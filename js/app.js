@@ -3,18 +3,21 @@ import { ik, e, pencere, kapatPencere, bugunMetni, bildir } from './ui.js';
 import * as Y1 from './sayfalar1.js';
 import * as Y2 from './sayfalar2.js';
 import * as P from './portal.js';
+import * as Y3 from './sayfalar3.js';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
   plan: Y1.plan, teorik: Y1.teorik, sinavlar: Y2.sinavlar, kasa: Y2.kasa, filo: Y2.filo,
   mesajlar: Y2.mesajlar, meb: Y2.meb, raporlar: Y2.raporlar, ayarlar: Y2.ayarlar,
   egitmen: P.egitmenPortal, ogrenci: P.ogrenciPortal,
+  belgeler: Y3.belgeler, kayit: Y3.kayitSayfasi,
 };
 
 const MENU = [
-  ['Gündem', [['genel', 'Genel bakış', 'genel'], ['adaylar', 'Adaylar', 'aday'], ['mesajlar', 'Mesajlar ve asistan', 'mesaj']]],
-  ['Eğitim', [['kursiyerler', 'Kursiyerler', 'kursiyer'], ['plan', 'Direksiyon planı', 'direksiyon'], ['teorik', 'Teorik dersler', 'teorik'], ['sinavlar', 'Sınavlar', 'sinav']]],
-  ['İşletme', [['kasa', 'Kasa ve ödemeler', 'kasa'], ['filo', 'Eğitmen ve araçlar', 'filo'], ['meb', 'MEB işlemleri', 'meb'], ['raporlar', 'Raporlar', 'rapor'], ['ayarlar', 'Ayarlar', 'ayar']]],
+  ['Bugün', [['genel', 'Genel bakış', '↑'], ['adaylar', 'Yeni öğrenciler', '↗'], ['mesajlar', 'Mesajlar', '↗']]],
+  ['Eğitim', [['kursiyerler', 'Kursiyerler', '→'], ['plan', 'Direksiyon planı', '→'], ['teorik', 'Teorik dersler', '→'], ['sinavlar', 'Sınavlar', '→']]],
+  ['İşletme', [['kasa', 'Kasa ve ödemeler', '→'], ['filo', 'Ekip ve araçlar', '→'], ['meb', 'MEB işlemleri', '→'], ['belgeler', 'Belgeler ve çıktılar', '→'], ['raporlar', 'Raporlar', '→']]],
+  ['Kurs', [['kayit', 'Evden kayıt sayfası', '↗'], ['ayarlar', 'Ayarlar', '→']]],
 ];
 
 let rol = 'yonetici';
@@ -30,15 +33,15 @@ function sayaclar() {
 
 function iskelet() {
   const say = sayaclar();
-  const menu = MENU.map(([g, l]) => `<div class="yan-baslik">${g}</div>` + l.map(([k, t, i]) => `<a href="#/${k}" data-menu="${k}">${ik(i)}<span>${t}</span>${say[k] && say[k][0] ? `<b class="${say[k][1] ? 'sakin' : ''}">${say[k][0]}</b>` : ''}</a>`).join('')).join('');
+  const menu = MENU.map(([g, l]) => `<div class="yan-baslik">${g}</div>` + l.map(([k, t, i]) => `<a href="#/${k}" data-menu="${k}"><span class="ok" aria-hidden="true">${i}</span><span>${t}</span>${say[k] && say[k][0] ? `<b class="${say[k][1] ? '' : 'uyar'}">${say[k][0]}</b>` : ''}</a>`).join('')).join('');
   document.getElementById('uyg').innerHTML = `
   <div class="uyg">
-    <aside class="yan" id="yan" aria-label="Ana menü">
-      <a class="logo" href="#/genel" aria-label="Sinyal ana sayfa"><span class="logo-isaret"><svg viewBox="0 0 24 24"><path d="M12 2.5 21.5 12 12 21.5 2.5 12z" fill="#1b1f25"/><path d="M12 7v6M12 16v.6" stroke="#ffc61a" stroke-width="2.4" stroke-linecap="round"/></svg></span><span><b>Sinyal</b><small>${e(S.kurs.ad)}</small></span></a>
+    <aside class="yan" id="yan" aria-label="Ana menü"><div class="yan-levha">
+      <a class="logo" href="#/genel" aria-label="Sinyal ana sayfa"><svg class="logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 5.4 18.6 12 12 18.6 5.4 12z" fill="none" stroke="#111" stroke-width="1"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>${e(S.kurs.ad)}</small></span></a>
       <nav>${menu}</nav>
       <div class="yan-rol" role="group" aria-label="Görünüm"><button data-rol="yonetici" class="${rol === 'yonetici' ? 'secili' : ''}">Yönetici</button><button data-rol="egitmen" class="${rol === 'egitmen' ? 'secili' : ''}">Eğitmen</button><button data-rol="ogrenci" class="${rol === 'ogrenci' ? 'secili' : ''}">Kursiyer</button></div>
-      <div class="yan-alt"><span class="avatar">KM</span><div><b>${e(S.kurs.yetkili)}</b><small>${e(S.kurs.sehir)} · yönetici</small></div></div>
-    </aside>
+      <div class="yan-alt"><b>${e(S.kurs.yetkili)}</b><span>${e(S.kurs.sehir)} · demo verisi</span></div>
+    </div></aside>
     <div class="ana">
       <div class="demo-serit" title="Demo · örnek verilerle"></div>
       <header class="ust">
@@ -72,7 +75,7 @@ export function yenile(kaydirma = false) {
   const r = rota();
   const yer = document.getElementById('icerik');
   if (!yer) return;
-  const portal = r.ad === 'egitmen' || r.ad === 'ogrenci';
+  const portal = r.ad === 'egitmen' || r.ad === 'ogrenci' || r.ad === 'kayit';
   document.body.classList.toggle('portal-modu', portal);
   let s;
   try { s = SAYFALAR[r.ad](r.id); }
@@ -90,7 +93,7 @@ export function yenile(kaydirma = false) {
   const say = sayaclar();
   document.querySelectorAll('.yan [data-menu]').forEach(a => {
     const k = a.dataset.menu; let b = a.querySelector('b');
-    if (say[k] && say[k][0]) { if (!b) { b = document.createElement('b'); a.appendChild(b); } b.textContent = say[k][0]; b.className = say[k][1] ? 'sakin' : ''; }
+    if (say[k] && say[k][0]) { if (!b) { b = document.createElement('b'); a.appendChild(b); } b.textContent = say[k][0]; b.className = say[k][1] ? '' : 'uyar'; }
     else if (b) b.remove();
   });
   if (kaydirma) window.scrollTo(0, 0);

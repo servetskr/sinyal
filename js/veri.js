@@ -1,5 +1,5 @@
 // Sinyal demo verisi: tarihler bugüne göre üretilir, tarayıcıda saklanır.
-const ANAHTAR = 'sinyal-demo-v7';
+const ANAHTAR = 'sinyal-demo-v8';
 
 export const BUGUN = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })();
 export const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -34,11 +34,11 @@ function uret() {
   const tel = () => '05' + ara(30, 55) + ' ' + ara(100, 999) + ' ' + ara(10, 99) + ' ' + ara(10, 99);
 
   const egitmenler = [
-    { id: 'e1', ad: 'Hüseyin Aktaş', tel: '0532 418 22 61', siniflar: ['B', 'B-O'], renk: '#2f6fde', baslama: '2014' },
-    { id: 'e2', ad: 'Sevgi Uysal', tel: '0541 776 30 18', siniflar: ['B', 'B-O'], renk: '#c2410c', baslama: '2017' },
-    { id: 'e3', ad: 'Murat Er', tel: '0505 233 91 47', siniflar: ['B', 'C'], renk: '#0f8a5f', baslama: '2011' },
-    { id: 'e4', ad: 'Gökhan Tunç', tel: '0553 902 14 85', siniflar: ['A2', 'B'], renk: '#7c3aed', baslama: '2019' },
-    { id: 'e5', ad: 'Nurcan Bilgin', tel: '0536 640 72 09', siniflar: ['B-O'], renk: '#b45309', baslama: '2021' },
+    { id: 'e1', ad: 'Hüseyin Aktaş', tel: '0532 418 22 61', siniflar: ['B', 'B-O'], renk: '#2f6fde', baslama: '2014', maas: 34000, prim: 160 },
+    { id: 'e2', ad: 'Sevgi Uysal', tel: '0541 776 30 18', siniflar: ['B', 'B-O'], renk: '#c2410c', baslama: '2017', maas: 32000, prim: 160 },
+    { id: 'e3', ad: 'Murat Er', tel: '0505 233 91 47', siniflar: ['B', 'C'], renk: '#0f8a5f', baslama: '2011', maas: 36000, prim: 180 },
+    { id: 'e4', ad: 'Gökhan Tunç', tel: '0553 902 14 85', siniflar: ['A2', 'B'], renk: '#7c3aed', baslama: '2019', maas: 30000, prim: 150 },
+    { id: 'e5', ad: 'Nurcan Bilgin', tel: '0536 640 72 09', siniflar: ['B-O'], renk: '#b45309', baslama: '2021', maas: 29000, prim: 150 },
   ];
   const araclar = [
     { id: 'a1', plaka: '26 SN 214', model: 'Renault Clio', yil: 2023, sinif: 'B', vites: 'Manuel', km: 48210, muayene: gun(212), sigorta: gun(64), kasko: gun(64), bakimKm: 50000, egitmen: 'e1' },
@@ -102,7 +102,10 @@ function uret() {
       kaynak: sec(['Google Haritalar', 'Google Haritalar', 'Google Haritalar', 'Instagram', 'Instagram', 'Tavsiye', 'Tavsiye', 'WhatsApp', 'Web sitesi']),
       yorum: asama === 'Ehliyet' ? (r() < 0.55 ? 'yapti' : 'istendi') : null,
       notlar: [],
+      deneme: ['Teorik', 'Direksiyon', 'Sınav'].includes(asama) ? Array.from({ length: ara(2, 6) }, () => ara(r() < 0.18 ? 38 : 58, r() < 0.18 ? 66 : 96)) : [],
+      acil: { ad: sec(ADLAR_K.concat(ADLAR_E)) + ' ' + sec(SOYADLAR), yakinlik: sec(['Anne', 'Baba', 'Eş', 'Kardeş']), tel: tel() },
     });
+    kursiyerler[kursiyerler.length - 1].odeme.senetli = r() < 0.35 && kursiyerler[kursiyerler.length - 1].odeme.taksitler.length > 0;
   }
   kursiyerler.find(k => k.asama === 'Direksiyon').notlar.push({ tarih: gun(-4), metin: 'Yokuş kalkışta zorlanıyor, iki ek ders önerildi.' });
 
@@ -167,7 +170,7 @@ function uret() {
     const ayGun = k => { const d = new Date(ay); d.setDate(k); return iso(d); };
     if (fark(ayGun(1)) <= 0) hareket.push({ id: 'h' + hid++, tarih: ayGun(1), tur: 'Gider', kategori: 'Kira', aciklama: 'Kurs binası kirası', tutar: 32000, yontem: 'Havale' });
     if (fark(ayGun(5)) <= 0) hareket.push({ id: 'h' + hid++, tarih: ayGun(5), tur: 'Gider', kategori: 'Maaş', aciklama: 'Personel maaşları', tutar: 148000, yontem: 'Havale' });
-    [3, 10, 17, 24].forEach(g => { if (fark(ayGun(g)) <= 0) hareket.push({ id: 'h' + hid++, tarih: ayGun(g), tur: 'Gider', kategori: 'Yakıt', aciklama: 'Araç yakıtı', tutar: ara(7200, 9800), yontem: 'Kart' }); });
+    [3, 10, 17, 24].forEach(g => { if (fark(ayGun(g)) <= 0) araclar.forEach(ar => hareket.push({ id: 'h' + hid++, tarih: ayGun(g), tur: 'Gider', kategori: 'Yakıt', aciklama: ar.plaka + ' · yakıt', tutar: Math.round(ara(900, 1900) * (ar.sinif === 'C' ? 2.4 : ar.sinif === 'A2' ? 0.4 : 1) / 10) * 10, yontem: 'Kart', arac: ar.id })); });
     if (fark(ayGun(14)) <= 0) hareket.push({ id: 'h' + hid++, tarih: ayGun(14), tur: 'Gider', kategori: 'Fatura', aciklama: 'Elektrik, su, internet', tutar: ara(5200, 7400), yontem: 'Havale' });
     if (m > 0) {
       // önceki dönem tahsilatları (arşiv kursiyerler)
@@ -177,7 +180,9 @@ function uret() {
       }
     }
   }
-  hareket.push({ id: 'h' + hid++, tarih: gun(-11), tur: 'Gider', kategori: 'Bakım', aciklama: '26 SN 731 · periyodik bakım', tutar: 8650, yontem: 'Kart' });
+  hareket.push({ id: 'h' + hid++, tarih: gun(-11), tur: 'Gider', kategori: 'Bakım', aciklama: '26 SN 731 · periyodik bakım', tutar: 8650, yontem: 'Kart', arac: 'a2' });
+  hareket.push({ id: 'h' + hid++, tarih: gun(-37), tur: 'Gider', kategori: 'Bakım', aciklama: '26 SN 447 · fren balatası', tutar: 6200, yontem: 'Havale', arac: 'a6' });
+  hareket.push({ id: 'h' + hid++, tarih: gun(-52), tur: 'Gider', kategori: 'Bakım', aciklama: '26 SN 214 · lastik değişimi', tutar: 11800, yontem: 'Kart', arac: 'a1' });
   hareket.push({ id: 'h' + hid++, tarih: gun(-23), tur: 'Gider', kategori: 'Reklam', aciklama: 'Instagram reklamı', tutar: 3500, yontem: 'Kart' });
 
   // adaylar (ön kayıt)
@@ -211,7 +216,26 @@ function uret() {
     { tarih: 'örnek', baslik: 'İl taban ücret tarifesi', ozet: 'Kurs ücretleri valilik komisyonunun belirlediği taban fiyatın altında olamaz. Güncel tarifeyi il MEM duyurularından takip edin.', kaynak: 'İl MEM' },
   ];
 
+  const personel = [
+    { id: 'p1', ad: 'Kurs Müdürü', gorev: 'Kurs müdürü', maas: 52000, tel: '0532 000 00 01' },
+    { id: 'p2', ad: 'Selda Korkmaz', gorev: 'Ön büro / sekreter', maas: 28500, tel: '0543 615 20 77' },
+    { id: 'p3', ad: 'Tuncay Yalım', gorev: 'Araç bakım / şoför', maas: 27000, tel: '0507 344 81 90' },
+  ];
+  const izinler = [
+    { kim: 'e2', bas: gun(4), bit: gun(5), tur: 'Yıllık izin' },
+    { kim: 'p2', bas: gun(12), bit: gun(12), tur: 'Mazeret izni' },
+    { kim: 'e4', bas: gun(-6), bit: gun(-5), tur: 'Rapor' },
+  ];
+  const bekleme = kursiyerler.filter(k => k.asama === 'Direksiyon').slice(0, 5).map((k, i) => ({ kursiyer: k.id, tercih: ['Hafta içi sabah', 'Hafta içi akşam', 'Cumartesi', 'Fark etmez', 'Öğleden sonra'][i], eklendi: gun(-i - 1) }));
+  const hesaplar = [
+    { id: 'kasa', ad: 'Nakit kasa', tur: 'Kasa', bakiye: 18450 },
+    { id: 'ziraat', ad: 'Ziraat Bankası', tur: 'Banka', bakiye: 412300 },
+    { id: 'pos', ad: 'Sanal POS', tur: 'POS', bakiye: 38900 },
+  ];
+  const kazanim = { doldurulan: 14, ekDers: 9, yorum: 23 };
+
   return {
+    personel, izinler, bekleme, hesaplar, kazanim, sms: { bakiye: 1840, kanal: 'WhatsApp' }, gunSonu: [],
     kurs: { ad: 'Örnek Sürücü Kursu', sehir: 'Eskişehir', tel: '0222 000 00 00', adres: 'Odunpazarı / Eskişehir', yetkili: 'Kurs Müdürü', puan: 4.9, yorumSayisi: 286, gunlukDersSiniri: 2, egitmenGunlukSinir: 8 },
     egitmenler, araclar, kursiyerler, dersler, teorik, sinavlar, hareket, adaylar, otomasyonlar, duyurular,
     gonderimler: [],
@@ -238,3 +262,18 @@ export const eksikEvrak = k => EVRAKLAR.filter(([key]) => !k.evrak[key]);
 export const asamaNo = k => ASAMALAR.indexOf(k.asama);
 export function sonrakiDers(k) { return S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Planlandı' && fark(d.tarih) >= 0).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat))[0]; }
 export function gonderimEkle(kime, metin, tur) { S.gonderimler.unshift({ zaman: new Date().toISOString(), kime, metin, tur }); kaydet(); }
+
+// Sınav riski: deneme ortalaması, gelmediği dersler, ilerleme hızı, önceki kalma.
+export function risk(k) {
+  if (!['Teorik', 'Direksiyon', 'Sınav'].includes(k.asama)) return null;
+  const n = [];
+  let p = 0;
+  const ort = k.deneme.length ? Math.round(k.deneme.reduce((a, b) => a + b, 0) / k.deneme.length) : null;
+  if (ort != null && ort < 70) { p += (70 - ort) * 1.6; n.push('Deneme ortalaması ' + ort); }
+  const gel = S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Gelmedi').length;
+  if (gel) { p += gel * 14; n.push(gel + ' derse gelmedi'); }
+  if (k.dsinav && k.dsinav.sonuc === 'Kaldı') { p += 30; n.push('Direksiyon sınavından kaldı'); }
+  if (k.esinav && k.esinav.hak > 1) { p += 12; n.push('e-Sınavı ' + k.esinav.hak + '. hakta geçti'); }
+  if (k.notlar.some(x => /zorlan|unut|panik|gergin/i.test(x.metin))) { p += 18; n.push('Eğitmen notu'); }
+  return { puan: Math.min(100, Math.round(p)), ort, nedenler: n };
+}

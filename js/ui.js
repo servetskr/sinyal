@@ -65,11 +65,8 @@ export const ik = (ad, cls = '') => `<svg class="ik ${cls}" viewBox="0 0 24 24" 
 
 export const rozet = (metin, tur = 'notr') => `<span class="rozet rozet-${tur}">${e(metin)}</span>`;
 export function asamaRozet(a) { const t = { 'Kayıt': 'notr', 'Evrak': 'uyari', 'Teorik': 'mavi', 'Direksiyon': 'mor', 'Sınav': 'turuncu', 'Ehliyet': 'yesil' }[a] || 'notr'; return rozet(a, t); }
-export function avatar(ad, soyad, renk) {
-  const h = [...(ad + soyad)].reduce((a, c) => a + c.charCodeAt(0), 0);
-  const tonlar = ['#dfe7f5', '#f3e3d6', '#dcefe5', '#ebe2f6', '#f5ecd2', '#e2edf0'];
-  return `<span class="avatar" style="background:${renk || tonlar[h % tonlar.length]}">${e((ad[0] || '') + (soyad ? soyad[0] : ''))}</span>`;
-}
+// Yuvarlak baş harf avatarları kaldırıldı; kişiler adlarıyla okunur.
+export function avatar() { return ''; }
 export const plaka = p => `<span class="plaka"><i>TR</i>${e(p)}</span>`;
 
 // İmza öğesi: kursiyerin kayıttan ehliyete yolculuğu, kesik şeritli bir yol üzerinde.
@@ -155,3 +152,38 @@ export function csvIndir(ad, satirlar) {
 }
 
 export const bugunMetni = () => { const d = BUGUN; return d.getDate() + ' ' + AY_U[d.getMonth()] + ' ' + GUN[d.getDay()]; };
+
+// --- Trafik levhası dili ---
+// Gerçek levha biçimleri: uyarı (kırmızı kenarlı üçgen), yasak (kırmızı halka), bilgi (mavi kare),
+// zorunlu (mavi daire), tamam (yeşil kare), dur (kırmızı sekizgen).
+export function isaret(tur, boyut = 22, ic = '') {
+  const s = boyut;
+  const sekil = {
+    uyari: `<path d="M12 2.2 22.6 20.6H1.4z" fill="#fff" stroke="#d52b1e" stroke-width="2.6" stroke-linejoin="round"/><path d="M12 9v5.2M12 16.9v.4" stroke="#111" stroke-width="2.3" stroke-linecap="round"/>`,
+    yasak: `<circle cx="12" cy="12" r="9.6" fill="#fff" stroke="#d52b1e" stroke-width="3.2"/>${ic ? `<text x="12" y="15.6" text-anchor="middle" font-size="9.5" font-weight="800" font-family="Overpass,sans-serif" fill="#111">${ic}</text>` : '<path d="M7.5 12h9" stroke="#111" stroke-width="2.4" stroke-linecap="round"/>'}`,
+    bilgi: `<rect x="2" y="2" width="20" height="20" rx="3.5" fill="#0a4da2"/><rect x="3.6" y="3.6" width="16.8" height="16.8" rx="2.4" fill="none" stroke="#fff" stroke-width="1"/><path d="M12 10.5v6M12 7.4v.4" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>`,
+    zorunlu: `<circle cx="12" cy="12" r="10" fill="#0a4da2"/><path d="M7 12h9M12.5 8l4 4-4 4" stroke="#fff" stroke-width="2.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+    tamam: `<rect x="2" y="2" width="20" height="20" rx="3.5" fill="#1f7a3e"/><path d="m7 12.4 3.3 3.3L17.2 8.6" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+    dur: `<path d="M8 2h8l6 6v8l-6 6H8l-6-6V8z" fill="#d52b1e"/><path d="M8.8 3.6h6.4l5.2 5.2v6.4l-5.2 5.2H8.8l-5.2-5.2V8.8z" fill="none" stroke="#fff" stroke-width="1"/><path d="M7.5 12h9" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>`,
+  }[tur] || '';
+  return `<svg class="isaret" width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true">${sekil}</svg>`;
+}
+
+// Yön levhası: hedefler ve "mesafeler" (sayılar). [[ad, deger, href, alt]]
+export function yonLevhasi(satirlar, baslik = '') {
+  return `<div class="yon-levhasi">${baslik ? `<div class="yl-bas">${e(baslik)}</div>` : ''}${satirlar.map(([ad, deger, href, alt]) => `<a class="yl-satir" href="${href || '#'}"><span class="yl-ok" aria-hidden="true">→</span><span class="yl-ad">${e(ad)}${alt ? `<small>${e(alt)}</small>` : ''}</span><b class="yl-deger">${deger}</b></a>`).join('')}</div>`;
+}
+
+// Ölçü şeridi: üst üste dizilmiş kart yerine tek levha üzerinde değerler. [[etiket, deger, alt, tur]]
+export function olcumler(l) {
+  return `<div class="olcum">${l.map(([et, d, alt, tur]) => `<div class="olcum-h ${tur ? 'o-' + tur : ''}"><small>${e(et)}</small><b>${d}</b>${alt ? `<span>${alt}</span>` : ''}</div>`).join('')}</div>`;
+}
+
+// Araç görseli + plaka (görseller img/arac-<id>.webp)
+export function aracGorsel(a, cls = '') {
+  if (!a) return '';
+  return `<figure class="arac-fig ${cls}"><img src="img/arac-${a.id}.webp" alt="${e(a.model)}" loading="lazy" width="640" height="420"><figcaption>${plaka(a.plaka)}</figcaption></figure>`;
+}
+
+// Ekran başı: bu ekran ne işe yarar, tek cümle.
+export function ekranNotu(metin, tur = 'bilgi') { return `<p class="ekran-notu">${isaret(tur, 20)}<span>${metin}</span></p>`; }
