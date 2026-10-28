@@ -1,6 +1,7 @@
-import { S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, risk, islem, geriAlNoktasi, oturum, tcGecerli, tcMaskele, ogretmen } from './veri.js';
+import { S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, risk, islem, geriAlNoktasi, oturum, tcGecerli, tcMaskele, ogretmen, yas, mebOnKontrol } from './veri.js';
 import { e, tl, sayi, ik, rozet, asamaRozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, sekmeler, tarih, tarihUzun, goreli, gunKisa, cubukGrafik, halka, ayAdi, isaret, yonLevhasi, olcumler, aracGorsel, ekranNotu, bugunMetni, fotoKucult } from './ui.js';
 import { yenile } from './app.js';
+import { denetimEksikleri } from './sayfalar3.js';
 
 const aktifler = () => S.kursiyerler.filter(k => k.asama !== 'Ehliyet');
 const buAyMi = s => { const d = tarihOku(s); return d.getMonth() === BUGUN.getMonth() && d.getFullYear() === BUGUN.getFullYear(); };
@@ -27,6 +28,7 @@ export function genel() {
     geciken.length && ['uyari', `${geciken.length} kursiyerin taksiti gecikti`, tl(gecikenTutar) + ' tahsil edilmedi.', '#/kasa/geciken'],
     evrakEksik.length && ['yasak', `${evrakEksik.length} kursiyerin evrakı eksik`, 'MEB kaydı bu evraklar tamamlanınca yapılabilir.', '#/meb'],
     ...belgeBiten.map(a => ['dur', `${a.plaka} · ${fark(a.sigorta) <= 21 ? 'sigorta' : 'muayene'} ${goreli(fark(a.sigorta) <= 21 ? a.sigorta : a.muayene)} bitiyor`, a.model, '#/filo']),
+    ...denetimEksikleri().filter(x => x[0] === 'dur' && !x[1].includes('SN ')).slice(0, 2).map(x => [x[0], x[1], x[2], x[3]]),
     ...haftaSinav.map(s => ['zorunlu', `${s.tur} · ${goreli(s.tarih)} ${s.saat}`, s.kursiyerler.length + ' kursiyer · ' + s.yer, '#/sinavlar']),
   ].filter(Boolean);
 
@@ -183,7 +185,10 @@ export function kursiyerFormu(on = {}) {
       <div class="alan"><label for="k-pesin">Peşinat</label><input id="k-pesin" name="pesin" inputmode="numeric" value="8000"></div>
       <div class="alan"><label for="k-taksit">Taksit sayısı</label><select id="k-taksit" name="taksit">${[0, 1, 2, 3, 4, 5].map(n => `<option value="${n}" ${n === 4 ? 'selected' : ''}>${n ? n + ' taksit' : 'Peşin'}</option>`).join('')}</select></div>
       <div class="alan"><span class="et">Ödeme planı</span><div id="k-plan" class="ipucu" style="min-height:40px"></div></div>
+      <div class="alan"><label for="k-grup">Teorik grup</label><select id="k-grup" name="grup">${S.gruplar.map(g => `<option value="${g.id}">${g.ad} · ${tarih(g.baslangic)} başlıyor</option>`).join('')}</select></div>
       <div class="alan tam"><span class="et">Teslim alınan evraklar</span><div class="secim">${EVRAKLAR.map(([k, t]) => `<label><input type="checkbox" name="ev-${k}"><span>${t}</span></label>`).join('')}</div></div>
+      <label class="tam" style="display:flex;gap:10px;align-items:flex-start;font-size:14px"><input type="checkbox" name="kvkk" style="width:18px;height:18px;margin-top:2px"> <span>KVKK aydınlatma metni verildi, açık rıza alındı <small style="color:var(--soluk);display:block">Sağlık raporu ve adli sicil özel nitelikli veridir; rıza olmadan kaydedilemez.</small></span></label>
+      <div class="tam kart" style="padding:12px 14px"><b class="et" style="display:block;margin-bottom:6px">MEBBİS ön kontrol</b><ul id="k-kontrol" style="list-style:none;display:grid;gap:5px;font-size:13.5px"></ul></div>
     </form>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-kursiyer">Kaydı oluştur</button>`,
     onAc(d) {
@@ -194,18 +199,23 @@ export function kursiyerFormu(on = {}) {
         f.egitmen.innerHTML = eg.map(x => `<option value="${x.id}" ${x.id === onceki ? 'selected' : ''}>${x.ad}</option>`).join('');
         const u = SINIFLAR[s].ucret, p = Math.min(u, +f.pesin.value.replace(/\D/g, '') || 0), n = +f.taksit.value;
         d.querySelector('#k-plan').innerHTML = n ? `${tl(p)} peşin + ${n} × ${tl((u - p) / n)}` : `${tl(u)} peşin`;
+        const gec = { id: '_yeni', tc: f.tc.value.trim(), dogumTarihi: f.dogumTarihi.value, sinif: s, asama: 'Kayıt', kayit: gun(0), teorikGrup: f.grup.value, evrak: Object.fromEntries(EVRAKLAR.map(([x]) => [x, f['ev-' + x].checked])), kvkk: { riza: f.kvkk.checked } };
+        d.querySelector('#k-kontrol').innerHTML = mebOnKontrol(gec).filter(([, t]) => !t.startsWith('Sağlık raporu numarası')).map(([ok, t]) => `<li style="display:flex;gap:8px;align-items:center">${isaret(ok ? 'tamam' : 'uyari', 16)}<span style="color:${ok ? 'var(--metin)' : 'var(--murekkep);font-weight:700'}">${t}</span></li>`).join('');
       };
-      f.addEventListener('input', guncelle); guncelle();
+      f.addEventListener('input', guncelle); f.addEventListener('change', guncelle); guncelle();
       f.addEventListener('submit', ev => {
         ev.preventDefault();
         if (!f.ad.value.trim() || !f.soyad.value.trim() || f.tel.value.replace(/\D/g, '').length < 10) return bildir('Ad, soyad ve geçerli bir telefon gerekli', 'uyari');
+        const yasi = yas(f.dogumTarihi.value); if (yasi != null && yasi < S.kurs.asgariYas) return bildir(`Kursiyer ${yasi} yaşında; ehliyet için en az ${S.kurs.asgariYas} yaş gerekir`, 'uyari');
+        if (S.kursiyerler.some(x => x.tc === f.tc.value.trim() && x.sinif === f.sinif.value && x.asama !== 'Ehliyet')) return bildir('Bu TC ile aynı sınıfa açık bir kayıt zaten var', 'uyari');
+        if (!f.kvkk.checked) return bildir('KVKK aydınlatma ve açık rıza alınmadan kayıt yapılamaz', 'uyari');
         if (!tcGecerli(f.tc.value.trim())) { f.tc.focus(); f.querySelector('.tc-not').textContent = 'Bu TC kimlik numarası geçerli değil'; f.querySelector('.tc-not').style.color = 'var(--kirmizi)'; return bildir('TC kimlik numarası geçerli değil', 'uyari'); }
         const s = f.sinif.value, u = SINIFLAR[s].ucret, n = +f.taksit.value;
         const p = n ? Math.min(u, +f.pesin.value.replace(/\D/g, '') || 0) : u;
         const taksitler = [];
         for (let i = 0; i < n; i++) { const v = new Date(BUGUN); v.setMonth(v.getMonth() + i + 1); const t = Math.round((u - p) / n / 50) * 50; taksitler.push({ vade: iso(v), tutar: i === n - 1 ? (u - p) - t * (n - 1) : t, odendi: null, yontem: null }); }
         const ev2 = {}; EVRAKLAR.forEach(([k]) => ev2[k] = f['ev-' + k].checked);
-        const yeni = { id: 'k' + Date.now(), ad: f.ad.value.trim(), soyad: f.soyad.value.trim(), tel: f.tel.value.trim(), tc: f.tc.value.trim(), dogumTarihi: f.dogumTarihi.value, ogrenim: f.ogrenim.value, adres: f.adres.value.trim(), mevcutEhliyet: f.mevcut.value, deneme: [], acil: null, teorikGrup: 'aksam', dogum: (f.dogumTarihi.value || '').slice(0, 4), sinif: s, kayit: gun(0), egitmen: f.egitmen.value, asama: Object.values(ev2).every(Boolean) ? 'Teorik' : 'Evrak', teorik: 0, direksiyon: 0, evrak: ev2, mebIslendi: false, esinav: null, dsinav: null, odeme: { toplam: u, pesin: p, pesinTarih: gun(0), taksitler }, kaynak: f.kaynak.value, yorum: null, notlar: [] };
+        const yeni = { id: 'k' + Date.now(), ad: f.ad.value.trim(), soyad: f.soyad.value.trim(), tel: f.tel.value.trim(), tc: f.tc.value.trim(), dogumTarihi: f.dogumTarihi.value, ogrenim: f.ogrenim.value, adres: f.adres.value.trim(), mevcutEhliyet: f.mevcut.value, deneme: [], acil: null, teorikGrup: f.grup.value, kvkk: { tarih: gun(0), kanal: 'Kursta imzalı form', riza: true }, dogum: (f.dogumTarihi.value || '').slice(0, 4), sinif: s, kayit: gun(0), egitmen: f.egitmen.value, asama: Object.values(ev2).every(Boolean) ? 'Teorik' : 'Evrak', teorik: 0, direksiyon: 0, evrak: ev2, mebIslendi: false, esinav: null, dsinav: null, odeme: { toplam: u, pesin: p, pesinTarih: gun(0), taksitler }, kaynak: f.kaynak.value, yorum: null, notlar: [] };
         S.kursiyerler.unshift(yeni); islem('Kursiyer kaydetti', tamAd(yeni) + ' · ' + SINIFLAR[s].ad);
         if (p) S.hareket.unshift({ id: 'h' + Date.now(), tarih: gun(0), tur: 'Gelir', kategori: 'Kurs ücreti', aciklama: tamAd(yeni) + ' · peşinat', tutar: p, yontem: 'Kart', kursiyer: yeni.id });
         if (on.adayId) { const a = S.adaylar.find(x => x.id === on.adayId); if (a) a.asama = 'Kayıt'; }
@@ -282,6 +292,7 @@ export function kursiyerDetay(id) {
     if (profilSekme === 'genel') { const ar = S.araclar.find(a => a.egitmen === k.egitmen && (a.sinif === k.sinif || eg.siniflar.length === 1)) || S.araclar.find(a => a.sinif === k.sinif); const r = risk(k); return `<div class="izgara iz-3">
       <div class="kart" style="padding:10px">${ar ? aracGorsel(ar) : ''}<div style="padding:10px 6px 4px"><b style="display:block;font-family:var(--baslik);font-size:17px;color:var(--murekkep)">${ar ? e(ar.model) : ''} · ${e(eg.ad)}</b><span style="font-size:14px">Dersler bu araçla ve bu usta öğreticiyle yapılıyor.</span></div></div>
       <div class="kart"><div class="kart-bas"><h3>Sınav riski</h3></div><div class="kart-govde">${r ? `<div style="display:flex;align-items:center;gap:14px">${isaret(r.puan >= 50 ? 'uyari' : r.puan >= 25 ? 'bilgi' : 'tamam', 44)}<div><b style="display:block;font-family:var(--baslik);font-size:24px;color:var(--murekkep)">${r.puan >= 50 ? 'Yüksek' : r.puan >= 25 ? 'Orta' : 'Düşük'} risk</b><span style="font-size:14px">${r.ort != null ? 'Deneme ortalaması ' + r.ort : 'Henüz deneme sınavı yok'}</span></div></div>${r.nedenler.length ? `<ul style="margin:12px 0 0 18px;font-size:14px">${r.nedenler.map(n => `<li>${e(n)}</li>`).join('')}</ul>` : ''}${r.puan >= 25 ? `<button class="dg dg-ana dg-kucuk" style="margin-top:14px" data-ekders>Ek ders öner</button>` : ''}` : `<p style="font-size:14px">${k.asama === 'Ehliyet' ? 'Ehliyetini aldı.' : 'Teorik derslere başlayınca hesaplanır.'}</p>`}</div></div>
+      <div class="kart"><div class="kart-bas"><h3>MEBBİS ön kontrol</h3><small>${(() => { const l = mebOnKontrol(k); return l.filter(x => x[0]).length + '/' + l.length; })()}</small><div class="sag">${k.mebIslendi ? rozet('Girildi', 'yesil') : `<a class="dg dg-ana dg-kucuk" href="#/mebbis/${k.id}">Giriş kartı</a>`}</div></div><div class="kart-govde"><ul style="list-style:none;display:grid;gap:6px;font-size:14px">${mebOnKontrol(k).map(([ok, t]) => `<li style="display:flex;gap:8px;align-items:center">${isaret(ok ? 'tamam' : 'uyari', 18)}<span style="${ok ? '' : 'font-weight:700;color:var(--murekkep)'}">${t}</span></li>`).join('')}</ul></div></div>
       <div class="kart"><div class="kart-bas"><h3>Belgeler</h3></div><div class="kart-govde" style="display:grid;gap:8px">${[['sozlesme', 'Sözleşme'], ['bilgi', 'Bilgi formu'], ['takip', 'Direksiyon takip formu'], ['makbuz', 'Son makbuz']].concat(k.odeme.senetli ? [['senet', 'Senet']] : []).map(([t, a]) => `<button class="dg dg-cizgi dg-kucuk" style="justify-content:flex-start" data-belge="${t}">${ik('belge')}${a}</button>`).join('')}</div></div>
       <div class="kart"><div class="kart-bas"><h3>Bilgiler</h3></div><div class="kart-govde"><dl class="bilgi-tablo">
         <dt>Sınıf</dt><dd>${S0.ad}</dd><dt>Kayıt</dt><dd>${tarih(k.kayit)} · ${e(k.kaynak)}</dd><dt>Usta öğretici</dt><dd>${e(eg.ad)}</dd><dt>Telefon</dt><dd>${e(k.tel)}</dd><dt>TC kimlik</dt><dd><span class="mono" data-tc-alan>${tcMaskele(k.tc)}</span> ${oturum.kullanici && oturum.kullanici.rol === 'mudur' && k.tc ? '<button class="dg dg-hafif dg-kucuk" data-tc-goster>Göster</button>' : ''}</dd><dt>Doğum tarihi</dt><dd>${k.dogumTarihi ? tarih(k.dogumTarihi) + ' ' + k.dogumTarihi.slice(0, 4) : e(k.dogum || '—')}</dd><dt>Öğrenim</dt><dd>${e(k.ogrenim || '—')}</dd><dt>Adres</dt><dd>${e(k.adres || '—')}</dd>${k.mevcutEhliyet ? `<dt>Mevcut ehliyet</dt><dd>${e(k.mevcutEhliyet)} · ${rozet('Sınıf geçişi', 'mavi')}</dd>` : ''}${k.acil && k.acil.ad ? `<dt>Acil durumda</dt><dd>${e(k.acil.ad)}${k.acil.yakinlik ? ' (' + e(k.acil.yakinlik) + ')' : ''} · ${e(k.acil.tel)}</dd>` : ''}
@@ -503,7 +514,9 @@ function dersEkle(sutunId, saat) {
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-kaydet>Dersi ekle</button>`,
     onAc(d) {
       const sel = d.querySelector('#d-k'), uy = d.querySelector('#d-uyari'), dg = d.querySelector('[data-kaydet]');
+      const belgeSorun = [ar && [ar.muayene, ar.sigorta].some(t => t && t < planGun) ? ar.plaka + ' muayene/sigorta süresi dolmuş' : '', ...Object.entries(eg.belgeler || {}).filter(([, t]) => t < planGun).map(([b]) => eg.ad + ' · ' + ({ sertifika: 'usta öğretici sertifikası', saglik: 'sağlık raporu', adli: 'adli sicil kaydı' }[b]) + ' süresi dolmuş')].filter(Boolean);
       const kontrol = () => {
+        if (belgeSorun.length) { uy.innerHTML = belgeSorun.map(x => `<div class="ipucu uyari" style="margin-bottom:6px">${isaret('dur', 20)}${e(x)}; bu tarihte ders planlanamaz.</div>`).join(''); dg.disabled = true; return; }
         const kid = sel.value, ayni = S.dersler.filter(x => x.kursiyer === kid && x.tarih === planGun);
         const cak = ayni.find(x => x.saat === saat);
         let m = '';
@@ -554,7 +567,7 @@ function dersAc(id) {
   pencere({
     baslik: 'Direksiyon dersi',
     icerik: `<div style="display:flex;gap:16px;align-items:center;margin-bottom:16px;flex-wrap:wrap">${ar ? aracGorsel(ar, 'orta') : ''}<div style="flex:1;min-width:180px"><b style="display:block;font-family:var(--baslik);font-size:20px;color:var(--murekkep)">${e(tamAd(k))}</b><span>${SINIFLAR[k.sinif].ad} · ${k.direksiyon}/${SINIFLAR[k.sinif].direksiyon} ders yapıldı</span></div><a class="dg dg-cizgi dg-kucuk" href="#/kursiyer/${k.id}" data-kapat>Dosyayı aç</a></div>
-      <dl class="bilgi-tablo"><dt>Zaman</dt><dd>${tarihUzun(d.tarih)} · ${d.saat}${d.tekrar ? ' · haftalık' : ''}</dd><dt>Usta öğretici</dt><dd>${e(eg.ad)}</dd><dt>Araç</dt><dd>${ar ? plaka(ar.plaka) + ' ' + e(ar.model) : '—'}</dd><dt>Durum</dt><dd>${rozet(d.durum, d.durum === 'Yapıldı' ? 'yesil' : d.durum === 'Gelmedi' ? 'kirmizi' : 'mavi')}</dd></dl>`,
+      <dl class="bilgi-tablo"><dt>Zaman</dt><dd>${tarihUzun(d.tarih)} · ${d.saat}${d.tekrar ? ' · haftalık' : ''}</dd><dt>Usta öğretici</dt><dd>${e(eg.ad)}</dd><dt>Araç</dt><dd>${ar ? plaka(ar.plaka) + ' ' + e(ar.model) : '—'}</dd><dt>Durum</dt><dd>${rozet(d.durum, d.durum === 'Yapıldı' ? 'yesil' : d.durum === 'Gelmedi' ? 'kirmizi' : 'mavi')}</dd>${d.durum === 'Yapıldı' ? `<dt>İmza</dt><dd>${d.imza ? (d.imza.kursiyer ? `<img src="${d.imza.kursiyer}" alt="Kursiyer imzası" style="height:38px;background:#fff;border:1px solid var(--cizgi);border-radius:4px"> <img src="${d.imza.usta}" alt="Usta öğretici imzası" style="height:38px;background:#fff;border:1px solid var(--cizgi);border-radius:4px">` : rozet('İmzalı', 'yesil')) : rozet('İmza eksik', 'kirmizi') + ' <small style="color:var(--soluk)">Usta öğretici ekranından imzalatılır</small>'}</dd>` : ''}</dl>`,
     altlik: d.durum === 'Planlandı' ? `<button class="dg dg-cizgi" data-iptal style="margin-right:auto;color:var(--kirmizi);border-color:var(--kirmizi)">Dersi iptal et</button><button class="dg dg-cizgi" data-tasi>Taşı</button><button class="dg dg-cizgi" data-gelmedi>Gelmedi</button><button class="dg dg-ana" data-yapildi>${ik('tik')}Yapıldı</button>` : `<button class="dg dg-cizgi" data-geri>Planlandı’ya al</button><button class="dg dg-koyu" data-kapat>Tamam</button>`,
     onAc(p) {
       p.addEventListener('click', ev => {
@@ -590,7 +603,7 @@ export function teorik() {
     <span class="sag">${gec ? `<span class="sayi" style="font-size:13px">${n}/${top}</span>${ilerleme(n, top, n / Math.max(1, top) > .8 ? 'yesil' : 'sari')}` : ''}<button class="dg ${gec ? 'dg-cizgi' : 'dg-koyu'} dg-kucuk" data-yoklama="${t.id}">${gec ? 'Yoklamayı gör' : 'Yoklama al'}</button></span></li>`; };
   return {
     baslik: 'Teorik dersler', alt: 'Sınıf programı, yoklama ve e-sınava hazırlık',
-    html: `${ekranNotu('Teorik dersleri öğretmenler verir. Yoklama, dersin grubundaki kursiyerlerle alınır; devamsızlık sınırına yaklaşan kursiyer ve velisi uyarılır.')}<div class="izgara iz-4">
+    html: `${ekranNotu('Teorik dersleri öğretmenler verir. Yoklama, dersin grubundaki kursiyerlerle alınır; devamsızlık sınırına yaklaşan kursiyere uyarı gider.')}<div class="izgara iz-4">
       <div class="kart gosterge"><small>Teorik aşamada</small><b>${teorikte.length} kursiyer</b><span>Akşam ${grupKisi('aksam').length} · sabah ${grupKisi('sabah').length}</span></div>
       <div class="kart gosterge"><small>Ortalama katılım</small><b>%${ort}</b><span>Son ${gecmis.length} oturum</span></div>
       <div class="kart gosterge"><small>Devamsızlık sınırında</small><b>${sinirda.length}</b><span>Sınır ${S.kurs.devamsizlikSiniri} ders</span></div>

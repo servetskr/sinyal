@@ -1,5 +1,5 @@
-import { oturum, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle } from './veri.js';
-import { e, tl, ik, rozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret } from './ui.js';
+import { oturum, islem, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle } from './veri.js';
+import { e, tl, ik, rozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani } from './ui.js';
 import { yenile } from './app.js';
 
 let egId = 'e1', egSekme = 'bugun';
@@ -45,7 +45,24 @@ export function egitmenPortal() {
       k.addEventListener('click', ev => {
         const t = ev.target;
         const s = t.closest('[data-egs]'); if (s) { egSekme = s.dataset.egs; yenile(true); }
-        const y = t.closest('[data-yapildi]'); if (y) { const d = S.dersler.find(x => x.id === y.dataset.yapildi), ks = kursiyer(d.kursiyer); d.durum = 'Yapıldı'; ks.direksiyon = Math.min(SINIFLAR[ks.sinif].direksiyon, ks.direksiyon + 1); kaydet(); bildir('Ders yapıldı olarak işaretlendi'); yenile(); }
+        const y = t.closest('[data-yapildi]'); if (y) {
+          const d = S.dersler.find(x => x.id === y.dataset.yapildi), ks = kursiyer(d.kursiyer);
+          pencere({
+            baslik: 'Dersi imzalayın',
+            icerik: `<p style="margin-bottom:10px">${e(tamAd(ks))} · ${d.saat} · ${ks.direksiyon + 1}. ders. İmzalar direksiyon eğitimi takip formuna işlenir; kağıt form gerekmez.</p><p class="et">Kursiyer imzası</p><canvas class="imza-alan" width="900" height="300" data-imza="k" aria-label="Kursiyer imzası"></canvas><p class="et" style="margin-top:12px">Usta öğretici imzası · ${e(egitmen(d.egitmen).ad)}</p><canvas class="imza-alan" width="900" height="300" data-imza="u" aria-label="Usta öğretici imzası"></canvas>`,
+            altlik: `<button class="dg dg-cizgi" data-temizle-imza>Temizle</button><button class="dg dg-ana" data-imza-kaydet>${ik('tik')}Ders yapıldı</button>`,
+            onAc(p) {
+              const ik_ = imzaAlani(p.querySelector('[data-imza=k]')), iu = imzaAlani(p.querySelector('[data-imza=u]'));
+              p.querySelector('[data-temizle-imza]').addEventListener('click', () => { ik_.temizle(); iu.temizle(); });
+              p.querySelector('[data-imza-kaydet]').addEventListener('click', () => {
+                if (ik_.bos() || iu.bos()) return bildir('İki imza da gerekli', 'uyari');
+                d.durum = 'Yapıldı'; d.imza = { zaman: new Date().toISOString().slice(0, 16), kursiyer: ik_.url(), usta: iu.url() };
+                ks.direksiyon = Math.min(SINIFLAR[ks.sinif].direksiyon, ks.direksiyon + 1);
+                islem('Ders imzalı tamamlandı', tamAd(ks) + ' · ' + d.saat); kaydet(); kapatPencere(); bildir('Ders imzalandı ve takip formuna işlendi'); yenile();
+              });
+            },
+          });
+        }
         const g = t.closest('[data-gelmedi]'); if (g) { const d = S.dersler.find(x => x.id === g.dataset.gelmedi); d.durum = 'Gelmedi'; kaydet(); gonderimEkle(tamAd(kursiyer(d.kursiyer)), 'Gelmedi bildirimi', 'Otomatik'); bildir('Kursiyere ve kursa bildirildi', 'wp'); yenile(); }
         const n = t.closest('[data-not]'); if (n) { const ks = kursiyer(n.dataset.not); pencere({ baslik: 'Not · ' + tamAd(ks), icerik: `<div class="alan"><label>Ders notu</label><textarea placeholder="Örn. park etmede iyi, şerit değiştirmede ayna kontrolünü unutuyor"></textarea></div>`, altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Kaydet</button>`, onAc(d) { d.querySelector('[data-k]').addEventListener('click', () => { const v = d.querySelector('textarea').value.trim(); if (v) { ks.notlar.unshift({ tarih: gun(0), metin: v }); kaydet(); } kapatPencere(); bildir('Not kaydedildi; kurs müdürü de görür'); yenile(); }); } }); }
       });

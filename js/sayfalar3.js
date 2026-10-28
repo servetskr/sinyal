@@ -1,4 +1,4 @@
-import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak } from './veri.js';
+import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas } from './veri.js';
 import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler } from './ui.js';
 import { yenile } from './app.js';
 
@@ -11,9 +11,23 @@ const SABLONLAR = [
   ['senet', 'Senet', 'Senetli ödeme planı olan kursiyerler için', 'senet'],
   ['program', 'Haftalık ders programı', 'Usta öğreticiye göre, kapıya asılacak çizelge', 'egitmen'],
   ['sinav', 'Sınav listesi', 'Oturuma giden kursiyerler, imza sütunuyla', 'sinav'],
+  ['denetim', 'Denetim dosyası', 'Kursiyer, ders, araç ve personel kayıtları; eksikler en başta', 'tek'],
 ];
+const imzaHucre = (d, kim) => `<td style="width:90px;text-align:center">${d.imza ? (d.imza[kim] ? `<img src="${d.imza[kim]}" alt="" style="height:26px">` : '<small>dijital ✓</small>') : ''}</td>`;
 const kursBas = baslik => `<h1>${e(baslik)}</h1><p class="a4-alt">${e(S.kurs.ad)} · ${e(S.kurs.adres)} · ${e(S.kurs.tel)}</p>`;
 function belgeHtml(tur, id) {
+  if (tur === 'denetim') {
+    const eks = denetimEksikleri(), akt = S.kursiyerler.filter(k => k.asama !== 'Ehliyet');
+    const yap = S.dersler.filter(d => d.durum === 'Yapıldı'), imz = yap.filter(d => d.imza).length;
+    const BG = { sertifika: 'Sertifika', saglik: 'Sağlık raporu', adli: 'Adli sicil' };
+    return kursBas('Denetim dosyası') + `<p><b>Hazırlanma:</b> ${tarihUzun(gun(0))} · ${e(oturum.kullanici ? oturum.kullanici.ad : '')}</p>
+      <p><b>1. Eksikler (${eks.length})</b></p><table>${eks.map(x => `<tr><td>${e(x[1])}</td><td>${e(x[2])}</td></tr>`).join('') || '<tr><td>Eksik yok.</td></tr>'}</table>
+      <p><b>2. Aktif kursiyerler (${akt.length})</b></p><table><tr><th>TC</th><th>Ad soyad</th><th>Sınıf</th><th>Aşama</th><th>Evrak</th><th>MEBBİS</th><th>KVKK</th></tr>${akt.map(k => `<tr><td>${tcMaskele(k.tc)}</td><td>${e(tamAd(k))}</td><td>${SINIFLAR[k.sinif].ad}</td><td>${k.asama}</td><td>${EVRAKLAR.length - eksikEvrak(k).length}/${EVRAKLAR.length}</td><td>${k.mebIslendi ? 'Girildi' : 'Bekliyor'}</td><td>${k.kvkk && k.kvkk.riza ? 'Rıza var' : 'YOK'}</td></tr>`).join('')}</table>
+      <p><b>3. Direksiyon dersleri</b></p><table><tr><th>Yapılan ders</th><td>${yap.length}</td><th>İmzalı</th><td>${imz} (%${Math.round(imz / Math.max(1, yap.length) * 100)})</td></tr></table>
+      <p><b>4. Araçlar</b></p><table><tr><th>Plaka</th><th>Model</th><th>Muayene</th><th>Sigorta</th><th>Kasko</th></tr>${S.araclar.map(a => `<tr><td>${a.plaka}</td><td>${e(a.model)}</td><td>${tarih(a.muayene)}</td><td>${tarih(a.sigorta)}</td><td>${a.kasko ? tarih(a.kasko) : '—'}</td></tr>`).join('')}</table>
+      <p><b>5. Usta öğreticiler</b></p><table><tr><th>Ad</th>${Object.values(BG).map(x => `<th>${x}</th>`).join('')}</tr>${S.egitmenler.map(x => `<tr><td>${e(x.ad)}</td>${Object.keys(BG).map(b => `<td>${tarih((x.belgeler || {})[b])}${(x.belgeler || {})[b] < gun(0) ? ' (DOLMUŞ)' : ''}</td>`).join('')}</tr>`).join('')}</table>
+      <div class="imza"><div>Hazırlayan</div><div>Kurs müdürü</div></div>`;
+  }
   if (tur === 'program') {
     const eg = egitmen(id), gunler = []; for (let n = 0; n < 7; n++) gunler.push(gun(n));
     return kursBas('Haftalık direksiyon programı') + `<p><b>Usta öğretici:</b> ${e(eg.ad)} &nbsp; <b>Araç:</b> ${e((S.araclar.find(a => a.egitmen === eg.id) || {}).plaka || '—')}</p><table><tr><th>Gün</th><th>Saat</th><th>Kursiyer</th><th>Telefon</th></tr>${gunler.flatMap(g => S.dersler.filter(d => d.egitmen === eg.id && d.tarih === g).sort((a, b) => a.saat.localeCompare(b.saat)).map(d => `<tr><td>${tarihUzun(g)}</td><td>${d.saat}</td><td>${e(tamAd(kursiyer(d.kursiyer)))}</td><td>${e(kursiyer(d.kursiyer).tel)}</td></tr>`)).join('') || '<tr><td colspan="4">Bu hafta ders yok.</td></tr>'}</table>`;
@@ -31,13 +45,14 @@ function belgeHtml(tur, id) {
     <div class="imza"><div>Kursiyer · ${e(tamAd(k))}</div><div>Kurs müdürü · ${e(S.kurs.ad)}</div></div>`;
   if (tur === 'bilgi') return kursBas('Kursiyer bilgi formu') + `<table><tr><th>Ad soyad</th><td>${e(tamAd(k))}</td></tr><tr><th>Telefon</th><td>${e(k.tel)}</td></tr><tr><th>Doğum yılı</th><td>${e(k.dogum)}</td></tr><tr><th>Sınıf</th><td>${S0.ad}</td></tr><tr><th>Usta öğretici</th><td>${e(egitmen(k.egitmen).ad)}</td></tr><tr><th>Acil durum kişisi</th><td>${e(k.acil ? k.acil.ad + ' (' + k.acil.yakinlik + ') ' + k.acil.tel : '—')}</td></tr><tr><th>Nereden duydu</th><td>${e(k.kaynak)}</td></tr></table>
     <p><b>Evrak durumu</b></p><table>${EVRAKLAR.map(([key, t]) => `<tr><td>${t}</td><td>${k.evrak[key] ? 'Teslim alındı' : 'Eksik'}</td></tr>`).join('')}</table><div class="imza"><div>Kursiyer</div><div>Teslim alan</div></div>`;
-  if (tur === 'takip') { const d = S.dersler.filter(x => x.kursiyer === k.id && x.durum === 'Yapıldı').sort((a, b) => a.tarih.localeCompare(b.tarih)); return kursBas('Direksiyon eğitimi takip formu') + `<p><b>Kursiyer:</b> ${e(tamAd(k))} &nbsp; <b>Sınıf:</b> ${S0.ad}</p><table><tr><th>#</th><th>Tarih</th><th>Saat</th><th>Usta öğretici</th><th>Araç</th><th>Kursiyer imza</th></tr>${Array.from({ length: S0.direksiyon }, (_, i) => d[i] ? `<tr><td>${i + 1}</td><td>${tarih(d[i].tarih)}</td><td>${d[i].saat}</td><td>${e(egitmen(d[i].egitmen).ad)}</td><td>${d[i].arac ? arac(d[i].arac).plaka : ''}</td><td></td></tr>` : `<tr><td>${i + 1}</td><td></td><td></td><td></td><td></td><td></td></tr>`).join('')}</table>`; }
+  if (tur === 'takip') { const d = S.dersler.filter(x => x.kursiyer === k.id && x.durum === 'Yapıldı').sort((a, b) => a.tarih.localeCompare(b.tarih)); return kursBas('Direksiyon eğitimi takip formu') + `<p><b>Kursiyer:</b> ${e(tamAd(k))} &nbsp; <b>Sınıf:</b> ${S0.ad}</p><table><tr><th>#</th><th>Tarih</th><th>Saat</th><th>Usta öğretici</th><th>Araç</th><th>Kursiyer imza</th><th>Usta öğr. imza</th></tr>${Array.from({ length: Math.max(S0.direksiyon, d.length) }, (_, i) => d[i] ? `<tr><td>${i + 1}</td><td>${tarih(d[i].tarih)}</td><td>${d[i].saat}</td><td>${e(egitmen(d[i].egitmen).ad)}</td><td>${d[i].arac ? arac(d[i].arac).plaka : ''}</td>${imzaHucre(d[i], 'kursiyer')}${imzaHucre(d[i], 'usta')}</tr>` : `<tr><td>${i + 1}</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`).join('')}</table><p style="font-size:11.5px;color:#555">Dijital imzalar ders sonunda usta öğreticinin telefonunda alınmış, zaman damgasıyla saklanmıştır.</p>`; }
   if (tur === 'makbuz') { const h = S.hareket.filter(x => x.kursiyer === k.id).sort((a, b) => b.tarih.localeCompare(a.tarih))[0]; return kursBas('Tahsilat makbuzu') + `<table><tr><th>Makbuz no</th><td>${(h ? h.id : '').replace('h', 'M-')}</td><th>Tarih</th><td>${h ? tarih(h.tarih) : ''}</td></tr><tr><th>Ödeyen</th><td>${e(tamAd(k))}</td><th>Yöntem</th><td>${h ? e(h.yontem) : ''}</td></tr><tr><th>Açıklama</th><td colspan="3">${h ? e(h.aciklama) : ''}</td></tr><tr><th>Tutar</th><td colspan="3"><b>${h ? tl(h.tutar) : ''}</b></td></tr><tr><th>Kalan borç</th><td colspan="3">${tl(kalanBorc(k))}</td></tr></table><div class="imza"><div>Teslim eden</div><div>Teslim alan</div></div>`; }
   if (tur === 'senet') { const t = k.odeme.taksitler.find(x => !x.odendi) || k.odeme.taksitler[0]; return kursBas('Senet') + `<table><tr><th>Ödeme günü</th><td>${t ? tarih(t.vade) : ''}</td><th>Tutar</th><td><b>${t ? tl(t.tutar) : ''}</b></td></tr></table><p>İşbu senet mukabilinde ${t ? tarih(t.vade) : ''} tarihinde ${e(S.kurs.ad)}’na yukarıda yazılı tutarı ödeyeceğim. Bedeli eğitim hizmeti olarak alınmıştır.</p><table><tr><th>Borçlu</th><td>${e(tamAd(k))}</td></tr><tr><th>Telefon</th><td>${e(k.tel)}</td></tr><tr><th>Kefil</th><td>${e(k.acil ? k.acil.ad : '')}</td></tr></table><p style="color:#666;font-size:11.5px">Örnek şablon; kurs kendi senet formunu kullanabilir.</p><div class="imza"><div>Borçlu</div><div>Kefil</div></div>`; }
   return '';
 }
 export function belgeAc(tur, id) {
   const s = SABLONLAR.find(x => x[0] === tur);
+  if (s[3] === 'tek') { pencere({ baslik: s[1], genis: true, icerik: `<div style="background:var(--zemin);padding:18px;border-radius:8px;max-height:66vh;overflow:auto"><div class="a4" id="a4">${belgeHtml(tur)}</div></div>`, altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-yazdir>${ik('belge')}Yazdır / PDF</button>`, onAc(d) { d.querySelector('[data-yazdir]').addEventListener('click', () => window.print()); islem('Denetim dosyası oluşturdu'); kaydet(); } }); return; }
   const secici = s[3] === 'kursiyer' ? S.kursiyerler.filter(k => tur !== 'takip' || k.direksiyon > 0) : s[3] === 'senet' ? S.kursiyerler.filter(k => k.odeme.senetli) : s[3] === 'egitmen' ? S.egitmenler : S.sinavlar;
   const ad = x => x.tur ? x.tur + ' · ' + tarih(x.tarih) : x.soyad ? tamAd(x) : x.ad;
   if (!id) id = secici[0].id;
@@ -78,6 +93,7 @@ export function kayitSayfasi() {
     ${EVRAKLAR.filter(([k]) => k !== 'sozlesme').map(([k, t]) => `<label class="yukle" style="margin-bottom:8px;position:relative">${kayit.evrak[k] ? `<img src="${kayit.evrak[k]}" alt="">` : isaret('bilgi', 26)}<span style="flex:1"><b style="display:block;color:var(--murekkep)">${t}</b><small style="color:var(--soluk)">${kayit.evrak[k] ? 'Yüklendi' : 'Fotoğraf çek ya da seç'}</small></span>${kayit.evrak[k] ? isaret('tamam', 22) : ''}<input type="file" accept="image/*" capture="environment" data-evrak="${k}"></label>`).join('')}`;
   if (kayit.adim === 3) { const v = SINIFLAR[kayit.sinif], p = 8000, n = 4; govde = `<h2 style="font-size:26px;margin-bottom:14px">Son adım</h2>
     <div class="kart" style="padding:14px 16px;margin-bottom:12px"><div style="display:flex;justify-content:space-between"><b style="color:var(--murekkep)">${v.ad}</b><b class="sayi" style="color:var(--murekkep)">${tl(v.ucret)}</b></div><p style="font-size:14px;margin-top:4px">Bugün ${tl(p)} peşinat, sonra ${n} × ${tl((v.ucret - p) / n)}</p></div>
+    <label style="display:flex;gap:10px;align-items:flex-start;font-size:14px;margin-bottom:12px"><input type="checkbox" data-kvkk ${kayit.kvkk ? 'checked' : ''} style="width:18px;height:18px;margin-top:2px"><span>Aydınlatma metnini okudum; sağlık raporu ve adli sicil bilgilerimin MEB kaydı için işlenmesine açık rıza veriyorum. <a href="#" data-aydinlatma-oku style="color:var(--levha);font-weight:700">Metni oku</a></span></label>
     <p class="et" style="margin-bottom:6px">Sözleşmeyi parmağınla imzala</p><canvas class="imza-alan" width="900" height="300" aria-label="İmza alanı"></canvas><button class="dg dg-hafif dg-kucuk" data-temizle type="button">Temizle</button>
     <div class="form-izgara" style="margin-top:12px"><div class="alan tam"><label>Kart numarası</label><input value="4111 1111 1111 1111" inputmode="numeric"></div><div class="alan"><label>Son kullanma</label><input value="12/30"></div><div class="alan"><label>CVC</label><input value="000"></div></div>
     <div class="ipucu uyari" style="margin-top:12px">${isaret('uyari', 20)}<span>Demo: test kartı dolu gelir, ödeme alınmaz. Canlıda kursun sanal POS’u ile 3D Secure çalışır.</span></div>`; }
@@ -109,18 +125,20 @@ export function kayitSayfasi() {
       }
       k.addEventListener('click', ev => {
         const t = ev.target;
+        if (t.closest('[data-aydinlatma-oku]')) { ev.preventDefault(); pencere({ baslik: 'KVKK aydınlatma metni', icerik: `<p>${e(S.kurs.aydinlatma || S.kurs.ad + ' olarak kişisel verilerinizi sürücü kursu eğitimi ve MEB mevzuatı gereği MEBBİS kaydı amacıyla işliyoruz. Verileriniz yalnızca yetkili kurumlarla paylaşılır, mevzuattaki süre boyunca saklanır.')}</p>` }); }
         if (t.closest('[data-temizle]')) { cv.getContext('2d').clearRect(0, 0, cv.width, cv.height); kayit.imza = false; }
         if (t.closest('[data-geri]')) { kayit.adim--; yenile(true); }
         if (t.closest('[data-bastan]')) { kayit = { adim: 0, sinif: 'B', bilgi: {}, evrak: {}, imza: false }; yenile(true); }
         if (t.closest('[data-ileri]')) {
-          if (kayit.adim === 1) { const f = k.querySelector('#f-k1'); const b = Object.fromEntries(new FormData(f)); if (!b.ad.trim() || !b.soyad.trim() || b.tel.replace(/\D/g, '').length < 10) return bildir('Ad, soyad ve geçerli telefon gerekli', 'uyari'); if (!tcGecerli(b.tc.trim())) return bildir('TC kimlik numarası geçerli değil', 'uyari'); kayit.bilgi = b; }
+          if (kayit.adim === 1) { const f = k.querySelector('#f-k1'); const b = Object.fromEntries(new FormData(f)); if (!b.ad.trim() || !b.soyad.trim() || b.tel.replace(/\D/g, '').length < 10) return bildir('Ad, soyad ve geçerli telefon gerekli', 'uyari'); if (!tcGecerli(b.tc.trim())) return bildir('TC kimlik numarası geçerli değil', 'uyari'); const y = yas(b.dogumTarihi); if (!b.dogumTarihi) return bildir('Doğum tarihini girin', 'uyari'); if (y < S.kurs.asgariYas) return bildir(`Ehliyet için en az ${S.kurs.asgariYas} yaşında olmalısın`, 'uyari'); kayit.bilgi = b; }
           if (kayit.adim === 3) {
+            if (!k.querySelector('[data-kvkk]').checked) return bildir('Devam etmek için KVKK onayı gerekli', 'uyari');
             if (!kayit.imza) return bildir('Sözleşmeyi imzalayın', 'uyari');
             const v = SINIFLAR[kayit.sinif], p = 8000, n = 4, taksitler = [];
             for (let i = 0; i < n; i++) { const d = new Date(BUGUN); d.setMonth(d.getMonth() + i + 1); taksitler.push({ vade: iso(d), tutar: Math.round((v.ucret - p) / n / 50) * 50, odendi: null, yontem: null }); }
             const ev2 = {}; EVRAKLAR.forEach(([x]) => ev2[x] = x === 'sozlesme' ? true : !!kayit.evrak[x]);
             const eg = S.egitmenler.find(x => x.siniflar.includes(kayit.sinif));
-            const yeni = { id: 'k' + Date.now(), ad: kayit.bilgi.ad.trim(), soyad: kayit.bilgi.soyad.trim(), tel: kayit.bilgi.tel, tc: kayit.bilgi.tc.trim(), dogumTarihi: kayit.bilgi.dogumTarihi || '', adres: kayit.bilgi.adres || '', ogrenim: '', dogum: (kayit.bilgi.dogumTarihi || '').slice(0, 4), teorikGrup: 'aksam', evrakFoto: Object.fromEntries(Object.entries(kayit.evrak)), sinif: kayit.sinif, kayit: gun(0), egitmen: eg.id, asama: Object.values(ev2).every(Boolean) ? 'Teorik' : 'Evrak', teorik: 0, direksiyon: 0, evrak: ev2, mebIslendi: false, esinav: null, dsinav: null, odeme: { toplam: v.ucret, pesin: p, pesinTarih: gun(0), taksitler, senetli: false }, kaynak: 'Web sitesi', yorum: null, notlar: [{ tarih: gun(0), metin: 'Evden kayıt sayfasından kaydoldu, sözleşmeyi telefondan imzaladı.' }], deneme: [], acil: { ad: kayit.bilgi.acil || '', yakinlik: '', tel: kayit.bilgi.acilTel || '' } };
+            const yeni = { id: 'k' + Date.now(), ad: kayit.bilgi.ad.trim(), soyad: kayit.bilgi.soyad.trim(), tel: kayit.bilgi.tel, tc: kayit.bilgi.tc.trim(), dogumTarihi: kayit.bilgi.dogumTarihi || '', adres: kayit.bilgi.adres || '', ogrenim: '', dogum: (kayit.bilgi.dogumTarihi || '').slice(0, 4), teorikGrup: 'aksam', kvkk: { tarih: gun(0), kanal: 'Online kayıt', riza: true }, evrakFoto: Object.fromEntries(Object.entries(kayit.evrak)), sinif: kayit.sinif, kayit: gun(0), egitmen: eg.id, asama: Object.values(ev2).every(Boolean) ? 'Teorik' : 'Evrak', teorik: 0, direksiyon: 0, evrak: ev2, mebIslendi: false, esinav: null, dsinav: null, odeme: { toplam: v.ucret, pesin: p, pesinTarih: gun(0), taksitler, senetli: false }, kaynak: 'Web sitesi', yorum: null, notlar: [{ tarih: gun(0), metin: 'Evden kayıt sayfasından kaydoldu, sözleşmeyi telefondan imzaladı.' }], deneme: [], acil: { ad: kayit.bilgi.acil || '', yakinlik: '', tel: kayit.bilgi.acilTel || '' } };
             S.kursiyerler.unshift(yeni);
             S.hareket.unshift({ id: 'h' + Date.now(), tarih: gun(0), tur: 'Gelir', kategori: 'Kurs ücreti', aciklama: tamAd(yeni) + ' · online peşinat', tutar: p, yontem: 'Kart', kursiyer: yeni.id });
             gonderimEkle(tamAd(yeni), 'Hoş geldin, ders programı ve ödeme planı', 'Otomatik');
@@ -245,4 +263,21 @@ export function guven() {
       });
     },
   };
+}
+
+// Denetimde sorun çıkarabilecek eksikler: [işaret, başlık, ayrıntı, bağlantı]
+export function denetimEksikleri() {
+  const l = [];
+  const BG = { sertifika: 'usta öğretici sertifikası', saglik: 'sağlık raporu', adli: 'adli sicil kaydı' };
+  S.egitmenler.forEach(x => Object.entries(x.belgeler || {}).forEach(([b, t]) => { const f = fark(t); if (f < 0) l.push(['dur', `${x.ad} · ${BG[b]} süresi dolmuş`, 'Bu usta öğreticiyle ders ve sınav yapılamaz.', '#/filo']); else if (f <= 30) l.push(['uyari', `${x.ad} · ${BG[b]} ${f} gün içinde bitiyor`, 'Yenileme için hatırlatıldı.', '#/filo']); }));
+  S.araclar.forEach(a => [['muayene', a.muayene], ['sigorta', a.sigorta], ['kasko', a.kasko]].forEach(([b, t]) => { if (!t) return; const f = fark(t); if (f < 0) l.push(['dur', `${a.plaka} · ${b} süresi dolmuş`, a.model, '#/filo']); else if (f <= 30) l.push(['uyari', `${a.plaka} · ${b} ${f} gün içinde bitiyor`, a.model, '#/filo']); }));
+  const imzasiz = S.dersler.filter(d => d.durum === 'Yapıldı' && !d.imza);
+  if (imzasiz.length) l.push(['yasak', `${imzasiz.length} direksiyon dersi imzasız`, 'Takip formunda imza eksik; usta öğretici ekranından imzalatın.', '#/plan']);
+  const evr = S.kursiyerler.filter(k => k.asama !== 'Ehliyet' && eksikEvrak(k).length);
+  if (evr.length) l.push(['yasak', `${evr.length} kursiyerin evrakı eksik`, evr.slice(0, 4).map(tamAd).join(', ') + (evr.length > 4 ? '…' : ''), '#/meb/evrak']);
+  const riza = S.kursiyerler.filter(k => !(k.kvkk && k.kvkk.riza));
+  if (riza.length) l.push(['yasak', `${riza.length} kursiyerde KVKK rızası yok`, 'Özel nitelikli veri rızasız işlenemez.', '#/ayarlar/kvkk']);
+  const meb = S.kursiyerler.filter(k => !k.mebIslendi && k.asama !== 'Kayıt' && k.asama !== 'Evrak');
+  if (meb.length) l.push(['uyari', `${meb.length} kursiyer derste ama MEBBİS kaydı işaretlenmemiş`, meb.slice(0, 4).map(tamAd).join(', '), '#/meb']);
+  return l;
 }

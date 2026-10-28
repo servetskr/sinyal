@@ -198,3 +198,14 @@ export function fotoKucult(dosya, max = 640) {
     r.readAsDataURL(dosya);
   });
 }
+
+// Parmakla imza alanı: { bos(), url(), temizle() }
+export function imzaAlani(cv) {
+  const c = cv.getContext('2d'); c.lineWidth = 4; c.lineCap = 'round'; c.lineJoin = 'round'; c.strokeStyle = '#111';
+  let ciz = false, bos = true;
+  const n = ev => { const r = cv.getBoundingClientRect(); return [(ev.clientX - r.left) * cv.width / r.width, (ev.clientY - r.top) * cv.height / r.height]; };
+  cv.addEventListener('pointerdown', ev => { ciz = true; c.beginPath(); c.moveTo(...n(ev)); try { cv.setPointerCapture(ev.pointerId); } catch (x) { } });
+  cv.addEventListener('pointermove', ev => { if (!ciz) return; c.lineTo(...n(ev)); c.stroke(); bos = false; });
+  cv.addEventListener('pointerup', () => ciz = false);
+  return { bos: () => bos, url: () => { const k = document.createElement('canvas'); k.width = 300; k.height = 100; k.getContext('2d').drawImage(cv, 0, 0, 300, 100); return k.toDataURL('image/png'); }, temizle: () => { c.clearRect(0, 0, cv.width, cv.height); bos = true; } };
+}
