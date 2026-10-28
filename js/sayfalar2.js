@@ -219,7 +219,8 @@ export function filo() {
 }
 
 /* ================= MESAJLAR VE ASİSTAN ================= */
-export function mesajlar() {
+export function mesajlar(alt) {
+  if (alt && ['gelen', 'oto', 'bilgi', 'toplu', 'yorum'].includes(alt)) durum.mesaj = alt;
   const sohbetler = S.adaylar.filter(a => a.asama !== 'Kaybedildi');
   if (!secSohbet || !sohbetler.find(a => a.id === secSohbet)) secSohbet = sohbetler[0] && sohbetler[0].id;
   const sec = sohbetler.find(a => a.id === secSohbet);

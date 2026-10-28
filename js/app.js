@@ -4,6 +4,7 @@ import * as Y1 from './sayfalar1.js';
 import * as Y2 from './sayfalar2.js';
 import * as P from './portal.js';
 import * as Y3 from './sayfalar3.js';
+import * as Y4 from './sayfalar4.js';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -11,13 +12,14 @@ const SAYFALAR = {
   mesajlar: Y2.mesajlar, meb: Y2.meb, raporlar: Y2.raporlar, ayarlar: Y2.ayarlar,
   egitmen: P.egitmenPortal, ogrenci: P.ogrenciPortal,
   belgeler: Y3.belgeler, kayit: Y3.kayitSayfasi, guven: Y3.guven, mebbis: Y3.mebbisAsistani,
+  sosyal: Y4.sosyal,
 };
 const ROL_AD = { mudur: 'Kurs müdürü', sekreter: 'Ön büro', usta: 'Usta öğretici' };
 const YASAK = { mudur: [], sekreter: ['raporlar', 'ayarlar', 'guven'], usta: Object.keys(SAYFALAR).filter(k => k !== 'egitmen') };
 const izinli = ad => { const u = oturum.kullanici; return u && !YASAK[u.rol].includes(ad); };
 
 const MENU = [
-  ['Bugün', [['genel', 'Genel bakış', '↑'], ['adaylar', 'Yeni öğrenciler', '↗'], ['mesajlar', 'Mesajlar', '↗']]],
+  ['Bugün', [['genel', 'Genel bakış', '↑'], ['adaylar', 'Yeni öğrenciler', '↗'], ['mesajlar', 'Mesajlar', '↗'], ['sosyal', 'Sosyal medya asistanı', '↗']]],
   ['Eğitim', [['kursiyerler', 'Kursiyerler', '→'], ['plan', 'Direksiyon planı', '→'], ['teorik', 'Teorik dersler', '→'], ['sinavlar', 'Sınavlar', '→']]],
   ['İşletme', [['kasa', 'Kasa ve ödemeler', '→'], ['filo', 'Ekip ve araçlar', '→'], ['meb', 'MEB işlemleri', '→'], ['belgeler', 'Belgeler ve çıktılar', '→'], ['raporlar', 'Raporlar', '→']]],
   ['Kurs', [['kayit', 'Evden kayıt sayfası', '↗'], ['ogrenci', 'Kursiyer ekranı', '↗'], ['guven', 'Paket ve güvence', '→'], ['ayarlar', 'Ayarlar', '→']]],
@@ -31,6 +33,7 @@ function sayaclar() {
     adaylar: [S.adaylar.filter(a => a.asama === 'Yeni').length, false],
     kasa: [S.kursiyerler.filter(k => gecikenler(k).length).length, false],
     meb: [S.kursiyerler.filter(k => !k.mebIslendi && !eksikEvrak(k).length).length, true],
+    sosyal: [S.sosyal.yorumlar.filter(y => y.durum === 'devir').length + S.devredilen.length, false],
   };
 }
 

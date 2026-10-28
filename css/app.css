@@ -563,3 +563,15 @@ body.portal-modu:not(.usta-modu) .portal-geri{display:inline-flex}
   body.rapor-yazdir .uyg{display:block}
   body.rapor-yazdir .kart,body.rapor-yazdir .izgara:has(>.gosterge){break-inside:avoid}
 }
+
+/* sosyal medya asistanı */
+.dene-sohbet{grid-template-columns:260px 1fr}
+.dene-yan{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.gonderi-kart{display:grid;grid-template-columns:minmax(0,180px) 1fr;overflow:hidden;margin-bottom:14px}
+@media (max-width:900px){
+  .dene-sohbet{grid-template-columns:1fr}
+  .dene-yan{max-height:none;flex-direction:row;flex-wrap:wrap;align-items:flex-start}
+  .dene-yan>b{width:100%}
+  .gonderi-kart{grid-template-columns:88px 1fr}
+  .gonderi-kart .liste>li{padding:10px 12px}
+}

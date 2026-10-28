@@ -1,5 +1,5 @@
 // Sinyal demo verisi: tarihler bugüne göre üretilir, tarayıcıda saklanır.
-const ANAHTAR = 'sinyal-demo-v13';
+const ANAHTAR = 'sinyal-demo-v14';
 
 export const BUGUN = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })();
 export const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -289,7 +289,35 @@ function uret() {
     { ad: 'Seda Bal', kanal: 'Instagram', konu: 'Özel durum', mesaj: 'Sol ayağımda protez var, otomatik araçla ehliyet alabilir miyim?', neden: 'Sağlık durumu: insana devredildi', saat: '09:40' },
   ];
 
+  // Sosyal medya asistanı (DengChat modülü)
+  const sosyal = {
+    kanallar: [
+      { id: 'igm', ad: 'Instagram mesajları', hesap: '@ornekmtsk', bagli: true, cevap: true, mod: '7/24', son: '08:12' },
+      { id: 'igy', ad: 'Instagram yorumları', hesap: '@ornekmtsk', bagli: true, cevap: true, mod: '7/24', son: '07:58' },
+      { id: 'wp', ad: 'WhatsApp Business', hesap: '0222 000 00 00', bagli: true, cevap: true, mod: 'Mesai dışı', son: '08:12' },
+      { id: 'fb', ad: 'Facebook Messenger', hesap: 'Örnek Sürücü Kursu', bagli: false, cevap: false, mod: '7/24', son: null },
+    ],
+    ayar: { ad: 'Kurs asistanı', ton: 'Samimi', emoji: false, susma: 24, devir: { indirim: true, sikayet: true, saglik: true, insan: true, bilinmeyen: true } },
+    ay: { mesaj: 1284, kisi: 412, otomatik: 92, sure: 3, mesaiDisi: 41, aday: 86, gorusme: 31, kayit: 14, devir: 9 },
+    saatlik: [9, 4, 2, 1, 1, 2, 6, 14, 31, 42, 47, 45, 52, 49, 44, 47, 55, 63, 74, 88, 104, 112, 96, 41],
+    kanalDagilim: { igm: 46, igy: 18, wp: 36, fb: 0 },
+    gonderiler: [
+      { id: 'g1', gorsel: 'img/kayit.webp', metin: 'Kasım grubu kayıtları başladı. Teorik dersler 18:30’da.', begeni: 214, gun: -2 },
+      { id: 'g2', gorsel: 'img/arac-a2.webp', metin: 'Otomatik vitesli yeni aracımız filoya katıldı.', begeni: 158, gun: -5 },
+      { id: 'g3', gorsel: 'img/arac-a4.webp', metin: 'Bu hafta 9 kursiyerimiz direksiyon sınavını geçti. Tebrikler!', begeni: 302, gun: -8 },
+    ],
+    yorumlar: [
+      { id: 'y1', gonderi: 'g1', kim: '@elif.krk', metin: 'Fiyat ne kadar?', saat: '07:58', gun: 0, durum: 'dm', cevap: 'Merhaba, ücret bilgisini özelden yazdım.' },
+      { id: 'y2', gonderi: 'g1', kim: '@mert_yz', metin: 'Akşam kursu var mı, gündüz çalışıyorum', saat: '23:14', gun: -1, durum: 'acik', cevap: 'Var, teorik dersler hafta içi 18:30’da. Direksiyonu da size uygun saate planlıyoruz.' },
+      { id: 'y3', gonderi: 'g2', kim: '@ayse.dmr', metin: 'Ben de buradan aldım, hocalar çok ilgili 👏', saat: '20:41', gun: -2, durum: 'acik', cevap: 'Teşekkür ederiz Ayşe Hanım, yolunuz açık olsun!' },
+      { id: 'y4', gonderi: 'g2', kim: '@hakan_44', metin: 'Sınav günü araç gelmedi, rezalet', saat: '22:05', gun: -2, durum: 'devir', cevap: null },
+      { id: 'y5', gonderi: 'g3', kim: '@takipci.al.ucuz', metin: 'Takipçi almak için profilime bak', saat: '03:12', gun: -3, durum: 'gizli', cevap: null },
+      { id: 'y6', gonderi: 'g3', kim: '@zeynep.oz', metin: 'Otomatik ile kaç ayda bitiyor?', saat: '21:37', gun: -3, durum: 'dm', cevap: 'Detayları özelden yazdım.' },
+    ],
+  };
+
   return {
+    sosyal,
     personel, izinler, bekleme, hesaplar, kazanim, gruplar, arsiv, mevzuat, ogretmenler, kullanicilar, islemler, asistanBilgi, devredilen, sms: { bakiye: 1840, kanal: 'WhatsApp' }, gunSonu: [],
     kurs: { ad: 'Örnek Sürücü Kursu', sehir: 'Eskişehir', tel: '0222 000 00 00', adres: 'Odunpazarı / Eskişehir', yetkili: 'Kurs Müdürü', puan: 4.9, yorumSayisi: 286, gunlukDersSiniri: 2, egitmenGunlukSinir: 8, ekDersUcreti: 900, devamsizlikSiniri: 4, programOnGun: 5, sinavBildirimIsGunu: 4, geceDersi: 2, tekrarBekleme: 15, asgariYas: 18, saklamaYil: 10 },
     egitmenler, araclar, kursiyerler, dersler, teorik, sinavlar, hareket, adaylar, otomasyonlar, duyurular,

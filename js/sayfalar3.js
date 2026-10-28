@@ -227,7 +227,7 @@ export function guven() {
   const paketler = [
     ['Kurs', '1.490', ['Kursiyer, evrak, ödeme ve senet takibi', 'Direksiyon ve teorik program, yoklama', 'MEBBİS giriş asistanı ve kural kontrolü', 'Belge çıktıları, kasa, raporlar', '3 kullanıcı']],
     ['Kurs + WhatsApp', '2.490', ['Kurs paketindeki her şey', 'Ders, taksit, sınav hatırlatmaları (ayda 2.000 mesaj dahil)', 'Evden kayıt sayfası ve kartla ödeme linki', 'Usta öğretici ve kursiyer ekranları', 'Sınırsız kullanıcı'], true],
-    ['Kurs + Asistan', '3.990', ['WhatsApp paketindeki her şey', '7/24 cevap veren asistan (WhatsApp ve Instagram)', 'Boşalan saati doldurma, sınav riski ve ek ders', 'Google yorum toplama']],
+    ['Kurs + Asistan', '3.990', ['WhatsApp paketindeki her şey', 'Sosyal medya asistanı: Instagram mesajları ve yorumları, WhatsApp, Facebook’a 7/24 cevap', 'Boşalan saati doldurma, sınav riski ve ek ders', 'Google yorum toplama']],
   ];
   return {
     baslik: 'Paket ve güvence', alt: 'Fiyat, veri sahipliği, kurulum ve destek',
