@@ -128,15 +128,16 @@ export function pencere({ baslik, icerik, altlik = '', genis = false, onAc }) {
 export function kapatPencere() { if (acikPencere) { acikPencere.remove(); acikPencere = null; document.body.classList.remove('kilitli'); } }
 document.addEventListener('keydown', ev => { if (ev.key === 'Escape') kapatPencere(); });
 
-export function bildir(metin, tur = 'tamam') {
+export function bildir(metin, tur = 'tamam', geriAlinir = false) {
   let k = document.querySelector('.bildirimler');
   if (!k) { k = document.createElement('div'); k.className = 'bildirimler'; k.setAttribute('aria-live', 'polite'); document.body.appendChild(k); }
   const b = document.createElement('div');
   b.className = 'bildirim bildirim-' + tur;
-  b.innerHTML = ik(tur === 'tamam' ? 'tik' : tur === 'wp' ? 'wp' : 'uyari') + '<span>' + e(metin) + '</span>';
+  b.innerHTML = ik(tur === 'tamam' ? 'tik' : tur === 'wp' ? 'wp' : 'uyari') + '<span>' + e(metin) + '</span>' + (geriAlinir ? '<button class="bildirim-geri" data-geri-al>Geri al</button>' : '');
   k.appendChild(b);
-  setTimeout(() => b.classList.add('git'), 3200);
-  setTimeout(() => b.remove(), 3700);
+  const sure = geriAlinir ? 6500 : 3200;
+  setTimeout(() => b.classList.add('git'), sure);
+  setTimeout(() => b.remove(), sure + 500);
 }
 
 export function sekmeler(liste, secili, ad = 'sekme') {
@@ -187,3 +188,13 @@ export function aracGorsel(a, cls = '') {
 
 // Ekran başı: bu ekran ne işe yarar, tek cümle.
 export function ekranNotu(metin, tur = 'bilgi') { return `<p class="ekran-notu">${isaret(tur, 20)}<span>${metin}</span></p>`; }
+
+// Fotoğrafı küçült (tarayıcıda saklamak için ~600px JPEG)
+export function fotoKucult(dosya, max = 640) {
+  return new Promise((coz, red) => {
+    const r = new FileReader();
+    r.onerror = red;
+    r.onload = () => { const im = new Image(); im.onload = () => { const o = Math.min(1, max / Math.max(im.width, im.height)); const c = document.createElement('canvas'); c.width = Math.round(im.width * o); c.height = Math.round(im.height * o); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); coz(c.toDataURL('image/jpeg', 0.72)); }; im.onerror = red; im.src = r.result; };
+    r.readAsDataURL(dosya);
+  });
+}

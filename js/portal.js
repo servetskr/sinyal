@@ -1,4 +1,4 @@
-import { S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle } from './veri.js';
+import { oturum, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle } from './veri.js';
 import { e, tl, ik, rozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret } from './ui.js';
 import { yenile } from './app.js';
 
@@ -10,6 +10,8 @@ const sekmeCubugu = (liste, secili, ad) => `<nav class="portal-sekme" aria-label
 
 /* ================= EĞİTMEN ================= */
 export function egitmenPortal() {
+  const usta = oturum.kullanici && oturum.kullanici.rol === 'usta';
+  if (usta) egId = oturum.kullanici.usta;
   const eg = egitmen(egId);
   const bugun = S.dersler.filter(d => d.egitmen === eg.id && d.tarih === gun(0)).sort((a, b) => a.saat.localeCompare(b.saat));
   const ar = S.araclar.find(a => a.egitmen === eg.id);
@@ -31,10 +33,10 @@ export function egitmenPortal() {
     govde = `<div class="kart"><ul class="liste">${ks.map(k => { const sd = sonrakiDers(k); return `<li><div class="kisi" style="flex:1">${avatar(k.ad, k.soyad)}<div><b>${e(tamAd(k))}</b><small>${k.direksiyon}/${SINIFLAR[k.sinif].direksiyon} ders${sd ? ' · sonraki ' + goreli(sd.tarih) : ''}</small></div></div><span class="sag" style="width:70px">${ilerleme(k.direksiyon, SINIFLAR[k.sinif].direksiyon, 'yesil')}</span></li>`; }).join('') || '<li>' + bos('Aktif kursiyer yok', '') + '</li>'}</ul></div>`;
   }
   return {
-    baslik: 'Eğitmen ekranı', alt: 'Telefondan kullanılan ekran',
+    baslik: 'Usta öğretici ekranı', alt: 'Telefondan kullanılan ekran',
     html: `<div class="portal">
       <div class="portal-bas">${avatar(...eg.ad.split(' '), eg.renk + '22')}<div><small>Merhaba,</small><h2>${e(eg.ad.split(' ')[0])} Hoca</h2></div>
-        <select class="girdi" style="margin-left:auto;width:auto;height:34px;font-size:12.5px" data-eg aria-label="Eğitmen seç">${S.egitmenler.map(x => `<option value="${x.id}" ${x.id === eg.id ? 'selected' : ''}>${e(x.ad)}</option>`).join('')}</select></div>
+        <select class="girdi" style="margin-left:auto;width:auto;height:34px;font-size:12.5px${usta ? ';display:none' : ''}" data-eg aria-label="Usta öğretici seç">${S.egitmenler.map(x => `<option value="${x.id}" ${x.id === eg.id ? 'selected' : ''}>${e(x.ad)}</option>`).join('')}</select></div>
       ${govde}
       ${sekmeCubugu([['bugun', 'Bugün', 'direksiyon'], ['hafta', 'Haftam', 'takvim'], ['kursiyer', 'Kursiyerlerim', 'kursiyer']], egSekme, 'egs')}
     </div>`,
@@ -52,13 +54,30 @@ export function egitmenPortal() {
 }
 
 /* ================= KURSİYER ================= */
-const SORULAR = [
+const HAVUZ = [
   ['Kırmızı ışık yanan bir trafik ışığında sürücü ne yapmalıdır?', ['Yavaşlayıp dikkatlice geçmelidir', 'Durmalıdır', 'Korna çalarak geçmelidir', 'Sağa dönebilir'], 1],
   ['Yerleşim yeri içinde, aksine bir işaret yoksa otomobiller için azami hız kaç km/saattir?', ['30', '50', '70', '90'], 1],
   ['Islak ve kaygan yolda takip mesafesi nasıl ayarlanmalıdır?', ['Kısaltılmalıdır', 'Değiştirilmemelidir', 'Artırılmalıdır', 'Önemi yoktur'], 2],
   ['Motor yağı seviyesi hangisiyle kontrol edilir?', ['Yağ çubuğu', 'Hararet göstergesi', 'Yakıt göstergesi', 'Takometre'], 0],
   ['İlk yardımın ABC’sinde “A” neyi ifade eder?', ['Kanamanın durdurulması', 'Hava yolunun açılması', 'Kalp masajı', 'Yaralının taşınması'], 1],
+  ['Yaya geçidinde karşıya geçmek üzere bekleyen yaya varsa sürücü ne yapmalıdır?', ['Korna çalıp geçmelidir', 'Hızlanarak geçmelidir', 'Durup yayaya yol vermelidir', 'Şerit değiştirmelidir'], 2],
+  ['Emniyet kemeri kimler tarafından takılmalıdır?', ['Yalnızca sürücü', 'Yalnızca ön koltuktakiler', 'Sürücü ve tüm yolcular', 'Yalnızca şehir dışında'], 2],
+  ['Siren çalan bir ambulans arkadan yaklaşıyorsa ne yapılmalıdır?', ['Hızlanılmalıdır', 'Sağa yanaşıp yol verilmelidir', 'Olduğu yerde durulmalıdır', 'Sol şeride geçilmelidir'], 1],
+  ['Karşıdan araç gelirken uzun hüzmeli farlar için ne yapılmalıdır?', ['Açık bırakılmalıdır', 'Kısa hüzmeye geçilmelidir', 'Sis farı da yakılmalıdır', 'Farlar tamamen kapatılmalıdır'], 1],
+  ['Hararet göstergesi kırmızı bölgeye çıkarsa ne yapılmalıdır?', ['Hızlanarak motor soğutulmalıdır', 'Güvenli yerde durup motor kontrol edilmelidir', 'Kaloriferi kapatıp yola devam edilmelidir', 'Önemsenmemelidir'], 1],
+  ['Lastik diş derinliği azaldığında ne olur?', ['Yakıt tüketimi azalır', 'Yol tutuşu azalır, kayma riski artar', 'Fren mesafesi kısalır', 'Bir değişiklik olmaz'], 1],
+  ['Kavşakta sağa dönecek sürücü ne yapmalıdır?', ['Sol şeritten dönmelidir', 'Önceden sağ şeride geçip sinyal vermelidir', 'Sinyal vermeden dönmelidir', 'Hızını artırmalıdır'], 1],
+  ['Bilinci kapalı ama nefes alan yaralıya hangi pozisyon verilir?', ['Sırtüstü yatış', 'Oturur pozisyon', 'Koma (yan yatış) pozisyonu', 'Ayakta tutma'], 2],
+  ['Burun kanamasında ne yapılmalıdır?', ['Baş geriye yatırılır', 'Baş hafifçe öne eğilip burun kanatları sıkılır', 'Yaralı sırtüstü yatırılır', 'Buruna pamuk sıkıca doldurulur'], 1],
+  ['Fren balataları aşındığında ne olur?', ['Fren mesafesi uzar', 'Yakıt tüketimi azalır', 'Direksiyon hafifler', 'Motor gücü artar'], 0],
+  ['Uzun yolda yorgunluk hissedilirse ne yapılmalıdır?', ['Hız artırılıp yol kısaltılmalıdır', 'Güvenli bir yerde mola verilip dinlenilmelidir', 'Camlar açılıp devam edilmelidir', 'Müzik sesi açılmalıdır'], 1],
+  ['Trafik görevlisinin işareti ile trafik ışığı çelişirse hangisine uyulur?', ['Trafik ışığına', 'Trafik görevlisinin işaretine', 'Levhaya', 'Diğer sürücülere'], 1],
+  ['Alkollü araç kullanmanın sürüşe etkisi nedir?', ['Dikkat artar', 'Tepki süresi uzar', 'Görüş alanı genişler', 'Etkisi yoktur'], 1],
+  ['Sis farları ne zaman kullanılır?', ['Her zaman', 'Sis, kar, yoğun yağmur gibi görüşü azaltan durumlarda', 'Yalnızca gündüz', 'Şehir içinde sürekli'], 1],
+  ['Sollama yapılırken hangi kontrol yapılmalıdır?', ['Yalnızca öndeki araca bakılır', 'Aynalar ve kör nokta kontrol edilip sinyal verilir', 'Korna çalınıp hemen geçilir', 'Kontrol gerekmez'], 1],
 ];
+let SORULAR = HAVUZ.slice(0, 10);
+const karistir = () => { const a = HAVUZ.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } SORULAR = a.slice(0, 10); };
 export function ogrenciPortal() {
   if (!ogId || !kursiyer(ogId)) ogId = (S.kursiyerler.find(k => k.asama === 'Direksiyon' && k.odeme.taksitler.some(t => !t.odendi)) || S.kursiyerler[0]).id;
   const k = kursiyer(ogId), S0 = SINIFLAR[k.sinif], eg = egitmen(k.egitmen);
@@ -80,7 +99,7 @@ export function ogrenciPortal() {
       <div class="taksit-sira"><span class="no">P</span><div><b style="color:var(--murekkep)">Peşinat</b><small style="display:block;color:var(--soluk)">${tarih(k.odeme.pesinTarih)}</small></div><span class="sayi">${tl(k.odeme.pesin)}</span>${rozet('Ödendi', 'yesil')}</div>
       ${k.odeme.taksitler.map((t, i) => `<div class="taksit-sira"><span class="no">${i + 1}</span><div><b style="color:var(--murekkep)">${i + 1}. taksit</b><small style="display:block;color:${!t.odendi && fark(t.vade) < 0 ? 'var(--kirmizi)' : 'var(--soluk)'}">Vade ${tarih(t.vade)}</small></div><span class="sayi">${tl(t.tutar)}</span>${t.odendi ? rozet('Ödendi', 'yesil') : `<button class="dg dg-ana dg-kucuk" data-ode="${i}">Öde</button>`}</div>`).join('')}</div></div>`;
   if (ogSekme === 'test') {
-    if (test.i >= SORULAR.length) govde = `<div class="kart soru" style="text-align:center"><h4 style="font-size:20px">${test.dogru}/${SORULAR.length} doğru</h4><p style="color:var(--soluk);margin-bottom:14px">${test.dogru >= 4 ? 'Harika gidiyorsun, e-sınava hazırsın!' : 'Biraz daha çalışalım; her gün 10 soru çöz.'}</p><button class="dg dg-koyu" data-yeniden>Yeniden başla</button></div>`;
+    if (test.i >= SORULAR.length) govde = `<div class="kart soru" style="text-align:center"><h4 style="font-size:20px">${test.dogru}/${SORULAR.length} doğru</h4><p style="color:var(--soluk);margin-bottom:14px">${test.dogru >= 7 ? 'Harika gidiyorsun, e-sınava hazırsın!' : 'Biraz daha çalışalım; her gün 10 soru çöz.'} Havuzda ${HAVUZ.length} soru var; her denemede 10’u rastgele gelir.</p><button class="dg dg-koyu" data-yeniden>Yeniden başla</button></div>`;
     else { const [q, sec, dogru] = SORULAR[test.i]; govde = `<div style="display:flex;justify-content:space-between;font-size:13px;color:var(--soluk);margin-bottom:8px"><span>Deneme sınavı</span><span>${test.i + 1}/${SORULAR.length}</span></div>${ilerleme(test.i, SORULAR.length)}<div class="ara-bosluk" style="height:12px"></div><div class="kart soru"><h4>${e(q)}</h4>${sec.map((s, i) => `<button class="secenek ${test.cevap != null ? (i === dogru ? 'dogru' : i === test.cevap ? 'yanlis' : '') : ''}" data-cevap="${i}" ${test.cevap != null ? 'disabled' : ''}><b>${'ABCD'[i]}</b>${e(s)}</button>`).join('')}${test.cevap != null ? `<button class="dg dg-koyu" style="width:100%;margin-top:6px" data-sonraki>Sonraki soru</button>` : ''}</div>`; }
   }
   if (ogSekme === 'evrak') govde = `<div class="kart"><div class="kart-govde">${EVRAKLAR.map(([key, t]) => `<div class="evrak"><span class="durum ${k.evrak[key] ? 'var' : 'yok'}">${ik(k.evrak[key] ? 'tik' : 'kapat')}</span><span style="flex:1;color:var(--murekkep)">${t}</span>${k.evrak[key] ? '' : rozet('Kursa getir', 'uyari')}</div>`).join('')}</div></div>`;
@@ -100,7 +119,7 @@ export function ogrenciPortal() {
         const o = t.closest('[data-ode]'); if (o) odemeYap(k, +o.dataset.ode);
         const c = t.closest('[data-cevap]'); if (c && test.cevap == null) { test.cevap = +c.dataset.cevap; if (test.cevap === SORULAR[test.i][2]) test.dogru++; yenile(); }
         if (t.closest('[data-sonraki]')) { test.i++; test.cevap = null; yenile(); }
-        if (t.closest('[data-yeniden]')) { test = { i: 0, dogru: 0, cevap: null }; yenile(); }
+        if (t.closest('[data-yeniden]')) { karistir(); test = { i: 0, dogru: 0, cevap: null }; yenile(); }
         const dg = t.closest('[data-degis]'); if (dg) { gonderimEkle(S.kurs.ad, tamAd(k) + ' ders saatini değiştirmek istiyor', 'Kursiyer talebi'); bildir('Talebin kursa iletildi; yeni saat WhatsApp’tan gelecek', 'wp'); }
         if (t.closest('[data-iste]')) pencere({ baslik: 'Direksiyon dersi iste', icerik: `<p style="color:var(--soluk);margin-bottom:10px">${e(eg.ad)} hocanın boş saatleri</p><div class="secim">${[1, 2, 3].flatMap(n => ['10:00', '15:00', '17:00'].filter(h => !S.dersler.some(d => d.egitmen === eg.id && d.tarih === gun(n) && d.saat === h)).map(h => `<label><input type="radio" name="s" value="${gun(n)} ${h}"><span>${gunKisa(gun(n))} ${tarihOku(gun(n)).getDate()} · ${h}</span></label>`)).join('')}</div>`, altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Talep gönder</button>`, onAc(d) { d.querySelector('[data-k]').addEventListener('click', () => { const v = d.querySelector('[name=s]:checked'); if (!v) return bildir('Bir saat seçin', 'uyari'); kapatPencere(); gonderimEkle(S.kurs.ad, tamAd(k) + ' ders istiyor: ' + v.value, 'Kursiyer talebi'); bildir('Ders talebin kursa iletildi'); }); } });
       });

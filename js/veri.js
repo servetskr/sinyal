@@ -1,5 +1,5 @@
 // Sinyal demo verisi: tarihler bugüne göre üretilir, tarayıcıda saklanır.
-const ANAHTAR = 'sinyal-demo-v8';
+const ANAHTAR = 'sinyal-demo-v11';
 
 export const BUGUN = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })();
 export const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -8,14 +8,14 @@ export const tarihOku = s => { const [y, m, d] = s.split('-').map(Number); retur
 export const fark = s => Math.round((tarihOku(s) - BUGUN) / 864e5);
 
 export const SINIFLAR = {
-  'B': { ad: 'B · Manuel', ucret: 24000, teorik: 34, direksiyon: 16 },
-  'B-O': { ad: 'B · Otomatik', ucret: 26500, teorik: 34, direksiyon: 16 },
+  'B': { ad: 'B · Manuel', ucret: 24000, teorik: 34, direksiyon: 14 },
+  'B-O': { ad: 'B · Otomatik', ucret: 26500, teorik: 34, direksiyon: 14 },
   'A2': { ad: 'A2 · Motosiklet', ucret: 18500, teorik: 34, direksiyon: 14 },
   'C': { ad: 'C · Kamyon', ucret: 31000, teorik: 34, direksiyon: 20 },
 };
 export const ASAMALAR = ['Kayıt', 'Evrak', 'Teorik', 'Direksiyon', 'Sınav', 'Ehliyet'];
 export const EVRAKLAR = [
-  ['saglik', 'Sağlık raporu'], ['ogrenim', 'Öğrenim belgesi'], ['foto', 'Biyometrik fotoğraf'],
+  ['saglik', 'Sürücü olur sağlık raporu'], ['ogrenim', 'Öğrenim belgesi'], ['adli', 'Adli sicil kaydı (barkodlu)'], ['foto', 'Biyometrik fotoğraf'],
   ['kimlik', 'Kimlik fotokopisi'], ['sozlesme', 'İmzalı sözleşme'],
 ];
 export const KAYNAKLAR = ['Google Haritalar', 'Instagram', 'Tavsiye', 'WhatsApp', 'Web sitesi'];
@@ -32,6 +32,9 @@ function uret() {
   const sec = a => a[Math.floor(r() * a.length)];
   const ara = (a, b) => a + Math.floor(r() * (b - a + 1));
   const tel = () => '05' + ara(30, 55) + ' ' + ara(100, 999) + ' ' + ara(10, 99) + ' ' + ara(10, 99);
+  // Biçimi geçerli ama uydurma TC kimlik numarası (demo)
+  const tcUret = () => { const d = [ara(1, 9)]; for (let i = 0; i < 8; i++) d.push(ara(0, 9)); d.push((((d[0] + d[2] + d[4] + d[6] + d[8]) * 7 - (d[1] + d[3] + d[5] + d[7])) % 10 + 10) % 10); d.push(d.reduce((a, b) => a + b, 0) % 10); return d.join(''); };
+  const MAH = ['Vişnelik', 'Emek', 'Osmangazi', 'Şirintepe', 'Batıkent', 'Hoşnudiye', 'Yenibağlar', 'Gökmeydan', 'Büyükdere', 'Sümer'];
 
   const egitmenler = [
     { id: 'e1', ad: 'Hüseyin Aktaş', tel: '0532 418 22 61', siniflar: ['B', 'B-O'], renk: '#2f6fde', baslama: '2014', maas: 34000, prim: 160 },
@@ -77,7 +80,7 @@ function uret() {
     } else {
       teorik = S.teorik; direksiyon = S.direksiyon;
       esinav = { sonuc: 'Geçti', puan: ara(70, 98), hak: r() < 0.2 ? 2 : 1 };
-      const gecti = r() < 0.78;
+      const gecti = r() < 0.8 || (egitmen === 'e1' && r() < 0.7);
       dsinav = { sonuc: gecti ? 'Geçti' : 'Kaldı', hak: 1, tarih: gun(-ara(3, 20)) };
       asama = gecti ? 'Ehliyet' : 'Sınav';
     }
@@ -102,6 +105,9 @@ function uret() {
       kaynak: sec(['Google Haritalar', 'Google Haritalar', 'Google Haritalar', 'Instagram', 'Instagram', 'Tavsiye', 'Tavsiye', 'WhatsApp', 'Web sitesi']),
       yorum: asama === 'Ehliyet' ? (r() < 0.55 ? 'yapti' : 'istendi') : null,
       notlar: [],
+      tc: tcUret(), dogumTarihi: (2008 - ara(0, 24)) + '-' + String(ara(1, 12)).padStart(2, '0') + '-' + String(ara(1, 28)).padStart(2, '0'),
+      adres: sec(MAH) + ' Mah., ' + sec(['Odunpazarı', 'Tepebaşı']) + ' / Eskişehir', ogrenim: sec(['Lise', 'Lise', 'Lisans', 'Önlisans', 'Ortaokul']), cinsiyet: kadin ? 'Kadın' : 'Erkek',
+      teorikGrup: r() < 0.65 ? 'aksam' : 'sabah',
       deneme: ['Teorik', 'Direksiyon', 'Sınav'].includes(asama) ? Array.from({ length: ara(2, 6) }, () => ara(r() < 0.18 ? 38 : 58, r() < 0.18 ? 66 : 96)) : [],
       acil: { ad: sec(ADLAR_K.concat(ADLAR_E)) + ' ' + sec(SOYADLAR), yakinlik: sec(['Anne', 'Baba', 'Eş', 'Kardeş']), tel: tel() },
     });
@@ -111,7 +117,7 @@ function uret() {
 
   // direksiyon dersleri: geçmiş 14 gün + gelecek 10 gün
   const dersler = [];
-  const saatler = ['09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00'];
+  const saatler = ['09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00', '19:00'];
   const aktif = kursiyerler.filter(k => ['Direksiyon', 'Sınav'].includes(k.asama));
   let did = 1;
   const gunSay = {};
@@ -128,7 +134,7 @@ function uret() {
           if (!adaylar.length) return;
           const k = sec(adaylar);
           gunSay[k.id + n] = (gunSay[k.id + n] || 0) + 1;
-          dersler.push({ id: 'd' + did++, kursiyer: k.id, egitmen: e.id, arac: arac ? arac.id : null, tarih: gun(n), saat: s, durum: (n < 0 || (n === 0 && +s.slice(0, 2) < SAAT_SIMDI)) ? (r() < 0.93 ? 'Yapıldı' : 'Gelmedi') : 'Planlandı' });
+          dersler.push({ id: 'd' + did++, kursiyer: k.id, egitmen: e.id, arac: arac ? arac.id : null, tarih: gun(n), saat: s, eklendi: gun(Math.min(n, 0) - ara(6, 12) + (n > 0 && r() < 0.12 ? ara(4, 8) : 0)), meb: n < 3 ? true : r() < 0.7, durum: (n < 0 || (n === 0 && +s.slice(0, 2) < SAAT_SIMDI)) ? (r() < 0.965 ? 'Yapıldı' : 'Gelmedi') : 'Planlandı' });
         }
       });
     });
@@ -141,8 +147,8 @@ function uret() {
   for (let n = -10; n <= 7; n++) {
     const d = tarihOku(gun(n)); const g = d.getDay();
     if (g === 0 || g === 6) continue;
-    teorik.push({ id: 't' + tid++, tarih: gun(n), saat: '18:30', sure: 2, konu: KONULAR[(n + 20) % 4], salon: 'Derslik 1', egitmen: 'e' + (1 + ((n + 20) % 3)), katilim: n < 0 ? ara(14, 22) : null, mevcut: 23 });
-    if (g === 2 || g === 4) teorik.push({ id: 't' + tid++, tarih: gun(n), saat: '10:00', sure: 3, konu: KONULAR[(n + 21) % 4], salon: 'Derslik 2', egitmen: 'e4', katilim: n < 0 ? ara(8, 13) : null, mevcut: 14 });
+    teorik.push({ id: 't' + tid++, tarih: gun(n), saat: '18:30', sure: 2, konu: KONULAR[(n + 20) % 4], salon: 'Derslik 1', grup: 'aksam', ogretmen: 'o' + (1 + ((n + 20) % 3)), katilim: n < 0 ? ara(14, 22) : null, mevcut: 23 });
+    if (g === 2 || g === 4) teorik.push({ id: 't' + tid++, tarih: gun(n), saat: '10:00', sure: 3, konu: KONULAR[(n + 21) % 4], salon: 'Derslik 2', grup: 'sabah', ogretmen: 'o' + (1 + ((n + 21) % 3)), katilim: n < 0 ? ara(8, 13) : null, mevcut: 14 });
   }
 
   // sınav oturumları
@@ -153,9 +159,9 @@ function uret() {
   const bitti = kursiyerler.filter(k => k.dsinav);
   sinavlar.push({ id: 's1', tur: 'e-Sınav', tarih: gun(-19), saat: '10:00', yer: 'Odunpazarı e-Sınav Merkezi', kursiyerler: dir.slice(0, 9).map(k => k.id), sonuc: Object.fromEntries(dir.slice(0, 9).map(k => [k.id, 'Geçti'])) });
   sinavlar.push({ id: 's2', tur: 'Direksiyon', tarih: gun(-9), saat: '08:30', yer: 'Sınav güzergâhı · Organize Sanayi', kursiyerler: bitti.map(k => k.id), sonuc: Object.fromEntries(bitti.map(k => [k.id, k.dsinav.sonuc])) });
-  sinavlar.push({ id: 's3', tur: 'Direksiyon', tarih: gun(3), saat: '08:30', yer: 'Sınav güzergâhı · Organize Sanayi', kursiyerler: sin.slice(0, 8).map(k => k.id), sonuc: {} });
-  sinavlar.push({ id: 's4', tur: 'e-Sınav', tarih: gun(6), saat: '14:00', yer: 'Tepebaşı e-Sınav Merkezi', kursiyerler: kursiyerler.filter(k => k.asama === 'Teorik' && k.teorik >= 30).slice(0, 2).map(k => k.id), sonuc: {} });
-  sinavlar.push({ id: 's5', tur: 'Direksiyon', tarih: gun(10), saat: '08:30', yer: 'Sınav güzergâhı · Organize Sanayi', kursiyerler: sin.slice(8).concat(kal).map(k => k.id), sonuc: {} });
+  sinavlar.push({ id: 's3', tur: 'Direksiyon', mebBildirim: false, tarih: gun(3), saat: '08:30', yer: 'Sınav güzergâhı · Organize Sanayi', kursiyerler: sin.slice(0, 8).map(k => k.id), sonuc: {} });
+  sinavlar.push({ id: 's4', tur: 'e-Sınav', tarih: gun(6), saat: '14:00', yer: 'Tepebaşı e-Sınav Merkezi', kursiyerler: kursiyerler.filter(k => k.asama === 'Teorik' && k.teorik >= 30).slice(0, 1).map(k => k.id), sonuc: {} });
+  sinavlar.push({ id: 's5', tur: 'Direksiyon', mebBildirim: false, tarih: gun(10), saat: '08:30', yer: 'Sınav güzergâhı · Organize Sanayi', kursiyerler: sin.slice(8).concat(kal).map(k => k.id), sonuc: {} });
   sin.slice(0, 8).forEach(k => k.dsinavPlan = gun(3));
 
   // kasa hareketleri
@@ -173,10 +179,13 @@ function uret() {
     [3, 10, 17, 24].forEach(g => { if (fark(ayGun(g)) <= 0) araclar.forEach(ar => hareket.push({ id: 'h' + hid++, tarih: ayGun(g), tur: 'Gider', kategori: 'Yakıt', aciklama: ar.plaka + ' · yakıt', tutar: Math.round(ara(900, 1900) * (ar.sinif === 'C' ? 2.4 : ar.sinif === 'A2' ? 0.4 : 1) / 10) * 10, yontem: 'Kart', arac: ar.id })); });
     if (fark(ayGun(14)) <= 0) hareket.push({ id: 'h' + hid++, tarih: ayGun(14), tur: 'Gider', kategori: 'Fatura', aciklama: 'Elektrik, su, internet', tutar: ara(5200, 7400), yontem: 'Havale' });
     if (m > 0) {
-      // önceki dönem tahsilatları (arşiv kursiyerler)
-      for (let x = 0; x < (m === 1 ? 6 : 30); x++) {
+      // önceki dönem tahsilatları (arşiv kursiyerler): ay toplamı ~300 bin olacak kadar
+      const mevcut = hareket.filter(h => h.tur === 'Gelir' && tarihOku(h.tarih).getMonth() === ay.getMonth() && tarihOku(h.tarih).getFullYear() === ay.getFullYear()).reduce((a, h) => a + h.tutar, 0);
+      const hedef = 285000 + ara(0, 40000);
+      for (let x = 0, top = mevcut; x < 60 && top < hedef; x++) {
         const t = ayGun(ara(1, 27));
-        hareket.push({ id: 'h' + hid++, tarih: t, tur: 'Gelir', kategori: sec(['Kurs ücreti', 'Taksit', 'Taksit']), aciklama: sec(ADLAR_E.concat(ADLAR_K)) + ' ' + sec(SOYADLAR) + ' · arşiv', tutar: Math.round(ara(4000, 12000) / 250) * 250, yontem: sec(['Kart', 'Havale', 'Nakit']) });
+        const tt = Math.round(ara(4000, 12000) / 250) * 250; top += tt;
+        hareket.push({ id: 'h' + hid++, tarih: t, tur: 'Gelir', kategori: sec(['Kurs ücreti', 'Taksit', 'Taksit']), aciklama: sec(ADLAR_E.concat(ADLAR_K)) + ' ' + sec(SOYADLAR) + ' · önceki dönem', tutar: tt, yontem: sec(['Kart', 'Havale', 'Nakit']) });
       }
     }
   }
@@ -233,10 +242,38 @@ function uret() {
     { id: 'pos', ad: 'Sanal POS', tur: 'POS', bakiye: 38900 },
   ];
   const kazanim = { doldurulan: 14, ekDers: 9, yorum: 23 };
+  kursiyerler.forEach(k => { if (k.evrak.saglik) { const t = tarihOku(k.kayit); t.setDate(t.getDate() - ara(2, 20)); k.saglikRapor = { no: '2026/' + ara(10000, 99999), tarih: iso(t).split('-').reverse().join('.') }; } if (k.evrak.adli) k.adliSicil = { barkod: 'ASB' + ara(100000, 999999) + ara(1000, 9999) }; });
+  kursiyerler.forEach(k => { k.odeme.ekler = []; if (k.esinav) k.odeme.ekler.push({ ad: 'e-Sınav ücreti', tutar: 1250, odendi: k.kayit }); if (k.dsinav && k.dsinav.hak > 1) k.odeme.ekler.push({ ad: 'Direksiyon sınavı tekrar ücreti', tutar: 2000, odendi: null }); if (k.dsinav && k.dsinav.sonuc === 'Kaldı') k.odeme.ekler.push({ ad: 'Sınav tekrar ücreti', tutar: 2000, odendi: null }); });
+  const ogretmenler = [
+    { id: 'o1', ad: 'Ayten Duman', brans: 'Trafik ve çevre', tel: '0532 771 40 12' },
+    { id: 'o2', ad: 'Dr. Serkan Ak', brans: 'İlk yardım', tel: '0505 318 62 90' },
+    { id: 'o3', ad: 'Levent Oral', brans: 'Araç tekniği', tel: '0542 905 13 77' },
+  ];
+  const kullanicilar = [
+    { id: 'u1', ad: 'Kurs Müdürü', rol: 'mudur', pin: '1111' },
+    { id: 'u2', ad: 'Selda Korkmaz', rol: 'sekreter', pin: '2222' },
+    { id: 'u3', ad: 'Hüseyin Aktaş', rol: 'usta', usta: 'e1', pin: '3333' },
+  ];
+  const islemler = [
+    { zaman: gun(-1) + 'T17:42', kim: 'Selda Korkmaz', ne: 'Tahsilat aldı', ayrinti: 'Ayşe Yıldız · 2. taksit · 6.500 ₺' },
+    { zaman: gun(-1) + 'T11:05', kim: 'Kurs Müdürü', ne: 'Ücret değiştirdi', ayrinti: 'B · Otomatik 26.000 ₺ → 26.500 ₺' },
+    { zaman: gun(-2) + 'T09:30', kim: 'Hüseyin Aktaş', ne: 'Ders yapıldı işaretledi', ayrinti: 'Elif Erdem · 12. ders' },
+  ];
+  const asistanBilgi = [
+    { konu: 'Fiyat ve taksit', metin: 'B manuel 24.000 TL, B otomatik 26.500 TL, A2 18.500 TL, C 31.000 TL. Peşinat sonrası 5 aya kadar taksit. Öğrenci belgesiyle 1.000 TL indirim.', onay: gun(-3) },
+    { konu: 'Evraklar', metin: 'Sağlık raporu, öğrenim belgesi, biyometrik fotoğraf, kimlik. Fotoğrafı kursta çekiyoruz.', onay: gun(-12) },
+    { konu: 'Ders saatleri', metin: 'Teorik dersler hafta içi 18:30 ve Salı-Perşembe 10:00. Direksiyon Pazartesi–Cumartesi 09:00–18:00.', onay: gun(-12) },
+    { konu: 'Süre', metin: 'Teorik yaklaşık 4 hafta, ardından e-sınav ve direksiyon eğitimi; ortalama 2–3 ay.', onay: gun(-12) },
+    { konu: 'Sınav ücretleri', metin: 'e-Sınav ücreti oturum başına 1.250 TL (MEB 2026 kılavuzu). Tekrar sınav ücretini kurs bildirir.', onay: gun(-5) },
+  ];
+  const devredilen = [
+    { ad: 'Halil Yurt', kanal: 'WhatsApp', konu: 'İndirim pazarlığı', mesaj: 'Üç kardeş kaydolursak ne kadar indirim olur?', neden: 'Kurs bilgisinde toplu indirim yok', saat: '10:12' },
+    { ad: 'Seda Bal', kanal: 'Instagram', konu: 'Özel durum', mesaj: 'Sol ayağımda protez var, otomatik araçla ehliyet alabilir miyim?', neden: 'Sağlık durumu: insana devredildi', saat: '09:40' },
+  ];
 
   return {
-    personel, izinler, bekleme, hesaplar, kazanim, sms: { bakiye: 1840, kanal: 'WhatsApp' }, gunSonu: [],
-    kurs: { ad: 'Örnek Sürücü Kursu', sehir: 'Eskişehir', tel: '0222 000 00 00', adres: 'Odunpazarı / Eskişehir', yetkili: 'Kurs Müdürü', puan: 4.9, yorumSayisi: 286, gunlukDersSiniri: 2, egitmenGunlukSinir: 8 },
+    personel, izinler, bekleme, hesaplar, kazanim, ogretmenler, kullanicilar, islemler, asistanBilgi, devredilen, sms: { bakiye: 1840, kanal: 'WhatsApp' }, gunSonu: [],
+    kurs: { ad: 'Örnek Sürücü Kursu', sehir: 'Eskişehir', tel: '0222 000 00 00', adres: 'Odunpazarı / Eskişehir', yetkili: 'Kurs Müdürü', puan: 4.9, yorumSayisi: 286, gunlukDersSiniri: 2, egitmenGunlukSinir: 8, ekDersUcreti: 900, devamsizlikSiniri: 4, programOnGun: 5, sinavBildirimIsGunu: 4, geceDersi: 2, tekrarBekleme: 15 },
     egitmenler, araclar, kursiyerler, dersler, teorik, sinavlar, hareket, adaylar, otomasyonlar, duyurular,
     gonderimler: [],
   };
@@ -255,8 +292,9 @@ export const kursiyer = id => S.kursiyerler.find(k => k.id === id);
 export const egitmen = id => S.egitmenler.find(e => e.id === id);
 export const arac = id => S.araclar.find(a => a.id === id);
 export const tamAd = k => k.ad + ' ' + k.soyad;
-export const odenen = k => k.odeme.pesin + k.odeme.taksitler.filter(t => t.odendi).reduce((a, t) => a + t.tutar, 0);
-export const kalanBorc = k => k.odeme.toplam - odenen(k);
+export const ekToplam = k => (k.odeme.ekler || []).reduce((a, x) => a + x.tutar, 0);
+export const odenen = k => k.odeme.pesin + k.odeme.taksitler.reduce((a, t) => a + (t.odendi ? t.tutar : (t.kismi || 0)), 0) + (k.odeme.ekler || []).filter(x => x.odendi).reduce((a, x) => a + x.tutar, 0) - (k.odeme.iade || 0);
+export const kalanBorc = k => Math.max(0, k.odeme.toplam + ekToplam(k) - odenen(k));
 export const gecikenler = k => k.odeme.taksitler.filter(t => !t.odendi && fark(t.vade) < 0);
 export const eksikEvrak = k => EVRAKLAR.filter(([key]) => !k.evrak[key]);
 export const asamaNo = k => ASAMALAR.indexOf(k.asama);
@@ -274,6 +312,23 @@ export function risk(k) {
   if (gel) { p += gel * 14; n.push(gel + ' derse gelmedi'); }
   if (k.dsinav && k.dsinav.sonuc === 'Kaldı') { p += 30; n.push('Direksiyon sınavından kaldı'); }
   if (k.esinav && k.esinav.hak > 1) { p += 12; n.push('e-Sınavı ' + k.esinav.hak + '. hakta geçti'); }
-  if (k.notlar.some(x => /zorlan|unut|panik|gergin/i.test(x.metin))) { p += 18; n.push('Eğitmen notu'); }
+  if (k.notlar.some(x => /zorlan|unut|panik|gergin/i.test(x.metin))) { p += 18; n.push('Usta öğretici notu'); }
   return { puan: Math.min(100, Math.round(p)), ort, nedenler: n };
 }
+
+export const ogretmen = id => (S.ogretmenler || []).find(o => o.id === id);
+export const tcMaskele = tc => tc ? tc.slice(0, 3) + '*****' + tc.slice(-3) : '—';
+export function tcGecerli(tc) {
+  if (!/^[1-9]\d{10}$/.test(tc)) return false;
+  const d = tc.split('').map(Number);
+  const on = (((d[0] + d[2] + d[4] + d[6] + d[8]) * 7 - (d[1] + d[3] + d[5] + d[7])) % 10 + 10) % 10;
+  return on === d[9] && d.slice(0, 10).reduce((a, b) => a + b, 0) % 10 === d[10];
+}
+// oturum ve işlem geçmişi
+export const oturum = { kullanici: null };
+try { const o = sessionStorage.getItem('sinyal-oturum'); if (o) oturum.kullanici = JSON.parse(o); } catch (x) { }
+export function islem(ne, ayrinti = '') { S.islemler.unshift({ zaman: new Date().toISOString().slice(0, 16), kim: oturum.kullanici ? oturum.kullanici.ad : 'Sistem', ne, ayrinti }); }
+// geri alma: son değişiklikten önceki durumun anlık görüntüsü
+let anlik = null;
+export function geriAlNoktasi() { anlik = JSON.stringify(S); }
+export function geriAl() { if (!anlik) return false; S = JSON.parse(anlik); anlik = null; kaydet(); return true; }

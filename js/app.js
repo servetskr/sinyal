@@ -1,4 +1,4 @@
-import { S, sifirla, tamAd, gecikenler, eksikEvrak, egitmen } from './veri.js';
+import { S, sifirla, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl } from './veri.js';
 import { ik, e, pencere, kapatPencere, bugunMetni, bildir } from './ui.js';
 import * as Y1 from './sayfalar1.js';
 import * as Y2 from './sayfalar2.js';
@@ -10,14 +10,17 @@ const SAYFALAR = {
   plan: Y1.plan, teorik: Y1.teorik, sinavlar: Y2.sinavlar, kasa: Y2.kasa, filo: Y2.filo,
   mesajlar: Y2.mesajlar, meb: Y2.meb, raporlar: Y2.raporlar, ayarlar: Y2.ayarlar,
   egitmen: P.egitmenPortal, ogrenci: P.ogrenciPortal,
-  belgeler: Y3.belgeler, kayit: Y3.kayitSayfasi,
+  belgeler: Y3.belgeler, kayit: Y3.kayitSayfasi, guven: Y3.guven, mebbis: Y3.mebbisAsistani,
 };
+const ROL_AD = { mudur: 'Kurs müdürü', sekreter: 'Ön büro', usta: 'Usta öğretici' };
+const YASAK = { mudur: [], sekreter: ['raporlar', 'ayarlar', 'guven'], usta: Object.keys(SAYFALAR).filter(k => k !== 'egitmen') };
+const izinli = ad => { const u = oturum.kullanici; return u && !YASAK[u.rol].includes(ad); };
 
 const MENU = [
   ['Bugün', [['genel', 'Genel bakış', '↑'], ['adaylar', 'Yeni öğrenciler', '↗'], ['mesajlar', 'Mesajlar', '↗']]],
   ['Eğitim', [['kursiyerler', 'Kursiyerler', '→'], ['plan', 'Direksiyon planı', '→'], ['teorik', 'Teorik dersler', '→'], ['sinavlar', 'Sınavlar', '→']]],
   ['İşletme', [['kasa', 'Kasa ve ödemeler', '→'], ['filo', 'Ekip ve araçlar', '→'], ['meb', 'MEB işlemleri', '→'], ['belgeler', 'Belgeler ve çıktılar', '→'], ['raporlar', 'Raporlar', '→']]],
-  ['Kurs', [['kayit', 'Evden kayıt sayfası', '↗'], ['ayarlar', 'Ayarlar', '→']]],
+  ['Kurs', [['kayit', 'Evden kayıt sayfası', '↗'], ['ogrenci', 'Kursiyer ekranı', '↗'], ['guven', 'Paket ve güvence', '→'], ['ayarlar', 'Ayarlar', '→']]],
 ];
 
 let rol = 'yonetici';
@@ -33,26 +36,22 @@ function sayaclar() {
 
 function iskelet() {
   const say = sayaclar();
-  const menu = MENU.map(([g, l]) => `<div class="yan-baslik">${g}</div>` + l.map(([k, t, i]) => `<a href="#/${k}" data-menu="${k}"><span class="ok" aria-hidden="true">${i}</span><span>${t}</span>${say[k] && say[k][0] ? `<b class="${say[k][1] ? '' : 'uyar'}">${say[k][0]}</b>` : ''}</a>`).join('')).join('');
+  const menu = MENU.map(([g, l]) => [g, l.filter(([k]) => izinli(k))]).filter(([, l]) => l.length).map(([g, l]) => `<div class="yan-baslik">${g}</div>` + l.map(([k, t, i]) => `<a href="#/${k}" data-menu="${k}"><span class="ok" aria-hidden="true">${i}</span><span>${t}</span>${say[k] && say[k][0] ? `<b class="${say[k][1] ? '' : 'uyar'}">${say[k][0]}</b>` : ''}</a>`).join('')).join('');
   document.getElementById('uyg').innerHTML = `
   <div class="uyg">
     <aside class="yan" id="yan" aria-label="Ana menü"><div class="yan-levha">
       <a class="logo" href="#/genel" aria-label="Sinyal ana sayfa"><svg class="logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 5.4 18.6 12 12 18.6 5.4 12z" fill="none" stroke="#111" stroke-width="1"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>${e(S.kurs.ad)}</small></span></a>
       <nav>${menu}</nav>
-      <div class="yan-rol" role="group" aria-label="Görünüm"><button data-rol="yonetici" class="${rol === 'yonetici' ? 'secili' : ''}">Yönetici</button><button data-rol="egitmen" class="${rol === 'egitmen' ? 'secili' : ''}">Eğitmen</button><button data-rol="ogrenci" class="${rol === 'ogrenci' ? 'secili' : ''}">Kursiyer</button></div>
-      <div class="yan-alt"><b>${e(S.kurs.yetkili)}</b><span>${e(S.kurs.sehir)} · demo verisi</span></div>
+      <div class="yan-alt"><b>${e(oturum.kullanici.ad)}</b><span>${ROL_AD[oturum.kullanici.rol]} · demo verisi</span><button class="dg dg-cizgi dg-kucuk" style="margin-top:8px;width:100%;background:transparent;color:#fff;border-color:#fff" data-cikis>Kullanıcı değiştir</button></div>
     </div></aside>
     <div class="ana">
       <div class="demo-serit" title="Demo · örnek verilerle"></div>
       <header class="ust">
         <button class="dg-ikon mobil-ust-sol" data-yan aria-label="Menüyü aç">${ik('menu')}</button>
         <div class="ust-baslik"><small id="ust-alt">${bugunMetni()}</small><h1 id="ust-baslik">Genel bakış</h1></div>
+        <a class="dg dg-hafif portal-geri" href="#/genel">← Panele dön</a>
         <button class="arama" data-ara aria-label="Ara">${ik('ara')}<span>Kursiyer, aday, plaka ara</span><kbd>⌘K</kbd></button>
-        <div class="rol" role="group" aria-label="Görünüm">
-          <button data-rol="yonetici" class="${rol === 'yonetici' ? 'secili' : ''}">Yönetici</button>
-          <button data-rol="egitmen" class="${rol === 'egitmen' ? 'secili' : ''}">Eğitmen</button>
-          <button data-rol="ogrenci" class="${rol === 'ogrenci' ? 'secili' : ''}">Kursiyer</button>
-        </div>
+        <button class="kullanici-cip" data-cikis title="Kullanıcı değiştir"><b>${e(oturum.kullanici.ad)}</b><small>${ROL_AD[oturum.kullanici.rol]}</small></button>
       </header>
       <main class="icerik" id="icerik"></main>
     </div>
@@ -72,11 +71,14 @@ function rota() {
 }
 
 export function yenile(kaydirma = false) {
-  const r = rota();
+  if (!oturum.kullanici) return girisEkrani();
+  let r = rota();
+  if (!izinli(r.ad)) { location.hash = oturum.kullanici.rol === 'usta' ? '#/egitmen' : '#/genel'; return; }
   const yer = document.getElementById('icerik');
   if (!yer) return;
   const portal = r.ad === 'egitmen' || r.ad === 'ogrenci' || r.ad === 'kayit';
   document.body.classList.toggle('portal-modu', portal);
+  document.body.classList.toggle('usta-modu', oturum.kullanici.rol === 'usta');
   let s;
   try { s = SAYFALAR[r.ad](r.id); }
   catch (x) { console.error(x); s = { baslik: 'Bir şeyler ters gitti', html: '<div class="kart"><div class="bos"><b>Bu sayfa açılamadı</b><p>Demo verisini sıfırlayıp tekrar deneyin.</p><button class="dg dg-koyu" data-sifirla>Demo verisini sıfırla</button></div></div>' }; }
@@ -111,7 +113,7 @@ function aramaAc() {
     ...S.kursiyerler.map(k => ({ t: tamAd(k), a: 'Kursiyer · ' + k.sinif + ' · ' + k.tel, h: '#/kursiyer/' + k.id, g: 'Kursiyerler' })),
     ...S.adaylar.map(a => ({ t: a.ad, a: 'Aday · ' + a.asama, h: '#/adaylar/' + a.id, g: 'Adaylar' })),
     ...S.araclar.map(a => ({ t: a.plaka, a: a.model, h: '#/filo', g: 'Araçlar' })),
-    ...S.egitmenler.map(x => ({ t: x.ad, a: 'Eğitmen', h: '#/filo', g: 'Eğitmenler' })),
+    ...S.egitmenler.map(x => ({ t: x.ad, a: 'Usta öğretici', h: '#/filo', g: 'Usta öğreticiler' })),
     ...MENU.flatMap(([, l]) => l.map(([k, t]) => ({ t, a: 'Sayfa', h: '#/' + k, g: 'Sayfalar' }))),
   ];
   pencere({
@@ -145,7 +147,6 @@ function yanAcKapa(ac) {
 document.addEventListener('click', ev => {
   const t = ev.target;
   if (t.closest('[data-ara]')) return aramaAc();
-  const r = t.closest('[data-rol]'); if (r) return rolSec(r.dataset.rol);
   if (t.closest('[data-yan]')) return yanAcKapa(!document.getElementById('yan').classList.contains('acik'));
   if (t.closest('.yan a') || t.closest('.yan-rol')) yanAcKapa(false);
   if (t.closest('[data-sifirla]')) { sifirla(); bildir('Demo verisi sıfırlandı'); location.hash = '#/genel'; yenile(true); }
@@ -155,7 +156,30 @@ document.addEventListener('keydown', ev => { if ((ev.metaKey || ev.ctrlKey) && e
 let sonAd = null;
 window.addEventListener('hashchange', () => { const r = rota(); yenile(r.ad !== sonAd); sonAd = r.ad; });
 
-iskelet();
-if (!location.hash) location.hash = rol === 'egitmen' ? '#/egitmen' : rol === 'ogrenci' ? '#/ogrenci' : '#/genel';
-sonAd = rota().ad;
-yenile();
+function girisEkrani() {
+  document.body.classList.remove('portal-modu');
+  document.getElementById('uyg').innerHTML = `<div class="giris"><div class="giris-levha">
+    <div class="logo" style="border-bottom:0;margin:0 0 6px"><svg class="logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>${e(S.kurs.ad)}</small></span></div>
+    <h1>Kim giriş yapıyor?</h1><p>Her kullanıcı yalnızca yetkisi olan ekranları görür.</p>
+    <div class="giris-kisiler">${S.kullanicilar.map(u => `<button class="giris-kisi" data-kim="${u.id}"><b>${e(u.ad)}</b><small>${ROL_AD[u.rol]}</small><em>Demo PIN ${u.pin}</em></button>`).join('')}</div>
+    <form class="giris-pin" hidden><label for="pin">PIN</label><input id="pin" inputmode="numeric" maxlength="4" autocomplete="one-time-code" placeholder="••••"><button class="dg dg-koyu" type="submit">Giriş</button></form>
+    <p class="giris-not">Canlı kullanımda her kullanıcı kendi şifresiyle ve telefonuna gelen kodla girer.</p></div></div>`;
+  let secilen = null;
+  const kok = document.getElementById('uyg');
+  kok.querySelectorAll('[data-kim]').forEach(b => b.addEventListener('click', () => { secilen = S.kullanicilar.find(u => u.id === b.dataset.kim); kok.querySelectorAll('[data-kim]').forEach(x => x.classList.toggle('secili', x === b)); const f = kok.querySelector('.giris-pin'); f.hidden = false; f.querySelector('input').value = ''; f.querySelector('input').focus(); }));
+  kok.querySelector('.giris-pin').addEventListener('submit', ev => {
+    ev.preventDefault(); const v = ev.target.querySelector('input').value;
+    if (!secilen || v !== secilen.pin) { bildir('PIN hatalı', 'uyari'); return; }
+    oturum.kullanici = { id: secilen.id, ad: secilen.ad, rol: secilen.rol, usta: secilen.usta };
+    try { sessionStorage.setItem('sinyal-oturum', JSON.stringify(oturum.kullanici)); } catch (x) { }
+    islem('Giriş yaptı'); kaydet();
+    iskelet(); location.hash = secilen.rol === 'usta' ? '#/egitmen' : '#/genel'; sonAd = rota().ad; yenile(true);
+  });
+}
+document.addEventListener('click', ev => {
+  if (ev.target.closest('[data-cikis]')) { islem('Çıkış yaptı'); kaydet(); oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } girisEkrani(); }
+  const g = ev.target.closest('[data-geri-al]'); if (g) { if (geriAl()) { bildir('Son işlem geri alındı'); yenile(); } }
+});
+
+if (oturum.kullanici) { iskelet(); if (!location.hash) location.hash = oturum.kullanici.rol === 'usta' ? '#/egitmen' : '#/genel'; sonAd = rota().ad; yenile(); }
+else girisEkrani();
