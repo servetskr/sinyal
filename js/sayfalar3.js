@@ -1,6 +1,6 @@
-import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas } from './veri.js';
-import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler } from './ui.js';
-import { yenile } from './app.js';
+import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas } from './veri.js?v=22';
+import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler } from './ui.js?v=22';
+import { yenile } from './app.js?v=22';
 
 /* ================= BELGELER VE ÇIKTILAR ================= */
 const SABLONLAR = [
@@ -12,6 +12,11 @@ const SABLONLAR = [
   ['program', 'Haftalık ders programı', 'Usta öğreticiye göre, kapıya asılacak çizelge', 'egitmen'],
   ['sinav', 'Sınav listesi', 'Oturuma giden kursiyerler, imza sütunuyla', 'sinav'],
   ['denetim', 'Denetim dosyası', 'Kursiyer, ders, araç ve personel kayıtları; eksikler en başta', 'tek'],
+  ['ek1', 'Kursiyer kayıt formu (EK-1 düzeni)', 'MTSK Yönetmeliği ekindeki kayıt formu düzeninde', 'kursiyer'],
+  ['devam', 'Teorik devam çizelgesi', 'Gruplara göre katılım ve imza sütunu', 'tek'],
+  ['hizmet', 'Sinyal hizmet sözleşmesi', 'Erişilebilirlik, sorumluluk, veri teslimi, fesih', 'tek'],
+  ['vis', 'Veri işleme sözleşmesi', 'KVKK: kurs veri sorumlusu, Sinyal veri işleyen', 'tek'],
+  ['aydinlatma', 'Asistan aydınlatma metni', 'Mesajlaşma kanallarında kişiye gösterilen metin', 'tek'],
 ];
 const imzaHucre = (d, kim) => `<td style="width:90px;text-align:center">${d.imza ? (d.imza[kim] ? `<img src="${d.imza[kim]}" alt="" style="height:26px">` : '<small>dijital ✓</small>') : ''}</td>`;
 const kursBas = baslik => `<h1>${e(baslik)}</h1><p class="a4-alt">${e(S.kurs.ad)} · ${e(S.kurs.adres)} · ${e(S.kurs.tel)}</p>`;
@@ -28,6 +33,31 @@ function belgeHtml(tur, id) {
       <p><b>5. Usta öğreticiler</b></p><table><tr><th>Ad</th>${Object.values(BG).map(x => `<th>${x}</th>`).join('')}</tr>${S.egitmenler.map(x => `<tr><td>${e(x.ad)}</td>${Object.keys(BG).map(b => `<td>${tarih((x.belgeler || {})[b])}${(x.belgeler || {})[b] < gun(0) ? ' (DOLMUŞ)' : ''}</td>`).join('')}</tr>`).join('')}</table>
       <div class="imza"><div>Hazırlayan</div><div>Kurs müdürü</div></div>`;
   }
+  if (tur === 'devam') {
+    const gr = { aksam: 'Akşam grubu', sabah: 'Sabah grubu' };
+    return kursBas('Teorik ders devam çizelgesi') + Object.entries(gr).map(([g, ad]) => { const l = S.kursiyerler.filter(k => k.asama === 'Teorik' && (k.teorikGrup || 'aksam') === g); return `<p><b>${ad}</b> · ${l.length} kursiyer</p><table><tr><th>#</th><th>TC</th><th>Ad soyad</th><th>Sınıf</th><th>Katıldığı ders</th><th>Devamsızlık</th><th>İmza</th></tr>${l.map((k, i) => `<tr><td>${i + 1}</td><td>${e(k.tc)}</td><td>${e(tamAd(k))}</td><td>${SINIFLAR[k.sinif].ad}</td><td>${k.teorik} / ${SINIFLAR[k.sinif].teorik}</td><td>${k.devamsiz || 0}</td><td style="width:90px"></td></tr>`).join('') || '<tr><td colspan="7">Bu grupta teorik aşamada kursiyer yok.</td></tr>'}</table>`; }).join('') + `<div class="imza"><div>Teorik öğretmen</div><div>Kurs müdürü</div></div>`;
+  }
+  if (tur === 'hizmet') return kursBas('Sinyal hizmet sözleşmesi (özet taslak)') + `<p><b>Taraflar:</b> ${e(S.kurs.ad)} (“Kurs”) ile Sinyal yazılım hizmetini sunan şirket (“Sağlayıcı”). Unvan, vergi ve MERSİS bilgileri imza aşamasında doldurulur.</p>
+      <p><b>1. Erişilebilirlik.</b> Aylık en az %99,5. Altına düşen her tam gün için o ayın ücretinin 1/30’u iade edilir. Sınav günlerinde (Cumartesi dahil) destek öncelikli ve 30 dakika içinde döner. Planlı bakım gece 02:00–05:00 arasında ve 48 saat önceden bildirilir.</p>
+      <p><b>2. Mevzuat kontrolleri.</b> Sinyal’in MEB kural kontrolleri yardımcıdır; değerlerin kaynağı ekranda gösterilir. Sağlayıcı mevzuat değişikliklerini haftalık izler ve yayımından itibaren 5 iş günü içinde kursa bildirir. Bildirimi yapılmamış bir değişiklikten doğan idari para cezasında Sağlayıcı, ödenen yıllık ücret tutarına kadar sorumludur. MEBBİS’e giriş ve son karar Kurs’tadır.</p>
+      <p><b>3. Veriler.</b> Kurs veri sorumlusu, Sağlayıcı veri işleyendir (ayrı Veri İşleme Sözleşmesi). Veriler Türkiye’deki sunucuda, şifreli saklanır; her gece yedeklenir. Kurs istediği an tüm verisini indirebilir.</p>
+      <p><b>4. Hizmetin devamlılığı.</b> Sağlayıcı faaliyetini durdurursa: en az 90 gün önceden bildirir, tüm veriyi Excel ve veritabanı yedeği olarak teslim eder ve yazılımın Kurs’un kendi sunucusunda çalışacak sürümünü kaynak koduyla birlikte ücretsiz verir (kaynak kod emaneti noterde tutulur).</p>
+      <p><b>5. Sosyal medya hesapları.</b> Asistan Meta’nın resmî bağlantısıyla, yalnızca gelen mesajlara cevap verir. Meta’nın hesap kısıtlaması hâlinde asistan durdurulur, itiraz sürecinde Sağlayıcı ücretsiz destek verir. Kısıtlama Sağlayıcı’nın kural dışı bir gönderiminden kaynaklanırsa o ayın ücreti alınmaz.</p>
+      <p><b>6. Ücret ve fesih.</b> Aylık ücret, pakette yazılı WhatsApp ve SMS kotası dahil sabittir; kota aşımında kursa önceden onay sorulur. Taahhüt yoktur; Kurs ay sonunda feshedebilir. Fesihten sonra veriler 30 gün içinde teslim edilip silinir.</p>
+      <div class="imza"><div>Kurs</div><div>Sağlayıcı</div></div>`;
+  if (tur === 'vis') return kursBas('Veri işleme sözleşmesi (KVKK, özet taslak)') + `<p><b>Veri sorumlusu:</b> ${e(S.kurs.ad)} · <b>Veri işleyen:</b> Sinyal hizmet sağlayıcısı</p>
+      <table><tr><th>İşlenen veri</th><td>Kimlik, iletişim, öğrenim, sağlık raporu ve adli sicil (özel nitelikli), ödeme, ders ve sınav kayıtları, mesajlaşma içerikleri</td></tr>
+      <tr><th>Amaç</th><td>Sürücü kursu eğitiminin yürütülmesi, MEB mevzuatı gereği kayıtlar, ödeme ve iletişim</td></tr>
+      <tr><th>Yer</th><td>Türkiye’deki veri merkezi. Asistanın dil modeli ${(S.sosyal && S.sosyal.ayar.veri.konum === 'ab') ? 'AB’de çalışır; yurt dışı aktarım standart sözleşmeyle yapılır ve KVKK Kurulu’na bildirilir' : 'Türkiye’de çalışır; yurt dışına aktarım yoktur'}.</td></tr>
+      <tr><th>Güvenlik</th><td>Diskte ve aktarımda şifreleme, iki adımlı giriş, rol bazlı yetki, erişim kaydı, gece yedeği (30 gün)</td></tr>
+      <tr><th>Alt işleyenler</th><td>Veri merkezi, e-Arşiv entegratörü, WhatsApp/Meta (yalnızca mesaj iletimi), SMS sağlayıcısı. Değişiklik 30 gün önce bildirilir.</td></tr>
+      <tr><th>İhlal bildirimi</th><td>Öğrenildiği andan itibaren en geç 24 saat içinde kursa</td></tr>
+      <tr><th>Saklama ve imha</th><td>Kursun belirlediği sürelerle; sözleşme bitince 30 gün içinde teslim ve imha</td></tr></table>
+      <div class="imza"><div>Veri sorumlusu</div><div>Veri işleyen</div></div>`;
+  if (tur === 'aydinlatma') { const v = S.sosyal ? S.sosyal.ayar.veri : { konum: 'tr', saklamaAy: 12 }; return kursBas('Mesajlaşma kanalları aydınlatma metni') + `<p>${e(S.kurs.ad)} olarak Instagram, Facebook ve WhatsApp üzerinden bize yazdığınız mesajları; kurs hakkında bilgi vermek, kayıt görüşmesi ayarlamak ve sizi geri aramak amacıyla işliyoruz.</p>
+      <p>Mesajlarınıza ilk olarak bir yapay zekâ asistanı cevap verir. Asistan yalnızca kursun onayladığı bilgileri kullanır; sağlık durumu, şikâyet ve pazarlık gibi konuları kurs yetkilisine aktarır. TC kimlik numarası, telefon ve sağlık bilgisi gibi hassas veriler, asistanın dil modeline gönderilmeden gizlenir.</p>
+      <p>Mesajlarınız ${v.konum === 'tr' ? 'Türkiye’deki sunucularda işlenir, yurt dışına aktarılmaz' : 'Avrupa Birliği’ndeki bir sunucuda işlenir; bu aktarım KVKK’ya uygun standart sözleşmeyle yapılır'}. Konuşmalar ${v.saklamaAy} ay saklanır, ardından silinir.</p>
+      <p>KVKK’nın 11. maddesi kapsamındaki haklarınız (bilgi talep etme, düzeltme, silme, itiraz) için ${e(S.kurs.tel)} numarasından ya da kursa yazılı olarak başvurabilirsiniz.</p>`; }
   if (tur === 'program') {
     const eg = egitmen(id), gunler = []; for (let n = 0; n < 7; n++) gunler.push(gun(n));
     return kursBas('Haftalık direksiyon programı') + `<p><b>Usta öğretici:</b> ${e(eg.ad)} &nbsp; <b>Araç:</b> ${e((S.araclar.find(a => a.egitmen === eg.id) || {}).plaka || '—')}</p><table><tr><th>Gün</th><th>Saat</th><th>Kursiyer</th><th>Telefon</th></tr>${gunler.flatMap(g => S.dersler.filter(d => d.egitmen === eg.id && d.tarih === g).sort((a, b) => a.saat.localeCompare(b.saat)).map(d => `<tr><td>${tarihUzun(g)}</td><td>${d.saat}</td><td>${e(tamAd(kursiyer(d.kursiyer)))}</td><td>${e(kursiyer(d.kursiyer).tel)}</td></tr>`)).join('') || '<tr><td colspan="4">Bu hafta ders yok.</td></tr>'}</table>`;
@@ -43,9 +73,18 @@ function belgeHtml(tur, id) {
     <p>Kurs, ${S0.ad} sınıfı için teorik dersleri ve ${S0.direksiyon} direksiyon dersini verir. Kursiyer derslere zamanında katılmayı, ödeme planına uymayı kabul eder. Gelinemeyecek dersler en az bir gün önce bildirilir.</p>
     <p style="color:#666;font-size:11.5px">Bu örnek şablondur; kurs kendi sözleşme metnini Ayarlar’dan ekler.</p>
     <div class="imza"><div>Kursiyer · ${e(tamAd(k))}</div><div>Kurs müdürü · ${e(S.kurs.ad)}</div></div>`;
+  if (tur === 'ek1') return kursBas('Motorlu taşıt sürücüleri kursu kursiyer kayıt formu') + `<p style="font-size:11.5px;color:#555">MTSK Yönetmeliği ekindeki kayıt formu düzeninde hazırlanmıştır. İl MEM’inizin örneğiyle farklılık varsa bildirin, 1 iş günü içinde güncellenir.</p>
+      <table><tr><th>TC kimlik no</th><td>${e(k.tc || '')}</td><th>Kayıt tarihi</th><td>${tarih(k.kayit)}</td></tr>
+      <tr><th>Adı</th><td>${e(k.ad)}</td><th>Soyadı</th><td>${e(k.soyad)}</td></tr>
+      <tr><th>Doğum tarihi</th><td>${e(k.dogumTarihi ? k.dogumTarihi.split('-').reverse().join('.') : k.dogum || '')}</td><th>Öğrenim durumu</th><td>${e(k.ogrenim || '')}</td></tr>
+      <tr><th>İstenen sertifika</th><td>${S0.ad}</td><th>Mevcut sürücü belgesi</th><td>${e(k.mevcutEhliyet || 'Yok')}</td></tr>
+      <tr><th>Adres</th><td colspan="3">${e(k.adres || '')}</td></tr><tr><th>Telefon</th><td>${e(k.tel)}</td><th>Dönem / grup</th><td>${(k.teorikGrup || 'aksam') === 'sabah' ? 'Sabah' : 'Akşam'}</td></tr></table>
+      <p><b>Teslim alınan belgeler</b></p><table>${EVRAKLAR.map(([x, t]) => `<tr><td>${t}</td><td style="width:80px">${k.evrak[x] ? 'Var' : 'Yok'}</td></tr>`).join('')}</table>
+      <p style="font-size:12px">Beyan ettiğim bilgilerin doğru olduğunu, kişisel verilerimin aydınlatma metninde belirtilen amaçlarla işlenmesine onay verdiğimi kabul ederim.</p>
+      <div class="imza"><div>Kursiyer</div><div>Kurs müdürü</div></div>`;
   if (tur === 'bilgi') return kursBas('Kursiyer bilgi formu') + `<table><tr><th>Ad soyad</th><td>${e(tamAd(k))}</td></tr><tr><th>Telefon</th><td>${e(k.tel)}</td></tr><tr><th>Doğum yılı</th><td>${e(k.dogum)}</td></tr><tr><th>Sınıf</th><td>${S0.ad}</td></tr><tr><th>Usta öğretici</th><td>${e(egitmen(k.egitmen).ad)}</td></tr><tr><th>Acil durum kişisi</th><td>${e(k.acil ? k.acil.ad + ' (' + k.acil.yakinlik + ') ' + k.acil.tel : '—')}</td></tr><tr><th>Nereden duydu</th><td>${e(k.kaynak)}</td></tr></table>
     <p><b>Evrak durumu</b></p><table>${EVRAKLAR.map(([key, t]) => `<tr><td>${t}</td><td>${k.evrak[key] ? 'Teslim alındı' : 'Eksik'}</td></tr>`).join('')}</table><div class="imza"><div>Kursiyer</div><div>Teslim alan</div></div>`;
-  if (tur === 'takip') { const d = S.dersler.filter(x => x.kursiyer === k.id && x.durum === 'Yapıldı').sort((a, b) => a.tarih.localeCompare(b.tarih)); return kursBas('Direksiyon eğitimi takip formu') + `<p><b>Kursiyer:</b> ${e(tamAd(k))} &nbsp; <b>Sınıf:</b> ${S0.ad}</p><table><tr><th>#</th><th>Tarih</th><th>Saat</th><th>Usta öğretici</th><th>Araç</th><th>Kursiyer imza</th><th>Usta öğr. imza</th></tr>${Array.from({ length: Math.max(S0.direksiyon, d.length) }, (_, i) => d[i] ? `<tr><td>${i + 1}</td><td>${tarih(d[i].tarih)}</td><td>${d[i].saat}</td><td>${e(egitmen(d[i].egitmen).ad)}</td><td>${d[i].arac ? arac(d[i].arac).plaka : ''}</td>${imzaHucre(d[i], 'kursiyer')}${imzaHucre(d[i], 'usta')}</tr>` : `<tr><td>${i + 1}</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`).join('')}</table><p style="font-size:11.5px;color:#555">Dijital imzalar ders sonunda usta öğreticinin telefonunda alınmış, zaman damgasıyla saklanmıştır.</p>`; }
+  if (tur === 'takip') { const d = S.dersler.filter(x => x.kursiyer === k.id && x.durum === 'Yapıldı').sort((a, b) => a.tarih.localeCompare(b.tarih)); return kursBas('Direksiyon eğitimi takip formu') + `<p><b>Kursiyer:</b> ${e(tamAd(k))} &nbsp; <b>Sınıf:</b> ${S0.ad}</p>${(() => { const y = S.kurs.imzaYontemi || 'ikili', dij = y !== 'islak', isl = y !== 'dijital'; return `<table><tr><th>#</th><th>Tarih</th><th>Saat</th><th>Usta öğretici</th><th>Araç</th>${dij ? '<th>Kursiyer (dijital)</th><th>Usta öğr. (dijital)</th>' : ''}${isl ? '<th>Kursiyer ıslak imza</th><th>Usta öğr. ıslak imza</th>' : ''}</tr>${Array.from({ length: Math.max(S0.direksiyon, d.length) }, (_, i) => d[i] ? `<tr><td>${i + 1}</td><td>${tarih(d[i].tarih)}</td><td>${d[i].saat}</td><td>${e(egitmen(d[i].egitmen).ad)}</td><td>${d[i].arac ? arac(d[i].arac).plaka : ''}</td>${dij ? imzaHucre(d[i], 'kursiyer') + imzaHucre(d[i], 'usta') : ''}${isl ? '<td style="width:90px"></td><td style="width:90px"></td>' : ''}</tr>` : `<tr><td>${i + 1}</td><td></td><td></td><td></td><td></td>${dij ? '<td></td><td></td>' : ''}${isl ? '<td></td><td></td>' : ''}</tr>`).join('')}</table><p style="font-size:11.5px;color:#555">${{ ikili: 'Dijital imzalar ders sonunda usta öğreticinin telefonunda alınmış, zaman damgasıyla saklanmıştır. Islak imza sütunları haftalık olarak doldurulur.', dijital: 'Dijital imzalar ders sonunda alınmış, zaman damgasıyla saklanmıştır. Kurs, il MEM’in dijital imza onayını dosyasında saklar.', islak: 'Her ders sonunda ıslak imzalanır.' }[y]}</p>`; })()}`; }
   if (tur === 'makbuz') { const h = S.hareket.filter(x => x.kursiyer === k.id).sort((a, b) => b.tarih.localeCompare(a.tarih))[0]; return kursBas('Tahsilat makbuzu') + `<table><tr><th>Makbuz no</th><td>${(h ? h.id : '').replace('h', 'M-')}</td><th>Tarih</th><td>${h ? tarih(h.tarih) : ''}</td></tr><tr><th>Ödeyen</th><td>${e(tamAd(k))}</td><th>Yöntem</th><td>${h ? e(h.yontem) : ''}</td></tr><tr><th>Açıklama</th><td colspan="3">${h ? e(h.aciklama) : ''}</td></tr><tr><th>Tutar</th><td colspan="3"><b>${h ? tl(h.tutar) : ''}</b></td></tr><tr><th>Kalan borç</th><td colspan="3">${tl(kalanBorc(k))}</td></tr></table><div class="imza"><div>Teslim eden</div><div>Teslim alan</div></div>`; }
   if (tur === 'senet') { const t = k.odeme.taksitler.find(x => !x.odendi) || k.odeme.taksitler[0]; return kursBas('Senet') + `<table><tr><th>Ödeme günü</th><td>${t ? tarih(t.vade) : ''}</td><th>Tutar</th><td><b>${t ? tl(t.tutar) : ''}</b></td></tr></table><p>İşbu senet mukabilinde ${t ? tarih(t.vade) : ''} tarihinde ${e(S.kurs.ad)}’na yukarıda yazılı tutarı ödeyeceğim. Bedeli eğitim hizmeti olarak alınmıştır.</p><table><tr><th>Borçlu</th><td>${e(tamAd(k))}</td></tr><tr><th>Telefon</th><td>${e(k.tel)}</td></tr><tr><th>Kefil</th><td>${e(k.acil ? k.acil.ad : '')}</td></tr></table><p style="color:#666;font-size:11.5px">Örnek şablon; kurs kendi senet formunu kullanabilir.</p><div class="imza"><div>Borçlu</div><div>Kefil</div></div>`; }
   return '';
@@ -157,6 +196,11 @@ function kopyala(metin) {
   return Promise.resolve(yedek());
   function yedek() { const t = document.createElement('textarea'); t.value = metin; t.style.position = 'fixed'; t.style.opacity = '0'; document.body.appendChild(t); t.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (x) { } t.remove(); return ok; }
 }
+// Sıralı giriş: her dokunuşta sıradaki alan panoya kopyalanır; zincir modunda kursiyerden kursiyere geçer.
+export const mebSira = { kid: null, i: 0, basla: 0, zincir: false, sureler: [] };
+export const bekleyenMeb = () => S.kursiyerler.filter(k => !k.mebIslendi && !eksikEvrak(k).length);
+export function mebSiraBaslat(zincir = true) { const l = bekleyenMeb(); if (!l.length) return; Object.assign(mebSira, { kid: l[0].id, i: 0, basla: Date.now(), zincir, sureler: zincir ? [] : mebSira.sureler }); location.hash = '#/mebbis/' + l[0].id; }
+const sureMetni = ms => { const sn = Math.round(ms / 1000); return (sn >= 60 ? Math.floor(sn / 60) + ' dk ' : '') + (sn % 60) + ' sn'; };
 const ayAdiUzun = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 export function mebbisAsistani(id) {
   const k = kursiyer(id);
@@ -176,25 +220,47 @@ export function mebbisAsistani(id) {
   ];
   const tum = bolumler.flatMap(b => b[2]), girilen = tum.filter(([key]) => k.mebGirildi[key]).length;
   const bosAlan = tum.filter(([, , v]) => !v).map(([, l]) => l);
+  const sirali = mebSira.kid === k.id, adim = sirali ? tum[mebSira.i] : null;
+  const sonraki = bekleyenMeb().filter(x => x.id !== k.id);
+  const ortalama = mebSira.sureler.length ? mebSira.sureler.reduce((a, b) => a + b, 0) / mebSira.sureler.length : 0;
+  const siraBar = sirali ? `<div class="sira-bar" role="region" aria-label="Sıralı giriş">
+      ${adim ? `<div class="sira-ust"><span>Alan ${mebSira.i + 1}/${tum.length} · ${e(bolumler.find(b => b[2].includes(adim))[0])}</span>${mebSira.zincir ? `<span>Kuyrukta ${sonraki.length} kursiyer daha</span>` : ''}</div>
+      <div class="sira-govde"><div style="min-width:0;flex:1"><small>${e(adim[1])}</small><b class="mono">${e(adim[2]) || '<span style="color:var(--kirmizi)">eksik</span>'}</b></div>
+        <button class="dg dg-ana" data-sira-kopyala ${adim[2] ? '' : 'disabled'}>${ik('ok')}Kopyala, sonrakine geç <kbd>Enter</kbd></button><button class="dg dg-cizgi dg-kucuk" data-sira-atla>Atla</button><button class="dg dg-hafif dg-kucuk" data-sira-bitir>Durdur</button></div>`
+      : `<div class="sira-govde">${isaret('tamam', 28)}<div style="flex:1"><b>Bütün alanlar kopyalandı · ${sureMetni(Date.now() - mebSira.basla)}</b><small>MEBBİS’te kaydı tamamlayın, sonra onaylayın.${ortalama ? ' Bu oturumda kursiyer başı ortalama ' + sureMetni(ortalama) + '.' : ''}</small></div><button class="dg dg-ana" data-tamam>${mebSira.zincir && sonraki.length ? 'Girdim, sıradaki kursiyer →' : 'Hepsini MEBBİS’e girdim'}</button></div>`}
+    </div>` : `<div class="kart" style="margin-bottom:14px"><div class="kart-govde" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">${isaret('zorunlu', 30)}<div style="flex:1;min-width:240px"><b style="color:var(--murekkep);font-family:var(--baslik);font-size:16px">Sıralı giriş</b><p style="font-size:14px">MEBBİS’i yanda açın. Her dokunuşta sıradaki alan panoya kopyalanır; MEBBİS’e yapıştırıp devam edersiniz. Alan aramazsınız, sıra kaçmaz.</p></div><button class="dg dg-ana" data-sira-basla>Sıralı girişi başlat</button></div></div>`;
   return {
     baslik: 'MEBBİS giriş kartı', alt: tamAd(k) + ' · ' + SINIFLAR[k.sinif].ad,
     html: `<a class="dg dg-hafif" href="#/meb" style="margin:-6px 0 10px -8px">${ik('sol')}MEB işlemleri</a>
     ${ekranNotu('MEBBİS’i kendi oturumunuzda açın. Her alanın yanındaki “Kopyala”ya dokunun, MEBBİS’e yapıştırın; alan yeşile döner. Sinyal MEBBİS’e bağlanmaz.')}
     ${olcumler([['Kursiyer', e(tamAd(k))], ['Girilen alan', girilen + '/' + tum.length], ['Eksik bilgi', bosAlan.length + '', bosAlan.length ? 'Önce tamamlayın' : 'Hazır', bosAlan.length ? 'uyari' : '']])}
-    <div class="ara-bosluk"></div>
+    <div class="ara-bosluk"></div>${siraBar}
     <div class="izgara iz-2">${bolumler.map(([b, not, alanlar], bi) => `<div class="kart"><div class="kart-bas"><h3>${bi + 1} · ${b}</h3></div><div class="kart-govde"><p style="font-size:13.5px;color:var(--soluk);margin:-4px 0 10px">${not}</p>${alanlar.map(([key, l, v]) => `<div class="evrak"><span class="durum ${k.mebGirildi[key] ? 'var' : 'yok'}" style="${k.mebGirildi[key] ? '' : 'box-shadow:inset 0 0 0 2px var(--cizgi);color:var(--cizgi)'}">${ik('tik')}</span><div style="flex:1;min-width:0"><small style="color:var(--soluk);display:block">${l}</small>${['rapor-no', 'rapor-tarih', 'adli-barkod'].includes(key) ? `<input class="girdi" style="height:34px;margin-top:2px" data-alan="${key}" value="${e(v)}" placeholder="Belgeden girin">` : `<b class="mono" style="color:var(--murekkep);word-break:break-all">${e(v) || '<span style="color:var(--kirmizi)">eksik</span>'}</b>`}</div>${key.endsWith('-dosya') && (k.evrakFoto || {})[key.split('-')[0]] ? `<a class="dg dg-cizgi dg-kucuk" href="${k.evrakFoto[key.split('-')[0]]}" download="${e(v)}">İndir</a>` : ''}<button class="dg ${k.mebGirildi[key] ? 'dg-cizgi' : 'dg-ana'} dg-kucuk" data-kopyala="${key}" ${v ? '' : 'disabled'}>${k.mebGirildi[key] ? 'Tekrar kopyala' : 'Kopyala'}</button></div>`).join('')}</div></div>`).join('')}</div>
     <div class="ara-bosluk"></div>
     <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="dg dg-ana" data-tamam ${k.mebIslendi ? 'disabled' : ''}>${k.mebIslendi ? 'MEBBİS’e girildi' : 'Hepsini MEBBİS’e girdim'}</button><a class="dg dg-cizgi" href="#/kursiyer/${k.id}">Kursiyer dosyası</a></div>`,
     baglan(kap) {
+      const siraKopyala = () => { const al = tum[mebSira.i]; if (!al || !al[2]) return; kopyala(al[2]).then(ok => { k.mebGirildi[al[0]] = true; kaydet(); if (ok === false) bildir('Kopyalanamadı; değeri elle seçin', 'uyari'); mebSira.i++; yenile(); }); };
+      mebKlavye = ev => { if (mebSira.kid !== k.id || ev.key !== 'Enter' || (ev.target.closest && ev.target.closest('input,textarea,select,button'))) return; ev.preventDefault(); if (tum[mebSira.i]) siraKopyala(); else kap.querySelector('[data-tamam]')?.click(); };
       kap.addEventListener('change', ev => { const a = ev.target.closest('[data-alan]'); if (!a) return; const v = a.value.trim(); if (a.dataset.alan === 'adli-barkod') k.adliSicil = { barkod: v }; else { k.saglikRapor = k.saglikRapor || {}; k.saglikRapor[a.dataset.alan === 'rapor-no' ? 'no' : 'tarih'] = v; } kaydet(); yenile(); });
       kap.addEventListener('click', ev => {
         const c = ev.target.closest('[data-kopyala]');
         if (c) { const al = tum.find(x => x[0] === c.dataset.kopyala); kopyala(al[2]).then(ok => { k.mebGirildi[al[0]] = true; kaydet(); bildir(ok === false ? 'Kopyalanamadı; değeri elle seçin' : al[1] + ' kopyalandı'); yenile(); }); }
-        if (ev.target.closest('[data-tamam]')) { if (bosAlan.length) return bildir('Önce eksik bilgileri tamamlayın: ' + bosAlan.join(', '), 'uyari'); k.mebIslendi = true; islem('MEBBİS’e girildi işaretledi', tamAd(k)); kaydet(); bildir(tamAd(k) + ' MEBBİS’e girildi olarak işaretlendi'); location.hash = '#/meb'; }
+        if (ev.target.closest('[data-tamam]')) {
+          if (bosAlan.length) return bildir('Önce eksik bilgileri tamamlayın: ' + bosAlan.join(', '), 'uyari');
+          k.mebIslendi = true; islem('MEBBİS’e girildi işaretledi', tamAd(k)); kaydet(); bildir(tamAd(k) + ' MEBBİS’e girildi olarak işaretlendi');
+          if (mebSira.kid === k.id) { mebSira.sureler.push(Date.now() - mebSira.basla); const n = bekleyenMeb()[0]; if (mebSira.zincir && n) { Object.assign(mebSira, { kid: n.id, i: 0, basla: Date.now() }); location.hash = '#/mebbis/' + n.id; return; } mebSira.kid = null; }
+          location.hash = '#/meb';
+        }
+        if (ev.target.closest('[data-sira-basla]')) { Object.assign(mebSira, { kid: k.id, i: 0, basla: Date.now(), zincir: false }); yenile(); }
+        if (ev.target.closest('[data-sira-bitir]')) { mebSira.kid = null; yenile(); }
+        if (ev.target.closest('[data-sira-atla]')) { mebSira.i++; yenile(); }
+        if (ev.target.closest('[data-sira-kopyala]')) siraKopyala();
       });
     },
   };
 }
+let mebKlavye = null;
+document.addEventListener('keydown', ev => { if (mebKlavye && location.hash.startsWith('#/mebbis/')) mebKlavye(ev); });
 export function programPenceresi() {
   const l = S.dersler.filter(d => d.durum === 'Planlandı' && fark(d.tarih) >= 0 && !d.meb).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat));
   const gunler = [...new Set(l.map(d => d.tarih))];
@@ -225,14 +291,32 @@ const plakaMetin = a => e(a.plaka) + ' · ' + e(a.model);
 /* ================= PAKET VE GÜVENCE ================= */
 export function guven() {
   const paketler = [
-    ['Kurs', '1.490', ['Kursiyer, evrak, ödeme ve senet takibi', 'Direksiyon ve teorik program, yoklama', 'MEBBİS giriş asistanı ve kural kontrolü', 'Belge çıktıları, kasa, raporlar', '3 kullanıcı']],
-    ['Kurs + WhatsApp', '2.490', ['Kurs paketindeki her şey', 'Ders, taksit, sınav hatırlatmaları (ayda 2.000 mesaj dahil)', 'Evden kayıt sayfası ve kartla ödeme linki', 'Usta öğretici ve kursiyer ekranları', 'Sınırsız kullanıcı'], true],
-    ['Kurs + Asistan', '3.990', ['WhatsApp paketindeki her şey', 'Sosyal medya asistanı: Instagram mesajları ve yorumları, WhatsApp, Facebook’a 7/24 cevap', 'Boşalan saati doldurma, sınav riski ve ek ders', 'Google yorum toplama']],
+    ['Kurs', '1.490', ['Kursiyer, evrak, ödeme ve senet takibi', 'Direksiyon ve teorik program, yoklama', 'MEBBİS sıralı giriş ve kural kontrolü', 'Belge çıktıları, kasa, raporlar, muhasebe aktarımı', 'Ayda 300 SMS ve 300 e-Arşiv fatura dahil', '3 kullanıcı']],
+    ['Kurs + WhatsApp', '2.490', ['Kurs paketindeki her şey', 'Ders, taksit, sınav hatırlatmaları', 'Ayda 2.000 WhatsApp mesajı, 500 SMS, 500 e-Arşiv dahil', 'Evden kayıt sayfası ve kartla ödeme linki', 'Usta öğretici ve kursiyer ekranları, deneme sınavları', 'Sınırsız kullanıcı, çoklu şube'], true],
+    ['Kurs + Asistan', '3.990', ['WhatsApp paketindeki her şey', 'Sosyal medya asistanı: Instagram mesajları ve yorumları, WhatsApp, Facebook', 'Ayda 5.000 WhatsApp mesajı ve 1.000 SMS dahil', 'Boşalan saati doldurma, sınav riski ve ek ders', 'Google yorum toplama']],
   ];
+  const KOTA = { 'Kurs': 0, 'Kurs + WhatsApp': 2000, 'Kurs + Asistan': 5000 };
   return {
     baslik: 'Paket ve güvence', alt: 'Fiyat, veri sahipliği, kurulum ve destek',
     html: `${ekranNotu('Ne ödeyeceğiniz, verilerinizin kimde durduğu ve geçişin nasıl yapılacağı: karar vermeden önce bilmeniz gerekenler.')}
     <div class="izgara iz-3">${paketler.map(([ad, f, l, one]) => `<div class="kart" style="padding:22px;${one ? 'border-color:var(--levha);box-shadow:0 0 0 2px var(--levha)' : ''}">${one ? rozet('En çok seçilen', 'mavi') : ''}<h3 style="font-size:22px;margin-top:${one ? 10 : 0}px">${ad}</h3><b style="display:block;font-family:var(--baslik);font-size:40px;font-weight:900;color:var(--murekkep);margin:8px 0 2px">${f} ₺<small style="font-size:16px;font-weight:700;color:var(--soluk)"> / ay</small></b><small style="color:var(--soluk)">KDV hariç · taahhüt yok</small><ul style="list-style:none;margin-top:16px;display:grid;gap:9px">${l.map(x => `<li style="display:flex;gap:8px;align-items:flex-start">${isaret('tamam', 18)}<span>${x}</span></li>`).join('')}</ul></div>`).join('')}</div>
+    <p style="font-size:13.5px;color:var(--soluk);margin-top:10px">Fiyata dahil olmayan tek kalem bankanızın sanal POS komisyonudur; o da bankayla sizin aranızdadır. Kota aşılacaksa önce size sorulur: ek 1.000 WhatsApp mesajı 250 ₺.</p>
+    <div class="ara-bosluk"></div>
+    <div class="izgara iz-2">
+      <div class="kart"><div class="kart-bas"><h3>Ayda ne ödersiniz?</h3><small>Kendi rakamlarınızla hesaplayın</small></div><div class="kart-govde"><form class="form-izgara" data-hesap>
+        <div class="alan"><label for="h-paket">Paket</label><select id="h-paket" name="paket">${paketler.map(([a], i) => `<option ${i === 1 ? 'selected' : ''}>${a}</option>`).join('')}</select></div>
+        <div class="alan"><label for="h-k">Aktif kursiyer</label><input id="h-k" name="k" type="number" min="1" value="${S.kursiyerler.filter(k => k.asama !== 'Ehliyet').length}"></div>
+        <div class="alan"><label for="h-kart">Ayda kartla tahsilat (₺)</label><input id="h-kart" name="kart" type="number" min="0" step="1000" value="120000"></div>
+        <div class="alan"><label for="h-eski">Şu anki programınızın yıllık maliyeti (₺)</label><input id="h-eski" name="eski" type="number" min="0" step="500" value="18000"></div>
+      </form><div data-hesap-sonuc style="margin-top:14px"></div></div></div>
+      <div class="kart"><div class="kart-bas"><h3>Hizmet güvencesi</h3><small>Sözleşmede yazılı</small></div><ul class="liste" style="margin-top:8px">${[
+        ['tamam', '%99,5 erişilebilirlik', 'Altına düşen her tam gün için o ayın ücretinin 1/30’u iade edilir. Bakım gece 02:00–05:00 ve 48 saat önceden bildirilir.'],
+        ['tamam', 'Sınav günü öncelikli destek', 'Cumartesi dahil sınav günlerinde sorunlara 30 dakika içinde dönülür.'],
+        ['tamam', 'Biz kapanırsak da çalışır', 'Faaliyet durursa 90 gün önceden haber verilir; verileriniz ve yazılımın kendi sunucunuzda çalışan sürümü kaynak koduyla teslim edilir (noterde emanet).'],
+        ['tamam', 'Mevzuat sorumluluğu', 'Bildirilmeyen bir mevzuat değişikliğinden doğan cezada yıllık ücret tutarına kadar biz sorumluyuz.'],
+      ].map(([t, b, a]) => `<li style="align-items:flex-start">${isaret(t, 24)}<div><b style="color:var(--murekkep);display:block">${b}</b><small style="color:var(--metin);font-size:14px">${a}</small></div></li>`).join('')}</ul>
+      <div style="padding:6px 20px 20px;display:flex;gap:8px;flex-wrap:wrap"><button class="dg dg-cizgi" data-belge-ac="hizmet">${ik('belge')}Hizmet sözleşmesi</button><button class="dg dg-cizgi" data-belge-ac="vis">${ik('belge')}Veri işleme sözleşmesi</button></div></div>
+    </div>
     <div class="ara-bosluk"></div>
     <div class="izgara iz-2">
       <div class="kart"><div class="kart-bas"><h3>Verileriniz sizindir</h3></div><ul class="liste" style="margin-top:8px">${[
@@ -240,7 +324,7 @@ export function guven() {
         ['tamam', 'MEBBİS şifrenizi istemeyiz', 'Sinyal MEBBİS’e bağlanmaz; giriş kurs yetkilisinin kendi oturumunda yapılır.'],
         ['tamam', 'Kim neye baktı, kayıtlı', 'TC görüntüleme dahil her işlem kullanıcı adıyla işlem geçmişine yazılır.'],
         ['tamam', 'Yetkiye göre ekran', 'Sekreter maaşları görmez, usta öğretici yalnızca kendi derslerini görür.'],
-        ['bilgi', 'KVKK', 'Kayıt formunda aydınlatma metni ve açık rıza alınır. Sağlık raporu ve adli sicil özel nitelikli veridir; canlı kurulumda yurt içi sunucuda, şifreli saklanır ve günlük yedeklenir.'],
+        ['bilgi', 'KVKK', 'Kayıt formunda aydınlatma metni ve açık rıza alınır. Sağlık raporu ve adli sicil özel nitelikli veridir; Türkiye’deki sunucuda, şifreli saklanır ve her gece yedeklenir. Asistanın dil modeli de Türkiye’de çalışır.'],
         ['bilgi', 'Ayrılırsanız', 'Sözleşme bitince verileriniz 30 gün içinde Excel olarak teslim edilir, ardından silinir.'],
       ].map(([t, b, a]) => `<li style="align-items:flex-start">${isaret(t, 24)}<div><b style="color:var(--murekkep);display:block">${b}</b><small style="color:var(--metin);font-size:14px">${a}</small></div></li>`).join('')}</ul>
         <div style="padding:6px 20px 20px"><button class="dg dg-ana" data-dokum>${ik('indir')}Tüm verimi şimdi indir</button></div></div>
@@ -250,11 +334,21 @@ export function guven() {
         ['İlk hafta', 'Eski programınız yan yana açık kalır; her şey doğru görünene kadar geçiş zorunlu değil.'],
         ['İlk ay', 'Ücret yok. Memnun kalmazsanız verilerinizi alır, ayrılırsınız.'],
       ].map(([a, b]) => `<li style="align-items:flex-start"><b class="mono" style="color:var(--levha);width:76px;flex:none">${a}</b><span>${b}</span></li>`).join('')}</ul>
-        <div class="kart-bas" style="padding-top:8px"><h3>Destek</h3></div><div class="kart-govde"><p>Hafta içi 09:00–19:00 WhatsApp destek hattı; sınav günlerinde Cumartesi de açık. Sorun bildirimine ilk cevap en geç 1 saat.</p></div></div>
+        <div class="kart-bas" style="padding-top:8px"><h3>Destek</h3></div><div class="kart-govde"><p>Hafta içi 09:00–19:00 WhatsApp destek hattı; sınav günlerinde Cumartesi de açık. Mesai içinde ilk cevap en geç 1 saat, sınav günü 30 dakika. Destek ekibi nöbetleşe çalışır; tek bir kişiye bağlı değildir.</p></div></div>
     </div>
-    <p style="font-size:13px;color:var(--soluk);margin-top:14px">Demo: fiyatlar ve hizmet koşulları örnektir; teklif aşamasında kursa göre netleşir.</p>`,
+`,
     baglan(k) {
+      const f = k.querySelector('[data-hesap]'), out = k.querySelector('[data-hesap-sonuc]');
+      const hesapla = () => {
+        const p = paketler.find(x => x[0] === f.paket.value), ay = +p[1].replace('.', ''), kk = +f.k.value || 0, kart = +f.kart.value || 0, eski = +f.eski.value || 0;
+        const mesaj = kk * 14, kota = KOTA[p[0]], asim = kota ? Math.max(0, Math.ceil((mesaj - kota) / 1000)) * 250 : 0, pos = kart * 0.0249;
+        const aylik = ay + asim, yil3 = aylik * 36, eski3 = eski * 3;
+        out.innerHTML = `<ul class="liste" style="margin:0 -20px">${[[p[0] + ' paketi', tl(ay)], ['Tahmini mesaj', kota ? `${sayiTr(mesaj)} / ${sayiTr(kota)} kota${asim ? ' · ek ' + tl(asim) : ' · dahil'}` : 'WhatsApp yok, SMS dahil'], ['Sinyal’e aylık toplam', '<b>' + tl(aylik) + '</b>'], ['Bankaya POS komisyonu (bilgi)', tl(pos)], ['3 yılda Sinyal', tl(yil3)], ['3 yılda şu anki programınız', tl(eski3)]].map(([a, b]) => `<li><span style="flex:1">${a}</span><span class="mono">${b}</span></li>`).join('')}</ul><p style="font-size:13.5px;margin-top:10px">Mesaj tahmini kursiyer başına ayda 14 hatırlatmadır (ders, taksit, sınav). Sinyal, şu anki programınızın yapmadığı hatırlatma, asistan ve kayıt sayfası işlerini de kapsar; fark yalnızca fiyat değil, yapılan iştir.</p>`;
+      };
+      const sayiTr = n => new Intl.NumberFormat('tr-TR').format(n);
+      if (f) { f.addEventListener('input', hesapla); f.addEventListener('change', hesapla); hesapla(); }
       k.addEventListener('click', ev => {
+        const bo = ev.target.closest('[data-belge-ac]'); if (bo) return belgeAc(bo.dataset.belgeAc);
         if (!ev.target.closest('[data-dokum]')) return;
         csvIndir('sinyal-kursiyerler.csv', [['TC', 'Ad', 'Soyad', 'Telefon', 'Doğum tarihi', 'Adres', 'Öğrenim', 'Sınıf', 'Aşama', 'Kayıt', 'Teorik', 'Direksiyon', 'Toplam', 'Ödenen', 'Kalan'], ...S.kursiyerler.map(x => [x.tc, x.ad, x.soyad, x.tel, x.dogumTarihi, x.adres, x.ogrenim, SINIFLAR[x.sinif].ad, x.asama, x.kayit, x.teorik, x.direksiyon, x.odeme.toplam, odenen(x), kalanBorc(x)])]);
         setTimeout(() => csvIndir('sinyal-kasa.csv', [['Tarih', 'Tür', 'Kategori', 'Açıklama', 'Yöntem', 'Tutar'], ...S.hareket.map(x => [x.tarih, x.tur, x.kategori, x.aciklama, x.yontem, x.tutar])]), 400);
@@ -275,6 +369,8 @@ export function denetimEksikleri() {
   if (imzasiz.length) l.push(['yasak', `${imzasiz.length} direksiyon dersi imzasız`, 'Takip formunda imza eksik; usta öğretici ekranından imzalatın.', '#/plan']);
   const evr = S.kursiyerler.filter(k => k.asama !== 'Ehliyet' && eksikEvrak(k).length);
   if (evr.length) l.push(['yasak', `${evr.length} kursiyerin evrakı eksik`, evr.slice(0, 4).map(tamAd).join(', ') + (evr.length > 4 ? '…' : ''), '#/meb/evrak']);
+  const dogrulanmamis = S.kursiyerler.filter(k => k.asama !== 'Ehliyet' && ['saglik', 'adli'].some(x => k.evrak[x] && !(k.dogrulama || {})[x]));
+  if (dogrulanmamis.length) l.push(['uyari', `${dogrulanmamis.length} kursiyerin sağlık raporu ya da adli sicili doğrulanmadı`, 'Barkod ve rapor numarasını e-Devlet’te kontrol edip “Doğruladım”a basın.', '#/kursiyer/' + dogrulanmamis[0].id]);
   const riza = S.kursiyerler.filter(k => !(k.kvkk && k.kvkk.riza));
   if (riza.length) l.push(['yasak', `${riza.length} kursiyerde KVKK rızası yok`, 'Özel nitelikli veri rızasız işlenemez.', '#/ayarlar/kvkk']);
   const meb = S.kursiyerler.filter(k => !k.mebIslendi && k.asama !== 'Kayıt' && k.asama !== 'Evrak');

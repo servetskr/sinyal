@@ -1,10 +1,10 @@
-import { oturum, islem, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle } from './veri.js';
-import { e, tl, ik, rozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani } from './ui.js';
-import { yenile } from './app.js';
+import { oturum, islem, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle } from './veri.js?v=22';
+import { e, tl, ik, rozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani } from './ui.js?v=22';
+import { yenile } from './app.js?v=22';
+import { SORULAR, KONULAR } from './sorular.js?v=22';
 
 let egId = 'e1', egSekme = 'bugun';
 let ogId = null, ogSekme = 'durum';
-let test = { i: 0, dogru: 0, cevap: null };
 
 const sekmeCubugu = (liste, secili, ad) => `<nav class="portal-sekme" aria-label="Sekmeler">${liste.map(([k, t, i]) => `<button data-${ad}="${k}" class="${k === secili ? 'secili' : ''}">${ik(i)}${t}</button>`).join('')}</nav>`;
 
@@ -71,30 +71,30 @@ export function egitmenPortal() {
 }
 
 /* ================= KURSİYER ================= */
-const HAVUZ = [
-  ['Kırmızı ışık yanan bir trafik ışığında sürücü ne yapmalıdır?', ['Yavaşlayıp dikkatlice geçmelidir', 'Durmalıdır', 'Korna çalarak geçmelidir', 'Sağa dönebilir'], 1],
-  ['Yerleşim yeri içinde, aksine bir işaret yoksa otomobiller için azami hız kaç km/saattir?', ['30', '50', '70', '90'], 1],
-  ['Islak ve kaygan yolda takip mesafesi nasıl ayarlanmalıdır?', ['Kısaltılmalıdır', 'Değiştirilmemelidir', 'Artırılmalıdır', 'Önemi yoktur'], 2],
-  ['Motor yağı seviyesi hangisiyle kontrol edilir?', ['Yağ çubuğu', 'Hararet göstergesi', 'Yakıt göstergesi', 'Takometre'], 0],
-  ['İlk yardımın ABC’sinde “A” neyi ifade eder?', ['Kanamanın durdurulması', 'Hava yolunun açılması', 'Kalp masajı', 'Yaralının taşınması'], 1],
-  ['Yaya geçidinde karşıya geçmek üzere bekleyen yaya varsa sürücü ne yapmalıdır?', ['Korna çalıp geçmelidir', 'Hızlanarak geçmelidir', 'Durup yayaya yol vermelidir', 'Şerit değiştirmelidir'], 2],
-  ['Emniyet kemeri kimler tarafından takılmalıdır?', ['Yalnızca sürücü', 'Yalnızca ön koltuktakiler', 'Sürücü ve tüm yolcular', 'Yalnızca şehir dışında'], 2],
-  ['Siren çalan bir ambulans arkadan yaklaşıyorsa ne yapılmalıdır?', ['Hızlanılmalıdır', 'Sağa yanaşıp yol verilmelidir', 'Olduğu yerde durulmalıdır', 'Sol şeride geçilmelidir'], 1],
-  ['Karşıdan araç gelirken uzun hüzmeli farlar için ne yapılmalıdır?', ['Açık bırakılmalıdır', 'Kısa hüzmeye geçilmelidir', 'Sis farı da yakılmalıdır', 'Farlar tamamen kapatılmalıdır'], 1],
-  ['Hararet göstergesi kırmızı bölgeye çıkarsa ne yapılmalıdır?', ['Hızlanarak motor soğutulmalıdır', 'Güvenli yerde durup motor kontrol edilmelidir', 'Kaloriferi kapatıp yola devam edilmelidir', 'Önemsenmemelidir'], 1],
-  ['Lastik diş derinliği azaldığında ne olur?', ['Yakıt tüketimi azalır', 'Yol tutuşu azalır, kayma riski artar', 'Fren mesafesi kısalır', 'Bir değişiklik olmaz'], 1],
-  ['Kavşakta sağa dönecek sürücü ne yapmalıdır?', ['Sol şeritten dönmelidir', 'Önceden sağ şeride geçip sinyal vermelidir', 'Sinyal vermeden dönmelidir', 'Hızını artırmalıdır'], 1],
-  ['Bilinci kapalı ama nefes alan yaralıya hangi pozisyon verilir?', ['Sırtüstü yatış', 'Oturur pozisyon', 'Koma (yan yatış) pozisyonu', 'Ayakta tutma'], 2],
-  ['Burun kanamasında ne yapılmalıdır?', ['Baş geriye yatırılır', 'Baş hafifçe öne eğilip burun kanatları sıkılır', 'Yaralı sırtüstü yatırılır', 'Buruna pamuk sıkıca doldurulur'], 1],
-  ['Fren balataları aşındığında ne olur?', ['Fren mesafesi uzar', 'Yakıt tüketimi azalır', 'Direksiyon hafifler', 'Motor gücü artar'], 0],
-  ['Uzun yolda yorgunluk hissedilirse ne yapılmalıdır?', ['Hız artırılıp yol kısaltılmalıdır', 'Güvenli bir yerde mola verilip dinlenilmelidir', 'Camlar açılıp devam edilmelidir', 'Müzik sesi açılmalıdır'], 1],
-  ['Trafik görevlisinin işareti ile trafik ışığı çelişirse hangisine uyulur?', ['Trafik ışığına', 'Trafik görevlisinin işaretine', 'Levhaya', 'Diğer sürücülere'], 1],
-  ['Alkollü araç kullanmanın sürüşe etkisi nedir?', ['Dikkat artar', 'Tepki süresi uzar', 'Görüş alanı genişler', 'Etkisi yoktur'], 1],
-  ['Sis farları ne zaman kullanılır?', ['Her zaman', 'Sis, kar, yoğun yağmur gibi görüşü azaltan durumlarda', 'Yalnızca gündüz', 'Şehir içinde sürekli'], 1],
-  ['Sollama yapılırken hangi kontrol yapılmalıdır?', ['Yalnızca öndeki araca bakılır', 'Aynalar ve kör nokta kontrol edilip sinyal verilir', 'Korna çalınıp hemen geçilir', 'Kontrol gerekmez'], 1],
-];
-let SORULAR = HAVUZ.slice(0, 10);
-const karistir = () => { const a = HAVUZ.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } SORULAR = a.slice(0, 10); };
+const konuOran = (k, kn) => { const a = (k.konuAnaliz || {})[kn]; return a && a[1] ? Math.round(a[0] / a[1] * 100) : null; };
+const karistir = l => { const a = l.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const idx = SORULAR.map((_, i) => i);
+let test = { mod: null };
+let sayac = null;
+function testBaslat(mod, k, konu) {
+  let liste;
+  if (mod === 'deneme') liste = Object.entries(KONULAR).flatMap(([kn, [, n]]) => karistir(idx.filter(i => SORULAR[i][0] === kn)).slice(0, n));
+  else if (mod === 'konu') liste = karistir(idx.filter(i => SORULAR[i][0] === konu)).slice(0, 10);
+  else if (mod === 'yanlis') liste = karistir(k.yanlislar || []).slice(0, 10);
+  else liste = karistir(idx).slice(0, 10);
+  test = { mod, konu, liste, i: 0, dogru: 0, cevap: null, basla: Date.now(), cevaplar: [] };
+}
+function testBitir(k) {
+  const konu = {};
+  test.cevaplar.forEach(([qi, c]) => { const kn = SORULAR[qi][0]; konu[kn] = konu[kn] || [0, 0]; konu[kn][1]++; if (c === SORULAR[qi][3]) konu[kn][0]++; });
+  k.konuAnaliz = k.konuAnaliz || {};
+  Object.entries(konu).forEach(([kn, [d, t]]) => { const a = k.konuAnaliz[kn] || [0, 0]; k.konuAnaliz[kn] = [a[0] + d, a[1] + t]; });
+  const yanlis = test.cevaplar.filter(([qi, c]) => c !== SORULAR[qi][3]).map(([qi]) => qi), dogruQ = test.cevaplar.filter(([qi, c]) => c === SORULAR[qi][3]).map(([qi]) => qi);
+  k.yanlislar = [...new Set([...(k.yanlislar || []).filter(x => !dogruQ.includes(x)), ...yanlis])];
+  if (test.mod === 'deneme') { k.deneme = k.deneme || []; k.deneme.push(test.dogru * 2); }
+  test.sonuc = { konu, yanlis: yanlis.length };
+  kaydet();
+}
 export function ogrenciPortal() {
   if (!ogId || !kursiyer(ogId)) ogId = (S.kursiyerler.find(k => k.asama === 'Direksiyon' && k.odeme.taksitler.some(t => !t.odendi)) || S.kursiyerler[0]).id;
   const k = kursiyer(ogId), S0 = SINIFLAR[k.sinif], eg = egitmen(k.egitmen);
@@ -116,8 +116,25 @@ export function ogrenciPortal() {
       <div class="taksit-sira"><span class="no">P</span><div><b style="color:var(--murekkep)">Peşinat</b><small style="display:block;color:var(--soluk)">${tarih(k.odeme.pesinTarih)}</small></div><span class="sayi">${tl(k.odeme.pesin)}</span>${rozet('Ödendi', 'yesil')}</div>
       ${k.odeme.taksitler.map((t, i) => `<div class="taksit-sira"><span class="no">${i + 1}</span><div><b style="color:var(--murekkep)">${i + 1}. taksit</b><small style="display:block;color:${!t.odendi && fark(t.vade) < 0 ? 'var(--kirmizi)' : 'var(--soluk)'}">Vade ${tarih(t.vade)}</small></div><span class="sayi">${tl(t.tutar)}</span>${t.odendi ? rozet('Ödendi', 'yesil') : `<button class="dg dg-ana dg-kucuk" data-ode="${i}">Öde</button>`}</div>`).join('')}</div></div>`;
   if (ogSekme === 'test') {
-    if (test.i >= SORULAR.length) govde = `<div class="kart soru" style="text-align:center"><h4 style="font-size:20px">${test.dogru}/${SORULAR.length} doğru</h4><p style="color:var(--soluk);margin-bottom:14px">${test.dogru >= 7 ? 'Harika gidiyorsun, e-sınava hazırsın!' : 'Biraz daha çalışalım; her gün 10 soru çöz.'} Havuzda ${HAVUZ.length} soru var; her denemede 10’u rastgele gelir.</p><button class="dg dg-koyu" data-yeniden>Yeniden başla</button></div>`;
-    else { const [q, sec, dogru] = SORULAR[test.i]; govde = `<div style="display:flex;justify-content:space-between;font-size:13px;color:var(--soluk);margin-bottom:8px"><span>Deneme sınavı</span><span>${test.i + 1}/${SORULAR.length}</span></div>${ilerleme(test.i, SORULAR.length)}<div class="ara-bosluk" style="height:12px"></div><div class="kart soru"><h4>${e(q)}</h4>${sec.map((s, i) => `<button class="secenek ${test.cevap != null ? (i === dogru ? 'dogru' : i === test.cevap ? 'yanlis' : '') : ''}" data-cevap="${i}" ${test.cevap != null ? 'disabled' : ''}><b>${'ABCD'[i]}</b>${e(s)}</button>`).join('')}${test.cevap != null ? `<button class="dg dg-koyu" style="width:100%;margin-top:6px" data-sonraki>Sonraki soru</button>` : ''}</div>`; }
+    const MOD_AD = { deneme: 'Deneme sınavı', hizli: 'Hızlı test', konu: 'Konu çalışması', yanlis: 'Yanlışlarım' };
+    if (!test.mod) {
+      const son = (k.deneme || []).slice(-5);
+      govde = `<div class="kart" style="padding:18px"><small style="color:var(--soluk)">e-Sınav provası</small><b style="display:block;font-family:var(--baslik);font-size:22px;color:var(--murekkep);margin:2px 0 6px">Deneme sınavı</b><p style="font-size:14px">50 soru · 45 dakika · geçme puanı 70. Sorular e-sınavdaki konu dağılımıyla gelir.</p><button class="dg dg-ana" style="width:100%;margin-top:12px" data-test-basla="deneme">Sınavı başlat</button></div>
+        ${son.length ? `<div class="kart" style="padding:14px 18px"><small style="color:var(--soluk)">Son denemelerin</small><div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">${son.map(p => `<span class="rozet rozet-${p >= 70 ? 'yesil' : 'kirmizi'}" style="font-size:14px;padding:6px 10px">${p}</span>`).join('')}</div></div>` : ''}
+        <div class="kart" style="padding:14px 18px"><small style="color:var(--soluk)">Konu çalış · başarı oranın</small><div style="display:grid;gap:10px;margin-top:10px">${Object.entries(KONULAR).map(([kn, [ad]]) => { const o = konuOran(k, kn); return `<button class="konu-sat" data-test-basla="konu" data-konu="${kn}"><span>${ad}</span>${o != null && o < 70 ? rozet('Çalış', 'kirmizi') : ''}<b class="mono" style="color:${o != null && o < 70 ? 'var(--kirmizi)' : 'var(--murekkep)'}">${o == null ? '–' : '%' + o}</b>${ilerleme(o || 0, 100, o != null && o < 70 ? '' : 'yesil')}</button>`; }).join('')}</div></div>
+        <div class="izgara iz-2" style="gap:10px;grid-template-columns:1fr 1fr"><button class="dg dg-cizgi" style="height:auto;padding:12px" data-test-basla="hizli">Hızlı test<br><small>10 soru</small></button><button class="dg dg-cizgi" style="height:auto;padding:12px" data-test-basla="yanlis" ${(k.yanlislar || []).length ? '' : 'disabled'}>Yanlışlarım<br><small>${(k.yanlislar || []).length} soru</small></button></div>
+        <p style="font-size:12.5px;color:var(--soluk);text-align:center">Havuzda ${SORULAR.length} soru var. Sonuçların teorik öğretmenine konu konu gider; zayıf olduğun konuya ek ders konur.</p>`;
+    } else if (test.i >= test.liste.length) {
+      const toplam = test.liste.length, puan = test.mod === 'deneme' ? test.dogru * 2 : Math.round(test.dogru / Math.max(1, toplam) * 100);
+      govde = `<div class="kart soru" style="text-align:center">${test.mod === 'deneme' ? `<small style="color:var(--soluk)">Deneme sınavı puanın</small><b style="display:block;font-family:var(--baslik);font-size:46px;color:${puan >= 70 ? 'var(--yesil)' : 'var(--kirmizi)'}">${puan}</b><p>${puan >= 70 ? 'Geçme puanının üstündesin.' : 'Geçme puanı 70; biraz daha çalışalım.'}</p>` : `<h4 style="font-size:20px">${test.dogru}/${toplam} doğru</h4>`}
+        <ul class="liste" style="text-align:left;margin:12px -20px">${Object.entries(test.sonuc.konu).map(([kn, [d, t]]) => `<li><span style="flex:1">${KONULAR[kn][0]}</span><b class="mono">${d}/${t}</b></li>`).join('')}</ul>
+        <p style="font-size:13.5px;color:var(--soluk)">${test.sonuc.yanlis} yanlışın “Yanlışlarım”a eklendi.</p><button class="dg dg-koyu" style="margin-top:10px" data-test-menu>Tamam</button></div>`;
+    } else {
+      const [kn, q, sec, dogru] = SORULAR[test.liste[test.i]], aninda = test.mod !== 'deneme';
+      govde = `<div style="display:flex;justify-content:space-between;font-size:13px;color:var(--soluk);margin-bottom:8px"><span>${MOD_AD[test.mod]} · ${KONULAR[kn][0]}</span><span>${test.mod === 'deneme' ? '<b class="mono" data-kalan></b> · ' : ''}${test.i + 1}/${test.liste.length}</span></div>${ilerleme(test.i, test.liste.length)}<div class="ara-bosluk" style="height:12px"></div>
+        <div class="kart soru"><h4>${e(q)}</h4>${sec.map((s2, i) => `<button class="secenek ${aninda && test.cevap != null ? (i === dogru ? 'dogru' : i === test.cevap ? 'yanlis' : '') : ''}" data-cevap="${i}" ${test.cevap != null ? 'disabled' : ''}><b>${'ABCD'[i]}</b>${e(s2)}</button>`).join('')}${aninda && test.cevap != null ? `<button class="dg dg-koyu" style="width:100%;margin-top:6px" data-sonraki>Sonraki soru</button>` : ''}</div>
+        <button class="dg dg-hafif dg-kucuk" data-test-menu>Testi bırak</button>`;
+    }
   }
   if (ogSekme === 'evrak') govde = `<div class="kart"><div class="kart-govde">${EVRAKLAR.map(([key, t]) => `<div class="evrak"><span class="durum ${k.evrak[key] ? 'var' : 'yok'}">${ik(k.evrak[key] ? 'tik' : 'kapat')}</span><span style="flex:1;color:var(--murekkep)">${t}</span>${k.evrak[key] ? '' : rozet('Kursa getir', 'uyari')}</div>`).join('')}</div></div>`;
   return {
@@ -129,14 +146,23 @@ export function ogrenciPortal() {
       ${sekmeCubugu([['durum', 'Durumum', 'genel'], ['ders', 'Derslerim', 'direksiyon'], ['odeme', 'Ödemeler', 'kart'], ['test', 'Deneme', 'sinav'], ['evrak', 'Evrak', 'belge']], ogSekme, 'ogs')}
     </div>`,
     baglan(kap) {
-      kap.addEventListener('change', ev => { if (ev.target.matches('[data-og]')) { ogId = ev.target.value; yenile(); } });
+      clearInterval(sayac);
+      const kalanEl = kap.querySelector('[data-kalan]');
+      if (kalanEl) { const yaz = () => { const kalan = 45 * 60e3 - (Date.now() - test.basla); if (kalan <= 0) { clearInterval(sayac); test.i = test.liste.length; testBitir(k); yenile(); return; } kalanEl.textContent = String(Math.floor(kalan / 60e3)).padStart(2, '0') + ':' + String(Math.floor(kalan / 1e3) % 60).padStart(2, '0'); }; yaz(); sayac = setInterval(() => { if (!document.body.contains(kalanEl)) return clearInterval(sayac); yaz(); }, 1000); }
+      kap.addEventListener('change', ev => { if (ev.target.matches('[data-og]')) { ogId = ev.target.value; test = { mod: null }; yenile(); } });
       kap.addEventListener('click', ev => {
         const t = ev.target;
         const s = t.closest('[data-ogs]'); if (s) { ogSekme = s.dataset.ogs; yenile(true); }
         const o = t.closest('[data-ode]'); if (o) odemeYap(k, +o.dataset.ode);
-        const c = t.closest('[data-cevap]'); if (c && test.cevap == null) { test.cevap = +c.dataset.cevap; if (test.cevap === SORULAR[test.i][2]) test.dogru++; yenile(); }
-        if (t.closest('[data-sonraki]')) { test.i++; test.cevap = null; yenile(); }
-        if (t.closest('[data-yeniden]')) { karistir(); test = { i: 0, dogru: 0, cevap: null }; yenile(); }
+        const tb = t.closest('[data-test-basla]'); if (tb && !tb.disabled) { testBaslat(tb.dataset.testBasla, k, tb.dataset.konu); yenile(true); }
+        if (t.closest('[data-test-menu]')) { test = { mod: null }; yenile(true); }
+        const c = t.closest('[data-cevap]');
+        if (c && test.mod && test.cevap == null) {
+          const qi = test.liste[test.i], cv = +c.dataset.cevap; test.cevaplar.push([qi, cv]); if (cv === SORULAR[qi][3]) test.dogru++;
+          if (test.mod === 'deneme') { test.i++; if (test.i >= test.liste.length) testBitir(k); } else test.cevap = cv;
+          yenile();
+        }
+        if (t.closest('[data-sonraki]')) { test.i++; test.cevap = null; if (test.i >= test.liste.length) testBitir(k); yenile(); }
         const dg = t.closest('[data-degis]'); if (dg) { gonderimEkle(S.kurs.ad, tamAd(k) + ' ders saatini değiştirmek istiyor', 'Kursiyer talebi'); bildir('Talebin kursa iletildi; yeni saat WhatsApp’tan gelecek', 'wp'); }
         if (t.closest('[data-iste]')) pencere({ baslik: 'Direksiyon dersi iste', icerik: `<p style="color:var(--soluk);margin-bottom:10px">${e(eg.ad)} hocanın boş saatleri</p><div class="secim">${[1, 2, 3].flatMap(n => ['10:00', '15:00', '17:00'].filter(h => !S.dersler.some(d => d.egitmen === eg.id && d.tarih === gun(n) && d.saat === h)).map(h => `<label><input type="radio" name="s" value="${gun(n)} ${h}"><span>${gunKisa(gun(n))} ${tarihOku(gun(n)).getDate()} · ${h}</span></label>`)).join('')}</div>`, altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Talep gönder</button>`, onAc(d) { d.querySelector('[data-k]').addEventListener('click', () => { const v = d.querySelector('[name=s]:checked'); if (!v) return bildir('Bir saat seçin', 'uyari'); kapatPencere(); gonderimEkle(S.kurs.ad, tamAd(k) + ' ders istiyor: ' + v.value, 'Kursiyer talebi'); bildir('Ders talebin kursa iletildi'); }); } });
       });

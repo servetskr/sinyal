@@ -1,6 +1,6 @@
-import { S, kaydet, gun, islem } from './veri.js';
-import { e, ik, rozet, isaret, ekranNotu, sekmeler, olcumler, yonLevhasi, cubukGrafik, halka, pencere, kapatPencere, bildir, sayi, tl, goreli } from './ui.js';
-import { yenile } from './app.js';
+import { S, kaydet, gun, islem, tarihOku, oturum } from './veri.js?v=22';
+import { e, ik, rozet, isaret, ekranNotu, sekmeler, olcumler, yonLevhasi, cubukGrafik, halka, pencere, kapatPencere, bildir, sayi, tl, goreli } from './ui.js?v=22';
+import { yenile } from './app.js?v=22';
 
 /* ================= SOSYAL MEDYA ASİSTANI (DengChat modülü) =================
    Gelen kutusu "Mesajlar"da kalır. Bu modül kanalları bağlar, Instagram
@@ -28,23 +28,49 @@ const KURALLAR = [
 ];
 const TEL = /(\+?90|0)?\s*5\d{2}[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}/;
 
+const SINIF_SOR = [[/otomatik|otomotik/i, 'B otomatik'], [/motor|a2\b|motosiklet/i, 'A2'], [/kamyon|\bc\b|c sınıf|tır/i, 'C'], [/manuel|düz vites|\bb\b|araba/i, 'B manuel']];
+const fiyatBul = etiket => { const b = S.asistanBilgi.find(x => x.konu === 'Fiyat ve taksit'); const m = b && b.metin.match(new RegExp(etiket + '\\s+([\\d.]+ TL)')); return m ? m[1] : null; };
+const bosSlotlar = () => sos().slotlar.filter(x => !x.dolu && x.tarih >= gun(1)).slice(0, 3);
+const slotMetni = x => { const d = tarihOku(x.tarih); return d.toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' }) + ' ' + x.saat; };
+const BEKLET = 'Yetkilimize haber verdim; mesai saatinde en geç 30 dakika içinde size dönecek.';
+const maskele = t => t.replace(/\b\d{11}\b/g, m => m.slice(0, 2) + '*********').replace(TEL, m => m.replace(/\d(?=(?:\D*\d){2})/g, '*')).replace(/protez|epilepsi|diyabet|şeker hastası|ilaç kullan\w*/gi, '[sağlık bilgisi]');
+let bekleyen = null;
+
 function cevapUret(soru, ilk) {
   const a = sos().ayar, kurs = S.kurs.ad;
-  const beyan = ilk ? `Merhaba, ben ${kurs} adına yanıt veren yapay zekâ asistanıyım. ` : '';
+  const beyan = ilk ? `Merhaba, ben ${kurs} adına yanıt veren yapay zekâ asistanıyım.${a.veri.aydinlatma ? ' (Kişisel verileriniz: ornekmtsk.com/kvkk)' : ''} ` : '';
   const tel = soru.match(TEL);
-  if (tel) return { metin: beyan + 'Teşekkürler, numaranızı aldım. Ekibimiz mesai saatinde sizi arayacak. Ön kaydınızı oluşturdum.', kaynak: 'Aday kaydı', aday: tel[0] };
+  if (tel) { bekleyen = null; return { metin: beyan + 'Teşekkürler, numaranızı aldım. Ekibimiz mesai saatinde sizi arayacak. Ön kaydınızı oluşturdum.', kaynak: 'Aday kaydı', aday: tel[0] }; }
+  // bekleyen soru: randevu seçimi
+  if (bekleyen && bekleyen.tur === 'randevu') {
+    const n = (soru.match(/\b([1-3])\b/) || [])[1], sl = n ? bekleyen.slotlar[+n - 1] : bekleyen.slotlar.find(x => soru.includes(x.saat.slice(0, 2)));
+    if (sl) { const gercek = sos().slotlar.find(x => x.tarih === sl.tarih && x.saat === sl.saat); if (gercek && !gercek.dolu) { gercek.dolu = 'Deneme müşterisi'; kaydet(); bekleyen = null; return { metin: beyan + `${slotMetni(sl)} için kayıt görüşmenizi ayarladım. Adresimiz ${S.kurs.adres}. Gelirken kimliğinizi getirin; numaranızı yazarsanız bir gün önce hatırlatırız.`, kaynak: 'Kurs takvimi · boş saat ayrıldı' }; } }
+  }
+  // bekleyen soru: hangi sınıf
+  if (bekleyen && bekleyen.tur === 'fiyat') { const s2 = SINIF_SOR.find(([r]) => r.test(soru)); if (s2) { bekleyen = null; const f = fiyatBul(s2[1]); if (f) return { metin: beyan + `${s2[1]} kurs ücretimiz ${f}. Peşinat sonrası 5 aya kadar taksit yapıyoruz. Kayıt görüşmesi için uygun bir gün ayarlayalım mı?`, kaynak: 'Fiyat ve taksit · yalnızca sorulan sınıf' }; } }
   if (/kaç yaş|yaş sınır|17 yaş|16 yaş|yaşındayım/i.test(soru)) return { metin: beyan + `Sürücü belgesi için ${S.kurs.asgariYas} yaşını doldurmuş olmak gerekiyor. Bu yaşı doldurduğunuz gün kaydınızı yapabiliriz; numaranızı yazarsanız o tarihte size hatırlatalım.`, kaynak: 'Kurs ayarı: asgari yaş' };
+  if (a.randevu && /kayda gel|kaydolmaya gel|görüşme|uğra|randevu|gelip kaydol|yüz yüze|ne zaman gel/i.test(soru)) {
+    const sl = bosSlotlar();
+    if (sl.length) { bekleyen = { tur: 'randevu', slotlar: sl }; return { metin: beyan + 'Kayıt görüşmesi için takvimimizdeki boş saatler: ' + sl.map((x, i) => `${i + 1}) ${slotMetni(x)}`).join(', ') + '. Hangisi size uygun?', kaynak: 'Kurs takvimi · yalnızca boş saatler' }; }
+  }
   for (const r of KURALLAR) {
     if (!r.k.test(soru)) continue;
     if (r.devir) {
       if (!a.devir[r.devir]) continue;
-      return { metin: beyan + 'Bu konuyu kurs yetkilimizin cevaplaması daha doğru olur. Sizi bir arkadaşıma aktarıyorum; telefon numaranızı yazarsanız daha hızlı ulaşırız.', kaynak: 'Size devredildi · ' + r.n, devir: r.n };
+      return { metin: beyan + 'Bu konuyu kurs yetkilimizin cevaplaması daha doğru olur. ' + (a.bildirim.bekletme ? BEKLET : 'Telefon numaranızı yazarsanız sizi arayalım.'), kaynak: 'Size devredildi · ' + r.n, devir: r.n };
+    }
+    if (r.bilgi === 'Fiyat ve taksit' && a.fiyat !== 'liste') {
+      if (a.fiyat === 'telefon') return { metin: beyan + 'Ücretlerimizi taksit seçenekleriyle birlikte telefonda detaylı anlatalım. Numaranızı yazar mısınız?', kaynak: 'Fiyat politikası: telefonda' };
+      const s2 = SINIF_SOR.find(([rx]) => rx.test(soru)), f = s2 && fiyatBul(s2[1]);
+      if (f) return { metin: beyan + `${s2[1]} kurs ücretimiz ${f}. Peşinat sonrası 5 aya kadar taksit yapıyoruz.`, kaynak: 'Fiyat ve taksit · yalnızca sorulan sınıf' };
+      bekleyen = { tur: 'fiyat' };
+      return { metin: beyan + 'Hangi ehliyet için soruyorsunuz: otomatik, manuel, motosiklet (A2) ya da kamyon (C)?', kaynak: 'Fiyat politikası: önce sınıfı sor' };
     }
     const b = S.asistanBilgi.find(x => x.konu === r.bilgi);
-    if (b) return { metin: beyan + b.metin + (r.bilgi === 'Fiyat ve taksit' ? ' Hangi sınıf için düşünüyorsunuz?' : ''), kaynak: b.konu };
+    if (b) return { metin: beyan + b.metin, kaynak: b.konu };
   }
   if (/merhaba|selam|iyi günler|iyi akşamlar/i.test(soru) && soru.length < 25) return { metin: (ilk ? beyan : 'Merhaba! ') + 'Kurs ücreti, evraklar, ders saatleri ya da kayıtla ilgili ne sormak istersiniz?', kaynak: 'Karşılama' };
-  if (a.devir.bilinmeyen) return { metin: beyan + 'Bu konuda elimde kesin bilgi yok, yanlış bilgi vermek istemem. Kurs sizi arayacak; telefon numaranızı yazar mısınız?', kaynak: 'Bilinmeyen soru · size devredildi', devir: 'Bilinmeyen soru' };
+  if (a.devir.bilinmeyen) return { metin: beyan + 'Bu konuda elimde kesin bilgi yok, yanlış bilgi vermek istemem. ' + (a.bildirim.bekletme ? BEKLET : 'Kurs sizi arayacak.'), kaynak: 'Bilinmeyen soru · size devredildi', devir: 'Bilinmeyen soru' };
   return { metin: beyan + 'Bu konuda elimde kesin bilgi yok. Kurs bilgilerine eklenirse hemen cevaplayabilirim.', kaynak: 'Bilinmeyen soru' };
 }
 
@@ -88,7 +114,16 @@ function kanallar() {
     ${c.bagli ? `<div class="kart-govde" style="display:grid;gap:12px">
       <label style="display:flex;align-items:center;gap:12px"><span class="anahtar"><input type="checkbox" data-cevap="${c.id}" ${c.cevap ? 'checked' : ''} aria-label="${e(c.ad)} asistan cevaplasın"><i></i></span><span><b style="color:var(--murekkep)">Asistan cevaplasın</b><small style="display:block;color:var(--soluk)">${c.id === 'igy' ? 'Fiyat gibi kişisel sorularda yoruma kısa davet, cevap özelden' : 'Kapalıyken mesajlar yalnızca gelen kutusuna düşer'}</small></span></label>
       <div><span class="et" style="font-size:13px;font-weight:700;color:var(--soluk)">Ne zaman?</span><div class="secim" style="margin-top:6px">${['7/24', 'Mesai dışı'].map(m => `<label><input type="radio" name="mod-${c.id}" value="${m}" data-mod="${c.id}" ${c.mod === m ? 'checked' : ''}><span>${m === '7/24' ? 'Her zaman' : 'Yalnızca mesai dışında'}</span></label>`).join('')}</div></div>
+      ${c.id === 'wp' ? `<div><span class="et" style="font-size:13px;font-weight:700;color:var(--soluk)">Numara</span><div class="secim" style="margin-top:6px">${[[true, 'Telefondaki uygulama da açık kalsın'], [false, 'Ayrı numara kullan']].map(([v, t]) => `<label><input type="radio" name="wp-num" value="${v}" data-wp-num ${!!c.birlikte === v ? 'checked' : ''}><span>${t}</span></label>`).join('')}</div><small style="display:block;color:var(--soluk);font-size:12.5px;margin-top:6px">${c.birlikte ? 'Meta’nın birlikte kullanım özelliğiyle mesajlar hem ön bürodaki WhatsApp Business uygulamasında hem Sinyal’de görünür; sekreter telefondan yazmaya devam eder.' : 'Asistan için ayrı bir hat açılır; kursun bilinen numarası telefonda olduğu gibi kalır.'}</small></div>` : ''}
+      <div class="saglik">${saglik(c)}</div>
     </div>` : `<div class="kart-govde"><p style="font-size:14px">Bağlandığında bu kanaldan gelen mesajlar da aynı asistanla ve aynı kurs bilgileriyle cevaplanır.</p></div>`}</div>`).join('')}</div>
+  <div class="ara-bosluk"></div>
+  <div class="kart"><div class="kart-bas"><h3>Hesabınızı koruma</h3><small>Meta otomasyon şüphesi gördüğü hesapları kısıtlayabilir</small></div><ul class="liste" style="margin-top:8px">${[
+    ['tamam', 'Yalnızca gelen mesaja cevap verir', 'Takip etmez, beğenmez, kimseye ilk mesajı atmaz, toplu mesaj göndermez. Hesabınızda insan dışı “etkinlik” oluşmaz.'],
+    ['tamam', 'Meta uyarısında kendini durdurur', 'Hesaba kısıtlama ya da uyarı gelirse asistan o kanalda hemen susar, size bildirim gelir; mesajlar kaybolmaz, gelen kutusuna düşer.'],
+    ['tamam', 'Resmî bağlantı', 'Meta’nın izin verdiği resmî bağlantıyla çalışır; şifreniz ve hesabınızın oturumu Sinyal’de değildir.'],
+  ].map(([t, b, a]) => `<li style="align-items:flex-start">${isaret(t, 22)}<div><b style="color:var(--murekkep);display:block">${b}</b><small style="color:var(--metin);font-size:13.5px">${a}</small></div></li>`).join('')}
+    <li style="align-items:flex-start"><span class="anahtar" style="margin-top:2px"><input type="checkbox" data-hiz ${sos().ayar.hizSiniri ? 'checked' : ''} aria-label="Hız sınırı"><i></i></span><div><b style="color:var(--murekkep);display:block">Hız sınırı</b><small style="color:var(--metin);font-size:13.5px">Dakikada en fazla 20 cevap; yeni bağlanan hesaplarda ilk hafta yarı hızda. Kampanya günü yoğunluğunda bile hesap doğal görünür.</small></div></li></ul></div>
   <div class="ara-bosluk"></div>
   <div class="kart"><div class="kart-bas"><h3>Kurulum nasıl oluyor?</h3><small>Kurulumu biz yapıyoruz, yaklaşık 30 dakika</small></div><ul class="liste" style="margin-top:8px">${[
     ['zorunlu', 'Hesaplar sizin kalır', 'Instagram ve Facebook hesaplarınıza şifrenizi bize vermeden, Meta’nın kendi giriş ekranından izin verirsiniz.'],
@@ -98,11 +133,19 @@ function kanallar() {
   ].map(([t, b, a]) => `<li style="align-items:flex-start">${isaret(t, 22)}<div><b style="color:var(--murekkep);display:block">${b}</b><small style="color:var(--metin);font-size:13.5px">${a}</small></div></li>`).join('')}</ul></div>`;
 }
 
+function saglik(c) {
+  const once = c.izin ? -Math.round((tarihOku(c.izin) - tarihOku(gun(0))) / 864e5) : null;
+  const kalan = once != null ? 50 - once : null;
+  const iyi = c.sonCevapDk != null && c.sonCevapDk < 120 && kalan > 7;
+  return `<div style="display:flex;gap:10px;align-items:flex-start;background:var(--panel-2);border-radius:8px;padding:10px 12px">${isaret(iyi ? 'tamam' : 'uyari', 20)}<div style="flex:1;font-size:13.5px"><b style="color:var(--murekkep)">Bağlantı ${iyi ? 'sağlıklı' : 'kontrol edilmeli'}</b><br>
+    Son başarılı cevap: ${c.sonCevapDk == null ? '—' : c.sonCevapDk === 0 ? 'az önce' : c.sonCevapDk + ' dk önce'} · Erişim izni ${once} gün önce yenilendi; otomatik yenileme açık, sonraki ${kalan} gün sonra.<br><span style="color:var(--soluk)">Yenileme başarısız olursa 7 gün önceden size bildirim gelir; asistan 2 saat cevap veremezse WhatsApp’tan haber verilir.</span></div><button class="dg dg-cizgi dg-kucuk" data-test-kanal="${c.id}">Test et</button></div>`;
+}
 const YORUM_DURUM = {
   dm: ['Yoruma davet + özelden cevap', 'mavi'],
   acik: ['Herkese açık cevaplandı', 'yesil'],
   devir: ['Size devredildi', 'kirmizi'],
   gizli: ['Gizlendi · reklam', 'notr'],
+  onay: ['Reklam şüphesi · onayınızı bekliyor', 'sari'],
 };
 function yorumlar() {
   const g = sos().gonderiler, y = sos().yorumlar;
@@ -119,12 +162,12 @@ function yorumlar() {
       <div style="min-width:0"><div class="kart-bas" style="padding-bottom:6px"><div style="min-width:0"><b style="color:var(--murekkep)">${e(p.metin)}</b><small style="display:block">${goreli(gun(p.gun))} · ${sayi(p.begeni)} beğeni · ${ly.length} yorum</small></div></div>
       <ul class="liste">${ly.map(x => `<li style="align-items:flex-start;flex-wrap:wrap"><div style="flex:1;min-width:200px"><b style="color:var(--murekkep)">${e(x.kim)}</b> <span>${e(x.metin)}</span><small style="display:block;color:var(--soluk)">${goreli(gun(x.gun))} ${x.saat}</small>
         ${x.cevap ? `<div style="margin-top:6px;padding:6px 10px;background:#fff;border-left:3px solid var(--levha);border-radius:0 6px 6px 0;font-size:13.5px">${ik('robot')} ${e(x.cevap)}</div>` : ''}</div>
-        <span class="sag" style="flex-wrap:wrap">${rozet(...YORUM_DURUM[x.durum])}${x.durum === 'devir' ? `<button class="dg dg-ana dg-kucuk" data-yorum-cevap="${x.id}">Cevapla</button>` : ''}${x.durum === 'gizli' ? `<button class="dg dg-cizgi dg-kucuk" data-yorum-goster="${x.id}">Göster</button>` : ''}</span></li>`).join('')}</ul></div></div>`;
+        <span class="sag" style="flex-wrap:wrap">${rozet(...YORUM_DURUM[x.durum])}${x.durum === 'devir' ? `<button class="dg dg-ana dg-kucuk" data-yorum-cevap="${x.id}">Cevapla</button>` : ''}${x.durum === 'gizli' ? `<button class="dg dg-cizgi dg-kucuk" data-yorum-goster="${x.id}">Göster</button>` : ''}${x.durum === 'onay' ? `<button class="dg dg-ana dg-kucuk" data-yorum-gizle="${x.id}">Gizle</button><button class="dg dg-cizgi dg-kucuk" data-yorum-birak="${x.id}">Görünür bırak</button>` : ''}</span></li>`).join('')}</ul></div></div>`;
   }).join('')}`;
 }
 
 function dene() {
-  const ilkSoru = ['Fiyat ne kadar?', 'Hangi evraklar lazım?', 'Akşam dersi var mı?', '17 yaşındayım kaydolabilir miyim?', 'Üç kardeş gelirsek indirim olur mu?', 'Sol ayağımda protez var', 'Numaram 0532 111 22 33'];
+  const ilkSoru = ['Fiyat ne kadar?', 'Otomatik', 'Hangi evraklar lazım?', 'Akşam dersi var mı?', 'Kayda gelmek istiyorum', '2', '17 yaşındayım kaydolabilir miyim?', 'Üç kardeş gelirsek indirim olur mu?', 'Sol ayağımda protez var', 'Numaram 0532 111 22 33'];
   const mesajlar = durum.deneme;
   const kanal = durum.kanal;
   return `${ekranNotu('Asistanı müşteri gibi deneyin. Cevaplar yalnızca “Mesajlar › Asistanın bildikleri” sayfasındaki onaylı bilgilerden gelir; bilmediği soruyu uydurmaz, size devreder.')}
@@ -137,7 +180,7 @@ function dene() {
       <button class="dg dg-hafif dg-kucuk" style="margin-top:auto" data-dene-sifirla>${ik('sifirla')}Sohbeti temizle</button>
     </div>
     <div class="sohbet-pencere"><div class="sohbet-ust">${ik(KANAL_IK[kanal])}<div><b style="color:var(--murekkep)">${e(S.kurs.ad)}</b><small style="display:block;color:var(--soluk);font-size:12px">${KANAL_KISA[kanal]} · ${e(sos().ayar.ad)} · yapay zekâ</small></div></div>
-      <div class="sohbet-akis" style="min-height:380px">${mesajlar.length ? mesajlar.map(m => `<div class="balon ${m.kim === 'asistan' ? '' : 'giden'}" style="${m.kim === 'asistan' ? '' : 'background:#e2eaf5'}">${e(m.metin)}${m.kim === 'asistan' ? `<small>${ik('robot')} ${e(m.kaynak)}</small>` : '<small>Müşteri</small>'}</div>`).join('') : `<div style="margin:auto;text-align:center;color:var(--soluk);max-width:320px">${isaret('bilgi', 34)}<p style="margin-top:10px">Soldaki hazır sorulardan birine tıklayın ya da aşağıya müşteri gibi yazın.</p></div>`}</div>
+      <div class="sohbet-akis" style="min-height:380px">${mesajlar.length ? mesajlar.map(m => `<div class="balon ${m.kim === 'asistan' ? '' : 'giden'}" style="${m.kim === 'asistan' ? '' : 'background:#e2eaf5'}">${e(m.metin)}${m.kim === 'asistan' ? `<small>${ik('robot')} ${e(m.kaynak)}</small>` : `<small>Müşteri${m.model ? ' · modele giden: ' + e(m.model) : ''}</small>`}</div>`).join('') : `<div style="margin:auto;text-align:center;color:var(--soluk);max-width:320px">${isaret('bilgi', 34)}<p style="margin-top:10px">Hazır sorulardan birine dokunun ya da müşteri gibi yazın.</p></div>`}</div>
       <form class="sohbet-yaz" data-dene><input class="girdi" name="m" placeholder="Müşteri gibi yazın…" aria-label="Deneme mesajı" autocomplete="off"><button class="dg dg-ana" type="submit">${ik('gonder')}Gönder</button></form></div>
   </div></div>`;
 }
@@ -163,6 +206,31 @@ function kurallar() {
       <p style="font-size:13.5px;color:var(--soluk);margin-top:8px">Telefonunuzdan bir müşteriye cevap yazdığınızda asistan o konuşmaya bu süre boyunca karışmaz.</p></div></div>
   </div>
   <div class="ara-bosluk"></div>
+  <div class="izgara iz-2">
+    <div class="kart"><div class="kart-bas"><h3>Fiyat ve randevu</h3><small>Asistanın söz verebileceği şeyler</small></div><div class="kart-govde" style="display:grid;gap:14px">
+      <div><b style="color:var(--murekkep)">Fiyat sorulunca</b><div class="secim" style="margin-top:8px">${[['sorulan', 'Yalnızca sorulan sınıfın fiyatı'], ['liste', 'Tüm fiyat listesi'], ['telefon', 'Fiyatı telefonda söyleriz']].map(([v, t]) => `<label><input type="radio" name="fiyat" value="${v}" data-fiyat ${a.fiyat === v ? 'checked' : ''}><span>${t}</span></label>`).join('')}</div></div>
+      <label style="display:flex;gap:12px;align-items:flex-start"><span class="anahtar" style="margin-top:2px"><input type="checkbox" data-randevu ${a.randevu ? 'checked' : ''}><i></i></span><span><b style="color:var(--murekkep)">Kayıt görüşmesi ayarlayabilir</b><small style="display:block;color:var(--soluk)">Yalnızca takvimdeki boş saatleri önerir; aynı saate iki kişi yazılmaz. Boş saat: ${sos().slotlar.filter(x => !x.dolu).length}, dolu: ${sos().slotlar.filter(x => x.dolu).length}.</small></span></label>
+      <div style="font-size:13.5px;color:var(--metin);background:var(--panel-2);border-radius:8px;padding:10px 12px"><b>Asla söz vermez:</b> indirim, kesin sınav tarihi, “kesin geçersiniz” gibi garanti, belgede olmayan bilgi.</div></div></div>
+    <div class="kart"><div class="kart-bas"><h3>Kişisel veriler (KVKK)</h3><small>Asistana yazılanlar nerede işlenir?</small></div><div class="kart-govde" style="display:grid;gap:14px">
+      <div class="secim">${[['tr', 'Türkiye’deki sunucuda çalışan model'], ['ab', 'AB’deki model (yurt dışı aktarım)']].map(([v, t]) => `<label><input type="radio" name="konum" value="${v}" data-veri-konum ${a.veri.konum === v ? 'checked' : ''}><span>${t}</span></label>`).join('')}</div>
+      <small style="color:var(--soluk);font-size:13px;margin-top:-6px">${a.veri.konum === 'tr' ? 'Konuşmalar yurt dışına aktarılmaz; ayrıca açık rıza gerekmez.' : 'KVKK’nın yurt dışı aktarım kuralı gereği standart sözleşme Kurul’a bildirilir ve aydınlatma metninde yazılır; ek ücret yok.'}</small>
+      <label style="display:flex;gap:12px;align-items:flex-start"><span class="anahtar" style="margin-top:2px"><input type="checkbox" data-maskele ${a.veri.maskele ? 'checked' : ''}><i></i></span><span><b style="color:var(--murekkep)">Hassas bilgiyi modele göndermeden gizle</b><small style="display:block;color:var(--soluk)">TC kimlik no, telefon ve sağlık ifadeleri yıldızlanır. “Asistanı dene”de gizlenmiş hâlini görebilirsiniz.</small></span></label>
+      <label style="display:flex;gap:12px;align-items:flex-start"><span class="anahtar" style="margin-top:2px"><input type="checkbox" data-aydinlatma ${a.veri.aydinlatma ? 'checked' : ''}><i></i></span><span><b style="color:var(--murekkep)">İlk mesajda aydınlatma metni bağlantısı</b><small style="display:block;color:var(--soluk)">Kişi, verilerinin neden işlendiğini ve haklarını görür.</small></span></label>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="color:var(--murekkep);font-size:14px">Konuşmaları sakla:</b><div class="secim">${[6, 12, 24].map(n => `<label><input type="radio" name="saklama" value="${n}" data-saklama ${a.veri.saklamaAy === n ? 'checked' : ''}><span>${n} ay</span></label>`).join('')}</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="dg dg-cizgi dg-kucuk" data-belge-ac="vis">Veri işleme sözleşmesi</button><button class="dg dg-cizgi dg-kucuk" data-belge-ac="aydinlatma">Asistan aydınlatma metni</button></div></div></div>
+  </div>
+  <div class="ara-bosluk"></div>
+  <div class="izgara iz-2">
+    <div class="kart"><div class="kart-bas"><h3>Devredince size nasıl haber verilsin?</h3></div><div class="kart-govde" style="display:grid;gap:14px">
+      <div><b style="color:var(--murekkep)">Kime</b><div class="secim" style="margin-top:8px">${S.kullanicilar.filter(u => u.rol !== 'usta').map(u => `<label><input type="checkbox" value="${u.id}" data-bildirim-kisi ${a.bildirim.kisiler.includes(u.id) ? 'checked' : ''}><span>${e(u.ad)}</span></label>`).join('')}</div><small style="display:block;color:var(--soluk);margin-top:6px">Sıra önemli: önce ilk kişiye gider, cevaplanmazsa sıradakine.</small></div>
+      <div><b style="color:var(--murekkep)">Nereden</b><div class="secim" style="margin-top:8px">${['WhatsApp', 'SMS'].map(v => `<label><input type="radio" name="bkanal" value="${v}" data-bildirim-kanal ${a.bildirim.kanal === v ? 'checked' : ''}><span>${v}</span></label>`).join('')}</div></div>
+      <div><b style="color:var(--murekkep)">Cevaplanmazsa sıradakine</b><div class="secim" style="margin-top:8px">${[10, 15, 30].map(n => `<label><input type="radio" name="ikinci" value="${n}" data-ikinci ${a.bildirim.ikinciDk === n ? 'checked' : ''}><span>${n} dk sonra</span></label>`).join('')}</div></div>
+      <label style="display:flex;gap:12px;align-items:flex-start"><span class="anahtar" style="margin-top:2px"><input type="checkbox" data-bekletme ${a.bildirim.bekletme ? 'checked' : ''}><i></i></span><span><b style="color:var(--murekkep)">Müşteriyi bekletme mesajıyla oyala</b><small style="display:block;color:var(--soluk)">“Yetkilimize haber verdim; en geç 30 dakika içinde size dönecek.” Müşteri cevapsız kalmaz.</small></span></label></div></div>
+    <div class="kart"><div class="kart-bas"><h3>Instagram yorumları</h3></div><div class="kart-govde" style="display:grid;gap:14px">
+      <label style="display:flex;gap:12px;align-items:flex-start"><span class="anahtar" style="margin-top:2px"><input type="checkbox" data-gizle-onay ${a.gizleOnay ? 'checked' : ''}><i></i></span><span><b style="color:var(--murekkep)">Reklam şüpheli yorumu gizlemeden önce bana sor</b><small style="display:block;color:var(--soluk)">Gerçek bir müşterinin yorumu yanlışlıkla gizlenmez. Bekleyenler her akşam 19:00’da tek özet olarak gelir.</small></span></label>
+      <p style="font-size:13.5px;color:var(--metin)">Şikâyet içeren yorumlara asistan hiç cevap yazmaz, size bırakır.</p></div></div>
+  </div>
+  <div class="ara-bosluk"></div>
   <div class="kart"><div class="kart-bas"><h3>Asistanın bildikleri</h3><small>Fiyat, evrak, ders saatleri…</small><a class="sag dg dg-cizgi dg-kucuk" href="#/mesajlar/bilgi">Bilgileri düzenle</a></div>
     <ul class="liste" style="margin-top:8px">${S.asistanBilgi.map(b => `<li>${isaret('tamam', 20)}<b style="color:var(--murekkep);min-width:130px">${e(b.konu)}</b><small style="color:var(--metin);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1">${e(b.metin)}</small></li>`).join('')}</ul></div>`;
 }
@@ -171,7 +239,9 @@ function devirler() {
   const y = sos().yorumlar.filter(x => x.durum === 'devir');
   return `${ekranNotu('Asistanın kendisi cevaplamadığı, size bıraktığı konuşmalar. Cevapladığınızda listeden düşer.', 'uyari')}
   <div class="kart"><ul class="liste">${[
-    ...S.devredilen.map((d, i) => `<li style="align-items:flex-start">${isaret('uyari', 24)}<div style="flex:1"><b style="color:var(--murekkep);display:block">${e(d.ad)} · ${e(d.konu)}</b><p style="font-size:14px">“${e(d.mesaj)}”</p><small style="color:var(--soluk)">${e(d.kanal)} mesajı · ${d.saat} · ${e(d.neden)}</small></div><a class="dg dg-ana dg-kucuk" href="#/mesajlar/bilgi">Cevapla</a></li>`),
+    ...S.devredilen.map((d, i) => `<li style="align-items:flex-start">${isaret('uyari', 24)}<div style="flex:1"><b style="color:var(--murekkep);display:block">${e(d.ad)} · ${e(d.konu)}</b><p style="font-size:14px">“${e(d.mesaj)}”</p><small style="color:var(--soluk)">${e(d.kanal)} mesajı · ${d.saat} · ${e(d.neden)}</small>
+      ${(d.bildirim || []).length ? `<ul class="zaman-cizgisi" style="padding:8px 0 0 22px;margin:0">${d.bildirim.map(([sa, kim, nasil]) => `<li style="font-size:13px">${sa} · ${e(kim)} kişisine bildirim<small>${e(nasil)}</small></li>`).join('')}</ul>` : ''}
+      ${sos().ayar.bildirim.bekletme ? `<small style="display:block;color:var(--soluk);margin-top:4px">${ik('robot')} Müşteriye: “Yetkilimize haber verdim; en geç 30 dakika içinde size dönecek.”</small>` : ''}</div><a class="dg dg-ana dg-kucuk" href="#/mesajlar/bilgi">Cevapla</a></li>`),
     ...y.map(x => `<li style="align-items:flex-start">${isaret('uyari', 24)}<div style="flex:1"><b style="color:var(--murekkep);display:block">${e(x.kim)} · Instagram yorumu</b><p style="font-size:14px">“${e(x.metin)}”</p><small style="color:var(--soluk)">${goreli(gun(x.gun))} ${x.saat} · Şikâyet: asistan cevaplamadı</small></div><button class="dg dg-ana dg-kucuk" data-yorum-cevap="${x.id}">Cevapla</button></li>`),
   ].join('') || '<li style="color:var(--soluk)">Size devredilmiş konuşma yok.</li>'}</ul></div>`;
 }
@@ -191,9 +261,13 @@ export function sosyal(alt) {
         const t = ev.target;
         const s = t.closest('[data-sekme]'); if (s) { location.hash = '#/sosyal/' + s.dataset.sekme; return; }
         const h = t.closest('[data-hazir]'); if (h) return gonder(h.dataset.hazir);
-        if (t.closest('[data-dene-sifirla]')) { durum.deneme = []; yenile(); }
+        if (t.closest('[data-dene-sifirla]')) { durum.deneme = []; bekleyen = null; yenile(); }
         const b = t.closest('[data-bagla]'); if (b) return baglaSihirbazi(b.dataset.bagla);
         const yc = t.closest('[data-yorum-cevap]'); if (yc) return yorumCevapla(yc.dataset.yorumCevap);
+        const ygz = t.closest('[data-yorum-gizle]'); if (ygz) { const y = sos().yorumlar.find(x => x.id === ygz.dataset.yorumGizle); y.durum = 'gizli'; islem('Yorumu gizledi', y.kim); kaydet(); bildir('Yorum gizlendi'); yenile(); return; }
+        const ybr = t.closest('[data-yorum-birak]'); if (ybr) { const y = sos().yorumlar.find(x => x.id === ybr.dataset.yorumBirak); y.durum = 'devir'; kaydet(); bildir('Yorum görünür kaldı; cevabı size bırakıldı'); yenile(); return; }
+        const tk = t.closest('[data-test-kanal]'); if (tk) { const c = sos().kanallar.find(x => x.id === tk.dataset.testKanal); tk.disabled = true; tk.textContent = 'Deneniyor…'; setTimeout(() => { c.sonCevapDk = 0; kaydet(); bildir(c.ad + ': deneme mesajı gönderildi ve cevaplandı'); yenile(); }, 900); return; }
+        const ba = t.closest('[data-belge-ac]'); if (ba) { import('./sayfalar3.js?v=22').then(m => m.belgeAc(ba.dataset.belgeAc)); return; }
         const yg = t.closest('[data-yorum-goster]'); if (yg) { const y = sos().yorumlar.find(x => x.id === yg.dataset.yorumGoster); y.durum = 'devir'; kaydet(); bildir('Yorum görünür yapıldı; cevabı size bırakıldı'); yenile(); }
       });
       k.addEventListener('change', ev => {
@@ -203,6 +277,20 @@ export function sosyal(alt) {
         if (t.matches('[data-devir-ayar]')) { sos().ayar.devir[t.dataset.devirAyar] = t.checked; kaydet(); bildir('Devir kuralı kaydedildi'); }
         if (t.matches('[data-susma]')) { sos().ayar.susma = +t.value; kaydet(); bildir('Siz yazınca asistan ' + t.value + ' saat susacak'); }
         if (t.matches('[data-dene-kanal]')) { durum.kanal = t.value; yenile(); }
+        const a = sos().ayar, kay = (m, yen = true) => { islem('Asistan ayarını değiştirdi', m); kaydet(); bildir(m); if (yen) yenile(); };
+        if (t.matches('[data-fiyat]')) { a.fiyat = t.value; kay('Fiyat politikası kaydedildi'); }
+        if (t.matches('[data-randevu]')) { a.randevu = t.checked; kay(t.checked ? 'Asistan kayıt görüşmesi ayarlayabilir' : 'Asistan randevu vermeyecek'); }
+        if (t.matches('[data-veri-konum]')) { a.veri.konum = t.value; kay(t.value === 'tr' ? 'Model Türkiye’de çalışacak' : 'Model AB’de; aydınlatma metni güncellendi'); }
+        if (t.matches('[data-maskele]')) { a.veri.maskele = t.checked; kay(t.checked ? 'Hassas bilgiler modele gönderilmeden gizlenecek' : 'Gizleme kapatıldı'); }
+        if (t.matches('[data-aydinlatma]')) { a.veri.aydinlatma = t.checked; kay('Aydınlatma bağlantısı ' + (t.checked ? 'açık' : 'kapalı'), false); }
+        if (t.matches('[data-saklama]')) { a.veri.saklamaAy = +t.value; kay('Konuşmalar ' + t.value + ' ay saklanacak', false); }
+        if (t.matches('[data-bildirim-kisi]')) { const l = a.bildirim.kisiler; if (t.checked) l.push(t.value); else a.bildirim.kisiler = l.filter(x => x !== t.value); kay('Bildirim kişileri kaydedildi', false); }
+        if (t.matches('[data-bildirim-kanal]')) { a.bildirim.kanal = t.value; kay('Bildirim ' + t.value + ' ile gidecek', false); }
+        if (t.matches('[data-ikinci]')) { a.bildirim.ikinciDk = +t.value; kay(t.value + ' dk cevapsız kalırsa sıradakine gidecek', false); }
+        if (t.matches('[data-bekletme]')) { a.bildirim.bekletme = t.checked; kay('Bekletme mesajı ' + (t.checked ? 'açık' : 'kapalı'), false); }
+        if (t.matches('[data-gizle-onay]')) { a.gizleOnay = t.checked; kay(t.checked ? 'Gizlemeden önce size sorulacak' : 'Reklamlar otomatik gizlenecek', false); }
+        if (t.matches('[data-hiz]')) { a.hizSiniri = t.checked; kay('Hız sınırı ' + (t.checked ? 'açık' : 'kapalı'), false); }
+        if (t.matches('[data-wp-num]')) { const c = sos().kanallar.find(x => x.id === 'wp'); c.birlikte = t.value === 'true'; kay(c.birlikte ? 'WhatsApp numarası telefonda da açık kalacak' : 'Asistan ayrı numarada çalışacak'); }
       });
       const f = k.querySelector('[data-dene]');
       if (f) { f.addEventListener('submit', ev => { ev.preventDefault(); const m = f.m.value.trim(); if (m) gonder(m); }); const ak = k.querySelector('.sohbet-akis'); if (ak) ak.scrollTop = 1e5; }
@@ -214,14 +302,19 @@ export function sosyal(alt) {
 
 function gonder(metin) {
   const ilk = !durum.deneme.some(m => m.kim === 'asistan');
-  durum.deneme.push({ kim: 'musteri', metin });
+  const giden = sos().ayar.veri.maskele ? maskele(metin) : metin;
+  durum.deneme.push({ kim: 'musteri', metin, model: giden !== metin ? giden : null });
   const c = cevapUret(metin, ilk);
   durum.deneme.push({ kim: 'asistan', metin: c.metin, kaynak: c.kaynak });
   if (c.aday) {
     S.adaylar.unshift({ id: 'l' + Date.now(), ad: 'Deneme adayı (' + KANAL_KISA[durum.kanal] + ')', tel: c.aday, kaynak: durum.kanal === 'wp' ? 'WhatsApp' : 'Instagram', kanal: durum.kanal === 'wp' ? 'WhatsApp' : 'Instagram', sinif: 'B', asama: 'Yeni', tarih: gun(0), saat: new Date().toTimeString().slice(0, 5), takip: null, not: 'Sosyal medya asistanı açtı', mesajlar: durum.deneme.map(m => ({ kim: m.kim === 'asistan' ? 'asistan' : 'aday', metin: m.metin })) });
     kaydet(); bildir('Yeni aday açıldı · Yeni öğrenciler listesinde');
   }
-  if (c.devir) bildir('Konuşma size devredildi: ' + c.devir, 'uyari');
+  if (c.devir) {
+    const b = sos().ayar.bildirim, kisiler = S.kullanicilar.filter(u => b.kisiler.includes(u.id)), saat = new Date().toTimeString().slice(0, 5);
+    S.devredilen.unshift({ ad: 'Deneme müşterisi', kanal: KANAL_KISA[durum.kanal], konu: c.devir, mesaj: metin, neden: c.devir + ': insana devredildi', saat, bildirim: kisiler.map((u, i) => { const t = new Date(Date.now() + i * b.ikinciDk * 60e3).toTimeString().slice(0, 5); return [t, u.ad, b.kanal + (i ? ' · ilki ' + b.ikinciDk + ' dk cevapsız kalırsa' : '')]; }) });
+    kaydet(); bildir('Devredildi: ' + (kisiler[0] ? kisiler[0].ad + ' kişisine ' + b.kanal + ' bildirimi gitti' : 'bildirim kişisi seçilmedi'), 'uyari');
+  }
   yenile();
 }
 

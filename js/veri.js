@@ -1,5 +1,5 @@
 // Sinyal demo verisi: tarihler bugüne göre üretilir, tarayıcıda saklanır.
-const ANAHTAR = 'sinyal-demo-v14';
+const ANAHTAR = 'sinyal-demo-v16';
 
 export const BUGUN = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })();
 export const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -123,7 +123,7 @@ function uret() {
   const gunSay = {};
   for (let n = -14; n <= 10; n++) {
     const d = tarihOku(gun(n));
-    if (d.getDay() === 0) continue;
+    if (d.getDay() === 0 || ['01-01', '04-23', '05-01', '05-19', '07-15', '08-30', '10-29'].includes(iso(d).slice(5))) continue;
     egitmenler.forEach(e => {
       const arac = araclar.find(a => a.egitmen === e.id);
       saatler.forEach(s => {
@@ -285,19 +285,25 @@ function uret() {
     { konu: 'Sınav ücretleri', metin: 'e-Sınav ücreti oturum başına 1.250 TL (MEB 2026 kılavuzu). Tekrar sınav ücretini kurs bildirir.', onay: gun(-5) },
   ];
   const devredilen = [
-    { ad: 'Halil Yurt', kanal: 'WhatsApp', konu: 'İndirim pazarlığı', mesaj: 'Üç kardeş kaydolursak ne kadar indirim olur?', neden: 'Kurs bilgisinde toplu indirim yok', saat: '10:12' },
-    { ad: 'Seda Bal', kanal: 'Instagram', konu: 'Özel durum', mesaj: 'Sol ayağımda protez var, otomatik araçla ehliyet alabilir miyim?', neden: 'Sağlık durumu: insana devredildi', saat: '09:40' },
+    { ad: 'Halil Yurt', kanal: 'WhatsApp', konu: 'İndirim pazarlığı', mesaj: 'Üç kardeş kaydolursak ne kadar indirim olur?', neden: 'Kurs bilgisinde toplu indirim yok', saat: '10:12', bildirim: [['10:12', 'Kurs Müdürü', 'WhatsApp'], ['10:27', 'Selda Korkmaz', 'WhatsApp · 15 dk cevapsız kaldı']] },
+    { ad: 'Seda Bal', kanal: 'Instagram', konu: 'Özel durum', mesaj: 'Sol ayağımda protez var, otomatik araçla ehliyet alabilir miyim?', neden: 'Sağlık durumu: insana devredildi', saat: '09:40', bildirim: [['09:40', 'Kurs Müdürü', 'WhatsApp']] },
   ];
 
   // Sosyal medya asistanı (DengChat modülü)
   const sosyal = {
     kanallar: [
-      { id: 'igm', ad: 'Instagram mesajları', hesap: '@ornekmtsk', bagli: true, cevap: true, mod: '7/24', son: '08:12' },
-      { id: 'igy', ad: 'Instagram yorumları', hesap: '@ornekmtsk', bagli: true, cevap: true, mod: '7/24', son: '07:58' },
-      { id: 'wp', ad: 'WhatsApp Business', hesap: '0222 000 00 00', bagli: true, cevap: true, mod: 'Mesai dışı', son: '08:12' },
-      { id: 'fb', ad: 'Facebook Messenger', hesap: 'Örnek Sürücü Kursu', bagli: false, cevap: false, mod: '7/24', son: null },
+      { id: 'igm', ad: 'Instagram mesajları', hesap: '@ornekmtsk', bagli: true, cevap: true, mod: '7/24', son: '08:12', izin: gun(-12), sonCevapDk: 3 },
+      { id: 'igy', ad: 'Instagram yorumları', hesap: '@ornekmtsk', bagli: true, cevap: true, mod: '7/24', son: '07:58', izin: gun(-12), sonCevapDk: 17 },
+      { id: 'wp', ad: 'WhatsApp Business', hesap: '0222 000 00 00', bagli: true, cevap: true, mod: 'Mesai dışı', son: '08:12', izin: gun(-40), sonCevapDk: 3, birlikte: true },
+      { id: 'fb', ad: 'Facebook Messenger', hesap: 'Örnek Sürücü Kursu', bagli: false, cevap: false, mod: '7/24', son: null, izin: null, sonCevapDk: null },
     ],
-    ayar: { ad: 'Kurs asistanı', ton: 'Samimi', emoji: false, susma: 24, devir: { indirim: true, sikayet: true, saglik: true, insan: true, bilinmeyen: true } },
+    ayar: {
+      ad: 'Kurs asistanı', ton: 'Samimi', emoji: false, susma: 24, devir: { indirim: true, sikayet: true, saglik: true, insan: true, bilinmeyen: true },
+      fiyat: 'sorulan', randevu: true, gizleOnay: true, hizSiniri: true,
+      veri: { konum: 'tr', maskele: true, aydinlatma: true, saklamaAy: 12 },
+      bildirim: { kisiler: ['u1', 'u2'], kanal: 'WhatsApp', ikinciDk: 15, bekletme: true },
+    },
+    slotlar: (() => { const l = []; for (let n = 1; n <= 6; n++) { const d = new Date(BUGUN); d.setDate(d.getDate() + n); if (d.getDay() === 0) continue; ['10:00', '11:30', '14:00', '16:30'].forEach((h, i) => l.push({ tarih: gun(n), saat: h, dolu: (n + i) % 3 === 0 ? 'Yiğit Sarı' : null })); } return l; })(),
     ay: { mesaj: 1284, kisi: 412, otomatik: 92, sure: 3, mesaiDisi: 41, aday: 86, gorusme: 31, kayit: 14, devir: 9 },
     saatlik: [9, 4, 2, 1, 1, 2, 6, 14, 31, 42, 47, 45, 52, 49, 44, 47, 55, 63, 74, 88, 104, 112, 96, 41],
     kanalDagilim: { igm: 46, igy: 18, wp: 36, fb: 0 },
@@ -311,15 +317,41 @@ function uret() {
       { id: 'y2', gonderi: 'g1', kim: '@mert_yz', metin: 'Akşam kursu var mı, gündüz çalışıyorum', saat: '23:14', gun: -1, durum: 'acik', cevap: 'Var, teorik dersler hafta içi 18:30’da. Direksiyonu da size uygun saate planlıyoruz.' },
       { id: 'y3', gonderi: 'g2', kim: '@ayse.dmr', metin: 'Ben de buradan aldım, hocalar çok ilgili 👏', saat: '20:41', gun: -2, durum: 'acik', cevap: 'Teşekkür ederiz Ayşe Hanım, yolunuz açık olsun!' },
       { id: 'y4', gonderi: 'g2', kim: '@hakan_44', metin: 'Sınav günü araç gelmedi, rezalet', saat: '22:05', gun: -2, durum: 'devir', cevap: null },
-      { id: 'y5', gonderi: 'g3', kim: '@takipci.al.ucuz', metin: 'Takipçi almak için profilime bak', saat: '03:12', gun: -3, durum: 'gizli', cevap: null },
+      { id: 'y5', gonderi: 'g3', kim: '@takipci.al.ucuz', metin: 'Takipçi almak için profilime bak', saat: '03:12', gun: -3, durum: 'onay', cevap: null },
       { id: 'y6', gonderi: 'g3', kim: '@zeynep.oz', metin: 'Otomatik ile kaç ayda bitiyor?', saat: '21:37', gun: -3, durum: 'dm', cevap: 'Detayları özelden yazdım.' },
     ],
   };
 
+  const subeler = [{ id: 's1', ad: 'Merkez', semt: 'Odunpazarı' }, { id: 's2', ad: 'Tepebaşı şubesi', semt: 'Tepebaşı' }];
+  const SUBE_EG = { e1: 's1', e2: 's1', e5: 's1', e3: 's2', e4: 's2' };
+  egitmenler.forEach(x => { x.sube = SUBE_EG[x.id] || 's1'; });
+  araclar.forEach(a => { a.sube = SUBE_EG[a.egitmen] || 's1'; });
+  kursiyerler.forEach(k => { k.sube = SUBE_EG[k.egitmen] || 's1'; });
+  hareket.forEach((h, i) => { const k = h.kursiyer && kursiyerler.find(x => x.id === h.kursiyer); h.sube = k ? k.sube : (i % 4 === 0 ? 's2' : 's1'); });
+  personel.forEach(p => { p.sube = 's1'; });
+  kursiyerler.forEach((k, i) => { if (!k.deneme.length) return; const n = k.deneme.length, ort = k.deneme.reduce((a, b) => a + b, 0) / n / 100, zayif = ['trafik', 'ilkyardim', 'motor', 'adab'][i % 4]; k.konuAnaliz = Object.fromEntries([['trafik', 23], ['ilkyardim', 12], ['motor', 9], ['adab', 6]].map(([kn, q]) => { const t = q * n, o = Math.min(0.98, Math.max(0.3, ort + (kn === zayif ? -0.18 : 0.05))); return [kn, [Math.round(t * o), t]]; })); });
+  kursiyerler.forEach((k, i) => { if (i % 5 === 1) return; k.dogrulama = {}; ['saglik', 'adli'].forEach(x => { if (k.evrak[x]) k.dogrulama[x] = { kod: x === 'adli' ? 'A' + (480000 + i * 37) : 'R-' + (2026000 + i * 11), kim: 'Selda Korkmaz', tarih: k.kayit }; }); });
+
+  const guvenlik = {
+    ikiAdim: { mudur: true, sekreter: true, usta: false }, oturumDk: 30, ipKisit: false, hassasOnay: true,
+    oturumlar: [
+      { kim: 'Kurs Müdürü', cihaz: 'Chrome · Mac', yer: 'Eskişehir', son: 'Şimdi', bu: true },
+      { kim: 'Kurs Müdürü', cihaz: 'Safari · iPhone', yer: 'Eskişehir', son: '2 saat önce' },
+      { kim: 'Selda Korkmaz', cihaz: 'Chrome · Windows', yer: 'Eskişehir', son: '14 dk önce' },
+      { kim: 'Hüseyin Aktaş', cihaz: 'Chrome · Android', yer: 'Eskişehir', son: 'Dün 17:40' },
+    ],
+  };
+  const entegrasyon = {
+    earsiv: { bagli: true, ad: 'e-Arşiv entegratörü', not: 'Tahsilatta fatura otomatik kesilir' },
+    muhasebe: { tur: 'Excel', bagli: false },
+    musavir: { eposta: '', otomatik: false },
+    pos: { bagli: true, ad: 'Sanal POS', komisyon: 2.49 },
+  };
+
   return {
-    sosyal,
+    sosyal, subeler, guvenlik, entegrasyon,
     personel, izinler, bekleme, hesaplar, kazanim, gruplar, arsiv, mevzuat, ogretmenler, kullanicilar, islemler, asistanBilgi, devredilen, sms: { bakiye: 1840, kanal: 'WhatsApp' }, gunSonu: [],
-    kurs: { ad: 'Örnek Sürücü Kursu', sehir: 'Eskişehir', tel: '0222 000 00 00', adres: 'Odunpazarı / Eskişehir', yetkili: 'Kurs Müdürü', puan: 4.9, yorumSayisi: 286, gunlukDersSiniri: 2, egitmenGunlukSinir: 8, ekDersUcreti: 900, devamsizlikSiniri: 4, programOnGun: 5, sinavBildirimIsGunu: 4, geceDersi: 2, tekrarBekleme: 15, asgariYas: 18, saklamaYil: 10 },
+    kurs: { ad: 'Örnek Sürücü Kursu', sehir: 'Eskişehir', tel: '0222 000 00 00', adres: 'Odunpazarı / Eskişehir', yetkili: 'Kurs Müdürü', puan: 4.9, yorumSayisi: 286, imzaYontemi: 'ikili', kuralKontrol: gun(-13), gunlukDersSiniri: 2, egitmenGunlukSinir: 8, ekDersUcreti: 900, devamsizlikSiniri: 4, programOnGun: 5, sinavBildirimIsGunu: 4, geceDersi: 2, tekrarBekleme: 15, asgariYas: 18, saklamaYil: 10 },
     egitmenler, araclar, kursiyerler, dersler, teorik, sinavlar, hareket, adaylar, otomasyonlar, duyurular,
     gonderimler: [],
   };
@@ -330,7 +362,15 @@ function yukle() {
   try { const v = localStorage.getItem(ANAHTAR); if (v) { const o = JSON.parse(v); if (o && o._gun === iso(BUGUN)) return o; } } catch (e) { }
   const o = uret(); o._gun = iso(BUGUN); return o;
 }
-export function kaydet() { try { localStorage.setItem(ANAHTAR, JSON.stringify(S)); } catch (e) { } }
+function subeTamamla() {
+  if (!S.subeler) return;
+  const v = gorunum.sube || 's1';
+  S.kursiyerler.forEach(k => { if (!k.sube) { const e = S.egitmenler.find(x => x.id === k.egitmen); k.sube = gorunum.sube || (e && e.sube) || v; } });
+  S.hareket.forEach(h => { if (!h.sube) { const k = h.kursiyer && S.kursiyerler.find(x => x.id === h.kursiyer); h.sube = (k && k.sube) || v; } });
+  S.araclar.forEach(a => { if (!a.sube) a.sube = v; });
+  S.egitmenler.forEach(x => { if (!x.sube) x.sube = v; });
+}
+export function kaydet() { subeTamamla(); try { localStorage.setItem(ANAHTAR, JSON.stringify(S)); } catch (e) { } }
 export function sifirla() { try { localStorage.removeItem(ANAHTAR); } catch (e) { } S = uret(); S._gun = iso(BUGUN); kaydet(); }
 
 // --- türetilmiş bilgiler ---
@@ -395,3 +435,11 @@ export function mebOnKontrol(k) {
   l.push([!!(k.kvkk && k.kvkk.riza), 'KVKK aydınlatma ve açık rıza alındı']);
   return l;
 }
+
+// --- Şube görünümü: boş = tüm şubeler. Yeni kayıtlar seçili şubeye (yoksa Merkez'e) yazılır.
+export const gorunum = { sube: (() => { try { return sessionStorage.getItem('sinyal-sube') || ''; } catch (x) { return ''; } })() };
+export function subeSec(id) { gorunum.sube = id; try { sessionStorage.setItem('sinyal-sube', id); } catch (x) { } }
+export const subede = x => !gorunum.sube || !x || !x.sube || x.sube === gorunum.sube;
+export const sb = l => (gorunum.sube ? l.filter(subede) : l);
+export const sbDers = l => (gorunum.sube ? l.filter(d => subede(S.kursiyerler.find(k => k.id === d.kursiyer))) : l);
+export const varsayilanSube = () => gorunum.sube || 's1';
