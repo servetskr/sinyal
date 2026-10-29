@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk } from './veri.js?v=54';
+import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk } from './veri.js?v=55';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -197,8 +197,8 @@ export function kartDogrula(kok) {
 }
 // --- Gerçek WhatsApp: sohbet hazır mesajla açılır, gönderme tuşuna kullanıcı basar ---
 export function waNumara(tel) { let n = String(tel || '').replace(/\D/g, ''); if (n.startsWith('0')) n = '90' + n.slice(1); else if (n.length === 10 && n.startsWith('5')) n = '90' + n; return n.length >= 12 ? n : ''; }
-export const waUrl = (tel, metin) => 'https://wa.me/' + waNumara(tel) + '?text=' + encodeURIComponent(metin);
-export const smsUrl = (tel, metin) => 'sms:' + (waNumara(tel) ? '+' + waNumara(tel) : '') + '?&body=' + encodeURIComponent(metin);
+export const waUrl = (tel, metin) => 'https://wa.me/' + waNumara(tel) + '?text=' + encodeURIComponent(sadeDil(metin));
+export const smsUrl = (tel, metin) => 'sms:' + (waNumara(tel) ? '+' + waNumara(tel) : '') + '?&body=' + encodeURIComponent(sadeDil(metin));
 // Mesaj yönlendirme (demo): kursa gelen mesajlar hariç her mesaj Ayarlar'daki tek numaraya gider.
 // Demo etiketi: mesajın kimin telefonuna gittiği ("[ÖĞRENCİ · Ayşe Yılmaz]", "[HOCA · Hüseyin Aktaş]", "[MÜDÜR]")
 const ROL_KIME = { 'ÖĞRENCİ': 'öğrencinin', 'HOCA': 'usta öğreticinin', 'MÜDÜR': 'kurs müdürünün', 'ADAY': 'yeni öğrenci adayının', 'ÖN BÜRO': 'ön büronun' };
@@ -234,7 +234,7 @@ export async function apiGonder(metin, belge, adres) {
   giden.push(kayit); window.dispatchEvent(new CustomEvent('sinyal-giden'));
   const bitir = (ok, hata) => { kayit.durum = ok ? 'iletildi' : 'hata'; kayit.hata = hata; window.dispatchEvent(new CustomEvent('sinyal-giden')); };
   try {
-    const r = await fetch(adres || S.kurs.waApi, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ metin, belge }) });
+    const r = await fetch(adres || S.kurs.waApi, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ metin: sadeDil(metin), belge }) });
     const j = await r.json().catch(() => ({}));
     if (r.ok && j.ok) { bitir(true); return { ok: true, id: j.id || null }; }
     bitir(false, j.hata);
@@ -416,4 +416,45 @@ export function pinSor(neden) {
       },
     });
   });
+}
+
+/* ================= ARAYÜZ DİLİ =================
+   MEB terimleri (kursiyer, usta öğretici, hoca) ekranda ve WhatsApp mesajlarında sade adlarıyla görünür: öğrenci, öğretmen.
+   Resmî belgeler (A4 önizlemeleri, sözleşme metni) yönetmelikteki dille kalır: .a4 ve [data-resmi] içine dokunulmaz.
+   Ekler Türkçe ses uyumuna göre çevrilir (kursiyere → öğrenciye, usta öğreticinin → öğretmenin); tanınmayan ekli kelime olduğu gibi bırakılır. */
+const H = '\\p{L}';
+const KURSIYER_EK = { '': '', e: 'ye', i: 'yi', in: 'nin', le: 'yle', de: 'de', den: 'den', dir: 'dir', se: 'yse', iniz: 'niz', ine: 'sine', ini: 'sini', inin: 'sinin', inde: 'sinde', inden: 'sinden', iyle: 'siyle', siz: 'siz', im: 'm', imiz: 'miz', imize: 'mize', imizi: 'mizi', imizin: 'mizin', imizle: 'mizle' };
+const OGRETICI_EK = { '': '', ye: 'e', yi: 'i', nin: 'in', n: 'in', si: 'i', sinin: 'inin', sine: 'ine', sini: 'ini', siyle: 'iyle', yle: 'le', den: 'den', de: 'de', niz: 'iniz', nize: 'inize', nizin: 'inizin' };
+const USTA_EK = { '': '', ya: 'e', yı: 'i', nın: 'in', sı: 'i', sının: 'inin', sına: 'ine', yla: 'le', dan: 'den', da: 'de' };
+const buyuk = (orj, yeni) => orj === orj.toLocaleUpperCase('tr') && orj.length > 1 ? yeni.toLocaleUpperCase('tr') : orj[0] === orj[0].toLocaleUpperCase('tr') ? yeni[0].toLocaleUpperCase('tr') + yeni.slice(1) : yeni;
+const TERIMLER = [
+  // çoğullar: kök + -ler/-lar + kalan ek aynen geçer
+  [new RegExp(`(?<!${H})(usta öğreticiler|Usta öğreticiler|USTA ÖĞRETİCİLER)(${H}*)`, 'gu'), (m, k, ek) => buyuk(k, 'öğretmenler') + ek],
+  [new RegExp(`(?<!${H})(kursiyerler|Kursiyerler|KURSİYERLER)(${H}*)`, 'gu'), (m, k, ek) => buyuk(k, 'öğrenciler') + ek],
+  [new RegExp(`(?<!${H})(ustalar|Ustalar|hocalar|Hocalar)(${H}*)`, 'gu'), (m, k, ek) => buyuk(k, 'öğretmenler') + ek],
+  [new RegExp(`(?<!${H})(usta öğretici|Usta öğretici|USTA ÖĞRETİCİ)(${H}*)`, 'gu'), (m, k, ek) => ek.toLocaleLowerCase('tr') in OGRETICI_EK ? buyuk(k, 'öğretmen') + OGRETICI_EK[ek.toLocaleLowerCase('tr')] : m],
+  [new RegExp(`(?<!${H})(kursiyer|Kursiyer|KURSİYER)(${H}*)`, 'gu'), (m, k, ek) => ek.toLocaleLowerCase('tr') in KURSIYER_EK ? buyuk(k, 'öğrenci') + (k === k.toLocaleUpperCase('tr') ? KURSIYER_EK[ek.toLocaleLowerCase('tr')].toLocaleUpperCase('tr') : KURSIYER_EK[ek.toLocaleLowerCase('tr')]) : m],
+  // "usta" ve "hoca" kavram olarak; "Hüseyin Hoca" gibi hitaplar kalır
+  [new RegExp(`(?<!${H})(usta|Usta)(${H}*)`, 'gu'), (m, k, ek) => ek in USTA_EK ? buyuk(k, 'öğretmen') + USTA_EK[ek] : m],
+  [new RegExp(`(?<![\\p{Lu}]${H}+ )(?<!${H})(hoca|Hoca|HOCA)(${H}*)`, 'gu'), (m, k, ek) => ek.toLocaleLowerCase('tr') in USTA_EK ? buyuk(k, 'öğretmen') + (k === 'HOCA' ? USTA_EK[ek.toLocaleLowerCase('tr')].toLocaleUpperCase('tr') : USTA_EK[ek.toLocaleLowerCase('tr')]) : m],
+];
+export function sadeDil(s) {
+  if (!s || typeof s !== 'string' || !/kursiyer|öğretici|usta|hoca|KURSİYER|ÖĞRETİCİ/i.test(s)) return s;
+  for (const [r, f] of TERIMLER) s = s.replace(r, f);
+  return s;
+}
+const RESMI = '.a4, .pdf-kok, [data-resmi], script, style, textarea, code';
+const ATTR = ['placeholder', 'title', 'aria-label'];
+function sadelestir(kok) {
+  if (kok.nodeType === 3) { const p = kok.parentElement; if (p && !p.closest(RESMI)) { const y = sadeDil(kok.nodeValue); if (y !== kok.nodeValue) kok.nodeValue = y; } return; }
+  if (kok.nodeType !== 1 || kok.closest(RESMI)) return;
+  const w = document.createTreeWalker(kok, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, { acceptNode: n => n.nodeType === 1 && n.matches(RESMI) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
+  for (let n = kok; n; n = w.nextNode()) {
+    if (n.nodeType === 3) { const y = sadeDil(n.nodeValue); if (y !== n.nodeValue) n.nodeValue = y; }
+    else ATTR.forEach(a => { const v = n.getAttribute(a); if (v) { const y = sadeDil(v); if (y !== v) n.setAttribute(a, y); } });
+  }
+}
+export function sadeDilBaslat() {
+  sadelestir(document.body);
+  new MutationObserver(l => l.forEach(m => { if (m.type === 'characterData') sadelestir(m.target); else m.addedNodes.forEach(sadelestir); })).observe(document.body, { childList: true, subtree: true, characterData: true });
 }

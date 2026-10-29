@@ -1,7 +1,7 @@
-import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas, sb, sbDers, sbSinav, gorunum, subede, SOZLESME_VARSAYILAN, satistaSiniflar, ayEkle, YONTEMLER, yontemAd, selam, kursAdi } from './veri.js?v=54';
-import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler, imzaAlani, tamTarih, yaziyla, belgeYazdir, kartFormu, kartBagla, kartDogrula, waAc, apiAcik, belgeWhatsApp } from './ui.js?v=54';
-import { yenile } from './app.js?v=54';
-import { siraliPencere } from './sayfalar5.js?v=54';
+import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas, sb, sbDers, sbSinav, gorunum, subede, SOZLESME_VARSAYILAN, satistaSiniflar, ayEkle, YONTEMLER, yontemAd, selam, kursAdi } from './veri.js?v=55';
+import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler, imzaAlani, tamTarih, yaziyla, belgeYazdir, kartFormu, kartBagla, kartDogrula, waAc, apiAcik, belgeWhatsApp } from './ui.js?v=55';
+import { yenile } from './app.js?v=55';
+import { siraliPencere } from './sayfalar5.js?v=55';
 
 /* ================= BELGELER VE ÇIKTILAR ================= */
 const gorunumSube = () => gorunum.sube;
@@ -151,7 +151,7 @@ export function sozlesmeImzalat(k) {
     onAc(d) {
       const ia = imzaAlani(d.querySelector('[data-imza]'));
       d.querySelector('[data-temizle]').addEventListener('click', () => ia.temizle());
-      d.querySelector('[data-uzaktan]').addEventListener('click', () => import('./imza.js?v=54').then(m => m.imzayaGonderPenceresi(k, 'sozlesme')));
+      d.querySelector('[data-uzaktan]').addEventListener('click', () => import('./imza.js?v=55').then(m => m.imzayaGonderPenceresi(k, 'sozlesme')));
       d.querySelector('[data-yazdir]').addEventListener('click', () => { belgeYazdir(belgeHtml('sozlesme', k.id) + '<div class="sayfa-sonu"></div>' + belgeHtml('sozlesme', k.id), 'Sözleşme · ' + tamAd(k)); islem('Sözleşme yazdırdı', tamAd(k)); kaydet(); bildir('İki nüsha yazdırıldı. İmzalı nüshayı teslim alınca Evraklar’da “İmzalı sözleşme”yi işaretleyin'); });
       d.querySelector('[data-imzala]').addEventListener('click', () => {
         if (ia.bos()) return bildir('Kursiyer imza alanına imzalasın', 'uyari');
@@ -216,7 +216,7 @@ export function kayitSayfasi() {
   if (kayit.adim === 3) { const v = SINIFLAR[kayit.sinif], p = Math.min(8000, Math.round(v.ucret * 0.3 / 500) * 500), n = 4, pos = S.entegrasyon.pos.bagli, mad = sozlesmeMaddeleri({ sinif: kayit.sinif }); govde = `<h2 style="font-size:26px;margin-bottom:14px">Son adım</h2>
     <div class="kart" style="padding:14px 16px;margin-bottom:12px"><div style="display:flex;justify-content:space-between"><b style="color:var(--murekkep)">${v.ad}</b><b class="sayi" style="color:var(--murekkep)">${tl(v.ucret)}</b></div><p style="font-size:14px;margin-top:4px">Bugün ${tl(p)} peşinat, sonra ${n} × ${tl((v.ucret - p) / n)}</p></div>
     <label style="display:flex;gap:10px;align-items:flex-start;font-size:14px;margin-bottom:12px"><input type="checkbox" data-kvkk ${kayit.kvkk ? 'checked' : ''} style="width:18px;height:18px;margin-top:2px"><span>Aydınlatma metnini okudum; sağlık raporu ve adli sicil bilgilerimin MEB kaydı için işlenmesine açık rıza veriyorum. <a href="#" data-aydinlatma-oku style="color:var(--levha);font-weight:700">Metni oku</a></span></label>
-    <details class="kart" style="padding:12px 14px;margin-bottom:12px" open><summary style="cursor:pointer;font-weight:700;color:var(--murekkep)">Kurs sözleşmesini oku</summary><div style="max-height:240px;overflow:auto;font-size:13px;margin-top:8px">${mad.map((m, i) => `<p style="margin:6px 0"><b>${i + 1}.</b> ${e(m)}</p>`).join('')}<p style="margin:6px 0"><b>Cayma hakkı.</b> Kayıttan itibaren 14 gün içinde ve eğitim başlamadıysa gerekçe göstermeden cayabilirsin; ödediğin tutar 14 gün içinde iade edilir. Cayma için ${e(S.kurs.tel)} numarasını araman ya da ${kursAdi('e')} yazman yeterli.</p></div></details>
+    <details data-resmi class="kart" style="padding:12px 14px;margin-bottom:12px" open><summary style="cursor:pointer;font-weight:700;color:var(--murekkep)">Kurs sözleşmesini oku</summary><div style="max-height:240px;overflow:auto;font-size:13px;margin-top:8px">${mad.map((m, i) => `<p style="margin:6px 0"><b>${i + 1}.</b> ${e(m)}</p>`).join('')}<p style="margin:6px 0"><b>Cayma hakkı.</b> Kayıttan itibaren 14 gün içinde ve eğitim başlamadıysa gerekçe göstermeden cayabilirsin; ödediğin tutar 14 gün içinde iade edilir. Cayma için ${e(S.kurs.tel)} numarasını araman ya da ${kursAdi('e')} yazman yeterli.</p></div></details>
     <p class="et" style="margin-bottom:6px">Sözleşmeyi okudum, parmağımla imzalıyorum</p><canvas class="imza-alan" width="900" height="300" aria-label="İmza alanı"></canvas><button class="dg dg-hafif dg-kucuk" data-temizle type="button">Temizle</button>
     <p class="et" style="margin:16px 0 6px">Peşinat · ${tl(p)}</p>${pos ? kartFormu() + `
     <label style="display:flex;gap:10px;align-items:flex-start;font-size:14px;margin-top:12px"><input type="checkbox" data-oto-onay checked style="width:18px;height:18px;margin-top:2px"><span>Kalan ${n} taksitim vadesinde bu karttan otomatik çekilsin. İstediğim zaman kapatabilirim.</span></label>` : `<p class="ipucu">${isaret('bilgi', 18)}<span>Peşinatı ilk 3 gün içinde ${kursAdi('e')} gelip ya da ${S.kurs.iban ? 'havaleyle (IBAN: ' + e(S.kurs.iban) + ')' : 'havaleyle'} ödeyebilirsin. Ödeme gelince kaydın kesinleşir.</span></p>`}
