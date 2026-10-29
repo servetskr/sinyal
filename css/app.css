@@ -642,3 +642,6 @@ body.yazi-buyuk{zoom:1.12}
 .konu-sat span{font-weight:700;color:var(--murekkep)}
 .konu-sat .ilerleme{grid-column:1/-1}
 body.portal-modu .sube-sec,body.portal-modu .sube-yan{display:none!important}
+.guv-kod{display:inline-block;font-family:var(--mono);font-size:26px;font-weight:700;letter-spacing:.3em;padding:6px 14px;background:repeating-linear-gradient(135deg,#eef1f6 0 6px,#dfe5ee 6px 12px);border:1.5px solid var(--cizgi);border-radius:8px;color:#2a3a55;font-style:italic;text-decoration:line-through;text-decoration-color:rgba(42,58,85,.35)}
+.aktar-log{max-height:52vh;overflow:auto;border:1.5px solid var(--cizgi);border-radius:10px}
+.meb-aktar{border-color:var(--levha);box-shadow:0 0 0 2px var(--levha)}

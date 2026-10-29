@@ -1,6 +1,6 @@
-import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas } from './veri.js?v=22';
-import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler } from './ui.js?v=22';
-import { yenile } from './app.js?v=22';
+import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas } from './veri.js?v=24';
+import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler } from './ui.js?v=24';
+import { yenile } from './app.js?v=24';
 
 /* ================= BELGELER VE ÇIKTILAR ================= */
 const SABLONLAR = [
@@ -291,7 +291,7 @@ const plakaMetin = a => e(a.plaka) + ' · ' + e(a.model);
 /* ================= PAKET VE GÜVENCE ================= */
 export function guven() {
   const paketler = [
-    ['Kurs', '1.490', ['Kursiyer, evrak, ödeme ve senet takibi', 'Direksiyon ve teorik program, yoklama', 'MEBBİS sıralı giriş ve kural kontrolü', 'Belge çıktıları, kasa, raporlar, muhasebe aktarımı', 'Ayda 300 SMS ve 300 e-Arşiv fatura dahil', '3 kullanıcı']],
+    ['Kurs', '1.490', ['Kursiyer, evrak, ödeme ve senet takibi', 'Direksiyon ve teorik program, yoklama', 'MEBBİS: sıralı giriş ya da tek tuş aktarımı, kural kontrolü', 'Belge çıktıları, kasa, raporlar, muhasebe aktarımı', 'Ayda 300 SMS ve 300 e-Arşiv fatura dahil', '3 kullanıcı']],
     ['Kurs + WhatsApp', '2.490', ['Kurs paketindeki her şey', 'Ders, taksit, sınav hatırlatmaları', 'Ayda 2.000 WhatsApp mesajı, 500 SMS, 500 e-Arşiv dahil', 'Evden kayıt sayfası ve kartla ödeme linki', 'Usta öğretici ve kursiyer ekranları, deneme sınavları', 'Sınırsız kullanıcı, çoklu şube'], true],
     ['Kurs + Asistan', '3.990', ['WhatsApp paketindeki her şey', 'Sosyal medya asistanı: Instagram mesajları ve yorumları, WhatsApp, Facebook', 'Ayda 5.000 WhatsApp mesajı ve 1.000 SMS dahil', 'Boşalan saati doldurma, sınav riski ve ek ders', 'Google yorum toplama']],
   ];
@@ -321,7 +321,7 @@ export function guven() {
     <div class="izgara iz-2">
       <div class="kart"><div class="kart-bas"><h3>Verileriniz sizindir</h3></div><ul class="liste" style="margin-top:8px">${[
         ['tamam', 'Her an tam döküm', 'Tüm kursiyer, ödeme, ders ve kasa kayıtlarınızı tek tuşla indirin.'],
-        ['tamam', 'MEBBİS şifrenizi istemeyiz', 'Sinyal MEBBİS’e bağlanmaz; giriş kurs yetkilisinin kendi oturumunda yapılır.'],
+        ['tamam', 'MEBBİS şifreniz bize gelmez', 'Sıralı girişte şifre hiç gerekmez. Tek tuş aktarımını seçerseniz şifre yalnızca kurs bilgisayarındaki MEBBİS Aracı’nda kalır; Sinyal sunucusu görmez.'],
         ['tamam', 'Kim neye baktı, kayıtlı', 'TC görüntüleme dahil her işlem kullanıcı adıyla işlem geçmişine yazılır.'],
         ['tamam', 'Yetkiye göre ekran', 'Sekreter maaşları görmez, usta öğretici yalnızca kendi derslerini görür.'],
         ['bilgi', 'KVKK', 'Kayıt formunda aydınlatma metni ve açık rıza alınır. Sağlık raporu ve adli sicil özel nitelikli veridir; Türkiye’deki sunucuda, şifreli saklanır ve her gece yedeklenir. Asistanın dil modeli de Türkiye’de çalışır.'],
