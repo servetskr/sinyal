@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN, S } from './veri.js?v=36';
+import { ASAMALAR, tarihOku, fark, BUGUN, S } from './veri.js?v=37';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -209,13 +209,39 @@ export function yonlendir(tel, metin, ad, rol) {
 }
 // Otomatik gönderim: Ayarlar'da WhatsApp API adresi varsa mesaj WhatsApp açılmadan doğrudan gider (Cloud API köprüsü).
 export const apiAcik = () => !!(S && S.kurs && S.kurs.waApi);
-export async function apiGonder(metin) {
+// Gönderilen WhatsApp mesajlarının oturum günlüğü (senaryo ekranındaki telefon önizlemesi bunu gösterir)
+export const giden = [];
+export async function apiGonder(metin, belge, adres) {
+  const kayit = { zaman: new Date().toTimeString().slice(0, 5), metin, dosya: belge && belge.dosya, durum: 'gidiyor' };
+  giden.push(kayit); window.dispatchEvent(new CustomEvent('sinyal-giden'));
+  const bitir = (ok, hata) => { kayit.durum = ok ? 'iletildi' : 'hata'; kayit.hata = hata; window.dispatchEvent(new CustomEvent('sinyal-giden')); };
   try {
-    const r = await fetch(S.kurs.waApi, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ metin }) });
+    const r = await fetch(adres || S.kurs.waApi, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ metin, belge }) });
     const j = await r.json().catch(() => ({}));
-    if (r.ok && j.ok) return { ok: true };
+    if (r.ok && j.ok) { bitir(true); return { ok: true }; }
+    bitir(false, j.hata);
     return { ok: false, hata: j.kod === 131047 || /24 hours|re-engagement/i.test(j.hata || '') ? 'WhatsApp 24 saat penceresi kapalı: test numarasına “merhaba” yazıp tekrar deneyin' : (j.hata || 'Gönderilemedi') };
-  } catch (x) { return { ok: false, hata: 'WhatsApp servisine ulaşılamadı' }; }
+  } catch (x) { bitir(false, 'ulaşılamadı'); return { ok: false, hata: 'WhatsApp servisine ulaşılamadı' }; }
+}
+// Belgeyi gerçek PDF'e çevirir (html2pdf, ilk kullanımda yüklenir) ve base64 döndürür
+let html2pdfYuk = null;
+const html2pdfYukle = () => html2pdfYuk || (html2pdfYuk = new Promise((ok, red) => { if (window.html2pdf) return ok(); const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js'; sc.onload = ok; sc.onerror = () => { html2pdfYuk = null; red(new Error('PDF aracı yüklenemedi')); }; document.head.appendChild(sc); }));
+const kapsamliCss = () => A4_CSS.replace(/@page\{[^}]*\}/, '').split('}').filter(x => x.trim()).map(r => { const [sel, govde] = r.split('{'); return sel.split(',').map(x => { x = x.trim(); return x === 'body' ? '.pdf-kok' : x === '*' ? '.pdf-kok,.pdf-kok *' : '.pdf-kok ' + x; }).join(',') + '{' + govde + '}'; }).join('');
+export async function pdfUret(html, dosya = 'belge.pdf') {
+  await html2pdfYukle();
+  const yatay = html.includes('data-yatay'), kap = document.createElement('div');
+  kap.style.cssText = `position:fixed;left:-10000px;top:0;width:${yatay ? 1100 : 760}px;background:#fff`;
+  kap.innerHTML = `<style>${kapsamliCss()}</style><div class="pdf-kok" style="padding:4px">${html}</div>`;
+  document.body.appendChild(kap);
+  try {
+    const uri = await window.html2pdf().set({ margin: 10, filename: dosya, image: { type: 'jpeg', quality: 0.9 }, html2canvas: { scale: 2, backgroundColor: '#ffffff' }, jsPDF: { unit: 'mm', format: 'a4', orientation: yatay ? 'landscape' : 'portrait' }, pagebreak: { mode: ['css', 'legacy'], before: '.sayfa-onu', after: '.sayfa-sonu' } }).from(kap.querySelector('.pdf-kok')).outputPdf('datauristring');
+    return uri.split(',')[1];
+  } finally { kap.remove(); }
+}
+// Belgeyi PDF olarak WhatsApp'tan dosya gönderir (API bağlıysa)
+export async function belgeWhatsApp(html, dosya, metin, ad, rol) {
+  try { const base64 = await pdfUret(html, dosya); const s = await apiGonder(etiket(ad, rol) + metin, { base64, dosya }); bildir(s.ok ? `${dosya} WhatsApp’tan gönderildi ✓` : s.hata, s.ok ? 'wp' : 'uyari'); return s; }
+  catch (x) { bildir('PDF hazırlanamadı: ' + x.message, 'uyari'); return { ok: false }; }
 }
 const apiMetin = (metin, ad, rol) => etiket(ad, rol) + metin;
 export function waAc(tel, metin, kanal = 'WhatsApp', ad = '', elle = false, rol = '') {

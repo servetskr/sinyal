@@ -1,7 +1,7 @@
-import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas, sb, sbDers, sbSinav, gorunum, subede, SOZLESME_VARSAYILAN } from './veri.js?v=36';
-import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler, imzaAlani, tamTarih, yaziyla, belgeYazdir, kartFormu, kartBagla, kartDogrula, waAc } from './ui.js?v=36';
-import { yenile } from './app.js?v=36';
-import { siraliPencere } from './sayfalar5.js?v=36';
+import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas, sb, sbDers, sbSinav, gorunum, subede, SOZLESME_VARSAYILAN } from './veri.js?v=37';
+import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler, imzaAlani, tamTarih, yaziyla, belgeYazdir, kartFormu, kartBagla, kartDogrula, waAc, apiAcik, belgeWhatsApp } from './ui.js?v=37';
+import { yenile } from './app.js?v=37';
+import { siraliPencere } from './sayfalar5.js?v=37';
 
 /* ================= BELGELER VE ÇIKTILAR ================= */
 const gorunumSube = () => gorunum.sube;
@@ -28,6 +28,7 @@ export function sozlesmeMaddeleri(k) {
   const K = S.kurs, S0 = SINIFLAR[k.sinif], alan = { kurs: K.ad, sinif: S0.ad, teorik: S0.teorik, direksiyon: S0.direksiyon, hak: K.sinavHak || 4, tekrarE: tl((K.tekrarUcret || {}).esinav || 0), tekrarD: tl((K.tekrarUcret || {}).dsinav || 0), ekDers: tl(K.ekDersUcreti || 0) };
   return (K.sozlesme && K.sozlesme.length ? K.sozlesme : SOZLESME_VARSAYILAN).map(m => m.replace(/\{(\w+)\}/g, (x, a) => alan[a] != null ? alan[a] : x));
 }
+export const dosyaAdi = (belge, kime) => (belge + ' ' + (kime || '')).trim().toLocaleLowerCase('tr').replace(/[çğıöşü]/g, c => ({ ç: 'c', ğ: 'g', ı: 'i', ö: 'o', ş: 's', ü: 'u' }[c])).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '.pdf';
 export const makbuzNo = h => { const yil = h.tarih.slice(0, 4), l = S.hareket.filter(x => x.tur === 'Gelir' && x.tarih.slice(0, 4) === yil).sort((a, b) => (a.tarih + a.id).localeCompare(b.tarih + b.id)); return 'M' + yil + '-' + String(l.indexOf(h) + 1).padStart(5, '0'); };
 function faturaHtml(no) {
   const f = (S.faturalar || []).find(x => x.no === no); if (!f) return '<p>Fatura bulunamadı.</p>';
@@ -40,7 +41,7 @@ function faturaHtml(no) {
     <p>Yalnız: ${yaziyla(f.tutar)}</p><p style="font-size:11px;color:#555">Ödeme: ${e(f.yontem || '')} · ${tamTarih(f.odemeTarih)} tarihli tahsilat. ${f.durum === 'gib' ? 'GİB’e raporlandı.' : 'e-Arşiv raporuna eklenmek üzere sırada.'}</p>`;
 }
 const kursBas = baslik => `<h1>${e(baslik)}</h1><p class="a4-alt">${e(S.kurs.ad)} · ${e(S.kurs.adres)} · ${e(S.kurs.tel)}</p>`;
-function belgeHtml(tur, id, hid) {
+export function belgeHtml(tur, id, hid) {
   if (tur === 'denetim') {
     const eks = denetimEksikleri(), akt = S.kursiyerler.filter(k => k.asama !== 'Ehliyet');
     const yap = S.dersler.filter(d => d.durum === 'Yapıldı'), imz = yap.filter(d => d.imza).length;
@@ -150,14 +151,14 @@ export function sozlesmeImzalat(k) {
     onAc(d) {
       const ia = imzaAlani(d.querySelector('[data-imza]'));
       d.querySelector('[data-temizle]').addEventListener('click', () => ia.temizle());
-      d.querySelector('[data-uzaktan]').addEventListener('click', () => import('./imza.js?v=36').then(m => m.imzayaGonderPenceresi(k, 'sozlesme')));
+      d.querySelector('[data-uzaktan]').addEventListener('click', () => import('./imza.js?v=37').then(m => m.imzayaGonderPenceresi(k, 'sozlesme')));
       d.querySelector('[data-yazdir]').addEventListener('click', () => { belgeYazdir(belgeHtml('sozlesme', k.id) + '<div class="sayfa-sonu"></div>' + belgeHtml('sozlesme', k.id), 'Sözleşme · ' + tamAd(k)); islem('Sözleşme yazdırdı', tamAd(k)); kaydet(); bildir('İki nüsha yazdırıldı. İmzalı nüshayı teslim alınca Evraklar’da “İmzalı sözleşme”yi işaretleyin'); });
       d.querySelector('[data-imzala]').addEventListener('click', () => {
         if (ia.bos()) return bildir('Kursiyer imza alanına imzalasın', 'uyari');
         k.sozlesmeImza = { tarih: gun(0), yontem: 'Ekranda', url: ia.url() }; k.evrak.sozlesme = true;
         if (!eksikEvrak(k).length && ['Kayıt', 'Evrak'].includes(k.asama)) k.asama = 'Teorik';
-        islem('Sözleşme imzalattı', tamAd(k) + ' · ekranda'); kaydet(); kapatPencere();
-        bildir('Sözleşme imzalandı. Kopyasını Belgeler › Sözleşme › “PDF’i WhatsApp’tan gönder”le iletebilirsiniz'); yenile();
+        islem('Sözleşme imzalattı', tamAd(k) + ' · ekranda'); kaydet(); kapatPencere(); yenile();
+        if (apiAcik()) belgeWhatsApp(belgeHtml('sozlesme', k.id), dosyaAdi('Sözleşme', tamAd(k)), `Merhaba ${k.ad}, imzaladığın kurs sözleşmesinin kopyası ekte. ${S.kurs.ad}`, tamAd(k), 'ÖĞRENCİ'); else bildir('Sözleşme imzalandı. Kopyasını Belgeler › Sözleşme › “PDF’i WhatsApp’tan gönder”le iletebilirsiniz');
       });
     },
   });
@@ -182,7 +183,8 @@ export function belgeAc(tur, id) {
       const sec = d.querySelector('[data-kim]');
       sec.addEventListener('change', () => { d.querySelector('#a4').innerHTML = belgeHtml(tur, sec.value); });
       d.querySelector('[data-yazdir]').addEventListener('click', () => { const a = alici(sec.value); belgeYazdir(belgeHtml(tur, sec.value), s[1] + (a ? ' · ' + (typeof a === 'string' ? a : tamAd(a)) : '')); islem(s[1] + ' yazdırdı', a ? (typeof a === 'string' ? a : tamAd(a)) : ''); kaydet(); });
-      const w = d.querySelector('[data-wpb]'); if (w) w.addEventListener('click', () => { const a = alici(sec.value); if (!a) return bildir('Bu belgenin alıcısı yok', 'uyari'); const kime = typeof a === 'string' ? a : tamAd(a), tel = typeof a === 'string' ? ((S.egitmenler.find(x => x.ad === a) || {}).tel || '') : a.tel; bildir('Yazdırma penceresinde “PDF olarak kaydet”i seçin; sonra WhatsApp açılınca dosyayı ekleyin'); belgeYazdir(belgeHtml(tur, sec.value), s[1] + ' · ' + kime).then(() => { waAc(tel, `Merhaba ${kime.split(' ')[0]}, ${s[1].toLocaleLowerCase('tr')} ekte. ${S.kurs.ad}`, 'WhatsApp', kime, true); gonderimEkle(kime, s[1] + ' (PDF)', 'Belge'); islem(s[1] + ' gönderdi', kime); kaydet(); }); });
+      const w = d.querySelector('[data-wpb]'); if (w) w.addEventListener('click', () => { const a = alici(sec.value); if (!a) return bildir('Bu belgenin alıcısı yok', 'uyari'); const kime = typeof a === 'string' ? a : tamAd(a), tel = typeof a === 'string' ? ((S.egitmenler.find(x => x.ad === a) || {}).tel || '') : a.tel;
+        if (apiAcik()) { w.disabled = true; w.textContent = 'PDF hazırlanıyor…'; return belgeWhatsApp(belgeHtml(tur, sec.value), dosyaAdi(s[1], kime), `Merhaba ${kime.split(' ')[0]}, ${s[1].toLocaleLowerCase('tr')} ekte. ${S.kurs.ad}`, kime, typeof a === 'string' ? 'HOCA' : 'ÖĞRENCİ').then(r => { w.disabled = false; w.innerHTML = 'PDF’i WhatsApp’tan gönder'; if (r.ok) { gonderimEkle(kime, s[1] + ' (PDF)', 'Belge'); islem(s[1] + ' gönderdi', kime); kaydet(); } }); } bildir('Yazdırma penceresinde “PDF olarak kaydet”i seçin; sonra WhatsApp açılınca dosyayı ekleyin'); belgeYazdir(belgeHtml(tur, sec.value), s[1] + ' · ' + kime).then(() => { waAc(tel, `Merhaba ${kime.split(' ')[0]}, ${s[1].toLocaleLowerCase('tr')} ekte. ${S.kurs.ad}`, 'WhatsApp', kime, true); gonderimEkle(kime, s[1] + ' (PDF)', 'Belge'); islem(s[1] + ' gönderdi', kime); kaydet(); }); });
     },
   });
 }
