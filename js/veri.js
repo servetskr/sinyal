@@ -317,7 +317,7 @@ function uret() {
   const hesaplar = [
     { id: 'kasa', ad: 'Nakit kasa', tur: 'Kasa', bakiye: 18450 },
     { id: 'ziraat', ad: 'Ziraat Bankası', tur: 'Banka', bakiye: 412300 },
-    { id: 'pos', ad: 'Sanal POS', tur: 'POS', bakiye: 38900 },
+    { id: 'pos', ad: 'POS cihazı (kartla tahsilat)', tur: 'POS', bakiye: 38900 },
   ];
   const kazanim = { doldurulan: 14, ekDers: 9, yorum: 23 };
   const gruplar = [
@@ -418,7 +418,6 @@ function uret() {
   // Ders kanıtı: başlangıç-bitiş saati ve konum onayı (usta öğretici ekranından)
   dersler.filter(d => d.durum === 'Yapıldı').forEach((d, i) => { const [h, m] = d.saat.split(':').map(Number), bas = h * 60 + m + (i % 5), sure = i % 37 === 0 ? 34 : 48 + (i % 6); const f = x => String(Math.floor(x / 60)).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0'); d.bas = f(bas); d.bit = f(bas + sure); d.sure = sure; d.konum = true; });
   // Otomatik kart çekimi onayı veren kursiyerler
-  kursiyerler.forEach((k, i) => { if (i % 3 === 0 && k.odeme.taksitler.some(t => !t.odendi) && !k.odeme.taksitler.some(t => !t.odendi && fark(t.vade) < 0)) k.odeme.otomatik = { son4: String(1000 + (i * 739) % 9000).slice(0, 4), onay: k.kayit }; });
   // Evrak geçerlilik tarihleri (belgenin üzerindeki tarih)
   kursiyerler.forEach((k, i) => { if (k.dogrulama && k.dogrulama.saglik) k.dogrulama.saglik.gecerlilik = gun(i % 11 === 0 ? 20 : 200 + i * 3); });
   kursiyerler.forEach((k, i) => { if (!k.deneme.length) return; const n = k.deneme.length, ort = k.deneme.reduce((a, b) => a + b, 0) / n / 100, zayif = ['trafik', 'ilkyardim', 'motor', 'adab'][i % 4]; k.konuAnaliz = Object.fromEntries([['trafik', 23], ['ilkyardim', 12], ['motor', 9], ['adab', 6]].map(([kn, q]) => { const t = q * n, o = Math.min(0.98, Math.max(0.3, ort + (kn === zayif ? -0.18 : 0.05))); return [kn, [Math.round(t * o), t]]; })); });
