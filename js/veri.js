@@ -470,6 +470,11 @@ function goc(o) {
   // geçmiş derslerin beceri puanları (usta öğretici ders bitiminde 1–5 verir); eski kayıtlara kursiyerin seyrine göre doldurulur
   const hs = x => { let h = 7; for (const c of String(x)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
   const kz = {}; (o.kursiyerler || []).forEach(k => { kz[k.id] = k; });
+  // örnek trafik cezaları
+  if (!o.cezalar && o.araclar && o.araclar.length > 1) o.cezalar = [{ id: 'c1', arac: o.araclar[1].id, egitmen: o.araclar[1].egitmen || null, tarih: gun(-12), teblig: gun(-10), tur: 'Hız sınırı', tutar: 2167, odendi: null }, { id: 'c2', arac: o.araclar[0].id, egitmen: o.araclar[0].egitmen || null, tarih: gun(-40), teblig: gun(-36), tur: 'Hatalı park', tutar: 1408, odendi: gun(-30), odenen: 1056 }];
+  // öğrencinin derse verdiği puanlar (örnek veri; yaklaşık her 3 dersten 2'si puanlanmış)
+  const YORUM = ['Çok sabırlı, her şeyi tekrar tekrar anlattı.', 'Park etmeyi sonunda öğrendim, teşekkürler.', 'Biraz hızlı gittik ama faydalı oldu.', 'Yokuşta kalkışı iyi çalıştık.', 'Araç çok temizdi, ders zamanında başladı.', 'Ders 10 dakika geç başladı.', 'Kavşaklarda daha çok pratik istiyorum.'];
+  (o.dersler || []).forEach(d => { if (d.durum !== 'Yapıldı' || d.ogrenciPuan !== undefined) return; const h = hs(d.id + 'p'); if (h % 3 === 0) { d.ogrenciPuan = null; return; } const puan = [5, 5, 4, 5, 4, 3, 5, 4][h % 8], yorum = h % 5 === 0 ? YORUM[h % YORUM.length] : ''; d.ogrenciPuan = { puan: yorum.includes('geç başladı') ? 3 : puan, yorum, tarih: d.tarih }; });
   (o.dersler || []).forEach(d => { if (d.durum !== 'Yapıldı' || d.beceri !== undefined) return; const k = kz[d.kursiyer]; if (!k) return; const taban = [2.7, 3.5, 3.9, 4.2, 4.0, 3.8, 4.4][hs(k.id) % 7]; d.beceri = Object.fromEntries(BECERI.map(([b], i) => [b, Math.max(1, Math.min(5, Math.round(taban + ((hs(d.id + b) % 5) - 2) * 0.3 + (i === hs(k.id) % 5 ? -0.9 : 0))))])); });
   o.kurs.maliyet = o.kurs.maliyet || { yakit: 46, tuketim: 6.5, km: 22, bakim: 55, pay: 55 };
   if (o.kurs.kendiRandevu === undefined) o.kurs.kendiRandevu = true;
@@ -549,6 +554,11 @@ export function gonderimEkle(kime, metin, tur) { S.gonderimler.unshift({ zaman: 
 
 // Sınav riski (0–100): usta öğreticinin ders sonu beceri puanları, deneme sınavları, devamsızlık, kısa dersler, önceki kalma.
 const ortala = l => l.length ? l.reduce((a, x) => a + x, 0) / l.length : null;
+// Öğrencinin direksiyon dersine verdiği puan (1–5) ve yorum: öğretmen bazında ortalama
+export function memnuniyet(egId) {
+  const l = S.dersler.filter(d => d.ogrenciPuan && (!egId || d.egitmen === egId));
+  return { n: l.length, ort: l.length ? l.reduce((a, d) => a + d.ogrenciPuan.puan, 0) / l.length : null, yorumlar: l.filter(d => d.ogrenciPuan.yorum).sort((a, b) => (b.ogrenciPuan.tarih || b.tarih).localeCompare(a.ogrenciPuan.tarih || a.tarih)) };
+}
 export function beceriOzet(k, n = 3) {
   const l = S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Yapıldı' && d.beceri).sort((a, b) => (b.tarih + b.saat).localeCompare(a.tarih + a.saat)).slice(0, n);
   if (!l.length) return null;

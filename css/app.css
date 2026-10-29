@@ -1035,3 +1035,24 @@ button.oto-gidecek:hover{text-decoration:underline}
   .guven-kahraman{grid-template-columns:1fr;padding:22px 20px}
   .guven-katman div{margin-left:calc(var(--n) * 8px)}
 }
+/* konu anlatımı */
+.og-basliklar{list-style:none;margin:10px 0!important;display:grid!important;gap:4px!important}
+.og-basliklar button{display:flex;gap:10px;align-items:center;width:100%;text-align:left;padding:8px 10px;border-radius:8px;background:var(--panel-2);font-size:14px;color:var(--murekkep)}
+.og-basliklar button:hover{background:var(--levha-acik)}
+.og-basliklar button span{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:#fff;border:1.5px solid var(--cizgi);font:800 12px/1 var(--mono);color:var(--soluk)}
+.og-basliklar button.okundu span{background:var(--yesil);border-color:var(--yesil);color:#fff}
+.og-ders h3{font-size:22px;margin-bottom:12px}
+.og-ders p{font-size:15.5px;line-height:1.65;margin-bottom:12px;color:var(--metin)}
+.og-video{margin-bottom:14px}
+.og-video iframe{width:100%;aspect-ratio:16/9;border:0;border-radius:10px;background:#000;display:block}
+.og-video small{display:block;font-size:12.5px;color:var(--soluk);margin-top:4px}
+.og-akilda{background:var(--sari-acik);border-left:4px solid var(--sari);border-radius:0 10px 10px 0;padding:12px 16px;margin:6px 0 12px}
+.og-akilda b{font-family:var(--baslik);font-size:15px;color:var(--murekkep)}
+.og-akilda ul{margin:6px 0 0 18px;display:grid;gap:4px;font-size:14.5px}
+.og-kaynak{font-size:12.5px!important;color:var(--soluk)!important}
+.og-kaynak a{color:var(--levha);text-decoration:underline}
+.og-degerlendir{border-color:var(--sari)}
+.og-yildiz{display:flex;gap:6px;margin:4px 0 10px}
+.og-yildiz button{font-size:34px;line-height:1;color:var(--cizgi);padding:0 2px}
+.og-yildiz button.secili{color:var(--sari)}
+.og-degerlendir textarea{width:100%;margin-bottom:10px;font-size:14.5px}

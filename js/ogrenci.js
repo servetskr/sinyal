@@ -1,7 +1,7 @@
 // Öğrenci paneli sekmeleri: program, dersler (teorik konular + direksiyon + gelişim), sınavlar, ödemeler, belgeler
-import { S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen } from './veri.js?v=59';
-import { e, tl, ik, rozet, ilerleme, bos, pencere, bildir, tarih, tarihUzun, goreli, isaret, belgeYazdir } from './ui.js?v=59';
-import { belgeHtml } from './sayfalar3.js?v=59';
+import { S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen } from './veri.js?v=60';
+import { e, tl, ik, rozet, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, isaret, belgeYazdir } from './ui.js?v=60';
+import { belgeHtml } from './sayfalar3.js?v=60';
 
 // MEB teorik eğitim programı: konu, ders saati, başlıklar (anahtarlar soru bankasıyla aynı)
 export const MUFREDAT = [
@@ -14,6 +14,18 @@ const MEB_TOPLAM = MUFREDAT.reduce((a, x) => a + x[2], 0);
 // Öğrencinin teorik saatleri konulara MEB saat oranında dağılır (yoklama konu bazında tutulmadığı için)
 const konuSaat = k => { const S0 = SINIFLAR[k.sinif], oran = Math.min(1, k.teorik / Math.max(1, S0.teorik)); return MUFREDAT.map(([key, , saat]) => [key, Math.round(saat * oran)]); };
 const GUN = t => fark(t) === 0 ? 'Bugün' : fark(t) === 1 ? 'Yarın' : tarihUzun(t);
+
+/* ---------- Ders değerlendirmesi (öğrenciden öğretmene) ---------- */
+export function degerlendirKart(k) {
+  const d = S.dersler.filter(x => x.kursiyer === k.id && x.durum === 'Yapıldı' && fark(x.tarih) >= -7 && !x.ogrenciPuan).sort((a, b) => (b.tarih + b.saat).localeCompare(a.tarih + a.saat))[0];
+  if (!d) return '';
+  const h = egitmen(d.egitmen);
+  return `<div class="kart og-kart og-degerlendir"><div class="og-bas"><div><small>${GUN(d.tarih)} ${d.saat} · ${e(h ? h.ad : '')}</small><b>Dersin nasıldı?</b></div></div>
+    <div class="og-yildiz" role="radiogroup" aria-label="Puan">${[1, 2, 3, 4, 5].map(n => `<button type="button" data-og-yildiz="${n}" aria-label="${n} yıldız">★</button>`).join('')}</div>
+    <textarea class="girdi" data-og-yorum placeholder="İstersen kısa bir not yaz (isteğe bağlı)" rows="2"></textarea>
+    <button class="dg dg-ana dg-kucuk" data-og-puan="${d.id}" disabled>Gönder</button>
+    <p class="og-not" style="padding:0">Puanını yalnız kurs yönetimi görür.</p></div>`;
+}
 
 /* ---------- Program ---------- */
 function programOlaylari(k) {
@@ -44,9 +56,9 @@ export function derslerHtml(k, direksiyonListesi) {
   const son = ort(yapilan.slice(-3)), once = yapilan.length > 3 ? ort(yapilan.slice(0, -3)) : null;
   const notlar = yapilan.filter(d => d.not).slice(-2).reverse();
   return `<div class="kart og-kart"><div class="og-bas"><div><small>Teorik dersler</small><b>${k.teorik}/${S0.teorik} saat</b></div>${rozet(k.teorik >= S0.teorik ? 'Tamamlandı' : 'Devam ediyor', k.teorik >= S0.teorik ? 'yesil' : 'mavi')}</div>
-      ${MUFREDAT.map(([key, ad, saat, basliklar]) => `<details class="og-konu"><summary><span><b>${e(ad)}</b><small>${ks[key]}/${saat} saat</small></span>${ilerleme(ks[key], saat, ks[key] >= saat ? 'yesil' : '')}</summary>
-        <ul>${basliklar.map(b => `<li>${e(b)}</li>`).join('')}</ul>
-        <button class="dg dg-cizgi dg-kucuk" data-test-basla="konu" data-konu="${key}" data-og-sinava>${ik('sinav')}Bu konudan test çöz</button></details>`).join('')}
+      ${MUFREDAT.map(([key, ad, saat, basliklar]) => { const okn = basliklar.filter((b, i) => (k.okunan || {})[key + '-' + (i + 1)]).length; return `<details class="og-konu"><summary><span><b>${e(ad)}</b><small>${ks[key]}/${saat} saat · ${okn}/${basliklar.length} konu okundu</small></span>${ilerleme(ks[key], saat, ks[key] >= saat ? 'yesil' : '')}</summary>
+        <ul class="og-basliklar">${basliklar.map((b, i) => { const id = key + '-' + (i + 1), ok = (k.okunan || {})[id]; return `<li><button type="button" data-og-ders="${id}" class="${ok ? 'okundu' : ''}"><span>${ok ? '✓' : i + 1}</span>${e(b)}</button></li>`; }).join('')}</ul>
+        <button class="dg dg-cizgi dg-kucuk" data-test-basla="konu" data-konu="${key}" data-og-sinava>${ik('sinav')}Bu konudan test çöz</button></details>`; }).join('')}
       <p class="og-not" style="padding:0 2px">Konular MEB’in sürücü kursu teorik eğitim programına göredir (toplam ${MEB_TOPLAM} saat).</p></div>
     ${SINIFLAR[k.sinif].direksiyon ? `<div class="kart og-kart"><div class="og-bas"><div><small>Direksiyon</small><b>${k.direksiyon}/${S0.direksiyon} ders</b></div>${ilerleme(k.direksiyon, S0.direksiyon, 'yesil')}</div>${direksiyonListesi}</div>` : ''}
     ${yapilan.length ? `<div class="kart og-kart"><div class="og-bas"><div><small>Gelişimin</small><b>Öğretmeninin verdiği puanlar</b></div><small>son ${Math.min(3, yapilan.length)} ders · 1–5</small></div>
@@ -94,10 +106,38 @@ export function belgelerHtml(k) {
       <ul class="liste og-liste">${[['sozlesme', 'Kurs sözleşmen', 'Ücret, taksit planı ve şartlar'], ['takip', 'Direksiyon eğitimi takip formun', SINIFLAR[k.sinif].direksiyon ? k.direksiyon + ' ders işlendi' : ''], ['bilgi', 'Bilgi formun', 'Kayıtta verdiğin bilgiler']].filter(x => x[0] !== 'takip' || SINIFLAR[k.sinif].direksiyon).map(([tur, ad, alt]) => `<li><div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${ad}</b><small style="display:block;color:var(--soluk)">${e(alt)}</small></div><button class="dg dg-hafif dg-kucuk" data-og-belge="${tur}">Gör</button></li>`).join('')}</ul></div>`;
 }
 
+/* ---------- konu anlatımı ---------- */
+// İçerik ayrı dosyada; yalnız açılınca yüklenir (açılış hızını etkilemesin)
+let dersYuk = null;
+const dersleriYukle = () => dersYuk || (dersYuk = import('./dersler.js?v=60').then(m => m.DERSLER).catch(() => ({})));
+async function dersAc(k, id, yenile) {
+  const D = await dersleriYukle(), d = D[id], [key, no] = [id.replace(/-\d+$/, ''), +id.split('-').pop()], konu = MUFREDAT.find(x => x[0] === key), baslik = konu ? konu[3][no - 1] : id;
+  const sonraki = konu && no < konu[3].length ? key + '-' + (no + 1) : null;
+  pencere({
+    baslik: (konu ? konu[1] + ' · ' : '') + no + '. konu', genis: true,
+    icerik: `<article class="og-ders"><h3>${e(baslik)}</h3>
+      ${d ? `${(d.videolar || []).map(v => `<div class="og-video"><iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(v.id)}?rel=0" title="${e(v.baslik)}" loading="lazy" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe><small>${e(v.baslik)} · ${e(v.kanal)}</small></div>`).join('')}
+        ${d.paragraflar.map(p => `<p>${e(p)}</p>`).join('')}
+        ${d.akilda && d.akilda.length ? `<div class="og-akilda"><b>Akılda kalsın</b><ul>${d.akilda.map(x => `<li>${e(x)}</li>`).join('')}</ul></div>` : ''}
+        ${d.kaynak && d.kaynak.length ? `<p class="og-kaynak">Kaynak: ${d.kaynak.map(x => /^https?:/.test(x) ? `<a href="${e(x)}" target="_blank" rel="noopener">${e(x.replace(/^https?:\/\/(www\.)?/, '').split('/')[0])}</a>` : e(x)).join(' · ')}</p>` : ''}`
+      : `<p class="og-not">Bu konunun anlatımı hazırlanıyor.</p>`}</article>`,
+    altlik: `<button class="dg dg-cizgi" data-og-test="${key}">${ik('sinav')}Konu testi</button>${sonraki ? `<button class="dg dg-ana" data-og-sonraki="${sonraki}">Okudum, sonraki konu →</button>` : `<button class="dg dg-ana" data-og-bitir>Okudum</button>`}`,
+    onAc(p) {
+      const isaretle = () => { k.okunan = k.okunan || {}; if (!k.okunan[id]) { k.okunan[id] = gun(0); kaydet(); } };
+      const sn = p.querySelector('[data-og-sonraki]'); if (sn) sn.addEventListener('click', () => { isaretle(); dersAc(k, sn.dataset.ogSonraki, yenile); });
+      const bt = p.querySelector('[data-og-bitir]'); if (bt) bt.addEventListener('click', () => { isaretle(); kapatPencere(); yenile(); });
+      p.querySelector('[data-og-test]').addEventListener('click', () => { isaretle(); kapatPencere(); const b = document.querySelector(`[data-test-basla="konu"][data-konu="${key}"]`); if (b) b.click(); else yenile(); });
+    },
+  });
+}
+
 /* ---------- olaylar ---------- */
 export function ogBagla(kap, k, yenile) {
   kap.addEventListener('click', ev => {
     const t = ev.target;
+    const od = t.closest('[data-og-ders]'); if (od) return dersAc(k, od.dataset.ogDers, yenile);
+    const yz = t.closest('[data-og-yildiz]'); if (yz) { const kart = yz.closest('.og-degerlendir'), n = +yz.dataset.ogYildiz; kart.dataset.puan = n; kart.querySelectorAll('[data-og-yildiz]').forEach(b => b.classList.toggle('secili', +b.dataset.ogYildiz <= n)); kart.querySelector('[data-og-puan]').disabled = false; return; }
+    const op = t.closest('[data-og-puan]'); if (op) { const kart = op.closest('.og-degerlendir'), d = S.dersler.find(x => x.id === op.dataset.ogPuan), n = +kart.dataset.puan; if (!d || !n) return; d.ogrenciPuan = { puan: n, yorum: kart.querySelector('[data-og-yorum]').value.trim().slice(0, 300), tarih: gun(0) }; islem('Öğrenci dersi değerlendirdi', tamAd(k) + ' · ' + n + '/5'); kaydet(); bildir('Teşekkürler, değerlendirmen kursa iletildi'); return yenile(); }
     if (t.closest('[data-og-takvim]')) return takvimIndir(k);
     if (t.closest('[data-og-iban]')) { try { navigator.clipboard.writeText(S.kurs.iban.replace(/\s/g, '')); bildir('IBAN kopyalandı'); } catch (x) { bildir('IBAN: ' + S.kurs.iban); } return; }
     const mb = t.closest('[data-og-makbuz]'); if (mb) return belgeGoster('makbuz', k.id, mb.dataset.ogMakbuz, 'Makbuz');

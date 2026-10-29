@@ -1,6 +1,6 @@
-import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube} from './veri.js?v=59';
-import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor } from './ui.js?v=59';
-import { yenile } from './app.js?v=59';
+import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube} from './veri.js?v=60';
+import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor } from './ui.js?v=60';
+import { yenile } from './app.js?v=60';
 
 /* ================= MEB KURALLARI: KAYNAK VE SORUMLULUK ================= */
 const MTSK = 'MTSK Yönetmeliği (ÖÖKGM, Ocak 2025 metni)';
@@ -140,9 +140,27 @@ const ARAC_ALAN = [
   ['muayene', 'Muayene bitiş', ['muayene', 'muayenetarihi', 'muayenebitis']],
   ['sigorta', 'Sigorta bitiş', ['sigorta', 'sigortatarihi', 'trafiksigortasi']],
 ];
-const TUR_ALAN = () => ({ kursiyer: ALANLAR, taksit: TAKSIT_ALAN, arac: ARAC_ALAN }[aktarim.tur || 'kursiyer']);
+const OGRETMEN_ALAN = [
+  ['ad', 'Ad soyad', ['adsoyad', 'adisoyadi', 'adsoyadi', 'adisoyad', 'ad', 'adi', 'isim', 'personel', 'ustaogretici', 'ogretmen']],
+  ['tel', 'Telefon', ['telefon', 'tel', 'cep', 'gsm', 'ceptelefonu', 'telefonno', 'gsmno']],
+  ['siniflar', 'Verdiği sınıflar', ['sinif', 'siniflar', 'sertifikasinifi', 'brans']],
+  ['sertifika', 'Sertifika bitiş', ['sertifika', 'sertifikatarihi', 'ustaogreticisertifikasi', 'izinbitis']],
+  ['saglik', 'Sağlık raporu bitiş', ['saglik', 'saglikraporu', 'raportarihi']],
+  ['adli', 'Adli sicil tarihi', ['adli', 'adlisicil', 'sabika']],
+  ['baslama', 'İşe başlama', ['baslama', 'isebaslama', 'giris', 'baslamatarihi']],
+];
+const TUR_ALAN = () => ({ kursiyer: ALANLAR, taksit: TAKSIT_ALAN, arac: ARAC_ALAN, ogretmen: OGRETMEN_ALAN }[aktarim.tur || 'kursiyer']);
 const norm = s => String(s || '').toLocaleLowerCase('tr').replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/[^a-z0-9]/g, '');
 const aktarim = { tur: 'kursiyer', satirlar: null, baslik: [], esles: {}, sonuc: null };
+// Excel (.xlsx/.xls): okuyucu yalnız gerektiğinde yüklenir
+let xlsxYuk = null;
+const xlsxYukle = () => xlsxYuk || (xlsxYuk = new Promise((ok, red) => { if (window.XLSX) return ok(); const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; sc.onload = ok; sc.onerror = () => { xlsxYuk = null; red(new Error('Excel okuyucu yüklenemedi')); }; document.head.appendChild(sc); }));
+async function excelOku(dosya) {
+  await xlsxYukle();
+  const wb = window.XLSX.read(await dosya.arrayBuffer(), { type: 'array', cellDates: true });
+  const sh = wb.Sheets[wb.SheetNames[0]];
+  return window.XLSX.utils.sheet_to_json(sh, { header: 1, raw: false, dateNF: 'dd.mm.yyyy', defval: '' }).map(r => r.map(c => String(c).trim())).filter(r => r.some(Boolean));
+}
 function csvOku(metin) {
   const ilk = metin.split(/\r?\n/)[0] || ''; const ayr = (ilk.match(/;/g) || []).length >= (ilk.match(/,/g) || []).length ? ';' : ',';
   const sat = []; let alan = '', satir = [], tirnak = false;
@@ -160,6 +178,8 @@ const tutarCoz = v => +String(v || '').replace(/\./g, '').replace(',', '.').repl
 function kontrolEt(r, i = 0) {
   const get = k => aktarim.esles[k] != null && aktarim.esles[k] !== '' ? r[aktarim.esles[k]] : '';
   const x = Object.fromEntries(TUR_ALAN().map(([k]) => [k, get(k)]));
+  // tek sütunda “Adı Soyadı” geldiyse son kelime soyad sayılır
+  if (aktarim.tur === 'kursiyer' && x.ad && !x.soyad && /\s/.test(String(x.ad).trim())) { const p = String(x.ad).trim().split(/\s+/); x.soyad = p.pop(); x.ad = p.join(' '); }
   const hata = [], uyari = [];
   if (aktarim.tur === 'taksit') {
     const k = S.kursiyerler.find(z => z.tc && z.tc === String(x.tc).trim());
@@ -168,6 +188,13 @@ function kontrolEt(r, i = 0) {
     if (!tutarCoz(x.tutar)) hata.push('Tutar yok');
     if (k && k.odeme.taksitler.some(t => t.vade === tarihCoz(x.vade) && t.tutar === tutarCoz(x.tutar))) hata.push('Bu taksit zaten var');
     return { x, hata, uyari, k };
+  }
+  if (aktarim.tur === 'ogretmen') {
+    if (!String(x.ad || '').trim()) hata.push('Ad soyad yok');
+    if (x.ad && S.egitmenler.some(h => norm(h.ad) === norm(x.ad))) hata.push('Bu öğretmen zaten kayıtlı');
+    if (!String(x.siniflar || '').split(/[,;/ ]+/).map(sinifCoz).filter(Boolean).length) uyari.push('Sınıf okunamadı; B yazılacak');
+    if (!tarihCoz(x.sertifika)) uyari.push('Sertifika tarihi yok');
+    return { x, hata, uyari };
   }
   if (aktarim.tur === 'arac') {
     if (!x.plaka) hata.push('Plaka yok');
@@ -186,20 +213,20 @@ function kontrolEt(r, i = 0) {
 }
 function aktarimSekme() {
   let govde = '';
-  if (aktarim.sonuc) govde = `<div class="kart"><div class="kart-govde">${isaret('tamam', 34)}<h3 style="margin:10px 0 4px">${aktarim.sonuc.n} ${{ kursiyer: 'kursiyer', taksit: 'taksit', arac: 'araç' }[aktarim.sonuc.tur]} aktarıldı</h3><p style="color:var(--soluk)">${aktarim.sonuc.atla} satır hatalı olduğu için atlandı. ${{ kursiyer: 'Yapılmış ders sayısına göre aşamaları ayarlandı; KVKK rızası ilk ziyarette alınır. Sırada taksit planı dosyası var.', taksit: 'Ödenmiş taksitler kasaya tahsilat olarak işlendi; ödenmemişler vadesinde hatırlatılır.', arac: 'Muayene ve sigorta bitişleri takibe alındı.' }[aktarim.sonuc.tur]}</p><div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap"><a class="dg dg-ana" href="#/kursiyerler">Kursiyerleri gör</a><button class="dg dg-cizgi" data-aktarim-geri>Bu aktarımı geri al</button><button class="dg dg-hafif" data-aktarim-yeni>Yeni dosya</button></div></div></div>`;
+  if (aktarim.sonuc) govde = `<div class="kart"><div class="kart-govde">${isaret('tamam', 34)}<h3 style="margin:10px 0 4px">${aktarim.sonuc.n} ${{ kursiyer: 'kursiyer', taksit: 'taksit', arac: 'araç', ogretmen: 'öğretmen' }[aktarim.sonuc.tur]} aktarıldı</h3><p style="color:var(--soluk)">${aktarim.sonuc.atla} satır hatalı olduğu için atlandı. ${{ kursiyer: 'Yapılmış ders sayısına göre aşamaları ayarlandı; KVKK rızası ilk ziyarette alınır. Sırada taksit planı dosyası var.', taksit: 'Ödenmiş taksitler kasaya tahsilat olarak işlendi; ödenmemişler vadesinde hatırlatılır.', arac: 'Muayene ve sigorta bitişleri takibe alındı.' }[aktarim.sonuc.tur]}</p><div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap"><a class="dg dg-ana" href="#/kursiyerler">Kursiyerleri gör</a><button class="dg dg-cizgi" data-aktarim-geri>Bu aktarımı geri al</button><button class="dg dg-hafif" data-aktarim-yeni>Yeni dosya</button></div></div></div>`;
   else if (aktarim.satirlar) {
     const veri = aktarim.satirlar, sonuc = veri.map(kontrolEt);
     const ok = sonuc.filter(s => !s.hata.length).length, hata = sonuc.length - ok, uy = sonuc.filter(s => !s.hata.length && s.uyari.length).length;
     govde = `${olcumler([['Satır', sayi(veri.length)], ['Aktarılacak', sayi(ok), uy ? uy + ' tanesinde uyarı var' : 'Hepsi temiz'], ['Atlanacak', sayi(hata), hata ? 'Ad eksik ya da zaten kayıtlı' : '', hata ? 'uyari' : '']])}<div class="ara-bosluk"></div>
     <div class="izgara iz-12"><div class="kart"><div class="kart-bas"><h3>Sütun eşleştirme</h3><small>Otomatik eşleşti; gerekirse değiştirin</small></div><div class="kart-govde" style="display:grid;gap:8px">${TUR_ALAN().map(([k, t]) => `<label style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;font-size:14px"><b style="color:var(--murekkep)">${t}</b><select class="girdi" style="height:34px" data-esles="${k}"><option value="">— yok —</option>${aktarim.baslik.map((h, i) => `<option value="${i}" ${String(aktarim.esles[k]) === String(i) ? 'selected' : ''}>${e(h)}</option>`).join('')}</select></label>`).join('')}</div></div>
-    <div class="kart"><div class="kart-bas"><h3>Önizleme</h3><small>İlk 8 satır</small></div><div class="tablo-kap"><table class="tablo"><thead><tr>${aktarim.tur === 'taksit' ? '<th>Kursiyer</th><th>Vade</th><th>Tutar</th><th>Ödendi</th>' : aktarim.tur === 'arac' ? '<th>Plaka</th><th>Model</th><th>Sınıf</th><th>Muayene</th>' : '<th>Ad soyad</th><th>TC</th><th>Sınıf</th><th>Ücret / ödenen</th>'}<th>Durum</th></tr></thead><tbody>${sonuc.slice(0, 8).map(({ x, hata, uyari, k }) => `<tr>${aktarim.tur === 'taksit' ? `<td>${e(k ? tamAd(k) : x.tc)}</td><td class="mono">${e(x.vade)}</td><td class="mono">${tl(tutarCoz(x.tutar))}</td><td>${e(x.odeme || '—')}</td>` : aktarim.tur === 'arac' ? `<td class="mono">${e(x.plaka)}</td><td>${e(x.model)}</td><td>${e(sinifCoz(x.sinif) || x.sinif)}</td><td>${e(x.muayene)}</td>` : `<td>${e(x.ad + ' ' + x.soyad)}</td><td class="mono">${e(x.tc)}</td><td>${e(sinifCoz(x.sinif) || 'B')}</td><td class="mono">${tl(tutarCoz(x.toplam))} / ${tl(tutarCoz(x.odenen))}</td>`}<td>${hata.length ? rozet(hata[0], 'kirmizi') : uyari.length ? rozet(uyari.join(' · '), 'sari') : rozet('Hazır', 'yesil')}</td></tr>`).join('')}</tbody></table></div>
-      <div class="kart-govde"><button class="dg dg-ana" data-aktar-onay ${ok ? '' : 'disabled'}>${sayi(ok)} ${{ kursiyer: 'kursiyeri', taksit: 'taksiti', arac: 'aracı' }[aktarim.tur]} aktar</button> <button class="dg dg-hafif" data-aktarim-yeni>Vazgeç</button></div></div></div>`;
-  } else govde = `<div class="kart" style="margin-bottom:16px"><div class="kart-govde"><b style="color:var(--murekkep)">Ne aktarıyorsunuz?</b><div class="secim" style="margin-top:8px">${[['kursiyer', 'Kursiyerler (ders sayılarıyla)'], ['taksit', 'Taksit planı ve ödemeler'], ['arac', 'Araçlar']].map(([v, t]) => `<label><input type="radio" name="akttur" value="${v}" data-akt-tur ${aktarim.tur === v ? 'checked' : ''}><span>${t}</span></label>`).join('')}</div><small style="display:block;color:var(--soluk);margin-top:8px">Sıra: önce kursiyerler, sonra taksitler (TC ile eşleşir), en son araçlar. Usta öğreticiler kurulumda birlikte girilir.</small></div></div>
+    <div class="kart"><div class="kart-bas"><h3>Önizleme</h3><small>İlk 8 satır</small></div><div class="tablo-kap"><table class="tablo"><thead><tr>${aktarim.tur === 'taksit' ? '<th>Kursiyer</th><th>Vade</th><th>Tutar</th><th>Ödendi</th>' : aktarim.tur === 'ogretmen' ? '<th>Ad soyad</th><th>Telefon</th><th>Sınıflar</th><th>Sertifika</th>' : aktarim.tur === 'arac' ? '<th>Plaka</th><th>Model</th><th>Sınıf</th><th>Muayene</th>' : '<th>Ad soyad</th><th>TC</th><th>Sınıf</th><th>Ücret / ödenen</th>'}<th>Durum</th></tr></thead><tbody>${sonuc.slice(0, 8).map(({ x, hata, uyari, k }) => `<tr>${aktarim.tur === 'taksit' ? `<td>${e(k ? tamAd(k) : x.tc)}</td><td class="mono">${e(x.vade)}</td><td class="mono">${tl(tutarCoz(x.tutar))}</td><td>${e(x.odeme || '—')}</td>` : aktarim.tur === 'ogretmen' ? `<td>${e(x.ad)}</td><td class="mono">${e(x.tel)}</td><td>${e(String(x.siniflar || '').split(/[,;/ ]+/).map(sinifCoz).filter(Boolean).join(', ') || 'B')}</td><td>${e(x.sertifika || '—')}</td>`: aktarim.tur === 'arac' ? `<td class="mono">${e(x.plaka)}</td><td>${e(x.model)}</td><td>${e(sinifCoz(x.sinif) || x.sinif)}</td><td>${e(x.muayene)}</td>` : `<td>${e(x.ad + ' ' + x.soyad)}</td><td class="mono">${e(x.tc)}</td><td>${e(sinifCoz(x.sinif) || 'B')}</td><td class="mono">${tl(tutarCoz(x.toplam))} / ${tl(tutarCoz(x.odenen))}</td>`}<td>${hata.length ? rozet(hata[0], 'kirmizi') : uyari.length ? rozet(uyari.join(' · '), 'sari') : rozet('Hazır', 'yesil')}</td></tr>`).join('')}</tbody></table></div>
+      <div class="kart-govde"><button class="dg dg-ana" data-aktar-onay ${ok ? '' : 'disabled'}>${sayi(ok)} ${{ kursiyer: 'kursiyeri', taksit: 'taksiti', arac: 'aracı', ogretmen: 'öğretmeni' }[aktarim.tur]} aktar</button> <button class="dg dg-hafif" data-aktarim-yeni>Vazgeç</button></div></div></div>`;
+  } else govde = `<div class="kart" style="margin-bottom:16px"><div class="kart-govde"><b style="color:var(--murekkep)">Ne aktarıyorsunuz?</b><div class="secim" style="margin-top:8px">${[['kursiyer', 'Kursiyerler (ders sayılarıyla)'], ['taksit', 'Taksit planı ve ödemeler'], ['arac', 'Araçlar'], ['ogretmen', 'Öğretmenler']].map(([v, t]) => `<label><input type="radio" name="akttur" value="${v}" data-akt-tur ${aktarim.tur === v ? 'checked' : ''}><span>${t}</span></label>`).join('')}</div><small style="display:block;color:var(--soluk);margin-top:8px">Sıra: önce kursiyerler, sonra taksitler (TC ile eşleşir), en son araçlar. Usta öğreticiler kurulumda birlikte girilir.</small></div></div>
     <div class="izgara iz-2">
-    <div class="kart"><div class="kart-bas"><h3>1 · Eski programdan dışa aktarın</h3></div><div class="kart-govde"><ul class="liste" style="margin:-8px -20px 0">${[['Akınsoft NetSürücü', 'Kursiyer listesi → sağ tık → Excel’e aktar → “CSV (noktalı virgülle ayrılmış)” olarak kaydedin.'], ['Tabim', 'Raporlar → Kursiyer listesi → Excel → CSV olarak kaydedin.'], ['Excel tablonuz', 'Dosya → Farklı kaydet → CSV UTF-8.']].map(([a, b]) => `<li style="align-items:flex-start">${isaret('zorunlu', 20)}<div><b style="color:var(--murekkep);display:block">${a}</b><small style="font-size:13.5px;color:var(--metin)">${b}</small></div></li>`).join('')}</ul>
+    <div class="kart"><div class="kart-bas"><h3>1 · Eski programdan dışa aktarın</h3></div><div class="kart-govde"><ul class="liste" style="margin:-8px -20px 0">${[['Wenntec, Tabim, Akınsoft', 'Programınızdaki kursiyer, taksit, araç ya da personel listesini Excel’e aktarın. Excel dosyasını (.xlsx) olduğu gibi yükleyebilirsiniz; CSV’ye çevirmeniz gerekmez.'], ['Excel tablonuz', 'Dosyayı doğrudan yükleyin. Başlık satırı ilk satırda olsun.'], ['Sütun adları farklıysa', 'Sinyal sütunları adından tanır; tanımadığını bir sonraki adımda elle eşleştirirsiniz.']].map(([a, b]) => `<li style="align-items:flex-start">${isaret('zorunlu', 20)}<div><b style="color:var(--murekkep);display:block">${a}</b><small style="font-size:13.5px;color:var(--metin)">${b}</small></div></li>`).join('')}</ul>
       <button class="dg dg-hafif dg-kucuk" data-sablon-csv style="margin-top:10px">${ik('indir')}Boş şablon (tüm sütunlar)</button></div></div>
     <div class="kart"><div class="kart-bas"><h3>2 · Dosyayı bırakın</h3></div><div class="kart-govde">
-      <label class="yukle" style="position:relative">${isaret('zorunlu', 30)}<span style="flex:1"><b style="display:block;color:var(--murekkep)">CSV dosyası seç</b><small style="color:var(--soluk)">Sütun adları farklı olabilir; Sinyal tanır, siz kontrol edersiniz</small></span><input type="file" accept=".csv,text/csv" data-csv-yukle></label>
+      <label class="yukle" style="position:relative">${isaret('zorunlu', 30)}<span style="flex:1"><b style="display:block;color:var(--murekkep)">CSV dosyası seç</b><small style="color:var(--soluk)">Sütun adları farklı olabilir; Sinyal tanır, siz kontrol edersiniz</small></span><input type="file" accept=".csv,text/csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" data-csv-yukle></label>
       <p style="font-size:13.5px;color:var(--soluk);margin-top:12px">Aktarılan her kayıt kontrol edilir: TC doğrulaması, aynı kişinin iki kez girilmesi, eksik telefon ve tanınmayan sınıf. İsterseniz dosyayı bize gönderin, kontrolü biz yapalım.</p></div></div></div>`;
   return govde;
 }
@@ -212,6 +239,14 @@ function aktarimUygula() {
       k.odeme.taksitler.push({ vade, tutar, odendi: od || null, yontem: od ? yon : null, aktarim: id });
       k.odeme.taksitler.sort((a, b) => a.vade.localeCompare(b.vade));
       if (od) S.hareket.unshift({ id: 'h' + Date.now() + n, tarih: od, tur: 'Gelir', kategori: 'Taksit', aciklama: tamAd(k) + ' · aktarılan taksit', tutar, yontem: yon, kursiyer: k.id, aktarim: id });
+      n++;
+    });
+  } else if (aktarim.tur === 'ogretmen') {
+    const RENK = ['#2f6fde', '#1f7a3e', '#b45309', '#6744b8', '#d52b1e', '#0f766e'];
+    aktarim.satirlar.map(kontrolEt).forEach(({ x, hata }, i) => {
+      if (hata.length) { atla++; return; }
+      const sn = [...new Set(String(x.siniflar || '').split(/[,;/ ]+/).map(sinifCoz).filter(Boolean))];
+      S.egitmenler.push({ id: 'e' + Date.now() + i, aktarim: id, ad: String(x.ad).trim(), tel: String(x.tel || '').trim(), siniflar: sn.length ? sn : ['B'], maas: 0, prim: 0, baslama: (tarihCoz(x.baslama) || gun(0)).slice(0, 4), belgeler: Object.fromEntries([['sertifika', tarihCoz(x.sertifika)], ['saglik', tarihCoz(x.saglik)], ['adli', tarihCoz(x.adli)]].filter(([, v]) => v)), renk: RENK[(S.egitmenler.length + i) % RENK.length], sube: varsayilanSube() });
       n++;
     });
   } else if (aktarim.tur === 'arac') {
@@ -324,14 +359,19 @@ export function ayarBaglan(k) {
     if (t.matches('[data-gorunum]')) { let g = {}; try { g = JSON.parse(localStorage.getItem('sinyal-gorunum') || '{}'); } catch (x) { } g[t.dataset.gorunum] = t.value; try { localStorage.setItem('sinyal-gorunum', JSON.stringify(g)); } catch (x) { } temaUygula(); }
     const f = t.closest('[data-csv-yukle]');
     if (f && f.files[0]) {
-      const r = new FileReader(); r.onload = () => {
-        const sat = csvOku(String(r.result).replace(/^﻿/, ''));
+      const dosya = f.files[0], excel = /\.xlsx?$/i.test(dosya.name);
+      const isle = sat => {
         if (sat.length < 2) return bildir('Dosyada başlık ve en az bir satır olmalı', 'uyari');
         aktarim.baslik = sat[0]; aktarim.satirlar = sat.slice(1); aktarim.esles = {};
         const nb = sat[0].map(norm);
-        TUR_ALAN().forEach(([k, , es]) => { const i = nb.findIndex(h => es.includes(h)); if (i >= 0) aktarim.esles[k] = String(i); });
+        // önce tam ad, sonra başlığın içinde geçen eş anlamlı (ör. “Cep Telefonu” → telefon); bir sütun tek alana eşlenir
+        const kullanilan = new Set();
+        TUR_ALAN().forEach(([k, , es]) => { const i = nb.findIndex((h, j) => !kullanilan.has(j) && es.includes(h)); if (i >= 0) { aktarim.esles[k] = String(i); kullanilan.add(i); } });
+        TUR_ALAN().forEach(([k, , es]) => { if (aktarim.esles[k] != null) return; const i = nb.findIndex((h, j) => !kullanilan.has(j) && h.length > 2 && es.some(x => x.length > 2 && (h.includes(x) || x.includes(h)))); if (i >= 0) { aktarim.esles[k] = String(i); kullanilan.add(i); } });
         yenile();
-      }; r.readAsText(f.files[0], 'utf-8');
+      };
+      if (excel) excelOku(dosya).then(isle).catch(() => bildir('Excel dosyası okunamadı; CSV olarak kaydedip deneyin', 'uyari'));
+      else { const r = new FileReader(); r.onload = () => isle(csvOku(String(r.result).replace(/^﻿/, ''))); r.readAsText(dosya, 'utf-8'); }
     }
   });
   k.addEventListener('click', ev => {
@@ -343,7 +383,7 @@ export function ayarBaglan(k) {
     if (t.closest('[data-sozlesme-varsayilan]')) { S.kurs.sozlesme = null; islem('Sözleşmeyi varsayılana döndürdü'); kaydet(); bildir('Varsayılan metne dönüldü'); return yenile(); }
     if (t.closest('[data-sube-ekle]')) { const n = S.subeler.length + 1; S.subeler.push({ id: 's' + Date.now(), ad: 'Yeni şube ' + n, semt: '', kurumKodu: '', mudur: '', mebbis: '' }); islem('Şube ekledi'); kaydet(); bildir('Şube eklendi; kurum kodunu ve müdürünü yazın'); yenile(); }
     if (t.closest('[data-kural-onay]')) { S.kurs.kuralOnay = { kim: oturum.kullanici ? oturum.kullanici.ad : '', tarih: gun(0) }; islem('Kural değerlerini onayladı'); kaydet(); bildir('Kural değerleri onaylandı'); yenile(); }
-    const bo = t.closest('[data-belge-ac]'); if (bo) import('./sayfalar3.js?v=59').then(m => m.belgeAc(bo.dataset.belgeAc));
+    const bo = t.closest('[data-belge-ac]'); if (bo) import('./sayfalar3.js?v=60').then(m => m.belgeAc(bo.dataset.belgeAc));
     const ok = t.closest('[data-oturum-kapat]'); if (ok) { const o = S.guvenlik.oturumlar.splice(+ok.dataset.oturumKapat, 1)[0]; islem('Oturumu kapattırdı', o.kim + ' · ' + o.cihaz); kaydet(); bildir(o.kim + ' · ' + o.cihaz + ' oturumu kapatıldı'); yenile(); }
     const fs = t.closest('[data-fis]'); if (fs) { const n = +fs.dataset.fis, d = new Date(BUGUN); d.setMonth(d.getMonth() - n); csvIndir(`muhasebe-fisleri-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}.csv`, muhasebeFisi(n)); islem('Muhasebe fişlerini indirdi'); kaydet(); }
     if (t.closest('[data-parasut]')) pencere({ baslik: 'Paraşüt · bağlantı gerekli', icerik: `<div class="ipucu uyari" style="margin-bottom:12px">${isaret('uyari', 22)}<span>Paraşüt bağlantısı için kursun Paraşüt hesabından alınan API anahtarı gerekir. Anahtar girilene kadar tahsilatlar Paraşüt’e aktarılmaz.</span></div><p style="font-size:14.5px">Bu arada aylık muhasebe fişini CSV olarak indirip Paraşüt’e veya muhasebecinize yükleyebilirsiniz; fişte her tahsilat, gider ve iade ayrı satırdır.</p>`, altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-pfis>Bu ayın fişini indir</button>', onAc(d) { d.querySelector('[data-pfis]').addEventListener('click', () => { const d0 = new Date(BUGUN); csvIndir(`muhasebe-fisleri-${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}.csv`, muhasebeFisi(0)); islem('Muhasebe fişlerini indirdi'); kaydet(); kapatPencere(); }); } });
