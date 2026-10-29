@@ -1,18 +1,18 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=76';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=76';
-import * as Y1 from './sayfalar1.js?v=76';
-import * as Y2 from './sayfalar2.js?v=76';
-import * as P from './portal.js?v=76';
-import * as Y3 from './sayfalar3.js?v=76';
-import * as Y4 from './sayfalar4.js?v=76';
-import * as Y5 from './sayfalar5.js?v=76';
-import * as IM from './imza.js?v=76';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=76';
-import * as SN from './senaryo.js?v=76';
-import * as OZ from './ozellik.js?v=76';
-import { durumlariGuncelle } from './mesaj.js?v=76';
-import { yeniMenu } from './yeni.js?v=76';
-import * as B from './bulut.js?v=76';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=77';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=77';
+import * as Y1 from './sayfalar1.js?v=77';
+import * as Y2 from './sayfalar2.js?v=77';
+import * as P from './portal.js?v=77';
+import * as Y3 from './sayfalar3.js?v=77';
+import * as Y4 from './sayfalar4.js?v=77';
+import * as Y5 from './sayfalar5.js?v=77';
+import * as IM from './imza.js?v=77';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=77';
+import * as SN from './senaryo.js?v=77';
+import * as OZ from './ozellik.js?v=77';
+import { durumlariGuncelle } from './mesaj.js?v=77';
+import { yeniMenu } from './yeni.js?v=77';
+import * as B from './bulut.js?v=77';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -181,7 +181,7 @@ document.addEventListener('change', ev => { const s = ev.target.closest('[data-s
 Y5.temaUygula();
 
 let sonAd = null;
-window.addEventListener('hashchange', () => { if (imzaLinki()) return imzaSayfasiAc(); if (oturum.kullanici && oturum.kullanici.rol === 'ogrenci') return; if (ogrYolu()) return ogrenciModu(...ogrYolu()); if (davetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return davetEkrani(); const r = rota(); yenile(r.ad !== sonAd); sonAd = r.ad; });
+window.addEventListener('hashchange', () => { if (imzaLinki()) return imzaSayfasiAc(); if (oturum.kullanici && oturum.kullanici.rol === 'ogrenci') return; if (ogrYolu()) return eskiLink(); if (location.hash === '#/ogrenci-giris' && !(oturum.kullanici && oturum.kullanici.bulut)) return ogrenciGirisEkrani(); if (davetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return davetEkrani(); const r = rota(); yenile(r.ad !== sonAd); sonAd = r.ad; });
 
 // QR’dan gelen ilk sayfa index.html’de hazır durur (beklemeden görünsün); sonradan dönmek için saklanır
 const TANITIM = (() => { const t = document.getElementById('tanitim'); return t ? t.outerHTML : ''; })();
@@ -211,6 +211,7 @@ function girisEkrani(mod = 'tanitim') {
     <h1>Kurs hesabınızla girin</h1><p>Her çalışan kendi e-postası ve şifresiyle girer; yalnızca yetkisi olan ekranları görür.</p>
     <form class="giris-eposta" novalidate><label>E-posta<input name="eposta" type="email" autocomplete="username" inputmode="email" required value="${e((kayitli && kayitli.eposta) || '')}"></label><label>Şifre<input name="sifre" type="password" autocomplete="current-password" required></label><button class="dg dg-koyu" type="submit">Giriş yap</button></form>
     <p class="giris-baglar"><button type="button" data-sifre-unut>Şifremi unuttum</button><button type="button" data-kurs-ac>Yeni kurs hesabı aç</button></p>
+    <button class="giris-demo" type="button" data-ogrenci-giris style="margin-top:6px"><b>Öğrenciyim</b><small>Telefon numaranız ve şifrenizle girin</small><span aria-hidden="true">→</span></button>
     <details class="giris-ornek"${mod === 'pin-demo' || sessionStorageAl('sinyal-bekleyen') ? ' open' : ''}><summary>Örnek kursun çalışanı olarak dene (PIN)</summary>
     <p class="giris-not" style="margin:8px 0 10px">Demo kursun kullanıcıları. Gerçek kurs hesabında PIN yerine e-posta ve şifre kullanılır.</p>
     <div class="giris-kisiler">${S.kullanicilar.map(u => `<button class="giris-kisi" data-kim="${u.id}"><b>${e(u.ad)}</b><small>${ROL_AD[u.rol]}</small></button>`).join('')}</div>
@@ -221,6 +222,7 @@ function girisEkrani(mod = 'tanitim') {
   kok.querySelector('[data-demo]').addEventListener('click', demoyaGir);
   kok.querySelector('[data-tanitim]').addEventListener('click', () => { girisEkrani('tanitim'); window.scrollTo(0, 0); });
   kok.querySelector('[data-kurs-ac]').addEventListener('click', () => { girisEkrani('kursac'); window.scrollTo(0, 0); });
+  kok.querySelector('[data-ogrenci-giris]').addEventListener('click', () => { location.hash = '#/ogrenci-giris'; ogrenciGirisEkrani(); });
   kok.querySelector('[data-sifre-unut]').addEventListener('click', () => {
     const ep = kok.querySelector('[name=eposta]').value.trim();
     if (!/^\S+@\S+\.\S+$/.test(ep)) { bildir('Önce e-posta adresinizi yazın', 'uyari'); return kok.querySelector('[name=eposta]').focus(); }
@@ -302,28 +304,65 @@ function kursAcEkrani() {
       .catch(x => { btn.disabled = false; btn.textContent = 'Kurs hesabını aç'; bildir(B.hataMetni(x), 'uyari'); });
   });
 }
-// Öğrencinin kişisel linki: #/ogr/<kurs>/<kod>. Giriş yok; link öğrenciye özeldir, yalnız kendi kayıtlarını gösterir.
-const ogrYolu = () => { const m = location.hash.match(/^#\/ogr\/([A-Za-z0-9]+)\/([a-z0-9]+)$/); return m ? [m[1], m[2]] : null; };
-async function ogrenciModu(kurs, kod) {
-  try { localStorage.setItem('sinyal-ogrenci', JSON.stringify({ kurs, kod })); } catch (x) { }
+// Öğrenci hesabı: telefon numarası + şifre. Hesabı kurs açar, geçici şifre WhatsApp'tan gelir; ilk girişte öğrenci kendi şifresini belirler.
+const ogrYolu = () => /^#\/ogr\/[A-Za-z0-9]+\/[a-z0-9]+$/.test(location.hash);
+function eskiLink() { history.replaceState(null, '', '#/ogrenci-giris'); ogrenciGirisEkrani('Öğrenci paneli artık kendi hesabınızla açılıyor. Kursunuzun WhatsApp’tan gönderdiği telefon numarası ve şifreyle girin.'); }
+function ogrenciGirisEkrani(not) {
+  document.body.classList.remove('portal-modu'); document.title = 'Öğrenci girişi · Sinyal';
+  const kok = document.getElementById('uyg');
+  kok.innerHTML = `<div class="giris"><div class="giris-levha">${LOGO}
+    <h1>Öğrenci girişi</h1><p>${e(not || 'Kursunuzun açtığı hesapla girin: ders programınız, dersleriniz, ödemeleriniz, sınavlarınız ve evraklarınız burada.')}</p>
+    <form class="giris-eposta" novalidate><label>Cep telefonu<input name="tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="05xx xxx xx xx" required></label><label>Şifre<input name="sifre" type="password" autocomplete="current-password" required></label><button class="dg dg-koyu" type="submit">Giriş yap</button></form>
+    <p class="giris-baglar"><button type="button" data-unut>Şifremi unuttum</button><button type="button" data-geri>Kurs çalışanıyım</button></p></div></div>`;
+  const f = kok.querySelector('form');
+  kok.querySelector('[data-geri]').addEventListener('click', () => { location.hash = ''; girisEkrani('pin'); });
+  kok.querySelector('[data-unut]').addEventListener('click', ev => {
+    const b = ev.target; b.disabled = true;
+    B.ogrenciSifreTalep(f.tel.value).then(() => { b.textContent = 'Kursunuza iletildi'; bildir('Kursunuza iletildi. Yeni geçici şifreniz WhatsApp’tan gelecek.'); }).catch(x => { b.disabled = false; bildir(B.hataMetni(x), 'uyari'); f.tel.focus(); });
+  });
+  f.addEventListener('submit', ev => {
+    ev.preventDefault(); const btn = f.querySelector('button'); btn.disabled = true; btn.textContent = 'Giriliyor…';
+    B.ogrenciGiris(f.tel.value, f.sifre.value).then(u => u.ilkGiris ? sifreBelirleEkrani(u) : ogrenciModu(u.kurs, u.kod)).catch(x => { btn.disabled = false; btn.textContent = 'Giriş yap'; bildir(B.hataMetni(x), 'uyari'); });
+  });
+}
+function sifreBelirleEkrani(u) {
+  const kok = document.getElementById('uyg');
+  kok.innerHTML = `<div class="giris"><div class="giris-levha">${LOGO}
+    <h1>Kendi şifrenizi belirleyin</h1><p>Kursun gönderdiği geçici şifre bir kez kullanılır. Bundan sonra bu şifreyle gireceksiniz.</p>
+    <form class="giris-eposta" novalidate><label>Yeni şifre (en az 8 karakter)<input name="s1" type="password" autocomplete="new-password" required minlength="8"></label><label>Yeni şifre (tekrar)<input name="s2" type="password" autocomplete="new-password" required></label><button class="dg dg-koyu" type="submit">Şifreyi kaydet ve devam et</button></form></div></div>`;
+  const f = kok.querySelector('form'); f.s1.focus();
+  f.addEventListener('submit', ev => {
+    ev.preventDefault(); if (f.s1.value.length < 8) return bildir('Şifre en az 8 karakter olmalı', 'uyari'); if (f.s1.value !== f.s2.value) return bildir('İki şifre aynı değil', 'uyari');
+    const btn = f.querySelector('button'); btn.disabled = true;
+    B.ogrenciSifreBelirle(f.s1.value).then(() => ogrenciModu(u.kurs, u.kod, true)).catch(x => { btn.disabled = false; bildir(B.hataMetni(x), 'uyari'); });
+  });
+}
+async function ogrenciModu(kurs, kod, yeniSifre) {
   bekleEkrani('Öğrenci paneli açılıyor…');
   let k;
   try { k = await B.ogrenciBaglan(kurs, kod); }
-  catch (x) {
-    B.ogrenciAyril();
-    const kok = document.getElementById('uyg');
-    kok.innerHTML = `<div class="giris"><div class="giris-levha">${LOGO}<h1>Bu link açılamadı</h1><p>${e(B.hataMetni(x))}</p></div></div>`;
-    return;
-  }
+  catch (x) { await B.ogrenciCikis(); return ogrenciGirisEkrani('Hesabınız kapatılmış ya da yeni şifre gönderilmiş olabilir. Kursunuzun gönderdiği son bilgilerle girin ya da kursunuzla görüşün.'); }
   oturum.kullanici = { id: 'ogr-' + k.id, ad: tamAd(k), rol: 'ogrenci', kursiyer: k.id };
-  if (location.hash !== '#/ogr/' + kurs + '/' + kod) history.replaceState(null, '', '#/ogr/' + kurs + '/' + kod);
+  // kursa hesabın kullanıldığını bildir (ilk şifre belirleme ve günün ilk girişi)
+  const bugun = new Date().toISOString().slice(0, 10); let degisti = false;
+  if (yeniSifre && k.hesapAktif !== bugun) { k.hesapAktif = bugun; degisti = true; }
+  if (k.sonGiris !== bugun) { k.sonGiris = bugun; degisti = true; }
+  if (degisti) kaydet();
+  if (location.hash !== '#/ogrenci') history.replaceState(null, '', '#/ogrenci');
   ogrenciCiz(true);
+  if (yeniSifre) bildir('Şifreniz kaydedildi');
+}
+function ogrenciSifreDegistir() {
+  pencere({ baslik: 'Şifremi değiştir', icerik: `<form id="f-osifre" class="form-izgara"><div class="alan tam"><label>Mevcut şifre</label><input name="eski" type="password" autocomplete="current-password"></div><div class="alan tam"><label>Yeni şifre (en az 8 karakter)</label><input name="s1" type="password" autocomplete="new-password"></div><div class="alan tam"><label>Yeni şifre (tekrar)</label><input name="s2" type="password" autocomplete="new-password"></div></form>`,
+    altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-osifre">Şifreyi değiştir</button>',
+    onAc(d) { const f = d.querySelector('form'); f.addEventListener('submit', ev => { ev.preventDefault(); if (f.s1.value.length < 8) return bildir('Yeni şifre en az 8 karakter olmalı', 'uyari'); if (f.s1.value !== f.s2.value) return bildir('İki şifre aynı değil', 'uyari'); B.ogrenciSifreBelirle(f.s1.value, f.eski.value).then(() => { kapatPencere(); bildir('Şifreniz değiştirildi'); }).catch(x => bildir(B.hataMetni(x), 'uyari')); }); } });
 }
 function ogrenciCiz(kaydir) {
   const kok = document.getElementById('uyg');
   if (!kok.querySelector('.ogr-kabuk')) {
-    kok.innerHTML = `<div class="ogr-kabuk"><header class="ogr-ust"><svg class="logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>${e(S.kurs.ad)}</b><small>Öğrenci paneli</small></span><button type="button" class="ogr-cikis" data-ogr-cikis>Çıkış</button></header><main id="icerik" class="ogr-icerik"></main></div>`;
-    kok.querySelector('[data-ogr-cikis]').addEventListener('click', () => { B.ogrenciAyril(); location.hash = ''; location.reload(); });
+    kok.innerHTML = `<div class="ogr-kabuk"><header class="ogr-ust"><svg class="logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>${e(S.kurs.ad)}</b><small>Öğrenci paneli</small></span><button type="button" class="ogr-cikis" data-ogr-sifre>Şifre</button><button type="button" class="ogr-cikis" data-ogr-cikis>Çıkış</button></header><main id="icerik" class="ogr-icerik"></main></div>`;
+    kok.querySelector('[data-ogr-cikis]').addEventListener('click', () => B.ogrenciCikis().then(() => { location.hash = '#/ogrenci-giris'; location.reload(); }));
+    kok.querySelector('[data-ogr-sifre]').addEventListener('click', ogrenciSifreDegistir);
   }
   document.body.classList.add('portal-modu');
   const s = P.ogrenciPortal(), yer = document.getElementById('icerik');
@@ -400,9 +439,10 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.se
 window.addEventListener('beforeinstallprompt', ev => { ev.preventDefault(); window.__kurulum = ev; document.querySelectorAll('[data-kur-android]').forEach(b => { b.hidden = false; }); });
 const ogrKayit = (() => { try { return JSON.parse(localStorage.getItem('sinyal-ogrenci') || 'null'); } catch (x) { return null; } })();
 if (imzaLinki()) imzaSayfasiAc();
-else if (ogrYolu()) ogrenciModu(...ogrYolu());
+else if (ogrYolu()) eskiLink();
+else if (location.hash === '#/ogrenci-giris' && !B.bulutKayitli()) ogrenciGirisEkrani();
 else if (davetYolu()) davetEkrani();
-else if (ogrKayit && !B.bulutKayitli() && !location.hash) ogrenciModu(ogrKayit.kurs, ogrKayit.kod);
+else if (ogrKayit && !B.bulutKayitli()) { bekleEkrani('Öğrenci paneli açılıyor…'); B.ogrenciOturumu().then(u => !u ? ogrenciGirisEkrani() : u.ilkGiris ? sifreBelirleEkrani(u) : ogrenciModu(u.kurs, u.kod)).catch(() => ogrenciGirisEkrani()); }
 else if (B.bulutKayitli()) {
   oturum.kullanici = null; bekleEkrani('Kurs verisi yükleniyor…');
   B.bulutBaslat().then(u => { if (u) bulutOturumu(u, false); else girisEkrani('pin'); }).catch(x => { girisEkrani('pin'); bildir(B.hataMetni(x), 'uyari'); });

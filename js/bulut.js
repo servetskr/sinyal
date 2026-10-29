@@ -1,8 +1,8 @@
 // Gerçek kurs hesabı: Google Firebase (Frankfurt). Giriş e-posta + şifreyle; kurs verisi Firestore'da
 // kurslar/{kurs}/v altında parça parça durur. Her kayıt ayrı alan olarak yazılır: iki kişi aynı anda
 // farklı kayıtları değiştirirse ikisi de korunur. Fotoğraf ve imzalar kurslar/{kurs}/dosyalar'da ayrı belge.
-import { FIREBASE } from './firebase-ayar.js?v=76';
-import { S, bulutVeri, bosVeri, kaydetDinle, kaydet, oturum, bulutKanca, makbuzSira, islem, iso, EVRAKLAR, gun, fark, tamAd } from './veri.js?v=76';
+import { FIREBASE } from './firebase-ayar.js?v=77';
+import { S, bulutVeri, bosVeri, kaydetDinle, kaydet, oturum, bulutKanca, makbuzSira, islem, iso, EVRAKLAR, gun, fark, tamAd } from './veri.js?v=77';
 
 const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
 const YEREL = 'sinyal-bulut';
@@ -10,7 +10,7 @@ const BUYUK = { dersler: 64, kursiyerler: 64, hareket: 64, islemler: 16, gonderi
 const HARIC = new Set(['kullanicilar', '_gun', '_bulut']);
 const DOSYA_SINIR = 3000, DOSYA_ON = 'sinyal-dosya:';
 
-export const bulut = { kurs: null, uid: null, ad: '', rol: '', usta: null, eposta: '', durum: 'kapali', bekleyen: 0, hata: '' };
+export const bulut = { kurs: null, uid: null, ad: '', rol: '', usta: null, eposta: '', durum: 'kapali', bekleyen: 0, hata: '', sifreTalep: [] };
 export const bulutKayitli = () => { try { return JSON.parse(localStorage.getItem(YEREL) || 'null'); } catch (x) { return null; } };
 export const bulutta = () => !!bulut.kurs;
 
@@ -368,7 +368,7 @@ async function makbuzDenetle() {
     for (const h of benim) {
       const m = makbuzSira(h.no); if (!m) { delete h.noGecici; continue; }
       const cakisan = S.hareket.some(x => x !== h && x.no === h.no);
-      if (cakisan) { const eski = h.no, n = await sayacAyir(m[0]); h.no = 'M' + m[0] + '-' + String(n).padStart(5, '0'); islem('Makbuz numarası değişti', eski + ' başka cihazda da verilmişti; yeni numara ' + h.no); import('./ui.js?v=76').then(m => m.bildir(`Makbuz ${eski} çevrimdışıyken verilmişti ve başka cihazdaki makbuzla çakıştı; yeni numarası ${h.no}. Makbuzu verdiyseniz yenisini yazdırın.`, 'uyari')); }
+      if (cakisan) { const eski = h.no, n = await sayacAyir(m[0]); h.no = 'M' + m[0] + '-' + String(n).padStart(5, '0'); islem('Makbuz numarası değişti', eski + ' başka cihazda da verilmişti; yeni numara ' + h.no); import('./ui.js?v=77').then(m => m.bildir(`Makbuz ${eski} çevrimdışıyken verilmişti ve başka cihazdaki makbuzla çakıştı; yeni numarası ${h.no}. Makbuzu verdiyseniz yenisini yazdırın.`, 'uyari')); }
       else await sayacAyir(m[0], m[1] - 1);
       delete h.noGecici;
     }
@@ -498,7 +498,7 @@ const veriAt = (k, x) => typeof x === 'string' && x.length > DOSYA_SINIR && x.st
 export function ogrenciVerisi(k) {
   const id = k.id, bugun = iso(new Date());
   const kurs = { ...S.kurs }; ['waApi', 'waApiVarsayilan', 'demoNumara', 'demoKime', 'maliyet', 'kuralDegisen', 'kuralOnay', 'aydinlatma'].forEach(x => delete kurs[x]);
-  const ben = { ...k, tc: k.tc ? '•••••••' + String(k.tc).slice(-4) : '' }; delete ben.notlar; delete ben.panelKod;
+  const ben = { ...k, tc: k.tc ? '•••••••' + String(k.tc).slice(-4) : '' }; delete ben.notlar; delete ben.panelKod; delete ben.hesap;
   return {
     kurs, subeler: (S.subeler || []).filter(x => x.id === k.sube).map(x => sec(x, ['id', 'ad', 'semt'])),
     kursiyerler: [ben],
@@ -522,7 +522,7 @@ async function projeksiyonYaz() {
     const v = JSON.stringify(ogrenciVerisi(k), veriAt);
     if (projeSon.get(k.panelKod) === v) continue;
     projeSon.set(k.panelKod, v);
-    F.setDoc(F.doc(db, 'kurslar', bulut.kurs, 'ogrenciler', k.panelKod), { kursiyer: k.id, v, islenen: islenen.get(k.id) || [], guncel: F.serverTimestamp() }).catch(x => console.error(x));
+    F.setDoc(F.doc(db, 'kurslar', bulut.kurs, 'ogrenciler', k.panelKod), { kursiyer: k.id, uid: (k.hesap || {}).uid || null, v, islenen: islenen.get(k.id) || [], guncel: F.serverTimestamp() }).catch(x => console.error(x));
   }
 }
 export const panelLinki = (k) => location.origin + location.pathname + '#/ogr/' + bulut.kurs + '/' + k.panelKod;
@@ -531,7 +531,7 @@ export async function panelAc(k, yeniden) {
   if (k.panelKod && yeniden) { await F.deleteDoc(F.doc(db, 'kurslar', bulut.kurs, 'ogrenciler', k.panelKod)).catch(() => { }); projeSon.delete(k.panelKod); k.panelKod = null; }
   if (!k.panelKod) { k.panelKod = rastgele(24); kaydet(); }
   const v = JSON.stringify(ogrenciVerisi(k), veriAt); projeSon.set(k.panelKod, v);
-  await F.setDoc(F.doc(db, 'kurslar', bulut.kurs, 'ogrenciler', k.panelKod), { kursiyer: k.id, v, islenen: [], guncel: F.serverTimestamp() });
+  await F.setDoc(F.doc(db, 'kurslar', bulut.kurs, 'ogrenciler', k.panelKod), { kursiyer: k.id, uid: (k.hesap || {}).uid || null, v, islenen: [], guncel: F.serverTimestamp() });
   return panelLinki(k);
 }
 export async function panelKapat(k) {
@@ -542,6 +542,7 @@ export async function panelKapat(k) {
 // Kurs cihazı: öğrenciden gelenleri sırayla, denetleyerek işler (aynı kaydı iki cihaz işlemesin diye işlem içinde silinir)
 function gelenDinle() {
   const { db, F } = fb;
+  dinleyiciler.push(F.onSnapshot(F.collection(db, 'kurslar', bulut.kurs, 'sifreTalep'), q => { bulut.sifreTalep = q.docs.map(d => ({ tel: d.id, zaman: d.data().zaman })); yenileFn(); }, () => { }));
   dinleyiciler.push(F.onSnapshot(F.collection(db, 'kurslar', bulut.kurs, 'ogrenciGelen'), q => {
     q.docChanges().filter(c => c.type === 'added').forEach(c => {
       F.runTransaction(db, async t => { const d = await t.get(c.doc.ref); if (!d.exists()) return null; t.delete(c.doc.ref); return d.data(); })
@@ -556,6 +557,7 @@ function ogrenciUygula(docId, g) {
     let y = null; try { y = x.v ? JSON.parse(x.v) : null; } catch (e) { continue; }
     if (x.a === 'kursiyerler' && x.id === k.id && y) {
       ['deneme', 'yanlislar', 'konuAnaliz', 'okunan'].forEach(f => { if (y[f] !== undefined && JSON.stringify(y[f]).length < 50000) k[f] = y[f]; });
+      ['hesapAktif', 'sonGiris'].forEach(f => { if (typeof y[f] === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(y[f]) && y[f] !== k[f]) { k[f] = y[f]; if (f === 'hesapAktif') notlar.push('şifresini belirleyip hesabını kullanmaya başladı'); } });
       Object.entries(y.evrakYuklenen || {}).forEach(([key, e]) => {
         if (!e || !e.veri || !EVRAKLAR.some(z => z[0] === key) || k.evrak[key]) return;
         if (!/^data:(image\/jpeg|image\/png|application\/pdf);base64,/.test(e.veri) || e.veri.length > 950000) return;
@@ -582,7 +584,7 @@ function ogrenciUygula(docId, g) {
     } else if (x.a === 'gonderimler' && y && !x.eski) {
       const m = { zaman: new Date().toISOString(), kime: String(y.kime || '').slice(0, 80), metin: String(y.metin || '').slice(0, 1000), tur: String(y.tur || 'Öğrenci').slice(0, 60) };
       S.gonderimler.unshift(m);
-      if (y.iletilecek && S.kurs.waApi) sahiplen('og|' + docId + '|' + x.id).then(ok => { if (ok) import('./ui.js?v=76').then(u => u.apiGonder(u.etiket(m.kime, y.rol || '') + m.metin)); });
+      if (y.iletilecek && S.kurs.waApi) sahiplen('og|' + docId + '|' + x.id).then(ok => { if (ok) import('./ui.js?v=77').then(u => u.apiGonder(u.etiket(m.kime, y.rol || '') + m.metin)); });
     }
   }
   if (notlar.length) islem('Öğrenci panelinden', tamAd(k) + ': ' + notlar.join(', '));
@@ -609,12 +611,12 @@ export async function ogrenciBaglan(kurs, kod) {
   return new Promise((coz, red) => {
     let ilk = true;
     dinleyiciler.push(F.onSnapshot(F.doc(db, 'kurslar', kurs, 'ogrenciler', kod), d => {
-      if (!d.exists()) { if (ilk) { ilk = false; red(hata('Bu öğrenci linki geçersiz ya da kapatılmış. Kursundan yeni link iste.')); } else { try { localStorage.removeItem('sinyal-ogrenci'); } catch (x) { } location.reload(); } return; }
+      if (!d.exists()) { if (ilk) { ilk = false; red(hata('Öğrenci hesabınız kapatılmış. Kursunuzla görüşün.')); } else location.reload(); return; }
       const v = d.data(), isl = new Set(v.islenen || []);
       ogr.bekleyen = ogr.bekleyen.filter(p => !isl.has(p.id) && Date.now() - p.t < 3 * 60e3);
       ogrenciKur(JSON.parse(v.v));
       if (ilk) { ilk = false; kaydetDinle(ogrenciPlanla); coz(S.kursiyerler[0]); } else yenileFn();
-    }, x => { if (ilk) { ilk = false; red(x); } }));
+    }, x => { if (ilk) { ilk = false; red(x); } else location.reload(); }));  // hesap kapatıldı ya da şifre yenilendi: yeniden giriş
   });
 }
 let ogrZaman = null;
@@ -629,12 +631,98 @@ async function ogrenciGonder() {
   if (!d.length) return;
   tabanAl();
   const boyut = JSON.stringify(d).length;
-  if (boyut > 950000) { import('./ui.js?v=76').then(u => u.bildir('Gönderilen belge çok büyük; daha küçük bir fotoğraf dene', 'uyari')); return; }
+  if (boyut > 950000) { import('./ui.js?v=77').then(u => u.bildir('Gönderilen belge çok büyük; daha küçük bir fotoğraf dene', 'uyari')); return; }
   const { db, F } = fb;
   try {
     const ref = await F.addDoc(F.collection(db, 'kurslar', ogr.kurs, 'ogrenciGelen'), { kod: ogr.kod, kursiyer: S.kursiyerler[0].id, d, zaman: F.serverTimestamp() });
     ogr.bekleyen.push({ id: ref.id, t: Date.now(), d });
     try { localStorage.setItem('sinyal-ogr-bekleyen-' + ogr.kod, JSON.stringify(ogr.bekleyen.map(p => ({ ...p, d: p.d.map(x => x.v && x.v.length > 20000 ? { ...x, v: null, buyuk: true } : x).filter(x => !x.buyuk) })))); } catch (x) { }
-  } catch (x) { console.error(x); import('./ui.js?v=76').then(u => u.bildir('Kursa iletilemedi; internet bağlantını kontrol et', 'uyari')); }
+  } catch (x) { console.error(x); import('./ui.js?v=77').then(u => u.bildir('Kursa iletilemedi; internet bağlantını kontrol et', 'uyari')); }
 }
 export function ogrenciAyril() { try { localStorage.removeItem('sinyal-ogrenci'); } catch (x) { } }
+
+// ---- öğrenci hesabı: telefon numarası + şifre ----
+// Ücretsiz Firebase planında SMS yok: telefon numarası arka planda bir giriş adresine çevrilir (telefonlar/{90…} → adres).
+// Müdür hesabı ayrı bir Firebase bağlantısıyla açar (kendi oturumu kapanmaz); geçici şifre WhatsApp'tan gider,
+// öğrenci ilk girişte kendi şifresini belirler. Aynı telefonu kullanan kardeşler ayrı şifreyle girer.
+export const telNorm = t => { let d = String(t || '').replace(/\D/g, ''); if (d.startsWith('0')) d = d.slice(1); if (d.length === 10) d = '90' + d; return /^905\d{9}$/.test(d) ? d : null; };
+export const telGoster = tel => tel ? '0' + tel.slice(2, 5) + ' ' + tel.slice(5, 8) + ' ' + tel.slice(8, 10) + ' ' + tel.slice(10) : '';
+export const geciciSifre = () => rastgele(8);
+export const ogrenciGirisLinki = () => location.origin + location.pathname + '#/ogrenci-giris';
+export async function ogrenciHesapAc(k) {
+  const tel = telNorm(k.tel); if (!tel) throw hata('Öğrencinin cep telefonu numarası geçersiz; önce bilgilerini düzeltin');
+  const { db, F, A } = await sdk();
+  const tref = F.doc(db, 'telefonlar', tel), t = await F.getDoc(tref);
+  if (t.exists() && t.data().k !== bulut.kurs) throw hata('Bu telefon numarasıyla başka bir kursta öğrenci hesabı var. Öğrencinin başka bir numarasını girin');
+  const sifre = geciciSifre(), eposta = tel + '.' + rastgele(6) + '@ogrenci.sinyal.app';
+  if (!k.panelKod) k.panelKod = rastgele(24);
+  const { initializeApp, deleteApp } = await import(SDK + 'firebase-app.js');
+  const app2 = initializeApp(FIREBASE, 'ogr-' + Date.now());
+  let uid;
+  try {
+    const a2 = A.initializeAuth(app2, { persistence: A.inMemoryPersistence });
+    uid = (await A.createUserWithEmailAndPassword(a2, eposta, sifre)).user.uid;
+    await F.setDoc(F.doc(F.getFirestore(app2), 'kullanicilar', uid), { kurs: bulut.kurs, rol: 'ogrenci', kod: k.panelKod, kursiyer: k.id, ilkGiris: true });
+    await A.signOut(a2);
+  } finally { deleteApp(app2).catch(() => { }); }
+  const yeniden = !!(k.hesap && k.hesap.uid);
+  k.hesap = { tel, uid, acildi: gun(0), kim: bulut.ad, sifirlandi: yeniden ? gun(0) : null };
+  delete k.hesapAktif;
+  await panelAc(k);
+  await F.setDoc(tref, { k: bulut.kurs, h: { [k.id]: eposta } }, { merge: true });
+  F.deleteDoc(F.doc(db, 'kurslar', bulut.kurs, 'sifreTalep', tel)).catch(() => { });
+  kaydet();
+  return { tel, sifre, yeniden };
+}
+export async function ogrenciHesapKapat(k) {
+  const { db, F } = await sdk(), tel = (k.hesap || {}).tel;
+  if (tel) await F.updateDoc(F.doc(db, 'telefonlar', tel), { ['h.' + k.id]: F.deleteField() }).catch(() => { });
+  await panelKapat(k).catch(() => { });
+  k.hesap = null; delete k.hesapAktif; kaydet();
+}
+// öğrencinin telefonu
+async function ogrenciUyelik(user) {
+  const { db, F, auth, A } = await sdk();
+  const p = await F.getDoc(F.doc(db, 'kullanicilar', user.uid)), d = p.exists() ? p.data() : null;
+  if (!d || d.rol !== 'ogrenci') { await A.signOut(auth); throw hata('Bu hesap bir öğrenci hesabı değil'); }
+  try { localStorage.setItem('sinyal-ogrenci', JSON.stringify({ kurs: d.kurs, kod: d.kod, hesap: true })); } catch (x) { }
+  return { ...d, uid: user.uid };
+}
+export async function ogrenciGiris(telGiris, sifre) {
+  const tel = telNorm(telGiris); if (!tel) throw hata('Cep telefonu numaranızı 05xx xxx xx xx biçiminde yazın');
+  if (!sifre) throw hata('Şifrenizi girin');
+  const { auth, db, F, A } = await sdk();
+  const t = await F.getDoc(F.doc(db, 'telefonlar', tel)), adresler = t.exists() ? Object.values(t.data().h || {}) : [];
+  if (!adresler.length) throw hata('Bu numarayla açılmış öğrenci hesabı yok. Kursunuzdan hesap açmasını isteyin');
+  let son = null;
+  for (const a of adresler) {
+    try { return await ogrenciUyelik((await A.signInWithEmailAndPassword(auth, a, sifre)).user); }
+    catch (x) { if (x.kullanici || x.code === 'auth/too-many-requests' || x.code === 'auth/network-request-failed') throw x; son = x; }
+  }
+  throw hata('Telefon numarası ya da şifre hatalı');
+}
+export async function ogrenciOturumu() {
+  const { auth, A } = await sdk();
+  const user = await new Promise(coz => { const kapat = A.onAuthStateChanged(auth, u => { kapat(); coz(u); }); });
+  if (!user) return null;
+  try { return await ogrenciUyelik(user); } catch (x) { return null; }
+}
+export async function ogrenciSifreBelirle(yeni, eski) {
+  if (String(yeni).length < 8) throw hata('Şifre en az 8 karakter olmalı');
+  const { auth, db, F, A } = await sdk(), u = auth.currentUser; if (!u) throw hata('Oturum kapanmış; tekrar giriş yapın');
+  if (eski !== undefined) { try { await A.reauthenticateWithCredential(u, A.EmailAuthProvider.credential(u.email, eski)); } catch (x) { throw hata('Mevcut şifreniz hatalı'); } }
+  await A.updatePassword(u, yeni);
+  await F.updateDoc(F.doc(db, 'kullanicilar', u.uid), { ilkGiris: false });
+}
+export async function ogrenciCikis() {
+  try { localStorage.removeItem('sinyal-ogrenci'); } catch (x) { }
+  if (fb) { try { await fb.A.signOut(fb.auth); } catch (x) { } }
+}
+// şifresini unutan öğrenci: talep kursa düşer, kurs yeni geçici şifre gönderir
+export async function ogrenciSifreTalep(telGiris) {
+  const tel = telNorm(telGiris); if (!tel) throw hata('Önce cep telefonu numaranızı yazın');
+  const { db, F } = await sdk();
+  const t = await F.getDoc(F.doc(db, 'telefonlar', tel));
+  if (!t.exists() || !Object.keys(t.data().h || {}).length) throw hata('Bu numarayla açılmış öğrenci hesabı yok');
+  await F.setDoc(F.doc(db, 'kurslar', t.data().k, 'sifreTalep', tel), { zaman: F.serverTimestamp() });
+}
