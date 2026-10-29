@@ -1,6 +1,6 @@
-import { S, kaydet, gun, islem, tarihOku, oturum, kapaliGun } from './veri.js?v=37';
-import { e, ik, rozet, isaret, ekranNotu, sekmeler, olcumler, yonLevhasi, cubukGrafik, halka, pencere, kapatPencere, bildir, sayi, tl, goreli, tarih } from './ui.js?v=37';
-import { yenile } from './app.js?v=37';
+import { S, kaydet, gun, islem, tarihOku, oturum, kapaliGun, SINIFLAR, satistaSiniflar } from './veri.js?v=38';
+import { e, ik, rozet, isaret, ekranNotu, sekmeler, olcumler, yonLevhasi, cubukGrafik, halka, pencere, kapatPencere, bildir, sayi, tl, goreli, tarih, apiAcik, apiGonder } from './ui.js?v=38';
+import { yenile } from './app.js?v=38';
 
 /* ================= SOSYAL MEDYA ASİSTANI (DengChat modülü) =================
    Gelen kutusu "Mesajlar"da kalır. Bu modül kanalları bağlar, Instagram
@@ -29,7 +29,10 @@ const KURALLAR = [
 const TEL = /(\+?90|0)?\s*5\d{2}[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}/;
 
 const SINIF_SOR = [[/otomatik|otomotik/i, 'B otomatik'], [/motor|a2\b|motosiklet/i, 'A2'], [/kamyon|\bc\b|c sınıf|tır/i, 'C'], [/manuel|düz vites|\bb\b|araba/i, 'B manuel']];
-const fiyatBul = etiket => { const b = S.asistanBilgi.find(x => x.konu === 'Fiyat ve taksit'); const m = b && b.metin.match(new RegExp(etiket + '\\s+([\\d.]+ TL)')); return m ? m[1] : null; };
+// Fiyat her zaman Ayarlar › Sınıf ve ücretler'den okunur (tek kaynak)
+const ETIKET_SINIF = { 'B otomatik': 'B-O', 'B manuel': 'B', 'A2': 'A2', 'C': 'C' };
+const fiyatBul = etiket => { const s = SINIFLAR[ETIKET_SINIF[etiket]]; return s && s.aktif && s.ucret ? s.ucret.toLocaleString('tr-TR') + ' TL' : null; };
+const fiyatListesi = () => satistaSiniflar().map(([, v]) => v.ad.replace(' · ', ' ') + ' ' + v.ucret.toLocaleString('tr-TR') + ' TL').join(', ');
 export function bosSaatler(adet = 3) {
   const sb_ = sos().gorusmeSablon, l = [];
   for (let n = 1; n <= 21 && l.length < adet; n++) {
@@ -67,7 +70,7 @@ function cevapUret(soru, ilk) {
   }
   // bekleyen soru: hangi sınıf
   if (bekleyen && bekleyen.tur === 'fiyat') { const s2 = SINIF_SOR.find(([r]) => r.test(soru)); if (s2) { bekleyen = null; const f = fiyatBul(s2[1]); if (f) return { metin: beyan + `${s2[1]} kurs ücretimiz ${f}. Peşinat sonrası 5 aya kadar taksit yapıyoruz. Kayıt görüşmesi için uygun bir gün ayarlayalım mı?`, kaynak: 'Fiyat ve taksit · yalnızca sorulan sınıf' }; } }
-  if (/kaç yaş|yaş sınır|17 yaş|16 yaş|yaşındayım/i.test(soru)) return { metin: beyan + `Sürücü belgesi için ${S.kurs.asgariYas} yaşını doldurmuş olmak gerekiyor. Bu yaşı doldurduğunuz gün kaydınızı yapabiliriz; numaranızı yazarsanız o tarihte size hatırlatalım.`, kaynak: 'Kurs ayarı: asgari yaş' };
+  if (/kaç yaş|yaş sınır|17 yaş|16 yaş|yaşındayım/i.test(soru)) return { metin: beyan + `Yaş sınırları: ${satistaSiniflar().map(([, v]) => v.ad.split(' · ')[0] + ' ' + (v.yas || S.kurs.asgariYas)).join(', ')}. Bu yaşı doldurduğunuz gün kaydınızı yapabiliriz; numaranızı yazarsanız o tarihte size hatırlatalım.`, kaynak: 'Ayarlar › Sınıf ve ücretler: asgari yaş' };
   if (a.randevu && /kayda gel|kaydolmaya gel|görüşme|uğra|randevu|gelip kaydol|yüz yüze|ne zaman gel/i.test(soru)) {
     const sl = bosSlotlar();
     if (sl.length) { bekleyen = { tur: 'randevu', slotlar: sl }; return { metin: beyan + 'Kayıt görüşmesi için takvimimizdeki boş saatler: ' + sl.map((x, i) => `${i + 1}) ${slotMetni(x)}`).join(', ') + '. Hangisi size uygun?', kaynak: 'Kurs takvimi · yalnızca boş saatler' }; }
@@ -86,6 +89,7 @@ function cevapUret(soru, ilk) {
       bekleyen = { tur: 'fiyat' };
       return { metin: beyan + 'Hangi ehliyet için soruyorsunuz: otomatik, manuel, motosiklet (A2) ya da kamyon (C)?', kaynak: 'Fiyat politikası: önce sınıfı sor' };
     }
+    if (r.bilgi === 'Fiyat ve taksit') return { metin: beyan + 'Kurs ücretlerimiz: ' + fiyatListesi() + '. Peşinat sonrası 5 aya kadar taksit yapıyoruz.', kaynak: 'Ayarlar › Sınıf ve ücretler' };
     const b = S.asistanBilgi.find(x => x.konu === r.bilgi);
     if (b) return { metin: beyan + b.metin, kaynak: b.konu };
   }
@@ -319,8 +323,8 @@ export function sosyal(alt) {
         const kk = t.closest('[data-kapali-sil]'); if (kk) { sos().gorusmeSablon.kapali = sos().gorusmeSablon.kapali.filter(x => x !== kk.dataset.kapaliSil); kaydet(); yenile(); return; }
         const ygz = t.closest('[data-yorum-gizle]'); if (ygz) { const y = sos().yorumlar.find(x => x.id === ygz.dataset.yorumGizle); y.durum = 'gizli'; islem('Yorumu gizledi', y.kim); kaydet(); bildir('Yorum gizlendi'); yenile(); return; }
         const ybr = t.closest('[data-yorum-birak]'); if (ybr) { const y = sos().yorumlar.find(x => x.id === ybr.dataset.yorumBirak); y.durum = 'devir'; kaydet(); bildir('Yorum görünür kaldı; cevabı size bırakıldı'); yenile(); return; }
-        const tk = t.closest('[data-test-kanal]'); if (tk) { const c = sos().kanallar.find(x => x.id === tk.dataset.testKanal); tk.disabled = true; tk.textContent = 'Deneniyor…'; setTimeout(() => { c.sonCevapDk = 0; kaydet(); bildir(c.ad + ': deneme mesajı gönderildi ve cevaplandı'); yenile(); }, 900); return; }
-        const ba = t.closest('[data-belge-ac]'); if (ba) { import('./sayfalar3.js?v=37').then(m => m.belgeAc(ba.dataset.belgeAc)); return; }
+        const tk = t.closest('[data-test-kanal]'); if (tk) { const c = sos().kanallar.find(x => x.id === tk.dataset.testKanal); if (c.id !== 'wp' || !apiAcik()) return baglantiGerekli(c); tk.disabled = true; tk.textContent = 'Gönderiliyor…'; apiGonder(`${S.kurs.ad} · kanal denemesi\nBu mesaj Sinyal’den WhatsApp hattının çalıştığını doğrulamak için gönderildi.`).then(r => { if (r.ok) { c.son = new Date().toTimeString().slice(0, 5); islem('WhatsApp hattını denedi'); kaydet(); bildir('Deneme mesajı WhatsApp’a gönderildi'); } else bildir(r.hata, 'uyari'); yenile(); }); return; }
+        const ba = t.closest('[data-belge-ac]'); if (ba) { import('./sayfalar3.js?v=38').then(m => m.belgeAc(ba.dataset.belgeAc)); return; }
         const yg = t.closest('[data-yorum-goster]'); if (yg) { const y = sos().yorumlar.find(x => x.id === yg.dataset.yorumGoster); y.durum = 'devir'; kaydet(); bildir('Yorum görünür yapıldı; cevabı size bırakıldı'); yenile(); }
       });
       k.addEventListener('change', ev => {
@@ -378,8 +382,19 @@ function gonder(metin) {
   yenile();
 }
 
+function baglantiGerekli(c) {
+  const wp = c.id === 'wp';
+  pencere({
+    baslik: c.ad + ' · bağlantı gerekli',
+    icerik: `<div class="ipucu uyari" style="margin-bottom:12px">${isaret('uyari', 22)}<span>${wp ? 'WhatsApp gönderim adresi girilmemiş. Ayarlar › Kurs bilgileri’nde “WhatsApp gönderim adresi”ni doldurun; sonra bu düğme gerçek bir deneme mesajı gönderir.' : 'Bu kanal henüz kursun Meta hesabına bağlı değil. Bağlantı, kursun Facebook sayfası yöneticisinin Meta’da onay vermesiyle kurulur; Sinyal bunu kendi başına yapamaz.'}</span></div>
+      ${wp ? '' : `<ol style="padding-left:18px;display:grid;gap:8px;font-size:14.5px"><li>Kurs sayfasının yöneticisi Meta Business hesabında Sinyal uygulamasına izin verir.</li><li>Meta, mesaj okuma/cevaplama iznini onaylar (uygulama incelemesi birkaç gün sürebilir).</li><li>Onaydan sonra bu ekranda kanal “Bağlı” görünür ve asistan cevaplamaya başlar.</li></ol>`}`,
+    altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button>${wp ? '<a class="dg dg-ana" href="#/ayarlar" data-kapat>Ayarlara git</a>' : ''}`,
+  });
+}
+
 function baglaSihirbazi(id) {
   const c = sos().kanallar.find(x => x.id === id);
+  return baglantiGerekli(c);
   pencere({
     baslik: c.ad + ' bağla',
     icerik: `<ol style="padding-left:18px;display:grid;gap:10px;font-size:14.5px">
@@ -393,6 +408,8 @@ function baglaSihirbazi(id) {
 
 function yorumCevapla(id) {
   const y = sos().yorumlar.find(x => x.id === id);
+  const kanal = sos().kanallar.find(x => x.id === 'igy');
+  if (!kanal || !kanal.bagli) return baglantiGerekli(kanal || { id: 'igy', ad: 'Instagram yorumları' });
   pencere({
     baslik: y.kim + ' yorumuna cevap',
     icerik: `<div class="balon" style="max-width:100%;margin-bottom:12px">${e(y.metin)}</div>

@@ -1,6 +1,6 @@
-import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube} from './veri.js?v=37';
-import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli } from './ui.js?v=37';
-import { yenile } from './app.js?v=37';
+import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube} from './veri.js?v=38';
+import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli } from './ui.js?v=38';
+import { yenile } from './app.js?v=38';
 
 /* ================= MEB KURALLARI: KAYNAK VE SORUMLULUK ================= */
 const MTSK = 'MTSK Yönetmeliği (ÖÖKGM, Ocak 2025 metni)';
@@ -72,7 +72,7 @@ export function muhasebeFisi(ay = 0) {
   if (kayitta) S.kursiyerler.filter(k => buAy(k.kayit)).forEach(k => { const [n, v] = ayir(k.odeme.toplam); fis(k.kayit, tamAd(k) + ' · kurs ücreti faturası', [[HESAP.alici, k.odeme.toplam], [HESAP.gelir, 0, n], [HESAP.kdvOut, 0, v]]); });
   S.hareket.filter(h => buAy(h.tarih)).sort((a, b) => a.tarih.localeCompare(b.tarih)).forEach(h => {
     const para = HESAP[h.yontem] || HESAP.Nakit;
-    if (h.tur === 'Gelir' && h.kategori === 'İade') { const [n, v] = ayir(h.tutar); return fis(h.tarih, h.aciklama, [[HESAP.iade, n], [HESAP.kdvOut, v], [para, 0, h.tutar]]); }
+    if (h.kategori === 'İade') { const [n, v] = ayir(h.tutar); return fis(h.tarih, h.aciklama, [[HESAP.iade, n], [HESAP.kdvOut, v], [para, 0, h.tutar]]); }
     if (h.tur === 'Gelir') { if (kayitta && h.kursiyer) return fis(h.tarih, h.aciklama + ' · tahsilat', [[para, h.tutar], [HESAP.alici, 0, h.tutar]]); const [n, v] = ayir(h.tutar); return fis(h.tarih, h.aciklama + ' · e-Arşiv', [[para, h.tutar], [HESAP.gelir, 0, n], [HESAP.kdvOut, 0, v]]); }
     if (KDVLI_GIDER.includes(h.kategori)) { const [n, v] = ayir(h.tutar); return fis(h.tarih, h.aciklama, [[HESAP.gider, n, 0, h.kategori], [HESAP.kdvIn, v], [para, 0, h.tutar]]); }
     fis(h.tarih, h.aciklama, [[HESAP.gider, h.tutar, 0, h.kategori], [para, 0, h.tutar]]);
@@ -342,10 +342,10 @@ export function ayarBaglan(k) {
     if (t.closest('[data-sozlesme-varsayilan]')) { S.kurs.sozlesme = null; islem('Sözleşmeyi varsayılana döndürdü'); kaydet(); bildir('Varsayılan metne dönüldü'); return yenile(); }
     if (t.closest('[data-sube-ekle]')) { const n = S.subeler.length + 1; S.subeler.push({ id: 's' + Date.now(), ad: 'Yeni şube ' + n, semt: '', kurumKodu: '', mudur: '', mebbis: '' }); islem('Şube ekledi'); kaydet(); bildir('Şube eklendi; kurum kodunu ve müdürünü yazın'); yenile(); }
     if (t.closest('[data-kural-onay]')) { S.kurs.kuralOnay = { kim: oturum.kullanici ? oturum.kullanici.ad : '', tarih: gun(0) }; islem('Kural değerlerini onayladı'); kaydet(); bildir('Kural değerleri onaylandı'); yenile(); }
-    const bo = t.closest('[data-belge-ac]'); if (bo) import('./sayfalar3.js?v=37').then(m => m.belgeAc(bo.dataset.belgeAc));
+    const bo = t.closest('[data-belge-ac]'); if (bo) import('./sayfalar3.js?v=38').then(m => m.belgeAc(bo.dataset.belgeAc));
     const ok = t.closest('[data-oturum-kapat]'); if (ok) { const o = S.guvenlik.oturumlar.splice(+ok.dataset.oturumKapat, 1)[0]; islem('Oturumu kapattırdı', o.kim + ' · ' + o.cihaz); kaydet(); bildir(o.kim + ' · ' + o.cihaz + ' oturumu kapatıldı'); yenile(); }
     const fs = t.closest('[data-fis]'); if (fs) { const n = +fs.dataset.fis, d = new Date(BUGUN); d.setMonth(d.getMonth() - n); csvIndir(`muhasebe-fisleri-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}.csv`, muhasebeFisi(n)); islem('Muhasebe fişlerini indirdi'); kaydet(); }
-    if (t.closest('[data-parasut]')) { S.entegrasyon.muhasebe = { tur: 'Paraşüt', bagli: true }; islem('Paraşüt’ü bağladı'); kaydet(); bildir('Paraşüt bağlandı; tahsilatlar artık otomatik aktarılıyor'); yenile(); }
+    if (t.closest('[data-parasut]')) pencere({ baslik: 'Paraşüt · bağlantı gerekli', icerik: `<div class="ipucu uyari" style="margin-bottom:12px">${isaret('uyari', 22)}<span>Paraşüt bağlantısı için kursun Paraşüt hesabından alınan API anahtarı gerekir. Anahtar girilene kadar tahsilatlar Paraşüt’e aktarılmaz.</span></div><p style="font-size:14.5px">Bu arada aylık muhasebe fişini CSV olarak indirip Paraşüt’e veya muhasebecinize yükleyebilirsiniz; fişte her tahsilat, gider ve iade ayrı satırdır.</p>`, altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-pfis>Bu ayın fişini indir</button>', onAc(d) { d.querySelector('[data-pfis]').addEventListener('click', () => { const d0 = new Date(BUGUN); csvIndir(`muhasebe-fisleri-${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}.csv`, muhasebeFisi(0)); islem('Muhasebe fişlerini indirdi'); kaydet(); kapatPencere(); }); } });
     if (t.closest('[data-personel-ozet]')) { csvIndir('personel-ozeti.csv', personelOzeti()); islem('Personel özetini indirdi'); kaydet(); }
     if (t.closest('[data-sablon-csv]')) csvIndir(`sinyal-${aktarim.tur}-sablonu.csv`, [TUR_ALAN().map(a => a[1]), { kursiyer: ['12345678950', 'Ali', 'Yıldız', '0532 000 00 01', '14.03.2004', 'B', '02.10.2026', '24000', '8000', 'Odunpazarı', '12', '3'], taksit: ['12345678950', '02.11.2026', '4000', '', 'Kart'], arac: ['26 AB 123', 'Renault Clio', '2023', 'B', '12.05.2027', '01.03.2027'] }[aktarim.tur]]);
     if (t.closest('[data-aktar-onay]')) { aktarimUygula(); yenile(); }
@@ -427,9 +427,10 @@ export function mebAracKur() {
       <li><b>Sinyal’den “Tek tuşla aktar”a basın</b><br><small style="color:var(--soluk)">Araç sıradaki kayıtları MEBBİS’e girer. MEBBİS’in güvenlik kodunu siz yazarsınız; kural dışı bir kayıt varsa girilmez, size raporlanır.</small></li></ol>
       <div class="ipucu uyari" style="margin-top:16px;align-items:flex-start">${isaret('uyari', 22)}<span>${MEB_RISK}</span></div>
       <label style="display:flex;gap:10px;align-items:flex-start;margin-top:14px;font-size:14.5px"><input type="checkbox" data-meb-onay style="width:18px;height:18px;margin-top:2px"><span>Yukarıdaki uyarıyı okudum. Aktarım kursun kendi MEBBİS hesabıyla, kursun bilgisayarından yapılır; bu yöntemi kullanma kararı ve sorumluluğu kurs yönetimindedir.</span></label>`,
-    altlik: `<button class="dg dg-cizgi" data-kapat>Şimdilik sıralı girişle devam</button><button class="dg dg-ana" data-meb-kur>Aracı kurdum, etkinleştir</button>`,
+    altlik: `<button class="dg dg-ana" data-kapat>Sıralı girişle devam</button>`,
     onAc(d) {
-      d.querySelector('[data-meb-kur]').addEventListener('click', () => {
+      const onay = d.querySelector('[data-meb-onay]'); if (onay) onay.closest('label').innerHTML = `<div class="ipucu" style="margin:0">${isaret('bilgi', 20)}<span><b>Bağlantı gerekli:</b> MEBBİS Aracı bu kursun bilgisayarına henüz kurulmadı. Kurulum yerinde yapılır; o güne kadar Sinyal aktarılacakları sırayla gösterir, siz MEBBİS’e girersiniz ve “Girdim” diye işaretlersiniz.</span></div>`;
+      const kur = d.querySelector('[data-meb-kur]'); if (kur) kur.addEventListener('click', () => {
         if (!d.querySelector('[data-meb-onay]').checked) return bildir('Önce uyarıyı onaylayın', 'uyari');
         S.mebArac = { kurulu: true, bilgisayar: 'KURS-PC (Windows)', onay: { kim: oturum.kullanici ? oturum.kullanici.ad : '', tarih: gun(0) } };
         S.kurs.mebYontem = 'arac'; islem('Tek tuş MEBBİS aktarımını etkinleştirdi', 'Uyarıyı onayladı'); kaydet(); kapatPencere(); bildir('Tek tuş aktarımı açıldı'); yenile();

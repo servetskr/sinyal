@@ -13,12 +13,44 @@ const BAYRAMLAR = ['2026-03-20', '2026-03-21', '2026-03-22', '2026-05-27', '2026
 export const kapaliGun = t => tarihOku(t).getDay() === 0 ? 'Pazar' : (TATILLER.includes(t.slice(5)) || BAYRAMLAR.includes(t)) ? 'Resmî tatil' : null;
 export const isGunuIleri = t => { const d = tarihOku(t); while (kapaliGun(iso(d))) d.setDate(d.getDate() + 1); return iso(d); };
 
-export const SINIFLAR = {
-  'B': { ad: 'B · Manuel', ucret: 24000, teorik: 34, direksiyon: 14 },
-  'B-O': { ad: 'B · Otomatik', ucret: 26500, teorik: 34, direksiyon: 14 },
-  'A2': { ad: 'A2 · Motosiklet', ucret: 18500, teorik: 34, direksiyon: 14 },
-  'C': { ad: 'C · Kamyon', ucret: 31000, teorik: 34, direksiyon: 20 },
+// Sınıflar: varsayılanlar; kurs Ayarlar › Sınıf ve ücretler'den ücret, saat, yaş ve hangi sınıfları verdiğini değiştirir (S.kurs.siniflar'da kalıcı).
+// teyit: ders saatleri ve yaş yönetmelikten varsayılan; kurs kendi il MEM uygulamasıyla teyit etmeli.
+export const SINIF_VARSAYILAN = {
+  'A1': { ad: 'A1 · Hafif motosiklet', ucret: null, teorik: 34, direksiyon: 14, yas: 16, tur: 'ehliyet', aktif: false, teyit: true },
+  'A2': { ad: 'A2 · Motosiklet', ucret: 18500, teorik: 34, direksiyon: 14, yas: 18, tur: 'ehliyet', aktif: true },
+  'A': { ad: 'A · Motosiklet (sınırsız)', ucret: null, teorik: 34, direksiyon: 14, yas: 20, tur: 'ehliyet', aktif: false, teyit: true },
+  'B1': { ad: 'B1 · Dört tekerlekli motosiklet', ucret: null, teorik: 34, direksiyon: 14, yas: 16, tur: 'ehliyet', aktif: false, teyit: true },
+  'B': { ad: 'B · Manuel', ucret: 24000, teorik: 34, direksiyon: 14, yas: 18, tur: 'ehliyet', aktif: true },
+  'B-O': { ad: 'B · Otomatik', ucret: 26500, teorik: 34, direksiyon: 14, yas: 18, tur: 'ehliyet', aktif: true },
+  'BE': { ad: 'BE · Römorklu otomobil', ucret: null, teorik: 34, direksiyon: 14, yas: 18, tur: 'ehliyet', aktif: false, teyit: true },
+  'C1': { ad: 'C1 · Hafif kamyon', ucret: null, teorik: 34, direksiyon: 16, yas: 18, tur: 'ehliyet', aktif: false, teyit: true },
+  'C1E': { ad: 'C1E · Römorklu hafif kamyon', ucret: null, teorik: 34, direksiyon: 16, yas: 18, tur: 'ehliyet', aktif: false, teyit: true },
+  'C': { ad: 'C · Kamyon', ucret: 31000, teorik: 34, direksiyon: 20, yas: 21, tur: 'ehliyet', aktif: true },
+  'CE': { ad: 'CE · Çekici (tır)', ucret: null, teorik: 34, direksiyon: 20, yas: 21, tur: 'ehliyet', aktif: false, teyit: true },
+  'D1': { ad: 'D1 · Minibüs', ucret: null, teorik: 34, direksiyon: 20, yas: 21, tur: 'ehliyet', aktif: false, teyit: true },
+  'D1E': { ad: 'D1E · Römorklu minibüs', ucret: null, teorik: 34, direksiyon: 20, yas: 21, tur: 'ehliyet', aktif: false, teyit: true },
+  'D': { ad: 'D · Otobüs', ucret: null, teorik: 34, direksiyon: 20, yas: 24, tur: 'ehliyet', aktif: false, teyit: true },
+  'DE': { ad: 'DE · Römorklu otobüs', ucret: null, teorik: 34, direksiyon: 20, yas: 24, tur: 'ehliyet', aktif: false, teyit: true },
+  'F': { ad: 'F · Traktör', ucret: null, teorik: 34, direksiyon: 14, yas: 17, tur: 'ehliyet', aktif: false, teyit: true },
+  'G': { ad: 'G · İş makinesi', ucret: null, teorik: 34, direksiyon: 14, yas: 18, tur: 'ehliyet', aktif: false, teyit: true },
+  'SRC1': { ad: 'SRC1 · Uluslararası yolcu taşımacılığı', ucret: null, teorik: 40, direksiyon: 0, yas: 21, tur: 'src', aktif: false, teyit: true },
+  'SRC2': { ad: 'SRC2 · Yurt içi yolcu taşımacılığı', ucret: null, teorik: 40, direksiyon: 0, yas: 21, tur: 'src', aktif: false, teyit: true },
+  'SRC3': { ad: 'SRC3 · Uluslararası eşya taşımacılığı', ucret: null, teorik: 40, direksiyon: 0, yas: 21, tur: 'src', aktif: false, teyit: true },
+  'SRC4': { ad: 'SRC4 · Yurt içi eşya taşımacılığı', ucret: null, teorik: 40, direksiyon: 0, yas: 21, tur: 'src', aktif: false, teyit: true },
+  'SRC5': { ad: 'SRC5 · Tehlikeli madde taşımacılığı', ucret: null, teorik: 24, direksiyon: 0, yas: 21, tur: 'src', aktif: false, teyit: true },
+  'OP': { ad: 'İş makinesi operatörlüğü', ucret: null, teorik: 40, direksiyon: 16, yas: 18, tur: 'operator', aktif: false, teyit: true },
 };
+export const SINIFLAR = JSON.parse(JSON.stringify(SINIF_VARSAYILAN));
+export const aktifSiniflar = () => Object.entries(SINIFLAR).filter(([, v]) => v.aktif);
+export const satistaSiniflar = () => aktifSiniflar().filter(([, v]) => v.ucret > 0);
+// Ödeme yöntemleri tek listede (raporlar, kasa ve muhasebe aynı adları kullanır)
+export const YONTEMLER = ['Nakit', 'Kart', 'Havale'];
+export const yontemAd = y => y === 'Havale' ? 'Havale/EFT' : y;
+// Ay ekleme: 31 Ocak + 1 ay = 28/29 Şubat (taşma yok)
+export const ayEkle = (t, n) => { const d = tarihOku(t), g = d.getDate(); d.setDate(1); d.setMonth(d.getMonth() + n); const son = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); d.setDate(Math.min(g, son)); return iso(d); };
+// İki tarih arasındaki iş günü (bas hariç, bit dahil; Pazar ve tatiller sayılmaz)
+export const isGunuSay = (bas, bit) => { let n = 0; const d = tarihOku(bas), b = tarihOku(bit); while (d < b) { d.setDate(d.getDate() + 1); if (!kapaliGun(iso(d))) n++; } return n; };
+
 export const ASAMALAR = ['Kayıt', 'Evrak', 'Teorik', 'Direksiyon', 'Sınav', 'Ehliyet'];
 export const EVRAKLAR = [
   ['saglik', 'Sürücü olur sağlık raporu'], ['ogrenim', 'Öğrenim belgesi'], ['adli', 'Adli sicil kaydı (barkodlu)'], ['foto', 'Biyometrik fotoğraf'],
@@ -404,9 +436,34 @@ function uret() {
 
 export let S = yukle();
 function yukle() {
-  try { const v = localStorage.getItem(ANAHTAR); if (v) { const o = JSON.parse(v); if (o && o._gun === iso(BUGUN)) return o; } } catch (e) { }
-  const o = uret(); o._gun = iso(BUGUN); return o;
+  let o = null;
+  try { const v = localStorage.getItem(ANAHTAR); if (v) { const x = JSON.parse(v); if (x && x._gun === iso(BUGUN)) o = x; } } catch (e) { }
+  if (!o) { o = uret(); o._gun = iso(BUGUN); }
+  return goc(o);
 }
+// Eski kayıtları güncel yapıya taşır; gerçek bağlantısı olmayan entegrasyonları "bağlı değil" yapar
+function goc(o) {
+  o.kurs.siniflar = o.kurs.siniflar || {};
+  Object.keys(SINIFLAR).forEach(k => { SINIFLAR[k] = { ...SINIF_VARSAYILAN[k], ...(o.kurs.siniflar[k] || {}) }; });
+  Object.keys(o.kurs.siniflar).forEach(k => { if (!SINIFLAR[k]) SINIFLAR[k] = o.kurs.siniflar[k]; });
+  (o.hareket || []).forEach(h => { if (h.yontem === 'Havale/EFT') h.yontem = 'Havale'; });
+  (o.kursiyerler || []).forEach(k => { k.odeme.taksitler.forEach(t => { if (t.yontem === 'Havale/EFT') t.yontem = 'Havale'; }); });
+  // kalıcı makbuz numaraları (yıl içinde sıralı)
+  o.sayac = o.sayac || {};
+  const gelir = (o.hareket || []).filter(h => h.tur === 'Gelir').sort((a, b) => (a.tarih + a.id).localeCompare(b.tarih + b.id));
+  gelir.forEach(h => { if (!h.no) { const yil = h.tarih.slice(0, 4); o.sayac['m' + yil] = (o.sayac['m' + yil] || 0) + 1; h.no = 'M' + yil + '-' + String(o.sayac['m' + yil]).padStart(5, '0'); } });
+  // gerçek entegrasyon kurulana kadar bağlı görünmez
+  if (o.entegrasyon && !o.entegrasyon.gercek) { o.entegrasyon.earsiv.bagli = false; o.entegrasyon.pos.bagli = false; o.entegrasyon.muhasebe.bagli = false; o.entegrasyon.muhasebe.tur = 'Excel'; }
+  if (o.mebArac && !o.mebArac.gercek) o.mebArac = null;
+  if (o.kurs.mebYontem === 'arac' && !o.mebArac) o.kurs.mebYontem = 'sirali';
+  if (o.sosyal) o.sosyal.kanallar.forEach(c => { if (!c.gercek) { c.bagli = c.id === 'wp' ? !!o.kurs.waApi : false; c.cevap = c.bagli && c.cevap; } });
+  if (o.kazanim && !o.kazanim.gercek) o.kazanim = { gercek: true, doldurulan: 0, ekDers: 0, yorum: 0 };
+  return o;
+}
+// Yeni tahsilata kalıcı makbuz numarası
+export function makbuzNoVer(h) { if (h.no || h.tur !== 'Gelir') return h.no; const yil = h.tarih.slice(0, 4); S.sayac = S.sayac || {}; S.sayac['m' + yil] = (S.sayac['m' + yil] || 0) + 1; h.no = 'M' + yil + '-' + String(S.sayac['m' + yil]).padStart(5, '0'); return h.no; }
+// Sınıf ayarlarını kalıcı yaz
+export function sinifKaydet(k, alan) { Object.assign(SINIFLAR[k], alan); S.kurs.siniflar[k] = { ...(S.kurs.siniflar[k] || {}), ...alan }; }
 function subeTamamla() {
   if (!S.subeler) return;
   const v = gorunum.sube || 's1';
@@ -415,7 +472,7 @@ function subeTamamla() {
   S.araclar.forEach(a => { if (!a.sube) a.sube = v; });
   S.egitmenler.forEach(x => { if (!x.sube) x.sube = v; });
 }
-export function kaydet() { subeTamamla(); try { localStorage.setItem(ANAHTAR, JSON.stringify(S)); } catch (e) { } }
+export function kaydet() { subeTamamla(); (S.hareket || []).forEach(h => { if (h.tur === 'Gelir' && !h.no) makbuzNoVer(h); }); try { localStorage.setItem(ANAHTAR, JSON.stringify(S)); } catch (e) { } }
 export function sifirla() { try { localStorage.removeItem(ANAHTAR); } catch (e) { } S = uret(); S._gun = iso(BUGUN); kaydet(); }
 
 // Kursiyer sözleşmesinin varsayılan maddeleri. {süslü} alanlar kurs ayarlarından dolar; kurs Ayarlar › Sözleşme metni'nden değiştirir.
@@ -445,7 +502,8 @@ export function dersAraci(egId, sinif, t, saat, haric) {
 export const ekToplam = k => (k.odeme.ekler || []).reduce((a, x) => a + x.tutar, 0);
 export const odenen = k => k.odeme.pesin + k.odeme.taksitler.reduce((a, t) => a + (t.odendi ? t.tutar : (t.kismi || 0)), 0) + (k.odeme.ekler || []).filter(x => x.odendi).reduce((a, x) => a + x.tutar, 0) - (k.odeme.iade || 0);
 export const kalanBorc = k => Math.max(0, k.odeme.toplam + ekToplam(k) - odenen(k));
-export const gecikenler = k => k.odeme.taksitler.filter(t => !t.odendi && fark(t.vade) < 0);
+export const gecikenler = k => k.odeme.taksitler.filter(t => !t.odendi && !t.iptal && fark(t.vade) < 0);
+export const gecikenTutar = k => gecikenler(k).reduce((a, t) => a + t.tutar - (t.kismi || 0), 0);
 export const eksikEvrak = k => EVRAKLAR.filter(([key]) => !k.evrak[key]);
 export const asamaNo = k => ASAMALAR.indexOf(k.asama);
 export function sonrakiDers(k) { return S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Planlandı' && fark(d.tarih) >= 0).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat))[0]; }
@@ -492,7 +550,8 @@ export function mebOnKontrol(k) {
   l.push([!S.kursiyerler.some(x => x !== k && x.id !== k.id && x.tc && x.tc === k.tc && x.sinif === k.sinif && x.asama !== 'Ehliyet'), 'Aynı TC ile aynı sınıfa açık kayıt yok']);
   const y = yas(k.dogumTarihi);
   l.push([!!k.dogumTarihi, 'Doğum tarihi girildi']);
-  l.push([y == null || y >= S.kurs.asgariYas, `Yaş ${y == null ? '?' : y} · en az ${S.kurs.asgariYas}`]);
+  const asg = (SINIFLAR[k.sinif] && SINIFLAR[k.sinif].yas) || S.kurs.asgariYas;
+  l.push([y == null || y >= asg, `Yaş ${y == null ? '?' : y} · en az ${asg}`]);
   const g = (S.gruplar || []).find(x => x.id === k.teorikGrup);
   l.push([!g || !['Kayıt', 'Evrak'].includes(k.asama) || k.kayit <= g.baslangic, g ? `Kayıt grubun başlangıcından önce (${g.ad} ${g.baslangic.split('-').reverse().join('.')})` : 'Grup seçildi']);
   EVRAKLAR.filter(([x]) => x !== 'sozlesme').forEach(([x, t]) => l.push([!!k.evrak[x], t]));

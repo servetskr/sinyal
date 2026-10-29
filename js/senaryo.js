@@ -1,9 +1,9 @@
-import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, kalanBorc, gecikenler, islem, gonderimEkle, SINIFLAR, ustaAraci, isGunuIleri, yerelZaman } from './veri.js?v=37';
-import { e, ik, isaret, bildir, tl, tamTarih, tarihUzun, saatDe, saatE, apiAcik, belgeWhatsApp, giden, waSirali, waAc, ekranNotu } from './ui.js?v=37';
-import { wpGonder, bildirimler, odemeBilgisi, yorumMetni } from './sayfalar1.js?v=37';
-import { belgeHtml, dosyaAdi } from './sayfalar3.js?v=37';
-import { ornekGonder } from './zamanlayici.js?v=37';
-import { imzaIste } from './imza.js?v=37';
+import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, kalanBorc, gecikenler, islem, gonderimEkle, SINIFLAR, ustaAraci, isGunuIleri, yerelZaman } from './veri.js?v=38';
+import { e, ik, isaret, bildir, tl, tamTarih, tarihUzun, saatDe, saatE, apiAcik, belgeWhatsApp, giden, waSirali, waAc, ekranNotu } from './ui.js?v=38';
+import { wpGonder, bildirimler, odemeBilgisi, yorumMetni } from './sayfalar1.js?v=38';
+import { belgeHtml, dosyaAdi } from './sayfalar3.js?v=38';
+import { ornekGonder } from './zamanlayici.js?v=38';
+import { imzaIste } from './imza.js?v=38';
 
 /* ================= DEMO SENARYOLARI =================
    Kursun gerçek işlemlerini örnek kayıtlar üzerinde çalıştırır; her senaryonun mesajları
@@ -48,7 +48,7 @@ const SENARYOLAR = [
     { id: 'taksit3', ad: 'Taksit 3 gün kala hatırlatma', kim: ['Öğrenci'], ne: 'Vadeden 3 gün önce ve vade günü 10:00', calis: () => ornekGonder('o2') },
     { id: 'gecikme', ad: 'Taksit gecikti', kim: ['Öğrenci'], ne: 'Vadenin ertesi günü', calis: () => { const k = bul.geciken(), tk = gecikenler(k)[0] || k.odeme.taksitler.find(t => !t.odendi); wpGonder(k, `Merhaba ${k.ad}, ${tamTarih(tk.vade)} vadeli ${tl(tk.tutar)} taksidin henüz ödenmedi. ${odemeBilgisi()}`, 'Taksit hatırlatması'); } },
     { id: 'odeme', ad: 'Ödeme alındı + makbuz PDF’i', kim: ['Öğrenci'], ne: 'Tahsilat yapılınca', belge: true, calis: async () => { const k = bul.borclu(), i = k.odeme.taksitler.findIndex(t => !t.odendi), t = k.odeme.taksitler[i], v = t.tutar - (t.kismi || 0); t.odendi = gun(0); t.yontem = 'Kart'; delete t.kismi; const hid = 'h' + Date.now(); S.hareket.unshift({ id: hid, tarih: gun(0), tur: 'Gelir', kategori: 'Taksit', aciklama: tamAd(k) + ' · ' + (i + 1) + '. taksit', tutar: v, yontem: 'Kart', kursiyer: k.id }); islem('Tahsilat aldı', tamAd(k) + ' · ' + tl(v)); kaydet(); return belgeWhatsApp(belgeHtml('makbuz', k.id, hid), dosyaAdi('Makbuz', tamAd(k)), `Merhaba ${k.ad}, ${tl(v)} ödemen alındı, teşekkürler. Kalan borcun ${tl(kalanBorc(k))}. Makbuzun ekte. ${S.kurs.ad}`, tamAd(k), 'ÖĞRENCİ'); } },
-    { id: 'fatura', ad: 'e-Arşiv fatura PDF’i', kim: ['Öğrenci'], ne: 'Fatura kesilince', belge: true, calis: () => { const h = S.hareket.find(x => x.tur === 'Gelir' && x.kursiyer && kursiyer(x.kursiyer)); const k = kursiyer(h.kursiyer); S.faturalar = S.faturalar || []; let f = S.faturalar.find(x => x.hareket === h.id); if (!f) { const yil = gun(0).slice(0, 4), seri = ((S.entegrasyon.earsiv || {}).seri || 'SNY'); f = { no: seri + yil + String(S.faturalar.length + 1).padStart(9, '0'), ettn: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())).toUpperCase(), tarih: gun(0), kursiyer: k.id, hareket: h.id, tutar: h.tutar, kdv: S.entegrasyon.kdv ?? 20, aciklama: SINIFLAR[k.sinif].ad + ' sertifika sınıfı sürücü kursu eğitim hizmeti', yontem: h.yontem, odemeTarih: h.tarih, durum: 'sira' }; S.faturalar.push(f); h.fatura = f.no; islem('Fatura kesti', f.no); kaydet(); } return belgeWhatsApp(belgeHtml('fatura', f.no), f.no + '.pdf', `Merhaba ${k.ad}, ${tl(f.tutar)} tutarındaki e-Arşiv faturan ekte. ${S.kurs.ad}`, tamAd(k), 'ÖĞRENCİ'); } },
+    { id: 'fatura', ad: 'e-Arşiv fatura PDF’i (entegratör yoksa taslak)', kim: ['Öğrenci'], ne: 'Fatura kesilince', belge: true, calis: () => { const h = S.hareket.find(x => x.tur === 'Gelir' && x.kursiyer && kursiyer(x.kursiyer)); const k = kursiyer(h.kursiyer); S.faturalar = S.faturalar || []; let f = S.faturalar.find(x => x.hareket === h.id); if (!f) { const yil = gun(0).slice(0, 4), seri = ((S.entegrasyon.earsiv || {}).seri || 'SNY'); f = { no: seri + yil + String(S.faturalar.length + 1).padStart(9, '0'), ettn: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())).toUpperCase(), tarih: gun(0), kursiyer: k.id, hareket: h.id, tutar: h.tutar, kdv: S.entegrasyon.kdv ?? 20, aciklama: SINIFLAR[k.sinif].ad + ' sertifika sınıfı sürücü kursu eğitim hizmeti', yontem: h.yontem, odemeTarih: h.tarih, durum: S.entegrasyon.earsiv.bagli ? 'sira' : 'taslak' }; S.faturalar.push(f); h.fatura = f.no; islem('Fatura kesti', f.no); kaydet(); } return belgeWhatsApp(belgeHtml('fatura', f.no), f.no + '.pdf', `Merhaba ${k.ad}, ${tl(f.tutar)} tutarındaki e-Arşiv faturan ekte. ${S.kurs.ad}`, tamAd(k), 'ÖĞRENCİ'); } },
     { id: 'senet', ad: 'Senet PDF’i', kim: ['Öğrenci'], ne: 'Senetli satışta', belge: true, calis: () => { const k = bul.senetli(); return belgeWhatsApp(belgeHtml('senet', k.id), dosyaAdi('Senet', tamAd(k)), `Merhaba ${k.ad}, ödeme planına ait senetler ekte; kursa gelirken imzalayıp getirebilirsin. ${S.kurs.ad}`, tamAd(k), 'ÖĞRENCİ'); } },
   ]],
   ['Sınavlar ve ehliyet', [
@@ -65,7 +65,7 @@ const SENARYOLAR = [
   ['Adaylar ve duyurular', [
     { id: 'gorusme', ad: 'Kayıt görüşmesi hatırlatması', kim: ['Aday'], ne: 'Görüşmeden 1 gün önce 18:00', calis: () => ornekGonder('o11') },
     { id: 'adaytakip', ad: 'Düşünen adaya takip', kim: ['Aday'], ne: 'Bilgi aldıktan 2 gün sonra', calis: () => ornekGonder('o7') },
-    { id: 'duyuru', ad: 'Toplu duyuru (bayram tatili)', kim: ['Öğrenciler'], ne: 'Elle, gruba', calis: () => { const l = S.kursiyerler.filter(k => k.asama !== 'Ehliyet').slice(0, 2), m = k => `Merhaba ${k.ad}, Cumhuriyet Bayramı nedeniyle 29 Ekim’de kursumuz kapalı. 30 Ekim’den itibaren dersler normal saatinde devam ediyor. İyi bayramlar! ${S.kurs.ad}`; l.forEach(k => gonderimEkle(tamAd(k), m(k), 'Toplu duyuru')); waSirali(l.map(k => ({ ad: tamAd(k), tel: k.tel, rol: 'ÖĞRENCİ', metin: m(k) })), 'Toplu duyuru', { sessiz: true }); } },
+    { id: 'duyuru', ad: 'Toplu duyuru (bayram tatili)', kim: ['Öğrenciler'], ne: 'Elle, gruba', calis: () => { const l = S.kursiyerler.filter(k => k.asama !== 'Ehliyet').slice(0, 2), m = k => `Merhaba ${k.ad}, Cumhuriyet Bayramı nedeniyle 29 Ekim’de kursumuz kapalı. 30 Ekim’den itibaren dersler normal saatinde devam ediyor. İyi bayramlar! ${S.kurs.ad}`; waSirali(l.map(k => ({ ad: tamAd(k), tel: k.tel, rol: 'ÖĞRENCİ', metin: m(k) })), 'Toplu duyuru', { sessiz: true }); } },
   ]],
 ];
 

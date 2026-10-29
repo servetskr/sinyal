@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN, S } from './veri.js?v=37';
+import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle } from './veri.js?v=38';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -244,15 +244,17 @@ export async function belgeWhatsApp(html, dosya, metin, ad, rol) {
   catch (x) { bildir('PDF hazırlanamadı: ' + x.message, 'uyari'); return { ok: false }; }
 }
 const apiMetin = (metin, ad, rol) => etiket(ad, rol) + metin;
-export function waAc(tel, metin, kanal = 'WhatsApp', ad = '', elle = false, rol = '') {
+// Mesaj gönderim kaydı yalnızca gerçekten gidince (API) ya da WhatsApp açılınca düşer
+const kayitDus = (ad, metin, tur) => { if (tur && ad) gonderimEkle(ad, metin, tur); };
+export function waAc(tel, metin, kanal = 'WhatsApp', ad = '', elle = false, rol = '', tur = '') {
   if (kanal === 'WhatsApp' && apiAcik() && !elle) {
-    apiGonder(apiMetin(metin, ad, rol)).then(s => s.ok ? bildir((ad ? ad.split(' ')[0] + ': ' : '') + 'WhatsApp mesajı gönderildi ✓', 'wp') : bildir(s.hata, 'uyari'));
+    apiGonder(apiMetin(metin, ad, rol)).then(s => { if (s.ok) { kayitDus(ad, metin, tur); bildir((ad ? ad.split(' ')[0] + ': ' : '') + 'WhatsApp mesajı gönderildi ✓', 'wp'); } else bildir(s.hata, 'uyari'); });
     return 'api';
   }
-  [tel, metin] = yonlendir(tel, metin, ad, rol);
+  const ham = metin; [tel, metin] = yonlendir(tel, metin, ad, rol);
   const url = kanal === 'SMS' ? smsUrl(tel, metin) : waUrl(tel, metin);
   const w = window.open(url, '_blank');
-  if (w) { try { w.opener = null; } catch (x) { } return true; }
+  if (w) { try { w.opener = null; } catch (x) { } kayitDus(ad, ham, tur); return true; }
   pencere({ baslik: kanal + '’ı açın', icerik: `<p style="font-size:14.5px">Tarayıcı yeni pencereyi engelledi. Mesaj hazır; düğmeye basınca ${kanal} açılır.</p>`, altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button><a class="dg dg-wp" href="${e(url)}" target="_blank" rel="noopener" data-kapat>${ik('wp')}${kanal}’ı aç</a>` });
   return false;
 }
@@ -261,7 +263,7 @@ export function waSirali(liste, baslik, { kanal = 'WhatsApp', bitince, aciklama 
   liste = liste.filter(x => x && x.metin);
   if (!liste.length) { if (bitince) bitince(); return; }
   if (kanal === 'WhatsApp' && apiAcik() && sessiz) {
-    (async () => { let ok = 0, son = ''; for (const x of liste) { const s = await apiGonder(apiMetin(x.metin, x.ad, x.rol)); if (s.ok) ok++; else son = s.hata; } bildir(ok === liste.length ? `WhatsApp bildirimi gitti: ${liste.map(x => (x.rol || x.ad).toLocaleLowerCase('tr')).join(', ')} ✓` : `${liste.length - ok} bildirim gitmedi: ${son}`, ok === liste.length ? 'wp' : 'uyari'); if (bitince) bitince(); })();
+    (async () => { let ok = 0, son = ''; for (const x of liste) { const s = await apiGonder(apiMetin(x.metin, x.ad, x.rol)); if (s.ok) { ok++; kayitDus(x.ad, x.metin, x.tur || baslik); } else son = s.hata; } bildir(ok === liste.length ? `WhatsApp bildirimi gitti: ${liste.map(x => (x.rol || x.ad).toLocaleLowerCase('tr')).join(', ')} ✓` : `${liste.length - ok} bildirim gitmedi: ${son}`, ok === liste.length ? 'wp' : 'uyari'); if (bitince) bitince(); })();
     return;
   }
   if (kanal === 'WhatsApp' && apiAcik()) {
@@ -272,7 +274,7 @@ export function waSirali(liste, baslik, { kanal = 'WhatsApp', bitince, aciklama 
         (async () => {
           for (let i = 0; i < liste.length; i++) {
             const el = d.querySelector(`[data-api-durum="${i}"]`); if (el) el.textContent = 'gönderiliyor…';
-            const s = await apiGonder(apiMetin(liste[i].metin, liste[i].ad, liste[i].rol));
+            const s = await apiGonder(apiMetin(liste[i].metin, liste[i].ad, liste[i].rol)); if (s.ok) kayitDus(liste[i].ad, liste[i].metin, liste[i].tur || baslik);
             if (el) { el.textContent = s.ok ? 'gönderildi ✓' : 'gönderilemedi'; el.style.color = s.ok ? 'var(--yesil)' : 'var(--kirmizi)'; }
             if (s.ok) ok++; else son = s.hata;
             await new Promise(r => setTimeout(r, 350));
@@ -291,7 +293,7 @@ export function waSirali(liste, baslik, { kanal = 'WhatsApp', bitince, aciklama 
       <ul class="liste" style="max-height:46vh;overflow:auto;margin:0 -20px">${liste.map((x, i) => `<li data-sira-satir="${i}"><div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(x.ad)}</b><small style="display:block;color:var(--soluk);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e(x.tel || 'numara yok')} · ${e(x.metin)}</small></div><a class="dg dg-cizgi dg-kucuk" href="${e(url(x))}" target="_blank" rel="noopener" data-sira-ac="${i}">${ik('wp')}Aç</a></li>`).join('')}</ul>`,
     altlik: `<button class="dg dg-cizgi" data-sira-bitti>Bitti</button><button class="dg dg-wp" data-sira-sonraki>${ik('wp')}Sıradakini aç · 1/${liste.length}</button>`,
     onAc(d) {
-      const isaretle = i => { acilan.add(i); const li = d.querySelector(`[data-sira-satir="${i}"] a`); if (li) { li.textContent = 'Açıldı ✓'; li.classList.add('dg-hafif'); } while (acilan.has(sira)) sira++; const b = d.querySelector('[data-sira-sonraki]'); if (sira >= liste.length) { b.disabled = true; b.textContent = 'Hepsi açıldı'; } else b.innerHTML = `${ik('wp')}Sıradakini aç · ${sira + 1}/${liste.length}`; };
+      const isaretle = i => { if (!acilan.has(i)) kayitDus(liste[i].ad, liste[i].metin, liste[i].tur || baslik); acilan.add(i); const li = d.querySelector(`[data-sira-satir="${i}"] a`); if (li) { li.textContent = 'Açıldı ✓'; li.classList.add('dg-hafif'); } while (acilan.has(sira)) sira++; const b = d.querySelector('[data-sira-sonraki]'); if (sira >= liste.length) { b.disabled = true; b.textContent = 'Hepsi açıldı'; } else b.innerHTML = `${ik('wp')}Sıradakini aç · ${sira + 1}/${liste.length}`; };
       d.querySelectorAll('[data-sira-ac]').forEach(a => a.addEventListener('click', () => isaretle(+a.dataset.siraAc)));
       d.querySelector('[data-sira-sonraki]').addEventListener('click', () => { if (sira >= liste.length) return; const i = sira; const w = window.open(url(liste[i]), '_blank'); if (w) { try { w.opener = null; } catch (x) { } isaretle(i); } else bildir('Tarayıcı pencereyi engelledi; satırdaki “Aç”a basın', 'uyari'); });
       d.querySelector('[data-sira-bitti]').addEventListener('click', () => { kapatPencere(); if (acilan.size < liste.length) bildir(`${liste.length - acilan.size} kişiye ${kanal} açılmadı`, 'uyari'); if (bitince) bitince(acilan); });
