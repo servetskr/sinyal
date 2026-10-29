@@ -1148,3 +1148,11 @@ button.oto-gidecek:hover{text-decoration:underline}
 .motor-zaman button.secili{background:var(--murekkep);color:#fff;border-color:var(--murekkep)}
 .db-gosterge{display:flex;gap:18px;justify-content:center;font-size:14px}.db-gosterge b{font-family:var(--baslik);font-size:20px;color:var(--murekkep)}
 .db-surgu{display:block;font-size:14px;font-weight:600;color:var(--murekkep);margin-top:10px}.db-surgu small{font-weight:400;color:var(--soluk);margin-left:6px}.db-surgu input{width:100%;margin-top:4px;accent-color:var(--levha)}
+/* denetim modu */
+.dn-kontrol{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:4px;font-size:13.5px}.dn-kontrol li{display:flex;gap:6px;align-items:center}
+.dn-oz{list-style:none;padding:0;margin:6px 0 0;display:grid;gap:6px}
+.dn-oz li{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:1px solid var(--cizgi);border-radius:10px;font-size:14px}
+.dn-oz li span{flex:1}.dn-oz li small{display:block;color:var(--soluk);font-size:12.5px}
+.dn-oz li>button[data-dn-isaret]{flex:none;width:26px;height:26px;border-radius:7px;border:2px solid var(--cizgi);background:var(--panel,#fff);font-weight:800;cursor:pointer;color:#fff}
+.dn-oz li.ok>button[data-dn-isaret]{background:var(--yesil);border-color:var(--yesil)}.dn-oz li.no{border-color:var(--kirmizi)}.dn-oz li.no>button[data-dn-isaret]{background:var(--kirmizi);border-color:var(--kirmizi)}
+.dn-oz li>button[data-dn-isaret]:disabled{cursor:default;opacity:.9}

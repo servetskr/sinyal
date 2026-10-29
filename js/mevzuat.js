@@ -1,8 +1,9 @@
 // Mevzuat uyum kuralları: ücret, tahsilat, iade, ücretsiz kontenjan, sınava hazır yazısı, planlama ve personel denetimleri.
 // Dayanak: Özel Öğretim Kurumları Yönetmeliği (RG 5/9/2025-33008 değişikliği: m.54, m.55/3, m.56/3-b, m.56/4), MTSK Yönetmeliği
 // (m.7/7 ve Danıştay 8. D. 8/10/2025 YD kararı, m.15, m.16/8, m.20, m.43), 5580 sayılı Kanun m.13 (%3 ücretsiz).
-import { S, gun, fark, SINIFLAR, tamAd, islem, kaydet, oturum, egitmen, sb, sbDers } from './veri.js?v=92';
-import { e, tl, tarih, pencere, kapatPencere, bildir, belgeYazdir, isaret } from './ui.js?v=92';
+import { S, gun, fark, SINIFLAR, tamAd, islem, kaydet, oturum, egitmen, sb, sbDers } from './veri.js?v=94';
+import { e, tl, tarih, pencere, kapatPencere, bildir, belgeYazdir, isaret } from './ui.js?v=94';
+import { denetimUyarilari } from './denetim.js?v=94';
 
 const OOKY = 'Özel Öğretim Kurumları Yönetmeliği';
 const yil = () => gun(0).slice(0, 4);
@@ -92,7 +93,7 @@ export function hazirKarti(k) {
 }
 // öğrenci dosyasındaki tıklamalar (dosya yeniden çizildiği için olay yetkisiyle)
 export function hazirTikla(ev, k, yenile) {
-  if (ev.target.closest('[data-hazir-yazi]')) { import('./resmi.js?v=92').then(m => m.resmiAc('hazir', k.id)); return true; }
+  if (ev.target.closest('[data-hazir-yazi]')) { import('./resmi.js?v=94').then(m => m.resmiAc('hazir', k.id)); return true; }
   if (ev.target.closest('[data-hazir-yuklendi]')) { k.hazirYazi.yuklendi = gun(0); islem('Sınava hazır yazısını MEBBİS’e yükledi', tamAd(k)); kaydet(); bildir('Kaydedildi'); if (yenile) yenile(); return true; }
   return false;
 }
@@ -126,5 +127,6 @@ export function mevzuatKurallari() {
   // Çalışma izni olmayan usta öğreticiye ders (eksik personel çalıştırma: 5580 m.7/2-e, 10 brüt asgari ücret)
   const yakin = sbDers(S.dersler).filter(d => d.durum === 'Planlandı' && fark(d.tarih) >= 0 && fark(d.tarih) <= 7);
   S.egitmenler.filter(x => !x.calismaIzinNo && yakin.some(d => d.egitmen === x.id)).forEach(x => l.push(['uyari', `${x.ad} · MEB çalışma izni no girilmemiş`, 'Çalışma izni onaylanmamış personelle ders yapılamaz; eksik personel çalıştırmanın cezası brüt asgari ücretin 10 katı (5580 m.7/2-e). İzin varsa numarasını girin.', '#/filo/egitmen']));
+  l.push(...denetimUyarilari());
   return l;
 }
