@@ -1,6 +1,6 @@
-import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, gecikenler, kalanBorc, islem, gonderimEkle, yerelZaman, oturum, kapaliGun, SINIFLAR, risk } from './veri.js?v=47';
-import { tl, tamTarih, tarihUzun, saatDe, apiAcik, apiGonder, etiket, bildir, waSirali } from './ui.js?v=47';
-import { denetimSkoru } from './ozellik.js?v=47';
+import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, gecikenler, kalanBorc, islem, gonderimEkle, yerelZaman, oturum, kapaliGun, SINIFLAR, risk, selam, kursAdi } from './veri.js?v=48';
+import { tl, tamTarih, tarihUzun, saatDe, apiAcik, apiGonder, etiket, bildir, waSirali } from './ui.js?v=48';
+import { denetimSkoru } from './ozellik.js?v=48';
 
 /* ================= ZAMANLI MESAJLAR =================
    Sinyal açıkken her dakika zamanı gelen mesajları bulur. WhatsApp API bağlıysa kendiliğinden gönderir;
@@ -8,47 +8,63 @@ import { denetimSkoru } from './ozellik.js?v=47';
    Aynı mesaj iki kez gitmez (anahtar defteri). Demo sınırı açıkken her kuraldan günde en fazla 2 mesaj gider. */
 
 const YENI_KURALLAR = [
-  { id: 'o10', ad: 'Hocaya yarınki program', ne: 'Her akşam 18:00’de', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: '{ad} Hoca, yarınki direksiyon programınız: {liste}.' },
-  { id: 'o11', ad: 'Kayıt görüşmesi hatırlatması', ne: 'Görüşmeden bir gün önce 18:00’de', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: 'Merhaba {ad}, yarın {saatte} kayıt görüşmeniz var. Adresimiz: {adres}. Kimliğinizi getirmeyi unutmayın.' },
+  { id: 'o10', ad: 'Hocaya yarınki program', ne: 'Her akşam 18:00’de', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: 'Merhaba {ad} Hoca, yarınki direksiyon programınız: {liste}.' },
+  { id: 'o11', ad: 'Kayıt görüşmesi hatırlatması', ne: 'Görüşmeden bir gün önce 18:00’de', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: '{selam} yarın {saatte} {kursta} kayıt görüşmeniz var. Adresimiz: {adres}. Kimliğinizi getirmeyi unutmayın.' },
   { id: 'o12', ad: 'Müdüre akşam özeti', ne: 'Her akşam 19:00’da', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: '{kurs} · {tarih} akşam özeti\n{ozet}' },
   { id: 'o13', ad: 'Belge ve araç süresi uyarısı', ne: 'Bitmeden 30, 7 ve 1 gün önce 09:00’da', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: '{konu} {kalan} bitiyor ({tarih}). Yenilemeyi unutmayın.' },
-  { id: 'o15', ad: 'Kalma riski yüksek kursiyere ek ders teklifi', ne: 'Risk yükselince ertesi gün 12:00’de', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: 'Merhaba {ad}, son derslerine göre sınavdan önce {n} ek direksiyon dersi ({tutar}) öneriyoruz{odak}. Kursiyer ekranından ya da bu mesaja “evet” yazarak onaylayabilirsin.' },
-  { id: 'o14', ad: 'Teorik grup başlangıcı', ne: 'Gruptan iki gün önce 10:00’da', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: 'Merhaba {ad}, teorik derslerin {tarih} {saatte} başlıyor ({grup}, {derslik}). Görüşmek üzere!' },
+  { id: 'o15', ad: 'Kalma riski yüksek kursiyere ek ders teklifi', ne: 'Risk yükselince ertesi gün 12:00’de', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: '{selam} son derslerinize göre sınavdan önce {n} ek direksiyon dersi ({tutar}) öneriyoruz{odak}. Kursiyer ekranından ya da bu mesaja “evet” yazarak onaylayabilirsiniz.' },
+  { id: 'o14', ad: 'Teorik grup başlangıcı', ne: 'Gruptan iki gün önce 10:00’da', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: '{selam} teorik dersleriniz {tarih} {saatte} başlıyor ({grup}, {derslik}). Görüşmek üzere. {kurs}' },
 ];
+// Eski “sen” dilli şablonları “siz” diline ve hitaba ({selam}) çevir
+const SIZ_SABLON = {
+  o1: '{selam} yarın {saat}’te {egitmen} ile direksiyon dersiniz var. Gelemeyecekseniz bu mesajı yanıtlamanız yeterli. {kurs}',
+  o11: '{selam} yarın {saatte} {kursta} kayıt görüşmeniz var. Adresimiz: {adres}. Kimliğinizi getirmeyi unutmayın.',
+  o14: '{selam} teorik dersleriniz {tarih} {saatte} başlıyor ({grup}, {derslik}). Görüşmek üzere. {kurs}',
+  o15: '{selam} son derslerinize göre sınavdan önce {n} ek direksiyon dersi ({tutar}) öneriyoruz{odak}. Kursiyer ekranından ya da bu mesaja “evet” yazarak onaylayabilirsiniz.',
+  o2: '{selam} {vade} tarihli {tutar} taksidinizin hatırlatmasıdır. {odeme}',
+  o3: '{selam} {tur} sınavınız {tarih} {saatte}, yer: {yer}. Kimliğinizi yanınıza almayı unutmayın. {kurs}',
+  o4: '{selam} kaydınızı tamamlamak için {evrak} eksik. {kursa} getirdiğinizde işlemlerinizi hemen başlatıyoruz.',
+  o5: '{selam} tebrikler, artık ehliyetiniz var! {kurs} hakkında Google’da birkaç cümle yazarsanız çok seviniriz: {link}',
+  o6: '{selam} bu sefer olmadı ama çok yakındınız. Bir sonraki sınava kadar 2 ek ders ayarlayalım mı?',
+  o7: '{selam} kayıtla ilgili aklınıza takılan bir şey var mı? Bu hafta başlayan gruba hâlâ yer var. {kurs}',
+  o8: '{selam} e-sınav randevunuz {tarih} {saatte}, yer: {yer}. Kimliğinizi ve e-sınav ücreti dekontunu yanınıza alın.',
+  o9: '{selam} {tur} sınav sonucunuz: {sonuc}. {kalan_hak}'
+};
 // Eski kayıtlara yeni kuralları ve düzeltilmiş şablonları ekle
 export function kurallariHazirla() {
   if (!S.otomasyonlar) return;
   YENI_KURALLAR.forEach(k => { if (!S.otomasyonlar.some(o => o.id === k.id)) S.otomasyonlar.push({ ...k }); });
   S.otomasyonlar.forEach(o => { o.sablon = o.sablon.replace('{saat}’te', '{saatte}').replace('Kartla ödemek için: {link}', '{odeme}'); });
+  S.otomasyonlar.forEach(o => { if (SIZ_SABLON[o.id] && !o.sablon.includes('{selam}') && o.sablon.includes('{ad}')) o.sablon = SIZ_SABLON[o.id]; if (o.id === 'o10' && o.sablon.startsWith('{ad} Hoca')) o.sablon = 'Merhaba ' + o.sablon; if (o.id === 'o2') o.sablon = o.sablon.replace('{odeme} {kurs}', '{odeme}'); });
   S.zamanli = S.zamanli || { gonderilen: {}, kayit: [], kuyruk: [], son: null, sinir: true };
 }
 const SAAT = { o1: '18:00', o10: '18:00', o11: '18:00', o12: '19:00', o13: '09:00', o2: '10:00', o3: '10:00', o14: '10:00', o4: '11:00', o7: '11:00', o15: '12:00' };
 export const kuralSaati = id => SAAT[id] || null;
 const kural = id => S.otomasyonlar.find(o => o.id === id);
-const doldur = (id, alan) => (kural(id) ? kural(id).sablon : '').replace(/\{(\w+)\}/g, (x, a) => alan[a] != null ? alan[a] : '');
+const doldur = (id, alan) => { alan = { kurs: S.kurs.ad, kursa: kursAdi('e'), kursta: kursAdi('de'), ...alan }; if (alan.kisi && !alan.selam) alan.selam = selam(alan.kisi); return (kural(id) ? kural(id).sablon : '').replace(/\{(\w+)\}/g, (x, a) => alan[a] != null ? alan[a] : ''); };
 const ogr = k => ({ ad: tamAd(k), tel: k.tel, rol: 'ÖĞRENCİ' });
 const hoca = h => ({ ad: h.ad, tel: h.tel, rol: 'HOCA' });
 const mudur = () => ({ ad: S.kurs.yetkili || 'Kurs müdürü', tel: S.kurs.wp || '', rol: 'MÜDÜR' });
-const odeme = () => S.kurs.iban ? `Havale/EFT için IBAN: ${S.kurs.iban}; kursta nakit ya da kartla da ödeyebilirsin.` : 'Kursa uğrayıp nakit ya da kartla ödeyebilirsin.';
+const odeme = () => S.kurs.iban ? `Havale/EFT için IBAN: ${S.kurs.iban}; ${kursAdi('de')} nakit ya da kartla da ödeyebilirsiniz.` : `${kursAdi('e')} uğrayıp nakit ya da kartla ödeyebilirsiniz.`;
 const TEORIK_SAAT = { aksam: '18:30', sabah: '10:00' };
 
 // Her kural: o gün gönderilmesi gerekenler. ornek=true ise tarih şartı aranmaz (demo için tek örnek).
 const URET = {
-  o1: ornek => { const t = gun(1); return S.dersler.filter(d => d.durum === 'Planlandı' && (ornek ? fark(d.tarih) >= 0 : d.tarih === t)).map(d => { const k = kursiyer(d.kursiyer), h = egitmen(d.egitmen); return k && h && { anahtar: 'o1|' + d.id, kim: ogr(k), metin: doldur('o1', { ad: k.ad, saat: d.saat, saatte: saatDe(d.saat), egitmen: h.ad }) }; }); },
+  o1: ornek => { const t = gun(1); return S.dersler.filter(d => d.durum === 'Planlandı' && (ornek ? fark(d.tarih) >= 0 : d.tarih === t)).map(d => { const k = kursiyer(d.kursiyer), h = egitmen(d.egitmen); return k && h && { anahtar: 'o1|' + d.id, kim: ogr(k), metin: doldur('o1', { kisi: k, ad: k.ad, saat: d.saat, saatte: saatDe(d.saat), egitmen: h.ad }) }; }); },
   o10: ornek => { const t = gun(1); return S.egitmenler.map(h => { const l = S.dersler.filter(d => d.egitmen === h.id && d.durum === 'Planlandı' && (ornek ? fark(d.tarih) >= 0 : d.tarih === t)).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat)); if (ornek && l.length) { const g = l[0].tarih; l.splice(0, l.length, ...l.filter(d => d.tarih === g)); } return l.length && { anahtar: 'o10|' + h.id + '|' + t, kim: hoca(h), metin: doldur('o10', { ad: h.ad.split(' ')[0], liste: l.map(d => { const k = kursiyer(d.kursiyer); return d.saat + ' ' + (k ? tamAd(k) + ' (' + SINIFLAR[k.sinif].ad + ')' : ''); }).join(', ') }) }; }); },
-  o2: ornek => S.kursiyerler.filter(k => !k.kapali).flatMap(k => k.odeme.taksitler.map((tk, i) => ({ k, tk, i })).filter(({ tk }) => !tk.odendi && !tk.iptal && (ornek ? fark(tk.vade) >= 0 : [3, 0, -1].includes(fark(tk.vade))))).sort((a, b) => a.tk.vade.localeCompare(b.tk.vade)).map(({ k, tk, i }) => { const f = fark(tk.vade); return { anahtar: 'o2|' + k.id + '|' + i + '|' + f, kim: ogr(k), metin: f < 0 ? `Merhaba ${k.ad}, ${tamTarih(tk.vade)} vadeli ${tl(tk.tutar - (tk.kismi || 0))} taksidin henüz ödenmedi. ${odeme()}` : doldur('o2', { ad: k.ad, vade: tamTarih(tk.vade), tutar: tl(tk.tutar - (tk.kismi || 0)), odeme: odeme() }) }; }),
-  o3: ornek => S.sinavlar.filter(s => ornek ? fark(s.tarih) >= 0 : [3, 1].includes(fark(s.tarih))).flatMap(s => { const f = fark(s.tarih), l = s.kursiyerler.map(kursiyer).filter(Boolean); const ogrenci = l.map(k => ({ anahtar: 'o3|' + s.id + '|' + k.id + '|' + f, kim: ogr(k), metin: doldur('o3', { ad: k.ad, tur: s.tur.toLocaleLowerCase('tr'), tarih: tarihUzun(s.tarih), saat: s.saat, saatte: saatDe(s.saat), yer: s.yer }) })); const hocalar = s.tur === 'Direksiyon' && (ornek || f === 1) ? [...new Set(l.map(k => k.egitmen))].map(egitmen).filter(Boolean).map(h => ({ anahtar: 'o3h|' + s.id + '|' + h.id, kim: hoca(h), metin: `${h.ad.split(' ')[0]} Hoca, ${tarihUzun(s.tarih)} ${saatDe(s.saat)} direksiyon sınavı var (${s.yer}). Öğrencileriniz: ${l.filter(k => k.egitmen === h.id).map(tamAd).join(', ')}. Araçla 30 dakika önce orada olun.` })) : []; return [...hocalar, ...ogrenci]; }),
-  o4: ornek => S.kursiyerler.filter(k => eksikEvrak(k).length && ['Kayıt', 'Evrak'].includes(k.asama) && (ornek || [-3, -10].includes(fark(k.kayit)))).map(k => ({ anahtar: 'o4|' + k.id + '|' + fark(k.kayit), kim: ogr(k), metin: doldur('o4', { ad: k.ad, evrak: eksikEvrak(k).map(x => x[1].toLocaleLowerCase('tr')).join(', ') }) })),
-  o7: ornek => S.adaylar.filter(a => a.asama === 'Bilgi verildi' && (ornek || fark(a.tarih) === -2)).map(a => ({ anahtar: 'o7|' + a.id, kim: { ad: a.ad, tel: a.tel, rol: 'ADAY' }, metin: doldur('o7', { ad: a.ad.split(' ')[0] }) })),
-  o11: ornek => ((S.sosyal && S.sosyal.slotlar) || []).filter(x => x.dolu && (ornek ? fark(x.tarih) >= 0 : x.tarih === gun(1))).map(x => { const a = S.adaylar.find(y => y.id === x.aday) || { ad: x.dolu, tel: '' }; return { anahtar: 'o11|' + x.tarih + '|' + x.saat, kim: { ad: a.ad, tel: a.tel, rol: 'ADAY' }, metin: doldur('o11', { ad: a.ad.split(' ')[0], saatte: saatDe(x.saat), adres: S.kurs.adres }) }; }),
+  o2: ornek => S.kursiyerler.filter(k => !k.kapali).flatMap(k => k.odeme.taksitler.map((tk, i) => ({ k, tk, i })).filter(({ tk }) => !tk.odendi && !tk.iptal && (ornek ? fark(tk.vade) >= 0 : [3, 0, -1].includes(fark(tk.vade))))).sort((a, b) => a.tk.vade.localeCompare(b.tk.vade)).map(({ k, tk, i }) => { const f = fark(tk.vade); return { anahtar: 'o2|' + k.id + '|' + i + '|' + f, kim: ogr(k), metin: f < 0 ? `${selam(k)} ${tamTarih(tk.vade)} vadeli ${tl(tk.tutar - (tk.kismi || 0))} taksidiniz henüz ödenmedi. ${odeme()}` : doldur('o2', { kisi: k, ad: k.ad, vade: tamTarih(tk.vade), tutar: tl(tk.tutar - (tk.kismi || 0)), odeme: odeme() }) }; }),
+  o3: ornek => S.sinavlar.filter(s => ornek ? fark(s.tarih) >= 0 : [3, 1].includes(fark(s.tarih))).flatMap(s => { const f = fark(s.tarih), l = s.kursiyerler.map(kursiyer).filter(Boolean); const ogrenci = l.map(k => ({ anahtar: 'o3|' + s.id + '|' + k.id + '|' + f, kim: ogr(k), metin: doldur('o3', { kisi: k, ad: k.ad, tur: s.tur.toLocaleLowerCase('tr'), tarih: tarihUzun(s.tarih), saat: s.saat, saatte: saatDe(s.saat), yer: s.yer }) })); const hocalar = s.tur === 'Direksiyon' && (ornek || f === 1) ? [...new Set(l.map(k => k.egitmen))].map(egitmen).filter(Boolean).map(h => ({ anahtar: 'o3h|' + s.id + '|' + h.id, kim: hoca(h), metin: `Merhaba ${h.ad.split(' ')[0]} Hoca, ${tarihUzun(s.tarih)} ${saatDe(s.saat)} direksiyon sınavı var (${s.yer}). Öğrencileriniz: ${l.filter(k => k.egitmen === h.id).map(tamAd).join(', ')}. Araçla 30 dakika önce orada olun.` })) : []; return [...hocalar, ...ogrenci]; }),
+  o4: ornek => S.kursiyerler.filter(k => eksikEvrak(k).length && ['Kayıt', 'Evrak'].includes(k.asama) && (ornek || [-3, -10].includes(fark(k.kayit)))).map(k => ({ anahtar: 'o4|' + k.id + '|' + fark(k.kayit), kim: ogr(k), metin: doldur('o4', { kisi: k, ad: k.ad, evrak: eksikEvrak(k).map(x => x[1].toLocaleLowerCase('tr')).join(', ') }) })),
+  o7: ornek => S.adaylar.filter(a => a.asama === 'Bilgi verildi' && (ornek || fark(a.tarih) === -2)).map(a => ({ anahtar: 'o7|' + a.id, kim: { ad: a.ad, tel: a.tel, rol: 'ADAY' }, metin: doldur('o7', { kisi: a, ad: a.ad.split(' ')[0] }) })),
+  o11: ornek => ((S.sosyal && S.sosyal.slotlar) || []).filter(x => x.dolu && (ornek ? fark(x.tarih) >= 0 : x.tarih === gun(1))).map(x => { const a = S.adaylar.find(y => y.id === x.aday) || { ad: x.dolu, tel: '' }; return { anahtar: 'o11|' + x.tarih + '|' + x.saat, kim: { ad: a.ad, tel: a.tel, rol: 'ADAY' }, metin: doldur('o11', { kisi: a, ad: a.ad.split(' ')[0], saatte: saatDe(x.saat), adres: S.kurs.adres }) }; }),
   o12: () => [{ anahtar: 'o12|' + gun(0), kim: mudur(), metin: aksamOzeti() }],
   o13: ornek => { const l = [], uyar = (f, hedef, konu, t, ek) => { if (ornek || [30, 7, 1].includes(f)) l.push({ anahtar: 'o13|' + konu + '|' + t, kim: hedef, metin: doldur('o13', { konu, kalan: f <= 1 ? 'yarın' : f + ' gün sonra', tarih: tamTarih(t) }) + (ek || '') }); };
     S.araclar.forEach(a => [['muayene', 'muayenesi'], ['sigorta', 'trafik sigortası'], ['kasko', 'kaskosu']].forEach(([x, ad]) => { if (a[x] && fark(a[x]) > 0) uyar(fark(a[x]), mudur(), a.plaka + ' ' + ad, a[x]); }));
     S.egitmenler.forEach(h => Object.entries(h.belgeler || {}).forEach(([b, t]) => { if (t && fark(t) > 0) { const ad = { sertifika: 'usta öğretici sertifikanız', saglik: 'sağlık raporunuz', adli: 'adli sicil kaydınız' }[b]; uyar(fark(t), hoca(h), h.ad.split(' ')[0] + ' Hoca, ' + ad, t, ' Süresi dolarsa ders veremezsiniz.'); } }));
     return ornek ? l.sort((a, b) => a.anahtar.split('|').pop().localeCompare(b.anahtar.split('|').pop())).slice(0, 1) : l; },
-  o14: ornek => (S.gruplar || []).filter(g => ornek ? fark(g.baslangic) >= 0 : fark(g.baslangic) === 2).flatMap(g => S.kursiyerler.filter(k => k.teorikGrup === g.id && ['Kayıt', 'Evrak', 'Teorik'].includes(k.asama) && !k.teorik).map(k => ({ anahtar: 'o14|' + g.id + '|' + k.id, kim: ogr(k), metin: doldur('o14', { ad: k.ad, tarih: tarihUzun(g.baslangic), saatte: saatDe(TEORIK_SAAT[g.id] || '18:30'), grup: g.ad.toLocaleLowerCase('tr'), derslik: g.derslik }) }))),
+  o14: ornek => (S.gruplar || []).filter(g => ornek ? fark(g.baslangic) >= 0 : fark(g.baslangic) === 2).flatMap(g => S.kursiyerler.filter(k => k.teorikGrup === g.id && ['Kayıt', 'Evrak', 'Teorik'].includes(k.asama) && !k.teorik).map(k => ({ anahtar: 'o14|' + g.id + '|' + k.id, kim: ogr(k), metin: doldur('o14', { kisi: k, ad: k.ad, tarih: tarihUzun(g.baslangic), saatte: saatDe(TEORIK_SAAT[g.id] || '18:30'), grup: g.ad.toLocaleLowerCase('tr'), derslik: g.derslik }) }))),
 };
-URET.o15 = ornek => S.kursiyerler.map(k => ({ k, r: risk(k) })).filter(({ k, r }) => r && r.oneri && (ornek ? r.puan >= 25 : r.puan >= 50) && !k.ekDersTeklif).sort((a, b) => b.r.puan - a.r.puan).map(({ k, r }) => ({ anahtar: 'o15|' + k.id, kim: ogr(k), etki: { tur: 'ekders', k: k.id, n: r.oneri, tutar: r.oneri * S.kurs.ekDersUcreti }, metin: doldur('o15', { ad: k.ad, n: r.oneri, tutar: tl(r.oneri * S.kurs.ekDersUcreti), odak: r.beceri && r.beceri.zayif.length ? '; özellikle ' + r.beceri.zayif.join(', ').toLocaleLowerCase('tr') + ' üzerinde çalışacağız' : '' }) }));
+URET.o15 = ornek => S.kursiyerler.map(k => ({ k, r: risk(k) })).filter(({ k, r }) => r && r.oneri && (ornek ? r.puan >= 25 : r.puan >= 50) && !k.ekDersTeklif).sort((a, b) => b.r.puan - a.r.puan).map(({ k, r }) => ({ anahtar: 'o15|' + k.id, kim: ogr(k), etki: { tur: 'ekders', k: k.id, n: r.oneri, tutar: r.oneri * S.kurs.ekDersUcreti }, metin: doldur('o15', { kisi: k, ad: k.ad, n: r.oneri, tutar: tl(r.oneri * S.kurs.ekDersUcreti), odak: r.beceri && r.beceri.zayif.length ? '; özellikle ' + r.beceri.zayif.join(', ').toLocaleLowerCase('tr') + ' üzerinde çalışacağız' : '' }) }));
 // Mesaj gidince kayda işlenecek sonuç (ör. ek ders teklifi kursiyer ekranında görünür)
 function etkiUygula(x) {
   if (!x.etki || x.etki.tur !== 'ekders') return;

@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum } from './veri.js?v=47';
+import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk } from './veri.js?v=48';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -204,7 +204,7 @@ export const smsUrl = (tel, metin) => 'sms:' + (waNumara(tel) ? '+' + waNumara(t
 const ROL_KIME = { 'ÖĞRENCİ': 'öğrencinin', 'HOCA': 'usta öğreticinin', 'MÜDÜR': 'kurs müdürünün', 'ADAY': 'yeni öğrenci adayının', 'ÖN BÜRO': 'ön büronun' };
 export const etiket = (ad, rol) => {
   if (S.kurs.demoKime === false || (!ad && !rol)) return '';
-  if (rol === 'KURSA GELEN') return `KURSA GELEN MESAJ · gönderen: ${ad || 'öğrenci'}\n(Gerçekte bu mesaj öğrencinin telefonundan kursun WhatsApp hattına gelir.)\n――――――――\n`;
+  if (rol === 'KURSA GELEN') return `${adEk(S.kurs.ad, 'e').toLocaleUpperCase('tr')} GELEN MESAJ · gönderen: ${ad || 'öğrenci'}\n(Gerçekte bu mesaj öğrencinin telefonundan ${adEk(S.kurs.ad, 'in')} WhatsApp hattına gelir.)\n――――――――\n`;
   const kim = ROL_KIME[rol];
   return `ALICI: ${rol || 'KİŞİ'}${ad && rol !== 'MÜDÜR' ? ' · ' + ad : ''}\n(Gerçekte bu mesaj ${kim || 'alıcının'} telefonuna gider.)\n――――――――\n`;
 };
@@ -266,12 +266,12 @@ const apiMetin = (metin, ad, rol) => etiket(ad, rol) + metin;
 const kayitDus = (ad, metin, tur) => { if (tur && ad) gonderimEkle(ad, metin, tur); };
 // Ziyaretçi (QR ile gelen, giriş yapmadan inceleyen): mesajlar kimseye gitmez, ekranda önizlenir
 export const ziyaretci = () => !!(oturum.kullanici && oturum.kullanici.ziyaretci);
-const ROL_YAZI = { 'ÖĞRENCİ': 'öğrenciye', 'HOCA': 'usta öğreticiye', 'MÜDÜR': 'kurs müdürüne', 'ADAY': 'adaya', 'KURSA GELEN': 'kursa', 'ÖN BÜRO': 'ön büroya' };
+const ROL_YAZI = { 'ÖĞRENCİ': 'öğrenciye', 'HOCA': 'usta öğreticiye', 'MÜDÜR': 'kurs müdürüne', 'ADAY': 'adaya', 'KURSA GELEN': 'sürücü kursuna', 'ÖN BÜRO': 'ön büroya' };
 function onizle(liste, baslik, bitince) {
   pencere({
     baslik: baslik || 'Gidecek mesaj',
     icerik: `<p class="ipucu" style="margin-bottom:12px">${isaret('bilgi', 18)}<span>Demo görünümü: gerçek kullanımda ${liste.length > 1 ? 'bu ' + liste.length + ' mesaj' : 'bu mesaj'} WhatsApp’tan kendiliğinden gider. Burada yalnız gösteriliyor.</span></p>
-      <div style="display:grid;gap:10px;max-height:52vh;overflow:auto">${liste.map(x => `<div><small style="display:block;color:var(--soluk);margin-bottom:4px">${e(x.ad || '')}${x.rol ? ' · ' + (ROL_YAZI[x.rol] || x.rol.toLocaleLowerCase('tr')) : ''}</small><div class="balon giden" style="max-width:100%;white-space:pre-line">${e(x.metin)}</div></div>`).join('')}</div>`,
+      <div style="display:grid;gap:10px;max-height:52vh;overflow:auto">${liste.map(x => `<div><small style="display:block;color:var(--soluk);margin-bottom:4px">${e(x.ad || '')}${x.rol ? ' · ' + (x.rol === 'KURSA GELEN' ? adEk(S.kurs.ad, 'e') : ROL_YAZI[x.rol] || x.rol.toLocaleLowerCase('tr')) : ''}</small><div class="balon giden" style="max-width:100%;white-space:pre-line">${e(x.metin)}</div></div>`).join('')}</div>`,
     altlik: '<button class="dg dg-ana" data-onizle-tamam>Tamam</button>',
     onAc(d) { d.querySelector('[data-onizle-tamam]').addEventListener('click', () => { kapatPencere(); if (bitince) bitince(new Set(liste.map((x, i) => i))); }); },
   });

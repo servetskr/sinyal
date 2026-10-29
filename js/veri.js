@@ -273,15 +273,15 @@ function uret() {
   ].map((a, i) => ({ id: 'l' + (i + 1), ad: a.ad, tel: tel(), kaynak: a.kaynak, kanal: a.kanal, sinif: a.sinif, asama: a.asama, tarih: gun(a.gun), saat: a.saat, takip: a.takip || null, not: a.not || '', devir: a.devir || null, mesajlar: a.m.map(([kim, metin]) => ({ kim, metin })) }));
 
   const otomasyonlar = [
-    { id: 'o1', ad: 'Direksiyon dersi hatırlatması', ne: 'Dersten bir gün önce 18:00’de', kanal: 'WhatsApp', acik: true, gonderim: 412, sablon: 'Merhaba {ad}, yarın {saat}’te {egitmen} ile direksiyon dersin var. Gelemeyeceksen bu mesajı yanıtlaman yeterli.' },
-    { id: 'o2', ad: 'Taksit hatırlatması', ne: 'Vadeden 3 gün önce ve vade günü', kanal: 'WhatsApp', acik: true, gonderim: 138, sablon: 'Merhaba {ad}, {vade} tarihli {tutar} taksidinin hatırlatmasıdır. Kartla ödemek için: {link}' },
-    { id: 'o3', ad: 'Sınav bilgilendirmesi', ne: 'Sınava 3 gün ve 1 gün kala', kanal: 'WhatsApp', acik: true, gonderim: 96, sablon: '{ad}, {tur} sınavın {tarih} {saat}’te, {yer}. Kimliğini yanına almayı unutma.' },
-    { id: 'o4', ad: 'Eksik evrak hatırlatması', ne: 'Kayıttan 3 gün sonra, evrak eksikse', kanal: 'WhatsApp', acik: true, gonderim: 41, sablon: 'Merhaba {ad}, kaydını tamamlamak için {evrak} eksik. Kursa getirdiğinde işlemlerini hemen başlatıyoruz.' },
-    { id: 'o5', ad: 'Google yorum isteği', ne: 'Direksiyon sınavını geçince', kanal: 'WhatsApp', acik: true, gonderim: 57, sablon: 'Tebrikler {ad}, artık ehliyetin var! Bizi Google’da değerlendirirsen çok seviniriz: {link}' },
-    { id: 'o6', ad: 'Kalan kursiyere ek ders önerisi', ne: 'Sınav sonucu girildiğinde', kanal: 'WhatsApp', acik: true, gonderim: 12, sablon: '{ad}, bu sefer olmadı ama çok yakındın. Bir sonraki sınava kadar 2 ek ders ayarlayalım mı?' },
-    { id: 'o8', ad: 'e-Sınav randevusu ve giriş belgesi', ne: 'Randevu kesinleşince', kanal: 'WhatsApp', acik: true, gonderim: 64, sablon: '{ad}, e-sınav randevun {tarih} {saat}, {yer}. Giriş belgen ekte; kimliğini unutma.' },
-    { id: 'o9', ad: 'Sınav sonucu bildirimi', ne: 'Sonuç girilince', kanal: 'WhatsApp', acik: true, gonderim: 88, sablon: '{ad}, {tur} sınav sonucun: {sonuc}. {kalan_hak}' },
-    { id: 'o7', ad: 'Düşünen adaya takip', ne: 'Bilgi aldıktan 2 gün sonra', kanal: 'WhatsApp', acik: false, gonderim: 0, sablon: 'Merhaba {ad}, kayıtla ilgili aklına takılan bir şey var mı? Bu hafta başlayan gruba hâlâ yer var.' },
+    { id: 'o1', ad: 'Direksiyon dersi hatırlatması', ne: 'Dersten bir gün önce 18:00’de', kanal: 'WhatsApp', acik: true, gonderim: 412, sablon: '{selam} yarın {saat}’te {egitmen} ile direksiyon dersiniz var. Gelemeyecekseniz bu mesajı yanıtlamanız yeterli. {kurs}' },
+    { id: 'o2', ad: 'Taksit hatırlatması', ne: 'Vadeden 3 gün önce ve vade günü', kanal: 'WhatsApp', acik: true, gonderim: 138, sablon: '{selam} {vade} tarihli {tutar} taksidinizin hatırlatmasıdır. {odeme}' },
+    { id: 'o3', ad: 'Sınav bilgilendirmesi', ne: 'Sınava 3 gün ve 1 gün kala', kanal: 'WhatsApp', acik: true, gonderim: 96, sablon: '{selam} {tur} sınavınız {tarih} {saatte}, yer: {yer}. Kimliğinizi yanınıza almayı unutmayın. {kurs}' },
+    { id: 'o4', ad: 'Eksik evrak hatırlatması', ne: 'Kayıttan 3 gün sonra, evrak eksikse', kanal: 'WhatsApp', acik: true, gonderim: 41, sablon: '{selam} kaydınızı tamamlamak için {evrak} eksik. {kursa} getirdiğinizde işlemlerinizi hemen başlatıyoruz.' },
+    { id: 'o5', ad: 'Google yorum isteği', ne: 'Direksiyon sınavını geçince', kanal: 'WhatsApp', acik: true, gonderim: 57, sablon: '{selam} tebrikler, artık ehliyetiniz var! {kurs} hakkında Google’da birkaç cümle yazarsanız çok seviniriz: {link}' },
+    { id: 'o6', ad: 'Kalan kursiyere ek ders önerisi', ne: 'Sınav sonucu girildiğinde', kanal: 'WhatsApp', acik: true, gonderim: 12, sablon: '{selam} bu sefer olmadı ama çok yakındınız. Bir sonraki sınava kadar 2 ek ders ayarlayalım mı?' },
+    { id: 'o8', ad: 'e-Sınav randevusu ve giriş belgesi', ne: 'Randevu kesinleşince', kanal: 'WhatsApp', acik: true, gonderim: 64, sablon: '{selam} e-sınav randevunuz {tarih} {saatte}, yer: {yer}. Giriş belgeniz ekte; kimliğinizi unutmayın.' },
+    { id: 'o9', ad: 'Sınav sonucu bildirimi', ne: 'Sonuç girilince', kanal: 'WhatsApp', acik: true, gonderim: 88, sablon: '{selam} {tur} sınav sonucunuz: {sonuc}. {kalan_hak}' },
+    { id: 'o7', ad: 'Düşünen adaya takip', ne: 'Bilgi aldıktan 2 gün sonra', kanal: 'WhatsApp', acik: false, gonderim: 0, sablon: '{selam} kayıtla ilgili aklınıza takılan bir şey var mı? Bu hafta başlayan gruba hâlâ yer var. {kurs}' },
   ];
 
   const duyurular = [
@@ -463,7 +463,7 @@ function goc(o) {
   if (o.mebArac && !o.mebArac.gercek) o.mebArac = null;
   if (o.kurs.mebYontem === 'arac' && !o.mebArac) o.kurs.mebYontem = 'sirali';
   if (o.sosyal) o.sosyal.kanallar.forEach(c => { if (!c.gercek) { c.bagli = c.id === 'wp' ? !!o.kurs.waApi : false; c.cevap = c.bagli && c.cevap; } });
-  (o.otomasyonlar || []).forEach(x => { if (x.id === 'o8') x.sablon = 'Merhaba {ad}, e-sınav randevun {tarih} {saatte}, yer: {yer}. Kimliğini ve e-sınav ücreti dekontunu yanına al.'; if (x.id === 'o6') x.ne = 'Direksiyon sınavından kalınca'; });
+  (o.otomasyonlar || []).forEach(x => { if (x.id === 'o8') x.sablon = '{selam} e-sınav randevunuz {tarih} {saatte}, yer: {yer}. Kimliğinizi ve e-sınav ücreti dekontunu yanınıza alın.'; if (x.id === 'o6') x.ne = 'Direksiyon sınavından kalınca'; });
   if (o.kazanim && !o.kazanim.gercek) o.kazanim = { gercek: true, doldurulan: 0, ekDers: 0, yorum: 0 };
   // geçmiş derslerin beceri puanları (usta öğretici ders bitiminde 1–5 verir); eski kayıtlara kursiyerin seyrine göre doldurulur
   const hs = x => { let h = 7; for (const c of String(x)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
@@ -507,6 +507,27 @@ export const egitmen = id => S.egitmenler.find(e => e.id === id) || ((S.cikanlar
 export const arac = id => S.araclar.find(a => a.id === id) || ((S.cikanlar || {}).arac || []).find(a => a.id === id);
 export function arsivle(tur, x) { S.cikanlar = S.cikanlar || { egitmen: [], arac: [] }; S.cikanlar[tur].push({ ...x, cikis: gun(0) }); }
 export const tamAd = k => k.ad + ' ' + k.soyad;
+// Mesaj hitabı: "Merhaba Elif Hanım," / "Merhaba Hüseyin Hoca,"; cinsiyeti bilinmeyen (aday vb.) için "Sayın Deniz Akın,"
+export function selam(x) {
+  if (!x) return 'Merhaba,';
+  if (typeof x === 'string') x = S.kursiyerler.find(k => tamAd(k) === x) || S.egitmenler.find(h => h.ad === x) || { ad: x };
+  const ilk = String(x.ad || '').trim().split(/\s+/)[0], tam = x.soyad != null ? tamAd(x) : String(x.ad || '').trim();
+  if (S.egitmenler.includes(x)) return `Merhaba ${ilk} Hoca,`;
+  return x.cinsiyet === 'Kadın' ? `Merhaba ${ilk} Hanım,` : x.cinsiyet === 'Erkek' ? `Merhaba ${ilk} Bey,` : `Sayın ${tam},`;
+}
+// Özel ada hâl eki: "Sinyal Sürücü Kursu" → Kursu’na / Kursu’nda / Kursu’ndan / Kursu’nun
+export function adEk(ad, hal) {
+  ad = String(ad || '').trim(); if (!hal || !ad) return ad;
+  const kc = ad.toLocaleLowerCase('tr'), sesliler = 'aeıioöuü', son = [...kc].reverse().find(c => sesliler.includes(c)) || 'e';
+  const kalin = 'aıou'.includes(son), yuvarlak = 'ouöü'.includes(son), seslyBiter = sesliler.includes(kc.slice(-1));
+  const iyelik = /(kursu|merkezi|okulu|akademisi|kurumu)$/.test(kc);
+  const unlu = { e: kalin ? 'a' : 'e', de: kalin ? 'da' : 'de', den: kalin ? 'dan' : 'den', in: kalin ? (yuvarlak ? 'un' : 'ın') : (yuvarlak ? 'ün' : 'in') }[hal];
+  if (iyelik) return ad + '’n' + unlu;
+  if (seslyBiter) return ad + '’' + ({ e: 'y', in: 'n' }[hal] || '') + unlu;
+  const sert = 'fstkçşhp'.includes(kc.slice(-1));
+  return ad + '’' + (sert && unlu[0] === 'd' ? 't' + unlu.slice(1) : unlu);
+}
+export const kursAdi = hal => adEk(S.kurs.ad, hal);
 // Direksiyon aracı: önce ustanın kursiyerin sınıfındaki aracı, o saatte doluysa aynı sınıftaki boş araç.
 export const ustaAraci = (egId, sinif) => S.araclar.find(a => a.egitmen === egId && a.sinif === sinif);
 export function dersAraci(egId, sinif, t, saat, haric) {
