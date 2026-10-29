@@ -1,7 +1,7 @@
 // Araç tekniği canlandırmaları (öğrenci ekranı): 4 zamanlı motor ve debriyaj/kalkış denemesi.
 // 4 zaman: MEB Araç Tekniği programı (2020) A bölümü, motorun çalışma prensibi. Debriyaj denemesi temsilîdir:
 // pedal hızlı bırakılırsa motor yük altında düşük devire iner ve stop eder (direksiyon sınavında kalkış/rampa hatalarının çoğu).
-import { e, pencere } from './ui.js?v=90';
+import { e, pencere } from './ui.js?v=91';
 
 const ZAMAN = [
   ['Emme', 'Piston aşağı iner, emme supabı açıktır; silindire hava (benzinli motorda hava-yakıt karışımı) dolar.', '#5aa9e6'],

@@ -1,19 +1,20 @@
-import { oturum, islem, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, yerelZaman, BECERI, risk, ekToplam, selam, kursAdi, konuListesi, konuOner } from './veri.js?v=90';
-import { e, saatDe, saatE, tl, ik, rozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani, kartFormu, kartBagla, kartDogrula, waAc } from './ui.js?v=90';
-import { yenile } from './app.js?v=90';
-import { ekDersKabul, bosTeklifKabul, wpGonder, bildirimler } from './sayfalar1.js?v=90';
-import { KONULAR } from './konular.js?v=90';
+import { oturum, islem, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, yerelZaman, BECERI, risk, ekToplam, selam, kursAdi, konuListesi, konuOner } from './veri.js?v=91';
+import { e, saatDe, saatE, tl, ik, rozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani, kartFormu, kartBagla, kartDogrula, waAc } from './ui.js?v=91';
+import { yenile } from './app.js?v=91';
+import { ekDersKabul, bosTeklifKabul, wpGonder, bildirimler } from './sayfalar1.js?v=91';
+import { KONULAR } from './konular.js?v=91';
 // Soru bankası büyük; yalnız Sınavlar sekmesi ya da test açılınca yüklenir (açılış hızını etkilemesin)
 let SORULAR = [], soruYuk = null;
 // Sorular ve levha çizimleri yalnız sınav sekmesinde yüklenir; levhalı sorularda görsel "L:<kod>" olarak durur
 let levhaSvg = () => '';
-const sorulariYukle = () => soruYuk || (soruYuk = Promise.all([import('./sorular.js?v=90'), import('./levha.js?v=90').catch(() => null)]).then(([m, l]) => { SORULAR = m.SORULAR; if (l) levhaSvg = l.levhaSvg; }));
+const sorulariYukle = () => soruYuk || (soruYuk = Promise.all([import('./sorular.js?v=91'), import('./levha.js?v=91').catch(() => null)]).then(([m, l]) => { SORULAR = m.SORULAR; if (l) levhaSvg = l.levhaSvg; }));
 const gorselHtml = g => !g ? '' : String(g).startsWith('L:') ? levhaSvg(g.slice(2)) : g;
-import { randevuAl, randevuIptal } from './ozellik.js?v=90';
-import * as OG from './ogrenci.js?v=90';
-import * as HZ from './hazirlik.js?v=90';
-import { soruKonu } from './soruKonu.js?v=90';
-import { MUFREDAT } from './ogrenci.js?v=90';
+import { randevuAl, randevuIptal } from './ozellik.js?v=91';
+import * as OG from './ogrenci.js?v=91';
+import * as HZ from './hazirlik.js?v=91';
+import { ogrOzellik } from './veri.js?v=91';
+import { soruKonu } from './soruKonu.js?v=91';
+import { MUFREDAT } from './ogrenci.js?v=91';
 
 let egId = 'e1', egSekme = 'bugun';
 let ogId = null, ogSekme = 'durum';
@@ -69,7 +70,7 @@ export function egitmenPortal() {
     baglan(k) {
       k.addEventListener('change', ev => { if (ev.target.matches('[data-eg]')) { egId = ev.target.value; yenile(); } });
       k.addEventListener('click', ev => {
-        const dn = ev.target.closest('[data-deneme]'); if (dn) return import('./deneme.js?v=90').then(m => m.denemeAc(kursiyer(dn.dataset.deneme), yenile));
+        const dn = ev.target.closest('[data-deneme]'); if (dn) return import('./deneme.js?v=91').then(m => m.denemeAc(kursiyer(dn.dataset.deneme), yenile));
         const t = ev.target;
         const s = t.closest('[data-egs]'); if (s) { egSekme = s.dataset.egs; yenile(true); }
         const db = t.closest('[data-ders-basla]'); if (db) {
@@ -96,7 +97,7 @@ export function egitmenPortal() {
                 d.bit = new Date().toTimeString().slice(0, 5); d.sure = d.basZaman ? Math.round((Date.now() - d.basZaman) / 60e3) : null;
                 ks.direksiyon = Math.min(SINIFLAR[ks.sinif].direksiyon, ks.direksiyon + 1);
                 islem('Ders tamamlandı, kursiyer imzası istendi', tamAd(ks) + ' · ' + d.saat); kaydet(); kapatPencere();
-                const m = await import('./imza.js?v=90'); await m.imzaIste('ders', ks, [d.id]); bildir('Ders kaydedildi; WhatsApp’ta imza linkini gönderin', 'wp'); yenile(); riskKontrol(ks, once);
+                const m = await import('./imza.js?v=91'); await m.imzaIste('ders', ks, [d.id]); bildir('Ders kaydedildi; WhatsApp’ta imza linkini gönderin', 'wp'); yenile(); riskKontrol(ks, once);
               });
               p.querySelector('[data-imza-kaydet]').addEventListener('click', () => {
                 if (ik_.bos() || iu.bos()) return bildir('İki imza da gerekli', 'uyari');
@@ -111,7 +112,7 @@ export function egitmenPortal() {
             },
           });
         }
-        const it = t.closest('[data-imza-tekrar]'); if (it) { const d = S.dersler.find(x => x.id === it.dataset.imzaTekrar); import('./imza.js?v=90').then(m => m.imzaIste('ders', kursiyer(d.kursiyer), [d.id])); return; }
+        const it = t.closest('[data-imza-tekrar]'); if (it) { const d = S.dersler.find(x => x.id === it.dataset.imzaTekrar); import('./imza.js?v=91').then(m => m.imzaIste('ders', kursiyer(d.kursiyer), [d.id])); return; }
         const g = t.closest('[data-gelmedi]'); if (g) { const d = S.dersler.find(x => x.id === g.dataset.gelmedi); d.durum = 'Gelmedi'; islem('Gelmedi işaretledi', tamAd(kursiyer(d.kursiyer)) + ' · ' + d.saat); kaydet(); const ks = kursiyer(d.kursiyer); bildirimler([{ kim: ks, metin: `${selam(ks)} ${d.saat} direksiyon dersinde sizi bekledim ancak gelmediniz. Yeni saat için ${kursAdi('e')} yazabilirsiniz. ${egitmen(d.egitmen).ad}`, tur: 'Gelmedi bildirimi' }, { kim: 'mudur', metin: `${tamAd(ks)} ${d.saat} dersine gelmedi; ${egitmen(d.egitmen).ad} işaretledi.`, tur: 'Gelmedi bildirimi' }], 'Derse gelmedi'); yenile(); }
         const n = t.closest('[data-not]'); if (n) { const ks = kursiyer(n.dataset.not); pencere({ baslik: 'Not · ' + tamAd(ks), icerik: `<div class="alan"><label>Ders notu</label><textarea placeholder="Örn. park etmede iyi, şerit değiştirmede ayna kontrolünü unutuyor"></textarea></div>`, altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Kaydet</button>`, onAc(d) { d.querySelector('[data-k]').addEventListener('click', () => { const v = d.querySelector('textarea').value.trim(); if (v) { ks.notlar.unshift({ tarih: gun(0), metin: v }); kaydet(); } kapatPencere(); bildir('Not kaydedildi; kurs müdürü de görür'); yenile(); }); } }); }
       });
@@ -157,7 +158,7 @@ export function ogrenciPortal() {
   const sd = sonrakiDers(k), sonraki = k.odeme.taksitler.map((t, i) => ({ t, i })).find(x => !x.t.odendi && !x.t.iptal);
   const sinav = S.sinavlar.filter(s => s.kursiyerler.includes(k.id) && fark(s.tarih) >= 0).sort((a, b) => a.tarih.localeCompare(b.tarih))[0];
   let govde = '';
-  if (ogSekme === 'durum') govde = OG.degerlendirKart(k) + (!(k.esinav && k.esinav.sonuc === 'Geçti') && ['Kayıt', 'Teorik'].includes(k.asama) ? HZ.hazirlikKarti(k, true) : '') + `
+  if (ogSekme === 'durum') govde = OG.degerlendirKart(k) + (ogrOzellik('hazirlik') && !(k.esinav && k.esinav.sonuc === 'Geçti') && ['Kayıt', 'Teorik'].includes(k.asama) ? HZ.hazirlikKarti(k, true) : '') + `
     <div class="kart" style="padding:18px 6px 4px"><div style="padding:0 14px"><small style="color:var(--soluk)">Ehliyet yolculuğun</small><h3 style="font-size:18px;margin-top:2px">${k.asama === 'Ehliyet' ? 'Tebrikler, ehliyetini aldın!' : k.asama + ' aşamasındasın'}</h3></div>${yol(asamaNo(k), true)}</div>
     ${sd ? `<div class="kart" style="padding:8px">${sd.arac ? aracGorsel(arac(sd.arac)) : ''}<div style="padding:10px 10px 4px"><small style="color:var(--soluk)">Sıradaki direksiyon dersin</small><b style="display:block;font-family:var(--baslik);font-size:26px;font-weight:900;color:var(--murekkep)">${goreli(sd.tarih)} ${sd.saat}</b><p style="font-size:14.5px;margin-top:2px">${e(egitmen(sd.egitmen).ad)} ile · ${sd.arac ? e(arac(sd.arac).model) + ' · ' + arac(sd.arac).plaka : ''} · ${k.direksiyon + 1}. ders</p><button class="dg dg-cizgi dg-kucuk" style="margin-top:10px" data-degis="${sd.id}">Gelemeyeceğim, saati değiştir</button></div></div>` : ''}
     ${k.ekDersTeklif ? `<div class="kart" style="padding:16px 18px;border-color:var(--levha)"><small style="color:var(--soluk)">Kursun önerisi</small><b style="display:block;font-family:var(--baslik);font-size:19px;color:var(--murekkep);margin:4px 0">${k.ekDersTeklif.n} ek direksiyon dersi · ${tl(k.ekDersTeklif.tutar)}</b><p style="font-size:13.5px">Kabul edersen ücret ödeme planına eklenir, dersler planlanır.</p><div style="display:flex;gap:8px;margin-top:10px"><button class="dg dg-ana dg-kucuk" data-og-ekders="evet">Kabul et</button><button class="dg dg-cizgi dg-kucuk" data-og-ekders="hayir">İstemiyorum</button></div></div>` : ''}
@@ -178,11 +179,11 @@ export function ogrenciPortal() {
     const MOD_AD = { deneme: 'Deneme sınavı', hizli: 'Hızlı test', konu: 'Konu çalışması', yanlis: 'Yanlışlarım', tekrar: 'Bugünkü tekrar' };
     if (!test.mod) {
       const son = (k.deneme || []).slice(-5);
-      const tb = HZ.tekrarBugun(k).length;
-      govde = OG.sinavlarHtml(k) + `${['Direksiyon', 'Sınav'].includes(k.asama) ? '<h3 class="og-ara-baslik">Direksiyon sınavı</h3><div data-dir-yer></div>' : ''}<h3 class="og-ara-baslik">Sınava hazırlan</h3>${HZ.hazirlikKarti(k, true)}${tb ? `<div class="kart" style="padding:16px 18px;border-color:var(--levha)"><small style="color:var(--soluk)">Aralıklı tekrar</small><b style="display:block;font-family:var(--baslik);font-size:19px;color:var(--murekkep);margin:2px 0 4px">Bugün ${tb} tekrar sorun var</b><p style="font-size:13.5px">Yanlış yaptığın sorular 1, 3, 7, 14 ve 30 gün sonra yeniden gelir; beş kez üst üste doğru yapınca listeden çıkar.</p><button class="dg dg-ana" style="width:100%;margin-top:10px" data-test-basla="tekrar">Tekrarı başlat</button></div>` : ''}<div class="kart" style="padding:18px"><small style="color:var(--soluk)">e-Sınav provası</small><b style="display:block;font-family:var(--baslik);font-size:22px;color:var(--murekkep);margin:2px 0 6px">Deneme sınavı</b><p style="font-size:14px">50 soru · 45 dakika · geçme puanı 70. Sorular e-sınavdaki konu dağılımıyla gelir.</p><button class="dg dg-ana" style="width:100%;margin-top:12px" data-test-basla="deneme">Sınavı başlat</button></div>
+      const tb = ogrOzellik('tekrar') ? HZ.tekrarBugun(k).length : 0;
+      govde = OG.sinavlarHtml(k) + `${ogrOzellik('direksiyon') && ['Direksiyon', 'Sınav'].includes(k.asama) ? '<h3 class="og-ara-baslik">Direksiyon sınavı</h3><div data-dir-yer></div>' : ''}<h3 class="og-ara-baslik">Sınava hazırlan</h3>${ogrOzellik('hazirlik') ? HZ.hazirlikKarti(k, true) : ''}${tb ? `<div class="kart" style="padding:16px 18px;border-color:var(--levha)"><small style="color:var(--soluk)">Aralıklı tekrar</small><b style="display:block;font-family:var(--baslik);font-size:19px;color:var(--murekkep);margin:2px 0 4px">Bugün ${tb} tekrar sorun var</b><p style="font-size:13.5px">Yanlış yaptığın sorular 1, 3, 7, 14 ve 30 gün sonra yeniden gelir; beş kez üst üste doğru yapınca listeden çıkar.</p><button class="dg dg-ana" style="width:100%;margin-top:10px" data-test-basla="tekrar">Tekrarı başlat</button></div>` : ''}<div class="kart" style="padding:18px"><small style="color:var(--soluk)">e-Sınav provası</small><b style="display:block;font-family:var(--baslik);font-size:22px;color:var(--murekkep);margin:2px 0 6px">Deneme sınavı</b><p style="font-size:14px">50 soru · 45 dakika · geçme puanı 70. Sorular e-sınavdaki konu dağılımıyla gelir.</p><button class="dg dg-ana" style="width:100%;margin-top:12px" data-test-basla="deneme">Sınavı başlat</button></div>
         ${son.length ? `<div class="kart" style="padding:14px 18px"><small style="color:var(--soluk)">Son denemelerin</small><div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">${son.map(p => `<span class="rozet rozet-${p >= 70 ? 'yesil' : 'kirmizi'}" style="font-size:14px;padding:6px 10px">${p}</span>`).join('')}</div></div>` : ''}
         <div class="kart" style="padding:14px 18px"><small style="color:var(--soluk)">Konu çalış · başarı oranın</small><div style="display:grid;gap:10px;margin-top:10px">${Object.entries(KONULAR).map(([kn, [ad]]) => { const o = konuOran(k, kn); return `<button class="konu-sat" data-test-basla="konu" data-konu="${kn}"><span>${ad}</span>${o != null && o < 70 ? rozet('Çalış', 'kirmizi') : ''}<b class="mono" style="color:${o != null && o < 70 ? 'var(--kirmizi)' : 'var(--murekkep)'}">${o == null ? '–' : '%' + o}</b>${ilerleme(o || 0, 100, o != null && o < 70 ? '' : 'yesil')}</button>`; }).join('')}</div></div>
-        <div class="kart" style="padding:16px 18px"><small style="color:var(--soluk)">Trafikte tehlike algısı</small><b style="display:block;font-family:var(--baslik);font-size:19px;color:var(--murekkep);margin:2px 0 4px">Tehlikeyi erken fark et</b><p style="font-size:13.5px">8 kısa sahne: gelişen tehlikeyi fark ettiğin an dokun.${(k.tehlike || []).length ? ' Son puanın ' + k.tehlike.slice(-1)[0].puan + '/' + k.tehlike.slice(-1)[0].en + '.' : ''}</p><button class="dg dg-cizgi" style="width:100%;margin-top:10px" data-tehlike>Başlat</button></div>
+        ${ogrOzellik('tehlike') ? '' : '<!--'}<div class="kart" style="padding:16px 18px"><small style="color:var(--soluk)">Trafikte tehlike algısı</small><b style="display:block;font-family:var(--baslik);font-size:19px;color:var(--murekkep);margin:2px 0 4px">Tehlikeyi erken fark et</b><p style="font-size:13.5px">8 kısa sahne: gelişen tehlikeyi fark ettiğin an dokun.${(k.tehlike || []).length ? ' Son puanın ' + k.tehlike.slice(-1)[0].puan + '/' + k.tehlike.slice(-1)[0].en + '.' : ''}</p><button class="dg dg-cizgi" style="width:100%;margin-top:10px" data-tehlike>Başlat</button></div>${ogrOzellik('tehlike') ? '' : '-->'}
         <div class="izgara iz-2" style="gap:10px;grid-template-columns:1fr 1fr"><button class="dg dg-cizgi" style="height:auto;padding:12px" data-test-basla="hizli">Hızlı test<br><small>10 soru</small></button><button class="dg dg-cizgi" style="height:auto;padding:12px" data-test-basla="yanlis" ${(k.yanlislar || []).length ? '' : 'disabled'}>Yanlışlarım<br><small>${(k.yanlislar || []).length} soru</small></button></div>
         <p style="font-size:12.5px;color:var(--soluk);text-align:center">Havuzda ${SORULAR.length || 500 + '’den fazla'} soru var. Sonuçların teorik öğretmenine konu konu gider; zayıf olduğun konuya ek ders konur.</p>`;
     } else if (test.i >= test.liste.length) {

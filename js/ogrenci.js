@@ -1,7 +1,7 @@
 // Öğrenci paneli sekmeleri: program, dersler (teorik konular + direksiyon + gelişim), sınavlar, ödemeler, belgeler
-import { S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen } from './veri.js?v=90';
-import { e, tl, ik, rozet, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, isaret, belgeYazdir, fotoKucult } from './ui.js?v=90';
-import { belgeHtml } from './sayfalar3.js?v=90';
+import { S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen, ogrOzellik } from './veri.js?v=91';
+import { e, tl, ik, rozet, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, isaret, belgeYazdir, fotoKucult } from './ui.js?v=91';
+import { belgeHtml } from './sayfalar3.js?v=91';
 
 // MEB teorik eğitim programı: konu, ders saati, başlıklar (anahtarlar soru bankasıyla aynı)
 export const MUFREDAT = [
@@ -67,9 +67,9 @@ export function derslerHtml(k, direksiyonListesi) {
   return `<div class="kart og-kart"><div class="og-bas"><div><small>Teorik dersler</small><b>${k.teorik}/${S0.teorik} saat</b></div>${rozet(k.teorik >= S0.teorik ? 'Tamamlandı' : 'Devam ediyor', k.teorik >= S0.teorik ? 'yesil' : 'mavi')}</div>
       ${MUFREDAT.map(([key, ad, saat, basliklar]) => { const okn = basliklar.filter((b, i) => (k.okunan || {})[key + '-' + (i + 1)]).length; return `<details class="og-konu"><summary><span><b>${e(ad)}</b><small>${ks[key]}/${saat} saat · ${okn}/${basliklar.length} konu okundu</small></span>${ilerleme(ks[key], saat, ks[key] >= saat ? 'yesil' : '')}</summary>
         <ul class="og-basliklar">${basliklar.map((b, i) => { const id = key + '-' + (i + 1), ok = (k.okunan || {})[id]; return `<li><button type="button" data-og-ders="${id}" class="${ok ? 'okundu' : ''}"><span>${ok ? '✓' : i + 1}</span>${e(b)}</button></li>`; }).join('')}</ul>
-        ${key === 'trafik' ? `<button class="dg dg-ana dg-kucuk" data-tehlike style="margin:0 6px 8px 0">${ik('uyari')}Tehlike algısı çalışması</button>` : ''}${key === 'motor' ? `<button class="dg dg-ana dg-kucuk" data-ikaz style="margin:0 6px 8px 0">${ik('uyari')}Gösterge paneli ve ikaz lambaları</button><button class="dg dg-cizgi dg-kucuk" data-motor4 style="margin:0 6px 8px 0">4 zamanlı motor</button><button class="dg dg-cizgi dg-kucuk" data-debriyaj style="margin:0 6px 8px 0">Debriyaj: stop ettirmeden kalkış</button>` : ''}<button class="dg dg-cizgi dg-kucuk" data-test-basla="konu" data-konu="${key}" data-og-sinava>${ik('sinav')}Bu konudan test çöz</button></details>`; }).join('')}
+        ${key === 'trafik' && ogrOzellik('tehlike') ? `<button class="dg dg-ana dg-kucuk" data-tehlike style="margin:0 6px 8px 0">${ik('uyari')}Tehlike algısı çalışması</button>` : ''}${key === 'motor' ? `${ogrOzellik('ikaz') ? `<button class="dg dg-ana dg-kucuk" data-ikaz style="margin:0 6px 8px 0">${ik('uyari')}Gösterge paneli ve ikaz lambaları</button>` : ''}${ogrOzellik('motor') ? '<button class="dg dg-cizgi dg-kucuk" data-motor4 style="margin:0 6px 8px 0">4 zamanlı motor</button><button class="dg dg-cizgi dg-kucuk" data-debriyaj style="margin:0 6px 8px 0">Debriyaj: stop ettirmeden kalkış</button>' : ''}` : ''}<button class="dg dg-cizgi dg-kucuk" data-test-basla="konu" data-konu="${key}" data-og-sinava>${ik('sinav')}Bu konudan test çöz</button></details>`; }).join('')}
       <p class="og-not" style="padding:0 2px">Konular MEB’in sürücü kursu teorik eğitim programına göredir (toplam ${MEB_TOPLAM} saat).</p></div>
-    ${SINIFLAR[k.sinif].direksiyon ? `<div class="kart og-kart"><div class="og-bas"><div><small>Direksiyon</small><b>${k.direksiyon}/${S0.direksiyon} ders</b></div>${ilerleme(k.direksiyon, S0.direksiyon, 'yesil')}</div>${direksiyonListesi}</div><div data-dir-yer></div>` : ''}
+    ${SINIFLAR[k.sinif].direksiyon ? `<div class="kart og-kart"><div class="og-bas"><div><small>Direksiyon</small><b>${k.direksiyon}/${S0.direksiyon} ders</b></div>${ilerleme(k.direksiyon, S0.direksiyon, 'yesil')}</div>${direksiyonListesi}</div>${ogrOzellik('direksiyon') ? '<div data-dir-yer></div>' : ''}` : ''}
     ${yapilan.length ? `<div class="kart og-kart"><div class="og-bas"><div><small>Gelişimin</small><b>Öğretmeninin verdiği puanlar</b></div><small>son ${Math.min(3, yapilan.length)} ders · 1–5</small></div>
       <div class="og-beceri">${son.map(([ad, v], i) => v == null ? '' : `<div><span>${e(ad)}</span><i><b style="width:${v / 5 * 100}%;background:${v < 3 ? 'var(--kirmizi)' : v < 3.8 ? 'var(--sari)' : 'var(--yesil)'}"></b></i><b class="mono">${v.toFixed(1).replace('.', ',')}</b>${once && once[i][1] != null ? `<small class="${v >= once[i][1] ? 'og-artis' : 'og-dusus'}">${v >= once[i][1] ? '↑' : '↓'}</small>` : '<small></small>'}</div>`).join('')}</div>
       ${notlar.map(d => `<blockquote class="og-alinti">“${e(d.not)}”<small>${e((egitmen(d.egitmen) || {}).ad || '')} · ${tarih(d.tarih)}</small></blockquote>`).join('')}
@@ -121,7 +121,7 @@ export function belgelerHtml(k) {
 /* ---------- konu anlatımı ---------- */
 // İçerik ayrı dosyada; yalnız açılınca yüklenir (açılış hızını etkilemesin)
 let dersYuk = null;
-const dersleriYukle = () => dersYuk || (dersYuk = import('./dersler.js?v=90').then(m => m.DERSLER).catch(() => ({})));
+const dersleriYukle = () => dersYuk || (dersYuk = import('./dersler.js?v=91').then(m => m.DERSLER).catch(() => ({})));
 async function dersAc(k, id, yenile) {
   const D = await dersleriYukle(), d = D[id], [key, no] = [id.replace(/-\d+$/, ''), +id.split('-').pop()], konu = MUFREDAT.find(x => x[0] === key), baslik = konu ? konu[3][no - 1] : id;
   const sonraki = konu && no < konu[3].length ? key + '-' + (no + 1) : null;
@@ -133,7 +133,7 @@ async function dersAc(k, id, yenile) {
         ${d.akilda && d.akilda.length ? `<div class="og-akilda"><b>Akılda kalsın</b><ul>${d.akilda.map(x => `<li>${e(x)}</li>`).join('')}</ul></div>` : ''}
         ${d.kaynak && d.kaynak.length ? `<p class="og-kaynak">Kaynak: ${d.kaynak.map(x => e(x).replace(/:?\s*(https?:\/\/[^\s<]+)/g, (m, u) => ` <a href="${u}" target="_blank" rel="noopener">${u.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}</a>`)).join(' · ')}</p>` : ''}`
       : `<p class="og-not">Bu konunun anlatımı hazırlanıyor.</p>`}</article>`,
-    altlik: `${'speechSynthesis' in window && d ? `<button class="dg dg-hafif" data-og-dinle style="margin-right:auto">${ik('ses')}Sesli dinle</button>` : ''}<button class="dg dg-cizgi" data-og-test="${key}">${ik('sinav')}Konu testi</button>${sonraki ? `<button class="dg dg-ana" data-og-sonraki="${sonraki}">Okudum, sonraki konu →</button>` : `<button class="dg dg-ana" data-og-bitir>Okudum</button>`}`,
+    altlik: `${ogrOzellik('sesli') && 'speechSynthesis' in window && d ? `<button class="dg dg-hafif" data-og-dinle style="margin-right:auto">${ik('ses')}Sesli dinle</button>` : ''}<button class="dg dg-cizgi" data-og-test="${key}">${ik('sinav')}Konu testi</button>${sonraki ? `<button class="dg dg-ana" data-og-sonraki="${sonraki}">Okudum, sonraki konu →</button>` : `<button class="dg dg-ana" data-og-bitir>Okudum</button>`}`,
     onAc(p) {
       // video kapağına tıklanınca oynatıcı yüklenir (sayfa hızlı açılır, YouTube izlemeden önce bağlanmaz)
       p.querySelectorAll('[data-og-video]').forEach(b => b.addEventListener('click', () => { const f = document.createElement('iframe'); f.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(b.dataset.ogVideo) + '?autoplay=1&rel=0'; f.title = b.getAttribute('aria-label'); f.allow = 'autoplay; encrypted-media; picture-in-picture'; f.allowFullscreen = true; f.referrerPolicy = 'strict-origin-when-cross-origin'; b.replaceWith(f); }));
@@ -158,16 +158,16 @@ async function dersAc(k, id, yenile) {
 
 /* ---------- olaylar ---------- */
 // direksiyon hazırlık bölümü ayrı dosyada (resmî form maddeleriyle); yer tutucu varsa yüklenir
-const dirYukle = () => import('./direksiyon.js?v=90');
+const dirYukle = () => import('./direksiyon.js?v=91');
 export function ogBagla(kap, k, yenile) {
   const yer = kap.querySelectorAll('[data-dir-yer]'); if (yer.length) dirYukle().then(m => yer.forEach(y => { y.innerHTML = m.direksiyonHtml(k); })).catch(() => { });
   kap.addEventListener('click', ev => {
     const t = ev.target;
     const dr = t.closest('[data-dir]'); if (dr) return dirYukle().then(m => m.direksiyonAc(k, dr.dataset.dir, yenile));
-    if (t.closest('[data-ikaz]')) return import('./ikaz.js?v=90').then(m => m.ikazAc());
-    if (t.closest('[data-motor4]')) return import('./motor.js?v=90').then(m => m.motorAc());
-    if (t.closest('[data-debriyaj]')) return import('./motor.js?v=90').then(m => m.debriyajAc());
-    if (t.closest('[data-tehlike]')) return import('./tehlike.js?v=90').then(m => m.tehlikeAc(k));
+    if (t.closest('[data-ikaz]')) return import('./ikaz.js?v=91').then(m => m.ikazAc());
+    if (t.closest('[data-motor4]')) return import('./motor.js?v=91').then(m => m.motorAc());
+    if (t.closest('[data-debriyaj]')) return import('./motor.js?v=91').then(m => m.debriyajAc());
+    if (t.closest('[data-tehlike]')) return import('./tehlike.js?v=91').then(m => m.tehlikeAc(k));
     if (t.closest('[data-kur-android]') && window.__kurulum) { window.__kurulum.prompt(); window.__kurulum.userChoice.finally(() => { window.__kurulum = null; yenile(); }); return; }
     const od = t.closest('[data-og-ders]'); if (od) return dersAc(k, od.dataset.ogDers, yenile);
     const yz = t.closest('[data-og-yildiz]'); if (yz) { const kart = yz.closest('.og-degerlendir'), n = +yz.dataset.ogYildiz; kart.dataset.puan = n; kart.querySelectorAll('[data-og-yildiz]').forEach(b => b.classList.toggle('secili', +b.dataset.ogYildiz <= n)); kart.querySelector('[data-og-puan]').disabled = false; return; }

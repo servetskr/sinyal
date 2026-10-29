@@ -593,6 +593,9 @@ export const egitmen = id => S.egitmenler.find(e => e.id === id) || ((S.cikanlar
 export const arac = id => S.araclar.find(a => a.id === id) || ((S.cikanlar || {}).arac || []).find(a => a.id === id);
 export function arsivle(tur, x) { S.cikanlar = S.cikanlar || { egitmen: [], arac: [] }; S.cikanlar[tur].push({ ...x, cikis: gun(0) }); }
 export const tamAd = k => k.ad + ' ' + k.soyad;
+// öğrenci uygulamasının ek özellikleri: kurs Ayarlar › Öğrenci uygulaması’ndan kapatabilir (varsayılan açık)
+export const OGR_OZELLIK = [['hazirlik', 'Sınava hazırlık puanı ve öneriler'], ['tekrar', 'Aralıklı tekrar (yanlış soruların yeniden sorulması)'], ['direksiyon', 'Direksiyon sınavına hazırlık (resmî form maddeleri, park ve dönüş şemaları)'], ['ikaz', 'Gösterge paneli ve ikaz lambaları'], ['motor', '4 zamanlı motor ve debriyaj denemesi'], ['tehlike', 'Tehlike algısı çalışması'], ['sesli', 'Konu anlatımlarını sesli dinleme']];
+export const ogrOzellik = ad => ((S.kurs || {}).ogrOzellik || {})[ad] !== false;
 // Mesaj hitabı: "Merhaba Elif Hanım," / "Merhaba Hüseyin Hoca,"; cinsiyeti bilinmeyen (aday vb.) için "Sayın Deniz Akın,"
 export function selam(x) {
   if (!x) return 'Merhaba,';

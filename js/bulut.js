@@ -1,8 +1,8 @@
 // Gerçek kurs hesabı: Google Firebase (Frankfurt). Giriş e-posta + şifreyle; kurs verisi Firestore'da
 // kurslar/{kurs}/v altında parça parça durur. Her kayıt ayrı alan olarak yazılır: iki kişi aynı anda
 // farklı kayıtları değiştirirse ikisi de korunur. Fotoğraf ve imzalar kurslar/{kurs}/dosyalar'da ayrı belge.
-import { FIREBASE } from './firebase-ayar.js?v=90';
-import { S, bulutVeri, bosVeri, kaydetDinle, kaydet, oturum, bulutKanca, makbuzSira, islem, iso, EVRAKLAR, gun, fark, tamAd } from './veri.js?v=90';
+import { FIREBASE } from './firebase-ayar.js?v=91';
+import { S, bulutVeri, bosVeri, kaydetDinle, kaydet, oturum, bulutKanca, makbuzSira, islem, iso, EVRAKLAR, gun, fark, tamAd } from './veri.js?v=91';
 
 const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
 const YEREL = 'sinyal-bulut';
@@ -368,7 +368,7 @@ async function makbuzDenetle() {
     for (const h of benim) {
       const m = makbuzSira(h.no); if (!m) { delete h.noGecici; continue; }
       const cakisan = S.hareket.some(x => x !== h && x.no === h.no);
-      if (cakisan) { const eski = h.no, n = await sayacAyir(m[0]); h.no = 'M' + m[0] + '-' + String(n).padStart(5, '0'); islem('Makbuz numarası değişti', eski + ' başka cihazda da verilmişti; yeni numara ' + h.no); import('./ui.js?v=90').then(m => m.bildir(`Makbuz ${eski} çevrimdışıyken verilmişti ve başka cihazdaki makbuzla çakıştı; yeni numarası ${h.no}. Makbuzu verdiyseniz yenisini yazdırın.`, 'uyari')); }
+      if (cakisan) { const eski = h.no, n = await sayacAyir(m[0]); h.no = 'M' + m[0] + '-' + String(n).padStart(5, '0'); islem('Makbuz numarası değişti', eski + ' başka cihazda da verilmişti; yeni numara ' + h.no); import('./ui.js?v=91').then(m => m.bildir(`Makbuz ${eski} çevrimdışıyken verilmişti ve başka cihazdaki makbuzla çakıştı; yeni numarası ${h.no}. Makbuzu verdiyseniz yenisini yazdırın.`, 'uyari')); }
       else await sayacAyir(m[0], m[1] - 1);
       delete h.noGecici;
     }
@@ -584,7 +584,7 @@ function ogrenciUygula(docId, g) {
     } else if (x.a === 'gonderimler' && y && !x.eski) {
       const m = { zaman: new Date().toISOString(), kime: String(y.kime || '').slice(0, 80), metin: String(y.metin || '').slice(0, 1000), tur: String(y.tur || 'Öğrenci').slice(0, 60) };
       S.gonderimler.unshift(m);
-      if (y.iletilecek && S.kurs.waApi) sahiplen('og|' + docId + '|' + x.id).then(ok => { if (ok) import('./ui.js?v=90').then(u => u.apiGonder(u.etiket(m.kime, y.rol || '') + m.metin)); });
+      if (y.iletilecek && S.kurs.waApi) sahiplen('og|' + docId + '|' + x.id).then(ok => { if (ok) import('./ui.js?v=91').then(u => u.apiGonder(u.etiket(m.kime, y.rol || '') + m.metin)); });
     }
   }
   if (notlar.length) islem('Öğrenci panelinden', tamAd(k) + ': ' + notlar.join(', '));
@@ -631,13 +631,13 @@ async function ogrenciGonder() {
   if (!d.length) return;
   tabanAl();
   const boyut = JSON.stringify(d).length;
-  if (boyut > 950000) { import('./ui.js?v=90').then(u => u.bildir('Gönderilen belge çok büyük; daha küçük bir fotoğraf dene', 'uyari')); return; }
+  if (boyut > 950000) { import('./ui.js?v=91').then(u => u.bildir('Gönderilen belge çok büyük; daha küçük bir fotoğraf dene', 'uyari')); return; }
   const { db, F } = fb;
   try {
     const ref = await F.addDoc(F.collection(db, 'kurslar', ogr.kurs, 'ogrenciGelen'), { kod: ogr.kod, kursiyer: S.kursiyerler[0].id, d, zaman: F.serverTimestamp() });
     ogr.bekleyen.push({ id: ref.id, t: Date.now(), d });
     try { localStorage.setItem('sinyal-ogr-bekleyen-' + ogr.kod, JSON.stringify(ogr.bekleyen.map(p => ({ ...p, d: p.d.map(x => x.v && x.v.length > 20000 ? { ...x, v: null, buyuk: true } : x).filter(x => !x.buyuk) })))); } catch (x) { }
-  } catch (x) { console.error(x); import('./ui.js?v=90').then(u => u.bildir('Kursa iletilemedi; internet bağlantını kontrol et', 'uyari')); }
+  } catch (x) { console.error(x); import('./ui.js?v=91').then(u => u.bildir('Kursa iletilemedi; internet bağlantını kontrol et', 'uyari')); }
 }
 export function ogrenciAyril() { try { localStorage.removeItem('sinyal-ogrenci'); } catch (x) { } }
 
