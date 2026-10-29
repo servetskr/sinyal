@@ -1,7 +1,7 @@
-import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas, sb, sbDers, sbSinav, gorunum, subede, SOZLESME_VARSAYILAN, satistaSiniflar, ayEkle, YONTEMLER, yontemAd, selam, kursAdi } from './veri.js?v=65';
-import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler, imzaAlani, tamTarih, yaziyla, belgeYazdir, kartFormu, kartBagla, kartDogrula, waAc, apiAcik, belgeWhatsApp } from './ui.js?v=65';
-import { yenile } from './app.js?v=65';
-import { siraliPencere } from './sayfalar5.js?v=65';
+import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas, sb, sbDers, sbSinav, gorunum, subede, SOZLESME_VARSAYILAN, satistaSiniflar, ayEkle, YONTEMLER, yontemAd, selam, kursAdi } from './veri.js?v=68';
+import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler, imzaAlani, tamTarih, yaziyla, belgeYazdir, kartFormu, kartBagla, kartDogrula, waAc, apiAcik, belgeWhatsApp } from './ui.js?v=68';
+import { yenile } from './app.js?v=68';
+import { siraliPencere } from './sayfalar5.js?v=68';
 
 /* ================= BELGELER VE ÇIKTILAR ================= */
 const gorunumSube = () => gorunum.sube;
@@ -153,7 +153,7 @@ export function sozlesmeImzalat(k) {
     onAc(d) {
       const ia = imzaAlani(d.querySelector('[data-imza]'));
       d.querySelector('[data-temizle]').addEventListener('click', () => ia.temizle());
-      d.querySelector('[data-uzaktan]').addEventListener('click', () => import('./imza.js?v=65').then(m => m.imzayaGonderPenceresi(k, 'sozlesme')));
+      d.querySelector('[data-uzaktan]').addEventListener('click', () => import('./imza.js?v=68').then(m => m.imzayaGonderPenceresi(k, 'sozlesme')));
       d.querySelector('[data-yazdir]').addEventListener('click', () => { belgeYazdir(belgeHtml('sozlesme', k.id) + '<div class="sayfa-sonu"></div>' + belgeHtml('sozlesme', k.id), 'Sözleşme · ' + tamAd(k)); islem('Sözleşme yazdırdı', tamAd(k)); kaydet(); bildir('İki nüsha yazdırıldı. İmzalı nüshayı teslim alınca Evraklar’da “İmzalı sözleşme”yi işaretleyin'); });
       d.querySelector('[data-imzala]').addEventListener('click', () => {
         if (ia.bos()) return bildir('Kursiyer imza alanına imzalasın', 'uyari');
@@ -404,6 +404,7 @@ export function guven() {
       <div class="kart"><div class="kart-bas"><h3>Kim neyi görür, ne yapar</h3></div><ul class="liste" style="margin-top:8px">
         ${madde('tamam', 'Her çalışana ayrı hesap', 'Her çalışan kendi e-postası ve şifresiyle girer; çalışan yalnız müdürün gönderdiği tek kullanımlık davet linkiyle katılır. Ayrılan çalışanın erişimi “Kaldır”la o anda kapanır.', 'Bugün')}
         ${madde('tamam', 'Yetkiye göre ekran', 'Ön büro maaşları ve kârlılığı görmez; öğretmen yalnız kendi derslerini ve öğrencilerini görür.', 'Bugün')}
+        ${madde('tamam', 'Öğrenci yalnız kendini görür', 'Öğrenciye kendine özel link gider; linkte yalnız kendi programı, dersleri, ödemeleri ve belgeleri durur, TC numarası maskelidir. Öğrencinin yaptıkları (evrak, ders alma, iptal) kursun ekranında denetlenip işlenir; ödeme ve evrak onayını değiştiremez.', 'Bugün')}
         ${madde('tamam', 'Hassas işlemde ikinci onay', 'TC kimlik numarasını tam göstermek gibi işlemler şifreyi yeniden ister; TC listelerde maskeli görünür.', 'Bugün')}
         ${madde('tamam', 'Kim ne yaptı, kayıtlı', 'Her işlem kullanıcı adı ve saatiyle işlem geçmişine yazılır; yanlış işlem geri alınabilir.', 'Bugün')}
         ${madde('tamam', 'Bırakılan ekran kapanır', `${dk} dakika işlem yapılmazsa oturum kendiliğinden kapanır (Ayarlar › Güvenlik).`, 'Bugün')}
@@ -412,9 +413,9 @@ export function guven() {
       <div class="kart"><div class="kart-bas"><h3>Saldırı ya da arıza olursa</h3></div><ul class="liste" style="margin-top:8px">
         ${madde('tamam', 'Şifreli bağlantı ve şifreli depolama', 'Ekranla sunucu arasındaki her şey şifreli (HTTPS) gider; veriler Google’ın sunucularında şifreli saklanır. Kursa üye olmayan hiçbir hesap kayıtları okuyamaz.', 'Bugün')}
         ${madde('tamam', 'İki cihaz aynı anda çalışabilir', 'Ön büro ve müdür aynı anda kayıt girse de iki değişiklik de korunur; ekranlar birkaç saniyede güncellenir.', 'Bugün')}
-        ${madde('bilgi', 'Her gece otomatik yedek', 'Veriler her gece ayrı bir yere yedeklenir; bir kayıt silinir ya da bozulursa önceki güne dönülebilir.', 'Kurulumda')}
-        ${madde('bilgi', 'Belgeler ayrı ve korumalı depoda', 'Sağlık raporu, adli sicil ve fotoğraflar yalnız yetkili kullanıcının açabildiği depoda durur.', 'Kurulumda')}
-        ${madde('bilgi', 'Erişim kayıtları sunucuda', 'Hangi hesabın hangi kayda ne zaman eriştiği sunucuda tutulur; kurs bilgisayarından silinemez.', 'Kurulumda')}
+        ${madde('tamam', 'Her gün otomatik yedek, iki ayrı yerde', 'Her gün ilk açılışta kursun bütün kayıtları kopyalanır: Google Firebase’de ve ayrıca Cloudflare’de 30 gün durur. Yedekler değiştirilemez, 30 günden önce kimse silemez; müdür tek tuşla istediği güne döner.', 'Bugün')}
+        ${madde('tamam', 'Belgeler ayrı ve korumalı', 'Öğrencinin telefonundan yüklediği sağlık raporu, adli sicil ve fotoğraflar ayrı belgelerde durur; yalnız kursun kullanıcıları açabilir, her açılış kayda geçer.', 'Bugün')}
+        ${madde('tamam', 'İşlem kaydı sunucuda, silinemez', 'Giriş, çıkış, her değişiklik ve belge açma kim yaptı, ne zaman yaptı bilgisiyle sunucuya yazılır; müdür dahil kimse değiştiremez ya da silemez.', 'Bugün')}
         ${madde('tamam', 'USB’ye yedek, uzaktan bağlanma yok', 'Yedek almak için flaş bellek, destek için bilgisayarınıza uzaktan bağlanma programı gerekmez.', '')}
       </ul></div>
     </div>

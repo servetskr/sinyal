@@ -1,6 +1,6 @@
 // Mesaj merkezi: grup ya da tek tek seçilen kişilere kişiye özel WhatsApp mesajı, planlı gönderim, iletildi/okundu takibi
-import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, kalanBorc, gecikenler, gecikenTutar, eksikEvrak, sonrakiDers, risk, islem, sb, aktifSiniflar, SINIFLAR, selam, kursAdi, adEk, yerelZaman } from './veri.js?v=65';
-import { e, tl, ik, rozet, bos, pencere, kapatPencere, bildir, tarihUzun, apiAcik, apiGonder, etiket, waSirali, ziyaretci, isaret } from './ui.js?v=65';
+import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, kalanBorc, gecikenler, gecikenTutar, eksikEvrak, sonrakiDers, risk, islem, sb, aktifSiniflar, SINIFLAR, selam, kursAdi, adEk, yerelZaman, bulutKanca } from './veri.js?v=68';
+import { e, tl, ik, rozet, bos, pencere, kapatPencere, bildir, tarihUzun, apiAcik, apiGonder, etiket, waSirali, ziyaretci, isaret } from './ui.js?v=68';
 
 const durum = { grup: 'aktif', sinif: '', ogretmen: '', secili: null, sira: 0, zaman: 'simdi', metin: null, sablon: '', ek: null, cevapIste: false };
 // Ekli dosyalar localStorage’a yazılmaz (büyük olabilir); gönderim süresince bellekte durur
@@ -125,7 +125,7 @@ async function gonder(c) {
 export async function planlilariGonder() {
   if (!apiAcik()) return 0;
   const simdi = yerelZaman().slice(0, 16), l = (S.kampanyalar || []).filter(c => c.durum === 'planlandı' && c.planli <= simdi);
-  for (const c of l) { c.durum = 'gönderiliyor'; kaydet(); await gonder(c); islem('Planlı mesaj gönderildi', c.baslik + ' · ' + c.kisiler.length + ' kişi'); }
+  for (const c of l) { if (bulutKanca.sahiplen && !(await bulutKanca.sahiplen('k|' + c.id))) continue; c.durum = 'gönderiliyor'; kaydet(); await gonder(c); islem('Planlı mesaj gönderildi', c.baslik + ' · ' + c.kisiler.length + ' kişi'); }
   return l.length;
 }
 

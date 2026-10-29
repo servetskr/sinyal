@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk } from './veri.js?v=65';
+import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet } from './veri.js?v=68';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -295,6 +295,8 @@ export function waAc(tel, metin, kanal = 'WhatsApp', ad = '', elle = false, rol 
 export function waSirali(liste, baslik, { kanal = 'WhatsApp', bitince, aciklama = '', sessiz = false } = {}) {
   liste = liste.filter(x => x && x.metin);
   if (!liste.length) { if (bitince) bitince(); return; }
+  // öğrencinin kendi telefonu: bilgilendirmeler kursa iletilir, kurs cihazı gönderir (öğrencinin telefonundan kimseye mesaj açılmaz)
+  if (oturum.kullanici && oturum.kullanici.rol === 'ogrenci') { liste.forEach(x => S.gonderimler.unshift({ zaman: new Date().toISOString(), kime: x.ad, metin: x.metin, tur: x.tur || baslik, rol: x.rol || '', iletilecek: true })); kaydet(); if (bitince) bitince(); return; }
   if (ziyaretci()) { liste.forEach(x => kayitDus(x.ad, x.metin, x.tur || baslik)); return onizle(liste, baslik, bitince); }
   if (kanal === 'WhatsApp' && apiAcik() && sessiz) {
     (async () => { let ok = 0, son = ''; for (const x of liste) { const s = await apiGonder(apiMetin(x.metin, x.ad, x.rol)); if (s.ok) { ok++; kayitDus(x.ad, x.metin, x.tur || baslik); } else son = s.hata; } bildir(ok === liste.length ? `WhatsApp bildirimi gitti: ${liste.map(x => (x.rol || x.ad).toLocaleLowerCase('tr')).join(', ')} ✓` : `${liste.length - ok} bildirim gitmedi: ${son}`, ok === liste.length ? 'wp' : 'uyari'); if (bitince) bitince(); })();
@@ -426,7 +428,7 @@ function sifreSor(neden, ok) {
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Onayla</button>`,
     onAc(d) {
       const inp = d.querySelector('[data-sifre-tekrar]'), btn = d.querySelector('[data-k]');
-      const dene = () => { btn.disabled = true; import('./bulut.js?v=65').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
+      const dene = () => { btn.disabled = true; import('./bulut.js?v=68').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
       btn.addEventListener('click', dene); inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') dene(); }); setTimeout(() => inp.focus(), 50);
     },
   });

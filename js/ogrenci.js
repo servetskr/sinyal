@@ -1,7 +1,7 @@
 // Öğrenci paneli sekmeleri: program, dersler (teorik konular + direksiyon + gelişim), sınavlar, ödemeler, belgeler
-import { S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen } from './veri.js?v=65';
-import { e, tl, ik, rozet, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, isaret, belgeYazdir } from './ui.js?v=65';
-import { belgeHtml } from './sayfalar3.js?v=65';
+import { S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen } from './veri.js?v=68';
+import { e, tl, ik, rozet, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, isaret, belgeYazdir, fotoKucult } from './ui.js?v=68';
+import { belgeHtml } from './sayfalar3.js?v=68';
 
 // MEB teorik eğitim programı: konu, ders saati, başlıklar (anahtarlar soru bankasıyla aynı)
 export const MUFREDAT = [
@@ -118,7 +118,7 @@ export function belgelerHtml(k) {
 /* ---------- konu anlatımı ---------- */
 // İçerik ayrı dosyada; yalnız açılınca yüklenir (açılış hızını etkilemesin)
 let dersYuk = null;
-const dersleriYukle = () => dersYuk || (dersYuk = import('./dersler.js?v=65').then(m => m.DERSLER).catch(() => ({})));
+const dersleriYukle = () => dersYuk || (dersYuk = import('./dersler.js?v=68').then(m => m.DERSLER).catch(() => ({})));
 async function dersAc(k, id, yenile) {
   const D = await dersleriYukle(), d = D[id], [key, no] = [id.replace(/-\d+$/, ''), +id.split('-').pop()], konu = MUFREDAT.find(x => x[0] === key), baslik = konu ? konu[3][no - 1] : id;
   const sonraki = konu && no < konu[3].length ? key + '-' + (no + 1) : null;
@@ -158,10 +158,18 @@ export function ogBagla(kap, k, yenile) {
   kap.addEventListener('change', ev => {
     const inp = ev.target.closest('[data-og-evrak]'); if (!inp || !inp.files[0]) return;
     const f = inp.files[0], key = inp.dataset.ogEvrak, ad = (EVRAKLAR.find(x => x[0] === key) || [0, key])[1];
-    if (f.size > 8 * 1024 * 1024) return bildir('Dosya 8 MB’tan büyük olamaz', 'uyari');
-    k.evrakYuklenen = k.evrakYuklenen || {}; k.evrakYuklenen[key] = { tarih: gun(0), dosya: f.name, boyut: f.size };
-    islem('Öğrenci evrak yükledi', tamAd(k) + ' · ' + ad); gonderimEkle(S.kurs.ad, tamAd(k) + ' “' + ad + '” belgesini yükledi; kontrol bekliyor', 'Öğrenci evrakı'); kaydet();
-    bildir('Belgen kursa gönderildi; kontrol edilince tamamlanır'); yenile();
+    const pdf = f.type === 'application/pdf' || /\.pdf$/i.test(f.name), resim = /^image\//.test(f.type);
+    if (!pdf && !resim) return bildir('Belgenin fotoğrafını ya da PDF’ini yükle', 'uyari');
+    if (resim && f.size > 20 * 1024 * 1024) return bildir('Fotoğraf 20 MB’tan büyük olamaz', 'uyari');
+    if (pdf && f.size > 700 * 1024) return bildir('PDF 700 KB’tan büyük; belgenin fotoğrafını çekip yükle', 'uyari');
+    bildir('Belge hazırlanıyor…');
+    // fotoğraf okunaklı kalacak boyuta küçültülür (~200 KB); PDF olduğu gibi saklanır
+    const oku = resim ? fotoKucult(f, 1600) : new Promise((coz, red) => { const r = new FileReader(); r.onload = () => coz(r.result); r.onerror = red; r.readAsDataURL(f); });
+    oku.then(veri => {
+      k.evrakYuklenen = k.evrakYuklenen || {}; k.evrakYuklenen[key] = { tarih: gun(0), dosya: f.name, boyut: veri.length, tur: pdf ? 'pdf' : 'resim', veri };
+      islem('Öğrenci evrak yükledi', tamAd(k) + ' · ' + ad); gonderimEkle(S.kurs.ad, tamAd(k) + ' “' + ad + '” belgesini yükledi; kontrol bekliyor', 'Öğrenci evrakı'); kaydet();
+      bildir('Belgen kursa gönderildi; kontrol edilince tamamlanır'); yenile();
+    }).catch(() => bildir('Dosya okunamadı; tekrar dene', 'uyari'));
   });
 }
 function belgeGoster(tur, id, hid, baslik) {

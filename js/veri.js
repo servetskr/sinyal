@@ -483,7 +483,22 @@ function goc(o) {
   return o;
 }
 // Yeni tahsilata kalıcı makbuz numarası
-export function makbuzNoVer(h) { if (h.no || h.tur !== 'Gelir') return h.no; const yil = h.tarih.slice(0, 4); S.sayac = S.sayac || {}; S.sayac['m' + yil] = (S.sayac['m' + yil] || 0) + 1; h.no = 'M' + yil + '-' + String(S.sayac['m' + yil]).padStart(5, '0'); return h.no; }
+// Bulut kancaları (bulut.js doldurur; demoda boş): makbuz numarası, sunucu işlem kaydı, zamanlı mesajın tek cihazdan gitmesi
+export const bulutKanca = { makbuzNo: null, kayit: null, sahiplen: null, cihaz: null };
+const makbuzBicim = (yil, n) => 'M' + yil + '-' + String(n).padStart(5, '0');
+export const makbuzSira = (no) => { const m = /^M(\d{4})-(\d+)$/.exec(no || ''); return m ? [m[1], +m[2]] : null; };
+export function makbuzNoVer(h) {
+  if (h.no || h.tur !== 'Gelir') return h.no;
+  const yil = h.tarih.slice(0, 4);
+  // gerçek kurs: numara sunucudaki sayaçtan ayrılır, iki cihaz aynı numarayı veremez
+  const n = bulutKanca.makbuzNo && bulutKanca.makbuzNo(yil);
+  if (n) { h.no = makbuzBicim(yil, n); return h.no; }
+  S.sayac = S.sayac || {};
+  const enBuyuk = Math.max(S.sayac['m' + yil] || 0, ...(S.hareket || []).map(x => { const m = makbuzSira(x.no); return m && m[0] === yil ? m[1] : 0; }));
+  S.sayac['m' + yil] = enBuyuk + 1; h.no = makbuzBicim(yil, enBuyuk + 1);
+  if (bulutKanca.makbuzNo) h.noGecici = bulutKanca.cihaz || true;  // çevrimdışı verildi; bağlantı gelince çakışma denetlenir
+  return h.no;
+}
 // Sınıf ayarlarını kalıcı yaz
 export function sinifKaydet(k, alan) { Object.assign(SINIFLAR[k], alan); S.kurs.siniflar[k] = { ...(S.kurs.siniflar[k] || {}), ...alan }; }
 function subeTamamla() {
@@ -631,7 +646,7 @@ export function tcGecerli(tc) {
 export const oturum = { kullanici: null };
 try { const o = sessionStorage.getItem('sinyal-oturum'); if (o) oturum.kullanici = JSON.parse(o); } catch (x) { }
 export const yerelZaman = () => { const d = new Date(); return iso(d) + 'T' + d.toTimeString().slice(0, 5); };
-export function islem(ne, ayrinti = '') { S.islemler.unshift({ zaman: yerelZaman(), kim: oturum.kullanici ? oturum.kullanici.ad : 'Sistem', ne, ayrinti }); }
+export function islem(ne, ayrinti = '') { const x = { zaman: yerelZaman(), kim: oturum.kullanici ? oturum.kullanici.ad : 'Sistem', ne, ayrinti }; S.islemler.unshift(x); if (S.islemler.length > 3000) S.islemler.length = 3000; if (bulutKanca.kayit) bulutKanca.kayit(x); }
 // geri alma: son değişiklikten önceki durumun anlık görüntüsü
 let anlik = null;
 export function geriAlNoktasi() { anlik = JSON.stringify(S); }

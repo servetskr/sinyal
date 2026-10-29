@@ -1,7 +1,7 @@
-import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube} from './veri.js?v=65';
-import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor } from './ui.js?v=65';
-import { yenile } from './app.js?v=65';
-import * as B from './bulut.js?v=65';
+import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube} from './veri.js?v=68';
+import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor } from './ui.js?v=68';
+import { yenile } from './app.js?v=68';
+import * as B from './bulut.js?v=68';
 
 /* ================= MEB KURALLARI: KAYNAK VE SORUMLULUK ================= */
 const MTSK = 'MTSK Yönetmeliği (ÖÖKGM, Ocak 2025 metni)';
@@ -44,6 +44,7 @@ function kurallarSekme() {
 const cihazAdi = () => { const u = navigator.userAgent; const t = /Edg\//.test(u) ? 'Edge' : /Chrome\//.test(u) ? 'Chrome' : /Safari\//.test(u) ? 'Safari' : /Firefox\//.test(u) ? 'Firefox' : 'Tarayıcı'; const s = /iPhone|iPad/.test(u) ? 'iPhone' : /Android/.test(u) ? 'Android' : /Mac/.test(u) ? 'Mac' : /Windows/.test(u) ? 'Windows' : ''; return t + (s ? ' · ' + s : ''); };
 function guvenlikSekme() {
   const g = S.guvenlik;
+  if (B.bulutta()) return bulutGuvenlik(g);
   const anah = (yol, deger, b, a, kilit) => `<li style="align-items:flex-start"><span class="anahtar" style="margin-top:2px"><input type="checkbox" data-guv="${yol}" ${deger ? 'checked' : ''} ${kilit ? 'disabled' : ''} aria-label="${e(b)}"><i></i></span><div><b style="color:var(--murekkep);display:block">${b}</b><small style="color:var(--metin);font-size:13.5px">${a}</small></div></li>`;
   return `<div class="izgara iz-2">
     <div class="kart"><div class="kart-bas"><h3>Giriş</h3></div><ul class="liste" style="margin-top:8px">
@@ -55,8 +56,40 @@ function guvenlikSekme() {
     <div class="kart"><div class="kart-bas"><h3>Bu cihazdaki oturum</h3></div><ul class="liste" style="margin-top:8px"><li><div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(oturum.kullanici ? oturum.kullanici.ad : '')}</b><small style="display:block;color:var(--soluk)">${e(cihazAdi())} · hareketsiz ${g.oturumDk < 60 ? g.oturumDk + ' dk' : g.oturumDk / 60 + ' saat'} sonra kapanır</small></div>${rozet('Bu cihaz', 'yesil')}</li></ul>
       <p style="font-size:13px;color:var(--soluk);padding:0 20px 8px">Diğer cihazlardaki oturumları görme ve uzaktan kapatma sunucu kurulumuyla açılır.</p>
       <div class="kart-bas" style="padding-top:6px"><h3>Kişisel veri erişimi</h3></div><div class="kart-govde"><p style="font-size:14px">TC görüntüleme, veri indirme ve evrak açma kullanıcı adıyla kaydedilir. <a href="#/ayarlar/gecmis" style="color:var(--levha);font-weight:700">İşlem geçmişi</a></p>
-      <p style="font-size:14px;margin-top:8px">Veriler Türkiye’deki sunucuda, diskte şifreli tutulur; her gece yedeklenir, yedekler 30 gün saklanır.</p></div></div>
+      <p style="font-size:14px;margin-top:8px">Bu demoda veriler yalnız bu tarayıcıda durur. Kurs hesabında veriler Google Firebase’de (Frankfurt) şifreli tutulur; her gün yedeklenir, yedekler iki ayrı yerde 30 gün saklanır.</p></div></div>
   </div>`;
+}
+
+// Gerçek kurs hesabının güvenlik ayarları ve yedekleri
+function bulutGuvenlik(g) {
+  const mudur = oturum.kullanici.rol === 'mudur';
+  const satir = (t, b, a) => `<li style="align-items:flex-start">${isaret(t, 22)}<div><b style="color:var(--murekkep);display:block">${b}</b><small style="color:var(--metin);font-size:13.5px">${a}</small></div></li>`;
+  return `<div class="izgara iz-2">
+    <div class="kart"><div class="kart-bas"><h3>Giriş</h3></div><ul class="liste" style="margin-top:8px">
+      ${satir('tamam', 'Herkese ayrı e-posta ve şifre', 'Şifreler Google’ın giriş sisteminde tutulur; Sinyal şifreyi görmez. Çok sayıda hatalı denemede giriş geçici olarak kilitlenir.')}
+      <li style="align-items:flex-start"><span class="anahtar" style="margin-top:2px"><input type="checkbox" data-guv="hassasOnay" ${g.hassasOnay ? 'checked' : ''} aria-label="Hassas işlemde şifreyi tekrar sor"><i></i></span><div><b style="color:var(--murekkep);display:block">Hassas işlemde şifreyi tekrar sor</b><small style="color:var(--metin);font-size:13.5px">TC’yi tam göstermek, iade yapmak, kullanıcı kaldırmak ve yedekten geri dönmek için.</small></div></li>
+      ${satir('bilgi', 'İki adımlı giriş · henüz yok', 'Telefona doğrulama kodu ücretli Google planıyla açılabiliyor; şu an kapalı.')}
+    </ul><div class="kart-govde" style="border-top:1px solid var(--cizgi-2)"><b style="color:var(--murekkep)">Hareketsiz kalınca oturumu kapat</b><div class="secim" style="margin-top:8px">${[15, 30, 60, 240].map(d => `<label><input type="radio" name="oturum" value="${d}" data-oturum ${g.oturumDk == d ? 'checked' : ''}><span>${d < 60 ? d + ' dk' : d / 60 + ' saat'}</span></label>`).join('')}</div></div></div>
+    <div class="kart"><div class="kart-bas"><h3>Yedekler</h3><small>Her gün ilk açılışta otomatik</small>${mudur ? `<div class="sag"><button class="dg dg-cizgi dg-kucuk" data-yedek-al>${ik('indir')}Şimdi yedek al</button></div>` : ''}</div>
+      <div class="kart-govde"><p style="font-size:14px">Kursun bütün kayıtlarının günlük kopyası iki ayrı yerde 30 gün saklanır: Google Firebase’de ve Cloudflare’de. Yedekler değiştirilemez; 30 günden önce kimse silemez.</p></div>
+      ${mudur ? '<div data-yedek-liste><p class="kart-govde" style="color:var(--soluk);font-size:14px">Yedekler yükleniyor…</p></div>' : '<p class="kart-govde" style="color:var(--soluk);font-size:14px">Yedek listesini ve geri dönüşü kurs müdürü görür.</p>'}</div>
+  </div>
+  <div class="ara-bosluk"></div>
+  <div class="kart"><div class="kart-bas"><h3>İşlem kaydı</h3></div><div class="kart-govde"><p style="font-size:14px">Giriş, çıkış ve her değişiklik kim yaptı, ne zaman yaptı bilgisiyle sunucuya yazılır. Bu kayıt yalnız eklenebilir: kurs müdürü dahil kimse değiştiremez ya da silemez. <a href="#/ayarlar/gecmis" style="color:var(--levha);font-weight:700">İşlem geçmişini aç</a></p></div></div>`;
+}
+function yedekListesi(k) {
+  const yer = k.querySelector('[data-yedek-liste]'); if (!yer) return;
+  B.yedekler().then(l => {
+    yedekCache = l;
+    yer.innerHTML = l.length ? `<ul class="liste">${l.slice(0, 31).map(y => `<li><div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${tarih(y.tarih)}${y.etiket ? ' · ' + (y.etiket === 'geri-donus-oncesi' ? 'geri dönüşten önce' : 'elle alındı') : ''}</b><small style="display:block;color:var(--soluk)">${y.olusturma ? y.olusturma.toTimeString().slice(0, 5) : ''} · ${e(y.kim || '')} · ${y.ogrenci || 0} öğrenci, ${y.hareket || 0} kasa kaydı · ${Math.max(1, Math.round(y.boyut / 1024))} KB${y.dis ? ' · Cloudflare’de de var' : ''}</small></div><span class="sag" style="gap:6px"><button class="dg dg-hafif dg-kucuk" data-yedek-indir="${e(y.id)}">İndir</button><button class="dg dg-hafif dg-kucuk" data-yedek-don="${e(y.id)}">Bu ana dön</button></span></li>`).join('')}</ul>` : `<p class="kart-govde" style="color:var(--soluk);font-size:14px">Henüz yedek yok. İlk yedek bugün birkaç dakika içinde kendiliğinden alınır.</p>`;
+  }).catch(x => { yer.innerHTML = `<p class="kart-govde" style="color:var(--kirmizi);font-size:14px">${e(B.hataMetni(x))}</p>`; });
+}
+let yedekCache = [];
+function sunucuKaydi(k) {
+  const yer = k.querySelector('[data-sunucu-kayit]'); if (!yer) return;
+  B.kayitlar(300).then(l => {
+    yer.innerHTML = `<div class="tablo-kap" style="margin-top:10px"><table class="tablo tablo-mobil"><thead><tr><th>Zaman</th><th>Kullanıcı</th><th>İşlem</th><th>Ayrıntı</th></tr></thead><tbody>${l.map(x => `<tr><td class="mono m-gizle">${x.zaman ? x.zaman.toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '…'}</td><td><b style="color:var(--murekkep)">${e(x.ad)}</b></td><td>${e(x.ne)}</td><td class="m-tam" style="color:var(--metin)">${e(x.ayrinti)}</td></tr>`).join('') || '<tr><td colspan="4">Henüz kayıt yok</td></tr>'}</tbody></table></div>`;
+  }).catch(x => { yer.innerHTML = `<p class="kart-govde" style="color:var(--soluk);font-size:14px">${oturum.kullanici.rol === 'mudur' ? e(B.hataMetni(x)) : 'Sunucu kaydını kurs müdürü görür.'}</p>`; });
 }
 
 /* ================= ENTEGRASYONLAR: MUHASEBE, E-ARŞİV, POS, PERSONEL ================= */
@@ -388,7 +421,7 @@ function sozlesmeSekme() {
 }
 export const AYAR_SEKMELERI = { kullanici: kullaniciSekme, sozlesme: sozlesmeSekme, subeler: subelerSekme, kurallar: kurallarSekme, guvenlik: guvenlikSekme, entegrasyon: entegrasyonSekme, aktarim: aktarimSekme, gorunum: gorunumSekme };
 export function ayarBaglan(k) {
-  davetListesi(k);
+  davetListesi(k); yedekListesi(k); sunucuKaydi(k);
   k.addEventListener('change', ev => {
     const t = ev.target;
     if (t.matches('[data-uye-rol]')) { const u = S.kullanicilar.find(x => x.id === t.dataset.uyeRol); B.uyeGuncelle(u.id, { rol: t.value }).then(() => { islem('Rol değiştirdi', u.ad + ' · ' + ROL[t.value]); kaydet(); bildir(u.ad + ' artık ' + ROL[t.value]); }).catch(x => { bildir(B.hataMetni(x), 'uyari'); yenile(); }); return; }
@@ -427,6 +460,9 @@ export function ayarBaglan(k) {
     const t = ev.target;
     if (t.closest('[data-kul-ekle]')) return kullaniciFormu();
     if (t.closest('[data-davet]')) return davetFormu();
+    if (t.closest('[data-yedek-al]')) { const b = t.closest('[data-yedek-al]'); b.disabled = true; B.yedekAl('elle').then(() => { islem('Elle yedek aldı'); kaydet(); bildir('Yedek alındı'); yedekListesi(k); }).catch(x => bildir(B.hataMetni(x), 'uyari')).finally(() => { b.disabled = false; }); return; }
+    const yi = t.closest('[data-yedek-indir]'); if (yi) { const y = yedekCache.find(x => x.id === yi.dataset.yedekIndir); yi.disabled = true; B.yedekOku(y).then(v => { B.yedekIndir(v, 'sinyal-yedek-' + y.id + '.json'); islem('Yedek indirdi', y.id); kaydet(); }).catch(x => bildir(B.hataMetni(x), 'uyari')).finally(() => { yi.disabled = false; }); return; }
+    const yd = t.closest('[data-yedek-don]'); if (yd) { const y = yedekCache.find(x => x.id === yd.dataset.yedekDon); return pencere({ baslik: tarih(y.tarih) + ' yedeğine dönülsün mü?', icerik: `<p>Bütün kayıtlar (öğrenciler, dersler, kasa, ayarlar) bu yedekteki hâline döner. Yedekten sonra girilen kayıtlar kaybolur.</p><p style="margin-top:8px">Dönmeden önce şimdiki hâlin de yedeği alınır; yanlışlıkla döndüyseniz o yedekle geri gelebilirsiniz.</p>`, altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Bu ana dön</button>', onAc(d) { d.querySelector('[data-k]').addEventListener('click', () => pinSor('Yedekten geri dönmek').then(onay => { if (!onay) return; const b = d.querySelector('[data-k]'); if (b) b.disabled = true; bildir('Yedek okunuyor ve geri yükleniyor…'); B.geriYukle(y).then(() => { kapatPencere(); bildir(tarih(y.tarih) + ' yedeğine dönüldü'); yenile(); }).catch(x => bildir(B.hataMetni(x), 'uyari')); })); } }); }
     const dk = t.closest('[data-davet-kopya]'); if (dk) { const l = B.davetLinki(B.bulut.kurs, dk.dataset.davetKopya); (navigator.clipboard ? navigator.clipboard.writeText(l) : Promise.reject()).then(() => bildir('Link kopyalandı'), () => bildir(l)); return; }
     const ds = t.closest('[data-davet-sil]'); if (ds) { B.davetSil(ds.dataset.davetSil).then(() => { bildir('Davet iptal edildi'); davetListesi(k); }).catch(x => bildir(B.hataMetni(x), 'uyari')); return; }
     const uc = t.closest('[data-uye-cikar]'); if (uc) { const u = S.kullanicilar.find(x => x.id === uc.dataset.uyeCikar); return pencere({ baslik: u.ad + ' kaldırılsın mı?', icerik: '<p>Bu kişinin erişimi hemen kapanır. Yaptığı işlemler geçmişte kalır.</p>', altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Kaldır</button>', onAc(d) { d.querySelector('[data-k]').addEventListener('click', () => pinSor(u.ad + ' kullanıcısını kaldırmak').then(onay => { if (!onay) return; B.uyeCikar(u.id).then(() => { islem('Kullanıcı kaldırdı', u.ad); kaydet(); kapatPencere(); bildir(u.ad + ' kaldırıldı'); }).catch(x => bildir(B.hataMetni(x), 'uyari')); })); } }); }
@@ -436,7 +472,7 @@ export function ayarBaglan(k) {
     if (t.closest('[data-sozlesme-varsayilan]')) { S.kurs.sozlesme = null; islem('Sözleşmeyi varsayılana döndürdü'); kaydet(); bildir('Varsayılan metne dönüldü'); return yenile(); }
     if (t.closest('[data-sube-ekle]')) { const n = S.subeler.length + 1; S.subeler.push({ id: 's' + Date.now(), ad: 'Yeni şube ' + n, semt: '', kurumKodu: '', mudur: '', mebbis: '' }); islem('Şube ekledi'); kaydet(); bildir('Şube eklendi; kurum kodunu ve müdürünü yazın'); yenile(); }
     if (t.closest('[data-kural-onay]')) { S.kurs.kuralOnay = { kim: oturum.kullanici ? oturum.kullanici.ad : '', tarih: gun(0) }; islem('Kural değerlerini onayladı'); kaydet(); bildir('Kural değerleri onaylandı'); yenile(); }
-    const bo = t.closest('[data-belge-ac]'); if (bo) import('./sayfalar3.js?v=65').then(m => m.belgeAc(bo.dataset.belgeAc));
+    const bo = t.closest('[data-belge-ac]'); if (bo) import('./sayfalar3.js?v=68').then(m => m.belgeAc(bo.dataset.belgeAc));
     const ok = t.closest('[data-oturum-kapat]'); if (ok) { const o = S.guvenlik.oturumlar.splice(+ok.dataset.oturumKapat, 1)[0]; islem('Oturumu kapattırdı', o.kim + ' · ' + o.cihaz); kaydet(); bildir(o.kim + ' · ' + o.cihaz + ' oturumu kapatıldı'); yenile(); }
     const fs = t.closest('[data-fis]'); if (fs) { const n = +fs.dataset.fis, d = new Date(BUGUN); d.setMonth(d.getMonth() - n); csvIndir(`muhasebe-fisleri-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}.csv`, muhasebeFisi(n)); islem('Muhasebe fişlerini indirdi'); kaydet(); }
     if (t.closest('[data-parasut]')) pencere({ baslik: 'Paraşüt · bağlantı gerekli', icerik: `<div class="ipucu uyari" style="margin-bottom:12px">${isaret('uyari', 22)}<span>Paraşüt bağlantısı için kursun Paraşüt hesabından alınan API anahtarı gerekir. Anahtar girilene kadar tahsilatlar Paraşüt’e aktarılmaz.</span></div><p style="font-size:14.5px">Bu arada aylık muhasebe fişini CSV olarak indirip Paraşüt’e veya muhasebecinize yükleyebilirsiniz; fişte her tahsilat, gider ve iade ayrı satırdır.</p>`, altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-pfis>Bu ayın fişini indir</button>', onAc(d) { d.querySelector('[data-pfis]').addEventListener('click', () => { const d0 = new Date(BUGUN); csvIndir(`muhasebe-fisleri-${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}.csv`, muhasebeFisi(0)); islem('Muhasebe fişlerini indirdi'); kaydet(); kapatPencere(); }); } });
