@@ -1,7 +1,8 @@
-import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube} from './veri.js?v=91';
-import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor } from './ui.js?v=91';
-import { yenile } from './app.js?v=91';
-import * as B from './bulut.js?v=91';
+import * as EK from './eklenti.js?v=92';
+import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube} from './veri.js?v=92';
+import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor } from './ui.js?v=92';
+import { yenile } from './app.js?v=92';
+import * as B from './bulut.js?v=92';
 
 /* ================= MEB KURALLARI: KAYNAK VE SORUMLULUK ================= */
 const MTSK = 'MTSK Yönetmeliği (ÖÖKGM, Ocak 2025 metni)';
@@ -31,8 +32,8 @@ function kurallarSekme() {
     <div style="display:flex;gap:8px;flex-wrap:wrap">${K.kuralOnay ? `<span class="rozet rozet-yesil" style="height:34px;display:inline-flex;align-items:center">Değerleri ${e(K.kuralOnay.kim)} onayladı · ${tarih(K.kuralOnay.tarih)}</span>` : `<button class="dg dg-ana" data-kural-onay>Değerleri kontrol ettim, onaylıyorum</button>`}<button class="dg dg-cizgi" data-belge-ac="hizmet">Sözleşmedeki maddeyi gör</button></div>
   </div></div>
   <div class="ara-bosluk"></div>
-  <div class="kart"><div class="kart-bas"><h3>MEBBİS’e giriş yöntemi</h3></div><div class="kart-govde"><div class="secim">${[['sirali', 'Sıralı giriş (şifre gerekmez)'], ['arac', 'Tek tuş aktarımı (MEBBİS Aracı)']].map(([v, t]) => `<label><input type="radio" name="mebyontem" value="${v}" data-meb-yontem ${(K.mebYontem || 'sirali') === v ? 'checked' : ''}><span>${t}</span></label>`).join('')}</div>
-    <p style="font-size:13.5px;color:var(--soluk);margin-top:10px">${K.mebYontem === 'arac' && S.mebArac ? `Araç: ${e(S.mebArac.bilgisayar)} · ${e(S.mebArac.onay.kim)} ${tarih(S.mebArac.onay.tarih)} tarihinde uyarıyı onaylayarak açtı.` : 'Sıralı girişte MEBBİS’e kurs yetkilisi kendi oturumunda girer; Sinyal yalnızca hazırlar ve kopyalatır.'}</p>
+  <div class="kart"><div class="kart-bas"><h3>MEBBİS’e giriş yöntemi</h3></div><div class="kart-govde"><div class="secim">${[['sirali', 'Sıralı giriş (panodan kopyala, yapıştır)'], ['arac', 'MEBBİS Yardımcısı (Chrome eklentisi)']].map(([v, t]) => `<label><input type="radio" name="mebyontem" value="${v}" data-meb-yontem ${(K.mebYontem || 'sirali') === v ? 'checked' : ''}><span>${t}</span></label>`).join('')}</div>
+    <p style="font-size:13.5px;color:var(--soluk);margin-top:10px">${K.mebYontem === 'arac' ? (mebAracHazir() ? `Yardımcı bu tarayıcıda kurulu (sürüm ${e(EK.eklenti.surum || '')}).` : 'Yardımcı bu tarayıcıda kurulu değil; MEB işlemleri ekranından kurun.') : 'Sıralı girişte MEBBİS’e kurs yetkilisi kendi oturumunda girer; Sinyal yalnızca hazırlar ve kopyalatır.'}</p>
     <p style="font-size:13px;color:var(--metin);margin-top:8px;display:flex;gap:8px;align-items:flex-start">${isaret('uyari', 18)}<span>${MEB_RISK}</span></p></div></div>
   <div class="ara-bosluk"></div>
   <div class="kart"><div class="kart-bas"><h3>Direksiyon takip formunda imza</h3><small>Denetimde neyin geçerli sayılacağını il MEM’inize sorun</small></div><div class="kart-govde"><div class="secim">${[['ikili', 'Dijital imza + haftalık ıslak imzalı çıktı'], ['dijital', 'Yalnızca dijital imza'], ['islak', 'Yalnızca ıslak imza']].map(([v, t]) => `<label><input type="radio" name="imza" value="${v}" data-imza ${K.imzaYontemi === v ? 'checked' : ''}><span>${t}</span></label>`).join('')}</div>
@@ -195,6 +196,18 @@ async function excelOku(dosya) {
   const wb = window.XLSX.read(await dosya.arrayBuffer(), { type: 'array', cellDates: true });
   const sh = wb.Sheets[wb.SheetNames[0]];
   return window.XLSX.utils.sheet_to_json(sh, { header: 1, raw: false, dateNF: 'dd.mm.yyyy', defval: '' }).map(r => r.map(c => String(c).trim())).filter(r => r.some(Boolean));
+}
+// satırlar (ilk satır başlık) → aktarım ekranı; dosyadan ya da MEBBİS Yardımcısı’ndan gelir
+export function aktarimYukle(sat, tur, kaynak) {
+  if (!sat || sat.length < 2) return bildir('Tabloda başlık ve en az bir satır olmalı', 'uyari');
+  if (tur) aktarim.tur = tur;
+  aktarim.baslik = sat[0].map(x => String(x ?? '')); aktarim.satirlar = sat.slice(1); aktarim.esles = {}; aktarim.sonuc = null; aktarim.kaynak = kaynak || null;
+  const nb = aktarim.baslik.map(norm);
+  // önce tam ad, sonra başlığın içinde geçen eş anlamlı (ör. “Cep Telefonu” → telefon); bir sütun tek alana eşlenir
+  const kullanilan = new Set();
+  TUR_ALAN().forEach(([k, , es]) => { const i = nb.findIndex((h, j) => !kullanilan.has(j) && es.includes(h)); if (i >= 0) { aktarim.esles[k] = String(i); kullanilan.add(i); } });
+  TUR_ALAN().forEach(([k, , es]) => { if (aktarim.esles[k] != null) return; const i = nb.findIndex((h, j) => !kullanilan.has(j) && h.length > 2 && es.some(x => x.length > 2 && (h.includes(x) || x.includes(h)))); if (i >= 0) { aktarim.esles[k] = String(i); kullanilan.add(i); } });
+  yenile();
 }
 function csvOku(metin) {
   const ilk = metin.split(/\r?\n/)[0] || ''; const ayr = (ilk.match(/;/g) || []).length >= (ilk.match(/,/g) || []).length ? ';' : ',';
@@ -427,7 +440,7 @@ export function ayarBaglan(k) {
     if (t.matches('[data-uye-rol]')) { const u = S.kullanicilar.find(x => x.id === t.dataset.uyeRol); B.uyeGuncelle(u.id, { rol: t.value }).then(() => { islem('Rol değiştirdi', u.ad + ' · ' + ROL[t.value]); kaydet(); bildir(u.ad + ' artık ' + ROL[t.value]); }).catch(x => { bildir(B.hataMetni(x), 'uyari'); yenile(); }); return; }
     if (t.matches('[data-kural]')) { const key = t.dataset.kural, eski = S.kurs[key]; S.kurs[key] = +t.value || 0; if (KURAL_KAYNAK[key].tur === 'mevzuat') { S.kurs.kuralDegisen = S.kurs.kuralDegisen || {}; S.kurs.kuralDegisen[key] = true; } islem('Kural değerini değiştirdi', KURAL_KAYNAK[key].ad + ': ' + eski + ' → ' + S.kurs[key]); kaydet(); bildir('Kural kaydedildi'); yenile(); }
     if (t.matches('[data-sube-alan]')) { const [i, alan] = t.dataset.subeAlan.split(':'); S.subeler[+i][alan] = t.value.trim(); islem('Şube bilgisini güncelledi', S.subeler[+i].ad); kaydet(); bildir('Şube bilgisi kaydedildi'); }
-    if (t.matches('[data-meb-yontem]')) { if (t.value === 'arac' && !(S.mebArac && S.mebArac.kurulu)) { t.checked = false; k.querySelector('[data-meb-yontem][value="sirali"]').checked = true; return mebAracKur(); } S.kurs.mebYontem = t.value; islem('MEBBİS giriş yöntemini değiştirdi', t.value === 'arac' ? 'Tek tuş aktarımı' : 'Sıralı giriş'); kaydet(); bildir(t.value === 'arac' ? 'Tek tuş aktarımı açık' : 'Sıralı girişe dönüldü'); yenile(); }
+    if (t.matches('[data-meb-yontem]')) { if (t.value === 'arac' && !mebAracHazir()) mebAracKur(); S.kurs.mebYontem = t.value; islem('MEBBİS giriş yöntemini değiştirdi', t.value === 'arac' ? 'Tek tuş aktarımı' : 'Sıralı giriş'); kaydet(); bildir(t.value === 'arac' ? 'Tek tuş aktarımı açık' : 'Sıralı girişe dönüldü'); yenile(); }
     if (t.matches('[data-imza]')) { S.kurs.imzaYontemi = t.value; islem('İmza yöntemini değiştirdi', t.value); kaydet(); bildir('İmza yöntemi kaydedildi'); yenile(); }
     if (t.matches('[data-guv]')) { const [a, b] = t.dataset.guv.split('.'); if (b) S.guvenlik[a][b] = t.checked; else S.guvenlik[a] = t.checked; islem('Güvenlik ayarını değiştirdi', t.dataset.guv + ': ' + (t.checked ? 'açık' : 'kapalı')); kaydet(); bildir('Güvenlik ayarı kaydedildi'); }
     if (t.matches('[data-oturum]')) { S.guvenlik.oturumDk = +t.value; kaydet(); bildir('Oturum süresi kaydedildi'); }
@@ -442,16 +455,7 @@ export function ayarBaglan(k) {
     const f = t.closest('[data-csv-yukle]');
     if (f && f.files[0]) {
       const dosya = f.files[0], excel = /\.xlsx?$/i.test(dosya.name);
-      const isle = sat => {
-        if (sat.length < 2) return bildir('Dosyada başlık ve en az bir satır olmalı', 'uyari');
-        aktarim.baslik = sat[0]; aktarim.satirlar = sat.slice(1); aktarim.esles = {};
-        const nb = sat[0].map(norm);
-        // önce tam ad, sonra başlığın içinde geçen eş anlamlı (ör. “Cep Telefonu” → telefon); bir sütun tek alana eşlenir
-        const kullanilan = new Set();
-        TUR_ALAN().forEach(([k, , es]) => { const i = nb.findIndex((h, j) => !kullanilan.has(j) && es.includes(h)); if (i >= 0) { aktarim.esles[k] = String(i); kullanilan.add(i); } });
-        TUR_ALAN().forEach(([k, , es]) => { if (aktarim.esles[k] != null) return; const i = nb.findIndex((h, j) => !kullanilan.has(j) && h.length > 2 && es.some(x => x.length > 2 && (h.includes(x) || x.includes(h)))); if (i >= 0) { aktarim.esles[k] = String(i); kullanilan.add(i); } });
-        yenile();
-      };
+      const isle = sat => aktarimYukle(sat);
       if (excel) excelOku(dosya).then(isle).catch(() => bildir('Excel dosyası okunamadı; CSV olarak kaydedip deneyin', 'uyari'));
       else { const r = new FileReader(); r.onload = () => isle(csvOku(String(r.result).replace(/^﻿/, ''))); r.readAsText(dosya, 'utf-8'); }
     }
@@ -472,7 +476,7 @@ export function ayarBaglan(k) {
     if (t.closest('[data-sozlesme-varsayilan]')) { S.kurs.sozlesme = null; islem('Sözleşmeyi varsayılana döndürdü'); kaydet(); bildir('Varsayılan metne dönüldü'); return yenile(); }
     if (t.closest('[data-sube-ekle]')) { const n = S.subeler.length + 1; S.subeler.push({ id: 's' + Date.now(), ad: 'Yeni şube ' + n, semt: '', kurumKodu: '', mudur: '', mebbis: '' }); islem('Şube ekledi'); kaydet(); bildir('Şube eklendi; kurum kodunu ve müdürünü yazın'); yenile(); }
     if (t.closest('[data-kural-onay]')) { S.kurs.kuralOnay = { kim: oturum.kullanici ? oturum.kullanici.ad : '', tarih: gun(0) }; islem('Kural değerlerini onayladı'); kaydet(); bildir('Kural değerleri onaylandı'); yenile(); }
-    const bo = t.closest('[data-belge-ac]'); if (bo) import('./sayfalar3.js?v=91').then(m => m.belgeAc(bo.dataset.belgeAc));
+    const bo = t.closest('[data-belge-ac]'); if (bo) import('./sayfalar3.js?v=92').then(m => m.belgeAc(bo.dataset.belgeAc));
     const ok = t.closest('[data-oturum-kapat]'); if (ok) { const o = S.guvenlik.oturumlar.splice(+ok.dataset.oturumKapat, 1)[0]; islem('Oturumu kapattırdı', o.kim + ' · ' + o.cihaz); kaydet(); bildir(o.kim + ' · ' + o.cihaz + ' oturumu kapatıldı'); yenile(); }
     const fs = t.closest('[data-fis]'); if (fs) { const n = +fs.dataset.fis, d = new Date(BUGUN); d.setMonth(d.getMonth() - n); csvIndir(`muhasebe-fisleri-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}.csv`, muhasebeFisi(n)); islem('Muhasebe fişlerini indirdi'); kaydet(); }
     if (t.closest('[data-parasut]')) pencere({ baslik: 'Paraşüt · bağlantı gerekli', icerik: `<div class="ipucu uyari" style="margin-bottom:12px">${isaret('uyari', 22)}<span>Paraşüt bağlantısı için kursun Paraşüt hesabından alınan API anahtarı gerekir. Anahtar girilene kadar tahsilatlar Paraşüt’e aktarılmaz.</span></div><p style="font-size:14.5px">Bu arada aylık muhasebe fişini CSV olarak indirip Paraşüt’e veya muhasebecinize yükleyebilirsiniz; fişte her tahsilat, gider ve iade ayrı satırdır.</p>`, altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-pfis>Bu ayın fişini indir</button>', onAc(d) { d.querySelector('[data-pfis]').addEventListener('click', () => { const d0 = new Date(BUGUN); csvIndir(`muhasebe-fisleri-${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}.csv`, muhasebeFisi(0)); islem('Muhasebe fişlerini indirdi'); kaydet(); kapatPencere(); }); } });
@@ -531,7 +535,7 @@ export function kurulum() {
    formları doldurur. Şifre bu bilgisayarda kalır, Sinyal sunucusuna gelmez. Güvenlik kodunu kullanıcı girer.
    ⚠ Basına yansıyan Temmuz 2026 MEB yazısı bot/makro/eklenti ve şifre paylaşımını yasaklıyor;
    bu yüzden varsayılan değil, kurs müdürünün onayıyla açılır. */
-export const MEB_RISK = 'Basına yansıyan Temmuz 2026 tarihli MEB yazısına göre MEBBİS’te bot, makro, tarayıcı eklentisi gibi yetkisiz yazılımların kullanımı ve kullanıcı bilgilerinin paylaşılması yasaklandı. Tek tuş aktarımı da MEBBİS ekranlarını otomatik doldurur ve bu kapsama girebilir. Rakip programlar aynı yöntemi kullanıyor; kullanmadan önce il MEM’inize danışmanızı öneririz.';
+export const MEB_RISK = 'MEBBİS Yardımcısı kursun kendi MEBBİS oturumunda çalışır: MEBBİS’e kurs yetkilisi girer, Yardımcı şifre istemez ve saklamaz; formu doldurur, Kaydet’e ve güvenlik koduna kullanıcı basar.';
 export function mebKuyruk() {
   const kayit = sb(S.kursiyerler).filter(k => !k.mebIslendi && !eksikEvrak(k).length);
   const ders = sbDers(S.dersler).filter(d => d.durum === 'Planlandı' && fark(d.tarih) >= 0 && !d.meb);
@@ -540,85 +544,18 @@ export function mebKuyruk() {
   return { kayit, ders, gunler, sinav, toplam: kayit.length + gunler.length + sinav.length };
 }
 const isGunuSay = t => { let n = 0; const d = new Date(BUGUN), son = tarihOku(t); while (d < son) { d.setDate(d.getDate() + 1); if (d < son && d.getDay() !== 0 && d.getDay() !== 6) n++; } return n; };
-export const mebAracHazir = () => S.kurs.mebYontem === 'arac' && S.mebArac && S.mebArac.kurulu;
+export const mebAracHazir = () => EK.eklenti.var;
 export function mebAktarimKarti() {
-  const q = mebKuyruk(), son = (S.mebAktarimlar || [])[0];
-  if (!mebAracHazir()) return `<div class="kart" style="margin-bottom:16px"><div class="kart-govde" style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">${isaret('zorunlu', 30)}<div style="flex:1;min-width:240px"><b style="color:var(--murekkep);font-family:var(--baslik);font-size:16px">Tek tuşla MEBBİS aktarımı</b><p style="font-size:14px">Kursiyer kaydı, direksiyon programı ve sınav bildirimi tek tuşla MEBBİS’e girilir. Kurs bilgisayarına küçük bir araç kurulur; MEBBİS şifreniz o bilgisayarda kalır. İsteğe bağlıdır, varsayılan yöntem şifresiz sıralı giriştir.</p></div><button class="dg dg-ana" data-meb-arac-kur>Nasıl çalışır, kur</button></div></div>`;
+  const n = EK.mebIsleri().length, son = (S.mebAktarimlar || [])[0];
+  if (!EK.eklenti.var) return `<div class="kart" style="margin-bottom:16px"><div class="kart-govde" style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">${isaret('zorunlu', 30)}<div style="flex:1;min-width:240px"><b style="color:var(--murekkep);font-family:var(--baslik);font-size:16px">MEBBİS Yardımcısı ile elle giriş yok</b><p style="font-size:14px">Chrome’a eklenen yardımcı, kayıt, direksiyon programı, sınav bildirimi ve tahsilatları kursun kendi MEBBİS oturumunda forma yazar; geçişte MEBBİS listelerini Sinyal’e aktarır. Şifre istemez. ${n} iş bekliyor.</p></div><button class="dg dg-ana" data-meb-arac-kur>Kur ve nasıl çalıştığını gör</button></div></div>`;
   return `<div class="kart meb-aktar" style="margin-bottom:16px"><div class="kart-govde" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
-    <div style="flex:1;min-width:240px"><b style="color:var(--murekkep);font-family:var(--baslik);font-size:17px">MEBBİS’e aktarılacak</b><p style="font-size:14px;margin-top:2px">${q.kayit.length} kursiyer kaydı · ${q.ders.length} ders (${q.gunler.length} gün) · ${q.sinav.length} sınav bildirimi</p>${son ? `<small style="color:var(--soluk)">Son aktarım: ${tarih(son.tarih)} ${e(son.saat)} · ${e(son.kim)} · ${son.ok} işlem${son.hata ? ', ' + son.hata + ' hata' : ''}</small>` : ''}</div>
-    ${cokSube() && !seciliSube() ? `<span style="font-size:13.5px;color:var(--soluk);max-width:220px">Her şubenin MEBBİS hesabı ayrı; aktarmak için önce şube seçin.</span>` : `<button class="dg dg-ana" style="height:48px;padding:0 22px;font-size:16px" data-meb-aktar ${q.toplam ? '' : 'disabled'}>${ik('ok')}${seciliSube() ? e(seciliSube().ad) + ' için ' : ''}MEBBİS’e aktar</button>`}</div></div>`;
+    <div style="flex:1;min-width:240px"><b style="color:var(--murekkep);font-family:var(--baslik);font-size:17px">MEBBİS Yardımcısı bağlı</b><p style="font-size:14px;margin-top:2px">${n} iş MEBBİS’e yazılmayı bekliyor (kayıt, program, sınav bildirimi, tahsilat). Gönderin, MEBBİS’i açın; sağ alttaki panelden sırayla doldurun.</p>${son ? `<small style="color:var(--soluk)">Son gönderim: ${tarih(son.tarih)} ${e(son.saat)} · ${e(son.kim)}</small>` : ''}</div>
+    ${cokSube() && !seciliSube() ? `<span style="font-size:13.5px;color:var(--soluk);max-width:220px">Her şubenin MEBBİS hesabı ayrı; göndermek için önce şube seçin.</span>` : `<button class="dg dg-ana" style="height:48px;padding:0 22px;font-size:16px" data-meb-aktar ${n ? '' : 'disabled'}>${ik('ok')}MEBBİS Yardımcısına gönder</button><button class="dg dg-hafif dg-kucuk" data-meb-arac-kur>Yardımcı</button>`}</div></div>`;
 }
-export function mebAracKur() {
-  pencere({
-    baslik: 'Tek tuşla MEBBİS aktarımı', genis: true,
-    icerik: `<ol style="padding-left:18px;display:grid;gap:12px;font-size:14.5px">
-      <li><b>Kurs bilgisayarına MEBBİS Aracı’nı kurun</b><br><small style="color:var(--soluk)">Windows için küçük bir program. MEBBİS’i kursun kendi bilgisayarında, kursun kendi oturumuyla açar.</small></li>
-      <li><b>MEBBİS kullanıcı adınızı ve şifrenizi araca girin</b><br><small style="color:var(--soluk)">Şifre yalnızca o bilgisayarda, şifreli saklanır. Sinyal sunucusuna ve bize gelmez.</small></li>
-      <li><b>Sinyal’den “Tek tuşla aktar”a basın</b><br><small style="color:var(--soluk)">Araç sıradaki kayıtları MEBBİS’e girer. MEBBİS’in güvenlik kodunu siz yazarsınız; kural dışı bir kayıt varsa girilmez, size raporlanır.</small></li></ol>
-      <div class="ipucu uyari" style="margin-top:16px;align-items:flex-start">${isaret('uyari', 22)}<span>${MEB_RISK}</span></div>
-      <label style="display:flex;gap:10px;align-items:flex-start;margin-top:14px;font-size:14.5px"><input type="checkbox" data-meb-onay style="width:18px;height:18px;margin-top:2px"><span>Yukarıdaki uyarıyı okudum. Aktarım kursun kendi MEBBİS hesabıyla, kursun bilgisayarından yapılır; bu yöntemi kullanma kararı ve sorumluluğu kurs yönetimindedir.</span></label>`,
-    altlik: `<button class="dg dg-ana" data-kapat>Sıralı girişle devam</button>`,
-    onAc(d) {
-      const onay = d.querySelector('[data-meb-onay]'); if (onay) onay.closest('label').innerHTML = `<div class="ipucu" style="margin:0">${isaret('bilgi', 20)}<span><b>Bağlantı gerekli:</b> MEBBİS Aracı bu kursun bilgisayarına henüz kurulmadı. Kurulum yerinde yapılır; o güne kadar Sinyal aktarılacakları sırayla gösterir, siz MEBBİS’e girersiniz ve “Girdim” diye işaretlersiniz.</span></div>`;
-      const kur = d.querySelector('[data-meb-kur]'); if (kur) kur.addEventListener('click', () => {
-        if (!d.querySelector('[data-meb-onay]').checked) return bildir('Önce uyarıyı onaylayın', 'uyari');
-        S.mebArac = { kurulu: true, bilgisayar: 'KURS-PC (Windows)', onay: { kim: oturum.kullanici ? oturum.kullanici.ad : '', tarih: gun(0) } };
-        S.kurs.mebYontem = 'arac'; islem('Tek tuş MEBBİS aktarımını etkinleştirdi', 'Uyarıyı onayladı'); kaydet(); kapatPencere(); bildir('Tek tuş aktarımı açıldı'); yenile();
-      });
-    },
-  });
-}
+export function mebAracKur() { EK.kurulumPenceresi(); }
 export function mebAktar() {
-  const q = mebKuyruk(); if (!q.toplam) return bildir('Aktarılacak kayıt yok');
-  const kod = Array.from({ length: 5 }, () => 'ABCDEFGHJKMNPRSTUVYZ23456789'[Math.floor(Math.random() * 28)]).join('');
-  const satirlar = [
-    ...q.kayit.map(k => ({ tur: 'kayit', ad: tamAd(k) + ' · kursiyer kaydı', k, hata: !tcGecerli(k.tc || '') ? 'TC kimlik numarası geçersiz; MEBBİS kabul etmez' : !k.dogumTarihi ? 'Doğum tarihi eksik' : null })),
-    ...q.gunler.map(g => { const n = q.ders.filter(d => d.tarih === g).length; return { tur: 'program', ad: `${tarih(g)} direksiyon programı · ${n} ders`, g, hata: fark(g) < S.kurs.programOnGun ? `Program en az ${S.kurs.programOnGun} gün önce girilmeli; MEBBİS bu günü kabul etmez` : null }; }),
-    ...q.sinav.map(s => { const ig = isGunuSay(s.tarih); return { tur: 'sinav', ad: `${tarih(s.tarih)} direksiyon sınavı bildirimi · ${s.kursiyerler.length} kursiyer`, s, hata: ig < S.kurs.sinavBildirimIsGunu ? `Bildirim sınavdan en geç ${S.kurs.sinavBildirimIsGunu} iş günü önce yapılmalıydı (kalan ${ig}); il MEM ile görüşün` : null }; }),
-  ];
-  pencere({
-    baslik: 'MEBBİS’e aktarım', genis: true,
-    icerik: `<div data-asama="kod"><p style="font-size:14.5px;margin-bottom:12px">MEBBİS Aracı kurs bilgisayarında oturumu açtı. MEBBİS’in gösterdiği güvenlik kodunu yazın:</p>
-        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><span class="guv-kod" aria-label="Güvenlik kodu görseli">${kod}</span><input class="girdi" style="max-width:180px;text-transform:uppercase" data-guv-kod placeholder="Güvenlik kodu" autocomplete="off"><button class="dg dg-ana" data-baslat>Aktarımı başlat</button></div>
-        <p style="font-size:13px;color:var(--soluk);margin-top:10px">${satirlar.length} işlem sırada. Kural dışı olanlar girilmez, raporlanır.</p></div>
-      <ul class="liste aktar-log" data-log hidden>${satirlar.map((x, i) => `<li data-i="${i}">${isaret('bilgi', 20)}<span style="flex:1">${e(x.ad)}</span><small style="color:var(--soluk)">Sırada</small></li>`).join('')}</ul>
-      <div data-ozet></div>`,
-    altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button>`,
-    onAc(d) {
-      const kodIn = d.querySelector('[data-guv-kod]');
-      const basla = () => {
-        if (kodIn.value.trim().toUpperCase() !== kod) return bildir('Güvenlik kodu hatalı; tekrar yazın', 'uyari');
-        d.querySelector('[data-asama="kod"]').hidden = true; d.querySelector('[data-log]').hidden = false;
-        let i = 0, ok = 0, hata = 0;
-        const adim = () => {
-          if (i >= satirlar.length) {
-            const kayit = { tarih: gun(0), saat: new Date().toTimeString().slice(0, 5), kim: oturum.kullanici ? oturum.kullanici.ad : '', ok, hata };
-            S.mebAktarimlar = [kayit, ...(S.mebAktarimlar || [])].slice(0, 20);
-            islem('MEBBİS’e tek tuşla aktardı', `${ok} işlem${hata ? ', ' + hata + ' hata' : ''}`); kaydet();
-            d.querySelector('[data-ozet]').innerHTML = `<div class="ipucu ${hata ? 'uyari' : ''}" style="margin-top:12px">${isaret(hata ? 'uyari' : 'tamam', 22)}<span><b>${ok} işlem MEBBİS’e girildi.</b> ${hata ? hata + ' işlem kural dışı olduğu için girilmedi; düzeltip tekrar aktarın.' : 'Hepsi tamam.'} MEBBİS’in verdiği kayıt numaraları kursiyer dosyalarına yazıldı.</span></div>`;
-            d.querySelector('[data-kapat]').textContent = 'Bitti'; d.querySelector('[data-kapat]').addEventListener('click', () => yenile(), { once: true });
-            return;
-          }
-          const x = satirlar[i], li = d.querySelector(`[data-i="${i}"]`);
-          li.querySelector('small').textContent = 'Giriliyor…';
-          setTimeout(() => {
-            if (x.hata) { hata++; li.innerHTML = `${isaret('dur', 20)}<span style="flex:1">${e(x.ad)}<small style="display:block;color:var(--kirmizi)">${e(x.hata)}</small></span><small style="color:var(--kirmizi)">Girilmedi</small>`; }
-            else {
-              ok++;
-              if (x.tur === 'kayit') { x.k.mebIslendi = true; x.k.mebNo = 'MEB-' + (Date.now() % 1e7 + i); }
-              if (x.tur === 'program') S.dersler.filter(dd => dd.tarih === x.g && dd.durum === 'Planlandı').forEach(dd => { dd.meb = true; });
-              if (x.tur === 'sinav') x.s.mebBildirim = true;
-              li.innerHTML = `${isaret('tamam', 20)}<span style="flex:1">${e(x.ad)}</span><small style="color:var(--yesil)">Girildi</small>`;
-            }
-            i++; adim();
-          }, 260);
-        };
-        adim();
-      };
-      d.querySelector('[data-baslat]').addEventListener('click', basla);
-      kodIn.addEventListener('keydown', ev => { if (ev.key === 'Enter') basla(); });
-    },
-  });
+  EK.yardimciyaGonder();
+  S.mebAktarimlar = [{ tarih: gun(0), saat: new Date().toTimeString().slice(0, 5), kim: oturum.kullanici ? oturum.kullanici.ad : '', ok: EK.mebIsleri().length, hata: 0 }, ...(S.mebAktarimlar || [])].slice(0, 20); kaydet();
 }
 
 /* ================= GENEL SIRALI GİRİŞ PENCERESİ (program, sınav bildirimi) ================= */

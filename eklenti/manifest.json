@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Sinyal MEBBİS Yardımcısı",
+  "version": "1.0.0",
+  "description": "Sinyal'deki kayıt, direksiyon programı ve sınav bilgilerini kursun kendi MEBBİS oturumunda forma yazar; MEBBİS listelerini Sinyal'e aktarır. Şifre istemez, saklamaz.",
+  "permissions": ["storage"],
+  "host_permissions": ["https://mebbis.meb.gov.tr/*"],
+  "background": { "service_worker": "arka.js" },
+  "content_scripts": [
+    { "matches": ["https://mebbis.meb.gov.tr/*"], "js": ["mebbis.js"], "run_at": "document_idle", "all_frames": true },
+    { "matches": ["https://servetskr.github.io/sinyal/*", "http://localhost/*", "http://127.0.0.1/*"], "js": ["sinyal.js"], "run_at": "document_start" }
+  ],
+  "icons": { "128": "simge.png" }
+}

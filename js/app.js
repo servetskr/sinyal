@@ -1,18 +1,19 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=91';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=91';
-import * as Y1 from './sayfalar1.js?v=91';
-import * as Y2 from './sayfalar2.js?v=91';
-import * as P from './portal.js?v=91';
-import * as Y3 from './sayfalar3.js?v=91';
-import * as Y4 from './sayfalar4.js?v=91';
-import * as Y5 from './sayfalar5.js?v=91';
-import * as IM from './imza.js?v=91';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=91';
-import * as SN from './senaryo.js?v=91';
-import * as OZ from './ozellik.js?v=91';
-import { durumlariGuncelle } from './mesaj.js?v=91';
-import { yeniMenu } from './yeni.js?v=91';
-import * as B from './bulut.js?v=91';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=92';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=92';
+import * as Y1 from './sayfalar1.js?v=92';
+import * as Y2 from './sayfalar2.js?v=92';
+import * as P from './portal.js?v=92';
+import * as Y3 from './sayfalar3.js?v=92';
+import * as Y4 from './sayfalar4.js?v=92';
+import * as Y5 from './sayfalar5.js?v=92';
+import * as IM from './imza.js?v=92';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=92';
+import * as SN from './senaryo.js?v=92';
+import * as OZ from './ozellik.js?v=92';
+import { durumlariGuncelle } from './mesaj.js?v=92';
+import { yeniMenu } from './yeni.js?v=92';
+import * as B from './bulut.js?v=92';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=92';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -434,6 +435,8 @@ document.addEventListener('click', ev => {
 }, true);
 
 sadeDilBaslat();
+eklentiYenile(() => { if (oturum.kullanici && document.getElementById('icerik')) yenile(); });
+eklentiBaslat();
 // Telefona kurulabilir uygulama: servis çalışanı (yalnız https) ve Android'in “yükle” isteği
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => { });
 window.addEventListener('beforeinstallprompt', ev => { ev.preventDefault(); window.__kurulum = ev; document.querySelectorAll('[data-kur-android]').forEach(b => { b.hidden = false; }); });
