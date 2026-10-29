@@ -1,5 +1,5 @@
 // Sinyal demo verisi: tarihler bugüne göre üretilir, tarayıcıda saklanır.
-const ANAHTAR = 'sinyal-demo-v16';
+const ANAHTAR = 'sinyal-demo-v18';
 
 export const BUGUN = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })();
 export const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -299,10 +299,18 @@ function uret() {
     ],
     ayar: {
       ad: 'Kurs asistanı', ton: 'Samimi', emoji: false, susma: 24, devir: { indirim: true, sikayet: true, saglik: true, insan: true, bilinmeyen: true },
-      fiyat: 'sorulan', randevu: true, gizleOnay: true, hizSiniri: true,
+      fiyat: 'sorulan', randevu: true, gizleOnay: true, hizSiniri: true, onayModu: 'otomatik', model: 'Sinyal Asistan TR',
       veri: { konum: 'tr', maskele: true, aydinlatma: true, saklamaAy: 12 },
-      bildirim: { kisiler: ['u1', 'u2'], kanal: 'WhatsApp', ikinciDk: 15, bekletme: true },
+      bildirim: { kisiler: ['u1', 'u2'], kanal: 'WhatsApp', ikinciDk: 15, bekletme: true, sessiz: true, sessizBas: '22:00', sessizBit: '08:00' },
     },
+    gorusmeSablon: { gunler: [1, 2, 3, 4, 5, 6], saatler: ['10:00', '11:30', '14:00', '16:30'], kapali: [gun(9)] },
+    bilinmeyen: [
+      { soru: 'Engelli araç ile eğitim veriyor musunuz?', sayi: 4, son: gun(-1) },
+      { soru: 'Kurs bitince sınav aracını kullanabilir miyim, ücreti ne?', sayi: 3, son: gun(-2) },
+      { soru: 'Yabancı uyrukluyum, kayıt için ne gerekir?', sayi: 2, son: gun(-3) },
+      { soru: 'Ehliyetim iptal oldu, yeniden almak için kursa gelmem gerekiyor mu?', sayi: 2, son: gun(-5) },
+      { soru: 'Hafta sonu teorik ders var mı?', sayi: 1, son: gun(-6) },
+    ],
     slotlar: (() => { const l = []; for (let n = 1; n <= 6; n++) { const d = new Date(BUGUN); d.setDate(d.getDate() + n); if (d.getDay() === 0) continue; ['10:00', '11:30', '14:00', '16:30'].forEach((h, i) => l.push({ tarih: gun(n), saat: h, dolu: (n + i) % 3 === 0 ? 'Yiğit Sarı' : null })); } return l; })(),
     ay: { mesaj: 1284, kisi: 412, otomatik: 92, sure: 3, mesaiDisi: 41, aday: 86, gorusme: 31, kayit: 14, devir: 9 },
     saatlik: [9, 4, 2, 1, 1, 2, 6, 14, 31, 42, 47, 45, 52, 49, 44, 47, 55, 63, 74, 88, 104, 112, 96, 41],
@@ -322,13 +330,19 @@ function uret() {
     ],
   };
 
-  const subeler = [{ id: 's1', ad: 'Merkez', semt: 'Odunpazarı' }, { id: 's2', ad: 'Tepebaşı şubesi', semt: 'Tepebaşı' }];
+  const subeler = [{ id: 's1', ad: 'Merkez', semt: 'Odunpazarı', kurumKodu: '965412', mudur: 'Kurs Müdürü', mebbis: 'Merkez kurum hesabı' }, { id: 's2', ad: 'Tepebaşı şubesi', semt: 'Tepebaşı', kurumKodu: '971208', mudur: 'Tuncay Yalım', mebbis: 'Tepebaşı kurum hesabı' }];
   const SUBE_EG = { e1: 's1', e2: 's1', e5: 's1', e3: 's2', e4: 's2' };
   egitmenler.forEach(x => { x.sube = SUBE_EG[x.id] || 's1'; });
   araclar.forEach(a => { a.sube = SUBE_EG[a.egitmen] || 's1'; });
   kursiyerler.forEach(k => { k.sube = SUBE_EG[k.egitmen] || 's1'; });
   hareket.forEach((h, i) => { const k = h.kursiyer && kursiyerler.find(x => x.id === h.kursiyer); h.sube = k ? k.sube : (i % 4 === 0 ? 's2' : 's1'); });
-  personel.forEach(p => { p.sube = 's1'; });
+  personel.forEach(p => { p.sube = p.id === 'p3' ? 's2' : 's1'; });
+  // Ders kanıtı: başlangıç-bitiş saati ve konum onayı (usta öğretici ekranından)
+  dersler.filter(d => d.durum === 'Yapıldı').forEach((d, i) => { const [h, m] = d.saat.split(':').map(Number), bas = h * 60 + m + (i % 5), sure = i % 37 === 0 ? 34 : 48 + (i % 6); const f = x => String(Math.floor(x / 60)).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0'); d.bas = f(bas); d.bit = f(bas + sure); d.sure = sure; d.konum = true; });
+  // Otomatik kart çekimi onayı veren kursiyerler
+  kursiyerler.forEach((k, i) => { if (i % 3 === 0 && k.odeme.taksitler.some(t => !t.odendi) && !k.odeme.taksitler.some(t => !t.odendi && fark(t.vade) < 0)) k.odeme.otomatik = { son4: String(1000 + (i * 739) % 9000).slice(0, 4), onay: k.kayit }; });
+  // Evrak geçerlilik tarihleri (belgenin üzerindeki tarih)
+  kursiyerler.forEach((k, i) => { if (k.dogrulama && k.dogrulama.saglik) k.dogrulama.saglik.gecerlilik = gun(i % 11 === 0 ? 20 : 200 + i * 3); });
   kursiyerler.forEach((k, i) => { if (!k.deneme.length) return; const n = k.deneme.length, ort = k.deneme.reduce((a, b) => a + b, 0) / n / 100, zayif = ['trafik', 'ilkyardim', 'motor', 'adab'][i % 4]; k.konuAnaliz = Object.fromEntries([['trafik', 23], ['ilkyardim', 12], ['motor', 9], ['adab', 6]].map(([kn, q]) => { const t = q * n, o = Math.min(0.98, Math.max(0.3, ort + (kn === zayif ? -0.18 : 0.05))); return [kn, [Math.round(t * o), t]]; })); });
   kursiyerler.forEach((k, i) => { if (i % 5 === 1) return; k.dogrulama = {}; ['saglik', 'adli'].forEach(x => { if (k.evrak[x]) k.dogrulama[x] = { kod: x === 'adli' ? 'A' + (480000 + i * 37) : 'R-' + (2026000 + i * 11), kim: 'Selda Korkmaz', tarih: k.kayit }; }); });
 
@@ -346,12 +360,13 @@ function uret() {
     muhasebe: { tur: 'Excel', bagli: false },
     musavir: { eposta: '', otomatik: false },
     pos: { bagli: true, ad: 'Sanal POS', komisyon: 2.49 },
+    kdv: 20, fatura: 'tahsilat',
   };
 
   return {
-    sosyal, subeler, guvenlik, entegrasyon,
+    sosyal, subeler, guvenlik, entegrasyon, isDurum: {},
     personel, izinler, bekleme, hesaplar, kazanim, gruplar, arsiv, mevzuat, ogretmenler, kullanicilar, islemler, asistanBilgi, devredilen, sms: { bakiye: 1840, kanal: 'WhatsApp' }, gunSonu: [],
-    kurs: { ad: 'Örnek Sürücü Kursu', sehir: 'Eskişehir', tel: '0222 000 00 00', adres: 'Odunpazarı / Eskişehir', yetkili: 'Kurs Müdürü', puan: 4.9, yorumSayisi: 286, imzaYontemi: 'ikili', kuralKontrol: gun(-13), gunlukDersSiniri: 2, egitmenGunlukSinir: 8, ekDersUcreti: 900, devamsizlikSiniri: 4, programOnGun: 5, sinavBildirimIsGunu: 4, geceDersi: 2, tekrarBekleme: 15, asgariYas: 18, saklamaYil: 10 },
+    kurs: { ad: 'Örnek Sürücü Kursu', sehir: 'Eskişehir', tel: '0222 000 00 00', adres: 'Odunpazarı / Eskişehir', yetkili: 'Kurs Müdürü', puan: 4.9, yorumSayisi: 286, imzaYontemi: 'ikili', kuralKontrol: gun(-13), web: 'ornekmtsk.com', aksamOzet: true, gunlukDersSiniri: 2, egitmenGunlukSinir: 8, ekDersUcreti: 900, devamsizlikSiniri: 4, programOnGun: 5, sinavBildirimIsGunu: 4, geceDersi: 2, tekrarBekleme: 15, asgariYas: 18, saklamaYil: 10 },
     egitmenler, araclar, kursiyerler, dersler, teorik, sinavlar, hareket, adaylar, otomasyonlar, duyurular,
     gonderimler: [],
   };
@@ -443,3 +458,6 @@ export const subede = x => !gorunum.sube || !x || !x.sube || x.sube === gorunum.
 export const sb = l => (gorunum.sube ? l.filter(subede) : l);
 export const sbDers = l => (gorunum.sube ? l.filter(d => subede(S.kursiyerler.find(k => k.id === d.kursiyer))) : l);
 export const varsayilanSube = () => gorunum.sube || 's1';
+export const sbSinav = l => (gorunum.sube ? l.filter(s => (s.kursiyerler || []).some(id => subede(S.kursiyerler.find(k => k.id === id)))) : l);
+export const seciliSube = () => (S.subeler || []).find(x => x.id === gorunum.sube) || null;
+export const cokSube = () => (S.subeler || []).length > 1;

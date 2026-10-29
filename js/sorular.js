@@ -92,3 +92,49 @@ export const SORULAR = [
   ['adab', 'Yolcu taşırken sürücünün sorumluluğu nedir?', ['Yolcuların emniyet kemerini takmasını sağlamak', 'Müziği açmak', 'Hızlı gitmek', 'Hiçbiri'], 0],
   ['adab', 'Trafik kazası gören bir sürücü ne yapmalıdır?', ['Durup fotoğraf çekmeli, yolu kapatmalıdır', 'Gerekirse güvenli şekilde durup 112’ye haber vermeli, trafiği aksatmamalıdır', 'Hızlanıp uzaklaşmalıdır', 'Kornaya basmalıdır'], 1],
 ];
+
+// --- Görselli sorular: trafik işaretleri (SVG). 5. eleman levhanın kendisi.
+const L = ic => `<svg viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="Trafik işareti">${ic}</svg>`;
+const ok = (d, renk = '#fff') => `<path d="${d}" fill="none" stroke="${renk}" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>`;
+const LEVHA = {
+  dur: L('<polygon points="38,8 82,8 112,38 112,82 82,112 38,112 8,82 8,38" fill="#d52b1e" stroke="#fff" stroke-width="4"/><text x="60" y="72" text-anchor="middle" font-family="Arial,sans-serif" font-weight="800" font-size="30" fill="#fff">DUR</text>'),
+  yolver: L('<polygon points="8,14 112,14 60,108" fill="#fff" stroke="#d52b1e" stroke-width="12" stroke-linejoin="round"/>'),
+  girilmez: L('<circle cx="60" cy="60" r="52" fill="#d52b1e"/><rect x="22" y="50" width="76" height="20" fill="#fff"/>'),
+  park: L('<circle cx="60" cy="60" r="50" fill="#0a4da2" stroke="#d52b1e" stroke-width="11"/><line x1="25" y1="25" x2="95" y2="95" stroke="#d52b1e" stroke-width="11"/>'),
+  durpark: L('<circle cx="60" cy="60" r="50" fill="#0a4da2" stroke="#d52b1e" stroke-width="11"/><line x1="25" y1="25" x2="95" y2="95" stroke="#d52b1e" stroke-width="11"/><line x1="95" y1="25" x2="25" y2="95" stroke="#d52b1e" stroke-width="11"/>'),
+  hiz50: L('<circle cx="60" cy="60" r="52" fill="#fff" stroke="#d52b1e" stroke-width="11"/><text x="60" y="76" text-anchor="middle" font-family="Arial,sans-serif" font-weight="800" font-size="44" fill="#111">50</text>'),
+  soladonulmez: L('<circle cx="60" cy="60" r="52" fill="#fff" stroke="#d52b1e" stroke-width="11"/>' + ok('M76 92 V52 H40 M52 38 L38 52 L52 66', '#111') + '<line x1="27" y1="27" x2="93" y2="93" stroke="#d52b1e" stroke-width="9"/>'),
+  anayol: L('<rect x="24" y="24" width="72" height="72" transform="rotate(45 60 60)" fill="#fff" stroke="#111" stroke-width="2"/><rect x="35" y="35" width="50" height="50" transform="rotate(45 60 60)" fill="#f2b705"/>'),
+  anayolbitti: L('<rect x="24" y="24" width="72" height="72" transform="rotate(45 60 60)" fill="#fff" stroke="#111" stroke-width="2"/><rect x="35" y="35" width="50" height="50" transform="rotate(45 60 60)" fill="#f2b705"/><line x1="30" y1="90" x2="90" y2="30" stroke="#111" stroke-width="8"/>'),
+  sagamecburi: L('<circle cx="60" cy="60" r="52" fill="#0a4da2"/>' + ok('M28 60 H88 M70 42 L88 60 L70 78')),
+  hastane: L('<rect x="10" y="10" width="100" height="100" rx="8" fill="#0a4da2"/><rect x="26" y="26" width="68" height="68" fill="#fff"/><text x="60" y="80" text-anchor="middle" font-family="Arial,sans-serif" font-weight="800" font-size="52" fill="#d52b1e">H</text>'),
+  sagaviraj: L('<polygon points="60,8 114,104 6,104" fill="#fff" stroke="#d52b1e" stroke-width="10" stroke-linejoin="round"/>' + ok('M50 92 V68 Q50 52 64 50 H70 M62 40 L72 50 L62 60', '#111')),
+};
+SORULAR.push(
+  ['trafik', 'Bu levha neyi bildirir?', ['Yol ver', 'Dur', 'Park yasak', 'Girilmez'], 1, LEVHA.dur],
+  ['trafik', 'Bu levha neyi bildirir?', ['Dur', 'Ana yol', 'Yol ver', 'Tehlikeli viraj'], 2, LEVHA.yolver],
+  ['trafik', 'Bu levha neyi bildirir?', ['Taşıt trafiğine kapalı yol', 'Girilmez', 'Park yasak', 'Duraklama yasak'], 1, LEVHA.girilmez],
+  ['trafik', 'Bu levha neyi bildirir?', ['Park etmek yasaktır', 'Durmak ve park etmek yasaktır', 'Girilmez', 'Geçme yasağı'], 0, LEVHA.park],
+  ['trafik', 'Bu levha neyi bildirir?', ['Park etmek yasaktır', 'Girilmez', 'Durmak ve park etmek yasaktır', 'Kavşak'], 2, LEVHA.durpark],
+  ['trafik', 'Bu levha neyi bildirir?', ['En az hız 50 km/s', 'Azami hız 50 km/s', 'Yerleşim yeri 50 m ileride', 'Tonaj sınırı 50'], 1, LEVHA.hiz50],
+  ['trafik', 'Bu levha neyi bildirir?', ['Sola mecburi yön', 'Sola dönülmez', 'U dönüşü yasak', 'Sola tehlikeli viraj'], 1, LEVHA.soladonulmez],
+  ['trafik', 'Bu levha neyi bildirir?', ['Ana yol', 'Ana yol bitti', 'Kavşak', 'Yol ver'], 0, LEVHA.anayol],
+  ['trafik', 'Bu levha neyi bildirir?', ['Ana yol', 'Kavşak yaklaşıyor', 'Ana yol bitti', 'Dönel kavşak'], 2, LEVHA.anayolbitti],
+  ['trafik', 'Bu levha neyi bildirir?', ['Sağa dönülmez', 'Sağa mecburi yön', 'Tek yönlü yol', 'Sağa tehlikeli viraj'], 1, LEVHA.sagamecburi],
+  ['trafik', 'Bu levha neyi bildirir?', ['Hastane', 'Otel', 'Otopark', 'İlk yardım istasyonu'], 0, LEVHA.hastane],
+  ['trafik', 'Bu levha neyi bildirir?', ['Sağa mecburi yön', 'Sağa dönülmez', 'Sağa tehlikeli viraj', 'Yol daralır'], 2, LEVHA.sagaviraj],
+  ['trafik', 'Yokuş aşağı inişte motor freninden yararlanmak için ne yapılır?', ['Vites boşa alınır', 'Uygun düşük viteste inilir', 'Kontak kapatılır', 'Sürekli fren pedalına basılır'], 1],
+  ['trafik', 'Gece yerleşim yeri dışında, karşıdan araç yokken hangi far kullanılır?', ['Kısa hüzmeli', 'Uzun hüzmeli', 'Sis farı', 'Park lambası'], 1],
+  ['trafik', 'Kavşağa yaklaşırken trafik ışıkları çalışmıyorsa sürücü neye göre hareket eder?', ['Hızına göre', 'Trafik işaret levhalarına ve geçiş hakkı kurallarına göre', 'Korna çalana göre', 'Büyük araca göre'], 1],
+  ['trafik', 'Lastikler için kış şartlarında doğru olan hangisidir?', ['Yaz lastiğiyle devam edilir', 'Kış lastiği kullanılır ve hız azaltılır', 'Lastik basıncı sıfırlanır', 'Patinaj yapılarak ilerlenir'], 1],
+  ['ilkyardim', 'Elektrik çarpmasında ilk yapılacak hangisidir?', ['Kişiye hemen dokunmak', 'Elektrik kaynağını güvenli şekilde kesmek', 'Su dökmek', 'Kişiyi sarsmak'], 1],
+  ['ilkyardim', 'Kanaması olan bölgeye uygulanan bası en az ne kadar sürdürülmelidir?', ['10 saniye', 'Kanama durana kadar, genellikle birkaç dakika', '1 saat', 'Hiç gerekmez'], 1],
+  ['ilkyardim', 'Bilinci açık, şok belirtisi olmayan yaralı nasıl bekletilir?', ['Ayakta', 'Rahat edeceği pozisyonda, üşütülmeden', 'Baş aşağı', 'Yüzüstü'], 1],
+  ['ilkyardim', 'Kafa travması geçiren kişide hangisi tehlike belirtisidir?', ['Normal konuşması', 'Kulaktan ya da burundan kan veya sıvı gelmesi', 'Esnemesi', 'Susaması'], 1],
+  ['motor', 'Akü şarj ikaz lambası yanıyorsa olası arıza nedir?', ['Şarj sistemi (alternatör veya kayış)', 'Lastik basıncı', 'Fren balatası', 'Klima'], 0],
+  ['motor', 'Silecek suyu deposuna kışın ne eklenir?', ['Motor yağı', 'Antifrizli cam suyu', 'Fren hidroliği', 'Tuzlu su'], 1],
+  ['motor', 'Turbo şarjlı araçta uzun yoldan sonra motor nasıl kapatılır?', ['Hemen, gaza basarak', 'Kısa bir süre rölantide çalıştırıldıktan sonra', 'Vitesteyken', 'Önemi yoktur'], 1],
+  ['adab', 'Trafikte araç kullanırken yolcularla tartışmak neye yol açar?', ['Dikkatin dağılmasına', 'Daha güvenli sürüşe', 'Yakıt tasarrufuna', 'Hiçbir şeye'], 0],
+  ['adab', 'Bisikletliyi geçerken ne yapılmalıdır?', ['Yakın mesafeden hızla geçilir', 'Yeterli yan mesafe bırakılıp yavaşça geçilir', 'Korna çalınıp yanından geçilir', 'Peşinden gidilir'], 1],
+  ['adab', 'Engelli otoparkı neden boş bırakılmalıdır?', ['Ceza yüzünden', 'İhtiyacı olanların hakkı olduğu için', 'Geniş olduğu için', 'Kısa süreliğine kullanılabilir'], 1],
+);

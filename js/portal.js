@@ -1,7 +1,7 @@
-import { oturum, islem, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle } from './veri.js?v=24';
-import { e, tl, ik, rozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani } from './ui.js?v=24';
-import { yenile } from './app.js?v=24';
-import { SORULAR, KONULAR } from './sorular.js?v=24';
+import { oturum, islem, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle } from './veri.js?v=28';
+import { e, tl, ik, rozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani } from './ui.js?v=28';
+import { yenile } from './app.js?v=28';
+import { SORULAR, KONULAR } from './sorular.js?v=28';
 
 let egId = 'e1', egSekme = 'bugun';
 let ogId = null, ogSekme = 'durum';
@@ -22,7 +22,9 @@ export function egitmenPortal() {
       <div style="display:flex;align-items:center;gap:12px"><span class="mono" style="font-size:20px;font-weight:600;color:var(--murekkep)">${d.saat}</span><div class="kisi">${avatar(k.ad, k.soyad)}<div><b>${e(tamAd(k))}</b><small>${S0.ad} · ${k.direksiyon + (d.durum === 'Planlandı' ? 1 : 0)}. ders / ${S0.direksiyon}</small></div></div></div>
       ${ilerleme(k.direksiyon, S0.direksiyon, 'yesil')}
       ${k.notlar[0] ? `<p class="ipucu" style="margin-top:10px">${ik('kalem')}<span>${e(k.notlar[0].metin)}</span></p>` : ''}
-      <div style="display:flex;gap:8px;margin-top:12px">${d.durum === 'Planlandı' ? `<button class="dg dg-ana" style="flex:1" data-yapildi="${d.id}">${ik('tik')}Yapıldı</button><button class="dg dg-cizgi" data-gelmedi="${d.id}">Gelmedi</button>` : rozet(d.durum, d.durum === 'Yapıldı' ? 'yesil' : 'kirmizi')}<a class="dg dg-cizgi" style="${d.durum === 'Planlandı' ? '' : 'margin-left:auto'}" href="tel:${k.tel.replace(/\s/g, '')}" aria-label="Ara">${ik('tel')}</a><button class="dg dg-cizgi" data-not="${k.id}" aria-label="Not ekle">${ik('kalem')}</button></div>
+      ${d.bas && d.durum === 'Planlandı' ? `<p class="ipucu" style="margin-top:10px">${isaret('tamam', 18)}<span>Ders ${d.bas}’te başladı · konum alındı. Bitirince imzalatın; süre otomatik yazılır.</span></p>` : ''}
+      ${d.durum === 'Yapıldı' && d.bas ? `<small style="display:block;margin-top:8px;color:${(d.sure || 0) < 40 ? 'var(--kirmizi)' : 'var(--soluk)'}">${d.bas}–${d.bit} · ${d.sure} dk${(d.sure || 0) < 40 ? ' · kısa ders' : ''}${d.konum ? ' · konum kayıtlı' : ''}</small>` : ''}
+      <div style="display:flex;gap:8px;margin-top:12px">${d.durum === 'Planlandı' ? (d.bas ? `<button class="dg dg-ana" style="flex:1" data-yapildi="${d.id}">${ik('tik')}Bitir ve imzalat</button>` : `<button class="dg dg-ana" style="flex:1" data-ders-basla="${d.id}">${ik('direksiyon')}Dersi başlat</button><button class="dg dg-cizgi" data-gelmedi="${d.id}">Gelmedi</button>`) : rozet(d.durum, d.durum === 'Yapıldı' ? 'yesil' : 'kirmizi')}<a class="dg dg-cizgi" style="${d.durum === 'Planlandı' ? '' : 'margin-left:auto'}" href="tel:${k.tel.replace(/\s/g, '')}" aria-label="Ara">${ik('tel')}</a><button class="dg dg-cizgi" data-not="${k.id}" aria-label="Not ekle">${ik('kalem')}</button></div>
     </div>`; }).join('') || `<div class="kart">${bos('Bugün dersiniz yok', 'Yeni ders planlandığında burada görünür.')}</div>`}`;
   if (egSekme === 'hafta') {
     const gunler = []; for (let n = 0; n < 7; n++) gunler.push(gun(n));
@@ -45,6 +47,7 @@ export function egitmenPortal() {
       k.addEventListener('click', ev => {
         const t = ev.target;
         const s = t.closest('[data-egs]'); if (s) { egSekme = s.dataset.egs; yenile(true); }
+        const db = t.closest('[data-ders-basla]'); if (db) { const d = S.dersler.find(x => x.id === db.dataset.dersBasla); d.bas = new Date().toTimeString().slice(0, 5); d.basZaman = Date.now(); d.konum = true; islem('Dersi başlattı', tamAd(kursiyer(d.kursiyer)) + ' · ' + d.bas); kaydet(); bildir('Ders başladı; başlangıç saati ve konum kaydedildi'); yenile(); return; }
         const y = t.closest('[data-yapildi]'); if (y) {
           const d = S.dersler.find(x => x.id === y.dataset.yapildi), ks = kursiyer(d.kursiyer);
           pencere({
@@ -57,6 +60,8 @@ export function egitmenPortal() {
               p.querySelector('[data-imza-kaydet]').addEventListener('click', () => {
                 if (ik_.bos() || iu.bos()) return bildir('İki imza da gerekli', 'uyari');
                 d.durum = 'Yapıldı'; d.imza = { zaman: new Date().toISOString().slice(0, 16), kursiyer: ik_.url(), usta: iu.url() };
+                d.bit = new Date().toTimeString().slice(0, 5); d.sure = d.basZaman ? Math.round((Date.now() - d.basZaman) / 60e3) : null;
+                if (d.sure != null && d.sure < 40) bildir(`Ders ${d.sure} dk sürdü; kısa ders olarak işaretlendi`, 'uyari');
                 ks.direksiyon = Math.min(SINIFLAR[ks.sinif].direksiyon, ks.direksiyon + 1);
                 islem('Ders imzalı tamamlandı', tamAd(ks) + ' · ' + d.saat); kaydet(); kapatPencere(); bildir('Ders imzalandı ve takip formuna işlendi'); yenile();
               });
@@ -130,9 +135,9 @@ export function ogrenciPortal() {
         <ul class="liste" style="text-align:left;margin:12px -20px">${Object.entries(test.sonuc.konu).map(([kn, [d, t]]) => `<li><span style="flex:1">${KONULAR[kn][0]}</span><b class="mono">${d}/${t}</b></li>`).join('')}</ul>
         <p style="font-size:13.5px;color:var(--soluk)">${test.sonuc.yanlis} yanlışın “Yanlışlarım”a eklendi.</p><button class="dg dg-koyu" style="margin-top:10px" data-test-menu>Tamam</button></div>`;
     } else {
-      const [kn, q, sec, dogru] = SORULAR[test.liste[test.i]], aninda = test.mod !== 'deneme';
+      const [kn, q, sec, dogru, gorsel] = SORULAR[test.liste[test.i]], aninda = test.mod !== 'deneme';
       govde = `<div style="display:flex;justify-content:space-between;font-size:13px;color:var(--soluk);margin-bottom:8px"><span>${MOD_AD[test.mod]} · ${KONULAR[kn][0]}</span><span>${test.mod === 'deneme' ? '<b class="mono" data-kalan></b> · ' : ''}${test.i + 1}/${test.liste.length}</span></div>${ilerleme(test.i, test.liste.length)}<div class="ara-bosluk" style="height:12px"></div>
-        <div class="kart soru"><h4>${e(q)}</h4>${sec.map((s2, i) => `<button class="secenek ${aninda && test.cevap != null ? (i === dogru ? 'dogru' : i === test.cevap ? 'yanlis' : '') : ''}" data-cevap="${i}" ${test.cevap != null ? 'disabled' : ''}><b>${'ABCD'[i]}</b>${e(s2)}</button>`).join('')}${aninda && test.cevap != null ? `<button class="dg dg-koyu" style="width:100%;margin-top:6px" data-sonraki>Sonraki soru</button>` : ''}</div>
+        <div class="kart soru">${gorsel ? `<div class="soru-gorsel">${gorsel}</div>` : ''}<h4>${e(q)}</h4>${sec.map((s2, i) => `<button class="secenek ${aninda && test.cevap != null ? (i === dogru ? 'dogru' : i === test.cevap ? 'yanlis' : '') : ''}" data-cevap="${i}" ${test.cevap != null ? 'disabled' : ''}><b>${'ABCD'[i]}</b>${e(s2)}</button>`).join('')}${aninda && test.cevap != null ? `<button class="dg dg-koyu" style="width:100%;margin-top:6px" data-sonraki>Sonraki soru</button>` : ''}</div>
         <button class="dg dg-hafif dg-kucuk" data-test-menu>Testi bırak</button>`;
     }
   }
@@ -142,6 +147,7 @@ export function ogrenciPortal() {
     html: `<div class="portal">
       <div class="portal-bas">${avatar(k.ad, k.soyad)}<div><small>Merhaba,</small><h2>${e(k.ad)}</h2></div>
         <select class="girdi" style="margin-left:auto;width:auto;height:34px;font-size:12.5px;max-width:150px" data-og aria-label="Kursiyer seç">${S.kursiyerler.slice(0, 40).map(x => `<option value="${x.id}" ${x.id === k.id ? 'selected' : ''}>${e(tamAd(x))}</option>`).join('')}</select></div>
+      ${ogSekme === 'durum' ? `<p class="ipucu" style="font-size:13px">${isaret('bilgi', 18)}<span>Kursiyer bu ekrana telefon numarası ve SMS koduyla girer; yalnızca kendi bilgilerini görür. Bağlantı başka telefona iletilirse kod yeniden sorulur.</span></p>` : ''}
       ${govde}
       ${sekmeCubugu([['durum', 'Durumum', 'genel'], ['ders', 'Derslerim', 'direksiyon'], ['odeme', 'Ödemeler', 'kart'], ['test', 'Deneme', 'sinav'], ['evrak', 'Evrak', 'belge']], ogSekme, 'ogs')}
     </div>`,

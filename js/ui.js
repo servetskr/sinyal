@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN } from './veri.js?v=24';
+import { ASAMALAR, tarihOku, fark, BUGUN } from './veri.js?v=28';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });

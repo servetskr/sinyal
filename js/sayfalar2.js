@@ -1,20 +1,20 @@
-import { S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, gonderimEkle, risk, islem, geriAlNoktasi, oturum , sb, sbDers} from './veri.js?v=24';
-import { e, tl, sayi, ik, rozet, asamaRozet, avatar, plaka, ilerleme, bos, pencere, kapatPencere, bildir, sekmeler, tarih, tarihUzun, goreli, cubukGrafik, halka, ayAdi, csvIndir, isaret, ekranNotu, aracGorsel, olcumler, yonLevhasi } from './ui.js?v=24';
-import { yenile } from './app.js?v=24';
-import { AYAR_SEKMELERI, ayarBaglan, personelOzeti, mebAktarimKarti, mebAracKur, mebAktar, MEB_RISK } from './sayfalar5.js?v=24';
-import { wpGonder, tahsilAl, ekDersOner } from './sayfalar1.js?v=24';
-import { denetimEksikleri, mebSiraBaslat } from './sayfalar3.js?v=24';
+import { S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, gonderimEkle, risk, islem, geriAlNoktasi, oturum , sb, sbDers, sbSinav, gorunum, seciliSube, cokSube} from './veri.js?v=28';
+import { e, tl, sayi, ik, rozet, asamaRozet, avatar, plaka, ilerleme, bos, pencere, kapatPencere, bildir, sekmeler, tarih, tarihUzun, goreli, cubukGrafik, halka, ayAdi, csvIndir, isaret, ekranNotu, aracGorsel, olcumler, yonLevhasi } from './ui.js?v=28';
+import { yenile } from './app.js?v=28';
+import { AYAR_SEKMELERI, ayarBaglan, personelOzeti, mebAktarimKarti, mebAracKur, mebAktar, MEB_RISK } from './sayfalar5.js?v=28';
+import { wpGonder, tahsilAl, ekDersOner } from './sayfalar1.js?v=28';
+import { denetimEksikleri, mebSiraBaslat } from './sayfalar3.js?v=28';
 
 const durum = { sinav: 'yaklasan', kasa: 'hareket', filo: 'arac', mesaj: 'gelen', meb: 'asistan', ayar: 'kurs' };
 let secSohbet = null, gecmisKim = '';
 
 /* ================= SINAVLAR ================= */
 export function sinavlar() {
-  const gec = S.sinavlar.filter(s => Object.keys(s.sonuc).length);
+  const gec = sbSinav(S.sinavlar).filter(s => Object.keys(s.sonuc).length);
   const oran = tur => { const l = gec.filter(s => s.tur === tur).flatMap(s => Object.values(s.sonuc)); return l.length ? Math.round(l.filter(x => x === 'Geçti').length / l.length * 100) : 0; };
-  const kalanlar = S.kursiyerler.filter(k => k.dsinav && k.dsinav.sonuc === 'Kaldı');
-  const riskli = S.kursiyerler.map(k => ({ k, r: risk(k) })).filter(x => x.r && x.r.puan >= 25).sort((a, b) => b.r.puan - a.r.puan);
-  const liste = S.sinavlar.filter(s => durum.sinav === 'yaklasan' ? fark(s.tarih) >= 0 : fark(s.tarih) < 0).sort((a, b) => durum.sinav === 'yaklasan' ? a.tarih.localeCompare(b.tarih) : b.tarih.localeCompare(a.tarih));
+  const kalanlar = sb(S.kursiyerler).filter(k => k.dsinav && k.dsinav.sonuc === 'Kaldı');
+  const riskli = sb(S.kursiyerler).map(k => ({ k, r: risk(k) })).filter(x => x.r && x.r.puan >= 25).sort((a, b) => b.r.puan - a.r.puan);
+  const liste = sbSinav(S.sinavlar).filter(s => durum.sinav === 'yaklasan' ? fark(s.tarih) >= 0 : fark(s.tarih) < 0).sort((a, b) => durum.sinav === 'yaklasan' ? a.tarih.localeCompare(b.tarih) : b.tarih.localeCompare(a.tarih));
   const kartSinav = s => {
     const ks = s.kursiyerler.map(kursiyer).filter(Boolean), sonucVar = Object.keys(s.sonuc).length;
     const gecen = Object.values(s.sonuc).filter(x => x === 'Geçti').length;
@@ -33,10 +33,10 @@ export function sinavlar() {
     html: `${ekranNotu('Sınav günleri, kimlerin gireceği ve sonuçlar. “Kalma riski” sekmesi kalabilecek kursiyeri önceden gösterir; ek ders önerip hem kursiyeri hem geliri kurtarın.')}<div class="izgara iz-4">
       <div class="kart gosterge"><small>e-Sınav geçme oranı</small><b>%${oran('e-Sınav')}</b><span>Son oturumlar</span></div>
       <div class="kart gosterge"><small>Direksiyon geçme oranı</small><b>%${oran('Direksiyon')}</b><span>Son oturumlar</span></div>
-      <div class="kart gosterge"><small>Sınava hazır</small><b>${S.kursiyerler.filter(k => k.asama === 'Sınav' && !k.dsinav && !k.dsinavPlan).length}</b><span>Direksiyon derslerini bitirdi, oturum bekliyor</span></div>
+      <div class="kart gosterge"><small>Sınava hazır</small><b>${sb(S.kursiyerler).filter(k => k.asama === 'Sınav' && !k.dsinav && !k.dsinavPlan).length}</b><span>Direksiyon derslerini bitirdi, oturum bekliyor</span></div>
       <div class="kart gosterge"><small>Tekrar sınava girecek</small><b>${kalanlar.length}</b><span>Ek ders önerisi gönderildi</span></div>
     </div><div class="ara-bosluk"></div>
-    <div class="bolum-bas"><div id="sek">${sekmeler([['yaklasan', 'Yaklaşan', S.sinavlar.filter(s => fark(s.tarih) >= 0).length], ['gecmis', 'Geçmiş', S.sinavlar.filter(s => fark(s.tarih) < 0).length], ['risk', 'Kalma riski', riskli.length]], durum.sinav)}</div><div class="sag"><button class="dg dg-ana" data-yeni>${ik('arti')}Sınav oturumu ekle</button></div></div>
+    <div class="bolum-bas"><div id="sek">${sekmeler([['yaklasan', 'Yaklaşan', sbSinav(S.sinavlar).filter(s => fark(s.tarih) >= 0).length], ['gecmis', 'Geçmiş', sbSinav(S.sinavlar).filter(s => fark(s.tarih) < 0).length], ['risk', 'Kalma riski', riskli.length]], durum.sinav)}</div><div class="sag"><button class="dg dg-ana" data-yeni>${ik('arti')}Sınav oturumu ekle</button></div></div>
     ${durum.sinav === 'risk' ? `<div class="kart"><div class="kart-bas"><h3>Sınavda kalabilecek kursiyerler</h3><small>Deneme puanı, gelmediği dersler ve usta öğretici notlarından hesaplanır</small></div><ul class="liste" style="margin-top:8px">${riskli.map(({ k, r }) => `<li>${isaret(r.puan >= 50 ? 'uyari' : 'bilgi', 28)}<a class="kisi" href="#/kursiyer/${k.id}" style="flex:1"><div><b>${e(tamAd(k))} · ${r.puan >= 50 ? 'Yüksek' : 'Orta'} risk</b><small>${e(r.nedenler.join(' · '))}</small></div></a><span class="sag"><button class="dg dg-ana dg-kucuk" data-ekders="${k.id}">Ek ders öner</button></span></li>`).join('') || '<li>' + bos('Riskli kursiyer yok', 'Herkes sınava hazır görünüyor.') + '</li>'}</ul></div>` : `<div class="izgara iz-2">${liste.map(kartSinav).join('') || `<div class="kart">${bos('Oturum yok', 'Yeni bir sınav oturumu ekleyin.')}</div>`}</div>`}`,
     baglan(k) {
       k.addEventListener('click', ev => {
@@ -46,8 +46,8 @@ export function sinavlar() {
         const ed = t.closest('[data-ekders]'); if (ed) ekDersOner(kursiyer(ed.dataset.ekders));
         const so = t.closest('[data-sonuc]'); if (so) sonucGir(S.sinavlar.find(x => x.id === so.dataset.sonuc));
         const ek = t.closest('[data-ekle]'); if (ek) sinavaEkle(S.sinavlar.find(x => x.id === ek.dataset.ekle));
-        const h = t.closest('[data-hatir]'); if (h) { const s2 = S.sinavlar.find(x => x.id === h.dataset.hatir); s2.kursiyerler.forEach(id => gonderimEkle(tamAd(kursiyer(id)), `${s2.tur} sınavın ${tarihUzun(s2.tarih)} ${s2.saat}’te`, 'Sınav hatırlatması')); bildir(s2.kursiyerler.length + ' kursiyere sınav hatırlatması gönderildi', 'wp'); }
-        const l = t.closest('[data-liste]'); if (l) { const s2 = S.sinavlar.find(x => x.id === l.dataset.liste); csvIndir(`sinav-${s2.tur}-${s2.tarih}.csv`, [['Ad', 'Soyad', 'Telefon', 'Sınıf', 'Sonuç'], ...s2.kursiyerler.map(kursiyer).map(x => [x.ad, x.soyad, x.tel, SINIFLAR[x.sinif].ad, s2.sonuc[x.id] || ''])]); bildir('Sınav listesi indirildi'); }
+        const h = t.closest('[data-hatir]'); if (h) { const s2 = sbSinav(S.sinavlar).find(x => x.id === h.dataset.hatir); s2.kursiyerler.forEach(id => gonderimEkle(tamAd(kursiyer(id)), `${s2.tur} sınavın ${tarihUzun(s2.tarih)} ${s2.saat}’te`, 'Sınav hatırlatması')); bildir(s2.kursiyerler.length + ' kursiyere sınav hatırlatması gönderildi', 'wp'); }
+        const l = t.closest('[data-liste]'); if (l) { const s2 = sbSinav(S.sinavlar).find(x => x.id === l.dataset.liste); csvIndir(`sinav-${s2.tur}-${s2.tarih}.csv`, [['Ad', 'Soyad', 'Telefon', 'Sınıf', 'Sonuç'], ...s2.kursiyerler.map(kursiyer).map(x => [x.ad, x.soyad, x.tel, SINIFLAR[x.sinif].ad, s2.sonuc[x.id] || ''])]); bildir('Sınav listesi indirildi'); }
       });
     },
   };
@@ -119,7 +119,9 @@ export function kasa(alt) {
   if (durum.kasa === 'senet') govde = `<div class="kart"><div class="kart-bas"><h3>Senetler</h3><small>${senetler.filter(x => !x.t.odendi).length} açık senet · ${tl(senetler.filter(x => !x.t.odendi).reduce((a, x) => a + x.t.tutar, 0))}</small></div><div class="tablo-kap" style="margin-top:10px"><table class="tablo tablo-mobil"><thead><tr><th>Senet</th><th>Borçlu</th><th>Vade</th><th>Durum</th><th class="sag">Tutar</th><th></th></tr></thead><tbody>${senetler.map(({ k, t, i }) => `<tr><td class="m-gizle mono">S-${k.id.slice(1)}-${i + 1}</td><td class="m-tam"><a class="kisi" href="#/kursiyer/${k.id}"><div><b>${e(tamAd(k))}</b><small>Kefil: ${e(k.acil ? k.acil.ad : '—')}</small></div></a></td><td>${tarih(t.vade)}</td><td>${t.odendi ? rozet('Tahsil edildi', 'yesil') : fark(t.vade) < 0 ? rozet('Vadesi geçti', 'kirmizi') : rozet('Portföyde', 'mavi')}</td><td class="sag sayi">${tl(t.tutar)}</td><td class="sag"><button class="dg dg-cizgi dg-kucuk" data-senet="${k.id}">${ik('belge')}Yazdır</button></td></tr>`).join('') || `<tr><td colspan="6">${bos('Senetli ödeme yok', '')}</td></tr>`}</tbody></table></div></div>`;
   if (durum.kasa === 'hesap') { const bugunH = sb(S.hareket).filter(h => h.tarih === gun(0)); const gG = bugunH.filter(h => h.tur === 'Gelir'), gC = bugunH.filter(h => h.tur === 'Gider'); const yon = y => bugunH.filter(h => h.tur === 'Gelir' && h.yontem === y).reduce((a, h) => a + h.tutar, 0); govde = `<div class="izgara iz-3">${S.hesaplar.map(h => `<div class="kart" style="padding:18px 20px"><div style="display:flex;align-items:center;gap:10px">${isaret(h.tur === 'Kasa' ? 'bilgi' : 'zorunlu', 26)}<b style="font-family:var(--baslik);font-size:16px;color:var(--murekkep)">${e(h.ad)}</b><span style="margin-left:auto">${rozet(h.tur)}</span></div><b style="display:block;font-family:var(--baslik);font-size:30px;font-weight:900;color:var(--murekkep);margin-top:10px">${tl(h.bakiye + (h.id === 'kasa' ? yon('Nakit') : h.id === 'pos' ? yon('Kart') : yon('Havale')))}</b><small style="color:var(--soluk)">Bugün +${tl(h.id === 'kasa' ? yon('Nakit') : h.id === 'pos' ? yon('Kart') : yon('Havale'))}</small></div>`).join('')}</div><div class="ara-bosluk"></div>
     <div class="kart"><div class="kart-bas"><h3>Gün sonu</h3><small>${bugunMetni2()}</small><div class="sag"><button class="dg dg-ana dg-kucuk" data-gunsonu ${S.gunSonu.includes(gun(0)) ? 'disabled' : ''}>${S.gunSonu.includes(gun(0)) ? 'Gün kapatıldı' : 'Günü kapat'}</button></div></div><div class="kart-govde"><dl class="bilgi-tablo"><dt>Nakit tahsilat</dt><dd>${tl(yon('Nakit'))}</dd><dt>Kartla tahsilat</dt><dd>${tl(yon('Kart'))}</dd><dt>Havale / EFT</dt><dd>${tl(yon('Havale'))}</dd><dt>Bugünkü gider</dt><dd>${tl(gC.reduce((a, h) => a + h.tutar, 0))}</dd><dt>Kasada olması gereken</dt><dd>${tl(S.hesaplar[0].bakiye + yon('Nakit'))}</dd><dt>İşlem sayısı</dt><dd>${gG.length + gC.length}</dd></dl><div class="alan" style="margin-top:14px;max-width:320px"><label for="sayim">Kasada sayılan nakit (₺)</label><input id="sayim" inputmode="numeric" placeholder="${S.hesaplar[0].bakiye + yon('Nakit')}" ${S.gunSonu.includes(gun(0)) ? 'disabled' : ''}><small id="sayim-fark" style="color:var(--soluk)"></small></div><p style="font-size:13.5px;color:var(--soluk);margin-top:12px">Günü kapatınca özet kurs müdürüne WhatsApp’tan gider; kapatılan gün değiştirilemez.</p></div></div>`; }
-  if (durum.kasa === 'geciken') govde = `<div class="kart"><div class="kart-bas"><h3>Geciken taksitler</h3><small>${gec.length} taksit · ${tl(gecikenT)}</small><div class="sag"><button class="dg dg-wp dg-kucuk" data-toplu>${ik('wp')}Hepsine hatırlat</button></div></div><div class="tablo-kap" style="margin-top:10px"><table class="tablo tablo-mobil"><thead><tr><th>Kursiyer</th><th>Vade</th><th>Gecikme</th><th class="sag">Tutar</th><th></th></tr></thead><tbody>${gec.map(x => taksitSatir(x, true)).join('') || `<tr><td colspan="5">${bos('Geciken taksit yok', 'Tüm ödemeler zamanında.')}</td></tr>`}</tbody></table></div></div>`;
+  const otoBekleyen = sb(S.kursiyerler).filter(k => k.odeme.otomatik).flatMap(k => k.odeme.taksitler.map((t, i) => ({ k, t, i })).filter(x => !x.t.odendi && fark(x.t.vade) <= 0));
+  const otoKart = `<div class="kart" style="margin-bottom:16px"><div class="kart-govde" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">${isaret(otoBekleyen.length ? 'zorunlu' : 'tamam', 28)}<div style="flex:1;min-width:220px"><b style="color:var(--murekkep);font-family:var(--baslik);font-size:16px">Otomatik çekim</b><p style="font-size:14px">${sb(S.kursiyerler).filter(k => k.odeme.otomatik).length} kursiyerin kartı kayıtlı. ${otoBekleyen.length ? `Vadesi gelen <b>${otoBekleyen.length} taksit · ${tl(otoBekleyen.reduce((a, x) => a + x.t.tutar, 0))}</b> çekilmeyi bekliyor; her sabah 09:00’da kendiliğinden çekilir.` : 'Bugün çekilecek taksit yok.'} Çekilemeyenlere ödeme linki gider.</p></div>${otoBekleyen.length ? `<button class="dg dg-ana" data-oto-cek>Şimdi çek</button>` : ''}</div></div>`;
+  if (durum.kasa === 'geciken') govde = otoKart + `<div class="kart"><div class="kart-bas"><h3>Geciken taksitler</h3><small>${gec.length} taksit · ${tl(gecikenT)}</small><div class="sag"><button class="dg dg-wp dg-kucuk" data-toplu>${ik('wp')}Hepsine hatırlat</button></div></div><div class="tablo-kap" style="margin-top:10px"><table class="tablo tablo-mobil"><thead><tr><th>Kursiyer</th><th>Vade</th><th>Gecikme</th><th class="sag">Tutar</th><th></th></tr></thead><tbody>${gec.map(x => taksitSatir(x, true)).join('') || `<tr><td colspan="5">${bos('Geciken taksit yok', 'Tüm ödemeler zamanında.')}</td></tr>`}</tbody></table></div></div>`;
   return {
     baslik: 'Kasa ve ödemeler', alt: ayAdi(BUGUN.getMonth(), true) + ' ' + BUGUN.getFullYear(),
     html: `${ekranNotu('Kim ne ödedi, kimin taksiti gecikti, kasada ve bankada ne var. Geciken taksite tek dokunuşla ödeme linki gider.')}<div class="izgara iz-4">
@@ -133,6 +135,7 @@ export function kasa(alt) {
     <div class="bolum-bas"><div id="sek">${sekmeler([['hareket', 'Hareketler'], ['takvim', 'Taksit takvimi', yaklasan.length], ['geciken', 'Gecikenler', gec.length], ['senet', 'Senetler', senetler.filter(x => !x.t.odendi).length], ['hesap', 'Kasa ve banka']], durum.kasa)}</div><div class="sag"><button class="dg dg-cizgi" data-fatura>${ik('belge')}e-Arşiv fatura</button><button class="dg dg-ana" data-hareket>${ik('arti')}Gelir / gider ekle</button></div></div>
     ${govde}`,
     baglan(k) {
+      k.addEventListener('click', ev => { if (!ev.target.closest('[data-oto-cek]')) return; let ok = 0, red = 0; otoBekleyen.forEach(({ k: ks, t, i }, n) => { if (n % 5 === 4) { red++; wpGonder(ks, `Merhaba ${ks.ad}, ${i + 1}. taksitin kartından çekilemedi (bakiye yetersiz). Bu bağlantıdan başka bir kartla ödeyebilirsin.`, 'Çekim başarısız'); return; } t.odendi = gun(0); t.yontem = 'Kart'; S.hareket.unshift({ id: 'h' + Date.now() + n, tarih: gun(0), tur: 'Gelir', kategori: 'Taksit', aciklama: tamAd(ks) + ' · ' + (i + 1) + '. taksit (otomatik çekim)', tutar: t.tutar, yontem: 'Kart', kursiyer: ks.id }); ok++; }); islem('Otomatik çekimleri çalıştırdı', ok + ' başarılı, ' + red + ' başarısız'); kaydet(); bildir(`${ok} taksit çekildi${red ? ', ' + red + ' kişiye ödeme linki gitti' : ''}`); yenile(); });
       const sy = k.querySelector('#sayim'); if (sy) sy.addEventListener('input', () => { const f = (+sy.value.replace(/\D/g, '') || 0) - +sy.placeholder; k.querySelector('#sayim-fark').innerHTML = sy.value ? (f ? `<b style="color:var(--kirmizi)">Fark ${f > 0 ? '+' : ''}${tl(f)}</b>` : '<b style="color:var(--yesil)">Kasa tutuyor</b>') : ''; });
       k.addEventListener('click', ev => {
         const t = ev.target;
@@ -141,7 +144,7 @@ export function kasa(alt) {
         const h = t.closest('[data-hat]'); if (h) { const [id, i] = h.dataset.hat.split('|'); const ks = kursiyer(id), tk = ks.odeme.taksitler[+i]; wpGonder(ks, `Merhaba ${ks.ad}, ${tarih(tk.vade)} vadeli ${tl(tk.tutar)} taksidinin hatırlatmasıdır. Kartla ödemek için: odeme.ornek/${ks.id}`, 'Taksit hatırlatması'); }
         if (t.closest('[data-toplu]')) { gec.forEach(x => gonderimEkle(tamAd(x.k), 'Taksit hatırlatması ve ödeme linki', 'Taksit hatırlatması')); bildir(new Set(gec.map(x => x.k.id)).size + ' kursiyere ödeme linkiyle hatırlatma gönderildi', 'wp'); }
         if (t.closest('[data-hareket]')) hareketEkle();
-        const sn = t.closest('[data-senet]'); if (sn) import('./sayfalar3.js?v=24').then(m => m.belgeAc('senet', sn.dataset.senet));
+        const sn = t.closest('[data-senet]'); if (sn) import('./sayfalar3.js?v=28').then(m => m.belgeAc('senet', sn.dataset.senet));
         if (t.closest('[data-gunsonu]')) { const sy = k.querySelector('#sayim'), bek = +sy.placeholder, say = +String(sy.value).replace(/\D/g, '') || bek, fk = say - bek; S.gunSonu.push(gun(0)); islem('Günü kapattı', 'Sayım ' + tl(say) + (fk ? ' · fark ' + tl(fk) : ' · fark yok')); kaydet(); gonderimEkle(S.kurs.yetkili, 'Gün sonu özeti', 'Gün sonu'); bildir('Gün kapatıldı, özet kurs müdürüne gönderildi', 'wp'); yenile(); }
         if (t.closest('[data-fatura]')) faturaKes();
         if (t.closest('[data-disa]')) { csvIndir('kasa-hareketleri.csv', [['Tarih', 'Tür', 'Kategori', 'Açıklama', 'Yöntem', 'Tutar'], ...S.hareket.map(x => [x.tarih, x.tur, x.kategori, x.aciklama, x.yontem, x.tutar])]); bildir('Kasa hareketleri indirildi'); }
@@ -281,15 +284,15 @@ export function mesajlar(alt) {
 const isGunu = n => { let d = 0, t = new Date(BUGUN); for (let i = 0; i < n; i++) { t.setDate(t.getDate() + 1); if (t.getDay() !== 0 && t.getDay() !== 6) d++; } return d; };
 export function mebKurallari() {
   const K = S.kurs, l = [];
-  const yakin = S.dersler.filter(d => d.durum === 'Planlandı' && fark(d.tarih) >= 0);
+  const yakin = sbDers(S.dersler).filter(d => d.durum === 'Planlandı' && fark(d.tarih) >= 0);
   yakin.filter(d => d.eklendi && (tarihOku(d.tarih) - tarihOku(d.eklendi)) / 864e5 < K.programOnGun).slice(0, 4).forEach(d => l.push(['uyari', `${tamAd(kursiyer(d.kursiyer))} · ${tarih(d.tarih)} ${d.saat} dersi ${K.programOnGun} günden kısa sürede planlandı`, `Direksiyon programı MEBBİS’e en az ${K.programOnGun} gün önce girilmeli.`, '#/plan']));
   const gr = {}; yakin.forEach(d => { const a = d.kursiyer + '|' + d.tarih; gr[a] = (gr[a] || 0) + 1; });
   Object.entries(gr).filter(([, n]) => n > K.gunlukDersSiniri).forEach(([a, n]) => { const k = kursiyer(a.split('|')[0]); if (k) l.push(['yasak', `${tamAd(k)} için ${tarih(a.split('|')[1])} günü ${n} saat direksiyon var`, `Günde en fazla ${K.gunlukDersSiniri} saat.`, '#/plan']); });
-  S.kursiyerler.filter(k => k.asama === 'Sınav' && !k.dsinav && k.direksiyon < SINIFLAR[k.sinif].direksiyon).forEach(k => l.push(['yasak', `${tamAd(k)} sınava hazır görünüyor ama ${k.direksiyon}/${SINIFLAR[k.sinif].direksiyon} ders`, 'Sınıfın asgari direksiyon saati tamamlanmadan sınava giremez.', '#/kursiyer/' + k.id]));
-  S.kursiyerler.filter(k => ['Direksiyon', 'Sınav'].includes(k.asama) && k.direksiyon >= SINIFLAR[k.sinif].direksiyon - 4).forEach(k => { const g = S.dersler.filter(d => d.kursiyer === k.id && d.saat >= '18:00' && d.durum !== 'Gelmedi').length; if (g < K.geceDersi) l.push(['bilgi', `${tamAd(k)} · gece dersi ${g}/${K.geceDersi}`, `Gün batımından sonra en az ${K.geceDersi} saat ders planlanmalı.`, '#/plan']); });
-  S.sinavlar.filter(s => s.tur === 'Direksiyon' && fark(s.tarih) >= 0 && !s.mebBildirim && isGunu(fark(s.tarih)) <= K.sinavBildirimIsGunu + 2).forEach(s => l.push(['dur', `${tarih(s.tarih)} direksiyon sınavı MEBBİS’e bildirilmedi`, `Kursiyer, usta öğretici ve araç bilgileri sınavdan en geç ${K.sinavBildirimIsGunu} iş günü önce girilmeli. Kalan: ${isGunu(fark(s.tarih))} iş günü.`, '#/meb']));
-  S.sinavlar.filter(s => s.tur === 'e-Sınav' && fark(s.tarih) >= 0).forEach(s => s.kursiyerler.map(kursiyer).filter(k => k && eksikEvrak(k).length).forEach(k => l.push(['yasak', `${tamAd(k)} e-sınava kayıtlı ama evrakı eksik`, eksikEvrak(k).map(x => x[1]).join(', '), '#/kursiyer/' + k.id])));
-  S.kursiyerler.filter(k => k.dsinav && k.dsinav.sonuc === 'Kaldı' && k.dsinavPlan && (tarihOku(k.dsinavPlan) - tarihOku(k.dsinav.tarih)) / 864e5 < K.tekrarBekleme).forEach(k => l.push(['uyari', `${tamAd(k)} tekrar sınavı bekleme süresinden önce`, `Kaldıktan sonra en az ${K.tekrarBekleme} gün (kurs ayarı).`, '#/sinavlar']));
+  sb(S.kursiyerler).filter(k => k.asama === 'Sınav' && !k.dsinav && k.direksiyon < SINIFLAR[k.sinif].direksiyon).forEach(k => l.push(['yasak', `${tamAd(k)} sınava hazır görünüyor ama ${k.direksiyon}/${SINIFLAR[k.sinif].direksiyon} ders`, 'Sınıfın asgari direksiyon saati tamamlanmadan sınava giremez.', '#/kursiyer/' + k.id]));
+  sb(S.kursiyerler).filter(k => ['Direksiyon', 'Sınav'].includes(k.asama) && k.direksiyon >= SINIFLAR[k.sinif].direksiyon - 4).forEach(k => { const g = sbDers(S.dersler).filter(d => d.kursiyer === k.id && d.saat >= '18:00' && d.durum !== 'Gelmedi').length; if (g < K.geceDersi) l.push(['bilgi', `${tamAd(k)} · gece dersi ${g}/${K.geceDersi}`, `Gün batımından sonra en az ${K.geceDersi} saat ders planlanmalı.`, '#/plan']); });
+  sbSinav(S.sinavlar).filter(s => s.tur === 'Direksiyon' && fark(s.tarih) >= 0 && !s.mebBildirim && isGunu(fark(s.tarih)) <= K.sinavBildirimIsGunu + 2).forEach(s => l.push(['dur', `${tarih(s.tarih)} direksiyon sınavı MEBBİS’e bildirilmedi`, `Kursiyer, usta öğretici ve araç bilgileri sınavdan en geç ${K.sinavBildirimIsGunu} iş günü önce girilmeli. Kalan: ${isGunu(fark(s.tarih))} iş günü.`, '#/meb']));
+  sbSinav(S.sinavlar).filter(s => s.tur === 'e-Sınav' && fark(s.tarih) >= 0).forEach(s => s.kursiyerler.map(kursiyer).filter(k => k && eksikEvrak(k).length).forEach(k => l.push(['yasak', `${tamAd(k)} e-sınava kayıtlı ama evrakı eksik`, eksikEvrak(k).map(x => x[1]).join(', '), '#/kursiyer/' + k.id])));
+  sb(S.kursiyerler).filter(k => k.dsinav && k.dsinav.sonuc === 'Kaldı' && k.dsinavPlan && (tarihOku(k.dsinavPlan) - tarihOku(k.dsinav.tarih)) / 864e5 < K.tekrarBekleme).forEach(k => l.push(['uyari', `${tamAd(k)} tekrar sınavı bekleme süresinden önce`, `Kaldıktan sonra en az ${K.tekrarBekleme} gün (kurs ayarı).`, '#/sinavlar']));
   S.araclar.filter(a => [a.muayene, a.sigorta].some(t => t && fark(t) < 0)).forEach(a => l.push(['dur', `${a.plaka} belgesi süresi dolmuş`, 'Bu araçla ders ve sınav yapılamaz.', '#/filo']));
   S.egitmenler.forEach(x => Object.entries(x.belgeler || {}).filter(([, t]) => fark(t) < 0).forEach(([b]) => l.push(['dur', `${x.ad} · ${{ sertifika: 'sertifika', saglik: 'sağlık raporu', adli: 'adli sicil' }[b]} süresi dolmuş`, 'Yenilenene kadar ders ve sınav planlanamaz.', '#/filo'])));
   return l;
@@ -298,13 +301,13 @@ export function meb(alt) {
   const SEK = ['asistan', 'denetim', 'evrak', 'esinav', 'kontrol', 'duyuru'];
   if (alt && SEK.includes(alt)) durum.meb = alt;
   if (!SEK.includes(durum.meb)) durum.meb = 'asistan';
-  const eks = denetimEksikleri(), yap = S.dersler.filter(d => d.durum === 'Yapıldı'), imz = yap.filter(d => d.imza).length;
+  const eks = denetimEksikleri(), yap = sbDers(S.dersler).filter(d => d.durum === 'Yapıldı'), imz = yap.filter(d => d.imza).length;
   const hazir = Math.max(0, 100 - eks.reduce((a, x) => a + (x[0] === 'dur' ? 15 : x[0] === 'yasak' ? 8 : 3), 0));
-  const aktarim = S.kursiyerler.filter(k => !k.mebIslendi && !eksikEvrak(k).length);
-  const eksik = S.kursiyerler.filter(k => eksikEvrak(k).length && k.asama !== 'Ehliyet');
-  const esinav = S.kursiyerler.filter(k => k.asama === 'Teorik' && k.teorik >= SINIFLAR[k.sinif].teorik - 4 && !S.sinavlar.some(s => s.tur === 'e-Sınav' && fark(s.tarih) >= 0 && s.kursiyerler.includes(k.id)));
-  const program = S.dersler.filter(d => d.durum === 'Planlandı' && fark(d.tarih) >= 0 && !d.meb).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat));
-  const sinavBildir = S.sinavlar.filter(s => s.tur === 'Direksiyon' && fark(s.tarih) >= 0 && !s.mebBildirim);
+  const aktarim = sb(S.kursiyerler).filter(k => !k.mebIslendi && !eksikEvrak(k).length);
+  const eksik = sb(S.kursiyerler).filter(k => eksikEvrak(k).length && k.asama !== 'Ehliyet');
+  const esinav = sb(S.kursiyerler).filter(k => k.asama === 'Teorik' && k.teorik >= SINIFLAR[k.sinif].teorik - 4 && !sbSinav(S.sinavlar).some(s => s.tur === 'e-Sınav' && fark(s.tarih) >= 0 && s.kursiyerler.includes(k.id)));
+  const program = sbDers(S.dersler).filter(d => d.durum === 'Planlandı' && fark(d.tarih) >= 0 && !d.meb).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat));
+  const sinavBildir = sbSinav(S.sinavlar).filter(s => s.tur === 'Direksiyon' && fark(s.tarih) >= 0 && !s.mebBildirim);
   const kurallar = mebKurallari();
   let govde = '';
   if (durum.meb === 'asistan') govde = `${mebAktarimKarti()}<div class="izgara iz-3">
@@ -329,19 +332,20 @@ export function meb(alt) {
   return {
     baslik: 'MEB işlemleri', alt: 'MEBBİS’e girilecekler, evrak, sınav başvuruları ve kurallar',
     html: `${ekranNotu('MEBBİS’e girilecek her şey burada sırayla hazır: kayıtlar, direksiyon programı, sınav bildirimi. Yönetmelik kurallarına aykırı bir plan önceden işaretlenir.')}
+      ${cokSube() ? (seciliSube() ? `<div class="kurum-serit">${isaret('bilgi', 22)}<span><b>MEBBİS kurumu: ${e(seciliSube().ad)}</b> · kurum kodu <span class="mono">${e(seciliSube().kurumKodu)}</span> · müdür ${e(seciliSube().mudur)} · ${e(seciliSube().mebbis)}</span></div>` : `<div class="kurum-serit uyari">${isaret('uyari', 22)}<span><b>MEB işlemleri şube başına yapılır.</b> Her şube ayrı izinli kurumdur: ayrı kurum kodu, müdür ve MEBBİS hesabı. Aşağıda iki şubenin işleri birlikte görünüyor; girmek için şube seçin.</span><span style="display:flex;gap:6px;flex-wrap:wrap">${S.subeler.map(x => `<button class="dg dg-ana dg-kucuk" data-sube-sec="${x.id}">${e(x.ad)}</button>`).join('')}</span></div>`) : ''}
       ${olcumler([['Girilecek kayıt', aktarim.length + '', 'Evrakı tamam'], ['Girilecek program', program.length + ' ders', 'MEBBİS’e girilmemiş'], ['Sınav bildirimi', sinavBildir.length + '', 'Bekleyen oturum'], ['Kural uyarısı', kurallar.length + '', kurallar.length ? 'İnceleme bekliyor' : 'Sorun yok', kurallar.length ? 'uyari' : '']])}
       <div class="ara-bosluk"></div>
       <div id="sek">${sekmeler([['asistan', 'MEBBİS giriş asistanı', aktarim.length + (program.length ? 1 : 0) + sinavBildir.length], ['denetim', 'Denetim hazırlığı', eks.length], ['evrak', 'Evrak kontrolü', eksik.length], ['esinav', 'e-Sınav başvuruları', esinav.length], ['kontrol', 'Kurallar ve takvim', kurallar.length], ['duyuru', 'Mevzuat']], durum.meb)}</div>${govde}`,
     baglan(k) {
-      k.addEventListener('click', ev => { if (ev.target.closest('[data-meb-zincir]')) mebSiraBaslat(true); if (ev.target.closest('[data-meb-arac-kur]')) mebAracKur(); if (ev.target.closest('[data-meb-aktar]')) mebAktar(); });
+      k.addEventListener('click', ev => { const ss = ev.target.closest('[data-sube-sec]'); if (ss) { document.querySelectorAll('[data-sube]').forEach(x => { x.value = ss.dataset.subeSec; x.dispatchEvent(new Event('change', { bubbles: true })); }); return; } if (ev.target.closest('[data-meb-zincir]')) mebSiraBaslat(true); if (ev.target.closest('[data-meb-arac-kur]')) mebAracKur(); if (ev.target.closest('[data-meb-aktar]')) mebAktar(); });
       k.addEventListener('click', ev => {
         const t = ev.target;
         const s = t.closest('[data-sekme]'); if (s) { durum.meb = s.dataset.sekme; if (location.hash !== '#/meb') location.hash = '#/meb'; else yenile(); }
         if (t.closest('[data-evrak-toplu]')) { eksik.forEach(x => gonderimEkle(tamAd(x), 'Eksik evrak: ' + eksikEvrak(x).map(z => z[1]).join(', '), 'Evrak hatırlatması')); bildir(eksik.length + ' kursiyere eksik evrak hatırlatması gönderildi', 'wp'); }
         const c = t.closest('[data-csv]'); if (c) { csvIndir('esinav-basvuru.csv', [['TC', 'Ad', 'Soyad', 'Telefon', 'Sınıf', 'Teorik saat'], ...esinav.map(x => [x.tc, x.ad, x.soyad, x.tel, SINIFLAR[x.sinif].ad, x.teorik])]); bildir('Liste indirildi'); }
-        if (t.closest('[data-denetim-dosya]')) import('./sayfalar3.js?v=24').then(m => m.belgeAc('denetim'));
-        if (t.closest('[data-program]')) import('./sayfalar3.js?v=24').then(m => m.programPenceresi());
-        const sb = t.closest('[data-sinav-bildir]'); if (sb) import('./sayfalar3.js?v=24').then(m => m.sinavBildirimPenceresi(sb.dataset.sinavBildir));
+        if (t.closest('[data-denetim-dosya]')) import('./sayfalar3.js?v=28').then(m => m.belgeAc('denetim'));
+        if (t.closest('[data-program]')) import('./sayfalar3.js?v=28').then(m => m.programPenceresi());
+        const sb = t.closest('[data-sinav-bildir]'); if (sb) import('./sayfalar3.js?v=28').then(m => m.sinavBildirimPenceresi(sb.dataset.sinavBildir));
       });
     },
   };
@@ -408,7 +412,7 @@ export function ayarlar(alt) {
   if (AYAR_SEKMELERI[durum.ayar]) govde = AYAR_SEKMELERI[durum.ayar]();
   return {
     baslik: 'Ayarlar', alt: S.kurs.ad,
-    html: `<div id="sek">${sekmeler([['kurs', 'Kurs bilgileri'], ['sinif', 'Sınıf ve ücretler'], ['kurallar', 'MEB kuralları'], ['kullanici', 'Kullanıcılar'], ['guvenlik', 'Güvenlik'], ['kvkk', 'KVKK'], ['entegrasyon', 'Muhasebe ve fatura'], ['aktarim', 'Veri aktarımı'], ['gecmis', 'İşlem geçmişi', S.islemler.length], ['gorunum', 'Görünüm'], ['demo', 'Demo']], durum.ayar)}</div>${govde}`,
+    html: `<div id="sek" class="ayar-gruplar">${[['Kurs', [['kurs', 'Kurs bilgileri'], ['subeler', 'Şubeler'], ['sinif', 'Sınıf ve ücretler'], ['kurallar', 'MEB kuralları']]], ['Kişiler ve güvenlik', [['kullanici', 'Kullanıcılar'], ['guvenlik', 'Güvenlik'], ['kvkk', 'KVKK'], ['gecmis', 'İşlem geçmişi']]], ['Bağlantılar', [['entegrasyon', 'Muhasebe ve fatura'], ['aktarim', 'Veri aktarımı']]], ['Diğer', [['gorunum', 'Görünüm'], ['demo', 'Demo']]]].map(([g, l]) => `<div class="ayar-grup"><small>${g}</small>${sekmeler(l, durum.ayar)}</div>`).join('')}</div>${durum.ayar === 'kvkk' ? `<p class="ekran-notu">${isaret('bilgi', 20)}<span>Mesajlaşma asistanının KVKK ayarları (model konumu, gizleme, saklama) <a href="#/sosyal/kural" style="color:var(--levha);font-weight:700">Sosyal medya asistanı › Kurallar</a> sayfasında.</span></p>` : ''}${govde}`,
     baglan(k) {
       ayarBaglan(k);
       k.addEventListener('click', ev => {
