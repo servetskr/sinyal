@@ -1,29 +1,37 @@
-import { S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, risk, islem, geriAlNoktasi, oturum, tcGecerli, tcMaskele, ogretmen, yas, mebOnKontrol, sb, sbDers, sbSinav, kapaliGun, ustaAraci, dersAraci, yerelZaman } from './veri.js?v=34';
-import { e, tl, sayi, ik, rozet, asamaRozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, sekmeler, tarih, tarihUzun, goreli, gunKisa, cubukGrafik, halka, ayAdi, isaret, yonLevhasi, olcumler, aracGorsel, ekranNotu, bugunMetni, fotoKucult, waAc, waSirali, tamTarih } from './ui.js?v=34';
-import { yenile } from './app.js?v=34';
-import { denetimEksikleri, sozlesmeImzalat } from './sayfalar3.js?v=34';
-import { bosSaatler } from './sayfalar4.js?v=34';
-import { evrakDogrula, kurulumAdimlari } from './sayfalar5.js?v=34';
-import { KONULAR } from './sorular.js?v=34';
+import { S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, risk, islem, geriAlNoktasi, oturum, tcGecerli, tcMaskele, ogretmen, yas, mebOnKontrol, sb, sbDers, sbSinav, kapaliGun, ustaAraci, dersAraci, yerelZaman } from './veri.js?v=35';
+import { e, saatDe, saatE, tl, sayi, ik, rozet, asamaRozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, sekmeler, tarih, tarihUzun, goreli, gunKisa, cubukGrafik, halka, ayAdi, isaret, yonLevhasi, olcumler, aracGorsel, ekranNotu, bugunMetni, fotoKucult, waAc, waSirali, tamTarih } from './ui.js?v=35';
+import { yenile } from './app.js?v=35';
+import { denetimEksikleri, sozlesmeImzalat } from './sayfalar3.js?v=35';
+import { bosSaatler } from './sayfalar4.js?v=35';
+import { evrakDogrula, kurulumAdimlari } from './sayfalar5.js?v=35';
+import { KONULAR } from './sorular.js?v=35';
 
 const aktifler = () => sb(S.kursiyerler).filter(k => k.asama !== 'Ehliyet');
 const buAyMi = s => { const d = tarihOku(s); return d.getMonth() === BUGUN.getMonth() && d.getFullYear() === BUGUN.getFullYear(); };
 const gecenAyMi = s => { const d = tarihOku(s), g = new Date(BUGUN); g.setDate(1); g.setMonth(g.getMonth() - 1); return d.getMonth() === g.getMonth() && d.getFullYear() === g.getFullYear(); };
 // Mesajın gideceği kişi ve numarası (kursiyer, aday, usta ya da kullanıcı)
+const ROL_ETIKET = { mudur: 'MÜDÜR', sekreter: 'ÖN BÜRO', usta: 'HOCA' };
 export const alici = k => {
-  if (k && typeof k === 'object') return { ad: tamAd(k), tel: k.tel, kanal: 'WhatsApp' };
-  const a = S.adaylar.find(x => x.ad === k); if (a) return { ad: a.ad, tel: a.tel, kanal: a.kanal };
-  const ks = S.kursiyerler.find(x => tamAd(x) === k); if (ks) return { ad: k, tel: ks.tel, kanal: 'WhatsApp' };
-  const eg = S.egitmenler.find(x => x.ad === k); if (eg) return { ad: k, tel: eg.tel, kanal: 'WhatsApp' };
-  const u = S.kullanicilar.find(x => x.ad === k); return { ad: String(k || ''), tel: (u && u.tel) || '', kanal: 'WhatsApp' };
+  if (k === 'mudur') return { ad: S.kurs.yetkili || 'Kurs müdürü', tel: S.kurs.wp || '', kanal: 'WhatsApp', rol: 'MÜDÜR' };
+  if (k && typeof k === 'object') return k.siniflar ? { ad: k.ad, tel: k.tel, kanal: 'WhatsApp', rol: 'HOCA' } : { ad: tamAd(k), tel: k.tel, kanal: 'WhatsApp', rol: 'ÖĞRENCİ' };
+  const a = S.adaylar.find(x => x.ad === k); if (a) return { ad: a.ad, tel: a.tel, kanal: a.kanal, rol: 'ADAY' };
+  const ks = S.kursiyerler.find(x => tamAd(x) === k); if (ks) return { ad: k, tel: ks.tel, kanal: 'WhatsApp', rol: 'ÖĞRENCİ' };
+  const eg = S.egitmenler.find(x => x.ad === k); if (eg) return { ad: k, tel: eg.tel, kanal: 'WhatsApp', rol: 'HOCA' };
+  const u = S.kullanicilar.find(x => x.ad === k); return { ad: String(k || ''), tel: (u && u.tel) || '', kanal: 'WhatsApp', rol: u ? ROL_ETIKET[u.rol] : '' };
 };
+// Bir olayın birden çok kişiye bildirimi (ör. ders saati değişti → öğrenci + hoca). API açıksa sessizce gider.
+export function bildirimler(liste, baslik = 'Bildirimler') {
+  const l = liste.filter(x => x && x.kim && x.metin).map(x => { const a = alici(x.kim); return { ad: a.ad, tel: a.tel, rol: a.rol, metin: x.metin, tur: x.tur || baslik }; });
+  l.forEach(x => gonderimEkle(x.ad, x.metin, x.tur));
+  waSirali(l, baslik, { sessiz: true });
+}
 // Elle gönderilen mesaj: WhatsApp kişinin sohbetinde hazır mesajla açılır (Instagram adayında metin kopyalanır, DM kutusu açılır).
 export const wpGonder = (k, metin, tur = 'Mesaj') => {
   const a = alici(k); gonderimEkle(a.ad, metin, tur);
   if (a.kanal === 'Instagram') { try { navigator.clipboard.writeText(metin); } catch (x) { } window.open('https://www.instagram.com/direct/inbox/', '_blank'); return bildir('Mesaj kopyalandı; Instagram’da ' + a.ad.split(' ')[0] + ' sohbetine yapıştırıp gönderin'); }
-  if (waAc(a.tel, metin, 'WhatsApp', a.ad) === 'api') return; bildir(a.ad.split(' ')[0] + ' için WhatsApp açıldı; mesajı gönderin', 'wp');
+  if (waAc(a.tel, metin, 'WhatsApp', a.ad, false, a.rol) === 'api') return; bildir(a.ad.split(' ')[0] + ' için WhatsApp açıldı; mesajı gönderin', 'wp');
 };
-export const kisiListe = (l, metinFn) => l.map(k => { const a = alici(k); return { ad: a.ad, tel: a.tel, metin: metinFn(k) }; });
+export const kisiListe = (l, metinFn) => l.map(k => { const a = alici(k); return { ad: a.ad, tel: a.tel, rol: a.rol, metin: metinFn(k) }; });
 export const odemeBilgisi = () => S.kurs.iban ? `Havale/EFT için IBAN: ${S.kurs.iban} (${S.kurs.ad}); açıklamaya adını yazman yeterli. Kursta nakit ya da kartla da ödeyebilirsin.` : 'Kursa uğrayıp nakit ya da kartla ödeyebilirsin.';
 export const yorumMetni = k => `Merhaba ${k.ad}, ehliyetin hayırlı olsun! ${S.kurs.ad} hakkında birkaç cümle yazarsan çok seviniriz${S.kurs.yorumLink ? ': ' + S.kurs.yorumLink : '. Google’da “' + S.kurs.ad + '” aratıp yorum yazabilirsin.'}`;
 
@@ -384,7 +392,7 @@ export function kursiyerler(filtre) {
         const g = ev.target.closest('[data-git]'); if (g) location.hash = '#/kursiyer/' + g.dataset.git;
         if (ev.target.closest('[data-yeni]')) kursiyerFormu();
         const b = ev.target.closest('[data-borclu]'); if (b) { borclu = !borclu; b.classList.toggle('secili', borclu); ciz(); }
-        if (ev.target.closest('[data-disa]')) import('./ui.js?v=34').then(u => { u.csvIndir('kursiyerler.csv', [['Ad', 'Soyad', 'Telefon', 'Sınıf', 'Aşama', 'Kayıt', 'Direksiyon', 'Toplam', 'Ödenen', 'Kalan'], ...S.kursiyerler.map(x => [x.ad, x.soyad, x.tel, SINIFLAR[x.sinif].ad, x.asama, x.kayit, x.direksiyon, x.odeme.toplam, odenen(x), kalanBorc(x)])]); bildir('Kursiyer listesi indirildi'); });
+        if (ev.target.closest('[data-disa]')) import('./ui.js?v=35').then(u => { u.csvIndir('kursiyerler.csv', [['Ad', 'Soyad', 'Telefon', 'Sınıf', 'Aşama', 'Kayıt', 'Direksiyon', 'Toplam', 'Ödenen', 'Kalan'], ...S.kursiyerler.map(x => [x.ad, x.soyad, x.tel, SINIFLAR[x.sinif].ad, x.asama, x.kayit, x.direksiyon, x.odeme.toplam, odenen(x), kalanBorc(x)])]); bildir('Kursiyer listesi indirildi'); });
       });
       k.addEventListener('keydown', ev => { const g = ev.target.closest('[data-git]'); if (g && ev.key === 'Enter') location.hash = '#/kursiyer/' + g.dataset.git; });
       k.querySelector('[data-q]').addEventListener('input', ev => { q = ev.target.value; ciz(); });
@@ -543,10 +551,10 @@ export function kursiyerDetay(id) {
         const fb = ev.target.closest('[data-foto-buyut]'); if (fb) { ev.preventDefault(); pencere({ baslik: EVRAKLAR.find(x => x[0] === fb.dataset.fotoBuyut)[1] + ' · ' + tamAd(k), icerik: `<img src="${k.evrakFoto[fb.dataset.fotoBuyut]}" alt="" style="width:100%;border-radius:8px">` }); }
         const oi = ev.target.closest('[data-odeme-islem]'); if (oi) odemeIslem(k, oi.dataset.odemeIslem);
         const et = ev.target.closest('[data-ek-tahsil]'); if (et) ekKalemTahsil(k, +et.dataset.ekTahsil);
-        const bl = ev.target.closest('[data-belge]'); if (bl) import('./sayfalar3.js?v=34').then(m => m.belgeAc(bl.dataset.belge, k.id));
+        const bl = ev.target.closest('[data-belge]'); if (bl) import('./sayfalar3.js?v=35').then(m => m.belgeAc(bl.dataset.belge, k.id));
         if (ev.target.closest('[data-ekders]')) ekDersOner(k);
         if (ev.target.closest('[data-sozlesme]')) sozlesmeImzalat(k);
-        if (ev.target.closest('[data-ders-imza]')) import('./imza.js?v=34').then(m => m.imzayaGonderPenceresi(k, 'ders', imzasizDers(k).map(d => d.id)));
+        if (ev.target.closest('[data-ders-imza]')) import('./imza.js?v=35').then(m => m.imzayaGonderPenceresi(k, 'ders', imzasizDers(k).map(d => d.id)));
         if (ev.target.closest('[data-bilgi-duzenle]')) bilgiDuzenle(k);
         const kp = ev.target.closest('[data-kapanis]'); if (kp) kapanisAdim(k, kp.dataset.kapanis);
         const hb = ev.target.closest('[data-hak-karar]'); if (hb) hakKarar(k, hb.dataset.hakKarar);
@@ -586,8 +594,8 @@ export function tahsilAl(k, i, sonra) {
         islem('Tahsilat aldı', tamAd(k) + ' · ' + (i + 1) + '. taksit · ' + tl(v) + (t.odendi ? '' : ' (kısmi)'));
         const hid = 'h' + Date.now(); S.hareket.unshift({ id: hid, tarih: gun(0), tur: 'Gelir', kategori: 'Taksit', aciklama: tamAd(k) + ' · ' + (i + 1) + '. taksit' + (t.odendi ? '' : ' (kısmi)'), tutar: v, yontem: y, kursiyer: k.id });
         kaydet(); kapatPencere();
-        if (d.querySelector('[name=mak]').checked) gonderimEkle(tamAd(k), tl(v) + ' ödeme makbuzu', 'Makbuz');
-        if (d.querySelector('[name=yaz]').checked) setTimeout(() => import('./sayfalar3.js?v=34').then(m => m.belgeAc('makbuz', hid)), 200);
+        if (d.querySelector('[name=mak]').checked) wpGonder(k, `Merhaba ${k.ad}, ${tl(v)} ödemen alındı, teşekkürler. Kalan borcun ${tl(kalanBorc(k))}. ${S.kurs.ad}`, 'Makbuz');
+        if (d.querySelector('[name=yaz]').checked) setTimeout(() => import('./sayfalar3.js?v=35').then(m => m.belgeAc('makbuz', hid)), 200);
         bildir(tl(v) + ' tahsil edildi' + (t.odendi ? '' : ', taksitte ' + tl(t.tutar - t.kismi) + ' kaldı'), 'tamam', true);
         sonra ? sonra() : yenile();
       });
@@ -605,7 +613,7 @@ export function ekKalemTahsil(k, j) {
         geriAlNoktasi(); x.odendi = gun(0); const hid = 'h' + Date.now();
         S.hareket.unshift({ id: hid, tarih: gun(0), tur: 'Gelir', kategori: x.ad, aciklama: tamAd(k) + ' · ' + x.ad, tutar: x.tutar, yontem: d.querySelector('[name=y]:checked').value, kursiyer: k.id });
         islem('Tahsilat aldı', tamAd(k) + ' · ' + x.ad + ' · ' + tl(x.tutar)); kaydet(); kapatPencere(); bildir(x.ad + ' tahsil edildi', 'tamam', true); yenile();
-        if (d.querySelector('[name=mak]').checked) import('./sayfalar3.js?v=34').then(m => m.belgeAc('makbuz', hid));
+        if (d.querySelector('[name=mak]').checked) import('./sayfalar3.js?v=35').then(m => m.belgeAc('makbuz', hid));
       });
     },
   });
@@ -708,10 +716,10 @@ export function plan() {
         if (!yeniAr) return bildir('Bu saatte boş ' + SINIFLAR[ksn].ad + ' aracı yok', 'uyari');
         if (sbDers(S.dersler).some(x => x.id !== d.id && x.kursiyer === d.kursiyer && x.tarih === planGun && x.saat === saat)) return bildir('Kursiyerin o saatte başka dersi var', 'uyari');
         if (!egitmen(yeniEg).siniflar.includes(kursiyer(d.kursiyer).sinif)) return bildir(egitmen(yeniEg).ad + ' bu sınıfta ders vermiyor', 'uyari');
-        geriAlNoktasi(); const eskiSaat = d.saat; Object.assign(d, { saat, egitmen: yeniEg, arac: yeniAr }); islem('Dersi taşıdı', tamAd(kursiyer(d.kursiyer)) + ' · ' + eskiSaat + ' → ' + saat); kaydet();
-        const ks = kursiyer(d.kursiyer);
-        wpGonder(ks, `Merhaba ${ks.ad}, ${tarihUzun(planGun)} dersin ${eskiSaat} yerine ${saat}’e alındı.`, 'Saat değişikliği');
+        geriAlNoktasi(); const eskiSaat = d.saat, eskiEg = d.egitmen; Object.assign(d, { saat, egitmen: yeniEg, arac: yeniAr }); islem('Dersi taşıdı', tamAd(kursiyer(d.kursiyer)) + ' · ' + eskiSaat + ' → ' + saat); kaydet();
+        const ks = kursiyer(d.kursiyer), egY = egitmen(yeniEg);
         yenile();
+        bildirimler([{ kim: ks, metin: `Merhaba ${ks.ad}, ${tarihUzun(planGun)} direksiyon dersin ${eskiSaat} yerine ${saatE(saat)} alındı${eskiEg !== yeniEg ? '; usta öğreticin ' + egY.ad : ''}.`, tur: 'Saat değişikliği' }, { kim: egY, metin: `${egY.ad.split(' ')[0]} Hoca, ${tarihUzun(planGun)} ${ks.ad} ${ks.soyad} dersi ${eskiEg !== yeniEg ? 'size verildi, saat ' + saat : eskiSaat + ' yerine ' + saat + '’e alındı'}.`, tur: 'Saat değişikliği' }, eskiEg !== yeniEg && { kim: egitmen(eskiEg), metin: `${egitmen(eskiEg).ad.split(' ')[0]} Hoca, ${tarihUzun(planGun)} ${eskiSaat} ${ks.ad} ${ks.soyad} dersi programınızdan çıkarıldı.`, tur: 'Saat değişikliği' }], 'Ders saati değişti');
       });
       const sec = k.querySelector('.gun-sec .secili'); if (sec) sec.scrollIntoView({ inline: 'center', block: 'nearest' });
     },
@@ -768,8 +776,8 @@ function dersEkle(sutunId, saat) {
         }
         if (!ekAlan.hidden && d.querySelector('[name=ek]').checked && eklenen) { k.odeme.ekler = k.odeme.ekler || []; k.odeme.ekler.push({ ad: 'Ek direksiyon dersi × ' + eklenen, tutar: S.kurs.ekDersUcreti * eklenen, odendi: null }); }
         islem('Ders ekledi', tamAd(k) + ' · ' + tarih(planGun) + ' ' + saat + (n ? ' · ' + eklenen + ' hafta' : '')); kaydet(); kapatPencere();
-        const metin = n ? `Merhaba ${k.ad}, ${eklenen} hafta boyunca her ${gunKisa(planGun)} ${saat}’te ${eg.ad} ile direksiyon dersin var.` : `Merhaba ${k.ad}, ${tarihUzun(planGun)} ${saat}’te ${eg.ad} ile direksiyon dersin planlandı.`;
-        if (d.querySelector('[name=hat]').checked) wpGonder(k, metin, 'Ders bildirimi'); else bildir(eklenen + ' ders eklendi');
+        const metin = n ? `Merhaba ${k.ad}, ${eklenen} hafta boyunca her ${gunKisa(planGun)} ${saatDe(saat)} ${eg.ad} ile direksiyon dersin var.` : `Merhaba ${k.ad}, ${tarihUzun(planGun)} ${saatDe(saat)} ${eg.ad} ile direksiyon dersin planlandı.`;
+        if (d.querySelector('[name=hat]').checked) bildirimler([{ kim: k, metin, tur: 'Ders bildirimi' }, { kim: eg, metin: `${eg.ad.split(' ')[0]} Hoca, ${n ? eklenen + ' hafta boyunca her ' + gunKisa(planGun) : tarihUzun(planGun)} ${saatDe(saat)} ${tamAd(k)} (${SINIFLAR[k.sinif].ad}) ile direksiyon dersiniz var. Kursiyerin ${k.direksiyon + 1}. dersi.`, tur: 'Ders bildirimi' }], 'Ders planlandı'); else bildir(eklenen + ' ders eklendi');
         if (atlanan.length) setTimeout(() => bildir('Atlanan haftalar: ' + atlanan.join(', '), 'uyari'), 900);
         yenile();
       });
@@ -785,7 +793,7 @@ function bosSaatiDoldur(d) {
     altlik: `<button class="dg dg-cizgi" data-kapat>Boş kalsın</button><button class="dg dg-wp" data-teklif>${ik('wp')}Teklif gönder</button>`,
     onAc(p) {
       p.querySelector('[data-teklif]').addEventListener('click', () => {
-        kapatPencere(); const teklifMetni = k => `Merhaba ${k.ad}, ${tarihUzun(d.tarih)} ${d.saat}’te ${egitmen(d.egitmen).ad} ile direksiyon saati boşaldı. İstersen “evet” yaz; ilk yazan alır.`; bek.forEach(k => gonderimEkle(tamAd(k), teklifMetni(k), 'Boş saat teklifi'));
+        kapatPencere(); const teklifMetni = k => `Merhaba ${k.ad}, ${tarihUzun(d.tarih)} ${saatDe(d.saat)} ${egitmen(d.egitmen).ad} ile direksiyon saati boşaldı. İstersen “evet” yaz; ilk yazan alır.`; bek.forEach(k => gonderimEkle(tamAd(k), teklifMetni(k), 'Boş saat teklifi'));
         S.bosTeklif = S.bosTeklif || []; S.bosTeklif.push({ id: 'b' + Date.now(), tarih: d.tarih, saat: d.saat, egitmen: d.egitmen, arac: d.arac, adaylar: bek.map(k => k.id), gonderildi: yerelZaman() });
         islem('Boş saat teklifi gönderdi', tarih(d.tarih) + ' ' + d.saat + ' · ' + bek.length + ' kişi'); kaydet();
         yenile(); waSirali(kisiListe(bek, teklifMetni), 'Boş saat teklifi', { aciklama: 'Kabul eden olunca Plan’daki “Açık teklif”ten işaretleyin.' });
@@ -803,8 +811,9 @@ export function bosTeklifKabul(tid, kid, kursiyerden = false) {
   islem('Boş saati doldurdu', tamAd(k) + ' · ' + tarih(t.tarih) + ' ' + t.saat); kaydet(); yenile();
   const liste = [{ k, m: `Merhaba ${k.ad}, ${tarihUzun(t.tarih)} ${t.saat} dersin ${egitmen(t.egitmen).ad} ile planlandı.` }, ...digerleri.map(o => ({ k: o, m: `Merhaba ${o.ad}, ${tarihUzun(t.tarih)} ${t.saat} saati doldu; bir sonraki boşlukta yine haber vereceğiz.` }))];
   liste.forEach(x => gonderimEkle(tamAd(x.k), x.m, 'Boş saat teklifi'));
-  if (kursiyerden) return bildir('Saat senin; dersin planlandı');
-  waSirali(liste.map(x => ({ ad: tamAd(x.k), tel: x.k.tel, metin: x.m })), 'Boş saati doldurdu · bilgilendirme');
+  const hoca = egitmen(t.egitmen), hm = `${hoca.ad.split(' ')[0]} Hoca, ${tarihUzun(t.tarih)} ${t.saat} boşalan saatinize ${tamAd(k)} yazıldı.`;
+  if (kursiyerden) { bildirimler([{ kim: hoca, metin: hm, tur: 'Boş saat' }, { kim: 'mudur', metin: `${tamAd(k)} ${tarihUzun(t.tarih)} ${t.saat} boş saat teklifini kabul etti.`, tur: 'Boş saat' }], 'Boş saat doldu'); return bildir('Saat senin; dersin planlandı'); }
+  waSirali([...liste.map(x => ({ ad: tamAd(x.k), tel: x.k.tel, rol: 'ÖĞRENCİ', metin: x.m })), { ad: hoca.ad, tel: hoca.tel, rol: 'HOCA', metin: hm }], 'Boş saati doldurdu · bilgilendirme', { sessiz: true });
 }
 // Ek ders teklifi kabul: ücret ödeme planına yeni taksit olarak eklenir.
 export function ekDersKabul(k) {
@@ -824,15 +833,15 @@ function dersAc(id) {
     onAc(p) {
       p.addEventListener('click', ev => {
         if (ev.target.closest('[data-yapildi]')) { geriAlNoktasi(); islem('Ders yapıldı işaretledi', tamAd(k) + ' · ' + d.saat); d.durum = 'Yapıldı'; k.direksiyon = Math.min(SINIFLAR[k.sinif].direksiyon, k.direksiyon + 1); kaydet(); kapatPencere(); bildir('Ders yapıldı olarak işaretlendi', 'tamam', true); yenile(); }
-        if (ev.target.closest('[data-gelmedi]')) { d.durum = 'Gelmedi'; kaydet(); kapatPencere(); wpGonder(k, `Merhaba ${k.ad}, bugünkü dersine gelemedin. Yeni bir saat ayarlayalım mı?`, 'Gelmedi bildirimi'); yenile(); }
-        if (ev.target.closest('[data-iptal]')) { geriAlNoktasi(); S.dersler = S.dersler.filter(x => x.id !== d.id); islem('Ders iptal etti', tamAd(k) + ' · ' + tarih(d.tarih) + ' ' + d.saat); kaydet(); kapatPencere(); wpGonder(k, `Merhaba ${k.ad}, ${tarihUzun(d.tarih)} ${d.saat} direksiyon dersin iptal edildi. Yeni saat için bize yazabilirsin.`, 'Ders iptali'); bosSaatiDoldur(d); }
+        if (ev.target.closest('[data-gelmedi]')) { d.durum = 'Gelmedi'; kaydet(); kapatPencere(); bildirimler([{ kim: k, metin: `Merhaba ${k.ad}, ${d.saat} direksiyon dersine gelmedin. Yeni bir saat ayarlayalım mı?`, tur: 'Gelmedi bildirimi' }, { kim: 'mudur', metin: `${tamAd(k)} ${d.saat} dersine gelmedi (${eg.ad}).`, tur: 'Gelmedi bildirimi' }], 'Derse gelmedi'); yenile(); }
+        if (ev.target.closest('[data-iptal]')) { geriAlNoktasi(); S.dersler = S.dersler.filter(x => x.id !== d.id); islem('Ders iptal etti', tamAd(k) + ' · ' + tarih(d.tarih) + ' ' + d.saat); kaydet(); kapatPencere(); bildirimler([{ kim: k, metin: `Merhaba ${k.ad}, ${tarihUzun(d.tarih)} ${d.saat} direksiyon dersin iptal edildi. Yeni saat için bize yazabilirsin.`, tur: 'Ders iptali' }, { kim: eg, metin: `${eg.ad.split(' ')[0]} Hoca, ${tarihUzun(d.tarih)} ${d.saat} ${tamAd(k)} dersi iptal edildi; o saat boş.`, tur: 'Ders iptali' }], 'Ders iptal edildi'); bosSaatiDoldur(d); }
         if (ev.target.closest('[data-tasi]')) {
           const bos = SAATLER.filter(sa => sa !== '13:00' && sa !== d.saat && !S.dersler.some(x => x.tarih === d.tarih && x.saat === sa && (x.egitmen === d.egitmen || x.kursiyer === d.kursiyer)));
           const gov = p.querySelector('.pencere-govde');
           gov.insertAdjacentHTML('beforeend', `<div style="margin-top:16px"><p class="et" style="margin-bottom:6px">Aynı gün boş saatler</p><div class="secim">${bos.map(sa => `<label><input type="radio" name="yeni-saat" value="${sa}"><span>${sa}</span></label>`).join('') || '<span style="color:var(--soluk)">Boş saat yok</span>'}</div></div>`);
           p.querySelector('[data-tasi]').outerHTML = '<button class="dg dg-ana" data-tasi-onay>Yeni saate taşı</button>';
         }
-        if (ev.target.closest('[data-tasi-onay]')) { const v = p.querySelector('[name=yeni-saat]:checked'); if (!v) return bildir('Bir saat seçin', 'uyari'); geriAlNoktasi(); const eski = d.saat; d.saat = v.value; islem('Dersi taşıdı', tamAd(k) + ' · ' + eski + ' → ' + d.saat); kaydet(); kapatPencere(); wpGonder(k, `Merhaba ${k.ad}, ${tarihUzun(d.tarih)} dersin ${eski} yerine ${d.saat}’e alındı.`, 'Saat değişikliği'); yenile(); }
+        if (ev.target.closest('[data-tasi-onay]')) { const v = p.querySelector('[name=yeni-saat]:checked'); if (!v) return bildir('Bir saat seçin', 'uyari'); geriAlNoktasi(); const eski = d.saat; d.saat = v.value; islem('Dersi taşıdı', tamAd(k) + ' · ' + eski + ' → ' + d.saat); kaydet(); kapatPencere(); yenile(); bildirimler([{ kim: k, metin: `Merhaba ${k.ad}, ${tarihUzun(d.tarih)} direksiyon dersin ${eski} yerine ${saatE(d.saat)} alındı.`, tur: 'Saat değişikliği' }, { kim: eg, metin: `${eg.ad.split(' ')[0]} Hoca, ${tarihUzun(d.tarih)} ${tamAd(k)} dersi ${eski} yerine ${saatE(d.saat)} alındı.`, tur: 'Saat değişikliği' }], 'Ders saati değişti'); }
         if (ev.target.closest('[data-geri]')) { if (d.durum === 'Yapıldı') k.direksiyon = Math.max(0, k.direksiyon - 1); d.durum = 'Planlandı'; kaydet(); kapatPencere(); yenile(); }
       });
     },

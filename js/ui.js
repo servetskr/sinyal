@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN, S } from './veri.js?v=34';
+import { ASAMALAR, tarihOku, fark, BUGUN, S } from './veri.js?v=35';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -200,10 +200,12 @@ export function waNumara(tel) { let n = String(tel || '').replace(/\D/g, ''); if
 export const waUrl = (tel, metin) => 'https://wa.me/' + waNumara(tel) + '?text=' + encodeURIComponent(metin);
 export const smsUrl = (tel, metin) => 'sms:' + (waNumara(tel) ? '+' + waNumara(tel) : '') + '?&body=' + encodeURIComponent(metin);
 // Mesaj yönlendirme (demo): kursa gelen mesajlar hariç her mesaj Ayarlar'daki tek numaraya gider.
-export function yonlendir(tel, metin, ad) {
+// Demo etiketi: mesajın kimin telefonuna gittiği ("[ÖĞRENCİ · Ayşe Yılmaz]", "[HOCA · Hüseyin Aktaş]", "[MÜDÜR]")
+export const etiket = (ad, rol) => S.kurs.demoKime === false || (!ad && !rol) ? '' : `[${rol ? rol + (ad && rol !== 'MÜDÜR' ? ' · ' + ad : '') : ad + ' için'}]\n`;
+export function yonlendir(tel, metin, ad, rol) {
   const d = S && S.kurs && S.kurs.demoNumara;
   if (!d || (S.kurs.wp && waNumara(tel) && waNumara(tel) === waNumara(S.kurs.wp))) return [tel, metin];
-  return [d, (S.kurs.demoKime !== false && ad ? `[${ad} için]\n` : '') + metin];
+  return [d, etiket(ad, rol) + metin];
 }
 // Otomatik gönderim: Ayarlar'da WhatsApp API adresi varsa mesaj WhatsApp açılmadan doğrudan gider (Cloud API köprüsü).
 export const apiAcik = () => !!(S && S.kurs && S.kurs.waApi);
@@ -215,13 +217,13 @@ export async function apiGonder(metin) {
     return { ok: false, hata: j.kod === 131047 || /24 hours|re-engagement/i.test(j.hata || '') ? 'WhatsApp 24 saat penceresi kapalı: test numarasına “merhaba” yazıp tekrar deneyin' : (j.hata || 'Gönderilemedi') };
   } catch (x) { return { ok: false, hata: 'WhatsApp servisine ulaşılamadı' }; }
 }
-const apiMetin = (metin, ad) => (S.kurs.demoKime !== false && ad ? `[${ad} için]\n` : '') + metin;
-export function waAc(tel, metin, kanal = 'WhatsApp', ad = '', elle = false) {
+const apiMetin = (metin, ad, rol) => etiket(ad, rol) + metin;
+export function waAc(tel, metin, kanal = 'WhatsApp', ad = '', elle = false, rol = '') {
   if (kanal === 'WhatsApp' && apiAcik() && !elle) {
-    apiGonder(apiMetin(metin, ad)).then(s => s.ok ? bildir((ad ? ad.split(' ')[0] + ': ' : '') + 'WhatsApp mesajı gönderildi ✓', 'wp') : bildir(s.hata, 'uyari'));
+    apiGonder(apiMetin(metin, ad, rol)).then(s => s.ok ? bildir((ad ? ad.split(' ')[0] + ': ' : '') + 'WhatsApp mesajı gönderildi ✓', 'wp') : bildir(s.hata, 'uyari'));
     return 'api';
   }
-  [tel, metin] = yonlendir(tel, metin, ad);
+  [tel, metin] = yonlendir(tel, metin, ad, rol);
   const url = kanal === 'SMS' ? smsUrl(tel, metin) : waUrl(tel, metin);
   const w = window.open(url, '_blank');
   if (w) { try { w.opener = null; } catch (x) { } return true; }
@@ -229,9 +231,13 @@ export function waAc(tel, metin, kanal = 'WhatsApp', ad = '', elle = false) {
   return false;
 }
 // Toplu gönderim: her kişinin sohbeti sırayla hazır mesajla açılır (WhatsApp toplu mesaja yalnızca resmî API ile izin verir).
-export function waSirali(liste, baslik, { kanal = 'WhatsApp', bitince, aciklama = '' } = {}) {
+export function waSirali(liste, baslik, { kanal = 'WhatsApp', bitince, aciklama = '', sessiz = false } = {}) {
   liste = liste.filter(x => x && x.metin);
   if (!liste.length) { if (bitince) bitince(); return; }
+  if (kanal === 'WhatsApp' && apiAcik() && sessiz) {
+    (async () => { let ok = 0, son = ''; for (const x of liste) { const s = await apiGonder(apiMetin(x.metin, x.ad, x.rol)); if (s.ok) ok++; else son = s.hata; } bildir(ok === liste.length ? `WhatsApp bildirimi gitti: ${liste.map(x => (x.rol || x.ad).toLocaleLowerCase('tr')).join(', ')} ✓` : `${liste.length - ok} bildirim gitmedi: ${son}`, ok === liste.length ? 'wp' : 'uyari'); if (bitince) bitince(); })();
+    return;
+  }
   if (kanal === 'WhatsApp' && apiAcik()) {
     pencere({ baslik, icerik: `<p style="font-size:14px;margin-bottom:10px">${aciklama ? e(aciklama) + ' ' : ''}${liste.length} mesaj WhatsApp’tan otomatik gönderiliyor.</p><ul class="liste" style="max-height:46vh;overflow:auto;margin:0 -20px">${liste.map((x, i) => `<li><div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(x.ad)}</b><small style="display:block;color:var(--soluk);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e(x.metin)}</small></div><span data-api-durum="${i}" style="font-size:13px;color:var(--soluk)">sırada</span></li>`).join('')}</ul>`, altlik: `<button class="dg dg-ana" data-api-bitti disabled>Gönderiliyor…</button>`,
       onAc(d) {
@@ -240,7 +246,7 @@ export function waSirali(liste, baslik, { kanal = 'WhatsApp', bitince, aciklama 
         (async () => {
           for (let i = 0; i < liste.length; i++) {
             const el = d.querySelector(`[data-api-durum="${i}"]`); if (el) el.textContent = 'gönderiliyor…';
-            const s = await apiGonder(apiMetin(liste[i].metin, liste[i].ad));
+            const s = await apiGonder(apiMetin(liste[i].metin, liste[i].ad, liste[i].rol));
             if (el) { el.textContent = s.ok ? 'gönderildi ✓' : 'gönderilemedi'; el.style.color = s.ok ? 'var(--yesil)' : 'var(--kirmizi)'; }
             if (s.ok) ok++; else son = s.hata;
             await new Promise(r => setTimeout(r, 350));
@@ -252,7 +258,7 @@ export function waSirali(liste, baslik, { kanal = 'WhatsApp', bitince, aciklama 
     return;
   }
   const acilan = new Set(); let sira = 0;
-  const url = x => { const [t, m] = yonlendir(x.tel, x.metin, x.ad); return kanal === 'SMS' ? smsUrl(t, m) : waUrl(t, m); };
+  const url = x => { const [t, m] = yonlendir(x.tel, x.metin, x.ad, x.rol); return kanal === 'SMS' ? smsUrl(t, m) : waUrl(t, m); };
   pencere({
     baslik,
     icerik: `<p style="font-size:14px;margin-bottom:10px">${aciklama ? e(aciklama) + ' ' : ''}${liste.length} kişi. Her kişi için ${kanal} hazır mesajla açılır; gönderip bu ekrana dönün.</p>
@@ -266,6 +272,13 @@ export function waSirali(liste, baslik, { kanal = 'WhatsApp', bitince, aciklama 
     },
   });
 }
+// Saatle Türkçe ek: 09:00'da / 09:00'a, 14:00'te / 14:00'e, 16:00'da / 16:00'ya
+const SAAT_OKU = ['sıfır', 'bir', 'iki', 'üç', 'dört', 'beş', 'altı', 'yedi', 'sekiz', 'dokuz', 'on', 'on bir', 'on iki', 'on üç', 'on dört', 'on beş', 'on altı', 'on yedi', 'on sekiz', 'on dokuz', 'yirmi', 'yirmi bir', 'yirmi iki', 'yirmi üç'];
+const sesli = s => { const h = (String(s).match(/^(\d{1,2})/) || [])[1], m = String(s).slice(-2); const ok = m === '00' ? SAAT_OKU[+h] : ({ '15': 'on beş', '30': 'otuz', '45': 'kırk beş' }[m] || 'sıfır'); return ok || ''; };
+const sonSesli = w => (w.match(/[aıoueiöü](?=[^aıoueiöü]*$)/) || ['e'])[0];
+const ince = w => 'eiöü'.includes(sonSesli(w));
+export const saatDe = s => { const w = sesli(s); const sert = /[çfhkpsşt]$/.test(w); return s + '’' + (sert ? 't' : 'd') + (ince(w) ? 'e' : 'a'); };
+export const saatE = s => { const w = sesli(s); return s + '’' + (/[aıoueiöü]$/.test(w) ? 'y' : '') + (ince(w) ? 'e' : 'a'); };
 export const bugunMetni = () => { const d = BUGUN; return d.getDate() + ' ' + AY_U[d.getMonth()] + ' ' + GUN[d.getDay()]; };
 
 // --- Trafik levhası dili ---
