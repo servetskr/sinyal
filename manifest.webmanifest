@@ -1,0 +1,16 @@
+{
+  "name": "Sinyal · Sürücü kursu yönetimi",
+  "short_name": "Sinyal",
+  "description": "Öğrenci, ders, sınav, kasa, MEB işleri ve WhatsApp mesajları tek uygulamada.",
+  "lang": "tr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#e8e7e1",
+  "theme_color": "#0a4da2",
+  "icons": [
+    { "src": "img/simge/sinyal-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "img/simge/sinyal-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "img/simge/sinyal-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
