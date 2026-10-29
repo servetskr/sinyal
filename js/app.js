@@ -1,15 +1,15 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=44';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir } from './ui.js?v=44';
-import * as Y1 from './sayfalar1.js?v=44';
-import * as Y2 from './sayfalar2.js?v=44';
-import * as P from './portal.js?v=44';
-import * as Y3 from './sayfalar3.js?v=44';
-import * as Y4 from './sayfalar4.js?v=44';
-import * as Y5 from './sayfalar5.js?v=44';
-import * as IM from './imza.js?v=44';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=44';
-import * as SN from './senaryo.js?v=44';
-import * as OZ from './ozellik.js?v=44';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=45';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir } from './ui.js?v=45';
+import * as Y1 from './sayfalar1.js?v=45';
+import * as Y2 from './sayfalar2.js?v=45';
+import * as P from './portal.js?v=45';
+import * as Y3 from './sayfalar3.js?v=45';
+import * as Y4 from './sayfalar4.js?v=45';
+import * as Y5 from './sayfalar5.js?v=45';
+import * as IM from './imza.js?v=45';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=45';
+import * as SN from './senaryo.js?v=45';
+import * as OZ from './ozellik.js?v=45';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -221,7 +221,7 @@ setInterval(() => {
 }, 30e3);
 
 // Uzaktan imzalar: kursiyer imzalayınca kayda kendiliğinden işlenir
-setInterval(() => { if (oturum.kullanici && !imzaLinki()) IM.imzaKontrol(); }, 30e3);
+setInterval(() => { if (oturum.kullanici && !imzaLinki()) { IM.imzaKontrol(); if (oturum.kullanici.rol !== 'usta') OZ.gelenKontrol(); } }, 20e3);
 setTimeout(() => { if (oturum.kullanici && !imzaLinki()) IM.imzaKontrol(); }, 3000);
 
 if (imzaLinki()) imzaSayfasiAc();

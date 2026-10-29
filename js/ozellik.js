@@ -1,9 +1,9 @@
-import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli } from './veri.js?v=44';
-import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos } from './ui.js?v=44';
-import { yenile } from './app.js?v=44';
-import { bildirimler } from './sayfalar1.js?v=44';
-import { denetimEksikleri } from './sayfalar3.js?v=44';
-import { sinifKari, dersMaliyeti, bosKapasite, hakedis, KAPASITE_SAAT, randevuEngeli, bosSlotlar } from './risk.js?v=44';
+import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli } from './veri.js?v=45';
+import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos } from './ui.js?v=45';
+import { yenile } from './app.js?v=45';
+import { bildirimler } from './sayfalar1.js?v=45';
+import { denetimEksikleri } from './sayfalar3.js?v=45';
+import { sinifKari, dersMaliyeti, bosKapasite, hakedis, KAPASITE_SAAT, randevuEngeli, bosSlotlar } from './risk.js?v=45';
 
 /* ================= DENETİM SKORU ================= */
 export function denetimSkoru() {
@@ -178,3 +178,30 @@ export function randevuIptal(k, id) {
   });
 }
 export { bos };
+
+/* ================= WHATSAPP'TAN GELEN MESAJLAR =================
+   Kursun hattına yazan kişiye asistan Worker'da cevap verir; mesaj burada adaya dönüşür
+   (aynı numara tekrar yazarsa aynı adayın sohbetine eklenir). Asistanın bilemediği soru "Size devredilen"e düşer. */
+let gelenDe = false;
+export async function gelenKontrol() {
+  if (gelenDe || !S.kurs.waApi) return 0;
+  gelenDe = true; let n = 0;
+  try {
+    const j = await (await fetch(new URL(S.kurs.waApi).origin + '/gelen')).json();
+    if (!j.ok) return 0;
+    S.gelenAlinan = S.gelenAlinan || [];
+    for (const x of (j.liste || []).slice().reverse()) {
+      if (S.gelenAlinan.includes(x.id)) continue;
+      S.gelenAlinan.push(x.id); n++;
+      const saat = new Date(x.zaman).toTimeString().slice(0, 5);
+      let a = S.adaylar.find(y => y.waSon4 === x.son4 && !['Kayıt', 'Kaybedildi'].includes(y.asama));
+      if (!a) { a = { id: 'l' + Date.now() + n, ad: x.ad || 'WhatsApp adayı · ···' + x.son4, tel: '', waSon4: x.son4, kaynak: 'WhatsApp', kanal: 'WhatsApp', sinif: 'B', asama: 'Yeni', tarih: gun(0), saat, takip: null, not: 'Kursun WhatsApp hattına yazdı; asistan cevapladı', devir: null, mesajlar: [] }; S.adaylar.unshift(a); }
+      a.mesajlar.push({ kim: 'aday', metin: x.metin }, { kim: 'asistan', metin: x.cevap }); a.saat = saat;
+      if (x.devir) { a.devir = 'Bilinmeyen soru'; S.devredilen.unshift({ ad: a.ad, aday: a.id, kanal: 'WhatsApp', konu: 'Bilinmeyen soru', mesaj: x.metin, neden: 'Asistan bilmediği için size devretti', saat, bildirim: [[saat, S.kurs.yetkili || 'Kurs müdürü', 'Sinyal']] }); }
+      islem('WhatsApp’tan mesaj geldi', a.ad + ' · ' + x.konu);
+      bildir(`WhatsApp’tan yeni mesaj: “${x.metin.slice(0, 40)}”${x.devir ? ' · size devredildi' : ' · asistan cevapladı'}`, x.devir ? 'uyari' : 'wp');
+    }
+    if (n) { S.gelenAlinan = S.gelenAlinan.slice(-200); kaydet(); yenile(); }
+  } catch (e) { } finally { gelenDe = false; }
+  return n;
+}

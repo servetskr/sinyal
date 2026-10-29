@@ -443,7 +443,7 @@ function yukle() {
   if (!o) {
     o = uret(); o._gun = iso(BUGUN);
     // örnek veri her gün yenilenir ama kursun bağlantı ayarları ve imza anahtarı korunur
-    try { const eski = JSON.parse(localStorage.getItem(ANAHTAR) || 'null'); if (eski && eski.kurs) { ['waApi', 'wp', 'demoNumara', 'demoKime', 'iban', 'yorumLink', 'siniflar', 'maliyet', 'sozlesme', 'ekDersUcreti', 'tekrarUcret', 'sinavHak', 'borcluDers', 'kendiRandevu'].forEach(k => { if (eski.kurs[k] !== undefined) o.kurs[k] = eski.kurs[k]; }); if (eski.imzaAnahtari) o.imzaAnahtari = eski.imzaAnahtari; if (eski.kullanicilar) o.kullanicilar = eski.kullanicilar; if (eski.guvenlik) { o.guvenlik.oturumDk = eski.guvenlik.oturumDk; o.guvenlik.hassasOnay = eski.guvenlik.hassasOnay; } } } catch (e) { }
+    try { const eski = JSON.parse(localStorage.getItem(ANAHTAR) || 'null'); if (eski && eski.kurs) { ['waApi', 'wp', 'demoNumara', 'demoKime', 'iban', 'yorumLink', 'siniflar', 'maliyet', 'sozlesme', 'ekDersUcreti', 'tekrarUcret', 'sinavHak', 'borcluDers', 'kendiRandevu'].forEach(k => { if (eski.kurs[k] !== undefined) o.kurs[k] = eski.kurs[k]; }); if (eski.imzaAnahtari) o.imzaAnahtari = eski.imzaAnahtari; if (eski.gelenAlinan) o.gelenAlinan = eski.gelenAlinan; if (eski.kullanicilar) o.kullanicilar = eski.kullanicilar; if (eski.guvenlik) { o.guvenlik.oturumDk = eski.guvenlik.oturumDk; o.guvenlik.hassasOnay = eski.guvenlik.hassasOnay; } } } catch (e) { }
   }
   return goc(o);
 }
