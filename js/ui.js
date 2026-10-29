@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN } from './veri.js?v=29';
+import { ASAMALAR, tarihOku, fark, BUGUN } from './veri.js?v=31';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -153,6 +153,48 @@ export function csvIndir(ad, satirlar) {
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
 }
 
+// Belgelerde tam tarih: 29.10.2026
+export const tamTarih = s => s ? (/^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10).split('-').reverse().join('.') : s) : '—';
+// Tutarı yazıyla: 23.000 → "yirmiüçbin Türk lirası"
+export function yaziyla(n) {
+  const B = ['', 'bir', 'iki', 'üç', 'dört', 'beş', 'altı', 'yedi', 'sekiz', 'dokuz'], O = ['', 'on', 'yirmi', 'otuz', 'kırk', 'elli', 'altmış', 'yetmiş', 'seksen', 'doksan'];
+  const uc = x => { const y = Math.floor(x / 100), o = Math.floor(x % 100 / 10), b = x % 10; return (y ? (y > 1 ? B[y] : '') + 'yüz' : '') + O[o] + B[b]; };
+  const yaz = x => { if (!x) return 'sıfır'; let s = ''; for (const [v, a] of [[1e9, 'milyar'], [1e6, 'milyon'], [1e3, 'bin']]) { const q = Math.floor(x / v); if (q) { s += (v === 1e3 && q === 1 ? '' : uc(q)) + a; x %= v; } } return s + uc(x); };
+  const tam = Math.round(n * 100), lira = Math.floor(tam / 100), kurus = tam % 100;
+  return yaz(lira) + ' Türk lirası' + (kurus ? ' ' + yaz(kurus) + ' kuruş' : '');
+}
+// Belgeyi kendi A4 sayfasında yazdırır (tarayıcının "PDF olarak kaydet" seçeneğiyle PDF de olur).
+const A4_CSS = `@page{size:A4;margin:13mm}*{box-sizing:border-box}body{margin:0;font-family:Arial,"Helvetica Neue",sans-serif;color:#111;font-size:11.5px;line-height:1.45}
+h1{font-size:17px;text-align:center;text-transform:uppercase;letter-spacing:.06em;margin:0 0 4px}.a4-alt{text-align:center;color:#555;margin:0 0 16px}p{margin:8px 0}
+table{width:100%;border-collapse:collapse;margin:8px 0;page-break-inside:auto}tr{page-break-inside:avoid}td,th{border:1px solid #111;padding:4px 7px;text-align:left;vertical-align:top}.nw{white-space:nowrap}.son{page-break-inside:avoid;break-inside:avoid}th{background:#f0f0ec;font-weight:700}
+.imza{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:40px;text-align:center;page-break-inside:avoid}.imza div{border-top:1px solid #111;padding-top:6px}.sayfa-sonu{page-break-after:always;break-after:page}img{max-width:100%}small{font-size:10.5px}`;
+export function belgeYazdir(html, baslik = 'Belge') {
+  const f = document.createElement('iframe'); f.setAttribute('aria-hidden', 'true'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+  document.body.appendChild(f);
+  const d = f.contentDocument; d.open(); d.write(`<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>${e(baslik)}</title><style>${A4_CSS}${html.includes('data-yatay') ? '@page{size:A4 landscape}' : ''}</style></head><body>${html}</body></html>`); d.close();
+  const imgs = [...d.images].filter(i => !i.complete).map(i => new Promise(r => { i.onload = i.onerror = r; }));
+  Promise.all(imgs).then(() => { f.contentWindow.focus(); f.contentWindow.print(); setTimeout(() => f.remove(), 1000); });
+}
+// Kart formu: numara (Luhn), son kullanma (gelecekte), CVC. Kart bilgisi kursta saklanmaz; POS'a gider.
+export const kartFormu = () => `<div class="form-izgara kart-formu"><div class="alan tam"><label for="k-no">Kart numarası</label><input id="k-no" name="kno" inputmode="numeric" autocomplete="cc-number" placeholder="0000 0000 0000 0000" maxlength="23"></div>
+  <div class="alan tam"><label for="k-sahip">Kart üzerindeki ad</label><input id="k-sahip" name="ksahip" autocomplete="cc-name"></div>
+  <div class="alan"><label for="k-skt">Son kullanma</label><input id="k-skt" name="kskt" inputmode="numeric" autocomplete="cc-exp" placeholder="AA/YY" maxlength="5"></div><div class="alan"><label for="k-cvc">CVC</label><input id="k-cvc" name="kcvc" inputmode="numeric" autocomplete="cc-csc" placeholder="•••" maxlength="4"></div></div>
+  <p class="ipucu" style="margin-top:10px">${ik('kilit')}<span>Ödeme bankanın 3D Secure sayfasında onaylanır; kart bilgisi kursta saklanmaz.</span></p>`;
+export function kartBagla(kok) {
+  const no = kok.querySelector('[name=kno]'), skt = kok.querySelector('[name=kskt]');
+  no.addEventListener('input', () => { no.value = no.value.replace(/\D/g, '').slice(0, 19).replace(/(\d{4})(?=\d)/g, '$1 '); });
+  skt.addEventListener('input', () => { const v = skt.value.replace(/\D/g, '').slice(0, 4); skt.value = v.length > 2 ? v.slice(0, 2) + '/' + v.slice(2) : v; });
+}
+export function kartDogrula(kok) {
+  const n = kok.querySelector('[name=kno]').value.replace(/\D/g, ''), [aa, yy] = kok.querySelector('[name=kskt]').value.split('/').map(Number), cvc = kok.querySelector('[name=kcvc]').value.replace(/\D/g, ''), sahip = kok.querySelector('[name=ksahip]').value.trim();
+  let t = 0; n.split('').reverse().forEach((c, i) => { let d = +c; if (i % 2) { d *= 2; if (d > 9) d -= 9; } t += d; });
+  if (n.length < 15 || t % 10) return { hata: 'Kart numarası geçerli değil' };
+  if (sahip.length < 3) return { hata: 'Kart üzerindeki adı yazın' };
+  const simdi = new Date(), sonAy = new Date(2000 + (yy || 0), aa || 0, 1);
+  if (!aa || aa > 12 || !yy || sonAy <= new Date(simdi.getFullYear(), simdi.getMonth(), 1)) return { hata: 'Son kullanma tarihi geçerli değil' };
+  if (!/^\d{3,4}$/.test(cvc)) return { hata: 'CVC 3 ya da 4 hane olmalı' };
+  return { son4: n.slice(-4) };
+}
 export const bugunMetni = () => { const d = BUGUN; return d.getDate() + ' ' + AY_U[d.getMonth()] + ' ' + GUN[d.getDay()]; };
 
 // --- Trafik levhası dili ---

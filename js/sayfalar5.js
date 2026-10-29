@@ -1,6 +1,6 @@
-import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, oturum, odenen, egitmen, varsayilanSube, eksikEvrak , sb, sbDers, sbSinav, gorunum, seciliSube, cokSube} from './veri.js?v=29';
-import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme } from './ui.js?v=29';
-import { yenile } from './app.js?v=29';
+import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube} from './veri.js?v=31';
+import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli } from './ui.js?v=31';
+import { yenile } from './app.js?v=31';
 
 /* ================= MEB KURALLARI: KAYNAK VE SORUMLULUK ================= */
 const MTSK = 'MTSK Yönetmeliği (ÖÖKGM, Ocak 2025 metni)';
@@ -92,7 +92,7 @@ function entegrasyonSekme() {
   const g = S.entegrasyon;
   const kart = (bas, durum, govde) => `<div class="kart"><div class="kart-bas">${isaret(durum ? 'tamam' : 'bilgi', 24)}<h3>${bas}</h3><span class="sag">${durum ? rozet('Bağlı', 'yesil') : rozet('Bağlı değil', 'notr')}</span></div><div class="kart-govde">${govde}</div></div>`;
   return `<div class="izgara iz-2">
-    ${kart('e-Arşiv fatura', g.earsiv.bagli, `<p style="font-size:14px">Tahsilat alındığında fatura entegratörünüz üzerinden kesilir, PDF’i kursiyere WhatsApp’tan gider. Kursiyer bilgileri kayıttan gelir.</p>`)}
+    ${kart('e-Arşiv fatura', g.earsiv.bagli, `<p style="font-size:14px">Tahsilat alındığında fatura entegratörünüz üzerinden kesilir, PDF’i kursiyere WhatsApp’tan gider. Kursiyer bilgileri kayıttan gelir.</p><div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px"><div class="alan" style="width:140px"><label for="e-seri">Fatura seri öneki</label><input id="e-seri" class="girdi" maxlength="3" data-earsiv-alan="seri" value="${e(g.earsiv.seri || 'SNY')}"></div><div class="alan" style="width:170px"><label for="e-vkn">Vergi kimlik no</label><input id="e-vkn" class="girdi" inputmode="numeric" maxlength="11" data-earsiv-alan="vkn" value="${e(g.vkn || '')}"></div></div><small style="color:var(--soluk)">${(S.faturalar || []).length} fatura kesildi.</small>`)}
     ${kart('Sanal POS', g.pos.bagli, `<p style="font-size:14px">Evden kayıt sayfası ve ödeme linkleri kursun kendi POS’u ile çekilir. Banka komisyonu: <b>%${String(g.pos.komisyon).replace('.', ',')}</b> (bankanızla yaptığınız anlaşma).</p>`)}
     <div class="kart"><div class="kart-bas">${isaret(g.muhasebe.bagli ? 'tamam' : 'bilgi', 24)}<h3>Muhasebe</h3><span class="sag">${g.muhasebe.bagli ? rozet('Paraşüt bağlı', 'yesil') : rozet('Excel ile aktarım', 'mavi')}</span></div><div class="kart-govde" style="display:grid;gap:12px">
       <p style="font-size:14px">Kasadaki her hareket muhasebe fişine çevrilir. Paraşüt’e doğrudan gider; Logo, Mikro, Luca ve Zirve için aylık fiş dosyası hazırlanır.</p>
@@ -104,7 +104,7 @@ function entegrasyonSekme() {
     <div class="kart"><div class="kart-bas">${isaret('bilgi', 24)}<h3>Mali müşavir ve personel</h3></div><div class="kart-govde" style="display:grid;gap:12px">
       <p style="font-size:14px">Bordro ve SGK işlemleri mali müşavirinizde kalır. Sinyal ona her ay ihtiyaç duyduğu özeti hazırlar: maaş, yapılan ders, ders primi, izin.</p>
       <button class="dg dg-cizgi" data-personel-ozet style="justify-self:start">${ik('indir')}Bu ayın personel özeti</button>
-      <div class="alan"><label for="musavir">Mali müşavirin e-postası</label><input id="musavir" class="girdi" type="email" data-musavir value="${e(g.musavir.eposta)}" placeholder="musavir@ornek.com"></div>
+      <div class="alan"><label for="musavir">Mali müşavirin e-postası</label><input id="musavir" class="girdi" type="email" data-musavir value="${e(g.musavir.eposta)}" placeholder="musavir@firma.com"></div>
       <label style="display:flex;gap:12px;align-items:center;font-size:14.5px"><span class="anahtar"><input type="checkbox" data-musavir-oto ${g.musavir.otomatik ? 'checked' : ''}><i></i></span>Her ayın 1’inde fişler, kasa dökümü ve personel özeti otomatik gitsin</label></div></div>
   </div>`;
 }
@@ -255,7 +255,55 @@ function subelerSekme() {
   <div class="kart"><div class="tablo-kap"><table class="tablo tablo-mobil"><thead><tr><th>Şube</th><th>MEB kurum kodu</th><th>Kurs müdürü</th><th>MEBBİS hesabı</th><th>Kursiyer</th></tr></thead><tbody>${S.subeler.map((x, i) => `<tr><td><input class="girdi" style="height:34px" data-sube-alan="${i}:ad" value="${e(x.ad)}"></td><td><input class="girdi mono" style="height:34px;width:110px" inputmode="numeric" data-sube-alan="${i}:kurumKodu" value="${e(x.kurumKodu || '')}"></td><td><input class="girdi" style="height:34px" data-sube-alan="${i}:mudur" value="${e(x.mudur || '')}"></td><td><input class="girdi" style="height:34px" data-sube-alan="${i}:mebbis" value="${e(x.mebbis || '')}"></td><td class="mono">${S.kursiyerler.filter(k => k.sube === x.id && k.asama !== 'Ehliyet').length}</td></tr>`).join('')}</tbody></table></div>
   <div class="kart-govde"><button class="dg dg-cizgi" data-sube-ekle>${ik('arti')}Şube ekle</button></div></div>`;
 }
-export const AYAR_SEKMELERI = { subeler: subelerSekme, kurallar: kurallarSekme, guvenlik: guvenlikSekme, entegrasyon: entegrasyonSekme, aktarim: aktarimSekme, gorunum: gorunumSekme };
+const ROL = { mudur: 'Kurs müdürü', sekreter: 'Ön büro', usta: 'Usta öğretici' }, ROL_YETKI = { mudur: 'Her şeyi görür, ayarları değiştirir', sekreter: 'Kayıt, kasa, mesajlar, plan', usta: 'Kendi dersleri ve kursiyerleri' };
+function kullaniciSekme() {
+  const sonGiris = u => (S.islemler.find(x => x.kim === u.ad && x.ne === 'Giriş yaptı') || {}).zaman;
+  return `<div class="kart"><div class="kart-bas"><h3>Kullanıcılar</h3><small>${S.kullanicilar.length} kişi · her biri kendi PIN’iyle girer</small><div class="sag"><button class="dg dg-ana dg-kucuk" data-kul-ekle>${ik('arti')}Kullanıcı ekle</button></div></div><ul class="liste">${S.kullanicilar.map(u => { const g = sonGiris(u), ben = oturum.kullanici && oturum.kullanici.id === u.id; return `<li>${avatar(...u.ad.split(' '))}<div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(u.ad)}${ben ? ' · siz' : ''}</b><small style="display:block;color:var(--soluk)">${ROL_YETKI[u.rol]}${u.usta && egitmen(u.usta) ? ' · ' + e(egitmen(u.usta).ad) + ' derslerini görür' : ''}${u.tel ? ' · ' + e(u.tel) : ''} · ${g ? 'son giriş ' + goreli(g.slice(0, 10)) + ' ' + g.slice(11, 16) : 'henüz girmedi'}</small></div><span class="sag" style="gap:6px">${rozet(ROL[u.rol], u.rol === 'mudur' ? 'sari' : 'notr')}<button class="dg dg-hafif dg-kucuk" data-kul-pin="${u.id}">PIN değiştir</button>${ben ? '' : `<button class="dg dg-hafif dg-kucuk" data-kul-sil="${u.id}">Kaldır</button>`}</span></li>`; }).join('')}</ul></div>`;
+}
+function kullaniciFormu() {
+  pencere({
+    baslik: 'Kullanıcı ekle',
+    icerik: `<form class="form-izgara" id="f-kul"><div class="alan"><label>Ad soyad</label><input name="ad" required autocomplete="off"></div><div class="alan"><label>Telefon</label><input name="tel" inputmode="tel" placeholder="05xx xxx xx xx"></div>
+      <div class="alan tam"><span class="et">Rol</span><div class="secim">${Object.entries(ROL).map(([r, t], i) => `<label><input type="radio" name="rol" value="${r}" ${i === 1 ? 'checked' : ''}><span>${t}</span></label>`).join('')}</div></div>
+      <div class="alan tam" id="kul-usta" hidden><label>Hangi usta öğretici?</label><select name="usta">${S.egitmenler.filter(x => !S.kullanicilar.some(u => u.usta === x.id)).map(x => `<option value="${x.id}">${e(x.ad)}</option>`).join('') || '<option value="">Tüm usta öğreticilerin kullanıcısı var</option>'}</select></div>
+      <div class="alan"><label>PIN (4 hane)</label><input name="pin" inputmode="numeric" maxlength="4" autocomplete="new-password" required></div><div class="alan"><label>PIN tekrar</label><input name="pin2" inputmode="numeric" maxlength="4" autocomplete="new-password" required></div></form>
+      <p style="font-size:13px;color:var(--soluk);margin-top:10px">PIN’i kişiye yüz yüze söyleyin; ilk girişte kendisi değiştirebilir.</p>`,
+    altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-kul">Ekle</button>`,
+    onAc(d) {
+      const f = d.querySelector('form'); f.addEventListener('change', () => { d.querySelector('#kul-usta').hidden = f.rol.value !== 'usta'; });
+      f.ad.addEventListener('input', () => { const eg = S.egitmenler.find(x => x.ad.toLocaleLowerCase('tr') === f.ad.value.trim().toLocaleLowerCase('tr')); if (eg && [...f.usta.options].some(o => o.value === eg.id)) { f.usta.value = eg.id; f.querySelector('[name=rol][value=usta]').checked = true; d.querySelector('#kul-usta').hidden = false; } });
+      f.addEventListener('submit', ev => {
+        ev.preventDefault(); const ad = f.ad.value.trim();
+        if (ad.length < 3) return bildir('Ad soyad girin', 'uyari');
+        if (!/^\d{4}$/.test(f.pin.value)) return bildir('PIN 4 rakam olmalı', 'uyari');
+        if (f.pin.value !== f.pin2.value) return bildir('PIN’ler aynı değil', 'uyari');
+        if (/^(\d)\1{3}$|^(0123|1234|2345|3456|4567|5678|6789)$/.test(f.pin.value)) return bildir('Bu PIN çok kolay tahmin edilir; başka bir PIN seçin', 'uyari');
+        if (f.rol.value === 'usta' && !f.usta.value) return bildir('Usta öğretici seçin', 'uyari');
+        S.kullanicilar.push({ id: 'u' + Date.now(), ad, tel: f.tel.value.trim(), rol: f.rol.value, pin: f.pin.value, ...(f.rol.value === 'usta' ? { usta: f.usta.value } : {}) });
+        islem('Kullanıcı ekledi', ad + ' · ' + ROL[f.rol.value]); kaydet(); kapatPencere(); bildir(ad + ' eklendi'); yenile();
+      });
+    },
+  });
+}
+function pinDegistir(u) {
+  pencere({
+    baslik: 'PIN değiştir · ' + u.ad,
+    icerik: `<form class="form-izgara" id="f-pin"><div class="alan"><label>Yeni PIN</label><input name="pin" inputmode="numeric" maxlength="4" autocomplete="new-password" required></div><div class="alan"><label>Tekrar</label><input name="pin2" inputmode="numeric" maxlength="4" autocomplete="new-password" required></div></form>`,
+    altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-pin">Kaydet</button>`,
+    onAc(d) { d.querySelector('form').addEventListener('submit', ev => { ev.preventDefault(); const f = ev.target; if (!/^\d{4}$/.test(f.pin.value)) return bildir('PIN 4 rakam olmalı', 'uyari'); if (f.pin.value !== f.pin2.value) return bildir('PIN’ler aynı değil', 'uyari'); if (f.pin.value === u.pin) return bildir('Yeni PIN eskisiyle aynı', 'uyari'); u.pin = f.pin.value; islem('PIN değiştirdi', u.ad); kaydet(); kapatPencere(); bildir(u.ad + ' için PIN değişti'); }); },
+  });
+}
+function sozlesmeSekme() {
+  const m = S.kurs.sozlesme && S.kurs.sozlesme.length ? S.kurs.sozlesme : SOZLESME_VARSAYILAN;
+  return `<div class="izgara iz-21"><div class="kart"><div class="kart-bas"><h3>Kursiyer sözleşmesi maddeleri</h3><small>${S.kurs.sozlesme ? 'Kursun metni · ' + (S.kurs.sozlesmeTarih ? tarih(S.kurs.sozlesmeTarih) : '') : 'Varsayılan metin'}</small></div><div class="kart-govde">
+    <textarea data-sozlesme-metin style="min-height:420px;font-size:13.5px;line-height:1.55">${e(m.join('\n\n'))}</textarea>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="dg dg-ana" data-sozlesme-kaydet>Kaydet</button><button class="dg dg-cizgi" data-belge-ac="sozlesme">Önizle</button>${S.kurs.sozlesme ? '<button class="dg dg-hafif" data-sozlesme-varsayilan>Varsayılana dön</button>' : ''}</div></div></div>
+    <div class="kart"><div class="kart-bas"><h3>Nasıl yazılır</h3></div><div class="kart-govde" style="font-size:14px;display:grid;gap:10px">
+      <p>Her madde ayrı paragraf; aralarında bir boş satır bırakın. İlk cümlenin başındaki kısa başlık (“Ücret ve ödeme.”) kalın yazılır.</p>
+      <p>Şu alanlar her kursiyer için otomatik dolar:</p><ul style="margin-left:18px">${[['{kurs}', 'kurs adı'], ['{sinif}', 'sertifika sınıfı'], ['{teorik}', 'teorik saat'], ['{direksiyon}', 'direksiyon ders sayısı'], ['{hak}', 'sınav hakkı'], ['{tekrarE}', 'e-sınav ücreti'], ['{tekrarD}', 'direksiyon tekrar ücreti'], ['{ekDers}', 'ek ders ücreti']].map(([a, b]) => `<li><code>${a}</code> ${b}</li>`).join('')}</ul>
+      <p style="color:var(--soluk)">Taraf bilgileri, ücret, indirim ve ödeme planı tablosu sözleşmenin başına kendiliğinden eklenir. Metni avukatınıza ya da mali müşavirinize okutun.</p></div></div></div>`;
+}
+export const AYAR_SEKMELERI = { kullanici: kullaniciSekme, sozlesme: sozlesmeSekme, subeler: subelerSekme, kurallar: kurallarSekme, guvenlik: guvenlikSekme, entegrasyon: entegrasyonSekme, aktarim: aktarimSekme, gorunum: gorunumSekme };
 export function ayarBaglan(k) {
   k.addEventListener('change', ev => {
     const t = ev.target;
@@ -267,6 +315,7 @@ export function ayarBaglan(k) {
     if (t.matches('[data-oturum]')) { S.guvenlik.oturumDk = +t.value; kaydet(); bildir('Oturum süresi kaydedildi'); }
     if (t.matches('[data-kdv]')) { S.entegrasyon.kdv = Math.max(0, Math.min(20, +t.value || 0)); kaydet(); bildir('KDV oranı %' + S.entegrasyon.kdv + ' olarak kaydedildi'); }
     if (t.matches('[data-fatura]')) { S.entegrasyon.fatura = t.value; kaydet(); bildir(t.value === 'kayit' ? 'Kurs ücreti kayıtta faturalanacak; taksitler alacak hesabında' : 'Her tahsilatta e-Arşiv kesilecek'); yenile(); }
+    if (t.matches('[data-earsiv-alan]')) { const a = t.dataset.earsivAlan, v = t.value.trim(); if (a === 'seri') { if (!/^[A-Za-zÇĞİÖŞÜçğıöşü]{3}$/.test(v)) return bildir('Seri öneki 3 harf olmalı', 'uyari'); S.entegrasyon.earsiv.seri = v.toLocaleUpperCase('tr'); } else { if (v && !/^\d{10,11}$/.test(v)) return bildir('Vergi no 10, TC no 11 hane olmalı', 'uyari'); S.entegrasyon.vkn = v; } islem('Fatura ayarını değiştirdi', a); kaydet(); bildir('Kaydedildi'); }
     if (t.matches('[data-musavir]')) { S.entegrasyon.musavir.eposta = t.value.trim(); kaydet(); bildir('E-posta kaydedildi'); }
     if (t.matches('[data-musavir-oto]')) { if (t.checked && !S.entegrasyon.musavir.eposta) { t.checked = false; return bildir('Önce mali müşavirin e-postasını yazın', 'uyari'); } S.entegrasyon.musavir.otomatik = t.checked; kaydet(); bildir(t.checked ? 'Her ayın 1’inde otomatik gönderilecek' : 'Otomatik gönderim kapatıldı'); }
     if (t.matches('[data-akt-tur]')) { aktarim.tur = t.value; aktarim.satirlar = null; aktarim.esles = {}; yenile(); }
@@ -286,9 +335,14 @@ export function ayarBaglan(k) {
   });
   k.addEventListener('click', ev => {
     const t = ev.target;
+    if (t.closest('[data-kul-ekle]')) return kullaniciFormu();
+    const kp = t.closest('[data-kul-pin]'); if (kp) return pinDegistir(S.kullanicilar.find(u => u.id === kp.dataset.kulPin));
+    const ks = t.closest('[data-kul-sil]'); if (ks) { const u = S.kullanicilar.find(x => x.id === ks.dataset.kulSil); if (u.rol === 'mudur' && S.kullanicilar.filter(x => x.rol === 'mudur').length < 2) return bildir('Son kurs müdürü kaldırılamaz', 'uyari'); return pencere({ baslik: u.ad + ' kaldırılsın mı?', icerik: '<p>Bu kişi artık giriş yapamaz. Yaptığı işlemler geçmişte kalır.</p>', altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Kaldır</button>', onAc(d) { d.querySelector('[data-k]').addEventListener('click', () => { S.kullanicilar = S.kullanicilar.filter(x => x !== u); islem('Kullanıcı kaldırdı', u.ad); kaydet(); kapatPencere(); bildir(u.ad + ' kaldırıldı'); yenile(); }); } }); }
+    if (t.closest('[data-sozlesme-kaydet]')) { const v = k.querySelector('[data-sozlesme-metin]').value.split(/\n\s*\n/).map(x => x.replace(/\s+/g, ' ').trim()).filter(Boolean); if (v.length < 3) return bildir('Sözleşmede en az 3 madde olmalı', 'uyari'); const bilinmez = [...new Set((v.join(' ').match(/\{(\w+)\}/g) || []).filter(x => !['{kurs}', '{sinif}', '{teorik}', '{direksiyon}', '{hak}', '{tekrarE}', '{tekrarD}', '{ekDers}'].includes(x)))]; if (bilinmez.length) return bildir('Tanınmayan alan: ' + bilinmez.join(', '), 'uyari'); S.kurs.sozlesme = v; S.kurs.sozlesmeTarih = gun(0); islem('Sözleşme metnini değiştirdi', v.length + ' madde'); kaydet(); bildir('Sözleşme metni kaydedildi; yeni kayıtlar bu metinle hazırlanır'); return yenile(); }
+    if (t.closest('[data-sozlesme-varsayilan]')) { S.kurs.sozlesme = null; islem('Sözleşmeyi varsayılana döndürdü'); kaydet(); bildir('Varsayılan metne dönüldü'); return yenile(); }
     if (t.closest('[data-sube-ekle]')) { const n = S.subeler.length + 1; S.subeler.push({ id: 's' + Date.now(), ad: 'Yeni şube ' + n, semt: '', kurumKodu: '', mudur: '', mebbis: '' }); islem('Şube ekledi'); kaydet(); bildir('Şube eklendi; kurum kodunu ve müdürünü yazın'); yenile(); }
     if (t.closest('[data-kural-onay]')) { S.kurs.kuralOnay = { kim: oturum.kullanici ? oturum.kullanici.ad : '', tarih: gun(0) }; islem('Kural değerlerini onayladı'); kaydet(); bildir('Kural değerleri onaylandı'); yenile(); }
-    const bo = t.closest('[data-belge-ac]'); if (bo) import('./sayfalar3.js?v=29').then(m => m.belgeAc(bo.dataset.belgeAc));
+    const bo = t.closest('[data-belge-ac]'); if (bo) import('./sayfalar3.js?v=31').then(m => m.belgeAc(bo.dataset.belgeAc));
     const ok = t.closest('[data-oturum-kapat]'); if (ok) { const o = S.guvenlik.oturumlar.splice(+ok.dataset.oturumKapat, 1)[0]; islem('Oturumu kapattırdı', o.kim + ' · ' + o.cihaz); kaydet(); bildir(o.kim + ' · ' + o.cihaz + ' oturumu kapatıldı'); yenile(); }
     const fs = t.closest('[data-fis]'); if (fs) { const n = +fs.dataset.fis, d = new Date(BUGUN); d.setMonth(d.getMonth() - n); csvIndir(`muhasebe-fisleri-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}.csv`, muhasebeFisi(n)); islem('Muhasebe fişlerini indirdi'); kaydet(); }
     if (t.closest('[data-parasut]')) { S.entegrasyon.muhasebe = { tur: 'Paraşüt', bagli: true }; islem('Paraşüt’ü bağladı'); kaydet(); bildir('Paraşüt bağlandı; tahsilatlar artık otomatik aktarılıyor'); yenile(); }

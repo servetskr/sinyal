@@ -1,6 +1,6 @@
-import { S, kaydet, gun, islem, tarihOku, oturum, kapaliGun } from './veri.js?v=29';
-import { e, ik, rozet, isaret, ekranNotu, sekmeler, olcumler, yonLevhasi, cubukGrafik, halka, pencere, kapatPencere, bildir, sayi, tl, goreli, tarih } from './ui.js?v=29';
-import { yenile } from './app.js?v=29';
+import { S, kaydet, gun, islem, tarihOku, oturum, kapaliGun } from './veri.js?v=31';
+import { e, ik, rozet, isaret, ekranNotu, sekmeler, olcumler, yonLevhasi, cubukGrafik, halka, pencere, kapatPencere, bildir, sayi, tl, goreli, tarih } from './ui.js?v=31';
+import { yenile } from './app.js?v=31';
 
 /* ================= SOSYAL MEDYA ASİSTANI (DengChat modülü) =================
    Gelen kutusu "Mesajlar"da kalır. Bu modül kanalları bağlar, Instagram
@@ -320,7 +320,7 @@ export function sosyal(alt) {
         const ygz = t.closest('[data-yorum-gizle]'); if (ygz) { const y = sos().yorumlar.find(x => x.id === ygz.dataset.yorumGizle); y.durum = 'gizli'; islem('Yorumu gizledi', y.kim); kaydet(); bildir('Yorum gizlendi'); yenile(); return; }
         const ybr = t.closest('[data-yorum-birak]'); if (ybr) { const y = sos().yorumlar.find(x => x.id === ybr.dataset.yorumBirak); y.durum = 'devir'; kaydet(); bildir('Yorum görünür kaldı; cevabı size bırakıldı'); yenile(); return; }
         const tk = t.closest('[data-test-kanal]'); if (tk) { const c = sos().kanallar.find(x => x.id === tk.dataset.testKanal); tk.disabled = true; tk.textContent = 'Deneniyor…'; setTimeout(() => { c.sonCevapDk = 0; kaydet(); bildir(c.ad + ': deneme mesajı gönderildi ve cevaplandı'); yenile(); }, 900); return; }
-        const ba = t.closest('[data-belge-ac]'); if (ba) { import('./sayfalar3.js?v=29').then(m => m.belgeAc(ba.dataset.belgeAc)); return; }
+        const ba = t.closest('[data-belge-ac]'); if (ba) { import('./sayfalar3.js?v=31').then(m => m.belgeAc(ba.dataset.belgeAc)); return; }
         const yg = t.closest('[data-yorum-goster]'); if (yg) { const y = sos().yorumlar.find(x => x.id === yg.dataset.yorumGoster); y.durum = 'devir'; kaydet(); bildir('Yorum görünür yapıldı; cevabı size bırakıldı'); yenile(); }
       });
       k.addEventListener('change', ev => {
@@ -385,8 +385,7 @@ function baglaSihirbazi(id) {
     icerik: `<ol style="padding-left:18px;display:grid;gap:10px;font-size:14.5px">
       <li><b>Meta ile giriş</b><br><small style="color:var(--soluk)">Kurs sayfasının yöneticisi kendi Facebook hesabıyla giriş yapar. Şifre Sinyal’e gelmez.</small></li>
       <li><b>Sayfayı seç ve izin ver</b><br><small style="color:var(--soluk)">Yalnızca mesajları okuma ve cevaplama izni istenir; gönderi paylaşma izni istenmez.</small></li>
-      <li><b>Deneme mesajı</b><br><small style="color:var(--soluk)">Sayfaya bir mesaj atılır, asistanın cevabı birlikte kontrol edilir.</small></li></ol>
-      <p style="margin-top:12px;font-size:13px;color:var(--soluk)">Demo: bağlantı taklit edilir, gerçek hesaba dokunulmaz.</p>`,
+      <li><b>Deneme mesajı</b><br><small style="color:var(--soluk)">Sayfaya bir mesaj atılır, asistanın cevabı birlikte kontrol edilir.</small></li></ol>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>${ik('fb')}Meta ile bağlan</button>`,
     onAc(d) { d.querySelector('[data-k]').addEventListener('click', () => { c.bagli = true; c.cevap = true; c.son = null; islem('Kanal bağladı', c.ad); kaydet(); kapatPencere(); bildir(c.ad + ' bağlandı; asistan cevaplamaya başladı'); yenile(); }); },
   });

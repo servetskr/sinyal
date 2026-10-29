@@ -1,11 +1,12 @@
-import { S, sifirla, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=29';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir } from './ui.js?v=29';
-import * as Y1 from './sayfalar1.js?v=29';
-import * as Y2 from './sayfalar2.js?v=29';
-import * as P from './portal.js?v=29';
-import * as Y3 from './sayfalar3.js?v=29';
-import * as Y4 from './sayfalar4.js?v=29';
-import * as Y5 from './sayfalar5.js?v=29';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=31';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir } from './ui.js?v=31';
+import * as Y1 from './sayfalar1.js?v=31';
+import * as Y2 from './sayfalar2.js?v=31';
+import * as P from './portal.js?v=31';
+import * as Y3 from './sayfalar3.js?v=31';
+import * as Y4 from './sayfalar4.js?v=31';
+import * as Y5 from './sayfalar5.js?v=31';
+import * as IM from './imza.js?v=31';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -13,10 +14,10 @@ const SAYFALAR = {
   mesajlar: Y2.mesajlar, meb: Y2.meb, raporlar: Y2.raporlar, ayarlar: Y2.ayarlar,
   egitmen: P.egitmenPortal, ogrenci: P.ogrenciPortal,
   belgeler: Y3.belgeler, kayit: Y3.kayitSayfasi, guven: Y3.guven, mebbis: Y3.mebbisAsistani,
-  sosyal: Y4.sosyal, kurulum: Y5.kurulum,
+  sosyal: Y4.sosyal, kurulum: Y5.kurulum, 'imza-geldi': IM.imzaGeldi,
 };
 const ROL_AD = { mudur: 'Kurs müdürü', sekreter: 'Ön büro', usta: 'Usta öğretici' };
-const YASAK = { mudur: [], sekreter: ['raporlar', 'ayarlar', 'guven', 'kurulum'], usta: Object.keys(SAYFALAR).filter(k => k !== 'egitmen') };
+const YASAK = { mudur: [], sekreter: ['raporlar', 'ayarlar', 'guven', 'kurulum'], usta: Object.keys(SAYFALAR).filter(k => !['egitmen', 'imza-geldi'].includes(k)) };
 const izinli = ad => { const u = oturum.kullanici; return u && !YASAK[u.rol].includes(ad); };
 
 const MENU = [
@@ -48,10 +49,9 @@ function iskelet() {
       <a class="logo" href="#/genel" aria-label="Sinyal ana sayfa"><svg class="logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 5.4 18.6 12 12 18.6 5.4 12z" fill="none" stroke="#111" stroke-width="1"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>${e(S.kurs.ad)}</small></span></a>
       <nav>${menu}</nav>
       ${(S.subeler || []).length > 1 && oturum.kullanici.rol !== 'usta' ? `<label class="sube-yan"><span>Şube</span><select data-sube aria-label="Şube">${['', ...S.subeler.map(x => x.id)].map(id => `<option value="${id}" ${gorunum.sube === id ? 'selected' : ''}>${id ? e(S.subeler.find(x => x.id === id).ad) : 'Tüm şubeler'}</option>`).join('')}</select></label>` : ''}
-      <div class="yan-alt"><b>${e(oturum.kullanici.ad)}</b><span>${ROL_AD[oturum.kullanici.rol]} · demo verisi</span><button class="dg dg-cizgi dg-kucuk" style="margin-top:8px;width:100%;background:transparent;color:#fff;border-color:#fff" data-cikis>Kullanıcı değiştir</button></div>
+      <div class="yan-alt"><b>${e(oturum.kullanici.ad)}</b><span>${ROL_AD[oturum.kullanici.rol]}</span><button class="dg dg-cizgi dg-kucuk" style="margin-top:8px;width:100%;background:transparent;color:#fff;border-color:#fff" data-cikis>Kullanıcı değiştir</button></div>
     </div></aside>
     <div class="ana">
-      <div class="demo-serit" title="Demo · örnek verilerle"></div>
       <header class="ust">
         <button class="dg-ikon mobil-ust-sol" data-yan aria-label="Menüyü aç">${ik('menu')}</button>
         <div class="ust-baslik"><small id="ust-alt">${bugunMetni()}</small><h1 id="ust-baslik">Genel bakış</h1></div>
@@ -72,13 +72,18 @@ function iskelet() {
   </nav>`;
 }
 
+// Kursiyerin açtığı imza linki: girişsiz, uygulama kabuğu olmadan
+const imzaLinki = () => location.hash.startsWith('#/imza/') ? location.hash.slice(7) : null;
+function imzaSayfasiAc() { IM.imzaSayfasi(document.getElementById('uyg'), imzaLinki()); }
 function rota() {
   const h = (location.hash || '#/genel').slice(2).split('/');
   return { ad: SAYFALAR[h[0]] ? h[0] : 'genel', id: h[1] ? decodeURIComponent(h[1]) : null };
 }
 
 export function yenile(kaydirma = false) {
-  if (!oturum.kullanici) return girisEkrani();
+  if (imzaLinki()) return imzaSayfasiAc();
+  if (!oturum.kullanici) { if (location.hash.startsWith('#/imza-geldi/')) try { sessionStorage.setItem('sinyal-bekleyen', location.hash); } catch (x) { } return girisEkrani(); }
+  if (!document.getElementById('icerik')) iskelet();
   let r = rota();
   if (!izinli(r.ad)) { location.hash = oturum.kullanici.rol === 'usta' ? '#/egitmen' : '#/genel'; return; }
   const yer = document.getElementById('icerik');
@@ -88,7 +93,7 @@ export function yenile(kaydirma = false) {
   document.body.classList.toggle('usta-modu', oturum.kullanici.rol === 'usta');
   let s;
   try { s = SAYFALAR[r.ad](r.id); }
-  catch (x) { console.error(x); s = { baslik: 'Bir şeyler ters gitti', html: '<div class="kart"><div class="bos"><b>Bu sayfa açılamadı</b><p>Demo verisini sıfırlayıp tekrar deneyin.</p><button class="dg dg-koyu" data-sifirla>Demo verisini sıfırla</button></div></div>' }; }
+  catch (x) { console.error(x); s = { baslik: 'Bir şeyler ters gitti', html: '<div class="kart"><div class="bos"><b>Bu sayfa açılamadı</b><p>Sayfayı yenileyip tekrar deneyin. Sorun sürerse destek hattına yazın.</p><a class="dg dg-koyu" href="#/genel">Genel bakışa dön</a></div></div>' }; }
   document.getElementById('ust-baslik').textContent = s.baslik;
   document.getElementById('ust-alt').textContent = s.alt || bugunMetni();
   document.title = s.baslik + ' · Sinyal';
@@ -157,23 +162,22 @@ document.addEventListener('click', ev => {
   if (t.closest('[data-ara]')) return aramaAc();
   if (t.closest('[data-yan]')) return yanAcKapa(!document.getElementById('yan').classList.contains('acik'));
   if (t.closest('.yan a') || t.closest('.yan-rol')) yanAcKapa(false);
-  if (t.closest('[data-sifirla]')) { sifirla(); bildir('Demo verisi sıfırlandı'); location.hash = '#/genel'; yenile(true); }
 });
 document.addEventListener('keydown', ev => { if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === 'k') { ev.preventDefault(); aramaAc(); } });
 document.addEventListener('change', ev => { const s = ev.target.closest('[data-sube]'); if (!s) return; subeSec(s.value); document.querySelectorAll('[data-sube]').forEach(x => { x.value = s.value; }); bildir(s.value ? S.subeler.find(x => x.id === s.value).ad + ' gösteriliyor' : 'Tüm şubeler gösteriliyor'); yenile(); });
 Y5.temaUygula();
 
 let sonAd = null;
-window.addEventListener('hashchange', () => { const r = rota(); yenile(r.ad !== sonAd); sonAd = r.ad; });
+window.addEventListener('hashchange', () => { if (imzaLinki()) return imzaSayfasiAc(); const r = rota(); yenile(r.ad !== sonAd); sonAd = r.ad; });
 
 function girisEkrani() {
   document.body.classList.remove('portal-modu');
   document.getElementById('uyg').innerHTML = `<div class="giris"><div class="giris-levha">
     <div class="logo" style="border-bottom:0;margin:0 0 6px"><svg class="logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>${e(S.kurs.ad)}</small></span></div>
     <h1>Kim giriş yapıyor?</h1><p>Her kullanıcı yalnızca yetkisi olan ekranları görür.</p>
-    <div class="giris-kisiler">${S.kullanicilar.map(u => `<button class="giris-kisi" data-kim="${u.id}"><b>${e(u.ad)}</b><small>${ROL_AD[u.rol]}</small><em>Demo PIN ${u.pin}</em></button>`).join('')}</div>
+    <div class="giris-kisiler">${S.kullanicilar.map(u => `<button class="giris-kisi" data-kim="${u.id}"><b>${e(u.ad)}</b><small>${ROL_AD[u.rol]}</small></button>`).join('')}</div>
     <form class="giris-pin" hidden><label for="pin">PIN</label><input id="pin" inputmode="numeric" maxlength="4" autocomplete="one-time-code" placeholder="••••"><button class="dg dg-koyu" type="submit">Giriş</button></form>
-    <p class="giris-not">Canlı kullanımda her kullanıcı kendi şifresiyle ve telefonuna gelen kodla girer.</p></div></div>`;
+    <p class="giris-not">PIN’inizi unuttuysanız kurs müdürü Ayarlar › Kullanıcılar’dan yenisini verir.</p></div></div>`;
   let secilen = null;
   const kok = document.getElementById('uyg');
   kok.querySelectorAll('[data-kim]').forEach(b => b.addEventListener('click', () => { secilen = S.kullanicilar.find(u => u.id === b.dataset.kim); kok.querySelectorAll('[data-kim]').forEach(x => x.classList.toggle('secili', x === b)); const f = kok.querySelector('.giris-pin'); f.hidden = false; f.querySelector('input').value = ''; f.querySelector('input').focus(); }));
@@ -183,7 +187,8 @@ function girisEkrani() {
     oturum.kullanici = { id: secilen.id, ad: secilen.ad, rol: secilen.rol, usta: secilen.usta };
     try { sessionStorage.setItem('sinyal-oturum', JSON.stringify(oturum.kullanici)); } catch (x) { }
     islem('Giriş yaptı'); kaydet();
-    iskelet(); location.hash = secilen.rol === 'usta' ? '#/egitmen' : '#/genel'; sonAd = rota().ad; yenile(true);
+    let bekleyen = null; try { bekleyen = sessionStorage.getItem('sinyal-bekleyen'); sessionStorage.removeItem('sinyal-bekleyen'); } catch (x) { }
+    iskelet(); location.hash = bekleyen || (secilen.rol === 'usta' ? '#/egitmen' : '#/genel'); sonAd = rota().ad; yenile(true);
   });
 }
 document.addEventListener('click', ev => {
@@ -191,5 +196,6 @@ document.addEventListener('click', ev => {
   const g = ev.target.closest('[data-geri-al]'); if (g) { if (geriAl()) { bildir('Son işlem geri alındı'); yenile(); } }
 });
 
-if (oturum.kullanici) { iskelet(); if (!location.hash) location.hash = oturum.kullanici.rol === 'usta' ? '#/egitmen' : '#/genel'; sonAd = rota().ad; yenile(); }
+if (imzaLinki()) imzaSayfasiAc();
+else if (oturum.kullanici) { iskelet(); if (!location.hash) location.hash = oturum.kullanici.rol === 'usta' ? '#/egitmen' : '#/genel'; sonAd = rota().ad; yenile(); }
 else girisEkrani();
