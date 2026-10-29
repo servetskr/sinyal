@@ -1,4 +1,4 @@
-import { S, gun, fark, SINIFLAR, egitmen, kapaliGun, dersAraci, risk } from './veri.js?v=39';
+import { S, gun, fark, SINIFLAR, egitmen, kapaliGun, dersAraci, risk } from './veri.js?v=40';
 
 const ort = l => l.length ? l.reduce((a, x) => a + x, 0) / l.length : null;
 export const riskliler = (l = S.kursiyerler) => l.map(k => ({ k, r: risk(k) })).filter(x => x.r && x.r.puan >= 25).sort((a, b) => b.r.puan - a.r.puan);
@@ -38,6 +38,7 @@ export function hakedis(ayGeri = 0) {
 
 /* ================= KURSİYERİN KENDİ RANDEVUSU ================= */
 export function randevuEngeli(k) {
+  if (k.kapali) return 'Kaydın şu an ' + (k.kapali.tur === 'dondur' ? 'dondurulmuş' : 'kapalı') + '; ders için kursa yaz.';
   if (!S.kurs.kendiRandevu) return 'Kurs, direksiyon saatlerini kendisi planlıyor; ders için kursa yaz.';
   if (!['Direksiyon', 'Sınav'].includes(k.asama)) return k.asama === 'Teorik' || k.asama === 'Kayıt' || k.asama === 'Evrak' ? 'Direksiyon derslerin e-sınavı geçince açılır.' : 'Şu an direksiyon dersin yok.';
   const S0 = SINIFLAR[k.sinif]; if (!S0.direksiyon) return 'Bu sınıfta direksiyon dersi yok.';

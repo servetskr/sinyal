@@ -1,7 +1,7 @@
-import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas, sb, sbDers, sbSinav, gorunum, subede, SOZLESME_VARSAYILAN, satistaSiniflar, ayEkle, YONTEMLER, yontemAd } from './veri.js?v=39';
-import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler, imzaAlani, tamTarih, yaziyla, belgeYazdir, kartFormu, kartBagla, kartDogrula, waAc, apiAcik, belgeWhatsApp } from './ui.js?v=39';
-import { yenile } from './app.js?v=39';
-import { siraliPencere } from './sayfalar5.js?v=39';
+import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas, sb, sbDers, sbSinav, gorunum, subede, SOZLESME_VARSAYILAN, satistaSiniflar, ayEkle, YONTEMLER, yontemAd } from './veri.js?v=40';
+import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler, imzaAlani, tamTarih, yaziyla, belgeYazdir, kartFormu, kartBagla, kartDogrula, waAc, apiAcik, belgeWhatsApp } from './ui.js?v=40';
+import { yenile } from './app.js?v=40';
+import { siraliPencere } from './sayfalar5.js?v=40';
 
 /* ================= BELGELER VE ÇIKTILAR ================= */
 const gorunumSube = () => gorunum.sube;
@@ -130,7 +130,7 @@ export function belgeHtml(tur, id, hid) {
       <p style="font-size:11px;color:#555">Bu makbuz tahsilatın alındığını gösterir; fatura yerine geçmez.${h.fatura ? ' Fatura no: ' + e(h.fatura) : ''}</p><div class="imza"><div>Ödeyen</div><div>Tahsil eden${h.kim ? '<small style="display:block">' + e(h.kim) + '</small>' : ''}</div></div>`;
   }
   if (tur === 'senet') {
-    const acik = k.odeme.taksitler.map((t, i) => ({ t, i })).filter(x => !x.t.odendi);
+    const acik = k.odeme.taksitler.map((t, i) => ({ t, i })).filter(x => !x.t.odendi && !x.t.iptal);
     if (!acik.length) return kursBas('Senet') + '<p>Ödenmemiş taksit yok; senet düzenlenecek borç kalmadı.</p>';
     return acik.map(({ t, i }, n) => `<div class="${n < acik.length - 1 ? 'sayfa-sonu' : ''}"><h1>Bono (emre muharrer senet)</h1><p class="a4-alt">${i + 1}. taksit · ${n + 1}/${acik.length}</p>
       <table><tr><th>Düzenleme yeri</th><td>${e(S.kurs.sehir || '')}</td><th>Düzenleme tarihi</th><td>${tamTarih(k.odeme.pesinTarih || k.kayit)}</td></tr><tr><th>Ödeme günü</th><td>${tamTarih(t.vade)}</td><th>Ödeme yeri</th><td>${e(S.kurs.sehir || '')}</td></tr><tr><th>Tutar</th><td colspan="3"><b>${tl(t.tutar)}</b> · #${yaziyla(t.tutar)}#</td></tr></table>
@@ -151,7 +151,7 @@ export function sozlesmeImzalat(k) {
     onAc(d) {
       const ia = imzaAlani(d.querySelector('[data-imza]'));
       d.querySelector('[data-temizle]').addEventListener('click', () => ia.temizle());
-      d.querySelector('[data-uzaktan]').addEventListener('click', () => import('./imza.js?v=39').then(m => m.imzayaGonderPenceresi(k, 'sozlesme')));
+      d.querySelector('[data-uzaktan]').addEventListener('click', () => import('./imza.js?v=40').then(m => m.imzayaGonderPenceresi(k, 'sozlesme')));
       d.querySelector('[data-yazdir]').addEventListener('click', () => { belgeYazdir(belgeHtml('sozlesme', k.id) + '<div class="sayfa-sonu"></div>' + belgeHtml('sozlesme', k.id), 'Sözleşme · ' + tamAd(k)); islem('Sözleşme yazdırdı', tamAd(k)); kaydet(); bildir('İki nüsha yazdırıldı. İmzalı nüshayı teslim alınca Evraklar’da “İmzalı sözleşme”yi işaretleyin'); });
       d.querySelector('[data-imzala]').addEventListener('click', () => {
         if (ia.bos()) return bildir('Kursiyer imza alanına imzalasın', 'uyari');

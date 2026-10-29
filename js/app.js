@@ -1,15 +1,15 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=39';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir } from './ui.js?v=39';
-import * as Y1 from './sayfalar1.js?v=39';
-import * as Y2 from './sayfalar2.js?v=39';
-import * as P from './portal.js?v=39';
-import * as Y3 from './sayfalar3.js?v=39';
-import * as Y4 from './sayfalar4.js?v=39';
-import * as Y5 from './sayfalar5.js?v=39';
-import * as IM from './imza.js?v=39';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=39';
-import * as SN from './senaryo.js?v=39';
-import * as OZ from './ozellik.js?v=39';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=40';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir } from './ui.js?v=40';
+import * as Y1 from './sayfalar1.js?v=40';
+import * as Y2 from './sayfalar2.js?v=40';
+import * as P from './portal.js?v=40';
+import * as Y3 from './sayfalar3.js?v=40';
+import * as Y4 from './sayfalar4.js?v=40';
+import * as Y5 from './sayfalar5.js?v=40';
+import * as IM from './imza.js?v=40';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=40';
+import * as SN from './senaryo.js?v=40';
+import * as OZ from './ozellik.js?v=40';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -126,6 +126,7 @@ function rolSec(r) {
 }
 
 function aramaAc() {
+  if (!oturum.kullanici || oturum.kullanici.rol === 'usta') return;
   const kayitlar = [
     ...S.kursiyerler.map(k => ({ t: tamAd(k), a: 'Kursiyer · ' + k.sinif + ' · ' + k.tel, h: '#/kursiyer/' + k.id, g: 'Kursiyerler' })),
     ...S.adaylar.map(a => ({ t: a.ad, a: 'Aday · ' + a.asama, h: '#/adaylar/' + a.id, g: 'Adaylar' })),
@@ -187,7 +188,15 @@ function girisEkrani() {
   kok.querySelectorAll('[data-kim]').forEach(b => b.addEventListener('click', () => { secilen = S.kullanicilar.find(u => u.id === b.dataset.kim); kok.querySelectorAll('[data-kim]').forEach(x => x.classList.toggle('secili', x === b)); const f = kok.querySelector('.giris-pin'); f.hidden = false; f.querySelector('input').value = ''; f.querySelector('input').focus(); }));
   kok.querySelector('.giris-pin').addEventListener('submit', ev => {
     ev.preventDefault(); const v = ev.target.querySelector('input').value;
-    if (!secilen || v !== secilen.pin) { bildir('PIN hatalı', 'uyari'); return; }
+    if (!secilen) return;
+    const dn = (S.guvenlik.deneme = S.guvenlik.deneme || {})[secilen.id] || { n: 0, kilit: 0 };
+    if (dn.kilit > Date.now()) return bildir(`${secilen.ad} hesabı çok sayıda hatalı PIN nedeniyle kilitli; ${Math.ceil((dn.kilit - Date.now()) / 60e3)} dk sonra tekrar deneyin ya da müdürden yeni PIN isteyin`, 'uyari');
+    if (v !== secilen.pin) {
+      dn.n++; if (dn.n >= 5) { dn.kilit = Date.now() + 15 * 60e3; dn.n = 0; islem('Hesap kilitlendi', secilen.ad + ' · 5 hatalı PIN'); bildir('5 kez hatalı PIN girildi; hesap 15 dakika kilitlendi', 'uyari'); }
+      else bildir(`PIN hatalı · ${5 - dn.n} deneme hakkı kaldı`, 'uyari');
+      S.guvenlik.deneme[secilen.id] = dn; kaydet(); return;
+    }
+    delete S.guvenlik.deneme[secilen.id];
     oturum.kullanici = { id: secilen.id, ad: secilen.ad, rol: secilen.rol, usta: secilen.usta };
     try { sessionStorage.setItem('sinyal-oturum', JSON.stringify(oturum.kullanici)); } catch (x) { }
     islem('Giriş yaptı'); kaydet();
@@ -199,6 +208,17 @@ document.addEventListener('click', ev => {
   if (ev.target.closest('[data-cikis]')) { islem('Çıkış yaptı'); kaydet(); oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } girisEkrani(); }
   const g = ev.target.closest('[data-geri-al]'); if (g) { if (geriAl()) { bildir('Son işlem geri alındı'); yenile(); } }
 });
+
+// Hareketsiz kalınca oturumu kapat (Ayarlar › Güvenlik)
+let sonHareket = Date.now();
+['click', 'keydown', 'touchstart', 'scroll'].forEach(t => document.addEventListener(t, () => { sonHareket = Date.now(); }, { passive: true, capture: true }));
+setInterval(() => {
+  if (!oturum.kullanici || imzaLinki()) return;
+  const dk = (S.guvenlik && S.guvenlik.oturumDk) || 30;
+  if (Date.now() - sonHareket < dk * 60e3) return;
+  islem('Oturum kapandı', dk + ' dk hareketsiz'); kaydet(); oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { }
+  girisEkrani(); bildir(dk + ' dakika işlem yapılmadığı için oturum kapandı', 'uyari');
+}, 30e3);
 
 if (imzaLinki()) imzaSayfasiAc();
 else if (oturum.kullanici) { iskelet(); if (!location.hash) location.hash = oturum.kullanici.rol === 'usta' ? '#/egitmen' : '#/genel'; sonAd = rota().ad; yenile(); }

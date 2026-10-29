@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle } from './veri.js?v=39';
+import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum } from './veri.js?v=40';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -338,6 +338,7 @@ export function olcumler(l) {
 // Araç görseli + plaka (görseller img/arac-<id>.webp)
 export function aracGorsel(a, cls = '') {
   if (!a) return '';
+  if (!/^a[1-6]$/.test(a.id)) return `<figure class="arac-fig arac-fig-bos ${cls}"><svg viewBox="0 0 64 32" aria-hidden="true"><path d="M6 22h52M10 22l5-9h26l9 9M14 26a3 3 0 1 0 0-.1M48 26a3 3 0 1 0 0-.1" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><figcaption>${plaka(a.plaka)}</figcaption></figure>`;
   return `<figure class="arac-fig ${cls}"><img src="img/arac-${a.id}.webp" alt="${e(a.model)}" loading="lazy" width="640" height="420"><figcaption>${plaka(a.plaka)}</figcaption></figure>`;
 }
 
@@ -363,4 +364,22 @@ export function imzaAlani(cv) {
   cv.addEventListener('pointermove', ev => { if (!ciz) return; c.lineTo(...n(ev)); c.stroke(); bos = false; });
   cv.addEventListener('pointerup', () => ciz = false);
   return { bos: () => bos, url: () => { const k = document.createElement('canvas'); k.width = 300; k.height = 100; k.getContext('2d').drawImage(cv, 0, 0, 300, 100); return k.toDataURL('image/png'); }, temizle: () => { c.clearRect(0, 0, cv.width, cv.height); bos = true; } };
+}
+
+// Hassas işlemden önce oturumdaki kullanıcının PIN'ini tekrar sorar (Ayarlar › Güvenlik'te kapatılabilir)
+export function pinSor(neden) {
+  return new Promise(ok => {
+    if (!S.guvenlik || !S.guvenlik.hassasOnay) return ok(true);
+    const u = oturum.kullanici && S.kullanicilar.find(x => x.id === oturum.kullanici.id); if (!u) return ok(false);
+    let hata = 0;
+    pencere({
+      baslik: 'PIN onayı', icerik: `<p style="margin-bottom:10px">${e(neden)} için PIN’inizi tekrar girin.</p><input class="girdi" data-pin-tekrar type="password" inputmode="numeric" maxlength="4" autocomplete="off" style="max-width:160px" aria-label="PIN">`,
+      altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Onayla</button>`,
+      onAc(d) {
+        const inp = d.querySelector('[data-pin-tekrar]');
+        const dene = () => { if (inp.value === u.pin) { kapatPencere(); ok(true); } else if (++hata >= 3) { kapatPencere(); bildir('PIN 3 kez hatalı girildi; işlem yapılmadı', 'uyari'); } else { bildir('PIN hatalı', 'uyari'); inp.value = ''; inp.focus(); } };
+        d.querySelector('[data-k]').addEventListener('click', dene); inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') dene(); });
+      },
+    });
+  });
 }

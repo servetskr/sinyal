@@ -205,7 +205,7 @@ function uret() {
   let tid = 1;
   for (let n = -10; n <= 7; n++) {
     const d = tarihOku(gun(n)); const g = d.getDay();
-    if (g === 0 || g === 6) continue;
+    if (g === 0 || g === 6 || kapaliGun(gun(n))) continue;
     teorik.push({ id: 't' + tid++, tarih: gun(n), saat: '18:30', sure: 2, konu: KONULAR[(n + 20) % 4], salon: 'Derslik 1', grup: 'aksam', ogretmen: 'o' + (1 + ((n + 20) % 3)), katilim: n < 0 ? ara(14, 22) : null, mevcut: 23 });
     if (g === 2 || g === 4) teorik.push({ id: 't' + tid++, tarih: gun(n), saat: '10:00', sure: 3, konu: KONULAR[(n + 21) % 4], salon: 'Derslik 2', grup: 'sabah', ogretmen: 'o' + (1 + ((n + 21) % 3)), katilim: n < 0 ? ara(8, 13) : null, mevcut: 14 });
   }
@@ -411,7 +411,7 @@ function uret() {
   kursiyerler.forEach((k, i) => { if (i % 5 === 1) return; k.dogrulama = {}; ['saglik', 'adli'].forEach(x => { if (k.evrak[x]) k.dogrulama[x] = { kod: x === 'adli' ? 'A' + (480000 + i * 37) : 'R-' + (2026000 + i * 11), kim: 'Selda Korkmaz', tarih: k.kayit }; }); });
 
   const guvenlik = {
-    ikiAdim: { mudur: true, sekreter: true, usta: false }, oturumDk: 30, ipKisit: false, hassasOnay: true,
+    ikiAdim: { mudur: true, sekreter: true, usta: false }, oturumDk: 60, ipKisit: false, hassasOnay: true,
     oturumlar: [
       { kim: 'Servet Sakar', cihaz: 'Chrome · Mac', yer: 'Eskişehir', son: 'Şimdi', bu: true },
       { kim: 'Servet Sakar', cihaz: 'Safari · iPhone', yer: 'Eskişehir', son: '2 saat önce' },
@@ -497,8 +497,10 @@ export const SOZLESME_VARSAYILAN = [
 ];
 // --- türetilmiş bilgiler ---
 export const kursiyer = id => S.kursiyerler.find(k => k.id === id);
-export const egitmen = id => S.egitmenler.find(e => e.id === id);
-export const arac = id => S.araclar.find(a => a.id === id);
+// Ekipten çıkarılan usta ve araçlar geçmiş derslerde görünmeye devam eder
+export const egitmen = id => S.egitmenler.find(e => e.id === id) || ((S.cikanlar || {}).egitmen || []).find(e => e.id === id);
+export const arac = id => S.araclar.find(a => a.id === id) || ((S.cikanlar || {}).arac || []).find(a => a.id === id);
+export function arsivle(tur, x) { S.cikanlar = S.cikanlar || { egitmen: [], arac: [] }; S.cikanlar[tur].push({ ...x, cikis: gun(0) }); }
 export const tamAd = k => k.ad + ' ' + k.soyad;
 // Direksiyon aracı: önce ustanın kursiyerin sınıfındaki aracı, o saatte doluysa aynı sınıftaki boş araç.
 export const ustaAraci = (egId, sinif) => S.araclar.find(a => a.egitmen === egId && a.sinif === sinif);

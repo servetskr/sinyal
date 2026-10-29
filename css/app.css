@@ -696,3 +696,10 @@ body.portal-modu .sube-sec,body.portal-modu .sube-yan{display:none!important}
 .isi span{text-align:center;padding:7px 0;border-radius:4px;font-weight:700;font-variant-numeric:tabular-nums}
 .isi .bas{color:var(--soluk);font-weight:600;background:none}
 @media (max-width:640px){.isi div{grid-template-columns:44px repeat(10,1fr)}.isi span{padding:6px 0;font-size:11px}}
+
+.arac-fig.arac-fig-bos{display:flex;align-items:center;justify-content:center;aspect-ratio:auto;height:160px;position:relative;background:var(--cizgi-2, #eef0f2);color:var(--soluk)}
+.arac-fig-bos svg{width:42%;max-width:180px}
+.arac-fig.orta.arac-fig-bos{aspect-ratio:auto;height:84px;width:130px}
+.ekle-kart{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:180px;border:2px dashed var(--cizgi);background:transparent;cursor:pointer;color:var(--murekkep);font:inherit;text-align:center;padding:20px}
+.ekle-kart small{color:var(--soluk)}
+.ekle-kart:hover{border-color:var(--levha)}
