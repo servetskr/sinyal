@@ -443,7 +443,7 @@ function yukle() {
   if (!o) {
     o = uret(); o._gun = iso(BUGUN);
     // örnek veri her gün yenilenir ama kursun bağlantı ayarları ve imza anahtarı korunur
-    try { const eski = JSON.parse(localStorage.getItem(ANAHTAR) || 'null'); if (eski && eski.kurs) { ['waApi', 'wp', 'demoNumara', 'demoKime', 'iban', 'yorumLink', 'siniflar', 'maliyet', 'sozlesme', 'ekDersUcreti', 'tekrarUcret', 'sinavHak', 'borcluDers', 'kendiRandevu'].forEach(k => { if (eski.kurs[k] !== undefined) o.kurs[k] = eski.kurs[k]; }); if (eski.imzaAnahtari) o.imzaAnahtari = eski.imzaAnahtari; if (eski.gelenAlinan) o.gelenAlinan = eski.gelenAlinan; if (eski.kullanicilar) o.kullanicilar = eski.kullanicilar; if (eski.guvenlik) { o.guvenlik.oturumDk = eski.guvenlik.oturumDk; o.guvenlik.hassasOnay = eski.guvenlik.hassasOnay; } } } catch (e) { }
+    try { const eski = JSON.parse(localStorage.getItem(ANAHTAR) || 'null'); if (eski && eski.kurs) { ['waApi', 'waApiVarsayilan', 'wp', 'demoNumara', 'demoKime', 'iban', 'yorumLink', 'siniflar', 'maliyet', 'sozlesme', 'ekDersUcreti', 'tekrarUcret', 'sinavHak', 'borcluDers', 'kendiRandevu'].forEach(k => { if (eski.kurs[k] !== undefined) o.kurs[k] = eski.kurs[k]; }); if (eski.imzaAnahtari) o.imzaAnahtari = eski.imzaAnahtari; if (eski.gelenAlinan) o.gelenAlinan = eski.gelenAlinan; if (eski.kullanicilar) o.kullanicilar = eski.kullanicilar; if (eski.guvenlik) { o.guvenlik.oturumDk = eski.guvenlik.oturumDk; o.guvenlik.hassasOnay = eski.guvenlik.hassasOnay; } } } catch (e) { }
   }
   return goc(o);
 }
@@ -462,6 +462,8 @@ function goc(o) {
   if (o.entegrasyon && !o.entegrasyon.gercek) { o.entegrasyon.earsiv.bagli = false; o.entegrasyon.pos.bagli = false; o.entegrasyon.muhasebe.bagli = false; o.entegrasyon.muhasebe.tur = 'Excel'; }
   if (o.mebArac && !o.mebArac.gercek) o.mebArac = null;
   if (o.kurs.mebYontem === 'arac' && !o.mebArac) o.kurs.mebYontem = 'sirali';
+  // demo: PIN’le giren her cihazda WhatsApp gönderimi hazır gelsin (mesajlar yalnız demo numarasına gider); Ayarlar’dan boşaltılırsa kapalı kalır
+  if (o.kurs.waApi === undefined) { o.kurs.waApi = 'https://sinyal-wa.sinemsavar0.workers.dev'; o.kurs.waApiVarsayilan = true; }
   if (o.sosyal) o.sosyal.kanallar.forEach(c => { if (!c.gercek) { c.bagli = c.id === 'wp' ? !!o.kurs.waApi : false; c.cevap = c.bagli && c.cevap; } });
   (o.otomasyonlar || []).forEach(x => { if (x.id === 'o8') x.sablon = '{selam} e-sınav randevunuz {tarih} {saatte}, yer: {yer}. Kimliğinizi ve e-sınav ücreti dekontunu yanınıza alın.'; if (x.id === 'o6') x.ne = 'Direksiyon sınavından kalınca'; });
   if (o.kazanim && !o.kazanim.gercek) o.kazanim = { gercek: true, doldurulan: 0, ekDers: 0, yorum: 0 };

@@ -1,6 +1,7 @@
-import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, gecikenler, kalanBorc, islem, gonderimEkle, yerelZaman, oturum, kapaliGun, SINIFLAR, risk, selam, kursAdi } from './veri.js?v=51';
-import { tl, tamTarih, tarihUzun, saatDe, apiAcik, apiGonder, etiket, bildir, waSirali } from './ui.js?v=51';
-import { denetimSkoru } from './ozellik.js?v=51';
+import { planlilariGonder } from './mesaj.js?v=53';
+import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, gecikenler, kalanBorc, islem, gonderimEkle, yerelZaman, oturum, kapaliGun, SINIFLAR, risk, selam, kursAdi } from './veri.js?v=53';
+import { tl, tamTarih, tarihUzun, saatDe, apiAcik, apiGonder, etiket, bildir, waSirali } from './ui.js?v=53';
+import { denetimSkoru } from './ozellik.js?v=53';
 
 /* ================= ZAMANLI MESAJLAR =================
    Sinyal açıkken her dakika zamanı gelen mesajları bulur. WhatsApp API bağlıysa kendiliğinden gönderir;
@@ -89,6 +90,8 @@ export function aksamOzeti() {
   ].join('\n') });
 }
 export const zamanliKural = id => !!URET[id];
+// Bugün bu kuraldan kimlere gidecek (henüz gitmemiş olanlar); kurallar sekmesindeki önizleme bunu gösterir
+export function gidecekler(id) { kurallariHazirla(); if (!URET[id]) return []; const z = S.zamanli; return URET[id](false).filter(Boolean).filter(x => !z.gonderilen[x.anahtar]); }
 
 // Şu an zamanı gelmiş, gönderilmemiş mesajlar
 export function zamaniGelenler() {
@@ -103,16 +106,19 @@ export function zamaniGelenler() {
 let calisiyor = false;
 export async function zamanlayiciCalistir(elle = false) {
   if (calisiyor || !oturum.kullanici || !['mudur', 'sekreter'].includes(oturum.kullanici.rol)) return 0;
+  // demo: WhatsApp bu cihazda Ayarlar’dan bilerek bağlanmadıysa saatli mesajlar kendiliğinden gitmez (her yeni cihaz aynı mesajları tekrar atmasın); elle “Şimdi kontrol et” çalışır
+  if (S.kurs.waApiVarsayilan && !elle) return 0;
   calisiyor = true;
   try {
     const z = (kurallariHazirla(), S.zamanli), l = zamaniGelenler(), bugun = gun(0);
     let gonderilen = 0;
+    try { await planlilariGonder(); } catch (x) { console.error(x); }
     for (const x of l) {
       const atla = z.sinir && apiAcik() && ((z.gunluk || {})[bugun + x.kural] || 0) >= 2;
       if (atla) { z.gonderilen[x.anahtar] = bugun; z.kayit.unshift({ zaman: yerelZaman(), kural: x.kural, kime: x.kim.ad, rol: x.kim.rol, metin: x.metin, durum: 'demo sınırı' }); continue; }
       if (apiAcik()) {
         const s = await apiGonder(etiket(x.kim.ad, x.kim.rol) + x.metin);
-        z.kayit.unshift({ zaman: yerelZaman(), kural: x.kural, kime: x.kim.ad, rol: x.kim.rol, metin: x.metin, durum: s.ok ? 'gönderildi' : 'hata: ' + s.hata });
+        z.kayit.unshift({ zaman: yerelZaman(), kural: x.kural, kime: x.kim.ad, rol: x.kim.rol, metin: x.metin, id: s.id || null, durum: s.ok ? 'gönderildi' : 'hata: ' + s.hata });
         if (!s.ok) break;
         z.gonderilen[x.anahtar] = bugun; z.gunluk = z.gunluk || {}; z.gunluk[bugun + x.kural] = (z.gunluk[bugun + x.kural] || 0) + 1;
         gonderimEkle(x.kim.ad, x.metin, kural(x.kural).ad); kural(x.kural).gonderim++; gonderilen++; etkiUygula(x);
@@ -138,7 +144,7 @@ export async function ornekGonder(id) {
   const x = (URET[id](true) || []).filter(Boolean)[0];
   if (!x) return bildir('Bu kural için uygun kayıt yok', 'uyari');
   islem('Zamanlı mesaj örneği gönderdi', kural(id).ad);
-  if (apiAcik()) { const s = await apiGonder(etiket(x.kim.ad, x.kim.rol) + x.metin); S.zamanli.kayit.unshift({ zaman: yerelZaman(), kural: id, kime: x.kim.ad, rol: x.kim.rol, metin: x.metin, durum: s.ok ? 'örnek gönderildi' : 'hata: ' + s.hata }); if (s.ok) etkiUygula(x); kaydet(); return bildir(s.ok ? `“${kural(id).ad}” örneği gönderildi ✓` : s.hata, s.ok ? 'wp' : 'uyari'); }
+  if (apiAcik()) { const s = await apiGonder(etiket(x.kim.ad, x.kim.rol) + x.metin); S.zamanli.kayit.unshift({ zaman: yerelZaman(), kural: id, kime: x.kim.ad, rol: x.kim.rol, metin: x.metin, id: s.id || null, durum: s.ok ? 'örnek gönderildi' : 'hata: ' + s.hata }); if (s.ok) etkiUygula(x); kaydet(); return bildir(s.ok ? `“${kural(id).ad}” örneği gönderildi ✓` : s.hata, s.ok ? 'wp' : 'uyari'); }
   waSirali([{ ad: x.kim.ad, tel: x.kim.tel, rol: x.kim.rol, metin: x.metin }], kural(id).ad + ' · örnek');
 }
 let zamanlayici = null;

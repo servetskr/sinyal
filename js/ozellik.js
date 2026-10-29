@@ -1,9 +1,9 @@
-import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli } from './veri.js?v=51';
-import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos } from './ui.js?v=51';
-import { yenile } from './app.js?v=51';
-import { bildirimler } from './sayfalar1.js?v=51';
-import { denetimEksikleri } from './sayfalar3.js?v=51';
-import { sinifKari, dersMaliyeti, bosKapasite, hakedis, KAPASITE_SAAT, randevuEngeli, bosSlotlar } from './risk.js?v=51';
+import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli } from './veri.js?v=53';
+import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos } from './ui.js?v=53';
+import { yenile } from './app.js?v=53';
+import { bildirimler } from './sayfalar1.js?v=53';
+import { denetimEksikleri } from './sayfalar3.js?v=53';
+import { sinifKari, dersMaliyeti, bosKapasite, hakedis, KAPASITE_SAAT, randevuEngeli, bosSlotlar } from './risk.js?v=53';
 
 /* ================= DENETİM SKORU ================= */
 export function denetimSkoru() {

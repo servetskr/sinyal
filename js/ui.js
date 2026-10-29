@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk } from './veri.js?v=51';
+import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk } from './veri.js?v=53';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -236,7 +236,7 @@ export async function apiGonder(metin, belge, adres) {
   try {
     const r = await fetch(adres || S.kurs.waApi, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ metin, belge }) });
     const j = await r.json().catch(() => ({}));
-    if (r.ok && j.ok) { bitir(true); return { ok: true }; }
+    if (r.ok && j.ok) { bitir(true); return { ok: true, id: j.id || null }; }
     bitir(false, j.hata);
     return { ok: false, hata: j.kod === 131047 || /24 hours|re-engagement/i.test(j.hata || '') ? 'WhatsApp 24 saat penceresi kapalı: test numarasına “merhaba” yazıp tekrar deneyin' : (j.hata || 'Gönderilemedi') };
   } catch (x) { bitir(false, 'ulaşılamadı'); return { ok: false, hata: 'WhatsApp servisine ulaşılamadı' }; }

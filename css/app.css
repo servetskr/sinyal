@@ -808,3 +808,66 @@ body.portal-modu .sube-sec,body.portal-modu .sube-yan{display:none!important}
 .giris{align-content:center;gap:14px}
 .giris-geri{justify-self:center;font:800 15px/1 var(--baslik);color:var(--levha);padding:10px 14px;border-radius:8px}
 .giris-geri:hover{background:var(--levha-acik)}
+
+/* ---------- mesaj merkezi ---------- */
+.mm-govde{display:grid;gap:22px}
+.mm-adim{display:grid;gap:10px}
+.mm-adim>.et{font-family:var(--baslik);font-weight:800;font-size:15px;color:var(--murekkep)}
+.mm-gruplar span b{font-family:var(--mono);font-size:12px;font-weight:600;background:var(--panel-2);color:var(--metin);padding:1px 6px;border-radius:4px;margin-left:2px}
+.mm-gruplar input:checked+span b{background:rgba(255,255,255,.2);color:#fff}
+.mm-suz{display:flex;gap:8px;flex-wrap:wrap}
+.mm-suz select{flex:1 1 180px;width:auto}
+.mm-kisiler{border:1px solid var(--cizgi);border-radius:9px;background:var(--panel)}
+.mm-kisiler summary{cursor:pointer;padding:10px 14px;font-size:14px}
+.mm-kisiler summary b{font-family:var(--mono);color:var(--levha)}
+.mm-kisi-ust{display:flex;gap:6px;padding:0 12px 6px}
+.mm-kisiler ul{list-style:none;max-height:260px;overflow:auto;border-top:1px solid var(--cizgi-2)}
+.mm-kisiler li label{display:flex;gap:10px;align-items:center;padding:8px 14px;cursor:pointer}
+.mm-kisiler li label:hover{background:var(--panel-2)}
+.mm-kisiler li input{width:18px;height:18px;flex:none;accent-color:var(--levha)}
+.mm-kisiler li b{display:block;font-size:14px;color:var(--murekkep)}
+.mm-kisiler li small{display:block;font-size:12.5px;color:var(--soluk)}
+.mm-sablonlar{display:flex;flex-wrap:wrap;gap:6px}
+.mm-sablonlar .secili{background:var(--levha);color:#fff;border-color:var(--levha)}
+.mm-metin{min-height:120px;line-height:1.5;font-size:15px}
+.mm-alanlar{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.mm-alanlar small{color:var(--soluk);font-size:12.5px;margin-right:2px}
+.mm-alanlar button{font:700 12.5px/1 var(--mono);padding:6px 9px;border-radius:6px;background:var(--levha-acik);color:var(--levha)}
+.mm-alanlar button:hover{background:var(--levha);color:#fff}
+.mm-uyari{font-size:13.5px}
+.dg-baglanti{color:var(--levha);font-weight:700;text-decoration:underline;padding:0}
+.mm-saat{max-width:260px}
+.mm-gonder{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid var(--cizgi-2);padding-top:14px}
+.mm-gonder span{color:var(--soluk);font-size:14px}
+.mm-gonder .dg{margin-left:auto}
+.mm-sag{display:grid;gap:14px;align-content:start}
+.mm-onizleme .kart-bas{flex-wrap:wrap}
+.mm-oklar{display:flex;align-items:center;gap:4px;font-family:var(--mono);font-size:13px}
+.mm-telefon{background:#e9e2d6;margin:0 16px;border-radius:12px;padding:16px 12px;min-height:140px;display:grid;align-content:start}
+.mm-telefon .balon{max-width:100%;white-space:pre-line;justify-self:end}
+.mm-not{font-size:12.5px;color:var(--soluk);padding:10px 18px 16px}
+.mm-gecmis li{padding:0}
+.mm-gecmis li button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 18px}
+.mm-gecmis li button:hover{background:var(--panel-2)}
+.mm-gecmis li button>span:first-child{flex:1;min-width:0}
+.mm-gecmis b{display:block;color:var(--murekkep);font-size:14px}
+.mm-gecmis small{display:block;color:var(--soluk);font-size:12.5px}
+.mm-say{display:flex;gap:8px;font:600 12.5px/1 var(--mono);color:var(--soluk);white-space:nowrap}
+.mm-say i{font-style:normal}
+.tik{font:700 12px/1 var(--mono);color:var(--soluk);margin-right:4px}
+.tik-delivered{color:var(--soluk)}
+.tik-read,.mm-say .tik-read{color:#34b7f1}
+.tik-failed{color:var(--kirmizi)}
+.mm-ozet{display:flex;gap:10px;flex-wrap:wrap}
+.mm-ozet div{flex:1 1 90px;background:var(--panel-2);border-radius:9px;padding:10px 12px}
+.mm-ozet b{display:block;font:800 24px/1 var(--baslik);color:var(--murekkep)}
+.mm-ozet small{color:var(--soluk);font-size:12.5px}
+.oto-gidecek{display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-size:13px;color:var(--yesil);background:var(--yesil-acik);border-radius:6px;padding:5px 9px;font-weight:700}
+.oto-gidecek b{font-weight:800}
+.oto-gidecek .ik{width:15px;height:15px}
+button.oto-gidecek:hover{text-decoration:underline}
+.oto-gidecek.bos{color:var(--soluk);background:var(--panel-2);font-weight:400}
+@media (max-width:760px){
+  .mm-telefon{margin:0 12px}
+  .mm-gonder .dg{width:100%;justify-content:center}
+}
