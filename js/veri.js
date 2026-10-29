@@ -497,6 +497,17 @@ function goc(o) {
   // örnek dersler: takip formundaki konular ders sırasına göre (gerçek kursta öğretmen ders sonunda seçer)
   if (demo) { const sira = {}; (o.dersler || []).filter(d => d.durum === 'Yapıldı').sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat)).forEach(d => { const k = kz[d.kursiyer]; if (!k) return; sira[k.id] = (sira[k.id] || 0) + 1; if (!d.konular) d.konular = konuOner(k.sinif, sira[k.id], (SINIFLAR[k.sinif] || {}).direksiyon); }); }
   o.kurs.maliyet = o.kurs.maliyet || { yakit: 46, tuketim: 6.5, km: 22, bakim: 55, pay: 55 };
+  // mevzuat uyumu (E1): iade hesabında teorik payı; demo: çalışma izinleri, sınava hazır yazıları, bir ücretsiz kursiyer, ücret ilanı
+  if (o.kurs.teorikPay === undefined) o.kurs.teorikPay = 35;
+  if (demo && !o._e1) {
+    o._e1 = true; o.kurs.tarifeIlan = o.kurs.tarifeIlan || String(new Date().getFullYear());
+    (o.egitmenler || []).forEach((x, i, l) => { if (!x.calismaIzinNo && i < l.length - 1) x.calismaIzinNo = String(34816290 + i * 7311); });
+    const sv = (o.kursiyerler || []).filter(k => k.asama === 'Sınav' && !(k.dsinav && k.dsinav.sonuc === 'Geçti'));
+    sv.forEach((k, i) => { if (!k.hazirYazi && i < sv.length - 1) k.hazirYazi = { tarih: gun(-3 - i), egitmen: k.egitmen, kim: 'Demo', ...(i ? { yuklendi: gun(-2 - i) } : {}) }; });
+    (o.hareket || []).filter(h => h.tur === 'Gelir' && h.kursiyer && h.yontem === 'Nakit').forEach((h, i) => { if (i > 1) h.bankaya = h.tarih; });
+    const uc = (o.kursiyerler || []).find(k => k.asama === 'Teorik' && !k.ucretsiz);
+    if (uc) { uc.odeme.sozlesme = uc.odeme.toplam; const acik = uc.odeme.taksitler.filter(t => !t.odendi); acik.forEach(t => { t.iptal = gun(-20); }); uc.odeme.toplam -= acik.reduce((a, t) => a + t.tutar, 0); uc.ucretsiz = { tarih: gun(-20), neden: 'Şehit / gazi yakını', no: '', kim: 'Demo' }; }
+  }
   if (o.kurs.kendiRandevu === undefined) o.kurs.kendiRandevu = true;
   return o;
 }
@@ -571,7 +582,7 @@ export const SOZLESME_VARSAYILAN = [
   'Devam. Kursiyer derslere zamanında katılır. Gelemeyeceği direksiyon dersini en az bir gün önce bildirir. Bildirmeden gelinmeyen dersin yerine konan ders için {ekDers} ek ders ücreti alınır.',
   'Sınavlar. Kursiyerin her sınav için {hak} hakkı vardır. Direksiyon sınavının tekrarında {tekrarD} alınır. Haklarını dolduran kursiyer yeni dönem kaydı yaptırır.',
   'Ek ders. Zorunlu dersler dışında kursiyerin isteğiyle verilen her direksiyon dersinin ücreti {ekDers}’dir.',
-  'Fesih ve iade. Kursiyer eğitim başlamadan kaydını iptal ederse ödediği ücret, iadesi mümkün olmayan resmî bedeller düşülerek iade edilir. Eğitim başladıktan sonra ayrılırsa verilen ders saatleri oranında ücret hesaplanır, fazlası iade edilir.',
+  'Fesih ve iade. Kursiyer dönem başlamadan ayrılırsa sözleşmedeki eğitim ücretinin %10’u dışındaki kısım; dönem başladıktan sonra ayrılırsa ücretin %10’u ile aldığı teorik ve direksiyon ders saatlerinin karşılığı düşülerek kalan kısım iade edilir. İade, ayrılış tarihinden itibaren en geç bir ay içinde kursiyerin banka hesabına yapılır (Özel Öğretim Kurumları Yönetmeliği m.56). Ödenmiş sınav ücretleri ve harçlar iade kapsamında değildir.',
   'Kişisel veriler. Kursiyere 6698 sayılı Kanun kapsamındaki aydınlatma metni verilmiştir; sağlık raporu ve adli sicil bilgileri yalnızca MEB kaydı için işlenir.',
   'Uyuşmazlık. Bu sözleşmeden doğan uyuşmazlıklarda 6502 sayılı Kanun kapsamında tüketici hakem heyetleri ve tüketici mahkemeleri yetkilidir.',
 ];

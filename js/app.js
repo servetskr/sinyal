@@ -1,18 +1,18 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=74';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=74';
-import * as Y1 from './sayfalar1.js?v=74';
-import * as Y2 from './sayfalar2.js?v=74';
-import * as P from './portal.js?v=74';
-import * as Y3 from './sayfalar3.js?v=74';
-import * as Y4 from './sayfalar4.js?v=74';
-import * as Y5 from './sayfalar5.js?v=74';
-import * as IM from './imza.js?v=74';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=74';
-import * as SN from './senaryo.js?v=74';
-import * as OZ from './ozellik.js?v=74';
-import { durumlariGuncelle } from './mesaj.js?v=74';
-import { yeniMenu } from './yeni.js?v=74';
-import * as B from './bulut.js?v=74';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=76';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=76';
+import * as Y1 from './sayfalar1.js?v=76';
+import * as Y2 from './sayfalar2.js?v=76';
+import * as P from './portal.js?v=76';
+import * as Y3 from './sayfalar3.js?v=76';
+import * as Y4 from './sayfalar4.js?v=76';
+import * as Y5 from './sayfalar5.js?v=76';
+import * as IM from './imza.js?v=76';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=76';
+import * as SN from './senaryo.js?v=76';
+import * as OZ from './ozellik.js?v=76';
+import { durumlariGuncelle } from './mesaj.js?v=76';
+import { yeniMenu } from './yeni.js?v=76';
+import * as B from './bulut.js?v=76';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,

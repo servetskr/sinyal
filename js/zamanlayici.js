@@ -1,7 +1,7 @@
-import { planlilariGonder } from './mesaj.js?v=74';
-import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, gecikenler, kalanBorc, islem, gonderimEkle, yerelZaman, oturum, kapaliGun, SINIFLAR, risk, selam, kursAdi, bulutKanca } from './veri.js?v=74';
-import { tl, tamTarih, tarihUzun, saatDe, apiAcik, apiGonder, etiket, bildir, waSirali } from './ui.js?v=74';
-import { denetimSkoru } from './ozellik.js?v=74';
+import { planlilariGonder } from './mesaj.js?v=76';
+import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, gecikenler, kalanBorc, islem, gonderimEkle, yerelZaman, oturum, kapaliGun, SINIFLAR, risk, selam, kursAdi, bulutKanca } from './veri.js?v=76';
+import { tl, tamTarih, tarihUzun, saatDe, apiAcik, apiGonder, etiket, bildir, waSirali } from './ui.js?v=76';
+import { denetimSkoru } from './ozellik.js?v=76';
 
 /* ================= ZAMANLI MESAJLAR =================
    Sinyal açıkken her dakika zamanı gelen mesajları bulur. WhatsApp API bağlıysa kendiliğinden gönderir;

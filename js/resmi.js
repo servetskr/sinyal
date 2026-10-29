@@ -1,8 +1,8 @@
 // MEB resmî formları: MTSK Yönetmeliği eklerinin düzeninde, kayıtlardan dolan ya da boş (elle doldurmak için) çıktılar.
 // Kaynak: mevzuat.gov.tr 7.5.18408 ekleri (EK-1, EK-3, EK-4, EK-5, EK-8, EK-10, EK-12) ve md.17/3, md.42 içerik şartları.
-import { S, kaydet, gun, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, motorSinif, dersKonulari, gorunum, sb, sbSinav } from './veri.js?v=74';
-import { e, pencere, bildir, belgeYazdir, ik } from './ui.js?v=74';
-import { EK3, EK4, EK3_NOT, EK4_NOT, EK12 } from './formlar.js?v=74';
+import { S, kaydet, gun, oturum, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, motorSinif, dersKonulari, gorunum, sb, sbSinav } from './veri.js?v=76';
+import { e, pencere, bildir, belgeYazdir, ik } from './ui.js?v=76';
+import { EK3, EK4, EK3_NOT, EK4_NOT, EK12 } from './formlar.js?v=76';
 
 const trTarih = t => t ? String(t).slice(0, 10).split('-').reverse().join('.') : '';
 const BUYUK = s => String(s || '').toLocaleUpperCase('tr');
@@ -197,6 +197,27 @@ function dersDefteri(grupId, bos) {
     <div class="rf-imzalar"><div></div><div>Kurs müdürü<br>${e(kurum().mudur)}</div></div>`, true);
 }
 
+/* ---------- Sınava hazır yazısı (md.7/7; Danıştay 8. D. 8/10/2025 YD: usta öğretici kararını yazıyla bildirir) ---------- */
+function hazir(k, bos) {
+  const K = kurum(k), S0 = SINIFLAR[k.sinif] || {}, h = k.hazirYazi || {}, eg = egitmen(h.egitmen || k.egitmen) || {}, a = ogrenciAraci(k);
+  const dersler = S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Yapıldı').sort((x, y) => (x.tarih + x.saat).localeCompare(y.tarih + y.saat));
+  const gece = dersler.filter(d => d.saat >= '18:00').length, v = x => bos ? '' : (x || '');
+  return sar(`<div class="rf-orta" style="margin:10px 0 18px;font-weight:700">${bos ? '…………………………………………' : e(BUYUK(K.ad))} MÜDÜRLÜĞÜNE</div>
+    <p style="text-indent:2em;text-align:justify">Kursumuzda ${bos ? '……' : e(S0.ad || k.sinif)} sınıfı sertifika programında direksiyon eğitimi alan, bilgileri aşağıda yazılı kursiyer, programın öngördüğü direksiyon eğitimi derslerini tamamlamış olup direksiyon eğitimi dersi sınavına girmeye hazırdır.</p>
+    <p style="text-indent:2em">Bilgilerinize arz ederim.</p>
+    <table style="margin-top:12px">
+      <tr><td class="rf-et" style="width:38%">T.C. kimlik no</td><td>${e(v(k.tc))}</td></tr>
+      <tr><td class="rf-et">Adı soyadı</td><td>${e(v(tamAd(k)))}</td></tr>
+      <tr><td class="rf-et">Sertifika sınıfı</td><td>${e(v(S0.ad))}</td></tr>
+      <tr><td class="rf-et">Direksiyon eğitimine başlama</td><td>${bos ? '' : trTarih((dersler[0] || {}).tarih)}</td></tr>
+      <tr><td class="rf-et">Tamamlanan direksiyon dersi</td><td>${bos ? '' : dersler.length + ' ders saati (asgari ' + (S0.direksiyon || '') + ')'}${bos ? '' : ' · gece ' + gece + ' saat'}</td></tr>
+      <tr><td class="rf-et">Eğitim aracı</td><td>${e(v(a ? a.plaka + ' · ' + (a.model || '') : ''))}</td></tr>
+    </table>
+    <div class="rf-imzalar" style="margin-top:28px"><div></div><div>${bos ? '…/…/……' : trTarih(h.tarih || gun(0))}<br>Direksiyon Eğitimi Dersi Usta Öğreticisi<br>${e(v(eg.ad))}<br>${bos || !eg.tc ? '' : 'T.C. ' + e(eg.tc) + '<br>'}İmza</div></div>
+    <table style="margin-top:34px"><tr><td style="width:50%"><b>Kurs müdürlüğünce teslim alındı</b><br>Tarih: ${bos ? '…/…/……' : trTarih(h.tarih || gun(0))}<br>Kurs Müdürü: ${e(v(K.mudur))}<br>İmza:</td><td><b>Özel MTSK Modülüne yüklendi</b><br>Tarih: ${!bos && h.yuklendi ? trTarih(h.yuklendi) : '…/…/……'}<br>Yükleyen:<br>İmza:</td></tr></table>
+    <p class="rf-not">Dayanak: MTSK Yönetmeliği md.7/7. Danıştay 8. Dairesinin 08/10/2025 tarihli, E.2024/6765 sayılı yürütmeyi durdurma kararı uyarınca usta öğreticinin kararı yazılı olarak bildirilir; yazı taranarak modüle yüklenir.</p>`);
+}
+
 /* ---------- eksik bilgiler: formun üstünde doldurulur, kayda yazılır ---------- */
 const kursAlan = (yol, ad, ip) => ({ hedef: () => S.kurs, yol, ad, ip });
 function alanlar(tur, x) {
@@ -204,13 +225,14 @@ function alanlar(tur, x) {
     ...(k.mevcutEhliyet || (k.oncekiBelge && k.oncekiBelge.sinif) ? [['oncekiBelge.il', 'Önceki belge: verildiği il'], ['oncekiBelge.sinif', 'Önceki belge: sınıfı'], ['oncekiBelge.tarih', 'Önceki belge: tarihi', 'date'], ['oncekiBelge.sayi', 'Önceki belge: sayısı']].map(([yol, ad, tip]) => ({ hedef: () => k, yol, ad, tip })) : [])]; }
   if (tur === 'ek5') { const k = x, eg = egitmen(k.egitmen); return [kursAlan('resmiAd', 'Kursun resmî adı', 'Özel … Motorlu Taşıt Sürücüleri Kursu'), { hedef: () => k, yol: 'kBelge.no', ad: 'Belge no' }, { hedef: () => k, yol: 'kBelge.tarih', ad: 'Düzenlenme (akan trafiğe başlama) tarihi', tip: 'date' }, kursAlan('guzergah', 'Yol (güzergâh)', 'Örn. kurs önü – çevre yolu – sınav alanı'), kursAlan('kSaatler', 'Gün ve saatler', 'Örn. Pazartesi–Cumartesi 08:00–20:00'), { hedef: () => k, yol: 'nufus.baba', ad: 'Adayın baba adı' }, { hedef: () => k, yol: 'nufus.dogumYeri', ad: 'Adayın doğum yeri' },
     ...(eg ? [['tc', 'Öğretmenin TC kimlik no'], ['adres', 'Öğretmenin adresi'], ['ehliyet.sinif', 'Öğretmenin sürücü belgesi sınıfı'], ['ehliyet.no', 'Öğretmenin sürücü belgesi no'], ['ehliyet.yer', 'Belgenin verildiği yer']].map(([yol, ad]) => ({ hedef: () => eg, yol, ad })) : [])]; }
+  if (tur === 'hazir') { const k = x, eg = egitmen((k.hazirYazi || {}).egitmen || k.egitmen); return [kursAlan('resmiAd', 'Kursun resmî adı', 'Özel … Motorlu Taşıt Sürücüleri Kursu'), ...(eg ? [{ hedef: () => eg, yol: 'tc', ad: 'Usta öğreticinin TC kimlik no' }] : [])]; }
   if (tur === 'ek8') { const a = x; return [kursAlan('resmiAd', 'Kursun resmî adı', 'Özel … Motorlu Taşıt Sürücüleri Kursu'), kursAlan('kurucu', 'Kurucunun adı soyadı'), { hedef: () => a, yol: 'marka', ad: 'Markası', ip: String(a.model || '').split(' ')[0] }, { hedef: () => a, yol: 'motorNo', ad: 'Motor no' }, { hedef: () => a, yol: 'sasiNo', ad: 'Şasi no' }, { hedef: () => a, yol: 'izinTarih', ad: 'MEM izin onay tarihi', tip: 'date' }]; }
   return [];
 }
 
 /* ---------- pencere ---------- */
 // Önizleme/test için: formu doğrudan üret
-export function resmiHtml(tur, x, bos = false, ek) { return ({ ek1, ek5, ek34, ek8, aracdosya: aracDosyasi, dersdefteri: dersDefteri, ek12, ek10 })[tur](x, bos, ek); }
+export function resmiHtml(tur, x, bos = false, ek) { return ({ ek1, ek5, ek34, ek8, aracdosya: aracDosyasi, dersdefteri: dersDefteri, ek12, ek10, hazir })[tur](x, bos, ek); }
 export const RESMI = {
   ek1: ['Kursa müracaat formu (EK-1)', 'Kayıt dilekçesi ve beyan; fotoğraf ve nüfus bilgileriyle', 'kursiyer'],
   ek5: ['“K” sınıfı sürücü aday belgesi (EK-5)', 'Akan trafikte araçta bulunur; 6 ay geçerli', 'kursiyer'],
@@ -220,13 +242,14 @@ export const RESMI = {
   ek12: ['Sınav aracı kontrol formu (EK-12)', 'Sınav günü her araç için; denetim görevlisi doldurur', 'sinavArac'],
   ek10: ['Sınav aracı değişiklik formu (EK-10)', 'Arızalanan sınav aracının yerine başka araç', 'ek10'],
   dersdefteri: ['Teorik ders defteri (md.42)', 'Gruba göre işlenen dersler, öğretici ve katılım', 'grup'],
+  hazir: ['Sınava hazır yazısı (md.7/7)', 'Usta öğreticinin direksiyon sınavına hazır bildirimi; taranıp MEBBİS’e yüklenir', 'kursiyer'],
 };
 export function resmiAc(tur, id, takip) {
   if (takip) takipFormu = takip;
   const [baslik, , tip] = RESMI[tur];
   const dSinavlar = () => sbSinav(S.sinavlar).filter(s => /direksiyon/i.test(s.tur)).sort((a, b) => b.tarih.localeCompare(a.tarih));
   let secenek = [];
-  if (tip === 'kursiyer') secenek = sb(S.kursiyerler).filter(k => tur !== 'ek5' || (SINIFLAR[k.sinif] && SINIFLAR[k.sinif].direksiyon)).sort((a, b) => (['Direksiyon', 'Sınav'].includes(b.asama) ? 1 : 0) - (['Direksiyon', 'Sınav'].includes(a.asama) ? 1 : 0) || tamAd(a).localeCompare(tamAd(b), 'tr')).map(k => [k.id, tamAd(k) + ' · ' + k.sinif + ' · ' + k.asama]);
+  if (tip === 'kursiyer') secenek = sb(S.kursiyerler).filter(k => !['ek5', 'hazir'].includes(tur) || (SINIFLAR[k.sinif] && SINIFLAR[k.sinif].direksiyon)).sort((a, b) => (['Direksiyon', 'Sınav'].includes(b.asama) ? 1 : 0) - (['Direksiyon', 'Sınav'].includes(a.asama) ? 1 : 0) || tamAd(a).localeCompare(tamAd(b), 'tr')).map(k => [k.id, tamAd(k) + ' · ' + k.sinif + ' · ' + k.asama]);
   if (tip === 'arac') secenek = sb(S.araclar).map(a => [a.id, a.plaka + ' · ' + (a.model || '') + ' · ' + a.sinif]);
   if (tip === 'grup') secenek = (S.gruplar && S.gruplar.length ? S.gruplar : [{ id: 'aksam', ad: 'Akşam grubu' }, { id: 'sabah', ad: 'Sabah grubu' }]).map(g => [g.id, g.ad]);
   const durum = { id: id || (secenek[0] || [])[0], bos: false, parca: { ek8: true, ek5: false, takip: false }, sinav: (dSinavlar()[0] || {}).id, arac: (S.araclar[0] || {}).id, arizali: (S.araclar[0] || {}).id, yeni: (S.araclar[1] || {}).id, yeniPlaka: '', baskaKurs: '' };
@@ -236,6 +259,7 @@ export function resmiAc(tur, id, takip) {
     if (tur === 'ek1') return ek1(kayit(), durum.bos);
     if (tur === 'ek5') return ek5(kayit(), durum.bos);
     if (tur === 'ek34') return ek34(kayit(), durum.bos);
+    if (tur === 'hazir') return hazir(kayit(), durum.bos);
     if (tur === 'ek8') return ek8(kayit(), durum.bos);
     if (tur === 'aracdosya') return aracDosyasi(kayit(), durum.bos, durum.parca);
     if (tur === 'dersdefteri') return dersDefteri(durum.id, durum.bos);
@@ -286,7 +310,8 @@ export function resmiAc(tur, id, takip) {
       });
       d.querySelector('[data-yazdir]').addEventListener('click', () => {
         const x = kayit(), kime = x ? (x.soyad ? tamAd(x) : x.plaka || '') : '';
-        if (tur === 'ek5' && x && !durum.bos && !(x.kBelge && x.kBelge.tarih)) koy(x, 'kBelge.tarih', gun(0));  // ilk düzenleme tarihi sabitlenir; 6 ay buna göre
+        if (tur === 'ek5' && x && !durum.bos && !(x.kBelge && x.kBelge.tarih)) koy(x, 'kBelge.tarih', gun(0));
+        if (tur === 'hazir' && x && !durum.bos && !x.hazirYazi) x.hazirYazi = { tarih: gun(0), egitmen: x.egitmen, kim: oturum.kullanici ? oturum.kullanici.ad : '' };  // ilk düzenleme tarihi sabitlenir; 6 ay buna göre
         belgeYazdir(html(), baslik + (kime ? ' · ' + kime : '')); islem(baslik + ' yazdırdı', kime + (durum.bos ? ' (boş)' : '')); kaydet();
       });
     },

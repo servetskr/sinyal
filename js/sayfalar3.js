@@ -1,7 +1,7 @@
-import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas, sb, sbDers, sbSinav, gorunum, subede, SOZLESME_VARSAYILAN, satistaSiniflar, ayEkle, YONTEMLER, yontemAd, selam, kursAdi, dersKonulari } from './veri.js?v=74';
-import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler, imzaAlani, tamTarih, yaziyla, belgeYazdir, kartFormu, kartBagla, kartDogrula, waAc, apiAcik, belgeWhatsApp } from './ui.js?v=74';
-import { yenile } from './app.js?v=74';
-import { siraliPencere } from './sayfalar5.js?v=74';
+import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas, sb, sbDers, sbSinav, gorunum, subede, SOZLESME_VARSAYILAN, satistaSiniflar, ayEkle, YONTEMLER, yontemAd, selam, kursAdi, dersKonulari } from './veri.js?v=76';
+import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler, imzaAlani, tamTarih, yaziyla, belgeYazdir, kartFormu, kartBagla, kartDogrula, waAc, apiAcik, belgeWhatsApp } from './ui.js?v=76';
+import { yenile } from './app.js?v=76';
+import { siraliPencere } from './sayfalar5.js?v=76';
 
 /* ================= BELGELER VE ÇIKTILAR ================= */
 const gorunumSube = () => gorunum.sube;
@@ -24,6 +24,7 @@ const SABLONLAR = [
   ['ek12', 'Sınav aracı kontrol formu (EK-12)', 'Sınav günü her araç için', 'resmi'],
   ['ek10', 'Sınav aracı değişiklik formu (EK-10)', 'Arızalanan sınav aracının yerine başka araç', 'resmi'],
   ['dersdefteri', 'Teorik ders defteri (md.42)', 'Gruba göre işlenen dersler, öğretici ve katılım', 'resmi'],
+  ['hazir', 'Sınava hazır yazısı (md.7/7)', 'Usta öğreticinin direksiyon sınavına hazır bildirimi; taranıp MEBBİS’e yüklenir', 'resmi'],
   ['devam', 'Teorik devam çizelgesi', 'Gruplara göre katılım ve imza sütunu', 'tek'],
   ['hizmet', 'Sinyal hizmet sözleşmesi', 'Erişilebilirlik, sorumluluk, veri teslimi, fesih', 'tek'],
   ['vis', 'Veri işleme sözleşmesi', 'KVKK: kurs veri sorumlusu, Sinyal veri işleyen', 'tek'],
@@ -151,7 +152,7 @@ export function sozlesmeImzalat(k) {
     onAc(d) {
       const ia = imzaAlani(d.querySelector('[data-imza]'));
       d.querySelector('[data-temizle]').addEventListener('click', () => ia.temizle());
-      d.querySelector('[data-uzaktan]').addEventListener('click', () => import('./imza.js?v=74').then(m => m.imzayaGonderPenceresi(k, 'sozlesme')));
+      d.querySelector('[data-uzaktan]').addEventListener('click', () => import('./imza.js?v=76').then(m => m.imzayaGonderPenceresi(k, 'sozlesme')));
       d.querySelector('[data-yazdir]').addEventListener('click', () => { belgeYazdir(belgeHtml('sozlesme', k.id) + '<div class="sayfa-sonu"></div>' + belgeHtml('sozlesme', k.id), 'Sözleşme · ' + tamAd(k)); islem('Sözleşme yazdırdı', tamAd(k)); kaydet(); bildir('İki nüsha yazdırıldı. İmzalı nüshayı teslim alınca Evraklar’da “İmzalı sözleşme”yi işaretleyin'); });
       d.querySelector('[data-imzala]').addEventListener('click', () => {
         if (ia.bos()) return bildir('Kursiyer imza alanına imzalasın', 'uyari');
@@ -165,7 +166,7 @@ export function sozlesmeImzalat(k) {
 }
 export function belgeAc(tur, id) {
   const s = SABLONLAR.find(x => x[0] === tur);
-  if (s && s[3] === 'resmi') return import('./resmi.js?v=74').then(m => m.resmiAc(tur, id, kid => belgeHtml('takip', kid)));
+  if (s && s[3] === 'resmi') return import('./resmi.js?v=76').then(m => m.resmiAc(tur, id, kid => belgeHtml('takip', kid)));
   const yazdirBtn = `<button class="dg dg-ana" data-yazdir>${ik('belge')}Yazdır / PDF</button>`;
   if (s[3] === 'tek') { pencere({ baslik: s[1], genis: true, icerik: `<div style="background:var(--zemin);padding:18px;border-radius:8px;max-height:66vh;overflow:auto"><div class="a4" id="a4">${belgeHtml(tur)}</div></div>`, altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button>${yazdirBtn}`, onAc(d) { d.querySelector('[data-yazdir]').addEventListener('click', () => { belgeYazdir(belgeHtml(tur), s[1]); islem(s[1] + ' yazdırdı'); kaydet(); }); } }); return; }
   const gelir = () => S.hareket.filter(h => h.tur === 'Gelir' && h.kursiyer && subede(kursiyer(h.kursiyer))).sort((a, b) => (b.tarih + b.id).localeCompare(a.tarih + a.id));
