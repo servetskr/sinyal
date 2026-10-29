@@ -1,10 +1,10 @@
-import { cevapIsle } from './mesaj.js?v=63';
-import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli } from './veri.js?v=63';
-import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos } from './ui.js?v=63';
-import { yenile } from './app.js?v=63';
-import { bildirimler } from './sayfalar1.js?v=63';
-import { denetimEksikleri } from './sayfalar3.js?v=63';
-import { sinifKari, dersMaliyeti, bosKapasite, hakedis, KAPASITE_SAAT, randevuEngeli, bosSlotlar } from './risk.js?v=63';
+import { cevapIsle } from './mesaj.js?v=64';
+import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli } from './veri.js?v=64';
+import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos } from './ui.js?v=64';
+import { yenile } from './app.js?v=64';
+import { bildirimler } from './sayfalar1.js?v=64';
+import { denetimEksikleri } from './sayfalar3.js?v=64';
+import { sinifKari, dersMaliyeti, bosKapasite, hakedis, KAPASITE_SAAT, randevuEngeli, bosSlotlar } from './risk.js?v=64';
 
 /* ================= DENETİM SKORU ================= */
 export function denetimSkoru() {
