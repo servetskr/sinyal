@@ -2,7 +2,7 @@
 // [konu, soru, [A, B, C, D], doğru şık indeksi, görsel (inline SVG ya da "L:<levha kodu>", js/levha.js), açıklama, kaynak]
 // Mevzuat: 2918 sayılı KTK (7574 ve 7590 sayılı kanunlarla 2026 değişiklikleri), Karayolları Trafik Yönetmeliği, Trafik İşaretleri Yönetmeliği, KGM işaret el kitabı; ilk yardım: Sağlık Bakanlığı / MEB; motor: MEB araç tekniği programı.
 // Eski sorular yerinde kalır (öğrencilerin yanlış listeleri sıraya bağlı); yeniler sona eklenir. Üretim: scratchpad/c6/birlestir.mjs.
-export { KONULAR } from './konular.js?v=87';
+export { KONULAR } from './konular.js?v=90';
 
 export const SORULAR = [
 ["trafik","Kırmızı ışık yanan bir trafik ışığında sürücü ne yapmalıdır?",["Yavaşlayıp dikkatlice geçmelidir","Durmalıdır","Korna çalarak geçmelidir","Sağa dönebilir"],1,null,"Kırmızı ışık yolun trafiğe kapalı olduğunu bildirir; sürücü mutlak duruş yapar, hiçbir yöne hareket edemez.","Trafik İşaretleri Hakkında Yönetmelik md. 9"],

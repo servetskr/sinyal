@@ -1142,3 +1142,9 @@ button.oto-gidecek:hover{text-decoration:underline}
 @keyframes th-pop{from{transform:scale(1.8);opacity:.4}to{transform:scale(1);opacity:1}}
 .th-cubuk{height:4px;background:var(--cizgi-2,#e6e6e6);border-radius:2px;width:min(100%,300px,31vh);margin:6px auto 0}.th-cubuk i{display:block;height:100%;background:var(--levha);border-radius:2px;width:0}
 @media (prefers-reduced-motion: reduce){.th-isaret{animation:none}}
+/* araç tekniği canlandırmaları */
+.motor-zaman{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
+.motor-zaman button{border:1px solid var(--cizgi);background:var(--panel,#fff);border-radius:8px;padding:6px 4px;font-size:12.5px;cursor:pointer;color:var(--murekkep)}
+.motor-zaman button.secili{background:var(--murekkep);color:#fff;border-color:var(--murekkep)}
+.db-gosterge{display:flex;gap:18px;justify-content:center;font-size:14px}.db-gosterge b{font-family:var(--baslik);font-size:20px;color:var(--murekkep)}
+.db-surgu{display:block;font-size:14px;font-weight:600;color:var(--murekkep);margin-top:10px}.db-surgu small{font-weight:400;color:var(--soluk);margin-left:6px}.db-surgu input{width:100%;margin-top:4px;accent-color:var(--levha)}
