@@ -1,12 +1,12 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=32';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir } from './ui.js?v=32';
-import * as Y1 from './sayfalar1.js?v=32';
-import * as Y2 from './sayfalar2.js?v=32';
-import * as P from './portal.js?v=32';
-import * as Y3 from './sayfalar3.js?v=32';
-import * as Y4 from './sayfalar4.js?v=32';
-import * as Y5 from './sayfalar5.js?v=32';
-import * as IM from './imza.js?v=32';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=33';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir } from './ui.js?v=33';
+import * as Y1 from './sayfalar1.js?v=33';
+import * as Y2 from './sayfalar2.js?v=33';
+import * as P from './portal.js?v=33';
+import * as Y3 from './sayfalar3.js?v=33';
+import * as Y4 from './sayfalar4.js?v=33';
+import * as Y5 from './sayfalar5.js?v=33';
+import * as IM from './imza.js?v=33';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -49,7 +49,7 @@ function iskelet() {
       <a class="logo" href="#/genel" aria-label="Sinyal ana sayfa"><svg class="logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 5.4 18.6 12 12 18.6 5.4 12z" fill="none" stroke="#111" stroke-width="1"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>${e(S.kurs.ad)}</small></span></a>
       <nav>${menu}</nav>
       ${(S.subeler || []).length > 1 && oturum.kullanici.rol !== 'usta' ? `<label class="sube-yan"><span>Şube</span><select data-sube aria-label="Şube">${['', ...S.subeler.map(x => x.id)].map(id => `<option value="${id}" ${gorunum.sube === id ? 'selected' : ''}>${id ? e(S.subeler.find(x => x.id === id).ad) : 'Tüm şubeler'}</option>`).join('')}</select></label>` : ''}
-      <div class="yan-alt"><b>${e(oturum.kullanici.ad)}</b><span>${ROL_AD[oturum.kullanici.rol]}</span><button class="dg dg-cizgi dg-kucuk" style="margin-top:8px;width:100%;background:transparent;color:#fff;border-color:#fff" data-cikis>Kullanıcı değiştir</button></div>
+      <div class="yan-alt"><b>${e(oturum.kullanici.ad)}</b><span>${ROL_AD[oturum.kullanici.rol]}</span>${S.kurs.demoNumara ? `<span style="display:block;margin-top:4px;font-size:12px;opacity:.85">Mesajlar → ${e(S.kurs.demoNumara)}</span>` : ''}<button class="dg dg-cizgi dg-kucuk" style="margin-top:8px;width:100%;background:transparent;color:#fff;border-color:#fff" data-cikis>Kullanıcı değiştir</button></div>
     </div></aside>
     <div class="ana">
       <header class="ust">

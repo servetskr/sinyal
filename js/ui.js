@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN } from './veri.js?v=32';
+import { ASAMALAR, tarihOku, fark, BUGUN, S } from './veri.js?v=33';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -199,7 +199,14 @@ export function kartDogrula(kok) {
 export function waNumara(tel) { let n = String(tel || '').replace(/\D/g, ''); if (n.startsWith('0')) n = '90' + n.slice(1); else if (n.length === 10 && n.startsWith('5')) n = '90' + n; return n.length >= 12 ? n : ''; }
 export const waUrl = (tel, metin) => 'https://wa.me/' + waNumara(tel) + '?text=' + encodeURIComponent(metin);
 export const smsUrl = (tel, metin) => 'sms:' + (waNumara(tel) ? '+' + waNumara(tel) : '') + '?&body=' + encodeURIComponent(metin);
-export function waAc(tel, metin, kanal = 'WhatsApp') {
+// Mesaj yönlendirme (demo): kursa gelen mesajlar hariç her mesaj Ayarlar'daki tek numaraya gider.
+export function yonlendir(tel, metin, ad) {
+  const d = S && S.kurs && S.kurs.demoNumara;
+  if (!d || (S.kurs.wp && waNumara(tel) && waNumara(tel) === waNumara(S.kurs.wp))) return [tel, metin];
+  return [d, (S.kurs.demoKime !== false && ad ? `[${ad} için]\n` : '') + metin];
+}
+export function waAc(tel, metin, kanal = 'WhatsApp', ad = '') {
+  [tel, metin] = yonlendir(tel, metin, ad);
   const url = kanal === 'SMS' ? smsUrl(tel, metin) : waUrl(tel, metin);
   const w = window.open(url, '_blank');
   if (w) { try { w.opener = null; } catch (x) { } return true; }
@@ -211,7 +218,7 @@ export function waSirali(liste, baslik, { kanal = 'WhatsApp', bitince, aciklama 
   liste = liste.filter(x => x && x.metin);
   if (!liste.length) { if (bitince) bitince(); return; }
   const acilan = new Set(); let sira = 0;
-  const url = x => kanal === 'SMS' ? smsUrl(x.tel, x.metin) : waUrl(x.tel, x.metin);
+  const url = x => { const [t, m] = yonlendir(x.tel, x.metin, x.ad); return kanal === 'SMS' ? smsUrl(t, m) : waUrl(t, m); };
   pencere({
     baslik,
     icerik: `<p style="font-size:14px;margin-bottom:10px">${aciklama ? e(aciklama) + ' ' : ''}${liste.length} kişi. Her kişi için ${kanal} hazır mesajla açılır; gönderip bu ekrana dönün.</p>
