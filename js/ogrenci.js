@@ -1,7 +1,7 @@
 // Öğrenci paneli sekmeleri: program, dersler (teorik konular + direksiyon + gelişim), sınavlar, ödemeler, belgeler
-import { S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen } from './veri.js?v=70';
-import { e, tl, ik, rozet, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, isaret, belgeYazdir, fotoKucult } from './ui.js?v=70';
-import { belgeHtml } from './sayfalar3.js?v=70';
+import { S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen } from './veri.js?v=71';
+import { e, tl, ik, rozet, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, isaret, belgeYazdir, fotoKucult } from './ui.js?v=71';
+import { belgeHtml } from './sayfalar3.js?v=71';
 
 // MEB teorik eğitim programı: konu, ders saati, başlıklar (anahtarlar soru bankasıyla aynı)
 export const MUFREDAT = [
@@ -110,7 +110,7 @@ export function belgelerHtml(k) {
   const y = k.evrakYuklenen || {};
   return `<div class="kart og-kart"><div class="og-bas"><div><small>Kayıt evrakın</small><b>${EVRAKLAR.filter(([x]) => k.evrak[x]).length}/${EVRAKLAR.length} tamam</b></div></div>
       ${EVRAKLAR.map(([key, t]) => `<div class="evrak og-evrak"><span class="durum ${k.evrak[key] ? 'var' : y[key] ? 'bekliyor' : 'yok'}">${ik(k.evrak[key] ? 'tik' : y[key] ? 'saat' : 'kapat')}</span><span style="flex:1;color:var(--murekkep)">${t}${y[key] && !k.evrak[key] ? `<small>Yüklendi ${tarih(y[key].tarih)} · kurs kontrol ediyor</small>` : ''}</span>${k.evrak[key] ? '' : key === 'sozlesme' ? rozet('Kursta imzalanır', 'uyari') : `<label class="dg dg-cizgi dg-kucuk og-yukle">${ik(y[key] ? 'sifirla' : 'arti')}${y[key] ? 'Yenile' : 'Yükle'}<input type="file" accept="image/*,application/pdf" capture="environment" data-og-evrak="${key}" hidden></label>`}</div>`).join('')}
-      <p class="og-not" style="padding:0">Belgenin fotoğrafını çek; kurs kontrol edince burada tamamlanır. Asıllarını ilk geldiğinde kursa teslim et.</p></div>
+      <p class="og-not" style="padding:0">Belgenin fotoğrafını buradan yükle ya da kursun WhatsApp numarasına gönder; kurs kontrol edince burada tamamlanır. Asıllarını ilk geldiğinde kursa teslim et.</p></div>
     <div class="kart og-kart"><div class="og-bas"><div><small>Belgelerin</small><b>Kurs sözleşmesi ve formlar</b></div></div>
       <ul class="liste og-liste">${[['sozlesme', 'Kurs sözleşmen', 'Ücret, taksit planı ve şartlar'], ['takip', 'Direksiyon eğitimi takip formun', SINIFLAR[k.sinif].direksiyon ? k.direksiyon + ' ders işlendi' : ''], ['bilgi', 'Bilgi formun', 'Kayıtta verdiğin bilgiler']].filter(x => x[0] !== 'takip' || SINIFLAR[k.sinif].direksiyon).map(([tur, ad, alt]) => `<li><div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${ad}</b><small style="display:block;color:var(--soluk)">${e(alt)}</small></div><button class="dg dg-hafif dg-kucuk" data-og-belge="${tur}">Gör</button></li>`).join('')}</ul></div>`;
 }
@@ -118,7 +118,7 @@ export function belgelerHtml(k) {
 /* ---------- konu anlatımı ---------- */
 // İçerik ayrı dosyada; yalnız açılınca yüklenir (açılış hızını etkilemesin)
 let dersYuk = null;
-const dersleriYukle = () => dersYuk || (dersYuk = import('./dersler.js?v=70').then(m => m.DERSLER).catch(() => ({})));
+const dersleriYukle = () => dersYuk || (dersYuk = import('./dersler.js?v=71').then(m => m.DERSLER).catch(() => ({})));
 async function dersAc(k, id, yenile) {
   const D = await dersleriYukle(), d = D[id], [key, no] = [id.replace(/-\d+$/, ''), +id.split('-').pop()], konu = MUFREDAT.find(x => x[0] === key), baslik = konu ? konu[3][no - 1] : id;
   const sonraki = konu && no < konu[3].length ? key + '-' + (no + 1) : null;
