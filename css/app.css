@@ -1117,3 +1117,11 @@ button.oto-gidecek:hover{text-decoration:underline}
 .dn-m.secili .dn-renk{border-color:#111}.dn-m.secili .dn-renk:not(.dn-s)::after{content:'✕';margin:auto;font-weight:900;font-size:13px;color:#111}
 .dn-m[data-n="1"] .dn-renk.dn-s i:first-child,.dn-m[data-n="2"] .dn-renk.dn-s i{background:#111}
 .dn-metin b{color:var(--murekkep)}
+/* direksiyon sınavı hazırlık */
+.dir-madde{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:6px}
+.dir-madde li{display:flex;gap:8px;align-items:flex-start;font-size:14px;line-height:1.45}
+.dir-madde li .dn-renk{flex:none;margin-top:3px}
+.dir-madde li.dir-hata{background:color-mix(in srgb,var(--kirmizi) 8%,transparent);border-radius:6px;padding:4px 6px}
+.dir-adim{margin:6px 0 0 18px;display:grid;gap:6px;font-size:14.5px;line-height:1.5}
+.dir-sema{margin:12px 0 0}
+.dir-madde .dn-renk{width:14px;height:14px;border-radius:4px;padding:0}
