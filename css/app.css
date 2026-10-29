@@ -885,3 +885,35 @@ button.oto-gidecek:hover{text-decoration:underline}
 .mm-hayir{color:var(--kirmizi)!important}
 .mm-ozet .mm-evet b,.mm-ozet .mm-hayir b{color:inherit}
 .mm-cevap-rozet{font-size:12.5px;font-weight:700;background:var(--panel-2);border-radius:5px;padding:2px 7px;margin-right:8px;color:var(--metin)}
+
+/* ---------- + Yeni ---------- */
+.yeni-dugme{display:flex;align-items:center;gap:6px;height:40px;padding:0 14px 0 10px;border-radius:8px;background:var(--levha);color:#fff;font:800 15px/1 var(--baslik);flex:none}
+.yeni-dugme:hover{background:var(--levha-koyu)}
+.yeni-dugme .ik{width:20px;height:20px;stroke-width:2.6}
+.ust .yeni-dugme+.arama{margin-left:8px}
+.ust .yeni-dugme{margin-left:auto}
+.yeni-menu{display:grid;gap:18px}
+.yeni-menu h3{font-size:12.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--soluk);margin-bottom:8px}
+.yeni-izgara{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.yeni-kart{display:flex;align-items:center;gap:12px;text-align:left;padding:12px 14px;border:1.5px solid var(--cizgi);border-radius:10px;background:var(--panel)}
+.yeni-kart:hover,.yeni-kart:focus-visible{border-color:var(--levha);background:var(--levha-acik)}
+.yeni-kart b{display:block;font:800 15.5px/1.2 var(--baslik);color:var(--murekkep)}
+.yeni-kart small{display:block;font-size:12.5px;color:var(--soluk);margin-top:2px}
+.yeni-ik{flex:none;width:40px;height:40px;border-radius:9px;background:var(--levha);color:#fff;display:grid;place-items:center}
+.yeni-ik .ik{width:21px;height:21px}
+.yeni-ipucu{margin-top:14px;font-size:12.5px;color:var(--soluk)}
+.yeni-ipucu kbd{font-family:var(--mono);border:1px solid var(--cizgi);border-radius:4px;padding:0 5px}
+.yeni-liste{max-height:52vh;overflow:auto;margin:10px -20px 0}
+.yeni-satir{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 20px}
+.yeni-satir:hover{background:var(--panel-2)}
+.yeni-satir>span:first-child{flex:1;min-width:0}
+.yeni-satir b{display:block;color:var(--murekkep)}
+.yeni-satir small{display:block;color:var(--soluk);font-size:12.5px}
+.yeni-satir .sag{display:flex;flex-direction:column;align-items:flex-end}
+.alt-yeni span{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--sari);color:var(--murekkep)}
+.alt-yeni span .ik{width:20px;height:20px;stroke-width:2.8}
+@media (max-width:760px){
+  .ust .yeni-dugme{display:none}
+  .ust .arama{margin-left:auto}
+  .yeni-izgara{grid-template-columns:1fr}
+}

@@ -1,16 +1,17 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=55';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=55';
-import * as Y1 from './sayfalar1.js?v=55';
-import * as Y2 from './sayfalar2.js?v=55';
-import * as P from './portal.js?v=55';
-import * as Y3 from './sayfalar3.js?v=55';
-import * as Y4 from './sayfalar4.js?v=55';
-import * as Y5 from './sayfalar5.js?v=55';
-import * as IM from './imza.js?v=55';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=55';
-import * as SN from './senaryo.js?v=55';
-import * as OZ from './ozellik.js?v=55';
-import { durumlariGuncelle } from './mesaj.js?v=55';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=56';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=56';
+import * as Y1 from './sayfalar1.js?v=56';
+import * as Y2 from './sayfalar2.js?v=56';
+import * as P from './portal.js?v=56';
+import * as Y3 from './sayfalar3.js?v=56';
+import * as Y4 from './sayfalar4.js?v=56';
+import * as Y5 from './sayfalar5.js?v=56';
+import * as IM from './imza.js?v=56';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=56';
+import * as SN from './senaryo.js?v=56';
+import * as OZ from './ozellik.js?v=56';
+import { durumlariGuncelle } from './mesaj.js?v=56';
+import { yeniMenu } from './yeni.js?v=56';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -62,6 +63,7 @@ function iskelet() {
         <div class="ust-baslik"><small id="ust-alt">${bugunMetni()}</small><h1 id="ust-baslik">Genel bakış</h1></div>
         <a class="dg dg-hafif portal-geri" href="#/genel">← Panele dön</a>
         ${(S.subeler || []).length > 1 && oturum.kullanici.rol !== 'usta' ? `<label class="sube-sec"><span class="gizli-et">Şube</span><select data-sube aria-label="Şube">${['', ...S.subeler.map(x => x.id)].map(id => `<option value="${id}" ${gorunum.sube === id ? 'selected' : ''}>${id ? e(S.subeler.find(x => x.id === id).ad) : 'Tüm şubeler'}</option>`).join('')}</select></label>` : ''}
+        ${oturum.kullanici.rol !== 'usta' ? `<button class="yeni-dugme" data-yeni-menu aria-label="Yeni ekle">${ik('arti')}<span>Yeni</span></button>` : ''}
         <button class="arama" data-ara aria-label="Ara">${ik('ara')}<span>Kursiyer, aday, plaka ara</span><kbd>⌘K</kbd></button>
         <button class="kullanici-cip" data-cikis title="Kullanıcı değiştir"><b>${e(oturum.kullanici.ad)}</b><small>${ROL_AD[oturum.kullanici.rol]}</small></button>
       </header>
@@ -72,6 +74,7 @@ function iskelet() {
   <nav class="alt-menu" aria-label="Hızlı menü">
     <a href="#/genel" data-menu="genel">${ik('genel')}Bugün</a>
     <a href="#/kursiyerler" data-menu="kursiyerler">${ik('kursiyer')}Kursiyer</a>
+    ${oturum.kullanici.rol !== 'usta' ? `<button class="alt-yeni" data-yeni-menu aria-label="Yeni ekle"><span>${ik('arti')}</span>Yeni</button>` : ''}
     <a href="#/plan" data-menu="plan">${ik('direksiyon')}Plan</a>
     <a href="#/kasa" data-menu="kasa">${ik('kasa')}Kasa</a>
     <button data-yan>${ik('menu')}Menü</button>
@@ -170,7 +173,8 @@ document.addEventListener('click', ev => {
   if (t.closest('[data-yan]')) return yanAcKapa(!document.getElementById('yan').classList.contains('acik'));
   if (t.closest('.yan a') || t.closest('.yan-rol')) yanAcKapa(false);
 });
-document.addEventListener('keydown', ev => { if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === 'k') { ev.preventDefault(); aramaAc(); } });
+document.addEventListener('keydown', ev => { if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === 'k') { ev.preventDefault(); aramaAc(); } if (ev.key.toLowerCase() === 'n' && !ev.metaKey && !ev.ctrlKey && !ev.altKey && oturum.kullanici && !document.querySelector('.perde') && !ev.target.closest('input, textarea, select, [contenteditable]')) { ev.preventDefault(); yeniMenu(); } });
+document.addEventListener('click', ev => { if (ev.target.closest('[data-yeni-menu]')) yeniMenu(); });
 document.addEventListener('change', ev => { const s = ev.target.closest('[data-sube]'); if (!s) return; subeSec(s.value); document.querySelectorAll('[data-sube]').forEach(x => { x.value = s.value; }); bildir(s.value ? S.subeler.find(x => x.id === s.value).ad + ' gösteriliyor' : 'Tüm şubeler gösteriliyor'); yenile(); });
 Y5.temaUygula();
 
