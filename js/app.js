@@ -1,12 +1,13 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=35';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir } from './ui.js?v=35';
-import * as Y1 from './sayfalar1.js?v=35';
-import * as Y2 from './sayfalar2.js?v=35';
-import * as P from './portal.js?v=35';
-import * as Y3 from './sayfalar3.js?v=35';
-import * as Y4 from './sayfalar4.js?v=35';
-import * as Y5 from './sayfalar5.js?v=35';
-import * as IM from './imza.js?v=35';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=36';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir } from './ui.js?v=36';
+import * as Y1 from './sayfalar1.js?v=36';
+import * as Y2 from './sayfalar2.js?v=36';
+import * as P from './portal.js?v=36';
+import * as Y3 from './sayfalar3.js?v=36';
+import * as Y4 from './sayfalar4.js?v=36';
+import * as Y5 from './sayfalar5.js?v=36';
+import * as IM from './imza.js?v=36';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=36';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -41,6 +42,7 @@ function sayaclar() {
 }
 
 function iskelet() {
+  kurallariHazirla(); zamanlayiciBaslat();
   const say = sayaclar();
   const menu = MENU.map(([g, l]) => [g, l.filter(([k]) => izinli(k))]).filter(([, l]) => l.length).map(([g, l]) => `<div class="yan-baslik">${g}</div>` + l.map(([k, t, i]) => `<a href="#/${k}" data-menu="${k}"><span class="ok" aria-hidden="true">${i}</span><span>${t}</span>${say[k] && say[k][0] ? `<b class="${say[k][1] ? '' : 'uyar'}">${say[k][0]}</b>` : ''}</a>`).join('')).join('');
   document.getElementById('uyg').innerHTML = `
