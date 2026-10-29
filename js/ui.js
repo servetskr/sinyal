@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk } from './veri.js?v=50';
+import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk } from './veri.js?v=51';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -251,10 +251,12 @@ export async function pdfUret(html, dosya = 'belge.pdf') {
   kap.style.cssText = `position:fixed;left:-10000px;top:0;width:${yatay ? 1100 : 760}px;background:#fff`;
   kap.innerHTML = `<style>${kapsamliCss()}</style><div class="pdf-kok" style="padding:4px">${html}</div>`;
   document.body.appendChild(kap);
+  // html2canvas sayfa kaydırılmışken boş sayfa çiziyor; çizim süresince en üste alıp geri dön
+  const kx = window.scrollX, ky = window.scrollY; window.scrollTo(0, 0);
   try {
     const uri = await window.html2pdf().set({ margin: 10, filename: dosya, image: { type: 'jpeg', quality: 0.9 }, html2canvas: { scale: 2, backgroundColor: '#ffffff' }, jsPDF: { unit: 'mm', format: 'a4', orientation: yatay ? 'landscape' : 'portrait' }, pagebreak: { mode: ['css', 'legacy'], before: '.sayfa-onu', after: '.sayfa-sonu' } }).from(kap.querySelector('.pdf-kok')).outputPdf('datauristring');
     return uri.split(',')[1];
-  } finally { kap.remove(); }
+  } finally { kap.remove(); window.scrollTo(kx, ky); }
 }
 // Belgeyi PDF olarak WhatsApp'tan dosya gönderir (API bağlıysa)
 export async function belgeWhatsApp(html, dosya, metin, ad, rol) {
