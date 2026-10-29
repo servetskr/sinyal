@@ -871,3 +871,17 @@ button.oto-gidecek:hover{text-decoration:underline}
   .mm-telefon{margin:0 12px}
   .mm-gonder .dg{width:100%;justify-content:center}
 }
+.mm-ek-satir{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.mm-ek-satir>small{color:var(--soluk);font-size:12.5px}
+.mm-ek-ekle{cursor:pointer}
+.mm-ek{display:inline-flex;align-items:center;gap:8px;background:var(--levha-acik);color:var(--levha);border-radius:8px;padding:4px 4px 4px 10px;font-size:13.5px}
+.mm-ek small{color:var(--metin)}
+.mm-cevap{display:inline-flex;align-items:center;gap:8px;margin-left:auto;font-size:14px;font-weight:700;color:var(--murekkep);cursor:pointer}
+.mm-cevap input{width:18px;height:18px;accent-color:var(--levha)}
+.mm-cevap small{font-weight:400;color:var(--soluk)}
+.mm-balon-ek{display:flex;align-items:center;gap:6px;background:rgba(0,0,0,.06);border-radius:6px;padding:6px 8px;margin-bottom:6px;font-size:13px;font-weight:700}
+.mm-balon-metin{display:block}
+.mm-evet{color:var(--yesil)!important}
+.mm-hayir{color:var(--kirmizi)!important}
+.mm-ozet .mm-evet b,.mm-ozet .mm-hayir b{color:inherit}
+.mm-cevap-rozet{font-size:12.5px;font-weight:700;background:var(--panel-2);border-radius:5px;padding:2px 7px;margin-right:8px;color:var(--metin)}

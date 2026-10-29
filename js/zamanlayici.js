@@ -1,7 +1,7 @@
-import { planlilariGonder } from './mesaj.js?v=53';
-import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, gecikenler, kalanBorc, islem, gonderimEkle, yerelZaman, oturum, kapaliGun, SINIFLAR, risk, selam, kursAdi } from './veri.js?v=53';
-import { tl, tamTarih, tarihUzun, saatDe, apiAcik, apiGonder, etiket, bildir, waSirali } from './ui.js?v=53';
-import { denetimSkoru } from './ozellik.js?v=53';
+import { planlilariGonder } from './mesaj.js?v=54';
+import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, gecikenler, kalanBorc, islem, gonderimEkle, yerelZaman, oturum, kapaliGun, SINIFLAR, risk, selam, kursAdi } from './veri.js?v=54';
+import { tl, tamTarih, tarihUzun, saatDe, apiAcik, apiGonder, etiket, bildir, waSirali } from './ui.js?v=54';
+import { denetimSkoru } from './ozellik.js?v=54';
 
 /* ================= ZAMANLI MESAJLAR =================
    Sinyal açıkken her dakika zamanı gelen mesajları bulur. WhatsApp API bağlıysa kendiliğinden gönderir;
@@ -14,6 +14,7 @@ const YENI_KURALLAR = [
   { id: 'o12', ad: 'Müdüre akşam özeti', ne: 'Her akşam 19:00’da', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: '{kurs} · {tarih} akşam özeti\n{ozet}' },
   { id: 'o13', ad: 'Belge ve araç süresi uyarısı', ne: 'Bitmeden 30, 7 ve 1 gün önce 09:00’da', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: '{konu} {kalan} bitiyor ({tarih}). Yenilemeyi unutmayın.' },
   { id: 'o15', ad: 'Kalma riski yüksek kursiyere ek ders teklifi', ne: 'Risk yükselince ertesi gün 12:00’de', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: '{selam} son derslerinize göre sınavdan önce {n} ek direksiyon dersi ({tutar}) öneriyoruz{odak}. Kursiyer ekranından ya da bu mesaja “evet” yazarak onaylayabilirsiniz.' },
+  { id: 'o16', ad: 'Doğum günü kutlaması', ne: 'Doğum gününde 10:00’da', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: '{selam} doğum gününüz kutlu olsun! {kurs} olarak size sağlıklı, mutlu ve kazasız bir yıl dileriz.' },
   { id: 'o14', ad: 'Teorik grup başlangıcı', ne: 'Gruptan iki gün önce 10:00’da', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: '{selam} teorik dersleriniz {tarih} {saatte} başlıyor ({grup}, {derslik}). Görüşmek üzere. {kurs}' },
 ];
 // Eski “sen” dilli şablonları “siz” diline ve hitaba ({selam}) çevir
@@ -39,7 +40,7 @@ export function kurallariHazirla() {
   S.otomasyonlar.forEach(o => { if (SIZ_SABLON[o.id] && !o.sablon.includes('{selam}') && o.sablon.includes('{ad}')) o.sablon = SIZ_SABLON[o.id]; if (o.id === 'o10' && o.sablon.startsWith('{ad} Hoca')) o.sablon = 'Merhaba ' + o.sablon; if (o.id === 'o2') o.sablon = o.sablon.replace('{odeme} {kurs}', '{odeme}'); });
   S.zamanli = S.zamanli || { gonderilen: {}, kayit: [], kuyruk: [], son: null, sinir: true };
 }
-const SAAT = { o1: '18:00', o10: '18:00', o11: '18:00', o12: '19:00', o13: '09:00', o2: '10:00', o3: '10:00', o14: '10:00', o4: '11:00', o7: '11:00', o15: '12:00' };
+const SAAT = { o1: '18:00', o10: '18:00', o11: '18:00', o12: '19:00', o13: '09:00', o2: '10:00', o3: '10:00', o14: '10:00', o4: '11:00', o7: '11:00', o15: '12:00', o16: '10:00' };
 export const kuralSaati = id => SAAT[id] || null;
 const kural = id => S.otomasyonlar.find(o => o.id === id);
 const doldur = (id, alan) => { alan = { kurs: S.kurs.ad, kursa: kursAdi('e'), kursta: kursAdi('de'), ...alan }; if (alan.kisi && !alan.selam) alan.selam = selam(alan.kisi); return (kural(id) ? kural(id).sablon : '').replace(/\{(\w+)\}/g, (x, a) => alan[a] != null ? alan[a] : ''); };
@@ -65,6 +66,7 @@ const URET = {
     return ornek ? l.sort((a, b) => a.anahtar.split('|').pop().localeCompare(b.anahtar.split('|').pop())).slice(0, 1) : l; },
   o14: ornek => (S.gruplar || []).filter(g => ornek ? fark(g.baslangic) >= 0 : fark(g.baslangic) === 2).flatMap(g => S.kursiyerler.filter(k => k.teorikGrup === g.id && ['Kayıt', 'Evrak', 'Teorik'].includes(k.asama) && !k.teorik).map(k => ({ anahtar: 'o14|' + g.id + '|' + k.id, kim: ogr(k), metin: doldur('o14', { kisi: k, ad: k.ad, tarih: tarihUzun(g.baslangic), saatte: saatDe(TEORIK_SAAT[g.id] || '18:30'), grup: g.ad.toLocaleLowerCase('tr'), derslik: g.derslik }) }))),
 };
+URET.o16 = ornek => { const bg = gun(0).slice(5); const l = S.kursiyerler.filter(k => !k.kapali && k.dogumTarihi && (ornek || k.dogumTarihi.slice(5) === bg)); return (ornek ? l.slice(0, 1) : l).map(k => ({ anahtar: 'o16|' + k.id + '|' + gun(0).slice(0, 4), kim: ogr(k), metin: doldur('o16', { kisi: k, ad: k.ad }) })); };
 URET.o15 = ornek => S.kursiyerler.map(k => ({ k, r: risk(k) })).filter(({ k, r }) => r && r.oneri && (ornek ? r.puan >= 25 : r.puan >= 50) && !k.ekDersTeklif).sort((a, b) => b.r.puan - a.r.puan).map(({ k, r }) => ({ anahtar: 'o15|' + k.id, kim: ogr(k), etki: { tur: 'ekders', k: k.id, n: r.oneri, tutar: r.oneri * S.kurs.ekDersUcreti }, metin: doldur('o15', { kisi: k, ad: k.ad, n: r.oneri, tutar: tl(r.oneri * S.kurs.ekDersUcreti), odak: r.beceri && r.beceri.zayif.length ? '; özellikle ' + r.beceri.zayif.join(', ').toLocaleLowerCase('tr') + ' üzerinde çalışacağız' : '' }) }));
 // Mesaj gidince kayda işlenecek sonuç (ör. ek ders teklifi kursiyer ekranında görünür)
 function etkiUygula(x) {

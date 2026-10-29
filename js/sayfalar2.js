@@ -1,12 +1,12 @@
-import { S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, gonderimEkle, risk, islem, geriAlNoktasi, oturum, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube, kapaliGun, YONTEMLER, yontemAd, gecikenTutar, aktifSiniflar, sinifKaydet, ayEkle, isGunuSay, arsivle, selam, kursAdi } from './veri.js?v=53';
-import { e, saatDe, saatE, tl, sayi, ik, rozet, asamaRozet, avatar, plaka, ilerleme, bos, pencere, kapatPencere, bildir, sekmeler, tarih, tarihUzun, goreli, cubukGrafik, halka, ayAdi, csvIndir, waAc, waSirali, tamTarih, apiAcik, isaret, ekranNotu, aracGorsel, olcumler, yonLevhasi } from './ui.js?v=53';
-import { yenile } from './app.js?v=53';
-import { AYAR_SEKMELERI, ayarBaglan, personelOzeti, mebAktarimKarti, mebAracKur, mebAktar, MEB_RISK } from './sayfalar5.js?v=53';
-import { wpGonder, tahsilAl, ekDersOner, kisiListe, odemeBilgisi, yorumMetni, alici, mudurMu, bildirimler } from './sayfalar1.js?v=53';
-import { denetimEksikleri, mebSiraBaslat } from './sayfalar3.js?v=53';
-import * as OZ from './ozellik.js?v=53';
-import { kurallariHazirla, zamanliKural, kuralSaati, ornekGonder, zamanlayiciCalistir, kuyruguGonder, gidecekler } from './zamanlayici.js?v=53';
-import * as MM from './mesaj.js?v=53';
+import { S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, gonderimEkle, risk, islem, geriAlNoktasi, oturum, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube, kapaliGun, YONTEMLER, yontemAd, gecikenTutar, aktifSiniflar, sinifKaydet, ayEkle, isGunuSay, arsivle, selam, kursAdi } from './veri.js?v=54';
+import { e, saatDe, saatE, tl, sayi, ik, rozet, asamaRozet, avatar, plaka, ilerleme, bos, pencere, kapatPencere, bildir, sekmeler, tarih, tarihUzun, goreli, cubukGrafik, halka, ayAdi, csvIndir, waAc, waSirali, tamTarih, apiAcik, isaret, ekranNotu, aracGorsel, olcumler, yonLevhasi } from './ui.js?v=54';
+import { yenile } from './app.js?v=54';
+import { AYAR_SEKMELERI, ayarBaglan, personelOzeti, mebAktarimKarti, mebAracKur, mebAktar, MEB_RISK } from './sayfalar5.js?v=54';
+import { wpGonder, tahsilAl, ekDersOner, kisiListe, odemeBilgisi, yorumMetni, alici, mudurMu, bildirimler } from './sayfalar1.js?v=54';
+import { denetimEksikleri, mebSiraBaslat } from './sayfalar3.js?v=54';
+import * as OZ from './ozellik.js?v=54';
+import { kurallariHazirla, zamanliKural, kuralSaati, ornekGonder, zamanlayiciCalistir, kuyruguGonder, gidecekler } from './zamanlayici.js?v=54';
+import * as MM from './mesaj.js?v=54';
 
 const durum = { sinav: 'yaklasan', kasa: 'hareket', filo: 'arac', mesaj: 'gelen', meb: 'asistan', ayar: 'kurs' };
 let secSohbet = null, gecmisKim = '';
@@ -214,7 +214,7 @@ export function kasa(alt) {
         if (t.closest('[data-toplu]')) { const ks = [...new Set(gec.map(x => x.k))], ml = k => `${selam(k)} vadesi geçen ${tl(gecikenler(k).reduce((a, t) => a + t.tutar - (t.kismi || 0), 0))} taksidiniz var. ${odemeBilgisi()}`; waSirali(kisiListe(ks, ml), 'Geciken taksit hatırlatması'); }
         if (t.closest('[data-hareket]')) hareketEkle();
         const hd = t.closest('[data-h-duz]'); if (hd) hareketDuzelt(S.hareket.find(x => x.id === hd.dataset.hDuz));
-        const sn = t.closest('[data-senet]'); if (sn) import('./sayfalar3.js?v=53').then(m => m.belgeAc('senet', sn.dataset.senet));
+        const sn = t.closest('[data-senet]'); if (sn) import('./sayfalar3.js?v=54').then(m => m.belgeAc('senet', sn.dataset.senet));
         if (t.closest('[data-gunsonu]')) { const sy = k.querySelector('#sayim'); if (!sy.value.trim()) { sy.focus(); return bildir('Önce kasadaki nakdi sayıp yazın', 'uyari'); } const bek = +sy.placeholder, say = +String(sy.value).replace(/\D/g, ''), fk = say - bek; S.gunSonu.push(gun(0)); islem('Günü kapattı', 'Sayım ' + tl(say) + (fk ? ' · fark ' + tl(fk) : ' · fark yok')); kaydet(); const bh = sb(S.hareket).filter(h => h.tarih === gun(0)), gel = bh.filter(h => h.tur === 'Gelir').reduce((a, h) => a + h.tutar, 0), gid = bh.filter(h => h.tur === 'Gider').reduce((a, h) => a + h.tutar, 0); const ozet = `${S.kurs.ad} · ${tamTarih(gun(0))} gün sonu\nTahsilat: ${tl(gel)} (${bh.filter(h => h.tur === 'Gelir').length} işlem)\nGider: ${tl(gid)}\nKasa sayımı: ${tl(say)}${fk ? ' · fark ' + tl(fk) : ' · fark yok'}\nKapatan: ${oturum.kullanici ? oturum.kullanici.ad : ''}`; yenile(); if (waAc(S.kurs.wp, ozet, 'WhatsApp', S.kurs.yetkili, false, 'MÜDÜR', 'Gün sonu') !== 'api') bildir(S.kurs.wp ? 'Gün kapatıldı; özet kursun WhatsApp hattına hazır' : 'Gün kapatıldı. Özeti göndereceğiniz kişiyi WhatsApp’ta seçin', 'wp'); }
         if (t.closest('[data-fatura]')) faturaKes();
         if (t.closest('[data-disa]')) { csvIndir('kasa-hareketleri.csv', [['Tarih', 'Tür', 'Kategori', 'Açıklama', 'Yöntem', 'Tutar'], ...S.hareket.map(x => [x.tarih, x.tur, x.kategori, x.aciklama, x.yontem, x.tutar])]); bildir('Kasa hareketleri indirildi'); }
@@ -261,7 +261,7 @@ function faturaKes() {
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-kes>${taslak ? 'Taslağı hazırla' : 'Faturayı kes'}</button>`,
     onAc(d) {
       const ilk = d.querySelector('[name=h]:not([disabled])'); if (ilk) ilk.checked = true;
-      d.querySelectorAll('[data-fatura-ac]').forEach(b => b.addEventListener('click', ev => { ev.preventDefault(); import('./sayfalar3.js?v=53').then(m => m.belgeAc('fatura', b.dataset.faturaAc)); }));
+      d.querySelectorAll('[data-fatura-ac]').forEach(b => b.addEventListener('click', ev => { ev.preventDefault(); import('./sayfalar3.js?v=54').then(m => m.belgeAc('fatura', b.dataset.faturaAc)); }));
       d.querySelector('[data-kes]').addEventListener('click', () => {
         const sec = d.querySelector('[name=h]:checked'); if (!sec) return bildir('Faturası kesilmemiş bir tahsilat seçin', 'uyari');
         const h = S.hareket.find(x => x.id === sec.value), k = kursiyer(h.kursiyer);
@@ -273,7 +273,7 @@ function faturaKes() {
         S.faturalar.push({ no, ettn, tarih: gun(0), kursiyer: k.id, hareket: h.id, tutar: h.tutar, kdv: g.kdv ?? 20, aciklama: SINIFLAR[k.sinif].ad + ' sertifika sınıfı sürücü kursu eğitim hizmeti' + (h.kategori && h.kategori !== 'Kurs ücreti' ? ' · ' + h.kategori.toLowerCase() : ''), yontem: h.yontem, odemeTarih: h.tarih, durum: taslak ? 'taslak' : 'sira' });
         h.fatura = no; islem('Fatura kesti', no + ' · ' + tamAd(k) + ' · ' + tl(h.tutar)); kaydet();
         bildir((taslak ? 'Fatura taslağı ' : 'Fatura ') + no + (taslak ? ' hazırlandı' : ' kesildi')); yenile();
-        import('./sayfalar3.js?v=53').then(m => m.belgeAc('fatura', no));
+        import('./sayfalar3.js?v=54').then(m => m.belgeAc('fatura', no));
       });
     },
   });
@@ -416,9 +416,9 @@ export function mesajlar(alt) {
   if (durum.mesaj === 'oto') { kurallariHazirla(); const z = S.zamanli, bugunK = z.kayit.filter(x => x.zaman.slice(0, 10) === gun(0)), KURAL_AD = Object.fromEntries(S.otomasyonlar.map(o => [o.id, o.ad])); govde = `
     <div class="kart" style="margin-bottom:14px"><div class="kart-bas">${isaret(apiAcik() ? 'tamam' : 'bilgi', 24)}<div><h3>Zamanlı mesajlar</h3><small>${apiAcik() ? 'WhatsApp API bağlı: zamanı gelen mesajlar kendiliğinden gider' : 'WhatsApp API bağlı değil: zamanı gelenler aşağıda birikir, tek tuşla sırayla gönderilir'} · son kontrol ${z.son ? z.son.slice(11, 16) : '—'} · bugün ${bugunK.filter(x => /gönderildi/.test(x.durum)).length} mesaj</small></div><div class="sag" style="gap:6px">${z.kuyruk.length ? `<button class="dg dg-wp dg-kucuk" data-kuyruk>${ik('wp')}${z.kuyruk.length} mesajı gönder</button>` : ''}<button class="dg dg-cizgi dg-kucuk" data-zaman-kontrol>Şimdi kontrol et</button></div></div>
       <div class="kart-govde" style="padding-top:0"><label style="display:flex;gap:8px;align-items:center;font-size:13.5px"><input type="checkbox" data-zaman-sinir ${z.sinir ? 'checked' : ''}> Demo sınırı: her kuraldan günde en fazla 2 mesaj (bütün mesajlar tek telefona gittiği için)</label></div></div>
-    <div class="kart">${S.otomasyonlar.map(o => `<div class="oto"><span class="oto-ik">${ik({ o1: 'direksiyon', o2: 'kasa', o3: 'sinav', o4: 'belge', o5: 'yildiz', o6: 'sifirla', o7: 'aday', o8: 'teorik', o9: 'sinav', o10: 'kursiyer', o11: 'aday', o12: 'rapor', o13: 'filo', o14: 'teorik', o15: 'sinav' }[o.id] || 'mesaj')}</span><div style="min-width:0"><h4>${e(o.ad)}</h4><p>${e(o.ne)} · ${zamanliKural(o.id) ? 'zamanlı, ' + kuralSaati(o.id) : 'olay anında'} · ${sayi(o.gonderim)} gönderim</p><div class="sablon">${e(o.sablon)}</div>${o.acik && zamanliKural(o.id) ? ((n, g, gecti) => n ? `<button type="button" class="oto-gidecek" data-gidecek="${o.id}">${ik('wp')}${gecti ? `Sırada <b>${n} kişi</b> bekliyor` : `Bugün ${kuralSaati(o.id)}’de <b>${n} kişiye</b> gidecek`} · kimlere?</button>` : `<small class="oto-gidecek bos">${g ? `Bugün ${g} kişiye gönderildi` : 'Bugün gidecek mesaj yok'}</small>`)(gidecekler(o.id).length, bugunK.filter(x => x.kural === o.id && /gönderildi/.test(x.durum)).length, new Date().toTimeString().slice(0, 5) >= kuralSaati(o.id)) : ''}</div><div class="sag">${zamanliKural(o.id) ? `<button class="dg dg-cizgi dg-kucuk" data-ornek="${o.id}">${ik('wp')}Örnek gönder</button>` : ''}<button class="dg dg-hafif dg-kucuk" data-duzenle="${o.id}">Düzenle</button><span class="anahtar"><input type="checkbox" data-oto="${o.id}" ${o.acik ? 'checked' : ''} aria-label="${e(o.ad)}"><i></i></span></div></div>`).join('')}</div>
+    <div class="kart">${S.otomasyonlar.map(o => `<div class="oto"><span class="oto-ik">${ik({ o1: 'direksiyon', o2: 'kasa', o3: 'sinav', o4: 'belge', o5: 'yildiz', o6: 'sifirla', o7: 'aday', o8: 'teorik', o9: 'sinav', o10: 'kursiyer', o11: 'aday', o12: 'rapor', o13: 'filo', o14: 'teorik', o15: 'sinav', o16: 'yildiz' }[o.id] || 'mesaj')}</span><div style="min-width:0"><h4>${e(o.ad)}</h4><p>${e(o.ne)} · ${zamanliKural(o.id) ? 'zamanlı, ' + kuralSaati(o.id) : 'olay anında'} · ${sayi(o.gonderim)} gönderim</p><div class="sablon">${e(o.sablon)}</div>${o.acik && zamanliKural(o.id) ? ((n, g, gecti) => n ? `<button type="button" class="oto-gidecek" data-gidecek="${o.id}">${ik('wp')}${gecti ? `Sırada <b>${n} kişi</b> bekliyor` : `Bugün ${kuralSaati(o.id)}’de <b>${n} kişiye</b> gidecek`} · kimlere?</button>` : `<small class="oto-gidecek bos">${g ? `Bugün ${g} kişiye gönderildi` : 'Bugün gidecek mesaj yok'}</small>`)(gidecekler(o.id).length, bugunK.filter(x => x.kural === o.id && /gönderildi/.test(x.durum)).length, new Date().toTimeString().slice(0, 5) >= kuralSaati(o.id)) : ''}</div><div class="sag">${zamanliKural(o.id) ? `<button class="dg dg-cizgi dg-kucuk" data-ornek="${o.id}">${ik('wp')}Örnek gönder</button>` : ''}<button class="dg dg-hafif dg-kucuk" data-duzenle="${o.id}">Düzenle</button><span class="anahtar"><input type="checkbox" data-oto="${o.id}" ${o.acik ? 'checked' : ''} aria-label="${e(o.ad)}"><i></i></span></div></div>`).join('')}</div>
     <div class="ara-bosluk"></div>
-    <div class="kart"><div class="kart-bas"><h3>Zamanlı mesaj geçmişi</h3><small>Son ${Math.min(30, z.kayit.length)} kayıt</small></div><ul class="liste" style="margin-top:6px">${z.kayit.slice(0, 30).map(x => `<li style="align-items:flex-start"><span class="zaman">${x.zaman.slice(11, 16)}</span><div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(x.rol || '')} · ${e(x.kime)}</b><small style="display:block;color:var(--soluk)">${e(KURAL_AD[x.kural] || '')} · ${e(x.metin.slice(0, 120))}</small></div><span class="sag">${x.id ? MM.tik(x.id) : ''}${rozet(x.durum, /gönderildi/.test(x.durum) ? 'yesil' : /sınır/.test(x.durum) ? 'notr' : 'kirmizi')}</span></li>`).join('') || '<li>' + bos('Henüz zamanlı mesaj gitmedi', 'Kuralların saati gelince burada görünür. “Örnek gönder” ile hemen deneyebilirsiniz.') + '</li>'}</ul></div>`; }
+    <div class="kart"><div class="kart-bas"><h3>Zamanlı mesaj geçmişi</h3><small>Son ${Math.min(30, z.kayit.length)} kayıt</small></div><ul class="liste" style="margin-top:6px">${z.kayit.slice(0, 30).map(x => `<li style="align-items:flex-start"><span class="zaman">${x.zaman.slice(11, 16)}</span><div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(x.rol || '')} · ${e(x.kime)}</b><small style="display:block;color:var(--soluk)">${e(KURAL_AD[x.kural] || '')} · ${e(x.metin.slice(0, 120))}</small>${x.cevap ? `<small class="mm-cevap-rozet ${x.cevap.tur === 'olumlu' ? 'mm-evet' : x.cevap.tur === 'olumsuz' ? 'mm-hayir' : ''}" style="display:inline-block;margin-top:4px">Cevap: “${e(x.cevap.metin.slice(0, 60))}”</small>` : ''}</div><span class="sag">${x.id ? MM.tik(x.id) : ''}${rozet(x.durum, /gönderildi/.test(x.durum) ? 'yesil' : /sınır/.test(x.durum) ? 'notr' : 'kirmizi')}</span></li>`).join('') || '<li>' + bos('Henüz zamanlı mesaj gitmedi', 'Kuralların saati gelince burada görünür. “Örnek gönder” ile hemen deneyebilirsiniz.') + '</li>'}</ul></div>`; }
   if (durum.mesaj === 'yeni') govde = MM.yeniMesajHtml();
   if (durum.mesaj === 'bilgi') govde = `<div class="izgara iz-21">
     <div class="kart"><div class="kart-bas"><h3>Asistanın bildikleri</h3><small>Asistan yalnızca bu onaylı bilgilerle cevap verir</small></div><ul class="liste" style="margin-top:8px">${S.asistanBilgi.map((b, i) => `<li style="align-items:flex-start">${isaret('tamam', 24)}<div style="flex:1"><b style="color:var(--murekkep);display:block">${e(b.konu)}</b><p style="font-size:14px">${e(b.metin)}</p><small style="color:var(--soluk)">Onaylayan: kurs müdürü · ${goreli(b.onay)}</small></div><button class="dg dg-cizgi dg-kucuk" data-bilgi-duzenle="${i}">Düzenle</button></li>`).join('')}</ul></div>
@@ -528,13 +528,13 @@ export function meb(alt) {
         const s = t.closest('[data-sekme]'); if (s) { durum.meb = s.dataset.sekme; if (location.hash !== '#/meb') location.hash = '#/meb'; else yenile(); }
         if (t.closest('[data-evrak-toplu]')) { const ml = x => `${selam(x)} kaydınızı tamamlamak için şu evraklar eksik: ${eksikEvrak(x).map(z => z[1].toLocaleLowerCase('tr')).join(', ')}. ${kursAdi('e')} getirebilir ya da fotoğraflarını buraya gönderebilirsiniz.`; waSirali(kisiListe(eksik, ml), 'Eksik evrak hatırlatması'); }
         const c = t.closest('[data-csv]'); if (c) { csvIndir('esinav-basvuru.csv', [['TC', 'Ad', 'Soyad', 'Telefon', 'Sınıf', 'Teorik saat'], ...esinav.map(x => [x.tc, x.ad, x.soyad, x.tel, SINIFLAR[x.sinif].ad, x.teorik])]); bildir('Liste indirildi'); }
-        if (t.closest('[data-denetim-dosya]')) import('./sayfalar3.js?v=53').then(m => m.belgeAc('denetim'));
+        if (t.closest('[data-denetim-dosya]')) import('./sayfalar3.js?v=54').then(m => m.belgeAc('denetim'));
       });
       if (durum.meb === 'mutabakat') OZ.mutabakatBaglan(k);
       k.addEventListener('click', ev => {
         const t = ev.target;
-        if (t.closest('[data-program]')) import('./sayfalar3.js?v=53').then(m => m.programPenceresi());
-        const sb = t.closest('[data-sinav-bildir]'); if (sb) import('./sayfalar3.js?v=53').then(m => m.sinavBildirimPenceresi(sb.dataset.sinavBildir));
+        if (t.closest('[data-program]')) import('./sayfalar3.js?v=54').then(m => m.programPenceresi());
+        const sb = t.closest('[data-sinav-bildir]'); if (sb) import('./sayfalar3.js?v=54').then(m => m.sinavBildirimPenceresi(sb.dataset.sinavBildir));
       });
     },
   };

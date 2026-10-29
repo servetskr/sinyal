@@ -1,9 +1,10 @@
-import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli } from './veri.js?v=53';
-import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos } from './ui.js?v=53';
-import { yenile } from './app.js?v=53';
-import { bildirimler } from './sayfalar1.js?v=53';
-import { denetimEksikleri } from './sayfalar3.js?v=53';
-import { sinifKari, dersMaliyeti, bosKapasite, hakedis, KAPASITE_SAAT, randevuEngeli, bosSlotlar } from './risk.js?v=53';
+import { cevapIsle } from './mesaj.js?v=54';
+import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli } from './veri.js?v=54';
+import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos } from './ui.js?v=54';
+import { yenile } from './app.js?v=54';
+import { bildirimler } from './sayfalar1.js?v=54';
+import { denetimEksikleri } from './sayfalar3.js?v=54';
+import { sinifKari, dersMaliyeti, bosKapasite, hakedis, KAPASITE_SAAT, randevuEngeli, bosSlotlar } from './risk.js?v=54';
 
 /* ================= DENETİM SKORU ================= */
 export function denetimSkoru() {
@@ -194,6 +195,9 @@ export async function gelenKontrol() {
       if (S.gelenAlinan.includes(x.id)) continue;
       S.gelenAlinan.push(x.id); n++;
       const saat = new Date(x.zaman).toTimeString().slice(0, 5);
+      // gönderdiğimiz mesaja verilen cevap (evet/hayır ya da “yanıtla”) adaya değil o mesaja işlenir
+      const cv = cevapIsle(x);
+      if (cv) { islem('Mesaja cevap geldi', cv.ad + ' · ' + cv.baslik + ' · ' + x.metin); bildir(`${cv.ad} cevap verdi: “${x.metin.slice(0, 40)}”`, 'wp'); continue; }
       let a = S.adaylar.find(y => y.waSon4 === x.son4 && !['Kayıt', 'Kaybedildi'].includes(y.asama));
       if (!a) { a = { id: 'l' + Date.now() + n, ad: x.ad || 'WhatsApp adayı · ···' + x.son4, tel: '', waSon4: x.son4, kaynak: 'WhatsApp', kanal: 'WhatsApp', sinif: 'B', asama: 'Yeni', tarih: gun(0), saat, takip: null, not: 'Kursun WhatsApp hattına yazdı; asistan cevapladı', devir: null, mesajlar: [] }; S.adaylar.unshift(a); }
       a.mesajlar.push({ kim: 'aday', metin: x.metin }, { kim: 'asistan', metin: x.cevap }); a.saat = saat;

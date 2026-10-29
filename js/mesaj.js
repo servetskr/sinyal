@@ -1,8 +1,12 @@
 // Mesaj merkezi: grup ya da tek tek seçilen kişilere kişiye özel WhatsApp mesajı, planlı gönderim, iletildi/okundu takibi
-import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, kalanBorc, gecikenler, gecikenTutar, eksikEvrak, sonrakiDers, risk, islem, sb, aktifSiniflar, SINIFLAR, selam, kursAdi, yerelZaman } from './veri.js?v=53';
-import { e, tl, ik, rozet, bos, pencere, kapatPencere, bildir, tarihUzun, apiAcik, apiGonder, etiket, waSirali, ziyaretci, isaret } from './ui.js?v=53';
+import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, kalanBorc, gecikenler, gecikenTutar, eksikEvrak, sonrakiDers, risk, islem, sb, aktifSiniflar, SINIFLAR, selam, kursAdi, adEk, yerelZaman } from './veri.js?v=54';
+import { e, tl, ik, rozet, bos, pencere, kapatPencere, bildir, tarihUzun, apiAcik, apiGonder, etiket, waSirali, ziyaretci, isaret } from './ui.js?v=54';
 
-const durum = { grup: 'aktif', sinif: '', ogretmen: '', secili: null, sira: 0, zaman: 'simdi', metin: null, sablon: '' };
+const durum = { grup: 'aktif', sinif: '', ogretmen: '', secili: null, sira: 0, zaman: 'simdi', metin: null, sablon: '', ek: null, cevapIste: false };
+// Ekli dosyalar localStorage’a yazılmaz (büyük olabilir); gönderim süresince bellekte durur
+const EKLER = {};
+const CEVAP_NOTU = '“Evet” ya da “Hayır” yazarak cevaplayabilirsiniz.';
+const sonMetin = m => durum.cevapIste && !/evet/i.test(m) ? m.trim() + '\n\n' + CEVAP_NOTU : m.trim();
 
 // Kime: akıllı gruplar (öğrenci listesi süzülür; öğretmen ve aday ayrı kişi türü)
 const GRUPLAR = [
@@ -27,6 +31,7 @@ const SABLONLAR = [
   ['Ödeme hatırlatma', '{selam} {geciken} tutarında vadesi geçmiş taksitiniz bulunuyor; toplam kalan borcunuz {borc}. Ödeme için bu mesajı yanıtlayabilir ya da {kursa} uğrayabilirsiniz.'],
   ['Eksik evrak', '{selam} kaydınızın tamamlanması için {evrak} eksik. Belgelerin fotoğrafını bu mesaja yanıt olarak gönderebilir ya da {kursa} getirebilirsiniz.'],
   ['Sınav hatırlatma', '{selam} {sinav}. Kimliğinizi yanınıza almayı unutmayın. Başarılar!'],
+  ['Katılım sorusu', '{selam} {ders} direksiyon dersinize gelebilecek misiniz?', true],
   ['Ders iptali (hava)', '{selam} bugün hava koşulları nedeniyle direksiyon dersleri yapılamayacaktır. Dersiniz için size yeni saat bildireceğiz. {kurs}'],
   ['Arkadaşını getir', '{selam} yeni teorik grubumuz önümüzdeki hafta başlıyor. Ehliyet almak isteyen bir tanıdığınız varsa bu mesajı iletebilirsiniz. {kurs}'],
   ['Öğretmen toplantısı', '{selam} yarın 08:30’da kısa bir ekip toplantımız var; katılımınızı rica ederiz. {kurs}'],
@@ -79,7 +84,25 @@ export async function durumlariGuncelle() {
     return degisti;
   } catch (x) { return false; } finally { durumda = false; }
 }
-const sayac = c => { const l = c.sonuc || [], d = x => (S.waDurum || {})[x.id]; return { gitti: l.filter(x => x.id).length, iletildi: l.filter(x => ['delivered', 'read'].includes(d(x))).length, okundu: l.filter(x => d(x) === 'read').length, hata: l.filter(x => !x.id && x.durum !== 'demo sınırı').length, sinir: l.filter(x => x.durum === 'demo sınırı').length }; };
+const sayac = c => { const l = c.sonuc || [], d = x => (S.waDurum || {})[x.id]; return { gitti: l.filter(x => x.id).length, iletildi: l.filter(x => ['delivered', 'read'].includes(d(x))).length, okundu: l.filter(x => d(x) === 'read').length, hata: l.filter(x => !x.id && x.durum !== 'demo sınırı').length, sinir: l.filter(x => x.durum === 'demo sınırı').length, evet: l.filter(x => x.cevap && x.cevap.tur === 'olumlu').length, hayir: l.filter(x => x.cevap && x.cevap.tur === 'olumsuz').length, cevap: l.filter(x => x.cevap).length }; };
+
+// Gönderildiği hâlde okunmayanlar (cevap verenler okunmuş sayılır)
+const okumayan = c => (c.sonuc || []).filter(x => x.id && !x.cevap && (S.waDurum || {})[x.id] !== 'read');
+// WhatsApp’tan gelen kısa cevabı (evet/hayır) gönderdiğimiz mesaja bağlar.
+// Önce “yanıtla” ile hangi mesaja cevap verildiği (yanit = mesaj kimliği), yoksa son 3 günde “cevap iste” ile giden mesaj.
+export function cevapIsle(x) {
+  const cevap = { metin: x.metin, tur: x.cevapTur || null, zaman: x.zaman };
+  const kl = S.kampanyalar || [];
+  if (x.yanit) {
+    for (const c of kl) { const r = (c.sonuc || []).find(y => y.id === x.yanit); if (r) { r.cevap = cevap; return { ad: r.ad, baslik: c.baslik }; } }
+    const z = (S.zamanli && S.zamanli.kayit || []).find(y => y.id === x.yanit); if (z) { z.cevap = cevap; return { ad: z.kime, baslik: 'Otomatik mesaj' }; }
+  }
+  if (!x.cevapTur) return null;
+  const c = kl.find(c => c.cevapIste && c.durum === 'gönderildi' && fark(c.tarih) >= -3 && (c.sonuc || []).some(y => y.id && !y.cevap));
+  if (!c) return null;
+  const r = c.sonuc.find(y => y.id && !y.cevap); r.cevap = cevap;
+  return { ad: r.ad, baslik: c.baslik };
+}
 
 /* ---------- gönderim ---------- */
 async function gonder(c) {
@@ -88,12 +111,13 @@ async function gonder(c) {
   for (let i = 0; i < c.kisiler.length; i++) {
     const r = c.kisiler[i];
     if (sinirli && i >= DEMO_SINIR) { c.sonuc.push({ ad: r.ad, rol: r.rol, durum: 'demo sınırı' }); continue; }
-    const s = await apiGonder(etiket(r.ad, r.rol) + r.metin);
+    const ek = EKLER[c.id] || c.ekVeri;
+    const s = await apiGonder(etiket(r.ad, r.rol) + r.metin, ek ? { base64: ek.base64, dosya: ek.dosya, tur: ek.tur } : undefined);
     c.sonuc.push({ ad: r.ad, rol: r.rol, id: s.id || null, durum: s.ok ? 'gönderildi' : 'hata: ' + s.hata });
     if (!s.ok && /24 saat|ulaşılamadı/.test(s.hata || '')) { bildir(s.hata, 'uyari'); break; }
     await new Promise(z => setTimeout(z, 300));
   }
-  c.durum = 'gönderildi'; c.gonderim = yerelZaman(); kaydet();
+  c.durum = 'gönderildi'; c.gonderim = yerelZaman(); delete EKLER[c.id]; delete c.ekVeri; kaydet();
   const n = sayac(c);
   bildir(`${n.gitti} mesaj WhatsApp’tan gönderildi ✓${n.sinir ? ` · demo sınırı: ${n.sinir} kişi atlandı` : ''}`, 'wp');
 }
@@ -125,6 +149,8 @@ export function yeniMesajHtml() {
       <div class="mm-sablonlar">${SABLONLAR.map(([ad], i) => `<button type="button" class="dg dg-cizgi dg-kucuk ${durum.sablon === ad ? 'secili' : ''}" data-mm-sablon="${i}">${e(ad)}</button>`).join('')}</div>
       <textarea class="girdi mm-metin" data-mm-metin aria-label="Mesaj metni">${e(durum.metin)}</textarea>
       <div class="mm-alanlar"><small>Kişiye özel alan ekle:</small>${ALANLAR.map(([a, t]) => `<button type="button" data-mm-alan="${a}">${t}</button>`).join('')}</div>
+      <div class="mm-ek-satir">${durum.ek ? `<span class="mm-ek">${ik('belge')}<b>${e(durum.ek.dosya)}</b><small>${Math.round(durum.ek.boyut / 1024)} KB</small><button type="button" class="dg-ikon" data-mm-ek-sil aria-label="Eki kaldır">${ik('kapat')}</button></span>` : `<label class="dg dg-cizgi dg-kucuk mm-ek-ekle">${ik('belge')}Dosya ekle<input type="file" accept="application/pdf,image/jpeg,image/png" data-mm-ek hidden></label><small>PDF ya da görsel · ders programı, duyuru afişi…</small>`}
+        <label class="mm-cevap"><input type="checkbox" data-mm-cevap ${durum.cevapIste ? 'checked' : ''}><span>Cevap iste <small>(Evet / Hayır)</small></span></label></div>
       ${bosOlan.length ? `<p class="ipucu mm-uyari">${isaret('uyari', 18)}<span>${bosOlan.length} kişide ${[...new Set(bosOlan.flatMap(x => bosKalan(durum.metin, x)))].map(a => '“' + (ALANLAR.find(z => z[0] === a) || [a, a])[1].toLocaleLowerCase('tr') + '”').join(', ')} boş kalıyor. <button type="button" class="dg-baglanti" data-mm-bosu-cikar>Onları listeden çıkar</button></span></p>` : ''}
     </div>
     <div class="mm-adim"><span class="et">3 · Ne zaman?</span>
@@ -135,10 +161,10 @@ export function yeniMesajHtml() {
   </div></div>
   <div class="mm-sag">
     <div class="kart mm-onizleme"><div class="kart-bas"><h3>Önizleme</h3><small>${r ? e(r.ad) : '—'}</small>${sec.length > 1 ? `<div class="sag mm-oklar"><button type="button" class="dg-ikon" data-mm-sira="-1" aria-label="Önceki kişi">‹</button><span>${Math.min(durum.sira, sec.length - 1) + 1}/${sec.length}</span><button type="button" class="dg-ikon" data-mm-sira="1" aria-label="Sonraki kişi">›</button></div>` : ''}</div>
-      <div class="mm-telefon">${r ? `<div class="balon giden">${e(kisiyeOzel(durum.metin, r))}</div>` : `<p style="color:var(--soluk);text-align:center">Kişi seçin</p>`}</div>
+      <div class="mm-telefon">${r ? `<div class="balon giden">${durum.ek ? `<span class="mm-balon-ek">${ik('belge')}${e(durum.ek.dosya)}</span>` : ''}<span class="mm-balon-metin">${e(sonMetin(kisiyeOzel(durum.metin, r)))}</span></div>` : `<p style="color:var(--soluk);text-align:center">Kişi seçin</p>`}</div>
       <p class="mm-not">Her kişiye kendi adı ve bilgileriyle gider. SMS programındaki gibi tek tek yazmanız gerekmez.</p></div>
     <div class="kart"><div class="kart-bas"><h3>Gönderilen mesajlar</h3><small>İletildi ve okundu bilgisiyle</small></div>
-      <ul class="liste mm-gecmis">${kmp.map(c => { const n = sayac(c); return `<li><button type="button" data-mm-kampanya="${c.id}"><span><b>${e(c.baslik)}</b><small>${c.durum === 'planlandı' ? 'Planlandı · ' + tarihUzun(c.planli.slice(0, 10)) + ' ' + c.planli.slice(11, 16) : (c.gonderim || '').slice(11, 16) + ' · ' + c.kisiler.length + ' kişi'}</small></span>${c.durum === 'planlandı' ? rozet('Planlı', 'mavi') : c.durum === 'demo' ? rozet('Demo', 'notr') : `<span class="mm-say"><i title="Gönderildi">✓ ${n.gitti}</i><i class="tik-delivered" title="İletildi">✓✓ ${n.iletildi}</i><i class="tik-read" title="Okundu">✓✓ ${n.okundu}</i></span>`}</button></li>`; }).join('') || `<li>${bos('Henüz mesaj gönderilmedi', 'Gönderdiğiniz her mesajın kime iletildiğini ve kimin okuduğunu burada görürsünüz.')}</li>`}</ul></div>
+      <ul class="liste mm-gecmis">${kmp.map(c => { const n = sayac(c); return `<li><button type="button" data-mm-kampanya="${c.id}"><span><b>${e(c.baslik)}</b><small>${c.durum === 'planlandı' ? 'Planlandı · ' + tarihUzun(c.planli.slice(0, 10)) + ' ' + c.planli.slice(11, 16) : (c.gonderim || '').slice(11, 16) + ' · ' + c.kisiler.length + ' kişi'}</small></span>${c.durum === 'planlandı' ? rozet('Planlı', 'mavi') : c.durum === 'demo' ? rozet('Demo', 'notr') : c.cevapIste && n.cevap ? `<span class="mm-say"><i class="mm-evet">Evet ${n.evet}</i><i class="mm-hayir">Hayır ${n.hayir}</i></span>` : `<span class="mm-say"><i title="Gönderildi">✓ ${n.gitti}</i><i class="tik-delivered" title="İletildi">✓✓ ${n.iletildi}</i><i class="tik-read" title="Okundu">✓✓ ${n.okundu}</i></span>`}</button></li>`; }).join('') || `<li>${bos('Henüz mesaj gönderilmedi', 'Gönderdiğiniz her mesajın kime iletildiğini ve kimin okuduğunu burada görürsünüz.')}</li>`}</ul></div>
   </div></div>`;
 }
 
@@ -153,13 +179,21 @@ export function yeniMesajBagla(k, yenile) {
     if (t.matches('[data-mm-kisi]')) { durum.secili[t.checked ? 'add' : 'delete'](t.dataset.mmKisi); durum.sira = 0; return yenile(); }
     if (t.name === 'mm-zaman') { durum.zaman = t.value; return yenile(); }
     if (t.matches('[data-mm-saat]')) durum.planli = t.value;
+    if (t.matches('[data-mm-cevap]')) { durum.cevapIste = t.checked; return yenile(); }
+    if (t.matches('[data-mm-ek]') && t.files[0]) {
+      const f = t.files[0];
+      if (!/^(application\/pdf|image\/(jpeg|png))$/.test(f.type)) return bildir('Yalnız PDF, JPG ya da PNG eklenebilir', 'uyari');
+      if (f.size > 5 * 1024 * 1024) return bildir('Dosya 5 MB’tan büyük olamaz (WhatsApp sınırı)', 'uyari');
+      const rd = new FileReader(); rd.onload = () => { durum.ek = { base64: String(rd.result).split(',')[1], dosya: f.name, tur: f.type, boyut: f.size }; yenile(); }; rd.readAsDataURL(f);
+    }
   });
   // yazarken önizleme anında güncellenir (sayfa yeniden çizilmeden)
-  ta.addEventListener('input', () => { durum.metin = ta.value; durum.sablon = ''; const sec = seciliListe(), r = sec[Math.min(durum.sira, sec.length - 1)], b = kok.querySelector('.mm-telefon .balon'); if (b && r) b.textContent = kisiyeOzel(durum.metin, r); });
+  ta.addEventListener('input', () => { durum.metin = ta.value; durum.sablon = ''; const sec = seciliListe(), r = sec[Math.min(durum.sira, sec.length - 1)], b = kok.querySelector('.mm-telefon .mm-balon-metin'); if (b && r) b.textContent = sonMetin(kisiyeOzel(durum.metin, r)); });
   ta.addEventListener('blur', () => { if (seciliListe().some(x => bosKalan(durum.metin, x).length) !== !!kok.querySelector('.mm-uyari')) yenile(); });
   kok.addEventListener('click', ev => {
     const t = ev.target;
-    const sb2 = t.closest('[data-mm-sablon]'); if (sb2) { const [ad, m] = SABLONLAR[+sb2.dataset.mmSablon]; durum.metin = m; durum.sablon = ad; return yenile(); }
+    const sb2 = t.closest('[data-mm-sablon]'); if (sb2) { const [ad, m, cvp] = SABLONLAR[+sb2.dataset.mmSablon]; durum.metin = m; durum.sablon = ad; if (cvp) durum.cevapIste = true; return yenile(); }
+    if (t.closest('[data-mm-ek-sil]')) { durum.ek = null; return yenile(); }
     const al = t.closest('[data-mm-alan]'); if (al) { const s = ta.selectionStart ?? ta.value.length, x = '{' + al.dataset.mmAlan + '}'; ta.value = ta.value.slice(0, s) + x + ta.value.slice(ta.selectionEnd ?? s); durum.metin = ta.value; durum.sablon = ''; return yenile(); }
     const hp = t.closest('[data-mm-hepsi]'); if (hp) { durum.secili = new Set(hp.dataset.mmHepsi === '1' ? liste().map(r => r.anahtar) : []); durum.sira = 0; return yenile(); }
     const sr = t.closest('[data-mm-sira]'); if (sr) { const n = seciliListe().length; durum.sira = (durum.sira + +sr.dataset.mmSira + n) % n; return yenile(); }
@@ -180,19 +214,22 @@ function gonderTikla(yenile) {
       altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button>${bosOlan.length < sec.length ? `<button class="dg dg-ana" data-bos-cikar>Onları çıkar, ${sec.length - bosOlan.length} kişiye gönder</button>` : ''}`,
       onAc(d) { const b = d.querySelector('[data-bos-cikar]'); if (b) b.addEventListener('click', () => { bosOlan.forEach(r => durum.secili.delete(r.anahtar)); kapatPencere(); gonderTikla(yenile); }); } });
   }
-  const kisilerL = sec.map(r => ({ ad: r.ad, tel: r.tel, rol: r.rol, metin: kisiyeOzel(m, r) }));
+  const kisilerL = sec.map(r => ({ ad: r.ad, tel: r.tel, rol: r.rol, metin: sonMetin(kisiyeOzel(m, r)) }));
   const baslik = durum.sablon || (GRUPLAR.find(g => g[0] === durum.grup) || [0, 'Mesaj'])[1];
-  const c = { id: 'm' + Date.now(), tarih: gun(0), baslik, sablon: m, grup: durum.grup, kisiler: kisilerL, durum: 'hazır' };
+  const c = { id: 'm' + Date.now(), tarih: gun(0), baslik, sablon: sonMetin(m), grup: durum.grup, kisiler: kisilerL, durum: 'hazır', cevapIste: durum.cevapIste, ekAd: durum.ek ? durum.ek.dosya : null };
+  if (durum.ek) EKLER[c.id] = durum.ek;
   S.kampanyalar = S.kampanyalar || [];
   if (durum.zaman === 'plan') {
     const p = (durum.planli || gun(1) + 'T09:00');
     if (p <= yerelZaman().slice(0, 16)) return bildir('İleri bir tarih ve saat seçin', 'uyari');
+    if (durum.ek && durum.ek.boyut > 900 * 1024) return bildir('Planlı mesaja en çok 900 KB dosya eklenebilir; daha büyük dosyayı hemen gönderin', 'uyari');
+    if (durum.ek) { c.ekVeri = durum.ek; delete EKLER[c.id]; }
     Object.assign(c, { durum: 'planlandı', planli: p }); S.kampanyalar.unshift(c); islem('Mesaj planladı', baslik + ' · ' + sec.length + ' kişi'); kaydet();
     bildir(`${sec.length} kişiye ${tarihUzun(p.slice(0, 10))} ${p.slice(11, 16)}’de gidecek`); return yenile();
   }
   S.kampanyalar.unshift(c); islem('Mesaj gönderdi', baslik + ' · ' + sec.length + ' kişi');
   if (ziyaretci() || !apiAcik()) { c.durum = ziyaretci() ? 'demo' : 'elle'; c.gonderim = yerelZaman(); kaydet(); waSirali(kisilerL.map(x => ({ ...x, tur: baslik })), baslik, { bitince: () => yenile() }); return yenile(); }
-  c.durum = 'gönderiliyor'; kaydet(); yenile();
+  c.durum = 'gönderiliyor'; durum.ek = null; kaydet(); yenile();
   gonder(c).then(() => yenile());
 }
 
@@ -202,10 +239,18 @@ function kampanyaAc(id, yenile) {
   pencere({
     baslik: c.baslik, genis: true,
     icerik: `${c.durum === 'planlandı' ? `<p class="ipucu" style="margin-bottom:12px">${isaret('bilgi', 18)}<span>${tarihUzun(c.planli.slice(0, 10))} ${c.planli.slice(11, 16)}’de ${c.kisiler.length} kişiye gidecek. Sinyal açık bir cihazda o saatte kendiliğinden gönderilir.</span></p>` : `<div class="mm-ozet"><div><b>${n.gitti}</b><small>Gönderildi</small></div><div><b>${n.iletildi}</b><small>İletildi</small></div><div><b>${n.okundu}</b><small>Okundu</small></div>${n.sinir ? `<div><b>${n.sinir}</b><small>Demo sınırı</small></div>` : ''}</div>`}
-      <p class="et" style="margin-top:14px">Mesaj</p><div class="balon giden" style="max-width:100%;white-space:pre-line;margin-bottom:14px">${e(c.sablon)}</div>
-      <ul class="liste" style="max-height:44vh;overflow:auto">${(c.sonuc && c.sonuc.length ? c.sonuc : c.kisiler.map(x => ({ ad: x.ad, rol: x.rol, durum: c.durum }))).map(x => `<li><span style="flex:1"><b style="color:var(--murekkep)">${e(x.ad)}</b><small style="display:block;color:var(--soluk)">${e(x.rol === 'ÖĞRENCİ' ? 'Öğrenci' : x.rol === 'HOCA' ? 'Öğretmen' : x.rol === 'ADAY' ? 'Aday' : x.rol)}</small></span><span class="sag">${x.id ? `${tik(x.id)} <small>${DURUM_AD[dd(x)] || 'Gönderildi'}</small>` : rozet(x.durum, /sınır|planlandı|demo|elle/.test(x.durum) ? 'notr' : 'kirmizi')}</span></li>`).join('')}</ul>
+      ${c.cevapIste && c.durum !== 'planlandı' ? `<div class="mm-ozet" style="margin-top:10px"><div class="mm-evet"><b>${n.evet}</b><small>Evet</small></div><div class="mm-hayir"><b>${n.hayir}</b><small>Hayır</small></div><div><b>${Math.max(0, n.gitti - n.cevap)}</b><small>Cevap vermedi</small></div></div>` : ''}
+      <p class="et" style="margin-top:14px">${c.kisiler[0] ? 'Örnek: ' + e(adEk(c.kisiler[0].ad, 'e')) + ' giden mesaj' : 'Mesaj'}${c.ekAd ? ' · ek: ' + e(c.ekAd) : ''}</p><div class="balon giden" style="max-width:100%;white-space:pre-line;margin-bottom:14px">${e(c.kisiler[0] ? c.kisiler[0].metin : c.sablon)}</div>
+      <ul class="liste" style="max-height:44vh;overflow:auto">${(c.sonuc && c.sonuc.length ? c.sonuc : c.kisiler.map(x => ({ ad: x.ad, rol: x.rol, durum: c.durum }))).map(x => `<li><span style="flex:1"><b style="color:var(--murekkep)">${e(x.ad)}</b><small style="display:block;color:var(--soluk)">${e(x.rol === 'ÖĞRENCİ' ? 'Öğrenci' : x.rol === 'HOCA' ? 'Öğretmen' : x.rol === 'ADAY' ? 'Aday' : x.rol)}</small></span><span class="sag">${x.cevap ? `<span class="mm-cevap-rozet ${x.cevap.tur === 'olumlu' ? 'mm-evet' : x.cevap.tur === 'olumsuz' ? 'mm-hayir' : ''}" title="${e(x.cevap.metin)}">“${e(x.cevap.metin.slice(0, 24))}”</span>` : ''}${x.id ? `${tik(x.id)} <small>${DURUM_AD[dd(x)] || 'Gönderildi'}</small>` : rozet(x.durum, /sınır|planlandı|demo|elle/.test(x.durum) ? 'notr' : 'kirmizi')}</span></li>`).join('')}</ul>
       <p style="font-size:12.5px;color:var(--soluk);margin-top:10px">“Okundu” bilgisi, kişi WhatsApp’ta okundu bilgisini kapatmadıysa görünür.</p>`,
-    altlik: c.durum === 'planlandı' ? `<button class="dg dg-cizgi" data-mm-iptal>Planı iptal et</button><button class="dg dg-ana" data-kapat>Tamam</button>` : `<button class="dg dg-ana" data-kapat>Tamam</button>`,
-    onAc(d) { const ip = d.querySelector('[data-mm-iptal]'); if (ip) ip.addEventListener('click', () => { S.kampanyalar = S.kampanyalar.filter(x => x !== c); islem('Planlı mesajı iptal etti', c.baslik); kaydet(); kapatPencere(); bildir('Planlı mesaj iptal edildi'); yenile(); }); },
+    altlik: c.durum === 'planlandı' ? `<button class="dg dg-cizgi" data-mm-iptal>Planı iptal et</button><button class="dg dg-ana" data-kapat>Tamam</button>` : `${okumayan(c).length ? `<button class="dg dg-cizgi" data-mm-hatirlat>${ik('wp')}Okumayanlara hatırlat (${okumayan(c).length})</button>` : ''}<button class="dg dg-ana" data-kapat>Tamam</button>`,
+    onAc(d) {
+      const ht = d.querySelector('[data-mm-hatirlat]'); if (ht) ht.addEventListener('click', () => {
+        const l = okumayan(c), k2 = { id: 'm' + Date.now(), tarih: gun(0), baslik: 'Hatırlatma · ' + c.baslik, sablon: 'Hatırlatma: ' + c.sablon, grup: c.grup, cevapIste: c.cevapIste, kisiler: l.map(x => { const k0 = c.kisiler.find(y => y.ad === x.ad) || x; return { ad: k0.ad, tel: k0.tel, rol: k0.rol, metin: 'Hatırlatma: ' + (k0.metin || c.sablon) }; }), durum: 'gönderiliyor' };
+        S.kampanyalar.unshift(k2); islem('Okumayanlara hatırlattı', c.baslik + ' · ' + l.length + ' kişi'); kaydet(); kapatPencere(); yenile();
+        if (ziyaretci() || !apiAcik()) { k2.durum = 'demo'; kaydet(); return waSirali(k2.kisiler.map(x => ({ ...x, tur: k2.baslik })), k2.baslik, { bitince: () => yenile() }); }
+        gonder(k2).then(() => yenile());
+      });
+      const ip = d.querySelector('[data-mm-iptal]'); if (ip) ip.addEventListener('click', () => { S.kampanyalar = S.kampanyalar.filter(x => x !== c); islem('Planlı mesajı iptal etti', c.baslik); kaydet(); kapatPencere(); bildir('Planlı mesaj iptal edildi'); yenile(); }); },
   });
 }
