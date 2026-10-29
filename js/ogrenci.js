@@ -1,7 +1,7 @@
 // Öğrenci paneli sekmeleri: program, dersler (teorik konular + direksiyon + gelişim), sınavlar, ödemeler, belgeler
-import { S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen } from './veri.js?v=62';
-import { e, tl, ik, rozet, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, isaret, belgeYazdir } from './ui.js?v=62';
-import { belgeHtml } from './sayfalar3.js?v=62';
+import { S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen } from './veri.js?v=63';
+import { e, tl, ik, rozet, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, isaret, belgeYazdir } from './ui.js?v=63';
+import { belgeHtml } from './sayfalar3.js?v=63';
 
 // MEB teorik eğitim programı: konu, ders saati, başlıklar (anahtarlar soru bankasıyla aynı)
 export const MUFREDAT = [
@@ -118,20 +118,22 @@ export function belgelerHtml(k) {
 /* ---------- konu anlatımı ---------- */
 // İçerik ayrı dosyada; yalnız açılınca yüklenir (açılış hızını etkilemesin)
 let dersYuk = null;
-const dersleriYukle = () => dersYuk || (dersYuk = import('./dersler.js?v=62').then(m => m.DERSLER).catch(() => ({})));
+const dersleriYukle = () => dersYuk || (dersYuk = import('./dersler.js?v=63').then(m => m.DERSLER).catch(() => ({})));
 async function dersAc(k, id, yenile) {
   const D = await dersleriYukle(), d = D[id], [key, no] = [id.replace(/-\d+$/, ''), +id.split('-').pop()], konu = MUFREDAT.find(x => x[0] === key), baslik = konu ? konu[3][no - 1] : id;
   const sonraki = konu && no < konu[3].length ? key + '-' + (no + 1) : null;
   pencere({
     baslik: (konu ? konu[1] + ' · ' : '') + no + '. konu', genis: true,
     icerik: `<article class="og-ders"><h3>${e(baslik)}</h3>
-      ${d ? `${(d.videolar || []).map(v => `<div class="og-video"><iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(v.id)}?rel=0" title="${e(v.baslik)}" loading="lazy" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe><small>${e(v.baslik)} · ${e(v.kanal)}</small></div>`).join('')}
+      ${d ? `${(d.videolar || []).length ? `<div class="og-videolar">${d.videolar.map(v => `<div class="og-video"><button type="button" class="og-video-kapak" data-og-video="${e(v.id)}" aria-label="Videoyu oynat: ${e(v.baslik)}"><img src="https://i.ytimg.com/vi/${encodeURIComponent(v.id)}/hqdefault.jpg" alt="" loading="lazy"><span class="og-oynat" aria-hidden="true">▶</span></button><small>${e(v.baslik)} · ${e(v.kanal)}</small></div>`).join('')}</div>` : ''}
         ${d.paragraflar.map(p => `<p>${e(p)}</p>`).join('')}
         ${d.akilda && d.akilda.length ? `<div class="og-akilda"><b>Akılda kalsın</b><ul>${d.akilda.map(x => `<li>${e(x)}</li>`).join('')}</ul></div>` : ''}
-        ${d.kaynak && d.kaynak.length ? `<p class="og-kaynak">Kaynak: ${d.kaynak.map(x => /^https?:/.test(x) ? `<a href="${e(x)}" target="_blank" rel="noopener">${e(x.replace(/^https?:\/\/(www\.)?/, '').split('/')[0])}</a>` : e(x)).join(' · ')}</p>` : ''}`
+        ${d.kaynak && d.kaynak.length ? `<p class="og-kaynak">Kaynak: ${d.kaynak.map(x => e(x).replace(/:?\s*(https?:\/\/[^\s<]+)/g, (m, u) => ` <a href="${u}" target="_blank" rel="noopener">${u.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}</a>`)).join(' · ')}</p>` : ''}`
       : `<p class="og-not">Bu konunun anlatımı hazırlanıyor.</p>`}</article>`,
     altlik: `<button class="dg dg-cizgi" data-og-test="${key}">${ik('sinav')}Konu testi</button>${sonraki ? `<button class="dg dg-ana" data-og-sonraki="${sonraki}">Okudum, sonraki konu →</button>` : `<button class="dg dg-ana" data-og-bitir>Okudum</button>`}`,
     onAc(p) {
+      // video kapağına tıklanınca oynatıcı yüklenir (sayfa hızlı açılır, YouTube izlemeden önce bağlanmaz)
+      p.querySelectorAll('[data-og-video]').forEach(b => b.addEventListener('click', () => { const f = document.createElement('iframe'); f.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(b.dataset.ogVideo) + '?autoplay=1&rel=0'; f.title = b.getAttribute('aria-label'); f.allow = 'autoplay; encrypted-media; picture-in-picture'; f.allowFullscreen = true; f.referrerPolicy = 'strict-origin-when-cross-origin'; b.replaceWith(f); }));
       const isaretle = () => { k.okunan = k.okunan || {}; if (!k.okunan[id]) { k.okunan[id] = gun(0); kaydet(); } };
       const sn = p.querySelector('[data-og-sonraki]'); if (sn) sn.addEventListener('click', () => { isaretle(); dersAc(k, sn.dataset.ogSonraki, yenile); });
       const bt = p.querySelector('[data-og-bitir]'); if (bt) bt.addEventListener('click', () => { isaretle(); kapatPencere(); yenile(); });
