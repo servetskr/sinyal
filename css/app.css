@@ -805,13 +805,6 @@ body.portal-modu .sube-sec,body.portal-modu .sube-yan{display:none!important}
   .tn-son{padding:40px}
   .tn-son .tn-dugmeler{max-width:720px}
 }
-@media (prefers-reduced-motion:no-preference){
-  .tn-msj{animation:tn-gel .5s ease both}
-  .tn-msj:nth-of-type(2){animation-delay:.25s}
-  .tn-msj:nth-of-type(3){animation-delay:.5s}
-  .tn-msj:nth-of-type(4){animation-delay:.75s}
-  @keyframes tn-gel{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-}
 .giris{align-content:center;gap:14px}
 .giris-geri{justify-self:center;font:800 15px/1 var(--baslik);color:var(--levha);padding:10px 14px;border-radius:8px}
 .giris-geri:hover{background:var(--levha-acik)}
