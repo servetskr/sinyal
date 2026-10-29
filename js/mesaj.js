@@ -1,6 +1,6 @@
 // Mesaj merkezi: grup ya da tek tek seçilen kişilere kişiye özel WhatsApp mesajı, planlı gönderim, iletildi/okundu takibi
-import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, kalanBorc, gecikenler, gecikenTutar, eksikEvrak, sonrakiDers, risk, islem, sb, aktifSiniflar, SINIFLAR, selam, kursAdi, adEk, yerelZaman, bulutKanca } from './veri.js?v=84';
-import { e, tl, ik, rozet, bos, pencere, kapatPencere, bildir, tarihUzun, apiAcik, apiGonder, etiket, waSirali, ziyaretci, isaret } from './ui.js?v=84';
+import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, kalanBorc, gecikenler, gecikenTutar, eksikEvrak, sonrakiDers, risk, islem, sb, aktifSiniflar, SINIFLAR, selam, kursAdi, adEk, yerelZaman, bulutKanca } from './veri.js?v=87';
+import { e, tl, ik, rozet, bos, pencere, kapatPencere, bildir, tarihUzun, apiAcik, apiGonder, etiket, waSirali, ziyaretci, isaret } from './ui.js?v=87';
 
 const durum = { grup: 'aktif', sinif: '', ogretmen: '', secili: null, sira: 0, zaman: 'simdi', metin: null, sablon: '', ek: null, cevapIste: false };
 // Ekli dosyalar localStorage’a yazılmaz (büyük olabilir); gönderim süresince bellekte durur
