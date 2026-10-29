@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN, S } from './veri.js?v=33';
+import { ASAMALAR, tarihOku, fark, BUGUN, S } from './veri.js?v=34';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -205,7 +205,22 @@ export function yonlendir(tel, metin, ad) {
   if (!d || (S.kurs.wp && waNumara(tel) && waNumara(tel) === waNumara(S.kurs.wp))) return [tel, metin];
   return [d, (S.kurs.demoKime !== false && ad ? `[${ad} için]\n` : '') + metin];
 }
-export function waAc(tel, metin, kanal = 'WhatsApp', ad = '') {
+// Otomatik gönderim: Ayarlar'da WhatsApp API adresi varsa mesaj WhatsApp açılmadan doğrudan gider (Cloud API köprüsü).
+export const apiAcik = () => !!(S && S.kurs && S.kurs.waApi);
+export async function apiGonder(metin) {
+  try {
+    const r = await fetch(S.kurs.waApi, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ metin }) });
+    const j = await r.json().catch(() => ({}));
+    if (r.ok && j.ok) return { ok: true };
+    return { ok: false, hata: j.kod === 131047 || /24 hours|re-engagement/i.test(j.hata || '') ? 'WhatsApp 24 saat penceresi kapalı: test numarasına “merhaba” yazıp tekrar deneyin' : (j.hata || 'Gönderilemedi') };
+  } catch (x) { return { ok: false, hata: 'WhatsApp servisine ulaşılamadı' }; }
+}
+const apiMetin = (metin, ad) => (S.kurs.demoKime !== false && ad ? `[${ad} için]\n` : '') + metin;
+export function waAc(tel, metin, kanal = 'WhatsApp', ad = '', elle = false) {
+  if (kanal === 'WhatsApp' && apiAcik() && !elle) {
+    apiGonder(apiMetin(metin, ad)).then(s => s.ok ? bildir((ad ? ad.split(' ')[0] + ': ' : '') + 'WhatsApp mesajı gönderildi ✓', 'wp') : bildir(s.hata, 'uyari'));
+    return 'api';
+  }
   [tel, metin] = yonlendir(tel, metin, ad);
   const url = kanal === 'SMS' ? smsUrl(tel, metin) : waUrl(tel, metin);
   const w = window.open(url, '_blank');
@@ -217,6 +232,25 @@ export function waAc(tel, metin, kanal = 'WhatsApp', ad = '') {
 export function waSirali(liste, baslik, { kanal = 'WhatsApp', bitince, aciklama = '' } = {}) {
   liste = liste.filter(x => x && x.metin);
   if (!liste.length) { if (bitince) bitince(); return; }
+  if (kanal === 'WhatsApp' && apiAcik()) {
+    pencere({ baslik, icerik: `<p style="font-size:14px;margin-bottom:10px">${aciklama ? e(aciklama) + ' ' : ''}${liste.length} mesaj WhatsApp’tan otomatik gönderiliyor.</p><ul class="liste" style="max-height:46vh;overflow:auto;margin:0 -20px">${liste.map((x, i) => `<li><div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(x.ad)}</b><small style="display:block;color:var(--soluk);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e(x.metin)}</small></div><span data-api-durum="${i}" style="font-size:13px;color:var(--soluk)">sırada</span></li>`).join('')}</ul>`, altlik: `<button class="dg dg-ana" data-api-bitti disabled>Gönderiliyor…</button>`,
+      onAc(d) {
+        const b = d.querySelector('[data-api-bitti]'); let ok = 0, son = '';
+        b.addEventListener('click', () => { kapatPencere(); if (bitince) bitince(); });
+        (async () => {
+          for (let i = 0; i < liste.length; i++) {
+            const el = d.querySelector(`[data-api-durum="${i}"]`); if (el) el.textContent = 'gönderiliyor…';
+            const s = await apiGonder(apiMetin(liste[i].metin, liste[i].ad));
+            if (el) { el.textContent = s.ok ? 'gönderildi ✓' : 'gönderilemedi'; el.style.color = s.ok ? 'var(--yesil)' : 'var(--kirmizi)'; }
+            if (s.ok) ok++; else son = s.hata;
+            await new Promise(r => setTimeout(r, 350));
+          }
+          b.disabled = false; b.textContent = 'Tamam';
+          if (ok < liste.length) bildir(`${liste.length - ok} mesaj gönderilemedi: ${son}`, 'uyari'); else bildir(`${ok} mesaj WhatsApp’tan gönderildi ✓`, 'wp');
+        })();
+      } });
+    return;
+  }
   const acilan = new Set(); let sira = 0;
   const url = x => { const [t, m] = yonlendir(x.tel, x.metin, x.ad); return kanal === 'SMS' ? smsUrl(t, m) : waUrl(t, m); };
   pencere({

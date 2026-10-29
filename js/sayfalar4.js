@@ -1,6 +1,6 @@
-import { S, kaydet, gun, islem, tarihOku, oturum, kapaliGun } from './veri.js?v=33';
-import { e, ik, rozet, isaret, ekranNotu, sekmeler, olcumler, yonLevhasi, cubukGrafik, halka, pencere, kapatPencere, bildir, sayi, tl, goreli, tarih } from './ui.js?v=33';
-import { yenile } from './app.js?v=33';
+import { S, kaydet, gun, islem, tarihOku, oturum, kapaliGun } from './veri.js?v=34';
+import { e, ik, rozet, isaret, ekranNotu, sekmeler, olcumler, yonLevhasi, cubukGrafik, halka, pencere, kapatPencere, bildir, sayi, tl, goreli, tarih } from './ui.js?v=34';
+import { yenile } from './app.js?v=34';
 
 /* ================= SOSYAL MEDYA ASİSTANI (DengChat modülü) =================
    Gelen kutusu "Mesajlar"da kalır. Bu modül kanalları bağlar, Instagram
@@ -320,7 +320,7 @@ export function sosyal(alt) {
         const ygz = t.closest('[data-yorum-gizle]'); if (ygz) { const y = sos().yorumlar.find(x => x.id === ygz.dataset.yorumGizle); y.durum = 'gizli'; islem('Yorumu gizledi', y.kim); kaydet(); bildir('Yorum gizlendi'); yenile(); return; }
         const ybr = t.closest('[data-yorum-birak]'); if (ybr) { const y = sos().yorumlar.find(x => x.id === ybr.dataset.yorumBirak); y.durum = 'devir'; kaydet(); bildir('Yorum görünür kaldı; cevabı size bırakıldı'); yenile(); return; }
         const tk = t.closest('[data-test-kanal]'); if (tk) { const c = sos().kanallar.find(x => x.id === tk.dataset.testKanal); tk.disabled = true; tk.textContent = 'Deneniyor…'; setTimeout(() => { c.sonCevapDk = 0; kaydet(); bildir(c.ad + ': deneme mesajı gönderildi ve cevaplandı'); yenile(); }, 900); return; }
-        const ba = t.closest('[data-belge-ac]'); if (ba) { import('./sayfalar3.js?v=33').then(m => m.belgeAc(ba.dataset.belgeAc)); return; }
+        const ba = t.closest('[data-belge-ac]'); if (ba) { import('./sayfalar3.js?v=34').then(m => m.belgeAc(ba.dataset.belgeAc)); return; }
         const yg = t.closest('[data-yorum-goster]'); if (yg) { const y = sos().yorumlar.find(x => x.id === yg.dataset.yorumGoster); y.durum = 'devir'; kaydet(); bildir('Yorum görünür yapıldı; cevabı size bırakıldı'); yenile(); }
       });
       k.addEventListener('change', ev => {
