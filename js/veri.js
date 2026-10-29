@@ -7,6 +7,8 @@ export const DERS_KONU = [['hazirlik', 'Araç tanıma ve sürüşe hazırlık'],
 export const DERS_KONU_MOTOR = [['hazirlik', 'Araç tanıma ve sürüşe hazırlık'], ['calistirma', 'Aracı çalıştırma, kalkış ve duruş'], ['koni', 'Koniler arasından geçme'], ['sekiz', 'Sekiz çizme'], ['denge', 'Denge çizgisinden geçme'], ['udonus', 'Dar alanda (U) dönüş'], ['hizlanma', 'Hızlanma, yavaşlama ve durma'], ['engel', 'Engelden kaçma'], ['fren', 'Ani fren'], ['serit', 'Şerit izleme ve değiştirme'], ['kavsak', 'Kavşaklar ve dönüşler'], ['sollama', 'Öndeki aracı geçme ve geçilme'], ['hiz', 'Hız kuralları'], ['gece', 'Gece sürüşü'], ['guzergah', 'Sınav güzergâhı ve genel tekrar']];
 const KONU_PLAN = [['hazirlik', 'calistirma'], ['calistirma', 'pedal'], ['direksiyon', 'serit'], ['serit', 'kavsak'], ['kavsak', 'hiz'], ['park', 'geri'], ['donus', 'park'], ['rampa', 'fren'], ['sollama', 'hiz'], ['tali', 'ekonomik'], ['gece'], ['gece', 'kavsak'], ['guzergah'], ['guzergah']];
 const KONU_PLAN_MOTOR = [['hazirlik', 'calistirma'], ['koni', 'sekiz'], ['denge', 'udonus'], ['hizlanma', 'engel'], ['fren', 'serit'], ['kavsak', 'sollama'], ['hiz', 'gece'], ['guzergah']];
+// Araç sınıfına göre beklenen yakıt tüketimi (L/100 km; B için kurs ayarı)
+const BEKLENEN_TUKETIM = { C: 22, 'C-O': 22, A2: 3.5, A: 4.5, M: 2.5 };
 export const motorSinif = sinif => /^(A|M)/.test(String(sinif || ''));
 export const konuListesi = sinif => motorSinif(sinif) ? DERS_KONU_MOTOR : DERS_KONU;
 // Kaçıncı derste hangi konular: kursun ders sayısına göre plana oranlanır (öneri; öğretmen değiştirir)
@@ -490,6 +492,8 @@ function goc(o) {
   const YORUM = ['Çok sabırlı, her şeyi tekrar tekrar anlattı.', 'Park etmeyi sonunda öğrendim, teşekkürler.', 'Biraz hızlı gittik ama faydalı oldu.', 'Yokuşta kalkışı iyi çalıştık.', 'Araç çok temizdi, ders zamanında başladı.', 'Ders 10 dakika geç başladı.', 'Kavşaklarda daha çok pratik istiyorum.'];
   if (demo) (o.dersler || []).forEach(d => { if (d.durum !== 'Yapıldı' || d.ogrenciPuan !== undefined) return; const h = hs(d.id + 'p'); if (h % 3 === 0) { d.ogrenciPuan = null; return; } const puan = [5, 5, 4, 5, 4, 3, 5, 4][h % 8], yorum = h % 5 === 0 ? YORUM[h % YORUM.length] : ''; d.ogrenciPuan = { puan: yorum.includes('geç başladı') ? 3 : puan, yorum, tarih: d.tarih }; });
   if (demo) (o.dersler || []).forEach(d => { if (d.durum !== 'Yapıldı' || d.beceri !== undefined) return; const k = kz[d.kursiyer]; if (!k) return; const taban = [2.7, 3.5, 3.9, 4.2, 4.0, 3.8, 4.4][hs(k.id) % 7]; d.beceri = Object.fromEntries(BECERI.map(([b], i) => [b, Math.max(1, Math.min(5, Math.round(taban + ((hs(d.id + b) % 5) - 2) * 0.3 + (i === hs(k.id) % 5 ? -0.9 : 0))))])); });
+  // örnek yakıt dolumları: litre ve sayaç (tüketim hesabı için); bir araçta tüketim bilerek yüksek (kaçak/hatalı kullanım örneği)
+  if (demo) (o.araclar || []).forEach((ar, ai) => { const l = (o.hareket || []).filter(h => h.arac === ar.id && h.kategori === 'Yakıt').sort((x, y) => y.tarih.localeCompare(x.tarih)); let km = ar.km || 40000; const tk = (BEKLENEN_TUKETIM[ar.sinif] || 6.8) * (ai === 2 ? 1.12 : 1); l.forEach((h, i) => { if (h.litre) return; h.litre = Math.round(h.tutar / 46 * 10) / 10; h.kmSayac = km; km -= Math.round(h.litre / (i === 0 && ai === 2 ? tk * 1.5 : tk) * 100); }); });
   // örnek dersler: takip formundaki konular ders sırasına göre (gerçek kursta öğretmen ders sonunda seçer)
   if (demo) { const sira = {}; (o.dersler || []).filter(d => d.durum === 'Yapıldı').sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat)).forEach(d => { const k = kz[d.kursiyer]; if (!k) return; sira[k.id] = (sira[k.id] || 0) + 1; if (!d.konular) d.konular = konuOner(k.sinif, sira[k.id], (SINIFLAR[k.sinif] || {}).direksiyon); }); }
   o.kurs.maliyet = o.kurs.maliyet || { yakit: 46, tuketim: 6.5, km: 22, bakim: 55, pay: 55 };
@@ -501,6 +505,17 @@ function goc(o) {
 export const bulutKanca = { makbuzNo: null, kayit: null, sahiplen: null, cihaz: null };
 const makbuzBicim = (yil, n) => 'M' + yil + '-' + String(n).padStart(5, '0');
 export const makbuzSira = (no) => { const m = /^M(\d{4})-(\d+)$/.exec(no || ''); return m ? [m[1], +m[2]] : null; };
+// Yakıt tüketimi (L/100 km): litre ve kilometre sayacı girilmiş dolumlardan, dolu depo yöntemiyle (iki dolum arası km'ye sonraki dolumun litresi)
+export const beklenenTuketim = a => BEKLENEN_TUKETIM[a.sinif] || (S.kurs.maliyet && S.kurs.maliyet.tuketim) || 6.5;
+export function tuketim(a, gunSay = 120) {
+  const l = (S.hareket || []).filter(h => h.arac === a.id && h.kategori === 'Yakıt' && h.litre && h.kmSayac && fark(h.tarih) >= -gunSay).sort((x, y) => x.kmSayac - y.kmSayac);
+  if (l.length < 2) return null;
+  const km = l[l.length - 1].kmSayac - l[0].kmSayac; if (km < 100) return null;
+  const r = x => Math.round(x * 10) / 10, s1 = l[l.length - 1], s0 = l[l.length - 2];
+  const ort = r(l.slice(1).reduce((t, h) => t + h.litre, 0) / km * 100), son = s1.kmSayac > s0.kmSayac ? r(s1.litre / (s1.kmSayac - s0.kmSayac) * 100) : null;
+  const yuksek = (son && l.length >= 4 && son > ort * 1.25) || ort > beklenenTuketim(a) * 1.35;
+  return { ort, son, km, dolum: l.length, yuksek };
+}
 export function makbuzNoVer(h) {
   if (h.no || h.tur !== 'Gelir') return h.no;
   const yil = h.tarih.slice(0, 4);
@@ -640,6 +655,9 @@ export function risk(k) {
     const kisa = S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Yapıldı' && d.sure != null && d.sure < 40).length;
     if (kisa >= 2) { p += 8; n.push(kisa + ' ders 40 dakikadan kısa'); }
     if (k.dsinav && k.dsinav.sonuc === 'Kaldı') { p += 20; n.push('Direksiyon sınavından kaldı'); }
+    const dd = (k.dDeneme || []).slice(-1)[0];
+    if (dd && dd.sonuc === 'Kaldı') { p += 25; n.push('Son deneme sınavında kalırdı' + (dd.neden ? ' (' + dd.neden + ')' : '')); }
+    else if (dd && dd.sonuc === 'Geçti') p = Math.max(0, p - 10);
     const sonDers = S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Yapıldı').map(d => d.tarih).sort().pop();
     if (sonDers && fark(sonDers) < -14) { p += 10; n.push(-fark(sonDers) + ' gündür direksiyona çıkmadı'); }
   }

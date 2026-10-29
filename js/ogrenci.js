@@ -1,7 +1,7 @@
 // Öğrenci paneli sekmeleri: program, dersler (teorik konular + direksiyon + gelişim), sınavlar, ödemeler, belgeler
-import { S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen } from './veri.js?v=71';
-import { e, tl, ik, rozet, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, isaret, belgeYazdir, fotoKucult } from './ui.js?v=71';
-import { belgeHtml } from './sayfalar3.js?v=71';
+import { S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen } from './veri.js?v=73';
+import { e, tl, ik, rozet, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, isaret, belgeYazdir, fotoKucult } from './ui.js?v=73';
+import { belgeHtml } from './sayfalar3.js?v=73';
 
 // MEB teorik eğitim programı: konu, ders saati, başlıklar (anahtarlar soru bankasıyla aynı)
 export const MUFREDAT = [
@@ -87,7 +87,10 @@ export function sinavlarHtml(k) {
       <p class="et" style="margin-top:12px">Yanına al</p><ul class="og-getir">${getir.map(g => `<li>${isaret('tamam', 16)}${e(g)}</li>`).join('')}</ul>` : ''}</div>`;
   };
   const sonr = tur => S.sinavlar.filter(s => s.tur === tur && s.kursiyerler.includes(k.id) && fark(s.tarih) >= 0 && !(s.sonuc || {})[k.id]).sort((a, b) => a.tarih.localeCompare(b.tarih))[0];
-  return kart('e-Sınav', k.esinav, sonr('e-Sınav'), ['T.C. kimlik kartın (fotokopi geçmez)', 'e-Sınav ücreti dekontu', 'Sınavdan 30 dakika önce sınav merkezinde ol'], tu.esinav)
+  const dd = (k.dDeneme || []).slice(-1)[0];
+  const deneme = dd ? `<div class="kart og-kart"><div class="og-bas"><div><small>Son deneme direksiyon sınavın · ${tarih(dd.tarih)}</small><b style="color:${dd.sonuc === 'Geçti' ? 'var(--yesil)' : 'var(--kirmizi)'}">${dd.sonuc === 'Geçti' ? 'Gerçek sınavda geçerdin' : 'Gerçek sınavda kalırdın'}</b></div></div>
+    ${dd.hatalar.length ? `<p class="et" style="margin-top:6px">Çalışman gerekenler</p><ul class="og-getir">${dd.hatalar.slice(0, 6).map(h => `<li>${isaret(h.renk === 'k' ? 'yasak' : 'uyari', 16)}${e(h.metin)}</li>`).join('')}</ul>` : '<p class="og-not" style="padding:0">Hiç hata yapmadın.</p>'}${dd.not ? `<p class="og-not" style="padding:0;margin-top:6px">Öğretmenin notu: “${e(dd.not)}”</p>` : ''}</div>` : '';
+  return deneme + kart('e-Sınav', k.esinav, sonr('e-Sınav'), ['T.C. kimlik kartın (fotokopi geçmez)', 'e-Sınav ücreti dekontu', 'Sınavdan 30 dakika önce sınav merkezinde ol'], tu.esinav)
     + (SINIFLAR[k.sinif].direksiyon ? kart('Direksiyon sınavı', k.dsinav, sonr('Direksiyon'), ['T.C. kimlik kartın', 'Gözlük ya da lens kullanıyorsan yanında olsun', 'Sınavdan 30 dakika önce sınav yerinde ol'], tu.dsinav) : '');
 }
 
@@ -118,7 +121,7 @@ export function belgelerHtml(k) {
 /* ---------- konu anlatımı ---------- */
 // İçerik ayrı dosyada; yalnız açılınca yüklenir (açılış hızını etkilemesin)
 let dersYuk = null;
-const dersleriYukle = () => dersYuk || (dersYuk = import('./dersler.js?v=71').then(m => m.DERSLER).catch(() => ({})));
+const dersleriYukle = () => dersYuk || (dersYuk = import('./dersler.js?v=73').then(m => m.DERSLER).catch(() => ({})));
 async function dersAc(k, id, yenile) {
   const D = await dersleriYukle(), d = D[id], [key, no] = [id.replace(/-\d+$/, ''), +id.split('-').pop()], konu = MUFREDAT.find(x => x[0] === key), baslik = konu ? konu[3][no - 1] : id;
   const sonraki = konu && no < konu[3].length ? key + '-' + (no + 1) : null;

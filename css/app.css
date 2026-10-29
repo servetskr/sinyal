@@ -1102,3 +1102,18 @@ button.oto-gidecek:hover{text-decoration:underline}
 .eksik-alan{border:1.5px solid var(--sari);background:#fff8e1;border-radius:10px;padding:10px 14px;margin-bottom:12px}
 .eksik-alan summary{cursor:pointer;font-weight:700;color:var(--murekkep)}
 .eksik-alan .form-izgara{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+/* deneme direksiyon sınavı (EK-3/EK-4) */
+.dn-durum{position:sticky;top:-1px;z-index:2;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;background:var(--panel);padding:8px 0 10px;border-bottom:1px solid var(--cizgi);margin-bottom:6px}
+.dn-sayac{font-weight:700;font-size:13px;padding:3px 9px;border-radius:6px;color:#111}
+.dn-sayac.dn-m{background:#9fd3ec}.dn-sayac.dn-s{background:#f5c46b}.dn-sayac.dn-k{background:#ef8a80}
+.dn-kaldi{color:var(--kirmizi);font-size:14px}.dn-devam{color:var(--yesil);font-size:14px}
+.dn-liste{list-style:none;margin:0;padding:0;max-height:54vh;overflow:auto}
+.dn-bas{font-family:var(--baslik);font-weight:800;color:#b00000;font-size:13.5px;padding:12px 0 4px;border-bottom:1px solid var(--cizgi)}
+.dn-m{display:flex;gap:10px;align-items:flex-start;padding:9px 4px;border-bottom:1px solid var(--cizgi-2,#eee);cursor:pointer;font-size:14px;line-height:1.35}
+.dn-m:hover{background:var(--zemin)}.dn-m.secili{background:#fff1f0}
+.dn-renk{flex:none;width:30px;height:22px;border-radius:5px;display:flex;gap:2px;padding:2px;border:2px solid transparent}
+.dn-renk.dn-m{background:#9fd3ec}.dn-renk.dn-k{background:#ef8a80}.dn-renk.dn-s{background:#f5c46b}
+.dn-renk i{flex:1;border-radius:3px;background:rgba(255,255,255,.55)}
+.dn-m.secili .dn-renk{border-color:#111}.dn-m.secili .dn-renk:not(.dn-s)::after{content:'✕';margin:auto;font-weight:900;font-size:13px;color:#111}
+.dn-m[data-n="1"] .dn-renk.dn-s i:first-child,.dn-m[data-n="2"] .dn-renk.dn-s i{background:#111}
+.dn-metin b{color:var(--murekkep)}

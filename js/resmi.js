@@ -1,8 +1,8 @@
 // MEB resmî formları: MTSK Yönetmeliği eklerinin düzeninde, kayıtlardan dolan ya da boş (elle doldurmak için) çıktılar.
 // Kaynak: mevzuat.gov.tr 7.5.18408 ekleri (EK-1, EK-3, EK-4, EK-5, EK-8, EK-10, EK-12) ve md.17/3, md.42 içerik şartları.
-import { S, kaydet, gun, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, motorSinif, dersKonulari, gorunum, sb, sbSinav } from './veri.js?v=71';
-import { e, pencere, bildir, belgeYazdir, ik } from './ui.js?v=71';
-import { EK3, EK4, EK3_NOT, EK4_NOT, EK12 } from './formlar.js?v=71';
+import { S, kaydet, gun, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, motorSinif, dersKonulari, gorunum, sb, sbSinav } from './veri.js?v=73';
+import { e, pencere, bildir, belgeYazdir, ik } from './ui.js?v=73';
+import { EK3, EK4, EK3_NOT, EK4_NOT, EK12 } from './formlar.js?v=73';
 
 const trTarih = t => t ? String(t).slice(0, 10).split('-').reverse().join('.') : '';
 const BUYUK = s => String(s || '').toLocaleUpperCase('tr');
@@ -102,12 +102,13 @@ function ek8(a, bos) {
 }
 
 /* ---------- EK-3 / EK-4: Direksiyon eğitimi dersi sınav değerlendirme formu ---------- */
-function ek34(k, bos) {
+function ek34(k, bos, isaret = null) {
   const motor = motorSinif(k.sinif), L = motor ? EK3 : EK4, NOT = motor ? EK3_NOT : EK4_NOT, a = ogrenciAraci(k);
   const baslik = motor ? 'DİREKSİYON EĞİTİMİ DERSİ SINAV DEĞERLENDİRME FORMU<br>(“M”, “A1”, “A2”, “A” veya “B1” Sınıfları)' : 'DİREKSİYON EĞİTİMİ DERSİ SINAV DEĞERLENDİRME FORMU<br>(“B”,“BE”, “C1”, “C1E”,“C”,“CE”, “D1”, “D1E”, “D”,“DE” veya “F” Sınıfları)';
-  const renk = r => r === 's' ? '<td class="rf-renk" style="padding:0"><table style="margin:0;height:100%"><tr><td class="rf-s" style="border:0;border-right:1px solid #000;height:18px"></td><td class="rf-s" style="border:0"></td></tr></table></td>' : `<td class="rf-renk rf-${r}"></td>`;
+  const X = '<b style="display:block;text-align:center;font-size:13px">X</b>';
+  const renk = (r, n) => r === 's' ? `<td class="rf-renk" style="padding:0"><table style="margin:0;height:100%"><tr><td class="rf-s" style="border:0;border-right:1px solid #000;height:18px">${n >= 1 ? X : ''}</td><td class="rf-s" style="border:0">${n >= 2 ? X : ''}</td></tr></table></td>` : `<td class="rf-renk rf-${r}">${n ? X : ''}</td>`;
   let bol = '';
-  const satirlar = L.map(([b, bas, mad]) => { const ust = b !== bol ? `<tr><td colspan="3" class="rf-bol">(${b}. BÖLÜM)${b === 'I' ? ' ARAÇ BİLGİSİ SORGULAMA' : ''}</td></tr>` : ''; bol = b; return ust + (b === 'I' ? '' : `<tr><td colspan="3" class="rf-konu">${e(bas)}</td></tr>`) + mad.map(([s, m, r]) => `<tr><td class="rf-sira">${e(s)}</td><td>${e(m)}</td>${renk(r)}</tr>`).join(''); }).join('');
+  const satirlar = L.map(([b, bas, mad], bi) => { const ust = b !== bol ? `<tr><td colspan="3" class="rf-bol">(${b}. BÖLÜM)${b === 'I' ? ' ARAÇ BİLGİSİ SORGULAMA' : ''}</td></tr>` : ''; bol = b; return ust + (b === 'I' ? '' : `<tr><td colspan="3" class="rf-konu">${e(bas)}</td></tr>`) + mad.map(([s, m, r], mi) => `<tr><td class="rf-sira">${e(s)}</td><td>${e(m)}</td>${renk(r, isaret ? isaret[bi + '.' + mi] || 0 : 0)}</tr>`).join(''); }).join('');
   return sar(`<div class="rf-orta" style="font-size:10px">${motor ? 'Ek-3' : 'EK- 4'} (Değişik:RG-9/7/2024-32597)</div>
     <table><tr><td colspan="3" style="position:relative"><div class="rf-sag" style="font-size:10px">(${motor ? 'EK-3' : 'EK-4'})</div><div class="rf-bas" style="margin:0">${baslik}</div></td></tr>
       <tr><td colspan="3" class="rf-ara">KURSİYERİN</td></tr></table>
@@ -165,9 +166,9 @@ function aracDosyasi(a, bos, parca = {}) {
     <p style="font-size:11px">MTSK Yönetmeliği md.17/3’e göre direksiyon eğitim ve sınav aracında aşağıdakiler bulunur. Sınav günü EK-12’nin 17. maddesiyle kontrol edilir.</p>
     <table><tr><th style="width:24px"></th><th>Belge</th><th>Durum</th></tr>
       <tr><td class="rf-orta"><span class="rf-kutu"></span></td><td>a) Aracın kursa ait olduğuna ilişkin ruhsatnamenin (tescil belgesi) aslı</td><td>Araçta asıl bulunmalı · muayene ${trTarih(a.muayene) || '—'}</td></tr>
-      <tr><td class="rf-orta"><span class="rf-kutu"></span></td><td>b) Usta öğreticinin çalışma izninin bir örneği</td><td>${e(eg.ad || '—')}${izin ? ' · izin/sertifika ' + trTarih(izin) + (izin < bugun ? ' (SÜRESİ DOLMUŞ)' : '') : ''}</td></tr>
+      <tr><td class="rf-orta"><span class="rf-kutu"></span></td><td>b) Usta öğreticinin çalışma izninin bir örneği</td><td>${e(eg.ad || '—')}${eg.calismaIzinNo ? ' · izin no ' + e(eg.calismaIzinNo) : ''}${izin ? ' · sertifika ' + trTarih(izin) + (izin < bugun ? ' (SÜRESİ DOLMUŞ)' : '') : ''}</td></tr>
       <tr><td class="rf-orta"><span class="rf-kutu"></span></td><td>c) Bu araçla eğitim görecek kursiyerlerin isim ve çalışma saatleri listesi</td><td>Ekte · ${ogrenciler.length} kursiyer</td></tr>
-      <tr><td class="rf-orta"><span class="rf-kutu"></span></td><td>ç) Direksiyon eğitim ve sınav aracı izin formu onayının bir örneği (EK-8)</td><td>${a.izinTarih ? 'Onay ' + trTarih(a.izinTarih) : 'Onaylı örneği ekleyin'}</td></tr>
+      <tr><td class="rf-orta"><span class="rf-kutu"></span></td><td>ç) Direksiyon eğitim ve sınav aracı izin formu onayının bir örneği (EK-8)</td><td>${a.mebIzinNo || a.izinTarih ? 'Onay ' + [a.mebIzinNo, trTarih(a.izinTarih)].filter(Boolean).join(' · ') : 'Onaylı örneği ekleyin'}</td></tr>
       <tr><td class="rf-orta"><span class="rf-kutu"></span></td><td>d) Direksiyon eğitim takip formları</td><td>${ogrenciler.length} kursiyer${parca.takip ? ' · ekte' : ''}</td></tr>
       <tr><td class="rf-orta"><span class="rf-kutu"></span></td><td>e) Akan trafikte eğitim ve sınav için “K” sınıfı sürücü aday belgesi (EK-5)</td><td>${parca.ek5 ? 'Ekte · ' : ''}her kursiyer için ayrı, 6 ay geçerli</td></tr></table>
     <p class="rf-orta" style="font-weight:700;margin-top:14px">KURSİYER İSİM VE ÇALIŞMA SAATLERİ LİSTESİ</p>
@@ -209,7 +210,7 @@ function alanlar(tur, x) {
 
 /* ---------- pencere ---------- */
 // Önizleme/test için: formu doğrudan üret
-export function resmiHtml(tur, x, bos = false) { return ({ ek1, ek5, ek34, ek8, aracdosya: aracDosyasi, dersdefteri: dersDefteri, ek12, ek10 })[tur](x, bos); }
+export function resmiHtml(tur, x, bos = false, ek) { return ({ ek1, ek5, ek34, ek8, aracdosya: aracDosyasi, dersdefteri: dersDefteri, ek12, ek10 })[tur](x, bos, ek); }
 export const RESMI = {
   ek1: ['Kursa müracaat formu (EK-1)', 'Kayıt dilekçesi ve beyan; fotoğraf ve nüfus bilgileriyle', 'kursiyer'],
   ek5: ['“K” sınıfı sürücü aday belgesi (EK-5)', 'Akan trafikte araçta bulunur; 6 ay geçerli', 'kursiyer'],
