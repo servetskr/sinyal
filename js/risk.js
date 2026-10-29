@@ -1,4 +1,4 @@
-import { S, gun, fark, SINIFLAR, egitmen, kapaliGun, dersAraci, risk } from './veri.js?v=40';
+import { S, gun, fark, SINIFLAR, egitmen, kapaliGun, dersAraci, risk } from './veri.js?v=41';
 
 const ort = l => l.length ? l.reduce((a, x) => a + x, 0) / l.length : null;
 export const riskliler = (l = S.kursiyerler) => l.map(k => ({ k, r: risk(k) })).filter(x => x.r && x.r.puan >= 25).sort((a, b) => b.r.puan - a.r.puan);
