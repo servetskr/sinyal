@@ -1,11 +1,17 @@
 // Sinyal demo verisi: tarihler bugüne göre üretilir, tarayıcıda saklanır.
-const ANAHTAR = 'sinyal-demo-v18';
+const ANAHTAR = 'sinyal-demo-v19';
+try { for (let i = 1; i < 19; i++) localStorage.removeItem('sinyal-demo-v' + i); } catch (x) { }
 
 export const BUGUN = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })();
 export const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 export const gun = n => { const d = new Date(BUGUN); d.setDate(d.getDate() + n); return iso(d); };
 export const tarihOku = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
 export const fark = s => Math.round((tarihOku(s) - BUGUN) / 864e5);
+// Kurs kapalı günleri: Pazar, sabit resmî tatiller ve dini bayramlar (kurs Ayarlar'dan ek kapalı gün girer).
+export const TATILLER = ['01-01', '04-23', '05-01', '05-19', '07-15', '08-30', '10-29'];
+const BAYRAMLAR = ['2026-03-20', '2026-03-21', '2026-03-22', '2026-05-27', '2026-05-28', '2026-05-29', '2026-05-30'];
+export const kapaliGun = t => tarihOku(t).getDay() === 0 ? 'Pazar' : (TATILLER.includes(t.slice(5)) || BAYRAMLAR.includes(t)) ? 'Resmî tatil' : null;
+export const isGunuIleri = t => { const d = tarihOku(t); while (kapaliGun(iso(d))) d.setDate(d.getDate() + 1); return iso(d); };
 
 export const SINIFLAR = {
   'B': { ad: 'B · Manuel', ucret: 24000, teorik: 34, direksiyon: 14 },
@@ -37,10 +43,10 @@ function uret() {
   const MAH = ['Vişnelik', 'Emek', 'Osmangazi', 'Şirintepe', 'Batıkent', 'Hoşnudiye', 'Yenibağlar', 'Gökmeydan', 'Büyükdere', 'Sümer'];
 
   const egitmenler = [
-    { id: 'e1', ad: 'Hüseyin Aktaş', tel: '0532 418 22 61', siniflar: ['B', 'B-O'], renk: '#2f6fde', baslama: '2014', maas: 34000, prim: 160, belgeler: { sertifika: gun(820), saglik: gun(140), adli: gun(400) } },
-    { id: 'e2', ad: 'Sevgi Uysal', tel: '0541 776 30 18', siniflar: ['B', 'B-O'], renk: '#c2410c', baslama: '2017', maas: 32000, prim: 160, belgeler: { sertifika: gun(1200), saglik: gun(18), adli: gun(300) } },
+    { id: 'e1', ad: 'Hüseyin Aktaş', tel: '0532 418 22 61', siniflar: ['B'], renk: '#2f6fde', baslama: '2014', maas: 34000, prim: 160, belgeler: { sertifika: gun(820), saglik: gun(140), adli: gun(400) } },
+    { id: 'e2', ad: 'Sevgi Uysal', tel: '0541 776 30 18', siniflar: ['B-O'], renk: '#c2410c', baslama: '2017', maas: 32000, prim: 160, belgeler: { sertifika: gun(1200), saglik: gun(18), adli: gun(300) } },
     { id: 'e3', ad: 'Murat Er', tel: '0505 233 91 47', siniflar: ['B', 'C'], renk: '#0f8a5f', baslama: '2011', maas: 36000, prim: 180, belgeler: { sertifika: gun(640), saglik: gun(220), adli: gun(9) } },
-    { id: 'e4', ad: 'Gökhan Tunç', tel: '0553 902 14 85', siniflar: ['A2', 'B'], renk: '#7c3aed', baslama: '2019', maas: 30000, prim: 150, belgeler: { sertifika: gun(25), saglik: gun(310), adli: gun(510) } },
+    { id: 'e4', ad: 'Gökhan Tunç', tel: '0553 902 14 85', siniflar: ['A2'], renk: '#7c3aed', baslama: '2019', maas: 30000, prim: 150, belgeler: { sertifika: gun(25), saglik: gun(310), adli: gun(510) } },
     { id: 'e5', ad: 'Nurcan Bilgin', tel: '0536 640 72 09', siniflar: ['B-O'], renk: '#b45309', baslama: '2021', maas: 29000, prim: 150, belgeler: { sertifika: gun(1500), saglik: gun(260), adli: gun(330) } },
   ];
   const araclar = [
@@ -121,19 +127,22 @@ function uret() {
   const aktif = kursiyerler.filter(k => ['Direksiyon', 'Sınav'].includes(k.asama));
   let did = 1;
   const gunSay = {};
+  const planSay = {};
   for (let n = -14; n <= 10; n++) {
     const d = tarihOku(gun(n));
-    if (d.getDay() === 0 || ['01-01', '04-23', '05-01', '05-19', '07-15', '08-30', '10-29'].includes(iso(d).slice(5))) continue;
+    if (kapaliGun(iso(d))) continue;
     egitmenler.forEach(e => {
-      const arac = araclar.find(a => a.egitmen === e.id);
       saatler.forEach(s => {
         if (r() < (n < 0 ? 0.62 : n < 4 ? 0.55 : 0.32)) {
           let adaylar = aktif.filter(k => k.egitmen === e.id);
           if (adaylar.length < 3) adaylar = adaylar.concat(aktif.filter(k => e.siniflar.includes(k.sinif)));
-          adaylar = adaylar.filter(k => (gunSay[k.id + n] || 0) < 2 && !dersler.some(d => d.kursiyer === k.id && d.tarih === gun(n) && d.saat === s));
+          const ileri = !(n < 0 || (n === 0 && +s.slice(0, 2) < SAAT_SIMDI));
+          adaylar = adaylar.filter(k => (gunSay[k.id + n] || 0) < 2 && !dersler.some(d => d.kursiyer === k.id && d.tarih === gun(n) && d.saat === s) && (!ileri || k.direksiyon + (planSay[k.id] || 0) < SINIFLAR[k.sinif].direksiyon));
           if (!adaylar.length) return;
           const k = sec(adaylar);
           gunSay[k.id + n] = (gunSay[k.id + n] || 0) + 1;
+          if (ileri) planSay[k.id] = (planSay[k.id] || 0) + 1;
+          const arac = araclar.find(a => a.egitmen === e.id && a.sinif === k.sinif);
           dersler.push({ id: 'd' + did++, kursiyer: k.id, egitmen: e.id, arac: arac ? arac.id : null, tarih: gun(n), saat: s, eklendi: gun(Math.min(n, 0) - ara(6, 12) + (n > 0 && r() < 0.12 ? ara(4, 8) : 0)), meb: n < 3 ? true : r() < 0.7, durum: (n < 0 || (n === 0 && +s.slice(0, 2) < SAAT_SIMDI)) ? (r() < 0.965 ? 'Yapıldı' : 'Gelmedi') : 'Planlandı' });
           const sd = dersler[dersler.length - 1]; if (sd.durum === 'Yapıldı' && r() < 0.86) sd.imza = { zaman: sd.tarih + 'T' + sd.saat, kursiyer: null, usta: null };
         }
@@ -160,10 +169,10 @@ function uret() {
   const bitti = kursiyerler.filter(k => k.dsinav);
   sinavlar.push({ id: 's1', tur: 'e-Sınav', tarih: gun(-19), saat: '10:00', yer: 'Odunpazarı e-Sınav Merkezi', kursiyerler: dir.slice(0, 9).map(k => k.id), sonuc: Object.fromEntries(dir.slice(0, 9).map(k => [k.id, 'Geçti'])) });
   sinavlar.push({ id: 's2', tur: 'Direksiyon', tarih: gun(-9), saat: '08:30', yer: 'Sınav güzergâhı · Organize Sanayi', kursiyerler: bitti.map(k => k.id), sonuc: Object.fromEntries(bitti.map(k => [k.id, k.dsinav.sonuc])) });
-  sinavlar.push({ id: 's3', tur: 'Direksiyon', mebBildirim: false, tarih: gun(3), saat: '08:30', yer: 'Sınav güzergâhı · Organize Sanayi', kursiyerler: sin.slice(0, 8).map(k => k.id), sonuc: {} });
-  sinavlar.push({ id: 's4', tur: 'e-Sınav', tarih: gun(6), saat: '14:00', yer: 'Tepebaşı e-Sınav Merkezi', kursiyerler: kursiyerler.filter(k => k.asama === 'Teorik' && k.teorik >= 30).slice(0, 1).map(k => k.id), sonuc: {} });
-  sinavlar.push({ id: 's5', tur: 'Direksiyon', mebBildirim: false, tarih: gun(10), saat: '08:30', yer: 'Sınav güzergâhı · Organize Sanayi', kursiyerler: sin.slice(8).concat(kal).map(k => k.id), sonuc: {} });
-  sin.slice(0, 8).forEach(k => k.dsinavPlan = gun(3));
+  sinavlar.push({ id: 's3', tur: 'Direksiyon', mebBildirim: false, tarih: isGunuIleri(gun(3)), saat: '08:30', yer: 'Sınav güzergâhı · Organize Sanayi', kursiyerler: sin.slice(0, 8).map(k => k.id), sonuc: {} });
+  sinavlar.push({ id: 's4', tur: 'e-Sınav', tarih: isGunuIleri(gun(6)), saat: '14:00', yer: 'Tepebaşı e-Sınav Merkezi', kursiyerler: kursiyerler.filter(k => k.asama === 'Teorik' && k.teorik >= 30).slice(0, 1).map(k => k.id), sonuc: {} });
+  sinavlar.push({ id: 's5', tur: 'Direksiyon', mebBildirim: false, tarih: isGunuIleri(gun(10)), saat: '08:30', yer: 'Sınav güzergâhı · Organize Sanayi', kursiyerler: sin.slice(8).concat(kal).map(k => k.id), sonuc: {} });
+  sin.slice(0, 8).forEach(k => k.dsinavPlan = isGunuIleri(gun(3)));
 
   // kasa hareketleri
   const hareket = [];
@@ -195,21 +204,24 @@ function uret() {
   hareket.push({ id: 'h' + hid++, tarih: gun(-52), tur: 'Gider', kategori: 'Bakım', aciklama: '26 SN 214 · lastik değişimi', tutar: 11800, yontem: 'Kart', arac: 'a1' });
   hareket.push({ id: 'h' + hid++, tarih: gun(-23), tur: 'Gider', kategori: 'Reklam', aciklama: 'Instagram reklamı', tutar: 3500, yontem: 'Kart' });
 
-  // adaylar (ön kayıt)
+  // adaylar (ön kayıt) · kayıt görüşmeleri tek takvimde (sosyal.slotlar) tutulur
+  const gunAdi = t => tarihOku(t).toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' });
+  const yG = isGunuIleri(gun(1)), gG = isGunuIleri(gun(2));
+  const BEYAN = 'Merhaba, ben Örnek Sürücü Kursu adına yanıt veren yapay zekâ asistanıyım. ';
   const adaylar = [
     { ad: 'Deniz Akın', kaynak: 'Google Haritalar', kanal: 'WhatsApp', sinif: 'B-O', asama: 'Yeni', saat: '08:12', gun: 0, m: [['aday', 'Merhaba, otomatik vites ehliyet için fiyat öğrenebilir miyim?'], ['asistan', 'Merhaba Deniz Bey, B otomatik sınıfı kurs ücretimiz 26.500 TL. Peşinatın ardından 5 aya kadar taksit yapıyoruz. Ne zaman başlamayı düşünüyorsunuz?']] },
     { ad: 'Sena Uğur', kaynak: 'Instagram', kanal: 'Instagram', sinif: 'B', asama: 'Bilgi verildi', saat: '23:41', gun: -1, m: [['aday', 'Kaç günde ehliyet alınıyor?'], ['asistan', 'Teorik dersler yaklaşık 4 hafta, ardından e-sınav ve direksiyon eğitimi geliyor. Ortalama 2–3 ayda ehliyetinizi alıyorsunuz.'], ['aday', 'Taksit var mı?'], ['asistan', 'Evet, peşinat sonrası 5 aya kadar taksit yapıyoruz. Size uygun bir saat için kayıt görüşmesi ayarlayalım mı?']] },
-    { ad: 'Yiğit Sarı', kaynak: 'Google Haritalar', kanal: 'WhatsApp', sinif: 'A2', asama: 'Görüşme', saat: '14:05', gun: -1, takip: gun(1), m: [['aday', 'Motor ehliyeti için hangi belgeler lazım?'], ['asistan', 'Sağlık raporu, öğrenim belgesi, biyometrik fotoğraf ve kimlik yeterli. Raporu aile hekiminizden alabilirsiniz.'], ['aday', 'Cuma gelip kaydolabilir miyim?'], ['asistan', 'Cuma 11:00 için görüşmenizi oluşturdum. Görüşmek üzere!']] },
+    { ad: 'Yiğit Sarı', kaynak: 'Google Haritalar', kanal: 'WhatsApp', sinif: 'A2', asama: 'Görüşme', saat: '14:05', gun: -1, takip: gun(1), m: [['aday', 'Motor ehliyeti için hangi belgeler lazım?'], ['asistan', 'Sağlık raporu, öğrenim belgesi, biyometrik fotoğraf ve kimlik yeterli. Raporu aile hekiminizden alabilirsiniz.'], ['aday', 'Bu hafta gelip kaydolabilir miyim?'], ['asistan', `${gunAdi(yG)} 11:30 için kayıt görüşmenizi oluşturdum. Gelirken kimliğinizi getirin.`]] },
     { ad: 'Aslı Kara', kaynak: 'Tavsiye', kanal: 'WhatsApp', sinif: 'B', asama: 'Bilgi verildi', saat: '19:20', gun: -2, takip: gun(0), m: [['aday', 'Kuzenim sizde aldı, ben de kaydolmak istiyorum. Hafta sonu ders var mı?'], ['asistan', 'Hoş geldiniz! Cumartesi direksiyon derslerimiz var. Teorik dersler hafta içi akşam 18:30’da.']] },
-    { ad: 'Ozan Demirci', kaynak: 'Google Haritalar', kanal: 'WhatsApp', sinif: 'C', asama: 'Yeni', saat: '07:55', gun: 0, m: [['aday', 'B ehliyetim var, C ye geçiş ne kadar?']] },
+    { ad: 'Ozan Demirci', kaynak: 'Google Haritalar', kanal: 'WhatsApp', sinif: 'C', asama: 'Yeni', saat: '07:55', gun: 0, devir: 'Kurs bilgisinde B’den C’ye geçiş ücreti yok', m: [['aday', 'B ehliyetim var, C ye geçiş ne kadar?'], ['asistan', BEYAN + 'B’den C’ye geçiş ücreti konusunda elimde kesin bilgi yok, yanlış bilgi vermek istemem. Yetkilimize haber verdim; en geç 30 dakika içinde size dönecek.']] },
     { ad: 'Melike Tan', kaynak: 'Instagram', kanal: 'Instagram', sinif: 'B-O', asama: 'Kayıt', saat: '11:30', gun: -3, m: [['aday', 'Yarın kayda geleceğim, evrakları getireyim mi?'], ['asistan', 'Evet, sağlık raporu ve öğrenim belgesi yeterli; fotoğrafı kursta çekiyoruz.']] },
     { ad: 'Barış Yalçın', kaynak: 'Web sitesi', kanal: 'WhatsApp', sinif: 'B', asama: 'Kaybedildi', saat: '16:44', gun: -6, not: 'Fiyatı yüksek buldu', m: [['aday', 'Başka yerde 21 bin dediler.'], ['asistan', 'Anlıyorum. Fiyatımıza sınav günü araç ve ek tekrar dersi dahil. Karar verirseniz buradayız.']] },
-    { ad: 'Gizem Önal', kaynak: 'Google Haritalar', kanal: 'WhatsApp', sinif: 'B', asama: 'Görüşme', saat: '10:18', gun: -1, takip: gun(2), m: [['aday', 'Öğrenciyim, indirim oluyor mu?'], ['asistan', 'Öğrenci belgesiyle kayıtta 1.000 TL indirim uyguluyoruz.']] },
-    { ad: 'Kadir Bayram', kaynak: 'Google Haritalar', kanal: 'WhatsApp', sinif: 'B', asama: 'Yeni', saat: '09:47', gun: 0, m: [['aday', 'Sınavda kalırsam tekrar ücret ödüyor muyum?']] },
+    { ad: 'Gizem Önal', kaynak: 'Google Haritalar', kanal: 'WhatsApp', sinif: 'B', asama: 'Görüşme', saat: '10:18', gun: -1, takip: gun(2), m: [['aday', 'Öğrenciyim, indirim oluyor mu?'], ['asistan', 'Öğrenci belgesiyle kayıtta 1.000 TL indirim uyguluyoruz.'], ['aday', 'Gelip konuşmak istiyorum'], ['asistan', `${gunAdi(gG)} 14:00 için kayıt görüşmenizi oluşturdum. Öğrenci belgenizi getirmeyi unutmayın.`]] },
+    { ad: 'Kadir Bayram', kaynak: 'Google Haritalar', kanal: 'WhatsApp', sinif: 'B', asama: 'Yeni', saat: '09:47', gun: 0, m: [['aday', 'Sınavda kalırsam tekrar ücret ödüyor muyum?'], ['asistan', BEYAN + 'e-Sınav tekrarında MEB’in oturum ücreti 1.250 TL, direksiyon sınavı tekrarında 2.000 TL alıyoruz; sınav günü kurs aracı dahil. Her sınav için 4 hakkınız var.']] },
     { ad: 'Ebru Çınar', kaynak: 'Tavsiye', kanal: 'WhatsApp', sinif: 'B-O', asama: 'Bilgi verildi', saat: '21:03', gun: -4, takip: gun(-1), m: [['aday', 'Annem için soruyorum, 52 yaşında, zor olur mu?'], ['asistan', 'Hiç zor değil; otomatik vitesle başlayan pek çok kursiyerimiz var. Eğitmenimiz Nurcan Hanım çok sabırlıdır.']] },
     { ad: 'Tunahan Ersoy', kaynak: 'Instagram', kanal: 'Instagram', sinif: 'A2', asama: 'Kayıt', saat: '13:15', gun: -5, m: [['aday', 'Kaydoldum teşekkürler']] },
     { ad: 'Pınar Gök', kaynak: 'Google Haritalar', kanal: 'WhatsApp', sinif: 'B', asama: 'Kaybedildi', saat: '12:00', gun: -8, not: 'Cevap vermedi', m: [['aday', 'Fiyat?'], ['asistan', 'B manuel 24.000 TL, taksit imkânı var.']] },
-  ].map((a, i) => ({ id: 'l' + (i + 1), ad: a.ad, tel: tel(), kaynak: a.kaynak, kanal: a.kanal, sinif: a.sinif, asama: a.asama, tarih: gun(a.gun), saat: a.saat, takip: a.takip || null, not: a.not || '', mesajlar: a.m.map(([kim, metin]) => ({ kim, metin })) }));
+  ].map((a, i) => ({ id: 'l' + (i + 1), ad: a.ad, tel: tel(), kaynak: a.kaynak, kanal: a.kanal, sinif: a.sinif, asama: a.asama, tarih: gun(a.gun), saat: a.saat, takip: a.takip || null, not: a.not || '', devir: a.devir || null, mesajlar: a.m.map(([kim, metin]) => ({ kim, metin })) }));
 
   const otomasyonlar = [
     { id: 'o1', ad: 'Direksiyon dersi hatırlatması', ne: 'Dersten bir gün önce 18:00’de', kanal: 'WhatsApp', acik: true, gonderim: 412, sablon: 'Merhaba {ad}, yarın {saat}’te {egitmen} ile direksiyon dersin var. Gelemeyeceksen bu mesajı yanıtlaman yeterli.' },
@@ -261,6 +273,7 @@ function uret() {
     { tarih: '2026-07-10', konu: 'KVKK ve yetkisiz yazılım yazısı (haber)', ne: 'MEBBİS bilgilerinin paylaşılmaması ve bot/eklenti yasağı. Sinyal MEBBİS’e bağlanmadığı için değişiklik gerekmedi.', uygulandi: true },
   ];
   kursiyerler.forEach(k => { if (k.evrak.saglik) { const t = tarihOku(k.kayit); t.setDate(t.getDate() - ara(2, 20)); k.saglikRapor = { no: '2026/' + ara(10000, 99999), tarih: iso(t).split('-').reverse().join('.') }; } if (k.evrak.adli) k.adliSicil = { barkod: 'ASB' + ara(100000, 999999) + ara(1000, 9999) }; });
+  kursiyerler.forEach(k => { if (k.asama === 'Ehliyet' && k.dsinav) { const d = fark(k.dsinav.tarih); k.kapanis = d < -12 ? { sertifika: gun(d + 3), arsiv: gun(d + 6) } : d < -5 ? { sertifika: gun(d + 3) } : {}; } });
   kursiyerler.forEach(k => { k.odeme.ekler = []; if (k.esinav) k.odeme.ekler.push({ ad: 'e-Sınav ücreti', tutar: 1250, odendi: k.kayit }); if (k.dsinav && k.dsinav.hak > 1) k.odeme.ekler.push({ ad: 'Direksiyon sınavı tekrar ücreti', tutar: 2000, odendi: null }); if (k.dsinav && k.dsinav.sonuc === 'Kaldı') k.odeme.ekler.push({ ad: 'Sınav tekrar ücreti', tutar: 2000, odendi: null }); });
   const ogretmenler = [
     { id: 'o1', ad: 'Ayten Duman', brans: 'Trafik ve çevre', tel: '0532 771 40 12' },
@@ -282,9 +295,10 @@ function uret() {
     { konu: 'Evraklar', metin: 'Sağlık raporu, öğrenim belgesi, biyometrik fotoğraf, kimlik. Fotoğrafı kursta çekiyoruz.', onay: gun(-12) },
     { konu: 'Ders saatleri', metin: 'Teorik dersler hafta içi 18:30 ve Salı-Perşembe 10:00. Direksiyon Pazartesi–Cumartesi 09:00–18:00.', onay: gun(-12) },
     { konu: 'Süre', metin: 'Teorik yaklaşık 4 hafta, ardından e-sınav ve direksiyon eğitimi; ortalama 2–3 ay.', onay: gun(-12) },
-    { konu: 'Sınav ücretleri', metin: 'e-Sınav ücreti oturum başına 1.250 TL (MEB 2026 kılavuzu). Tekrar sınav ücretini kurs bildirir.', onay: gun(-5) },
+    { konu: 'Sınav ücretleri', metin: 'e-Sınav ücreti oturum başına 1.250 TL (MEB 2026 kılavuzu), kurs ücretine dahil değil. Direksiyon sınavı tekrarında 2.000 TL; sınav günü kurs aracı dahil. Her sınav için 4 hak var.', onay: gun(-5) },
   ];
   const devredilen = [
+    { ad: 'Ozan Demirci', aday: 'l5', kanal: 'WhatsApp', konu: 'Bilinmeyen soru', mesaj: 'B ehliyetim var, C ye geçiş ne kadar?', neden: 'Kurs bilgisinde B’den C’ye geçiş ücreti yok', saat: '07:55', bildirim: [['07:55', 'Kurs Müdürü', 'WhatsApp']] },
     { ad: 'Halil Yurt', kanal: 'WhatsApp', konu: 'İndirim pazarlığı', mesaj: 'Üç kardeş kaydolursak ne kadar indirim olur?', neden: 'Kurs bilgisinde toplu indirim yok', saat: '10:12', bildirim: [['10:12', 'Kurs Müdürü', 'WhatsApp'], ['10:27', 'Selda Korkmaz', 'WhatsApp · 15 dk cevapsız kaldı']] },
     { ad: 'Seda Bal', kanal: 'Instagram', konu: 'Özel durum', mesaj: 'Sol ayağımda protez var, otomatik araçla ehliyet alabilir miyim?', neden: 'Sağlık durumu: insana devredildi', saat: '09:40', bildirim: [['09:40', 'Kurs Müdürü', 'WhatsApp']] },
   ];
@@ -305,13 +319,14 @@ function uret() {
     },
     gorusmeSablon: { gunler: [1, 2, 3, 4, 5, 6], saatler: ['10:00', '11:30', '14:00', '16:30'], kapali: [gun(9)] },
     bilinmeyen: [
+      { soru: 'B ehliyetim var, C ye geçiş ne kadar?', sayi: 1, son: gun(0) },
       { soru: 'Engelli araç ile eğitim veriyor musunuz?', sayi: 4, son: gun(-1) },
       { soru: 'Kurs bitince sınav aracını kullanabilir miyim, ücreti ne?', sayi: 3, son: gun(-2) },
       { soru: 'Yabancı uyrukluyum, kayıt için ne gerekir?', sayi: 2, son: gun(-3) },
       { soru: 'Ehliyetim iptal oldu, yeniden almak için kursa gelmem gerekiyor mu?', sayi: 2, son: gun(-5) },
       { soru: 'Hafta sonu teorik ders var mı?', sayi: 1, son: gun(-6) },
     ],
-    slotlar: (() => { const l = []; for (let n = 1; n <= 6; n++) { const d = new Date(BUGUN); d.setDate(d.getDate() + n); if (d.getDay() === 0) continue; ['10:00', '11:30', '14:00', '16:30'].forEach((h, i) => l.push({ tarih: gun(n), saat: h, dolu: (n + i) % 3 === 0 ? 'Yiğit Sarı' : null })); } return l; })(),
+    slotlar: [{ tarih: yG, saat: '11:30', dolu: 'Yiğit Sarı', aday: 'l3', kanal: 'WhatsApp' }, { tarih: gG, saat: '14:00', dolu: 'Gizem Önal', aday: 'l8', kanal: 'WhatsApp' }],
     ay: { mesaj: 1284, kisi: 412, otomatik: 92, sure: 3, mesaiDisi: 41, aday: 86, gorusme: 31, kayit: 14, devir: 9 },
     saatlik: [9, 4, 2, 1, 1, 2, 6, 14, 31, 42, 47, 45, 52, 49, 44, 47, 55, 63, 74, 88, 104, 112, 96, 41],
     kanalDagilim: { igm: 46, igy: 18, wp: 36, fb: 0 },
@@ -366,7 +381,7 @@ function uret() {
   return {
     sosyal, subeler, guvenlik, entegrasyon, isDurum: {},
     personel, izinler, bekleme, hesaplar, kazanim, gruplar, arsiv, mevzuat, ogretmenler, kullanicilar, islemler, asistanBilgi, devredilen, sms: { bakiye: 1840, kanal: 'WhatsApp' }, gunSonu: [],
-    kurs: { ad: 'Örnek Sürücü Kursu', sehir: 'Eskişehir', tel: '0222 000 00 00', adres: 'Odunpazarı / Eskişehir', yetkili: 'Kurs Müdürü', puan: 4.9, yorumSayisi: 286, imzaYontemi: 'ikili', kuralKontrol: gun(-13), web: 'ornekmtsk.com', aksamOzet: true, gunlukDersSiniri: 2, egitmenGunlukSinir: 8, ekDersUcreti: 900, devamsizlikSiniri: 4, programOnGun: 5, sinavBildirimIsGunu: 4, geceDersi: 2, tekrarBekleme: 15, asgariYas: 18, saklamaYil: 10 },
+    kurs: { ad: 'Örnek Sürücü Kursu', sehir: 'Eskişehir', tel: '0222 000 00 00', adres: 'Odunpazarı / Eskişehir', yetkili: 'Kurs Müdürü', puan: 4.9, yorumSayisi: 286, imzaYontemi: 'ikili', kuralKontrol: gun(-13), web: 'ornekmtsk.com', aksamOzet: true, gunlukDersSiniri: 2, egitmenGunlukSinir: 8, ekDersUcreti: 900, devamsizlikSiniri: 4, programOnGun: 5, sinavBildirimIsGunu: 4, geceDersi: 2, tekrarBekleme: 15, asgariYas: 18, saklamaYil: 10, sinavHak: 4, tekrarUcret: { esinav: 1250, dsinav: 2000 }, borcluDers: 'uyar', indirimler: [{ ad: 'Öğrenci belgesi', tutar: 1000 }] },
     egitmenler, araclar, kursiyerler, dersler, teorik, sinavlar, hareket, adaylar, otomasyonlar, duyurular,
     gonderimler: [],
   };
@@ -393,6 +408,13 @@ export const kursiyer = id => S.kursiyerler.find(k => k.id === id);
 export const egitmen = id => S.egitmenler.find(e => e.id === id);
 export const arac = id => S.araclar.find(a => a.id === id);
 export const tamAd = k => k.ad + ' ' + k.soyad;
+// Direksiyon aracı: önce ustanın kursiyerin sınıfındaki aracı, o saatte doluysa aynı sınıftaki boş araç.
+export const ustaAraci = (egId, sinif) => S.araclar.find(a => a.egitmen === egId && a.sinif === sinif);
+export function dersAraci(egId, sinif, t, saat, haric) {
+  const bos = a => !S.dersler.some(d => d !== haric && d.arac === a.id && d.tarih === t && d.saat === saat);
+  const o = ustaAraci(egId, sinif); if (o && bos(o)) return o;
+  return S.araclar.filter(a => a.sinif === sinif && a !== o).find(bos) || null;
+}
 export const ekToplam = k => (k.odeme.ekler || []).reduce((a, x) => a + x.tutar, 0);
 export const odenen = k => k.odeme.pesin + k.odeme.taksitler.reduce((a, t) => a + (t.odendi ? t.tutar : (t.kismi || 0)), 0) + (k.odeme.ekler || []).filter(x => x.odendi).reduce((a, x) => a + x.tutar, 0) - (k.odeme.iade || 0);
 export const kalanBorc = k => Math.max(0, k.odeme.toplam + ekToplam(k) - odenen(k));
@@ -446,7 +468,9 @@ export function mebOnKontrol(k) {
   const g = (S.gruplar || []).find(x => x.id === k.teorikGrup);
   l.push([!g || !['Kayıt', 'Evrak'].includes(k.asama) || k.kayit <= g.baslangic, g ? `Kayıt grubun başlangıcından önce (${g.ad} ${g.baslangic.split('-').reverse().join('.')})` : 'Grup seçildi']);
   EVRAKLAR.filter(([x]) => x !== 'sozlesme').forEach(([x, t]) => l.push([!!k.evrak[x], t]));
-  l.push([!!(k.saglikRapor && k.saglikRapor.no), 'Sağlık raporu numarası girildi']);
+  l.push([!!k.cinsiyet, 'Cinsiyet seçildi']);
+  l.push([!!(k.saglikRapor && k.saglikRapor.no && k.saglikRapor.tarih), 'Sağlık raporu numarası ve tarihi girildi']);
+  l.push([!!(k.adliSicil && k.adliSicil.barkod), 'Adli sicil barkodu girildi']);
   l.push([!!(k.kvkk && k.kvkk.riza), 'KVKK aydınlatma ve açık rıza alındı']);
   return l;
 }

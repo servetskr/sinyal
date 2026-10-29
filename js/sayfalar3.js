@@ -1,7 +1,7 @@
-import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas , sb, sbDers, sbSinav, gorunum, subede} from './veri.js?v=28';
-import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler } from './ui.js?v=28';
-import { yenile } from './app.js?v=28';
-import { siraliPencere } from './sayfalar5.js?v=28';
+import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas , sb, sbDers, sbSinav, gorunum, subede} from './veri.js?v=29';
+import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler, imzaAlani } from './ui.js?v=29';
+import { yenile } from './app.js?v=29';
+import { siraliPencere } from './sayfalar5.js?v=29';
 
 /* ================= BELGELER VE ÇIKTILAR ================= */
 const gorunumSube = () => gorunum.sube;
@@ -69,7 +69,7 @@ function belgeHtml(tur, id) {
       <p>KVKK’nın 11. maddesi kapsamındaki haklarınız (bilgi talep etme, düzeltme, silme, itiraz) için ${e(S.kurs.tel)} numarasından ya da kursa yazılı olarak başvurabilirsiniz.</p>`; }
   if (tur === 'program') {
     const eg = egitmen(id), gunler = []; for (let n = 0; n < 7; n++) gunler.push(gun(n));
-    return kursBas('Haftalık direksiyon programı') + `<p><b>Usta öğretici:</b> ${e(eg.ad)} &nbsp; <b>Araç:</b> ${e((S.araclar.find(a => a.egitmen === eg.id) || {}).plaka || '—')}</p><table><tr><th>Gün</th><th>Saat</th><th>Kursiyer</th><th>Telefon</th></tr>${gunler.flatMap(g => S.dersler.filter(d => d.egitmen === eg.id && d.tarih === g).sort((a, b) => a.saat.localeCompare(b.saat)).map(d => `<tr><td>${tarihUzun(g)}</td><td>${d.saat}</td><td>${e(tamAd(kursiyer(d.kursiyer)))}</td><td>${e(kursiyer(d.kursiyer).tel)}</td></tr>`)).join('') || '<tr><td colspan="4">Bu hafta ders yok.</td></tr>'}</table>`;
+    return kursBas('Haftalık direksiyon programı') + `<p><b>Usta öğretici:</b> ${e(eg.ad)} &nbsp; <b>Araç:</b> ${e(S.araclar.filter(a => a.egitmen === eg.id).map(a => a.plaka + ' (' + a.vites.toLowerCase() + ')').join(', ') || '—')}</p><table><tr><th>Gün</th><th>Saat</th><th>Kursiyer</th><th>Telefon</th></tr>${gunler.flatMap(g => S.dersler.filter(d => d.egitmen === eg.id && d.tarih === g).sort((a, b) => a.saat.localeCompare(b.saat)).map(d => `<tr><td>${tarihUzun(g)}</td><td>${d.saat}</td><td>${e(tamAd(kursiyer(d.kursiyer)))}</td><td>${e(kursiyer(d.kursiyer).tel)}</td></tr>`)).join('') || '<tr><td colspan="4">Bu hafta ders yok.</td></tr>'}</table>`;
   }
   if (tur === 'sinav') {
     const s = S.sinavlar.find(x => x.id === id);
@@ -77,11 +77,11 @@ function belgeHtml(tur, id) {
   }
   const k = kursiyer(id); if (!k) return '';
   const S0 = SINIFLAR[k.sinif];
-  if (tur === 'sozlesme') return kursBas('Kursiyer sözleşmesi') + `<table><tr><th>Kursiyer</th><td>${e(tamAd(k))}</td><th>Telefon</th><td>${e(k.tel)}</td></tr><tr><th>Sınıf</th><td>${S0.ad}</td><th>Kayıt tarihi</th><td>${tarih(k.kayit)}</td></tr><tr><th>Kurs ücreti</th><td>${tl(k.odeme.toplam)}</td><th>Peşinat</th><td>${tl(k.odeme.pesin)}</td></tr></table>
+  if (tur === 'sozlesme') return kursBas('Kursiyer sözleşmesi') + `<table><tr><th>Kursiyer</th><td>${e(tamAd(k))}</td><th>Telefon</th><td>${e(k.tel)}</td></tr><tr><th>Sınıf</th><td>${S0.ad}</td><th>Kayıt tarihi</th><td>${tarih(k.kayit)}</td></tr><tr><th>Kurs ücreti</th><td>${tl(k.odeme.toplam)}${k.odeme.indirim ? ` <small>(${e(k.odeme.indirim.ad)} indirimi −${tl(k.odeme.indirim.tutar)} uygulandı)</small>` : ''}</td><th>Peşinat</th><td>${tl(k.odeme.pesin)}</td></tr></table>
     <p><b>Ödeme planı</b></p><table><tr><th>#</th><th>Vade</th><th>Tutar</th></tr>${k.odeme.taksitler.map((t, i) => `<tr><td>${i + 1}</td><td>${tarih(t.vade)}</td><td>${tl(t.tutar)}</td></tr>`).join('') || '<tr><td colspan="3">Peşin ödeme</td></tr>'}</table>
     <p>Kurs, ${S0.ad} sınıfı için teorik dersleri ve ${S0.direksiyon} direksiyon dersini verir. Kursiyer derslere zamanında katılmayı, ödeme planına uymayı kabul eder. Gelinemeyecek dersler en az bir gün önce bildirilir.</p>
     <p style="color:#666;font-size:11.5px">Bu örnek şablondur; kurs kendi sözleşme metnini Ayarlar’dan ekler.</p>
-    <div class="imza"><div>Kursiyer · ${e(tamAd(k))}</div><div>Kurs müdürü · ${e(S.kurs.ad)}</div></div>`;
+    <div class="imza"><div>${k.sozlesmeImza && k.sozlesmeImza.url ? `<img src="${k.sozlesmeImza.url}" alt="Kursiyer imzası" style="height:50px;display:block;margin:-56px auto 4px">` : ''}Kursiyer · ${e(tamAd(k))}${k.sozlesmeImza ? `<small style="display:block">${e(k.sozlesmeImza.yontem)} · ${tarih(k.sozlesmeImza.tarih)}</small>` : ''}</div><div>Kurs müdürü · ${e(S.kurs.ad)}</div></div>`;
   if (tur === 'ek1') return kursBas('Motorlu taşıt sürücüleri kursu kursiyer kayıt formu') + `<p style="font-size:11.5px;color:#555">MTSK Yönetmeliği ekindeki kayıt formu düzeninde hazırlanmıştır. İl MEM’inizin örneğiyle farklılık varsa bildirin, 1 iş günü içinde güncellenir.</p>
       <table><tr><th>TC kimlik no</th><td>${e(k.tc || '')}</td><th>Kayıt tarihi</th><td>${tarih(k.kayit)}</td></tr>
       <tr><th>Adı</th><td>${e(k.ad)}</td><th>Soyadı</th><td>${e(k.soyad)}</td></tr>
@@ -97,6 +97,27 @@ function belgeHtml(tur, id) {
   if (tur === 'makbuz') { const h = S.hareket.filter(x => x.kursiyer === k.id).sort((a, b) => b.tarih.localeCompare(a.tarih))[0]; return kursBas('Tahsilat makbuzu') + `<table><tr><th>Makbuz no</th><td>${(h ? h.id : '').replace('h', 'M-')}</td><th>Tarih</th><td>${h ? tarih(h.tarih) : ''}</td></tr><tr><th>Ödeyen</th><td>${e(tamAd(k))}</td><th>Yöntem</th><td>${h ? e(h.yontem) : ''}</td></tr><tr><th>Açıklama</th><td colspan="3">${h ? e(h.aciklama) : ''}</td></tr><tr><th>Tutar</th><td colspan="3"><b>${h ? tl(h.tutar) : ''}</b></td></tr><tr><th>Kalan borç</th><td colspan="3">${tl(kalanBorc(k))}</td></tr></table><div class="imza"><div>Teslim eden</div><div>Teslim alan</div></div>`; }
   if (tur === 'senet') { const t = k.odeme.taksitler.find(x => !x.odendi) || k.odeme.taksitler[0]; return kursBas('Senet') + `<table><tr><th>Ödeme günü</th><td>${t ? tarih(t.vade) : ''}</td><th>Tutar</th><td><b>${t ? tl(t.tutar) : ''}</b></td></tr></table><p>İşbu senet mukabilinde ${t ? tarih(t.vade) : ''} tarihinde ${e(S.kurs.ad)}’na yukarıda yazılı tutarı ödeyeceğim. Bedeli eğitim hizmeti olarak alınmıştır.</p><table><tr><th>Borçlu</th><td>${e(tamAd(k))}</td></tr><tr><th>Telefon</th><td>${e(k.tel)}</td></tr><tr><th>Kefil</th><td>${e(k.acil ? k.acil.ad : '')}</td></tr></table><p style="color:#666;font-size:11.5px">Örnek şablon; kurs kendi senet formunu kullanabilir.</p><div class="imza"><div>Borçlu</div><div>Kefil</div></div>`; }
   return '';
+}
+// Kayıt sonrası sözleşme: ekranda parmakla imza ya da yazdırıp ıslak imza
+export function sozlesmeImzalat(k) {
+  pencere({
+    baslik: 'Sözleşme · ' + tamAd(k), genis: true,
+    icerik: `<div style="background:var(--zemin);padding:14px;border-radius:8px;max-height:44vh;overflow:auto"><div class="a4">${belgeHtml('sozlesme', k.id)}</div></div>
+      <p class="et" style="margin:14px 0 6px">Kursiyer imzası · tablete ya da ekrana parmakla</p><canvas class="imza-alan" width="900" height="260" data-imza aria-label="Kursiyer imza alanı"></canvas><button class="dg dg-hafif dg-kucuk" data-temizle type="button" style="margin-top:6px">Temizle</button>`,
+    altlik: `<button class="dg dg-cizgi" data-kapat>Sonra</button><button class="dg dg-cizgi" data-yazdir>${ik('belge')}Yazdır, ıslak imza</button><button class="dg dg-ana" data-imzala>İmzayı kaydet</button>`,
+    onAc(d) {
+      const ia = imzaAlani(d.querySelector('[data-imza]'));
+      d.querySelector('[data-temizle]').addEventListener('click', () => ia.temizle());
+      d.querySelector('[data-yazdir]').addEventListener('click', () => { window.print(); islem('Sözleşme yazdırdı', tamAd(k)); kaydet(); bildir('İmzalı nüshayı teslim alınca Evraklar’da “İmzalı sözleşme”yi işaretleyin'); });
+      d.querySelector('[data-imzala]').addEventListener('click', () => {
+        if (ia.bos()) return bildir('Kursiyer imza alanına imzalasın', 'uyari');
+        k.sozlesmeImza = { tarih: gun(0), yontem: 'Ekranda', url: ia.url() }; k.evrak.sozlesme = true;
+        if (!eksikEvrak(k).length && ['Kayıt', 'Evrak'].includes(k.asama)) k.asama = 'Teorik';
+        islem('Sözleşme imzalattı', tamAd(k) + ' · ekranda'); gonderimEkle(tamAd(k), 'İmzalı sözleşmenin PDF kopyası', 'Sözleşme'); kaydet(); kapatPencere();
+        bildir('Sözleşme imzalandı; PDF kopyası kursiyere WhatsApp’tan gitti', 'wp'); yenile();
+      });
+    },
+  });
 }
 export function belgeAc(tur, id) {
   const s = SABLONLAR.find(x => x[0] === tur);
@@ -290,7 +311,7 @@ export function programPenceresi() {
 }
 export function sinavBildirimPenceresi(id) {
   const s = S.sinavlar.find(x => x.id === id), ks = s.kursiyerler.map(kursiyer).filter(Boolean).filter(subede);
-  const aracBul = k => S.araclar.find(a => a.egitmen === k.egitmen && (a.sinif === k.sinif || a.sinif === k.sinif.split('-')[0])) || S.araclar.find(a => a.sinif === k.sinif);
+  const aracBul = k => S.araclar.find(a => a.egitmen === k.egitmen && a.sinif === k.sinif) || S.araclar.find(a => a.sinif === k.sinif);
   pencere({
     baslik: `${tarih(s.tarih)} direksiyon sınavı · MEBBİS bildirimi`, genis: true,
     icerik: `<p style="margin-bottom:12px">Sınavdan en geç ${S.kurs.sinavBildirimIsGunu} iş günü önce her kursiyerin usta öğreticisi ve aracı MEBBİS’e girilir.</p><div class="tablo-kap"><table class="tablo"><thead><tr><th>TC</th><th>Kursiyer</th><th>Sınıf</th><th>Usta öğretici</th><th>Araç</th></tr></thead><tbody>${ks.map(k => { const a = aracBul(k); return `<tr><td class="mono">${e(k.tc)}</td><td>${e(tamAd(k))}</td><td>${SINIFLAR[k.sinif].ad}</td><td>${e(egitmen(k.egitmen).ad)}</td><td>${a ? plakaMetin(a) : ''}</td></tr>`; }).join('')}</tbody></table></div>`,

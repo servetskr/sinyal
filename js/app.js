@@ -1,11 +1,11 @@
-import { S, sifirla, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=28';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir } from './ui.js?v=28';
-import * as Y1 from './sayfalar1.js?v=28';
-import * as Y2 from './sayfalar2.js?v=28';
-import * as P from './portal.js?v=28';
-import * as Y3 from './sayfalar3.js?v=28';
-import * as Y4 from './sayfalar4.js?v=28';
-import * as Y5 from './sayfalar5.js?v=28';
+import { S, sifirla, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=29';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir } from './ui.js?v=29';
+import * as Y1 from './sayfalar1.js?v=29';
+import * as Y2 from './sayfalar2.js?v=29';
+import * as P from './portal.js?v=29';
+import * as Y3 from './sayfalar3.js?v=29';
+import * as Y4 from './sayfalar4.js?v=29';
+import * as Y5 from './sayfalar5.js?v=29';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
