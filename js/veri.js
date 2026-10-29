@@ -2,6 +2,18 @@
 let ANAHTAR = 'sinyal-demo-v19';
 // Usta öğreticinin ders sonunda puanladığı beceriler
 export const BECERI = [['kalkis', 'Kalkış ve duruş'], ['serit', 'Şerit ve ayna'], ['kavsak', 'Kavşak ve öncelik'], ['park', 'Park'], ['rampa', 'Rampa ve yokuş']];
+// Direksiyon dersi konuları: takip formunda zorunlu (MTSK Yön. md.17/3-d). Başlıklar sınavdaki değerlendirme formlarının (EK-4 otomobil, EK-3 motosiklet) bölümleriyle aynı.
+export const DERS_KONU = [['hazirlik', 'Araç tanıma ve sürüşe hazırlık'], ['calistirma', 'Aracı çalıştırma, kalkış ve duruş'], ['pedal', 'Kumanda pedalları ve vites'], ['direksiyon', 'Direksiyon hakimiyeti'], ['serit', 'Şerit izleme ve değiştirme'], ['kavsak', 'Kavşaklar ve dönüşler'], ['park', 'Geri park etme'], ['donus', 'Dar alanda geri dönüş'], ['geri', 'Geri düz gitme ve L dönüş'], ['rampa', 'Eğimli yolda kalkış'], ['sollama', 'Öndeki aracı geçme ve geçilme'], ['hiz', 'Hız kuralları ve takip mesafesi'], ['tali', 'Tali yolda sürüş'], ['fren', 'Ani fren'], ['ekonomik', 'Çevreye duyarlı, ekonomik sürüş'], ['gece', 'Gece sürüşü'], ['guzergah', 'Sınav güzergâhı ve genel tekrar']];
+export const DERS_KONU_MOTOR = [['hazirlik', 'Araç tanıma ve sürüşe hazırlık'], ['calistirma', 'Aracı çalıştırma, kalkış ve duruş'], ['koni', 'Koniler arasından geçme'], ['sekiz', 'Sekiz çizme'], ['denge', 'Denge çizgisinden geçme'], ['udonus', 'Dar alanda (U) dönüş'], ['hizlanma', 'Hızlanma, yavaşlama ve durma'], ['engel', 'Engelden kaçma'], ['fren', 'Ani fren'], ['serit', 'Şerit izleme ve değiştirme'], ['kavsak', 'Kavşaklar ve dönüşler'], ['sollama', 'Öndeki aracı geçme ve geçilme'], ['hiz', 'Hız kuralları'], ['gece', 'Gece sürüşü'], ['guzergah', 'Sınav güzergâhı ve genel tekrar']];
+const KONU_PLAN = [['hazirlik', 'calistirma'], ['calistirma', 'pedal'], ['direksiyon', 'serit'], ['serit', 'kavsak'], ['kavsak', 'hiz'], ['park', 'geri'], ['donus', 'park'], ['rampa', 'fren'], ['sollama', 'hiz'], ['tali', 'ekonomik'], ['gece'], ['gece', 'kavsak'], ['guzergah'], ['guzergah']];
+const KONU_PLAN_MOTOR = [['hazirlik', 'calistirma'], ['koni', 'sekiz'], ['denge', 'udonus'], ['hizlanma', 'engel'], ['fren', 'serit'], ['kavsak', 'sollama'], ['hiz', 'gece'], ['guzergah']];
+export const motorSinif = sinif => /^(A|M)/.test(String(sinif || ''));
+export const konuListesi = sinif => motorSinif(sinif) ? DERS_KONU_MOTOR : DERS_KONU;
+// Kaçıncı derste hangi konular: kursun ders sayısına göre plana oranlanır (öneri; öğretmen değiştirir)
+export function konuOner(sinif, no, toplam) { const p = motorSinif(sinif) ? KONU_PLAN_MOTOR : KONU_PLAN, i = Math.min(p.length - 1, Math.floor((Math.max(1, no) - 1) * p.length / Math.max(1, toplam || p.length))); return p[i]; }
+const BECERI_KONU = { kalkis: 'calistirma', serit: 'serit', kavsak: 'kavsak', park: 'park', rampa: 'rampa' };
+// Dersin konuları (takip formu): öğretmenin seçtiği; eski derslerde puanladığı beceriler
+export function dersKonulari(d, sinif) { const l = konuListesi(sinif), ad = id => (l.find(x => x[0] === id) || DERS_KONU.find(x => x[0] === id) || [0, id])[1]; if (d.konular && d.konular.length) return d.konular.map(ad); if (d.beceri) return Object.keys(d.beceri).map(k => BECERI_KONU[k]).filter(Boolean).map(ad); return []; }
 try { for (let i = 1; i < 19; i++) localStorage.removeItem('sinyal-demo-v' + i); } catch (x) { }
 
 export const BUGUN = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })();
@@ -478,6 +490,8 @@ function goc(o) {
   const YORUM = ['Çok sabırlı, her şeyi tekrar tekrar anlattı.', 'Park etmeyi sonunda öğrendim, teşekkürler.', 'Biraz hızlı gittik ama faydalı oldu.', 'Yokuşta kalkışı iyi çalıştık.', 'Araç çok temizdi, ders zamanında başladı.', 'Ders 10 dakika geç başladı.', 'Kavşaklarda daha çok pratik istiyorum.'];
   if (demo) (o.dersler || []).forEach(d => { if (d.durum !== 'Yapıldı' || d.ogrenciPuan !== undefined) return; const h = hs(d.id + 'p'); if (h % 3 === 0) { d.ogrenciPuan = null; return; } const puan = [5, 5, 4, 5, 4, 3, 5, 4][h % 8], yorum = h % 5 === 0 ? YORUM[h % YORUM.length] : ''; d.ogrenciPuan = { puan: yorum.includes('geç başladı') ? 3 : puan, yorum, tarih: d.tarih }; });
   if (demo) (o.dersler || []).forEach(d => { if (d.durum !== 'Yapıldı' || d.beceri !== undefined) return; const k = kz[d.kursiyer]; if (!k) return; const taban = [2.7, 3.5, 3.9, 4.2, 4.0, 3.8, 4.4][hs(k.id) % 7]; d.beceri = Object.fromEntries(BECERI.map(([b], i) => [b, Math.max(1, Math.min(5, Math.round(taban + ((hs(d.id + b) % 5) - 2) * 0.3 + (i === hs(k.id) % 5 ? -0.9 : 0))))])); });
+  // örnek dersler: takip formundaki konular ders sırasına göre (gerçek kursta öğretmen ders sonunda seçer)
+  if (demo) { const sira = {}; (o.dersler || []).filter(d => d.durum === 'Yapıldı').sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat)).forEach(d => { const k = kz[d.kursiyer]; if (!k) return; sira[k.id] = (sira[k.id] || 0) + 1; if (!d.konular) d.konular = konuOner(k.sinif, sira[k.id], (SINIFLAR[k.sinif] || {}).direksiyon); }); }
   o.kurs.maliyet = o.kurs.maliyet || { yakit: 46, tuketim: 6.5, km: 22, bakim: 55, pay: 55 };
   if (o.kurs.kendiRandevu === undefined) o.kurs.kendiRandevu = true;
   return o;

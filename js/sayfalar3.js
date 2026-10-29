@@ -1,11 +1,11 @@
-import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas, sb, sbDers, sbSinav, gorunum, subede, SOZLESME_VARSAYILAN, satistaSiniflar, ayEkle, YONTEMLER, yontemAd, selam, kursAdi } from './veri.js?v=68';
-import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler, imzaAlani, tamTarih, yaziyla, belgeYazdir, kartFormu, kartBagla, kartDogrula, waAc, apiAcik, belgeWhatsApp } from './ui.js?v=68';
-import { yenile } from './app.js?v=68';
-import { siraliPencere } from './sayfalar5.js?v=68';
+import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas, sb, sbDers, sbSinav, gorunum, subede, SOZLESME_VARSAYILAN, satistaSiniflar, ayEkle, YONTEMLER, yontemAd, selam, kursAdi, dersKonulari } from './veri.js?v=70';
+import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler, imzaAlani, tamTarih, yaziyla, belgeYazdir, kartFormu, kartBagla, kartDogrula, waAc, apiAcik, belgeWhatsApp } from './ui.js?v=70';
+import { yenile } from './app.js?v=70';
+import { siraliPencere } from './sayfalar5.js?v=70';
 
 /* ================= BELGELER VE ÇIKTILAR ================= */
 const gorunumSube = () => gorunum.sube;
-const BELGE_GRUP = { fatura: 'Kursiyer', sozlesme: 'Kursiyer', bilgi: 'Kursiyer', takip: 'Kursiyer', makbuz: 'Kursiyer', senet: 'Kursiyer', ek1: 'Kursiyer', denetim: 'MEB ve denetim', devam: 'MEB ve denetim', program: 'MEB ve denetim', sinav: 'MEB ve denetim', dilekce: 'MEB ve denetim', hizmet: 'Sözleşme ve KVKK', vis: 'Sözleşme ve KVKK', aydinlatma: 'Sözleşme ve KVKK' };
+const BELGE_GRUP = { fatura: 'Kursiyer', sozlesme: 'Kursiyer', bilgi: 'Kursiyer', takip: 'Kursiyer', makbuz: 'Kursiyer', senet: 'Kursiyer', ek1: 'MEB resmî formları', ek5: 'MEB resmî formları', ek34: 'MEB resmî formları', ek8: 'MEB resmî formları', aracdosya: 'MEB resmî formları', ek12: 'MEB resmî formları', ek10: 'MEB resmî formları', dersdefteri: 'MEB resmî formları', denetim: 'MEB ve denetim', devam: 'MEB ve denetim', program: 'MEB ve denetim', sinav: 'MEB ve denetim', dilekce: 'MEB ve denetim', hizmet: 'Sözleşme ve KVKK', vis: 'Sözleşme ve KVKK', aydinlatma: 'Sözleşme ve KVKK' };
 const SABLONLAR = [
   ['sozlesme', 'Kursiyer sözleşmesi', 'Ücret, taksit planı ve imza alanlarıyla', 'kursiyer'],
   ['bilgi', 'Kursiyer bilgi formu', 'Kimlik, iletişim, acil durum kişisi, evrak durumu', 'kursiyer'],
@@ -14,9 +14,16 @@ const SABLONLAR = [
   ['fatura', 'e-Arşiv fatura', 'Kesilmiş faturaların çıktısı', 'fatura'],
   ['senet', 'Senet', 'Senetli ödeme planı olan kursiyerler için', 'senet'],
   ['program', 'Haftalık ders programı', 'Usta öğreticiye göre, kapıya asılacak çizelge', 'egitmen'],
-  ['sinav', 'Sınav listesi', 'Oturuma giden kursiyerler, imza sütunuyla', 'sinav'],
+  ['sinav', 'Sınava gidecekler listesi (kurs içi)', 'Oturuma giden kursiyerler, imza sütunuyla; resmî sınav takip ve sonuç listesi MEBBİS’ten alınır', 'sinav'],
   ['denetim', 'Denetim dosyası', 'Kursiyer, ders, araç ve personel kayıtları; eksikler en başta', 'tek'],
-  ['ek1', 'Kursiyer kayıt formu (EK-1 düzeni)', 'MTSK Yönetmeliği ekindeki kayıt formu düzeninde', 'kursiyer'],
+  ['ek1', 'Kursa müracaat formu (EK-1)', 'Kayıt dilekçesi ve beyan; fotoğraf ve nüfus bilgileriyle', 'resmi'],
+  ['ek5', '“K” sınıfı sürücü aday belgesi (EK-5)', 'Akan trafikte araçta bulunur; 6 ay geçerli', 'resmi'],
+  ['ek34', 'Direksiyon sınavı değerlendirme formu (EK-3 / EK-4)', 'Sınıfa göre doğru form; deneme sınavında da kullanılır', 'resmi'],
+  ['ek8', 'Eğitim ve sınav aracı izin formu (EK-8)', 'Her araç için; MEM onayına gider', 'resmi'],
+  ['aracdosya', 'Araç evrak dosyası (md.17/3)', 'Araçta bulunacaklar, kursiyer ve saat listesi; istenirse EK-8, EK-5, takip formları', 'resmi'],
+  ['ek12', 'Sınav aracı kontrol formu (EK-12)', 'Sınav günü her araç için', 'resmi'],
+  ['ek10', 'Sınav aracı değişiklik formu (EK-10)', 'Arızalanan sınav aracının yerine başka araç', 'resmi'],
+  ['dersdefteri', 'Teorik ders defteri (md.42)', 'Gruba göre işlenen dersler, öğretici ve katılım', 'resmi'],
   ['devam', 'Teorik devam çizelgesi', 'Gruplara göre katılım ve imza sütunu', 'tek'],
   ['hizmet', 'Sinyal hizmet sözleşmesi', 'Erişilebilirlik, sorumluluk, veri teslimi, fesih', 'tek'],
   ['vis', 'Veri işleme sözleşmesi', 'KVKK: kurs veri sorumlusu, Sinyal veri işleyen', 'tek'],
@@ -110,21 +117,12 @@ export function belgeHtml(tur, id, hid) {
     <div class="son"><p>İki nüsha düzenlenmiş, birer nüshası taraflarda kalmıştır.</p>
     <div class="imza"><div>${imz && imz.url ? `<img src="${imz.url}" alt="Kursiyer imzası" style="height:50px;display:block;margin:-56px auto 4px">` : ''}Kursiyer · ${e(tamAd(k))}${imz ? `<small style="display:block">${imz.yontem === 'Islak imza' ? 'Islak imza' : /^Uzaktan/.test(imz.yontem || '') ? 'Elektronik imza · WhatsApp linki' : 'Elektronik imza · kursta'} · ${tamTarih(imz.tarih)}</small>` : ''}</div><div>Kurs müdürü · ${e(K.yetkili || '')}<small style="display:block">${e(K.ad)}</small></div></div></div>`;
   }
-  if (tur === 'ek1') return kursBas('Motorlu taşıt sürücüleri kursu kursiyer kayıt formu') + `<p style="font-size:11.5px;color:#555">MTSK Yönetmeliği ekindeki kayıt formu düzeninde hazırlanmıştır. İl MEM’inizin örneğiyle farklılık varsa bildirin, 1 iş günü içinde güncellenir.</p>
-      <table><tr><th>TC kimlik no</th><td>${e(k.tc || '')}</td><th>Kayıt tarihi</th><td>${tamTarih(k.kayit)}</td></tr>
-      <tr><th>Adı</th><td>${e(k.ad)}</td><th>Soyadı</th><td>${e(k.soyad)}</td></tr><tr><th>Cinsiyet</th><td>${e(k.cinsiyet || '')}</td><th>Sağlık raporu</th><td>${e(k.saglikRapor ? k.saglikRapor.no + ' · ' + (k.saglikRapor.tarih || '') : '')}</td></tr>
-      <tr><th>Doğum tarihi</th><td>${e(k.dogumTarihi ? k.dogumTarihi.split('-').reverse().join('.') : k.dogum || '')}</td><th>Öğrenim durumu</th><td>${e(k.ogrenim || '')}</td></tr>
-      <tr><th>İstenen sertifika</th><td>${S0.ad}</td><th>Mevcut sürücü belgesi</th><td>${e(k.mevcutEhliyet || 'Yok')}</td></tr>
-      <tr><th>Adres</th><td colspan="3">${e(k.adres || '')}</td></tr><tr><th>Telefon</th><td>${e(k.tel)}</td><th>Dönem / grup</th><td>${(k.teorikGrup || 'aksam') === 'sabah' ? 'Sabah' : 'Akşam'}</td></tr></table>
-      <p><b>Teslim alınan belgeler</b></p><table>${EVRAKLAR.map(([x, t]) => `<tr><td>${t}</td><td style="width:80px">${k.evrak[x] ? 'Var' : 'Yok'}</td></tr>`).join('')}</table>
-      <p style="font-size:12px">Beyan ettiğim bilgilerin doğru olduğunu, kişisel verilerimin aydınlatma metninde belirtilen amaçlarla işlenmesine onay verdiğimi kabul ederim.</p>
-      <div class="imza"><div>Kursiyer</div><div>Kurs müdürü</div></div>`;
   if (tur === 'bilgi') return kursBas('Kursiyer bilgi formu') + `<table><tr><th>Ad soyad</th><td>${e(tamAd(k))}</td><th>TC kimlik no</th><td>${e(k.tc || '')}</td></tr><tr><th>Doğum tarihi</th><td>${tamTarih(k.dogumTarihi)}</td><th>Cinsiyet</th><td>${e(k.cinsiyet || '')}</td></tr><tr><th>Telefon</th><td>${e(k.tel)}</td><th>Öğrenim</th><td>${e(k.ogrenim || '')}</td></tr><tr><th>Adres</th><td colspan="3">${e(k.adres || '')}</td></tr>
     <tr><th>Sınıf</th><td>${S0.ad}</td><th>Kayıt tarihi</th><td>${tamTarih(k.kayit)}</td></tr><tr><th>Usta öğretici</th><td>${e(egitmen(k.egitmen).ad)}</td><th>Teorik grup</th><td>${(k.teorikGrup || 'aksam') === 'sabah' ? 'Sabah' : 'Akşam'}</td></tr><tr><th>Mevcut ehliyet</th><td>${e(k.mevcutEhliyet || 'Yok')}</td><th>Nereden duydu</th><td>${e(k.kaynak)}</td></tr>
     <tr><th>Acil durum kişisi</th><td colspan="3">${e(k.acil && k.acil.ad ? k.acil.ad + (k.acil.yakinlik ? ' (' + k.acil.yakinlik + ')' : '') + ' · ' + k.acil.tel : '—')}</td></tr>
     <tr><th>Sağlık raporu</th><td>${e(k.saglikRapor ? k.saglikRapor.no + ' · ' + (k.saglikRapor.tarih || '') : '—')}</td><th>Adli sicil barkodu</th><td>${e(k.adliSicil ? k.adliSicil.barkod : '—')}</td></tr></table>
     <p><b>Evrak durumu</b></p><table>${EVRAKLAR.map(([key, t]) => `<tr><td>${t}</td><td style="width:140px">${k.evrak[key] ? 'Teslim alındı' : 'Eksik'}</td></tr>`).join('')}</table><div class="imza"><div>Kursiyer</div><div>Teslim alan</div></div>`;
-  if (tur === 'takip') { const d = S.dersler.filter(x => x.kursiyer === k.id && x.durum === 'Yapıldı').sort((a, b) => a.tarih.localeCompare(b.tarih)); return kursBas('Direksiyon eğitimi takip formu') + `<i data-yatay></i><p><b>Kursiyer:</b> ${e(tamAd(k))} &nbsp; <b>Sınıf:</b> ${S0.ad}</p>${(() => { const y = S.kurs.imzaYontemi || 'ikili', dij = y !== 'islak', isl = y !== 'dijital'; return `<table><tr><th>#</th><th>Tarih</th><th>Başlangıç–bitiş</th><th>Usta öğretici</th><th>Araç</th>${dij ? '<th>Kursiyer (dijital)</th><th>Usta öğr. (dijital)</th>' : ''}${isl ? '<th>Kursiyer ıslak imza</th><th>Usta öğr. ıslak imza</th>' : ''}</tr>${Array.from({ length: Math.max(S0.direksiyon, d.length) }, (_, i) => d[i] ? `<tr><td>${i + 1}</td><td>${tamTarih(d[i].tarih)}</td><td>${d[i].bas ? d[i].bas + '–' + d[i].bit + ' (' + d[i].sure + ' dk)' : d[i].saat}</td><td>${e(egitmen(d[i].egitmen).ad)}</td><td>${d[i].arac ? arac(d[i].arac).plaka : ''}</td>${dij ? imzaHucre(d[i], 'kursiyer') + imzaHucre(d[i], 'usta') : ''}${isl ? '<td style="width:90px"></td><td style="width:90px"></td>' : ''}</tr>` : `<tr><td>${i + 1}</td><td></td><td></td><td></td><td></td>${dij ? '<td></td><td></td>' : ''}${isl ? '<td></td><td></td>' : ''}</tr>`).join('')}</table><p style="font-size:11.5px;color:#555">${{ ikili: 'Dijital imzalar ders sonunda usta öğreticinin telefonunda alınmış, zaman damgasıyla saklanmıştır. Islak imza sütunları haftalık olarak doldurulur.', dijital: 'Dijital imzalar ders sonunda alınmış, zaman damgasıyla saklanmıştır. Kurs, il MEM’in dijital imza onayını dosyasında saklar.', islak: 'Her ders sonunda ıslak imzalanır.' }[y]}${d.some(x => x.imza && x.imza.kursiyerUzaktan) ? ' “Uzaktan” yazan kursiyer imzaları, kursiyerin kendi telefonundan kursun gönderdiği imza linkiyle alınmış ve mühürle doğrulanmıştır.' : ''}</p>`; })()}`; }
+  if (tur === 'takip') { const d = S.dersler.filter(x => x.kursiyer === k.id && x.durum === 'Yapıldı').sort((a, b) => a.tarih.localeCompare(b.tarih)); return kursBas('Direksiyon eğitim takip formu') + `<i data-yatay></i><p><b>Kursiyer:</b> ${e(tamAd(k))} &nbsp; <b>Sınıf:</b> ${S0.ad}</p>${(() => { const y = S.kurs.imzaYontemi || 'ikili', dij = y !== 'islak', isl = y !== 'dijital'; return `<table><tr><th>#</th><th>Tarih</th><th>Başlangıç–bitiş</th><th>Konular</th><th>Usta öğretici</th><th>Araç</th>${dij ? '<th>Kursiyer (dijital)</th><th>Usta öğr. (dijital)</th>' : ''}${isl ? '<th>Kursiyer ıslak imza</th><th>Usta öğr. ıslak imza</th>' : ''}</tr>${Array.from({ length: Math.max(S0.direksiyon, d.length) }, (_, i) => d[i] ? `<tr><td>${i + 1}</td><td>${tamTarih(d[i].tarih)}</td><td>${d[i].bas ? d[i].bas + '–' + d[i].bit + ' (' + d[i].sure + ' dk)' : d[i].saat}</td><td style="font-size:10.5px">${e(dersKonulari(d[i], k.sinif).join(', '))}</td><td>${e(egitmen(d[i].egitmen).ad)}</td><td>${d[i].arac ? arac(d[i].arac).plaka : ''}</td>${dij ? imzaHucre(d[i], 'kursiyer') + imzaHucre(d[i], 'usta') : ''}${isl ? '<td style="width:90px"></td><td style="width:90px"></td>' : ''}</tr>` : `<tr><td>${i + 1}</td><td></td><td></td><td></td><td></td><td></td>${dij ? '<td></td><td></td>' : ''}${isl ? '<td></td><td></td>' : ''}</tr>`).join('')}</table><p style="font-size:11.5px;color:#555">${{ ikili: 'Dijital imzalar ders sonunda usta öğreticinin telefonunda alınmış, zaman damgasıyla saklanmıştır. Islak imza sütunları haftalık olarak doldurulur.', dijital: 'Dijital imzalar ders sonunda alınmış, zaman damgasıyla saklanmıştır. Kurs, il MEM’in dijital imza onayını dosyasında saklar.', islak: 'Her ders sonunda ıslak imzalanır.' }[y]}${d.some(x => x.imza && x.imza.kursiyerUzaktan) ? ' “Uzaktan” yazan kursiyer imzaları, kursiyerin kendi telefonundan kursun gönderdiği imza linkiyle alınmış ve mühürle doğrulanmıştır.' : ''}</p>`; })()}`; }
   if (tur === 'makbuz') {
     const h = (hid && S.hareket.find(x => x.id === hid)) || S.hareket.filter(x => x.kursiyer === k.id && x.tur === 'Gelir').sort((a, b) => b.tarih.localeCompare(a.tarih))[0];
     if (!h) return kursBas('Tahsilat makbuzu') + '<p>Bu kursiyerden henüz tahsilat yok.</p>';
@@ -153,7 +151,7 @@ export function sozlesmeImzalat(k) {
     onAc(d) {
       const ia = imzaAlani(d.querySelector('[data-imza]'));
       d.querySelector('[data-temizle]').addEventListener('click', () => ia.temizle());
-      d.querySelector('[data-uzaktan]').addEventListener('click', () => import('./imza.js?v=68').then(m => m.imzayaGonderPenceresi(k, 'sozlesme')));
+      d.querySelector('[data-uzaktan]').addEventListener('click', () => import('./imza.js?v=70').then(m => m.imzayaGonderPenceresi(k, 'sozlesme')));
       d.querySelector('[data-yazdir]').addEventListener('click', () => { belgeYazdir(belgeHtml('sozlesme', k.id) + '<div class="sayfa-sonu"></div>' + belgeHtml('sozlesme', k.id), 'Sözleşme · ' + tamAd(k)); islem('Sözleşme yazdırdı', tamAd(k)); kaydet(); bildir('İki nüsha yazdırıldı. İmzalı nüshayı teslim alınca Evraklar’da “İmzalı sözleşme”yi işaretleyin'); });
       d.querySelector('[data-imzala]').addEventListener('click', () => {
         if (ia.bos()) return bildir('Kursiyer imza alanına imzalasın', 'uyari');
@@ -167,6 +165,7 @@ export function sozlesmeImzalat(k) {
 }
 export function belgeAc(tur, id) {
   const s = SABLONLAR.find(x => x[0] === tur);
+  if (s && s[3] === 'resmi') return import('./resmi.js?v=70').then(m => m.resmiAc(tur, id, kid => belgeHtml('takip', kid)));
   const yazdirBtn = `<button class="dg dg-ana" data-yazdir>${ik('belge')}Yazdır / PDF</button>`;
   if (s[3] === 'tek') { pencere({ baslik: s[1], genis: true, icerik: `<div style="background:var(--zemin);padding:18px;border-radius:8px;max-height:66vh;overflow:auto"><div class="a4" id="a4">${belgeHtml(tur)}</div></div>`, altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button>${yazdirBtn}`, onAc(d) { d.querySelector('[data-yazdir]').addEventListener('click', () => { belgeYazdir(belgeHtml(tur), s[1]); islem(s[1] + ' yazdırdı'); kaydet(); }); } }); return; }
   const gelir = () => S.hareket.filter(h => h.tur === 'Gelir' && h.kursiyer && subede(kursiyer(h.kursiyer))).sort((a, b) => (b.tarih + b.id).localeCompare(a.tarih + a.id));
@@ -194,7 +193,7 @@ export function belgeler() {
   return {
     baslik: 'Belgeler ve çıktılar', alt: 'Kayıtlardan otomatik dolan, yazdırmaya hazır formlar',
     html: `${ekranNotu('Formu seçin, kişiyi seçin; bilgiler kayıttan dolar. Yazdırın ya da WhatsApp’tan PDF olarak gönderin.')}
-    ${['Kursiyer', 'MEB ve denetim', 'Sözleşme ve KVKK'].map(g => `<div class="bolum-bas" style="margin-top:6px"><div><h2>${g}</h2></div></div><div class="belge-liste" style="margin-bottom:18px">${SABLONLAR.filter(x => BELGE_GRUP[x[0]] === g).map(([k, t, a]) => `<button class="belge-kart" data-belge="${k}"><span class="kagit"><i></i><i></i><i style="width:80%"></i><i></i><i style="width:65%"></i><i style="width:90%"></i></span><b>${t}</b><small>${a}</small></button>`).join('')}</div>`).join('')}`,
+    ${['Kursiyer', 'MEB resmî formları', 'MEB ve denetim', 'Sözleşme ve KVKK'].map(g => `<div class="bolum-bas" style="margin-top:6px"><div><h2>${g}</h2></div></div><div class="belge-liste" style="margin-bottom:18px">${SABLONLAR.filter(x => BELGE_GRUP[x[0]] === g).map(([k, t, a]) => `<button class="belge-kart" data-belge="${k}"><span class="kagit"><i></i><i></i><i style="width:80%"></i><i></i><i style="width:65%"></i><i style="width:90%"></i></span><b>${t}</b><small>${a}</small></button>`).join('')}</div>`).join('')}`,
     baglan(k) { k.addEventListener('click', ev => { const b = ev.target.closest('[data-belge]'); if (b) belgeAc(b.dataset.belge); }); },
   };
 }

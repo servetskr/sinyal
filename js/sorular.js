@@ -1,7 +1,7 @@
 // e-Sınav konu dağılımı: Trafik ve çevre 23, İlk yardım 12, Motor ve araç tekniği 9, Trafik adabı 6 (50 soru).
 // [konu, soru, [A, B, C, D], doğru şık indeksi, görsel (SVG ya da null), açıklama, kaynak]
 // Mevzuat: 2918 sayılı KTK (7574 ve 7590 sayılı kanunlarla 2026 değişiklikleri işlenmiş), Karayolları Trafik Yönetmeliği; ilk yardım: Sağlık Bakanlığı / MEB eğitim içeriği.
-export { KONULAR } from './konular.js?v=68';
+export { KONULAR } from './konular.js?v=70';
 
 export const SORULAR = [
   ["trafik","Kırmızı ışık yanan bir trafik ışığında sürücü ne yapmalıdır?",["Yavaşlayıp dikkatlice geçmelidir","Durmalıdır","Korna çalarak geçmelidir","Sağa dönebilir"],1],

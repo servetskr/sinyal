@@ -1096,3 +1096,9 @@ button.oto-gidecek:hover{text-decoration:underline}
 .ogr-ust small{font-size:12px;opacity:.85}
 .ogr-cikis{margin-left:auto;color:#fff;border:1.5px solid rgba(255,255,255,.8);border-radius:7px;padding:4px 12px;font-weight:700;font-size:13px}
 .ogr-icerik{max-width:640px;margin:0 auto;padding:16px 16px 96px}
+.konu-sec{gap:6px;margin-bottom:12px}
+.konu-sec label span{font-size:13px;padding:6px 10px}
+/* resmî form: eksik bilgiler */
+.eksik-alan{border:1.5px solid var(--sari);background:#fff8e1;border-radius:10px;padding:10px 14px;margin-bottom:12px}
+.eksik-alan summary{cursor:pointer;font-weight:700;color:var(--murekkep)}
+.eksik-alan .form-izgara{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
