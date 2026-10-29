@@ -1,7 +1,7 @@
-import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas, sb, sbDers, sbSinav, gorunum, subede, SOZLESME_VARSAYILAN, satistaSiniflar, ayEkle, YONTEMLER, yontemAd, selam, kursAdi } from './veri.js?v=61';
-import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler, imzaAlani, tamTarih, yaziyla, belgeYazdir, kartFormu, kartBagla, kartDogrula, waAc, apiAcik, belgeWhatsApp } from './ui.js?v=61';
-import { yenile } from './app.js?v=61';
-import { siraliPencere } from './sayfalar5.js?v=61';
+import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas, sb, sbDers, sbSinav, gorunum, subede, SOZLESME_VARSAYILAN, satistaSiniflar, ayEkle, YONTEMLER, yontemAd, selam, kursAdi } from './veri.js?v=62';
+import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler, imzaAlani, tamTarih, yaziyla, belgeYazdir, kartFormu, kartBagla, kartDogrula, waAc, apiAcik, belgeWhatsApp } from './ui.js?v=62';
+import { yenile } from './app.js?v=62';
+import { siraliPencere } from './sayfalar5.js?v=62';
 
 /* ================= BELGELER VE ÇIKTILAR ================= */
 const gorunumSube = () => gorunum.sube;
@@ -63,25 +63,27 @@ export function belgeHtml(tur, id, hid) {
       <p>Bu şekilde alınan elektronik imzaların Motorlu Taşıt Sürücüleri Kursu Yönetmeliği kapsamındaki takip formu için geçerli kabul edilip edilmeyeceği, kabul edilmiyorsa ıslak imzalı formun hangi sıklıkla düzenlenmesi gerektiği hususunda bilgi verilmesini arz ederim.</p>
       <div class="imza"><div></div><div>${e(sb_.mudur || S.kurs.yetkili)}<br>Kurs müdürü</div></div>
       <p style="font-size:12px;margin-top:20px">Adres: ${e(S.kurs.adres)} · Tel: ${e(S.kurs.tel)}</p>`; }
-  if (tur === 'hizmet') return kursBas('Sinyal hizmet sözleşmesi') + `<p><b>Taraflar:</b> ${e(S.kurs.ad)} (“Kurs”) ile Sinyal yazılım hizmetini sunan şirket (“Sağlayıcı”). Unvan, vergi ve MERSİS bilgileri imza aşamasında doldurulur.</p>
-      <p><b>1. Erişilebilirlik.</b> Aylık en az %99,5. Altına düşen her tam gün için o ayın ücretinin 1/30’u iade edilir. Sınav günlerinde (Cumartesi dahil) destek öncelikli ve 30 dakika içinde döner. Planlı bakım gece 02:00–05:00 arasında ve 48 saat önceden bildirilir.</p>
-      <p><b>2. Mevzuat kontrolleri.</b> Sinyal’in MEB kural kontrolleri yardımcıdır; değerlerin kaynağı ekranda gösterilir. Sağlayıcı mevzuat değişikliklerini haftalık izler ve yayımından itibaren 5 iş günü içinde kursa bildirir. Bildirimi yapılmamış bir değişiklikten doğan idari para cezasında Sağlayıcı, ödenen yıllık ücret tutarına kadar sorumludur. MEBBİS’e giriş ve son karar Kurs’tadır.</p>
-      <p><b>3. Veriler.</b> Kurs veri sorumlusu, Sağlayıcı veri işleyendir (ayrı Veri İşleme Sözleşmesi). Veriler Türkiye’deki sunucuda, şifreli saklanır; her gece yedeklenir. Kurs istediği an tüm verisini indirebilir.</p>
-      <p><b>4. Hizmetin devamlılığı.</b> Sağlayıcı faaliyetini durdurursa: en az 90 gün önceden bildirir, tüm veriyi Excel ve veritabanı yedeği olarak teslim eder ve yazılımın Kurs’un kendi sunucusunda çalışacak sürümünü kaynak koduyla birlikte ücretsiz verir (kaynak kod emaneti noterde tutulur).</p>
-      <p><b>5. Sosyal medya hesapları.</b> Asistan Meta’nın resmî bağlantısıyla, yalnızca gelen mesajlara cevap verir. Meta’nın hesap kısıtlaması hâlinde asistan durdurulur, itiraz sürecinde Sağlayıcı ücretsiz destek verir. Kısıtlama Sağlayıcı’nın kural dışı bir gönderiminden kaynaklanırsa o ayın ücreti alınmaz.</p>
-      <p><b>6. Ücret ve fesih.</b> Aylık ücret, pakette yazılı WhatsApp ve SMS kotası dahil sabittir; kota aşımında kursa önceden onay sorulur. Taahhüt yoktur; Kurs ay sonunda feshedebilir. Fesihten sonra veriler 30 gün içinde teslim edilip silinir.</p>
-      <div class="imza"><div>Kurs</div><div>Sağlayıcı</div></div>`;
-  if (tur === 'vis') return kursBas('Veri işleme sözleşmesi (KVKK)') + `<p><b>Veri sorumlusu:</b> ${e(S.kurs.ad)} · <b>Veri işleyen:</b> Sinyal hizmet sağlayıcısı</p>
-      <table><tr><th>İşlenen veri</th><td>Kimlik, iletişim, öğrenim, sağlık raporu ve adli sicil (özel nitelikli), ödeme, ders ve sınav kayıtları, mesajlaşma içerikleri</td></tr>
-      <tr><th>Amaç</th><td>Sürücü kursu eğitiminin yürütülmesi, MEB mevzuatı gereği kayıtlar, ödeme ve iletişim</td></tr>
-      <tr><th>Yer</th><td>Türkiye’deki veri merkezi. Asistanın dil modeli ${(S.sosyal && S.sosyal.ayar.veri.konum === 'ab') ? 'AB’de çalışır; yurt dışı aktarım standart sözleşmeyle yapılır ve KVKK Kurulu’na bildirilir' : 'Türkiye’de çalışır; yurt dışına aktarım yoktur'}.</td></tr>
-      <tr><th>Güvenlik</th><td>Diskte ve aktarımda şifreleme, iki adımlı giriş, rol bazlı yetki, erişim kaydı, gece yedeği (30 gün)</td></tr>
-      <tr><th>Alt işleyenler</th><td>Veri merkezi, e-Arşiv entegratörü, WhatsApp/Meta (yalnızca mesaj iletimi), SMS sağlayıcısı. Değişiklik 30 gün önce bildirilir.</td></tr>
-      <tr><th>İhlal bildirimi</th><td>Öğrenildiği andan itibaren en geç 24 saat içinde kursa</td></tr>
-      <tr><th>Saklama ve imha</th><td>Kursun belirlediği sürelerle; sözleşme bitince 30 gün içinde teslim ve imha</td></tr></table>
-      <div class="imza"><div>Veri sorumlusu</div><div>Veri işleyen</div></div>`;
+  if (tur === 'hizmet') return kursBas('Sinyal hizmet sözleşmesi (taslak)') + `<p style="font-size:12px;color:#666">Taslak metindir; imzadan önce taraflarca ve hukuk danışmanınızca gözden geçirilir.</p>
+    <p><b>Taraflar.</b> ${e(S.kurs.ad)} (“Kurs”) ile Sinyal yazılım hizmetini sunan taraf (“Sağlayıcı”). Sağlayıcının kimlik ve vergi bilgileri imza aşamasında doldurulur.</p>
+    <p><b>1. Hizmet.</b> Sinyal yazılımının tarayıcı ve telefon üzerinden kullanımı; kurulum, mevcut kayıtların aktarımı ve kullanıcılara kullanım eğitimi.</p>
+    <p><b>2. Erişim ve destek.</b> Sağlayıcı hizmetin kesintisiz çalışması için gereken özeni gösterir. Planlı bakım önceden bildirilir. Destek WhatsApp üzerinden verilir.</p>
+    <p><b>3. Mevzuat.</b> Sinyal’in MEB kural kontrolleri yardımcıdır; kuralın kaynağı ekranda gösterilir. MEBBİS’e girilen bilginin doğruluğu ve son karar Kurs’tadır.</p>
+    <p><b>4. Veriler.</b> Kurs veri sorumlusu, Sağlayıcı veri işleyendir (ayrı Veri İşleme Sözleşmesi). Veriler Google Firebase altyapısında, Avrupa Birliği’ndeki veri merkezinde şifreli saklanır. Kurs istediği an tüm verisini indirebilir.</p>
+    <p><b>5. Ücret.</b> Ücret ve ödeme koşulları bu sözleşmenin ekinde belirlenir.</p>
+    <p><b>6. Fesih.</b> Taraflar ekte belirtilen bildirim süresiyle sözleşmeyi feshedebilir. Fesihten sonra veriler 30 gün içinde Excel olarak teslim edilir, ardından silinir.</p>
+    <div class="imza"><div>Kurs</div><div>Sağlayıcı</div></div>`;
+  if (tur === 'vis') return kursBas('Veri işleme sözleşmesi (KVKK, taslak)') + `<p style="font-size:12px;color:#666">Taslak metindir; imzadan önce taraflarca ve hukuk danışmanınızca gözden geçirilir.</p><table>
+    <tr><th>Veri sorumlusu</th><td>${e(S.kurs.ad)}</td></tr><tr><th>Veri işleyen</th><td>Sinyal hizmet sağlayıcısı</td></tr>
+    <tr><th>İşlenen veri</th><td>Kimlik, iletişim, öğrenim, sağlık raporu ve adli sicil (özel nitelikli), fotoğraf, ödeme, ders ve sınav kayıtları, mesajlaşma içerikleri</td></tr>
+    <tr><th>Amaç</th><td>Sürücü kursu eğitiminin yürütülmesi, MEB mevzuatı gereği kayıtlar, ödeme ve iletişim</td></tr>
+    <tr><th>Yer</th><td>Google Firebase (Google Cloud), Avrupa Birliği’ndeki (Frankfurt) veri merkezi. Yurt dışına aktarım KVKK’nın 9. maddesine göre standart sözleşmeyle yapılır ve Kurul’a bildirilir.</td></tr>
+    <tr><th>Güvenlik</th><td>Aktarımda ve depolamada şifreleme, kullanıcıya özel giriş, rol bazlı yetki, işlem kaydı, düzenli yedek</td></tr>
+    <tr><th>Alt işleyenler</th><td>Google (barındırma), Meta/WhatsApp (mesaj iletimi), Cloudflare (mesaj köprüsü ve kısa bağlantılar); Kurs’un seçtiği e-Arşiv entegratörü ve ödeme kuruluşu. Değişiklik önceden bildirilir.</td></tr>
+    <tr><th>İhlal bildirimi</th><td>Öğrenildiği anda, gecikmeksizin Kurs’a</td></tr>
+    <tr><th>Saklama ve imha</th><td>Kurs’un belirlediği sürelerle; sözleşme bitince 30 gün içinde teslim ve imha</td></tr>
+  </table><div class="imza"><div>Veri sorumlusu</div><div>Veri işleyen</div></div>`;
   if (tur === 'aydinlatma') { const v = S.sosyal ? S.sosyal.ayar.veri : { konum: 'tr', saklamaAy: 12 }; return kursBas('Mesajlaşma kanalları aydınlatma metni') + `<p>${e(S.kurs.ad)} olarak Instagram, Facebook ve WhatsApp üzerinden bize yazdığınız mesajları; kurs hakkında bilgi vermek, kayıt görüşmesi ayarlamak ve sizi geri aramak amacıyla işliyoruz.</p>
-      <p>Mesajlarınıza ilk olarak bir yapay zekâ asistanı cevap verir. Asistan yalnızca kursun onayladığı bilgileri kullanır; sağlık durumu, şikâyet ve pazarlık gibi konuları kurs yetkilisine aktarır. TC kimlik numarası, telefon ve sağlık bilgisi gibi hassas veriler, asistanın dil modeline gönderilmeden gizlenir.</p>
+      <p>Mesajlarınıza ilk olarak kursun otomatik asistanı cevap verir. Asistan yalnızca kursun onayladığı bilgileri kullanır; cevabını bilmediği soruları, sağlık durumu, şikâyet ve pazarlık gibi konuları kurs yetkilisine aktarır.</p>
       <p>Mesajlarınız ${v.konum === 'tr' ? 'Türkiye’deki sunucularda işlenir, yurt dışına aktarılmaz' : 'Avrupa Birliği’ndeki bir sunucuda işlenir; bu aktarım KVKK’ya uygun standart sözleşmeyle yapılır'}. Konuşmalar ${v.saklamaAy} ay saklanır, ardından silinir.</p>
       <p>KVKK’nın 11. maddesi kapsamındaki haklarınız (bilgi talep etme, düzeltme, silme, itiraz) için ${e(S.kurs.tel)} numarasından ya da kursa yazılı olarak başvurabilirsiniz.</p>`; }
   if (tur === 'program') {
@@ -151,7 +153,7 @@ export function sozlesmeImzalat(k) {
     onAc(d) {
       const ia = imzaAlani(d.querySelector('[data-imza]'));
       d.querySelector('[data-temizle]').addEventListener('click', () => ia.temizle());
-      d.querySelector('[data-uzaktan]').addEventListener('click', () => import('./imza.js?v=61').then(m => m.imzayaGonderPenceresi(k, 'sozlesme')));
+      d.querySelector('[data-uzaktan]').addEventListener('click', () => import('./imza.js?v=62').then(m => m.imzayaGonderPenceresi(k, 'sozlesme')));
       d.querySelector('[data-yazdir]').addEventListener('click', () => { belgeYazdir(belgeHtml('sozlesme', k.id) + '<div class="sayfa-sonu"></div>' + belgeHtml('sozlesme', k.id), 'Sözleşme · ' + tamAd(k)); islem('Sözleşme yazdırdı', tamAd(k)); kaydet(); bildir('İki nüsha yazdırıldı. İmzalı nüshayı teslim alınca Evraklar’da “İmzalı sözleşme”yi işaretleyin'); });
       d.querySelector('[data-imzala]').addEventListener('click', () => {
         if (ia.bos()) return bildir('Kursiyer imza alanına imzalasın', 'uyari');
