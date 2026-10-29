@@ -683,3 +683,16 @@ body.portal-modu .sube-sec,body.portal-modu .sube-yan{display:none!important}
 .tel-dosya .ik{width:22px;height:22px;color:#c2410c}.tel-dosya span{display:flex;flex-direction:column;font-weight:700;font-size:12.5px}.tel-dosya small{text-align:left;font-weight:400}
 .tel-bos{margin:auto;text-align:center;color:#555;font-size:13px;padding:20px}.tel-bos .ik{width:34px;height:34px;color:#075e54}
 @media (max-width:900px){.senaryo-yerlesim{grid-template-columns:1fr}.telefon{position:static;height:460px}}
+
+.beceri-giris{display:grid;gap:6px;margin-bottom:4px}
+.beceri-sat{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between}
+.beceri-sat>span{font-size:14px;font-weight:700;color:var(--murekkep);min-width:130px}
+.beceri-sat .secim span{min-height:34px;min-width:38px;justify-content:center;padding:0 8px}
+.beceri-cubuk{display:grid;grid-template-columns:minmax(110px,auto) 1fr 34px;gap:8px;align-items:center;font-size:13.5px}
+.beceri-cubuk i{display:block;height:8px;border-radius:4px;background:var(--cizgi);overflow:hidden}
+.beceri-cubuk i b{display:block;height:100%;border-radius:4px}
+.isi{display:grid;gap:3px;font-size:12px}
+.isi div{display:grid;grid-template-columns:64px repeat(10,1fr);gap:3px;align-items:center}
+.isi span{text-align:center;padding:7px 0;border-radius:4px;font-weight:700;font-variant-numeric:tabular-nums}
+.isi .bas{color:var(--soluk);font-weight:600;background:none}
+@media (max-width:640px){.isi div{grid-template-columns:44px repeat(10,1fr)}.isi span{padding:6px 0;font-size:11px}}

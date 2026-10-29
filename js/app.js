@@ -1,14 +1,15 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=38';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir } from './ui.js?v=38';
-import * as Y1 from './sayfalar1.js?v=38';
-import * as Y2 from './sayfalar2.js?v=38';
-import * as P from './portal.js?v=38';
-import * as Y3 from './sayfalar3.js?v=38';
-import * as Y4 from './sayfalar4.js?v=38';
-import * as Y5 from './sayfalar5.js?v=38';
-import * as IM from './imza.js?v=38';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=38';
-import * as SN from './senaryo.js?v=38';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=39';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir } from './ui.js?v=39';
+import * as Y1 from './sayfalar1.js?v=39';
+import * as Y2 from './sayfalar2.js?v=39';
+import * as P from './portal.js?v=39';
+import * as Y3 from './sayfalar3.js?v=39';
+import * as Y4 from './sayfalar4.js?v=39';
+import * as Y5 from './sayfalar5.js?v=39';
+import * as IM from './imza.js?v=39';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=39';
+import * as SN from './senaryo.js?v=39';
+import * as OZ from './ozellik.js?v=39';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -16,16 +17,16 @@ const SAYFALAR = {
   mesajlar: Y2.mesajlar, meb: Y2.meb, raporlar: Y2.raporlar, ayarlar: Y2.ayarlar,
   egitmen: P.egitmenPortal, ogrenci: P.ogrenciPortal,
   belgeler: Y3.belgeler, kayit: Y3.kayitSayfasi, guven: Y3.guven, mebbis: Y3.mebbisAsistani,
-  sosyal: Y4.sosyal, kurulum: Y5.kurulum, 'imza-geldi': IM.imzaGeldi, senaryo: SN.senaryolar,
+  sosyal: Y4.sosyal, kurulum: Y5.kurulum, 'imza-geldi': IM.imzaGeldi, senaryo: SN.senaryolar, karlilik: OZ.karlilik,
 };
 const ROL_AD = { mudur: 'Kurs müdürü', sekreter: 'Ön büro', usta: 'Usta öğretici' };
-const YASAK = { mudur: [], sekreter: ['raporlar', 'ayarlar', 'guven', 'kurulum', 'senaryo'], usta: Object.keys(SAYFALAR).filter(k => !['egitmen', 'imza-geldi'].includes(k)) };
+const YASAK = { mudur: [], sekreter: ['raporlar', 'ayarlar', 'guven', 'kurulum', 'senaryo', 'karlilik'], usta: Object.keys(SAYFALAR).filter(k => !['egitmen', 'imza-geldi'].includes(k)) };
 const izinli = ad => { const u = oturum.kullanici; return u && !YASAK[u.rol].includes(ad); };
 
 const MENU = [
   ['Bugün', [['genel', 'Genel bakış', '↑'], ['adaylar', 'Yeni öğrenciler', '↗'], ['mesajlar', 'Mesajlar', '↗'], ['sosyal', 'Sosyal medya asistanı', '↗']]],
   ['Eğitim', [['kursiyerler', 'Kursiyerler', '→'], ['plan', 'Direksiyon planı', '→'], ['teorik', 'Teorik dersler', '→'], ['sinavlar', 'Sınavlar', '→']]],
-  ['İşletme', [['kasa', 'Kasa ve ödemeler', '→'], ['filo', 'Ekip ve araçlar', '→'], ['meb', 'MEB işlemleri', '→'], ['belgeler', 'Belgeler ve çıktılar', '→'], ['raporlar', 'Raporlar', '→']]],
+  ['İşletme', [['kasa', 'Kasa ve ödemeler', '→'], ['filo', 'Ekip ve araçlar', '→'], ['meb', 'MEB işlemleri', '→'], ['belgeler', 'Belgeler ve çıktılar', '→'], ['raporlar', 'Raporlar', '→'], ['karlilik', 'Kârlılık ve kapasite', '→']]],
   ['Kurs', [['senaryo', 'Demo senaryoları', '↗'], ['kurulum', 'Kurulum', '→'], ['kayit', 'Evden kayıt sayfası', '↗'], ['ogrenci', 'Kursiyer ekranı', '↗'], ['guven', 'Paket ve güvence', '→'], ['ayarlar', 'Ayarlar', '→']]],
 ];
 

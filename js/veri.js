@@ -1,5 +1,7 @@
 // Sinyal demo verisi: tarihler bugüne göre üretilir, tarayıcıda saklanır.
 const ANAHTAR = 'sinyal-demo-v19';
+// Usta öğreticinin ders sonunda puanladığı beceriler
+export const BECERI = [['kalkis', 'Kalkış ve duruş'], ['serit', 'Şerit ve ayna'], ['kavsak', 'Kavşak ve öncelik'], ['park', 'Park'], ['rampa', 'Rampa ve yokuş']];
 try { for (let i = 1; i < 19; i++) localStorage.removeItem('sinyal-demo-v' + i); } catch (x) { }
 
 export const BUGUN = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })();
@@ -458,6 +460,12 @@ function goc(o) {
   if (o.kurs.mebYontem === 'arac' && !o.mebArac) o.kurs.mebYontem = 'sirali';
   if (o.sosyal) o.sosyal.kanallar.forEach(c => { if (!c.gercek) { c.bagli = c.id === 'wp' ? !!o.kurs.waApi : false; c.cevap = c.bagli && c.cevap; } });
   if (o.kazanim && !o.kazanim.gercek) o.kazanim = { gercek: true, doldurulan: 0, ekDers: 0, yorum: 0 };
+  // geçmiş derslerin beceri puanları (usta öğretici ders bitiminde 1–5 verir); eski kayıtlara kursiyerin seyrine göre doldurulur
+  const hs = x => { let h = 7; for (const c of String(x)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
+  const kz = {}; (o.kursiyerler || []).forEach(k => { kz[k.id] = k; });
+  (o.dersler || []).forEach(d => { if (d.durum !== 'Yapıldı' || d.beceri !== undefined) return; const k = kz[d.kursiyer]; if (!k) return; const taban = [2.7, 3.5, 3.9, 4.2, 4.0, 3.8, 4.4][hs(k.id) % 7]; d.beceri = Object.fromEntries(BECERI.map(([b], i) => [b, Math.max(1, Math.min(5, Math.round(taban + ((hs(d.id + b) % 5) - 2) * 0.3 + (i === hs(k.id) % 5 ? -0.9 : 0))))])); });
+  o.kurs.maliyet = o.kurs.maliyet || { yakit: 46, tuketim: 6.5, km: 22, bakim: 55, pay: 55 };
+  if (o.kurs.kendiRandevu === undefined) o.kurs.kendiRandevu = true;
   return o;
 }
 // Yeni tahsilata kalıcı makbuz numarası
@@ -473,7 +481,7 @@ function subeTamamla() {
   S.egitmenler.forEach(x => { if (!x.sube) x.sube = v; });
 }
 export function kaydet() { subeTamamla(); (S.hareket || []).forEach(h => { if (h.tur === 'Gelir' && !h.no) makbuzNoVer(h); }); try { localStorage.setItem(ANAHTAR, JSON.stringify(S)); } catch (e) { } }
-export function sifirla() { try { localStorage.removeItem(ANAHTAR); } catch (e) { } S = uret(); S._gun = iso(BUGUN); kaydet(); }
+export function sifirla() { try { localStorage.removeItem(ANAHTAR); } catch (e) { } S = goc(uret()); S._gun = iso(BUGUN); kaydet(); }
 
 // Kursiyer sözleşmesinin varsayılan maddeleri. {süslü} alanlar kurs ayarlarından dolar; kurs Ayarlar › Sözleşme metni'nden değiştirir.
 export const SOZLESME_VARSAYILAN = [
@@ -509,19 +517,42 @@ export const asamaNo = k => ASAMALAR.indexOf(k.asama);
 export function sonrakiDers(k) { return S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Planlandı' && fark(d.tarih) >= 0).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat))[0]; }
 export function gonderimEkle(kime, metin, tur) { S.gonderimler.unshift({ zaman: new Date().toISOString(), kime, metin, tur }); kaydet(); }
 
-// Sınav riski: deneme ortalaması, gelmediği dersler, ilerleme hızı, önceki kalma.
+// Sınav riski (0–100): usta öğreticinin ders sonu beceri puanları, deneme sınavları, devamsızlık, kısa dersler, önceki kalma.
+const ortala = l => l.length ? l.reduce((a, x) => a + x, 0) / l.length : null;
+export function beceriOzet(k, n = 3) {
+  const l = S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Yapıldı' && d.beceri).sort((a, b) => (b.tarih + b.saat).localeCompare(a.tarih + a.saat)).slice(0, n);
+  if (!l.length) return null;
+  const b = Object.fromEntries(BECERI.map(([x]) => [x, ortala(l.map(d => d.beceri[x]).filter(v => v != null))]));
+  return { ders: l.length, beceri: b, ort: ortala(Object.values(b).filter(v => v != null)), zayif: BECERI.filter(([x]) => b[x] != null && b[x] < 3).map(([, ad]) => ad) };
+}
 export function risk(k) {
-  if (!['Teorik', 'Direksiyon', 'Sınav'].includes(k.asama)) return null;
-  const n = [];
+  if (!['Teorik', 'Direksiyon', 'Sınav'].includes(k.asama) || k.kapali) return null;
+  const n = [], direksiyon = k.asama !== 'Teorik', son3 = (k.deneme || []).slice(-3), ort = son3.length ? Math.round(ortala(son3)) : null;
   let p = 0;
-  const ort = k.deneme.length ? Math.round(k.deneme.reduce((a, b) => a + b, 0) / k.deneme.length) : null;
-  if (ort != null && ort < 70) { p += (70 - ort) * 1.6; n.push('Deneme ortalaması ' + ort); }
-  const gel = S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Gelmedi').length;
-  if (gel) { p += gel * 14; n.push(gel + ' derse gelmedi'); }
-  if (k.dsinav && k.dsinav.sonuc === 'Kaldı') { p += 30; n.push('Direksiyon sınavından kaldı'); }
-  if (k.esinav && k.esinav.hak > 1) { p += 12; n.push('e-Sınavı ' + k.esinav.hak + '. hakta geçti'); }
-  if (k.notlar.some(x => /zorlan|unut|panik|gergin/i.test(x.metin))) { p += 18; n.push('Usta öğretici notu'); }
-  return { puan: Math.min(100, Math.round(p)), ort, nedenler: n };
+  if (!direksiyon) {
+    if (ort == null) { p += 20; n.push('Hiç deneme sınavına girmedi'); }
+    else if (ort < 70) { p += (70 - ort) * 1.6 + 10; n.push(`Son denemelerin ortalaması ${ort} (geçme 70)`); }
+    const dev = S.teorik.filter(t => t.grup === k.teorikGrup && t.yoklama && t.tarih >= k.kayit && !t.yoklama.includes(k.id)).length;
+    if (dev >= 4) { p += 15; n.push(dev + ' teorik derse gelmedi'); }
+    if (k.esinav && k.esinav.sonuc === 'Kaldı') { p += 15; n.push('e-Sınavdan bir kez kaldı'); }
+  } else {
+    const b = beceriOzet(k);
+    if (!b) { p += 10; n.push('Henüz beceri puanı girilmedi'); }
+    else {
+      if (b.ort < 3.4) { p += b.ort < 2.8 ? 45 : 25; n.push(`Son ${b.ders} dersin beceri ortalaması ${b.ort.toFixed(1).replace('.', ',')}/5`); }
+      if (b.zayif.length) { p += Math.min(20, b.zayif.length * 8); n.push('Zayıf: ' + b.zayif.join(', ').toLocaleLowerCase('tr')); }
+    }
+    const gel = S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Gelmedi').length;
+    if (gel) { p += Math.min(24, gel * 8); n.push(gel + ' derse gelmedi'); }
+    const kisa = S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Yapıldı' && d.sure != null && d.sure < 40).length;
+    if (kisa >= 2) { p += 8; n.push(kisa + ' ders 40 dakikadan kısa'); }
+    if (k.dsinav && k.dsinav.sonuc === 'Kaldı') { p += 20; n.push('Direksiyon sınavından kaldı'); }
+    const sonDers = S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Yapıldı').map(d => d.tarih).sort().pop();
+    if (sonDers && fark(sonDers) < -14) { p += 10; n.push(-fark(sonDers) + ' gündür direksiyona çıkmadı'); }
+  }
+  if ((k.notlar || []).some(x => /zorlan|unut|panik|gergin/i.test(x.metin))) { p += 12; n.push('Usta öğretici notu'); }
+  const puan = Math.min(100, Math.round(p));
+  return { puan, ort, nedenler: n, seviye: puan >= 50 ? 'Yüksek' : puan >= 25 ? 'Orta' : 'Düşük', tur: direksiyon ? 'Direksiyon sınavı' : 'e-Sınav', beceri: direksiyon ? beceriOzet(k) : null, oneri: direksiyon ? (puan >= 50 ? 4 : puan >= 25 ? 2 : 0) : 0 };
 }
 
 export const ogretmen = id => (S.ogretmenler || []).find(o => o.id === id);

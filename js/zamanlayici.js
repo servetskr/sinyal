@@ -1,5 +1,6 @@
-import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, gecikenler, kalanBorc, islem, gonderimEkle, yerelZaman, oturum, kapaliGun, SINIFLAR } from './veri.js?v=38';
-import { tl, tamTarih, tarihUzun, saatDe, apiAcik, apiGonder, etiket, bildir, waSirali } from './ui.js?v=38';
+import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, gecikenler, kalanBorc, islem, gonderimEkle, yerelZaman, oturum, kapaliGun, SINIFLAR, risk } from './veri.js?v=39';
+import { tl, tamTarih, tarihUzun, saatDe, apiAcik, apiGonder, etiket, bildir, waSirali } from './ui.js?v=39';
+import { denetimSkoru } from './ozellik.js?v=39';
 
 /* ================= ZAMANLI MESAJLAR =================
    Sinyal açıkken her dakika zamanı gelen mesajları bulur. WhatsApp API bağlıysa kendiliğinden gönderir;
@@ -11,6 +12,7 @@ const YENI_KURALLAR = [
   { id: 'o11', ad: 'Kayıt görüşmesi hatırlatması', ne: 'Görüşmeden bir gün önce 18:00’de', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: 'Merhaba {ad}, yarın {saatte} kayıt görüşmeniz var. Adresimiz: {adres}. Kimliğinizi getirmeyi unutmayın.' },
   { id: 'o12', ad: 'Müdüre akşam özeti', ne: 'Her akşam 19:00’da', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: '{kurs} · {tarih} akşam özeti\n{ozet}' },
   { id: 'o13', ad: 'Belge ve araç süresi uyarısı', ne: 'Bitmeden 30, 7 ve 1 gün önce 09:00’da', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: '{konu} {kalan} bitiyor ({tarih}). Yenilemeyi unutmayın.' },
+  { id: 'o15', ad: 'Kalma riski yüksek kursiyere ek ders teklifi', ne: 'Risk yükselince ertesi gün 12:00’de', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: 'Merhaba {ad}, son derslerine göre sınavdan önce {n} ek direksiyon dersi ({tutar}) öneriyoruz{odak}. Kursiyer ekranından ya da bu mesaja “evet” yazarak onaylayabilirsin.' },
   { id: 'o14', ad: 'Teorik grup başlangıcı', ne: 'Gruptan iki gün önce 10:00’da', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: 'Merhaba {ad}, teorik derslerin {tarih} {saatte} başlıyor ({grup}, {derslik}). Görüşmek üzere!' },
 ];
 // Eski kayıtlara yeni kuralları ve düzeltilmiş şablonları ekle
@@ -20,7 +22,7 @@ export function kurallariHazirla() {
   S.otomasyonlar.forEach(o => { o.sablon = o.sablon.replace('{saat}’te', '{saatte}').replace('Kartla ödemek için: {link}', '{odeme}'); });
   S.zamanli = S.zamanli || { gonderilen: {}, kayit: [], kuyruk: [], son: null, sinir: true };
 }
-const SAAT = { o1: '18:00', o10: '18:00', o11: '18:00', o12: '19:00', o13: '09:00', o2: '10:00', o3: '10:00', o14: '10:00', o4: '11:00', o7: '11:00' };
+const SAAT = { o1: '18:00', o10: '18:00', o11: '18:00', o12: '19:00', o13: '09:00', o2: '10:00', o3: '10:00', o14: '10:00', o4: '11:00', o7: '11:00', o15: '12:00' };
 export const kuralSaati = id => SAAT[id] || null;
 const kural = id => S.otomasyonlar.find(o => o.id === id);
 const doldur = (id, alan) => (kural(id) ? kural(id).sablon : '').replace(/\{(\w+)\}/g, (x, a) => alan[a] != null ? alan[a] : '');
@@ -39,13 +41,37 @@ const URET = {
   o4: ornek => S.kursiyerler.filter(k => eksikEvrak(k).length && ['Kayıt', 'Evrak'].includes(k.asama) && (ornek || [-3, -10].includes(fark(k.kayit)))).map(k => ({ anahtar: 'o4|' + k.id + '|' + fark(k.kayit), kim: ogr(k), metin: doldur('o4', { ad: k.ad, evrak: eksikEvrak(k).map(x => x[1].toLocaleLowerCase('tr')).join(', ') }) })),
   o7: ornek => S.adaylar.filter(a => a.asama === 'Bilgi verildi' && (ornek || fark(a.tarih) === -2)).map(a => ({ anahtar: 'o7|' + a.id, kim: { ad: a.ad, tel: a.tel, rol: 'ADAY' }, metin: doldur('o7', { ad: a.ad.split(' ')[0] }) })),
   o11: ornek => ((S.sosyal && S.sosyal.slotlar) || []).filter(x => x.dolu && (ornek ? fark(x.tarih) >= 0 : x.tarih === gun(1))).map(x => { const a = S.adaylar.find(y => y.id === x.aday) || { ad: x.dolu, tel: '' }; return { anahtar: 'o11|' + x.tarih + '|' + x.saat, kim: { ad: a.ad, tel: a.tel, rol: 'ADAY' }, metin: doldur('o11', { ad: a.ad.split(' ')[0], saatte: saatDe(x.saat), adres: S.kurs.adres }) }; }),
-  o12: () => { const t = gun(1), yd = S.dersler.filter(d => d.tarih === t && d.durum === 'Planlandı').length, ys = S.sinavlar.filter(s => s.tarih === t), gel = S.hareket.filter(h => h.tarih === gun(0) && h.tur === 'Gelir').reduce((a, h) => a + h.tutar, 0), gk = S.kursiyerler.filter(k => gecikenler(k).length), ev = S.kursiyerler.filter(k => eksikEvrak(k).length && k.asama !== 'Ehliyet').length; return [{ anahtar: 'o12|' + gun(0), kim: mudur(), metin: doldur('o12', { kurs: S.kurs.ad, tarih: tamTarih(gun(0)), ozet: `Bugün tahsilat: ${tl(gel)}\nYarın: ${kapaliGun(t) ? 'kurs kapalı' : yd + ' direksiyon dersi' + (ys.length ? ', ' + ys.map(s => s.tur + ' sınavı ' + s.saat).join(', ') : '')}\nGeciken taksit: ${gk.length} kursiyer, ${tl(gk.reduce((a, k) => a + gecikenler(k).reduce((x, tk) => x + tk.tutar, 0), 0))}\nEksik evrak: ${ev} kursiyer` }) }]; },
+  o12: () => [{ anahtar: 'o12|' + gun(0), kim: mudur(), metin: aksamOzeti() }],
   o13: ornek => { const l = [], uyar = (f, hedef, konu, t, ek) => { if (ornek || [30, 7, 1].includes(f)) l.push({ anahtar: 'o13|' + konu + '|' + t, kim: hedef, metin: doldur('o13', { konu, kalan: f <= 1 ? 'yarın' : f + ' gün sonra', tarih: tamTarih(t) }) + (ek || '') }); };
     S.araclar.forEach(a => [['muayene', 'muayenesi'], ['sigorta', 'trafik sigortası'], ['kasko', 'kaskosu']].forEach(([x, ad]) => { if (a[x] && fark(a[x]) > 0) uyar(fark(a[x]), mudur(), a.plaka + ' ' + ad, a[x]); }));
     S.egitmenler.forEach(h => Object.entries(h.belgeler || {}).forEach(([b, t]) => { if (t && fark(t) > 0) { const ad = { sertifika: 'usta öğretici sertifikanız', saglik: 'sağlık raporunuz', adli: 'adli sicil kaydınız' }[b]; uyar(fark(t), hoca(h), h.ad.split(' ')[0] + ' Hoca, ' + ad, t, ' Süresi dolarsa ders veremezsiniz.'); } }));
     return ornek ? l.sort((a, b) => a.anahtar.split('|').pop().localeCompare(b.anahtar.split('|').pop())).slice(0, 1) : l; },
   o14: ornek => (S.gruplar || []).filter(g => ornek ? fark(g.baslangic) >= 0 : fark(g.baslangic) === 2).flatMap(g => S.kursiyerler.filter(k => k.teorikGrup === g.id && ['Kayıt', 'Evrak', 'Teorik'].includes(k.asama) && !k.teorik).map(k => ({ anahtar: 'o14|' + g.id + '|' + k.id, kim: ogr(k), metin: doldur('o14', { ad: k.ad, tarih: tarihUzun(g.baslangic), saatte: saatDe(TEORIK_SAAT[g.id] || '18:30'), grup: g.ad.toLocaleLowerCase('tr'), derslik: g.derslik }) }))),
 };
+URET.o15 = ornek => S.kursiyerler.map(k => ({ k, r: risk(k) })).filter(({ k, r }) => r && r.oneri && (ornek ? r.puan >= 25 : r.puan >= 50) && !k.ekDersTeklif).sort((a, b) => b.r.puan - a.r.puan).map(({ k, r }) => ({ anahtar: 'o15|' + k.id, kim: ogr(k), etki: { tur: 'ekders', k: k.id, n: r.oneri, tutar: r.oneri * S.kurs.ekDersUcreti }, metin: doldur('o15', { ad: k.ad, n: r.oneri, tutar: tl(r.oneri * S.kurs.ekDersUcreti), odak: r.beceri && r.beceri.zayif.length ? '; özellikle ' + r.beceri.zayif.join(', ').toLocaleLowerCase('tr') + ' üzerinde çalışacağız' : '' }) }));
+// Mesaj gidince kayda işlenecek sonuç (ör. ek ders teklifi kursiyer ekranında görünür)
+function etkiUygula(x) {
+  if (!x.etki || x.etki.tur !== 'ekders') return;
+  const k = kursiyer(x.etki.k); if (k && !k.ekDersTeklif) { k.ekDersTeklif = { n: x.etki.n, tutar: x.etki.tutar, tarih: gun(0), neden: 'risk' }; islem('Otomatik ek ders teklifi', tamAd(k) + ' · ' + x.etki.n + ' ders'); }
+}
+// Müdüre akşam özeti: önizleme ve gerçek gönderim aynı metni kullanır
+export function aksamOzeti() {
+  kurallariHazirla();
+  const t = gun(1), bd = S.dersler.filter(d => d.tarih === gun(0)), yd = S.dersler.filter(d => d.tarih === t && d.durum === 'Planlandı').length, ys = S.sinavlar.filter(s => s.tarih === t);
+  const gel = S.hareket.filter(h => h.tarih === gun(0) && h.tur === 'Gelir').reduce((a, h) => a + h.tutar, 0), gk = S.kursiyerler.filter(k => gecikenler(k).length), ev = S.kursiyerler.filter(k => eksikEvrak(k).length && k.asama !== 'Ehliyet').length;
+  const ds = denetimSkoru(), rk = S.kursiyerler.filter(k => { const r = risk(k); return r && r.puan >= 50; }).length;
+  const yeni = S.adaylar.filter(a => a.tarih === gun(0)).length, kayit = S.kursiyerler.filter(k => k.kayit === gun(0)).length;
+  return doldur('o12', { kurs: S.kurs.ad, tarih: tamTarih(gun(0)), ozet: [
+    `Bugün tahsilat: ${tl(gel)}`,
+    `Direksiyon: ${bd.filter(d => d.durum === 'Yapıldı').length}/${bd.length} ders yapıldı${bd.some(d => d.durum === 'Gelmedi') ? ', ' + bd.filter(d => d.durum === 'Gelmedi').length + ' gelmedi' : ''}`,
+    `Yeni öğrenci: ${yeni} · yeni kayıt: ${kayit}`,
+    `Yarın: ${kapaliGun(t) ? 'kurs kapalı (' + kapaliGun(t).toLocaleLowerCase('tr') + ')' : yd + ' direksiyon dersi' + (ys.length ? ', ' + ys.map(s => s.tur + ' sınavı ' + s.saat).join(', ') : '')}`,
+    `Geciken taksit: ${gk.length} kursiyer, ${tl(gk.reduce((a, k) => a + gecikenler(k).reduce((x, tk) => x + tk.tutar - (tk.kismi || 0), 0), 0))}`,
+    `Eksik evrak: ${ev} kursiyer`,
+    `Denetim hazırlığı: %${ds.puan}${ds.kritik ? ' (' + ds.kritik + ' kritik madde)' : ''}`,
+    `Sınav riski yüksek: ${rk} kursiyer`,
+  ].join('\n') });
+}
 export const zamanliKural = id => !!URET[id];
 
 // Şu an zamanı gelmiş, gönderilmemiş mesajlar
@@ -73,7 +99,7 @@ export async function zamanlayiciCalistir(elle = false) {
         z.kayit.unshift({ zaman: yerelZaman(), kural: x.kural, kime: x.kim.ad, rol: x.kim.rol, metin: x.metin, durum: s.ok ? 'gönderildi' : 'hata: ' + s.hata });
         if (!s.ok) break;
         z.gonderilen[x.anahtar] = bugun; z.gunluk = z.gunluk || {}; z.gunluk[bugun + x.kural] = (z.gunluk[bugun + x.kural] || 0) + 1;
-        gonderimEkle(x.kim.ad, x.metin, kural(x.kural).ad); kural(x.kural).gonderim++; gonderilen++;
+        gonderimEkle(x.kim.ad, x.metin, kural(x.kural).ad); kural(x.kural).gonderim++; gonderilen++; etkiUygula(x);
       } else z.kuyruk.push({ ...x, eklendi: yerelZaman() });
     }
     // eski kayıtları temizle
@@ -88,7 +114,7 @@ export async function zamanlayiciCalistir(elle = false) {
 export function kuyruguGonder(sonra) {
   const z = S.zamanli; if (!z || !z.kuyruk.length) return bildir('Bekleyen zamanlı mesaj yok');
   const l = z.kuyruk.slice();
-  waSirali(l.map(x => ({ ad: x.kim.ad, tel: x.kim.tel, rol: x.kim.rol, metin: x.metin, tur: kural(x.kural).ad })), 'Zamanı gelen mesajlar', { bitince: acilan => { const ac = acilan || new Set(l.map((x, i) => i)); l.forEach((x, i) => { if (!ac.has(i)) return; z.gonderilen[x.anahtar] = gun(0); z.kuyruk = z.kuyruk.filter(q => q.anahtar !== x.anahtar); z.kayit.unshift({ zaman: yerelZaman(), kural: x.kural, kime: x.kim.ad, rol: x.kim.rol, metin: x.metin, durum: 'gönderildi' }); kural(x.kural).gonderim++; }); kaydet(); if (sonra) sonra(); } });
+  waSirali(l.map(x => ({ ad: x.kim.ad, tel: x.kim.tel, rol: x.kim.rol, metin: x.metin, tur: kural(x.kural).ad })), 'Zamanı gelen mesajlar', { bitince: acilan => { const ac = acilan || new Set(l.map((x, i) => i)); l.forEach((x, i) => { if (!ac.has(i)) return; z.gonderilen[x.anahtar] = gun(0); z.kuyruk = z.kuyruk.filter(q => q.anahtar !== x.anahtar); z.kayit.unshift({ zaman: yerelZaman(), kural: x.kural, kime: x.kim.ad, rol: x.kim.rol, metin: x.metin, durum: 'gönderildi' }); kural(x.kural).gonderim++; etkiUygula(x); }); kaydet(); if (sonra) sonra(); } });
 }
 // Demo: bir kuraldan tek örnek mesajı hemen gönder (tarih şartı aranmaz)
 export async function ornekGonder(id) {
@@ -96,7 +122,7 @@ export async function ornekGonder(id) {
   const x = (URET[id](true) || []).filter(Boolean)[0];
   if (!x) return bildir('Bu kural için uygun kayıt yok', 'uyari');
   islem('Zamanlı mesaj örneği gönderdi', kural(id).ad);
-  if (apiAcik()) { const s = await apiGonder(etiket(x.kim.ad, x.kim.rol) + x.metin); S.zamanli.kayit.unshift({ zaman: yerelZaman(), kural: id, kime: x.kim.ad, rol: x.kim.rol, metin: x.metin, durum: s.ok ? 'örnek gönderildi' : 'hata: ' + s.hata }); kaydet(); return bildir(s.ok ? `“${kural(id).ad}” örneği gönderildi ✓` : s.hata, s.ok ? 'wp' : 'uyari'); }
+  if (apiAcik()) { const s = await apiGonder(etiket(x.kim.ad, x.kim.rol) + x.metin); S.zamanli.kayit.unshift({ zaman: yerelZaman(), kural: id, kime: x.kim.ad, rol: x.kim.rol, metin: x.metin, durum: s.ok ? 'örnek gönderildi' : 'hata: ' + s.hata }); if (s.ok) etkiUygula(x); kaydet(); return bildir(s.ok ? `“${kural(id).ad}” örneği gönderildi ✓` : s.hata, s.ok ? 'wp' : 'uyari'); }
   waSirali([{ ad: x.kim.ad, tel: x.kim.tel, rol: x.kim.rol, metin: x.metin }], kural(id).ad + ' · örnek');
 }
 let zamanlayici = null;
