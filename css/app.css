@@ -1064,3 +1064,20 @@ button.oto-gidecek:hover{text-decoration:underline}
 .og-oynat{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:58px;height:58px;border-radius:50%;background:var(--kirmizi);color:#fff;display:grid;place-items:center;font-size:22px;padding-left:4px;box-shadow:0 6px 20px rgba(0,0,0,.35)}
 .soru-aciklama{background:var(--levha-acik);border-radius:9px;padding:10px 12px;font-size:14px;line-height:1.5;margin:8px 0 4px;color:var(--murekkep)}
 .soru-aciklama small{display:block;color:var(--soluk);font-size:12px;margin-top:4px}
+/* gerçek kurs hesabı: e-posta girişi, kurs açma, davet */
+.giris-eposta{display:grid;gap:10px;margin-top:6px}
+.giris-eposta label{display:grid;gap:4px;font-family:var(--baslik);font-weight:800;font-size:14px}
+.giris-eposta label[hidden]{display:none}
+.giris-eposta input:not([type=checkbox]){height:46px;border-radius:8px;border:0;padding:0 14px;font:16px var(--govde,inherit);color:#111;background:#fff}
+.giris-eposta input:focus-visible{outline:3px solid var(--sari);outline-offset:2px}
+.giris-eposta .dg-koyu{height:48px;background:#111;justify-content:center;margin-top:4px}
+.giris-onay{display:flex!important;grid-template-columns:none;gap:10px;align-items:flex-start;font-family:inherit!important;font-weight:400!important;font-size:13px!important;opacity:.92}
+.giris-onay input{width:18px;height:18px;margin-top:2px;flex:none}
+.giris-baglar{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px;font-size:14px}
+.giris-baglar button{color:#fff;text-decoration:underline;text-underline-offset:3px;font-weight:600}
+.giris-ornek{margin-top:18px;border-top:1px solid rgba(255,255,255,.3);padding-top:12px}
+.giris-ornek summary{cursor:pointer;font-family:var(--baslik);font-weight:800;font-size:14px;opacity:.9}
+.bulut-durum{display:inline-block;margin-left:10px;font-size:12px;color:var(--soluk);font-weight:600}
+.bulut-durum.tamam::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:#2e8b57;margin-right:5px;vertical-align:1px}
+.bulut-durum.uyari{color:#a86200}
+.bulut-durum.hata{color:#c0392b}

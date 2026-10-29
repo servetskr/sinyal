@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk } from './veri.js?v=64';
+import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk } from './veri.js?v=65';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -404,6 +404,7 @@ export function imzaAlani(cv) {
 export function pinSor(neden) {
   return new Promise(ok => {
     if (!S.guvenlik || !S.guvenlik.hassasOnay) return ok(true);
+    if (oturum.kullanici && oturum.kullanici.bulut) return sifreSor(neden, ok);
     const u = oturum.kullanici && S.kullanicilar.find(x => x.id === oturum.kullanici.id); if (!u) return ok(false);
     let hata = 0;
     pencere({
@@ -415,6 +416,19 @@ export function pinSor(neden) {
         d.querySelector('[data-k]').addEventListener('click', dene); inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') dene(); });
       },
     });
+  });
+}
+
+// Gerçek kurs hesabında PIN yok: hesabın şifresi sorulur
+function sifreSor(neden, ok) {
+  pencere({
+    baslik: 'Şifre onayı', icerik: `<p style="margin-bottom:10px">${e(neden)} için hesap şifrenizi tekrar girin.</p><input class="girdi" data-sifre-tekrar type="password" autocomplete="current-password" style="max-width:260px" aria-label="Şifre">`,
+    altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Onayla</button>`,
+    onAc(d) {
+      const inp = d.querySelector('[data-sifre-tekrar]'), btn = d.querySelector('[data-k]');
+      const dene = () => { btn.disabled = true; import('./bulut.js?v=65').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
+      btn.addEventListener('click', dene); inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') dene(); }); setTimeout(() => inp.focus(), 50);
+    },
   });
 }
 

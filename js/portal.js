@@ -1,13 +1,13 @@
-import { oturum, islem, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, yerelZaman, BECERI, risk, ekToplam, selam, kursAdi } from './veri.js?v=64';
-import { e, saatDe, saatE, tl, ik, rozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani, kartFormu, kartBagla, kartDogrula, waAc } from './ui.js?v=64';
-import { yenile } from './app.js?v=64';
-import { ekDersKabul, bosTeklifKabul, wpGonder, bildirimler } from './sayfalar1.js?v=64';
-import { KONULAR } from './konular.js?v=64';
+import { oturum, islem, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, yerelZaman, BECERI, risk, ekToplam, selam, kursAdi } from './veri.js?v=65';
+import { e, saatDe, saatE, tl, ik, rozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani, kartFormu, kartBagla, kartDogrula, waAc } from './ui.js?v=65';
+import { yenile } from './app.js?v=65';
+import { ekDersKabul, bosTeklifKabul, wpGonder, bildirimler } from './sayfalar1.js?v=65';
+import { KONULAR } from './konular.js?v=65';
 // Soru bankası büyük; yalnız Sınavlar sekmesi ya da test açılınca yüklenir (açılış hızını etkilemesin)
 let SORULAR = [], soruYuk = null;
-const sorulariYukle = () => soruYuk || (soruYuk = import('./sorular.js?v=64').then(m => { SORULAR = m.SORULAR; }));
-import { randevuAl, randevuIptal } from './ozellik.js?v=64';
-import * as OG from './ogrenci.js?v=64';
+const sorulariYukle = () => soruYuk || (soruYuk = import('./sorular.js?v=65').then(m => { SORULAR = m.SORULAR; }));
+import { randevuAl, randevuIptal } from './ozellik.js?v=65';
+import * as OG from './ogrenci.js?v=65';
 
 let egId = 'e1', egSekme = 'bugun';
 let ogId = null, ogSekme = 'durum';
@@ -25,7 +25,8 @@ function riskKontrol(ks, once) {
 export function egitmenPortal() {
   const usta = oturum.kullanici && oturum.kullanici.rol === 'usta';
   if (usta) egId = oturum.kullanici.usta;
-  const eg = egitmen(egId);
+  const eg = egitmen(egId) || (!usta && S.egitmenler[0]);
+  if (!eg) return { baslik: 'Öğretmen ekranı', alt: 'Telefondan kullanılan ekran', html: `<div class="portal"><div class="kart">${bos(usta ? 'Hesabınız bir öğretmen kaydına bağlı değil' : 'Henüz öğretmen yok', usta ? 'Kurs müdürü Ayarlar › Kullanıcılar’dan sizi yeniden davet etmeli.' : 'Filo › Öğretmenler’den öğretmen ekleyince ders ekranı burada görünür.')}</div></div>` };
   const bugun = S.dersler.filter(d => d.egitmen === eg.id && d.tarih === gun(0)).sort((a, b) => a.saat.localeCompare(b.saat));
   const ar = S.araclar.find(a => a.egitmen === eg.id);
   let govde = '';
@@ -84,7 +85,7 @@ export function egitmenPortal() {
                 d.bit = new Date().toTimeString().slice(0, 5); d.sure = d.basZaman ? Math.round((Date.now() - d.basZaman) / 60e3) : null;
                 ks.direksiyon = Math.min(SINIFLAR[ks.sinif].direksiyon, ks.direksiyon + 1);
                 islem('Ders tamamlandı, kursiyer imzası istendi', tamAd(ks) + ' · ' + d.saat); kaydet(); kapatPencere();
-                const m = await import('./imza.js?v=64'); await m.imzaIste('ders', ks, [d.id]); bildir('Ders kaydedildi; WhatsApp’ta imza linkini gönderin', 'wp'); yenile(); riskKontrol(ks, once);
+                const m = await import('./imza.js?v=65'); await m.imzaIste('ders', ks, [d.id]); bildir('Ders kaydedildi; WhatsApp’ta imza linkini gönderin', 'wp'); yenile(); riskKontrol(ks, once);
               });
               p.querySelector('[data-imza-kaydet]').addEventListener('click', () => {
                 if (ik_.bos() || iu.bos()) return bildir('İki imza da gerekli', 'uyari');
@@ -98,7 +99,7 @@ export function egitmenPortal() {
             },
           });
         }
-        const it = t.closest('[data-imza-tekrar]'); if (it) { const d = S.dersler.find(x => x.id === it.dataset.imzaTekrar); import('./imza.js?v=64').then(m => m.imzaIste('ders', kursiyer(d.kursiyer), [d.id])); return; }
+        const it = t.closest('[data-imza-tekrar]'); if (it) { const d = S.dersler.find(x => x.id === it.dataset.imzaTekrar); import('./imza.js?v=65').then(m => m.imzaIste('ders', kursiyer(d.kursiyer), [d.id])); return; }
         const g = t.closest('[data-gelmedi]'); if (g) { const d = S.dersler.find(x => x.id === g.dataset.gelmedi); d.durum = 'Gelmedi'; islem('Gelmedi işaretledi', tamAd(kursiyer(d.kursiyer)) + ' · ' + d.saat); kaydet(); const ks = kursiyer(d.kursiyer); bildirimler([{ kim: ks, metin: `${selam(ks)} ${d.saat} direksiyon dersinde sizi bekledim ancak gelmediniz. Yeni saat için ${kursAdi('e')} yazabilirsiniz. ${egitmen(d.egitmen).ad}`, tur: 'Gelmedi bildirimi' }, { kim: 'mudur', metin: `${tamAd(ks)} ${d.saat} dersine gelmedi; ${egitmen(d.egitmen).ad} işaretledi.`, tur: 'Gelmedi bildirimi' }], 'Derse gelmedi'); yenile(); }
         const n = t.closest('[data-not]'); if (n) { const ks = kursiyer(n.dataset.not); pencere({ baslik: 'Not · ' + tamAd(ks), icerik: `<div class="alan"><label>Ders notu</label><textarea placeholder="Örn. park etmede iyi, şerit değiştirmede ayna kontrolünü unutuyor"></textarea></div>`, altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Kaydet</button>`, onAc(d) { d.querySelector('[data-k]').addEventListener('click', () => { const v = d.querySelector('textarea').value.trim(); if (v) { ks.notlar.unshift({ tarih: gun(0), metin: v }); kaydet(); } kapatPencere(); bildir('Not kaydedildi; kurs müdürü de görür'); yenile(); }); } }); }
       });
@@ -133,6 +134,7 @@ function testBitir(k) {
 }
 export function ogrenciPortal() {
   // önizlemede ilk açılan öğrenci dolu bir örnek olsun: planlı dersi, ödenmemiş taksiti ve puanlanmış dersleri olan
+  if (!S.kursiyerler.length) return { baslik: 'Öğrenci ekranı', alt: 'Öğrencinin telefonundan gördüğü ekran', html: `<div class="portal"><div class="kart">${bos('Henüz öğrenci yok', 'İlk öğrenciyi kaydedince onun telefonda göreceği ekran burada önizlenir.')}</div></div>` };
   if (!ogId || !kursiyer(ogId)) { const puan = k => (sonrakiDers(k) ? 4 : 0) + (k.odeme.taksitler.some(t => !t.odendi) ? 2 : 0) + (S.dersler.some(d => d.kursiyer === k.id && d.beceri) ? 2 : 0) + (k.asama === 'Direksiyon' ? 1 : 0); ogId = [...S.kursiyerler].sort((a, b) => puan(b) - puan(a))[0].id; }
   const k = kursiyer(ogId), S0 = SINIFLAR[k.sinif], eg = egitmen(k.egitmen);
   const sd = sonrakiDers(k), sonraki = k.odeme.taksitler.map((t, i) => ({ t, i })).find(x => !x.t.odendi && !x.t.iptal);

@@ -1,7 +1,7 @@
-import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas, sb, sbDers, sbSinav, gorunum, subede, SOZLESME_VARSAYILAN, satistaSiniflar, ayEkle, YONTEMLER, yontemAd, selam, kursAdi } from './veri.js?v=64';
-import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler, imzaAlani, tamTarih, yaziyla, belgeYazdir, kartFormu, kartBagla, kartDogrula, waAc, apiAcik, belgeWhatsApp } from './ui.js?v=64';
-import { yenile } from './app.js?v=64';
-import { siraliPencere } from './sayfalar5.js?v=64';
+import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas, sb, sbDers, sbSinav, gorunum, subede, SOZLESME_VARSAYILAN, satistaSiniflar, ayEkle, YONTEMLER, yontemAd, selam, kursAdi } from './veri.js?v=65';
+import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler, imzaAlani, tamTarih, yaziyla, belgeYazdir, kartFormu, kartBagla, kartDogrula, waAc, apiAcik, belgeWhatsApp } from './ui.js?v=65';
+import { yenile } from './app.js?v=65';
+import { siraliPencere } from './sayfalar5.js?v=65';
 
 /* ================= BELGELER VE ÇIKTILAR ================= */
 const gorunumSube = () => gorunum.sube;
@@ -153,7 +153,7 @@ export function sozlesmeImzalat(k) {
     onAc(d) {
       const ia = imzaAlani(d.querySelector('[data-imza]'));
       d.querySelector('[data-temizle]').addEventListener('click', () => ia.temizle());
-      d.querySelector('[data-uzaktan]').addEventListener('click', () => import('./imza.js?v=64').then(m => m.imzayaGonderPenceresi(k, 'sozlesme')));
+      d.querySelector('[data-uzaktan]').addEventListener('click', () => import('./imza.js?v=65').then(m => m.imzayaGonderPenceresi(k, 'sozlesme')));
       d.querySelector('[data-yazdir]').addEventListener('click', () => { belgeYazdir(belgeHtml('sozlesme', k.id) + '<div class="sayfa-sonu"></div>' + belgeHtml('sozlesme', k.id), 'Sözleşme · ' + tamAd(k)); islem('Sözleşme yazdırdı', tamAd(k)); kaydet(); bildir('İki nüsha yazdırıldı. İmzalı nüshayı teslim alınca Evraklar’da “İmzalı sözleşme”yi işaretleyin'); });
       d.querySelector('[data-imzala]').addEventListener('click', () => {
         if (ia.bos()) return bildir('Kursiyer imza alanına imzalasın', 'uyari');
@@ -388,30 +388,31 @@ const plakaMetin = a => e(a.plaka) + ' · ' + e(a.model);
 
 /* ================= PAKET VE GÜVENCE ================= */
 export function guven() {
-  const dk = (S.guvenlik && S.guvenlik.oturumDk) || 30;
+  const dk = (S.guvenlik && S.guvenlik.oturumDk) || 30, bulutta = !!(oturum.kullanici && oturum.kullanici.bulut);
   const madde = (t, b, a, etiket) => `<li style="align-items:flex-start">${isaret(t, 24)}<div style="flex:1"><b style="color:var(--murekkep);display:block">${b}${etiket ? ` <span class="rozet rozet-${etiket === 'Bugün' ? 'yesil' : 'mavi'}" style="font-size:11px;vertical-align:middle">${etiket}</span>` : ''}</b><small style="color:var(--metin);font-size:14px">${a}</small></div></li>`;
   return {
     baslik: 'Verileriniz ve güvenlik', alt: 'Veriler nerede durur, nasıl korunur, kimin elindedir',
-    html: `${ekranNotu('Yöneticinin “verilerimiz nerede, saldırı olursa ne olur?” sorusunun cevabı. “Bugün” etiketli korumalar bu demoda çalışıyor; “Kurulumda” etiketliler kursunuza kurulumla birlikte açılır.')}
+    html: `${ekranNotu('Yöneticinin “verilerimiz nerede, saldırı olursa ne olur?” sorusunun cevabı. “Bugün” etiketli korumalar şu an çalışıyor; “Kurulumda” etiketliler henüz yapım aşamasında.')}
     <div class="kart guven-kahraman"><div>
       <small>Verileriniz nerede durur?</small>
       <h2>Google’ın bulut altyapısında, şifreli.</h2>
-      <p>Kurulumda öğrenci, ödeme, ders ve evrak kayıtlarınız Google Firebase’de, Avrupa Birliği’ndeki (Frankfurt) veri merkezinde tutulur. Kurs bilgisayarında veri durmaz: bilgisayar bozulsa, çalınsa ya da virüs bulaşsa da kayıtlarınız kaybolmaz.</p>
-      <p class="guven-not">Bu demoda veriler yalnız açık olduğu tarayıcıda durur; hiçbir sunucuya gönderilmez.</p>
+      <p>Kurs hesabında öğrenci, ödeme ve ders kayıtlarınız Google Firebase’de, Avrupa Birliği’ndeki (Frankfurt) veri merkezinde tutulur. Kurs bilgisayarında veri durmaz: bilgisayar bozulsa, çalınsa ya da virüs bulaşsa da kayıtlarınız kaybolmaz.</p>
+      <p class="guven-not">${bulutta ? 'Bu hesabın kayıtları şu an Firebase’de (Frankfurt) duruyor; internet kesilirse cihazda bekler, bağlantı gelince gönderilir.' : 'Bu demoda veriler yalnız açık olduğu tarayıcıda durur; hiçbir sunucuya gönderilmez.'}</p>
     </div><div class="guven-katman" aria-hidden="true">${[['Kurs ekranı', 'tarayıcı · telefon'], ['Şifreli bağlantı', 'HTTPS'], ['Google Firebase', 'Frankfurt · şifreli'], ['Günlük yedek', 'geri dönüş']].map(([a, b], n) => `<div style="--n:${n}"><b>${a}</b><small>${b}</small></div>`).join('')}</div></div>
     <div class="ara-bosluk"></div>
     <div class="izgara iz-2">
       <div class="kart"><div class="kart-bas"><h3>Kim neyi görür, ne yapar</h3></div><ul class="liste" style="margin-top:8px">
-        ${madde('tamam', 'PIN ile giriş, 5 hatalı denemede kilit', 'Her çalışan kendi PIN’iyle girer; 5 hatalı denemede hesap 15 dakika kilitlenir.', 'Bugün')}
+        ${madde('tamam', 'Her çalışana ayrı hesap', 'Her çalışan kendi e-postası ve şifresiyle girer; çalışan yalnız müdürün gönderdiği tek kullanımlık davet linkiyle katılır. Ayrılan çalışanın erişimi “Kaldır”la o anda kapanır.', 'Bugün')}
         ${madde('tamam', 'Yetkiye göre ekran', 'Ön büro maaşları ve kârlılığı görmez; öğretmen yalnız kendi derslerini ve öğrencilerini görür.', 'Bugün')}
-        ${madde('tamam', 'Hassas işlemde ikinci onay', 'TC kimlik numarasını tam göstermek gibi işlemler yeniden PIN ister; TC listelerde maskeli görünür.', 'Bugün')}
+        ${madde('tamam', 'Hassas işlemde ikinci onay', 'TC kimlik numarasını tam göstermek gibi işlemler şifreyi yeniden ister; TC listelerde maskeli görünür.', 'Bugün')}
         ${madde('tamam', 'Kim ne yaptı, kayıtlı', 'Her işlem kullanıcı adı ve saatiyle işlem geçmişine yazılır; yanlış işlem geri alınabilir.', 'Bugün')}
         ${madde('tamam', 'Bırakılan ekran kapanır', `${dk} dakika işlem yapılmazsa oturum kendiliğinden kapanır (Ayarlar › Güvenlik).`, 'Bugün')}
-        ${madde('bilgi', 'Her kullanıcıya ayrı hesap ve iki adımlı giriş', 'Kurulumda her çalışan kendi e-postasıyla girer; yöneticiler için doğrulama kodu açılır.', 'Kurulumda')}
+        ${madde('bilgi', 'İki adımlı giriş', 'Yöneticiler için şifreye ek olarak telefona gelen doğrulama kodu.', 'Kurulumda')}
       </ul></div>
       <div class="kart"><div class="kart-bas"><h3>Saldırı ya da arıza olursa</h3></div><ul class="liste" style="margin-top:8px">
-        ${madde('bilgi', 'Şifreli bağlantı ve şifreli depolama', 'Ekranla sunucu arasındaki her şey şifreli gider; veriler Google’ın sunucularında şifreli saklanır.', 'Kurulumda')}
-        ${madde('bilgi', 'Her gece otomatik yedek', 'Veriler her gece yedeklenir; bir kayıt silinir ya da bozulursa önceki güne dönülebilir.', 'Kurulumda')}
+        ${madde('tamam', 'Şifreli bağlantı ve şifreli depolama', 'Ekranla sunucu arasındaki her şey şifreli (HTTPS) gider; veriler Google’ın sunucularında şifreli saklanır. Kursa üye olmayan hiçbir hesap kayıtları okuyamaz.', 'Bugün')}
+        ${madde('tamam', 'İki cihaz aynı anda çalışabilir', 'Ön büro ve müdür aynı anda kayıt girse de iki değişiklik de korunur; ekranlar birkaç saniyede güncellenir.', 'Bugün')}
+        ${madde('bilgi', 'Her gece otomatik yedek', 'Veriler her gece ayrı bir yere yedeklenir; bir kayıt silinir ya da bozulursa önceki güne dönülebilir.', 'Kurulumda')}
         ${madde('bilgi', 'Belgeler ayrı ve korumalı depoda', 'Sağlık raporu, adli sicil ve fotoğraflar yalnız yetkili kullanıcının açabildiği depoda durur.', 'Kurulumda')}
         ${madde('bilgi', 'Erişim kayıtları sunucuda', 'Hangi hesabın hangi kayda ne zaman eriştiği sunucuda tutulur; kurs bilgisayarından silinemez.', 'Kurulumda')}
         ${madde('tamam', 'USB’ye yedek, uzaktan bağlanma yok', 'Yedek almak için flaş bellek, destek için bilgisayarınıza uzaktan bağlanma programı gerekmez.', '')}

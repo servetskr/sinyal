@@ -1,17 +1,18 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=64';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=64';
-import * as Y1 from './sayfalar1.js?v=64';
-import * as Y2 from './sayfalar2.js?v=64';
-import * as P from './portal.js?v=64';
-import * as Y3 from './sayfalar3.js?v=64';
-import * as Y4 from './sayfalar4.js?v=64';
-import * as Y5 from './sayfalar5.js?v=64';
-import * as IM from './imza.js?v=64';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=64';
-import * as SN from './senaryo.js?v=64';
-import * as OZ from './ozellik.js?v=64';
-import { durumlariGuncelle } from './mesaj.js?v=64';
-import { yeniMenu } from './yeni.js?v=64';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=65';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=65';
+import * as Y1 from './sayfalar1.js?v=65';
+import * as Y2 from './sayfalar2.js?v=65';
+import * as P from './portal.js?v=65';
+import * as Y3 from './sayfalar3.js?v=65';
+import * as Y4 from './sayfalar4.js?v=65';
+import * as Y5 from './sayfalar5.js?v=65';
+import * as IM from './imza.js?v=65';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=65';
+import * as SN from './senaryo.js?v=65';
+import * as OZ from './ozellik.js?v=65';
+import { durumlariGuncelle } from './mesaj.js?v=65';
+import { yeniMenu } from './yeni.js?v=65';
+import * as B from './bulut.js?v=65';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -55,12 +56,12 @@ function iskelet() {
       <a class="logo" href="#/genel" aria-label="Sinyal ana sayfa"><svg class="logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 5.4 18.6 12 12 18.6 5.4 12z" fill="none" stroke="#111" stroke-width="1"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>${e(S.kurs.ad)}</small></span></a>
       <nav>${menu}</nav>
       ${(S.subeler || []).length > 1 && oturum.kullanici.rol !== 'usta' ? `<label class="sube-yan"><span>Şube</span><select data-sube aria-label="Şube">${['', ...S.subeler.map(x => x.id)].map(id => `<option value="${id}" ${gorunum.sube === id ? 'selected' : ''}>${id ? e(S.subeler.find(x => x.id === id).ad) : 'Tüm şubeler'}</option>`).join('')}</select></label>` : ''}
-      <div class="yan-alt"><b>${e(oturum.kullanici.ad)}</b><span>${ROL_AD[oturum.kullanici.rol]}</span>${S.kurs.demoNumara ? `<span style="display:block;margin-top:4px;font-size:12px;opacity:.85">Mesajlar → ${e(S.kurs.demoNumara)}</span>` : ''}<button class="dg dg-cizgi dg-kucuk" style="margin-top:8px;width:100%;background:transparent;color:#fff;border-color:#fff" data-cikis>Kullanıcı değiştir</button></div>
+      <div class="yan-alt"><b>${e(oturum.kullanici.ad)}</b><span>${ROL_AD[oturum.kullanici.rol]}</span>${S.kurs.demoNumara ? `<span style="display:block;margin-top:4px;font-size:12px;opacity:.85">Mesajlar → ${e(S.kurs.demoNumara)}</span>` : ''}<button class="dg dg-cizgi dg-kucuk" style="margin-top:8px;width:100%;background:transparent;color:#fff;border-color:#fff" data-cikis>${oturum.kullanici.bulut ? 'Çıkış yap' : 'Kullanıcı değiştir'}</button></div>
     </div></aside>
     <div class="ana">
       <header class="ust">
         <button class="dg-ikon mobil-ust-sol" data-yan aria-label="Menüyü aç">${ik('menu')}</button>
-        <div class="ust-baslik"><small id="ust-alt">${bugunMetni()}</small><h1 id="ust-baslik">Genel bakış</h1></div>
+        <div class="ust-baslik"><small id="ust-alt">${bugunMetni()}</small>${oturum.kullanici.bulut ? '<span id="bulut-durum" class="bulut-durum" role="status"></span>' : ''}<h1 id="ust-baslik">Genel bakış</h1></div>
         <a class="dg dg-hafif portal-geri" href="#/genel">← Panele dön</a>
         ${(S.subeler || []).length > 1 && oturum.kullanici.rol !== 'usta' ? `<label class="sube-sec"><span class="gizli-et">Şube</span><select data-sube aria-label="Şube">${['', ...S.subeler.map(x => x.id)].map(id => `<option value="${id}" ${gorunum.sube === id ? 'selected' : ''}>${id ? e(S.subeler.find(x => x.id === id).ad) : 'Tüm şubeler'}</option>`).join('')}</select></label>` : ''}
         ${oturum.kullanici.rol !== 'usta' ? `<button class="yeni-dugme" data-yeni-menu aria-label="Yeni ekle">${ik('arti')}<span>Yeni</span></button>` : ''}
@@ -179,7 +180,7 @@ document.addEventListener('change', ev => { const s = ev.target.closest('[data-s
 Y5.temaUygula();
 
 let sonAd = null;
-window.addEventListener('hashchange', () => { if (imzaLinki()) return imzaSayfasiAc(); const r = rota(); yenile(r.ad !== sonAd); sonAd = r.ad; });
+window.addEventListener('hashchange', () => { if (imzaLinki()) return imzaSayfasiAc(); if (davetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return davetEkrani(); const r = rota(); yenile(r.ad !== sonAd); sonAd = r.ad; });
 
 // QR’dan gelen ilk sayfa index.html’de hazır durur (beklemeden görünsün); sonradan dönmek için saklanır
 const TANITIM = (() => { const t = document.getElementById('tanitim'); return t ? t.outerHTML : ''; })();
@@ -200,18 +201,37 @@ function girisEkrani(mod = 'tanitim') {
     kok0.querySelectorAll('[data-giris]').forEach(b => b.addEventListener('click', () => { girisEkrani('pin'); window.scrollTo(0, 0); }));
     return;
   }
+  if (mod === 'kursac') return kursAcEkrani();
   document.title = 'Giriş · Sinyal';
+  const kayitli = B.bulutKayitli();
   document.getElementById('uyg').innerHTML = `<div class="giris"><div class="giris-levha">
-    <div class="logo" style="border-bottom:0;margin:0 0 6px"><svg class="logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>${e(S.kurs.ad)}</small></span></div>
+    <div class="logo" style="border-bottom:0;margin:0 0 6px"><svg class="logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>Sürücü kursu yönetimi</small></span></div>
     <button class="giris-demo" data-demo><b>Demoyu incele</b><small>Giriş gerekmez · örnek verilerle · mesaj gönderilmez</small><span aria-hidden="true">→</span></button>
-    <h1>Kim giriş yapıyor?</h1><p>Kurs çalışanları PIN ile girer; her kullanıcı yalnızca yetkisi olan ekranları görür.</p>
+    <h1>Kurs hesabınızla girin</h1><p>Her çalışan kendi e-postası ve şifresiyle girer; yalnızca yetkisi olan ekranları görür.</p>
+    <form class="giris-eposta" novalidate><label>E-posta<input name="eposta" type="email" autocomplete="username" inputmode="email" required value="${e((kayitli && kayitli.eposta) || '')}"></label><label>Şifre<input name="sifre" type="password" autocomplete="current-password" required></label><button class="dg dg-koyu" type="submit">Giriş yap</button></form>
+    <p class="giris-baglar"><button type="button" data-sifre-unut>Şifremi unuttum</button><button type="button" data-kurs-ac>Yeni kurs hesabı aç</button></p>
+    <details class="giris-ornek"${mod === 'pin-demo' || sessionStorageAl('sinyal-bekleyen') ? ' open' : ''}><summary>Örnek kursun çalışanı olarak dene (PIN)</summary>
+    <p class="giris-not" style="margin:8px 0 10px">Demo kursun kullanıcıları. Gerçek kurs hesabında PIN yerine e-posta ve şifre kullanılır.</p>
     <div class="giris-kisiler">${S.kullanicilar.map(u => `<button class="giris-kisi" data-kim="${u.id}"><b>${e(u.ad)}</b><small>${ROL_AD[u.rol]}</small></button>`).join('')}</div>
     <form class="giris-pin" hidden><label for="pin">PIN</label><input id="pin" inputmode="numeric" maxlength="4" autocomplete="one-time-code" placeholder="••••"><button class="dg dg-koyu" type="submit">Giriş</button></form>
-    <p class="giris-not">PIN’inizi unuttuysanız kurs müdürü Ayarlar › Kullanıcılar’dan yenisini verir.</p></div><button class="giris-geri" data-tanitim type="button">← Sinyal nedir?</button></div>`;
+    </details></div><button class="giris-geri" data-tanitim type="button">← Sinyal nedir?</button></div>`;
   let secilen = null;
   const kok = document.getElementById('uyg');
   kok.querySelector('[data-demo]').addEventListener('click', demoyaGir);
   kok.querySelector('[data-tanitim]').addEventListener('click', () => { girisEkrani('tanitim'); window.scrollTo(0, 0); });
+  kok.querySelector('[data-kurs-ac]').addEventListener('click', () => { girisEkrani('kursac'); window.scrollTo(0, 0); });
+  kok.querySelector('[data-sifre-unut]').addEventListener('click', () => {
+    const ep = kok.querySelector('[name=eposta]').value.trim();
+    if (!/^\S+@\S+\.\S+$/.test(ep)) { bildir('Önce e-posta adresinizi yazın', 'uyari'); return kok.querySelector('[name=eposta]').focus(); }
+    B.sifreSifirla(ep).then(() => bildir(ep + ' adresine şifre sıfırlama linki gönderildi; gelen kutunuzu ve spam klasörünü kontrol edin')).catch(x => bildir(B.hataMetni(x), 'uyari'));
+  });
+  kok.querySelector('.giris-eposta').addEventListener('submit', ev => {
+    ev.preventDefault(); const f = ev.target, btn = f.querySelector('button');
+    if (!/^\S+@\S+\.\S+$/.test(f.eposta.value.trim())) return bildir('E-posta adresini kontrol edin', 'uyari');
+    if (!f.sifre.value) return bildir('Şifrenizi girin', 'uyari');
+    btn.disabled = true; btn.textContent = 'Giriliyor…';
+    B.girisYap(f.eposta.value, f.sifre.value).then(u => bulutOturumu(u, true)).catch(x => { btn.disabled = false; btn.textContent = 'Giriş yap'; bildir(B.hataMetni(x), 'uyari'); });
+  });
   kok.querySelectorAll('[data-kim]').forEach(b => b.addEventListener('click', () => { secilen = S.kullanicilar.find(u => u.id === b.dataset.kim); kok.querySelectorAll('[data-kim]').forEach(x => x.classList.toggle('secili', x === b)); const f = kok.querySelector('.giris-pin'); f.hidden = false; f.querySelector('input').value = ''; f.querySelector('input').focus(); }));
   kok.querySelector('.giris-pin').addEventListener('submit', ev => {
     ev.preventDefault(); const v = ev.target.querySelector('input').value;
@@ -231,7 +251,90 @@ function girisEkrani(mod = 'tanitim') {
     iskelet(); location.hash = bekleyen || (secilen.rol === 'usta' ? '#/egitmen' : '#/genel'); sonAd = rota().ad; yenile(true);
   });
 }
+function sessionStorageAl(k) { try { return sessionStorage.getItem(k); } catch (x) { return null; } }
+const LOGO = `<div class="logo" style="border-bottom:0;margin:0 0 6px"><svg class="logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>Sürücü kursu yönetimi</small></span></div>`;
+function bekleEkrani(metin) { document.getElementById('uyg').innerHTML = `<div class="giris"><div class="giris-levha">${LOGO}<h1 style="font-size:24px">${e(metin)}</h1><p>İlk açılışta birkaç saniye sürebilir.</p></div></div>`; }
+// Gerçek kurs hesabıyla oturum aç
+function bulutOturumu(u, yeniGiris) {
+  oturum.kullanici = u;
+  try { sessionStorage.setItem('sinyal-oturum', JSON.stringify(u)); } catch (x) { }
+  if (yeniGiris) { islem('Giriş yaptı'); kaydet(); }
+  let bekleyen = null; try { bekleyen = sessionStorage.getItem('sinyal-bekleyen'); sessionStorage.removeItem('sinyal-bekleyen'); } catch (x) { }
+  iskelet(); B.durumYaz();
+  const h = location.hash.slice(2).split('/')[0];
+  if (bekleyen) location.hash = bekleyen; else if (!SAYFALAR[h] || h === 'davet' || yeniGiris) location.hash = u.rol === 'usta' ? '#/egitmen' : '#/genel';
+  sonAd = rota().ad; yenile(true);
+}
+B.bulutYenileDinle(() => {
+  if (!oturum.kullanici || !document.getElementById('icerik')) return;
+  const a = document.activeElement;
+  if (document.querySelector('.pencere-arka, .pencere') || (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) { bekleyenYenile = true; return; }
+  yenile();
+});
+let bekleyenYenile = false;
+setInterval(() => { if (!bekleyenYenile || !oturum.kullanici) return; const a = document.activeElement; if (document.querySelector('.pencere-arka, .pencere') || (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) return; bekleyenYenile = false; yenile(); }, 1500);
+function kursAcEkrani() {
+  document.title = 'Yeni kurs hesabı · Sinyal';
+  document.getElementById('uyg').innerHTML = `<div class="giris"><div class="giris-levha">${LOGO}
+    <h1>Yeni kurs hesabı</h1><p>Kursunuzun verileri boş bir hesapla başlar. Öğrenci listenizi sonra Excel’den aktarabilirsiniz.</p>
+    <form class="giris-eposta" novalidate>
+      <label>Kursun adı<input name="kurs" required placeholder="Örn. Sinyal Sürücü Kursu" autocomplete="organization"></label>
+      <label>Şehir<input name="sehir" autocomplete="address-level1"></label>
+      <label>Adınız soyadınız<input name="ad" required autocomplete="name"></label>
+      <label>E-posta<input name="eposta" type="email" inputmode="email" autocomplete="username" required></label>
+      <label>Şifre (en az 8 karakter)<input name="sifre" type="password" autocomplete="new-password" required minlength="8"></label>
+      <label class="giris-onay"><input type="checkbox" name="onay"><span>Verilerin Google Firebase’in Frankfurt (Almanya) sunucusunda saklanacağını okudum. Sinyal şu an pilot aşamasında.</span></label>
+      <button class="dg dg-koyu" type="submit">Kurs hesabını aç</button></form>
+    <p class="giris-baglar"><button type="button" data-geri>← Giriş ekranına dön</button></p></div></div>`;
+  const kok = document.getElementById('uyg');
+  kok.querySelector('[data-geri]').addEventListener('click', () => girisEkrani('pin'));
+  kok.querySelector('form').addEventListener('submit', ev => {
+    ev.preventDefault(); const f = ev.target, btn = f.querySelector('[type=submit]');
+    if (f.kurs.value.trim().length < 3) return bildir('Kursun adını yazın', 'uyari');
+    if (f.ad.value.trim().length < 3) return bildir('Adınızı ve soyadınızı yazın', 'uyari');
+    if (!/^\S+@\S+\.\S+$/.test(f.eposta.value.trim())) return bildir('E-posta adresini kontrol edin', 'uyari');
+    if (f.sifre.value.length < 8) return bildir('Şifre en az 8 karakter olmalı', 'uyari');
+    if (!f.onay.checked) return bildir('Verilerin nerede saklanacağını okuduğunuzu işaretleyin', 'uyari');
+    btn.disabled = true; btn.textContent = 'Hesap açılıyor…';
+    B.kursAc({ kursAd: f.kurs.value.trim(), yetkili: f.ad.value.trim(), sehir: f.sehir.value.trim(), eposta: f.eposta.value.trim(), sifre: f.sifre.value })
+      .then(u => { bulutOturumu(u, true); bildir('Kurs hesabı açıldı. Önce Ayarlar’dan kurs bilgilerini, sonra öğrenci listenizi ekleyin'); })
+      .catch(x => { btn.disabled = false; btn.textContent = 'Kurs hesabını aç'; bildir(B.hataMetni(x), 'uyari'); });
+  });
+}
+// Davet linki: #/davet/<kurs>/<kod>
+const davetYolu = () => { const m = location.hash.match(/^#\/davet\/([^/]+)\/([^/]+)$/); return m ? [m[1], m[2]] : null; };
+async function davetEkrani() {
+  const [kurs, kod] = davetYolu();
+  bekleEkrani('Davet açılıyor…');
+  let dv = null; try { dv = await B.davetGetir(kurs, kod); } catch (x) { }
+  const kok = document.getElementById('uyg');
+  if (!dv) { kok.innerHTML = `<div class="giris"><div class="giris-levha">${LOGO}<h1>Bu davet geçersiz</h1><p>Linkin süresi dolmuş ya da daha önce kullanılmış. Kurs müdüründen yeni bir davet linki isteyin.</p><p class="giris-baglar"><button type="button" data-geri>Giriş ekranına git</button></p></div></div>`; kok.querySelector('[data-geri]').addEventListener('click', () => { location.hash = ''; girisEkrani('pin'); }); return; }
+  const ROL_T = { mudur: 'kurs müdürü', sekreter: 'ön büro çalışanı', usta: 'öğretmen' };
+  document.title = 'Davet · Sinyal';
+  kok.innerHTML = `<div class="giris"><div class="giris-levha">${LOGO}
+    <h1>${e(dv.kursAd)}</h1><p>${e(dv.davetEden || 'Kurs müdürü')} sizi Sinyal’e ${ROL_T[dv.rol] || dv.rol} olarak davet etti. Kendi e-postanız ve şifrenizle hesabınızı açın.</p>
+    <form class="giris-eposta" novalidate>
+      <label data-yeni>Adınız soyadınız<input name="ad" value="${e(dv.ad)}" autocomplete="name"></label>
+      <label>E-posta<input name="eposta" type="email" inputmode="email" autocomplete="username" required></label>
+      <label><span data-sifre-et>Şifre belirleyin (en az 8 karakter)</span><input name="sifre" type="password" autocomplete="new-password" required></label>
+      <button class="dg dg-koyu" type="submit">Hesabımı aç ve katıl</button></form>
+    <p class="giris-baglar"><button type="button" data-mevcut>Zaten Sinyal hesabım var</button></p></div></div>`;
+  let yeni = true;
+  const f = kok.querySelector('form'), btn = f.querySelector('[type=submit]');
+  kok.querySelector('[data-mevcut]').addEventListener('click', ev => { yeni = !yeni; kok.querySelector('[data-yeni]').hidden = !yeni; kok.querySelector('[data-sifre-et]').textContent = yeni ? 'Şifre belirleyin (en az 8 karakter)' : 'Şifre'; f.sifre.autocomplete = yeni ? 'new-password' : 'current-password'; btn.textContent = yeni ? 'Hesabımı aç ve katıl' : 'Giriş yap ve katıl'; ev.target.textContent = yeni ? 'Zaten Sinyal hesabım var' : 'Yeni hesap açacağım'; });
+  f.addEventListener('submit', ev => {
+    ev.preventDefault();
+    if (yeni && f.ad.value.trim().length < 3) return bildir('Adınızı ve soyadınızı yazın', 'uyari');
+    if (!/^\S+@\S+\.\S+$/.test(f.eposta.value.trim())) return bildir('E-posta adresini kontrol edin', 'uyari');
+    if (yeni && f.sifre.value.length < 8) return bildir('Şifre en az 8 karakter olmalı', 'uyari');
+    btn.disabled = true; const t = btn.textContent; btn.textContent = 'Bağlanıyor…';
+    B.davetKabul(kurs, kod, { eposta: f.eposta.value.trim(), sifre: f.sifre.value, ad: f.ad.value.trim(), yeni })
+      .then(u => { location.hash = ''; bulutOturumu(u, true); bildir(dv.kursAd + ' hesabına katıldınız'); })
+      .catch(x => { btn.disabled = false; btn.textContent = t; bildir(B.hataMetni(x), 'uyari'); });
+  });
+}
 document.addEventListener('click', ev => {
+  if (ev.target.closest('[data-cikis]') && oturum.kullanici && oturum.kullanici.bulut) { islem('Çıkış yaptı'); kaydet(); B.cikisYap().then(() => { try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } location.hash = ''; location.reload(); }); return; }
   if (ev.target.closest('[data-cikis]')) { const zy = ziyaretci(); islem('Çıkış yaptı'); kaydet(); oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } location.hash = ''; girisEkrani(zy ? 'tanitim' : 'pin'); window.scrollTo(0, 0); }
   const g = ev.target.closest('[data-geri-al]'); if (g) { if (geriAl()) { bildir('Son işlem geri alındı'); yenile(); } }
 });
@@ -243,7 +346,9 @@ setInterval(() => {
   if (!oturum.kullanici || imzaLinki()) return;
   const dk = (S.guvenlik && S.guvenlik.oturumDk) || 30;
   if (Date.now() - sonHareket < dk * 60e3) return;
-  islem('Oturum kapandı', dk + ' dk hareketsiz'); kaydet(); oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { }
+  islem('Oturum kapandı', dk + ' dk hareketsiz'); kaydet();
+  if (oturum.kullanici.bulut) { oturum.kullanici = null; B.cikisYap().then(() => { try { sessionStorage.removeItem('sinyal-oturum'); sessionStorage.setItem('sinyal-kapandi', String(dk)); } catch (x) { } location.reload(); }); return; }
+  oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { }
   girisEkrani('pin'); bildir(dk + ' dakika işlem yapılmadığı için oturum kapandı', 'uyari');
 }, 30e3);
 
@@ -263,5 +368,12 @@ sadeDilBaslat();
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => { });
 window.addEventListener('beforeinstallprompt', ev => { ev.preventDefault(); window.__kurulum = ev; document.querySelectorAll('[data-kur-android]').forEach(b => { b.hidden = false; }); });
 if (imzaLinki()) imzaSayfasiAc();
-else if (oturum.kullanici) { iskelet(); if (!location.hash) location.hash = oturum.kullanici.rol === 'usta' ? '#/egitmen' : '#/genel'; sonAd = rota().ad; yenile(); }
+else if (davetYolu()) davetEkrani();
+else if (B.bulutKayitli()) {
+  oturum.kullanici = null; bekleEkrani('Kurs verisi yükleniyor…');
+  B.bulutBaslat().then(u => { if (u) bulutOturumu(u, false); else girisEkrani('pin'); }).catch(x => { girisEkrani('pin'); bildir(B.hataMetni(x), 'uyari'); });
+  const kp = sessionStorageAl('sinyal-kapandi'); if (kp) { try { sessionStorage.removeItem('sinyal-kapandi'); } catch (x) { } setTimeout(() => bildir(kp + ' dakika işlem yapılmadığı için oturum kapandı; tekrar giriş yapın', 'uyari'), 400); }
+}
+else if (sessionStorageAl('sinyal-kapandi')) { const kp = sessionStorageAl('sinyal-kapandi'); try { sessionStorage.removeItem('sinyal-kapandi'); } catch (x) { } oturum.kullanici = null; girisEkrani('pin'); setTimeout(() => bildir(kp + ' dakika işlem yapılmadığı için oturum kapandı; tekrar giriş yapın', 'uyari'), 400); }
+else if (oturum.kullanici && !oturum.kullanici.bulut) { iskelet(); if (!location.hash) location.hash = oturum.kullanici.rol === 'usta' ? '#/egitmen' : '#/genel'; sonAd = rota().ad; yenile(); }
 else girisEkrani(location.hash.startsWith('#/imza-geldi/') ? 'pin' : 'tanitim');

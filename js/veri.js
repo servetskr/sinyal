@@ -1,5 +1,5 @@
 // Sinyal demo verisi: tarihler bugüne göre üretilir, tarayıcıda saklanır.
-const ANAHTAR = 'sinyal-demo-v19';
+let ANAHTAR = 'sinyal-demo-v19';
 // Usta öğreticinin ders sonunda puanladığı beceriler
 export const BECERI = [['kalkis', 'Kalkış ve duruş'], ['serit', 'Şerit ve ayna'], ['kavsak', 'Kavşak ve öncelik'], ['park', 'Park'], ['rampa', 'Rampa ve yokuş']];
 try { for (let i = 1; i < 19; i++) localStorage.removeItem('sinyal-demo-v' + i); } catch (x) { }
@@ -449,6 +449,8 @@ function yukle() {
 }
 // Eski kayıtları güncel yapıya taşır; gerçek bağlantısı olmayan entegrasyonları "bağlı değil" yapar
 function goc(o) {
+  // gerçek kurs verisi (bulut) demo örneklerinden ayrı: örnek puan, ceza, beceri ve demo WhatsApp adresi yalnız demoya eklenir
+  const demo = !o._bulut;
   o.kurs.siniflar = o.kurs.siniflar || {};
   Object.keys(SINIFLAR).forEach(k => { SINIFLAR[k] = { ...SINIF_VARSAYILAN[k], ...(o.kurs.siniflar[k] || {}) }; });
   Object.keys(o.kurs.siniflar).forEach(k => { if (!SINIFLAR[k]) SINIFLAR[k] = o.kurs.siniflar[k]; });
@@ -463,7 +465,7 @@ function goc(o) {
   if (o.mebArac && !o.mebArac.gercek) o.mebArac = null;
   if (o.kurs.mebYontem === 'arac' && !o.mebArac) o.kurs.mebYontem = 'sirali';
   // demo: PIN’le giren her cihazda WhatsApp gönderimi hazır gelsin (mesajlar yalnız demo numarasına gider); Ayarlar’dan boşaltılırsa kapalı kalır
-  if (o.kurs.waApi === undefined) { o.kurs.waApi = 'https://sinyal-wa.sinemsavar0.workers.dev'; o.kurs.waApiVarsayilan = true; }
+  if (demo && o.kurs.waApi === undefined) { o.kurs.waApi = 'https://sinyal-wa.sinemsavar0.workers.dev'; o.kurs.waApiVarsayilan = true; }
   if (o.sosyal) o.sosyal.kanallar.forEach(c => { if (!c.gercek) { c.bagli = c.id === 'wp' ? !!o.kurs.waApi : false; c.cevap = c.bagli && c.cevap; } });
   (o.otomasyonlar || []).forEach(x => { if (x.id === 'o8') x.sablon = '{selam} e-sınav randevunuz {tarih} {saatte}, yer: {yer}. Kimliğinizi ve e-sınav ücreti dekontunu yanınıza alın.'; if (x.id === 'o6') x.ne = 'Direksiyon sınavından kalınca'; });
   if (o.kazanim && !o.kazanim.gercek) o.kazanim = { gercek: true, doldurulan: 0, ekDers: 0, yorum: 0 };
@@ -471,11 +473,11 @@ function goc(o) {
   const hs = x => { let h = 7; for (const c of String(x)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
   const kz = {}; (o.kursiyerler || []).forEach(k => { kz[k.id] = k; });
   // örnek trafik cezaları
-  if (!o.cezalar && o.araclar && o.araclar.length > 1) o.cezalar = [{ id: 'c1', arac: o.araclar[1].id, egitmen: o.araclar[1].egitmen || null, tarih: gun(-12), teblig: gun(-10), tur: 'Hız sınırı', tutar: 2167, odendi: null }, { id: 'c2', arac: o.araclar[0].id, egitmen: o.araclar[0].egitmen || null, tarih: gun(-40), teblig: gun(-36), tur: 'Hatalı park', tutar: 1408, odendi: gun(-30), odenen: 1056 }];
+  if (demo && !o.cezalar && o.araclar && o.araclar.length > 1) o.cezalar = [{ id: 'c1', arac: o.araclar[1].id, egitmen: o.araclar[1].egitmen || null, tarih: gun(-12), teblig: gun(-10), tur: 'Hız sınırı', tutar: 2167, odendi: null }, { id: 'c2', arac: o.araclar[0].id, egitmen: o.araclar[0].egitmen || null, tarih: gun(-40), teblig: gun(-36), tur: 'Hatalı park', tutar: 1408, odendi: gun(-30), odenen: 1056 }];
   // öğrencinin derse verdiği puanlar (örnek veri; yaklaşık her 3 dersten 2'si puanlanmış)
   const YORUM = ['Çok sabırlı, her şeyi tekrar tekrar anlattı.', 'Park etmeyi sonunda öğrendim, teşekkürler.', 'Biraz hızlı gittik ama faydalı oldu.', 'Yokuşta kalkışı iyi çalıştık.', 'Araç çok temizdi, ders zamanında başladı.', 'Ders 10 dakika geç başladı.', 'Kavşaklarda daha çok pratik istiyorum.'];
-  (o.dersler || []).forEach(d => { if (d.durum !== 'Yapıldı' || d.ogrenciPuan !== undefined) return; const h = hs(d.id + 'p'); if (h % 3 === 0) { d.ogrenciPuan = null; return; } const puan = [5, 5, 4, 5, 4, 3, 5, 4][h % 8], yorum = h % 5 === 0 ? YORUM[h % YORUM.length] : ''; d.ogrenciPuan = { puan: yorum.includes('geç başladı') ? 3 : puan, yorum, tarih: d.tarih }; });
-  (o.dersler || []).forEach(d => { if (d.durum !== 'Yapıldı' || d.beceri !== undefined) return; const k = kz[d.kursiyer]; if (!k) return; const taban = [2.7, 3.5, 3.9, 4.2, 4.0, 3.8, 4.4][hs(k.id) % 7]; d.beceri = Object.fromEntries(BECERI.map(([b], i) => [b, Math.max(1, Math.min(5, Math.round(taban + ((hs(d.id + b) % 5) - 2) * 0.3 + (i === hs(k.id) % 5 ? -0.9 : 0))))])); });
+  if (demo) (o.dersler || []).forEach(d => { if (d.durum !== 'Yapıldı' || d.ogrenciPuan !== undefined) return; const h = hs(d.id + 'p'); if (h % 3 === 0) { d.ogrenciPuan = null; return; } const puan = [5, 5, 4, 5, 4, 3, 5, 4][h % 8], yorum = h % 5 === 0 ? YORUM[h % YORUM.length] : ''; d.ogrenciPuan = { puan: yorum.includes('geç başladı') ? 3 : puan, yorum, tarih: d.tarih }; });
+  if (demo) (o.dersler || []).forEach(d => { if (d.durum !== 'Yapıldı' || d.beceri !== undefined) return; const k = kz[d.kursiyer]; if (!k) return; const taban = [2.7, 3.5, 3.9, 4.2, 4.0, 3.8, 4.4][hs(k.id) % 7]; d.beceri = Object.fromEntries(BECERI.map(([b], i) => [b, Math.max(1, Math.min(5, Math.round(taban + ((hs(d.id + b) % 5) - 2) * 0.3 + (i === hs(k.id) % 5 ? -0.9 : 0))))])); });
   o.kurs.maliyet = o.kurs.maliyet || { yakit: 46, tuketim: 6.5, km: 22, bakim: 55, pay: 55 };
   if (o.kurs.kendiRandevu === undefined) o.kurs.kendiRandevu = true;
   return o;
@@ -492,7 +494,29 @@ function subeTamamla() {
   S.araclar.forEach(a => { if (!a.sube) a.sube = v; });
   S.egitmenler.forEach(x => { if (!x.sube) x.sube = v; });
 }
-export function kaydet() { subeTamamla(); (S.hareket || []).forEach(h => { if (h.tur === 'Gelir' && !h.no) makbuzNoVer(h); }); try { localStorage.setItem(ANAHTAR, JSON.stringify(S)); } catch (e) { } }
+let kaydetDinleyici = null;
+export const kaydetDinle = f => { kaydetDinleyici = f; };
+export function kaydet() { subeTamamla(); (S.hareket || []).forEach(h => { if (h.tur === 'Gelir' && !h.no) makbuzNoVer(h); }); try { localStorage.setItem(ANAHTAR, JSON.stringify(S)); } catch (e) { } if (kaydetDinleyici) kaydetDinleyici(); }
+// Bulut (gerçek kurs): veri Firestore'dan gelir; yerel kopya kursa özel anahtarda tutulur, günlük yenilenmez
+export function bulutVeri(yeni, kursId) { ANAHTAR = 'sinyal-bulut-' + kursId; yeni._bulut = true; S = goc(yeni); }
+export function demoyaDon() { ANAHTAR = 'sinyal-demo-v19'; S = yukle(); }
+// Yeni kurs: ayarlar ve şablonlar hazır, kayıtlar boş
+export function bosVeri({ kursAd, yetkili, sehir }) {
+  const o = uret();
+  ['kursiyerler', 'dersler', 'hareket', 'adaylar', 'sinavlar', 'teorik', 'gonderimler', 'islemler', 'kampanyalar', 'cezalar', 'avanslar', 'devredilen', 'imzaTalepleri', 'bosTeklif', 'faturalar', 'izinler', 'duyurular', 'bekleme', 'gelenAlinan', 'egitmenler', 'araclar', 'ogretmenler', 'personel', 'kullanicilar', 'arsiv', 'gunSonu'].forEach(k => { if (Array.isArray(o[k])) o[k] = []; });
+  o.subeler = [{ id: 's1', ad: 'Merkez', semt: '', kurumKodu: '', mudur: yetkili || '', mebbis: '' }];
+  o.kurs = { ...o.kurs, ad: kursAd || 'Sürücü kursu', yetkili: yetkili || '', sehir: sehir || '', tel: '', adres: sehir || '', puan: null, yorumSayisi: 0, web: '', wp: '', iban: '', waApi: '', yorumLink: '' };
+  o.zamanli = { gonderilen: {}, kayit: [], kuyruk: [], son: null, sinir: false };
+  o.waDurum = {}; o.sayac = {}; o.kazanim = { gercek: true, doldurulan: 0, ekDers: 0, yorum: 0 };
+  if (o.sosyal) { Object.assign(o.sosyal, { sohbetler: [], slotlar: [], bilinmeyen: [], gonderiler: [], yorumlar: [], ay: { mesaj: 0, kisi: 0, otomatik: 0, sure: 0, mesaiDisi: 0, aday: 0, gorusme: 0, kayit: 0, devir: 0 }, saatlik: Array(24).fill(0), kanalDagilim: { igm: 0, igy: 0, wp: 0, fb: 0 } }); (o.sosyal.kanallar || []).forEach(c => Object.assign(c, { hesap: '', bagli: false, cevap: false, son: null, izin: null, sonCevapDk: null })); }
+  if (o.guvenlik) o.guvenlik.oturumlar = [];
+  o.asistanBilgi = []; o.gruplar = []; o.mevzuat = (o.mevzuat || []).filter(m => m.uygulandi);
+  o.hesaplar = [{ id: 'kasa', ad: 'Nakit kasa', tur: 'Kasa', bakiye: 0 }];
+  o.entegrasyon = { ...o.entegrasyon, earsiv: { bagli: false, ad: 'e-Arşiv entegratörü', not: '' }, pos: { bagli: false, ad: 'Sanal POS', komisyon: 0 } };
+  o.sms = { bakiye: 0, kanal: 'WhatsApp' };
+  delete o._gun; o._bulut = true;
+  return o;
+}
 export function sifirla() { try { localStorage.removeItem(ANAHTAR); } catch (e) { } S = goc(uret()); S._gun = iso(BUGUN); kaydet(); }
 
 // Kursiyer sözleşmesinin varsayılan maddeleri. {süslü} alanlar kurs ayarlarından dolar; kurs Ayarlar › Sözleşme metni'nden değiştirir.

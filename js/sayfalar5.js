@@ -1,6 +1,7 @@
-import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube} from './veri.js?v=64';
-import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor } from './ui.js?v=64';
-import { yenile } from './app.js?v=64';
+import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube} from './veri.js?v=65';
+import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor } from './ui.js?v=65';
+import { yenile } from './app.js?v=65';
+import * as B from './bulut.js?v=65';
 
 /* ================= MEB KURALLARI: KAYNAK VE SORUMLULUK ================= */
 const MTSK = 'MTSK Yönetmeliği (ÖÖKGM, Ocak 2025 metni)';
@@ -294,8 +295,53 @@ function subelerSekme() {
 }
 const ROL = { mudur: 'Kurs müdürü', sekreter: 'Ön büro', usta: 'Usta öğretici' }, ROL_YETKI = { mudur: 'Her şeyi görür, ayarları değiştirir', sekreter: 'Kayıt, kasa, mesajlar, plan', usta: 'Kendi dersleri ve kursiyerleri' };
 function kullaniciSekme() {
+  if (B.bulutta()) return bulutKullanicilar();
   const sonGiris = u => (S.islemler.find(x => x.kim === u.ad && x.ne === 'Giriş yaptı') || {}).zaman;
   return `<div class="kart"><div class="kart-bas"><h3>Kullanıcılar</h3><small>${S.kullanicilar.length} kişi · her biri kendi PIN’iyle girer</small><div class="sag"><button class="dg dg-ana dg-kucuk" data-kul-ekle>${ik('arti')}Kullanıcı ekle</button></div></div><ul class="liste">${S.kullanicilar.map(u => { const g = sonGiris(u), ben = oturum.kullanici && oturum.kullanici.id === u.id; return `<li>${avatar(...u.ad.split(' '))}<div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(u.ad)}${ben ? ' · siz' : ''}</b><small style="display:block;color:var(--soluk)">${ROL_YETKI[u.rol]}${u.usta && egitmen(u.usta) ? ' · ' + e(egitmen(u.usta).ad) + ' derslerini görür' : ''}${u.tel ? ' · ' + e(u.tel) : ''} · ${g ? 'son giriş ' + goreli(g.slice(0, 10)) + ' ' + g.slice(11, 16) : 'henüz girmedi'}</small></div><span class="sag" style="gap:6px">${rozet(ROL[u.rol], u.rol === 'mudur' ? 'sari' : 'notr')}<button class="dg dg-hafif dg-kucuk" data-kul-pin="${u.id}">PIN değiştir</button>${ben ? '' : `<button class="dg dg-hafif dg-kucuk" data-kul-sil="${u.id}">Kaldır</button>`}</span></li>`; }).join('')}</ul></div>`;
+}
+// Gerçek kurs hesabı: herkes kendi e-posta ve şifresiyle girer; çalışan davet linkiyle katılır
+function bulutKullanicilar() {
+  const benMudur = oturum.kullanici.rol === 'mudur', mudurSay = S.kullanicilar.filter(x => x.rol === 'mudur').length;
+  return `<div class="kart"><div class="kart-bas"><h3>Kullanıcılar</h3><small>${S.kullanicilar.length} kişi · her biri kendi e-posta ve şifresiyle girer</small>${benMudur ? `<div class="sag"><button class="dg dg-ana dg-kucuk" data-davet>${ik('arti')}Çalışan davet et</button></div>` : ''}</div>
+    <ul class="liste">${S.kullanicilar.map(u => { const ben = oturum.kullanici.id === u.id; return `<li>${avatar(...String(u.ad || '?').split(' '))}<div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(u.ad)}${ben ? ' · siz' : ''}</b><small style="display:block;color:var(--soluk)">${ROL_YETKI[u.rol] || ''}${u.usta && egitmen(u.usta) ? ' · ' + e(egitmen(u.usta).ad) + ' derslerini görür' : ''}${u.eposta ? ' · ' + e(u.eposta) : ''}</small></div><span class="sag" style="gap:6px">${benMudur && !ben && u.rol !== 'usta' ? `<select class="girdi" style="height:34px;width:auto" data-uye-rol="${u.id}" aria-label="Rol">${['mudur', 'sekreter'].map(r => `<option value="${r}" ${u.rol === r ? 'selected' : ''}>${ROL[r]}</option>`).join('')}</select>` : rozet(ROL[u.rol] || u.rol, u.rol === 'mudur' ? 'sari' : 'notr')}${benMudur && !ben && !(u.rol === 'mudur' && mudurSay < 2) ? `<button class="dg dg-hafif dg-kucuk" data-uye-cikar="${u.id}">Kaldır</button>` : ''}</span></li>`; }).join('')}</ul>
+    ${benMudur ? '<div data-davet-liste></div>' : ''}
+    <div class="kart-govde"><p style="font-size:13px;color:var(--soluk)">Şifresini unutan kişi giriş ekranındaki “Şifremi unuttum”la e-postasına sıfırlama linki alır. Ayrılan çalışanı “Kaldır”la çıkarın; o anda erişimi kapanır.</p></div></div>`;
+}
+function davetListesi(k) {
+  const yer = k.querySelector('[data-davet-liste]'); if (!yer) return;
+  B.davetler().then(l => { yer.innerHTML = l.length ? `<div class="kart-govde" style="border-top:1px solid var(--cizgi)"><b style="color:var(--murekkep)">Bekleyen davetler</b><ul class="liste">${l.map(d => `<li><div style="flex:1;min-width:0"><b>${e(d.ad)}</b><small style="display:block;color:var(--soluk)">${ROL[d.rol] || d.rol} · link ${tarih(d.son.toISOString().slice(0, 10))} tarihine kadar geçerli</small></div><span class="sag" style="gap:6px"><button class="dg dg-hafif dg-kucuk" data-davet-kopya="${d.kod}">Linki kopyala</button><button class="dg dg-hafif dg-kucuk" data-davet-sil="${d.kod}">İptal et</button></span></li>`).join('')}</ul></div>` : ''; }).catch(() => { });
+}
+function davetFormu() {
+  const bosUsta = S.egitmenler.filter(x => !S.kullanicilar.some(u => u.usta === x.id));
+  pencere({
+    baslik: 'Çalışan davet et',
+    icerik: `<form class="form-izgara" id="f-davet"><div class="alan tam"><label>Ad soyad</label><input name="ad" required autocomplete="off"></div>
+      <div class="alan tam"><span class="et">Rol</span><div class="secim">${Object.entries(ROL).map(([r, t], i) => `<label><input type="radio" name="rol" value="${r}" ${i === 1 ? 'checked' : ''}><span>${t}</span></label>`).join('')}</div></div>
+      <div class="alan tam" id="davet-usta" hidden><label>Hangi öğretmen?</label><select name="usta">${bosUsta.map(x => `<option value="${x.id}">${e(x.ad)}</option>`).join('') || '<option value="">Önce Filo › Öğretmenler’den öğretmeni ekleyin</option>'}</select></div></form>
+      <p style="font-size:13px;color:var(--soluk);margin-top:10px">Bir link oluşturulur; kişiye WhatsApp’tan gönderirsiniz. Link 7 gün geçerli ve tek kullanımlık. Kişi kendi e-postası ve şifresiyle hesabını açar.</p>`,
+    altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-davet">Davet linki oluştur</button>`,
+    onAc(d) {
+      const f = d.querySelector('form'); f.addEventListener('change', () => { d.querySelector('#davet-usta').hidden = f.rol.value !== 'usta'; });
+      f.ad.addEventListener('input', () => { const eg = bosUsta.find(x => x.ad.toLocaleLowerCase('tr') === f.ad.value.trim().toLocaleLowerCase('tr')); if (eg) { f.usta.value = eg.id; f.querySelector('[name=rol][value=usta]').checked = true; d.querySelector('#davet-usta').hidden = false; } });
+      f.addEventListener('submit', ev => {
+        ev.preventDefault(); const ad = f.ad.value.trim();
+        if (ad.length < 3) return bildir('Ad soyad girin', 'uyari');
+        if (f.rol.value === 'usta' && !f.usta.value) return bildir('Öğretmeni seçin', 'uyari');
+        const btn = d.querySelector('[form=f-davet]'); btn.disabled = true;
+        B.davetOlustur({ ad, rol: f.rol.value, usta: f.rol.value === 'usta' ? f.usta.value : null }).then(r => { islem('Çalışan davet etti', ad + ' · ' + ROL[f.rol.value]); kaydet(); davetGoster(ad, r.link); }).catch(x => { btn.disabled = false; bildir(B.hataMetni(x), 'uyari'); });
+      });
+    },
+  });
+}
+function davetGoster(ad, link) {
+  const metin = `Merhaba ${ad}, ${S.kurs.ad} Sinyal hesabına katılmanız için davet linkiniz: ${link}`;
+  pencere({
+    baslik: 'Davet linki hazır',
+    icerik: `<p style="margin-bottom:10px">Linki ${e(ad)} kişisine gönderin. Açınca kendi e-postası ve şifresiyle hesabını oluşturur.</p><input class="girdi mono" readonly value="${e(link)}" data-davet-link style="width:100%">`,
+    altlik: `<button class="dg dg-cizgi" data-kopya>Kopyala</button><a class="dg dg-ana" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(metin)}">WhatsApp’tan gönder</a>`,
+    onAc(d) { d.querySelector('[data-kopya]').addEventListener('click', () => { const i = d.querySelector('[data-davet-link]'); i.select(); (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject()).catch(() => document.execCommand('copy')).finally(() => bildir('Link kopyalandı')); }); },
+  });
+  yenile();
 }
 function kullaniciFormu() {
   pencere({
@@ -342,8 +388,10 @@ function sozlesmeSekme() {
 }
 export const AYAR_SEKMELERI = { kullanici: kullaniciSekme, sozlesme: sozlesmeSekme, subeler: subelerSekme, kurallar: kurallarSekme, guvenlik: guvenlikSekme, entegrasyon: entegrasyonSekme, aktarim: aktarimSekme, gorunum: gorunumSekme };
 export function ayarBaglan(k) {
+  davetListesi(k);
   k.addEventListener('change', ev => {
     const t = ev.target;
+    if (t.matches('[data-uye-rol]')) { const u = S.kullanicilar.find(x => x.id === t.dataset.uyeRol); B.uyeGuncelle(u.id, { rol: t.value }).then(() => { islem('Rol değiştirdi', u.ad + ' · ' + ROL[t.value]); kaydet(); bildir(u.ad + ' artık ' + ROL[t.value]); }).catch(x => { bildir(B.hataMetni(x), 'uyari'); yenile(); }); return; }
     if (t.matches('[data-kural]')) { const key = t.dataset.kural, eski = S.kurs[key]; S.kurs[key] = +t.value || 0; if (KURAL_KAYNAK[key].tur === 'mevzuat') { S.kurs.kuralDegisen = S.kurs.kuralDegisen || {}; S.kurs.kuralDegisen[key] = true; } islem('Kural değerini değiştirdi', KURAL_KAYNAK[key].ad + ': ' + eski + ' → ' + S.kurs[key]); kaydet(); bildir('Kural kaydedildi'); yenile(); }
     if (t.matches('[data-sube-alan]')) { const [i, alan] = t.dataset.subeAlan.split(':'); S.subeler[+i][alan] = t.value.trim(); islem('Şube bilgisini güncelledi', S.subeler[+i].ad); kaydet(); bildir('Şube bilgisi kaydedildi'); }
     if (t.matches('[data-meb-yontem]')) { if (t.value === 'arac' && !(S.mebArac && S.mebArac.kurulu)) { t.checked = false; k.querySelector('[data-meb-yontem][value="sirali"]').checked = true; return mebAracKur(); } S.kurs.mebYontem = t.value; islem('MEBBİS giriş yöntemini değiştirdi', t.value === 'arac' ? 'Tek tuş aktarımı' : 'Sıralı giriş'); kaydet(); bildir(t.value === 'arac' ? 'Tek tuş aktarımı açık' : 'Sıralı girişe dönüldü'); yenile(); }
@@ -378,13 +426,17 @@ export function ayarBaglan(k) {
   k.addEventListener('click', ev => {
     const t = ev.target;
     if (t.closest('[data-kul-ekle]')) return kullaniciFormu();
+    if (t.closest('[data-davet]')) return davetFormu();
+    const dk = t.closest('[data-davet-kopya]'); if (dk) { const l = B.davetLinki(B.bulut.kurs, dk.dataset.davetKopya); (navigator.clipboard ? navigator.clipboard.writeText(l) : Promise.reject()).then(() => bildir('Link kopyalandı'), () => bildir(l)); return; }
+    const ds = t.closest('[data-davet-sil]'); if (ds) { B.davetSil(ds.dataset.davetSil).then(() => { bildir('Davet iptal edildi'); davetListesi(k); }).catch(x => bildir(B.hataMetni(x), 'uyari')); return; }
+    const uc = t.closest('[data-uye-cikar]'); if (uc) { const u = S.kullanicilar.find(x => x.id === uc.dataset.uyeCikar); return pencere({ baslik: u.ad + ' kaldırılsın mı?', icerik: '<p>Bu kişinin erişimi hemen kapanır. Yaptığı işlemler geçmişte kalır.</p>', altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Kaldır</button>', onAc(d) { d.querySelector('[data-k]').addEventListener('click', () => pinSor(u.ad + ' kullanıcısını kaldırmak').then(onay => { if (!onay) return; B.uyeCikar(u.id).then(() => { islem('Kullanıcı kaldırdı', u.ad); kaydet(); kapatPencere(); bildir(u.ad + ' kaldırıldı'); }).catch(x => bildir(B.hataMetni(x), 'uyari')); })); } }); }
     const kp = t.closest('[data-kul-pin]'); if (kp) return pinDegistir(S.kullanicilar.find(u => u.id === kp.dataset.kulPin));
     const ks = t.closest('[data-kul-sil]'); if (ks) { const u = S.kullanicilar.find(x => x.id === ks.dataset.kulSil); if (u.rol === 'mudur' && S.kullanicilar.filter(x => x.rol === 'mudur').length < 2) return bildir('Son kurs müdürü kaldırılamaz', 'uyari'); return pencere({ baslik: u.ad + ' kaldırılsın mı?', icerik: '<p>Bu kişi artık giriş yapamaz. Yaptığı işlemler geçmişte kalır.</p>', altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Kaldır</button>', onAc(d) { d.querySelector('[data-k]').addEventListener('click', () => pinSor(u.ad + ' kullanıcısını kaldırmak').then(onay => { if (!onay) return; S.kullanicilar = S.kullanicilar.filter(x => x !== u); islem('Kullanıcı kaldırdı', u.ad); kaydet(); bildir(u.ad + ' kaldırıldı'); yenile(); })); } }); }
     if (t.closest('[data-sozlesme-kaydet]')) { const v = k.querySelector('[data-sozlesme-metin]').value.split(/\n\s*\n/).map(x => x.replace(/\s+/g, ' ').trim()).filter(Boolean); if (v.length < 3) return bildir('Sözleşmede en az 3 madde olmalı', 'uyari'); const bilinmez = [...new Set((v.join(' ').match(/\{(\w+)\}/g) || []).filter(x => !['{kurs}', '{sinif}', '{teorik}', '{direksiyon}', '{hak}', '{tekrarE}', '{tekrarD}', '{ekDers}'].includes(x)))]; if (bilinmez.length) return bildir('Tanınmayan alan: ' + bilinmez.join(', '), 'uyari'); S.kurs.sozlesme = v; S.kurs.sozlesmeTarih = gun(0); islem('Sözleşme metnini değiştirdi', v.length + ' madde'); kaydet(); bildir('Sözleşme metni kaydedildi; yeni kayıtlar bu metinle hazırlanır'); return yenile(); }
     if (t.closest('[data-sozlesme-varsayilan]')) { S.kurs.sozlesme = null; islem('Sözleşmeyi varsayılana döndürdü'); kaydet(); bildir('Varsayılan metne dönüldü'); return yenile(); }
     if (t.closest('[data-sube-ekle]')) { const n = S.subeler.length + 1; S.subeler.push({ id: 's' + Date.now(), ad: 'Yeni şube ' + n, semt: '', kurumKodu: '', mudur: '', mebbis: '' }); islem('Şube ekledi'); kaydet(); bildir('Şube eklendi; kurum kodunu ve müdürünü yazın'); yenile(); }
     if (t.closest('[data-kural-onay]')) { S.kurs.kuralOnay = { kim: oturum.kullanici ? oturum.kullanici.ad : '', tarih: gun(0) }; islem('Kural değerlerini onayladı'); kaydet(); bildir('Kural değerleri onaylandı'); yenile(); }
-    const bo = t.closest('[data-belge-ac]'); if (bo) import('./sayfalar3.js?v=64').then(m => m.belgeAc(bo.dataset.belgeAc));
+    const bo = t.closest('[data-belge-ac]'); if (bo) import('./sayfalar3.js?v=65').then(m => m.belgeAc(bo.dataset.belgeAc));
     const ok = t.closest('[data-oturum-kapat]'); if (ok) { const o = S.guvenlik.oturumlar.splice(+ok.dataset.oturumKapat, 1)[0]; islem('Oturumu kapattırdı', o.kim + ' · ' + o.cihaz); kaydet(); bildir(o.kim + ' · ' + o.cihaz + ' oturumu kapatıldı'); yenile(); }
     const fs = t.closest('[data-fis]'); if (fs) { const n = +fs.dataset.fis, d = new Date(BUGUN); d.setMonth(d.getMonth() - n); csvIndir(`muhasebe-fisleri-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}.csv`, muhasebeFisi(n)); islem('Muhasebe fişlerini indirdi'); kaydet(); }
     if (t.closest('[data-parasut]')) pencere({ baslik: 'Paraşüt · bağlantı gerekli', icerik: `<div class="ipucu uyari" style="margin-bottom:12px">${isaret('uyari', 22)}<span>Paraşüt bağlantısı için kursun Paraşüt hesabından alınan API anahtarı gerekir. Anahtar girilene kadar tahsilatlar Paraşüt’e aktarılmaz.</span></div><p style="font-size:14.5px">Bu arada aylık muhasebe fişini CSV olarak indirip Paraşüt’e veya muhasebecinize yükleyebilirsiniz; fişte her tahsilat, gider ve iade ayrı satırdır.</p>`, altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-pfis>Bu ayın fişini indir</button>', onAc(d) { d.querySelector('[data-pfis]').addEventListener('click', () => { const d0 = new Date(BUGUN); csvIndir(`muhasebe-fisleri-${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}.csv`, muhasebeFisi(0)); islem('Muhasebe fişlerini indirdi'); kaydet(); kapatPencere(); }); } });
