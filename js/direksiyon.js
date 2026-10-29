@@ -2,9 +2,9 @@
 // gelir; öğrenci hangi davranışın sınavı bitirdiğini (kırmızı) ya da iki kez yapılınca bitirdiğini (sarı) görür. Geri park (EK-13),
 // L dönüşü (EK-19) ve dar alanda geri dönüş (EK-20) yönetmelikteki ölçülerle çizilip adım adım oynatılır.
 // Kural: sınav alanına konan kolaylaştırıcı işaretlere dayalı tarif verilmez (MTSK Yön. md.26/9); anlatım ayna, sinyal ve ölçüyle.
-import { S, kaydet, gun, motorSinif, SINIFLAR } from './veri.js?v=82';
-import { e, ik, pencere, rozet, tarih } from './ui.js?v=82';
-import { EK3, EK4 } from './formlar.js?v=82';
+import { S, kaydet, gun, motorSinif, SINIFLAR } from './veri.js?v=84';
+import { e, ik, pencere, rozet, tarih } from './ui.js?v=84';
+import { EK3, EK4 } from './formlar.js?v=84';
 
 const RENK_AD = { m: 'Mavi', s: 'Sarı', k: 'Kırmızı' };
 const KAYNAK_HATA = 'MEB verisi: Mart 2018–Mart 2019, 76.491 aday, 898.618 hata (Hatipoğlu, 2020)';
@@ -118,7 +118,7 @@ export function direksiyonAc(k, id, yenile) {
   pencere({
     baslik: b.ad, genis: true,
     icerik: `<article class="og-ders">${ek.ozet ? `<p style="font-size:15px">${e(ek.ozet)}</p>` : ''}${ek.oran ? `<p class="ipucu" style="margin:8px 0">${ik('bilgi')}<span>${e(ek.oran)} <small style="display:block;color:var(--soluk)">${KAYNAK_HATA}</small></span></p>` : ''}
-      ${ek.sema ? semaHtml(ek.sema) : ''}
+      ${ek.sema ? semaHtml(ek.sema) : ''}${b.no === 'I' ? `<button type="button" class="dg dg-ana dg-kucuk" data-ikaz style="margin-top:8px">${ik('uyari')}Gösterge paneli ve ikaz lambaları</button>` : ''}
       ${ek.adim ? `<h4 style="margin-top:14px">Adım adım</h4><ol class="dir-adim">${ek.adim.map(x => `<li>${e(x)}</li>`).join('')}</ol>` : ''}
       <h4 style="margin-top:14px">Sınavda değerlendirilenler</h4>
       ${kirmizi.length ? `<p class="et" style="margin-top:6px">Kırmızı · bir kez yapılırsa sınav biter</p>${liste(kirmizi, 'k')}` : ''}
@@ -128,6 +128,7 @@ export function direksiyonAc(k, id, yenile) {
     altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-dir-tamam>${cal[id] ? 'Çalıştım ✓' : 'Çalıştım'}</button>`,
     onAc(p) {
       if (ek.sema) semaBagla(p, ek.sema);
+      const iz = p.querySelector('[data-ikaz]'); if (iz) iz.addEventListener('click', () => import('./ikaz.js?v=84').then(m => m.ikazAc()));
       p.querySelector('[data-dir-tamam]').addEventListener('click', () => { k.dirCalisma = { ...(k.dirCalisma || {}), [id]: gun(0) }; kaydet(); p.querySelector('[data-kapat]').click(); if (yenile) yenile(); });
     },
   });
