@@ -459,6 +459,7 @@ function goc(o) {
   if (o.mebArac && !o.mebArac.gercek) o.mebArac = null;
   if (o.kurs.mebYontem === 'arac' && !o.mebArac) o.kurs.mebYontem = 'sirali';
   if (o.sosyal) o.sosyal.kanallar.forEach(c => { if (!c.gercek) { c.bagli = c.id === 'wp' ? !!o.kurs.waApi : false; c.cevap = c.bagli && c.cevap; } });
+  (o.otomasyonlar || []).forEach(x => { if (x.id === 'o8') x.sablon = 'Merhaba {ad}, e-sınav randevun {tarih} {saatte}, yer: {yer}. Kimliğini ve e-sınav ücreti dekontunu yanına al.'; if (x.id === 'o6') x.ne = 'Direksiyon sınavından kalınca'; });
   if (o.kazanim && !o.kazanim.gercek) o.kazanim = { gercek: true, doldurulan: 0, ekDers: 0, yorum: 0 };
   // geçmiş derslerin beceri puanları (usta öğretici ders bitiminde 1–5 verir); eski kayıtlara kursiyerin seyrine göre doldurulur
   const hs = x => { let h = 7; for (const c of String(x)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };

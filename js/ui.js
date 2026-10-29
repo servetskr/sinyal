@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum } from './veri.js?v=41';
+import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum } from './veri.js?v=42';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -201,7 +201,23 @@ export const waUrl = (tel, metin) => 'https://wa.me/' + waNumara(tel) + '?text='
 export const smsUrl = (tel, metin) => 'sms:' + (waNumara(tel) ? '+' + waNumara(tel) : '') + '?&body=' + encodeURIComponent(metin);
 // Mesaj yönlendirme (demo): kursa gelen mesajlar hariç her mesaj Ayarlar'daki tek numaraya gider.
 // Demo etiketi: mesajın kimin telefonuna gittiği ("[ÖĞRENCİ · Ayşe Yılmaz]", "[HOCA · Hüseyin Aktaş]", "[MÜDÜR]")
-export const etiket = (ad, rol) => S.kurs.demoKime === false || (!ad && !rol) ? '' : `[${rol ? rol + (ad && rol !== 'MÜDÜR' ? ' · ' + ad : '') : ad + ' için'}]\n`;
+const ROL_KIME = { 'ÖĞRENCİ': 'öğrencinin', 'HOCA': 'usta öğreticinin', 'MÜDÜR': 'kurs müdürünün', 'ADAY': 'yeni öğrenci adayının', 'ÖN BÜRO': 'ön büronun' };
+export const etiket = (ad, rol) => {
+  if (S.kurs.demoKime === false || (!ad && !rol)) return '';
+  if (rol === 'KURSA GELEN') return `KURSA GELEN MESAJ · gönderen: ${ad || 'öğrenci'}\n(Gerçekte bu mesaj öğrencinin telefonundan kursun WhatsApp hattına gelir.)\n――――――――\n`;
+  const kim = ROL_KIME[rol];
+  return `ALICI: ${rol || 'KİŞİ'}${ad && rol !== 'MÜDÜR' ? ' · ' + ad : ''}\n(Gerçekte bu mesaj ${kim || 'alıcının'} telefonuna gider.)\n――――――――\n`;
+};
+// Uzun linki (imza paketi vb.) kısa ve açıklayıcı linke çevirir: servetskr.github.io/sinyal/sozlesme-imzasi-ad-soyad-x7k2pq
+export async function kisaLink(hedef, ad, takip, api) {
+  const a = api || (S && S.kurs && S.kurs.waApi); if (!a) return hedef;
+  try {
+    const kok = new URL(a).origin;
+    const r = await fetch(kok + '/kisa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hedef, ad, takip }) });
+    const j = await r.json(); if (!r.ok || !j.ok) return hedef;
+    return location.hostname === 'servetskr.github.io' ? location.origin + '/sinyal/' + j.slug : kok + '/' + j.slug;
+  } catch (x) { return hedef; }
+}
 export function yonlendir(tel, metin, ad, rol) {
   const d = S && S.kurs && S.kurs.demoNumara;
   if (!d || (S.kurs.wp && waNumara(tel) && waNumara(tel) === waNumara(S.kurs.wp))) return [tel, metin];

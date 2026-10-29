@@ -1,15 +1,15 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=41';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir } from './ui.js?v=41';
-import * as Y1 from './sayfalar1.js?v=41';
-import * as Y2 from './sayfalar2.js?v=41';
-import * as P from './portal.js?v=41';
-import * as Y3 from './sayfalar3.js?v=41';
-import * as Y4 from './sayfalar4.js?v=41';
-import * as Y5 from './sayfalar5.js?v=41';
-import * as IM from './imza.js?v=41';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=41';
-import * as SN from './senaryo.js?v=41';
-import * as OZ from './ozellik.js?v=41';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=42';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir } from './ui.js?v=42';
+import * as Y1 from './sayfalar1.js?v=42';
+import * as Y2 from './sayfalar2.js?v=42';
+import * as P from './portal.js?v=42';
+import * as Y3 from './sayfalar3.js?v=42';
+import * as Y4 from './sayfalar4.js?v=42';
+import * as Y5 from './sayfalar5.js?v=42';
+import * as IM from './imza.js?v=42';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=42';
+import * as SN from './senaryo.js?v=42';
+import * as OZ from './ozellik.js?v=42';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -219,6 +219,10 @@ setInterval(() => {
   islem('Oturum kapandı', dk + ' dk hareketsiz'); kaydet(); oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { }
   girisEkrani(); bildir(dk + ' dakika işlem yapılmadığı için oturum kapandı', 'uyari');
 }, 30e3);
+
+// Uzaktan imzalar: kursiyer imzalayınca kayda kendiliğinden işlenir
+setInterval(() => { if (oturum.kullanici && !imzaLinki()) IM.imzaKontrol(); }, 30e3);
+setTimeout(() => { if (oturum.kullanici && !imzaLinki()) IM.imzaKontrol(); }, 3000);
 
 if (imzaLinki()) imzaSayfasiAc();
 else if (oturum.kullanici) { iskelet(); if (!location.hash) location.hash = oturum.kullanici.rol === 'usta' ? '#/egitmen' : '#/genel'; sonAd = rota().ad; yenile(); }

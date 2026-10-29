@@ -1,6 +1,6 @@
-import { S, kaydet, gun, islem, tarihOku, oturum, kapaliGun, SINIFLAR, satistaSiniflar } from './veri.js?v=41';
-import { e, ik, rozet, isaret, ekranNotu, sekmeler, olcumler, yonLevhasi, cubukGrafik, halka, pencere, kapatPencere, bildir, sayi, tl, goreli, tarih, apiAcik, apiGonder } from './ui.js?v=41';
-import { yenile } from './app.js?v=41';
+import { S, kaydet, gun, islem, tarihOku, oturum, kapaliGun, SINIFLAR, satistaSiniflar } from './veri.js?v=42';
+import { e, ik, rozet, isaret, ekranNotu, sekmeler, olcumler, yonLevhasi, cubukGrafik, halka, pencere, kapatPencere, bildir, sayi, tl, goreli, tarih, apiAcik, apiGonder } from './ui.js?v=42';
+import { yenile } from './app.js?v=42';
 
 /* ================= SOSYAL MEDYA ASİSTANI (DengChat modülü) =================
    Gelen kutusu "Mesajlar"da kalır. Bu modül kanalları bağlar, Instagram
@@ -94,7 +94,7 @@ function cevapUret(soru, ilk) {
     if (b) return { metin: beyan + b.metin, kaynak: b.konu };
   }
   if (/merhaba|selam|iyi günler|iyi akşamlar/i.test(soru) && soru.length < 25) return { metin: (ilk ? beyan : 'Merhaba! ') + 'Kurs ücreti, evraklar, ders saatleri ya da kayıtla ilgili ne sormak istersiniz?', kaynak: 'Karşılama' };
-  { const l = sos().bilinmeyen, v = l.find(x => x.soru.toLocaleLowerCase('tr') === soru.toLocaleLowerCase('tr')); if (v) { v.sayi++; v.son = gun(0); } else l.unshift({ soru, sayi: 1, son: gun(0) }); kaydet(); }
+  if (!denemede) { const l = sos().bilinmeyen, v = l.find(x => x.soru.toLocaleLowerCase('tr') === soru.toLocaleLowerCase('tr')); if (v) { v.sayi++; v.son = gun(0); } else l.unshift({ soru, sayi: 1, son: gun(0) }); kaydet(); }
   if (a.devir.bilinmeyen) return { metin: beyan + 'Bu konuda elimde kesin bilgi yok, yanlış bilgi vermek istemem. ' + (a.bildirim.bekletme ? beklet() : 'Kurs sizi arayacak.'), kaynak: 'Bilinmeyen soru · size devredildi, “Bilemedikleri”ne eklendi', devir: 'Bilinmeyen soru' };
   return { metin: beyan + 'Bu konuda elimde kesin bilgi yok. Kurs bilgilerine eklenirse hemen cevaplayabilirim.', kaynak: 'Bilinmeyen soru' };
 }
@@ -205,7 +205,7 @@ function dene() {
       <button class="dg dg-hafif dg-kucuk" style="margin-top:auto" data-dene-sifirla>${ik('sifirla')}Sohbeti temizle</button>
     </div>
     <div class="sohbet-pencere"><div class="sohbet-ust">${ik(KANAL_IK[kanal])}<div><b style="color:var(--murekkep)">${e(S.kurs.ad)}</b><small style="display:block;color:var(--soluk);font-size:12px">${KANAL_KISA[kanal]} · ${e(sos().ayar.ad)} · yapay zekâ</small></div></div>
-      <div class="sohbet-akis" style="min-height:380px">${mesajlar.length ? mesajlar.map((m, mi) => `<div class="balon ${m.kim === 'asistan' ? '' : 'giden'} ${m.taslak ? 'taslak' : ''}" style="${m.kim === 'asistan' ? '' : 'background:#e2eaf5'}">${m.taslak ? `<b class="taslak-et">Taslak · müşteriye gitmedi, onayınızı bekliyor</b>` : ''}${e(m.metin)}${m.taslak ? `<span style="display:flex;gap:6px;margin-top:8px"><button class="dg dg-ana dg-kucuk" data-taslak-onay="${mi}">Onayla, gönder</button><button class="dg dg-cizgi dg-kucuk" data-taslak-duzenle="${mi}">Düzenle</button></span>` : ''}${m.kim === 'asistan' ? `<small>${ik('robot')} ${e(m.kaynak)}</small>` : `<small>Müşteri${m.model ? ' · modele giden: ' + e(m.model) : ''}</small>`}</div>`).join('') : `<div style="margin:auto;text-align:center;color:var(--soluk);max-width:320px">${isaret('bilgi', 34)}<p style="margin-top:10px">Hazır sorulardan birine dokunun ya da müşteri gibi yazın.</p></div>`}</div>
+      <div class="sohbet-akis" style="min-height:380px">${mesajlar.length ? mesajlar.map((m, mi) => m.kim === 'not' ? `<p class="ipucu" style="margin:6px 0;font-size:13px">${isaret('bilgi', 18)}<span>${e(m.metin)}</span></p>` : `<div class="balon ${m.kim === 'asistan' ? '' : 'giden'} ${m.taslak ? 'taslak' : ''}" style="${m.kim === 'asistan' ? '' : 'background:#e2eaf5'}">${m.taslak ? `<b class="taslak-et">Taslak · müşteriye gitmedi, onayınızı bekliyor</b>` : ''}${e(m.metin)}${m.taslak ? `<span style="display:flex;gap:6px;margin-top:8px"><button class="dg dg-ana dg-kucuk" data-taslak-onay="${mi}">Onayla, gönder</button><button class="dg dg-cizgi dg-kucuk" data-taslak-duzenle="${mi}">Düzenle</button></span>` : ''}${m.kim === 'asistan' ? `<small>${ik('robot')} ${e(m.kaynak)}</small>` : `<small>Müşteri${m.model ? ' · modele giden: ' + e(m.model) : ''}</small>`}</div>`).join('') : `<div style="margin:auto;text-align:center;color:var(--soluk);max-width:320px">${isaret('bilgi', 34)}<p style="margin-top:10px">Hazır sorulardan birine dokunun ya da müşteri gibi yazın.</p></div>`}</div>
       <form class="sohbet-yaz" data-dene><input class="girdi" name="m" placeholder="Müşteri gibi yazın…" aria-label="Deneme mesajı" autocomplete="off"><button class="dg dg-ana" type="submit">${ik('gonder')}Gönder</button></form></div>
   </div></div>`;
 }
@@ -324,7 +324,7 @@ export function sosyal(alt) {
         const ygz = t.closest('[data-yorum-gizle]'); if (ygz) { const y = sos().yorumlar.find(x => x.id === ygz.dataset.yorumGizle); y.durum = 'gizli'; islem('Yorumu gizledi', y.kim); kaydet(); bildir('Yorum gizlendi'); yenile(); return; }
         const ybr = t.closest('[data-yorum-birak]'); if (ybr) { const y = sos().yorumlar.find(x => x.id === ybr.dataset.yorumBirak); y.durum = 'devir'; kaydet(); bildir('Yorum görünür kaldı; cevabı size bırakıldı'); yenile(); return; }
         const tk = t.closest('[data-test-kanal]'); if (tk) { const c = sos().kanallar.find(x => x.id === tk.dataset.testKanal); if (c.id !== 'wp' || !apiAcik()) return baglantiGerekli(c); tk.disabled = true; tk.textContent = 'Gönderiliyor…'; apiGonder(`${S.kurs.ad} · kanal denemesi\nBu mesaj Sinyal’den WhatsApp hattının çalıştığını doğrulamak için gönderildi.`).then(r => { if (r.ok) { c.son = new Date().toTimeString().slice(0, 5); islem('WhatsApp hattını denedi'); kaydet(); bildir('Deneme mesajı WhatsApp’a gönderildi'); } else bildir(r.hata, 'uyari'); yenile(); }); return; }
-        const ba = t.closest('[data-belge-ac]'); if (ba) { import('./sayfalar3.js?v=41').then(m => m.belgeAc(ba.dataset.belgeAc)); return; }
+        const ba = t.closest('[data-belge-ac]'); if (ba) { import('./sayfalar3.js?v=42').then(m => m.belgeAc(ba.dataset.belgeAc)); return; }
         const yg = t.closest('[data-yorum-goster]'); if (yg) { const y = sos().yorumlar.find(x => x.id === yg.dataset.yorumGoster); y.durum = 'devir'; kaydet(); bildir('Yorum görünür yapıldı; cevabı size bırakıldı'); yenile(); }
       });
       k.addEventListener('change', ev => {
@@ -363,22 +363,17 @@ export function sosyal(alt) {
   };
 }
 
+// Deneme sohbeti gerçek listelere (adaylar, devredilenler, bilemedikleri) kayıt yazmaz
+let denemede = false;
 function gonder(metin) {
   const ilk = !durum.deneme.some(m => m.kim === 'asistan');
   const giden = sos().ayar.veri.maskele ? maskele(metin) : metin;
   durum.deneme.push({ kim: 'musteri', metin, model: giden !== metin ? giden : null });
-  const c = cevapUret(metin, ilk);
+  denemede = true; let c; try { c = cevapUret(metin, ilk); } finally { denemede = false; }
   const om = sos().ayar.onayModu, taslak = om === 'taslak' || (om === 'karisik' && /Fiyat|takvim/i.test(c.kaynak));
   durum.deneme.push({ kim: 'asistan', metin: c.metin, kaynak: c.kaynak, taslak });
-  if (c.aday) {
-    S.adaylar.unshift({ id: 'l' + Date.now(), ad: 'Deneme adayı (' + KANAL_KISA[durum.kanal] + ')', tel: c.aday, kaynak: durum.kanal === 'wp' ? 'WhatsApp' : 'Instagram', kanal: durum.kanal === 'wp' ? 'WhatsApp' : 'Instagram', sinif: 'B', asama: 'Yeni', tarih: gun(0), saat: new Date().toTimeString().slice(0, 5), takip: null, not: 'Sosyal medya asistanı açtı', mesajlar: durum.deneme.map(m => ({ kim: m.kim === 'asistan' ? 'asistan' : 'aday', metin: m.metin })) });
-    kaydet(); bildir('Yeni aday açıldı · Yeni öğrenciler listesinde');
-  }
-  if (c.devir) {
-    const b = sos().ayar.bildirim, kisiler = S.kullanicilar.filter(u => b.kisiler.includes(u.id)), saat = new Date().toTimeString().slice(0, 5), sessiz = sessizMi();
-    S.devredilen.unshift({ ad: 'Deneme müşterisi', kanal: KANAL_KISA[durum.kanal], konu: c.devir, mesaj: metin, neden: c.devir + ': insana devredildi', saat, bildirim: kisiler.map((u, i) => { const t = sessiz ? b.sessizBit : new Date(Date.now() + i * b.ikinciDk * 60e3).toTimeString().slice(0, 5); return [t, u.ad, b.kanal + (sessiz ? ' · sessiz saat, sabah gönderilecek' : '') + (i ? ' · ilki ' + b.ikinciDk + ' dk cevapsız kalırsa' : '')]; }) });
-    kaydet(); bildir('Devredildi: ' + (kisiler[0] ? kisiler[0].ad + ' kişisine ' + b.kanal + ' bildirimi gitti' : 'bildirim kişisi seçilmedi'), 'uyari');
-  }
+  if (c.aday) durum.deneme.push({ kim: 'not', metin: `Gerçek sohbette burada ${c.aday} numarasıyla “Yeni öğrenciler” listesine aday açılır. Deneme olduğu için kayıt yapılmadı.` });
+  if (c.devir) { const b = sos().ayar.bildirim, kisiler = S.kullanicilar.filter(u => b.kisiler.includes(u.id)); durum.deneme.push({ kim: 'not', metin: `Gerçek sohbette bu konuşma “${c.devir}” nedeniyle size devredilir${kisiler[0] ? '; ' + kisiler.map(u => u.ad).join(', ') + ' kişisine ' + b.kanal + ' bildirimi gider' : ''}. Deneme olduğu için bildirim gönderilmedi.` }); }
   yenile();
 }
 
