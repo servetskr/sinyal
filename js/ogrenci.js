@@ -1,7 +1,7 @@
 // Öğrenci paneli sekmeleri: program, dersler (teorik konular + direksiyon + gelişim), sınavlar, ödemeler, belgeler
-import { S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen } from './veri.js?v=57';
-import { e, tl, ik, rozet, ilerleme, bos, pencere, bildir, tarih, tarihUzun, goreli, isaret, belgeYazdir } from './ui.js?v=57';
-import { belgeHtml } from './sayfalar3.js?v=57';
+import { S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen } from './veri.js?v=58';
+import { e, tl, ik, rozet, ilerleme, bos, pencere, bildir, tarih, tarihUzun, goreli, isaret, belgeYazdir } from './ui.js?v=58';
+import { belgeHtml } from './sayfalar3.js?v=58';
 
 // MEB teorik eğitim programı: konu, ders saati, başlıklar (anahtarlar soru bankasıyla aynı)
 export const MUFREDAT = [

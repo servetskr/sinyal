@@ -620,6 +620,8 @@ export function mebOnKontrol(k) {
   l.push([!!(k.saglikRapor && k.saglikRapor.no && k.saglikRapor.tarih), 'Sağlık raporu numarası ve tarihi girildi']);
   l.push([!!(k.adliSicil && k.adliSicil.barkod), 'Adli sicil barkodu girildi']);
   l.push([!!(k.kvkk && k.kvkk.riza), 'KVKK aydınlatma ve açık rıza alındı']);
+  // MEBBİS'e aktarılacak kayıt fotoğrafı (aktarılmış eski kayıtlarda aranmaz)
+  if (!k.mebIslendi) l.push([!!k.foto, 'Kayıt fotoğrafı çekildi (biyometrik)']);
   return l;
 }
 
