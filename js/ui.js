@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN } from './veri.js?v=31';
+import { ASAMALAR, tarihOku, fark, BUGUN } from './veri.js?v=32';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -173,7 +173,7 @@ export function belgeYazdir(html, baslik = 'Belge') {
   document.body.appendChild(f);
   const d = f.contentDocument; d.open(); d.write(`<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>${e(baslik)}</title><style>${A4_CSS}${html.includes('data-yatay') ? '@page{size:A4 landscape}' : ''}</style></head><body>${html}</body></html>`); d.close();
   const imgs = [...d.images].filter(i => !i.complete).map(i => new Promise(r => { i.onload = i.onerror = r; }));
-  Promise.all(imgs).then(() => { f.contentWindow.focus(); f.contentWindow.print(); setTimeout(() => f.remove(), 1000); });
+  return Promise.all(imgs).then(() => { f.contentWindow.focus(); f.contentWindow.print(); setTimeout(() => f.remove(), 1000); });
 }
 // Kart formu: numara (Luhn), son kullanma (gelecekte), CVC. Kart bilgisi kursta saklanmaz; POS'a gider.
 export const kartFormu = () => `<div class="form-izgara kart-formu"><div class="alan tam"><label for="k-no">Kart numarası</label><input id="k-no" name="kno" inputmode="numeric" autocomplete="cc-number" placeholder="0000 0000 0000 0000" maxlength="23"></div>
@@ -194,6 +194,36 @@ export function kartDogrula(kok) {
   if (!aa || aa > 12 || !yy || sonAy <= new Date(simdi.getFullYear(), simdi.getMonth(), 1)) return { hata: 'Son kullanma tarihi geçerli değil' };
   if (!/^\d{3,4}$/.test(cvc)) return { hata: 'CVC 3 ya da 4 hane olmalı' };
   return { son4: n.slice(-4) };
+}
+// --- Gerçek WhatsApp: sohbet hazır mesajla açılır, gönderme tuşuna kullanıcı basar ---
+export function waNumara(tel) { let n = String(tel || '').replace(/\D/g, ''); if (n.startsWith('0')) n = '90' + n.slice(1); else if (n.length === 10 && n.startsWith('5')) n = '90' + n; return n.length >= 12 ? n : ''; }
+export const waUrl = (tel, metin) => 'https://wa.me/' + waNumara(tel) + '?text=' + encodeURIComponent(metin);
+export const smsUrl = (tel, metin) => 'sms:' + (waNumara(tel) ? '+' + waNumara(tel) : '') + '?&body=' + encodeURIComponent(metin);
+export function waAc(tel, metin, kanal = 'WhatsApp') {
+  const url = kanal === 'SMS' ? smsUrl(tel, metin) : waUrl(tel, metin);
+  const w = window.open(url, '_blank');
+  if (w) { try { w.opener = null; } catch (x) { } return true; }
+  pencere({ baslik: kanal + '’ı açın', icerik: `<p style="font-size:14.5px">Tarayıcı yeni pencereyi engelledi. Mesaj hazır; düğmeye basınca ${kanal} açılır.</p>`, altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button><a class="dg dg-wp" href="${e(url)}" target="_blank" rel="noopener" data-kapat>${ik('wp')}${kanal}’ı aç</a>` });
+  return false;
+}
+// Toplu gönderim: her kişinin sohbeti sırayla hazır mesajla açılır (WhatsApp toplu mesaja yalnızca resmî API ile izin verir).
+export function waSirali(liste, baslik, { kanal = 'WhatsApp', bitince, aciklama = '' } = {}) {
+  liste = liste.filter(x => x && x.metin);
+  if (!liste.length) { if (bitince) bitince(); return; }
+  const acilan = new Set(); let sira = 0;
+  const url = x => kanal === 'SMS' ? smsUrl(x.tel, x.metin) : waUrl(x.tel, x.metin);
+  pencere({
+    baslik,
+    icerik: `<p style="font-size:14px;margin-bottom:10px">${aciklama ? e(aciklama) + ' ' : ''}${liste.length} kişi. Her kişi için ${kanal} hazır mesajla açılır; gönderip bu ekrana dönün.</p>
+      <ul class="liste" style="max-height:46vh;overflow:auto;margin:0 -20px">${liste.map((x, i) => `<li data-sira-satir="${i}"><div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(x.ad)}</b><small style="display:block;color:var(--soluk);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e(x.tel || 'numara yok')} · ${e(x.metin)}</small></div><a class="dg dg-cizgi dg-kucuk" href="${e(url(x))}" target="_blank" rel="noopener" data-sira-ac="${i}">${ik('wp')}Aç</a></li>`).join('')}</ul>`,
+    altlik: `<button class="dg dg-cizgi" data-sira-bitti>Bitti</button><button class="dg dg-wp" data-sira-sonraki>${ik('wp')}Sıradakini aç · 1/${liste.length}</button>`,
+    onAc(d) {
+      const isaretle = i => { acilan.add(i); const li = d.querySelector(`[data-sira-satir="${i}"] a`); if (li) { li.textContent = 'Açıldı ✓'; li.classList.add('dg-hafif'); } while (acilan.has(sira)) sira++; const b = d.querySelector('[data-sira-sonraki]'); if (sira >= liste.length) { b.disabled = true; b.textContent = 'Hepsi açıldı'; } else b.innerHTML = `${ik('wp')}Sıradakini aç · ${sira + 1}/${liste.length}`; };
+      d.querySelectorAll('[data-sira-ac]').forEach(a => a.addEventListener('click', () => isaretle(+a.dataset.siraAc)));
+      d.querySelector('[data-sira-sonraki]').addEventListener('click', () => { if (sira >= liste.length) return; const i = sira; const w = window.open(url(liste[i]), '_blank'); if (w) { try { w.opener = null; } catch (x) { } isaretle(i); } else bildir('Tarayıcı pencereyi engelledi; satırdaki “Aç”a basın', 'uyari'); });
+      d.querySelector('[data-sira-bitti]').addEventListener('click', () => { kapatPencere(); if (acilan.size < liste.length) bildir(`${liste.length - acilan.size} kişiye ${kanal} açılmadı`, 'uyari'); if (bitince) bitince(acilan); });
+    },
+  });
 }
 export const bugunMetni = () => { const d = BUGUN; return d.getDate() + ' ' + AY_U[d.getMonth()] + ' ' + GUN[d.getDay()]; };
 

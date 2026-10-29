@@ -1,6 +1,6 @@
-import { S, kaydet, kursiyer, egitmen, arac, tamAd, SINIFLAR, islem, gonderimEkle, yerelZaman, eksikEvrak } from './veri.js?v=31';
-import { e, tl, ik, isaret, bildir, tamTarih, pencere, kapatPencere } from './ui.js?v=31';
-import { sozlesmeMaddeleri } from './sayfalar3.js?v=31';
+import { S, kaydet, kursiyer, egitmen, arac, tamAd, SINIFLAR, islem, gonderimEkle, yerelZaman, eksikEvrak } from './veri.js?v=32';
+import { e, tl, ik, isaret, bildir, tamTarih, pencere, kapatPencere, waAc } from './ui.js?v=32';
+import { sozlesmeMaddeleri } from './sayfalar3.js?v=32';
 
 /* ================= UZAKTAN İMZA =================
    1) Kurs "WhatsApp'tan imzaya gönder" der: belge özeti linke paketlenir, kursun anahtarıyla mühürlenir,
@@ -29,13 +29,7 @@ async function muhur(metin) {
   return b64(new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(metin)))).slice(0, 22);
 }
 const adres = () => location.origin + location.pathname;
-// WhatsApp'ı hazır mesajla açar; numara yoksa kişi seçtirir.
-export function waAc(tel, metin) {
-  let n = (tel || '').replace(/\D/g, '');
-  if (n.startsWith('0')) n = '90' + n.slice(1); else if (n.length === 10) n = '90' + n;
-  const url = 'https://wa.me/' + (n.length >= 12 ? n : '') + '?text=' + encodeURIComponent(metin);
-  const w = window.open(url, '_blank'); if (w) w.opener = null; else location.href = url;
-}
+export { waAc };
 const kursWp = () => S.kurs.wp || '';
 
 function belgeModeli(tur, k, dersIdleri) {
@@ -162,8 +156,8 @@ export function imzayaGonderPenceresi(k, tur, dersIdleri) {
   pencere({
     baslik: 'WhatsApp’tan imzaya gönder',
     icerik: `<p style="font-size:14.5px">${e(tamAd(k))} kişisine ${tur === 'sozlesme' ? 'sözleşme' : dersIdleri.length + ' dersin takip formu'} için imza linki gidecek. WhatsApp, ${e(k.tel)} numarasına hazır mesajla açılır; siz gönderirsiniz.</p>
-      <p class="ipucu" style="margin-top:12px">${isaret('bilgi', 18)}<span>Kursiyer imzalayınca imza ${kursWp() ? `kursun WhatsApp hattına (${e(kursWp())})` : 'kursa WhatsApp’tan (Ayarlar › Kurs bilgileri’nde WhatsApp hattı girilmemiş; kursiyer numarayı kendisi seçer)'} link olarak gelir. O linke dokunduğunuzda imza doğrulanır ve kayda işlenir.</span></p>${b ? `<p style="margin-top:10px;font-size:13.5px;color:var(--soluk)">Önceki link ${b.tarih.slice(0, 10).split('-').reverse().join('.')} ${b.tarih.slice(11, 16)}’de gönderildi; yenisi eskisinin yerine geçer.</p>` : ''}`,
+      ${kursWp() ? `<p class="ipucu" style="margin-top:12px">${isaret('bilgi', 18)}<span>Kursiyer imzalayınca imza kursun WhatsApp hattına (${e(kursWp())}) link olarak gelir. O linke dokunduğunuzda imza doğrulanır ve kayda işlenir.</span></p>` : `<div class="alan" style="margin-top:14px"><label for="i-wp">İmzalar hangi WhatsApp numarasına gelsin?</label><input id="i-wp" class="girdi" inputmode="tel" placeholder="05xx xxx xx xx" autocomplete="tel"><small style="color:var(--soluk)">Kursun WhatsApp hattı; bir kez girilir, Ayarlar › Kurs bilgileri’nden değişir.</small></div>`}${b ? `<p style="margin-top:10px;font-size:13.5px;color:var(--soluk)">Önceki link ${b.tarih.slice(0, 10).split('-').reverse().join('.')} ${b.tarih.slice(11, 16)}’de gönderildi; yenisi eskisinin yerine geçer.</p>` : ''}`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-wp" data-k>${ik('wp')}WhatsApp’ı aç</button>`,
-    onAc(d) { d.querySelector('[data-k]').addEventListener('click', async () => { await imzaIste(tur, k, dersIdleri); kapatPencere(); bildir('İmza linki hazırlandı; WhatsApp’ta mesajı gönderin', 'wp'); import('./app.js?v=31').then(m => m.yenile()); }); },
+    onAc(d) { d.querySelector('[data-k]').addEventListener('click', async () => { const w = d.querySelector('#i-wp'); if (w) { const n = w.value.replace(/\D/g, ''); if (!/^0?5\d{9}$/.test(n) && !/^905\d{9}$/.test(n)) return bildir('Geçerli bir cep telefonu girin', 'uyari'); S.kurs.wp = w.value.trim(); islem('Kursun WhatsApp hattını girdi'); kaydet(); } await imzaIste(tur, k, dersIdleri); kapatPencere(); bildir('İmza linki hazırlandı; WhatsApp’ta mesajı gönderin', 'wp'); import('./app.js?v=32').then(m => m.yenile()); }); },
   });
 }

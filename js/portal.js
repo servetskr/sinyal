@@ -1,8 +1,8 @@
-import { oturum, islem, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, yerelZaman } from './veri.js?v=31';
-import { e, tl, ik, rozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani, kartFormu, kartBagla, kartDogrula } from './ui.js?v=31';
-import { yenile } from './app.js?v=31';
-import { ekDersKabul, bosTeklifKabul } from './sayfalar1.js?v=31';
-import { SORULAR, KONULAR } from './sorular.js?v=31';
+import { oturum, islem, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, yerelZaman } from './veri.js?v=32';
+import { e, tl, ik, rozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani, kartFormu, kartBagla, kartDogrula, waAc } from './ui.js?v=32';
+import { yenile } from './app.js?v=32';
+import { ekDersKabul, bosTeklifKabul, wpGonder } from './sayfalar1.js?v=32';
+import { SORULAR, KONULAR } from './sorular.js?v=32';
 
 let egId = 'e1', egSekme = 'bugun';
 let ogId = null, ogSekme = 'durum';
@@ -65,7 +65,7 @@ export function egitmenPortal() {
                 d.bit = new Date().toTimeString().slice(0, 5); d.sure = d.basZaman ? Math.round((Date.now() - d.basZaman) / 60e3) : null;
                 ks.direksiyon = Math.min(SINIFLAR[ks.sinif].direksiyon, ks.direksiyon + 1);
                 islem('Ders tamamlandı, kursiyer imzası istendi', tamAd(ks) + ' · ' + d.saat); kaydet(); kapatPencere();
-                const m = await import('./imza.js?v=31'); await m.imzaIste('ders', ks, [d.id]); bildir('Ders kaydedildi; WhatsApp’ta imza linkini gönderin', 'wp'); yenile();
+                const m = await import('./imza.js?v=32'); await m.imzaIste('ders', ks, [d.id]); bildir('Ders kaydedildi; WhatsApp’ta imza linkini gönderin', 'wp'); yenile();
               });
               p.querySelector('[data-imza-kaydet]').addEventListener('click', () => {
                 if (ik_.bos() || iu.bos()) return bildir('İki imza da gerekli', 'uyari');
@@ -78,8 +78,8 @@ export function egitmenPortal() {
             },
           });
         }
-        const it = t.closest('[data-imza-tekrar]'); if (it) { const d = S.dersler.find(x => x.id === it.dataset.imzaTekrar); import('./imza.js?v=31').then(m => m.imzaIste('ders', kursiyer(d.kursiyer), [d.id])); return; }
-        const g = t.closest('[data-gelmedi]'); if (g) { const d = S.dersler.find(x => x.id === g.dataset.gelmedi); d.durum = 'Gelmedi'; kaydet(); gonderimEkle(tamAd(kursiyer(d.kursiyer)), 'Gelmedi bildirimi', 'Otomatik'); bildir('Kursiyere ve kursa bildirildi', 'wp'); yenile(); }
+        const it = t.closest('[data-imza-tekrar]'); if (it) { const d = S.dersler.find(x => x.id === it.dataset.imzaTekrar); import('./imza.js?v=32').then(m => m.imzaIste('ders', kursiyer(d.kursiyer), [d.id])); return; }
+        const g = t.closest('[data-gelmedi]'); if (g) { const d = S.dersler.find(x => x.id === g.dataset.gelmedi); d.durum = 'Gelmedi'; islem('Gelmedi işaretledi', tamAd(kursiyer(d.kursiyer)) + ' · ' + d.saat); kaydet(); const ks = kursiyer(d.kursiyer); wpGonder(ks, `Merhaba ${ks.ad}, ${d.saat} direksiyon dersinde seni bekledim ama gelmedin. Yeni saat için kursa yazabilirsin. ${egitmen(d.egitmen).ad}`, 'Gelmedi bildirimi'); yenile(); }
         const n = t.closest('[data-not]'); if (n) { const ks = kursiyer(n.dataset.not); pencere({ baslik: 'Not · ' + tamAd(ks), icerik: `<div class="alan"><label>Ders notu</label><textarea placeholder="Örn. park etmede iyi, şerit değiştirmede ayna kontrolünü unutuyor"></textarea></div>`, altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Kaydet</button>`, onAc(d) { d.querySelector('[data-k]').addEventListener('click', () => { const v = d.querySelector('textarea').value.trim(); if (v) { ks.notlar.unshift({ tarih: gun(0), metin: v }); kaydet(); } kapatPencere(); bildir('Not kaydedildi; kurs müdürü de görür'); yenile(); }); } }); }
       });
     },
@@ -175,7 +175,7 @@ export function ogrenciPortal() {
         const s = t.closest('[data-ogs]'); if (s) { ogSekme = s.dataset.ogs; yenile(true); }
         const o = t.closest('[data-ode]'); if (o) odemeYap(k, +o.dataset.ode);
         const oe = t.closest('[data-og-ekders]'); if (oe) { if (oe.dataset.ogEkders === 'evet') ekDersKabul(k); else { k.ekDersTeklif = null; gonderimEkle(S.kurs.ad, tamAd(k) + ' ek ders teklifini istemedi', 'Kursiyer cevabı'); kaydet(); bildir('Cevabın kursa iletildi'); yenile(); } }
-        const ob = t.closest('[data-og-bos]'); if (ob) bosTeklifKabul(ob.dataset.ogBos, k.id);
+        const ob = t.closest('[data-og-bos]'); if (ob) bosTeklifKabul(ob.dataset.ogBos, k.id, true);
         if (t.closest('[data-og-oto]')) pencere({ baslik: 'Otomatik çekim talimatı', icerik: `<p style="margin-bottom:12px;font-size:14px">Kalan ${k.odeme.taksitler.filter(x => !x.odendi).length} taksitin vadesinde bu karttan çekilecek.</p>${kartFormu()}`, altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Talimatı onayla</button>', onAc(d) { kartBagla(d); d.querySelector('[data-k]').addEventListener('click', () => { const kr = kartDogrula(d); if (kr.hata) return bildir(kr.hata, 'uyari'); k.odeme.otomatik = { son4: kr.son4, onay: gun(0) }; k.odeme.otoTalep = null; gonderimEkle(S.kurs.ad, tamAd(k) + ' otomatik çekim talimatı verdi (•••• ' + kr.son4 + ')', 'Kursiyer cevabı'); kaydet(); kapatPencere(); bildir('Talimat kaydedildi; taksitlerin vadesinde çekilecek'); yenile(); }); } });
         const tb = t.closest('[data-test-basla]'); if (tb && !tb.disabled) { testBaslat(tb.dataset.testBasla, k, tb.dataset.konu); yenile(true); }
         if (t.closest('[data-test-menu]')) { test = { mod: null }; yenile(true); }
@@ -186,8 +186,8 @@ export function ogrenciPortal() {
           yenile();
         }
         if (t.closest('[data-sonraki]')) { test.i++; test.cevap = null; if (test.i >= test.liste.length) testBitir(k); yenile(); }
-        const dg = t.closest('[data-degis]'); if (dg) { gonderimEkle(S.kurs.ad, tamAd(k) + ' ders saatini değiştirmek istiyor', 'Kursiyer talebi'); bildir('Talebin kursa iletildi; yeni saat WhatsApp’tan gelecek', 'wp'); }
-        if (t.closest('[data-iste]')) pencere({ baslik: 'Direksiyon dersi iste', icerik: `<p style="color:var(--soluk);margin-bottom:10px">${e(eg.ad)} hocanın boş saatleri</p><div class="secim">${[1, 2, 3].flatMap(n => ['10:00', '15:00', '17:00'].filter(h => !S.dersler.some(d => d.egitmen === eg.id && d.tarih === gun(n) && d.saat === h)).map(h => `<label><input type="radio" name="s" value="${gun(n)} ${h}"><span>${gunKisa(gun(n))} ${tarihOku(gun(n)).getDate()} · ${h}</span></label>`)).join('')}</div>`, altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Talep gönder</button>`, onAc(d) { d.querySelector('[data-k]').addEventListener('click', () => { const v = d.querySelector('[name=s]:checked'); if (!v) return bildir('Bir saat seçin', 'uyari'); kapatPencere(); gonderimEkle(S.kurs.ad, tamAd(k) + ' ders istiyor: ' + v.value, 'Kursiyer talebi'); bildir('Ders talebin kursa iletildi'); }); } });
+        const dg = t.closest('[data-degis]'); if (dg) { const sd2 = sonrakiDers(k), m = `Merhaba, ben ${tamAd(k)}. ${sd2 ? tarihUzun(sd2.tarih) + ' ' + sd2.saat + ' direksiyon dersimin saatini' : 'Ders saatimi'} değiştirmek istiyorum.`; gonderimEkle(S.kurs.ad, m, 'Kursiyer talebi'); waAc(S.kurs.wp, m); bildir('WhatsApp açıldı; mesajı kursa gönder', 'wp'); }
+        if (t.closest('[data-iste]')) pencere({ baslik: 'Direksiyon dersi iste', icerik: `<p style="color:var(--soluk);margin-bottom:10px">${e(eg.ad)} hocanın boş saatleri</p><div class="secim">${[1, 2, 3].flatMap(n => ['10:00', '15:00', '17:00'].filter(h => !S.dersler.some(d => d.egitmen === eg.id && d.tarih === gun(n) && d.saat === h)).map(h => `<label><input type="radio" name="s" value="${gun(n)} ${h}"><span>${gunKisa(gun(n))} ${tarihOku(gun(n)).getDate()} · ${h}</span></label>`)).join('')}</div>`, altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Talep gönder</button>`, onAc(d) { d.querySelector('[data-k]').addEventListener('click', () => { const v = d.querySelector('[name=s]:checked'); if (!v) return bildir('Bir saat seçin', 'uyari'); kapatPencere(); const [tg, ts] = v.value.split(' '), m = `Merhaba, ben ${tamAd(k)}. ${tarihUzun(tg)} ${ts}’te ${eg.ad} ile direksiyon dersi almak istiyorum.`; gonderimEkle(S.kurs.ad, m, 'Kursiyer talebi'); waAc(S.kurs.wp, m); bildir('WhatsApp açıldı; talebini kursa gönder', 'wp'); }); } });
       });
     },
   };
@@ -204,7 +204,7 @@ function odemeYap(k, i) {
         const kr = kartDogrula(d); if (kr.hata) return bildir(kr.hata, 'uyari');
         const tutar = t.tutar - (t.kismi || 0); t.odendi = gun(0); t.yontem = 'Kart'; delete t.kismi;
         S.hareket.unshift({ id: 'h' + Date.now(), tarih: gun(0), tur: 'Gelir', kategori: 'Taksit', aciklama: tamAd(k) + ' · ' + (i + 1) + '. taksit (online, kart •••• ' + kr.son4 + ')', tutar, yontem: 'Kart', kursiyer: k.id, kim: 'Online ödeme' });
-        gonderimEkle(tamAd(k), tl(tutar) + ' ödeme makbuzu', 'Makbuz'); kaydet(); kapatPencere(); bildir('Ödeme alındı, makbuz WhatsApp’a gönderildi', 'wp'); yenile();
+        gonderimEkle(S.kurs.ad, tamAd(k) + ' online ödeme yaptı: ' + tl(tutar), 'Online ödeme'); kaydet(); kapatPencere(); bildir('Ödeme alındı. Makbuzun kursta hazır'); yenile();
       });
     },
   });
