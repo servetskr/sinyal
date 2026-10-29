@@ -1,15 +1,15 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=48';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci } from './ui.js?v=48';
-import * as Y1 from './sayfalar1.js?v=48';
-import * as Y2 from './sayfalar2.js?v=48';
-import * as P from './portal.js?v=48';
-import * as Y3 from './sayfalar3.js?v=48';
-import * as Y4 from './sayfalar4.js?v=48';
-import * as Y5 from './sayfalar5.js?v=48';
-import * as IM from './imza.js?v=48';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=48';
-import * as SN from './senaryo.js?v=48';
-import * as OZ from './ozellik.js?v=48';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=49';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci } from './ui.js?v=49';
+import * as Y1 from './sayfalar1.js?v=49';
+import * as Y2 from './sayfalar2.js?v=49';
+import * as P from './portal.js?v=49';
+import * as Y3 from './sayfalar3.js?v=49';
+import * as Y4 from './sayfalar4.js?v=49';
+import * as Y5 from './sayfalar5.js?v=49';
+import * as IM from './imza.js?v=49';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=49';
+import * as SN from './senaryo.js?v=49';
+import * as OZ from './ozellik.js?v=49';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -87,7 +87,7 @@ function rota() {
 
 export function yenile(kaydirma = false) {
   if (imzaLinki()) return imzaSayfasiAc();
-  if (!oturum.kullanici) { if (location.hash.startsWith('#/imza-geldi/')) try { sessionStorage.setItem('sinyal-bekleyen', location.hash); } catch (x) { } return girisEkrani(); }
+  if (!oturum.kullanici) { if (location.hash.startsWith('#/imza-geldi/')) try { sessionStorage.setItem('sinyal-bekleyen', location.hash); } catch (x) { } if (document.querySelector('.giris')) return; return girisEkrani(location.hash.startsWith('#/imza-geldi/') ? 'pin' : 'tanitim'); }
   if (!document.getElementById('icerik')) iskelet();
   let r = rota();
   if (!izinli(r.ad)) { location.hash = oturum.kullanici.rol === 'usta' ? '#/egitmen' : '#/genel'; return; }
@@ -176,23 +176,37 @@ Y5.temaUygula();
 let sonAd = null;
 window.addEventListener('hashchange', () => { if (imzaLinki()) return imzaSayfasiAc(); const r = rota(); yenile(r.ad !== sonAd); sonAd = r.ad; });
 
-function girisEkrani() {
+// QR’dan gelen ilk sayfa index.html’de hazır durur (beklemeden görünsün); sonradan dönmek için saklanır
+const TANITIM = (() => { const t = document.getElementById('tanitim'); return t ? t.outerHTML : ''; })();
+function demoyaGir() {
+  const u = S.kullanicilar.find(x => x.rol === 'mudur') || { id: 'u1', ad: 'Kurs müdürü' };
+  oturum.kullanici = { id: u.id, ad: u.ad, rol: 'mudur', ziyaretci: true };
+  try { sessionStorage.setItem('sinyal-oturum', JSON.stringify(oturum.kullanici)); } catch (x) { }
+  iskelet(); location.hash = '#/genel'; sonAd = rota().ad; yenile(true); window.scrollTo(0, 0);
+}
+function girisEkrani(mod = 'tanitim') {
   document.body.classList.remove('portal-modu');
+  const kok0 = document.getElementById('uyg');
+  if (mod === 'tanitim' && TANITIM) {
+    if (!kok0.querySelector('#tanitim') || kok0.querySelector('#tanitim').hidden) kok0.innerHTML = TANITIM;
+    document.title = 'Sinyal · Sürücü kursu yönetimi';
+    const tn = kok0.querySelector('#tanitim'); tn.hidden = false; if (tn.dataset.bagli) return; tn.dataset.bagli = '1';
+    kok0.querySelectorAll('[data-demo]').forEach(b => b.addEventListener('click', demoyaGir));
+    kok0.querySelectorAll('[data-giris]').forEach(b => b.addEventListener('click', () => { girisEkrani('pin'); window.scrollTo(0, 0); }));
+    return;
+  }
+  document.title = 'Giriş · Sinyal';
   document.getElementById('uyg').innerHTML = `<div class="giris"><div class="giris-levha">
     <div class="logo" style="border-bottom:0;margin:0 0 6px"><svg class="logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>${e(S.kurs.ad)}</small></span></div>
     <button class="giris-demo" data-demo><b>Demoyu incele</b><small>Giriş gerekmez · örnek verilerle · mesaj gönderilmez</small><span aria-hidden="true">→</span></button>
     <h1>Kim giriş yapıyor?</h1><p>Kurs çalışanları PIN ile girer; her kullanıcı yalnızca yetkisi olan ekranları görür.</p>
     <div class="giris-kisiler">${S.kullanicilar.map(u => `<button class="giris-kisi" data-kim="${u.id}"><b>${e(u.ad)}</b><small>${ROL_AD[u.rol]}</small></button>`).join('')}</div>
     <form class="giris-pin" hidden><label for="pin">PIN</label><input id="pin" inputmode="numeric" maxlength="4" autocomplete="one-time-code" placeholder="••••"><button class="dg dg-koyu" type="submit">Giriş</button></form>
-    <p class="giris-not">PIN’inizi unuttuysanız kurs müdürü Ayarlar › Kullanıcılar’dan yenisini verir.</p></div></div>`;
+    <p class="giris-not">PIN’inizi unuttuysanız kurs müdürü Ayarlar › Kullanıcılar’dan yenisini verir.</p></div><button class="giris-geri" data-tanitim type="button">← Sinyal nedir?</button></div>`;
   let secilen = null;
   const kok = document.getElementById('uyg');
-  kok.querySelector('[data-demo]').addEventListener('click', () => {
-    const u = S.kullanicilar.find(x => x.rol === 'mudur') || { id: 'u1', ad: 'Kurs müdürü' };
-    oturum.kullanici = { id: u.id, ad: u.ad, rol: 'mudur', ziyaretci: true };
-    try { sessionStorage.setItem('sinyal-oturum', JSON.stringify(oturum.kullanici)); } catch (x) { }
-    iskelet(); location.hash = '#/genel'; sonAd = rota().ad; yenile(true);
-  });
+  kok.querySelector('[data-demo]').addEventListener('click', demoyaGir);
+  kok.querySelector('[data-tanitim]').addEventListener('click', () => { girisEkrani('tanitim'); window.scrollTo(0, 0); });
   kok.querySelectorAll('[data-kim]').forEach(b => b.addEventListener('click', () => { secilen = S.kullanicilar.find(u => u.id === b.dataset.kim); kok.querySelectorAll('[data-kim]').forEach(x => x.classList.toggle('secili', x === b)); const f = kok.querySelector('.giris-pin'); f.hidden = false; f.querySelector('input').value = ''; f.querySelector('input').focus(); }));
   kok.querySelector('.giris-pin').addEventListener('submit', ev => {
     ev.preventDefault(); const v = ev.target.querySelector('input').value;
@@ -213,7 +227,7 @@ function girisEkrani() {
   });
 }
 document.addEventListener('click', ev => {
-  if (ev.target.closest('[data-cikis]')) { islem('Çıkış yaptı'); kaydet(); oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } girisEkrani(); }
+  if (ev.target.closest('[data-cikis]')) { const zy = ziyaretci(); islem('Çıkış yaptı'); kaydet(); oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } location.hash = ''; girisEkrani(zy ? 'tanitim' : 'pin'); window.scrollTo(0, 0); }
   const g = ev.target.closest('[data-geri-al]'); if (g) { if (geriAl()) { bildir('Son işlem geri alındı'); yenile(); } }
 });
 
@@ -225,7 +239,7 @@ setInterval(() => {
   const dk = (S.guvenlik && S.guvenlik.oturumDk) || 30;
   if (Date.now() - sonHareket < dk * 60e3) return;
   islem('Oturum kapandı', dk + ' dk hareketsiz'); kaydet(); oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { }
-  girisEkrani(); bildir(dk + ' dakika işlem yapılmadığı için oturum kapandı', 'uyari');
+  girisEkrani('pin'); bildir(dk + ' dakika işlem yapılmadığı için oturum kapandı', 'uyari');
 }, 30e3);
 
 // Uzaktan imzalar: kursiyer imzalayınca kayda kendiliğinden işlenir
@@ -241,4 +255,4 @@ document.addEventListener('click', ev => {
 
 if (imzaLinki()) imzaSayfasiAc();
 else if (oturum.kullanici) { iskelet(); if (!location.hash) location.hash = oturum.kullanici.rol === 'usta' ? '#/egitmen' : '#/genel'; sonAd = rota().ad; yenile(); }
-else girisEkrani();
+else girisEkrani(location.hash.startsWith('#/imza-geldi/') ? 'pin' : 'tanitim');
