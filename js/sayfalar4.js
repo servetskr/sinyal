@@ -1,6 +1,6 @@
-import { S, kaydet, gun, islem, tarihOku, oturum, kapaliGun, SINIFLAR, satistaSiniflar } from './veri.js?v=45';
-import { e, ik, rozet, isaret, ekranNotu, sekmeler, olcumler, yonLevhasi, cubukGrafik, halka, pencere, kapatPencere, bildir, sayi, tl, goreli, tarih, apiAcik, apiGonder } from './ui.js?v=45';
-import { yenile } from './app.js?v=45';
+import { S, kaydet, gun, islem, tarihOku, oturum, kapaliGun, SINIFLAR, satistaSiniflar } from './veri.js?v=47';
+import { e, ik, rozet, isaret, ekranNotu, sekmeler, olcumler, yonLevhasi, cubukGrafik, halka, pencere, kapatPencere, bildir, sayi, tl, goreli, tarih, apiAcik, apiGonder } from './ui.js?v=47';
+import { yenile } from './app.js?v=47';
 
 /* ================= SOSYAL MEDYA ASİSTANI (DengChat modülü) =================
    Gelen kutusu "Mesajlar"da kalır. Bu modül kanalları bağlar, Instagram
@@ -324,7 +324,7 @@ export function sosyal(alt) {
         const ygz = t.closest('[data-yorum-gizle]'); if (ygz) { const y = sos().yorumlar.find(x => x.id === ygz.dataset.yorumGizle); y.durum = 'gizli'; islem('Yorumu gizledi', y.kim); kaydet(); bildir('Yorum gizlendi'); yenile(); return; }
         const ybr = t.closest('[data-yorum-birak]'); if (ybr) { const y = sos().yorumlar.find(x => x.id === ybr.dataset.yorumBirak); y.durum = 'devir'; kaydet(); bildir('Yorum görünür kaldı; cevabı size bırakıldı'); yenile(); return; }
         const tk = t.closest('[data-test-kanal]'); if (tk) { const c = sos().kanallar.find(x => x.id === tk.dataset.testKanal); if (c.id !== 'wp' || !apiAcik()) return baglantiGerekli(c); tk.disabled = true; tk.textContent = 'Gönderiliyor…'; apiGonder(`${S.kurs.ad} · kanal denemesi\nBu mesaj Sinyal’den WhatsApp hattının çalıştığını doğrulamak için gönderildi.`).then(r => { if (r.ok) { c.son = new Date().toTimeString().slice(0, 5); islem('WhatsApp hattını denedi'); kaydet(); bildir('Deneme mesajı WhatsApp’a gönderildi'); } else bildir(r.hata, 'uyari'); yenile(); }); return; }
-        const ba = t.closest('[data-belge-ac]'); if (ba) { import('./sayfalar3.js?v=45').then(m => m.belgeAc(ba.dataset.belgeAc)); return; }
+        const ba = t.closest('[data-belge-ac]'); if (ba) { import('./sayfalar3.js?v=47').then(m => m.belgeAc(ba.dataset.belgeAc)); return; }
         const yg = t.closest('[data-yorum-goster]'); if (yg) { const y = sos().yorumlar.find(x => x.id === yg.dataset.yorumGoster); y.durum = 'devir'; kaydet(); bildir('Yorum görünür yapıldı; cevabı size bırakıldı'); yenile(); }
       });
       k.addEventListener('change', ev => {

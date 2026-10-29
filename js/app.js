@@ -1,15 +1,15 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=45';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir } from './ui.js?v=45';
-import * as Y1 from './sayfalar1.js?v=45';
-import * as Y2 from './sayfalar2.js?v=45';
-import * as P from './portal.js?v=45';
-import * as Y3 from './sayfalar3.js?v=45';
-import * as Y4 from './sayfalar4.js?v=45';
-import * as Y5 from './sayfalar5.js?v=45';
-import * as IM from './imza.js?v=45';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=45';
-import * as SN from './senaryo.js?v=45';
-import * as OZ from './ozellik.js?v=45';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=47';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci } from './ui.js?v=47';
+import * as Y1 from './sayfalar1.js?v=47';
+import * as Y2 from './sayfalar2.js?v=47';
+import * as P from './portal.js?v=47';
+import * as Y3 from './sayfalar3.js?v=47';
+import * as Y4 from './sayfalar4.js?v=47';
+import * as Y5 from './sayfalar5.js?v=47';
+import * as IM from './imza.js?v=47';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=47';
+import * as SN from './senaryo.js?v=47';
+import * as OZ from './ozellik.js?v=47';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -21,7 +21,7 @@ const SAYFALAR = {
 };
 const ROL_AD = { mudur: 'Kurs müdürü', sekreter: 'Ön büro', usta: 'Usta öğretici' };
 const YASAK = { mudur: [], sekreter: ['raporlar', 'ayarlar', 'guven', 'kurulum', 'senaryo', 'karlilik'], usta: Object.keys(SAYFALAR).filter(k => !['egitmen', 'imza-geldi'].includes(k)) };
-const izinli = ad => { const u = oturum.kullanici; return u && !YASAK[u.rol].includes(ad); };
+const izinli = ad => { const u = oturum.kullanici; return u && !YASAK[u.rol].includes(ad) && !(u.ziyaretci && ad === 'senaryo'); };
 
 const MENU = [
   ['Bugün', [['genel', 'Genel bakış', '↑'], ['adaylar', 'Yeni öğrenciler', '↗'], ['mesajlar', 'Mesajlar', '↗'], ['sosyal', 'Sosyal medya asistanı', '↗']]],
@@ -64,6 +64,7 @@ function iskelet() {
         <button class="arama" data-ara aria-label="Ara">${ik('ara')}<span>Kursiyer, aday, plaka ara</span><kbd>⌘K</kbd></button>
         <button class="kullanici-cip" data-cikis title="Kullanıcı değiştir"><b>${e(oturum.kullanici.ad)}</b><small>${ROL_AD[oturum.kullanici.rol]}</small></button>
       </header>
+      ${oturum.kullanici.ziyaretci ? `<div class="ziyaretci-serit"><span><b>Demo görünümü</b> · örnek verilerle. Mesajlar kimseye gitmez, ekranda gösterilir.</span><button data-cikis>Çık</button></div>` : ''}
       <main class="icerik" id="icerik"></main>
     </div>
   </div>
@@ -179,12 +180,19 @@ function girisEkrani() {
   document.body.classList.remove('portal-modu');
   document.getElementById('uyg').innerHTML = `<div class="giris"><div class="giris-levha">
     <div class="logo" style="border-bottom:0;margin:0 0 6px"><svg class="logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>${e(S.kurs.ad)}</small></span></div>
-    <h1>Kim giriş yapıyor?</h1><p>Her kullanıcı yalnızca yetkisi olan ekranları görür.</p>
+    <button class="giris-demo" data-demo><b>Demoyu incele</b><small>Giriş gerekmez · örnek verilerle · mesaj gönderilmez</small><span aria-hidden="true">→</span></button>
+    <h1>Kim giriş yapıyor?</h1><p>Kurs çalışanları PIN ile girer; her kullanıcı yalnızca yetkisi olan ekranları görür.</p>
     <div class="giris-kisiler">${S.kullanicilar.map(u => `<button class="giris-kisi" data-kim="${u.id}"><b>${e(u.ad)}</b><small>${ROL_AD[u.rol]}</small></button>`).join('')}</div>
     <form class="giris-pin" hidden><label for="pin">PIN</label><input id="pin" inputmode="numeric" maxlength="4" autocomplete="one-time-code" placeholder="••••"><button class="dg dg-koyu" type="submit">Giriş</button></form>
     <p class="giris-not">PIN’inizi unuttuysanız kurs müdürü Ayarlar › Kullanıcılar’dan yenisini verir.</p></div></div>`;
   let secilen = null;
   const kok = document.getElementById('uyg');
+  kok.querySelector('[data-demo]').addEventListener('click', () => {
+    const u = S.kullanicilar.find(x => x.rol === 'mudur') || { id: 'u1', ad: 'Kurs müdürü' };
+    oturum.kullanici = { id: u.id, ad: u.ad, rol: 'mudur', ziyaretci: true };
+    try { sessionStorage.setItem('sinyal-oturum', JSON.stringify(oturum.kullanici)); } catch (x) { }
+    iskelet(); location.hash = '#/genel'; sonAd = rota().ad; yenile(true);
+  });
   kok.querySelectorAll('[data-kim]').forEach(b => b.addEventListener('click', () => { secilen = S.kullanicilar.find(u => u.id === b.dataset.kim); kok.querySelectorAll('[data-kim]').forEach(x => x.classList.toggle('secili', x === b)); const f = kok.querySelector('.giris-pin'); f.hidden = false; f.querySelector('input').value = ''; f.querySelector('input').focus(); }));
   kok.querySelector('.giris-pin').addEventListener('submit', ev => {
     ev.preventDefault(); const v = ev.target.querySelector('input').value;
@@ -223,6 +231,13 @@ setInterval(() => {
 // Uzaktan imzalar: kursiyer imzalayınca kayda kendiliğinden işlenir
 setInterval(() => { if (oturum.kullanici && !imzaLinki()) { IM.imzaKontrol(); if (oturum.kullanici.rol !== 'usta') OZ.gelenKontrol(); } }, 20e3);
 setTimeout(() => { if (oturum.kullanici && !imzaLinki()) IM.imzaKontrol(); }, 3000);
+
+// Ziyaretçi modunda arama ve doğrudan WhatsApp linkleri gerçek numaralara gitmesin
+document.addEventListener('click', ev => {
+  if (!ziyaretci()) return;
+  const a = ev.target.closest('a[href^="tel:"], a[href^="sms:"], a[href*="wa.me/"]'); if (!a) return;
+  ev.preventDefault(); bildir('Demo görünümünde arama ve WhatsApp kapalı; gerçek kullanımda bu düğme kişiyi arar ya da yazar');
+}, true);
 
 if (imzaLinki()) imzaSayfasiAc();
 else if (oturum.kullanici) { iskelet(); if (!location.hash) location.hash = oturum.kullanici.rol === 'usta' ? '#/egitmen' : '#/genel'; sonAd = rota().ad; yenile(); }
