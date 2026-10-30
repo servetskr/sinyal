@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Sinyal · Sürücü kursu yönetimi</title>
-<meta name="description" content="Sürücü kursları için web tabanlı yönetim: öğrenci, direksiyon planı, sınav, kasa, MEB işlemleri ve WhatsApp asistanı tek yerde.">
+<title>Sinyal · Sürücü kursu otomasyonu</title>
+<meta name="description" content="Sürücü kursları için web tabanlı otomasyon: öğrenci, direksiyon planı, sınav, kasa, MEB işlemleri ve WhatsApp asistanı tek yerde.">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#0a4da2">
 <link rel="manifest" href="manifest.webmanifest">
@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Sinyal">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta property="og:title" content="Sinyal · Sürücü kursu yönetimi">
+<meta property="og:title" content="Sinyal · Sürücü kursu otomasyonu">
 <meta property="og:description" content="Öğrenci, direksiyon planı, sınav, kasa, MEB işlemleri ve WhatsApp asistanı tek yerde.">
 <meta property="og:image" content="https://servetskr.github.io/sinyal/og.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%23ffc61a'/%3E%3Cpath d='M12 4 20 12 12 20 4 12z' fill='%231b1f25'/%3E%3Cpath d='M12 8.5v4.5M12 15.4v.4' stroke='%23ffc61a' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
@@ -42,38 +42,30 @@
 </head>
 <body>
 <div id="uyg"><div class="tanitim" id="tanitim">
-<header class="tn-ust"><span class="tn-logo"><svg class="tn-logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>Sürücü kursu yönetim yazılımı</small></span></span><button class="tn-ust-giris" data-giris type="button">Giriş yap</button></header>
+<header class="w-ust"><div class="w-kap w-ust-ic"><span class="tn-logo"><svg class="tn-logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>Sürücü kursu otomasyonu</small></span></span><div class="w-ust-dg"><a class="w-link" href="#/ogrenci-giris">Öğrenci girişi</a><button class="w-btn w-btn-kucuk w-btn-cizgi" data-giris type="button">Giriş</button><button class="w-btn w-btn-kucuk w-btn-ana" data-demo type="button">Demo</button></div></div></header>
 <main>
-<section class="tn-kahraman">
-<div class="tn-levha">
-<p class="tn-et">Sürücü kursları için</p>
-<h1>Kursunuzun bütün işi tek ekranda.</h1>
-<p class="tn-giris-yazi">Kayıt, direksiyon planı, taksit, sınav ve MEB evrakı aynı yerde. Hatırlatmalar öğrenciye, öğretmene ve size WhatsApp’tan kendiliğinden gider.</p>
-<div class="tn-dugmeler"><button class="tn-demo" data-demo type="button"><b>Demoyu incele</b><small>Giriş gerekmez · örnek verilerle · mesaj gönderilmez</small><span aria-hidden="true">→</span></button><button class="tn-giris" data-giris type="button"><b>Giriş yap</b><small>Kurs çalışanları · e-posta ve şifreyle</small><span aria-hidden="true">→</span></button></div>
-</div>
-<div class="tn-telefon" aria-label="Sinyal’in bir akşam kendiliğinden gönderdiği mesaj örnekleri">
-<p class="tn-telefon-bas">Bu akşam kendiliğinden gidenler</p>
-<div class="tn-msj"><small>Öğrenciye <i>18:00</i></small><p>Merhaba Berk Bey, yarın 10:00’da Hüseyin Aktaş ile direksiyon dersiniz var. Gelemeyecekseniz bu mesajı yanıtlamanız yeterli.</p></div>
-<div class="tn-msj"><small>Öğretmene <i>18:00</i></small><p>Merhaba Hüseyin Hoca, yarınki direksiyon programınız: 10:00 Berk Bulut, 11:00 Cansu Doğan, 15:00 Sude Çetin.</p></div>
-<div class="tn-msj"><small>Kurs müdürüne <i>19:00</i></small><p>Akşam özeti · Bugün tahsilat 5.500 ₺ · Yarın 20 direksiyon dersi · Geciken taksit: 7 öğrenci</p></div>
-</div>
-</section>
-<section class="tn-bolum" aria-labelledby="tn-ne">
-<h2 id="tn-ne">Sinyal’de neler var</h2>
-<p class="tn-alt">Hepsi tarayıcıdan çalışır; bilgisayara program kurulmaz, telefonda da açılır.</p>
-<ul class="tn-liste"><li><span class="tn-ok" aria-hidden="true">→</span><span><b>WhatsApp asistanı</b><small>Fiyat, evrak ve ders saati sorularına gece gündüz cevap verir; yazan her kişi aday kartına düşer.</small></span></li><li><span class="tn-ok" aria-hidden="true">→</span><span><b>Kayıt ve sözleşme</b><small>TC, yaş ve KVKK kontrolü, taksit planı; sözleşme ekranda ya da gönderilen bağlantıyla imzalanır.</small></span></li><li><span class="tn-ok" aria-hidden="true">→</span><span><b>Direksiyon planı</b><small>Öğretmen, araç ve saat çakışmasını engeller. Saat değişince öğrenciye ve öğretmene haber gider.</small></span></li><li><span class="tn-ok" aria-hidden="true">→</span><span><b>Kâğıtsız takip formu</b><small>Öğretmen dersi telefondan işler, öğrenciye imzalatır; imza uzaktan da alınır.</small></span></li><li><span class="tn-ok" aria-hidden="true">→</span><span><b>Sınav ve kalma riski</b><small>Sınavda zorlanacak öğrenciyi önceden gösterir, ek ders teklifini kendisi gönderir.</small></span></li><li><span class="tn-ok" aria-hidden="true">→</span><span><b>Kasa ve taksit</b><small>Vadeden önce hatırlatma, makbuz, geciken listesi ve gün sonu.</small></span></li><li><span class="tn-ok" aria-hidden="true">→</span><span><b>MEB ve denetim</b><small>MEBBİS’e girilecekler sırayla hazır; denetime hazırlık yüzdesi.</small></span></li><li><span class="tn-ok" aria-hidden="true">→</span><span><b>Kârlılık</b><small>Ders başına kâr, boş direksiyon saatlerinin TL karşılığı, öğretmen hakedişi.</small></span></li></ul>
-</section>
-<section class="tn-bolum" aria-labelledby="tn-kim">
-<h2 id="tn-kim">Herkes kendi ekranını görür</h2>
-<div class="tn-roller"><div class="tn-rol"><b>Kurs müdürü</b><p>Kasa, kârlılık, MEB işleri ve her akşam WhatsApp’tan gün özeti.</p></div><div class="tn-rol"><b>Ön büro</b><p>Yeni öğrenciler, kayıt, taksit ve gelen mesajlar.</p></div><div class="tn-rol"><b>Öğretmen</b><p>Telefonunda günün dersleri, beceri puanı ve iki imza.</p></div><div class="tn-rol"><b>Öğrenci</b><p>Sıradaki dersini, borcunu ve sınav tarihini görür; deneme sınavı çözer.</p></div></div>
-</section>
-<section class="tn-son">
-<h2>Kendiniz bakın.</h2>
-<p>Demo, örnek bir kursun verileriyle açılır. İstediğiniz ekranı gezin; hiçbir mesaj kimseye gitmez.</p>
-<div class="tn-dugmeler"><button class="tn-demo" data-demo type="button"><b>Demoyu incele</b><small>Giriş gerekmez · örnek verilerle · mesaj gönderilmez</small><span aria-hidden="true">→</span></button><button class="tn-giris" data-giris type="button"><b>Giriş yap</b><small>Kurs çalışanları · e-posta ve şifreyle</small><span aria-hidden="true">→</span></button></div>
-</section>
+<section class="w-kahraman"><div class="w-kap">
+<p class="w-et">Sürücü kursu otomasyonu</p>
+<h1>Sürücü kursunuzu <em>tek otomasyonla</em> yönetin.</h1>
+<p class="w-giris-yazi">Öğrenci kaydı, direksiyon planı, ödeme, sınav ve MEB işleri tek yerde. Hatırlatmalar WhatsApp’tan kendiliğinden gider.</p>
+<div class="w-dugmeler"><button class="w-btn w-btn-ana" data-demo type="button">Demoyu incele <span aria-hidden="true">→</span></button><button class="w-btn w-btn-cizgi" data-giris type="button">Kurs girişi</button></div>
+<p class="w-not">Kurulum gerekmez · Telefonda ve bilgisayarda çalışır · Demo için giriş yok</p>
+<div class="w-vitrin" data-gor><div class="w-ekran"><div class="w-pano-ust"><i></i><i></i><i></i><span>Direksiyon planı</span></div><img src="img/site/plan.webp" width="1600" height="1000" alt="Sinyal direksiyon planı: araçlar, öğretmenler ve günün dersleri" fetchpriority="high" decoding="async"></div></div>
+</div></section>
+<section class="w-bolum"><div class="w-kap"><div class="w-uc" data-gor>
+<article><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10M8 3v6M16 3v6"/></svg><h3>Plan kendini düzenler</h3><p>Araç ve öğretmen çakışmaları kontrol edilir; boş saatler tek tuşla öğrencilere dağıtılır.</p></article>
+<article><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.3-3.8A8 8 0 1 1 8 19z"/></svg><h3>WhatsApp’tan otomatik</h3><p>Ders, taksit ve sınav hatırlatmaları gider; öğrencinin attığı evrak dosyasına düşer.</p></article>
+<article><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5z M9 8h6M9 12h6M9 16h3"/></svg><h3>MEB ve muhasebe hazır</h3><p>Resmî formlar dolu gelir; ay sonunda müşavirinize tek Excel dosyası gider.</p></article>
+</div></div></section>
+<section class="w-bolum w-ikinci"><div class="w-kap w-ogr" data-gor>
+<div><p class="w-et">Öğrenci uygulaması</p><h2>Öğrenci her şeyi telefonundan görür.</h2><p class="w-alt">Kayıtta giriş bilgisi WhatsApp’tan gider. Ders saatleri, ödeme, sınav ve 1.949 soruluk sınav hazırlığı tek yerde.</p>
+<ul class="w-tikler"><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>Ders programı ve ders defteri</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>Deneme sınavı ve konu anlatımları</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>Ödeme planı ve makbuzlar</li></ul></div>
+<div class="w-tel-cerceve"><img src="img/site/ogrenci.webp" width="540" height="1107" alt="Sinyal öğrenci uygulaması" loading="lazy" decoding="async"></div>
+</div></section>
+<section class="w-son"><div class="w-kap"><h2>Kendiniz görün.</h2><p>Demo örnek bir kursla açılır; hiçbir mesaj kimseye gitmez.</p><div class="w-dugmeler"><button class="w-btn w-btn-ana" data-demo type="button">Demoyu incele <span aria-hidden="true">→</span></button></div>
+<ul class="w-guven"><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>Veriler Avrupa’da, her gün yedekli</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>KVKK araçları</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>MTSK Yönetmeliği’ne göre</li></ul></div></section>
 </main>
-<footer class="tn-alt-bilgi">Sinyal · sürücü kursu yönetim yazılımı</footer>
+<footer class="w-alt-bilgi"><div class="w-kap w-alt-ic"><span class="tn-logo"><svg class="tn-logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>Sürücü kursu otomasyonu</small></span></span><nav aria-label="Alt bağlantılar"><a href="#/ogrenci-giris">Öğrenci girişi</a><button type="button" data-giris>Kurs girişi</button><a href="gizlilik.html">Gizlilik</a></nav></div></footer>
 </div><div id="acilis" hidden style="min-height:100vh;display:grid;place-items:center;background:#e8e7e1;font:700 15px system-ui,-apple-system,sans-serif;color:#373d44"><div style="display:grid;justify-items:center;gap:14px"><svg width="56" height="56" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#0a4da2" stroke-width="1.2"/><path d="M12 7.6v5.6M12 15.8v.4" stroke="#111417" stroke-width="2.3" stroke-linecap="round"/></svg><span>Sinyal açılıyor…</span></div></div></div>
 <script>try{if(sessionStorage.getItem('sinyal-oturum')||/^#\/imza\//.test(location.hash)){document.getElementById('tanitim').hidden=true;document.getElementById('acilis').hidden=false}}catch(e){}</script>
 <noscript><p style="padding:24px">Sinyal’i kullanmak için JavaScript’i açın.</p></noscript>

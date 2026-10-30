@@ -224,6 +224,10 @@ function girisEkrani(mod = 'tanitim') {
     const tn = kok0.querySelector('#tanitim'); tn.hidden = false; if (tn.dataset.bagli) return; tn.dataset.bagli = '1';
     kok0.querySelectorAll('[data-demo]').forEach(b => b.addEventListener('click', demoyaGir));
     kok0.querySelectorAll('[data-giris]').forEach(b => b.addEventListener('click', () => { girisEkrani('pin'); window.scrollTo(0, 0); }));
+    // bölümler ekrana girerken hafifçe belirir (hareket azaltma tercihine uyar; IntersectionObserver yoksa hepsi görünür)
+    if ('IntersectionObserver' in window && !matchMedia('(prefers-reduced-motion: reduce)').matches) { document.documentElement.classList.add('w-anim'); const io = new IntersectionObserver(l => l.forEach(x => { if (x.isIntersecting) { x.target.classList.add('w-gorundu'); io.unobserve(x.target); } }), { rootMargin: '0px 0px -8% 0px' }); kok0.querySelectorAll('[data-gor]').forEach(el => io.observe(el)); }
+    // sayfa içi menü: adres çubuğuna dokunmadan bölüme kaydırır (hash yönlendirmesiyle karışmasın)
+    kok0.querySelectorAll('[data-kaydir]').forEach(b => b.addEventListener('click', () => { const h = document.getElementById(b.dataset.kaydir); if (h) h.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); }));
     return;
   }
   if (mod === 'kursac') return kursAcEkrani();
