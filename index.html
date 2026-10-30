@@ -116,6 +116,10 @@ html.w-anim [data-gor].w-gorundu{opacity:1;transform:none}
 @media (max-width:420px){.w-ust-dg .w-btn-cizgi{display:none}}
 @media (prefers-reduced-motion:reduce){.w-btn{transition:none}html.w-anim [data-gor]{opacity:1;transform:none;transition:none}}
 .w-yukleniyor{opacity:.75;cursor:progress}
+.w-girisler{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px 8px;margin-top:14px;font:700 14px/1.2 var(--baslik);color:var(--w-yazi)}
+.w-girisler span{opacity:.75}
+.w-girisler a,.w-girisler button{color:var(--w-baslik);background:none;border:1px solid var(--w-cizgi);border-radius:999px;padding:7px 12px;font:inherit;cursor:pointer;text-decoration:none}
+.w-girisler a:hover,.w-girisler button:hover{border-color:var(--w-vurgu);color:var(--w-vurgu)}
 </style>
 <link id="app-css" rel="stylesheet" href="css/app.css?v=102" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="css/app.css?v=102"></noscript>
@@ -130,6 +134,7 @@ html.w-anim [data-gor].w-gorundu{opacity:1;transform:none}
 <p class="w-giris-yazi">Öğrenci kaydı, direksiyon planı, ödeme, sınav ve MEB işleri tek yerde. Hatırlatmalar WhatsApp’tan kendiliğinden gider.</p>
 <div class="w-dugmeler"><button class="w-btn w-btn-ana" data-demo type="button">Demoyu incele <span aria-hidden="true">→</span></button><button class="w-btn w-btn-cizgi" data-giris type="button">Kurs girişi</button></div>
 <p class="w-not">Kurulum gerekmez · Telefonda ve bilgisayarda çalışır · Demo için giriş yok</p>
+<nav class="w-girisler" aria-label="Girişler"><span>Giriş:</span><a href="#/ogrenci-giris">Öğrenci</a><button type="button" data-giris="ogretmen">Öğretmen</button><button type="button" data-giris>Kurs müdürü ve ön büro</button></nav>
 <div class="w-vitrin" data-gor><div class="w-ekran"><div class="w-pano-ust"><i></i><i></i><i></i><span>Direksiyon planı</span></div><img src="img/site/plan-1200.webp" srcset="img/site/plan-800.webp 800w, img/site/plan-1200.webp 1200w, img/site/plan.webp 1600w" sizes="(max-width: 1100px) 94vw, 1040px" width="1600" height="1000" alt="Sinyal direksiyon planı: araçlar, öğretmenler ve günün dersleri" fetchpriority="high" decoding="async"></div></div>
 </div></section>
 <section class="w-bolum"><div class="w-kap"><div class="w-uc" data-gor>
@@ -145,7 +150,7 @@ html.w-anim [data-gor].w-gorundu{opacity:1;transform:none}
 <section class="w-son"><div class="w-kap"><h2>Kendiniz görün.</h2><p>Demo örnek bir kursla açılır; hiçbir mesaj kimseye gitmez.</p><div class="w-dugmeler"><button class="w-btn w-btn-ana" data-demo type="button">Demoyu incele <span aria-hidden="true">→</span></button></div>
 <ul class="w-guven"><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>Her gün yedeklenir</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>KVKK araçları</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>MTSK Yönetmeliği’ne göre</li></ul></div></section>
 </main>
-<footer class="w-alt-bilgi"><div class="w-kap w-alt-ic"><span class="tn-logo"><svg class="tn-logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>Sürücü kursu otomasyonu</small></span></span><nav aria-label="Alt bağlantılar"><a href="#/ogrenci-giris">Öğrenci girişi</a><button type="button" data-giris>Kurs girişi</button><a href="gizlilik.html">Gizlilik</a></nav></div></footer>
+<footer class="w-alt-bilgi"><div class="w-kap w-alt-ic"><span class="tn-logo"><svg class="tn-logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>Sürücü kursu otomasyonu</small></span></span><nav aria-label="Alt bağlantılar"><a href="#/ogrenci-giris">Öğrenci girişi</a><button type="button" data-giris="ogretmen">Öğretmen girişi</button><button type="button" data-giris>Kurs girişi</button><a href="gizlilik.html">Gizlilik</a></nav></div></footer>
 </div><div id="acilis" hidden style="min-height:100vh;display:grid;place-items:center;background:#e8e7e1;font:700 15px system-ui,-apple-system,sans-serif;color:#373d44"><div style="display:grid;justify-items:center;gap:14px"><svg width="56" height="56" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#0a4da2" stroke-width="1.2"/><path d="M12 7.6v5.6M12 15.8v.4" stroke="#111417" stroke-width="2.3" stroke-linecap="round"/></svg><span>Sinyal açılıyor…</span></div></div></div>
 <script>try{if(sessionStorage.getItem('sinyal-oturum')||/^#\/./.test(location.hash)||localStorage.getItem('sinyal-bulut')||localStorage.getItem('sinyal-ogrenci')){document.getElementById('tanitim').hidden=true;document.getElementById('acilis').hidden=false}}catch(e){}</script>
 <noscript><p style="padding:24px">Sinyal’i kullanmak için JavaScript’i açın.</p></noscript>

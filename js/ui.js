@@ -379,8 +379,9 @@ export function olcumler(l) {
 // Araç görseli + plaka (görseller img/arac-<id>.webp)
 export function aracGorsel(a, cls = '') {
   if (!a) return '';
-  if (!/^a[1-6]$/.test(a.id)) return `<figure class="arac-fig arac-fig-bos ${cls}"><svg viewBox="0 0 64 32" aria-hidden="true"><path d="M6 22h52M10 22l5-9h26l9 9M14 26a3 3 0 1 0 0-.1M48 26a3 3 0 1 0 0-.1" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><figcaption>${plaka(a.plaka)}</figcaption></figure>`;
-  return `<figure class="arac-fig ${cls}"><img src="img/arac-${a.id}.webp" alt="${e(a.model)}" loading="lazy" width="640" height="420"><figcaption>${plaka(a.plaka)}</figcaption></figure>`;
+  const gid = a.gorsel || a.id;
+  if (!/^a[1-6]$/.test(gid)) return `<figure class="arac-fig arac-fig-bos ${cls}"><svg viewBox="0 0 64 32" aria-hidden="true"><path d="M6 22h52M10 22l5-9h26l9 9M14 26a3 3 0 1 0 0-.1M48 26a3 3 0 1 0 0-.1" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><figcaption>${plaka(a.plaka)}</figcaption></figure>`;
+  return `<figure class="arac-fig ${cls}"><img src="img/arac-${gid}.webp" alt="${e(a.model)}" loading="lazy" width="640" height="420"><figcaption>${plaka(a.plaka)}</figcaption></figure>`;
 }
 
 // Ekran başı: bu ekran ne işe yarar, tek cümle.

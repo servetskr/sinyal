@@ -156,7 +156,7 @@ function dersDiger(d) {
 const DURUM_TON = { 'Yapıldı': 'yesil', 'Gelmedi': 'kirmizi', 'İptal': 'notr' };
 function egDersKart(d, vurgu) {
   const k = kursiyer(d.kursiyer); if (!k) return '';
-  const S0 = SINIFLAR[k.sinif], acik = d.durum === 'Planlandı', no = k.direksiyon + (acik ? 1 : 0), basladi = acik && d.bas, gecmis = d.tarih < gun(0);
+  const S0 = SINIFLAR[k.sinif], acik = d.durum === 'Planlandı', no = k.direksiyon + (acik ? 1 + S.dersler.filter(x => x.kursiyer === k.id && x.durum === 'Planlandı' && (x.tarih + x.saat) < (d.tarih + d.saat)).length : 0), basladi = acik && d.bas, gecmis = d.tarih < gun(0);
   const sag = acik ? (basladi ? rozet('Derste', 'mavi') : gecmis ? rozet('Kapanmadı', 'uyari') : '') : rozet(d.durum, DURUM_TON[d.durum] || 'notr');
   return `<article class="eg-ders ${vurgu ? 'vurgu' : ''} ${acik ? '' : 'kapali'}">
     <div class="eg-ders-ust"><div class="og-zaman"><small>${gecmis ? tarih(d.tarih) : goreli(d.tarih)}</small><b class="mono">${d.saat}</b></div><div class="og-olay-ad">${avatar(k.ad, k.soyad, k.foto)}<b>${e(tamAd(k))}</b><small>${S0.ad} · ${acik ? no + '. ders' : no + ' ders yapıldı'} / ${S0.direksiyon}</small></div>${sag}</div>
