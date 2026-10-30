@@ -25,6 +25,43 @@ const ASISTAN = [
 const CEVAP = [[/^(evet|olur|tamam|tamamd[ıi]r|gelece[ğg]im|gelirim|uygun|kat[ıi]l[ıi]yorum|onayl[ıi]yorum|ok|okey)(\s|$|[.!,])/, 'olumlu'], [/^(hay[ıi]r|gelemem|gelemeyece[ğg]im|olmaz|uygun de[ğg]il|kat[ıi]lam[ıi]yorum|iptal)(\s|$|[.!,])/, 'olumsuz']];
 const cevapTuru = m => { const t = kucuk(m).trim(); for (const [r, k] of CEVAP) if (r.test(t)) return k; return null; };
 const asistanCevap = m => { const t = kucuk(m).trim(); if (cevapTuru(t)) return { metin: 'Teşekkürler, cevabınızı aldık ve kursa ilettik.', konu: 'Cevap' }; for (const [r, c, k] of ASISTAN) if (r.test(t)) return { metin: c, konu: k }; return { metin: 'Sorunuzu kurs yetkilimize ilettim, kısa süre içinde size dönecek. Bu arada ücret, evrak ya da ders saatleriyle ilgili sorularınızı hemen cevaplayabilirim.', konu: 'Yetkiliye devredildi', devir: true }; };
+// Demo hattına yazan adayla adım adım sohbet (durum KV'de 1 gün tutulur): kayıt → sınıf → bilgi → link / randevu / aranma
+const KURS_AD = 'Sinyal Sürücü Kursu', KAYIT_LINK = 'https://servetskr.github.io/sinyal/#/kayit', KURS_ADRES = 'Vişnelik Mah. Atatürk Blv. No:12, Odunpazarı / Eskişehir';
+const DEMO_SINIF = [
+  ['B manuel (otomobil)', '24.000 TL', 34, 14, /manuel|otomobil|araba|\bb\b/],
+  ['B otomatik', '26.500 TL', 34, 14, /otomatik/],
+  ['A2 motosiklet', '18.500 TL', 34, 14, /motor|motosiklet|\ba2\b/],
+  ['C kamyon', '31.000 TL', 34, 20, /kamyon|\bc\b/],
+];
+const MENU = 'Size nasıl yardımcı olabilirim? Numarasını yazmanız yeterli:\n\n1. Kayıt ve ücretler\n2. Gerekli belgeler\n3. Ders saatleri\n4. Adres\n5. Yetkiliyle görüşmek';
+const SINIF_MENU = 'Hangi ehliyet sınıfını düşünüyorsunuz?\n\n' + DEMO_SINIF.map((s, i) => `${i + 1}. ${s[0]} · ${s[1]}`).join('\n') + '\n\nNumarasını yazmanız yeterli.';
+const sinifBilgi = s => `*${s[0]}*\n\nÜcret: ${s[1]} (peşinattan sonra 5 aya kadar taksit)\nEğitim: ${s[2]} saat teorik ders ve ${s[3]} direksiyon dersi\nSüre: yaklaşık 6–8 hafta\n\nNasıl devam edelim?\n\n1. Evden kayıt linkini gönder\n2. Kursa gelip kayıt olmak istiyorum\n3. Yetkili beni arasın`;
+const BELGE = 'Kayıt için gerekenler:\n\n• Kimlik kartı\n• Sürücü sağlık raporu (aile hekiminizden alabilirsiniz)\n• Öğrenim belgesi\n• Adli sicil kaydı (e-Devlet)\n• 2 vesikalık fotoğraf\n\nBelgelerin fotoğrafını bu numaraya gönderebilirsiniz.';
+const SAAT = 'Teorik dersler:\n\n• Akşam grubu: hafta içi her akşam 18:30\n• Sabah grubu: salı ve perşembe 10:00\n\nYeni akşam grubumuz yakında başlıyor; kontenjan sınırlı.';
+const ADRES = `Adresimiz: ${KURS_ADRES}\n\nGelmeden önce yazarsanız sizi bekleriz.`;
+async function sohbet(env, kimden, metin) {
+  const anahtar = 'sohbet:' + rakam(kimden); let d = {};
+  try { d = JSON.parse((await env.LINK.get(anahtar)) || '{}'); } catch (x) { d = {}; }
+  const t = kucuk(metin).trim(), no = (t.match(/^([1-9])\s*[.)]?$/) || [])[1], selam = /^(merhaba|selam|slm|mrb|iyi günler|iyi akşamlar|günaydın)/.test(t);
+  const sinifBul = () => DEMO_SINIF.findIndex(s => s[4].test(t));
+  let c = null;
+  if (d.adim === 'sinif' && ((no && DEMO_SINIF[no - 1]) || sinifBul() >= 0)) { const i = no ? +no - 1 : sinifBul(); c = { metin: sinifBilgi(DEMO_SINIF[i]), konu: 'Kayıt · ' + DEMO_SINIF[i][0], d: { adim: 'devam', sinif: i } }; }
+  else if (d.adim === 'devam' && no === '1') c = { metin: `Kaydınızı evden birkaç dakikada yapabilirsiniz:\n${KAYIT_LINK}\n\nBilgilerinizi girip belgelerinizin fotoğrafını yüklüyor, sözleşmeyi telefondan imzalıyorsunuz. Takıldığınız yerde buraya yazmanız yeterli.`, konu: 'Kayıt · link gönderildi', d: {} };
+  else if (d.adim === 'devam' && no === '2') c = { metin: `Memnuniyetle bekleriz. Hangi gün ve saat size uygun? Yazdığınız zamanı yetkilimize iletip size onaylatacağım.\n\n${ADRES}`, konu: 'Kayıt · randevu', d: { adim: 'randevu' } };
+  else if ((d.adim === 'devam' && no === '3') || (d.adim === 'menu' && no === '5') || /yetkili|ara(y[ıi]n|s[ıi]n)|telefon edin|biri arasın/.test(t)) c = { metin: 'Talebinizi yetkilimize ilettim; en kısa sürede sizi bu numaradan arayacak. Uygun olmadığınız saat varsa yazabilirsiniz.', konu: 'Aranma talebi', devir: true, d: {} };
+  else if (d.adim === 'randevu' && !no) c = { metin: `Teşekkürler. "${String(metin).trim().slice(0, 60)}" talebinizi yetkilimize ilettim; onaylayınca size buradan yazacağız.`, konu: 'Kayıt · randevu talebi', devir: true, d: {} };
+  else if (d.adim === 'menu' && no) c = { '1': { metin: SINIF_MENU, konu: 'Kayıt', d: { adim: 'sinif' } }, '2': { metin: BELGE, konu: 'Evrak', d: { adim: 'menu' } }, '3': { metin: SAAT, konu: 'Ders saatleri', d: { adim: 'menu' } }, '4': { metin: ADRES, konu: 'Adres', d: { adim: 'menu' } } }[no] || null;
+  else if (/kay[ıi]t|kaydol|yaz[ıi]l|ehliyet al|ba[şs]vur/.test(t)) c = { metin: `${selam ? 'Merhaba, ' : ''}${KURS_AD}’na hoş geldiniz. Kayıt düşünmenize çok sevindik.\n\n${SINIF_MENU}`, konu: 'Kayıt', d: { adim: 'sinif' } };
+  else if (sinifBul() >= 0 && /fiyat|ücret|ucret|ka[çc]|ne kadar|bilgi/.test(t)) { const i = sinifBul(); c = { metin: sinifBilgi(DEMO_SINIF[i]), konu: 'Fiyat · ' + DEMO_SINIF[i][0], d: { adim: 'devam', sinif: i } }; }
+  else if (/fiyat|ücret|ucret|kaç para|kac para|taksit|ne kadar/.test(t)) c = { metin: 'Kurs ücretlerimiz:\n\n' + DEMO_SINIF.map((s, i) => `${i + 1}. ${s[0]} · ${s[1]}`).join('\n') + '\n\nPeşinattan sonra 5 aya kadar taksit yapıyoruz. Hangi sınıfı düşünüyorsanız numarasını yazın, ayrıntıları göndereyim.', konu: 'Fiyat ve taksit', d: { adim: 'sinif' } };
+  else if (/evrak|belge|rapor|gerekli|neler lazım|ne lazım/.test(t)) c = { metin: BELGE, konu: 'Evrak', d: { adim: 'menu' } };
+  else if (/saat|ne zaman|başla|basla|grup|kurs günleri/.test(t)) c = { metin: SAAT, konu: 'Ders saatleri', d: { adim: 'menu' } };
+  else if (/adres|nerede|nerdesiniz|konum/.test(t)) c = { metin: ADRES, konu: 'Adres', d: { adim: 'menu' } };
+  else if (selam || !d.adim) { const k = selam ? null : asistanCevap(metin); c = k && !k.devir ? { ...k, d: {} } : selam ? { metin: `Merhaba, ${KURS_AD}’na hoş geldiniz.\n\n${MENU}`, konu: 'Karşılama', d: { adim: 'menu' } } : { metin: `Sorunuzu kurs yetkilimize ilettim, kısa süre içinde size dönecek.\n\nBu arada:\n${MENU.split('\n\n')[1]}`, konu: 'Yetkiliye devredildi', devir: true, d: { adim: 'menu' } }; }
+  if (!c) c = { metin: `Anlayamadım, kusura bakmayın.\n\n${MENU}`, konu: 'Menü', d: { adim: 'menu' } };
+  await env.LINK.put(anahtar, JSON.stringify(c.d || {}), { expirationTtl: 86400 }).catch(() => {});
+  return c;
+}
 const sade = s => String(s || '').toLocaleLowerCase('tr').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
 const rakam = x => String(x || '').replace(/\D/g, '');
 // İsteği yapan Firebase kullanıcısının kurstaki rolü (Firestore, kullanıcının kendi kimliğiyle okunur; sahte kimlik reddedilir)
@@ -170,8 +207,8 @@ export default {
       // fotoğraf ya da PDF (evrak): Meta'dan indirilir, 14 gün saklanır; Sinyal öğrencinin dosyasına alır
       const medya = (m.type === 'image' || m.type === 'document') && env.LINK ? await medyaAl(env, m, env.WA_TOKEN, 'medya-' + m.id) : null;
       const metin = m.type === 'text' ? m.text.body : (m[m.type] && m[m.type].caption) || (m.type === 'image' ? '(fotoğraf)' : m.type === 'document' ? '(belge)' : '(' + m.type + ')');
-      const c = medya ? { metin: 'Belgenizi aldık, teşekkürler. Kurs kontrol edip kaydınıza işleyecek; eksik ya da okunmuyorsa size yazacağız.', konu: 'Evrak' } : asistanCevap(metin);
-      const h = demoHatlar(env), ust = h.usta || h.mudur ? '' : 'ALICI: ADAY (size yazan kişi)\n(Kursun asistanı otomatik cevapladı.)\n――――――――\n';
+      const c = medya ? { metin: 'Belgenizi aldık, teşekkürler. Kurs kontrol edip kaydınıza işleyecek; eksik ya da okunmuyorsa size yazacağız.', konu: 'Evrak' } : env.LINK ? await sohbet(env, m.from, metin) : asistanCevap(metin);
+      const ust = '';  // asistan cevabı yazan kişiye gider; etiket gerekmez
       const yaz = body => fetch(G + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + env.WA_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       await yaz({ messaging_product: 'whatsapp', status: 'read', message_id: m.id }).catch(() => {});
       await yaz({ messaging_product: 'whatsapp', to: env.ALICI, type: 'text', text: { body: ust + c.metin, preview_url: true } }).catch(() => {});
