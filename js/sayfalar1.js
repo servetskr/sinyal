@@ -393,7 +393,7 @@ export function kursiyerler(filtre) {
     return l.map(k => {
       const g = gecikenler(k), sd = sonrakiDers(k), S0 = SINIFLAR[k.sinif];
       return `<tr class="tik" data-git="${k.id}" tabindex="0">
-        <td class="m-tam"><div class="kisi">${avatar(k.ad, k.soyad)}<div><b>${e(tamAd(k))}</b><small>${e(k.tel)}</small></div></div></td>
+        <td class="m-tam"><div class="kisi">${avatar(k.ad, k.soyad, k.foto)}<div><b>${e(tamAd(k))}</b><small>${e(k.tel)}</small></div></div></td>
         <td class="m-gizle">${rozet(S0.ad.split(' ·')[0])} <small style="color:var(--soluk)">${S0.ad.split('· ')[1]}</small></td>
         <td style="min-width:150px">${yol(asamaNo(k))}<small style="color:var(--soluk);font-size:12px">${k.asama}${k.dsinav && k.dsinav.sonuc === 'Kaldı' ? ' · tekrar' : ''}${k.kapali ? ' · <b style="color:var(--kirmizi)">' + (k.kapali.tur === 'dondur' ? 'donduruldu' : 'kayıt kapalı') + '</b>' : ''}</small></td>
         <td class="m-gizle" style="min-width:110px"><span class="sayi" style="font-size:12.5px">${k.direksiyon}/${S0.direksiyon}</span>${ilerleme(k.direksiyon, S0.direksiyon, k.direksiyon >= S0.direksiyon ? 'yesil' : '')}</td>
@@ -602,20 +602,30 @@ function denemeKarti(k) {
 // Kayıt fotoğrafı: MEBBİS'e aktarılan fotoğraf biyometrik kurallara uymalı; yanlış fotoğraf o dönem düzeltilemez
 function profilFoto(k) {
   const KURAL = ['Son 6 ay içinde çekilmiş', 'Beyaz ya da açık renk düz fon', 'Yüz tam karşıdan, gözler açık ve net', 'Şapka, gözlük yansıması ve gölge yok', 'Yüz kadrajı dolduruyor, kimlikteki kişiyle aynı'];
-  let veri = k.foto || null;
+  let veri = k.foto || null, dveri = (k.dogrulamaFoto || {}).veri || null;
   pencere({
-    baslik: 'Kayıt fotoğrafı · ' + tamAd(k),
+    baslik: 'Kayıt fotoğrafı · ' + tamAd(k), genis: true,
     icerik: `<div class="foto-cek"><div class="foto-onizle">${veri ? `<img src="${veri}" alt="">` : `${ik('kursiyer')}<small>Henüz fotoğraf yok</small>`}</div>
       <div><label class="dg dg-ana" style="cursor:pointer">${ik('arti')}${veri ? 'Yeniden çek / yükle' : 'Fotoğraf çek / yükle'}<input type="file" accept="image/*" capture="user" data-foto-sec hidden></label>
       <p class="et" style="margin-top:14px">Biyometrik kontrol</p><div class="foto-kural">${KURAL.map((x, i) => `<label><input type="checkbox" data-kural="${i}" ${k.foto ? 'checked' : ''}><span>${x}</span></label>`).join('')}</div>
-      <p style="font-size:12.5px;color:var(--soluk);margin-top:10px">Bu fotoğraf MEBBİS’e aktarılır. MEB modülünde hatalı fotoğraf o dönem düzeltilemez.</p></div></div>`,
+      <p style="font-size:12.5px;color:var(--soluk);margin-top:10px">Bu fotoğraf MEBBİS’e aktarılır. MEB modülünde hatalı fotoğraf o dönem düzeltilemez.</p></div></div>
+      <div class="foto-cek" style="margin-top:18px;padding-top:16px;border-top:1px solid var(--cizgi-2)"><div class="foto-onizle" data-donizle>${dveri ? `<img src="${dveri}" alt="">` : `${ik('kursiyer')}<small>Doğrulama fotoğrafı yok</small>`}</div>
+      <div><p class="et">Kimlik doğrulama fotoğrafı</p><p style="font-size:13.5px;margin:4px 0 10px">Kayıt günü kursta, öğrenci karşınızdayken çekilir. Kimlik kartındaki kişiyle aynı kişi olduğunu gösterir; biyometrik fotoğrafla yan yana saklanır.</p>
+      <label class="dg dg-cizgi" style="cursor:pointer">${ik('arti')}${dveri ? 'Yeniden çek' : 'Şimdi çek'}<input type="file" accept="image/*" capture="user" data-dfoto-sec hidden></label>
+      <label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:14px"><input type="checkbox" data-dkimlik ${(k.dogrulamaFoto || {}).kimlik ? 'checked' : ''}> Kimlik kartıyla yüzü karşılaştırdım, aynı kişi</label>
+      ${k.dogrulamaFoto ? `<p style="font-size:12.5px;color:var(--soluk);margin-top:8px">${tarih(k.dogrulamaFoto.tarih)} · ${e(k.dogrulamaFoto.kim || '')}</p>` : ''}</div></div>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-foto-kaydet>Kaydet</button>`,
     onAc(d) {
       d.querySelector('[data-foto-sec]').addEventListener('change', ev => { const f = ev.target.files[0]; if (!f) return; fotoKucult(f, 480).then(u => { veri = u; d.querySelector('.foto-onizle').innerHTML = `<img src="${u}" alt="">`; d.querySelectorAll('[data-kural]').forEach(c => { c.checked = false; }); }).catch(() => bildir('Fotoğraf okunamadı', 'uyari')); });
+      d.querySelector('[data-dfoto-sec]').addEventListener('change', ev => { const f = ev.target.files[0]; if (!f) return; fotoKucult(f, 480).then(u => { dveri = u; d.querySelector('[data-donizle]').innerHTML = `<img src="${u}" alt="">`; d.querySelector('[data-dkimlik]').checked = false; }).catch(() => bildir('Fotoğraf okunamadı', 'uyari')); });
       d.querySelector('[data-foto-kaydet]').addEventListener('click', () => {
-        if (!veri) return bildir('Önce fotoğraf çekin ya da yükleyin', 'uyari');
-        if ([...d.querySelectorAll('[data-kural]')].some(c => !c.checked)) return bildir('Biyometrik kontrolün hepsini işaretleyin; uymayan fotoğraf MEB’den döner', 'uyari');
-        k.foto = veri; k.fotoTarih = gun(0); islem('Kayıt fotoğrafı ekledi', tamAd(k)); kaydet(); kapatPencere(); bildir('Fotoğraf kaydedildi'); yenile();
+        if (!veri && !dveri) return bildir('Önce fotoğraf çekin ya da yükleyin', 'uyari');
+        if (veri && veri !== k.foto && [...d.querySelectorAll('[data-kural]')].some(c => !c.checked)) return bildir('Biyometrik kontrolün hepsini işaretleyin; uymayan fotoğraf MEB’den döner', 'uyari');
+        const dk = d.querySelector('[data-dkimlik]').checked;
+        if (dveri && dveri !== (k.dogrulamaFoto || {}).veri && !dk) return bildir('Doğrulama fotoğrafı için kimlik kartıyla karşılaştırmayı işaretleyin', 'uyari');
+        if (veri && veri !== k.foto) { k.foto = veri; k.fotoTarih = gun(0); islem('Kayıt fotoğrafı ekledi', tamAd(k)); }
+        if (dveri && dveri !== (k.dogrulamaFoto || {}).veri) { k.dogrulamaFoto = { veri: dveri, tarih: gun(0), kim: oturum.kullanici ? oturum.kullanici.ad : '', kimlik: dk }; islem('Kimlik doğrulama fotoğrafı çekti', tamAd(k)); }
+        kaydet(); kapatPencere(); bildir('Fotoğraf kaydedildi'); yenile();
       });
     },
   });

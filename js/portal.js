@@ -56,7 +56,7 @@ export function egitmenPortal() {
   if (egSekme === 'bugun') govde = `
     <div class="kart" style="padding:8px">${ar ? aracGorsel(ar) : ''}<div style="display:flex;align-items:center;gap:10px;padding:10px 8px 6px"><div><b style="color:var(--murekkep);font-family:var(--baslik);font-size:17px">${ar ? e(ar.model) + ' · bugün senin aracın' : 'Araç atanmadı'}</b><small style="display:block;color:var(--soluk)">${ar ? 'Bakıma ' + Math.max(0, ar.bakimKm - ar.km).toLocaleString('tr-TR') + ' km' : ''}</small></div><span style="margin-left:auto">${rozet(bugun.filter(d => d.durum === 'Yapıldı').length + '/' + bugun.length + ' ders', 'sari')}</span></div></div>
     ${bugun.map(d => { const k = kursiyer(d.kursiyer), S0 = SINIFLAR[k.sinif]; return `<div class="kart" style="padding:16px 18px">
-      <div style="display:flex;align-items:center;gap:12px"><span class="mono" style="font-size:20px;font-weight:600;color:var(--murekkep)">${d.saat}</span><div class="kisi">${avatar(k.ad, k.soyad)}<div><b>${e(tamAd(k))}</b><small>${S0.ad} · ${k.direksiyon + (d.durum === 'Planlandı' ? 1 : 0)}. ders / ${S0.direksiyon}</small></div></div></div>
+      <div style="display:flex;align-items:center;gap:12px"><span class="mono" style="font-size:20px;font-weight:600;color:var(--murekkep)">${d.saat}</span><div class="kisi">${avatar(k.ad, k.soyad, k.foto)}<div><b>${e(tamAd(k))}</b><small>${S0.ad} · ${k.direksiyon + (d.durum === 'Planlandı' ? 1 : 0)}. ders / ${S0.direksiyon}</small></div></div></div>
       ${ilerleme(k.direksiyon, S0.direksiyon, 'yesil')}
       ${k.notlar[0] ? `<p class="ipucu" style="margin-top:10px">${ik('kalem')}<span>${e(k.notlar[0].metin)}</span></p>` : ''}
       ${d.bas && d.durum === 'Planlandı' ? `<p class="ipucu" style="margin-top:10px">${isaret('tamam', 18)}<span>Ders ${saatDe(d.bas)} başladı · ${d.konum ? 'konum alındı' : d.konum === false ? 'konum alınamadı' : 'konum alınıyor'}. Bitirince imzalatın; süre otomatik yazılır.</span></p>` : ''}
@@ -70,7 +70,7 @@ export function egitmenPortal() {
   }
   if (egSekme === 'kursiyer') {
     const ks = S.kursiyerler.filter(k => k.egitmen === eg.id && ['Direksiyon', 'Sınav'].includes(k.asama));
-    govde = `<div class="kart"><ul class="liste">${ks.map(k => { const sd = sonrakiDers(k); return `<li><div class="kisi" style="flex:1">${avatar(k.ad, k.soyad)}<div><b>${e(tamAd(k))}</b><small>${k.direksiyon}/${SINIFLAR[k.sinif].direksiyon} ders${sd ? ' · sonraki ' + goreli(sd.tarih) : ''}</small></div></div><span class="sag" style="width:70px">${ilerleme(k.direksiyon, SINIFLAR[k.sinif].direksiyon, 'yesil')}</span><button class="dg dg-cizgi dg-kucuk" data-deneme="${k.id}" style="margin-left:8px">Deneme sınavı</button></li>${(k.dDeneme || []).length ? `<li style="padding-top:0;border-top:0"><small style="color:var(--soluk);padding-left:52px">Son deneme: ${(() => { const x = k.dDeneme[k.dDeneme.length - 1]; return tarih(x.tarih) + ' · ' + (x.sonuc === 'Geçti' ? 'geçerdi' : 'kalırdı') + (x.neden ? ' (' + e(x.neden) + ')' : ''); })()}</small></li>` : ''}`; }).join('') || '<li>' + bos('Aktif kursiyer yok', '') + '</li>'}</ul></div>`;
+    govde = `<div class="kart"><ul class="liste">${ks.map(k => { const sd = sonrakiDers(k); return `<li><div class="kisi" style="flex:1">${avatar(k.ad, k.soyad, k.foto)}<div><b>${e(tamAd(k))}</b><small>${k.direksiyon}/${SINIFLAR[k.sinif].direksiyon} ders${sd ? ' · sonraki ' + goreli(sd.tarih) : ''}</small></div></div><span class="sag" style="width:70px">${ilerleme(k.direksiyon, SINIFLAR[k.sinif].direksiyon, 'yesil')}</span><button class="dg dg-cizgi dg-kucuk" data-deneme="${k.id}" style="margin-left:8px">Deneme sınavı</button></li>${(k.dDeneme || []).length ? `<li style="padding-top:0;border-top:0"><small style="color:var(--soluk);padding-left:52px">Son deneme: ${(() => { const x = k.dDeneme[k.dDeneme.length - 1]; return tarih(x.tarih) + ' · ' + (x.sonuc === 'Geçti' ? 'geçerdi' : 'kalırdı') + (x.neden ? ' (' + e(x.neden) + ')' : ''); })()}</small></li>` : ''}`; }).join('') || '<li>' + bos('Aktif kursiyer yok', '') + '</li>'}</ul></div>`;
   }
   return {
     baslik: 'Usta öğretici ekranı', alt: 'Telefondan kullanılan ekran',
@@ -217,7 +217,7 @@ export function ogrenciPortal() {
   return {
     baslik: 'Kursiyer ekranı', alt: 'Kursiyerin telefonunda gördüğü ekran',
     html: `<div class="portal">
-      <div class="portal-bas">${avatar(k.ad, k.soyad)}<div><small>Merhaba,</small><h2>${e(k.ad)}</h2></div>
+      <div class="portal-bas">${avatar(k.ad, k.soyad, k.foto)}<div><small>Merhaba,</small><h2>${e(k.ad)}</h2></div>
         ${kendi ? '' : `<select class="girdi" style="margin-left:auto;width:auto;height:34px;font-size:12.5px;max-width:150px" data-og aria-label="Kursiyer seç">${S.kursiyerler.slice(0, 40).map(x => `<option value="${x.id}" ${x.id === k.id ? 'selected' : ''}>${e(tamAd(x))}</option>`).join('')}</select>`}</div>
       ${ogSekme === 'durum' && !kendi ? `<p class="ipucu" style="font-size:13px">${isaret('bilgi', 18)}<span>Personel önizlemesi: öğrencinin telefonunda göreceği ekran. Kurs hesabında her öğrenciye öğrenci dosyasından kişisel link gönderilir.</span></p>` : ''}
       ${govde}

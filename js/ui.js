@@ -68,7 +68,8 @@ export const ik = (ad, cls = '') => `<svg class="ik ${cls}" viewBox="0 0 24 24" 
 export const rozet = (metin, tur = 'notr') => `<span class="rozet rozet-${tur}">${e(metin)}</span>`;
 export function asamaRozet(a) { const t = { 'Kayıt': 'notr', 'Evrak': 'uyari', 'Teorik': 'mavi', 'Direksiyon': 'mor', 'Sınav': 'turuncu', 'Ehliyet': 'yesil' }[a] || 'notr'; return rozet(a, t); }
 // Yuvarlak baş harf avatarları kaldırıldı; kişiler adlarıyla okunur.
-export function avatar() { return ''; }
+// Baş harf avatarı kullanılmaz; kayıt fotoğrafı varsa küçük fotoğraf gösterilir (listelerde yüzden tanıma)
+export const avatar = (ad, soyad, foto) => foto ? `<img class="kisi-foto" src="${e(foto)}" alt="" loading="lazy">` : '';
 export const plaka = p => `<span class="plaka"><i>TR</i>${e(p)}</span>`;
 
 // İmza öğesi: kursiyerin kayıttan ehliyete yolculuğu, kesik şeritli bir yol üzerinde.
