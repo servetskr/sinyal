@@ -34,7 +34,7 @@ function kurallarSekme() {
   <div class="ara-bosluk"></div>
   <div class="kart"><div class="kart-bas"><h3>MEBBİS’e giriş yöntemi</h3></div><div class="kart-govde"><div class="secim">${[['sirali', 'Sıralı giriş (panodan kopyala, yapıştır)'], ['arac', 'MEBBİS Yardımcısı (Chrome eklentisi)']].map(([v, t]) => `<label><input type="radio" name="mebyontem" value="${v}" data-meb-yontem ${(K.mebYontem || 'sirali') === v ? 'checked' : ''}><span>${t}</span></label>`).join('')}</div>
     <p style="font-size:13.5px;color:var(--soluk);margin-top:10px">${K.mebYontem === 'arac' ? (mebAracHazir() ? `Yardımcı bu tarayıcıda kurulu (sürüm ${e(EK.eklenti.surum || '')}).` : 'Yardımcı bu tarayıcıda kurulu değil; MEB işlemleri ekranından kurun.') : 'Sıralı girişte MEBBİS’e kurs yetkilisi kendi oturumunda girer; Sinyal yalnızca hazırlar ve kopyalatır.'}</p>
-    <p style="font-size:13px;color:var(--metin);margin-top:8px;display:flex;gap:8px;align-items:flex-start">${isaret('uyari', 18)}<span>${MEB_RISK}</span></p></div></div>
+    <p style="font-size:13px;color:var(--metin);margin-top:8px;display:flex;gap:8px;align-items:flex-start">${isaret('bilgi', 18)}<span>${MEB_BILGI}</span></p></div></div>
   <div class="ara-bosluk"></div>
   <div class="kart"><div class="kart-bas"><h3>Direksiyon takip formunda imza</h3><small>Denetimde neyin geçerli sayılacağını il MEM’inize sorun</small></div><div class="kart-govde"><div class="secim">${[['ikili', 'Dijital imza + haftalık ıslak imzalı çıktı'], ['dijital', 'Yalnızca dijital imza'], ['islak', 'Yalnızca ıslak imza']].map(([v, t]) => `<label><input type="radio" name="imza" value="${v}" data-imza ${K.imzaYontemi === v ? 'checked' : ''}><span>${t}</span></label>`).join('')}</div>
     <button class="dg dg-cizgi dg-kucuk" style="margin-top:10px" data-belge-ac="dilekce">${ik('belge')}İl MEM’e soran dilekçe (hazır)</button>
@@ -592,10 +592,8 @@ export function kurulum() {
 
 /* ================= MEBBİS TEK TUŞ AKTARIM (isteğe bağlı) =================
    Rakiplerdeki gibi: kurs bilgisayarındaki MEBBİS Aracı, kursun kendi MEBBİS oturumunu açar ve
-   formları doldurur. Şifre bu bilgisayarda kalır, Sinyal sunucusuna gelmez. Güvenlik kodunu kullanıcı girer.
-   ⚠ Basına yansıyan Temmuz 2026 MEB yazısı bot/makro/eklenti ve şifre paylaşımını yasaklıyor;
-   bu yüzden Yardımcı yalnız kursun kendi Chrome’una kurulursa çalışır; şifre istemez, Kaydet’e kullanıcı basar. */
-export const MEB_RISK = 'MEBBİS Yardımcısı kursun kendi MEBBİS oturumunda çalışır: MEBBİS’e kurs yetkilisi girer, Yardımcı şifre istemez ve saklamaz; formu doldurur, Kaydet’e ve güvenlik koduna kullanıcı basar.';
+   formları doldurur. Yardımcı kursun kendi Chrome’unda çalışır; şifre istemez, Kaydet’e kullanıcı basar. */
+export const MEB_BILGI = 'MEBBİS Yardımcısı kursun kendi MEBBİS oturumunda çalışır: MEBBİS’e kurs yetkilisi girer, Yardımcı şifre istemez ve saklamaz; formu doldurur, Kaydet’e ve güvenlik koduna kullanıcı basar.';
 export function mebKuyruk() {
   const kayit = sb(S.kursiyerler).filter(k => !k.mebIslendi && !eksikEvrak(k).length);
   const ders = sbDers(S.dersler).filter(d => d.durum === 'Planlandı' && fark(d.tarih) >= 0 && !d.meb);

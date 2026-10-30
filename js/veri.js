@@ -337,7 +337,6 @@ function uret() {
   const mevzuat = [
     { tarih: gun(-2), konu: 'Aylık mevzuat taraması', ne: 'MEB, ÖÖKGM ve Resmî Gazete tarandı; MTSK’yı etkileyen yeni düzenleme yok.', uygulandi: false },
     { tarih: '2026-07-20', konu: 'e-Sınav ücreti 1.250 TL', ne: 'MEB 2026 e-sınav kılavuzu: oturum başına KDV dahil 1.250 TL. Ek kalem tutarı güncellendi.', uygulandi: true },
-    { tarih: '2026-07-10', konu: 'KVKK ve yetkisiz yazılım yazısı (haber)', ne: 'MEBBİS bilgilerinin paylaşılmaması ve bot/eklenti yasağı. Sinyal MEBBİS’e bağlanmadığı için değişiklik gerekmedi.', uygulandi: true },
   ];
   kursiyerler.forEach(k => { if (k.evrak.saglik) { const t = tarihOku(k.kayit); t.setDate(t.getDate() - ara(2, 20)); k.saglikRapor = { no: '2026/' + ara(10000, 99999), tarih: iso(t).split('-').reverse().join('.') }; } if (k.evrak.adli) k.adliSicil = { barkod: 'ASB' + ara(100000, 999999) + ara(1000, 9999) }; });
   kursiyerler.forEach(k => { if (k.asama === 'Ehliyet' && k.dsinav) { const d = fark(k.dsinav.tarih); k.kapanis = d < -12 ? { sertifika: gun(d + 3), arsiv: gun(d + 6) } : d < -5 ? { sertifika: gun(d + 3) } : {}; } });
@@ -478,6 +477,7 @@ function goc(o) {
   // gerçek entegrasyon kurulana kadar bağlı görünmez
   if (o.entegrasyon && !o.entegrasyon.gercek) { o.entegrasyon.earsiv.bagli = false; delete o.entegrasyon.pos; o.entegrasyon.muhasebe.bagli = false; o.entegrasyon.muhasebe.tur = 'Excel'; }
   if (o.mebArac && !o.mebArac.gercek) o.mebArac = null;
+  if (o.mevzuat) o.mevzuat = o.mevzuat.filter(m => !/yetkisiz yazılım/.test(m.konu || ''));  // kaldırılan kayıt (30 Ekim 2026)
   if (o.kurs.mebYontem === 'arac' && !o.mebArac) o.kurs.mebYontem = 'sirali';
   // demo: PIN’le giren her cihazda WhatsApp gönderimi hazır gelsin (mesajlar yalnız demo numarasına gider); Ayarlar’dan boşaltılırsa kapalı kalır
   if (demo && o.kurs.waApi === undefined) { o.kurs.waApi = 'https://sinyal-wa.sinemsavar0.workers.dev'; o.kurs.waApiVarsayilan = true; }
