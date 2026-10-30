@@ -1,9 +1,9 @@
 // Öğrenci hesapları (kurs tarafı): müdür ya da ön büro hesabı açar, giriş bilgileri öğrenciye WhatsApp'tan gider,
 // öğrenci ilk girişte kendi şifresini belirler. Şifresini unutan öğrencinin talebi buraya düşer; tek dokunuşla yeni geçici şifre gider.
-import { S, kaydet, gun, tamAd, islem, selam, oturum, sb, SINIFLAR, egitmen, eksikEvrak, kursAdi } from './veri.js?v=99';
-import { e, ik, tarih, pencere, kapatPencere, bildir, waSirali, tl, tamTarih } from './ui.js?v=99';
-import * as B from './bulut.js?v=99';
-import { wpGonder, alici, odemeBilgisi } from './sayfalar1.js?v=99';
+import { S, kaydet, gun, tamAd, islem, selam, oturum, sb, SINIFLAR, egitmen, eksikEvrak, kursAdi } from './veri.js?v=100';
+import { e, ik, tarih, pencere, kapatPencere, bildir, waSirali, tl, tamTarih } from './ui.js?v=100';
+import * as B from './bulut.js?v=100';
+import { wpGonder, alici, odemeBilgisi } from './sayfalar1.js?v=100';
 
 const yetkili = () => oturum.kullanici && ['mudur', 'sekreter'].includes(oturum.kullanici.rol);
 const talepVar = k => B.bulutta() && !!k.hesap && (B.bulut.sifreTalep || []).some(t => t.tel === k.hesap.tel);
@@ -36,7 +36,7 @@ export async function karsilama(k, { hos = true, hesap = true } = {}) {
   if (hesap && !k.hesap) r = await ac(k).then(x => { islem('Öğrenci hesabı açtı', tamAd(k)); kaydet(); return x; }).catch(x => { bildir('Öğrenci hesabı açılamadı: ' + B.hataMetni(x) + '. Öğrenci dosyasından tekrar deneyin', 'uyari'); return null; });
   const a = alici(k), ogr = metin => ({ ad: a.ad, tel: a.tel, rol: a.rol, metin, tur: 'Hoş geldin' }), l = [];
   if (hos) {
-    l.push(ogr(`${selam(k)} ${kursAdi('e')} hoş geldiniz! Kaydınız tamamlandı. Sınıfınız: ${SINIFLAR[k.sinif].ad}.`));
+    l.push(ogr(`${selam(k)} ${S.kurs.ad} ailesine hoş geldiniz! Kaydınız tamamlandı. Sınıfınız: ${SINIFLAR[k.sinif].ad}.`));
     const ek = eksikEvrak(k).filter(([x]) => x !== 'sozlesme');
     if (ek.length) l.push(ogr(`Kaydınızı tamamlamak için şu belgeler eksik:\n${ek.map(([, ad]) => '• ' + ad).join('\n')}\nBelgelerin fotoğrafını ya da PDF'ini bu numaraya WhatsApp'tan gönderebilirsiniz; her belge doğrudan dosyanıza işlenir.`));
   }

@@ -1,8 +1,9 @@
-import * as EK from './eklenti.js?v=99';
-import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, kursiyer, DERS_TUR_AD, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube} from './veri.js?v=99';
-import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor, belgeYazdir } from './ui.js?v=99';
-import { yenile } from './app.js?v=99';
-import * as B from './bulut.js?v=99';
+import * as EK from './eklenti.js?v=100';
+import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, kursiyer, DERS_TUR_AD, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube} from './veri.js?v=100';
+import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor, belgeYazdir } from './ui.js?v=100';
+import { yenile } from './app.js?v=100';
+import * as B from './bulut.js?v=100';
+import { wpGonder } from './sayfalar1.js?v=100';
 
 /* ================= MEB KURALLARI: KAYNAK VE SORUMLULUK ================= */
 const MTSK = 'MTSK Yönetmeliği (ÖÖKGM, Ocak 2025 metni)';
@@ -535,17 +536,20 @@ function davetFormu() {
         if (ad.length < 3) return bildir('Ad soyad girin', 'uyari');
         if (f.rol.value === 'usta' && !f.usta.value) return bildir('Öğretmeni seçin', 'uyari');
         const btn = d.querySelector('[form=f-davet]'); btn.disabled = true;
-        B.davetOlustur({ ad, rol: f.rol.value, usta: f.rol.value === 'usta' ? f.usta.value : null }).then(r => { islem('Çalışan davet etti', ad + ' · ' + ROL[f.rol.value]); kaydet(); davetGoster(ad, r.link); }).catch(x => { btn.disabled = false; bildir(B.hataMetni(x), 'uyari'); });
+        B.davetOlustur({ ad, rol: f.rol.value, usta: f.rol.value === 'usta' ? f.usta.value : null }).then(r => { islem('Çalışan davet etti', ad + ' · ' + ROL[f.rol.value]); kaydet(); davetGoster(ad, r.link, f.rol.value === 'usta' ? egitmen(f.usta.value) : null); }).catch(x => { btn.disabled = false; bildir(B.hataMetni(x), 'uyari'); });
       });
     },
   });
 }
-function davetGoster(ad, link) {
+// Davet: öğretmenin telefonu kayıtlıysa link kursun hattından kendiliğinden gider (hat bağlı değilse WhatsApp hazır mesajla açılır)
+function davetGoster(ad, link, kisi) {
   const metin = `Merhaba ${ad}, ${S.kurs.ad} Sinyal hesabına katılmanız için davet linkiniz: ${link}`;
+  const otomatik = !!(kisi && kisi.tel);
+  if (otomatik) wpGonder(kisi, metin, 'Çalışan daveti');
   pencere({
-    baslik: 'Davet linki hazır',
-    icerik: `<p style="margin-bottom:10px">Linki ${e(ad)} kişisine gönderin. Açınca kendi e-postası ve şifresiyle hesabını oluşturur.</p><input class="girdi mono" readonly value="${e(link)}" data-davet-link style="width:100%">`,
-    altlik: `<button class="dg dg-cizgi" data-kopya>Kopyala</button><a class="dg dg-ana" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(metin)}">WhatsApp’tan gönder</a>`,
+    baslik: otomatik ? 'Davet gönderildi' : 'Davet linki hazır',
+    icerik: `<p style="margin-bottom:10px">${otomatik ? `Davet linki ${e(ad)} kişisinin WhatsApp’ına gönderildi.` : `Linki ${e(ad)} kişisine gönderin.`} Açınca kendi e-postası ve şifresiyle hesabını oluşturur.</p><input class="girdi mono" readonly value="${e(link)}" data-davet-link style="width:100%">`,
+    altlik: `<button class="dg dg-cizgi" data-kopya>Kopyala</button>${otomatik ? '<button class="dg dg-ana" data-kapat>Tamam</button>' : `<a class="dg dg-ana" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(metin)}">WhatsApp’tan gönder</a>`}`,
     onAc(d) { d.querySelector('[data-kopya]').addEventListener('click', () => { const i = d.querySelector('[data-davet-link]'); i.select(); (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject()).catch(() => document.execCommand('copy')).finally(() => bildir('Link kopyalandı')); }); },
   });
   yenile();
@@ -639,7 +643,7 @@ export function ayarBaglan(k) {
     if (t.closest('[data-sozlesme-varsayilan]')) { S.kurs.sozlesme = null; islem('Sözleşmeyi varsayılana döndürdü'); kaydet(); bildir('Varsayılan metne dönüldü'); return yenile(); }
     if (t.closest('[data-sube-ekle]')) { const n = S.subeler.length + 1; S.subeler.push({ id: 's' + Date.now(), ad: 'Yeni şube ' + n, semt: '', kurumKodu: '', mudur: '', mebbis: '' }); islem('Şube ekledi'); kaydet(); bildir('Şube eklendi; kurum kodunu ve müdürünü yazın'); yenile(); }
     if (t.closest('[data-kural-onay]')) { S.kurs.kuralOnay = { kim: oturum.kullanici ? oturum.kullanici.ad : '', tarih: gun(0) }; islem('Kural değerlerini onayladı'); kaydet(); bildir('Kural değerleri onaylandı'); yenile(); }
-    const bo = t.closest('[data-belge-ac]'); if (bo) import('./sayfalar3.js?v=99').then(m => m.belgeAc(bo.dataset.belgeAc));
+    const bo = t.closest('[data-belge-ac]'); if (bo) import('./sayfalar3.js?v=100').then(m => m.belgeAc(bo.dataset.belgeAc));
     const ok = t.closest('[data-oturum-kapat]'); if (ok) { const o = S.guvenlik.oturumlar.splice(+ok.dataset.oturumKapat, 1)[0]; islem('Oturumu kapattırdı', o.kim + ' · ' + o.cihaz); kaydet(); bildir(o.kim + ' · ' + o.cihaz + ' oturumu kapatıldı'); yenile(); }
     const fs = t.closest('[data-fis]'); if (fs) { const n = +fs.dataset.fis, d = new Date(BUGUN); d.setMonth(d.getMonth() - n); csvIndir(`muhasebe-fisleri-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}.csv`, muhasebeFisi(n)); islem('Muhasebe fişlerini indirdi'); kaydet(); }
     if (t.closest('[data-parasut]')) pencere({ baslik: 'Paraşüt · bağlantı gerekli', icerik: `<div class="ipucu uyari" style="margin-bottom:12px">${isaret('uyari', 22)}<span>Paraşüt bağlantısı için kursun Paraşüt hesabından alınan API anahtarı gerekir. Anahtar girilene kadar tahsilatlar Paraşüt’e aktarılmaz.</span></div><p style="font-size:14.5px">Bu arada aylık muhasebe fişini CSV olarak indirip Paraşüt’e veya muhasebecinize yükleyebilirsiniz; fişte her tahsilat, gider ve iade ayrı satırdır.</p>`, altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-pfis>Bu ayın fişini indir</button>', onAc(d) { d.querySelector('[data-pfis]').addEventListener('click', () => { const d0 = new Date(BUGUN); csvIndir(`muhasebe-fisleri-${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}.csv`, muhasebeFisi(0)); islem('Muhasebe fişlerini indirdi'); kaydet(); kapatPencere(); }); } });
