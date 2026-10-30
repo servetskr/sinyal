@@ -236,7 +236,7 @@ export async function apiGonder(metin, belge, adres, kime) {
   giden.push(kayit); window.dispatchEvent(new CustomEvent('sinyal-giden'));
   const bitir = (ok, hata) => { kayit.durum = ok ? 'iletildi' : 'hata'; kayit.hata = hata; window.dispatchEvent(new CustomEvent('sinyal-giden')); };
   try {
-    const govde = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ metin: sadeDil(metin), belge, tel: tel || undefined }) };
+    const govde = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ metin: sadeDil(metin), belge, tel: tel || undefined, rol: (kime && kime.rol) || undefined }) };
     const r = adres ? await fetch(adres, govde) : await waIstek('/', govde);
     const j = await r.json().catch(() => ({}));
     if (r.ok && j.ok) { bitir(true); return { ok: true, id: j.id || null }; }
