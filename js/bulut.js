@@ -101,7 +101,7 @@ async function hesapAc(eposta, sifre, ad) {
   return user;
 }
 // Yeni kurs: müdür hesabı + boş kurs verisi
-export async function kursAc({ kursAd, yetkili, sehir, eposta, sifre }) {
+export async function kursAc({ kursAd, yetkili, sehir, eposta, sifre, mudurTel }) {
   const user = await hesapAc(eposta, sifre, yetkili);
   const { db, F } = fb;
   const kRef = F.doc(F.collection(db, 'kurslar'));
@@ -110,7 +110,7 @@ export async function kursAc({ kursAd, yetkili, sehir, eposta, sifre }) {
   b.set(F.doc(db, 'kurslar', kRef.id, 'uyeler', user.uid), { ad: yetkili, rol: 'mudur', eposta: user.email, katilma: F.serverTimestamp() });
   b.set(F.doc(db, 'kullanicilar', user.uid), { kurs: kRef.id });
   await b.commit();
-  return baglan({ kurs: kRef.id, uid: user.uid, ad: yetkili, rol: 'mudur', usta: null, eposta: user.email }, bosVeri({ kursAd, yetkili, sehir }));
+  return baglan({ kurs: kRef.id, uid: user.uid, ad: yetkili, rol: 'mudur', usta: null, eposta: user.email }, bosVeri({ kursAd, yetkili, sehir, mudurTel }));
 }
 
 // ---- davet ----
@@ -623,7 +623,7 @@ function ogrenciUygula(docId, g) {
     } else if (x.a === 'gonderimler' && y && !x.eski) {
       const m = { zaman: new Date().toISOString(), kime: String(y.kime || '').slice(0, 80), metin: String(y.metin || '').slice(0, 1000), tur: String(y.tur || 'Öğrenci').slice(0, 60) };
       S.gonderimler.unshift(m);
-      if (y.iletilecek && S.kurs.waApi) sahiplen('og|' + docId + '|' + x.id).then(ok => { if (ok) import('./ui.js?v=101').then(u => u.apiGonder(u.etiket(m.kime, y.rol || '') + m.metin, undefined, undefined, { ad: m.kime, rol: y.rol || '' })); });
+      if (y.iletilecek && S.kurs.waApi) sahiplen('og|' + docId + '|' + x.id).then(ok => { if (ok) import('./ui.js?v=101').then(u => u.apiGonder(u.etiket(m.kime, y.rol || '') + m.metin, undefined, undefined, { ad: m.kime, rol: y.rol || '' }).then(s => { if (!s.ok) { islem('Öğrenci bildirimi gönderilemedi', m.kime + ' · ' + m.tur + ': ' + s.hata); kaydet(); } })); });
     }
   }
   if (notlar.length) islem('Öğrenci panelinden', tamAd(k) + ': ' + notlar.join(', '));

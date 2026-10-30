@@ -1,5 +1,7 @@
 // Sinyal → WhatsApp Cloud API köprüsü + kısa link deposu (Cloudflare Worker)
 // Ortam: WA_TOKEN (gizli), PHONE_ID, ALICI; KV bağlaması LINK (kısa linkler 60 gün + gelen mesajlar)
+// SABLON_AD (isteğe bağlı, ör. sinyal_bildirim) + SABLON_DIL (varsayılan tr): kişi son 24 saatte yazmadıysa (Meta 131047) mesaj bu onaylı
+// şablonla, tek değişkene ({{1}}) konarak tekrar denenir. Kursun kendi hattında şablon adı hat kaydındaki 'sablon' alanından da gelebilir.
 // /webhook: Meta'dan gelen WhatsApp mesajları → kurs asistanı cevaplar, mesaj Sinyal'in gelen kutusuna (KV 'gelen') yazılır
 // İki yol var:
 //  · Demo (örnek kurs): Authorization başlığı yok → her mesaj ALICI'ya (demo telefonu) gider, yalnız ALICI'dan gelenler işlenir. Eskisi gibi.
@@ -236,7 +238,7 @@ export default {
       return cevap({ ok: true, liste: JSON.parse((env.LINK && (await env.LINK.get(gercek ? 'gelen:' + kursId : 'gelen'))) || '[]') });
     }
     if (req.method === 'GET') {
-      if (!yol) return cevap({ ok: true, hazir: !!(env.WA_TOKEN && env.PHONE_ID && env.ALICI), belge: true, kisa: !!env.LINK, kursHatti: true, demoHatlari: { usta: !!env.PHONE_ID_USTA, mudur: !!env.PHONE_ID_MUDUR } });
+      if (!yol) return cevap({ ok: true, hazir: !!(env.WA_TOKEN && env.PHONE_ID && env.ALICI), belge: true, kisa: !!env.LINK, kursHatti: true, sablon: !!env.SABLON_AD, demoHatlari: { usta: !!env.PHONE_ID_USTA, mudur: !!env.PHONE_ID_MUDUR } });
       const anahtar = yol.startsWith('k/') ? yol.slice(2) : yol;
       if (/^(gelen$|(hat|hatno|gelen|medya|durum|yedek)[:-])/.test(anahtar)) return cevap({ ok: false }, 404);  // iç kayıtlar kısa link gibi okunamaz
       const v = env.LINK ? await env.LINK.get(anahtar) : null;
@@ -260,10 +262,10 @@ export default {
     let metin = String((b && b.metin) || '').trim().slice(0, 4000);
     if (!metin) return cevap({ ok: false, hata: 'Mesaj bos' }, 400);
     // Gönderen hat ve alıcı: gerçek kursta kursun kendi hattı ve istekteki numara; demoda alıcının rolüne göre demo hattı ve ALICI
-    let phoneId = env.PHONE_ID, token = env.WA_TOKEN, to = env.ALICI;
+    let phoneId = env.PHONE_ID, token = env.WA_TOKEN, to = env.ALICI, h = null;
     if (!gercek) { const d = demoHatSec(env, metin, String(b.rol || '')); [phoneId, token] = d.hat; metin = d.metin; }
     if (gercek) {
-      const h = await kursHat(env, kursId);
+      h = await kursHat(env, kursId);
       if (!h) return cevap({ ok: false, hata: 'Kursun WhatsApp hattı bağlı değil (Ayarlar › Kurs bilgileri)' }, 409);
       to = rakam(b.tel);
       if (!/^\d{11,15}$/.test(to)) return cevap({ ok: false, hata: 'Alıcının telefon numarası geçersiz' }, 400);
@@ -273,7 +275,18 @@ export default {
     if (g.hata) return cevap(g.hata, 502);
     const r = await fetch('https://graph.facebook.com/v25.0/' + phoneId + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(g.govde) });
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) return cevap({ ok: false, kod: j.error && j.error.code, hata: (j.error && j.error.message) || 'Meta hatasi' }, 502);
+    if (!r.ok) {
+      const kod = j.error && j.error.code, sablon = (h && h.sablon) || env.SABLON_AD;
+      // 24 saat penceresi kapalı: onaylı şablonla tekrar (yalnız metin mesajı; şablon değişkeni satır sonu içeremez)
+      if (kod === 131047 && sablon && !(b.belge && b.belge.base64)) {
+        const param = metin.replace(/\s*\n+\s*/g, ' · ').replace(/[\t ]{4,}/g, '   ').slice(0, 1000);
+        const r2 = await fetch('https://graph.facebook.com/v25.0/' + phoneId + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'template', template: { name: sablon, language: { code: env.SABLON_DIL || 'tr' }, components: [{ type: 'body', parameters: [{ type: 'text', text: param }] }] } }) });
+        const j2 = await r2.json().catch(() => ({}));
+        if (r2.ok) return cevap({ ok: true, id: j2.messages && j2.messages[0] && j2.messages[0].id, sablon: true });
+        return cevap({ ok: false, kod: j2.error && j2.error.code, hata: 'Şablonla da gönderilemedi: ' + ((j2.error && j2.error.message) || 'Meta hatasi') }, 502);
+      }
+      return cevap({ ok: false, kod, hata: (j.error && j.error.message) || 'Meta hatasi' }, 502);
+    }
     return cevap({ ok: true, id: j.messages && j.messages[0] && j.messages[0].id });
   },
 };

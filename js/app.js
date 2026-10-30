@@ -312,6 +312,7 @@ function kursAcEkrani() {
       <label>Kursun adı<input name="kurs" required placeholder="Örn. Sinyal Sürücü Kursu" autocomplete="organization"></label>
       <label>Şehir<input name="sehir" autocomplete="address-level1"></label>
       <label>Adınız soyadınız<input name="ad" required autocomplete="name"></label>
+      <label>Cep telefonunuz <small style="font-weight:400;opacity:.85">yeni kayıt, iptal ve günlük özet WhatsApp’tan buraya gelir</small><input name="tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="05xx xxx xx xx"></label>
       <label>E-posta<input name="eposta" type="email" inputmode="email" autocomplete="username" required></label>
       <label>Şifre (en az 8 karakter)<input name="sifre" type="password" autocomplete="new-password" required minlength="8"></label>
       <label class="giris-onay"><input type="checkbox" name="onay"><span>Verilerin Google Firebase’in Frankfurt (Almanya) sunucusunda saklanacağını okudum. Sinyal şu an pilot aşamasında.</span></label>
@@ -327,7 +328,7 @@ function kursAcEkrani() {
     if (f.sifre.value.length < 8) return bildir('Şifre en az 8 karakter olmalı', 'uyari');
     if (!f.onay.checked) return bildir('Verilerin nerede saklanacağını okuduğunuzu işaretleyin', 'uyari');
     btn.disabled = true; btn.textContent = 'Hesap açılıyor…';
-    B.kursAc({ kursAd: f.kurs.value.trim(), yetkili: f.ad.value.trim(), sehir: f.sehir.value.trim(), eposta: f.eposta.value.trim(), sifre: f.sifre.value })
+    B.kursAc({ kursAd: f.kurs.value.trim(), yetkili: f.ad.value.trim(), sehir: f.sehir.value.trim(), eposta: f.eposta.value.trim(), sifre: f.sifre.value, mudurTel: f.tel.value.trim() })
       .then(u => { bulutOturumu(u, true); bildir('Kurs hesabı açıldı. Önce Ayarlar’dan kurs bilgilerini, sonra öğrenci listenizi ekleyin'); })
       .catch(x => { btn.disabled = false; btn.textContent = 'Kurs hesabını aç'; bildir(B.hataMetni(x), 'uyari'); });
   });

@@ -1,5 +1,5 @@
 import { planlilariGonder } from './mesaj.js?v=101';
-import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, gecikenler, kalanBorc, islem, gonderimEkle, yerelZaman, oturum, kapaliGun, SINIFLAR, risk, selam, kursAdi, bulutKanca } from './veri.js?v=101';
+import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, gecikenler, kalanBorc, islem, gonderimEkle, yerelZaman, oturum, kapaliGun, SINIFLAR, risk, selam, kursAdi, bulutKanca, mudurTel } from './veri.js?v=101';
 import { tl, tamTarih, tarihUzun, saatDe, apiAcik, apiGonder, etiket, bildir, waSirali } from './ui.js?v=101';
 import { denetimSkoru } from './ozellik.js?v=101';
 
@@ -46,7 +46,7 @@ const kural = id => S.otomasyonlar.find(o => o.id === id);
 const doldur = (id, alan) => { alan = { kurs: S.kurs.ad, kursa: kursAdi('e'), kursta: kursAdi('de'), ...alan }; if (alan.kisi && !alan.selam) alan.selam = selam(alan.kisi); return (kural(id) ? kural(id).sablon : '').replace(/\{(\w+)\}/g, (x, a) => alan[a] != null ? alan[a] : ''); };
 const ogr = k => ({ ad: tamAd(k), tel: k.tel, rol: 'ÖĞRENCİ' });
 const hoca = h => ({ ad: h.ad, tel: h.tel, rol: 'HOCA' });
-const mudur = () => ({ ad: S.kurs.yetkili || 'Kurs müdürü', tel: S.kurs.wp || '', rol: 'MÜDÜR' });
+const mudur = () => ({ ad: S.kurs.yetkili || 'Kurs müdürü', tel: mudurTel(), rol: 'MÜDÜR' });
 const odeme = () => S.kurs.iban ? `Havale/EFT için IBAN: ${S.kurs.iban}; ${kursAdi('de')} nakit ya da kartla da ödeyebilirsiniz.` : `${kursAdi('e')} uğrayıp nakit ya da kartla ödeyebilirsiniz.`;
 const TEORIK_SAAT = { aksam: '18:30', sabah: '10:00' };
 
@@ -123,7 +123,8 @@ export async function zamanlayiciCalistir(elle = false) {
         if (bulutKanca.sahiplen && !(await bulutKanca.sahiplen('z|' + x.anahtar + '|' + bugun))) continue;  // öbür cihaz gönderdi; kaydı eşitlemeyle gelir
         const s = await apiGonder(etiket(x.kim.ad, x.kim.rol) + x.metin, undefined, undefined, x.kim);
         z.kayit.unshift({ zaman: yerelZaman(), kural: x.kural, kime: x.kim.ad, rol: x.kim.rol, metin: x.metin, id: s.id || null, durum: s.ok ? 'gönderildi' : 'hata: ' + s.hata });
-        if (!s.ok) break;
+        // gönderilemeyen mesaj öbürlerini durdurmaz; aynı mesaj 3 kez denenince bugünlük bırakılır
+        if (!s.ok) { z.hata = z.hata || {}; z.hata[x.anahtar] = (z.hata[x.anahtar] || 0) + 1; if (z.hata[x.anahtar] >= 3) z.gonderilen[x.anahtar] = bugun; continue; }
         z.gonderilen[x.anahtar] = bugun; z.gunluk = z.gunluk || {}; z.gunluk[bugun + x.kural] = (z.gunluk[bugun + x.kural] || 0) + 1;
         gonderimEkle(x.kim.ad, x.metin, kural(x.kural).ad); kural(x.kural).gonderim++; gonderilen++; etkiUygula(x);
       } else z.kuyruk.push({ ...x, eklendi: yerelZaman() });

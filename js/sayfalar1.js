@@ -1,4 +1,4 @@
-import { S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, risk, BECERI, islem, geriAlNoktasi, oturum, tcGecerli, tcMaskele, DERS_TUR_AD, ek3Sinif, ogretmen, yas, mebOnKontrol, sb, sbDers, sbSinav, kapaliGun, ustaAraci, dersAraci, yerelZaman, aktifSiniflar, satistaSiniflar, YONTEMLER, yontemAd, ayEkle, gecikenTutar, selam, kursAdi, tuketim, beklenenTuketim } from './veri.js?v=101';
+import { S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, risk, BECERI, islem, geriAlNoktasi, oturum, tcGecerli, tcMaskele, DERS_TUR_AD, ek3Sinif, ogretmen, yas, mebOnKontrol, sb, sbDers, sbSinav, kapaliGun, ustaAraci, dersAraci, yerelZaman, aktifSiniflar, satistaSiniflar, YONTEMLER, yontemAd, ayEkle, gecikenTutar, selam, kursAdi, tuketim, beklenenTuketim, mudurTel } from './veri.js?v=101';
 import { e, saatDe, saatE, tl, sayi, ik, rozet, asamaRozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, sekmeler, tarih, tarihUzun, goreli, gunKisa, cubukGrafik, halka, ayAdi, isaret, yonLevhasi, olcumler, aracGorsel, ekranNotu, bugunMetni, fotoKucult, waAc, waSirali, tamTarih, pinSor } from './ui.js?v=101';
 import { yenile } from './app.js?v=101';
 import { denetimEksikleri, sozlesmeImzalat } from './sayfalar3.js?v=101';
@@ -18,7 +18,7 @@ const gecenAyMi = s => { const d = tarihOku(s), g = new Date(BUGUN); g.setDate(1
 // Mesajın gideceği kişi ve numarası (kursiyer, aday, usta ya da kullanıcı)
 const ROL_ETIKET = { mudur: 'MÜDÜR', sekreter: 'ÖN BÜRO', usta: 'HOCA' };
 export const alici = k => {
-  if (k === 'mudur') return { ad: S.kurs.yetkili || 'Kurs müdürü', tel: S.kurs.wp || '', kanal: 'WhatsApp', rol: 'MÜDÜR' };
+  if (k === 'mudur') return { ad: S.kurs.yetkili || 'Kurs müdürü', tel: mudurTel(), kanal: 'WhatsApp', rol: 'MÜDÜR' };
   if (k && typeof k === 'object') return k.siniflar ? { ad: k.ad, tel: k.tel, kanal: 'WhatsApp', rol: 'HOCA' } : { ad: tamAd(k), tel: k.tel, kanal: 'WhatsApp', rol: 'ÖĞRENCİ' };
   const a = S.adaylar.find(x => x.ad === k); if (a) return { ad: a.ad, tel: a.tel, kanal: a.kanal, rol: 'ADAY' };
   const ks = S.kursiyerler.find(x => tamAd(x) === k); if (ks) return { ad: k, tel: ks.tel, kanal: 'WhatsApp', rol: 'ÖĞRENCİ' };
@@ -27,7 +27,7 @@ export const alici = k => {
 };
 // Bir olayın birden çok kişiye bildirimi (ör. ders saati değişti → öğrenci + hoca). API açıksa sessizce gider.
 export function bildirimler(liste, baslik = 'Bildirimler') {
-  const l = liste.filter(x => x && x.kim && x.metin).map(x => { const a = alici(x.kim); return { ad: a.ad, tel: a.tel, rol: a.rol, metin: x.metin, tur: x.tur || baslik }; });
+  const l = liste.filter(x => x && x.kim && x.metin && !(x.kim === 'mudur' && mudurMu() && !x.kendine)).map(x => { const a = alici(x.kim); return { ad: a.ad, tel: a.tel, rol: a.rol, metin: x.metin, tur: x.tur || baslik }; });
   waSirali(l, baslik, { sessiz: true });
 }
 // Elle gönderilen mesaj: WhatsApp kişinin sohbetinde hazır mesajla açılır (Instagram adayında metin kopyalanır, DM kutusu açılır).
@@ -377,9 +377,8 @@ export function kursiyerFormu(on = {}) {
         if (p) S.hareket.unshift({ id: 'h' + Date.now(), tarih: gun(0), tur: 'Gelir', kategori: 'Kurs ücreti', aciklama: tamAd(yeni) + (n ? ' · peşinat' : ' · peşin ödeme'), tutar: p, yontem: f.yontem.value, kursiyer: yeni.id });
         if (on.adayId) { const a = S.adaylar.find(x => x.id === on.adayId); if (a) a.asama = 'Kayıt'; }
         kaydet(); kapatPencere();
-        if (f.hos.checked || f.hesap.checked) HS.karsilama(yeni, { hos: f.hos.checked, hesap: f.hesap.checked }); else bildir('Kayıt oluşturuldu');
         location.hash = '#/kursiyer/' + yeni.id;
-        setTimeout(() => sozlesmeImzalat(yeni), 250);
+        HS.karsilama(yeni, { hos: f.hos.checked, hesap: f.hesap.checked, sonra: () => setTimeout(() => sozlesmeImzalat(yeni), 250) });
       });
     },
   });
@@ -1044,7 +1043,7 @@ export function bosTeklifKabul(tid, kid, kursiyerden = false) {
   islem('Boş saati doldurdu', tamAd(k) + ' · ' + tarih(t.tarih) + ' ' + t.saat); kaydet(); yenile();
   const liste = [{ k, m: `${selam(k)} ${tarihUzun(t.tarih)} ${t.saat} dersiniz ${egitmen(t.egitmen).ad} ile planlandı.` }, ...digerleri.map(o => ({ k: o, m: `${selam(o)} ${tarihUzun(t.tarih)} ${t.saat} saati doldu; bir sonraki boşlukta yine haber vereceğiz.` }))];
     const hoca = egitmen(t.egitmen), hm = `${hoca.ad.split(' ')[0]} Hoca, ${tarihUzun(t.tarih)} ${t.saat} boşalan saatinize ${tamAd(k)} yazıldı.`;
-  if (kursiyerden) { bildirimler([{ kim: hoca, metin: hm, tur: 'Boş saat' }, { kim: 'mudur', metin: `${tamAd(k)} ${tarihUzun(t.tarih)} ${t.saat} boş saat teklifini kabul etti.`, tur: 'Boş saat' }], 'Boş saat doldu'); return bildir('Saat senin; dersin planlandı'); }
+  if (kursiyerden) { bildirimler([...digerleri.map(o => ({ kim: o, metin: `${selam(o)} ${tarihUzun(t.tarih)} ${t.saat} saati doldu; bir sonraki boşlukta yine haber vereceğiz.`, tur: 'Boş saat' })), { kim: hoca, metin: hm, tur: 'Boş saat' }, { kim: 'mudur', metin: `${tamAd(k)} ${tarihUzun(t.tarih)} ${t.saat} boş saat teklifini kabul etti.`, tur: 'Boş saat' }], 'Boş saat doldu'); return bildir('Saat senin; dersin planlandı'); }
   waSirali([...liste.map(x => ({ ad: tamAd(x.k), tel: x.k.tel, rol: 'ÖĞRENCİ', metin: x.m })), { ad: hoca.ad, tel: hoca.tel, rol: 'HOCA', metin: hm }], 'Boş saati doldurdu · bilgilendirme', { sessiz: true });
 }
 // Ek ders teklifi kabul: ücret ödeme planına yeni taksit olarak eklenir.
@@ -1054,6 +1053,8 @@ export function ekDersKabul(k) {
   k.ekDersHakki = (k.ekDersHakki || 0) + t.n; k.ekDersTeklif = null;
   islem('Ek ders teklifi kabul edildi', tamAd(k) + ' · ' + t.n + ' ders · ' + tl(t.tutar)); kaydet();
   bildir(k.ad + ' ' + t.n + ' ek dersi kabul etti; ' + tl(t.tutar) + ' ödeme planına eklendi'); yenile();
+  const h = egitmen(k.egitmen);
+  bildirimler([{ kim: 'mudur', metin: `${tamAd(k)} ${t.n} ek direksiyon dersi teklifini kabul etti; ${tl(t.tutar)} ödeme planına eklendi. Dersleri planlayın.`, tur: 'Ek ders' }, h && { kim: h, metin: `${h.ad.split(' ')[0]} Hoca, ${tamAd(k)} ${t.n} ek direksiyon dersi aldı; dersler planlanınca programınıza eklenecek.`, tur: 'Ek ders' }], 'Ek ders kabul edildi');
 }
 function dersAc(id) {
   const d = S.dersler.find(x => x.id === id); const k = kursiyer(d.kursiyer), eg = egitmen(d.egitmen), ar = arac(d.arac);
