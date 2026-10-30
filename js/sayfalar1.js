@@ -81,13 +81,19 @@ export function genel(alt) {
   ].filter(Boolean);
   const gorusme = ((S.sosyal && S.sosyal.slotlar) || []).filter(x => x.dolu && x.tarih === gun(0)).sort((a, b) => a.saat.localeCompare(b.saat));
   if (gorusme.length) yapilacak.splice(2, 0, ['zorunlu', `${gorusme.length} kayıt görüşmesi bugün`, gorusme.map(x => x.saat + ' ' + x.dolu).join(', '), '#/sosyal/kural', 'Gör']);
+  // önce insanlar ve para (öğrenci, aday, taksit, sınav), sonra kurum işleri; araç uyarıları en sonda tek satırda toplanır
+  const SIRA = [['şifresini unuttu', 0], ['sizi bekliyor', 1], ['kayıt görüşmesi', 1], ['cevap bekliyor', 2], ['taksiti gecikti', 3], ['itiraz', 4], ['sınav hakkı', 4], ['Sınavı ·', 5], ['e-Sınav ·', 5], ['belge', 6], ['evrakı eksik', 7], ['MEBBİS', 8], ['dosyası kapanmadı', 9]];
+  const agirlik = x => x[3] === '#/filo' ? 99 : ((SIRA.find(([s]) => x[1].includes(s)) || [0, 10])[1]);
+  const araclar = yapilacak.filter(x => x[3] === '#/filo');
+  yapilacak.sort((a, b) => agirlik(a) - agirlik(b));
+  if (araclar.length > 1) { yapilacak.splice(yapilacak.length - araclar.length, araclar.length, ['uyari', `Araçlar: ${araclar.length} uyarı`, araclar.map(x => x[1]).join(' · '), '#/filo', 'Gör']); }
   const isD = S.isDurum || (S.isDurum = {}), bugunT = gun(0), anahtar = x => x[3] + '|' + x[1];
   const gorunen = yapilacak.filter(x => { const d = isD[anahtar(x)]; return !d || !((d.durum === 'tamam' && d.tarih === bugunT) || (d.durum === 'ertele' && d.tarih >= bugunT)); });
   const benim = oturum.kullanici && oturum.kullanici.rol === 'sekreter';
   if (benim) gorunen.sort((a, b) => ((isD[anahtar(b)] || {}).durum === 'atandi') - ((isD[anahtar(a)] || {}).durum === 'atandi'));
   const bitenSay = yapilacak.length - gorunen.length;
-  const ilk5 = gorunen.slice(0, 5), kalan = gorunen.slice(5);
-  const isSatir = x => { const [t, b, a, h, f] = x, d = isD[anahtar(x)], key = e(anahtar(x)); return `<li>${isaret(t, 26)}<a href="${h}" style="min-width:0;flex:1"><b style="color:var(--murekkep);font-weight:700;display:block">${e(b)}${d && d.durum === 'atandi' ? ' ' + rozet(e(d.kim) + '’da', 'mor') : ''}</b><small style="color:var(--soluk);font-size:13px">${e(a)}</small></a><span class="is-eylem"><a class="dg ${t === 'dur' ? 'dg-ana' : 'dg-cizgi'} dg-kucuk" href="${h}">${f}</a><button class="dg-ikon is-btn" data-is="tamam" data-key="${key}" title="Tamamlandı" aria-label="Tamamlandı">${ik('tik')}</button><button class="dg-ikon is-btn" data-is="ertele" data-key="${key}" title="Yarına ertele" aria-label="Yarına ertele">${ik('saat')}</button>${benim ? '' : `<button class="dg-ikon is-btn" data-is="ata" data-key="${key}" title="Ön büroya ver" aria-label="Ön büroya ver">${ik('kursiyer')}</button>`}</span></li>`; };
+  const ilk5 = gorunen.slice(0, 4), kalan = gorunen.slice(4);
+  const isSatir = x => { const [t, b, a, h, f] = x, d = isD[anahtar(x)], key = e(anahtar(x)); return `<li>${isaret(t, 26)}<a href="${h}" style="min-width:0;flex:1"><b style="color:var(--murekkep);font-weight:700;display:block">${e(b)}${d && d.durum === 'atandi' ? ' ' + rozet(e(d.kim) + '’da', 'mor') : ''}</b><small style="color:var(--soluk);font-size:13px">${e(a)}</small></a><span class="is-eylem"><a class="dg ${t === 'dur' ? 'dg-ana' : 'dg-cizgi'} dg-kucuk" href="${h}">${f}</a><button class="dg-ikon is-btn" data-is-menu="${key}" data-is-ad="${e(b)}" title="Diğer: tamamlandı, ertele, ön büroya ver" aria-label="Diğer işlemler">${ik('menu')}</button></span></li>`; };
   const kurBitmedi = kurulumAdimlari().filter(x => !x[1]).length;
 
   const aracSerit = sb(S.araclar).map(a => { const d = bugunDers.filter(x => x.arac === a.id), yp = d.filter(x => x.durum === 'Yapıldı').length, simdi = d.find(x => x.durum === 'Planlandı'); return `<a class="kart arac-kart" href="#/filo" style="padding:8px">${aracGorsel(a)}<div style="padding:2px 6px 4px"><b style="display:block;font-family:var(--baslik);font-size:15.5px;color:var(--murekkep)">${e((egitmen(a.egitmen) || { ad: 'Havuz aracı' }).ad)}</b><span style="font-size:13.5px">${d.length ? `${yp}/${d.length} ders${simdi ? ' · sıradaki ' + simdi.saat : ' · bitti'}` : 'Bugün ders yok'}</span>${ilerleme(yp, Math.max(1, d.length), 'yesil')}</div></a>`; }).join('');
@@ -102,7 +108,7 @@ export function genel(alt) {
   return {
     baslik: 'Genel bakış',
     html: `
-    ${kurBitmedi && oturum.kullanici && oturum.kullanici.rol === 'mudur' ? `<a class="kurulum-serit" href="#/kurulum">${isaret('zorunlu', 22)}<span>Kurulumda <b>${kurBitmedi} adım</b> kaldı. Kalanların çoğunu biz yapıyoruz.</span><span class="dg dg-cizgi dg-kucuk">Kuruluma git</span></a>` : ''}
+    ${kurBitmedi && S._bulut && oturum.kullanici && oturum.kullanici.rol === 'mudur' ? `<a class="kurulum-serit" href="#/kurulum">${isaret('zorunlu', 22)}<span>Kurulumda <b>${kurBitmedi} adım</b> kaldı. Kalanların çoğunu biz yapıyoruz.</span><span class="dg dg-cizgi dg-kucuk">Kuruluma git</span></a>` : ''}
     <div class="izgara iz-21">
       <div class="kart bugun-kart"><div class="kart-bas"><h3>Bugün yapılacaklar</h3><small>${gorunen.length ? 'Önem sırasıyla' : ''}${bitenSay ? ' · ' + bitenSay + ' iş tamamlandı ya da ertelendi' : ''}</small></div>
         <ul class="liste" style="margin-top:8px">${ilk5.map(isSatir).join('') || '<li>' + bos('Her şey yolunda', 'Bugün sizi bekleyen iş yok.') + '</li>'}</ul>
@@ -139,9 +145,13 @@ export function genel(alt) {
     </details>`,
     baglan(k) {
       if (alt === 'evrak') { history.replaceState(null, '', '#/genel'); import('./evrak.js?v=101').then(m => m.sahipsizPencere(yenile)); }
+      const onburo = () => ((S.kullanicilar || []).find(u => u.rol === 'sekreter') || {}).ad || 'Ön büro';
+      const isIsle = b => { const key = b.dataset.key, ad = { tamam: 'Tamamlandı', ertele: 'Yarına ertelendi', ata: 'Ön büroya verildi' }[b.dataset.is]; S.isDurum[key] = b.dataset.is === 'tamam' ? { durum: 'tamam', tarih: gun(0) } : b.dataset.is === 'ertele' ? { durum: 'ertele', tarih: gun(1) } : { durum: 'atandi', tarih: gun(0), kim: onburo() }; islem('Görev: ' + ad, key.split('|')[1]); kaydet(); bildir(ad); yenile(); };
       k.addEventListener('click', ev => {
+        const im = ev.target.closest('[data-is-menu]');
+        if (im) { ev.preventDefault(); const key = im.dataset.isMenu; return pencere({ baslik: im.dataset.isAd, icerik: `<div class="eg-menu">${[['tamam', 'tik', 'Tamamlandı', 'Bugünlük listeden kalkar'], ['ertele', 'saat', 'Yarına ertele', 'Yarın yeniden çıkar'], ...(benim ? [] : [['ata', 'kursiyer', 'Ön büroya ver', 'Ön büronun listesinde en üstte görünür']])].map(([d, i, t, a]) => `<button class="eg-menu-sat" data-is="${d}" data-key="${e(key)}">${ik(i)}<span><b>${t}</b><small>${a}</small></span></button>`).join('')}</div>`, onAc(p) { p.addEventListener('click', ev2 => { const b2 = ev2.target.closest('[data-is]'); if (b2) { kapatPencere(); isIsle(b2); } }); } }); }
         const b = ev.target.closest('[data-is]');
-        if (b) { ev.preventDefault(); const key = b.dataset.key, ad = { tamam: 'Tamamlandı', ertele: 'Yarına ertelendi', ata: 'Ön büroya verildi' }[b.dataset.is]; S.isDurum[key] = b.dataset.is === 'tamam' ? { durum: 'tamam', tarih: gun(0) } : b.dataset.is === 'ertele' ? { durum: 'ertele', tarih: gun(1) } : { durum: 'atandi', tarih: gun(0), kim: 'Selda Korkmaz' }; islem('Görev: ' + ad, key.split('|')[1]); kaydet(); bildir(ad); yenile(); return; }
+        if (b) { ev.preventDefault(); return isIsle(b); }
         if (ev.target.closest('[data-aksam-onizle]')) {
           const metin = aksamOzeti();
           pencere({ baslik: 'Akşam özeti · önizleme', icerik: `<div class="balon giden" style="max-width:100%;white-space:pre-line">${e(metin)}</div><p style="font-size:13px;color:var(--soluk);margin-top:10px">Kurs müdürünün telefonuna her akşam 19:00’da bu biçimde gelir.</p>` });
