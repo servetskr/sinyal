@@ -2,9 +2,9 @@
 // gelir; öğrenci hangi davranışın sınavı bitirdiğini (kırmızı) ya da iki kez yapılınca bitirdiğini (sarı) görür. Geri park (EK-13),
 // L dönüşü (EK-19) ve dar alanda geri dönüş (EK-20) yönetmelikteki ölçülerle çizilip adım adım oynatılır.
 // Kural: sınav alanına konan kolaylaştırıcı işaretlere dayalı tarif verilmez (MTSK Yön. md.26/9); anlatım ayna, sinyal ve ölçüyle.
-import { S, kaydet, gun, motorSinif, SINIFLAR, ogrOzellik } from './veri.js?v=95';
-import { e, ik, pencere, rozet, tarih } from './ui.js?v=95';
-import { EK3, EK4 } from './formlar.js?v=95';
+import { S, kaydet, gun, motorSinif, ek3Sinif, SINIFLAR, ogrOzellik } from './veri.js?v=96';
+import { e, ik, pencere, rozet, tarih } from './ui.js?v=96';
+import { EK3, EK4 } from './formlar.js?v=96';
 
 const RENK_AD = { m: 'Mavi', s: 'Sarı', k: 'Kırmızı' };
 const KAYNAK_HATA = 'MEB verisi: Mart 2018–Mart 2019, 76.491 aday, 898.618 hata (Hatipoğlu, 2020)';
@@ -31,7 +31,7 @@ const EK = {
 };
 const bolumNo = bas => { const m = /^(\d+)\./.exec(bas); return m ? +m[1] : null; };
 function bolumler(k) {
-  const motor = motorSinif(k.sinif), f = motor ? EK3 : EK4, romorkSinif = /E$/.test(k.sinif);
+  const motor = ek3Sinif(k.sinif), f = motor ? EK3 : EK4, romorkSinif = /E$/.test(k.sinif);
   return f.map(([bol, bas, l], i) => {
     const no = bol === 'I' ? 'I' : bolumNo(bas), ek = motor ? {} : (EK[no] || {});
     const ad = ek.ad || bas.replace(/^\d+\.\s*/, '').replace(/\s*\(.*\)\s*$/, '').toLocaleLowerCase('tr').replace(/^./, c => c.toLocaleUpperCase('tr'));
@@ -128,8 +128,8 @@ export function direksiyonAc(k, id, yenile) {
     altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-dir-tamam>${cal[id] ? 'Çalıştım ✓' : 'Çalıştım'}</button>`,
     onAc(p) {
       if (ek.sema) semaBagla(p, ek.sema);
-      const iz = p.querySelector('[data-ikaz]'); if (iz) iz.addEventListener('click', () => import('./ikaz.js?v=95').then(m => m.ikazAc()));
-      const db = p.querySelector('[data-debriyaj]'); if (db) db.addEventListener('click', () => import('./motor.js?v=95').then(m => m.debriyajAc()));
+      const iz = p.querySelector('[data-ikaz]'); if (iz) iz.addEventListener('click', () => import('./ikaz.js?v=96').then(m => m.ikazAc()));
+      const db = p.querySelector('[data-debriyaj]'); if (db) db.addEventListener('click', () => import('./motor.js?v=96').then(m => m.debriyajAc()));
       p.querySelector('[data-dir-tamam]').addEventListener('click', () => { k.dirCalisma = { ...(k.dirCalisma || {}), [id]: gun(0) }; kaydet(); p.querySelector('[data-kapat]').click(); if (yenile) yenile(); });
     },
   });

@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet } from './veri.js?v=95';
+import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet } from './veri.js?v=96';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -175,26 +175,6 @@ export function belgeYazdir(html, baslik = 'Belge') {
   const d = f.contentDocument; d.open(); d.write(`<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>${e(baslik)}</title><style>${A4_CSS}${html.includes('data-yatay') ? '@page{size:A4 landscape}' : ''}</style></head><body>${html}</body></html>`); d.close();
   const imgs = [...d.images].filter(i => !i.complete).map(i => new Promise(r => { i.onload = i.onerror = r; }));
   return Promise.all(imgs).then(() => { f.contentWindow.focus(); f.contentWindow.print(); setTimeout(() => f.remove(), 1000); });
-}
-// Kart formu: numara (Luhn), son kullanma (gelecekte), CVC. Kart bilgisi kursta saklanmaz; POS'a gider.
-export const kartFormu = () => `<div class="form-izgara kart-formu"><div class="alan tam"><label for="k-no">Kart numarası</label><input id="k-no" name="kno" inputmode="numeric" autocomplete="cc-number" placeholder="0000 0000 0000 0000" maxlength="23"></div>
-  <div class="alan tam"><label for="k-sahip">Kart üzerindeki ad</label><input id="k-sahip" name="ksahip" autocomplete="cc-name"></div>
-  <div class="alan"><label for="k-skt">Son kullanma</label><input id="k-skt" name="kskt" inputmode="numeric" autocomplete="cc-exp" placeholder="AA/YY" maxlength="5"></div><div class="alan"><label for="k-cvc">CVC</label><input id="k-cvc" name="kcvc" inputmode="numeric" autocomplete="cc-csc" placeholder="•••" maxlength="4"></div></div>
-  <p class="ipucu" style="margin-top:10px">${ik('kilit')}<span>Ödeme bankanın 3D Secure sayfasında onaylanır; kart bilgisi kursta saklanmaz.</span></p>`;
-export function kartBagla(kok) {
-  const no = kok.querySelector('[name=kno]'), skt = kok.querySelector('[name=kskt]');
-  no.addEventListener('input', () => { no.value = no.value.replace(/\D/g, '').slice(0, 19).replace(/(\d{4})(?=\d)/g, '$1 '); });
-  skt.addEventListener('input', () => { const v = skt.value.replace(/\D/g, '').slice(0, 4); skt.value = v.length > 2 ? v.slice(0, 2) + '/' + v.slice(2) : v; });
-}
-export function kartDogrula(kok) {
-  const n = kok.querySelector('[name=kno]').value.replace(/\D/g, ''), [aa, yy] = kok.querySelector('[name=kskt]').value.split('/').map(Number), cvc = kok.querySelector('[name=kcvc]').value.replace(/\D/g, ''), sahip = kok.querySelector('[name=ksahip]').value.trim();
-  let t = 0; n.split('').reverse().forEach((c, i) => { let d = +c; if (i % 2) { d *= 2; if (d > 9) d -= 9; } t += d; });
-  if (n.length < 15 || t % 10) return { hata: 'Kart numarası geçerli değil' };
-  if (sahip.length < 3) return { hata: 'Kart üzerindeki adı yazın' };
-  const simdi = new Date(), sonAy = new Date(2000 + (yy || 0), aa || 0, 1);
-  if (!aa || aa > 12 || !yy || sonAy <= new Date(simdi.getFullYear(), simdi.getMonth(), 1)) return { hata: 'Son kullanma tarihi geçerli değil' };
-  if (!/^\d{3,4}$/.test(cvc)) return { hata: 'CVC 3 ya da 4 hane olmalı' };
-  return { son4: n.slice(-4) };
 }
 // --- Gerçek WhatsApp: sohbet hazır mesajla açılır, gönderme tuşuna kullanıcı basar ---
 export function waNumara(tel) { let n = String(tel || '').replace(/\D/g, ''); if (n.startsWith('0')) n = '90' + n.slice(1); else if (n.length === 10 && n.startsWith('5')) n = '90' + n; return n.length >= 12 ? n : ''; }
@@ -429,7 +409,7 @@ function sifreSor(neden, ok) {
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Onayla</button>`,
     onAc(d) {
       const inp = d.querySelector('[data-sifre-tekrar]'), btn = d.querySelector('[data-k]');
-      const dene = () => { btn.disabled = true; import('./bulut.js?v=95').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
+      const dene = () => { btn.disabled = true; import('./bulut.js?v=96').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
       btn.addEventListener('click', dene); inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') dene(); }); setTimeout(() => inp.focus(), 50);
     },
   });
