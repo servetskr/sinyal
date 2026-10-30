@@ -69,7 +69,7 @@ function bulutGuvenlik(g) {
     <div class="kart"><div class="kart-bas"><h3>Giriş</h3></div><ul class="liste" style="margin-top:8px">
       ${satir('tamam', 'Herkese ayrı e-posta ve şifre', 'Şifreler Google’ın giriş sisteminde tutulur; Sinyal şifreyi görmez. Çok sayıda hatalı denemede giriş geçici olarak kilitlenir.')}
       <li style="align-items:flex-start"><span class="anahtar" style="margin-top:2px"><input type="checkbox" data-guv="hassasOnay" ${g.hassasOnay ? 'checked' : ''} aria-label="Hassas işlemde şifreyi tekrar sor"><i></i></span><div><b style="color:var(--murekkep);display:block">Hassas işlemde şifreyi tekrar sor</b><small style="color:var(--metin);font-size:13.5px">TC’yi tam göstermek, iade yapmak, kullanıcı kaldırmak ve yedekten geri dönmek için.</small></div></li>
-      ${satir('bilgi', 'İki adımlı giriş · henüz yok', 'Telefona doğrulama kodu ücretli Google planıyla açılabiliyor; şu an kapalı.')}
+      <li style="align-items:flex-start" data-iki-adim>${isaret('bilgi', 22)}<div><b style="color:var(--murekkep);display:block">İki adımlı giriş</b><small style="color:var(--metin);font-size:13.5px">Durum yükleniyor…</small></div></li>
     </ul><div class="kart-govde" style="border-top:1px solid var(--cizgi-2)"><b style="color:var(--murekkep)">Hareketsiz kalınca oturumu kapat</b><div class="secim" style="margin-top:8px">${[15, 30, 60, 240].map(d => `<label><input type="radio" name="oturum" value="${d}" data-oturum ${g.oturumDk == d ? 'checked' : ''}><span>${d < 60 ? d + ' dk' : d / 60 + ' saat'}</span></label>`).join('')}</div></div></div>
     <div class="kart"><div class="kart-bas"><h3>Yedekler</h3><small>Her gün ilk açılışta otomatik</small>${mudur ? `<div class="sag"><button class="dg dg-cizgi dg-kucuk" data-yedek-al>${ik('indir')}Şimdi yedek al</button></div>` : ''}</div>
       <div class="kart-govde"><p style="font-size:14px">Kursun bütün kayıtlarının günlük kopyası iki ayrı yerde 30 gün saklanır: Google Firebase’de ve Cloudflare’de. Yedekler değiştirilemez; 30 günden önce kimse silemez.</p></div>
@@ -77,6 +77,33 @@ function bulutGuvenlik(g) {
   </div>
   <div class="ara-bosluk"></div>
   <div class="kart"><div class="kart-bas"><h3>İşlem kaydı</h3></div><div class="kart-govde"><p style="font-size:14px">Giriş, çıkış ve her değişiklik kim yaptı, ne zaman yaptı bilgisiyle sunucuya yazılır. Bu kayıt yalnız eklenebilir: kurs müdürü dahil kimse değiştiremez ya da silemez. <a href="#/ayarlar/gecmis" style="color:var(--levha);font-weight:700">İşlem geçmişini aç</a></p></div></div>`;
+}
+// İki adımlı giriş satırı: kendi hesabınız için doğrulama uygulamasını açar/kapatır
+function ikiAdimSatiri(k) {
+  const yer = k.querySelector('[data-iki-adim]'); if (!yer) return;
+  B.ikiAdimDurum().then(acik => {
+    yer.innerHTML = `${isaret(acik ? 'tamam' : 'bilgi', 22)}<div style="flex:1"><b style="color:var(--murekkep);display:block">İki adımlı giriş · ${acik ? 'açık' : 'kapalı'}</b><small style="color:var(--metin);font-size:13.5px">${acik ? 'Girişte şifreden sonra telefonunuzdaki doğrulama uygulamasının kodu istenir.' : 'Şifreye ek olarak telefonunuzdaki doğrulama uygulamasından (Google Authenticator vb.) kod istenir. Müdür ve ön büro için önerilir. Her kişi kendi hesabında açar.'}</small></div><button class="dg ${acik ? 'dg-cizgi' : 'dg-ana'} dg-kucuk" ${acik ? 'data-iki-kapat' : 'data-iki-ac'}>${acik ? 'Kapat' : 'Aç'}</button>`;
+  }).catch(() => { yer.querySelector('small').textContent = 'Durum okunamadı'; });
+}
+const qrYukle = () => window.QRCode ? Promise.resolve() : new Promise((ok, red) => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'; sc.onload = ok; sc.onerror = () => red(new Error('QR aracı yüklenemedi')); document.head.appendChild(sc); });
+function ikiAdimKur() {
+  B.ikiAdimBaslat().then(g => {
+    pencere({
+      baslik: 'İki adımlı girişi aç',
+      icerik: `<ol style="font-size:14px;padding-left:18px;display:grid;gap:6px"><li>Telefonunuza Google Authenticator ya da Microsoft Authenticator kurun.</li><li>Uygulamada “QR kod tara”yı seçip aşağıdaki kodu okutun. Okutamıyorsanız anahtarı elle girin.</li><li>Uygulamada Sinyal için görünen 6 haneli kodu yazın.</li></ol>
+        <div data-qr style="display:flex;justify-content:center;margin:14px 0"></div><p style="text-align:center;font-size:13px;color:var(--soluk)">Anahtar: <span class="mono" style="user-select:all">${e(g.anahtar)}</span> · <a href="${e(g.url)}" style="color:var(--levha)">telefonda aç</a></p>
+        <input class="girdi" data-iki-kod inputmode="numeric" maxlength="6" autocomplete="one-time-code" aria-label="Doğrulama kodu" placeholder="6 haneli kod" style="font-size:20px;letter-spacing:5px;text-align:center;margin-top:10px;width:100%">`,
+      altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-iki-onay>Aç</button>',
+      onAc(d) {
+        qrYukle().then(() => new window.QRCode(d.querySelector('[data-qr]'), { text: g.url, width: 180, height: 180 })).catch(() => { });
+        d.querySelector('[data-iki-onay]').addEventListener('click', ev => {
+          const kod = d.querySelector('[data-iki-kod]').value.replace(/\D/g, ''); if (kod.length !== 6) return bildir('6 haneli kodu girin', 'uyari');
+          ev.target.disabled = true;
+          g.bitir(kod).then(() => { islem('İki adımlı girişi açtı'); kaydet(); kapatPencere(); bildir('İki adımlı giriş açıldı'); yenile(); }).catch(x => { ev.target.disabled = false; bildir(B.hataMetni(x), 'uyari'); });
+        });
+      },
+    });
+  }).catch(x => { if (x.code === 'auth/unverified-email') B.epostaDogrula().catch(() => { }); bildir(B.hataMetni(x), 'uyari'); });
 }
 function yedekListesi(k) {
   const yer = k.querySelector('[data-yedek-liste]'); if (!yer) return;
@@ -465,7 +492,7 @@ function sozlesmeSekme() {
 }
 export const AYAR_SEKMELERI = { kullanici: kullaniciSekme, sozlesme: sozlesmeSekme, subeler: subelerSekme, kurallar: kurallarSekme, guvenlik: guvenlikSekme, entegrasyon: entegrasyonSekme, aktarim: aktarimSekme, gorunum: gorunumSekme };
 export function ayarBaglan(k) {
-  davetListesi(k); yedekListesi(k); sunucuKaydi(k);
+  davetListesi(k); yedekListesi(k); sunucuKaydi(k); if (B.bulutta()) ikiAdimSatiri(k);
   k.addEventListener('change', ev => {
     const t = ev.target;
     if (t.matches('[data-uye-rol]')) { const u = S.kullanicilar.find(x => x.id === t.dataset.uyeRol); B.uyeGuncelle(u.id, { rol: t.value }).then(() => { islem('Rol değiştirdi', u.ad + ' · ' + ROL[t.value]); kaydet(); bildir(u.ad + ' artık ' + ROL[t.value]); }).catch(x => { bildir(B.hataMetni(x), 'uyari'); yenile(); }); return; }
@@ -494,6 +521,8 @@ export function ayarBaglan(k) {
     const t = ev.target;
     if (t.closest('[data-kul-ekle]')) return kullaniciFormu();
     if (t.closest('[data-davet]')) return davetFormu();
+    if (t.closest('[data-iki-ac]')) return ikiAdimKur();
+    if (t.closest('[data-iki-kapat]')) { pinSor('İki adımlı girişi kapatmak için şifrenizi girin').then(ok => ok && B.ikiAdimKapat().then(() => { islem('İki adımlı girişi kapattı'); kaydet(); bildir('İki adımlı giriş kapatıldı'); yenile(); }).catch(x => bildir(B.hataMetni(x), 'uyari'))); return; }
     if (t.closest('[data-yedek-al]')) { const b = t.closest('[data-yedek-al]'); b.disabled = true; B.yedekAl('elle').then(() => { islem('Elle yedek aldı'); kaydet(); bildir('Yedek alındı'); yedekListesi(k); }).catch(x => bildir(B.hataMetni(x), 'uyari')).finally(() => { b.disabled = false; }); return; }
     const yi = t.closest('[data-yedek-indir]'); if (yi) { const y = yedekCache.find(x => x.id === yi.dataset.yedekIndir); yi.disabled = true; B.yedekOku(y).then(v => { B.yedekIndir(v, 'sinyal-yedek-' + y.id + '.json'); islem('Yedek indirdi', y.id); kaydet(); }).catch(x => bildir(B.hataMetni(x), 'uyari')).finally(() => { yi.disabled = false; }); return; }
     const yd = t.closest('[data-yedek-don]'); if (yd) { const y = yedekCache.find(x => x.id === yd.dataset.yedekDon); return pencere({ baslik: tarih(y.tarih) + ' yedeğine dönülsün mü?', icerik: `<p>Bütün kayıtlar (öğrenciler, dersler, kasa, ayarlar) bu yedekteki hâline döner. Yedekten sonra girilen kayıtlar kaybolur.</p><p style="margin-top:8px">Dönmeden önce şimdiki hâlin de yedeği alınır; yanlışlıkla döndüyseniz o yedekle geri gelebilirsiniz.</p>`, altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Bu ana dön</button>', onAc(d) { d.querySelector('[data-k]').addEventListener('click', () => pinSor('Yedekten geri dönmek').then(onay => { if (!onay) return; const b = d.querySelector('[data-k]'); if (b) b.disabled = true; bildir('Yedek okunuyor ve geri yükleniyor…'); B.geriYukle(y).then(() => { kapatPencere(); bildir(tarih(y.tarih) + ' yedeğine dönüldü'); yenile(); }).catch(x => bildir(B.hataMetni(x), 'uyari')); })); } }); }

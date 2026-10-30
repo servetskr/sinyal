@@ -186,6 +186,21 @@ window.addEventListener('hashchange', () => { if (imzaLinki()) return imzaSayfas
 
 // QR’dan gelen ilk sayfa index.html’de hazır durur (beklemeden görünsün); sonradan dönmek için saklanır
 const TANITIM = (() => { const t = document.getElementById('tanitim'); return t ? t.outerHTML : ''; })();
+// İki adımlı giriş: doğrulama uygulamasındaki 6 haneli kodu ister (pencere kapatılırsa null döner)
+const kodSor = () => new Promise(coz => {
+  let bitti = false;
+  pencere({
+    baslik: 'Doğrulama kodu',
+    icerik: `<p style="font-size:14.5px">Telefonunuzdaki doğrulama uygulamasında (Google Authenticator, Microsoft Authenticator vb.) Sinyal için görünen 6 haneli kodu girin.</p><input class="girdi" data-kod inputmode="numeric" maxlength="6" autocomplete="one-time-code" aria-label="Doğrulama kodu" style="font-size:22px;letter-spacing:6px;text-align:center;margin-top:12px;width:100%">`,
+    altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-kod-tamam>Devam</button>',
+    onAc(d) {
+      const i = d.querySelector('[data-kod]'); i.focus();
+      const tamam = () => { const v = i.value.replace(/\D/g, ''); if (v.length !== 6) return bildir('6 haneli kodu girin', 'uyari'); bitti = true; kapatPencere(); coz(v); };
+      d.querySelector('[data-kod-tamam]').addEventListener('click', tamam); i.addEventListener('keydown', ev => { if (ev.key === 'Enter') tamam(); });
+      const izle = setInterval(() => { if (!d.isConnected) { clearInterval(izle); if (!bitti) coz(null); } }, 300);
+    },
+  });
+});
 function demoyaGir() {
   const u = S.kullanicilar.find(x => x.rol === 'mudur') || { id: 'u1', ad: 'Kurs müdürü' };
   oturum.kullanici = { id: u.id, ad: u.ad, rol: 'mudur', ziyaretci: true };
@@ -234,7 +249,7 @@ function girisEkrani(mod = 'tanitim') {
     if (!/^\S+@\S+\.\S+$/.test(f.eposta.value.trim())) return bildir('E-posta adresini kontrol edin', 'uyari');
     if (!f.sifre.value) return bildir('Şifrenizi girin', 'uyari');
     btn.disabled = true; btn.textContent = 'Giriliyor…';
-    B.girisYap(f.eposta.value, f.sifre.value).then(u => bulutOturumu(u, true)).catch(x => { btn.disabled = false; btn.textContent = 'Giriş yap'; bildir(B.hataMetni(x), 'uyari'); });
+    B.girisYap(f.eposta.value, f.sifre.value, kodSor).then(u => bulutOturumu(u, true)).catch(x => { btn.disabled = false; btn.textContent = 'Giriş yap'; bildir(B.hataMetni(x), 'uyari'); });
   });
   kok.querySelectorAll('[data-kim]').forEach(b => b.addEventListener('click', () => { secilen = S.kullanicilar.find(u => u.id === b.dataset.kim); kok.querySelectorAll('[data-kim]').forEach(x => x.classList.toggle('secili', x === b)); const f = kok.querySelector('.giris-pin'); f.hidden = false; f.querySelector('input').value = ''; f.querySelector('input').focus(); }));
   kok.querySelector('.giris-pin').addEventListener('submit', ev => {

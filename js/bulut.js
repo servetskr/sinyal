@@ -32,7 +32,8 @@ const HATA = {
   'auth/invalid-credential': 'E-posta ya da şifre hatalı', 'auth/wrong-password': 'E-posta ya da şifre hatalı', 'auth/user-not-found': 'Bu e-postayla açılmış hesap yok',
   'auth/invalid-email': 'E-posta adresi geçersiz', 'auth/email-already-in-use': 'Bu e-postayla zaten hesap var; giriş yapın', 'auth/weak-password': 'Şifre en az 8 karakter olmalı',
   'auth/too-many-requests': 'Çok fazla deneme yapıldı; birkaç dakika sonra tekrar deneyin', 'auth/network-request-failed': 'İnternet bağlantısı yok', 'permission-denied': 'Bu işlem için yetkiniz yok',
-  'auth/missing-password': 'Şifre girin', 'auth/requires-recent-login': 'Güvenlik için tekrar giriş yapın',
+  'auth/missing-password': 'Şifre girin', 'auth/requires-recent-login': 'Güvenlik için çıkış yapıp tekrar giriş yapın, sonra yeniden deneyin',
+  'auth/invalid-verification-code': 'Doğrulama kodu hatalı', 'auth/operation-not-allowed': 'İki adımlı giriş bu Sinyal kurulumunda henüz açılmadı; Sinyal ekibine yazın', 'auth/unverified-email': 'Önce e-posta adresinizi doğrulayın (gelen kutunuza doğrulama linki gönderildi)',
 };
 export const hataMetni = x => HATA[x && x.code] || (x && x.kullanici) || 'İşlem tamamlanamadı; bağlantınızı kontrol edip tekrar deneyin';
 const hata = m => Object.assign(new Error(m), { kullanici: m });
@@ -47,17 +48,39 @@ async function uyelikBul(user) {
   const d = u.data();
   return { kurs, uid: user.uid, ad: d.ad || user.displayName || user.email, rol: d.rol, usta: d.usta || null, eposta: user.email };
 }
-export async function girisYap(eposta, sifre) {
+// kodSor: iki adımlı giriş açıksa doğrulama uygulamasındaki 6 haneli kodu isteyen fonksiyon (Promise<string|null>)
+export async function girisYap(eposta, sifre, kodSor) {
   const { auth, A } = await sdk();
-  const c = await A.signInWithEmailAndPassword(auth, eposta.trim(), sifre);
+  let c;
+  try { c = await A.signInWithEmailAndPassword(auth, eposta.trim(), sifre); }
+  catch (x) {
+    if (x.code !== 'auth/multi-factor-auth-required' || !kodSor) throw x;
+    const r = A.getMultiFactorResolver(auth, x), ipucu = r.hints.find(h => h.factorId === A.TotpMultiFactorGenerator.FACTOR_ID);
+    if (!ipucu) throw x;
+    for (;;) {
+      const kod = await kodSor(); if (!kod) throw hata('Giriş iptal edildi');
+      try { c = await r.resolveSignIn(A.TotpMultiFactorGenerator.assertionForSignIn(ipucu.uid, kod)); break; }
+      catch (y) { if (y.code !== 'auth/invalid-verification-code') throw y; }
+    }
+  }
   const u = await uyelikBul(c.user);
   if (!u) { await A.signOut(auth); throw hata('Bu hesap bir kursa bağlı değil. Kurs müdürünüzden davet linki isteyin ya da yeni kurs hesabı açın'); }
   return baglan(u);
 }
+// İki adımlı giriş (doğrulama uygulaması / TOTP). Firebase projesinde Identity Platform ve TOTP açık olmalı.
+export async function ikiAdimDurum() { const { auth, A } = await sdk(); return A.multiFactor(auth.currentUser).enrolledFactors.some(f => f.factorId === A.TotpMultiFactorGenerator.FACTOR_ID); }
+export async function ikiAdimBaslat() {
+  const { auth, A } = await sdk();
+  const oturum = await A.multiFactor(auth.currentUser).getSession();
+  const gizli = await A.TotpMultiFactorGenerator.generateSecret(oturum);
+  return { anahtar: gizli.secretKey, url: gizli.generateQrCodeUrl(auth.currentUser.email, 'Sinyal'), bitir: kod => A.multiFactor(auth.currentUser).enroll(A.TotpMultiFactorGenerator.assertionForEnrollment(gizli, kod), 'Doğrulama uygulaması') };
+}
+export async function epostaDogrula() { const { auth, A } = await sdk(); await A.sendEmailVerification(auth.currentUser); }
+export async function ikiAdimKapat() { const { auth, A } = await sdk(); const m = A.multiFactor(auth.currentUser), f = m.enrolledFactors.find(x => x.factorId === A.TotpMultiFactorGenerator.FACTOR_ID); if (f) await m.unenroll(f); }
 export async function sifreSifirla(eposta) { const { auth, A } = await sdk(); await A.sendPasswordResetEmail(auth, eposta.trim()); }
 export async function sifreDogrula(sifre) {
   const { auth, A } = await sdk();
-  try { await A.reauthenticateWithCredential(auth.currentUser, A.EmailAuthProvider.credential(auth.currentUser.email, sifre)); return true; } catch (x) { return false; }
+  try { await A.reauthenticateWithCredential(auth.currentUser, A.EmailAuthProvider.credential(auth.currentUser.email, sifre)); return true; } catch (x) { return x.code === 'auth/multi-factor-auth-required'; }  // iki adımlı hesapta şifre doğruysa ikinci adım istenir
 }
 export async function cikisYap() {
   try { await akit(); } catch (x) { }
