@@ -375,6 +375,9 @@ h1,h2,h3,h4{color:var(--murekkep);font-family:var(--baslik);font-weight:800;line
 .bilgi-tablo dt{color:var(--soluk)}
 .bilgi-tablo dd{color:var(--murekkep);font-weight:700}
 .evrak{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--cizgi-2)}
+.evrak{flex-wrap:wrap;row-gap:8px}
+.evrak>span[style*="flex:1"]{min-width:min(100%,200px)}
+.evrak>.dg,.evrak>img{flex:none}
 .evrak:first-child{border-top:0}
 .evrak .durum{width:22px;height:22px;border-radius:4px;display:grid;place-items:center;flex:none}
 .evrak .durum.var{background:var(--yesil);color:#fff}
