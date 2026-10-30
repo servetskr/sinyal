@@ -123,7 +123,9 @@ export default {
       if (b.sil) { if (h) await env.LINK.delete('hatno:' + h.phoneId); await env.LINK.delete('hat:' + kursId); return cevap({ ok: true, bagli: false }); }
       const phoneId = rakam(b.phoneId), token = String(b.token || '').trim();
       if (!phoneId || token.length < 20) return cevap({ ok: false, hata: 'Telefon numarası kimliği ve erişim anahtarı gerekli' }, 400);
-      if ([env.PHONE_ID, env.PHONE_ID_USTA, env.PHONE_ID_MUDUR].filter(Boolean).map(rakam).includes(phoneId)) return cevap({ ok: false, hata: 'Bu, Sinyal demo hattı; kursun kendi hattını girin' }, 400);
+      // DEMO_HAT_KURSLAR (virgülle kurs kimlikleri): Sinyal'in kendi deneme kursları demo hattını gönderim için bağlayabilir; gelen mesajlar yine demoya gider
+      const demoIzin = String(env.DEMO_HAT_KURSLAR || '').split(',').map(s => s.trim()).filter(Boolean).includes(kursId);
+      if (!demoIzin && [env.PHONE_ID, env.PHONE_ID_USTA, env.PHONE_ID_MUDUR].filter(Boolean).map(rakam).includes(phoneId)) return cevap({ ok: false, hata: 'Bu, Sinyal demo hattı; kursun kendi hattını girin' }, 400);
       const sahip = await env.LINK.get('hatno:' + phoneId);
       if (sahip && sahip !== kursId) return cevap({ ok: false, hata: 'Bu hat başka bir kursa bağlı' }, 409);
       const r = await fetch('https://graph.facebook.com/v25.0/' + phoneId + '?fields=display_phone_number,verified_name', { headers: { Authorization: 'Bearer ' + token } });
