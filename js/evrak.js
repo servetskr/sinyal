@@ -1,7 +1,7 @@
 // WhatsApp'tan gelen evrak: öğrenci belgenin fotoğrafını ya da PDF'ini kursun numarasına atar; belge doğru öğrencinin
 // dosyasına, doğru başlığa düşer. Okunmayacak kadar bulanıksa işaretlenir, tek tuşla yeniden istenir.
 import { S, kaydet, gun, EVRAKLAR, tamAd, islem, eksikEvrak, gonderimEkle, selam } from './veri.js?v=97';
-import { e, pencere, kapatPencere, bildir, fotoKucult, ik, waIstek } from './ui.js?v=97';
+import { e, pencere, kapatPencere, bildir, fotoKucult, ik, waIstek, waAc, apiAcik } from './ui.js?v=97';
 
 const rakam = x => String(x || '').replace(/\D/g, '');
 const kucuk = s => String(s || '').toLocaleLowerCase('tr');
@@ -66,7 +66,14 @@ export async function evrakGeldi(x) {
   islem('WhatsApp’tan evrak geldi', tamAd(s.k) + ' · ' + turAd(t.key) + (t.tahmin ? ' (tür tahmini)' : '') + ' · ' + s.neden);
   gonderimEkle(S.kurs.ad, tamAd(s.k) + ' “' + turAd(t.key) + '” belgesini WhatsApp’tan gönderdi; kontrol bekliyor', 'Öğrenci evrakı');
   bildir(`${tamAd(s.k)} WhatsApp’tan ${turAd(t.key).toLocaleLowerCase('tr')} gönderdi${b.net != null && b.net < BULANIK_SINIR ? ' · bulanık olabilir' : ''}`, b.net != null && b.net < BULANIK_SINIR ? 'uyari' : 'wp');
-  kaydet(); return true;
+  kaydet();
+  // otomatik gönderim açıksa öğrenciye alındı cevabı ve kalan belgeler (bulanıksa yeniden iste)
+  if (apiAcik()) {
+    const kalan = eksikEvrak(s.k).filter(([x]) => x !== 'sozlesme' && !(s.k.evrakYuklenen || {})[x]).map(([, ad]) => ad.toLocaleLowerCase('tr'));
+    const bulanik = b.net != null && b.net < BULANIK_SINIR;
+    waAc(s.k.tel, bulanik ? `${selam(s.k)} gönderdiğiniz ${turAd(t.key).toLocaleLowerCase('tr')} bulanık görünüyor; yazılar okunacak şekilde, ışıkta yeniden çekip gönderebilir misiniz?` : `${selam(s.k)} ${turAd(t.key).toLocaleLowerCase('tr')} belgeniz alındı, teşekkürler.${kalan.length ? ' Kalan belgeler: ' + kalan.join(', ') + '.' : ' Belgeleriniz tamam; kurs kontrol edip kaydınıza işleyecek.'}`, 'WhatsApp', tamAd(s.k), false, 'ÖĞRENCİ', 'Evrak alındı');
+  }
+  return true;
 }
 
 // Sahibi bulunamayan belgeler: kime ait ve hangi belge olduğunu seçin

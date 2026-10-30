@@ -329,7 +329,7 @@ export function kursiyerFormu(on = {}) {
       <div class="alan"><label for="k-rno">Sağlık raporu no</label><input id="k-rno" name="raporNo" placeholder="Rapordaki numara" autocomplete="off"></div>
       <div class="alan"><label for="k-rtar">Rapor tarihi</label><input id="k-rtar" name="raporTarih" type="date"></div>
       <div class="alan tam"><label for="k-adli">Adli sicil barkodu</label><input id="k-adli" name="adliBarkod" placeholder="e-Devlet belgesinin altındaki barkod numarası" autocomplete="off"></div>
-      <label class="tam" style="display:flex;gap:10px;align-items:center;font-size:14px"><input type="checkbox" name="hos" checked style="width:18px;height:18px"> Hoş geldin mesajı ve ödeme planını WhatsApp’tan gönder</label>
+      <label class="tam" style="display:flex;gap:10px;align-items:center;font-size:14px"><input type="checkbox" name="hos" checked style="width:18px;height:18px"> Hoş geldin, eksik evrak, ödeme planı ve teorik ders mesajlarını WhatsApp’tan gönder; usta öğreticiye haber ver</label>
       <label class="tam" style="display:flex;gap:10px;align-items:center;font-size:14px"><input type="checkbox" name="hesap" checked style="width:18px;height:18px"> Öğrenci hesabı aç; giriş bilgileri WhatsApp’tan gitsin</label>
       <label class="tam" style="display:flex;gap:10px;align-items:flex-start;font-size:14px"><input type="checkbox" name="kvkk" style="width:18px;height:18px;margin-top:2px"> <span>KVKK aydınlatma metni verildi, açık rıza alındı <small style="color:var(--soluk);display:block">Sağlık raporu ve adli sicil özel nitelikli veridir; rıza olmadan kaydedilemez.</small></span></label>
       <div class="tam kart" style="padding:12px 14px"><b class="et" style="display:block;margin-bottom:6px">MEBBİS ön kontrol</b><ul id="k-kontrol" style="list-style:none;display:grid;gap:5px;font-size:13.5px"></ul></div>
@@ -375,9 +375,7 @@ export function kursiyerFormu(on = {}) {
         if (p) S.hareket.unshift({ id: 'h' + Date.now(), tarih: gun(0), tur: 'Gelir', kategori: 'Kurs ücreti', aciklama: tamAd(yeni) + (n ? ' · peşinat' : ' · peşin ödeme'), tutar: p, yontem: f.yontem.value, kursiyer: yeni.id });
         if (on.adayId) { const a = S.adaylar.find(x => x.id === on.adayId); if (a) a.asama = 'Kayıt'; }
         kaydet(); kapatPencere();
-        if (f.hos.checked) { const g = S.gruplar.find(x => x.id === yeni.teorikGrup); wpGonder(yeni, `${selam(yeni)} ${kursAdi('e')} hoş geldiniz. Sınıfınız: ${SINIFLAR[s].ad}.${g ? ` Teorik dersleriniz ${tamTarih(g.baslangic)} tarihinde ${g.ad.toLocaleLowerCase('tr')} ile başlıyor.` : ''} Ödeme planınız: peşinat ${tl(p)}${taksitler.length ? '; ' + taksitler.map((t, i) => `${i + 1}) ${tamTarih(t.vade)} · ${tl(t.tutar)}`).join(', ') : ' (peşin)'}. ${odemeBilgisi()}`, 'Hoş geldin'); }
-        else bildir('Kayıt oluşturuldu');
-        if (f.hesap.checked) setTimeout(() => HS.hesapAcSessiz(yeni), 1200);
+        if (f.hos.checked || f.hesap.checked) HS.karsilama(yeni, { hos: f.hos.checked, hesap: f.hesap.checked }); else bildir('Kayıt oluşturuldu');
         location.hash = '#/kursiyer/' + yeni.id;
         setTimeout(() => sozlesmeImzalat(yeni), 250);
       });
