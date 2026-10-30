@@ -27,27 +27,98 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%23ffc61a'/%3E%3Cpath d='M12 4 20 12 12 20 4 12z' fill='%231b1f25'/%3E%3Cpath d='M12 8.5v4.5M12 15.4v.4' stroke='%23ffc61a' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Overpass+Mono:wght@500;600;700&family=Overpass:wght@600;700;800;900&display=swap" onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Overpass+Mono:wght@500;600;700&family=Overpass:wght@600;700;800;900&display=swap"></noscript>
-<link rel="modulepreload" href="js/app.js?v=101">
-<link rel="modulepreload" href="js/imza.js?v=101">
-<link rel="modulepreload" href="js/mesaj.js?v=101">
-<link rel="modulepreload" href="js/ogrenci.js?v=101">
-<link rel="modulepreload" href="js/ozellik.js?v=101">
-<link rel="modulepreload" href="js/portal.js?v=101">
-<link rel="modulepreload" href="js/risk.js?v=101">
-<link rel="modulepreload" href="js/sayfalar1.js?v=101">
-<link rel="modulepreload" href="js/sayfalar2.js?v=101">
-<link rel="modulepreload" href="js/sayfalar3.js?v=101">
-<link rel="modulepreload" href="js/sayfalar4.js?v=101">
-<link rel="modulepreload" href="js/sayfalar5.js?v=101">
-<link rel="modulepreload" href="js/senaryo.js?v=101">
-<link rel="modulepreload" href="js/konular.js?v=101">
-<link rel="modulepreload" href="js/ui.js?v=101">
-<link rel="modulepreload" href="js/yeni.js?v=101">
-<link rel="modulepreload" href="js/veri.js?v=101">
-<link rel="modulepreload" href="js/zamanlayici.js?v=101">
-  <link rel="modulepreload" href="js/bulut.js?v=101">
-  <link rel="modulepreload" href="js/firebase-ayar.js?v=101">
-<link rel="stylesheet" href="css/app.css?v=101">
+<!-- Ana sayfa yalnız aşağıdaki küçük stille açılır; uygulamanın stili ve kodu arka planda ya da ilk dokunuşta iner -->
+<style id="ilk-css">
+:root{
+  --zemin:#e8e7e1; --zemin-2:#dedcd4; --panel:#fbfbf8; --panel-2:#f2f1ec;
+  --murekkep:#111417; --metin:#373d44; --soluk:#767c84; --cizgi:#d3d2ca; --cizgi-2:#e4e3dc;
+  --levha:#0a4da2; --levha-koyu:#073a7c; --levha-acik:#e2eaf5;
+  --kirmizi:#d52b1e; --kirmizi-acik:#fbe8e5; --yesil:#1f7a3e; --yesil-acik:#e2f0e6;
+  --sari:#f2b705; --sari-acik:#fff4cf; --kahve:#6b3e26; --turuncu:#b45309;
+  --asfalt:#2a2e33;
+  --baslik:"Overpass",system-ui,sans-serif; --govde:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"Overpass Mono",ui-monospace,monospace;
+  --r:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--zemin);color:var(--metin);font:400 15px/1.5 var(--govde);-webkit-font-smoothing:antialiased;min-height:100vh}
+body.kilitli{overflow:hidden}
+a{color:inherit;text-decoration:none}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+:focus-visible{outline:3px solid var(--sari);outline-offset:2px;border-radius:4px}
+.ik{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.isaret{flex:none;display:block}
+h1,h2,h3,h4{color:var(--murekkep);font-family:var(--baslik);font-weight:800;line-height:1.15}
+/* ---------- tanıtım: ana sayfa (sade; tema renkleri tek yerde) ---------- */
+.tanitim{--w-bg:#0e1a33;--w-yuzey:#15244a;--w-cizgi:rgba(255,255,255,.1);--w-yazi:#c8d1e3;--w-baslik:#fff;--w-vurgu:#f2b705;--w-et:#f2b705;--w-bg2:#122042;
+  background:var(--w-bg);color:var(--w-yazi);overflow-x:clip;min-height:100vh}
+.tanitim.w-acik-tema{--w-bg:#f4f1ea;--w-yuzey:#fffdf8;--w-cizgi:#e4ded2;--w-yazi:#4a4f57;--w-baslik:#14171b;--w-vurgu:#0a4da2;--w-et:#0a4da2;--w-bg2:#ece7dc}
+.w-kap{max-width:1120px;margin:0 auto;padding:0 20px}
+.tn-logo{display:flex;align-items:center;gap:10px;color:var(--w-baslik)}
+.tn-logo b{display:block;font:900 20px/1 var(--baslik)}
+.tn-logo small{display:block;font-size:12px;opacity:.65;margin-top:2px}
+.tn-logo-isaret{width:32px;height:32px;flex:none}
+.w-ust{position:sticky;top:0;z-index:20;background:var(--w-bg);border-bottom:1px solid var(--w-cizgi)}
+.w-ust-ic{display:flex;align-items:center;gap:16px;height:64px}
+.w-ust-dg{margin-left:auto;display:flex;align-items:center;gap:8px}
+.w-link{display:inline-block;white-space:nowrap;font:700 14px var(--baslik);color:var(--w-yazi);padding:8px 10px;text-decoration:none}
+.w-link:hover{color:var(--w-baslik)}
+.w-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:0 26px;border-radius:12px;font:800 16px var(--baslik);cursor:pointer;border:1.5px solid transparent;transition:background .15s,transform .15s}
+.w-btn:active{transform:translateY(1px)}
+.w-btn-ana{background:#f2b705;color:#111}
+.w-btn-ana:hover{background:#ffc61a}
+.w-btn-cizgi{background:transparent;color:var(--w-baslik);border-color:var(--w-cizgi)}
+.w-btn-cizgi:hover{border-color:currentColor}
+.w-btn-kucuk{min-height:38px;padding:0 16px;font-size:14px;border-radius:9px}
+.w-btn:focus-visible,.w-alt-bilgi a:focus-visible{outline:3px solid #f2b705;outline-offset:2px}
+.w-dugmeler{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+.w-et{font:800 13px/1 var(--baslik);letter-spacing:.1em;text-transform:uppercase;color:var(--w-et);margin:0 0 16px}
+.w-kahraman{text-align:center;padding:72px 0 0}
+.w-kahraman h1{font:900 clamp(38px,6.2vw,72px)/1.04 var(--baslik);letter-spacing:-.03em;color:var(--w-baslik);margin:0 auto 20px;max-width:16ch}
+.w-kahraman h1 em{font-style:normal;color:var(--w-vurgu)}
+.w-giris-yazi{font-size:clamp(17px,2vw,21px);line-height:1.55;max-width:46ch;margin:0 auto 32px}
+.w-not{font-size:14px;opacity:.7;margin:18px 0 0}
+.w-vitrin{margin:56px auto 0;max-width:1080px}
+.w-ekran{border-radius:16px 16px 0 0;overflow:hidden;background:var(--w-yuzey);border:1px solid var(--w-cizgi);border-bottom:0;box-shadow:0 -20px 80px -40px rgba(242,183,5,.25)}
+.w-ekran img{display:block;width:100%;height:auto}
+.w-pano-ust{display:flex;align-items:center;gap:6px;padding:11px 14px;border-bottom:1px solid var(--w-cizgi);font:700 12px var(--baslik)}
+.w-pano-ust i{width:10px;height:10px;border-radius:50%;background:var(--w-cizgi)}
+.w-pano-ust span{margin-left:10px;opacity:.7}
+.w-bolum{padding:88px 0;border-top:1px solid var(--w-cizgi)}
+.w-ikinci{background:var(--w-bg2)}
+.w-uc{display:grid;gap:36px}
+.w-uc article svg{width:30px;height:30px;fill:none;stroke:var(--w-vurgu);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;margin-bottom:14px}
+.w-uc h3{font:800 21px/1.25 var(--baslik);color:var(--w-baslik);margin:0 0 8px}
+.w-uc p{margin:0;font-size:16.5px;line-height:1.6}
+.w-ogr{display:grid;gap:44px;align-items:center}
+.w-ogr h2,.w-son h2{font:900 clamp(30px,4.2vw,46px)/1.1 var(--baslik);letter-spacing:-.02em;color:var(--w-baslik);margin:0 0 16px}
+.w-alt{font-size:17.5px;line-height:1.6;margin:0 0 22px;max-width:46ch}
+.w-tikler,.w-guven{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.w-tikler li,.w-guven li{display:flex;gap:10px;align-items:center;font-size:16.5px;color:var(--w-baslik)}
+.w-tikler svg,.w-guven svg{width:20px;height:20px;flex:none;fill:none;stroke:#f2b705;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.w-tel-cerceve{width:min(300px,80%);margin:0 auto;border:10px solid #0a0f1c;border-radius:40px;overflow:hidden;box-shadow:0 40px 80px -30px rgba(0,0,0,.5)}
+.w-tel-cerceve img{display:block;width:100%;height:auto}
+.w-son{text-align:center;padding:96px 0;border-top:1px solid var(--w-cizgi)}
+.w-son p{font-size:18px;margin:0 auto 28px}
+.w-son .w-guven{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 26px;margin-top:40px}
+.w-son .w-guven li{font-size:14.5px;color:var(--w-yazi)}
+.w-alt-bilgi{padding:28px 0;border-top:1px solid var(--w-cizgi)}
+.w-alt-ic{display:flex;flex-wrap:wrap;gap:18px;align-items:center;justify-content:space-between}
+.w-alt-bilgi nav{display:flex;flex-wrap:wrap;gap:6px 20px}
+.w-alt-bilgi a,.w-alt-bilgi nav button{color:var(--w-yazi);font:700 14px var(--baslik);text-decoration:none;background:none;border:0;padding:4px 0;cursor:pointer}
+.w-alt-bilgi a:hover,.w-alt-bilgi nav button:hover{color:var(--w-baslik)}
+html.w-anim [data-gor]{opacity:0;transform:translateY(16px);transition:opacity .7s ease,transform .7s ease}
+html.w-anim [data-gor].w-gorundu{opacity:1;transform:none}
+@media (max-width:420px){.w-link{font-size:13px;padding:8px 4px}.tn-logo small{display:none}}
+@media (min-width:900px){.w-kahraman{padding-top:96px}.w-uc{grid-template-columns:repeat(3,1fr);gap:48px}.w-ogr{grid-template-columns:1.1fr .9fr;gap:72px}.w-bolum{padding:112px 0}}
+@media (max-width:420px){.w-ust-dg .w-btn-cizgi{display:none}}
+@media (prefers-reduced-motion:reduce){.w-btn{transition:none}html.w-anim [data-gor]{opacity:1;transform:none;transition:none}}
+.w-yukleniyor{opacity:.75;cursor:progress}
+</style>
+<link id="app-css" rel="stylesheet" href="css/app.css?v=101" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="css/app.css?v=101"></noscript>
 </head>
 <body>
 <div id="uyg"><div class="tanitim" id="tanitim">
@@ -59,7 +130,7 @@
 <p class="w-giris-yazi">Öğrenci kaydı, direksiyon planı, ödeme, sınav ve MEB işleri tek yerde. Hatırlatmalar WhatsApp’tan kendiliğinden gider.</p>
 <div class="w-dugmeler"><button class="w-btn w-btn-ana" data-demo type="button">Demoyu incele <span aria-hidden="true">→</span></button><button class="w-btn w-btn-cizgi" data-giris type="button">Kurs girişi</button></div>
 <p class="w-not">Kurulum gerekmez · Telefonda ve bilgisayarda çalışır · Demo için giriş yok</p>
-<div class="w-vitrin" data-gor><div class="w-ekran"><div class="w-pano-ust"><i></i><i></i><i></i><span>Direksiyon planı</span></div><img src="img/site/plan.webp" width="1600" height="1000" alt="Sinyal direksiyon planı: araçlar, öğretmenler ve günün dersleri" fetchpriority="high" decoding="async"></div></div>
+<div class="w-vitrin" data-gor><div class="w-ekran"><div class="w-pano-ust"><i></i><i></i><i></i><span>Direksiyon planı</span></div><img src="img/site/plan-1200.webp" srcset="img/site/plan-800.webp 800w, img/site/plan-1200.webp 1200w, img/site/plan.webp 1600w" sizes="(max-width: 1100px) 94vw, 1040px" width="1600" height="1000" alt="Sinyal direksiyon planı: araçlar, öğretmenler ve günün dersleri" fetchpriority="high" decoding="async"></div></div>
 </div></section>
 <section class="w-bolum"><div class="w-kap"><div class="w-uc" data-gor>
 <article><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10M8 3v6M16 3v6"/></svg><h3>Plan kendini düzenler</h3><p>Araç ve öğretmen çakışmaları kontrol edilir; boş saatler tek tuşla öğrencilere dağıtılır.</p></article>
@@ -69,15 +140,34 @@
 <section class="w-bolum w-ikinci"><div class="w-kap w-ogr" data-gor>
 <div><p class="w-et">Öğrenci uygulaması</p><h2>Öğrenci her şeyi telefonundan görür.</h2><p class="w-alt">Kayıtta giriş bilgisi WhatsApp’tan gider. Ders saatleri, ödeme, sınav ve 1.949 soruluk sınav hazırlığı tek yerde.</p>
 <ul class="w-tikler"><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>Ders programı ve ders defteri</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>Deneme sınavı ve konu anlatımları</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>Ödeme planı ve makbuzlar</li></ul></div>
-<div class="w-tel-cerceve"><img src="img/site/ogrenci.webp" width="540" height="1107" alt="Sinyal öğrenci uygulaması" loading="lazy" decoding="async"></div>
+<div class="w-tel-cerceve"><img src="img/site/ogrenci-360.webp" srcset="img/site/ogrenci-360.webp 360w, img/site/ogrenci.webp 540w" sizes="270px" width="540" height="1107" alt="Sinyal öğrenci uygulaması" loading="lazy" decoding="async"></div>
 </div></section>
 <section class="w-son"><div class="w-kap"><h2>Kendiniz görün.</h2><p>Demo örnek bir kursla açılır; hiçbir mesaj kimseye gitmez.</p><div class="w-dugmeler"><button class="w-btn w-btn-ana" data-demo type="button">Demoyu incele <span aria-hidden="true">→</span></button></div>
-<ul class="w-guven"><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>Veriler Avrupa’da, her gün yedekli</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>KVKK araçları</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>MTSK Yönetmeliği’ne göre</li></ul></div></section>
+<ul class="w-guven"><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>Her gün yedeklenir</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>KVKK araçları</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>MTSK Yönetmeliği’ne göre</li></ul></div></section>
 </main>
 <footer class="w-alt-bilgi"><div class="w-kap w-alt-ic"><span class="tn-logo"><svg class="tn-logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>Sürücü kursu otomasyonu</small></span></span><nav aria-label="Alt bağlantılar"><a href="#/ogrenci-giris">Öğrenci girişi</a><button type="button" data-giris>Kurs girişi</button><a href="gizlilik.html">Gizlilik</a></nav></div></footer>
 </div><div id="acilis" hidden style="min-height:100vh;display:grid;place-items:center;background:#e8e7e1;font:700 15px system-ui,-apple-system,sans-serif;color:#373d44"><div style="display:grid;justify-items:center;gap:14px"><svg width="56" height="56" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#0a4da2" stroke-width="1.2"/><path d="M12 7.6v5.6M12 15.8v.4" stroke="#111417" stroke-width="2.3" stroke-linecap="round"/></svg><span>Sinyal açılıyor…</span></div></div></div>
-<script>try{if(sessionStorage.getItem('sinyal-oturum')||/^#\/imza\//.test(location.hash)){document.getElementById('tanitim').hidden=true;document.getElementById('acilis').hidden=false}}catch(e){}</script>
+<script>try{if(sessionStorage.getItem('sinyal-oturum')||/^#\/./.test(location.hash)||localStorage.getItem('sinyal-bulut')||localStorage.getItem('sinyal-ogrenci')){document.getElementById('tanitim').hidden=true;document.getElementById('acilis').hidden=false}}catch(e){}</script>
 <noscript><p style="padding:24px">Sinyal’i kullanmak için JavaScript’i açın.</p></noscript>
-<script type="module" src="js/app.js?v=101"></script>
+<script type="module">
+// Uygulama kodu ana sayfayı bekletmesin: oturum, uygulama içi adres ya da kayıtlı hesap varsa hemen; yoksa ilk dokunuşta ya da sayfa boşta kalınca iner.
+const css = document.getElementById('app-css');
+const cssHazir = () => new Promise(r => { if (css.media === 'all' && css.sheet) return r(); css.media = 'all'; css.addEventListener('load', r, { once: true }); setTimeout(r, 5000); });
+const yukle = () => window.__uyg || (window.__uyg = cssHazir().then(() => import('./js/app.js?v=101')).then(m => { window.__hazir = true; return m; }));
+let hemen = true;
+try { hemen = /^#\/./.test(location.hash) || !!(sessionStorage.getItem('sinyal-oturum') || sessionStorage.getItem('sinyal-kapandi') || localStorage.getItem('sinyal-bulut') || localStorage.getItem('sinyal-ogrenci')); } catch (e) { }
+if (hemen) yukle();
+else {
+  // tanıtımdaki düğme ya da uygulama linki: önce kod iner, sonra aynı dokunuş uygulamaya iletilir
+  document.addEventListener('click', ev => {
+    if (window.__hazir) return;
+    const b = ev.target.closest('[data-demo], [data-giris], a[href^="#/"]'); if (!b) return;
+    ev.preventDefault(); ev.stopPropagation();
+    b.setAttribute('aria-busy', 'true'); b.classList.add('w-yukleniyor');
+    yukle().then(() => setTimeout(() => { b.removeAttribute('aria-busy'); b.classList.remove('w-yukleniyor'); b.click(); }, 30));
+  }, true);
+  addEventListener('load', () => { const n = navigator.connection; if (n && n.saveData) return; setTimeout(() => (window.requestIdleCallback || (f => f()))(() => yukle()), 3000); }, { once: true });
+}
+</script>
 </body>
 </html>
