@@ -231,7 +231,7 @@ export function kayitSayfasi() {
       <div class="kart" style="padding:22px 22px 18px;align-self:start">
         ${kayit.adim < 4 ? `<div class="adim-serit">${adimlar.map((a, i) => `<span class="${i <= kayit.adim ? 'ok' : ''}" title="${a}"></span>`).join('')}</div><p style="font-family:var(--baslik);font-weight:800;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--soluk);margin-bottom:8px">Adım ${kayit.adim + 1}/4 · ${adimlar[kayit.adim]}</p>` : ''}
         ${govde}
-        ${kayit.adim < 4 ? `<div style="display:flex;gap:8px;margin-top:18px">${kayit.adim ? '<button class="dg dg-cizgi" data-geri>Geri</button>' : ''}<button class="dg dg-ana" style="flex:1" data-ileri>${kayit.adim === 3 ? 'Peşinatı öde ve kaydı tamamla' : 'Devam'}</button></div>` : ''}
+        ${kayit.adim < 4 ? `<div style="display:flex;gap:8px;margin-top:18px">${kayit.adim ? '<button class="dg dg-cizgi" data-geri>Geri</button>' : ''}<button class="dg dg-ana" style="flex:1" data-ileri>${kayit.adim === 3 ? 'Sözleşmeyi imzala ve kaydı tamamla' : 'Devam'}</button></div>` : ''}
       </div>
     </div>`,
     baglan(k) {
