@@ -117,8 +117,8 @@ html.w-anim [data-gor].w-gorundu{opacity:1;transform:none}
 @media (prefers-reduced-motion:reduce){.w-btn{transition:none}html.w-anim [data-gor]{opacity:1;transform:none;transition:none}}
 .w-yukleniyor{opacity:.75;cursor:progress}
 </style>
-<link id="app-css" rel="stylesheet" href="css/app.css?v=101" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="css/app.css?v=101"></noscript>
+<link id="app-css" rel="stylesheet" href="css/app.css?v=102" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="css/app.css?v=102"></noscript>
 </head>
 <body>
 <div id="uyg"><div class="tanitim" id="tanitim">
@@ -153,7 +153,7 @@ html.w-anim [data-gor].w-gorundu{opacity:1;transform:none}
 // Uygulama kodu ana sayfayı bekletmesin: oturum, uygulama içi adres ya da kayıtlı hesap varsa hemen; yoksa ilk dokunuşta ya da sayfa boşta kalınca iner.
 const css = document.getElementById('app-css');
 const cssHazir = () => new Promise(r => { if (css.media === 'all' && css.sheet) return r(); css.media = 'all'; css.addEventListener('load', r, { once: true }); setTimeout(r, 5000); });
-const yukle = () => window.__uyg || (window.__uyg = cssHazir().then(() => import('./js/app.js?v=101')).then(m => { window.__hazir = true; return m; }));
+const yukle = () => window.__uyg || (window.__uyg = cssHazir().then(() => import('./js/app.js?v=102')).then(m => { window.__hazir = true; return m; }));
 let hemen = true;
 try { hemen = /^#\/./.test(location.hash) || !!(sessionStorage.getItem('sinyal-oturum') || sessionStorage.getItem('sinyal-kapandi') || localStorage.getItem('sinyal-bulut') || localStorage.getItem('sinyal-ogrenci')); } catch (e) { }
 if (hemen) yukle();
