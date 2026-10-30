@@ -1,20 +1,20 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=98';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=98';
-import * as Y1 from './sayfalar1.js?v=98';
-import * as Y2 from './sayfalar2.js?v=98';
-import * as P from './portal.js?v=98';
-import * as Y3 from './sayfalar3.js?v=98';
-import * as Y4 from './sayfalar4.js?v=98';
-import * as Y5 from './sayfalar5.js?v=98';
-import * as IM from './imza.js?v=98';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=98';
-import * as SN from './senaryo.js?v=98';
-import * as OZ from './ozellik.js?v=98';
-import { durumlariGuncelle } from './mesaj.js?v=98';
-import { yeniMenu } from './yeni.js?v=98';
-import * as B from './bulut.js?v=98';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=98';
-import * as AN from './analiz.js?v=98';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=99';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=99';
+import * as Y1 from './sayfalar1.js?v=99';
+import * as Y2 from './sayfalar2.js?v=99';
+import * as P from './portal.js?v=99';
+import * as Y3 from './sayfalar3.js?v=99';
+import * as Y4 from './sayfalar4.js?v=99';
+import * as Y5 from './sayfalar5.js?v=99';
+import * as IM from './imza.js?v=99';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=99';
+import * as SN from './senaryo.js?v=99';
+import * as OZ from './ozellik.js?v=99';
+import { durumlariGuncelle } from './mesaj.js?v=99';
+import { yeniMenu } from './yeni.js?v=99';
+import * as B from './bulut.js?v=99';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=99';
+import * as AN from './analiz.js?v=99';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -224,6 +224,10 @@ function girisEkrani(mod = 'tanitim') {
     const tn = kok0.querySelector('#tanitim'); tn.hidden = false; if (tn.dataset.bagli) return; tn.dataset.bagli = '1';
     kok0.querySelectorAll('[data-demo]').forEach(b => b.addEventListener('click', demoyaGir));
     kok0.querySelectorAll('[data-giris]').forEach(b => b.addEventListener('click', () => { girisEkrani('pin'); window.scrollTo(0, 0); }));
+    // bölümler ekrana girerken hafifçe belirir (hareket azaltma tercihine uyar; IntersectionObserver yoksa hepsi görünür)
+    if ('IntersectionObserver' in window && !matchMedia('(prefers-reduced-motion: reduce)').matches) { document.documentElement.classList.add('w-anim'); const io = new IntersectionObserver(l => l.forEach(x => { if (x.isIntersecting) { x.target.classList.add('w-gorundu'); io.unobserve(x.target); } }), { rootMargin: '0px 0px -8% 0px' }); kok0.querySelectorAll('[data-gor]').forEach(el => io.observe(el)); }
+    // sayfa içi menü: adres çubuğuna dokunmadan bölüme kaydırır (hash yönlendirmesiyle karışmasın)
+    kok0.querySelectorAll('[data-kaydir]').forEach(b => b.addEventListener('click', () => { const h = document.getElementById(b.dataset.kaydir); if (h) h.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); }));
     return;
   }
   if (mod === 'kursac') return kursAcEkrani();
