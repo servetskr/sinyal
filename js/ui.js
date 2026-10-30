@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet } from './veri.js?v=95';
+import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca } from './veri.js?v=96';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -176,26 +176,6 @@ export function belgeYazdir(html, baslik = 'Belge') {
   const imgs = [...d.images].filter(i => !i.complete).map(i => new Promise(r => { i.onload = i.onerror = r; }));
   return Promise.all(imgs).then(() => { f.contentWindow.focus(); f.contentWindow.print(); setTimeout(() => f.remove(), 1000); });
 }
-// Kart formu: numara (Luhn), son kullanma (gelecekte), CVC. Kart bilgisi kursta saklanmaz; POS'a gider.
-export const kartFormu = () => `<div class="form-izgara kart-formu"><div class="alan tam"><label for="k-no">Kart numarası</label><input id="k-no" name="kno" inputmode="numeric" autocomplete="cc-number" placeholder="0000 0000 0000 0000" maxlength="23"></div>
-  <div class="alan tam"><label for="k-sahip">Kart üzerindeki ad</label><input id="k-sahip" name="ksahip" autocomplete="cc-name"></div>
-  <div class="alan"><label for="k-skt">Son kullanma</label><input id="k-skt" name="kskt" inputmode="numeric" autocomplete="cc-exp" placeholder="AA/YY" maxlength="5"></div><div class="alan"><label for="k-cvc">CVC</label><input id="k-cvc" name="kcvc" inputmode="numeric" autocomplete="cc-csc" placeholder="•••" maxlength="4"></div></div>
-  <p class="ipucu" style="margin-top:10px">${ik('kilit')}<span>Ödeme bankanın 3D Secure sayfasında onaylanır; kart bilgisi kursta saklanmaz.</span></p>`;
-export function kartBagla(kok) {
-  const no = kok.querySelector('[name=kno]'), skt = kok.querySelector('[name=kskt]');
-  no.addEventListener('input', () => { no.value = no.value.replace(/\D/g, '').slice(0, 19).replace(/(\d{4})(?=\d)/g, '$1 '); });
-  skt.addEventListener('input', () => { const v = skt.value.replace(/\D/g, '').slice(0, 4); skt.value = v.length > 2 ? v.slice(0, 2) + '/' + v.slice(2) : v; });
-}
-export function kartDogrula(kok) {
-  const n = kok.querySelector('[name=kno]').value.replace(/\D/g, ''), [aa, yy] = kok.querySelector('[name=kskt]').value.split('/').map(Number), cvc = kok.querySelector('[name=kcvc]').value.replace(/\D/g, ''), sahip = kok.querySelector('[name=ksahip]').value.trim();
-  let t = 0; n.split('').reverse().forEach((c, i) => { let d = +c; if (i % 2) { d *= 2; if (d > 9) d -= 9; } t += d; });
-  if (n.length < 15 || t % 10) return { hata: 'Kart numarası geçerli değil' };
-  if (sahip.length < 3) return { hata: 'Kart üzerindeki adı yazın' };
-  const simdi = new Date(), sonAy = new Date(2000 + (yy || 0), aa || 0, 1);
-  if (!aa || aa > 12 || !yy || sonAy <= new Date(simdi.getFullYear(), simdi.getMonth(), 1)) return { hata: 'Son kullanma tarihi geçerli değil' };
-  if (!/^\d{3,4}$/.test(cvc)) return { hata: 'CVC 3 ya da 4 hane olmalı' };
-  return { son4: n.slice(-4) };
-}
 // --- Gerçek WhatsApp: sohbet hazır mesajla açılır, gönderme tuşuna kullanıcı basar ---
 export function waNumara(tel) { let n = String(tel || '').replace(/\D/g, ''); if (n.startsWith('0')) n = '90' + n.slice(1); else if (n.length === 10 && n.startsWith('5')) n = '90' + n; return n.length >= 12 ? n : ''; }
 export const waUrl = (tel, metin) => 'https://wa.me/' + waNumara(tel) + '?text=' + encodeURIComponent(sadeDil(metin));
@@ -203,8 +183,10 @@ export const smsUrl = (tel, metin) => 'sms:' + (waNumara(tel) ? '+' + waNumara(t
 // Mesaj yönlendirme (demo): kursa gelen mesajlar hariç her mesaj Ayarlar'daki tek numaraya gider.
 // Demo etiketi: mesajın kimin telefonuna gittiği ("[ÖĞRENCİ · Ayşe Yılmaz]", "[HOCA · Hüseyin Aktaş]", "[MÜDÜR]")
 const ROL_KIME = { 'ÖĞRENCİ': 'öğrencinin', 'HOCA': 'usta öğreticinin', 'MÜDÜR': 'kurs müdürünün', 'ADAY': 'yeni öğrenci adayının', 'ÖN BÜRO': 'ön büronun' };
+// Etiket yalnız demo yönlendirmesinde (örnek kurs ya da Ayarlar'da yönlendirme numarası varken) yazılır; gerçek mesaja eklenmez
+export const demoYonlendirme = () => !!(S && S.kurs && (S.kurs.demoNumara || !S._bulut));
 export const etiket = (ad, rol) => {
-  if (S.kurs.demoKime === false || (!ad && !rol)) return '';
+  if (S.kurs.demoKime === false || (!ad && !rol) || !demoYonlendirme()) return '';
   if (rol === 'KURSA GELEN') return `${adEk(S.kurs.ad, 'e').toLocaleUpperCase('tr')} GELEN MESAJ · gönderen: ${ad || 'öğrenci'}\n(Gerçekte bu mesaj öğrencinin telefonundan ${adEk(S.kurs.ad, 'in')} WhatsApp hattına gelir.)\n――――――――\n`;
   const kim = ROL_KIME[rol];
   return `ALICI: ${rol || 'KİŞİ'}${ad && rol !== 'MÜDÜR' ? ' · ' + ad : ''}\n(Gerçekte bu mesaj ${kim || 'alıcının'} telefonuna gider.)\n――――――――\n`;
@@ -226,16 +208,35 @@ export function yonlendir(tel, metin, ad, rol) {
 }
 // Otomatik gönderim: Ayarlar'da WhatsApp API adresi varsa mesaj WhatsApp açılmadan doğrudan gider (Cloud API köprüsü).
 // Ziyaretçi (giriş yapmadan inceleyen) modunda hiçbir mesaj gönderilmez, adres kayıtlı olsa bile
-export const apiAcik = () => !!(S && S.kurs && S.kurs.waApi) && !(oturum.kullanici && oturum.kullanici.ziyaretci);
+// Gerçek kursta otomatik gönderim, kursun kendi WhatsApp hattı bağlıysa açılır (Ayarlar › Kurs bilgileri)
+export const apiAcik = () => !!(S && S.kurs && S.kurs.waApi) && !(oturum.kullanici && oturum.kullanici.ziyaretci) && (!S._bulut || !!S.kurs.waHat);
+// WhatsApp servisine istek: gerçek kursta kursun kimliğiyle (servis kursun üyesi olduğunu doğrular), örnek kursta kimliksiz
+export async function waIstek(yol, ayar = {}) {
+  const h = { ...(ayar.headers || {}), ...(S._bulut && bulutKanca.yetki ? await bulutKanca.yetki() : {}) };
+  return fetch(new URL(S.kurs.waApi).origin + yol, { ...ayar, headers: h });
+}
 // Gönderilen WhatsApp mesajlarının oturum günlüğü (senaryo ekranındaki telefon önizlemesi bunu gösterir)
 export const giden = [];
-export async function apiGonder(metin, belge, adres) {
+// Alıcının numarası: yönlendirme numarası varsa o; örnek kursta servis belirler (demo telefonu); gerçek kursta kişinin kayıtlı telefonu
+function aliciTel(kime) {
+  if (S.kurs.demoNumara) return waNumara(S.kurs.demoNumara);
+  if (!S._bulut || !kime) return '';
+  if (kime.tel) return waNumara(kime.tel);
+  const { ad, rol } = kime;
+  if (['MÜDÜR', 'KURSA GELEN', 'ÖN BÜRO'].includes(rol)) return waNumara(S.kurs.wp || S.kurs.tel);
+  const kisi = rol === 'HOCA' ? (S.egitmenler || []).find(x => x.ad === ad) : rol === 'ADAY' ? (S.adaylar || []).find(x => x.ad === ad) : (S.kursiyerler || []).find(x => x.ad + ' ' + x.soyad === ad);
+  return kisi ? waNumara(kisi.tel) : '';
+}
+export async function apiGonder(metin, belge, adres, kime) {
   if (oturum.kullanici && oturum.kullanici.ziyaretci) return { ok: false, hata: 'Demo görünümünde mesaj gönderilmez' };
+  const tel = aliciTel(kime);
+  if (!tel && S._bulut) return { ok: false, hata: (kime && kime.ad ? kime.ad + ': ' : '') + 'kayıtlı WhatsApp numarası yok' };
   const kayit = { zaman: new Date().toTimeString().slice(0, 5), metin, dosya: belge && belge.dosya, durum: 'gidiyor' };
   giden.push(kayit); window.dispatchEvent(new CustomEvent('sinyal-giden'));
   const bitir = (ok, hata) => { kayit.durum = ok ? 'iletildi' : 'hata'; kayit.hata = hata; window.dispatchEvent(new CustomEvent('sinyal-giden')); };
   try {
-    const r = await fetch(adres || S.kurs.waApi, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ metin: sadeDil(metin), belge }) });
+    const govde = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ metin: sadeDil(metin), belge, tel: tel || undefined }) };
+    const r = adres ? await fetch(adres, govde) : await waIstek('/', govde);
     const j = await r.json().catch(() => ({}));
     if (r.ok && j.ok) { bitir(true); return { ok: true, id: j.id || null }; }
     bitir(false, j.hata);
@@ -260,8 +261,8 @@ export async function pdfUret(html, dosya = 'belge.pdf') {
   } finally { kap.remove(); window.scrollTo(kx, ky); }
 }
 // Belgeyi PDF olarak WhatsApp'tan dosya gönderir (API bağlıysa)
-export async function belgeWhatsApp(html, dosya, metin, ad, rol) {
-  try { const base64 = await pdfUret(html, dosya); const s = await apiGonder(etiket(ad, rol) + metin, { base64, dosya }); bildir(s.ok ? `${dosya} WhatsApp’tan gönderildi ✓` : s.hata, s.ok ? 'wp' : 'uyari'); return s; }
+export async function belgeWhatsApp(html, dosya, metin, ad, rol, tel) {
+  try { const base64 = await pdfUret(html, dosya); const s = await apiGonder(etiket(ad, rol) + metin, { base64, dosya }, undefined, { ad, rol, tel }); bildir(s.ok ? `${dosya} WhatsApp’tan gönderildi ✓` : s.hata, s.ok ? 'wp' : 'uyari'); return s; }
   catch (x) { bildir('PDF hazırlanamadı: ' + x.message, 'uyari'); return { ok: false }; }
 }
 const apiMetin = (metin, ad, rol) => etiket(ad, rol) + metin;
@@ -282,7 +283,7 @@ function onizle(liste, baslik, bitince) {
 export function waAc(tel, metin, kanal = 'WhatsApp', ad = '', elle = false, rol = '', tur = '') {
   if (ziyaretci()) { kayitDus(ad, metin, tur); onizle([{ ad, rol, metin }], kanal === 'SMS' ? 'Gidecek SMS' : 'Gidecek WhatsApp mesajı'); return 'onizleme'; }
   if (kanal === 'WhatsApp' && apiAcik() && !elle) {
-    apiGonder(apiMetin(metin, ad, rol)).then(s => { if (s.ok) { kayitDus(ad, metin, tur); bildir((ad ? ad.split(' ')[0] + ': ' : '') + 'WhatsApp mesajı gönderildi ✓', 'wp'); } else bildir(s.hata, 'uyari'); });
+    apiGonder(apiMetin(metin, ad, rol), undefined, undefined, { ad, rol, tel }).then(s => { if (s.ok) { kayitDus(ad, metin, tur); bildir((ad ? ad.split(' ')[0] + ': ' : '') + 'WhatsApp mesajı gönderildi ✓', 'wp'); } else bildir(s.hata, 'uyari'); });
     return 'api';
   }
   const ham = metin; [tel, metin] = yonlendir(tel, metin, ad, rol);
@@ -300,7 +301,7 @@ export function waSirali(liste, baslik, { kanal = 'WhatsApp', bitince, aciklama 
   if (oturum.kullanici && oturum.kullanici.rol === 'ogrenci') { liste.forEach(x => S.gonderimler.unshift({ zaman: new Date().toISOString(), kime: x.ad, metin: x.metin, tur: x.tur || baslik, rol: x.rol || '', iletilecek: true })); kaydet(); if (bitince) bitince(); return; }
   if (ziyaretci()) { liste.forEach(x => kayitDus(x.ad, x.metin, x.tur || baslik)); return onizle(liste, baslik, bitince); }
   if (kanal === 'WhatsApp' && apiAcik() && sessiz) {
-    (async () => { let ok = 0, son = ''; for (const x of liste) { const s = await apiGonder(apiMetin(x.metin, x.ad, x.rol)); if (s.ok) { ok++; kayitDus(x.ad, x.metin, x.tur || baslik); } else son = s.hata; } bildir(ok === liste.length ? `WhatsApp bildirimi gitti: ${liste.map(x => (x.rol || x.ad).toLocaleLowerCase('tr')).join(', ')} ✓` : `${liste.length - ok} bildirim gitmedi: ${son}`, ok === liste.length ? 'wp' : 'uyari'); if (bitince) bitince(); })();
+    (async () => { let ok = 0, son = ''; for (const x of liste) { const s = await apiGonder(apiMetin(x.metin, x.ad, x.rol), undefined, undefined, x); if (s.ok) { ok++; kayitDus(x.ad, x.metin, x.tur || baslik); } else son = s.hata; } bildir(ok === liste.length ? `WhatsApp bildirimi gitti: ${liste.map(x => (x.rol || x.ad).toLocaleLowerCase('tr')).join(', ')} ✓` : `${liste.length - ok} bildirim gitmedi: ${son}`, ok === liste.length ? 'wp' : 'uyari'); if (bitince) bitince(); })();
     return;
   }
   if (kanal === 'WhatsApp' && apiAcik()) {
@@ -311,7 +312,7 @@ export function waSirali(liste, baslik, { kanal = 'WhatsApp', bitince, aciklama 
         (async () => {
           for (let i = 0; i < liste.length; i++) {
             const el = d.querySelector(`[data-api-durum="${i}"]`); if (el) el.textContent = 'gönderiliyor…';
-            const s = await apiGonder(apiMetin(liste[i].metin, liste[i].ad, liste[i].rol)); if (s.ok) kayitDus(liste[i].ad, liste[i].metin, liste[i].tur || baslik);
+            const s = await apiGonder(apiMetin(liste[i].metin, liste[i].ad, liste[i].rol), undefined, undefined, liste[i]); if (s.ok) kayitDus(liste[i].ad, liste[i].metin, liste[i].tur || baslik);
             if (el) { el.textContent = s.ok ? 'gönderildi ✓' : 'gönderilemedi'; el.style.color = s.ok ? 'var(--yesil)' : 'var(--kirmizi)'; }
             if (s.ok) ok++; else son = s.hata;
             await new Promise(r => setTimeout(r, 350));
@@ -429,7 +430,7 @@ function sifreSor(neden, ok) {
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Onayla</button>`,
     onAc(d) {
       const inp = d.querySelector('[data-sifre-tekrar]'), btn = d.querySelector('[data-k]');
-      const dene = () => { btn.disabled = true; import('./bulut.js?v=95').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
+      const dene = () => { btn.disabled = true; import('./bulut.js?v=96').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
       btn.addEventListener('click', dene); inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') dene(); }); setTimeout(() => inp.focus(), 50);
     },
   });

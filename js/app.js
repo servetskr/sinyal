@@ -1,19 +1,19 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=95';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=95';
-import * as Y1 from './sayfalar1.js?v=95';
-import * as Y2 from './sayfalar2.js?v=95';
-import * as P from './portal.js?v=95';
-import * as Y3 from './sayfalar3.js?v=95';
-import * as Y4 from './sayfalar4.js?v=95';
-import * as Y5 from './sayfalar5.js?v=95';
-import * as IM from './imza.js?v=95';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=95';
-import * as SN from './senaryo.js?v=95';
-import * as OZ from './ozellik.js?v=95';
-import { durumlariGuncelle } from './mesaj.js?v=95';
-import { yeniMenu } from './yeni.js?v=95';
-import * as B from './bulut.js?v=95';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=95';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=96';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=96';
+import * as Y1 from './sayfalar1.js?v=96';
+import * as Y2 from './sayfalar2.js?v=96';
+import * as P from './portal.js?v=96';
+import * as Y3 from './sayfalar3.js?v=96';
+import * as Y4 from './sayfalar4.js?v=96';
+import * as Y5 from './sayfalar5.js?v=96';
+import * as IM from './imza.js?v=96';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=96';
+import * as SN from './senaryo.js?v=96';
+import * as OZ from './ozellik.js?v=96';
+import { durumlariGuncelle } from './mesaj.js?v=96';
+import { yeniMenu } from './yeni.js?v=96';
+import * as B from './bulut.js?v=96';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=96';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -25,7 +25,7 @@ const SAYFALAR = {
 };
 const ROL_AD = { mudur: 'Kurs müdürü', sekreter: 'Ön büro', usta: 'Usta öğretici' };
 const YASAK = { mudur: [], sekreter: ['raporlar', 'ayarlar', 'guven', 'kurulum', 'senaryo', 'karlilik'], usta: Object.keys(SAYFALAR).filter(k => !['egitmen', 'imza-geldi'].includes(k)) };
-const izinli = ad => { const u = oturum.kullanici; return u && !YASAK[u.rol].includes(ad) && !(u.ziyaretci && ad === 'senaryo'); };
+const izinli = ad => { const u = oturum.kullanici; return u && !YASAK[u.rol].includes(ad) && !((u.ziyaretci || u.bulut) && ad === 'senaryo'); };
 
 const MENU = [
   ['Bugün', [['genel', 'Genel bakış', '↑'], ['adaylar', 'Yeni öğrenciler', '↗'], ['mesajlar', 'Mesajlar', '↗'], ['sosyal', 'Sosyal medya asistanı', '↗']]],
@@ -140,7 +140,7 @@ function aramaAc() {
     ...S.adaylar.map(a => ({ t: a.ad, a: 'Aday · ' + a.asama, h: '#/adaylar/' + a.id, g: 'Adaylar' })),
     ...S.araclar.map(a => ({ t: a.plaka, a: a.model, h: '#/filo', g: 'Araçlar' })),
     ...S.egitmenler.map(x => ({ t: x.ad, a: 'Usta öğretici', h: '#/filo', g: 'Usta öğreticiler' })),
-    ...MENU.flatMap(([, l]) => l.map(([k, t]) => ({ t, a: 'Sayfa', h: '#/' + k, g: 'Sayfalar' }))),
+    ...MENU.flatMap(([, l]) => l.filter(([k]) => izinli(k)).map(([k, t]) => ({ t, a: 'Sayfa', h: '#/' + k, g: 'Sayfalar' }))),
   ];
   pencere({
     baslik: 'Ara', icerik: `<div class="komut"><input type="search" placeholder="Ad, telefon, plaka ya da sayfa yazın" aria-label="Ara"><ul></ul></div>`,
@@ -186,6 +186,21 @@ window.addEventListener('hashchange', () => { if (imzaLinki()) return imzaSayfas
 
 // QR’dan gelen ilk sayfa index.html’de hazır durur (beklemeden görünsün); sonradan dönmek için saklanır
 const TANITIM = (() => { const t = document.getElementById('tanitim'); return t ? t.outerHTML : ''; })();
+// İki adımlı giriş: doğrulama uygulamasındaki 6 haneli kodu ister (pencere kapatılırsa null döner)
+const kodSor = () => new Promise(coz => {
+  let bitti = false;
+  pencere({
+    baslik: 'Doğrulama kodu',
+    icerik: `<p style="font-size:14.5px">Telefonunuzdaki doğrulama uygulamasında (Google Authenticator, Microsoft Authenticator vb.) Sinyal için görünen 6 haneli kodu girin.</p><input class="girdi" data-kod inputmode="numeric" maxlength="6" autocomplete="one-time-code" aria-label="Doğrulama kodu" style="font-size:22px;letter-spacing:6px;text-align:center;margin-top:12px;width:100%">`,
+    altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-kod-tamam>Devam</button>',
+    onAc(d) {
+      const i = d.querySelector('[data-kod]'); i.focus();
+      const tamam = () => { const v = i.value.replace(/\D/g, ''); if (v.length !== 6) return bildir('6 haneli kodu girin', 'uyari'); bitti = true; kapatPencere(); coz(v); };
+      d.querySelector('[data-kod-tamam]').addEventListener('click', tamam); i.addEventListener('keydown', ev => { if (ev.key === 'Enter') tamam(); });
+      const izle = setInterval(() => { if (!d.isConnected) { clearInterval(izle); if (!bitti) coz(null); } }, 300);
+    },
+  });
+});
 function demoyaGir() {
   const u = S.kullanicilar.find(x => x.rol === 'mudur') || { id: 'u1', ad: 'Kurs müdürü' };
   oturum.kullanici = { id: u.id, ad: u.ad, rol: 'mudur', ziyaretci: true };
@@ -234,7 +249,7 @@ function girisEkrani(mod = 'tanitim') {
     if (!/^\S+@\S+\.\S+$/.test(f.eposta.value.trim())) return bildir('E-posta adresini kontrol edin', 'uyari');
     if (!f.sifre.value) return bildir('Şifrenizi girin', 'uyari');
     btn.disabled = true; btn.textContent = 'Giriliyor…';
-    B.girisYap(f.eposta.value, f.sifre.value).then(u => bulutOturumu(u, true)).catch(x => { btn.disabled = false; btn.textContent = 'Giriş yap'; bildir(B.hataMetni(x), 'uyari'); });
+    B.girisYap(f.eposta.value, f.sifre.value, kodSor).then(u => bulutOturumu(u, true)).catch(x => { btn.disabled = false; btn.textContent = 'Giriş yap'; bildir(B.hataMetni(x), 'uyari'); });
   });
   kok.querySelectorAll('[data-kim]').forEach(b => b.addEventListener('click', () => { secilen = S.kullanicilar.find(u => u.id === b.dataset.kim); kok.querySelectorAll('[data-kim]').forEach(x => x.classList.toggle('secili', x === b)); const f = kok.querySelector('.giris-pin'); f.hidden = false; f.querySelector('input').value = ''; f.querySelector('input').focus(); }));
   kok.querySelector('.giris-pin').addEventListener('submit', ev => {

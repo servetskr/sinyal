@@ -1,8 +1,8 @@
 // MEB resmî formları: MTSK Yönetmeliği eklerinin düzeninde, kayıtlardan dolan ya da boş (elle doldurmak için) çıktılar.
 // Kaynak: mevzuat.gov.tr 7.5.18408 ekleri (EK-1, EK-3, EK-4, EK-5, EK-8, EK-10, EK-12) ve md.17/3, md.42 içerik şartları.
-import { S, kaydet, gun, oturum, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, motorSinif, dersKonulari, gorunum, sb, sbSinav } from './veri.js?v=95';
-import { e, pencere, bildir, belgeYazdir, ik } from './ui.js?v=95';
-import { EK3, EK4, EK3_NOT, EK4_NOT, EK12 } from './formlar.js?v=95';
+import { S, kaydet, gun, oturum, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, ek3Sinif, dersKonulari, gorunum, sb, sbSinav } from './veri.js?v=96';
+import { e, pencere, bildir, belgeYazdir, ik } from './ui.js?v=96';
+import { EK3, EK4, EK3_NOT, EK4_NOT, EK12 } from './formlar.js?v=96';
 
 const trTarih = t => t ? String(t).slice(0, 10).split('-').reverse().join('.') : '';
 const BUYUK = s => String(s || '').toLocaleUpperCase('tr');
@@ -103,7 +103,7 @@ function ek8(a, bos) {
 
 /* ---------- EK-3 / EK-4: Direksiyon eğitimi dersi sınav değerlendirme formu ---------- */
 function ek34(k, bos, isaret = null) {
-  const motor = motorSinif(k.sinif), L = motor ? EK3 : EK4, NOT = motor ? EK3_NOT : EK4_NOT, a = ogrenciAraci(k);
+  const motor = ek3Sinif(k.sinif), L = motor ? EK3 : EK4, NOT = motor ? EK3_NOT : EK4_NOT, a = ogrenciAraci(k);
   const baslik = motor ? 'DİREKSİYON EĞİTİMİ DERSİ SINAV DEĞERLENDİRME FORMU<br>(“M”, “A1”, “A2”, “A” veya “B1” Sınıfları)' : 'DİREKSİYON EĞİTİMİ DERSİ SINAV DEĞERLENDİRME FORMU<br>(“B”,“BE”, “C1”, “C1E”,“C”,“CE”, “D1”, “D1E”, “D”,“DE” veya “F” Sınıfları)';
   const X = '<b style="display:block;text-align:center;font-size:13px">X</b>';
   const renk = (r, n) => r === 's' ? `<td class="rf-renk" style="padding:0"><table style="margin:0;height:100%"><tr><td class="rf-s" style="border:0;border-right:1px solid #000;height:18px">${n >= 1 ? X : ''}</td><td class="rf-s" style="border:0">${n >= 2 ? X : ''}</td></tr></table></td>` : `<td class="rf-renk rf-${r}">${n ? X : ''}</td>`;

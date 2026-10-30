@@ -1,8 +1,8 @@
 // Gerçek kurs hesabı: Google Firebase (Frankfurt). Giriş e-posta + şifreyle; kurs verisi Firestore'da
 // kurslar/{kurs}/v altında parça parça durur. Her kayıt ayrı alan olarak yazılır: iki kişi aynı anda
 // farklı kayıtları değiştirirse ikisi de korunur. Fotoğraf ve imzalar kurslar/{kurs}/dosyalar'da ayrı belge.
-import { FIREBASE } from './firebase-ayar.js?v=95';
-import { S, bulutVeri, bosVeri, kaydetDinle, kaydet, oturum, bulutKanca, makbuzSira, islem, iso, EVRAKLAR, gun, fark, tamAd } from './veri.js?v=95';
+import { FIREBASE } from './firebase-ayar.js?v=96';
+import { S, bulutVeri, bosVeri, kaydetDinle, kaydet, oturum, bulutKanca, makbuzSira, islem, iso, EVRAKLAR, gun, fark, tamAd } from './veri.js?v=96';
 
 const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
 const YEREL = 'sinyal-bulut';
@@ -32,7 +32,8 @@ const HATA = {
   'auth/invalid-credential': 'E-posta ya da şifre hatalı', 'auth/wrong-password': 'E-posta ya da şifre hatalı', 'auth/user-not-found': 'Bu e-postayla açılmış hesap yok',
   'auth/invalid-email': 'E-posta adresi geçersiz', 'auth/email-already-in-use': 'Bu e-postayla zaten hesap var; giriş yapın', 'auth/weak-password': 'Şifre en az 8 karakter olmalı',
   'auth/too-many-requests': 'Çok fazla deneme yapıldı; birkaç dakika sonra tekrar deneyin', 'auth/network-request-failed': 'İnternet bağlantısı yok', 'permission-denied': 'Bu işlem için yetkiniz yok',
-  'auth/missing-password': 'Şifre girin', 'auth/requires-recent-login': 'Güvenlik için tekrar giriş yapın',
+  'auth/missing-password': 'Şifre girin', 'auth/requires-recent-login': 'Güvenlik için çıkış yapıp tekrar giriş yapın, sonra yeniden deneyin',
+  'auth/invalid-verification-code': 'Doğrulama kodu hatalı', 'auth/operation-not-allowed': 'İki adımlı giriş bu Sinyal kurulumunda henüz açılmadı; Sinyal ekibine yazın', 'auth/unverified-email': 'Önce e-posta adresinizi doğrulayın (gelen kutunuza doğrulama linki gönderildi)',
 };
 export const hataMetni = x => HATA[x && x.code] || (x && x.kullanici) || 'İşlem tamamlanamadı; bağlantınızı kontrol edip tekrar deneyin';
 const hata = m => Object.assign(new Error(m), { kullanici: m });
@@ -47,17 +48,39 @@ async function uyelikBul(user) {
   const d = u.data();
   return { kurs, uid: user.uid, ad: d.ad || user.displayName || user.email, rol: d.rol, usta: d.usta || null, eposta: user.email };
 }
-export async function girisYap(eposta, sifre) {
+// kodSor: iki adımlı giriş açıksa doğrulama uygulamasındaki 6 haneli kodu isteyen fonksiyon (Promise<string|null>)
+export async function girisYap(eposta, sifre, kodSor) {
   const { auth, A } = await sdk();
-  const c = await A.signInWithEmailAndPassword(auth, eposta.trim(), sifre);
+  let c;
+  try { c = await A.signInWithEmailAndPassword(auth, eposta.trim(), sifre); }
+  catch (x) {
+    if (x.code !== 'auth/multi-factor-auth-required' || !kodSor) throw x;
+    const r = A.getMultiFactorResolver(auth, x), ipucu = r.hints.find(h => h.factorId === A.TotpMultiFactorGenerator.FACTOR_ID);
+    if (!ipucu) throw x;
+    for (;;) {
+      const kod = await kodSor(); if (!kod) throw hata('Giriş iptal edildi');
+      try { c = await r.resolveSignIn(A.TotpMultiFactorGenerator.assertionForSignIn(ipucu.uid, kod)); break; }
+      catch (y) { if (y.code !== 'auth/invalid-verification-code') throw y; }
+    }
+  }
   const u = await uyelikBul(c.user);
   if (!u) { await A.signOut(auth); throw hata('Bu hesap bir kursa bağlı değil. Kurs müdürünüzden davet linki isteyin ya da yeni kurs hesabı açın'); }
   return baglan(u);
 }
+// İki adımlı giriş (doğrulama uygulaması / TOTP). Firebase projesinde Identity Platform ve TOTP açık olmalı.
+export async function ikiAdimDurum() { const { auth, A } = await sdk(); return A.multiFactor(auth.currentUser).enrolledFactors.some(f => f.factorId === A.TotpMultiFactorGenerator.FACTOR_ID); }
+export async function ikiAdimBaslat() {
+  const { auth, A } = await sdk();
+  const oturum = await A.multiFactor(auth.currentUser).getSession();
+  const gizli = await A.TotpMultiFactorGenerator.generateSecret(oturum);
+  return { anahtar: gizli.secretKey, url: gizli.generateQrCodeUrl(auth.currentUser.email, 'Sinyal'), bitir: kod => A.multiFactor(auth.currentUser).enroll(A.TotpMultiFactorGenerator.assertionForEnrollment(gizli, kod), 'Doğrulama uygulaması') };
+}
+export async function epostaDogrula() { const { auth, A } = await sdk(); await A.sendEmailVerification(auth.currentUser); }
+export async function ikiAdimKapat() { const { auth, A } = await sdk(); const m = A.multiFactor(auth.currentUser), f = m.enrolledFactors.find(x => x.factorId === A.TotpMultiFactorGenerator.FACTOR_ID); if (f) await m.unenroll(f); }
 export async function sifreSifirla(eposta) { const { auth, A } = await sdk(); await A.sendPasswordResetEmail(auth, eposta.trim()); }
 export async function sifreDogrula(sifre) {
   const { auth, A } = await sdk();
-  try { await A.reauthenticateWithCredential(auth.currentUser, A.EmailAuthProvider.credential(auth.currentUser.email, sifre)); return true; } catch (x) { return false; }
+  try { await A.reauthenticateWithCredential(auth.currentUser, A.EmailAuthProvider.credential(auth.currentUser.email, sifre)); return true; } catch (x) { return x.code === 'auth/multi-factor-auth-required'; }  // iki adımlı hesapta şifre doğruysa ikinci adım istenir
 }
 export async function cikisYap() {
   try { await akit(); } catch (x) { }
@@ -368,7 +391,7 @@ async function makbuzDenetle() {
     for (const h of benim) {
       const m = makbuzSira(h.no); if (!m) { delete h.noGecici; continue; }
       const cakisan = S.hareket.some(x => x !== h && x.no === h.no);
-      if (cakisan) { const eski = h.no, n = await sayacAyir(m[0]); h.no = 'M' + m[0] + '-' + String(n).padStart(5, '0'); islem('Makbuz numarası değişti', eski + ' başka cihazda da verilmişti; yeni numara ' + h.no); import('./ui.js?v=95').then(m => m.bildir(`Makbuz ${eski} çevrimdışıyken verilmişti ve başka cihazdaki makbuzla çakıştı; yeni numarası ${h.no}. Makbuzu verdiyseniz yenisini yazdırın.`, 'uyari')); }
+      if (cakisan) { const eski = h.no, n = await sayacAyir(m[0]); h.no = 'M' + m[0] + '-' + String(n).padStart(5, '0'); islem('Makbuz numarası değişti', eski + ' başka cihazda da verilmişti; yeni numara ' + h.no); import('./ui.js?v=96').then(m => m.bildir(`Makbuz ${eski} çevrimdışıyken verilmişti ve başka cihazdaki makbuzla çakıştı; yeni numarası ${h.no}. Makbuzu verdiyseniz yenisini yazdırın.`, 'uyari')); }
       else await sayacAyir(m[0], m[1] - 1);
       delete h.noGecici;
     }
@@ -389,6 +412,8 @@ function kancalariKur(u) {
   bulutKanca.sahiplen = sahiplen;
   bulutKanca.kayit = kayitYaz;
   bulutKanca.makbuzNo = makbuzNo; bulutKanca.cihaz = cihaz;
+  // WhatsApp servisine kursun kimliğiyle gidilir (servis, Firebase oturumundan kursun üyesi olduğunu doğrular)
+  bulutKanca.yetki = async () => ({ Authorization: 'Bearer ' + await fb.auth.currentUser.getIdToken(), 'X-Kurs': bulut.kurs });
   rezervAl(String(new Date().getFullYear()));
   setInterval(makbuzDenetle, 30000); setTimeout(makbuzDenetle, 5000);
   if (['mudur', 'sekreter'].includes(u.rol)) { setTimeout(() => gunlukYedek().catch(x => console.error(x)), 45000); gelenDinle(); }
@@ -397,7 +422,15 @@ function kancalariKur(u) {
 // ---- yedek ----
 // Her gün ilk açılışta kurs verisinin tam kopyası alınır: (1) Firestore'da kurslar/{kurs}/yedekler (30 gün silinemez),
 // (2) ayrı bir yerde, Cloudflare'de (sunucu Google'dan bağımsız). Fotoğraflar ayrı belgede kaldığı için kopyada yalnız işaretleri durur.
-const WORKER = 'https://sinyal-wa.sinemsavar0.workers.dev';
+export const WORKER = 'https://sinyal-wa.sinemsavar0.workers.dev';
+// Kursun kendi WhatsApp Business hattı: durum, bağlama, kaldırma (erişim anahtarı yalnız servisde saklanır)
+export async function waHat(govde) {
+  const h = { ...(await bulutKanca.yetki()), 'Content-Type': 'application/json' };
+  const r = await fetch(WORKER + '/hat', govde ? { method: 'POST', headers: h, body: JSON.stringify(govde) } : { headers: h });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.ok) throw Object.assign(new Error(j.hata || 'WhatsApp servisine ulaşılamadı'), { kullanici: j.hata || 'WhatsApp servisine ulaşılamadı' });
+  return j;
+}
 const PARCA = 900000;
 async function sikistir(metin) {
   const b = new TextEncoder().encode(metin);
@@ -497,7 +530,7 @@ const sec = (o, l) => { const r = {}; l.forEach(k => { if (o && o[k] !== undefin
 const veriAt = (k, x) => typeof x === 'string' && x.length > DOSYA_SINIR && x.startsWith('data:') ? null : (typeof x === 'string' && x.startsWith(DOSYA_ON) ? null : x);
 export function ogrenciVerisi(k) {
   const id = k.id, bugun = iso(new Date());
-  const kurs = { ...S.kurs }; ['waApi', 'waApiVarsayilan', 'demoNumara', 'demoKime', 'maliyet', 'kuralDegisen', 'kuralOnay', 'aydinlatma'].forEach(x => delete kurs[x]);
+  const kurs = { ...S.kurs }; ['waApi', 'waApiVarsayilan', 'waHat', 'demoNumara', 'demoKime', 'maliyet', 'kuralDegisen', 'kuralOnay', 'aydinlatma'].forEach(x => delete kurs[x]);
   const ben = { ...k, tc: k.tc ? '•••••••' + String(k.tc).slice(-4) : '' }; delete ben.notlar; delete ben.panelKod; delete ben.hesap;
   return {
     kurs, subeler: (S.subeler || []).filter(x => x.id === k.sube).map(x => sec(x, ['id', 'ad', 'semt'])),
@@ -510,7 +543,7 @@ export function ogrenciVerisi(k) {
     egitmenler: S.egitmenler.map(x => sec(x, ['id', 'ad', 'renk', 'siniflar', 'sube', 'sinif'])),
     araclar: S.araclar.map(x => sec(x, ['id', 'plaka', 'model', 'sinif', 'vites', 'egitmen', 'renk', 'yil'])),
     ogretmenler: (S.ogretmenler || []).map(x => sec(x, ['id', 'ad'])),
-    entegrasyon: { pos: { bagli: false }, kdv: (S.entegrasyon || {}).kdv, earsiv: { bagli: false }, muhasebe: {}, musavir: {} },
+    entegrasyon: { kdv: (S.entegrasyon || {}).kdv, earsiv: { bagli: false }, muhasebe: {}, musavir: {} },
   };
 }
 async function projeksiyonYaz() {
@@ -575,6 +608,12 @@ function ogrenciUygula(docId, g) {
       if (d && d.kursiyer === k.id) {
         if (!y) { if (d.durum === 'Planlandı' && fark(d.tarih) >= 1) { S.dersler = S.dersler.filter(z => z !== d); notlar.push(d.tarih + ' ' + d.saat + ' dersini iptal etti'); } else notlar.push('iptal isteği reddedildi (24 saatten az kaldı)'); }
         else if (y.ogrenciPuan && typeof y.ogrenciPuan.puan === 'number' && d.durum === 'Yapıldı') { d.ogrenciPuan = { puan: Math.max(1, Math.min(5, Math.round(y.ogrenciPuan.puan))), yorum: String(y.ogrenciPuan.yorum || '').slice(0, 300), tarih: bugun }; notlar.push('dersi puanladı'); }
+        // ders defteri: öğrenci dersi onaylar ya da itiraz eder (bir kez); itiraz müdüre düşer
+        if (y && y.ogrenciOnay && ['onay', 'itiraz'].includes(y.ogrenciOnay.durum) && d.durum === 'Yapıldı' && !d.ogrenciOnay) {
+          d.ogrenciOnay = { durum: y.ogrenciOnay.durum, not: String(y.ogrenciOnay.not || '').slice(0, 300), tarih: bugun };
+          notlar.push(d.tarih + ' ' + d.saat + ' dersini ' + (d.ogrenciOnay.durum === 'onay' ? 'onayladı' : 'itiraz etti' + (d.ogrenciOnay.not ? ': ' + d.ogrenciOnay.not : '')));
+          if (d.ogrenciOnay.durum === 'itiraz') (S.devredilen = S.devredilen || []).unshift({ ad: tamAd(k), kanal: 'Ders defteri', konu: 'Ders itirazı', mesaj: d.tarih + ' ' + d.saat + ' dersi yapılmadı diyor' + (d.ogrenciOnay.not ? ': ' + d.ogrenciOnay.not : ''), neden: 'Öğrenci dersi onaylamadı', saat: new Date().toTimeString().slice(0, 5), bildirim: [] });
+        }
       } else if (!d && y && y.kursiyer === k.id && y.durum === 'Planlandı' && y.tarih >= bugun && S.egitmenler.some(e => e.id === y.egitmen)) {
         if (S.dersler.some(z => z.tarih === y.tarih && z.saat === y.saat && (z.egitmen === y.egitmen || z.kursiyer === k.id) && z.durum !== 'İptal')) { notlar.push(y.tarih + ' ' + y.saat + ' ders isteği reddedildi: saat dolu'); continue; }
         S.dersler.push({ id: String(x.id).slice(0, 40), kursiyer: k.id, egitmen: y.egitmen, arac: S.araclar.some(a => a.id === y.arac) ? y.arac : null, tarih: y.tarih, saat: String(y.saat).slice(0, 5), durum: 'Planlandı', eklendi: bugun, kaynak: 'kursiyer' });
@@ -584,7 +623,7 @@ function ogrenciUygula(docId, g) {
     } else if (x.a === 'gonderimler' && y && !x.eski) {
       const m = { zaman: new Date().toISOString(), kime: String(y.kime || '').slice(0, 80), metin: String(y.metin || '').slice(0, 1000), tur: String(y.tur || 'Öğrenci').slice(0, 60) };
       S.gonderimler.unshift(m);
-      if (y.iletilecek && S.kurs.waApi) sahiplen('og|' + docId + '|' + x.id).then(ok => { if (ok) import('./ui.js?v=95').then(u => u.apiGonder(u.etiket(m.kime, y.rol || '') + m.metin)); });
+      if (y.iletilecek && S.kurs.waApi) sahiplen('og|' + docId + '|' + x.id).then(ok => { if (ok) import('./ui.js?v=96').then(u => u.apiGonder(u.etiket(m.kime, y.rol || '') + m.metin, undefined, undefined, { ad: m.kime, rol: y.rol || '' })); });
     }
   }
   if (notlar.length) islem('Öğrenci panelinden', tamAd(k) + ': ' + notlar.join(', '));
@@ -631,13 +670,13 @@ async function ogrenciGonder() {
   if (!d.length) return;
   tabanAl();
   const boyut = JSON.stringify(d).length;
-  if (boyut > 950000) { import('./ui.js?v=95').then(u => u.bildir('Gönderilen belge çok büyük; daha küçük bir fotoğraf dene', 'uyari')); return; }
+  if (boyut > 950000) { import('./ui.js?v=96').then(u => u.bildir('Gönderilen belge çok büyük; daha küçük bir fotoğraf dene', 'uyari')); return; }
   const { db, F } = fb;
   try {
     const ref = await F.addDoc(F.collection(db, 'kurslar', ogr.kurs, 'ogrenciGelen'), { kod: ogr.kod, kursiyer: S.kursiyerler[0].id, d, zaman: F.serverTimestamp() });
     ogr.bekleyen.push({ id: ref.id, t: Date.now(), d });
     try { localStorage.setItem('sinyal-ogr-bekleyen-' + ogr.kod, JSON.stringify(ogr.bekleyen.map(p => ({ ...p, d: p.d.map(x => x.v && x.v.length > 20000 ? { ...x, v: null, buyuk: true } : x).filter(x => !x.buyuk) })))); } catch (x) { }
-  } catch (x) { console.error(x); import('./ui.js?v=95').then(u => u.bildir('Kursa iletilemedi; internet bağlantını kontrol et', 'uyari')); }
+  } catch (x) { console.error(x); import('./ui.js?v=96').then(u => u.bildir('Kursa iletilemedi; internet bağlantını kontrol et', 'uyari')); }
 }
 export function ogrenciAyril() { try { localStorage.removeItem('sinyal-ogrenci'); } catch (x) { } }
 

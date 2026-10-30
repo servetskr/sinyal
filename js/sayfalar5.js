@@ -1,8 +1,8 @@
-import * as EK from './eklenti.js?v=95';
-import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube} from './veri.js?v=95';
-import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor } from './ui.js?v=95';
-import { yenile } from './app.js?v=95';
-import * as B from './bulut.js?v=95';
+import * as EK from './eklenti.js?v=96';
+import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, kursiyer, DERS_TUR_AD, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube} from './veri.js?v=96';
+import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor } from './ui.js?v=96';
+import { yenile } from './app.js?v=96';
+import * as B from './bulut.js?v=96';
 
 /* ================= MEB KURALLARI: KAYNAK VE SORUMLULUK ================= */
 const MTSK = 'MTSK Yönetmeliği (ÖÖKGM, Ocak 2025 metni)';
@@ -69,7 +69,7 @@ function bulutGuvenlik(g) {
     <div class="kart"><div class="kart-bas"><h3>Giriş</h3></div><ul class="liste" style="margin-top:8px">
       ${satir('tamam', 'Herkese ayrı e-posta ve şifre', 'Şifreler Google’ın giriş sisteminde tutulur; Sinyal şifreyi görmez. Çok sayıda hatalı denemede giriş geçici olarak kilitlenir.')}
       <li style="align-items:flex-start"><span class="anahtar" style="margin-top:2px"><input type="checkbox" data-guv="hassasOnay" ${g.hassasOnay ? 'checked' : ''} aria-label="Hassas işlemde şifreyi tekrar sor"><i></i></span><div><b style="color:var(--murekkep);display:block">Hassas işlemde şifreyi tekrar sor</b><small style="color:var(--metin);font-size:13.5px">TC’yi tam göstermek, iade yapmak, kullanıcı kaldırmak ve yedekten geri dönmek için.</small></div></li>
-      ${satir('bilgi', 'İki adımlı giriş · henüz yok', 'Telefona doğrulama kodu ücretli Google planıyla açılabiliyor; şu an kapalı.')}
+      <li style="align-items:flex-start" data-iki-adim>${isaret('bilgi', 22)}<div><b style="color:var(--murekkep);display:block">İki adımlı giriş</b><small style="color:var(--metin);font-size:13.5px">Durum yükleniyor…</small></div></li>
     </ul><div class="kart-govde" style="border-top:1px solid var(--cizgi-2)"><b style="color:var(--murekkep)">Hareketsiz kalınca oturumu kapat</b><div class="secim" style="margin-top:8px">${[15, 30, 60, 240].map(d => `<label><input type="radio" name="oturum" value="${d}" data-oturum ${g.oturumDk == d ? 'checked' : ''}><span>${d < 60 ? d + ' dk' : d / 60 + ' saat'}</span></label>`).join('')}</div></div></div>
     <div class="kart"><div class="kart-bas"><h3>Yedekler</h3><small>Her gün ilk açılışta otomatik</small>${mudur ? `<div class="sag"><button class="dg dg-cizgi dg-kucuk" data-yedek-al>${ik('indir')}Şimdi yedek al</button></div>` : ''}</div>
       <div class="kart-govde"><p style="font-size:14px">Kursun bütün kayıtlarının günlük kopyası iki ayrı yerde 30 gün saklanır: Google Firebase’de ve Cloudflare’de. Yedekler değiştirilemez; 30 günden önce kimse silemez.</p></div>
@@ -77,6 +77,33 @@ function bulutGuvenlik(g) {
   </div>
   <div class="ara-bosluk"></div>
   <div class="kart"><div class="kart-bas"><h3>İşlem kaydı</h3></div><div class="kart-govde"><p style="font-size:14px">Giriş, çıkış ve her değişiklik kim yaptı, ne zaman yaptı bilgisiyle sunucuya yazılır. Bu kayıt yalnız eklenebilir: kurs müdürü dahil kimse değiştiremez ya da silemez. <a href="#/ayarlar/gecmis" style="color:var(--levha);font-weight:700">İşlem geçmişini aç</a></p></div></div>`;
+}
+// İki adımlı giriş satırı: kendi hesabınız için doğrulama uygulamasını açar/kapatır
+function ikiAdimSatiri(k) {
+  const yer = k.querySelector('[data-iki-adim]'); if (!yer) return;
+  B.ikiAdimDurum().then(acik => {
+    yer.innerHTML = `${isaret(acik ? 'tamam' : 'bilgi', 22)}<div style="flex:1"><b style="color:var(--murekkep);display:block">İki adımlı giriş · ${acik ? 'açık' : 'kapalı'}</b><small style="color:var(--metin);font-size:13.5px">${acik ? 'Girişte şifreden sonra telefonunuzdaki doğrulama uygulamasının kodu istenir.' : 'Şifreye ek olarak telefonunuzdaki doğrulama uygulamasından (Google Authenticator vb.) kod istenir. Müdür ve ön büro için önerilir. Her kişi kendi hesabında açar.'}</small></div><button class="dg ${acik ? 'dg-cizgi' : 'dg-ana'} dg-kucuk" ${acik ? 'data-iki-kapat' : 'data-iki-ac'}>${acik ? 'Kapat' : 'Aç'}</button>`;
+  }).catch(() => { yer.querySelector('small').textContent = 'Durum okunamadı'; });
+}
+const qrYukle = () => window.QRCode ? Promise.resolve() : new Promise((ok, red) => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'; sc.onload = ok; sc.onerror = () => red(new Error('QR aracı yüklenemedi')); document.head.appendChild(sc); });
+function ikiAdimKur() {
+  B.ikiAdimBaslat().then(g => {
+    pencere({
+      baslik: 'İki adımlı girişi aç',
+      icerik: `<ol style="font-size:14px;padding-left:18px;display:grid;gap:6px"><li>Telefonunuza Google Authenticator ya da Microsoft Authenticator kurun.</li><li>Uygulamada “QR kod tara”yı seçip aşağıdaki kodu okutun. Okutamıyorsanız anahtarı elle girin.</li><li>Uygulamada Sinyal için görünen 6 haneli kodu yazın.</li></ol>
+        <div data-qr style="display:flex;justify-content:center;margin:14px 0"></div><p style="text-align:center;font-size:13px;color:var(--soluk)">Anahtar: <span class="mono" style="user-select:all">${e(g.anahtar)}</span> · <a href="${e(g.url)}" style="color:var(--levha)">telefonda aç</a></p>
+        <input class="girdi" data-iki-kod inputmode="numeric" maxlength="6" autocomplete="one-time-code" aria-label="Doğrulama kodu" placeholder="6 haneli kod" style="font-size:20px;letter-spacing:5px;text-align:center;margin-top:10px;width:100%">`,
+      altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-iki-onay>Aç</button>',
+      onAc(d) {
+        qrYukle().then(() => new window.QRCode(d.querySelector('[data-qr]'), { text: g.url, width: 180, height: 180 })).catch(() => { });
+        d.querySelector('[data-iki-onay]').addEventListener('click', ev => {
+          const kod = d.querySelector('[data-iki-kod]').value.replace(/\D/g, ''); if (kod.length !== 6) return bildir('6 haneli kodu girin', 'uyari');
+          ev.target.disabled = true;
+          g.bitir(kod).then(() => { islem('İki adımlı girişi açtı'); kaydet(); kapatPencere(); bildir('İki adımlı giriş açıldı'); yenile(); }).catch(x => { ev.target.disabled = false; bildir(B.hataMetni(x), 'uyari'); });
+        });
+      },
+    });
+  }).catch(x => { if (x.code === 'auth/unverified-email') B.epostaDogrula().catch(() => { }); bildir(B.hataMetni(x), 'uyari'); });
 }
 function yedekListesi(k) {
   const yer = k.querySelector('[data-yedek-liste]'); if (!yer) return;
@@ -115,8 +142,8 @@ export function muhasebeFisi(ay = 0) {
   });
   return satir;
 }
-export function personelOzeti() {
-  const d0 = new Date(BUGUN); const buAy = s => { const d = tarihOku(s); return d.getMonth() === d0.getMonth() && d.getFullYear() === d0.getFullYear(); };
+export function personelOzeti(ay = 0) {
+  const d0 = new Date(BUGUN); d0.setDate(1); d0.setMonth(d0.getMonth() - ay); const buAy = s => { const d = tarihOku(s); return d.getMonth() === d0.getMonth() && d.getFullYear() === d0.getFullYear(); };
   const izinGun = kim => S.izinler.filter(z => z.kim === kim && buAy(z.bas)).reduce((a, z) => a + Math.round((tarihOku(z.bit) - tarihOku(z.bas)) / 864e5) + 1, 0);
   const sat = [['Ad soyad', 'Görev', 'Şube', 'Brüt aylık ücret', 'Bu ay yapılan ders', 'Ders primi (brüt, SGK’ya tabi)', 'İzin (gün)', 'Brüt toplam', 'Bu ay verilen avans (maaştan düşülecek)'], ['Not: tutarlar brüttür; net ücret, SGK ve vergi kesintileri bordroda hesaplanır.', '', '', '', '', '', '', '']];
   const subeAd = id => ((S.subeler || []).find(x => x.id === id) || {}).ad || '';
@@ -125,23 +152,55 @@ export function personelOzeti() {
   S.personel.forEach(p => sat.push([p.ad, p.gorev, subeAd(p.sube), p.maas, '', '', izinGun(p.id), p.maas, avans(p.ad)]));
   return sat;
 }
+// Usta öğretici puantajı: ay içinde yapılan her direksiyon dersi (bordro için mali müşavire)
+export function puantaj(ay = 0) {
+  const d0 = new Date(BUGUN); d0.setDate(1); d0.setMonth(d0.getMonth() - ay);
+  const buAy = t => { const d = tarihOku(t); return d.getMonth() === d0.getMonth() && d.getFullYear() === d0.getFullYear(); };
+  const sat = [['Usta öğretici', 'Tarih', 'Saat', 'Bitiş', 'Süre (dk)', 'Kursiyer', 'Ders türü']];
+  S.egitmenler.forEach(x => S.dersler.filter(d => d.egitmen === x.id && d.durum === 'Yapıldı' && buAy(d.tarih)).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat))
+    .forEach(d => { const k = kursiyer(d.kursiyer); sat.push([x.ad, d.tarih, d.bas || d.saat, d.bit || '', d.sure || '', k ? tamAd(k) : '', DERS_TUR_AD[d.tur] || 'Direksiyon (trafikte)']); }));
+  return sat;
+}
+// Mali müşavir paketi: ayın tahsilatları (fatura kesilecek), giderleri, muhasebe fişleri, personel özeti ve puantajı tek Excel dosyasında
+export async function musavirPaketi(ay = 0) {
+  await xlsxYukle();
+  const d0 = new Date(BUGUN); d0.setDate(1); d0.setMonth(d0.getMonth() - ay);
+  const buAy = t => { const d = tarihOku(t); return d.getMonth() === d0.getMonth() && d.getFullYear() === d0.getFullYear(); };
+  const oran = (S.entegrasyon.kdv ?? 20) / 100, net = t => Math.round(t / (1 + oran) * 100) / 100;
+  const hr = S.hareket.filter(h => buAy(h.tarih)).sort((a, b) => a.tarih.localeCompare(b.tarih));
+  const gelir = hr.filter(h => h.tur === 'Gelir'), gider = hr.filter(h => h.tur !== 'Gelir');
+  const tahsilat = [['Tarih', 'Makbuz no', 'Ödeyen', 'TC kimlik no', 'Adres', 'Tutar (KDV dahil)', 'KDV hariç', 'KDV', 'Ödeme yöntemi', 'Açıklama', 'Fatura no']];
+  gelir.forEach(h => { const k = h.kursiyer && kursiyer(h.kursiyer), iade = h.kategori === 'İade'; tahsilat.push([h.tarih, h.no || '', k ? tamAd(k) : (h.kim || ''), k ? k.tc || '' : '', k ? k.adres || '' : '', iade ? -h.tutar : h.tutar, iade ? -net(h.tutar) : net(h.tutar), iade ? -(h.tutar - net(h.tutar)) : Math.round((h.tutar - net(h.tutar)) * 100) / 100, h.yontem || '', h.aciklama || '', h.fatura || '']); });
+  const giderS = [['Tarih', 'Kategori', 'Açıklama', 'Tutar', 'Ödeme yöntemi']];
+  gider.forEach(h => giderS.push([h.tarih, h.kategori || '', h.aciklama || '', h.tutar, h.yontem || '']));
+  const topla = (l, f) => l.reduce((a, h) => a + (f(h) ? h.tutar : 0), 0);
+  const ayAd = d0.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+  const ozet = [[S.kurs.ad + ' · ' + ayAd + ' mali müşavir paketi'], [], ['Toplam tahsilat', topla(gelir, h => h.kategori !== 'İade')], ['İadeler', topla(gelir, h => h.kategori === 'İade')], ['Toplam gider', topla(gider, () => true)], [],
+    ...['Nakit', 'Havale', 'Kart'].map(y => ['Tahsilat · ' + y, topla(gelir, h => h.yontem === y && h.kategori !== 'İade')]), [], ['KDV oranı (%)', S.entegrasyon.kdv ?? 20],
+    ['Not', 'Sinyal makbuzu fatura yerine geçmez. “Tahsilatlar” sayfasındaki her satır için fatura (e-Arşiv) kesilmesi gerekebilir; oranı ve zamanlamayı siz belirleyin.']];
+  const wb = XLSX.utils.book_new();
+  [['Özet', ozet], ['Tahsilatlar', tahsilat], ['Giderler', giderS], ['Muhasebe fişleri', muhasebeFisi(ay)], ['Personel özeti', personelOzeti(ay)], ['Puantaj', puantaj(ay)]]
+    .forEach(([ad, veri]) => XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(veri), ad));
+  XLSX.writeFile(wb, `musavir-paketi-${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}.xlsx`);
+}
 function entegrasyonSekme() {
   const g = S.entegrasyon;
   const kart = (bas, durum, govde) => `<div class="kart"><div class="kart-bas">${isaret(durum ? 'tamam' : 'bilgi', 24)}<h3>${bas}</h3><span class="sag">${durum ? rozet('Bağlı', 'yesil') : rozet('Bağlı değil', 'notr')}</span></div><div class="kart-govde">${govde}</div></div>`;
   return `<div class="izgara iz-2">
-    ${kart('e-Arşiv fatura', g.earsiv.bagli, `<p style="font-size:14px">Tahsilat alındığında fatura entegratörünüz üzerinden kesilir, PDF’i kursiyere WhatsApp’tan gider. Kursiyer bilgileri kayıttan gelir.</p><div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px"><div class="alan" style="width:140px"><label for="e-seri">Fatura seri öneki</label><input id="e-seri" class="girdi" maxlength="3" data-earsiv-alan="seri" value="${e(g.earsiv.seri || 'SNY')}"></div><div class="alan" style="width:170px"><label for="e-vkn">Vergi kimlik no</label><input id="e-vkn" class="girdi" inputmode="numeric" maxlength="11" data-earsiv-alan="vkn" value="${e(g.vkn || '')}"></div></div><small style="color:var(--soluk)">${(S.faturalar || []).length} fatura kesildi.</small>`)}
+    ${kart('e-Arşiv fatura', g.earsiv.bagli, `<p style="font-size:14px">${g.earsiv.bagli ? 'Tahsilat alındığında fatura entegratörünüz üzerinden kesilir, PDF’i kursiyere WhatsApp’tan gider. Kursiyer bilgileri kayıttan gelir.' : 'e-Arşiv bağlantısı hazırlanıyor. O zamana kadar faturayı mali müşaviriniz keser: aşağıdaki müşavir paketindeki “Tahsilatlar” sayfası her tahsilatı TC ve adresiyle verir.'}</p><div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px"><div class="alan" style="width:140px"><label for="e-seri">Fatura seri öneki</label><input id="e-seri" class="girdi" maxlength="3" data-earsiv-alan="seri" value="${e(g.earsiv.seri || 'SNY')}"></div><div class="alan" style="width:170px"><label for="e-vkn">Vergi kimlik no</label><input id="e-vkn" class="girdi" inputmode="numeric" maxlength="11" data-earsiv-alan="vkn" value="${e(g.vkn || '')}"></div></div><small style="color:var(--soluk)">${(S.faturalar || []).length} fatura kesildi.</small>`)}
     <div class="kart"><div class="kart-bas">${isaret(g.muhasebe.bagli ? 'tamam' : 'bilgi', 24)}<h3>Muhasebe</h3><span class="sag">${g.muhasebe.bagli ? rozet('Paraşüt bağlı', 'yesil') : rozet('Excel ile aktarım', 'mavi')}</span></div><div class="kart-govde" style="display:grid;gap:12px">
-      <p style="font-size:14px">Kasadaki her hareket muhasebe fişine çevrilir. Paraşüt’e doğrudan gider; Logo, Mikro, Luca ve Zirve için aylık fiş dosyası hazırlanır.</p>
+      <p style="font-size:14px">Kasadaki her hareket muhasebe fişine çevrilir. Logo, Mikro, Luca ve Zirve için aylık fiş dosyası hazırlanır.</p>
       <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end"><div class="alan" style="width:130px"><label for="kdv">KDV oranı (%)</label><input id="kdv" class="girdi" type="number" min="0" max="20" data-kdv value="${g.kdv ?? 20}"></div>
         <div><b style="color:var(--murekkep);font-size:14px">Kurs ücreti ne zaman faturalanıyor?</b><div class="secim" style="margin-top:6px">${[['tahsilat', 'Her tahsilatta'], ['kayit', 'Kayıtta tamamı (taksitler alacak)']].map(([v, t]) => `<label><input type="radio" name="fatura" value="${v}" data-fatura ${g.fatura === v ? 'checked' : ''}><span>${t}</span></label>`).join('')}</div></div></div>
       <small style="color:var(--soluk)">Oranı ve faturalama zamanını mali müşavirinizle teyit edin; fişler buna göre üretilir.</small>
       <div class="tablo-kap"><table class="tablo"><thead><tr><th>Sinyal’de</th><th>Muhasebe hesabı</th></tr></thead><tbody>${[['Nakit / havale / kart', [HESAP.Nakit[0] + ' / ' + HESAP.Havale[0] + ' / ' + HESAP.Kart[0], 'Kasa, bankalar, POS']], ['Kurs ücreti (KDV hariç)', HESAP.gelir], ['Hesaplanan KDV', HESAP.kdvOut], ...(g.fatura === 'kayit' ? [['Taksit alacağı', HESAP.alici]] : []), ['İade', HESAP.iade], ['Gider (yakıt, bakım, fatura, reklam KDV’li)', [HESAP.gider[0] + ' + ' + HESAP.kdvIn[0], 'Gider + indirilecek KDV']], ['Maaş, kira, harç', HESAP.gider]].map(([a, h]) => `<tr><td>${a}</td><td class="mono">${h[0]} · ${e(h[1])}</td></tr>`).join('')}</tbody></table></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="dg dg-ana" data-fis="0">${ik('indir')}Bu ayın muhasebe fişleri</button><button class="dg dg-cizgi" data-fis="1">Geçen ay</button>${g.muhasebe.bagli ? '' : '<button class="dg dg-cizgi" data-parasut>Paraşüt’ü bağla</button>'}</div></div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="dg dg-ana" data-fis="0">${ik('indir')}Bu ayın muhasebe fişleri</button><button class="dg dg-cizgi" data-fis="1">Geçen ay</button></div></div></div>
     <div class="kart"><div class="kart-bas">${isaret('bilgi', 24)}<h3>Mali müşavir ve personel</h3></div><div class="kart-govde" style="display:grid;gap:12px">
       <p style="font-size:14px">Bordro ve SGK işlemleri mali müşavirinizde kalır. Sinyal ona her ay ihtiyaç duyduğu özeti hazırlar: maaş, yapılan ders, ders primi, izin.</p>
-      <button class="dg dg-cizgi" data-personel-ozet style="justify-self:start">${ik('indir')}Bu ayın personel özeti</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="dg dg-ana" data-musavir-paket="0">${ik('indir')}Bu ayın müşavir paketi (Excel)</button><button class="dg dg-cizgi" data-musavir-paket="1">Geçen ay</button><button class="dg dg-cizgi" data-personel-ozet>Yalnız personel özeti</button></div>
+      <small style="color:var(--soluk)">Pakette tek dosyada: tahsilatlar (fatura kesilecek satırlar), giderler, muhasebe fişleri, personel özeti ve usta öğretici puantajı.</small>
       <div class="alan"><label for="musavir">Mali müşavirin e-postası</label><input id="musavir" class="girdi" type="email" data-musavir value="${e(g.musavir.eposta)}" placeholder="musavir@firma.com"></div>
-      <label style="display:flex;gap:12px;align-items:center;font-size:14.5px"><span class="anahtar"><input type="checkbox" data-musavir-oto ${g.musavir.otomatik ? 'checked' : ''}><i></i></span>Her ayın 1’inde fişler, kasa dökümü ve personel özeti otomatik gitsin</label></div></div>
+      <p style="font-size:13.5px;color:var(--soluk)">Özeti indirip müşavirinize e-postayla gönderin.${g.musavir.eposta ? ` <a href="mailto:${e(g.musavir.eposta)}?subject=${encodeURIComponent(S.kurs.ad + ' · aylık özet')}" style="color:var(--levha);font-weight:700">E-posta yaz</a>` : ''}</p></div></div>
   </div>`;
 }
 
@@ -433,7 +492,7 @@ function sozlesmeSekme() {
 }
 export const AYAR_SEKMELERI = { kullanici: kullaniciSekme, sozlesme: sozlesmeSekme, subeler: subelerSekme, kurallar: kurallarSekme, guvenlik: guvenlikSekme, entegrasyon: entegrasyonSekme, aktarim: aktarimSekme, gorunum: gorunumSekme };
 export function ayarBaglan(k) {
-  davetListesi(k); yedekListesi(k); sunucuKaydi(k);
+  davetListesi(k); yedekListesi(k); sunucuKaydi(k); if (B.bulutta()) ikiAdimSatiri(k);
   k.addEventListener('change', ev => {
     const t = ev.target;
     if (t.matches('[data-uye-rol]')) { const u = S.kullanicilar.find(x => x.id === t.dataset.uyeRol); B.uyeGuncelle(u.id, { rol: t.value }).then(() => { islem('Rol değiştirdi', u.ad + ' · ' + ROL[t.value]); kaydet(); bildir(u.ad + ' artık ' + ROL[t.value]); }).catch(x => { bildir(B.hataMetni(x), 'uyari'); yenile(); }); return; }
@@ -446,8 +505,7 @@ export function ayarBaglan(k) {
     if (t.matches('[data-kdv]')) { S.entegrasyon.kdv = Math.max(0, Math.min(20, +t.value || 0)); kaydet(); bildir('KDV oranı %' + S.entegrasyon.kdv + ' olarak kaydedildi'); }
     if (t.matches('[data-fatura]')) { S.entegrasyon.fatura = t.value; kaydet(); bildir(t.value === 'kayit' ? 'Kurs ücreti kayıtta faturalanacak; taksitler alacak hesabında' : 'Her tahsilatta e-Arşiv kesilecek'); yenile(); }
     if (t.matches('[data-earsiv-alan]')) { const a = t.dataset.earsivAlan, v = t.value.trim(); if (a === 'seri') { if (!/^[A-Za-zÇĞİÖŞÜçğıöşü]{3}$/.test(v)) return bildir('Seri öneki 3 harf olmalı', 'uyari'); S.entegrasyon.earsiv.seri = v.toLocaleUpperCase('tr'); } else { if (v && !/^\d{10,11}$/.test(v)) return bildir('Vergi no 10, TC no 11 hane olmalı', 'uyari'); S.entegrasyon.vkn = v; } islem('Fatura ayarını değiştirdi', a); kaydet(); bildir('Kaydedildi'); }
-    if (t.matches('[data-musavir]')) { S.entegrasyon.musavir.eposta = t.value.trim(); kaydet(); bildir('E-posta kaydedildi'); }
-    if (t.matches('[data-musavir-oto]')) { if (t.checked && !S.entegrasyon.musavir.eposta) { t.checked = false; return bildir('Önce mali müşavirin e-postasını yazın', 'uyari'); } S.entegrasyon.musavir.otomatik = t.checked; kaydet(); bildir(t.checked ? 'Her ayın 1’inde otomatik gönderilecek' : 'Otomatik gönderim kapatıldı'); }
+    if (t.matches('[data-musavir]')) { S.entegrasyon.musavir.eposta = t.value.trim(); kaydet(); bildir('E-posta kaydedildi'); yenile(); }
     if (t.matches('[data-akt-tur]')) { aktarim.tur = t.value; aktarim.satirlar = null; aktarim.esles = {}; yenile(); }
     if (t.matches('[data-esles]')) { aktarim.esles[t.dataset.esles] = t.value; yenile(); }
     if (t.matches('[data-gorunum]')) { let g = {}; try { g = JSON.parse(localStorage.getItem('sinyal-gorunum') || '{}'); } catch (x) { } g[t.dataset.gorunum] = t.value; try { localStorage.setItem('sinyal-gorunum', JSON.stringify(g)); } catch (x) { } temaUygula(); }
@@ -463,6 +521,8 @@ export function ayarBaglan(k) {
     const t = ev.target;
     if (t.closest('[data-kul-ekle]')) return kullaniciFormu();
     if (t.closest('[data-davet]')) return davetFormu();
+    if (t.closest('[data-iki-ac]')) return ikiAdimKur();
+    if (t.closest('[data-iki-kapat]')) { pinSor('İki adımlı girişi kapatmak için şifrenizi girin').then(ok => ok && B.ikiAdimKapat().then(() => { islem('İki adımlı girişi kapattı'); kaydet(); bildir('İki adımlı giriş kapatıldı'); yenile(); }).catch(x => bildir(B.hataMetni(x), 'uyari'))); return; }
     if (t.closest('[data-yedek-al]')) { const b = t.closest('[data-yedek-al]'); b.disabled = true; B.yedekAl('elle').then(() => { islem('Elle yedek aldı'); kaydet(); bildir('Yedek alındı'); yedekListesi(k); }).catch(x => bildir(B.hataMetni(x), 'uyari')).finally(() => { b.disabled = false; }); return; }
     const yi = t.closest('[data-yedek-indir]'); if (yi) { const y = yedekCache.find(x => x.id === yi.dataset.yedekIndir); yi.disabled = true; B.yedekOku(y).then(v => { B.yedekIndir(v, 'sinyal-yedek-' + y.id + '.json'); islem('Yedek indirdi', y.id); kaydet(); }).catch(x => bildir(B.hataMetni(x), 'uyari')).finally(() => { yi.disabled = false; }); return; }
     const yd = t.closest('[data-yedek-don]'); if (yd) { const y = yedekCache.find(x => x.id === yd.dataset.yedekDon); return pencere({ baslik: tarih(y.tarih) + ' yedeğine dönülsün mü?', icerik: `<p>Bütün kayıtlar (öğrenciler, dersler, kasa, ayarlar) bu yedekteki hâline döner. Yedekten sonra girilen kayıtlar kaybolur.</p><p style="margin-top:8px">Dönmeden önce şimdiki hâlin de yedeği alınır; yanlışlıkla döndüyseniz o yedekle geri gelebilirsiniz.</p>`, altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Bu ana dön</button>', onAc(d) { d.querySelector('[data-k]').addEventListener('click', () => pinSor('Yedekten geri dönmek').then(onay => { if (!onay) return; const b = d.querySelector('[data-k]'); if (b) b.disabled = true; bildir('Yedek okunuyor ve geri yükleniyor…'); B.geriYukle(y).then(() => { kapatPencere(); bildir(tarih(y.tarih) + ' yedeğine dönüldü'); yenile(); }).catch(x => bildir(B.hataMetni(x), 'uyari')); })); } }); }
@@ -475,10 +535,11 @@ export function ayarBaglan(k) {
     if (t.closest('[data-sozlesme-varsayilan]')) { S.kurs.sozlesme = null; islem('Sözleşmeyi varsayılana döndürdü'); kaydet(); bildir('Varsayılan metne dönüldü'); return yenile(); }
     if (t.closest('[data-sube-ekle]')) { const n = S.subeler.length + 1; S.subeler.push({ id: 's' + Date.now(), ad: 'Yeni şube ' + n, semt: '', kurumKodu: '', mudur: '', mebbis: '' }); islem('Şube ekledi'); kaydet(); bildir('Şube eklendi; kurum kodunu ve müdürünü yazın'); yenile(); }
     if (t.closest('[data-kural-onay]')) { S.kurs.kuralOnay = { kim: oturum.kullanici ? oturum.kullanici.ad : '', tarih: gun(0) }; islem('Kural değerlerini onayladı'); kaydet(); bildir('Kural değerleri onaylandı'); yenile(); }
-    const bo = t.closest('[data-belge-ac]'); if (bo) import('./sayfalar3.js?v=95').then(m => m.belgeAc(bo.dataset.belgeAc));
+    const bo = t.closest('[data-belge-ac]'); if (bo) import('./sayfalar3.js?v=96').then(m => m.belgeAc(bo.dataset.belgeAc));
     const ok = t.closest('[data-oturum-kapat]'); if (ok) { const o = S.guvenlik.oturumlar.splice(+ok.dataset.oturumKapat, 1)[0]; islem('Oturumu kapattırdı', o.kim + ' · ' + o.cihaz); kaydet(); bildir(o.kim + ' · ' + o.cihaz + ' oturumu kapatıldı'); yenile(); }
     const fs = t.closest('[data-fis]'); if (fs) { const n = +fs.dataset.fis, d = new Date(BUGUN); d.setMonth(d.getMonth() - n); csvIndir(`muhasebe-fisleri-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}.csv`, muhasebeFisi(n)); islem('Muhasebe fişlerini indirdi'); kaydet(); }
     if (t.closest('[data-parasut]')) pencere({ baslik: 'Paraşüt · bağlantı gerekli', icerik: `<div class="ipucu uyari" style="margin-bottom:12px">${isaret('uyari', 22)}<span>Paraşüt bağlantısı için kursun Paraşüt hesabından alınan API anahtarı gerekir. Anahtar girilene kadar tahsilatlar Paraşüt’e aktarılmaz.</span></div><p style="font-size:14.5px">Bu arada aylık muhasebe fişini CSV olarak indirip Paraşüt’e veya muhasebecinize yükleyebilirsiniz; fişte her tahsilat, gider ve iade ayrı satırdır.</p>`, altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-pfis>Bu ayın fişini indir</button>', onAc(d) { d.querySelector('[data-pfis]').addEventListener('click', () => { const d0 = new Date(BUGUN); csvIndir(`muhasebe-fisleri-${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}.csv`, muhasebeFisi(0)); islem('Muhasebe fişlerini indirdi'); kaydet(); kapatPencere(); }); } });
+    const mp = t.closest('[data-musavir-paket]'); if (mp) { mp.disabled = true; musavirPaketi(+mp.dataset.musavirPaket).then(() => { islem('Mali müşavir paketini indirdi'); kaydet(); bildir('Müşavir paketi indirildi'); }).catch(x => bildir(x.message, 'uyari')).finally(() => { mp.disabled = false; }); }
     if (t.closest('[data-personel-ozet]')) { csvIndir('personel-ozeti.csv', personelOzeti()); islem('Personel özetini indirdi'); kaydet(); }
     if (t.closest('[data-sablon-csv]')) csvIndir(`sinyal-${aktarim.tur}-sablonu.csv`, [TUR_ALAN().map(a => a[1]), { kursiyer: ['12345678950', 'Ali', 'Yıldız', '0532 000 00 01', '14.03.2004', 'B', '02.10.2026', '24000', '8000', 'Odunpazarı', '12', '3'], taksit: ['12345678950', '02.11.2026', '4000', '', 'Kart'], arac: ['26 AB 123', 'Renault Clio', '2023', 'B', '12.05.2027', '01.03.2027'] }[aktarim.tur]]);
     if (t.closest('[data-aktar-onay]')) { aktarimUygula(); yenile(); }
@@ -506,7 +567,7 @@ export function evrakDogrula(k, tur) {
 
 /* ================= KURULUM ================= */
 export function kurulumAdimlari() {
-  const sos = S.sosyal || { kanallar: [] }, g = S.guvenlik || { ikiAdim: {} }, en = S.entegrasyon || { earsiv: {}, pos: {} };
+  const sos = S.sosyal || { kanallar: [] }, en = S.entegrasyon || { earsiv: {} };
   return [
     ['Kurs bilgileri ve şubeler', !!(S.kurs.tel && S.kurs.adres), 'Siz · 3 dk', '#/ayarlar/kurs', 'Ad, adres, telefon; birden fazla şube varsa şubeler.'],
     ['Sınıflar ve ücretler', true, 'Siz · 2 dk', '#/ayarlar/sinif', 'Sürücü kursu şablonu hazır gelir; yalnızca ücretleri kontrol edin.'],
@@ -514,8 +575,8 @@ export function kurulumAdimlari() {
     ['Kursiyerleri aktar', S.kursiyerler.length > 0, 'Biz · 1 gün', '#/ayarlar/aktarim', 'Eski programdan kursiyer, taksit ve ödeme geçmişi.'],
     ['MEB kural değerlerini onayla', !!S.kurs.kuralOnay, 'Siz · 2 dk', '#/ayarlar/kurallar', 'Değerler kaynağıyla gelir; kurs müdürü onaylar.'],
     ['Asistanın bildikleri', S.asistanBilgi.length >= 5, 'Biz · şablondan', '#/mesajlar/bilgi', 'Fiyat, evrak, ders saatleri. Sürücü kursu şablonundan doldurulur, siz okursunuz.'],
-    ['Kanalları bağla', sos.kanallar.filter(c => c.bagli).length >= 2, 'Biz + siz · 30 dk', '#/sosyal/kanal', 'Instagram ve WhatsApp; Meta girişini siz yaparsınız.'],
-    ['Kullanıcılar ve güvenlik', !!g.ikiAdim.mudur && !!g.ikiAdim.sekreter, 'Siz · 5 dk', '#/ayarlar/guvenlik', 'Ön büro ve usta öğretici davetleri, iki adımlı giriş.'],
+    ['WhatsApp hattını bağla', !!S.kurs.waApi || sos.kanallar.some(c => c.id === 'wp' && c.bagli), 'Biz + siz · 30 dk', '#/ayarlar/kurs', 'Mesajların kurs numarasından otomatik gitmesi için. Instagram ve Facebook, Meta onayından sonra eklenir.'],
+    ['Kullanıcılar ve güvenlik', (S.kullanicilar || []).length >= 2, 'Siz · 5 dk', '#/ayarlar/kullanici', 'Ön büro ve usta öğretici davetleri; hareketsiz kalınca oturumun kapanma süresi.'],
     ['e-Arşiv fatura', !!en.earsiv.bagli, 'Biz · 1 gün', '#/ayarlar/entegrasyon', 'e-Arşiv entegratörü bilgileri (kursun kendi sözleşmesiyle).'],
   ];
 }
@@ -533,7 +594,7 @@ export function kurulum() {
    Rakiplerdeki gibi: kurs bilgisayarındaki MEBBİS Aracı, kursun kendi MEBBİS oturumunu açar ve
    formları doldurur. Şifre bu bilgisayarda kalır, Sinyal sunucusuna gelmez. Güvenlik kodunu kullanıcı girer.
    ⚠ Basına yansıyan Temmuz 2026 MEB yazısı bot/makro/eklenti ve şifre paylaşımını yasaklıyor;
-   bu yüzden varsayılan değil, kurs müdürünün onayıyla açılır. */
+   bu yüzden Yardımcı yalnız kursun kendi Chrome’una kurulursa çalışır; şifre istemez, Kaydet’e kullanıcı basar. */
 export const MEB_RISK = 'MEBBİS Yardımcısı kursun kendi MEBBİS oturumunda çalışır: MEBBİS’e kurs yetkilisi girer, Yardımcı şifre istemez ve saklamaz; formu doldurur, Kaydet’e ve güvenlik koduna kullanıcı basar.';
 export function mebKuyruk() {
   const kayit = sb(S.kursiyerler).filter(k => !k.mebIslendi && !eksikEvrak(k).length);

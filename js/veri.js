@@ -10,6 +10,10 @@ const KONU_PLAN_MOTOR = [['hazirlik', 'calistirma'], ['koni', 'sekiz'], ['denge'
 // Araç sınıfına göre beklenen yakıt tüketimi (L/100 km; B için kurs ayarı)
 const BEKLENEN_TUKETIM = { C: 22, 'C-O': 22, A2: 3.5, A: 4.5, M: 2.5 };
 export const motorSinif = sinif => /^(A|M)/.test(String(sinif || ''));
+// Ders türleri: simülatör ve eğitim alanı saatleri 9/1/2025'ten beri asgari direksiyon saatine eklenir (MTSK Yön. değişikliği)
+export const DERS_TUR_AD = { trafik: 'Direksiyon (trafikte)', alan: 'Eğitim alanı', simulator: 'Simülatör' };
+// Direksiyon sınav formu: M, A1, A2, A ve B1 EK-3 ile, diğer sınıflar EK-4 ile değerlendirilir
+export const ek3Sinif = sinif => motorSinif(sinif) || String(sinif || '') === 'B1';
 export const konuListesi = sinif => motorSinif(sinif) ? DERS_KONU_MOTOR : DERS_KONU;
 // Kaçıncı derste hangi konular: kursun ders sayısına göre plana oranlanır (öneri; öğretmen değiştirir)
 export function konuOner(sinif, no, toplam) { const p = motorSinif(sinif) ? KONU_PLAN_MOTOR : KONU_PLAN, i = Math.min(p.length - 1, Math.floor((Math.max(1, no) - 1) * p.length / Math.max(1, toplam || p.length))); return p[i]; }
@@ -417,11 +421,10 @@ function uret() {
   personel.forEach(p => { p.sube = p.id === 'p3' ? 's2' : 's1'; });
   // Ders kanıtı: başlangıç-bitiş saati ve konum onayı (usta öğretici ekranından)
   dersler.filter(d => d.durum === 'Yapıldı').forEach((d, i) => { const [h, m] = d.saat.split(':').map(Number), bas = h * 60 + m + (i % 5), sure = i % 37 === 0 ? 34 : 48 + (i % 6); const f = x => String(Math.floor(x / 60)).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0'); d.bas = f(bas); d.bit = f(bas + sure); d.sure = sure; d.konum = true; });
-  // Otomatik kart çekimi onayı veren kursiyerler
   // Evrak geçerlilik tarihleri (belgenin üzerindeki tarih)
-  kursiyerler.forEach((k, i) => { if (k.dogrulama && k.dogrulama.saglik) k.dogrulama.saglik.gecerlilik = gun(i % 11 === 0 ? 20 : 200 + i * 3); });
   kursiyerler.forEach((k, i) => { if (!k.deneme.length) return; const n = k.deneme.length, ort = k.deneme.reduce((a, b) => a + b, 0) / n / 100, zayif = ['trafik', 'ilkyardim', 'motor', 'adab'][i % 4]; k.konuAnaliz = Object.fromEntries([['trafik', 23], ['ilkyardim', 12], ['motor', 9], ['adab', 6]].map(([kn, q]) => { const t = q * n, o = Math.min(0.98, Math.max(0.3, ort + (kn === zayif ? -0.18 : 0.05))); return [kn, [Math.round(t * o), t]]; })); });
   kursiyerler.forEach((k, i) => { if (i % 5 === 1) return; k.dogrulama = {}; ['saglik', 'adli'].forEach(x => { if (k.evrak[x]) k.dogrulama[x] = { kod: x === 'adli' ? 'A' + (480000 + i * 37) : 'R-' + (2026000 + i * 11), kim: 'Selda Korkmaz', tarih: k.kayit }; }); });
+  kursiyerler.forEach((k, i) => { if (k.dogrulama && k.dogrulama.saglik) k.dogrulama.saglik.gecerlilik = gun(i % 11 === 0 ? 20 : 200 + i * 3); });
 
   const guvenlik = {
     ikiAdim: { mudur: true, sekreter: true, usta: false }, oturumDk: 60, ipKisit: false, hassasOnay: true,
@@ -436,7 +439,6 @@ function uret() {
     earsiv: { bagli: true, ad: 'e-Arşiv entegratörü', not: 'Tahsilatta fatura otomatik kesilir' },
     muhasebe: { tur: 'Excel', bagli: false },
     musavir: { eposta: '', otomatik: false },
-    pos: { bagli: true, ad: 'Sanal POS', komisyon: 2.49 },
     kdv: 20, fatura: 'tahsilat',
   };
 
@@ -474,7 +476,7 @@ function goc(o) {
   const gelir = (o.hareket || []).filter(h => h.tur === 'Gelir').sort((a, b) => (a.tarih + a.id).localeCompare(b.tarih + b.id));
   gelir.forEach(h => { if (!h.no) { const yil = h.tarih.slice(0, 4); o.sayac['m' + yil] = (o.sayac['m' + yil] || 0) + 1; h.no = 'M' + yil + '-' + String(o.sayac['m' + yil]).padStart(5, '0'); } });
   // gerçek entegrasyon kurulana kadar bağlı görünmez
-  if (o.entegrasyon && !o.entegrasyon.gercek) { o.entegrasyon.earsiv.bagli = false; o.entegrasyon.pos.bagli = false; o.entegrasyon.muhasebe.bagli = false; o.entegrasyon.muhasebe.tur = 'Excel'; }
+  if (o.entegrasyon && !o.entegrasyon.gercek) { o.entegrasyon.earsiv.bagli = false; delete o.entegrasyon.pos; o.entegrasyon.muhasebe.bagli = false; o.entegrasyon.muhasebe.tur = 'Excel'; }
   if (o.mebArac && !o.mebArac.gercek) o.mebArac = null;
   if (o.kurs.mebYontem === 'arac' && !o.mebArac) o.kurs.mebYontem = 'sirali';
   // demo: PIN’le giren her cihazda WhatsApp gönderimi hazır gelsin (mesajlar yalnız demo numarasına gider); Ayarlar’dan boşaltılırsa kapalı kalır
@@ -512,7 +514,7 @@ function goc(o) {
 }
 // Yeni tahsilata kalıcı makbuz numarası
 // Bulut kancaları (bulut.js doldurur; demoda boş): makbuz numarası, sunucu işlem kaydı, zamanlı mesajın tek cihazdan gitmesi
-export const bulutKanca = { makbuzNo: null, kayit: null, sahiplen: null, cihaz: null };
+export const bulutKanca = { makbuzNo: null, kayit: null, sahiplen: null, cihaz: null, yetki: null };
 const makbuzBicim = (yil, n) => 'M' + yil + '-' + String(n).padStart(5, '0');
 export const makbuzSira = (no) => { const m = /^M(\d{4})-(\d+)$/.exec(no || ''); return m ? [m[1], +m[2]] : null; };
 // Yakıt tüketimi (L/100 km): litre ve kilometre sayacı girilmiş dolumlardan, dolu depo yöntemiyle (iki dolum arası km'ye sonraki dolumun litresi)
@@ -566,7 +568,7 @@ export function bosVeri({ kursAd, yetkili, sehir }) {
   if (o.guvenlik) o.guvenlik.oturumlar = [];
   o.asistanBilgi = []; o.gruplar = []; o.mevzuat = (o.mevzuat || []).filter(m => m.uygulandi);
   o.hesaplar = [{ id: 'kasa', ad: 'Nakit kasa', tur: 'Kasa', bakiye: 0 }];
-  o.entegrasyon = { ...o.entegrasyon, earsiv: { bagli: false, ad: 'e-Arşiv entegratörü', not: '' }, pos: { bagli: false, ad: 'Sanal POS', komisyon: 0 } };
+  o.entegrasyon = { ...o.entegrasyon, earsiv: { bagli: false, ad: 'e-Arşiv entegratörü', not: '' } };
   o.sms = { bakiye: 0, kanal: 'WhatsApp' };
   delete o._gun; o._bulut = true;
   return o;
@@ -593,8 +595,9 @@ export const arac = id => S.araclar.find(a => a.id === id) || ((S.cikanlar || {}
 export function arsivle(tur, x) { S.cikanlar = S.cikanlar || { egitmen: [], arac: [] }; S.cikanlar[tur].push({ ...x, cikis: gun(0) }); }
 export const tamAd = k => k.ad + ' ' + k.soyad;
 // öğrenci uygulamasının ek özellikleri: kurs Ayarlar › Öğrenci uygulaması’ndan kapatabilir (varsayılan açık)
-export const OGR_OZELLIK = [['hazirlik', 'Sınava hazırlık puanı ve öneriler'], ['tekrar', 'Aralıklı tekrar (yanlış soruların yeniden sorulması)'], ['direksiyon', 'Direksiyon sınavına hazırlık (resmî form maddeleri, park ve dönüş şemaları)'], ['ikaz', 'Gösterge paneli ve ikaz lambaları'], ['motor', '4 zamanlı motor ve debriyaj denemesi'], ['tehlike', 'Tehlike algısı çalışması'], ['sesli', 'Konu anlatımlarını sesli dinleme']];
-export const ogrOzellik = ad => ((S.kurs || {}).ogrOzellik || {})[ad] !== false;
+export const OGR_OZELLIK = [['hazirlik', 'Sınava hazırlık puanı ve öneriler'], ['tekrar', 'Aralıklı tekrar (yanlış soruların yeniden sorulması)'], ['direksiyon', 'Direksiyon sınavına hazırlık (resmî form maddeleri, park ve dönüş şemaları)'], ['ikaz', 'Gösterge paneli ve ikaz lambaları'], ['motor', '4 zamanlı motor ve debriyaj denemesi'], ['tehlike', 'Tehlike algısı çalışması'], ['sesli', 'Konu anlatımlarını sesli dinleme'], ['dersOnay', 'Ders defteri: öğrenci her direksiyon dersini kendi telefonundan onaylar ya da itiraz eder (varsayılan kapalı)']];
+const OGR_KAPALI = ['dersOnay'];  // kursun açması gereken özellikler
+export const ogrOzellik = ad => { const v = ((S.kurs || {}).ogrOzellik || {})[ad]; return OGR_KAPALI.includes(ad) ? v === true : v !== false; };
 // Mesaj hitabı: "Merhaba Elif Hanım," / "Merhaba Hüseyin Hoca,"; cinsiyeti bilinmeyen (aday vb.) için "Sayın Deniz Akın,"
 export function selam(x) {
   if (!x) return 'Merhaba,';
