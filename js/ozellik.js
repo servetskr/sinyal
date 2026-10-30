@@ -1,10 +1,10 @@
-import { cevapIsle } from './mesaj.js?v=101';
-import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli } from './veri.js?v=101';
-import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos, waIstek } from './ui.js?v=101';
-import { yenile } from './app.js?v=101';
-import { bildirimler } from './sayfalar1.js?v=101';
-import { denetimEksikleri } from './sayfalar3.js?v=101';
-import { sinifKari, dersMaliyeti, bosKapasite, hakedis, KAPASITE_SAAT, randevuEngeli, bosSlotlar } from './risk.js?v=101';
+import { cevapIsle } from './mesaj.js?v=102';
+import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli } from './veri.js?v=102';
+import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos, waIstek, ziyaretci } from './ui.js?v=102';
+import { yenile } from './app.js?v=102';
+import { bildirimler } from './sayfalar1.js?v=102';
+import { denetimEksikleri } from './sayfalar3.js?v=102';
+import { sinifKari, dersMaliyeti, bosKapasite, hakedis, KAPASITE_SAAT, randevuEngeli, bosSlotlar } from './risk.js?v=102';
 
 /* ================= DENETİM SKORU ================= */
 export function denetimSkoru() {
@@ -183,19 +183,24 @@ export { bos };
 /* ================= WHATSAPP'TAN GELEN MESAJLAR =================
    Kursun hattına yazan kişiye asistan Worker'da cevap verir; mesaj burada adaya dönüşür
    (aynı numara tekrar yazarsa aynı adayın sohbetine eklenir). Asistanın bilemediği soru "Size devredilen"e düşer. */
-let gelenDe = false;
+let gelenDe = false, ilkTur = true;
+const uiBildir = (m, t) => bildir(m, t);
 export async function gelenKontrol() {
-  if (gelenDe || !S.kurs.waApi) return 0;
-  gelenDe = true; let n = 0;
+  if (gelenDe || !S.kurs.waApi || ziyaretci()) return 0;
+  gelenDe = true; let n = 0; const uyarilar = [];
+  const bildir = (m, t) => uyarilar.push([m, t]);
   try {
     const j = await (await waIstek('/gelen')).json();
     if (!j.ok) return 0;
     S.gelenAlinan = S.gelenAlinan || [];
+    // demo hattının gelen kutusu herkesin ortak geçmişi: oturum açılınca eskiler okundu sayılır, yalnız bundan sonra gelenler işlenir
+    if (ilkTur && !S._bulut) { ilkTur = false; (j.liste || []).forEach(x => { if (!S.gelenAlinan.includes(x.id)) S.gelenAlinan.push(x.id); }); S.gelenAlinan = S.gelenAlinan.slice(-200); return 0; }
+    ilkTur = false;
     for (const x of (j.liste || []).slice().reverse()) {
       if (S.gelenAlinan.includes(x.id)) continue;
       S.gelenAlinan.push(x.id); n++;
       // fotoğraf ya da PDF: öğrencinin evrakı (indirilemezse sonraki turda yeniden denenir)
-      if (x.medya) { const ok = await (await import('./evrak.js?v=101')).evrakGeldi(x).catch(() => false); if (!ok) { S.gelenAlinan.pop(); n--; } continue; }
+      if (x.medya) { const ok = await (await import('./evrak.js?v=102')).evrakGeldi(x).catch(() => false); if (!ok) { S.gelenAlinan.pop(); n--; } continue; }
       const saat = new Date(x.zaman).toTimeString().slice(0, 5);
       // gönderdiğimiz mesaja verilen cevap (evet/hayır ya da “yanıtla”) adaya değil o mesaja işlenir
       const cv = cevapIsle(x);
@@ -211,6 +216,10 @@ export async function gelenKontrol() {
       bildir(`WhatsApp’tan yeni mesaj: “${x.metin.slice(0, 40)}”${!x.cevap ? '' : x.devir ? ' · size devredildi' : ' · asistan cevapladı'}`, x.devir && x.cevap ? 'uyari' : 'wp');
     }
     if (n) { S.gelenAlinan = S.gelenAlinan.slice(-200); kaydet(); yenile(); }
-  } catch (e) { } finally { gelenDe = false; }
+  } catch (e) { } finally {
+    gelenDe = false;
+    // aynı anda çok mesaj geldiyse ekranı bildirimle doldurmaz: tek özet
+    if (uyarilar.length > 2) uiBildir(`WhatsApp’tan ${uyarilar.length} yeni mesaj geldi; Mesajlar’da`, 'wp'); else uyarilar.forEach(([m, t]) => uiBildir(m, t));
+  }
   return n;
 }

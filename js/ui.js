@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca } from './veri.js?v=101';
+import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=102';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -224,14 +224,16 @@ function aliciTel(kime) {
   if (!S._bulut || !kime) return '';
   if (kime.tel) return waNumara(kime.tel);
   const { ad, rol } = kime;
-  if (['MÜDÜR', 'KURSA GELEN', 'ÖN BÜRO'].includes(rol)) return waNumara(S.kurs.wp || S.kurs.tel);
+  if (rol === 'MÜDÜR') return waNumara(mudurTel());
+  if (rol === 'ÖN BÜRO') return waNumara(onburoTel());
+  if (rol === 'KURSA GELEN') return waNumara(S.kurs.wp || S.kurs.tel);
   const kisi = rol === 'HOCA' ? (S.egitmenler || []).find(x => x.ad === ad) : rol === 'ADAY' ? (S.adaylar || []).find(x => x.ad === ad) : (S.kursiyerler || []).find(x => x.ad + ' ' + x.soyad === ad);
   return kisi ? waNumara(kisi.tel) : '';
 }
 export async function apiGonder(metin, belge, adres, kime) {
   if (oturum.kullanici && oturum.kullanici.ziyaretci) return { ok: false, hata: 'Demo görünümünde mesaj gönderilmez' };
   const tel = aliciTel(kime);
-  if (!tel && S._bulut) return { ok: false, hata: (kime && kime.ad ? kime.ad + ': ' : '') + 'kayıtlı WhatsApp numarası yok' };
+  if (!tel && S._bulut) return { ok: false, hata: kime && ['MÜDÜR', 'ÖN BÜRO'].includes(kime.rol) ? 'Kurs müdürünün cep telefonu kayıtlı değil: Ayarlar › Kurs bilgileri › Müdürün cep telefonu' : (kime && kime.ad ? kime.ad + ': ' : '') + 'kayıtlı WhatsApp numarası yok' };
   const kayit = { zaman: new Date().toTimeString().slice(0, 5), metin, dosya: belge && belge.dosya, durum: 'gidiyor' };
   giden.push(kayit); window.dispatchEvent(new CustomEvent('sinyal-giden'));
   const bitir = (ok, hata) => { kayit.durum = ok ? 'iletildi' : 'hata'; kayit.hata = hata; window.dispatchEvent(new CustomEvent('sinyal-giden')); };
@@ -241,7 +243,7 @@ export async function apiGonder(metin, belge, adres, kime) {
     const j = await r.json().catch(() => ({}));
     if (r.ok && j.ok) { bitir(true); return { ok: true, id: j.id || null }; }
     bitir(false, j.hata);
-    return { ok: false, hata: j.kod === 131047 || /24 hours|re-engagement/i.test(j.hata || '') ? 'WhatsApp 24 saat penceresi kapalı: test numarasına “merhaba” yazıp tekrar deneyin' : (j.hata || 'Gönderilemedi') };
+    return { ok: false, hata: j.kod === 131047 || /24 hours|re-engagement/i.test(j.hata || '') ? 'WhatsApp 24 saat penceresi kapalı: kişi son 24 saatte kursa yazmamış. Onaylı mesaj şablonu tanımlanınca bu mesajlar da gider' : (j.hata || 'Gönderilemedi') };
   } catch (x) { bitir(false, 'ulaşılamadı'); return { ok: false, hata: 'WhatsApp servisine ulaşılamadı' }; }
 }
 // Belgeyi gerçek PDF'e çevirir (html2pdf, ilk kullanımda yüklenir) ve base64 döndürür
@@ -377,8 +379,9 @@ export function olcumler(l) {
 // Araç görseli + plaka (görseller img/arac-<id>.webp)
 export function aracGorsel(a, cls = '') {
   if (!a) return '';
-  if (!/^a[1-6]$/.test(a.id)) return `<figure class="arac-fig arac-fig-bos ${cls}"><svg viewBox="0 0 64 32" aria-hidden="true"><path d="M6 22h52M10 22l5-9h26l9 9M14 26a3 3 0 1 0 0-.1M48 26a3 3 0 1 0 0-.1" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><figcaption>${plaka(a.plaka)}</figcaption></figure>`;
-  return `<figure class="arac-fig ${cls}"><img src="img/arac-${a.id}.webp" alt="${e(a.model)}" loading="lazy" width="640" height="420"><figcaption>${plaka(a.plaka)}</figcaption></figure>`;
+  const gid = a.gorsel || a.id;
+  if (!/^a[1-6]$/.test(gid)) return `<figure class="arac-fig arac-fig-bos ${cls}"><svg viewBox="0 0 64 32" aria-hidden="true"><path d="M6 22h52M10 22l5-9h26l9 9M14 26a3 3 0 1 0 0-.1M48 26a3 3 0 1 0 0-.1" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><figcaption>${plaka(a.plaka)}</figcaption></figure>`;
+  return `<figure class="arac-fig ${cls}"><img src="img/arac-${gid}.webp" alt="${e(a.model)}" loading="lazy" width="640" height="420"><figcaption>${plaka(a.plaka)}</figcaption></figure>`;
 }
 
 // Ekran başı: bu ekran ne işe yarar, tek cümle.
@@ -431,7 +434,7 @@ function sifreSor(neden, ok) {
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Onayla</button>`,
     onAc(d) {
       const inp = d.querySelector('[data-sifre-tekrar]'), btn = d.querySelector('[data-k]');
-      const dene = () => { btn.disabled = true; import('./bulut.js?v=101').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
+      const dene = () => { btn.disabled = true; import('./bulut.js?v=102').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
       btn.addEventListener('click', dene); inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') dene(); }); setTimeout(() => inp.focus(), 50);
     },
   });

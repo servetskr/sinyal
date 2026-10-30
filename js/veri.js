@@ -557,11 +557,11 @@ export function kaydet() { subeTamamla(); (S.hareket || []).forEach(h => { if (h
 export function bulutVeri(yeni, kursId) { ANAHTAR = 'sinyal-bulut-' + kursId; yeni._bulut = true; S = goc(yeni); }
 export function demoyaDon() { ANAHTAR = 'sinyal-demo-v19'; S = yukle(); }
 // Yeni kurs: ayarlar ve şablonlar hazır, kayıtlar boş
-export function bosVeri({ kursAd, yetkili, sehir }) {
+export function bosVeri({ kursAd, yetkili, sehir, mudurTel }) {
   const o = uret();
   ['kursiyerler', 'dersler', 'hareket', 'adaylar', 'sinavlar', 'teorik', 'gonderimler', 'islemler', 'kampanyalar', 'cezalar', 'avanslar', 'devredilen', 'imzaTalepleri', 'bosTeklif', 'faturalar', 'izinler', 'duyurular', 'bekleme', 'gelenAlinan', 'egitmenler', 'araclar', 'ogretmenler', 'personel', 'kullanicilar', 'arsiv', 'gunSonu'].forEach(k => { if (Array.isArray(o[k])) o[k] = []; });
   o.subeler = [{ id: 's1', ad: 'Merkez', semt: '', kurumKodu: '', mudur: yetkili || '', mebbis: '' }];
-  o.kurs = { ...o.kurs, ad: kursAd || 'Sürücü kursu', yetkili: yetkili || '', sehir: sehir || '', tel: '', adres: sehir || '', puan: null, yorumSayisi: 0, web: '', wp: '', iban: '', waApi: '', yorumLink: '' };
+  o.kurs = { ...o.kurs, ad: kursAd || 'Sürücü kursu', yetkili: yetkili || '', sehir: sehir || '', tel: '', adres: sehir || '', puan: null, yorumSayisi: 0, web: '', wp: '', mudurTel: mudurTel || '', iban: '', waApi: '', yorumLink: '' };
   o.zamanli = { gonderilen: {}, kayit: [], kuyruk: [], son: null, sinir: false };
   o.waDurum = {}; o.sayac = {}; o.kazanim = { gercek: true, doldurulan: 0, ekDers: 0, yorum: 0 };
   if (o.sosyal) { Object.assign(o.sosyal, { sohbetler: [], slotlar: [], bilinmeyen: [], gonderiler: [], yorumlar: [], ay: { mesaj: 0, kisi: 0, otomatik: 0, sure: 0, mesaiDisi: 0, aday: 0, gorusme: 0, kayit: 0, devir: 0 }, saatlik: Array(24).fill(0), kanalDagilim: { igm: 0, igy: 0, wp: 0, fb: 0 } }); (o.sosyal.kanallar || []).forEach(c => Object.assign(c, { hesap: '', bagli: false, cevap: false, son: null, izin: null, sonCevapDk: null })); }
@@ -599,6 +599,15 @@ export const OGR_OZELLIK = [['hazirlik', 'Sınava hazırlık puanı ve öneriler
 const OGR_KAPALI = ['dersOnay'];  // kursun açması gereken özellikler
 export const ogrOzellik = ad => { const v = ((S.kurs || {}).ogrOzellik || {})[ad]; return OGR_KAPALI.includes(ad) ? v === true : v !== false; };
 // Mesaj hitabı: "Merhaba Elif Hanım," / "Merhaba Hüseyin Hoca,"; cinsiyeti bilinmeyen (aday vb.) için "Sayın Deniz Akın,"
+// Kurs müdürünün kendi cep telefonu: müdüre giden bildirimler buraya gider. Kursun WhatsApp hattı (wp / bağlı hat) olamaz:
+// hat kendine mesaj atamaz. Boşsa müdür bildirimi WhatsApp'tan gitmez, uygulama içinde kalır.
+const rakamlar = t => { let n = String(t || '').replace(/\D/g, ''); if (n.startsWith('0')) n = '90' + n.slice(1); else if (n.length === 10 && n.startsWith('5')) n = '90' + n; return n; };
+export function mudurTel() {
+  const t = rakamlar(S.kurs && S.kurs.mudurTel); if (t.length < 12) return '';
+  const hat = [S.kurs.wp, S.kurs.waHat && S.kurs.waHat.no].map(rakamlar).filter(Boolean);
+  return hat.includes(t) ? '' : S.kurs.mudurTel;
+}
+export const onburoTel = () => (S.kurs && S.kurs.onburoTel) || mudurTel();
 export function selam(x) {
   if (!x) return 'Merhaba,';
   if (typeof x === 'string') x = S.kursiyerler.find(k => tamAd(k) === x) || S.egitmenler.find(h => h.ad === x) || { ad: x };
