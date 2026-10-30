@@ -48,6 +48,36 @@ export function randevuEngeli(k) {
   if (gec.length && S.kurs.borcluDers === 'engelle') return 'Gecikmiş taksidin var; ödeme yapınca yeni ders alabilirsin.';
   return null;
 }
+// Otomatik ders planı (öneri): ders hakkı kalan kursiyerlere önümüzdeki günlerin boş usta/araç saatlerini dağıtır.
+// Kurallar: kursiyer başı günlük sınır, usta başı günlük sınır, araç muayene/sigorta, usta izni, kapalı gün, borçlu kursiyer ayarı.
+// Öncelik: sınavı yakın olan, sonra en uzun süredir dersi olmayan. Müdür onaylamadan hiçbir ders eklenmez.
+export function otomatikPlan({ gunSay = 7, haftalik = 3 } = {}) {
+  const kSinir = S.kurs.gunlukDersSiniri || 2, uSinir = S.kurs.egitmenGunlukSinir || S.kurs.ustaGunlukSinir || 8;
+  const dolu = new Set(), kGun = {}, uGun = {}, kHafta = {};
+  const ekle = d => { dolu.add('u' + d.tarih + d.saat + d.egitmen); dolu.add('k' + d.tarih + d.saat + d.kursiyer); if (d.arac) dolu.add('a' + d.tarih + d.saat + d.arac); kGun[d.kursiyer + d.tarih] = (kGun[d.kursiyer + d.tarih] || 0) + 1; uGun[d.egitmen + d.tarih] = (uGun[d.egitmen + d.tarih] || 0) + 1; kHafta[d.kursiyer] = (kHafta[d.kursiyer] || 0) + 1; };
+  S.dersler.filter(d => d.durum !== 'İptal' && fark(d.tarih) >= 0).forEach(d => { ekle(d); if (fark(d.tarih) < 1 || fark(d.tarih) > gunSay) kHafta[d.kursiyer]--; });
+  const sonDers = k => S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Yapıldı').reduce((a, d) => d.tarih > a ? d.tarih : a, '');
+  const adaylar = S.kursiyerler.filter(k => !k.kapali && ['Direksiyon', 'Sınav'].includes(k.asama) && SINIFLAR[k.sinif].direksiyon && egitmen(k.egitmen))
+    .map(k => ({ k, kalan: SINIFLAR[k.sinif].direksiyon + (k.ekDersHakki || 0) - k.direksiyon - S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Planlandı').length }))
+    .filter(x => x.kalan > 0 && !(S.kurs.borcluDers === 'engelle' && x.k.odeme.taksitler.some(t => !t.odendi && !t.iptal && fark(t.vade) < 0)))
+    .sort((a, b) => (a.k.dsinavPlan || '9999').localeCompare(b.k.dsinavPlan || '9999') || sonDers(a.k).localeCompare(sonDers(b.k)));
+  const oneri = [];
+  for (let n = 1; n <= gunSay; n++) {
+    const g = gun(n); if (kapaliGun(g)) continue;
+    for (const x of adaylar) {
+      if (x.kalan <= 0 || (kHafta[x.k.id] || 0) >= haftalik || (kGun[x.k.id + g] || 0) >= kSinir) continue;
+      const h = egitmen(x.k.egitmen);
+      if ((S.izinler || []).some(i => i.kim === h.id && g >= i.bas && g <= i.bit) || (uGun[h.id + g] || 0) >= uSinir) continue;
+      for (const sa of KAPASITE_SAAT) {
+        if (dolu.has('u' + g + sa + h.id) || dolu.has('k' + g + sa + x.k.id)) continue;
+        const ar = dersAraci(h.id, x.k.sinif, g, sa); if (!ar || dolu.has('a' + g + sa + ar.id) || [ar.muayene, ar.sigorta].some(t => t && t < g)) continue;
+        const d = { kursiyer: x.k.id, egitmen: h.id, arac: ar.id, tarih: g, saat: sa };
+        ekle(d); oneri.push(d); x.kalan--; break;
+      }
+    }
+  }
+  return oneri;
+}
 export function bosSlotlar(k, gunSay = 7) {
   const h = egitmen(k.egitmen); if (!h) return [];
   const l = [];

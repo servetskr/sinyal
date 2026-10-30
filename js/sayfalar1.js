@@ -837,7 +837,7 @@ export function plan() {
     html: `${ekranNotu('Boş saate dokunun: ders ekleyin. Dersi sürükleyin: saatini ya da aracını değiştirin. İptal edilen saat bekleme listesine otomatik teklif edilir.')}
     <div class="bolum-bas" style="align-items:center">
       <div class="gun-sec" style="flex:1;min-width:0">${gunler.map(g => `<button data-gun="${g}" class="${g === planGun ? 'secili' : ''} ${fark(g) === 0 ? 'bugun' : ''}" aria-label="${tarihUzun(g)}"><small>${fark(g) === 0 ? 'Bugün' : gunKisa(g)}</small><b>${tarihOku(g).getDate()}</b></button>`).join('')}</div>
-      <div class="sag" style="width:auto"><div class="rol" style="display:flex"><button data-gorunum="arac" class="${planGorunum === 'arac' ? 'secili' : ''}">Araca göre</button><button data-gorunum="egitmen" class="${planGorunum === 'egitmen' ? 'secili' : ''}">Usta öğreticiye göre</button></div></div>
+      <div class="sag" style="width:auto;gap:8px"><button class="dg dg-ana dg-kucuk" data-oto-plan>${ik('robot')}Otomatik planla</button><div class="rol" style="display:flex"><button data-gorunum="arac" class="${planGorunum === 'arac' ? 'secili' : ''}">Araca göre</button><button data-gorunum="egitmen" class="${planGorunum === 'egitmen' ? 'secili' : ''}">Usta öğreticiye göre</button></div></div>
     </div>
     <div class="kart" style="overflow:hidden">
       ${kapali ? `<div class="ipucu uyari" style="margin:14px">${isaret('dur', 20)}${kapali === 'Pazar' ? 'Pazar günü' : 'Resmî tatil;'} kurs kapalı, ders planlanamaz.</div>` : ''}
@@ -858,6 +858,7 @@ export function plan() {
         const t = ev.target;
         const g = t.closest('[data-gun]'); if (g) { planGun = g.dataset.gun; yenile(); }
         const v = t.closest('[data-gorunum]'); if (v) { planGorunum = v.dataset.gorunum; yenile(); }
+        if (t.closest('[data-oto-plan]')) return otoPlanPenceresi();
         const h = t.closest('[data-ekle]'); if (h) ekle(h.dataset.ekle);
         const d = t.closest('[data-ders]'); if (d) dersAc(d.dataset.ders);
         const bk = t.closest('[data-bt-kabul]'); if (bk) { const [tid, kid] = bk.dataset.btKabul.split('|'); return bosTeklifKabul(tid, kid); }
@@ -891,6 +892,37 @@ export function plan() {
 }
 // “+ Yeni” penceresinden: belirli öğretmen, gün ve saat için ders ekleme penceresini açar
 export function dersPlanlaAc(egId, tarih, saat) { planGun = tarih; planGorunum = 'egitmen'; dersEkle(egId, saat); }
+// Otomatik planlama: önerilen dersler listelenir, müdür seçtiklerini ekler
+function otoPlanPenceresi() {
+  import('./risk.js?v=96').then(R => {
+    const l = R.otomatikPlan({ gunSay: 7, haftalik: 3 });
+    if (!l.length) return bildir('Önümüzdeki 7 günde dağıtılacak ders yok: ders hakkı kalan kursiyer ya da boş usta/araç saati bulunamadı', 'uyari');
+    const gunler = [...new Set(l.map(d => d.tarih))];
+    pencere({
+      baslik: 'Otomatik plan önerisi · ' + l.length + ' ders',
+      icerik: `<p style="font-size:14px;margin-bottom:10px">Önümüzdeki 7 gün için boş usta öğretici ve araç saatleri, ders hakkı kalan kursiyerlere dağıtıldı. Sınavı yakın olan ve uzun süredir dersi olmayan öncelikli; kursiyer başına haftada en çok 3, günde en çok ${S.kurs.gunlukDersSiniri || 2} ders. İstemediklerinizin işaretini kaldırın.</p>
+        <div style="max-height:50vh;overflow:auto">${gunler.map(g => `<p class="et" style="margin:10px 0 4px">${tarihUzun(g)}</p>${l.map((d, i) => d.tarih !== g ? '' : `<label class="evrak" style="cursor:pointer"><input type="checkbox" value="${i}" checked style="width:18px;height:18px;accent-color:var(--levha)"><span class="mono" style="width:48px">${d.saat}</span><span style="flex:1;color:var(--murekkep)">${e(tamAd(kursiyer(d.kursiyer)))}<small style="display:block;color:var(--soluk)">${e(egitmen(d.egitmen).ad)} · ${e(arac(d.arac).plaka)}</small></span></label>`).join('')}`).join('')}</div>
+        <label style="display:flex;gap:8px;align-items:center;margin-top:12px;font-size:14px"><input type="checkbox" checked name="hat"> Kursiyerlere ve usta öğreticilere WhatsApp’tan bildir</label>`,
+      altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-oto-ekle>Seçilenleri plana ekle</button>',
+      onAc(p) {
+        p.querySelector('[data-oto-ekle]').addEventListener('click', () => {
+          const sec = [...p.querySelectorAll('input[type=checkbox][value]:checked')].map(x => l[+x.value]);
+          if (!sec.length) return bildir('Hiç ders seçilmedi', 'uyari');
+          sec.forEach((d, i) => S.dersler.push({ id: 'd' + Date.now() + i, ...d, durum: 'Planlandı', kaynak: 'otomatik' }));
+          islem('Otomatik planla ders ekledi', sec.length + ' ders'); kaydet(); kapatPencere();
+          if (p.querySelector('[name=hat]').checked) {
+            const ogr = {}; sec.forEach(d => (ogr[d.kursiyer] = ogr[d.kursiyer] || []).push(d));
+            const usta = {}; sec.forEach(d => (usta[d.egitmen] = usta[d.egitmen] || []).push(d));
+            const metinL = l2 => l2.map(d => `${tarihUzun(d.tarih)} ${saatDe(d.saat)}`).join(', ');
+            bildirimler([...Object.entries(ogr).map(([kid, l2]) => { const k = kursiyer(kid); return { kim: k, metin: `${selam(k)} direksiyon dersleriniz planlandı: ${metinL(l2)}. Uymayan saat olursa bize yazın.`, tur: 'Ders bildirimi' }; }),
+              ...Object.entries(usta).map(([hid, l2]) => { const h = egitmen(hid); return { kim: h, metin: `${h.ad.split(' ')[0]} Hoca, programınıza ${l2.length} direksiyon dersi eklendi: ${l2.map(d => `${tarihUzun(d.tarih)} ${saatDe(d.saat)} ${tamAd(kursiyer(d.kursiyer))}`).join('; ')}.`, tur: 'Ders bildirimi' }; })], 'Otomatik plan');
+          } else bildir(sec.length + ' ders plana eklendi');
+          yenile();
+        });
+      },
+    });
+  });
+}
 function dersEkle(sutunId, saat) {
   const kapali = kapaliGun(planGun); if (kapali) return bildir(tarihUzun(planGun) + ' ' + kapali.toLowerCase() + '; kurs kapalı, ders planlanamaz', 'uyari');
   const aracGor = planGorunum === 'arac', ar0 = aracGor ? arac(sutunId) : null;
@@ -923,7 +955,7 @@ function dersEkle(sutunId, saat) {
         Object.entries(eg.belgeler || {}).filter(([, t]) => t < planGun).forEach(([b]) => sorun.push(eg.ad + ' · ' + ({ sertifika: 'usta öğretici sertifikası', saglik: 'sağlık raporu', adli: 'adli sicil kaydı' }[b]) + ' süresi dolmuş; bu tarihte ders planlanamaz.'));
         const ayni = S.dersler.filter(x => x.kursiyer === k.id && x.tarih === planGun), cak = ayni.find(x => x.saat === saat);
         if (cak) sorun.push(`Bu kursiyerin aynı saatte ${egitmen(cak.egitmen).ad} ile dersi var.`);
-        const ustaGun = S.dersler.filter(x => x.egitmen === eg.id && x.tarih === planGun).length, ustaSinir = S.kurs.ustaGunlukSinir || 8;
+        const ustaGun = S.dersler.filter(x => x.egitmen === eg.id && x.tarih === planGun).length, ustaSinir = S.kurs.egitmenGunlukSinir || S.kurs.ustaGunlukSinir || 8;
         if (ustaGun >= ustaSinir) not.push(`${eg.ad} o gün ${ustaGun} ders veriyor; usta başına günlük sınır ${ustaSinir} ders. Yorgunluk denetimde sorulabilir.`);
         if (!cak && ayni.length >= S.kurs.gunlukDersSiniri) not.push(`Kursiyerin o gün zaten ${ayni.length} dersi var. Kurs ayarlarındaki günlük sınır ${S.kurs.gunlukDersSiniri} ders.`);
         const gec = gecikenler(k).reduce((a, t) => a + t.tutar - (t.kismi || 0), 0);
