@@ -1,6 +1,6 @@
 import * as EK from './eklenti.js?v=101';
 import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, kursiyer, DERS_TUR_AD, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube} from './veri.js?v=101';
-import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor, belgeYazdir } from './ui.js?v=101';
+import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor, belgeYazdir, kisaLink } from './ui.js?v=101';
 import { yenile } from './app.js?v=101';
 import * as B from './bulut.js?v=101';
 import { wpGonder } from './sayfalar1.js?v=101';
@@ -536,14 +536,17 @@ function davetFormu() {
         if (ad.length < 3) return bildir('Ad soyad girin', 'uyari');
         if (f.rol.value === 'usta' && !f.usta.value) return bildir('Öğretmeni seçin', 'uyari');
         const btn = d.querySelector('[form=f-davet]'); btn.disabled = true;
-        B.davetOlustur({ ad, rol: f.rol.value, usta: f.rol.value === 'usta' ? f.usta.value : null }).then(r => { islem('Çalışan davet etti', ad + ' · ' + ROL[f.rol.value]); kaydet(); davetGoster(ad, r.link, f.rol.value === 'usta' ? egitmen(f.usta.value) : null); }).catch(x => { btn.disabled = false; bildir(B.hataMetni(x), 'uyari'); });
+        B.davetOlustur({ ad, rol: f.rol.value, usta: f.rol.value === 'usta' ? f.usta.value : null }).then(r => { islem('Çalışan davet etti', ad + ' · ' + ROL[f.rol.value]); kaydet(); davetGoster(ad, r.link, f.rol.value === 'usta' ? egitmen(f.usta.value) : null, f.rol.value); }).catch(x => { btn.disabled = false; bildir(B.hataMetni(x), 'uyari'); });
       });
     },
   });
 }
 // Davet: öğretmenin telefonu kayıtlıysa link kursun hattından kendiliğinden gider (hat bağlı değilse WhatsApp hazır mesajla açılır)
-function davetGoster(ad, link, kisi) {
-  const metin = `Merhaba ${ad}, ${S.kurs.ad} Sinyal hesabına katılmanız için davet linkiniz: ${link}`;
+async function davetGoster(ad, link, kisi, rol) {
+  // kısa ve okunur link: servetskr.github.io/sinyal/ahmet-yilmaz-davet-x7k2 (servis yoksa uzun link kalır)
+  link = await kisaLink(link, ad + ' davet', null);
+  const ilk = ad.split(' ')[0], hitap = rol === 'usta' ? `${ilk} Hoca` : ilk;
+  const metin = `Merhaba ${hitap},\n\n*${S.kurs.ad}* sizi Sinyal'e ${{ mudur: 'kurs müdürü', sekreter: 'ön büro çalışanı', usta: 'usta öğretici' }[rol] || 'çalışan'} olarak davet etti.\n\nHesabınızı oluşturmak için:\n${link}\n\nLink 7 gün geçerlidir ve yalnız size özeldir.`;
   const otomatik = !!(kisi && kisi.tel);
   if (otomatik) wpGonder(kisi, metin, 'Çalışan daveti');
   pencere({

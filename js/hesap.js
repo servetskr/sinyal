@@ -9,7 +9,7 @@ const yetkili = () => oturum.kullanici && ['mudur', 'sekreter'].includes(oturum.
 const talepVar = k => B.bulutta() && !!k.hesap && (B.bulut.sifreTalep || []).some(t => t.tel === k.hesap.tel);
 export const talepEdenler = () => (B.bulutta() ? (B.bulut.sifreTalep || []) : []).map(t => S.kursiyerler.find(k => k.hesap && k.hesap.tel === t.tel && !k.kapali)).filter(Boolean);
 
-export const mesaj = (k, r) => `${selam(k)} ${S.kurs.ad} öğrenci uygulamasında ${r.yeniden ? 'şifreniz yenilendi' : 'hesabınız açıldı'}. Giriş: ${B.ogrenciGirisLinki()} Telefon: ${B.telGoster(r.tel)} Geçici şifre: ${r.sifre} İlk girişte kendi şifrenizi belirleyeceksiniz.${r.yeniden ? '' : ' Ders programınızı, derslerinizi, ödemelerinizi ve sınavlarınızı buradan görebilir, evraklarınızı yükleyebilir, direksiyon dersi alabilirsiniz.'} Şifrenizi kimseyle paylaşmayın.`;
+export const mesaj = (k, r) => `${selam(k)}\n\n*${S.kurs.ad}* öğrenci uygulamasında ${r.yeniden ? 'şifreniz yenilendi' : 'hesabınız açıldı'}.\n\n*Giriş:* ${B.ogrenciGirisLinki()}\n*Telefon:* ${B.telGoster(r.tel)}\n*Geçici şifre:* ${r.sifre}\n\nİlk girişte kendi şifrenizi belirleyeceksiniz.${r.yeniden ? '' : ' Ders programınızı, ödemelerinizi ve sınavlarınızı buradan görebilir, belgelerinizi yükleyebilirsiniz.'}\n\nŞifrenizi kimseyle paylaşmayın.`;
 
 // Demoda gerçek hesap açılmaz: akış ve mesaj aynıdır, mesaj yalnız demo numarasına gider
 async function ac(k) {
