@@ -1,5 +1,5 @@
 import * as EK from './eklenti.js?v=96';
-import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube} from './veri.js?v=96';
+import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, kursiyer, DERS_TUR_AD, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube} from './veri.js?v=96';
 import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor } from './ui.js?v=96';
 import { yenile } from './app.js?v=96';
 import * as B from './bulut.js?v=96';
@@ -115,8 +115,8 @@ export function muhasebeFisi(ay = 0) {
   });
   return satir;
 }
-export function personelOzeti() {
-  const d0 = new Date(BUGUN); const buAy = s => { const d = tarihOku(s); return d.getMonth() === d0.getMonth() && d.getFullYear() === d0.getFullYear(); };
+export function personelOzeti(ay = 0) {
+  const d0 = new Date(BUGUN); d0.setDate(1); d0.setMonth(d0.getMonth() - ay); const buAy = s => { const d = tarihOku(s); return d.getMonth() === d0.getMonth() && d.getFullYear() === d0.getFullYear(); };
   const izinGun = kim => S.izinler.filter(z => z.kim === kim && buAy(z.bas)).reduce((a, z) => a + Math.round((tarihOku(z.bit) - tarihOku(z.bas)) / 864e5) + 1, 0);
   const sat = [['Ad soyad', 'Görev', 'Şube', 'Brüt aylık ücret', 'Bu ay yapılan ders', 'Ders primi (brüt, SGK’ya tabi)', 'İzin (gün)', 'Brüt toplam', 'Bu ay verilen avans (maaştan düşülecek)'], ['Not: tutarlar brüttür; net ücret, SGK ve vergi kesintileri bordroda hesaplanır.', '', '', '', '', '', '', '']];
   const subeAd = id => ((S.subeler || []).find(x => x.id === id) || {}).ad || '';
@@ -125,21 +125,53 @@ export function personelOzeti() {
   S.personel.forEach(p => sat.push([p.ad, p.gorev, subeAd(p.sube), p.maas, '', '', izinGun(p.id), p.maas, avans(p.ad)]));
   return sat;
 }
+// Usta öğretici puantajı: ay içinde yapılan her direksiyon dersi (bordro için mali müşavire)
+export function puantaj(ay = 0) {
+  const d0 = new Date(BUGUN); d0.setDate(1); d0.setMonth(d0.getMonth() - ay);
+  const buAy = t => { const d = tarihOku(t); return d.getMonth() === d0.getMonth() && d.getFullYear() === d0.getFullYear(); };
+  const sat = [['Usta öğretici', 'Tarih', 'Saat', 'Bitiş', 'Süre (dk)', 'Kursiyer', 'Ders türü']];
+  S.egitmenler.forEach(x => S.dersler.filter(d => d.egitmen === x.id && d.durum === 'Yapıldı' && buAy(d.tarih)).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat))
+    .forEach(d => { const k = kursiyer(d.kursiyer); sat.push([x.ad, d.tarih, d.bas || d.saat, d.bit || '', d.sure || '', k ? tamAd(k) : '', DERS_TUR_AD[d.tur] || 'Direksiyon (trafikte)']); }));
+  return sat;
+}
+// Mali müşavir paketi: ayın tahsilatları (fatura kesilecek), giderleri, muhasebe fişleri, personel özeti ve puantajı tek Excel dosyasında
+export async function musavirPaketi(ay = 0) {
+  await xlsxYukle();
+  const d0 = new Date(BUGUN); d0.setDate(1); d0.setMonth(d0.getMonth() - ay);
+  const buAy = t => { const d = tarihOku(t); return d.getMonth() === d0.getMonth() && d.getFullYear() === d0.getFullYear(); };
+  const oran = (S.entegrasyon.kdv ?? 20) / 100, net = t => Math.round(t / (1 + oran) * 100) / 100;
+  const hr = S.hareket.filter(h => buAy(h.tarih)).sort((a, b) => a.tarih.localeCompare(b.tarih));
+  const gelir = hr.filter(h => h.tur === 'Gelir'), gider = hr.filter(h => h.tur !== 'Gelir');
+  const tahsilat = [['Tarih', 'Makbuz no', 'Ödeyen', 'TC kimlik no', 'Adres', 'Tutar (KDV dahil)', 'KDV hariç', 'KDV', 'Ödeme yöntemi', 'Açıklama', 'Fatura no']];
+  gelir.forEach(h => { const k = h.kursiyer && kursiyer(h.kursiyer), iade = h.kategori === 'İade'; tahsilat.push([h.tarih, h.no || '', k ? tamAd(k) : (h.kim || ''), k ? k.tc || '' : '', k ? k.adres || '' : '', iade ? -h.tutar : h.tutar, iade ? -net(h.tutar) : net(h.tutar), iade ? -(h.tutar - net(h.tutar)) : Math.round((h.tutar - net(h.tutar)) * 100) / 100, h.yontem || '', h.aciklama || '', h.fatura || '']); });
+  const giderS = [['Tarih', 'Kategori', 'Açıklama', 'Tutar', 'Ödeme yöntemi']];
+  gider.forEach(h => giderS.push([h.tarih, h.kategori || '', h.aciklama || '', h.tutar, h.yontem || '']));
+  const topla = (l, f) => l.reduce((a, h) => a + (f(h) ? h.tutar : 0), 0);
+  const ayAd = d0.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+  const ozet = [[S.kurs.ad + ' · ' + ayAd + ' mali müşavir paketi'], [], ['Toplam tahsilat', topla(gelir, h => h.kategori !== 'İade')], ['İadeler', topla(gelir, h => h.kategori === 'İade')], ['Toplam gider', topla(gider, () => true)], [],
+    ...['Nakit', 'Havale', 'Kart'].map(y => ['Tahsilat · ' + y, topla(gelir, h => h.yontem === y && h.kategori !== 'İade')]), [], ['KDV oranı (%)', S.entegrasyon.kdv ?? 20],
+    ['Not', 'Sinyal makbuzu fatura yerine geçmez. “Tahsilatlar” sayfasındaki her satır için fatura (e-Arşiv) kesilmesi gerekebilir; oranı ve zamanlamayı siz belirleyin.']];
+  const wb = XLSX.utils.book_new();
+  [['Özet', ozet], ['Tahsilatlar', tahsilat], ['Giderler', giderS], ['Muhasebe fişleri', muhasebeFisi(ay)], ['Personel özeti', personelOzeti(ay)], ['Puantaj', puantaj(ay)]]
+    .forEach(([ad, veri]) => XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(veri), ad));
+  XLSX.writeFile(wb, `musavir-paketi-${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}.xlsx`);
+}
 function entegrasyonSekme() {
   const g = S.entegrasyon;
   const kart = (bas, durum, govde) => `<div class="kart"><div class="kart-bas">${isaret(durum ? 'tamam' : 'bilgi', 24)}<h3>${bas}</h3><span class="sag">${durum ? rozet('Bağlı', 'yesil') : rozet('Bağlı değil', 'notr')}</span></div><div class="kart-govde">${govde}</div></div>`;
   return `<div class="izgara iz-2">
-    ${kart('e-Arşiv fatura', g.earsiv.bagli, `<p style="font-size:14px">Tahsilat alındığında fatura entegratörünüz üzerinden kesilir, PDF’i kursiyere WhatsApp’tan gider. Kursiyer bilgileri kayıttan gelir.</p><div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px"><div class="alan" style="width:140px"><label for="e-seri">Fatura seri öneki</label><input id="e-seri" class="girdi" maxlength="3" data-earsiv-alan="seri" value="${e(g.earsiv.seri || 'SNY')}"></div><div class="alan" style="width:170px"><label for="e-vkn">Vergi kimlik no</label><input id="e-vkn" class="girdi" inputmode="numeric" maxlength="11" data-earsiv-alan="vkn" value="${e(g.vkn || '')}"></div></div><small style="color:var(--soluk)">${(S.faturalar || []).length} fatura kesildi.</small>`)}
+    ${kart('e-Arşiv fatura', g.earsiv.bagli, `<p style="font-size:14px">${g.earsiv.bagli ? 'Tahsilat alındığında fatura entegratörünüz üzerinden kesilir, PDF’i kursiyere WhatsApp’tan gider. Kursiyer bilgileri kayıttan gelir.' : 'e-Arşiv bağlantısı hazırlanıyor. O zamana kadar faturayı mali müşaviriniz keser: aşağıdaki müşavir paketindeki “Tahsilatlar” sayfası her tahsilatı TC ve adresiyle verir.'}</p><div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px"><div class="alan" style="width:140px"><label for="e-seri">Fatura seri öneki</label><input id="e-seri" class="girdi" maxlength="3" data-earsiv-alan="seri" value="${e(g.earsiv.seri || 'SNY')}"></div><div class="alan" style="width:170px"><label for="e-vkn">Vergi kimlik no</label><input id="e-vkn" class="girdi" inputmode="numeric" maxlength="11" data-earsiv-alan="vkn" value="${e(g.vkn || '')}"></div></div><small style="color:var(--soluk)">${(S.faturalar || []).length} fatura kesildi.</small>`)}
     <div class="kart"><div class="kart-bas">${isaret(g.muhasebe.bagli ? 'tamam' : 'bilgi', 24)}<h3>Muhasebe</h3><span class="sag">${g.muhasebe.bagli ? rozet('Paraşüt bağlı', 'yesil') : rozet('Excel ile aktarım', 'mavi')}</span></div><div class="kart-govde" style="display:grid;gap:12px">
-      <p style="font-size:14px">Kasadaki her hareket muhasebe fişine çevrilir. Paraşüt’e doğrudan gider; Logo, Mikro, Luca ve Zirve için aylık fiş dosyası hazırlanır.</p>
+      <p style="font-size:14px">Kasadaki her hareket muhasebe fişine çevrilir. Logo, Mikro, Luca ve Zirve için aylık fiş dosyası hazırlanır.</p>
       <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end"><div class="alan" style="width:130px"><label for="kdv">KDV oranı (%)</label><input id="kdv" class="girdi" type="number" min="0" max="20" data-kdv value="${g.kdv ?? 20}"></div>
         <div><b style="color:var(--murekkep);font-size:14px">Kurs ücreti ne zaman faturalanıyor?</b><div class="secim" style="margin-top:6px">${[['tahsilat', 'Her tahsilatta'], ['kayit', 'Kayıtta tamamı (taksitler alacak)']].map(([v, t]) => `<label><input type="radio" name="fatura" value="${v}" data-fatura ${g.fatura === v ? 'checked' : ''}><span>${t}</span></label>`).join('')}</div></div></div>
       <small style="color:var(--soluk)">Oranı ve faturalama zamanını mali müşavirinizle teyit edin; fişler buna göre üretilir.</small>
       <div class="tablo-kap"><table class="tablo"><thead><tr><th>Sinyal’de</th><th>Muhasebe hesabı</th></tr></thead><tbody>${[['Nakit / havale / kart', [HESAP.Nakit[0] + ' / ' + HESAP.Havale[0] + ' / ' + HESAP.Kart[0], 'Kasa, bankalar, POS']], ['Kurs ücreti (KDV hariç)', HESAP.gelir], ['Hesaplanan KDV', HESAP.kdvOut], ...(g.fatura === 'kayit' ? [['Taksit alacağı', HESAP.alici]] : []), ['İade', HESAP.iade], ['Gider (yakıt, bakım, fatura, reklam KDV’li)', [HESAP.gider[0] + ' + ' + HESAP.kdvIn[0], 'Gider + indirilecek KDV']], ['Maaş, kira, harç', HESAP.gider]].map(([a, h]) => `<tr><td>${a}</td><td class="mono">${h[0]} · ${e(h[1])}</td></tr>`).join('')}</tbody></table></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="dg dg-ana" data-fis="0">${ik('indir')}Bu ayın muhasebe fişleri</button><button class="dg dg-cizgi" data-fis="1">Geçen ay</button>${g.muhasebe.bagli ? '' : '<button class="dg dg-cizgi" data-parasut>Paraşüt’ü bağla</button>'}</div></div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="dg dg-ana" data-fis="0">${ik('indir')}Bu ayın muhasebe fişleri</button><button class="dg dg-cizgi" data-fis="1">Geçen ay</button></div></div></div>
     <div class="kart"><div class="kart-bas">${isaret('bilgi', 24)}<h3>Mali müşavir ve personel</h3></div><div class="kart-govde" style="display:grid;gap:12px">
       <p style="font-size:14px">Bordro ve SGK işlemleri mali müşavirinizde kalır. Sinyal ona her ay ihtiyaç duyduğu özeti hazırlar: maaş, yapılan ders, ders primi, izin.</p>
-      <button class="dg dg-cizgi" data-personel-ozet style="justify-self:start">${ik('indir')}Bu ayın personel özeti</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="dg dg-ana" data-musavir-paket="0">${ik('indir')}Bu ayın müşavir paketi (Excel)</button><button class="dg dg-cizgi" data-musavir-paket="1">Geçen ay</button><button class="dg dg-cizgi" data-personel-ozet>Yalnız personel özeti</button></div>
+      <small style="color:var(--soluk)">Pakette tek dosyada: tahsilatlar (fatura kesilecek satırlar), giderler, muhasebe fişleri, personel özeti ve usta öğretici puantajı.</small>
       <div class="alan"><label for="musavir">Mali müşavirin e-postası</label><input id="musavir" class="girdi" type="email" data-musavir value="${e(g.musavir.eposta)}" placeholder="musavir@firma.com"></div>
       <p style="font-size:13.5px;color:var(--soluk)">Özeti indirip müşavirinize e-postayla gönderin.${g.musavir.eposta ? ` <a href="mailto:${e(g.musavir.eposta)}?subject=${encodeURIComponent(S.kurs.ad + ' · aylık özet')}" style="color:var(--levha);font-weight:700">E-posta yaz</a>` : ''}</p></div></div>
   </div>`;
@@ -478,6 +510,7 @@ export function ayarBaglan(k) {
     const ok = t.closest('[data-oturum-kapat]'); if (ok) { const o = S.guvenlik.oturumlar.splice(+ok.dataset.oturumKapat, 1)[0]; islem('Oturumu kapattırdı', o.kim + ' · ' + o.cihaz); kaydet(); bildir(o.kim + ' · ' + o.cihaz + ' oturumu kapatıldı'); yenile(); }
     const fs = t.closest('[data-fis]'); if (fs) { const n = +fs.dataset.fis, d = new Date(BUGUN); d.setMonth(d.getMonth() - n); csvIndir(`muhasebe-fisleri-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}.csv`, muhasebeFisi(n)); islem('Muhasebe fişlerini indirdi'); kaydet(); }
     if (t.closest('[data-parasut]')) pencere({ baslik: 'Paraşüt · bağlantı gerekli', icerik: `<div class="ipucu uyari" style="margin-bottom:12px">${isaret('uyari', 22)}<span>Paraşüt bağlantısı için kursun Paraşüt hesabından alınan API anahtarı gerekir. Anahtar girilene kadar tahsilatlar Paraşüt’e aktarılmaz.</span></div><p style="font-size:14.5px">Bu arada aylık muhasebe fişini CSV olarak indirip Paraşüt’e veya muhasebecinize yükleyebilirsiniz; fişte her tahsilat, gider ve iade ayrı satırdır.</p>`, altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-pfis>Bu ayın fişini indir</button>', onAc(d) { d.querySelector('[data-pfis]').addEventListener('click', () => { const d0 = new Date(BUGUN); csvIndir(`muhasebe-fisleri-${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}.csv`, muhasebeFisi(0)); islem('Muhasebe fişlerini indirdi'); kaydet(); kapatPencere(); }); } });
+    const mp = t.closest('[data-musavir-paket]'); if (mp) { mp.disabled = true; musavirPaketi(+mp.dataset.musavirPaket).then(() => { islem('Mali müşavir paketini indirdi'); kaydet(); bildir('Müşavir paketi indirildi'); }).catch(x => bildir(x.message, 'uyari')).finally(() => { mp.disabled = false; }); }
     if (t.closest('[data-personel-ozet]')) { csvIndir('personel-ozeti.csv', personelOzeti()); islem('Personel özetini indirdi'); kaydet(); }
     if (t.closest('[data-sablon-csv]')) csvIndir(`sinyal-${aktarim.tur}-sablonu.csv`, [TUR_ALAN().map(a => a[1]), { kursiyer: ['12345678950', 'Ali', 'Yıldız', '0532 000 00 01', '14.03.2004', 'B', '02.10.2026', '24000', '8000', 'Odunpazarı', '12', '3'], taksit: ['12345678950', '02.11.2026', '4000', '', 'Kart'], arac: ['26 AB 123', 'Renault Clio', '2023', 'B', '12.05.2027', '01.03.2027'] }[aktarim.tur]]);
     if (t.closest('[data-aktar-onay]')) { aktarimUygula(); yenile(); }

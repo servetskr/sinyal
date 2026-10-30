@@ -1,6 +1,6 @@
 // Mesaj merkezi: grup ya da tek tek seçilen kişilere kişiye özel WhatsApp mesajı, planlı gönderim, iletildi/okundu takibi
 import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, kalanBorc, gecikenler, gecikenTutar, eksikEvrak, sonrakiDers, risk, islem, sb, aktifSiniflar, SINIFLAR, selam, kursAdi, adEk, yerelZaman, bulutKanca } from './veri.js?v=96';
-import { e, tl, ik, rozet, bos, pencere, kapatPencere, bildir, tarihUzun, apiAcik, apiGonder, etiket, waSirali, ziyaretci, isaret } from './ui.js?v=96';
+import { e, tl, ik, rozet, bos, pencere, kapatPencere, bildir, tarihUzun, apiAcik, apiGonder, etiket, waSirali, ziyaretci, isaret, waIstek } from './ui.js?v=96';
 
 const durum = { grup: 'aktif', sinif: '', ogretmen: '', secili: null, sira: 0, zaman: 'simdi', metin: null, sablon: '', ek: null, cevapIste: false };
 // Ekli dosyalar localStorage’a yazılmaz (büyük olabilir); gönderim süresince bellekte durur
@@ -76,7 +76,7 @@ export async function durumlariGuncelle() {
   if (!ids.length) return false;
   durumda = true;
   try {
-    const j = await (await fetch(new URL(S.kurs.waApi).origin + '/durum?ids=' + encodeURIComponent(ids.join(',')))).json();
+    const j = await (await waIstek('/durum?ids=' + encodeURIComponent(ids.join(',')))).json();
     if (!j.ok) return false;
     S.waDurum = S.waDurum || {}; let degisti = false;
     Object.entries(j.durum || {}).forEach(([id, d]) => { if ((DURUM_SIRA[d] || 0) > (DURUM_SIRA[S.waDurum[id]] || 0)) { S.waDurum[id] = d; degisti = true; } });
@@ -112,7 +112,7 @@ async function gonder(c) {
     const r = c.kisiler[i];
     if (sinirli && i >= DEMO_SINIR) { c.sonuc.push({ ad: r.ad, rol: r.rol, durum: 'demo sınırı' }); continue; }
     const ek = EKLER[c.id] || c.ekVeri;
-    const s = await apiGonder(etiket(r.ad, r.rol) + r.metin, ek ? { base64: ek.base64, dosya: ek.dosya, tur: ek.tur } : undefined);
+    const s = await apiGonder(etiket(r.ad, r.rol) + r.metin, ek ? { base64: ek.base64, dosya: ek.dosya, tur: ek.tur } : undefined, undefined, r);
     c.sonuc.push({ ad: r.ad, rol: r.rol, id: s.id || null, durum: s.ok ? 'gönderildi' : 'hata: ' + s.hata });
     if (!s.ok && /24 saat|ulaşılamadı/.test(s.hata || '')) { bildir(s.hata, 'uyari'); break; }
     await new Promise(z => setTimeout(z, 300));

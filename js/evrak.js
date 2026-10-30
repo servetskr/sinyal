@@ -1,7 +1,7 @@
 // WhatsApp'tan gelen evrak: öğrenci belgenin fotoğrafını ya da PDF'ini kursun numarasına atar; belge doğru öğrencinin
 // dosyasına, doğru başlığa düşer. Okunmayacak kadar bulanıksa işaretlenir, tek tuşla yeniden istenir.
 import { S, kaydet, gun, EVRAKLAR, tamAd, islem, eksikEvrak, gonderimEkle, selam } from './veri.js?v=96';
-import { e, pencere, kapatPencere, bildir, fotoKucult, ik } from './ui.js?v=96';
+import { e, pencere, kapatPencere, bildir, fotoKucult, ik, waIstek } from './ui.js?v=96';
 
 const rakam = x => String(x || '').replace(/\D/g, '');
 const kucuk = s => String(s || '').toLocaleLowerCase('tr');
@@ -12,6 +12,7 @@ const turAd = key => (EVRAKLAR.find(x => x[0] === key) || [0, key])[1];
 // Sahibi: önce gönderen numara (öğrencinin telefonu), yoksa son 7 günde evrak istediğimiz öğrenci
 function sahibiBul(x) {
   const aktif = S.kursiyerler.filter(k => k.asama !== 'Ehliyet');
+  if (x.tel) { const k = aktif.find(k => rakam(k.tel).slice(-10) === String(x.tel).slice(-10)); if (k) return { k, neden: 'telefon numarası' }; }
   if (x.son4) { const l = aktif.filter(k => rakam(k.tel).slice(-4) === String(x.son4)); if (l.length === 1) return { k: l[0], neden: 'telefon numarası' }; }
   const sinir = Date.now() - 7 * 864e5;
   const g = (S.gonderimler || []).find(m => new Date(m.zaman).getTime() > sinir && /evrak|belge/i.test((m.tur || '') + ' ' + (m.metin || '')) && aktif.some(k => tamAd(k) === m.kime));
@@ -38,7 +39,7 @@ async function netlik(veri) {
 }
 export const BULANIK_SINIR = 250;  // net belge fotoğrafında binlerce, belirgin bulanıkta ~100
 async function indir(x) {
-  const r = await fetch(new URL(S.kurs.waApi).origin + '/medya/' + encodeURIComponent(x.medya.id));
+  const r = await waIstek('/medya/' + encodeURIComponent(x.medya.id));
   if (!r.ok) throw new Error('indirilemedi');
   const b = await r.blob();
   if (/^image\//.test(x.medya.mime || b.type)) { const veri = await fotoKucult(b, 1600); return { veri, tur: 'resim', net: await netlik(veri).catch(() => null) }; }

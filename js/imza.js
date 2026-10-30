@@ -1,5 +1,5 @@
 import { S, kaydet, kursiyer, egitmen, arac, tamAd, SINIFLAR, islem, gonderimEkle, yerelZaman, eksikEvrak, selam, kursAdi, adEk } from './veri.js?v=96';
-import { e, tl, ik, isaret, bildir, tamTarih, pencere, kapatPencere, waAc, apiAcik, belgeWhatsApp, etiket, kisaLink } from './ui.js?v=96';
+import { e, tl, ik, isaret, bildir, tamTarih, pencere, kapatPencere, waAc, waUrl, apiAcik, belgeWhatsApp, etiket, kisaLink } from './ui.js?v=96';
 import { sozlesmeMaddeleri, belgeHtml, dosyaAdi } from './sayfalar3.js?v=96';
 
 /* ================= UZAKTAN İMZA =================
@@ -45,7 +45,7 @@ export async function imzaIste(tur, k, dersIdleri = []) {
   const belge = belgeModeli(tur, k, dersIdleri), ozet = await muhur(JSON.stringify(belge));
   const id = 'i' + Date.now().toString(36);
   const m = await muhur([id, tur, k.id, ozet].join('|'));
-  const uzun = adres() + '#/imza/' + await paketle({ v: 1, id, tur, k: k.id, ozet, m, belge, ...(S.kurs.waApi ? { api: S.kurs.waApi } : {}) });
+  const uzun = adres() + '#/imza/' + await paketle({ v: 1, id, tur, k: k.id, ozet, m, belge, ...(S.kurs.waApi ? { api: S.kurs.waApi, ...(etiket('', 'KURSA GELEN') ? { dk: 1 } : {}) } : {}), ...(S._bulut ? { g: 1 } : {}) });
   const link = await kisaLink(uzun, (tur === 'sozlesme' ? 'sozlesme imzasi ' : 'ders katilim imzasi ') + tamAd(k));
   if (link === uzun && uzun.length > 1500) bildir('Kısa link oluşturulamadı; uzun link WhatsApp’ta kesilebilir', 'uyari');
   S.imzaTalepleri = (S.imzaTalepleri || []).filter(t => !(t.durum === 'bekliyor' && t.kursiyer === k.id && t.tur === tur && (tur === 'sozlesme' || dersIdleri.every(x => t.dersler.includes(x)))));
@@ -118,8 +118,9 @@ export async function imzaSayfasi(kok, paket) {
     const metin = `${b.kisi.ad} · ${p.tur === 'sozlesme' ? 'sözleşme' : 'ders katılım (takip formu)'} imzam. Kurs ekranında kendiliğinden işlenir; işlenmezse linke dokunun:\n${kisa}`;
     // kısa link deposuna kaydolduysa imza kursa ulaşmıştır (kurs ekranı kendiliğinden işler); WhatsApp bildirimi ayrıca gider
     let otomatik = kisa !== donus;
-    if (p.api) { try { const r = await fetch(p.api, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ metin: `${adEk(b.kurs.ad, 'e').toLocaleUpperCase('tr')} GELEN MESAJ · gönderen: ${b.kisi.ad}\n(Gerçekte bu mesaj öğrencinin telefonundan ${adEk(b.kurs.ad, 'in')} WhatsApp hattına gelir.)\n――――――――\n` + metin }) }); otomatik = otomatik || r.ok; } catch (x) { } }
-    if (!otomatik) otomatik = waAc(b.kurs.wp, metin, 'WhatsApp', b.kisi.ad, false, 'KURSA GELEN') === 'api';
+    // gerçek kursta öğrencinin telefonu servise kimliksiz yazamaz: imza kısa link deposundan kursa ulaşır, olmazsa WhatsApp hazır mesajla açılır
+    if (p.api && !p.g) { try { const r = await fetch(p.api, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ metin: (p.dk ? `${adEk(b.kurs.ad, 'e').toLocaleUpperCase('tr')} GELEN MESAJ · gönderen: ${b.kisi.ad}\n(Gerçekte bu mesaj öğrencinin telefonundan ${adEk(b.kurs.ad, 'in')} WhatsApp hattına gelir.)\n――――――――\n` : '') + metin }) }); otomatik = otomatik || r.ok; } catch (x) { } }
+    if (!otomatik) { if (p.g) { const w = window.open(waUrl(b.kurs.wp, metin), '_blank'); if (w) try { w.opener = null; } catch (x) { } } else otomatik = waAc(b.kurs.wp, metin, 'WhatsApp', b.kisi.ad, false, 'KURSA GELEN') === 'api'; }
     kok.querySelector('.imza-sayfa').innerHTML = `<div class="imza-ust"><b>${e(b.kurs.ad)}</b><small>${e(b.kisi.ad)}</small></div><div class="kart" style="padding:24px;text-align:center">${isaret('tamam', 56)}<h2 style="margin:14px 0 6px">${otomatik ? `İmzanız ${e(adEk(b.kurs.ad, 'e'))} gönderildi` : 'Son adım: WhatsApp mesajını gönderin'}</h2><p>${otomatik ? 'Teşekkürler; kurs imzanızı kayda alacak.' : `İmzanız hazır. WhatsApp açıldı; mesajı ${e(adEk(b.kurs.ad, 'e'))} gönderince imzanız kayda geçer.`}</p>
       <div style="display:grid;gap:8px;margin-top:16px"><button class="dg dg-wp" data-tekrar>${ik('wp')}WhatsApp’ı yeniden aç</button><button class="dg dg-cizgi" data-kopyala>Linki kopyala</button></div></div>`;
     kok.querySelector('[data-tekrar]').addEventListener('click', () => waAc(b.kurs.wp, metin));
@@ -142,7 +143,7 @@ async function imzaIsle(paket) {
   } else t.dersler.forEach(id => { const d = S.dersler.find(x => x.id === id); if (d) d.imza = { ...(d.imza || {}), zaman: d.imza && d.imza.zaman ? d.imza.zaman : z, kursiyer: resim, kursiyerUzaktan: z, kursiyerBekliyor: false, usta: d.imza ? d.imza.usta : null }; });
   t.durum = 'imzalandi'; t.imzaZaman = z; t.imzalayan = r.ad;
   islem('Uzaktan imza işlendi', tamAd(k) + ' · ' + (t.tur === 'sozlesme' ? 'sözleşme' : t.dersler.length + ' ders')); kaydet();
-  if (apiAcik()) belgeWhatsApp(belgeHtml(t.tur === 'sozlesme' ? 'sozlesme' : 'takip', k.id), dosyaAdi(t.tur === 'sozlesme' ? 'Sözleşme' : 'Takip formu', tamAd(k)), `${selam(k)} imzaladığınız ${t.tur === 'sozlesme' ? 'kurs sözleşmesinin' : 'direksiyon takip formunun'} kopyası ekte. ${S.kurs.ad}`, tamAd(k), 'ÖĞRENCİ');
+  if (apiAcik()) belgeWhatsApp(belgeHtml(t.tur === 'sozlesme' ? 'sozlesme' : 'takip', k.id), dosyaAdi(t.tur === 'sozlesme' ? 'Sözleşme' : 'Takip formu', tamAd(k)), `${selam(k)} imzaladığınız ${t.tur === 'sozlesme' ? 'kurs sözleşmesinin' : 'direksiyon takip formunun'} kopyası ekte. ${S.kurs.ad}`, tamAd(k), 'ÖĞRENCİ', k.tel);
   return { t, k, r, resim, zaman };
 }
 // Bekleyen imzaları arka planda kontrol eder: kursiyer imzalayınca kurs linke dokunmadan kayda işlenir

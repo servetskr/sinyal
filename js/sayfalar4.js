@@ -12,6 +12,9 @@ const KANAL_KISA = { igm: 'Instagram', igy: 'Instagram yorum', wp: 'WhatsApp', f
 const ORT_UCRET = 25_000;
 
 const sos = () => S.sosyal;
+// Instagram ve Facebook, Meta onayı alınana kadar gerçek kurs hesabında gösterilmez (örnek kursta görünür)
+const metaAcik = () => !S._bulut;
+const kanalListe = () => metaAcik() ? sos().kanallar : sos().kanallar.filter(c => c.id === 'wp');
 const bekleyenDevir = () => sos().yorumlar.filter(y => y.durum === 'devir').length + S.devredilen.length;
 
 /* --- Asistanı dene: kurs bilgilerinden cevap (canlıda dil modeli; demo kural tabanlı) --- */
@@ -133,7 +136,7 @@ function ozet() {
 }
 
 function kanallar() {
-  const l = sos().kanallar;
+  const l = kanalListe();
   return `<div class="izgara iz-2">${l.map(c => `<div class="kart"><div class="kart-bas" style="padding-bottom:4px">${isaret(c.bagli ? 'tamam' : 'uyari', 26)}<div><h3 style="display:flex;gap:6px;align-items:center">${ik(KANAL_IK[c.id])}${e(c.ad)}</h3><small>${c.bagli ? e(c.hesap) + (c.son ? ' · son mesaj ' + e(c.son) : '') : 'Bağlı değil'}</small></div>
       <span class="sag">${c.bagli ? rozet('Bağlı', 'yesil') : `<button class="dg dg-ana dg-kucuk" data-bagla="${c.id}">Bağla</button>`}</span></div>
     ${c.bagli ? `<div class="kart-govde" style="display:grid;gap:12px">
@@ -297,15 +300,16 @@ function devirler() {
 }
 
 export function sosyal(alt) {
-  const SEK = ['ozet', 'kanal', 'yorum', 'dene', 'kural', 'devir', 'bilmedi'];
+  const SEK = ['ozet', 'kanal', ...(metaAcik() ? ['yorum'] : []), 'dene', 'kural', 'devir', 'bilmedi'];
   if (alt && SEK.includes(alt)) durum.sekme = alt;
+  if (!SEK.includes(durum.sekme)) durum.sekme = 'ozet';
   const govde = { ozet, kanal: kanallar, yorum: yorumlar, dene, kural: kurallar, devir: devirler, bilmedi }[durum.sekme]();
-  const bagli = sos().kanallar.filter(c => c.bagli).length;
+  const bagli = kanalListe().filter(c => c.bagli).length;
   return {
     baslik: 'Sosyal medya asistanı',
-    alt: `${bagli} kanal bağlı · Instagram, WhatsApp ve yorumlara 7/24 cevap`,
-    html: `${durum.sekme === 'ozet' ? ekranNotu('Instagram mesajları, gönderi yorumları ve WhatsApp’a gece gündüz saniyeler içinde cevap verilir; kayda dönen her sohbet aday olarak açılır. Konuşmaların kendisi “Mesajlar”da.') : ''}
-      <div id="sek">${sekmeler([['ozet', 'Özet'], ['kanal', 'Kanallar', bagli], ['yorum', 'Instagram yorumları'], ['dene', 'Asistanı dene'], ['kural', 'Kurallar'], ['devir', 'Size devredilen', bekleyenDevir()], ['bilmedi', 'Bilemedikleri', sos().bilinmeyen.length]], durum.sekme)}</div>${govde}`,
+    alt: metaAcik() ? `${bagli} kanal bağlı · Instagram, WhatsApp ve yorumlara 7/24 cevap` : `WhatsApp ${bagli ? 'bağlı' : 'bağlı değil'} · Instagram ve Facebook Meta onayından sonra eklenecek`,
+    html: `${durum.sekme === 'ozet' ? ekranNotu(metaAcik() ? 'Instagram mesajları, gönderi yorumları ve WhatsApp’a gece gündüz saniyeler içinde cevap verilir; kayda dönen her sohbet aday olarak açılır. Konuşmaların kendisi “Mesajlar”da.' : 'WhatsApp’tan gelen mesajlara cevap verilir; kayda dönen her sohbet aday olarak açılır. Instagram ve Facebook, Meta onayı alındıktan sonra eklenecek.') : ''}
+      <div id="sek">${sekmeler([['ozet', 'Özet'], ['kanal', 'Kanallar', bagli], ...(metaAcik() ? [['yorum', 'Instagram yorumları']] : []), ['dene', 'Asistanı dene'], ['kural', 'Kurallar'], ['devir', 'Size devredilen', bekleyenDevir()], ['bilmedi', 'Bilemedikleri', sos().bilinmeyen.length]], durum.sekme)}</div>${govde}`,
     baglan(k) {
       k.addEventListener('click', ev => {
         const t = ev.target;
@@ -323,7 +327,7 @@ export function sosyal(alt) {
         const kk = t.closest('[data-kapali-sil]'); if (kk) { sos().gorusmeSablon.kapali = sos().gorusmeSablon.kapali.filter(x => x !== kk.dataset.kapaliSil); kaydet(); yenile(); return; }
         const ygz = t.closest('[data-yorum-gizle]'); if (ygz) { const y = sos().yorumlar.find(x => x.id === ygz.dataset.yorumGizle); y.durum = 'gizli'; islem('Yorumu gizledi', y.kim); kaydet(); bildir('Yorum gizlendi'); yenile(); return; }
         const ybr = t.closest('[data-yorum-birak]'); if (ybr) { const y = sos().yorumlar.find(x => x.id === ybr.dataset.yorumBirak); y.durum = 'devir'; kaydet(); bildir('Yorum görünür kaldı; cevabı size bırakıldı'); yenile(); return; }
-        const tk = t.closest('[data-test-kanal]'); if (tk) { const c = sos().kanallar.find(x => x.id === tk.dataset.testKanal); if (c.id !== 'wp' || !apiAcik()) return baglantiGerekli(c); tk.disabled = true; tk.textContent = 'Gönderiliyor…'; apiGonder(`${S.kurs.ad} · kanal denemesi\nBu mesaj Sinyal’den WhatsApp hattının çalıştığını doğrulamak için gönderildi.`).then(r => { if (r.ok) { c.son = new Date().toTimeString().slice(0, 5); islem('WhatsApp hattını denedi'); kaydet(); bildir('Deneme mesajı WhatsApp’a gönderildi'); } else bildir(r.hata, 'uyari'); yenile(); }); return; }
+        const tk = t.closest('[data-test-kanal]'); if (tk) { const c = sos().kanallar.find(x => x.id === tk.dataset.testKanal); if (c.id !== 'wp' || !apiAcik()) return baglantiGerekli(c); tk.disabled = true; tk.textContent = 'Gönderiliyor…'; apiGonder(`${S.kurs.ad} · kanal denemesi\nBu mesaj Sinyal’den WhatsApp hattının çalıştığını doğrulamak için gönderildi.`, undefined, undefined, { ad: S.kurs.ad, rol: 'KURSA GELEN' }).then(r => { if (r.ok) { c.son = new Date().toTimeString().slice(0, 5); islem('WhatsApp hattını denedi'); kaydet(); bildir('Deneme mesajı WhatsApp’a gönderildi'); } else bildir(r.hata, 'uyari'); yenile(); }); return; }
         const ba = t.closest('[data-belge-ac]'); if (ba) { import('./sayfalar3.js?v=96').then(m => m.belgeAc(ba.dataset.belgeAc)); return; }
         const yg = t.closest('[data-yorum-goster]'); if (yg) { const y = sos().yorumlar.find(x => x.id === yg.dataset.yorumGoster); y.durum = 'devir'; kaydet(); bildir('Yorum görünür yapıldı; cevabı size bırakıldı'); yenile(); }
       });

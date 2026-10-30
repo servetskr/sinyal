@@ -10,6 +10,8 @@ const KONU_PLAN_MOTOR = [['hazirlik', 'calistirma'], ['koni', 'sekiz'], ['denge'
 // Araç sınıfına göre beklenen yakıt tüketimi (L/100 km; B için kurs ayarı)
 const BEKLENEN_TUKETIM = { C: 22, 'C-O': 22, A2: 3.5, A: 4.5, M: 2.5 };
 export const motorSinif = sinif => /^(A|M)/.test(String(sinif || ''));
+// Ders türleri: simülatör ve eğitim alanı saatleri 9/1/2025'ten beri asgari direksiyon saatine eklenir (MTSK Yön. değişikliği)
+export const DERS_TUR_AD = { trafik: 'Direksiyon (trafikte)', alan: 'Eğitim alanı', simulator: 'Simülatör' };
 // Direksiyon sınav formu: M, A1, A2, A ve B1 EK-3 ile, diğer sınıflar EK-4 ile değerlendirilir
 export const ek3Sinif = sinif => motorSinif(sinif) || String(sinif || '') === 'B1';
 export const konuListesi = sinif => motorSinif(sinif) ? DERS_KONU_MOTOR : DERS_KONU;
@@ -512,7 +514,7 @@ function goc(o) {
 }
 // Yeni tahsilata kalıcı makbuz numarası
 // Bulut kancaları (bulut.js doldurur; demoda boş): makbuz numarası, sunucu işlem kaydı, zamanlı mesajın tek cihazdan gitmesi
-export const bulutKanca = { makbuzNo: null, kayit: null, sahiplen: null, cihaz: null };
+export const bulutKanca = { makbuzNo: null, kayit: null, sahiplen: null, cihaz: null, yetki: null };
 const makbuzBicim = (yil, n) => 'M' + yil + '-' + String(n).padStart(5, '0');
 export const makbuzSira = (no) => { const m = /^M(\d{4})-(\d+)$/.exec(no || ''); return m ? [m[1], +m[2]] : null; };
 // Yakıt tüketimi (L/100 km): litre ve kilometre sayacı girilmiş dolumlardan, dolu depo yöntemiyle (iki dolum arası km'ye sonraki dolumun litresi)

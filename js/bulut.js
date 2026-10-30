@@ -389,6 +389,8 @@ function kancalariKur(u) {
   bulutKanca.sahiplen = sahiplen;
   bulutKanca.kayit = kayitYaz;
   bulutKanca.makbuzNo = makbuzNo; bulutKanca.cihaz = cihaz;
+  // WhatsApp servisine kursun kimliğiyle gidilir (servis, Firebase oturumundan kursun üyesi olduğunu doğrular)
+  bulutKanca.yetki = async () => ({ Authorization: 'Bearer ' + await fb.auth.currentUser.getIdToken(), 'X-Kurs': bulut.kurs });
   rezervAl(String(new Date().getFullYear()));
   setInterval(makbuzDenetle, 30000); setTimeout(makbuzDenetle, 5000);
   if (['mudur', 'sekreter'].includes(u.rol)) { setTimeout(() => gunlukYedek().catch(x => console.error(x)), 45000); gelenDinle(); }
@@ -397,7 +399,15 @@ function kancalariKur(u) {
 // ---- yedek ----
 // Her gün ilk açılışta kurs verisinin tam kopyası alınır: (1) Firestore'da kurslar/{kurs}/yedekler (30 gün silinemez),
 // (2) ayrı bir yerde, Cloudflare'de (sunucu Google'dan bağımsız). Fotoğraflar ayrı belgede kaldığı için kopyada yalnız işaretleri durur.
-const WORKER = 'https://sinyal-wa.sinemsavar0.workers.dev';
+export const WORKER = 'https://sinyal-wa.sinemsavar0.workers.dev';
+// Kursun kendi WhatsApp Business hattı: durum, bağlama, kaldırma (erişim anahtarı yalnız servisde saklanır)
+export async function waHat(govde) {
+  const h = { ...(await bulutKanca.yetki()), 'Content-Type': 'application/json' };
+  const r = await fetch(WORKER + '/hat', govde ? { method: 'POST', headers: h, body: JSON.stringify(govde) } : { headers: h });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.ok) throw Object.assign(new Error(j.hata || 'WhatsApp servisine ulaşılamadı'), { kullanici: j.hata || 'WhatsApp servisine ulaşılamadı' });
+  return j;
+}
 const PARCA = 900000;
 async function sikistir(metin) {
   const b = new TextEncoder().encode(metin);
@@ -497,7 +507,7 @@ const sec = (o, l) => { const r = {}; l.forEach(k => { if (o && o[k] !== undefin
 const veriAt = (k, x) => typeof x === 'string' && x.length > DOSYA_SINIR && x.startsWith('data:') ? null : (typeof x === 'string' && x.startsWith(DOSYA_ON) ? null : x);
 export function ogrenciVerisi(k) {
   const id = k.id, bugun = iso(new Date());
-  const kurs = { ...S.kurs }; ['waApi', 'waApiVarsayilan', 'demoNumara', 'demoKime', 'maliyet', 'kuralDegisen', 'kuralOnay', 'aydinlatma'].forEach(x => delete kurs[x]);
+  const kurs = { ...S.kurs }; ['waApi', 'waApiVarsayilan', 'waHat', 'demoNumara', 'demoKime', 'maliyet', 'kuralDegisen', 'kuralOnay', 'aydinlatma'].forEach(x => delete kurs[x]);
   const ben = { ...k, tc: k.tc ? '•••••••' + String(k.tc).slice(-4) : '' }; delete ben.notlar; delete ben.panelKod; delete ben.hesap;
   return {
     kurs, subeler: (S.subeler || []).filter(x => x.id === k.sube).map(x => sec(x, ['id', 'ad', 'semt'])),
@@ -584,7 +594,7 @@ function ogrenciUygula(docId, g) {
     } else if (x.a === 'gonderimler' && y && !x.eski) {
       const m = { zaman: new Date().toISOString(), kime: String(y.kime || '').slice(0, 80), metin: String(y.metin || '').slice(0, 1000), tur: String(y.tur || 'Öğrenci').slice(0, 60) };
       S.gonderimler.unshift(m);
-      if (y.iletilecek && S.kurs.waApi) sahiplen('og|' + docId + '|' + x.id).then(ok => { if (ok) import('./ui.js?v=96').then(u => u.apiGonder(u.etiket(m.kime, y.rol || '') + m.metin)); });
+      if (y.iletilecek && S.kurs.waApi) sahiplen('og|' + docId + '|' + x.id).then(ok => { if (ok) import('./ui.js?v=96').then(u => u.apiGonder(u.etiket(m.kime, y.rol || '') + m.metin, undefined, undefined, { ad: m.kime, rol: y.rol || '' })); });
     }
   }
   if (notlar.length) islem('Öğrenci panelinden', tamAd(k) + ': ' + notlar.join(', '));
