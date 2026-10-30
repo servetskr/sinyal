@@ -190,7 +190,7 @@ document.addEventListener('change', ev => { const s = ev.target.closest('[data-s
 Y5.temaUygula();
 
 let sonAd = null;
-window.addEventListener('hashchange', () => { if (imzaLinki()) return imzaSayfasiAc(); if (oturum.kullanici && oturum.kullanici.rol === 'ogrenci') return; if (ogrYolu()) return eskiLink(); if (location.hash === '#/ogrenci-giris' && !(oturum.kullanici && oturum.kullanici.bulut)) return ogrenciGirisEkrani(); if (davetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return davetEkrani(); const r = rota(); yenile(r.ad !== sonAd); sonAd = r.ad; });
+window.addEventListener('hashchange', () => { if (imzaLinki()) return imzaSayfasiAc(); if (oturum.kullanici && oturum.kullanici.rol === 'ogrenci') return; if (ogrYolu()) return eskiLink(); if (location.hash === '#/ogrenci-giris') return ogrenciGirisEkrani(oturum.kullanici && oturum.kullanici.bulut ? 'Bu cihazda bir personel hesabı açık. Öğrenci olarak girersen o oturum kapanır.' : undefined); if (davetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return davetEkrani(); const r = rota(); yenile(r.ad !== sonAd); sonAd = r.ad; });
 
 // QR’dan gelen ilk sayfa index.html’de hazır durur (beklemeden görünsün); sonradan dönmek için saklanır
 const TANITIM = (() => { const t = document.getElementById('tanitim'); return t ? t.outerHTML : ''; })();
@@ -491,7 +491,7 @@ window.addEventListener('beforeinstallprompt', ev => { ev.preventDefault(); wind
 const ogrKayit = (() => { try { return JSON.parse(localStorage.getItem('sinyal-ogrenci') || 'null'); } catch (x) { return null; } })();
 if (imzaLinki()) imzaSayfasiAc();
 else if (ogrYolu()) eskiLink();
-else if (location.hash === '#/ogrenci-giris' && !B.bulutKayitli()) ogrenciGirisEkrani();
+else if (location.hash === '#/ogrenci-giris') ogrenciGirisEkrani(B.bulutKayitli() ? 'Bu cihazda bir personel hesabı açık. Öğrenci olarak girersen o oturum kapanır.' : undefined);
 else if (davetYolu()) davetEkrani();
 else if (ogrKayit && !B.bulutKayitli()) { bekleEkrani('Öğrenci paneli açılıyor…'); B.ogrenciOturumu().then(u => !u ? ogrenciGirisEkrani() : u.ilkGiris ? sifreBelirleEkrani(u) : ogrenciModu(u.kurs, u.kod)).catch(() => ogrenciGirisEkrani()); }
 else if (B.bulutKayitli()) {

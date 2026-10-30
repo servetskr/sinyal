@@ -735,7 +735,8 @@ export async function ogrenciGiris(telGiris, sifre) {
   if (!adresler.length) throw hata('Bu numarayla açılmış öğrenci hesabı yok. Kursunuzdan hesap açmasını isteyin');
   let son = null;
   for (const a of adresler) {
-    try { return await ogrenciUyelik((await A.signInWithEmailAndPassword(auth, a, sifre)).user); }
+    // öğrenci girişi bu cihazdaki personel oturumunun yerini alır
+    try { const u = await ogrenciUyelik((await A.signInWithEmailAndPassword(auth, a, sifre)).user); try { localStorage.removeItem(YEREL); } catch (z) { } return u; }
     catch (x) { if (x.kullanici || x.code === 'auth/too-many-requests' || x.code === 'auth/network-request-failed') throw x; son = x; }
   }
   throw hata('Telefon numarası ya da şifre hatalı');
