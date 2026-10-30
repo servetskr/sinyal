@@ -1,15 +1,15 @@
 // Öğrenci hesapları (kurs tarafı): müdür ya da ön büro hesabı açar, giriş bilgileri öğrenciye WhatsApp'tan gider,
 // öğrenci ilk girişte kendi şifresini belirler. Şifresini unutan öğrencinin talebi buraya düşer; tek dokunuşla yeni geçici şifre gider.
-import { S, kaydet, gun, tamAd, islem, selam, oturum, sb, SINIFLAR, egitmen, eksikEvrak, kursAdi } from './veri.js?v=100';
-import { e, ik, tarih, pencere, kapatPencere, bildir, waSirali, tl, tamTarih } from './ui.js?v=100';
-import * as B from './bulut.js?v=100';
-import { wpGonder, alici, odemeBilgisi } from './sayfalar1.js?v=100';
+import { S, kaydet, gun, tamAd, islem, selam, oturum, sb, SINIFLAR, egitmen, eksikEvrak, kursAdi } from './veri.js?v=101';
+import { e, ik, tarih, pencere, kapatPencere, bildir, waSirali, tl, tamTarih } from './ui.js?v=101';
+import * as B from './bulut.js?v=101';
+import { wpGonder, alici, odemeBilgisi } from './sayfalar1.js?v=101';
 
 const yetkili = () => oturum.kullanici && ['mudur', 'sekreter'].includes(oturum.kullanici.rol);
 const talepVar = k => B.bulutta() && !!k.hesap && (B.bulut.sifreTalep || []).some(t => t.tel === k.hesap.tel);
 export const talepEdenler = () => (B.bulutta() ? (B.bulut.sifreTalep || []) : []).map(t => S.kursiyerler.find(k => k.hesap && k.hesap.tel === t.tel && !k.kapali)).filter(Boolean);
 
-export const mesaj = (k, r) => `${selam(k)} ${S.kurs.ad} öğrenci uygulamasında ${r.yeniden ? 'şifreniz yenilendi' : 'hesabınız açıldı'}. Giriş: ${B.ogrenciGirisLinki()} Telefon: ${B.telGoster(r.tel)} Geçici şifre: ${r.sifre} İlk girişte kendi şifrenizi belirleyeceksiniz.${r.yeniden ? '' : ' Ders programınızı, derslerinizi, ödemelerinizi ve sınavlarınızı buradan görebilir, evraklarınızı yükleyebilir, direksiyon dersi alabilirsiniz.'} Şifrenizi kimseyle paylaşmayın.`;
+export const mesaj = (k, r) => `${selam(k)}\n\n*${S.kurs.ad}* öğrenci uygulamasında ${r.yeniden ? 'şifreniz yenilendi' : 'hesabınız açıldı'}.\n\n*Giriş:* ${B.ogrenciGirisLinki()}\n*Telefon:* ${B.telGoster(r.tel)}\n*Geçici şifre:* ${r.sifre}\n\nİlk girişte kendi şifrenizi belirleyeceksiniz.${r.yeniden ? '' : ' Ders programınızı, ödemelerinizi ve sınavlarınızı buradan görebilir, belgelerinizi yükleyebilirsiniz.'}\n\nŞifrenizi kimseyle paylaşmayın.`;
 
 // Demoda gerçek hesap açılmaz: akış ve mesaj aynıdır, mesaj yalnız demo numarasına gider
 async function ac(k) {
