@@ -33,9 +33,9 @@ const DEMO_SINIF = [
   ['A2 motosiklet', '18.500 TL', 34, 14, /motor|motosiklet|\ba2\b/],
   ['C kamyon', '31.000 TL', 34, 20, /kamyon|\bc\b/],
 ];
-const MENU = 'Size nasıl yardımcı olabilirim? Numarasını yazmanız yeterli:\n\n1. Kayıt ve ücretler\n2. Gerekli belgeler\n3. Ders saatleri\n4. Adres\n5. Yetkiliyle görüşmek';
-const SINIF_MENU = 'Hangi ehliyet sınıfını düşünüyorsunuz?\n\n' + DEMO_SINIF.map((s, i) => `${i + 1}. ${s[0]} · ${s[1]}`).join('\n') + '\n\nNumarasını yazmanız yeterli.';
-const sinifBilgi = s => `*${s[0]}*\n\nÜcret: ${s[1]} (peşinattan sonra 5 aya kadar taksit)\nEğitim: ${s[2]} saat teorik ders ve ${s[3]} direksiyon dersi\nSüre: yaklaşık 6–8 hafta\n\nNasıl devam edelim?\n\n1. Evden kayıt linkini gönder\n2. Kursa gelip kayıt olmak istiyorum\n3. Yetkili beni arasın`;
+const MENU = 'Size nasıl yardımcı olabilirim?\n\n1. Kayıt ve ücretler\n2. Gerekli belgeler\n3. Ders saatleri\n4. Adres\n5. Yetkiliyle görüşmek\n\nSeçtiğiniz maddenin rakamını yazmanız yeterli (örneğin 1).';
+const SINIF_MENU = 'Hangi ehliyet sınıfını düşünüyorsunuz?\n\n' + DEMO_SINIF.map((s, i) => `${i + 1}. ${s[0]} · ${s[1]}`).join('\n') + '\n\nSeçtiğiniz sınıfın rakamını yazmanız yeterli (örneğin 1).';
+const sinifBilgi = s => `*${s[0]}*\n\nÜcret: ${s[1]} (peşinattan sonra 5 aya kadar taksit)\nEğitim: ${s[2]} saat teorik ders ve ${s[3]} direksiyon dersi\nSüre: yaklaşık 6–8 hafta\n\nNasıl devam edelim?\n\n1. Evden kayıt linkini gönder\n2. Kursa gelip kayıt olmak istiyorum\n3. Yetkili beni arasın\n\nSeçtiğiniz maddenin rakamını yazmanız yeterli.`;
 const BELGE = 'Kayıt için gerekenler:\n\n• Kimlik kartı\n• Sürücü sağlık raporu (aile hekiminizden alabilirsiniz)\n• Öğrenim belgesi\n• Adli sicil kaydı (e-Devlet)\n• 2 vesikalık fotoğraf\n\nBelgelerin fotoğrafını bu numaraya gönderebilirsiniz.';
 const SAAT = 'Teorik dersler:\n\n• Akşam grubu: hafta içi her akşam 18:30\n• Sabah grubu: salı ve perşembe 10:00\n\nYeni akşam grubumuz yakında başlıyor; kontenjan sınırlı.';
 const ADRES = `Adresimiz: ${KURS_ADRES}\n\nGelmeden önce yazarsanız sizi bekleriz.`;
@@ -53,11 +53,11 @@ async function sohbet(env, kimden, metin) {
   else if (d.adim === 'menu' && no) c = { '1': { metin: SINIF_MENU, konu: 'Kayıt', d: { adim: 'sinif' } }, '2': { metin: BELGE, konu: 'Evrak', d: { adim: 'menu' } }, '3': { metin: SAAT, konu: 'Ders saatleri', d: { adim: 'menu' } }, '4': { metin: ADRES, konu: 'Adres', d: { adim: 'menu' } } }[no] || null;
   else if (/kay[ıi]t|kaydol|yaz[ıi]l|ehliyet al|ba[şs]vur/.test(t)) c = { metin: `${selam ? 'Merhaba, ' : ''}${KURS_AD}’na hoş geldiniz. Kayıt düşünmenize çok sevindik.\n\n${SINIF_MENU}`, konu: 'Kayıt', d: { adim: 'sinif' } };
   else if (sinifBul() >= 0 && /fiyat|ücret|ucret|ka[çc]|ne kadar|bilgi/.test(t)) { const i = sinifBul(); c = { metin: sinifBilgi(DEMO_SINIF[i]), konu: 'Fiyat · ' + DEMO_SINIF[i][0], d: { adim: 'devam', sinif: i } }; }
-  else if (/fiyat|ücret|ucret|kaç para|kac para|taksit|ne kadar/.test(t)) c = { metin: 'Kurs ücretlerimiz:\n\n' + DEMO_SINIF.map((s, i) => `${i + 1}. ${s[0]} · ${s[1]}`).join('\n') + '\n\nPeşinattan sonra 5 aya kadar taksit yapıyoruz. Hangi sınıfı düşünüyorsanız numarasını yazın, ayrıntıları göndereyim.', konu: 'Fiyat ve taksit', d: { adim: 'sinif' } };
+  else if (/fiyat|ücret|ucret|kaç para|kac para|taksit|ne kadar/.test(t)) c = { metin: 'Kurs ücretlerimiz:\n\n' + DEMO_SINIF.map((s, i) => `${i + 1}. ${s[0]} · ${s[1]}`).join('\n') + '\n\nPeşinattan sonra 5 aya kadar taksit yapıyoruz. Hangi sınıfı düşünüyorsanız rakamını yazın (örneğin 1), ayrıntıları göndereyim.', konu: 'Fiyat ve taksit', d: { adim: 'sinif' } };
   else if (/evrak|belge|rapor|gerekli|neler lazım|ne lazım/.test(t)) c = { metin: BELGE, konu: 'Evrak', d: { adim: 'menu' } };
   else if (/saat|ne zaman|başla|basla|grup|kurs günleri/.test(t)) c = { metin: SAAT, konu: 'Ders saatleri', d: { adim: 'menu' } };
   else if (/adres|nerede|nerdesiniz|konum/.test(t)) c = { metin: ADRES, konu: 'Adres', d: { adim: 'menu' } };
-  else if (selam || !d.adim) { const k = selam ? null : asistanCevap(metin); c = k && !k.devir ? { ...k, d: {} } : selam ? { metin: `Merhaba, ${KURS_AD}’na hoş geldiniz.\n\n${MENU}`, konu: 'Karşılama', d: { adim: 'menu' } } : { metin: `Sorunuzu kurs yetkilimize ilettim, kısa süre içinde size dönecek.\n\nBu arada:\n${MENU.split('\n\n')[1]}`, konu: 'Yetkiliye devredildi', devir: true, d: { adim: 'menu' } }; }
+  else if (selam || !d.adim) { const k = selam ? null : asistanCevap(metin); c = k && !k.devir ? { ...k, d: {} } : selam ? { metin: `Merhaba, ${KURS_AD}’na hoş geldiniz.\n\n${MENU}`, konu: 'Karşılama', d: { adim: 'menu' } } : { metin: `Sorunuzu kurs yetkilimize ilettim, kısa süre içinde size dönecek.\n\nBu arada:\n\n${MENU.split('\n\n').slice(1).join('\n\n')}`, konu: 'Yetkiliye devredildi', devir: true, d: { adim: 'menu' } }; }
   if (!c) c = { metin: `Anlayamadım, kusura bakmayın.\n\n${MENU}`, konu: 'Menü', d: { adim: 'menu' } };
   await env.LINK.put(anahtar, JSON.stringify(c.d || {}), { expirationTtl: 86400 }).catch(() => {});
   return c;
