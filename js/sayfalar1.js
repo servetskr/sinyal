@@ -7,6 +7,7 @@ import { evrakDogrula, kurulumAdimlari } from './sayfalar5.js?v=97';
 import { KONULAR } from './konular.js?v=97';
 import * as MZ from './mevzuat.js?v=97';
 import * as HS from './hesap.js?v=97';
+import * as OG from './ogrenci.js?v=97';
 import * as HZ from './hazirlik.js?v=97';
 import { aksamOzeti } from './zamanlayici.js?v=97';
 import * as B from './bulut.js?v=97';
@@ -70,6 +71,7 @@ export function genel(alt) {
     ...belgeBiten.map(a => ['dur', `${a.plaka} · ${fark(a.sigorta) <= 21 ? 'sigorta' : 'muayene'} ${goreli(fark(a.sigorta) <= 21 ? a.sigorta : a.muayene)} bitiyor`, a.model, '#/filo', 'Gör']),
     devir && ['uyari', `${devir} müşteri sizi bekliyor`, 'Asistanın size devrettiği konuşmalar.', '#/sosyal/devir', 'Cevapla'],
     geciken.length && ['uyari', `${geciken.length} kursiyerin taksiti gecikti`, tl(gecikenTutar) + ' tahsil edilmedi.', '#/kasa/geciken', 'Hatırlat'],
+    ...(() => { const l = sbDers(S.dersler).filter(d => d.ogrenciOnay && d.ogrenciOnay.durum === 'itiraz' && !d.ogrenciOnay.cozuldu && fark(d.tarih) >= -30); return l.length ? [['dur', `${l.length} derse öğrenci itiraz etti`, 'Öğrenci dersin yapılmadığını ya da eksik olduğunu söylüyor; usta öğreticiyle konuşun.', '#/kursiyer/' + l[0].kursiyer, 'Gör']] : []; })(),
     hakBitti.length && ['yasak', `${hakBitti.length} kursiyerin sınav hakkı doldu`, 'Yeniden kayıt ya da kayıt kapatma kararı bekliyor.', '#/kursiyer/' + hakBitti[0].id, 'Karar ver'],
     yeniAday.length && ['bilgi', `${yeniAday.length} yeni öğrenci cevap bekliyor`, devirAday ? `Asistan ${devirAday} soruyu bilemedi ve size devretti; diğerlerine ilk cevabı verdi.` : 'Asistan ilk cevabı verdi; kayıt görüşmesine çevirin.', '#/adaylar', 'Aç'],
     kapanmayan.length && ['bilgi', `${kapanmayan.length} kursiyerin dosyası kapanmadı`, 'Ehliyet sınavını geçtiler; sertifika ya da arşiv adımı bekliyor.', '#/kursiyerler/Ehliyet', 'Kapat'],
@@ -630,6 +632,25 @@ function profilFoto(k) {
     },
   });
 }
+// Profilin üstü: bu öğrenci için yapılması gerekenler, önem sırasıyla, her birinin yanında işi yapan düğme
+function profilEksikleri(k) {
+  if (k.kapali || k.asama === 'Ehliyet') return '';
+  const ev = eksikEvrak(k).filter(([x]) => x !== 'sozlesme'), gec = gecikenler(k).reduce((a, t) => a + t.tutar - (t.kismi || 0), 0);
+  const itiraz = S.dersler.filter(d => d.kursiyer === k.id && d.ogrenciOnay && d.ogrenciOnay.durum === 'itiraz').length;
+  const l = [
+    k.hakBitti && !k.hakBitti.cozuldu && ['yasak', 'Sınav hakkı doldu', '<button class="dg dg-cizgi dg-kucuk" data-psekme="sinav">Karar ver</button>'],
+    itiraz && ['dur', `${itiraz} derse itiraz etti`, '<button class="dg dg-cizgi dg-kucuk" data-psekme="dersler">Gör</button>'],
+    gec && ['uyari', `Geciken ödeme ${tl(gec)}`, `<button class="dg dg-wp dg-kucuk" data-link>${ik('wp')}Hatırlat</button>`],
+    ev.length && ['uyari', `${ev.length} evrak eksik: ${ev.map(([, ad]) => ad.split(' (')[0].toLocaleLowerCase('tr')).join(', ')}`, `<button class="dg dg-wp dg-kucuk" data-evrak-hatirlat>${ik('wp')}WhatsApp’tan iste</button>`],
+    !k.evrak.sozlesme && ['uyari', 'Sözleşme imzalanmadı', '<button class="dg dg-cizgi dg-kucuk" data-sozlesme>İmzaya gönder</button>'],
+    !k.foto && ['bilgi', 'Kayıt fotoğrafı yok', '<button class="dg dg-cizgi dg-kucuk" data-profil-foto>Çek</button>'],
+    k.foto && !k.dogrulamaFoto && ['bilgi', 'Kimlik doğrulama fotoğrafı yok', '<button class="dg dg-cizgi dg-kucuk" data-profil-foto>Çek</button>'],
+    !k.mebIslendi && !ev.length && ['bilgi', 'MEBBİS’e girilmedi', '<a class="dg dg-cizgi dg-kucuk" href="#/meb">MEB işlemleri</a>'],
+    !k.hesap && ['bilgi', 'Öğrenci uygulaması hesabı açılmadı', '<button class="dg dg-cizgi dg-kucuk" data-hesap-ac>Hesap aç</button>'],
+  ].filter(Boolean);
+  if (!l.length) return `<p class="ipucu" style="margin:0 20px">${isaret('tamam', 20)}<span>Eksik yok. Sıradaki adım: ${k.asama === 'Sınav' ? 'sınav' : k.asama === 'Direksiyon' ? 'direksiyon dersleri' : k.asama === 'Teorik' ? 'teorik dersler ve e-sınav' : 'aşamayı ilerletin'}.</span></p>`;
+  return `<div class="profil-eksik" style="margin:0 20px;display:grid;gap:6px"><p class="et" style="margin:0">Yapılacaklar</p>${l.map(([t, m, d]) => `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">${isaret(t, 20)}<span style="flex:1;min-width:160px;font-size:14px;color:var(--murekkep)">${m}</span>${d}</div>`).join('')}</div>`;
+}
 export function kursiyerDetay(id) {
   const k = kursiyer(id);
   if (!k) return { baslik: 'Kursiyer bulunamadı', html: `<div class="kart">${bos('Bu kursiyer bulunamadı', 'Kayıt silinmiş ya da bağlantı hatalı olabilir.', '<a class="dg dg-koyu" href="#/kursiyerler">Kursiyerlere dön</a>')}</div>` };
@@ -660,9 +681,9 @@ export function kursiyerDetay(id) {
         <ul class="zaman-cizgisi">${k.notlar.map(n => `<li>${e(n.metin)}<small>${goreli(n.tarih)}</small></li>`).join('') || '<li style="color:var(--soluk)">Henüz not yok.<small>Usta öğretici notları ve görüşmeler burada birikir.</small></li>'}</ul>
         <form data-not style="display:flex;gap:8px;margin-top:10px"><input class="girdi" name="n" placeholder="Not ekleyin" aria-label="Not"><button class="dg dg-koyu" type="submit">Ekle</button></form>
       </div></div></div>`; }
-    if (profilSekme === 'dersler') return `<div class="kart"><div class="kart-bas"><h3>Direksiyon dersleri</h3><small>${k.direksiyon} yapıldı · ${dersler.filter(d => d.durum === 'Planlandı').length} planlı${imzasizDers(k).length ? ' · ' + imzasizDers(k).length + ' dersin kursiyer imzası eksik' : ''}</small><div class="sag" style="gap:6px">${imzasizDers(k).length ? `<button class="dg dg-wp dg-kucuk" data-ders-imza>${ik('wp')}İmzaya gönder</button>` : ''}<a class="dg dg-ana dg-kucuk" href="#/plan">${ik('arti')}Ders planla</a></div></div>
+    if (profilSekme === 'dersler') return `<div class="kart"><div class="kart-bas"><h3>Direksiyon dersleri</h3><small>${k.direksiyon} yapıldı · ${dersler.filter(d => d.durum === 'Planlandı').length} planlı${dersler.some(d => d.ogrenciOnay) ? ` · öğrenci onayı ${dersler.filter(d => d.ogrenciOnay && d.ogrenciOnay.durum === 'onay').length}${dersler.some(d => d.ogrenciOnay && d.ogrenciOnay.durum === 'itiraz') ? ', itiraz ' + dersler.filter(d => d.ogrenciOnay && d.ogrenciOnay.durum === 'itiraz').map(d => tarih(d.tarih) + (d.ogrenciOnay.not ? ' (“' + e(d.ogrenciOnay.not) + '”)' : '')).join(', ') : ''}` : ''}${imzasizDers(k).length ? ' · ' + imzasizDers(k).length + ' dersin kursiyer imzası eksik' : ''}</small><div class="sag" style="gap:6px">${imzasizDers(k).length ? `<button class="dg dg-wp dg-kucuk" data-ders-imza>${ik('wp')}İmzaya gönder</button>` : ''}<a class="dg dg-ana dg-kucuk" href="#/plan">${ik('arti')}Ders planla</a></div></div>
       <ul class="liste" style="margin-top:8px">${dersler.map(d => `<li><span class="zaman">${d.saat}</span><div><b style="color:var(--murekkep)">${tarihUzun(d.tarih)}</b><small style="display:block;color:var(--soluk)">${e(egitmen(d.egitmen).ad)}</small></div><span class="sag">${d.arac ? plaka(arac(d.arac).plaka) : ''}${d.durum === 'Yapıldı' ? (imzasiz(d) ? rozet(d.imza && d.imza.kursiyerBekliyor ? 'İmza bekleniyor' : 'İmzasız', 'uyari') : rozet(d.imza && d.imza.kursiyerUzaktan ? 'Uzaktan imzalı' : 'İmzalı', 'yesil')) : ''}${rozet(d.durum, d.durum === 'Yapıldı' ? 'yesil' : d.durum === 'Gelmedi' ? 'kirmizi' : 'mavi')}</span></li>`).join('') || '<li>' + bos('Henüz direksiyon dersi yok', 'Teorik dersler ve e-sınav bittikten sonra planlanır.') + '</li>'}</ul></div>`;
-    if (profilSekme === 'odeme') return `<div class="izgara iz-12">
+    if (profilSekme === 'odeme') return `${OG.hesapDokumu(k)}<div class="ara-bosluk"></div><div class="izgara iz-12">
       <div><div class="kart gosterge"><small>Kurs ücreti${ekToplam(k) ? ' + ek kalemler' : ''}</small><b>${tl(k.odeme.toplam + ekToplam(k))}</b><span>Ödenen ${tl(odenen(k))}${k.odeme.iade ? ' · iade ' + tl(k.odeme.iade) : ''}${k.ucretsiz ? ' · ücretsiz kursiyer (' + e(k.ucretsiz.neden) + ')' : ''}</span>${ilerleme(odenen(k), k.odeme.toplam + ekToplam(k), 'yesil')}<span style="margin-top:8px">Kalan <b style="font-size:15px;font-family:var(--mono)">${tl(kalanBorc(k))}</b></span></div>
         <div style="display:grid;gap:8px;margin-top:12px">${[['indirim', 'İndirim uygula'], ['plan', 'Planı yeniden böl'], ['ek', 'Ek kalem ekle'], ['iade', 'İade yap'], ...(k.ucretsiz ? [] : [['ucretsiz', 'Ücretsiz kursiyer (%3)']])].filter(([t]) => mudurMu() || !['indirim', 'iade', 'ucretsiz'].includes(t)).map(([t, a]) => `<button class="dg dg-cizgi dg-kucuk" style="justify-content:flex-start" data-odeme-islem="${t}">${a}</button>`).join('')}</div></div>
       <div class="kart"><div class="kart-bas"><h3>Ödeme planı</h3>${k.odeme.senetli ? rozet('Senetli', 'mor') : ''}<div class="sag">${kalanBorc(k) ? `<button class="dg dg-cizgi dg-kucuk" data-link>${ik('wp')}Ödeme bilgisini gönder</button>` : ''}</div></div><div class="kart-govde">
@@ -686,6 +707,7 @@ ${mesajlar.length ? '' : '<li style="color:var(--soluk)">Bu kursiyere henüz mes
         <div class="sag"><button class="dg dg-wp" data-wp>${ik('wp')}WhatsApp</button><button class="dg dg-cizgi" data-ileri ${k.asama === 'Ehliyet' || k.kapali ? 'disabled' : ''}>${ik('ok')}Sonraki aşamaya geçir</button>${mudurMu() && !k.kapali && k.asama !== 'Ehliyet' ? '<button class="dg dg-hafif" data-kapat-kayit>Kaydı kapat</button>' : ''}</div></div>
       ${k.kapali ? `<div class="ipucu uyari" style="margin:0 20px 14px">${isaret('uyari', 22)}<span style="flex:1"><b>${k.kapali.tur === 'dondur' ? 'Kayıt donduruldu' : 'Kayıt kapatıldı'}</b> · ${tarih(k.kapali.tarih)} · ${e(k.kapali.neden)}${k.kapali.kim ? ' · ' + e(k.kapali.kim) : ''}</span>${mudurMu() ? '<button class="dg dg-cizgi dg-kucuk" data-kayit-ac>Yeniden aç</button>' : ''}</div>` : ''}
       ${yol(asamaNo(k), true)}
+      ${profilEksikleri(k)}
       <div style="height:18px"></div>
     </div>
     ${dosyaSeridi(k, eksik)}
