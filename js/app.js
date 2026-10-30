@@ -1,19 +1,20 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=96';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=96';
-import * as Y1 from './sayfalar1.js?v=96';
-import * as Y2 from './sayfalar2.js?v=96';
-import * as P from './portal.js?v=96';
-import * as Y3 from './sayfalar3.js?v=96';
-import * as Y4 from './sayfalar4.js?v=96';
-import * as Y5 from './sayfalar5.js?v=96';
-import * as IM from './imza.js?v=96';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=96';
-import * as SN from './senaryo.js?v=96';
-import * as OZ from './ozellik.js?v=96';
-import { durumlariGuncelle } from './mesaj.js?v=96';
-import { yeniMenu } from './yeni.js?v=96';
-import * as B from './bulut.js?v=96';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=96';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=97';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=97';
+import * as Y1 from './sayfalar1.js?v=97';
+import * as Y2 from './sayfalar2.js?v=97';
+import * as P from './portal.js?v=97';
+import * as Y3 from './sayfalar3.js?v=97';
+import * as Y4 from './sayfalar4.js?v=97';
+import * as Y5 from './sayfalar5.js?v=97';
+import * as IM from './imza.js?v=97';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=97';
+import * as SN from './senaryo.js?v=97';
+import * as OZ from './ozellik.js?v=97';
+import { durumlariGuncelle } from './mesaj.js?v=97';
+import { yeniMenu } from './yeni.js?v=97';
+import * as B from './bulut.js?v=97';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=97';
+import * as AN from './analiz.js?v=97';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -21,18 +22,24 @@ const SAYFALAR = {
   mesajlar: Y2.mesajlar, meb: Y2.meb, raporlar: Y2.raporlar, ayarlar: Y2.ayarlar,
   egitmen: P.egitmenPortal, ogrenci: P.ogrenciPortal,
   belgeler: Y3.belgeler, kayit: Y3.kayitSayfasi, guven: Y3.guven, mebbis: Y3.mebbisAsistani,
-  sosyal: Y4.sosyal, kurulum: Y5.kurulum, 'imza-geldi': IM.imzaGeldi, senaryo: SN.senaryolar, karlilik: OZ.karlilik,
+  sosyal: Y4.sosyal, kurulum: Y5.kurulum, 'imza-geldi': IM.imzaGeldi, senaryo: SN.senaryolar, karlilik: OZ.karlilik, analiz: AN.analiz,
 };
 const ROL_AD = { mudur: 'Kurs müdürü', sekreter: 'Ön büro', usta: 'Usta öğretici' };
-const YASAK = { mudur: [], sekreter: ['raporlar', 'ayarlar', 'guven', 'kurulum', 'senaryo', 'karlilik'], usta: Object.keys(SAYFALAR).filter(k => !['egitmen', 'imza-geldi'].includes(k)) };
+const YASAK = { mudur: [], sekreter: ['raporlar', 'ayarlar', 'guven', 'kurulum', 'senaryo', 'karlilik', 'analiz'], usta: Object.keys(SAYFALAR).filter(k => !['egitmen', 'imza-geldi'].includes(k)) };
 const izinli = ad => { const u = oturum.kullanici; return u && !YASAK[u.rol].includes(ad) && !((u.ziyaretci || u.bulut) && ad === 'senaryo'); };
 
+// Menü günlük işe göre: önce bugün, sonra öğrenci işleri, para, kurum işleri, analiz; az kullanılanlar en altta
 const MENU = [
-  ['Bugün', [['genel', 'Genel bakış', '↑'], ['adaylar', 'Yeni öğrenciler', '↗'], ['mesajlar', 'Mesajlar', '↗'], ['sosyal', 'Sosyal medya asistanı', '↗']]],
-  ['Eğitim', [['kursiyerler', 'Kursiyerler', '→'], ['plan', 'Direksiyon planı', '→'], ['teorik', 'Teorik dersler', '→'], ['sinavlar', 'Sınavlar', '→']]],
-  ['İşletme', [['kasa', 'Kasa ve ödemeler', '→'], ['filo', 'Ekip ve araçlar', '→'], ['meb', 'MEB işlemleri', '→'], ['belgeler', 'Belgeler ve çıktılar', '→'], ['raporlar', 'Raporlar', '→'], ['karlilik', 'Kârlılık ve kapasite', '→']]],
-  ['Kurs', [['senaryo', 'Demo senaryoları', '↗'], ['kurulum', 'Kurulum', '→'], ['kayit', 'Evden kayıt sayfası', '↗'], ['ogrenci', 'Kursiyer ekranı', '↗'], ['guven', 'Verileriniz ve güvenlik', '→'], ['ayarlar', 'Ayarlar', '→']]],
+  ['Bugün', [['genel', 'Genel bakış', '↑'], ['mesajlar', 'Mesajlar', '↗'], ['adaylar', 'Yeni öğrenciler', '↗']]],
+  ['Öğrenciler', [['kursiyerler', 'Kursiyerler', '→'], ['plan', 'Direksiyon planı', '→'], ['teorik', 'Teorik dersler', '→'], ['sinavlar', 'Sınavlar', '→']]],
+  ['Para', [['kasa', 'Kasa ve ödemeler', '→']]],
+  ['Kurum', [['meb', 'MEB işlemleri', '→'], ['belgeler', 'Belgeler ve çıktılar', '→'], ['filo', 'Ekip ve araçlar', '→']]],
+  ['Analiz', [['analiz', 'Analiz', '→'], ['raporlar', 'Raporlar', '→'], ['karlilik', 'Kârlılık ve kapasite', '→']]],
+  ['Diğer', [['sosyal', 'Sosyal medya asistanı', '↗'], ['kayit', 'Evden kayıt sayfası', '↗'], ['ogrenci', 'Kursiyer ekranı', '↗'], ['senaryo', 'Demo senaryoları', '↗'], ['kurulum', 'Kurulum', '→'], ['guven', 'Verileriniz ve güvenlik', '→'], ['ayarlar', 'Ayarlar', '→']]],
 ];
+// Aramada sayfaların yanında özellikler de çıkar (ör. "müşavir" yazınca müşavir paketi)
+const OZELLIKLER = [['Müşavir paketi (Excel)', '#/ayarlar/entegrasyon', 'muhasebe fatura e-arşiv luca'], ['Otomatik planla', '#/plan', 'ders dağıt program'], ['WhatsApp hattını bağla', '#/ayarlar/kurs', 'otomatik mesaj api'], ['İki adımlı giriş', '#/ayarlar/guvenlik', 'doğrulama kodu güvenlik'], ['Ders defteri (öğrenci onayı)', '#/ayarlar/ogrenciapp', 'itiraz onay'], ['Öğrenci uygulaması ayarları', '#/ayarlar/ogrenciapp', 'kursiyer ekranı'], ['Sınıf ve ücretler', '#/ayarlar/sinif', 'fiyat taban ücret'], ['Kullanıcılar ve davet', '#/ayarlar/kullanici', 'çalışan personel'], ['Yedekler', '#/ayarlar/guvenlik', 'yedek geri yükle'], ['İşlem geçmişi', '#/ayarlar/gecmis', 'log kim ne yaptı'], ['KVKK ve anonimleştirme', '#/ayarlar/kvkk', 'kişisel veri imha'], ['Veri aktarımı (Excel)', '#/ayarlar/aktarim', 'içe aktar eski program'], ['Denetim modu', '#/meb', 'müfettiş denetim'], ['MEBBİS Yardımcısı', '#/meb', 'eklenti chrome'], ['Puantaj ve personel özeti', '#/ayarlar/entegrasyon', 'bordro maaş prim']];
+
 
 let rol = 'yonetici';
 try { rol = localStorage.getItem('sinyal-rol') || 'yonetici'; } catch (x) { }
@@ -141,6 +148,7 @@ function aramaAc() {
     ...S.araclar.map(a => ({ t: a.plaka, a: a.model, h: '#/filo', g: 'Araçlar' })),
     ...S.egitmenler.map(x => ({ t: x.ad, a: 'Usta öğretici', h: '#/filo', g: 'Usta öğreticiler' })),
     ...MENU.flatMap(([, l]) => l.filter(([k]) => izinli(k)).map(([k, t]) => ({ t, a: 'Sayfa', h: '#/' + k, g: 'Sayfalar' }))),
+    ...OZELLIKLER.filter(([, h]) => izinli(h.slice(2).split('/')[0])).map(([t, h, ara]) => ({ t, a: ara, h, g: 'Özellikler' })),
   ];
   pencere({
     baslik: 'Ara', icerik: `<div class="komut"><input type="search" placeholder="Ad, telefon, plaka ya da sayfa yazın" aria-label="Ara"><ul></ul></div>`,

@@ -39,6 +39,16 @@ async function uyeRol(req, kurs) {
   return (d.fields && d.fields.rol && d.fields.rol.stringValue) || null;
 }
 const PERSONEL = ['mudur', 'sekreter', 'usta'];
+// Demo hatları: öğrenci (PHONE_ID), usta öğretici (PHONE_ID_USTA), kurs müdürü (PHONE_ID_MUDUR). Hepsi demo telefonuna (ALICI) yazar.
+// Usta ve müdür hatları tanımlıysa mesaj alıcının rolüne göre o hattan gider ve başındaki "ALICI: …" açıklaması silinir.
+const demoHatlar = env => ({ ogrenci: [env.PHONE_ID, env.WA_TOKEN], usta: env.PHONE_ID_USTA ? [env.PHONE_ID_USTA, env.WA_TOKEN_USTA || env.WA_TOKEN] : null, mudur: env.PHONE_ID_MUDUR ? [env.PHONE_ID_MUDUR, env.WA_TOKEN_MUDUR || env.WA_TOKEN] : null });
+const ETIKET = /^ALICI: ([^\n·(]+?)\s*(?:·[^\n]*)?\n\([^\n]*\)\n―+\n/, GELEN_ETIKET = /^[^\n]* GELEN MESAJ · gönderen:[^\n]*\n\([^\n]*\)\n―+\n/;
+function demoHatSec(env, metin, rol) {
+  const h = demoHatlar(env), cok = !!(h.usta || h.mudur), m = metin.match(ETIKET);
+  if (!rol) rol = GELEN_ETIKET.test(metin) ? 'KURSA GELEN' : m ? m[1].trim() : '';
+  const hat = rol === 'HOCA' ? h.usta : ['MÜDÜR', 'ÖN BÜRO', 'KURSA GELEN'].includes(rol) ? h.mudur : null;
+  return { hat: hat || h.ogrenci, metin: cok ? metin.replace(ETIKET, '').replace(GELEN_ETIKET, '') : metin };
+}
 // Kursun kendi WhatsApp hattı (Meta'daki telefon numarası kimliği + kalıcı erişim anahtarı); anahtar tarayıcıya hiç dönmez
 const kursHat = async (env, kurs) => { try { return JSON.parse((await env.LINK.get('hat:' + kurs)) || 'null'); } catch (x) { return null; } };
 // Gönderim gövdesi: metin ya da belge (PDF/fotoğraf önce Meta'ya yüklenir)
@@ -113,7 +123,7 @@ export default {
       if (b.sil) { if (h) await env.LINK.delete('hatno:' + h.phoneId); await env.LINK.delete('hat:' + kursId); return cevap({ ok: true, bagli: false }); }
       const phoneId = rakam(b.phoneId), token = String(b.token || '').trim();
       if (!phoneId || token.length < 20) return cevap({ ok: false, hata: 'Telefon numarası kimliği ve erişim anahtarı gerekli' }, 400);
-      if (phoneId === rakam(env.PHONE_ID)) return cevap({ ok: false, hata: 'Bu, Sinyal demo hattı; kursun kendi hattını girin' }, 400);
+      if ([env.PHONE_ID, env.PHONE_ID_USTA, env.PHONE_ID_MUDUR].filter(Boolean).map(rakam).includes(phoneId)) return cevap({ ok: false, hata: 'Bu, Sinyal demo hattı; kursun kendi hattını girin' }, 400);
       const sahip = await env.LINK.get('hatno:' + phoneId);
       if (sahip && sahip !== kursId) return cevap({ ok: false, hata: 'Bu hat başka bir kursa bağlı' }, 409);
       const r = await fetch('https://graph.facebook.com/v25.0/' + phoneId + '?fields=display_phone_number,verified_name', { headers: { Authorization: 'Bearer ' + token } });
@@ -142,7 +152,7 @@ export default {
       if (!m) return new Response('ok');
       const telId = v.metadata && v.metadata.phone_number_id;
       // Gerçek kursun hattına gelen mesaj: herkesten kabul edilir, yalnız o kursun gelen kutusuna yazılır (otomatik cevap yok)
-      if (telId && telId !== env.PHONE_ID && env.LINK) {
+      if (telId && telId !== env.PHONE_ID && telId !== env.PHONE_ID_USTA && telId !== env.PHONE_ID_MUDUR && env.LINK) {
         const kurs = await env.LINK.get('hatno:' + telId), h = kurs && await kursHat(env, kurs);
         if (!h) return new Response('ok');
         const medya = (m.type === 'image' || m.type === 'document') ? await medyaAl(env, m, h.token, 'medya-' + kurs + '-' + m.id) : null;
@@ -159,7 +169,7 @@ export default {
       const medya = (m.type === 'image' || m.type === 'document') && env.LINK ? await medyaAl(env, m, env.WA_TOKEN, 'medya-' + m.id) : null;
       const metin = m.type === 'text' ? m.text.body : (m[m.type] && m[m.type].caption) || (m.type === 'image' ? '(fotoğraf)' : m.type === 'document' ? '(belge)' : '(' + m.type + ')');
       const c = medya ? { metin: 'Belgenizi aldık, teşekkürler. Kurs kontrol edip kaydınıza işleyecek; eksik ya da okunmuyorsa size yazacağız.', konu: 'Evrak' } : asistanCevap(metin);
-      const ust = 'ALICI: ADAY (size yazan kişi)\n(Kursun asistanı otomatik cevapladı.)\n――――――――\n';
+      const h = demoHatlar(env), ust = h.usta || h.mudur ? '' : 'ALICI: ADAY (size yazan kişi)\n(Kursun asistanı otomatik cevapladı.)\n――――――――\n';
       const yaz = body => fetch(G + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + env.WA_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       await yaz({ messaging_product: 'whatsapp', status: 'read', message_id: m.id }).catch(() => {});
       await yaz({ messaging_product: 'whatsapp', to: env.ALICI, type: 'text', text: { body: ust + c.metin, preview_url: true } }).catch(() => {});
@@ -187,7 +197,7 @@ export default {
       return cevap({ ok: true, liste: JSON.parse((env.LINK && (await env.LINK.get(gercek ? 'gelen:' + kursId : 'gelen'))) || '[]') });
     }
     if (req.method === 'GET') {
-      if (!yol) return cevap({ ok: true, hazir: !!(env.WA_TOKEN && env.PHONE_ID && env.ALICI), belge: true, kisa: !!env.LINK, kursHatti: true });
+      if (!yol) return cevap({ ok: true, hazir: !!(env.WA_TOKEN && env.PHONE_ID && env.ALICI), belge: true, kisa: !!env.LINK, kursHatti: true, demoHatlari: { usta: !!env.PHONE_ID_USTA, mudur: !!env.PHONE_ID_MUDUR } });
       const anahtar = yol.startsWith('k/') ? yol.slice(2) : yol;
       if (/^(gelen$|(hat|hatno|gelen|medya|durum|yedek)[:-])/.test(anahtar)) return cevap({ ok: false }, 404);  // iç kayıtlar kısa link gibi okunamaz
       const v = env.LINK ? await env.LINK.get(anahtar) : null;
@@ -208,10 +218,11 @@ export default {
       return cevap({ ok: true, slug });
     }
     if (yol) return cevap({ ok: false, hata: 'Bilinmeyen adres' }, 404);
-    const metin = String((b && b.metin) || '').trim().slice(0, 4000);
+    let metin = String((b && b.metin) || '').trim().slice(0, 4000);
     if (!metin) return cevap({ ok: false, hata: 'Mesaj bos' }, 400);
-    // Gönderen hat ve alıcı: gerçek kursta kursun kendi hattı ve istekteki numara; demoda Sinyal hattı ve ALICI
+    // Gönderen hat ve alıcı: gerçek kursta kursun kendi hattı ve istekteki numara; demoda alıcının rolüne göre demo hattı ve ALICI
     let phoneId = env.PHONE_ID, token = env.WA_TOKEN, to = env.ALICI;
+    if (!gercek) { const d = demoHatSec(env, metin, String(b.rol || '')); [phoneId, token] = d.hat; metin = d.metin; }
     if (gercek) {
       const h = await kursHat(env, kursId);
       if (!h) return cevap({ ok: false, hata: 'Kursun WhatsApp hattı bağlı değil (Ayarlar › Kurs bilgileri)' }, 409);

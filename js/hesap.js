@@ -1,9 +1,9 @@
 // Öğrenci hesapları (kurs tarafı): müdür ya da ön büro hesabı açar, giriş bilgileri öğrenciye WhatsApp'tan gider,
 // öğrenci ilk girişte kendi şifresini belirler. Şifresini unutan öğrencinin talebi buraya düşer; tek dokunuşla yeni geçici şifre gider.
-import { S, kaydet, gun, tamAd, islem, selam, oturum, sb } from './veri.js?v=96';
-import { e, ik, tarih, pencere, kapatPencere, bildir, waSirali } from './ui.js?v=96';
-import * as B from './bulut.js?v=96';
-import { wpGonder, alici } from './sayfalar1.js?v=96';
+import { S, kaydet, gun, tamAd, islem, selam, oturum, sb, SINIFLAR, egitmen, eksikEvrak, kursAdi } from './veri.js?v=97';
+import { e, ik, tarih, pencere, kapatPencere, bildir, waSirali, tl, tamTarih } from './ui.js?v=97';
+import * as B from './bulut.js?v=97';
+import { wpGonder, alici, odemeBilgisi } from './sayfalar1.js?v=97';
 
 const yetkili = () => oturum.kullanici && ['mudur', 'sekreter'].includes(oturum.kullanici.rol);
 const talepVar = k => B.bulutta() && !!k.hesap && (B.bulut.sifreTalep || []).some(t => t.tel === k.hesap.tel);
@@ -29,6 +29,29 @@ export function hesapSeridi(k) {
     : `<button type="button" class="dg dg-ana dg-kucuk" data-hesap-ac>Hesap aç ve WhatsApp’tan gönder</button>`}</span></div>`;
 }
 // kayıt sırasında: hesap arka planda açılır, giriş bilgileri gönderilir
+// Kayıt sonrası karşılama: öğrenciye konusuna göre ayrı mesajlar (hoş geldin, eksik evrak, uygulama girişi, ödeme planı, teorik ders),
+// usta öğreticiye yeni öğrenci bildirimi. İstenirse öğrenci hesabı önce açılır, geçici şifre 3. mesajla gider.
+export async function karsilama(k, { hos = true, hesap = true } = {}) {
+  let r = null;
+  if (hesap && !k.hesap) r = await ac(k).then(x => { islem('Öğrenci hesabı açtı', tamAd(k)); kaydet(); return x; }).catch(x => { bildir('Öğrenci hesabı açılamadı: ' + B.hataMetni(x) + '. Öğrenci dosyasından tekrar deneyin', 'uyari'); return null; });
+  const a = alici(k), ogr = metin => ({ ad: a.ad, tel: a.tel, rol: a.rol, metin, tur: 'Hoş geldin' }), l = [];
+  if (hos) {
+    l.push(ogr(`${selam(k)} ${kursAdi('e')} hoş geldiniz! Kaydınız tamamlandı. Sınıfınız: ${SINIFLAR[k.sinif].ad}.`));
+    const ek = eksikEvrak(k).filter(([x]) => x !== 'sozlesme');
+    if (ek.length) l.push(ogr(`Kaydınızı tamamlamak için şu belgeler eksik:\n${ek.map(([, ad]) => '• ' + ad).join('\n')}\nBelgelerin fotoğrafını ya da PDF'ini bu numaraya WhatsApp'tan gönderebilirsiniz; her belge doğrudan dosyanıza işlenir.`));
+  }
+  if (r) l.push(ogr(`Öğrenci uygulamanız hazır.\nGiriş: ${B.ogrenciGirisLinki()}\nKullanıcı adı: ${B.telGoster(r.tel)}\nGeçici şifre: ${r.sifre}\nİlk girişte şifrenizi değiştirmeyi unutmayın. Ders programınızı, ödemelerinizi ve sınavlarınızı buradan görebilir, sınava çalışabilirsiniz.`));
+  if (hos) {
+    const o = k.odeme, t = o.taksitler.filter(x => !x.iptal);
+    l.push(ogr(t.length ? `Ödeme planınız (toplam ${tl(o.toplam)}):\n${o.pesin ? `• Peşinat: ${tl(o.pesin)} (ödendi)\n` : ''}${t.map((x, i) => `• ${x.aciklama || (i + 1) + '. taksit'}: ${tamTarih(x.vade)} · ${tl(x.tutar)}${x.odendi ? ' (ödendi)' : ''}`).join('\n')}\n${odemeBilgisi()}` : `Kurs ücretiniz ${tl(o.toplam)}${o.pesin >= o.toplam ? ' peşin ödendi, teşekkürler.' : '. ' + odemeBilgisi()}`));
+    const g = (S.gruplar || []).find(x => x.id === k.teorikGrup);
+    if (g) l.push(ogr(`Teorik dersleriniz ${tamTarih(g.baslangic)} tarihinde başlıyor: ${g.ad}${g.saat ? ', ' + g.saat : ''}. Derslere kimliğinizle gelin.`));
+    const h = egitmen(k.egitmen);
+    if (h) { const b = alici(h); l.push({ ad: b.ad, tel: b.tel, rol: b.rol, tur: 'Yeni öğrenci', metin: `${h.ad.split(' ')[0]} Hoca, yeni öğrenciniz: ${tamAd(k)} · ${SINIFLAR[k.sinif].ad} · ${k.tel}. Direksiyon dersleri e-sınavdan sonra planlanacak; planlanınca size ayrıca bildirim gelir.` }); }
+  }
+  if (!l.length) return;
+  waSirali(l, 'Kayıt mesajları', { sessiz: true });
+}
 export function hesapAcSessiz(k) {
   if (k.hesap) return;
   ac(k).then(r => { islem('Öğrenci hesabı açtı', tamAd(k)); kaydet(); wpGonder(k, mesaj(k, r), 'Öğrenci hesabı'); }).catch(x => bildir('Öğrenci hesabı açılamadı: ' + B.hataMetni(x) + '. Öğrenci dosyasından tekrar deneyin', 'uyari'));
