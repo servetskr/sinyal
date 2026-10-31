@@ -232,7 +232,7 @@ function aliciTel(kime) {
   const kisi = rol === 'HOCA' ? (S.egitmenler || []).find(x => x.ad === ad) : rol === 'ADAY' ? (S.adaylar || []).find(x => x.ad === ad) : (S.kursiyerler || []).find(x => x.ad + ' ' + x.soyad === ad);
   return kisi ? waNumara(kisi.tel) : '';
 }
-export async function apiGonder(metin, belge, adres, kime) {
+export async function apiGonder(metin, belge, adres, kime, ek = {}) {
   if (oturum.kullanici && oturum.kullanici.ziyaretci) return { ok: false, hata: 'Demo görünümünde mesaj gönderilmez' };
   const tel = aliciTel(kime);
   if (!tel && S._bulut) return { ok: false, hata: kime && ['MÜDÜR', 'ÖN BÜRO'].includes(kime.rol) ? 'Kurs müdürünün cep telefonu kayıtlı değil: Ayarlar › Kurs bilgileri › Müdürün cep telefonu' : (kime && kime.ad ? kime.ad + ': ' : '') + 'kayıtlı WhatsApp numarası yok' };
@@ -240,7 +240,7 @@ export async function apiGonder(metin, belge, adres, kime) {
   giden.push(kayit); window.dispatchEvent(new CustomEvent('sinyal-giden'));
   const bitir = (ok, hata) => { kayit.durum = ok ? 'iletildi' : 'hata'; kayit.hata = hata; window.dispatchEvent(new CustomEvent('sinyal-giden')); };
   try {
-    const govde = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ metin: sadeDil(metin), belge, tel: tel || undefined, rol: (kime && kime.rol) || undefined }) };
+    const govde = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ metin: sadeDil(metin), belge, tel: tel || undefined, rol: (kime && kime.rol) || undefined, ...ek }) };
     const r = adres ? await fetch(adres, govde) : await waIstek('/', govde);
     const j = await r.json().catch(() => ({}));
     if (r.ok && j.ok) { bitir(true); return { ok: true, id: j.id || null }; }
