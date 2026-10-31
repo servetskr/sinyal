@@ -286,8 +286,9 @@ export default {
       if (!env.LINK) return cevap({ ok: false, hata: 'Kisa link deposu bagli degil' }, 500);
       const hedef = String((b && b.hedef) || '');
       if (!HEDEF.test(hedef) || hedef.length > 200000) return cevap({ ok: false, hata: 'Gecersiz hedef' }, 400);
-      const harf = 'abcdefghjkmnpqrstuvwxyz23456789', rast = [...crypto.getRandomValues(new Uint8Array(6))].map(x => harf[x % harf.length]).join('');
-      const slug = (sade(b.ad) || 'link') + '-' + rast;
+      // kısa ve tahmin edilemez: kişinin adı linkte görünmez (32 harflik alfabe, 7 karakter, çakışırsa yeniden)
+      const harf = 'abcdefghijkmnpqrstuvwxyz23456789', uret = () => [...crypto.getRandomValues(new Uint8Array(7))].map(x => harf[x & 31]).join('');
+      let slug = uret(); for (let i = 0; i < 4 && await env.LINK.get(slug); i++) slug = uret();
       await env.LINK.put(slug, hedef, { expirationTtl: 5184000 });
       if (b.takip) await env.LINK.put('takip-' + sade(b.takip), hedef, { expirationTtl: 5184000 });
       return cevap({ ok: true, slug });

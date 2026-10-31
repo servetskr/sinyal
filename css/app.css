@@ -1447,3 +1447,88 @@ button.oto-gidecek:hover{text-decoration:underline}
 .og-ozet-kutu span{font-size:13px;color:var(--metin);overflow-wrap:anywhere}
 .og-ozet-kutu.tamam{background:var(--yesil-acik);border-color:#cfe5d6}
 .og-ozet-kutu.tamam b{color:var(--yesil)}
+
+/* Mesajlar (v105): sohbet uygulaması düzeni; telefonda önce liste, dokununca konuşma */
+.sayfa-mesajlar .sohbet{display:grid;grid-template-columns:340px 1fr;min-height:560px;background:var(--panel);border:1px solid var(--cizgi-2);border-radius:18px;overflow:hidden}
+.sohbet-liste{border-right:1px solid var(--cizgi-2);overflow-y:auto;max-height:640px;background:var(--panel)}
+.sohbet-liste a{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--cizgi-2);text-decoration:none;color:inherit;position:relative}
+.sohbet-liste a:hover{background:var(--panel-2)}
+.sohbet-liste a.secili{background:var(--levha-acik)}
+.sohbet-av{width:44px;height:44px;border-radius:50%;flex:none;display:grid;place-items:center;color:#fff;font:800 15px/1 var(--baslik);letter-spacing:.02em}
+.sohbet-sat{flex:1;min-width:0}
+.sohbet-sat-ust{display:flex;align-items:baseline;gap:8px}
+.sohbet-sat-ust b{font-size:15px;color:var(--murekkep);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.sohbet-sat-ust small{margin-left:auto;font-size:12px;color:var(--soluk);flex:none}
+.sohbet-sat p{margin:2px 0 0;font-size:14px;color:var(--soluk);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sohbet-liste a.yeni .sohbet-sat p{color:var(--murekkep);font-weight:600}
+.sohbet-liste a.yeni .sohbet-sat-ust small{color:var(--yesil);font-weight:700}
+.sohbet-nokta{width:10px;height:10px;border-radius:50%;background:var(--yesil);flex:none}
+.sohbet-bos{padding:28px 20px;color:var(--soluk);font-size:14px;text-align:center}
+.sohbet-pencere{display:flex;flex-direction:column;background:#efeae2;min-width:0}
+.sohbet-ust{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--panel);border-bottom:1px solid var(--cizgi-2)}
+.sohbet-ust b{display:block;color:var(--murekkep);font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sohbet-ust small{display:block;color:var(--soluk);font-size:12.5px}
+.sohbet-geri{display:none;width:36px;height:36px;border-radius:50%;place-items:center;color:var(--levha);flex:none}
+.sohbet-geri .ik{width:22px;height:22px}
+.sohbet-akis{flex:1;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:6px;max-height:none}
+.sohbet-akis .balon{max-width:78%;padding:8px 12px 6px;border-radius:12px 12px 12px 4px;background:#fff;color:var(--murekkep);font-size:15px;line-height:1.4;box-shadow:0 1px 1px rgba(0,0,0,.06);white-space:pre-line;overflow-wrap:anywhere;align-self:flex-start}
+.sohbet-akis .balon.giden{background:#d9fdd3;border-radius:12px 12px 4px 12px;align-self:flex-end}
+.sohbet-akis .balon small{display:flex;align-items:center;gap:4px;justify-content:flex-end;margin-top:2px;font-size:11px;color:var(--soluk)}
+.sohbet-yaz{display:flex;gap:8px;padding:10px;background:var(--panel);border-top:1px solid var(--cizgi-2)}
+.sohbet-yaz .girdi{flex:1;min-width:0;height:44px;border-radius:22px;padding:0 16px}
+.sohbet-yaz .dg-wp{width:44px;height:44px;border-radius:50%;padding:0;justify-content:center;flex:none}
+.sohbet-sec{flex:1;display:grid;place-items:center;align-content:center;gap:8px;color:var(--soluk)}
+.sohbet-sec .ik{width:40px;height:40px;opacity:.5}
+@media (max-width:900px){
+  .sayfa-mesajlar .sohbet{grid-template-columns:1fr;min-height:0;border-radius:16px}
+  .sohbet-liste{border-right:0;max-height:none}
+  .sohbet .sohbet-pencere{display:none}
+  .sohbet.acik .sohbet-liste{display:none}
+  .sohbet.acik .sohbet-pencere{display:flex;height:calc(100dvh - 210px);min-height:420px}
+  .sohbet-geri{display:grid}
+}
+
+/* Otomatik mesajlar (v105): telefonda taşma yok; içerik tam genişlik, düğmeler alta */
+.oto .sablon{overflow-wrap:anywhere;white-space:pre-line}
+.oto>div:nth-child(2){flex:1;min-width:0}
+@media (max-width:760px){
+  .oto{flex-wrap:wrap;padding:14px 16px;gap:10px 12px}
+  .oto>div:nth-child(2){flex:1 1 calc(100% - 50px)}
+  .oto .sag{flex:1 1 100%;margin-left:0;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-start;padding-left:46px}
+  .oto .sag .anahtar{margin-left:auto}
+  .liste .sag .rozet{white-space:normal;max-width:140px;text-align:right}
+  .liste li>div[style*="flex:1"]{min-width:0}
+}
+
+/* Genel bakış (v105): Sinyal bu ay sizin için */
+.sinyal-ay{background:linear-gradient(135deg,#0a3f86,#0a4da2 55%,#1d5fb8);color:#fff;border-radius:20px;padding:22px 22px 18px;margin-bottom:18px;box-shadow:0 18px 40px -26px rgba(10,77,162,.8)}
+.sinyal-ay-bas small{display:block;font:700 12.5px/1 var(--baslik);letter-spacing:.06em;text-transform:uppercase;opacity:.75}
+.sinyal-ay-bas h3{font:800 clamp(20px,2.6vw,26px)/1.25 var(--baslik);margin:10px 0 6px;color:#fff;letter-spacing:-.01em}
+.sinyal-ay-bas h3 em{font-style:normal;color:#ffd45a}
+.sinyal-ay-bas p{margin:0;opacity:.85;font-size:14.5px}
+.sinyal-ay-sayilar{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:18px}
+.sinyal-ay-sayilar div{background:rgba(255,255,255,.1);border-radius:14px;padding:12px 14px;min-width:0}
+.sinyal-ay-sayilar b{display:block;font:800 22px/1.1 var(--baslik);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sinyal-ay-sayilar span{display:block;font-size:12.5px;opacity:.8;margin-top:4px;line-height:1.3}
+@media (max-width:760px){.sinyal-ay{padding:18px 16px 14px;border-radius:18px}.sinyal-ay-sayilar{grid-template-columns:repeat(2,minmax(0,1fr))}.sinyal-ay-sayilar b{font-size:19px}}
+
+/* Alt sekme çubuğu (v105): iOS tarzı; yarı saydam, ince üst çizgi, seçili sekme yalnız renkle; ana ekran çubuğu payı */
+@media (max-width:900px){
+  .alt-menu{left:0;right:0;bottom:0;border-radius:0;padding:6px 8px calc(6px + env(safe-area-inset-bottom));gap:0;background:rgba(251,251,248,.88);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);box-shadow:none;border-top:.5px solid rgba(17,20,23,.18)}
+  .alt-menu a,.alt-menu button{color:#7d838b;background:none;border-radius:0;padding:4px 0 2px;gap:3px;font:600 10.5px/1.1 var(--govde);letter-spacing:.01em}
+  .alt-menu .ik{width:25px;height:25px;stroke-width:1.8}
+  .alt-menu .secili{background:none;color:var(--levha)}
+  .alt-menu .secili .ik{stroke-width:2.2}
+  .alt-yeni span{width:30px;height:30px;border-radius:50%;background:var(--levha);color:#fff;display:grid;place-items:center}
+  .alt-yeni span .ik{width:18px;height:18px;stroke-width:2.6}
+  body.tema-sade .alt-menu a,body.tema-sade .alt-menu button{color:#7d838b}
+  body.tema-sade .alt-menu .secili{color:var(--levha)}
+  .icerik{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+  .bildirimler{bottom:calc(76px + env(safe-area-inset-bottom))}
+}
+/* Öğretmen ve öğrenci sekme çubuğu: aynı iOS dili (hap vurgusu yok) */
+.og-sekme{background:rgba(251,251,248,.88);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-top:.5px solid rgba(17,20,23,.18)}
+.og-sekme button{color:#7d838b;font:600 10.5px/1.1 var(--govde);gap:3px}
+.og-sekme button .ik{width:25px;height:25px;stroke-width:1.8;padding:0;background:none!important;border-radius:0}
+.og-sekme button.secili{color:var(--levha)}
+.og-sekme button.secili .ik{stroke-width:2.2}

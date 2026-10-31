@@ -14,6 +14,22 @@ import * as B from './bulut.js?v=105';
 
 const aktifler = () => sb(S.kursiyerler).filter(k => k.asama !== 'Ehliyet' && !k.kapali);
 const buAyMi = s => { const d = tarihOku(s); return d.getMonth() === BUGUN.getMonth() && d.getFullYear() === BUGUN.getFullYear(); };
+// Sinyal bu ay sizin için: gerçek kayıtlardan (giden mesajlar, hatırlatma sonrası tahsilat, otomatik dersler, WhatsApp'tan gelen evrak)
+function sinyalBuAy() {
+  const ayIci = z => !!z && buAyMi(String(z).slice(0, 10));
+  const giden = (S.gonderimler || []).filter(m => !m.iletilecek && ayIci(m.zaman));
+  const ilk = new Map();
+  giden.filter(m => m.tur === 'Taksit hatırlatması').forEach(m => { const k = S.kursiyerler.find(x => tamAd(x) === m.kime), t = String(m.zaman).slice(0, 10); if (k && (!ilk.has(k.id) || ilk.get(k.id) > t)) ilk.set(k.id, t); });
+  const tahsil = (S.hareket || []).filter(h => h.tur === 'Gelir' && h.kategori === 'Taksit' && ayIci(h.tarih) && ilk.has(h.kursiyer) && h.tarih >= ilk.get(h.kursiyer)).reduce((a, h) => a + (+h.tutar || 0), 0);
+  const isl = (S.islemler || []).filter(x => ayIci(x.zaman));
+  const ders = isl.filter(x => x.ne === 'Otomatik planla ders ekledi').reduce((a, x) => a + (parseInt(x.ayrinti) || 0), 0) + S.dersler.filter(d => d.kaynak === 'kursiyer' && ayIci(d.eklendi)).length + isl.filter(x => /dersini taşıdı|Boş saati doldurdu/.test(x.ne)).length;
+  const evrak = S.kursiyerler.reduce((a, k) => a + Object.values(k.evrakYuklenen || {}).filter(y => y && ayIci(y.tarih)).length, 0);
+  let r = { mesaj: giden.length, tahsil, ders, evrak };
+  // örnek kurs: tanıtımda boş görünmesin
+  if (!S._bulut && r.mesaj < 20) r = { mesaj: 186, tahsil: 41200, ders: 23, evrak: 17 };
+  r.saat = Math.max(0, Math.round((r.mesaj * 2 + r.evrak * 4 + r.ders * 3) / 6) / 10);
+  return r;
+}
 const gecenAyMi = s => { const d = tarihOku(s), g = new Date(BUGUN); g.setDate(1); g.setMonth(g.getMonth() - 1); return d.getMonth() === g.getMonth() && d.getFullYear() === g.getFullYear(); };
 // Mesajın gideceği kişi ve numarası (kursiyer, aday, usta ya da kullanıcı)
 const ROL_ETIKET = { mudur: 'MÜDÜR', sekreter: 'ÖN BÜRO', usta: 'HOCA' };
@@ -108,7 +124,9 @@ export function genel(alt) {
   return {
     baslik: 'Genel bakış',
     html: `
-    ${kurBitmedi && S._bulut && oturum.kullanici && oturum.kullanici.rol === 'mudur' ? `<a class="kurulum-serit" href="#/kurulum">${isaret('zorunlu', 22)}<span>Kurulumda <b>${kurBitmedi} adım</b> kaldı. Kalanların çoğunu biz yapıyoruz.</span><span class="dg dg-cizgi dg-kucuk">Kuruluma git</span></a>` : ''}
+    ${oturum.kullanici && ['mudur', 'sekreter'].includes(oturum.kullanici.rol) ? (() => { const r = sinyalBuAy(), ay = BUGUN.toLocaleDateString('tr-TR', { month: 'long' }), bos = !r.mesaj && !r.ders && !r.evrak;
+      return `<section class="sinyal-ay"><div class="sinyal-ay-bas"><small>${ay[0].toLocaleUpperCase('tr') + ay.slice(1)} · Sinyal sizin için</small><h3>${bos ? 'Sinyal kursunuz için çalışmaya başladı.' : `Bu ay sizin yerinize <em>${r.mesaj} mesaj</em> gönderdi${r.saat >= 1 ? `, yaklaşık <em>${String(r.saat).replace('.', ',')} saat</em> kazandırdı` : ''}.`}</h3><p>${bos ? 'Hatırlatmalar ve otomatik planlar gittikçe burada ne kazandırdığını göreceksiniz.' : 'Hatırlatmalar, planlar ve evrak takibi siz uğraşmadan yürüdü.'}</p></div>
+        <div class="sinyal-ay-sayilar"><div><b>${r.mesaj}</b><span>otomatik mesaj</span></div><div><b>${tl(r.tahsil)}</b><span>hatırlatma sonrası tahsilat</span></div><div><b>${r.ders}</b><span>kendiliğinden planlanan ders</span></div><div><b>${r.evrak}</b><span>WhatsApp'tan gelen evrak</span></div></div></section>`; })() : ''}
     <div class="izgara iz-21">
       <div class="kart bugun-kart"><div class="kart-bas"><h3>Bugün yapılacaklar</h3><small>${gorunen.length ? 'Önem sırasıyla' : ''}${bitenSay ? ' · ' + bitenSay + ' iş tamamlandı ya da ertelendi' : ''}</small></div>
         <ul class="liste" style="margin-top:8px">${ilk5.map(isSatir).join('') || '<li>' + bos('Her şey yolunda', 'Bugün sizi bekleyen iş yok.') + '</li>'}</ul>

@@ -299,8 +299,11 @@ async function baglan(u, ilkVeri) {
   try { localStorage.setItem(YEREL, JSON.stringify(u)); } catch (x) { }
   const { db, F } = fb;
   if (ilkVeri) { bulutVeri(ilkVeri, u.kurs); S.kullanicilar = [{ id: u.uid, ad: u.ad, rol: u.rol }]; await akit(); }
-  ilkHazir = new Promise(coz => {
+  ilkHazir = new Promise(coz0 => {
     let ilk = true;
+    // yeni cihazda ilk veri sunucudan gelmezse giriş ekranı sonsuza kadar beklemesin: oturum kayıtlı, sayfa bir kez yenilenir (önbellekli açılış yolu çalışır)
+    const bekci = setTimeout(() => { if (!ilk) return; try { if (!sessionStorage.getItem('sinyal-yeniden')) { sessionStorage.setItem('sinyal-yeniden', '1'); location.reload(); } } catch (x) { } }, 25000);
+    const coz = () => { clearTimeout(bekci); try { sessionStorage.removeItem('sinyal-yeniden'); } catch (x) { } coz0(); };
     dinleyiciler.push(F.onSnapshot(F.collection(db, 'kurslar', u.kurs, 'v'), { includeMetadataChanges: true }, q => {
       bulut.durum = q.metadata.fromCache ? 'cevrimdisi' : 'cevrimici';
       if (ilk) {

@@ -88,7 +88,6 @@ function iskelet() {
     ${oturum.kullanici.rol !== 'usta' ? `<button class="alt-yeni" data-yeni-menu aria-label="Yeni ekle"><span>${ik('arti')}</span>Yeni</button>` : ''}
     <a href="#/plan" data-menu="plan">${ik('direksiyon')}Plan</a>
     <a href="#/kasa" data-menu="kasa">${ik('kasa')}Kasa</a>
-    <button data-yan>${ik('menu')}Menü</button>
   </nav>`;
 }
 
@@ -218,6 +217,7 @@ function demoyaGir() {
   iskelet(); location.hash = '#/genel'; sonAd = rota().ad; yenile(true); window.scrollTo(0, 0);
 }
 function girisEkrani(mod = 'tanitim') {
+  B.sdkHazirla();
   document.body.classList.remove('portal-modu');
   const kok0 = document.getElementById('uyg');
   if (mod === 'tanitim' && TANITIM) {

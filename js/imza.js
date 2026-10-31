@@ -1,5 +1,5 @@
-import { S, kaydet, kursiyer, egitmen, arac, tamAd, SINIFLAR, islem, gonderimEkle, yerelZaman, eksikEvrak, selam, kursAdi, adEk } from './veri.js?v=105';
-import { e, tl, ik, isaret, bildir, tamTarih, pencere, kapatPencere, waAc, waUrl, apiAcik, belgeWhatsApp, etiket, kisaLink } from './ui.js?v=105';
+import { S, kaydet, kursiyer, egitmen, arac, tamAd, SINIFLAR, islem, gonderimEkle, yerelZaman, eksikEvrak, selam, kursAdi, adEk, bulutKanca } from './veri.js?v=105';
+import { e, tl, ik, isaret, bildir, tamTarih, tarihUzun, pencere, kapatPencere, waAc, waUrl, apiAcik, belgeWhatsApp, etiket, kisaLink } from './ui.js?v=105';
 import { sozlesmeMaddeleri, belgeHtml, dosyaAdi } from './sayfalar3.js?v=105';
 
 /* ================= UZAKTAN İMZA =================
@@ -50,8 +50,11 @@ export async function imzaIste(tur, k, dersIdleri = []) {
   if (link === uzun && uzun.length > 1500) bildir('Kısa link oluşturulamadı; uzun link WhatsApp’ta kesilebilir', 'uyari');
   S.imzaTalepleri = (S.imzaTalepleri || []).filter(t => !(t.durum === 'bekliyor' && t.kursiyer === k.id && t.tur === tur && (tur === 'sozlesme' || dersIdleri.every(x => t.dersler.includes(x)))));
   S.imzaTalepleri.push({ id, tur, kursiyer: k.id, dersler: dersIdleri, ozet, tarih: yerelZaman(), durum: 'bekliyor' });
-  const ne = tur === 'sozlesme' ? 'kurs sözleşmeni' : (dersIdleri.length > 1 ? dersIdleri.length + ' direksiyon dersinin' : 'direksiyon dersinin') + ' takip formunu';
-  const metin = `${selam(k)} ${kursAdi()} olarak ${ne} imzalamanızı rica ediyoruz. Bağlantıya dokunup metni okuyun ve parmağınızla imzalayın:\n${link}`;
+  const dersler = dersIdleri.map(x => S.dersler.find(d => d.id === x)).filter(Boolean).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat));
+  const satir = d => `• ${tarihUzun(d.tarih)} ${d.bas || d.saat}${d.bit ? '–' + d.bit : ''}${egitmen(d.egitmen) ? ' · ' + egitmen(d.egitmen).ad : ''}`;
+  const metin = tur === 'sozlesme'
+    ? `${selam(k)} ${kursAdi()} kurs sözleşmeniz imzanızı bekliyor.\n\nOkuyup parmağınızla imzalamak için dokunun:\n${link}`
+    : `${selam(k)} ${dersler.length > 1 ? 'aşağıdaki direksiyon derslerinizin' : 'direksiyon dersinizin'} takip formu imzanızı bekliyor:\n\n${dersler.map(satir).join('\n')}\n\nKontrol edip parmağınızla imzalamak için dokunun (1 dakika sürer):\n${link}`;
   islem('İmzaya gönderdi', tamAd(k) + ' · ' + (tur === 'sozlesme' ? 'sözleşme' : dersIdleri.length + ' ders')); gonderimEkle(tamAd(k), (tur === 'sozlesme' ? 'Sözleşme' : 'Takip formu') + ' imza linki', 'İmza isteği'); kaydet();
   waAc(k.tel, metin, 'WhatsApp', tamAd(k), false, 'ÖĞRENCİ');
   return id;
@@ -158,6 +161,7 @@ export async function imzaKontrol() {
       try {
         const j = await (await fetch(kok + '/k/takip-' + t.id.toLowerCase())).json();
         if (!j.ok || !j.hedef || !j.hedef.includes('#/imza-geldi/')) continue;
+        if (S._bulut && bulutKanca.sahiplen && !(await bulutKanca.sahiplen('imza|' + t.id))) continue;
         const s = await imzaIsle(j.hedef.split('#/imza-geldi/')[1]);
         if (s.k && !s.zaten && !s.hata) { n++; bildir(`${tamAd(s.k)} ${s.t.tur === 'sozlesme' ? 'sözleşmeyi' : 'ders katılım formunu'} imzaladı; kayda işlendi`, 'tamam'); }
       } catch (x) { }

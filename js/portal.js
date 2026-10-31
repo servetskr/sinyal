@@ -179,7 +179,9 @@ export function egitmenPortal() {
   const bugun = benim.filter(d => d.tarih === gun(0)).sort((a, b) => a.saat.localeCompare(b.saat));
   const kapanmamis = benim.filter(d => d.durum === 'Planlandı' && d.tarih < gun(0) && d.tarih >= gun(-14)).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat));
   const ar = S.araclar.find(a => a.egitmen === eg.id), ad1 = e(eg.ad.split(' ')[0]);
-  const ogrenciler = S.kursiyerler.filter(k => k.egitmen === eg.id && ['Direksiyon', 'Sınav'].includes(k.asama));
+  // öğretmenin bütün aktif öğrencileri: direksiyonda olanlar önde, sonra sınavdakiler, sonra yeni kayıtlar (evrak, teorik)
+  const ASIRA = { Direksiyon: 0, 'Sınav': 1, Teorik: 2, Evrak: 3, 'Kayıt': 4 };
+  const ogrenciler = S.kursiyerler.filter(k => k.egitmen === eg.id && k.asama !== 'Ehliyet' && !k.kapali).sort((a, b) => (ASIRA[a.asama] ?? 9) - (ASIRA[b.asama] ?? 9) || tamAd(a).localeCompare(tamAd(b), 'tr'));
   let govde = '';
   if (egSekme === 'bugun') {
     const siradaki = bugun.find(d => d.durum === 'Planlandı' && d.bas) || bugun.find(d => d.durum === 'Planlandı');
