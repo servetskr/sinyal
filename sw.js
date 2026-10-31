@@ -1,6 +1,6 @@
 // Sinyal servis çalışanı: önce ağ, bağlantı yoksa son açılan sürüm (aynı kaynaktaki dosyalar).
 // WhatsApp köprüsü, yazı tipleri gibi dış istekler önbelleğe alınmaz.
-const ONBELLEK = 'sinyal-v4';  // sürüm değişince eski dosyalar silinir
+const ONBELLEK = 'sinyal-v5';  // sürüm değişince eski dosyalar silinir
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', ev => ev.waitUntil(caches.keys().then(l => Promise.all(l.filter(k => k !== ONBELLEK).map(k => caches.delete(k)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', ev => {
@@ -9,7 +9,19 @@ self.addEventListener('fetch', ev => {
   // Sayfanın kendisi ve sürüm eki olmayan dosyalar her açılışta sunucuya sorulur; böylece link açılınca güncel sürüm gelir.
   const taze = r.mode === 'navigate' || !u.searchParams.has('v');
   // sürüm ekli dosyalar (?v=NN) hiç değişmez: önce önbellekten, yoksa ağdan (açılış ağ hızını beklemez)
-  if (!taze) { ev.respondWith(caches.match(r).then(x => x || fetch(r).then(yanit => { if (yanit.ok) { const kopya = yanit.clone(); caches.open(ONBELLEK).then(c => c.put(r, kopya)); } return yanit; }))); return; }
+  // Yayından hemen sonra CDN birkaç dakika eski dosyayı verebilir (sürüm eki önbellek anahtarında yok): içindeki sürüm ekleri istenen sürümle uyuşmayan JS dosyası saklanmaz
+  if (!taze) {
+    const v = u.searchParams.get('v');
+    ev.respondWith(caches.match(r).then(x => x || fetch(r, { cache: 'no-cache' }).then(async yanit => {
+      if (yanit.ok) {
+        const kopya = yanit.clone(); let uygun = true;
+        if (/\.js$/.test(u.pathname)) { const t = await yanit.clone().text(); uygun = !(t.match(/\?v=\d+/g) || []).some(m => m.slice(3) !== v); }
+        if (uygun) caches.open(ONBELLEK).then(c => c.put(r, kopya));
+      }
+      return yanit;
+    })));
+    return;
+  }
   ev.respondWith(fetch(taze ? new Request(r, { cache: 'no-cache' }) : r).then(yanit => {
     if (yanit.ok) { const kopya = yanit.clone(); caches.open(ONBELLEK).then(c => c.put(r, kopya)); }
     return yanit;

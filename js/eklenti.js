@@ -1,7 +1,7 @@
 // Sinyal MEBBİS Yardımcısı (Chrome eklentisi) ile konuşma: eklenti kurulu mu, MEBBİS’e yazılacak işleri sıraya koy,
 // MEBBİS’ten gelen listeyi aktarım ekranına ver, MEBBİS’te kaydedilen işleri Sinyal’de işlendi olarak işaretle.
-import { S, kaydet, gun, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, eksikEvrak, sb, sbDers, sbSinav } from './veri.js?v=107';
-import { bildir, pencere, e, ik, isaret } from './ui.js?v=107';
+import { S, kaydet, gun, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, eksikEvrak, sb, sbDers, sbSinav } from './veri.js?v=108';
+import { bildir, pencere, e, ik, isaret } from './ui.js?v=108';
 
 export const eklenti = { var: false, surum: null };
 const sayfadan = (tur, veri) => window.postMessage({ kaynak: 'sinyal-sayfa', tur, veri }, location.origin);
@@ -91,7 +91,7 @@ export function eklentiBaslat() {
     const { tur, veri } = ev.data;
     if (tur === 'merhaba') { const ilk = !eklenti.var; Object.assign(eklenti, { var: true, surum: veri && veri.surum }); if (ilk) yenileFn(); }
     if (tur === 'tablo' && veri && veri.satirlar) {
-      import('./sayfalar5.js?v=107').then(m => { location.hash = '#/ayarlar/aktarim'; setTimeout(() => { m.aktarimYukle(veri.satirlar, turTahmin(veri.satirlar[0] || []), 'MEBBİS'); bildir(`MEBBİS’ten ${veri.satirlar.length - 1} satırlık liste geldi; sütunları kontrol edip aktarın`); }, 300); });
+      import('./sayfalar5.js?v=108').then(m => { location.hash = '#/ayarlar/aktarim'; setTimeout(() => { m.aktarimYukle(veri.satirlar, turTahmin(veri.satirlar[0] || []), 'MEBBİS'); bildir(`MEBBİS’ten ${veri.satirlar.length - 1} satırlık liste geldi; sütunları kontrol edip aktarın`); }, 300); });
     }
     if (tur === 'bitenler' && Array.isArray(veri)) bitenleriIsle(veri);
   });
