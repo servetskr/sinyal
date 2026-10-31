@@ -1,8 +1,8 @@
 // Öğrenci paneli sekmeleri: dersler (yaklaşan + defter + gelişim + teorik konular), sınavlar, ödemeler, belgeler; bölümler açılır kapanır modüller
-import { S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen, ogrOzellik, oturum } from './veri.js?v=104';
-import { bildirimler } from './sayfalar1.js?v=104';
-import { e, tl, ik, rozet, ilerleme, pencere, kapatPencere, bildir, tarih, goreli, isaret, belgeYazdir, fotoKucult } from './ui.js?v=104';
-import { belgeHtml } from './sayfalar3.js?v=104';
+import { S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen, ogrOzellik, oturum } from './veri.js?v=105';
+import { bildirimler } from './sayfalar1.js?v=105';
+import { e, tl, ik, rozet, ilerleme, pencere, kapatPencere, bildir, tarih, goreli, isaret, belgeYazdir, fotoKucult } from './ui.js?v=105';
+import { belgeHtml } from './sayfalar3.js?v=105';
 
 // MEB teorik eğitim programı: konu, ders saati, başlıklar (anahtarlar soru bankasıyla aynı)
 export const MUFREDAT = [
@@ -76,15 +76,20 @@ function beceriOzet(k) {
   return { yapilan, son: ort(yapilan.slice(-3)), once: yapilan.length > 3 ? ort(yapilan.slice(0, -3)) : null };
 }
 const virgul = v => v.toFixed(1).replace('.', ',');
-export function derslerHtml(k) {
-  const S0 = SINIFLAR[k.sinif], dir = !!S0.direksiyon, ks = Object.fromEntries(konuSaat(k)), teorikOnce = ['Kayıt', 'Evrak', 'Teorik'].includes(k.asama);
+// Teorik konular (ders içerikleri): Derslerim ve Sınav ekranında aynı bölüm
+export function teorikModul(k, acik = false) {
+  const S0 = SINIFLAR[k.sinif], ks = Object.fromEntries(konuSaat(k));
   const okn = key => MUFREDAT.find(x => x[0] === key)[3].filter((b, i) => (k.okunan || {})[key + '-' + (i + 1)]).length;
   const okunan = MUFREDAT.reduce((a, [key]) => a + okn(key), 0), konuTop = MUFREDAT.reduce((a, x) => a + x[3].length, 0);
-  const teorik = modul('teorik', { ikon: 'teorik', baslik: 'Teorik dersler ve konular', ozet: `${k.teorik}/${S0.teorik} saat · ${okunan}/${konuTop} konu okundu`, sag: k.teorik >= S0.teorik ? rozet('Bitti', 'yesil') : '', acik: teorikOnce },
+  return modul('teorik', { ikon: 'teorik', baslik: 'Teorik dersler ve konular', ozet: `${k.teorik}/${S0.teorik} saat · ${okunan}/${konuTop} konu okundu`, sag: k.teorik >= S0.teorik ? rozet('Bitti', 'yesil') : '', acik },
     `${MUFREDAT.map(([key, ad, saat, basliklar]) => `<details class="og-konu"><summary><span><b>${e(ad)}</b><small>${ks[key]}/${saat} saat · ${okn(key)}/${basliklar.length} konu okundu</small></span>${ilerleme(ks[key], saat, ks[key] >= saat ? 'yesil' : '')}</summary>
       <ul class="og-basliklar">${basliklar.map((b, i) => { const id = key + '-' + (i + 1), ok = (k.okunan || {})[id]; return `<li><button type="button" data-og-ders="${id}" class="${ok ? 'okundu' : ''}"><span>${ok ? '✓' : i + 1}</span>${e(b)}</button></li>`; }).join('')}</ul>
       <div class="og-konu-dg">${key === 'trafik' && ogrOzellik('tehlike') ? `<button class="dg dg-cizgi dg-kucuk" data-tehlike>${ik('uyari')}Tehlike algısı</button>` : ''}${key === 'motor' ? `${ogrOzellik('ikaz') ? `<button class="dg dg-cizgi dg-kucuk" data-ikaz>${ik('uyari')}İkaz lambaları</button>` : ''}${ogrOzellik('motor') ? '<button class="dg dg-cizgi dg-kucuk" data-motor4>4 zamanlı motor</button><button class="dg dg-cizgi dg-kucuk" data-debriyaj>Debriyaj ve kalkış</button>' : ''}` : ''}<button class="dg dg-ana dg-kucuk" data-test-basla="konu" data-konu="${key}" data-og-sinava>${ik('sinav')}Bu konudan test</button></div></details>`).join('')}
     <p class="og-not">Konular MEB’in sürücü kursu teorik eğitim programına göredir (toplam ${MEB_TOPLAM} saat).</p>`);
+}
+export function derslerHtml(k) {
+  const S0 = SINIFLAR[k.sinif], dir = !!S0.direksiyon, ks = Object.fromEntries(konuSaat(k)), teorikOnce = ['Kayıt', 'Evrak', 'Teorik'].includes(k.asama);
+  const teorik = teorikModul(k, teorikOnce);
   if (!dir) return yaklasanHtml(k) + teorik;
   const { yapilan, son, once } = beceriOzet(k), notlar = yapilan.filter(d => d.not).slice(-2).reverse();
   const zayif = son.filter(([, v]) => v != null).sort((a, b) => a[1] - b[1])[0];
@@ -190,7 +195,7 @@ export function belgelerHtml(k) {
 /* ---------- konu anlatımı ---------- */
 // İçerik ayrı dosyada; yalnız açılınca yüklenir (açılış hızını etkilemesin)
 let dersYuk = null;
-const dersleriYukle = () => dersYuk || (dersYuk = import('./dersler.js?v=104').then(m => m.DERSLER).catch(() => ({})));
+const dersleriYukle = () => dersYuk || (dersYuk = import('./dersler.js?v=105').then(m => m.DERSLER).catch(() => ({})));
 async function dersAc(k, id, yenile) {
   const D = await dersleriYukle(), d = D[id], [key, no] = [id.replace(/-\d+$/, ''), +id.split('-').pop()], konu = MUFREDAT.find(x => x[0] === key), baslik = konu ? konu[3][no - 1] : id;
   const sonraki = konu && no < konu[3].length ? key + '-' + (no + 1) : null;
@@ -227,17 +232,17 @@ async function dersAc(k, id, yenile) {
 
 /* ---------- olaylar ---------- */
 // direksiyon hazırlık bölümü ayrı dosyada (resmî form maddeleriyle); yer tutucu varsa yüklenir
-const dirYukle = () => import('./direksiyon.js?v=104');
+const dirYukle = () => import('./direksiyon.js?v=105');
 export function ogBagla(kap, k, yenile) {
   const yer = kap.querySelectorAll('[data-dir-yer]'); if (yer.length) dirYukle().then(m => yer.forEach(y => { y.innerHTML = m.direksiyonHtml(k, true); })).catch(() => { });
   kap.addEventListener('toggle', ev => { const m = ev.target; if (!m.matches || !m.matches('[data-modul]')) return; const id = m.dataset.modul; if (m.open) { ACIK.add(id); KAPALI.delete(id); } else { ACIK.delete(id); KAPALI.add(id); } }, true);
   kap.addEventListener('click', ev => {
     const t = ev.target;
     const dr = t.closest('[data-dir]'); if (dr) return dirYukle().then(m => m.direksiyonAc(k, dr.dataset.dir, yenile));
-    if (t.closest('[data-ikaz]')) return import('./ikaz.js?v=104').then(m => m.ikazAc());
-    if (t.closest('[data-motor4]')) return import('./motor.js?v=104').then(m => m.motorAc());
-    if (t.closest('[data-debriyaj]')) return import('./motor.js?v=104').then(m => m.debriyajAc());
-    if (t.closest('[data-tehlike]')) return import('./tehlike.js?v=104').then(m => m.tehlikeAc(k));
+    if (t.closest('[data-ikaz]')) return import('./ikaz.js?v=105').then(m => m.ikazAc());
+    if (t.closest('[data-motor4]')) return import('./motor.js?v=105').then(m => m.motorAc());
+    if (t.closest('[data-debriyaj]')) return import('./motor.js?v=105').then(m => m.debriyajAc());
+    if (t.closest('[data-tehlike]')) return import('./tehlike.js?v=105').then(m => m.tehlikeAc(k));
     if (t.closest('[data-kur-android]') && window.__kurulum) { window.__kurulum.prompt(); window.__kurulum.userChoice.finally(() => { window.__kurulum = null; yenile(); }); return; }
     const od = t.closest('[data-og-ders]'); if (od) return dersAc(k, od.dataset.ogDers, yenile);
     const yz = t.closest('[data-og-yildiz]'); if (yz) { const kart = yz.closest('.og-degerlendir'), n = +yz.dataset.ogYildiz; kart.dataset.puan = n; kart.querySelectorAll('[data-og-yildiz]').forEach(b => b.classList.toggle('secili', +b.dataset.ogYildiz <= n)); kart.querySelector('[data-og-puan]').disabled = false; return; }

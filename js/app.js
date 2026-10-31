@@ -1,20 +1,20 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=104';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=104';
-import * as Y1 from './sayfalar1.js?v=104';
-import * as Y2 from './sayfalar2.js?v=104';
-import * as P from './portal.js?v=104';
-import * as Y3 from './sayfalar3.js?v=104';
-import * as Y4 from './sayfalar4.js?v=104';
-import * as Y5 from './sayfalar5.js?v=104';
-import * as IM from './imza.js?v=104';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=104';
-import * as SN from './senaryo.js?v=104';
-import * as OZ from './ozellik.js?v=104';
-import { durumlariGuncelle } from './mesaj.js?v=104';
-import { yeniMenu } from './yeni.js?v=104';
-import * as B from './bulut.js?v=104';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=104';
-import * as AN from './analiz.js?v=104';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=105';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=105';
+import * as Y1 from './sayfalar1.js?v=105';
+import * as Y2 from './sayfalar2.js?v=105';
+import * as P from './portal.js?v=105';
+import * as Y3 from './sayfalar3.js?v=105';
+import * as Y4 from './sayfalar4.js?v=105';
+import * as Y5 from './sayfalar5.js?v=105';
+import * as IM from './imza.js?v=105';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=105';
+import * as SN from './senaryo.js?v=105';
+import * as OZ from './ozellik.js?v=105';
+import { durumlariGuncelle } from './mesaj.js?v=105';
+import { yeniMenu } from './yeni.js?v=105';
+import * as B from './bulut.js?v=105';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=105';
+import * as AN from './analiz.js?v=105';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
