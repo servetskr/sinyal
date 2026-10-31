@@ -1,7 +1,7 @@
 // Gösterge paneli ikaz lambaları (öğrenci ekranı › Araç tekniği): lambaya dokun → adı, rengi, ne yapılır; ardından kısa test.
 // Renk anlamı ve “motorun derhal durdurulması gereken arızalar” MEB araç tekniği dersi öğretim programına göre (2020, D bölümü);
 // semboller ISO 2575’teki yaygın biçimlerin sadeleştirilmiş çizimidir. Aracın kendi kullanım kılavuzu her zaman önceliklidir.
-import { e, pencere } from './ui.js?v=103';
+import { e, pencere } from './ui.js?v=104';
 
 const RENK = { k: ['#e0362c', 'Kırmızı', 'Tehlike: güvenli bir yerde hemen dur'], s: ['#f2a20c', 'Sarı / turuncu', 'Arıza ya da uyarı: en kısa sürede kontrol ettir'], y: ['#2fae5a', 'Yeşil', 'Bilgi: sistem açık'], m: ['#2f6fde', 'Mavi', 'Bilgi: uzun far açık'] };
 const c = 'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"';

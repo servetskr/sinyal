@@ -1,8 +1,8 @@
 // Tehlike algısı (öğrenci ekranı): kuşbakışı kısa sahneler. Öğrenci gelişen tehlikeyi fark ettiği an dokunur;
 // tehlike penceresinin başında fark ederse 5, sonuna doğru 1 puan, pencereden sonra 0. Art arda rastgele dokunma puanı sıfırlar.
 // Konu: MEB Trafik ve Çevre programı (2022) “trafikte tehlike algısı”; sahneler temsilîdir.
-import { S, kaydet, gun } from './veri.js?v=103';
-import { e, pencere } from './ui.js?v=103';
+import { S, kaydet, gun } from './veri.js?v=104';
+import { e, pencere } from './ui.js?v=104';
 
 const T = 8;  // saniye
 // nesne: tur, renk, kare: [[t, x, y, açı]] (metre; y aşağı; bizim araç sağ şeritte yukarı gider)
