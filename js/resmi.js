@@ -1,8 +1,8 @@
 // MEB resmî formları: MTSK Yönetmeliği eklerinin düzeninde, kayıtlardan dolan ya da boş (elle doldurmak için) çıktılar.
 // Kaynak: mevzuat.gov.tr 7.5.18408 ekleri (EK-1, EK-3, EK-4, EK-5, EK-8, EK-10, EK-12) ve md.17/3, md.42 içerik şartları.
-import { S, kaydet, gun, oturum, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, ek3Sinif, dersKonulari, gorunum, sb, sbSinav } from './veri.js?v=108';
-import { e, pencere, bildir, belgeYazdir, ik } from './ui.js?v=108';
-import { EK3, EK4, EK3_NOT, EK4_NOT, EK12 } from './formlar.js?v=108';
+import { S, kaydet, gun, oturum, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, ek3Sinif, dersKonulari, gorunum, sb, sbSinav } from './veri.js?v=109';
+import { e, pencere, bildir, belgeYazdir, ik } from './ui.js?v=109';
+import { EK3, EK4, EK3_NOT, EK4_NOT, EK12 } from './formlar.js?v=109';
 
 const trTarih = t => t ? String(t).slice(0, 10).split('-').reverse().join('.') : '';
 const BUYUK = s => String(s || '').toLocaleUpperCase('tr');
