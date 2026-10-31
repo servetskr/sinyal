@@ -1,20 +1,20 @@
-import { oturum, islem, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, yerelZaman, BECERI, risk, ekToplam, selam, kursAdi, konuListesi, konuOner } from './veri.js?v=105';
-import { e, saatDe, saatE, tl, ik, rozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani, waAc, waNumara } from './ui.js?v=105';
-import { yenile } from './app.js?v=105';
-import { ekDersKabul, bosTeklifKabul, wpGonder, bildirimler } from './sayfalar1.js?v=105';
-import { KONULAR } from './konular.js?v=105';
+import { oturum, islem, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, yerelZaman, BECERI, risk, ekToplam, selam, kursAdi, konuListesi, konuOner } from './veri.js?v=106';
+import { e, saatDe, saatE, tl, ik, rozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani, waAc, waNumara } from './ui.js?v=106';
+import { yenile } from './app.js?v=106';
+import { ekDersKabul, bosTeklifKabul, wpGonder, bildirimler } from './sayfalar1.js?v=106';
+import { KONULAR } from './konular.js?v=106';
 // Soru bankası büyük; yalnız Sınavlar sekmesi ya da test açılınca yüklenir (açılış hızını etkilemesin)
 let SORULAR = [], soruYuk = null;
 // Sorular ve levha çizimleri yalnız sınav sekmesinde yüklenir; levhalı sorularda görsel "L:<kod>" olarak durur
 let levhaSvg = () => '';
-const sorulariYukle = () => soruYuk || (soruYuk = Promise.all([import('./sorular.js?v=105'), import('./levha.js?v=105').catch(() => null)]).then(([m, l]) => { SORULAR = m.SORULAR; if (l) levhaSvg = l.levhaSvg; }));
+const sorulariYukle = () => soruYuk || (soruYuk = Promise.all([import('./sorular.js?v=106'), import('./levha.js?v=106').catch(() => null)]).then(([m, l]) => { SORULAR = m.SORULAR; if (l) levhaSvg = l.levhaSvg; }));
 const gorselHtml = g => !g ? '' : String(g).startsWith('L:') ? levhaSvg(g.slice(2)) : g;
-import { randevuAl, randevuIptal } from './ozellik.js?v=105';
-import * as OG from './ogrenci.js?v=105';
-import * as HZ from './hazirlik.js?v=105';
-import { ogrOzellik } from './veri.js?v=105';
-import { soruKonu } from './soruKonu.js?v=105';
-import { MUFREDAT } from './ogrenci.js?v=105';
+import { randevuAl, randevuIptal } from './ozellik.js?v=106';
+import * as OG from './ogrenci.js?v=106';
+import * as HZ from './hazirlik.js?v=106';
+import { ogrOzellik } from './veri.js?v=106';
+import { soruKonu } from './soruKonu.js?v=106';
+import { MUFREDAT } from './ogrenci.js?v=106';
 
 let egId = 'e1', egSekme = 'bugun';
 let ogId = null, ogSekme = (() => { try { return sessionStorage.getItem('sinyal-og-sekme') || 'durum'; } catch (x) { return 'durum'; } })();
@@ -94,7 +94,7 @@ function dersKapat(d) {
         if (iu.bos()) return bildir('Önce sen imzala; öğrencinin imzası WhatsApp’tan istenir', 'uyari');
         const once = isle({ zaman: yerelZaman(), kursiyer: null, kursiyerBekliyor: true, usta: iu.url() });
         islem('Ders tamamlandı, öğrenci imzası istendi', tamAd(ks) + ' · ' + d.tarih + ' ' + d.saat); kaydet(); kapatPencere();
-        const m = await import('./imza.js?v=105'); await m.imzaIste('ders', ks, [d.id]); bildir('Ders kaydedildi; imza linki öğrenciye gidiyor', 'wp'); yenile(); riskKontrol(ks, once);
+        const m = await import('./imza.js?v=106'); await m.imzaIste('ders', ks, [d.id]); bildir('Ders kaydedildi; imza linki öğrenciye gidiyor', 'wp'); yenile(); riskKontrol(ks, once);
       });
     },
   });
@@ -225,7 +225,7 @@ export function egitmenPortal() {
       k.addEventListener('change', ev => { if (ev.target.matches('[data-eg]')) { egId = ev.target.value; yenile(); } });
       k.addEventListener('click', ev => {
         const t = ev.target;
-        const dn = t.closest('[data-deneme]'); if (dn) return import('./deneme.js?v=105').then(m => m.denemeAc(kursiyer(dn.dataset.deneme), yenile));
+        const dn = t.closest('[data-deneme]'); if (dn) return import('./deneme.js?v=106').then(m => m.denemeAc(kursiyer(dn.dataset.deneme), yenile));
         const s = t.closest('[data-egs]'); if (s) { egSekme = s.dataset.egs; return yenile(true); }
         const eg2 = t.closest('[data-eg-gun]'); if (eg2) { egGun = eg2.dataset.egGun; return yenile(); }
         const db = t.closest('[data-ders-basla]'); if (db) {
@@ -239,7 +239,7 @@ export function egitmenPortal() {
           return;
         }
         const y = t.closest('[data-yapildi]'); if (y) return dersKapat(S.dersler.find(x => x.id === y.dataset.yapildi));
-        const it = t.closest('[data-imza-tekrar]'); if (it) { const d = S.dersler.find(x => x.id === it.dataset.imzaTekrar); import('./imza.js?v=105').then(m => m.imzaIste('ders', kursiyer(d.kursiyer), [d.id])); return; }
+        const it = t.closest('[data-imza-tekrar]'); if (it) { const d = S.dersler.find(x => x.id === it.dataset.imzaTekrar); import('./imza.js?v=106').then(m => m.imzaIste('ders', kursiyer(d.kursiyer), [d.id])); return; }
         const g = t.closest('[data-gelmedi]'); if (g) return gelmediIsaretle(S.dersler.find(x => x.id === g.dataset.gelmedi));
         const dg = t.closest('[data-ders-diger]'); if (dg) return dersDiger(S.dersler.find(x => x.id === dg.dataset.dersDiger));
       });

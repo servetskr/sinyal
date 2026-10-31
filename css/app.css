@@ -1532,3 +1532,7 @@ button.oto-gidecek:hover{text-decoration:underline}
 .og-sekme button .ik{width:25px;height:25px;stroke-width:1.8;padding:0;background:none!important;border-radius:0}
 .og-sekme button.secili{color:var(--levha)}
 .og-sekme button.secili .ik{stroke-width:2.2}
+
+/* Yeni sürüm şeridi (v106) */
+.surum-serit{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom));z-index:60;display:flex;align-items:center;gap:12px;padding:8px 8px 8px 16px;background:#111417;color:#fff;border-radius:999px;box-shadow:0 12px 30px -10px rgba(0,0,0,.5);font:600 14px/1.2 var(--govde);max-width:calc(100% - 24px)}
+.surum-serit button{background:var(--levha);color:#fff;border-radius:999px;padding:8px 14px;font:700 14px/1 var(--baslik)}

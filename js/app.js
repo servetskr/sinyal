@@ -1,20 +1,20 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=105';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=105';
-import * as Y1 from './sayfalar1.js?v=105';
-import * as Y2 from './sayfalar2.js?v=105';
-import * as P from './portal.js?v=105';
-import * as Y3 from './sayfalar3.js?v=105';
-import * as Y4 from './sayfalar4.js?v=105';
-import * as Y5 from './sayfalar5.js?v=105';
-import * as IM from './imza.js?v=105';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=105';
-import * as SN from './senaryo.js?v=105';
-import * as OZ from './ozellik.js?v=105';
-import { durumlariGuncelle } from './mesaj.js?v=105';
-import { yeniMenu } from './yeni.js?v=105';
-import * as B from './bulut.js?v=105';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=105';
-import * as AN from './analiz.js?v=105';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=106';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=106';
+import * as Y1 from './sayfalar1.js?v=106';
+import * as Y2 from './sayfalar2.js?v=106';
+import * as P from './portal.js?v=106';
+import * as Y3 from './sayfalar3.js?v=106';
+import * as Y4 from './sayfalar4.js?v=106';
+import * as Y5 from './sayfalar5.js?v=106';
+import * as IM from './imza.js?v=106';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=106';
+import * as SN from './senaryo.js?v=106';
+import * as OZ from './ozellik.js?v=106';
+import { durumlariGuncelle } from './mesaj.js?v=106';
+import { yeniMenu } from './yeni.js?v=106';
+import * as B from './bulut.js?v=106';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=106';
+import * as AN from './analiz.js?v=106';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -513,3 +513,18 @@ else if (B.bulutKayitli()) {
 else if (sessionStorageAl('sinyal-kapandi')) { const kp = sessionStorageAl('sinyal-kapandi'); try { sessionStorage.removeItem('sinyal-kapandi'); } catch (x) { } oturum.kullanici = null; girisEkrani('pin'); setTimeout(() => bildir(kp + ' dakika işlem yapılmadığı için oturum kapandı; tekrar giriş yapın', 'uyari'), 400); }
 else if (oturum.kullanici && !oturum.kullanici.bulut) { iskelet(); if (!location.hash) location.hash = oturum.kullanici.rol === 'usta' ? '#/egitmen' : '#/genel'; sonAd = rota().ad; yenile(); }
 else girisEkrani(location.hash.startsWith('#/imza-geldi/') ? 'pin' : 'tanitim');
+
+// Yeni sürüm: ana ekrana eklenmiş uygulamada yenile düğmesi yok; uygulama öne gelince sunucudaki sürüme bakılır, yenisi varsa altta "Güncelle" şeridi çıkar
+const SURUM = +(new URL(import.meta.url).searchParams.get('v') || 0);
+async function surumBak() {
+  try {
+    const t = await (await fetch('./?surum=' + Date.now(), { cache: 'no-store' })).text(), v = +((t.match(/app\.js\?v=(\d+)/) || [])[1] || 0);
+    if (!(v > SURUM) || document.getElementById('surum-serit')) return;
+    const d = document.createElement('div'); d.id = 'surum-serit'; d.className = 'surum-serit'; d.setAttribute('role', 'status');
+    d.innerHTML = '<span>Yeni sürüm hazır</span><button type="button">Güncelle</button>';
+    d.querySelector('button').addEventListener('click', async () => { try { await Promise.all((await caches.keys()).map(k => caches.delete(k))); const r = await navigator.serviceWorker.getRegistration(); if (r) await r.update(); } catch (x) { } location.reload(); });
+    document.body.appendChild(d);
+  } catch (x) { }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') surumBak(); });
+setTimeout(surumBak, 4000);
