@@ -482,6 +482,8 @@ function goc(o) {
   // demo: PIN’le giren her cihazda WhatsApp gönderimi hazır gelsin (mesajlar yalnız demo numarasına gider); Ayarlar’dan boşaltılırsa kapalı kalır
   if (demo && o.kurs.waApi === undefined) { o.kurs.waApi = 'https://sinyal-wa.sinemsavar0.workers.dev'; o.kurs.waApiVarsayilan = true; }
   if (o.sosyal) o.sosyal.kanallar.forEach(c => { if (!c.gercek) { c.bagli = c.id === 'wp' ? !!o.kurs.waApi : false; c.cevap = c.bagli && c.cevap; } });
+  // gerçek kurs: demo kursun gönderim sayıları devralınmasın (bir kez sıfırlanır; sonra gerçek gönderimlerle artar)
+  if (o._bulut && o.kurs && !o.kurs.otoSayacGercek) { (o.otomasyonlar || []).forEach(x => { x.gonderim = 0; }); o.kurs.otoSayacGercek = true; }
   (o.otomasyonlar || []).forEach(x => { if (x.id === 'o8') x.sablon = '{selam} e-sınav randevunuz {tarih} {saatte}, yer: {yer}. Kimliğinizi ve e-sınav ücreti dekontunu yanınıza alın.'; if (x.id === 'o6') x.ne = 'Direksiyon sınavından kalınca'; });
   if (o.kazanim && !o.kazanim.gercek) o.kazanim = { gercek: true, doldurulan: 0, ekDers: 0, yorum: 0 };
   // geçmiş derslerin beceri puanları (usta öğretici ders bitiminde 1–5 verir); eski kayıtlara kursiyerin seyrine göre doldurulur

@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=103';
+import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=105';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -180,6 +180,8 @@ export function belgeYazdir(html, baslik = 'Belge') {
 // --- Gerçek WhatsApp: sohbet hazır mesajla açılır, gönderme tuşuna kullanıcı basar ---
 export function waNumara(tel) { let n = String(tel || '').replace(/\D/g, ''); if (n.startsWith('0')) n = '90' + n.slice(1); else if (n.length === 10 && n.startsWith('5')) n = '90' + n; return n.length >= 12 ? n : ''; }
 export const waUrl = (tel, metin) => 'https://wa.me/' + waNumara(tel) + '?text=' + encodeURIComponent(sadeDil(metin));
+// Telefonda yeni sekme açılmaz: ana ekrandaki uygulamada boş beyaz pencere kalıyordu; doğrudan WhatsApp uygulaması açılır
+const mobil = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 export const smsUrl = (tel, metin) => 'sms:' + (waNumara(tel) ? '+' + waNumara(tel) : '') + '?&body=' + encodeURIComponent(sadeDil(metin));
 // Mesaj yönlendirme (demo): kursa gelen mesajlar hariç her mesaj Ayarlar'daki tek numaraya gider.
 // Demo etiketi: mesajın kimin telefonuna gittiği ("[ÖĞRENCİ · Ayşe Yılmaz]", "[HOCA · Hüseyin Aktaş]", "[MÜDÜR]")
@@ -230,7 +232,7 @@ function aliciTel(kime) {
   const kisi = rol === 'HOCA' ? (S.egitmenler || []).find(x => x.ad === ad) : rol === 'ADAY' ? (S.adaylar || []).find(x => x.ad === ad) : (S.kursiyerler || []).find(x => x.ad + ' ' + x.soyad === ad);
   return kisi ? waNumara(kisi.tel) : '';
 }
-export async function apiGonder(metin, belge, adres, kime) {
+export async function apiGonder(metin, belge, adres, kime, ek = {}) {
   if (oturum.kullanici && oturum.kullanici.ziyaretci) return { ok: false, hata: 'Demo görünümünde mesaj gönderilmez' };
   const tel = aliciTel(kime);
   if (!tel && S._bulut) return { ok: false, hata: kime && ['MÜDÜR', 'ÖN BÜRO'].includes(kime.rol) ? 'Kurs müdürünün cep telefonu kayıtlı değil: Ayarlar › Kurs bilgileri › Müdürün cep telefonu' : (kime && kime.ad ? kime.ad + ': ' : '') + 'kayıtlı WhatsApp numarası yok' };
@@ -238,7 +240,7 @@ export async function apiGonder(metin, belge, adres, kime) {
   giden.push(kayit); window.dispatchEvent(new CustomEvent('sinyal-giden'));
   const bitir = (ok, hata) => { kayit.durum = ok ? 'iletildi' : 'hata'; kayit.hata = hata; window.dispatchEvent(new CustomEvent('sinyal-giden')); };
   try {
-    const govde = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ metin: sadeDil(metin), belge, tel: tel || undefined, rol: (kime && kime.rol) || undefined }) };
+    const govde = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ metin: sadeDil(metin), belge, tel: tel || undefined, rol: (kime && kime.rol) || undefined, ...ek }) };
     const r = adres ? await fetch(adres, govde) : await waIstek('/', govde);
     const j = await r.json().catch(() => ({}));
     if (r.ok && j.ok) { bitir(true); return { ok: true, id: j.id || null }; }
@@ -291,6 +293,7 @@ export function waAc(tel, metin, kanal = 'WhatsApp', ad = '', elle = false, rol 
   }
   const ham = metin; [tel, metin] = yonlendir(tel, metin, ad, rol);
   const url = kanal === 'SMS' ? smsUrl(tel, metin) : waUrl(tel, metin);
+  if (mobil() && (kanal === 'SMS' || waNumara(tel))) { location.href = kanal === 'SMS' ? url : 'whatsapp://send?phone=' + waNumara(tel) + '&text=' + encodeURIComponent(sadeDil(metin)); kayitDus(ad, ham, tur); return true; }
   const w = window.open(url, '_blank');
   if (w) { try { w.opener = null; } catch (x) { } kayitDus(ad, ham, tur); return true; }
   pencere({ baslik: kanal + '’ı açın', icerik: `<p style="font-size:14.5px">Tarayıcı yeni pencereyi engelledi. Mesaj hazır; düğmeye basınca ${kanal} açılır.</p>`, altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button><a class="dg dg-wp" href="${e(url)}" target="_blank" rel="noopener" data-kapat>${ik('wp')}${kanal}’ı aç</a>` });
@@ -434,7 +437,7 @@ function sifreSor(neden, ok) {
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Onayla</button>`,
     onAc(d) {
       const inp = d.querySelector('[data-sifre-tekrar]'), btn = d.querySelector('[data-k]');
-      const dene = () => { btn.disabled = true; import('./bulut.js?v=103').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
+      const dene = () => { btn.disabled = true; import('./bulut.js?v=105').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
       btn.addEventListener('click', dene); inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') dene(); }); setTimeout(() => inp.focus(), 50);
     },
   });

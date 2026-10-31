@@ -1,8 +1,8 @@
 // Gerçek kurs hesabı: Google Firebase (Frankfurt). Giriş e-posta + şifreyle; kurs verisi Firestore'da
 // kurslar/{kurs}/v altında parça parça durur. Her kayıt ayrı alan olarak yazılır: iki kişi aynı anda
 // farklı kayıtları değiştirirse ikisi de korunur. Fotoğraf ve imzalar kurslar/{kurs}/dosyalar'da ayrı belge.
-import { FIREBASE } from './firebase-ayar.js?v=103';
-import { S, bulutVeri, bosVeri, kaydetDinle, kaydet, oturum, bulutKanca, makbuzSira, islem, iso, EVRAKLAR, gun, fark, tamAd } from './veri.js?v=103';
+import { FIREBASE } from './firebase-ayar.js?v=105';
+import { S, bulutVeri, bosVeri, kaydetDinle, kaydet, oturum, bulutKanca, makbuzSira, islem, iso, EVRAKLAR, gun, fark, tamAd } from './veri.js?v=105';
 
 const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
 const YEREL = 'sinyal-bulut';
@@ -299,8 +299,11 @@ async function baglan(u, ilkVeri) {
   try { localStorage.setItem(YEREL, JSON.stringify(u)); } catch (x) { }
   const { db, F } = fb;
   if (ilkVeri) { bulutVeri(ilkVeri, u.kurs); S.kullanicilar = [{ id: u.uid, ad: u.ad, rol: u.rol }]; await akit(); }
-  ilkHazir = new Promise(coz => {
+  ilkHazir = new Promise(coz0 => {
     let ilk = true;
+    // yeni cihazda ilk veri sunucudan gelmezse giriş ekranı sonsuza kadar beklemesin: oturum kayıtlı, sayfa bir kez yenilenir (önbellekli açılış yolu çalışır)
+    const bekci = setTimeout(() => { if (!ilk) return; try { if (!sessionStorage.getItem('sinyal-yeniden')) { sessionStorage.setItem('sinyal-yeniden', '1'); location.reload(); } } catch (x) { } }, 25000);
+    const coz = () => { clearTimeout(bekci); try { sessionStorage.removeItem('sinyal-yeniden'); } catch (x) { } coz0(); };
     dinleyiciler.push(F.onSnapshot(F.collection(db, 'kurslar', u.kurs, 'v'), { includeMetadataChanges: true }, q => {
       bulut.durum = q.metadata.fromCache ? 'cevrimdisi' : 'cevrimici';
       if (ilk) {
@@ -391,7 +394,7 @@ async function makbuzDenetle() {
     for (const h of benim) {
       const m = makbuzSira(h.no); if (!m) { delete h.noGecici; continue; }
       const cakisan = S.hareket.some(x => x !== h && x.no === h.no);
-      if (cakisan) { const eski = h.no, n = await sayacAyir(m[0]); h.no = 'M' + m[0] + '-' + String(n).padStart(5, '0'); islem('Makbuz numarası değişti', eski + ' başka cihazda da verilmişti; yeni numara ' + h.no); import('./ui.js?v=103').then(m => m.bildir(`Makbuz ${eski} çevrimdışıyken verilmişti ve başka cihazdaki makbuzla çakıştı; yeni numarası ${h.no}. Makbuzu verdiyseniz yenisini yazdırın.`, 'uyari')); }
+      if (cakisan) { const eski = h.no, n = await sayacAyir(m[0]); h.no = 'M' + m[0] + '-' + String(n).padStart(5, '0'); islem('Makbuz numarası değişti', eski + ' başka cihazda da verilmişti; yeni numara ' + h.no); import('./ui.js?v=105').then(m => m.bildir(`Makbuz ${eski} çevrimdışıyken verilmişti ve başka cihazdaki makbuzla çakıştı; yeni numarası ${h.no}. Makbuzu verdiyseniz yenisini yazdırın.`, 'uyari')); }
       else await sayacAyir(m[0], m[1] - 1);
       delete h.noGecici;
     }
@@ -530,7 +533,7 @@ const sec = (o, l) => { const r = {}; l.forEach(k => { if (o && o[k] !== undefin
 const veriAt = (k, x) => typeof x === 'string' && x.length > DOSYA_SINIR && x.startsWith('data:') ? null : (typeof x === 'string' && x.startsWith(DOSYA_ON) ? null : x);
 export function ogrenciVerisi(k) {
   const id = k.id, bugun = iso(new Date());
-  const kurs = { ...S.kurs }; ['waApi', 'waApiVarsayilan', 'waHat', 'demoNumara', 'demoKime', 'maliyet', 'kuralDegisen', 'kuralOnay', 'aydinlatma'].forEach(x => delete kurs[x]);
+  const kurs = { ...S.kurs, wpGenel: S.kurs.wp || (S.kurs.waHat && S.kurs.waHat.no) || S.kurs.tel || '' }; ['waApi', 'waApiVarsayilan', 'waHat', 'demoNumara', 'demoKime', 'maliyet', 'kuralDegisen', 'kuralOnay', 'aydinlatma'].forEach(x => delete kurs[x]);
   const ben = { ...k, tc: k.tc ? '•••••••' + String(k.tc).slice(-4) : '' }; delete ben.notlar; delete ben.panelKod; delete ben.hesap;
   return {
     kurs, subeler: (S.subeler || []).filter(x => x.id === k.sube).map(x => sec(x, ['id', 'ad', 'semt'])),
@@ -623,7 +626,7 @@ function ogrenciUygula(docId, g) {
     } else if (x.a === 'gonderimler' && y && !x.eski) {
       const m = { zaman: new Date().toISOString(), kime: String(y.kime || '').slice(0, 80), metin: String(y.metin || '').slice(0, 1000), tur: String(y.tur || 'Öğrenci').slice(0, 60) };
       S.gonderimler.unshift(m);
-      if (y.iletilecek && S.kurs.waApi) sahiplen('og|' + docId + '|' + x.id).then(ok => { if (ok) import('./ui.js?v=103').then(u => u.apiGonder(u.etiket(m.kime, y.rol || '') + m.metin, undefined, undefined, { ad: m.kime, rol: y.rol || '' }).then(s => { if (!s.ok) { islem('Öğrenci bildirimi gönderilemedi', m.kime + ' · ' + m.tur + ': ' + s.hata); kaydet(); } })); });
+      if (y.iletilecek && S.kurs.waApi) sahiplen('og|' + docId + '|' + x.id).then(ok => { if (ok) import('./ui.js?v=105').then(u => u.apiGonder(u.etiket(m.kime, y.rol || '') + m.metin, undefined, undefined, { ad: m.kime, rol: y.rol || '' }).then(s => { if (!s.ok) { islem('Öğrenci bildirimi gönderilemedi', m.kime + ' · ' + m.tur + ': ' + s.hata); kaydet(); } })); });
     }
   }
   if (notlar.length) islem('Öğrenci panelinden', tamAd(k) + ': ' + notlar.join(', '));
@@ -670,13 +673,13 @@ async function ogrenciGonder() {
   if (!d.length) return;
   tabanAl();
   const boyut = JSON.stringify(d).length;
-  if (boyut > 950000) { import('./ui.js?v=103').then(u => u.bildir('Gönderilen belge çok büyük; daha küçük bir fotoğraf dene', 'uyari')); return; }
+  if (boyut > 950000) { import('./ui.js?v=105').then(u => u.bildir('Gönderilen belge çok büyük; daha küçük bir fotoğraf dene', 'uyari')); return; }
   const { db, F } = fb;
   try {
     const ref = await F.addDoc(F.collection(db, 'kurslar', ogr.kurs, 'ogrenciGelen'), { kod: ogr.kod, kursiyer: S.kursiyerler[0].id, d, zaman: F.serverTimestamp() });
     ogr.bekleyen.push({ id: ref.id, t: Date.now(), d });
     try { localStorage.setItem('sinyal-ogr-bekleyen-' + ogr.kod, JSON.stringify(ogr.bekleyen.map(p => ({ ...p, d: p.d.map(x => x.v && x.v.length > 20000 ? { ...x, v: null, buyuk: true } : x).filter(x => !x.buyuk) })))); } catch (x) { }
-  } catch (x) { console.error(x); import('./ui.js?v=103').then(u => u.bildir('Kursa iletilemedi; internet bağlantını kontrol et', 'uyari')); }
+  } catch (x) { console.error(x); import('./ui.js?v=105').then(u => u.bildir('Kursa iletilemedi; internet bağlantını kontrol et', 'uyari')); }
 }
 export function ogrenciAyril() { try { localStorage.removeItem('sinyal-ogrenci'); } catch (x) { } }
 
@@ -740,6 +743,12 @@ export async function ogrenciGiris(telGiris, sifre) {
     catch (x) { if (x.kullanici || x.code === 'auth/too-many-requests' || x.code === 'auth/network-request-failed') throw x; son = x; }
   }
   throw hata('Telefon numarası ya da şifre hatalı');
+}
+// Giriş ekranı açılınca Firebase arka planda hazırlanır; öğrenci yazarken iner
+export const sdkHazirla = () => { sdk().catch(() => { }); };
+// Yeniden açılışta son görülen panel hemen çizilir; güncel veri bağlantı kurulunca gelir
+export function ogrenciOnbellek(kod) {
+  try { const v = JSON.parse(localStorage.getItem('sinyal-bulut-ogr-' + kod) || 'null'); if (!v || !v.kursiyerler || !v.kursiyerler[0]) return null; bulutVeri(v, 'ogr-' + kod); tabanAl(); return S.kursiyerler[0]; } catch (x) { return null; }
 }
 export async function ogrenciOturumu() {
   const { auth, A } = await sdk();

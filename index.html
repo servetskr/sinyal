@@ -120,21 +120,26 @@ html.w-anim [data-gor].w-gorundu{opacity:1;transform:none}
 .w-girisler span{opacity:.75}
 .w-girisler a,.w-girisler button{color:var(--w-baslik);background:none;border:1px solid var(--w-cizgi);border-radius:999px;padding:7px 12px;font:inherit;cursor:pointer;text-decoration:none}
 .w-girisler a:hover,.w-girisler button:hover{border-color:var(--w-vurgu);color:var(--w-vurgu)}
+.w-girisler{flex-direction:column;gap:10px;margin-top:34px}.w-girisler span{font-size:13px;font-weight:700;letter-spacing:.02em;opacity:.7}
+.w-secici{display:inline-flex;padding:4px;gap:4px;border-radius:14px;background:rgba(255,255,255,.07);border:1px solid var(--w-cizgi);max-width:100%}
+.w-secici a,.w-secici button{border:0!important;border-radius:10px;padding:10px 18px;color:var(--w-baslik);background:transparent;font:700 15px/1.2 var(--baslik);white-space:nowrap;transition:background .15s,color .15s}
+.w-secici a:hover,.w-secici button:hover{background:rgba(255,255,255,.12);color:#fff}
+@media (max-width:420px){.w-secici a,.w-secici button{padding:10px 12px;font-size:14px}}
 </style>
-<link id="app-css" rel="stylesheet" href="css/app.css?v=103" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="css/app.css?v=103"></noscript>
+<link id="app-css" rel="stylesheet" href="css/app.css?v=105" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="css/app.css?v=105"></noscript>
 </head>
 <body>
 <div id="uyg"><div class="tanitim" id="tanitim">
-<header class="w-ust"><div class="w-kap w-ust-ic"><span class="tn-logo"><svg class="tn-logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>Sürücü kursu otomasyonu</small></span></span><div class="w-ust-dg"><a class="w-link" href="#/ogrenci-giris">Öğrenci girişi</a><button class="w-btn w-btn-kucuk w-btn-cizgi" data-giris type="button">Giriş</button><button class="w-btn w-btn-kucuk w-btn-ana" data-demo type="button">Demo</button></div></div></header>
+<header class="w-ust"><div class="w-kap w-ust-ic"><span class="tn-logo"><svg class="tn-logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>Sürücü kursu otomasyonu</small></span></span><div class="w-ust-dg"><button class="w-btn w-btn-kucuk w-btn-cizgi" data-giris type="button">Giriş yap</button><button class="w-btn w-btn-kucuk w-btn-ana" data-demo type="button">Demo</button></div></div></header>
 <main>
 <section class="w-kahraman"><div class="w-kap">
 <p class="w-et">Sürücü kursu otomasyonu</p>
 <h1>Sürücü kursunuzu <em>tek otomasyonla</em> yönetin.</h1>
 <p class="w-giris-yazi">Öğrenci kaydı, direksiyon planı, ödeme, sınav ve MEB işleri tek yerde. Hatırlatmalar WhatsApp’tan kendiliğinden gider.</p>
-<div class="w-dugmeler"><button class="w-btn w-btn-ana" data-demo type="button">Demoyu incele <span aria-hidden="true">→</span></button><button class="w-btn w-btn-cizgi" data-giris type="button">Kurs girişi</button></div>
+<div class="w-dugmeler"><button class="w-btn w-btn-ana" data-demo type="button">Demoyu incele <span aria-hidden="true">→</span></button></div>
 <p class="w-not">Kurulum gerekmez · Telefonda ve bilgisayarda çalışır · Demo için giriş yok</p>
-<nav class="w-girisler" aria-label="Girişler"><span>Giriş:</span><a href="#/ogrenci-giris">Öğrenci</a><button type="button" data-giris="ogretmen">Öğretmen</button><button type="button" data-giris>Kurs müdürü ve ön büro</button></nav>
+<nav class="w-girisler" aria-label="Girişler"><span>Hesabınla gir</span><div class="w-secici"><a href="#/ogrenci-giris">Öğrenci</a><button type="button" data-giris="ogretmen">Öğretmen</button><button type="button" data-giris>Kurs müdürü</button></div></nav>
 <div class="w-vitrin" data-gor><div class="w-ekran"><div class="w-pano-ust"><i></i><i></i><i></i><span>Direksiyon planı</span></div><img src="img/site/plan-1200.webp" srcset="img/site/plan-800.webp 800w, img/site/plan-1200.webp 1200w, img/site/plan.webp 1600w" sizes="(max-width: 1100px) 94vw, 1040px" width="1600" height="1000" alt="Sinyal direksiyon planı: araçlar, öğretmenler ve günün dersleri" fetchpriority="high" decoding="async"></div></div>
 </div></section>
 <section class="w-bolum"><div class="w-kap"><div class="w-uc" data-gor>
@@ -158,7 +163,7 @@ html.w-anim [data-gor].w-gorundu{opacity:1;transform:none}
 // Uygulama kodu ana sayfayı bekletmesin: oturum, uygulama içi adres ya da kayıtlı hesap varsa hemen; yoksa ilk dokunuşta ya da sayfa boşta kalınca iner.
 const css = document.getElementById('app-css');
 const cssHazir = () => new Promise(r => { if (css.media === 'all' && css.sheet) return r(); css.media = 'all'; css.addEventListener('load', r, { once: true }); setTimeout(r, 5000); });
-const yukle = () => window.__uyg || (window.__uyg = cssHazir().then(() => import('./js/app.js?v=103')).then(m => { window.__hazir = true; return m; }));
+const yukle = () => window.__uyg || (window.__uyg = cssHazir().then(() => import('./js/app.js?v=105')).then(m => { window.__hazir = true; return m; }));
 let hemen = true;
 try { hemen = /^#\/./.test(location.hash) || !!(sessionStorage.getItem('sinyal-oturum') || sessionStorage.getItem('sinyal-kapandi') || localStorage.getItem('sinyal-bulut') || localStorage.getItem('sinyal-ogrenci')); } catch (e) { }
 if (hemen) yukle();

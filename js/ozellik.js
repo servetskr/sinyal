@@ -1,10 +1,10 @@
-import { cevapIsle } from './mesaj.js?v=103';
-import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli } from './veri.js?v=103';
-import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos, waIstek, ziyaretci } from './ui.js?v=103';
-import { yenile } from './app.js?v=103';
-import { bildirimler } from './sayfalar1.js?v=103';
-import { denetimEksikleri } from './sayfalar3.js?v=103';
-import { sinifKari, dersMaliyeti, bosKapasite, hakedis, KAPASITE_SAAT, randevuEngeli, bosSlotlar } from './risk.js?v=103';
+import { cevapIsle } from './mesaj.js?v=105';
+import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli, sonrakiDers, selam, bulutKanca } from './veri.js?v=105';
+import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos, waIstek, ziyaretci, apiGonder } from './ui.js?v=105';
+import { yenile } from './app.js?v=105';
+import { bildirimler } from './sayfalar1.js?v=105';
+import { denetimEksikleri } from './sayfalar3.js?v=105';
+import { sinifKari, dersMaliyeti, bosKapasite, hakedis, KAPASITE_SAAT, randevuEngeli, bosSlotlar } from './risk.js?v=105';
 
 /* ================= DENETİM SKORU ================= */
 export function denetimSkoru() {
@@ -183,6 +183,42 @@ export { bos };
 /* ================= WHATSAPP'TAN GELEN MESAJLAR =================
    Kursun hattına yazan kişiye asistan Worker'da cevap verir; mesaj burada adaya dönüşür
    (aynı numara tekrar yazarsa aynı adayın sohbetine eklenir). Asistanın bilemediği soru "Size devredilen"e düşer. */
+// WhatsApp'tan ders değişikliği: 24 saat kuralı, aynı öğretmenle 7 gün içinde en çok 3 boş saat; seçilen saate ders taşınır, öğrenci, öğretmen ve müdür bilgilenir
+async function dersTalebi(x) {
+  if (S._bulut && bulutKanca.sahiplen && !(await bulutKanca.sahiplen('ders-talebi|' + x.id))) return;
+  const tel10 = String(x.tel || '').replace(/\D/g, '').slice(-10), k = tel10 && S.kursiyerler.find(y => String(y.tel || '').replace(/\D/g, '').slice(-10) === tel10);
+  const saat = new Date(x.zaman).toTimeString().slice(0, 5);
+  const devret = neden => { S.devredilen.unshift({ ad: k ? tamAd(k) : (x.ad || '···' + x.son4), kanal: 'WhatsApp', konu: 'Ders değişikliği', mesaj: x.metin, neden, saat, bildirim: [[saat, S.kurs.yetkili || 'Kurs müdürü', 'Sinyal']] }); uiBildir((k ? tamAd(k) : 'Bir öğrenci') + ': ders değişikliği · ' + neden, 'uyari'); };
+  if (!k) return devret('Numara kayıtlı bir öğrenciye ait değil');
+  const yaz = (metin, ek) => apiGonder(metin, undefined, undefined, { ad: tamAd(k), rol: 'ÖĞRENCİ', tel: k.tel }, ek);
+  const hoca = id => egitmen(id) || { ad: 'Öğretmeniniz' };
+  if (x.niyet === 'dersSecim') {
+    const d = S.dersler.find(y => y.id === x.ders && y.kursiyer === k.id && y.durum === 'Planlandı'), s = x.secim || {};
+    if (!d) { await yaz(`${selam(k)} değiştirmek istediğiniz dersi bulamadım; talebinizi kursa ilettim, size dönecekler.`); return devret('Seçilen ders artık planlı değil'); }
+    const uygun = bosSlotlar(k, 10).find(y => y.tarih === s.tarih && y.saat === s.saat && y.egitmen === d.egitmen);
+    if (!uygun) { await yaz(`${selam(k)} seçtiğiniz saat az önce doldu. Uygun saatleri yeniden gönderiyorum.`); return dersTalebi({ ...x, id: x.id + '-y', niyet: 'dersDegistir' }); }
+    const eski = tarihUzun(d.tarih) + ' ' + d.saat, yeni = tarihUzun(s.tarih) + ' ' + s.saat, h = hoca(d.egitmen);
+    Object.assign(d, { tarih: s.tarih, saat: s.saat, arac: uygun.arac });
+    islem('Kursiyer WhatsApp’tan dersini taşıdı', tamAd(k) + ' · ' + eski + ' → ' + yeni); kaydet(); yenile();
+    bildirimler([{ kim: k, metin: `${selam(k)} direksiyon dersiniz ${eski} yerine ${yeni} saatine alındı. Öğretmeniniz: ${h.ad}. Öğrenci panelinizde de güncellendi.`, tur: 'Ders saati değişti' },
+      { kim: h, metin: `${h.ad.split(' ')[0]} Hoca, ${tamAd(k)} ${eski} dersini ${yeni} saatine aldı.`, tur: 'Ders saati değişti' },
+      { kim: 'mudur', kendine: true, metin: `${tamAd(k)} WhatsApp’tan dersini taşıdı: ${eski} → ${yeni} (${h.ad}).`, tur: 'Ders saati değişti' }], 'Ders saati değişti');
+    return uiBildir(`${tamAd(k)} dersini ${yeni} saatine taşıdı`, 'wp');
+  }
+  const d = sonrakiDers(k);
+  if (!d) { await yaz(`${selam(k)} planlı bir direksiyon dersiniz görünmüyor. Talebinizi kursa ilettim; size dönecekler.`); return devret('Planlı dersi yok'); }
+  const kalanSaat = (new Date(d.tarih + 'T' + d.saat) - Date.now()) / 36e5;
+  if (kalanSaat < 24) { await yaz(`${selam(k)} ${tarihUzun(d.tarih)} ${d.saat} dersinize 24 saatten az kaldığı için değişikliği buradan yapamıyorum. Lütfen kursu arayın${S.kurs.tel ? ': ' + S.kurs.tel : ''}.`); return devret('Derse 24 saatten az kala değişiklik istedi'); }
+  const aday = bosSlotlar(k, 7).filter(s => s.egitmen === d.egitmen && s.tarih <= gun(7) && !(s.tarih === d.tarih && s.saat === d.saat)), sec = [];
+  aday.forEach(s => { if (sec.length < 3 && !sec.some(y => y.tarih === s.tarih)) sec.push(s); });
+  aday.forEach(s => { if (sec.length < 3 && !sec.includes(s)) sec.push(s); });
+  sec.sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat));
+  if (!sec.length) { await yaz(`${selam(k)} önümüzdeki 7 günde öğretmeninizin boş saati yok. Talebinizi kursa ilettim; size uygun bir saat için dönecekler.`); return devret('Öğretmenin 7 gün içinde boş saati yok'); }
+  const secenek = sec.map(s => ({ tarih: s.tarih, saat: s.saat, arac: s.arac, etiket: tarihUzun(s.tarih) + ' ' + s.saat }));
+  const r = await yaz(`${selam(k)} ${tarihUzun(d.tarih)} ${d.saat} dersiniz için ${hoca(d.egitmen).ad} ile uygun saatler:\n\n${secenek.map((s, i) => `${i + 1}. ${s.etiket}`).join('\n')}\n\nSeçtiğiniz saatin rakamını yazın (örneğin 1). Hiçbiri uymuyorsa 0 yazın.`, { sohbetDurum: { adim: 'dersSec', ders: d.id, secenek } });
+  if (!r.ok) return devret('Saat önerisi gönderilemedi: ' + r.hata);
+  islem('Ders değişikliği için saat önerdi', tamAd(k) + ' · ' + secenek.map(s => s.etiket).join(', '));
+}
 let gelenDe = false, ilkTur = true;
 const uiBildir = (m, t) => bildir(m, t);
 export async function gelenKontrol() {
@@ -200,9 +236,11 @@ export async function gelenKontrol() {
       if (S.gelenAlinan.includes(x.id)) continue;
       S.gelenAlinan.push(x.id); n++;
       // fotoğraf ya da PDF: öğrencinin evrakı (indirilemezse sonraki turda yeniden denenir)
-      if (x.medya) { const ok = await (await import('./evrak.js?v=103')).evrakGeldi(x).catch(() => false); if (!ok) { S.gelenAlinan.pop(); n--; } continue; }
+      if (x.medya) { const ok = await (await import('./evrak.js?v=105')).evrakGeldi(x).catch(() => false); if (!ok) { S.gelenAlinan.pop(); n--; } continue; }
       const saat = new Date(x.zaman).toTimeString().slice(0, 5);
       // gönderdiğimiz mesaja verilen cevap (evet/hayır ya da “yanıtla”) adaya değil o mesaja işlenir
+      // kayıtlı öğrencinin WhatsApp'tan ders değişikliği (asistan tanıdı): saat önerisi ya da seçilen saate taşıma
+      if (x.niyet) { await dersTalebi(x).catch(err => console.error(err)); continue; }
       const cv = cevapIsle(x);
       if (cv) { islem('Mesaja cevap geldi', cv.ad + ' · ' + cv.baslik + ' · ' + x.metin); bildir(`${cv.ad} cevap verdi: “${x.metin.slice(0, 40)}”`, 'wp'); continue; }
       // gerçek kurs hattında numara tam gelir: kayıtlı kursiyerse mesaj ona yazılır, aday açılmaz

@@ -1,9 +1,9 @@
 // Öğrenci hesapları (kurs tarafı): müdür ya da ön büro hesabı açar, giriş bilgileri öğrenciye WhatsApp'tan gider,
 // öğrenci ilk girişte kendi şifresini belirler. Şifresini unutan öğrencinin talebi buraya düşer; tek dokunuşla yeni geçici şifre gider.
-import { S, kaydet, gun, tamAd, islem, selam, oturum, sb, SINIFLAR, egitmen, eksikEvrak, kursAdi } from './veri.js?v=103';
-import { e, ik, tarih, pencere, kapatPencere, bildir, waSirali, tl, tamTarih, apiAcik } from './ui.js?v=103';
-import * as B from './bulut.js?v=103';
-import { wpGonder, alici, odemeBilgisi } from './sayfalar1.js?v=103';
+import { S, kaydet, gun, tamAd, islem, selam, oturum, sb, SINIFLAR, egitmen, eksikEvrak, kursAdi } from './veri.js?v=105';
+import { e, ik, tarih, pencere, kapatPencere, bildir, waSirali, tl, tamTarih, apiAcik } from './ui.js?v=105';
+import * as B from './bulut.js?v=105';
+import { wpGonder, alici, odemeBilgisi } from './sayfalar1.js?v=105';
 
 const yetkili = () => oturum.kullanici && ['mudur', 'sekreter'].includes(oturum.kullanici.rol);
 const talepVar = k => B.bulutta() && !!k.hesap && (B.bulut.sifreTalep || []).some(t => t.tel === k.hesap.tel);

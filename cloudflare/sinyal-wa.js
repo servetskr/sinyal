@@ -41,6 +41,31 @@ const sinifBilgi = s => `*${s[0]}*\n\nÜcret: ${s[1]} (peşinattan sonra 5 aya k
 const BELGE = 'Kayıt için gerekenler:\n\n• Kimlik kartı\n• Sürücü sağlık raporu (aile hekiminizden alabilirsiniz)\n• Öğrenim belgesi\n• Adli sicil kaydı (e-Devlet)\n• 2 vesikalık fotoğraf\n\nBelgelerin fotoğrafını bu numaraya gönderebilirsiniz.';
 const SAAT = 'Teorik dersler:\n\n• Akşam grubu: hafta içi her akşam 18:30\n• Sabah grubu: salı ve perşembe 10:00\n\nYeni akşam grubumuz yakında başlıyor; kontenjan sınırlı.';
 const ADRES = `Adresimiz: ${KURS_ADRES}\n\nGelmeden önce yazarsanız sizi bekleriz.`;
+// Kayıtlı öğrencinin ders değişikliği: asistan isteği tanır, kursun uygulaması uygun saatleri hesaplayıp gönderir (POST / + sohbetDurum),
+// öğrenci rakamla seçer, seçim kursun gelen kutusuna 'dersSecim' olarak düşer ve uygulama dersi taşır.
+const DERS_NIYET = /(ders|direksiyon|randevu)\S*.{0,50}(de[gğ]i[sş]|ertele|kayd[ıi]r|ta[sş][ıi]|iptal|gelemeyece|gelemiyor|gelemem|ba[sş]ka (g[uü]n|saat))|(de[gğ]i[sş]tir|ertele|gelemeyece|gelemiyece)\S*.{0,40}(ders|direksiyon)/;
+async function dersAkisi(env, kurs, kimden, metin) {
+  const anahtar = 'sohbet:' + rakam(kimden); let d = {};
+  try { d = JSON.parse((await env.LINK.get(anahtar)) || '{}'); } catch (x) { d = {}; }
+  const t = kucuk(metin).trim(), no = (t.match(/^([0-9])\s*[.)]?$/) || [])[1];
+  if (d.adim === 'dersSec' && no && no !== '0' && d.secenek && d.secenek[+no - 1]) {
+    const secim = d.secenek[+no - 1]; await env.LINK.delete(anahtar).catch(() => {});
+    return { metin: `Seçiminiz alındı: ${secim.etiket}. Dersiniz taşınıyor; birazdan onay mesajı gelecek.`, konu: 'Ders değişikliği · seçim', kurs, ek: { niyet: 'dersSecim', ders: d.ders, secim } };
+  }
+  if (d.adim === 'dersSec' && (no === '0' || /hi[cç]biri|olmaz|uymuyor|uygun de[gğ]il/.test(t))) {
+    await env.LINK.delete(anahtar).catch(() => {});
+    return { metin: 'Anladım. Talebinizi yetkilimize ilettim; size uygun bir saat için sizi arayacak.', konu: 'Ders değişikliği · yetkiliye', devir: true, kurs };
+  }
+  if (!DERS_NIYET.test(t)) return null;
+  if (!kurs) return { metin: 'Ders değişikliği talebinizi kursa ilettim; kısa süre içinde size dönecekler.', konu: 'Ders değişikliği', devir: true };
+  await env.LINK.put(anahtar, JSON.stringify({ adim: 'dersBekle' }), { expirationTtl: 3600 }).catch(() => {});
+  return { metin: 'Talebinizi aldım, dersinize bakıyorum. Uygun saatleri birazdan buradan yazacağım.', konu: 'Ders değişikliği', kurs, ek: { niyet: 'dersDegistir' } };
+}
+async function kursaDusur(env, kurs, m, v, metin, c) {
+  const l = JSON.parse((await env.LINK.get('gelen:' + kurs)) || '[]');
+  l.unshift({ id: m.id, zaman: new Date(+m.timestamp * 1000 || Date.now()).toISOString(), ad: (v.contacts && v.contacts[0] && v.contacts[0].profile && v.contacts[0].profile.name) || '', tel: m.from, son4: m.from.slice(-4), metin, cevap: c.metin, konu: c.konu, devir: !!c.devir, yanit: null, cevapTur: null, medya: null, ...(c.ek || {}) });
+  await env.LINK.put('gelen:' + kurs, JSON.stringify(l.slice(0, 200)));
+}
 async function sohbet(env, kimden, metin) {
   const anahtar = 'sohbet:' + rakam(kimden); let d = {};
   try { d = JSON.parse((await env.LINK.get(anahtar)) || '{}'); } catch (x) { d = {}; }
@@ -199,6 +224,12 @@ export default {
         const medya = (m.type === 'image' || m.type === 'document') ? await medyaAl(env, m, h.token, 'medya-' + kurs + '-' + m.id) : null;
         const metin = m.type === 'text' ? m.text.body : (m[m.type] && m[m.type].caption) || (m.type === 'image' ? '(fotoğraf)' : m.type === 'document' ? '(belge)' : '(' + m.type + ')');
         await fetch('https://graph.facebook.com/v25.0/' + telId + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + h.token, 'Content-Type': 'application/json' }, body: JSON.stringify({ messaging_product: 'whatsapp', status: 'read', message_id: m.id }) }).catch(() => {});
+        const da = !medya && m.type === 'text' ? await dersAkisi(env, kurs, m.from, metin) : null;
+        if (da) {
+          await fetch('https://graph.facebook.com/v25.0/' + telId + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + h.token, 'Content-Type': 'application/json' }, body: JSON.stringify({ messaging_product: 'whatsapp', to: m.from, type: 'text', text: { body: da.metin } }) }).catch(() => {});
+          await kursaDusur(env, kurs, m, v, metin, da);
+          return new Response('ok');
+        }
         const l = JSON.parse((await env.LINK.get('gelen:' + kurs)) || '[]');
         l.unshift({ id: m.id, zaman: new Date(+m.timestamp * 1000 || Date.now()).toISOString(), ad: (v.contacts && v.contacts[0] && v.contacts[0].profile && v.contacts[0].profile.name) || '', tel: m.from, son4: m.from.slice(-4), metin, cevap: '', konu: medya ? 'Evrak' : '', devir: true, yanit: (m.context && m.context.id) || null, cevapTur: medya ? null : cevapTuru(metin), medya });
         await env.LINK.put('gelen:' + kurs, JSON.stringify(l.slice(0, 200)));
@@ -209,7 +240,10 @@ export default {
       // fotoğraf ya da PDF (evrak): Meta'dan indirilir, 14 gün saklanır; Sinyal öğrencinin dosyasına alır
       const medya = (m.type === 'image' || m.type === 'document') && env.LINK ? await medyaAl(env, m, env.WA_TOKEN, 'medya-' + m.id) : null;
       const metin = m.type === 'text' ? m.text.body : (m[m.type] && m[m.type].caption) || (m.type === 'image' ? '(fotoğraf)' : m.type === 'document' ? '(belge)' : '(' + m.type + ')');
-      const c = medya ? { metin: 'Belgenizi aldık, teşekkürler. Kurs kontrol edip kaydınıza işleyecek; eksik ya da okunmuyorsa size yazacağız.', konu: 'Evrak' } : env.LINK ? await sohbet(env, m.from, metin) : asistanCevap(metin);
+      const demoKurs = env.LINK && !medya && m.type === 'text' ? await env.LINK.get('hatno:' + env.PHONE_ID) : null;
+      const da = env.LINK && !medya && m.type === 'text' ? await dersAkisi(env, demoKurs, m.from, metin) : null;
+      const c = medya ? { metin: 'Belgenizi aldık, teşekkürler. Kurs kontrol edip kaydınıza işleyecek; eksik ya da okunmuyorsa size yazacağız.', konu: 'Evrak' } : da ? da : env.LINK ? await sohbet(env, m.from, metin) : asistanCevap(metin);
+      if (da && da.kurs) await kursaDusur(env, da.kurs, m, v, metin, da).catch(() => {});
       const ust = '';  // asistan cevabı yazan kişiye gider; etiket gerekmez
       const yaz = body => fetch(G + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + env.WA_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       await yaz({ messaging_product: 'whatsapp', status: 'read', message_id: m.id }).catch(() => {});
@@ -252,8 +286,9 @@ export default {
       if (!env.LINK) return cevap({ ok: false, hata: 'Kisa link deposu bagli degil' }, 500);
       const hedef = String((b && b.hedef) || '');
       if (!HEDEF.test(hedef) || hedef.length > 200000) return cevap({ ok: false, hata: 'Gecersiz hedef' }, 400);
-      const harf = 'abcdefghjkmnpqrstuvwxyz23456789', rast = [...crypto.getRandomValues(new Uint8Array(6))].map(x => harf[x % harf.length]).join('');
-      const slug = (sade(b.ad) || 'link') + '-' + rast;
+      // kısa ve tahmin edilemez: kişinin adı linkte görünmez (32 harflik alfabe, 7 karakter, çakışırsa yeniden)
+      const harf = 'abcdefghijkmnpqrstuvwxyz23456789', uret = () => [...crypto.getRandomValues(new Uint8Array(7))].map(x => harf[x & 31]).join('');
+      let slug = uret(); for (let i = 0; i < 4 && await env.LINK.get(slug); i++) slug = uret();
       await env.LINK.put(slug, hedef, { expirationTtl: 5184000 });
       if (b.takip) await env.LINK.put('takip-' + sade(b.takip), hedef, { expirationTtl: 5184000 });
       return cevap({ ok: true, slug });
@@ -287,6 +322,7 @@ export default {
       }
       return cevap({ ok: false, kod, hata: (j.error && j.error.message) || 'Meta hatasi' }, 502);
     }
+    if (b.sohbetDurum && env.LINK && to) await env.LINK.put('sohbet:' + rakam(to), JSON.stringify(b.sohbetDurum), { expirationTtl: 6 * 3600 }).catch(() => {});
     return cevap({ ok: true, id: j.messages && j.messages[0] && j.messages[0].id });
   },
 };
