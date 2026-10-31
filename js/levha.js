@@ -4,7 +4,7 @@
 // Kodlar ve adlar el kitabındaki gibidir. Soru bankasında satır içi SVG'si zaten bulunan 12 levha
 // (TT-1, TT-2, TT-4, P-1, P-2, TT-29a, TT-26b, B-38, B-39, TT-35a, B-15, T-1a) burada tekrarlanmaz.
 //
-// Kullanım:  import { LEVHA, levhaSvg } from './levha.js?v=106';  el.innerHTML = levhaSvg('T-11');
+// Kullanım:  import { LEVHA, levhaSvg } from './levha.js?v=107';  el.innerHTML = levhaSvg('T-11');
 
 const KR = '#d52b1e', MV = '#0a4da2', SY = '#1a1a1a', BY = '#ffffff', SR = '#f7d117', TU = '#f39200', GR = '#8c8c8c', SU = '#1e73c8';
 
