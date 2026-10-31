@@ -530,7 +530,7 @@ const sec = (o, l) => { const r = {}; l.forEach(k => { if (o && o[k] !== undefin
 const veriAt = (k, x) => typeof x === 'string' && x.length > DOSYA_SINIR && x.startsWith('data:') ? null : (typeof x === 'string' && x.startsWith(DOSYA_ON) ? null : x);
 export function ogrenciVerisi(k) {
   const id = k.id, bugun = iso(new Date());
-  const kurs = { ...S.kurs }; ['waApi', 'waApiVarsayilan', 'waHat', 'demoNumara', 'demoKime', 'maliyet', 'kuralDegisen', 'kuralOnay', 'aydinlatma'].forEach(x => delete kurs[x]);
+  const kurs = { ...S.kurs, wpGenel: S.kurs.wp || (S.kurs.waHat && S.kurs.waHat.no) || S.kurs.tel || '' }; ['waApi', 'waApiVarsayilan', 'waHat', 'demoNumara', 'demoKime', 'maliyet', 'kuralDegisen', 'kuralOnay', 'aydinlatma'].forEach(x => delete kurs[x]);
   const ben = { ...k, tc: k.tc ? '•••••••' + String(k.tc).slice(-4) : '' }; delete ben.notlar; delete ben.panelKod; delete ben.hesap;
   return {
     kurs, subeler: (S.subeler || []).filter(x => x.id === k.sube).map(x => sec(x, ['id', 'ad', 'semt'])),
@@ -740,6 +740,12 @@ export async function ogrenciGiris(telGiris, sifre) {
     catch (x) { if (x.kullanici || x.code === 'auth/too-many-requests' || x.code === 'auth/network-request-failed') throw x; son = x; }
   }
   throw hata('Telefon numarası ya da şifre hatalı');
+}
+// Giriş ekranı açılınca Firebase arka planda hazırlanır; öğrenci yazarken iner
+export const sdkHazirla = () => { sdk().catch(() => { }); };
+// Yeniden açılışta son görülen panel hemen çizilir; güncel veri bağlantı kurulunca gelir
+export function ogrenciOnbellek(kod) {
+  try { const v = JSON.parse(localStorage.getItem('sinyal-bulut-ogr-' + kod) || 'null'); if (!v || !v.kursiyerler || !v.kursiyerler[0]) return null; bulutVeri(v, 'ogr-' + kod); tabanAl(); return S.kursiyerler[0]; } catch (x) { return null; }
 }
 export async function ogrenciOturumu() {
   const { auth, A } = await sdk();

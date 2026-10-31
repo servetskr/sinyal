@@ -353,6 +353,7 @@ function gozBagla(kok) {
   kok.addEventListener('click', ev => { const b = ev.target.closest('[data-goz]'); if (!b) return; const i = b.parentElement.querySelector('input'), ac = i.type === 'password'; i.type = ac ? 'text' : 'password'; b.setAttribute('aria-pressed', ac); b.setAttribute('aria-label', ac ? 'Şifreyi gizle' : 'Şifreyi göster'); b.classList.toggle('acik', ac); });
 }
 function ogrenciGirisEkrani(not) {
+  B.sdkHazirla();
   document.body.classList.remove('portal-modu'); document.title = 'Öğrenci girişi · Sinyal';
   const kok = document.getElementById('uyg');
   kok.innerHTML = ogrKap(`<div class="og-giris-bas"><h1>Öğrenci girişi</h1><p>Derslerin, ödemelerin ve sınavların tek ekranda.</p></div>
@@ -393,7 +394,7 @@ function sifreBelirleEkrani(u) {
   });
 }
 async function ogrenciModu(kurs, kod, yeniSifre) {
-  bekleEkrani('Öğrenci paneli açılıyor…');
+  if (!document.querySelector('.ogr-kabuk')) bekleEkrani('Öğrenci paneli açılıyor…');
   let k;
   try { k = await B.ogrenciBaglan(kurs, kod); }
   catch (x) { await B.ogrenciCikis(); return ogrenciGirisEkrani('Hesabınız kapatılmış ya da yeni şifre gönderilmiş olabilir. Kursunuzun gönderdiği son bilgilerle girin ya da kursunuzla görüşün.'); }
@@ -420,7 +421,8 @@ function ogrenciCiz(kaydir) {
     kok.querySelector('[data-ogr-sifre]').addEventListener('click', ogrenciSifreDegistir);
   }
   document.body.classList.add('portal-modu');
-  const s = P.ogrenciPortal(), yer = document.getElementById('icerik');
+  const yer = document.getElementById('icerik'); let s;
+  try { s = P.ogrenciPortal(); } catch (x) { console.error(x); s = { html: `<div class="og-giris-kart" style="margin:24px auto"><h2 style="font-size:20px">Ekran açılamadı</h2><p style="margin:8px 0 16px">Bir sorun oldu; verilerin güvende. Yeniden dene.</p><button class="dg dg-ana og-giris-dg" onclick="location.reload()">Yeniden yükle</button></div>` }; }
   document.title = S.kurs.ad + ' · Öğrenci paneli';
   const kap = document.createElement('div'); kap.className = 'sayfa sayfa-ogrenci'; kap.innerHTML = s.html; yer.replaceChildren(kap);
   if (s.baglan) { try { s.baglan(kap); } catch (x) { console.error(x); } }
@@ -499,7 +501,10 @@ if (imzaLinki()) imzaSayfasiAc();
 else if (ogrYolu()) eskiLink();
 else if (location.hash === '#/ogrenci-giris') ogrenciGirisEkrani(B.bulutKayitli() ? 'Bu cihazda bir personel hesabı açık. Öğrenci olarak girersen o oturum kapanır.' : undefined);
 else if (davetYolu()) davetEkrani();
-else if (ogrKayit && !B.bulutKayitli()) { bekleEkrani('Öğrenci paneli açılıyor…'); B.ogrenciOturumu().then(u => !u ? ogrenciGirisEkrani() : u.ilkGiris ? sifreBelirleEkrani(u) : ogrenciModu(u.kurs, u.kod)).catch(() => ogrenciGirisEkrani()); }
+else if (ogrKayit && !B.bulutKayitli()) {
+  // son görülen panel önbellekten hemen; oturum ve güncel veri arkadan gelir
+  const ok = ogrKayit.kod && B.ogrenciOnbellek(ogrKayit.kod);
+  if (ok) { oturum.kullanici = { id: 'ogr-' + ok.id, ad: tamAd(ok), rol: 'ogrenci', kursiyer: ok.id }; ogrenciCiz(true); } else bekleEkrani('Öğrenci paneli açılıyor…'); B.ogrenciOturumu().then(u => !u ? ogrenciGirisEkrani() : u.ilkGiris ? sifreBelirleEkrani(u) : ogrenciModu(u.kurs, u.kod)).catch(() => ogrenciGirisEkrani()); }
 else if (B.bulutKayitli()) {
   oturum.kullanici = null; bekleEkrani('Kurs verisi yükleniyor…');
   B.bulutBaslat().then(u => { if (u) bulutOturumu(u, false); else girisEkrani('pin'); }).catch(x => { girisEkrani('pin'); bildir(B.hataMetni(x), 'uyari'); });

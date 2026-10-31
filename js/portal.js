@@ -1,5 +1,5 @@
 import { oturum, islem, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, yerelZaman, BECERI, risk, ekToplam, selam, kursAdi, konuListesi, konuOner } from './veri.js?v=104';
-import { e, saatDe, saatE, tl, ik, rozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani, waAc } from './ui.js?v=104';
+import { e, saatDe, saatE, tl, ik, rozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani, waAc, waNumara } from './ui.js?v=104';
 import { yenile } from './app.js?v=104';
 import { ekDersKabul, bosTeklifKabul, wpGonder, bildirimler } from './sayfalar1.js?v=104';
 import { KONULAR } from './konular.js?v=104';
@@ -17,7 +17,8 @@ import { soruKonu } from './soruKonu.js?v=104';
 import { MUFREDAT } from './ogrenci.js?v=104';
 
 let egId = 'e1', egSekme = 'bugun';
-let ogId = null, ogSekme = 'durum';
+let ogId = null, ogSekme = (() => { try { return sessionStorage.getItem('sinyal-og-sekme') || 'durum'; } catch (x) { return 'durum'; } })();
+const sekmeSakla = () => { try { sessionStorage.setItem('sinyal-og-sekme', ogSekme); } catch (x) { } };
 
 const sekmeCubugu = (liste, secili, ad) => `<nav class="portal-sekme" aria-label="Sekmeler">${liste.map(([k, t, i]) => `<button data-${ad}="${k}" class="${k === secili ? 'secili' : ''}">${ik(i)}${t}</button>`).join('')}</nav>`;
 
@@ -279,7 +280,7 @@ function anaSayfa(k, sd, sinav) {
   const S0 = SINIFLAR[k.sinif], sn = OG.sonrakiTaksit(k), tb = ogrOzellik('tekrar') ? HZ.tekrarBugun(k).length : 0;
   const esGecti = k.esinav && k.esinav.sonuc === 'Geçti';
   let sira = '';
-  if (sd) { const a = sd.arac && arac(sd.arac); sira = `<section class="og-sira">${a ? aracGorsel(a, 'og-sira-arac') : ''}<small>Sıradaki direksiyon dersin</small><b class="og-sira-zaman">${goreli(sd.tarih)} · ${sd.saat}</b><p>${e(egitmen(sd.egitmen).ad)} ile${a ? ' · ' + e(a.model) : ''} · ${k.direksiyon + 1}. ders</p><div class="og-sira-dg"><button class="dg dg-kucuk og-sira-ikincil" data-degis="${sd.id}">Gelemeyeceğim</button><button class="dg dg-kucuk og-sira-ikincil" data-ogs="ders">Tüm derslerim</button></div></section>`; }
+  if (sd) { const a = sd.arac && arac(sd.arac); sira = `<section class="og-sira">${a ? aracGorsel(a, 'og-sira-arac') : ''}<small>Sıradaki direksiyon dersin</small><b class="og-sira-zaman">${goreli(sd.tarih)} · ${sd.saat}</b><p>${e((egitmen(sd.egitmen) || {}).ad || 'Öğretmenin')} ile${a ? ' · ' + e(a.model) : ''} · ${k.direksiyon + 1}. ders</p><div class="og-sira-dg"><button class="dg dg-kucuk og-sira-ikincil" data-degis="${sd.id}">Gelemeyeceğim</button><button class="dg dg-kucuk og-sira-ikincil" data-ogs="ders">Tüm derslerim</button></div></section>`; }
   else if (sinav) sira = `<section class="og-sira"><small>Sıradaki sınavın</small><b class="og-sira-zaman">${e(sinav.tur)} · ${goreli(sinav.tarih)} ${sinav.saat}</b><p>${e(sinav.yer)}. Kimliğini yanına almayı unutma.</p><div class="og-sira-dg"><button class="dg dg-kucuk og-sira-ikincil" data-ogs="sinav">Sınav bilgileri</button></div></section>`;
   else if (k.asama === 'Ehliyet') sira = `<section class="og-sira"><small>Tebrikler</small><b class="og-sira-zaman">Ehliyetini aldın!</b><p>İyi yolculuklar. Belgelerin ve makbuzların burada durmaya devam eder.</p></section>`;
   else if (!esGecti && ['Kayıt', 'Evrak', 'Teorik'].includes(k.asama)) sira = `<section class="og-sira"><small>Şimdi sıra sende</small><b class="og-sira-zaman">e-Sınava hazırlan</b><p>${HZ.hazirlik(k).oneri[0] ? e(HZ.hazirlik(k).oneri[0]) + '.' : 'Bir deneme sınavı çözerek başla.'}</p><div class="og-sira-dg"><button class="dg dg-kucuk og-sira-ana" data-test-basla="deneme" data-og-sinava>Deneme sınavı çöz</button><button class="dg dg-kucuk og-sira-ikincil" data-ogs="sinav">Çalışma alanı</button></div></section>`;
@@ -288,7 +289,7 @@ function anaSayfa(k, sd, sinav) {
   const is = [], satir = (ikon, ton, baslik, alt, dugme) => `<li class="og-is ${ton}"><span class="og-m-ik">${ik(ikon)}</span><div><b>${baslik}</b>${alt ? `<small>${alt}</small>` : ''}</div>${dugme}</li>`;
   if (sn && fark(sn.t.vade) < 0) is.push(satir('kart', 'kirmizi', 'Taksitin gecikti', `${tl(sn.t.tutar - (sn.t.kismi || 0))} · vade ${tarih(sn.t.vade)}`, `<button class="dg dg-ana dg-kucuk" data-ode="${sn.i}">Öde</button>`));
   if (k.ekDersTeklif) is.push(satir('direksiyon', 'mavi', `${k.ekDersTeklif.n} ek ders önerisi · ${tl(k.ekDersTeklif.tutar)}`, 'Kabul edersen ücret ödeme planına eklenir', `<span class="og-is-dg"><button class="dg dg-ana dg-kucuk" data-og-ekders="evet">Kabul</button><button class="dg dg-cizgi dg-kucuk" data-og-ekders="hayir">Hayır</button></span>`));
-  (S.bosTeklif || []).filter(t => t.adaylar.includes(k.id) && fark(t.tarih) >= 0).forEach(t => is.push(satir('saat', 'mavi', `Boş saat: ${goreli(t.tarih)} ${t.saat}`, e(egitmen(t.egitmen).ad) + (t.fiyat ? ' · %' + t.yuzde + ' indirimli ' + tl(t.fiyat) : '') + ' · ilk kabul eden alır', `<button class="dg dg-ana dg-kucuk" data-og-bos="${t.id}">Al</button>`)));
+  (S.bosTeklif || []).filter(t => t.adaylar.includes(k.id) && fark(t.tarih) >= 0).forEach(t => is.push(satir('saat', 'mavi', `Boş saat: ${goreli(t.tarih)} ${t.saat}`, e((egitmen(t.egitmen) || {}).ad || 'Öğretmen') + (t.fiyat ? ' · %' + t.yuzde + ' indirimli ' + tl(t.fiyat) : '') + ' · ilk kabul eden alır', `<button class="dg dg-ana dg-kucuk" data-og-bos="${t.id}">Al</button>`)));
   const ob = S0.direksiyon && ogrOzellik('dersOnay') ? OG.onayBekleyen(k) : 0;
   if (ob) is.push(satir('kalem', 'sari', `${ob} dersini onayla`, 'Ders yapıldıysa ders defterinde “Yapıldı”ya dokun', `<button class="dg dg-cizgi dg-kucuk" data-git="ders:defter">Aç</button>`));
   const eb = OG.eksikBelge(k);
@@ -376,8 +377,8 @@ export function ogrenciPortal() {
       OG.ogBagla(kap, k, yenile);
       kap.addEventListener('click', ev => {
         const t = ev.target;
-        const s = t.closest('[data-ogs]'); if (s) { ogSekme = s.dataset.ogs; yenile(true); }
-        const gt = t.closest('[data-git]'); if (gt) { const [sk, md] = gt.dataset.git.split(':'); if (md) OG.modulAc(md); ogSekme = sk; yenile(true); return; }
+        const s = t.closest('[data-ogs]'); if (s) { ogSekme = s.dataset.ogs; sekmeSakla(); yenile(true); }
+        const gt = t.closest('[data-git]'); if (gt) { const [sk, md] = gt.dataset.git.split(':'); if (md) OG.modulAc(md); ogSekme = sk; sekmeSakla(); yenile(true); return; }
         const o = t.closest('[data-ode]'); if (o) odemeYap(k, +o.dataset.ode);
         const oe = t.closest('[data-og-ekders]'); if (oe) { if (oe.dataset.ogEkders === 'evet') ekDersKabul(k); else { k.ekDersTeklif = null; kaydet(); bildirimler([{ kim: 'mudur', metin: `${tamAd(k)} ek direksiyon dersi teklifini istemedi.`, tur: 'Kursiyer cevabı' }], 'Ek ders'); bildir('Cevabın kursa iletildi'); yenile(); } }
         const ob = t.closest('[data-og-bos]'); if (ob) bosTeklifKabul(ob.dataset.ogBos, k.id, true);
@@ -391,7 +392,7 @@ export function ogrenciPortal() {
           yenile();
         }
         if (t.closest('[data-sonraki]')) { test.i++; test.cevap = null; if (test.i >= test.liste.length) testBitir(k); yenile(); }
-        const dg = t.closest('[data-degis]'); if (dg) { const sd2 = sonrakiDers(k), m = `Merhaba, ben ${tamAd(k)}. ${sd2 ? tarihUzun(sd2.tarih) + ' ' + sd2.saat + ' direksiyon dersimin saatini' : 'Ders saatimi'} değiştirmek istiyorum.`; gonderimEkle(S.kurs.ad, m, 'Kursiyer talebi'); if (waAc(S.kurs.wp, m, 'WhatsApp', tamAd(k), false, 'KURSA GELEN') !== 'api') bildir('WhatsApp açıldı; mesajı kursa gönder', 'wp'); }
+        const dg = t.closest('[data-degis]'); if (dg) { const sd2 = sonrakiDers(k), m = `Merhaba, ben ${tamAd(k)}. ${sd2 ? tarihUzun(sd2.tarih) + ' ' + sd2.saat + ' direksiyon dersimin saatini' : 'Ders saatimi'} değiştirmek istiyorum.`; gonderimEkle(S.kurs.ad, m, 'Kursiyer talebi'); const kno = S.kurs.wp || S.kurs.wpGenel || S.kurs.tel; if (!waNumara(kno)) return bildir('Kursun WhatsApp numarası kayıtlı değil; kursu arayın' + (S.kurs.tel ? ': ' + S.kurs.tel : ''), 'uyari'); if (waAc(kno, m, 'WhatsApp', tamAd(k), false, 'KURSA GELEN') !== 'api') bildir('WhatsApp açıldı; mesajı kursa gönder', 'wp'); }
         if (t.closest('[data-iste]')) return randevuAl(k);
         const oi = t.closest('[data-og-iptal]'); if (oi) return randevuIptal(k, oi.dataset.ogIptal);
       });

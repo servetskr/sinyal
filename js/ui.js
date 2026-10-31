@@ -180,6 +180,8 @@ export function belgeYazdir(html, baslik = 'Belge') {
 // --- Gerçek WhatsApp: sohbet hazır mesajla açılır, gönderme tuşuna kullanıcı basar ---
 export function waNumara(tel) { let n = String(tel || '').replace(/\D/g, ''); if (n.startsWith('0')) n = '90' + n.slice(1); else if (n.length === 10 && n.startsWith('5')) n = '90' + n; return n.length >= 12 ? n : ''; }
 export const waUrl = (tel, metin) => 'https://wa.me/' + waNumara(tel) + '?text=' + encodeURIComponent(sadeDil(metin));
+// Telefonda yeni sekme açılmaz: ana ekrandaki uygulamada boş beyaz pencere kalıyordu; doğrudan WhatsApp uygulaması açılır
+const mobil = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 export const smsUrl = (tel, metin) => 'sms:' + (waNumara(tel) ? '+' + waNumara(tel) : '') + '?&body=' + encodeURIComponent(sadeDil(metin));
 // Mesaj yönlendirme (demo): kursa gelen mesajlar hariç her mesaj Ayarlar'daki tek numaraya gider.
 // Demo etiketi: mesajın kimin telefonuna gittiği ("[ÖĞRENCİ · Ayşe Yılmaz]", "[HOCA · Hüseyin Aktaş]", "[MÜDÜR]")
@@ -291,6 +293,7 @@ export function waAc(tel, metin, kanal = 'WhatsApp', ad = '', elle = false, rol 
   }
   const ham = metin; [tel, metin] = yonlendir(tel, metin, ad, rol);
   const url = kanal === 'SMS' ? smsUrl(tel, metin) : waUrl(tel, metin);
+  if (mobil() && (kanal === 'SMS' || waNumara(tel))) { location.href = kanal === 'SMS' ? url : 'whatsapp://send?phone=' + waNumara(tel) + '&text=' + encodeURIComponent(sadeDil(metin)); kayitDus(ad, ham, tur); return true; }
   const w = window.open(url, '_blank');
   if (w) { try { w.opener = null; } catch (x) { } kayitDus(ad, ham, tur); return true; }
   pencere({ baslik: kanal + '’ı açın', icerik: `<p style="font-size:14.5px">Tarayıcı yeni pencereyi engelledi. Mesaj hazır; düğmeye basınca ${kanal} açılır.</p>`, altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button><a class="dg dg-wp" href="${e(url)}" target="_blank" rel="noopener" data-kapat>${ik('wp')}${kanal}’ı aç</a>` });
