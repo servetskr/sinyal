@@ -253,6 +253,11 @@ const karistir = l => { const a = l.slice(); for (let i = a.length - 1; i > 0; i
 const idx = () => SORULAR.map((_, i) => i);
 let test = { mod: null };
 let sayac = null;
+// Devam eden test telefonda saklanır: uygulama kapansa da kaldığı yerden sürer; süre yalnız test ekranı açıkken işler
+const TEST_ANAHTAR = k => 'sinyal-test-' + k.id;
+const testSakla = k => { try { if (test.mod && test.i < test.liste.length) localStorage.setItem(TEST_ANAHTAR(k), JSON.stringify({ ...test, sonuc: undefined })); else localStorage.removeItem(TEST_ANAHTAR(k)); } catch (x) { } };
+const testGeriYukle = k => { if (test.mod) return; try { const t = JSON.parse(localStorage.getItem(TEST_ANAHTAR(k)) || 'null'); if (t && t.mod && t.i < t.liste.length) test = { ...t, duraklat: true }; } catch (x) { } };
+const testBirak = k => { test = { mod: null }; try { localStorage.removeItem(TEST_ANAHTAR(k)); } catch (x) { } };
 function testBaslat(mod, k, konu) {
   let liste;
   if (mod === 'deneme') liste = Object.entries(KONULAR).flatMap(([kn, [, n]]) => karistir(idx().filter(i => SORULAR[i][0] === kn)).slice(0, n));
@@ -260,7 +265,8 @@ function testBaslat(mod, k, konu) {
   else if (mod === 'yanlis') liste = karistir(k.yanlislar || []).slice(0, 10);
   else if (mod === 'tekrar') liste = karistir(HZ.tekrarBugun(k).filter(i => i < SORULAR.length)).slice(0, 20);
   else liste = karistir(idx()).slice(0, 10);
-  test = { mod, konu, liste, i: 0, dogru: 0, cevap: null, basla: Date.now(), cevaplar: [] };
+  test = { mod, konu, liste, i: 0, dogru: 0, cevap: null, basla: Date.now(), harcanan: 0, sonTik: Date.now(), cevaplar: [] };
+  testSakla(k);
 }
 function testBitir(k) {
   const konu = {};
@@ -269,10 +275,12 @@ function testBitir(k) {
   Object.entries(konu).forEach(([kn, [d, t]]) => { const a = k.konuAnaliz[kn] || [0, 0]; k.konuAnaliz[kn] = [a[0] + d, a[1] + t]; });
   const yanlis = test.cevaplar.filter(([qi, c]) => c !== SORULAR[qi][3]).map(([qi]) => qi), dogruQ = test.cevaplar.filter(([qi, c]) => c === SORULAR[qi][3]).map(([qi]) => qi);
   k.yanlislar = [...new Set([...(k.yanlislar || []).filter(x => !dogruQ.includes(x)), ...yanlis])];
-  if (test.mod === 'deneme') { k.deneme = k.deneme || []; k.deneme.push(test.dogru * 2); }
+  test.eksik = test.liste.length - test.cevaplar.length;
+  if (test.mod === 'deneme' && !test.eksik) { k.deneme = k.deneme || []; k.deneme.push(test.dogru * 2); }
   HZ.gorulenEkle(k, test.cevaplar.map(([qi]) => qi));
   HZ.tekrarGuncelle(k, test.cevaplar.map(([qi, c]) => [qi, c === SORULAR[qi][3]]));
   test.sonuc = { konu, yanlis: yanlis.length, yanlisListe: test.cevaplar.filter(([qi, c]) => c !== SORULAR[qi][3]) };
+  try { localStorage.removeItem(TEST_ANAHTAR(k)); } catch (x) { }
   kaydet();
 }
 // Ana sayfa: önce sıradaki iş (ders ya da sınav), sonra öğrencinin yapması gerekenler, sonra kısa özet; ayrıntılar sekmelerde
@@ -343,10 +351,15 @@ export function ogrenciPortal() {
   if (ogSekme === 'sinav') {
     if (!SORULAR.length) sorulariYukle().then(() => { if (location.hash.startsWith('#/ogrenci')) yenile(); });
     const MOD_AD = { deneme: 'Deneme sınavı', hizli: 'Hızlı test', konu: 'Konu çalışması', yanlis: 'Yanlışlarım', tekrar: 'Bugünkü tekrar' };
+    testGeriYukle(k);
     if (!test.mod) govde = sinavMenu(k);
+    else if (test.duraklat && test.i < test.liste.length) {
+      const kalanDk = test.mod === 'deneme' ? Math.max(1, Math.ceil((45 * 60e3 - (test.harcanan || 0)) / 60e3)) : 0;
+      govde = `<div class="kart soru" style="text-align:center"><small style="color:var(--soluk)">Yarım kalan test</small><h3 style="margin:6px 0 4px;font-size:22px">${MOD_AD[test.mod]}</h3><p style="color:var(--metin)">${test.i}/${test.liste.length} soru cevaplandı${kalanDk ? ' · ' + kalanDk + ' dakikan var' : ''}</p>${ilerleme(test.i, test.liste.length)}<div style="display:grid;gap:10px;margin-top:16px"><button class="dg dg-ana og-giris-dg" data-test-devam>Kaldığın yerden devam et</button><button class="dg dg-hafif" data-test-menu>Testi bırak</button></div></div>`;
+    }
     else if (test.i >= test.liste.length) {
       const toplam = test.liste.length, puan = test.mod === 'deneme' ? test.dogru * 2 : Math.round(test.dogru / Math.max(1, toplam) * 100);
-      govde = `<div class="kart soru" style="text-align:center">${test.mod === 'deneme' ? `<small style="color:var(--soluk)">Deneme sınavı puanın</small><b style="display:block;font-family:var(--baslik);font-size:46px;color:${puan >= 70 ? 'var(--yesil)' : 'var(--kirmizi)'}">${puan}</b><p>${puan >= 70 ? 'Geçme puanının üstündesin.' : 'Geçme puanı 70; biraz daha çalışalım.'}</p>` : `<h4 style="font-size:20px">${test.dogru}/${toplam} doğru</h4>`}
+      govde = `${test.mod === 'deneme' && test.eksik ? `<p class="og-giris-not" style="margin:0 0 12px">${ik('uyari')}<span>${test.sureDoldu ? 'Süre doldu. ' : ''}${test.liste.length - test.eksik}/${test.liste.length} soru cevapladın; bu deneme puanlarına sayılmadı. Tam bir deneme çözünce hazırlık puanın güncellenir.</span></p>` : ''}<div class="kart soru" style="text-align:center">${test.mod === 'deneme' ? `<small style="color:var(--soluk)">Deneme sınavı puanın</small><b style="display:block;font-family:var(--baslik);font-size:46px;color:${puan >= 70 ? 'var(--yesil)' : 'var(--kirmizi)'}">${puan}</b><p>${puan >= 70 ? 'Geçme puanının üstündesin.' : 'Geçme puanı 70; biraz daha çalışalım.'}</p>` : `<h4 style="font-size:20px">${test.dogru}/${toplam} doğru</h4>`}
         <ul class="liste" style="text-align:left;margin:12px -20px">${Object.entries(test.sonuc.konu).map(([kn, [d, t]]) => `<li><span style="flex:1">${KONULAR[kn][0]}</span><b class="mono">${d}/${t}</b></li>`).join('')}</ul>
         <p style="font-size:13.5px;color:var(--soluk)">${test.sonuc.yanlis ? test.sonuc.yanlis + ' yanlışın tekrar listene eklendi; yarın yeniden sorulacak.' : 'Hiç yanlışın yok.'}</p>
         ${test.mod === 'deneme' && test.sonuc.yanlisListe.length ? `<details style="text-align:left;margin-top:10px"><summary style="cursor:pointer;font-weight:700;color:var(--murekkep)">Yanlışlarını gözden geçir (${test.sonuc.yanlisListe.length})</summary>${test.sonuc.yanlisListe.map(([qi, c]) => { const q = SORULAR[qi]; return `<div style="border-top:1px solid var(--cizgi-2);padding:12px 0">${q[4] ? `<div class="soru-gorsel" style="max-width:140px">${gorselHtml(q[4])}</div>` : ''}<b style="display:block;color:var(--murekkep);margin-bottom:6px">${e(q[1])}</b><p style="font-size:13.5px;color:var(--kirmizi)">Senin cevabın: ${'ABCD'[c] || '—'}) ${e(q[2][c] || 'boş')}</p><p style="font-size:13.5px;color:var(--yesil)">Doğrusu: ${'ABCD'[q[3]]}) ${e(q[2][q[3]])}</p>${q[5] ? `<p style="font-size:13px;margin-top:4px">${e(q[5])}</p>` : ''}<div style="margin-top:6px">${konuLink(qi)}</div></div>`; }).join('')}</details>` : ''}<button class="dg dg-koyu" style="margin-top:10px" data-test-menu>Tamam</button></div>`;
@@ -372,26 +385,28 @@ export function ogrenciPortal() {
     baglan(kap) {
       clearInterval(sayac);
       const kalanEl = kap.querySelector('[data-kalan]');
-      if (kalanEl) { const yaz = () => { const kalan = 45 * 60e3 - (Date.now() - test.basla); if (kalan <= 0) { clearInterval(sayac); test.i = test.liste.length; testBitir(k); yenile(); return; } kalanEl.textContent = String(Math.floor(kalan / 60e3)).padStart(2, '0') + ':' + String(Math.floor(kalan / 1e3) % 60).padStart(2, '0'); }; yaz(); sayac = setInterval(() => { if (!document.body.contains(kalanEl)) return clearInterval(sayac); yaz(); }, 1000); }
+      if (kalanEl) { const yaz = () => { const simdi = Date.now(); if (document.visibilityState === 'visible') test.harcanan = (test.harcanan || 0) + Math.min(2000, Math.max(0, simdi - (test.sonTik || simdi))); test.sonTik = simdi; const kalan = 45 * 60e3 - test.harcanan; if (Math.floor(kalan / 1e3) % 15 === 0) testSakla(k); if (kalan <= 0) { clearInterval(sayac); test.sureDoldu = true; test.i = test.liste.length; testBitir(k); yenile(); return; } kalanEl.textContent = String(Math.floor(kalan / 60e3)).padStart(2, '0') + ':' + String(Math.floor(kalan / 1e3) % 60).padStart(2, '0'); }; yaz(); sayac = setInterval(() => { if (!document.body.contains(kalanEl)) return clearInterval(sayac); yaz(); }, 1000); }
       kap.addEventListener('change', ev => { if (ev.target.matches('[data-og]')) { ogId = ev.target.value; test = { mod: null }; OG.modulSifirla(); yenile(); } });
       OG.ogBagla(kap, k, yenile);
       kap.addEventListener('click', ev => {
         const t = ev.target;
-        const s = t.closest('[data-ogs]'); if (s) { ogSekme = s.dataset.ogs; sekmeSakla(); yenile(true); }
+        const s = t.closest('[data-ogs]'); if (s) { if (test.mod && test.i >= test.liste.length) test = { mod: null }; else if (test.mod) { test.duraklat = true; testSakla(k); } ogSekme = s.dataset.ogs; sekmeSakla(); yenile(true); }
         const gt = t.closest('[data-git]'); if (gt) { const [sk, md] = gt.dataset.git.split(':'); if (md) OG.modulAc(md); ogSekme = sk; sekmeSakla(); yenile(true); return; }
         const o = t.closest('[data-ode]'); if (o) odemeYap(k, +o.dataset.ode);
         const oe = t.closest('[data-og-ekders]'); if (oe) { if (oe.dataset.ogEkders === 'evet') ekDersKabul(k); else { k.ekDersTeklif = null; kaydet(); bildirimler([{ kim: 'mudur', metin: `${tamAd(k)} ek direksiyon dersi teklifini istemedi.`, tur: 'Kursiyer cevabı' }], 'Ek ders'); bildir('Cevabın kursa iletildi'); yenile(); } }
         const ob = t.closest('[data-og-bos]'); if (ob) bosTeklifKabul(ob.dataset.ogBos, k.id, true);
         const tb = t.closest('[data-test-basla]'); if (tb && !tb.disabled) { if (tb.matches('[data-og-sinava]')) ogSekme = 'sinav'; sorulariYukle().then(() => { testBaslat(tb.dataset.testBasla, k, tb.dataset.konu); yenile(true); }); }
-        if (t.closest('[data-test-menu]')) { test = { mod: null }; yenile(true); }
+        if (t.closest('[data-test-menu]')) { testBirak(k); yenile(true); }
+        if (t.closest('[data-test-devam]')) { test.duraklat = false; test.sonTik = Date.now(); yenile(true); }
         if (t.closest('[data-soru-bildir]')) { const qi = test.liste[test.i], q = SORULAR[qi]; return pencere({ baslik: 'Soruyu bildir', icerik: `<p style="font-size:14px;margin-bottom:10px">“${e(q[1].slice(0, 120))}”</p><div class="alan"><label>Sorun ne?</label><select class="girdi" data-n><option>Doğru cevap yanlış işaretlenmiş</option><option>Soru ya da şıklar anlaşılmıyor</option><option>Bilgi güncel değil</option><option>Görsel hatalı</option><option>Diğer</option></select></div><div class="alan" style="margin-top:10px"><label>Açıklama (isteğe bağlı)</label><input class="girdi" data-a maxlength="300"></div>`, altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Gönder</button>', onAc(d) { d.querySelector('[data-k]').addEventListener('click', () => { gonderimEkle(S.kurs.ad, `${tamAd(k)} soru bildirdi (#${qi + 1}): ${d.querySelector('[data-n]').value}${d.querySelector('[data-a]').value.trim() ? ' · ' + d.querySelector('[data-a]').value.trim() : ''} · “${q[1].slice(0, 90)}”`, 'Soru bildirimi'); kaydet(); kapatPencere(); bildir('Teşekkürler, soru incelenmek üzere iletildi'); }); } }); }
         const c = t.closest('[data-cevap]');
         if (c && test.mod && test.cevap == null) {
           const qi = test.liste[test.i], cv = +c.dataset.cevap; test.cevaplar.push([qi, cv]); if (cv === SORULAR[qi][3]) test.dogru++;
           if (test.mod === 'deneme') { test.i++; if (test.i >= test.liste.length) testBitir(k); } else test.cevap = cv;
+          testSakla(k);
           yenile();
         }
-        if (t.closest('[data-sonraki]')) { test.i++; test.cevap = null; if (test.i >= test.liste.length) testBitir(k); yenile(); }
+        if (t.closest('[data-sonraki]')) { test.i++; test.cevap = null; if (test.i >= test.liste.length) testBitir(k); else testSakla(k); yenile(); }
         const dg = t.closest('[data-degis]'); if (dg) { const sd2 = sonrakiDers(k), m = `Merhaba, ben ${tamAd(k)}. ${sd2 ? tarihUzun(sd2.tarih) + ' ' + sd2.saat + ' direksiyon dersimin saatini' : 'Ders saatimi'} değiştirmek istiyorum.`; gonderimEkle(S.kurs.ad, m, 'Kursiyer talebi'); const kno = S.kurs.wp || S.kurs.wpGenel || S.kurs.tel; if (!waNumara(kno)) return bildir('Kursun WhatsApp numarası kayıtlı değil; kursu arayın' + (S.kurs.tel ? ': ' + S.kurs.tel : ''), 'uyari'); if (waAc(kno, m, 'WhatsApp', tamAd(k), false, 'KURSA GELEN') !== 'api') bildir('WhatsApp açıldı; mesajı kursa gönder', 'wp'); }
         if (t.closest('[data-iste]')) return randevuAl(k);
         const oi = t.closest('[data-og-iptal]'); if (oi) return randevuIptal(k, oi.dataset.ogIptal);
