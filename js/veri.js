@@ -644,6 +644,14 @@ export const kalanBorc = k => Math.max(0, k.odeme.toplam + ekToplam(k) - odenen(
 export const gecikenler = k => k.odeme.taksitler.filter(t => !t.odendi && !t.iptal && fark(t.vade) < 0);
 export const gecikenTutar = k => gecikenler(k).reduce((a, t) => a + t.tutar - (t.kismi || 0), 0);
 export const eksikEvrak = k => EVRAKLAR.filter(([key]) => !k.evrak[key]);
+// Belgenin dosyadaki görüntüsü: onaylı fotoğraf, onaylı PDF, yoksa onay bekleyen yükleme (WhatsApp / öğrenci ekranı)
+export function evrakKaynak(k, key, kaynak) {
+  const y = (k.evrakYuklenen || {})[key], f = (k.evrakFoto || {})[key], p = (k.evrakPdf || {})[key];
+  if (kaynak === 'foto') return f ? { veri: f, tur: 'resim' } : null;
+  if (kaynak === 'pdf') return p ? { veri: p, tur: 'pdf' } : null;
+  if (kaynak === 'yuklenen') return y && y.veri ? { veri: y.veri, tur: y.tur === 'pdf' ? 'pdf' : 'resim' } : null;
+  return f ? { veri: f, tur: 'resim' } : p ? { veri: p, tur: 'pdf' } : y && y.veri ? { veri: y.veri, tur: y.tur === 'pdf' ? 'pdf' : 'resim' } : null;
+}
 export const asamaNo = k => ASAMALAR.indexOf(k.asama);
 export function sonrakiDers(k) { return S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Planlandı' && fark(d.tarih) >= 0).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat))[0]; }
 export function gonderimEkle(kime, metin, tur) { S.gonderimler.unshift({ zaman: new Date().toISOString(), kime, metin, tur }); kaydet(); }
