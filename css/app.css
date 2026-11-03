@@ -1601,3 +1601,28 @@ button.oto-gidecek:hover{text-decoration:underline}
   .ozel-not-alt{flex-wrap:wrap}
 }
 @media print{.ozel-not{display:none!important}}
+
+/* Özel notlar (v114): başlıkta küçük kilit, pencerede tarihli notlar ve resmî ödeme özeti */
+.ozel-kilit{position:relative;width:38px;height:38px;border-radius:10px;display:inline-grid;place-items:center;color:var(--soluk);border:1px solid var(--cizgi-2);background:var(--panel)}
+.ozel-kilit:hover{color:var(--murekkep);border-color:var(--cizgi)}
+.ozel-kilit .ik{width:17px;height:17px}
+.ozel-kilit em{position:absolute;top:-6px;right:-6px;min-width:17px;height:17px;padding:0 4px;border-radius:999px;background:var(--murekkep);color:#fff;font:700 10.5px/17px var(--govde);font-style:normal;text-align:center}
+.ozel-isaret{display:inline-flex;margin-left:6px;vertical-align:-2px;color:var(--soluk)}
+.ozel-isaret .ik{width:13px;height:13px}
+.ozel-odeme{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:14px}
+.ozel-odeme div{background:var(--panel-2);border-radius:10px;padding:8px 10px;min-width:0}
+.ozel-odeme small{display:block;font-size:11.5px;color:var(--soluk);font-weight:700}
+.ozel-odeme b{display:block;font-size:14px;color:var(--murekkep);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ozel-liste{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:8px;max-height:260px;overflow:auto}
+.ozel-liste li{position:relative;background:var(--sari-acik);border-radius:10px;padding:8px 34px 8px 12px}
+.ozel-liste small{font-size:11.5px;color:var(--soluk);font-weight:700}
+.ozel-liste p{margin:2px 0 0;font-size:14px;white-space:pre-line;overflow-wrap:anywhere}
+.ozel-sil{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:6px;display:grid;place-items:center;color:var(--soluk)}
+.ozel-sil:hover{background:rgba(0,0,0,.06);color:var(--kirmizi)}
+.ozel-sil .ik{width:13px;height:13px}
+.ozel-bos{color:var(--soluk);font-size:14px;margin:0 0 12px}
+.ozel-ekle{display:flex;gap:8px;align-items:flex-end}
+.ozel-ekle textarea.girdi{flex:1;min-width:0;height:auto;min-height:44px;padding:8px 10px;resize:vertical}
+.ozel-bilgi{display:flex;gap:6px;align-items:center;margin:12px 0 0;font-size:12.5px;color:var(--soluk)}
+.ozel-bilgi .ik{width:13px;height:13px}
+@media (max-width:520px){.ozel-odeme{grid-template-columns:repeat(2,minmax(0,1fr))}}
