@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=109';
+import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=110';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -233,6 +233,20 @@ function aliciTel(kime) {
   const kisi = rol === 'HOCA' ? (S.egitmenler || []).find(x => x.ad === ad) : rol === 'ADAY' ? (S.adaylar || []).find(x => x.ad === ad) : (S.kursiyerler || []).find(x => x.ad + ' ' + x.soyad === ad);
   return kisi ? waNumara(kisi.tel) : '';
 }
+// Meta'nın İngilizce hata kodları Türkçe ve ne yapılacağını söyleyen bir cümleye çevrilir (müşterinin önünde anlaşılmaz uyarı çıkmasın)
+function metaHata(j) {
+  const k = +j.kod || 0, m = String(j.hata || '');
+  if (k === 131030 || /not in allowed list/i.test(m)) return 'Deneme hattı yalnızca Meta’da izin verilen numaralara mesaj gönderebilir. Kursun kendi WhatsApp hattı bağlanınca bütün öğrencilere gider';
+  if (k === 131047 || /24 hours|re-engagement/i.test(m)) return 'WhatsApp 24 saat penceresi kapalı: kişi son 24 saatte kursa yazmamış. Onaylı mesaj şablonu tanımlanınca bu mesajlar da gider';
+  if (k === 131026 || /undeliverable/i.test(m)) return 'Mesaj teslim edilemedi: numara WhatsApp kullanmıyor olabilir. Numarayı kontrol edin';
+  if (k === 190 || /access token|session has expired|OAuth/i.test(m)) return 'WhatsApp bağlantısının süresi dolmuş: Ayarlar › Kurs bilgileri › WhatsApp hattını yeniden bağlayın';
+  if (k === 131031 || /locked/i.test(m)) return 'WhatsApp hesabı Meta tarafından kilitlenmiş; Meta İşletme ayarlarını kontrol edin';
+  if ([130429, 131048, 131056, 80007].includes(k) || /rate limit|spam/i.test(m)) return 'Kısa sürede çok mesaj gönderildi; birkaç dakika sonra tekrar deneyin';
+  if (k === 132001 || /template.*(not exist|does not exist)/i.test(m)) return 'Mesaj şablonu Meta’da bulunamadı ya da henüz onaylanmadı';
+  if (/Şablonla da gönderilemedi/.test(m)) return 'Mesaj gönderilemedi: 24 saat penceresi kapalı ve onaylı şablonla da gitmedi. Şablonun onayını kontrol edin';
+  // servisin kendi Türkçe uyarıları olduğu gibi; Meta'dan gelen İngilizce metin yerine genel Türkçe cümle
+  return m && !/\b(the|is|not|number|recipient|message|error|invalid|failed|parameter|permission|unsupported|request|account)\b/i.test(m) ? m : 'WhatsApp mesajı gönderilemedi' + (k ? ' (Meta kodu ' + k + ')' : '') + '. Biraz sonra tekrar deneyin';
+}
 export async function apiGonder(metin, belge, adres, kime, ek = {}) {
   if (oturum.kullanici && oturum.kullanici.ziyaretci) return { ok: false, hata: 'Demo görünümünde mesaj gönderilmez' };
   const tel = aliciTel(kime);
@@ -246,7 +260,7 @@ export async function apiGonder(metin, belge, adres, kime, ek = {}) {
     const j = await r.json().catch(() => ({}));
     if (r.ok && j.ok) { bitir(true); return { ok: true, id: j.id || null }; }
     bitir(false, j.hata);
-    return { ok: false, hata: j.kod === 131047 || /24 hours|re-engagement/i.test(j.hata || '') ? 'WhatsApp 24 saat penceresi kapalı: kişi son 24 saatte kursa yazmamış. Onaylı mesaj şablonu tanımlanınca bu mesajlar da gider' : (j.hata || 'Gönderilemedi') };
+    return { ok: false, hata: metaHata(j) };
   } catch (x) { bitir(false, 'ulaşılamadı'); return { ok: false, hata: 'WhatsApp servisine ulaşılamadı' }; }
 }
 // Belgeyi gerçek PDF'e çevirir (html2pdf, ilk kullanımda yüklenir) ve base64 döndürür
@@ -438,7 +452,7 @@ function sifreSor(neden, ok) {
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Onayla</button>`,
     onAc(d) {
       const inp = d.querySelector('[data-sifre-tekrar]'), btn = d.querySelector('[data-k]');
-      const dene = () => { btn.disabled = true; import('./bulut.js?v=109').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
+      const dene = () => { btn.disabled = true; import('./bulut.js?v=110').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
       btn.addEventListener('click', dene); inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') dene(); }); setTimeout(() => inp.focus(), 50);
     },
   });
