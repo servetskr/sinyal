@@ -146,7 +146,7 @@ export function dirDenemeHtml(k) {
 
 /* ---------- Ödemeler ---------- */
 // Hesap dökümü: kurs ücreti, ek kalemler, ödemeler ve iade satır satır, yürüyen bakiyeyle (ek ücret ve iade anlaşmazlıklarını önler)
-function dokumTablo(k) {
+export function dokumTablo(k, ogrenciIcin = true) {
   const o = k.odeme, l = [[k.kayit, 'Kurs ücreti · ' + SINIFLAR[k.sinif].ad, o.toplam, 0]];
   (o.ekler || []).forEach(x => l.push([x.tarih || k.kayit, x.ad, x.tutar, 0]));
   if (o.pesin) l.push([o.pesinTarih || k.kayit, 'Peşinat ödendi', 0, o.pesin]);
@@ -156,7 +156,7 @@ function dokumTablo(k) {
   l.sort((a, b) => String(a[0]).localeCompare(String(b[0])) || (b[2] ? 1 : 0) - (a[2] ? 1 : 0));
   let b = 0;
   return `<div class="tablo-kap"><table class="tablo"><thead><tr><th>Tarih</th><th>Açıklama</th><th style="text-align:right">Borç</th><th style="text-align:right">Ödeme</th><th style="text-align:right">Kalan</th></tr></thead><tbody>${l.map(([t, ad, borc, od]) => { b += borc - od; return `<tr><td class="mono">${tarih(t)}</td><td>${e(ad)}</td><td class="sayi" style="text-align:right">${borc ? tl(borc) : ''}</td><td class="sayi" style="text-align:right;color:var(--yesil)">${od ? tl(od) : ''}</td><td class="sayi" style="text-align:right">${tl(Math.max(0, b))}</td></tr>`; }).join('')}</tbody></table></div>
-    <p class="og-not">Burada olmayan bir ücret senden istenirse kursa sor. Sınav tekrar ücreti ve ek ders gibi kalemler eklenince bu listede görünür.</p>`;
+    ${ogrenciIcin ? '<p class="og-not">Burada olmayan bir ücret senden istenirse kursa sor. Sınav tekrar ücreti ve ek ders gibi kalemler eklenince bu listede görünür.</p>' : ''}`;
 }
 export function hesapDokumu(k) {
   return `<details class="kart og-kart"><summary class="og-bas" style="cursor:pointer"><div><small>Hesap dökümün</small><b>Kalem kalem borç ve ödemeler</b></div></summary>${dokumTablo(k)}</details>`;

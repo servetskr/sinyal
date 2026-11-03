@@ -538,7 +538,7 @@ const veriAt = (k, x) => typeof x === 'string' && x.length > DOSYA_SINIR && x.st
 export function ogrenciVerisi(k) {
   const id = k.id, bugun = iso(new Date());
   const kurs = { ...S.kurs, wpGenel: S.kurs.wp || (S.kurs.waHat && S.kurs.waHat.no) || S.kurs.tel || '' }; ['waApi', 'waApiVarsayilan', 'waHat', 'demoNumara', 'demoKime', 'maliyet', 'kuralDegisen', 'kuralOnay', 'aydinlatma'].forEach(x => delete kurs[x]);
-  const ben = { ...k, tc: k.tc ? '•••••••' + String(k.tc).slice(-4) : '' }; delete ben.notlar; delete ben.panelKod; delete ben.hesap;
+  const ben = { ...k, tc: k.tc ? '•••••••' + String(k.tc).slice(-4) : '' }; delete ben.notlar; delete ben.panelKod; delete ben.hesap; delete ben.ozelNot; delete ben.ozelNotTarih;  // özel not yalnız müdürün; öğrenciye gitmez
   return {
     kurs, subeler: (S.subeler || []).filter(x => x.id === k.sube).map(x => sec(x, ['id', 'ad', 'semt'])),
     kursiyerler: [ben],
