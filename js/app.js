@@ -1,20 +1,20 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=114';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=114';
-import * as Y1 from './sayfalar1.js?v=114';
-import * as Y2 from './sayfalar2.js?v=114';
-import * as P from './portal.js?v=114';
-import * as Y3 from './sayfalar3.js?v=114';
-import * as Y4 from './sayfalar4.js?v=114';
-import * as Y5 from './sayfalar5.js?v=114';
-import * as IM from './imza.js?v=114';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=114';
-import * as SN from './senaryo.js?v=114';
-import * as OZ from './ozellik.js?v=114';
-import { durumlariGuncelle } from './mesaj.js?v=114';
-import { yeniMenu } from './yeni.js?v=114';
-import * as B from './bulut.js?v=114';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=114';
-import * as AN from './analiz.js?v=114';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=115';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=115';
+import * as Y1 from './sayfalar1.js?v=115';
+import * as Y2 from './sayfalar2.js?v=115';
+import * as P from './portal.js?v=115';
+import * as Y3 from './sayfalar3.js?v=115';
+import * as Y4 from './sayfalar4.js?v=115';
+import * as Y5 from './sayfalar5.js?v=115';
+import * as IM from './imza.js?v=115';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=115';
+import * as SN from './senaryo.js?v=115';
+import * as OZ from './ozellik.js?v=115';
+import { durumlariGuncelle } from './mesaj.js?v=115';
+import { yeniMenu } from './yeni.js?v=115';
+import * as B from './bulut.js?v=115';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=115';
+import * as AN from './analiz.js?v=115';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -103,6 +103,8 @@ export function yenile(kaydirma = false) {
   if (imzaLinki()) return imzaSayfasiAc();
   if (oturum.kullanici && oturum.kullanici.rol === 'ogrenci') return ogrenciCiz(kaydirma);
   if (!oturum.kullanici) { if (location.hash.startsWith('#/imza-geldi/')) try { sessionStorage.setItem('sinyal-bekleyen', location.hash); } catch (x) { } if (document.querySelector('.giris')) return; return girisEkrani(location.hash.startsWith('#/imza-geldi/') ? 'pin' : 'tanitim'); }
+  // başka cihazdan eksik alanla gelen sınav kaydı sayfaları çökertmesin
+  (S.sinavlar || []).forEach(x => { if (!x.sonuc || typeof x.sonuc !== 'object') x.sonuc = {}; if (!Array.isArray(x.kursiyerler)) x.kursiyerler = []; });
   if (!document.getElementById('icerik')) iskelet();
   let r = rota();
   if (!izinli(r.ad)) { location.hash = oturum.kullanici.rol === 'usta' ? '#/egitmen' : '#/genel'; return; }

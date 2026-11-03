@@ -482,6 +482,8 @@ function goc(o) {
   // demo: PIN’le giren her cihazda WhatsApp gönderimi hazır gelsin (mesajlar yalnız demo numarasına gider); Ayarlar’dan boşaltılırsa kapalı kalır
   if (demo && o.kurs.waApi === undefined) { o.kurs.waApi = 'https://sinyal-wa.sinemsavar0.workers.dev'; o.kurs.waApiVarsayilan = true; }
   if (o.sosyal) o.sosyal.kanallar.forEach(c => { if (!c.gercek) { c.bagli = c.id === 'wp' ? !!o.kurs.waApi : false; c.cevap = c.bagli && c.cevap; } });
+  // eksik alanlı sınav kaydı (ör. eski sunum verisi) sayfaları çökertmesin
+  (o.sinavlar || []).forEach(x => { if (!x.sonuc || typeof x.sonuc !== 'object') x.sonuc = {}; if (!Array.isArray(x.kursiyerler)) x.kursiyerler = []; });
   // gerçek kurs: demo kursun gönderim sayıları devralınmasın (bir kez sıfırlanır; sonra gerçek gönderimlerle artar)
   // işaret kuralın kendisinde: kurs ayarlarına (tek parça kaydedilir) dokunulmaz; önbellekten açılan eski bir cihaz ayarları geri yazamasın
   if (o._bulut) (o.otomasyonlar || []).forEach(x => { if (!x.gercekSayac) { x.gonderim = 0; x.gercekSayac = true; } });
