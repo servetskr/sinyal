@@ -5,7 +5,10 @@ const al = k => chrome.storage.session.get(k).then(x => x[k]);
 const koy = (k, v) => chrome.storage.session.set({ [k]: v });
 chrome.runtime.onMessage.addListener((m, kimden, cevap) => {
   (async () => {
-    if (m.tur === 'kuyruk-koy') { await koy('kuyruk', { kurs: m.kurs || '', zaman: Date.now(), isler: m.isler || [] }); return { ok: true, n: (m.isler || []).length }; }
+    if (m.tur === 'kuyruk-koy') { await koy('kuyruk', { kurs: m.kurs || '', zaman: Date.now(), isler: m.isler || [], oto: !!m.oto }); return { ok: true, n: (m.isler || []).length }; }
+    if (m.tur === 'kuyruk-basladi') { const q = (await al('kuyruk')) || { isler: [] }; q.oto = false; await koy('kuyruk', q); return { ok: true }; }
+    if (m.tur === 'is-hata') { const h = (await al('hatalar')) || []; h.push({ id: m.id, not: m.not || '', zaman: Date.now() }); await koy('hatalar', h); return { ok: true }; }
+    if (m.tur === 'hatalar-al') { const h = (await al('hatalar')) || []; await chrome.storage.session.remove('hatalar'); return h; }
     if (m.tur === 'mebbis-ac') {
       const l = await chrome.tabs.query({ url: 'https://mebbis.meb.gov.tr/*' });
       await koy('yeni', true);
