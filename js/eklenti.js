@@ -1,7 +1,7 @@
 // Sinyal MEBBİS Yardımcısı (Chrome eklentisi) ile konuşma: eklenti kurulu mu, MEBBİS’e yazılacak işleri sıraya koy,
 // MEBBİS’ten gelen listeyi aktarım ekranına ver, MEBBİS’te kaydedilen işleri Sinyal’de işlendi olarak işaretle.
-import { S, kaydet, gun, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, eksikEvrak, sb, sbDers, sbSinav } from './veri.js?v=115';
-import { bildir, pencere, e, ik, isaret } from './ui.js?v=115';
+import { S, kaydet, gun, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, eksikEvrak, sb, sbDers, sbSinav } from './veri.js?v=116';
+import { bildir, pencere, e, ik, isaret } from './ui.js?v=116';
 
 export const eklenti = { var: false, surum: null };
 const sayfadan = (tur, veri) => window.postMessage({ kaynak: 'sinyal-sayfa', tur, veri }, location.origin);
@@ -63,7 +63,7 @@ export function kurulumPenceresi() {
     baslik: 'Sinyal MEBBİS Yardımcısı', genis: true,
     icerik: `${eklenti.var ? `<p class="ipucu" style="margin-bottom:12px">${isaret('tamam', 20)}<span>Yardımcı bu tarayıcıda kurulu (sürüm ${e(eklenti.surum)}).</span></p>` : ''}
       <p style="font-size:14.5px">Chrome’a eklenen küçük bir yardımcı. Kursun kendi MEBBİS oturumunda çalışır: MEBBİS’e siz girersiniz, şifrenizi istemez ve saklamaz.</p>
-      <ul class="liste" style="margin:8px 0">${[['Günlük aktarım', 'Sinyal’de girdiğiniz kayıt, direksiyon programı, sınav bildirimi ve tahsilatlar sıraya girer. MEBBİS’te ilgili formu açıp “Formu doldur”a basarsınız; kontrol edip Kaydet’e siz basarsınız.'], ['Geçişte ilk kurulum', 'MEBBİS’te kursiyer, araç ya da personel listesini açıp “Listeyi Sinyal’e aktar”a basın; liste Sinyal’in aktarım ekranına gelir.'], ['MEBBİS ekranı değişirse', 'Yardımcı alanları etiketlerinden bulur; bulamadığı alanı bir kez gösterirsiniz, sonra kendisi bulur.']].map(([a, b]) => `<li style="align-items:flex-start">${isaret('bilgi', 20)}<div><b style="color:var(--murekkep)">${a}</b><small style="display:block;color:var(--metin);font-size:13.5px">${b}</small></div></li>`).join('')}</ul>
+      <ul class="liste" style="margin:8px 0">${[['MEBBİS’e bilgi gir', 'Kayıt, direksiyon programı, sınav bildirimi ve tahsilatlar türlerine göre sıraya girer. Türü seçin, MEBBİS’te formu açın, “Formu doldur”a basın; Kaydet’e siz basarsınız, Yardımcı sıradakini açar.'], ['MEBBİS’ten Sinyal’e al', 'Kursiyer, ödeme, öğretmen ve araç listeleri; sınav sonuçları ve MEBBİS ile karşılaştırma. MEBBİS’te listeyi açıp “Listeyi Sinyal’e gönder”e basın; Sinyal’de kontrol edip kaydedersiniz.'], ['MEBBİS ekranı değişirse', 'Yardımcı alanları etiketlerinden bulur; bulamadığı alanı bir kez gösterirsiniz, sonra kendisi bulur.']].map(([a, b]) => `<li style="align-items:flex-start">${isaret('bilgi', 20)}<div><b style="color:var(--murekkep)">${a}</b><small style="display:block;color:var(--metin);font-size:13.5px">${b}</small></div></li>`).join('')}</ul>
       <h4 style="margin-top:10px">Kurulum (bir kez, kurs bilgisayarında)</h4>
       <ol style="padding-left:18px;display:grid;gap:8px;font-size:14px;margin-top:6px"><li><a href="${EKLENTI_ZIP}" download style="color:var(--levha);font-weight:700">Yardımcıyı indirin</a> ve zip dosyasını bir klasöre açın.</li><li>Chrome’da adres çubuğuna <b>chrome://extensions</b> yazın, sağ üstten <b>Geliştirici modu</b>nu açın.</li><li><b>Paketlenmemiş öğe yükle</b>’ye basıp açtığınız klasörü seçin.</li><li>Sinyal sayfasını yenileyin; bu pencerede “kurulu” yazısı görünür.</li></ol>
       <p class="og-not" style="margin-top:10px">Chrome Web Mağazası’ndaki sürüm onaylanınca tek tıkla kurulacak.</p>`,
@@ -85,14 +85,52 @@ function bitenleriIsle(l) {
   });
   if (n) { islem('MEBBİS’e girildi (Yardımcı)', n + ' iş'); kaydet(); bildir(n + ' iş MEBBİS’e girildi olarak işaretlendi'); yenileFn(); }
 }
+// MEBBİS'ten gelen liste: amacına göre aktarım, karşılaştırma ya da sınav sonucu ekranına gider
+function tabloGeldi(veri) {
+  const sat = veri.satirlar, n = sat.length - 1;
+  if (veri.amac === 'mutabakat') return import('./ozellik.js?v=116').then(m => { if (m.mutabakatTablodan(sat, 'MEBBİS · ' + (veri.baslik || 'liste'))) { location.hash = '#/meb/mutabakat'; yenileFn(); } });
+  if (veri.amac === 'sinav') return sinavSonucuAl(sat);
+  const t = ['kursiyer', 'taksit', 'arac', 'ogretmen'].includes(veri.amac) ? veri.amac : turTahmin(sat[0] || []);
+  import('./sayfalar5.js?v=116').then(m => { location.hash = '#/ayarlar/aktarim'; setTimeout(() => { m.aktarimYukle(sat, t, 'MEBBİS'); bildir(`MEBBİS’ten ${n} satırlık liste geldi; sütunları kontrol edip aktarın`); }, 300); });
+}
+// Sınav sonuç listesi: TC ile kursiyer bulunur, en uygun oturumun sonuç penceresi dolu açılır; kaydetmeyi kullanıcı yapar
+const nrm = x => String(x || '').toLocaleLowerCase('tr').replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/[^a-z0-9]/g, '');
+function sinavSonucuAl(sat) {
+  const bas = sat[0].map(nrm), bul = (...l) => bas.findIndex(h => l.some(x => h.includes(x)));
+  const iTc = bul('tc', 'kimlik'), iSon = bul('sonuc', 'durum', 'basari', 'netice'), iPuan = bul('puan', 'notu'), iTar = bul('tarih');
+  if (iTc < 0) return bildir('Listede TC kimlik numarası sütunu bulunamadı', 'uyari');
+  if (iSon < 0 && iPuan < 0) return bildir('Listede sonuç ya da puan sütunu bulunamadı', 'uyari');
+  const deger = (r) => {
+    const v = nrm(iSon >= 0 ? r[iSon] : ''), p = iPuan >= 0 && String(r[iPuan]).trim() !== '' && !isNaN(+String(r[iPuan]).replace(',', '.')) ? Math.round(+String(r[iPuan]).replace(',', '.')) : null;
+    if (/girmedi|gelmedi|katilmadi|devamsiz/.test(v)) return { v: 'Girmedi' };
+    if (/basarisiz|kaldi|gecmedi|olumsuz/.test(v)) return { v: 'Kaldı', puan: p };
+    if (/basarili|gecti|olumlu|gecer/.test(v)) return { v: 'Geçti', puan: p };
+    return p != null ? { v: p >= 70 ? 'Geçti' : 'Kaldı', puan: p } : null;
+  };
+  const tarihIso = v => { const m = String(v || '').match(/(\d{1,2})[./-](\d{1,2})[./-](\d{4})/); return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : ''; };
+  const oturum = {}; let bulunamayan = 0;
+  sat.slice(1).forEach(r => {
+    const tc = String(r[iTc] || '').replace(/\D/g, ''), k = tc && S.kursiyerler.find(x => x.tc === tc), d = deger(r); if (!k || !d) { bulunamayan++; return; }
+    const t = iTar >= 0 ? tarihIso(r[iTar]) : '';
+    const s = sbSinav(S.sinavlar).filter(x => (x.kursiyerler || []).includes(k.id) && !(x.sonuc || {})[k.id] && fark(x.tarih) <= 0 && (!t || x.tarih === t)).sort((a, b) => b.tarih.localeCompare(a.tarih))[0];
+    if (!s) { bulunamayan++; return; }
+    (oturum[s.id] = oturum[s.id] || {})[k.id] = d;
+  });
+  const sira = Object.entries(oturum).sort((a, b) => Object.keys(b[1]).length - Object.keys(a[1]).length);
+  if (!sira.length) return bildir('Listedeki kişilerden sonucu girilmemiş bir sınav oturumunda olan bulunamadı', 'uyari');
+  const [sid, hazir] = sira[0], s = S.sinavlar.find(x => x.id === sid);
+  location.hash = '#/sinavlar';
+  import('./sayfalar2.js?v=116').then(m => setTimeout(() => {
+    m.sonucGir(s, hazir);
+    bildir(`${Object.keys(hazir).length} kursiyerin sonucu MEBBİS’ten dolduruldu; kontrol edip “Sonuçları kaydet”e basın.${sira.length > 1 ? ` ${sira.length - 1} oturum daha var; kaydettikten sonra listeyi tekrar gönderin.` : ''}${bulunamayan ? ` ${bulunamayan} satır eşleşmedi.` : ''}`);
+  }, 400));
+}
 export function eklentiBaslat() {
   window.addEventListener('message', ev => {
     if (ev.source !== window || ev.origin !== location.origin || !ev.data || ev.data.kaynak !== 'sinyal-eklenti') return;
     const { tur, veri } = ev.data;
     if (tur === 'merhaba') { const ilk = !eklenti.var; Object.assign(eklenti, { var: true, surum: veri && veri.surum }); if (ilk) yenileFn(); }
-    if (tur === 'tablo' && veri && veri.satirlar) {
-      import('./sayfalar5.js?v=115').then(m => { location.hash = '#/ayarlar/aktarim'; setTimeout(() => { m.aktarimYukle(veri.satirlar, turTahmin(veri.satirlar[0] || []), 'MEBBİS'); bildir(`MEBBİS’ten ${veri.satirlar.length - 1} satırlık liste geldi; sütunları kontrol edip aktarın`); }, 300); });
-    }
+    if (tur === 'tablo' && veri && veri.satirlar) tabloGeldi(veri);
     if (tur === 'bitenler' && Array.isArray(veri)) bitenleriIsle(veri);
   });
   sayfadan('ping', {});
