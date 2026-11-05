@@ -6,6 +6,15 @@ const koy = (k, v) => chrome.storage.session.set({ [k]: v });
 chrome.runtime.onMessage.addListener((m, kimden, cevap) => {
   (async () => {
     if (m.tur === 'kuyruk-koy') { await koy('kuyruk', { kurs: m.kurs || '', zaman: Date.now(), isler: m.isler || [] }); return { ok: true, n: (m.isler || []).length }; }
+    if (m.tur === 'mebbis-ac') {
+      const l = await chrome.tabs.query({ url: 'https://mebbis.meb.gov.tr/*' });
+      await koy('yeni', true);
+      if (l.length) { const s = l.find(x => x.active) || l[0]; await chrome.tabs.update(s.id, { active: true }); await chrome.windows.update(s.windowId, { focused: true }).catch(() => { }); return { sekme: 'gecildi' }; }
+      await chrome.tabs.create({ url: 'https://mebbis.meb.gov.tr/' }); return { sekme: 'acildi' };
+    }
+    if (m.tur === 'yeni-al') { const y = await al('yeni'); await chrome.storage.session.remove('yeni'); return !!y; }
+    if (m.tur === 'aktif-al') return (await al('aktif')) || null;
+    if (m.tur === 'aktif-koy') { await koy('aktif', m.aktif); return { ok: true }; }
     if (m.tur === 'kuyruk-al') return (await al('kuyruk')) || { isler: [] };
     if (m.tur === 'is-bitti') { const q = (await al('kuyruk')) || { isler: [] }; const x = q.isler.find(y => y.id === m.id); if (x) x.bitti = Date.now(); await koy('kuyruk', q); const b = (await al('bitenler')) || []; b.push({ id: m.id, ref: x && x.ref, tur: x && x.tur, zaman: Date.now() }); await koy('bitenler', b); return { ok: true }; }
     if (m.tur === 'bitenler-al') { const b = (await al('bitenler')) || []; await koy('bitenler', []); return b; }

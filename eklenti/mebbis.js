@@ -75,8 +75,11 @@
     if (d[ISARET] === 'ogret') { ogrenilen = d.alan; document.body.style.cursor = 'crosshair'; }
     if (d[ISARET] === 'ogret-iptal') { ogrenilen = null; document.body.style.cursor = ''; }
   });
-  // kısayollar her çerçevede yakalanır, panele iletilir: Alt+Shift+D doldur, Alt+Shift+S kaydettim-sonraki, Alt+Shift+N atla
+  // her çerçevede: kısayollar (Alt+Shift+D doldur, S kaydettim, N atla) ve MEBBİS'in Kaydet düğmesine basıldığını panele bildirme
   document.addEventListener('keydown', ev => { if (ev.altKey && ev.shiftKey && /^Key[DSN]$/.test(ev.code)) { ev.preventDefault(); window.top.postMessage({ [ISARET]: 'kisayol', k: ev.code }, '*'); } }, true);
+  const KAYDET = /kaydet|ekle|güncelle|onayla/i;
+  document.addEventListener('click', ev => { const b = ev.target.closest && ev.target.closest('input[type=submit], input[type=button], input[type=image], button, a'); if (!b) return; const t = String(b.value || b.textContent || b.title || '').trim(); if (t && t.length < 30 && KAYDET.test(t)) window.top.postMessage({ [ISARET]: 'kaydet-basildi' }, '*'); }, true);
+  window.addEventListener('message', ev => { const d = ev.data; if (d && d[ISARET] === 'metin' && ev.source === window.top) window.top.postMessage({ [ISARET]: 'metin-cevap', no: d.no, metin: document.body ? document.body.innerText.slice(0, 20000) : '', alan: alanlar().length }, '*'); });
   if (!UST) return;
 
   /* ---------- üst çerçeve: panel ---------- */
@@ -90,158 +93,192 @@
     setTimeout(() => { window.removeEventListener('message', dinle); ok(gelen); }, bekle);
   });
   const girisSayfasi = () => cerceveler().some(w => { try { return !!w.document.querySelector('input[type=password]'); } catch (x) { return false; } });
+  const sayfaMetni = async () => { const r = await herkese('metin', {}, 600); return { metin: r.map(x => x.metin).join('\n'), alan: r.reduce((a, x) => a + (x.alan || 0), 0) }; };
+  const BASARI = /başarı(yla|lı)|kaydedil(di|miştir)|işlem(iniz)? tamamlan|eklendi|güncellendi/i;
+  const HATA = /hata|geçersiz|zorunlu alan|boş bırakılamaz|hatalı|başarısız|bulunamadı/i;
 
-  // MEBBİS'e yazılacak iş türleri ve MEBBİS'ten alınabilecek listeler
-  const GIR = [
-    ['kayit', 'Kursiyer kaydı', 'kursiyer kayıt'],
-    ['program', 'Direksiyon programı', 'direksiyon eğitimi programı giriş'],
+  // iş türleri: aciliyet eşitse sınav > program > kayıt > tahsilat
+  const TURLER = [
     ['sinav', 'Sınav bildirimi', 'direksiyon sınavına kursiyer bildirimi'],
+    ['program', 'Direksiyon programı', 'direksiyon eğitimi programı giriş'],
+    ['kayit', 'Kursiyer kaydı', 'kursiyer kayıt'],
     ['odeme', 'Tahsilat', 'kursiyer ödeme bilgisi giriş'],
   ];
+  const AD = Object.fromEntries(TURLER.map(x => [x[0], x[1]])), FORM = Object.fromEntries(TURLER.map(x => [x[0], x[2]])), SIRA = Object.fromEntries(TURLER.map((x, i) => [x[0], i]));
   const AL = [
     ['kursiyer', 'Kursiyer listesi', 'kayıtlı kursiyer listesi', 'Geçişte kursiyerleri Sinyal’e alır.'],
+    ['sinav', 'Sınav sonuçları', 'e-sınav ya da direksiyon sınavı sonuç listesi', 'Sonuçlar Sinyal’in sonuç penceresine dolar.'],
+    ['mutabakat', 'MEBBİS ile karşılaştır', 'kursiyer listesi', 'Sinyal’de olup MEBBİS’te olmayanları gösterir.'],
     ['taksit', 'Ödemeler', 'kursiyer ödeme listesi', 'Ödenen ve kalan taksitleri alır.'],
     ['ogretmen', 'Usta öğreticiler', 'personel (usta öğretici) listesi', 'Öğretmenleri Sinyal’e alır.'],
     ['arac', 'Araçlar', 'araç listesi', 'Araçları plakalarıyla alır.'],
-    ['sinav', 'Sınav sonuçları', 'e-sınav ya da direksiyon sınavı sonuç listesi', 'Sonuçlar Sinyal’in sonuç penceresine dolar; siz kaydedersiniz.'],
-    ['mutabakat', 'MEBBİS ile karşılaştır', 'kursiyer listesi', 'Sinyal’de olup MEBBİS’te olmayanları ve farkları gösterir.'],
   ];
-  const AD = Object.fromEntries(GIR.map(x => [x[0], x[1]]));
+  const bugun = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  const kalan = t => t ? Math.round((new Date(t + 'T12:00:00') - new Date(bugun() + 'T12:00:00')) / 864e5) : 99;
+  const etiket = t => { if (!t) return ['Acil değil', '']; const k = kalan(t); return k < 0 ? ['Süresi geçti', 'gecti'] : k === 0 ? ['Bugün son gün', 'bugun'] : k === 1 ? ['Yarın son gün', 'yakin'] : k <= 7 ? [k + ' gün kaldı', 'yakin'] : [t.split('-').reverse().join('.') + '’e kadar', '']; };
 
   const kok = document.createElement('div'); kok.id = 'sinyal-mebbis-panel';
   const g = kok.attachShadow({ mode: 'open' });
   g.innerHTML = `<style>
     :host{all:initial}*{box-sizing:border-box;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;margin:0}
-    .p{position:fixed;right:16px;bottom:16px;z-index:2147483647;width:360px;max-height:80vh;display:flex;flex-direction:column;background:#fff;color:#1d1d1d;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.28);border:1px solid #dcdcdc;font-size:13.5px;line-height:1.35}
+    .p{position:fixed;right:16px;bottom:16px;z-index:2147483647;width:360px;max-height:82vh;display:flex;flex-direction:column;background:#fff;color:#1d1d1d;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.28);border:1px solid #dcdcdc;font-size:13.5px;line-height:1.35}
     .b{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#14284b;color:#fff;border-radius:14px 14px 0 0;cursor:pointer;user-select:none}.b b{flex:1;font-size:14px}.b i{width:14px;height:14px;background:#f2b705;transform:rotate(45deg);border-radius:2px;flex:none}.b small{opacity:.85}
     .gizli .b{border-radius:14px}.gizli .g{display:none}
     .g{padding:10px 12px 12px;overflow:auto}
-    h4{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#6b7280;margin:12px 0 6px}h4:first-child{margin-top:2px}
-    .k{display:flex;align-items:center;gap:8px;border:1px solid #e3e3e3;border-radius:10px;padding:8px 10px;margin-bottom:6px;cursor:pointer;background:#fff;width:100%;text-align:left;font-size:13.5px;font-weight:400}
-    .k:hover{border-color:#2f6fde;background:#f6f9ff}.k div{flex:1;min-width:0}.k b{display:block;font-weight:600}.k small{display:block;color:#666;font-size:12px}
-    .k .say{min-width:26px;text-align:center;font-weight:700;background:#14284b;color:#fff;border-radius:20px;padding:2px 7px;font-size:12px}.k .say.bos{background:#e5e7eb;color:#6b7280}
-    .k.sonra{opacity:.55}.k.sec{border-color:#2f6fde;background:#f2f6ff}
-    .one{border:1px solid #f2b705;background:#fff8e0;border-radius:10px;padding:9px 10px;margin-bottom:8px}.one b{display:block}
-    .uy{border:1px solid #f0c2bd;background:#fdf0ee;color:#7a2318;border-radius:10px;padding:8px 10px;margin-bottom:8px;font-size:12.5px}
-    .ust{display:flex;align-items:center;gap:8px;margin-bottom:6px}.ust b{flex:1;font-size:14px}.ust small{color:#666}
+    h4{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#6b7280;margin:12px 0 6px}
+    input.ara{width:100%;border:1px solid #d6d9de;border-radius:9px;padding:8px 10px;font-size:13.5px;margin-bottom:10px}
+    .sir{border:2px solid #2f6fde;border-radius:12px;padding:10px 11px;background:#f6f9ff}.sir small{display:block;color:#555;font-size:12px;margin-top:2px}.sir b{display:block;font-size:14.5px;margin-top:4px}
+    .et{display:inline-block;font-size:11px;font-weight:700;border-radius:20px;padding:2px 8px;background:#eef0f3;color:#374151}.et.gecti{background:#fde2e0;color:#a12a20}.et.bugun{background:#fde2e0;color:#a12a20}.et.yakin{background:#fff1c2;color:#7a5600}
+    .k{display:flex;align-items:center;gap:8px;border:1px solid #e3e3e3;border-radius:10px;padding:7px 10px;margin-bottom:6px;cursor:pointer;background:#fff;width:100%;text-align:left;font-size:13px;font-weight:400}
+    .k:hover{border-color:#2f6fde;background:#f6f9ff}.k div{flex:1;min-width:0}.k b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.k small{display:block;color:#666;font-size:12px}
+    .cip{display:flex;gap:6px;flex-wrap:wrap}.cip button{background:#eef0f3;color:#1d1d1d;font-weight:600;font-size:12.5px;padding:6px 9px;border-radius:20px}.cip button span{opacity:.6;margin-left:3px}.cip button[disabled]{opacity:.45;cursor:default}
+    .ozet{display:flex;gap:10px;font-size:12px;color:#555;margin:8px 0 2px}.ozet b{color:#1d1d1d}
+    .uy{border:1px solid #f0c2bd;background:#fdf0ee;color:#7a2318;border-radius:10px;padding:8px 10px;margin-bottom:10px;font-size:12.5px}
+    .ust{display:flex;align-items:center;gap:8px;margin:6px 0 6px}.ust b{flex:1;font-size:14px}.ust small{color:#666}
     .a{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center;padding:5px 0;border-bottom:1px solid #f0f0f0}.a span{color:#555}.a b{font-weight:600;word-break:break-all;cursor:copy;text-align:right}.a b:hover{color:#2f6fde}.a em{grid-column:1/-1;font-style:normal;font-size:12px}
     .ok{color:#1f8a46}.no{color:#c0392b}
-    button{border:0;border-radius:8px;padding:8px 10px;font-weight:600;cursor:pointer;font-size:13px}.ana{background:#2f6fde;color:#fff}.ana[disabled]{background:#a9bde6;cursor:default}.cz{background:#eef0f3;color:#1d1d1d}.kc{padding:4px 8px;font-size:12px}.geri{background:none;padding:2px 0;color:#2f6fde}
-    .r{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.n{font-size:12px;color:#666;margin-top:8px}.m{font-size:12.5px;color:#14284b;background:#eef4ff;border-radius:8px;padding:7px 9px;margin-top:8px}
-    input.ara{width:100%;border:1px solid #d6d9de;border-radius:8px;padding:7px 9px;font-size:13px;margin:4px 0 8px}
+    button{border:0;border-radius:8px;padding:8px 10px;font-weight:600;cursor:pointer;font-size:13px}.ana{background:#2f6fde;color:#fff}.ana[disabled]{background:#a9bde6;cursor:default}.cz{background:#eef0f3;color:#1d1d1d}.kc{padding:4px 8px;font-size:12px}.geri{background:none;padding:2px 0;color:#2f6fde}.yesil{background:#1f8a46;color:#fff}
+    .r{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;align-items:center}.n{font-size:12px;color:#666;margin-top:8px}.m{font-size:12.5px;color:#14284b;background:#eef4ff;border-radius:8px;padding:7px 9px;margin-top:8px}
     .bar{height:5px;background:#e5e7eb;border-radius:4px;overflow:hidden;margin:2px 0 8px}.bar i{display:block;height:100%;background:#1f8a46}
+    .ac{display:flex;align-items:center;justify-content:space-between;width:100%;background:none;padding:6px 0;color:#14284b;font-size:13px;border-top:1px solid #eee;border-radius:0;margin-top:10px}
+    .oto{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#374151;cursor:pointer}.oto i{width:30px;height:17px;border-radius:10px;background:#cbd5e1;position:relative;flex:none}.oto i::after{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:left .15s}.oto.acik i{background:#1f8a46}.oto.acik i::after{left:15px}
     kbd{font:11px ui-monospace,monospace;background:#f3f4f6;border:1px solid #d1d5db;border-radius:4px;padding:0 4px;color:#374151}
     </style>
     <div class="p" lang="tr"><div class="b" data-k><i></i><b>Sinyal MEBBİS Yardımcısı</b><small data-sayi></small></div><div class="g" data-g></div></div>`;
   (document.body || document.documentElement).appendChild(kok);
   const p = g.querySelector('.p'), govde = g.querySelector('[data-g]');
-  const durum = { ekran: 'ana', tur: null, sec: null, al: null, sonuc: {}, mesaj: '', ara: '', q: { isler: [] }, sayfa: {}, tablo: null, temizle: false };
+  const durum = { ekran: 'ana', filtre: null, sec: null, al: null, sonuc: {}, mesaj: '', ara: '', q: { isler: [] }, sayfa: {}, tablo: null, temizle: false, alAcik: false, oto: true, soru: false, bekle: null, dolanId: null };
   const e = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const bekleyen = tur => durum.q.isler.filter(x => x.tur === tur && !x.bitti);
-  const biten = tur => durum.q.isler.filter(x => x.tur === tur && x.bitti).length;
+  // bekleyen işler en acilden: son gün, sonra tür sırası
+  const sirali = (tur) => durum.q.isler.filter(x => !x.bitti && (!tur || x.tur === tur)).sort((a, b) => (a.son || '9999').localeCompare(b.son || '9999') || SIRA[a.tur] - SIRA[b.tur]);
+  const aranan = () => { const a = durum.ara.toLocaleLowerCase('tr').trim(); return a ? sirali().filter(x => (x.baslik + ' ' + x.alanlar.map(y => y.deger).join(' ')).toLocaleLowerCase('tr').includes(a)) : null; };
   const saat = t => t ? new Date(t).toTimeString().slice(0, 5) : '';
+  const aktifKaydet = () => gonder({ tur: 'aktif-koy', aktif: { sec: durum.sec, filtre: durum.filtre, ekran: durum.ekran, bekle: durum.bekle } });
+
+  const isSatir = x => { const [t, c] = etiket(x.son); return `<button class="k" data-is="${e(x.id)}"><div><b>${e(x.baslik)}</b><small>${e(AD[x.tur] || x.tur)}</small></div><span class="et ${c}">${t}</span></button>`; };
+
+  function ciz() {
+    const hepsi = sirali(), giris = girisSayfasi();
+    g.querySelector('[data-sayi]').textContent = hepsi.length ? hepsi.length + ' iş' : '';
+    let h = '';
+    if (durum.ekran === 'ana') {
+      if (giris) h += `<div class="uy"><b>MEBBİS giriş sayfası.</b> Kendi şifrenizle girin; Yardımcı burada hiçbir şey doldurmaz.</div>`;
+      h += `<input class="ara" data-ara placeholder="Ara: ad, TC, plaka, tarih…" value="${e(durum.ara)}">`;
+      const ar = aranan();
+      if (ar) h += ar.length ? `<p class="n" style="margin:0 0 6px">${ar.length} sonuç</p>` + ar.slice(0, 30).map(isSatir).join('') : `<p class="n">Sonuç yok.</p>`;
+      else if (!hepsi.length) h += `<p class="m" style="margin-top:0">Sırada iş yok. Sinyal’de <b>MEB işlemleri › MEBBİS Yardımcısına gönder</b>’e basın; Yardımcı bu sekmeye gelir.</p>`;
+      else {
+        const x = hepsi[0], [t, c] = etiket(x.son), gec = hepsi.filter(y => y.son && kalan(y.son) < 0).length, hafta = hepsi.filter(y => y.son && kalan(y.son) >= 0 && kalan(y.son) <= 7).length;
+        h += `<div class="sir"><span class="et ${c}">${t}</span><b>${e(x.baslik)}</b><small>${e(AD[x.tur])} · ${e(x.neden || '')}</small><div class="r"><button class="ana" data-basla>Sırayla başla</button><span class="n" style="margin:0">${hepsi.length} iş, en aciliyle başlar</span></div></div>`;
+        h += `<div class="ozet">${gec ? `<span><b style="color:#a12a20">${gec}</b> süresi geçti</span>` : ''}<span><b>${hafta}</b> bu hafta</span><span><b>${hepsi.length - gec - hafta}</b> sonra</span></div>`;
+        h += `<h4>Türe göre</h4><div class="cip">${TURLER.map(([k, ad]) => { const n = sirali(k).length; return `<button data-filtre="${k}" ${n ? '' : 'disabled'}>${ad}<span>${n}</span></button>`; }).join('')}</div>`;
+        h += `<h4>En acil</h4>` + hepsi.slice(1, 5).map(isSatir).join('');
+      }
+      h += `<button class="ac" data-alac><span>MEBBİS’ten Sinyal’e al</span><span>${durum.alAcik ? '▾' : '▸'}</span></button>`;
+      if (durum.alAcik) h += AL.map(([k, ad, , a]) => `<button class="k" data-al="${k}"><div><b>${ad}</b><small>${a}</small></div></button>`).join('');
+      h += `<div class="r" style="justify-content:space-between"><span class="oto ${durum.oto ? 'acik' : ''}" data-oto><i></i>Otomatik doldur ve ilerle</span><span><button class="cz kc" data-yenile>Yenile</button>${durum.q.isler.length ? ` <button class="cz kc" data-temizle>${durum.temizle ? 'Emin misiniz?' : 'Temizle'}</button>` : ''}</span></div>`;
+      if (durum.q.kurs) h += `<p class="n">${e(durum.q.kurs)} · Sinyal’den ${saat(durum.q.zaman)}’de gönderildi.</p>`;
+    }
+    if (durum.ekran === 'is') {
+      const is = durum.q.isler.find(x => x.id === durum.sec); if (!is || is.bitti) { durum.ekran = 'ana'; return ciz(); }
+      const l = sirali(durum.filtre), sira = l.findIndex(x => x.id === is.id) + 1, [t, c] = etiket(is.son), kayitli = durum.sayfa[is.tur];
+      const biten = durum.q.isler.filter(x => x.bitti && (!durum.filtre || x.tur === durum.filtre)).length;
+      h += `<button class="geri" data-ana>← Ana menü</button><div class="ust"><b>${durum.filtre ? AD[durum.filtre] : 'Tüm işler'}</b><small>${sira}/${l.length}</small></div><div class="bar"><i style="width:${Math.round(100 * biten / (biten + l.length || 1))}%"></i></div>`;
+      if (giris) h += `<div class="uy">Giriş sayfası: önce kendi şifrenizle girin.</div>`;
+      h += `<span class="et ${c}">${t}</span><p style="margin:6px 0 2px;font-weight:700;font-size:14.5px">${e(is.baslik)}</p><p class="n" style="margin:0 0 6px">${e(AD[is.tur])}: MEBBİS’te <b>${e(FORM[is.tur])}</b> ekranı${kayitli && kayitli.yol !== location.pathname ? ` · <button class="cz kc" data-formac="${is.tur}">Formu aç</button>` : ''}</p>`;
+      h += is.alanlar.map((a, i) => { const s = durum.sonuc[a.etiket]; return `<div class="a"><span>${e(a.etiket)}</span><b data-kopya="${i}" title="Kopyalamak için tıklayın">${e(a.deger)}</b>${s === 'ok' ? '<em class="ok">✓ dolduruldu</em>' : s === 'yok' ? `<em class="no">Alan bulunamadı · <button class="cz kc" data-ogret="${i}">Alanı göster</button> ya da değere tıklayıp kopyalayın</em>` : s === 'secenek' ? '<em class="no">Listede bu seçenek yok; elle seçin</em>' : ''}</div>`; }).join('');
+      if (durum.soru) h += `<div class="m"><b>Kayıt tamamlandı mı?</b> MEBBİS’in mesajını kontrol edin.<div class="r" style="margin-top:6px"><button class="yesil" data-evet>Evet, sıradakine geç</button><button class="cz" data-hayir>Hayır</button></div></div>`;
+      else if (durum.bekle) h += `<p class="m">MEBBİS’in cevabı kontrol ediliyor…</p>`;
+      h += `<div class="r"><button class="ana" data-doldur ${giris ? 'disabled' : ''}>Formu doldur</button><button class="cz" data-bitti>Kaydettim</button><button class="cz" data-atla>Atla</button></div>`;
+      h += durum.mesaj ? `<p class="m">${e(durum.mesaj)}</p>` : '';
+      h += `<p class="n">${durum.oto ? 'Otomatik: form açılınca doldurulur; Kaydet’e bastığınızda sonuç kontrol edilip sıradakine geçilir.' : 'Otomatik kapalı: “Formu doldur” ve “Kaydettim” ile ilerleyin.'} Kaydet’e ve güvenlik koduna her zaman siz basarsınız. <kbd>Alt+Shift+D</kbd> doldur · <kbd>S</kbd> kaydettim · <kbd>N</kbd> atla</p>`;
+    }
+    if (durum.ekran === 'al') {
+      const [, ad, liste, a] = AL.find(x => x[0] === durum.al), tb = durum.tablo;
+      h += `<button class="geri" data-ana>← Ana menü</button><div class="ust"><b>${ad}</b></div><p class="n" style="margin:0 0 8px">${a}</p>`;
+      h += `<p style="margin-bottom:6px">MEBBİS’te <b>${liste}</b> ekranını açıp listeyi getirin (sayfalama varsa tümünü gösterin).</p>`;
+      h += tb ? `<p class="m">Bu sayfada <b>${tb.s.length - 1} satırlık</b> liste var: ${e(tb.s[0].slice(0, 5).join(' · '))}${tb.s[0].length > 5 ? ' …' : ''}</p>` : `<p class="m">Bu sayfada henüz liste görünmüyor; liste ekrana gelince kendiliğinden bulunur.</p>`;
+      h += `<div class="r"><button class="ana" data-gonder ${tb ? '' : 'disabled'}>Listeyi Sinyal’e gönder</button></div>`;
+      h += durum.mesaj ? `<p class="m">${e(durum.mesaj)}</p>` : '';
+      h += `<p class="n">Sinyal hiçbir şeyi onayınız olmadan kaydetmez; liste Sinyal’de kontrol ekranına gelir.</p>`;
+    }
+    const odak = g.activeElement && g.activeElement.matches && g.activeElement.matches('[data-ara]');
+    govde.innerHTML = h; durum.mesaj = '';
+    if (odak) { const ara = govde.querySelector('[data-ara]'); if (ara) { ara.focus(); ara.setSelectionRange(ara.value.length, ara.value.length); } }
+  }
 
   async function yukle() {
     durum.q = await gonder({ tur: 'kuyruk-al' }) || { isler: [] }; durum.q.isler = durum.q.isler || [];
     durum.sayfa = await gonder({ tur: 'sayfa-al' }) || {};
-    if (durum.sec && !durum.q.isler.some(x => x.id === durum.sec && !x.bitti)) { durum.sec = null; if (durum.ekran === 'is') durum.ekran = 'grup'; }
     ciz();
   }
   async function tara() {
     const r = await herkese('tablo', {}), hepsi = r.flatMap(x => (x.tablolar || []).map(s => ({ s, baslik: x.baslik })));
     durum.tablo = hepsi.sort((a, b) => b.s.length * b.s[0].length - a.s.length * a.s[0].length)[0] || null; ciz();
   }
-  function isAc(id) { durum.sec = id; durum.sonuc = {}; durum.ekran = 'is'; ciz(); }
-  function sonrakiId(tur, sonra) {
-    const l = bekleyen(tur); if (!l.length) return null;
-    const i = l.findIndex(x => x.id === sonra); return (i >= 0 ? l[(i + 1) % l.length] : l[0]).id;
+  function isAc(id, otomatikDoldur) {
+    durum.sec = id; durum.sonuc = {}; durum.ekran = 'is'; durum.soru = false; durum.dolanId = null; aktifKaydet(); ciz();
+    if (otomatikDoldur && durum.oto) setTimeout(() => kendiligindenDoldur(), 500);
   }
-
-  function ciz() {
-    const toplam = durum.q.isler.filter(x => !x.bitti).length;
-    g.querySelector('[data-sayi]').textContent = toplam ? toplam + ' iş' : '';
-    const giris = girisSayfasi();
-    let h = '';
-    if (durum.ekran === 'ana') {
-      if (giris) h += `<div class="uy"><b>MEBBİS giriş sayfası.</b> Kendi şifrenizle girin. Yardımcı bu sayfada hiçbir şey doldurmaz.</div>`;
-      const burada = GIR.find(([t]) => durum.sayfa[t] && durum.sayfa[t].yol === location.pathname && bekleyen(t).length);
-      if (burada && !giris) h += `<div class="one"><b>Bu sayfa: ${e(burada[1])}</b><small>${bekleyen(burada[0]).length} iş bekliyor</small><div class="r"><button class="ana" data-basla="${burada[0]}">Kaldığım yerden devam et</button></div></div>`;
-      h += `<h4>MEBBİS’e bilgi gir</h4>`;
-      if (!durum.q.isler.length) h += `<p class="n" style="margin:0 0 6px">Sırada iş yok. Sinyal’de <b>MEB işlemleri › MEBBİS Yardımcısına gönder</b>’e basın.</p>`;
-      else h += GIR.map(([t, ad]) => { const n = bekleyen(t).length, b = biten(t); return `<button class="k ${n ? '' : 'sonra'}" data-grup="${t}"><div><b>${ad}</b><small>${n ? n + ' bekliyor' : 'Bekleyen yok'}${b ? ' · ' + b + ' bitti' : ''}</small></div><span class="say ${n ? '' : 'bos'}">${n}</span></button>`; }).join('');
-      h += `<h4>MEBBİS’ten Sinyal’e al</h4>` + AL.map(([t, ad, , a]) => `<button class="k" data-al="${t}"><div><b>${ad}</b><small>${a}</small></div></button>`).join('');
-      h += `<div class="r"><button class="cz kc" data-yenile>Yenile</button>${durum.q.isler.length ? `<button class="cz kc" data-temizle>${durum.temizle ? 'Emin misiniz? Sırayı temizle' : 'Sırayı temizle'}</button>` : ''}</div>`;
-      if (durum.q.kurs) h += `<p class="n">${e(durum.q.kurs)} · Sinyal’den ${saat(durum.q.zaman)}’de gönderildi.</p>`;
-    }
-    if (durum.ekran === 'grup') {
-      const [t, ad, form] = GIR.find(x => x[0] === durum.tur), l = bekleyen(t), b = biten(t), kayitli = durum.sayfa[t];
-      const ara = durum.ara.toLocaleLowerCase('tr'), goster = ara ? l.filter(x => x.baslik.toLocaleLowerCase('tr').includes(ara)) : l;
-      h += `<button class="geri" data-ana>← Ana menü</button><div class="ust" style="margin-top:6px"><b>${ad}</b><small>${l.length} bekliyor · ${b} bitti</small></div><div class="bar"><i style="width:${l.length + b ? Math.round(100 * b / (l.length + b)) : 0}%"></i></div>`;
-      h += `<p class="n" style="margin:0 0 6px">MEBBİS’te <b>${form}</b> ekranını açın, sonra işe başlayın.</p>`;
-      if (kayitli && kayitli.yol !== location.pathname) h += `<div class="r" style="margin:0 0 8px"><button class="cz kc" data-formac="${t}">Son kullandığınız formu aç</button></div>`;
-      if (!l.length) h += `<p class="m">Bu türde bekleyen iş kalmadı.</p>`;
-      else {
-        h += `<div class="r" style="margin:0 0 8px"><button class="ana" data-basla="${t}">Sıradakine başla</button></div>`;
-        if (l.length > 6) h += `<input class="ara" data-ara placeholder="Ad, tarih ya da tutar ara" value="${e(durum.ara)}">`;
-        h += goster.slice(0, 60).map(x => `<button class="k" data-is="${e(x.id)}"><div><b>${e(x.baslik)}</b><small>${x.alanlar.length} alan</small></div></button>`).join('') + (goster.length > 60 ? `<p class="n">+${goster.length - 60} iş daha; aramayı daraltın.</p>` : '');
-      }
-    }
-    if (durum.ekran === 'is') {
-      const is = durum.q.isler.find(x => x.id === durum.sec); if (!is) { durum.ekran = 'grup'; return ciz(); }
-      const l = bekleyen(is.tur), sira = l.findIndex(x => x.id === is.id) + 1;
-      h += `<button class="geri" data-grup="${is.tur}">← ${AD[is.tur] || is.tur}</button><div class="ust" style="margin-top:6px"><b>${e(is.baslik)}</b><small>${sira}/${l.length}</small></div>`;
-      if (giris) h += `<div class="uy">Bu MEBBİS giriş sayfası. Önce kendi şifrenizle girin ve ilgili formu açın.</div>`;
-      h += is.alanlar.map((a, i) => { const s = durum.sonuc[a.etiket]; return `<div class="a"><span>${e(a.etiket)}</span><b data-kopya="${i}" title="Kopyalamak için tıklayın">${e(a.deger)}</b>${s === 'ok' ? '<em class="ok">✓ dolduruldu</em>' : s === 'yok' ? `<em class="no">Alan bulunamadı · <button class="cz kc" data-ogret="${i}">Alanı göster</button> ya da değere tıklayıp kopyalayın</em>` : s === 'secenek' ? '<em class="no">Listede bu seçenek yok; elle seçin</em>' : ''}</div>`; }).join('');
-      h += `<div class="r"><button class="ana" data-doldur ${giris ? 'disabled' : ''}>Formu doldur</button><button class="cz" data-bitti>Kaydettim, sonraki</button><button class="cz" data-atla>Atla</button></div>`;
-      h += durum.mesaj ? `<p class="m">${e(durum.mesaj)}</p>` : '';
-      h += `<p class="n">Kontrol edin; Kaydet’e ve güvenlik koduna siz basarsınız. Kısayollar: <kbd>Alt+Shift+D</kbd> doldur · <kbd>Alt+Shift+S</kbd> kaydettim · <kbd>Alt+Shift+N</kbd> atla</p>`;
-    }
-    if (durum.ekran === 'al') {
-      const [t, ad, liste, a] = AL.find(x => x[0] === durum.al), tb = durum.tablo;
-      h += `<button class="geri" data-ana>← Ana menü</button><div class="ust" style="margin-top:6px"><b>${ad}</b></div><p class="n" style="margin:0 0 8px">${a}</p>`;
-      h += `<p style="margin-bottom:6px">1. MEBBİS’te <b>${liste}</b> ekranını açın ve listeyi getirin. Sayfalama varsa tümünü gösterin.</p><p>2. Liste ekrandayken aşağıdaki düğmeye basın.</p>`;
-      h += tb ? `<p class="m">Bu sayfada <b>${tb.s.length - 1} satırlık</b> liste bulundu: ${e(tb.s[0].slice(0, 5).join(' · '))}${tb.s[0].length > 5 ? ' …' : ''}</p>` : `<p class="m">Bu sayfada henüz liste görünmüyor.</p>`;
-      h += `<div class="r"><button class="ana" data-gonder ${tb ? '' : 'disabled'}>Listeyi Sinyal’e gönder</button><button class="cz" data-tara>Yeniden tara</button></div>`;
-      h += durum.mesaj ? `<p class="m">${e(durum.mesaj)}</p>` : '';
-      h += `<p class="n">Sinyal hiçbir şeyi onayınız olmadan kaydetmez; liste Sinyal’de kontrol ekranına gelir.</p>`;
-    }
-    govde.innerHTML = h; durum.mesaj = '';
-    const ara = govde.querySelector('[data-ara]'); if (ara && durum.araOdak) { ara.focus(); ara.setSelectionRange(ara.value.length, ara.value.length); }
+  // form bu sayfadaysa (alan var, giriş değil) bir kez kendiliğinden doldurur
+  async function kendiligindenDoldur() {
+    const is = durum.q.isler.find(x => x.id === durum.sec); if (!is || durum.dolanId === is.id || girisSayfasi()) return;
+    const { alan } = await sayfaMetni(); if (alan < 2) return;
+    const once = durum.sayfa[is.tur]; if (once && once.yol !== location.pathname) return;
+    durum.dolanId = is.id; panelDoldur(true);
   }
-
-  async function panelDoldur() {
+  async function panelDoldur(oto) {
     const is = durum.q.isler.find(x => x.id === durum.sec); if (!is) return;
     if (girisSayfasi()) { durum.mesaj = 'Önce MEBBİS’e girin ve ilgili formu açın.'; return ciz(); }
     const r = await herkese('doldur', { is });
     durum.sonuc = {}; r.forEach(x => Object.entries(x.sonuc || {}).forEach(([a, s]) => { if (durum.sonuc[a] !== 'ok') durum.sonuc[a] = s === 'yok' && durum.sonuc[a] ? durum.sonuc[a] : s; }));
-    const ok = Object.values(durum.sonuc).filter(s => s === 'ok').length; durum.mesaj = `${ok}/${is.alanlar.length} alan dolduruldu.`; ciz();
+    const ok = Object.values(durum.sonuc).filter(s => s === 'ok').length;
+    durum.mesaj = ok ? `${ok}/${is.alanlar.length} alan ${oto ? 'kendiliğinden ' : ''}dolduruldu. Kontrol edip MEBBİS’te Kaydet’e basın.` : 'Bu sayfada formun alanları bulunamadı. Doğru ekranı açtığınızdan emin olun.';
+    ciz();
   }
-  async function panelBitti() {
+  // iş tamam: Sinyal'e bildir, formun adresini hatırla, sıradakine geç; aynı formdaysa doldur, başka formdaysa onu aç
+  async function tamamla() {
     const is = durum.q.isler.find(x => x.id === durum.sec); if (!is) return;
-    const sonra = sonrakiId(is.tur, is.id);
+    const l = sirali(durum.filtre), i = l.findIndex(x => x.id === is.id), sonraki = l[i + 1] || l.find(x => x.id !== is.id);
     await gonder({ tur: 'is-bitti', id: is.id }); await gonder({ tur: 'sayfa-koy', is: is.tur, yol: location.pathname, adres: location.href });
-    await yukle();
-    const yeni = sonra && sonra !== is.id && bekleyen(is.tur).some(x => x.id === sonra) ? sonra : null;
-    if (yeni) { isAc(yeni); durum.mesaj = 'Kaydedildi olarak işaretlendi. Sıradaki iş açıldı.'; ciz(); }
-    else { durum.ekran = 'grup'; durum.tur = is.tur; durum.sec = null; ciz(); }
+    durum.bekle = null; durum.soru = false; await yukle();
+    if (!sonraki) { Object.assign(durum, { ekran: 'ana', sec: null }); aktifKaydet(); durum.mesaj = ''; return ciz(); }
+    const ayniForm = sonraki.tur === is.tur, adres = durum.sayfa[sonraki.tur];
+    isAc(sonraki.id, ayniForm);
+    durum.mesaj = ayniForm ? 'Kaydedildi. Sıradaki iş açıldı.' : `Kaydedildi. Sıradaki iş başka formda: ${AD[sonraki.tur]}.`; ciz();
+    if (!ayniForm && durum.oto && adres && /^https:\/\/mebbis\.meb\.gov\.tr\//.test(adres.adres)) setTimeout(() => { location.href = adres.adres; }, 1200);
   }
-  function panelAtla() { const is = durum.q.isler.find(x => x.id === durum.sec); if (!is) return; const s = sonrakiId(is.tur, is.id); if (s && s !== is.id) isAc(s); else { durum.mesaj = 'Bu türde başka iş yok.'; ciz(); } }
+  // Kaydet'e basıldı: MEBBİS'in cevabını birkaç saniye izle
+  async function kaydetIzle(yenilendi) {
+    if (!durum.bekle) return;
+    const b = durum.bekle;
+    for (let i = 0; i < 10 && durum.bekle === b; i++) {
+      await new Promise(r => setTimeout(r, 1000));
+      const { metin } = await sayfaMetni();
+      if (BASARI.test(metin) && !b.basari0) return durum.oto ? tamamla() : (durum.soru = true, durum.bekle = null, aktifKaydet(), ciz());
+      if (HATA.test(metin) && !b.hata0) { durum.bekle = null; aktifKaydet(); durum.mesaj = 'MEBBİS bir uyarı gösteriyor. Düzeltip yeniden Kaydet’e basın.'; return ciz(); }
+    }
+    if (durum.bekle === b) { durum.bekle = null; durum.soru = true; aktifKaydet(); ciz(); }
+  }
+  function panelAtla() { const l = sirali(durum.filtre), i = l.findIndex(x => x.id === durum.sec), s = l[i + 1] || l[0]; if (s && s.id !== durum.sec) isAc(s.id, true); else { durum.mesaj = 'Başka iş yok.'; ciz(); } }
 
-  g.addEventListener('input', ev => { if (ev.target.matches('[data-ara]')) { durum.ara = ev.target.value; durum.araOdak = true; ciz(); durum.araOdak = false; } });
+  g.addEventListener('input', ev => { if (ev.target.matches('[data-ara]')) { durum.ara = ev.target.value; ciz(); } });
   g.addEventListener('click', async ev => {
     const t = ev.target;
     if (t.closest('[data-k]')) { p.classList.toggle('gizli'); gonder({ tur: 'ayar-koy', ad: 'kapali', deger: p.classList.contains('gizli') }); return; }
     if (t.closest('[data-yenile]')) return yukle();
-    if (t.closest('[data-ana]')) { Object.assign(durum, { ekran: 'ana', sec: null, al: null, ara: '' }); return ciz(); }
+    if (t.closest('[data-ana]')) { Object.assign(durum, { ekran: 'ana', sec: null, al: null, filtre: null, soru: false, bekle: null }); aktifKaydet(); return ciz(); }
+    if (t.closest('[data-oto]')) { durum.oto = !durum.oto; gonder({ tur: 'ayar-koy', ad: 'oto', deger: durum.oto }); return ciz(); }
+    if (t.closest('[data-alac]')) { durum.alAcik = !durum.alAcik; return ciz(); }
     if (t.closest('[data-temizle]')) { if (!durum.temizle) { durum.temizle = true; ciz(); setTimeout(() => { durum.temizle = false; ciz(); }, 4000); return; } durum.temizle = false; await gonder({ tur: 'kuyruk-temizle' }); return yukle(); }
-    const gr = t.closest('[data-grup]'); if (gr) { Object.assign(durum, { ekran: 'grup', tur: gr.dataset.grup, sec: null, ara: '' }); return ciz(); }
-    const ba = t.closest('[data-basla]'); if (ba) { durum.tur = ba.dataset.basla; const id = sonrakiId(durum.tur); return id ? isAc(id) : ciz(); }
+    if (t.closest('[data-basla]')) { durum.filtre = null; const x = sirali()[0]; return x && isAc(x.id, true); }
+    const fi = t.closest('[data-filtre]'); if (fi) { durum.filtre = fi.dataset.filtre; const x = sirali(durum.filtre)[0]; return x && isAc(x.id, true); }
     const fa = t.closest('[data-formac]'); if (fa) { const s = durum.sayfa[fa.dataset.formac]; if (s && /^https:\/\/mebbis\.meb\.gov\.tr\//.test(s.adres)) location.href = s.adres; return; }
-    const k = t.closest('[data-is]'); if (k) return isAc(k.dataset.is);
+    const k = t.closest('[data-is]'); if (k) { const x = durum.q.isler.find(y => y.id === k.dataset.is); durum.filtre = null; return isAc(k.dataset.is, true); }
     const al = t.closest('[data-al]'); if (al) { Object.assign(durum, { ekran: 'al', al: al.dataset.al, tablo: null }); ciz(); return tara(); }
-    if (t.closest('[data-tara]')) return tara();
-    if (t.closest('[data-doldur]')) return panelDoldur();
-    if (t.closest('[data-bitti]')) return panelBitti();
+    if (t.closest('[data-doldur]')) return panelDoldur(false);
+    if (t.closest('[data-bitti]') || t.closest('[data-evet]')) return tamamla();
+    if (t.closest('[data-hayir]')) { durum.soru = false; durum.mesaj = 'Formu düzeltip yeniden Kaydet’e basın.'; return ciz(); }
     if (t.closest('[data-atla]')) return panelAtla();
     const kp = t.closest('[data-kopya]'); if (kp) { const is = durum.q.isler.find(x => x.id === durum.sec), a = is && is.alanlar[+kp.dataset.kopya]; if (a) { try { await navigator.clipboard.writeText(a.deger); durum.mesaj = `“${a.etiket}” kopyalandı; MEBBİS’te alana yapıştırın.`; } catch (x) { durum.mesaj = 'Kopyalanamadı; değeri elle yazın.'; } ciz(); } return; }
     const og = t.closest('[data-ogret]'); if (og) { const is = durum.q.isler.find(x => x.id === durum.sec), a = is.alanlar[+og.dataset.ogret]; cerceveler().forEach(w => w.postMessage({ [ISARET]: 'ogret', alan: a }, '*')); durum.mesaj = `MEBBİS’te “${a.etiket}” alanına tıklayın; Yardımcı bir dahakine kendisi bulur.`; return ciz(); }
@@ -249,14 +286,30 @@
       if (!durum.tablo) return;
       const [, ad] = AL.find(x => x[0] === durum.al);
       await gonder({ tur: 'tablo-koy', tablo: { satirlar: durum.tablo.s, baslik: durum.tablo.baslik, adres: location.pathname, amac: durum.al } });
-      durum.mesaj = `${durum.tablo.s.length - 1} satır gönderildi. Sinyal sekmesine geçin; ${ad.toLocaleLowerCase('tr')} sizi kontrol ekranında bekliyor.`; return ciz();
+      durum.mesaj = `${durum.tablo.s.length - 1} satır gönderildi. Sinyal sekmesine geçin; ${ad.toLocaleLowerCase('tr')} kontrol ekranında bekliyor.`; return ciz();
     }
   });
-  window.addEventListener('message', ev => {
+  window.addEventListener('message', async ev => {
     const d = ev.data; if (!d || !d[ISARET]) return;
     if (d[ISARET] === 'ogrenildi') { durum.sonuc[d.etiket] = 'ok'; durum.mesaj = 'Alan öğrenildi.'; ciz(); }
-    if (d[ISARET] === 'kisayol' && durum.ekran === 'is') { if (d.k === 'KeyD') panelDoldur(); if (d.k === 'KeyS') panelBitti(); if (d.k === 'KeyN') panelAtla(); }
+    if (d[ISARET] === 'kisayol' && durum.ekran === 'is') { if (d.k === 'KeyD') panelDoldur(false); if (d.k === 'KeyS') tamamla(); if (d.k === 'KeyN') panelAtla(); }
+    if (d[ISARET] === 'kaydet-basildi' && durum.ekran === 'is' && durum.sec && !durum.bekle) {
+      const { metin } = await sayfaMetni();
+      durum.bekle = { id: durum.sec, zaman: Date.now(), basari0: BASARI.test(metin), hata0: HATA.test(metin) }; aktifKaydet(); ciz(); kaydetIzle(false);
+    }
   });
-  gonder({ tur: 'ayar-al', ad: 'kapali' }).then(k => { if (k) p.classList.add('gizli'); });
-  yukle(); setInterval(() => { if (durum.ekran !== 'is' && !g.activeElement) yukle(); }, 5000);
+
+  // açılış: ayarlar, yarım kalan iş ve Sinyal'den yeni gelen sıra
+  (async () => {
+    const [kapali, oto, aktif, yeni] = await Promise.all([gonder({ tur: 'ayar-al', ad: 'kapali' }), gonder({ tur: 'ayar-al', ad: 'oto' }), gonder({ tur: 'aktif-al' }), gonder({ tur: 'yeni-al' })]);
+    durum.oto = oto !== false;
+    if (kapali && !yeni) p.classList.add('gizli');
+    await yukle();
+    if (yeni) { Object.assign(durum, { ekran: 'ana', sec: null, filtre: null }); aktifKaydet(); durum.mesaj = ''; return ciz(); }
+    if (aktif && aktif.sec && durum.q.isler.some(x => x.id === aktif.sec && !x.bitti) && aktif.ekran === 'is') {
+      Object.assign(durum, { sec: aktif.sec, filtre: aktif.filtre || null, ekran: 'is', bekle: aktif.bekle || null }); ciz();
+      if (durum.bekle && Date.now() - durum.bekle.zaman < 60000) kaydetIzle(true); else { durum.bekle = null; setTimeout(() => kendiligindenDoldur(), 800); }
+    }
+  })();
+  setInterval(() => { if (durum.ekran === 'ana' && !(g.activeElement && g.activeElement.matches && g.activeElement.matches('[data-ara]'))) yukle(); if (durum.ekran === 'al' && !durum.tablo) tara(); }, 5000);
 })();
