@@ -142,6 +142,19 @@
     .bar{height:5px;background:#e5e7eb;border-radius:4px;overflow:hidden;margin:2px 0 8px}.bar i{display:block;height:100%;background:#1f8a46}
     .ac{display:flex;align-items:center;justify-content:space-between;width:100%;background:none;padding:6px 0;color:#14284b;font-size:13px;border-top:1px solid #eee;border-radius:0;margin-top:10px}
     .oto{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#374151;cursor:pointer}.oto i{width:30px;height:17px;border-radius:10px;background:#cbd5e1;position:relative;flex:none}.oto i::after{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:left .15s}.oto.acik i{background:#1f8a46}.oto.acik i::after{left:15px}
+    .kucuk{font-size:12px;color:#6b7280;margin-bottom:4px}
+    .sir{border:1px solid #e3e3e3;border-radius:12px;padding:11px 12px;margin-bottom:10px}.sir b{display:block;font-size:15px}.sir small{display:block;color:#555;margin:2px 0 6px}
+    .buyuk{display:block;width:100%;background:#2f6fde;color:#fff;font-size:15px;padding:12px;border-radius:10px;margin-bottom:8px}
+    .satir{display:flex;justify-content:space-between;align-items:center;width:100%;background:#f3f4f6;color:#1d1d1d;padding:9px 11px;border-radius:9px;font-weight:600;margin-top:6px}
+    .alt{display:flex;gap:6px;margin-top:12px;padding-top:10px;border-top:1px solid #eee}.alt button{flex:1;background:none;color:#2f6fde;padding:6px 4px;font-size:12.5px}
+    .bos{text-align:center;padding:10px 4px}.bos>b{display:block;font-size:15px;margin-bottom:6px}.bos p{color:#555;font-size:13px}
+    .not{font-size:12px;color:#666;margin-top:8px}
+    .ad{font-size:16px;font-weight:700}
+    .adim{border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:13.5px;font-weight:600}.adim.bilgi{background:#eef4ff;color:#14284b}.adim.tamam{background:#e7f6ec;color:#14532d}.adim.uyari{background:#fdf0ee;color:#7a2318}.adim.soru{background:#fff6d6;color:#5c4400}
+    .iki{display:flex;gap:6px;margin-bottom:8px}.iki button{flex:1;padding:11px;font-size:14px}
+    .cip .sec{background:#14284b;color:#fff}
+    .ayar{padding:10px 0;border-bottom:1px solid #eee;margin-top:6px}.oto span small{display:block;color:#666;font-weight:400;font-size:12px}.oto span b{display:block}
+    .e2{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0f0}.e2 span{color:#555;font-size:12.5px}.e2 b{text-align:right;cursor:copy;word-break:break-word}.e2 b:hover{color:#2f6fde}.gst{background:none;color:#8a94a6;font-size:11px;padding:0;font-weight:500;text-decoration:underline}
     kbd{font:11px ui-monospace,monospace;background:#f3f4f6;border:1px solid #d1d5db;border-radius:4px;padding:0 4px;color:#374151}
     </style>
     <div class="p" lang="tr"><div class="b" data-k><i></i><b>Sinyal MEBBİS Yardımcısı</b><small data-sayi></small></div><div class="g" data-g></div></div>`;
@@ -156,51 +169,67 @@
   const aktifKaydet = () => gonder({ tur: 'aktif-koy', aktif: { sec: durum.sec, filtre: durum.filtre, ekran: durum.ekran, bekle: durum.bekle } });
 
   const isSatir = x => { const [t, c] = etiket(x.son); return `<button class="k" data-is="${e(x.id)}"><div><b>${e(x.baslik)}</b><small>${e(AD[x.tur] || x.tur)}</small></div><span class="et ${c}">${t}</span></button>`; };
+  const geri = (hedef = 'ana', yazi = 'Geri') => `<button class="geri" data-git="${hedef}">← ${yazi}</button>`;
 
   function ciz() {
     const hepsi = sirali(), giris = girisSayfasi();
     g.querySelector('[data-sayi]').textContent = hepsi.length ? hepsi.length + ' iş' : '';
     let h = '';
+    // ANA: yalnız sıradaki iş ve Başla
     if (durum.ekran === 'ana') {
-      if (giris) h += `<div class="uy"><b>MEBBİS giriş sayfası.</b> Kendi şifrenizle girin; Yardımcı burada hiçbir şey doldurmaz.</div>`;
-      h += `<input class="ara" data-ara placeholder="Ara: ad, TC, plaka, tarih…" value="${e(durum.ara)}">`;
-      const ar = aranan();
-      if (ar) h += ar.length ? `<p class="n" style="margin:0 0 6px">${ar.length} sonuç</p>` + ar.slice(0, 30).map(isSatir).join('') : `<p class="n">Sonuç yok.</p>`;
-      else if (!hepsi.length) h += `<p class="m" style="margin-top:0">Sırada iş yok. Sinyal’de <b>MEB işlemleri › MEBBİS Yardımcısına gönder</b>’e basın; Yardımcı bu sekmeye gelir.</p>`;
+      if (!hepsi.length) h += `<div class="bos"><b>Sırada iş yok</b><p>Sinyal’de <b>MEB işlemleri</b> ekranında <b>MEBBİS Yardımcısına gönder</b>’e basın. İşler buraya gelir.</p></div>`;
       else {
-        const x = hepsi[0], [t, c] = etiket(x.son), gec = hepsi.filter(y => y.son && kalan(y.son) < 0).length, hafta = hepsi.filter(y => y.son && kalan(y.son) >= 0 && kalan(y.son) <= 7).length;
-        h += `<div class="sir"><span class="et ${c}">${t}</span><b>${e(x.baslik)}</b><small>${e(AD[x.tur])} · ${e(x.neden || '')}</small><div class="r"><button class="ana" data-basla>Sırayla başla</button><span class="n" style="margin:0">${hepsi.length} iş, en aciliyle başlar</span></div></div>`;
-        h += `<div class="ozet">${gec ? `<span><b style="color:#a12a20">${gec}</b> süresi geçti</span>` : ''}<span><b>${hafta}</b> bu hafta</span><span><b>${hepsi.length - gec - hafta}</b> sonra</span></div>`;
-        h += `<h4>Türe göre</h4><div class="cip">${TURLER.map(([k, ad]) => { const n = sirali(k).length; return `<button data-filtre="${k}" ${n ? '' : 'disabled'}>${ad}<span>${n}</span></button>`; }).join('')}</div>`;
-        h += `<h4>En acil</h4>` + hepsi.slice(1, 5).map(isSatir).join('');
+        const x = hepsi[0], [t, c] = etiket(x.son);
+        h += `<p class="kucuk">Sıradaki iş</p><div class="sir"><b>${e(x.baslik)}</b><small>${e(AD[x.tur])}</small><span class="et ${c}">${t}</span></div>`;
+        h += `<button class="buyuk" data-basla>Başla</button>`;
+        h += `<button class="satir" data-git="liste"><span>Bekleyen işler</span><b>${hepsi.length}</b></button>`;
       }
-      h += `<button class="ac" data-alac><span>MEBBİS’ten Sinyal’e al</span><span>${durum.alAcik ? '▾' : '▸'}</span></button>`;
-      if (durum.alAcik) h += AL.map(([k, ad, , a]) => `<button class="k" data-al="${k}"><div><b>${ad}</b><small>${a}</small></div></button>`).join('');
-      h += `<div class="r" style="justify-content:space-between"><span class="oto ${durum.oto ? 'acik' : ''}" data-oto><i></i>Otomatik doldur ve ilerle</span><span><button class="cz kc" data-yenile>Yenile</button>${durum.q.isler.length ? ` <button class="cz kc" data-temizle>${durum.temizle ? 'Emin misiniz?' : 'Temizle'}</button>` : ''}</span></div>`;
-      if (durum.q.kurs) h += `<p class="n">${e(durum.q.kurs)} · Sinyal’den ${saat(durum.q.zaman)}’de gönderildi.</p>`;
+      if (giris) h += `<p class="not">MEBBİS’e kendi şifrenizle girin; Yardımcı giriş sayfasında hiçbir şey yazmaz.</p>`;
+      h += `<div class="alt"><button data-git="alsec">MEBBİS’ten veri al</button><button data-git="ayar">Ayarlar</button></div>`;
     }
+    // İŞ: ne yapılacağı tek cümle, bilgiler gizli
     if (durum.ekran === 'is') {
       const is = durum.q.isler.find(x => x.id === durum.sec); if (!is || is.bitti) { durum.ekran = 'ana'; return ciz(); }
-      const l = sirali(durum.filtre), sira = l.findIndex(x => x.id === is.id) + 1, [t, c] = etiket(is.son), kayitli = durum.sayfa[is.tur];
-      const biten = durum.q.isler.filter(x => x.bitti && (!durum.filtre || x.tur === durum.filtre)).length;
-      h += `<button class="geri" data-ana>← Ana menü</button><div class="ust"><b>${durum.filtre ? AD[durum.filtre] : 'Tüm işler'}</b><small>${sira}/${l.length}</small></div><div class="bar"><i style="width:${Math.round(100 * biten / (biten + l.length || 1))}%"></i></div>`;
-      if (giris) h += `<div class="uy">Giriş sayfası: önce kendi şifrenizle girin.</div>`;
-      h += `<span class="et ${c}">${t}</span><p style="margin:6px 0 2px;font-weight:700;font-size:14.5px">${e(is.baslik)}</p><p class="n" style="margin:0 0 6px">${e(AD[is.tur])}: MEBBİS’te <b>${e(FORM[is.tur])}</b> ekranı${kayitli && kayitli.yol !== location.pathname ? ` · <button class="cz kc" data-formac="${is.tur}">Formu aç</button>` : ''}</p>`;
-      h += is.alanlar.map((a, i) => { const s = durum.sonuc[a.etiket]; return `<div class="a"><span>${e(a.etiket)}</span><b data-kopya="${i}" title="Kopyalamak için tıklayın">${e(a.deger)}</b>${s === 'ok' ? '<em class="ok">✓ dolduruldu</em>' : s === 'yok' ? `<em class="no">Alan bulunamadı · <button class="cz kc" data-ogret="${i}">Alanı göster</button> ya da değere tıklayıp kopyalayın</em>` : s === 'secenek' ? '<em class="no">Listede bu seçenek yok; elle seçin</em>' : ''}</div>`; }).join('');
-      if (durum.soru) h += `<div class="m"><b>Kayıt tamamlandı mı?</b> MEBBİS’in mesajını kontrol edin.<div class="r" style="margin-top:6px"><button class="yesil" data-evet>Evet, sıradakine geç</button><button class="cz" data-hayir>Hayır</button></div></div>`;
-      else if (durum.bekle) h += `<p class="m">MEBBİS’in cevabı kontrol ediliyor…</p>`;
-      h += `<div class="r"><button class="ana" data-doldur ${giris ? 'disabled' : ''}>Formu doldur</button><button class="cz" data-bitti>Kaydettim</button><button class="cz" data-atla>Atla</button></div>`;
-      h += durum.mesaj ? `<p class="m">${e(durum.mesaj)}</p>` : '';
-      h += `<p class="n">${durum.oto ? 'Otomatik: form açılınca doldurulur; Kaydet’e bastığınızda sonuç kontrol edilip sıradakine geçilir.' : 'Otomatik kapalı: “Formu doldur” ve “Kaydettim” ile ilerleyin.'} Kaydet’e ve güvenlik koduna her zaman siz basarsınız. <kbd>Alt+Shift+D</kbd> doldur · <kbd>S</kbd> kaydettim · <kbd>N</kbd> atla</p>`;
+      const l = sirali(durum.filtre), sira = l.findIndex(x => x.id === is.id) + 1, kayitli = durum.sayfa[is.tur];
+      const ok = Object.values(durum.sonuc).filter(x => x === 'ok').length, eksik = is.alanlar.filter(a => durum.sonuc[a.etiket] && durum.sonuc[a.etiket] !== 'ok');
+      h += `<div class="ust">${geri('ana', 'Kapat')}<small>${sira} / ${l.length}</small></div>`;
+      h += `<p class="ad">${e(is.baslik)}</p><p class="kucuk" style="margin:0 0 10px">${e(AD[is.tur])}</p>`;
+      let adim, dugme = '';
+      if (giris) adim = ['bilgi', 'MEBBİS’e kendi şifrenizle girin.'];
+      else if (durum.soru) { adim = ['soru', 'Kayıt tamamlandı mı?']; dugme = `<div class="iki"><button class="yesil" data-evet>Evet</button><button class="cz" data-hayir>Hayır</button></div>`; }
+      else if (durum.bekle) adim = ['bilgi', 'MEBBİS’in cevabı bekleniyor…'];
+      else if (ok) adim = ['tamam', eksik.length ? `${ok} bilgi yazıldı. ${eksik.length} bilgiyi elle girin, sonra MEBBİS’te Kaydet’e basın.` : 'Form dolduruldu. Kontrol edin, MEBBİS’te Kaydet’e basın.'];
+      else if (Object.keys(durum.sonuc).length) { adim = ['uyari', `Bu sayfada form bulunamadı. MEBBİS’te “${FORM[is.tur]}” ekranını açın.`]; if (kayitli && kayitli.yol !== location.pathname) dugme = `<button class="buyuk" data-formac="${is.tur}">Formu aç</button>`; }
+      else { adim = ['bilgi', `MEBBİS’te “${FORM[is.tur]}” ekranını açın, sonra Doldur’a basın.`]; dugme = kayitli && kayitli.yol !== location.pathname ? `<button class="buyuk" data-formac="${is.tur}">Formu aç</button>` : `<button class="buyuk" data-doldur>Doldur</button>`; }
+      h += `<div class="adim ${adim[0]}">${adim[1]}</div>${dugme}`;
+      if (durum.mesaj) h += `<p class="not">${e(durum.mesaj)}</p>`;
+      if (eksik.length) h += `<p class="kucuk" style="margin-top:2px">Elle girilecekler · değere dokunun, kopyalanır</p>` + eksik.map(a => { const i = is.alanlar.indexOf(a); return `<div class="e2"><span>${e(a.etiket)}</span><b data-kopya="${i}">${e(a.deger)}</b><button class="gst" data-ogret="${i}" title="MEBBİS’te bu alanın yerini gösterin; bir dahakine kendisi yazar">yerini göster</button></div>`; }).join('');
+      h += `<button class="satir" data-bilgi><span>Bilgileri ${durum.bilgiAcik ? 'gizle' : 'göster'}</span><b>${durum.bilgiAcik ? '▾' : '▸'}</b></button>`;
+      if (durum.bilgiAcik) h += is.alanlar.map((a, i) => `<div class="a"><span>${e(a.etiket)}</span><b data-kopya="${i}" title="Kopyala">${e(a.deger)}</b></div>`).join('');
+      h += `<div class="alt"><button data-bitti>Kaydettim</button><button data-atla>Atla</button>${ok ? '<button data-doldur>Tekrar doldur</button>' : ''}</div>`;
+    }
+    // LİSTE: arama ve tüm işler
+    if (durum.ekran === 'liste') {
+      h += geri() + `<input class="ara" data-ara placeholder="Ara: ad, TC, plaka, tarih" value="${e(durum.ara)}">`;
+      const l = aranan() || sirali(durum.filtre);
+      h += `<div class="cip"><button data-filtre="" class="${durum.filtre ? '' : 'sec'}">Hepsi</button>${TURLER.map(([k, ad]) => { const n = sirali(k).length; return n ? `<button data-filtre="${k}" class="${durum.filtre === k ? 'sec' : ''}">${ad} ${n}</button>` : ''; }).join('')}</div>`;
+      h += l.length ? l.slice(0, 40).map(isSatir).join('') + (l.length > 40 ? `<p class="not">+${l.length - 40} iş; aramayı daraltın.</p>` : '') : '<p class="not">Sonuç yok.</p>';
+    }
+    // MEBBİS'TEN AL: önce seçim, sonra tek düğme
+    if (durum.ekran === 'alsec') {
+      h += geri() + `<p class="kucuk" style="margin:8px 0">MEBBİS’ten Sinyal’e ne alınacak?</p>` + AL.map(([k, ad, , a]) => `<button class="k" data-al="${k}"><div><b>${ad}</b><small>${a}</small></div></button>`).join('');
     }
     if (durum.ekran === 'al') {
-      const [, ad, liste, a] = AL.find(x => x[0] === durum.al), tb = durum.tablo;
-      h += `<button class="geri" data-ana>← Ana menü</button><div class="ust"><b>${ad}</b></div><p class="n" style="margin:0 0 8px">${a}</p>`;
-      h += `<p style="margin-bottom:6px">MEBBİS’te <b>${liste}</b> ekranını açıp listeyi getirin (sayfalama varsa tümünü gösterin).</p>`;
-      h += tb ? `<p class="m">Bu sayfada <b>${tb.s.length - 1} satırlık</b> liste var: ${e(tb.s[0].slice(0, 5).join(' · '))}${tb.s[0].length > 5 ? ' …' : ''}</p>` : `<p class="m">Bu sayfada henüz liste görünmüyor; liste ekrana gelince kendiliğinden bulunur.</p>`;
-      h += `<div class="r"><button class="ana" data-gonder ${tb ? '' : 'disabled'}>Listeyi Sinyal’e gönder</button></div>`;
-      h += durum.mesaj ? `<p class="m">${e(durum.mesaj)}</p>` : '';
-      h += `<p class="n">Sinyal hiçbir şeyi onayınız olmadan kaydetmez; liste Sinyal’de kontrol ekranına gelir.</p>`;
+      const [, ad, liste] = AL.find(x => x[0] === durum.al), tb = durum.tablo;
+      h += geri('alsec') + `<p class="ad" style="margin-top:8px">${ad}</p>`;
+      h += tb ? `<div class="adim tamam">Bu sayfada ${tb.s.length - 1} satırlık liste bulundu.</div><button class="buyuk" data-gonder>Sinyal’e gönder</button>` : `<div class="adim bilgi">MEBBİS’te ${liste} ekranını açın. Liste görününce burada Gönder düğmesi çıkar.</div>`;
+      if (durum.mesaj) h += `<p class="not">${e(durum.mesaj)}</p>`;
+    }
+    if (durum.ekran === 'ayar') {
+      h += geri() + `<div class="ayar"><span class="oto ${durum.oto ? 'acik' : ''}" data-oto><i></i><span><b>Otomatik</b><small>Formu kendisi doldurur, Kaydet’ten sonra sıradakine geçer</small></span></span></div>`;
+      h += `<p class="not">Kısayollar: Alt+Shift+D doldur · Alt+Shift+S kaydettim · Alt+Shift+N atla</p>`;
+      if (durum.q.kurs) h += `<p class="not">${e(durum.q.kurs)} · Sinyal’den ${saat(durum.q.zaman)}’de gönderildi.</p>`;
+      if (durum.q.isler.length) h += `<button class="satir" data-temizle><span>${durum.temizle ? 'Emin misiniz? Tekrar basın' : 'Bekleyen işleri temizle'}</span><b></b></button>`;
     }
     const odak = g.activeElement && g.activeElement.matches && g.activeElement.matches('[data-ara]');
     govde.innerHTML = h; durum.mesaj = '';
@@ -217,7 +246,7 @@
     durum.tablo = hepsi.sort((a, b) => b.s.length * b.s[0].length - a.s.length * a.s[0].length)[0] || null; ciz();
   }
   function isAc(id, otomatikDoldur) {
-    durum.sec = id; durum.sonuc = {}; durum.ekran = 'is'; durum.soru = false; durum.dolanId = null; aktifKaydet(); ciz();
+    durum.sec = id; durum.sonuc = {}; durum.ekran = 'is'; durum.soru = false; durum.dolanId = null; durum.bilgiAcik = false; aktifKaydet(); ciz();
     if (otomatikDoldur && durum.oto) setTimeout(() => kendiligindenDoldur(), 500);
   }
   // form bu sayfadaysa (alan var, giriş değil) bir kez kendiliğinden doldurur
@@ -232,8 +261,6 @@
     if (girisSayfasi()) { durum.mesaj = 'Önce MEBBİS’e girin ve ilgili formu açın.'; return ciz(); }
     const r = await herkese('doldur', { is });
     durum.sonuc = {}; r.forEach(x => Object.entries(x.sonuc || {}).forEach(([a, s]) => { if (durum.sonuc[a] !== 'ok') durum.sonuc[a] = s === 'yok' && durum.sonuc[a] ? durum.sonuc[a] : s; }));
-    const ok = Object.values(durum.sonuc).filter(s => s === 'ok').length;
-    durum.mesaj = ok ? `${ok}/${is.alanlar.length} alan ${oto ? 'kendiliğinden ' : ''}dolduruldu. Kontrol edip MEBBİS’te Kaydet’e basın.` : 'Bu sayfada formun alanları bulunamadı. Doğru ekranı açtığınızdan emin olun.';
     ciz();
   }
   // iş tamam: Sinyal'e bildir, formun adresini hatırla, sıradakine geç; aynı formdaysa doldur, başka formdaysa onu aç
@@ -245,7 +272,7 @@
     if (!sonraki) { Object.assign(durum, { ekran: 'ana', sec: null }); aktifKaydet(); durum.mesaj = ''; return ciz(); }
     const ayniForm = sonraki.tur === is.tur, adres = durum.sayfa[sonraki.tur];
     isAc(sonraki.id, ayniForm);
-    durum.mesaj = ayniForm ? 'Kaydedildi. Sıradaki iş açıldı.' : `Kaydedildi. Sıradaki iş başka formda: ${AD[sonraki.tur]}.`; ciz();
+    durum.mesaj = ayniForm ? '✓ Önceki iş kaydedildi.' : `✓ Önceki iş kaydedildi. Sıradaki iş başka ekranda: ${AD[sonraki.tur]}.`; ciz();
     if (!ayniForm && durum.oto && adres && /^https:\/\/mebbis\.meb\.gov\.tr\//.test(adres.adres)) setTimeout(() => { location.href = adres.adres; }, 1200);
   }
   // Kaydet'e basıldı: MEBBİS'in cevabını birkaç saniye izle
@@ -256,7 +283,7 @@
       await new Promise(r => setTimeout(r, 1000));
       const { metin } = await sayfaMetni();
       if (BASARI.test(metin) && !b.basari0) return durum.oto ? tamamla() : (durum.soru = true, durum.bekle = null, aktifKaydet(), ciz());
-      if (HATA.test(metin) && !b.hata0) { durum.bekle = null; aktifKaydet(); durum.mesaj = 'MEBBİS bir uyarı gösteriyor. Düzeltip yeniden Kaydet’e basın.'; return ciz(); }
+      if (HATA.test(metin) && !b.hata0) { durum.bekle = null; aktifKaydet(); durum.mesaj = 'MEBBİS bir hata gösteriyor. Düzeltip yeniden Kaydet’e basın.'; return ciz(); }
     }
     if (durum.bekle === b) { durum.bekle = null; durum.soru = true; aktifKaydet(); ciz(); }
   }
@@ -267,14 +294,14 @@
     const t = ev.target;
     if (t.closest('[data-k]')) { p.classList.toggle('gizli'); gonder({ tur: 'ayar-koy', ad: 'kapali', deger: p.classList.contains('gizli') }); return; }
     if (t.closest('[data-yenile]')) return yukle();
-    if (t.closest('[data-ana]')) { Object.assign(durum, { ekran: 'ana', sec: null, al: null, filtre: null, soru: false, bekle: null }); aktifKaydet(); return ciz(); }
+    const git = t.closest('[data-git]'); if (git) { const h = git.dataset.git; Object.assign(durum, { ekran: h, soru: false, bekle: null, bilgiAcik: false }); if (h === 'ana') Object.assign(durum, { sec: null, al: null, filtre: null, ara: '' }); aktifKaydet(); return ciz(); }
+    if (t.closest('[data-bilgi]')) { durum.bilgiAcik = !durum.bilgiAcik; return ciz(); }
     if (t.closest('[data-oto]')) { durum.oto = !durum.oto; gonder({ tur: 'ayar-koy', ad: 'oto', deger: durum.oto }); return ciz(); }
-    if (t.closest('[data-alac]')) { durum.alAcik = !durum.alAcik; return ciz(); }
     if (t.closest('[data-temizle]')) { if (!durum.temizle) { durum.temizle = true; ciz(); setTimeout(() => { durum.temizle = false; ciz(); }, 4000); return; } durum.temizle = false; await gonder({ tur: 'kuyruk-temizle' }); return yukle(); }
     if (t.closest('[data-basla]')) { durum.filtre = null; const x = sirali()[0]; return x && isAc(x.id, true); }
-    const fi = t.closest('[data-filtre]'); if (fi) { durum.filtre = fi.dataset.filtre; const x = sirali(durum.filtre)[0]; return x && isAc(x.id, true); }
+    const fi = t.closest('[data-filtre]'); if (fi) { durum.filtre = fi.dataset.filtre || null; durum.ara = ''; return ciz(); }
     const fa = t.closest('[data-formac]'); if (fa) { const s = durum.sayfa[fa.dataset.formac]; if (s && /^https:\/\/mebbis\.meb\.gov\.tr\//.test(s.adres)) location.href = s.adres; return; }
-    const k = t.closest('[data-is]'); if (k) { const x = durum.q.isler.find(y => y.id === k.dataset.is); durum.filtre = null; return isAc(k.dataset.is, true); }
+    const k = t.closest('[data-is]'); if (k) { if (durum.ara) durum.filtre = null; return isAc(k.dataset.is, true); }
     const al = t.closest('[data-al]'); if (al) { Object.assign(durum, { ekran: 'al', al: al.dataset.al, tablo: null }); ciz(); return tara(); }
     if (t.closest('[data-doldur]')) return panelDoldur(false);
     if (t.closest('[data-bitti]') || t.closest('[data-evet]')) return tamamla();
