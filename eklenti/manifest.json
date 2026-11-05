@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Sinyal MEBBİS Yardımcısı",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "Sinyal'deki kayıt, direksiyon programı ve sınav bilgilerini kursun kendi MEBBİS oturumunda forma yazar; MEBBİS listelerini Sinyal'e aktarır. Şifre istemez, saklamaz.",
   "permissions": ["storage"],
   "host_permissions": ["https://mebbis.meb.gov.tr/*"],

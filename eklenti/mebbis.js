@@ -184,7 +184,7 @@
     <div class="p" lang="tr"><div class="b" data-k><i></i><b>Sinyal MEBBİS Yardımcısı</b><small data-sayi></small></div><div class="g" data-g></div></div>`;
   (document.body || document.documentElement).appendChild(kok);
   const p = g.querySelector('.p'), govde = g.querySelector('[data-g]');
-  const durum = { ekran: 'ana', filtre: null, sec: null, al: null, sonuc: {}, mesaj: '', ara: '', q: { isler: [] }, sayfa: {}, tablo: null, temizle: false, alAcik: false, oto: true, soru: false, bekle: null, dolanId: null };
+  const durum = { hatalar: new Set(), ekran: 'ana', filtre: null, sec: null, al: null, sonuc: {}, mesaj: '', ara: '', q: { isler: [] }, sayfa: {}, tablo: null, temizle: false, alAcik: false, oto: true, soru: false, bekle: null, dolanId: null };
   const e = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   // bekleyen işler en acilden: son gün, sonra tür sırası
   const sirali = (tur) => durum.q.isler.filter(x => !x.bitti && (!tur || x.tur === tur)).sort((a, b) => (a.son || '9999').localeCompare(b.son || '9999') || SIRA[a.tur] - SIRA[b.tur]);
@@ -201,22 +201,27 @@
     let h = '';
     // ANA: yalnız sıradaki iş ve Başla
     if (durum.ekran === 'ana') {
-      if (!hepsi.length) h += `<div class="bos"><b>Sırada iş yok</b><p>Sinyal’de <b>MEB işlemleri</b> ekranında <b>MEBBİS Yardımcısına gönder</b>’e basın. İşler buraya gelir.</p></div>`;
+      if (!hepsi.length) h += `<div class="bos"><b>Aktarılacak iş yok</b><p>Sinyal’de <b>MEB işlemleri › MEBBİS aktarımı</b> ekranında işleri seçip <b>MEBBİS’e aktar</b>’a basın. Yardımcı buraya gelip sırayla yürütür.</p></div><button class="buyuk" data-sinyal>Sinyal’i aç</button>`;
       else {
-        const x = hepsi[0], [t, c] = etiket(x.son);
-        h += `<p class="kucuk">Sıradaki iş</p><div class="sir"><b>${e(x.baslik)}</b><small>${e(AD[x.tur])}</small><span class="et ${c}">${t}</span></div>`;
-        h += `<button class="buyuk" data-basla>Başla</button>`;
-        h += `<button class="satir" data-git="liste"><span>Bekleyen işler</span><b>${hepsi.length}</b></button>`;
+        const say = TURLER.map(([k, ad]) => [ad, sirali(k).length]).filter(x => x[1]).map(([ad, n]) => `${n} ${ad.toLocaleLowerCase('tr')}`).join(' · ');
+        h += `<p class="kucuk">MEBBİS’e aktarılacak</p><div class="sir"><b>${hepsi.length} iş</b><small>${e(say)}</small></div>`;
+        h += `<button class="buyuk" data-basla>${durum.q.isler.some(x => x.bitti) ? 'Devam et' : 'Aktarımı başlat'}</button>`;
       }
       if (giris) h += `<p class="not">MEBBİS’e kendi şifrenizle girin; Yardımcı giriş sayfasında hiçbir şey yazmaz.</p>`;
-      h += `<div class="alt"><button data-git="alsec">MEBBİS’ten veri al</button><button data-git="ayar">Ayarlar</button></div>`;
+      h += `<div class="alt"><button data-sinyal>Sinyal’e dön</button><button data-git="ayar">Ayarlar</button></div>`;
+    }
+    // BİTTİ: özet
+    if (durum.ekran === 'bitti') {
+      const ok = durum.q.isler.filter(x => x.bitti).length, hata = durum.hatalar.size;
+      h += `<div class="bos"><b>✓ Aktarım bitti</b><p>${ok} iş aktarıldı${hata ? ` · <span style="color:#a12a20;font-weight:700">${hata} iş hata verdi</span>` : ''}. Sinyal’de durumları görebilirsiniz.</p></div><button class="buyuk" data-sinyal>Sinyal’e dön</button>`;
     }
     // İŞ: ne yapılacağı tek cümle, bilgiler gizli
     if (durum.ekran === 'is') {
       const is = durum.q.isler.find(x => x.id === durum.sec); if (!is || is.bitti) { durum.ekran = 'ana'; return ciz(); }
       const l = sirali(durum.filtre), sira = l.findIndex(x => x.id === is.id) + 1, kayitli = durum.sayfa[is.tur];
       const ok = Object.values(durum.sonuc).filter(x => x === 'ok').length, eksik = is.alanlar.filter(a => durum.sonuc[a.etiket] && durum.sonuc[a.etiket] !== 'ok');
-      h += `<div class="ust">${geri('ana', 'Kapat')}<small>${sira} / ${l.length}</small></div>`;
+      const toplam = durum.q.isler.length, biten = durum.q.isler.filter(x => x.bitti).length;
+      h += `<div class="ust"><b style="font-size:13px;color:#14284b">Aktarılıyor · ${biten + 1} / ${toplam}</b><button class="geri" data-git="ana">Durdur</button></div><div class="bar"><i style="width:${Math.round(100 * biten / (toplam || 1))}%"></i></div>`;
       h += `<p class="ad">${e(is.baslik)}</p><p class="kucuk" style="margin:0 0 10px">${e(AD[is.tur])}</p>`;
       let adim, dugme = '';
       const hd = durum.hedef && durum.hedef.tip === 'gir' ? durum.hedef : null;
@@ -353,7 +358,8 @@
     const l = sirali(durum.filtre), i = l.findIndex(x => x.id === is.id), sonraki = l[i + 1] || l.find(x => x.id !== is.id);
     await gonder({ tur: 'is-bitti', id: is.id }); await gonder({ tur: 'sayfa-koy', is: is.tur, yol: location.pathname, adres: location.href });
     durum.bekle = null; durum.soru = false; await yukle();
-    if (!sonraki) { Object.assign(durum, { ekran: 'ana', sec: null }); aktifKaydet(); durum.mesaj = ''; return ciz(); }
+    durum.hatalar.delete(is.id);
+    if (!sonraki) { Object.assign(durum, { ekran: 'bitti', sec: null }); aktifKaydet(); durum.mesaj = ''; return ciz(); }
     const ayniForm = sonraki.tur === is.tur;
     isAc(sonraki.id, true);
     durum.mesaj = ayniForm ? '✓ Önceki iş kaydedildi.' : `✓ Önceki iş kaydedildi. Sıradaki iş: ${AD[sonraki.tur]}; ekran açılıyor.`; ciz();
@@ -366,11 +372,11 @@
       await new Promise(r => setTimeout(r, 1000));
       const { metin } = await sayfaMetni();
       if (BASARI.test(metin) && !b.basari0) return durum.oto ? tamamla() : (durum.soru = true, durum.bekle = null, aktifKaydet(), ciz());
-      if (HATA.test(metin) && !b.hata0) { durum.bekle = null; aktifKaydet(); durum.mesaj = 'MEBBİS bir hata gösteriyor. Düzeltip yeniden Kaydet’e basın.'; return ciz(); }
+      if (HATA.test(metin) && !b.hata0) { const not = (metin.split('\n').find(x => HATA.test(x)) || '').trim().slice(0, 140); durum.hatalar.add(b.id); gonder({ tur: 'is-hata', id: b.id, not }); durum.bekle = null; aktifKaydet(); durum.mesaj = 'MEBBİS bir hata gösteriyor' + (not ? ': “' + not + '”' : '') + '. Düzeltip yeniden Kaydet’e basın ya da Atla.'; return ciz(); }
     }
     if (durum.bekle === b) { durum.bekle = null; durum.soru = true; aktifKaydet(); ciz(); }
   }
-  function panelAtla() { const l = sirali(durum.filtre), i = l.findIndex(x => x.id === durum.sec), s = l[i + 1] || l[0]; if (s && s.id !== durum.sec) isAc(s.id, true); else { durum.mesaj = 'Başka iş yok.'; ciz(); } }
+  function panelAtla() { const l = sirali(durum.filtre), i = l.findIndex(x => x.id === durum.sec), s = l[i + 1]; if (s) isAc(s.id, true); else { Object.assign(durum, { ekran: 'bitti', sec: null }); aktifKaydet(); ciz(); } }
 
   g.addEventListener('input', ev => { if (ev.target.matches('[data-ara]')) { durum.ara = ev.target.value; ciz(); } });
   g.addEventListener('click', async ev => {
@@ -378,6 +384,7 @@
     if (t.closest('[data-k]')) { p.classList.toggle('gizli'); gonder({ tur: 'ayar-koy', ad: 'kapali', deger: p.classList.contains('gizli') }); return; }
     if (t.closest('[data-yenile]')) return yukle();
     const git = t.closest('[data-git]'); if (git) { const h = git.dataset.git; Object.assign(durum, { ekran: h, soru: false, bekle: null, bilgiAcik: false }); if (h === 'ana') Object.assign(durum, { sec: null, al: null, filtre: null, ara: '' }); aktifKaydet(); return ciz(); }
+    if (t.closest('[data-sinyal]')) return gonder({ tur: 'sinyal-ac' });
     if (t.closest('[data-bilgi]')) { durum.bilgiAcik = !durum.bilgiAcik; return ciz(); }
     if (t.closest('[data-oto]')) { durum.oto = !durum.oto; gonder({ tur: 'ayar-koy', ad: 'oto', deger: durum.oto }); return ciz(); }
     if (t.closest('[data-temizle]')) { if (!durum.temizle) { durum.temizle = true; ciz(); setTimeout(() => { durum.temizle = false; ciz(); }, 4000); return; } durum.temizle = false; await gonder({ tur: 'kuyruk-temizle' }); return yukle(); }
@@ -417,7 +424,9 @@
       if (hedef.tip === 'al') Object.assign(durum, { ekran: 'al', al: hedef.amac }); else if (aktif && aktif.sec) Object.assign(durum, { ekran: 'is', sec: aktif.sec, filtre: aktif.filtre || null });
       ciz(); return setTimeout(() => ilerle(), 1200);
     }
-    if (yeni) { Object.assign(durum, { ekran: 'ana', sec: null, filtre: null }); aktifKaydet(); durum.mesaj = ''; return ciz(); }
+    if (yeni) { Object.assign(durum, { ekran: 'ana', sec: null, filtre: null }); durum.hatalar.clear(); p.classList.remove('gizli'); aktifKaydet(); durum.mesaj = '';
+      if (durum.q.oto && sirali().length) { await gonder({ tur: 'kuyruk-basladi' }); durum.q.oto = false; return isAc(sirali()[0].id, true); }
+      return ciz(); }
     if (aktif && aktif.sec && durum.q.isler.some(x => x.id === aktif.sec && !x.bitti) && aktif.ekran === 'is') {
       Object.assign(durum, { sec: aktif.sec, filtre: aktif.filtre || null, ekran: 'is', bekle: aktif.bekle || null }); ciz();
       if (durum.bekle && Date.now() - durum.bekle.zaman < 60000) kaydetIzle(true); else { durum.bekle = null; setTimeout(() => kendiligindenDoldur(), 800); }

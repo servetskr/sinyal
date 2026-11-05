@@ -7,7 +7,7 @@ window.addEventListener('message', async ev => {
   if (ev.source !== window || ev.origin !== location.origin || !ev.data || ev.data.kaynak !== 'sinyal-sayfa') return;
   const { tur, veri } = ev.data;
   if (tur === 'ping') return sayfaya('merhaba', { surum: SURUM });
-  if (tur === 'kuyruk') { const r = await gonder({ tur: 'kuyruk-koy', isler: veri.isler, kurs: veri.kurs }); const s = await gonder({ tur: 'mebbis-ac' }); return sayfaya('kuyruk-alindi', { ...r, sekme: s && s.sekme }); }
+  if (tur === 'kuyruk') { const r = await gonder({ tur: 'kuyruk-koy', isler: veri.isler, kurs: veri.kurs, oto: !!veri.oto }); const s = await gonder({ tur: 'mebbis-ac' }); return sayfaya('kuyruk-alindi', { ...r, sekme: s && s.sekme }); }
   if (tur === 'cek') { await gonder({ tur: 'hedef-koy', hedef: { tip: 'al', amac: veri.amac, zaman: Date.now(), tik: [], dogrudan: false, durum: 'gidiyor' } }); const s = await gonder({ tur: 'mebbis-ac' }); return sayfaya('cek-alindi', { sekme: s && s.sekme }); }
   if (tur === 'temizle') { await gonder({ tur: 'kuyruk-temizle' }); return sayfaya('temizlendi', {}); }
 });
@@ -15,6 +15,7 @@ window.addEventListener('message', async ev => {
 async function yokla() {
   const t = await gonder({ tur: 'tablo-al' }); if (t) sayfaya('tablo', t);
   const b = await gonder({ tur: 'bitenler-al' }); if (b && b.length) sayfaya('bitenler', b);
+  const h = await gonder({ tur: 'hatalar-al' }); if (h && h.length) sayfaya('hatalar', h);
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) yokla(); });
 setInterval(yokla, 4000);
