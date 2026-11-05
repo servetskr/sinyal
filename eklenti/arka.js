@@ -12,6 +12,11 @@ chrome.runtime.onMessage.addListener((m, kimden, cevap) => {
     if (m.tur === 'kuyruk-temizle') { await chrome.storage.session.remove(['kuyruk', 'bitenler', 'tablo']); return { ok: true }; }
     if (m.tur === 'tablo-koy') { await koy('tablo', { zaman: Date.now(), ...m.tablo }); return { ok: true }; }
     if (m.tur === 'tablo-al') { const t = await al('tablo'); await chrome.storage.session.remove('tablo'); return t || null; }
+    // formun MEBBİS adresi (kişisel veri yok) ve panel ayarları kalıcı saklanır
+    if (m.tur === 'sayfa-al') return (await chrome.storage.local.get('sayfa')).sayfa || {};
+    if (m.tur === 'sayfa-koy') { const s = (await chrome.storage.local.get('sayfa')).sayfa || {}; s[m.is] = { yol: m.yol, adres: m.adres }; await chrome.storage.local.set({ sayfa: s }); return { ok: true }; }
+    if (m.tur === 'ayar-al') return ((await chrome.storage.local.get('ayar')).ayar || {})[m.ad];
+    if (m.tur === 'ayar-koy') { const a = (await chrome.storage.local.get('ayar')).ayar || {}; a[m.ad] = m.deger; await chrome.storage.local.set({ ayar: a }); return { ok: true }; }
     if (m.tur === 'esleme-al') return (await chrome.storage.local.get('esleme')).esleme || {};
     if (m.tur === 'esleme-koy') { const e = (await chrome.storage.local.get('esleme')).esleme || {}; e[m.anahtar] = m.secici; await chrome.storage.local.set({ esleme: e }); return { ok: true }; }
     return null;

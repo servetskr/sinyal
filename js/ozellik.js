@@ -1,10 +1,10 @@
-import { cevapIsle } from './mesaj.js?v=115';
-import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli, sonrakiDers, selam, bulutKanca } from './veri.js?v=115';
-import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos, waIstek, ziyaretci, apiGonder } from './ui.js?v=115';
-import { yenile } from './app.js?v=115';
-import { bildirimler } from './sayfalar1.js?v=115';
-import { denetimEksikleri } from './sayfalar3.js?v=115';
-import { sinifKari, dersMaliyeti, bosKapasite, hakedis, KAPASITE_SAAT, randevuEngeli, bosSlotlar } from './risk.js?v=115';
+import { cevapIsle } from './mesaj.js?v=116';
+import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli, sonrakiDers, selam, bulutKanca } from './veri.js?v=116';
+import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos, waIstek, ziyaretci, apiGonder } from './ui.js?v=116';
+import { yenile } from './app.js?v=116';
+import { bildirimler } from './sayfalar1.js?v=116';
+import { denetimEksikleri } from './sayfalar3.js?v=116';
+import { sinifKari, dersMaliyeti, bosKapasite, hakedis, KAPASITE_SAAT, randevuEngeli, bosSlotlar } from './risk.js?v=116';
 
 /* ================= DENETİM SKORU ================= */
 export function denetimSkoru() {
@@ -112,6 +112,15 @@ export function mutabakatSekme() {
     </ul>` : ''}</div>
     <div><div class="kart" style="padding:20px"><small class="et" style="color:var(--soluk)">EŞLEŞEN</small><b style="display:block;font-family:var(--baslik);font-size:48px;font-weight:900;color:var(--murekkep);line-height:1.1">${r ? r.eslesen : '—'}</b><p style="font-size:14px">${r ? `${fark_} fark bulundu` : 'MEBBİS’te olması gereken ' + mebdeOlmali().length + ' kursiyer var'}</p></div>
     <div class="ara-bosluk"></div><div class="kart" style="padding:20px"><small class="et" style="color:var(--soluk)">NEDEN ÖNEMLİ</small><p style="font-size:14px;margin-top:6px">Denetimde MEBBİS kayıtları esas alınır. Sinyal’de yapılmış ama MEBBİS’e girilmemiş ders, kursiyerin sınav başvurusunu ve usta hakedişini etkiler.</p></div></div></div>`;
+}
+// MEBBİS Yardımcısı'ndan gelen tablo ile karşılaştırma (dosya yüklemeden)
+export function mutabakatTablodan(satirlar, kaynak) {
+  const csv = satirlar.map(r => r.map(c => '"' + String(c ?? '').replace(/"/g, '""') + '"').join(';')).join('\n');
+  const x = mutabakatHesapla(csv); if (x.hata) { bildir(x.hata, 'uyari'); return false; }
+  S.mutabakat = { tarih: gun(0), saat: new Date().toTimeString().slice(0, 5), dosya: kaynak || 'MEBBİS', satir: x.satir, sonuc: x.sonuc };
+  const n = x.sonuc.yalnizSinyal.length + x.sonuc.yalnizMeb.length + x.sonuc.sinif.length + x.sonuc.ders.length;
+  islem('MEBBİS mutabakatı yaptı', (kaynak || 'MEBBİS') + ' · ' + n + ' fark'); kaydet(); bildir(n ? n + ' fark bulundu' : 'MEBBİS ile Sinyal birebir aynı', n ? 'uyari' : undefined);
+  return true;
 }
 export function mutabakatBaglan(k) {
   k.addEventListener('change', ev => {
@@ -236,7 +245,7 @@ export async function gelenKontrol() {
       if (S.gelenAlinan.includes(x.id)) continue;
       S.gelenAlinan.push(x.id); n++;
       // fotoğraf ya da PDF: öğrencinin evrakı (indirilemezse sonraki turda yeniden denenir)
-      if (x.medya) { const ok = await (await import('./evrak.js?v=115')).evrakGeldi(x).catch(() => false); if (!ok) { S.gelenAlinan.pop(); n--; } continue; }
+      if (x.medya) { const ok = await (await import('./evrak.js?v=116')).evrakGeldi(x).catch(() => false); if (!ok) { S.gelenAlinan.pop(); n--; } continue; }
       const saat = new Date(x.zaman).toTimeString().slice(0, 5);
       // gönderdiğimiz mesaja verilen cevap (evet/hayır ya da “yanıtla”) adaya değil o mesaja işlenir
       // kayıtlı öğrencinin WhatsApp'tan ders değişikliği (asistan tanıdı): saat önerisi ya da seçilen saate taşıma
