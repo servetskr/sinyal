@@ -43,6 +43,8 @@
     return true;
   }
   async function doldur(is) {
+    // Giriş sayfasında (şifre alanı olan çerçeve) asla doldurma: kullanıcı adı kutusuna kursiyer bilgisi yazılmasın
+    if (document.querySelector('input[type=password]')) return {};
     const esleme = await gonder({ tur: 'esleme-al' }) || {};
     // seçim kutuları sayfayı yenileyebilir (MEBBİS’te seçim değişince sayfa yeniden yüklenen formlar var): önce metin alanları
     const l = is.alanlar.map(a => ({ a, el: bul(a, esleme) })), sonuc = {};
@@ -125,7 +127,9 @@
     const k = t.closest('[data-is]'); if (k) { durum.sec = k.dataset.is; durum.sonuc = {}; return ciz(); }
     if (t.closest('[data-geri]')) { durum.sec = null; return ciz(); }
     if (t.closest('[data-doldur]')) {
-      const is = durum.isler.find(x => x.id === durum.sec); const r = await herkese('doldur', { is });
+      const is = durum.isler.find(x => x.id === durum.sec);
+      if (cerceveler().some(w => { try { return !!w.document.querySelector('input[type=password]'); } catch (x) { return false; } })) { durum.mesaj = 'Bu MEBBİS giriş sayfası. Önce kendi şifrenizle girin, ilgili formu açın, sonra doldurun. '; return ciz(); }
+      const r = await herkese('doldur', { is });
       durum.sonuc = {}; r.forEach(x => Object.entries(x.sonuc || {}).forEach(([a, s]) => { if (durum.sonuc[a] !== 'ok') durum.sonuc[a] = s === 'yok' && durum.sonuc[a] ? durum.sonuc[a] : s; }));
       const ok = Object.values(durum.sonuc).filter(s => s === 'ok').length; durum.mesaj = `${ok}/${is.alanlar.length} alan dolduruldu. `; return ciz();
     }
