@@ -80,6 +80,30 @@
   const KAYDET = /kaydet|ekle|güncelle|onayla/i;
   document.addEventListener('click', ev => { const b = ev.target.closest && ev.target.closest('input[type=submit], input[type=button], input[type=image], button, a'); if (!b) return; const t = String(b.value || b.textContent || b.title || '').trim(); if (t && t.length < 30 && KAYDET.test(t)) window.top.postMessage({ [ISARET]: 'kaydet-basildi' }, '*'); }, true);
   window.addEventListener('message', ev => { const d = ev.data; if (d && d[ISARET] === 'metin' && ev.source === window.top) window.top.postMessage({ [ISARET]: 'metin-cevap', no: d.no, metin: document.body ? document.body.innerText.slice(0, 20000) : '', alan: alanlar().length }, '*'); });
+  // MEBBİS menüsünde hedef ekranı bulma: yalnız gezinme bağlantıları; silme, kaydetme, çıkış gibi düğmelere asla basılmaz
+  const TEHLIKE = /sil|iptal|çıkış|kapat|onay|kaydet|gönder|güncelle|vazgeç|reddet|yazdır|indir|excel/i;
+  const elMetin = el => String(el.innerText || el.textContent || el.value || el.title || '').replace(/\s+/g, ' ').trim();
+  const tiklanabilir = () => [...document.querySelectorAll('a, button, [role=menuitem], [onclick], input[type=button], li > span')].filter(el => !el.closest('#sinyal-mebbis-panel'));
+  function menuAday(gruplar, yasak) {
+    let en = null;
+    tiklanabilir().forEach(el => {
+      const m = elMetin(el); if (!m || m.length > 60 || TEHLIKE.test(m) || yasak.includes(m)) return; const n = norm(m);
+      gruplar.forEach((l, gi) => l.forEach(ph => { const k = norm(ph); if (k && n.includes(k)) { const sk = 100 - gi * 30 + (n === k ? 10 : 0) - n.length / 20; if (!en || sk > en.skor) en = { skor: sk, metin: m }; } }));
+    });
+    return en;
+  }
+  const LISTE_BASLIK = { kursiyer: [/tc|kimlik/, /ad/], mutabakat: [/tc|kimlik/, /ad/], taksit: [/tutar|odeme|miktar/], ogretmen: [/ad/, /brans|gorev|unvan|personel|ogretici|sertifika/], arac: [/plaka/], sinav: [/tc|kimlik/, /sonuc|puan|basari|durum/] };
+  function listeUygun(amac) {
+    const k = LISTE_BASLIK[amac] || []; let en = null;
+    tablolar().forEach(t => { const b = norm(t[0].join(' ')); if (t.length >= 2 && k.every(r => r.test(b)) && (!en || t.length > en)) en = t.length; });
+    return en ? en - 1 : 0;
+  }
+  window.addEventListener('message', async ev => {
+    const d = ev.data; if (!d || !d[ISARET] || ev.source !== window.top) return;
+    if (d[ISARET] === 'menu-ara') window.top.postMessage({ [ISARET]: 'menu-aday', no: d.no, aday: menuAday(d.gruplar, d.yasak || []) }, '*');
+    if (d[ISARET] === 'menu-tikla') { const el = tiklanabilir().find(x => elMetin(x) === d.metin && !TEHLIKE.test(d.metin)); if (el) el.click(); window.top.postMessage({ [ISARET]: 'menu-tiklandi', no: d.no, ok: !!el }, '*'); }
+    if (d[ISARET] === 'olc') { const esleme = d.is ? await gonder({ tur: 'esleme-al' }) || {} : {}; window.top.postMessage({ [ISARET]: 'olcum', no: d.no, form: d.is && !document.querySelector('input[type=password]') ? d.is.alanlar.filter(a => bul(a, esleme)).length : 0, liste: d.amac ? listeUygun(d.amac) : 0 }, '*'); }
+  });
   if (!UST) return;
 
   /* ---------- üst çerçeve: panel ---------- */
@@ -195,12 +219,15 @@
       h += `<div class="ust">${geri('ana', 'Kapat')}<small>${sira} / ${l.length}</small></div>`;
       h += `<p class="ad">${e(is.baslik)}</p><p class="kucuk" style="margin:0 0 10px">${e(AD[is.tur])}</p>`;
       let adim, dugme = '';
-      if (giris) adim = ['bilgi', 'MEBBİS’e kendi şifrenizle girin.'];
+      const hd = durum.hedef && durum.hedef.tip === 'gir' ? durum.hedef : null;
+      if (giris) adim = ['bilgi', 'MEBBİS’e kendi şifrenizle girin; Yardımcı sonra ekranı kendisi açar.'];
+      else if (hd && hd.durum === 'gidiyor') adim = ['bilgi', `${FORM[is.tur]} ekranı açılıyor…`];
+      else if (hd && hd.durum === 'ogren') { adim = ['uyari', `“${FORM[is.tur]}” ekranını menüde bulamadım. Menüden bir kez siz açın; Yardımcı yerini öğrenir, bir dahakine kendisi açar.`]; dugme = `<button class="cz" data-hedef-iptal style="width:100%">Vazgeç</button>`; }
       else if (durum.soru) { adim = ['soru', 'Kayıt tamamlandı mı?']; dugme = `<div class="iki"><button class="yesil" data-evet>Evet</button><button class="cz" data-hayir>Hayır</button></div>`; }
       else if (durum.bekle) adim = ['bilgi', 'MEBBİS’in cevabı bekleniyor…'];
       else if (ok) adim = ['tamam', eksik.length ? `${ok} bilgi yazıldı. ${eksik.length} bilgiyi elle girin, sonra MEBBİS’te Kaydet’e basın.` : 'Form dolduruldu. Kontrol edin, MEBBİS’te Kaydet’e basın.'];
-      else if (Object.keys(durum.sonuc).length) { adim = ['uyari', `Bu sayfada form bulunamadı. MEBBİS’te “${FORM[is.tur]}” ekranını açın.`]; if (kayitli && kayitli.yol !== location.pathname) dugme = `<button class="buyuk" data-formac="${is.tur}">Formu aç</button>`; }
-      else { adim = ['bilgi', `MEBBİS’te “${FORM[is.tur]}” ekranını açın, sonra Doldur’a basın.`]; dugme = kayitli && kayitli.yol !== location.pathname ? `<button class="buyuk" data-formac="${is.tur}">Formu aç</button>` : `<button class="buyuk" data-doldur>Doldur</button>`; }
+      else if (Object.keys(durum.sonuc).length) { adim = ['uyari', `Bu sayfada form bulunamadı.`]; dugme = `<button class="buyuk" data-formac="${is.tur}">Ekranı aç</button>`; }
+      else { adim = ['bilgi', `${FORM[is.tur]} ekranı`]; dugme = `<button class="buyuk" data-formac="${is.tur}">Ekranı aç ve doldur</button>`; }
       h += `<div class="adim ${adim[0]}">${adim[1]}</div>${dugme}`;
       if (durum.mesaj) h += `<p class="not">${e(durum.mesaj)}</p>`;
       if (eksik.length) h += `<p class="kucuk" style="margin-top:2px">Elle girilecekler · değere dokunun, kopyalanır</p>` + eksik.map(a => { const i = is.alanlar.indexOf(a); return `<div class="e2"><span>${e(a.etiket)}</span><b data-kopya="${i}">${e(a.deger)}</b><button class="gst" data-ogret="${i}" title="MEBBİS’te bu alanın yerini gösterin; bir dahakine kendisi yazar">yerini göster</button></div>`; }).join('');
@@ -222,7 +249,11 @@
     if (durum.ekran === 'al') {
       const [, ad, liste] = AL.find(x => x[0] === durum.al), tb = durum.tablo;
       h += geri('alsec') + `<p class="ad" style="margin-top:8px">${ad}</p>`;
-      h += tb ? `<div class="adim tamam">Bu sayfada ${tb.s.length - 1} satırlık liste bulundu.</div><button class="buyuk" data-gonder>Sinyal’e gönder</button>` : `<div class="adim bilgi">MEBBİS’te ${liste} ekranını açın. Liste görününce burada Gönder düğmesi çıkar.</div>`;
+      const hd = durum.hedef && durum.hedef.tip === 'al' ? durum.hedef : null;
+      if (giris) h += `<div class="adim bilgi">MEBBİS’e kendi şifrenizle girin; Yardımcı sonra ${liste} ekranını kendisi açar.</div>`;
+      else if (hd && hd.durum === 'gidiyor') h += `<div class="adim bilgi">${liste[0].toLocaleUpperCase('tr') + liste.slice(1)} ekranı açılıyor…</div>`;
+      else if (hd && hd.durum === 'ogren') h += `<div class="adim uyari">“${liste}” ekranını menüde bulamadım. Menüden bir kez siz açın; Yardımcı listeyi kendisi alıp gönderir ve yerini öğrenir.</div><button class="cz" data-hedef-iptal style="width:100%">Vazgeç</button>`;
+      else h += tb ? `<div class="adim tamam">Bu sayfada ${tb.s.length - 1} satırlık liste var.</div><button class="buyuk" data-gonder>Sinyal’e gönder</button>` : `<div class="adim bilgi">Liste bekleniyor.</div><button class="buyuk" data-alyeniden>Ekranı aç ve listeyi al</button>`;
       if (durum.mesaj) h += `<p class="not">${e(durum.mesaj)}</p>`;
     }
     if (durum.ekran === 'ayar') {
@@ -236,6 +267,60 @@
     if (odak) { const ara = govde.querySelector('[data-ara]'); if (ara) { ara.focus(); ara.setSelectionRange(ara.value.length, ara.value.length); } }
   }
 
+  // MEBBİS menüsünde aranacak adlar: en özelden genele (tahmin; bulunamazsa kullanıcı bir kez gösterir, adres öğrenilir)
+  const MODUL = ['özel mtsk', 'motorlu taşıt sürücüleri kursu', 'mtsk modülü', 'sürücü kursu'];
+  const YOL = {
+    kayit: [['kursiyer kayıt', 'kursiyer kaydı', 'yeni kursiyer', 'kursiyer ekle', 'kesin kayıt'], ['kursiyer işlemleri'], MODUL],
+    program: [['direksiyon eğitim programı', 'direksiyon eğitimi programı', 'direksiyon programı', 'ders programı', 'eğitim planı'], ['direksiyon eğitim işlemleri', 'direksiyon işlemleri', 'eğitim işlemleri'], MODUL],
+    sinav: [['direksiyon sınav başvuru', 'sınav başvurusu', 'sınava gireceklerin', 'sınav bildirimi', 'sınav listesi'], ['sınav işlemleri'], MODUL],
+    odeme: [['kursiyer ödeme', 'ödeme bilgi', 'ödeme girişi', 'tahsilat'], ['ödeme işlemleri', 'mali işlemler', 'kursiyer işlemleri'], MODUL],
+    'al-kursiyer': [['kursiyer listesi', 'kursiyer listele', 'kursiyer sorgula', 'kursiyer arama'], ['kursiyer işlemleri', 'raporlar'], MODUL],
+    'al-mutabakat': [['kursiyer listesi', 'kursiyer listele', 'kursiyer sorgula'], ['kursiyer işlemleri', 'raporlar'], MODUL],
+    'al-taksit': [['ödeme listesi', 'ödeme raporu', 'ödeme bilgileri'], ['ödeme işlemleri', 'raporlar'], MODUL],
+    'al-ogretmen': [['personel listesi', 'usta öğretici listesi', 'personel bilgileri', 'öğretici listesi'], ['personel işlemleri', 'kurum işlemleri'], MODUL],
+    'al-arac': [['araç listesi', 'araç bilgileri', 'araçlar'], ['araç işlemleri', 'kurum işlemleri'], MODUL],
+    'al-sinav': [['sınav sonuçları', 'sınav sonuç', 'e-sınav sonuç', 'sonuç listesi'], ['sınav işlemleri', 'raporlar'], MODUL],
+  };
+  const anahtarOf = h => h.tip === 'gir' ? h.tur : 'al-' + h.amac;
+  const hedefAd = h => h.tip === 'gir' ? FORM[h.tur] + ' ekranı' : (AL.find(x => x[0] === h.amac) || [, , 'liste'])[2] + ' ekranı';
+  async function olc(is, amac) { const r = await herkese('olc', { is, amac }, 900); return { form: Math.max(0, ...r.map(x => x.form || 0)), liste: Math.max(0, ...r.map(x => x.liste || 0)) }; }
+  async function menuTikla(gruplar, yasak) {
+    const r = await herkese('menu-ara', { gruplar, yasak }, 700), en = r.filter(x => x.aday).sort((a, b) => b.aday.skor - a.aday.skor)[0];
+    if (!en) return null;
+    await herkese('menu-tikla', { metin: en.aday.metin }, 300); return en.aday.metin;
+  }
+  const hedefKaydet = () => gonder({ tur: 'hedef-koy', hedef: durum.hedef });
+  async function hedefeGit(h) {
+    durum.hedef = { ...h, zaman: Date.now(), tik: [], dogrudan: false, durum: 'gidiyor' }; await hedefKaydet(); ciz(); ilerle();
+  }
+  async function ilerle() {
+    const h = durum.hedef; if (!h || durum.ilerliyor) return; durum.ilerliyor = true; let sonra = false;
+    try {
+      if (girisSayfasi()) { h.durum = 'giris'; return hedefKaydet(); }
+      const deneme = h.tip === 'gir' ? (durum.q.isler.find(x => x.id === durum.sec && x.tur === h.tur) || sirali(h.tur)[0]) : null;
+      const o = await olc(deneme, h.tip === 'al' ? h.amac : null);
+      if ((h.tip === 'gir' && o.form >= 2) || (h.tip === 'al' && o.liste > 0)) { durum.ilerliyor = false; return vardi(h); }
+      const ogr = durum.sayfa[anahtarOf(h)];
+      if (ogr && !h.dogrudan && /^https:\/\/mebbis\.meb\.gov\.tr\//.test(ogr.adres) && location.href !== ogr.adres) { h.dogrudan = true; await hedefKaydet(); location.href = ogr.adres; return; }
+      if (h.tik.length < 5) { const m = await menuTikla(YOL[anahtarOf(h)], h.tik); if (m) { h.tik.push(m); h.durum = 'gidiyor'; await hedefKaydet(); sonra = true; setTimeout(() => { durum.ilerliyor = false; ilerle(); }, 1500); return; } }
+      h.durum = 'ogren'; await hedefKaydet();
+    } finally { if (!sonra) durum.ilerliyor = false; ciz(); }
+  }
+  // hedef ekrana ulaşıldı: adresi öğren, sonra doldur ya da listeyi alıp Sinyal'e gönder
+  async function vardi(h) {
+    await gonder({ tur: 'sayfa-koy', is: anahtarOf(h), yol: location.pathname, adres: location.href }); durum.sayfa = await gonder({ tur: 'sayfa-al' }) || {};
+    durum.hedef = null; await gonder({ tur: 'hedef-sil' }); durum.ilerliyor = false;
+    if (h.tip === 'gir') { durum.dolanId = null; return kendiligindenDoldur(); }
+    Object.assign(durum, { ekran: 'al', al: h.amac }); await tara();
+    if (durum.tablo) return listeGonder(true);
+  }
+  async function listeGonder(oto) {
+    if (!durum.tablo) return; const [, ad] = AL.find(x => x[0] === durum.al);
+    await gonder({ tur: 'tablo-koy', tablo: { satirlar: durum.tablo.s, baslik: durum.tablo.baslik, adres: location.pathname, amac: durum.al } });
+    await gonder({ tur: 'sayfa-koy', is: 'al-' + durum.al, yol: location.pathname, adres: location.href });
+    durum.mesaj = `${durum.tablo.s.length - 1} satır Sinyal’e gönderildi${oto ? '; Sinyal açılıyor' : ''}. ${ad} kontrol ekranında bekliyor.`; ciz();
+    if (oto) setTimeout(() => gonder({ tur: 'sinyal-ac' }), 900);
+  }
   async function yukle() {
     durum.q = await gonder({ tur: 'kuyruk-al' }) || { isler: [] }; durum.q.isler = durum.q.isler || [];
     durum.sayfa = await gonder({ tur: 'sayfa-al' }) || {};
@@ -251,10 +336,9 @@
   }
   // form bu sayfadaysa (alan var, giriş değil) bir kez kendiliğinden doldurur
   async function kendiligindenDoldur() {
-    const is = durum.q.isler.find(x => x.id === durum.sec); if (!is || durum.dolanId === is.id || girisSayfasi()) return;
-    const { alan } = await sayfaMetni(); if (alan < 2) return;
-    const once = durum.sayfa[is.tur]; if (once && once.yol !== location.pathname) return;
-    durum.dolanId = is.id; panelDoldur(true);
+    const is = durum.q.isler.find(x => x.id === durum.sec); if (!is || durum.dolanId === is.id) return;
+    if (!girisSayfasi()) { const o = await olc(is, null); if (o.form >= 2) { durum.dolanId = is.id; return panelDoldur(true); } }
+    if (durum.oto && !durum.hedef) hedefeGit({ tip: 'gir', tur: is.tur });
   }
   async function panelDoldur(oto) {
     const is = durum.q.isler.find(x => x.id === durum.sec); if (!is) return;
@@ -270,10 +354,9 @@
     await gonder({ tur: 'is-bitti', id: is.id }); await gonder({ tur: 'sayfa-koy', is: is.tur, yol: location.pathname, adres: location.href });
     durum.bekle = null; durum.soru = false; await yukle();
     if (!sonraki) { Object.assign(durum, { ekran: 'ana', sec: null }); aktifKaydet(); durum.mesaj = ''; return ciz(); }
-    const ayniForm = sonraki.tur === is.tur, adres = durum.sayfa[sonraki.tur];
-    isAc(sonraki.id, ayniForm);
-    durum.mesaj = ayniForm ? '✓ Önceki iş kaydedildi.' : `✓ Önceki iş kaydedildi. Sıradaki iş başka ekranda: ${AD[sonraki.tur]}.`; ciz();
-    if (!ayniForm && durum.oto && adres && /^https:\/\/mebbis\.meb\.gov\.tr\//.test(adres.adres)) setTimeout(() => { location.href = adres.adres; }, 1200);
+    const ayniForm = sonraki.tur === is.tur;
+    isAc(sonraki.id, true);
+    durum.mesaj = ayniForm ? '✓ Önceki iş kaydedildi.' : `✓ Önceki iş kaydedildi. Sıradaki iş: ${AD[sonraki.tur]}; ekran açılıyor.`; ciz();
   }
   // Kaydet'e basıldı: MEBBİS'in cevabını birkaç saniye izle
   async function kaydetIzle(yenilendi) {
@@ -300,21 +383,18 @@
     if (t.closest('[data-temizle]')) { if (!durum.temizle) { durum.temizle = true; ciz(); setTimeout(() => { durum.temizle = false; ciz(); }, 4000); return; } durum.temizle = false; await gonder({ tur: 'kuyruk-temizle' }); return yukle(); }
     if (t.closest('[data-basla]')) { durum.filtre = null; const x = sirali()[0]; return x && isAc(x.id, true); }
     const fi = t.closest('[data-filtre]'); if (fi) { durum.filtre = fi.dataset.filtre || null; durum.ara = ''; return ciz(); }
-    const fa = t.closest('[data-formac]'); if (fa) { const s = durum.sayfa[fa.dataset.formac]; if (s && /^https:\/\/mebbis\.meb\.gov\.tr\//.test(s.adres)) location.href = s.adres; return; }
+    const fa = t.closest('[data-formac]'); if (fa) { durum.dolanId = null; if (!girisSayfasi()) { const is = durum.q.isler.find(x => x.id === durum.sec); const o = await olc(is, null); if (o.form >= 2) { durum.dolanId = is.id; return panelDoldur(false); } } return hedefeGit({ tip: 'gir', tur: fa.dataset.formac }); }
+    if (t.closest('[data-hedef-iptal]')) { durum.hedef = null; await gonder({ tur: 'hedef-sil' }); return ciz(); }
+    if (t.closest('[data-alyeniden]')) return hedefeGit({ tip: 'al', amac: durum.al });
     const k = t.closest('[data-is]'); if (k) { if (durum.ara) durum.filtre = null; return isAc(k.dataset.is, true); }
-    const al = t.closest('[data-al]'); if (al) { Object.assign(durum, { ekran: 'al', al: al.dataset.al, tablo: null }); ciz(); return tara(); }
+    const al = t.closest('[data-al]'); if (al) { Object.assign(durum, { ekran: 'al', al: al.dataset.al, tablo: null }); ciz(); await tara(); return durum.tablo ? ciz() : hedefeGit({ tip: 'al', amac: al.dataset.al }); }
     if (t.closest('[data-doldur]')) return panelDoldur(false);
     if (t.closest('[data-bitti]') || t.closest('[data-evet]')) return tamamla();
     if (t.closest('[data-hayir]')) { durum.soru = false; durum.mesaj = 'Formu düzeltip yeniden Kaydet’e basın.'; return ciz(); }
     if (t.closest('[data-atla]')) return panelAtla();
     const kp = t.closest('[data-kopya]'); if (kp) { const is = durum.q.isler.find(x => x.id === durum.sec), a = is && is.alanlar[+kp.dataset.kopya]; if (a) { try { await navigator.clipboard.writeText(a.deger); durum.mesaj = `“${a.etiket}” kopyalandı; MEBBİS’te alana yapıştırın.`; } catch (x) { durum.mesaj = 'Kopyalanamadı; değeri elle yazın.'; } ciz(); } return; }
     const og = t.closest('[data-ogret]'); if (og) { const is = durum.q.isler.find(x => x.id === durum.sec), a = is.alanlar[+og.dataset.ogret]; cerceveler().forEach(w => w.postMessage({ [ISARET]: 'ogret', alan: a }, '*')); durum.mesaj = `MEBBİS’te “${a.etiket}” alanına tıklayın; Yardımcı bir dahakine kendisi bulur.`; return ciz(); }
-    if (t.closest('[data-gonder]')) {
-      if (!durum.tablo) return;
-      const [, ad] = AL.find(x => x[0] === durum.al);
-      await gonder({ tur: 'tablo-koy', tablo: { satirlar: durum.tablo.s, baslik: durum.tablo.baslik, adres: location.pathname, amac: durum.al } });
-      durum.mesaj = `${durum.tablo.s.length - 1} satır gönderildi. Sinyal sekmesine geçin; ${ad.toLocaleLowerCase('tr')} kontrol ekranında bekliyor.`; return ciz();
-    }
+    if (t.closest('[data-gonder]')) return listeGonder(false);
   });
   window.addEventListener('message', async ev => {
     const d = ev.data; if (!d || !d[ISARET]) return;
@@ -326,17 +406,25 @@
     }
   });
 
-  // açılış: ayarlar, yarım kalan iş ve Sinyal'den yeni gelen sıra
-  (async () => {
-    const [kapali, oto, aktif, yeni] = await Promise.all([gonder({ tur: 'ayar-al', ad: 'kapali' }), gonder({ tur: 'ayar-al', ad: 'oto' }), gonder({ tur: 'aktif-al' }), gonder({ tur: 'yeni-al' })]);
+  // açılış: ayarlar, yarım kalan iş, yarım kalan gezinme ve Sinyal'den yeni gelen sıra; Sinyal'den komut gelince yeniden çalışır
+  const basla = async () => {
+    const [kapali, oto, aktif, yeni, hedef] = await Promise.all([gonder({ tur: 'ayar-al', ad: 'kapali' }), gonder({ tur: 'ayar-al', ad: 'oto' }), gonder({ tur: 'aktif-al' }), gonder({ tur: 'yeni-al' }), gonder({ tur: 'hedef-al' })]);
     durum.oto = oto !== false;
     if (kapali && !yeni) p.classList.add('gizli');
     await yukle();
+    if (hedef && Date.now() - hedef.zaman < 10 * 60000) {
+      durum.hedef = hedef; p.classList.remove('gizli');
+      if (hedef.tip === 'al') Object.assign(durum, { ekran: 'al', al: hedef.amac }); else if (aktif && aktif.sec) Object.assign(durum, { ekran: 'is', sec: aktif.sec, filtre: aktif.filtre || null });
+      ciz(); return setTimeout(() => ilerle(), 1200);
+    }
     if (yeni) { Object.assign(durum, { ekran: 'ana', sec: null, filtre: null }); aktifKaydet(); durum.mesaj = ''; return ciz(); }
     if (aktif && aktif.sec && durum.q.isler.some(x => x.id === aktif.sec && !x.bitti) && aktif.ekran === 'is') {
       Object.assign(durum, { sec: aktif.sec, filtre: aktif.filtre || null, ekran: 'is', bekle: aktif.bekle || null }); ciz();
       if (durum.bekle && Date.now() - durum.bekle.zaman < 60000) kaydetIzle(true); else { durum.bekle = null; setTimeout(() => kendiligindenDoldur(), 800); }
     }
-  })();
+  };
+  basla();
+  chrome.runtime.onMessage.addListener(m => { if (m && m.tur === 'yeniden-bak') { durum.hedef = null; durum.ilerliyor = false; basla(); } });
+  setInterval(() => { if (durum.hedef && ['ogren', 'giris'].includes(durum.hedef.durum)) ilerle(); }, 2500);
   setInterval(() => { if (durum.ekran === 'ana' && !(g.activeElement && g.activeElement.matches && g.activeElement.matches('[data-ara]'))) yukle(); if (durum.ekran === 'al' && !durum.tablo) tara(); }, 5000);
 })();

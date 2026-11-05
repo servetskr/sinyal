@@ -8,6 +8,7 @@ window.addEventListener('message', async ev => {
   const { tur, veri } = ev.data;
   if (tur === 'ping') return sayfaya('merhaba', { surum: SURUM });
   if (tur === 'kuyruk') { const r = await gonder({ tur: 'kuyruk-koy', isler: veri.isler, kurs: veri.kurs }); const s = await gonder({ tur: 'mebbis-ac' }); return sayfaya('kuyruk-alindi', { ...r, sekme: s && s.sekme }); }
+  if (tur === 'cek') { await gonder({ tur: 'hedef-koy', hedef: { tip: 'al', amac: veri.amac, zaman: Date.now(), tik: [], dogrudan: false, durum: 'gidiyor' } }); const s = await gonder({ tur: 'mebbis-ac' }); return sayfaya('cek-alindi', { sekme: s && s.sekme }); }
   if (tur === 'temizle') { await gonder({ tur: 'kuyruk-temizle' }); return sayfaya('temizlendi', {}); }
 });
 // MEBBİS’ten gelen tablo ve biten işler: sayfa görünür olunca ve aralıklarla sorulur
@@ -17,4 +18,5 @@ async function yokla() {
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) yokla(); });
 setInterval(yokla, 4000);
+gonder({ tur: 'sinyal-burada' });
 window.addEventListener('DOMContentLoaded', () => { sayfaya('merhaba', { surum: SURUM }); yokla(); });
