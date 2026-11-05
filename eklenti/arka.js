@@ -10,7 +10,11 @@ chrome.runtime.onMessage.addListener((m, kimden, cevap) => {
       const l = await chrome.tabs.query({ url: 'https://mebbis.meb.gov.tr/*' });
       await koy('yeni', true);
       if (l.length) { const s = l.find(x => x.active) || l[0]; await chrome.tabs.update(s.id, { active: true }); await chrome.windows.update(s.windowId, { focused: true }).catch(() => { }); chrome.tabs.sendMessage(s.id, { tur: 'yeniden-bak' }).catch(() => { }); return { sekme: 'gecildi' }; }
-      await chrome.tabs.create({ url: 'https://mebbis.meb.gov.tr/' }); return { sekme: 'acildi' };
+      // MEBBİS sekmesi yoksa Sinyal sekmesinin hemen yanında, aynı pencerede açılır ve öne gelir
+      const yan = kimden && kimden.tab;
+      const yeniSekme = await chrome.tabs.create({ url: 'https://mebbis.meb.gov.tr/', active: true, ...(yan ? { windowId: yan.windowId, index: yan.index + 1, openerTabId: yan.id } : {}) });
+      await chrome.windows.update(yeniSekme.windowId, { focused: true }).catch(() => { });
+      return { sekme: 'acildi' };
     }
     if (m.tur === 'hedef-koy') { await koy('hedef', m.hedef); return { ok: true }; }
     if (m.tur === 'hedef-al') return (await al('hedef')) || null;
