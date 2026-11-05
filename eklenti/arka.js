@@ -9,9 +9,14 @@ chrome.runtime.onMessage.addListener((m, kimden, cevap) => {
     if (m.tur === 'mebbis-ac') {
       const l = await chrome.tabs.query({ url: 'https://mebbis.meb.gov.tr/*' });
       await koy('yeni', true);
-      if (l.length) { const s = l.find(x => x.active) || l[0]; await chrome.tabs.update(s.id, { active: true }); await chrome.windows.update(s.windowId, { focused: true }).catch(() => { }); return { sekme: 'gecildi' }; }
+      if (l.length) { const s = l.find(x => x.active) || l[0]; await chrome.tabs.update(s.id, { active: true }); await chrome.windows.update(s.windowId, { focused: true }).catch(() => { }); chrome.tabs.sendMessage(s.id, { tur: 'yeniden-bak' }).catch(() => { }); return { sekme: 'gecildi' }; }
       await chrome.tabs.create({ url: 'https://mebbis.meb.gov.tr/' }); return { sekme: 'acildi' };
     }
+    if (m.tur === 'hedef-koy') { await koy('hedef', m.hedef); return { ok: true }; }
+    if (m.tur === 'hedef-al') return (await al('hedef')) || null;
+    if (m.tur === 'hedef-sil') { await chrome.storage.session.remove('hedef'); return { ok: true }; }
+    if (m.tur === 'sinyal-burada' && kimden.tab) { await koy('sinyalSekme', { id: kimden.tab.id, pencere: kimden.tab.windowId }); return { ok: true }; }
+    if (m.tur === 'sinyal-ac') { const s = await al('sinyalSekme'); if (!s) return { ok: false }; try { await chrome.tabs.update(s.id, { active: true }); await chrome.windows.update(s.pencere, { focused: true }); return { ok: true }; } catch (x) { return { ok: false }; } }
     if (m.tur === 'yeni-al') { const y = await al('yeni'); await chrome.storage.session.remove('yeni'); return !!y; }
     if (m.tur === 'aktif-al') return (await al('aktif')) || null;
     if (m.tur === 'aktif-koy') { await koy('aktif', m.aktif); return { ok: true }; }
