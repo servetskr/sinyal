@@ -1,7 +1,7 @@
 // Sinyal MEBBİS Yardımcısı (Chrome eklentisi) ile konuşma: eklenti kurulu mu, MEBBİS’e yazılacak işleri sıraya koy,
 // MEBBİS’ten gelen listeyi aktarım ekranına ver, MEBBİS’te kaydedilen işleri Sinyal’de işlendi olarak işaretle.
-import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, eksikEvrak, sb, sbDers, sbSinav } from './veri.js?v=117';
-import { bildir, pencere, e, ik, isaret } from './ui.js?v=117';
+import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, eksikEvrak, sb, sbDers, sbSinav } from './veri.js?v=118';
+import { bildir, pencere, e, ik, isaret } from './ui.js?v=118';
 
 export const eklenti = { var: false, surum: null };
 const sayfadan = (tur, veri) => window.postMessage({ kaynak: 'sinyal-sayfa', tur, veri }, location.origin);
@@ -92,10 +92,10 @@ function bitenleriIsle(l) {
 // MEBBİS'ten gelen liste: amacına göre aktarım, karşılaştırma ya da sınav sonucu ekranına gider
 function tabloGeldi(veri) {
   const sat = veri.satirlar, n = sat.length - 1;
-  if (veri.amac === 'mutabakat') return import('./ozellik.js?v=117').then(m => { if (m.mutabakatTablodan(sat, 'MEBBİS · ' + (veri.baslik || 'liste'))) { location.hash = '#/meb/mutabakat'; yenileFn(); } });
+  if (veri.amac === 'mutabakat') return import('./ozellik.js?v=118').then(m => { if (m.mutabakatTablodan(sat, 'MEBBİS · ' + (veri.baslik || 'liste'))) { location.hash = '#/meb/mutabakat'; yenileFn(); } });
   if (veri.amac === 'sinav') return sinavSonucuAl(sat);
   const t = ['kursiyer', 'taksit', 'arac', 'ogretmen'].includes(veri.amac) ? veri.amac : turTahmin(sat[0] || []);
-  import('./sayfalar5.js?v=117').then(m => { location.hash = '#/ayarlar/aktarim'; setTimeout(() => { m.aktarimYukle(sat, t, 'MEBBİS'); bildir(`MEBBİS’ten ${n} satırlık liste geldi; sütunları kontrol edip aktarın`); }, 300); });
+  import('./sayfalar5.js?v=118').then(m => { location.hash = '#/ayarlar/aktarim'; setTimeout(() => { m.aktarimYukle(sat, t, 'MEBBİS'); bildir(`MEBBİS’ten ${n} satırlık liste geldi; sütunları kontrol edip aktarın`); }, 300); });
 }
 // Sınav sonuç listesi: TC ile kursiyer bulunur, en uygun oturumun sonuç penceresi dolu açılır; kaydetmeyi kullanıcı yapar
 const nrm = x => String(x || '').toLocaleLowerCase('tr').replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/[^a-z0-9]/g, '');
@@ -124,7 +124,7 @@ function sinavSonucuAl(sat) {
   if (!sira.length) return bildir('Listedeki kişilerden sonucu girilmemiş bir sınav oturumunda olan bulunamadı', 'uyari');
   const [sid, hazir] = sira[0], s = S.sinavlar.find(x => x.id === sid);
   location.hash = '#/sinavlar';
-  import('./sayfalar2.js?v=117').then(m => setTimeout(() => {
+  import('./sayfalar2.js?v=118').then(m => setTimeout(() => {
     m.sonucGir(s, hazir);
     bildir(`${Object.keys(hazir).length} kursiyerin sonucu MEBBİS’ten dolduruldu; kontrol edip “Sonuçları kaydet”e basın.${sira.length > 1 ? ` ${sira.length - 1} oturum daha var; kaydettikten sonra listeyi tekrar gönderin.` : ''}${bulunamayan ? ` ${bulunamayan} satır eşleşmedi.` : ''}`);
   }, 400));
