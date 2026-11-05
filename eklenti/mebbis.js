@@ -147,7 +147,7 @@
     .buyuk{display:block;width:100%;background:#2f6fde;color:#fff;font-size:15px;padding:12px;border-radius:10px;margin-bottom:8px}
     .satir{display:flex;justify-content:space-between;align-items:center;width:100%;background:#f3f4f6;color:#1d1d1d;padding:9px 11px;border-radius:9px;font-weight:600;margin-top:6px}
     .alt{display:flex;gap:6px;margin-top:12px;padding-top:10px;border-top:1px solid #eee}.alt button{flex:1;background:none;color:#2f6fde;padding:6px 4px;font-size:12.5px}
-    .bos{text-align:center;padding:10px 4px}.bos b{display:block;font-size:15px;margin-bottom:6px}.bos p{color:#555;font-size:13px}
+    .bos{text-align:center;padding:10px 4px}.bos>b{display:block;font-size:15px;margin-bottom:6px}.bos p{color:#555;font-size:13px}
     .not{font-size:12px;color:#666;margin-top:8px}
     .ad{font-size:16px;font-weight:700}
     .adim{border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:13.5px;font-weight:600}.adim.bilgi{background:#eef4ff;color:#14284b}.adim.tamam{background:#e7f6ec;color:#14532d}.adim.uyari{background:#fdf0ee;color:#7a2318}.adim.soru{background:#fff6d6;color:#5c4400}
