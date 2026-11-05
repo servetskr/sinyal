@@ -24,7 +24,7 @@ export function mebIsleri() {
   sb(S.kursiyerler).filter(k => !k.mebIslendi && !k.kapali && !eksikEvrak(k).length).forEach(k => {
     const n = k.nufus || {}, S0 = SINIFLAR[k.sinif] || {};
     const ilk = S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Planlandı').map(d => d.tarih).sort()[0];
-    isler.push({ id: 'kayit-' + k.id, tur: 'kayit', ref: { kursiyer: k.id }, son: ilk ? gunEkle(ilk, -(S.kurs.programOnGun || 5)) : gun(3), neden: ilk ? 'İlk dersinden önce' : 'Kayıttan sonra', baslik: tamAd(k) + ' · kursiyer kaydı', alanlar: [
+    isler.push({ id: 'kayit-' + k.id, tur: 'kayit', ref: { kursiyer: k.id }, son: ilk ? gunEkle(ilk, -(S.kurs.programOnGun || 5)) : gun(3), neden: ilk ? 'İlk dersinden önce' : 'Kayıttan sonra', baslik: tamAd(k), alanlar: [
       alan(TC[0], k.tc, TC[1]), alan('Adı', k.ad, ['ad', 'adi']), alan('Soyadı', k.soyad, ['soyad', 'soyadi']), alan('Baba Adı', n.baba, ['babaadi']), alan('Ana Adı', n.ana, ['anaadi', 'anneadi']),
       alan('Doğum Yeri', n.dogumYeri, ['dogumyeri']), alan('Doğum Tarihi', tr(k.dogumTarihi), ['dogumtarihi']), alan('Cinsiyeti', k.cinsiyet, ['cinsiyet']), alan('Öğrenim Durumu', k.ogrenim, ['ogrenim', 'ogrenimdurumu', 'egitimdurumu']),
       alan('Cep Telefonu', tel(k.tel), ['telefon', 'ceptelefonu', 'gsm', 'tel']), alan('Adres', k.adres, ['adres', 'ikametadresi']), alan('Sertifika Sınıfı', String(S0.ad || k.sinif).split(' ·')[0], ['sinif', 'sertifikasinifi', 'surucubelgesisinifi', 'kurssinifi']),
@@ -33,21 +33,21 @@ export function mebIsleri() {
   });
   sbDers(S.dersler).filter(d => d.durum === 'Planlandı' && fark(d.tarih) >= 0 && !d.meb).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat)).forEach(d => {
     const k = kursiyer(d.kursiyer); if (!k) return; const eg = egitmen(d.egitmen) || {}, ar = arac(d.arac) || {};
-    isler.push({ id: 'ders-' + d.id, tur: 'program', ref: { ders: d.id }, son: gunEkle(d.tarih, -(S.kurs.programOnGun || 5)), neden: `Dersten ${S.kurs.programOnGun || 5} gün önce`, baslik: `${tr(d.tarih)} ${d.saat} · ${tamAd(k)}`, alanlar: [
+    isler.push({ id: 'ders-' + d.id, tur: 'program', ref: { ders: d.id }, son: gunEkle(d.tarih, -(S.kurs.programOnGun || 5)), neden: `Dersten ${S.kurs.programOnGun || 5} gün önce`, baslik: `${tamAd(k)} · ${tr(d.tarih)} ${d.saat}`, alanlar: [
       alan('Tarih', tr(d.tarih), ['derstarihi', 'tarih', 'egitimtarihi']), alan('Saat', d.saat, ['dersaati', 'baslangicsaati', 'saat']), alan(TC[0], k.tc, TC[1]), alan('Kursiyer', tamAd(k), ['kursiyer', 'kursiyeradi', 'adisoyadi']),
       alan('Usta Öğretici', eg.ad, ['ustaogretici', 'ogretici', 'egitici', 'personel']), alan('Araç Plakası', ar.plaka, ['plaka', 'aracplakasi', 'arac']),
     ].filter(Boolean) });
   });
   sbSinav(S.sinavlar).filter(s => s.tur === 'Direksiyon' && fark(s.tarih) >= 0 && !s.mebBildirim).forEach(s => (s.kursiyerler || []).map(kursiyer).filter(Boolean).filter(k => !(s.mebKisi || []).includes(k.id)).forEach(k => {
     const d = S.dersler.filter(x => x.kursiyer === k.id && x.arac).sort((a, b) => b.tarih.localeCompare(a.tarih))[0], ar = arac(d && d.arac) || {}, eg = egitmen(k.egitmen) || {};
-    isler.push({ id: 'sinav-' + s.id + '-' + k.id, tur: 'sinav', ref: { sinav: s.id, kursiyer: k.id }, son: isGunuGeri(s.tarih, 4), neden: 'Sınavdan 4 iş günü önce', baslik: `${tr(s.tarih)} direksiyon sınavı · ${tamAd(k)}`, alanlar: [
+    isler.push({ id: 'sinav-' + s.id + '-' + k.id, tur: 'sinav', ref: { sinav: s.id, kursiyer: k.id }, son: isGunuGeri(s.tarih, 4), neden: 'Sınavdan 4 iş günü önce', baslik: `${tamAd(k)} · ${tr(s.tarih)} sınavı`, alanlar: [
       alan('Sınav Tarihi', tr(s.tarih), ['sinavtarihi', 'tarih']), alan(TC[0], k.tc, TC[1]), alan('Kursiyer', tamAd(k), ['kursiyer', 'adisoyadi']), alan('Araç Plakası', ar.plaka, ['plaka', 'aracplakasi', 'sinavaraci']), alan('Usta Öğretici', eg.ad, ['ustaogretici', 'ogretici']),
     ].filter(Boolean) });
   }));
   // eğitim ücreti tahsilatları MEBBİS’e işlenir (Özel Öğretim Kurumları Yönetmeliği m.55/3)
   (S.hareket || []).filter(h => h.tur === 'Gelir' && h.kursiyer && ['Kurs ücreti', 'Taksit'].includes(h.kategori) && !h.meb && fark(h.tarih) >= -60).forEach(h => {
     const k = kursiyer(h.kursiyer); if (!k) return;
-    isler.push({ id: 'odeme-' + h.id, tur: 'odeme', ref: { hareket: h.id }, neden: 'Tahsilat kaydı (süre sınırı yok)', baslik: `${tr(h.tarih)} · ${tamAd(k)} · ${h.tutar} ₺`, alanlar: [
+    isler.push({ id: 'odeme-' + h.id, tur: 'odeme', ref: { hareket: h.id }, neden: 'Tahsilat kaydı (süre sınırı yok)', baslik: `${tamAd(k)} · ${h.tutar} ₺ · ${tr(h.tarih)}`, alanlar: [
       alan(TC[0], k.tc, TC[1]), alan('Ödeme Tarihi', tr(h.tarih), ['odemetarihi', 'tarih', 'tahsilattarihi']), alan('Tutar', h.tutar, ['tutar', 'odemetutari', 'miktar']), alan('Ödeme Şekli', h.yontem === 'Havale' ? 'Havale/EFT' : h.yontem, ['odemesekli', 'odemeturu']), alan('Makbuz / Dekont No', h.no, ['makbuzno', 'dekontno', 'belgeno', 'aciklama']),
     ].filter(Boolean) });
   });
