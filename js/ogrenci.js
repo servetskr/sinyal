@@ -1,8 +1,9 @@
 // Öğrenci paneli sekmeleri: dersler (yaklaşan + defter + gelişim + teorik konular), sınavlar, ödemeler, belgeler; bölümler açılır kapanır modüller
-import { S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen, ogrOzellik, oturum } from './veri.js?v=120';
-import { bildirimler } from './sayfalar1.js?v=120';
-import { e, tl, ik, rozet, ilerleme, pencere, kapatPencere, bildir, tarih, goreli, isaret, belgeYazdir, fotoKucult } from './ui.js?v=120';
-import { belgeHtml } from './sayfalar3.js?v=120';
+import { S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen, ogrOzellik, oturum, DERS_TUR_AD } from './veri.js?v=121';
+import * as TK from './takvim.js?v=121';
+import { bildirimler } from './sayfalar1.js?v=121';
+import { e, tl, ik, rozet, ilerleme, pencere, kapatPencere, bildir, tarih, goreli, isaret, belgeYazdir, fotoKucult } from './ui.js?v=121';
+import { belgeHtml } from './sayfalar3.js?v=121';
 
 // MEB teorik eğitim programı: konu, ders saati, başlıklar (anahtarlar soru bankasıyla aynı)
 export const MUFREDAT = [
@@ -61,6 +62,23 @@ export function yaklasanHtml(k) {
       : `<p class="og-bos">${k.asama === 'Direksiyon' ? 'Planlı dersin yok. Yukarıdan direksiyon dersi alabilirsin.' : 'Programın belli olunca burada görünür.'}</p>`}
     <p class="og-not">Program değişirse WhatsApp’tan haber verilir.</p></section>`;
 }
+// Ders programı: gün / hafta / ay. Teorik dersler, direksiyon dersleri (yapılanlar soluk) ve sınavlar aynı takvimde
+const ogTk = TK.takvimDurum('ogrenci', 'hafta', true);
+function takvimOlaylari(k) {
+  const l = [], teorikDonem = ['Kayıt', 'Evrak', 'Teorik'].includes(k.asama) || (S.teorik || []).some(t => (t.yoklama || []).includes(k.id));
+  if (teorikDonem) (S.teorik || []).filter(t => t.grup === (k.teorikGrup || 'aksam') && t.tarih >= (k.kayit || '')).forEach(t => { const o = ogretmen(t.ogretmen); l.push({ tarih: t.tarih, saat: t.saat, ton: 'teorik', baslik: 'Teorik · ' + t.konu, alt: [t.salon, t.sure + ' saat', o && o.ad].filter(Boolean).join(' · ') }); });
+  S.dersler.filter(d => d.kursiyer === k.id && d.durum !== 'İptal' && !(d.durum === 'Planlandı' && fark(d.tarih) < 0)).forEach(d => { const h = egitmen(d.egitmen), a = d.arac && arac(d.arac), plan = d.durum === 'Planlandı';
+    l.push({ tarih: d.tarih, saat: d.saat, ton: plan ? 'direksiyon' : d.durum === 'Yapıldı' ? 'yapildi' : 'gelmedi', baslik: (d.tur && d.tur !== 'trafik' ? DERS_TUR_AD[d.tur] : 'Direksiyon dersi') + (plan ? '' : d.durum === 'Yapıldı' ? ' · yapıldı' : ' · gelmedin'), alt: [h && h.ad, a && a.plaka].filter(Boolean).join(' · '),
+      sag: plan && fark(d.tarih) >= 1 ? `<button class="dg dg-hafif dg-kucuk" data-og-iptal="${d.id}">İptal</button>` : '' }); });
+  S.sinavlar.filter(s => s.kursiyerler.includes(k.id)).forEach(s => { const r = (s.sonuc || {})[k.id]; l.push({ tarih: s.tarih, saat: s.saat, ton: 'sinav', baslik: s.tur + ' sınavı' + (r && r.sonuc ? ' · ' + r.sonuc.toLocaleLowerCase('tr') : ''), alt: s.yer }); });
+  return l;
+}
+export function programHtml(k) {
+  const l = takvimOlaylari(k), yaklasan = programOlaylari(k);
+  return `<section class="kart og-kart"><div class="og-bas"><div><small>${yaklasan.length ? 'Sıradaki: ' + gunK(yaklasan[0].tarih) + ' ' + yaklasan[0].saat : 'Planlı dersin yok'}</small><b>Ders programın</b></div>${yaklasan.length ? `<button class="dg dg-hafif dg-kucuk" data-og-takvim>${ik('takvim')}Takvime ekle</button>` : ''}</div>
+    ${TK.takvimHtml(ogTk, l, { bosMetin: 'Bu gün dersin yok.', ozet: false })}
+    <p class="og-not">${k.asama === 'Direksiyon' && !yaklasan.length ? 'Planlı dersin yok. Yukarıdan direksiyon dersi alabilirsin. ' : ''}Program değişirse WhatsApp’tan haber verilir.</p></section>`;
+}
 function takvimIndir(k) {
   const l = programOlaylari(k), z = (t, s) => t.replace(/-/g, '') + 'T' + s.replace(':', '') + '00';
   const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Sinyal//TR', ...l.flatMap((x, i) => ['BEGIN:VEVENT', 'UID:sinyal-' + k.id + '-' + i + '@sinyal', 'DTSTART:' + z(x.tarih, x.saat), 'DURATION:PT' + (x.tur === 'teorik' ? 2 : 1) + 'H', 'SUMMARY:' + x.baslik, 'LOCATION:' + (x.alt || '').replace(/,/g, '\\,'), 'END:VEVENT']), 'END:VCALENDAR'].join('\r\n');
@@ -90,7 +108,7 @@ export function teorikModul(k, acik = false) {
 export function derslerHtml(k) {
   const S0 = SINIFLAR[k.sinif], dir = !!S0.direksiyon, ks = Object.fromEntries(konuSaat(k)), teorikOnce = ['Kayıt', 'Evrak', 'Teorik'].includes(k.asama);
   const teorik = teorikModul(k, teorikOnce);
-  if (!dir) return yaklasanHtml(k) + teorik;
+  if (!dir) return programHtml(k) + teorik;
   const { yapilan, son, once } = beceriOzet(k), notlar = yapilan.filter(d => d.not).slice(-2).reverse();
   const zayif = son.filter(([, v]) => v != null).sort((a, b) => a[1] - b[1])[0];
   const gelisim = yapilan.length ? modul('gelisim', { ikon: 'rapor', baslik: 'Gelişimin', ozet: zayif && zayif[1] < 3.8 ? `Üzerinde çalış: ${e(zayif[0])} (${virgul(zayif[1])})` : `Son ${Math.min(3, yapilan.length)} derste iyi gidiyorsun`, acik: false },
@@ -103,8 +121,8 @@ export function derslerHtml(k) {
     gecmis.length ? `<ul class="og-olaylar">${gecmis.map(satir).join('')}</ul>` : '<p class="og-bos">Henüz yapılan direksiyon dersin yok.</p>');
   const al = k.asama !== 'Ehliyet' ? `<button class="dg dg-ana og-genis" data-iste>${ik('arti')}Direksiyon dersi al</button>` : '';
   const ilerl = `<div class="og-sayac"><div><small>Direksiyon</small><b>${k.direksiyon}<span>/${S0.direksiyon}</span></b>${ilerleme(k.direksiyon, S0.direksiyon, 'yesil')}</div><div><small>Teorik</small><b>${k.teorik}<span>/${S0.teorik}</span></b>${ilerleme(k.teorik, S0.teorik, 'yesil')}</div></div>`;
-  return ilerl + (teorikOnce ? yaklasanHtml(k) + teorik + (ogrOzellik('dersOnay') ? dersDefteri(k) : '') + gelisim + direksiyon
-    : al + yaklasanHtml(k) + (ogrOzellik('dersOnay') ? dersDefteri(k) : '') + gelisim + direksiyon + teorik);
+  return ilerl + (teorikOnce ? programHtml(k) + teorik + (ogrOzellik('dersOnay') ? dersDefteri(k) : '') + gelisim + direksiyon
+    : al + programHtml(k) + (ogrOzellik('dersOnay') ? dersDefteri(k) : '') + gelisim + direksiyon + teorik);
 }
 
 // Ders defteri: sözleşmedeki / yapılan / onaylanan / MEBBİS'e girilen direksiyon dersleri yan yana; öğrenci son 14 günün derslerini onaylar ya da itiraz eder
@@ -195,7 +213,7 @@ export function belgelerHtml(k) {
 /* ---------- konu anlatımı ---------- */
 // İçerik ayrı dosyada; yalnız açılınca yüklenir (açılış hızını etkilemesin)
 let dersYuk = null;
-const dersleriYukle = () => dersYuk || (dersYuk = import('./dersler.js?v=120').then(m => m.DERSLER).catch(() => ({})));
+const dersleriYukle = () => dersYuk || (dersYuk = import('./dersler.js?v=121').then(m => m.DERSLER).catch(() => ({})));
 async function dersAc(k, id, yenile) {
   const D = await dersleriYukle(), d = D[id], [key, no] = [id.replace(/-\d+$/, ''), +id.split('-').pop()], konu = MUFREDAT.find(x => x[0] === key), baslik = konu ? konu[3][no - 1] : id;
   const sonraki = konu && no < konu[3].length ? key + '-' + (no + 1) : null;
@@ -232,17 +250,18 @@ async function dersAc(k, id, yenile) {
 
 /* ---------- olaylar ---------- */
 // direksiyon hazırlık bölümü ayrı dosyada (resmî form maddeleriyle); yer tutucu varsa yüklenir
-const dirYukle = () => import('./direksiyon.js?v=120');
+const dirYukle = () => import('./direksiyon.js?v=121');
 export function ogBagla(kap, k, yenile) {
   const yer = kap.querySelectorAll('[data-dir-yer]'); if (yer.length) dirYukle().then(m => yer.forEach(y => { y.innerHTML = m.direksiyonHtml(k, true); })).catch(() => { });
   kap.addEventListener('toggle', ev => { const m = ev.target; if (!m.matches || !m.matches('[data-modul]')) return; const id = m.dataset.modul; if (m.open) { ACIK.add(id); KAPALI.delete(id); } else { ACIK.delete(id); KAPALI.add(id); } }, true);
   kap.addEventListener('click', ev => {
     const t = ev.target;
+    if (t.closest('.tk2') && TK.takvimTikla(t, ogTk)) return yenile();
     const dr = t.closest('[data-dir]'); if (dr) return dirYukle().then(m => m.direksiyonAc(k, dr.dataset.dir, yenile));
-    if (t.closest('[data-ikaz]')) return import('./ikaz.js?v=120').then(m => m.ikazAc());
-    if (t.closest('[data-motor4]')) return import('./motor.js?v=120').then(m => m.motorAc());
-    if (t.closest('[data-debriyaj]')) return import('./motor.js?v=120').then(m => m.debriyajAc());
-    if (t.closest('[data-tehlike]')) return import('./tehlike.js?v=120').then(m => m.tehlikeAc(k));
+    if (t.closest('[data-ikaz]')) return import('./ikaz.js?v=121').then(m => m.ikazAc());
+    if (t.closest('[data-motor4]')) return import('./motor.js?v=121').then(m => m.motorAc());
+    if (t.closest('[data-debriyaj]')) return import('./motor.js?v=121').then(m => m.debriyajAc());
+    if (t.closest('[data-tehlike]')) return import('./tehlike.js?v=121').then(m => m.tehlikeAc(k));
     if (t.closest('[data-kur-android]') && window.__kurulum) { window.__kurulum.prompt(); window.__kurulum.userChoice.finally(() => { window.__kurulum = null; yenile(); }); return; }
     const od = t.closest('[data-og-ders]'); if (od) return dersAc(k, od.dataset.ogDers, yenile);
     const yz = t.closest('[data-og-yildiz]'); if (yz) { const kart = yz.closest('.og-degerlendir'), n = +yz.dataset.ogYildiz; kart.dataset.puan = n; kart.querySelectorAll('[data-og-yildiz]').forEach(b => b.classList.toggle('secili', +b.dataset.ogYildiz <= n)); kart.querySelector('[data-og-puan]').disabled = false; return; }
