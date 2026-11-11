@@ -72,7 +72,7 @@ function bulutGuvenlik(g) {
       <li style="align-items:flex-start"><span class="anahtar" style="margin-top:2px"><input type="checkbox" data-guv="hassasOnay" ${g.hassasOnay ? 'checked' : ''} aria-label="Hassas işlemde şifreyi tekrar sor"><i></i></span><div><b style="color:var(--murekkep);display:block">Hassas işlemde şifreyi tekrar sor</b><small style="color:var(--metin);font-size:13.5px">TC’yi tam göstermek, iade yapmak, kullanıcı kaldırmak ve yedekten geri dönmek için.</small></div></li>
       <li style="align-items:flex-start" data-iki-adim>${isaret('bilgi', 22)}<div><b style="color:var(--murekkep);display:block">İki adımlı giriş</b><small style="color:var(--metin);font-size:13.5px">Durum yükleniyor…</small></div></li>
     </ul><div class="kart-govde" style="border-top:1px solid var(--cizgi-2)"><b style="color:var(--murekkep)">Hareketsiz kalınca oturumu kapat</b><div class="secim" style="margin-top:8px">${[15, 30, 60, 240].map(d => `<label><input type="radio" name="oturum" value="${d}" data-oturum ${g.oturumDk == d ? 'checked' : ''}><span>${d < 60 ? d + ' dk' : d / 60 + ' saat'}</span></label>`).join('')}</div></div></div>
-    <div class="kart"><div class="kart-bas"><h3>Yedekler</h3><small>Her gün ilk açılışta otomatik</small>${mudur ? `<div class="sag"><button class="dg dg-cizgi dg-kucuk" data-yedek-al>${ik('indir')}Şimdi yedek al</button></div>` : ''}</div>
+    <div class="kart"><div class="kart-bas"><h3>Yedekler</h3><small>Her gün ilk açılışta otomatik · son 31 gün ve son 12 ayın her ayı</small>${mudur ? `<div class="sag"><button class="dg dg-cizgi dg-kucuk" data-yedek-al>${ik('indir')}Şimdi yedek al</button><label class="dg dg-hafif dg-kucuk" style="cursor:pointer">Dosyadan geri yükle<input type="file" accept=".json,application/json" data-yedek-dosya hidden></label></div>` : ''}</div>
       <div class="kart-govde"><p style="font-size:14px">Kursun bütün kayıtlarının günlük kopyası iki ayrı yerde 30 gün saklanır: Google Firebase’de ve Cloudflare’de. Yedekler değiştirilemez; 30 günden önce kimse silemez.</p></div>
       ${mudur ? '<div data-yedek-liste><p class="kart-govde" style="color:var(--soluk);font-size:14px">Yedekler yükleniyor…</p></div>' : '<p class="kart-govde" style="color:var(--soluk);font-size:14px">Yedek listesini ve geri dönüşü kurs müdürü görür.</p>'}</div>
   </div>
@@ -110,7 +110,7 @@ function yedekListesi(k) {
   const yer = k.querySelector('[data-yedek-liste]'); if (!yer) return;
   B.yedekler().then(l => {
     yedekCache = l;
-    yer.innerHTML = l.length ? `<ul class="liste">${l.slice(0, 31).map(y => `<li><div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${tarih(y.tarih)}${y.etiket ? ' · ' + (y.etiket === 'geri-donus-oncesi' ? 'geri dönüşten önce' : 'elle alındı') : ''}</b><small style="display:block;color:var(--soluk)">${y.olusturma ? y.olusturma.toTimeString().slice(0, 5) : ''} · ${e(y.kim || '')} · ${y.ogrenci || 0} öğrenci, ${y.hareket || 0} kasa kaydı · ${Math.max(1, Math.round(y.boyut / 1024))} KB${y.dis ? ' · Cloudflare’de de var' : ''}</small></div><span class="sag" style="gap:6px"><button class="dg dg-hafif dg-kucuk" data-yedek-indir="${e(y.id)}">İndir</button><button class="dg dg-hafif dg-kucuk" data-yedek-don="${e(y.id)}">Bu ana dön</button></span></li>`).join('')}</ul>` : `<p class="kart-govde" style="color:var(--soluk);font-size:14px">Henüz yedek yok. İlk yedek bugün birkaç dakika içinde kendiliğinden alınır.</p>`;
+    yer.innerHTML = l.length ? `<ul class="liste">${l.slice(0, 50).map(y => `<li><div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${tarih(y.tarih)}${y.etiket ? ' · ' + (y.etiket === 'geri-donus-oncesi' ? 'geri dönüşten önce' : 'elle alındı') : ''}</b><small style="display:block;color:var(--soluk)">${y.olusturma ? y.olusturma.toTimeString().slice(0, 5) : ''} · ${e(y.kim || '')} · ${y.ogrenci || 0} öğrenci, ${y.hareket || 0} kasa kaydı · ${Math.max(1, Math.round(y.boyut / 1024))} KB${y.dis ? ' · Cloudflare’de de var' : ''}</small></div><span class="sag" style="gap:6px"><button class="dg dg-hafif dg-kucuk" data-yedek-indir="${e(y.id)}">İndir</button><button class="dg dg-hafif dg-kucuk" data-yedek-don="${e(y.id)}">Bu ana dön</button></span></li>`).join('')}</ul>` : `<p class="kart-govde" style="color:var(--soluk);font-size:14px">Henüz yedek yok. İlk yedek bugün birkaç dakika içinde kendiliğinden alınır.</p>`;
   }).catch(x => { yer.innerHTML = `<p class="kart-govde" style="color:var(--kirmizi);font-size:14px">${e(B.hataMetni(x))}</p>`; });
 }
 let yedekCache = [];
@@ -352,7 +352,7 @@ const norm = s => String(s || '').toLocaleLowerCase('tr').replace(/ı/g, 'i').re
 const aktarim = { tur: 'kursiyer', satirlar: null, baslik: [], esles: {}, sonuc: null };
 // Excel (.xlsx/.xls): okuyucu yalnız gerektiğinde yüklenir
 let xlsxYuk = null;
-const xlsxYukle = () => xlsxYuk || (xlsxYuk = new Promise((ok, red) => { if (window.XLSX) return ok(); const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; sc.onload = ok; sc.onerror = () => { xlsxYuk = null; red(new Error('Excel okuyucu yüklenemedi')); }; document.head.appendChild(sc); }));
+export const xlsxYukle = () => xlsxYuk || (xlsxYuk = new Promise((ok, red) => { if (window.XLSX) return ok(); const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; sc.onload = ok; sc.onerror = () => { xlsxYuk = null; red(new Error('Excel okuyucu yüklenemedi')); }; document.head.appendChild(sc); }));
 async function excelOku(dosya) {
   await xlsxYukle();
   const wb = window.XLSX.read(await dosya.arrayBuffer(), { type: 'array', cellDates: true });
@@ -438,6 +438,9 @@ function aktarimSekme() {
     <div class="kart"><div class="kart-bas"><h3>2 · Dosyayı bırakın</h3></div><div class="kart-govde">
       <label class="yukle" style="position:relative">${isaret('zorunlu', 30)}<span style="flex:1"><b style="display:block;color:var(--murekkep)">CSV dosyası seç</b><small style="color:var(--soluk)">Sütun adları farklı olabilir; Sinyal tanır, siz kontrol edersiniz</small></span><input type="file" accept=".csv,text/csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" data-csv-yukle></label>
       <p style="font-size:13.5px;color:var(--soluk);margin-top:12px">Aktarılan her kayıt kontrol edilir: TC doğrulaması, aynı kişinin iki kez girilmesi, eksik telefon ve tanınmayan sınıf. İsterseniz dosyayı bize gönderin, kontrolü biz yapalım.</p></div></div></div>`;
+  // Sunucuya kaydedilemeyen değişiklikler (cihazda saklanır): indir, Sinyal ekibine gönder, sonra temizle
+  let kur = []; try { kur = JSON.parse(localStorage.getItem('sinyal-kurtarma') || '[]'); } catch (x) { }
+  if (kur.length) govde = `<div class="kart" style="margin-bottom:16px;border-color:var(--kirmizi)"><div class="kart-bas"><h3>Kaydedilemeyen değişiklikler</h3><small>${kur.length} paket · son ${new Date(kur[0].zaman).toLocaleString('tr-TR')} · ${e(kur[0].hata)}</small><div class="sag"><button class="dg dg-ana dg-kucuk" data-kurtarma-indir>İndir</button><button class="dg dg-cizgi dg-kucuk" data-kurtarma-sil>Temizle</button></div></div><p class="kart-govde" style="font-size:14px">Bu değişiklikler sunucu tarafından reddedildi ve yalnız bu cihazda duruyor. Dosyayı indirip Sinyal ekibine gönderin; geri yüklensin.</p></div>` + govde;
   return govde;
 }
 function aktarimUygula() {
@@ -602,6 +605,21 @@ function sozlesmeSekme() {
 }
 export const AYAR_SEKMELERI = { kullanici: kullaniciSekme, sozlesme: sozlesmeSekme, subeler: subelerSekme, kurallar: kurallarSekme, guvenlik: guvenlikSekme, entegrasyon: entegrasyonSekme, aktarim: aktarimSekme, gorunum: gorunumSekme };
 export function ayarBaglan(k) {
+  // İndirilmiş yedek dosyasından geri dönüş (müdür): önce o anın yedeği alınır, sonra dosyadaki veri yüklenir
+  k.addEventListener('change', ev => {
+    const inp = ev.target.closest('[data-yedek-dosya]'); if (!inp || !inp.files[0]) return;
+    const f = inp.files[0]; inp.value = '';
+    f.text().then(t => { let v; try { v = JSON.parse(t); } catch (x) { return bildir('Dosya okunamadı; Sinyal’den indirilen yedek dosyasını seçin', 'uyari'); }
+      if (!v || typeof v !== 'object' || !Array.isArray(v.kursiyerler) || !v.kurs) return bildir('Bu dosya bir Sinyal yedeği değil', 'uyari');
+      pencere({ baslik: 'Dosyadan geri yükle', icerik: `<p style="font-size:14.5px"><b>${e(f.name)}</b> · ${v.kursiyerler.length} kursiyer · ${(v.dersler || []).length} ders. Kursun bütün verisi bu dosyadakiyle değiştirilecek. Önce şu anki verinin yedeği alınır; gerekirse ona geri dönebilirsiniz.</p>`,
+        altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Geri yükle</button>',
+        onAc(p) { p.querySelector('[data-k]').addEventListener('click', () => { p.querySelector('[data-k]').disabled = true; B.dosyadanGeriYukle(v, f.name).then(() => { kapatPencere(); bildir('Yedek dosyası yüklendi'); yenile(); }).catch(x => { kapatPencere(); bildir(B.hataMetni(x), 'uyari'); }); }); } });
+    });
+  });
+  k.addEventListener('click', ev => {
+    if (ev.target.closest('[data-kurtarma-indir]')) { const a2 = document.createElement('a'); a2.href = URL.createObjectURL(new Blob([localStorage.getItem('sinyal-kurtarma') || '[]'], { type: 'application/json' })); a2.download = 'sinyal-kaydedilemeyenler.json'; a2.click(); setTimeout(() => URL.revokeObjectURL(a2.href), 3000); }
+    if (ev.target.closest('[data-kurtarma-sil]') && confirm('Kaydedilemeyen değişiklikler bu cihazdan silinsin mi? Önce indirdiğinizden emin olun.')) { try { localStorage.removeItem('sinyal-kurtarma'); } catch (x) { } import('./bulut.js?v=123').then(B => { B.bulut.kalici = ''; B.durumYaz(); }); yenile(); }
+  });
   davetListesi(k); yedekListesi(k); sunucuKaydi(k); if (B.bulutta()) ikiAdimSatiri(k);
   k.addEventListener('change', ev => {
     const t = ev.target;

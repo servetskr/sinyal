@@ -438,10 +438,29 @@ export function guven() {
     baglan(k) {
       k.addEventListener('click', ev => {
         if (!ev.target.closest('[data-dokum]')) return;
-        csvIndir('sinyal-kursiyerler.csv', [['TC', 'Ad', 'Soyad', 'Telefon', 'Doğum tarihi', 'Adres', 'Öğrenim', 'Sınıf', 'Aşama', 'Kayıt', 'Teorik', 'Direksiyon', 'Toplam', 'Ödenen', 'Kalan'], ...S.kursiyerler.map(x => [x.tc, x.ad, x.soyad, x.tel, x.dogumTarihi, x.adres, x.ogrenim, SINIFLAR[x.sinif].ad, x.asama, x.kayit, x.teorik, x.direksiyon, x.odeme.toplam, odenen(x), kalanBorc(x)])]);
-        setTimeout(() => csvIndir('sinyal-kasa.csv', [['Tarih', 'Tür', 'Kategori', 'Açıklama', 'Yöntem', 'Tutar'], ...S.hareket.map(x => [x.tarih, x.tur, x.kategori, x.aciklama, x.yontem, x.tutar])]), 400);
-        setTimeout(() => csvIndir('sinyal-dersler.csv', [['Tarih', 'Saat', 'Öğrenci', 'Öğretmen', 'Araç', 'Durum'], ...S.dersler.map(d => [d.tarih, d.saat, tamAd(kursiyer(d.kursiyer) || { ad: '', soyad: '' }), (egitmen(d.egitmen) || {}).ad, d.arac ? arac(d.arac).plaka : '', d.durum])]), 800);
-        islem('Tam veri dökümü indirdi'); kaydet(); bildir('Öğrenci, kasa ve ders dökümleri indirildi');
+        // Tam döküm: tek Excel dosyası (kursiyerler, taksitler, kasa ve makbuzlar, dersler, sınavlar, öğretmenler, araçlar, ek kalemler) + tam yedek (JSON, fotoğraf ve imzalar dahil)
+        const kn = id => { const x = kursiyer(id); return x ? tamAd(x) : ''; }, ar = id => (arac(id) || {}).plaka || '', eg = id => (egitmen(id) || {}).ad || '';
+        const sayfalar = {
+          'Kursiyerler': [['No', 'TC', 'Ad', 'Soyad', 'Telefon', 'Doğum tarihi', 'Cinsiyet', 'Adres', 'Öğrenim', 'Sınıf', 'Aşama', 'Kayıt', 'Usta öğretici', 'Teorik', 'Direksiyon', 'Toplam ücret', 'Ödenen', 'Kalan', 'Durum'],
+            ...S.kursiyerler.map(x => [x.no || '', x.tc, x.ad, x.soyad, x.tel, x.dogumTarihi, x.cinsiyet, x.adres, x.ogrenim, (SINIFLAR[x.sinif] || {}).ad || x.sinif, x.asama, x.kayit, eg(x.egitmen), x.teorik, x.direksiyon, x.odeme.toplam, odenen(x), kalanBorc(x), x.kapali ? 'Kapalı' : 'Açık'])],
+          'Taksitler': [['Kursiyer', 'Sıra', 'Vade', 'Tutar', 'Ödenen kısmi', 'Ödendi', 'Yöntem', 'Açıklama'], ...S.kursiyerler.flatMap(x => x.odeme.taksitler.map((t, i) => [tamAd(x), i + 1, t.vade, t.tutar, t.kismi || 0, t.odendi || '', t.yontem || '', t.aciklama || '']))],
+          'Ek kalemler': [['Kursiyer', 'Kalem', 'Tutar', 'Ödendi'], ...S.kursiyerler.flatMap(x => (x.odeme.ekler || []).map(y => [tamAd(x), y.ad, y.tutar, y.odendi || '']))],
+          'Kasa': [['Tarih', 'Makbuz no', 'Tür', 'Kategori', 'Açıklama', 'Yöntem', 'Tutar', 'Kursiyer', 'İptal'], ...S.hareket.map(x => [x.tarih, x.no || '', x.tur, x.kategori, x.aciklama, x.yontem, x.tutar, kn(x.kursiyer), x.iptal ? x.iptal.tarih + ' · ' + x.iptal.neden : ''])],
+          'Dersler': [['Tarih', 'Saat', 'Kursiyer', 'Usta öğretici', 'Araç', 'Tür', 'Durum', 'Başlangıç', 'Bitiş', 'Süre (dk)', 'MEBBİS'], ...S.dersler.map(d => [d.tarih, d.saat, kn(d.kursiyer), eg(d.egitmen), ar(d.arac), d.tur || 'trafik', d.durum, d.bas || '', d.bit || '', d.sure ?? '', d.meb ? 'Girildi' : ''])],
+          'Sınavlar': [['Tür', 'Tarih', 'Saat', 'Yer', 'Kursiyer', 'Sonuç', 'Puan'], ...S.sinavlar.flatMap(x => (x.kursiyerler || []).map(id => { const r = (x.sonuc || {})[id] || {}; return [x.tur, x.tarih, x.saat, x.yer, kn(id), r.sonuc || '', r.puan ?? '']; }))],
+          'Usta öğreticiler': [['Ad', 'Telefon', 'Sınıflar', 'Başlama'], ...S.egitmenler.map(x => [x.ad, x.tel, (x.siniflar || []).join(', '), x.baslama || ''])],
+          'Araçlar': [['Plaka', 'Model', 'Yıl', 'Sınıf', 'Vites', 'Usta öğretici', 'Km', 'Muayene', 'Sigorta'], ...S.araclar.map(a => [a.plaka, a.model, a.yil, a.sinif, a.vites, eg(a.egitmen), a.km, a.muayene || '', a.sigorta || ''])],
+        };
+        const csvYap = () => Object.entries(sayfalar).forEach(([ad, l], i) => setTimeout(() => csvIndir('sinyal-' + ad.toLocaleLowerCase('tr').replace(/\s+/g, '-') + '.csv', l), i * 400));
+        const tamYedek = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S)], { type: 'application/json' })); a.download = 'sinyal-tam-yedek-' + gun(0) + '.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
+        import('./sayfalar5.js?v=123').then(m => m.xlsxYukle()).then(() => {
+          const X = window.XLSX, wb = X.utils.book_new();
+          // Excel'de formül olarak çalışmasın: = + - @ ile başlayan metinlerin başına ' konur
+          const guvenli = l => l.map(r => r.map(h => typeof h === 'string' && /^[=+\-@]/.test(h) ? "'" + h : h));
+          Object.entries(sayfalar).forEach(([ad, l]) => X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet(guvenli(l)), ad.slice(0, 31)));
+          X.writeFile(wb, 'sinyal-tam-dokum-' + gun(0) + '.xlsx');
+        }).catch(() => csvYap()).finally(() => setTimeout(tamYedek, 600));
+        islem('Tam veri dökümü indirdi'); kaydet(); bildir('Tam döküm indirildi: Excel (8 sayfa) ve tam yedek dosyası');
       });
     },
   };

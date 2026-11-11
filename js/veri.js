@@ -536,6 +536,8 @@ function goc(o) {
   }
   if (o.kurs.kendiRandevu === undefined) o.kurs.kendiRandevu = true;
   noTamamla(o.kursiyerler || []);
+  // gönderim geçmişi sınırsız büyümesin (eşitleme kovaları 1 MB sınırına yaklaşmasın): son 5000 mesaj
+  if (Array.isArray(o.gonderimler) && o.gonderimler.length > 5000) o.gonderimler.length = 5000;
   return o;
 }
 // Yeni tahsilata kalıcı makbuz numarası
@@ -584,6 +586,19 @@ function mebDegisimIzle() {
   }
   mebIz = simdi;
 }
+// Ödeme uzlaştırma: taksitin ödenmiş tutarı, onu ödeyen kasa hareketlerinden (dağılım) aşağı düşemez.
+// İki cihaz aynı kursiyeri farklı anlarda değiştirip eski kopya yazılırsa "ödendi" işareti silinebiliyordu; hareket ayrı kayıt olduğu için kalır ve buradan geri gelir.
+function odemeUzlas() {
+  const gerek = new Map();
+  (S.hareket || []).forEach(h => { if (h.tur !== 'Gelir' || h.iptal || !h.kursiyer || !Array.isArray(h.dagilim)) return; h.dagilim.forEach(x => { const a = h.kursiyer + '|' + x.i + '|' + x.vade; gerek.set(a, (gerek.get(a) || 0) + (+x.al || 0)); }); });
+  if (!gerek.size) return;
+  const kz = new Map((S.kursiyerler || []).map(k => [k.id, k]));
+  gerek.forEach((tutar, a) => {
+    const [kid, i, vade] = a.split('|'), k = kz.get(kid), t = k && k.odeme && k.odeme.taksitler[+i]; if (!t || t.vade !== vade || t.iptal) return;
+    const odenmis = t.odendi ? t.tutar : (t.kismi || 0); if (odenmis >= Math.min(tutar, t.tutar)) return;
+    if (tutar >= t.tutar) { t.odendi = t.odendi || gun(0); delete t.kismi; } else t.kismi = tutar;
+  });
+}
 // Kursiyer numarası: kayıt sırasına göre kalıcı sıra no (demo kayıtlarında kimlikteki sayı); bir kez verilir, değişmez
 function noTamamla(l = S.kursiyerler || []) {
   if (!l.some(k => !k.no)) return;
@@ -600,7 +615,7 @@ function subeTamamla() {
 }
 let kaydetDinleyici = null;
 export const kaydetDinle = f => { kaydetDinleyici = f; };
-export function kaydet() { subeTamamla(); noTamamla(); mebDegisimIzle(); (S.hareket || []).forEach(h => { if (h.tur === 'Gelir' && !h.no) makbuzNoVer(h); }); // Kurs personelinin bulut verisi cihaza tam kopya olarak yazılmaz (Firestore kendi önbelleğini tutar; çıkışta silinir); demo ve öğrencinin kendi küçük kopyası yazılır
+export function kaydet() { subeTamamla(); noTamamla(); odemeUzlas(); mebDegisimIzle(); (S.hareket || []).forEach(h => { if (h.tur === 'Gelir' && !h.no) makbuzNoVer(h); }); // Kurs personelinin bulut verisi cihaza tam kopya olarak yazılmaz (Firestore kendi önbelleğini tutar; çıkışta silinir); demo ve öğrencinin kendi küçük kopyası yazılır
   if (!ANAHTAR.startsWith('sinyal-bulut-') || ANAHTAR.startsWith('sinyal-bulut-ogr-')) { try { localStorage.setItem(ANAHTAR, JSON.stringify(S)); } catch (e) { } }
   if (kaydetDinleyici) kaydetDinleyici(); }
 // Bulut (gerçek kurs): veri Firestore'dan gelir; yerel kopya kursa özel anahtarda tutulur, günlük yenilenmez
@@ -766,9 +781,10 @@ try { const o = sessionStorage.getItem('sinyal-oturum'); if (o) oturum.kullanici
 export const yerelZaman = () => { const d = new Date(); return iso(d) + 'T' + d.toTimeString().slice(0, 5); };
 export function islem(ne, ayrinti = '') { const x = { zaman: yerelZaman(), kim: oturum.kullanici ? oturum.kullanici.ad : 'Sistem', ne, ayrinti }; S.islemler.unshift(x); if (S.islemler.length > 3000) S.islemler.length = 3000; if (bulutKanca.kayit) bulutKanca.kayit(x); }
 // geri alma: son değişiklikten önceki durumun anlık görüntüsü
-let anlik = null;
-export function geriAlNoktasi() { anlik = JSON.stringify(S); }
-export function geriAl() { if (!anlik) return false; S = JSON.parse(anlik); anlik = null; kaydet(); return true; }
+// Geri alma noktası: fotoğraf ve imza gibi büyük metinler kopyalanmaz (değişmez değerler; işaretle tutulur), yalnız veri yapısı kopyalanır
+let anlik = null, anlikBuyuk = null;
+export function geriAlNoktasi() { const b = new Map(); try { anlik = JSON.stringify(S, (k, x) => { if (typeof x === 'string' && x.length > 3000) { const id = '\u0001' + b.size; b.set(id, x); return id; } return x; }); anlikBuyuk = b; } catch (x) { anlik = null; anlikBuyuk = null; } }
+export function geriAl() { if (!anlik) return false; const b = anlikBuyuk || new Map(); S = JSON.parse(anlik, (k, x) => typeof x === 'string' && x.charCodeAt(0) === 1 && b.has(x) ? b.get(x) : x); anlik = null; anlikBuyuk = null; kaydet(); return true; }
 
 export function yas(dt) { if (!dt) return null; const d = tarihOku(dt); let y = BUGUN.getFullYear() - d.getFullYear(); if (BUGUN.getMonth() < d.getMonth() || (BUGUN.getMonth() === d.getMonth() && BUGUN.getDate() < d.getDate())) y--; return y; }
 // MEBBİS'e girmeden önce kayıt kontrolü: [tamam, metin]

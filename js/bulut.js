@@ -242,19 +242,27 @@ export async function akit() {
   const yazilar = farklar(), dosyalar = yeniDosya; yeniDosya = new Map();
   if (!yazilar.size && !dosyalar.size) return;
   const { db, F } = fb, kok = ['kurslar', bulut.kurs];
-  let b = F.writeBatch(db), n = 0, boy = 0; const isler = [];
-  const ekle = (ref, veri, boyut) => { if (n >= 450 || boy + boyut > 6e6) { isler.push(b.commit()); b = F.writeBatch(db); n = 0; boy = 0; } b.set(ref, veri, { merge: true }); n++; boy += boyut; };
-  dosyalar.forEach((v, id) => { if (v.length > 950000) return; ekle(F.doc(db, ...kok, 'dosyalar', id), { v }, v.length); yuklu.add(id); });
+  // Her paketin içeriği tutulur: sunucu reddederse (yetki, boyut) değişiklikler kaybolmasın diye cihaza "kurtarma" kaydı düşer ve uyarı kalıcı olur
+  let b = F.writeBatch(db), n = 0, boy = 0, icerik = []; const isler = [];
+  const kapat = () => { const ic = icerik; isler.push(b.commit().then(() => null, x => { kurtarmaYaz(ic, x); throw x; })); };
+  const ekle = (ref, veri, boyut, kayit) => { if (n >= 450 || boy + boyut > 6e6) { kapat(); b = F.writeBatch(db); n = 0; boy = 0; icerik = []; } b.set(ref, veri, { merge: true }); n++; boy += boyut; if (kayit) icerik.push(kayit); };
+  // Firestore belge sınırı 1 MiB: 700 KB'lık PDF base64'te ~956 bin karakter eder, sığar
+  dosyalar.forEach((v, id) => { if (v.length > 1040000) { bulut.kalici = 'Bir dosya çok büyük olduğu için kaydedilemedi; daha küçük bir fotoğraf ya da PDF yükleyin'; return; } ekle(F.doc(db, ...kok, 'dosyalar', id), { v }, v.length); yuklu.add(id); });
   yazilar.forEach((w, id) => {
     const veri = { a: w.a };
     if (w.d) { veri.d = true; veri.i = {}; Object.entries(w.i).forEach(([k, x]) => { veri.i[k] = x === null ? F.deleteField() : x; }); }
     else veri.t = w.t;
-    ekle(F.doc(db, ...kok, 'v', id), veri, JSON.stringify(w).length);
+    ekle(F.doc(db, ...kok, 'v', id), veri, JSON.stringify(w).length, { id, w });
   });
-  isler.push(b.commit());
+  kapat();
   bulut.bekleyen += isler.length; durumYaz();
   if (projeKirli.size) setTimeout(projeksiyonYaz, 1500);
-  await Promise.all(isler.map(p => p.then(() => { bulut.bekleyen--; bulut.hata = ''; durumYaz(); }, x => { bulut.bekleyen--; bulut.hata = hataMetni(x); console.error(x); durumYaz(); })));
+  await Promise.all(isler.map(p => p.then(() => { bulut.bekleyen--; bulut.hata = ''; durumYaz(); }, x => { bulut.bekleyen--; bulut.hata = hataMetni(x); bulut.kalici = 'Bazı değişiklikler sunucuya kaydedilemedi (' + bulut.hata + '). Ayarlar › Veri aktarımı’ndan indirip Sinyal ekibine gönderin.'; console.error(x); durumYaz(); })));
+}
+// Kaydedilemeyen değişiklikler cihazda saklanır (en çok 30 paket); Ayarlar › Veri aktarımı'ndan indirilir
+export const KURTARMA = 'sinyal-kurtarma';
+function kurtarmaYaz(icerik, x) {
+  try { const l = JSON.parse(localStorage.getItem(KURTARMA) || '[]'); l.unshift({ zaman: new Date().toISOString(), kurs: bulut.kurs, hata: String((x && (x.code || x.message)) || x).slice(0, 200), kayitlar: icerik.map(({ id, w }) => ({ belge: id, a: w.a, ...(w.d ? { i: w.i } : { t: w.t }) })) }); localStorage.setItem(KURTARMA, JSON.stringify(l.slice(0, 30))); } catch (e) { }
 }
 function planla() { if (!bulut.kurs) return; clearTimeout(zamanla); zamanla = setTimeout(() => akit(), 400); }
 
@@ -350,7 +358,7 @@ async function baglan(u, ilkVeri) {
 // Üst çubuktaki küçük durum yazısı
 export function durumYaz() {
   const el = document.getElementById('bulut-durum'); if (!el) return;
-  const [t, c] = bulut.hata ? ['Kaydedilemedi · ' + bulut.hata, 'hata'] : bulut.durum === 'cevrimdisi' ? [bulut.bekleyen ? 'Çevrimdışı · değişiklikler bu cihazda bekliyor' : 'Çevrimdışı', 'uyari'] : bulut.bekleyen ? ['Kaydediliyor…', ''] : ['Kaydedildi', 'tamam'];
+  const [t, c] = bulut.kalici ? [bulut.kalici, 'hata'] : bulut.hata ? ['Kaydedilemedi · ' + bulut.hata, 'hata'] : bulut.durum === 'cevrimdisi' ? [bulut.bekleyen ? 'Çevrimdışı · değişiklikler bu cihazda bekliyor' : 'Çevrimdışı', 'uyari'] : bulut.bekleyen ? ['Kaydediliyor…', ''] : ['Kaydedildi', 'tamam'];
   el.textContent = t; el.className = 'bulut-durum ' + c;
 }
 
@@ -487,10 +495,15 @@ export async function yedekler() {
   try { const tok = await fb.auth.currentUser.getIdToken(); const r = await fetch(WORKER + '/yedek?kurs=' + encodeURIComponent(bulut.kurs), { headers: { Authorization: 'Bearer ' + tok } }); if (r.ok) dis = new Set((await r.json()).map(x => x.id)); } catch (x) { }
   return q.docs.map(d => ({ id: d.id, ...d.data(), olusturma: d.data().olusturma && d.data().olusturma.toDate(), dis: dis.has(d.id) })).sort((a, b) => (b.olusturma || 0) - (a.olusturma || 0));
 }
+// Saklama: son 31 günün her günü + son 12 ayın her ayının ilk yedeği (ayın sonunda fark edilen hata da geri alınabilsin)
 async function eskiYedekleriSil() {
-  const { db, F } = fb, sinir = Date.now() - 31 * 864e5;
-  for (const y of await yedekler()) {
+  const { db, F } = fb, sinir = Date.now() - 31 * 864e5, yilSinir = Date.now() - 366 * 864e5;
+  const l = await yedekler(), ayIlk = new Set();
+  [...l].sort((a, b) => (a.olusturma || 0) - (b.olusturma || 0)).forEach(y => { if (!y.olusturma) return; const ay = y.olusturma.toISOString().slice(0, 7); if (![...ayIlk].some(x => x.startsWith(ay + '|'))) ayIlk.add(ay + '|' + y.id); });
+  const aylik = new Set([...ayIlk].map(x => x.split('|')[1]));
+  for (const y of l) {
     if (!y.olusturma || y.olusturma.getTime() > sinir) continue;
+    if (aylik.has(y.id) && y.olusturma.getTime() > yilSinir) continue;
     const b = F.writeBatch(db), kok = ['kurslar', bulut.kurs, 'yedekler'];
     for (let i = 0; i < y.parca; i++) b.delete(F.doc(db, ...kok, y.id + '~' + i));
     b.delete(F.doc(db, ...kok, y.id + '~dis')); b.delete(F.doc(db, ...kok, y.id)); await b.commit().catch(() => { });
@@ -519,6 +532,15 @@ export async function geriYukle(y) {
   Object.keys(S).forEach(k => { if (!HARIC.has(k) && !(k in yeni)) delete S[k]; });
   Object.keys(yeni).forEach(k => { if (!HARIC.has(k)) S[k] = yeni[k]; });
   islem('Yedekten geri döndü', y.tarih + (y.etiket ? ' · ' + y.etiket : ''));
+  kaydet(); await akit();
+  return true;
+}
+export async function dosyadanGeriYukle(veri, ad) {
+  await yedekAl('geri-donus-oncesi');
+  const yeni = JSON.parse(JSON.stringify(veri), (k, x) => typeof x === 'string' && x.startsWith(DOSYA_ON) && dosyaVeri.has(x.slice(DOSYA_ON.length)) ? dosyaVeri.get(x.slice(DOSYA_ON.length)) : x);
+  Object.keys(S).forEach(k => { if (!HARIC.has(k) && !(k in yeni)) delete S[k]; });
+  Object.keys(yeni).forEach(k => { if (!HARIC.has(k)) S[k] = yeni[k]; });
+  islem('Yedek dosyasından geri döndü', String(ad || '').slice(0, 80));
   kaydet(); await akit();
   return true;
 }
