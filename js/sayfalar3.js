@@ -1,7 +1,7 @@
-import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas, sb, sbDers, sbSinav, gorunum, subede, SOZLESME_VARSAYILAN, satistaSiniflar, ayEkle, YONTEMLER, yontemAd, selam, kursAdi, dersKonulari, evrakKaynak, ayniTcKayit, taksitBol, aydinlatmaMetni } from './veri.js?v=124';
-import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler, imzaAlani, tamTarih, yaziyla, belgeYazdir, waAc, apiAcik, belgeWhatsApp, waSirali } from './ui.js?v=124';
-import { yenile } from './app.js?v=124';
-import { siraliPencere } from './sayfalar5.js?v=124';
+import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas, sb, sbDers, sbSinav, gorunum, subede, SOZLESME_VARSAYILAN, satistaSiniflar, ayEkle, YONTEMLER, yontemAd, selam, kursAdi, dersKonulari, evrakKaynak, ayniTcKayit, taksitBol, aydinlatmaMetni } from './veri.js?v=125';
+import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler, imzaAlani, tamTarih, yaziyla, belgeYazdir, waAc, apiAcik, belgeWhatsApp, waSirali } from './ui.js?v=125';
+import { yenile } from './app.js?v=125';
+import { siraliPencere } from './sayfalar5.js?v=125';
 
 /* ================= BELGELER VE ÇIKTILAR ================= */
 const gorunumSube = () => gorunum.sube;
@@ -32,6 +32,19 @@ const SABLONLAR = [
   ['dilekce', 'İl MEM’e dijital imza dilekçesi', 'Takip formunda dijital imzanın kabulünü sorar', 'tek'],
 ];
 const imzaHucre = (d, kim) => `<td style="width:90px;text-align:center">${d.imza ? (d.imza[kim] ? `<img src="${d.imza[kim]}" alt="" style="height:26px">${kim === 'kursiyer' && d.imza.kursiyerUzaktan ? '<br><small>uzaktan</small>' : ''}` : kim === 'kursiyer' && d.imza.kursiyerBekliyor ? '<small>bekleniyor</small>' : '<small>dijital ✓</small>') : ''}</td>`;
+const metinKodla = h => { const b = new TextEncoder().encode(h); let t = ''; for (let i = 0; i < b.length; i += 8192) t += String.fromCharCode.apply(null, b.subarray(i, i + 8192)); return 'data:text/html;charset=utf-8;base64,' + btoa(t); };
+const metinCoz = d => { try { const t = atob(d.slice(d.indexOf(',') + 1)); return new TextDecoder().decode(Uint8Array.from(t, c => c.charCodeAt(0))); } catch (x) { return null; } };
+// Sözleşmenin imza alanı dışındaki gövdesi (kursiyer, kurs, ücret, taksitler, maddeler)
+function sozlesmeGovde(k) {
+  const K = S.kurs, S0 = SINIFLAR[k.sinif], maddeler = sozlesmeMaddeleri(k);
+  return `<p style="text-align:right">Sözleşme no: ${e(k.id.replace('k', 'S-'))} · ${tamTarih(k.kayit)}</p>
+    <table><tr><th colspan="4">Kursiyer</th></tr><tr><th>Ad soyad</th><td>${e(tamAd(k))}</td><th>TC kimlik no</th><td>${e(k.tc || '')}</td></tr><tr><th>Doğum tarihi</th><td>${tamTarih(k.dogumTarihi)}</td><th>Telefon</th><td>${e(k.tel)}</td></tr><tr><th>Adres</th><td colspan="3">${e(k.adres || '')}</td></tr>
+    <tr><th colspan="4">Kurs</th></tr><tr><th>Unvan</th><td>${e(K.ad)}</td><th>Telefon</th><td>${e(K.tel)}</td></tr><tr><th>Adres</th><td colspan="3">${e(K.adres)}</td></tr></table>
+    <table><tr><th>Sertifika sınıfı</th><td>${S0.ad}</td><th>Kayıt tarihi</th><td>${tamTarih(k.kayit)}</td></tr><tr><th>Kurs ücreti</th><td>${tl(k.odeme.toplam)}${k.odeme.indirim ? `<br><small>${e(k.odeme.indirim.ad)} indirimi −${tl(k.odeme.indirim.tutar)} uygulandı</small>` : ''}</td><th>Peşinat</th><td>${tl(k.odeme.pesin)} · ${tamTarih(k.odeme.pesinTarih)}</td></tr></table>
+    <p><b>Ödeme planı</b></p><table><tr><th>#</th><th>Vade</th><th>Tutar</th></tr>${k.odeme.taksitler.map((t, i) => `<tr><td>${i + 1}</td><td>${tamTarih(t.vade)}</td><td>${tl(t.tutar)}</td></tr>`).join('') || '<tr><td colspan="3">Peşin ödendi</td></tr>'}</table>
+    ${maddeler.map((m, i) => { const n = m.indexOf('. '); return `<p><b>${i + 1}. ${e(n > 0 && n < 40 ? m.slice(0, n) : '')}${n > 0 && n < 40 ? '.' : ''}</b> ${e(n > 0 && n < 40 ? m.slice(n + 2) : m)}</p>`; }).join('')}`;
+}
+export const sozlesmeDondur = k => metinKodla(sozlesmeGovde(k));
 export function sozlesmeMaddeleri(k) {
   const K = S.kurs, S0 = SINIFLAR[k.sinif], alan = { kurs: K.ad, sinif: S0.ad, teorik: S0.teorik, direksiyon: S0.direksiyon, hak: K.sinavHak || 4, tekrarE: tl((K.tekrarUcret || {}).esinav || 0), tekrarD: tl((K.tekrarUcret || {}).dsinav || 0), ekDers: tl(K.ekDersUcreti || 0) };
   return (K.sozlesme && K.sozlesme.length ? K.sozlesme : SOZLESME_VARSAYILAN).map(m => m.replace(/\{(\w+)\}/g, (x, a) => alan[a] != null ? alan[a] : x));
@@ -108,14 +121,10 @@ export function belgeHtml(tur, id, hid) {
   const k = kursiyer(id); if (!k) return '';
   const S0 = SINIFLAR[k.sinif];
   if (tur === 'sozlesme') {
-    const K = S.kurs, maddeler = sozlesmeMaddeleri(k);
-    const imz = k.sozlesmeImza;
-    return kursBas('Kursiyer eğitim sözleşmesi') + `<p style="text-align:right">Sözleşme no: ${e(k.id.replace('k', 'S-'))} · ${tamTarih(k.kayit)}</p>
-    <table><tr><th colspan="4">Kursiyer</th></tr><tr><th>Ad soyad</th><td>${e(tamAd(k))}</td><th>TC kimlik no</th><td>${e(k.tc || '')}</td></tr><tr><th>Doğum tarihi</th><td>${tamTarih(k.dogumTarihi)}</td><th>Telefon</th><td>${e(k.tel)}</td></tr><tr><th>Adres</th><td colspan="3">${e(k.adres || '')}</td></tr>
-    <tr><th colspan="4">Kurs</th></tr><tr><th>Unvan</th><td>${e(K.ad)}</td><th>Telefon</th><td>${e(K.tel)}</td></tr><tr><th>Adres</th><td colspan="3">${e(K.adres)}</td></tr></table>
-    <table><tr><th>Sertifika sınıfı</th><td>${S0.ad}</td><th>Kayıt tarihi</th><td>${tamTarih(k.kayit)}</td></tr><tr><th>Kurs ücreti</th><td>${tl(k.odeme.toplam)}${k.odeme.indirim ? `<br><small>${e(k.odeme.indirim.ad)} indirimi −${tl(k.odeme.indirim.tutar)} uygulandı</small>` : ''}</td><th>Peşinat</th><td>${tl(k.odeme.pesin)} · ${tamTarih(k.odeme.pesinTarih)}</td></tr></table>
-    <p><b>Ödeme planı</b></p><table><tr><th>#</th><th>Vade</th><th>Tutar</th></tr>${k.odeme.taksitler.map((t, i) => `<tr><td>${i + 1}</td><td>${tamTarih(t.vade)}</td><td>${tl(t.tutar)}</td></tr>`).join('') || '<tr><td colspan="3">Peşin ödendi</td></tr>'}</table>
-    ${maddeler.map((m, i) => { const n = m.indexOf('. '); return `<p><b>${i + 1}. ${e(n > 0 && n < 40 ? m.slice(0, n) : '')}${n > 0 && n < 40 ? '.' : ''}</b> ${e(n > 0 && n < 40 ? m.slice(n + 2) : m)}</p>`; }).join('')}
+    const K = S.kurs, imz = k.sozlesmeImza;
+    // İmzalı sözleşme: imza anında dondurulan metin gösterilir; sonradan ücret ya da madde değişse de belge değişmez
+    const donuk = imz && typeof imz.metin === 'string' && imz.metin.startsWith('data:') ? metinCoz(imz.metin) : null;
+    return kursBas('Kursiyer eğitim sözleşmesi') + (donuk || sozlesmeGovde(k)) + (imz && imz.metin && !donuk ? '<p style="font-size:11px;color:#555">İmza anındaki metin yükleniyor; şu an güncel metin gösteriliyor.</p>' : '') + (donuk ? `<p style="font-size:11px;color:#555">Bu metin ${tamTarih(imz.tarih)} tarihinde imza anında kaydedilmiştir; sonradan değiştirilemez.</p>` : '') + `
     <div class="son"><p>İki nüsha düzenlenmiş, birer nüshası taraflarda kalmıştır.</p>
     <div class="imza"><div>${imz && imz.url ? `<img src="${imz.url}" alt="Kursiyer imzası" style="height:50px;display:block;margin:-56px auto 4px">` : ''}Kursiyer · ${e(tamAd(k))}${imz ? `<small style="display:block">${imz.yontem === 'Islak imza' ? 'Islak imza' : /^Uzaktan/.test(imz.yontem || '') ? 'Elektronik imza · WhatsApp linki' : 'Elektronik imza · kursta'} · ${tamTarih(imz.tarih)}</small>` : ''}</div><div>Kurs müdürü · ${e(K.yetkili || '')}<small style="display:block">${e(K.ad)}</small></div></div></div>`;
   }
@@ -153,11 +162,11 @@ export function sozlesmeImzalat(k) {
     onAc(d) {
       const ia = imzaAlani(d.querySelector('[data-imza]'));
       d.querySelector('[data-temizle]').addEventListener('click', () => ia.temizle());
-      d.querySelector('[data-uzaktan]').addEventListener('click', () => import('./imza.js?v=124').then(m => m.imzayaGonderPenceresi(k, 'sozlesme')));
+      d.querySelector('[data-uzaktan]').addEventListener('click', () => import('./imza.js?v=125').then(m => m.imzayaGonderPenceresi(k, 'sozlesme')));
       d.querySelector('[data-yazdir]').addEventListener('click', () => { belgeYazdir(belgeHtml('sozlesme', k.id) + '<div class="sayfa-sonu"></div>' + belgeHtml('sozlesme', k.id), 'Sözleşme · ' + tamAd(k)); islem('Sözleşme yazdırdı', tamAd(k)); kaydet(); bildir('İki nüsha yazdırıldı. İmzalı nüshayı teslim alınca Evraklar’da “İmzalı sözleşme”yi işaretleyin'); });
       d.querySelector('[data-imzala]').addEventListener('click', () => {
         if (ia.bos()) return bildir('Kursiyer imza alanına imzalasın', 'uyari');
-        k.sozlesmeImza = { tarih: gun(0), yontem: 'Ekranda', url: ia.url() }; k.evrak.sozlesme = true;
+        k.sozlesmeImza = { tarih: gun(0), yontem: 'Ekranda', url: ia.url(), metin: sozlesmeDondur(k) }; k.evrak.sozlesme = true;
         if (!eksikEvrak(k).length && ['Kayıt', 'Evrak'].includes(k.asama)) k.asama = 'Teorik';
         islem('Sözleşme imzalattı', tamAd(k) + ' · ekranda'); kaydet(); kapatPencere(); yenile();
         if (apiAcik()) belgeWhatsApp(belgeHtml('sozlesme', k.id), dosyaAdi('Sözleşme', tamAd(k)), `${selam(k)} imzaladığınız kurs sözleşmesinin kopyası ekte. ${S.kurs.ad}`, tamAd(k), 'ÖĞRENCİ'); else bildir('Sözleşme imzalandı. Kopyasını Belgeler › Sözleşme › “PDF’i WhatsApp’tan gönder”le iletebilirsiniz');
@@ -167,7 +176,7 @@ export function sozlesmeImzalat(k) {
 }
 export function belgeAc(tur, id) {
   const s = SABLONLAR.find(x => x[0] === tur);
-  if (s && s[3] === 'resmi') return import('./resmi.js?v=124').then(m => m.resmiAc(tur, id, kid => belgeHtml('takip', kid)));
+  if (s && s[3] === 'resmi') return import('./resmi.js?v=125').then(m => m.resmiAc(tur, id, kid => belgeHtml('takip', kid)));
   const yazdirBtn = `<button class="dg dg-ana" data-yazdir>${ik('belge')}Yazdır / PDF</button>`;
   if (s[3] === 'tek') { pencere({ baslik: s[1], genis: true, icerik: `<div style="background:var(--zemin);padding:18px;border-radius:8px;max-height:66vh;overflow:auto"><div class="a4" id="a4">${belgeHtml(tur)}</div></div>`, altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button>${yazdirBtn}`, onAc(d) { d.querySelector('[data-yazdir]').addEventListener('click', () => { belgeYazdir(belgeHtml(tur), s[1]); islem(s[1] + ' yazdırdı'); kaydet(); }); } }); return; }
   const gelir = () => S.hareket.filter(h => h.tur === 'Gelir' && h.kursiyer && subede(kursiyer(h.kursiyer))).sort((a, b) => (b.tarih + b.id).localeCompare(a.tarih + a.id));
@@ -271,9 +280,9 @@ export function kayitSayfasi() {
             const grup = (S.gruplar || []).filter(g => fark(g.baslangic) >= 0).sort((a, b) => a.baslangic.localeCompare(b.baslangic))[0];
             const yeni = { id: 'k' + Date.now(), ad: kayit.bilgi.ad.trim(), soyad: kayit.bilgi.soyad.trim(), tel: kayit.bilgi.tel, tc: kayit.bilgi.tc.trim(), dogumTarihi: kayit.bilgi.dogumTarihi || '', adres: kayit.bilgi.adres || '', ogrenim: '', dogum: (kayit.bilgi.dogumTarihi || '').slice(0, 4), teorikGrup: grup ? grup.id : 'aksam', kvkk: { tarih: gun(0), kanal: 'Online kayıt', aydinlatma: true, pazarlama: !!kayit.pazarlama }, evrakFoto: Object.fromEntries(Object.entries(kayit.evrak)), sinif: kayit.sinif, kayit: gun(0), egitmen: eg ? eg.id : null, asama: Object.values(ev2).every(Boolean) ? 'Teorik' : 'Evrak', teorik: 0, direksiyon: 0, evrak: ev2, mebIslendi: false, esinav: null, dsinav: null, odeme: { toplam: v.ucret, pesin: 0, pesinTarih: gun(0), taksitler, ekler: [], senetli: false }, kaynak: 'Web sitesi', yorum: null, notlar: [{ tarih: gun(0), metin: 'Evden kayıt sayfasından kaydoldu, sözleşmeyi telefondan imzaladı.' }], deneme: [], acil: { ad: kayit.bilgi.acil || '', yakinlik: '', tel: kayit.bilgi.acilTel || '' } };
             S.kursiyerler.unshift(yeni);
-            Object.assign(yeni, { cinsiyet: kayit.bilgi.cinsiyet, ogrenim: kayit.bilgi.ogrenim || '', sozlesmeImza: { tarih: gun(0), yontem: 'Ekranda', url: imzaUrl, kanal: 'Online kayıt' } });
+            Object.assign(yeni, { cinsiyet: kayit.bilgi.cinsiyet, ogrenim: kayit.bilgi.ogrenim || '', sozlesmeImza: { tarih: gun(0), yontem: 'Ekranda', url: imzaUrl, kanal: 'Online kayıt' } }); yeni.sozlesmeImza.metin = sozlesmeDondur(yeni);
             // evden kayıt: öğrenciye hoş geldin, müdüre kayıt özeti, usta öğreticiye yeni öğrenci (otomatik gönderim açıksa)
-            kayit.mesaj = apiAcik(); if (kayit.mesaj) import('./sayfalar1.js?v=124').then(SA => { const m = SA.alici('mudur'), l = [{ ad: tamAd(yeni), tel: yeni.tel, rol: 'ÖĞRENCİ', tur: 'Hoş geldin', metin: `${selam(yeni)} ${kursAdi('e')} kaydınız alındı. Sınıfınız: ${v.ad}.${grup ? ` Teorik dersleriniz ${tamTarih(grup.baslangic)} tarihinde başlıyor.` : ''} Ödeme planınız: ${yeni.odeme.taksitler.map(t => `${tamTarih(t.vade)} · ${tl(t.tutar)}${t.aciklama ? ' (' + t.aciklama.toLocaleLowerCase('tr') + ')' : ''}`).join(', ')}.` },
+            kayit.mesaj = apiAcik(); if (kayit.mesaj) import('./sayfalar1.js?v=125').then(SA => { const m = SA.alici('mudur'), l = [{ ad: tamAd(yeni), tel: yeni.tel, rol: 'ÖĞRENCİ', tur: 'Hoş geldin', metin: `${selam(yeni)} ${kursAdi('e')} kaydınız alındı. Sınıfınız: ${v.ad}.${grup ? ` Teorik dersleriniz ${tamTarih(grup.baslangic)} tarihinde başlıyor.` : ''} Ödeme planınız: ${yeni.odeme.taksitler.map(t => `${tamTarih(t.vade)} · ${tl(t.tutar)}${t.aciklama ? ' (' + t.aciklama.toLocaleLowerCase('tr') + ')' : ''}`).join(', ')}.` },
               { ad: m.ad, tel: m.tel, rol: m.rol, tur: 'Yeni kayıt', metin: `Yeni kayıt (evden): ${tamAd(yeni)} · ${v.ad} · ${yeni.tel}\nSözleşme ekranda imzalandı. Peşinat ${tl(p0)} henüz ödenmedi.${eksikEvrak(yeni).length ? '\nEksik evrak: ' + eksikEvrak(yeni).map(([, ad]) => ad.toLocaleLowerCase('tr')).join(', ') : ''}` }];
               if (eg) l.push({ ad: eg.ad, tel: eg.tel, rol: 'HOCA', tur: 'Yeni öğrenci', metin: `${eg.ad.split(' ')[0]} Hoca, yeni öğrenciniz: ${tamAd(yeni)} · ${v.ad} · ${yeni.tel}. Direksiyon dersleri e-sınavdan sonra planlanacak.` });
               waSirali(l, 'Kayıt mesajları', { sessiz: true }); });
@@ -340,7 +349,7 @@ export function mebbisAsistani(id) {
       mebKlavye = ev => { if (mebSira.kid !== k.id || ev.key !== 'Enter' || (ev.target.closest && ev.target.closest('input,textarea,select,button'))) return; ev.preventDefault(); if (tum[mebSira.i]) siraKopyala(); else kap.querySelector('[data-tamam]')?.click(); };
       kap.addEventListener('change', ev => { const a = ev.target.closest('[data-alan]'); if (!a) return; const v = a.value.trim(); if (a.dataset.alan === 'adli-barkod') k.adliSicil = { barkod: v }; else { k.saglikRapor = k.saglikRapor || {}; k.saglikRapor[a.dataset.alan === 'rapor-no' ? 'no' : 'tarih'] = v; } kaydet(); yenile(); });
       kap.addEventListener('click', ev => {
-        const mp = ev.target.closest('[data-meb-pdf]'); if (mp) { mp.disabled = true; return import('./evrak.js?v=124').then(m => m.evrakPdfIndir(k, mp.dataset.mebPdf, { ad: `${k.tc}_${mp.dataset.mebPdf}.pdf` })).finally(() => { mp.disabled = false; }); }
+        const mp = ev.target.closest('[data-meb-pdf]'); if (mp) { mp.disabled = true; return import('./evrak.js?v=125').then(m => m.evrakPdfIndir(k, mp.dataset.mebPdf, { ad: `${k.tc}_${mp.dataset.mebPdf}.pdf` })).finally(() => { mp.disabled = false; }); }
         const c = ev.target.closest('[data-kopyala]');
         if (c) { const al = tum.find(x => x[0] === c.dataset.kopyala); kopyala(al[2]).then(ok => { k.mebGirildi[al[0]] = true; kaydet(); bildir(ok === false ? 'Kopyalanamadı; değeri elle seçin' : al[1] + ' kopyalandı'); yenile(); }); }
         if (ev.target.closest('[data-tamam]')) {
@@ -455,7 +464,7 @@ export function guven() {
         };
         const csvYap = () => Object.entries(sayfalar).forEach(([ad, l], i) => setTimeout(() => csvIndir('sinyal-' + ad.toLocaleLowerCase('tr').replace(/\s+/g, '-') + '.csv', l), i * 400));
         const tamYedek = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S)], { type: 'application/json' })); a.download = 'sinyal-tam-yedek-' + gun(0) + '.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
-        import('./sayfalar5.js?v=124').then(m => m.xlsxYukle()).then(() => {
+        import('./sayfalar5.js?v=125').then(m => m.xlsxYukle()).then(() => {
           const X = window.XLSX, wb = X.utils.book_new();
           // Excel'de formül olarak çalışmasın: = + - @ ile başlayan metinlerin başına ' konur
           const guvenli = l => l.map(r => r.map(h => typeof h === 'string' && /^[=+\-@]/.test(h) ? "'" + h : h));
