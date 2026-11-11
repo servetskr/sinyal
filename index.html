@@ -2,6 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://www.gstatic.com https://*.workers.dev; frame-src 'self' https://www.youtube-nocookie.com https://sinyal-5d37a.firebaseapp.com; worker-src 'self' blob:; media-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Sinyal · Sürücü kursu otomasyonu</title>
 <meta name="description" content="Sürücü kursları için web tabanlı otomasyon: öğrenci, direksiyon planı, sınav, kasa, MEB işlemleri ve WhatsApp asistanı tek yerde.">
@@ -26,7 +27,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%23ffc61a'/%3E%3Cpath d='M12 4 20 12 12 20 4 12z' fill='%231b1f25'/%3E%3Cpath d='M12 8.5v4.5M12 15.4v.4' stroke='%23ffc61a' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Overpass+Mono:wght@500;600;700&family=Overpass:wght@600;700;800;900&display=swap" onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Overpass+Mono:wght@500;600;700&family=Overpass:wght@600;700;800;900&display=swap"></noscript>
+<link id="font-css" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Overpass+Mono:wght@500;600;700&family=Overpass:wght@600;700;800;900&display=swap" media="print"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Overpass+Mono:wght@500;600;700&family=Overpass:wght@600;700;800;900&display=swap"></noscript>
 <!-- Ana sayfa yalnız aşağıdaki küçük stille açılır; uygulamanın stili ve kodu arka planda ya da ilk dokunuşta iner -->
 <style id="ilk-css">
 :root{
@@ -126,8 +127,8 @@ html.w-anim [data-gor].w-gorundu{opacity:1;transform:none}
 .w-secici a:hover,.w-secici button:hover{background:rgba(255,255,255,.12);color:#fff}
 @media (max-width:420px){.w-secici a,.w-secici button{padding:10px 12px;font-size:14px}}
 </style>
-<link id="app-css" rel="stylesheet" href="css/app.css?v=122" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="css/app.css?v=122"></noscript>
+<link id="app-css" rel="stylesheet" href="css/app.css?v=123" media="print">
+<noscript><link rel="stylesheet" href="css/app.css?v=123"></noscript>
 </head>
 <body>
 <div id="uyg"><div class="tanitim" id="tanitim">
@@ -157,27 +158,8 @@ html.w-anim [data-gor].w-gorundu{opacity:1;transform:none}
 </main>
 <footer class="w-alt-bilgi"><div class="w-kap w-alt-ic"><span class="tn-logo"><svg class="tn-logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>Sürücü kursu otomasyonu</small></span></span><nav aria-label="Alt bağlantılar"><a href="#/ogrenci-giris">Öğrenci girişi</a><button type="button" data-giris="ogretmen">Öğretmen girişi</button><button type="button" data-giris>Kurs girişi</button><a href="gizlilik.html">Gizlilik</a></nav></div></footer>
 </div><div id="acilis" hidden style="min-height:100vh;display:grid;place-items:center;background:#e8e7e1;font:700 15px system-ui,-apple-system,sans-serif;color:#373d44"><div style="display:grid;justify-items:center;gap:14px"><svg width="56" height="56" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#0a4da2" stroke-width="1.2"/><path d="M12 7.6v5.6M12 15.8v.4" stroke="#111417" stroke-width="2.3" stroke-linecap="round"/></svg><span>Sinyal açılıyor…</span></div></div></div>
-<script>try{if(sessionStorage.getItem('sinyal-oturum')||/^#\/./.test(location.hash)||localStorage.getItem('sinyal-bulut')||localStorage.getItem('sinyal-ogrenci')){document.getElementById('tanitim').hidden=true;document.getElementById('acilis').hidden=false}}catch(e){}</script>
+<script src="js/acilis.js?v=123"></script>
 <noscript><p style="padding:24px">Sinyal’i kullanmak için JavaScript’i açın.</p></noscript>
-<script type="module">
-// Uygulama kodu ana sayfayı bekletmesin: oturum, uygulama içi adres ya da kayıtlı hesap varsa hemen; yoksa ilk dokunuşta ya da sayfa boşta kalınca iner.
-const css = document.getElementById('app-css');
-const cssHazir = () => new Promise(r => { if (css.media === 'all' && css.sheet) return r(); css.media = 'all'; css.addEventListener('load', r, { once: true }); setTimeout(r, 5000); });
-const yukle = () => window.__uyg || (window.__uyg = cssHazir().then(() => import('./js/app.js?v=122')).then(m => { window.__hazir = true; return m; }));
-let hemen = true;
-try { hemen = /^#\/./.test(location.hash) || !!(sessionStorage.getItem('sinyal-oturum') || sessionStorage.getItem('sinyal-kapandi') || localStorage.getItem('sinyal-bulut') || localStorage.getItem('sinyal-ogrenci')); } catch (e) { }
-if (hemen) yukle();
-else {
-  // tanıtımdaki düğme ya da uygulama linki: önce kod iner, sonra aynı dokunuş uygulamaya iletilir
-  document.addEventListener('click', ev => {
-    if (window.__hazir) return;
-    const b = ev.target.closest('[data-demo], [data-giris], a[href^="#/"]'); if (!b) return;
-    ev.preventDefault(); ev.stopPropagation();
-    b.setAttribute('aria-busy', 'true'); b.classList.add('w-yukleniyor');
-    yukle().then(() => setTimeout(() => { b.removeAttribute('aria-busy'); b.classList.remove('w-yukleniyor'); b.click(); }, 30));
-  }, true);
-  addEventListener('load', () => { const n = navigator.connection; if (n && n.saveData) return; setTimeout(() => (window.requestIdleCallback || (f => f()))(() => yukle()), 3000); }, { once: true });
-}
-</script>
+<script type="module" src="js/baslat.js?v=123"></script>
 </body>
 </html>

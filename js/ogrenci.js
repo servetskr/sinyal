@@ -1,9 +1,9 @@
 // Öğrenci paneli sekmeleri: dersler (yaklaşan + defter + gelişim + teorik konular), sınavlar, ödemeler, belgeler; bölümler açılır kapanır modüller
-import { S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen, ogrOzellik, oturum, DERS_TUR_AD } from './veri.js?v=122';
-import * as TK from './takvim.js?v=122';
-import { bildirimler } from './sayfalar1.js?v=122';
-import { e, tl, ik, rozet, ilerleme, pencere, kapatPencere, bildir, tarih, goreli, isaret, belgeYazdir, fotoKucult } from './ui.js?v=122';
-import { belgeHtml } from './sayfalar3.js?v=122';
+import { S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen, ogrOzellik, oturum, DERS_TUR_AD, iptalEdilebilir } from './veri.js?v=123';
+import * as TK from './takvim.js?v=123';
+import { bildirimler } from './sayfalar1.js?v=123';
+import { e, tl, ik, rozet, ilerleme, pencere, kapatPencere, bildir, tarih, goreli, isaret, belgeYazdir, fotoKucult } from './ui.js?v=123';
+import { belgeHtml } from './sayfalar3.js?v=123';
 
 // MEB teorik eğitim programı: konu, ders saati, başlıklar (anahtarlar soru bankasıyla aynı)
 export const MUFREDAT = [
@@ -50,11 +50,11 @@ export function degerlendirKart(k) {
 function programOlaylari(k) {
   const l = [];
   if (['Kayıt', 'Evrak', 'Teorik'].includes(k.asama)) (S.teorik || []).filter(t => t.grup === (k.teorikGrup || 'aksam') && fark(t.tarih) >= 0 && fark(t.tarih) <= 14).forEach(t => { const o = ogretmen(t.ogretmen); l.push({ tarih: t.tarih, saat: t.saat, tur: 'teorik', baslik: 'Teorik · ' + t.konu, alt: [t.salon, t.sure + ' saat', o && o.ad].filter(Boolean).join(' · ') }); });
-  S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Planlandı' && fark(d.tarih) >= 0).forEach(d => { const h = egitmen(d.egitmen), a = d.arac && arac(d.arac); l.push({ id: d.id, iptal: fark(d.tarih) >= 1, tarih: d.tarih, saat: d.saat, tur: 'direksiyon', baslik: 'Direksiyon dersi', alt: [h && h.ad, a && a.model + ' · ' + a.plaka].filter(Boolean).join(' · ') }); });
+  S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Planlandı' && fark(d.tarih) >= 0).forEach(d => { const h = egitmen(d.egitmen), a = d.arac && arac(d.arac); l.push({ id: d.id, iptal: iptalEdilebilir(d), tarih: d.tarih, saat: d.saat, tur: 'direksiyon', baslik: 'Direksiyon dersi', alt: [h && h.ad, a && a.model + ' · ' + a.plaka].filter(Boolean).join(' · ') }); });
   S.sinavlar.filter(s => s.kursiyerler.includes(k.id) && fark(s.tarih) >= 0 && !(s.sonuc || {})[k.id]).forEach(s => l.push({ tarih: s.tarih, saat: s.saat, tur: 'sinav', baslik: s.tur + ' sınavı', alt: s.yer }));
   return l.sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat));
 }
-const olayHtml = x => `<div class="og-olay og-${x.tur}"><div class="og-zaman"><small>${gunK(x.tarih)}</small><b class="mono">${x.saat}</b></div><div class="og-olay-ad"><b>${e(x.baslik)}</b><small>${e(x.alt)}</small></div>${x.iptal ? `<button class="dg dg-hafif dg-kucuk" data-og-iptal="${x.id}">İptal</button>` : ''}</div>`;
+const olayHtml = x => `<div class="og-olay og-${x.tur}"><div class="og-zaman"><small>${gunK(x.tarih)}</small><b class="mono">${x.saat}</b></div><div class="og-olay-ad"><b>${e(x.baslik)}</b><small>${e(x.alt)}</small></div>${x.iptal ? `<button class="dg dg-hafif dg-kucuk" data-og-iptal="${e(x.id)}">İptal</button>` : ''}</div>`;
 export function yaklasanHtml(k) {
   const l = programOlaylari(k), ilk = l.slice(0, 4), kalan = l.slice(4);
   return `<section class="kart og-kart"><div class="og-bas"><div><small>Önümüzdeki 2 hafta</small><b>Yaklaşan derslerin</b></div>${l.length ? `<button class="dg dg-hafif dg-kucuk" data-og-takvim>${ik('takvim')}Takvime ekle</button>` : ''}</div>
@@ -69,7 +69,7 @@ function takvimOlaylari(k) {
   if (teorikDonem) (S.teorik || []).filter(t => t.grup === (k.teorikGrup || 'aksam') && t.tarih >= (k.kayit || '')).forEach(t => { const o = ogretmen(t.ogretmen); l.push({ tarih: t.tarih, saat: t.saat, ton: 'teorik', baslik: 'Teorik · ' + t.konu, alt: [t.salon, t.sure + ' saat', o && o.ad].filter(Boolean).join(' · ') }); });
   S.dersler.filter(d => d.kursiyer === k.id && d.durum !== 'İptal' && !(d.durum === 'Planlandı' && fark(d.tarih) < 0)).forEach(d => { const h = egitmen(d.egitmen), a = d.arac && arac(d.arac), plan = d.durum === 'Planlandı';
     l.push({ tarih: d.tarih, saat: d.saat, ton: plan ? 'direksiyon' : d.durum === 'Yapıldı' ? 'yapildi' : 'gelmedi', baslik: (d.tur && d.tur !== 'trafik' ? DERS_TUR_AD[d.tur] : 'Direksiyon dersi') + (plan ? '' : d.durum === 'Yapıldı' ? ' · yapıldı' : ' · gelmedin'), alt: [h && h.ad, a && a.plaka].filter(Boolean).join(' · '),
-      sag: plan && fark(d.tarih) >= 1 ? `<button class="dg dg-hafif dg-kucuk" data-og-iptal="${d.id}">İptal</button>` : '' }); });
+      sag: plan && iptalEdilebilir(d) ? `<button class="dg dg-hafif dg-kucuk" data-og-iptal="${e(d.id)}">İptal</button>` : '' }); });
   S.sinavlar.filter(s => s.kursiyerler.includes(k.id)).forEach(s => { const r = (s.sonuc || {})[k.id]; l.push({ tarih: s.tarih, saat: s.saat, ton: 'sinav', baslik: s.tur + ' sınavı' + (r && r.sonuc ? ' · ' + r.sonuc.toLocaleLowerCase('tr') : ''), alt: s.yer }); });
   return l;
 }
@@ -213,7 +213,7 @@ export function belgelerHtml(k) {
 /* ---------- konu anlatımı ---------- */
 // İçerik ayrı dosyada; yalnız açılınca yüklenir (açılış hızını etkilemesin)
 let dersYuk = null;
-const dersleriYukle = () => dersYuk || (dersYuk = import('./dersler.js?v=122').then(m => m.DERSLER).catch(() => ({})));
+const dersleriYukle = () => dersYuk || (dersYuk = import('./dersler.js?v=123').then(m => m.DERSLER).catch(() => ({})));
 async function dersAc(k, id, yenile) {
   const D = await dersleriYukle(), d = D[id], [key, no] = [id.replace(/-\d+$/, ''), +id.split('-').pop()], konu = MUFREDAT.find(x => x[0] === key), baslik = konu ? konu[3][no - 1] : id;
   const sonraki = konu && no < konu[3].length ? key + '-' + (no + 1) : null;
@@ -250,7 +250,7 @@ async function dersAc(k, id, yenile) {
 
 /* ---------- olaylar ---------- */
 // direksiyon hazırlık bölümü ayrı dosyada (resmî form maddeleriyle); yer tutucu varsa yüklenir
-const dirYukle = () => import('./direksiyon.js?v=122');
+const dirYukle = () => import('./direksiyon.js?v=123');
 export function ogBagla(kap, k, yenile) {
   const yer = kap.querySelectorAll('[data-dir-yer]'); if (yer.length) dirYukle().then(m => yer.forEach(y => { y.innerHTML = m.direksiyonHtml(k, true); })).catch(() => { });
   kap.addEventListener('toggle', ev => { const m = ev.target; if (!m.matches || !m.matches('[data-modul]')) return; const id = m.dataset.modul; if (m.open) { ACIK.add(id); KAPALI.delete(id); } else { ACIK.delete(id); KAPALI.add(id); } }, true);
@@ -258,10 +258,10 @@ export function ogBagla(kap, k, yenile) {
     const t = ev.target;
     if (t.closest('.tk2') && TK.takvimTikla(t, ogTk)) return yenile();
     const dr = t.closest('[data-dir]'); if (dr) return dirYukle().then(m => m.direksiyonAc(k, dr.dataset.dir, yenile));
-    if (t.closest('[data-ikaz]')) return import('./ikaz.js?v=122').then(m => m.ikazAc());
-    if (t.closest('[data-motor4]')) return import('./motor.js?v=122').then(m => m.motorAc());
-    if (t.closest('[data-debriyaj]')) return import('./motor.js?v=122').then(m => m.debriyajAc());
-    if (t.closest('[data-tehlike]')) return import('./tehlike.js?v=122').then(m => m.tehlikeAc(k));
+    if (t.closest('[data-ikaz]')) return import('./ikaz.js?v=123').then(m => m.ikazAc());
+    if (t.closest('[data-motor4]')) return import('./motor.js?v=123').then(m => m.motorAc());
+    if (t.closest('[data-debriyaj]')) return import('./motor.js?v=123').then(m => m.debriyajAc());
+    if (t.closest('[data-tehlike]')) return import('./tehlike.js?v=123').then(m => m.tehlikeAc(k));
     if (t.closest('[data-kur-android]') && window.__kurulum) { window.__kurulum.prompt(); window.__kurulum.userChoice.finally(() => { window.__kurulum = null; yenile(); }); return; }
     const od = t.closest('[data-og-ders]'); if (od) return dersAc(k, od.dataset.ogDers, yenile);
     const yz = t.closest('[data-og-yildiz]'); if (yz) { const kart = yz.closest('.og-degerlendir'), n = +yz.dataset.ogYildiz; kart.dataset.puan = n; kart.querySelectorAll('[data-og-yildiz]').forEach(b => b.classList.toggle('secili', +b.dataset.ogYildiz <= n)); kart.querySelector('[data-og-puan]').disabled = false; return; }
