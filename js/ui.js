@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=128';
+import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=129';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -21,6 +21,7 @@ export function goreli(s) {
 }
 
 const P = {
+  alev: '<path d="M12 22c4 0 7-2.8 7-6.8 0-3.3-2-5.6-3.6-7.5-.5 1.6-1.4 2.6-2.4 3C13 7.5 11.6 4.6 9 2c.3 3-1.3 5-2.8 6.9C4.9 10.5 5 12.6 5 15.2 5 19.2 8 22 12 22z"/>',
   ses: '<path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.6 5.4a9 9 0 0 1 0 13.2"/>',
   genel: '<path d="M3 13h8V3H3zM13 21h8v-8h-8zM3 21h8v-6H3zM13 11h8V3h-8z"/>',
   aday: '<path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/>',
@@ -114,10 +115,10 @@ export function halka(parcalar, { boyut = 132, kalinlik = 16, orta = '' } = {}) 
 let acikPencere = null;
 // korumali: içine bilgi girilen pencere (ders bitirme, imza) dışarı dokununca ya da Esc ile kapanmaz; yalnız Vazgeç/✕ ile
 let oncekiOdak = null;
-export function pencere({ baslik, icerik, altlik = '', genis = false, onAc, korumali = false }) {
+export function pencere({ baslik, icerik, altlik = '', genis = false, onAc, korumali = false, alt = false }) {
   kapatPencere(); oncekiOdak = document.activeElement;
   const d = document.createElement('div');
-  d.className = 'perde';
+  d.className = 'perde' + (alt ? ' alt-sayfa' : '');  // alt: telefonda alttan açılan sayfa (hesap menüsü gibi)
   d.innerHTML = `<div class="pencere ${genis ? 'genis' : ''}" role="dialog" aria-modal="true" aria-label="${e(baslik)}">
     <header><h2>${e(baslik)}</h2><button class="dg-ikon" data-kapat aria-label="Kapat">${ik('kapat')}</button></header>
     <div class="pencere-govde">${icerik}</div>${altlik ? `<footer>${altlik}</footer>` : ''}</div>`;
@@ -459,7 +460,7 @@ function sifreSor(neden, ok) {
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Onayla</button>`,
     onAc(d) {
       const inp = d.querySelector('[data-sifre-tekrar]'), btn = d.querySelector('[data-k]');
-      const dene = () => { btn.disabled = true; import('./bulut.js?v=128').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
+      const dene = () => { btn.disabled = true; import('./bulut.js?v=129').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
       btn.addEventListener('click', dene); inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') dene(); }); setTimeout(() => inp.focus(), 50);
     },
   });

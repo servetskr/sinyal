@@ -1,22 +1,22 @@
-import { oturum, islem, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, yerelZaman, BECERI, risk, ekToplam, selam, kursAdi, konuListesi, konuOner, DERS_TUR_AD, dersKalanSaat, dersIptalIz } from './veri.js?v=128';
-import { e, saatDe, saatE, tl, ik, rozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani, waAc, waNumara } from './ui.js?v=128';
-import { yenile } from './app.js?v=128';
-import { ekDersKabul, bosTeklifKabul, wpGonder, bildirimler } from './sayfalar1.js?v=128';
-import { KONULAR } from './konular.js?v=128';
+import { oturum, islem, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, yerelZaman, BECERI, risk, ekToplam, selam, kursAdi, konuListesi, konuOner, DERS_TUR_AD, dersKalanSaat, dersIptalIz } from './veri.js?v=129';
+import { e, saatDe, saatE, tl, ik, rozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani, waAc, waNumara } from './ui.js?v=129';
+import { yenile } from './app.js?v=129';
+import { ekDersKabul, bosTeklifKabul, wpGonder, bildirimler } from './sayfalar1.js?v=129';
+import { KONULAR } from './konular.js?v=129';
 // Soru bankası büyük; yalnız Sınavlar sekmesi ya da test açılınca yüklenir (açılış hızını etkilemesin)
 let SORULAR = [], soruYuk = null;
 // Sorular ve levha çizimleri yalnız sınav sekmesinde yüklenir; levhalı sorularda görsel "L:<kod>" olarak durur
 let levhaSvg = () => '';
 // yüklenemezse (zayıf internet) bir sonraki dokunuşta yeniden denenir; öğrenciye haber verilir
-const sorulariYukle = () => soruYuk || (soruYuk = Promise.all([import('./sorular.js?v=128'), import('./levha.js?v=128').catch(() => null)]).then(([m, l]) => { SORULAR = m.SORULAR; if (l) levhaSvg = l.levhaSvg; }).catch(x => { soruYuk = null; bildir('Sorular yüklenemedi; internet bağlantını kontrol edip tekrar dene', 'uyari'); throw x; }));
+const sorulariYukle = () => soruYuk || (soruYuk = Promise.all([import('./sorular.js?v=129'), import('./levha.js?v=129').catch(() => null)]).then(([m, l]) => { SORULAR = m.SORULAR; if (l) levhaSvg = l.levhaSvg; }).catch(x => { soruYuk = null; bildir('Sorular yüklenemedi; internet bağlantını kontrol edip tekrar dene', 'uyari'); throw x; }));
 const gorselHtml = g => !g ? '' : String(g).startsWith('L:') ? levhaSvg(g.slice(2)) : g;
-import { randevuAl, randevuIptal } from './ozellik.js?v=128';
-import * as OG from './ogrenci.js?v=128';
-import * as HZ from './hazirlik.js?v=128';
-import { ogrOzellik } from './veri.js?v=128';
-import { soruKonu } from './soruKonu.js?v=128';
-import { MUFREDAT } from './ogrenci.js?v=128';
-import * as TK from './takvim.js?v=128';
+import { randevuAl, randevuIptal } from './ozellik.js?v=129';
+import * as OG from './ogrenci.js?v=129';
+import * as HZ from './hazirlik.js?v=129';
+import { ogrOzellik } from './veri.js?v=129';
+import { soruKonu } from './soruKonu.js?v=129';
+import { MUFREDAT } from './ogrenci.js?v=129';
+import * as TK from './takvim.js?v=129';
 
 let egId = 'e1', egSekme = 'bugun';
 let ogId = null, ogSekme = (() => { try { return sessionStorage.getItem('sinyal-og-sekme') || 'durum'; } catch (x) { return 'durum'; } })();
@@ -96,7 +96,7 @@ function dersKapat(d) {
         if (iu.bos()) return bildir('Önce sen imzala; öğrencinin imzası WhatsApp’tan istenir', 'uyari');
         const once = isle({ zaman: yerelZaman(), kursiyer: null, kursiyerBekliyor: true, usta: iu.url() });
         islem('Ders tamamlandı, öğrenci imzası istendi', tamAd(ks) + ' · ' + d.tarih + ' ' + d.saat); kaydet(); kapatPencere();
-        const m = await import('./imza.js?v=128'); await m.imzaIste('ders', ks, [d.id]); bildir('Ders kaydedildi; imza linki öğrenciye gidiyor', 'wp'); yenile(); riskKontrol(ks, once);
+        const m = await import('./imza.js?v=129'); await m.imzaIste('ders', ks, [d.id]); bildir('Ders kaydedildi; imza linki öğrenciye gidiyor', 'wp'); yenile(); riskKontrol(ks, once);
       });
     },
   });
@@ -159,12 +159,15 @@ function dersDiger(d) {
   });
 }
 const DURUM_TON = { 'Yapıldı': 'yesil', 'Gelmedi': 'kirmizi', 'İptal': 'notr' };
+// Günün saatine göre selam (öğretmen ve öğrenci ekranının başlığı)
+export const selamla = () => { const s = new Date().getHours(); return s < 5 ? 'İyi geceler' : s < 11 ? 'Günaydın' : s < 18 ? 'İyi günler' : s < 23 ? 'İyi akşamlar' : 'İyi geceler'; };
 function egDersKart(d, vurgu) {
   const k = kursiyer(d.kursiyer); if (!k) return '';
   const S0 = SINIFLAR[k.sinif], acik = d.durum === 'Planlandı', no = k.direksiyon + (acik ? 1 + S.dersler.filter(x => x.kursiyer === k.id && x.durum === 'Planlandı' && (x.tarih + x.saat) < (d.tarih + d.saat)).length : 0), basladi = acik && d.bas, gecmis = d.tarih < gun(0);
   const sag = acik ? (basladi ? rozet('Derste', 'mavi') : gecmis ? rozet('Kapanmadı', 'uyari') : '') : rozet(d.durum, DURUM_TON[d.durum] || 'notr');
-  return `<article class="eg-ders ${vurgu ? 'vurgu' : ''} ${acik ? '' : 'kapali'}">
-    <div class="eg-ders-ust"><div class="og-zaman"><small>${gecmis ? tarih(d.tarih) : goreli(d.tarih)}</small><b class="mono">${d.saat}</b></div><div class="og-olay-ad">${avatar(k.ad, k.soyad, k.foto)}<b>${e(tamAd(k))}</b><small>${S0.ad} · ${acik ? no + '. ders' : no + ' ders yapıldı'} / ${S0.direksiyon}</small></div>${sag}</div>
+  return `<article class="eg-ders ${vurgu ? 'vurgu' : ''} ${acik ? '' : 'kapali'} ${d.durum === 'Yapıldı' ? 'bitti' : ''}">
+    ${vurgu && acik ? `<small class="eg-sira-et">${basladi ? 'Şu an derstesin' : 'Sıradaki dersin'}</small>` : ''}
+    <div class="eg-ders-ust"><div class="eg-saat"><b class="mono">${d.saat}</b>${gecmis ? `<small>${gunKisa(d.tarih)} ${tarih(d.tarih)}</small>` : d.tarih !== gun(0) ? `<small>${goreli(d.tarih)}</small>` : ''}</div><div class="og-olay-ad">${avatar(k.ad, k.soyad, k.foto)}<b>${e(tamAd(k))}</b><small>${e(S0.ad)} · ${acik ? no + '. ders' : no + ' ders yapıldı'} / ${S0.direksiyon}</small></div>${sag}</div>
     ${vurgu && acik && k.notlar[0] ? `<p class="eg-bilgi">${ik('kalem')}<span>${e(k.notlar[0].metin)}</span></p>` : ''}
     ${basladi ? `<p class="eg-bilgi mavi">${ik('saat')}<span>${saatDe(d.bas)} başladı · ${d.konum ? 'konum alındı' : d.konum === false ? 'konum alınamadı' : 'konum alınıyor'}. Bitince imzalat; süre kendiliğinden yazılır.</span></p>` : ''}
     ${d.durum === 'Yapıldı' && d.imza && d.imza.kursiyerBekliyor ? `<p class="eg-bilgi sari">${ik('uyari')}<span>Öğrencinin imzası bekleniyor. <button class="dg dg-hafif dg-kucuk" data-imza-tekrar="${e(d.id)}">Linki yeniden gönder</button></span></p>` : ''}
@@ -191,11 +194,11 @@ export function egitmenPortal() {
   if (egSekme === 'bugun') {
     const siradaki = bugun.find(d => d.durum === 'Planlandı' && d.bas) || bugun.find(d => d.durum === 'Planlandı');
     const aracSat = ar ? `<div class="eg-arac">${aracGorsel(ar, 'kucuk')}<div><b>${e(ar.model)} · ${e(ar.plaka)}</b><small>Bugün senin aracın · bakıma ${Math.max(0, ar.bakimKm - ar.km).toLocaleString('tr-TR')} km</small></div></div>` : '';
-    govde = `${kapanmamis.length ? `<section class="og-grup" style="margin-top:6px"><h3 class="og-grup-bas">Kapatman gereken dersler</h3><p class="og-not" style="margin:-4px 2px 10px">Bu dersler yapıldı ya da öğrenci gelmedi olarak işaretlenmemiş. Takip formu ve ders sayısı için kapat.</p>${kapanmamis.map(d => egDersKart(d)).join('')}</section>` : ''}
-      <section class="og-grup" style="margin-top:${kapanmamis.length ? 22 : 6}px"><h3 class="og-grup-bas">Bugünkü derslerin</h3>
+    govde = `${kapanmamis.length ? `<section class="og-grup eg-uyari-grup" style="margin-top:6px"><h3 class="og-grup-bas">Kapatman gereken dersler</h3><p class="og-not" style="margin:-4px 2px 10px">Bu dersler yapıldı ya da öğrenci gelmedi olarak işaretlenmemiş. Takip formu ve ders sayısı için kapat.</p>${kapanmamis.map(d => egDersKart(d)).join('')}</section>` : ''}
+      <section class="og-grup" style="margin-top:${kapanmamis.length ? 22 : 6}px"><h3 class="og-grup-bas">Bugünkü derslerin</h3><div class="eg-zaman-cizgi">
       ${bugun.length ? bugun.map(d => egDersKart(d, d === siradaki)).join('') : `<div class="kart og-kart eg-bos"><b>Bugün dersin yok</b><p>Kurs sana ders planlayınca burada görünür.</p>
         <ol class="eg-nasil"><li><span>1</span><div><b>Dersi başlat</b><small>Başlangıç saati ve konum kaydedilir.</small></div></li><li><span>2</span><div><b>Bitir: konu ve puan</b><small>Çalışılan konular takip formuna yazılır; becerilere 1–5 puan verilir.</small></div></li><li><span>3</span><div><b>İmzalat</b><small>Öğrenci telefonuna imza atar ya da imza linki WhatsApp’tan gider.</small></div></li></ol>
-        <p class="og-not">Öğrenci gelmezse “Gelmedi”ye dokun; öğrenciye ve müdüre haber gider. Dersi iptal etmek için ⋯ menüsünü kullan.</p></div>`}</section>
+        <p class="og-not">Öğrenci gelmezse “Gelmedi”ye dokun; öğrenciye ve müdüre haber gider. Dersi iptal etmek için ⋯ menüsünü kullan.</p></div>`}</div></section>
       ${aracSat ? `<section class="og-grup"><h3 class="og-grup-bas">Aracın</h3>${aracSat}</section>` : ''}`;
   }
   if (egSekme === 'hafta') {
@@ -216,10 +219,12 @@ export function egitmenPortal() {
   }
   const yapilan = bugun.filter(d => d.durum === 'Yapıldı').length;
   return {
-    baslik: 'Usta öğretici ekranı', alt: 'Telefondan kullanılan ekran',
+    baslik: !usta ? 'Öğretmen ekranı' : egSekme === 'bugun' ? 'Bugün' : egSekme === 'hafta' ? 'Programım' : 'Öğrencilerim', alt: usta ? 'Öğretmen ekranı' : 'Telefondan kullanılan ekran',
     html: `<div class="portal portal-og">
       ${usta ? '' : `<div class="og-onizleme">${isaret('bilgi', 16)}<span>Personel önizlemesi</span><select class="girdi" data-eg aria-label="Usta öğretici seç">${S.egitmenler.map(x => `<option value="${x.id}" ${x.id === eg.id ? 'selected' : ''}>${e(x.ad)}</option>`).join('')}</select></div>`}
-      <header class="og-ust"><div><small>Merhaba,</small><h2>${ad1} Hoca</h2></div><span class="og-asama">${egSekme === 'bugun' ? (bugun.length ? yapilan + '/' + bugun.length + ' ders bitti' : 'Bugün ders yok') : egSekme === 'hafta' ? 'Programın' : ogrenciler.length + ' öğrenci'}</span></header>
+      <header class="app-bas"><small>${tarihUzun(gun(0))}</small><h2>${egSekme === 'bugun' ? selamla() + ', ' + ad1 + ' Hoca' : egSekme === 'hafta' ? 'Programım' : 'Öğrencilerim'}</h2>${egSekme === 'kursiyer' && ogrenciler.length ? `<p>${ogrenciler.length} öğrencin var</p>` : ''}</header>
+      ${egSekme === 'bugun' && bugun.length ? (() => { const iptalsiz = bugun.filter(d => d.durum !== 'İptal'), kalan = iptalsiz.filter(d => d.durum === 'Planlandı').length, sira2 = bugun.find(d => d.durum === 'Planlandı' && d.bas) || bugun.find(d => d.durum === 'Planlandı'), ks = sira2 && kursiyer(sira2.kursiyer);
+        return `<div class="eg-ozet" role="status"><span class="eg-halka" style="--o:${Math.round(yapilan / Math.max(1, iptalsiz.length) * 100)}"><b>${yapilan}</b><small>/${iptalsiz.length}</small></span><div><b>${kalan ? kalan + ' ders kaldı' : 'Bugünkü derslerin bitti'}</b><small>${sira2 && ks ? (sira2.bas ? 'Şu an ' : 'Sıradaki ') + sira2.saat + ' · ' + e(tamAd(ks)) : kalan ? '' : 'Eline sağlık.'}</small></div></div>`; })() : ''}
       ${govde}
     </div>
     <nav class="og-sekme" aria-label="Öğretmen ekranı">${[['bugun', 'Bugün', 'direksiyon'], ['hafta', 'Programım', 'takvim'], ['kursiyer', 'Öğrencilerim', 'kursiyer']].map(([kk, t, i]) => `<button data-egs="${kk}" class="${kk === egSekme ? 'secili' : ''}" ${kk === egSekme ? 'aria-current="page"' : ''}>${ik(i)}<span>${t}${kk === 'bugun' && kapanmamis.length ? ' <em>' + kapanmamis.length + '</em>' : ''}</span></button>`).join('')}</nav>`,
@@ -227,7 +232,7 @@ export function egitmenPortal() {
       k.addEventListener('change', ev => { if (ev.target.matches('[data-eg]')) { egId = ev.target.value; yenile(); } });
       k.addEventListener('click', ev => {
         const t = ev.target;
-        const dn = t.closest('[data-deneme]'); if (dn) return import('./deneme.js?v=128').then(m => m.denemeAc(kursiyer(dn.dataset.deneme), yenile));
+        const dn = t.closest('[data-deneme]'); if (dn) return import('./deneme.js?v=129').then(m => m.denemeAc(kursiyer(dn.dataset.deneme), yenile));
         const s = t.closest('[data-egs]'); if (s) { egSekme = s.dataset.egs; return yenile(true); }
         if (TK.takvimTikla(t, egTk)) return yenile();
         const db = t.closest('[data-ders-basla]'); if (db) {
@@ -241,7 +246,7 @@ export function egitmenPortal() {
           return;
         }
         const y = t.closest('[data-yapildi]'); if (y) return dersKapat(S.dersler.find(x => x.id === y.dataset.yapildi));
-        const it = t.closest('[data-imza-tekrar]'); if (it) { const d = S.dersler.find(x => x.id === it.dataset.imzaTekrar); import('./imza.js?v=128').then(m => m.imzaIste('ders', kursiyer(d.kursiyer), [d.id])); return; }
+        const it = t.closest('[data-imza-tekrar]'); if (it) { const d = S.dersler.find(x => x.id === it.dataset.imzaTekrar); import('./imza.js?v=129').then(m => m.imzaIste('ders', kursiyer(d.kursiyer), [d.id])); return; }
         const g = t.closest('[data-gelmedi]'); if (g) return gelmediIsaretle(S.dersler.find(x => x.id === g.dataset.gelmedi));
         const dg = t.closest('[data-ders-diger]'); if (dg) return dersDiger(S.dersler.find(x => x.id === dg.dataset.dersDiger));
       });
@@ -287,6 +292,36 @@ function testBitir(k) {
   try { localStorage.removeItem(TEST_ANAHTAR(k)); } catch (x) { }
   kaydet();
 }
+// Yolculuk şeridi: kayıttan ehliyete giden yol; araba öğrencinin bulunduğu aşamada (içinde ilerledikçe ileri gider)
+const ARABA = '<svg viewBox="0 0 34 18" aria-hidden="true"><path d="M3 12.6V10.2c0-1 .7-1.9 1.7-2.1L8.4 7l3.3-3.7a3 3 0 0 1 2.2-1h6.6a3 3 0 0 1 2.3 1.1L26 7l3.3.9c1.1.3 1.9 1.3 1.9 2.5v2.2c0 .6-.4 1-1 1H4c-.6 0-1-.4-1-1z" fill="#f2b705" stroke="#111" stroke-width="1.3" stroke-linejoin="round"/><path d="M11 7l2.5-2.8c.2-.3.5-.4.8-.4h2.9V7zM18.6 7V3.8h2c.3 0 .6.1.8.4L23.6 7z" fill="#dbe7f6"/><circle cx="9.2" cy="13.9" r="2.7" fill="#111" stroke="#fff" stroke-width="1"/><circle cx="25" cy="13.9" r="2.7" fill="#111" stroke="#fff" stroke-width="1"/></svg>';
+function yolculuk(k) {
+  const n = Math.max(0, asamaNo(k)), son = ASAMALAR.length - 1, S0 = SINIFLAR[k.sinif];
+  const ic = k.asama === 'Direksiyon' && S0.direksiyon ? k.direksiyon / S0.direksiyon : k.asama === 'Teorik' && S0.teorik ? k.teorik / S0.teorik : 0;
+  const konum = Math.min(100, (n + Math.min(.85, ic)) / son * 100);
+  const metin = k.asama === 'Ehliyet' ? 'Ehliyetini aldın, iyi yolculuklar' : k.asama === 'Direksiyon' && S0.direksiyon ? `Direksiyondasın · ${k.direksiyon}/${S0.direksiyon} ders` : k.asama === 'Teorik' ? `Teorik derslerdesin · ${k.teorik}/${S0.teorik} saat` : k.asama === 'Sınav' ? 'Sınav aşamasındasın, az kaldı' : k.asama === 'Evrak' ? 'Belgelerin tamamlanıyor' : 'Kaydın yapıldı, yola çıktın';
+  return `<section class="og-yolculuk" aria-label="Aşaman: ${e(k.asama)}. ${e(metin)}"><div class="og-serit" style="--k:${(konum / 100).toFixed(3)}"><i class="og-serit-dolu"></i>${ASAMALAR.slice(0, -1).map((a, i) => `<span class="og-durak ${i < n ? 'gecti' : i === n ? 'simdi' : ''}" style="--x:${(i / son).toFixed(3)}"></span>`).join('')}<span class="og-araba">${ARABA}</span></div>
+    <ol class="og-duraklar" aria-hidden="true">${ASAMALAR.map((a, i) => `<li class="${i < n ? 'gecti' : i === n ? 'simdi' : ''}" style="--x:${(i / son).toFixed(3)}">${a}</li>`).join('')}</ol><p class="og-yolculuk-not">${e(metin)}</p></section>`;
+}
+// Günün sorusu: her gün öğrenciye özel bir soru; üst üste kaç gün çözdüğü bu cihazda tutulur (kursa gönderilmez)
+const gsAnahtar = k => 'sinyal-gs-' + k.id;
+const gsOku = k => { try { const v = JSON.parse(localStorage.getItem(gsAnahtar(k)) || '{}'); return { gunler: Array.isArray(v.gunler) ? v.gunler : [], cevap: v.cevap || null }; } catch (x) { return { gunler: [], cevap: null }; } };
+const gsYaz = (k, v) => { try { localStorage.setItem(gsAnahtar(k), JSON.stringify(v)); } catch (x) { } };
+const gsSoru = k => { let h = 2166136261; for (const c of gun(0) + '|' + k.id) h = Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0; return h % SORULAR.length; };
+const gsSeri = g => { const bas = g.gunler.includes(gun(0)) ? 0 : 1; let n = 0; while (g.gunler.includes(gun(-(bas + n)))) n++; return n; };
+function gununSorusu(k) {
+  if (k.asama === 'Ehliyet') return '';
+  if (!SORULAR.length) { sorulariYukle().then(() => { if (document.querySelector('[data-gs-bekle]')) yenile(); }).catch(() => { }); return `<section class="og-grup"><div class="og-gs" data-gs-bekle><div class="og-gs-ust"><span class="og-gs-et"><b>Günün sorusu</b></span></div><p class="og-gs-soru soluk">Soru hazırlanıyor…</p></div></section>`; }
+  const g = gsOku(k), qi = gsSoru(k), [kn, q, sec, dogru, gorsel, aciklama] = SORULAR[qi], c = g.cevap && g.cevap.tarih === gun(0) && g.cevap.soru === qi ? g.cevap.secim : null, seri = gsSeri(g);
+  const hafta = Array.from({ length: 7 }, (_, i) => gun(i - 6)).map(t => `<i class="${g.gunler.includes(t) ? 'dolu' : ''} ${t === gun(0) ? 'bugun' : ''}"><small>${gunKisa(t)}</small></i>`).join('');
+  return `<section class="og-grup"><div class="og-gs ${c == null ? '' : c === dogru ? 'dogru' : 'yanlis'}">
+    <div class="og-gs-ust"><span class="og-gs-et"><b>Günün sorusu</b>${e(KONULAR[kn] ? KONULAR[kn][0] : 'Trafik')}</span>${seri ? `<span class="og-gs-seri" title="Üst üste çözdüğün gün">${ik('alev')}${seri} gün</span>` : ''}</div>
+    ${gorsel ? `<div class="soru-gorsel og-gs-gorsel">${gorselHtml(gorsel)}</div>` : ''}<p class="og-gs-soru">${e(q)}</p>
+    <div class="og-gs-sec">${sec.map((t, i) => `<button type="button" data-gs="${i}" class="${c == null ? '' : i === dogru ? 'dogru' : i === c ? 'yanlis' : 'soluk'}" ${c == null ? '' : 'disabled'}><b>${'ABCD'[i]}</b><span>${e(t)}</span></button>`).join('')}</div>
+    ${c == null ? '' : `<p class="og-gs-sonuc"><b>${c === dogru ? 'Doğru, tebrikler!' : 'Doğrusu ' + 'ABCD'[dogru] + '.'}</b>${aciklama ? ' ' + e(aciklama) : ''}</p>
+      <div class="og-gs-hafta" aria-label="Son 7 gün: ${g.gunler.filter(t => t >= gun(-6)).length} gün çözüldü">${hafta}</div>
+      <button type="button" class="dg dg-cizgi og-genis" data-test-basla="hizli" data-og-sinava>${ik('saat')}10 soruluk hızlı teste geç</button>`}
+  </div></section>`;
+}
 // Ana sayfa: önce sıradaki iş (ders ya da sınav), sonra öğrencinin yapması gerekenler, sonra kısa özet; ayrıntılar sekmelerde
 function anaSayfa(k, sd, sinav) {
   const S0 = SINIFLAR[k.sinif], sn = OG.sonrakiTaksit(k), tb = ogrOzellik('tekrar') ? HZ.tekrarBugun(k).length : 0;
@@ -320,7 +355,7 @@ function anaSayfa(k, sd, sinav) {
     ${karo('odeme', 'Kalan borç', kalan ? tl(kalan) : 'Yok', kalan && sn ? 'Sonraki ' + tarih(sn.t.vade) : 'Ödemelerin tamam', '')}
     ${esGecti ? karo('sinav', 'e-Sınav', 'Geçti', k.esinav.puan ? k.esinav.puan + ' puan' : '', '') : karo('sinav', 'e-Sınava hazırlık', hz.puan + '<i>/100</i>', '', ilerleme(hz.puan, 100, hz.puan >= 70 ? 'yesil' : ''))}
   </div></section>`;
-  return sira + yapilacak + ozet + OG.kurulumKart();
+  return sira + yapilacak + gununSorusu(k) + ozet + OG.kurulumKart();
 }
 // Sınav sekmesi menüsü: önce sınav durumu, sonra öğrencinin aşamasına göre önce direksiyon ya da e-sınav çalışması
 function sinavMenu(k) {
@@ -390,9 +425,8 @@ export function ogrenciPortal() {
     baslik: 'Kursiyer ekranı', alt: 'Kursiyerin telefonunda gördüğü ekran',
     html: `<div class="portal portal-og">
       ${kendi ? '' : `<div class="og-onizleme">${isaret('bilgi', 16)}<span>Personel önizlemesi</span><select class="girdi" data-og aria-label="Öğrenci seç">${S.kursiyerler.slice(0, 40).map(x => `<option value="${x.id}" ${x.id === k.id ? 'selected' : ''}>${e(tamAd(x))}</option>`).join('')}</select></div>`}
-      ${ogSekme === 'durum' ? `<header class="og-ust">${avatar(k.ad, k.soyad, k.foto)}<div><small>Merhaba,</small><h2>${e(k.ad)}</h2></div><span class="og-asama">${e(k.asama === 'Ehliyet' ? 'Ehliyet alındı' : k.asama + ' aşaması')}</span></header>
-        <ol class="og-yol" aria-label="Aşama: ${e(k.asama)}">${ASAMALAR.map((a, i) => `<li class="${i < asamaNo(k) ? 'gecti' : i === asamaNo(k) ? 'simdi' : ''}"><i></i><span>${a}</span></li>`).join('')}</ol>`
-        : `<header class="og-ust og-ust-kucuk"><h2>${OG_SEKME.find(x => x[0] === ogSekme)[1]}</h2><small>${e(tamAd(k))} · ${e(S0.ad)}</small></header>`}
+      ${ogSekme === 'durum' ? `<header class="app-bas og-selam">${avatar(k.ad, k.soyad, k.foto)}<div><small>${selamla()},</small><h2>${e(k.ad)}</h2></div></header>${yolculuk(k)}`
+        : `<header class="app-bas"><small>${e(tamAd(k))} · ${e(S0.ad)}</small><h2>${OG_SEKME.find(x => x[0] === ogSekme)[1]}</h2></header>`}
       ${govde}
     </div>
     <nav class="og-sekme" aria-label="Öğrenci paneli">${OG_SEKME.map(([kk, t, i]) => `<button data-ogs="${kk}" class="${kk === ogSekme ? 'secili' : ''}" ${kk === ogSekme ? 'aria-current="page"' : ''}>${ik(i)}<span>${t}</span></button>`).join('')}</nav>`,
@@ -406,6 +440,7 @@ export function ogrenciPortal() {
         const t = ev.target;
         const s = t.closest('[data-ogs]'); if (s) { if (test.mod && test.i >= test.liste.length) test = { mod: null }; else if (test.mod) { test.duraklat = true; testSakla(k); } ogSekme = s.dataset.ogs; sekmeSakla(); yenile(true); }
         const gt = t.closest('[data-git]'); if (gt) { const [sk, md] = gt.dataset.git.split(':'); if (md) OG.modulAc(md); ogSekme = sk; sekmeSakla(); yenile(true); return; }
+        const gs = t.closest('[data-gs]'); if (gs && !gs.disabled && SORULAR.length) { const g = gsOku(k); if (!(g.cevap && g.cevap.tarih === gun(0))) { g.cevap = { tarih: gun(0), soru: gsSoru(k), secim: +gs.dataset.gs }; g.gunler = [...new Set([...g.gunler, gun(0)])].sort().slice(-60); gsYaz(k, g); } return yenile(); }
         const o = t.closest('[data-ode]'); if (o) odemeYap(k, +o.dataset.ode);
         const oe = t.closest('[data-og-ekders]'); if (oe) { if (oe.dataset.ogEkders === 'evet') ekDersKabul(k); else { k.ekDersTeklif = null; kaydet(); bildirimler([{ kim: 'mudur', metin: `${tamAd(k)} ek direksiyon dersi teklifini istemedi.`, tur: 'Kursiyer cevabı' }], 'Ek ders'); bildir('Cevabın kursa iletildi'); yenile(); } }
         const ob = t.closest('[data-og-bos]'); if (ob) bosTeklifKabul(ob.dataset.ogBos, k.id, true);
