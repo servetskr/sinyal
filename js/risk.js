@@ -25,6 +25,16 @@ export function bosKapasite(gunSay = 6) {
   }));
   return { gunler, hucre, toplam: hucre.flat().reduce((a, c) => a + c.bos, 0) };
 }
+// Öğretmenin bir aylık alacağı (brüt): sabit ücret + yapılan ders × prim − o ay verilen avans − o ay için yapılan ödemeler.
+// Ofisin hakediş tablosu ve öğretmenin "Kazancım" ekranı aynı hesabı kullanır.
+export const ayAnahtar = (geri = 0) => { const [y, m] = gun(0).split('-').map(Number), t = new Date(y, m - 1 - geri, 1); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0'); };
+export function ustaAlacak(h, geri = 0) {
+  const ay = ayAnahtar(geri), l = S.dersler.filter(d => d.egitmen === h.id && d.durum === 'Yapıldı' && (d.tarih || '').slice(0, 7) === ay);
+  const maas = +h.maas || 0, primBirim = +h.prim || 0, prim = l.length * primBirim, brut = maas + prim;
+  const avans = (S.avanslar || []).filter(a => a.kim === h.ad && (a.tarih || '').slice(0, 7) === ay).reduce((x, a) => x + (+a.tutar || 0), 0);
+  const odemeler = (S.ustaOdemeleri || []).filter(o => o.egitmen === h.id && o.ay === ay), odenen = odemeler.reduce((x, o) => x + (+o.tutar || 0), 0);
+  return { ay, ders: l.length, imzasiz: l.filter(d => !d.imza || d.imza.kursiyerBekliyor).length, kisa: l.filter(d => d.sure != null && d.sure < 40).length, maas, primBirim, prim, brut, avans, odemeler, odenen, kalan: Math.max(0, brut - avans - odenen) };
+}
 export function hakedis(ayGeri = 0) {
   const d0 = new Date(); d0.setDate(1); d0.setMonth(d0.getMonth() - ayGeri);
   const buAy = t => t.slice(0, 7) === `${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}`;

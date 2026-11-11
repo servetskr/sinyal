@@ -582,6 +582,7 @@ function kirlet(a, el, o) {
   else if (a === 'dersler' || a === 'hareket') { [el && el.kursiyer, eski && eski.kursiyer].forEach(k => k && projeKirli.add(k)); if (a === 'dersler') [el, eski].forEach(d => d && d.egitmen && S.kursiyerler.forEach(k => { if (k.panelKod && k.egitmen === d.egitmen && k.id !== d.kursiyer) projeKirli.add(k.id); })); }
   else if (a === 'sinavlar') [el, eski].forEach(x => x && (x.kursiyerler || []).forEach(k => projeKirli.add(k)));
   else if (['teorik', 'gruplar', 'egitmenler', 'araclar', 'bosTeklif', 'subeler'].includes(a)) projeKirli.add('*');
+  else if (['avanslar', 'ustaOdemeleri'].includes(a)) { ustaKirli.add('*'); setTimeout(ustaProjeksiyonYaz, 0); }  // öğretmenin kazanç ekranı
 }
 const sec = (o, l) => { const r = {}; l.forEach(k => { if (o && o[k] !== undefined) r[k] = o[k]; }); return r; };
 const veriAt = (k, x) => typeof x === 'string' && x.length > DOSYA_SINIR && x.startsWith('data:') ? null : (typeof x === 'string' && x.startsWith(DOSYA_ON) ? null : x);
@@ -786,6 +787,9 @@ export function ustaVerisi(egId, gunSiniri = 180) {
     dersler: benim.concat(diger),
     sinavlar: S.sinavlar.filter(x => (x.kursiyerler || []).some(k => kIds.has(k))).map(x => ({ ...x, kursiyerler: x.kursiyerler.filter(k => kIds.has(k)), sonuc: x.sonuc ? Object.fromEntries(Object.entries(x.sonuc).filter(([k]) => kIds.has(k))) : x.sonuc })),
     bosTeklif: (S.bosTeklif || []).filter(t => t.egitmen === egId),
+    // kendi kazancı: yalnız kendi avansları ve kendisine yapılan ödemeler
+    avanslar: (S.avanslar || []).filter(a => a.kim === (S.egitmenler.find(x => x.id === egId) || {}).ad),
+    ustaOdemeleri: (S.ustaOdemeleri || []).filter(o => o.egitmen === egId),
     imzaTalepleri: (S.imzaTalepleri || []).filter(t => kIds.has(t.kursiyer)).map(t => { const x = { ...t }; delete x.metin; return x; }),
     entegrasyon: { kdv: (S.entegrasyon || {}).kdv, earsiv: { bagli: false }, muhasebe: {}, musavir: {} },
   };

@@ -494,6 +494,7 @@ function goc(o) {
   (o.kursiyerler || []).forEach(k => { k.odeme.taksitler.forEach(t => { if (t.yontem === 'Havale/EFT') t.yontem = 'Havale'; }); });
   // kalıcı makbuz numaraları (yıl içinde sıralı)
   o.sayac = o.sayac || {};
+  o.ustaOdemeleri = o.ustaOdemeleri || [];  // öğretmene yapılan hakediş ödemeleri { id, egitmen, ay: 'YYYY-AA', tutar, tarih, yontem }
   const gelir = (o.hareket || []).filter(h => h.tur === 'Gelir').sort((a, b) => (a.tarih + a.id).localeCompare(b.tarih + b.id));
   gelir.forEach(h => { if (!h.no) { const yil = h.tarih.slice(0, 4); o.sayac['m' + yil] = (o.sayac['m' + yil] || 0) + 1; h.no = 'M' + yil + '-' + String(o.sayac['m' + yil]).padStart(5, '0'); } });
   // gerçek entegrasyon kurulana kadar bağlı görünmez
@@ -628,7 +629,7 @@ export function demoyaDon() { mebIz = null; ANAHTAR = 'sinyal-demo-v19'; S = yuk
 // Yeni kurs: ayarlar ve şablonlar hazır, kayıtlar boş
 export function bosVeri({ kursAd, yetkili, sehir, mudurTel }) {
   const o = uret();
-  ['kursiyerler', 'dersler', 'hareket', 'adaylar', 'sinavlar', 'teorik', 'gonderimler', 'islemler', 'kampanyalar', 'cezalar', 'avanslar', 'devredilen', 'imzaTalepleri', 'bosTeklif', 'faturalar', 'izinler', 'duyurular', 'bekleme', 'gelenAlinan', 'egitmenler', 'araclar', 'ogretmenler', 'personel', 'kullanicilar', 'arsiv', 'gunSonu'].forEach(k => { if (Array.isArray(o[k])) o[k] = []; });
+  ['kursiyerler', 'dersler', 'hareket', 'adaylar', 'sinavlar', 'teorik', 'gonderimler', 'islemler', 'kampanyalar', 'cezalar', 'avanslar', 'ustaOdemeleri', 'devredilen', 'imzaTalepleri', 'bosTeklif', 'faturalar', 'izinler', 'duyurular', 'bekleme', 'gelenAlinan', 'egitmenler', 'araclar', 'ogretmenler', 'personel', 'kullanicilar', 'arsiv', 'gunSonu'].forEach(k => { if (Array.isArray(o[k])) o[k] = []; });
   o.subeler = [{ id: 's1', ad: 'Merkez', semt: '', kurumKodu: '', mudur: yetkili || '', mebbis: '' }];
   o.kurs = { ...o.kurs, ad: kursAd || 'Sürücü kursu', yetkili: yetkili || '', sehir: sehir || '', tel: '', adres: sehir || '', puan: null, yorumSayisi: 0, web: '', wp: '', mudurTel: mudurTel || '', iban: '', waApi: '', yorumLink: '' };
   o.zamanli = { gonderilen: {}, kayit: [], kuyruk: [], son: null, sinir: false };
