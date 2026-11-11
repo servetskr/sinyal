@@ -27,9 +27,31 @@ export const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStar
 export const gun = n => { const d = new Date(BUGUN); d.setDate(d.getDate() + n); return iso(d); };
 export const tarihOku = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
 export const fark = s => Math.round((tarihOku(s) - BUGUN) / 864e5);
+// KVKK aydınlatma metni (kurs Ayarlar › KVKK'dan değiştirebilir): veri sorumlusu kurs; hukuki sebep, aktarım ve haklar
+export const aydinlatmaMetni = () => S.kurs.aydinlatma || `${S.kurs.ad || 'Kursumuz'} (veri sorumlusu) olarak kimlik, iletişim, öğrenim, sağlık raporu ve adli sicil bilgilerinizi; ders, sınav ve ödeme kayıtlarınızı sürücü kursu eğitiminin yürütülmesi, sözleşmenin ifası ve MEB mevzuatından doğan yükümlülükler (MEBBİS kaydı, ders programı, sınav bildirimi) için işliyoruz (KVKK m.5/2-c, ç; m.6). Ders hatırlatmaları ve ödeme takibi kursun meşru menfaatine dayanır; kampanya ve tanıtım mesajları yalnız izninizle gönderilir. Verileriniz kursun kullandığı Sinyal yazılımı aracılığıyla Google (Almanya), Cloudflare ve Meta (WhatsApp) altyapısında tutulur; bu nedenle yurt dışına aktarılır. Yetkili kurumlar (MEB, vergi idaresi) dışında paylaşılmaz ve mevzuattaki süre boyunca saklanır. KVKK m.11 kapsamındaki haklarınız (bilgi isteme, düzeltme, silme, itiraz) için kursa başvurabilirsiniz; ayrıntılar: servetskr.github.io/sinyal/gizlilik.html`;
+// Ders iptali ve değişikliği: ders saatinden en az 24 saat önce (takvim günü değil, gerçek saat)
+export const dersKalanSaat = d => (new Date(d.tarih + 'T' + (/^\d{2}:\d{2}$/.test(d.saat || '') ? d.saat : '00:00') + ':00') - Date.now()) / 36e5;
+// Para girişi: "1.250,50" → 1250.5, "24.000" → 24000, "24,000.00" → 24000; eksi ve geçersiz değer 0 olur
+// Aynı TC ile açık kayıt: aynı sınıfta kayıt durdurulur, başka sınıfta açık kayıt varsa uyarılır
+export function ayniTcKayit(tc, sinif, haric) { const t = String(tc || '').trim(); if (!/^\d{11}$/.test(t)) return { ayni: null, baska: null };
+  const acik = (S.kursiyerler || []).filter(x => x !== haric && x.tc === t && !x.kapali && x.asama !== 'Ehliyet');
+  return { ayni: acik.find(x => x.sinif === sinif) || null, baska: acik.find(x => x.sinif !== sinif) || null }; }
+export function tutarOku(v) {
+  if (typeof v === 'number') return isFinite(v) && v > 0 ? Math.round(v * 100) / 100 : 0;
+  let t = String(v ?? '').replace(/[^\d.,]/g, ''); if (!t) return 0;
+  const sonV = t.lastIndexOf(','), sonN = t.lastIndexOf('.');
+  if (sonV >= 0 && sonN >= 0) t = sonV > sonN ? t.replace(/\./g, '').replace(',', '.') : t.replace(/,/g, '');
+  else if (sonV >= 0) t = /^\d{1,3}(,\d{3})+$/.test(t) ? t.replace(/,/g, '') : t.replace(/,/g, '.').replace(/\.(?=.*\.)/g, '');
+  else if (sonN >= 0) t = /^\d{1,3}(\.\d{3})+$/.test(t) ? t.replace(/\./g, '') : t.replace(/\.(?=.*\.)/g, '');
+  const n = Math.round(parseFloat(t) * 100) / 100; return isFinite(n) && n > 0 ? n : 0;
+}
+// Taksit bölme: 50 TL'ye yuvarlanır, kalan son taksite eklenir; sıfır liralık taksit oluşmaz (gerekirse taksit sayısı azalır)
+export function taksitBol(top, n) { top = Math.round(top); if (top <= 0) return []; n = Math.max(1, Math.min(n || 1, Math.floor(top / 50) || 1)); const p = Math.floor(top / n / 50) * 50; return Array.from({ length: n }, (_, i) => i === n - 1 ? top - p * (n - 1) : p); }
+export const iptalEdilebilir = d => !!d && d.durum === 'Planlandı' && dersKalanSaat(d) >= 24;
 // Kurs kapalı günleri: Pazar, sabit resmî tatiller ve dini bayramlar (kurs Ayarlar'dan ek kapalı gün girer).
 export const TATILLER = ['01-01', '04-23', '05-01', '05-19', '07-15', '08-30', '10-29'];
-const BAYRAMLAR = ['2026-03-20', '2026-03-21', '2026-03-22', '2026-05-27', '2026-05-28', '2026-05-29', '2026-05-30'];
+// Dini bayramlar (Diyanet takvimi; arife yarım gün olduğu için kapalı sayılmaz). Her yıl eklenmeli: 2028 için Ağustos 2027'de Diyanet takvimine bakın
+const BAYRAMLAR = ['2026-03-20', '2026-03-21', '2026-03-22', '2026-05-27', '2026-05-28', '2026-05-29', '2026-05-30', '2027-03-09', '2027-03-10', '2027-03-11', '2027-05-16', '2027-05-17', '2027-05-18', '2027-05-19'];
 export const kapaliGun = t => tarihOku(t).getDay() === 0 ? 'Pazar' : (TATILLER.includes(t.slice(5)) || BAYRAMLAR.includes(t)) ? 'Resmî tatil' : null;
 export const isGunuIleri = t => { const d = tarihOku(t); while (kapaliGun(iso(d))) d.setDate(d.getDate() + 1); return iso(d); };
 
@@ -515,6 +537,9 @@ function goc(o) {
     if (uc) { uc.odeme.sozlesme = uc.odeme.toplam; const acik = uc.odeme.taksitler.filter(t => !t.odendi); acik.forEach(t => { t.iptal = gun(-20); }); uc.odeme.toplam -= acik.reduce((a, t) => a + t.tutar, 0); uc.ucretsiz = { tarih: gun(-20), neden: 'Şehit / gazi yakını', no: '', kim: 'Demo' }; }
   }
   if (o.kurs.kendiRandevu === undefined) o.kurs.kendiRandevu = true;
+  noTamamla(o.kursiyerler || []);
+  // gönderim geçmişi sınırsız büyümesin (eşitleme kovaları 1 MB sınırına yaklaşmasın): son 5000 mesaj
+  if (Array.isArray(o.gonderimler) && o.gonderimler.length > 5000) o.gonderimler.length = 5000;
   return o;
 }
 // Yeni tahsilata kalıcı makbuz numarası
@@ -546,7 +571,44 @@ export function makbuzNoVer(h) {
   return h.no;
 }
 // Sınıf ayarlarını kalıcı yaz
-export function sinifKaydet(k, alan) { Object.assign(SINIFLAR[k], alan); S.kurs.siniflar[k] = { ...(S.kurs.siniflar[k] || {}), ...alan }; }
+export function sinifKaydet(k, alan) { if (alan && 'ucret' in alan) S.kurs.ucretOnay = gun(0); Object.assign(SINIFLAR[k], alan); S.kurs.siniflar[k] = { ...(S.kurs.siniflar[k] || {}), ...alan }; }
+// MEBBİS'e girilmiş dersin değişmesi: hangi yoldan olursa olsun (sürükle, taşı, iptal, öğrenci/öğretmen telefonu, WhatsApp) kaydette fark edilir.
+// Saati/öğretmeni/aracı değişen ders yeniden "MEBBİS'e girilecek" olur; silinen ders "MEBBİS'ten silinecek" listesine yazılır.
+let mebIz = null;
+function mebDegisimIzle() {
+  const iz = d => [d.tarih, d.saat, d.egitmen, d.arac || '', d.kursiyer].join('|'), simdi = new Map();
+  (S.dersler || []).forEach(d => { if (d.meb) simdi.set(d.id, iz(d)); });
+  if (mebIz) {
+    const varolan = new Map((S.dersler || []).map(d => [d.id, d]));
+    mebIz.forEach((eski, id) => {
+      const d = varolan.get(id), [tarih, saat, egitmen, arac, kursiyer] = eski.split('|');
+      if (!d) { const l = S.mebSilinecek = S.mebSilinecek || []; if (!l.some(x => x.id === id)) l.push({ id, tarih, saat, egitmen, arac, kursiyer, zaman: gun(0) }); }
+      else if (d.meb && iz(d) !== eski) { d.meb = false; d.mebDegisti = { eski: tarih + ' ' + saat, zaman: gun(0) }; simdi.delete(id); }
+    });
+  }
+  mebIz = simdi;
+}
+// Ödeme uzlaştırma: taksitin ödenmiş tutarı, onu ödeyen kasa hareketlerinden (dağılım) aşağı düşemez.
+// İki cihaz aynı kursiyeri farklı anlarda değiştirip eski kopya yazılırsa "ödendi" işareti silinebiliyordu; hareket ayrı kayıt olduğu için kalır ve buradan geri gelir.
+function odemeUzlas() {
+  const gerek = new Map();
+  (S.hareket || []).forEach(h => { if (h.tur !== 'Gelir' || h.iptal || !h.kursiyer || !Array.isArray(h.dagilim)) return; h.dagilim.forEach(x => { const a = h.kursiyer + '|' + x.i + '|' + x.vade; gerek.set(a, (gerek.get(a) || 0) + (+x.al || 0)); }); });
+  if (!gerek.size) return;
+  const kz = new Map((S.kursiyerler || []).map(k => [k.id, k]));
+  gerek.forEach((tutar, a) => {
+    const [kid, i, vade] = a.split('|'), k = kz.get(kid), t = k && k.odeme && k.odeme.taksitler[+i]; if (!t || t.vade !== vade || t.iptal) return;
+    const odenmis = t.odendi ? t.tutar : (t.kismi || 0); if (odenmis >= Math.min(tutar, t.tutar)) return;
+    if (tutar >= t.tutar) { t.odendi = t.odendi || gun(0); delete t.kismi; } else t.kismi = tutar;
+  });
+}
+// İptal edilen ders plandan çıkar ama izi kalır (kim, ne zaman, neden): denetimde ve öğretmen primi hesabında sorulduğunda gösterilir
+export function dersIptalIz(d, neden, not) { if (!d) return; (S.dersIptaller = S.dersIptaller || []).unshift({ id: d.id, kursiyer: d.kursiyer, egitmen: d.egitmen, arac: d.arac || null, tarih: d.tarih, saat: d.saat, meb: !!d.meb, iptal: { zaman: yerelZaman(), kim: oturum.kullanici ? oturum.kullanici.ad : 'Öğrenci paneli', neden: neden || '', not: String(not || '').slice(0, 200) } }); if (S.dersIptaller.length > 1000) S.dersIptaller.length = 1000; }
+// Kursiyer numarası: kayıt sırasına göre kalıcı sıra no (demo kayıtlarında kimlikteki sayı); bir kez verilir, değişmez
+function noTamamla(l = S.kursiyerler || []) {
+  if (!l.some(k => !k.no)) return;
+  let son = l.reduce((a, k) => Math.max(a, +k.no || 0), 0);
+  l.filter(k => !k.no).sort((a, b) => (a.kayit || '').localeCompare(b.kayit || '') || String(a.id).localeCompare(String(b.id))).forEach(k => { const m = /^k(\d{1,4})$/.exec(k.id); k.no = m && !l.some(x => +x.no === +m[1]) ? +m[1] : ++son; if (+k.no > son) son = +k.no; });
+}
 function subeTamamla() {
   if (!S.subeler) return;
   const v = gorunum.sube || 's1';
@@ -557,10 +619,12 @@ function subeTamamla() {
 }
 let kaydetDinleyici = null;
 export const kaydetDinle = f => { kaydetDinleyici = f; };
-export function kaydet() { subeTamamla(); (S.hareket || []).forEach(h => { if (h.tur === 'Gelir' && !h.no) makbuzNoVer(h); }); try { localStorage.setItem(ANAHTAR, JSON.stringify(S)); } catch (e) { } if (kaydetDinleyici) kaydetDinleyici(); }
+export function kaydet() { subeTamamla(); noTamamla(); odemeUzlas(); mebDegisimIzle(); (S.hareket || []).forEach(h => { if (h.tur === 'Gelir' && !h.no) makbuzNoVer(h); }); // Kurs personelinin bulut verisi cihaza tam kopya olarak yazılmaz (Firestore kendi önbelleğini tutar; çıkışta silinir); demo ve öğrencinin kendi küçük kopyası yazılır
+  if (!ANAHTAR.startsWith('sinyal-bulut-') || ANAHTAR.startsWith('sinyal-bulut-ogr-')) { try { localStorage.setItem(ANAHTAR, JSON.stringify(S)); } catch (e) { } }
+  if (kaydetDinleyici) kaydetDinleyici(); }
 // Bulut (gerçek kurs): veri Firestore'dan gelir; yerel kopya kursa özel anahtarda tutulur, günlük yenilenmez
-export function bulutVeri(yeni, kursId) { ANAHTAR = 'sinyal-bulut-' + kursId; yeni._bulut = true; S = goc(yeni); }
-export function demoyaDon() { ANAHTAR = 'sinyal-demo-v19'; S = yukle(); }
+export function bulutVeri(yeni, kursId) { mebIz = null; ANAHTAR = 'sinyal-bulut-' + kursId; yeni._bulut = true; S = goc(yeni); if (!String(kursId).startsWith('ogr-')) { try { localStorage.removeItem(ANAHTAR); } catch (e) { } } }
+export function demoyaDon() { mebIz = null; ANAHTAR = 'sinyal-demo-v19'; S = yukle(); }
 // Yeni kurs: ayarlar ve şablonlar hazır, kayıtlar boş
 export function bosVeri({ kursAd, yetkili, sehir, mudurTel }) {
   const o = uret();
@@ -575,6 +639,9 @@ export function bosVeri({ kursAd, yetkili, sehir, mudurTel }) {
   o.hesaplar = [{ id: 'kasa', ad: 'Nakit kasa', tur: 'Kasa', bakiye: 0 }];
   o.entegrasyon = { ...o.entegrasyon, earsiv: { bagli: false, ad: 'e-Arşiv entegratörü', not: '' } };
   o.sms = { bakiye: 0, kanal: 'WhatsApp' };
+  // demodan kalan görüşme günü kapatması ve hazır ücretler yeni kursa taşınmaz: ücretler kurulumda müdür onaylayana kadar "onaylanmadı" sayılır
+  const gs = (o.sosyal && o.sosyal.gorusmeSablon) || o.gorusmeSablon; if (gs) gs.kapali = [];
+  o.kurs.ucretOnay = null;
   delete o._gun; o._bulut = true;
   return o;
 }
@@ -718,9 +785,10 @@ try { const o = sessionStorage.getItem('sinyal-oturum'); if (o) oturum.kullanici
 export const yerelZaman = () => { const d = new Date(); return iso(d) + 'T' + d.toTimeString().slice(0, 5); };
 export function islem(ne, ayrinti = '') { const x = { zaman: yerelZaman(), kim: oturum.kullanici ? oturum.kullanici.ad : 'Sistem', ne, ayrinti }; S.islemler.unshift(x); if (S.islemler.length > 3000) S.islemler.length = 3000; if (bulutKanca.kayit) bulutKanca.kayit(x); }
 // geri alma: son değişiklikten önceki durumun anlık görüntüsü
-let anlik = null;
-export function geriAlNoktasi() { anlik = JSON.stringify(S); }
-export function geriAl() { if (!anlik) return false; S = JSON.parse(anlik); anlik = null; kaydet(); return true; }
+// Geri alma noktası: fotoğraf ve imza gibi büyük metinler kopyalanmaz (değişmez değerler; işaretle tutulur), yalnız veri yapısı kopyalanır
+let anlik = null, anlikBuyuk = null;
+export function geriAlNoktasi() { const b = new Map(); try { anlik = JSON.stringify(S, (k, x) => { if (typeof x === 'string' && x.length > 3000) { const id = '\u0001' + b.size; b.set(id, x); return id; } return x; }); anlikBuyuk = b; } catch (x) { anlik = null; anlikBuyuk = null; } }
+export function geriAl() { if (!anlik) return false; const b = anlikBuyuk || new Map(); S = JSON.parse(anlik, (k, x) => typeof x === 'string' && x.charCodeAt(0) === 1 && b.has(x) ? b.get(x) : x); anlik = null; anlikBuyuk = null; kaydet(); return true; }
 
 export function yas(dt) { if (!dt) return null; const d = tarihOku(dt); let y = BUGUN.getFullYear() - d.getFullYear(); if (BUGUN.getMonth() < d.getMonth() || (BUGUN.getMonth() === d.getMonth() && BUGUN.getDate() < d.getDate())) y--; return y; }
 // MEBBİS'e girmeden önce kayıt kontrolü: [tamam, metin]
@@ -738,7 +806,7 @@ export function mebOnKontrol(k) {
   l.push([!!k.cinsiyet, 'Cinsiyet seçildi']);
   l.push([!!(k.saglikRapor && k.saglikRapor.no && k.saglikRapor.tarih), 'Sağlık raporu numarası ve tarihi girildi']);
   l.push([!!(k.adliSicil && k.adliSicil.barkod), 'Adli sicil barkodu girildi']);
-  l.push([!!(k.kvkk && k.kvkk.riza), 'KVKK aydınlatma ve açık rıza alındı']);
+  l.push([!!(k.kvkk && (k.kvkk.aydinlatma || k.kvkk.riza)), 'KVKK aydınlatma metni verildi']);
   // MEBBİS'e aktarılacak kayıt fotoğrafı (aktarılmış eski kayıtlarda aranmaz)
   if (!k.mebIslendi) l.push([!!k.foto, 'Kayıt fotoğrafı çekildi (biyometrik)']);
   return l;

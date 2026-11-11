@@ -1,4 +1,4 @@
-import { S, gun, fark, SINIFLAR, egitmen, kapaliGun, dersAraci, risk, kursAdi } from './veri.js?v=122';
+import { S, gun, fark, SINIFLAR, egitmen, kapaliGun, dersAraci, risk, kursAdi } from './veri.js?v=123';
 
 const ort = l => l.length ? l.reduce((a, x) => a + x, 0) / l.length : null;
 export const riskliler = (l = S.kursiyerler) => l.map(k => ({ k, r: risk(k) })).filter(x => x.r && x.r.puan >= 25).sort((a, b) => b.r.puan - a.r.puan);
@@ -6,7 +6,7 @@ export const riskliler = (l = S.kursiyerler) => l.map(k => ({ k, r: risk(k) })).
 /* ================= DERS BAŞI KÂR VE BOŞ KAPASİTE ================= */
 export const KAPASITE_SAAT = ['09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'];
 export function dersMaliyeti(primOrt) {
-  const m = S.kurs.maliyet, yakit = Math.round(m.km * m.tuketim / 100 * m.yakit);
+  const m = S.kurs.maliyet || (S.kurs.maliyet = { yakit: 46, tuketim: 6.5, km: 22, bakim: 55, pay: 55 }), yakit = Math.round(m.km * m.tuketim / 100 * m.yakit);
   const prim = primOrt != null ? primOrt : Math.round(ort(S.egitmenler.map(x => x.prim || 0)) || 0);
   return { yakit, prim, bakim: +m.bakim || 0, toplam: yakit + prim + (+m.bakim || 0) };
 }
@@ -68,6 +68,7 @@ export function otomatikPlan({ gunSay = 7, haftalik = 3 } = {}) {
       if (x.kalan <= 0 || (kHafta[x.k.id] || 0) >= haftalik || (kGun[x.k.id + g] || 0) >= kSinir) continue;
       const h = egitmen(x.k.egitmen);
       if ((S.izinler || []).some(i => i.kim === h.id && g >= i.bas && g <= i.bit) || (uGun[h.id + g] || 0) >= uSinir) continue;
+      if (Object.values(h.belgeler || {}).some(t => t && t < g)) continue;  // sertifika, sağlık raporu ya da adli sicil süresi dolmuş usta öğreticiye ders önerilmez (elle eklemede de engelli)
       for (const sa of KAPASITE_SAAT) {
         if (dolu.has('u' + g + sa + h.id) || dolu.has('k' + g + sa + x.k.id)) continue;
         const ar = dersAraci(h.id, x.k.sinif, g, sa); if (!ar || dolu.has('a' + g + sa + ar.id) || [ar.muayene, ar.sigorta].some(t => t && t < g)) continue;

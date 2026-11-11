@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=122';
+import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=123';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -112,8 +112,10 @@ export function halka(parcalar, { boyut = 132, kalinlik = 16, orta = '' } = {}) 
 
 // --- pencere, çekmece, bildirim ---
 let acikPencere = null;
-export function pencere({ baslik, icerik, altlik = '', genis = false, onAc }) {
-  kapatPencere();
+// korumali: içine bilgi girilen pencere (ders bitirme, imza) dışarı dokununca ya da Esc ile kapanmaz; yalnız Vazgeç/✕ ile
+let oncekiOdak = null;
+export function pencere({ baslik, icerik, altlik = '', genis = false, onAc, korumali = false }) {
+  kapatPencere(); oncekiOdak = document.activeElement;
   const d = document.createElement('div');
   d.className = 'perde';
   d.innerHTML = `<div class="pencere ${genis ? 'genis' : ''}" role="dialog" aria-modal="true" aria-label="${e(baslik)}">
@@ -122,14 +124,17 @@ export function pencere({ baslik, icerik, altlik = '', genis = false, onAc }) {
   document.body.appendChild(d);
   document.body.classList.add('kilitli');
   requestAnimationFrame(() => d.classList.add('acik'));
-  d.addEventListener('click', ev => { if (ev.target === d || ev.target.closest('[data-kapat]')) kapatPencere(); });
+  if (korumali) d.dataset.korumali = '1';
+  d.addEventListener('click', ev => { if ((ev.target === d && !korumali) || ev.target.closest('[data-kapat]')) kapatPencere(); });
   acikPencere = d;
   const ilk = d.querySelector('input,select,textarea,button:not([data-kapat])'); if (ilk) setTimeout(() => ilk.focus(), 60);
   if (onAc) onAc(d);
   return d;
 }
-export function kapatPencere() { if (acikPencere) { acikPencere.remove(); acikPencere = null; document.body.classList.remove('kilitli'); } }
-document.addEventListener('keydown', ev => { if (ev.key === 'Escape') kapatPencere(); });
+export function kapatPencere() { if (acikPencere) { acikPencere.remove(); acikPencere = null; document.body.classList.remove('kilitli'); if (oncekiOdak && oncekiOdak.isConnected && oncekiOdak.focus) { try { oncekiOdak.focus(); } catch (x) { } } oncekiOdak = null; } }
+// Pencere açıkken Tab odağı pencerenin içinde döner (klavye ve ekran okuyucu kullanıcıları arkadaki sayfaya düşmesin)
+document.addEventListener('keydown', ev => { if (ev.key !== 'Tab' || !acikPencere) return; const l = [...acikPencere.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')].filter(x => x.offsetParent !== null); if (!l.length) return; const ilk = l[0], son = l[l.length - 1]; if (ev.shiftKey && document.activeElement === ilk) { ev.preventDefault(); son.focus(); } else if (!ev.shiftKey && document.activeElement === son) { ev.preventDefault(); ilk.focus(); } else if (!acikPencere.contains(document.activeElement)) { ev.preventDefault(); ilk.focus(); } });
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !(acikPencere && acikPencere.dataset.korumali)) kapatPencere(); });
 
 export function bildir(metin, tur = 'tamam', geriAlinir = false) {
   let k = document.querySelector('.bildirimler');
@@ -138,7 +143,7 @@ export function bildir(metin, tur = 'tamam', geriAlinir = false) {
   b.className = 'bildirim bildirim-' + tur;
   b.innerHTML = ik(tur === 'tamam' ? 'tik' : tur === 'wp' ? 'wp' : 'uyari') + '<span>' + e(metin) + '</span>' + (geriAlinir ? '<button class="bildirim-geri" data-geri-al>Geri al</button>' : '');
   k.appendChild(b);
-  const sure = geriAlinir ? 6500 : 3200;
+  const sure = geriAlinir ? 6500 : tur === 'uyari' ? 6000 : 3200;  // uyarılar okunacak kadar ekranda kalır
   setTimeout(() => b.classList.add('git'), sure);
   setTimeout(() => b.remove(), sure + 500);
 }
@@ -148,7 +153,9 @@ export function sekmeler(liste, secili, ad = 'sekme') {
 }
 
 export function csvIndir(ad, satirlar) {
-  const csv = '﻿' + satirlar.map(r => r.map(h => '"' + String(h ?? '').replace(/"/g, '""') + '"').join(';')).join('\r\n');
+  // Excel'de formül olarak çalışmasın: = + - @ ile başlayan metinlerin başına ' konur (sayılar hariç)
+  const hucre = h => { let t = String(h ?? ''); if (typeof h !== 'number' && /^[=+\-@\t\r]/.test(t)) t = "'" + t; return '"' + t.replace(/"/g, '""') + '"'; };
+  const csv = '﻿' + satirlar.map(r => r.map(hucre).join(';')).join('\r\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = ad; document.body.appendChild(a); a.click();
@@ -452,7 +459,7 @@ function sifreSor(neden, ok) {
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Onayla</button>`,
     onAc(d) {
       const inp = d.querySelector('[data-sifre-tekrar]'), btn = d.querySelector('[data-k]');
-      const dene = () => { btn.disabled = true; import('./bulut.js?v=122').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
+      const dene = () => { btn.disabled = true; import('./bulut.js?v=123').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
       btn.addEventListener('click', dene); inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') dene(); }); setTimeout(() => inp.focus(), 50);
     },
   });

@@ -1,8 +1,8 @@
 // Gerçek kurs hesabı: Google Firebase (Frankfurt). Giriş e-posta + şifreyle; kurs verisi Firestore'da
 // kurslar/{kurs}/v altında parça parça durur. Her kayıt ayrı alan olarak yazılır: iki kişi aynı anda
 // farklı kayıtları değiştirirse ikisi de korunur. Fotoğraf ve imzalar kurslar/{kurs}/dosyalar'da ayrı belge.
-import { FIREBASE } from './firebase-ayar.js?v=122';
-import { S, bulutVeri, bosVeri, kaydetDinle, kaydet, oturum, bulutKanca, makbuzSira, islem, iso, EVRAKLAR, gun, fark, tamAd } from './veri.js?v=122';
+import { FIREBASE } from './firebase-ayar.js?v=123';
+import { S, bulutVeri, bosVeri, kaydetDinle, kaydet, oturum, bulutKanca, makbuzSira, islem, iso, EVRAKLAR, gun, fark, tamAd, iptalEdilebilir, dersIptalIz } from './veri.js?v=123';
 
 const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
 const YEREL = 'sinyal-bulut';
@@ -82,10 +82,14 @@ export async function sifreDogrula(sifre) {
   const { auth, A } = await sdk();
   try { await A.reauthenticateWithCredential(auth.currentUser, A.EmailAuthProvider.credential(auth.currentUser.email, sifre)); return true; } catch (x) { return x.code === 'auth/multi-factor-auth-required'; }  // iki adımlı hesapta şifre doğruysa ikinci adım istenir
 }
+// Çıkış: bekleyen yazılar en fazla 4 sn beklenir; cihazda kalan kurs verisi (yerel kopya ve Firestore önbelleği) silinir
+export const yerelTemizle = () => { try { Object.keys(localStorage).filter(a => a.startsWith('sinyal-bulut-') || a.startsWith('sinyal-ogr-bekleyen-')).forEach(a => localStorage.removeItem(a)); } catch (x) { } };
+async function onbellekSil() { if (!fb) return; try { await fb.F.terminate(fb.db); await fb.F.clearIndexedDbPersistence(fb.db); } catch (x) { } }
 export async function cikisYap() {
-  try { await akit(); } catch (x) { }
-  try { localStorage.removeItem(YEREL); } catch (x) { }
+  try { await Promise.race([akit(), new Promise(r => setTimeout(r, 4000))]); } catch (x) { }
+  try { localStorage.removeItem(YEREL); localStorage.removeItem('sinyal-son-hareket'); } catch (x) { }
   if (fb) { try { await fb.A.signOut(fb.auth); } catch (x) { } }
+  yerelTemizle(); await onbellekSil();
 }
 async function hesapAc(eposta, sifre, ad) {
   const { auth, A } = await sdk();
@@ -238,19 +242,27 @@ export async function akit() {
   const yazilar = farklar(), dosyalar = yeniDosya; yeniDosya = new Map();
   if (!yazilar.size && !dosyalar.size) return;
   const { db, F } = fb, kok = ['kurslar', bulut.kurs];
-  let b = F.writeBatch(db), n = 0, boy = 0; const isler = [];
-  const ekle = (ref, veri, boyut) => { if (n >= 450 || boy + boyut > 6e6) { isler.push(b.commit()); b = F.writeBatch(db); n = 0; boy = 0; } b.set(ref, veri, { merge: true }); n++; boy += boyut; };
-  dosyalar.forEach((v, id) => { if (v.length > 950000) return; ekle(F.doc(db, ...kok, 'dosyalar', id), { v }, v.length); yuklu.add(id); });
+  // Her paketin içeriği tutulur: sunucu reddederse (yetki, boyut) değişiklikler kaybolmasın diye cihaza "kurtarma" kaydı düşer ve uyarı kalıcı olur
+  let b = F.writeBatch(db), n = 0, boy = 0, icerik = []; const isler = [];
+  const kapat = () => { const ic = icerik; isler.push(b.commit().then(() => null, x => { kurtarmaYaz(ic, x); throw x; })); };
+  const ekle = (ref, veri, boyut, kayit) => { if (n >= 450 || boy + boyut > 6e6) { kapat(); b = F.writeBatch(db); n = 0; boy = 0; icerik = []; } b.set(ref, veri, { merge: true }); n++; boy += boyut; if (kayit) icerik.push(kayit); };
+  // Firestore belge sınırı 1 MiB: 700 KB'lık PDF base64'te ~956 bin karakter eder, sığar
+  dosyalar.forEach((v, id) => { if (v.length > 1040000) { bulut.kalici = 'Bir dosya çok büyük olduğu için kaydedilemedi; daha küçük bir fotoğraf ya da PDF yükleyin'; return; } ekle(F.doc(db, ...kok, 'dosyalar', id), { v }, v.length); yuklu.add(id); });
   yazilar.forEach((w, id) => {
     const veri = { a: w.a };
     if (w.d) { veri.d = true; veri.i = {}; Object.entries(w.i).forEach(([k, x]) => { veri.i[k] = x === null ? F.deleteField() : x; }); }
     else veri.t = w.t;
-    ekle(F.doc(db, ...kok, 'v', id), veri, JSON.stringify(w).length);
+    ekle(F.doc(db, ...kok, 'v', id), veri, JSON.stringify(w).length, { id, w });
   });
-  isler.push(b.commit());
+  kapat();
   bulut.bekleyen += isler.length; durumYaz();
   if (projeKirli.size) setTimeout(projeksiyonYaz, 1500);
-  await Promise.all(isler.map(p => p.then(() => { bulut.bekleyen--; bulut.hata = ''; durumYaz(); }, x => { bulut.bekleyen--; bulut.hata = hataMetni(x); console.error(x); durumYaz(); })));
+  await Promise.all(isler.map(p => p.then(() => { bulut.bekleyen--; bulut.hata = ''; durumYaz(); }, x => { bulut.bekleyen--; bulut.hata = hataMetni(x); bulut.kalici = 'Bazı değişiklikler sunucuya kaydedilemedi (' + bulut.hata + '). Ayarlar › Veri aktarımı’ndan indirip Sinyal ekibine gönderin.'; console.error(x); durumYaz(); })));
+}
+// Kaydedilemeyen değişiklikler cihazda saklanır (en çok 30 paket); Ayarlar › Veri aktarımı'ndan indirilir
+export const KURTARMA = 'sinyal-kurtarma';
+function kurtarmaYaz(icerik, x) {
+  try { const l = JSON.parse(localStorage.getItem(KURTARMA) || '[]'); l.unshift({ zaman: new Date().toISOString(), kurs: bulut.kurs, hata: String((x && (x.code || x.message)) || x).slice(0, 200), kayitlar: icerik.map(({ id, w }) => ({ belge: id, a: w.a, ...(w.d ? { i: w.i } : { t: w.t }) })) }); localStorage.setItem(KURTARMA, JSON.stringify(l.slice(0, 30))); } catch (e) { }
 }
 function planla() { if (!bulut.kurs) return; clearTimeout(zamanla); zamanla = setTimeout(() => akit(), 400); }
 
@@ -346,7 +358,7 @@ async function baglan(u, ilkVeri) {
 // Üst çubuktaki küçük durum yazısı
 export function durumYaz() {
   const el = document.getElementById('bulut-durum'); if (!el) return;
-  const [t, c] = bulut.hata ? ['Kaydedilemedi · ' + bulut.hata, 'hata'] : bulut.durum === 'cevrimdisi' ? [bulut.bekleyen ? 'Çevrimdışı · değişiklikler bu cihazda bekliyor' : 'Çevrimdışı', 'uyari'] : bulut.bekleyen ? ['Kaydediliyor…', ''] : ['Kaydedildi', 'tamam'];
+  const [t, c] = bulut.kalici ? [bulut.kalici, 'hata'] : bulut.hata ? ['Kaydedilemedi · ' + bulut.hata, 'hata'] : bulut.durum === 'cevrimdisi' ? [bulut.bekleyen ? 'Çevrimdışı · değişiklikler bu cihazda bekliyor' : 'Çevrimdışı', 'uyari'] : bulut.bekleyen ? ['Kaydediliyor…', ''] : ['Kaydedildi', 'tamam'];
   el.textContent = t; el.className = 'bulut-durum ' + c;
 }
 
@@ -399,7 +411,7 @@ async function makbuzDenetle() {
     for (const h of benim) {
       const m = makbuzSira(h.no); if (!m) { delete h.noGecici; continue; }
       const cakisan = S.hareket.some(x => x !== h && x.no === h.no);
-      if (cakisan) { const eski = h.no, n = await sayacAyir(m[0]); h.no = 'M' + m[0] + '-' + String(n).padStart(5, '0'); islem('Makbuz numarası değişti', eski + ' başka cihazda da verilmişti; yeni numara ' + h.no); import('./ui.js?v=122').then(m => m.bildir(`Makbuz ${eski} çevrimdışıyken verilmişti ve başka cihazdaki makbuzla çakıştı; yeni numarası ${h.no}. Makbuzu verdiyseniz yenisini yazdırın.`, 'uyari')); }
+      if (cakisan) { const eski = h.no, n = await sayacAyir(m[0]); h.no = 'M' + m[0] + '-' + String(n).padStart(5, '0'); islem('Makbuz numarası değişti', eski + ' başka cihazda da verilmişti; yeni numara ' + h.no); import('./ui.js?v=123').then(m => m.bildir(`Makbuz ${eski} çevrimdışıyken verilmişti ve başka cihazdaki makbuzla çakıştı; yeni numarası ${h.no}. Makbuzu verdiyseniz yenisini yazdırın.`, 'uyari')); }
       else await sayacAyir(m[0], m[1] - 1);
       delete h.noGecici;
     }
@@ -483,10 +495,15 @@ export async function yedekler() {
   try { const tok = await fb.auth.currentUser.getIdToken(); const r = await fetch(WORKER + '/yedek?kurs=' + encodeURIComponent(bulut.kurs), { headers: { Authorization: 'Bearer ' + tok } }); if (r.ok) dis = new Set((await r.json()).map(x => x.id)); } catch (x) { }
   return q.docs.map(d => ({ id: d.id, ...d.data(), olusturma: d.data().olusturma && d.data().olusturma.toDate(), dis: dis.has(d.id) })).sort((a, b) => (b.olusturma || 0) - (a.olusturma || 0));
 }
+// Saklama: son 31 günün her günü + son 12 ayın her ayının ilk yedeği (ayın sonunda fark edilen hata da geri alınabilsin)
 async function eskiYedekleriSil() {
-  const { db, F } = fb, sinir = Date.now() - 31 * 864e5;
-  for (const y of await yedekler()) {
+  const { db, F } = fb, sinir = Date.now() - 31 * 864e5, yilSinir = Date.now() - 366 * 864e5;
+  const l = await yedekler(), ayIlk = new Set();
+  [...l].sort((a, b) => (a.olusturma || 0) - (b.olusturma || 0)).forEach(y => { if (!y.olusturma) return; const ay = y.olusturma.toISOString().slice(0, 7); if (![...ayIlk].some(x => x.startsWith(ay + '|'))) ayIlk.add(ay + '|' + y.id); });
+  const aylik = new Set([...ayIlk].map(x => x.split('|')[1]));
+  for (const y of l) {
     if (!y.olusturma || y.olusturma.getTime() > sinir) continue;
+    if (aylik.has(y.id) && y.olusturma.getTime() > yilSinir) continue;
     const b = F.writeBatch(db), kok = ['kurslar', bulut.kurs, 'yedekler'];
     for (let i = 0; i < y.parca; i++) b.delete(F.doc(db, ...kok, y.id + '~' + i));
     b.delete(F.doc(db, ...kok, y.id + '~dis')); b.delete(F.doc(db, ...kok, y.id)); await b.commit().catch(() => { });
@@ -518,6 +535,15 @@ export async function geriYukle(y) {
   kaydet(); await akit();
   return true;
 }
+export async function dosyadanGeriYukle(veri, ad) {
+  await yedekAl('geri-donus-oncesi');
+  const yeni = JSON.parse(JSON.stringify(veri), (k, x) => typeof x === 'string' && x.startsWith(DOSYA_ON) && dosyaVeri.has(x.slice(DOSYA_ON.length)) ? dosyaVeri.get(x.slice(DOSYA_ON.length)) : x);
+  Object.keys(S).forEach(k => { if (!HARIC.has(k) && !(k in yeni)) delete S[k]; });
+  Object.keys(yeni).forEach(k => { if (!HARIC.has(k)) S[k] = yeni[k]; });
+  islem('Yedek dosyasından geri döndü', String(ad || '').slice(0, 80));
+  kaydet(); await akit();
+  return true;
+}
 export function yedekIndir(veri, ad) {
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(veri)], { type: 'application/json' })); a.download = ad; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
@@ -525,7 +551,7 @@ export function yedekIndir(veri, ad) {
 // ---- öğrenci paneli: öğrencinin kendi telefonundan girişi ----
 // Her öğrenciye tahmin edilemez bir link (kurslar/{kurs}/ogrenciler/{kod}). Belgede yalnız o öğrencinin kayıtları durur;
 // öğrencinin yaptıkları (evrak, ders alma/iptal, puan, test) ogrenciGelen'e yazılır, kurs cihazı denetleyip işler.
-const projeKirli = new Set(), projeSon = new Map(), islenen = new Map();
+const projeKirli = new Set(), projeSon = new Map(), islenen = new Map(), sonuclar = new Map();  // sonuclar: öğrenci isteklerinin reddi, öğrencinin ekranına döner
 const DIZI_OGR = ['kursiyerler', 'dersler', 'gonderimler'];
 function kirlet(a, el, o) {
   const eski = o && o.v ? (() => { try { return JSON.parse(o.v); } catch (x) { return null; } })() : null;
@@ -538,12 +564,13 @@ const sec = (o, l) => { const r = {}; l.forEach(k => { if (o && o[k] !== undefin
 const veriAt = (k, x) => typeof x === 'string' && x.length > DOSYA_SINIR && x.startsWith('data:') ? null : (typeof x === 'string' && x.startsWith(DOSYA_ON) ? null : x);
 export function ogrenciVerisi(k) {
   const id = k.id, bugun = iso(new Date());
-  const kurs = { ...S.kurs, wpGenel: S.kurs.wp || (S.kurs.waHat && S.kurs.waHat.no) || S.kurs.tel || '' }; ['waApi', 'waApiVarsayilan', 'waHat', 'demoNumara', 'demoKime', 'maliyet', 'kuralDegisen', 'kuralOnay', 'aydinlatma'].forEach(x => delete kurs[x]);
+  const kurs = { ...S.kurs, wpGenel: S.kurs.wp || (S.kurs.waHat && S.kurs.waHat.no) || S.kurs.tel || '' }; ['waApi', 'waApiVarsayilan', 'waHat', 'demoNumara', 'demoKime', 'maliyet', 'kuralDegisen', 'kuralOnay', 'aydinlatma', 'mudurTel', 'onburoTel', 'isletme'].forEach(x => delete kurs[x]);
   const ben = { ...k, tc: k.tc ? '•••••••' + String(k.tc).slice(-4) : '' }; delete ben.notlar; delete ben.panelKod; delete ben.hesap; delete ben.ozelNot; delete ben.ozelNotlar; delete ben.ozelNotTarih;  // özel not yalnız müdürün; öğrenciye gitmez
   return {
     kurs, subeler: (S.subeler || []).filter(x => x.id === k.sube).map(x => sec(x, ['id', 'ad', 'semt'])),
     kursiyerler: [ben],
-    dersler: S.dersler.filter(d => d.kursiyer === id).concat(S.dersler.filter(d => d.kursiyer !== id && d.egitmen === k.egitmen && d.tarih >= bugun && d.durum === 'Planlandı').map(d => ({ ...sec(d, ['id', 'egitmen', 'arac', 'tarih', 'saat', 'durum']), kursiyer: null }))),
+    // konum ve iz (GPS) öğrenciye gitmez
+    dersler: S.dersler.filter(d => d.kursiyer === id).map(d => { const x = { ...d }; delete x.konum; delete x.konumBit; delete x.iz; return x; }).concat(S.dersler.filter(d => d.kursiyer !== id && d.egitmen === k.egitmen && d.tarih >= bugun && d.durum === 'Planlandı').map(d => ({ ...sec(d, ['id', 'egitmen', 'arac', 'tarih', 'saat', 'durum']), kursiyer: null }))),
     hareket: S.hareket.filter(h => h.kursiyer === id).map(h => sec(h, ['id', 'tarih', 'tur', 'kategori', 'aciklama', 'tutar', 'yontem', 'kursiyer', 'no'])),
     sinavlar: S.sinavlar.filter(x => (x.kursiyerler || []).includes(id)).map(x => ({ ...x, kursiyerler: [id], sonuc: x.sonuc ? { [id]: x.sonuc[id] } : x.sonuc })),
     teorik: S.teorik.filter(t => !k.teorikGrup || !t.grup || t.grup === k.teorikGrup).map(t => sec(t, ['id', 'tarih', 'saat', 'sure', 'konu', 'salon', 'grup', 'ogretmen'])),
@@ -563,7 +590,7 @@ async function projeksiyonYaz() {
     const v = JSON.stringify(ogrenciVerisi(k), veriAt);
     if (projeSon.get(k.panelKod) === v) continue;
     projeSon.set(k.panelKod, v);
-    F.setDoc(F.doc(db, 'kurslar', bulut.kurs, 'ogrenciler', k.panelKod), { kursiyer: k.id, uid: (k.hesap || {}).uid || null, v, islenen: islenen.get(k.id) || [], guncel: F.serverTimestamp() }).catch(x => console.error(x));
+    F.setDoc(F.doc(db, 'kurslar', bulut.kurs, 'ogrenciler', k.panelKod), { kursiyer: k.id, uid: (k.hesap || {}).uid || null, v, islenen: islenen.get(k.id) || [], sonuclar: sonuclar.get(k.id) || [], guncel: F.serverTimestamp() }).catch(x => console.error(x));
   }
 }
 export const panelLinki = (k) => location.origin + location.pathname + '#/ogr/' + bulut.kurs + '/' + k.panelKod;
@@ -591,18 +618,24 @@ function gelenDinle() {
     });
   }, () => { }));
 }
+// Öğrenciden gelen veri personel ekranında gösterilir: HTML karakteri taşıyan metin süzülür, biçimler katı denetlenir
+const guvenliVeri = v => typeof v === 'string' ? v.replace(/[<>"'`]/g, '').slice(0, 500) : Array.isArray(v) ? v.slice(0, 2000).map(guvenliVeri)
+  : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).slice(0, 2000).map(([a, b]) => [String(a).replace(/[<>"'`]/g, '').slice(0, 80), guvenliVeri(b)]))
+  : (typeof v === 'number' && isFinite(v)) || typeof v === 'boolean' || v === null ? v : null;
+const DOSYA_BICIM = /^data:(image\/jpeg|image\/png|application\/pdf);base64,[A-Za-z0-9+/]+={0,2}$/;
+const KIMLIK_BICIM = /^[A-Za-z0-9_-]{1,40}$/, TARIH_BICIM = /^\d{4}-\d{2}-\d{2}$/, SAAT_BICIM = /^\d{2}:\d{2}$/;
 function ogrenciUygula(docId, g) {
   const k = S.kursiyerler.find(x => x.id === g.kursiyer); if (!k || !Array.isArray(g.d)) return;
-  const notlar = [], bugun = iso(new Date());
+  const notlar = [], retler = [], bugun = iso(new Date());
   for (const x of g.d.slice(0, 30)) {
     let y = null; try { y = x.v ? JSON.parse(x.v) : null; } catch (e) { continue; }
     if (x.a === 'kursiyerler' && x.id === k.id && y) {
-      ['deneme', 'yanlislar', 'konuAnaliz', 'okunan', 'tekrar', 'gorulen', 'dirCalisma', 'tehlike'].forEach(f => { if (y[f] !== undefined && JSON.stringify(y[f]).length < 50000) k[f] = y[f]; });
+      ['deneme', 'yanlislar', 'konuAnaliz', 'okunan', 'tekrar', 'gorulen', 'dirCalisma', 'tehlike'].forEach(f => { if (y[f] !== undefined && JSON.stringify(y[f]).length < 50000) k[f] = guvenliVeri(y[f]); });
       ['hesapAktif', 'sonGiris'].forEach(f => { if (typeof y[f] === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(y[f]) && y[f] !== k[f]) { k[f] = y[f]; if (f === 'hesapAktif') notlar.push('şifresini belirleyip hesabını kullanmaya başladı'); } });
       Object.entries(y.evrakYuklenen || {}).forEach(([key, e]) => {
         if (!e || !e.veri || !EVRAKLAR.some(z => z[0] === key) || k.evrak[key]) return;
-        if (!/^data:(image\/jpeg|image\/png|application\/pdf);base64,/.test(e.veri) || e.veri.length > 950000) return;
-        k.evrakYuklenen = k.evrakYuklenen || {}; k.evrakYuklenen[key] = { tarih: bugun, dosya: String(e.dosya || '').slice(0, 120), boyut: e.veri.length, tur: e.veri.startsWith('data:application/pdf') ? 'pdf' : 'resim', veri: e.veri };
+        if (typeof e.veri !== 'string' || e.veri.length > 950000 || !DOSYA_BICIM.test(e.veri)) return;
+        k.evrakYuklenen = k.evrakYuklenen || {}; k.evrakYuklenen[key] = { tarih: bugun, dosya: String(e.dosya || '').replace(/[<>"'`]/g, '').slice(0, 120), boyut: e.veri.length, tur: e.veri.startsWith('data:application/pdf') ? 'pdf' : 'resim', veri: e.veri };
         notlar.push((EVRAKLAR.find(z => z[0] === key) || [0, key])[1] + ' belgesini yükledi');
       });
       if (k.ekDersTeklif && y.ekDersTeklif === null) {
@@ -614,7 +647,7 @@ function ogrenciUygula(docId, g) {
     } else if (x.a === 'dersler') {
       const d = S.dersler.find(z => z.id === x.id);
       if (d && d.kursiyer === k.id) {
-        if (!y) { if (d.durum === 'Planlandı' && fark(d.tarih) >= 1) { S.dersler = S.dersler.filter(z => z !== d); notlar.push(d.tarih + ' ' + d.saat + ' dersini iptal etti'); } else notlar.push('iptal isteği reddedildi (24 saatten az kaldı)'); }
+        if (!y) { if (iptalEdilebilir(d)) { dersIptalIz(d, 'Kursiyer iptal etti (öğrenci paneli)'); S.dersler = S.dersler.filter(z => z !== d); notlar.push(d.tarih + ' ' + d.saat + ' dersini iptal etti'); } else { notlar.push('iptal isteği reddedildi (24 saatten az kaldı)'); retler.push(d.tarih + ' ' + d.saat + ' dersinin iptali yapılamadı: derse 24 saatten az kaldı. Kursu arayın.'); } }
         else if (y.ogrenciPuan && typeof y.ogrenciPuan.puan === 'number' && d.durum === 'Yapıldı') { d.ogrenciPuan = { puan: Math.max(1, Math.min(5, Math.round(y.ogrenciPuan.puan))), yorum: String(y.ogrenciPuan.yorum || '').slice(0, 300), tarih: bugun }; notlar.push('dersi puanladı'); }
         // ders defteri: öğrenci dersi onaylar ya da itiraz eder (bir kez); itiraz müdüre düşer
         if (y && y.ogrenciOnay && ['onay', 'itiraz'].includes(y.ogrenciOnay.durum) && d.durum === 'Yapıldı' && !d.ogrenciOnay) {
@@ -622,33 +655,45 @@ function ogrenciUygula(docId, g) {
           notlar.push(d.tarih + ' ' + d.saat + ' dersini ' + (d.ogrenciOnay.durum === 'onay' ? 'onayladı' : 'itiraz etti' + (d.ogrenciOnay.not ? ': ' + d.ogrenciOnay.not : '')));
           if (d.ogrenciOnay.durum === 'itiraz') (S.devredilen = S.devredilen || []).unshift({ ad: tamAd(k), kanal: 'Ders defteri', konu: 'Ders itirazı', mesaj: d.tarih + ' ' + d.saat + ' dersi yapılmadı diyor' + (d.ogrenciOnay.not ? ': ' + d.ogrenciOnay.not : ''), neden: 'Öğrenci dersi onaylamadı', saat: new Date().toTimeString().slice(0, 5), bildirim: [] });
         }
-      } else if (!d && y && y.kursiyer === k.id && y.durum === 'Planlandı' && y.tarih >= bugun && S.egitmenler.some(e => e.id === y.egitmen)) {
-        if (S.dersler.some(z => z.tarih === y.tarih && z.saat === y.saat && (z.egitmen === y.egitmen || z.kursiyer === k.id) && z.durum !== 'İptal')) { notlar.push(y.tarih + ' ' + y.saat + ' ders isteği reddedildi: saat dolu'); continue; }
-        S.dersler.push({ id: String(x.id).slice(0, 40), kursiyer: k.id, egitmen: y.egitmen, arac: S.araclar.some(a => a.id === y.arac) ? y.arac : null, tarih: y.tarih, saat: String(y.saat).slice(0, 5), durum: 'Planlandı', eklendi: bugun, kaynak: 'kursiyer' });
+      } else if (!d && y && KIMLIK_BICIM.test(String(x.id)) && y.kursiyer === k.id && y.durum === 'Planlandı' && TARIH_BICIM.test(y.tarih || '') && SAAT_BICIM.test(y.saat || '') && y.tarih >= bugun && S.egitmenler.some(e => e.id === y.egitmen)) {
+        if (S.dersler.some(z => z.tarih === y.tarih && z.saat === y.saat && (z.egitmen === y.egitmen || z.kursiyer === k.id) && z.durum !== 'İptal')) { notlar.push(y.tarih + ' ' + y.saat + ' ders isteği reddedildi: saat dolu'); retler.push(y.tarih + ' ' + y.saat + ' ders isteğin alınamadı: o saat dolmuş. Başka bir saat seç.'); continue; }
+        S.dersler.push({ id: String(x.id), kursiyer: k.id, egitmen: y.egitmen, arac: S.araclar.some(a => a.id === y.arac) ? y.arac : null, tarih: y.tarih, saat: y.saat, durum: 'Planlandı', eklendi: bugun, kaynak: 'kursiyer' });
         const t = (S.bosTeklif || []).find(z => z.tarih === y.tarih && z.saat === y.saat && z.egitmen === y.egitmen); if (t) { S.bosTeklif = S.bosTeklif.filter(z => z !== t); S.kazanim.doldurulan++; }
         notlar.push(y.tarih + ' ' + y.saat + ' direksiyon dersi aldı');
       }
     } else if (x.a === 'gonderimler' && y && !x.eski) {
       const m = { zaman: new Date().toISOString(), kime: String(y.kime || '').slice(0, 80), metin: String(y.metin || '').slice(0, 1000), tur: String(y.tur || 'Öğrenci').slice(0, 60) };
+      // Öğrenci panelinden tetiklenen bildirim yalnız kurs müdürüne ve öğrencinin kendi ustasına (ya da ders yaptığı ustaya) gider
+      const ustalari = new Set([k.egitmen, ...S.dersler.filter(z => z.kursiyer === k.id).map(z => z.egitmen)].filter(Boolean));
+      const izinli = y.rol === 'MÜDÜR' || (y.rol === 'HOCA' && S.egitmenler.some(h => h.ad === m.kime && ustalari.has(h.id)));
       S.gonderimler.unshift(m);
-      if (y.iletilecek && S.kurs.waApi) sahiplen('og|' + docId + '|' + x.id).then(ok => { if (ok) import('./ui.js?v=122').then(u => u.apiGonder(u.etiket(m.kime, y.rol || '') + m.metin, undefined, undefined, { ad: m.kime, rol: y.rol || '' }).then(s => { if (!s.ok) { islem('Öğrenci bildirimi gönderilemedi', m.kime + ' · ' + m.tur + ': ' + s.hata); kaydet(); } })); });
+      if (!izinli && y.iletilecek) { islem('Öğrenci panelinden izinsiz bildirim engellendi', tamAd(k) + ' → ' + m.kime); continue; }
+      if (retler.length && /dersi aldı|dersini iptal etti/.test(m.metin)) continue;  // istek reddedildiyse "ders aldı / iptal etti" bildirimi gitmez
+      if (y.iletilecek && S.kurs.waApi) sahiplen('og|' + docId + '|' + x.id).then(ok => { if (ok) import('./ui.js?v=123').then(u => u.apiGonder(u.etiket(m.kime, y.rol || '') + m.metin, undefined, undefined, { ad: m.kime, rol: y.rol || '' }).then(s => { if (!s.ok) { islem('Öğrenci bildirimi gönderilemedi', m.kime + ' · ' + m.tur + ': ' + s.hata); kaydet(); } })); });
     }
   }
   if (notlar.length) islem('Öğrenci panelinden', tamAd(k) + ': ' + notlar.join(', '));
   const l = islenen.get(k.id) || []; l.unshift(docId); islenen.set(k.id, l.slice(0, 20)); projeKirli.add(k.id);
+  if (retler.length) { const r = sonuclar.get(k.id) || []; r.unshift({ doc: docId, ret: retler.slice(0, 5), zaman: Date.now() }); sonuclar.set(k.id, r.slice(0, 10)); }
   kaydet(); yenileFn();
 }
 
 // Öğrencinin telefonu: kendi belgesini dinler, yaptıklarını kursa gönderir
 const ogr = { kurs: null, kod: null, taban: new Map(), bekleyen: [] };
 const tabanAl = () => { DIZI_OGR.forEach(a => { const m = new Map(); const l = S[a] || []; kimlikler(l).forEach((id, n) => m.set(id, JSON.stringify(l[n]))); ogr.taban.set(a, m); }); };
+function retBildir(kod, l) {
+  let gor = []; try { gor = JSON.parse(localStorage.getItem('sinyal-ogr-ret-' + kod) || '[]'); } catch (x) { }
+  const yeni = l.filter(r => !gor.includes(r.doc)); if (!yeni.length) return;
+  try { localStorage.setItem('sinyal-ogr-ret-' + kod, JSON.stringify([...yeni.map(r => r.doc), ...gor].slice(0, 30))); } catch (x) { }
+  import('./ui.js?v=123').then(u => yeni.flatMap(r => r.ret).forEach((m, i) => setTimeout(() => u.bildir(m, 'uyari'), 400 + i * 3500)));
+}
 function ogrenciKur(veri) {
   const taban = bosVeri({}); delete taban._gun;
   Object.keys(veri).forEach(a => { taban[a] = veri[a]; });
   taban.kullanicilar = []; taban.gonderimler = [];
   bulutVeri(taban, 'ogr-' + ogr.kod);
   // henüz kurs tarafından işlenmemiş kendi değişikliklerini üstüne koy
-  ogr.bekleyen.forEach(p => p.d.forEach(x => { const l = S[x.a]; if (!Array.isArray(l)) return; const i = kimlikler(l).indexOf(x.id); if (x.v === null) { if (i >= 0) l.splice(i, 1); } else { const y = JSON.parse(x.v); if (i >= 0) l[i] = y; else l.push(y); } }));
+  ogr.bekleyen.forEach(p => p.d.forEach(x => { const l = S[x.a]; if (!Array.isArray(l)) return; const i = kimlikler(l).indexOf(x.id); if (x.v === null) { if (i >= 0) l.splice(i, 1); } else { const y = JSON.parse(x.v); if (x.a === 'dersler' && i < 0) y.onayBekliyor = true; if (i >= 0) l[i] = y; else l.push(y); } }));
   tabanAl();
 }
 export async function ogrenciBaglan(kurs, kod) {
@@ -660,7 +705,10 @@ export async function ogrenciBaglan(kurs, kod) {
     dinleyiciler.push(F.onSnapshot(F.doc(db, 'kurslar', kurs, 'ogrenciler', kod), d => {
       if (!d.exists()) { if (ilk) { ilk = false; red(hata('Öğrenci hesabınız kapatılmış. Kursunuzla görüşün.')); } else location.reload(); return; }
       const v = d.data(), isl = new Set(v.islenen || []);
-      ogr.bekleyen = ogr.bekleyen.filter(p => !isl.has(p.id) && Date.now() - p.t < 3 * 60e3);
+      // kursun henüz işlemediği istekler 24 saate kadar "onay bekliyor" olarak görünür; reddedilen istek öğrenciye bir kez bildirilir
+      ogr.bekleyen = ogr.bekleyen.filter(p => !isl.has(p.id) && Date.now() - p.t < 864e5);
+      try { localStorage.setItem('sinyal-ogr-bekleyen-' + kod, JSON.stringify(ogr.bekleyen.map(p => ({ ...p, d: p.d.map(x => x.v && x.v.length > 20000 ? { ...x, v: null, buyuk: true } : x).filter(x => !x.buyuk) })))); } catch (x) { }
+      retBildir(kod, v.sonuclar || []);
       ogrenciKur(JSON.parse(v.v));
       if (ilk) { ilk = false; kaydetDinle(ogrenciPlanla); coz(S.kursiyerler[0]); } else yenileFn();
     }, x => { if (ilk) { ilk = false; red(x); } else location.reload(); }));  // hesap kapatıldı ya da şifre yenilendi: yeniden giriş
@@ -678,13 +726,13 @@ async function ogrenciGonder() {
   if (!d.length) return;
   tabanAl();
   const boyut = JSON.stringify(d).length;
-  if (boyut > 950000) { import('./ui.js?v=122').then(u => u.bildir('Gönderilen belge çok büyük; daha küçük bir fotoğraf dene', 'uyari')); return; }
+  if (boyut > 950000) { import('./ui.js?v=123').then(u => u.bildir('Gönderilen belge çok büyük; daha küçük bir fotoğraf dene', 'uyari')); return; }
   const { db, F } = fb;
   try {
     const ref = await F.addDoc(F.collection(db, 'kurslar', ogr.kurs, 'ogrenciGelen'), { kod: ogr.kod, kursiyer: S.kursiyerler[0].id, d, zaman: F.serverTimestamp() });
     ogr.bekleyen.push({ id: ref.id, t: Date.now(), d });
     try { localStorage.setItem('sinyal-ogr-bekleyen-' + ogr.kod, JSON.stringify(ogr.bekleyen.map(p => ({ ...p, d: p.d.map(x => x.v && x.v.length > 20000 ? { ...x, v: null, buyuk: true } : x).filter(x => !x.buyuk) })))); } catch (x) { }
-  } catch (x) { console.error(x); import('./ui.js?v=122').then(u => u.bildir('Kursa iletilemedi; internet bağlantını kontrol et', 'uyari')); }
+  } catch (x) { console.error(x); import('./ui.js?v=123').then(u => u.bildir('Kursa iletilemedi; internet bağlantını kontrol et', 'uyari')); }
 }
 export function ogrenciAyril() { try { localStorage.removeItem('sinyal-ogrenci'); } catch (x) { } }
 
@@ -771,6 +819,7 @@ export async function ogrenciSifreBelirle(yeni, eski) {
 export async function ogrenciCikis() {
   try { localStorage.removeItem('sinyal-ogrenci'); } catch (x) { }
   if (fb) { try { await fb.A.signOut(fb.auth); } catch (x) { } }
+  yerelTemizle(); await onbellekSil();
 }
 // şifresini unutan öğrenci: talep kursa düşer, kurs yeni geçici şifre gönderir
 export async function ogrenciSifreTalep(telGiris) {

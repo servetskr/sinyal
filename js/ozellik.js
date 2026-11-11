@@ -1,10 +1,10 @@
-import { cevapIsle } from './mesaj.js?v=122';
-import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli, sonrakiDers, selam, bulutKanca } from './veri.js?v=122';
-import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos, waIstek, ziyaretci, apiGonder } from './ui.js?v=122';
-import { yenile } from './app.js?v=122';
-import { bildirimler } from './sayfalar1.js?v=122';
-import { denetimEksikleri } from './sayfalar3.js?v=122';
-import { sinifKari, dersMaliyeti, bosKapasite, hakedis, KAPASITE_SAAT, randevuEngeli, bosSlotlar } from './risk.js?v=122';
+import { cevapIsle } from './mesaj.js?v=123';
+import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli, sonrakiDers, selam, bulutKanca, iptalEdilebilir, oturum, dersIptalIz } from './veri.js?v=123';
+import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos, waIstek, ziyaretci, apiGonder } from './ui.js?v=123';
+import { yenile } from './app.js?v=123';
+import { bildirimler } from './sayfalar1.js?v=123';
+import { denetimEksikleri } from './sayfalar3.js?v=123';
+import { sinifKari, dersMaliyeti, bosKapasite, hakedis, KAPASITE_SAAT, randevuEngeli, bosSlotlar } from './risk.js?v=123';
 
 /* ================= DENETİM SKORU ================= */
 export function denetimSkoru() {
@@ -16,7 +16,7 @@ export function denetimSkoru() {
 /* ================= KÂRLILIK VE KAPASİTE ================= */
 const renkIsi = (n, max) => n ? `background:color-mix(in srgb, var(--yesil) ${Math.round(18 + n / max * 62)}%, #fff);color:${n / max > .55 ? '#fff' : 'var(--murekkep)'}` : 'background:var(--kagit, #f4f4f2);color:var(--soluk)';
 export function karlilik() {
-  const m = S.kurs.maliyet, mal = dersMaliyeti(), kap = bosKapasite(6), hk = hakedis(0);
+  const mal = dersMaliyeti(), m = S.kurs.maliyet, kap = bosKapasite(6), hk = hakedis(0);
   const siniflar = aktifSiniflar().filter(([, v]) => v.ucret && v.direksiyon).map(([k, v]) => ({ k, v, x: sinifKari(k) }));
   const ekKar = S.kurs.ekDersUcreti - mal.toplam, maxB = S.egitmenler.length || 1;
   const ayAd = new Date().toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
@@ -164,7 +164,7 @@ export function randevuAl(k, sonra) {
         const ar = arac(x.arac);
         S.dersler.push({ id: 'd' + Date.now(), kursiyer: k.id, egitmen: x.egitmen, arac: x.arac, tarih: tg, saat: sa, durum: 'Planlandı', eklendi: gun(0), kaynak: 'kursiyer' });
         islem('Kursiyer kendi dersini aldı', tamAd(k) + ' · ' + tarih(tg) + ' ' + sa); kaydet(); kapatPencere(); yenile();
-        bildir(`${tarihUzun(tg)} ${saatDe(sa)} dersin planlandı`);
+        bildir(oturum.kullanici && oturum.kullanici.rol === 'ogrenci' ? `${tarihUzun(tg)} ${saatDe(sa)} ders isteğin kursa iletildi; kurs onaylayınca kesinleşir` : `${tarihUzun(tg)} ${saatDe(sa)} dersin planlandı`);
         bildirimler([{ kim: h, metin: `${h.ad.split(' ')[0]} Hoca, ${tamAd(k)} kursiyer ekranından ${tarihUzun(tg)} ${saatDe(sa)} direksiyon dersi aldı${ar ? ' (' + ar.plaka + ')' : ''}. Kursiyerin ${k.direksiyon + planli + 1}. dersi.`, tur: 'Kursiyer randevusu' }, { kim: 'mudur', metin: `${tamAd(k)} ${tarihUzun(tg)} ${saatDe(sa)} ${h.ad} ile direksiyon dersini kendisi aldı.`, tur: 'Kursiyer randevusu' }], 'Kursiyer ders aldı');
         if (sonra) sonra();
       });
@@ -173,15 +173,15 @@ export function randevuAl(k, sonra) {
 }
 export function randevuIptal(k, id) {
   const d = S.dersler.find(x => x.id === id); if (!d || d.kursiyer !== k.id || d.durum !== 'Planlandı') return;
-  if (fark(d.tarih) < 1) return bildir('Dersten 24 saatten az kaldı; iptal için kursu ara', 'uyari');
+  if (!iptalEdilebilir(d)) return bildir('Dersten 24 saatten az kaldı; iptal için kursu ara', 'uyari');
   const h = egitmen(d.egitmen);
   pencere({
     baslik: 'Ders iptal edilsin mi?', icerik: `<p>${tarihUzun(d.tarih)} ${saatDe(d.saat)} ${e(h.ad)} ile dersin iptal edilecek. Saat başka bir kursiyere açılır.</p>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>İptal et</button>`,
     onAc(p) {
       p.querySelector('[data-k]').addEventListener('click', () => {
-        S.dersler = S.dersler.filter(x => x !== d); islem('Kursiyer dersini iptal etti', tamAd(k) + ' · ' + tarih(d.tarih) + ' ' + d.saat); kaydet(); kapatPencere(); yenile();
-        bildir('Dersin iptal edildi');
+        dersIptalIz(d, 'Kursiyer iptal etti'); S.dersler = S.dersler.filter(x => x !== d); islem('Kursiyer dersini iptal etti', tamAd(k) + ' · ' + tarih(d.tarih) + ' ' + d.saat); kaydet(); kapatPencere(); yenile();
+        bildir(oturum.kullanici && oturum.kullanici.rol === 'ogrenci' ? 'İptal isteğin kursa iletildi' : 'Dersin iptal edildi');
         bildirimler([{ kim: h, metin: `${h.ad.split(' ')[0]} Hoca, ${tamAd(k)} ${tarihUzun(d.tarih)} ${saatDe(d.saat)} dersini iptal etti; saatiniz boşaldı.`, tur: 'Ders iptali' }, { kim: 'mudur', metin: `${tamAd(k)} ${tarihUzun(d.tarih)} ${saatDe(d.saat)} dersini kursiyer ekranından iptal etti. Saat bekleme listesine teklif edilebilir.`, tur: 'Ders iptali' }], 'Ders iptal edildi');
       });
     },
@@ -245,7 +245,7 @@ export async function gelenKontrol() {
       if (S.gelenAlinan.includes(x.id)) continue;
       S.gelenAlinan.push(x.id); n++;
       // fotoğraf ya da PDF: öğrencinin evrakı (indirilemezse sonraki turda yeniden denenir)
-      if (x.medya) { const ok = await (await import('./evrak.js?v=122')).evrakGeldi(x).catch(() => false); if (!ok) { S.gelenAlinan.pop(); n--; } continue; }
+      if (x.medya) { const ok = await (await import('./evrak.js?v=123')).evrakGeldi(x).catch(() => false); if (!ok) { S.gelenAlinan.pop(); n--; } continue; }
       const saat = new Date(x.zaman).toTimeString().slice(0, 5);
       // gönderdiğimiz mesaja verilen cevap (evet/hayır ya da “yanıtla”) adaya değil o mesaja işlenir
       // kayıtlı öğrencinin WhatsApp'tan ders değişikliği (asistan tanıdı): saat önerisi ya da seçilen saate taşıma

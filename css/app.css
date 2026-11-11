@@ -1793,3 +1793,12 @@ button.oto-gidecek:hover{text-decoration:underline}
 .ort-uyeler small{display:block;color:var(--soluk);font-size:12.5px}
 .ort-kur{max-width:720px}
 @media (max-width:640px){ .ort-ust-sag small{display:none} }
+/* Kursiyer kartı: geri alınması zor işlemler "⋯" menüsünde */
+.kayit-diger{position:relative;display:inline-block}
+.kayit-diger>summary{list-style:none;cursor:pointer;min-width:40px;justify-content:center;font-size:18px;line-height:1}
+.kayit-diger>summary::-webkit-details-marker{display:none}
+.kayit-diger-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:20;background:var(--panel);border:1.5px solid var(--cizgi);border-radius:10px;padding:6px;display:grid;gap:4px;min-width:230px;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+.kayit-diger-menu .dg{justify-content:flex-start;width:100%}
+/* Erişilebilirlik: dokunmatik ekranda küçük düğmeler de en az 44 px; soluk yazı kontrastı AA */
+@media (pointer:coarse){ .dg-kucuk{min-height:44px} }
+:root{--soluk:#5f656d}

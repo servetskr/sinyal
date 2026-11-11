@@ -1,8 +1,10 @@
 // Mesaj merkezi: grup ya da tek tek seçilen kişilere kişiye özel WhatsApp mesajı, planlı gönderim, iletildi/okundu takibi
-import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, kalanBorc, gecikenler, gecikenTutar, eksikEvrak, sonrakiDers, risk, islem, sb, aktifSiniflar, SINIFLAR, selam, kursAdi, adEk, yerelZaman, bulutKanca } from './veri.js?v=122';
-import { e, tl, ik, rozet, bos, pencere, kapatPencere, bildir, tarihUzun, apiAcik, apiGonder, etiket, waSirali, ziyaretci, isaret, waIstek } from './ui.js?v=122';
+import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, kalanBorc, gecikenler, gecikenTutar, eksikEvrak, sonrakiDers, risk, islem, sb, aktifSiniflar, SINIFLAR, selam, kursAdi, adEk, yerelZaman, bulutKanca } from './veri.js?v=123';
+import { e, tl, ik, rozet, bos, pencere, kapatPencere, bildir, tarihUzun, apiAcik, apiGonder, etiket, waSirali, ziyaretci, isaret, waIstek } from './ui.js?v=123';
 
-const durum = { grup: 'aktif', sinif: '', ogretmen: '', secili: null, sira: 0, zaman: 'simdi', metin: null, sablon: '', ek: null, cevapIste: false };
+const durum = { grup: 'aktif', sinif: '', ogretmen: '', secili: null, sira: 0, zaman: 'simdi', metin: null, sablon: '', ek: null, cevapIste: false, tanitim: false };
+// Kampanya/tanıtım mesajı yalnız kampanya izni olan öğrencilere gider; eski kayıtlardaki birleşik rıza izin sayılır
+const tanitimIzni = k => !!(k.kvkk && (k.kvkk.pazarlama === undefined ? k.kvkk.riza : k.kvkk.pazarlama));  // izin kaydı yoksa gönderilmez
 // Ekli dosyalar localStorage’a yazılmaz (büyük olabilir); gönderim süresince bellekte durur
 const EKLER = {};
 const CEVAP_NOTU = '“Evet” ya da “Hayır” yazarak cevaplayabilirsiniz.';
@@ -43,7 +45,7 @@ export function kisiler(grup = durum.grup, sinif = durum.sinif, ogr = durum.ogre
   if (grup === 'ogretmen') return S.egitmenler.map(h => ({ anahtar: 'h' + h.id, ad: h.ad, tel: h.tel, rol: 'HOCA', tip: 'ogretmen', kisi: h, alt: 'Öğretmen' }));
   if (grup === 'aday') return S.adaylar.filter(a => !['Kayıt', 'Kaybedildi'].includes(a.asama)).map(a => ({ anahtar: 'a' + a.id, ad: a.ad, tel: a.tel, rol: 'ADAY', tip: 'aday', kisi: a, alt: 'Aday · ' + a.asama }));
   const f = (GRUPLAR.find(g => g[0] === grup) || GRUPLAR[0])[2];
-  return sb(S.kursiyerler).filter(k => !k.kapali && f(k) && (!sinif || k.sinif === sinif) && (!ogr || k.egitmen === ogr))
+  return sb(S.kursiyerler).filter(k => !k.kapali && f(k) && (!sinif || k.sinif === sinif) && (!ogr || k.egitmen === ogr) && (!durum.tanitim || tanitimIzni(k)))
     .map(k => ({ anahtar: 'k' + k.id, ad: tamAd(k), tel: k.tel, rol: 'ÖĞRENCİ', tip: 'ogrenci', kisi: k, alt: SINIFLAR[k.sinif].ad + ' · ' + k.asama }));
 }
 // Bir kişi için alan değerleri (öğrenci olmayanlarda öğrenciye özel alanlar boştur)
@@ -140,7 +142,7 @@ export function yeniMesajHtml() {
   <div class="kart"><div class="kart-bas"><h3>Yeni mesaj</h3><small>Kişiye özel, WhatsApp’tan</small></div><div class="kart-govde mm-govde">
     <div class="mm-adim"><span class="et">1 · Kime?</span>
       <div class="secim mm-gruplar">${GRUPLAR.map(([v, t]) => `<label><input type="radio" name="mm-grup" value="${v}" ${durum.grup === v ? 'checked' : ''}><span>${t}<b>${kisiler(v, durum.sinif, durum.ogretmen).length}</b></span></label>`).join('')}</div>
-      ${ogrenciGrubu ? `<div class="mm-suz"><select class="girdi" data-mm-sinif aria-label="Sınıf"><option value="">Bütün sınıflar</option>${aktifSiniflar().map(([k, v]) => `<option value="${k}" ${durum.sinif === k ? 'selected' : ''}>${e(v.ad)}</option>`).join('')}</select><select class="girdi" data-mm-ogretmen aria-label="Öğretmen"><option value="">Bütün öğretmenler</option>${S.egitmenler.map(h => `<option value="${h.id}" ${durum.ogretmen === h.id ? 'selected' : ''}>${e(h.ad)}</option>`).join('')}</select></div>` : ''}
+      ${ogrenciGrubu ? `<div class="mm-suz"><select class="girdi" data-mm-sinif aria-label="Sınıf"><option value="">Bütün sınıflar</option>${aktifSiniflar().map(([k, v]) => `<option value="${k}" ${durum.sinif === k ? 'selected' : ''}>${e(v.ad)}</option>`).join('')}</select><select class="girdi" data-mm-ogretmen aria-label="Öğretmen"><option value="">Bütün öğretmenler</option>${S.egitmenler.map(h => `<option value="${h.id}" ${durum.ogretmen === h.id ? 'selected' : ''}>${e(h.ad)}</option>`).join('')}</select></div><label class="mm-tanitim" style="display:flex;gap:8px;align-items:center;font-size:13.5px;margin:6px 0"><input type="checkbox" data-mm-tanitim ${durum.tanitim ? 'checked' : ''}> Kampanya / tanıtım mesajı (yalnız izin verenlere gider)</label>` : ''}
       <details class="mm-kisiler" ${l.length <= 8 ? 'open' : ''}><summary><b>${sec.length}</b> / ${l.length} kişi seçili · listeyi gör, tek tek çıkar</summary>
         <div class="mm-kisi-ust"><button type="button" class="dg dg-hafif dg-kucuk" data-mm-hepsi="1">Hepsini seç</button><button type="button" class="dg dg-hafif dg-kucuk" data-mm-hepsi="0">Hiçbirini</button></div>
         <ul>${l.map(x => `<li><label><input type="checkbox" data-mm-kisi="${x.anahtar}" ${durum.secili.has(x.anahtar) ? 'checked' : ''}><span><b>${e(x.ad)}</b><small>${e(x.alt)}</small></span></label></li>`).join('') || `<li>${bos('Bu grupta kimse yok', 'Başka bir grup seçin.')}</li>`}</ul></details>
@@ -175,6 +177,7 @@ export function yeniMesajBagla(k, yenile) {
     const t = ev.target;
     if (t.name === 'mm-grup') { durum.grup = t.value; durum.secili = null; durum.sira = 0; return yenile(); }
     if (t.matches('[data-mm-sinif]')) { durum.sinif = t.value; durum.secili = null; durum.sira = 0; return yenile(); }
+    if (t.matches('[data-mm-tanitim]')) { durum.tanitim = t.checked; durum.secili = null; durum.sira = 0; return yenile(); }
     if (t.matches('[data-mm-ogretmen]')) { durum.ogretmen = t.value; durum.secili = null; durum.sira = 0; return yenile(); }
     if (t.matches('[data-mm-kisi]')) { durum.secili[t.checked ? 'add' : 'delete'](t.dataset.mmKisi); durum.sira = 0; return yenile(); }
     if (t.name === 'mm-zaman') { durum.zaman = t.value; return yenile(); }
