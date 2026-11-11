@@ -113,8 +113,9 @@ export function halka(parcalar, { boyut = 132, kalinlik = 16, orta = '' } = {}) 
 // --- pencere, çekmece, bildirim ---
 let acikPencere = null;
 // korumali: içine bilgi girilen pencere (ders bitirme, imza) dışarı dokununca ya da Esc ile kapanmaz; yalnız Vazgeç/✕ ile
+let oncekiOdak = null;
 export function pencere({ baslik, icerik, altlik = '', genis = false, onAc, korumali = false }) {
-  kapatPencere();
+  kapatPencere(); oncekiOdak = document.activeElement;
   const d = document.createElement('div');
   d.className = 'perde';
   d.innerHTML = `<div class="pencere ${genis ? 'genis' : ''}" role="dialog" aria-modal="true" aria-label="${e(baslik)}">
@@ -130,7 +131,9 @@ export function pencere({ baslik, icerik, altlik = '', genis = false, onAc, koru
   if (onAc) onAc(d);
   return d;
 }
-export function kapatPencere() { if (acikPencere) { acikPencere.remove(); acikPencere = null; document.body.classList.remove('kilitli'); } }
+export function kapatPencere() { if (acikPencere) { acikPencere.remove(); acikPencere = null; document.body.classList.remove('kilitli'); if (oncekiOdak && oncekiOdak.isConnected && oncekiOdak.focus) { try { oncekiOdak.focus(); } catch (x) { } } oncekiOdak = null; } }
+// Pencere açıkken Tab odağı pencerenin içinde döner (klavye ve ekran okuyucu kullanıcıları arkadaki sayfaya düşmesin)
+document.addEventListener('keydown', ev => { if (ev.key !== 'Tab' || !acikPencere) return; const l = [...acikPencere.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')].filter(x => x.offsetParent !== null); if (!l.length) return; const ilk = l[0], son = l[l.length - 1]; if (ev.shiftKey && document.activeElement === ilk) { ev.preventDefault(); son.focus(); } else if (!ev.shiftKey && document.activeElement === son) { ev.preventDefault(); ilk.focus(); } else if (!acikPencere.contains(document.activeElement)) { ev.preventDefault(); ilk.focus(); } });
 document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !(acikPencere && acikPencere.dataset.korumali)) kapatPencere(); });
 
 export function bildir(metin, tur = 'tamam', geriAlinir = false) {
@@ -140,7 +143,7 @@ export function bildir(metin, tur = 'tamam', geriAlinir = false) {
   b.className = 'bildirim bildirim-' + tur;
   b.innerHTML = ik(tur === 'tamam' ? 'tik' : tur === 'wp' ? 'wp' : 'uyari') + '<span>' + e(metin) + '</span>' + (geriAlinir ? '<button class="bildirim-geri" data-geri-al>Geri al</button>' : '');
   k.appendChild(b);
-  const sure = geriAlinir ? 6500 : 3200;
+  const sure = geriAlinir ? 6500 : tur === 'uyari' ? 6000 : 3200;  // uyarılar okunacak kadar ekranda kalır
   setTimeout(() => b.classList.add('git'), sure);
   setTimeout(() => b.remove(), sure + 500);
 }
