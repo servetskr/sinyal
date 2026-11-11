@@ -264,7 +264,7 @@ export function aylikOzetHtml(ay = 0) {
 async function faturaNoAktar(dosya) {
   let tablolar;
   if (/\.xlsx?$/i.test(dosya.name)) { await xlsxYukle(); const wb = window.XLSX.read(await dosya.arrayBuffer(), { type: 'array' }); tablolar = wb.SheetNames.map(ad => window.XLSX.utils.sheet_to_json(wb.Sheets[ad], { header: 1, raw: false, defval: '' })); }
-  else tablolar = [csvOku((await dosya.text()).replace(/^﻿/, ''))];
+  else tablolar = [csvOku(await csvMetin(dosya))];
   const anahtar = x => String(x ?? '').trim().toUpperCase(), harita = new Map(S.hareket.filter(h => h.no).map(h => [anahtar(h.no), h]));
   let n = 0, ayni = 0, yok = 0, dolu = 0, baslik = false;
   tablolar.forEach(sat => {
@@ -382,9 +382,22 @@ function csvOku(metin) {
   satir.push(alan.trim()); if (satir.some(x => x)) sat.push(satir);
   return sat;
 }
-const tarihCoz = v => { const m = String(v || '').match(/(\d{1,2})[./-](\d{1,2})[./-](\d{4})/); if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`; const m2 = String(v || '').match(/(\d{4})-(\d{2})-(\d{2})/); return m2 ? m2[0] : ''; };
-const sinifCoz = v => { const t = norm(v); if (!t) return null; if (/otomatik|bo$|^bot/.test(t)) return 'B-O'; if (/^a2/.test(t)) return 'A2'; if (/^c/.test(t)) return 'C'; if (/^b/.test(t)) return 'B'; return null; };
+// Tarih: gg.aa.yyyy, gg/aa/yy, yyyy-aa-gg; iki haneli yıl (24 → 2024, 85 → 1985); ikinci sayı 12'den büyükse ABD biçimi (aa/gg) sayılır
+const tarihCoz = v => {
+  const t = String(v || '').trim(), m2 = t.match(/(\d{4})-(\d{2})-(\d{2})/); if (m2) return m2[0];
+  const m = t.match(/(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})\b/); if (!m) return '';
+  let g = +m[1], a = +m[2], y = +m[3]; if (a > 12 && g <= 12) [g, a] = [a, g]; if (a < 1 || a > 12 || g < 1 || g > 31) return '';
+  if (m[3].length === 2) { const bu = new Date().getFullYear() % 100; y = y <= bu ? 2000 + y : 1900 + y; }
+  if (new Date(y, a - 1, g).getDate() !== g) return '';  // 31 Şubat gibi geçersiz gün
+  return `${y}-${String(a).padStart(2, '0')}-${String(g).padStart(2, '0')}`;
+};
+// Sınıf: bütün ehliyet sınıfları (A1, A2, A, B1, B, BE, C1, C1E, C, CE, D1, D1E, D, DE, F, G, M); "otomatik" B-O; tanınmazsa null (satır hata verir, B sayılmaz)
+const sinifCoz = v => { const t = norm(v); if (!t) return null; if (/otomatik|^bo$|^b-?o\b|^bot/.test(t)) return SINIFLAR['B-O'] ? 'B-O' : 'B';
+  const m = String(v).toLocaleUpperCase('tr').replace(/İ/g, 'I').replace(/[\s.\-_]/g, '').match(/^(?:SINIF)?(A1|A2|B1|BE|C1E|C1|CE|D1E|D1|DE|A|B|C|D|F|G|M)(?![0-9E])/);
+  return m && SINIFLAR[m[1]] ? m[1] : null; };
 const tutarCoz = v => tutarOku(v);
+// CSV kodlaması: önce UTF-8; geçersizse Türkçe Windows (1254) — Türkçe Excel'in kaydettiği CSV'de ı, ş, ğ bozulmasın
+async function csvMetin(dosya) { const b = await dosya.arrayBuffer(); let t; try { t = new TextDecoder('utf-8', { fatal: true }).decode(b); } catch (x) { t = new TextDecoder('windows-1254').decode(b); } return t.replace(/^\ufeff/, ''); }
 function kontrolEt(r, i = 0) {
   const get = k => aktarim.esles[k] != null && aktarim.esles[k] !== '' ? r[aktarim.esles[k]] : '';
   const x = Object.fromEntries(TUR_ALAN().map(([k]) => [k, get(k)]));
@@ -418,7 +431,10 @@ function kontrolEt(r, i = 0) {
   if (x.tc && S.kursiyerler.some(k => k.tc === x.tc)) hata.push('Bu TC zaten kayıtlı');
   else if (x.tc && aktarim.esles.tc != null && aktarim.satirlar.slice(0, i).some(o => String(o[aktarim.esles.tc] || '').trim() === String(x.tc).trim())) hata.push('Dosyada iki kez var');
   if (String(x.tel).replace(/\D/g, '').length < 10) uyari.push('Telefon eksik');
-  if (!sinifCoz(x.sinif)) uyari.push('Sınıf tanınmadı → B');
+  if (String(x.sinif || '').trim() && !sinifCoz(x.sinif)) hata.push('Sınıf tanınmadı: “' + String(x.sinif).slice(0, 20) + '” (kursta açık sınıflardan biri olmalı)');
+  else if (!String(x.sinif || '').trim()) uyari.push('Sınıf yok → B');
+  // TC'siz kayıtta aynı ad soyad ve telefon zaten varsa mükerrer sayılır
+  if (!x.tc && x.ad && S.kursiyerler.some(k => norm(k.ad + k.soyad) === norm(String(x.ad) + String(x.soyad)) && String(k.tel || '').replace(/\D/g, '').slice(-10) === String(x.tel || '').replace(/\D/g, '').slice(-10))) hata.push('Aynı ad ve telefonla kayıtlı');
   return { x, hata, uyari };
 }
 function aktarimSekme() {
@@ -427,7 +443,7 @@ function aktarimSekme() {
   else if (aktarim.satirlar) {
     const veri = aktarim.satirlar, sonuc = veri.map(kontrolEt);
     const ok = sonuc.filter(s => !s.hata.length).length, hata = sonuc.length - ok, uy = sonuc.filter(s => !s.hata.length && s.uyari.length).length;
-    govde = `${olcumler([['Satır', sayi(veri.length)], ['Aktarılacak', sayi(ok), uy ? uy + ' tanesinde uyarı var' : 'Hepsi temiz'], ['Atlanacak', sayi(hata), hata ? 'Ad eksik ya da zaten kayıtlı' : '', hata ? 'uyari' : '']])}<div class="ara-bosluk"></div>
+    govde = `${olcumler([['Satır', sayi(veri.length)], ['Aktarılacak', sayi(ok), uy ? uy + ' tanesinde uyarı var' : 'Hepsi temiz'], ['Atlanacak', sayi(hata), hata ? 'Ad eksik ya da zaten kayıtlı' : '', hata ? 'uyari' : '']])}${hata || uy ? `<div style="margin-top:10px"><button class="dg dg-cizgi dg-kucuk" data-aktarim-hata>${ik('indir')}Hatalı ve uyarılı satırları indir (${hata + uy})</button></div>` : ''}<div class="ara-bosluk"></div>
     <div class="izgara iz-12"><div class="kart"><div class="kart-bas"><h3>Sütun eşleştirme</h3><small>Otomatik eşleşti; gerekirse değiştirin</small></div><div class="kart-govde" style="display:grid;gap:8px">${TUR_ALAN().map(([k, t]) => `<label style="display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;font-size:14px"><b style="color:var(--murekkep)">${t}</b><select class="girdi" style="height:34px" data-esles="${k}"><option value="">— yok —</option>${aktarim.baslik.map((h, i) => `<option value="${i}" ${String(aktarim.esles[k]) === String(i) ? 'selected' : ''}>${e(h)}</option>`).join('')}</select></label>`).join('')}</div></div>
     <div class="kart"><div class="kart-bas"><h3>Önizleme</h3><small>İlk 8 satır</small></div><div class="tablo-kap"><table class="tablo"><thead><tr>${aktarim.tur === 'taksit' ? '<th>Kursiyer</th><th>Vade</th><th>Tutar</th><th>Ödendi</th>' : aktarim.tur === 'ogretmen' ? '<th>Ad soyad</th><th>Telefon</th><th>Sınıflar</th><th>Sertifika</th>' : aktarim.tur === 'arac' ? '<th>Plaka</th><th>Model</th><th>Sınıf</th><th>Muayene</th>' : '<th>Ad soyad</th><th>TC</th><th>Sınıf</th><th>Ücret / ödenen</th>'}<th>Durum</th></tr></thead><tbody>${sonuc.slice(0, 8).map(({ x, hata, uyari, k }) => `<tr>${aktarim.tur === 'taksit' ? `<td>${e(k ? tamAd(k) : x.tc)}</td><td class="mono">${e(x.vade)}</td><td class="mono">${tl(tutarCoz(x.tutar))}</td><td>${e(x.odeme || '—')}</td>` : aktarim.tur === 'ogretmen' ? `<td>${e(x.ad)}</td><td class="mono">${e(x.tel)}</td><td>${e(String(x.siniflar || '').split(/[,;/ ]+/).map(sinifCoz).filter(Boolean).join(', ') || 'B')}</td><td>${e(x.sertifika || '—')}</td>`: aktarim.tur === 'arac' ? `<td class="mono">${e(x.plaka)}</td><td>${e(x.model)}</td><td>${e(sinifCoz(x.sinif) || x.sinif)}</td><td>${e(x.muayene)}</td>` : `<td>${e(x.ad + ' ' + x.soyad)}</td><td class="mono">${e(x.tc)}</td><td>${e(sinifCoz(x.sinif) || 'B')}</td><td class="mono">${tl(tutarCoz(x.toplam))} / ${tl(tutarCoz(x.odenen))}</td>`}<td>${hata.length ? rozet(hata[0], 'kirmizi') : uyari.length ? rozet(uyari.join(' · '), 'sari') : rozet('Hazır', 'yesil')}</td></tr>`).join('')}</tbody></table></div>
       <div class="kart-govde"><button class="dg dg-ana" data-aktar-onay ${ok ? '' : 'disabled'}>${sayi(ok)} ${{ kursiyer: 'kursiyeri', taksit: 'taksiti', arac: 'aracı', ogretmen: 'öğretmeni' }[aktarim.tur]} aktar</button> <button class="dg dg-hafif" data-aktarim-yeni>Vazgeç</button></div></div></div>`;
@@ -473,10 +489,10 @@ function aktarimUygula() {
   aktarim.satirlar.map(kontrolEt).forEach(({ x, hata }, i) => {
     if (hata.length) { atla++; return; }
     const sn = sinifCoz(x.sinif) || 'B', toplam = tutarCoz(x.toplam) || SINIFLAR[sn].ucret, od = Math.min(tutarCoz(x.odenen), toplam), kt = tarihCoz(x.kayit) || gun(0);
-    const eg = S.egitmenler.find(z => z.siniflar.includes(sn) && (z.sube === varsayilanSube())) || S.egitmenler.find(z => z.siniflar.includes(sn));
+    const eg = S.egitmenler.find(z => z.siniflar.includes(sn) && (z.sube === varsayilanSube())) || S.egitmenler.find(z => z.siniflar.includes(sn)) || null;  // öğretmen henüz yoksa boş kalır, sonra atanır
     const td = Math.min(SINIFLAR[sn].teorik, Math.round(tutarCoz(x.teorikDers))), dd = Math.min(SINIFLAR[sn].direksiyon, Math.round(tutarCoz(x.direksiyonDers)));
     const asama = dd > 0 ? 'Direksiyon' : td >= SINIFLAR[sn].teorik ? 'Sınav' : td > 0 ? 'Teorik' : 'Evrak';
-    S.kursiyerler.push({ id: 'k' + Date.now() + i, aktarim: id, ad: String(x.ad).trim(), soyad: String(x.soyad).trim(), tel: x.tel, tc: String(x.tc || '').trim(), dogumTarihi: tarihCoz(x.dogum), dogum: tarihCoz(x.dogum).slice(0, 4), adres: x.adres || '', ogrenim: '', sinif: sn, kayit: kt, egitmen: eg.id, sube: varsayilanSube(), asama, teorik: td, direksiyon: dd, evrak: Object.fromEntries(EVRAKLAR.map(([z]) => [z, false])), mebIslendi: false, esinav: null, dsinav: null, odeme: { toplam, pesin: od, pesinTarih: kt, taksitler: [], senetli: false }, kaynak: 'Aktarım', yorum: null, notlar: [{ tarih: gun(0), metin: 'Eski programdan aktarıldı.' }], deneme: [], acil: null, kvkk: null });
+    S.kursiyerler.push({ id: 'k' + Date.now() + i, aktarim: id, ad: String(x.ad).trim(), soyad: String(x.soyad).trim(), tel: x.tel, tc: String(x.tc || '').trim(), dogumTarihi: tarihCoz(x.dogum), dogum: tarihCoz(x.dogum).slice(0, 4), adres: x.adres || '', ogrenim: '', sinif: sn, kayit: kt, egitmen: eg ? eg.id : null, sube: varsayilanSube(), asama, teorik: td, direksiyon: dd, evrak: Object.fromEntries(EVRAKLAR.map(([z]) => [z, false])), mebIslendi: false, esinav: null, dsinav: null, odeme: { toplam, pesin: od, pesinTarih: kt, taksitler: [], senetli: false }, kaynak: 'Aktarım', yorum: null, notlar: [{ tarih: gun(0), metin: 'Eski programdan aktarıldı.' }], deneme: [], acil: null, kvkk: null });
     n++;
   });
   aktarim.sonuc = { id, n, atla, tur: 'kursiyer' }; aktarim.satirlar = null;
@@ -605,6 +621,9 @@ function sozlesmeSekme() {
 }
 export const AYAR_SEKMELERI = { kullanici: kullaniciSekme, sozlesme: sozlesmeSekme, subeler: subelerSekme, kurallar: kurallarSekme, guvenlik: guvenlikSekme, entegrasyon: entegrasyonSekme, aktarim: aktarimSekme, gorunum: gorunumSekme };
 export function ayarBaglan(k) {
+  k.addEventListener('click', ev => { if (!ev.target.closest('[data-aktarim-hata]') || !aktarim.satirlar) return;
+    const l = aktarim.satirlar.map((r, i) => ({ r, i, s: kontrolEt(r, i) })).filter(x => x.s.hata.length || x.s.uyari.length);
+    csvIndir('sinyal-aktarim-hatalar.csv', [['Satır', 'Durum', 'Sebep', ...(aktarim.baslik || [])], ...l.map(x => [x.i + 2, x.s.hata.length ? 'Atlanacak' : 'Uyarı', [...x.s.hata, ...x.s.uyari].join('; '), ...x.r])]); });
   // İndirilmiş yedek dosyasından geri dönüş (müdür): önce o anın yedeği alınır, sonra dosyadaki veri yüklenir
   k.addEventListener('change', ev => {
     const inp = ev.target.closest('[data-yedek-dosya]'); if (!inp || !inp.files[0]) return;
@@ -643,7 +662,7 @@ export function ayarBaglan(k) {
       const dosya = f.files[0], excel = /\.xlsx?$/i.test(dosya.name);
       const isle = sat => aktarimYukle(sat);
       if (excel) excelOku(dosya).then(isle).catch(() => bildir('Excel dosyası okunamadı; CSV olarak kaydedip deneyin', 'uyari'));
-      else { const r = new FileReader(); r.onload = () => isle(csvOku(String(r.result).replace(/^﻿/, ''))); r.readAsText(dosya, 'utf-8'); }
+      else csvMetin(dosya).then(t => isle(csvOku(t)));
     }
   });
   k.addEventListener('click', ev => {
