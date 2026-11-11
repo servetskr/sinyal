@@ -1,21 +1,21 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=128';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=128';
-import * as Y1 from './sayfalar1.js?v=128';
-import * as Y2 from './sayfalar2.js?v=128';
-import * as P from './portal.js?v=128';
-import * as Y3 from './sayfalar3.js?v=128';
-import * as Y4 from './sayfalar4.js?v=128';
-import * as Y5 from './sayfalar5.js?v=128';
-import * as IM from './imza.js?v=128';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=128';
-import * as SN from './senaryo.js?v=128';
-import * as OZ from './ozellik.js?v=128';
-import { durumlariGuncelle } from './mesaj.js?v=128';
-import { yeniMenu } from './yeni.js?v=128';
-import * as B from './bulut.js?v=128';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=128';
-import * as AN from './analiz.js?v=128';
-import * as ORT from './ortak.js?v=128';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=129';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=129';
+import * as Y1 from './sayfalar1.js?v=129';
+import * as Y2 from './sayfalar2.js?v=129';
+import * as P from './portal.js?v=129';
+import * as Y3 from './sayfalar3.js?v=129';
+import * as Y4 from './sayfalar4.js?v=129';
+import * as Y5 from './sayfalar5.js?v=129';
+import * as IM from './imza.js?v=129';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=129';
+import * as SN from './senaryo.js?v=129';
+import * as OZ from './ozellik.js?v=129';
+import { durumlariGuncelle } from './mesaj.js?v=129';
+import { yeniMenu } from './yeni.js?v=129';
+import * as B from './bulut.js?v=129';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=129';
+import * as AN from './analiz.js?v=129';
+import * as ORT from './ortak.js?v=129';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -55,6 +55,23 @@ function sayaclar() {
   };
 }
 
+// Telefon uygulaması kabuğu (öğrenci ve öğretmen): üst çubukta kurs adı ve yuvarlak profil düğmesi; hesap işleri alttan açılan sayfada
+const APP_LOGO = '<svg class="logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#111" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg>';
+const basHarf = ad => e(String(ad || '?').trim().split(/\s+/).filter(Boolean).map(x => x[0]).slice(0, 2).join('').toLocaleUpperCase('tr') || '?');
+// iOS durum çubuğu üst çubukla aynı renkte olsun (uygulama kabuğunda açık zemin, panelde levha mavisi)
+function temaRengi(uygulama) { const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = uygulama ? '#f1f0eb' : '#0a4da2'; }
+// Kaydırınca üst çubuğun altına ince çizgi gelir (iOS gibi); en üstte çizgisiz
+addEventListener('scroll', () => document.body.classList.toggle('kaydi', scrollY > 6), { passive: true });
+function hesapSayfasi() {
+  const u = oturum.kullanici; if (!u) return;
+  const ogr = u.rol === 'ogrenci', og = ogr ? kursiyer(u.kursiyer) : null, ad = og ? tamAd(og) : u.ad;
+  const tel = (S.kurs.tel || '').replace(/\s/g, '');
+  const satir = (ikon, metin, ek, ton = '') => `<span class="hs-ik ${ton}">${ik(ikon)}</span><span class="hs-metin">${metin}${ek ? `<small>${ek}</small>` : ''}</span>`;
+  pencere({ baslik: 'Hesabım', alt: true, icerik: `<div class="hs-kim"><span class="app-profil buyuk" aria-hidden="true">${basHarf(ad)}</span><div><b>${e(ad)}</b><small>${e(S.kurs.ad)} · ${ogr ? 'Öğrenci' : ROL_AD[u.rol]}</small></div></div>
+    <div class="hs-liste">${ogr ? `<button type="button" data-ogr-sifre>${satir('kilit', 'Şifremi değiştir')}${ik('sag')}</button>` : ''}
+      ${tel ? `<a href="tel:${e(tel)}">${satir('tel', 'Kursu ara', e(S.kurs.tel))}${ik('sag')}</a>` : ''}</div>
+    <div class="hs-liste"><button type="button" class="hs-cikis" ${ogr ? 'data-ogr-cikis' : 'data-cikis'}>${satir('cikis', u.bulut || ogr ? 'Çıkış yap' : 'Kullanıcı değiştir', '', 'kirmizi')}</button></div>` });
+}
 function iskelet() {
   kurallariHazirla(); zamanlayiciBaslat();
   const say = sayaclar();
@@ -70,7 +87,7 @@ function iskelet() {
       <div class="yan-alt"><b>${e(oturum.kullanici.ad)}</b><span>${ROL_AD[oturum.kullanici.rol]}</span>${S.kurs.demoNumara ? `<span style="display:block;margin-top:4px;font-size:12px;opacity:.85">Mesajlar → ${e(S.kurs.demoNumara)}</span>` : ''}<button class="dg dg-cizgi dg-kucuk" style="margin-top:8px;width:100%;background:transparent;color:#fff;border-color:#fff" data-cikis>${oturum.kullanici.bulut ? 'Çıkış yap' : 'Kullanıcı değiştir'}</button></div>
     </div></aside>
     <div class="ana">
-      <header class="ust">
+      ${oturum.kullanici.rol === 'usta' ? `<header class="app-ust">${APP_LOGO}<span class="app-ust-ad"><b>${e(S.kurs.ad)}</b>${oturum.kullanici.bulut ? '<span id="bulut-durum" class="bulut-durum" role="status"></span>' : '<small>Öğretmen</small>'}</span><h1 id="ust-baslik" class="gizli-et">Öğretmen ekranı</h1><small id="ust-alt" hidden></small><button type="button" class="app-profil" data-hesap aria-label="Hesabım: ${e(oturum.kullanici.ad)}">${basHarf(oturum.kullanici.ad)}</button></header>` : `<header class="ust">
         <button class="dg-ikon mobil-ust-sol" data-yan aria-label="Menüyü aç">${ik('menu')}</button>
         <div class="ust-baslik"><small id="ust-alt">${bugunMetni()}</small>${oturum.kullanici.bulut ? '<span id="bulut-durum" class="bulut-durum" role="status"></span>' : ''}<h1 id="ust-baslik">Genel bakış</h1></div>
         <a class="dg dg-hafif portal-geri" href="#/genel">← Panele dön</a>
@@ -78,7 +95,7 @@ function iskelet() {
         <button class="arama" data-ara aria-label="Ara">${ik('ara')}<span>Kursiyer, aday, plaka ara</span><kbd>⌘K</kbd></button>
         ${oturum.kullanici.rol !== 'usta' ? `<button class="yeni-dugme" data-yeni-menu aria-label="Yeni ekle">${ik('arti')}<span>Yeni</span></button>` : ''}
         <button class="kullanici-cip" data-cikis title="Kullanıcı değiştir"><b>${e(oturum.kullanici.ad)}</b><small>${ROL_AD[oturum.kullanici.rol]}</small></button>
-      </header>
+      </header>`}
       ${oturum.kullanici.ziyaretci ? `<div class="ziyaretci-serit"><span><b>Demo görünümü</b> · örnek verilerle. Mesajlar kimseye gitmez, ekranda gösterilir.</span><button data-cikis>Çık</button></div>` : ''}
       <main class="icerik" id="icerik"></main>
     </div>
@@ -117,6 +134,7 @@ export function yenile(kaydirma = false) {
   const portal = r.ad === 'egitmen' || r.ad === 'ogrenci' || r.ad === 'kayit';
   document.body.classList.toggle('portal-modu', portal);
   document.body.classList.toggle('usta-modu', oturum.kullanici.rol === 'usta');
+  temaRengi(portal && oturum.kullanici.rol === 'usta');
   let s;
   try { s = SAYFALAR[r.ad](r.id); }
   catch (x) { console.error(x); s = { baslik: 'Bir şeyler ters gitti', html: '<div class="kart"><div class="bos"><b>Bu sayfa açılamadı</b><p>Sayfayı yenileyip tekrar deneyin. Sorun sürerse destek hattına yazın.</p><a class="dg dg-koyu" href="#/genel">Genel bakışa dön</a></div></div>' }; }
@@ -434,11 +452,10 @@ function ogrenciSifreDegistir() {
 function ogrenciCiz(kaydir) {
   const kok = document.getElementById('uyg');
   if (!kok.querySelector('.ogr-kabuk')) {
-    kok.innerHTML = `<div class="ogr-kabuk"><header class="ogr-ust"><svg class="logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>${e(S.kurs.ad)}</b><small>Öğrenci paneli</small></span><button type="button" class="ogr-dg" data-ogr-sifre aria-label="Şifremi değiştir">${ik('kilit')}<span>Şifre</span></button><button type="button" class="ogr-dg" data-ogr-cikis aria-label="Çıkış yap">${ik('cikis')}<span>Çıkış</span></button></header><main id="icerik" class="ogr-icerik"></main></div>`;
-    kok.querySelector('[data-ogr-cikis]').addEventListener('click', () => B.ogrenciCikis().then(() => { location.hash = '#/ogrenci-giris'; location.reload(); }));
-    kok.querySelector('[data-ogr-sifre]').addEventListener('click', ogrenciSifreDegistir);
+    const og = kursiyer(oturum.kullanici.kursiyer), adSoyad = og ? tamAd(og) : (oturum.kullanici.ad || 'Öğrenci');
+    kok.innerHTML = `<div class="ogr-kabuk"><header class="app-ust">${APP_LOGO}<span class="app-ust-ad"><b>${e(S.kurs.ad)}</b><small>Öğrenci</small></span><button type="button" class="app-profil" data-hesap aria-label="Hesabım: ${e(adSoyad)}">${basHarf(adSoyad)}</button></header><main id="icerik" class="ogr-icerik"></main></div>`;
   }
-  document.body.classList.add('portal-modu');
+  document.body.classList.add('portal-modu'); temaRengi(true);
   const yer = document.getElementById('icerik'); let s;
   try { s = P.ogrenciPortal(); } catch (x) { console.error(x); s = { html: `<div class="og-giris-kart" style="margin:24px auto"><h2 style="font-size:20px">Ekran açılamadı</h2><p style="margin:8px 0 16px">Bir sorun oldu; verilerin güvende. Yeniden dene.</p><button class="dg dg-ana og-giris-dg" data-yeniden-yukle>Yeniden yükle</button></div>` }; }
   document.title = S.kurs.ad + ' · Öğrenci paneli';
@@ -507,6 +524,10 @@ async function davetEkrani() {
 }
 document.addEventListener('click', ev => { if (ev.target.closest('[data-yeniden-yukle]')) location.reload(); });
 document.addEventListener('click', ev => {
+  if (ev.target.closest('[data-cikis]')) kapatPencere();
+  if (ev.target.closest('[data-hesap]')) return hesapSayfasi();
+  if (ev.target.closest('[data-ogr-cikis]')) return B.ogrenciCikis().then(() => { location.hash = '#/ogrenci-giris'; location.reload(); });
+  if (ev.target.closest('[data-ogr-sifre]')) { kapatPencere(); return ogrenciSifreDegistir(); }
   if (ev.target.closest('[data-cikis]') && oturum.kullanici && oturum.kullanici.bulut) { islem('Çıkış yaptı'); kaydet(); B.cikisYap().then(() => { try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } location.hash = ''; location.reload(); }); return; }
   if (ev.target.closest('[data-cikis]')) { const zy = ziyaretci(); islem('Çıkış yaptı'); kaydet(); oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } location.hash = ''; girisEkrani(zy ? 'tanitim' : 'pin'); window.scrollTo(0, 0); }
   const g = ev.target.closest('[data-geri-al]'); if (g) { if (geriAl()) { bildir('Son işlem geri alındı'); yenile(); } }
