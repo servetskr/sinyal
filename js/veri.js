@@ -30,6 +30,10 @@ export const fark = s => Math.round((tarihOku(s) - BUGUN) / 864e5);
 // Ders iptali ve değişikliği: ders saatinden en az 24 saat önce (takvim günü değil, gerçek saat)
 export const dersKalanSaat = d => (new Date(d.tarih + 'T' + (/^\d{2}:\d{2}$/.test(d.saat || '') ? d.saat : '00:00') + ':00') - Date.now()) / 36e5;
 // Para girişi: "1.250,50" → 1250.5, "24.000" → 24000, "24,000.00" → 24000; eksi ve geçersiz değer 0 olur
+// Aynı TC ile açık kayıt: aynı sınıfta kayıt durdurulur, başka sınıfta açık kayıt varsa uyarılır
+export function ayniTcKayit(tc, sinif, haric) { const t = String(tc || '').trim(); if (!/^\d{11}$/.test(t)) return { ayni: null, baska: null };
+  const acik = (S.kursiyerler || []).filter(x => x !== haric && x.tc === t && !x.kapali && x.asama !== 'Ehliyet');
+  return { ayni: acik.find(x => x.sinif === sinif) || null, baska: acik.find(x => x.sinif !== sinif) || null }; }
 export function tutarOku(v) {
   if (typeof v === 'number') return isFinite(v) && v > 0 ? Math.round(v * 100) / 100 : 0;
   let t = String(v ?? '').replace(/[^\d.,]/g, ''); if (!t) return 0;
@@ -563,7 +567,7 @@ export function makbuzNoVer(h) {
   return h.no;
 }
 // Sınıf ayarlarını kalıcı yaz
-export function sinifKaydet(k, alan) { Object.assign(SINIFLAR[k], alan); S.kurs.siniflar[k] = { ...(S.kurs.siniflar[k] || {}), ...alan }; }
+export function sinifKaydet(k, alan) { if (alan && 'ucret' in alan) S.kurs.ucretOnay = gun(0); Object.assign(SINIFLAR[k], alan); S.kurs.siniflar[k] = { ...(S.kurs.siniflar[k] || {}), ...alan }; }
 // Kursiyer numarası: kayıt sırasına göre kalıcı sıra no (demo kayıtlarında kimlikteki sayı); bir kez verilir, değişmez
 function noTamamla(l = S.kursiyerler || []) {
   if (!l.some(k => !k.no)) return;
@@ -600,6 +604,9 @@ export function bosVeri({ kursAd, yetkili, sehir, mudurTel }) {
   o.hesaplar = [{ id: 'kasa', ad: 'Nakit kasa', tur: 'Kasa', bakiye: 0 }];
   o.entegrasyon = { ...o.entegrasyon, earsiv: { bagli: false, ad: 'e-Arşiv entegratörü', not: '' } };
   o.sms = { bakiye: 0, kanal: 'WhatsApp' };
+  // demodan kalan görüşme günü kapatması ve hazır ücretler yeni kursa taşınmaz: ücretler kurulumda müdür onaylayana kadar "onaylanmadı" sayılır
+  const gs = (o.sosyal && o.sosyal.gorusmeSablon) || o.gorusmeSablon; if (gs) gs.kapali = [];
+  o.kurs.ucretOnay = null;
   delete o._gun; o._bulut = true;
   return o;
 }
