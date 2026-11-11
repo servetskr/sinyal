@@ -1,8 +1,8 @@
 // Gerçek kurs hesabı: Google Firebase (Frankfurt). Giriş e-posta + şifreyle; kurs verisi Firestore'da
 // kurslar/{kurs}/v altında parça parça durur. Her kayıt ayrı alan olarak yazılır: iki kişi aynı anda
 // farklı kayıtları değiştirirse ikisi de korunur. Fotoğraf ve imzalar kurslar/{kurs}/dosyalar'da ayrı belge.
-import { FIREBASE } from './firebase-ayar.js?v=121';
-import { S, bulutVeri, bosVeri, kaydetDinle, kaydet, oturum, bulutKanca, makbuzSira, islem, iso, EVRAKLAR, gun, fark, tamAd } from './veri.js?v=121';
+import { FIREBASE } from './firebase-ayar.js?v=122';
+import { S, bulutVeri, bosVeri, kaydetDinle, kaydet, oturum, bulutKanca, makbuzSira, islem, iso, EVRAKLAR, gun, fark, tamAd } from './veri.js?v=122';
 
 const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
 const YEREL = 'sinyal-bulut';
@@ -398,7 +398,7 @@ async function makbuzDenetle() {
     for (const h of benim) {
       const m = makbuzSira(h.no); if (!m) { delete h.noGecici; continue; }
       const cakisan = S.hareket.some(x => x !== h && x.no === h.no);
-      if (cakisan) { const eski = h.no, n = await sayacAyir(m[0]); h.no = 'M' + m[0] + '-' + String(n).padStart(5, '0'); islem('Makbuz numarası değişti', eski + ' başka cihazda da verilmişti; yeni numara ' + h.no); import('./ui.js?v=121').then(m => m.bildir(`Makbuz ${eski} çevrimdışıyken verilmişti ve başka cihazdaki makbuzla çakıştı; yeni numarası ${h.no}. Makbuzu verdiyseniz yenisini yazdırın.`, 'uyari')); }
+      if (cakisan) { const eski = h.no, n = await sayacAyir(m[0]); h.no = 'M' + m[0] + '-' + String(n).padStart(5, '0'); islem('Makbuz numarası değişti', eski + ' başka cihazda da verilmişti; yeni numara ' + h.no); import('./ui.js?v=122').then(m => m.bildir(`Makbuz ${eski} çevrimdışıyken verilmişti ve başka cihazdaki makbuzla çakıştı; yeni numarası ${h.no}. Makbuzu verdiyseniz yenisini yazdırın.`, 'uyari')); }
       else await sayacAyir(m[0], m[1] - 1);
       delete h.noGecici;
     }
@@ -579,6 +579,20 @@ export async function panelKapat(k) {
   await F.deleteDoc(F.doc(db, 'kurslar', bulut.kurs, 'ogrenciler', k.panelKod)); projeSon.delete(k.panelKod); k.panelKod = null; kaydet();
 }
 
+// ---- ortak paneli: satış ortağının salt okunur görünümü ----
+// Öğrenci paneliyle aynı yol (kurslar/{kurs}/ogrenciler/{kod}: tahmin edilemez kod, listelenemez, yalnız kurs üyeleri yazar);
+// belgede "ortak" işareti vardır, öğrenci girişi bu belgeyi açmaz. İçinde kursiyer bilgisi yoktur.
+export const rastgeleKod = n => rastgele(n);
+export async function ortakYaz(kod, veri) {
+  const { db, F } = await sdk();
+  await F.setDoc(F.doc(db, 'kurslar', bulut.kurs, 'ogrenciler', kod), { ortak: true, v: JSON.stringify(veri), guncel: F.serverTimestamp() });
+}
+export async function ortakSil(kod) { const { db, F } = await sdk(); await F.deleteDoc(F.doc(db, 'kurslar', bulut.kurs, 'ogrenciler', kod)); }
+export async function ortakDinle(kurs, kod, f, hataF) {
+  const { db, F } = await sdk();
+  return F.onSnapshot(F.doc(db, 'kurslar', kurs, 'ogrenciler', kod), d => { const x = d.exists() ? d.data() : null; f(x && x.ortak ? JSON.parse(x.v) : null); }, hataF);
+}
+
 // Kurs cihazı: öğrenciden gelenleri sırayla, denetleyerek işler (aynı kaydı iki cihaz işlemesin diye işlem içinde silinir)
 function gelenDinle() {
   const { db, F } = fb;
@@ -630,7 +644,7 @@ function ogrenciUygula(docId, g) {
     } else if (x.a === 'gonderimler' && y && !x.eski) {
       const m = { zaman: new Date().toISOString(), kime: String(y.kime || '').slice(0, 80), metin: String(y.metin || '').slice(0, 1000), tur: String(y.tur || 'Öğrenci').slice(0, 60) };
       S.gonderimler.unshift(m);
-      if (y.iletilecek && S.kurs.waApi) sahiplen('og|' + docId + '|' + x.id).then(ok => { if (ok) import('./ui.js?v=121').then(u => u.apiGonder(u.etiket(m.kime, y.rol || '') + m.metin, undefined, undefined, { ad: m.kime, rol: y.rol || '' }).then(s => { if (!s.ok) { islem('Öğrenci bildirimi gönderilemedi', m.kime + ' · ' + m.tur + ': ' + s.hata); kaydet(); } })); });
+      if (y.iletilecek && S.kurs.waApi) sahiplen('og|' + docId + '|' + x.id).then(ok => { if (ok) import('./ui.js?v=122').then(u => u.apiGonder(u.etiket(m.kime, y.rol || '') + m.metin, undefined, undefined, { ad: m.kime, rol: y.rol || '' }).then(s => { if (!s.ok) { islem('Öğrenci bildirimi gönderilemedi', m.kime + ' · ' + m.tur + ': ' + s.hata); kaydet(); } })); });
     }
   }
   if (notlar.length) islem('Öğrenci panelinden', tamAd(k) + ': ' + notlar.join(', '));
@@ -677,13 +691,13 @@ async function ogrenciGonder() {
   if (!d.length) return;
   tabanAl();
   const boyut = JSON.stringify(d).length;
-  if (boyut > 950000) { import('./ui.js?v=121').then(u => u.bildir('Gönderilen belge çok büyük; daha küçük bir fotoğraf dene', 'uyari')); return; }
+  if (boyut > 950000) { import('./ui.js?v=122').then(u => u.bildir('Gönderilen belge çok büyük; daha küçük bir fotoğraf dene', 'uyari')); return; }
   const { db, F } = fb;
   try {
     const ref = await F.addDoc(F.collection(db, 'kurslar', ogr.kurs, 'ogrenciGelen'), { kod: ogr.kod, kursiyer: S.kursiyerler[0].id, d, zaman: F.serverTimestamp() });
     ogr.bekleyen.push({ id: ref.id, t: Date.now(), d });
     try { localStorage.setItem('sinyal-ogr-bekleyen-' + ogr.kod, JSON.stringify(ogr.bekleyen.map(p => ({ ...p, d: p.d.map(x => x.v && x.v.length > 20000 ? { ...x, v: null, buyuk: true } : x).filter(x => !x.buyuk) })))); } catch (x) { }
-  } catch (x) { console.error(x); import('./ui.js?v=121').then(u => u.bildir('Kursa iletilemedi; internet bağlantını kontrol et', 'uyari')); }
+  } catch (x) { console.error(x); import('./ui.js?v=122').then(u => u.bildir('Kursa iletilemedi; internet bağlantını kontrol et', 'uyari')); }
 }
 export function ogrenciAyril() { try { localStorage.removeItem('sinyal-ogrenci'); } catch (x) { } }
 

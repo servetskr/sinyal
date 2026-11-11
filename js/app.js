@@ -1,20 +1,20 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=121';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=121';
-import * as Y1 from './sayfalar1.js?v=121';
-import * as Y2 from './sayfalar2.js?v=121';
-import * as P from './portal.js?v=121';
-import * as Y3 from './sayfalar3.js?v=121';
-import * as Y4 from './sayfalar4.js?v=121';
-import * as Y5 from './sayfalar5.js?v=121';
-import * as IM from './imza.js?v=121';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=121';
-import * as SN from './senaryo.js?v=121';
-import * as OZ from './ozellik.js?v=121';
-import { durumlariGuncelle } from './mesaj.js?v=121';
-import { yeniMenu } from './yeni.js?v=121';
-import * as B from './bulut.js?v=121';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=121';
-import * as AN from './analiz.js?v=121';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=122';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=122';
+import * as Y1 from './sayfalar1.js?v=122';
+import * as Y2 from './sayfalar2.js?v=122';
+import * as P from './portal.js?v=122';
+import * as Y3 from './sayfalar3.js?v=122';
+import * as Y4 from './sayfalar4.js?v=122';
+import * as Y5 from './sayfalar5.js?v=122';
+import * as IM from './imza.js?v=122';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=122';
+import * as SN from './senaryo.js?v=122';
+import * as OZ from './ozellik.js?v=122';
+import { durumlariGuncelle } from './mesaj.js?v=122';
+import { yeniMenu } from './yeni.js?v=122';
+import * as B from './bulut.js?v=122';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=122';
+import * as AN from './analiz.js?v=122';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -193,7 +193,7 @@ document.addEventListener('change', ev => { const s = ev.target.closest('[data-s
 Y5.temaUygula();
 
 let sonAd = null;
-window.addEventListener('hashchange', () => { if (imzaLinki()) return imzaSayfasiAc(); if (oturum.kullanici && oturum.kullanici.rol === 'ogrenci') return; if (ogrYolu()) return eskiLink(); if (location.hash === '#/ogrenci-giris') return ogrenciGirisEkrani(oturum.kullanici && oturum.kullanici.bulut ? 'Bu cihazda bir personel hesabı açık. Öğrenci olarak girersen o oturum kapanır.' : undefined); if (davetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return davetEkrani(); const r = rota(); yenile(r.ad !== sonAd); sonAd = r.ad; });
+window.addEventListener('hashchange', () => { if (imzaLinki()) return imzaSayfasiAc(); if (ortakYolu()) return location.reload(); if (oturum.kullanici && oturum.kullanici.rol === 'ogrenci') return; if (ogrYolu()) return eskiLink(); if (location.hash === '#/ogrenci-giris') return ogrenciGirisEkrani(oturum.kullanici && oturum.kullanici.bulut ? 'Bu cihazda bir personel hesabı açık. Öğrenci olarak girersen o oturum kapanır.' : undefined); if (davetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return davetEkrani(); const r = rota(); yenile(r.ad !== sonAd); sonAd = r.ad; });
 
 // QR’dan gelen ilk sayfa index.html’de hazır durur (beklemeden görünsün); sonradan dönmek için saklanır
 const TANITIM = (() => { const t = document.getElementById('tanitim'); return t ? t.outerHTML : ''; })();
@@ -430,6 +430,15 @@ function ogrenciCiz(kaydir) {
   if (s.baglan) { try { s.baglan(kap); } catch (x) { console.error(x); } }
   if (kaydir) window.scrollTo(0, 0);
 }
+// Ortak paneli linki: #/ortak/<kurs>/<kod> (satış ortağının salt okunur görünümü; giriş gerekmez)
+const ortakYolu = () => { const m = location.hash.match(/^#\/ortak\/([^/]+)\/([^/]+)$/); return m ? [m[1], m[2]] : null; };
+async function ortakEkrani() {
+  const [kurs, kod] = ortakYolu(), kok = document.getElementById('uyg');
+  bekleEkrani('Ortak paneli açılıyor…');
+  document.body.classList.add('portal-modu');
+  try { const ORT = await import('./ortak.js?v=122'); await ORT.ortakPanelAc(kurs, kod, kok); }
+  catch (x) { kok.innerHTML = `<div class="giris"><div class="giris-levha">${LOGO}<h1>Bu panel kapalı</h1><p>Link yenilenmiş ya da panel kapatılmış olabilir. Servet Sakar’dan güncel linki isteyin.</p></div></div>`; }
+}
 // Davet linki: #/davet/<kurs>/<kod>
 const davetYolu = () => { const m = location.hash.match(/^#\/davet\/([^/]+)\/([^/]+)$/); return m ? [m[1], m[2]] : null; };
 async function davetEkrani() {
@@ -500,6 +509,7 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.se
 window.addEventListener('beforeinstallprompt', ev => { ev.preventDefault(); window.__kurulum = ev; document.querySelectorAll('[data-kur-android]').forEach(b => { b.hidden = false; }); });
 const ogrKayit = (() => { try { return JSON.parse(localStorage.getItem('sinyal-ogrenci') || 'null'); } catch (x) { return null; } })();
 if (imzaLinki()) imzaSayfasiAc();
+else if (ortakYolu()) ortakEkrani();
 else if (ogrYolu()) eskiLink();
 else if (location.hash === '#/ogrenci-giris') ogrenciGirisEkrani(B.bulutKayitli() ? 'Bu cihazda bir personel hesabı açık. Öğrenci olarak girersen o oturum kapanır.' : undefined);
 else if (davetYolu()) davetEkrani();

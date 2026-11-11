@@ -1731,3 +1731,53 @@ button.oto-gidecek:hover{text-decoration:underline}
   .ap-ust{flex-direction:column;gap:3px}
   .plan-usta{padding-left:0;border-left:0}
 }
+
+/* ---------- Ortaklık: gelir paylaşımı (müdür, Ayarlar) ve ortağın salt okunur paneli ---------- */
+.ort .kart-govde{padding:12px 20px 18px}
+.ort-aciklama{font-size:14px;color:var(--soluk);padding-top:6px!important}
+.ort-gez{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.ort-gez b{font:800 16px/1.2 var(--baslik);color:var(--murekkep);min-width:120px;text-align:center}
+.ort-gez .dg{width:34px;padding:0;justify-content:center;font-size:18px}
+.ort-tablo td,.ort-tablo th{padding:9px 10px}
+.ort-tablo tfoot td{border-top:2px solid var(--cizgi);background:var(--panel-2)}
+.ort-not{display:block;color:var(--soluk);font-size:12px}
+.ort-bos{color:var(--soluk);font-size:14px;padding:6px 0}
+.ort-alt{font-size:13.5px;color:var(--metin);margin-top:10px}
+.ort-borc{list-style:none;padding:0;margin:0;display:grid;gap:10px}
+.ort-borc li{display:grid;grid-template-columns:110px 1fr;align-items:baseline;gap:2px 12px}
+.ort-borc span{color:var(--soluk);font-size:13.5px}
+.ort-borc b{font:800 18px/1.2 var(--baslik);color:var(--murekkep);font-variant-numeric:tabular-nums}
+.ort-borc small{grid-column:2;color:var(--soluk);font-size:12.5px}
+.ort-onay{display:flex;gap:10px;align-items:flex-start;margin-top:14px;font-size:14px;line-height:1.4;cursor:pointer}
+.ort-onay input{width:18px;height:18px;margin-top:2px;accent-color:var(--levha);flex:none}
+.ort-onay small{display:block;color:var(--soluk);font-size:12.5px}
+.ort-onizle{margin-top:12px;font-size:14px;color:var(--metin);min-height:1.2em}
+.ort-kabuk{min-height:100vh;background:var(--zemin)}
+.ort-ust{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--levha);color:#fff}
+.ort-ust b{font:900 18px/1 var(--baslik)}
+.ort-ust .logo-isaret{width:28px;height:28px}
+.ort-ana{max-width:880px;margin:0 auto;padding:18px 16px 60px}
+.ort-panel{display:flex;flex-direction:column;gap:14px}
+.ort-panel-bas{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.ort-panel-bas small{color:var(--soluk);font:800 12px/1 var(--baslik);letter-spacing:.1em;text-transform:uppercase}
+.ort-panel-bas h1{font-size:26px;margin:4px 0 2px}
+.ort-panel-bas p{color:var(--soluk);font-size:14px;margin:0}
+.ort-guncel{font-size:12.5px;color:var(--soluk)}
+.ort-dip{font-size:12.5px;color:var(--soluk);text-align:center;margin-top:6px}
+@media (max-width:640px){
+  .ort-tablo thead{display:none}
+  .ort-tablo,.ort-tablo tbody,.ort-tablo tr,.ort-tablo td,.ort-tablo tfoot{display:block;width:100%}
+  .ort-tablo tr{padding:8px 0;border-bottom:1px solid var(--cizgi-2)}
+  .ort-tablo td{border:0;padding:2px 0;text-align:left!important}
+  .ort-tablo td.sag:empty{display:none}
+  .ort-tablo tfoot td{background:none;border:0}
+  .ort .kart-govde{padding:10px 14px 14px}
+}
+@media (max-width:640px){
+  .ort-tablo td[data-et]{display:flex;justify-content:space-between;gap:12px}
+  .ort-tablo td[data-et]::before{content:attr(data-et);color:var(--soluk);font-size:12.5px;font-family:var(--govde);font-weight:400}
+  .ort-tablo td[data-et="Müşteri"]::before,.ort-tablo td[data-et="Tür"]::before{content:none}
+}
+.ort-yigin{display:flex;flex-direction:column;gap:16px}
+.ort-tablo td.mono{white-space:nowrap}
+@media (max-width:760px){ .tablo-kap>.tablo.ort-tablo{min-width:0} }
