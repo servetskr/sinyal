@@ -1,6 +1,6 @@
-import { S, BUGUN, iso, kapaliGun, ASAMALAR, KAYNAKLAR, kursiyer, tamAd, eksikEvrak, gecikenler, gecikenTutar, memnuniyet, sb, sbDers } from './veri.js?v=127';
-import { e, tl, sayi, rozet, asamaRozet, olcumler, sekmeler, ilerleme, bos, ekranNotu, ayAdi } from './ui.js?v=127';
-import { riskliler } from './risk.js?v=127';
+import { S, BUGUN, iso, kapaliGun, ASAMALAR, KAYNAKLAR, kursiyer, tamAd, eksikEvrak, gecikenler, gecikenTutar, memnuniyet, sb, sbDers } from './veri.js?v=128';
+import { e, tl, sayi, rozet, asamaRozet, olcumler, sekmeler, ilerleme, bos, ekranNotu, ayAdi } from './ui.js?v=128';
+import { riskliler } from './risk.js?v=128';
 
 /* ================= ANALİZ =================
    Öğrenci, usta öğretici ve kurs göstergeleri tek sayfada. Sekme hash'ten gelir: #/analiz/<ogrenci|usta|kurs> */

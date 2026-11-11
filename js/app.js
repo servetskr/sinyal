@@ -1,21 +1,21 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=127';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=127';
-import * as Y1 from './sayfalar1.js?v=127';
-import * as Y2 from './sayfalar2.js?v=127';
-import * as P from './portal.js?v=127';
-import * as Y3 from './sayfalar3.js?v=127';
-import * as Y4 from './sayfalar4.js?v=127';
-import * as Y5 from './sayfalar5.js?v=127';
-import * as IM from './imza.js?v=127';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=127';
-import * as SN from './senaryo.js?v=127';
-import * as OZ from './ozellik.js?v=127';
-import { durumlariGuncelle } from './mesaj.js?v=127';
-import { yeniMenu } from './yeni.js?v=127';
-import * as B from './bulut.js?v=127';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=127';
-import * as AN from './analiz.js?v=127';
-import * as ORT from './ortak.js?v=127';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=128';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=128';
+import * as Y1 from './sayfalar1.js?v=128';
+import * as Y2 from './sayfalar2.js?v=128';
+import * as P from './portal.js?v=128';
+import * as Y3 from './sayfalar3.js?v=128';
+import * as Y4 from './sayfalar4.js?v=128';
+import * as Y5 from './sayfalar5.js?v=128';
+import * as IM from './imza.js?v=128';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=128';
+import * as SN from './senaryo.js?v=128';
+import * as OZ from './ozellik.js?v=128';
+import { durumlariGuncelle } from './mesaj.js?v=128';
+import { yeniMenu } from './yeni.js?v=128';
+import * as B from './bulut.js?v=128';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=128';
+import * as AN from './analiz.js?v=128';
+import * as ORT from './ortak.js?v=128';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -571,7 +571,7 @@ else girisEkrani(location.hash.startsWith('#/imza-geldi/') ? 'pin' : 'tanitim');
 const SURUM = +(new URL(import.meta.url).searchParams.get('v') || 0);
 async function surumBak() {
   try {
-    const t = await (await fetch('./?surum=' + Date.now(), { cache: 'no-store' })).text(), v = +((t.match(/app\.js\?v=(\d+)/) || [])[1] || 0);
+    const t = await (await fetch('./?surum=' + Date.now(), { cache: 'no-store' })).text(), v = +((t.match(/(?:baslat|app)\.js\?v=(\d+)/) || [])[1] || 0);
     if (!(v > SURUM) || document.getElementById('surum-serit')) return;
     const d = document.createElement('div'); d.id = 'surum-serit'; d.className = 'surum-serit'; d.setAttribute('role', 'status');
     d.innerHTML = '<span>Yeni sürüm hazır</span><button type="button">Güncelle</button>';
