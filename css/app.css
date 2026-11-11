@@ -1781,3 +1781,15 @@ button.oto-gidecek:hover{text-decoration:underline}
 .ort-yigin{display:flex;flex-direction:column;gap:16px}
 .ort-tablo td.mono{white-space:nowrap}
 @media (max-width:760px){ .tablo-kap>.tablo.ort-tablo{min-width:0} }
+/* Sinyal Yönetim kabuğu */
+.ort-ust-sag{margin-left:auto;display:flex;align-items:center;gap:12px;min-width:0}
+.ort-ust-sag small{font-size:13px;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ort-ust .bulut-durum{color:#fff;opacity:.85}
+.ort-cikis{border:1.5px solid rgba(255,255,255,.7);color:#fff;border-radius:8px;padding:5px 12px;font:800 13px/1 var(--baslik);flex:none}
+.ort-cikis:hover{background:rgba(255,255,255,.12)}
+.ort-uyeler{list-style:none;margin:0;padding:0}
+.ort-uyeler li{display:flex;align-items:center;gap:12px;justify-content:space-between}
+.ort-uyeler b{display:block;color:var(--murekkep)}
+.ort-uyeler small{display:block;color:var(--soluk);font-size:12.5px}
+.ort-kur{max-width:720px}
+@media (max-width:640px){ .ort-ust-sag small{display:none} }

@@ -1,6 +1,7 @@
-// Ortaklık: Sinyal'in kendi gelir paylaşımı (satış ortağına %40 pay, borç ve anapara iadesi) ve ortağın salt okunur paneli.
-// Yalnız S.isletme bulunan hesapta görünür (Ayarlar › Diğer › Ortaklık). Ortak, tahmin edilemez bir linkle kendi panelini açar;
-// panelde kursların kursiyer bilgisi yoktur: yalnız müşteri kurs adı, tahsilat, pay ve ödemeler.
+// Sinyal Yönetim: Sinyal'in kendi gelir paylaşımı (satış ortağına %40 pay, borç ve anapara iadesi).
+// Kurs hesaplarından ayrı bir hesapta çalışır (S.kurs.tur === 'yonetim'); kurs ekranları açılmaz.
+// Üyeler: yönetici (müdür rolü, her şeyi girer) ve ortak (kendi e-posta ve şifresiyle girer, yalnız görür).
+// Kursiyer bilgisi yoktur: yalnız müşteri kurs adı, tahsilat, pay ve ödemeler.
 import { S, kaydet, gun, fark, tarihOku, iso, ayEkle, kapaliGun, islem, geriAlNoktasi } from './veri.js?v=122';
 import { e, ik, rozet, pencere, kapatPencere, bildir, tarih, tarihUzun, ayAdi, olcumler, belgeYazdir } from './ui.js?v=122';
 import * as B from './bulut.js?v=122';
@@ -14,6 +15,7 @@ const sonrakiAy = (ay, n = 1) => ayEkle(ay + '-01', n).slice(0, 7);
 const isGunu = t => { let x = t; while (kapaliGun(x) || tarihOku(x).getDay() === 6) { const d = tarihOku(x); d.setDate(d.getDate() + 1); x = iso(d); } return x; };
 
 export const isletmeVar = () => !!(S.isletme && S.isletme.ortak);
+export const yonetimModu = () => !!(S.kurs && S.kurs.tur === 'yonetim' && isletmeVar());
 
 // Hesap: her tahsilatın payı ve (ilk yıllık abonelikte) anapara iadesi; borç bakiyesi tarih sırasıyla düşer
 export function hesap(v) {
@@ -97,11 +99,11 @@ let secAy = null;
 export function ayarHtml() {
   const v = S.isletme, h = hesap(v), o = v.ortak;
   if (!secAy) secAy = gun(0).slice(0, 7);
-  const link = o.link ? ortakLinki(o.link) : null;
+  const ortaklar = (S.kullanicilar || []).filter(u => u.rol === 'ortak');
   return `<div class="ort">
     <div class="kart"><div class="kart-bas"><h3>${e(o.ad)} · gelir paylaşımı</h3><small>Satışlardan %${h.oran} · sözleşme ${tarih(o.baslangic)}</small>
-      <div class="sag">${link ? `<button class="dg dg-cizgi dg-kucuk" data-ort-kopyala>${ik('belge')}Panel linkini kopyala</button><button class="dg dg-hafif dg-kucuk" data-ort-link-menu>Link</button>` : `<button class="dg dg-ana dg-kucuk" data-ort-link-ac>${ik('arti')}Ortak panelini aç</button>`}</div></div>
-      <p class="kart-govde ort-aciklama">${link ? `${e(o.ad.split(' ')[0])} Bey kendi panelini bu linkle açar; salt okunurdur, kursiyer bilgisi içermez. Yaptığınız her kayıt panele hemen yansır.` : 'Panel açılınca ortağınız müşterileri, tahsilatları, payını ve borç durumunu kendi telefonundan görür. Aylık dökümü ayrıca hazırlamanız gerekmez.'}</p>
+      <div class="sag">${ortaklar.length ? '' : `<button class="dg dg-ana dg-kucuk" data-ort-davet>${ik('arti')}${e(o.ad.split(' ')[0])} Bey'i davet et</button>`}</div></div>
+      <div class="kart-govde ort-aciklama">${ortaklar.length ? `<ul class="ort-uyeler">${ortaklar.map(u => `<li><span><b>${e(u.ad)}</b><small>${e(u.eposta || '')} · yalnız görüntüler</small></span><button class="dg dg-hafif dg-kucuk" data-ort-uye-cikar="${e(u.id)}">Erişimi kaldır</button></li>`).join('')}</ul>` : `${e(o.ad.split(' ')[0])} Bey kendi e-posta ve şifresiyle bu hesaba girer ve her şeyi görür ama hiçbir şeyi değiştiremez. Davet linki 7 gün geçerlidir.`}</div>
     </div>
     <div class="ara-bosluk"></div>${ozetHtml(v, h)}<div class="ara-bosluk"></div>
     <div class="kart"><div class="kart-bas"><h3>Aylık döküm</h3><small>Ortağa her ayın 5'ine kadar paylaşılır</small><div class="sag"><button class="dg dg-cizgi dg-kucuk" data-ort-pdf>${ik('belge')}PDF</button></div></div><div class="kart-govde">${dokumHtml(v, h, secAy)}</div></div>
@@ -117,19 +119,15 @@ export function ayarHtml() {
     </div></div>`;
 }
 const kimlik = () => 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-function kaydetYayinla(ne, ayrinti) { if (ne) islem(ne, ayrinti); kaydet(); yayinla(); }
+function kaydetYayinla(ne, ayrinti) { if (ne) islem(ne, ayrinti); kaydet(); }
 export function ayarBaglan(k, yenile) {
-  if (S.isletme && S.isletme.ortak && S.isletme.ortak.link) yayinla();
   k.addEventListener('click', ev => {
     const t = ev.target, v = S.isletme;
     if (!t.closest('.ort')) return;
     const ay = t.closest('[data-ort-ay]'); if (ay && ay.dataset.ortAy) { secAy = ay.dataset.ortAy; return yenile(); }
     if (t.closest('[data-ort-pdf]')) return belgeYazdir(dokumBelgesi(v, secAy), 'Sinyal gelir paylaşımı · ' + ayAd(secAy));
-    if (t.closest('[data-ort-link-ac]')) return linkAc().then(yenile);
-    if (t.closest('[data-ort-kopyala]')) { const u = ortakLinki(v.ortak.link); try { navigator.clipboard.writeText(u); bildir('Link kopyalandı; WhatsApp’tan ' + v.ortak.ad.split(' ')[0] + ' Bey’e gönderebilirsiniz'); } catch (x) { bildir(u); } return; }
-    if (t.closest('[data-ort-link-menu]')) return pencere({ baslik: 'Ortak paneli linki', icerik: `<p style="font-size:14.5px;word-break:break-all;margin-bottom:12px"><a href="${e(ortakLinki(v.ortak.link))}" target="_blank" rel="noopener">${e(ortakLinki(v.ortak.link))}</a></p><p style="font-size:14px;color:var(--soluk)">Link yenilenirse eski link çalışmaz. Kapatılırsa panel kimseye görünmez; kayıtlarınız silinmez.</p>`,
-      altlik: '<button class="dg dg-cizgi" data-link-kapat>Paneli kapat</button><button class="dg dg-cizgi" data-link-yenile>Linki yenile</button><button class="dg dg-ana" data-kapat>Tamam</button>',
-      onAc(p) { p.querySelector('[data-link-yenile]').addEventListener('click', () => linkKapat().then(linkAc).then(() => { kapatPencere(); bildir('Yeni link hazır; eskisi artık açılmaz'); yenile(); })); p.querySelector('[data-link-kapat]').addEventListener('click', () => linkKapat().then(() => { kapatPencere(); bildir('Ortak paneli kapatıldı'); yenile(); })); } });
+    if (t.closest('[data-ort-davet]')) return davetPenceresi();
+    const uc = t.closest('[data-ort-uye-cikar]'); if (uc) return silOnay('Bu kişinin Sinyal Yönetim hesabına erişimi kaldırılsın mı? Kayıtlar silinmez; isterseniz yeniden davet edebilirsiniz.', () => B.uyeCikar(uc.dataset.ortUyeCikar).then(() => { islem('Sinyal Yönetim: ortağın erişimini kaldırdı'); kaydet(); yenile(); }).catch(x => bildir(B.hataMetni(x), 'uyari')));
     if (t.closest('[data-ort-musteri-ekle]')) return musteriPenceresi(null, yenile);
     const mu = t.closest('[data-ort-musteri]'); if (mu) return musteriPenceresi((v.musteriler || []).find(m => m.id === mu.dataset.ortMusteri), yenile);
     if (t.closest('[data-ort-tahsilat]')) return tahsilatPenceresi(yenile);
@@ -198,33 +196,20 @@ function dokumBelgesi(v, ay) {
     <p style="margin-top:14px;font-size:11px;color:#555">Tutarlar KDV hariç, fiilen tahsil edilmiş ve iade edilmemiş gelirlerdir. Anapara iadesi her yeni müşterinin ilk yıllık aboneliği tamamen tahsil edildiğinde doğar.</p>`;
 }
 
-/* ---------- link ve yayın ---------- */
-export const ortakLinki = kod => location.origin + location.pathname + '#/ortak/' + B.bulut.kurs + '/' + kod;
-async function linkAc() {
-  if (!B.bulut.kurs) { bildir('Ortak paneli için bulut hesabı gerekli', 'uyari'); return; }
-  const kod = B.rastgeleKod(28); S.isletme.ortak.link = kod; S.isletme.ortak.linkTarih = gun(0);
-  kaydetYayinla('Ortaklık: ortak panelini açtı');
-  bildir('Ortak paneli açıldı; linki kopyalayıp gönderebilirsiniz');
-}
-async function linkKapat() {
-  const kod = S.isletme.ortak.link; if (!kod) return;
-  await B.ortakSil(kod).catch(x => console.error(x));
-  S.isletme.ortak.link = null; kaydetYayinla('Ortaklık: ortak panelini kapattı');
-}
-let yayinZaman = null;
-export function yayinla() {
-  clearTimeout(yayinZaman);
-  yayinZaman = setTimeout(() => {
-    const v = S.isletme; if (!v || !v.ortak || !v.ortak.link) return;
-    if (!B.bulut.kurs) return;
-    const paylas = { ortak: { ad: v.ortak.ad, oran: v.ortak.oran, baslangic: v.ortak.baslangic }, borc: v.borc, musteriler: (v.musteriler || []).map(m => ({ id: m.id, ad: m.ad, paket: m.paket, sube: m.sube, bas: m.bas, durum: m.durum })),
-      tahsilatlar: (v.tahsilatlar || []).map(t => ({ id: t.id, tarih: t.tarih, musteri: t.musteri, musteriAd: t.musteriAd, tur: t.tur, tutar: t.tutar, iade: t.iade, ilkYil: t.ilkYil, not: t.not })), odemeler: v.odemeler || [], guncel: new Date().toISOString() };
-    B.ortakYaz(v.ortak.link, paylas).catch(x => { console.error(x); bildir('Ortak paneli güncellenemedi; bağlantınızı kontrol edin', 'uyari'); });
-  }, 400);
+/* ---------- ortağı davet: kendi e-posta ve şifresiyle girer, rolü "ortak" (yalnız görür) ---------- */
+function davetPenceresi() {
+  const o = S.isletme.ortak;
+  B.davetOlustur({ ad: o.ad, rol: 'ortak' }).then(d => {
+    islem('Sinyal Yönetim: ortağa davet linki oluşturdu', o.ad); kaydet();
+    pencere({ baslik: o.ad + ' · davet linki', icerik: `<p style="font-size:14.5px;margin-bottom:10px">Bu linki WhatsApp'tan ${e(o.ad.split(' ')[0])} Bey'e gönderin. Linki açınca kendi e-postasını ve bir şifre belirleyip hesaba katılır. Link ${d.son.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} tarihine kadar geçerlidir ve bir kez kullanılır.</p>
+      <p style="font-size:13.5px;word-break:break-all;background:var(--panel-2);border-radius:8px;padding:10px 12px">${e(d.link)}</p>`,
+      altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-kopyala>Linki kopyala</button>',
+      onAc(p) { p.querySelector('[data-kopyala]').addEventListener('click', () => { try { navigator.clipboard.writeText(d.link); bildir('Link kopyalandı'); } catch (x) { bildir(d.link); } }); } });
+  }).catch(x => bildir(B.hataMetni(x), 'uyari'));
 }
 
-/* ---------- ortağın paneli: #/ortak/<kurs>/<kod> (giriş gerekmez, salt okunur) ---------- */
-export function ortakPanelHtml(v, ay) {
+/* ---------- ortağın görünümü (rolü "ortak"): yalnız görüntüler ---------- */
+export function ortakPanelHtml(v, ay = secAy || gun(0).slice(0, 7)) {
   const h = hesap(v), guncel = v.guncel ? new Date(v.guncel) : null;
   return `<div class="ort ort-panel">
     <header class="ort-panel-bas"><div><small>Sinyal · ortak paneli</small><h1>${e(v.ortak.ad)}</h1><p>Satışlardan %${h.oran} gelir payı · sözleşme ${tarih(v.ortak.baslangic)}</p></div>
@@ -235,19 +220,31 @@ export function ortakPanelHtml(v, ay) {
     <section class="kart"><div class="kart-bas"><h3>Tahsilatlar</h3><small>KDV hariç</small></div><div class="kart-govde">${tahsilatHtml(v, h, false)}</div></section>
     <section class="kart"><div class="kart-bas"><h3>Size yapılan ödemeler</h3></div><div class="kart-govde">${odemeHtml(v, false)}</div></section>
     <section class="kart"><div class="kart-bas"><h3>Borç durumu</h3></div><div class="kart-govde">${borcHtml(v, h)}</div></section>
-    <p class="ort-dip">Bu panel salt okunurdur ve yalnız size özeldir; linki başkasıyla paylaşmayın. Kursların öğrenci bilgileri burada yer almaz.</p></div>`;
+    <p class="ort-dip">Bu ekran yalnız görüntüleme içindir; kayıtları Servet Sakar girer. Kursların öğrenci bilgileri burada yer almaz.</p></div>`;
 }
-export async function ortakPanelAc(kurs, kod, kok) {
-  let v = null, ay = gun(0).slice(0, 7);
-  const ciz = () => { if (!v) return; document.title = 'Ortak paneli · Sinyal'; kok.innerHTML = `<div class="ort-kabuk"><header class="ogr-ust ort-ust"><svg class="logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#0b1d33" stroke-width="2.2" stroke-linecap="round"/></svg><b>Sinyal</b></header><main class="ort-ana">${ortakPanelHtml(v, ay)}</main></div>`; };
-  kok.addEventListener('click', ev => { const b = ev.target.closest('[data-ort-ay]'); if (b && b.dataset.ortAy) { ay = b.dataset.ortAy; ciz(); } });
-  return new Promise((coz, red) => {
-    let ilk = true;
-    B.ortakDinle(kurs, kod, d => {
-      if (!d || !d.ortak) { if (ilk) { ilk = false; red(new Error('kapali')); } else { v = null; kok.innerHTML = ''; red(new Error('kapali')); } return; }
-      v = d; ciz(); if (ilk) { ilk = false; coz(); }
-    }, x => { if (ilk) { ilk = false; red(x); } });
-  });
+/* ---------- Sinyal Yönetim hesabının ekranı (uygulama kabuğu app.js'te) ---------- */
+export const yonetimHtml = rol => rol === 'mudur' ? ayarHtml() : ortakPanelHtml(S.isletme);
+export function yonetimBaglan(k, rol, yenile) {
+  if (rol === 'mudur') return ayarBaglan(k, yenile);
+  k.addEventListener('click', ev => { const ay = ev.target.closest('[data-ort-ay]'); if (ay && ay.dataset.ortAy) { secAy = ay.dataset.ortAy; yenile(); } });
+}
+// Kurulum: yeni ve boş bir hesap bir kez "Sinyal Yönetim" hesabına çevrilir (#/yonetim-kur, yalnız müdür)
+export const kurulabilir = () => !S.isletme && !(S.kursiyerler || []).length && !(S.dersler || []).length && !(S.hareket || []).length;
+export function kurulumHtml() {
+  return `<div class="kart ort-kur"><div class="kart-bas"><h3>Sinyal Yönetim hesabını kur</h3><small>Bu hesap kurs olarak değil, Sinyal'in kendi gelir paylaşımı için kullanılır</small></div>
+    <form class="kart-govde" id="f-yk">
+      <div class="izgara iz-2" style="gap:12px">${alan('Ortağın adı soyadı', '<input name="ad" value="Eyüp Çağlar" required>')}${alan('Gelir payı (%)', '<input name="oran" inputmode="numeric" value="40">')}</div>
+      <div class="izgara iz-2" style="gap:12px">${alan('Sözleşme tarihi', '<input name="bas" type="date" value="2026-11-10">')}${alan('Borcun aktarıldığı tarih', '<input name="bt" type="date" value="2026-11-11">')}</div>
+      <div class="izgara iz-2" style="gap:12px">${alan('Anapara (₺)', '<input name="anapara" inputmode="numeric" value="50.000">')}${alan('Yeni satış başına anapara iadesi (₺)', '<input name="iade" inputmode="numeric" value="2.000">')}</div>
+      <p class="ort-onizle">Kurulduktan sonra bu hesapta öğrenci, ders ve kasa ekranları açılmaz; yalnız gelir paylaşımı ekranı açılır. Bu işlem geri alınamaz, bu yüzden boş ve yeni bir hesapta yapın.</p>
+      <button class="dg dg-ana" type="submit" style="margin-top:14px">Sinyal Yönetim hesabını kur</button></form></div>`;
+}
+export function kurulumBaglan(k, bitti) {
+  const f = k.querySelector('#f-yk'); if (!f) return;
+  f.addEventListener('submit', ev => { ev.preventDefault(); if (!kurulabilir()) return bildir('Bu hesapta kurs kaydı var; yeni ve boş bir hesap açın', 'uyari');
+    const oran = +f.oran.value.replace(/\D/g, '') || 40, anapara = tutarOku(f.anapara.value), satisIade = tutarOku(f.iade.value);
+    isletmeKur({ ad: f.ad.value.trim(), oran, baslangic: f.bas.value, anapara, borcTarih: f.bt.value, satisIade });
+    S.kurs.tur = 'yonetim'; S.kurs.ad = 'Sinyal Yönetim'; kaydet(); bildir('Sinyal Yönetim hesabı kuruldu'); bitti(); });
 }
 
 // İlk kurulum: hesapta işletme defteri yoksa sözleşme bilgileriyle açılır (yalnız kurulum adresinden)

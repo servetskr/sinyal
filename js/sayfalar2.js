@@ -11,7 +11,6 @@ import { denetimEksikleri, mebSiraBaslat } from './sayfalar3.js?v=122';
 import * as OZ from './ozellik.js?v=122';
 import { kurallariHazirla, zamanliKural, kuralSaati, ornekGonder, zamanlayiciCalistir, kuyruguGonder, gidecekler } from './zamanlayici.js?v=122';
 import * as MM from './mesaj.js?v=122';
-import * as ORT from './ortak.js?v=122';
 
 const durum = { sinav: 'yaklasan', kasa: 'hareket', filo: 'arac', mesaj: 'gelen', meb: 'aktarim', ayar: 'kurs' };
 let secSohbet = null, gecmisKim = '', sohbetAcik = false;
@@ -675,13 +674,11 @@ export function ayarlar(alt) {
       <div><div class="kart"><div class="kart-bas"><h3>Açık rıza kayıtları</h3></div><div class="kart-govde">${olcumler([['Rıza alınan', (S.kursiyerler.length - rizasiz.length) + ''], ['Eksik', rizasiz.length + '', '', rizasiz.length ? 'uyari' : '']])}<p style="font-size:14px;margin-top:10px">Her kursiyerin rıza tarihi ve kanalı (kursta imzalı form / online kayıt) dosyasında saklanır.</p></div></div>
       <div class="ara-bosluk"></div><div class="kart"><div class="kart-bas"><h3>Saklama ve imha</h3></div><div class="kart-govde"><p style="font-size:14px">Saklama süresi: <b>${S.kurs.saklamaYil} yıl</b> (kurs ayarı; mevzuata göre belirleyin). Süresi dolan ${imha.length} kayıt var.</p>${imha.length ? `<button class="dg dg-cizgi dg-kucuk" style="margin-top:10px" data-anonim>Süresi dolanları anonimleştir</button>` : ''}<p style="font-size:14px;margin-top:10px">Kim hangi kişisel veriye baktı: <a href="#/ayarlar/gecmis" style="color:var(--levha);font-weight:700">İşlem geçmişi</a></p></div></div></div></div>`; }
   if (AYAR_SEKMELERI[durum.ayar]) govde = AYAR_SEKMELERI[durum.ayar]();
-  if (durum.ayar === 'ortak' && ORT.isletmeVar() && mudurMu()) govde = ORT.ayarHtml();
   return {
     baslik: 'Ayarlar', alt: S.kurs.ad,
-    html: `<div id="sek" class="ayar-gruplar">${[['Kurs', [['kurs', 'Kurs bilgileri'], ['subeler', 'Şubeler'], ['sinif', 'Sınıf ve ücretler'], ['kurallar', 'MEB kuralları'], ['sozlesme', 'Sözleşme metni'], ['ogrenciapp', 'Öğrenci uygulaması']]], ['Kişiler ve güvenlik', [['kullanici', 'Kullanıcılar'], ['guvenlik', 'Güvenlik'], ['kvkk', 'KVKK'], ['gecmis', 'İşlem geçmişi']]], ['Bağlantılar', [['entegrasyon', 'Muhasebe ve fatura'], ['aktarim', 'Veri aktarımı']]], ['Diğer', [['gorunum', 'Görünüm'], ...(ORT.isletmeVar() && mudurMu() ? [['ortak', 'Ortaklık']] : [])]]].map(([g, l]) => `<div class="ayar-grup"><small>${g}</small>${sekmeler(l, durum.ayar)}</div>`).join('')}</div>${durum.ayar === 'kvkk' ? `<p class="ekran-notu">${isaret('bilgi', 20)}<span>Mesajlaşma asistanının KVKK ayarları (model konumu, gizleme, saklama) <a href="#/sosyal/kural" style="color:var(--levha);font-weight:700">Sosyal medya asistanı › Kurallar</a> sayfasında.</span></p>` : ''}${govde}`,
+    html: `<div id="sek" class="ayar-gruplar">${[['Kurs', [['kurs', 'Kurs bilgileri'], ['subeler', 'Şubeler'], ['sinif', 'Sınıf ve ücretler'], ['kurallar', 'MEB kuralları'], ['sozlesme', 'Sözleşme metni'], ['ogrenciapp', 'Öğrenci uygulaması']]], ['Kişiler ve güvenlik', [['kullanici', 'Kullanıcılar'], ['guvenlik', 'Güvenlik'], ['kvkk', 'KVKK'], ['gecmis', 'İşlem geçmişi']]], ['Bağlantılar', [['entegrasyon', 'Muhasebe ve fatura'], ['aktarim', 'Veri aktarımı']]], ['Diğer', [['gorunum', 'Görünüm']]]].map(([g, l]) => `<div class="ayar-grup"><small>${g}</small>${sekmeler(l, durum.ayar)}</div>`).join('')}</div>${durum.ayar === 'kvkk' ? `<p class="ekran-notu">${isaret('bilgi', 20)}<span>Mesajlaşma asistanının KVKK ayarları (model konumu, gizleme, saklama) <a href="#/sosyal/kural" style="color:var(--levha);font-weight:700">Sosyal medya asistanı › Kurallar</a> sayfasında.</span></p>` : ''}${govde}`,
     baglan(k) {
       ayarBaglan(k);
-      if (durum.ayar === 'ortak' && ORT.isletmeVar() && mudurMu()) ORT.ayarBaglan(k, yenile);
       k.addEventListener('click', ev => {
         const s = ev.target.closest('[data-sekme]'); if (s) { durum.ayar = s.dataset.sekme; yenile(); }
         if (ev.target.closest('[data-sunum-ekle]')) return import('./sunum.js?v=122').then(m => { const r = m.sunumVerisiEkle(); if (!r.ok) return bildir(r.hata, 'uyari'); kaydet(); bildir(`Sunum verisi eklendi: ${r.k.ad} · ${r.h.ad}. Öğretmen ekranında bugünkü dersler hazır`); yenile(); });

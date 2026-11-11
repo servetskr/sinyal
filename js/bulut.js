@@ -233,6 +233,7 @@ function farklar() {
 let sunucuGeldi = false;  // bu oturumda sunucudan en az bir güncel anlık görüntü geldi mi
 export async function akit() {
   if (!bulut.kurs || !fb) return;
+  if (bulut.rol === 'ortak') return;  // Sinyal Yönetim'de ortak yalnız görür; sunucu kuralı da yazmasına izin vermez
   clearTimeout(zamanla); zamanla = null;
   const yazilar = farklar(), dosyalar = yeniDosya; yeniDosya = new Map();
   if (!yazilar.size && !dosyalar.size) return;
@@ -577,20 +578,6 @@ export async function panelAc(k, yeniden) {
 export async function panelKapat(k) {
   if (!k.panelKod) return; const { db, F } = await sdk();
   await F.deleteDoc(F.doc(db, 'kurslar', bulut.kurs, 'ogrenciler', k.panelKod)); projeSon.delete(k.panelKod); k.panelKod = null; kaydet();
-}
-
-// ---- ortak paneli: satış ortağının salt okunur görünümü ----
-// Öğrenci paneliyle aynı yol (kurslar/{kurs}/ogrenciler/{kod}: tahmin edilemez kod, listelenemez, yalnız kurs üyeleri yazar);
-// belgede "ortak" işareti vardır, öğrenci girişi bu belgeyi açmaz. İçinde kursiyer bilgisi yoktur.
-export const rastgeleKod = n => rastgele(n);
-export async function ortakYaz(kod, veri) {
-  const { db, F } = await sdk();
-  await F.setDoc(F.doc(db, 'kurslar', bulut.kurs, 'ogrenciler', kod), { ortak: true, v: JSON.stringify(veri), guncel: F.serverTimestamp() });
-}
-export async function ortakSil(kod) { const { db, F } = await sdk(); await F.deleteDoc(F.doc(db, 'kurslar', bulut.kurs, 'ogrenciler', kod)); }
-export async function ortakDinle(kurs, kod, f, hataF) {
-  const { db, F } = await sdk();
-  return F.onSnapshot(F.doc(db, 'kurslar', kurs, 'ogrenciler', kod), d => { const x = d.exists() ? d.data() : null; f(x && x.ortak ? JSON.parse(x.v) : null); }, hataF);
 }
 
 // Kurs cihazı: öğrenciden gelenleri sırayla, denetleyerek işler (aynı kaydı iki cihaz işlemesin diye işlem içinde silinir)
