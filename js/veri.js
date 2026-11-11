@@ -27,6 +27,8 @@ export const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStar
 export const gun = n => { const d = new Date(BUGUN); d.setDate(d.getDate() + n); return iso(d); };
 export const tarihOku = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
 export const fark = s => Math.round((tarihOku(s) - BUGUN) / 864e5);
+// KVKK aydınlatma metni (kurs Ayarlar › KVKK'dan değiştirebilir): veri sorumlusu kurs; hukuki sebep, aktarım ve haklar
+export const aydinlatmaMetni = () => S.kurs.aydinlatma || `${S.kurs.ad || 'Kursumuz'} (veri sorumlusu) olarak kimlik, iletişim, öğrenim, sağlık raporu ve adli sicil bilgilerinizi; ders, sınav ve ödeme kayıtlarınızı sürücü kursu eğitiminin yürütülmesi, sözleşmenin ifası ve MEB mevzuatından doğan yükümlülükler (MEBBİS kaydı, ders programı, sınav bildirimi) için işliyoruz (KVKK m.5/2-c, ç; m.6). Ders hatırlatmaları ve ödeme takibi kursun meşru menfaatine dayanır; kampanya ve tanıtım mesajları yalnız izninizle gönderilir. Verileriniz kursun kullandığı Sinyal yazılımı aracılığıyla Google (Almanya), Cloudflare ve Meta (WhatsApp) altyapısında tutulur; bu nedenle yurt dışına aktarılır. Yetkili kurumlar (MEB, vergi idaresi) dışında paylaşılmaz ve mevzuattaki süre boyunca saklanır. KVKK m.11 kapsamındaki haklarınız (bilgi isteme, düzeltme, silme, itiraz) için kursa başvurabilirsiniz; ayrıntılar: servetskr.github.io/sinyal/gizlilik.html`;
 // Ders iptali ve değişikliği: ders saatinden en az 24 saat önce (takvim günü değil, gerçek saat)
 export const dersKalanSaat = d => (new Date(d.tarih + 'T' + (/^\d{2}:\d{2}$/.test(d.saat || '') ? d.saat : '00:00') + ':00') - Date.now()) / 36e5;
 // Para girişi: "1.250,50" → 1250.5, "24.000" → 24000, "24,000.00" → 24000; eksi ve geçersiz değer 0 olur
@@ -802,7 +804,7 @@ export function mebOnKontrol(k) {
   l.push([!!k.cinsiyet, 'Cinsiyet seçildi']);
   l.push([!!(k.saglikRapor && k.saglikRapor.no && k.saglikRapor.tarih), 'Sağlık raporu numarası ve tarihi girildi']);
   l.push([!!(k.adliSicil && k.adliSicil.barkod), 'Adli sicil barkodu girildi']);
-  l.push([!!(k.kvkk && k.kvkk.riza), 'KVKK aydınlatma ve açık rıza alındı']);
+  l.push([!!(k.kvkk && (k.kvkk.aydinlatma || k.kvkk.riza)), 'KVKK aydınlatma metni verildi']);
   // MEBBİS'e aktarılacak kayıt fotoğrafı (aktarılmış eski kayıtlarda aranmaz)
   if (!k.mebIslendi) l.push([!!k.foto, 'Kayıt fotoğrafı çekildi (biyometrik)']);
   return l;

@@ -327,7 +327,7 @@ function kursAcEkrani() {
       <label>Cep telefonunuz <small style="font-weight:400;opacity:.85">yeni kayıt, iptal ve günlük özet WhatsApp’tan buraya gelir</small><input name="tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="05xx xxx xx xx"></label>
       <label>E-posta<input name="eposta" type="email" inputmode="email" autocomplete="username" required></label>
       <label>Şifre (en az 8 karakter)<input name="sifre" type="password" autocomplete="new-password" required minlength="8"></label>
-      <label class="giris-onay"><input type="checkbox" name="onay"><span>Verilerin Google Firebase’in Frankfurt (Almanya) sunucusunda saklanacağını okudum. Sinyal şu an pilot aşamasında.</span></label>
+      <label class="giris-onay"><input type="checkbox" name="onay"><span><a href="gizlilik.html" target="_blank" rel="noopener" style="color:inherit;font-weight:700;text-decoration:underline">Gizlilik ve veri işleme şartlarını</a> okudum: kursum veri sorumlusu, Sinyal veri işleyendir; veriler Google (Frankfurt, Almanya), Cloudflare ve Meta (WhatsApp) altyapısında işlenir.</span></label>
       <button class="dg dg-koyu" type="submit">Kurs hesabını aç</button></form>
     <p class="giris-baglar"><button type="button" data-geri>← Giriş ekranına dön</button></p></div></div>`;
   const kok = document.getElementById('uyg');
