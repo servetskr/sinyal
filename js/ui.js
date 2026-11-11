@@ -112,7 +112,8 @@ export function halka(parcalar, { boyut = 132, kalinlik = 16, orta = '' } = {}) 
 
 // --- pencere, çekmece, bildirim ---
 let acikPencere = null;
-export function pencere({ baslik, icerik, altlik = '', genis = false, onAc }) {
+// korumali: içine bilgi girilen pencere (ders bitirme, imza) dışarı dokununca ya da Esc ile kapanmaz; yalnız Vazgeç/✕ ile
+export function pencere({ baslik, icerik, altlik = '', genis = false, onAc, korumali = false }) {
   kapatPencere();
   const d = document.createElement('div');
   d.className = 'perde';
@@ -122,14 +123,15 @@ export function pencere({ baslik, icerik, altlik = '', genis = false, onAc }) {
   document.body.appendChild(d);
   document.body.classList.add('kilitli');
   requestAnimationFrame(() => d.classList.add('acik'));
-  d.addEventListener('click', ev => { if (ev.target === d || ev.target.closest('[data-kapat]')) kapatPencere(); });
+  if (korumali) d.dataset.korumali = '1';
+  d.addEventListener('click', ev => { if ((ev.target === d && !korumali) || ev.target.closest('[data-kapat]')) kapatPencere(); });
   acikPencere = d;
   const ilk = d.querySelector('input,select,textarea,button:not([data-kapat])'); if (ilk) setTimeout(() => ilk.focus(), 60);
   if (onAc) onAc(d);
   return d;
 }
 export function kapatPencere() { if (acikPencere) { acikPencere.remove(); acikPencere = null; document.body.classList.remove('kilitli'); } }
-document.addEventListener('keydown', ev => { if (ev.key === 'Escape') kapatPencere(); });
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !(acikPencere && acikPencere.dataset.korumali)) kapatPencere(); });
 
 export function bildir(metin, tur = 'tamam', geriAlinir = false) {
   let k = document.querySelector('.bildirimler');

@@ -1,7 +1,7 @@
 // Denetim modu: habersiz denetimde (MTSK Yön. m.46/A) tek ekran: şu an hangi derste kim, hangi araçta, MEBBİS programına uygun mu;
 // araçta bulunması gereken belgeler (m.17/3), öz kontrol listesi (EK-16/17 maddelerinden) ve tek tıkla çıktılar.
 // Denetim kayıtları: bulgu, eksik giderme süresi (m.46: 20 gün) ve 5580 m.7/2 cezalarında tekerrür (7590 sayılı Kanun: tekrarda 5 kat, üçüncüde ruhsat iptali).
-import { S, kaydet, gun, fark, tamAd, islem, kursiyer, egitmen, arac, oturum, sbDers, sb } from './veri.js?v=123';
+import { S, kaydet, gun, fark, tamAd, islem, kursiyer, egitmen, arac, oturum, sbDers, sb, tutarOku } from './veri.js?v=123';
 import { e, ik, isaret, pencere, kapatPencere, bildir, tarih, rozet } from './ui.js?v=123';
 
 const simdi = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
@@ -94,7 +94,7 @@ export function denetimKaydiAc(yenile) {
       f.addEventListener('change', goster);
       f.addEventListener('submit', ev => {
         ev.preventDefault(); if (!f.bulgu.value.trim() && !f.bent.value) return bildir('Bulgu yazın ya da ceza seçin', 'uyari');
-        const sure = +f.sure.value, x = { id: 'dn' + Date.now(), tarih: f.tarih.value || gun(0), tur: f.tur.value, bulgu: f.bulgu.value.trim(), son: sure ? (() => { const t = new Date((f.tarih.value || gun(0)) + 'T12:00'); t.setDate(t.getDate() + sure); return t.toISOString().slice(0, 10); })() : null, bent: f.bent.value || null, ceza: !!f.bent.value, tutar: +String(f.tutar.value).replace(/\D/g, '') || null, kim: oturum.kullanici ? oturum.kullanici.ad : '', giderildi: null };
+        const sure = +f.sure.value, x = { id: 'dn' + Date.now(), tarih: f.tarih.value || gun(0), tur: f.tur.value, bulgu: f.bulgu.value.trim(), son: sure ? (() => { const t = new Date((f.tarih.value || gun(0)) + 'T12:00'); t.setDate(t.getDate() + sure); return t.toISOString().slice(0, 10); })() : null, bent: f.bent.value || null, ceza: !!f.bent.value, tutar: tutarOku(f.tutar.value) || null, kim: oturum.kullanici ? oturum.kullanici.ad : '', giderildi: null };
         x.sira = x.bent ? tekerrur(x.bent, x.tarih) + 1 : null;
         S.denetimler = [x, ...(S.denetimler || [])]; islem('Denetim kaydı ekledi', x.tur + (x.bent ? ' · ceza m.7/2-' + x.bent : '')); kaydet(); kapatPencere(); bildir('Denetim kaydedildi'); if (yenile) yenile();
       });

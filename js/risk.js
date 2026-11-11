@@ -6,7 +6,7 @@ export const riskliler = (l = S.kursiyerler) => l.map(k => ({ k, r: risk(k) })).
 /* ================= DERS BAŞI KÂR VE BOŞ KAPASİTE ================= */
 export const KAPASITE_SAAT = ['09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'];
 export function dersMaliyeti(primOrt) {
-  const m = S.kurs.maliyet, yakit = Math.round(m.km * m.tuketim / 100 * m.yakit);
+  const m = S.kurs.maliyet || (S.kurs.maliyet = { yakit: 46, tuketim: 6.5, km: 22, bakim: 55, pay: 55 }), yakit = Math.round(m.km * m.tuketim / 100 * m.yakit);
   const prim = primOrt != null ? primOrt : Math.round(ort(S.egitmenler.map(x => x.prim || 0)) || 0);
   return { yakit, prim, bakim: +m.bakim || 0, toplam: yakit + prim + (+m.bakim || 0) };
 }

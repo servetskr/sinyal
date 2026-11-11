@@ -1,4 +1,4 @@
-import { oturum, islem, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, yerelZaman, BECERI, risk, ekToplam, selam, kursAdi, konuListesi, konuOner, DERS_TUR_AD } from './veri.js?v=123';
+import { oturum, islem, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, yerelZaman, BECERI, risk, ekToplam, selam, kursAdi, konuListesi, konuOner, DERS_TUR_AD, dersKalanSaat } from './veri.js?v=123';
 import { e, saatDe, saatE, tl, ik, rozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani, waAc, waNumara } from './ui.js?v=123';
 import { yenile } from './app.js?v=123';
 import { ekDersKabul, bosTeklifKabul, wpGonder, bildirimler } from './sayfalar1.js?v=123';
@@ -52,7 +52,7 @@ function izBitir(d) {
 function dersKapat(d) {
   const ks = kursiyer(d.kursiyer), no = ks.direksiyon + 1, h = egitmen(d.egitmen), gecmis = d.tarih < gun(0);
   pencere({
-    baslik: 'Dersi bitir',
+    baslik: 'Dersi bitir', korumali: true,
     icerik: `<ol class="eg-adim"><li class="simdi" data-adim-et="1"><b>1</b>Konular</li><li data-adim-et="2"><b>2</b>Değerlendirme</li><li data-adim-et="3"><b>3</b>İmza</li></ol>
       <p class="eg-ders-bilgi"><b>${e(tamAd(ks))}</b> · ${gecmis ? tarih(d.tarih) + ' ' : ''}${d.saat} · ${no}. ders</p>
       <section data-adim="1">${konuGiris(ks, no)}<p class="og-not">Sıradaki ders için önerilen konular işaretli geldi. Takip formuna yazılır.</p></section>
@@ -124,6 +124,8 @@ function dersIptal(d) {
 }
 // "Gelmedi" yanlışlıkla basılmasın: onay alınır, sonra öğrenciye ve müdüre haber gider
 function gelmediIsaretle(d) {
+  if (!d) return;
+  if (dersKalanSaat(d) > 0) return bildir('Ders saati gelmeden “gelmedi” işaretlenemez', 'uyari');
   const ks = kursiyer(d.kursiyer), h = egitmen(d.egitmen);
   pencere({
     baslik: 'Öğrenci gelmedi mi?', icerik: `<p><b>${e(tamAd(ks))}</b> · ${d.tarih === gun(0) ? 'bugün' : tarih(d.tarih)} ${d.saat}. Ders “gelmedi” olarak kapanır; öğrenciye ve kurs müdürüne haber gider.</p>`,
@@ -166,7 +168,7 @@ function egDersKart(d, vurgu) {
     ${basladi ? `<p class="eg-bilgi mavi">${ik('saat')}<span>${saatDe(d.bas)} başladı · ${d.konum ? 'konum alındı' : d.konum === false ? 'konum alınamadı' : 'konum alınıyor'}. Bitince imzalat; süre kendiliğinden yazılır.</span></p>` : ''}
     ${d.durum === 'Yapıldı' && d.imza && d.imza.kursiyerBekliyor ? `<p class="eg-bilgi sari">${ik('uyari')}<span>Öğrencinin imzası bekleniyor. <button class="dg dg-hafif dg-kucuk" data-imza-tekrar="${e(d.id)}">Linki yeniden gönder</button></span></p>` : ''}
     ${d.durum === 'Yapıldı' && d.bas && d.sure != null ? `<small class="eg-sure ${(d.sure || 0) < 40 ? 'kisa' : ''}">${d.bas}–${d.bit} · ${d.sure} dk${(d.sure || 0) < 40 ? ' · kısa ders' : ''}${d.konum ? ' · konum kayıtlı' : ''}</small>` : ''}
-    ${acik ? `<div class="eg-dg">${basladi || gecmis ? `<button class="dg dg-ana" data-yapildi="${e(d.id)}">${ik('tik')}${gecmis ? 'Yapıldı, imzalat' : 'Bitir ve imzalat'}</button>${gecmis ? `<button class="dg dg-cizgi" data-gelmedi="${e(d.id)}">Gelmedi</button>` : ''}` : `<button class="dg dg-ana" data-ders-basla="${e(d.id)}">${ik('direksiyon')}Dersi başlat</button><button class="dg dg-cizgi" data-gelmedi="${e(d.id)}">Gelmedi</button>`}<button class="dg dg-cizgi eg-diger" data-ders-diger="${e(d.id)}" aria-label="Diğer işlemler">${ik('menu')}</button></div>` : ''}
+    ${acik ? `<div class="eg-dg">${basladi || gecmis ? `<button class="dg dg-ana" data-yapildi="${e(d.id)}">${ik('tik')}${gecmis ? 'Yapıldı, imzalat' : 'Bitir ve imzalat'}</button>${gecmis ? `<button class="dg dg-cizgi" data-gelmedi="${e(d.id)}">Gelmedi</button>` : ''}` : `<button class="dg dg-ana" data-ders-basla="${e(d.id)}">${ik('direksiyon')}Dersi başlat</button>${dersKalanSaat(d) <= 0 ? `<button class="dg dg-cizgi" data-gelmedi="${e(d.id)}">Gelmedi</button>` : ''}`}<button class="dg dg-cizgi eg-diger" data-ders-diger="${e(d.id)}" aria-label="Diğer işlemler">${ik('menu')}</button></div>` : ''}
   </article>`;
 }
 const egTk = TK.takvimDurum('ogretmen', 'hafta', true);
@@ -179,7 +181,7 @@ export function egitmenPortal() {
   egId = eg.id;
   const benim = S.dersler.filter(d => d.egitmen === eg.id);
   const bugun = benim.filter(d => d.tarih === gun(0)).sort((a, b) => a.saat.localeCompare(b.saat));
-  const kapanmamis = benim.filter(d => d.durum === 'Planlandı' && d.tarih < gun(0) && d.tarih >= gun(-14)).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat));
+  const kapanmamis = benim.filter(d => d.durum === 'Planlandı' && d.tarih < gun(0) && d.tarih >= gun(-60)).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat));
   const ar = S.araclar.find(a => a.egitmen === eg.id), ad1 = e(eg.ad.split(' ')[0]);
   // öğretmenin bütün aktif öğrencileri: direksiyonda olanlar önde, sonra sınavdakiler, sonra yeni kayıtlar (evrak, teorik)
   const ASIRA = { Direksiyon: 0, 'Sınav': 1, Teorik: 2, Evrak: 3, 'Kayıt': 4 };

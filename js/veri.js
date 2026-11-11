@@ -29,10 +29,23 @@ export const tarihOku = s => { const [y, m, d] = s.split('-').map(Number); retur
 export const fark = s => Math.round((tarihOku(s) - BUGUN) / 864e5);
 // Ders iptali ve değişikliği: ders saatinden en az 24 saat önce (takvim günü değil, gerçek saat)
 export const dersKalanSaat = d => (new Date(d.tarih + 'T' + (/^\d{2}:\d{2}$/.test(d.saat || '') ? d.saat : '00:00') + ':00') - Date.now()) / 36e5;
+// Para girişi: "1.250,50" → 1250.5, "24.000" → 24000, "24,000.00" → 24000; eksi ve geçersiz değer 0 olur
+export function tutarOku(v) {
+  if (typeof v === 'number') return isFinite(v) && v > 0 ? Math.round(v * 100) / 100 : 0;
+  let t = String(v ?? '').replace(/[^\d.,]/g, ''); if (!t) return 0;
+  const sonV = t.lastIndexOf(','), sonN = t.lastIndexOf('.');
+  if (sonV >= 0 && sonN >= 0) t = sonV > sonN ? t.replace(/\./g, '').replace(',', '.') : t.replace(/,/g, '');
+  else if (sonV >= 0) t = /^\d{1,3}(,\d{3})+$/.test(t) ? t.replace(/,/g, '') : t.replace(/,/g, '.').replace(/\.(?=.*\.)/g, '');
+  else if (sonN >= 0) t = /^\d{1,3}(\.\d{3})+$/.test(t) ? t.replace(/\./g, '') : t.replace(/\.(?=.*\.)/g, '');
+  const n = Math.round(parseFloat(t) * 100) / 100; return isFinite(n) && n > 0 ? n : 0;
+}
+// Taksit bölme: 50 TL'ye yuvarlanır, kalan son taksite eklenir; sıfır liralık taksit oluşmaz (gerekirse taksit sayısı azalır)
+export function taksitBol(top, n) { top = Math.round(top); if (top <= 0) return []; n = Math.max(1, Math.min(n || 1, Math.floor(top / 50) || 1)); const p = Math.floor(top / n / 50) * 50; return Array.from({ length: n }, (_, i) => i === n - 1 ? top - p * (n - 1) : p); }
 export const iptalEdilebilir = d => !!d && d.durum === 'Planlandı' && dersKalanSaat(d) >= 24;
 // Kurs kapalı günleri: Pazar, sabit resmî tatiller ve dini bayramlar (kurs Ayarlar'dan ek kapalı gün girer).
 export const TATILLER = ['01-01', '04-23', '05-01', '05-19', '07-15', '08-30', '10-29'];
-const BAYRAMLAR = ['2026-03-20', '2026-03-21', '2026-03-22', '2026-05-27', '2026-05-28', '2026-05-29', '2026-05-30'];
+// Dini bayramlar (Diyanet takvimi; arife yarım gün olduğu için kapalı sayılmaz). Her yıl eklenmeli: 2028 için Ağustos 2027'de Diyanet takvimine bakın
+const BAYRAMLAR = ['2026-03-20', '2026-03-21', '2026-03-22', '2026-05-27', '2026-05-28', '2026-05-29', '2026-05-30', '2027-03-09', '2027-03-10', '2027-03-11', '2027-05-16', '2027-05-17', '2027-05-18', '2027-05-19'];
 export const kapaliGun = t => tarihOku(t).getDay() === 0 ? 'Pazar' : (TATILLER.includes(t.slice(5)) || BAYRAMLAR.includes(t)) ? 'Resmî tatil' : null;
 export const isGunuIleri = t => { const d = tarihOku(t); while (kapaliGun(iso(d))) d.setDate(d.getDate() + 1); return iso(d); };
 
@@ -518,6 +531,7 @@ function goc(o) {
     if (uc) { uc.odeme.sozlesme = uc.odeme.toplam; const acik = uc.odeme.taksitler.filter(t => !t.odendi); acik.forEach(t => { t.iptal = gun(-20); }); uc.odeme.toplam -= acik.reduce((a, t) => a + t.tutar, 0); uc.ucretsiz = { tarih: gun(-20), neden: 'Şehit / gazi yakını', no: '', kim: 'Demo' }; }
   }
   if (o.kurs.kendiRandevu === undefined) o.kurs.kendiRandevu = true;
+  noTamamla(o.kursiyerler || []);
   return o;
 }
 // Yeni tahsilata kalıcı makbuz numarası
@@ -550,6 +564,12 @@ export function makbuzNoVer(h) {
 }
 // Sınıf ayarlarını kalıcı yaz
 export function sinifKaydet(k, alan) { Object.assign(SINIFLAR[k], alan); S.kurs.siniflar[k] = { ...(S.kurs.siniflar[k] || {}), ...alan }; }
+// Kursiyer numarası: kayıt sırasına göre kalıcı sıra no (demo kayıtlarında kimlikteki sayı); bir kez verilir, değişmez
+function noTamamla(l = S.kursiyerler || []) {
+  if (!l.some(k => !k.no)) return;
+  let son = l.reduce((a, k) => Math.max(a, +k.no || 0), 0);
+  l.filter(k => !k.no).sort((a, b) => (a.kayit || '').localeCompare(b.kayit || '') || String(a.id).localeCompare(String(b.id))).forEach(k => { const m = /^k(\d{1,4})$/.exec(k.id); k.no = m && !l.some(x => +x.no === +m[1]) ? +m[1] : ++son; if (+k.no > son) son = +k.no; });
+}
 function subeTamamla() {
   if (!S.subeler) return;
   const v = gorunum.sube || 's1';
@@ -560,7 +580,7 @@ function subeTamamla() {
 }
 let kaydetDinleyici = null;
 export const kaydetDinle = f => { kaydetDinleyici = f; };
-export function kaydet() { subeTamamla(); (S.hareket || []).forEach(h => { if (h.tur === 'Gelir' && !h.no) makbuzNoVer(h); }); // Kurs personelinin bulut verisi cihaza tam kopya olarak yazılmaz (Firestore kendi önbelleğini tutar; çıkışta silinir); demo ve öğrencinin kendi küçük kopyası yazılır
+export function kaydet() { subeTamamla(); noTamamla(); (S.hareket || []).forEach(h => { if (h.tur === 'Gelir' && !h.no) makbuzNoVer(h); }); // Kurs personelinin bulut verisi cihaza tam kopya olarak yazılmaz (Firestore kendi önbelleğini tutar; çıkışta silinir); demo ve öğrencinin kendi küçük kopyası yazılır
   if (!ANAHTAR.startsWith('sinyal-bulut-') || ANAHTAR.startsWith('sinyal-bulut-ogr-')) { try { localStorage.setItem(ANAHTAR, JSON.stringify(S)); } catch (e) { } }
   if (kaydetDinleyici) kaydetDinleyici(); }
 // Bulut (gerçek kurs): veri Firestore'dan gelir; yerel kopya kursa özel anahtarda tutulur, günlük yenilenmez

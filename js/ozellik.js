@@ -16,7 +16,7 @@ export function denetimSkoru() {
 /* ================= KÂRLILIK VE KAPASİTE ================= */
 const renkIsi = (n, max) => n ? `background:color-mix(in srgb, var(--yesil) ${Math.round(18 + n / max * 62)}%, #fff);color:${n / max > .55 ? '#fff' : 'var(--murekkep)'}` : 'background:var(--kagit, #f4f4f2);color:var(--soluk)';
 export function karlilik() {
-  const m = S.kurs.maliyet, mal = dersMaliyeti(), kap = bosKapasite(6), hk = hakedis(0);
+  const mal = dersMaliyeti(), m = S.kurs.maliyet, kap = bosKapasite(6), hk = hakedis(0);
   const siniflar = aktifSiniflar().filter(([, v]) => v.ucret && v.direksiyon).map(([k, v]) => ({ k, v, x: sinifKari(k) }));
   const ekKar = S.kurs.ekDersUcreti - mal.toplam, maxB = S.egitmenler.length || 1;
   const ayAd = new Date().toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });

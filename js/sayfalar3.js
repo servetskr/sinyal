@@ -37,7 +37,8 @@ export function sozlesmeMaddeleri(k) {
   return (K.sozlesme && K.sozlesme.length ? K.sozlesme : SOZLESME_VARSAYILAN).map(m => m.replace(/\{(\w+)\}/g, (x, a) => alan[a] != null ? alan[a] : x));
 }
 export const dosyaAdi = (belge, kime) => (belge + ' ' + (kime || '')).trim().toLocaleLowerCase('tr').replace(/[çğıöşü]/g, c => ({ ç: 'c', ğ: 'g', ı: 'i', ö: 'o', ş: 's', ü: 'u' }[c])).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '.pdf';
-export const makbuzNo = h => { const yil = h.tarih.slice(0, 4), l = S.hareket.filter(x => x.tur === 'Gelir' && x.tarih.slice(0, 4) === yil).sort((a, b) => (a.tarih + a.id).localeCompare(b.tarih + b.id)); return 'M' + yil + '-' + String(l.indexOf(h) + 1).padStart(5, '0'); };
+// Makbuz numarası kayıtta verilen kalıcı numaradır (h.no); yalnız eski, numarasız kayıtlarda sıraya göre hesaplanır
+export const makbuzNo = h => { if (h && h.no) return h.no; const yil = h.tarih.slice(0, 4), l = S.hareket.filter(x => x.tur === 'Gelir' && x.tarih.slice(0, 4) === yil).sort((a, b) => (a.tarih + a.id).localeCompare(b.tarih + b.id)); return 'M' + yil + '-' + String(l.indexOf(h) + 1).padStart(5, '0'); };
 function faturaHtml(no) {
   const f = (S.faturalar || []).find(x => x.no === no); if (!f) return '<p>Fatura bulunamadı.</p>';
   const k = kursiyer(f.kursiyer) || {}, oran = f.kdv, matrah = Math.round(f.tutar / (1 + oran / 100) * 100) / 100, kdv = Math.round((f.tutar - matrah) * 100) / 100, para = n => n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
@@ -299,7 +300,8 @@ export function mebbisAsistani(id) {
   const k = kursiyer(id);
   if (!k) return { baslik: 'MEBBİS giriş kartı', html: `<div class="kart">${bos('Kursiyer seçilmedi', 'MEB işlemleri ekranından bir kursiyerin giriş kartını açın.', '<a class="dg dg-koyu" href="#/meb">MEB işlemleri</a>')}</div>` };
   k.mebGirildi = k.mebGirildi || {};
-  const ilce = (k.adres || '').includes('Tepebaşı') ? 'Tepebaşı' : 'Odunpazarı';
+  // İl ve ilçe kursun kendi bilgisinden: il kurs şehri; ilçe öğrencinin adresinde geçen, kursun şubelerinin semtlerinden biri (yoksa boş, elle seçilir)
+  const il = S.kurs.sehir || '', ilce = [...new Set((S.subeler || []).map(x => x.semt).filter(Boolean))].find(x => (k.adres || '').toLocaleLowerCase('tr').includes(x.toLocaleLowerCase('tr'))) || '';
   const kd = new Date(k.kayit); const donem = ayAdiUzun[(kd.getMonth() + 1) % 12] + ' ' + (kd.getMonth() === 11 ? kd.getFullYear() + 1 : kd.getFullYear());
   const dosya = key => `${k.tc}_${key}.pdf`;  // MEBBİS JPEG kabul etmez
   const bolumler = [
@@ -308,7 +310,7 @@ export function mebbisAsistani(id) {
     ['Öğrenim', 'Belgenin aslı görülür, örneği taranıp yüklenir.', [['ogrenim', 'Öğrenim durumu', k.ogrenim || ''], ['ogrenim-dosya', 'Yüklenecek dosya', dosya('ogrenim')]]],
     ['Sağlık raporu', 'Sürücü olur raporu taranıp yüklenir.', [['rapor-no', 'Rapor numarası', (k.saglikRapor || {}).no || ''], ['rapor-tarih', 'Rapor tarihi', (k.saglikRapor || {}).tarih || ''], ['saglik-dosya', 'Yüklenecek dosya', dosya('saglik')]]],
     ['Adli sicil', 'Barkodlu adli sicil kaydı yüklenir.', [['adli-barkod', 'Belge barkodu', (k.adliSicil || {}).barkod || ''], ['adli-dosya', 'Yüklenecek dosya', dosya('adli')]]],
-    ['İletişim', 'İl ve ilçe seçilir, açık adres elle girilir.', [['il', 'İl', 'Eskişehir'], ['ilce', 'İlçe', ilce], ['adres', 'Açık adres', k.adres || ''], ['tel', 'Cep telefonu', (k.tel || '').replace(/\s/g, '')]]],
+    ['İletişim', 'İl ve ilçe seçilir, açık adres elle girilir.', [['il', 'İl', il], ['ilce', 'İlçe', ilce], ['adres', 'Açık adres', k.adres || ''], ['tel', 'Cep telefonu', (k.tel || '').replace(/\s/g, '')]]],
     ['Son adım', 'Sistemden alınan teyit belgesi kursiyere imzalatılıp yüklenir; fatura taranıp girilir.', [['teyit', 'Teyit belgesi imzalatıldı', 'Evet'], ['fatura', 'Fatura tutarı', String(k.odeme.toplam)]]],
   ];
   const tum = bolumler.flatMap(b => b[2]), girilen = tum.filter(([key]) => k.mebGirildi[key]).length;
@@ -416,7 +418,7 @@ export function guven() {
         ${madde('tamam', 'İki cihaz aynı anda çalışabilir', 'Ön büro ve müdür aynı anda kayıt girse de iki değişiklik de korunur; ekranlar birkaç saniyede güncellenir.', 'Bugün')}
         ${madde('tamam', 'Her gün otomatik yedek, iki ayrı yerde', 'Her gün ilk açılışta kursun bütün kayıtları kopyalanır: Google Firebase’de ve ayrıca Cloudflare’de 30 gün durur. Yedekler değiştirilemez, 30 günden önce kimse silemez; müdür tek tuşla istediği güne döner.', 'Bugün')}
         ${madde('tamam', 'Belgeler ayrı ve korumalı', 'Öğrencinin telefonundan yüklediği sağlık raporu, adli sicil ve fotoğraflar ayrı belgelerde durur; yalnız kursun kullanıcıları açabilir, her açılış kayda geçer.', 'Bugün')}
-        ${madde('tamam', 'İşlem kaydı sunucuda, silinemez', 'Giriş, çıkış, her değişiklik ve belge açma kim yaptı, ne zaman yaptı bilgisiyle sunucuya yazılır; müdür dahil kimse değiştiremez ya da silemez.', 'Bugün')}
+        ${madde('tamam', 'İşlem kaydı sunucuda, silinemez', 'Sinyal’de yapılan giriş, çıkış, değişiklik ve belge açma işlemleri kim yaptı, ne zaman yaptı bilgisiyle sunucuya yazılır; yazılan kayıtları müdür dahil kimse değiştiremez ya da silemez.', 'Bugün')}
         ${madde('tamam', 'USB’ye yedek, uzaktan bağlanma yok', 'Yedek almak için flaş bellek, destek için bilgisayarınıza uzaktan bağlanma programı gerekmez.', '')}
       </ul></div>
     </div>

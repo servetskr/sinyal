@@ -1,5 +1,5 @@
 import * as EK from './eklenti.js?v=123';
-import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, kursiyer, DERS_TUR_AD, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube} from './veri.js?v=123';
+import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, kursiyer, DERS_TUR_AD, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube, tutarOku } from './veri.js?v=123';
 import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor, belgeYazdir, kisaLink } from './ui.js?v=123';
 import { yenile } from './app.js?v=123';
 import * as B from './bulut.js?v=123';
@@ -77,7 +77,7 @@ function bulutGuvenlik(g) {
       ${mudur ? '<div data-yedek-liste><p class="kart-govde" style="color:var(--soluk);font-size:14px">Yedekler yükleniyor…</p></div>' : '<p class="kart-govde" style="color:var(--soluk);font-size:14px">Yedek listesini ve geri dönüşü kurs müdürü görür.</p>'}</div>
   </div>
   <div class="ara-bosluk"></div>
-  <div class="kart"><div class="kart-bas"><h3>İşlem kaydı</h3></div><div class="kart-govde"><p style="font-size:14px">Giriş, çıkış ve her değişiklik kim yaptı, ne zaman yaptı bilgisiyle sunucuya yazılır. Bu kayıt yalnız eklenebilir: kurs müdürü dahil kimse değiştiremez ya da silemez. <a href="#/ayarlar/gecmis" style="color:var(--levha);font-weight:700">İşlem geçmişini aç</a></p></div></div>`;
+  <div class="kart"><div class="kart-bas"><h3>İşlem kaydı</h3></div><div class="kart-govde"><p style="font-size:14px">Sinyal’de yapılan giriş, çıkış ve değişiklikler kim yaptı, ne zaman yaptı bilgisiyle sunucuya yazılır. Bu kayıt yalnız eklenebilir: kurs müdürü dahil kimse değiştiremez ya da silemez. <a href="#/ayarlar/gecmis" style="color:var(--levha);font-weight:700">İşlem geçmişini aç</a></p></div></div>`;
 }
 // İki adımlı giriş satırı: kendi hesabınız için doğrulama uygulamasını açar/kapatır
 function ikiAdimSatiri(k) {
@@ -384,7 +384,7 @@ function csvOku(metin) {
 }
 const tarihCoz = v => { const m = String(v || '').match(/(\d{1,2})[./-](\d{1,2})[./-](\d{4})/); if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`; const m2 = String(v || '').match(/(\d{4})-(\d{2})-(\d{2})/); return m2 ? m2[0] : ''; };
 const sinifCoz = v => { const t = norm(v); if (!t) return null; if (/otomatik|bo$|^bot/.test(t)) return 'B-O'; if (/^a2/.test(t)) return 'A2'; if (/^c/.test(t)) return 'C'; if (/^b/.test(t)) return 'B'; return null; };
-const tutarCoz = v => +String(v || '').replace(/\./g, '').replace(',', '.').replace(/[^\d.]/g, '') || 0;
+const tutarCoz = v => tutarOku(v);
 function kontrolEt(r, i = 0) {
   const get = k => aktarim.esles[k] != null && aktarim.esles[k] !== '' ? r[aktarim.esles[k]] : '';
   const x = Object.fromEntries(TUR_ALAN().map(([k]) => [k, get(k)]));
