@@ -601,6 +601,8 @@ function odemeUzlas() {
     if (tutar >= t.tutar) { t.odendi = t.odendi || gun(0); delete t.kismi; } else t.kismi = tutar;
   });
 }
+// İptal edilen ders plandan çıkar ama izi kalır (kim, ne zaman, neden): denetimde ve öğretmen primi hesabında sorulduğunda gösterilir
+export function dersIptalIz(d, neden, not) { if (!d) return; (S.dersIptaller = S.dersIptaller || []).unshift({ id: d.id, kursiyer: d.kursiyer, egitmen: d.egitmen, arac: d.arac || null, tarih: d.tarih, saat: d.saat, meb: !!d.meb, iptal: { zaman: yerelZaman(), kim: oturum.kullanici ? oturum.kullanici.ad : 'Öğrenci paneli', neden: neden || '', not: String(not || '').slice(0, 200) } }); if (S.dersIptaller.length > 1000) S.dersIptaller.length = 1000; }
 // Kursiyer numarası: kayıt sırasına göre kalıcı sıra no (demo kayıtlarında kimlikteki sayı); bir kez verilir, değişmez
 function noTamamla(l = S.kursiyerler || []) {
   if (!l.some(k => !k.no)) return;

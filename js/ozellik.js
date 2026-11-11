@@ -1,5 +1,5 @@
 import { cevapIsle } from './mesaj.js?v=123';
-import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli, sonrakiDers, selam, bulutKanca, iptalEdilebilir, oturum } from './veri.js?v=123';
+import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli, sonrakiDers, selam, bulutKanca, iptalEdilebilir, oturum, dersIptalIz } from './veri.js?v=123';
 import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos, waIstek, ziyaretci, apiGonder } from './ui.js?v=123';
 import { yenile } from './app.js?v=123';
 import { bildirimler } from './sayfalar1.js?v=123';
@@ -180,7 +180,7 @@ export function randevuIptal(k, id) {
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>İptal et</button>`,
     onAc(p) {
       p.querySelector('[data-k]').addEventListener('click', () => {
-        S.dersler = S.dersler.filter(x => x !== d); islem('Kursiyer dersini iptal etti', tamAd(k) + ' · ' + tarih(d.tarih) + ' ' + d.saat); kaydet(); kapatPencere(); yenile();
+        dersIptalIz(d, 'Kursiyer iptal etti'); S.dersler = S.dersler.filter(x => x !== d); islem('Kursiyer dersini iptal etti', tamAd(k) + ' · ' + tarih(d.tarih) + ' ' + d.saat); kaydet(); kapatPencere(); yenile();
         bildir(oturum.kullanici && oturum.kullanici.rol === 'ogrenci' ? 'İptal isteğin kursa iletildi' : 'Dersin iptal edildi');
         bildirimler([{ kim: h, metin: `${h.ad.split(' ')[0]} Hoca, ${tamAd(k)} ${tarihUzun(d.tarih)} ${saatDe(d.saat)} dersini iptal etti; saatiniz boşaldı.`, tur: 'Ders iptali' }, { kim: 'mudur', metin: `${tamAd(k)} ${tarihUzun(d.tarih)} ${saatDe(d.saat)} dersini kursiyer ekranından iptal etti. Saat bekleme listesine teklif edilebilir.`, tur: 'Ders iptali' }], 'Ders iptal edildi');
       });

@@ -1,12 +1,14 @@
 // Sinyal servis çalışanı: önce ağ, bağlantı yoksa son açılan sürüm (aynı kaynaktaki dosyalar).
 // WhatsApp köprüsü, yazı tipleri gibi dış istekler önbelleğe alınmaz.
-const ONBELLEK = 'sinyal-v5';  // sürüm değişince eski dosyalar silinir
+const ONBELLEK = 'sinyal-v6';  // sürüm değişince eski dosyalar silinir (v6: birikmiş eski sürümler ve sürüm sorguları temizlenir)
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', ev => ev.waitUntil(caches.keys().then(l => Promise.all(l.filter(k => k !== ONBELLEK).map(k => caches.delete(k)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', ev => {
   const r = ev.request, u = new URL(r.url);
   if (r.method !== 'GET' || u.origin !== location.origin) return;
   // Sayfanın kendisi ve sürüm eki olmayan dosyalar her açılışta sunucuya sorulur; böylece link açılınca güncel sürüm gelir.
+  // sürüm denetimi (?surum=) ve gizlilik sayfası her seferinde ağdan; önbelleğe yazılmaz (her yoklama ayrı kayıt olup önbellek büyümesin)
+  if (u.searchParams.has('surum')) return;
   const taze = r.mode === 'navigate' || !u.searchParams.has('v');
   // sürüm ekli dosyalar (?v=NN) hiç değişmez: önce önbellekten, yoksa ağdan (açılış ağ hızını beklemez)
   // Yayından hemen sonra CDN birkaç dakika eski dosyayı verebilir (sürüm eki önbellek anahtarında yok): içindeki sürüm ekleri istenen sürümle uyuşmayan JS dosyası saklanmaz
@@ -16,14 +18,15 @@ self.addEventListener('fetch', ev => {
       if (yanit.ok) {
         const kopya = yanit.clone(); let uygun = true;
         if (/\.js$/.test(u.pathname)) { const t = await yanit.clone().text(); uygun = !(t.match(/\?v=\d+/g) || []).some(m => m.slice(3) !== v); }
-        if (uygun) caches.open(ONBELLEK).then(c => c.put(r, kopya));
+        // aynı dosyanın eski sürümleri silinir; önbellekte her dosyanın yalnız son sürümü kalır
+        if (uygun) caches.open(ONBELLEK).then(async c => { for (const k of await c.keys()) { const ku = new URL(k.url); if (ku.pathname === u.pathname && ku.searchParams.get('v') !== v) c.delete(k); } c.put(r, kopya); });
       }
       return yanit;
     })));
     return;
   }
   ev.respondWith(fetch(taze ? new Request(r, { cache: 'no-cache' }) : r).then(yanit => {
-    if (yanit.ok) { const kopya = yanit.clone(); caches.open(ONBELLEK).then(c => c.put(r, kopya)); }
+    if (yanit.ok) { const kopya = yanit.clone(); caches.open(ONBELLEK).then(c => c.put(u.origin + u.pathname, kopya)); }  // sorgu eki olmadan tek kayıt
     return yanit;
-  }).catch(() => caches.match(r).then(x => x || (r.mode === 'navigate' ? caches.match('./').then(y => y || caches.match('./index.html')).then(y => y || Response.error()) : Response.error()))));
+  }).catch(() => caches.match(r).then(x => x || caches.match(u.origin + u.pathname)).then(x => x || (r.mode === 'navigate' ? caches.match('./').then(y => y || caches.match('./index.html')).then(y => y || Response.error()) : Response.error()))));
 });

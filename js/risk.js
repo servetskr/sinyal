@@ -68,6 +68,7 @@ export function otomatikPlan({ gunSay = 7, haftalik = 3 } = {}) {
       if (x.kalan <= 0 || (kHafta[x.k.id] || 0) >= haftalik || (kGun[x.k.id + g] || 0) >= kSinir) continue;
       const h = egitmen(x.k.egitmen);
       if ((S.izinler || []).some(i => i.kim === h.id && g >= i.bas && g <= i.bit) || (uGun[h.id + g] || 0) >= uSinir) continue;
+      if (Object.values(h.belgeler || {}).some(t => t && t < g)) continue;  // sertifika, sağlık raporu ya da adli sicil süresi dolmuş usta öğreticiye ders önerilmez (elle eklemede de engelli)
       for (const sa of KAPASITE_SAAT) {
         if (dolu.has('u' + g + sa + h.id) || dolu.has('k' + g + sa + x.k.id)) continue;
         const ar = dersAraci(h.id, x.k.sinif, g, sa); if (!ar || dolu.has('a' + g + sa + ar.id) || [ar.muayene, ar.sigorta].some(t => t && t < g)) continue;
