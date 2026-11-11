@@ -115,6 +115,8 @@ export async function zamanlayiciCalistir(elle = false) {
     const z = (kurallariHazirla(), S.zamanli), l = zamaniGelenler(), bugun = gun(0);
     let gonderilen = 0;
     try { await planlilariGonder(); } catch (x) { console.error(x); }
+    // elle gönderilecekler kuyruğu yalnız bugünün mesajlarını tutar: "yarın dersiniz var" günler sonra gitmesin
+    z.kuyruk = (z.kuyruk || []).filter(x => x.gun === bugun);
     for (const x of l) {
       const atla = z.sinir && apiAcik() && ((z.gunluk || {})[bugun + x.kural] || 0) >= 2;
       if (atla) { z.gonderilen[x.anahtar] = bugun; z.kayit.unshift({ zaman: yerelZaman(), kural: x.kural, kime: x.kim.ad, rol: x.kim.rol, metin: x.metin, durum: 'demo sınırı' }); continue; }
@@ -124,10 +126,10 @@ export async function zamanlayiciCalistir(elle = false) {
         const s = await apiGonder(etiket(x.kim.ad, x.kim.rol) + x.metin, undefined, undefined, x.kim);
         z.kayit.unshift({ zaman: yerelZaman(), kural: x.kural, kime: x.kim.ad, rol: x.kim.rol, metin: x.metin, id: s.id || null, durum: s.ok ? 'gönderildi' : 'hata: ' + s.hata });
         // gönderilemeyen mesaj öbürlerini durdurmaz; aynı mesaj 3 kez denenince bugünlük bırakılır
-        if (!s.ok) { z.hata = z.hata || {}; z.hata[x.anahtar] = (z.hata[x.anahtar] || 0) + 1; if (z.hata[x.anahtar] >= 3) z.gonderilen[x.anahtar] = bugun; continue; }
+        if (!s.ok) { z.hata = z.hata || {}; z.hata[x.anahtar] = (z.hata[x.anahtar] || 0) + 1; if (z.hata[x.anahtar] >= 3) { z.gonderilen[x.anahtar] = bugun; if (!z.kuyruk.some(y => y.anahtar === x.anahtar)) z.kuyruk.push({ ...x, eklendi: yerelZaman(), gun: bugun, hata: s.hata }); } continue; }  // 3 denemede gitmezse elle gönderilecekler listesine düşer
         z.gonderilen[x.anahtar] = bugun; z.gunluk = z.gunluk || {}; z.gunluk[bugun + x.kural] = (z.gunluk[bugun + x.kural] || 0) + 1;
         gonderimEkle(x.kim.ad, x.metin, kural(x.kural).ad); kural(x.kural).gonderim++; gonderilen++; etkiUygula(x);
-      } else z.kuyruk.push({ ...x, eklendi: yerelZaman() });
+      } else if (!z.kuyruk.some(y => y.anahtar === x.anahtar)) z.kuyruk.push({ ...x, eklendi: yerelZaman(), gun: bugun });
     }
     // eski kayıtları temizle
     Object.keys(z.gonderilen).forEach(k => { if (fark(z.gonderilen[k]) < -7) delete z.gonderilen[k]; });

@@ -1,5 +1,5 @@
 import { cevapIsle } from './mesaj.js?v=123';
-import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli, sonrakiDers, selam, bulutKanca, iptalEdilebilir } from './veri.js?v=123';
+import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli, sonrakiDers, selam, bulutKanca, iptalEdilebilir, oturum } from './veri.js?v=123';
 import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos, waIstek, ziyaretci, apiGonder } from './ui.js?v=123';
 import { yenile } from './app.js?v=123';
 import { bildirimler } from './sayfalar1.js?v=123';
@@ -164,7 +164,7 @@ export function randevuAl(k, sonra) {
         const ar = arac(x.arac);
         S.dersler.push({ id: 'd' + Date.now(), kursiyer: k.id, egitmen: x.egitmen, arac: x.arac, tarih: tg, saat: sa, durum: 'Planlandı', eklendi: gun(0), kaynak: 'kursiyer' });
         islem('Kursiyer kendi dersini aldı', tamAd(k) + ' · ' + tarih(tg) + ' ' + sa); kaydet(); kapatPencere(); yenile();
-        bildir(`${tarihUzun(tg)} ${saatDe(sa)} dersin planlandı`);
+        bildir(oturum.kullanici && oturum.kullanici.rol === 'ogrenci' ? `${tarihUzun(tg)} ${saatDe(sa)} ders isteğin kursa iletildi; kurs onaylayınca kesinleşir` : `${tarihUzun(tg)} ${saatDe(sa)} dersin planlandı`);
         bildirimler([{ kim: h, metin: `${h.ad.split(' ')[0]} Hoca, ${tamAd(k)} kursiyer ekranından ${tarihUzun(tg)} ${saatDe(sa)} direksiyon dersi aldı${ar ? ' (' + ar.plaka + ')' : ''}. Kursiyerin ${k.direksiyon + planli + 1}. dersi.`, tur: 'Kursiyer randevusu' }, { kim: 'mudur', metin: `${tamAd(k)} ${tarihUzun(tg)} ${saatDe(sa)} ${h.ad} ile direksiyon dersini kendisi aldı.`, tur: 'Kursiyer randevusu' }], 'Kursiyer ders aldı');
         if (sonra) sonra();
       });
@@ -181,7 +181,7 @@ export function randevuIptal(k, id) {
     onAc(p) {
       p.querySelector('[data-k]').addEventListener('click', () => {
         S.dersler = S.dersler.filter(x => x !== d); islem('Kursiyer dersini iptal etti', tamAd(k) + ' · ' + tarih(d.tarih) + ' ' + d.saat); kaydet(); kapatPencere(); yenile();
-        bildir('Dersin iptal edildi');
+        bildir(oturum.kullanici && oturum.kullanici.rol === 'ogrenci' ? 'İptal isteğin kursa iletildi' : 'Dersin iptal edildi');
         bildirimler([{ kim: h, metin: `${h.ad.split(' ')[0]} Hoca, ${tamAd(k)} ${tarihUzun(d.tarih)} ${saatDe(d.saat)} dersini iptal etti; saatiniz boşaldı.`, tur: 'Ders iptali' }, { kim: 'mudur', metin: `${tamAd(k)} ${tarihUzun(d.tarih)} ${saatDe(d.saat)} dersini kursiyer ekranından iptal etti. Saat bekleme listesine teklif edilebilir.`, tur: 'Ders iptali' }], 'Ders iptal edildi');
       });
     },

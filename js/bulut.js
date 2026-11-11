@@ -551,7 +551,7 @@ export function yedekIndir(veri, ad) {
 // ---- öğrenci paneli: öğrencinin kendi telefonundan girişi ----
 // Her öğrenciye tahmin edilemez bir link (kurslar/{kurs}/ogrenciler/{kod}). Belgede yalnız o öğrencinin kayıtları durur;
 // öğrencinin yaptıkları (evrak, ders alma/iptal, puan, test) ogrenciGelen'e yazılır, kurs cihazı denetleyip işler.
-const projeKirli = new Set(), projeSon = new Map(), islenen = new Map();
+const projeKirli = new Set(), projeSon = new Map(), islenen = new Map(), sonuclar = new Map();  // sonuclar: öğrenci isteklerinin reddi, öğrencinin ekranına döner
 const DIZI_OGR = ['kursiyerler', 'dersler', 'gonderimler'];
 function kirlet(a, el, o) {
   const eski = o && o.v ? (() => { try { return JSON.parse(o.v); } catch (x) { return null; } })() : null;
@@ -590,7 +590,7 @@ async function projeksiyonYaz() {
     const v = JSON.stringify(ogrenciVerisi(k), veriAt);
     if (projeSon.get(k.panelKod) === v) continue;
     projeSon.set(k.panelKod, v);
-    F.setDoc(F.doc(db, 'kurslar', bulut.kurs, 'ogrenciler', k.panelKod), { kursiyer: k.id, uid: (k.hesap || {}).uid || null, v, islenen: islenen.get(k.id) || [], guncel: F.serverTimestamp() }).catch(x => console.error(x));
+    F.setDoc(F.doc(db, 'kurslar', bulut.kurs, 'ogrenciler', k.panelKod), { kursiyer: k.id, uid: (k.hesap || {}).uid || null, v, islenen: islenen.get(k.id) || [], sonuclar: sonuclar.get(k.id) || [], guncel: F.serverTimestamp() }).catch(x => console.error(x));
   }
 }
 export const panelLinki = (k) => location.origin + location.pathname + '#/ogr/' + bulut.kurs + '/' + k.panelKod;
@@ -626,7 +626,7 @@ const DOSYA_BICIM = /^data:(image\/jpeg|image\/png|application\/pdf);base64,[A-Z
 const KIMLIK_BICIM = /^[A-Za-z0-9_-]{1,40}$/, TARIH_BICIM = /^\d{4}-\d{2}-\d{2}$/, SAAT_BICIM = /^\d{2}:\d{2}$/;
 function ogrenciUygula(docId, g) {
   const k = S.kursiyerler.find(x => x.id === g.kursiyer); if (!k || !Array.isArray(g.d)) return;
-  const notlar = [], bugun = iso(new Date());
+  const notlar = [], retler = [], bugun = iso(new Date());
   for (const x of g.d.slice(0, 30)) {
     let y = null; try { y = x.v ? JSON.parse(x.v) : null; } catch (e) { continue; }
     if (x.a === 'kursiyerler' && x.id === k.id && y) {
@@ -647,7 +647,7 @@ function ogrenciUygula(docId, g) {
     } else if (x.a === 'dersler') {
       const d = S.dersler.find(z => z.id === x.id);
       if (d && d.kursiyer === k.id) {
-        if (!y) { if (iptalEdilebilir(d)) { S.dersler = S.dersler.filter(z => z !== d); notlar.push(d.tarih + ' ' + d.saat + ' dersini iptal etti'); } else notlar.push('iptal isteği reddedildi (24 saatten az kaldı)'); }
+        if (!y) { if (iptalEdilebilir(d)) { S.dersler = S.dersler.filter(z => z !== d); notlar.push(d.tarih + ' ' + d.saat + ' dersini iptal etti'); } else { notlar.push('iptal isteği reddedildi (24 saatten az kaldı)'); retler.push(d.tarih + ' ' + d.saat + ' dersinin iptali yapılamadı: derse 24 saatten az kaldı. Kursu arayın.'); } }
         else if (y.ogrenciPuan && typeof y.ogrenciPuan.puan === 'number' && d.durum === 'Yapıldı') { d.ogrenciPuan = { puan: Math.max(1, Math.min(5, Math.round(y.ogrenciPuan.puan))), yorum: String(y.ogrenciPuan.yorum || '').slice(0, 300), tarih: bugun }; notlar.push('dersi puanladı'); }
         // ders defteri: öğrenci dersi onaylar ya da itiraz eder (bir kez); itiraz müdüre düşer
         if (y && y.ogrenciOnay && ['onay', 'itiraz'].includes(y.ogrenciOnay.durum) && d.durum === 'Yapıldı' && !d.ogrenciOnay) {
@@ -656,7 +656,7 @@ function ogrenciUygula(docId, g) {
           if (d.ogrenciOnay.durum === 'itiraz') (S.devredilen = S.devredilen || []).unshift({ ad: tamAd(k), kanal: 'Ders defteri', konu: 'Ders itirazı', mesaj: d.tarih + ' ' + d.saat + ' dersi yapılmadı diyor' + (d.ogrenciOnay.not ? ': ' + d.ogrenciOnay.not : ''), neden: 'Öğrenci dersi onaylamadı', saat: new Date().toTimeString().slice(0, 5), bildirim: [] });
         }
       } else if (!d && y && KIMLIK_BICIM.test(String(x.id)) && y.kursiyer === k.id && y.durum === 'Planlandı' && TARIH_BICIM.test(y.tarih || '') && SAAT_BICIM.test(y.saat || '') && y.tarih >= bugun && S.egitmenler.some(e => e.id === y.egitmen)) {
-        if (S.dersler.some(z => z.tarih === y.tarih && z.saat === y.saat && (z.egitmen === y.egitmen || z.kursiyer === k.id) && z.durum !== 'İptal')) { notlar.push(y.tarih + ' ' + y.saat + ' ders isteği reddedildi: saat dolu'); continue; }
+        if (S.dersler.some(z => z.tarih === y.tarih && z.saat === y.saat && (z.egitmen === y.egitmen || z.kursiyer === k.id) && z.durum !== 'İptal')) { notlar.push(y.tarih + ' ' + y.saat + ' ders isteği reddedildi: saat dolu'); retler.push(y.tarih + ' ' + y.saat + ' ders isteğin alınamadı: o saat dolmuş. Başka bir saat seç.'); continue; }
         S.dersler.push({ id: String(x.id), kursiyer: k.id, egitmen: y.egitmen, arac: S.araclar.some(a => a.id === y.arac) ? y.arac : null, tarih: y.tarih, saat: y.saat, durum: 'Planlandı', eklendi: bugun, kaynak: 'kursiyer' });
         const t = (S.bosTeklif || []).find(z => z.tarih === y.tarih && z.saat === y.saat && z.egitmen === y.egitmen); if (t) { S.bosTeklif = S.bosTeklif.filter(z => z !== t); S.kazanim.doldurulan++; }
         notlar.push(y.tarih + ' ' + y.saat + ' direksiyon dersi aldı');
@@ -668,24 +668,32 @@ function ogrenciUygula(docId, g) {
       const izinli = y.rol === 'MÜDÜR' || (y.rol === 'HOCA' && S.egitmenler.some(h => h.ad === m.kime && ustalari.has(h.id)));
       S.gonderimler.unshift(m);
       if (!izinli && y.iletilecek) { islem('Öğrenci panelinden izinsiz bildirim engellendi', tamAd(k) + ' → ' + m.kime); continue; }
+      if (retler.length && /dersi aldı|dersini iptal etti/.test(m.metin)) continue;  // istek reddedildiyse "ders aldı / iptal etti" bildirimi gitmez
       if (y.iletilecek && S.kurs.waApi) sahiplen('og|' + docId + '|' + x.id).then(ok => { if (ok) import('./ui.js?v=123').then(u => u.apiGonder(u.etiket(m.kime, y.rol || '') + m.metin, undefined, undefined, { ad: m.kime, rol: y.rol || '' }).then(s => { if (!s.ok) { islem('Öğrenci bildirimi gönderilemedi', m.kime + ' · ' + m.tur + ': ' + s.hata); kaydet(); } })); });
     }
   }
   if (notlar.length) islem('Öğrenci panelinden', tamAd(k) + ': ' + notlar.join(', '));
   const l = islenen.get(k.id) || []; l.unshift(docId); islenen.set(k.id, l.slice(0, 20)); projeKirli.add(k.id);
+  if (retler.length) { const r = sonuclar.get(k.id) || []; r.unshift({ doc: docId, ret: retler.slice(0, 5), zaman: Date.now() }); sonuclar.set(k.id, r.slice(0, 10)); }
   kaydet(); yenileFn();
 }
 
 // Öğrencinin telefonu: kendi belgesini dinler, yaptıklarını kursa gönderir
 const ogr = { kurs: null, kod: null, taban: new Map(), bekleyen: [] };
 const tabanAl = () => { DIZI_OGR.forEach(a => { const m = new Map(); const l = S[a] || []; kimlikler(l).forEach((id, n) => m.set(id, JSON.stringify(l[n]))); ogr.taban.set(a, m); }); };
+function retBildir(kod, l) {
+  let gor = []; try { gor = JSON.parse(localStorage.getItem('sinyal-ogr-ret-' + kod) || '[]'); } catch (x) { }
+  const yeni = l.filter(r => !gor.includes(r.doc)); if (!yeni.length) return;
+  try { localStorage.setItem('sinyal-ogr-ret-' + kod, JSON.stringify([...yeni.map(r => r.doc), ...gor].slice(0, 30))); } catch (x) { }
+  import('./ui.js?v=123').then(u => yeni.flatMap(r => r.ret).forEach((m, i) => setTimeout(() => u.bildir(m, 'uyari'), 400 + i * 3500)));
+}
 function ogrenciKur(veri) {
   const taban = bosVeri({}); delete taban._gun;
   Object.keys(veri).forEach(a => { taban[a] = veri[a]; });
   taban.kullanicilar = []; taban.gonderimler = [];
   bulutVeri(taban, 'ogr-' + ogr.kod);
   // henüz kurs tarafından işlenmemiş kendi değişikliklerini üstüne koy
-  ogr.bekleyen.forEach(p => p.d.forEach(x => { const l = S[x.a]; if (!Array.isArray(l)) return; const i = kimlikler(l).indexOf(x.id); if (x.v === null) { if (i >= 0) l.splice(i, 1); } else { const y = JSON.parse(x.v); if (i >= 0) l[i] = y; else l.push(y); } }));
+  ogr.bekleyen.forEach(p => p.d.forEach(x => { const l = S[x.a]; if (!Array.isArray(l)) return; const i = kimlikler(l).indexOf(x.id); if (x.v === null) { if (i >= 0) l.splice(i, 1); } else { const y = JSON.parse(x.v); if (x.a === 'dersler' && i < 0) y.onayBekliyor = true; if (i >= 0) l[i] = y; else l.push(y); } }));
   tabanAl();
 }
 export async function ogrenciBaglan(kurs, kod) {
@@ -697,7 +705,10 @@ export async function ogrenciBaglan(kurs, kod) {
     dinleyiciler.push(F.onSnapshot(F.doc(db, 'kurslar', kurs, 'ogrenciler', kod), d => {
       if (!d.exists()) { if (ilk) { ilk = false; red(hata('Öğrenci hesabınız kapatılmış. Kursunuzla görüşün.')); } else location.reload(); return; }
       const v = d.data(), isl = new Set(v.islenen || []);
-      ogr.bekleyen = ogr.bekleyen.filter(p => !isl.has(p.id) && Date.now() - p.t < 3 * 60e3);
+      // kursun henüz işlemediği istekler 24 saate kadar "onay bekliyor" olarak görünür; reddedilen istek öğrenciye bir kez bildirilir
+      ogr.bekleyen = ogr.bekleyen.filter(p => !isl.has(p.id) && Date.now() - p.t < 864e5);
+      try { localStorage.setItem('sinyal-ogr-bekleyen-' + kod, JSON.stringify(ogr.bekleyen.map(p => ({ ...p, d: p.d.map(x => x.v && x.v.length > 20000 ? { ...x, v: null, buyuk: true } : x).filter(x => !x.buyuk) })))); } catch (x) { }
+      retBildir(kod, v.sonuclar || []);
       ogrenciKur(JSON.parse(v.v));
       if (ilk) { ilk = false; kaydetDinle(ogrenciPlanla); coz(S.kursiyerler[0]); } else yenileFn();
     }, x => { if (ilk) { ilk = false; red(x); } else location.reload(); }));  // hesap kapatıldı ya da şifre yenilendi: yeniden giriş
