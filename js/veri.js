@@ -568,6 +568,22 @@ export function makbuzNoVer(h) {
 }
 // Sınıf ayarlarını kalıcı yaz
 export function sinifKaydet(k, alan) { if (alan && 'ucret' in alan) S.kurs.ucretOnay = gun(0); Object.assign(SINIFLAR[k], alan); S.kurs.siniflar[k] = { ...(S.kurs.siniflar[k] || {}), ...alan }; }
+// MEBBİS'e girilmiş dersin değişmesi: hangi yoldan olursa olsun (sürükle, taşı, iptal, öğrenci/öğretmen telefonu, WhatsApp) kaydette fark edilir.
+// Saati/öğretmeni/aracı değişen ders yeniden "MEBBİS'e girilecek" olur; silinen ders "MEBBİS'ten silinecek" listesine yazılır.
+let mebIz = null;
+function mebDegisimIzle() {
+  const iz = d => [d.tarih, d.saat, d.egitmen, d.arac || '', d.kursiyer].join('|'), simdi = new Map();
+  (S.dersler || []).forEach(d => { if (d.meb) simdi.set(d.id, iz(d)); });
+  if (mebIz) {
+    const varolan = new Map((S.dersler || []).map(d => [d.id, d]));
+    mebIz.forEach((eski, id) => {
+      const d = varolan.get(id), [tarih, saat, egitmen, arac, kursiyer] = eski.split('|');
+      if (!d) { const l = S.mebSilinecek = S.mebSilinecek || []; if (!l.some(x => x.id === id)) l.push({ id, tarih, saat, egitmen, arac, kursiyer, zaman: gun(0) }); }
+      else if (d.meb && iz(d) !== eski) { d.meb = false; d.mebDegisti = { eski: tarih + ' ' + saat, zaman: gun(0) }; simdi.delete(id); }
+    });
+  }
+  mebIz = simdi;
+}
 // Kursiyer numarası: kayıt sırasına göre kalıcı sıra no (demo kayıtlarında kimlikteki sayı); bir kez verilir, değişmez
 function noTamamla(l = S.kursiyerler || []) {
   if (!l.some(k => !k.no)) return;
@@ -584,12 +600,12 @@ function subeTamamla() {
 }
 let kaydetDinleyici = null;
 export const kaydetDinle = f => { kaydetDinleyici = f; };
-export function kaydet() { subeTamamla(); noTamamla(); (S.hareket || []).forEach(h => { if (h.tur === 'Gelir' && !h.no) makbuzNoVer(h); }); // Kurs personelinin bulut verisi cihaza tam kopya olarak yazılmaz (Firestore kendi önbelleğini tutar; çıkışta silinir); demo ve öğrencinin kendi küçük kopyası yazılır
+export function kaydet() { subeTamamla(); noTamamla(); mebDegisimIzle(); (S.hareket || []).forEach(h => { if (h.tur === 'Gelir' && !h.no) makbuzNoVer(h); }); // Kurs personelinin bulut verisi cihaza tam kopya olarak yazılmaz (Firestore kendi önbelleğini tutar; çıkışta silinir); demo ve öğrencinin kendi küçük kopyası yazılır
   if (!ANAHTAR.startsWith('sinyal-bulut-') || ANAHTAR.startsWith('sinyal-bulut-ogr-')) { try { localStorage.setItem(ANAHTAR, JSON.stringify(S)); } catch (e) { } }
   if (kaydetDinleyici) kaydetDinleyici(); }
 // Bulut (gerçek kurs): veri Firestore'dan gelir; yerel kopya kursa özel anahtarda tutulur, günlük yenilenmez
-export function bulutVeri(yeni, kursId) { ANAHTAR = 'sinyal-bulut-' + kursId; yeni._bulut = true; S = goc(yeni); if (!String(kursId).startsWith('ogr-')) { try { localStorage.removeItem(ANAHTAR); } catch (e) { } } }
-export function demoyaDon() { ANAHTAR = 'sinyal-demo-v19'; S = yukle(); }
+export function bulutVeri(yeni, kursId) { mebIz = null; ANAHTAR = 'sinyal-bulut-' + kursId; yeni._bulut = true; S = goc(yeni); if (!String(kursId).startsWith('ogr-')) { try { localStorage.removeItem(ANAHTAR); } catch (e) { } } }
+export function demoyaDon() { mebIz = null; ANAHTAR = 'sinyal-demo-v19'; S = yukle(); }
 // Yeni kurs: ayarlar ve şablonlar hazır, kayıtlar boş
 export function bosVeri({ kursAd, yetkili, sehir, mudurTel }) {
   const o = uret();

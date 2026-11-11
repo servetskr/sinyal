@@ -1,6 +1,6 @@
 // MEBBİS aktarım merkezi: MEBBİS'e gidecek işler türlerine göre sekmelerde, filtrelenir, seçilir, toplu aktarılır.
 // Aktarımı MEBBİS Yardımcısı (Chrome eklentisi) kursun kendi MEBBİS oturumunda yürütür; MEBBİS'ten veri çekme de buradan başlar.
-import { S, fark, SINIFLAR, egitmen, sb, seciliSube, cokSube } from './veri.js?v=123';
+import { S, fark, SINIFLAR, egitmen, sb, seciliSube, cokSube, kursiyer, tamAd, islem, kaydet } from './veri.js?v=123';
 import { e, tarih, rozet, isaret, ik, sekmeler, bos } from './ui.js?v=123';
 import * as EK from './eklenti.js?v=123';
 
@@ -20,7 +20,8 @@ function durumu(x) {
   if (x.bitti) return ['Aktarıldı', 'yesil', ''];
   const d = (S.mebDurum || {})[x.id];
   if (d && d.durum === 'hata') return ['Hata', 'kirmizi', d.not || ''];
-  if (d && d.durum === 'gonderildi' && Date.now() - d.zaman < 864e5) return ['Gönderildi', 'mavi', ''];
+  // Gönderilen iş, Yardımcı "bitti" ya da "hata" diyene kadar (en çok 7 gün) Gönderildi kalır; kendiliğinden Bekliyor'a dönüp iki kez girilmesin
+  if (d && d.durum === 'gonderildi' && Date.now() - d.zaman < 7 * 864e5) return ['Gönderildi', 'mavi', 'Yardımcı sonucu bildirmedi; MEBBİS’te kontrol edip gerekirse yeniden gönderin'];
   return ['Bekliyor', 'notr', ''];
 }
 function suzulmus(hepsi) {
@@ -42,6 +43,9 @@ export function merkezSekme() {
   let h = '';
   if (!EK.eklenti.var) h += `<div class="ipucu uyari" style="margin-bottom:14px">${isaret('uyari', 20)}<span><b>MEBBİS Yardımcısı bu tarayıcıda kurulu değil.</b> Aktarım için Chrome’a bir kez kurun; kurulana kadar “Elle giriş” sekmesinden sırayla girebilirsiniz. <button type="button" data-meb-arac-kur style="background:none;border:0;padding:0;color:var(--levha);font-weight:700;cursor:pointer;font:inherit">Nasıl kurulur?</button></span></div>`;
   if (subeSorun) h += `<div class="ipucu uyari" style="margin-bottom:14px">${isaret('uyari', 20)}<span>Her şubenin MEBBİS hesabı ayrı. Aktarmak için yukarıdan şube seçin.</span></div>`;
+  // MEBBİS'e girildikten sonra iptal edilen ya da silinen dersler: MEBBİS'teki programdan elle silinmeli (denetimde program ile fiili ders uyuşsun)
+  const silinecek = [...new Map((S.mebSilinecek || []).map(x => [x.id, x])).values()];
+  if (silinecek.length) h += `<div class="kart" style="margin-bottom:14px;border-color:var(--sari)"><div class="kart-bas"><h3>MEBBİS’ten silinecek dersler</h3><small>MEBBİS’e girildikten sonra iptal edildi ya da silindi · ${silinecek.length}</small></div><ul class="liste" style="margin-top:6px">${silinecek.map(x => { const kk = kursiyer(x.kursiyer); return `<li><span style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(kk ? tamAd(kk) : 'Silinmiş kursiyer')}</b><small style="display:block;color:var(--soluk)">${tarih(x.tarih)} ${e(x.saat)} · ${e((egitmen(x.egitmen) || {}).ad || '')}</small></span><button class="dg dg-cizgi dg-kucuk" data-meb-sildim="${e(x.id)}">MEBBİS’ten sildim</button></li>`; }).join('')}</ul><p class="og-not" style="margin:0 16px 14px">Taşınan dersler ise “Direksiyon programı” listesine “DEĞİŞTİ” notuyla yeniden düştü; MEBBİS’te eski kaydı düzeltin.</p></div>`;
   h += `<div class="kart"><div style="padding:12px 16px 0">${sekmeler(TURLER.map(([k, ad]) => [k, ad, k === 'al' ? null : sayi(k)]), m.tur, 'mm-tur')}</div>`;
   if (m.tur === 'al') {
     h += `<div class="kart-govde"><p style="font-size:14px;color:var(--metin);margin-bottom:14px">Yardımcı MEBBİS sekmesine geçer, ilgili listeyi kendisi açar ve buraya getirir. Sinyal hiçbir şeyi onayınız olmadan kaydetmez.</p>
@@ -71,6 +75,7 @@ export function merkezBaglan(k, yenile) {
   const odakla = sec => setTimeout(() => { const el = k.querySelector(sec); if (el) { el.focus(); if (el.setSelectionRange) el.setSelectionRange(el.value.length, el.value.length); } }, 0);
   k.addEventListener('click', ev => {
     const t = ev.target;
+    const ms = t.closest('[data-meb-sildim]'); if (ms) { const x = (S.mebSilinecek || []).find(y => y.id === ms.dataset.mebSildim); S.mebSilinecek = (S.mebSilinecek || []).filter(y => y.id !== ms.dataset.mebSildim); islem('MEBBİS’ten dersi sildi', x ? x.tarih + ' ' + x.saat : ''); kaydet(); return yenile(); }
     const sk = t.closest('[data-mm-tur]'); if (sk) { m.tur = sk.dataset.mmTur; m.secili.clear(); m.sinif = m.egitmen = ''; return yenile(); }
     const cb = t.closest('[data-mm-sec]'); if (cb) { const id = cb.dataset.mmSec; cb.checked ? m.secili.add(id) : m.secili.delete(id); return yenile(); }
     const sat = t.closest('[data-mm-satir]'); if (sat && !t.closest('input')) { const id = sat.dataset.mmSatir, x = EK.mebIsleri().find(y => y.id === id); if (!x) return; m.secili.has(id) ? m.secili.delete(id) : m.secili.add(id); return yenile(); }

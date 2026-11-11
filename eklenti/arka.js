@@ -29,7 +29,9 @@ chrome.runtime.onMessage.addListener((m, kimden, cevap) => {
     if (m.tur === 'aktif-koy') { await koy('aktif', m.aktif); return { ok: true }; }
     if (m.tur === 'kuyruk-al') return (await al('kuyruk')) || { isler: [] };
     if (m.tur === 'is-bitti') { const q = (await al('kuyruk')) || { isler: [] }; const x = q.isler.find(y => y.id === m.id); if (x) x.bitti = Date.now(); await koy('kuyruk', q); const b = (await al('bitenler')) || []; b.push({ id: m.id, ref: x && x.ref, tur: x && x.tur, zaman: Date.now() }); await koy('bitenler', b); return { ok: true }; }
-    if (m.tur === 'bitenler-al') { const b = (await al('bitenler')) || []; await koy('bitenler', []); return b; }
+    // biten işler Sinyal işleyip "aldım" deyince silinir (sayfa henüz hazır değilse kaybolmasın)
+    if (m.tur === 'bitenler-al') return (await al('bitenler')) || [];
+    if (m.tur === 'bitenler-sil') { const ids = new Set(m.ids || []); const b = ((await al('bitenler')) || []).filter(x => !ids.has(x.id)); await koy('bitenler', b); return { ok: true }; }
     if (m.tur === 'kuyruk-temizle') { await chrome.storage.session.remove(['kuyruk', 'bitenler', 'tablo']); return { ok: true }; }
     if (m.tur === 'tablo-koy') { await koy('tablo', { zaman: Date.now(), ...m.tablo }); return { ok: true }; }
     if (m.tur === 'tablo-al') { const t = await al('tablo'); await chrome.storage.session.remove('tablo'); return t || null; }

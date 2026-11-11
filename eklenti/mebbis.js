@@ -3,7 +3,8 @@
 // 2) Sayfadaki listeyi (tablo) Sinyal’e aktarır. Kaydet’e ve güvenlik koduna her zaman kullanıcı basar; eklenti formu göndermez.
 (() => {
   if (window.__sinyalMebbis) return; window.__sinyalMebbis = true;
-  const UST = window === window.top, ISARET = 'sinyal-mebbis';
+  // Çerçeveler arası mesajlar yalnız aynı kökene (MEBBİS) gider; başka kaynaktan bir çerçeveye kursiyer verisi gitmez
+  const UST = window === window.top, ISARET = 'sinyal-mebbis', HEDEF = location.origin;
   const norm = s => String(s || '').toLocaleLowerCase('tr').replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/[^a-z0-9]/g, '');
   const gonder = m => new Promise(ok => { try { chrome.runtime.sendMessage(m, ok); } catch (x) { ok(null); } });
 
@@ -21,12 +22,12 @@
     return l.map(x => norm(String(x).slice(0, 80))).filter(Boolean);
   }
   const secici = el => el.id ? '#' + CSS.escape(el.id) : el.name ? `${el.tagName.toLowerCase()}[name="${CSS.escape(el.name)}"]` : null;
-  function bul(alan, esleme) {
+  function bul(alan, esleme, kullanilan = new Set()) {
     const anahtar = location.pathname + '|' + norm(alan.etiket);
-    if (esleme[anahtar]) { const el = document.querySelector(esleme[anahtar]); if (el) return el; }
+    if (esleme[anahtar]) { const el = document.querySelector(esleme[anahtar]); if (el && !kullanilan.has(el)) return el; }
     const es = [alan.etiket, ...(alan.es || [])].map(norm).filter(Boolean);
     let en = null, ep = 0;
-    alanlar().forEach(el => { const et = etiketler(el); let p = 0; et.forEach((t, i) => es.forEach(x => { const agirlik = i < 2 ? 1 : .8; if (t === x) p = Math.max(p, 3 * agirlik); else if (x.length > 3 && (t.includes(x) || (t.length > 3 && x.includes(t)))) p = Math.max(p, 2 * agirlik); })); if (p > ep) { ep = p; en = el; } });
+    alanlar().filter(el => !kullanilan.has(el)).forEach(el => { const et = etiketler(el); let p = 0; et.forEach((t, i) => es.forEach(x => { const agirlik = i < 2 ? 1 : .8; if (t === x) p = Math.max(p, 3 * agirlik); else if (x.length > 3 && (t.includes(x) || (t.length > 3 && x.includes(t)))) p = Math.max(p, 2 * agirlik); })); if (p > ep) { ep = p; en = el; } });
     return ep >= 1.6 ? en : null;
   }
   function yaz(el, deger) {
@@ -35,8 +36,11 @@
       const n = norm(v), o = [...el.options].find(x => norm(x.textContent) === n || norm(x.value) === n) || [...el.options].find(x => n && (norm(x.textContent).includes(n) || (norm(x.textContent).length > 2 && n.includes(norm(x.textContent)))));
       if (!o) return false; el.value = o.value;
     } else {
-      const set = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'value'); set && set.set ? set.set.call(el, v) : (el.value = v);
+      // type=date alan yyyy-aa-gg ister; Sinyal gg.aa.yyyy gönderebilir
+      let yv = v; const m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(v); if (el.type === 'date' && m) yv = m[3] + '-' + m[2] + '-' + m[1];
+      const set = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'value'); set && set.set ? set.set.call(el, yv) : (el.value = yv);
       el.dispatchEvent(new Event('input', { bubbles: true }));
+      if (yv && String(el.value).replace(/\s/g, '') !== yv.replace(/\s/g, '') && !(el.maxLength > 0 && yv.startsWith(el.value))) return false;  // değer yerleşmedi (maske, biçim): kullanıcı elle girer
     }
     el.dispatchEvent(new Event('change', { bubbles: true })); el.dispatchEvent(new Event('blur', { bubbles: true }));
     el.style.outline = '3px solid #2fae5a'; el.style.outlineOffset = '1px'; setTimeout(() => { el.style.outline = ''; }, 4000);
@@ -47,7 +51,7 @@
     if (document.querySelector('input[type=password]')) return {};
     const esleme = await gonder({ tur: 'esleme-al' }) || {};
     // seçim kutuları sayfayı yenileyebilir (MEBBİS’te seçim değişince sayfa yeniden yüklenen formlar var): önce metin alanları
-    const l = is.alanlar.map(a => ({ a, el: bul(a, esleme) })), sonuc = {};
+    const kullanilan = new Set(), l = is.alanlar.map(a => { const el = bul(a, esleme, kullanilan); if (el) kullanilan.add(el); return { a, el }; }), sonuc = {};
     [...l.filter(x => !x.el || x.el.tagName !== 'SELECT'), ...l.filter(x => x.el && x.el.tagName === 'SELECT')].forEach(({ a, el }) => { sonuc[a.etiket] = el ? (yaz(el, a.deger) ? 'ok' : 'secenek') : 'yok'; });
     return sonuc;
   }
@@ -65,25 +69,29 @@
     const s = secici(el); if (!s) return;
     ev.preventDefault(); ev.stopPropagation();
     const a = ogrenilen; ogrenilen = null; document.body.style.cursor = '';
-    gonder({ tur: 'esleme-koy', anahtar: location.pathname + '|' + norm(a.etiket), secici: s }).then(() => { yaz(el, a.deger); window.top.postMessage({ [ISARET]: 'ogrenildi', etiket: a.etiket }, '*'); });
+    gonder({ tur: 'esleme-koy', anahtar: location.pathname + '|' + norm(a.etiket), secici: s }).then(() => { yaz(el, a.deger); window.top.postMessage({ [ISARET]: 'ogrenildi', etiket: a.etiket }, HEDEF); });
   }, true);
   // üst çerçeveden gelen komutlar
   window.addEventListener('message', async ev => {
     const d = ev.data; if (!d || !d[ISARET] || ev.source !== window.top) return;
-    if (d[ISARET] === 'doldur') { const r = await doldur(d.is); window.top.postMessage({ [ISARET]: 'doldu', no: d.no, sonuc: r }, '*'); }
-    if (d[ISARET] === 'tablo') window.top.postMessage({ [ISARET]: 'tablolar', no: d.no, tablolar: tablolar(), baslik: document.title }, '*');
+    if (d[ISARET] === 'doldur') { const r = await doldur(d.is); window.top.postMessage({ [ISARET]: 'doldu', no: d.no, sonuc: r }, HEDEF); }
+    if (d[ISARET] === 'tablo') window.top.postMessage({ [ISARET]: 'tablolar', no: d.no, tablolar: tablolar(), baslik: document.title }, HEDEF);
     if (d[ISARET] === 'ogret') { ogrenilen = d.alan; document.body.style.cursor = 'crosshair'; }
     if (d[ISARET] === 'ogret-iptal') { ogrenilen = null; document.body.style.cursor = ''; }
   });
   // her çerçevede: kısayollar (Alt+Shift+D doldur, S kaydettim, N atla) ve MEBBİS'in Kaydet düğmesine basıldığını panele bildirme
-  document.addEventListener('keydown', ev => { if (ev.altKey && ev.shiftKey && /^Key[DSN]$/.test(ev.code)) { ev.preventDefault(); window.top.postMessage({ [ISARET]: 'kisayol', k: ev.code }, '*'); } }, true);
+  document.addEventListener('keydown', ev => { if (ev.altKey && ev.shiftKey && /^Key[DSN]$/.test(ev.code)) { ev.preventDefault(); window.top.postMessage({ [ISARET]: 'kisayol', k: ev.code }, HEDEF); } }, true);
   const KAYDET = /kaydet|ekle|güncelle|onayla/i;
-  document.addEventListener('click', ev => { const b = ev.target.closest && ev.target.closest('input[type=submit], input[type=button], input[type=image], button, a'); if (!b) return; const t = String(b.value || b.textContent || b.title || '').trim(); if (t && t.length < 30 && KAYDET.test(t)) window.top.postMessage({ [ISARET]: 'kaydet-basildi' }, '*'); }, true);
-  window.addEventListener('message', ev => { const d = ev.data; if (d && d[ISARET] === 'metin' && ev.source === window.top) window.top.postMessage({ [ISARET]: 'metin-cevap', no: d.no, metin: document.body ? document.body.innerText.slice(0, 20000) : '', alan: alanlar().length }, '*'); });
+  document.addEventListener('click', ev => { const b = ev.target.closest && ev.target.closest('input[type=submit], input[type=button], input[type=image], button, a'); if (!b) return; const t = String(b.value || b.textContent || b.title || '').trim(); if (t && t.length < 30 && KAYDET.test(t)) window.top.postMessage({ [ISARET]: 'kaydet-basildi' }, HEDEF); }, true);
+  window.addEventListener('message', ev => { const d = ev.data; if (d && d[ISARET] === 'metin' && ev.source === window.top) window.top.postMessage({ [ISARET]: 'metin-cevap', no: d.no, metin: document.body ? document.body.innerText.slice(0, 20000) : '', mesaj: mesajMetni(), alan: alanlar().length }, HEDEF); });
+  // MEBBİS'in sonuç mesajı: yalnız mesaj kutularındaki yazı (sayfadaki sütun başlıkları ya da menü yazıları başarı/hata sanılmasın)
+  function mesajMetni() { return [...document.querySelectorAll('.alert, [role=alert], [role=status], .validation-summary-errors, .field-validation-error, [id*="mesaj" i], [id*="lblHata" i], [id*="lblBilgi" i], [class*="mesaj" i], [class*="message" i], .ui-dialog-content, .swal2-html-container, .modal-body, .toast')].filter(gorunur).map(x => x.innerText.trim()).filter(Boolean).join('\n').slice(0, 2000); }
   // MEBBİS menüsünde hedef ekranı bulma: yalnız gezinme bağlantıları; silme, kaydetme, çıkış gibi düğmelere asla basılmaz
-  const TEHLIKE = /sil|iptal|çıkış|kapat|onay|kaydet|gönder|güncelle|vazgeç|reddet|yazdır|indir|excel/i;
+  const TEHLIKE = /sil|iptal|çıkış|kapat|onay|kaydet|gönder|güncelle|vazgeç|reddet|yazdır|indir|excel|başvur|oluştur|aktar|tamamla|sorgula|ara$/i;
   const elMetin = el => String(el.innerText || el.textContent || el.value || el.title || '').replace(/\s+/g, ' ').trim();
-  const tiklanabilir = () => [...document.querySelectorAll('a, button, [role=menuitem], [onclick], input[type=button], li > span')].filter(el => !el.closest('#sinyal-mebbis-panel'));
+  // Yalnız menüdeki gezinme bağlantıları (düğmeler ve form içindeki bağlantılar asla); "ekle" yalnız menü içinde kabul edilir
+  const MENU_KAP = 'nav, [role=menu], [role=menubar], [role=tree], ul, .menu, [id*="menu" i], [class*="menu" i], [id*="tree" i]';
+  const tiklanabilir = () => [...document.querySelectorAll('a, [role=menuitem], li > span')].filter(el => !el.closest('#sinyal-mebbis-panel') && !el.closest('form table, .grid, [id*="grid" i]') && (!/ekle/i.test(elMetin(el)) || el.closest(MENU_KAP)));
   function menuAday(gruplar, yasak) {
     let en = null;
     tiklanabilir().forEach(el => {
@@ -100,9 +108,9 @@
   }
   window.addEventListener('message', async ev => {
     const d = ev.data; if (!d || !d[ISARET] || ev.source !== window.top) return;
-    if (d[ISARET] === 'menu-ara') window.top.postMessage({ [ISARET]: 'menu-aday', no: d.no, aday: menuAday(d.gruplar, d.yasak || []) }, '*');
-    if (d[ISARET] === 'menu-tikla') { const el = tiklanabilir().find(x => elMetin(x) === d.metin && !TEHLIKE.test(d.metin)); if (el) el.click(); window.top.postMessage({ [ISARET]: 'menu-tiklandi', no: d.no, ok: !!el }, '*'); }
-    if (d[ISARET] === 'olc') { const esleme = d.is ? await gonder({ tur: 'esleme-al' }) || {} : {}; window.top.postMessage({ [ISARET]: 'olcum', no: d.no, form: d.is && !document.querySelector('input[type=password]') ? d.is.alanlar.filter(a => bul(a, esleme)).length : 0, liste: d.amac ? listeUygun(d.amac) : 0 }, '*'); }
+    if (d[ISARET] === 'menu-ara') window.top.postMessage({ [ISARET]: 'menu-aday', no: d.no, aday: menuAday(d.gruplar, d.yasak || []) }, HEDEF);
+    if (d[ISARET] === 'menu-tikla') { const el = tiklanabilir().find(x => elMetin(x) === d.metin && !TEHLIKE.test(d.metin)); if (el) el.click(); window.top.postMessage({ [ISARET]: 'menu-tiklandi', no: d.no, ok: !!el }, HEDEF); }
+    if (d[ISARET] === 'olc') { const esleme = d.is ? await gonder({ tur: 'esleme-al' }) || {} : {}; window.top.postMessage({ [ISARET]: 'olcum', no: d.no, form: d.is && !document.querySelector('input[type=password]') ? d.is.alanlar.filter(a => bul(a, esleme)).length : 0, liste: d.amac ? listeUygun(d.amac) : 0 }, HEDEF); }
   });
   if (!UST) return;
 
@@ -113,13 +121,13 @@
     const n = ++no, gelen = [];
     const dinle = ev => { if (ev.data && ev.data[ISARET] && ev.data.no === n) gelen.push(ev.data); };
     window.addEventListener('message', dinle);
-    cerceveler().forEach(w => w.postMessage({ [ISARET]: komut, no: n, ...ek }, '*'));
+    cerceveler().forEach(w => w.postMessage({ [ISARET]: komut, no: n, ...ek }, HEDEF));
     setTimeout(() => { window.removeEventListener('message', dinle); ok(gelen); }, bekle);
   });
   const girisSayfasi = () => cerceveler().some(w => { try { return !!w.document.querySelector('input[type=password]'); } catch (x) { return false; } });
-  const sayfaMetni = async () => { const r = await herkese('metin', {}, 600); return { metin: r.map(x => x.metin).join('\n'), alan: r.reduce((a, x) => a + (x.alan || 0), 0) }; };
-  const BASARI = /başarı(yla|lı)|kaydedil(di|miştir)|işlem(iniz)? tamamlan|eklendi|güncellendi/i;
-  const HATA = /hata|geçersiz|zorunlu alan|boş bırakılamaz|hatalı|başarısız|bulunamadı/i;
+  const sayfaMetni = async () => { const r = await herkese('metin', {}, 600); return { metin: r.map(x => x.metin).join('\n'), mesaj: r.map(x => x.mesaj || '').filter(Boolean).join('\n'), alan: r.reduce((a, x) => a + (x.alan || 0), 0) }; };
+  const BASARI = /başarı(yla|lı)|kaydedil(di|miştir)|kayıt (işlemi )?tamamlan|işlem(iniz)? (başarıyla )?tamamlan/i;
+  const HATA = /hata (oluştu|var)|hatalı|geçersiz|zorunlu alan|boş bırakılamaz|başarısız|girilmelidir|seçilmelidir/i;
 
   // iş türleri: aciliyet eşitse sınav > program > kayıt > tahsilat
   const TURLER = [
@@ -262,7 +270,7 @@
       if (durum.mesaj) h += `<p class="not">${e(durum.mesaj)}</p>`;
     }
     if (durum.ekran === 'ayar') {
-      h += geri() + `<div class="ayar"><span class="oto ${durum.oto ? 'acik' : ''}" data-oto><i></i><span><b>Otomatik</b><small>Formu kendisi doldurur, Kaydet’ten sonra sıradakine geçer</small></span></span></div>`;
+      h += geri() + `<div class="ayar"><span class="oto ${durum.oto ? 'acik' : ''}" data-oto><i></i><span><b>Otomatik</b><small>Formu kendisi doldurur; kaydettiğinizi onaylayınca sıradakine geçer</small></span></span></div>`;
       h += `<p class="not">Kısayollar: Alt+Shift+D doldur · Alt+Shift+S kaydettim · Alt+Shift+N atla</p>`;
       if (durum.q.kurs) h += `<p class="not">${e(durum.q.kurs)} · Sinyal’den ${saat(durum.q.zaman)}’de gönderildi.</p>`;
       if (durum.q.isler.length) h += `<button class="satir" data-temizle><span>${durum.temizle ? 'Emin misiniz? Tekrar basın' : 'Bekleyen işleri temizle'}</span><b></b></button>`;
@@ -370,8 +378,9 @@
     const b = durum.bekle;
     for (let i = 0; i < 10 && durum.bekle === b; i++) {
       await new Promise(r => setTimeout(r, 1000));
-      const { metin } = await sayfaMetni();
-      if (BASARI.test(metin) && !b.basari0) return durum.oto ? tamamla() : (durum.soru = true, durum.bekle = null, aktifKaydet(), ciz());
+      const { mesaj: metin } = await sayfaMetni();
+      // başarı mesajı görülse de iş kendiliğinden kapanmaz: kullanıcı "Kaydedildi" der (yanlış eşleşmede MEBBİS'e girilmemiş iş aktarıldı sayılmasın)
+      if (BASARI.test(metin) && !b.basari0) { durum.soru = true; durum.bekle = null; durum.mesaj = 'MEBBİS kaydedildi diyor: “' + (metin.split('\n').find(x => BASARI.test(x)) || '').trim().slice(0, 120) + '”. Doğruysa onaylayın.'; aktifKaydet(); return ciz(); }
       if (HATA.test(metin) && !b.hata0) { const not = (metin.split('\n').find(x => HATA.test(x)) || '').trim().slice(0, 140); durum.hatalar.add(b.id); gonder({ tur: 'is-hata', id: b.id, not }); durum.bekle = null; aktifKaydet(); durum.mesaj = 'MEBBİS bir hata gösteriyor' + (not ? ': “' + not + '”' : '') + '. Düzeltip yeniden Kaydet’e basın ya da Atla.'; return ciz(); }
     }
     if (durum.bekle === b) { durum.bekle = null; durum.soru = true; aktifKaydet(); ciz(); }
@@ -400,7 +409,7 @@
     if (t.closest('[data-hayir]')) { durum.soru = false; durum.mesaj = 'Formu düzeltip yeniden Kaydet’e basın.'; return ciz(); }
     if (t.closest('[data-atla]')) return panelAtla();
     const kp = t.closest('[data-kopya]'); if (kp) { const is = durum.q.isler.find(x => x.id === durum.sec), a = is && is.alanlar[+kp.dataset.kopya]; if (a) { try { await navigator.clipboard.writeText(a.deger); durum.mesaj = `“${a.etiket}” kopyalandı; MEBBİS’te alana yapıştırın.`; } catch (x) { durum.mesaj = 'Kopyalanamadı; değeri elle yazın.'; } ciz(); } return; }
-    const og = t.closest('[data-ogret]'); if (og) { const is = durum.q.isler.find(x => x.id === durum.sec), a = is.alanlar[+og.dataset.ogret]; cerceveler().forEach(w => w.postMessage({ [ISARET]: 'ogret', alan: a }, '*')); durum.mesaj = `MEBBİS’te “${a.etiket}” alanına tıklayın; Yardımcı bir dahakine kendisi bulur.`; return ciz(); }
+    const og = t.closest('[data-ogret]'); if (og) { const is = durum.q.isler.find(x => x.id === durum.sec), a = is.alanlar[+og.dataset.ogret]; cerceveler().forEach(w => w.postMessage({ [ISARET]: 'ogret', alan: a }, HEDEF)); durum.mesaj = `MEBBİS’te “${a.etiket}” alanına tıklayın; Yardımcı bir dahakine kendisi bulur.`; return ciz(); }
     if (t.closest('[data-gonder]')) return listeGonder(false);
   });
   window.addEventListener('message', async ev => {
@@ -408,7 +417,7 @@
     if (d[ISARET] === 'ogrenildi') { durum.sonuc[d.etiket] = 'ok'; durum.mesaj = 'Alan öğrenildi.'; ciz(); }
     if (d[ISARET] === 'kisayol' && durum.ekran === 'is') { if (d.k === 'KeyD') panelDoldur(false); if (d.k === 'KeyS') tamamla(); if (d.k === 'KeyN') panelAtla(); }
     if (d[ISARET] === 'kaydet-basildi' && durum.ekran === 'is' && durum.sec && !durum.bekle) {
-      const { metin } = await sayfaMetni();
+      const { mesaj: metin } = await sayfaMetni();
       durum.bekle = { id: durum.sec, zaman: Date.now(), basari0: BASARI.test(metin), hata0: HATA.test(metin) }; aktifKaydet(); ciz(); kaydetIzle(false);
     }
   });
