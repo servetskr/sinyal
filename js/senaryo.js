@@ -1,11 +1,11 @@
-import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, kalanBorc, gecikenler, islem, gonderimEkle, SINIFLAR, ustaAraci, isGunuIleri, yerelZaman, selam, kursAdi } from './veri.js?v=125';
-import { e, ik, isaret, bildir, tl, tamTarih, tarihUzun, saatDe, saatE, apiAcik, belgeWhatsApp, giden, waSirali, waAc, ekranNotu } from './ui.js?v=125';
-import { wpGonder, bildirimler, odemeBilgisi, yorumMetni } from './sayfalar1.js?v=125';
-import { belgeHtml, dosyaAdi } from './sayfalar3.js?v=125';
-import { ornekGonder } from './zamanlayici.js?v=125';
-import { imzaIste } from './imza.js?v=125';
-import { bosSlotlar } from './risk.js?v=125';
-import { risk } from './veri.js?v=125';
+import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, kalanBorc, gecikenler, islem, gonderimEkle, SINIFLAR, ustaAraci, isGunuIleri, yerelZaman, selam, kursAdi } from './veri.js?v=126';
+import { e, ik, isaret, bildir, tl, tamTarih, tarihUzun, saatDe, saatE, apiAcik, belgeWhatsApp, giden, waSirali, waAc, ekranNotu } from './ui.js?v=126';
+import { wpGonder, bildirimler, odemeBilgisi, yorumMetni } from './sayfalar1.js?v=126';
+import { belgeHtml, dosyaAdi } from './sayfalar3.js?v=126';
+import { ornekGonder } from './zamanlayici.js?v=126';
+import { imzaIste } from './imza.js?v=126';
+import { bosSlotlar } from './risk.js?v=126';
+import { risk } from './veri.js?v=126';
 
 /* ================= DEMO SENARYOLARI =================
    Kursun gerçek işlemlerini örnek kayıtlar üzerinde çalıştırır; her senaryonun mesajları
