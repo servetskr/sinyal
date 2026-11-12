@@ -110,7 +110,7 @@
         }
         ctx.strokeStyle = `rgba(6,9,16,${.85 * a})`; ctx.lineWidth = en; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0, y1); ctx.lineTo(x2, y2); ctx.stroke();
         if (pl.lamba > .02) {
-          const rr = Math.min(Math.max(1.5, .9 * f / z), 14); g = ctx.createRadialGradient(x2, y2, 0, x2, y2, rr * 4); g.addColorStop(0, `rgba(255,226,170,${pl.lamba * a})`); g.addColorStop(1, 'rgba(255,226,170,0)');
+          const rr = Math.min(Math.max(1.5, .9 * f / z), 9); g = ctx.createRadialGradient(x2, y2, 0, x2, y2, rr * 4); g.addColorStop(0, `rgba(255,226,170,${pl.lamba * a})`); g.addColorStop(1, 'rgba(255,226,170,0)');
           ctx.fillStyle = g; ctx.fillRect(x2 - rr * 4, y2 - rr * 4, rr * 8, rr * 8);
         }
       }
@@ -135,8 +135,8 @@
       // ufukta pus ve alt kenarda koyulaşma
       g = ctx.createLinearGradient(0, hy - 40, 0, hy + 60); g.addColorStop(0, 'rgba(20,30,52,0)'); g.addColorStop(.5, 'rgba(20,30,52,.3)'); g.addColorStop(1, 'rgba(20,30,52,0)');
       ctx.fillStyle = g; ctx.fillRect(0, hy - 40, w, 100);
-      g = ctx.createLinearGradient(0, h * .82, 0, h); g.addColorStop(0, 'rgba(7,11,20,0)'); g.addColorStop(1, 'rgba(7,11,20,.85)');
-      ctx.fillStyle = g; ctx.fillRect(0, h * .82, w, h * .18 + 1);
+      g = ctx.createLinearGradient(0, h * .8, 0, h); g.addColorStop(0, 'rgba(7,11,20,0)'); g.addColorStop(1, 'rgba(7,11,20,1)'); // alt kenar sayfanın zemin rengine erir (bölüm geçişi görünmez)
+      ctx.fillStyle = g; ctx.fillRect(0, h * .8, w, h * .2 + 1);
     }
     function kare(n) {
       raf = 0; if (!gorunur || document.hidden) return;

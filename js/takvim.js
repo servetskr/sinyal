@@ -1,7 +1,7 @@
 // Ders takvimi: günlük, haftalık ve aylık görünüm. Öğretmen, öğrenci ve müdür ekranları aynı bileşeni kullanır.
 // Çağıran ekran olayları verir ({ tarih, saat, ton, baslik, alt, ek }), seçili günü ve görünümü kendisi tutar (takvimDurum).
-import { gun, fark, iso, tarihOku, kapaliGun } from './veri.js?v=176';
-import { e, tarih, tarihUzun, gunKisa, ayAdi } from './ui.js?v=176';
+import { gun, fark, iso, tarihOku, kapaliGun } from './veri.js?v=177';
+import { e, tarih, tarihUzun, gunKisa, ayAdi } from './ui.js?v=177';
 
 export const MODLAR = [['gun', 'Gün'], ['hafta', 'Hafta'], ['ay', 'Ay']];
 const ekle = (t, n) => { const d = tarihOku(t); d.setDate(d.getDate() + n); return iso(d); };
