@@ -454,3 +454,99 @@ body.st,.tanitim{background:var(--w-bg)}
 }
 .vt-k-yazi h1{font-size:clamp(40px,5.2vw,70px)}
 @media (min-width:980px){.vt-k-ic{grid-template-columns:1fr 1.1fr}}
+
+/* ===================== v172: ilk ekran derinliği, gerçek oranlı telefon, roller ===================== */
+.vt-kahraman{position:relative;isolation:isolate}
+.vt-kahraman::before{content:"";position:absolute;z-index:-1;inset:-20% -10% auto 35%;height:120%;background:radial-gradient(closest-side,rgba(10,77,162,.16),transparent 70%),radial-gradient(closest-side at 70% 60%,rgba(122,92,214,.10),transparent 70%);pointer-events:none}
+.vt-kahraman::after{content:"";position:absolute;z-index:-2;inset:0;background-image:radial-gradient(rgba(13,17,23,.07) 1px,transparent 1.2px);background-size:22px 22px;-webkit-mask-image:radial-gradient(70% 60% at 70% 45%,#000,transparent);mask-image:radial-gradient(70% 60% at 70% 45%,#000,transparent);pointer-events:none}
+.vt-kompozisyon{padding:20px 0 60px}
+.vt-telefon{display:none}
+/* telefon: gerçek oran (19.5:9), çentik, durum çubuğu, alt sekmeler */
+.vt-tel{width:240px;aspect-ratio:9/19.5;border-radius:44px;background:#0d1117;padding:9px;box-shadow:0 0 0 1.5px #2a2f37 inset,0 50px 90px -40px rgba(13,17,23,.6),0 8px 20px -8px rgba(13,17,23,.3)}
+.vt-tel-ic{position:relative;height:100%;border-radius:36px;overflow:hidden;background:#f2f2f7;display:flex;flex-direction:column;font:400 11px/1.35 var(--vt-sistem);color:#0b0d10}
+.vt-tel-durum{position:absolute;left:0;right:0;top:0;z-index:3;display:flex;align-items:center;justify-content:space-between;height:34px;padding:0 20px 0 24px;color:#fff;font:600 11.5px/1 var(--vt-sistem)}
+.vt-tel-durum svg{height:9px;width:auto;fill:#fff}
+.vt-tel-durum .sag{display:flex;gap:4px;align-items:center}
+.vt-tel-ada{position:absolute;z-index:4;top:9px;left:50%;width:74px;height:21px;margin-left:-37px;border-radius:12px;background:#000}
+.vt-tel-gok{position:relative;background:linear-gradient(180deg,#0b1830 0%,#13305e 100%);color:#fff;padding:46px 16px 20px;overflow:hidden}
+.vt-tel-gok::before{content:"";position:absolute;inset:0;background-image:radial-gradient(1px 1px at 20% 30%,#fff,transparent),radial-gradient(1px 1px at 70% 18%,#fff,transparent),radial-gradient(1.2px 1.2px at 45% 55%,rgba(255,255,255,.8),transparent),radial-gradient(1px 1px at 85% 62%,#fff,transparent),radial-gradient(1px 1px at 12% 70%,rgba(255,255,255,.7),transparent),radial-gradient(1px 1px at 58% 82%,rgba(255,255,255,.6),transparent);opacity:.8}
+.vt-tel-gok .ay{position:absolute;right:16px;top:44px;width:30px;height:30px;border-radius:50%;background:#f4e9c4;box-shadow:0 0 26px rgba(244,233,196,.45)}
+.vt-tel-gok small{position:relative;display:block;font-size:10px;opacity:.7}
+.vt-tel-gok .et{position:relative;display:block;margin-top:14px;font:700 8.5px/1 var(--st-baslik);letter-spacing:.12em;text-transform:uppercase;color:var(--vt-sari)}
+.vt-tel-gok b{position:relative;display:block;font:800 24px/1.05 var(--st-baslik);margin:6px 0 5px;letter-spacing:-.01em}
+.vt-tel-gok span{position:relative;display:block;font-size:10.5px;opacity:.78}
+.vt-tel-gok .cubuk{position:relative;display:flex;gap:3px;margin-top:12px}
+.vt-tel-gok .cubuk i{flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.2)}
+.vt-tel-gok .cubuk i.d{background:#fff}.vt-tel-gok .cubuk i.y{background:var(--vt-sari)}
+.vt-tel-gok .cubuk-et{position:relative;display:flex;justify-content:space-between;margin-top:6px;font-size:9.5px;opacity:.7}
+.vt-tel-govde{flex:1;padding:12px 12px 0;display:flex;flex-direction:column;gap:8px;min-height:0;overflow:hidden}
+.vt-tel-govde h4{margin:4px 2px 0;font:700 13px/1.2 var(--vt-sistem);color:#0b0d10}
+.vt-tel-kart{background:#fff;border-radius:13px;padding:10px 11px}
+.vt-tel-kart b{display:block;font-weight:600;font-size:11.5px}
+.vt-tel-kart small{display:block;color:#6b6e76;font-size:10px;margin-top:1px}
+.vt-tel-kart .yildiz{display:flex;gap:4px;margin-top:7px;color:#d1d3d8;font-size:15px;letter-spacing:1px}
+.vt-tel-kart .yildiz span:nth-child(-n+4){color:var(--vt-sari)}
+.vt-tel-satir{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.vt-tel-satir em{font-style:normal;font-size:10px;font-weight:600;color:#1e8e4e}
+.vt-tel-sekme{display:grid;grid-template-columns:repeat(5,1fr);padding:7px 6px 18px;background:rgba(255,255,255,.94);border-top:.5px solid rgba(60,60,67,.18)}
+.vt-tel-sekme span{display:grid;justify-items:center;gap:2px;font-size:7.5px;color:#8e9198;white-space:nowrap;min-width:0;letter-spacing:-.01em}
+.vt-tel-sekme span.s{color:var(--vt-mavi);font-weight:600}
+.vt-tel-sekme svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.vt-tel-cizgi{position:absolute;bottom:6px;left:50%;width:84px;height:4px;margin-left:-42px;border-radius:3px;background:#0b0d10}
+/* ilk ekran yerleşimi */
+.vt-k-tel{position:absolute;right:-18px;bottom:0;z-index:2}
+.vt-yuzen{position:absolute;z-index:3;background:#fff;border:1px solid #e3e6eb;border-radius:14px;padding:10px 12px;box-shadow:0 24px 44px -24px rgba(13,17,23,.45);font:400 12px/1.35 var(--vt-sistem);color:#1b1f24;display:flex;align-items:center;gap:10px;animation:vt-suz 6s ease-in-out infinite}
+.vt-yuzen i{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;flex:none;font-style:normal;font:800 13px/1 var(--st-baslik);color:#fff;background:#1e8e4e}
+.vt-yuzen b{display:block;font-weight:650;font-size:12.5px}
+.vt-yuzen small{display:block;color:#7a808a;font-size:11px}
+.vt-yuzen.makbuz{left:-30px;bottom:70px}
+@keyframes vt-suz{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.vt-bildirim{left:auto;right:150px;top:-6px}
+@media (min-width:980px){.vt-kompozisyon{padding:24px 96px 70px 0}.vt-k-tel{right:-44px}.vt-k-tel .vt-tel{width:228px}}
+@media (max-width:979px){.vt-kompozisyon{padding:10px 0 70px;margin:0}.vt-k-tel{right:-6px;bottom:0;transform:scale(.6);transform-origin:100% 100%}.vt-yuzen.makbuz{left:-4px;bottom:22px}.vt-bildirim{right:auto;left:0;top:-18px}}
+@media (prefers-reduced-motion:reduce){.vt-yuzen{animation:none}}
+
+/* ---------- herkes kendi ekranında ---------- */
+.vt-roller{padding:104px 0;border-top:1px solid var(--w-cizgi);background:linear-gradient(180deg,#f5f6f8,#eef2f8)}
+.vt-rol-sekme{display:inline-flex;flex-wrap:wrap;gap:4px;padding:4px;margin:36px 0 0;border-radius:14px;background:#e6e9ee}
+.vt-rol-sekme button{height:40px;padding:0 18px;border-radius:10px;font:700 15px/1 var(--st-baslik);color:#4b5260}
+.vt-rol-sekme button[aria-selected="true"]{background:#fff;color:var(--w-baslik);box-shadow:0 1px 3px rgba(13,17,23,.12)}
+.vt-rol{display:none;gap:40px;align-items:center;margin-top:40px}
+.vt-rol.aktif{display:grid;animation:vt-belir .4s ease both}
+.vt-rol h3{font:800 clamp(24px,2.6vw,32px)/1.15 var(--st-baslik);color:var(--w-baslik);letter-spacing:-.015em;margin:0}
+.vt-rol p{font-size:17px;line-height:1.65;color:var(--w-yazi);margin:12px 0 0;max-width:46ch}
+.vt-rol .st-tik li{font-size:16px}
+.vt-rol-cihaz{display:flex;justify-content:center;align-items:center;min-height:440px}
+.vt-rol-cihaz .vt-pencere{width:100%;max-width:620px}
+@media (min-width:980px){.vt-rol{grid-template-columns:.9fr 1.1fr;gap:64px}}
+/* müdür ekranı: rapor kutuları ve çubuk grafik */
+.vt-rapor{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.vt-rapor div{background:#fff;border:1px solid #e7e9ed;border-radius:10px;padding:10px}
+.vt-rapor small{display:block;font-size:10.5px;color:#7a808a}
+.vt-rapor b{display:block;font:800 18px/1.15 var(--st-baslik);color:#0d1117}
+.vt-rapor em{font-style:normal;font-size:10.5px;color:#1e8e4e;font-weight:600}
+.vt-grafik{background:#fff;border:1px solid #e7e9ed;border-radius:10px;padding:12px}
+.vt-grafik p{margin:0 0 10px;font-size:12px;font-weight:700}
+.vt-cubuklar{display:flex;align-items:flex-end;gap:8px;height:120px}
+.vt-cubuklar i{flex:1;border-radius:5px 5px 2px 2px;background:#d9e5f7}
+.vt-cubuklar i.son{background:var(--vt-mavi)}
+.vt-cubuk-et{display:flex;gap:8px;margin-top:6px}.vt-cubuk-et span{flex:1;text-align:center;font:600 10px/1 var(--vt-mono);color:#8a909a}
+/* ön büro ekranı: öğrenci listesi */
+.vt-liste{background:#fff;border:1px solid #e7e9ed;border-radius:10px;overflow:hidden}
+.vt-liste div{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 12px;border-bottom:1px solid #f1f2f5;font-size:12.5px}
+.vt-liste div:last-child{border-bottom:0}
+.vt-liste i{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font:700 11px/1 var(--st-baslik);font-style:normal;color:#fff;background:#8e97a6}
+.vt-liste b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vt-liste small{display:block;font-size:11px;color:#7a808a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vt-rozet{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:999px;background:#eef6f1;color:#17663a;white-space:nowrap}
+.vt-rozet.s{background:#fff4d6;color:#7a5200}.vt-rozet.k{background:#fde8e6;color:#a8241a}.vt-rozet.m{background:#e7eefa;color:#0a4da2}
+/* öğretmen telefonu: bugünkü dersler */
+.vt-tel-ders{display:grid;grid-template-columns:38px minmax(0,1fr);gap:8px;align-items:center;background:#fff;border-radius:12px;padding:9px 10px}
+.vt-tel-ders time{font:700 10.5px/1.2 var(--vt-mono);color:#0b0d10;text-align:center}
+.vt-tel-ders b{display:block;font-size:11.5px;font-weight:600}
+.vt-tel-ders small{display:block;font-size:10px;color:#6b6e76}
+.vt-tel-ders.simdi{background:var(--vt-mavi);color:#fff}.vt-tel-ders.simdi time,.vt-tel-ders.simdi small{color:rgba(255,255,255,.85)}
+.vt-tel-ders.bitti{opacity:.55}
+@media (max-width:979px){.vt-rol-cihaz{min-height:0}.vt-rol-cihaz .vt-tel{width:230px;border-radius:42px;padding:9px}.vt-rol-cihaz .vt-tel-ic{border-radius:34px}.vt-rol-cihaz .vt-tel-govde,.vt-rol-cihaz .vt-tel-gok small,.vt-rol-cihaz .vt-tel-gok .cubuk-et{display:flex}.vt-rol-cihaz .vt-tel-gok small{display:block}.vt-rol-cihaz .vt-tel-gok{padding:46px 16px 20px}.vt-rol-cihaz .vt-tel-gok b{font-size:22px}.vt-rol-cihaz .vt-tel-ada{width:74px;height:21px;margin-left:-37px;top:9px}.vt-rol-cihaz .vt-tel-durum{height:34px;padding:0 20px 0 24px;font-size:11.5px}}
+@media (max-width:600px){.vt-rol-sekme{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));width:100%}.vt-rol-sekme button{padding:0 4px;font-size:13.5px;white-space:nowrap}}
+@media (max-width:600px){.vt-yuzen.makbuz{max-width:calc(100% - 140px);bottom:96px}.vt-yuzen.makbuz>div{min-width:0}.vt-yuzen.makbuz b,.vt-yuzen.makbuz small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
