@@ -3,7 +3,7 @@
 const font = document.getElementById('font-css'); if (font) font.media = 'all';
 const css = document.getElementById('app-css');
 const cssHazir = () => new Promise(r => { if (css.media === 'all' && css.sheet) return r(); css.media = 'all'; css.addEventListener('load', r, { once: true }); setTimeout(r, 5000); });
-const yukle = () => window.__uyg || (window.__uyg = cssHazir().then(() => import('./app.js?v=134')).then(m => { window.__hazir = true; return m; }));
+const yukle = () => window.__uyg || (window.__uyg = cssHazir().then(() => import('./app.js?v=135')).then(m => { window.__hazir = true; return m; }));
 let hemen = true;
 try { hemen = /^#\/./.test(location.hash) || !!(sessionStorage.getItem('sinyal-oturum') || sessionStorage.getItem('sinyal-kapandi') || localStorage.getItem('sinyal-bulut') || localStorage.getItem('sinyal-ogrenci')); } catch (e) { }
 if (hemen) yukle();
