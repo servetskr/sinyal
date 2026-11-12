@@ -1,21 +1,21 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=132';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=132';
-import * as Y1 from './sayfalar1.js?v=132';
-import * as Y2 from './sayfalar2.js?v=132';
-import * as P from './portal.js?v=132';
-import * as Y3 from './sayfalar3.js?v=132';
-import * as Y4 from './sayfalar4.js?v=132';
-import * as Y5 from './sayfalar5.js?v=132';
-import * as IM from './imza.js?v=132';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=132';
-import * as SN from './senaryo.js?v=132';
-import * as OZ from './ozellik.js?v=132';
-import { durumlariGuncelle } from './mesaj.js?v=132';
-import { yeniMenu } from './yeni.js?v=132';
-import * as B from './bulut.js?v=132';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=132';
-import * as AN from './analiz.js?v=132';
-import * as ORT from './ortak.js?v=132';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=133';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=133';
+import * as Y1 from './sayfalar1.js?v=133';
+import * as Y2 from './sayfalar2.js?v=133';
+import * as P from './portal.js?v=133';
+import * as Y3 from './sayfalar3.js?v=133';
+import * as Y4 from './sayfalar4.js?v=133';
+import * as Y5 from './sayfalar5.js?v=133';
+import * as IM from './imza.js?v=133';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=133';
+import * as SN from './senaryo.js?v=133';
+import * as OZ from './ozellik.js?v=133';
+import { durumlariGuncelle } from './mesaj.js?v=133';
+import { yeniMenu } from './yeni.js?v=133';
+import * as B from './bulut.js?v=133';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=133';
+import * as AN from './analiz.js?v=133';
+import * as ORT from './ortak.js?v=133';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -313,7 +313,16 @@ function girisEkrani(mod = 'tanitim') {
 }
 function sessionStorageAl(k) { try { return sessionStorage.getItem(k); } catch (x) { return null; } }
 const LOGO = `<div class="logo" style="border-bottom:0;margin:0 0 6px"><svg class="logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>Sürücü kursu otomasyonu</small></span></div>`;
-function bekleEkrani(metin) { document.getElementById('uyg').innerHTML = `<div class="giris"><div class="giris-levha">${LOGO}<h1 style="font-size:24px">${e(metin)}</h1><p>İlk açılışta birkaç saniye sürebilir.</p></div></div>`; }
+const YUKLE_SAHNE = '<svg class="yk" viewBox="0 0 320 180" role="img" aria-label="Kurs arabası trafik ışığında yeşili bekliyor"><g><circle cx="62" cy="42" r="24" fill="#ffd166" opacity=".28"/><circle cx="62" cy="42" r="14" fill="#ffd166"/><g transform="translate(118 36)"><g class="yk-bulut" fill="#fff"><circle cx="0" cy="0" r="8"/><circle cx="11" cy="-5" r="11"/><circle cx="23" cy="0" r="8"/><rect x="0" y="0" width="23" height="8"/></g></g><g transform="translate(188 58) scale(.7)"><g class="yk-bulut iki" fill="#fff"><circle cx="0" cy="0" r="8"/><circle cx="11" cy="-5" r="11"/><circle cx="23" cy="0" r="8"/><rect x="0" y="0" width="23" height="8"/></g></g><path d="M0 116 C50 96 96 102 140 114 S226 122 262 108 S306 100 320 106 V136 H0Z" fill="#bfe0b2"/><path d="M0 126 C60 112 110 118 170 126 S270 120 320 124 V136 H0Z" fill="#a6d39a"/><rect y="132" width="320" height="48" fill="#353b44"/><path d="M0 133.5 H320" stroke="#fff" stroke-opacity=".35" stroke-width="2"/><path d="M0 162 H320" stroke="#fff" stroke-opacity=".85" stroke-width="3" stroke-dasharray="14 12"/><rect x="214" y="134" width="5" height="22" fill="#fff" opacity=".9"/><rect x="231" y="64" width="5" height="70" rx="1.5" fill="#5b6470"/><rect x="221" y="32" width="25" height="60" rx="9" fill="#1c2129"/><circle class="yk-k" cx="233.5" cy="45" r="6.5" fill="#5a2420"/><circle class="yk-s" cx="233.5" cy="62" r="6.5" fill="#5a4a1a"/><circle class="yk-y" cx="233.5" cy="79" r="6.5" fill="#1d4a2c"/><g class="yk-araba"><ellipse cx="38" cy="156" rx="31" ry="2.6" fill="#000" opacity=".22"/><circle class="yk-duman" cx="-1" cy="143" r="3.5" fill="#d5dbe3"/><circle class="yk-duman iki" cx="-1" cy="141" r="3" fill="#e3e8ee"/><g class="yk-govde"><path d="M4 146 V138 Q4 130 12 129 L22 128 L31 116 Q34 112 39 112 H52 Q57 112 60 116 L67 127 Q72 128 72 134 V146 Q72 148 70 148 H6 Q4 148 4 146 Z" fill="#0a4da2"/><path d="M24 128 L32 117 Q34 115 37 115 H44 V128 Z M47 115 H52 Q55 115 57 117 L64 128 H47 Z" fill="#d4e6fc"/><path d="M45 130 V146" stroke="#073a7c" stroke-width="1"/><path d="M9 141 H67" stroke="#4d86d1" stroke-width="2" stroke-linecap="round" opacity=".7"/><rect x="34" y="104" width="20" height="8" rx="2" fill="#f2b705" stroke="#c99600" stroke-width=".8"/><path d="M44 105.3 l2.4 2.7 -2.4 2.7 -2.4 -2.7z" fill="#1c2129"/><rect x="68" y="132" width="4" height="4" rx="1.5" fill="#ffe08a"/><rect x="4" y="133" width="3" height="4" rx="1" fill="#ff6b5b"/></g><g class="yk-teker"><circle cx="19" cy="148" r="8" fill="#1c2129"/><circle cx="19" cy="148" r="3.8" fill="#c9d2dd"/><path d="M19 144.4 V151.6 M15.4 148 H22.6" stroke="#1c2129" stroke-width="1.5"/></g><g class="yk-teker"><circle cx="57" cy="148" r="8" fill="#1c2129"/><circle cx="57" cy="148" r="3.8" fill="#c9d2dd"/><path d="M57 144.4 V151.6 M53.4 148 H60.6" stroke="#1c2129" stroke-width="1.5"/></g></g></g></svg>';
+const IPUCLARI = ['Sarı ışık “dur”a hazırlan demektir, hızlan demek değildir.', 'Öndeki araçla aranda en az 2 saniyelik mesafe bırak.', 'Emniyet kemeri arka koltukta da takılır.', 'Yaya geçidinde öncelik her zaman yayanındır.', 'Şerit değiştirmeden önce sinyal ver, aynaya ve kör noktana bak.', 'Yağmurda takip mesafesini iki katına çıkar.', 'Kavşağa girmeden önce hızını düşür, sağdan gelene yol ver.'];
+let ipucuSayac = null;
+// Yükleme ekranı: trafik ışığında bekleyen kurs arabası; altında birkaç saniyede bir değişen kısa trafik ipucu
+function bekleEkrani(metin) {
+  let n = Math.floor(Math.random() * IPUCLARI.length);
+  document.getElementById('uyg').innerHTML = `<div class="yukleme" role="status" aria-live="polite"><div class="yukle-sahne">${YUKLE_SAHNE}</div><div class="yukle-yazi"><b>${e(String(metin).replace(/…$/, ''))}</b><small>İlk açılışta birkaç saniye sürebilir</small></div><p class="yukle-ipucu" aria-live="off"><i>Biliyor muydun?</i><span>${e(IPUCLARI[n])}</span></p></div>`;
+  clearInterval(ipucuSayac);
+  ipucuSayac = setInterval(() => { const p = document.querySelector('.yukle-ipucu'); if (!p) return clearInterval(ipucuSayac); p.style.opacity = 0; setTimeout(() => { n = (n + 1) % IPUCLARI.length; p.querySelector('span').textContent = IPUCLARI[n]; p.style.opacity = 1; }, 350); }, 3600);
+}
 // Gerçek kurs hesabıyla oturum aç
 function bulutOturumu(u, yeniGiris) {
   oturum.kullanici = u;
