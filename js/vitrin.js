@@ -75,6 +75,51 @@
     kok.querySelectorAll('.vt-sahne-ici').forEach(s => io2.observe(s));
     temizle.push(() => { durdur(); io.disconnect(); io2.disconnect(); hik.removeEventListener('click', tik); hik.removeEventListener('mouseenter', gir); hik.removeEventListener('mouseleave', cik); });
   }
+  // Yolculuk: sahne ekrana sabitlenir; kaydırma ilerledikçe gün sabahtan geceye döner, kamera yolda ilerler,
+  // her saat diliminde soldaki metin ve sağdaki ürün ekranı 3B dönerek değişir. Kaydırma hızı sahneyi hafifçe eğer.
+  function yolculuk(kok) {
+    const sec = kok.querySelector('.vt-yolculuk'); if (!sec) return;
+    const parca = [...sec.querySelectorAll('.vt-yk-blok, .vt-yk-kart')], dgler = [...sec.querySelectorAll('[data-yk-git]')];
+    const cizgi = sec.querySelector('.vt-yk-zaman .cizgi i'), egim = sec.querySelector('.vt-yk-egim'), cv = sec.querySelector('canvas[data-yol]');
+    const N = dgler.length, GIRIS = .1; // kaydırmanın ilk %10'u ilk ekran
+    let akt = -2, p = 0, sonY = scrollY, hedef = 0, aci = 0, raf = 0;
+    const sec_ = i => {
+      if (i === akt) return; akt = i;
+      parca.forEach(el => { const j = +el.dataset.i; el.classList.toggle('aktif', j === i); el.classList.toggle('once', j < i); el.inert = j !== i; });
+      dgler.forEach((b, j) => { b.classList.toggle('gecti', j <= i); b.setAttribute('aria-current', j === i ? 'step' : 'false'); });
+      const sh = sec.querySelector(`.vt-yk-kart[data-i="${i}"] .vt-sahne`); if (sh) { sh.classList.remove('oynat'); void sh.offsetWidth; sh.classList.add('oynat'); }
+      sec.classList.toggle('basladi', i >= 0);
+    };
+    const olc = () => {
+      const bos = sec.offsetHeight - innerHeight; if (bos <= 0) return;
+      p = Math.max(0, Math.min(1, -sec.getBoundingClientRect().top / bos));
+      const ad = (p - GIRIS) / (1 - GIRIS);
+      sec_(p < GIRIS ? -1 : Math.min(N - 1, Math.floor(ad * N)));
+      if (cv && cv.__yol) cv.__yol.ayarla({ saat: Math.max(0, Math.min(1, ad * 1.04)), yol: p * 1600 });
+      if (cizgi) cizgi.style.transform = `scaleX(${Math.max(0, Math.min(1, ad))})`;
+    };
+    // kaydırma hızına göre eğim; durunca yay gibi sıfıra döner (dururken ekran keskin kalır)
+    const dongu = () => {
+      aci += (hedef - aci) * .14; hedef *= .86;
+      if (Math.abs(aci) < .03 && Math.abs(hedef) < .03) { raf = 0; egim.style.transform = ''; return; }
+      egim.style.transform = `rotateY(${(-aci).toFixed(2)}deg) rotateX(${(aci * .35).toFixed(2)}deg) translateZ(${(-Math.abs(aci) * 6).toFixed(1)}px)`;
+      raf = requestAnimationFrame(dongu);
+    };
+    const kaydir = () => {
+      const v = scrollY - sonY; sonY = scrollY; olc();
+      if (azHareket() || !egim) return;
+      hedef = Math.max(-9, Math.min(9, hedef + v * .06)); if (!raf) raf = requestAnimationFrame(dongu);
+    };
+    const git = ev => {
+      const b = ev.target.closest('[data-yk-git]'); if (!b) return;
+      const hedefP = GIRIS + (+b.dataset.ykGit + .5) / N * (1 - GIRIS);
+      scrollTo({ top: sec.offsetTop + hedefP * (sec.offsetHeight - innerHeight), behavior: azHareket() ? 'auto' : 'smooth' });
+    };
+    addEventListener('scroll', kaydir, { passive: true }); addEventListener('resize', olc); sec.addEventListener('click', git);
+    if (window.__yol) window.__yol();
+    olc();
+    temizle.push(() => { removeEventListener('scroll', kaydir); removeEventListener('resize', olc); sec.removeEventListener('click', git); cancelAnimationFrame(raf); });
+  }
   // "Herkes kendi ekranında": rol sekmeleri (ok tuşlarıyla da gezilir)
   function roller(kok) {
     const sekmeler = [...kok.querySelectorAll('[data-rol]')], paneller = [...kok.querySelectorAll('[data-rol-panel]')];
@@ -97,7 +142,7 @@
     if (!kok || kok.hidden) return;
     if (window.__yol) window.__yol(); // gece yolu sahnesi (tanıtım yeniden çizildiyse yeni tuval)
     akis(kok.querySelector('[data-vt-akis]'));
-    hikaye(kok);
+    yolculuk(kok);
     roller(kok);
   }
   window.__vitrin = baslat;
