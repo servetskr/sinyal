@@ -2,7 +2,7 @@
 // Sinyal Yönetim panelinin “Hesaplar” bölümünde açılır (yalnız Servet; ortak görmez).
 // Yetki Firebase güvenlik kurallarından değil, Google hesabından gelir: Firebase projesinin sahibi olan Google hesabıyla
 // bağlanılır, Google IAM izin verirse işlem yapılır. Sunucu, gizli anahtar yok; erişim belirteci yalnız bellekte durur (1 saat).
-import { e, ik, pencere, kapatPencere, bildir } from './ui.js?v=145';
+import { e, ik, pencere, kapatPencere, bildir } from './ui.js?v=146';
 
 const PROJE = 'sinyal-5d37a';
 const ISTEMCI = '451344576006-sua0mu4d4qcssc0lv8g01qic26hr6os7.apps.googleusercontent.com';  // Google OAuth istemci kimliği (herkese açık bilgidir; yetkiyi Google hesabı verir)
@@ -309,6 +309,10 @@ async function davetPenceresi(yonetim) {
     },
   });
 }
+
+// Henüz Yönetim hesabı yokken (ilk kurulum ya da hesap silindiyse): Google'da yetkili kişi kendine kurulum linki açar.
+// Yetkiyi yine Google IAM verir; projede yetkisi olmayan Google hesabı link oluşturamaz.
+export async function yonetimKurulumLinki() { await baglan(); return davetLinki(true); }
 
 // ---- giriş ekranları için: giremeyene kendiliğinden yardım ----
 // Şifre yanlış girilince form altında açılır; kişi “şifremi unuttum”u aramak zorunda kalmaz.

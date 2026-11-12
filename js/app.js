@@ -1,22 +1,22 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=145';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=145';
-import * as Y1 from './sayfalar1.js?v=145';
-import * as Y2 from './sayfalar2.js?v=145';
-import * as P from './portal.js?v=145';
-import * as Y3 from './sayfalar3.js?v=145';
-import * as Y4 from './sayfalar4.js?v=145';
-import * as Y5 from './sayfalar5.js?v=145';
-import * as IM from './imza.js?v=145';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=145';
-import * as SN from './senaryo.js?v=145';
-import * as OZ from './ozellik.js?v=145';
-import { durumlariGuncelle } from './mesaj.js?v=145';
-import { yeniMenu } from './yeni.js?v=145';
-import * as B from './bulut.js?v=145';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=145';
-import * as AN from './analiz.js?v=145';
-import * as ORT from './ortak.js?v=145';
-import * as SH from './sahip.js?v=145';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=146';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=146';
+import * as Y1 from './sayfalar1.js?v=146';
+import * as Y2 from './sayfalar2.js?v=146';
+import * as P from './portal.js?v=146';
+import * as Y3 from './sayfalar3.js?v=146';
+import * as Y4 from './sayfalar4.js?v=146';
+import * as Y5 from './sayfalar5.js?v=146';
+import * as IM from './imza.js?v=146';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=146';
+import * as SN from './senaryo.js?v=146';
+import * as OZ from './ozellik.js?v=146';
+import { durumlariGuncelle } from './mesaj.js?v=146';
+import { yeniMenu } from './yeni.js?v=146';
+import * as B from './bulut.js?v=146';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=146';
+import * as AN from './analiz.js?v=146';
+import * as ORT from './ortak.js?v=146';
+import * as SH from './sahip.js?v=146';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -428,8 +428,13 @@ function yonetimGirisEkrani(not) {
     ${not ? `<p class="og-giris-not">${ik('uyari')}<span>${not}</span></p>` : ''}
     <form novalidate class="og-giris-form">${ogrAlan('kad', 'E-posta', 'text', 'kursiyer', 'autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required')}${ogrAlan('sifre', 'Şifre', 'password', 'kilit', 'autocomplete="current-password" required')}
     <button type="button" class="og-bag og-unut" data-unut>Şifremi unuttum</button>
-    <button class="dg dg-ana og-giris-dg" type="submit">Giriş yap</button></form><div data-yardim></div>`);
+    <button class="dg dg-ana og-giris-dg" type="submit">Giriş yap</button></form><div data-yardim></div>`,
+    `<p class="og-giris-alt">Hesabın yok mu? <button type="button" class="og-bag" data-yon-kur>Google hesabınla kur</button></p>`);
   gozBagla(kok);
+  kok.querySelector('[data-yon-kur]').addEventListener('click', ev => {
+    const b = ev.currentTarget; b.disabled = true; b.textContent = 'Google açılıyor…';
+    SH.yonetimKurulumLinki().then(l => { location.href = l; }).catch(x => { b.disabled = false; b.textContent = 'Google hesabınla kur'; bildir(x.message, 'uyari'); });
+  });
   const f = kok.querySelector('form'), btn = f.querySelector('[type=submit]');
   kok.querySelector('[data-unut]').addEventListener('click', ev => {
     const v = f.kad.value.trim(), b = ev.currentTarget;
