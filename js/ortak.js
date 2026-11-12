@@ -2,9 +2,9 @@
 // Kurs hesaplarından ayrı bir hesapta çalışır (S.kurs.tur === 'yonetim'); kurs ekranları açılmaz.
 // Üyeler: yönetici (müdür rolü, her şeyi girer) ve ortak (kendi e-posta ve şifresiyle girer, yalnız görür).
 // Kursiyer bilgisi yoktur: yalnız müşteri kurs adı, tahsilat, pay ve ödemeler.
-import { S, kaydet, gun, fark, tarihOku, iso, ayEkle, kapaliGun, islem, geriAlNoktasi } from './veri.js?v=150';
-import { e, ik, rozet, pencere, kapatPencere, bildir, tarih, tarihUzun, ayAdi, olcumler, belgeYazdir, fotoKucult, csvIndir, gunKisa } from './ui.js?v=150';
-import * as B from './bulut.js?v=150';
+import { S, kaydet, gun, fark, tarihOku, iso, ayEkle, kapaliGun, islem, geriAlNoktasi } from './veri.js?v=151';
+import { e, ik, rozet, pencere, kapatPencere, bildir, tarih, tarihUzun, ayAdi, olcumler, belgeYazdir, fotoKucult, csvIndir, gunKisa } from './ui.js?v=151';
+import * as B from './bulut.js?v=151';
 
 export const TURLER = ['İlk yıllık abonelik', 'Aylık abonelik', 'Abonelik yenileme', 'Ek şube', 'Kurulum', 'Eğitim', 'Destek', 'Ücretli modül', 'Diğer Sinyal hizmeti'];
 const PARA = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -218,15 +218,35 @@ export const DURUMLAR = [['Müşteri', 'yr-yesil', 'tik'], ['Sıcak', 'yr-kirmiz
 const DURUM_ACIKLAMA = { 'Müşteri': 'Sinyal’i kullanıyor ve ödüyor', 'Sıcak': 'Satışa en yakın; ilk bunları takip et', 'Riskli': 'İlgili ama kaybedebiliriz; hızlı davran', 'Görüşülüyor': 'Görüşme sürüyor, karar bekleniyor', 'Ortak': 'Satış ortağı ya da iş birliği', 'Bekliyor': 'Zamanı gelince yeniden gidilecek', 'Soğuk': 'Şimdilik ilgisiz' };
 const durumBul = d => DURUMLAR.find(x => x[0] === d) || DURUMLAR[5];
 const bolum = (baslik, alt, dugme, ic, sinif = '') => `<section class="yn-bolum"><div class="yn-bolum-bas"><div><h2>${baslik}</h2>${alt ? `<small>${alt}</small>` : ''}</div>${dugme ? `<div class="yn-dg">${dugme}</div>` : ''}</div><div class="yn-kart ${sinif}">${ic}</div></section>`;
+// Kurs kutusu: kısa ve okunur; uzun yazılar (notlar, çekinceler, sonraki adım) kutuya dokununca açılan sayfada
+const teklifMetni = t => { const m = String(t || '').match(/\d{1,3}(?:[.\s]\d{3})+|\d+/); return m ? m[0].replace(/\s/g, '.') + ' ₺' : (t ? String(t) : ''); };
+const ilkKisi = s => String(s || '').split(/[;,(]/)[0].trim();
 function kursKart(k, yon) {
-  const d = durumBul(k.durum), itiraz = String(k.itiraz || '').split(/\s*;\s*/).filter(Boolean);
-  const alan = (ikon, et, ic) => `<div class="yn-alan"><dt>${ik(ikon)}${et}</dt><dd>${ic}</dd></div>`;
-  return `<article class="yn-kurs ${d[1]}" ${yon ? `data-yn-kurs="${e(k.id)}" tabindex="0" role="button" aria-label="${e(k.ad)} kursunu düzenle"` : ''}>
-    <header><b>${e(k.ad)}</b><span class="yn-durum">${ik(d[2])}${e(d[0])}</span></header>
-    ${k.kisiler || k.not ? `<dl class="yn-alanlar">${k.kisiler ? alan('kursiyer', 'Görüşülen', e(k.kisiler)) : ''}${k.not ? alan('mesaj', 'Son durum', e(k.not)) : ''}</dl>` : ''}
-    ${k.sonraki ? `<div class="yn-sonraki"><div class="yn-sonraki-bas"><small>Sıradaki adım</small>${k.zaman ? `<span class="yn-zaman">${ik('saat')}${e(k.zaman)}</span>` : ''}</div><span>${e(k.sonraki)}</span></div>` : ''}
-    ${k.teklif || itiraz.length ? `<footer>${k.teklif ? `<div class="yn-alt-satir"><small>Teklif</small><span class="yn-etiket">${e(k.teklif)}</span></div>` : ''}${itiraz.length ? `<div class="yn-alt-satir"><small>Çekinceleri</small><span class="yn-etiketler">${itiraz.map(x => `<span class="yn-etiket uyari">${e(x)}</span>`).join('')}</span></div>` : ''}</footer>` : ''}
+  const d = durumBul(k.durum), sayi = (et, deger) => `<div><small>${et}</small><b class="${deger ? '' : 'bos'}">${deger ? e(deger) : '—'}</b></div>`;
+  return `<article class="yk ${d[1]}" data-yn-kurs-ac="${e(k.id)}" tabindex="0" role="button" aria-label="${e(k.ad)}">
+    <div class="yk-ust"><span class="yk-durum"><i></i>${e(d[0])}</span>${k.zaman ? `<span class="yk-zaman">${e(k.zaman)}</span>` : ''}</div>
+    <b class="yk-ad">${e(k.ad)}</b>
+    <small class="yk-kisi">${e(ilkKisi(k.kisiler)) || '&nbsp;'}</small>
+    <div class="yk-sayilar">${sayi('Görüşme', k.gorusme ? String(k.gorusme) : '')}${sayi('Teklif', teklifMetni(k.teklif))}${sayi('Program', k.program)}</div>
   </article>`;
+}
+// kutuya dokununca: bütün bilgiler ve notlar
+function kursDetay(k, yon, yenile) {
+  const d = durumBul(k.durum), itiraz = String(k.itiraz || '').split(/\s*;\s*/).filter(Boolean);
+  const satir = (et, deger) => deger ? `<div class="ykd-satir"><span>${et}</span><b>${e(deger)}</b></div>` : '';
+  pencere({ baslik: k.ad, alt: true, icerik: `<div class="ykd">
+      <div class="ykd-ust ${d[1]}"><span class="yk-durum"><i></i>${e(d[0])}</span>${k.guncel ? `<small>Son güncelleme ${tarih(k.guncel)}</small>` : ''}</div>
+      <div class="yk-sayilar ykd-sayilar">${[['Görüşme', k.gorusme ? String(k.gorusme) : ''], ['Teklif', teklifMetni(k.teklif)], ['Program', k.program]].map(([a, b]) => `<div><small>${a}</small><b class="${b ? '' : 'bos'}">${b ? e(b) : '—'}</b></div>`).join('')}</div>
+      <div class="ykd-liste">${satir('Yetkili', k.kisiler)}${satir('Sıradaki adım', k.sonraki)}${satir('Ne zaman', k.zaman)}${k.teklif && teklifMetni(k.teklif) !== k.teklif ? satir('Teklif ayrıntısı', k.teklif) : ''}</div>
+      ${k.not ? `<h3 class="ykd-bas">Notlar</h3><p class="ykd-not">${e(k.not).replace(/\n/g, '<br>')}</p>` : ''}
+      ${itiraz.length ? `<h3 class="ykd-bas">Çekinceleri</h3><div class="ykd-etiketler">${itiraz.map(x => `<span>${e(x)}</span>`).join('')}</div>` : ''}
+    </div>`,
+    altlik: yon ? `<button class="dg dg-cizgi" data-ykd-gorusme>${ik('arti')}Görüşme ekle</button><button class="dg dg-ana" data-ykd-duzenle>Düzenle</button>` : '<button class="dg dg-ana" data-kapat>Tamam</button>',
+    onAc(p) {
+      if (!yon) return;
+      p.querySelector('[data-ykd-duzenle]').addEventListener('click', () => kursPenceresi(k, yenile));
+      p.querySelector('[data-ykd-gorusme]').addEventListener('click', () => { k.gorusme = (+k.gorusme || 0) + 1; k.guncel = gun(0); kaydetYayinla('Sinyal Yönetim: görüşme ekledi', k.ad); bildir(k.ad + ': ' + k.gorusme + '. görüşme'); yenile(); kursDetay(k, yon, yenile); });
+    } });
 }
 function kurslarHtml(v, yon) {
   const l = v.kurslar || [];
@@ -237,7 +257,7 @@ function kurslarHtml(v, yon) {
   // kurslar duruma göre gruplanır; her grubun başında o durumun ne demek olduğu yazar
   const gruplar = DURUMLAR.filter(([d]) => (kursFiltre === 'hepsi' || kursFiltre === d) && say(d)).map(([d, sinif, ikon]) => {
     const g = l.filter(k => k.durum === d).sort((a, b) => a.ad.localeCompare(b.ad, 'tr'));
-    return `<section class="yn-kurs-grup ${sinif}"><div class="yn-kurs-grup-bas"><span class="yn-durum">${ik(ikon)}${e(d)}</span><b>${g.length} kurs</b><small>${e(DURUM_ACIKLAMA[d] || '')}</small></div><div class="yn-kurslar">${g.map(k => kursKart(k, yon)).join('')}</div></section>`;
+    return `<section class="yn-kurs-grup ${sinif}"><h3 class="yk-grup" title="${e(DURUM_ACIKLAMA[d] || '')}"><i></i>${e(d)}<span>${g.length}</span></h3><div class="yk-izgara">${g.map(k => kursKart(k, yon)).join('')}</div></section>`;
   }).join('');
   return `<div class="yn-kurs-ust"><div class="yn-filtre" role="tablist" aria-label="Duruma göre süz">${[['hepsi', 'Tümü', l.length], ...DURUMLAR.map(([d]) => [d, d, say(d)]).filter(x => x[2])].map(([k, t, n]) => `<button data-yn-filtre="${e(k)}" class="${kursFiltre === k ? 'secili' : ''}" aria-pressed="${kursFiltre === k}">${e(t)}<em>${n}</em></button>`).join('')}</div>${yon ? `<div class="yn-dg">${ekle}</div>` : ''}</div>
     ${gruplar}`;
@@ -404,17 +424,18 @@ function kursPenceresi(k, yenile) {
   pencere({ baslik: k ? k.ad : 'Kurs ekle', alt: true, icerik: `<form id="f-ynk" class="og-giris-form yn-form">
       ${a('ad', 'Kurs adı', girdi('ad', k && k.ad, 'required placeholder="Örn. Kural Sürücü Kursu"'))}
       ${a('durum', 'Durum', `<span class="og-girdi"><select name="durum">${DURUMLAR.map(([d]) => `<option ${(k ? k.durum : 'Bekliyor') === d ? 'selected' : ''}>${d}</option>`).join('')}</select></span>`)}
-      ${a('kisiler', 'Kiminle', girdi('kisiler', k && k.kisiler, 'placeholder="Örn. Pelin Hanım (kurs müdürü)"'))}
-      ${a('not', 'Son durum', `<span class="og-girdi yn-alan-uzun"><textarea name="not" rows="3" placeholder="Ne konuşuldu, nerede kaldı">${e(k ? k.not || '' : '')}</textarea></span>`)}
+      ${a('kisiler', 'Yetkili', girdi('kisiler', k && k.kisiler, 'placeholder="Örn. Pelin Hanım (kurs müdürü)"'))}
+      <div class="yn-form-ikili">${a('gorusme', 'Görüşme sayısı', girdi('gorusme', k && k.gorusme, 'type="number" min="0" max="99" inputmode="numeric" placeholder="0"'))}${a('program', 'Kullandıkları program', girdi('program', k && k.program, 'placeholder="Örn. Tabim"'))}</div>
+      ${a('not', 'Notlar', `<span class="og-girdi yn-alan-uzun"><textarea name="not" rows="4" placeholder="Ne konuşuldu, nerede kaldı, ek bilgiler">${e(k ? k.not || '' : '')}</textarea></span>`)}
       ${a('sonraki', 'Sonraki adım', girdi('sonraki', k && k.sonraki, 'placeholder="Örn. Cuma öğlen ara"'))}
       ${a('zaman', 'Ne zaman', girdi('zaman', k && k.zaman, 'placeholder="Örn. Salı 10:00"'))}
-      ${a('teklif', 'Teklif', girdi('teklif', k && k.teklif, 'placeholder="Örn. 7.500 ₺"'))}
-      ${a('itiraz', 'İtirazlar <small>noktalı virgülle ayır</small>', girdi('itiraz', k && k.itiraz, 'placeholder="Örn. Fiyat pahalı; e-Arşiv"'))}</form>`,
+      ${a('teklif', 'Teklif', girdi('teklif', k && k.teklif, 'placeholder="Örn. 15.000 ₺"'))}
+      ${a('itiraz', 'Çekinceleri <small>noktalı virgülle ayır</small>', girdi('itiraz', k && k.itiraz, 'placeholder="Örn. Fiyat pahalı; e-Arşiv"'))}</form>`,
     altlik: `${k ? '<button class="dg dg-cizgi" data-yn-kurs-sil style="margin-right:auto;color:var(--u-kirmizi)">Sil</button>' : ''}<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-ynk">Kaydet</button>`,
     onAc(p) {
       const f = p.querySelector('form');
       f.addEventListener('submit', ev => { ev.preventDefault(); const ad = f.ad.value.trim(); if (ad.length < 2) return bildir('Kurs adını yaz', 'uyari');
-        const x = { ad, durum: f.durum.value, kisiler: f.kisiler.value.trim(), not: f.not.value.trim(), sonraki: f.sonraki.value.trim(), zaman: f.zaman.value.trim(), teklif: f.teklif.value.trim(), itiraz: f.itiraz.value.trim(), guncel: gun(0) };
+        const x = { ad, durum: f.durum.value, kisiler: f.kisiler.value.trim(), gorusme: Math.max(0, Math.min(99, parseInt(f.gorusme.value, 10) || 0)), program: f.program.value.trim(), not: f.not.value.trim(), sonraki: f.sonraki.value.trim(), zaman: f.zaman.value.trim(), teklif: f.teklif.value.trim(), itiraz: f.itiraz.value.trim(), guncel: gun(0) };
         if (k) Object.assign(k, x); else (v.kurslar = v.kurslar || []).push({ id: kimlik(), ...x });
         kaydetYayinla(k ? 'Sinyal Yönetim: kursu güncelledi' : 'Sinyal Yönetim: kurs ekledi', ad); kapatPencere(); bildir('Kaydedildi'); yenile(); });
       const sil = p.querySelector('[data-yn-kurs-sil]'); if (sil) sil.addEventListener('click', () => { kapatPencere(); silOnay(k.ad + ' kurslar listesinden silinsin mi?', () => { geriAlNoktasi(); v.kurslar = v.kurslar.filter(y => y !== k); kaydetYayinla('Sinyal Yönetim: kursu sildi', k.ad); yenile(); }); });
@@ -428,7 +449,7 @@ function kursDosyasi(dosya, yenile) {
     const v = S.isletme, var_ = new Set((v.kurslar || []).map(k => k.ad.toLocaleLowerCase('tr'))), metin = x => String(x == null ? '' : x).slice(0, 600);
     let n = 0;
     l.forEach(k => { const ad = metin(k && k.ad).trim(); if (ad.length < 2 || var_.has(ad.toLocaleLowerCase('tr'))) return; var_.add(ad.toLocaleLowerCase('tr'));
-      (v.kurslar = v.kurslar || []).push({ id: kimlik(), ad, durum: DURUMLAR.some(x => x[0] === k.durum) ? k.durum : 'Bekliyor', kisiler: metin(k.kisiler), not: metin(k.not), sonraki: metin(k.sonraki), zaman: metin(k.zaman), teklif: metin(k.teklif), itiraz: metin(k.itiraz), guncel: gun(0) }); n++; });
+      (v.kurslar = v.kurslar || []).push({ id: kimlik(), ad, durum: DURUMLAR.some(x => x[0] === k.durum) ? k.durum : 'Bekliyor', kisiler: metin(k.kisiler), not: metin(k.not), sonraki: metin(k.sonraki), zaman: metin(k.zaman), teklif: metin(k.teklif), itiraz: metin(k.itiraz), gorusme: Math.max(0, parseInt(k.gorusme, 10) || 0), program: metin(k.program).slice(0, 60), guncel: gun(0) }); n++; });
     if (!n) return bildir('Eklenecek yeni kurs yok; hepsi zaten listede', 'uyari');
     kaydetYayinla('Sinyal Yönetim: dosyadan kurs ekledi', n + ' kurs'); bildir(n + ' kurs eklendi'); yenile();
   });
@@ -439,6 +460,7 @@ export function yonetimBaglan(k, rol, yenile) {
     const t = ev.target, v = S.isletme;
     const sk = t.closest('[data-yn-sekme]'); if (sk) { sekme = sk.dataset.ynSekme; yenile(); return scrollTo(0, 0); }
     const gt = t.closest('[data-yn-git]'); if (gt) { sekme = gt.dataset.ynGit; yenile(); return scrollTo(0, 0); }
+    const kac = t.closest('[data-yn-kurs-ac]'); if (kac) { const x = (v.kurslar || []).find(y => y.id === kac.dataset.ynKursAc); if (x) kursDetay(x, yon, yenile); return; }
     const fl = t.closest('[data-yn-filtre]'); if (fl) { kursFiltre = fl.dataset.ynFiltre; return yenile(); }
     const ay = t.closest('[data-ort-ay]'); if (ay && ay.dataset.ortAy && !yon) { secAy = ay.dataset.ortAy; return yenile(); }
     if (!yon) return;
@@ -461,7 +483,7 @@ export function yonetimBaglan(k, rol, yenile) {
     kaydetYayinla('Sinyal Yönetim: ' + (isEkTur === 'Hedef' ? 'hedef' : 'iş') + ' ekledi', b); bildir(isEkTur === 'Hedef' ? 'Hedef eklendi' : 'İş eklendi'); yenile();
     requestAnimationFrame(() => { const i = document.querySelector('[data-yn-is-form] input[name=baslik]'); if (i) i.focus(); });
   });
-  k.addEventListener('keydown', ev => { if (ev.key === 'Enter' && ev.target.matches('[data-yn-kurs],[data-yn-is],[data-yn-hareket-ac]')) ev.target.click(); });
+  k.addEventListener('keydown', ev => { if (ev.key === 'Enter' && ev.target.matches('[data-yn-kurs],[data-yn-kurs-ac],[data-yn-is],[data-yn-hareket-ac]')) ev.target.click(); });
   k.addEventListener('change', ev => { const i = ev.target.closest('[data-yn-kurs-dosya]'); if (i && i.files[0] && yon) { kursDosyasi(i.files[0], yenile); i.value = ''; } });
   if (yon) ayarBaglan(k, yenile);
 }
