@@ -1,22 +1,22 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=147';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=147';
-import * as Y1 from './sayfalar1.js?v=147';
-import * as Y2 from './sayfalar2.js?v=147';
-import * as P from './portal.js?v=147';
-import * as Y3 from './sayfalar3.js?v=147';
-import * as Y4 from './sayfalar4.js?v=147';
-import * as Y5 from './sayfalar5.js?v=147';
-import * as IM from './imza.js?v=147';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=147';
-import * as SN from './senaryo.js?v=147';
-import * as OZ from './ozellik.js?v=147';
-import { durumlariGuncelle } from './mesaj.js?v=147';
-import { yeniMenu } from './yeni.js?v=147';
-import * as B from './bulut.js?v=147';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=147';
-import * as AN from './analiz.js?v=147';
-import * as ORT from './ortak.js?v=147';
-import * as SH from './sahip.js?v=147';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=148';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=148';
+import * as Y1 from './sayfalar1.js?v=148';
+import * as Y2 from './sayfalar2.js?v=148';
+import * as P from './portal.js?v=148';
+import * as Y3 from './sayfalar3.js?v=148';
+import * as Y4 from './sayfalar4.js?v=148';
+import * as Y5 from './sayfalar5.js?v=148';
+import * as IM from './imza.js?v=148';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=148';
+import * as SN from './senaryo.js?v=148';
+import * as OZ from './ozellik.js?v=148';
+import { durumlariGuncelle } from './mesaj.js?v=148';
+import { yeniMenu } from './yeni.js?v=148';
+import * as B from './bulut.js?v=148';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=148';
+import * as AN from './analiz.js?v=148';
+import * as ORT from './ortak.js?v=148';
+import * as SH from './sahip.js?v=148';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -575,6 +575,7 @@ function yonetimCiz(kaydir) {
   yer.replaceChildren(kap);
   if (ORT.yonetimModu()) { try { ORT.yonetimBaglan(kap, u.rol, yenile); } catch (x) { console.error(x); } }
   const shg = kap.querySelector('[data-sh-gomulu]'); if (shg && u.rol === 'mudur') SH.sahipGomulu(shg, B.bulut.eposta);
+  if (u.rol === 'mudur' && ORT.yonetimModu()) { SH.hazirla(); kap.addEventListener('click', ev => { if (ev.target.closest('[data-yn-sekme="hesaplar"]')) SH.otoBaglan(); }, true); }
   B.durumYaz();
   if (kaydir) window.scrollTo(0, 0);
 }

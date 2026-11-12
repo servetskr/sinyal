@@ -2,7 +2,7 @@
 // Sinyal Yönetim panelinin “Hesaplar” bölümünde açılır (yalnız Servet; ortak görmez).
 // Yetki Firebase güvenlik kurallarından değil, Google hesabından gelir: Firebase projesinin sahibi olan Google hesabıyla
 // bağlanılır, Google IAM izin verirse işlem yapılır. Sunucu, gizli anahtar yok; erişim belirteci yalnız bellekte durur (1 saat).
-import { e, ik, pencere, kapatPencere, bildir } from './ui.js?v=147';
+import { e, ik, pencere, kapatPencere, bildir } from './ui.js?v=148';
 
 const PROJE = 'sinyal-5d37a';
 const ISTEMCI = '451344576006-sua0mu4d4qcssc0lv8g01qic26hr6os7.apps.googleusercontent.com';  // Google OAuth istemci kimliği (herkese açık bilgidir; yetkiyi Google hesabı verir)
@@ -17,6 +17,9 @@ const SUZGEC = [['hepsi', 'Hepsi'], ['personel', 'Kurs personeli'], ['ogrenci', 
 
 let belirtec = null, bitis = 0, hesaplar = null, talepler = [], suzgec = 'hepsi', arama = '', kok = null, yukleniyor = false, hataMetni = '', gomulu = false, ipucu = '';
 
+// Google onayı sekme açık kaldıkça (en çok 1 saat) hatırlanır; her yenilemede yeniden onay istenmez
+const SAKLA = 'sinyal-sahip-onay';
+try { const o = JSON.parse(sessionStorage.getItem(SAKLA) || 'null'); if (o && o.bitis > Date.now()) { belirtec = o.t; bitis = o.bitis; } } catch (x) { }
 const rastgele = (n, harf = 'abcdefghijkmnpqrstuvwxyz23456789') => [...crypto.getRandomValues(new Uint8Array(n))].map(x => harf[x % harf.length]).join('');
 // okunması ve WhatsApp'tan yazılması kolay geçici şifre: 4 harf + 4 rakam (karışan harfler yok)
 const geciciSifre = () => rastgele(4, 'abcdefghkmnprstuvyz') + rastgele(4, '23456789');
@@ -37,10 +40,10 @@ async function baglan() {
   await new Promise((coz, red) => {
     const c = google.accounts.oauth2.initTokenClient({
       client_id: ISTEMCI, scope: KAPSAM, ...(ipucu ? { login_hint: ipucu } : {}),
-      callback: r => { if (r.error) return red(new Error(r.error_description || r.error)); belirtec = r.access_token; bitis = Date.now() + ((+r.expires_in || 3600) - 60) * 1000; coz(); },
+      callback: r => { if (r.error) return red(new Error(r.error_description || r.error)); belirtec = r.access_token; bitis = Date.now() + ((+r.expires_in || 3600) - 60) * 1000; try { sessionStorage.setItem(SAKLA, JSON.stringify({ t: belirtec, bitis })); } catch (x) { } coz(); },
       error_callback: x => red(new Error(x && x.type === 'popup_closed' ? 'Google penceresi kapatıldı' : 'Google penceresi açılamadı; açılır pencerelere izin ver')),
     });
-    c.requestAccessToken();
+    c.requestAccessToken({ prompt: '' });  // daha önce izin verildiyse Google penceresi kendiliğinden kapanır
   });
 }
 const bagli = () => !!belirtec && Date.now() < bitis;
@@ -50,7 +53,7 @@ async function api(url, govde, yontem) {
   const r = await fetch(url, { method: yontem || (govde ? 'POST' : 'GET'), headers: { Authorization: 'Bearer ' + belirtec, ...(govde ? { 'Content-Type': 'application/json' } : {}) }, body: govde ? JSON.stringify(govde) : undefined });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) {
-    if (r.status === 401) belirtec = null;
+    if (r.status === 401) { belirtec = null; try { sessionStorage.removeItem(SAKLA); } catch (x) { } }
     const m = (j.error && j.error.message) || ('HTTP ' + r.status);
     throw Object.assign(new Error(r.status === 401 ? 'Google bağlantısının süresi doldu; yeniden bağlan' : r.status === 403 ? 'Bu Google hesabının Sinyal projesinde yetkisi yok (' + m + ')' : 'Google: ' + m), { yetki: r.status === 401 });
   }
@@ -156,6 +159,7 @@ const waLinki = (tel, metin) => 'https://wa.me/' + (tel || '') + '?text=' + enco
 export function sahipGomulu(yer, eposta) {
   kok = yer; gomulu = true; ipucu = /@/.test(eposta || '') && !/\.invalid$/.test(eposta) ? eposta : '';
   ciz();
+  if (bagli() && !hesaplar && !yukleniyor) yenile();
   if (!kok.dataset.shBagli) { kok.dataset.shBagli = '1'; kok.addEventListener('click', tikla); kok.addEventListener('input', yaz); }
 }
 export function sahipEkrani(yer) {
@@ -310,6 +314,12 @@ async function davetPenceresi(yonetim) {
   });
 }
 
+// Hesaplar sekmesine dokununca (kullanıcı hareketi içinde) Google onayı kendiliğinden alınır; ayrıca düğmeye basmak gerekmez
+export const hazirla = () => { gsiYukle().catch(() => { }); };
+export function otoBaglan() {
+  if (bagli() || !ISTEMCI) return;
+  baglan().then(() => { hataMetni = ''; hesaplar = null; ciz(); return yenile(); }).catch(x => { hataMetni = x.message; ciz(); });
+}
 // Henüz Yönetim hesabı yokken (ilk kurulum ya da hesap silindiyse): Google'da yetkili kişi kendine kurulum linki açar.
 // Yetkiyi yine Google IAM verir; projede yetkisi olmayan Google hesabı link oluşturamaz.
 export async function yonetimKurulumLinki() { await baglan(); return davetLinki(true); }
