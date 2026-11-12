@@ -30,6 +30,34 @@
 <link id="font-css" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Overpass+Mono:wght@500;600;700&family=Overpass:wght@600;700;800;900&display=swap" media="print"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Overpass+Mono:wght@500;600;700&family=Overpass:wght@600;700;800;900&display=swap"></noscript>
 <!-- Ana sayfa yalnız aşağıdaki küçük stille açılır; uygulamanın stili ve kodu arka planda ya da ilk dokunuşta iner -->
 <style id="ilk-css">
+/* Yükleme ekranı: kurs arabası ışıkta durur, yeşilde kalkar (4,5 sn döngü); hareket azaltılmışsa sabit */
+.yukleme{min-height:100vh;min-height:100dvh;display:grid;place-items:center;align-content:center;gap:24px;padding:24px;background:#f2f2f7;color:#0b0d10;text-align:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.yukle-sahne{overflow:hidden;border-radius:28px;background:linear-gradient(180deg,#cfe3fa,#f3f8fe 78%);box-shadow:0 20px 44px -24px rgba(10,77,162,.5)}
+.yk{display:block;width:min(320px,84vw);height:auto}
+.yukle-yazi b{display:block;font-size:20px;font-weight:600;letter-spacing:-.01em}
+.yukle-yazi small{display:block;margin-top:4px;font-size:14px;color:#6b6e76}
+.yukle-ipucu{max-width:300px;min-height:62px;font-size:15px;line-height:1.4;color:#3a3d42;transition:opacity .35s}
+.yukle-ipucu i{display:block;margin-bottom:4px;font-style:normal;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#b07f00}
+.yk-araba{animation:yk-yol 4.5s infinite}
+@keyframes yk-yol{0%{transform:translateX(-80px);animation-timing-function:cubic-bezier(.22,.61,.36,1)}32%{transform:translateX(138px)}62%{transform:translateX(138px);animation-timing-function:cubic-bezier(.55,0,.85,.4)}100%{transform:translateX(370px)}}
+.yk-teker{transform-box:fill-box;transform-origin:center;animation:yk-don 4.5s infinite}
+@keyframes yk-don{0%{transform:rotate(0);animation-timing-function:cubic-bezier(.22,.61,.36,1)}32%{transform:rotate(620deg)}62%{transform:rotate(620deg);animation-timing-function:cubic-bezier(.55,0,.85,.4)}100%{transform:rotate(1500deg)}}
+.yk-govde{transform-box:fill-box;transform-origin:50% 100%;animation:yk-sallan 4.5s infinite}
+@keyframes yk-sallan{0%,29%{transform:none}33%{transform:rotate(3deg)}38%{transform:rotate(-.8deg)}42%{transform:none}47%{transform:translateY(.7px)}51%{transform:none}55%{transform:translateY(.7px)}59%,62%{transform:none}66%{transform:rotate(-3deg)}74%,100%{transform:none}}
+.yk-duman{transform-box:fill-box;transform-origin:center;opacity:0;animation:yk-duman 4.5s infinite}
+.yk-duman.iki{animation-delay:.12s}
+@keyframes yk-duman{0%,61%{opacity:0;transform:scale(.3)}65%{opacity:.9;transform:translateX(-3px) scale(.9)}78%{opacity:0;transform:translateX(-16px) translateY(-4px) scale(1.8)}100%{opacity:0}}
+.yk-k{animation:yk-kirmizi 4.5s infinite}
+@keyframes yk-kirmizi{0%,47%{fill:#ff4d3d}48%,100%{fill:#5a2420}}
+.yk-s{animation:yk-sari 4.5s infinite}
+@keyframes yk-sari{0%,47%{fill:#5a4a1a}48%,59%{fill:#ffc531}60%,100%{fill:#5a4a1a}}
+.yk-y{animation:yk-yesil 4.5s infinite}
+@keyframes yk-yesil{0%,59%{fill:#1d4a2c}60%,99%{fill:#33e07a}100%{fill:#1d4a2c}}
+.yk-bulut{animation:yk-bulut 9s ease-in-out infinite alternate}
+.yk-bulut.iki{animation-duration:12s}
+@keyframes yk-bulut{to{transform:translateX(18px)}}
+@media (prefers-reduced-motion:reduce){.yk *{animation:none!important}.yk-araba{transform:translateX(138px)}.yk-y{fill:#33e07a}.yukle-ipucu{transition:none}}
+
 :root{
   --zemin:#e8e7e1; --zemin-2:#dedcd4; --panel:#fbfbf8; --panel-2:#f2f1ec;
   --murekkep:#111417; --metin:#373d44; --soluk:#767c84; --cizgi:#d3d2ca; --cizgi-2:#e4e3dc;
@@ -127,8 +155,8 @@ html.w-anim [data-gor].w-gorundu{opacity:1;transform:none}
 .w-secici a:hover,.w-secici button:hover{background:rgba(255,255,255,.12);color:#fff}
 @media (max-width:420px){.w-secici a,.w-secici button{padding:10px 12px;font-size:14px}}
 </style>
-<link id="app-css" rel="stylesheet" href="css/app.css?v=132" media="print">
-<noscript><link rel="stylesheet" href="css/app.css?v=132"></noscript>
+<link id="app-css" rel="stylesheet" href="css/app.css?v=133" media="print">
+<noscript><link rel="stylesheet" href="css/app.css?v=133"></noscript>
 </head>
 <body>
 <div id="uyg"><div class="tanitim" id="tanitim">
@@ -157,9 +185,9 @@ html.w-anim [data-gor].w-gorundu{opacity:1;transform:none}
 <ul class="w-guven"><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>Her gün yedeklenir</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>KVKK araçları</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>MTSK Yönetmeliği’ne göre</li></ul></div></section>
 </main>
 <footer class="w-alt-bilgi"><div class="w-kap w-alt-ic"><span class="tn-logo"><svg class="tn-logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>Sürücü kursu otomasyonu</small></span></span><nav aria-label="Alt bağlantılar"><a href="#/ogrenci-giris">Öğrenci girişi</a><button type="button" data-giris="ogretmen">Öğretmen girişi</button><button type="button" data-giris>Kurs girişi</button><a href="gizlilik.html">Gizlilik</a></nav></div></footer>
-</div><div id="acilis" hidden style="min-height:100vh;display:grid;place-items:center;background:#e8e7e1;font:700 15px system-ui,-apple-system,sans-serif;color:#373d44"><div style="display:grid;justify-items:center;gap:14px"><svg width="56" height="56" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#0a4da2" stroke-width="1.2"/><path d="M12 7.6v5.6M12 15.8v.4" stroke="#111417" stroke-width="2.3" stroke-linecap="round"/></svg><span>Sinyal açılıyor…</span></div></div></div>
-<script src="js/acilis.js?v=132"></script>
+</div><div id="acilis" hidden><div class="yukleme"><div class="yukle-sahne"><svg class="yk" viewBox="0 0 320 180" role="img" aria-label="Kurs arabası trafik ışığında yeşili bekliyor"><g><circle cx="62" cy="42" r="24" fill="#ffd166" opacity=".28"/><circle cx="62" cy="42" r="14" fill="#ffd166"/><g transform="translate(118 36)"><g class="yk-bulut" fill="#fff"><circle cx="0" cy="0" r="8"/><circle cx="11" cy="-5" r="11"/><circle cx="23" cy="0" r="8"/><rect x="0" y="0" width="23" height="8"/></g></g><g transform="translate(188 58) scale(.7)"><g class="yk-bulut iki" fill="#fff"><circle cx="0" cy="0" r="8"/><circle cx="11" cy="-5" r="11"/><circle cx="23" cy="0" r="8"/><rect x="0" y="0" width="23" height="8"/></g></g><path d="M0 116 C50 96 96 102 140 114 S226 122 262 108 S306 100 320 106 V136 H0Z" fill="#bfe0b2"/><path d="M0 126 C60 112 110 118 170 126 S270 120 320 124 V136 H0Z" fill="#a6d39a"/><rect y="132" width="320" height="48" fill="#353b44"/><path d="M0 133.5 H320" stroke="#fff" stroke-opacity=".35" stroke-width="2"/><path d="M0 162 H320" stroke="#fff" stroke-opacity=".85" stroke-width="3" stroke-dasharray="14 12"/><rect x="214" y="134" width="5" height="22" fill="#fff" opacity=".9"/><rect x="231" y="64" width="5" height="70" rx="1.5" fill="#5b6470"/><rect x="221" y="32" width="25" height="60" rx="9" fill="#1c2129"/><circle class="yk-k" cx="233.5" cy="45" r="6.5" fill="#5a2420"/><circle class="yk-s" cx="233.5" cy="62" r="6.5" fill="#5a4a1a"/><circle class="yk-y" cx="233.5" cy="79" r="6.5" fill="#1d4a2c"/><g class="yk-araba"><ellipse cx="38" cy="156" rx="31" ry="2.6" fill="#000" opacity=".22"/><circle class="yk-duman" cx="-1" cy="143" r="3.5" fill="#d5dbe3"/><circle class="yk-duman iki" cx="-1" cy="141" r="3" fill="#e3e8ee"/><g class="yk-govde"><path d="M4 146 V138 Q4 130 12 129 L22 128 L31 116 Q34 112 39 112 H52 Q57 112 60 116 L67 127 Q72 128 72 134 V146 Q72 148 70 148 H6 Q4 148 4 146 Z" fill="#0a4da2"/><path d="M24 128 L32 117 Q34 115 37 115 H44 V128 Z M47 115 H52 Q55 115 57 117 L64 128 H47 Z" fill="#d4e6fc"/><path d="M45 130 V146" stroke="#073a7c" stroke-width="1"/><path d="M9 141 H67" stroke="#4d86d1" stroke-width="2" stroke-linecap="round" opacity=".7"/><rect x="34" y="104" width="20" height="8" rx="2" fill="#f2b705" stroke="#c99600" stroke-width=".8"/><path d="M44 105.3 l2.4 2.7 -2.4 2.7 -2.4 -2.7z" fill="#1c2129"/><rect x="68" y="132" width="4" height="4" rx="1.5" fill="#ffe08a"/><rect x="4" y="133" width="3" height="4" rx="1" fill="#ff6b5b"/></g><g class="yk-teker"><circle cx="19" cy="148" r="8" fill="#1c2129"/><circle cx="19" cy="148" r="3.8" fill="#c9d2dd"/><path d="M19 144.4 V151.6 M15.4 148 H22.6" stroke="#1c2129" stroke-width="1.5"/></g><g class="yk-teker"><circle cx="57" cy="148" r="8" fill="#1c2129"/><circle cx="57" cy="148" r="3.8" fill="#c9d2dd"/><path d="M57 144.4 V151.6 M53.4 148 H60.6" stroke="#1c2129" stroke-width="1.5"/></g></g></g></svg></div><div class="yukle-yazi"><b>Sinyal açılıyor</b><small>Birkaç saniye sürebilir</small></div></div></div></div>
+<script src="js/acilis.js?v=133"></script>
 <noscript><p style="padding:24px">Sinyal’i kullanmak için JavaScript’i açın.</p></noscript>
-<script type="module" src="js/baslat.js?v=132"></script>
+<script type="module" src="js/baslat.js?v=133"></script>
 </body>
 </html>
