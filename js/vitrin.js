@@ -78,6 +78,7 @@
     temizle.forEach(f => f()); temizle = [];
     const kok = document.getElementById('tanitim');
     if (!kok || kok.hidden) return;
+    if (window.__yol) window.__yol(); // gece yolu sahnesi (tanıtım yeniden çizildiyse yeni tuval)
     akis(kok.querySelector('[data-vt-akis]'));
     hikaye(kok);
     roller(kok);
