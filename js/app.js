@@ -1,21 +1,21 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=129';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=129';
-import * as Y1 from './sayfalar1.js?v=129';
-import * as Y2 from './sayfalar2.js?v=129';
-import * as P from './portal.js?v=129';
-import * as Y3 from './sayfalar3.js?v=129';
-import * as Y4 from './sayfalar4.js?v=129';
-import * as Y5 from './sayfalar5.js?v=129';
-import * as IM from './imza.js?v=129';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=129';
-import * as SN from './senaryo.js?v=129';
-import * as OZ from './ozellik.js?v=129';
-import { durumlariGuncelle } from './mesaj.js?v=129';
-import { yeniMenu } from './yeni.js?v=129';
-import * as B from './bulut.js?v=129';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=129';
-import * as AN from './analiz.js?v=129';
-import * as ORT from './ortak.js?v=129';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=130';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=130';
+import * as Y1 from './sayfalar1.js?v=130';
+import * as Y2 from './sayfalar2.js?v=130';
+import * as P from './portal.js?v=130';
+import * as Y3 from './sayfalar3.js?v=130';
+import * as Y4 from './sayfalar4.js?v=130';
+import * as Y5 from './sayfalar5.js?v=130';
+import * as IM from './imza.js?v=130';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=130';
+import * as SN from './senaryo.js?v=130';
+import * as OZ from './ozellik.js?v=130';
+import { durumlariGuncelle } from './mesaj.js?v=130';
+import { yeniMenu } from './yeni.js?v=130';
+import * as B from './bulut.js?v=130';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=130';
+import * as AN from './analiz.js?v=130';
+import * as ORT from './ortak.js?v=130';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -59,7 +59,7 @@ function sayaclar() {
 const APP_LOGO = '<svg class="logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#111" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg>';
 const basHarf = ad => e(String(ad || '?').trim().split(/\s+/).filter(Boolean).map(x => x[0]).slice(0, 2).join('').toLocaleUpperCase('tr') || '?');
 // iOS durum çubuğu üst çubukla aynı renkte olsun (uygulama kabuğunda açık zemin, panelde levha mavisi)
-function temaRengi(uygulama) { const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = uygulama ? '#f1f0eb' : '#0a4da2'; }
+function temaRengi(uygulama) { if (!uygulama) document.body.classList.remove('hero-acik'); const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = uygulama ? '#f2f2f7' : '#0a4da2'; }
 // Kaydırınca üst çubuğun altına ince çizgi gelir (iOS gibi); en üstte çizgisiz
 addEventListener('scroll', () => document.body.classList.toggle('kaydi', scrollY > 6), { passive: true });
 function hesapSayfasi() {
