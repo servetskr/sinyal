@@ -40,17 +40,33 @@
       adimlar.forEach((x, j) => { x.classList.toggle('aktif', j === i); const b = x.querySelector('.vt-adim-bas'); if (b) b.setAttribute('aria-pressed', j === i); });
       const k = +adimlar[i].dataset.sahne; sahneler.forEach((s, j) => { s.classList.toggle('aktif', j === k); if (j === k) oynat(s, bastan); });
     };
+    hik.classList.add('vt-ilk'); // ilk açılışta geçiş oynamasın; sonraki adım değişimleri yumuşak
     sec(0, false);
+    requestAnimationFrame(() => requestAnimationFrame(() => hik.classList.remove('vt-ilk')));
+    // liste, en uzun açılmış adıma göre sabit yükseklikte durur: adım değişince bölüm boyu ve altındaki her şey yerinde kalır
+    const ol = kok.querySelector('.vt-adimlar');
+    const sabitle = () => {
+      ol.style.minHeight = ''; if (!masa.matches) return;
+      const k = ol.cloneNode(true); k.classList.add('vt-olc'); k.setAttribute('aria-hidden', 'true');
+      k.style.cssText = 'position:absolute;visibility:hidden;pointer-events:none;left:0;top:0;width:' + ol.getBoundingClientRect().width + 'px';
+      hik.appendChild(k); const li = [...k.children]; let en = 0;
+      li.forEach((x, i) => { li.forEach((y, j) => y.classList.toggle('aktif', i === j)); en = Math.max(en, k.offsetHeight); });
+      k.remove(); ol.style.minHeight = Math.ceil(en) + 12 + 'px';
+    };
+    sabitle();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(sabitle);
+    let rz = 0; const rzf = () => { clearTimeout(rz); rz = setTimeout(sabitle, 150); };
+    addEventListener('resize', rzf); temizle.push(() => removeEventListener('resize', rzf));
     if (azHareket() || !('IntersectionObserver' in window)) { kok.querySelectorAll('.vt-sahne').forEach(s => oynat(s)); return; }
     // kendiliğinden ilerleme: bölüm göründüğünde başlar, fare üstündeyken durur, kullanıcı bir adıma tıklayınca kapanır
     const SURE = 7000; let zaman = null, basla = 0, kalan = SURE, gorunur = false, dur = false, oto = true;
     hik.style.setProperty('--sure', SURE / 1000 + 's');
     const durdur = () => { clearTimeout(zaman); zaman = null; };
     const kur = ms => { durdur(); if (!oto || !gorunur || dur || !masa.matches || document.hidden) return; basla = Date.now(); kalan = ms; zaman = setTimeout(() => { sec((n + 1) % adimlar.length, true); kur(SURE); }, ms); };
-    hik.classList.add('oto');
-    const tik = ev => { const b = ev.target.closest('.vt-adim-bas'); if (!b || !masa.matches) return; const i = adimlar.indexOf(b.closest('.vt-adim')); oto = false; hik.classList.remove('oto'); durdur(); if (i !== n) sec(i, true); };
-    const gir = () => { if (!oto) return; dur = true; hik.classList.add('dur'); if (zaman) { durdur(); kalan = Math.max(400, kalan - (Date.now() - basla)); } };
-    const cik = () => { if (!oto) return; dur = false; hik.classList.remove('dur'); kur(kalan); };
+    hik.classList.add('vt-oto');
+    const tik = ev => { const b = ev.target.closest('.vt-adim-bas'); if (!b || !masa.matches) return; const i = adimlar.indexOf(b.closest('.vt-adim')); oto = false; hik.classList.remove('vt-oto'); durdur(); if (i !== n) sec(i, true); };
+    const gir = () => { if (!oto) return; dur = true; hik.classList.add('vt-dur'); if (zaman) { durdur(); kalan = Math.max(400, kalan - (Date.now() - basla)); } };
+    const cik = () => { if (!oto) return; dur = false; hik.classList.remove('vt-dur'); kur(kalan); };
     hik.addEventListener('click', tik); hik.addEventListener('mouseenter', gir); hik.addEventListener('mouseleave', cik);
     const io = new IntersectionObserver(l => l.forEach(x => { gorunur = x.isIntersecting; if (gorunur) { sec(n, true); kur(SURE); } else durdur(); }), { threshold: .35 });
     io.observe(hik);
@@ -65,7 +81,8 @@
     if (!sekmeler.length) return;
     const sec = (n, odak) => {
       sekmeler.forEach((b, i) => { b.setAttribute('aria-selected', i === n); b.tabIndex = i === n ? 0 : -1; if (i === n && odak) b.focus(); });
-      paneller.forEach((p, i) => { p.classList.toggle('aktif', i === n); p.hidden = i !== n; });
+      // paneller üst üste durur (bölüm boyu sekmeye göre değişmez); görünmeyen panel klavye ve ekran okuyucudan gizlenir
+      paneller.forEach((p, i) => { const ac = i === n; p.classList.toggle('aktif', ac); p.inert = !ac; p.setAttribute('aria-hidden', !ac); });
     };
     const tik = ev => { const b = ev.target.closest('[data-rol]'); if (b) sec(+b.dataset.rol); };
     const tus = ev => { const b = ev.target.closest('[data-rol]'); if (!b) return; const n = +b.dataset.rol, d = ev.key === 'ArrowRight' ? 1 : ev.key === 'ArrowLeft' ? -1 : 0; if (d) { ev.preventDefault(); sec((n + d + sekmeler.length) % sekmeler.length, true); } };

@@ -197,8 +197,9 @@ body.st{margin:0;background:var(--w-bg);color:var(--w-yazi);font:400 16px/1.6 va
 @media (min-width:760px){.st-alt-izgara{grid-template-columns:1.4fr 1fr 1fr 1fr}}
 
 /* görünür olunca beliren bölümler */
-html.st-anim [data-st-gor]{opacity:0;transform:translateY(18px);transition:opacity .7s ease,transform .7s ease}
-html.st-anim [data-st-gor].gorundu{opacity:1;transform:none}
+/* gizleme anında (ekran dışındayken), belirme yumuşak; görünür içerik açılışta hiç hareket etmez */
+html.st-anim [data-st-gor]{opacity:0;transform:translateY(10px)}
+html.st-anim [data-st-gor].gorundu{opacity:1;transform:none;transition:opacity .6s ease,transform .6s cubic-bezier(.2,.8,.2,1)}
 @media (prefers-reduced-motion:reduce){html.st-anim [data-st-gor]{opacity:1;transform:none;transition:none}.st-btn{transition:none}}
 /* ana sayfada uygulamanın genel başlık rengi koyu; site bileşenlerinde açık */
 .st-adim h3,.st-kart h3,.st-fiyat h3,.st-giris h2,.tanitim .st-kart p b{color:var(--w-baslik)}
@@ -540,23 +541,29 @@ body.st,.tanitim{background:var(--w-bg);color:var(--w-yazi)}
   .vt-hikaye{grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:56px;align-items:start}
   .vt-adimlar{display:grid;gap:4px}
   .vt-adim,.vt-adim:first-child{padding:0;border:1px solid transparent;border-radius:16px;transition:background .25s,border-color .25s;overflow:hidden}
-  .vt-adim-bas{display:grid;grid-template-columns:62px minmax(0,1fr);align-items:baseline;padding:15px 20px;cursor:pointer;border-radius:16px}
+  .vt-adim-bas{display:grid;grid-template-columns:62px minmax(0,1fr);align-items:baseline;padding:15px 20px;cursor:pointer;border-radius:16px;transition:padding .45s cubic-bezier(.2,.8,.2,1)}
   .vt-adim-bas time{color:rgba(214,222,238,.45)}
   .vt-adim-bas span{font-size:17.5px;font-weight:700;letter-spacing:0;margin:0;color:rgba(214,222,238,.6);transition:color .2s}
   .vt-adim-bas:hover span{color:#fff}
-  .vt-adim>p,.vt-adim>.kazanc,.vt-adim .vt-sahne-ici{display:none}
+  .vt-adim .vt-sahne-ici{display:none}
+  /* açılan metin: ızgara satırı 0fr→1fr; kapanan ve açılan adım aynı eğriyle değişir, liste boyu sabit kalır */
+  .vt-adim-ic{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .45s cubic-bezier(.2,.8,.2,1),opacity .3s ease}
+  .vt-adim-ic>div{min-height:0;overflow:hidden}
+  .vt-adim.aktif .vt-adim-ic{grid-template-rows:1fr;opacity:1}
+  .vt-adim-ic p{padding:0 24px 0 82px;font-size:15.5px}
+  .vt-adim-ic .kazanc{display:flex;margin:14px 24px 20px 82px;font-size:14px}
+  .vt-olc .vt-adim *,.vt-olc .vt-adim{transition:none!important;animation:none!important}
+  .vt-ilk .vt-adim,.vt-ilk .vt-adim *{transition:none!important}
   .vt-adim.aktif{background:var(--cam);border-color:var(--gece-cizgi);box-shadow:var(--cam-golge)}
-  .vt-adim.aktif .vt-adim-bas{padding-bottom:8px;cursor:default}
-  .vt-adim.aktif .vt-adim-bas span{color:#fff;font-size:19px;font-weight:800}
+  .vt-adim.aktif .vt-adim-bas{cursor:default}
+  .vt-adim.aktif .vt-adim-bas span{color:#fff}
   .vt-adim.aktif .vt-adim-bas time{color:var(--sari)}
-  .vt-adim.aktif>p{display:block;padding:0 24px 0 82px;font-size:15.5px}
-  .vt-adim.aktif>.kazanc{display:flex;margin:14px 24px 20px 82px;font-size:14px}
   .vt-adim::after{content:"";position:absolute;left:82px;right:24px;bottom:0;height:2px;border-radius:2px;background:var(--sari);transform:scaleX(0);transform-origin:left}
-  .vt-hikaye.oto .vt-adim.aktif::after{animation:vt-sure var(--sure,7s) linear forwards}
-  .vt-hikaye.dur .vt-adim.aktif::after{animation-play-state:paused}
+  .vt-hikaye.vt-oto .vt-adim.aktif::after{animation:vt-sure var(--sure,7s) linear forwards}
+  .vt-hikaye.vt-dur .vt-adim.aktif::after{animation-play-state:paused}
   .vt-ekran{display:block;position:sticky;top:112px;height:500px}
-  .vt-ekran .vt-sahne{position:absolute;inset:0;opacity:0;transform:translateY(12px) scale(.985);transition:opacity .45s,transform .45s;pointer-events:none}
-  .vt-ekran .vt-sahne.aktif{opacity:1;transform:none}
+  .vt-ekran .vt-sahne{position:absolute;inset:0;opacity:0;transform:translateY(8px) scale(.99);transition:opacity .2s ease,transform .2s ease;pointer-events:none}
+  .vt-ekran .vt-sahne.aktif{opacity:1;transform:none;transition:opacity .4s ease .15s,transform .45s cubic-bezier(.2,.8,.2,1) .15s}
 }
 @keyframes vt-sure{to{transform:scaleX(1)}}
 .vt-sahne{box-shadow:0 0 0 1px rgba(255,255,255,.06),0 50px 100px -50px rgba(0,0,0,.9)}
@@ -568,8 +575,10 @@ body.st,.tanitim{background:var(--w-bg);color:var(--w-yazi)}
 .vt-rol-sekme button{height:42px;padding:0 20px;border-radius:10px;font:700 15px/1 var(--st-baslik);color:var(--gece-yazi);transition:color .15s,background .15s}
 .vt-rol-sekme button:hover{color:#fff}
 .vt-rol-sekme button[aria-selected="true"]{background:var(--sari);color:#0b1220}
-.vt-rol{display:none;gap:40px;align-items:center;margin-top:48px}
-.vt-rol.aktif{display:grid;animation:vt-belir .4s ease both}
+.vt-rol-kap{display:grid;margin-top:48px}
+/* geçiş sıralı: eski panel hızla söner, yenisi ardından belirir (iki metin üst üste binmez) */
+.vt-rol{grid-area:1/1;display:grid;gap:40px;align-items:center;visibility:hidden;opacity:0;transform:translateY(6px);transition:opacity .15s ease,transform .15s ease,visibility 0s linear .15s}
+.vt-rol.aktif{visibility:visible;opacity:1;transform:none;transition:opacity .35s ease .15s,transform .35s cubic-bezier(.2,.8,.2,1) .15s,visibility 0s linear .15s}
 .vt-rol h3{font:800 clamp(24px,2.6vw,34px)/1.15 var(--st-baslik);color:#fff;letter-spacing:-.02em;margin:0}
 .vt-rol>div:first-child p{font-size:17px;line-height:1.65;color:var(--gece-yazi);margin:14px 0 0;max-width:46ch}
 .vt-rol .st-tik li{font-size:16px;color:#fff}
@@ -635,6 +644,7 @@ body.st,.tanitim{background:var(--w-bg);color:var(--w-yazi)}
   .vt-gun,.vt-roller,.vt-neden,.vt-guven{padding:84px 0}
   .vt-son{padding:96px 0 170px}
   .vt-rol-cihaz{min-height:0}
+  .vt-rol{align-items:start}
 }
 @media (max-width:600px){
   .vt-rol-sekme{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));width:100%}
@@ -651,4 +661,4 @@ body.st,.tanitim{background:var(--w-bg);color:var(--w-yazi)}
   .vt-gece .vt-ilerleme i{width:100%}
   .vt-adim{opacity:1!important}
   .vt-ekran .vt-sahne{transition:none}
-}@media (prefers-reduced-motion:reduce){.vt-yuzen{animation:none}.vt-adim::after{display:none}.vt-rol.aktif{animation:none}}
+}@media (prefers-reduced-motion:reduce){.vt-yuzen{animation:none}.vt-adim::after{display:none}.vt-rol,.vt-rol.aktif{transition:none;transform:none}}
