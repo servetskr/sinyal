@@ -583,7 +583,7 @@ body.st,.tanitim{background:var(--w-bg);color:var(--w-yazi)}
 .vt-wa-gun{align-self:center;margin:0 0 8px;padding:3px 9px;border-radius:7px;background:#fff;color:#54656f;font-size:10.5px;box-shadow:0 1px .5px rgba(0,0,0,.1)}
 .vt-wa .vt-baloncuk,.vt-b-sohbet .vt-baloncuk{font-size:12.5px;line-height:1.4;max-width:84%;padding:7px 10px 17px;margin:0 0 7px}
 .vt-wa .vt-baloncuk small,.vt-b-sohbet .vt-baloncuk small{font-size:9.5px}
-.vt-wa-baglanti{display:block;margin-top:7px;padding:7px 9px;border-radius:8px;background:rgba(11,20,26,.05);border-left:3px solid #25d366;font-size:11px;color:#54656f}
+.vt-wa-baglanti{display:block;margin-top:7px;padding:8px 10px;border-radius:10px;background:rgba(11,20,26,.06);font-size:11px;color:#54656f}
 .vt-wa-baglanti b{display:block;font-size:11.5px;color:#111b21}
 .vt-wa-not{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;margin:-2px 0 8px 4px;font-size:10.5px;color:#54656f}
 .vt-wa-not::before{content:"";width:6px;height:6px;border-radius:50%;background:#25d366}
@@ -935,4 +935,44 @@ body.st,.tanitim{background:var(--w-bg);color:var(--w-yazi)}
 .zc-saat span:first-child{transform:none}
 .zc-serit>i.simdi{background:var(--r);border-color:var(--r);box-shadow:0 6px 14px -6px var(--r)}.zc-serit>i.simdi b{color:#fff}.zc-serit>i.simdi small{color:rgba(255,255,255,.85);font-weight:700}
 /* çizelge daralınca bozulmasın: her ekranda gerçek genişliğinde çizilir, sahneye orantılı sığdırılır */
-.vt-yk-kart .vt-pencere.vt-zc,.oz-cihaz .vt-pencere.vt-zc{width:560px;max-width:none}
+.vt-yk-kart .vt-pencere.vt-pl,.oz-cihaz .vt-pencere.vt-pl{width:560px;max-width:none}
+
+/* ---------- direksiyon planı (v180): plaka + günün dersleri; kenar şeritli kart yok ---------- */
+.vt-pl .vt-pen-ic{padding:18px}
+.vt-pl .a{--r:#1f5ad6}.vt-pl .b{--r:#7a5cd6}.vt-pl .c{--r:#1e8e4e}
+.pl-ust{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.pl-ust small{display:block;font-size:11px;color:#7a808a}
+.pl-ust b{display:block;font:800 17px/1.2 var(--st-baslik);color:#0d1117;margin-top:2px}
+.pl-dg{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 13px;border-radius:10px;background:#0d1117;color:#fff;font-size:12px;font-weight:650;white-space:nowrap}
+.pl-dg svg{width:14px;height:14px;fill:var(--sari)}
+.vt-an.oynat .pl-dg{animation:vt-bas .5s ease .25s}
+.pl-ozet{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.pl-ozet span{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:999px;background:#f2f3f6;font-size:11.5px;color:#5b6270}
+.pl-ozet b{color:#0d1117}
+.pl-ozet span.ok{background:#e9f6ee;color:#17663a;font-weight:650}
+.pl-govde{display:grid;gap:10px}
+.pl-satir{display:grid;grid-template-columns:118px minmax(0,1fr);gap:12px;align-items:center;padding:10px;border-radius:14px;background:#f6f7f9}
+.pl-arac small{display:block;margin-top:5px;font-size:10.5px;color:#5b6270;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Türk plakası: solda mavi TR şeridi, siyah çerçeve */
+.pl-plaka{display:inline-flex;align-items:stretch;height:24px;border:1.5px solid #14171c;border-radius:5px;overflow:hidden;background:#fff;font:700 12px/21px var(--vt-mono);letter-spacing:.04em;color:#14171c;white-space:nowrap}
+.pl-plaka i{display:grid;place-items:center;width:15px;background:#1f4fd1;color:#fff;font:700 7px/1 var(--vt-sistem);font-style:normal;letter-spacing:0;margin-right:5px}
+.pl-plaka{padding-right:6px}
+.pl-dersler{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.pl-ders{padding:7px 8px;border-radius:10px;background:#fff;border:1px solid #e3e6eb;min-width:0}
+.pl-ders time{display:flex;align-items:center;justify-content:space-between;gap:4px;font:700 11.5px/1.2 var(--vt-mono);color:#0d1117}
+.pl-ders b{display:block;margin-top:2px;font-size:11.5px;font-weight:600;color:#3b4250;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl-ders svg{width:12px;height:12px;fill:none;stroke:#1e8e4e;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.pl-ders.b{background:#eef0f3;border-color:transparent}
+.pl-ders.b time,.pl-ders.b b{color:#7a808a}
+.pl-ders.s{background:var(--r);border-color:var(--r);box-shadow:0 8px 18px -8px var(--r)}
+.pl-ders.s time,.pl-ders.s b{color:#fff}
+.pl-ders .nabiz{flex:none;width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 0 0 rgba(255,255,255,.7);animation:pl-nabiz 1.6s ease-out infinite}
+@keyframes pl-nabiz{70%{box-shadow:0 0 0 7px rgba(255,255,255,0)}100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}}
+.vt-an .pl-ders{opacity:0;transform:translateY(6px) scale(.96)}
+.vt-an.oynat .pl-ders{animation:vt-belir .45s cubic-bezier(.2,.8,.2,1) forwards;animation-delay:calc(.45s + var(--g,0) * .06s)}
+.pl-alt{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin-top:12px;font-size:11px;color:#5b6270}
+.pl-alt span{display:inline-flex;align-items:center;gap:6px}
+.pl-alt i{width:10px;height:10px;border-radius:3px}
+.pl-alt i.b{background:#d9dde3}.pl-alt i.s{background:#1f5ad6}.pl-alt i.y{background:#fff;border:1px solid #cfd4dc}
+.pl-alt em{margin-left:auto;font-style:normal;font-weight:600;color:#17663a}
+@media (prefers-reduced-motion:reduce){.vt-an .pl-ders{opacity:1;transform:none;animation:none}.pl-ders .nabiz{animation:none}}
