@@ -2,9 +2,9 @@
 // Kurs hesaplarından ayrı bir hesapta çalışır (S.kurs.tur === 'yonetim'); kurs ekranları açılmaz.
 // Üyeler: yönetici (müdür rolü, her şeyi girer) ve ortak (kendi e-posta ve şifresiyle girer, yalnız görür).
 // Kursiyer bilgisi yoktur: yalnız müşteri kurs adı, tahsilat, pay ve ödemeler.
-import { S, kaydet, gun, fark, tarihOku, iso, ayEkle, kapaliGun, islem, geriAlNoktasi } from './veri.js?v=156';
-import { e, ik, rozet, pencere, kapatPencere, bildir, tarih, tarihUzun, ayAdi, olcumler, belgeYazdir, fotoKucult, csvIndir, gunKisa } from './ui.js?v=156';
-import * as B from './bulut.js?v=156';
+import { S, kaydet, gun, fark, tarihOku, iso, ayEkle, kapaliGun, islem, geriAlNoktasi } from './veri.js?v=158';
+import { e, ik, rozet, pencere, kapatPencere, bildir, tarih, tarihUzun, ayAdi, olcumler, belgeYazdir, fotoKucult, csvIndir, gunKisa } from './ui.js?v=158';
+import * as B from './bulut.js?v=158';
 
 export const TURLER = ['İlk yıllık abonelik', 'Aylık abonelik', 'Abonelik yenileme', 'Ek şube', 'Kurulum', 'Eğitim', 'Destek', 'Ücretli modül', 'Diğer Sinyal hizmeti'];
 const PARA = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -305,7 +305,7 @@ function kasaHtml(v, h) {
       <div class="yn-dg"><button class="u-hap" data-yn-hareket="Gider">${ik('arti')}Gider</button><button class="u-hap gri" data-yn-hareket="Gelir">${ik('arti')}Gelir</button><button class="u-hap gri" data-yn-kasa-excel>${ik('indir')}Excel</button></div></div>
     <div class="yn-kasa-kutular">${kart('Gelir', para(k.gelir), k.gelirDiger ? `Sinyal ${para(k.gelirSinyal)} · diğer ${para(k.gelirDiger)}` : 'Kurs tahsilatları, KDV hariç', 'yesil')}${kart('Gider', para(k.gider), k.hr.filter(x => x.tur === 'Gider').length + ' kalem', 'kirmizi')}${kart('Ortak payı', para(k.pay), '%' + h.oran + ' · ' + e(v.ortak.ad.split(' ')[0]) + ' Bey')}${kart('Sana kalan', para(k.net), 'gelir − gider − ortak payı', k.net < 0 ? 'kirmizi koyu' : 'koyu')}</div>
     ${katL.length ? bolum('Giderin dağılımı', '', '', `<div class="yn-kat">${katL.map(([a, t]) => `<div class="yn-kat-sat"><span>${e(a)}</span><i style="--o:${Math.max(4, Math.round(t / katMax * 100))}%"></i><b>${para(t)}</b></div>`).join('')}</div>`) : ''}
-    ${bolum('Hareketler', '', '', satirlar.length ? `<div class="tablo-kap"><table class="ort-tablo yn-kasa-tablo"><thead><tr><th>Tarih</th><th>Açıklama</th><th>Kategori</th><th class="sag">Tutar</th><th aria-label="Belge"></th></tr></thead><tbody>${satirlar.map(x => `<tr class="${x.kendi ? 'tik' : 'oto'}" ${x.kendi ? `data-yn-hareket-ac="${e(x.id)}"` : ''}><td>${tarih(x.tarih)}</td><td><b>${e(x.aciklama || '')}</b>${x.yontem ? `<small class="ort-not">${e(x.yontem)}</small>` : ''}</td><td>${e(x.kategori || '')}</td><td class="sag ${x.tur === 'Gider' ? 'eksi' : 'arti'}">${x.tur === 'Gider' ? '−' : '+'}${para(x.tutar)}</td><td>${x.belge ? `<button class="yn-belge" data-yn-belge="${e(x.id)}" aria-label="Belgeyi aç">${ik('belge')}</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`
+    ${bolum('Hareketler', '', '', satirlar.length ? `<div class="tablo-kap"><table class="ort-tablo yn-kasa-tablo"><thead><tr><th>Tarih</th><th>Açıklama</th><th>Kategori</th><th class="sag">Tutar</th><th aria-label="Belge"></th><th aria-label="İşlemler"></th></tr></thead><tbody>${satirlar.map(x => `<tr class="${x.kendi ? 'tik' : 'oto'}" ${x.kendi ? `data-yn-hareket-ac="${e(x.id)}"` : ''}><td>${tarih(x.tarih)}</td><td><b>${e(x.aciklama || '')}</b>${x.yontem ? `<small class="ort-not">${e(x.yontem)}</small>` : ''}</td><td>${e(x.kategori || '')}</td><td class="sag ${x.tur === 'Gider' ? 'eksi' : 'arti'}">${x.tur === 'Gider' ? '−' : '+'}${para(x.tutar)}</td><td>${x.belge ? `<button class="yn-belge" data-yn-belge="${e(x.id)}" aria-label="Belgeyi aç">${ik('belge')}</button>` : ''}</td><td class="yn-h-dg">${x.kendi ? `<button data-yn-h-duzenle="${e(x.id)}" aria-label="Düzenle" title="Düzenle">${ik('kalem')}</button><button class="sil" data-yn-h-sil2="${e(x.id)}" aria-label="Sil" title="Sil">${ik('kapat')}</button>` : '<small title="Ortaklık bölümündeki tahsilattan gelir">otomatik</small>'}</td></tr>`).join('')}</tbody></table></div>`
       : `<div class="u-bos">${ik('kasa')}<b>${e(ayAd(kasaAy))} ayında hareket yok</b><p>Harcama yaptığında "Gider" ile ekle; faturanın fotoğrafını ya da PDF'ini de iliştirebilirsin.</p></div>`)}`;
 }
 function ozetHtml2(v, h) {
@@ -377,7 +377,7 @@ function hareketPenceresi(x, tur, yenile, ilk = {}) {
   const a = (et, ic) => `<label class="og-alan"><span class="og-alan-et">${et}</span>${ic}</label>`, kat = h0.tur === 'Gider' ? GIDER_KAT : GELIR_KAT;
   let belge = h0.belge || '';
   const belgeDurum = () => belge ? `<span class="yn-belge-var">${ik('belge')}${belge.startsWith('data:application/pdf') ? 'PDF iliştirildi' : belge.startsWith('data:image') ? 'Fotoğraf iliştirildi' : 'Belge kayıtlı'} <button type="button" class="u-bag" data-belge-kaldir>kaldır</button></span>` : '';
-  pencere({ baslik: (yeni ? 'Yeni ' : '') + (h0.tur === 'Gider' ? 'gider' : 'gelir'), alt: true, icerik: `<form id="f-ynh" class="og-giris-form yn-form">
+  pencere({ baslik: yeni ? (h0.tur === 'Gider' ? 'Yeni gider' : 'Yeni gelir') : (h0.tur === 'Gider' ? 'Gideri düzenle' : 'Geliri düzenle'), alt: true, icerik: `<form id="f-ynh" class="og-giris-form yn-form">
       ${a('Açıklama', `<span class="og-girdi"><input name="aciklama" value="${e(h0.aciklama || '')}" placeholder="${h0.tur === 'Gider' ? 'Örn. sinyal.com.tr alan adı' : 'Örn. danışmanlık'}" required maxlength="200"></span>`)}
       <div class="yn-iki">${a('Tutar (₺)', `<span class="og-girdi"><input name="tutar" inputmode="decimal" value="${h0.tutar ? String(h0.tutar).replace('.', ',') : ''}" placeholder="0" required></span>`)}${a('Tarih', `<span class="og-girdi"><input name="tarih" type="date" value="${e(h0.tarih || gun(0))}"></span>`)}</div>
       <div class="yn-iki">${a('Kategori', `<span class="og-girdi"><select name="kategori">${kat.map(k => `<option ${h0.kategori === k ? 'selected' : ''}>${k}</option>`).join('')}</select></span>`)}${a('Ödeme', `<span class="og-girdi"><select name="yontem">${['Kart', 'Havale', 'Nakit'].map(k => `<option ${h0.yontem === k ? 'selected' : ''}>${k}</option>`).join('')}</select></span>`)}</div>
@@ -469,6 +469,8 @@ export function yonetimBaglan(k, rol, yenile) {
     if (t.closest('[data-yn-kasa-excel]')) return kasaExcel(v, hesap(v));
     const ht = t.closest('[data-yn-hareket]'); if (ht) return hareketPenceresi(null, ht.dataset.ynHareket, yenile);
     const bl = t.closest('[data-yn-belge]'); if (bl) { ev.stopPropagation(); return belgeGoster((v.hareketler || []).find(x => x.id === bl.dataset.ynBelge) || {}); }
+    const hd = t.closest('[data-yn-h-duzenle]'); if (hd) { ev.stopPropagation(); const x = (v.hareketler || []).find(y => y.id === hd.dataset.ynHDuzenle); if (x) hareketPenceresi(x, x.tur, yenile); return; }
+    const hs = t.closest('[data-yn-h-sil2]'); if (hs) { ev.stopPropagation(); const x = (v.hareketler || []).find(y => y.id === hs.dataset.ynHSil2); if (x) silOnay('“' + (x.aciklama || x.kategori) + '” (' + para(x.tutar) + ') silinsin mi?', () => { geriAlNoktasi(); v.hareketler = v.hareketler.filter(z => z !== x); kaydetYayinla('Sinyal Yönetim: hareketi sildi', x.aciklama); yenile(); bildir('Silindi', 'tamam', true); }); return; }
     const ha = t.closest('[data-yn-hareket-ac]'); if (ha) { const x = (v.hareketler || []).find(y => y.id === ha.dataset.ynHareketAc); if (x) return hareketPenceresi(x, x.tur, yenile); }
     const tr = t.closest('[data-yn-is-tur]'); if (tr) { isEkTur = tr.dataset.ynIsTur; return yenile(); }
     const ib = t.closest('[data-yn-is-bitti]'); if (ib) { const x = v.isler.find(y => y.id === ib.dataset.ynIsBitti); if (x) { x.bitti = x.bitti ? '' : gun(0); kaydetYayinla(x.bitti ? 'Sinyal Yönetim: işi tamamladı' : 'Sinyal Yönetim: işi geri açtı', x.baslik); yenile(); } return; }
