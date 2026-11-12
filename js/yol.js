@@ -56,7 +56,7 @@
       if (pl.yildiz > .02) for (const [x, y, a, ph] of yildiz) { ctx.fillStyle = `rgba(255,255,255,${a * pl.yildiz * (.75 + .25 * Math.sin(t * 1.7 + ph))})`; ctx.fillRect(x, y, 1.3, 1.3); }
       // güneş (sabah solda doğar, öğlen yükselir, akşam sağda batar) ve ay
       if (pl.gunes > .02) {
-        const k = Math.min(1, saat / .78), gx = w * (.12 + .8 * k), gy = hy - Math.sin(Math.PI * Math.min(1, k)) * hy * (w < 700 ? .2 : .62) + 8; // dar ekranda güneş ufka yakın (yazıların arkasına düşmesin)
+        const k = Math.min(1, saat / .78), gx = w * (w < 700 ? .12 + .8 * k : .46 + .5 * k), gy = hy - Math.sin(Math.PI * Math.min(1, k)) * hy * (w < 700 ? .2 : .5) + 8; // dar ekranda güneş ufka yakın (yazıların arkasına düşmesin)
         const rr = Math.max(16, h * .035), renk = karis([255, 214, 160], [255, 248, 230], Math.sin(Math.PI * k));
         g = ctx.createRadialGradient(gx, gy, 0, gx, gy, rr * 7); g.addColorStop(0, `rgba(${renk},${.55 * pl.gunes})`); g.addColorStop(1, `rgba(${renk},0)`);
         ctx.fillStyle = g; ctx.fillRect(gx - rr * 7, gy - rr * 7, rr * 14, rr * 14);
