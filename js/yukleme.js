@@ -54,18 +54,29 @@
     s += '<rect x="44" y="96" width="3" height="42" rx="1" fill="#7b8590"/><rect x="36" y="82" width="19" height="19" rx="3" fill="#1f5fbf" stroke="#fff" stroke-width="1.4"/><path d="M45.5 85 L52 97.5 H39 Z" fill="#fff"/><circle cx="45.5" cy="89.5" r="1.3" fill="#1c2129"/><path d="M45.3 91 l-.6 3.4 m.6 -3.4 l1.8 2.2 m-1.8 -2.2 l-1.6 1.6 m1 1.8 l-1.4 1.8 m1.4 -1.8 l1.6 1.6" stroke="#1c2129" stroke-width=".9" stroke-linecap="round"/>';
     return s;
   }
+  // ördek: önden (geçitten bize doğru yürürken) ve yandan (kaldırımda sağa yürürken) iki görünüm; ayaklar y=0
   function ordek(yavru) {
-    var g = yavru, govde = g ? '#ffd23f' : '#ffffff', kenar = g ? '#f2b705' : '#dfe3e8';
-    return '<ellipse class="gol" cx="0" cy="1" rx="' + (g ? 5 : 8) + '" ry="1.6" fill="#000" opacity=".16"/>' +
-      '<g class="yur">' +
-      '<ellipse class="ay1" cx="-2.6" cy="0" rx="2.2" ry="1" fill="#ff9f1c"/><ellipse class="ay2" cx="2.6" cy="0" rx="2.2" ry="1" fill="#ff9f1c"/>' +
+    var g = yavru, govde = g ? '#ffd23f' : '#ffffff', kenar = g ? '#f2b705' : '#dfe3e8', kanat = g ? '#f6c429' : '#eef1f4';
+    var on = '<g class="yk-on"><g class="yk-yur">' +
+      '<ellipse class="yk-ay1" cx="-2.6" cy="0" rx="2.2" ry="1" fill="#ff9f1c"/><ellipse class="yk-ay2" cx="2.6" cy="0" rx="2.2" ry="1" fill="#ff9f1c"/>' +
       '<ellipse cx="-6.4" cy="-9" rx="2.3" ry="4.6" fill="' + govde + '" stroke="' + kenar + '" stroke-width=".7" transform="rotate(14 -6.4 -9)"/><ellipse cx="6.4" cy="-9" rx="2.3" ry="4.6" fill="' + govde + '" stroke="' + kenar + '" stroke-width=".7" transform="rotate(-14 6.4 -9)"/>' +
       '<ellipse cx="0" cy="-8.6" rx="' + (g ? 6.2 : 7) + '" ry="' + (g ? 6.6 : 7.6) + '" fill="' + govde + '" stroke="' + kenar + '" stroke-width=".7"/>' +
       '<circle cx="0" cy="' + (g ? -18 : -19.4) + '" r="' + (g ? 5.6 : 5.2) + '" fill="' + govde + '" stroke="' + kenar + '" stroke-width=".7"/>' +
       (g ? '<path d="M-.6 -23.4 q.6 -2.4 1.6 -.4" stroke="' + kenar + '" stroke-width="1" fill="none"/>' : '<path d="M-3.4 -15.6 q3.4 2.2 6.8 0" stroke="#5b8def" stroke-width="1.6" fill="none" stroke-linecap="round"/>') +
       '<circle cx="-1.9" cy="' + (g ? -18.8 : -20.2) + '" r=".95" fill="#1c2129"/><circle cx="1.9" cy="' + (g ? -18.8 : -20.2) + '" r=".95" fill="#1c2129"/>' +
       '<ellipse cx="0" cy="' + (g ? -16.4 : -17.6) + '" rx="' + (g ? 2.2 : 2.6) + '" ry="1.3" fill="#ff9f1c"/>' +
-      '</g>';
+      '</g></g>';
+    var hy = g ? -15.5 : -17, hx = g ? 4.2 : 5.2, hr = g ? 5.2 : 4.8;
+    var yan = '<g class="yk-yan" style="display:none"><g class="yk-ybac1"><path d="M-1.5 -3.5 V-.6" stroke="#f08c00" stroke-width="1.3" stroke-linecap="round"/><ellipse cx="-.4" cy="0" rx="2.2" ry=".85" fill="#ff9f1c"/></g>' +
+      '<g class="yk-ybac2"><path d="M1.8 -3.5 V-.6" stroke="#f08c00" stroke-width="1.3" stroke-linecap="round"/><ellipse cx="2.9" cy="0" rx="2.2" ry=".85" fill="#ff9f1c"/></g>' +
+      '<g class="yk-ygov"><path d="M-7.6 -9.4 L-11.4 -13 L-7 -6.6 Z" fill="' + govde + '" stroke="' + kenar + '" stroke-width=".7" stroke-linejoin="round"/>' +
+      '<ellipse cx="0" cy="-8" rx="' + (g ? 7.2 : 8.4) + '" ry="' + (g ? 6 : 6.4) + '" fill="' + govde + '" stroke="' + kenar + '" stroke-width=".7"/>' +
+      '<ellipse cx="-1.4" cy="-8.4" rx="' + (g ? 3.8 : 4.6) + '" ry="' + (g ? 2.6 : 3) + '" fill="' + kanat + '" stroke="' + kenar + '" stroke-width=".6"/>' +
+      '<g class="yk-ybas"><circle cx="' + hx + '" cy="' + hy + '" r="' + hr + '" fill="' + govde + '" stroke="' + kenar + '" stroke-width=".7"/>' +
+      (g ? '<path d="M' + (hx - .6) + ' ' + (hy - hr - .2) + ' q.8 -2.4 1.8 -.3" stroke="' + kenar + '" stroke-width="1" fill="none"/>' : '<path d="M' + (hx - 4) + ' ' + (hy + 3.6) + ' q3.4 1.8 6.6 -.4" stroke="#5b8def" stroke-width="1.6" fill="none" stroke-linecap="round"/>') +
+      '<circle cx="' + (hx + 1.8) + '" cy="' + (hy - 1) + '" r=".95" fill="#1c2129"/>' +
+      '<path d="M' + (hx + hr - .8) + ' ' + (hy + .2) + ' q3.4 .2 3.2 1.4 q-1.7 .8 -3.4 -.1 z" fill="#ff9f1c"/></g></g></g>';
+    return '<ellipse class="yk-gol" cx="0" cy="1" rx="' + (g ? 5 : 8) + '" ry="1.6" fill="#000" opacity=".16"/>' + on + yan;
   }
   function araba(u) {
     return '<defs><linearGradient id="' + u + 'g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b7be0"/><stop offset=".55" stop-color="#0a4da2"/><stop offset="1" stop-color="#073d82"/></linearGradient>' +
@@ -78,14 +89,14 @@
       '<path d="M30.5 128 V146" stroke="#06336d" stroke-width=".9"/><rect x="22" y="133" width="4.5" height="1.6" rx=".8" fill="#06336d"/><rect x="36" y="133" width="4.5" height="1.6" rx=".8" fill="#06336d"/>' +
       '<path d="M50.5 125.4 h4.6 q1 0 1 1.4 h-5.6 z" fill="#06336d"/><path d="M56 126.4 L69 129" stroke="#06336d" stroke-opacity=".35" stroke-width=".8"/>' +
       '<path d="M8 142 H70.5" stroke="#5d94dc" stroke-width="2" stroke-linecap="round" opacity=".7"/>' +
-      '<ellipse class="yanak" cx="64" cy="135.4" rx="2.8" ry="1.6" fill="#ff7aa2" opacity="0"/>' +
-      '<g class="goz"><ellipse cx="42" cy="120.5" rx="3.4" ry="3.9" fill="#fff"/><g class="bebek"><circle cx="42.6" cy="121" r="1.8" fill="#1c2129"/><circle cx="43.2" cy="120.3" r=".55" fill="#fff"/></g></g>' +
-      '<path class="mutlu" d="M39 121.5 q3 -3 6 0" stroke="#1c2129" stroke-width="1.3" fill="none" stroke-linecap="round" opacity="0"/>' +
-      '<path class="gul" d="M66 139.4 q3 2.4 6 0" stroke="#e8f1ff" stroke-width="1.4" fill="none" stroke-linecap="round"/>' +
+      '<ellipse class="yk-yanak" cx="64" cy="135.4" rx="2.8" ry="1.6" fill="#ff7aa2" opacity="0"/>' +
+      '<g class="yk-goz"><ellipse cx="42" cy="120.5" rx="3.4" ry="3.9" fill="#fff"/><g class="yk-bebek"><circle cx="42.6" cy="121" r="1.8" fill="#1c2129"/><circle cx="43.2" cy="120.3" r=".55" fill="#fff"/></g></g>' +
+      '<path class="yk-mutlu" d="M39 121.5 q3 -3 6 0" stroke="#1c2129" stroke-width="1.3" fill="none" stroke-linecap="round" opacity="0"/>' +
+      '<path class="yk-gul" d="M66 139.4 q3 2.4 6 0" stroke="#e8f1ff" stroke-width="1.4" fill="none" stroke-linecap="round"/>' +
       '<rect x="70.6" y="130.8" width="3.8" height="4.2" rx="1.6" fill="#ffe08a"/><rect x="4" y="129.6" width="2.8" height="5" rx="1" fill="#ff6b5b"/>';
   }
   function teker(cx) {
-    return '<g class="teker" data-cx="' + cx + '"><circle cx="' + cx + '" cy="148" r="8" fill="#1f242b"/><circle cx="' + cx + '" cy="148" r="4.6" fill="#cfd6df"/>' +
+    return '<g class="yk-teker" data-cx="' + cx + '"><circle cx="' + cx + '" cy="148" r="8" fill="#1f242b"/><circle cx="' + cx + '" cy="148" r="4.6" fill="#cfd6df"/>' +
       '<path d="M' + cx + ' 143.6 V152.4 M' + (cx - 4.2) + ' 146.6 L' + (cx + 4.2) + ' 149.4 M' + (cx - 4.2) + ' 149.4 L' + (cx + 4.2) + ' 146.6" stroke="#8c96a3" stroke-width="1.1"/><circle cx="' + cx + '" cy="148" r="1.5" fill="#6b7480"/></g>';
   }
   var KALP = '<path d="M0 3 C-6 -2 -4 -8 0 -5 C4 -8 6 -2 0 3 Z" fill="#ff5c8a"/><path d="M-2.6 -4.4 q-1.2 .4 -1.2 1.8" stroke="#fff" stroke-opacity=".7" stroke-width=".9" fill="none" stroke-linecap="round"/>';
@@ -94,38 +105,38 @@
     var u = 'yk' + (++sayac) + Math.floor(Math.random() * 1e4);
     var svg = el('svg', { viewBox: '0 0 ' + GEN + ' ' + YUK, preserveAspectRatio: 'xMidYMax slice', class: 'yk', role: 'img', 'aria-label': 'Kurs arabası yaya geçidinde ördek ailesine yol veriyor' });
     svg.innerHTML =
-      '<circle class="gunes-isik" cx="252" cy="44" r="26" fill="#ffe7a3" opacity=".55"/><circle cx="252" cy="44" r="16" fill="#ffd166"/>' +
-      '<g class="bulut1" fill="#fff"><circle cx="60" cy="40" r="9"/><circle cx="72" cy="34" r="12"/><circle cx="86" cy="40" r="9"/><rect x="60" y="40" width="26" height="9"/></g>' +
-      '<g class="bulut2" fill="#fff" opacity=".9"><circle cx="190" cy="62" r="6"/><circle cx="199" cy="58" r="8"/><circle cx="209" cy="62" r="6"/><rect x="190" y="62" width="19" height="6"/></g>' +
-      '<g class="kuslar" stroke="#3a4a63" stroke-width="1.4" fill="none" stroke-linecap="round"><path class="kus1" d="M-4 0 q2 -2.6 4 0 q2 -2.6 4 0"/><path class="kus2" transform="translate(12 -6)" d="M-3 0 q1.5 -2 3 0 q1.5 -2 3 0"/></g>' +
-      '<g class="uzak2" fill="#cfe7c1">' + tepeler2() + '</g><g class="uzak" fill="#b6dca6">' + tepeler() + '</g>' +
-      '<g class="orta">' + agaclar(u) + '</g>' +
-      '<rect y="133" width="' + GEN + '" height="10" fill="#dfe3e8"/><path class="derz1" d="M0 138 H' + GEN + '" stroke="#c7cdd5" stroke-width="10" stroke-dasharray="1.4 22.6"/><rect y="141.5" width="' + GEN + '" height="2" fill="#b9c0c9"/>' +
-      '<rect y="143" width="' + GEN + '" height="53" fill="#3a4049"/><path class="serit" d="M0 170 H' + GEN + '" stroke="#fff" stroke-opacity=".85" stroke-width="3" stroke-dasharray="18 14"/>' +
-      '<g class="gecit">' + gecit() + '</g>' +
-      '<g class="arka-ordek"></g>' +
-      '<g class="hiz" stroke="#9db4d3" stroke-width="2.4" stroke-linecap="round"><path d="M' + (AX - 34) + ' 132 H' + (AX - 10) + '"/><path d="M' + (AX - 46) + ' 150 H' + (AX - 12) + '"/><path d="M' + (AX - 30) + ' 166 H' + (AX - 8) + '"/></g>' +
-      '<g class="duman"></g>' +
+      '<circle class="yk-gunes-isik" cx="252" cy="44" r="26" fill="#ffe7a3" opacity=".55"/><circle cx="252" cy="44" r="16" fill="#ffd166"/>' +
+      '<g class="yk-bulut1" fill="#fff"><circle cx="60" cy="40" r="9"/><circle cx="72" cy="34" r="12"/><circle cx="86" cy="40" r="9"/><rect x="60" y="40" width="26" height="9"/></g>' +
+      '<g class="yk-bulut2" fill="#fff" opacity=".9"><circle cx="190" cy="62" r="6"/><circle cx="199" cy="58" r="8"/><circle cx="209" cy="62" r="6"/><rect x="190" y="62" width="19" height="6"/></g>' +
+      '<g class="yk-kuslar" stroke="#3a4a63" stroke-width="1.4" fill="none" stroke-linecap="round"><path class="yk-kus1" d="M-4 0 q2 -2.6 4 0 q2 -2.6 4 0"/><path class="yk-kus2" transform="translate(12 -6)" d="M-3 0 q1.5 -2 3 0 q1.5 -2 3 0"/></g>' +
+      '<g class="yk-uzak2" fill="#cfe7c1">' + tepeler2() + '</g><g class="yk-uzak" fill="#b6dca6">' + tepeler() + '</g>' +
+      '<g class="yk-orta">' + agaclar(u) + '</g>' +
+      '<rect y="133" width="' + GEN + '" height="10" fill="#dfe3e8"/><path class="yk-derz1" d="M0 138 H' + GEN + '" stroke="#c7cdd5" stroke-width="10" stroke-dasharray="1.4 22.6"/><rect y="141.5" width="' + GEN + '" height="2" fill="#b9c0c9"/>' +
+      '<rect y="143" width="' + GEN + '" height="53" fill="#3a4049"/><path class="yk-serit" d="M0 170 H' + GEN + '" stroke="#fff" stroke-opacity=".85" stroke-width="3" stroke-dasharray="18 14"/>' +
+      '<g class="yk-gecit">' + gecit() + '</g>' +
+      '<g class="yk-arka-ordek"></g>' +
+      '<g class="yk-hiz" stroke="#9db4d3" stroke-width="2.4" stroke-linecap="round"><path d="M' + (AX - 34) + ' 132 H' + (AX - 10) + '"/><path d="M' + (AX - 46) + ' 150 H' + (AX - 12) + '"/><path d="M' + (AX - 30) + ' 166 H' + (AX - 8) + '"/></g>' +
+      '<g class="yk-duman"></g>' +
       '<ellipse cx="' + (AX + 38 * OL) + '" cy="191" rx="' + (33 * OL) + '" ry="3.4" fill="#000" opacity=".22"/>' +
-      '<g class="arac" transform="translate(' + AX + ' ' + AY + ') scale(' + OL + ')"><g class="govde">' + araba(u) +
-      '<g class="tabela"><rect x="22.6" y="110.6" width="1.4" height="2.4" fill="#5b6470"/><rect x="30" y="110.6" width="1.4" height="2.4" fill="#5b6470"/><rect x="17" y="103" width="20" height="8.2" rx="2" fill="#f2b705" stroke="#c99600" stroke-width=".8"/><path d="M27 104.3 l2.5 2.8 -2.5 2.8 -2.5 -2.8z" fill="#1c2129"/></g>' +
+      '<g class="yk-arac" transform="translate(' + AX + ' ' + AY + ') scale(' + OL + ')"><g class="yk-govde">' + araba(u) +
+      '<g class="yk-tabela"><rect x="22.6" y="110.6" width="1.4" height="2.4" fill="#5b6470"/><rect x="30" y="110.6" width="1.4" height="2.4" fill="#5b6470"/><rect x="17" y="103" width="20" height="8.2" rx="2" fill="#f2b705" stroke="#c99600" stroke-width=".8"/><path d="M27 104.3 l2.5 2.8 -2.5 2.8 -2.5 -2.8z" fill="#1c2129"/></g>' +
       '</g>' + teker(17) + teker(59) + '</g>' +
-      '<g class="kalpler"><g class="kalp1" opacity="0">' + KALP + '</g><g class="kalp2" opacity="0">' + KALP + '</g></g>' +
-      '<rect y="196" width="' + GEN + '" height="9" fill="#e6e9ed"/><rect y="196" width="' + GEN + '" height="1.6" fill="#c3c9d1"/><path class="derz2" d="M0 200.5 H' + GEN + '" stroke="#cfd5dc" stroke-width="9" stroke-dasharray="1.4 26.6"/>' +
-      '<rect y="205" width="' + GEN + '" height="15" fill="#a5d88f"/><g class="cim">' + cimler() + '</g>' +
-      '<g class="on-ordek"></g>';
+      '<g class="yk-kalpler"><g class="yk-kalp1" opacity="0">' + KALP + '</g><g class="yk-kalp2" opacity="0">' + KALP + '</g></g>' +
+      '<rect y="196" width="' + GEN + '" height="9" fill="#e6e9ed"/><rect y="196" width="' + GEN + '" height="1.6" fill="#c3c9d1"/><path class="yk-derz2" d="M0 200.5 H' + GEN + '" stroke="#cfd5dc" stroke-width="9" stroke-dasharray="1.4 26.6"/>' +
+      '<rect y="205" width="' + GEN + '" height="15" fill="#a5d88f"/><g class="yk-cim">' + cimler() + '</g>' +
+      '<g class="yk-on-ordek"></g>';
     kap.innerHTML = ''; kap.appendChild(svg);
     var q = function (s) { return svg.querySelector(s); };
     var R = {
-      uzak: q('.uzak'), uzak2: q('.uzak2'), orta: q('.orta'), serit: q('.serit'), derz1: q('.derz1'), derz2: q('.derz2'), cim: q('.cim'),
-      gecit: q('.gecit'), arka: q('.arka-ordek'), on: q('.on-ordek'), govde: q('.govde'), tabela: q('.tabela'), tekerler: svg.querySelectorAll('.teker'),
-      goz: q('.goz'), bebek: q('.bebek'), mutlu: q('.mutlu'), yanak: q('.yanak'), gul: q('.gul'), hiz: q('.hiz'), duman: q('.duman'),
-      kalp1: q('.kalp1'), kalp2: q('.kalp2'), bulut1: q('.bulut1'), bulut2: q('.bulut2'), kuslar: q('.kuslar'), kus1: q('.kus1'), kus2: q('.kus2'),
-      gunes: q('.gunes-isik'), salanlar: svg.querySelectorAll('[data-sal]')
+      uzak: q('.yk-uzak'), uzak2: q('.yk-uzak2'), orta: q('.yk-orta'), serit: q('.yk-serit'), derz1: q('.yk-derz1'), derz2: q('.yk-derz2'), cim: q('.yk-cim'),
+      gecit: q('.yk-gecit'), arka: q('.yk-arka-ordek'), on: q('.yk-on-ordek'), govde: q('.yk-govde'), tabela: q('.yk-tabela'), tekerler: svg.querySelectorAll('.yk-teker'),
+      goz: q('.yk-goz'), bebek: q('.yk-bebek'), mutlu: q('.yk-mutlu'), yanak: q('.yk-yanak'), gul: q('.yk-gul'), hiz: q('.yk-hiz'), duman: q('.yk-duman'),
+      kalp1: q('.yk-kalp1'), kalp2: q('.yk-kalp2'), bulut1: q('.yk-bulut1'), bulut2: q('.yk-bulut2'), kuslar: q('.yk-kuslar'), kus1: q('.yk-kus1'), kus2: q('.yk-kus2'),
+      gunes: q('.yk-gunes-isik'), salanlar: svg.querySelectorAll('[data-sal]')
     };
     // ördekler: anne + üç yavru; her biri sırayla geçer, sonuncusu biraz geride kalır
-    var ORD = [{ y: 0, bas: 3.35, sure: 1.9, olc: 1.3 }, { y: 1, bas: 3.85, sure: 1.95, olc: .82 }, { y: 1, bas: 4.25, sure: 2.0, olc: .82 }, { y: 1, bas: 4.95, sure: 2.05, olc: .78 }];
-    ORD.forEach(function (o, i) { o.g = el('g', {}, ordek(o.y)); o.yur = o.g.querySelector('.yur'); o.ay1 = o.g.querySelector('.ay1'); o.ay2 = o.g.querySelector('.ay2'); o.i = i; R.arka.appendChild(o.g); o.onde = false; });
+    var ORD = [{ y: 0, bas: 3.3, hiz: 40, olc: 1.3 }, { y: 1, bas: 3.62, hiz: 37, olc: .82 }, { y: 1, bas: 3.95, hiz: 38, olc: .82 }, { y: 1, bas: 4.2, hiz: 40, olc: .78 }];
+    ORD.forEach(function (o, i) { o.g = el('g', {}, ordek(o.y)); o.on = o.g.querySelector('.yk-on'); o.yan = o.g.querySelector('.yk-yan'); o.yur = o.g.querySelector('.yk-yur'); o.ay1 = o.g.querySelector('.yk-ay1'); o.ay2 = o.g.querySelector('.yk-ay2'); o.ygov = o.g.querySelector('.yk-ygov'); o.ybas = o.g.querySelector('.yk-ybas'); o.ybac1 = o.g.querySelector('.yk-ybac1'); o.ybac2 = o.g.querySelector('.yk-ybac2'); o.i = i; o.gorunum = null; R.arka.appendChild(o.g); o.onde = false; });
     // egzoz dumanı havuzu
     var DUM = []; for (var d = 0; d < 16; d++) { var c = el('circle', { r: 0, fill: '#dde3ea', opacity: 0 }); R.duman.appendChild(c); DUM.push({ c: c, omur: 0 }); }
     var dumSon = 0;
@@ -134,10 +145,14 @@
     var basla = null, t0 = 1.0;
 
     function ordekKonum(o, t, zx) {
-      var bekX = zx + 16 - 16 * o.i - (o.i ? 5 : 0), hedefX = zx + 16 + (o.i % 2 ? -3 : 3), p = (t - o.bas) / o.sure;
-      if (p <= 0) return { x: bekX, y: 140, yur: 0, p: 0 };
-      if (p >= 1) { var son = t - o.bas - o.sure; return { x: hedefX + Math.min(70, son * 17), y: 203, yur: son < 4 ? 1 : 0, p: 1 }; }  // karşıda sıra hâlinde sağa yürürler
-      return { x: bekX + (hedefX - bekX) * ss(kis(p * 3, 0, 1)), y: 140 + 63 * ss(p), yur: 1, p: p };
+      var bekX = zx + 16 - 11 * o.i - (o.i ? 3 : 0), hedefX = zx + 16 + (o.i % 2 ? -3 : 3), yatay = hedefX - bekX, dikey = 63;
+      var gecen = Math.max(0, t - o.bas) * o.hiz, son;
+      if (t <= o.bas) return { x: bekX, y: 140, gor: 'yan', yol: 0, yur: 0, p: 0 };
+      if (gecen < yatay) return { x: bekX + gecen, y: 140, gor: 'yan', yol: gecen, yur: 1, p: gecen / (yatay + dikey) };
+      if (gecen < yatay + dikey) return { x: hedefX, y: 140 + (gecen - yatay), gor: 'on', yol: gecen, yur: 1, p: gecen / (yatay + dikey) };
+      son = t - o.bas - (yatay + dikey) / o.hiz;
+      var ileri = Math.min(64, son * 18);
+      return { x: hedefX + ileri, y: 203, gor: 'yan', yol: yatay + dikey + ileri, yur: ileri < 64 ? 1 : 0, p: 1 };
     }
 
     function kare(simdi) {
@@ -172,10 +187,18 @@
       var hedef = null;
       ORD.forEach(function (o) {
         var k = ordekKonum(o, t, zx), olc = o.olc * (.86 + .26 * (k.y - 140) / 63);
-        var adim = (ge + o.i * .37) * (o.i === 3 ? 9.5 : 7.5), yur = k.yur ? Math.sin(adim) * 10 : Math.sin(ge * 2 + o.i) * 2, zip = k.yur ? Math.abs(Math.sin(adim)) * 1.4 : 0;
+        var adimBoy = o.y ? 4.2 : 5.6, faz = k.yol / adimBoy * Math.PI, sn = Math.sin(faz), zip = k.yur ? Math.abs(sn) * 1.1 : 0;
+        if (k.gor !== o.gorunum) { o.on.style.display = k.gor === 'on' ? '' : 'none'; o.yan.style.display = k.gor === 'yan' ? '' : 'none'; o.gorunum = k.gor; }
         o.g.setAttribute('transform', 'translate(' + k.x + ' ' + (k.y - zip) + ') scale(' + olc + ')');
-        o.yur.setAttribute('transform', 'rotate(' + yur + ')');
-        o.ay1.setAttribute('transform', 'translate(0 ' + (k.yur && Math.sin(adim) > 0 ? -1.2 : 0) + ')'); o.ay2.setAttribute('transform', 'translate(0 ' + (k.yur && Math.sin(adim) < 0 ? -1.2 : 0) + ')');
+        if (k.gor === 'on') {
+          o.yur.setAttribute('transform', 'rotate(' + (k.yur ? sn * 7 : 0) + ')');
+          o.ay1.setAttribute('transform', 'translate(0 ' + (k.yur && sn > 0 ? -1.3 * sn : 0) + ')'); o.ay2.setAttribute('transform', 'translate(0 ' + (k.yur && sn < 0 ? 1.3 * sn : 0) + ')');
+        } else {
+          var bekle = !k.yur, nefes = bekle ? Math.sin(ge * 2.2 + o.i * 1.3) : 0, gaga = bekle && Math.sin(ge * .9 + o.i * 2) > .93 ? 1.6 : 0;
+          o.ygov.setAttribute('transform', 'rotate(' + (k.yur ? sn * 4 : nefes * 1.2) + ')');
+          o.ybas.setAttribute('transform', 'translate(' + (k.yur ? Math.abs(sn) * .9 : 0) + ' ' + (gaga + (k.yur ? 0 : nefes * .3)) + ')');
+          o.ybac1.setAttribute('transform', 'translate(' + (k.yur ? sn * 1.8 : 0) + ' ' + (k.yur && sn > 0 ? -1 * sn : 0) + ')'); o.ybac2.setAttribute('transform', 'translate(' + (k.yur ? -sn * 1.8 : 0) + ' ' + (k.yur && sn < 0 ? sn : 0) + ')');
+        }
         var onde = k.y > 166; if (onde !== o.onde) { (onde ? R.on : R.arka).appendChild(o.g); o.onde = onde; }
         if (!hedef && k.p > 0 && k.p < 1) hedef = k;
         if (!hedef && k.p === 0 && t > T_FREN) hedef = k;
