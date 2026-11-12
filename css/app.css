@@ -2065,3 +2065,10 @@ body.hero-acik.hero-gunduz.kaydi .app-ust{background:rgba(23,79,153,.84)}
 @keyframes u-bulut-kay{from{transform:translateX(-760px)}to{transform:translateX(1150px)}}
 @media (prefers-reduced-motion:reduce){.u-bulut-kay{animation:none}}
 body.portal-modu .ogr-icerik{max-width:none}
+
+/* Sinyal Yönetim hesap oluşturma: ortaklık bilgileri açılır bölümde */
+.yh-ortak{margin:6px 0 2px;padding:12px 14px;border-radius:14px;background:var(--panel-2,#f4f4f7)}
+.yh-ortak summary{cursor:pointer;font-weight:700;color:var(--murekkep)}
+.yh-ortak summary small{display:block;font-weight:400;font-size:13px;color:var(--soluk)}
+.yh-ortak[open] summary{margin-bottom:10px}
+.yh-ortak .og-alan{margin-top:10px}

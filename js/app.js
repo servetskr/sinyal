@@ -1,21 +1,21 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=140';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=140';
-import * as Y1 from './sayfalar1.js?v=140';
-import * as Y2 from './sayfalar2.js?v=140';
-import * as P from './portal.js?v=140';
-import * as Y3 from './sayfalar3.js?v=140';
-import * as Y4 from './sayfalar4.js?v=140';
-import * as Y5 from './sayfalar5.js?v=140';
-import * as IM from './imza.js?v=140';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=140';
-import * as SN from './senaryo.js?v=140';
-import * as OZ from './ozellik.js?v=140';
-import { durumlariGuncelle } from './mesaj.js?v=140';
-import { yeniMenu } from './yeni.js?v=140';
-import * as B from './bulut.js?v=140';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=140';
-import * as AN from './analiz.js?v=140';
-import * as ORT from './ortak.js?v=140';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=141';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=141';
+import * as Y1 from './sayfalar1.js?v=141';
+import * as Y2 from './sayfalar2.js?v=141';
+import * as P from './portal.js?v=141';
+import * as Y3 from './sayfalar3.js?v=141';
+import * as Y4 from './sayfalar4.js?v=141';
+import * as Y5 from './sayfalar5.js?v=141';
+import * as IM from './imza.js?v=141';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=141';
+import * as SN from './senaryo.js?v=141';
+import * as OZ from './ozellik.js?v=141';
+import { durumlariGuncelle } from './mesaj.js?v=141';
+import { yeniMenu } from './yeni.js?v=141';
+import * as B from './bulut.js?v=141';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=141';
+import * as AN from './analiz.js?v=141';
+import * as ORT from './ortak.js?v=141';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -215,7 +215,7 @@ document.addEventListener('change', ev => { const s = ev.target.closest('[data-s
 Y5.temaUygula();
 
 let sonAd = null;
-window.addEventListener('hashchange', () => { if (imzaLinki()) return imzaSayfasiAc(); if (kursDavetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return kursDavetEkrani(); if (oturum.kullanici && oturum.kullanici.rol === 'ogrenci') return; if (ogrYolu()) return eskiLink(); if (location.hash === '#/ogrenci-giris') return ogrenciGirisEkrani(oturum.kullanici && oturum.kullanici.bulut ? 'Bu cihazda bir personel hesabı açık. Öğrenci olarak girersen o oturum kapanır.' : undefined); if (davetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return davetEkrani(); const r = rota(); yenile(r.ad !== sonAd); sonAd = r.ad; });
+window.addEventListener('hashchange', () => { if (imzaLinki()) return imzaSayfasiAc(); if (!(oturum.kullanici && oturum.kullanici.bulut)) { if (yonetimKurYolu()) return yonetimHesapEkrani(yonetimKurYolu()); if (yonetimGirisYolu()) return yonetimGirisEkrani(); } if (kursDavetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return kursDavetEkrani(); if (oturum.kullanici && oturum.kullanici.rol === 'ogrenci') return; if (ogrYolu()) return eskiLink(); if (location.hash === '#/ogrenci-giris') return ogrenciGirisEkrani(oturum.kullanici && oturum.kullanici.bulut ? 'Bu cihazda bir personel hesabı açık. Öğrenci olarak girersen o oturum kapanır.' : undefined); if (davetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return davetEkrani(); const r = rota(); yenile(r.ad !== sonAd); sonAd = r.ad; });
 
 // QR’dan gelen ilk sayfa index.html’de hazır durur (beklemeden görünsün); sonradan dönmek için saklanır
 const TANITIM = (() => { const t = document.getElementById('tanitim'); return t ? t.outerHTML : ''; })();
@@ -325,11 +325,19 @@ function bekleEkrani(metin) {
 }
 // Gerçek kurs hesabıyla oturum aç
 function bulutOturumu(u, yeniGiris) {
+  const yonetimIstendi = yonetimGirisYolu();
   oturum.kullanici = u;
   try { sessionStorage.setItem('sinyal-oturum', JSON.stringify(u)); } catch (x) { }
   if (yeniGiris) { islem('Giriş yaptı'); kaydet(); }
   sonHareket = Date.now(); sonYazim = 0; hareketYaz();
   let bekleyen = null; try { bekleyen = sessionStorage.getItem('sinyal-bekleyen'); sessionStorage.removeItem('sinyal-bekleyen'); } catch (x) { }
+  if (yonetimIstendi && !ORT.yonetimModu() && u.rol !== 'ortak') {
+    document.getElementById('uyg').innerHTML = ogrKap(`<div class="og-giris-bas"><h1>Sinyal Yönetim</h1><p>Bu tarayıcıda bir kurs hesabı açık (${e(u.ad)}). Sinyal Yönetim'e girmek için önce bu hesaptan çık.</p></div><button class="dg dg-ana og-giris-dg" data-yon-cik>Çıkış yap ve Sinyal Yönetim'e gir</button><a class="dg dg-hafif og-giris-dg" href="#/genel" data-yon-don style="margin-top:10px">Kurs hesabıma dön</a>`);
+    const k = document.getElementById('uyg');
+    k.querySelector('[data-yon-cik]').addEventListener('click', () => { islem('Çıkış yaptı'); kaydet(); B.cikisYap().then(() => { try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } location.hash = '#/yonetim'; location.reload(); }); });
+    k.querySelector('[data-yon-don]').addEventListener('click', ev => { ev.preventDefault(); location.hash = '#/genel'; location.reload(); });
+    return;
+  }
   if (!ORT.yonetimModu()) iskelet(); B.durumYaz();
   // Sinyal ekibi (yönetici) hesabı: Ayarlar › Diğer'de kurs hesabı açma linki oluşturur
   B.yoneticiMi().then(y => { if (y && !B.bulut.yonetici) { B.bulut.yonetici = true; yenile(); } }).catch(() => { });
@@ -396,6 +404,65 @@ function sifreIzle(f, btn) {
 }
 function gozBagla(kok) {
   kok.addEventListener('click', ev => { const b = ev.target.closest('[data-goz]'); if (!b) return; const i = b.parentElement.querySelector('input'), ac = i.type === 'password'; i.type = ac ? 'text' : 'password'; b.setAttribute('aria-pressed', ac); b.setAttribute('aria-label', ac ? 'Şifreyi gizle' : 'Şifreyi göster'); b.classList.toggle('acik', ac); });
+}
+// Sinyal Yönetim alt linki: #/yonetim (giriş) ve #/yonetim/kur/<davet kodu> (tek seferlik hesap oluşturma + kurulum)
+const yonetimGirisYolu = () => location.hash === '#/yonetim';
+const yonetimKurYolu = () => { const m = location.hash.match(/^#\/yonetim\/kur\/([a-z0-9]+)$/); return m ? m[1] : null; };
+// kullanıcı adı girişte e-postaya çevrilir: hiçbir yere ulaşmayan ayrılmış alan adı (.invalid); e-posta yazılırsa olduğu gibi kullanılır
+const yonetimEposta = v => { v = String(v || '').trim(); return v.includes('@') ? v : v.toLocaleLowerCase('tr').replace(/[^a-z0-9._-]/g, '') + '@yonetim.sinyal.invalid'; };
+function yonetimGirisEkrani(not) {
+  B.sdkHazirla();
+  document.body.classList.remove('portal-modu'); document.title = 'Sinyal Yönetim · Giriş';
+  const kok = document.getElementById('uyg');
+  kok.innerHTML = ogrKap(`<div class="og-giris-bas"><h1>Sinyal Yönetim</h1><p>Gelir paylaşımı. Yalnız yetkili kişiler girebilir.</p></div>
+    ${not ? `<p class="og-giris-not">${ik('uyari')}<span>${not}</span></p>` : ''}
+    <form novalidate class="og-giris-form">${ogrAlan('kad', 'Kullanıcı adı ya da e-posta', 'text', 'kursiyer', 'autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required')}${ogrAlan('sifre', 'Şifre', 'password', 'kilit', 'autocomplete="current-password" required')}
+    <button class="dg dg-ana og-giris-dg" type="submit">Giriş yap</button></form>`);
+  gozBagla(kok);
+  const f = kok.querySelector('form'), btn = f.querySelector('[type=submit]');
+  f.addEventListener('submit', ev => {
+    ev.preventDefault();
+    if (!f.kad.value.trim()) return bildir('Kullanıcı adını yaz', 'uyari');
+    if (!f.sifre.value) return bildir('Şifreni yaz', 'uyari');
+    btn.disabled = true; btn.textContent = 'Giriliyor…';
+    B.girisYap(yonetimEposta(f.kad.value), f.sifre.value, kodSor).then(u => bulutOturumu(u, true)).catch(x => { btn.disabled = false; btn.textContent = 'Giriş yap'; bildir(B.hataMetni(x), 'uyari'); });
+  });
+}
+async function yonetimHesapEkrani(kod) {
+  bekleEkrani('Hesap açma linki kontrol ediliyor…');
+  let dv = null; try { dv = await B.kursDavetGetir(kod); } catch (x) { }
+  document.body.classList.remove('portal-modu'); document.title = 'Sinyal Yönetim hesabı';
+  const kok = document.getElementById('uyg');
+  if (!dv) { kok.innerHTML = ogrKap(`<div class="og-giris-bas"><h1>Bu link geçersiz</h1><p>Hesap açma linkinin süresi dolmuş ya da daha önce kullanılmış.</p></div><a class="dg dg-ana og-giris-dg" href="#/yonetim">Sinyal Yönetim girişine git</a>`); return; }
+  const alan = (ad, et, ek) => `<label class="og-alan"><span class="og-alan-et">${et}</span><span class="og-girdi"><input name="${ad}" ${ek}></span></label>`;
+  kok.innerHTML = ogrKap(`<div class="og-giris-bas"><h1>Sinyal Yönetim hesabı</h1><p>Bir kez yapılır. Sonra her seferinde <b>sinyal/#/yonetim</b> adresinden kullanıcı adın ve şifrenle girersin.</p></div>
+    <form novalidate class="og-giris-form" id="f-yh">${ogrAlan('kad', 'Kullanıcı adı', 'text', 'kursiyer', 'value="skrservet" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required')}${ogrAlan('ad', 'Adın soyadın', 'text', 'kursiyer', 'value="Servet Sakar" autocomplete="name" required')}
+      ${ogrAlan('s1', 'Şifre', 'password', 'kilit', 'autocomplete="new-password" required')}${ogrAlan('s2', 'Şifre (tekrar)', 'password', 'kilit', 'autocomplete="new-password" required')}${SIFRE_KURAL}
+      <details class="yh-ortak"><summary>Ortaklık bilgileri <small>sözleşmeye göre dolu; gerekirse düzelt</small></summary>
+        ${alan('oad', 'Ortağın adı soyadı', 'value="Eyüp Çağlar"')}${alan('oran', 'Gelir payı (%)', 'inputmode="numeric" value="40"')}${alan('bas', 'Sözleşme tarihi', 'type="date" value="2026-11-10"')}${alan('bt', 'Borcun aktarıldığı tarih (son gün bundan 6 ay sonra)', 'type="date" value="2026-11-10"')}${alan('anapara', 'Anapara (₺)', 'inputmode="numeric" value="50.000"')}${alan('iade', 'Yeni satış başına anapara iadesi (₺)', 'inputmode="numeric" value="2.000"')}
+      </details>
+      <p class="og-giris-not" style="margin:4px 0 0">${ik('uyari')}<span>Kullanıcı adıyla açılan hesapta “şifremi unuttum” çalışmaz; şifreyi bir yere not et.</span></p>
+      <button class="dg dg-ana og-giris-dg" type="submit">Hesabı oluştur</button></form>`);
+  gozBagla(kok);
+  const f = kok.querySelector('#f-yh'), btn = f.querySelector('[type=submit]');
+  sifreIzle(f, btn);
+  f.addEventListener('submit', async ev => {
+    ev.preventDefault(); if (btn.disabled) return;
+    const kad = f.kad.value.trim();
+    if (!/^[A-Za-z0-9._-]{3,}$/.test(kad) && !/^\S+@\S+\.\S+$/.test(kad)) return bildir('Kullanıcı adı en az 3 karakter olmalı; harf, rakam, nokta, tire kullan', 'uyari');
+    if (f.ad.value.trim().length < 3) return bildir('Adını ve soyadını yaz', 'uyari');
+    const oran = +String(f.oran.value).replace(/\D/g, '') || 40, para = v => Math.round(parseFloat(String(v).replace(/\./g, '').replace(',', '.')) || 0);
+    btn.disabled = true; btn.textContent = 'Hesap oluşturuluyor…';
+    try {
+      const u = await B.kursAc({ kursAd: 'Sinyal Yönetim', yetkili: f.ad.value.trim(), sehir: '', eposta: yonetimEposta(kad), sifre: f.s1.value, mudurTel: '', davetKod: kod });
+      // sunucudan ilk görüntü gelmeden kurs ayarı yazılmaz; en çok 10 sn beklenir
+      for (let i = 0; i < 50 && !B.sunucuHazir(); i++) await new Promise(r => setTimeout(r, 200));
+      ORT.isletmeKur({ ad: f.oad.value.trim() || 'Ortak', oran, baslangic: f.bas.value, anapara: para(f.anapara.value), borcTarih: f.bt.value, satisIade: para(f.iade.value) });
+      S.kurs.tur = 'yonetim'; S.kurs.ad = 'Sinyal Yönetim'; kaydet();
+      history.replaceState(null, '', '#/yonetim');
+      bulutOturumu(u, true); bildir('Sinyal Yönetim hesabın hazır. Bundan sonra kullanıcı adın ' + kad + ' ile girersin');
+    } catch (x) { btn.disabled = false; btn.textContent = 'Hesabı oluştur'; bildir(B.hataMetni(x), 'uyari'); }
+  });
 }
 function ogrenciGirisEkrani(not) {
   B.sdkHazirla();
@@ -537,7 +604,7 @@ document.addEventListener('click', ev => {
   if (ev.target.closest('[data-hesap]')) return hesapSayfasi();
   if (ev.target.closest('[data-ogr-cikis]')) return B.ogrenciCikis().then(() => { location.hash = '#/ogrenci-giris'; location.reload(); });
   if (ev.target.closest('[data-ogr-sifre]')) { kapatPencere(); return ogrenciSifreDegistir(); }
-  if (ev.target.closest('[data-cikis]') && oturum.kullanici && oturum.kullanici.bulut) { islem('Çıkış yaptı'); kaydet(); B.cikisYap().then(() => { try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } location.hash = ''; location.reload(); }); return; }
+  if (ev.target.closest('[data-cikis]') && oturum.kullanici && oturum.kullanici.bulut) { const yon = ORT.yonetimModu() || oturum.kullanici.rol === 'ortak'; islem('Çıkış yaptı'); kaydet(); B.cikisYap().then(() => { try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } location.hash = yon ? '#/yonetim' : ''; location.reload(); }); return; }
   if (ev.target.closest('[data-cikis]')) { const zy = ziyaretci(); islem('Çıkış yaptı'); kaydet(); oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } location.hash = ''; girisEkrani(zy ? 'tanitim' : 'pin'); window.scrollTo(0, 0); }
   const g = ev.target.closest('[data-geri-al]'); if (g) { if (geriAl()) { bildir('Son işlem geri alındı'); yenile(); } }
 });
@@ -580,6 +647,8 @@ else if (ogrYolu()) eskiLink();
 else if (location.hash === '#/ogrenci-giris') ogrenciGirisEkrani(B.bulutKayitli() ? 'Bu cihazda bir personel hesabı açık. Öğrenci olarak girersen o oturum kapanır.' : undefined);
 else if (davetYolu()) davetEkrani();
 else if (kursDavetYolu()) kursDavetEkrani();
+else if (yonetimKurYolu() && !B.bulutKayitli()) yonetimHesapEkrani(yonetimKurYolu());
+else if (yonetimGirisYolu() && !B.bulutKayitli()) yonetimGirisEkrani();
 else if (ogrKayit && !B.bulutKayitli()) {
   // son görülen panel önbellekten hemen; oturum ve güncel veri arkadan gelir
   const ok = ogrKayit.kod && B.ogrenciOnbellek(ogrKayit.kod);
