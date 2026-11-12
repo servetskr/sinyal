@@ -142,7 +142,7 @@
     var dumSon = 0;
     // yay fiziği: gövde eğimi (fren burnu indirir, kalkış kaldırır) ve tabela
     var th = 0, thv = 0, fi = 0, fiv = 0, oncekiV = V0, kirpSon = 0, kirpBas = -1, sonZ = null;
-    var basla = null, t0 = 1.0;
+    var basla = window.__ykBas || null, t0 = 1.0;  // bütün sahneler aynı saati paylaşır: açılıştan bekleme ekranına geçişte kaldığı yerden sürer
 
     function ordekKonum(o, t, zx) {
       var bekX = zx + 16 - 11 * o.i - (o.i ? 3 : 0), hedefX = zx + 16 + (o.i % 2 ? -3 : 3), yatay = hedefX - bekX, dikey = 63;
@@ -159,7 +159,7 @@
       if (!svg.isConnected) return;
       if (svg.__dur) { requestAnimationFrame(kare); return; }
       if (kap.offsetParent === null && !kap.closest('[data-yk-goster]')) { setTimeout(function () { requestAnimationFrame(kare); }, 400); return; }
-      if (basla === null) basla = simdi;
+      if (basla === null) basla = window.__ykBas = simdi;
       var ge = (simdi - basla) / 1000 + t0, tur = Math.floor(ge / DONGU), t = ge - tur * DONGU;
       var dt = sonZ === null ? 1 / 60 : Math.min(.05, (simdi - sonZ) / 1000); sonZ = simdi;
       ciz(t, tur, ge, dt);
