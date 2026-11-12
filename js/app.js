@@ -1,21 +1,21 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=134';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=134';
-import * as Y1 from './sayfalar1.js?v=134';
-import * as Y2 from './sayfalar2.js?v=134';
-import * as P from './portal.js?v=134';
-import * as Y3 from './sayfalar3.js?v=134';
-import * as Y4 from './sayfalar4.js?v=134';
-import * as Y5 from './sayfalar5.js?v=134';
-import * as IM from './imza.js?v=134';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=134';
-import * as SN from './senaryo.js?v=134';
-import * as OZ from './ozellik.js?v=134';
-import { durumlariGuncelle } from './mesaj.js?v=134';
-import { yeniMenu } from './yeni.js?v=134';
-import * as B from './bulut.js?v=134';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=134';
-import * as AN from './analiz.js?v=134';
-import * as ORT from './ortak.js?v=134';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=135';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=135';
+import * as Y1 from './sayfalar1.js?v=135';
+import * as Y2 from './sayfalar2.js?v=135';
+import * as P from './portal.js?v=135';
+import * as Y3 from './sayfalar3.js?v=135';
+import * as Y4 from './sayfalar4.js?v=135';
+import * as Y5 from './sayfalar5.js?v=135';
+import * as IM from './imza.js?v=135';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=135';
+import * as SN from './senaryo.js?v=135';
+import * as OZ from './ozellik.js?v=135';
+import { durumlariGuncelle } from './mesaj.js?v=135';
+import { yeniMenu } from './yeni.js?v=135';
+import * as B from './bulut.js?v=135';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=135';
+import * as AN from './analiz.js?v=135';
+import * as ORT from './ortak.js?v=135';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -313,13 +313,13 @@ function girisEkrani(mod = 'tanitim') {
 }
 function sessionStorageAl(k) { try { return sessionStorage.getItem(k); } catch (x) { return null; } }
 const LOGO = `<div class="logo" style="border-bottom:0;margin:0 0 6px"><svg class="logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>Sürücü kursu otomasyonu</small></span></div>`;
-const YUKLE_SAHNE = '<svg class="yk" viewBox="0 0 320 180" role="img" aria-label="Kurs arabası trafik ışığında yeşili bekliyor"><g><circle cx="58" cy="40" r="24" fill="#ffd166" opacity=".28"/><circle cx="58" cy="40" r="14" fill="#ffd166"/><g transform="translate(120 34)"><g class="yk-bulut" fill="#fff"><circle cx="0" cy="0" r="8"/><circle cx="11" cy="-5" r="11"/><circle cx="23" cy="0" r="8"/><rect x="0" y="0" width="23" height="8"/></g></g><g transform="translate(210 56) scale(.7)"><g class="yk-bulut iki" fill="#fff"><circle cx="0" cy="0" r="8"/><circle cx="11" cy="-5" r="11"/><circle cx="23" cy="0" r="8"/><rect x="0" y="0" width="23" height="8"/></g></g><g class="yk-uzak" fill="#c4e2b6"><path d="M0 118 C30 118 50 96 80 96 S130 118 160 118 V136 H0 Z"/><path d="M160 118 C190 118 210 96 240 96 S290 118 320 118 V136 H160 Z"/><path d="M320 118 C350 118 370 96 400 96 S450 118 480 118 V136 H320 Z"/><path d="M480 118 C510 118 530 96 560 96 S610 118 640 118 V136 H480 Z"/></g><g class="yk-orta"><rect x="28.4" y="115" width="3.2" height="16" rx="1" fill="#7a5a3a"/><circle cx="30" cy="115" r="10" fill="#6fb35e"/><circle cx="26.5" cy="112.0" r="4.5" fill="#fff" opacity=".18"/><rect x="78.4" y="118" width="3.2" height="13" rx="1" fill="#7a5a3a"/><circle cx="80" cy="118" r="7" fill="#88c477"/><circle cx="77.55" cy="115.9" r="3.15" fill="#fff" opacity=".18"/><rect x="145.4" y="115" width="3.2" height="16" rx="1" fill="#7a5a3a"/><circle cx="147" cy="115" r="10" fill="#6fb35e"/><circle cx="143.5" cy="112.0" r="4.5" fill="#fff" opacity=".18"/><rect x="195.4" y="118" width="3.2" height="13" rx="1" fill="#7a5a3a"/><circle cx="197" cy="118" r="7" fill="#88c477"/><circle cx="194.55" cy="115.9" r="3.15" fill="#fff" opacity=".18"/><rect x="262.4" y="115" width="3.2" height="16" rx="1" fill="#7a5a3a"/><circle cx="264" cy="115" r="10" fill="#6fb35e"/><circle cx="260.5" cy="112.0" r="4.5" fill="#fff" opacity=".18"/><rect x="312.4" y="118" width="3.2" height="13" rx="1" fill="#7a5a3a"/><circle cx="314" cy="118" r="7" fill="#88c477"/><circle cx="311.55" cy="115.9" r="3.15" fill="#fff" opacity=".18"/><rect x="379.4" y="115" width="3.2" height="16" rx="1" fill="#7a5a3a"/><circle cx="381" cy="115" r="10" fill="#6fb35e"/><circle cx="377.5" cy="112.0" r="4.5" fill="#fff" opacity=".18"/><rect x="429.4" y="118" width="3.2" height="13" rx="1" fill="#7a5a3a"/><circle cx="431" cy="118" r="7" fill="#88c477"/><circle cx="428.55" cy="115.9" r="3.15" fill="#fff" opacity=".18"/><rect x="496.4" y="115" width="3.2" height="16" rx="1" fill="#7a5a3a"/><circle cx="498" cy="115" r="10" fill="#6fb35e"/><circle cx="494.5" cy="112.0" r="4.5" fill="#fff" opacity=".18"/><rect x="546.4" y="118" width="3.2" height="13" rx="1" fill="#7a5a3a"/><circle cx="548" cy="118" r="7" fill="#88c477"/><circle cx="545.55" cy="115.9" r="3.15" fill="#fff" opacity=".18"/><rect x="613.4" y="115" width="3.2" height="16" rx="1" fill="#7a5a3a"/><circle cx="615" cy="115" r="10" fill="#6fb35e"/><circle cx="611.5" cy="112.0" r="4.5" fill="#fff" opacity=".18"/><rect x="663.4" y="118" width="3.2" height="13" rx="1" fill="#7a5a3a"/><circle cx="665" cy="118" r="7" fill="#88c477"/><circle cx="662.55" cy="115.9" r="3.15" fill="#fff" opacity=".18"/></g><rect y="131" width="320" height="49" fill="#353b44"/><path d="M0 132.5 H320" stroke="#fff" stroke-opacity=".3" stroke-width="2"/><path class="yk-serit" d="M0 162 H1100" stroke="#fff" stroke-opacity=".85" stroke-width="3" stroke-dasharray="14 12"/><g class="yk-isik"><rect x="214" y="133" width="5" height="22" fill="#fff" opacity=".9"/><rect x="231" y="64" width="5" height="68" rx="1.5" fill="#5b6470"/><rect x="221" y="32" width="25" height="60" rx="9" fill="#1c2129"/><circle class="yk-k" cx="233.5" cy="45" r="6.5" fill="#5a2420"/><circle class="yk-s" cx="233.5" cy="62" r="6.5" fill="#5a4a1a"/><circle class="yk-y" cx="233.5" cy="79" r="6.5" fill="#1d4a2c"/></g><g transform="translate(126 0)"><g class="yk-hiz" stroke="#8aa4c4" stroke-width="2.2" stroke-linecap="round"><path d="M-30 122 H-10"/><path d="M-38 132 H-8"/><path d="M-26 141 H-6"/></g><ellipse cx="38" cy="156" rx="31" ry="2.6" fill="#000" opacity=".22"/><circle class="yk-duman" cx="-1" cy="143" r="3.5" fill="#d5dbe3"/><circle class="yk-duman iki" cx="-1" cy="141" r="3" fill="#e3e8ee"/><g class="yk-govde"><path d="M4 146 V138 Q4 130 12 129 L22 128 L31 116 Q34 112 39 112 H52 Q57 112 60 116 L67 127 Q72 128 72 134 V146 Q72 148 70 148 H6 Q4 148 4 146 Z" fill="#0a4da2"/><path d="M24 128 L32 117 Q34 115 37 115 H44 V128 Z M47 115 H52 Q55 115 57 117 L64 128 H47 Z" fill="#d4e6fc"/><path d="M45 130 V146" stroke="#073a7c" stroke-width="1"/><path d="M9 141 H62" stroke="#4d86d1" stroke-width="2" stroke-linecap="round" opacity=".7"/><g class="yk-goz"><ellipse cx="55" cy="121.5" rx="3.3" ry="3.8" fill="#fff"/><circle class="yk-gozbebek" cx="56" cy="122" r="1.7" fill="#1c2129"/></g><path d="M64.5 139.5 q3 2.4 6.2 0" stroke="#d4e6fc" stroke-width="1.4" fill="none" stroke-linecap="round"/><g class="yk-tabela"><rect x="34" y="104" width="20" height="8" rx="2" fill="#f2b705" stroke="#c99600" stroke-width=".8"/><path d="M44 105.3 l2.4 2.7 -2.4 2.7 -2.4 -2.7z" fill="#1c2129"/></g><rect x="68" y="131" width="4" height="4" rx="1.5" fill="#ffe08a"/><rect x="4" y="133" width="3" height="4" rx="1" fill="#ff6b5b"/></g><g class="yk-teker"><circle cx="19" cy="148" r="8" fill="#1c2129"/><circle cx="19" cy="148" r="3.8" fill="#c9d2dd"/><path d="M19 144.4 V151.6 M15.4 148 H22.6" stroke="#1c2129" stroke-width="1.5"/></g><g class="yk-teker"><circle cx="57" cy="148" r="8" fill="#1c2129"/><circle cx="57" cy="148" r="3.8" fill="#c9d2dd"/><path d="M57 144.4 V151.6 M53.4 148 H60.6" stroke="#1c2129" stroke-width="1.5"/></g></g></g></svg>';
-const IPUCLARI = ['Sarı ışık “dur”a hazırlan demektir, hızlan demek değildir.', 'Öndeki araçla aranda en az 2 saniyelik mesafe bırak.', 'Emniyet kemeri arka koltukta da takılır.', 'Yaya geçidinde öncelik her zaman yayanındır.', 'Şerit değiştirmeden önce sinyal ver, aynaya ve kör noktana bak.', 'Yağmurda takip mesafesini iki katına çıkar.', 'Kavşağa girmeden önce hızını düşür, sağdan gelene yol ver.'];
+const IPUCLARI = ['Yaya geçidinde öncelik her zaman yayanındır.', 'Sarı ışık “dur”a hazırlan demektir, hızlan demek değildir.', 'Öndeki araçla aranda en az 2 saniyelik mesafe bırak.', 'Emniyet kemeri arka koltukta da takılır.', 'Şerit değiştirmeden önce sinyal ver, aynaya ve kör noktana bak.', 'Yağmurda takip mesafesini iki katına çıkar.', 'Kavşağa girmeden önce hızını düşür, sağdan gelene yol ver.'];
 let ipucuSayac = null;
 // Yükleme ekranı: trafik ışığında bekleyen kurs arabası; altında birkaç saniyede bir değişen kısa trafik ipucu
 function bekleEkrani(metin) {
-  let n = Math.floor(Math.random() * IPUCLARI.length);
-  document.getElementById('uyg').innerHTML = `<div class="yukleme" role="status" aria-live="polite"><div class="yukle-sahne">${YUKLE_SAHNE}</div><div class="yukle-yazi"><b>${e(String(metin).replace(/…$/, ''))}</b><small>İlk açılışta birkaç saniye sürebilir</small></div><p class="yukle-ipucu" aria-live="off"><i>Biliyor muydun?</i><span>${e(IPUCLARI[n])}</span></p></div>`;
+  let n = 0;
+  document.getElementById('uyg').innerHTML = `<div class="yukleme" role="status" aria-live="polite"><div class="yukle-sahne" data-yk></div><div class="yukle-yazi"><b>${e(String(metin).replace(/…$/, ''))}</b><small>İlk açılışta birkaç saniye sürebilir</small></div><p class="yukle-ipucu" aria-live="off"><i>Biliyor muydun?</i><span>${e(IPUCLARI[n])}</span></p></div>`;
+  const sahne = document.querySelector('#uyg [data-yk]'); if (sahne && window.sinyalYukleme) window.sinyalYukleme(sahne);
   clearInterval(ipucuSayac);
   ipucuSayac = setInterval(() => { const p = document.querySelector('.yukle-ipucu'); if (!p) return clearInterval(ipucuSayac); p.style.opacity = 0; setTimeout(() => { n = (n + 1) % IPUCLARI.length; p.querySelector('span').textContent = IPUCLARI[n]; p.style.opacity = 1; }, 350); }, 3600);
 }
