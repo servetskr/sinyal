@@ -2375,3 +2375,22 @@ body.sahip-modu{
 .sh-gomulu .sh-bas h1{display:none}
 .sh-gomulu .sh-bas p{margin-top:0;font-weight:600}
 .sh-sen{font-style:normal;font-size:11.5px;font-weight:700;color:var(--levha);background:var(--levha-acik);border-radius:6px;padding:1px 6px;margin-left:4px;vertical-align:2px}
+/* Kurslar (v149): duruma göre gruplar, etiketli alanlar */
+.yn-kurs-grup{margin-top:22px}
+.yn-kurs-grup-bas{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;padding:0 2px}
+.yn-kurs-grup-bas b{font-size:15px;font-weight:700;color:var(--murekkep)}
+.yn-kurs-grup-bas small{font-size:14px;color:#6b6e76}
+.yn-kurs-grup .yn-kurslar{margin-top:10px}
+.yn-alanlar{display:grid;gap:10px;margin:12px 0 0}
+.yn-alan dt{display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#8e9198}
+.yn-alan dt .ik{width:13px;height:13px}
+.yn-alan dd{margin:3px 0 0;font-size:14.5px;line-height:1.45;color:var(--murekkep)}
+.yn-sonraki-bas{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.yn-zaman{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;border-radius:999px;background:#fff;color:#0a4da2;font-size:12.5px;font-weight:600;box-shadow:inset 0 0 0 1px #d5e0f3}
+.yn-zaman .ik{width:12px;height:12px}
+.yn-kurs footer{display:grid;gap:8px;margin-top:12px}
+.yn-alt-satir{display:grid;grid-template-columns:86px minmax(0,1fr);align-items:baseline;gap:8px}
+.yn-alt-satir>small{font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#8e9198}
+.yn-etiketler{display:flex;flex-wrap:wrap;gap:6px}
+.yn-etiket.uyari{background:#fff4e0;color:#8a4a00;font-weight:500}
+.yn-alt-satir .yn-etiket{justify-self:start}

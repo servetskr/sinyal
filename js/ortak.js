@@ -2,9 +2,9 @@
 // Kurs hesaplarından ayrı bir hesapta çalışır (S.kurs.tur === 'yonetim'); kurs ekranları açılmaz.
 // Üyeler: yönetici (müdür rolü, her şeyi girer) ve ortak (kendi e-posta ve şifresiyle girer, yalnız görür).
 // Kursiyer bilgisi yoktur: yalnız müşteri kurs adı, tahsilat, pay ve ödemeler.
-import { S, kaydet, gun, fark, tarihOku, iso, ayEkle, kapaliGun, islem, geriAlNoktasi } from './veri.js?v=148';
-import { e, ik, rozet, pencere, kapatPencere, bildir, tarih, tarihUzun, ayAdi, olcumler, belgeYazdir, fotoKucult, csvIndir, gunKisa } from './ui.js?v=148';
-import * as B from './bulut.js?v=148';
+import { S, kaydet, gun, fark, tarihOku, iso, ayEkle, kapaliGun, islem, geriAlNoktasi } from './veri.js?v=149';
+import { e, ik, rozet, pencere, kapatPencere, bildir, tarih, tarihUzun, ayAdi, olcumler, belgeYazdir, fotoKucult, csvIndir, gunKisa } from './ui.js?v=149';
+import * as B from './bulut.js?v=149';
 
 export const TURLER = ['İlk yıllık abonelik', 'Aylık abonelik', 'Abonelik yenileme', 'Ek şube', 'Kurulum', 'Eğitim', 'Destek', 'Ücretli modül', 'Diğer Sinyal hizmeti'];
 const PARA = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -214,16 +214,18 @@ let sekme = 'ozet', kursFiltre = 'hepsi', kasaAy = null, isEkTur = 'İş';
 export const sekmeSec = k => { sekme = k; };
 // kurs durumları: sıralama, renk ve simge (sıra = kartların dizilişi)
 export const DURUMLAR = [['Müşteri', 'yr-yesil', 'tik'], ['Sıcak', 'yr-kirmizi', 'alev'], ['Riskli', 'yr-turuncu', 'uyari'], ['Görüşülüyor', 'yr-sari', 'tel'], ['Ortak', 'yr-mor', 'kursiyer'], ['Bekliyor', 'yr-gri', 'saat'], ['Soğuk', 'yr-soluk', 'kapat']];
+// her durumun ne anlama geldiği (Kurslar ekranında grup başlığında yazar)
+const DURUM_ACIKLAMA = { 'Müşteri': 'Sinyal’i kullanıyor ve ödüyor', 'Sıcak': 'Satışa en yakın; ilk bunları takip et', 'Riskli': 'İlgili ama kaybedebiliriz; hızlı davran', 'Görüşülüyor': 'Görüşme sürüyor, karar bekleniyor', 'Ortak': 'Satış ortağı ya da iş birliği', 'Bekliyor': 'Zamanı gelince yeniden gidilecek', 'Soğuk': 'Şimdilik ilgisiz' };
 const durumBul = d => DURUMLAR.find(x => x[0] === d) || DURUMLAR[5];
 const bolum = (baslik, alt, dugme, ic, sinif = '') => `<section class="yn-bolum"><div class="yn-bolum-bas"><div><h2>${baslik}</h2>${alt ? `<small>${alt}</small>` : ''}</div>${dugme ? `<div class="yn-dg">${dugme}</div>` : ''}</div><div class="yn-kart ${sinif}">${ic}</div></section>`;
 function kursKart(k, yon) {
   const d = durumBul(k.durum), itiraz = String(k.itiraz || '').split(/\s*;\s*/).filter(Boolean);
+  const alan = (ikon, et, ic) => `<div class="yn-alan"><dt>${ik(ikon)}${et}</dt><dd>${ic}</dd></div>`;
   return `<article class="yn-kurs ${d[1]}" ${yon ? `data-yn-kurs="${e(k.id)}" tabindex="0" role="button" aria-label="${e(k.ad)} kursunu düzenle"` : ''}>
     <header><b>${e(k.ad)}</b><span class="yn-durum">${ik(d[2])}${e(d[0])}</span></header>
-    ${k.kisiler ? `<p class="yn-kisi">${ik('kursiyer')}<span>${e(k.kisiler)}</span></p>` : ''}
-    ${k.not ? `<p class="yn-not">${e(k.not)}</p>` : ''}
-    ${k.sonraki ? `<div class="yn-sonraki"><small>Sonraki adım${k.zaman ? ` · <b>${e(k.zaman)}</b>` : ''}</small><span>${e(k.sonraki)}</span></div>` : ''}
-    ${k.teklif || itiraz.length ? `<footer>${k.teklif ? `<span class="yn-etiket">Teklif · ${e(k.teklif)}</span>` : ''}${itiraz.map(x => `<span class="yn-etiket gri">${e(x)}</span>`).join('')}</footer>` : ''}
+    ${k.kisiler || k.not ? `<dl class="yn-alanlar">${k.kisiler ? alan('kursiyer', 'Görüşülen', e(k.kisiler)) : ''}${k.not ? alan('mesaj', 'Son durum', e(k.not)) : ''}</dl>` : ''}
+    ${k.sonraki ? `<div class="yn-sonraki"><div class="yn-sonraki-bas"><small>Sıradaki adım</small>${k.zaman ? `<span class="yn-zaman">${ik('saat')}${e(k.zaman)}</span>` : ''}</div><span>${e(k.sonraki)}</span></div>` : ''}
+    ${k.teklif || itiraz.length ? `<footer>${k.teklif ? `<div class="yn-alt-satir"><small>Teklif</small><span class="yn-etiket">${e(k.teklif)}</span></div>` : ''}${itiraz.length ? `<div class="yn-alt-satir"><small>Çekinceleri</small><span class="yn-etiketler">${itiraz.map(x => `<span class="yn-etiket uyari">${e(x)}</span>`).join('')}</span></div>` : ''}</footer>` : ''}
   </article>`;
 }
 function kurslarHtml(v, yon) {
@@ -232,10 +234,13 @@ function kurslarHtml(v, yon) {
   if (!l.length) return `<div class="yn-bolum"><div class="u-bos">${ik('kursiyer')}<b>Henüz kurs eklenmedi</b><p>${yon ? 'Görüştüğün kursları ekle; durumunu, kiminle görüştüğünü ve sonraki adımı tek yerde takip et.' : 'Servet Sakar kursları ekleyince burada görünür.'}</p>${yon ? `<div class="yn-bos-dg">${ekle}</div>` : ''}</div></div>`;
   if (kursFiltre !== 'hepsi' && !l.some(k => k.durum === kursFiltre)) kursFiltre = 'hepsi';
   const say = d => l.filter(k => k.durum === d).length;
-  const sira = d => DURUMLAR.findIndex(x => x[0] === d);
-  const gor = l.filter(k => kursFiltre === 'hepsi' || k.durum === kursFiltre).sort((a, b) => sira(a.durum) - sira(b.durum) || a.ad.localeCompare(b.ad, 'tr'));
+  // kurslar duruma göre gruplanır; her grubun başında o durumun ne demek olduğu yazar
+  const gruplar = DURUMLAR.filter(([d]) => (kursFiltre === 'hepsi' || kursFiltre === d) && say(d)).map(([d, sinif, ikon]) => {
+    const g = l.filter(k => k.durum === d).sort((a, b) => a.ad.localeCompare(b.ad, 'tr'));
+    return `<section class="yn-kurs-grup ${sinif}"><div class="yn-kurs-grup-bas"><span class="yn-durum">${ik(ikon)}${e(d)}</span><b>${g.length} kurs</b><small>${e(DURUM_ACIKLAMA[d] || '')}</small></div><div class="yn-kurslar">${g.map(k => kursKart(k, yon)).join('')}</div></section>`;
+  }).join('');
   return `<div class="yn-kurs-ust"><div class="yn-filtre" role="tablist" aria-label="Duruma göre süz">${[['hepsi', 'Tümü', l.length], ...DURUMLAR.map(([d]) => [d, d, say(d)]).filter(x => x[2])].map(([k, t, n]) => `<button data-yn-filtre="${e(k)}" class="${kursFiltre === k ? 'secili' : ''}" aria-pressed="${kursFiltre === k}">${e(t)}<em>${n}</em></button>`).join('')}</div>${yon ? `<div class="yn-dg">${ekle}</div>` : ''}</div>
-    <div class="yn-kurslar">${gor.map(k => kursKart(k, yon)).join('')}</div>`;
+    ${gruplar}`;
 }
 // ---- Ajanda: yapılacaklar ve hedefler (yalnız yönetici) ----
 const bugunMu = t => t === gun(0);
@@ -306,6 +311,7 @@ export function yonetimHtml(rol) {
   const borcAlt = h.kalanBorc ? (h.vadeGun != null && h.vadeGun >= 0 ? `${tarih(h.vade)} · ${h.vadeGun} gün` : 'son gün geçti') : 'kapandı';
   const olc = yon ? [[ayAd(ay.ay) + ' geliri', para(kasa.gelir), 'KDV hariç'], ['Gider', para(kasa.gider), kasa.hr.filter(x => x.tur === 'Gider').length + ' kalem'], ['Sana kalan', para(kasa.net), 'ortak payı düşülmüş'], ['Kalan borç', para(h.kalanBorc), borcAlt]]
     : [[ayAd(ay.ay) + ' tahsilat', para(ay.net), 'KDV hariç'], ['Bu ay pay', para(ay.pay), 'ödeme ' + tarih(ay.son)], ['Ödenmemiş pay', para(h.odenmemisPay), h.odenenPay ? para(h.odenenPay) + ' ödendi' : 'henüz ödeme yok'], ['Kalan borç', para(h.kalanBorc), borcAlt]];
+  if (sekme === 'kurslar') { const kl = v.kurslar || [], ks = d => kl.filter(k => k.durum === d).length; olc.splice(0, 4, ['Toplam', kl.length + ' kurs', 'görüşülen ve takip edilen'], ['Sıcak', ks('Sıcak') + ' kurs', 'satışa en yakın'], ['Görüşülüyor', ks('Görüşülüyor') + ks('Riskli') + ' kurs', ks('Riskli') ? ks('Riskli') + ' tanesi riskli' : 'karar bekleniyor'], ['Müşteri', ks('Müşteri') + ' kurs', 'Sinyal’i kullanan']); }
   const baslik = bol.find(b => b[0] === sekme)[1];
   const ust = `<section class="yn-hero"><div class="yn-ic"><small>${yon ? 'Sinyal Yönetim' : 'Ortak paneli · yalnız görüntüleme'}</small><h1>${sekme === 'ozet' ? (yon ? 'Merhaba ' + e(String(S.kurs.yetkili || 'Servet').split(' ')[0]) : e(o.ad)) : baslik}</h1><p>${yon ? `${tarihUzun(gun(0))} · ${bugunIs ? bugunIs + ' iş seni bekliyor' : 'bugün için bekleyen iş yok'}` : `Satışlardan %${h.oran} pay · sözleşme ${tarih(o.baslangic)}`}</p>
     <div class="yn-olcum">${olc.map(([a, b, c]) => `<div><small>${a}</small><b>${b}</b><span>${c}</span></div>`).join('')}</div></div></section>`;
