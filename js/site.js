@@ -24,6 +24,21 @@
     const io2 = new IntersectionObserver(l => l.forEach(x => { if (!x.isIntersecting) return; ici.forEach(a => a.classList.remove('secili')); const a = harita.get(x.target.id); if (a) { a.classList.add('secili'); const k = a.parentElement; k.scrollTo({ left: a.offsetLeft - (k.clientWidth - a.offsetWidth) / 2, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); } }), { rootMargin: '-45% 0px -50% 0px' });
     harita.forEach((a, id) => { const b = d.getElementById(id); if (b) io2.observe(b); });
   }
+  // Özellikler: özellik gezgini (soldaki listeden seçilen özelliğin cihaz ekranı sağda; ok tuşlarıyla da gezilir)
+  const gz = d.querySelector('.oz-gezgin');
+  if (gz) {
+    const sek = [...gz.querySelectorAll('[data-oz]')], pan = [...gz.querySelectorAll('[data-oz-panel]')], liste = gz.querySelector('.oz-liste');
+    // cihaz gerçek boyutunda çizilir, sahneye sığacak kadar orantılı küçültülür
+    const sigdir = () => pan.forEach(p => { const sh = p.querySelector('.oz-cihaz'), c = sh && sh.firstElementChild; if (!c) return; c.style.transform = ''; const o = Math.min(1, sh.clientWidth / c.offsetWidth, sh.clientHeight / c.offsetHeight); if (o < .999) c.style.transform = `scale(${o.toFixed(3)})`; });
+    const sec = (n, odak) => {
+      sek.forEach((b, i) => { b.setAttribute('aria-selected', i === n); b.tabIndex = i === n ? 0 : -1; if (i === n && odak) b.focus({ preventScroll: true }); });
+      pan.forEach((p, i) => { const ac = i === n; p.classList.toggle('aktif', ac); p.inert = !ac; const an = p.querySelector('.vt-an'); if (ac && an) { an.classList.remove('oynat'); void an.offsetWidth; an.classList.add('oynat'); } });
+      if (liste.scrollWidth > liste.clientWidth) { const b = sek[n]; liste.scrollTo({ left: b.offsetLeft - 20, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); }
+    };
+    gz.addEventListener('click', ev => { const b = ev.target.closest('[data-oz]'); if (b) sec(+b.dataset.oz); });
+    gz.addEventListener('keydown', ev => { const b = ev.target.closest('[data-oz]'); if (!b) return; const d2 = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[ev.key]; if (d2) { ev.preventDefault(); sec((+b.dataset.oz + d2 + sek.length) % sek.length, true); } });
+    sigdir(); sec(0); addEventListener('resize', sigdir); if (d.fonts && d.fonts.ready) d.fonts.ready.then(sigdir);
+  }
   // SSS: konu süzgeci ve arama
   const sss = d.querySelector('[data-st-sss]');
   if (sss) {
