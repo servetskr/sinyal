@@ -154,12 +154,17 @@ html.w-anim [data-gor].w-gorundu{opacity:1;transform:none}
 .w-secici a:hover,.w-secici button:hover{background:rgba(255,255,255,.12);color:#fff}
 @media (max-width:420px){.w-secici a,.w-secici button{padding:10px 12px;font-size:14px}}
 </style>
-<link id="app-css" rel="stylesheet" href="css/app.css?v=162" media="print">
-<noscript><link rel="stylesheet" href="css/app.css?v=162"></noscript>
+<link id="app-css" rel="stylesheet" href="css/app.css?v=167" media="print">
+<noscript><link rel="stylesheet" href="css/app.css?v=167"></noscript>
+<link rel="stylesheet" href="css/site.css?v=167">
 </head>
 <body>
 <div id="uyg"><div class="tanitim" id="tanitim">
-<header class="w-ust"><div class="w-kap w-ust-ic"><span class="tn-logo"><svg class="tn-logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>Sürücü kursu otomasyonu</small></span></span><div class="w-ust-dg"><button class="w-btn w-btn-kucuk w-btn-cizgi" data-giris type="button">Giriş yap</button><button class="w-btn w-btn-kucuk w-btn-ana" data-demo type="button">Demo</button></div></div></header>
+<!--st-ust--><header class="st-ust"><div class="st-kap st-ust-ic">
+<a class="st-logo" href="./" aria-label="Sinyal ana sayfa"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>Sürücü kursu otomasyonu</small></span></a>
+<nav class="st-nav" aria-label="Ana menü"><a href="ozellikler/">Özellikler</a><a href="fiyatlar/">Fiyatlar</a><a href="sss/">SSS</a><a href="iletisim/">İletişim</a></nav>
+<div class="st-ust-dg"><a class="st-btn st-btn-cizgi st-giris-dg" href="giris/">Giriş</a><button class="st-btn st-btn-ana" data-demo type="button">Demo</button><button class="st-menu-dg" type="button" data-st-menu aria-expanded="false" aria-controls="st-menu" aria-label="Menü"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></div>
+</div></header><div class="st-menu" id="st-menu"><a href="./">Ana sayfa</a><a href="ozellikler/">Özellikler</a><a href="fiyatlar/">Fiyatlar</a><a href="sss/">SSS</a><a href="iletisim/">İletişim</a><a href="giris/">Giriş</a><div class="st-menu-dgler"><a class="st-btn st-btn-ana st-btn-buyuk" href="#/demo">Demoyu incele</a><a class="st-btn st-btn-wp st-btn-buyuk" href="https://wa.me/905013636536?text=Merhaba, Sinyal hakkında bilgi almak istiyorum." target="_blank" rel="noopener">WhatsApp’tan yaz</a></div></div><!--/st-ust-->
 <main>
 <section class="w-kahraman"><div class="w-kap">
 <p class="w-et">Sürücü kursu otomasyonu</p>
@@ -174,20 +179,33 @@ html.w-anim [data-gor].w-gorundu{opacity:1;transform:none}
 <article><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10M8 3v6M16 3v6"/></svg><h3>Plan kendini düzenler</h3><p>Araç ve öğretmen çakışmaları kontrol edilir; boş saatler tek tuşla öğrencilere dağıtılır.</p></article>
 <article><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.3-3.8A8 8 0 1 1 8 19z"/></svg><h3>WhatsApp’tan otomatik</h3><p>Ders, taksit ve sınav hatırlatmaları gider; öğrencinin attığı evrak dosyasına düşer.</p></article>
 <article><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5z M9 8h6M9 12h6M9 16h3"/></svg><h3>MEB ve muhasebe hazır</h3><p>Resmî formlar dolu gelir; ay sonunda müşavirinize tek Excel dosyası gider.</p></article>
-</div></div></section>
+</div><p style="text-align:center;margin:44px 0 0"><a class="st-btn st-btn-cizgi" href="ozellikler/">Bütün özellikler →</a></p></div></section>
 <section class="w-bolum w-ikinci"><div class="w-kap w-ogr" data-gor>
 <div><p class="w-et">Öğrenci uygulaması</p><h2>Öğrenci her şeyi telefonundan görür.</h2><p class="w-alt">Kayıtta giriş bilgisi WhatsApp’tan gider. Ders saatleri, ödeme, sınav ve 1.949 soruluk sınav hazırlığı tek yerde.</p>
 <ul class="w-tikler"><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>Ders programı ve ders defteri</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>Deneme sınavı ve konu anlatımları</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>Ödeme planı ve makbuzlar</li></ul></div>
 <div class="w-tel-cerceve"><img src="img/site/ogrenci-360.webp" srcset="img/site/ogrenci-360.webp 360w, img/site/ogrenci.webp 540w" sizes="270px" width="540" height="1107" alt="Sinyal öğrenci uygulaması" loading="lazy" decoding="async"></div>
 </div></section>
+<section class="w-bolum"><div class="w-kap" data-gor><p class="w-et" style="text-align:center">Nasıl başlarız</p><h2 style="font:900 clamp(30px,4.2vw,46px)/1.1 var(--baslik);letter-spacing:-.02em;color:var(--w-baslik);text-align:center;margin:0">Bir günde Sinyal’e geçin.</h2>
+<div class="st-adimlar"><div class="st-adim"><h3>Görüşme</h3><p>Kursunuza gelir, ekranları sizin verinizle gösteririz.</p></div><div class="st-adim"><h3>Taşıma ve kurulum</h3><p>Eski programdaki öğrenci, ödeme ve ders kayıtlarınızı biz taşırız.</p></div><div class="st-adim"><h3>Kullanmaya başlayın</h3><p>Ekibe kısa eğitim; öğrencilere giriş bilgisi WhatsApp’tan gider.</p></div></div>
+<div class="st-kart" style="margin-top:18px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px 22px"><div><p style="margin:0;color:var(--w-baslik);font:800 20px/1.3 var(--baslik)">Kuruluş teklifi: 15.000 ₺ / 13 ay</p><p style="margin:4px 0 0">İlk 5 kurs için. Bütün modüller, öğrenci ve öğretmen uygulamaları, WhatsApp asistanı dahil.</p></div><a class="st-btn st-btn-ana" href="fiyatlar/">Fiyatlar →</a></div>
+</div></section>
 <section class="w-son"><div class="w-kap"><h2>Kendiniz görün.</h2><p>Demo örnek bir kursla açılır; hiçbir mesaj kimseye gitmez.</p><div class="w-dugmeler"><button class="w-btn w-btn-ana" data-demo type="button">Demoyu incele <span aria-hidden="true">→</span></button></div>
 <ul class="w-guven"><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>Her gün yedeklenir</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>KVKK araçları</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>MTSK Yönetmeliği’ne göre</li></ul></div></section>
 </main>
-<footer class="w-alt-bilgi"><div class="w-kap w-alt-ic"><span class="tn-logo"><svg class="tn-logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>Sürücü kursu otomasyonu</small></span></span><nav aria-label="Alt bağlantılar"><a href="#/ogrenci-giris">Öğrenci girişi</a><button type="button" data-giris="ogretmen">Öğretmen girişi</button><button type="button" data-giris>Kurs girişi</button><a href="gizlilik.html">Gizlilik</a></nav></div></footer>
+<!--st-alt--><footer class="st-alt"><div class="st-kap">
+<div class="st-alt-izgara">
+<div class="st-alt-marka"><a class="st-logo" href="./"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>Sürücü kursu otomasyonu</small></span></a><p>Öğrenci kaydı, direksiyon planı, ödeme, sınav ve MEB işleri tek yerde. Eskişehir’de, sürücü kurslarıyla birlikte geliştirildi.</p></div>
+<div><h3>Ürün</h3><ul><li><a href="ozellikler/">Özellikler</a></li><li><a href="fiyatlar/">Fiyatlar</a></li><li><a href="sss/">Sık sorulanlar</a></li><li><a href="#/demo">Demo</a></li></ul></div>
+<div><h3>Giriş</h3><ul><li><a href="#/giris">Kurs ekibi</a></li><li><a href="#/ogretmen-giris">Öğretmen</a></li><li><a href="#/ogrenci-giris">Öğrenci</a></li><li><a href="giris/">Bütün girişler</a></li></ul></div>
+<div><h3>Sinyal</h3><ul><li><a href="iletisim/">İletişim</a></li><li><a href="https://wa.me/905013636536" target="_blank" rel="noopener">WhatsApp · 0501 363 65 36</a></li><li><a href="gizlilik.html">Gizlilik ve KVKK</a></li></ul></div>
+</div>
+<div class="st-alt-dip"><span>© 2026 Sinyal · Servet Sakar</span><span>Verileriniz Avrupa’da (Frankfurt) tutulur ve her gün yedeklenir.</span></div>
+</div></footer><!--/st-alt-->
 </div><div id="acilis" hidden><div class="yukleme" role="status"><div class="yk-gokbulut b1" aria-hidden="true"></div><div class="yk-gokbulut b2" aria-hidden="true"></div><div class="yk-ust"><div class="yk-marka"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#0b2546" stroke-width="1.2"/><path d="M12 7.6v5.6M12 15.8v.4" stroke="#0b2546" stroke-width="2.3" stroke-linecap="round"/></svg><span>Sinyal</span></div><h1 class="yk-baslik">Sinyal açılıyor</h1><p class="yk-alt">Birkaç saniye sürebilir</p><div class="yk-cubuk" aria-hidden="true"><i></i></div><div class="yukle-ipucu" aria-live="off"><svg viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="9" fill="#1f5fbf"/><path d="M15 6.5 23 21.5H7Z" fill="#fff"/><circle cx="15" cy="12.4" r="1.4" fill="#0b2546"/><path d="M14.8 14.2l-.7 3.6m.7-3.6 2 2.4m-2-2.4-1.8 1.7m1.1 1.9-1.6 2m1.6-2 1.8 1.8" stroke="#0b2546" stroke-width="1.05" stroke-linecap="round"/></svg><div><i>Biliyor muydun?</i><span>Yaya geçidinde öncelik her zaman yayanındır.</span></div></div></div><div class="yukle-sahne" data-yk></div></div></div></div></div>
-<script src="js/yukleme.js?v=162"></script>
-<script src="js/acilis.js?v=162"></script>
+<script src="js/yukleme.js?v=167"></script>
+<script src="js/acilis.js?v=167"></script>
 <noscript><p style="padding:24px">Sinyal’i kullanmak için JavaScript’i açın.</p></noscript>
-<script type="module" src="js/baslat.js?v=162"></script>
+<script type="module" src="js/baslat.js?v=167"></script>
+<script src="js/site.js?v=167" defer></script>
 </body>
 </html>
