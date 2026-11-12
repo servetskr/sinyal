@@ -1,22 +1,22 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=154';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=154';
-import * as Y1 from './sayfalar1.js?v=154';
-import * as Y2 from './sayfalar2.js?v=154';
-import * as P from './portal.js?v=154';
-import * as Y3 from './sayfalar3.js?v=154';
-import * as Y4 from './sayfalar4.js?v=154';
-import * as Y5 from './sayfalar5.js?v=154';
-import * as IM from './imza.js?v=154';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=154';
-import * as SN from './senaryo.js?v=154';
-import * as OZ from './ozellik.js?v=154';
-import { durumlariGuncelle } from './mesaj.js?v=154';
-import { yeniMenu } from './yeni.js?v=154';
-import * as B from './bulut.js?v=154';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=154';
-import * as AN from './analiz.js?v=154';
-import * as ORT from './ortak.js?v=154';
-import * as SH from './sahip.js?v=154';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=156';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=156';
+import * as Y1 from './sayfalar1.js?v=156';
+import * as Y2 from './sayfalar2.js?v=156';
+import * as P from './portal.js?v=156';
+import * as Y3 from './sayfalar3.js?v=156';
+import * as Y4 from './sayfalar4.js?v=156';
+import * as Y5 from './sayfalar5.js?v=156';
+import * as IM from './imza.js?v=156';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=156';
+import * as SN from './senaryo.js?v=156';
+import * as OZ from './ozellik.js?v=156';
+import { durumlariGuncelle } from './mesaj.js?v=156';
+import { yeniMenu } from './yeni.js?v=156';
+import * as B from './bulut.js?v=156';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=156';
+import * as AN from './analiz.js?v=156';
+import * as ORT from './ortak.js?v=156';
+import * as SH from './sahip.js?v=156';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -70,8 +70,32 @@ function hesapSayfasi() {
   const satir = (ikon, metin, ek, ton = '') => `<span class="hs-ik ${ton}">${ik(ikon)}</span><span class="hs-metin">${metin}${ek ? `<small>${ek}</small>` : ''}</span>`;
   pencere({ baslik: 'Hesabım', alt: true, icerik: `<div class="hs-kim"><span class="app-profil buyuk" aria-hidden="true">${basHarf(ad)}</span><div><b>${e(ad)}</b><small>${e(S.kurs.ad)} · ${ogr ? 'Öğrenci' : ORT.yonetimModu() || u.rol === 'ortak' ? (u.rol === 'mudur' ? 'Yönetici' : 'Ortak · yalnız görüntüler') : ROL_AD[u.rol]}</small></div></div>
     <div class="hs-liste">${ogr ? `<button type="button" data-ogr-sifre>${satir('kilit', 'Şifremi değiştir')}${ik('sag')}</button>` : ''}
-      ${tel ? `<a href="tel:${e(tel)}">${satir('tel', 'Kursu ara', e(S.kurs.tel))}${ik('sag')}</a>` : ''}</div>
+      ${tel ? `<a href="tel:${e(tel)}">${satir('tel', 'Kursu ara', e(S.kurs.tel))}${ik('sag')}</a>` : ''}
+      ${!ogr && !ORT.yonetimModu() && u.rol !== 'ortak' ? `<button type="button" data-destek>${satir('mesaj', 'Sinyal Destek', 'Sorun, soru ya da istek bildir')}${ik('sag')}</button>` : ''}</div>
     <div class="hs-liste"><button type="button" class="hs-cikis" ${ogr ? 'data-ogr-cikis' : 'data-cikis'}>${satir('cikis', u.bulut || ogr ? 'Çıkış yap' : 'Kullanıcı değiştir', '', 'kirmizi')}</button></div>` });
+}
+// Kurs personeli Sinyal'e destek talebi açar: talep kursun verisine yazılır, Servet Sinyal Yönetim › Destek'te görür ve cevaplar
+const DESTEK_TUR = ['Hata', 'Soru', 'İstek', 'Eğitim'];
+function destekPenceresi() {
+  const u = oturum.kullanici, yazar = !!u.bulut && ['mudur', 'sekreter'].includes(u.rol), c = S.destekCevap || {};
+  const l = (S.destek || []).slice().sort((a, b) => String(b.zaman).localeCompare(String(a.zaman)));
+  const wa = 'https://wa.me/' + SH.DESTEK_TEL + '?text=' + encodeURIComponent('Merhaba, ' + (S.kurs.ad || 'kursumuz') + ' için Sinyal desteği rica ediyorum.');
+  pencere({ baslik: 'Sinyal Destek', alt: true, icerik: `${yazar ? `<form id="f-destek" class="og-giris-form yn-form">
+      <div class="sh-durum-sec ds-tur" role="radiogroup">${DESTEK_TUR.map((t, i) => `<button type="button" role="radio" aria-checked="${!i}" class="${!i ? 'secili' : ''}" data-ds-tur="${t}">${t}</button>`).join('')}</div>
+      <label class="og-alan"><span class="og-alan-et">Ne oldu, ne istiyorsun?</span><span class="og-girdi yn-alan-uzun"><textarea name="metin" rows="4" required placeholder="Örn. Taksit ekranında ödeme kaydedilmiyor"></textarea></span></label></form>`
+      : `<p class="ekran-notu" style="margin:0 0 12px">${ik('uyari')}<span>Talebi kurs müdürü ya da ön büro açar. Acil bir durum için WhatsApp’tan yazabilirsin.</span></p>`}
+    <a class="ds-wa" target="_blank" rel="noopener" href="${wa}">${ik('wp')}<span>Acil mi? Sinyal’e WhatsApp’tan yaz<small>0501 363 65 36</small></span></a>
+    ${l.length ? `<h3 class="krsd-bas">Talepleriniz</h3><div class="ds-liste">${l.map(t => { const x = c[t.id] || {}, d = x.durum || 'Açık';
+      return `<div class="ds-talep"><div><b>${e(t.tur)} · ${e(String(t.metin).slice(0, 80))}</b><small>${e(t.kim || '')} · ${e(new Date(t.zaman).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }))}</small>${x.cevap ? `<p class="ds-cevap">${ik('mesaj')}<span><b>Sinyal:</b> ${e(x.cevap)}</span></p>` : ''}</div><em class="ds-durum ${d === 'Çözüldü' ? 'ok' : d === 'İnceleniyor' ? 'bak' : ''}">${e(d)}</em></div>`; }).join('')}</div>` : ''}`,
+    altlik: yazar ? `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-destek">Gönder</button>` : '<button class="dg dg-ana" data-kapat>Tamam</button>',
+    onAc: p => {
+      if (!yazar) return;
+      let tur = DESTEK_TUR[0];
+      p.querySelectorAll('[data-ds-tur]').forEach(b => b.addEventListener('click', () => { tur = b.dataset.dsTur; p.querySelectorAll('[data-ds-tur]').forEach(x => { x.classList.toggle('secili', x === b); x.setAttribute('aria-checked', x === b); }); }));
+      p.querySelector('form').addEventListener('submit', ev => { ev.preventDefault(); const m = ev.target.metin.value.trim(); if (m.length < 3) return bildir('Kısaca ne olduğunu yaz', 'uyari');
+        (S.destek = S.destek || []).push({ id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), zaman: new Date().toISOString(), kim: u.ad, rol: u.rol, tur, metin: m.slice(0, 2000) });
+        islem('Sinyal Destek talebi açtı', tur); kaydet(); kapatPencere(); bildir('Talebin Sinyal’e iletildi; cevap buraya gelecek'); });
+    } });
 }
 function iskelet() {
   kurallariHazirla(); zamanlayiciBaslat();
@@ -574,8 +598,8 @@ function yonetimCiz(kaydir) {
   else { try { kap.innerHTML = ORT.yonetimHtml(u.rol); } catch (x) { console.error(x); kap.innerHTML = '<div class="kart"><div class="bos"><b>Ekran açılamadı</b><p>Sayfayı yenileyin.</p></div></div>'; } }
   yer.replaceChildren(kap);
   if (ORT.yonetimModu()) { try { ORT.yonetimBaglan(kap, u.rol, yenile); } catch (x) { console.error(x); } }
-  const shg = kap.querySelector('[data-sh-gomulu]'); if (shg && u.rol === 'mudur') SH.sahipGomulu(shg, B.bulut.eposta);
-  if (u.rol === 'mudur' && ORT.yonetimModu()) { SH.hazirla(); kap.addEventListener('click', ev => { if (ev.target.closest('[data-yn-sekme="hesaplar"]')) SH.otoBaglan(); }, true); }
+  const shg = kap.querySelector('[data-sh-gomulu]'); if (shg && u.rol === 'mudur') SH.sahipGomulu(shg, B.bulut.eposta, shg.dataset.shGor || 'hesaplar');
+  if (u.rol === 'mudur' && ORT.yonetimModu()) { SH.hazirla(); kap.addEventListener('click', ev => { if (ev.target.closest('[data-yn-sekme="hesaplar"],[data-yn-sekme="destek"]')) SH.otoBaglan(); }, true); }
   B.durumYaz();
   if (kaydir) window.scrollTo(0, 0);
 }
@@ -626,6 +650,7 @@ document.addEventListener('click', ev => { if (ev.target.closest('[data-yeniden-
 document.addEventListener('click', ev => {
   if (ev.target.closest('[data-cikis]')) kapatPencere();
   if (ev.target.closest('[data-hesap]')) return hesapSayfasi();
+  if (ev.target.closest('[data-destek]')) return destekPenceresi();
   if (ev.target.closest('[data-ogr-cikis]')) return B.ogrenciCikis().then(() => { location.hash = '#/ogrenci-giris'; location.reload(); });
   if (ev.target.closest('[data-ogr-sifre]')) { kapatPencere(); return ogrenciSifreDegistir(); }
   if (ev.target.closest('[data-cikis]') && oturum.kullanici && oturum.kullanici.bulut) { const yon = ORT.yonetimModu() || oturum.kullanici.rol === 'ortak'; islem('Çıkış yaptı'); kaydet(); B.cikisYap().then(() => { try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } location.hash = yon ? '#/yonetim' : ''; location.reload(); }); return; }

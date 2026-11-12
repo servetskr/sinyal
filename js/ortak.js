@@ -2,9 +2,9 @@
 // Kurs hesaplarından ayrı bir hesapta çalışır (S.kurs.tur === 'yonetim'); kurs ekranları açılmaz.
 // Üyeler: yönetici (müdür rolü, her şeyi girer) ve ortak (kendi e-posta ve şifresiyle girer, yalnız görür).
 // Kursiyer bilgisi yoktur: yalnız müşteri kurs adı, tahsilat, pay ve ödemeler.
-import { S, kaydet, gun, fark, tarihOku, iso, ayEkle, kapaliGun, islem, geriAlNoktasi } from './veri.js?v=154';
-import { e, ik, rozet, pencere, kapatPencere, bildir, tarih, tarihUzun, ayAdi, olcumler, belgeYazdir, fotoKucult, csvIndir, gunKisa } from './ui.js?v=154';
-import * as B from './bulut.js?v=154';
+import { S, kaydet, gun, fark, tarihOku, iso, ayEkle, kapaliGun, islem, geriAlNoktasi } from './veri.js?v=156';
+import { e, ik, rozet, pencere, kapatPencere, bildir, tarih, tarihUzun, ayAdi, olcumler, belgeYazdir, fotoKucult, csvIndir, gunKisa } from './ui.js?v=156';
+import * as B from './bulut.js?v=156';
 
 export const TURLER = ['İlk yıllık abonelik', 'Aylık abonelik', 'Abonelik yenileme', 'Ek şube', 'Kurulum', 'Eğitim', 'Destek', 'Ücretli modül', 'Diğer Sinyal hizmeti'];
 const PARA = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -318,7 +318,7 @@ function ozetHtml2(v, h) {
     <div>${bolum('Takipteki kurslar', 'Sıcak, riskli ve görüşülenler', `<button class="u-hap gri" data-yn-git="kurslar">Kurslar</button>`, sicak.length ? sicak.map(k => { const d = DURUMLAR.find(x => x[0] === k.durum); return `<div class="u-satir dokun ${d[1]}" data-yn-kurs="${e(k.id)}"><span class="yn-nokta"></span><span class="u-satir-govde"><b>${e(k.ad)}</b><small>${e(k.sonraki || k.not || '')}${k.zaman ? ' · ' + e(k.zaman) : ''}</small></span><span class="yn-durum">${e(k.durum)}</span></div>`; }).join('') : '<p class="ort-bos">Takipte kurs yok.</p>')}</div>
   </div>`;
 }
-const BOLUMLER_YON = [['ozet', 'Özet', 'genel'], ['ajanda', 'Ajanda', 'takvim'], ['kurslar', 'Kurslar', 'kursiyer'], ['kasa', 'Gelir-Gider', 'kasa'], ['ortaklik', 'Ortaklık', 'rapor'], ['hesaplar', 'Hesaplar', 'kilit']];
+const BOLUMLER_YON = [['ozet', 'Özet', 'genel'], ['ajanda', 'Ajanda', 'takvim'], ['kurslar', 'Kurslar', 'kursiyer'], ['kasa', 'Gelir-Gider', 'kasa'], ['ortaklik', 'Ortaklık', 'rapor'], ['destek', 'Destek', 'mesaj'], ['hesaplar', 'Hesaplar', 'kilit']];
 const BOLUMLER_ORT = [['ozet', 'Özet', 'genel'], ['kurslar', 'Kurslar', 'kursiyer'], ['ortaklik', 'Ortaklık', 'rapor']];
 export function yonetimHtml(rol) {
   const v = S.isletme, h = hesap(v), o = v.ortak, yon = rol === 'mudur', bol = yon ? BOLUMLER_YON : BOLUMLER_ORT;
@@ -341,7 +341,8 @@ export function yonetimHtml(rol) {
   if (sekme === 'ajanda') govde = ajandaHtml(v);
   if (sekme === 'kurslar') govde = kurslarHtml(v, yon);
   if (sekme === 'kasa') govde = kasaHtml(v, h);
-  if (sekme === 'hesaplar') govde = '<div data-sh-gomulu></div>';  // bütün Sinyal hesapları (sahip.js); yalnız Servet görür
+  if (sekme === 'hesaplar') govde = '<div data-sh-gomulu></div>';
+  if (sekme === 'destek') govde = '<div data-sh-gomulu data-sh-gor="destek"></div>';  // destek talepleri ve verilen hizmetler  // bütün Sinyal hesapları (sahip.js); yalnız Servet görür
   if (sekme === 'ortaklik') {
     const ortaklar = (S.kullanicilar || []).filter(u => u.rol === 'ortak');
     const ortakIc = ortaklar.length ? ortaklar.map(u => `<div class="u-satir"><span class="u-ik mor">${ik('kursiyer')}</span><span class="u-satir-govde"><b>${e(u.ad)}</b><small>${e(u.eposta || '')} · yalnız görüntüler</small></span>${yon ? `<button class="u-hap gri" data-ort-uye-cikar="${e(u.id)}">Erişimi kaldır</button>` : ''}</div>`).join('')
