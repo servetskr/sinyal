@@ -21,7 +21,7 @@
   const ici = d.querySelectorAll('.st-ici a[href^="#"]');
   if (ici.length && 'IntersectionObserver' in window) {
     const harita = new Map([...ici].map(a => [a.getAttribute('href').slice(1), a]));
-    const io2 = new IntersectionObserver(l => l.forEach(x => { if (!x.isIntersecting) return; ici.forEach(a => a.classList.remove('secili')); const a = harita.get(x.target.id); if (a) { a.classList.add('secili'); a.scrollIntoView({ block: 'nearest', inline: 'center' }); } }), { rootMargin: '-45% 0px -50% 0px' });
+    const io2 = new IntersectionObserver(l => l.forEach(x => { if (!x.isIntersecting) return; ici.forEach(a => a.classList.remove('secili')); const a = harita.get(x.target.id); if (a) { a.classList.add('secili'); const k = a.parentElement; k.scrollTo({ left: a.offsetLeft - (k.clientWidth - a.offsetWidth) / 2, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); } }), { rootMargin: '-45% 0px -50% 0px' });
     harita.forEach((a, id) => { const b = d.getElementById(id); if (b) io2.observe(b); });
   }
   // SSS: konu süzgeci ve arama

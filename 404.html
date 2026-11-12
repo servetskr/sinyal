@@ -1,16 +1,16 @@
 <!doctype html>
 <html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sinyal Sürücü Kursu</title><meta property="og:title" content="Sinyal · Sürücü kursu otomasyonu"><meta property="og:description" content="Öğrenci kaydı, direksiyon planı, ödeme, sınav ve MEB işleri tek yerde."><meta property="og:image" content="https://servetskr.github.io/sinyal/img/site/paylas-101.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image">
-<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f2f0ea;color:#1c2129;font:17px/1.5 system-ui,-apple-system,sans-serif}main{max-width:420px;padding:28px;text-align:center}b{display:block;font-size:20px;margin-bottom:6px}</style></head>
-<body><main><b>Sinyal Sürücü Kursu</b><p id="m">Link açılıyor…</p></main>
+<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(60% 40% at 50% 100%,rgba(255,170,70,.14),transparent 70%),#070b14;color:rgba(214,222,238,.75);font:17px/1.55 system-ui,-apple-system,sans-serif}main{max-width:420px;padding:28px;text-align:center}main svg{width:56px;height:56px;margin-bottom:18px}b{display:block;font-size:22px;color:#fff;margin-bottom:6px}a.git{display:inline-flex;align-items:center;margin-top:22px;min-height:48px;padding:0 22px;border-radius:12px;background:#ffc21a;color:#0b1220;font-weight:800;text-decoration:none}a.git[hidden]{display:none}</style></head>
+<body><main><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#ffc21a"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><b>Sinyal</b><p id="m">Link açılıyor…</p><a class="git" id="git" href="/sinyal/" hidden>Ana sayfaya dön</a></main>
 <script>
 (async () => {
   const yol = location.pathname.replace(/^\/sinyal\/?/, '').replace(/\/+$/, '');
   const m = document.getElementById('m');
-  if (!yol || !/^[a-z0-9-]{4,90}$/.test(yol)) { m.textContent = 'Sayfa bulunamadı.'; return; }
+  if (!yol || !/^[a-z0-9-]{4,90}$/.test(yol)) { m.textContent = 'Aradığınız sayfa bulunamadı.'; document.getElementById('git').hidden = false; return; }
   try {
     const j = await (await fetch('https://sinyal-wa.sinemsavar0.workers.dev/k/' + yol)).json();
     if (j.ok && j.hedef) { location.replace(j.hedef); return; }
   } catch (e) { }
-  m.textContent = 'Bu linkin süresi dolmuş ya da link hatalı. Kursa yazıp yeni link isteyin.';
+  m.textContent = 'Bu linkin süresi dolmuş ya da link hatalı. Kursa yazıp yeni link isteyin.'; document.getElementById('git').hidden = false;
 })();
 </script></body></html>
