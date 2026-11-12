@@ -1,7 +1,8 @@
-// Sinyal sahip paneli (#/sahip): bütün hesaplar tek yerde (kurs personeli, öğrenciler, Sinyal Yönetim ve ortak).
+// Sinyal sahip araçları: bütün hesaplar tek yerde (kurs personeli, öğrenciler, Sinyal Yönetim ve ortak).
+// Sinyal Yönetim panelinin “Hesaplar” bölümünde açılır (yalnız Servet; ortak görmez).
 // Yetki Firebase güvenlik kurallarından değil, Google hesabından gelir: Firebase projesinin sahibi olan Google hesabıyla
 // bağlanılır, Google IAM izin verirse işlem yapılır. Sunucu, gizli anahtar yok; erişim belirteci yalnız bellekte durur (1 saat).
-import { e, ik, pencere, kapatPencere, bildir } from './ui.js?v=144';
+import { e, ik, pencere, kapatPencere, bildir } from './ui.js?v=145';
 
 const PROJE = 'sinyal-5d37a';
 const ISTEMCI = '451344576006-sua0mu4d4qcssc0lv8g01qic26hr6os7.apps.googleusercontent.com';  // Google OAuth istemci kimliği (herkese açık bilgidir; yetkiyi Google hesabı verir)
@@ -14,7 +15,7 @@ const YONETIM_KURS = 'Sinyal Yönetim';
 const ROL = { mudur: 'Kurs müdürü', sekreter: 'Ön büro', usta: 'Öğretmen', ortak: 'Ortak', ogrenci: 'Öğrenci' };
 const SUZGEC = [['hepsi', 'Hepsi'], ['personel', 'Kurs personeli'], ['ogrenci', 'Öğrenciler'], ['yonetim', 'Yönetim']];
 
-let belirtec = null, bitis = 0, hesaplar = null, talepler = [], suzgec = 'hepsi', arama = '', kok = null, yukleniyor = false, hataMetni = '';
+let belirtec = null, bitis = 0, hesaplar = null, talepler = [], suzgec = 'hepsi', arama = '', kok = null, yukleniyor = false, hataMetni = '', gomulu = false, ipucu = '';
 
 const rastgele = (n, harf = 'abcdefghijkmnpqrstuvwxyz23456789') => [...crypto.getRandomValues(new Uint8Array(n))].map(x => harf[x % harf.length]).join('');
 // okunması ve WhatsApp'tan yazılması kolay geçici şifre: 4 harf + 4 rakam (karışan harfler yok)
@@ -35,7 +36,7 @@ async function baglan() {
   await gsiYukle();
   await new Promise((coz, red) => {
     const c = google.accounts.oauth2.initTokenClient({
-      client_id: ISTEMCI, scope: KAPSAM,
+      client_id: ISTEMCI, scope: KAPSAM, ...(ipucu ? { login_hint: ipucu } : {}),
       callback: r => { if (r.error) return red(new Error(r.error_description || r.error)); belirtec = r.access_token; bitis = Date.now() + ((+r.expires_in || 3600) - 60) * 1000; coz(); },
       error_callback: x => red(new Error(x && x.type === 'popup_closed' ? 'Google penceresi kapatıldı' : 'Google penceresi açılamadı; açılır pencerelere izin ver')),
     });
@@ -147,11 +148,18 @@ function sifreMesaji(h, sifre) {
   if (h.yonetim) return `Merhaba${ad}, Sinyal Yönetim için yeni şifren: ${sifre}\n\nGiriş: ${girisAdresi()}#/yonetim\n${h.kullaniciAdi ? 'Kullanıcı adı: ' + h.kullaniciAdi : 'E-posta: ' + h.eposta}`;
   return `Merhaba${ad}, Sinyal için yeni şifren: ${sifre}\n\nGiriş: ${girisAdresi()}\nE-posta: ${h.eposta}\nGirdikten sonra Hesabım bölümünden kendi şifreni belirleyebilirsin.`;
 }
+const benMi = h => !!ipucu && h.eposta.toLocaleLowerCase('tr') === ipucu.toLocaleLowerCase('tr');
 const waLinki = (tel, metin) => 'https://wa.me/' + (tel || '') + '?text=' + encodeURIComponent(metin);
 
 // ---- ekran ----
+// Sinyal Yönetim içinde (Hesaplar bölümü): üst çubuk ve sayfa kabuğu Yönetim panelinden gelir
+export function sahipGomulu(yer, eposta) {
+  kok = yer; gomulu = true; ipucu = /@/.test(eposta || '') && !/\.invalid$/.test(eposta) ? eposta : '';
+  ciz();
+  if (!kok.dataset.shBagli) { kok.dataset.shBagli = '1'; kok.addEventListener('click', tikla); kok.addEventListener('input', yaz); }
+}
 export function sahipEkrani(yer) {
-  kok = yer || document.getElementById('uyg');
+  kok = yer || document.getElementById('uyg'); gomulu = false;
   document.body.classList.remove('portal-modu', 'yonetim-modu'); document.body.classList.add('sahip-modu');
   document.title = 'Sinyal · Sahip paneli';
   ciz();
@@ -160,34 +168,33 @@ export function sahipEkrani(yer) {
 const ust = () => `<header class="sh-ust"><div class="sh-marka"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>Sahip paneli</small></span></div>
   ${bagli() ? `<button class="sh-yenile" data-sh-yenile ${yukleniyor ? 'disabled' : ''}>${ik('sifirla')}<span>${yukleniyor ? 'Yükleniyor…' : 'Yenile'}</span></button>` : ''}</header>`;
 
+const kabuk = (ic, giris) => gomulu ? `<div class="sh sh-gomulu${giris ? ' sh-giris' : ''}">${ic}</div>` : `<div class="sh">${ust()}<main class="sh-govde${giris ? ' sh-giris' : ''}">${ic}</main></div>`;
 function ciz() {
-  if (!kok || !document.body.classList.contains('sahip-modu')) return;
+  if (!kok || (gomulu ? !kok.isConnected : !document.body.classList.contains('sahip-modu'))) return;
   if (!bagli()) {
-    kok.innerHTML = `<div class="sh">${ust()}<main class="sh-govde sh-giris">
-      <div class="sh-giris-kart">
+    kok.innerHTML = kabuk(`<div class="sh-giris-kart">
         <span class="sh-giris-ik">${ik('kilit')}</span>
         <h1>Bütün hesaplar tek yerde</h1>
         <p>Kurs müdürleri, ön büro, öğretmenler, öğrenciler ve Sinyal Yönetim. Şifresini unutan olursa buradan tek dokunuşla yeni şifre verirsin.</p>
         <button class="dg dg-ana sh-giris-dg" data-sh-baglan>${ik('kilit')}Google hesabınla bağlan</button>
         ${hataMetni ? `<p class="sh-hata">${ik('uyari')}<span>${e(hataMetni)}</span></p>` : ''}
-        <p class="sh-dip">Yalnız Sinyal’in Firebase projesinin sahibi olan Google hesabı girebilir. Yetkiyi Google verir; şifreler ve anahtarlar hiçbir yerde saklanmaz.</p>
-      </div></main></div>`;
+        <p class="sh-dip">Güvenlik için hesaplara Google hesabınla bir kez daha onay verirsin (${ipucu ? e(ipucu) : 'Sinyal projesinin sahibi olan Google hesabı'}); onay bir saat geçerli. Şifreler ve anahtarlar hiçbir yerde saklanmaz.</p>
+      </div>`, true);
     return;
   }
-  if (!hesaplar) { kok.innerHTML = `<div class="sh">${ust()}<main class="sh-govde"><div class="sh-bos">${ik('saat')}<b>Hesaplar yükleniyor…</b></div></main></div>`; return; }
+  if (!hesaplar) { kok.innerHTML = kabuk(`<div class="sh-bos">${ik('saat')}<b>Hesaplar yükleniyor…</b></div>`); return; }
   const kursSay = new Set(hesaplar.filter(h => h.kurs && !h.yonetim).map(h => h.kurs)).size;
   const talepHtml = talepler.length ? `<section class="sh-talep"><h2>${ik('uyari')}Şifre isteyenler <span>${talepler.length}</span></h2>${talepler.map(t => {
     const h = hesaplar.find(x => x.tel === t.tel && x.kurs === t.kurs);
     return `<div class="sh-talep-satir"><span><b>${e(h ? h.ad : telGoster(t.tel))}</b><small>${e(h ? h.kursAd : 'Öğrenci')} · ${e(telGoster(t.tel))}</small></span>${h ? `<button class="dg dg-ana dg-kucuk" data-sh-sifre="${h.uid}">Yeni şifre ver</button>` : ''}</div>`;
   }).join('')}</section>` : '';
-  kok.innerHTML = `<div class="sh">${ust()}<main class="sh-govde">
+  kok.innerHTML = kabuk(`
     <div class="sh-bas"><div><h1>Hesaplar</h1><p>${hesaplar.length} hesap · ${kursSay} kurs</p></div>
-      <div class="sh-bas-dg"><button class="dg dg-cizgi dg-kucuk" data-sh-davet="kurs">${ik('arti')}Kurs hesabı linki</button><button class="dg dg-cizgi dg-kucuk" data-sh-davet="yonetim">${ik('arti')}Yönetim hesabı linki</button></div></div>
+      <div class="sh-bas-dg">${gomulu ? `<button class="dg dg-cizgi dg-kucuk" data-sh-yenile ${yukleniyor ? 'disabled' : ''}>${ik('sifirla')}${yukleniyor ? 'Yükleniyor…' : 'Yenile'}</button>` : ''}<button class="dg dg-cizgi dg-kucuk" data-sh-davet="kurs">${ik('arti')}Kurs hesabı linki</button><button class="dg dg-cizgi dg-kucuk" data-sh-davet="yonetim">${ik('arti')}Yönetim hesabı linki</button></div></div>
     ${talepHtml}
     <div class="sh-arac"><label class="sh-ara">${ik('ara')}<input type="search" data-sh-ara placeholder="İsim, telefon, e-posta ya da kurs ara" value="${e(arama)}" autocomplete="off"></label>
       <div class="sh-suz" role="tablist">${SUZGEC.map(([k, a]) => `<button role="tab" aria-selected="${suzgec === k}" class="${suzgec === k ? 'secili' : ''}" data-sh-suz="${k}">${a}</button>`).join('')}</div></div>
-    <div data-sh-sonuc>${sonucHtml()}</div>
-  </main></div>`;
+    <div data-sh-sonuc>${sonucHtml()}</div>`);
 }
 // arama yazılırken yalnız liste yenilenir (kutu odağını kaybetmez)
 function sonucHtml() {
@@ -204,7 +211,7 @@ function sonucHtml() {
       const baslik = a === '0' ? YONETIM_KURS : a === '2' ? 'Kursa bağlı olmayan hesaplar' : a.slice(1);
       return `<section class="sh-grup"><h2>${e(baslik)}<span>${l.length}</span></h2><div class="sh-liste">${l.map(h => `<button class="sh-satir${h.kapali ? ' kapali' : ''}" data-sh-hesap="${h.uid}">
         <span class="sh-av sh-av-${h.rol || 'yok'}">${e((h.ad || '?').trim().charAt(0).toLocaleUpperCase('tr'))}</span>
-        <span class="sh-satir-ic"><b>${e(h.ad)}</b><small>${e(rolAd(h))} · ${e(kimlik(h))}</small></span>
+        <span class="sh-satir-ic"><b>${e(h.ad)}${benMi(h) ? ' <em class="sh-sen">sen</em>' : ''}</b><small>${e(rolAd(h))} · ${e(kimlik(h))}</small></span>
         <span class="sh-satir-sag">${h.kapali ? '<em class="sh-rozet">Giriş kapalı</em>' : `<small>${e(zamanMetni(h.sonGiris))}</small>`}${ik('sag')}</span></button>`).join('')}</div></section>`;
     }).join('') : `<div class="sh-bos">${ik('ara')}<b>Eşleşen hesap yok</b><small>Aramayı ya da süzgeci değiştir.</small></div>`;
 }
@@ -242,7 +249,7 @@ function hesapPenceresi(h) {
       <div class="sh-islem">
         <button class="sh-islem-dg birincil" data-p-sifre>${ik('kilit')}<span><b>Yeni şifre ver</b><small>Geçici şifre oluşur, WhatsApp’tan gönderirsin${h.rol === 'ogrenci' ? '; öğrenci ilk girişte kendi şifresini belirler' : ''}</small></span></button>
         <button class="sh-islem-dg" data-p-kapat>${ik(h.kapali ? 'tik' : 'kapat')}<span><b>${h.kapali ? 'Girişi aç' : 'Girişi kapat'}</b><small>${h.kapali ? 'Hesap yeniden kullanılabilir' : 'Veriler kalır; bu kişi giremez'}</small></span></button>
-        ${h.rol === 'ogrenci' ? '' : `<button class="sh-islem-dg tehlike" data-p-sil>${ik('kapat')}<span><b>Hesabı sil</b><small>Kalıcıdır; kursun verileri silinmez</small></span></button>`}
+        ${h.rol === 'ogrenci' || benMi(h) ? '' : `<button class="sh-islem-dg tehlike" data-p-sil>${ik('kapat')}<span><b>Hesabı sil</b><small>Kalıcıdır; kursun verileri silinmez</small></span></button>`}
       </div>`,
     onAc: p => {
       p.querySelector('[data-p-sifre]').addEventListener('click', () => sifrePenceresi(h));
