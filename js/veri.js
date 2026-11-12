@@ -495,6 +495,12 @@ function goc(o) {
   // kalıcı makbuz numaraları (yıl içinde sıralı)
   o.sayac = o.sayac || {};
   o.ustaOdemeleri = o.ustaOdemeleri || [];  // öğretmene yapılan hakediş ödemeleri { id, egitmen, ay: 'YYYY-AA', tutar, tarih, yontem }
+  // demoda geçen ayın hakedişi ilk öğretmene ödenmiş görünsün (öğretmenin "Kazancım" ekranında ödendi / bekliyor farkı)
+  if (demo && !o.ustaOdemeleri.length && (o.egitmenler || [])[0]) {
+    const [y, m] = gun(0).split('-').map(Number), t = new Date(y, m - 2, 1), ay = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0'), h = o.egitmenler[0];
+    const n = (o.dersler || []).filter(d => d.egitmen === h.id && d.durum === 'Yapıldı' && (d.tarih || '').slice(0, 7) === ay).length;
+    o.ustaOdemeleri.push({ id: 'uo-demo', egitmen: h.id, ay, tutar: (+h.maas || 0) + n * (+h.prim || 0), tarih: ay + '-28', yontem: 'Havale' });
+  }
   const gelir = (o.hareket || []).filter(h => h.tur === 'Gelir').sort((a, b) => (a.tarih + a.id).localeCompare(b.tarih + b.id));
   gelir.forEach(h => { if (!h.no) { const yil = h.tarih.slice(0, 4); o.sayac['m' + yil] = (o.sayac['m' + yil] || 0) + 1; h.no = 'M' + yil + '-' + String(o.sayac['m' + yil]).padStart(5, '0'); } });
   // gerçek entegrasyon kurulana kadar bağlı görünmez

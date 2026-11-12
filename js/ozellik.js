@@ -1,10 +1,36 @@
-import { cevapIsle } from './mesaj.js?v=129';
-import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli, sonrakiDers, selam, bulutKanca, iptalEdilebilir, oturum, dersIptalIz } from './veri.js?v=129';
-import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos, waIstek, ziyaretci, apiGonder } from './ui.js?v=129';
-import { yenile } from './app.js?v=129';
-import { bildirimler } from './sayfalar1.js?v=129';
-import { denetimEksikleri } from './sayfalar3.js?v=129';
-import { sinifKari, dersMaliyeti, bosKapasite, hakedis, KAPASITE_SAAT, randevuEngeli, bosSlotlar } from './risk.js?v=129';
+import { cevapIsle } from './mesaj.js?v=130';
+import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli, sonrakiDers, selam, bulutKanca, iptalEdilebilir, oturum, dersIptalIz } from './veri.js?v=130';
+import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos, waIstek, ziyaretci, apiGonder } from './ui.js?v=130';
+import { yenile } from './app.js?v=130';
+import { bildirimler } from './sayfalar1.js?v=130';
+import { denetimEksikleri } from './sayfalar3.js?v=130';
+import { sinifKari, dersMaliyeti, bosKapasite, hakedis, ustaAlacak, ayAnahtar, KAPASITE_SAAT, randevuEngeli, bosSlotlar } from './risk.js?v=130';
+const AY_ADI = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+export const ayAdi = a => AY_ADI[+a.slice(5, 7) - 1] + ' ' + a.slice(0, 4);
+
+// Öğretmene hakediş ödemesi: ödeme kaydı öğretmenin "Kazancım" ekranına gider; istenirse kasaya Maaş gideri olarak da işlenir
+function ustaOde(h) {
+  if (!h) return;
+  const aylar = [1, 0].map(g => ({ g, a: ustaAlacak(h, g) })), ilk = aylar.find(x => x.a.kalan > 0) || aylar[1];
+  pencere({ baslik: h.ad + ' · hakediş ödemesi', icerik: `<form class="form-izgara" id="f-uode"><div class="alan tam"><label>Hangi ayın hakedişi</label><select name="ay">${aylar.map(({ g, a }) => `<option value="${g}" ${g === ilk.g ? 'selected' : ''}>${ayAdi(a.ay)} · kalan ${tl(a.kalan)}</option>`).join('')}</select></div>
+    <div class="alan"><label>Tutar (₺)</label><input name="tutar" inputmode="decimal" required value="${ilk.a.kalan || ''}"></div><div class="alan"><label>Ödeme</label><select name="yontem"><option>Havale</option><option>Nakit</option></select></div>
+    <label class="alan tam" style="display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" name="kasa" checked style="width:auto"> Kasaya “Maaş” gideri olarak işle</label></form>
+    <p style="font-size:13px;color:var(--soluk);margin-top:8px">Tutarlar brüttür; net ücret bordroda kesinleşir. Maaşları kasaya toplu giriyorsanız kutuyu kaldırın, gider iki kez yazılmasın.</p>`,
+    altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Ödemeyi kaydet</button>',
+    onAc(d) {
+      const f = d.querySelector('#f-uode');
+      f.ay.addEventListener('change', () => { f.tutar.value = aylar.find(x => x.g === +f.ay.value).a.kalan || ''; });
+      d.querySelector('[data-k]').addEventListener('click', () => {
+        const tutar = Math.round(parseFloat(String(f.tutar.value).replace(/[^\d,.]/g, '').replace(/\.(?=\d{3}\b)/g, '').replace(',', '.')) * 100) / 100;
+        if (!(tutar > 0)) return bildir('Tutarı yazın', 'uyari');
+        const a = aylar.find(x => x.g === +f.ay.value).a, ad = ayAdi(a.ay);
+        S.ustaOdemeleri = S.ustaOdemeleri || [];
+        S.ustaOdemeleri.unshift({ id: 'uo' + Date.now(), egitmen: h.id, ay: a.ay, tutar, tarih: gun(0), yontem: f.yontem.value });
+        if (f.kasa.checked) S.hareket.unshift({ id: 'h' + Date.now(), tarih: gun(0), tur: 'Gider', kategori: 'Maaş', aciklama: h.ad + ' · ' + ad + ' hakedişi', tutar, yontem: f.yontem.value });
+        islem('Öğretmene hakediş ödedi', h.ad + ' · ' + ad + ' · ' + tl(tutar)); kaydet(); kapatPencere(); bildir(h.ad + ' için ' + tl(tutar) + ' ödeme kaydedildi'); yenile();
+      });
+    } });
+}
 
 /* ================= DENETİM SKORU ================= */
 export function denetimSkoru() {
@@ -44,11 +70,11 @@ export function karlilik() {
       <p style="font-size:13px;color:var(--soluk);margin-top:10px">Kutudaki sayı o saatte boş olan usta öğretici sayısı. İzinli ustalar, resmî tatiller ve pazar günleri sayılmaz.</p></div></div>
     <div class="ara-bosluk"></div>
     <div class="kart"><div class="kart-bas"><h3>Usta hakedişi · ${ayAd}</h3><small>Yapılan ve imzalanan dersler üzerinden, brüt</small><div class="sag"><button class="dg dg-cizgi dg-kucuk" data-hakedis-csv>${ik('indir')}Bordroya aktar</button></div></div>
-      <div class="tablo-kap"><table class="tablo"><thead><tr><th>Usta öğretici</th><th style="text-align:right">Ders</th><th style="text-align:right">Maaş</th><th style="text-align:right">Ders primi</th><th style="text-align:right">Toplam</th><th style="text-align:right">Ders başı maliyet</th><th>Kontrol</th></tr></thead><tbody>
-        ${hk.map(x => `<tr><td><b>${e(x.h.ad)}</b><small style="display:block;color:var(--soluk)">${tl(x.h.prim || 0)} prim/ders</small></td><td class="sayi" style="text-align:right">${x.ders}</td><td class="sayi" style="text-align:right">${tl(x.maas)}</td><td class="sayi" style="text-align:right">${tl(x.prim)}</td><td class="sayi" style="text-align:right;font-weight:800">${tl(x.toplam)}</td><td class="sayi" style="text-align:right">${x.dersBasi ? tl(x.dersBasi) : '—'}</td><td>${x.imzasiz ? rozet(x.imzasiz + ' imzasız', 'kirmizi') + ' ' : ''}${x.kisa ? rozet(x.kisa + ' kısa ders', 'sari') : ''}${!x.imzasiz && !x.kisa ? rozet('Tamam', 'yesil') : ''}</td></tr>`).join('')}
-        <tr><td><b>Toplam</b></td><td class="sayi" style="text-align:right">${hk.reduce((a, x) => a + x.ders, 0)}</td><td class="sayi" style="text-align:right">${tl(hk.reduce((a, x) => a + x.maas, 0))}</td><td class="sayi" style="text-align:right">${tl(hk.reduce((a, x) => a + x.prim, 0))}</td><td class="sayi" style="text-align:right;font-weight:800">${tl(hk.reduce((a, x) => a + x.toplam, 0))}</td><td></td><td></td></tr>
+      <div class="tablo-kap"><table class="tablo"><thead><tr><th>Usta öğretici</th><th style="text-align:right">Ders</th><th style="text-align:right">Maaş</th><th style="text-align:right">Ders primi</th><th style="text-align:right">Toplam</th><th style="text-align:right">Avans ve ödenen</th><th style="text-align:right">Kalan</th><th>Kontrol</th><th></th></tr></thead><tbody>
+        ${hk.map(x => `<tr><td><b>${e(x.h.ad)}</b><small style="display:block;color:var(--soluk)">${tl(x.h.prim || 0)} prim/ders</small></td><td class="sayi" style="text-align:right">${x.ders}</td><td class="sayi" style="text-align:right">${tl(x.maas)}</td><td class="sayi" style="text-align:right">${tl(x.prim)}</td><td class="sayi" style="text-align:right;font-weight:800">${tl(x.toplam)}</td>${(() => { const a = ustaAlacak(x.h, 0); return `<td class="sayi" style="text-align:right">${a.avans + a.odenen ? '−' + tl(a.avans + a.odenen) : '—'}</td><td class="sayi" style="text-align:right;font-weight:800">${tl(a.kalan)}</td>`; })()}<td>${x.imzasiz ? rozet(x.imzasiz + ' imzasız', 'kirmizi') + ' ' : ''}${x.kisa ? rozet(x.kisa + ' kısa ders', 'sari') : ''}${!x.imzasiz && !x.kisa ? rozet('Tamam', 'yesil') : ''}</td><td><button class="dg dg-ana dg-kucuk" data-usta-ode="${x.h.id}">Öde</button></td></tr>`).join('')}
+        <tr><td><b>Toplam</b></td><td class="sayi" style="text-align:right">${hk.reduce((a, x) => a + x.ders, 0)}</td><td class="sayi" style="text-align:right">${tl(hk.reduce((a, x) => a + x.maas, 0))}</td><td class="sayi" style="text-align:right">${tl(hk.reduce((a, x) => a + x.prim, 0))}</td><td class="sayi" style="text-align:right;font-weight:800">${tl(hk.reduce((a, x) => a + x.toplam, 0))}</td><td></td><td class="sayi" style="text-align:right;font-weight:800">${tl(hk.reduce((a, x) => a + ustaAlacak(x.h, 0).kalan, 0))}</td><td></td><td></td></tr>
       </tbody></table></div>
-      <p style="font-size:13px;color:var(--soluk);padding:4px 20px 18px">İmzasız ve 40 dakikadan kısa dersler primden önce kontrol edilmeli; MEB denetiminde de sorulur.</p></div>`,
+      <p style="font-size:13px;color:var(--soluk);padding:4px 20px 18px">İmzasız ve 40 dakikadan kısa dersler primden önce kontrol edilmeli; MEB denetiminde de sorulur. Kalan = toplam − o ay verilen avans − o ay için yapılan ödemeler. Öğretmen aynı hesabı kendi telefonunda “Kazancım”da görür.</p></div>`,
     baglan(k) {
       k.addEventListener('change', ev => {
         const t = ev.target; if (!t.matches('[data-maliyet]')) return;
@@ -56,6 +82,7 @@ export function karlilik() {
         S.kurs.maliyet[t.dataset.maliyet] = v; islem('Maliyet ayarını değiştirdi', t.dataset.maliyet + ' = ' + v); kaydet(); yenile(true);
       });
       k.addEventListener('click', ev => {
+        const od = ev.target.closest('[data-usta-ode]'); if (od) return ustaOde(S.egitmenler.find(x => x.id === od.dataset.ustaOde));
         if (!ev.target.closest('[data-hakedis-csv]')) return;
         csvIndir('usta-hakedisi.csv', [['Usta öğretici', 'Yapılan ders', 'İmzasız ders', 'Kısa ders', 'Brüt maaş', 'Ders primi', 'Brüt toplam'], ...hk.map(x => [x.h.ad, x.ders, x.imzasiz, x.kisa, x.maas, x.prim, x.toplam])]);
         islem('Usta hakedişini indirdi'); kaydet();
@@ -245,7 +272,7 @@ export async function gelenKontrol() {
       if (S.gelenAlinan.includes(x.id)) continue;
       S.gelenAlinan.push(x.id); n++;
       // fotoğraf ya da PDF: öğrencinin evrakı (indirilemezse sonraki turda yeniden denenir)
-      if (x.medya) { const ok = await (await import('./evrak.js?v=129')).evrakGeldi(x).catch(() => false); if (!ok) { S.gelenAlinan.pop(); n--; } continue; }
+      if (x.medya) { const ok = await (await import('./evrak.js?v=130')).evrakGeldi(x).catch(() => false); if (!ok) { S.gelenAlinan.pop(); n--; } continue; }
       const saat = new Date(x.zaman).toTimeString().slice(0, 5);
       // gönderdiğimiz mesaja verilen cevap (evet/hayır ya da “yanıtla”) adaya değil o mesaja işlenir
       // kayıtlı öğrencinin WhatsApp'tan ders değişikliği (asistan tanıdı): saat önerisi ya da seçilen saate taşıma
