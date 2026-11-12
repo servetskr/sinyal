@@ -2443,3 +2443,50 @@ body.sahip-modu{
 .og-girdi.yn-alan-uzun textarea::placeholder{color:#a3a7ad}
 .yn-form .og-girdi input[type=number]{-moz-appearance:textfield}
 @media (max-width:420px){.yn-form-ikili{grid-template-columns:minmax(0,1fr)}}
+/* Sahip araçları (v155): alt sekmeler, kurs istatistikleri, silinenler, destek ve hizmetler */
+.sh-alt{margin:4px 0 14px}
+.sh-alt button em,.sh-suz button em{font-style:normal;font-weight:600;color:#8e9198;margin-left:2px}
+.sh-ist-izgara{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.sh-ist{background:#fff;border-radius:16px;padding:14px;border:1px solid var(--cizgi-2);cursor:pointer;min-width:0;transition:box-shadow .15s}
+.sh-ist:hover{box-shadow:0 10px 24px -14px rgba(11,24,48,.35)}
+.sh-ist header b{display:block;font-size:17px;font-weight:700;color:var(--murekkep);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sh-ist header small{display:block;margin-top:2px;font-size:13px;color:#8e9198}
+.sh-ist-kutular{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;margin-top:12px;border-radius:12px;overflow:hidden;background:#e6e6eb}
+.sh-ist-kutular>div{background:#f5f5f8;padding:9px 10px;min-width:0}
+.sh-ist-kutular small{display:block;font-size:11px;font-weight:600;color:#8e9198;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sh-ist-kutular b{display:block;margin-top:2px;font-size:17px;font-weight:700;color:var(--murekkep);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sh-ist-kutular span{display:block;font-size:11.5px;line-height:1.3;color:#8e9198}
+.sh-ist footer{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:13px;color:#6b6e76}
+.sh-ist footer span{display:inline-flex;align-items:center;gap:5px}
+.sh-ist footer .ik{width:14px;height:14px}
+.sh-ist footer .uyar{color:#a8241a;font-weight:600}
+.sh-silinen{cursor:default}
+.sh-silinen .sh-satir-sag{gap:8px}
+.sh-silinen .dg{border-radius:16px}
+.sh-av-hizmet{background:#1e8e4e}
+.sh-av-hizmet .ik{width:18px;height:18px;color:#fff}
+.sh-ucret{font-size:14.5px;color:var(--murekkep)}
+.sh-t-nokta{width:10px;height:10px;border-radius:50%;flex:none;margin:0 6px 0 4px;background:var(--t-renk,#8e9198)}
+.sh-t-acik{--t-renk:#e0483d}.sh-t-inceleniyor{--t-renk:#e3a300}.sh-t-cozuldu{--t-renk:#28a05a}
+.sh-t-cozuldu .sh-satir-ic b{color:#8e9198}
+.sh-durum-r{font-style:normal;font-size:12px;font-weight:700;color:var(--t-renk,#6b6e76)}
+.sh-durum-sec{display:flex;flex-wrap:wrap;gap:6px}
+.sh-durum-sec button{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:18px;background:#fff;border:1px solid var(--cizgi);font-size:14px;font-weight:600;color:#3a3d42}
+.sh-durum-sec button i{width:8px;height:8px;border-radius:50%;background:var(--t-renk,#8e9198)}
+.sh-durum-sec button.secili{background:#0b1830;border-color:#0b1830;color:#fff}
+/* Kurs tarafı: Sinyal Destek */
+.ds-tur{margin-bottom:4px}
+.ds-wa{display:flex;align-items:center;gap:10px;margin-top:14px;padding:12px 14px;border-radius:12px;background:#eef6f0;color:#14663a;font-weight:600;font-size:14.5px}
+.ds-wa .ik{width:20px;height:20px;flex:none}
+.ds-wa small{display:block;font-weight:500;color:#5b7a66;font-size:12.5px}
+.ds-liste{display:grid;gap:8px}
+.ds-talep{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid var(--cizgi-2)}
+.ds-talep>div{min-width:0}
+.ds-talep b{display:block;font-size:14.5px;font-weight:600;color:var(--murekkep);overflow-wrap:anywhere}
+.ds-talep small{display:block;font-size:12.5px;color:#8e9198;margin-top:2px}
+.ds-cevap{display:flex;gap:6px;margin-top:6px;font-size:13.5px;line-height:1.4;color:#3a3d42}
+.ds-cevap .ik{width:14px;height:14px;flex:none;margin-top:2px;color:#0a4da2}
+.ds-cevap b{display:inline;font-size:inherit}
+.ds-durum{flex:none;font-style:normal;font-size:12px;font-weight:700;padding:3px 8px;border-radius:8px;background:#fde7e5;color:#a8241a}
+.ds-durum.bak{background:#fff4cf;color:#7a5200}.ds-durum.ok{background:#e3f4ea;color:#14663a}
+@media (max-width:420px){.sh-ist-izgara{grid-template-columns:minmax(0,1fr)}.sh-silinen .sh-satir-sag{flex-direction:column;align-items:flex-end}}

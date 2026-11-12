@@ -2,7 +2,8 @@
 // Sinyal Yönetim panelinin “Hesaplar” bölümünde açılır (yalnız Servet; ortak görmez).
 // Yetki Firebase güvenlik kurallarından değil, Google hesabından gelir: Firebase projesinin sahibi olan Google hesabıyla
 // bağlanılır, Google IAM izin verirse işlem yapılır. Sunucu, gizli anahtar yok; erişim belirteci yalnız bellekte durur (1 saat).
-import { e, ik, pencere, kapatPencere, bildir } from './ui.js?v=154';
+import { e, ik, pencere, kapatPencere, bildir, tl } from './ui.js?v=156';
+import { S, kaydet, islem } from './veri.js?v=156';
 
 const PROJE = 'sinyal-5d37a';
 const ISTEMCI = '451344576006-sua0mu4d4qcssc0lv8g01qic26hr6os7.apps.googleusercontent.com';  // Google OAuth istemci kimliği (herkese açık bilgidir; yetkiyi Google hesabı verir)
@@ -15,6 +16,8 @@ const YONETIM_KURS = 'Sinyal Yönetim';
 const ROL = { mudur: 'Kurs müdürü', sekreter: 'Ön büro', usta: 'Öğretmen', ortak: 'Ortak', ogrenci: 'Öğrenci' };
 const SUZGEC = [['hepsi', 'Hepsi'], ['personel', 'Kurs personeli'], ['ogrenci', 'Öğrenciler'], ['yonetim', 'Yönetim']];
 
+const SIL_GUN = 7;  // silinen hesap bu kadar gün geri alınabilir, sonra kalıcı silinir
+let silinecekler = [], kursIst = {}, destekler = [], gorunum = 'hesaplar', alt = 'kurslar', destekAlt = 'talepler';
 let belirtec = null, bitis = 0, hesaplar = null, talepler = [], suzgec = 'hepsi', arama = '', kok = null, yukleniyor = false, hataMetni = '', gomulu = false, ipucu = '';
 
 // Google onayı sekme açık kaldıkça (en çok 1 saat) hatırlanır; her yenilemede yeniden onay istenmez
@@ -108,6 +111,53 @@ async function yukle() {
     };
   });
   talepler = tl;
+  // silinen hesaplar: 7 gün içinde geri alınabilir; süresi dolanlar şimdi kalıcı silinir
+  let sl = [];
+  try { const j = await api(FS + '/sahipSilinecek?pageSize=300'); sl = (j.documents || []).map(d => ({ ...alanlar(d.fields), uid: d.name.split('/').pop() })); } catch (x) { }
+  for (const x of sl.filter(x => kalanGun(x) <= 0)) { try { await kaliciSil(x); } catch (y) { } }
+  silinecekler = sl.filter(x => kalanGun(x) > 0);
+  for (const h of hesaplar) { const x = silinecekler.find(y => y.uid === h.uid); if (x) h.silinecek = x.zaman; }
+  // her kursun verisi: istatistik ve destek talepleri
+  kursIst = {}; destekler = [];
+  for (const k of kursIdler) {
+    const ad = (kurslar['kurslar/' + k] || {}).ad || 'Adı bilinmeyen kurs';
+    if (ad === YONETIM_KURS) continue;
+    try { kursIst[k] = await kursIstatistik(k, ad, (kurslar['kurslar/' + k] || {}).sehir || ''); } catch (x) { kursIst[k] = { ad, hata: x.message }; }
+  }
+}
+const kalanGun = x => SIL_GUN - Math.floor((Date.now() - Date.parse(x.zaman)) / 864e5);
+// kursun Sinyal verisi (kurslar/{kurs}/v): diziler parça parça, diğerleri tek belge
+async function kursVerisi(k) {
+  let docs = [], sayfa = '';
+  do { const j = await api(FS + '/kurslar/' + k + '/v?pageSize=300' + (sayfa ? '&pageToken=' + encodeURIComponent(sayfa) : '')); docs = docs.concat(j.documents || []); sayfa = j.nextPageToken || ''; } while (sayfa);
+  const V = {}, parca = {};
+  for (const d of docs) {
+    const f = alanlar(d.fields); if (!f.a) continue;
+    if (f.d) { const l = parca[f.a] = parca[f.a] || []; for (const x of Object.values(f.i || {})) { if (x && typeof x.v === 'string') try { l.push([+x.x || 0, JSON.parse(x.v)]); } catch (y) { } } }
+    else if (typeof f.t === 'string') { try { V[f.a] = JSON.parse(f.t); } catch (y) { } }
+  }
+  for (const [a, l] of Object.entries(parca)) V[a] = l.sort((p, q) => p[0] - q[0]).map(p => p[1]);
+  return V;
+}
+async function kursIstatistik(k, ad, sehir) {
+  const V = await kursVerisi(k), ay = new Date().toISOString().slice(0, 7), otuz = new Date(Date.now() - 30 * 864e5).toISOString();
+  let kayit = [];
+  try {
+    const j = await api(FS + '/kurslar/' + k + ':runQuery', { structuredQuery: { from: [{ collectionId: 'kayit' }], where: { fieldFilter: { field: { fieldPath: 'zaman' }, op: 'GREATER_THAN_OR_EQUAL', value: { timestampValue: otuz } } }, select: { fields: [{ fieldPath: 'ne' }, { fieldPath: 'uid' }, { fieldPath: 'zaman' }] }, limit: 5000 } });
+    kayit = j.filter(x => x.document).map(x => alanlar(x.document.fields));
+  } catch (x) { }
+  const ks = V.kursiyerler || [], cevap = V.destekCevap || {};
+  (V.destek || []).forEach(t => destekler.push({ ...t, kurs: k, kursAd: ad, kanal: 'Sinyal', ...(cevap[t.id] || {}) }));
+  return {
+    ad, sehir, kursiyer: ks.length, aktif: ks.filter(x => x.asama !== 'Ehliyet' && !x.pasif && !x.silindi).length,
+    dersAy: (V.dersler || []).filter(x => String(x.tarih || '').startsWith(ay)).length,
+    tahsilAy: (V.hareket || []).filter(x => x.tur === 'Gelir' && String(x.tarih || '').startsWith(ay)).reduce((t, x) => t + (+x.tutar || 0), 0),
+    gonderimAy: (V.gonderimler || []).filter(x => String(x.zaman || '').startsWith(ay)).length,
+    adaylar: (V.adaylar || []).length,
+    oturum: kayit.filter(x => x.ne === 'Giriş yaptı').length, islem: kayit.length,
+    aktifKisi: new Set(kayit.map(x => x.uid).filter(Boolean)).size,
+    son: kayit.reduce((m, x) => (x.zaman || '') > m ? x.zaman : m, ''), destekCevap: cevap,
+  };
 }
 
 // ---- işlemler ----
@@ -123,11 +173,26 @@ async function sifreVer(h) {
   return sifre;
 }
 const girisKapat = async (h, kapat) => { await api(IT + '/accounts:update', { localId: h.uid, disableUser: kapat }); h.kapali = kapat; };
+// Silme: hesap hemen kapanır (kimse giremez), 7 gün içinde geri alınabilir; süre dolunca kalıcı silinir
 async function hesapSil(h) {
-  await api(IT + '/accounts:delete', { localId: h.uid });
-  await belgeSil('kullanicilar/' + h.uid).catch(() => { });
-  if (h.kurs && h.rol && h.rol !== 'ogrenci') await belgeSil('kurslar/' + h.kurs + '/uyeler/' + h.uid).catch(() => { });
-  hesaplar = hesaplar.filter(x => x !== h);
+  const zaman = new Date().toISOString();
+  await api(IT + '/accounts:update', { localId: h.uid, disableUser: true });
+  const x = { uid: h.uid, eposta: h.eposta, ad: h.ad, kurs: h.kurs || '', kursAd: h.kursAd || '', rol: h.rol || '', zaman };
+  await api(FS + '/sahipSilinecek/' + h.uid, { fields: Object.fromEntries(Object.entries(x).map(([a, b]) => [a, { stringValue: String(b) }])) }, 'PATCH');
+  h.kapali = true; h.silinecek = zaman; silinecekler = silinecekler.filter(y => y.uid !== h.uid).concat(x);
+}
+async function silmeGeriAl(x) {
+  await api(IT + '/accounts:update', { localId: x.uid, disableUser: false });
+  await belgeSil('sahipSilinecek/' + x.uid);
+  silinecekler = silinecekler.filter(y => y.uid !== x.uid);
+  const h = (hesaplar || []).find(y => y.uid === x.uid); if (h) { h.kapali = false; delete h.silinecek; }
+}
+async function kaliciSil(x) {
+  try { await api(IT + '/accounts:delete', { localId: x.uid }); } catch (y) { if (!/USER_NOT_FOUND/.test(y.message)) throw y; }
+  await belgeSil('kullanicilar/' + x.uid).catch(() => { });
+  if (x.kurs && x.rol && x.rol !== 'ogrenci') await belgeSil('kurslar/' + x.kurs + '/uyeler/' + x.uid).catch(() => { });
+  await belgeSil('sahipSilinecek/' + x.uid).catch(() => { });
+  silinecekler = silinecekler.filter(y => y.uid !== x.uid); if (hesaplar) hesaplar = hesaplar.filter(y => y.uid !== x.uid);
 }
 async function davetLinki(yonetim) {
   const kod = rastgele(20), simdi = new Date();
@@ -156,8 +221,8 @@ const waLinki = (tel, metin) => 'https://wa.me/' + (tel || '') + '?text=' + enco
 
 // ---- ekran ----
 // Sinyal Yönetim içinde (Hesaplar bölümü): üst çubuk ve sayfa kabuğu Yönetim panelinden gelir
-export function sahipGomulu(yer, eposta) {
-  kok = yer; gomulu = true; ipucu = /@/.test(eposta || '') && !/\.invalid$/.test(eposta) ? eposta : '';
+export function sahipGomulu(yer, eposta, gor = 'hesaplar') {
+  kok = yer; gomulu = true; gorunum = gor; ipucu = /@/.test(eposta || '') && !/\.invalid$/.test(eposta) ? eposta : '';
   ciz();
   if (bagli() && !hesaplar && !yukleniyor) yenile();
   if (!kok.dataset.shBagli) { kok.dataset.shBagli = '1'; kok.addEventListener('click', tikla); kok.addEventListener('input', yaz); }
@@ -178,34 +243,63 @@ function ciz() {
   if (!bagli()) {
     kok.innerHTML = kabuk(`<div class="sh-giris-kart">
         <span class="sh-giris-ik">${ik('kilit')}</span>
-        <h1>Bütün hesaplar tek yerde</h1>
-        <p>Kurs müdürleri, ön büro, öğretmenler, öğrenciler ve Sinyal Yönetim. Şifresini unutan olursa buradan tek dokunuşla yeni şifre verirsin.</p>
+        <h1>${gorunum === 'destek' ? 'Destek talepleri ve hizmetler' : 'Bütün hesaplar ve kurslar'}</h1>
+        <p>${gorunum === 'destek' ? 'Kursların Sinyal’den açtığı talepler, WhatsApp’tan gelenler ve verdiğin hizmetler tek yerde.' : 'Her kursun kullanımı, öğrenci ve personel hesapları. Şifresini unutana tek dokunuşla yeni şifre verir, hesabı silersin.'}</p>
         <button class="dg dg-ana sh-giris-dg" data-sh-baglan>${ik('kilit')}Google hesabınla bağlan</button>
         ${hataMetni ? `<p class="sh-hata">${ik('uyari')}<span>${e(hataMetni)}</span></p>` : ''}
         <p class="sh-dip">Güvenlik için hesaplara Google hesabınla bir kez daha onay verirsin (${ipucu ? e(ipucu) : 'Sinyal projesinin sahibi olan Google hesabı'}); onay bir saat geçerli. Şifreler ve anahtarlar hiçbir yerde saklanmaz.</p>
       </div>`, true);
     return;
   }
-  if (!hesaplar) { kok.innerHTML = kabuk(`<div class="sh-bos">${ik('saat')}<b>Hesaplar yükleniyor…</b></div>`); return; }
-  const kursSay = new Set(hesaplar.filter(h => h.kurs && !h.yonetim).map(h => h.kurs)).size;
+  if (!hesaplar) { kok.innerHTML = kabuk(`<div class="sh-bos">${ik('saat')}<b>${gorunum === 'destek' ? 'Destek talepleri' : 'Hesaplar ve kurs verileri'} yükleniyor…</b></div>`); return; }
+  if (gorunum === 'destek') { kok.innerHTML = kabuk(destekHtml()); return; }
+  const kursSay = Object.keys(kursIst).length, gorunur = hesaplar.filter(h => !h.silinecek);
   const talepHtml = talepler.length ? `<section class="sh-talep"><h2>${ik('uyari')}Şifre isteyenler <span>${talepler.length}</span></h2>${talepler.map(t => {
     const h = hesaplar.find(x => x.tel === t.tel && x.kurs === t.kurs);
     return `<div class="sh-talep-satir"><span><b>${e(h ? h.ad : telGoster(t.tel))}</b><small>${e(h ? h.kursAd : 'Öğrenci')} · ${e(telGoster(t.tel))}</small></span>${h ? `<button class="dg dg-ana dg-kucuk" data-sh-sifre="${h.uid}">Yeni şifre ver</button>` : ''}</div>`;
   }).join('')}</section>` : '';
+  const sekme = [['kurslar', 'Kurslar', kursSay], ['hesaplar', 'Hesaplar', gorunur.length], ['silinen', 'Silinenler', silinecekler.length]];
   kok.innerHTML = kabuk(`
-    <div class="sh-bas"><div><h1>Hesaplar</h1><p>${hesaplar.length} hesap · ${kursSay} kurs</p></div>
+    <div class="sh-bas"><div><h1>Hesaplar</h1><p>${kursSay} kurs · ${gorunur.length} hesap</p></div>
       <div class="sh-bas-dg">${gomulu ? `<button class="dg dg-cizgi dg-kucuk" data-sh-yenile ${yukleniyor ? 'disabled' : ''}>${ik('sifirla')}${yukleniyor ? 'Yükleniyor…' : 'Yenile'}</button>` : ''}<button class="dg dg-cizgi dg-kucuk" data-sh-davet="kurs">${ik('arti')}Kurs hesabı linki</button><button class="dg dg-cizgi dg-kucuk" data-sh-davet="yonetim">${ik('arti')}Yönetim hesabı linki</button></div></div>
     ${talepHtml}
-    <div class="sh-arac"><label class="sh-ara">${ik('ara')}<input type="search" data-sh-ara placeholder="İsim, telefon, e-posta ya da kurs ara" value="${e(arama)}" autocomplete="off"></label>
+    <div class="sh-suz sh-alt" role="tablist">${sekme.map(([k, a, n]) => `<button role="tab" aria-selected="${alt === k}" class="${alt === k ? 'secili' : ''}" data-sh-alt="${k}">${a}${n ? ` <em>${n}</em>` : ''}</button>`).join('')}</div>
+    ${alt === 'kurslar' ? kursIstHtml() : alt === 'silinen' ? silinenHtml() : `<div class="sh-arac"><label class="sh-ara">${ik('ara')}<input type="search" data-sh-ara placeholder="İsim, telefon, e-posta ya da kurs ara" value="${e(arama)}" autocomplete="off"></label>
       <div class="sh-suz" role="tablist">${SUZGEC.map(([k, a]) => `<button role="tab" aria-selected="${suzgec === k}" class="${suzgec === k ? 'secili' : ''}" data-sh-suz="${k}">${a}</button>`).join('')}</div></div>
-    <div data-sh-sonuc>${sonucHtml()}</div>`);
+    <div data-sh-sonuc>${sonucHtml()}</div>`}`);
+}
+const gunOnce = iso => { if (!iso) return 'hiç'; const g = Math.floor((Date.now() - Date.parse(iso)) / 864e5); return g <= 0 ? 'bugün' : g === 1 ? 'dün' : g + ' gün önce'; };
+// her kurs için kısa istatistik kutusu
+function kursIstHtml() {
+  const l = Object.entries(kursIst).sort((a, b) => (b[1].son || '').localeCompare(a[1].son || ''));
+  if (!l.length) return `<div class="sh-bos">${ik('kursiyer')}<b>Henüz kurs hesabı yok</b><small>“Kurs hesabı linki” ile ilk kursu aç.</small></div>`;
+  const kutu = (et, d, alt2) => `<div><small>${et}</small><b>${d}</b>${alt2 ? `<span>${alt2}</span>` : ''}</div>`;
+  return `<div class="sh-ist-izgara">${l.map(([k, x]) => {
+    const hs = hesaplar.filter(h => h.kurs === k && !h.silinecek), per = hs.filter(h => h.rol && h.rol !== 'ogrenci').length, ogr = hs.filter(h => h.rol === 'ogrenci').length;
+    const ogrAktif = hs.filter(h => h.rol === 'ogrenci' && h.sonGiris > Date.now() - 30 * 864e5).length, acik = destekler.filter(t => t.kurs === k && (t.durum || 'Açık') !== 'Çözüldü').length;
+    return `<article class="sh-ist" data-sh-kurs="${e(k)}" role="button" tabindex="0">
+      <header><b>${e(x.ad)}</b><small>${e([x.sehir, 'son hareket ' + gunOnce(x.son)].filter(Boolean).join(' · '))}</small></header>
+      ${x.hata ? `<p class="sh-hata">${ik('uyari')}<span>Veri okunamadı: ${e(x.hata)}</span></p>` : `<div class="sh-ist-kutular">
+        ${kutu('Kursiyer', x.aktif, x.kursiyer + ' kayıtlı')}${kutu('Bu ay ders', x.dersAy, '')}${kutu('Bu ay tahsilat', tl(x.tahsilAy), '')}
+        ${kutu('Oturum', x.oturum, 'son 30 gün')}${kutu('Aktif kişi', x.aktifKisi, per + ' personel hesabı')}${kutu('Öğrenci girişi', ogrAktif, ogr + ' öğrenci hesabı')}</div>
+      <footer><span>${ik('mesaj')}${x.gonderimAy} mesaj bu ay</span><span>${ik('aday')}${x.adaylar} aday</span>${acik ? `<span class="uyar">${ik('uyari')}${acik} açık destek</span>` : ''}</footer>`}
+    </article>`;
+  }).join('')}</div><p class="sh-dip">Oturum ve aktif kişi son 30 günün işlem kaydından sayılır. Kutuya dokununca o kursun hesapları açılır.</p>`;
+}
+function silinenHtml() {
+  if (!silinecekler.length) return `<div class="sh-bos">${ik('tik')}<b>Silinen hesap yok</b><small>Sildiğin hesaplar ${SIL_GUN} gün burada durur; bu sürede geri alabilirsin.</small></div>`;
+  return `<div class="sh-liste">${silinecekler.slice().sort((a, b) => b.zaman.localeCompare(a.zaman)).map(x => `<div class="sh-satir sh-silinen">
+    <span class="sh-av sh-av-${x.rol || 'yok'}">${e((x.ad || '?').charAt(0).toLocaleUpperCase('tr'))}</span>
+    <span class="sh-satir-ic"><b>${e(x.ad)}</b><small>${e([x.kursAd, x.eposta].filter(Boolean).join(' · '))}</small></span>
+    <span class="sh-satir-sag"><em class="sh-rozet">${kalanGun(x)} gün kaldı</em><button class="dg dg-ana dg-kucuk" data-sh-geri="${e(x.uid)}">Geri al</button></span></div>`).join('')}</div>
+    <p class="sh-dip">Silinen hesap hemen kapanır, kimse giremez. ${SIL_GUN} gün içinde “Geri al” ile eski haline döner; süre dolunca kalıcı silinir. Kursun öğrenci, ders ve kasa verileri hiçbir durumda silinmez.</p>`;
 }
 // arama yazılırken yalnız liste yenilenir (kutu odağını kaybetmez)
 function sonucHtml() {
   const q = arama.trim().toLocaleLowerCase('tr'), qr = q.replace(/\D/g, '');
   const uygun = h => (suzgec === 'hepsi' || (suzgec === 'ogrenci' ? h.rol === 'ogrenci' : suzgec === 'yonetim' ? h.yonetim : h.rol && h.rol !== 'ogrenci' && !h.yonetim))
     && (!q || [h.ad, h.eposta, h.kursAd, h.kullaniciAdi, rolAd(h)].some(x => String(x || '').toLocaleLowerCase('tr').includes(q)) || (qr.length >= 3 && (h.tel.includes(qr) || ('0' + h.tel.slice(2)).includes(qr))));
-  const gorunen = hesaplar.filter(uygun);
+  const gorunen = hesaplar.filter(h => !h.silinecek && uygun(h));
   const gruplar = new Map();
   for (const h of gorunen) { const a = h.yonetim ? '0' : h.kurs ? '1' + h.kursAd : '2'; if (!gruplar.has(a)) gruplar.set(a, []); gruplar.get(a).push(h); }
   const sira = [...gruplar.keys()].sort((a, b) => a.localeCompare(b, 'tr'));
@@ -238,6 +332,10 @@ async function tikla(ev) {
     return;
   }
   if (t.closest('[data-sh-yenile]')) return yenile();
+  const al = t.closest('[data-sh-alt]'); if (al) { alt = al.dataset.shAlt; return ciz(); }
+  const kr = t.closest('[data-sh-kurs]'); if (kr) { alt = 'hesaplar'; suzgec = 'hepsi'; arama = (kursIst[kr.dataset.shKurs] || {}).ad || ''; return ciz(); }
+  const gr = t.closest('[data-sh-geri]'); if (gr) { const x = silinecekler.find(y => y.uid === gr.dataset.shGeri); if (!x) return; gr.disabled = true; try { await silmeGeriAl(x); bildir(x.ad + ' geri alındı; yeniden girebilir'); ciz(); } catch (y) { gr.disabled = false; islemHata(y); } return; }
+  if (gorunum === 'destek' && await destekTikla(t)) return;
   const s = t.closest('[data-sh-suz]'); if (s) { suzgec = s.dataset.shSuz; kok.querySelectorAll('[data-sh-suz]').forEach(b => { b.classList.toggle('secili', b === s); b.setAttribute('aria-selected', b === s); }); const r = kok.querySelector('[data-sh-sonuc]'); if (r) r.innerHTML = sonucHtml(); return; }
   const d = t.closest('[data-sh-davet]'); if (d) return davetPenceresi(d.dataset.shDavet === 'yonetim');
   const sf = t.closest('[data-sh-sifre]'); if (sf) { const h = hesaplar.find(x => x.uid === sf.dataset.shSifre); if (h) sifrePenceresi(h); return; }
@@ -253,7 +351,7 @@ function hesapPenceresi(h) {
       <div class="sh-islem">
         <button class="sh-islem-dg birincil" data-p-sifre>${ik('kilit')}<span><b>Yeni şifre ver</b><small>Geçici şifre oluşur, WhatsApp’tan gönderirsin${h.rol === 'ogrenci' ? '; öğrenci ilk girişte kendi şifresini belirler' : ''}</small></span></button>
         <button class="sh-islem-dg" data-p-kapat>${ik(h.kapali ? 'tik' : 'kapat')}<span><b>${h.kapali ? 'Girişi aç' : 'Girişi kapat'}</b><small>${h.kapali ? 'Hesap yeniden kullanılabilir' : 'Veriler kalır; bu kişi giremez'}</small></span></button>
-        ${h.rol === 'ogrenci' || benMi(h) ? '' : `<button class="sh-islem-dg tehlike" data-p-sil>${ik('kapat')}<span><b>Hesabı sil</b><small>Kalıcıdır; kursun verileri silinmez</small></span></button>`}
+        ${benMi(h) ? '' : `<button class="sh-islem-dg tehlike" data-p-sil>${ik('kapat')}<span><b>Hesabı sil</b><small>Hemen kapanır; ${SIL_GUN} gün içinde geri alabilirsin</small></span></button>`}
       </div>`,
     onAc: p => {
       p.querySelector('[data-p-sifre]').addEventListener('click', () => sifrePenceresi(h));
@@ -290,11 +388,11 @@ async function sifrePenceresi(h) {
 function silPenceresi(h) {
   pencere({
     baslik: 'Hesap silinsin mi?',
-    icerik: `<p style="font-size:15px;line-height:1.5"><b>${e(h.ad)}</b> (${e(kimlik(h))}) kalıcı olarak silinir ve bir daha giremez. Geri alınamaz.</p><p class="sh-dip">${h.yonetim ? 'Sinyal Yönetim verileri (kurslar, gelir-gider) silinmez; yeni hesap aynı linkle değil, yeni bir “Yönetim hesabı linki” ile açılır.' : 'Kursun öğrenci, ders ve kasa verileri silinmez; yalnız bu kişinin girişi kaldırılır.'}</p>`,
-    altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg sh-tehlike" data-p-evet>Kalıcı olarak sil</button>`,
+    icerik: `<p style="font-size:15px;line-height:1.5"><b>${e(h.ad)}</b> (${e(kimlik(h))}) hemen kapanır ve giremez.</p><p class="sh-dip">${SIL_GUN} gün içinde Hesaplar › Silinenler’den geri alabilirsin; süre dolunca kalıcı silinir. ${h.rol === 'ogrenci' ? 'Öğrencinin kurs kaydı, dersleri ve ödemeleri silinmez.' : 'Kursun öğrenci, ders ve kasa verileri silinmez; yalnız bu kişinin girişi kaldırılır.'}</p>`,
+    altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg sh-tehlike" data-p-evet>Hesabı sil</button>`,
     onAc: p => p.querySelector('[data-p-evet]').addEventListener('click', async ev => {
       const b = ev.currentTarget; b.disabled = true; b.textContent = 'Siliniyor…';
-      try { await hesapSil(h); kapatPencere(); bildir(h.ad + ' silindi'); ciz(); } catch (x) { b.disabled = false; b.textContent = 'Kalıcı olarak sil'; islemHata(x); }
+      try { await hesapSil(h); kapatPencere(); bildir(h.ad + ' silindi; ' + SIL_GUN + ' gün içinde geri alabilirsin'); ciz(); } catch (x) { b.disabled = false; b.textContent = 'Hesabı sil'; islemHata(x); }
     }),
   });
 }
@@ -323,6 +421,115 @@ export function otoBaglan() {
 // Henüz Yönetim hesabı yokken (ilk kurulum ya da hesap silindiyse): Google'da yetkili kişi kendine kurulum linki açar.
 // Yetkiyi yine Google IAM verir; projede yetkisi olmayan Google hesabı link oluşturamaz.
 export async function yonetimKurulumLinki() { await baglan(); return davetLinki(true); }
+
+// ---- Destek talepleri ve verilen hizmetler (Sinyal Yönetim › Destek) ----
+// Kurslar Sinyal'den (Hesabım › Sinyal Destek) talep açar; talep kursun verisinde durur, cevap ve durum kursa geri yazılır.
+// WhatsApp ya da telefonla gelenler elle eklenir; hizmetler Yönetim verisinde tutulur.
+const TALEP_TUR = ['Hata', 'Soru', 'İstek', 'Eğitim'], KANAL = ['WhatsApp', 'Telefon', 'Yüz yüze', 'E-posta'];
+const HIZMET_TUR = ['Kurulum', 'Eğitim', 'Destek', 'Veri aktarımı', 'Geliştirme', 'Ziyaret'];
+const TDURUM = [['Açık', 'acik'], ['İnceleniyor', 'inceleniyor'], ['Çözüldü', 'cozuldu']];
+const isl = () => { const v = S.isletme || {}; v.destekElle = v.destekElle || []; v.hizmetler = v.hizmetler || []; return v; };
+const tKey = t => (t.elle ? 'e:' : t.kurs + ':') + t.id;
+const tDurum = t => t.durum || 'Açık';
+const tumTalepler = () => destekler.concat(isl().destekElle.map(t => ({ ...t, elle: true })))
+  .sort((a, b) => (tDurum(a) === 'Çözüldü') - (tDurum(b) === 'Çözüldü') || String(b.zaman || '').localeCompare(String(a.zaman || '')));
+const waTel = t => { let d = String(t || '').replace(/\D/g, ''); if (d.startsWith('0')) d = d.slice(1); if (d.length === 10) d = '90' + d; return /^90\d{10}$/.test(d) ? d : ''; };
+const gunTarih = d => d ? new Date(d).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }) : '';
+const ayBaslik = ym => new Date(ym + '-01T12:00').toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+const kursAdlari = () => [...new Set(Object.values(kursIst).map(x => x.ad).concat((S.isletme && S.isletme.kurslar || []).map(k => k.ad)).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'tr'));
+const bugunIso = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const kimlikUret = () => 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+function destekHtml() {
+  const v = isl(), l = tumTalepler(), acik = l.filter(t => tDurum(t) !== 'Çözüldü').length, ay = bugunIso().slice(0, 7), hAy = v.hizmetler.filter(h => String(h.tarih || '').startsWith(ay));
+  const sek = [['talepler', 'Talepler', acik], ['hizmetler', 'Hizmetler', v.hizmetler.length]];
+  return `<div class="sh-bas"><div><h1>Destek</h1><p>${acik} açık talep · bu ay ${hAy.length} hizmet</p></div>
+      <div class="sh-bas-dg"><button class="dg dg-cizgi dg-kucuk" data-sh-yenile ${yukleniyor ? 'disabled' : ''}>${ik('sifirla')}${yukleniyor ? 'Yükleniyor…' : 'Yenile'}</button><button class="dg dg-cizgi dg-kucuk" data-sh-talep-ekle>${ik('arti')}Talep ekle</button><button class="dg dg-ana dg-kucuk" data-sh-hizmet-ekle>${ik('arti')}Hizmet ekle</button></div></div>
+    <div class="sh-suz sh-alt" role="tablist">${sek.map(([k, a, n]) => `<button role="tab" aria-selected="${destekAlt === k}" class="${destekAlt === k ? 'secili' : ''}" data-sh-dalt="${k}">${a}${n ? ` <em>${n}</em>` : ''}</button>`).join('')}</div>
+    ${destekAlt === 'talepler' ? talepListeHtml(l) : hizmetListeHtml(v.hizmetler)}`;
+}
+function talepListeHtml(l) {
+  if (!l.length) return `<div class="sh-bos">${ik('mesaj')}<b>Destek talebi yok</b><small>Kurslar Sinyal’de Hesabım › Sinyal Destek’ten talep açınca burada görünür. WhatsApp ya da telefonla gelenleri “Talep ekle” ile kaydet.</small></div>`;
+  return `<div class="sh-liste">${l.map(t => `<button class="sh-satir sh-t-${TDURUM.find(d => d[0] === tDurum(t))[1]}" data-sh-talep="${e(tKey(t))}">
+    <span class="sh-t-nokta" aria-hidden="true"></span>
+    <span class="sh-satir-ic"><b>${e(t.tur || 'Talep')} · ${e(String(t.metin || '').slice(0, 90))}</b><small>${e([t.kursAd, t.kim, gunOnce(t.zaman), t.kanal || 'Sinyal'].filter(Boolean).join(' · '))}</small></span>
+    <span class="sh-satir-sag"><em class="sh-durum-r">${e(tDurum(t))}</em>${ik('sag')}</span></button>`).join('')}</div>`;
+}
+function hizmetListeHtml(l) {
+  if (!l.length) return `<div class="sh-bos">${ik('belge')}<b>Kayıtlı hizmet yok</b><small>Kurulum, eğitim, destek gibi verdiğin her hizmeti “Hizmet ekle” ile kaydet; ay ay toplamı burada görünür.</small></div>`;
+  const ay = new Map(); l.slice().sort((a, b) => String(b.tarih).localeCompare(String(a.tarih))).forEach(h => { const k = String(h.tarih || '').slice(0, 7); if (!ay.has(k)) ay.set(k, []); ay.get(k).push(h); });
+  return [...ay].map(([k, hs]) => { const ucret = hs.reduce((t, h) => t + (+h.ucret || 0), 0), sure = hs.reduce((t, h) => t + (+h.sure || 0), 0);
+    return `<section class="sh-grup"><h2>${e(ayBaslik(k))}<span>${hs.length} hizmet${sure ? ' · ' + (sure >= 60 ? (Math.round(sure / 6) / 10).toLocaleString('tr-TR') + ' saat' : sure + ' dk') : ''}${ucret ? ' · ' + tl(ucret) : ''}</span></h2><div class="sh-liste">${hs.map(h => `<button class="sh-satir" data-sh-hizmet="${e(h.id)}">
+      <span class="sh-av sh-av-hizmet">${ik('tik')}</span>
+      <span class="sh-satir-ic"><b>${e(h.kursAd || 'Kurs')} · ${e(h.tur || 'Hizmet')}</b><small>${e([gunTarih(h.tarih), h.aciklama, h.sure ? h.sure + ' dk' : ''].filter(Boolean).join(' · '))}</small></span>
+      <span class="sh-satir-sag">${+h.ucret ? `<b class="sh-ucret">${tl(+h.ucret)}</b>` : ''}${ik('sag')}</span></button>`).join('')}</div></section>`; }).join('');
+}
+async function talepDurumYaz(t, durum, cevap) {
+  const zaman = new Date().toISOString();
+  if (t.elle) { const x = isl().destekElle.find(y => y.id === t.id); if (x) Object.assign(x, { durum, cevap, cevapZaman: zaman }); islem('Sinyal Destek: talep güncellendi', (t.kursAd || '') + ' · ' + durum); kaydet(); return; }
+  const ist = kursIst[t.kurs] || {}, cur = { ...(ist.destekCevap || {}), [t.id]: { durum, cevap, zaman } };
+  await api(FS + '/kurslar/' + t.kurs + '/v/t~destekCevap', { fields: { a: { stringValue: 'destekCevap' }, t: { stringValue: JSON.stringify(cur) } } }, 'PATCH');
+  ist.destekCevap = cur; const y = destekler.find(z => z.kurs === t.kurs && z.id === t.id); if (y) Object.assign(y, { durum, cevap, zaman });
+}
+function talepPenceresi(t) {
+  const satir = (et, d) => d ? `<div class="krsd-satir"><span>${et}</span><b>${e(d)}</b></div>` : '';
+  pencere({ baslik: (t.tur || 'Talep') + ' · ' + (t.kursAd || ''), alt: true, icerik: `<div class="krsd">
+      <div class="krsd-liste">${satir('Kurs', t.kursAd)}${satir('Kişi', t.kim)}${satir('Telefon', t.tel)}${satir('Tarih', t.zaman ? new Date(t.zaman).toLocaleString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) : '')}${satir('Kanal', t.kanal || 'Sinyal')}</div>
+      <h3 class="krsd-bas">Talep</h3><p class="krsd-not">${e(t.metin || '').replace(/\n/g, '<br>')}</p>
+      <h3 class="krsd-bas">Durum</h3><div class="sh-durum-sec" role="radiogroup">${TDURUM.map(([d, c]) => `<button type="button" role="radio" aria-checked="${tDurum(t) === d}" class="sh-t-${c}${tDurum(t) === d ? ' secili' : ''}" data-p-durum="${d}"><i></i>${d}</button>`).join('')}</div>
+      <label class="og-alan" style="margin-top:14px"><span class="og-alan-et">Cevap ya da not ${t.elle ? '' : '<small>kurs Sinyal’de görür</small>'}</span><span class="og-girdi yn-alan-uzun"><textarea name="cevap" rows="3" placeholder="Örn. Hata düzeltildi, sayfayı yenileyin">${e(t.cevap || '')}</textarea></span></label></div>`,
+    altlik: `${waTel(t.tel) ? `<a class="dg dg-wp" target="_blank" rel="noopener" href="${e(waLinki(waTel(t.tel), 'Merhaba, Sinyal destek talebiniz hakkında yazıyorum.'))}">${ik('wp')}WhatsApp</a>` : ''}<button class="dg dg-cizgi" data-p-hizmet>Hizmet olarak kaydet</button><button class="dg dg-ana" data-p-kaydet>Kaydet</button>`,
+    onAc: p => {
+      let durum = tDurum(t);
+      p.querySelectorAll('[data-p-durum]').forEach(b => b.addEventListener('click', () => { durum = b.dataset.pDurum; p.querySelectorAll('[data-p-durum]').forEach(x => { x.classList.toggle('secili', x === b); x.setAttribute('aria-checked', x === b); }); }));
+      p.querySelector('[data-p-kaydet]').addEventListener('click', async ev => { const b = ev.currentTarget; b.disabled = true;
+        try { await talepDurumYaz(t, durum, p.querySelector('[name=cevap]').value.trim()); kapatPencere(); bildir('Talep güncellendi'); ciz(); } catch (x) { b.disabled = false; islemHata(x); } });
+      p.querySelector('[data-p-hizmet]').addEventListener('click', () => hizmetPenceresi(null, { kursAd: t.kursAd, tur: 'Destek', aciklama: (t.tur || 'Talep') + ': ' + String(t.metin || '').slice(0, 80), talep: t }));
+    } });
+}
+function talepEklePenceresi() {
+  const a = (et, ic) => `<label class="og-alan"><span class="og-alan-et">${et}</span>${ic}</label>`, g = (ad, ek = '') => `<span class="og-girdi"><input name="${ad}" ${ek}></span>`;
+  const sec = (ad, l) => `<span class="og-girdi"><select name="${ad}">${l.map(x => `<option>${x}</option>`).join('')}</select></span>`;
+  pencere({ baslik: 'Talep ekle', alt: true, icerik: `<form id="f-sht" class="og-giris-form yn-form">
+      ${a('Kurs', g('kurs', 'list="sh-kurslar" required placeholder="Örn. Kural" autocomplete="off"'))}<datalist id="sh-kurslar">${kursAdlari().map(k => `<option value="${e(k)}">`).join('')}</datalist>
+      <div class="yn-form-ikili">${a('Kişi', g('kim', 'placeholder="Örn. Pelin Hanım"'))}${a('Telefon', g('tel', 'type="tel" inputmode="tel" placeholder="05xx xxx xx xx"'))}</div>
+      <div class="yn-form-ikili">${a('Konu', sec('tur', TALEP_TUR))}${a('Nereden geldi', sec('kanal', KANAL))}</div>
+      ${a('Talep', `<span class="og-girdi yn-alan-uzun"><textarea name="metin" rows="4" required placeholder="Ne istediler, sorun ne"></textarea></span>`)}</form>`,
+    altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-sht">Kaydet</button>`,
+    onAc: p => p.querySelector('form').addEventListener('submit', ev => { ev.preventDefault(); const f = ev.target;
+      if (!f.kurs.value.trim()) return bildir('Kurs adını yaz', 'uyari'); if (!f.metin.value.trim()) return bildir('Talebi yaz', 'uyari');
+      isl().destekElle.unshift({ id: kimlikUret(), zaman: new Date().toISOString(), kursAd: f.kurs.value.trim(), kim: f.kim.value.trim(), tel: f.tel.value.trim(), tur: f.tur.value, kanal: f.kanal.value, metin: f.metin.value.trim(), durum: 'Açık' });
+      if (!S.isletme.destekElle) S.isletme.destekElle = isl().destekElle;
+      islem('Sinyal Destek: talep ekledi', f.kurs.value.trim()); kaydet(); kapatPencere(); bildir('Talep kaydedildi'); destekAlt = 'talepler'; ciz(); }) });
+}
+function hizmetPenceresi(h, on = {}) {
+  const v = isl(), x = h || on, a = (et, ic) => `<label class="og-alan"><span class="og-alan-et">${et}</span>${ic}</label>`, g = (ad, d, ek = '') => `<span class="og-girdi"><input name="${ad}" value="${e(d == null ? '' : d)}" ${ek}></span>`;
+  pencere({ baslik: h ? 'Hizmeti düzenle' : 'Hizmet ekle', alt: true, icerik: `<form id="f-shh" class="og-giris-form yn-form">
+      <div class="yn-form-ikili">${a('Tarih', g('tarih', x.tarih || bugunIso(), 'type="date" required'))}${a('Tür', `<span class="og-girdi"><select name="tur">${HIZMET_TUR.map(t => `<option ${(x.tur || 'Destek') === t ? 'selected' : ''}>${t}</option>`).join('')}</select></span>`)}</div>
+      ${a('Kurs', g('kurs', x.kursAd, 'list="sh-kurslar2" required placeholder="Örn. Kural" autocomplete="off"'))}<datalist id="sh-kurslar2">${kursAdlari().map(k => `<option value="${e(k)}">`).join('')}</datalist>
+      ${a('Ne yapıldı', `<span class="og-girdi yn-alan-uzun"><textarea name="aciklama" rows="3" placeholder="Örn. Ön büroya kayıt ekranı eğitimi">${e(x.aciklama || '')}</textarea></span>`)}
+      <div class="yn-form-ikili">${a('Süre (dakika)', g('sure', x.sure || '', 'type="number" min="0" inputmode="numeric" placeholder="Örn. 45"'))}${a('Ücret (₺)', g('ucret', x.ucret || '', 'type="number" min="0" inputmode="numeric" placeholder="Ücretsizse boş bırak"'))}</div></form>`,
+    altlik: `${h ? '<button class="dg dg-cizgi" data-p-sil style="margin-right:auto;color:var(--kirmizi)">Sil</button>' : ''}<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-shh">Kaydet</button>`,
+    onAc: p => {
+      p.querySelector('form').addEventListener('submit', async ev => { ev.preventDefault(); const f = ev.target;
+        if (!f.kurs.value.trim()) return bildir('Kurs adını yaz', 'uyari');
+        const y = { tarih: f.tarih.value || bugunIso(), tur: f.tur.value, kursAd: f.kurs.value.trim(), aciklama: f.aciklama.value.trim(), sure: Math.max(0, parseInt(f.sure.value, 10) || 0), ucret: Math.max(0, parseFloat(f.ucret.value) || 0) };
+        if (h) Object.assign(h, y); else v.hizmetler.unshift({ id: kimlikUret(), ...y, ...(on.talep ? { talep: tKey(on.talep) } : {}) });
+        if (S.isletme && !S.isletme.hizmetler) S.isletme.hizmetler = v.hizmetler;
+        islem(h ? 'Sinyal Destek: hizmeti güncelledi' : 'Sinyal Destek: hizmet kaydetti', y.kursAd + ' · ' + y.tur); kaydet();
+        if (on.talep && tDurum(on.talep) !== 'Çözüldü') { try { await talepDurumYaz(on.talep, 'Çözüldü', on.talep.cevap || ''); } catch (x) { islemHata(x); } }
+        kapatPencere(); bildir(h ? 'Hizmet güncellendi' : 'Hizmet kaydedildi'); if (!h) destekAlt = on.talep ? destekAlt : 'hizmetler'; ciz(); });
+      const sl = p.querySelector('[data-p-sil]'); if (sl) sl.addEventListener('click', () => { v.hizmetler.splice(v.hizmetler.indexOf(h), 1); islem('Sinyal Destek: hizmeti sildi', h.kursAd || ''); kaydet(); kapatPencere(); bildir('Hizmet silindi'); ciz(); });
+    } });
+}
+async function destekTikla(t) {
+  const d = t.closest('[data-sh-dalt]'); if (d) { destekAlt = d.dataset.shDalt; ciz(); return true; }
+  if (t.closest('[data-sh-talep-ekle]')) { talepEklePenceresi(); return true; }
+  if (t.closest('[data-sh-hizmet-ekle]')) { hizmetPenceresi(null); return true; }
+  const tk = t.closest('[data-sh-talep]'); if (tk) { const x = tumTalepler().find(y => tKey(y) === tk.dataset.shTalep); if (x) talepPenceresi(x); return true; }
+  const hz = t.closest('[data-sh-hizmet]'); if (hz) { const x = isl().hizmetler.find(y => y.id === hz.dataset.shHizmet); if (x) hizmetPenceresi(x); return true; }
+  return false;
+}
 
 // ---- giriş ekranları için: giremeyene kendiliğinden yardım ----
 // Şifre yanlış girilince form altında açılır; kişi “şifremi unuttum”u aramak zorunda kalmaz.
