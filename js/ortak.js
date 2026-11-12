@@ -2,9 +2,9 @@
 // Kurs hesaplarından ayrı bir hesapta çalışır (S.kurs.tur === 'yonetim'); kurs ekranları açılmaz.
 // Üyeler: yönetici (müdür rolü, her şeyi girer) ve ortak (kendi e-posta ve şifresiyle girer, yalnız görür).
 // Kursiyer bilgisi yoktur: yalnız müşteri kurs adı, tahsilat, pay ve ödemeler.
-import { S, kaydet, gun, fark, tarihOku, iso, ayEkle, kapaliGun, islem, geriAlNoktasi } from './veri.js?v=141';
-import { e, ik, rozet, pencere, kapatPencere, bildir, tarih, tarihUzun, ayAdi, olcumler, belgeYazdir } from './ui.js?v=141';
-import * as B from './bulut.js?v=141';
+import { S, kaydet, gun, fark, tarihOku, iso, ayEkle, kapaliGun, islem, geriAlNoktasi } from './veri.js?v=142';
+import { e, ik, rozet, pencere, kapatPencere, bildir, tarih, tarihUzun, ayAdi, olcumler, belgeYazdir } from './ui.js?v=142';
+import * as B from './bulut.js?v=142';
 
 export const TURLER = ['İlk yıllık abonelik', 'Aylık abonelik', 'Abonelik yenileme', 'Ek şube', 'Kurulum', 'Eğitim', 'Destek', 'Ücretli modül', 'Diğer Sinyal hizmeti'];
 const PARA = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -208,25 +208,109 @@ function davetPenceresi() {
   }).catch(x => bildir(B.hataMetni(x), 'uyari'));
 }
 
-/* ---------- ortağın görünümü (rolü "ortak"): yalnız görüntüler ---------- */
-export function ortakPanelHtml(v, ay = secAy || gun(0).slice(0, 7)) {
-  const h = hesap(v), guncel = v.guncel ? new Date(v.guncel) : null;
-  return `<div class="ort ort-panel">
-    <header class="ort-panel-bas"><div><small>Sinyal · ortak paneli</small><h1>${e(v.ortak.ad)}</h1><p>Satışlardan %${h.oran} gelir payı · sözleşme ${tarih(v.ortak.baslangic)}</p></div>
-      <span class="ort-guncel">${guncel ? 'Güncellendi ' + guncel.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }) + ' ' + guncel.toTimeString().slice(0, 5) : ''}</span></header>
-    ${ozetHtml(v, h)}
-    <section class="kart"><div class="kart-bas"><h3>Aylık döküm</h3><small>Ödeme her ayın 10'una kadar</small></div><div class="kart-govde">${dokumHtml(v, h, ay)}</div></section>
-    <section class="kart"><div class="kart-bas"><h3>Müşteri kurslar</h3><small>${(v.musteriler || []).filter(m => m.durum !== 'Ayrıldı').length} aktif</small></div><div class="kart-govde">${musteriHtml(v, false)}</div></section>
-    <section class="kart"><div class="kart-bas"><h3>Tahsilatlar</h3><small>KDV hariç</small></div><div class="kart-govde">${tahsilatHtml(v, h, false)}</div></section>
-    <section class="kart"><div class="kart-bas"><h3>Size yapılan ödemeler</h3></div><div class="kart-govde">${odemeHtml(v, false)}</div></section>
-    <section class="kart"><div class="kart-bas"><h3>Borç durumu</h3></div><div class="kart-govde">${borcHtml(v, h)}</div></section>
-    <p class="ort-dip">Bu ekran yalnız görüntüleme içindir; kayıtları Servet Sakar girer. Kursların öğrenci bilgileri burada yer almaz.</p></div>`;
+/* ---------- Sinyal Yönetim ekranı (yeni tasarım): Özet · Kurslar · Defter ----------
+   Yönetici her şeyi girer; ortak (rol "ortak") aynı ekranı yalnız görür. Hesaplar hesap()/aylik() ile aynıdır. */
+let sekme = 'ozet', kursFiltre = 'hepsi';
+// kurs durumları: sıralama, renk ve simge (sıra = kartların dizilişi)
+export const DURUMLAR = [['Müşteri', 'yr-yesil', 'tik'], ['Sıcak', 'yr-kirmizi', 'alev'], ['Riskli', 'yr-turuncu', 'uyari'], ['Görüşülüyor', 'yr-sari', 'tel'], ['Ortak', 'yr-mor', 'kursiyer'], ['Bekliyor', 'yr-gri', 'saat'], ['Soğuk', 'yr-soluk', 'kapat']];
+const durumBul = d => DURUMLAR.find(x => x[0] === d) || DURUMLAR[5];
+const bolum = (baslik, alt, dugme, ic, sinif = '') => `<section class="yn-bolum"><div class="yn-bolum-bas"><div><h2>${baslik}</h2>${alt ? `<small>${alt}</small>` : ''}</div>${dugme ? `<div class="yn-dg">${dugme}</div>` : ''}</div><div class="yn-kart ${sinif}">${ic}</div></section>`;
+function kursKart(k, yon) {
+  const d = durumBul(k.durum), itiraz = String(k.itiraz || '').split(/\s*;\s*/).filter(Boolean);
+  return `<article class="yn-kurs ${d[1]}" ${yon ? `data-yn-kurs="${e(k.id)}" tabindex="0" role="button" aria-label="${e(k.ad)} kursunu düzenle"` : ''}>
+    <header><b>${e(k.ad)}</b><span class="yn-durum">${ik(d[2])}${e(d[0])}</span></header>
+    ${k.kisiler ? `<p class="yn-kisi">${ik('kursiyer')}<span>${e(k.kisiler)}</span></p>` : ''}
+    ${k.not ? `<p class="yn-not">${e(k.not)}</p>` : ''}
+    ${k.sonraki ? `<div class="yn-sonraki"><small>Sonraki adım${k.zaman ? ` · <b>${e(k.zaman)}</b>` : ''}</small><span>${e(k.sonraki)}</span></div>` : ''}
+    ${k.teklif || itiraz.length ? `<footer>${k.teklif ? `<span class="yn-etiket">Teklif · ${e(k.teklif)}</span>` : ''}${itiraz.map(x => `<span class="yn-etiket gri">${e(x)}</span>`).join('')}</footer>` : ''}
+  </article>`;
 }
-/* ---------- Sinyal Yönetim hesabının ekranı (uygulama kabuğu app.js'te) ---------- */
-export const yonetimHtml = rol => rol === 'mudur' ? ayarHtml() : ortakPanelHtml(S.isletme);
+function kurslarHtml(v, yon) {
+  const l = v.kurslar || [];
+  const ekle = yon ? `<button class="u-hap" data-yn-kurs-ekle>${ik('arti')}Kurs ekle</button><label class="u-hap gri yn-dosya">Dosyadan ekle<input type="file" accept=".json,application/json" data-yn-kurs-dosya></label>` : '';
+  if (!l.length) return `<div class="yn-bolum"><div class="u-bos">${ik('kursiyer')}<b>Henüz kurs eklenmedi</b><p>${yon ? 'Görüştüğün kursları ekle; durumunu, kiminle görüştüğünü ve sonraki adımı tek yerde takip et.' : 'Servet Sakar kursları ekleyince burada görünür.'}</p>${yon ? `<div class="yn-bos-dg">${ekle}</div>` : ''}</div></div>`;
+  if (kursFiltre !== 'hepsi' && !l.some(k => k.durum === kursFiltre)) kursFiltre = 'hepsi';
+  const say = d => l.filter(k => k.durum === d).length;
+  const sira = d => DURUMLAR.findIndex(x => x[0] === d);
+  const gor = l.filter(k => kursFiltre === 'hepsi' || k.durum === kursFiltre).sort((a, b) => sira(a.durum) - sira(b.durum) || a.ad.localeCompare(b.ad, 'tr'));
+  return `<div class="yn-kurs-ust"><div class="yn-filtre" role="tablist" aria-label="Duruma göre süz">${[['hepsi', 'Tümü', l.length], ...DURUMLAR.map(([d]) => [d, d, say(d)]).filter(x => x[2])].map(([k, t, n]) => `<button data-yn-filtre="${e(k)}" class="${kursFiltre === k ? 'secili' : ''}" aria-pressed="${kursFiltre === k}">${e(t)}<em>${n}</em></button>`).join('')}</div>${yon ? `<div class="yn-dg">${ekle}</div>` : ''}</div>
+    <div class="yn-kurslar">${gor.map(k => kursKart(k, yon)).join('')}</div>`;
+}
+export function yonetimHtml(rol) {
+  const v = S.isletme, h = hesap(v), o = v.ortak, yon = rol === 'mudur';
+  if (!secAy) secAy = gun(0).slice(0, 7);
+  const ay = aylik(v, h, gun(0).slice(0, 7)), kurslar = v.kurslar || [];
+  const olc = [[ayAd(ay.ay) + ' tahsilat', para(ay.net), 'KDV hariç'], ['Bu ay pay (%' + h.oran + ')', para(ay.pay), 'ödeme ' + tarih(ay.son)], ['Ödenmemiş pay', para(h.odenmemisPay), h.odenenPay ? para(h.odenenPay) + ' ödendi' : 'henüz ödeme yok'], ['Kalan borç', para(h.kalanBorc), h.kalanBorc ? 'son gün ' + tarih(h.vade) + (h.vadeGun != null ? ' · ' + (h.vadeGun >= 0 ? h.vadeGun + ' gün' : 'geçti') : '') : 'kapandı']];
+  const ust = `<section class="yn-hero"><div class="yn-ic"><small>${yon ? 'Gelir paylaşımı' : 'Ortak paneli · yalnız görüntüleme'}</small><h1>${e(o.ad)}</h1><p>Satışlardan %${h.oran} pay · sözleşme ${tarih(o.baslangic)}</p>
+    <div class="yn-olcum">${olc.map(([a, b, c]) => `<div><small>${a}</small><b>${b}</b><span>${c}</span></div>`).join('')}</div></div></section>`;
+  const sekmeler = `<nav class="yn-sekme" role="tablist">${[['ozet', 'Özet'], ['kurslar', 'Kurslar'], ['defter', 'Defter']].map(([k, t]) => `<button role="tab" data-yn-sekme="${k}" aria-selected="${sekme === k}" class="${sekme === k ? 'secili' : ''}">${t}${k === 'kurslar' && kurslar.length ? `<em>${kurslar.length}</em>` : ''}</button>`).join('')}</nav>`;
+  let govde = '';
+  if (sekme === 'ozet') {
+    const ortaklar = (S.kullanicilar || []).filter(u => u.rol === 'ortak');
+    const ortakIc = ortaklar.length ? ortaklar.map(u => `<div class="u-satir"><span class="u-ik mor">${ik('kursiyer')}</span><span class="u-satir-govde"><b>${e(u.ad)}</b><small>${e(u.eposta || '')} · yalnız görüntüler</small></span>${yon ? `<button class="u-hap gri" data-ort-uye-cikar="${e(u.id)}">Erişimi kaldır</button>` : ''}</div>`).join('')
+      : `<div class="u-satir"><span class="u-ik gri">${ik('kursiyer')}</span><span class="u-satir-govde"><b>${e(o.ad)}</b><small>Henüz katılmadı. Davet linkiyle kendi e-postası ve şifresiyle girer, her şeyi görür ama değiştiremez.</small></span></div>`;
+    govde = (yon ? bolum('Ortak', '', ortaklar.length ? '' : `<button class="u-hap" data-ort-davet>${ik('arti')}${e(o.ad.split(' ')[0])} Bey'i davet et</button>`, ortakIc) : '') +
+      bolum('Aylık döküm', 'Ortağa her ayın 5\'ine kadar paylaşılır', `<button class="u-hap gri" data-ort-pdf>${ik('belge')}PDF</button>`, dokumHtml(v, h, secAy)) +
+      bolum('Borç', 'Faizsiz, en geç 6 ayda', '', borcHtml(v, h)) +
+      (yon ? '' : `<p class="u-dipnot">Bu ekran yalnız görüntüleme içindir; kayıtları Servet Sakar girer. Kursların öğrenci bilgileri burada yer almaz.</p>`);
+  }
+  if (sekme === 'kurslar') govde = kurslarHtml(v, yon);
+  if (sekme === 'defter') {
+    govde = bolum('Tahsilatlar', 'KDV hariç, kursun fiilen ödediği', yon ? `<button class="u-hap" data-ort-tahsilat ${(v.musteriler || []).length ? '' : 'disabled title="Önce müşteri ekleyin"'}>${ik('arti')}Tahsilat</button>` : '', tahsilatHtml(v, h, yon)) +
+      bolum('Müşteri kurslar', 'Sinyal kullanan ve ödeyen kurslar', yon ? `<button class="u-hap" data-ort-musteri-ekle>${ik('arti')}Müşteri</button>` : '', musteriHtml(v, yon)) +
+      bolum(yon ? 'Ortağa ödemeler' : 'Size yapılan ödemeler', 'Banka havalesiyle', yon ? `<button class="u-hap" data-ort-odeme>${ik('arti')}Ödeme</button>` : '', odemeHtml(v, yon));
+  }
+  return `<div class="yn ort">${ust}<div class="yn-govde">${sekmeler}${govde}</div></div>`;
+}
+// Kurs ekle/düzenle (yalnız yönetici): alttan açılan sayfa
+function kursPenceresi(k, yenile) {
+  const v = S.isletme, a = (ad, et, ic) => `<label class="og-alan"><span class="og-alan-et">${et}</span>${ic}</label>`;
+  const girdi = (ad, deger, ek = '') => `<span class="og-girdi"><input name="${ad}" value="${e(deger || '')}" ${ek}></span>`;
+  pencere({ baslik: k ? k.ad : 'Kurs ekle', alt: true, icerik: `<form id="f-ynk" class="og-giris-form yn-form">
+      ${a('ad', 'Kurs adı', girdi('ad', k && k.ad, 'required placeholder="Örn. Kural Sürücü Kursu"'))}
+      ${a('durum', 'Durum', `<span class="og-girdi"><select name="durum">${DURUMLAR.map(([d]) => `<option ${(k ? k.durum : 'Bekliyor') === d ? 'selected' : ''}>${d}</option>`).join('')}</select></span>`)}
+      ${a('kisiler', 'Kiminle', girdi('kisiler', k && k.kisiler, 'placeholder="Örn. Pelin Hanım (kurs müdürü)"'))}
+      ${a('not', 'Son durum', `<span class="og-girdi yn-alan-uzun"><textarea name="not" rows="3" placeholder="Ne konuşuldu, nerede kaldı">${e(k ? k.not || '' : '')}</textarea></span>`)}
+      ${a('sonraki', 'Sonraki adım', girdi('sonraki', k && k.sonraki, 'placeholder="Örn. Cuma öğlen ara"'))}
+      ${a('zaman', 'Ne zaman', girdi('zaman', k && k.zaman, 'placeholder="Örn. Salı 10:00"'))}
+      ${a('teklif', 'Teklif', girdi('teklif', k && k.teklif, 'placeholder="Örn. 7.500 ₺"'))}
+      ${a('itiraz', 'İtirazlar <small>noktalı virgülle ayır</small>', girdi('itiraz', k && k.itiraz, 'placeholder="Örn. Fiyat pahalı; e-Arşiv"'))}</form>`,
+    altlik: `${k ? '<button class="dg dg-cizgi" data-yn-kurs-sil style="margin-right:auto;color:var(--u-kirmizi)">Sil</button>' : ''}<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-ynk">Kaydet</button>`,
+    onAc(p) {
+      const f = p.querySelector('form');
+      f.addEventListener('submit', ev => { ev.preventDefault(); const ad = f.ad.value.trim(); if (ad.length < 2) return bildir('Kurs adını yaz', 'uyari');
+        const x = { ad, durum: f.durum.value, kisiler: f.kisiler.value.trim(), not: f.not.value.trim(), sonraki: f.sonraki.value.trim(), zaman: f.zaman.value.trim(), teklif: f.teklif.value.trim(), itiraz: f.itiraz.value.trim(), guncel: gun(0) };
+        if (k) Object.assign(k, x); else (v.kurslar = v.kurslar || []).push({ id: kimlik(), ...x });
+        kaydetYayinla(k ? 'Sinyal Yönetim: kursu güncelledi' : 'Sinyal Yönetim: kurs ekledi', ad); kapatPencere(); bildir('Kaydedildi'); yenile(); });
+      const sil = p.querySelector('[data-yn-kurs-sil]'); if (sil) sil.addEventListener('click', () => { kapatPencere(); silOnay(k.ad + ' kurslar listesinden silinsin mi?', () => { geriAlNoktasi(); v.kurslar = v.kurslar.filter(y => y !== k); kaydetYayinla('Sinyal Yönetim: kursu sildi', k.ad); yenile(); }); });
+    } });
+}
+// Dosyadan kurs ekleme: { kurslar: [{ ad, durum, kisiler, not, sonraki, zaman, teklif, itiraz }] }; aynı adlı kurs varsa atlanır
+function kursDosyasi(dosya, yenile) {
+  dosya.text().then(t => {
+    let d; try { d = JSON.parse(t); } catch (x) { return bildir('Dosya okunamadı; Sinyal kurs dosyası (.json) seç', 'uyari'); }
+    const l = Array.isArray(d) ? d : d && Array.isArray(d.kurslar) ? d.kurslar : null; if (!l) return bildir('Dosyada kurs listesi yok', 'uyari');
+    const v = S.isletme, var_ = new Set((v.kurslar || []).map(k => k.ad.toLocaleLowerCase('tr'))), metin = x => String(x == null ? '' : x).slice(0, 600);
+    let n = 0;
+    l.forEach(k => { const ad = metin(k && k.ad).trim(); if (ad.length < 2 || var_.has(ad.toLocaleLowerCase('tr'))) return; var_.add(ad.toLocaleLowerCase('tr'));
+      (v.kurslar = v.kurslar || []).push({ id: kimlik(), ad, durum: DURUMLAR.some(x => x[0] === k.durum) ? k.durum : 'Bekliyor', kisiler: metin(k.kisiler), not: metin(k.not), sonraki: metin(k.sonraki), zaman: metin(k.zaman), teklif: metin(k.teklif), itiraz: metin(k.itiraz), guncel: gun(0) }); n++; });
+    if (!n) return bildir('Eklenecek yeni kurs yok; hepsi zaten listede', 'uyari');
+    kaydetYayinla('Sinyal Yönetim: dosyadan kurs ekledi', n + ' kurs'); bildir(n + ' kurs eklendi'); yenile();
+  });
+}
 export function yonetimBaglan(k, rol, yenile) {
-  if (rol === 'mudur') return ayarBaglan(k, yenile);
-  k.addEventListener('click', ev => { const ay = ev.target.closest('[data-ort-ay]'); if (ay && ay.dataset.ortAy) { secAy = ay.dataset.ortAy; yenile(); } });
+  k.addEventListener('click', ev => {
+    const t = ev.target;
+    const sk = t.closest('[data-yn-sekme]'); if (sk) { sekme = sk.dataset.ynSekme; yenile(); return scrollTo(0, 0); }
+    const fl = t.closest('[data-yn-filtre]'); if (fl) { kursFiltre = fl.dataset.ynFiltre; return yenile(); }
+    const ay = t.closest('[data-ort-ay]'); if (ay && ay.dataset.ortAy && rol !== 'mudur') { secAy = ay.dataset.ortAy; return yenile(); }
+    if (rol !== 'mudur') return;
+    if (t.closest('[data-yn-kurs-ekle]')) return kursPenceresi(null, yenile);
+    const kk = t.closest('[data-yn-kurs]'); if (kk) return kursPenceresi((S.isletme.kurslar || []).find(x => x.id === kk.dataset.ynKurs), yenile);
+  });
+  k.addEventListener('keydown', ev => { if (ev.key === 'Enter' && ev.target.matches('[data-yn-kurs]')) ev.target.click(); });
+  k.addEventListener('change', ev => { const i = ev.target.closest('[data-yn-kurs-dosya]'); if (i && i.files[0] && rol === 'mudur') { kursDosyasi(i.files[0], yenile); i.value = ''; } });
+  if (rol === 'mudur') ayarBaglan(k, yenile);
 }
 // Kurulum: yeni ve boş bir hesap bir kez "Sinyal Yönetim" hesabına çevrilir (#/yonetim-kur, yalnız müdür)
 export const kurulabilir = () => !S.isletme && !(S.kursiyerler || []).length && !(S.dersler || []).length && !(S.hareket || []).length;

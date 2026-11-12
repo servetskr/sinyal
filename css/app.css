@@ -2072,3 +2072,99 @@ body.portal-modu .ogr-icerik{max-width:none}
 .yh-ortak summary small{display:block;font-weight:400;font-size:13px;color:var(--soluk)}
 .yh-ortak[open] summary{margin-bottom:10px}
 .yh-ortak .og-alan{margin-top:10px}
+
+/* ================= Sinyal Yönetim (v142): uygulama dili; Özet · Kurslar · Defter ================= */
+.ort-kabuk .ort-ana{padding:0}
+.yn-hero{background:radial-gradient(90% 70% at 85% 0%,#1d3f78,transparent 60%),linear-gradient(180deg,#0b1830,#10254a);color:#fff;padding:16px 20px 60px}
+.yn-ic{max-width:760px;margin:0 auto}
+.yn-hero small{display:block;font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--u-sari,#f2b705)}
+.yn-hero h1{margin-top:6px;font-size:30px;line-height:1.1;font-weight:700;letter-spacing:-.025em;color:#fff}
+.yn-hero p{margin-top:6px;font-size:15px;color:rgba(255,255,255,.72)}
+.yn-olcum{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:20px}
+.yn-olcum>div{padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.09);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+.yn-olcum small{font-size:12.5px;font-weight:500;letter-spacing:0;text-transform:none;color:rgba(255,255,255,.7)}
+.yn-olcum b{display:block;margin:4px 0 2px;font-size:22px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:#fff}
+.yn-olcum span{font-size:12.5px;color:rgba(255,255,255,.6)}
+@media (max-width:700px){.yn-olcum{grid-template-columns:1fr 1fr}.yn-olcum b{font-size:20px}}
+.yn-govde{position:relative;max-width:760px;margin:-36px auto 0;padding:0 16px calc(60px + env(safe-area-inset-bottom))}
+.yn-sekme{display:flex;gap:4px;padding:4px;border-radius:14px;background:#fff;box-shadow:0 12px 30px -18px rgba(11,24,48,.55),0 1px 2px rgba(11,24,48,.08)}
+.yn-sekme button{flex:1;height:42px;border-radius:10px;font-size:15px;font-weight:600;color:var(--u-ikincil,#6b6e76)}
+.yn-sekme button.secili{background:#0b1830;color:#fff}
+.yn-sekme em{font-style:normal;margin-left:6px;font-size:12.5px;opacity:.7}
+.yn-bolum{margin-top:26px}
+.yn-bolum-bas{display:flex;align-items:flex-end;gap:10px;margin:0 4px 10px}
+.yn-bolum-bas h2{font-size:20px;font-weight:700;letter-spacing:-.02em;color:var(--murekkep)}
+.yn-bolum-bas small{display:block;margin-top:2px;font-size:14px;color:var(--u-ikincil,#6b6e76)}
+.yn-dg{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.yn-dg .u-hap .ik{width:15px;height:15px;margin-right:2px;vertical-align:-2px}
+.yn-kart{background:#fff;border-radius:14px;overflow:hidden}
+/* eski tablolar yeni dilde: Excel benzeri ızgara */
+.yn .tablo-kap{overflow-x:auto;border:0;border-radius:0;margin:0}
+.yn .ort-tablo{width:100%;border-collapse:collapse;font-size:14.5px;font-variant-numeric:tabular-nums}
+.yn .ort-tablo th{background:#f7f7f9;padding:8px 10px;text-align:left;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#6b6e76;border-bottom:1px solid #d9d9df;white-space:nowrap}
+.yn .ort-tablo td{padding:10px;border-bottom:.5px solid #e6e6eb;vertical-align:top}
+.yn .ort-tablo td+td,.yn .ort-tablo th+th{border-left:.5px solid #e6e6eb}
+.yn .ort-tablo .sag{text-align:right}
+.yn .ort-tablo tfoot td{background:#fafafb}
+.yn .ort-tablo tr.tik{cursor:pointer}
+.yn .ort-tablo tr.tik:hover td{background:#f7f9fd}
+.yn .ort-not{display:block;margin-top:2px;font-size:12.5px;color:#6b6e76}
+.yn .ort-gez{display:flex;align-items:center;gap:8px;padding:12px 14px;margin:0;border-bottom:.5px solid #e6e6eb}
+.yn .ort-gez b{font-size:16px;font-weight:600;min-width:130px;text-align:center}
+.yn .ort-gez .dg{min-width:36px;height:34px;padding:0;justify-content:center;border:0;border-radius:10px;background:#ececf1;color:var(--u-vurgu,#0a4da2);font-size:18px}
+.yn .ort-gez .dg:disabled{color:#a3a5ab}
+.yn .ort-alt{padding:10px 14px;font-size:14px;color:#6b6e76}
+.yn .ort-bos{padding:18px 16px;font-size:15px;color:#6b6e76}
+.yn .ort-borc{list-style:none;margin:0;padding:0}
+.yn .ort-borc li{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:12px 16px;border-top:.5px solid #e6e6eb}
+.yn .ort-borc li:first-child{border-top:0}
+.yn .ort-borc span{font-size:16px;font-weight:600;color:var(--murekkep)}
+.yn .ort-borc b{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
+.yn .ort-borc small{grid-column:1/-1;font-size:13.5px;color:#6b6e76}
+.yn .u-dipnot{margin-top:18px}
+/* kurslar */
+.yn-kurs-ust{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px}
+.yn-filtre{display:flex;gap:6px;overflow-x:auto;padding:2px;scrollbar-width:none;min-width:0;flex:1}
+.yn-filtre::-webkit-scrollbar{display:none}
+.yn-filtre button{flex:none;height:34px;padding:0 12px;border-radius:999px;background:#fff;font-size:14px;font-weight:600;color:var(--murekkep);box-shadow:inset 0 0 0 .5px rgba(60,60,67,.2)}
+.yn-filtre button.secili{background:#0b1830;color:#fff;box-shadow:none}
+.yn-filtre em{font-style:normal;margin-left:5px;opacity:.6}
+.yn-dosya{position:relative;cursor:pointer;display:inline-flex;align-items:center}
+.yn-dosya input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.yn-bos-dg{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+.yn-kurslar{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px;margin-top:14px}
+.yn-kurs{--renk:#a3a5ab;--acik:#ececf1;--koyu:#3a3d42;position:relative;display:flex;flex-direction:column;background:#fff;border-radius:16px;padding:14px 16px 14px 19px;overflow:hidden;transition:box-shadow .15s,transform .15s}
+.yn-kurs::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--renk)}
+.yn-kurs[data-yn-kurs]{cursor:pointer}
+.yn-kurs[data-yn-kurs]:hover{box-shadow:0 10px 26px -16px rgba(11,24,48,.45)}
+.yn-kurs[data-yn-kurs]:active{transform:scale(.99)}
+.yn-kurs header{display:flex;align-items:flex-start;gap:10px}
+.yn-kurs header b{flex:1;font-size:17px;font-weight:700;line-height:1.25;color:var(--murekkep)}
+.yn-durum{flex:none;display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 9px;border-radius:999px;background:var(--acik);color:var(--koyu);font-size:12.5px;font-weight:600}
+.yn-durum .ik{width:13px;height:13px}
+.yn-kisi{display:flex;gap:6px;margin-top:8px;font-size:14px;line-height:1.35;color:#6b6e76}
+.yn-kisi .ik{flex:none;width:15px;height:15px;margin-top:1px}
+.yn-not{margin-top:8px;font-size:15px;line-height:1.45;color:var(--murekkep)}
+.yn-sonraki{margin-top:12px;padding:10px 12px;border-radius:12px;background:#f3f6fc}
+.yn-sonraki small{display:block;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#0a4da2}
+.yn-sonraki small b{letter-spacing:0;text-transform:none}
+.yn-sonraki span{display:block;margin-top:3px;font-size:14.5px;line-height:1.4;color:var(--murekkep)}
+.yn-kurs footer{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.yn-etiket{display:inline-flex;align-items:center;min-height:24px;padding:2px 9px;border-radius:7px;background:#e7eefa;color:#0a4da2;font-size:12.5px;font-weight:600;line-height:1.3}
+.yn-etiket.gri{background:#f2f2f5;color:#55585e;font-weight:500}
+.yr-yesil{--renk:#28a05a;--acik:#e3f4ea;--koyu:#14663a}
+.yr-kirmizi{--renk:#e0483d;--acik:#fde7e5;--koyu:#a8241a}
+.yr-turuncu{--renk:#f08a24;--acik:#fdeedd;--koyu:#8a4300}
+.yr-sari{--renk:#e3a300;--acik:#fff4cf;--koyu:#7a5200}
+.yr-mor{--renk:#7a5cd6;--acik:#ece7fb;--koyu:#4b2fa6}
+.yr-gri{--renk:#8e9198;--acik:#ececf1;--koyu:#3a3d42}
+.yr-soluk{--renk:#d0d1d6;--acik:#f2f2f5;--koyu:#8e9198}
+.yr-soluk header b,.yr-soluk .yn-not{color:#8e9198}
+.yn-form textarea{width:100%;min-height:76px;border:0;background:none;resize:vertical;font:inherit;font-size:16px;color:var(--murekkep);outline:none;padding:10px 0}
+.yn-form .og-girdi select{width:100%;height:100%;border:0;background:none;font:inherit;font-size:16px;outline:none}
+.og-alan-et small{font-weight:400;color:#6b6e76}
+.yn-kurs-ust{flex-direction:column-reverse;align-items:stretch}
+.yn-kurs-ust .yn-dg{align-self:flex-end}
+.yn-kurs-ust .yn-filtre{flex:none;width:100%;max-width:100%;min-width:0}
+@media (min-width:760px){.ort-kabuk .app-ust{padding-left:max(16px,calc(50% - 380px));padding-right:max(16px,calc(50% - 380px))}}
+.yn .u-satir-govde small{white-space:normal}
