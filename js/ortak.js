@@ -2,9 +2,9 @@
 // Kurs hesaplarından ayrı bir hesapta çalışır (S.kurs.tur === 'yonetim'); kurs ekranları açılmaz.
 // Üyeler: yönetici (müdür rolü, her şeyi girer) ve ortak (kendi e-posta ve şifresiyle girer, yalnız görür).
 // Kursiyer bilgisi yoktur: yalnız müşteri kurs adı, tahsilat, pay ve ödemeler.
-import { S, kaydet, gun, fark, tarihOku, iso, ayEkle, kapaliGun, islem, geriAlNoktasi } from './veri.js?v=133';
-import { e, ik, rozet, pencere, kapatPencere, bildir, tarih, tarihUzun, ayAdi, olcumler, belgeYazdir } from './ui.js?v=133';
-import * as B from './bulut.js?v=133';
+import { S, kaydet, gun, fark, tarihOku, iso, ayEkle, kapaliGun, islem, geriAlNoktasi } from './veri.js?v=134';
+import { e, ik, rozet, pencere, kapatPencere, bildir, tarih, tarihUzun, ayAdi, olcumler, belgeYazdir } from './ui.js?v=134';
+import * as B from './bulut.js?v=134';
 
 export const TURLER = ['İlk yıllık abonelik', 'Aylık abonelik', 'Abonelik yenileme', 'Ek şube', 'Kurulum', 'Eğitim', 'Destek', 'Ücretli modül', 'Diğer Sinyal hizmeti'];
 const PARA = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
