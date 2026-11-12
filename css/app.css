@@ -1827,6 +1827,8 @@ body.kaydi .app-ust{border-bottom-color:var(--u-ayrac)}
 .app-profil:active{opacity:.7}
 .app-profil.buyuk{width:56px;height:56px;font-size:20px}
 body.hero-acik .app-ust{background:var(--u-gece);border-bottom-color:transparent}
+/* kaydırınca üst bölüm çubuğun altından bulanık geçer; sert bir kesik çizgi oluşmaz */
+body.hero-acik.kaydi .app-ust{background:rgba(11,24,48,.8);border-bottom-color:rgba(255,255,255,.08)}
 body.hero-acik .app-ust-ad b{color:#fff}
 body.hero-acik .app-ust-ad small,body.hero-acik .app-ust-ad .bulut-durum{color:rgba(255,255,255,.6)}
 body.hero-acik .app-profil{background:rgba(255,255,255,.16);box-shadow:inset 0 0 0 1px rgba(255,255,255,.2)}
@@ -1835,7 +1837,7 @@ body.hero-acik .app-profil{background:rgba(255,255,255,.16);box-shadow:inset 0 0
 .portal-og{max-width:520px;margin:0 auto;padding:6px 16px calc(110px + env(safe-area-inset-bottom))}
 .u-onizleme{max-width:520px;margin:10px auto!important}
 /* üst bölüm: gece yolu */
-.u-hero{position:relative;overflow:hidden;background:linear-gradient(180deg,var(--u-gece),#10254a);color:#fff;padding:6px 20px 44px}
+.u-hero{position:relative;overflow:hidden;background:radial-gradient(70% 55% at 80% 80%,rgba(74,124,196,.38),transparent 70%),linear-gradient(180deg,var(--u-gece),#10254a);color:#fff;padding:6px 20px 44px}
 .u-hero::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:22px;background:var(--zemin);border-radius:22px 22px 0 0}
 .u-hero.kartli{padding-bottom:96px}
 .u-hero.kartli::after{display:none}
@@ -2007,3 +2009,44 @@ body.usta-modu .u-satir-govde small{font-size:15px}
 .portal-og .rozet-turuncu,.portal-og .rozet-uyari{background:#fdeedd;color:#8a4300}
 .portal-og [data-tk-git]{border:0!important;background:#ececf1!important;border-radius:10px!important;min-width:44px;min-height:38px}
 .portal-og .og-sira{border-radius:20px}
+
+/* öğretmen programı: Excel tablosu düzeni (ızgara çizgileri, gün sütunu birleşik, bugün vurgulu) */
+.u-prog-arac{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px}
+.u-bolum{display:flex;padding:2px;border-radius:10px;background:#e3e3e8}
+.u-bolum button{min-width:70px;height:32px;padding:0 12px;border-radius:8px;font-size:14px;font-weight:600;color:var(--murekkep)}
+.u-bolum button.secili{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.u-prog-git{display:flex;gap:6px}
+.u-prog-git button{height:34px;min-width:34px;padding:0 10px;border-radius:10px;background:#fff;color:var(--u-vurgu);font-size:14px;font-weight:600;display:grid;place-items:center}
+.u-prog-git button .ik{width:16px;height:16px}
+.u-prog-git button:disabled{color:var(--u-ucuncul)}
+.u-tablo-kap{background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 0 0 .5px var(--u-ayrac)}
+.u-tablo{width:100%;border-collapse:collapse;font-size:15px;font-variant-numeric:tabular-nums}
+.u-tablo th{background:#f7f7f9;padding:8px 10px;text-align:left;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--u-ikincil);border-bottom:1px solid #d9d9df}
+.u-tablo td{padding:9px 10px;border-bottom:.5px solid #e6e6eb;vertical-align:middle}
+.u-tablo td+td,.u-tablo th+th{border-left:.5px solid #e6e6eb}
+.u-tablo tr.gun-ilk td{border-top:1px solid #d9d9df}
+.u-tablo tbody tr:first-child td{border-top:0}
+.u-gun{width:46px;text-align:center;background:#fafafb}
+.u-gun b{display:block;font-size:18px;font-weight:700;line-height:1.1;color:var(--murekkep)}
+.u-gun small{display:block;font-size:11.5px;font-weight:600;color:var(--u-ikincil);text-transform:uppercase}
+.u-tablo tr.bugun td{background:#eef4fd}
+.u-tablo tr.bugun .u-gun{background:var(--u-vurgu)}
+.u-tablo tr.bugun .u-gun b,.u-tablo tr.bugun .u-gun small{color:#fff}
+.u-t-saat{width:56px;font-weight:600;color:var(--murekkep)}
+.u-t-ad{font-weight:600;color:var(--murekkep);line-height:1.25}
+.u-t-ad small{display:block;font-size:12.5px;font-weight:400;color:var(--u-ikincil)}
+.u-tablo tr.bos td{color:var(--u-ucuncul)}
+.u-tablo tr.iptal .u-t-saat,.u-tablo tr.iptal .u-t-ad{color:var(--u-ucuncul);text-decoration:line-through}
+.u-tablo .u-durum{font-size:13px}
+.u-indir{width:100%;margin-top:14px;background:#fff;color:#1d6f42}
+.u-indir .ik{color:#1d6f42}
+/* öğrenci arama */
+.u-ara{display:flex;align-items:center;gap:8px;height:40px;padding:0 10px;margin:0 0 4px;border-radius:12px;background:#e3e3e8;color:var(--u-ikincil)}
+.u-ara>.ik{width:17px;height:17px;flex:none}
+.u-ara input{flex:1;min-width:0;height:100%;border:0;background:none;font-size:17px;color:var(--murekkep);outline:none;-webkit-appearance:none;appearance:none}
+.u-ara input::-webkit-search-cancel-button{display:none}
+.u-ara-sil{flex:none;width:22px;height:22px;border-radius:50%;background:#a3a5ab;color:#fff;display:grid;place-items:center}
+.u-ara-sil .ik{width:12px;height:12px;stroke-width:3}
+.u-ara+.u-liste,.u-ara+.u-grup{margin-top:14px}
+.u-bos[data-ara-yok]{margin-top:14px}
+.u-prog-git .ik.ters{transform:scaleX(-1)}
