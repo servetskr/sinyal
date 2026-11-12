@@ -1,21 +1,21 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=141';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=141';
-import * as Y1 from './sayfalar1.js?v=141';
-import * as Y2 from './sayfalar2.js?v=141';
-import * as P from './portal.js?v=141';
-import * as Y3 from './sayfalar3.js?v=141';
-import * as Y4 from './sayfalar4.js?v=141';
-import * as Y5 from './sayfalar5.js?v=141';
-import * as IM from './imza.js?v=141';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=141';
-import * as SN from './senaryo.js?v=141';
-import * as OZ from './ozellik.js?v=141';
-import { durumlariGuncelle } from './mesaj.js?v=141';
-import { yeniMenu } from './yeni.js?v=141';
-import * as B from './bulut.js?v=141';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=141';
-import * as AN from './analiz.js?v=141';
-import * as ORT from './ortak.js?v=141';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=142';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=142';
+import * as Y1 from './sayfalar1.js?v=142';
+import * as Y2 from './sayfalar2.js?v=142';
+import * as P from './portal.js?v=142';
+import * as Y3 from './sayfalar3.js?v=142';
+import * as Y4 from './sayfalar4.js?v=142';
+import * as Y5 from './sayfalar5.js?v=142';
+import * as IM from './imza.js?v=142';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=142';
+import * as SN from './senaryo.js?v=142';
+import * as OZ from './ozellik.js?v=142';
+import { durumlariGuncelle } from './mesaj.js?v=142';
+import { yeniMenu } from './yeni.js?v=142';
+import * as B from './bulut.js?v=142';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=142';
+import * as AN from './analiz.js?v=142';
+import * as ORT from './ortak.js?v=142';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -67,7 +67,7 @@ function hesapSayfasi() {
   const ogr = u.rol === 'ogrenci', og = ogr ? kursiyer(u.kursiyer) : null, ad = og ? tamAd(og) : u.ad;
   const tel = (S.kurs.tel || '').replace(/\s/g, '');
   const satir = (ikon, metin, ek, ton = '') => `<span class="hs-ik ${ton}">${ik(ikon)}</span><span class="hs-metin">${metin}${ek ? `<small>${ek}</small>` : ''}</span>`;
-  pencere({ baslik: 'Hesabım', alt: true, icerik: `<div class="hs-kim"><span class="app-profil buyuk" aria-hidden="true">${basHarf(ad)}</span><div><b>${e(ad)}</b><small>${e(S.kurs.ad)} · ${ogr ? 'Öğrenci' : ROL_AD[u.rol]}</small></div></div>
+  pencere({ baslik: 'Hesabım', alt: true, icerik: `<div class="hs-kim"><span class="app-profil buyuk" aria-hidden="true">${basHarf(ad)}</span><div><b>${e(ad)}</b><small>${e(S.kurs.ad)} · ${ogr ? 'Öğrenci' : ORT.yonetimModu() || u.rol === 'ortak' ? (u.rol === 'mudur' ? 'Yönetici' : 'Ortak · yalnız görüntüler') : ROL_AD[u.rol]}</small></div></div>
     <div class="hs-liste">${ogr ? `<button type="button" data-ogr-sifre>${satir('kilit', 'Şifremi değiştir')}${ik('sag')}</button>` : ''}
       ${tel ? `<a href="tel:${e(tel)}">${satir('tel', 'Kursu ara', e(S.kurs.tel))}${ik('sag')}</a>` : ''}</div>
     <div class="hs-liste"><button type="button" class="hs-cikis" ${ogr ? 'data-ogr-cikis' : 'data-cikis'}>${satir('cikis', u.bulut || ogr ? 'Çıkış yap' : 'Kullanıcı değiştir', '', 'kirmizi')}</button></div>` });
@@ -542,9 +542,10 @@ function ogrenciCiz(kaydir) {
 // Sinyal Yönetim kabuğu: menü yok; üstte hesap adı, kullanıcı ve çıkış
 function yonetimCiz(kaydir) {
   const kok = document.getElementById('uyg'), u = oturum.kullanici;
-  if (!kok.querySelector('.ort-kabuk')) kok.innerHTML = `<div class="ort-kabuk"><header class="ort-ust"><svg class="logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#0b1d33" stroke-width="2.2" stroke-linecap="round"/></svg><b>Sinyal Yönetim</b>
-    <span class="ort-ust-sag"><span id="bulut-durum" class="bulut-durum" role="status"></span><small>${e(u.ad)} · ${u.rol === 'mudur' ? 'Yönetici' : 'Ortak, yalnız görüntüler'}</small><button class="ort-cikis" data-cikis>Çıkış</button></span></header><main class="ort-ana" id="icerik"></main></div>`;
-  document.body.classList.add('portal-modu');
+  // uygulama kabuğu: öğrenci ve öğretmen ekranlarıyla aynı üst çubuk; çıkış profil düğmesinin alttan açılan sayfasında
+  if (!kok.querySelector('.ort-kabuk')) kok.innerHTML = `<div class="ort-kabuk"><header class="app-ust">${APP_LOGO}<span class="app-ust-ad"><b>Sinyal Yönetim</b><span id="bulut-durum" class="bulut-durum" role="status"></span></span><button type="button" class="app-profil" data-hesap aria-label="Hesabım: ${e(u.ad)}">${basHarf(u.ad)}</button></header><main class="ort-ana" id="icerik"></main></div>`;
+  document.body.classList.add('portal-modu', 'hero-acik'); document.body.classList.remove('hero-gunduz');
+  { const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = '#0b1830'; }
   document.title = 'Sinyal Yönetim';
   const yer = document.getElementById('icerik'), kap = document.createElement('div');
   kap.className = 'sayfa sayfa-yonetim';
