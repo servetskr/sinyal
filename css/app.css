@@ -2061,6 +2061,7 @@ body.usta-modu .u-satir-govde small{font-size:15px}
 .u-hero.gunduz,.u-hero.gunduz.kartli{background:radial-gradient(70% 50% at 84% 16%,rgba(255,236,170,.32),transparent 62%),linear-gradient(180deg,#174f99 0%,#2a6bbd 46%,#5996dc 74%,#93c3ee 100%)}
 body.hero-acik.hero-gunduz .app-ust{background:#174f99}
 body.hero-acik.hero-gunduz.kaydi .app-ust{background:rgba(23,79,153,.84)}
-.u-bulut-kay{animation:u-bulut-kay 100s linear infinite}
-@keyframes u-bulut-kay{from{transform:translateX(-90px)}to{transform:translateX(470px)}}
+.u-bulut-kay{animation:u-bulut-kay 420s linear infinite}
+@keyframes u-bulut-kay{from{transform:translateX(-760px)}to{transform:translateX(1150px)}}
 @media (prefers-reduced-motion:reduce){.u-bulut-kay{animation:none}}
+body.portal-modu .ogr-icerik{max-width:none}

@@ -1,24 +1,24 @@
-import { oturum, islem, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, yerelZaman, BECERI, risk, ekToplam, selam, kursAdi, konuListesi, konuOner, DERS_TUR_AD, dersKalanSaat, dersIptalIz } from './veri.js?v=139';
-import { e, saatDe, saatE, tl, ik, rozet, avatar, csvIndir, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani, waAc, waNumara } from './ui.js?v=139';
-import { yenile } from './app.js?v=139';
-import { ekDersKabul, bosTeklifKabul, wpGonder, bildirimler } from './sayfalar1.js?v=139';
-import { KONULAR } from './konular.js?v=139';
+import { oturum, islem, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, yerelZaman, BECERI, risk, ekToplam, selam, kursAdi, konuListesi, konuOner, DERS_TUR_AD, dersKalanSaat, dersIptalIz } from './veri.js?v=140';
+import { e, saatDe, saatE, tl, ik, rozet, avatar, csvIndir, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani, waAc, waNumara } from './ui.js?v=140';
+import { yenile } from './app.js?v=140';
+import { ekDersKabul, bosTeklifKabul, wpGonder, bildirimler } from './sayfalar1.js?v=140';
+import { KONULAR } from './konular.js?v=140';
 // Soru bankası büyük; yalnız Sınavlar sekmesi ya da test açılınca yüklenir (açılış hızını etkilemesin)
 let SORULAR = [], soruYuk = null;
 // Sorular ve levha çizimleri yalnız sınav sekmesinde yüklenir; levhalı sorularda görsel "L:<kod>" olarak durur
 let levhaSvg = () => '';
 // yüklenemezse (zayıf internet) bir sonraki dokunuşta yeniden denenir; öğrenciye haber verilir
-const sorulariYukle = () => soruYuk || (soruYuk = Promise.all([import('./sorular.js?v=139'), import('./levha.js?v=139').catch(() => null)]).then(([m, l]) => { SORULAR = m.SORULAR; if (l) levhaSvg = l.levhaSvg; }).catch(x => { soruYuk = null; bildir('Sorular yüklenemedi; internet bağlantını kontrol edip tekrar dene', 'uyari'); throw x; }));
+const sorulariYukle = () => soruYuk || (soruYuk = Promise.all([import('./sorular.js?v=140'), import('./levha.js?v=140').catch(() => null)]).then(([m, l]) => { SORULAR = m.SORULAR; if (l) levhaSvg = l.levhaSvg; }).catch(x => { soruYuk = null; bildir('Sorular yüklenemedi; internet bağlantını kontrol edip tekrar dene', 'uyari'); throw x; }));
 const gorselHtml = g => !g ? '' : String(g).startsWith('L:') ? levhaSvg(g.slice(2)) : g;
-import { randevuAl, randevuIptal } from './ozellik.js?v=139';
-import * as OG from './ogrenci.js?v=139';
-import * as HZ from './hazirlik.js?v=139';
-import { ogrOzellik } from './veri.js?v=139';
-import { ustaAlacak } from './risk.js?v=139';
-import { ayAdi } from './ozellik.js?v=139';
-import { soruKonu } from './soruKonu.js?v=139';
-import { MUFREDAT } from './ogrenci.js?v=139';
-import * as TK from './takvim.js?v=139';
+import { randevuAl, randevuIptal } from './ozellik.js?v=140';
+import * as OG from './ogrenci.js?v=140';
+import * as HZ from './hazirlik.js?v=140';
+import { ogrOzellik } from './veri.js?v=140';
+import { ustaAlacak } from './risk.js?v=140';
+import { ayAdi } from './ozellik.js?v=140';
+import { soruKonu } from './soruKonu.js?v=140';
+import { MUFREDAT } from './ogrenci.js?v=140';
+import * as TK from './takvim.js?v=140';
 
 let egId = 'e1', egSekme = 'bugun';
 let ogId = null, ogSekme = (() => { try { return sessionStorage.getItem('sinyal-og-sekme') || 'durum'; } catch (x) { return 'durum'; } })();
@@ -98,7 +98,7 @@ function dersKapat(d) {
         if (iu.bos()) return bildir('Önce sen imzala; öğrencinin imzası WhatsApp’tan istenir', 'uyari');
         const once = isle({ zaman: yerelZaman(), kursiyer: null, kursiyerBekliyor: true, usta: iu.url() });
         islem('Ders tamamlandı, öğrenci imzası istendi', tamAd(ks) + ' · ' + d.tarih + ' ' + d.saat); kaydet(); kapatPencere();
-        const m = await import('./imza.js?v=139'); await m.imzaIste('ders', ks, [d.id]); bildir('Ders kaydedildi; imza linki öğrenciye gidiyor', 'wp'); yenile(); riskKontrol(ks, once);
+        const m = await import('./imza.js?v=140'); await m.imzaIste('ders', ks, [d.id]); bildir('Ders kaydedildi; imza linki öğrenciye gidiyor', 'wp'); yenile(); riskKontrol(ks, once);
       });
     },
   });
@@ -165,55 +165,65 @@ const DURUM_TON = { 'Yapıldı': 'yesil', 'Gelmedi': 'kirmizi', 'İptal': 'notr'
 export const selamla = () => { const s = new Date().getHours(); return s < 5 ? 'İyi geceler' : s < 11 ? 'Günaydın' : s < 18 ? 'İyi günler' : s < 23 ? 'İyi akşamlar' : 'İyi geceler'; };
 // ---- Uygulama parçaları (öğretmen ve öğrenci) ----
 // Üst bölümün arka planı: ufka uzanan gece yolu; şerit çizgisi yavaşça akar (hareket azaltılmışsa durur)
-// Üst bölüm sahnesi: sakin gece manzarası (yıldızlar, ay, şehir silüeti, uzaktaki yolda süzülen farlar). Hareketler yavaş ve
-// düşük kontrastlı; yazının okunmasını bozmaz. Hareket azaltılmışsa durur.
-const GECE_SVG = (() => {
-  let r = 11; const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
-  const yildiz = Array.from({ length: 30 }, () => `<circle class="u-yildiz" cx="${(rnd() * 400).toFixed(1)}" cy="${(rnd() * 150).toFixed(1)}" r="${(.45 + rnd() * .9).toFixed(2)}" style="animation-duration:${(5 + rnd() * 5).toFixed(1)}s;animation-delay:-${(rnd() * 9).toFixed(1)}s"/>`).join('');
-  let x = -4, bina = '', pencere = '';
-  while (x < 404) {
+// Üst bölüm sahneleri: gece (yıldız, ay, şehir, uzak yolda süzülen farlar) ve gündüz (güneş, bulut, kuş, açık tonlu şehir, küçük arabalar).
+// Her şey -700…1100 birim genişlikte çizilir; görüş alanı üst bölümün oranına göre ayarlanır (heroBoyutla), böylece dar telefonda da
+// geniş ekranda da kenarlarda boşluk kalmaz, sahne büyüyüp yazıların üstüne çıkmaz. Hareketler yavaş; hareket azaltılmışsa durur.
+const SAHNE_X0 = -700, SAHNE_X1 = 1100;
+const sahneYol = (() => { let d = `M${SAHNE_X0} 206`; for (let x = SAHNE_X0, i = 0; x < SAHNE_X1; x += 130, i++) d += ` S${x + 95} ${i % 2 ? 216 : 194} ${x + 130} ${i % 2 ? 208 : 202}`; return d; })();
+const sahneTepe = (y0, gen, yuk) => { let d = `M${SAHNE_X0} ${y0}`; for (let x = SAHNE_X0, i = 0; x < SAHNE_X1; x += gen, i++) d += ` S${x + gen * .6} ${y0 - (i % 2 ? yuk : yuk * .4)} ${x + gen} ${y0 - (i % 3 ? yuk * .3 : 0)}`; return d + ` V260 H${SAHNE_X0}Z`; };
+function sahneSehir(tohum, pencereli) {
+  let r = tohum; const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
+  let x = SAHNE_X0, bina = '', pencere = '';
+  while (x < SAHNE_X1) {
     const w = 13 + rnd() * 20, h = 12 + rnd() * 30, ust = 234 - h;
     bina += `<rect x="${x.toFixed(1)}" y="${ust.toFixed(1)}" width="${w.toFixed(1)}" height="${(h + 40).toFixed(1)}" rx="1"/>`;
-    for (let py = ust + 5; py < 226; py += 6) for (let px = x + 3; px < x + w - 3; px += 5) if (rnd() < .2) pencere += `<rect class="${rnd() < .35 ? 'u-pencere' : ''}" x="${px.toFixed(1)}" y="${py.toFixed(1)}" width="1.8" height="2.4" style="animation-delay:-${(rnd() * 14).toFixed(1)}s"/>`;
+    if (pencereli) for (let py = ust + 5; py < 226; py += 6) for (let px = x + 3; px < x + w - 3; px += 5) if (rnd() < .2) pencere += `<rect class="${rnd() < .3 ? 'u-pencere' : ''}" x="${px.toFixed(1)}" y="${py.toFixed(1)}" width="1.8" height="2.4" style="animation-delay:-${(rnd() * 14).toFixed(1)}s"/>`;
     x += w + .8 + rnd() * 2.5;
   }
-  const yol = 'M-30 212 C70 196 150 220 230 206 S360 190 430 202';
-  const far = (renk, sure, gecikme, ters) => `<g><circle r="3.2" fill="${renk}" opacity=".22"/><circle r="1.15" fill="${renk}"/><animateMotion dur="${sure}s" begin="-${gecikme}s" repeatCount="indefinite" path="${yol}" ${ters ? 'keyPoints="1;0" keyTimes="0;1" calcMode="linear"' : ''}/></g>`;
-  return `<svg class="u-gece" viewBox="0 0 400 260" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+  return { bina, pencere };
+}
+const GECE_SVG = (() => {
+  let r = 11; const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
+  const yildiz = Array.from({ length: 110 }, () => { const anim = rnd() < .3; return `<circle${anim ? ' class="u-yildiz"' : ''} cx="${(SAHNE_X0 + rnd() * (SAHNE_X1 - SAHNE_X0)).toFixed(1)}" cy="${(rnd() * 150).toFixed(1)}" r="${(.45 + rnd() * .9).toFixed(2)}" opacity="${anim ? 1 : (.25 + rnd() * .5).toFixed(2)}"${anim ? ` style="animation-duration:${(5 + rnd() * 5).toFixed(1)}s;animation-delay:-${(rnd() * 9).toFixed(1)}s"` : ''}/>`; }).join('');
+  const { bina, pencere } = sahneSehir(17, true);
+  const far = (renk, gecikme, ters) => `<g><circle r="3.2" fill="${renk}" opacity=".22"/><circle r="1.15" fill="${renk}"/><animateMotion dur="${ters ? 110 : 95}s" begin="-${gecikme}s" repeatCount="indefinite" path="${sahneYol}" ${ters ? 'keyPoints="1;0" keyTimes="0;1" calcMode="linear"' : ''}/></g>`;
+  const farlar = [0, 12, 24, 36, 48, 60, 72, 84].map((g, i) => far(i % 3 === 2 ? '#ff8a7a' : '#fff3c9', g, i % 3 === 2)).join('');
+  return `<svg class="u-gece" viewBox="50 0 300 260" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
     <g fill="#fff">${yildiz}</g>
     <g class="u-ay-isik" fill="#f3e6c0"><circle cx="338" cy="50" r="40" opacity=".03"/><circle cx="338" cy="50" r="30" opacity=".04"/><circle cx="338" cy="50" r="21" opacity=".06"/><circle cx="338" cy="50" r="15.5" opacity=".08"/></g><circle cx="338" cy="50" r="11.5" fill="#f3e6c0" opacity=".92"/><circle cx="334" cy="47" r="2.4" fill="#e2d2a6" opacity=".6"/><circle cx="341.5" cy="54" r="1.6" fill="#e2d2a6" opacity=".55"/>
-    <path d="M0 214 C80 200 160 210 240 198 S350 196 400 204 V260 H0Z" fill="#132a52" opacity=".85"/>
+    <path d="${sahneTepe(214, 160, 14)}" fill="#132a52" opacity=".85"/>
     <g fill="#0f2346">${bina}</g><g fill="#ffd77a" opacity=".55">${pencere}</g>
-    <path d="${yol}" stroke="#2c4a7c" stroke-width="2.2" fill="none"/>
-    ${far('#fff3c9', 21, 3)}${far('#fff3c9', 21, 13)}${far('#ff8a7a', 26, 8, 1)}${far('#ff8a7a', 26, 20, 1)}${far('#fff3c9', 23, 17)}
-    <path d="M0 232 C70 222 140 230 210 226 S330 220 400 230 V260 H0Z" fill="#0a1a35"/>
+    <path d="${sahneYol}" stroke="#2c4a7c" stroke-width="2.2" fill="none"/>${farlar}
+    <path d="${sahneTepe(234, 140, 8)}" fill="#0a1a35"/>
   </svg>`;
 })();
-// Gündüz (06:00–18:00): sabah göğü, güneş, yavaş kayan bulutlar, açık tonlu şehir, uzak yolda süzülen küçük arabalar
 const GUNDUZ_SVG = (() => {
-  let r = 23; const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
-  let x = -4, bina = '';
-  while (x < 404) { const w = 13 + rnd() * 20, h = 12 + rnd() * 30, ust = 234 - h; bina += `<rect x="${x.toFixed(1)}" y="${ust.toFixed(1)}" width="${w.toFixed(1)}" height="${(h + 40).toFixed(1)}" rx="1"/>`; x += w + .8 + rnd() * 2.5; }
-  const bulut = (cx, cy, o, sure, gec) => `<g class="u-bulut-kay" style="animation-duration:${sure}s;animation-delay:-${gec}s"><g fill="#fff" opacity="${o}"><circle cx="${cx}" cy="${cy}" r="10"/><circle cx="${cx + 12}" cy="${cy - 6}" r="13"/><circle cx="${cx + 27}" cy="${cy}" r="10"/><rect x="${cx}" y="${cy}" width="27" height="10"/></g></g>`;
-  const yol = 'M-30 212 C70 196 150 220 230 206 S360 190 430 202';
-  const araba = (renk, sure, gec, ters) => `<g><g transform="translate(-4 -4)"><rect x="0" y="2.2" width="8" height="3.2" rx="1.4" fill="${renk}"/><rect x="2" y=".4" width="4" height="2.4" rx="1" fill="${renk}"/><circle cx="2" cy="5.6" r=".9" fill="#1c2129"/><circle cx="6" cy="5.6" r=".9" fill="#1c2129"/></g><animateMotion dur="${sure}s" begin="-${gec}s" repeatCount="indefinite" rotate="${ters ? 'auto-reverse' : 'auto'}" path="${yol}" ${ters ? 'keyPoints="1;0" keyTimes="0;1" calcMode="linear"' : ''}/></g>`;
-  return `<svg class="u-gece" viewBox="0 0 400 260" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+  const { bina } = sahneSehir(29, false);
+  const bulut = (cx, cy, o, gec) => `<g class="u-bulut-kay" style="animation-delay:-${gec}s"><g fill="#fff" opacity="${o}"><circle cx="${cx}" cy="${cy}" r="10"/><circle cx="${cx + 12}" cy="${cy - 6}" r="13"/><circle cx="${cx + 27}" cy="${cy}" r="10"/><rect x="${cx}" y="${cy}" width="27" height="10"/></g></g>`;
+  const bulutlar = [[0, 40, .32, 0], [0, 72, .24, 70], [0, 26, .3, 140], [0, 58, .26, 210], [0, 34, .3, 280], [0, 80, .22, 350]].map(b => bulut(...b)).join('');
+  const araba = (renk, gec, ters) => `<g><g transform="translate(-4 -4)"><rect x="0" y="2.2" width="8" height="3.2" rx="1.4" fill="${renk}"/><rect x="2" y=".4" width="4" height="2.4" rx="1" fill="${renk}"/><circle cx="2" cy="5.6" r=".9" fill="#1c2129"/><circle cx="6" cy="5.6" r=".9" fill="#1c2129"/></g><animateMotion dur="${ters ? 120 : 105}s" begin="-${gec}s" repeatCount="indefinite" rotate="${ters ? 'auto-reverse' : 'auto'}" path="${sahneYol}" ${ters ? 'keyPoints="1;0" keyTimes="0;1" calcMode="linear"' : ''}/></g>`;
+  const arabalar = [['#f2b705', 0], ['#ffffff', 14], ['#e0483d', 28, 1], ['#0a4da2', 42, 1], ['#2fa36b', 56], ['#ffffff', 70, 1], ['#f2b705', 84, 1], ['#e0483d', 98]].map(a => araba(...a)).join('');
+  return `<svg class="u-gece" viewBox="50 0 300 260" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
     <g class="u-ay-isik" fill="#fff4cf"><circle cx="338" cy="50" r="44" opacity=".06"/><circle cx="338" cy="50" r="32" opacity=".09"/><circle cx="338" cy="50" r="22" opacity=".14"/></g><circle cx="338" cy="50" r="13" fill="#fff1bf"/>
-    ${bulut(40, 40, .32, 95, 10)}${bulut(170, 70, .26, 120, 70)}${bulut(260, 26, .3, 105, 40)}
-    <g class="u-kus" stroke="#e8f1fb" stroke-width="1.2" fill="none" stroke-linecap="round" opacity=".7"><path d="M-4 0 q2 -2.4 4 0 q2 -2.4 4 0"/><path d="M8 -6 q1.6 -2 3 0 q1.6 -2 3 0"/><animateMotion dur="38s" begin="-6s" repeatCount="indefinite" path="M-30 110 C80 96 200 120 300 100 S420 92 440 96"/></g>
-    <path d="M0 214 C80 200 160 210 240 198 S350 196 400 204 V260 H0Z" fill="#8bbbe8" opacity=".9"/>
+    ${bulutlar}
+    <g stroke="#e8f1fb" stroke-width="1.2" fill="none" stroke-linecap="round" opacity=".7"><path d="M-4 0 q2 -2.4 4 0 q2 -2.4 4 0"/><path d="M8 -6 q1.6 -2 3 0 q1.6 -2 3 0"/><animateMotion dur="120s" begin="-20s" repeatCount="indefinite" path="M${SAHNE_X0} 110 C-200 96 200 120 500 100 S900 92 ${SAHNE_X1} 96"/></g>
+    <path d="${sahneTepe(214, 160, 14)}" fill="#8bbbe8" opacity=".9"/>
     <g fill="#6c9fd6">${bina}</g>
-    <path d="${yol}" stroke="#5a8cc6" stroke-width="2.4" fill="none"/>
-    ${araba('#f2b705', 24, 4)}${araba('#ffffff', 24, 15)}${araba('#e0483d', 29, 9, 1)}${araba('#0a4da2', 29, 22, 1)}
-    <path d="M0 232 C70 222 140 230 210 226 S330 220 400 230 V260 H0Z" fill="#4f84c2"/>
+    <path d="${sahneYol}" stroke="#5a8cc6" stroke-width="2.4" fill="none"/>${arabalar}
+    <path d="${sahneTepe(234, 140, 8)}" fill="#4f84c2"/>
   </svg>`;
 })();
+// görüş alanı: yükseklik 260 birim sabit, genişlik üst bölümün oranına göre (300–1700), sahne ortada
+function heroBoyutla() {
+  document.querySelectorAll('svg.u-gece').forEach(g => { const r = g.getBoundingClientRect(); if (!r.width || !r.height) return; const vw = Math.max(300, Math.min(1700, 260 * r.width / r.height)); g.setAttribute('viewBox', `${(200 - vw / 2).toFixed(1)} 0 ${vw.toFixed(1)} 260`); });
+}
+addEventListener('resize', () => requestAnimationFrame(heroBoyutla));
 const gunduzMu = () => { const s = new Date().getHours(); return s >= 6 && s < 18; };
 const heroSahne = () => gunduzMu() ? GUNDUZ_SVG : GECE_SVG;
 const AV_RENK = ['#2f6fde', '#c2410c', '#0f8a5f', '#7a5cd6', '#b4233a', '#0e7490', '#a16207'];
 const avDaire = (k, cls = '') => k.foto ? `<img class="u-av ${cls}" src="${e(k.foto)}" alt="">` : `<span class="u-av ${cls}" style="--r:${AV_RENK[[...((k.ad || '') + (k.soyad || ''))].reduce((a, c) => a + c.charCodeAt(0), 0) % AV_RENK.length]}" aria-hidden="true">${e(((k.ad || '?')[0] + ((k.soyad || '')[0] || '')).toLocaleUpperCase('tr'))}</span>`;
 // sayfa üstü rengi: üst bölüm varsa telefonun durum çubuğu da lacivert olur
-const temaUst = koyu => { if (koyu && window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) document.querySelectorAll('svg.u-gece').forEach(g => { try { g.pauseAnimations(); } catch (x) { } }); document.body.classList.toggle('hero-acik', koyu); document.body.classList.toggle('hero-gunduz', koyu && gunduzMu()); const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = koyu ? (gunduzMu() ? '#174f99' : '#0b1830') : '#f2f2f7'; };
+const temaUst = koyu => { if (koyu) heroBoyutla(); if (koyu && window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) document.querySelectorAll('svg.u-gece').forEach(g => { try { g.pauseAnimations(); } catch (x) { } }); document.body.classList.toggle('hero-acik', koyu); document.body.classList.toggle('hero-gunduz', koyu && gunduzMu()); const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = koyu ? (gunduzMu() ? '#174f99' : '#0b1830') : '#f2f2f7'; };
 const dersNo = (d, k) => k.direksiyon + (d.durum === 'Planlandı' ? 1 + S.dersler.filter(x => x.kursiyer === k.id && x.durum === 'Planlandı' && (x.tarih + x.saat) < (d.tarih + d.saat)).length : 0);
 // Sıradaki (ya da sürmekte olan) ders: üst bölüme taşan büyük kart, tek ana düğme
 function egSiraKart(d) {
@@ -246,7 +256,7 @@ function egOgrAc(k) {
     ${S0.direksiyon ? `<div class="u-ilerleme"><span>Direksiyon dersleri</span><b>${k.direksiyon}<small>/${S0.direksiyon}</small></b>${ilerleme(k.direksiyon, S0.direksiyon, 'yesil')}</div>` : ''}
     <div class="u-liste">${sat('takvim', 'mavi', 'Sonraki ders', sd ? tarihUzun(sd.tarih) + ' · ' + sd.saat : 'Planlı ders yok')}${dd ? sat('sinav', dd.sonuc === 'Geçti' ? 'yesil' : 'kirmizi', 'Son deneme sınavı', dd.sonuc === 'Geçti' ? 'Sınavı geçerdi' : 'Sınavdan kalırdı') : ''}${r && r.puan >= 50 ? sat('uyari', 'turuncu', 'Sınav riski yüksek', 'Ek ders ve deneme önerilir') : ''}</div>
     <div class="u-sayfa-dg"><button class="u-dg birincil" data-ogr-deneme>${ik('sinav')}Deneme sınavı yap</button>${tel ? `<a class="u-dg" href="tel:${e(tel)}">${ik('tel')}Ara</a>` : ''}</div>`,
-    onAc(d) { d.querySelector('[data-ogr-deneme]').addEventListener('click', () => { kapatPencere(); import('./deneme.js?v=139').then(m => m.denemeAc(k, yenile)); }); } });
+    onAc(d) { d.querySelector('[data-ogr-deneme]').addEventListener('click', () => { kapatPencere(); import('./deneme.js?v=140').then(m => m.denemeAc(k, yenile)); }); } });
 }
 let egProg = { mod: 'hafta', kay: 0 }, egAra = '';
 const araMetin = t => String(t || '').toLocaleLowerCase('tr');
@@ -277,7 +287,7 @@ async function progIndir(eg) {
   const sat = [['Tarih', 'Gün', 'Saat', 'Öğrenci', 'Sınıf', 'Ders no', 'Araç', 'Durum', 'Süre (dk)'], ...l.map(d => { const k = kursiyer(d.kursiyer), a = d.arac && arac(d.arac); return [d.tarih.split('-').reverse().join('.'), gunKisa(d.tarih), d.saat, k ? tamAd(k) : '', k ? SINIFLAR[k.sinif].ad : '', k ? dersNo(d, k) : '', a ? a.plaka : '', progDurum(d)[0], d.sure != null ? d.sure : '']; })];
   const ad = 'ders-programi-' + gunler[0] + '_' + gunler[gunler.length - 1];
   try {
-    await import('./sayfalar5.js?v=139').then(m => m.xlsxYukle());
+    await import('./sayfalar5.js?v=140').then(m => m.xlsxYukle());
     const X = window.XLSX, ws = X.utils.aoa_to_sheet(sat), wb = X.utils.book_new();
     ws['!cols'] = [12, 6, 7, 24, 14, 8, 12, 11, 9].map(w => ({ wch: w })); ws['!autofilter'] = { ref: 'A1:I' + sat.length };
     X.utils.book_append_sheet(wb, ws, 'Program'); X.writeFile(wb, ad + '.xlsx');
@@ -377,7 +387,7 @@ export function egitmenPortal() {
           return;
         }
         const y = t.closest('[data-yapildi]'); if (y) return dersKapat(S.dersler.find(x => x.id === y.dataset.yapildi));
-        const it = t.closest('[data-imza-tekrar]'); if (it) { const d = S.dersler.find(x => x.id === it.dataset.imzaTekrar); import('./imza.js?v=139').then(m => m.imzaIste('ders', kursiyer(d.kursiyer), [d.id])); return; }
+        const it = t.closest('[data-imza-tekrar]'); if (it) { const d = S.dersler.find(x => x.id === it.dataset.imzaTekrar); import('./imza.js?v=140').then(m => m.imzaIste('ders', kursiyer(d.kursiyer), [d.id])); return; }
         const g = t.closest('[data-gelmedi]'); if (g) return gelmediIsaretle(S.dersler.find(x => x.id === g.dataset.gelmedi));
         const dg = t.closest('[data-ders-diger]'); if (dg) return dersDiger(S.dersler.find(x => x.id === dg.dataset.dersDiger));
       });

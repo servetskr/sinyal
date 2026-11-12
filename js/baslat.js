@@ -6,8 +6,8 @@ const cssHazir = () => new Promise(r => { if (css.media === 'all' && css.sheet) 
 // Açılış ekranı görünüyorsa animasyon en az 2 sn oynar; uygulama kodu bu sırada önceden indirilir (modulepreload), süre dolunca çalışır
 const ACILIS_SURE = 2000;
 const acilisBekle = () => { const a = document.getElementById('acilis'); if (!a || a.hidden) return Promise.resolve(); return new Promise(r => setTimeout(r, Math.max(0, ACILIS_SURE - performance.now()))); };
-const onYukle = () => { try { const l = document.createElement('link'); l.rel = 'modulepreload'; l.href = 'js/app.js?v=139'; document.head.appendChild(l); } catch (e) { } };
-const yukle = () => window.__uyg || (window.__uyg = (onYukle(), Promise.all([cssHazir(), acilisBekle()])).then(() => import('./app.js?v=139')).then(m => { window.__hazir = true; return m; }));
+const onYukle = () => { try { const l = document.createElement('link'); l.rel = 'modulepreload'; l.href = 'js/app.js?v=140'; document.head.appendChild(l); } catch (e) { } };
+const yukle = () => window.__uyg || (window.__uyg = (onYukle(), Promise.all([cssHazir(), acilisBekle()])).then(() => import('./app.js?v=140')).then(m => { window.__hazir = true; return m; }));
 let hemen = true;
 try { hemen = /^#\/./.test(location.hash) || !!(sessionStorage.getItem('sinyal-oturum') || sessionStorage.getItem('sinyal-kapandi') || localStorage.getItem('sinyal-bulut') || localStorage.getItem('sinyal-ogrenci')); } catch (e) { }
 if (hemen) yukle();
