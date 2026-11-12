@@ -1,22 +1,22 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=159';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=159';
-import * as Y1 from './sayfalar1.js?v=159';
-import * as Y2 from './sayfalar2.js?v=159';
-import * as P from './portal.js?v=159';
-import * as Y3 from './sayfalar3.js?v=159';
-import * as Y4 from './sayfalar4.js?v=159';
-import * as Y5 from './sayfalar5.js?v=159';
-import * as IM from './imza.js?v=159';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=159';
-import * as SN from './senaryo.js?v=159';
-import * as OZ from './ozellik.js?v=159';
-import { durumlariGuncelle } from './mesaj.js?v=159';
-import { yeniMenu } from './yeni.js?v=159';
-import * as B from './bulut.js?v=159';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=159';
-import * as AN from './analiz.js?v=159';
-import * as ORT from './ortak.js?v=159';
-import * as SH from './sahip.js?v=159';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=162';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=162';
+import * as Y1 from './sayfalar1.js?v=162';
+import * as Y2 from './sayfalar2.js?v=162';
+import * as P from './portal.js?v=162';
+import * as Y3 from './sayfalar3.js?v=162';
+import * as Y4 from './sayfalar4.js?v=162';
+import * as Y5 from './sayfalar5.js?v=162';
+import * as IM from './imza.js?v=162';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=162';
+import * as SN from './senaryo.js?v=162';
+import * as OZ from './ozellik.js?v=162';
+import { durumlariGuncelle } from './mesaj.js?v=162';
+import { yeniMenu } from './yeni.js?v=162';
+import * as B from './bulut.js?v=162';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=162';
+import * as AN from './analiz.js?v=162';
+import * as ORT from './ortak.js?v=162';
+import * as SH from './sahip.js?v=162';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -119,7 +119,7 @@ function iskelet() {
         ${(S.subeler || []).length > 1 && oturum.kullanici.rol !== 'usta' ? `<label class="sube-sec"><span class="gizli-et">Şube</span><select data-sube aria-label="Şube">${['', ...S.subeler.map(x => x.id)].map(id => `<option value="${id}" ${gorunum.sube === id ? 'selected' : ''}>${id ? e(S.subeler.find(x => x.id === id).ad) : 'Tüm şubeler'}</option>`).join('')}</select></label>` : ''}
         <button class="arama" data-ara aria-label="Ara">${ik('ara')}<span>Kursiyer, aday, plaka ara</span><kbd>⌘K</kbd></button>
         ${oturum.kullanici.rol !== 'usta' ? `<button class="yeni-dugme" data-yeni-menu aria-label="Yeni ekle">${ik('arti')}<span>Yeni</span></button>` : ''}
-        <button class="kullanici-cip" data-cikis title="Kullanıcı değiştir"><b>${e(oturum.kullanici.ad)}</b><small>${ROL_AD[oturum.kullanici.rol]}</small></button>
+        <button class="kullanici-cip" data-cikis title="Kullanıcı değiştir" aria-label="${e(oturum.kullanici.ad)} · ${ROL_AD[oturum.kullanici.rol]} · kullanıcı değiştir"><i class="kc-bas" aria-hidden="true">${basHarf(oturum.kullanici.ad)}</i><b>${e(oturum.kullanici.ad)}</b><small>${ROL_AD[oturum.kullanici.rol]}</small></button>
       </header>`}
       ${oturum.kullanici.ziyaretci ? `<div class="ziyaretci-serit"><span><b>Demo görünümü</b> · örnek verilerle. Mesajlar kimseye gitmez, ekranda gösterilir.</span><button data-cikis>Çık</button></div>` : ''}
       <main class="icerik" id="icerik"></main>
