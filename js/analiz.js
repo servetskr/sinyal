@@ -1,6 +1,6 @@
-import { S, BUGUN, iso, kapaliGun, ASAMALAR, KAYNAKLAR, kursiyer, tamAd, eksikEvrak, gecikenler, gecikenTutar, memnuniyet, sb, sbDers } from './veri.js?v=159';
-import { e, tl, sayi, rozet, asamaRozet, olcumler, sekmeler, ilerleme, bos, ekranNotu, ayAdi } from './ui.js?v=159';
-import { riskliler } from './risk.js?v=159';
+import { S, BUGUN, iso, kapaliGun, ASAMALAR, KAYNAKLAR, kursiyer, tamAd, eksikEvrak, gecikenler, gecikenTutar, memnuniyet, sb, sbDers } from './veri.js?v=162';
+import { e, tl, sayi, rozet, asamaRozet, olcumler, sekmeler, ilerleme, bos, ekranNotu, ayAdi } from './ui.js?v=162';
+import { riskliler } from './risk.js?v=162';
 
 /* ================= ANALİZ =================
    Öğrenci, usta öğretici ve kurs göstergeleri tek sayfada. Sekme hash'ten gelir: #/analiz/<ogrenci|usta|kurs> */
@@ -22,7 +22,7 @@ const soluk = m => `<small style="display:block;color:var(--soluk)">${m}</small>
 
 // Yatay çubuk satırı: etiket, değer, ilerleme
 function cubuk(ad, n, max, { href, tur = '', deger } = {}) {
-  return `<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;gap:8px;font-size:13.5px;margin-bottom:5px"><span>${href ? `<a href="${href}" style="color:inherit">${ad}</a>` : ad}</span><b class="sayi" style="color:var(--murekkep);white-space:nowrap">${deger ?? sayi(n)}</b></div>${ilerleme(n, max, tur)}</div>`;
+  return `<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;gap:8px;font-size:13.5px;margin-bottom:5px"><span>${href ? `<a class="an-bag" href="${href}">${ad}</a>` : ad}</span><b class="sayi" style="color:var(--murekkep);white-space:nowrap">${deger ?? sayi(n)}</b></div>${ilerleme(n, max, tur)}</div>`;
 }
 function kart(baslik, alt, govde) {
   return `<div class="kart"><div class="kart-bas"><h3>${e(baslik)}</h3>${alt ? `<small>${alt}</small>` : ''}</div>${govde}</div>`;

@@ -2514,3 +2514,42 @@ body.sahip-modu{
   .yn-kasa-tablo td:nth-child(5) .yn-belge{width:28px;height:28px}
   .yn-kasa-tablo td:nth-child(6){grid-area:dg;width:auto}
 }
+
+/* ================= Sabit yerleşim (v160): sayfadan sayfaya geçerken hiçbir şey zıplamasın ================= */
+/* Üst çubuk her sayfada aynı yükseklikte: uzun alt başlık tek satırda kısalır, kullanıcı düğmesi satır kırmaz */
+.ust{height:74px;min-height:0}
+.ust-baslik{flex:1 1 auto;min-width:0}
+.ust-baslik small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ust .arama{flex:0 1 auto;min-width:0}
+.kullanici-cip{flex:none;white-space:nowrap;max-width:180px}
+.kullanici-cip b,.kullanici-cip small{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kc-bas{display:none}
+@media (max-width:900px){
+  .ust{height:62px}
+  .ust-baslik h1{display:block;-webkit-line-clamp:unset;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
+  /* telefonda kullanıcı düğmesi baş harfli yuvarlak: 40×40, hiç kırılmaz */
+  .kullanici-cip{width:40px;height:40px;max-width:none;padding:0;border-radius:50%;align-items:center;justify-content:center}
+  .kullanici-cip b,.kullanici-cip small{display:none}
+  .kc-bas{display:block;font:800 14px/1 var(--baslik);font-style:normal;color:var(--murekkep)}
+  .mobil-ust-sol{min-width:40px;min-height:40px}
+}
+/* dokunma alanları en az 36 px (parmakla rahat basılsın) */
+.ziyaretci-serit button{min-height:36px}
+@media (max-width:600px){
+  .bolum-bas .rol button{min-height:36px}
+  .ipucu button{min-height:32px;padding-top:6px;padding-bottom:6px}
+  .tablo input[type=checkbox]{width:20px;height:20px}
+  .olcum-h a,.gosterge a{display:inline-block;padding:7px 0}
+}
+/* Pencereler: ekrandan uzun içerikte başlık ve düğmeler yerinde kalır, yalnız içerik kayar */
+.pencere{display:flex;flex-direction:column;max-height:88vh;max-height:88dvh}
+.pencere>header,.pencere>footer{flex:none}
+.pencere-govde{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+@media (max-width:900px){.pencere{max-height:94vh;max-height:94dvh}}
+/* başlık bloğu: tarih ve "Kaydedildi" aynı satırda, altında sayfa adı; üst çubuğun yüksekliğini aşmaz */
+.ust{padding-top:10px;padding-bottom:10px}
+.ust-baslik{display:grid;grid-template-columns:minmax(0,max-content) auto;align-items:center;justify-content:start;column-gap:0}
+.ust-baslik small{grid-column:1;min-width:0}
+.ust-baslik .bulut-durum{grid-column:2;white-space:nowrap}
+.ust-baslik h1{grid-column:1/-1;min-width:0}
+.an-bag{display:inline-block;padding:8px 0;margin:-8px 0;color:inherit}
