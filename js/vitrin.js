@@ -87,8 +87,14 @@
       if (i === akt) return; akt = i;
       parca.forEach(el => { const j = +el.dataset.i; el.classList.toggle('aktif', j === i); el.classList.toggle('once', j < i); el.inert = j !== i; });
       dgler.forEach((b, j) => { b.classList.toggle('gecti', j <= i); b.setAttribute('aria-current', j === i ? 'step' : 'false'); });
-      const sh = sec.querySelector(`.vt-yk-kart[data-i="${i}"] .vt-sahne`); if (sh) { sh.classList.remove('oynat'); void sh.offsetWidth; sh.classList.add('oynat'); }
+      const sh = sec.querySelector(`.vt-yk-kart[data-i="${i}"] .vt-an`); if (sh) { sh.classList.remove('oynat'); void sh.offsetWidth; sh.classList.add('oynat'); }
       sec.classList.toggle('basladi', i >= 0);
+    };
+    // cihazları sahne alanına sığdır (gerçek boyut korunur, yalnız ölçek değişir)
+    const sahne = sec.querySelector('.vt-yk-sahne');
+    const sigdir = () => {
+      const W = sahne.clientWidth, H = sahne.clientHeight; if (!W || !H) return;
+      sec.querySelectorAll('.vt-yk-kart').forEach(k => { const d = k.firstElementChild; if (!d) return; d.style.transform = ''; const o = Math.min(1, W / d.offsetWidth, H / d.offsetHeight); if (o < .999) d.style.transform = `scale(${o.toFixed(3)})`; });
     };
     const olc = () => {
       const bos = sec.offsetHeight - innerHeight; if (bos <= 0) return;
@@ -115,10 +121,12 @@
       const hedefP = GIRIS + (+b.dataset.ykGit + .5) / N * (1 - GIRIS);
       scrollTo({ top: sec.offsetTop + hedefP * (sec.offsetHeight - innerHeight), behavior: azHareket() ? 'auto' : 'smooth' });
     };
-    addEventListener('scroll', kaydir, { passive: true }); addEventListener('resize', olc); sec.addEventListener('click', git);
+    const boyut = () => { sigdir(); olc(); };
+    addEventListener('scroll', kaydir, { passive: true }); addEventListener('resize', boyut); sec.addEventListener('click', git);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(sigdir);
     if (window.__yol) window.__yol();
-    olc();
-    temizle.push(() => { removeEventListener('scroll', kaydir); removeEventListener('resize', olc); sec.removeEventListener('click', git); cancelAnimationFrame(raf); });
+    sigdir(); olc();
+    temizle.push(() => { removeEventListener('scroll', kaydir); removeEventListener('resize', boyut); sec.removeEventListener('click', git); cancelAnimationFrame(raf); });
   }
   // "Herkes kendi ekranında": rol sekmeleri (ok tuşlarıyla da gezilir)
   function roller(kok) {
