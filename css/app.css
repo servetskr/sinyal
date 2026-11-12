@@ -2184,6 +2184,7 @@ body.portal-modu .ogr-icerik{max-width:none}
 .yn-izgara{display:grid;gap:0 18px}
 @media (min-width:860px){.yn-izgara{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
 @media (min-width:980px){
+  .ort-kabuk .ort-ana{max-width:none}  /* bilgisayarda panel ekranın tamamını kullanır (telefon kutusu gibi ortada sıkışmaz) */
   .yn{display:grid;grid-template-columns:236px minmax(0,1fr)}
   .yn-yan{display:flex;flex-direction:column;gap:2px;position:sticky;top:52px;align-self:start;height:calc(100vh - 52px);padding:18px 12px;background:#fff;border-right:.5px solid rgba(60,60,67,.17)}
   .yn-yan button{display:flex;align-items:center;gap:11px;height:44px;padding:0 12px;border-radius:11px;font-size:15px;font-weight:600;color:#3a3d42;text-align:left}
