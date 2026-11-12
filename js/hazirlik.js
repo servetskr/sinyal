@@ -1,8 +1,8 @@
 // e-Sınava hazırlık: son denemeler, konu başarısı ve soru bankasında görülen soru oranından tek puan;
 // yanlış yapılan sorular aralıklı tekrar takvimine girer (1, 3, 7, 14, 30 gün sonra yeniden sorulur).
-import { gun } from './veri.js?v=153';
-import { e, ilerleme } from './ui.js?v=153';
-import { SORU_KONU } from './soruKonu.js?v=153';
+import { gun } from './veri.js?v=154';
+import { e, ilerleme } from './ui.js?v=154';
+import { SORU_KONU } from './soruKonu.js?v=154';
 
 const N = SORU_KONU.length;
 const KAT = { trafik: ['Trafik ve çevre', 23], ilkyardim: ['İlk yardım', 12], motor: ['Motor ve araç tekniği', 9], adab: ['Trafik adabı', 6] };
