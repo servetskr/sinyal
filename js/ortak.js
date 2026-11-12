@@ -2,9 +2,9 @@
 // Kurs hesaplarından ayrı bir hesapta çalışır (S.kurs.tur === 'yonetim'); kurs ekranları açılmaz.
 // Üyeler: yönetici (müdür rolü, her şeyi girer) ve ortak (kendi e-posta ve şifresiyle girer, yalnız görür).
 // Kursiyer bilgisi yoktur: yalnız müşteri kurs adı, tahsilat, pay ve ödemeler.
-import { S, kaydet, gun, fark, tarihOku, iso, ayEkle, kapaliGun, islem, geriAlNoktasi } from './veri.js?v=158';
-import { e, ik, rozet, pencere, kapatPencere, bildir, tarih, tarihUzun, ayAdi, olcumler, belgeYazdir, fotoKucult, csvIndir, gunKisa } from './ui.js?v=158';
-import * as B from './bulut.js?v=158';
+import { S, kaydet, gun, fark, tarihOku, iso, ayEkle, kapaliGun, islem, geriAlNoktasi } from './veri.js?v=159';
+import { e, ik, rozet, pencere, kapatPencere, bildir, tarih, tarihUzun, ayAdi, olcumler, belgeYazdir, fotoKucult, csvIndir, gunKisa } from './ui.js?v=159';
+import * as B from './bulut.js?v=159';
 
 export const TURLER = ['İlk yıllık abonelik', 'Aylık abonelik', 'Abonelik yenileme', 'Ek şube', 'Kurulum', 'Eğitim', 'Destek', 'Ücretli modül', 'Diğer Sinyal hizmeti'];
 const PARA = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -139,6 +139,21 @@ export function ayarBaglan(k, yenile) {
 function silOnay(metin, f) { pencere({ baslik: 'Silinsin mi?', icerik: `<p style="font-size:14.5px">${e(metin)}</p>`, altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-evet>Sil</button>', onAc(p) { p.querySelector('[data-evet]').addEventListener('click', () => { kapatPencere(); f(); bildir('Silindi', 'tamam', true); }); } }); }
 const alan = (et, ic) => `<div class="alan" style="margin-top:12px"><label>${et}</label>${ic}</div>`;
 const tutarOku = s => { const v = String(s || '').trim().replace(/\./g, '').replace(',', '.').replace(/[^\d.]/g, ''); return Math.round((+v || 0) * 100) / 100; };
+// Müşteri (Ortaklık › Müşteri kurslar) ile Kurslar'daki kart aynı kurstur: adla eşleşir, bağ k.musteri = m.id.
+// Aktif ya da denemedeki müşteri Kurslar'da "Müşteri" durumunda görünür; ayrılan müşterinin kartı "Soğuk"a düşer.
+const adEs = (a, b) => String(a || '').trim().toLocaleLowerCase('tr') === String(b || '').trim().toLocaleLowerCase('tr');
+export function musteriKursEsle(v) {
+  let degisti = false; v.kurslar = v.kurslar || [];
+  for (const m of v.musteriler || []) {
+    const k = v.kurslar.find(x => x.musteri === m.id) || v.kurslar.find(x => !x.musteri && adEs(x.ad, m.ad)), ayrildi = m.durum === 'Ayrıldı';
+    if (!k) { if (!ayrildi) { v.kurslar.push({ id: kimlik(), ad: m.ad, durum: 'Müşteri', musteri: m.id, program: 'Sinyal', kisiler: '', not: m.not || '', guncel: gun(0) }); degisti = true; } continue; }
+    if (k.musteri !== m.id) { k.musteri = m.id; degisti = true; }
+    if (!ayrildi && k.durum !== 'Müşteri') { k.durum = 'Müşteri'; k.program = 'Sinyal'; k.guncel = gun(0); degisti = true; }
+    if (ayrildi && k.durum === 'Müşteri') { k.durum = 'Soğuk'; k.guncel = gun(0); degisti = true; }
+    if (!adEs(k.ad, m.ad) && k.musteri === m.id && k.adMusteri !== m.ad) { k.ad = m.ad; k.adMusteri = m.ad; degisti = true; }
+  }
+  return degisti;
+}
 function musteriPenceresi(m, yenile) {
   const v = S.isletme;
   pencere({ baslik: m ? 'Müşteri · ' + m.ad : 'Müşteri kurs ekle', icerik: `<form id="f-ortm">${alan('Kurs adı', `<input name="ad" value="${e(m ? m.ad : '')}" placeholder="Örn. Adalar Sürücü Kursu" required>`)}
@@ -149,7 +164,8 @@ function musteriPenceresi(m, yenile) {
     onAc(p) { p.querySelector('form').addEventListener('submit', ev => { ev.preventDefault(); const f = ev.target, ad = f.ad.value.trim(); if (ad.length < 2) return bildir('Kurs adını yazın', 'uyari');
       const x = { ad, paket: f.paket.value, sube: Math.max(1, +f.sube.value.replace(/\D/g, '') || 1), bas: f.bas.value || gun(0), durum: f.durum.value, not: f.not.value.trim() };
       if (m) Object.assign(m, x); else (v.musteriler = v.musteriler || []).push({ id: kimlik(), ...x });
-      kaydetYayinla(m ? 'Ortaklık: müşteriyi güncelledi' : 'Ortaklık: müşteri ekledi', ad); kapatPencere(); bildir('Kaydedildi'); yenile(); }); } });
+      musteriKursEsle(v);
+      kaydetYayinla(m ? 'Ortaklık: müşteriyi güncelledi' : 'Ortaklık: müşteri ekledi', ad); kapatPencere(); bildir(m ? 'Kaydedildi' : 'Kaydedildi; Kurslar’da da “Müşteri” olarak görünüyor'); yenile(); }); } });
 }
 function tahsilatPenceresi(yenile) {
   const v = S.isletme, ms = (v.musteriler || []).filter(m => m.durum !== 'Ayrıldı');
@@ -237,7 +253,7 @@ function kursDetay(k, yon, yenile) {
   pencere({ baslik: k.ad, alt: true, icerik: `<div class="krsd">
       <div class="krsd-ust ${d[1]}"><span class="krs-durum"><i></i>${e(d[0])}</span>${k.guncel ? `<small>Son güncelleme ${tarih(k.guncel)}</small>` : ''}</div>
       <div class="krs-sayilar krsd-sayilar">${[['Görüşme', k.gorusme ? String(k.gorusme) : ''], ['Teklif', teklifMetni(k.teklif)], ['Program', k.program]].map(([a, b]) => `<div><small>${a}</small><b class="${b ? '' : 'krs-yok'}">${b ? e(b) : '—'}</b></div>`).join('')}</div>
-      <div class="krsd-liste">${satir('Yetkili', k.kisiler)}${satir('Sıradaki adım', k.sonraki)}${satir('Ne zaman', k.zaman)}${k.teklif && teklifMetni(k.teklif) !== k.teklif ? satir('Teklif ayrıntısı', k.teklif) : ''}</div>
+      <div class="krsd-liste">${(m => m ? satir('Abonelik', [m.paket, (m.sube || 1) + ' şube', m.bas ? 'başlangıç ' + tarih(m.bas) : '', m.durum].filter(Boolean).join(' · ')) : '')(k.musteri && (S.isletme.musteriler || []).find(m => m.id === k.musteri))}${satir('Yetkili', k.kisiler)}${satir('Sıradaki adım', k.sonraki)}${satir('Ne zaman', k.zaman)}${k.teklif && teklifMetni(k.teklif) !== k.teklif ? satir('Teklif ayrıntısı', k.teklif) : ''}</div>
       ${k.not ? `<h3 class="krsd-bas">Notlar</h3><p class="krsd-not">${e(k.not).replace(/\n/g, '<br>')}</p>` : ''}
       ${itiraz.length ? `<h3 class="krsd-bas">Çekinceleri</h3><div class="krsd-etiketler">${itiraz.map(x => `<span>${e(x)}</span>`).join('')}</div>` : ''}
     </div>`,
@@ -438,6 +454,11 @@ function kursPenceresi(k, yenile) {
       f.addEventListener('submit', ev => { ev.preventDefault(); const ad = f.ad.value.trim(); if (ad.length < 2) return bildir('Kurs adını yaz', 'uyari');
         const x = { ad, durum: f.durum.value, kisiler: f.kisiler.value.trim(), gorusme: Math.max(0, Math.min(99, parseInt(f.gorusme.value, 10) || 0)), program: f.program.value.trim(), not: f.not.value.trim(), sonraki: f.sonraki.value.trim(), zaman: f.zaman.value.trim(), teklif: f.teklif.value.trim(), itiraz: f.itiraz.value.trim(), guncel: gun(0) };
         if (k) Object.assign(k, x); else (v.kurslar = v.kurslar || []).push({ id: kimlik(), ...x });
+        const kk = k || v.kurslar[v.kurslar.length - 1], bagli = kk.musteri && (v.musteriler || []).find(m => m.id === kk.musteri);
+        if (x.durum === 'Müşteri' && !bagli) { const m = { id: kimlik(), ad, paket: 'Yıllık', sube: 1, bas: gun(0), durum: 'Aktif', not: '' }; (v.musteriler = v.musteriler || []).push(m); kk.musteri = m.id; kk.program = kk.program || 'Sinyal'; bildir('Ortaklık › Müşteri kurslar listesine de eklendi'); }
+        if (bagli && x.durum === 'Müşteri' && bagli.durum === 'Ayrıldı') bagli.durum = 'Aktif';
+        if (bagli && x.durum !== 'Müşteri' && bagli.durum !== 'Ayrıldı') bagli.durum = 'Ayrıldı';
+        if (bagli && !adEs(bagli.ad, ad)) bagli.ad = ad;
         kaydetYayinla(k ? 'Sinyal Yönetim: kursu güncelledi' : 'Sinyal Yönetim: kurs ekledi', ad); kapatPencere(); bildir('Kaydedildi'); yenile(); });
       const sil = p.querySelector('[data-yn-kurs-sil]'); if (sil) sil.addEventListener('click', () => { kapatPencere(); silOnay(k.ad + ' kurslar listesinden silinsin mi?', () => { geriAlNoktasi(); v.kurslar = v.kurslar.filter(y => y !== k); kaydetYayinla('Sinyal Yönetim: kursu sildi', k.ad); yenile(); }); });
     } });
@@ -457,6 +478,7 @@ function kursDosyasi(dosya, yenile) {
 }
 export function yonetimBaglan(k, rol, yenile) {
   const yon = rol === 'mudur';
+  if (yon && S.isletme && musteriKursEsle(S.isletme)) { kaydetYayinla('Sinyal Yönetim: müşteriler Kurslar ile eşleşti'); setTimeout(yenile, 0); }
   k.addEventListener('click', ev => {
     const t = ev.target, v = S.isletme;
     const sk = t.closest('[data-yn-sekme]'); if (sk) { sekme = sk.dataset.ynSekme; yenile(); return scrollTo(0, 0); }
