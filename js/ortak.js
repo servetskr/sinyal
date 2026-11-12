@@ -2,9 +2,9 @@
 // Kurs hesaplarından ayrı bir hesapta çalışır (S.kurs.tur === 'yonetim'); kurs ekranları açılmaz.
 // Üyeler: yönetici (müdür rolü, her şeyi girer) ve ortak (kendi e-posta ve şifresiyle girer, yalnız görür).
 // Kursiyer bilgisi yoktur: yalnız müşteri kurs adı, tahsilat, pay ve ödemeler.
-import { S, kaydet, gun, fark, tarihOku, iso, ayEkle, kapaliGun, islem, geriAlNoktasi } from './veri.js?v=151';
-import { e, ik, rozet, pencere, kapatPencere, bildir, tarih, tarihUzun, ayAdi, olcumler, belgeYazdir, fotoKucult, csvIndir, gunKisa } from './ui.js?v=151';
-import * as B from './bulut.js?v=151';
+import { S, kaydet, gun, fark, tarihOku, iso, ayEkle, kapaliGun, islem, geriAlNoktasi } from './veri.js?v=152';
+import { e, ik, rozet, pencere, kapatPencere, bildir, tarih, tarihUzun, ayAdi, olcumler, belgeYazdir, fotoKucult, csvIndir, gunKisa } from './ui.js?v=152';
+import * as B from './bulut.js?v=152';
 
 export const TURLER = ['İlk yıllık abonelik', 'Aylık abonelik', 'Abonelik yenileme', 'Ek şube', 'Kurulum', 'Eğitim', 'Destek', 'Ücretli modül', 'Diğer Sinyal hizmeti'];
 const PARA = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -222,24 +222,24 @@ const bolum = (baslik, alt, dugme, ic, sinif = '') => `<section class="yn-bolum"
 const teklifMetni = t => { const m = String(t || '').match(/\d{1,3}(?:[.\s]\d{3})+|\d+/); return m ? m[0].replace(/\s/g, '.') + ' ₺' : (t ? String(t) : ''); };
 const ilkKisi = s => String(s || '').split(/[;,(]/)[0].trim();
 function kursKart(k, yon) {
-  const d = durumBul(k.durum), sayi = (et, deger) => `<div><small>${et}</small><b class="${deger ? '' : 'bos'}">${deger ? e(deger) : '—'}</b></div>`;
-  return `<article class="yk ${d[1]}" data-yn-kurs-ac="${e(k.id)}" tabindex="0" role="button" aria-label="${e(k.ad)}">
-    <div class="yk-ust"><span class="yk-durum"><i></i>${e(d[0])}</span>${k.zaman ? `<span class="yk-zaman">${e(k.zaman)}</span>` : ''}</div>
-    <b class="yk-ad">${e(k.ad)}</b>
-    <small class="yk-kisi">${e(ilkKisi(k.kisiler)) || '&nbsp;'}</small>
-    <div class="yk-sayilar">${sayi('Görüşme', k.gorusme ? String(k.gorusme) : '')}${sayi('Teklif', teklifMetni(k.teklif))}${sayi('Program', k.program)}</div>
+  const d = durumBul(k.durum), sayi = (et, deger) => `<div><small>${et}</small><b class="${deger ? '' : 'krs-yok'}">${deger ? e(deger) : '—'}</b></div>`;
+  return `<article class="krs ${d[1]}" data-yn-kurs-ac="${e(k.id)}" tabindex="0" role="button" aria-label="${e(k.ad)}">
+    <div class="krs-ust"><span class="krs-durum"><i></i>${e(d[0])}</span>${k.zaman ? `<span class="krs-zaman">${e(k.zaman)}</span>` : ''}</div>
+    <b class="krs-ad">${e(k.ad)}</b>
+    <small class="krs-kisi">${e(ilkKisi(k.kisiler)) || '&nbsp;'}</small>
+    <div class="krs-sayilar">${sayi('Görüşme', k.gorusme ? String(k.gorusme) : '')}${sayi('Teklif', teklifMetni(k.teklif))}${sayi('Program', k.program)}</div>
   </article>`;
 }
 // kutuya dokununca: bütün bilgiler ve notlar
 function kursDetay(k, yon, yenile) {
   const d = durumBul(k.durum), itiraz = String(k.itiraz || '').split(/\s*;\s*/).filter(Boolean);
-  const satir = (et, deger) => deger ? `<div class="ykd-satir"><span>${et}</span><b>${e(deger)}</b></div>` : '';
-  pencere({ baslik: k.ad, alt: true, icerik: `<div class="ykd">
-      <div class="ykd-ust ${d[1]}"><span class="yk-durum"><i></i>${e(d[0])}</span>${k.guncel ? `<small>Son güncelleme ${tarih(k.guncel)}</small>` : ''}</div>
-      <div class="yk-sayilar ykd-sayilar">${[['Görüşme', k.gorusme ? String(k.gorusme) : ''], ['Teklif', teklifMetni(k.teklif)], ['Program', k.program]].map(([a, b]) => `<div><small>${a}</small><b class="${b ? '' : 'bos'}">${b ? e(b) : '—'}</b></div>`).join('')}</div>
-      <div class="ykd-liste">${satir('Yetkili', k.kisiler)}${satir('Sıradaki adım', k.sonraki)}${satir('Ne zaman', k.zaman)}${k.teklif && teklifMetni(k.teklif) !== k.teklif ? satir('Teklif ayrıntısı', k.teklif) : ''}</div>
-      ${k.not ? `<h3 class="ykd-bas">Notlar</h3><p class="ykd-not">${e(k.not).replace(/\n/g, '<br>')}</p>` : ''}
-      ${itiraz.length ? `<h3 class="ykd-bas">Çekinceleri</h3><div class="ykd-etiketler">${itiraz.map(x => `<span>${e(x)}</span>`).join('')}</div>` : ''}
+  const satir = (et, deger) => deger ? `<div class="krsd-satir"><span>${et}</span><b>${e(deger)}</b></div>` : '';
+  pencere({ baslik: k.ad, alt: true, icerik: `<div class="krsd">
+      <div class="krsd-ust ${d[1]}"><span class="krs-durum"><i></i>${e(d[0])}</span>${k.guncel ? `<small>Son güncelleme ${tarih(k.guncel)}</small>` : ''}</div>
+      <div class="krs-sayilar krsd-sayilar">${[['Görüşme', k.gorusme ? String(k.gorusme) : ''], ['Teklif', teklifMetni(k.teklif)], ['Program', k.program]].map(([a, b]) => `<div><small>${a}</small><b class="${b ? '' : 'krs-yok'}">${b ? e(b) : '—'}</b></div>`).join('')}</div>
+      <div class="krsd-liste">${satir('Yetkili', k.kisiler)}${satir('Sıradaki adım', k.sonraki)}${satir('Ne zaman', k.zaman)}${k.teklif && teklifMetni(k.teklif) !== k.teklif ? satir('Teklif ayrıntısı', k.teklif) : ''}</div>
+      ${k.not ? `<h3 class="krsd-bas">Notlar</h3><p class="krsd-not">${e(k.not).replace(/\n/g, '<br>')}</p>` : ''}
+      ${itiraz.length ? `<h3 class="krsd-bas">Çekinceleri</h3><div class="krsd-etiketler">${itiraz.map(x => `<span>${e(x)}</span>`).join('')}</div>` : ''}
     </div>`,
     altlik: yon ? `<button class="dg dg-cizgi" data-ykd-gorusme>${ik('arti')}Görüşme ekle</button><button class="dg dg-ana" data-ykd-duzenle>Düzenle</button>` : '<button class="dg dg-ana" data-kapat>Tamam</button>',
     onAc(p) {
@@ -257,7 +257,7 @@ function kurslarHtml(v, yon) {
   // kurslar duruma göre gruplanır; her grubun başında o durumun ne demek olduğu yazar
   const gruplar = DURUMLAR.filter(([d]) => (kursFiltre === 'hepsi' || kursFiltre === d) && say(d)).map(([d, sinif, ikon]) => {
     const g = l.filter(k => k.durum === d).sort((a, b) => a.ad.localeCompare(b.ad, 'tr'));
-    return `<section class="yn-kurs-grup ${sinif}"><h3 class="yk-grup" title="${e(DURUM_ACIKLAMA[d] || '')}"><i></i>${e(d)}<span>${g.length}</span></h3><div class="yk-izgara">${g.map(k => kursKart(k, yon)).join('')}</div></section>`;
+    return `<section class="yn-kurs-grup ${sinif}"><h3 class="krs-grup" title="${e(DURUM_ACIKLAMA[d] || '')}"><i></i>${e(d)}<span>${g.length}</span></h3><div class="krs-izgara">${g.map(k => kursKart(k, yon)).join('')}</div></section>`;
   }).join('');
   return `<div class="yn-kurs-ust"><div class="yn-filtre" role="tablist" aria-label="Duruma göre süz">${[['hepsi', 'Tümü', l.length], ...DURUMLAR.map(([d]) => [d, d, say(d)]).filter(x => x[2])].map(([k, t, n]) => `<button data-yn-filtre="${e(k)}" class="${kursFiltre === k ? 'secili' : ''}" aria-pressed="${kursFiltre === k}">${e(t)}<em>${n}</em></button>`).join('')}</div>${yon ? `<div class="yn-dg">${ekle}</div>` : ''}</div>
     ${gruplar}`;
