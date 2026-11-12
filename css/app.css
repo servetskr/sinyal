@@ -1837,16 +1837,22 @@ body.hero-acik .app-profil{background:rgba(255,255,255,.16);box-shadow:inset 0 0
 .portal-og{max-width:520px;margin:0 auto;padding:6px 16px calc(110px + env(safe-area-inset-bottom))}
 .u-onizleme{max-width:520px;margin:10px auto!important}
 /* üst bölüm: gece yolu */
-.u-hero{position:relative;overflow:hidden;background:radial-gradient(70% 55% at 80% 80%,rgba(74,124,196,.38),transparent 70%),linear-gradient(180deg,var(--u-gece),#10254a);color:#fff;padding:6px 20px 44px}
+.u-hero{position:relative;overflow:hidden;background:radial-gradient(90% 60% at 50% 100%,rgba(74,124,196,.42),transparent 70%),linear-gradient(180deg,#081428,var(--u-gece) 45%,#132f5c);color:#fff;padding:6px 20px 44px}
+/* gece manzarası: bütün üst bölüme yayılır, yavaş ve sakin */
+.u-gece{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.u-yildiz{animation:u-parla 7s ease-in-out infinite}
+@keyframes u-parla{0%,100%{opacity:.2}50%{opacity:.85}}
+.u-pencere{animation:u-pencere 16s steps(1) infinite}
+@keyframes u-pencere{0%,70%{opacity:1}71%,100%{opacity:.15}}
+.u-ay-isik{animation:u-ay 9s ease-in-out infinite}
+@keyframes u-ay{50%{opacity:.2}}
+@media (prefers-reduced-motion:reduce){.u-yildiz,.u-pencere,.u-ay-isik{animation:none}}
 .u-hero::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:22px;background:var(--zemin);border-radius:22px 22px 0 0}
+.u-hero:not(.kartli){padding-bottom:92px}
+.u-hero-ic{z-index:2}
 .u-hero.kartli{padding-bottom:96px}
 .u-hero.kartli::after{display:none}
-.u-yol{position:absolute;left:0;right:0;bottom:0;width:100%;height:62%;pointer-events:none;opacity:.85}
-.u-hero.kartli .u-yol{display:none}
-.u-hero.kartli{background:radial-gradient(120% 90% at 85% 0%,#1d3f78 0%,transparent 60%),linear-gradient(180deg,var(--u-gece),#10254a)}
-.u-yol-serit{animation:u-serit 2.8s linear infinite}
-@keyframes u-serit{to{stroke-dashoffset:-48}}
-@media (prefers-reduced-motion:reduce){.u-yol-serit{animation:none}}
+.u-hero.kartli{background:radial-gradient(90% 60% at 50% 100%,rgba(74,124,196,.42),transparent 70%),linear-gradient(180deg,#081428,var(--u-gece) 45%,#132f5c)}
 .u-hero-ic{position:relative;z-index:1;max-width:488px;margin:0 auto;animation:u-gel .5s cubic-bezier(.2,.8,.2,1) both}
 @keyframes u-gel{from{opacity:0;transform:translateY(8px)}}
 @media (prefers-reduced-motion:reduce){.u-hero-ic{animation:none}}
