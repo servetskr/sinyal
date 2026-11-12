@@ -30,15 +30,31 @@
 <link id="font-css" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Overpass+Mono:wght@500;600;700&family=Overpass:wght@600;700;800;900&display=swap" media="print"><noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Overpass+Mono:wght@500;600;700&family=Overpass:wght@600;700;800;900&display=swap"></noscript>
 <!-- Ana sayfa yalnız aşağıdaki küçük stille açılır; uygulamanın stili ve kodu arka planda ya da ilk dokunuşta iner -->
 <style id="ilk-css">
-/* Yükleme ekranı (v135): sahne js/yukleme.js ile her karede çizilir (ördek ailesine yol veren kurs arabası) */
-.yukleme{min-height:100vh;min-height:100dvh;display:grid;place-items:center;align-content:center;gap:22px;padding:24px;background:#f2f2f7;color:#0b0d10;text-align:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-.yukle-sahne{width:min(360px,90vw);aspect-ratio:360/220;overflow:hidden;border-radius:30px;background:linear-gradient(180deg,#9fd0fb 0%,#cfe8fd 42%,#fff3de 64%);box-shadow:0 24px 50px -26px rgba(10,77,162,.55),0 2px 6px rgba(10,77,162,.08)}
+/* Yükleme ekranı (v136): tam ekran sabah göğü; üstte marka, başlık, yükleme çubuğu ve buzlu cam ipucu kartı;
+   altta kenardan kenara sahne (js/yukleme.js çizer). Geniş ekranda sahnenin kenarları göğe karışır. */
+.yukleme{position:relative;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;padding-bottom:env(safe-area-inset-bottom);background:linear-gradient(180deg,#78b8f2 0%,#acd6fa 34%,#d9edfd 60%,#fff0d6 88%);color:#0b2546;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+.yk-gokbulut{position:absolute;width:130px;height:38px;border-radius:38px;background:#fff;opacity:.7;pointer-events:none}
+.yk-gokbulut::before{content:"";position:absolute;left:20px;top:-30px;width:60px;height:60px;border-radius:50%;background:#fff}
+.yk-gokbulut::after{content:"";position:absolute;left:64px;top:-19px;width:42px;height:42px;border-radius:50%;background:#fff}
+.yk-gokbulut.b1{top:44%;left:0;animation:yk-sur 46s linear -8s infinite}
+.yk-gokbulut.b2{top:8%;left:0;opacity:.45;animation:yk-sur 70s linear -40s infinite}
+@keyframes yk-sur{from{transform:translateX(-160px)}to{transform:translateX(calc(100vw + 40px))}}
+.yk-ust{position:relative;z-index:1;width:100%;max-width:440px;margin:0 auto;padding:calc(26px + env(safe-area-inset-top)) 24px 0}
+.yk-marka{display:flex;align-items:center;gap:9px;font-size:16px;font-weight:600;letter-spacing:-.01em}
+.yk-marka svg{width:26px;height:26px;flex:none}
+.yk-baslik{margin-top:clamp(26px,7vh,64px);font-size:34px;line-height:1.08;font-weight:700;letter-spacing:-.03em;color:#0b2546}
+.yk-alt{margin-top:8px;font-size:16px;line-height:1.35;color:rgba(11,37,70,.64)}
+.yk-cubuk{position:relative;max-width:200px;height:5px;margin-top:18px;border-radius:3px;background:rgba(255,255,255,.6);overflow:hidden}
+.yk-cubuk i{position:absolute;top:0;bottom:0;left:-45%;width:45%;border-radius:3px;background:linear-gradient(90deg,#f2b705,#ffd76a);animation:yk-cubuk 1.7s cubic-bezier(.45,0,.25,1) infinite}
+@keyframes yk-cubuk{to{left:100%}}
+.yukle-ipucu{display:flex;gap:12px;align-items:flex-start;margin-top:26px;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.52);-webkit-backdrop-filter:blur(14px) saturate(160%);backdrop-filter:blur(14px) saturate(160%);border:1px solid rgba(255,255,255,.8);box-shadow:0 10px 28px -16px rgba(11,37,70,.4);font-size:15px;line-height:1.42;color:#163457;transition:opacity .35s}
+.yukle-ipucu>svg{flex:none;width:30px;height:30px;margin-top:1px}
+.yukle-ipucu i{display:block;margin-bottom:2px;font-style:normal;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#a06c00}
+.yukle-sahne{position:relative;z-index:1;flex:none;width:100%;max-width:780px;height:clamp(230px,42vh,440px);margin:16px auto 0}
+.yukle-sahne::after{content:"";position:absolute;left:0;right:0;top:100%;height:env(safe-area-inset-bottom);background:#a5d88f}
+@media (min-width:781px){.yukle-sahne{-webkit-mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent);mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent)}}
 .yk{display:block;width:100%;height:100%}
-.yukle-yazi b{display:block;font-size:20px;font-weight:600;letter-spacing:-.01em}
-.yukle-yazi small{display:block;margin-top:4px;font-size:14px;color:#6b6e76}
-.yukle-ipucu{max-width:300px;min-height:62px;font-size:15px;line-height:1.4;color:#3a3d42;transition:opacity .35s}
-.yukle-ipucu i{display:block;margin-bottom:4px;font-style:normal;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#b07f00}
-@media (prefers-reduced-motion:reduce){.yukle-ipucu{transition:none}}
+@media (prefers-reduced-motion:reduce){.yk-gokbulut,.yk-cubuk i{animation:none}.yk-cubuk i{left:0;width:60%}.yukle-ipucu{transition:none}}
 
 :root{
   --zemin:#e8e7e1; --zemin-2:#dedcd4; --panel:#fbfbf8; --panel-2:#f2f1ec;
@@ -137,8 +153,8 @@ html.w-anim [data-gor].w-gorundu{opacity:1;transform:none}
 .w-secici a:hover,.w-secici button:hover{background:rgba(255,255,255,.12);color:#fff}
 @media (max-width:420px){.w-secici a,.w-secici button{padding:10px 12px;font-size:14px}}
 </style>
-<link id="app-css" rel="stylesheet" href="css/app.css?v=135" media="print">
-<noscript><link rel="stylesheet" href="css/app.css?v=135"></noscript>
+<link id="app-css" rel="stylesheet" href="css/app.css?v=136" media="print">
+<noscript><link rel="stylesheet" href="css/app.css?v=136"></noscript>
 </head>
 <body>
 <div id="uyg"><div class="tanitim" id="tanitim">
@@ -167,10 +183,10 @@ html.w-anim [data-gor].w-gorundu{opacity:1;transform:none}
 <ul class="w-guven"><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>Her gün yedeklenir</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>KVKK araçları</li><li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>MTSK Yönetmeliği’ne göre</li></ul></div></section>
 </main>
 <footer class="w-alt-bilgi"><div class="w-kap w-alt-ic"><span class="tn-logo"><svg class="tn-logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>Sürücü kursu otomasyonu</small></span></span><nav aria-label="Alt bağlantılar"><a href="#/ogrenci-giris">Öğrenci girişi</a><button type="button" data-giris="ogretmen">Öğretmen girişi</button><button type="button" data-giris>Kurs girişi</button><a href="gizlilik.html">Gizlilik</a></nav></div></footer>
-</div><div id="acilis" hidden><div class="yukleme"><div class="yukle-sahne" data-yk></div><div class="yukle-yazi"><b>Sinyal açılıyor</b><small>Birkaç saniye sürebilir</small></div></div></div></div>
-<script src="js/yukleme.js?v=135"></script>
-<script src="js/acilis.js?v=135"></script>
+</div><div id="acilis" hidden><div class="yukleme" role="status"><div class="yk-gokbulut b1" aria-hidden="true"></div><div class="yk-gokbulut b2" aria-hidden="true"></div><div class="yk-ust"><div class="yk-marka"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#0b2546" stroke-width="1.2"/><path d="M12 7.6v5.6M12 15.8v.4" stroke="#0b2546" stroke-width="2.3" stroke-linecap="round"/></svg><span>Sinyal</span></div><h1 class="yk-baslik">Sinyal açılıyor</h1><p class="yk-alt">Birkaç saniye sürebilir</p><div class="yk-cubuk" aria-hidden="true"><i></i></div><div class="yukle-ipucu" aria-live="off"><svg viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="9" fill="#1f5fbf"/><path d="M15 6.5 23 21.5H7Z" fill="#fff"/><circle cx="15" cy="12.4" r="1.4" fill="#0b2546"/><path d="M14.8 14.2l-.7 3.6m.7-3.6 2 2.4m-2-2.4-1.8 1.7m1.1 1.9-1.6 2m1.6-2 1.8 1.8" stroke="#0b2546" stroke-width="1.05" stroke-linecap="round"/></svg><div><i>Biliyor muydun?</i><span>Yaya geçidinde öncelik her zaman yayanındır.</span></div></div></div><div class="yukle-sahne" data-yk></div></div></div></div></div>
+<script src="js/yukleme.js?v=136"></script>
+<script src="js/acilis.js?v=136"></script>
 <noscript><p style="padding:24px">Sinyal’i kullanmak için JavaScript’i açın.</p></noscript>
-<script type="module" src="js/baslat.js?v=135"></script>
+<script type="module" src="js/baslat.js?v=136"></script>
 </body>
 </html>

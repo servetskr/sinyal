@@ -8,7 +8,7 @@
   var GEN = 360, YUK = 220, V0 = 92;                       // sahne, seyir hızı (px/sn)
   var T_FREN = 2.0, D_FREN = 1.3, T_KALK = 6.9, D_KALK = 1.2, DONGU = 11.0;
   var AX = 108, OL = 1.55, AY = 190 - 156 * OL;             // arabanın sol kenarı, ölçeği, üst kayması (teker altı y=190)
-  var BURUN = AX + 72 * OL, GECIT = BURUN + 16;             // durunca geçidin sol kenarı
+  var BURUN = AX + 74.5 * OL, GECIT = BURUN + 16;             // durunca geçidin sol kenarı
   var sayac = 0;
 
   var ss = function (u) { return u * u * (3 - 2 * u); };
@@ -70,18 +70,19 @@
   function araba(u) {
     return '<defs><linearGradient id="' + u + 'g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b7be0"/><stop offset=".55" stop-color="#0a4da2"/><stop offset="1" stop-color="#073d82"/></linearGradient>' +
       '<linearGradient id="' + u + 'c" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eef6ff"/><stop offset="1" stop-color="#b9d6f7"/></linearGradient></defs>' +
-      '<path d="M4 146 V138 Q4 130 12 129 L22 128 L31 116 Q34 112 39 112 H52 Q57 112 60 116 L67 127 Q72 128 72 134 V146 Q72 148 70 148 H6 Q4 148 4 146 Z" fill="url(#' + u + 'g)"/>' +
-      '<path d="M8 131 Q20 128.5 36 128.5 H66" stroke="#fff" stroke-opacity=".28" stroke-width="1.2" fill="none" stroke-linecap="round"/>' +
-      '<path d="M24 128 L32 117 Q34 115 37 115 H44 V128 Z M47 115 H52 Q55 115 57 117 L64 128 H47 Z" fill="url(#' + u + 'c)"/>' +
-      '<path d="M34 125 L39 117 M37 126 L41 120" stroke="#fff" stroke-opacity=".8" stroke-width="1.1" stroke-linecap="round"/>' +
-      '<path d="M45 130 V146" stroke="#06336d" stroke-width=".9"/><rect x="38" y="133" width="4.5" height="1.6" rx=".8" fill="#06336d"/><rect x="51" y="133" width="4.5" height="1.6" rx=".8" fill="#06336d"/>' +
-      '<path d="M62 127 h4 q1 0 1 1.4 h-5 z" fill="#06336d"/>' +
-      '<path d="M8 142 H68" stroke="#5d94dc" stroke-width="2" stroke-linecap="round" opacity=".7"/>' +
-      '<ellipse class="yanak" cx="61" cy="135" rx="2.8" ry="1.6" fill="#ff7aa2" opacity="0"/>' +
-      '<g class="goz"><ellipse cx="55" cy="121.5" rx="3.4" ry="3.9" fill="#fff"/><g class="bebek"><circle cx="55.6" cy="122" r="1.8" fill="#1c2129"/><circle cx="56.2" cy="121.3" r=".55" fill="#fff"/></g></g>' +
-      '<path class="mutlu" d="M52 122.5 q3 -3 6 0" stroke="#1c2129" stroke-width="1.3" fill="none" stroke-linecap="round" opacity="0"/>' +
-      '<path class="gul" d="M64.4 139.2 q3.2 2.6 6.4 0" stroke="#e8f1ff" stroke-width="1.4" fill="none" stroke-linecap="round"/>' +
-      '<rect x="68.4" y="131" width="3.6" height="4.4" rx="1.6" fill="#ffe08a"/><rect x="4" y="132.6" width="3" height="4.4" rx="1" fill="#ff6b5b"/>';
+      // hatchback (Clio benzeri): kısa dik arka, uzun motor kaputu; araba sağa bakar
+      '<path d="M4 146 V134 Q4 128 6.5 124 L12 115.5 Q14 112 19 112 H40 Q44 112 47 115 L56 126 L69 128.6 Q74.5 129.6 74.5 135 V146 Q74.5 148 72.5 148 H6 Q4 148 4 146 Z" fill="url(#' + u + 'g)"/>' +
+      '<path d="M9 131 Q22 129 40 129 L68 130.4" stroke="#fff" stroke-opacity=".28" stroke-width="1.2" fill="none" stroke-linecap="round"/>' +
+      '<path d="M15.5 115 H29 V126 H10.5 Z M32 115 H40 Q42 115 43.6 116.6 L51.2 126 H32 Z" fill="url(#' + u + 'c)"/>' +
+      '<path d="M17 124 L21 117 M20.5 125 L23.5 120 M35 124.5 L38.6 118" stroke="#fff" stroke-opacity=".8" stroke-width="1.1" stroke-linecap="round"/>' +
+      '<path d="M30.5 128 V146" stroke="#06336d" stroke-width=".9"/><rect x="22" y="133" width="4.5" height="1.6" rx=".8" fill="#06336d"/><rect x="36" y="133" width="4.5" height="1.6" rx=".8" fill="#06336d"/>' +
+      '<path d="M50.5 125.4 h4.6 q1 0 1 1.4 h-5.6 z" fill="#06336d"/><path d="M56 126.4 L69 129" stroke="#06336d" stroke-opacity=".35" stroke-width=".8"/>' +
+      '<path d="M8 142 H70.5" stroke="#5d94dc" stroke-width="2" stroke-linecap="round" opacity=".7"/>' +
+      '<ellipse class="yanak" cx="64" cy="135.4" rx="2.8" ry="1.6" fill="#ff7aa2" opacity="0"/>' +
+      '<g class="goz"><ellipse cx="42" cy="120.5" rx="3.4" ry="3.9" fill="#fff"/><g class="bebek"><circle cx="42.6" cy="121" r="1.8" fill="#1c2129"/><circle cx="43.2" cy="120.3" r=".55" fill="#fff"/></g></g>' +
+      '<path class="mutlu" d="M39 121.5 q3 -3 6 0" stroke="#1c2129" stroke-width="1.3" fill="none" stroke-linecap="round" opacity="0"/>' +
+      '<path class="gul" d="M66 139.4 q3 2.4 6 0" stroke="#e8f1ff" stroke-width="1.4" fill="none" stroke-linecap="round"/>' +
+      '<rect x="70.6" y="130.8" width="3.8" height="4.2" rx="1.6" fill="#ffe08a"/><rect x="4" y="129.6" width="2.8" height="5" rx="1" fill="#ff6b5b"/>';
   }
   function teker(cx) {
     return '<g class="teker" data-cx="' + cx + '"><circle cx="' + cx + '" cy="148" r="8" fill="#1f242b"/><circle cx="' + cx + '" cy="148" r="4.6" fill="#cfd6df"/>' +
@@ -91,9 +92,9 @@
 
   function kur(kap) {
     var u = 'yk' + (++sayac) + Math.floor(Math.random() * 1e4);
-    var svg = el('svg', { viewBox: '0 0 ' + GEN + ' ' + YUK, class: 'yk', role: 'img', 'aria-label': 'Kurs arabası yaya geçidinde ördek ailesine yol veriyor' });
+    var svg = el('svg', { viewBox: '0 0 ' + GEN + ' ' + YUK, preserveAspectRatio: 'xMidYMax slice', class: 'yk', role: 'img', 'aria-label': 'Kurs arabası yaya geçidinde ördek ailesine yol veriyor' });
     svg.innerHTML =
-      '<circle class="gunes-isik" cx="292" cy="40" r="26" fill="#ffe7a3" opacity=".55"/><circle cx="292" cy="40" r="16" fill="#ffd166"/>' +
+      '<circle class="gunes-isik" cx="252" cy="44" r="26" fill="#ffe7a3" opacity=".55"/><circle cx="252" cy="44" r="16" fill="#ffd166"/>' +
       '<g class="bulut1" fill="#fff"><circle cx="60" cy="40" r="9"/><circle cx="72" cy="34" r="12"/><circle cx="86" cy="40" r="9"/><rect x="60" y="40" width="26" height="9"/></g>' +
       '<g class="bulut2" fill="#fff" opacity=".9"><circle cx="190" cy="62" r="6"/><circle cx="199" cy="58" r="8"/><circle cx="209" cy="62" r="6"/><rect x="190" y="62" width="19" height="6"/></g>' +
       '<g class="kuslar" stroke="#3a4a63" stroke-width="1.4" fill="none" stroke-linecap="round"><path class="kus1" d="M-4 0 q2 -2.6 4 0 q2 -2.6 4 0"/><path class="kus2" transform="translate(12 -6)" d="M-3 0 q1.5 -2 3 0 q1.5 -2 3 0"/></g>' +
@@ -107,8 +108,8 @@
       '<g class="duman"></g>' +
       '<ellipse cx="' + (AX + 38 * OL) + '" cy="191" rx="' + (33 * OL) + '" ry="3.4" fill="#000" opacity=".22"/>' +
       '<g class="arac" transform="translate(' + AX + ' ' + AY + ') scale(' + OL + ')"><g class="govde">' + araba(u) +
-      '<g class="tabela"><rect x="40" y="110.6" width="1.4" height="2.4" fill="#5b6470"/><rect x="47" y="110.6" width="1.4" height="2.4" fill="#5b6470"/><rect x="34" y="103" width="20" height="8.2" rx="2" fill="#f2b705" stroke="#c99600" stroke-width=".8"/><path d="M44 104.3 l2.5 2.8 -2.5 2.8 -2.5 -2.8z" fill="#1c2129"/></g>' +
-      '</g>' + teker(19) + teker(57) + '</g>' +
+      '<g class="tabela"><rect x="22.6" y="110.6" width="1.4" height="2.4" fill="#5b6470"/><rect x="30" y="110.6" width="1.4" height="2.4" fill="#5b6470"/><rect x="17" y="103" width="20" height="8.2" rx="2" fill="#f2b705" stroke="#c99600" stroke-width=".8"/><path d="M27 104.3 l2.5 2.8 -2.5 2.8 -2.5 -2.8z" fill="#1c2129"/></g>' +
+      '</g>' + teker(17) + teker(59) + '</g>' +
       '<g class="kalpler"><g class="kalp1" opacity="0">' + KALP + '</g><g class="kalp2" opacity="0">' + KALP + '</g></g>' +
       '<rect y="196" width="' + GEN + '" height="9" fill="#e6e9ed"/><rect y="196" width="' + GEN + '" height="1.6" fill="#c3c9d1"/><path class="derz2" d="M0 200.5 H' + GEN + '" stroke="#cfd5dc" stroke-width="9" stroke-dasharray="1.4 26.6"/>' +
       '<rect y="205" width="' + GEN + '" height="15" fill="#a5d88f"/><g class="cim">' + cimler() + '</g>' +
@@ -185,26 +186,26 @@
       var crouch = t > T_KALK - .32 && t < T_KALK ? Math.sin((t - (T_KALK - .32)) / .32 * Math.PI / 2) : 0;
       var bob = v > 1 ? Math.sin(W * .09) * .45 : Math.sin(ge * 42) * .22;
       R.govde.setAttribute('transform', 'rotate(' + kis(th, -6, 6) + ' 38 148) translate(0 ' + (bob + crouch * .9) + ')' + (crouch ? ' scale(1 ' + (1 - crouch * .035) + ')' : ''));
-      R.tabela.setAttribute('transform', 'rotate(' + kis(fi, -22, 22) + ' 44 112)');
+      R.tabela.setAttribute('transform', 'rotate(' + kis(fi, -22, 22) + ' 27 112)');
       var don = (W / (8 * OL)) * 180 / Math.PI;
       for (var w = 0; w < R.tekerler.length; w++) { var tk = R.tekerler[w]; tk.setAttribute('transform', 'rotate(' + (don % 360) + ' ' + tk.dataset.cx + ' 148)'); }
       // göz: ördekleri izler, ara sıra kırpar; kalp anında gülümser
       var mutluMu = t > 5.0 && t < 6.6;
-      if (hedef && !mutluMu) { var ex = AX + 55 * OL, ey = AY + 121.5 * OL, dx = hedef.x - ex, dy = (hedef.y - 12) - ey, n = Math.hypot(dx, dy) || 1; R.bebek.setAttribute('transform', 'translate(' + (dx / n * 1.4) + ' ' + (dy / n * 1.6) + ')'); }
+      if (hedef && !mutluMu) { var ex = AX + 42 * OL, ey = AY + 120.5 * OL, dx = hedef.x - ex, dy = (hedef.y - 12) - ey, n = Math.hypot(dx, dy) || 1; R.bebek.setAttribute('transform', 'translate(' + (dx / n * 1.4) + ' ' + (dy / n * 1.6) + ')'); }
       else R.bebek.setAttribute('transform', 'translate(.6 0)');
       if (ge - kirpSon > 2.6 + (tur % 3) * .7) { kirpBas = ge; kirpSon = ge; }
       var kirp = ge - kirpBas < .16 ? Math.sin((ge - kirpBas) / .16 * Math.PI) : 0;
-      R.goz.setAttribute('transform', 'translate(0 ' + (121.5 * kirp * .88) + ') scale(1 ' + (1 - kirp * .88) + ')');
+      R.goz.setAttribute('transform', 'translate(0 ' + (120.5 * kirp * .88) + ') scale(1 ' + (1 - kirp * .88) + ')');
       R.goz.setAttribute('opacity', mutluMu ? 0 : 1); R.mutlu.setAttribute('opacity', mutluMu ? 1 : 0);
       R.yanak.setAttribute('opacity', mutluMu ? .65 : 0);
-      R.gul.setAttribute('d', mutluMu ? 'M64 138.6 q3.6 3.6 7.2 0' : 'M64.4 139.2 q3.2 2.6 6.4 0');
+      R.gul.setAttribute('d', mutluMu ? 'M65.4 138.8 q3.4 3.4 6.8 0' : 'M66 139.4 q3 2.4 6 0');
       // kalpler
       [[R.kalp1, 5.0, -4, 1.7], [R.kalp2, 5.35, 18, 1.2]].forEach(function (k) {
         var p = (t - k[1]) / 1.5;
         if (p < 0 || p > 1) { k[0].setAttribute('opacity', 0); return; }
         var pop = p < .2 ? 1.18 * Math.sin(p / .2 * Math.PI / 2) : 1 + .18 * Math.cos((p - .2) * 14) * Math.exp(-(p - .2) * 6);
         k[0].setAttribute('opacity', p > .7 ? (1 - p) / .3 : 1);
-        k[0].setAttribute('transform', 'translate(' + (AX + 44 * OL + k[2] + Math.sin(p * 9) * 2) + ' ' + (AY + 96 * OL - p * 38) + ') scale(' + (pop * k[3]) + ')');
+        k[0].setAttribute('transform', 'translate(' + (AX + 27 * OL + k[2] + Math.sin(p * 9) * 2) + ' ' + (AY + 96 * OL - p * 38) + ') scale(' + (pop * k[3]) + ')');
       });
       // hız çizgileri
       var hz = kis((v / V0 - .55) / .45, 0, 1);
