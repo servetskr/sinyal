@@ -1,22 +1,22 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=167';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=167';
-import * as Y1 from './sayfalar1.js?v=167';
-import * as Y2 from './sayfalar2.js?v=167';
-import * as P from './portal.js?v=167';
-import * as Y3 from './sayfalar3.js?v=167';
-import * as Y4 from './sayfalar4.js?v=167';
-import * as Y5 from './sayfalar5.js?v=167';
-import * as IM from './imza.js?v=167';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=167';
-import * as SN from './senaryo.js?v=167';
-import * as OZ from './ozellik.js?v=167';
-import { durumlariGuncelle } from './mesaj.js?v=167';
-import { yeniMenu } from './yeni.js?v=167';
-import * as B from './bulut.js?v=167';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=167';
-import * as AN from './analiz.js?v=167';
-import * as ORT from './ortak.js?v=167';
-import * as SH from './sahip.js?v=167';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=169';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=169';
+import * as Y1 from './sayfalar1.js?v=169';
+import * as Y2 from './sayfalar2.js?v=169';
+import * as P from './portal.js?v=169';
+import * as Y3 from './sayfalar3.js?v=169';
+import * as Y4 from './sayfalar4.js?v=169';
+import * as Y5 from './sayfalar5.js?v=169';
+import * as IM from './imza.js?v=169';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=169';
+import * as SN from './senaryo.js?v=169';
+import * as OZ from './ozellik.js?v=169';
+import { durumlariGuncelle } from './mesaj.js?v=169';
+import { yeniMenu } from './yeni.js?v=169';
+import * as B from './bulut.js?v=169';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=169';
+import * as AN from './analiz.js?v=169';
+import * as ORT from './ortak.js?v=169';
+import * as SH from './sahip.js?v=169';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -274,7 +274,7 @@ function girisEkrani(mod = 'tanitim') {
   if (mod === 'tanitim' && TANITIM) {
     if (!kok0.querySelector('#tanitim') || kok0.querySelector('#tanitim').hidden) kok0.innerHTML = TANITIM;
     document.title = 'Sinyal · Sürücü kursu yönetimi';
-    const tn = kok0.querySelector('#tanitim'); tn.hidden = false; if (tn.dataset.bagli) return; tn.dataset.bagli = '1';
+    const tn = kok0.querySelector('#tanitim'); tn.hidden = false; if (window.__vitrin) setTimeout(window.__vitrin, 0); if (tn.dataset.bagli) return; tn.dataset.bagli = '1';
     kok0.querySelectorAll('[data-demo]').forEach(b => b.addEventListener('click', demoyaGir));
     kok0.querySelectorAll('[data-giris]').forEach(b => b.addEventListener('click', () => { girisEkrani(b.dataset.giris || 'pin'); window.scrollTo(0, 0); }));
     // bölümler ekrana girerken hafifçe belirir (hareket azaltma tercihine uyar; IntersectionObserver yoksa hepsi görünür)
