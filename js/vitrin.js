@@ -30,24 +30,34 @@
     const sahneler = [...ekran.querySelectorAll('.vt-sahne')];
     // telefon için: her adımın altına kendi sahnesinin kopyası
     adimlar.forEach(a => { if (a.querySelector('.vt-sahne-ici')) return; const s = sahneler[+a.dataset.sahne]; if (!s) return; const k = s.cloneNode(true); k.classList.add('vt-sahne-ici'); k.setAttribute('aria-hidden', 'true'); a.appendChild(k); });
-    const oynat = s => { if (!s || s.classList.contains('oynat')) return; s.classList.add('oynat'); };
-    const sec = a => {
-      adimlar.forEach(x => x.classList.toggle('aktif', x === a));
-      const n = +a.dataset.sahne; sahneler.forEach((s, i) => { s.classList.toggle('aktif', i === n); if (i === n) oynat(s); });
-      oynat(a.querySelector('.vt-sahne-ici'));
+    const oynat = (s, bastan) => { if (!s) return; if (bastan) { s.classList.remove('oynat'); void s.offsetWidth; } s.classList.add('oynat'); };
+    const hik = kok.querySelector('.vt-hikaye'), masa = matchMedia('(min-width:980px)');
+    // masaüstü: soldaki listeden bir adım seçilir, sağdaki ekran o adımın sahnesini baştan oynatır
+    let n = 0;
+    const sec = (i, bastan) => {
+      n = i;
+      if (bastan) { adimlar[i].classList.remove('aktif'); void adimlar[i].offsetWidth; } // ilerleme çizgisi baştan başlasın
+      adimlar.forEach((x, j) => { x.classList.toggle('aktif', j === i); const b = x.querySelector('.vt-adim-bas'); if (b) b.setAttribute('aria-pressed', j === i); });
+      const k = +adimlar[i].dataset.sahne; sahneler.forEach((s, j) => { s.classList.toggle('aktif', j === k); if (j === k) oynat(s, bastan); });
     };
-    sec(adimlar[0]);
-    if (azHareket() || !('IntersectionObserver' in window)) { kok.querySelectorAll('.vt-sahne').forEach(oynat); return; }
-    // etkin adım: üst kenarı ekranın ortasını geçmiş son adım (hızlı kaydırmada da doğru adım seçilir)
-    let son = adimlar[0], bekliyor = false;
-    const bak = () => { bekliyor = false; let a = adimlar[0]; for (const x of adimlar) if (x.getBoundingClientRect().top < innerHeight * .5) a = x; if (a !== son) { son = a; sec(a); } };
-    const kaydir = () => { if (!bekliyor) { bekliyor = true; requestAnimationFrame(bak); } };
-    addEventListener('scroll', kaydir, { passive: true }); addEventListener('resize', kaydir); bak();
-    const io = { disconnect: () => { removeEventListener('scroll', kaydir); removeEventListener('resize', kaydir); } };
-    // telefonda sahne ekrana girince oynasın
+    sec(0, false);
+    if (azHareket() || !('IntersectionObserver' in window)) { kok.querySelectorAll('.vt-sahne').forEach(s => oynat(s)); return; }
+    // kendiliğinden ilerleme: bölüm göründüğünde başlar, fare üstündeyken durur, kullanıcı bir adıma tıklayınca kapanır
+    const SURE = 7000; let zaman = null, basla = 0, kalan = SURE, gorunur = false, dur = false, oto = true;
+    hik.style.setProperty('--sure', SURE / 1000 + 's');
+    const durdur = () => { clearTimeout(zaman); zaman = null; };
+    const kur = ms => { durdur(); if (!oto || !gorunur || dur || !masa.matches || document.hidden) return; basla = Date.now(); kalan = ms; zaman = setTimeout(() => { sec((n + 1) % adimlar.length, true); kur(SURE); }, ms); };
+    hik.classList.add('oto');
+    const tik = ev => { const b = ev.target.closest('.vt-adim-bas'); if (!b || !masa.matches) return; const i = adimlar.indexOf(b.closest('.vt-adim')); oto = false; hik.classList.remove('oto'); durdur(); if (i !== n) sec(i, true); };
+    const gir = () => { if (!oto) return; dur = true; hik.classList.add('dur'); if (zaman) { durdur(); kalan = Math.max(400, kalan - (Date.now() - basla)); } };
+    const cik = () => { if (!oto) return; dur = false; hik.classList.remove('dur'); kur(kalan); };
+    hik.addEventListener('click', tik); hik.addEventListener('mouseenter', gir); hik.addEventListener('mouseleave', cik);
+    const io = new IntersectionObserver(l => l.forEach(x => { gorunur = x.isIntersecting; if (gorunur) { sec(n, true); kur(SURE); } else durdur(); }), { threshold: .35 });
+    io.observe(hik);
+    // telefonda her adımın altındaki sahne ekrana girince oynar
     const io2 = new IntersectionObserver(l => l.forEach(x => { if (x.isIntersecting) { oynat(x.target); io2.unobserve(x.target); } }), { rootMargin: '0px 0px -20% 0px' });
     kok.querySelectorAll('.vt-sahne-ici').forEach(s => io2.observe(s));
-    temizle.push(() => { io.disconnect(); io2.disconnect(); });
+    temizle.push(() => { durdur(); io.disconnect(); io2.disconnect(); hik.removeEventListener('click', tik); hik.removeEventListener('mouseenter', gir); hik.removeEventListener('mouseleave', cik); });
   }
   // "Herkes kendi ekranında": rol sekmeleri (ok tuşlarıyla da gezilir)
   function roller(kok) {
