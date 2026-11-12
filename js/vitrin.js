@@ -49,12 +49,28 @@
     kok.querySelectorAll('.vt-sahne-ici').forEach(s => io2.observe(s));
     temizle.push(() => { io.disconnect(); io2.disconnect(); });
   }
+  // "Herkes kendi ekranında": rol sekmeleri (ok tuşlarıyla da gezilir)
+  function roller(kok) {
+    const sekmeler = [...kok.querySelectorAll('[data-rol]')], paneller = [...kok.querySelectorAll('[data-rol-panel]')];
+    if (!sekmeler.length) return;
+    const sec = (n, odak) => {
+      sekmeler.forEach((b, i) => { b.setAttribute('aria-selected', i === n); b.tabIndex = i === n ? 0 : -1; if (i === n && odak) b.focus(); });
+      paneller.forEach((p, i) => { p.classList.toggle('aktif', i === n); p.hidden = i !== n; });
+    };
+    const tik = ev => { const b = ev.target.closest('[data-rol]'); if (b) sec(+b.dataset.rol); };
+    const tus = ev => { const b = ev.target.closest('[data-rol]'); if (!b) return; const n = +b.dataset.rol, d = ev.key === 'ArrowRight' ? 1 : ev.key === 'ArrowLeft' ? -1 : 0; if (d) { ev.preventDefault(); sec((n + d + sekmeler.length) % sekmeler.length, true); } };
+    const kap = sekmeler[0].parentElement;
+    kap.addEventListener('click', tik); kap.addEventListener('keydown', tus);
+    sec(0);
+    temizle.push(() => { kap.removeEventListener('click', tik); kap.removeEventListener('keydown', tus); });
+  }
   function baslat() {
     temizle.forEach(f => f()); temizle = [];
     const kok = document.getElementById('tanitim');
     if (!kok || kok.hidden) return;
     akis(kok.querySelector('[data-vt-akis]'));
     hikaye(kok);
+    roller(kok);
   }
   window.__vitrin = baslat;
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', baslat); else baslat();
