@@ -50,10 +50,11 @@
 .yukle-ipucu{display:flex;gap:12px;align-items:flex-start;margin-top:26px;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.52);-webkit-backdrop-filter:blur(14px) saturate(160%);backdrop-filter:blur(14px) saturate(160%);border:1px solid rgba(255,255,255,.8);box-shadow:0 10px 28px -16px rgba(11,37,70,.4);font-size:15px;line-height:1.42;color:#163457;transition:opacity .35s}
 .yukle-ipucu>svg{flex:none;width:30px;height:30px;margin-top:1px}
 .yukle-ipucu i{display:block;margin-bottom:2px;font-style:normal;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#a06c00}
-.yukle-sahne{position:relative;z-index:1;flex:none;width:100%;max-width:780px;height:clamp(230px,42vh,440px);margin:16px auto 0}
+.yukle-sahne{position:relative;z-index:1;flex:none;width:100%;height:clamp(230px,42vh,440px);margin:16px 0 0}
 .yukle-sahne::after{content:"";position:absolute;left:0;right:0;top:100%;height:env(safe-area-inset-bottom);background:#a5d88f}
-@media (min-width:781px){.yukle-sahne{-webkit-mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent);mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent)}}
 .yk{display:block;width:100%;height:100%}
+/* kısa ekran (yatay telefon): başlık küçülür, açıklama ve ipucu gizlenir, sahne alt yarıyı kaplar */
+@media (max-height:560px){.yk-ust{padding-top:calc(14px + env(safe-area-inset-top))}.yk-baslik{margin-top:12px;font-size:26px}.yk-alt,.yukle-ipucu,.yk-gokbulut{display:none}.yk-cubuk{margin-top:12px}.yukle-sahne{height:58vh;margin-top:8px}}
 @media (prefers-reduced-motion:reduce){.yk-gokbulut,.yk-cubuk i{animation:none}.yk-cubuk i{left:0;width:60%}.yukle-ipucu{transition:none}}
 
 :root{
@@ -153,8 +154,8 @@ html.w-anim [data-gor].w-gorundu{opacity:1;transform:none}
 .w-secici a:hover,.w-secici button:hover{background:rgba(255,255,255,.12);color:#fff}
 @media (max-width:420px){.w-secici a,.w-secici button{padding:10px 12px;font-size:14px}}
 </style>
-<link id="app-css" rel="stylesheet" href="css/app.css?v=139" media="print">
-<noscript><link rel="stylesheet" href="css/app.css?v=139"></noscript>
+<link id="app-css" rel="stylesheet" href="css/app.css?v=140" media="print">
+<noscript><link rel="stylesheet" href="css/app.css?v=140"></noscript>
 </head>
 <body>
 <div id="uyg"><div class="tanitim" id="tanitim">
@@ -184,9 +185,9 @@ html.w-anim [data-gor].w-gorundu{opacity:1;transform:none}
 </main>
 <footer class="w-alt-bilgi"><div class="w-kap w-alt-ic"><span class="tn-logo"><svg class="tn-logo-isaret" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#fff" stroke-width="1.2"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><span><b>Sinyal</b><small>Sürücü kursu otomasyonu</small></span></span><nav aria-label="Alt bağlantılar"><a href="#/ogrenci-giris">Öğrenci girişi</a><button type="button" data-giris="ogretmen">Öğretmen girişi</button><button type="button" data-giris>Kurs girişi</button><a href="gizlilik.html">Gizlilik</a></nav></div></footer>
 </div><div id="acilis" hidden><div class="yukleme" role="status"><div class="yk-gokbulut b1" aria-hidden="true"></div><div class="yk-gokbulut b2" aria-hidden="true"></div><div class="yk-ust"><div class="yk-marka"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#0b2546" stroke-width="1.2"/><path d="M12 7.6v5.6M12 15.8v.4" stroke="#0b2546" stroke-width="2.3" stroke-linecap="round"/></svg><span>Sinyal</span></div><h1 class="yk-baslik">Sinyal açılıyor</h1><p class="yk-alt">Birkaç saniye sürebilir</p><div class="yk-cubuk" aria-hidden="true"><i></i></div><div class="yukle-ipucu" aria-live="off"><svg viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="9" fill="#1f5fbf"/><path d="M15 6.5 23 21.5H7Z" fill="#fff"/><circle cx="15" cy="12.4" r="1.4" fill="#0b2546"/><path d="M14.8 14.2l-.7 3.6m.7-3.6 2 2.4m-2-2.4-1.8 1.7m1.1 1.9-1.6 2m1.6-2 1.8 1.8" stroke="#0b2546" stroke-width="1.05" stroke-linecap="round"/></svg><div><i>Biliyor muydun?</i><span>Yaya geçidinde öncelik her zaman yayanındır.</span></div></div></div><div class="yukle-sahne" data-yk></div></div></div></div></div>
-<script src="js/yukleme.js?v=139"></script>
-<script src="js/acilis.js?v=139"></script>
+<script src="js/yukleme.js?v=140"></script>
+<script src="js/acilis.js?v=140"></script>
 <noscript><p style="padding:24px">Sinyal’i kullanmak için JavaScript’i açın.</p></noscript>
-<script type="module" src="js/baslat.js?v=139"></script>
+<script type="module" src="js/baslat.js?v=140"></script>
 </body>
 </html>
