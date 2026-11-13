@@ -1,6 +1,6 @@
 // mdSinyal servis çalışanı: önce ağ, bağlantı yoksa son açılan sürüm (aynı kaynaktaki dosyalar).
 // WhatsApp köprüsü, yazı tipleri gibi dış istekler önbelleğe alınmaz.
-const ONBELLEK = 'sinyal-v6';  // sürüm değişince eski dosyalar silinir (v6: birikmiş eski sürümler ve sürüm sorguları temizlenir)
+const ONBELLEK = 'sinyal-v7';  // sürüm değişince eski dosyalar silinir (v6: birikmiş eski sürümler ve sürüm sorguları temizlenir)
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', ev => ev.waitUntil(caches.keys().then(l => Promise.all(l.filter(k => k !== ONBELLEK).map(k => caches.delete(k)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', ev => {

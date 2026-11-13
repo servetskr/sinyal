@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>mdSinyal</title><meta property="og:title" content="mdSinyal · Sürücü kursu otomasyonu"><meta property="og:description" content="Öğrenci kaydı, direksiyon planı, ödeme, sınav ve MEB işleri tek yerde."><meta property="og:image" content="https://servetskr.github.io/sinyal/img/site/paylas-103.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image">
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>mdSinyal</title><meta property="og:title" content="mdSinyal · Sürücü kursu otomasyonu"><meta property="og:description" content="Öğrenci kaydı, direksiyon planı, ödeme, sınav ve MEB işleri tek yerde."><meta property="og:image" content="https://mdsinyal.com/img/site/paylas-103.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image">
 <style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(60% 40% at 50% 100%,rgba(255,170,70,.14),transparent 70%),#070b14;color:rgba(214,222,238,.75);font:17px/1.55 system-ui,-apple-system,sans-serif}main{max-width:420px;padding:28px;text-align:center}main svg{width:56px;height:56px;margin-bottom:18px}b{display:block;font-size:22px;color:#fff;margin-bottom:6px}a.git{display:inline-flex;align-items:center;margin-top:22px;min-height:48px;padding:0 22px;border-radius:12px;background:#ffc21a;color:#0b1220;font-weight:800;text-decoration:none}a.git[hidden]{display:none}.mk{font-weight:400;opacity:.55}</style></head>
 <body><main><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="#141e33"/><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="1.2"/><g fill="none" stroke="#ffc21a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20l12 12-12 12" stroke-opacity=".38"/><path d="M33 20l12 12-12 12"/></g></svg><b><span class="mk">md</span>Sinyal</b><p id="m">Link açılıyor…</p><a class="git" id="git" href="/sinyal/" hidden>Ana sayfaya dön</a></main>
 <script>
@@ -11,7 +11,7 @@
   const m = document.getElementById('m');
   if (!yol || !/^[a-z0-9-]{4,90}$/.test(yol)) { m.textContent = 'Aradığınız sayfa bulunamadı.'; document.getElementById('git').hidden = false; return; }
   try {
-    const j = await (await fetch('https://sinyal-wa.sinemsavar0.workers.dev/k/' + yol)).json();
+    const j = await (await fetch('https://api.mdsinyal.com/k/' + yol)).json();
     if (j.ok && j.hedef) { location.replace(j.hedef); return; }
   } catch (e) { }
   m.textContent = 'Bu linkin süresi dolmuş ya da link hatalı. Kursa yazıp yeni link isteyin.'; document.getElementById('git').hidden = false;
