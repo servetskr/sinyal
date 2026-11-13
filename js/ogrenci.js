@@ -1,9 +1,9 @@
 // Öğrenci paneli sekmeleri: dersler (yaklaşan + defter + gelişim + teorik konular), sınavlar, ödemeler, belgeler; bölümler açılır kapanır modüller
-import { S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen, ogrOzellik, oturum, DERS_TUR_AD, iptalEdilebilir } from './veri.js?v=183';
-import * as TK from './takvim.js?v=183';
-import { bildirimler } from './sayfalar1.js?v=183';
-import { e, tl, ik, rozet, ilerleme, pencere, kapatPencere, bildir, tarih, goreli, isaret, belgeYazdir, fotoKucult } from './ui.js?v=183';
-import { belgeHtml } from './sayfalar3.js?v=183';
+import { S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen, ogrOzellik, oturum, DERS_TUR_AD, iptalEdilebilir } from './veri.js?v=184';
+import * as TK from './takvim.js?v=184';
+import { bildirimler } from './sayfalar1.js?v=184';
+import { e, tl, ik, rozet, ilerleme, pencere, kapatPencere, bildir, tarih, goreli, isaret, belgeYazdir, fotoKucult } from './ui.js?v=184';
+import { belgeHtml } from './sayfalar3.js?v=184';
 
 // MEB teorik eğitim programı: konu, ders saati, başlıklar (anahtarlar soru bankasıyla aynı)
 export const MUFREDAT = [
@@ -31,7 +31,7 @@ const gunK = t => fark(t) === 0 ? 'Bugün' : fark(t) === 1 ? 'Yarın' : fark(t) 
 export function kurulumKart() {
   if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return '';
   const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  return `<div class="og-kur"><img src="img/simge/sinyal-192.png" alt="" width="40" height="40"><div><b>ÖzSinyal’i telefonuna ekle</b><small>${ios ? 'Safari’de Paylaş düğmesine (kare ve ok), sonra “Ana Ekrana Ekle”ye dokun.' : 'Tarayıcı menüsünden “Ana ekrana ekle”yi seç; uygulama gibi açılır.'}</small></div>
+  return `<div class="og-kur"><img src="img/simge/mdsinyal-192.png" alt="" width="40" height="40"><div><b>mdSinyal’i telefonuna ekle</b><small>${ios ? 'Safari’de Paylaş düğmesine (kare ve ok), sonra “Ana Ekrana Ekle”ye dokun.' : 'Tarayıcı menüsünden “Ana ekrana ekle”yi seç; uygulama gibi açılır.'}</small></div>
     <button class="dg dg-ana dg-kucuk" data-kur-android ${window.__kurulum ? '' : 'hidden'}>Yükle</button></div>`;
 }
 
@@ -81,7 +81,7 @@ export function programHtml(k) {
 }
 function takvimIndir(k) {
   const l = programOlaylari(k), z = (t, s) => t.replace(/-/g, '') + 'T' + s.replace(':', '') + '00';
-  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Sinyal//TR', ...l.flatMap((x, i) => ['BEGIN:VEVENT', 'UID:sinyal-' + k.id + '-' + i + '@sinyal', 'DTSTART:' + z(x.tarih, x.saat), 'DURATION:PT' + (x.tur === 'teorik' ? 2 : 1) + 'H', 'SUMMARY:' + x.baslik, 'LOCATION:' + (x.alt || '').replace(/,/g, '\\,'), 'END:VEVENT']), 'END:VCALENDAR'].join('\r\n');
+  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//mdSinyal//TR', ...l.flatMap((x, i) => ['BEGIN:VEVENT', 'UID:sinyal-' + k.id + '-' + i + '@sinyal', 'DTSTART:' + z(x.tarih, x.saat), 'DURATION:PT' + (x.tur === 'teorik' ? 2 : 1) + 'H', 'SUMMARY:' + x.baslik, 'LOCATION:' + (x.alt || '').replace(/,/g, '\\,'), 'END:VEVENT']), 'END:VCALENDAR'].join('\r\n');
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' })); a.download = 'ders-programim.ics'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   bildir('Takvim dosyası indirildi; açınca dersler telefonunun takvimine eklenir');
 }
@@ -213,7 +213,7 @@ export function belgelerHtml(k) {
 /* ---------- konu anlatımı ---------- */
 // İçerik ayrı dosyada; yalnız açılınca yüklenir (açılış hızını etkilemesin)
 let dersYuk = null;
-const dersleriYukle = () => dersYuk || (dersYuk = import('./dersler.js?v=183').then(m => m.DERSLER).catch(() => ({})));
+const dersleriYukle = () => dersYuk || (dersYuk = import('./dersler.js?v=184').then(m => m.DERSLER).catch(() => ({})));
 async function dersAc(k, id, yenile) {
   const D = await dersleriYukle(), d = D[id], [key, no] = [id.replace(/-\d+$/, ''), +id.split('-').pop()], konu = MUFREDAT.find(x => x[0] === key), baslik = konu ? konu[3][no - 1] : id;
   const sonraki = konu && no < konu[3].length ? key + '-' + (no + 1) : null;
@@ -250,7 +250,7 @@ async function dersAc(k, id, yenile) {
 
 /* ---------- olaylar ---------- */
 // direksiyon hazırlık bölümü ayrı dosyada (resmî form maddeleriyle); yer tutucu varsa yüklenir
-const dirYukle = () => import('./direksiyon.js?v=183');
+const dirYukle = () => import('./direksiyon.js?v=184');
 export function ogBagla(kap, k, yenile) {
   const yer = kap.querySelectorAll('[data-dir-yer]'); if (yer.length) dirYukle().then(m => yer.forEach(y => { y.innerHTML = m.direksiyonHtml(k, true); })).catch(() => { });
   kap.addEventListener('toggle', ev => { const m = ev.target; if (!m.matches || !m.matches('[data-modul]')) return; const id = m.dataset.modul; if (m.open) { ACIK.add(id); KAPALI.delete(id); } else { ACIK.delete(id); KAPALI.add(id); } }, true);
@@ -258,10 +258,10 @@ export function ogBagla(kap, k, yenile) {
     const t = ev.target;
     if (t.closest('.tk2') && TK.takvimTikla(t, ogTk)) return yenile();
     const dr = t.closest('[data-dir]'); if (dr) return dirYukle().then(m => m.direksiyonAc(k, dr.dataset.dir, yenile));
-    if (t.closest('[data-ikaz]')) return import('./ikaz.js?v=183').then(m => m.ikazAc());
-    if (t.closest('[data-motor4]')) return import('./motor.js?v=183').then(m => m.motorAc());
-    if (t.closest('[data-debriyaj]')) return import('./motor.js?v=183').then(m => m.debriyajAc());
-    if (t.closest('[data-tehlike]')) return import('./tehlike.js?v=183').then(m => m.tehlikeAc(k));
+    if (t.closest('[data-ikaz]')) return import('./ikaz.js?v=184').then(m => m.ikazAc());
+    if (t.closest('[data-motor4]')) return import('./motor.js?v=184').then(m => m.motorAc());
+    if (t.closest('[data-debriyaj]')) return import('./motor.js?v=184').then(m => m.debriyajAc());
+    if (t.closest('[data-tehlike]')) return import('./tehlike.js?v=184').then(m => m.tehlikeAc(k));
     if (t.closest('[data-kur-android]') && window.__kurulum) { window.__kurulum.prompt(); window.__kurulum.userChoice.finally(() => { window.__kurulum = null; yenile(); }); return; }
     const od = t.closest('[data-og-ders]'); if (od) return dersAc(k, od.dataset.ogDers, yenile);
     const yz = t.closest('[data-og-yildiz]'); if (yz) { const kart = yz.closest('.og-degerlendir'), n = +yz.dataset.ogYildiz; kart.dataset.puan = n; kart.querySelectorAll('[data-og-yildiz]').forEach(b => b.classList.toggle('secili', +b.dataset.ogYildiz <= n)); kart.querySelector('[data-og-puan]').disabled = false; return; }

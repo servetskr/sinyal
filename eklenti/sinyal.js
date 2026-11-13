@@ -1,5 +1,5 @@
-// ÖzSinyal MEBBİS Yardımcısı · ÖzSinyal sayfası tarafı: sayfa ile eklenti arasında mesaj taşır.
-// Yalnız aynı penceredeki ÖzSinyal sayfasından gelen mesajlar kabul edilir.
+// mdSinyal MEBBİS Yardımcısı · mdSinyal sayfası tarafı: sayfa ile eklenti arasında mesaj taşır.
+// Yalnız aynı penceredeki mdSinyal sayfasından gelen mesajlar kabul edilir.
 const SURUM = chrome.runtime.getManifest().version;
 const sayfaya = (tur, veri) => window.postMessage({ kaynak: 'sinyal-eklenti', tur, veri }, location.origin);
 const gonder = m => new Promise(ok => { try { chrome.runtime.sendMessage(m, ok); } catch (x) { ok(null); } });

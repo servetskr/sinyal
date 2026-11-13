@@ -1,4 +1,4 @@
-/* Sinyal tanıtım sitesi (v163): ana sayfa, alt sayfalar (Özellikler, Fiyatlar, SSS, İletişim, Giriş, Gizlilik),
+/* mdSinyal tanıtım sitesi (v163): ana sayfa, alt sayfalar (Özellikler, Fiyatlar, SSS, İletişim, Giriş, Gizlilik),
    ortak üst menü ve alt bilgi. Uygulamanın stilinden bağımsızdır; ana sayfada da yüklenir (st- önekli sınıflar). */
 .st,.tanitim{--w-bg:#0e1a33;--w-yuzey:#15244a;--w-yuzey2:#1a2c57;--w-cizgi:rgba(255,255,255,.1);--w-yazi:#c8d1e3;--w-baslik:#fff;--w-vurgu:#f2b705;--w-et:#f2b705;--w-bg2:#122042;
   --st-baslik:"Overpass",system-ui,-apple-system,sans-serif;--st-govde:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif}
@@ -17,7 +17,7 @@ body.st{margin:0;background:var(--w-bg);color:var(--w-yazi);font:400 16px/1.6 va
 .st-logo svg{width:32px;height:32px;flex:none}
 .st-logo b{display:block;font:900 20px/1 var(--st-baslik);color:var(--w-baslik)}
 .st-logo small{display:block;font-size:12px;opacity:.65;margin-top:2px;white-space:nowrap}
-.st-logo b .oz{font-weight:500;opacity:.55}
+.st-logo b .mk{font-weight:500;opacity:.55}
 .st-nav{display:flex;align-items:center;gap:2px;margin-left:12px}
 .st-nav a{display:inline-flex;align-items:center;height:40px;padding:0 12px;border-radius:10px;font:700 15px/1 var(--st-baslik);color:var(--w-yazi);transition:color .15s,background .15s}
 .st-nav a:hover{color:#fff;background:rgba(255,255,255,.06)}
@@ -795,7 +795,6 @@ body.st,.tanitim{background:var(--w-bg);color:var(--w-yazi)}
 /* ---------- alt bilgi: sarı; kapanış bölümünün üstüne yükselen bir sayfa gibi ---------- */
 .st-alt{position:relative;z-index:1;margin-top:-36px;border-radius:36px 36px 0 0;border-top:0;background:var(--sari);color:#3b2f05}
 .st-alt .st-logo b{color:#111}.st-alt .st-logo small{color:rgba(17,17,17,.62)}
-.st-alt .st-logo svg .rz-c{stroke:#111;stroke-opacity:.9;stroke-width:2}
 .st-alt-marka p{color:rgba(30,24,4,.78)}
 .st-alt h3{color:rgba(30,24,4,.55)}
 .st-alt li a{color:#16130a;opacity:1}.st-alt li a:hover{color:#000;text-decoration:underline;text-underline-offset:3px}

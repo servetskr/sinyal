@@ -1,8 +1,8 @@
-// Sinyal → WhatsApp Cloud API köprüsü + kısa link deposu (Cloudflare Worker)
+// mdSinyal → WhatsApp Cloud API köprüsü + kısa link deposu (Cloudflare Worker)
 // Ortam: WA_TOKEN (gizli), PHONE_ID, ALICI; KV bağlaması LINK (kısa linkler 60 gün + gelen mesajlar)
 // SABLON_AD (isteğe bağlı, ör. sinyal_bildirim) + SABLON_DIL (varsayılan tr): kişi son 24 saatte yazmadıysa (Meta 131047) mesaj bu onaylı
 // şablonla, tek değişkene ({{1}}) konarak tekrar denenir. Kursun kendi hattında şablon adı hat kaydındaki 'sablon' alanından da gelebilir.
-// /webhook: Meta'dan gelen WhatsApp mesajları → kurs asistanı cevaplar, mesaj Sinyal'in gelen kutusuna (KV 'gelen') yazılır
+// /webhook: Meta'dan gelen WhatsApp mesajları → kurs asistanı cevaplar, mesaj mdSinyal'in gelen kutusuna (KV 'gelen') yazılır
 // İki yol var:
 //  · Demo (örnek kurs): Authorization başlığı yok → her mesaj ALICI'ya (demo telefonu) gider, yalnız ALICI'dan gelenler işlenir. Eskisi gibi.
 //  · Gerçek kurs: Authorization (Firebase oturumu) + X-Kurs → kursun kendi WhatsApp hattından (KV 'hat:<kurs>') alıcının numarasına gider;
@@ -20,15 +20,15 @@ const ASISTAN = [
   [/evrak|belge|rapor|gerekli|neler lazım|ne lazım/, 'Kayıt için kimlik kartı, sürücü sağlık raporu, öğrenim belgesi, adli sicil kaydı ve 2 vesikalık fotoğraf yeterli. Sağlık raporunu aile hekiminizden alabilirsiniz.', 'Evrak'],
   [/saat|ne zaman|başla|basla|grup|kurs günleri|hafta/, 'Teorik dersler hafta içi her akşam 18:30 grubunda, salı ve perşembe 10:00 sabah grubunda yapılıyor. Yeni akşam grubumuz 3 Kasım’da başlıyor.', 'Ders saatleri'],
   [/adres|nerede|nerdesiniz|konum|yer/, 'Odunpazarı / Eskişehir’deyiz. Kayıt görüşmesi için uygun olduğunuz günü yazarsanız saat ayarlayalım.', 'Adres'],
-  [/kayıt|kayit|kaydol|yazıl|yazil/, 'Kaydınızı evden de yapabilirsiniz: https://servetskr.github.io/sinyal/#/kayit — isterseniz Sinyal Sürücü Kursu’na uğrayarak da kayıt olabilirsiniz.', 'Kayıt'],
-  [/^(merhaba|selam|slm|mrb|iyi günler|iyi akşamlar|günaydın)\b/, 'Merhaba, Sinyal Sürücü Kursu’na hoş geldiniz. Ben kursun dijital asistanıyım. Kurs ücreti, evraklar, ders saatleri ya da kayıt hakkında sorabilirsiniz.', 'Karşılama'],
+  [/kayıt|kayit|kaydol|yazıl|yazil/, 'Kaydınızı evden de yapabilirsiniz: https://servetskr.github.io/sinyal/#/kayit — isterseniz Örnek Sürücü Kursu’na uğrayarak da kayıt olabilirsiniz.', 'Kayıt'],
+  [/^(merhaba|selam|slm|mrb|iyi günler|iyi akşamlar|günaydın)\b/, 'Merhaba, Örnek Sürücü Kursu’na hoş geldiniz. Ben kursun dijital asistanıyım. Kurs ücreti, evraklar, ders saatleri ya da kayıt hakkında sorabilirsiniz.', 'Karşılama'],
 ];
-// Kursun sorusuna verilen kısa cevaplar (evet/hayır): asistan teşekkür eder, cevap Sinyal'de ilgili mesaja işlenir
+// Kursun sorusuna verilen kısa cevaplar (evet/hayır): asistan teşekkür eder, cevap mdSinyal'de ilgili mesaja işlenir
 const CEVAP = [[/^(evet|olur|tamam|tamamd[ıi]r|gelece[ğg]im|gelirim|uygun|kat[ıi]l[ıi]yorum|onayl[ıi]yorum|ok|okey)(\s|$|[.!,])/, 'olumlu'], [/^(hay[ıi]r|gelemem|gelemeyece[ğg]im|olmaz|uygun de[ğg]il|kat[ıi]lam[ıi]yorum|iptal)(\s|$|[.!,])/, 'olumsuz']];
 const cevapTuru = m => { const t = kucuk(m).trim(); for (const [r, k] of CEVAP) if (r.test(t)) return k; return null; };
 const asistanCevap = m => { const t = kucuk(m).trim(); if (cevapTuru(t)) return { metin: 'Teşekkürler, cevabınızı aldık ve kursa ilettik.', konu: 'Cevap' }; for (const [r, c, k] of ASISTAN) if (r.test(t)) return { metin: c, konu: k }; return { metin: 'Sorunuzu kurs yetkilimize ilettim, kısa süre içinde size dönecek. Bu arada ücret, evrak ya da ders saatleriyle ilgili sorularınızı hemen cevaplayabilirim.', konu: 'Yetkiliye devredildi', devir: true }; };
 // Demo hattına yazan adayla adım adım sohbet (durum KV'de 1 gün tutulur): kayıt → sınıf → bilgi → link / randevu / aranma
-const KURS_AD = 'Sinyal Sürücü Kursu', KAYIT_LINK = 'https://servetskr.github.io/sinyal/#/kayit', KURS_ADRES = 'Vişnelik Mah. Atatürk Blv. No:12, Odunpazarı / Eskişehir';
+const KURS_AD = 'Örnek Sürücü Kursu', KAYIT_LINK = 'https://servetskr.github.io/sinyal/#/kayit', KURS_ADRES = 'Vişnelik Mah. Atatürk Blv. No:12, Odunpazarı / Eskişehir';
 const DEMO_SINIF = [
   ['B manuel (otomobil)', '24.000 TL', 34, 14, /manuel|otomobil|araba|\bb\b/],
   ['B otomatik', '26.500 TL', 34, 14, /otomatik/],
@@ -187,9 +187,9 @@ export default {
       if (b.sil) { if (h) await env.LINK.delete('hatno:' + h.phoneId); await env.LINK.delete('hat:' + kursId); return cevap({ ok: true, bagli: false }); }
       const phoneId = rakam(b.phoneId), token = String(b.token || '').trim();
       if (!phoneId || token.length < 20) return cevap({ ok: false, hata: 'Telefon numarası kimliği ve erişim anahtarı gerekli' }, 400);
-      // DEMO_HAT_KURSLAR (virgülle kurs kimlikleri): Sinyal'in kendi deneme kursları demo hattını gönderim için bağlayabilir; gelen mesajlar yine demoya gider
+      // DEMO_HAT_KURSLAR (virgülle kurs kimlikleri): mdSinyal'in kendi deneme kursları demo hattını gönderim için bağlayabilir; gelen mesajlar yine demoya gider
       const demoIzin = String(env.DEMO_HAT_KURSLAR || '').split(',').map(s => s.trim()).filter(Boolean).includes(kursId);
-      if (!demoIzin && [env.PHONE_ID, env.PHONE_ID_USTA, env.PHONE_ID_MUDUR].filter(Boolean).map(rakam).includes(phoneId)) return cevap({ ok: false, hata: 'Bu, Sinyal demo hattı; kursun kendi hattını girin' }, 400);
+      if (!demoIzin && [env.PHONE_ID, env.PHONE_ID_USTA, env.PHONE_ID_MUDUR].filter(Boolean).map(rakam).includes(phoneId)) return cevap({ ok: false, hata: 'Bu, mdSinyal demo hattı; kursun kendi hattını girin' }, 400);
       const sahip = await env.LINK.get('hatno:' + phoneId);
       if (sahip && sahip !== kursId) return cevap({ ok: false, hata: 'Bu hat başka bir kursa bağlı' }, 409);
       const r = await fetch('https://graph.facebook.com/v25.0/' + phoneId + '?fields=display_phone_number,verified_name', { headers: { Authorization: 'Bearer ' + token } });
@@ -208,7 +208,7 @@ export default {
     if (yol === 'webhook' && req.method === 'POST') {
       let p; try { p = await req.json(); } catch (x) { return new Response('ok'); }
       const v = p && p.entry && p.entry[0] && p.entry[0].changes && p.entry[0].changes[0] && p.entry[0].changes[0].value;
-      // gönderilen mesajların durumu (gönderildi / iletildi / okundu): Sinyal ekranında ✓✓ olarak görünür
+      // gönderilen mesajların durumu (gönderildi / iletildi / okundu): mdSinyal ekranında ✓✓ olarak görünür
       const st = v && v.statuses;
       if (st && st.length) {
         if (env.LINK) { const SIRA = { sent: 1, delivered: 2, read: 3, failed: 9 }; for (const s of st) { const k = 'durum-' + s.id, eski = await env.LINK.get(k); if ((SIRA[s.status] || 0) > (SIRA[eski] || 0)) await env.LINK.put(k, s.status, { expirationTtl: 1209600 }); } }
@@ -237,7 +237,7 @@ export default {
       }
       // Demo hattı: yalnızca kursun numarasına, kayıtlı ALICI'dan gelenler işlenir
       if ((telId && telId !== env.PHONE_ID) || rakam(m.from).slice(-10) !== rakam(env.ALICI).slice(-10)) return new Response('ok');
-      // fotoğraf ya da PDF (evrak): Meta'dan indirilir, 14 gün saklanır; Sinyal öğrencinin dosyasına alır
+      // fotoğraf ya da PDF (evrak): Meta'dan indirilir, 14 gün saklanır; mdSinyal öğrencinin dosyasına alır
       const medya = (m.type === 'image' || m.type === 'document') && env.LINK ? await medyaAl(env, m, env.WA_TOKEN, 'medya-' + m.id) : null;
       const metin = m.type === 'text' ? m.text.body : (m[m.type] && m[m.type].caption) || (m.type === 'image' ? '(fotoğraf)' : m.type === 'document' ? '(belge)' : '(' + m.type + ')');
       const demoKurs = env.LINK && !medya && m.type === 'text' ? await env.LINK.get('hatno:' + env.PHONE_ID) : null;

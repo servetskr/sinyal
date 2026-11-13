@@ -1,22 +1,22 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=183';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=183';
-import * as Y1 from './sayfalar1.js?v=183';
-import * as Y2 from './sayfalar2.js?v=183';
-import * as P from './portal.js?v=183';
-import * as Y3 from './sayfalar3.js?v=183';
-import * as Y4 from './sayfalar4.js?v=183';
-import * as Y5 from './sayfalar5.js?v=183';
-import * as IM from './imza.js?v=183';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=183';
-import * as SN from './senaryo.js?v=183';
-import * as OZ from './ozellik.js?v=183';
-import { durumlariGuncelle } from './mesaj.js?v=183';
-import { yeniMenu } from './yeni.js?v=183';
-import * as B from './bulut.js?v=183';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=183';
-import * as AN from './analiz.js?v=183';
-import * as ORT from './ortak.js?v=183';
-import * as SH from './sahip.js?v=183';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=184';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=184';
+import * as Y1 from './sayfalar1.js?v=184';
+import * as Y2 from './sayfalar2.js?v=184';
+import * as P from './portal.js?v=184';
+import * as Y3 from './sayfalar3.js?v=184';
+import * as Y4 from './sayfalar4.js?v=184';
+import * as Y5 from './sayfalar5.js?v=184';
+import * as IM from './imza.js?v=184';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=184';
+import * as SN from './senaryo.js?v=184';
+import * as OZ from './ozellik.js?v=184';
+import { durumlariGuncelle } from './mesaj.js?v=184';
+import { yeniMenu } from './yeni.js?v=184';
+import * as B from './bulut.js?v=184';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=184';
+import * as AN from './analiz.js?v=184';
+import * as ORT from './ortak.js?v=184';
+import * as SH from './sahip.js?v=184';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -57,7 +57,7 @@ function sayaclar() {
 }
 
 // Telefon uygulaması kabuğu (öğrenci ve öğretmen): üst çubukta kurs adı ve yuvarlak profil düğmesi; hesap işleri alttan açılan sayfada
-const APP_LOGO = '<svg class="logo-isaret" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="#ffc21a"/><path d="M56.6 7.4C51.5 2.3 43.5 0 32 0 9 0 0 9 0 32c0 11.5 2.3 19.5 7.4 24.6z" fill="#131d31"/><path d="M56.6 7.4 7.4 56.6" stroke="#fff" stroke-opacity=".14"/><path class="rz-c" d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="1.2"/><circle cx="15.5" cy="19.5" r="4.5" fill="#fff"/><circle cx="27.5" cy="19.5" r="4.5" fill="#fff"/><path d="M35 38l8 8-8 8" fill="none" stroke="#0b1220" stroke-opacity=".34" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M45 38l8 8-8 8" fill="none" stroke="#0b1220" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const APP_LOGO = '<svg class="logo-isaret" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="#141e33"/><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="1.2"/><g fill="none" stroke="#ffc21a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20l12 12-12 12" stroke-opacity=".38"/><path d="M33 20l12 12-12 12"/></g></svg>';
 const basHarf = ad => e(String(ad || '?').trim().split(/\s+/).filter(Boolean).map(x => x[0]).slice(0, 2).join('').toLocaleUpperCase('tr') || '?');
 // iOS durum çubuğu üst çubukla aynı renkte olsun (uygulama kabuğunda açık zemin, panelde levha mavisi)
 function temaRengi(uygulama) { if (!uygulama) document.body.classList.remove('hero-acik'); const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = uygulama ? '#f2f2f7' : '#0a4da2'; }
@@ -71,22 +71,22 @@ function hesapSayfasi() {
   pencere({ baslik: 'Hesabım', alt: true, icerik: `<div class="hs-kim"><span class="app-profil buyuk" aria-hidden="true">${basHarf(ad)}</span><div><b>${e(ad)}</b><small>${e(S.kurs.ad)} · ${ogr ? 'Öğrenci' : ORT.yonetimModu() || u.rol === 'ortak' ? (u.rol === 'mudur' ? 'Yönetici' : 'Ortak · yalnız görüntüler') : ROL_AD[u.rol]}</small></div></div>
     <div class="hs-liste">${ogr ? `<button type="button" data-ogr-sifre>${satir('kilit', 'Şifremi değiştir')}${ik('sag')}</button>` : ''}
       ${tel ? `<a href="tel:${e(tel)}">${satir('tel', 'Kursu ara', e(S.kurs.tel))}${ik('sag')}</a>` : ''}
-      ${!ogr && !ORT.yonetimModu() && u.rol !== 'ortak' ? `<button type="button" data-destek>${satir('mesaj', 'ÖzSinyal Destek', 'Sorun, soru ya da istek bildir')}${ik('sag')}</button>` : ''}</div>
+      ${!ogr && !ORT.yonetimModu() && u.rol !== 'ortak' ? `<button type="button" data-destek>${satir('mesaj', 'mdSinyal Destek', 'Sorun, soru ya da istek bildir')}${ik('sag')}</button>` : ''}</div>
     <div class="hs-liste"><button type="button" class="hs-cikis" ${ogr ? 'data-ogr-cikis' : 'data-cikis'}>${satir('cikis', u.bulut || ogr ? 'Çıkış yap' : 'Kullanıcı değiştir', '', 'kirmizi')}</button></div>` });
 }
-// Kurs personeli ÖzSinyal'e destek talebi açar: talep kursun verisine yazılır, Servet ÖzSinyal Yönetim › Destek'te görür ve cevaplar
+// Kurs personeli mdSinyal'e destek talebi açar: talep kursun verisine yazılır, Servet mdSinyal Yönetim › Destek'te görür ve cevaplar
 const DESTEK_TUR = ['Hata', 'Soru', 'İstek', 'Eğitim'];
 function destekPenceresi() {
   const u = oturum.kullanici, yazar = !!u.bulut && ['mudur', 'sekreter'].includes(u.rol), c = S.destekCevap || {};
   const l = (S.destek || []).slice().sort((a, b) => String(b.zaman).localeCompare(String(a.zaman)));
-  const wa = 'https://wa.me/' + SH.DESTEK_TEL + '?text=' + encodeURIComponent('Merhaba, ' + (S.kurs.ad || 'kursumuz') + ' için ÖzSinyal desteği rica ediyorum.');
-  pencere({ baslik: 'ÖzSinyal Destek', alt: true, icerik: `${yazar ? `<form id="f-destek" class="og-giris-form yn-form">
+  const wa = 'https://wa.me/' + SH.DESTEK_TEL + '?text=' + encodeURIComponent('Merhaba, ' + (S.kurs.ad || 'kursumuz') + ' için mdSinyal desteği rica ediyorum.');
+  pencere({ baslik: 'mdSinyal Destek', alt: true, icerik: `${yazar ? `<form id="f-destek" class="og-giris-form yn-form">
       <div class="sh-durum-sec ds-tur" role="radiogroup">${DESTEK_TUR.map((t, i) => `<button type="button" role="radio" aria-checked="${!i}" class="${!i ? 'secili' : ''}" data-ds-tur="${t}">${t}</button>`).join('')}</div>
       <label class="og-alan"><span class="og-alan-et">Ne oldu, ne istiyorsun?</span><span class="og-girdi yn-alan-uzun"><textarea name="metin" rows="4" required placeholder="Örn. Taksit ekranında ödeme kaydedilmiyor"></textarea></span></label></form>`
       : `<p class="ekran-notu" style="margin:0 0 12px">${ik('uyari')}<span>Talebi kurs müdürü ya da ön büro açar. Acil bir durum için WhatsApp’tan yazabilirsin.</span></p>`}
-    <a class="ds-wa" target="_blank" rel="noopener" href="${wa}">${ik('wp')}<span>Acil mi? ÖzSinyal’e WhatsApp’tan yaz<small>0501 363 65 36</small></span></a>
+    <a class="ds-wa" target="_blank" rel="noopener" href="${wa}">${ik('wp')}<span>Acil mi? mdSinyal’e WhatsApp’tan yaz<small>0501 363 65 36</small></span></a>
     ${l.length ? `<h3 class="krsd-bas">Talepleriniz</h3><div class="ds-liste">${l.map(t => { const x = c[t.id] || {}, d = x.durum || 'Açık';
-      return `<div class="ds-talep"><div><b>${e(t.tur)} · ${e(String(t.metin).slice(0, 80))}</b><small>${e(t.kim || '')} · ${e(new Date(t.zaman).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }))}</small>${x.cevap ? `<p class="ds-cevap">${ik('mesaj')}<span><b>ÖzSinyal:</b> ${e(x.cevap)}</span></p>` : ''}</div><em class="ds-durum ${d === 'Çözüldü' ? 'ok' : d === 'İnceleniyor' ? 'bak' : ''}">${e(d)}</em></div>`; }).join('')}</div>` : ''}`,
+      return `<div class="ds-talep"><div><b>${e(t.tur)} · ${e(String(t.metin).slice(0, 80))}</b><small>${e(t.kim || '')} · ${e(new Date(t.zaman).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }))}</small>${x.cevap ? `<p class="ds-cevap">${ik('mesaj')}<span><b>mdSinyal:</b> ${e(x.cevap)}</span></p>` : ''}</div><em class="ds-durum ${d === 'Çözüldü' ? 'ok' : d === 'İnceleniyor' ? 'bak' : ''}">${e(d)}</em></div>`; }).join('')}</div>` : ''}`,
     altlik: yazar ? `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-destek">Gönder</button>` : '<button class="dg dg-ana" data-kapat>Tamam</button>',
     onAc: p => {
       if (!yazar) return;
@@ -94,7 +94,7 @@ function destekPenceresi() {
       p.querySelectorAll('[data-ds-tur]').forEach(b => b.addEventListener('click', () => { tur = b.dataset.dsTur; p.querySelectorAll('[data-ds-tur]').forEach(x => { x.classList.toggle('secili', x === b); x.setAttribute('aria-checked', x === b); }); }));
       p.querySelector('form').addEventListener('submit', ev => { ev.preventDefault(); const m = ev.target.metin.value.trim(); if (m.length < 3) return bildir('Kısaca ne olduğunu yaz', 'uyari');
         (S.destek = S.destek || []).push({ id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), zaman: new Date().toISOString(), kim: u.ad, rol: u.rol, tur, metin: m.slice(0, 2000) });
-        islem('ÖzSinyal Destek talebi açtı', tur); kaydet(); kapatPencere(); bildir('Talebin ÖzSinyal’e iletildi; cevap buraya gelecek'); });
+        islem('mdSinyal Destek talebi açtı', tur); kaydet(); kapatPencere(); bildir('Talebin mdSinyal’e iletildi; cevap buraya gelecek'); });
     } });
 }
 function iskelet() {
@@ -106,7 +106,7 @@ function iskelet() {
   document.getElementById('uyg').innerHTML = `
   <div class="uyg">
     <aside class="yan" id="yan" aria-label="Ana menü"><div class="yan-levha">
-      <a class="logo" href="#/genel" aria-label="ÖzSinyal ana sayfa"><svg class="logo-isaret" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="#ffc21a"/><path d="M56.6 7.4C51.5 2.3 43.5 0 32 0 9 0 0 9 0 32c0 11.5 2.3 19.5 7.4 24.6z" fill="#131d31"/><path d="M56.6 7.4 7.4 56.6" stroke="#fff" stroke-opacity=".14"/><path class="rz-c" d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="1.2"/><circle cx="15.5" cy="19.5" r="4.5" fill="#fff"/><circle cx="27.5" cy="19.5" r="4.5" fill="#fff"/><path d="M35 38l8 8-8 8" fill="none" stroke="#0b1220" stroke-opacity=".34" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M45 38l8 8-8 8" fill="none" stroke="#0b1220" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b><span class="oz">Öz</span>Sinyal</b><small>${e(S.kurs.ad)}</small></span></a>
+      <a class="logo" href="#/genel" aria-label="mdSinyal ana sayfa"><svg class="logo-isaret" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="#141e33"/><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="1.2"/><g fill="none" stroke="#ffc21a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20l12 12-12 12" stroke-opacity=".38"/><path d="M33 20l12 12-12 12"/></g></svg><span><b><span class="mk">md</span>Sinyal</b><small>${e(S.kurs.ad)}</small></span></a>
       <nav>${menu}</nav>
       ${(S.subeler || []).length > 1 && oturum.kullanici.rol !== 'usta' ? `<label class="sube-yan"><span>Şube</span><select data-sube aria-label="Şube">${['', ...S.subeler.map(x => x.id)].map(id => `<option value="${id}" ${gorunum.sube === id ? 'selected' : ''}>${id ? e(S.subeler.find(x => x.id === id).ad) : 'Tüm şubeler'}</option>`).join('')}</select></label>` : ''}
       <div class="yan-alt"><b>${e(oturum.kullanici.ad)}</b><span>${ROL_AD[oturum.kullanici.rol]}</span>${S.kurs.demoNumara ? `<span style="display:block;margin-top:4px;font-size:12px;opacity:.85">Mesajlar → ${e(S.kurs.demoNumara)}</span>` : ''}<button class="dg dg-cizgi dg-kucuk" style="margin-top:8px;width:100%;background:transparent;color:#fff;border-color:#fff" data-cikis>${oturum.kullanici.bulut ? 'Çıkış yap' : 'Kullanıcı değiştir'}</button></div>
@@ -148,7 +148,7 @@ export function yenile(kaydirma = false) {
   if (imzaLinki()) return imzaSayfasiAc();
   if (oturum.kullanici && oturum.kullanici.rol === 'ogrenci') return ogrenciCiz(kaydirma);
   if (!oturum.kullanici) { if (location.hash.startsWith('#/imza-geldi/')) try { sessionStorage.setItem('sinyal-bekleyen', location.hash); } catch (x) { } if (document.querySelector('.giris')) return; return girisEkrani(location.hash.startsWith('#/imza-geldi/') ? 'pin' : 'tanitim'); }
-  // ÖzSinyal Yönetim hesabı: kurs ekranları yok, yalnız gelir paylaşımı (yönetici girer, ortak görür)
+  // mdSinyal Yönetim hesabı: kurs ekranları yok, yalnız gelir paylaşımı (yönetici girer, ortak görür)
   if (oturum.kullanici.bulut && (ORT.yonetimModu() || oturum.kullanici.rol === 'ortak')) return yonetimCiz(kaydirma);
   if (location.hash === '#/yonetim-kur' && oturum.kullanici.bulut && oturum.kullanici.rol === 'mudur') return yonetimKurCiz();
   // başka cihazdan eksik alanla gelen sınav kaydı sayfaları çökertmesin
@@ -167,7 +167,7 @@ export function yenile(kaydirma = false) {
   catch (x) { console.error(x); s = { baslik: 'Bir şeyler ters gitti', html: '<div class="kart"><div class="bos"><b>Bu sayfa açılamadı</b><p>Sayfayı yenileyip tekrar deneyin. Sorun sürerse destek hattına yazın.</p><a class="dg dg-koyu" href="#/genel">Genel bakışa dön</a></div></div>' }; }
   document.getElementById('ust-baslik').textContent = s.baslik;
   document.getElementById('ust-alt').textContent = s.alt || bugunMetni();
-  document.title = sadeDil(s.baslik) + ' · ÖzSinyal';
+  document.title = sadeDil(s.baslik) + ' · mdSinyal';
   const kap = document.createElement('div');
   kap.className = 'sayfa sayfa-' + r.ad;
   kap.innerHTML = s.html;
@@ -251,7 +251,7 @@ const kodSor = () => new Promise(coz => {
   let bitti = false;
   pencere({
     baslik: 'Doğrulama kodu',
-    icerik: `<p style="font-size:14.5px">Telefonunuzdaki doğrulama uygulamasında (Google Authenticator, Microsoft Authenticator vb.) ÖzSinyal için görünen 6 haneli kodu girin.</p><input class="girdi" data-kod inputmode="numeric" maxlength="6" autocomplete="one-time-code" aria-label="Doğrulama kodu" style="font-size:22px;letter-spacing:6px;text-align:center;margin-top:12px;width:100%">`,
+    icerik: `<p style="font-size:14.5px">Telefonunuzdaki doğrulama uygulamasında (Google Authenticator, Microsoft Authenticator vb.) mdSinyal için görünen 6 haneli kodu girin.</p><input class="girdi" data-kod inputmode="numeric" maxlength="6" autocomplete="one-time-code" aria-label="Doğrulama kodu" style="font-size:22px;letter-spacing:6px;text-align:center;margin-top:12px;width:100%">`,
     altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-kod-tamam>Devam</button>',
     onAc(d) {
       const i = d.querySelector('[data-kod]'); i.focus();
@@ -273,7 +273,7 @@ function girisEkrani(mod = 'tanitim') {
   const kok0 = document.getElementById('uyg');
   if (mod === 'tanitim' && TANITIM) {
     if (!kok0.querySelector('#tanitim') || kok0.querySelector('#tanitim').hidden) kok0.innerHTML = TANITIM;
-    document.title = 'ÖzSinyal · Sürücü kursu yönetimi';
+    document.title = 'mdSinyal · Sürücü kursu yönetimi';
     const tn = kok0.querySelector('#tanitim'); tn.hidden = false; if (window.__vitrin) setTimeout(window.__vitrin, 0); if (tn.dataset.bagli) return; tn.dataset.bagli = '1';
     kok0.querySelectorAll('[data-demo]').forEach(b => b.addEventListener('click', demoyaGir));
     kok0.querySelectorAll('[data-giris]').forEach(b => b.addEventListener('click', () => { girisEkrani(b.dataset.giris || 'pin'); window.scrollTo(0, 0); }));
@@ -286,10 +286,10 @@ function girisEkrani(mod = 'tanitim') {
   if (mod === 'kursac') return kursAcEkrani();
   // öğretmen: kurs müdürünün davetiyle belirlediği e-posta ve şifreyle girer (aynı hesap sistemi, yalnız kendi ders ekranını görür)
   const ogt = mod === 'ogretmen';
-  document.title = (ogt ? 'Öğretmen girişi' : 'Giriş') + ' · ÖzSinyal';
+  document.title = (ogt ? 'Öğretmen girişi' : 'Giriş') + ' · mdSinyal';
   const kayitli = B.bulutKayitli();
   document.getElementById('uyg').innerHTML = `<div class="giris"><div class="giris-levha">
-    <div class="logo" style="border-bottom:0;margin:0 0 6px"><svg class="logo-isaret" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="#ffc21a"/><path d="M56.6 7.4C51.5 2.3 43.5 0 32 0 9 0 0 9 0 32c0 11.5 2.3 19.5 7.4 24.6z" fill="#131d31"/><path d="M56.6 7.4 7.4 56.6" stroke="#fff" stroke-opacity=".14"/><path class="rz-c" d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="1.2"/><circle cx="15.5" cy="19.5" r="4.5" fill="#fff"/><circle cx="27.5" cy="19.5" r="4.5" fill="#fff"/><path d="M35 38l8 8-8 8" fill="none" stroke="#0b1220" stroke-opacity=".34" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M45 38l8 8-8 8" fill="none" stroke="#0b1220" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b><span class="oz">Öz</span>Sinyal</b><small>Sürücü kursu yönetimi</small></span></div>
+    <div class="logo" style="border-bottom:0;margin:0 0 6px"><svg class="logo-isaret" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="#141e33"/><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="1.2"/><g fill="none" stroke="#ffc21a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20l12 12-12 12" stroke-opacity=".38"/><path d="M33 20l12 12-12 12"/></g></svg><span><b><span class="mk">md</span>Sinyal</b><small>Sürücü kursu yönetimi</small></span></div>
     
     <h1>${ogt ? 'Öğretmen girişi' : 'Kurs hesabınızla girin'}</h1><p>${ogt ? 'Kurs müdürünün WhatsApp’tan gönderdiği davetle belirlediğiniz e-posta ve şifreyle girin. Bugünkü dersleriniz, haftanız ve öğrencileriniz açılır. Davetiniz yoksa kurs müdürünüze yazın.' : 'Kurs müdürü, ön büro ve öğretmenler kendi e-postası ve şifresiyle girer; herkes yalnız kendi ekranlarını görür.'}</p>
     <form class="giris-eposta" novalidate><label>E-posta<input name="eposta" type="email" autocomplete="username" inputmode="email" required value="${e((kayitli && kayitli.eposta) || '')}"></label><label>Şifre<input name="sifre" type="password" autocomplete="current-password" required></label><button class="dg dg-koyu" type="submit">Giriş yap</button></form>
@@ -299,12 +299,12 @@ function girisEkrani(mod = 'tanitim') {
     <p class="giris-not" style="margin:8px 0 10px">Demo kursun kullanıcıları. Gerçek kurs hesabında PIN yerine e-posta ve şifre kullanılır.</p>
     <div class="giris-kisiler">${S.kullanicilar.map(u => `<button class="giris-kisi" data-kim="${u.id}"><b>${e(u.ad)}</b><small>${ROL_AD[u.rol]}</small></button>`).join('')}</div>
     <form class="giris-pin" hidden><label for="pin">PIN</label><input id="pin" inputmode="numeric" maxlength="4" autocomplete="one-time-code" placeholder="••••"><button class="dg dg-koyu" type="submit">Giriş</button></form>
-    </details></div><button class="giris-geri" data-tanitim type="button">← ÖzSinyal nedir?</button></div>`;
+    </details></div><button class="giris-geri" data-tanitim type="button">← mdSinyal nedir?</button></div>`;
   let secilen = null;
   const kok = document.getElementById('uyg');
   const dm = kok.querySelector('[data-demo]'); if (dm) dm.addEventListener('click', demoyaGir);
   kok.querySelector('[data-tanitim]').addEventListener('click', () => { girisEkrani('tanitim'); window.scrollTo(0, 0); });
-  const ka = kok.querySelector('[data-kurs-ac]'); if (ka) ka.addEventListener('click', () => pencere({ baslik: 'Kurs hesabı nasıl açılır?', icerik: '<p style="font-size:14.5px">ÖzSinyal hesabı kurulumla birlikte açılır: kayıtlarınızı taşırız, ekibinize kısa bir eğitim veririz. Görüşmek için <b>Servet Sakar · 0501 363 65 36</b> (telefon ve WhatsApp). Size özel hesap açma linki gönderilir.</p>', altlik: '<button class="dg dg-ana" data-kapat>Tamam</button>' }));
+  const ka = kok.querySelector('[data-kurs-ac]'); if (ka) ka.addEventListener('click', () => pencere({ baslik: 'Kurs hesabı nasıl açılır?', icerik: '<p style="font-size:14.5px">mdSinyal hesabı kurulumla birlikte açılır: kayıtlarınızı taşırız, ekibinize kısa bir eğitim veririz. Görüşmek için <b>Servet Sakar · 0501 363 65 36</b> (telefon ve WhatsApp). Size özel hesap açma linki gönderilir.</p>', altlik: '<button class="dg dg-ana" data-kapat>Tamam</button>' }));
   const gp = kok.querySelector('[data-giris-pin]'); if (gp) gp.addEventListener('click', () => { girisEkrani('pin'); window.scrollTo(0, 0); });
   kok.querySelector('[data-ogrenci-giris]').addEventListener('click', () => { location.hash = '#/ogrenci-giris'; ogrenciGirisEkrani(); });
   kok.querySelector('[data-sifre-unut]').addEventListener('click', () => {
@@ -339,13 +339,13 @@ function girisEkrani(mod = 'tanitim') {
   });
 }
 function sessionStorageAl(k) { try { return sessionStorage.getItem(k); } catch (x) { return null; } }
-const LOGO = `<div class="logo" style="border-bottom:0;margin:0 0 6px"><svg class="logo-isaret" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="#ffc21a"/><path d="M56.6 7.4C51.5 2.3 43.5 0 32 0 9 0 0 9 0 32c0 11.5 2.3 19.5 7.4 24.6z" fill="#131d31"/><path d="M56.6 7.4 7.4 56.6" stroke="#fff" stroke-opacity=".14"/><path class="rz-c" d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="1.2"/><circle cx="15.5" cy="19.5" r="4.5" fill="#fff"/><circle cx="27.5" cy="19.5" r="4.5" fill="#fff"/><path d="M35 38l8 8-8 8" fill="none" stroke="#0b1220" stroke-opacity=".34" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M45 38l8 8-8 8" fill="none" stroke="#0b1220" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b><span class="oz">Öz</span>Sinyal</b><small>Sürücü kursu otomasyonu</small></span></div>`;
+const LOGO = `<div class="logo" style="border-bottom:0;margin:0 0 6px"><svg class="logo-isaret" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="#141e33"/><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="1.2"/><g fill="none" stroke="#ffc21a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20l12 12-12 12" stroke-opacity=".38"/><path d="M33 20l12 12-12 12"/></g></svg><span><b><span class="mk">md</span>Sinyal</b><small>Sürücü kursu otomasyonu</small></span></div>`;
 const IPUCLARI = ['Yaya geçidinde öncelik her zaman yayanındır.', 'Sarı ışık “dur”a hazırlan demektir, hızlan demek değildir.', 'Öndeki araçla aranda en az 2 saniyelik mesafe bırak.', 'Emniyet kemeri arka koltukta da takılır.', 'Şerit değiştirmeden önce sinyal ver, aynaya ve kör noktana bak.', 'Yağmurda takip mesafesini iki katına çıkar.', 'Kavşağa girmeden önce hızını düşür, sağdan gelene yol ver.'];
 let ipucuSayac = null;
 // Yükleme ekranı: trafik ışığında bekleyen kurs arabası; altında birkaç saniyede bir değişen kısa trafik ipucu
 function bekleEkrani(metin) {
   let n = 0;
-  document.getElementById('uyg').innerHTML = `<div class="yukleme" role="status" aria-live="polite"><div class="yk-gokbulut b1" aria-hidden="true"></div><div class="yk-gokbulut b2" aria-hidden="true"></div><div class="yk-ust"><div class="yk-marka"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="#ffc21a"/><path d="M56.6 7.4C51.5 2.3 43.5 0 32 0 9 0 0 9 0 32c0 11.5 2.3 19.5 7.4 24.6z" fill="#131d31"/><path d="M56.6 7.4 7.4 56.6" stroke="#fff" stroke-opacity=".14"/><path class="rz-c" d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="1.2"/><circle cx="15.5" cy="19.5" r="4.5" fill="#fff"/><circle cx="27.5" cy="19.5" r="4.5" fill="#fff"/><path d="M35 38l8 8-8 8" fill="none" stroke="#0b1220" stroke-opacity=".34" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M45 38l8 8-8 8" fill="none" stroke="#0b1220" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span><span class="oz">Öz</span>Sinyal</span></div><p class="yk-baslik">${e(String(metin).replace(/…$/, ''))}</p><p class="yk-alt">İlk açılışta birkaç saniye sürebilir</p><div class="yk-cubuk" aria-hidden="true"><i></i></div><div class="yukle-ipucu" aria-live="off"><svg viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="9" fill="#1f5fbf"/><path d="M15 6.5 23 21.5H7Z" fill="#fff"/><circle cx="15" cy="12.4" r="1.4" fill="#0b2546"/><path d="M14.8 14.2l-.7 3.6m.7-3.6 2 2.4m-2-2.4-1.8 1.7m1.1 1.9-1.6 2m1.6-2 1.8 1.8" stroke="#0b2546" stroke-width="1.05" stroke-linecap="round"/></svg><div><i>Biliyor muydun?</i><span>${e(IPUCLARI[n])}</span></div></div></div><div class="yukle-sahne" data-yk></div></div>`;
+  document.getElementById('uyg').innerHTML = `<div class="yukleme" role="status" aria-live="polite"><div class="yk-gokbulut b1" aria-hidden="true"></div><div class="yk-gokbulut b2" aria-hidden="true"></div><div class="yk-ust"><div class="yk-marka"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="#141e33"/><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="1.2"/><g fill="none" stroke="#ffc21a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20l12 12-12 12" stroke-opacity=".38"/><path d="M33 20l12 12-12 12"/></g></svg><span><span class="mk">md</span>Sinyal</span></div><p class="yk-baslik">${e(String(metin).replace(/…$/, ''))}</p><p class="yk-alt">İlk açılışta birkaç saniye sürebilir</p><div class="yk-cubuk" aria-hidden="true"><i></i></div><div class="yukle-ipucu" aria-live="off"><svg viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="9" fill="#1f5fbf"/><path d="M15 6.5 23 21.5H7Z" fill="#fff"/><circle cx="15" cy="12.4" r="1.4" fill="#0b2546"/><path d="M14.8 14.2l-.7 3.6m.7-3.6 2 2.4m-2-2.4-1.8 1.7m1.1 1.9-1.6 2m1.6-2 1.8 1.8" stroke="#0b2546" stroke-width="1.05" stroke-linecap="round"/></svg><div><i>Biliyor muydun?</i><span>${e(IPUCLARI[n])}</span></div></div></div><div class="yukle-sahne" data-yk></div></div>`;
   const sahne = document.querySelector('#uyg [data-yk]'); if (sahne && window.sinyalYukleme) window.sinyalYukleme(sahne);
   clearInterval(ipucuSayac);
   ipucuSayac = setInterval(() => { const p = document.querySelector('.yukle-ipucu'); if (!p) return clearInterval(ipucuSayac); p.style.opacity = 0; setTimeout(() => { n = (n + 1) % IPUCLARI.length; p.querySelector('span').textContent = IPUCLARI[n]; p.style.opacity = 1; }, 350); }, 3600);
@@ -359,14 +359,14 @@ function bulutOturumu(u, yeniGiris) {
   sonHareket = Date.now(); sonYazim = 0; hareketYaz();
   let bekleyen = null; try { bekleyen = sessionStorage.getItem('sinyal-bekleyen'); sessionStorage.removeItem('sinyal-bekleyen'); } catch (x) { }
   if (yonetimIstendi && !ORT.yonetimModu() && u.rol !== 'ortak') {
-    document.getElementById('uyg').innerHTML = ogrKap(`<div class="og-giris-bas"><h1>ÖzSinyal Yönetim</h1><p>Bu tarayıcıda bir kurs hesabı açık (${e(u.ad)}). ÖzSinyal Yönetim'e girmek için önce bu hesaptan çık.</p></div><button class="dg dg-ana og-giris-dg" data-yon-cik>Çıkış yap ve ÖzSinyal Yönetim'e gir</button><a class="dg dg-hafif og-giris-dg" href="#/genel" data-yon-don style="margin-top:10px">Kurs hesabıma dön</a>`);
+    document.getElementById('uyg').innerHTML = ogrKap(`<div class="og-giris-bas"><h1>mdSinyal Yönetim</h1><p>Bu tarayıcıda bir kurs hesabı açık (${e(u.ad)}). mdSinyal Yönetim'e girmek için önce bu hesaptan çık.</p></div><button class="dg dg-ana og-giris-dg" data-yon-cik>Çıkış yap ve mdSinyal Yönetim'e gir</button><a class="dg dg-hafif og-giris-dg" href="#/genel" data-yon-don style="margin-top:10px">Kurs hesabıma dön</a>`);
     const k = document.getElementById('uyg');
     k.querySelector('[data-yon-cik]').addEventListener('click', () => { islem('Çıkış yaptı'); kaydet(); B.cikisYap().then(() => { try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } location.hash = '#/yonetim'; location.reload(); }); });
     k.querySelector('[data-yon-don]').addEventListener('click', ev => { ev.preventDefault(); location.hash = '#/genel'; location.reload(); });
     return;
   }
   if (!ORT.yonetimModu()) iskelet(); B.durumYaz();
-  // ÖzSinyal ekibi (yönetici) hesabı: Ayarlar › Diğer'de kurs hesabı açma linki oluşturur
+  // mdSinyal ekibi (yönetici) hesabı: Ayarlar › Diğer'de kurs hesabı açma linki oluşturur
   B.yoneticiMi().then(y => { if (y && !B.bulut.yonetici) { B.bulut.yonetici = true; yenile(); } }).catch(() => { });
   const h = location.hash.slice(2).split('/')[0];
   if (bekleyen) location.hash = bekleyen; else if (!SAYFALAR[h] || h === 'davet' || yeniGiris) location.hash = u.rol === 'usta' ? '#/egitmen' : '#/genel';
@@ -380,7 +380,7 @@ B.bulutYenileDinle(() => {
 });
 let bekleyenYenile = false;
 setInterval(() => { if (!bekleyenYenile || !oturum.kullanici) return; const a = document.activeElement; if (document.querySelector('.pencere-arka, .pencere') || (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) return; bekleyenYenile = false; yenile(); }, 1500);
-// Hesap açma linki: #/yeni-kurs/<kod> (ÖzSinyal ekibinin verdiği tek kullanımlık kod)
+// Hesap açma linki: #/yeni-kurs/<kod> (mdSinyal ekibinin verdiği tek kullanımlık kod)
 const kursDavetYolu = () => { const m = location.hash.match(/^#\/yeni-kurs\/([a-z0-9]+)$/); return m ? m[1] : null; };
 async function kursDavetEkrani() {
   const kod = kursDavetYolu(); bekleEkrani('Hesap açma linki kontrol ediliyor…');
@@ -390,17 +390,17 @@ async function kursDavetEkrani() {
 }
 function kursAcEkrani(davetKod) {
   if (!davetKod) return girisEkrani('pin');
-  document.title = 'Yeni kurs hesabı · ÖzSinyal';
+  document.title = 'Yeni kurs hesabı · mdSinyal';
   document.getElementById('uyg').innerHTML = `<div class="giris"><div class="giris-levha">${LOGO}
     <h1>Yeni kurs hesabı</h1><p>Kursunuzun verileri boş bir hesapla başlar. Öğrenci listenizi sonra Excel’den aktarabilirsiniz.</p>
     <form class="giris-eposta" novalidate>
-      <label>Kursun adı<input name="kurs" required placeholder="Örn. Sinyal Sürücü Kursu" autocomplete="organization"></label>
+      <label>Kursun adı<input name="kurs" required placeholder="Örn. Örnek Sürücü Kursu" autocomplete="organization"></label>
       <label>Şehir<input name="sehir" autocomplete="address-level1"></label>
       <label>Adınız soyadınız<input name="ad" required autocomplete="name"></label>
       <label>Cep telefonunuz <small style="font-weight:400;opacity:.85">yeni kayıt, iptal ve günlük özet WhatsApp’tan buraya gelir</small><input name="tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="05xx xxx xx xx"></label>
       <label>E-posta<input name="eposta" type="email" inputmode="email" autocomplete="username" required></label>
       <label>Şifre (en az 8 karakter)<input name="sifre" type="password" autocomplete="new-password" required minlength="8"></label>
-      <label class="giris-onay"><input type="checkbox" name="onay"><span><a href="gizlilik.html" target="_blank" rel="noopener" style="color:inherit;font-weight:700;text-decoration:underline">Gizlilik ve veri işleme şartlarını</a> okudum: kursum veri sorumlusu, Sinyal veri işleyendir; veriler Google (Frankfurt, Almanya), Cloudflare ve Meta (WhatsApp) altyapısında işlenir.</span></label>
+      <label class="giris-onay"><input type="checkbox" name="onay"><span><a href="gizlilik.html" target="_blank" rel="noopener" style="color:inherit;font-weight:700;text-decoration:underline">Gizlilik ve veri işleme şartlarını</a> okudum: kursum veri sorumlusu, mdSinyal veri işleyendir; veriler Google (Frankfurt, Almanya), Cloudflare ve Meta (WhatsApp) altyapısında işlenir.</span></label>
       <button class="dg dg-koyu" type="submit">Kurs hesabını aç</button></form>
     <p class="giris-baglar"><button type="button" data-geri>← Giriş ekranına dön</button></p></div></div>`;
   const kok = document.getElementById('uyg');
@@ -441,16 +441,16 @@ function yardimAc(kok, { kim, tur, eposta, tel }) {
 function gozBagla(kok) {
   kok.addEventListener('click', ev => { const b = ev.target.closest('[data-goz]'); if (!b) return; const i = b.parentElement.querySelector('input'), ac = i.type === 'password'; i.type = ac ? 'text' : 'password'; b.setAttribute('aria-pressed', ac); b.setAttribute('aria-label', ac ? 'Şifreyi gizle' : 'Şifreyi göster'); b.classList.toggle('acik', ac); });
 }
-// ÖzSinyal Yönetim alt linki: #/yonetim (giriş) ve #/yonetim/kur/<davet kodu> (tek seferlik hesap oluşturma + kurulum)
+// mdSinyal Yönetim alt linki: #/yonetim (giriş) ve #/yonetim/kur/<davet kodu> (tek seferlik hesap oluşturma + kurulum)
 const yonetimGirisYolu = () => location.hash === '#/yonetim';
 const yonetimKurYolu = () => { const m = location.hash.match(/^#\/yonetim\/kur\/([a-z0-9]+)$/); return m ? m[1] : null; };
 // kullanıcı adı girişte e-postaya çevrilir: hiçbir yere ulaşmayan ayrılmış alan adı (.invalid); e-posta yazılırsa olduğu gibi kullanılır
 const yonetimEposta = v => { v = String(v || '').trim(); return v.includes('@') ? v : v.toLocaleLowerCase('tr').replace(/[^a-z0-9._-]/g, '') + '@yonetim.sinyal.invalid'; };
 function yonetimGirisEkrani(not) {
   B.sdkHazirla();
-  document.body.classList.remove('portal-modu'); document.title = 'ÖzSinyal Yönetim · Giriş';
+  document.body.classList.remove('portal-modu'); document.title = 'mdSinyal Yönetim · Giriş';
   const kok = document.getElementById('uyg');
-  kok.innerHTML = ogrKap(`<div class="og-giris-bas"><h1>ÖzSinyal Yönetim</h1><p>Kurslar, gelir-gider ve ortaklık. Yalnız yetkili kişiler girebilir.</p></div>
+  kok.innerHTML = ogrKap(`<div class="og-giris-bas"><h1>mdSinyal Yönetim</h1><p>Kurslar, gelir-gider ve ortaklık. Yalnız yetkili kişiler girebilir.</p></div>
     ${not ? `<p class="og-giris-not">${ik('uyari')}<span>${not}</span></p>` : ''}
     <form novalidate class="og-giris-form">${ogrAlan('kad', 'E-posta', 'text', 'kursiyer', 'autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required')}${ogrAlan('sifre', 'Şifre', 'password', 'kilit', 'autocomplete="current-password" required')}
     <button type="button" class="og-bag og-unut" data-unut>Şifremi unuttum</button>
@@ -478,11 +478,11 @@ function yonetimGirisEkrani(not) {
 async function yonetimHesapEkrani(kod) {
   bekleEkrani('Hesap açma linki kontrol ediliyor…');
   let dv = null; try { dv = await B.kursDavetGetir(kod); } catch (x) { }
-  document.body.classList.remove('portal-modu'); document.title = 'ÖzSinyal Yönetim hesabı';
+  document.body.classList.remove('portal-modu'); document.title = 'mdSinyal Yönetim hesabı';
   const kok = document.getElementById('uyg');
-  if (!dv) { kok.innerHTML = ogrKap(`<div class="og-giris-bas"><h1>Bu link geçersiz</h1><p>Hesap açma linkinin süresi dolmuş ya da daha önce kullanılmış.</p></div><a class="dg dg-ana og-giris-dg" href="#/yonetim">ÖzSinyal Yönetim girişine git</a>`); return; }
+  if (!dv) { kok.innerHTML = ogrKap(`<div class="og-giris-bas"><h1>Bu link geçersiz</h1><p>Hesap açma linkinin süresi dolmuş ya da daha önce kullanılmış.</p></div><a class="dg dg-ana og-giris-dg" href="#/yonetim">mdSinyal Yönetim girişine git</a>`); return; }
   const alan = (ad, et, ek) => `<label class="og-alan"><span class="og-alan-et">${et}</span><span class="og-girdi"><input name="${ad}" ${ek}></span></label>`;
-  kok.innerHTML = ogrKap(`<div class="og-giris-bas"><h1>ÖzSinyal Yönetim hesabı</h1><p>Bir kez yapılır. Sonra her seferinde <b>sinyal/#/yonetim</b> adresinden e-postan ve şifrenle girersin.</p></div>
+  kok.innerHTML = ogrKap(`<div class="og-giris-bas"><h1>mdSinyal Yönetim hesabı</h1><p>Bir kez yapılır. Sonra her seferinde <b>sinyal/#/yonetim</b> adresinden e-postan ve şifrenle girersin.</p></div>
     <form novalidate class="og-giris-form" id="f-yh">${ogrAlan('kad', 'E-posta adresin', 'email', 'kursiyer', 'placeholder="ornek@gmail.com" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required')}${ogrAlan('ad', 'Adın soyadın', 'text', 'kursiyer', 'value="Servet Sakar" autocomplete="name" required')}
       <details class="yh-ortak"><summary>Ortaklık bilgileri <small>sözleşmeye göre dolu; gerekirse düzelt</small></summary>
         ${alan('oad', 'Ortağın adı soyadı', 'value="Eyüp Çağlar"')}${alan('oran', 'Gelir payı (%)', 'inputmode="numeric" value="40"')}${alan('bas', 'Sözleşme tarihi', 'type="date" value="2026-11-10"')}${alan('bt', 'Borcun aktarıldığı tarih (son gün bundan 6 ay sonra)', 'type="date" value="2026-11-10"')}${alan('anapara', 'Anapara (₺)', 'inputmode="numeric" value="50.000"')}${alan('iade', 'Yeni satış başına anapara iadesi (₺)', 'inputmode="numeric" value="2.000"')}
@@ -499,11 +499,11 @@ async function yonetimHesapEkrani(kod) {
     const oran = +String(f.oran.value).replace(/\D/g, '') || 40, para = v => Math.round(parseFloat(String(v).replace(/\./g, '').replace(',', '.')) || 0);
     btn.disabled = true; btn.textContent = 'Hesap oluşturuluyor…';
     try {
-      const u = await B.kursAc({ kursAd: 'ÖzSinyal Yönetim', yetkili: f.ad.value.trim(), sehir: '', eposta: yonetimEposta(kad), sifre: B.geciciSifre() + B.geciciSifre() + 'Aa9', mudurTel: '', davetKod: kod });
+      const u = await B.kursAc({ kursAd: 'mdSinyal Yönetim', yetkili: f.ad.value.trim(), sehir: '', eposta: yonetimEposta(kad), sifre: B.geciciSifre() + B.geciciSifre() + 'Aa9', mudurTel: '', davetKod: kod });
       // sunucudan ilk görüntü gelmeden kurs ayarı yazılmaz; en çok 10 sn beklenir
       for (let i = 0; i < 50 && !B.sunucuHazir(); i++) await new Promise(r => setTimeout(r, 200));
       ORT.isletmeKur({ ad: f.oad.value.trim() || 'Ortak', oran, baslangic: f.bas.value, anapara: para(f.anapara.value), borcTarih: f.bt.value, satisIade: para(f.iade.value) });
-      S.kurs.tur = 'yonetim'; S.kurs.ad = 'ÖzSinyal Yönetim'; kaydet();
+      S.kurs.tur = 'yonetim'; S.kurs.ad = 'mdSinyal Yönetim'; kaydet();
       history.replaceState(null, '', '#/yonetim');
       bulutOturumu(u, true);
       // şifreyi kişi kendisi e-postadaki linkten koyar (Türkçe Firebase e-postası)
@@ -513,7 +513,7 @@ async function yonetimHesapEkrani(kod) {
 }
 function ogrenciGirisEkrani(not) {
   B.sdkHazirla();
-  document.body.classList.remove('portal-modu'); document.title = 'Öğrenci girişi · ÖzSinyal';
+  document.body.classList.remove('portal-modu'); document.title = 'Öğrenci girişi · mdSinyal';
   const kok = document.getElementById('uyg');
   kok.innerHTML = ogrKap(`<div class="og-giris-bas"><h1>Öğrenci girişi</h1><p>Derslerin, ödemelerin ve sınavların tek ekranda.</p></div>
     ${not ? `<p class="og-giris-not">${ik('uyari')}<span>${e(not)}</span></p>` : ''}
@@ -586,14 +586,14 @@ function ogrenciCiz(kaydir) {
   if (s.baglan) { try { s.baglan(kap); } catch (x) { console.error(x); } }
   if (kaydir) window.scrollTo(0, 0);
 }
-// ÖzSinyal Yönetim kabuğu: menü yok; üstte hesap adı, kullanıcı ve çıkış
+// mdSinyal Yönetim kabuğu: menü yok; üstte hesap adı, kullanıcı ve çıkış
 function yonetimCiz(kaydir) {
   const kok = document.getElementById('uyg'), u = oturum.kullanici;
   // uygulama kabuğu: öğrenci ve öğretmen ekranlarıyla aynı üst çubuk; çıkış profil düğmesinin alttan açılan sayfasında
-  if (!kok.querySelector('.ort-kabuk')) kok.innerHTML = `<div class="ort-kabuk"><header class="app-ust">${APP_LOGO}<span class="app-ust-ad"><b>ÖzSinyal Yönetim</b><span id="bulut-durum" class="bulut-durum" role="status"></span></span><button type="button" class="app-profil" data-hesap aria-label="Hesabım: ${e(u.ad)}">${basHarf(u.ad)}</button></header><main class="ort-ana" id="icerik"></main></div>`;
+  if (!kok.querySelector('.ort-kabuk')) kok.innerHTML = `<div class="ort-kabuk"><header class="app-ust">${APP_LOGO}<span class="app-ust-ad"><b>mdSinyal Yönetim</b><span id="bulut-durum" class="bulut-durum" role="status"></span></span><button type="button" class="app-profil" data-hesap aria-label="Hesabım: ${e(u.ad)}">${basHarf(u.ad)}</button></header><main class="ort-ana" id="icerik"></main></div>`;
   document.body.classList.add('portal-modu', 'hero-acik'); document.body.classList.remove('hero-gunduz');
   { const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = '#0b1830'; }
-  document.title = 'ÖzSinyal Yönetim';
+  document.title = 'mdSinyal Yönetim';
   const yer = document.getElementById('icerik'), kap = document.createElement('div');
   kap.className = 'sayfa sayfa-yonetim';
   if (!ORT.yonetimModu()) kap.innerHTML = `<div class="kart"><div class="bos"><b>Bu hesap henüz kurulmadı</b><p>Servet Sakar hesabı kurduğunda gelir paylaşımı burada görünür.</p></div></div>`;
@@ -605,15 +605,15 @@ function yonetimCiz(kaydir) {
   B.durumYaz();
   if (kaydir) window.scrollTo(0, 0);
 }
-// Yeni ve boş bir hesabı bir kez ÖzSinyal Yönetim hesabına çevirme ekranı (#/yonetim-kur)
+// Yeni ve boş bir hesabı bir kez mdSinyal Yönetim hesabına çevirme ekranı (#/yonetim-kur)
 function yonetimKurCiz() {
   if (!document.getElementById('icerik')) iskelet();
   const yer = document.getElementById('icerik'), kap = document.createElement('div');
   kap.className = 'sayfa sayfa-yonetim-kur';
-  kap.innerHTML = ORT.kurulabilir() ? ORT.kurulumHtml() : `<div class="kart"><div class="bos"><b>Bu hesapta kurs kayıtları var</b><p>ÖzSinyal Yönetim için ayrı bir e-postayla yeni ve boş bir hesap açın.</p></div></div>`;
+  kap.innerHTML = ORT.kurulabilir() ? ORT.kurulumHtml() : `<div class="kart"><div class="bos"><b>Bu hesapta kurs kayıtları var</b><p>mdSinyal Yönetim için ayrı bir e-postayla yeni ve boş bir hesap açın.</p></div></div>`;
   yer.replaceChildren(kap);
-  document.getElementById('ust-baslik').textContent = 'ÖzSinyal Yönetim';
-  document.title = 'ÖzSinyal Yönetim kurulumu';
+  document.getElementById('ust-baslik').textContent = 'mdSinyal Yönetim';
+  document.title = 'mdSinyal Yönetim kurulumu';
   ORT.kurulumBaglan(kap, () => { location.hash = ''; location.reload(); });
 }
 // Davet linki: #/davet/<kurs>/<kod>
@@ -625,18 +625,18 @@ async function davetEkrani() {
   const kok = document.getElementById('uyg');
   if (!dv) { kok.innerHTML = `<div class="giris"><div class="giris-levha">${LOGO}<h1>Bu davet geçersiz</h1><p>Linkin süresi dolmuş ya da daha önce kullanılmış. Kurs müdüründen yeni bir davet linki isteyin.</p><p class="giris-baglar"><button type="button" data-geri>Giriş ekranına git</button></p></div></div>`; kok.querySelector('[data-geri]').addEventListener('click', () => { location.hash = ''; girisEkrani('pin'); }); return; }
   const ROL_T = { mudur: 'kurs müdürü', sekreter: 'ön büro çalışanı', usta: 'öğretmen', ortak: 'ortak (yalnız görüntüleme)' };
-  document.title = 'Davet · ÖzSinyal';
+  document.title = 'Davet · mdSinyal';
   kok.innerHTML = `<div class="giris"><div class="giris-levha">${LOGO}
-    <h1>${e(dv.kursAd)}</h1><p>${e(dv.davetEden || 'Kurs müdürü')} sizi ÖzSinyal’e ${ROL_T[dv.rol] || dv.rol} olarak davet etti. Kendi e-postanız ve şifrenizle hesabınızı açın.</p>
+    <h1>${e(dv.kursAd)}</h1><p>${e(dv.davetEden || 'Kurs müdürü')} sizi mdSinyal’e ${ROL_T[dv.rol] || dv.rol} olarak davet etti. Kendi e-postanız ve şifrenizle hesabınızı açın.</p>
     <form class="giris-eposta" novalidate>
       <label data-yeni>Adınız soyadınız<input name="ad" value="${e(dv.ad)}" autocomplete="name"></label>
       <label>E-posta<input name="eposta" type="email" inputmode="email" autocomplete="username" required></label>
       <label><span data-sifre-et>Şifre belirleyin (en az 8 karakter)</span><input name="sifre" type="password" autocomplete="new-password" required></label>
       <button class="dg dg-koyu" type="submit">Hesabımı aç ve katıl</button></form>
-    <p class="giris-baglar"><button type="button" data-mevcut>Zaten ÖzSinyal hesabım var</button></p></div></div>`;
+    <p class="giris-baglar"><button type="button" data-mevcut>Zaten mdSinyal hesabım var</button></p></div></div>`;
   let yeni = true;
   const f = kok.querySelector('form'), btn = f.querySelector('[type=submit]');
-  kok.querySelector('[data-mevcut]').addEventListener('click', ev => { yeni = !yeni; kok.querySelector('[data-yeni]').hidden = !yeni; kok.querySelector('[data-sifre-et]').textContent = yeni ? 'Şifre belirleyin (en az 8 karakter)' : 'Şifre'; f.sifre.autocomplete = yeni ? 'new-password' : 'current-password'; btn.textContent = yeni ? 'Hesabımı aç ve katıl' : 'Giriş yap ve katıl'; ev.target.textContent = yeni ? 'Zaten ÖzSinyal hesabım var' : 'Yeni hesap açacağım'; });
+  kok.querySelector('[data-mevcut]').addEventListener('click', ev => { yeni = !yeni; kok.querySelector('[data-yeni]').hidden = !yeni; kok.querySelector('[data-sifre-et]').textContent = yeni ? 'Şifre belirleyin (en az 8 karakter)' : 'Şifre'; f.sifre.autocomplete = yeni ? 'new-password' : 'current-password'; btn.textContent = yeni ? 'Hesabımı aç ve katıl' : 'Giriş yap ve katıl'; ev.target.textContent = yeni ? 'Zaten mdSinyal hesabım var' : 'Yeni hesap açacağım'; });
   f.addEventListener('submit', ev => {
     ev.preventDefault();
     if (yeni && f.ad.value.trim().length < 3) return bildir('Adınızı ve soyadınızı yazın', 'uyari');

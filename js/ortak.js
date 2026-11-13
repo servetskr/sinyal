@@ -1,12 +1,12 @@
-// ÖzSinyal Yönetim: ÖzSinyal'in kendi gelir paylaşımı (satış ortağına %40 pay, borç ve anapara iadesi).
+// mdSinyal Yönetim: mdSinyal'in kendi gelir paylaşımı (satış ortağına %40 pay, borç ve anapara iadesi).
 // Kurs hesaplarından ayrı bir hesapta çalışır (S.kurs.tur === 'yonetim'); kurs ekranları açılmaz.
 // Üyeler: yönetici (müdür rolü, her şeyi girer) ve ortak (kendi e-posta ve şifresiyle girer, yalnız görür).
 // Kursiyer bilgisi yoktur: yalnız müşteri kurs adı, tahsilat, pay ve ödemeler.
-import { S, kaydet, gun, fark, tarihOku, iso, ayEkle, kapaliGun, islem, geriAlNoktasi } from './veri.js?v=183';
-import { e, ik, rozet, pencere, kapatPencere, bildir, tarih, tarihUzun, ayAdi, olcumler, belgeYazdir, fotoKucult, csvIndir, gunKisa } from './ui.js?v=183';
-import * as B from './bulut.js?v=183';
+import { S, kaydet, gun, fark, tarihOku, iso, ayEkle, kapaliGun, islem, geriAlNoktasi } from './veri.js?v=184';
+import { e, ik, rozet, pencere, kapatPencere, bildir, tarih, tarihUzun, ayAdi, olcumler, belgeYazdir, fotoKucult, csvIndir, gunKisa } from './ui.js?v=184';
+import * as B from './bulut.js?v=184';
 
-export const TURLER = ['İlk yıllık abonelik', 'Aylık abonelik', 'Abonelik yenileme', 'Ek şube', 'Kurulum', 'Eğitim', 'Destek', 'Ücretli modül', 'Diğer ÖzSinyal hizmeti'];
+export const TURLER = ['İlk yıllık abonelik', 'Aylık abonelik', 'Abonelik yenileme', 'Ek şube', 'Kurulum', 'Eğitim', 'Destek', 'Ücretli modül', 'Diğer mdSinyal hizmeti'];
 const PARA = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 export const para = n => PARA.format(Math.round((n || 0) * 100) / 100) + ' ₺';
 const yuvarla = n => Math.round(n * 100) / 100;
@@ -110,7 +110,7 @@ export function ayarHtml() {
     <div class="ara-bosluk"></div>
     <div class="ort-yigin">
       <div class="kart"><div class="kart-bas"><h3>Tahsilatlar</h3><small>KDV hariç, kursun fiilen ödediği</small><div class="sag"><button class="dg dg-ana dg-kucuk" data-ort-tahsilat ${(v.musteriler || []).length ? '' : 'disabled title="Önce müşteri ekleyin"'}>${ik('arti')}Tahsilat</button></div></div><div class="kart-govde">${tahsilatHtml(v, h, true)}</div></div>
-      <div class="kart"><div class="kart-bas"><h3>Müşteri kurslar</h3><small>ÖzSinyal kullanan ve ödeyen kurslar</small><div class="sag"><button class="dg dg-cizgi dg-kucuk" data-ort-musteri-ekle>${ik('arti')}Müşteri</button></div></div><div class="kart-govde">${musteriHtml(v, true)}</div></div>
+      <div class="kart"><div class="kart-bas"><h3>Müşteri kurslar</h3><small>mdSinyal kullanan ve ödeyen kurslar</small><div class="sag"><button class="dg dg-cizgi dg-kucuk" data-ort-musteri-ekle>${ik('arti')}Müşteri</button></div></div><div class="kart-govde">${musteriHtml(v, true)}</div></div>
     </div>
     <div class="ara-bosluk"></div>
     <div class="izgara iz-2">
@@ -125,9 +125,9 @@ export function ayarBaglan(k, yenile) {
     const t = ev.target, v = S.isletme;
     if (!t.closest('.ort')) return;
     const ay = t.closest('[data-ort-ay]'); if (ay && ay.dataset.ortAy) { secAy = ay.dataset.ortAy; return yenile(); }
-    if (t.closest('[data-ort-pdf]')) return belgeYazdir(dokumBelgesi(v, secAy), 'ÖzSinyal gelir paylaşımı · ' + ayAd(secAy));
+    if (t.closest('[data-ort-pdf]')) return belgeYazdir(dokumBelgesi(v, secAy), 'mdSinyal gelir paylaşımı · ' + ayAd(secAy));
     if (t.closest('[data-ort-davet]')) return davetPenceresi();
-    const uc = t.closest('[data-ort-uye-cikar]'); if (uc) return silOnay('Bu kişinin ÖzSinyal Yönetim hesabına erişimi kaldırılsın mı? Kayıtlar silinmez; isterseniz yeniden davet edebilirsiniz.', () => B.uyeCikar(uc.dataset.ortUyeCikar).then(() => { islem('ÖzSinyal Yönetim: ortağın erişimini kaldırdı'); kaydet(); yenile(); }).catch(x => bildir(B.hataMetni(x), 'uyari')));
+    const uc = t.closest('[data-ort-uye-cikar]'); if (uc) return silOnay('Bu kişinin mdSinyal Yönetim hesabına erişimi kaldırılsın mı? Kayıtlar silinmez; isterseniz yeniden davet edebilirsiniz.', () => B.uyeCikar(uc.dataset.ortUyeCikar).then(() => { islem('mdSinyal Yönetim: ortağın erişimini kaldırdı'); kaydet(); yenile(); }).catch(x => bildir(B.hataMetni(x), 'uyari')));
     if (t.closest('[data-ort-musteri-ekle]')) return musteriPenceresi(null, yenile);
     const mu = t.closest('[data-ort-musteri]'); if (mu) return musteriPenceresi((v.musteriler || []).find(m => m.id === mu.dataset.ortMusteri), yenile);
     if (t.closest('[data-ort-tahsilat]')) return tahsilatPenceresi(yenile);
@@ -146,9 +146,9 @@ export function musteriKursEsle(v) {
   let degisti = false; v.kurslar = v.kurslar || [];
   for (const m of v.musteriler || []) {
     const k = v.kurslar.find(x => x.musteri === m.id) || v.kurslar.find(x => !x.musteri && adEs(x.ad, m.ad)), ayrildi = m.durum === 'Ayrıldı';
-    if (!k) { if (!ayrildi) { v.kurslar.push({ id: kimlik(), ad: m.ad, durum: 'Müşteri', musteri: m.id, program: 'Sinyal', kisiler: '', not: m.not || '', guncel: gun(0) }); degisti = true; } continue; }
+    if (!k) { if (!ayrildi) { v.kurslar.push({ id: kimlik(), ad: m.ad, durum: 'Müşteri', musteri: m.id, program: 'mdSinyal', kisiler: '', not: m.not || '', guncel: gun(0) }); degisti = true; } continue; }
     if (k.musteri !== m.id) { k.musteri = m.id; degisti = true; }
-    if (!ayrildi && k.durum !== 'Müşteri') { k.durum = 'Müşteri'; k.program = 'Sinyal'; k.guncel = gun(0); degisti = true; }
+    if (!ayrildi && k.durum !== 'Müşteri') { k.durum = 'Müşteri'; k.program = 'mdSinyal'; k.guncel = gun(0); degisti = true; }
     if (ayrildi && k.durum === 'Müşteri') { k.durum = 'Soğuk'; k.guncel = gun(0); degisti = true; }
     if (!adEs(k.ad, m.ad) && k.musteri === m.id && k.adMusteri !== m.ad) { k.ad = m.ad; k.adMusteri = m.ad; degisti = true; }
   }
@@ -204,7 +204,7 @@ function odemePenceresi(yenile) {
 // Aylık döküm belgesi (PDF): sözleşme 6.1'deki alanlar
 function dokumBelgesi(v, ay) {
   const h = hesap(v), a = aylik(v, h, ay);
-  return `<h1>Gelir paylaşımı dökümü</h1><p class="a4-alt">ÖzSinyal · ${e(ayAd(ay))} · ${e(v.ortak.ad)} (%${h.oran}) · hazırlanma ${tarih(gun(0))}</p>
+  return `<h1>Gelir paylaşımı dökümü</h1><p class="a4-alt">mdSinyal · ${e(ayAd(ay))} · ${e(v.ortak.ad)} (%${h.oran}) · hazırlanma ${tarih(gun(0))}</p>
     ${dokumHtml(v, h, ay, true)}
     <h2 style="margin-top:18px">Durum (${tarih(gun(0))})</h2>
     <table><tbody><tr><th>Toplam tahakkuk eden pay</th><td>${para(h.payTahakkuk)}</td></tr><tr><th>Ödenen pay</th><td>${para(h.odenenPay)}</td></tr><tr><th>Ödenmemiş pay</th><td><b>${para(h.odenmemisPay)}</b></td></tr>
@@ -216,7 +216,7 @@ function dokumBelgesi(v, ay) {
 function davetPenceresi() {
   const o = S.isletme.ortak;
   B.davetOlustur({ ad: o.ad, rol: 'ortak' }).then(d => {
-    islem('ÖzSinyal Yönetim: ortağa davet linki oluşturdu', o.ad); kaydet();
+    islem('mdSinyal Yönetim: ortağa davet linki oluşturdu', o.ad); kaydet();
     pencere({ baslik: o.ad + ' · davet linki', icerik: `<p style="font-size:14.5px;margin-bottom:10px">Bu linki WhatsApp'tan ${e(o.ad.split(' ')[0])} Bey'e gönderin. Linki açınca kendi e-postasını ve bir şifre belirleyip hesaba katılır. Link ${d.son.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} tarihine kadar geçerlidir ve bir kez kullanılır.</p>
       <p style="font-size:13.5px;word-break:break-all;background:var(--panel-2);border-radius:8px;padding:10px 12px">${e(d.link)}</p>`,
       altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-kopyala>Linki kopyala</button>',
@@ -224,14 +224,14 @@ function davetPenceresi() {
   }).catch(x => bildir(B.hataMetni(x), 'uyari'));
 }
 
-/* ---------- ÖzSinyal Yönetim ekranı (yeni tasarım): Özet · Kurslar · Defter ----------
+/* ---------- mdSinyal Yönetim ekranı (yeni tasarım): Özet · Kurslar · Defter ----------
    Yönetici her şeyi girer; ortak (rol "ortak") aynı ekranı yalnız görür. Hesaplar hesap()/aylik() ile aynıdır. */
 let sekme = 'ozet', kursFiltre = 'hepsi', kasaAy = null, isEkTur = 'İş';
 export const sekmeSec = k => { sekme = k; };
 // kurs durumları: sıralama, renk ve simge (sıra = kartların dizilişi)
 export const DURUMLAR = [['Müşteri', 'yr-yesil', 'tik'], ['Sıcak', 'yr-kirmizi', 'alev'], ['Riskli', 'yr-turuncu', 'uyari'], ['Görüşülüyor', 'yr-sari', 'tel'], ['Ortak', 'yr-mor', 'kursiyer'], ['Bekliyor', 'yr-gri', 'saat'], ['Soğuk', 'yr-soluk', 'kapat']];
 // her durumun ne anlama geldiği (Kurslar ekranında grup başlığında yazar)
-const DURUM_ACIKLAMA = { 'Müşteri': 'ÖzSinyal’i kullanıyor ve ödüyor', 'Sıcak': 'Satışa en yakın; ilk bunları takip et', 'Riskli': 'İlgili ama kaybedebiliriz; hızlı davran', 'Görüşülüyor': 'Görüşme sürüyor, karar bekleniyor', 'Ortak': 'Satış ortağı ya da iş birliği', 'Bekliyor': 'Zamanı gelince yeniden gidilecek', 'Soğuk': 'Şimdilik ilgisiz' };
+const DURUM_ACIKLAMA = { 'Müşteri': 'mdSinyal’i kullanıyor ve ödüyor', 'Sıcak': 'Satışa en yakın; ilk bunları takip et', 'Riskli': 'İlgili ama kaybedebiliriz; hızlı davran', 'Görüşülüyor': 'Görüşme sürüyor, karar bekleniyor', 'Ortak': 'Satış ortağı ya da iş birliği', 'Bekliyor': 'Zamanı gelince yeniden gidilecek', 'Soğuk': 'Şimdilik ilgisiz' };
 const durumBul = d => DURUMLAR.find(x => x[0] === d) || DURUMLAR[5];
 const bolum = (baslik, alt, dugme, ic, sinif = '') => `<section class="yn-bolum"><div class="yn-bolum-bas"><div><h2>${baslik}</h2>${alt ? `<small>${alt}</small>` : ''}</div>${dugme ? `<div class="yn-dg">${dugme}</div>` : ''}</div><div class="yn-kart ${sinif}">${ic}</div></section>`;
 // Kurs kutusu: kısa ve okunur; uzun yazılar (notlar, çekinceler, sonraki adım) kutuya dokununca açılan sayfada
@@ -261,7 +261,7 @@ function kursDetay(k, yon, yenile) {
     onAc(p) {
       if (!yon) return;
       p.querySelector('[data-ykd-duzenle]').addEventListener('click', () => kursPenceresi(k, yenile));
-      p.querySelector('[data-ykd-gorusme]').addEventListener('click', () => { k.gorusme = (+k.gorusme || 0) + 1; k.guncel = gun(0); kaydetYayinla('ÖzSinyal Yönetim: görüşme ekledi', k.ad); bildir(k.ad + ': ' + k.gorusme + '. görüşme'); yenile(); kursDetay(k, yon, yenile); });
+      p.querySelector('[data-ykd-gorusme]').addEventListener('click', () => { k.gorusme = (+k.gorusme || 0) + 1; k.guncel = gun(0); kaydetYayinla('mdSinyal Yönetim: görüşme ekledi', k.ad); bildir(k.ad + ': ' + k.gorusme + '. görüşme'); yenile(); kursDetay(k, yon, yenile); });
     } });
 }
 function kurslarHtml(v, yon) {
@@ -300,7 +300,7 @@ function ajandaHtml(v) {
     ${grup('Gecikenler', 'Tarihi geçmiş, yapılmamış', geciken, 'kirmizi')}${grup('Bugün', tarihUzun(gun(0)), bugun)}${grup('Yaklaşanlar', '', yakin)}${grup('Hedefler', 'Uzun vadeli', hedef)}${grup('Tarihsiz', '', tarihsiz)}
     ${biten.length ? `<details class="yn-bolum yn-biten"><summary>Tamamlananlar <span class="yn-say">${biten.length}</span></summary><div class="yn-kart">${biten.map(x => isSatir(x, v)).join('')}</div></details>` : ''}`;
 }
-// ---- Gelir-Gider: ÖzSinyal'in kendi defteri (yalnız yönetici). Kurslardan gelen tahsilatlar ortaklık defterinden otomatik gelir ----
+// ---- Gelir-Gider: mdSinyal'in kendi defteri (yalnız yönetici). Kurslardan gelen tahsilatlar ortaklık defterinden otomatik gelir ----
 export const GIDER_KAT = ['Alan adı ve barındırma', 'Yazılım ve abonelik', 'Reklam ve tanıtım', 'Basılı malzeme', 'Yol ve yakıt', 'Telefon ve internet', 'Ekipman', 'Danışmanlık ve muhasebe', 'Vergi ve harç', 'Yemek ve ağırlama', 'Diğer'];
 const GELIR_KAT = ['Danışmanlık', 'Eğitim', 'Diğer gelir'];
 function kasaAyHesap(v, h, ay) {
@@ -316,10 +316,10 @@ function kasaHtml(v, h) {
   const k = kasaAyHesap(v, h, kasaAy), aylar = [...new Set([gun(0).slice(0, 7), ...(v.hareketler || []).map(x => (x.tarih || '').slice(0, 7)), ...h.satirlar.map(t => t.tarih.slice(0, 7))])].filter(Boolean).sort(), i = aylar.indexOf(kasaAy);
   const kart = (et, deger, alt, sinif = '') => `<div class="yn-kasa-kutu ${sinif}"><small>${et}</small><b>${deger}</b><span>${alt}</span></div>`;
   const katL = Object.entries(k.kat).sort((a, b) => b[1] - a[1]), katMax = katL.length ? katL[0][1] : 1;
-  const satirlar = [...k.hr.map(x => ({ ...x, kendi: true })), ...k.tah.map(t => ({ id: t.id, tarih: t.tarih, tur: 'Gelir', kategori: 'ÖzSinyal tahsilatı', aciklama: t.musteriAd + ' · ' + t.tur, tutar: t.net, oto: true }))].sort((a, b) => b.tarih.localeCompare(a.tarih));
+  const satirlar = [...k.hr.map(x => ({ ...x, kendi: true })), ...k.tah.map(t => ({ id: t.id, tarih: t.tarih, tur: 'Gelir', kategori: 'mdSinyal tahsilatı', aciklama: t.musteriAd + ' · ' + t.tur, tutar: t.net, oto: true }))].sort((a, b) => b.tarih.localeCompare(a.tarih));
   return `<div class="yn-kasa-ust"><div class="yn-ay-gez"><button data-yn-kasa-ay="${i > 0 ? aylar[i - 1] : ''}" ${i > 0 ? '' : 'disabled'} aria-label="Önceki ay">${ik('sag', 'ters')}</button><b>${e(ayAd(kasaAy))}</b><button data-yn-kasa-ay="${i < aylar.length - 1 ? aylar[i + 1] : ''}" ${i < aylar.length - 1 ? '' : 'disabled'} aria-label="Sonraki ay">${ik('sag')}</button></div>
       <div class="yn-dg"><button class="u-hap" data-yn-hareket="Gider">${ik('arti')}Gider</button><button class="u-hap gri" data-yn-hareket="Gelir">${ik('arti')}Gelir</button><button class="u-hap gri" data-yn-kasa-excel>${ik('indir')}Excel</button></div></div>
-    <div class="yn-kasa-kutular">${kart('Gelir', para(k.gelir), k.gelirDiger ? `ÖzSinyal ${para(k.gelirSinyal)} · diğer ${para(k.gelirDiger)}` : 'Kurs tahsilatları, KDV hariç', 'yesil')}${kart('Gider', para(k.gider), k.hr.filter(x => x.tur === 'Gider').length + ' kalem', 'kirmizi')}${kart('Ortak payı', para(k.pay), '%' + h.oran + ' · ' + e(v.ortak.ad.split(' ')[0]) + ' Bey')}${kart('Sana kalan', para(k.net), 'gelir − gider − ortak payı', k.net < 0 ? 'kirmizi koyu' : 'koyu')}</div>
+    <div class="yn-kasa-kutular">${kart('Gelir', para(k.gelir), k.gelirDiger ? `mdSinyal ${para(k.gelirSinyal)} · diğer ${para(k.gelirDiger)}` : 'Kurs tahsilatları, KDV hariç', 'yesil')}${kart('Gider', para(k.gider), k.hr.filter(x => x.tur === 'Gider').length + ' kalem', 'kirmizi')}${kart('Ortak payı', para(k.pay), '%' + h.oran + ' · ' + e(v.ortak.ad.split(' ')[0]) + ' Bey')}${kart('Sana kalan', para(k.net), 'gelir − gider − ortak payı', k.net < 0 ? 'kirmizi koyu' : 'koyu')}</div>
     ${katL.length ? bolum('Giderin dağılımı', '', '', `<div class="yn-kat">${katL.map(([a, t]) => `<div class="yn-kat-sat"><span>${e(a)}</span><i style="--o:${Math.max(4, Math.round(t / katMax * 100))}%"></i><b>${para(t)}</b></div>`).join('')}</div>`) : ''}
     ${bolum('Hareketler', '', '', satirlar.length ? `<div class="tablo-kap"><table class="ort-tablo yn-kasa-tablo"><thead><tr><th>Tarih</th><th>Açıklama</th><th>Kategori</th><th class="sag">Tutar</th><th aria-label="Belge"></th><th aria-label="İşlemler"></th></tr></thead><tbody>${satirlar.map(x => `<tr class="${x.kendi ? 'tik' : 'oto'}" ${x.kendi ? `data-yn-hareket-ac="${e(x.id)}"` : ''}><td>${tarih(x.tarih)}</td><td><b>${e(x.aciklama || '')}</b>${x.yontem ? `<small class="ort-not">${e(x.yontem)}</small>` : ''}</td><td>${e(x.kategori || '')}</td><td class="sag ${x.tur === 'Gider' ? 'eksi' : 'arti'}">${x.tur === 'Gider' ? '−' : '+'}${para(x.tutar)}</td><td>${x.belge ? `<button class="yn-belge" data-yn-belge="${e(x.id)}" aria-label="Belgeyi aç">${ik('belge')}</button>` : ''}</td><td class="yn-h-dg">${x.kendi ? `<button data-yn-h-duzenle="${e(x.id)}" aria-label="Düzenle" title="Düzenle">${ik('kalem')}</button><button class="sil" data-yn-h-sil2="${e(x.id)}" aria-label="Sil" title="Sil">${ik('kapat')}</button>` : '<small title="Ortaklık bölümündeki tahsilattan gelir">otomatik</small>'}</td></tr>`).join('')}</tbody></table></div>`
       : `<div class="u-bos">${ik('kasa')}<b>${e(ayAd(kasaAy))} ayında hareket yok</b><p>Harcama yaptığında "Gider" ile ekle; faturanın fotoğrafını ya da PDF'ini de iliştirebilirsin.</p></div>`)}`;
@@ -347,9 +347,9 @@ export function yonetimHtml(rol) {
   const borcAlt = h.kalanBorc ? (h.vadeGun != null && h.vadeGun >= 0 ? `${tarih(h.vade)} · ${h.vadeGun} gün` : 'son gün geçti') : 'kapandı';
   const olc = yon ? [[ayAd(ay.ay) + ' geliri', para(kasa.gelir), 'KDV hariç'], ['Gider', para(kasa.gider), kasa.hr.filter(x => x.tur === 'Gider').length + ' kalem'], ['Sana kalan', para(kasa.net), 'ortak payı düşülmüş'], ['Kalan borç', para(h.kalanBorc), borcAlt]]
     : [[ayAd(ay.ay) + ' tahsilat', para(ay.net), 'KDV hariç'], ['Bu ay pay', para(ay.pay), 'ödeme ' + tarih(ay.son)], ['Ödenmemiş pay', para(h.odenmemisPay), h.odenenPay ? para(h.odenenPay) + ' ödendi' : 'henüz ödeme yok'], ['Kalan borç', para(h.kalanBorc), borcAlt]];
-  if (sekme === 'kurslar') { const kl = v.kurslar || [], ks = d => kl.filter(k => k.durum === d).length; olc.splice(0, 4, ['Toplam', kl.length + ' kurs', 'görüşülen ve takip edilen'], ['Sıcak', ks('Sıcak') + ' kurs', 'satışa en yakın'], ['Görüşülüyor', ks('Görüşülüyor') + ks('Riskli') + ' kurs', ks('Riskli') ? ks('Riskli') + ' tanesi riskli' : 'karar bekleniyor'], ['Müşteri', ks('Müşteri') + ' kurs', 'ÖzSinyal’i kullanan']); }
+  if (sekme === 'kurslar') { const kl = v.kurslar || [], ks = d => kl.filter(k => k.durum === d).length; olc.splice(0, 4, ['Toplam', kl.length + ' kurs', 'görüşülen ve takip edilen'], ['Sıcak', ks('Sıcak') + ' kurs', 'satışa en yakın'], ['Görüşülüyor', ks('Görüşülüyor') + ks('Riskli') + ' kurs', ks('Riskli') ? ks('Riskli') + ' tanesi riskli' : 'karar bekleniyor'], ['Müşteri', ks('Müşteri') + ' kurs', 'mdSinyal’i kullanan']); }
   const baslik = bol.find(b => b[0] === sekme)[1];
-  const ust = `<section class="yn-hero"><div class="yn-ic"><small>${yon ? 'ÖzSinyal Yönetim' : 'Ortak paneli · yalnız görüntüleme'}</small><h1>${sekme === 'ozet' ? (yon ? 'Merhaba ' + e(String(S.kurs.yetkili || 'Servet').split(' ')[0]) : e(o.ad)) : baslik}</h1><p>${yon ? `${tarihUzun(gun(0))} · ${bugunIs ? bugunIs + ' iş seni bekliyor' : 'bugün için bekleyen iş yok'}` : `Satışlardan %${h.oran} pay · sözleşme ${tarih(o.baslangic)}`}</p>
+  const ust = `<section class="yn-hero"><div class="yn-ic"><small>${yon ? 'mdSinyal Yönetim' : 'Ortak paneli · yalnız görüntüleme'}</small><h1>${sekme === 'ozet' ? (yon ? 'Merhaba ' + e(String(S.kurs.yetkili || 'Servet').split(' ')[0]) : e(o.ad)) : baslik}</h1><p>${yon ? `${tarihUzun(gun(0))} · ${bugunIs ? bugunIs + ' iş seni bekliyor' : 'bugün için bekleyen iş yok'}` : `Satışlardan %${h.oran} pay · sözleşme ${tarih(o.baslangic)}`}</p>
     <div class="yn-olcum">${olc.map(([a, b, c]) => `<div><small>${a}</small><b>${b}</b><span>${c}</span></div>`).join('')}</div></div></section>`;
   const nav = sinif => `<nav class="${sinif}" aria-label="Bölümler">${bol.map(([k, t, i]) => `<button data-yn-sekme="${k}" class="${sekme === k ? 'secili' : ''}" ${sekme === k ? 'aria-current="page"' : ''}>${ik(i)}<span>${t}</span>${say[k] ? `<em>${say[k]}</em>` : ''}</button>`).join('')}</nav>`;
   let govde = '';
@@ -358,7 +358,7 @@ export function yonetimHtml(rol) {
   if (sekme === 'kurslar') govde = kurslarHtml(v, yon);
   if (sekme === 'kasa') govde = kasaHtml(v, h);
   if (sekme === 'hesaplar') govde = '<div data-sh-gomulu></div>';
-  if (sekme === 'destek') govde = '<div data-sh-gomulu data-sh-gor="destek"></div>';  // destek talepleri ve verilen hizmetler  // bütün ÖzSinyal hesapları (sahip.js); yalnız Servet görür
+  if (sekme === 'destek') govde = '<div data-sh-gomulu data-sh-gor="destek"></div>';  // destek talepleri ve verilen hizmetler  // bütün mdSinyal hesapları (sahip.js); yalnız Servet görür
   if (sekme === 'ortaklik') {
     const ortaklar = (S.kullanicilar || []).filter(u => u.rol === 'ortak');
     const ortakIc = ortaklar.length ? ortaklar.map(u => `<div class="u-satir"><span class="u-ik mor">${ik('kursiyer')}</span><span class="u-satir-govde"><b>${e(u.ad)}</b><small>${e(u.eposta || '')} · yalnız görüntüler</small></span>${yon ? `<button class="u-hap gri" data-ort-uye-cikar="${e(u.id)}">Erişimi kaldır</button>` : ''}</div>`).join('')
@@ -366,7 +366,7 @@ export function yonetimHtml(rol) {
     govde = (yon ? bolum('Ortak', `Satışlardan %${h.oran} · sözleşme ${tarih(o.baslangic)}`, ortaklar.length ? '' : `<button class="u-hap" data-ort-davet>${ik('arti')}${e(o.ad.split(' ')[0])} Bey'i davet et</button>`, ortakIc) : '') +
       `<div class="yn-izgara"><div>${bolum('Aylık döküm', 'Ortağa her ayın 5\'ine kadar paylaşılır', `<button class="u-hap gri" data-ort-pdf>${ik('belge')}PDF</button>`, dokumHtml(v, h, secAy))}</div><div>${bolum('Borç', 'Faizsiz, en geç 6 ayda', '', borcHtml(v, h))}</div></div>` +
       bolum('Tahsilatlar', 'KDV hariç, kursun fiilen ödediği', yon ? `<button class="u-hap" data-ort-tahsilat ${(v.musteriler || []).length ? '' : 'disabled title="Önce müşteri ekleyin"'}>${ik('arti')}Tahsilat</button>` : '', tahsilatHtml(v, h, yon)) +
-      `<div class="yn-izgara"><div>${bolum('Müşteri kurslar', 'ÖzSinyal kullanan ve ödeyen', yon ? `<button class="u-hap" data-ort-musteri-ekle>${ik('arti')}Müşteri</button>` : '', musteriHtml(v, yon))}</div><div>${bolum(yon ? 'Ortağa ödemeler' : 'Size yapılan ödemeler', 'Banka havalesiyle', yon ? `<button class="u-hap" data-ort-odeme>${ik('arti')}Ödeme</button>` : '', odemeHtml(v, yon))}</div></div>`;
+      `<div class="yn-izgara"><div>${bolum('Müşteri kurslar', 'mdSinyal kullanan ve ödeyen', yon ? `<button class="u-hap" data-ort-musteri-ekle>${ik('arti')}Müşteri</button>` : '', musteriHtml(v, yon))}</div><div>${bolum(yon ? 'Ortağa ödemeler' : 'Size yapılan ödemeler', 'Banka havalesiyle', yon ? `<button class="u-hap" data-ort-odeme>${ik('arti')}Ödeme</button>` : '', odemeHtml(v, yon))}</div></div>`;
   }
   return `<div class="yn ort">${nav('yn-yan')}<div class="yn-ana">${ust}<div class="yn-govde">${govde}</div></div>${nav('og-sekme yn-alt')}</div>`;
 }
@@ -383,8 +383,8 @@ function isPenceresi(x, yenile) {
     onAc(p) {
       const f = p.querySelector('form');
       f.addEventListener('submit', ev => { ev.preventDefault(); const b = f.baslik.value.trim(); if (!b) return bildir('Başlığı yaz', 'uyari');
-        Object.assign(x, { baslik: b, tur: f.tur.value, tarih: f.tarih.value, saat: f.saat.value, kurs: f.kurs.value, not: f.not.value.trim() }); kaydetYayinla('ÖzSinyal Yönetim: işi güncelledi', b); kapatPencere(); yenile(); });
-      p.querySelector('[data-yn-is-sil]').addEventListener('click', () => { kapatPencere(); silOnay('“' + x.baslik + '” silinsin mi?', () => { v.isler = v.isler.filter(y => y !== x); kaydetYayinla('ÖzSinyal Yönetim: işi sildi', x.baslik); yenile(); }); });
+        Object.assign(x, { baslik: b, tur: f.tur.value, tarih: f.tarih.value, saat: f.saat.value, kurs: f.kurs.value, not: f.not.value.trim() }); kaydetYayinla('mdSinyal Yönetim: işi güncelledi', b); kapatPencere(); yenile(); });
+      p.querySelector('[data-yn-is-sil]').addEventListener('click', () => { kapatPencere(); silOnay('“' + x.baslik + '” silinsin mi?', () => { v.isler = v.isler.filter(y => y !== x); kaydetYayinla('mdSinyal Yönetim: işi sildi', x.baslik); yenile(); }); });
     } });
 }
 // gelir / gider ekle-düzenle; fatura ya da fiş: fotoğraf küçültülür (1600 px), PDF en çok 600 KB
@@ -394,7 +394,7 @@ function hareketPenceresi(x, tur, yenile, ilk = {}) {
   let belge = h0.belge || '';
   const belgeDurum = () => belge ? `<span class="yn-belge-var">${ik('belge')}${belge.startsWith('data:application/pdf') ? 'PDF iliştirildi' : belge.startsWith('data:image') ? 'Fotoğraf iliştirildi' : 'Belge kayıtlı'} <button type="button" class="u-bag" data-belge-kaldir>kaldır</button></span>` : '';
   pencere({ baslik: yeni ? (h0.tur === 'Gider' ? 'Yeni gider' : 'Yeni gelir') : (h0.tur === 'Gider' ? 'Gideri düzenle' : 'Geliri düzenle'), alt: true, icerik: `<form id="f-ynh" class="og-giris-form yn-form">
-      ${a('Açıklama', `<span class="og-girdi"><input name="aciklama" value="${e(h0.aciklama || '')}" placeholder="${h0.tur === 'Gider' ? 'Örn. sinyal.com.tr alan adı' : 'Örn. danışmanlık'}" required maxlength="200"></span>`)}
+      ${a('Açıklama', `<span class="og-girdi"><input name="aciklama" value="${e(h0.aciklama || '')}" placeholder="${h0.tur === 'Gider' ? 'Örn. mdsinyal.com alan adı' : 'Örn. danışmanlık'}" required maxlength="200"></span>`)}
       <div class="yn-iki">${a('Tutar (₺)', `<span class="og-girdi"><input name="tutar" inputmode="decimal" value="${h0.tutar ? String(h0.tutar).replace('.', ',') : ''}" placeholder="0" required></span>`)}${a('Tarih', `<span class="og-girdi"><input name="tarih" type="date" value="${e(h0.tarih || gun(0))}"></span>`)}</div>
       <div class="yn-iki">${a('Kategori', `<span class="og-girdi"><select name="kategori">${kat.map(k => `<option ${h0.kategori === k ? 'selected' : ''}>${k}</option>`).join('')}</select></span>`)}${a('Ödeme', `<span class="og-girdi"><select name="yontem">${['Kart', 'Havale', 'Nakit'].map(k => `<option ${h0.yontem === k ? 'selected' : ''}>${k}</option>`).join('')}</select></span>`)}</div>
       ${a('Fatura ya da fiş <small>fotoğraf ya da PDF, isteğe bağlı</small>', `<span class="og-girdi yn-belge-sec"><input type="file" name="belge" accept="image/*,application/pdf" capture="environment"></span><span data-belge-durum>${belgeDurum()}</span>`)}
@@ -415,8 +415,8 @@ function hareketPenceresi(x, tur, yenile, ilk = {}) {
       f.addEventListener('submit', ev => { ev.preventDefault(); const tutar = tutarOku(f.tutar.value), ac = f.aciklama.value.trim(); if (!ac) return bildir('Açıklamayı yaz', 'uyari'); if (!tutar) return bildir('Tutarı yaz', 'uyari');
         const y = { tur: h0.tur, tarih: f.tarih.value || gun(0), aciklama: ac, kategori: f.kategori.value, yontem: f.yontem.value, tutar, not: f.not.value.trim(), belge, is: h0.is || '' };
         if (x) Object.assign(x, y); else (v.hareketler = v.hareketler || []).push({ id: kimlik(), ...y });
-        kaydetYayinla(yeni ? 'ÖzSinyal Yönetim: ' + h0.tur.toLocaleLowerCase('tr') + ' ekledi' : 'ÖzSinyal Yönetim: hareketi güncelledi', ac + ' · ' + para(tutar)); kapatPencere(); bildir((h0.tur === 'Gider' ? 'Gider' : 'Gelir') + ' kaydedildi'); kasaAy = y.tarih.slice(0, 7); yenile(); });
-      const sil = p.querySelector('[data-yn-h-sil]'); if (sil) sil.addEventListener('click', () => { kapatPencere(); silOnay('“' + x.aciklama + '” silinsin mi?', () => { geriAlNoktasi(); v.hareketler = v.hareketler.filter(z => z !== x); kaydetYayinla('ÖzSinyal Yönetim: hareketi sildi', x.aciklama); yenile(); }); });
+        kaydetYayinla(yeni ? 'mdSinyal Yönetim: ' + h0.tur.toLocaleLowerCase('tr') + ' ekledi' : 'mdSinyal Yönetim: hareketi güncelledi', ac + ' · ' + para(tutar)); kapatPencere(); bildir((h0.tur === 'Gider' ? 'Gider' : 'Gelir') + ' kaydedildi'); kasaAy = y.tarih.slice(0, 7); yenile(); });
+      const sil = p.querySelector('[data-yn-h-sil]'); if (sil) sil.addEventListener('click', () => { kapatPencere(); silOnay('“' + x.aciklama + '” silinsin mi?', () => { geriAlNoktasi(); v.hareketler = v.hareketler.filter(z => z !== x); kaydetYayinla('mdSinyal Yönetim: hareketi sildi', x.aciklama); yenile(); }); });
     } });
 }
 function belgeGoster(x) {
@@ -427,9 +427,9 @@ function belgeGoster(x) {
     altlik: `<a class="dg dg-cizgi" href="${b}" download="${e((x.aciklama || 'belge').replace(/[^\wçğıöşüÇĞİÖŞÜ .-]/g, '').slice(0, 60))}.${pdf ? 'pdf' : 'jpg'}">İndir</a><button class="dg dg-ana" data-kapat>Kapat</button>` });
 }
 async function kasaExcel(v, h) {
-  const k = kasaAyHesap(v, h, kasaAy), sat = [['Tarih', 'Tür', 'Kategori', 'Açıklama', 'Ödeme', 'Tutar (₺)', 'Belge'], ...k.hr.map(x => [x.tarih.split('-').reverse().join('.'), x.tur, x.kategori || '', x.aciklama || '', x.yontem || '', x.tur === 'Gider' ? -x.tutar : x.tutar, x.belge ? 'var' : '']), ...k.tah.map(t => [t.tarih.split('-').reverse().join('.'), 'Gelir', 'ÖzSinyal tahsilatı', t.musteriAd + ' · ' + t.tur, '', t.net, ''])];
+  const k = kasaAyHesap(v, h, kasaAy), sat = [['Tarih', 'Tür', 'Kategori', 'Açıklama', 'Ödeme', 'Tutar (₺)', 'Belge'], ...k.hr.map(x => [x.tarih.split('-').reverse().join('.'), x.tur, x.kategori || '', x.aciklama || '', x.yontem || '', x.tur === 'Gider' ? -x.tutar : x.tutar, x.belge ? 'var' : '']), ...k.tah.map(t => [t.tarih.split('-').reverse().join('.'), 'Gelir', 'mdSinyal tahsilatı', t.musteriAd + ' · ' + t.tur, '', t.net, ''])];
   sat.push([], ['', '', '', 'Gelir', '', k.gelir, ''], ['', '', '', 'Gider', '', -k.gider, ''], ['', '', '', 'Ortak payı', '', -k.pay, ''], ['', '', '', 'Net', '', k.net, '']);
-  const ad = 'sinyal-gelir-gider-' + kasaAy;
+  const ad = 'mdsinyal-gelir-gider-' + kasaAy;
   try { if (!window.XLSX) await new Promise((ok, red) => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; sc.onload = ok; sc.onerror = red; document.head.appendChild(sc); });
     const X = window.XLSX, ws = X.utils.aoa_to_sheet(sat), wb = X.utils.book_new(); ws['!cols'] = [12, 8, 22, 36, 10, 14, 8].map(w => ({ wch: w })); X.utils.book_append_sheet(wb, ws, 'Gelir-Gider'); X.writeFile(wb, ad + '.xlsx');
   } catch (x) { csvIndir(ad + '.csv', sat); }
@@ -455,30 +455,30 @@ function kursPenceresi(k, yenile) {
         const x = { ad, durum: f.durum.value, kisiler: f.kisiler.value.trim(), gorusme: Math.max(0, Math.min(99, parseInt(f.gorusme.value, 10) || 0)), program: f.program.value.trim(), not: f.not.value.trim(), sonraki: f.sonraki.value.trim(), zaman: f.zaman.value.trim(), teklif: f.teklif.value.trim(), itiraz: f.itiraz.value.trim(), guncel: gun(0) };
         if (k) Object.assign(k, x); else (v.kurslar = v.kurslar || []).push({ id: kimlik(), ...x });
         const kk = k || v.kurslar[v.kurslar.length - 1], bagli = kk.musteri && (v.musteriler || []).find(m => m.id === kk.musteri);
-        if (x.durum === 'Müşteri' && !bagli) { const m = { id: kimlik(), ad, paket: 'Yıllık', sube: 1, bas: gun(0), durum: 'Aktif', not: '' }; (v.musteriler = v.musteriler || []).push(m); kk.musteri = m.id; kk.program = kk.program || 'Sinyal'; bildir('Ortaklık › Müşteri kurslar listesine de eklendi'); }
+        if (x.durum === 'Müşteri' && !bagli) { const m = { id: kimlik(), ad, paket: 'Yıllık', sube: 1, bas: gun(0), durum: 'Aktif', not: '' }; (v.musteriler = v.musteriler || []).push(m); kk.musteri = m.id; kk.program = kk.program || 'mdSinyal'; bildir('Ortaklık › Müşteri kurslar listesine de eklendi'); }
         if (bagli && x.durum === 'Müşteri' && bagli.durum === 'Ayrıldı') bagli.durum = 'Aktif';
         if (bagli && x.durum !== 'Müşteri' && bagli.durum !== 'Ayrıldı') bagli.durum = 'Ayrıldı';
         if (bagli && !adEs(bagli.ad, ad)) bagli.ad = ad;
-        kaydetYayinla(k ? 'ÖzSinyal Yönetim: kursu güncelledi' : 'ÖzSinyal Yönetim: kurs ekledi', ad); kapatPencere(); bildir('Kaydedildi'); yenile(); });
-      const sil = p.querySelector('[data-yn-kurs-sil]'); if (sil) sil.addEventListener('click', () => { kapatPencere(); silOnay(k.ad + ' kurslar listesinden silinsin mi?', () => { geriAlNoktasi(); v.kurslar = v.kurslar.filter(y => y !== k); kaydetYayinla('ÖzSinyal Yönetim: kursu sildi', k.ad); yenile(); }); });
+        kaydetYayinla(k ? 'mdSinyal Yönetim: kursu güncelledi' : 'mdSinyal Yönetim: kurs ekledi', ad); kapatPencere(); bildir('Kaydedildi'); yenile(); });
+      const sil = p.querySelector('[data-yn-kurs-sil]'); if (sil) sil.addEventListener('click', () => { kapatPencere(); silOnay(k.ad + ' kurslar listesinden silinsin mi?', () => { geriAlNoktasi(); v.kurslar = v.kurslar.filter(y => y !== k); kaydetYayinla('mdSinyal Yönetim: kursu sildi', k.ad); yenile(); }); });
     } });
 }
 // Dosyadan kurs ekleme: { kurslar: [{ ad, durum, kisiler, not, sonraki, zaman, teklif, itiraz }] }; aynı adlı kurs varsa atlanır
 function kursDosyasi(dosya, yenile) {
   dosya.text().then(t => {
-    let d; try { d = JSON.parse(t); } catch (x) { return bildir('Dosya okunamadı; ÖzSinyal kurs dosyası (.json) seç', 'uyari'); }
+    let d; try { d = JSON.parse(t); } catch (x) { return bildir('Dosya okunamadı; mdSinyal kurs dosyası (.json) seç', 'uyari'); }
     const l = Array.isArray(d) ? d : d && Array.isArray(d.kurslar) ? d.kurslar : null; if (!l) return bildir('Dosyada kurs listesi yok', 'uyari');
     const v = S.isletme, var_ = new Set((v.kurslar || []).map(k => k.ad.toLocaleLowerCase('tr'))), metin = x => String(x == null ? '' : x).slice(0, 600);
     let n = 0;
     l.forEach(k => { const ad = metin(k && k.ad).trim(); if (ad.length < 2 || var_.has(ad.toLocaleLowerCase('tr'))) return; var_.add(ad.toLocaleLowerCase('tr'));
       (v.kurslar = v.kurslar || []).push({ id: kimlik(), ad, durum: DURUMLAR.some(x => x[0] === k.durum) ? k.durum : 'Bekliyor', kisiler: metin(k.kisiler), not: metin(k.not), sonraki: metin(k.sonraki), zaman: metin(k.zaman), teklif: metin(k.teklif), itiraz: metin(k.itiraz), gorusme: Math.max(0, parseInt(k.gorusme, 10) || 0), program: metin(k.program).slice(0, 60), guncel: gun(0) }); n++; });
     if (!n) return bildir('Eklenecek yeni kurs yok; hepsi zaten listede', 'uyari');
-    kaydetYayinla('ÖzSinyal Yönetim: dosyadan kurs ekledi', n + ' kurs'); bildir(n + ' kurs eklendi'); yenile();
+    kaydetYayinla('mdSinyal Yönetim: dosyadan kurs ekledi', n + ' kurs'); bildir(n + ' kurs eklendi'); yenile();
   });
 }
 export function yonetimBaglan(k, rol, yenile) {
   const yon = rol === 'mudur';
-  if (yon && S.isletme && musteriKursEsle(S.isletme)) { kaydetYayinla('ÖzSinyal Yönetim: müşteriler Kurslar ile eşleşti'); setTimeout(yenile, 0); }
+  if (yon && S.isletme && musteriKursEsle(S.isletme)) { kaydetYayinla('mdSinyal Yönetim: müşteriler Kurslar ile eşleşti'); setTimeout(yenile, 0); }
   k.addEventListener('click', ev => {
     const t = ev.target, v = S.isletme;
     const sk = t.closest('[data-yn-sekme]'); if (sk) { sekme = sk.dataset.ynSekme; yenile(); return scrollTo(0, 0); }
@@ -492,10 +492,10 @@ export function yonetimBaglan(k, rol, yenile) {
     const ht = t.closest('[data-yn-hareket]'); if (ht) return hareketPenceresi(null, ht.dataset.ynHareket, yenile);
     const bl = t.closest('[data-yn-belge]'); if (bl) { ev.stopPropagation(); return belgeGoster((v.hareketler || []).find(x => x.id === bl.dataset.ynBelge) || {}); }
     const hd = t.closest('[data-yn-h-duzenle]'); if (hd) { ev.stopPropagation(); const x = (v.hareketler || []).find(y => y.id === hd.dataset.ynHDuzenle); if (x) hareketPenceresi(x, x.tur, yenile); return; }
-    const hs = t.closest('[data-yn-h-sil2]'); if (hs) { ev.stopPropagation(); const x = (v.hareketler || []).find(y => y.id === hs.dataset.ynHSil2); if (x) silOnay('“' + (x.aciklama || x.kategori) + '” (' + para(x.tutar) + ') silinsin mi?', () => { geriAlNoktasi(); v.hareketler = v.hareketler.filter(z => z !== x); kaydetYayinla('ÖzSinyal Yönetim: hareketi sildi', x.aciklama); yenile(); bildir('Silindi', 'tamam', true); }); return; }
+    const hs = t.closest('[data-yn-h-sil2]'); if (hs) { ev.stopPropagation(); const x = (v.hareketler || []).find(y => y.id === hs.dataset.ynHSil2); if (x) silOnay('“' + (x.aciklama || x.kategori) + '” (' + para(x.tutar) + ') silinsin mi?', () => { geriAlNoktasi(); v.hareketler = v.hareketler.filter(z => z !== x); kaydetYayinla('mdSinyal Yönetim: hareketi sildi', x.aciklama); yenile(); bildir('Silindi', 'tamam', true); }); return; }
     const ha = t.closest('[data-yn-hareket-ac]'); if (ha) { const x = (v.hareketler || []).find(y => y.id === ha.dataset.ynHareketAc); if (x) return hareketPenceresi(x, x.tur, yenile); }
     const tr = t.closest('[data-yn-is-tur]'); if (tr) { isEkTur = tr.dataset.ynIsTur; return yenile(); }
-    const ib = t.closest('[data-yn-is-bitti]'); if (ib) { const x = v.isler.find(y => y.id === ib.dataset.ynIsBitti); if (x) { x.bitti = x.bitti ? '' : gun(0); kaydetYayinla(x.bitti ? 'ÖzSinyal Yönetim: işi tamamladı' : 'ÖzSinyal Yönetim: işi geri açtı', x.baslik); yenile(); } return; }
+    const ib = t.closest('[data-yn-is-bitti]'); if (ib) { const x = v.isler.find(y => y.id === ib.dataset.ynIsBitti); if (x) { x.bitti = x.bitti ? '' : gun(0); kaydetYayinla(x.bitti ? 'mdSinyal Yönetim: işi tamamladı' : 'mdSinyal Yönetim: işi geri açtı', x.baslik); yenile(); } return; }
     const ig = t.closest('[data-yn-is-gider]'); if (ig) { const x = v.isler.find(y => y.id === ig.dataset.ynIsGider); return hareketPenceresi(null, 'Gider', yenile, { aciklama: x ? x.baslik : '', is: x ? x.id : '' }); }
     const is = t.closest('[data-yn-is]'); if (is) { const x = v.isler.find(y => y.id === is.dataset.ynIs); if (x) return isPenceresi(x, yenile); }
     if (t.closest('[data-yn-kurs-ekle]')) return kursPenceresi(null, yenile);
@@ -505,30 +505,30 @@ export function yonetimBaglan(k, rol, yenile) {
     const f = ev.target.closest('[data-yn-is-form]'); if (!f || !yon) return; ev.preventDefault();
     const b = f.baslik.value.trim(); if (!b) return f.baslik.focus();
     const v = S.isletme; (v.isler = v.isler || []).push({ id: kimlik(), baslik: b, tur: isEkTur, tarih: f.tarih.value, saat: '', kurs: '', not: '', bitti: '', eklendi: gun(0) });
-    kaydetYayinla('ÖzSinyal Yönetim: ' + (isEkTur === 'Hedef' ? 'hedef' : 'iş') + ' ekledi', b); bildir(isEkTur === 'Hedef' ? 'Hedef eklendi' : 'İş eklendi'); yenile();
+    kaydetYayinla('mdSinyal Yönetim: ' + (isEkTur === 'Hedef' ? 'hedef' : 'iş') + ' ekledi', b); bildir(isEkTur === 'Hedef' ? 'Hedef eklendi' : 'İş eklendi'); yenile();
     requestAnimationFrame(() => { const i = document.querySelector('[data-yn-is-form] input[name=baslik]'); if (i) i.focus(); });
   });
   k.addEventListener('keydown', ev => { if (ev.key === 'Enter' && ev.target.matches('[data-yn-kurs],[data-yn-kurs-ac],[data-yn-is],[data-yn-hareket-ac]')) ev.target.click(); });
   k.addEventListener('change', ev => { const i = ev.target.closest('[data-yn-kurs-dosya]'); if (i && i.files[0] && yon) { kursDosyasi(i.files[0], yenile); i.value = ''; } });
   if (yon) ayarBaglan(k, yenile);
 }
-// Kurulum: yeni ve boş bir hesap bir kez "ÖzSinyal Yönetim" hesabına çevrilir (#/yonetim-kur, yalnız müdür)
+// Kurulum: yeni ve boş bir hesap bir kez "mdSinyal Yönetim" hesabına çevrilir (#/yonetim-kur, yalnız müdür)
 export const kurulabilir = () => !S.isletme && !(S.kursiyerler || []).length && !(S.dersler || []).length && !(S.hareket || []).length;
 export function kurulumHtml() {
-  return `<div class="kart ort-kur"><div class="kart-bas"><h3>ÖzSinyal Yönetim hesabını kur</h3><small>Bu hesap kurs olarak değil, ÖzSinyal'in kendi gelir paylaşımı için kullanılır</small></div>
+  return `<div class="kart ort-kur"><div class="kart-bas"><h3>mdSinyal Yönetim hesabını kur</h3><small>Bu hesap kurs olarak değil, mdSinyal'in kendi gelir paylaşımı için kullanılır</small></div>
     <form class="kart-govde" id="f-yk">
       <div class="izgara iz-2" style="gap:12px">${alan('Ortağın adı soyadı', '<input name="ad" value="Eyüp Çağlar" required>')}${alan('Gelir payı (%)', '<input name="oran" inputmode="numeric" value="40">')}</div>
       <div class="izgara iz-2" style="gap:12px">${alan('Sözleşme tarihi', '<input name="bas" type="date" value="2026-11-10">')}${alan('Borcun aktarıldığı tarih', '<input name="bt" type="date" value="2026-11-11">')}</div>
       <div class="izgara iz-2" style="gap:12px">${alan('Anapara (₺)', '<input name="anapara" inputmode="numeric" value="50.000">')}${alan('Yeni satış başına anapara iadesi (₺)', '<input name="iade" inputmode="numeric" value="2.000">')}</div>
       <p class="ort-onizle">Kurulduktan sonra bu hesapta öğrenci, ders ve kasa ekranları açılmaz; yalnız gelir paylaşımı ekranı açılır. Bu işlem geri alınamaz, bu yüzden boş ve yeni bir hesapta yapın.</p>
-      <button class="dg dg-ana" type="submit" style="margin-top:14px">ÖzSinyal Yönetim hesabını kur</button></form></div>`;
+      <button class="dg dg-ana" type="submit" style="margin-top:14px">mdSinyal Yönetim hesabını kur</button></form></div>`;
 }
 export function kurulumBaglan(k, bitti) {
   const f = k.querySelector('#f-yk'); if (!f) return;
   f.addEventListener('submit', ev => { ev.preventDefault(); if (!kurulabilir()) return bildir('Bu hesapta kurs kaydı var; yeni ve boş bir hesap açın', 'uyari');
     const oran = +f.oran.value.replace(/\D/g, '') || 40, anapara = tutarOku(f.anapara.value), satisIade = tutarOku(f.iade.value);
     isletmeKur({ ad: f.ad.value.trim(), oran, baslangic: f.bas.value, anapara, borcTarih: f.bt.value, satisIade });
-    S.kurs.tur = 'yonetim'; S.kurs.ad = 'ÖzSinyal Yönetim'; kaydet(); bildir('ÖzSinyal Yönetim hesabı kuruldu'); bitti(); });
+    S.kurs.tur = 'yonetim'; S.kurs.ad = 'mdSinyal Yönetim'; kaydet(); bildir('mdSinyal Yönetim hesabı kuruldu'); bitti(); });
 }
 
 // İlk kurulum: hesapta işletme defteri yoksa sözleşme bilgileriyle açılır (yalnız kurulum adresinden)

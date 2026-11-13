@@ -1,4 +1,4 @@
-/* ÖzSinyal yükleme sahnesi: kurs arabası yaya geçidinde anne ördekle yavrularına yol verir.
+/* mdSinyal yükleme sahnesi: kurs arabası yaya geçidinde anne ördekle yavrularına yol verir.
    Saf JS + SVG, requestAnimationFrame ile her kare hesaplanır (süspansiyon ve tabela yay fiziğiyle sallanır).
    window.sinyalYukleme(kap): kap içine sahneyi kurar; kap sayfadan çıkınca kendiliğinden durur.
    Hareket azaltılmışsa ördeklerin geçtiği an tek kare olarak çizilir. */
