@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=181';
+import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=182';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -211,7 +211,9 @@ export async function kisaLink(hedef, ad, takip, api) {
     const kok = new URL(a).origin;
     const r = await fetch(kok + '/kisa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hedef, ad, takip }) });
     const j = await r.json(); if (!r.ok || !j.ok) return hedef;
-    return location.hostname === 'servetskr.github.io' ? location.origin + '/sinyal/' + j.slug : kok + '/' + j.slug;
+    // kısa link sitenin kendi adresinde açılır (404 sayfası yönlendirir); yerel geliştirmede servisin adresi kullanılır
+    if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return kok + '/' + j.slug;
+    return location.origin + location.pathname.replace(/[^/]*$/, '') + j.slug;
   } catch (x) { return hedef; }
 }
 export function yonlendir(tel, metin, ad, rol) {
@@ -461,7 +463,7 @@ function sifreSor(neden, ok) {
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Onayla</button>`,
     onAc(d) {
       const inp = d.querySelector('[data-sifre-tekrar]'), btn = d.querySelector('[data-k]');
-      const dene = () => { btn.disabled = true; import('./bulut.js?v=181').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
+      const dene = () => { btn.disabled = true; import('./bulut.js?v=182').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
       btn.addEventListener('click', dene); inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') dene(); }); setTimeout(() => inp.focus(), 50);
     },
   });

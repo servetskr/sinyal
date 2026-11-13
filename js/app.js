@@ -1,22 +1,22 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=181';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=181';
-import * as Y1 from './sayfalar1.js?v=181';
-import * as Y2 from './sayfalar2.js?v=181';
-import * as P from './portal.js?v=181';
-import * as Y3 from './sayfalar3.js?v=181';
-import * as Y4 from './sayfalar4.js?v=181';
-import * as Y5 from './sayfalar5.js?v=181';
-import * as IM from './imza.js?v=181';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=181';
-import * as SN from './senaryo.js?v=181';
-import * as OZ from './ozellik.js?v=181';
-import { durumlariGuncelle } from './mesaj.js?v=181';
-import { yeniMenu } from './yeni.js?v=181';
-import * as B from './bulut.js?v=181';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=181';
-import * as AN from './analiz.js?v=181';
-import * as ORT from './ortak.js?v=181';
-import * as SH from './sahip.js?v=181';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=182';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=182';
+import * as Y1 from './sayfalar1.js?v=182';
+import * as Y2 from './sayfalar2.js?v=182';
+import * as P from './portal.js?v=182';
+import * as Y3 from './sayfalar3.js?v=182';
+import * as Y4 from './sayfalar4.js?v=182';
+import * as Y5 from './sayfalar5.js?v=182';
+import * as IM from './imza.js?v=182';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=182';
+import * as SN from './senaryo.js?v=182';
+import * as OZ from './ozellik.js?v=182';
+import { durumlariGuncelle } from './mesaj.js?v=182';
+import { yeniMenu } from './yeni.js?v=182';
+import * as B from './bulut.js?v=182';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=182';
+import * as AN from './analiz.js?v=182';
+import * as ORT from './ortak.js?v=182';
+import * as SH from './sahip.js?v=182';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -345,7 +345,7 @@ let ipucuSayac = null;
 // Yükleme ekranı: trafik ışığında bekleyen kurs arabası; altında birkaç saniyede bir değişen kısa trafik ipucu
 function bekleEkrani(metin) {
   let n = 0;
-  document.getElementById('uyg').innerHTML = `<div class="yukleme" role="status" aria-live="polite"><div class="yk-gokbulut b1" aria-hidden="true"></div><div class="yk-gokbulut b2" aria-hidden="true"></div><div class="yk-ust"><div class="yk-marka"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#0b2546" stroke-width="1.2"/><path d="M12 7.6v5.6M12 15.8v.4" stroke="#0b2546" stroke-width="2.3" stroke-linecap="round"/></svg><span>Sinyal</span></div><h1 class="yk-baslik">${e(String(metin).replace(/…$/, ''))}</h1><p class="yk-alt">İlk açılışta birkaç saniye sürebilir</p><div class="yk-cubuk" aria-hidden="true"><i></i></div><div class="yukle-ipucu" aria-live="off"><svg viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="9" fill="#1f5fbf"/><path d="M15 6.5 23 21.5H7Z" fill="#fff"/><circle cx="15" cy="12.4" r="1.4" fill="#0b2546"/><path d="M14.8 14.2l-.7 3.6m.7-3.6 2 2.4m-2-2.4-1.8 1.7m1.1 1.9-1.6 2m1.6-2 1.8 1.8" stroke="#0b2546" stroke-width="1.05" stroke-linecap="round"/></svg><div><i>Biliyor muydun?</i><span>${e(IPUCLARI[n])}</span></div></div></div><div class="yukle-sahne" data-yk></div></div>`;
+  document.getElementById('uyg').innerHTML = `<div class="yukleme" role="status" aria-live="polite"><div class="yk-gokbulut b1" aria-hidden="true"></div><div class="yk-gokbulut b2" aria-hidden="true"></div><div class="yk-ust"><div class="yk-marka"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#f2b705" stroke="#0b2546" stroke-width="1.2"/><path d="M12 7.6v5.6M12 15.8v.4" stroke="#0b2546" stroke-width="2.3" stroke-linecap="round"/></svg><span>Sinyal</span></div><p class="yk-baslik">${e(String(metin).replace(/…$/, ''))}</p><p class="yk-alt">İlk açılışta birkaç saniye sürebilir</p><div class="yk-cubuk" aria-hidden="true"><i></i></div><div class="yukle-ipucu" aria-live="off"><svg viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="9" fill="#1f5fbf"/><path d="M15 6.5 23 21.5H7Z" fill="#fff"/><circle cx="15" cy="12.4" r="1.4" fill="#0b2546"/><path d="M14.8 14.2l-.7 3.6m.7-3.6 2 2.4m-2-2.4-1.8 1.7m1.1 1.9-1.6 2m1.6-2 1.8 1.8" stroke="#0b2546" stroke-width="1.05" stroke-linecap="round"/></svg><div><i>Biliyor muydun?</i><span>${e(IPUCLARI[n])}</span></div></div></div><div class="yukle-sahne" data-yk></div></div>`;
   const sahne = document.querySelector('#uyg [data-yk]'); if (sahne && window.sinyalYukleme) window.sinyalYukleme(sahne);
   clearInterval(ipucuSayac);
   ipucuSayac = setInterval(() => { const p = document.querySelector('.yukle-ipucu'); if (!p) return clearInterval(ipucuSayac); p.style.opacity = 0; setTimeout(() => { n = (n + 1) % IPUCLARI.length; p.querySelector('span').textContent = IPUCLARI[n]; p.style.opacity = 1; }, 350); }, 3600);
