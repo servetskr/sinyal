@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "mdSinyal MEBBİS Yardımcısı",
   "version": "1.8.0",
-  "description": "mdSinyal'deki kayıt, direksiyon programı ve sınav bilgilerini kursun kendi MEBBİS oturumunda forma yazar; MEBBİS listelerini mdSinyal'e aktarır. Şifre istemez, saklamaz.",
+  "description": "mdSinyal kayıtlarını kursun kendi MEBBİS oturumunda forma yazar, MEBBİS listelerini aktarır. Şifre istemez, saklamaz.",
   "permissions": [
     "storage"
   ],
