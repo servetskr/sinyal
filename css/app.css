@@ -2553,3 +2553,38 @@ body.sahip-modu{
 .ust-baslik .bulut-durum{grid-column:2;white-space:nowrap}
 .ust-baslik h1{grid-column:1/-1;min-width:0}
 .an-bag{display:inline-block;padding:8px 0;margin:-8px 0;color:inherit}
+
+/* ---------- Giriş ekranları gece temasında (v181): kurs ekibi, öğretmen, öğrenci ve Yönetim girişi ---------- */
+/* Renkler yalnız giriş kapsayıcısında yeniden tanımlanır; uygulamanın geri kalanı etkilenmez. Tanıtım sitesiyle aynı: gece göğü, cam kart, sinyal sarısı */
+.giris,.og-giris{
+  --zemin:#070b14;--panel:rgba(255,255,255,.05);--panel-2:rgba(255,255,255,.08);
+  --murekkep:#f3f5fa;--metin:rgba(214,222,238,.8);--soluk:rgba(214,222,238,.56);
+  --cizgi:rgba(255,255,255,.16);--cizgi-2:rgba(255,255,255,.09);
+  --levha:#ffc21a;--levha-koyu:#ffd24d;--levha-acik:rgba(255,194,26,.16);--sari-acik:rgba(255,194,26,.12);
+  position:relative;isolation:isolate;color:var(--metin);
+  background:radial-gradient(60% 40% at 50% 108%,rgba(255,170,70,.2),transparent 70%),radial-gradient(55% 45% at 15% 0,rgba(46,107,255,.18),transparent 70%),linear-gradient(180deg,#03060c,#0a1222 62%,#111b31)}
+.giris::before,.og-giris::before{content:"";position:absolute;z-index:-1;inset:0 0 35% 0;pointer-events:none;opacity:.7;background-image:radial-gradient(1px 1px at 12% 18%,#fff,transparent),radial-gradient(1px 1px at 27% 8%,rgba(255,255,255,.8),transparent),radial-gradient(1.2px 1.2px at 44% 22%,#fff,transparent),radial-gradient(1px 1px at 63% 12%,rgba(255,255,255,.7),transparent),radial-gradient(1px 1px at 78% 26%,#fff,transparent),radial-gradient(1px 1px at 88% 9%,rgba(255,255,255,.8),transparent),radial-gradient(1px 1px at 8% 40%,rgba(255,255,255,.6),transparent),radial-gradient(1px 1px at 93% 44%,rgba(255,255,255,.6),transparent),radial-gradient(1.2px 1.2px at 55% 38%,rgba(255,255,255,.5),transparent)}
+.giris::after,.og-giris::after{content:"";position:absolute;z-index:-1;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,196,120,.45) 50%,transparent);pointer-events:none}
+body:has(.giris),body:has(.og-giris){background:#070b14}
+/* kart: cam */
+.giris-levha,.og-giris-kart{background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.025));border:1px solid rgba(255,255,255,.1);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 40px 90px -40px rgba(0,0,0,.85)}
+.giris-levha .logo-isaret path:first-child,.og-giris-ust .logo-isaret path:first-child{stroke:none}
+.og-giris-ust .logo,.giris-levha .logo{color:#fff}
+/* alanlar */
+.giris-eposta input:not([type=checkbox]),.og-girdi,.giris-pin input{background:rgba(255,255,255,.05);border-color:var(--cizgi);color:#fff}
+.og-girdi input,.giris-eposta input:not([type=checkbox]){color:#fff}
+.og-girdi input::placeholder,.giris-eposta input::placeholder,.giris-pin input::placeholder{color:rgba(214,222,238,.4)}
+.giris-eposta input:not([type=checkbox]):focus-visible,.og-girdi:focus-within{border-color:var(--sari);box-shadow:0 0 0 3px rgba(255,194,26,.2)}
+.giris input[type=checkbox],.og-giris input[type=checkbox]{accent-color:#ffc21a}
+/* ana düğmeler: sinyal sarısı */
+.giris .dg-koyu,.giris-pin .dg-koyu,.og-giris .dg-ana{background:var(--sari,#ffc21a);color:#0b1220;box-shadow:0 12px 28px -14px rgba(255,170,0,.6)}
+.giris .dg-koyu:hover,.giris-pin .dg-koyu:hover,.og-giris .dg-ana:hover{background:#ffd24d}
+.giris .dg-hafif,.og-giris .dg-hafif{background:rgba(255,255,255,.06);color:#fff;border-color:var(--cizgi)}
+/* demo ve kişi seçimi */
+.giris-demo{background:rgba(255,255,255,.05);border-color:var(--cizgi-2);color:#fff}
+.giris-demo:hover{background:rgba(255,194,26,.1);border-color:rgba(255,194,26,.4)}
+.giris-kisi{background:rgba(255,255,255,.04);border-color:var(--cizgi);color:#fff}
+.giris-kisi.secili,.giris-kisi:hover{background:rgba(255,194,26,.14);border-color:rgba(255,194,26,.45);color:#ffd24d}
+.giris-kisi.secili em,.giris-kisi:hover em{background:rgba(255,255,255,.08)}
+.og-giris-not{background:rgba(255,194,26,.12);color:#ffdf8a}
+.giris-geri:hover{color:#ffd24d}
