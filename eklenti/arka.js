@@ -1,4 +1,4 @@
-// Sinyal MEBBİS Yardımcısı · arka plan: Sinyal sekmesi ile MEBBİS sekmesi arasında köprü.
+// ÖzSinyal MEBBİS Yardımcısı · arka plan: ÖzSinyal sekmesi ile MEBBİS sekmesi arasında köprü.
 // Kişisel veriler chrome.storage.session’da durur (tarayıcı kapanınca silinir); kalıcı olarak yalnız öğretilen alan eşlemeleri saklanır.
 chrome.runtime.onInstalled.addListener(() => chrome.storage.session.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' }).catch(() => { }));
 const al = k => chrome.storage.session.get(k).then(x => x[k]);
@@ -13,7 +13,7 @@ chrome.runtime.onMessage.addListener((m, kimden, cevap) => {
       const l = await chrome.tabs.query({ url: 'https://mebbis.meb.gov.tr/*' });
       await koy('yeni', true);
       if (l.length) { const s = l.find(x => x.active) || l[0]; await chrome.tabs.update(s.id, { active: true }); await chrome.windows.update(s.windowId, { focused: true }).catch(() => { }); chrome.tabs.sendMessage(s.id, { tur: 'yeniden-bak' }).catch(() => { }); return { sekme: 'gecildi' }; }
-      // MEBBİS sekmesi yoksa Sinyal sekmesinin hemen yanında, aynı pencerede açılır ve öne gelir
+      // MEBBİS sekmesi yoksa ÖzSinyal sekmesinin hemen yanında, aynı pencerede açılır ve öne gelir
       const yan = kimden && kimden.tab;
       const yeniSekme = await chrome.tabs.create({ url: 'https://mebbis.meb.gov.tr/', active: true, ...(yan ? { windowId: yan.windowId, index: yan.index + 1, openerTabId: yan.id } : {}) });
       await chrome.windows.update(yeniSekme.windowId, { focused: true }).catch(() => { });
@@ -29,7 +29,7 @@ chrome.runtime.onMessage.addListener((m, kimden, cevap) => {
     if (m.tur === 'aktif-koy') { await koy('aktif', m.aktif); return { ok: true }; }
     if (m.tur === 'kuyruk-al') return (await al('kuyruk')) || { isler: [] };
     if (m.tur === 'is-bitti') { const q = (await al('kuyruk')) || { isler: [] }; const x = q.isler.find(y => y.id === m.id); if (x) x.bitti = Date.now(); await koy('kuyruk', q); const b = (await al('bitenler')) || []; b.push({ id: m.id, ref: x && x.ref, tur: x && x.tur, zaman: Date.now() }); await koy('bitenler', b); return { ok: true }; }
-    // biten işler Sinyal işleyip "aldım" deyince silinir (sayfa henüz hazır değilse kaybolmasın)
+    // biten işler ÖzSinyal işleyip "aldım" deyince silinir (sayfa henüz hazır değilse kaybolmasın)
     if (m.tur === 'bitenler-al') return (await al('bitenler')) || [];
     if (m.tur === 'bitenler-sil') { const ids = new Set(m.ids || []); const b = ((await al('bitenler')) || []).filter(x => !ids.has(x.id)); await koy('bitenler', b); return { ok: true }; }
     if (m.tur === 'kuyruk-temizle') { await chrome.storage.session.remove(['kuyruk', 'bitenler', 'tablo']); return { ok: true }; }

@@ -1,8 +1,8 @@
 // Gerçek kurs hesabı: Google Firebase (Frankfurt). Giriş e-posta + şifreyle; kurs verisi Firestore'da
 // kurslar/{kurs}/v altında parça parça durur. Her kayıt ayrı alan olarak yazılır: iki kişi aynı anda
 // farklı kayıtları değiştirirse ikisi de korunur. Fotoğraf ve imzalar kurslar/{kurs}/dosyalar'da ayrı belge.
-import { FIREBASE } from './firebase-ayar.js?v=182';
-import { S, bulutVeri, bosVeri, kaydetDinle, kaydet, oturum, bulutKanca, makbuzSira, islem, iso, EVRAKLAR, gun, fark, tamAd, iptalEdilebilir, dersIptalIz } from './veri.js?v=182';
+import { FIREBASE } from './firebase-ayar.js?v=183';
+import { S, bulutVeri, bosVeri, kaydetDinle, kaydet, oturum, bulutKanca, makbuzSira, islem, iso, EVRAKLAR, gun, fark, tamAd, iptalEdilebilir, dersIptalIz } from './veri.js?v=183';
 
 const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
 const YEREL = 'sinyal-bulut';
@@ -32,8 +32,8 @@ const HATA = {
   'auth/invalid-credential': 'E-posta ya da şifre hatalı', 'auth/wrong-password': 'E-posta ya da şifre hatalı', 'auth/user-not-found': 'Bu e-postayla açılmış hesap yok',
   'auth/invalid-email': 'E-posta adresi geçersiz', 'auth/email-already-in-use': 'Bu e-postayla zaten hesap var; giriş yapın', 'auth/weak-password': 'Şifre en az 8 karakter olmalı',
   'auth/too-many-requests': 'Çok fazla deneme yapıldı; birkaç dakika sonra tekrar deneyin', 'auth/network-request-failed': 'İnternet bağlantısı yok', 'permission-denied': 'Bu işlem için yetkiniz yok',
-  'auth/missing-password': 'Şifre girin', 'auth/user-disabled': 'Bu hesabın girişi kapatılmış; Sinyal’e yazın', 'auth/requires-recent-login': 'Güvenlik için çıkış yapıp tekrar giriş yapın, sonra yeniden deneyin',
-  'auth/invalid-verification-code': 'Doğrulama kodu hatalı', 'auth/operation-not-allowed': 'İki adımlı giriş bu Sinyal kurulumunda henüz açılmadı; Sinyal ekibine yazın', 'auth/unverified-email': 'Önce e-posta adresinizi doğrulayın (gelen kutunuza doğrulama linki gönderildi)',
+  'auth/missing-password': 'Şifre girin', 'auth/user-disabled': 'Bu hesabın girişi kapatılmış; ÖzSinyal’e yazın', 'auth/requires-recent-login': 'Güvenlik için çıkış yapıp tekrar giriş yapın, sonra yeniden deneyin',
+  'auth/invalid-verification-code': 'Doğrulama kodu hatalı', 'auth/operation-not-allowed': 'İki adımlı giriş bu ÖzSinyal kurulumunda henüz açılmadı; ÖzSinyal ekibine yazın', 'auth/unverified-email': 'Önce e-posta adresinizi doğrulayın (gelen kutunuza doğrulama linki gönderildi)',
 };
 export const hataMetni = x => HATA[x && x.code] || (x && x.kullanici) || 'İşlem tamamlanamadı; bağlantınızı kontrol edip tekrar deneyin';
 const hata = m => Object.assign(new Error(m), { kullanici: m });
@@ -73,7 +73,7 @@ export async function ikiAdimBaslat() {
   const { auth, A } = await sdk();
   const oturum = await A.multiFactor(auth.currentUser).getSession();
   const gizli = await A.TotpMultiFactorGenerator.generateSecret(oturum);
-  return { anahtar: gizli.secretKey, url: gizli.generateQrCodeUrl(auth.currentUser.email, 'Sinyal'), bitir: kod => A.multiFactor(auth.currentUser).enroll(A.TotpMultiFactorGenerator.assertionForEnrollment(gizli, kod), 'Doğrulama uygulaması') };
+  return { anahtar: gizli.secretKey, url: gizli.generateQrCodeUrl(auth.currentUser.email, 'ÖzSinyal'), bitir: kod => A.multiFactor(auth.currentUser).enroll(A.TotpMultiFactorGenerator.assertionForEnrollment(gizli, kod), 'Doğrulama uygulaması') };
 }
 export async function epostaDogrula() { const { auth, A } = await sdk(); await A.sendEmailVerification(auth.currentUser); }
 export async function ikiAdimKapat() { const { auth, A } = await sdk(); const m = A.multiFactor(auth.currentUser), f = m.enrolledFactors.find(x => x.factorId === A.TotpMultiFactorGenerator.FACTOR_ID); if (f) await m.unenroll(f); }
@@ -105,7 +105,7 @@ async function hesapAc(eposta, sifre, ad) {
   return user;
 }
 // Yeni kurs: müdür hesabı + boş kurs verisi
-// Yeni kurs hesabı yalnız Sinyal ekibinin verdiği tek kullanımlık davet koduyla açılır (Firestore kuralı da zorunlu kılar)
+// Yeni kurs hesabı yalnız ÖzSinyal ekibinin verdiği tek kullanımlık davet koduyla açılır (Firestore kuralı da zorunlu kılar)
 export const kursDavetLinki = kod => location.origin + location.pathname + '#/yeni-kurs/' + kod;
 export async function kursDavetGetir(kod) {
   const { db, F } = await sdk();
@@ -124,7 +124,7 @@ export async function kursDavetOlustur(not) {
   return { kod, link: kursDavetLinki(kod), son };
 }
 export async function kursAc({ kursAd, yetkili, sehir, eposta, sifre, mudurTel, davetKod }) {
-  if (!davetKod || !(await kursDavetGetir(davetKod))) throw hata('Bu hesap açma linki geçersiz ya da süresi dolmuş; Sinyal ekibinden yeni link isteyin');
+  if (!davetKod || !(await kursDavetGetir(davetKod))) throw hata('Bu hesap açma linki geçersiz ya da süresi dolmuş; ÖzSinyal ekibinden yeni link isteyin');
   const user = await hesapAc(eposta, sifre, yetkili);
   const { db, F } = fb;
   const kRef = F.doc(F.collection(db, 'kurslar'));
@@ -258,7 +258,7 @@ let sunucuGeldi = false;  // bu oturumda sunucudan en az bir güncel anlık gör
 export const sunucuHazir = () => sunucuGeldi;
 export async function akit() {
   if (!bulut.kurs || !fb) return;
-  if (bulut.rol === 'ortak') return;  // Sinyal Yönetim'de ortak yalnız görür; sunucu kuralı da yazmasına izin vermez
+  if (bulut.rol === 'ortak') return;  // ÖzSinyal Yönetim'de ortak yalnız görür; sunucu kuralı da yazmasına izin vermez
   if (bulut.rol === 'usta') return ustaGonder();  // öğretmen kurs verisine doğrudan yazmaz; yaptıkları ustaGelen'e gider
   clearTimeout(zamanla); zamanla = null;
   const yazilar = farklar(), dosyalar = yeniDosya; yeniDosya = new Map();
@@ -279,7 +279,7 @@ export async function akit() {
   kapat();
   bulut.bekleyen += isler.length; durumYaz();
   if (projeKirli.size) setTimeout(projeksiyonYaz, 1500);
-  await Promise.all(isler.map(p => p.then(() => { bulut.bekleyen--; bulut.hata = ''; durumYaz(); }, x => { bulut.bekleyen--; bulut.hata = hataMetni(x); bulut.kalici = 'Bazı değişiklikler sunucuya kaydedilemedi (' + bulut.hata + '). Ayarlar › Veri aktarımı’ndan indirip Sinyal ekibine gönderin.'; console.error(x); durumYaz(); })));
+  await Promise.all(isler.map(p => p.then(() => { bulut.bekleyen--; bulut.hata = ''; durumYaz(); }, x => { bulut.bekleyen--; bulut.hata = hataMetni(x); bulut.kalici = 'Bazı değişiklikler sunucuya kaydedilemedi (' + bulut.hata + '). Ayarlar › Veri aktarımı’ndan indirip ÖzSinyal ekibine gönderin.'; console.error(x); durumYaz(); })));
 }
 // Kaydedilemeyen değişiklikler cihazda saklanır (en çok 30 paket); Ayarlar › Veri aktarımı'ndan indirilir
 export const KURTARMA = 'sinyal-kurtarma';
@@ -434,7 +434,7 @@ async function makbuzDenetle() {
     for (const h of benim) {
       const m = makbuzSira(h.no); if (!m) { delete h.noGecici; continue; }
       const cakisan = S.hareket.some(x => x !== h && x.no === h.no);
-      if (cakisan) { const eski = h.no, n = await sayacAyir(m[0]); h.no = 'M' + m[0] + '-' + String(n).padStart(5, '0'); islem('Makbuz numarası değişti', eski + ' başka cihazda da verilmişti; yeni numara ' + h.no); import('./ui.js?v=182').then(m => m.bildir(`Makbuz ${eski} çevrimdışıyken verilmişti ve başka cihazdaki makbuzla çakıştı; yeni numarası ${h.no}. Makbuzu verdiyseniz yenisini yazdırın.`, 'uyari')); }
+      if (cakisan) { const eski = h.no, n = await sayacAyir(m[0]); h.no = 'M' + m[0] + '-' + String(n).padStart(5, '0'); islem('Makbuz numarası değişti', eski + ' başka cihazda da verilmişti; yeni numara ' + h.no); import('./ui.js?v=183').then(m => m.bildir(`Makbuz ${eski} çevrimdışıyken verilmişti ve başka cihazdaki makbuzla çakıştı; yeni numarası ${h.no}. Makbuzu verdiyseniz yenisini yazdırın.`, 'uyari')); }
       else await sayacAyir(m[0], m[1] - 1);
       delete h.noGecici;
     }
@@ -695,7 +695,7 @@ function ogrenciUygula(docId, g) {
       S.gonderimler.unshift(m);
       if (!izinli && y.iletilecek) { islem('Öğrenci panelinden izinsiz bildirim engellendi', tamAd(k) + ' → ' + m.kime); continue; }
       if (retler.length && /dersi aldı|dersini iptal etti/.test(m.metin)) continue;  // istek reddedildiyse "ders aldı / iptal etti" bildirimi gitmez
-      if (y.iletilecek && S.kurs.waApi) sahiplen('og|' + docId + '|' + x.id).then(ok => { if (ok) import('./ui.js?v=182').then(u => u.apiGonder(u.etiket(m.kime, y.rol || '') + m.metin, undefined, undefined, { ad: m.kime, rol: y.rol || '' }).then(s => { if (!s.ok) { islem('Öğrenci bildirimi gönderilemedi', m.kime + ' · ' + m.tur + ': ' + s.hata); kaydet(); } })); });
+      if (y.iletilecek && S.kurs.waApi) sahiplen('og|' + docId + '|' + x.id).then(ok => { if (ok) import('./ui.js?v=183').then(u => u.apiGonder(u.etiket(m.kime, y.rol || '') + m.metin, undefined, undefined, { ad: m.kime, rol: y.rol || '' }).then(s => { if (!s.ok) { islem('Öğrenci bildirimi gönderilemedi', m.kime + ' · ' + m.tur + ': ' + s.hata); kaydet(); } })); });
     }
   }
   if (notlar.length) islem('Öğrenci panelinden', tamAd(k) + ': ' + notlar.join(', '));
@@ -711,7 +711,7 @@ function retBildir(kod, l) {
   let gor = []; try { gor = JSON.parse(localStorage.getItem('sinyal-ogr-ret-' + kod) || '[]'); } catch (x) { }
   const yeni = l.filter(r => !gor.includes(r.doc)); if (!yeni.length) return;
   try { localStorage.setItem('sinyal-ogr-ret-' + kod, JSON.stringify([...yeni.map(r => r.doc), ...gor].slice(0, 30))); } catch (x) { }
-  import('./ui.js?v=182').then(u => yeni.flatMap(r => r.ret).forEach((m, i) => setTimeout(() => u.bildir(m, 'uyari'), 400 + i * 3500)));
+  import('./ui.js?v=183').then(u => yeni.flatMap(r => r.ret).forEach((m, i) => setTimeout(() => u.bildir(m, 'uyari'), 400 + i * 3500)));
 }
 function ogrenciKur(veri) {
   const taban = bosVeri({}); delete taban._gun;
@@ -752,20 +752,20 @@ async function ogrenciGonder() {
   if (!d.length) return;
   tabanAl();
   const boyut = JSON.stringify(d).length;
-  if (boyut > 950000) { import('./ui.js?v=182').then(u => u.bildir('Gönderilen belge çok büyük; daha küçük bir fotoğraf dene', 'uyari')); return; }
+  if (boyut > 950000) { import('./ui.js?v=183').then(u => u.bildir('Gönderilen belge çok büyük; daha küçük bir fotoğraf dene', 'uyari')); return; }
   const { db, F } = fb;
   try {
     const ref = await F.addDoc(F.collection(db, 'kurslar', ogr.kurs, 'ogrenciGelen'), { kod: ogr.kod, kursiyer: S.kursiyerler[0].id, d, zaman: F.serverTimestamp() });
     ogr.bekleyen.push({ id: ref.id, t: Date.now(), d });
     try { localStorage.setItem('sinyal-ogr-bekleyen-' + ogr.kod, JSON.stringify(ogr.bekleyen.map(p => ({ ...p, d: p.d.map(x => x.v && x.v.length > 20000 ? { ...x, v: null, buyuk: true } : x).filter(x => !x.buyuk) })))); } catch (x) { }
-  } catch (x) { console.error(x); import('./ui.js?v=182').then(u => u.bildir('Kursa iletilemedi; internet bağlantını kontrol et', 'uyari')); }
+  } catch (x) { console.error(x); import('./ui.js?v=183').then(u => u.bildir('Kursa iletilemedi; internet bağlantını kontrol et', 'uyari')); }
 }
 export function ogrenciAyril() { try { localStorage.removeItem('sinyal-ogrenci'); } catch (x) { } }
 
 // ---- öğretmen (usta) hesabı: yalnız kendi öğrencileri ve dersleri ----
 // Ofis cihazı (müdür / ön büro) her öğretmen için kurslar/{kurs}/ustalar/{öğretmen} belgesini hazırlar; öğretmenin telefonu
 // kurs verisinin tamamını değil yalnız bu belgeyi okur. Öğretmenin yaptıkları (ders başlat/bitir, imza, not, deneme) ustaGelen'e
-// yazılır, ofis cihazı denetleyip kayda işler. Kendi telefonunda değişiklik hemen görünür; ofiste Sinyal açık değilse kayda sonra geçer.
+// yazılır, ofis cihazı denetleyip kayda işler. Kendi telefonunda değişiklik hemen görünür; ofiste ÖzSinyal açık değilse kayda sonra geçer.
 const DIZI_USTA = ['dersler', 'kursiyerler', 'gonderimler', 'imzaTalepleri', 'dersIptaller', 'islemler'];
 const KURSIYER_USTA = ['id', 'no', 'ad', 'soyad', 'tel', 'foto', 'sinif', 'asama', 'egitmen', 'sube', 'kapali', 'direksiyon', 'teorik', 'deneme', 'dDeneme', 'esinav', 'dsinav', 'kayit', 'teorikGrup', 'mevcutEhliyet', 'ekDersHakki', 'cinsiyet'];
 const DERS_KORUNAN = new Set(['id', 'kursiyer', 'egitmen', 'tarih', 'saat', 'arac', 'meb', 'mebDegisti', 'ogrenciOnay', 'ogrenciPuan', 'tur', 'kaynak', 'eklendi', 'onayBekliyor']);
@@ -889,7 +889,7 @@ async function ustaBaglan(u) {
     dinleyiciler.push(F.onSnapshot(F.doc(db, 'kurslar', u.kurs, 'ustalar', u.usta), { includeMetadataChanges: true }, d => {
       bulut.durum = d.metadata.fromCache ? 'cevrimdisi' : 'cevrimici';
       if (d.metadata.hasPendingWrites) return;
-      if (!d.exists()) { if (d.metadata.fromCache && ilk) return; bulut.hata = ''; bulut.kalici = 'Dersleriniz kurs bilgisayarında Sinyal açılınca burada görünecek'; ustaKur({}, u); bitir(); durumYaz(); return; }
+      if (!d.exists()) { if (d.metadata.fromCache && ilk) return; bulut.hata = ''; bulut.kalici = 'Dersleriniz kurs bilgisayarında ÖzSinyal açılınca burada görünecek'; ustaKur({}, u); bitir(); durumYaz(); return; }
       bulut.kalici = '';
       if (ust.zaman) ustaGonder();  // henüz gönderilmemiş değişiklik: önce ayrılır, sonra üstüne konur
       const v = d.data(), isl = new Set(v.islenen || []);

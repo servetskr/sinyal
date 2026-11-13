@@ -1,4 +1,4 @@
-// Sinyal servis çalışanı: önce ağ, bağlantı yoksa son açılan sürüm (aynı kaynaktaki dosyalar).
+// ÖzSinyal servis çalışanı: önce ağ, bağlantı yoksa son açılan sürüm (aynı kaynaktaki dosyalar).
 // WhatsApp köprüsü, yazı tipleri gibi dış istekler önbelleğe alınmaz.
 const ONBELLEK = 'sinyal-v6';  // sürüm değişince eski dosyalar silinir (v6: birikmiş eski sürümler ve sürüm sorguları temizlenir)
 self.addEventListener('install', () => self.skipWaiting());

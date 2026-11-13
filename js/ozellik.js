@@ -1,10 +1,10 @@
-import { cevapIsle } from './mesaj.js?v=182';
-import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli, sonrakiDers, selam, bulutKanca, iptalEdilebilir, oturum, dersIptalIz } from './veri.js?v=182';
-import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos, waIstek, ziyaretci, apiGonder } from './ui.js?v=182';
-import { yenile } from './app.js?v=182';
-import { bildirimler } from './sayfalar1.js?v=182';
-import { denetimEksikleri } from './sayfalar3.js?v=182';
-import { sinifKari, dersMaliyeti, bosKapasite, hakedis, ustaAlacak, ayAnahtar, KAPASITE_SAAT, randevuEngeli, bosSlotlar } from './risk.js?v=182';
+import { cevapIsle } from './mesaj.js?v=183';
+import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli, sonrakiDers, selam, bulutKanca, iptalEdilebilir, oturum, dersIptalIz } from './veri.js?v=183';
+import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos, waIstek, ziyaretci, apiGonder } from './ui.js?v=183';
+import { yenile } from './app.js?v=183';
+import { bildirimler } from './sayfalar1.js?v=183';
+import { denetimEksikleri } from './sayfalar3.js?v=183';
+import { sinifKari, dersMaliyeti, bosKapasite, hakedis, ustaAlacak, ayAnahtar, KAPASITE_SAAT, randevuEngeli, bosSlotlar } from './risk.js?v=183';
 const AY_ADI = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 export const ayAdi = a => AY_ADI[+a.slice(5, 7) - 1] + ' ' + a.slice(0, 4);
 
@@ -92,7 +92,7 @@ export function karlilik() {
 }
 
 /* ================= MEBBİS MUTABAKATI =================
-   MEBBİS’ten alınan kursiyer listesi (Excel/CSV) yüklenir; Sinyal’deki kayıtlarla TC bazında karşılaştırılır. */
+   MEBBİS’ten alınan kursiyer listesi (Excel/CSV) yüklenir; ÖzSinyal’deki kayıtlarla TC bazında karşılaştırılır. */
 const mebdeOlmali = () => sb(S.kursiyerler).filter(k => !k.kapali && (k.mebIslendi || !['Kayıt', 'Evrak'].includes(k.asama)));
 const yapilanDers = k => S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Yapıldı').length;
 function csvOku(metin) {
@@ -125,20 +125,20 @@ export function mutabakatSekme() {
   const ks = id => kursiyer(id);
   return `<div class="izgara iz-21"><div class="kart"><div class="kart-bas"><h3>MEBBİS mutabakatı</h3><small>${m ? `Son karşılaştırma ${tarih(m.tarih)} ${m.saat} · ${e(m.dosya)} · ${m.satir} satır` : 'Henüz karşılaştırma yapılmadı'}</small></div>
     <div class="kart-govde">
-      <p style="font-size:14.5px">MEBBİS’ten kursiyer listesini Excel (CSV) olarak indirip buraya yükleyin. Sinyal TC kimlik numarasına göre eşleştirir; MEBBİS’te eksik kaydı, Sinyal’de olmayan kişiyi, sınıf ve ders sayısı farkını gösterir.</p>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px"><label class="dg dg-ana" style="cursor:pointer">${ik('indir')}MEBBİS listesini yükle<input type="file" accept=".csv,.txt,text/csv" data-mutabakat-dosya hidden></label><button class="dg dg-cizgi" data-mutabakat-sablon>${ik('indir')}Sinyal listesini indir</button></div>
+      <p style="font-size:14.5px">MEBBİS’ten kursiyer listesini Excel (CSV) olarak indirip buraya yükleyin. ÖzSinyal TC kimlik numarasına göre eşleştirir; MEBBİS’te eksik kaydı, ÖzSinyal’de olmayan kişiyi, sınıf ve ders sayısı farkını gösterir.</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px"><label class="dg dg-ana" style="cursor:pointer">${ik('indir')}MEBBİS listesini yükle<input type="file" accept=".csv,.txt,text/csv" data-mutabakat-dosya hidden></label><button class="dg dg-cizgi" data-mutabakat-sablon>${ik('indir')}ÖzSinyal listesini indir</button></div>
       <p style="font-size:12.5px;color:var(--soluk);margin-top:8px">Beklenen sütunlar: TC, Adı, Soyadı, Sınıf, Direksiyon ders. Sütun sırası önemli değil; “;” ya da “,” ayraç olabilir.</p>
     </div>
     ${r ? `<ul class="liste">
       ${r.yalnizSinyal.map(id => ks(id)).filter(Boolean).map(k => `<li>${isaret('dur', 24)}<div style="flex:1"><b style="color:var(--murekkep);display:block">${e(tamAd(k))} · MEBBİS’te yok</b><small style="color:var(--soluk)">${SINIFLAR[k.sinif] ? SINIFLAR[k.sinif].ad : k.sinif} · ${k.asama}. Derse başlamış kursiyerin MEBBİS kaydı olmalı.</small></div><a class="dg dg-ana dg-kucuk" href="#/mebbis/${k.id}">MEBBİS’e gir</a></li>`).join('')}
-      ${r.yalnizMeb.map(x => `<li>${isaret('yasak', 24)}<div style="flex:1"><b style="color:var(--murekkep);display:block">${e(x.ad || x.tc)} · Sinyal’de yok</b><small style="color:var(--soluk)">TC ${x.tc.slice(0, 3)}*****${x.tc.slice(-3)}${x.sinif ? ' · ' + e(x.sinif) : ''}. MEBBİS’te kayıtlı ama kursiyer listenizde değil.</small></div><a class="dg dg-cizgi dg-kucuk" href="#/kursiyerler">Kursiyer ekle</a></li>`).join('')}
-      ${r.sinif.map(x => ({ k: ks(x.id), x })).filter(y => y.k).map(({ k, x }) => `<li>${isaret('uyari', 24)}<div style="flex:1"><b style="color:var(--murekkep);display:block">${e(tamAd(k))} · sınıf farklı</b><small style="color:var(--soluk)">Sinyal: ${k.sinif} · MEBBİS: ${e(x.meb)}</small></div><a class="dg dg-cizgi dg-kucuk" href="#/kursiyer/${k.id}">Dosyayı aç</a></li>`).join('')}
-      ${r.ders.map(x => ({ k: ks(x.id), x })).filter(y => y.k).map(({ k, x }) => `<li>${isaret('uyari', 24)}<div style="flex:1"><b style="color:var(--murekkep);display:block">${e(tamAd(k))} · direksiyon ders sayısı farklı</b><small style="color:var(--soluk)">Sinyal’de ${x.sinyal} yapılan ders · MEBBİS’te ${x.meb}. ${x.sinyal > x.meb ? 'Programı MEBBİS’e girmeyi unutmuş olabilirsiniz.' : 'MEBBİS’teki fazla ders Sinyal’de imzalı değil.'}</small></div><a class="dg dg-cizgi dg-kucuk" href="#/kursiyer/${k.id}/dersler">Dersleri aç</a></li>`).join('')}
+      ${r.yalnizMeb.map(x => `<li>${isaret('yasak', 24)}<div style="flex:1"><b style="color:var(--murekkep);display:block">${e(x.ad || x.tc)} · ÖzSinyal’de yok</b><small style="color:var(--soluk)">TC ${x.tc.slice(0, 3)}*****${x.tc.slice(-3)}${x.sinif ? ' · ' + e(x.sinif) : ''}. MEBBİS’te kayıtlı ama kursiyer listenizde değil.</small></div><a class="dg dg-cizgi dg-kucuk" href="#/kursiyerler">Kursiyer ekle</a></li>`).join('')}
+      ${r.sinif.map(x => ({ k: ks(x.id), x })).filter(y => y.k).map(({ k, x }) => `<li>${isaret('uyari', 24)}<div style="flex:1"><b style="color:var(--murekkep);display:block">${e(tamAd(k))} · sınıf farklı</b><small style="color:var(--soluk)">ÖzSinyal: ${k.sinif} · MEBBİS: ${e(x.meb)}</small></div><a class="dg dg-cizgi dg-kucuk" href="#/kursiyer/${k.id}">Dosyayı aç</a></li>`).join('')}
+      ${r.ders.map(x => ({ k: ks(x.id), x })).filter(y => y.k).map(({ k, x }) => `<li>${isaret('uyari', 24)}<div style="flex:1"><b style="color:var(--murekkep);display:block">${e(tamAd(k))} · direksiyon ders sayısı farklı</b><small style="color:var(--soluk)">ÖzSinyal’de ${x.sinyal} yapılan ders · MEBBİS’te ${x.meb}. ${x.sinyal > x.meb ? 'Programı MEBBİS’e girmeyi unutmuş olabilirsiniz.' : 'MEBBİS’teki fazla ders ÖzSinyal’de imzalı değil.'}</small></div><a class="dg dg-cizgi dg-kucuk" href="#/kursiyer/${k.id}/dersler">Dersleri aç</a></li>`).join('')}
       ${r.gecersiz.length ? `<li>${isaret('bilgi', 24)}<span style="flex:1">${r.gecersiz.length} satırda TC kimlik numarası geçersiz; atlandı.</span></li>` : ''}
       ${!fark_ ? `<li>${isaret('tamam', 24)}<b style="flex:1;color:var(--yesil)">Fark yok: ${r.eslesen} kursiyer MEBBİS ile birebir aynı.</b></li>` : ''}
     </ul>` : ''}</div>
     <div><div class="kart" style="padding:20px"><small class="et" style="color:var(--soluk)">EŞLEŞEN</small><b style="display:block;font-family:var(--baslik);font-size:48px;font-weight:900;color:var(--murekkep);line-height:1.1">${r ? r.eslesen : '—'}</b><p style="font-size:14px">${r ? `${fark_} fark bulundu` : 'MEBBİS’te olması gereken ' + mebdeOlmali().length + ' kursiyer var'}</p></div>
-    <div class="ara-bosluk"></div><div class="kart" style="padding:20px"><small class="et" style="color:var(--soluk)">NEDEN ÖNEMLİ</small><p style="font-size:14px;margin-top:6px">Denetimde MEBBİS kayıtları esas alınır. Sinyal’de yapılmış ama MEBBİS’e girilmemiş ders, kursiyerin sınav başvurusunu ve usta hakedişini etkiler.</p></div></div></div>`;
+    <div class="ara-bosluk"></div><div class="kart" style="padding:20px"><small class="et" style="color:var(--soluk)">NEDEN ÖNEMLİ</small><p style="font-size:14px;margin-top:6px">Denetimde MEBBİS kayıtları esas alınır. ÖzSinyal’de yapılmış ama MEBBİS’e girilmemiş ders, kursiyerin sınav başvurusunu ve usta hakedişini etkiler.</p></div></div></div>`;
 }
 // MEBBİS Yardımcısı'ndan gelen tablo ile karşılaştırma (dosya yüklemeden)
 export function mutabakatTablodan(satirlar, kaynak) {
@@ -146,7 +146,7 @@ export function mutabakatTablodan(satirlar, kaynak) {
   const x = mutabakatHesapla(csv); if (x.hata) { bildir(x.hata, 'uyari'); return false; }
   S.mutabakat = { tarih: gun(0), saat: new Date().toTimeString().slice(0, 5), dosya: kaynak || 'MEBBİS', satir: x.satir, sonuc: x.sonuc };
   const n = x.sonuc.yalnizSinyal.length + x.sonuc.yalnizMeb.length + x.sonuc.sinif.length + x.sonuc.ders.length;
-  islem('MEBBİS mutabakatı yaptı', (kaynak || 'MEBBİS') + ' · ' + n + ' fark'); kaydet(); bildir(n ? n + ' fark bulundu' : 'MEBBİS ile Sinyal birebir aynı', n ? 'uyari' : undefined);
+  islem('MEBBİS mutabakatı yaptı', (kaynak || 'MEBBİS') + ' · ' + n + ' fark'); kaydet(); bildir(n ? n + ' fark bulundu' : 'MEBBİS ile ÖzSinyal birebir aynı', n ? 'uyari' : undefined);
   return true;
 }
 export function mutabakatBaglan(k) {
@@ -159,7 +159,7 @@ export function mutabakatBaglan(k) {
       const x = mutabakatHesapla(String(rd.result)); if (x.hata) return bildir(x.hata, 'uyari');
       S.mutabakat = { tarih: gun(0), saat: new Date().toTimeString().slice(0, 5), dosya: f.name, satir: x.satir, sonuc: x.sonuc };
       const n = x.sonuc.yalnizSinyal.length + x.sonuc.yalnizMeb.length + x.sonuc.sinif.length + x.sonuc.ders.length;
-      islem('MEBBİS mutabakatı yaptı', f.name + ' · ' + n + ' fark'); kaydet(); bildir(n ? n + ' fark bulundu' : 'MEBBİS ile Sinyal birebir aynı', n ? 'uyari' : undefined); yenile();
+      islem('MEBBİS mutabakatı yaptı', f.name + ' · ' + n + ' fark'); kaydet(); bildir(n ? n + ' fark bulundu' : 'MEBBİS ile ÖzSinyal birebir aynı', n ? 'uyari' : undefined); yenile();
     };
     rd.readAsText(f, 'utf-8');
   });
@@ -224,7 +224,7 @@ async function dersTalebi(x) {
   if (S._bulut && bulutKanca.sahiplen && !(await bulutKanca.sahiplen('ders-talebi|' + x.id))) return;
   const tel10 = String(x.tel || '').replace(/\D/g, '').slice(-10), k = tel10 && S.kursiyerler.find(y => String(y.tel || '').replace(/\D/g, '').slice(-10) === tel10);
   const saat = new Date(x.zaman).toTimeString().slice(0, 5);
-  const devret = neden => { S.devredilen.unshift({ ad: k ? tamAd(k) : (x.ad || '···' + x.son4), kanal: 'WhatsApp', konu: 'Ders değişikliği', mesaj: x.metin, neden, saat, bildirim: [[saat, S.kurs.yetkili || 'Kurs müdürü', 'Sinyal']] }); uiBildir((k ? tamAd(k) : 'Bir öğrenci') + ': ders değişikliği · ' + neden, 'uyari'); };
+  const devret = neden => { S.devredilen.unshift({ ad: k ? tamAd(k) : (x.ad || '···' + x.son4), kanal: 'WhatsApp', konu: 'Ders değişikliği', mesaj: x.metin, neden, saat, bildirim: [[saat, S.kurs.yetkili || 'Kurs müdürü', 'ÖzSinyal']] }); uiBildir((k ? tamAd(k) : 'Bir öğrenci') + ': ders değişikliği · ' + neden, 'uyari'); };
   if (!k) return devret('Numara kayıtlı bir öğrenciye ait değil');
   const yaz = (metin, ek) => apiGonder(metin, undefined, undefined, { ad: tamAd(k), rol: 'ÖĞRENCİ', tel: k.tel }, ek);
   const hoca = id => egitmen(id) || { ad: 'Öğretmeniniz' };
@@ -272,7 +272,7 @@ export async function gelenKontrol() {
       if (S.gelenAlinan.includes(x.id)) continue;
       S.gelenAlinan.push(x.id); n++;
       // fotoğraf ya da PDF: öğrencinin evrakı (indirilemezse sonraki turda yeniden denenir)
-      if (x.medya) { const ok = await (await import('./evrak.js?v=182')).evrakGeldi(x).catch(() => false); if (!ok) { S.gelenAlinan.pop(); n--; } continue; }
+      if (x.medya) { const ok = await (await import('./evrak.js?v=183')).evrakGeldi(x).catch(() => false); if (!ok) { S.gelenAlinan.pop(); n--; } continue; }
       const saat = new Date(x.zaman).toTimeString().slice(0, 5);
       // gönderdiğimiz mesaja verilen cevap (evet/hayır ya da “yanıtla”) adaya değil o mesaja işlenir
       // kayıtlı öğrencinin WhatsApp'tan ders değişikliği (asistan tanıdı): saat önerisi ya da seçilen saate taşıma
@@ -281,11 +281,11 @@ export async function gelenKontrol() {
       if (cv) { islem('Mesaja cevap geldi', cv.ad + ' · ' + cv.baslik + ' · ' + x.metin); bildir(`${cv.ad} cevap verdi: “${x.metin.slice(0, 40)}”`, 'wp'); continue; }
       // gerçek kurs hattında numara tam gelir: kayıtlı kursiyerse mesaj ona yazılır, aday açılmaz
       const tel10 = x.tel ? String(x.tel).slice(-10) : '', ogr = tel10 && S.kursiyerler.find(k => String(k.tel || '').replace(/\D/g, '').slice(-10) === tel10);
-      if (ogr) { const ad = ogr.ad + ' ' + ogr.soyad; S.devredilen.unshift({ ad, kanal: 'WhatsApp', konu: 'Kursiyer mesajı', mesaj: x.metin, neden: 'Kursiyer kursun WhatsApp hattına yazdı', saat, bildirim: [[saat, S.kurs.yetkili || 'Kurs müdürü', 'Sinyal']] }); islem('WhatsApp’tan kursiyer mesajı', ad + ' · ' + x.metin.slice(0, 60)); bildir(`${ad} WhatsApp’tan yazdı: “${x.metin.slice(0, 40)}”`, 'wp'); continue; }
+      if (ogr) { const ad = ogr.ad + ' ' + ogr.soyad; S.devredilen.unshift({ ad, kanal: 'WhatsApp', konu: 'Kursiyer mesajı', mesaj: x.metin, neden: 'Kursiyer kursun WhatsApp hattına yazdı', saat, bildirim: [[saat, S.kurs.yetkili || 'Kurs müdürü', 'ÖzSinyal']] }); islem('WhatsApp’tan kursiyer mesajı', ad + ' · ' + x.metin.slice(0, 60)); bildir(`${ad} WhatsApp’tan yazdı: “${x.metin.slice(0, 40)}”`, 'wp'); continue; }
       let a = S.adaylar.find(y => (tel10 && String(y.tel || '').replace(/\D/g, '').slice(-10) === tel10) || (y.waSon4 === x.son4 && !['Kayıt', 'Kaybedildi'].includes(y.asama)));
       if (!a) { a = { id: 'l' + Date.now() + n, ad: x.ad || 'WhatsApp adayı · ···' + x.son4, tel: tel10 ? '0' + tel10 : '', waSon4: x.son4, kaynak: 'WhatsApp', kanal: 'WhatsApp', sinif: 'B', asama: 'Yeni', tarih: gun(0), saat, takip: null, not: x.cevap ? 'Kursun WhatsApp hattına yazdı; asistan cevapladı' : 'Kursun WhatsApp hattına yazdı', devir: null, mesajlar: [] }; S.adaylar.unshift(a); }
       a.mesajlar.push({ kim: 'aday', metin: x.metin }, ...(x.cevap ? [{ kim: 'asistan', metin: x.cevap }] : [])); a.saat = saat;
-      if (x.devir) { a.devir = x.cevap ? 'Bilinmeyen soru' : 'Yeni mesaj'; S.devredilen.unshift({ ad: a.ad, aday: a.id, kanal: 'WhatsApp', konu: x.cevap ? 'Bilinmeyen soru' : 'Yeni mesaj', mesaj: x.metin, neden: x.cevap ? 'Asistan bilmediği için size devretti' : 'Kursun WhatsApp hattına yazdı; cevabı siz verin', saat, bildirim: [[saat, S.kurs.yetkili || 'Kurs müdürü', 'Sinyal']] }); }
+      if (x.devir) { a.devir = x.cevap ? 'Bilinmeyen soru' : 'Yeni mesaj'; S.devredilen.unshift({ ad: a.ad, aday: a.id, kanal: 'WhatsApp', konu: x.cevap ? 'Bilinmeyen soru' : 'Yeni mesaj', mesaj: x.metin, neden: x.cevap ? 'Asistan bilmediği için size devretti' : 'Kursun WhatsApp hattına yazdı; cevabı siz verin', saat, bildirim: [[saat, S.kurs.yetkili || 'Kurs müdürü', 'ÖzSinyal']] }); }
       islem('WhatsApp’tan mesaj geldi', a.ad + ' · ' + (x.konu || 'yeni mesaj'));
       bildir(`WhatsApp’tan yeni mesaj: “${x.metin.slice(0, 40)}”${!x.cevap ? '' : x.devir ? ' · size devredildi' : ' · asistan cevapladı'}`, x.devir && x.cevap ? 'uyari' : 'wp');
     }

@@ -1,4 +1,4 @@
-// Sinyal demo verisi: tarihler bugüne göre üretilir, tarayıcıda saklanır.
+// ÖzSinyal demo verisi: tarihler bugüne göre üretilir, tarayıcıda saklanır.
 let ANAHTAR = 'sinyal-demo-v19';
 // Usta öğreticinin ders sonunda puanladığı beceriler
 export const BECERI = [['kalkis', 'Kalkış ve duruş'], ['serit', 'Şerit ve ayna'], ['kavsak', 'Kavşak ve öncelik'], ['park', 'Park'], ['rampa', 'Rampa ve yokuş']];
@@ -28,7 +28,7 @@ export const gun = n => { const d = new Date(BUGUN); d.setDate(d.getDate() + n);
 export const tarihOku = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
 export const fark = s => Math.round((tarihOku(s) - BUGUN) / 864e5);
 // KVKK aydınlatma metni (kurs Ayarlar › KVKK'dan değiştirebilir): veri sorumlusu kurs; hukuki sebep, aktarım ve haklar
-export const aydinlatmaMetni = () => S.kurs.aydinlatma || `${S.kurs.ad || 'Kursumuz'} (veri sorumlusu) olarak kimlik, iletişim, öğrenim, sağlık raporu ve adli sicil bilgilerinizi; ders, sınav ve ödeme kayıtlarınızı sürücü kursu eğitiminin yürütülmesi, sözleşmenin ifası ve MEB mevzuatından doğan yükümlülükler (MEBBİS kaydı, ders programı, sınav bildirimi) için işliyoruz (KVKK m.5/2-c, ç; m.6). Ders hatırlatmaları ve ödeme takibi kursun meşru menfaatine dayanır; kampanya ve tanıtım mesajları yalnız izninizle gönderilir. Verileriniz kursun kullandığı Sinyal yazılımı aracılığıyla Google (Almanya), Cloudflare ve Meta (WhatsApp) altyapısında tutulur; bu nedenle yurt dışına aktarılır. Yetkili kurumlar (MEB, vergi idaresi) dışında paylaşılmaz ve mevzuattaki süre boyunca saklanır. KVKK m.11 kapsamındaki haklarınız (bilgi isteme, düzeltme, silme, itiraz) için kursa başvurabilirsiniz; ayrıntılar: servetskr.github.io/sinyal/gizlilik.html`;
+export const aydinlatmaMetni = () => S.kurs.aydinlatma || `${S.kurs.ad || 'Kursumuz'} (veri sorumlusu) olarak kimlik, iletişim, öğrenim, sağlık raporu ve adli sicil bilgilerinizi; ders, sınav ve ödeme kayıtlarınızı sürücü kursu eğitiminin yürütülmesi, sözleşmenin ifası ve MEB mevzuatından doğan yükümlülükler (MEBBİS kaydı, ders programı, sınav bildirimi) için işliyoruz (KVKK m.5/2-c, ç; m.6). Ders hatırlatmaları ve ödeme takibi kursun meşru menfaatine dayanır; kampanya ve tanıtım mesajları yalnız izninizle gönderilir. Verileriniz kursun kullandığı ÖzSinyal yazılımı aracılığıyla Google (Almanya), Cloudflare ve Meta (WhatsApp) altyapısında tutulur; bu nedenle yurt dışına aktarılır. Yetkili kurumlar (MEB, vergi idaresi) dışında paylaşılmaz ve mevzuattaki süre boyunca saklanır. KVKK m.11 kapsamındaki haklarınız (bilgi isteme, düzeltme, silme, itiraz) için kursa başvurabilirsiniz; ayrıntılar: servetskr.github.io/sinyal/gizlilik.html`;
 // Ders iptali ve değişikliği: ders saatinden en az 24 saat önce (takvim günü değil, gerçek saat)
 export const dersKalanSaat = d => (new Date(d.tarih + 'T' + (/^\d{2}:\d{2}$/.test(d.saat || '') ? d.saat : '00:00') + ':00') - Date.now()) / 36e5;
 // Para girişi: "1.250,50" → 1250.5, "24.000" → 24000, "24,000.00" → 24000; eksi ve geçersiz değer 0 olur
@@ -401,7 +401,7 @@ function uret() {
     ],
     ayar: {
       ad: 'Kurs asistanı', ton: 'Samimi', emoji: false, susma: 24, devir: { indirim: true, sikayet: true, saglik: true, insan: true, bilinmeyen: true },
-      fiyat: 'sorulan', randevu: true, gizleOnay: true, hizSiniri: true, onayModu: 'otomatik', model: 'Sinyal Asistan TR',
+      fiyat: 'sorulan', randevu: true, gizleOnay: true, hizSiniri: true, onayModu: 'otomatik', model: 'ÖzSinyal Asistan TR',
       veri: { konum: 'tr', maskele: true, aydinlatma: true, saklamaAy: 12 },
       bildirim: { kisiler: ['u1', 'u2'], kanal: 'WhatsApp', ikinciDk: 15, bekletme: true, sessiz: true, sessizBas: '22:00', sessizBit: '08:00' },
     },

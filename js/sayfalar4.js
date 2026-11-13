@@ -1,6 +1,6 @@
-import { S, kaydet, gun, islem, tarihOku, oturum, kapaliGun, SINIFLAR, satistaSiniflar } from './veri.js?v=182';
-import { e, ik, rozet, isaret, ekranNotu, sekmeler, olcumler, yonLevhasi, cubukGrafik, halka, pencere, kapatPencere, bildir, sayi, tl, goreli, tarih, apiAcik, apiGonder } from './ui.js?v=182';
-import { yenile } from './app.js?v=182';
+import { S, kaydet, gun, islem, tarihOku, oturum, kapaliGun, SINIFLAR, satistaSiniflar } from './veri.js?v=183';
+import { e, ik, rozet, isaret, ekranNotu, sekmeler, olcumler, yonLevhasi, cubukGrafik, halka, pencere, kapatPencere, bildir, sayi, tl, goreli, tarih, apiAcik, apiGonder } from './ui.js?v=183';
+import { yenile } from './app.js?v=183';
 
 /* ================= SOSYAL MEDYA ASİSTANI (DengChat modülü) =================
    Gelen kutusu "Mesajlar"da kalır. Bu modül kanalları bağlar, Instagram
@@ -142,14 +142,14 @@ function kanallar() {
     ${c.bagli ? `<div class="kart-govde" style="display:grid;gap:12px">
       <label style="display:flex;align-items:center;gap:12px"><span class="anahtar"><input type="checkbox" data-cevap="${c.id}" ${c.cevap ? 'checked' : ''} aria-label="${e(c.ad)} asistan cevaplasın"><i></i></span><span><b style="color:var(--murekkep)">Asistan cevaplasın</b><small style="display:block;color:var(--soluk)">${c.id === 'igy' ? 'Fiyat gibi kişisel sorularda yoruma kısa davet, cevap özelden' : 'Kapalıyken mesajlar yalnızca gelen kutusuna düşer'}</small></span></label>
       <div><span class="et" style="font-size:13px;font-weight:700;color:var(--soluk)">Ne zaman?</span><div class="secim" style="margin-top:6px">${['7/24', 'Mesai dışı'].map(m => `<label><input type="radio" name="mod-${c.id}" value="${m}" data-mod="${c.id}" ${c.mod === m ? 'checked' : ''}><span>${m === '7/24' ? 'Her zaman' : 'Yalnızca mesai dışında'}</span></label>`).join('')}</div></div>
-      ${c.id === 'wp' ? `<div><span class="et" style="font-size:13px;font-weight:700;color:var(--soluk)">Numara</span><div class="secim" style="margin-top:6px">${[[true, 'Telefondaki uygulama da açık kalsın'], [false, 'Ayrı numara kullan']].map(([v, t]) => `<label><input type="radio" name="wp-num" value="${v}" data-wp-num ${!!c.birlikte === v ? 'checked' : ''}><span>${t}</span></label>`).join('')}</div><small style="display:block;color:var(--soluk);font-size:12.5px;margin-top:6px">${c.birlikte ? 'Meta’nın birlikte kullanım özelliğiyle mesajlar hem ön bürodaki WhatsApp Business uygulamasında hem Sinyal’de görünür; sekreter telefondan yazmaya devam eder.' : 'Asistan için ayrı bir hat açılır; kursun bilinen numarası telefonda olduğu gibi kalır.'}</small></div>` : ''}
+      ${c.id === 'wp' ? `<div><span class="et" style="font-size:13px;font-weight:700;color:var(--soluk)">Numara</span><div class="secim" style="margin-top:6px">${[[true, 'Telefondaki uygulama da açık kalsın'], [false, 'Ayrı numara kullan']].map(([v, t]) => `<label><input type="radio" name="wp-num" value="${v}" data-wp-num ${!!c.birlikte === v ? 'checked' : ''}><span>${t}</span></label>`).join('')}</div><small style="display:block;color:var(--soluk);font-size:12.5px;margin-top:6px">${c.birlikte ? 'Meta’nın birlikte kullanım özelliğiyle mesajlar hem ön bürodaki WhatsApp Business uygulamasında hem ÖzSinyal’de görünür; sekreter telefondan yazmaya devam eder.' : 'Asistan için ayrı bir hat açılır; kursun bilinen numarası telefonda olduğu gibi kalır.'}</small></div>` : ''}
       <div class="saglik">${saglik(c)}</div>
     </div>` : `<div class="kart-govde"><p style="font-size:14px">Bağlandığında bu kanaldan gelen mesajlar da aynı asistanla ve aynı kurs bilgileriyle cevaplanır.</p></div>`}</div>`).join('')}</div>
   <div class="ara-bosluk"></div>
   <div class="kart"><div class="kart-bas"><h3>Hesabınızı koruma</h3><small>Meta otomasyon şüphesi gördüğü hesapları kısıtlayabilir</small></div><ul class="liste" style="margin-top:8px">${[
     ['tamam', 'Yalnızca gelen mesaja cevap verir', 'Takip etmez, beğenmez, kimseye ilk mesajı atmaz, toplu mesaj göndermez. Hesabınızda insan dışı “etkinlik” oluşmaz.'],
     ['tamam', 'Meta uyarısında kendini durdurur', 'Hesaba kısıtlama ya da uyarı gelirse asistan o kanalda hemen susar, size bildirim gelir; mesajlar kaybolmaz, gelen kutusuna düşer.'],
-    ['tamam', 'Resmî bağlantı', 'Meta’nın izin verdiği resmî bağlantıyla çalışır; şifreniz ve hesabınızın oturumu Sinyal’de değildir.'],
+    ['tamam', 'Resmî bağlantı', 'Meta’nın izin verdiği resmî bağlantıyla çalışır; şifreniz ve hesabınızın oturumu ÖzSinyal’de değildir.'],
   ].map(([t, b, a]) => `<li style="align-items:flex-start">${isaret(t, 22)}<div><b style="color:var(--murekkep);display:block">${b}</b><small style="color:var(--metin);font-size:13.5px">${a}</small></div></li>`).join('')}
     <li style="align-items:flex-start"><span class="anahtar" style="margin-top:2px"><input type="checkbox" data-hiz ${sos().ayar.hizSiniri ? 'checked' : ''} aria-label="Hız sınırı"><i></i></span><div><b style="color:var(--murekkep);display:block">Hız sınırı</b><small style="color:var(--metin);font-size:13.5px">Dakikada en fazla 20 cevap; yeni bağlanan hesaplarda ilk hafta yarı hızda. Kampanya günü yoğunluğunda bile hesap doğal görünür.</small></div></li></ul></div>
   <div class="ara-bosluk"></div>
@@ -246,7 +246,7 @@ function kurallar() {
       <label style="display:flex;gap:12px;align-items:flex-start"><span class="anahtar" style="margin-top:2px"><input type="checkbox" data-maskele ${a.veri.maskele ? 'checked' : ''}><i></i></span><span><b style="color:var(--murekkep)">Hassas bilgiyi modele göndermeden gizle</b><small style="display:block;color:var(--soluk)">TC kimlik no, telefon ve sağlık ifadeleri yıldızlanır. “Asistanı dene”de gizlenmiş hâlini görebilirsiniz.</small></span></label>
       <label style="display:flex;gap:12px;align-items:flex-start"><span class="anahtar" style="margin-top:2px"><input type="checkbox" data-aydinlatma ${a.veri.aydinlatma ? 'checked' : ''}><i></i></span><span><b style="color:var(--murekkep)">İlk mesajda aydınlatma metni bağlantısı</b><small style="display:block;color:var(--soluk)">Kişi, verilerinin neden işlendiğini ve haklarını görür.</small></span></label>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="color:var(--murekkep);font-size:14px">Konuşmaları sakla:</b><div class="secim">${[6, 12, 24].map(n => `<label><input type="radio" name="saklama" value="${n}" data-saklama ${a.veri.saklamaAy === n ? 'checked' : ''}><span>${n} ay</span></label>`).join('')}</div></div>
-      <p style="font-size:13.5px;color:var(--metin);background:var(--panel-2);border-radius:8px;padding:10px 12px"><b>Model:</b> ${e(a.model || 'Sinyal Asistan TR')}${a.veri.konum === 'tr' ? ' · Türkiye’deki sunucuda barındırılan açık kaynaklı dil modeli' : ' · AB’deki sunucuda çalışan model'}. İnternete çıkmaz; yalnızca “Asistanın bildikleri” ve kurs takvimini kullanır. Türkçe sürücü kursu konuşmalarıyla sınanmıştır; “Asistanı dene” sekmesinden kendiniz de sınayabilirsiniz.</p>
+      <p style="font-size:13.5px;color:var(--metin);background:var(--panel-2);border-radius:8px;padding:10px 12px"><b>Model:</b> ${e(a.model || 'ÖzSinyal Asistan TR')}${a.veri.konum === 'tr' ? ' · Türkiye’deki sunucuda barındırılan açık kaynaklı dil modeli' : ' · AB’deki sunucuda çalışan model'}. İnternete çıkmaz; yalnızca “Asistanın bildikleri” ve kurs takvimini kullanır. Türkçe sürücü kursu konuşmalarıyla sınanmıştır; “Asistanı dene” sekmesinden kendiniz de sınayabilirsiniz.</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="dg dg-cizgi dg-kucuk" data-belge-ac="vis">Veri işleme sözleşmesi</button><button class="dg dg-cizgi dg-kucuk" data-belge-ac="aydinlatma">Asistan aydınlatma metni</button></div></div></div>
   </div>
   <div class="ara-bosluk"></div>
@@ -327,8 +327,8 @@ export function sosyal(alt) {
         const kk = t.closest('[data-kapali-sil]'); if (kk) { sos().gorusmeSablon.kapali = sos().gorusmeSablon.kapali.filter(x => x !== kk.dataset.kapaliSil); kaydet(); yenile(); return; }
         const ygz = t.closest('[data-yorum-gizle]'); if (ygz) { const y = sos().yorumlar.find(x => x.id === ygz.dataset.yorumGizle); y.durum = 'gizli'; islem('Yorumu gizledi', y.kim); kaydet(); bildir('Yorum gizlendi'); yenile(); return; }
         const ybr = t.closest('[data-yorum-birak]'); if (ybr) { const y = sos().yorumlar.find(x => x.id === ybr.dataset.yorumBirak); y.durum = 'devir'; kaydet(); bildir('Yorum görünür kaldı; cevabı size bırakıldı'); yenile(); return; }
-        const tk = t.closest('[data-test-kanal]'); if (tk) { const c = sos().kanallar.find(x => x.id === tk.dataset.testKanal); if (c.id !== 'wp' || !apiAcik()) return baglantiGerekli(c); tk.disabled = true; tk.textContent = 'Gönderiliyor…'; apiGonder(`${S.kurs.ad} · kanal denemesi\nBu mesaj Sinyal’den WhatsApp hattının çalıştığını doğrulamak için gönderildi.`, undefined, undefined, { ad: S.kurs.ad, rol: 'KURSA GELEN' }).then(r => { if (r.ok) { c.son = new Date().toTimeString().slice(0, 5); islem('WhatsApp hattını denedi'); kaydet(); bildir('Deneme mesajı WhatsApp’a gönderildi'); } else bildir(r.hata, 'uyari'); yenile(); }); return; }
-        const ba = t.closest('[data-belge-ac]'); if (ba) { import('./sayfalar3.js?v=182').then(m => m.belgeAc(ba.dataset.belgeAc)); return; }
+        const tk = t.closest('[data-test-kanal]'); if (tk) { const c = sos().kanallar.find(x => x.id === tk.dataset.testKanal); if (c.id !== 'wp' || !apiAcik()) return baglantiGerekli(c); tk.disabled = true; tk.textContent = 'Gönderiliyor…'; apiGonder(`${S.kurs.ad} · kanal denemesi\nBu mesaj ÖzSinyal’den WhatsApp hattının çalıştığını doğrulamak için gönderildi.`, undefined, undefined, { ad: S.kurs.ad, rol: 'KURSA GELEN' }).then(r => { if (r.ok) { c.son = new Date().toTimeString().slice(0, 5); islem('WhatsApp hattını denedi'); kaydet(); bildir('Deneme mesajı WhatsApp’a gönderildi'); } else bildir(r.hata, 'uyari'); yenile(); }); return; }
+        const ba = t.closest('[data-belge-ac]'); if (ba) { import('./sayfalar3.js?v=183').then(m => m.belgeAc(ba.dataset.belgeAc)); return; }
         const yg = t.closest('[data-yorum-goster]'); if (yg) { const y = sos().yorumlar.find(x => x.id === yg.dataset.yorumGoster); y.durum = 'devir'; kaydet(); bildir('Yorum görünür yapıldı; cevabı size bırakıldı'); yenile(); }
       });
       k.addEventListener('change', ev => {
@@ -385,8 +385,8 @@ function baglantiGerekli(c) {
   const wp = c.id === 'wp';
   pencere({
     baslik: c.ad + ' · bağlantı gerekli',
-    icerik: `<div class="ipucu uyari" style="margin-bottom:12px">${isaret('uyari', 22)}<span>${wp ? 'WhatsApp gönderim adresi girilmemiş. Ayarlar › Kurs bilgileri’nde “WhatsApp gönderim adresi”ni doldurun; sonra bu düğme gerçek bir deneme mesajı gönderir.' : 'Bu kanal henüz kursun Meta hesabına bağlı değil. Bağlantı, kursun Facebook sayfası yöneticisinin Meta’da onay vermesiyle kurulur; Sinyal bunu kendi başına yapamaz.'}</span></div>
-      ${wp ? '' : `<ol style="padding-left:18px;display:grid;gap:8px;font-size:14.5px"><li>Kurs sayfasının yöneticisi Meta Business hesabında Sinyal uygulamasına izin verir.</li><li>Meta, mesaj okuma/cevaplama iznini onaylar (uygulama incelemesi birkaç gün sürebilir).</li><li>Onaydan sonra bu ekranda kanal “Bağlı” görünür ve asistan cevaplamaya başlar.</li></ol>`}`,
+    icerik: `<div class="ipucu uyari" style="margin-bottom:12px">${isaret('uyari', 22)}<span>${wp ? 'WhatsApp gönderim adresi girilmemiş. Ayarlar › Kurs bilgileri’nde “WhatsApp gönderim adresi”ni doldurun; sonra bu düğme gerçek bir deneme mesajı gönderir.' : 'Bu kanal henüz kursun Meta hesabına bağlı değil. Bağlantı, kursun Facebook sayfası yöneticisinin Meta’da onay vermesiyle kurulur; ÖzSinyal bunu kendi başına yapamaz.'}</span></div>
+      ${wp ? '' : `<ol style="padding-left:18px;display:grid;gap:8px;font-size:14.5px"><li>Kurs sayfasının yöneticisi Meta Business hesabında ÖzSinyal uygulamasına izin verir.</li><li>Meta, mesaj okuma/cevaplama iznini onaylar (uygulama incelemesi birkaç gün sürebilir).</li><li>Onaydan sonra bu ekranda kanal “Bağlı” görünür ve asistan cevaplamaya başlar.</li></ol>`}`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button>${wp ? '<a class="dg dg-ana" href="#/ayarlar" data-kapat>Ayarlara git</a>' : ''}`,
   });
 }
@@ -397,7 +397,7 @@ function baglaSihirbazi(id) {
   pencere({
     baslik: c.ad + ' bağla',
     icerik: `<ol style="padding-left:18px;display:grid;gap:10px;font-size:14.5px">
-      <li><b>Meta ile giriş</b><br><small style="color:var(--soluk)">Kurs sayfasının yöneticisi kendi Facebook hesabıyla giriş yapar. Şifre Sinyal’e gelmez.</small></li>
+      <li><b>Meta ile giriş</b><br><small style="color:var(--soluk)">Kurs sayfasının yöneticisi kendi Facebook hesabıyla giriş yapar. Şifre ÖzSinyal’e gelmez.</small></li>
       <li><b>Sayfayı seç ve izin ver</b><br><small style="color:var(--soluk)">Yalnızca mesajları okuma ve cevaplama izni istenir; gönderi paylaşma izni istenmez.</small></li>
       <li><b>Deneme mesajı</b><br><small style="color:var(--soluk)">Sayfaya bir mesaj atılır, asistanın cevabı birlikte kontrol edilir.</small></li></ol>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>${ik('fb')}Meta ile bağlan</button>`,
