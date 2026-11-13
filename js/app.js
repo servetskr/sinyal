@@ -1,22 +1,22 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=186';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=186';
-import * as Y1 from './sayfalar1.js?v=186';
-import * as Y2 from './sayfalar2.js?v=186';
-import * as P from './portal.js?v=186';
-import * as Y3 from './sayfalar3.js?v=186';
-import * as Y4 from './sayfalar4.js?v=186';
-import * as Y5 from './sayfalar5.js?v=186';
-import * as IM from './imza.js?v=186';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=186';
-import * as SN from './senaryo.js?v=186';
-import * as OZ from './ozellik.js?v=186';
-import { durumlariGuncelle } from './mesaj.js?v=186';
-import { yeniMenu } from './yeni.js?v=186';
-import * as B from './bulut.js?v=186';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=186';
-import * as AN from './analiz.js?v=186';
-import * as ORT from './ortak.js?v=186';
-import * as SH from './sahip.js?v=186';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=187';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=187';
+import * as Y1 from './sayfalar1.js?v=187';
+import * as Y2 from './sayfalar2.js?v=187';
+import * as P from './portal.js?v=187';
+import * as Y3 from './sayfalar3.js?v=187';
+import * as Y4 from './sayfalar4.js?v=187';
+import * as Y5 from './sayfalar5.js?v=187';
+import * as IM from './imza.js?v=187';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=187';
+import * as SN from './senaryo.js?v=187';
+import * as OZ from './ozellik.js?v=187';
+import { durumlariGuncelle } from './mesaj.js?v=187';
+import { yeniMenu } from './yeni.js?v=187';
+import * as B from './bulut.js?v=187';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=187';
+import * as AN from './analiz.js?v=187';
+import * as ORT from './ortak.js?v=187';
+import * as SH from './sahip.js?v=187';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -70,7 +70,8 @@ function hesapSayfasi() {
   const satir = (ikon, metin, ek, ton = '') => `<span class="hs-ik ${ton}">${ik(ikon)}</span><span class="hs-metin">${metin}${ek ? `<small>${ek}</small>` : ''}</span>`;
   pencere({ baslik: 'Hesabım', alt: true, icerik: `<div class="hs-kim"><span class="app-profil buyuk" aria-hidden="true">${basHarf(ad)}</span><div><b>${e(ad)}</b><small>${e(S.kurs.ad)} · ${ogr ? 'Öğrenci' : ORT.yonetimModu() || u.rol === 'ortak' ? (u.rol === 'mudur' ? 'Yönetici' : 'Ortak · yalnız görüntüler') : ROL_AD[u.rol]}</small></div></div>
     <div class="hs-liste">${ogr ? `<button type="button" data-ogr-sifre>${satir('kilit', 'Şifremi değiştir')}${ik('sag')}</button>` : ''}
-      ${tel ? `<a href="tel:${e(tel)}">${satir('tel', 'Kursu ara', e(S.kurs.tel))}${ik('sag')}</a>` : ''}
+      ${tel && !ORT.yonetimModu() && u.rol !== 'ortak' ? `<a href="tel:${e(tel)}">${satir('tel', 'Kursu ara', e(S.kurs.tel))}${ik('sag')}</a>` : ''}
+      ${ORT.yonetimModu() && u.rol === 'mudur' ? `<button type="button" data-yn-hesaplar>${satir('kilit', 'Hesaplar', 'Kurs hesapları, kullanıcılar, şifre yenileme')}${ik('sag')}</button>` : ''}
       ${!ogr && !ORT.yonetimModu() && u.rol !== 'ortak' ? `<button type="button" data-destek>${satir('mesaj', 'mdSinyal Destek', 'Sorun, soru ya da istek bildir')}${ik('sag')}</button>` : ''}</div>
     <div class="hs-liste"><button type="button" class="hs-cikis" ${ogr ? 'data-ogr-cikis' : 'data-cikis'}>${satir('cikis', u.bulut || ogr ? 'Çıkış yap' : 'Kullanıcı değiştir', '', 'kirmizi')}</button></div>` });
 }
@@ -653,6 +654,8 @@ document.addEventListener('click', ev => {
   if (ev.target.closest('[data-cikis]')) kapatPencere();
   if (ev.target.closest('[data-hesap]')) return hesapSayfasi();
   if (ev.target.closest('[data-destek]')) return destekPenceresi();
+  // Yönetim: Hesaplar telefonda profil menüsünden açılır (alt çubuk 6 sekme kalır)
+  if (ev.target.closest('[data-yn-hesaplar]')) { kapatPencere(); ORT.sekmeSec('hesaplar'); yonetimCiz(true); SH.otoBaglan(); return; }
   if (ev.target.closest('[data-ogr-cikis]')) return B.ogrenciCikis().then(() => { location.hash = '#/ogrenci-giris'; location.reload(); });
   if (ev.target.closest('[data-ogr-sifre]')) { kapatPencere(); return ogrenciSifreDegistir(); }
   if (ev.target.closest('[data-cikis]') && oturum.kullanici && oturum.kullanici.bulut) { const yon = ORT.yonetimModu() || oturum.kullanici.rol === 'ortak'; islem('Çıkış yaptı'); kaydet(); B.cikisYap().then(() => { try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } location.hash = yon ? '#/yonetim' : ''; location.reload(); }); return; }
