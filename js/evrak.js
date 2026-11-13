@@ -1,7 +1,7 @@
 // WhatsApp'tan gelen evrak: öğrenci belgenin fotoğrafını ya da PDF'ini kursun numarasına atar; belge doğru öğrencinin
 // dosyasına, doğru başlığa düşer. Okunmayacak kadar bulanıksa işaretlenir, tek tuşla yeniden istenir.
-import { S, kaydet, gun, EVRAKLAR, tamAd, islem, eksikEvrak, gonderimEkle, selam, evrakKaynak } from './veri.js?v=182';
-import { e, pencere, kapatPencere, bildir, fotoKucult, ik, waIstek, waAc, apiAcik } from './ui.js?v=182';
+import { S, kaydet, gun, EVRAKLAR, tamAd, islem, eksikEvrak, gonderimEkle, selam, evrakKaynak } from './veri.js?v=183';
+import { e, pencere, kapatPencere, bildir, fotoKucult, ik, waIstek, waAc, apiAcik } from './ui.js?v=183';
 
 const rakam = x => String(x || '').replace(/\D/g, '');
 const kucuk = s => String(s || '').toLocaleLowerCase('tr');
@@ -138,7 +138,7 @@ function pdfYaz(jpeg, w, h, baslik) {
   nesne(3, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${f(W)} ${f(H)}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>`);
   nesne(4, `<< /Type /XObject /Subtype /Image /Width ${w} /Height ${h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>`, jpeg);
   nesne(5, `<< /Length ${ciz.length} >>`, ciz);
-  nesne(6, `<< /Title ${utf16(baslik || 'Belge')} /Producer (Sinyal) >>`);
+  nesne(6, `<< /Title ${utf16(baslik || 'Belge')} /Producer (ÖzSinyal) >>`);
   const xref = n;
   ekle('xref\n0 7\n0000000000 65535 f \n' + yer.slice(1).map(x => String(x).padStart(10, '0') + ' 00000 n \n').join('') + `trailer\n<< /Size 7 /Root 1 0 R /Info 6 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
   return new Blob(parca, { type: 'application/pdf' });

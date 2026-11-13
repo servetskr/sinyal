@@ -17,6 +17,7 @@ body.st{margin:0;background:var(--w-bg);color:var(--w-yazi);font:400 16px/1.6 va
 .st-logo svg{width:32px;height:32px;flex:none}
 .st-logo b{display:block;font:900 20px/1 var(--st-baslik);color:var(--w-baslik)}
 .st-logo small{display:block;font-size:12px;opacity:.65;margin-top:2px;white-space:nowrap}
+.st-logo b .oz{font-weight:500;opacity:.55}
 .st-nav{display:flex;align-items:center;gap:2px;margin-left:12px}
 .st-nav a{display:inline-flex;align-items:center;height:40px;padding:0 12px;border-radius:10px;font:700 15px/1 var(--st-baslik);color:var(--w-yazi);transition:color .15s,background .15s}
 .st-nav a:hover{color:#fff;background:rgba(255,255,255,.06)}
@@ -232,7 +233,7 @@ body.st,.tanitim{background:var(--w-bg);color:var(--w-yazi)}
 /* üst menü */
 .st-ust{background:rgba(7,11,20,.72);border-bottom:1px solid var(--gece-cizgi)}
 .st-logo b{color:#fff}.st-logo small{color:var(--gece-yazi);opacity:1}
-.st-logo svg path:first-child{stroke:none}
+
 .st-nav a{color:var(--gece-yazi)}.st-nav a:hover{color:#fff;background:rgba(255,255,255,.07)}.st-nav a[aria-current="page"]{color:#fff;background:rgba(255,255,255,.09)}
 .st-menu-dg{color:#fff;border-color:var(--gece-cizgi)}
 .st-menu{background:var(--gece);border-top-color:var(--gece-cizgi)}
@@ -794,7 +795,7 @@ body.st,.tanitim{background:var(--w-bg);color:var(--w-yazi)}
 /* ---------- alt bilgi: sarı; kapanış bölümünün üstüne yükselen bir sayfa gibi ---------- */
 .st-alt{position:relative;z-index:1;margin-top:-36px;border-radius:36px 36px 0 0;border-top:0;background:var(--sari);color:#3b2f05}
 .st-alt .st-logo b{color:#111}.st-alt .st-logo small{color:rgba(17,17,17,.62)}
-.st-alt .st-logo svg path:first-child{fill:#111}.st-alt .st-logo svg path:last-child{stroke:var(--sari)}
+.st-alt .st-logo svg .rz-c{stroke:#111;stroke-opacity:.9;stroke-width:2}
 .st-alt-marka p{color:rgba(30,24,4,.78)}
 .st-alt h3{color:rgba(30,24,4,.55)}
 .st-alt li a{color:#16130a;opacity:1}.st-alt li a:hover{color:#000;text-decoration:underline;text-underline-offset:3px}

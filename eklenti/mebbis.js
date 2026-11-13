@@ -1,6 +1,6 @@
-// Sinyal MEBBİS Yardımcısı · MEBBİS tarafı. Kursun kendi MEBBİS oturumunda çalışır; şifre istemez, saklamaz.
-// 1) Sinyal’in sıraya koyduğu işin alanlarını açık formda etiketlerinden bulup doldurur; bulamadığını kullanıcı bir kez gösterir (öğrenilir).
-// 2) Sayfadaki listeyi (tablo) Sinyal’e aktarır. Kaydet’e ve güvenlik koduna her zaman kullanıcı basar; eklenti formu göndermez.
+// ÖzSinyal MEBBİS Yardımcısı · MEBBİS tarafı. Kursun kendi MEBBİS oturumunda çalışır; şifre istemez, saklamaz.
+// 1) ÖzSinyal’in sıraya koyduğu işin alanlarını açık formda etiketlerinden bulup doldurur; bulamadığını kullanıcı bir kez gösterir (öğrenilir).
+// 2) Sayfadaki listeyi (tablo) ÖzSinyal’e aktarır. Kaydet’e ve güvenlik koduna her zaman kullanıcı basar; eklenti formu göndermez.
 (() => {
   if (window.__sinyalMebbis) return; window.__sinyalMebbis = true;
   // Çerçeveler arası mesajlar yalnız aynı kökene (MEBBİS) gider; başka kaynaktan bir çerçeveye kursiyer verisi gitmez
@@ -36,7 +36,7 @@
       const n = norm(v), o = [...el.options].find(x => norm(x.textContent) === n || norm(x.value) === n) || [...el.options].find(x => n && (norm(x.textContent).includes(n) || (norm(x.textContent).length > 2 && n.includes(norm(x.textContent)))));
       if (!o) return false; el.value = o.value;
     } else {
-      // type=date alan yyyy-aa-gg ister; Sinyal gg.aa.yyyy gönderebilir
+      // type=date alan yyyy-aa-gg ister; ÖzSinyal gg.aa.yyyy gönderebilir
       let yv = v; const m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(v); if (el.type === 'date' && m) yv = m[3] + '-' + m[2] + '-' + m[1];
       const set = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), 'value'); set && set.set ? set.set.call(el, yv) : (el.value = yv);
       el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -138,11 +138,11 @@
   ];
   const AD = Object.fromEntries(TURLER.map(x => [x[0], x[1]])), FORM = Object.fromEntries(TURLER.map(x => [x[0], x[2]])), SIRA = Object.fromEntries(TURLER.map((x, i) => [x[0], i]));
   const AL = [
-    ['kursiyer', 'Kursiyer listesi', 'kayıtlı kursiyer listesi', 'Geçişte kursiyerleri Sinyal’e alır.'],
-    ['sinav', 'Sınav sonuçları', 'e-sınav ya da direksiyon sınavı sonuç listesi', 'Sonuçlar Sinyal’in sonuç penceresine dolar.'],
-    ['mutabakat', 'MEBBİS ile karşılaştır', 'kursiyer listesi', 'Sinyal’de olup MEBBİS’te olmayanları gösterir.'],
+    ['kursiyer', 'Kursiyer listesi', 'kayıtlı kursiyer listesi', 'Geçişte kursiyerleri ÖzSinyal’e alır.'],
+    ['sinav', 'Sınav sonuçları', 'e-sınav ya da direksiyon sınavı sonuç listesi', 'Sonuçlar ÖzSinyal’in sonuç penceresine dolar.'],
+    ['mutabakat', 'MEBBİS ile karşılaştır', 'kursiyer listesi', 'ÖzSinyal’de olup MEBBİS’te olmayanları gösterir.'],
     ['taksit', 'Ödemeler', 'kursiyer ödeme listesi', 'Ödenen ve kalan taksitleri alır.'],
-    ['ogretmen', 'Usta öğreticiler', 'personel (usta öğretici) listesi', 'Öğretmenleri Sinyal’e alır.'],
+    ['ogretmen', 'Usta öğreticiler', 'personel (usta öğretici) listesi', 'Öğretmenleri ÖzSinyal’e alır.'],
     ['arac', 'Araçlar', 'araç listesi', 'Araçları plakalarıyla alır.'],
   ];
   const bugun = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
@@ -189,7 +189,7 @@
     .e2{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0f0}.e2 span{color:#555;font-size:12.5px}.e2 b{text-align:right;cursor:copy;word-break:break-word}.e2 b:hover{color:#2f6fde}.gst{background:none;color:#8a94a6;font-size:11px;padding:0;font-weight:500;text-decoration:underline}
     kbd{font:11px ui-monospace,monospace;background:#f3f4f6;border:1px solid #d1d5db;border-radius:4px;padding:0 4px;color:#374151}
     </style>
-    <div class="p" lang="tr"><div class="b" data-k><i></i><b>Sinyal MEBBİS Yardımcısı</b><small data-sayi></small></div><div class="g" data-g></div></div>`;
+    <div class="p" lang="tr"><div class="b" data-k><i></i><b>ÖzSinyal MEBBİS Yardımcısı</b><small data-sayi></small></div><div class="g" data-g></div></div>`;
   (document.body || document.documentElement).appendChild(kok);
   const p = g.querySelector('.p'), govde = g.querySelector('[data-g]');
   const durum = { hatalar: new Set(), ekran: 'ana', filtre: null, sec: null, al: null, sonuc: {}, mesaj: '', ara: '', q: { isler: [] }, sayfa: {}, tablo: null, temizle: false, alAcik: false, oto: true, soru: false, bekle: null, dolanId: null };
@@ -209,19 +209,19 @@
     let h = '';
     // ANA: yalnız sıradaki iş ve Başla
     if (durum.ekran === 'ana') {
-      if (!hepsi.length) h += `<div class="bos"><b>Aktarılacak iş yok</b><p>Sinyal’de <b>MEB işlemleri › MEBBİS aktarımı</b> ekranında işleri seçip <b>MEBBİS’e aktar</b>’a basın. Yardımcı buraya gelip sırayla yürütür.</p></div><button class="buyuk" data-sinyal>Sinyal’i aç</button>`;
+      if (!hepsi.length) h += `<div class="bos"><b>Aktarılacak iş yok</b><p>ÖzSinyal’de <b>MEB işlemleri › MEBBİS aktarımı</b> ekranında işleri seçip <b>MEBBİS’e aktar</b>’a basın. Yardımcı buraya gelip sırayla yürütür.</p></div><button class="buyuk" data-sinyal>ÖzSinyal’i aç</button>`;
       else {
         const say = TURLER.map(([k, ad]) => [ad, sirali(k).length]).filter(x => x[1]).map(([ad, n]) => `${n} ${ad.toLocaleLowerCase('tr')}`).join(' · ');
         h += `<p class="kucuk">MEBBİS’e aktarılacak</p><div class="sir"><b>${hepsi.length} iş</b><small>${e(say)}</small></div>`;
         h += `<button class="buyuk" data-basla>${durum.q.isler.some(x => x.bitti) ? 'Devam et' : 'Aktarımı başlat'}</button>`;
       }
       if (giris) h += `<p class="not">MEBBİS’e kendi şifrenizle girin; Yardımcı giriş sayfasında hiçbir şey yazmaz.</p>`;
-      h += `<div class="alt"><button data-sinyal>Sinyal’e dön</button><button data-git="ayar">Ayarlar</button></div>`;
+      h += `<div class="alt"><button data-sinyal>ÖzSinyal’e dön</button><button data-git="ayar">Ayarlar</button></div>`;
     }
     // BİTTİ: özet
     if (durum.ekran === 'bitti') {
       const ok = durum.q.isler.filter(x => x.bitti).length, hata = durum.hatalar.size;
-      h += `<div class="bos"><b>✓ Aktarım bitti</b><p>${ok} iş aktarıldı${hata ? ` · <span style="color:#a12a20;font-weight:700">${hata} iş hata verdi</span>` : ''}. Sinyal’de durumları görebilirsiniz.</p></div><button class="buyuk" data-sinyal>Sinyal’e dön</button>`;
+      h += `<div class="bos"><b>✓ Aktarım bitti</b><p>${ok} iş aktarıldı${hata ? ` · <span style="color:#a12a20;font-weight:700">${hata} iş hata verdi</span>` : ''}. ÖzSinyal’de durumları görebilirsiniz.</p></div><button class="buyuk" data-sinyal>ÖzSinyal’e dön</button>`;
     }
     // İŞ: ne yapılacağı tek cümle, bilgiler gizli
     if (durum.ekran === 'is') {
@@ -257,7 +257,7 @@
     }
     // MEBBİS'TEN AL: önce seçim, sonra tek düğme
     if (durum.ekran === 'alsec') {
-      h += geri() + `<p class="kucuk" style="margin:8px 0">MEBBİS’ten Sinyal’e ne alınacak?</p>` + AL.map(([k, ad, , a]) => `<button class="k" data-al="${k}"><div><b>${ad}</b><small>${a}</small></div></button>`).join('');
+      h += geri() + `<p class="kucuk" style="margin:8px 0">MEBBİS’ten ÖzSinyal’e ne alınacak?</p>` + AL.map(([k, ad, , a]) => `<button class="k" data-al="${k}"><div><b>${ad}</b><small>${a}</small></div></button>`).join('');
     }
     if (durum.ekran === 'al') {
       const [, ad, liste] = AL.find(x => x[0] === durum.al), tb = durum.tablo;
@@ -266,13 +266,13 @@
       if (giris) h += `<div class="adim bilgi">MEBBİS’e kendi şifrenizle girin; Yardımcı sonra ${liste} ekranını kendisi açar.</div>`;
       else if (hd && hd.durum === 'gidiyor') h += `<div class="adim bilgi">${liste[0].toLocaleUpperCase('tr') + liste.slice(1)} ekranı açılıyor…</div>`;
       else if (hd && hd.durum === 'ogren') h += `<div class="adim uyari">“${liste}” ekranını menüde bulamadım. Menüden bir kez siz açın; Yardımcı listeyi kendisi alıp gönderir ve yerini öğrenir.</div><button class="cz" data-hedef-iptal style="width:100%">Vazgeç</button>`;
-      else h += tb ? `<div class="adim tamam">Bu sayfada ${tb.s.length - 1} satırlık liste var.</div><button class="buyuk" data-gonder>Sinyal’e gönder</button>` : `<div class="adim bilgi">Liste bekleniyor.</div><button class="buyuk" data-alyeniden>Ekranı aç ve listeyi al</button>`;
+      else h += tb ? `<div class="adim tamam">Bu sayfada ${tb.s.length - 1} satırlık liste var.</div><button class="buyuk" data-gonder>ÖzSinyal’e gönder</button>` : `<div class="adim bilgi">Liste bekleniyor.</div><button class="buyuk" data-alyeniden>Ekranı aç ve listeyi al</button>`;
       if (durum.mesaj) h += `<p class="not">${e(durum.mesaj)}</p>`;
     }
     if (durum.ekran === 'ayar') {
       h += geri() + `<div class="ayar"><span class="oto ${durum.oto ? 'acik' : ''}" data-oto><i></i><span><b>Otomatik</b><small>Formu kendisi doldurur; kaydettiğinizi onaylayınca sıradakine geçer</small></span></span></div>`;
       h += `<p class="not">Kısayollar: Alt+Shift+D doldur · Alt+Shift+S kaydettim · Alt+Shift+N atla</p>`;
-      if (durum.q.kurs) h += `<p class="not">${e(durum.q.kurs)} · Sinyal’den ${saat(durum.q.zaman)}’de gönderildi.</p>`;
+      if (durum.q.kurs) h += `<p class="not">${e(durum.q.kurs)} · ÖzSinyal’den ${saat(durum.q.zaman)}’de gönderildi.</p>`;
       if (durum.q.isler.length) h += `<button class="satir" data-temizle><span>${durum.temizle ? 'Emin misiniz? Tekrar basın' : 'Bekleyen işleri temizle'}</span><b></b></button>`;
     }
     const odak = g.activeElement && g.activeElement.matches && g.activeElement.matches('[data-ara]');
@@ -319,7 +319,7 @@
       h.durum = 'ogren'; await hedefKaydet();
     } finally { if (!sonra) durum.ilerliyor = false; ciz(); }
   }
-  // hedef ekrana ulaşıldı: adresi öğren, sonra doldur ya da listeyi alıp Sinyal'e gönder
+  // hedef ekrana ulaşıldı: adresi öğren, sonra doldur ya da listeyi alıp ÖzSinyal'e gönder
   async function vardi(h) {
     await gonder({ tur: 'sayfa-koy', is: anahtarOf(h), yol: location.pathname, adres: location.href }); durum.sayfa = await gonder({ tur: 'sayfa-al' }) || {};
     durum.hedef = null; await gonder({ tur: 'hedef-sil' }); durum.ilerliyor = false;
@@ -331,7 +331,7 @@
     if (!durum.tablo) return; const [, ad] = AL.find(x => x[0] === durum.al);
     await gonder({ tur: 'tablo-koy', tablo: { satirlar: durum.tablo.s, baslik: durum.tablo.baslik, adres: location.pathname, amac: durum.al } });
     await gonder({ tur: 'sayfa-koy', is: 'al-' + durum.al, yol: location.pathname, adres: location.href });
-    durum.mesaj = `${durum.tablo.s.length - 1} satır Sinyal’e gönderildi${oto ? '; Sinyal açılıyor' : ''}. ${ad} kontrol ekranında bekliyor.`; ciz();
+    durum.mesaj = `${durum.tablo.s.length - 1} satır ÖzSinyal’e gönderildi${oto ? '; ÖzSinyal açılıyor' : ''}. ${ad} kontrol ekranında bekliyor.`; ciz();
     if (oto) setTimeout(() => gonder({ tur: 'sinyal-ac' }), 900);
   }
   async function yukle() {
@@ -360,7 +360,7 @@
     durum.sonuc = {}; r.forEach(x => Object.entries(x.sonuc || {}).forEach(([a, s]) => { if (durum.sonuc[a] !== 'ok') durum.sonuc[a] = s === 'yok' && durum.sonuc[a] ? durum.sonuc[a] : s; }));
     ciz();
   }
-  // iş tamam: Sinyal'e bildir, formun adresini hatırla, sıradakine geç; aynı formdaysa doldur, başka formdaysa onu aç
+  // iş tamam: ÖzSinyal'e bildir, formun adresini hatırla, sıradakine geç; aynı formdaysa doldur, başka formdaysa onu aç
   async function tamamla() {
     const is = durum.q.isler.find(x => x.id === durum.sec); if (!is) return;
     const l = sirali(durum.filtre), i = l.findIndex(x => x.id === is.id), sonraki = l[i + 1] || l.find(x => x.id !== is.id);
@@ -422,7 +422,7 @@
     }
   });
 
-  // açılış: ayarlar, yarım kalan iş, yarım kalan gezinme ve Sinyal'den yeni gelen sıra; Sinyal'den komut gelince yeniden çalışır
+  // açılış: ayarlar, yarım kalan iş, yarım kalan gezinme ve ÖzSinyal'den yeni gelen sıra; ÖzSinyal'den komut gelince yeniden çalışır
   const basla = async () => {
     const [kapali, oto, aktif, yeni, hedef] = await Promise.all([gonder({ tur: 'ayar-al', ad: 'kapali' }), gonder({ tur: 'ayar-al', ad: 'oto' }), gonder({ tur: 'aktif-al' }), gonder({ tur: 'yeni-al' }), gonder({ tur: 'hedef-al' })]);
     durum.oto = oto !== false;

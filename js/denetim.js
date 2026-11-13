@@ -1,8 +1,8 @@
 // Denetim modu: habersiz denetimde (MTSK Yön. m.46/A) tek ekran: şu an hangi derste kim, hangi araçta, MEBBİS programına uygun mu;
 // araçta bulunması gereken belgeler (m.17/3), öz kontrol listesi (EK-16/17 maddelerinden) ve tek tıkla çıktılar.
 // Denetim kayıtları: bulgu, eksik giderme süresi (m.46: 20 gün) ve 5580 m.7/2 cezalarında tekerrür (7590 sayılı Kanun: tekrarda 5 kat, üçüncüde ruhsat iptali).
-import { S, kaydet, gun, fark, tamAd, islem, kursiyer, egitmen, arac, oturum, sbDers, sb, tutarOku } from './veri.js?v=182';
-import { e, ik, isaret, pencere, kapatPencere, bildir, tarih, rozet } from './ui.js?v=182';
+import { S, kaydet, gun, fark, tamAd, islem, kursiyer, egitmen, arac, oturum, sbDers, sb, tutarOku } from './veri.js?v=183';
+import { e, ik, isaret, pencere, kapatPencere, bildir, tarih, rozet } from './ui.js?v=183';
 
 const simdi = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
 const dk = s => { const [h, m] = String(s || '0:0').split(':').map(Number); return h * 60 + (m || 0); };
@@ -56,7 +56,7 @@ export function denetimModuAc(yenile) {
     return `<p style="font-size:14px">${tarih(bugun)} · saat ${simdi()} · bugün ${a.dersler.length} direksiyon dersi, ${a.kalan} tanesi henüz başlamadı.</p>
       <h4 style="margin-top:12px">Şu an yapılan direksiyon dersleri</h4>${a.suan.length ? a.suan.map(dersSatir).join('') : `<p class="og-not">Şu an direksiyon dersi yok.${a.dersler.length ? ' Sıradaki: ' + e((a.dersler.find(d => dk(d.saat) > dk(simdi())) || {}).saat || '—') : ''}</p>`}
       <h4 style="margin-top:12px">Şu an yapılan teorik dersler</h4>${a.teorik.length ? a.teorik.map(t => `<div class="kart" style="padding:12px 14px;margin-bottom:10px"><b>${e(t.saat)} · ${e(t.salon || '')} · ${e(t.konu || '')}</b><div style="margin-top:6px"><button class="dg dg-cizgi dg-kucuk" data-dn-yazdir="dersdefteri|${e(t.grup || '')}">${ik('belge')}Ders defteri ve yoklama</button></div></div>`).join('') : '<p class="og-not">Şu an teorik ders yok.</p>'}
-      <h4 style="margin-top:12px">Öz kontrol</h4><ul class="dn-oz">${kl.map(([id, metin, oto, not, belge]) => { const v = oto === true ? true : oto === false ? false : ik2[id]; return `<li class="${v === true ? 'ok' : v === false ? 'no' : ''}"><button type="button" data-dn-isaret="${id}" ${oto != null ? 'disabled' : ''} aria-label="${e(metin)}">${v === true ? '✓' : v === false ? '!' : ''}</button><span>${e(metin)}${v === false && not ? `<small>${e(not)}</small>` : ''}${oto != null ? '<small>Sinyal kayıtlarından kontrol edildi</small>' : ''}</span>${belge ? `<button class="dg dg-hafif dg-kucuk" data-dn-yazdir="${belge}|">${ik('belge')}Yazdır</button>` : ''}</li>`; }).join('')}</ul>
+      <h4 style="margin-top:12px">Öz kontrol</h4><ul class="dn-oz">${kl.map(([id, metin, oto, not, belge]) => { const v = oto === true ? true : oto === false ? false : ik2[id]; return `<li class="${v === true ? 'ok' : v === false ? 'no' : ''}"><button type="button" data-dn-isaret="${id}" ${oto != null ? 'disabled' : ''} aria-label="${e(metin)}">${v === true ? '✓' : v === false ? '!' : ''}</button><span>${e(metin)}${v === false && not ? `<small>${e(not)}</small>` : ''}${oto != null ? '<small>ÖzSinyal kayıtlarından kontrol edildi</small>' : ''}</span>${belge ? `<button class="dg dg-hafif dg-kucuk" data-dn-yazdir="${belge}|">${ik('belge')}Yazdır</button>` : ''}</li>`; }).join('')}</ul>
       <p class="og-not" style="margin-top:8px">Denetçi EK-16 (teorik) ve EK-17 (direksiyon) kontrol formlarını doldurur; bu liste o formlardaki ve m.17/3, m.42, m.46/A’daki maddelerden hazırlandı.</p>`;
   };
   pencere({
@@ -66,7 +66,7 @@ export function denetimModuAc(yenile) {
       const g = p.querySelector('[data-dn]');
       g.addEventListener('click', ev => {
         const i = ev.target.closest('[data-dn-isaret]'); if (i && !i.disabled) { const x = S.denetimKontrol.isaret; x[i.dataset.dnIsaret] = x[i.dataset.dnIsaret] === true ? false : x[i.dataset.dnIsaret] === false ? undefined : true; kaydet(); g.innerHTML = ciz(); return; }
-        const y = ev.target.closest('[data-dn-yazdir]'); if (y) { const [tur, id] = y.dataset.dnYazdir.split('|'); return import('./sayfalar3.js?v=182').then(m => m.belgeAc(tur, id || undefined)); }
+        const y = ev.target.closest('[data-dn-yazdir]'); if (y) { const [tur, id] = y.dataset.dnYazdir.split('|'); return import('./sayfalar3.js?v=183').then(m => m.belgeAc(tur, id || undefined)); }
       });
       const zaman = setInterval(() => { if (!document.body.contains(p)) return clearInterval(zaman); if (!g.querySelector(':focus')) g.innerHTML = ciz(); }, 60000);
       p.querySelector('[data-dn-kayit]').addEventListener('click', () => { kapatPencere(); setTimeout(() => denetimKaydiAc(yenile), 200); });
@@ -104,7 +104,7 @@ export function denetimKaydiAc(yenile) {
 export function denetimKaydiKarti() {
   const l = S.denetimler || [];
   return `<div class="kart"><div class="kart-bas"><h3>Denetim kayıtları</h3><small>Eksik giderme süreleri ve ceza tekerrürü</small><div class="sag"><button class="dg dg-cizgi dg-kucuk" data-denetim-kayit>${ik('arti')}Kayıt ekle</button></div></div>
-    ${l.length ? `<ul class="liste" style="margin-top:8px">${l.slice(0, 8).map(x => `<li style="align-items:flex-start">${isaret(x.giderildi ? 'tamam' : x.son && fark(x.son) < 0 ? 'dur' : x.ceza ? 'yasak' : 'uyari', 24)}<div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${tarih(x.tarih)} · ${e(x.tur)}${x.bent ? ` · ceza m.7/2-${x.bent}${x.sira > 1 ? ` (${x.sira}. kez)` : ''}` : ''}</b><small style="display:block;color:var(--metin)">${e(x.bulgu || '')}</small>${x.son && !x.giderildi ? `<small style="display:block;color:${fark(x.son) < 0 ? 'var(--kirmizi)' : 'var(--soluk)'}">Eksik giderme son günü ${tarih(x.son)}${fark(x.son) < 0 ? ' · geçti' : ' · ' + fark(x.son) + ' gün kaldı'}</small>` : ''}</div>${x.son && !x.giderildi ? `<button class="dg dg-hafif dg-kucuk" data-denetim-giderildi="${x.id}">Giderildi</button>` : ''}</li>`).join('')}</ul>` : '<p class="kart-govde" style="color:var(--soluk);font-size:14px">Henüz denetim kaydı yok. Denetim olunca bulguları ve verilen süreyi girin; Sinyal son günü hatırlatır, cezalarda tekerrürü sayar.</p>'}</div>`;
+    ${l.length ? `<ul class="liste" style="margin-top:8px">${l.slice(0, 8).map(x => `<li style="align-items:flex-start">${isaret(x.giderildi ? 'tamam' : x.son && fark(x.son) < 0 ? 'dur' : x.ceza ? 'yasak' : 'uyari', 24)}<div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${tarih(x.tarih)} · ${e(x.tur)}${x.bent ? ` · ceza m.7/2-${x.bent}${x.sira > 1 ? ` (${x.sira}. kez)` : ''}` : ''}</b><small style="display:block;color:var(--metin)">${e(x.bulgu || '')}</small>${x.son && !x.giderildi ? `<small style="display:block;color:${fark(x.son) < 0 ? 'var(--kirmizi)' : 'var(--soluk)'}">Eksik giderme son günü ${tarih(x.son)}${fark(x.son) < 0 ? ' · geçti' : ' · ' + fark(x.son) + ' gün kaldı'}</small>` : ''}</div>${x.son && !x.giderildi ? `<button class="dg dg-hafif dg-kucuk" data-denetim-giderildi="${x.id}">Giderildi</button>` : ''}</li>`).join('')}</ul>` : '<p class="kart-govde" style="color:var(--soluk);font-size:14px">Henüz denetim kaydı yok. Denetim olunca bulguları ve verilen süreyi girin; ÖzSinyal son günü hatırlatır, cezalarda tekerrürü sayar.</p>'}</div>`;
 }
 // MEB kuralları listesine: süresi yaklaşan eksik giderme ve tekerrür riski
 export function denetimUyarilari() {

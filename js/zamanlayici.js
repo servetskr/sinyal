@@ -1,10 +1,10 @@
-import { planlilariGonder } from './mesaj.js?v=182';
-import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, gecikenler, kalanBorc, islem, gonderimEkle, yerelZaman, oturum, kapaliGun, SINIFLAR, risk, selam, kursAdi, bulutKanca, mudurTel } from './veri.js?v=182';
-import { tl, tamTarih, tarihUzun, saatDe, apiAcik, apiGonder, etiket, bildir, waSirali } from './ui.js?v=182';
-import { denetimSkoru } from './ozellik.js?v=182';
+import { planlilariGonder } from './mesaj.js?v=183';
+import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, gecikenler, kalanBorc, islem, gonderimEkle, yerelZaman, oturum, kapaliGun, SINIFLAR, risk, selam, kursAdi, bulutKanca, mudurTel } from './veri.js?v=183';
+import { tl, tamTarih, tarihUzun, saatDe, apiAcik, apiGonder, etiket, bildir, waSirali } from './ui.js?v=183';
+import { denetimSkoru } from './ozellik.js?v=183';
 
 /* ================= ZAMANLI MESAJLAR =================
-   Sinyal açıkken her dakika zamanı gelen mesajları bulur. WhatsApp API bağlıysa kendiliğinden gönderir;
+   ÖzSinyal açıkken her dakika zamanı gelen mesajları bulur. WhatsApp API bağlıysa kendiliğinden gönderir;
    bağlı değilse "zamanı gelen mesajlar" kuyruğuna koyar, ön büro tek ekrandan sırayla gönderir.
    Aynı mesaj iki kez gitmez (anahtar defteri). Demo sınırı açıkken her kuraldan günde en fazla 2 mesaj gider. */
 
