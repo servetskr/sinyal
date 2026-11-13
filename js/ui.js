@@ -507,7 +507,7 @@ const TERIMLER = [
   // çoğullar: kök + -ler/-lar + kalan ek aynen geçer
   [new RegExp(`(?<!${H})(usta öğreticiler|Usta öğreticiler|USTA ÖĞRETİCİLER)(${H}*)`, 'gu'), (m, k, ek) => buyuk(k, 'öğretmenler') + ek],
   [new RegExp(`(?<!${H})(kursiyerler|Kursiyerler|KURSİYERLER)(${H}*)`, 'gu'), (m, k, ek) => buyuk(k, 'öğrenciler') + ek],
-  [new RegExp(`(?<!${H})(ustalar|Ustalar|hocalar|Hocalar)(${H}*)`, 'gu'), (m, k, ek) => buyuk(k, 'öğretmenler') + ek],
+  [new RegExp(`(?<!${H})(ustalar|Ustalar|hocalar|Hocalar)(${H}*)`, 'gu'), (m, k, ek) => buyuk(k, 'öğretmenler') + ek.replace(/a/g, 'e').replace(/ı/g, 'i')],  // ustalara → öğretmenlere (ses uyumu)
   [new RegExp(`(?<!${H})(usta öğretici|Usta öğretici|USTA ÖĞRETİCİ)(${H}*)`, 'gu'), (m, k, ek) => ek.toLocaleLowerCase('tr') in OGRETICI_EK ? buyuk(k, 'öğretmen') + OGRETICI_EK[ek.toLocaleLowerCase('tr')] : m],
   [new RegExp(`(?<!${H})(kursiyer|Kursiyer|KURSİYER)(${H}*)`, 'gu'), (m, k, ek) => ek.toLocaleLowerCase('tr') in KURSIYER_EK ? buyuk(k, 'öğrenci') + (k === k.toLocaleUpperCase('tr') ? KURSIYER_EK[ek.toLocaleLowerCase('tr')].toLocaleUpperCase('tr') : KURSIYER_EK[ek.toLocaleLowerCase('tr')]) : m],
   // "usta" ve "hoca" kavram olarak; "Hüseyin Hoca" gibi hitaplar kalır

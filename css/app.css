@@ -2635,3 +2635,7 @@ tr.tik{font:inherit;color:inherit;margin-right:0}
 
 /* öğrenci listesi (telefon): ilerleme çubuğu ile tutar arasında boşluk (denetim B016) */
 @media (max-width:700px){.tablo-mobil td:has(> .yol){padding-right:22px}}
+
+/* Yönetim: üst etikette marka büyük harfe dönmesin; alt sekme yazısı tek satır (denetim B029, B030) */
+.yn-ic>small{text-transform:none;letter-spacing:.02em}
+.yn-alt button span{white-space:nowrap;letter-spacing:-.01em}
