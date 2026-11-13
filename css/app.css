@@ -137,6 +137,8 @@ h1,h2,h3,h4{color:var(--murekkep);font-family:var(--baslik);font-weight:800;line
 .kart.gosterge{padding:18px 20px;display:flex;flex-direction:column;gap:4px}
 .kart.gosterge small{font-family:var(--baslik);font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--soluk)}
 .kart.gosterge b{font-family:var(--baslik);font-size:30px;font-weight:900;color:var(--murekkep)}
+/* mavi gösterge panelindeki kartlar: başlık ve açıklama beyaz (genel kart kuralı griye çekmesin) */
+.izgara>.kart.gosterge>small,.izgara>.kart.gosterge>span{color:#fff}
 
 /* yön levhası */
 .yon-levhasi{background:var(--levha);color:#fff;border-radius:14px;box-shadow:inset 0 0 0 4px var(--levha),inset 0 0 0 6px #fff;padding:12px 10px}
@@ -1262,7 +1264,7 @@ button.oto-gidecek:hover{text-decoration:underline}
 .og-iban-kart .og-iban{font-size:13.5px!important}
 /* alt menü */
 .og-sekme{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:center;gap:2px;padding:6px 8px calc(6px + env(safe-area-inset-bottom));background:rgba(251,251,248,.96);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-top:1px solid var(--cizgi)}
-.og-sekme button{flex:1;max-width:100px;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 2px;border-radius:12px;color:var(--soluk);font:700 11.5px/1.1 var(--baslik)}
+.og-sekme button{flex:1;max-width:100px;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 2px;border-radius:12px;color:#676c75;font:700 11.5px/1.1 var(--baslik)}
 .og-sekme .ik{width:22px;height:22px;box-sizing:content-box;padding:3px 14px;border-radius:999px;transition:background .15s}
 .og-sekme button.secili{color:var(--levha)}
 .og-sekme button.secili .ik{background:var(--levha-acik)}
@@ -1529,7 +1531,7 @@ button.oto-gidecek:hover{text-decoration:underline}
 }
 /* Öğretmen ve öğrenci sekme çubuğu: aynı iOS dili (hap vurgusu yok) */
 .og-sekme{background:rgba(251,251,248,.88);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-top:.5px solid rgba(17,20,23,.18)}
-.og-sekme button{color:#7d838b;font:600 10.5px/1.1 var(--govde);gap:3px}
+.og-sekme button{color:#676c75;font:600 10.5px/1.1 var(--govde);gap:3px}
 .og-sekme button .ik{width:25px;height:25px;stroke-width:1.8;padding:0;background:none!important;border-radius:0}
 .og-sekme button.secili{color:var(--levha)}
 .og-sekme button.secili .ik{stroke-width:2.2}
@@ -1971,7 +1973,7 @@ body.usta-modu .u-satir-govde b{font-size:18px}
 body.usta-modu .u-satir-govde small{font-size:15px}
 /* alt sekme çubuğu */
 .og-sekme{background:rgba(249,249,251,.88);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-top:.5px solid var(--u-ayrac)}
-.og-sekme button{min-height:50px;color:#8e9198;font:500 10.5px/1.1 var(--govde)}
+.og-sekme button{min-height:50px;color:#676c75;font:500 10.5px/1.1 var(--govde)}
 .og-sekme button .ik{width:25px;height:25px;stroke-width:1.8;padding:0;background:none!important}
 .og-sekme button.secili{color:var(--u-vurgu)}
 .og-sekme button.secili .ik{stroke-width:2.2}
@@ -2568,24 +2570,24 @@ body.sahip-modu{
 .giris::after,.og-giris::after{content:"";position:absolute;z-index:-1;left:0;right:0;bottom:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,196,120,.45) 50%,transparent);pointer-events:none}
 body:has(.giris),body:has(.og-giris){background:#070b14}
 /* kart: cam */
-.giris-levha,.og-giris-kart{background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.025));border:1px solid rgba(255,255,255,.1);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 40px 90px -40px rgba(0,0,0,.85)}
+:is(.giris,.og-giris) .giris-levha,:is(.giris,.og-giris) .og-giris-kart{background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.025));border:1px solid rgba(255,255,255,.1);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 40px 90px -40px rgba(0,0,0,.85)}
 
-.og-giris-ust .logo,.giris-levha .logo{color:#fff}
+:is(.giris,.og-giris) .og-giris-ust .logo,:is(.giris,.og-giris) .giris-levha .logo{color:#fff}
 /* alanlar */
-.giris-eposta input:not([type=checkbox]),.og-girdi,.giris-pin input{background:rgba(255,255,255,.05);border-color:var(--cizgi);color:#fff}
-.og-girdi input,.giris-eposta input:not([type=checkbox]){color:#fff}
-.og-girdi input::placeholder,.giris-eposta input::placeholder,.giris-pin input::placeholder{color:rgba(214,222,238,.4)}
-.giris-eposta input:not([type=checkbox]):focus-visible,.og-girdi:focus-within{border-color:var(--sari);box-shadow:0 0 0 3px rgba(255,194,26,.2)}
+:is(.giris,.og-giris) .giris-eposta input:not([type=checkbox]),:is(.giris,.og-giris) .og-girdi,:is(.giris,.og-giris) .giris-pin input{background:rgba(255,255,255,.05);border-color:var(--cizgi);color:#fff}
+:is(.giris,.og-giris) .og-girdi input,:is(.giris,.og-giris) .giris-eposta input:not([type=checkbox]){color:#fff}
+:is(.giris,.og-giris) .og-girdi input::placeholder,:is(.giris,.og-giris) .giris-eposta input::placeholder,:is(.giris,.og-giris) .giris-pin input::placeholder{color:rgba(214,222,238,.4)}
+:is(.giris,.og-giris) .giris-eposta input:not([type=checkbox]):focus-visible,:is(.giris,.og-giris) .og-girdi:focus-within{border-color:var(--sari);box-shadow:0 0 0 3px rgba(255,194,26,.2)}
 .giris input[type=checkbox],.og-giris input[type=checkbox]{accent-color:#ffc21a}
 /* ana düğmeler: sinyal sarısı */
-.giris .dg-koyu,.giris-pin .dg-koyu,.og-giris .dg-ana{background:var(--sari,#ffc21a);color:#0b1220;box-shadow:0 12px 28px -14px rgba(255,170,0,.6)}
-.giris .dg-koyu:hover,.giris-pin .dg-koyu:hover,.og-giris .dg-ana:hover{background:#ffd24d}
+.giris .dg-koyu,:is(.giris,.og-giris) .giris-pin .dg-koyu,.og-giris .dg-ana{background:var(--sari,#ffc21a);color:#0b1220;box-shadow:0 12px 28px -14px rgba(255,170,0,.6)}
+.giris .dg-koyu:hover,:is(.giris,.og-giris) .giris-pin .dg-koyu:hover,.og-giris .dg-ana:hover{background:#ffd24d}
 .giris .dg-hafif,.og-giris .dg-hafif{background:rgba(255,255,255,.06);color:#fff;border-color:var(--cizgi)}
 /* demo ve kişi seçimi */
-.giris-demo{background:rgba(255,255,255,.05);border-color:var(--cizgi-2);color:#fff}
-.giris-demo:hover{background:rgba(255,194,26,.1);border-color:rgba(255,194,26,.4)}
-.giris-kisi{background:rgba(255,255,255,.04);border-color:var(--cizgi);color:#fff}
-.giris-kisi.secili,.giris-kisi:hover{background:rgba(255,194,26,.14);border-color:rgba(255,194,26,.45);color:#ffd24d}
-.giris-kisi.secili em,.giris-kisi:hover em{background:rgba(255,255,255,.08)}
-.og-giris-not{background:rgba(255,194,26,.12);color:#ffdf8a}
-.giris-geri:hover{color:#ffd24d}
+:is(.giris,.og-giris) .giris-demo{background:rgba(255,255,255,.05);border-color:var(--cizgi-2);color:#fff}
+:is(.giris,.og-giris) .giris-demo:hover{background:rgba(255,194,26,.1);border-color:rgba(255,194,26,.4)}
+:is(.giris,.og-giris) .giris-kisi{background:rgba(255,255,255,.04);border-color:var(--cizgi);color:#fff}
+:is(.giris,.og-giris) .giris-kisi.secili,:is(.giris,.og-giris) .giris-kisi:hover{background:rgba(255,194,26,.14);border-color:rgba(255,194,26,.45);color:#ffd24d}
+:is(.giris,.og-giris) .giris-kisi.secili em,:is(.giris,.og-giris) .giris-kisi:hover em{background:rgba(255,255,255,.08)}
+:is(.giris,.og-giris) .og-giris-not{background:rgba(255,194,26,.12);color:#ffdf8a}
+:is(.giris,.og-giris) .giris-geri:hover{color:#ffd24d}
