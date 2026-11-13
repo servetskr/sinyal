@@ -1,22 +1,22 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=189';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=189';
-import * as Y1 from './sayfalar1.js?v=189';
-import * as Y2 from './sayfalar2.js?v=189';
-import * as P from './portal.js?v=189';
-import * as Y3 from './sayfalar3.js?v=189';
-import * as Y4 from './sayfalar4.js?v=189';
-import * as Y5 from './sayfalar5.js?v=189';
-import * as IM from './imza.js?v=189';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=189';
-import * as SN from './senaryo.js?v=189';
-import * as OZ from './ozellik.js?v=189';
-import { durumlariGuncelle } from './mesaj.js?v=189';
-import { yeniMenu } from './yeni.js?v=189';
-import * as B from './bulut.js?v=189';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=189';
-import * as AN from './analiz.js?v=189';
-import * as ORT from './ortak.js?v=189';
-import * as SH from './sahip.js?v=189';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=190';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=190';
+import * as Y1 from './sayfalar1.js?v=190';
+import * as Y2 from './sayfalar2.js?v=190';
+import * as P from './portal.js?v=190';
+import * as Y3 from './sayfalar3.js?v=190';
+import * as Y4 from './sayfalar4.js?v=190';
+import * as Y5 from './sayfalar5.js?v=190';
+import * as IM from './imza.js?v=190';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=190';
+import * as SN from './senaryo.js?v=190';
+import * as OZ from './ozellik.js?v=190';
+import { durumlariGuncelle } from './mesaj.js?v=190';
+import { yeniMenu } from './yeni.js?v=190';
+import * as B from './bulut.js?v=190';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=190';
+import * as AN from './analiz.js?v=190';
+import * as ORT from './ortak.js?v=190';
+import * as SH from './sahip.js?v=190';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -156,6 +156,7 @@ export function yenile(kaydirma = false) {
   (S.sinavlar || []).forEach(x => { if (!x.sonuc || typeof x.sonuc !== 'object') x.sonuc = {}; if (!Array.isArray(x.kursiyerler)) x.kursiyerler = []; });
   if (!document.getElementById('icerik')) iskelet();
   let r = rota();
+  kurulumAkisi();
   if (!izinli(r.ad)) { if (oturum.kullanici.rol === 'sekreter' && SAYFALAR[r.ad]) bildir('Bu ekran yalnız kurs müdürüne açık', 'uyari'); location.hash = oturum.kullanici.rol === 'usta' ? '#/egitmen' : '#/genel'; return; }
   const yer = document.getElementById('icerik');
   if (!yer) return;
@@ -239,6 +240,25 @@ document.addEventListener('click', ev => {
 });
 document.addEventListener('keydown', ev => { if ((ev.metaKey || ev.ctrlKey) && (ev.key || "").toLowerCase() === "k") { ev.preventDefault(); aramaAc(); } if ((ev.key || "").toLowerCase() === "n" && !ev.metaKey && !ev.ctrlKey && !ev.altKey && oturum.kullanici && !document.querySelector('.perde') && !ev.target.closest('input, textarea, select, [contenteditable]')) { ev.preventDefault(); yeniMenu(); } });
 document.addEventListener('click', ev => { if (ev.target.closest('[data-yeni-menu]')) yeniMenu(); });
+// Kurulum akışı: Kurulum sayfasından bir adıma gidilince o adım tamamlanınca sıradaki eksik adım kendiliğinden açılır.
+// Kullanıcı adımın ekranından başka yere giderse akış biter; Kurulum sayfasından yeniden başlar.
+const AKIS = 'sinyal-kurulum-akis';
+document.addEventListener('click', ev => { const a = ev.target.closest('[data-kurulum-adim]'); if (a) try { sessionStorage.setItem(AKIS, a.dataset.kurulumAdim); } catch (x) { } });
+function kurulumAkisi() {
+  let i = null; try { i = sessionStorage.getItem(AKIS); } catch (x) { }
+  if (i == null || !oturum.kullanici || oturum.kullanici.rol !== 'mudur') return;
+  const bitir = () => { try { sessionStorage.removeItem(AKIS); } catch (x) { } };
+  const l = Y5.kurulumAdimlari(), adim = l[+i];
+  if (!adim) return bitir();
+  const kok = adim[3].split('/').slice(0, 2).join('/');
+  if (!location.hash.startsWith(kok)) return bitir();  // adımın ekranından çıkıldı
+  if (!adim[1]) return;  // adım henüz tamamlanmadı
+  const n = l.findIndex((x, j) => j > +i && !x[1]), sonraki = n >= 0 ? n : l.findIndex(x => !x[1]);
+  if (sonraki < 0) { bitir(); bildir('Kurulum tamamlandı'); setTimeout(() => { location.hash = '#/kurulum'; }, 900); return; }
+  try { sessionStorage.setItem(AKIS, String(sonraki)); } catch (x) { }
+  bildir(adim[0] + ' tamam · sıradaki: ' + l[sonraki][0]);
+  setTimeout(() => { if (location.hash === l[sonraki][3]) yenile(true); else location.hash = l[sonraki][3]; }, 900);
+}
 document.addEventListener('change', ev => { const s = ev.target.closest('[data-sube]'); if (!s) return; subeSec(s.value); document.querySelectorAll('[data-sube]').forEach(x => { x.value = s.value; }); bildir(s.value ? S.subeler.find(x => x.id === s.value).ad + ' gösteriliyor' : 'Tüm şubeler gösteriliyor'); yenile(); });
 Y5.temaUygula();
 
