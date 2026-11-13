@@ -1,10 +1,10 @@
-import { cevapIsle } from './mesaj.js?v=189';
-import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli, sonrakiDers, selam, bulutKanca, iptalEdilebilir, oturum, dersIptalIz, gonderimEkle } from './veri.js?v=189';
-import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos, waIstek, ziyaretci, apiGonder, waAc, waNumara } from './ui.js?v=189';
-import { yenile } from './app.js?v=189';
-import { bildirimler } from './sayfalar1.js?v=189';
-import { denetimEksikleri } from './sayfalar3.js?v=189';
-import { sinifKari, dersMaliyeti, bosKapasite, hakedis, ustaAlacak, ayAnahtar, KAPASITE_SAAT, randevuEngeli, bosSlotlar, engelYazilir } from './risk.js?v=189';
+import { cevapIsle } from './mesaj.js?v=190';
+import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli, sonrakiDers, selam, bulutKanca, iptalEdilebilir, oturum, dersIptalIz, gonderimEkle } from './veri.js?v=190';
+import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos, waIstek, ziyaretci, apiGonder, waAc, waNumara } from './ui.js?v=190';
+import { yenile } from './app.js?v=190';
+import { bildirimler } from './sayfalar1.js?v=190';
+import { denetimEksikleri } from './sayfalar3.js?v=190';
+import { sinifKari, dersMaliyeti, bosKapasite, hakedis, ustaAlacak, ayAnahtar, KAPASITE_SAAT, randevuEngeli, bosSlotlar, engelYazilir } from './risk.js?v=190';
 const AY_ADI = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 export const ayAdi = a => AY_ADI[+a.slice(5, 7) - 1] + ' ' + a.slice(0, 4);
 
@@ -285,7 +285,7 @@ export async function gelenKontrol() {
       if (S.gelenAlinan.includes(x.id)) continue;
       S.gelenAlinan.push(x.id); n++;
       // fotoğraf ya da PDF: öğrencinin evrakı (indirilemezse sonraki turda yeniden denenir)
-      if (x.medya) { const ok = await (await import('./evrak.js?v=189')).evrakGeldi(x).catch(() => false); if (!ok) { S.gelenAlinan.pop(); n--; } continue; }
+      if (x.medya) { const ok = await (await import('./evrak.js?v=190')).evrakGeldi(x).catch(() => false); if (!ok) { S.gelenAlinan.pop(); n--; } continue; }
       const saat = new Date(x.zaman).toTimeString().slice(0, 5);
       // gönderdiğimiz mesaja verilen cevap (evet/hayır ya da “yanıtla”) adaya değil o mesaja işlenir
       // kayıtlı öğrencinin WhatsApp'tan ders değişikliği (asistan tanıdı): saat önerisi ya da seçilen saate taşıma

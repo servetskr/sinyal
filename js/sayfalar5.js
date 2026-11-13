@@ -1,9 +1,9 @@
-import * as EK from './eklenti.js?v=189';
-import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, kursiyer, DERS_TUR_AD, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube, tutarOku } from './veri.js?v=189';
-import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor, belgeYazdir, kisaLink } from './ui.js?v=189';
-import { yenile } from './app.js?v=189';
-import * as B from './bulut.js?v=189';
-import { wpGonder } from './sayfalar1.js?v=189';
+import * as EK from './eklenti.js?v=190';
+import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, kursiyer, DERS_TUR_AD, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube, tutarOku } from './veri.js?v=190';
+import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor, belgeYazdir, kisaLink } from './ui.js?v=190';
+import { yenile } from './app.js?v=190';
+import * as B from './bulut.js?v=190';
+import { wpGonder } from './sayfalar1.js?v=190';
 
 /* ================= MEB KURALLARI: KAYNAK VE SORUMLULUK ================= */
 const MTSK = 'MTSK Yönetmeliği (ÖÖKGM, Ocak 2025 metni)';
@@ -637,7 +637,7 @@ export function ayarBaglan(k) {
   });
   k.addEventListener('click', ev => {
     if (ev.target.closest('[data-kurtarma-indir]')) { const a2 = document.createElement('a'); a2.href = URL.createObjectURL(new Blob([localStorage.getItem('sinyal-kurtarma') || '[]'], { type: 'application/json' })); a2.download = 'mdsinyal-kaydedilemeyenler.json'; a2.click(); setTimeout(() => URL.revokeObjectURL(a2.href), 3000); }
-    if (ev.target.closest('[data-kurtarma-sil]') && confirm('Kaydedilemeyen değişiklikler bu cihazdan silinsin mi? Önce indirdiğinizden emin olun.')) { try { localStorage.removeItem('sinyal-kurtarma'); } catch (x) { } import('./bulut.js?v=189').then(B => { B.bulut.kalici = ''; B.durumYaz(); }); yenile(); }
+    if (ev.target.closest('[data-kurtarma-sil]') && confirm('Kaydedilemeyen değişiklikler bu cihazdan silinsin mi? Önce indirdiğinizden emin olun.')) { try { localStorage.removeItem('sinyal-kurtarma'); } catch (x) { } import('./bulut.js?v=190').then(B => { B.bulut.kalici = ''; B.durumYaz(); }); yenile(); }
   });
   davetListesi(k); yedekListesi(k); sunucuKaydi(k); if (B.bulutta()) ikiAdimSatiri(k);
   k.addEventListener('change', ev => {
@@ -683,7 +683,7 @@ export function ayarBaglan(k) {
     if (t.closest('[data-sozlesme-varsayilan]')) { S.kurs.sozlesme = null; islem('Sözleşmeyi varsayılana döndürdü'); kaydet(); bildir('Varsayılan metne dönüldü'); return yenile(); }
     if (t.closest('[data-sube-ekle]')) { const n = S.subeler.length + 1; S.subeler.push({ id: 's' + Date.now(), ad: 'Yeni şube ' + n, semt: '', kurumKodu: '', mudur: '', mebbis: '' }); islem('Şube ekledi'); kaydet(); bildir('Şube eklendi; kurum kodunu ve müdürünü yazın'); yenile(); }
     if (t.closest('[data-kural-onay]')) { S.kurs.kuralOnay = { kim: oturum.kullanici ? oturum.kullanici.ad : '', tarih: gun(0) }; islem('Kural değerlerini onayladı'); kaydet(); bildir('Kural değerleri onaylandı'); yenile(); }
-    const bo = t.closest('[data-belge-ac]'); if (bo) import('./sayfalar3.js?v=189').then(m => m.belgeAc(bo.dataset.belgeAc));
+    const bo = t.closest('[data-belge-ac]'); if (bo) import('./sayfalar3.js?v=190').then(m => m.belgeAc(bo.dataset.belgeAc));
     const ok = t.closest('[data-oturum-kapat]'); if (ok) { const o = S.guvenlik.oturumlar.splice(+ok.dataset.oturumKapat, 1)[0]; islem('Oturumu kapattırdı', o.kim + ' · ' + o.cihaz); kaydet(); bildir(o.kim + ' · ' + o.cihaz + ' oturumu kapatıldı'); yenile(); }
     const fs = t.closest('[data-fis]'); if (fs) { const n = +fs.dataset.fis, d = new Date(BUGUN); d.setMonth(d.getMonth() - n); csvIndir(`muhasebe-fisleri-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}.csv`, muhasebeFisi(n)); islem('Muhasebe fişlerini indirdi'); kaydet(); }
     if (t.closest('[data-parasut]')) pencere({ baslik: 'Paraşüt · bağlantı gerekli', icerik: `<div class="ipucu uyari" style="margin-bottom:12px">${isaret('uyari', 22)}<span>Paraşüt bağlantısı için kursun Paraşüt hesabından alınan API anahtarı gerekir. Anahtar girilene kadar tahsilatlar Paraşüt’e aktarılmaz.</span></div><p style="font-size:14.5px">Bu arada aylık muhasebe fişini CSV olarak indirip Paraşüt’e veya muhasebecinize yükleyebilirsiniz; fişte her tahsilat, gider ve iade ayrı satırdır.</p>`, altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-pfis>Bu ayın fişini indir</button>', onAc(d) { d.querySelector('[data-pfis]').addEventListener('click', () => { const d0 = new Date(BUGUN); csvIndir(`muhasebe-fisleri-${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}.csv`, muhasebeFisi(0)); islem('Muhasebe fişlerini indirdi'); kaydet(); kapatPencere(); }); } });
@@ -735,7 +735,7 @@ export function kurulum() {
     baslik: 'Kurulum', alt: `${biten}/${l.length} adım tamam`,
     html: `${ekranNotu('Kurulumun çoğunu biz yaparız. Sizden istenenler kısa ve her birinin yanında yazar. Toplam süre: kurs tarafında yaklaşık 45 dakika.')}
     <div class="kart"><div class="kart-govde">${ilerleme(biten, l.length, 'yesil')}<p style="margin-top:8px;font-size:14px"><b>${biten}</b> / ${l.length} adım tamamlandı</p></div>
-    <ul class="liste">${l.map(([b, ok, kim, h, a], i) => `<li style="align-items:flex-start">${isaret(ok ? 'tamam' : 'zorunlu', 26)}<div style="flex:1;min-width:0"><b style="color:var(--murekkep);display:block">${i + 1}. ${b}</b><small style="color:var(--metin);font-size:13.5px">${a}</small></div><span class="sag" style="flex-wrap:wrap;justify-content:flex-end">${rozet(kim, kim.startsWith('Biz') ? 'mavi' : 'notr')}${ok ? rozet('Tamam', 'yesil') : `<a class="dg dg-ana dg-kucuk" href="${h}">Yap</a>`}</span></li>`).join('')}</ul></div>`,
+    <ul class="liste">${l.map(([b, ok, kim, h, a], i) => `<li style="align-items:flex-start">${isaret(ok ? 'tamam' : 'zorunlu', 26)}<div style="flex:1;min-width:0"><b style="color:var(--murekkep);display:block">${i + 1}. ${b}</b><small style="color:var(--metin);font-size:13.5px">${a}</small></div><span class="sag" style="flex-wrap:wrap;justify-content:flex-end">${rozet(kim, kim.startsWith('Biz') ? 'mavi' : 'notr')}${ok ? rozet('Tamam', 'yesil') : `<a class="dg dg-ana dg-kucuk" href="${h}" data-kurulum-adim="${i}">Yap</a>`}</span></li>`).join('')}</ul></div>`,
   };
 }
 
