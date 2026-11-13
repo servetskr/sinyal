@@ -1192,6 +1192,10 @@ button.oto-gidecek:hover{text-decoration:underline}
 .og-sayac small{display:block;font-size:12px;font-weight:700;color:var(--soluk)}
 .og-sayac b{display:block;font:900 22px/1.15 var(--baslik);color:var(--murekkep);margin:2px 0 8px}
 .og-genis{width:100%;height:46px;border-radius:12px;margin-bottom:12px;font-size:15px}
+/* ders alınamıyorsa: nedeni ve kursa yazma */
+.og-ders-engel{display:flex;align-items:center;gap:12px;margin:0 0 12px;padding:12px 14px;border-radius:14px;background:#fff;color:var(--metin);font-size:14px;line-height:1.4}
+.og-ders-engel span{flex:1;min-width:0}
+.og-ders-engel .dg{flex:none;min-height:40px}
 .og-olaylar{list-style:none;display:grid;grid-template-columns:minmax(0,1fr);gap:6px}
 .portal-og .og-olay{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;background:var(--panel-2);border-left:0;margin:0}
 .og-zaman{flex:none;min-width:54px}
@@ -1663,7 +1667,7 @@ button.oto-gidecek:hover{text-decoration:underline}
 .tk2-hgun.bugun .tk2-hbas small,.tk2-hgun.bugun .tk2-hbas b{color:#fff}
 .tk2-hgun.gecmis .tk2-hbas b{color:var(--soluk)}
 .tk2-hic{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;justify-content:center}
-.tk2-hbos{color:var(--cizgi);font-size:14px;padding:8px 2px}
+.tk2-hbos{color:var(--soluk);font-size:14px;padding:8px 2px}
 .tk2-ay{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
 .tk2-agun{font:700 11px/1 var(--baslik);color:var(--soluk);text-align:center;padding:4px 0 6px}
 .tk2-ahucre{aspect-ratio:1/1.05;border-radius:9px;background:var(--panel-2);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:5px 2px 3px;gap:1px;min-width:0;position:relative}
@@ -1826,7 +1830,7 @@ body.kaydi .app-ust{border-bottom-color:var(--u-ayrac)}
 .app-ust-ad{flex:1;min-width:0;display:grid;line-height:1.2}
 .app-ust-ad b{font-size:15px;font-weight:600;color:var(--murekkep);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .app-ust-ad small,.app-ust-ad .bulut-durum{font-size:12px;color:var(--u-ikincil);margin:0;padding:0;background:none}
-.app-profil{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--u-vurgu);color:#fff;font-size:13px;font-weight:600;letter-spacing:0}
+.app-profil{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--u-vurgu);color:#fff;font-size:13px;font-weight:600;letter-spacing:0}
 .app-profil:active{opacity:.7}
 .app-profil.buyuk{width:56px;height:56px;font-size:20px}
 body.hero-acik .app-ust{background:var(--u-gece);border-bottom-color:transparent}
@@ -2002,6 +2006,8 @@ body.usta-modu .u-satir-govde small{font-size:15px}
 .hs-cikis .hs-metin{color:#d63a2f}
 /* sekmelerin mevcut içeriği aynı dile: çerçevesiz beyaz gruplar, hap rozetler, dolgu düğmeler */
 .portal-og .kart,.portal-og .og-isler,.portal-og .og-degerlendir,.portal-og .og-karo,.portal-og .og-ozet-kutu,.portal-og .og-sayac>div{border:0;border-radius:14px;background:#fff;box-shadow:none}
+/* ana kart (Deneme sınavı) beyaz kart kuralından sonra: mavi zemini korunur */
+.portal-og .og-karo-ana{background:var(--levha)}
 .portal-og .og-degerlendir{margin-bottom:10px}
 .portal-og .og-grup{margin-top:28px}
 .portal-og .og-grup-bas{font-family:var(--baslik);font-size:20px;font-weight:700;letter-spacing:-.02em;text-transform:none;color:var(--murekkep);margin:0 4px 10px}
@@ -2044,7 +2050,7 @@ body.usta-modu .u-satir-govde small{font-size:15px}
 .u-t-saat{width:56px;font-weight:600;color:var(--murekkep)}
 .u-t-ad{font-weight:600;color:var(--murekkep);line-height:1.25}
 .u-t-ad small{display:block;font-size:12.5px;font-weight:400;color:var(--u-ikincil)}
-.u-tablo tr.bos td{color:var(--u-ucuncul)}
+.u-tablo tr.bos td{color:var(--u-ikincil,#6b7079)}
 .u-tablo tr.iptal .u-t-saat,.u-tablo tr.iptal .u-t-ad{color:var(--u-ucuncul);text-decoration:line-through}
 .u-tablo .u-durum{font-size:13px}
 .u-indir{width:100%;margin-top:14px;background:#fff;color:#1d6f42}
@@ -2591,3 +2597,41 @@ body:has(.giris),body:has(.og-giris){background:#070b14}
 :is(.giris,.og-giris) .giris-kisi.secili em,:is(.giris,.og-giris) .giris-kisi:hover em{background:rgba(255,255,255,.08)}
 :is(.giris,.og-giris) .og-giris-not{background:rgba(255,194,26,.12);color:#ffdf8a}
 :is(.giris,.og-giris) .giris-geri:hover{color:#ffd24d}
+
+/* Form doğrulama (denetim B022): zorunlu alan işareti ve alan altında hata */
+.alan:has(> [required]) > label::after,.alan.zorunlu > .et::after{content:" *";color:var(--kirmizi);font-weight:700}
+.alan-hata{display:block;margin-top:5px;color:var(--kirmizi);font-size:13px;font-weight:600;line-height:1.35}
+[aria-invalid="true"]:not([type=radio]):not([type=checkbox]){border-color:var(--kirmizi)!important;box-shadow:0 0 0 3px rgba(198,40,40,.14)!important}
+.alan.hatali .secim{border-radius:12px;box-shadow:0 0 0 2px var(--kirmizi)}
+label.hatali{color:var(--kirmizi)}
+
+/* Telefonda dokunma hedefleri ve yerleşim (denetim B003, B009, B013, B019) */
+@media (max-width:700px){
+  .dg-hafif{min-height:40px}
+  .portal-og .dg,.og-defter .dg,.og-taksit .dg,.tk2-mod button,.tk2-hgun .dg{min-height:40px}
+  .yan nav a{padding:11px 12px}
+  .og-ozet-kutular>:nth-child(odd):last-child{grid-column:1/-1}
+}
+.u-etiket{white-space:nowrap}
+
+/* öğretmen programı: gün etiketi günün ilk dersine hizalı (denetim B002) */
+.u-tablo td.u-gun{vertical-align:top;padding-top:12px}
+
+/* pencere açıkken telefonda bildirim üste çıkar; alttaki eylem düğmelerini örtmez (denetim B012) */
+@media (max-width:700px){body.kilitli .bildirimler{top:calc(12px + env(safe-area-inset-top,0px));bottom:auto}}
+
+/* evrak satırı: anahtarın ne olduğu yazılı (denetim B015) */
+.evrak .anahtar{margin-left:62px}
+.evrak .anahtar::before{content:"Teslim";position:absolute;right:calc(100% + 8px);top:50%;transform:translateY(-50%);font-size:12.5px;font-weight:700;color:var(--soluk);white-space:nowrap;pointer-events:none}
+
+/* "tik" hem küçük onay işareti hem tıklanabilir tablo satırı sınıfı: satır yazı tipini değiştirmesin (denetim B020) */
+tr.tik{font:inherit;color:inherit;margin-right:0}
+
+/* öğrenci dosyası üst kutuları: telefonda kesilmesin, iki satıra insin (denetim B017) */
+@media (max-width:700px){.serit-kutu b{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.2}}
+
+/* plan gün şeridi: kaydırılabildiği kenarlarda belli olsun (denetim B021) */
+.gun-sec{-webkit-mask-image:linear-gradient(90deg,transparent,#000 18px,#000 calc(100% - 18px),transparent);mask-image:linear-gradient(90deg,transparent,#000 18px,#000 calc(100% - 18px),transparent)}
+
+/* öğrenci listesi (telefon): ilerleme çubuğu ile tutar arasında boşluk (denetim B016) */
+@media (max-width:700px){.tablo-mobil td:has(> .yol){padding-right:22px}}

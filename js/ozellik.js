@@ -1,10 +1,10 @@
-import { cevapIsle } from './mesaj.js?v=185';
-import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli, sonrakiDers, selam, bulutKanca, iptalEdilebilir, oturum, dersIptalIz } from './veri.js?v=185';
-import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos, waIstek, ziyaretci, apiGonder } from './ui.js?v=185';
-import { yenile } from './app.js?v=185';
-import { bildirimler } from './sayfalar1.js?v=185';
-import { denetimEksikleri } from './sayfalar3.js?v=185';
-import { sinifKari, dersMaliyeti, bosKapasite, hakedis, ustaAlacak, ayAnahtar, KAPASITE_SAAT, randevuEngeli, bosSlotlar } from './risk.js?v=185';
+import { cevapIsle } from './mesaj.js?v=186';
+import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli, sonrakiDers, selam, bulutKanca, iptalEdilebilir, oturum, dersIptalIz, gonderimEkle } from './veri.js?v=186';
+import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos, waIstek, ziyaretci, apiGonder, waAc, waNumara } from './ui.js?v=186';
+import { yenile } from './app.js?v=186';
+import { bildirimler } from './sayfalar1.js?v=186';
+import { denetimEksikleri } from './sayfalar3.js?v=186';
+import { sinifKari, dersMaliyeti, bosKapasite, hakedis, ustaAlacak, ayAnahtar, KAPASITE_SAAT, randevuEngeli, bosSlotlar, engelYazilir } from './risk.js?v=186';
 const AY_ADI = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 export const ayAdi = a => AY_ADI[+a.slice(5, 7) - 1] + ' ' + a.slice(0, 4);
 
@@ -170,9 +170,22 @@ export function mutabakatBaglan(k) {
 }
 
 /* ================= KURSİYERİN KENDİ RANDEVUSU ================= */
+// Öğrenci kursa WhatsApp'tan yazar (ders isteği): mesaj kursun gelen kutusuna da düşer
+export function kursaYaz(k, neden = 'ders', metin = '') {
+  const m = metin || `Merhaba, ben ${tamAd(k)}. ${neden === 'ek' ? 'Zorunlu direksiyon derslerim planlandı; ek direksiyon dersi almak istiyorum.' : 'Direksiyon dersi almak istiyorum; uygun saatleri yazar mısınız?'}`;
+  gonderimEkle(S.kurs.ad, m, 'Kursiyer talebi');
+  const kno = S.kurs.wp || S.kurs.wpGenel || S.kurs.tel;
+  if (!waNumara(kno)) return bildir('Kursun WhatsApp numarası kayıtlı değil; kursu arayın' + (S.kurs.tel ? ': ' + S.kurs.tel : ''), 'uyari');
+  if (waAc(kno, m, 'WhatsApp', tamAd(k), false, 'KURSA GELEN') !== 'api') bildir('WhatsApp açıldı; mesajı kursa gönder', 'wp');
+}
 export function randevuAl(k, sonra) {
   const engel = randevuEngeli(k);
-  if (engel) return pencere({ baslik: 'Direksiyon dersi al', icerik: `<p class="ipucu">${isaret('bilgi', 20)}<span>${e(engel)}</span></p>`, altlik: `<button class="dg dg-cizgi" data-kapat>Tamam</button>` });
+  if (engel) {
+    const ek = /hepsi planlandı/.test(engel), yaz = engelYazilir(engel);
+    return pencere({ baslik: ek ? 'Ek direksiyon dersi' : 'Direksiyon dersi al', icerik: `<p class="ipucu">${isaret('bilgi', 20)}<span>${e(engel)}</span></p>`,
+      altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button>${yaz ? `<button class="dg dg-ana" data-kursa-yaz-pencere>${ik('wp')}Kursa WhatsApp'tan yaz</button>` : ''}`,
+      onAc: d => { const b = d.querySelector('[data-kursa-yaz-pencere]'); if (b) b.addEventListener('click', () => { kapatPencere(); kursaYaz(k, ek ? 'ek' : 'ders'); }); } });
+  }
   const l = bosSlotlar(k, 7), h = egitmen(k.egitmen);
   if (!l.length) return pencere({ baslik: 'Direksiyon dersi al', icerik: `<p class="ipucu">${isaret('bilgi', 20)}<span>${e(h.ad)} hocanın önümüzdeki günlerde boş saati yok. Kursa yazarsan bekleme listesine alınırsın; saat boşalınca haber gelir.</span></p>`, altlik: `<button class="dg dg-cizgi" data-kapat>Tamam</button>` });
   const gunler = [...new Set(l.map(x => x.tarih))];
@@ -272,7 +285,7 @@ export async function gelenKontrol() {
       if (S.gelenAlinan.includes(x.id)) continue;
       S.gelenAlinan.push(x.id); n++;
       // fotoğraf ya da PDF: öğrencinin evrakı (indirilemezse sonraki turda yeniden denenir)
-      if (x.medya) { const ok = await (await import('./evrak.js?v=185')).evrakGeldi(x).catch(() => false); if (!ok) { S.gelenAlinan.pop(); n--; } continue; }
+      if (x.medya) { const ok = await (await import('./evrak.js?v=186')).evrakGeldi(x).catch(() => false); if (!ok) { S.gelenAlinan.pop(); n--; } continue; }
       const saat = new Date(x.zaman).toTimeString().slice(0, 5);
       // gönderdiğimiz mesaja verilen cevap (evet/hayır ya da “yanıtla”) adaya değil o mesaja işlenir
       // kayıtlı öğrencinin WhatsApp'tan ders değişikliği (asistan tanıdı): saat önerisi ya da seçilen saate taşıma
