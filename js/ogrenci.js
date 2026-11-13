@@ -1,9 +1,10 @@
 // Öğrenci paneli sekmeleri: dersler (yaklaşan + defter + gelişim + teorik konular), sınavlar, ödemeler, belgeler; bölümler açılır kapanır modüller
-import { S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen, ogrOzellik, oturum, DERS_TUR_AD, iptalEdilebilir } from './veri.js?v=185';
-import * as TK from './takvim.js?v=185';
-import { bildirimler } from './sayfalar1.js?v=185';
-import { e, tl, ik, rozet, ilerleme, pencere, kapatPencere, bildir, tarih, goreli, isaret, belgeYazdir, fotoKucult } from './ui.js?v=185';
-import { belgeHtml } from './sayfalar3.js?v=185';
+import { S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen, ogrOzellik, oturum, DERS_TUR_AD, iptalEdilebilir } from './veri.js?v=186';
+import * as TK from './takvim.js?v=186';
+import { randevuEngeli, engelYazilir } from './risk.js?v=186';
+import { bildirimler } from './sayfalar1.js?v=186';
+import { e, tl, ik, rozet, ilerleme, pencere, kapatPencere, bildir, tarih, goreli, isaret, belgeYazdir, fotoKucult } from './ui.js?v=186';
+import { belgeHtml } from './sayfalar3.js?v=186';
 
 // MEB teorik eğitim programı: konu, ders saati, başlıklar (anahtarlar soru bankasıyla aynı)
 export const MUFREDAT = [
@@ -119,7 +120,10 @@ export function derslerHtml(k) {
   const satir = d => `<li class="og-olay"><div class="og-zaman"><small>${gunK(d.tarih)}</small><b class="mono">${d.saat}</b></div><div class="og-olay-ad"><b>${d.durum === 'Yapıldı' ? 'Ders yapıldı' : e(d.durum)}</b><small>${e((egitmen(d.egitmen) || {}).ad || '')}</small></div>${rozet(d.durum, d.durum === 'Yapıldı' ? 'yesil' : d.durum === 'Gelmedi' ? 'kirmizi' : 'notr')}</li>`;
   const direksiyon = modul('direksiyon', { ikon: 'direksiyon', baslik: 'Geçmiş direksiyon derslerin', ozet: `${k.direksiyon}/${S0.direksiyon} ders yapıldı${gecmis.some(d => d.durum === 'Gelmedi') ? ' · ' + gecmis.filter(d => d.durum === 'Gelmedi').length + ' gelmedi' : ''}`, acik: false },
     gecmis.length ? `<ul class="og-olaylar">${gecmis.map(satir).join('')}</ul>` : '<p class="og-bos">Henüz yapılan direksiyon dersin yok.</p>');
-  const al = k.asama !== 'Ehliyet' ? `<button class="dg dg-ana og-genis" data-iste>${ik('arti')}Direksiyon dersi al</button>` : '';
+  // Ders alınabiliyorsa ana düğme; alınamıyorsa nedeni ve (işe yarıyorsa) kursa yazma yolu
+  const engel = k.asama !== 'Ehliyet' ? randevuEngeli(k) : null;
+  const al = k.asama === 'Ehliyet' ? '' : !engel ? `<button class="dg dg-ana og-genis" data-iste>${ik('arti')}Direksiyon dersi al</button>`
+    : engelYazilir(engel) ? `<div class="og-ders-engel"><span>${e(engel)}</span><button class="dg dg-cizgi" data-kursa-yaz="${/hepsi planlandı/.test(engel) ? 'ek' : 'ders'}">${ik('wp')}Kursa yaz</button></div>` : '';
   const ilerl = `<div class="og-sayac"><div><small>Direksiyon</small><b>${k.direksiyon}<span>/${S0.direksiyon}</span></b>${ilerleme(k.direksiyon, S0.direksiyon, 'yesil')}</div><div><small>Teorik</small><b>${k.teorik}<span>/${S0.teorik}</span></b>${ilerleme(k.teorik, S0.teorik, 'yesil')}</div></div>`;
   return ilerl + (teorikOnce ? programHtml(k) + teorik + (ogrOzellik('dersOnay') ? dersDefteri(k) : '') + gelisim + direksiyon
     : al + programHtml(k) + (ogrOzellik('dersOnay') ? dersDefteri(k) : '') + gelisim + direksiyon + teorik);
@@ -213,7 +217,7 @@ export function belgelerHtml(k) {
 /* ---------- konu anlatımı ---------- */
 // İçerik ayrı dosyada; yalnız açılınca yüklenir (açılış hızını etkilemesin)
 let dersYuk = null;
-const dersleriYukle = () => dersYuk || (dersYuk = import('./dersler.js?v=185').then(m => m.DERSLER).catch(() => ({})));
+const dersleriYukle = () => dersYuk || (dersYuk = import('./dersler.js?v=186').then(m => m.DERSLER).catch(() => ({})));
 async function dersAc(k, id, yenile) {
   const D = await dersleriYukle(), d = D[id], [key, no] = [id.replace(/-\d+$/, ''), +id.split('-').pop()], konu = MUFREDAT.find(x => x[0] === key), baslik = konu ? konu[3][no - 1] : id;
   const sonraki = konu && no < konu[3].length ? key + '-' + (no + 1) : null;
@@ -250,7 +254,7 @@ async function dersAc(k, id, yenile) {
 
 /* ---------- olaylar ---------- */
 // direksiyon hazırlık bölümü ayrı dosyada (resmî form maddeleriyle); yer tutucu varsa yüklenir
-const dirYukle = () => import('./direksiyon.js?v=185');
+const dirYukle = () => import('./direksiyon.js?v=186');
 export function ogBagla(kap, k, yenile) {
   const yer = kap.querySelectorAll('[data-dir-yer]'); if (yer.length) dirYukle().then(m => yer.forEach(y => { y.innerHTML = m.direksiyonHtml(k, true); })).catch(() => { });
   kap.addEventListener('toggle', ev => { const m = ev.target; if (!m.matches || !m.matches('[data-modul]')) return; const id = m.dataset.modul; if (m.open) { ACIK.add(id); KAPALI.delete(id); } else { ACIK.delete(id); KAPALI.add(id); } }, true);
@@ -258,10 +262,10 @@ export function ogBagla(kap, k, yenile) {
     const t = ev.target;
     if (t.closest('.tk2') && TK.takvimTikla(t, ogTk)) return yenile();
     const dr = t.closest('[data-dir]'); if (dr) return dirYukle().then(m => m.direksiyonAc(k, dr.dataset.dir, yenile));
-    if (t.closest('[data-ikaz]')) return import('./ikaz.js?v=185').then(m => m.ikazAc());
-    if (t.closest('[data-motor4]')) return import('./motor.js?v=185').then(m => m.motorAc());
-    if (t.closest('[data-debriyaj]')) return import('./motor.js?v=185').then(m => m.debriyajAc());
-    if (t.closest('[data-tehlike]')) return import('./tehlike.js?v=185').then(m => m.tehlikeAc(k));
+    if (t.closest('[data-ikaz]')) return import('./ikaz.js?v=186').then(m => m.ikazAc());
+    if (t.closest('[data-motor4]')) return import('./motor.js?v=186').then(m => m.motorAc());
+    if (t.closest('[data-debriyaj]')) return import('./motor.js?v=186').then(m => m.debriyajAc());
+    if (t.closest('[data-tehlike]')) return import('./tehlike.js?v=186').then(m => m.tehlikeAc(k));
     if (t.closest('[data-kur-android]') && window.__kurulum) { window.__kurulum.prompt(); window.__kurulum.userChoice.finally(() => { window.__kurulum = null; yenile(); }); return; }
     const od = t.closest('[data-og-ders]'); if (od) return dersAc(k, od.dataset.ogDers, yenile);
     const yz = t.closest('[data-og-yildiz]'); if (yz) { const kart = yz.closest('.og-degerlendir'), n = +yz.dataset.ogYildiz; kart.dataset.puan = n; kart.querySelectorAll('[data-og-yildiz]').forEach(b => b.classList.toggle('secili', +b.dataset.ogYildiz <= n)); kart.querySelector('[data-og-puan]').disabled = false; return; }

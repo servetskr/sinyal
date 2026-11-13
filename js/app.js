@@ -1,22 +1,22 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=185';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=185';
-import * as Y1 from './sayfalar1.js?v=185';
-import * as Y2 from './sayfalar2.js?v=185';
-import * as P from './portal.js?v=185';
-import * as Y3 from './sayfalar3.js?v=185';
-import * as Y4 from './sayfalar4.js?v=185';
-import * as Y5 from './sayfalar5.js?v=185';
-import * as IM from './imza.js?v=185';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=185';
-import * as SN from './senaryo.js?v=185';
-import * as OZ from './ozellik.js?v=185';
-import { durumlariGuncelle } from './mesaj.js?v=185';
-import { yeniMenu } from './yeni.js?v=185';
-import * as B from './bulut.js?v=185';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=185';
-import * as AN from './analiz.js?v=185';
-import * as ORT from './ortak.js?v=185';
-import * as SH from './sahip.js?v=185';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=186';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=186';
+import * as Y1 from './sayfalar1.js?v=186';
+import * as Y2 from './sayfalar2.js?v=186';
+import * as P from './portal.js?v=186';
+import * as Y3 from './sayfalar3.js?v=186';
+import * as Y4 from './sayfalar4.js?v=186';
+import * as Y5 from './sayfalar5.js?v=186';
+import * as IM from './imza.js?v=186';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=186';
+import * as SN from './senaryo.js?v=186';
+import * as OZ from './ozellik.js?v=186';
+import { durumlariGuncelle } from './mesaj.js?v=186';
+import { yeniMenu } from './yeni.js?v=186';
+import * as B from './bulut.js?v=186';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=186';
+import * as AN from './analiz.js?v=186';
+import * as ORT from './ortak.js?v=186';
+import * as SH from './sahip.js?v=186';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -155,7 +155,7 @@ export function yenile(kaydirma = false) {
   (S.sinavlar || []).forEach(x => { if (!x.sonuc || typeof x.sonuc !== 'object') x.sonuc = {}; if (!Array.isArray(x.kursiyerler)) x.kursiyerler = []; });
   if (!document.getElementById('icerik')) iskelet();
   let r = rota();
-  if (!izinli(r.ad)) { location.hash = oturum.kullanici.rol === 'usta' ? '#/egitmen' : '#/genel'; return; }
+  if (!izinli(r.ad)) { if (oturum.kullanici.rol === 'sekreter' && SAYFALAR[r.ad]) bildir('Bu ekran yalnız kurs müdürüne açık', 'uyari'); location.hash = oturum.kullanici.rol === 'usta' ? '#/egitmen' : '#/genel'; return; }
   const yer = document.getElementById('icerik');
   if (!yer) return;
   const portal = r.ad === 'egitmen' || r.ad === 'ogrenci' || r.ad === 'kayit';

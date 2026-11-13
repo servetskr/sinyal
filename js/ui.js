@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=185';
+import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=186';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -116,6 +116,28 @@ export function halka(parcalar, { boyut = 132, kalinlik = 16, orta = '' } = {}) 
 let acikPencere = null;
 // korumali: içine bilgi girilen pencere (ders bitirme, imza) dışarı dokununca ya da Esc ile kapanmaz; yalnız Vazgeç/✕ ile
 let oncekiOdak = null;
+// Formdaki eksik ya da hatalı alanları birlikte işaretler, ilk alana kaydırır; liste: [[alan, mesaj], ...]. Hata varsa true döner.
+export function alanHatalari(form, liste) {
+  form.querySelectorAll('.alan-hata').forEach(x => x.remove());
+  form.querySelectorAll('[aria-invalid="true"]').forEach(x => x.removeAttribute('aria-invalid'));
+  form.querySelectorAll('.alan.hatali').forEach(x => x.classList.remove('hatali'));
+  liste.forEach(([el, m]) => {
+    const kap = el.closest('.alan') || el.closest('label') || el.parentElement;
+    el.setAttribute('aria-invalid', 'true'); kap.classList.add('hatali');
+    const s = document.createElement('small'); s.className = 'alan-hata'; s.textContent = m; s.setAttribute('role', 'alert'); kap.appendChild(s);
+  });
+  if (!form.dataset.hataDinle) {
+    form.dataset.hataDinle = '1';
+    const temizle = ev => { const kap = ev.target.closest('.alan.hatali, label.hatali'); if (!kap) return; kap.classList.remove('hatali'); kap.querySelectorAll('.alan-hata').forEach(x => x.remove()); kap.querySelectorAll('[aria-invalid]').forEach(x => x.removeAttribute('aria-invalid')); };
+    form.addEventListener('input', temizle); form.addEventListener('change', temizle);
+  }
+  if (!liste.length) return false;
+  const ilk = liste[0][0];
+  (ilk.closest('.alan') || ilk.closest('label') || ilk).scrollIntoView({ block: 'center', behavior: 'smooth' });
+  if (ilk.type !== 'radio' && ilk.type !== 'checkbox') ilk.focus({ preventScroll: true });
+  bildir(liste.length === 1 ? liste[0][1] : `${liste.length} alan eksik ya da hatalı; işaretli alanları düzeltin`, 'uyari');
+  return true;
+}
 export function pencere({ baslik, icerik, altlik = '', genis = false, onAc, korumali = false, alt = false }) {
   kapatPencere(); oncekiOdak = document.activeElement;
   const d = document.createElement('div');
@@ -430,11 +452,14 @@ export function fotoKucult(dosya, max = 640) {
 export function imzaAlani(cv) {
   const c = cv.getContext('2d'); c.lineWidth = 4; c.lineCap = 'round'; c.lineJoin = 'round'; c.strokeStyle = '#111';
   let ciz = false, bos = true;
+  // boş alanda soluk ipucu; ilk dokunuşta silinir (denetim B011)
+  const ipucu = () => { c.save(); c.fillStyle = 'rgba(17,17,17,.3)'; c.font = `600 ${Math.max(14, Math.round(cv.height * 0.13))}px system-ui,-apple-system,sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('Buraya parmakla imza atın', cv.width / 2, cv.height / 2); c.restore(); };
+  ipucu();
   const n = ev => { const r = cv.getBoundingClientRect(); return [(ev.clientX - r.left) * cv.width / r.width, (ev.clientY - r.top) * cv.height / r.height]; };
-  cv.addEventListener('pointerdown', ev => { ciz = true; c.beginPath(); c.moveTo(...n(ev)); try { cv.setPointerCapture(ev.pointerId); } catch (x) { } });
+  cv.addEventListener('pointerdown', ev => { if (bos) c.clearRect(0, 0, cv.width, cv.height); ciz = true; c.beginPath(); c.moveTo(...n(ev)); try { cv.setPointerCapture(ev.pointerId); } catch (x) { } });
   cv.addEventListener('pointermove', ev => { if (!ciz) return; c.lineTo(...n(ev)); c.stroke(); bos = false; });
   cv.addEventListener('pointerup', () => ciz = false);
-  return { bos: () => bos, url: () => { const k = document.createElement('canvas'); k.width = 300; k.height = 100; k.getContext('2d').drawImage(cv, 0, 0, 300, 100); return k.toDataURL('image/png'); }, temizle: () => { c.clearRect(0, 0, cv.width, cv.height); bos = true; } };
+  return { bos: () => bos, url: () => { const k = document.createElement('canvas'); k.width = 300; k.height = 100; k.getContext('2d').drawImage(cv, 0, 0, 300, 100); return k.toDataURL('image/png'); }, temizle: () => { c.clearRect(0, 0, cv.width, cv.height); bos = true; ipucu(); } };
 }
 
 // Hassas işlemden önce oturumdaki kullanıcının PIN'ini tekrar sorar (Ayarlar › Güvenlik'te kapatılabilir)
@@ -463,7 +488,7 @@ function sifreSor(neden, ok) {
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Onayla</button>`,
     onAc(d) {
       const inp = d.querySelector('[data-sifre-tekrar]'), btn = d.querySelector('[data-k]');
-      const dene = () => { btn.disabled = true; import('./bulut.js?v=185').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
+      const dene = () => { btn.disabled = true; import('./bulut.js?v=186').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
       btn.addEventListener('click', dene); inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') dene(); }); setTimeout(() => inp.focus(), 50);
     },
   });
@@ -482,7 +507,7 @@ const TERIMLER = [
   // çoğullar: kök + -ler/-lar + kalan ek aynen geçer
   [new RegExp(`(?<!${H})(usta öğreticiler|Usta öğreticiler|USTA ÖĞRETİCİLER)(${H}*)`, 'gu'), (m, k, ek) => buyuk(k, 'öğretmenler') + ek],
   [new RegExp(`(?<!${H})(kursiyerler|Kursiyerler|KURSİYERLER)(${H}*)`, 'gu'), (m, k, ek) => buyuk(k, 'öğrenciler') + ek],
-  [new RegExp(`(?<!${H})(ustalar|Ustalar|hocalar|Hocalar)(${H}*)`, 'gu'), (m, k, ek) => buyuk(k, 'öğretmenler') + ek],
+  [new RegExp(`(?<!${H})(ustalar|Ustalar|hocalar|Hocalar)(${H}*)`, 'gu'), (m, k, ek) => buyuk(k, 'öğretmenler') + ek.replace(/a/g, 'e').replace(/ı/g, 'i')],  // ustalara → öğretmenlere (ses uyumu)
   [new RegExp(`(?<!${H})(usta öğretici|Usta öğretici|USTA ÖĞRETİCİ)(${H}*)`, 'gu'), (m, k, ek) => ek.toLocaleLowerCase('tr') in OGRETICI_EK ? buyuk(k, 'öğretmen') + OGRETICI_EK[ek.toLocaleLowerCase('tr')] : m],
   [new RegExp(`(?<!${H})(kursiyer|Kursiyer|KURSİYER)(${H}*)`, 'gu'), (m, k, ek) => ek.toLocaleLowerCase('tr') in KURSIYER_EK ? buyuk(k, 'öğrenci') + (k === k.toLocaleUpperCase('tr') ? KURSIYER_EK[ek.toLocaleLowerCase('tr')].toLocaleUpperCase('tr') : KURSIYER_EK[ek.toLocaleLowerCase('tr')]) : m],
   // "usta" ve "hoca" kavram olarak; "Hüseyin Hoca" gibi hitaplar kalır
@@ -508,4 +533,33 @@ function sadelestir(kok) {
 export function sadeDilBaslat() {
   sadelestir(document.body);
   new MutationObserver(l => l.forEach(m => { if (m.type === 'characterData') sadelestir(m.target); else m.addedNodes.forEach(sadelestir); })).observe(document.body, { childList: true, subtree: true, characterData: true });
+}
+
+// Erişilebilirlik (denetim B018): görünür etiketi alana bağla; tablo içindeki alanlara sütun başlığını ad olarak ver.
+export function etiketBagla(kok) {
+  kok.querySelectorAll('.alan > label:not([for])').forEach(l => {
+    if (l.querySelector('input,select,textarea')) return;
+    const g = l.parentElement.querySelector(':scope > input, :scope > select, :scope > textarea, :scope > div > input, :scope > div > select');
+    if (!g || g.closest('label') || g.type === 'hidden') return;
+    if (!g.id) g.id = 'a-' + Math.random().toString(36).slice(2, 9);
+    l.htmlFor = g.id;
+  });
+  kok.querySelectorAll('td > input:not([aria-label]):not([type=hidden]), td > select:not([aria-label])').forEach(g => {
+    const td = g.parentElement, tablo = td.closest('table'); if (!tablo) return;
+    const th = tablo.querySelectorAll('thead th')[td.cellIndex];
+    const satir = td.parentElement.querySelector('th, td:first-child');
+    const ad = [th && th.textContent.trim(), satir && satir !== td && satir.textContent.trim()].filter(Boolean).join(' · ');
+    if (ad) g.setAttribute('aria-label', ad.slice(0, 80));
+  });
+}
+// Plan gün şeridi: seçili günü ortaya getir (denetim B021)
+function gunSeridiOrtala(kok) {
+  kok.querySelectorAll('.gun-sec:not([data-ortalandi])').forEach(s => {
+    const b = s.querySelector('.secili, .bugun'); s.dataset.ortalandi = '1'; if (!b || s.scrollWidth <= s.clientWidth) return;
+    s.scrollLeft = b.offsetLeft - (s.clientWidth - b.offsetWidth) / 2;
+  });
+}
+if (typeof MutationObserver !== 'undefined' && document.body) {
+  let bekleyen = 0;
+  new MutationObserver(() => { if (bekleyen) return; bekleyen = requestAnimationFrame(() => { bekleyen = 0; etiketBagla(document.body); gunSeridiOrtala(document.body); }); }).observe(document.body, { childList: true, subtree: true });
 }

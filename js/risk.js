@@ -1,4 +1,4 @@
-import { S, gun, fark, SINIFLAR, egitmen, kapaliGun, dersAraci, risk, kursAdi } from './veri.js?v=185';
+import { S, gun, fark, SINIFLAR, egitmen, kapaliGun, dersAraci, risk, kursAdi } from './veri.js?v=186';
 
 const ort = l => l.length ? l.reduce((a, x) => a + x, 0) / l.length : null;
 export const riskliler = (l = S.kursiyerler) => l.map(k => ({ k, r: risk(k) })).filter(x => x.r && x.r.puan >= 25).sort((a, b) => b.r.puan - a.r.puan);
@@ -47,6 +47,8 @@ export function hakedis(ayGeri = 0) {
 }
 
 /* ================= KURSİYERİN KENDİ RANDEVUSU ================= */
+// Kursa yazmak işe yarar mı: ders aşamasına gelmemiş öğrenciye yazdırmanın anlamı yok
+export const engelYazilir = engel => !!engel && !/e-sınavı geçince|direksiyon dersin yok|direksiyon dersi yok/.test(engel);
 export function randevuEngeli(k) {
   if (k.kapali) return 'Kaydın şu an ' + (k.kapali.tur === 'dondur' ? 'dondurulmuş' : 'kapalı') + `; ders için ${kursAdi('e')} yaz.`;
   if (!S.kurs.kendiRandevu) return `${kursAdi()} direksiyon saatlerini kendisi planlıyor; ders için ${kursAdi('e')} yaz.`;

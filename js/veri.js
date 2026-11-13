@@ -668,6 +668,15 @@ export const SOZLESME_VARSAYILAN = [
 ];
 // --- türetilmiş bilgiler ---
 export const kursiyer = id => S.kursiyerler.find(k => k.id === id);
+// Dersin öğrencinin kaçıncı direksiyon dersi olduğu: yapılan dersler tarih sırasıyla, planlananlar ardından gelir.
+// Gelmedi / iptal derslerin sırası yoktur (null). Plan, genel bakış, öğretmen ve öğrenci ekranları bunu kullanır.
+export function dersSirasi(d, k) {
+  k = k || kursiyer(d.kursiyer); if (!k) return null;
+  const an = d.tarih + d.saat, ayni = x => x.kursiyer === k.id && x.id !== d.id;
+  if (d.durum === 'Planlandı') return k.direksiyon + 1 + S.dersler.filter(x => ayni(x) && x.durum === 'Planlandı' && (x.tarih + x.saat) < an).length;
+  if (d.durum === 'Yapıldı') return Math.max(1, k.direksiyon - S.dersler.filter(x => ayni(x) && x.durum === 'Yapıldı' && (x.tarih + x.saat) > an).length);
+  return null;
+}
 // Ekipten çıkarılan usta ve araçlar geçmiş derslerde görünmeye devam eder
 export const egitmen = id => S.egitmenler.find(e => e.id === id) || ((S.cikanlar || {}).egitmen || []).find(e => e.id === id);
 export const arac = id => S.araclar.find(a => a.id === id) || ((S.cikanlar || {}).arac || []).find(a => a.id === id);
