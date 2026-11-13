@@ -2664,3 +2664,14 @@ tr.tik{font:inherit;color:inherit;margin-right:0}
   .sayfa-plan .takvim{display:none}
   .sayfa-plan .ptl-liste{display:block}
 }
+/* Ayarlar › Kurs: banka hesapları listesi (v191) */
+.iban-liste{display:grid;gap:8px;margin:4px 0 6px}
+.iban-satir{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--cizgi);border-radius:var(--r);background:var(--panel)}
+.iban-bilgi{display:grid;gap:2px;min-width:0}
+.iban-bilgi b{color:var(--murekkep);font-size:14.5px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.iban-bilgi .mono{font-size:13.5px;word-break:break-all;color:var(--metin)}
+.iban-bilgi small{color:var(--soluk);font-size:12.5px}
+.iban-bos{color:var(--soluk);font-size:13.5px}
+.iban-liste>[data-iban-ekle]{justify-self:start}
+.og-iban-kart .og-bas+.og-bas{margin-top:12px;padding-top:12px;border-top:1px solid var(--cizgi-2)}
+.og-iban-kart .og-bas small+small{display:block;margin-top:2px}

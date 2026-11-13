@@ -1,24 +1,24 @@
-import { dersSirasi, oturum, islem, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, yerelZaman, BECERI, risk, ekToplam, selam, kursAdi, konuListesi, konuOner, DERS_TUR_AD, dersKalanSaat, dersIptalIz } from './veri.js?v=190';
-import { e, saatDe, saatE, tl, ik, rozet, avatar, csvIndir, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani, waAc, waNumara } from './ui.js?v=190';
-import { yenile } from './app.js?v=190';
-import { ekDersKabul, bosTeklifKabul, wpGonder, bildirimler } from './sayfalar1.js?v=190';
-import { KONULAR } from './konular.js?v=190';
+import { dersSirasi, oturum, islem, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, yerelZaman, BECERI, risk, ekToplam, selam, kursAdi, konuListesi, konuOner, DERS_TUR_AD, dersKalanSaat, dersIptalIz } from './veri.js?v=191';
+import { e, saatDe, saatE, tl, ik, rozet, avatar, csvIndir, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani, waAc, waNumara } from './ui.js?v=191';
+import { yenile } from './app.js?v=191';
+import { ekDersKabul, bosTeklifKabul, wpGonder, bildirimler } from './sayfalar1.js?v=191';
+import { KONULAR } from './konular.js?v=191';
 // Soru bankası büyük; yalnız Sınavlar sekmesi ya da test açılınca yüklenir (açılış hızını etkilemesin)
 let SORULAR = [], soruYuk = null;
 // Sorular ve levha çizimleri yalnız sınav sekmesinde yüklenir; levhalı sorularda görsel "L:<kod>" olarak durur
 let levhaSvg = () => '';
 // yüklenemezse (zayıf internet) bir sonraki dokunuşta yeniden denenir; öğrenciye haber verilir
-const sorulariYukle = () => soruYuk || (soruYuk = Promise.all([import('./sorular.js?v=190'), import('./levha.js?v=190').catch(() => null)]).then(([m, l]) => { SORULAR = m.SORULAR; if (l) levhaSvg = l.levhaSvg; }).catch(x => { soruYuk = null; bildir('Sorular yüklenemedi; internet bağlantını kontrol edip tekrar dene', 'uyari'); throw x; }));
+const sorulariYukle = () => soruYuk || (soruYuk = Promise.all([import('./sorular.js?v=191'), import('./levha.js?v=191').catch(() => null)]).then(([m, l]) => { SORULAR = m.SORULAR; if (l) levhaSvg = l.levhaSvg; }).catch(x => { soruYuk = null; bildir('Sorular yüklenemedi; internet bağlantını kontrol edip tekrar dene', 'uyari'); throw x; }));
 const gorselHtml = g => !g ? '' : String(g).startsWith('L:') ? levhaSvg(g.slice(2)) : g;
-import { randevuAl, randevuIptal, kursaYaz } from './ozellik.js?v=190';
-import * as OG from './ogrenci.js?v=190';
-import * as HZ from './hazirlik.js?v=190';
-import { ogrOzellik } from './veri.js?v=190';
-import { ustaAlacak } from './risk.js?v=190';
-import { ayAdi } from './ozellik.js?v=190';
-import { soruKonu } from './soruKonu.js?v=190';
-import { MUFREDAT } from './ogrenci.js?v=190';
-import * as TK from './takvim.js?v=190';
+import { randevuAl, randevuIptal, kursaYaz } from './ozellik.js?v=191';
+import * as OG from './ogrenci.js?v=191';
+import * as HZ from './hazirlik.js?v=191';
+import { ogrOzellik, ibanlar, ibanBicim } from './veri.js?v=191';
+import { ustaAlacak } from './risk.js?v=191';
+import { ayAdi } from './ozellik.js?v=191';
+import { soruKonu } from './soruKonu.js?v=191';
+import { MUFREDAT } from './ogrenci.js?v=191';
+import * as TK from './takvim.js?v=191';
 
 let egId = 'e1', egSekme = 'bugun';
 let ogId = null, ogSekme = (() => { try { return sessionStorage.getItem('sinyal-og-sekme') || 'durum'; } catch (x) { return 'durum'; } })();
@@ -98,7 +98,7 @@ function dersKapat(d) {
         if (iu.bos()) return bildir('Önce sen imzala; öğrencinin imzası WhatsApp’tan istenir', 'uyari');
         const once = isle({ zaman: yerelZaman(), kursiyer: null, kursiyerBekliyor: true, usta: iu.url() });
         islem('Ders tamamlandı, öğrenci imzası istendi', tamAd(ks) + ' · ' + d.tarih + ' ' + d.saat); kaydet(); kapatPencere();
-        const m = await import('./imza.js?v=190'); await m.imzaIste('ders', ks, [d.id]); bildir('Ders kaydedildi; imza linki öğrenciye gidiyor', 'wp'); yenile(); riskKontrol(ks, once);
+        const m = await import('./imza.js?v=191'); await m.imzaIste('ders', ks, [d.id]); bildir('Ders kaydedildi; imza linki öğrenciye gidiyor', 'wp'); yenile(); riskKontrol(ks, once);
       });
     },
   });
@@ -256,7 +256,7 @@ function egOgrAc(k) {
     ${S0.direksiyon ? `<div class="u-ilerleme"><span>Direksiyon dersleri</span><b>${k.direksiyon}<small>/${S0.direksiyon}</small></b>${ilerleme(k.direksiyon, S0.direksiyon, 'yesil')}</div>` : ''}
     <div class="u-liste">${sat('takvim', 'mavi', 'Sonraki ders', sd ? tarihUzun(sd.tarih) + ' · ' + sd.saat : 'Planlı ders yok')}${dd ? sat('sinav', dd.sonuc === 'Geçti' ? 'yesil' : 'kirmizi', 'Son deneme sınavı', dd.sonuc === 'Geçti' ? 'Sınavı geçerdi' : 'Sınavdan kalırdı') : ''}${r && r.puan >= 50 ? sat('uyari', 'turuncu', 'Sınav riski yüksek', 'Ek ders ve deneme önerilir') : ''}</div>
     <div class="u-sayfa-dg"><button class="u-dg birincil" data-ogr-deneme>${ik('sinav')}Deneme sınavı yap</button>${tel ? `<a class="u-dg" href="tel:${e(tel)}">${ik('tel')}Ara</a>` : ''}</div>`,
-    onAc(d) { d.querySelector('[data-ogr-deneme]').addEventListener('click', () => { kapatPencere(); import('./deneme.js?v=190').then(m => m.denemeAc(k, yenile)); }); } });
+    onAc(d) { d.querySelector('[data-ogr-deneme]').addEventListener('click', () => { kapatPencere(); import('./deneme.js?v=191').then(m => m.denemeAc(k, yenile)); }); } });
 }
 let egProg = { mod: 'hafta', kay: 0 }, egAra = '';
 const araMetin = t => String(t || '').toLocaleLowerCase('tr');
@@ -287,7 +287,7 @@ async function progIndir(eg) {
   const sat = [['Tarih', 'Gün', 'Saat', 'Öğrenci', 'Sınıf', 'Ders no', 'Araç', 'Durum', 'Süre (dk)'], ...l.map(d => { const k = kursiyer(d.kursiyer), a = d.arac && arac(d.arac); return [d.tarih.split('-').reverse().join('.'), gunKisa(d.tarih), d.saat, k ? tamAd(k) : '', k ? SINIFLAR[k.sinif].ad : '', k ? dersNo(d, k) : '', a ? a.plaka : '', progDurum(d)[0], d.sure != null ? d.sure : '']; })];
   const ad = 'ders-programi-' + gunler[0] + '_' + gunler[gunler.length - 1];
   try {
-    await import('./sayfalar5.js?v=190').then(m => m.xlsxYukle());
+    await import('./sayfalar5.js?v=191').then(m => m.xlsxYukle());
     const X = window.XLSX, ws = X.utils.aoa_to_sheet(sat), wb = X.utils.book_new();
     ws['!cols'] = [12, 6, 7, 24, 14, 8, 12, 11, 9].map(w => ({ wch: w })); ws['!autofilter'] = { ref: 'A1:I' + sat.length };
     X.utils.book_append_sheet(wb, ws, 'Program'); X.writeFile(wb, ad + '.xlsx');
@@ -387,7 +387,7 @@ export function egitmenPortal() {
           return;
         }
         const y = t.closest('[data-yapildi]'); if (y) return dersKapat(S.dersler.find(x => x.id === y.dataset.yapildi));
-        const it = t.closest('[data-imza-tekrar]'); if (it) { const d = S.dersler.find(x => x.id === it.dataset.imzaTekrar); import('./imza.js?v=190').then(m => m.imzaIste('ders', kursiyer(d.kursiyer), [d.id])); return; }
+        const it = t.closest('[data-imza-tekrar]'); if (it) { const d = S.dersler.find(x => x.id === it.dataset.imzaTekrar); import('./imza.js?v=191').then(m => m.imzaIste('ders', kursiyer(d.kursiyer), [d.id])); return; }
         const g = t.closest('[data-gelmedi]'); if (g) return gelmediIsaretle(S.dersler.find(x => x.id === g.dataset.gelmedi));
         const dg = t.closest('[data-ders-diger]'); if (dg) return dersDiger(S.dersler.find(x => x.id === dg.dataset.dersDiger));
       });
@@ -584,5 +584,5 @@ export function ogrenciPortal() {
 }
 function odemeYap(k, i) {
   const t = k.odeme.taksitler[i];
-  pencere({ baslik: 'Nasıl öderim?', icerik: `<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px"><span>${i + 1}. taksit · vade ${tarih(t.vade)}</span><b class="sayi" style="font-size:22px;color:var(--murekkep)">${tl(t.tutar - (t.kismi || 0))}</b></div><p class="ipucu">${isaret('bilgi', 18)}<span>${S.kurs.iban ? 'Kursun banka hesabına havale/EFT ile öde: <b>' + e(S.kurs.iban) + '</b> (' + e(S.kurs.ad) + '); açıklamaya adını ve soyadını yaz. Ödemen kursa ulaşınca makbuzun burada görünür.' : 'Ödemeyi kursta kartla ya da kursun banka hesabına havale/EFT ile yapabilirsin. Banka bilgisini kursa WhatsApp’tan sor.'}</span></p>`, altlik: `${S.kurs.iban ? '<button class="dg dg-cizgi" data-og-iban>IBAN’ı kopyala</button>' : ''}<button class="dg dg-ana" data-og-odeme-yaz>${ik('wp')}${S.kurs.iban ? 'Dekontu gönder' : 'Kursa sor'}</button>`, onAc(d) { const w = d.querySelector('[data-og-odeme-yaz]'); if (w) w.addEventListener('click', () => { kapatPencere(); const tt = tl(t.tutar - (t.kismi || 0)); kursaYaz(k, 'odeme', S.kurs.iban ? `Merhaba, ben ${tamAd(k)}. ${i + 1}. taksit (${tt}) ödemesini havale/EFT ile yaptım; dekontu gönderiyorum.` : `Merhaba, ben ${tamAd(k)}. ${i + 1}. taksit (${tt}) ödemesini yapmak istiyorum; banka bilgisini paylaşır mısınız?`); }); const b = d.querySelector('[data-og-iban]'); if (b) b.addEventListener('click', () => { try { navigator.clipboard.writeText(S.kurs.iban.replace(/\s/g, '')); bildir('IBAN kopyalandı'); } catch (x) { bildir('IBAN: ' + S.kurs.iban); } }); } });
+  pencere({ baslik: 'Nasıl öderim?', icerik: `<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px"><span>${i + 1}. taksit · vade ${tarih(t.vade)}</span><b class="sayi" style="font-size:22px;color:var(--murekkep)">${tl(t.tutar - (t.kismi || 0))}</b></div><p class="ipucu">${isaret('bilgi', 18)}<span>${S.kurs.iban ? 'Kursun banka hesabına havale/EFT ile öde; açıklamaya adını ve soyadını yaz. Ödemen kursa ulaşınca makbuzun burada görünür.' + ibanlar().map(h => '<span style="display:block;margin-top:8px"><b>' + e(h.ad || 'Hesap') + '</b>' + (h.banka || h.alici ? ' · ' + e([h.banka, h.alici || S.kurs.ad].filter(Boolean).join(' · ')) : '') + '<br><span class="mono">' + e(ibanBicim(h.iban)) + '</span>' + (h.not ? '<br><small>' + e(h.not) + '</small>' : '') + '</span>').join('') : 'Ödemeyi kursta kartla ya da kursun banka hesabına havale/EFT ile yapabilirsin. Banka bilgisini kursa WhatsApp’tan sor.'}</span></p>`, altlik: `${S.kurs.iban ? '<button class="dg dg-cizgi" data-og-iban>IBAN’ı kopyala</button>' : ''}<button class="dg dg-ana" data-og-odeme-yaz>${ik('wp')}${S.kurs.iban ? 'Dekontu gönder' : 'Kursa sor'}</button>`, onAc(d) { const w = d.querySelector('[data-og-odeme-yaz]'); if (w) w.addEventListener('click', () => { kapatPencere(); const tt = tl(t.tutar - (t.kismi || 0)); kursaYaz(k, 'odeme', S.kurs.iban ? `Merhaba, ben ${tamAd(k)}. ${i + 1}. taksit (${tt}) ödemesini havale/EFT ile yaptım; dekontu gönderiyorum.` : `Merhaba, ben ${tamAd(k)}. ${i + 1}. taksit (${tt}) ödemesini yapmak istiyorum; banka bilgisini paylaşır mısınız?`); }); const b = d.querySelector('[data-og-iban]'); if (b) b.addEventListener('click', () => { try { navigator.clipboard.writeText(S.kurs.iban.replace(/\s/g, '')); bildir('IBAN kopyalandı'); } catch (x) { bildir('IBAN: ' + S.kurs.iban); } }); } });
 }

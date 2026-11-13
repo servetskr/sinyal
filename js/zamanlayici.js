@@ -1,7 +1,7 @@
-import { planlilariGonder } from './mesaj.js?v=190';
-import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, gecikenler, kalanBorc, islem, gonderimEkle, yerelZaman, oturum, kapaliGun, SINIFLAR, risk, selam, kursAdi, bulutKanca, mudurTel } from './veri.js?v=190';
-import { tl, tamTarih, tarihUzun, saatDe, apiAcik, apiGonder, etiket, bildir, waSirali } from './ui.js?v=190';
-import { denetimSkoru } from './ozellik.js?v=190';
+import { planlilariGonder } from './mesaj.js?v=191';
+import { ibanMetni, S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, gecikenler, kalanBorc, islem, gonderimEkle, yerelZaman, oturum, kapaliGun, SINIFLAR, risk, selam, kursAdi, bulutKanca, mudurTel } from './veri.js?v=191';
+import { tl, tamTarih, tarihUzun, saatDe, apiAcik, apiGonder, etiket, bildir, waSirali } from './ui.js?v=191';
+import { denetimSkoru } from './ozellik.js?v=191';
 
 /* ================= ZAMANLI MESAJLAR =================
    mdSinyal açıkken her dakika zamanı gelen mesajları bulur. WhatsApp API bağlıysa kendiliğinden gönderir;
@@ -47,7 +47,7 @@ const doldur = (id, alan) => { alan = { kurs: S.kurs.ad, kursa: kursAdi('e'), ku
 const ogr = k => ({ ad: tamAd(k), tel: k.tel, rol: 'ÖĞRENCİ' });
 const hoca = h => ({ ad: h.ad, tel: h.tel, rol: 'HOCA' });
 const mudur = () => ({ ad: S.kurs.yetkili || 'Kurs müdürü', tel: mudurTel(), rol: 'MÜDÜR' });
-const odeme = () => S.kurs.iban ? `Havale/EFT için IBAN: ${S.kurs.iban}; ${kursAdi('de')} nakit ya da kartla da ödeyebilirsiniz.` : `${kursAdi('e')} uğrayıp nakit ya da kartla ödeyebilirsiniz.`;
+const odeme = () => S.kurs.iban ? `Havale/EFT için IBAN: ${ibanMetni()}; ${kursAdi('de')} nakit ya da kartla da ödeyebilirsiniz.` : `${kursAdi('e')} uğrayıp nakit ya da kartla ödeyebilirsiniz.`;
 const TEORIK_SAAT = { aksam: '18:30', sabah: '10:00' };
 
 // Her kural: o gün gönderilmesi gerekenler. ornek=true ise tarih şartı aranmaz (demo için tek örnek).

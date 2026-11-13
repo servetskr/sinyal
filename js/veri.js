@@ -624,6 +624,18 @@ function subeTamamla() {
   S.araclar.forEach(a => { if (!a.sube) a.sube = v; });
   S.egitmenler.forEach(x => { if (!x.sube) x.sube = v; });
 }
+// Kursun banka hesapları: adı, bankası, hesap sahibi ve öğrenciye görünen notuyla. Varsayılan hesap kurs.iban olarak da tutulur
+// (taksit hatırlatmaları ve eski ekranlar onu kullanır). Eski tek IBAN'lı kurslar tek hesaplı liste olarak okunur.
+export const ibanlar = (K = S.kurs) => Array.isArray(K.ibanlar) ? K.ibanlar : K.iban ? [{ id: 'h1', ad: 'Kurs hesabı', banka: '', alici: K.ad || '', iban: K.iban, not: '', varsayilan: true }] : [];
+export const ibanVarsayilan = (K = S.kurs) => { const l = ibanlar(K); return l.find(x => x.varsayilan) || l[0] || null; };
+export const ibanBicim = s => String(s || '').replace(/\s/g, '').toLocaleUpperCase('tr').replace(/(.{4})/g, '$1 ').trim();
+export function ibanGecerli(s) {
+  const x = String(s || '').replace(/\s/g, '').toUpperCase(); if (!/^TR\d{24}$/.test(x)) return false;
+  let m = 0; for (const ch of (x.slice(4) + x.slice(0, 4)).replace(/[A-Z]/g, c => c.charCodeAt(0) - 55)) m = (m * 10 + +ch) % 97;
+  return m === 1;
+}
+// Mesajlarda: "TR.. (Banka · Hesap sahibi)"
+export const ibanMetni = (K = S.kurs) => { const h = ibanVarsayilan(K); if (!h) return ''; const ek = [h.banka, h.alici || K.ad].filter(Boolean).join(' · '); return h.iban + (ek ? ' (' + ek + ')' : ''); };
 let kaydetDinleyici = null;
 export const kaydetDinle = f => { kaydetDinleyici = f; };
 export function kaydet() { subeTamamla(); noTamamla(); odemeUzlas(); mebDegisimIzle(); (S.hareket || []).forEach(h => { if (h.tur === 'Gelir' && !h.no) makbuzNoVer(h); }); // Kurs personelinin bulut verisi cihaza tam kopya olarak yazılmaz (Firestore kendi önbelleğini tutar; çıkışta silinir); demo ve öğrencinin kendi küçük kopyası yazılır
