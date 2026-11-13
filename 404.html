@@ -4,7 +4,10 @@
 <body><main><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.6 22.4 12 12 22.4 1.6 12z" fill="#ffc21a"/><path d="M12 8v5M12 15.6v.3" stroke="#111" stroke-width="2.2" stroke-linecap="round"/></svg><b>Sinyal</b><p id="m">Link açılıyor…</p><a class="git" id="git" href="/sinyal/" hidden>Ana sayfaya dön</a></main>
 <script>
 (async () => {
-  const yol = location.pathname.replace(/^\/sinyal\/?/, '').replace(/\/+$/, '');
+  // site alan adının kökünde (/) ya da GitHub Pages altında (/sinyal/) çalışabilir
+  const KOK = /^\/sinyal(\/|$)/.test(location.pathname) ? '/sinyal/' : '/';
+  document.getElementById('git').href = KOK;
+  const yol = location.pathname.slice(KOK.length).replace(/\/+$/, '');
   const m = document.getElementById('m');
   if (!yol || !/^[a-z0-9-]{4,90}$/.test(yol)) { m.textContent = 'Aradığınız sayfa bulunamadı.'; document.getElementById('git').hidden = false; return; }
   try {
