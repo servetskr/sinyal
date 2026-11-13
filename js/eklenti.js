@@ -1,13 +1,13 @@
-// ÖzSinyal MEBBİS Yardımcısı (Chrome eklentisi) ile konuşma: eklenti kurulu mu, MEBBİS’e yazılacak işleri sıraya koy,
-// MEBBİS’ten gelen listeyi aktarım ekranına ver, MEBBİS’te kaydedilen işleri ÖzSinyal’de işlendi olarak işaretle.
-import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, eksikEvrak, sb, sbDers, sbSinav, oturum, cokSube, seciliSube } from './veri.js?v=183';
-import { bildir, pencere, e, ik, isaret } from './ui.js?v=183';
+// mdSinyal MEBBİS Yardımcısı (Chrome eklentisi) ile konuşma: eklenti kurulu mu, MEBBİS’e yazılacak işleri sıraya koy,
+// MEBBİS’ten gelen listeyi aktarım ekranına ver, MEBBİS’te kaydedilen işleri mdSinyal’de işlendi olarak işaretle.
+import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, eksikEvrak, sb, sbDers, sbSinav, oturum, cokSube, seciliSube } from './veri.js?v=184';
+import { bildir, pencere, e, ik, isaret } from './ui.js?v=184';
 
 export const eklenti = { var: false, surum: null };
 const sayfadan = (tur, veri) => window.postMessage({ kaynak: 'sinyal-sayfa', tur, veri }, location.origin);
 let yenileFn = () => { };
 export const eklentiYenile = f => { yenileFn = f; };
-export const EKLENTI_ZIP = 'eklenti/sinyal-mebbis.zip';
+export const EKLENTI_ZIP = 'eklenti/mdsinyal-mebbis.zip';
 
 const tr = t => t ? String(t).slice(0, 10).split('-').reverse().join('.') : '';
 const tel = t => { const d = String(t || '').replace(/\D/g, '').replace(/^90/, ''); return d.length === 10 ? '0' + d : d.length === 11 ? d : String(t || ''); };
@@ -70,7 +70,7 @@ export function yardimciyaGonder(idler) {
   bildir(`${isler.length} iş MEBBİS’e aktarılıyor. MEBBİS sekmesi açılıyor; girmediyseniz kendi şifrenizle girin, Yardımcı sırayla yürütür.`);
 }
 
-// MEBBİS'ten veri çek: Yardımcı MEBBİS sekmesine geçer, ilgili listeyi kendisi açar ve ÖzSinyal'e gönderir
+// MEBBİS'ten veri çek: Yardımcı MEBBİS sekmesine geçer, ilgili listeyi kendisi açar ve mdSinyal'e gönderir
 const CEK_AD = { kursiyer: 'kursiyer listesini', sinav: 'sınav sonuçlarını', mutabakat: 'kursiyer listesini karşılaştırma için', taksit: 'ödemeleri', ogretmen: 'usta öğretici listesini', arac: 'araç listesini' };
 export function mebbistenCek(amac) {
   if (!eklenti.var) return kurulumPenceresi();
@@ -80,12 +80,12 @@ export function mebbistenCek(amac) {
 }
 export function kurulumPenceresi() {
   pencere({
-    baslik: 'ÖzSinyal MEBBİS Yardımcısı', genis: true,
+    baslik: 'mdSinyal MEBBİS Yardımcısı', genis: true,
     icerik: `${eklenti.var ? `<p class="ipucu" style="margin-bottom:12px">${isaret('tamam', 20)}<span>Yardımcı bu tarayıcıda kurulu (sürüm ${e(eklenti.surum)}).</span></p>` : ''}
       <p style="font-size:14.5px">Chrome’a eklenen küçük bir yardımcı. Kursun kendi MEBBİS oturumunda çalışır: MEBBİS’e siz girersiniz, şifrenizi istemez ve saklamaz.</p>
-      <ul class="liste" style="margin:8px 0">${[['MEBBİS’e bilgi gir', 'Kayıt, direksiyon programı, sınav bildirimi ve tahsilatlar türlerine göre sıraya girer. Türü seçin, MEBBİS’te formu açın, “Formu doldur”a basın; Kaydet’e siz basarsınız, Yardımcı sıradakini açar.'], ['MEBBİS’ten ÖzSinyal’e al', 'Kursiyer, ödeme, öğretmen ve araç listeleri; sınav sonuçları ve MEBBİS ile karşılaştırma. MEBBİS’te listeyi açıp “Listeyi ÖzSinyal’e gönder”e basın; ÖzSinyal’de kontrol edip kaydedersiniz.'], ['MEBBİS ekranı değişirse', 'Yardımcı alanları etiketlerinden bulur; bulamadığı alanı bir kez gösterirsiniz, sonra kendisi bulur.']].map(([a, b]) => `<li style="align-items:flex-start">${isaret('bilgi', 20)}<div><b style="color:var(--murekkep)">${a}</b><small style="display:block;color:var(--metin);font-size:13.5px">${b}</small></div></li>`).join('')}</ul>
+      <ul class="liste" style="margin:8px 0">${[['MEBBİS’e bilgi gir', 'Kayıt, direksiyon programı, sınav bildirimi ve tahsilatlar türlerine göre sıraya girer. Türü seçin, MEBBİS’te formu açın, “Formu doldur”a basın; Kaydet’e siz basarsınız, Yardımcı sıradakini açar.'], ['MEBBİS’ten mdSinyal’e al', 'Kursiyer, ödeme, öğretmen ve araç listeleri; sınav sonuçları ve MEBBİS ile karşılaştırma. MEBBİS’te listeyi açıp “Listeyi mdSinyal’e gönder”e basın; mdSinyal’de kontrol edip kaydedersiniz.'], ['MEBBİS ekranı değişirse', 'Yardımcı alanları etiketlerinden bulur; bulamadığı alanı bir kez gösterirsiniz, sonra kendisi bulur.']].map(([a, b]) => `<li style="align-items:flex-start">${isaret('bilgi', 20)}<div><b style="color:var(--murekkep)">${a}</b><small style="display:block;color:var(--metin);font-size:13.5px">${b}</small></div></li>`).join('')}</ul>
       <h4 style="margin-top:10px">Kurulum (bir kez, kurs bilgisayarında)</h4>
-      <ol style="padding-left:18px;display:grid;gap:8px;font-size:14px;margin-top:6px"><li><a href="${EKLENTI_ZIP}" download style="color:var(--levha);font-weight:700">Yardımcıyı indirin</a> ve zip dosyasını bir klasöre açın.</li><li>Chrome’da adres çubuğuna <b>chrome://extensions</b> yazın, sağ üstten <b>Geliştirici modu</b>nu açın.</li><li><b>Paketlenmemiş öğe yükle</b>’ye basıp açtığınız klasörü seçin.</li><li>ÖzSinyal sayfasını yenileyin; bu pencerede “kurulu” yazısı görünür.</li></ol>
+      <ol style="padding-left:18px;display:grid;gap:8px;font-size:14px;margin-top:6px"><li><a href="${EKLENTI_ZIP}" download style="color:var(--levha);font-weight:700">Yardımcıyı indirin</a> ve zip dosyasını bir klasöre açın.</li><li>Chrome’da adres çubuğuna <b>chrome://extensions</b> yazın, sağ üstten <b>Geliştirici modu</b>nu açın.</li><li><b>Paketlenmemiş öğe yükle</b>’ye basıp açtığınız klasörü seçin.</li><li>mdSinyal sayfasını yenileyin; bu pencerede “kurulu” yazısı görünür.</li></ol>
       <p class="og-not" style="margin-top:10px">Chrome Web Mağazası’ndaki sürüm onaylanınca tek tıkla kurulacak.</p>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button>${eklenti.var ? '<button class="dg dg-ana" data-eklenti-gonder>İşleri gönder</button>' : ''}`,
     onAc(d) { const b = d.querySelector('[data-eklenti-gonder]'); if (b) b.addEventListener('click', () => { d.querySelector('[data-kapat]').click(); yardimciyaGonder(); }); },
@@ -118,10 +118,10 @@ function hatalariIsle(l) {
 function tabloGeldi(veri) {
   const sat = veri.satirlar, n = sat.length - 1;
   S.mebCekim = { ...(S.mebCekim || {}), [veri.amac || 'liste']: gun(0) + ' ' + new Date().toTimeString().slice(0, 5) }; kaydet();
-  if (veri.amac === 'mutabakat') return import('./ozellik.js?v=183').then(m => { if (m.mutabakatTablodan(sat, 'MEBBİS · ' + (veri.baslik || 'liste'))) { location.hash = '#/meb/mutabakat'; yenileFn(); } });
+  if (veri.amac === 'mutabakat') return import('./ozellik.js?v=184').then(m => { if (m.mutabakatTablodan(sat, 'MEBBİS · ' + (veri.baslik || 'liste'))) { location.hash = '#/meb/mutabakat'; yenileFn(); } });
   if (veri.amac === 'sinav') return sinavSonucuAl(sat);
   const t = ['kursiyer', 'taksit', 'arac', 'ogretmen'].includes(veri.amac) ? veri.amac : turTahmin(sat[0] || []);
-  import('./sayfalar5.js?v=183').then(m => { location.hash = '#/ayarlar/aktarim'; setTimeout(() => { m.aktarimYukle(sat, t, 'MEBBİS'); bildir(`MEBBİS’ten ${n} satırlık liste geldi; sütunları kontrol edip aktarın`); }, 300); });
+  import('./sayfalar5.js?v=184').then(m => { location.hash = '#/ayarlar/aktarim'; setTimeout(() => { m.aktarimYukle(sat, t, 'MEBBİS'); bildir(`MEBBİS’ten ${n} satırlık liste geldi; sütunları kontrol edip aktarın`); }, 300); });
 }
 // Sınav sonuç listesi: TC ile kursiyer bulunur, en uygun oturumun sonuç penceresi dolu açılır; kaydetmeyi kullanıcı yapar
 const nrm = x => String(x || '').toLocaleLowerCase('tr').replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/[^a-z0-9]/g, '');
@@ -150,7 +150,7 @@ function sinavSonucuAl(sat) {
   if (!sira.length) return bildir('Listedeki kişilerden sonucu girilmemiş bir sınav oturumunda olan bulunamadı', 'uyari');
   const [sid, hazir] = sira[0], s = S.sinavlar.find(x => x.id === sid);
   location.hash = '#/sinavlar';
-  import('./sayfalar2.js?v=183').then(m => setTimeout(() => {
+  import('./sayfalar2.js?v=184').then(m => setTimeout(() => {
     m.sonucGir(s, hazir);
     bildir(`${Object.keys(hazir).length} kursiyerin sonucu MEBBİS’ten dolduruldu; kontrol edip “Sonuçları kaydet”e basın.${sira.length > 1 ? ` ${sira.length - 1} oturum daha var; kaydettikten sonra listeyi tekrar gönderin.` : ''}${bulunamayan ? ` ${bulunamayan} satır eşleşmedi.` : ''}`);
   }, 400));

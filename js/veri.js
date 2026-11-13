@@ -1,5 +1,5 @@
-// ÖzSinyal demo verisi: tarihler bugüne göre üretilir, tarayıcıda saklanır.
-let ANAHTAR = 'sinyal-demo-v19';
+// mdSinyal demo verisi: tarihler bugüne göre üretilir, tarayıcıda saklanır.
+let ANAHTAR = 'sinyal-demo-v20';
 // Usta öğreticinin ders sonunda puanladığı beceriler
 export const BECERI = [['kalkis', 'Kalkış ve duruş'], ['serit', 'Şerit ve ayna'], ['kavsak', 'Kavşak ve öncelik'], ['park', 'Park'], ['rampa', 'Rampa ve yokuş']];
 // Direksiyon dersi konuları: takip formunda zorunlu (MTSK Yön. md.17/3-d). Başlıklar sınavdaki değerlendirme formlarının (EK-4 otomobil, EK-3 motosiklet) bölümleriyle aynı.
@@ -20,7 +20,7 @@ export function konuOner(sinif, no, toplam) { const p = motorSinif(sinif) ? KONU
 const BECERI_KONU = { kalkis: 'calistirma', serit: 'serit', kavsak: 'kavsak', park: 'park', rampa: 'rampa' };
 // Dersin konuları (takip formu): öğretmenin seçtiği; eski derslerde puanladığı beceriler
 export function dersKonulari(d, sinif) { const l = konuListesi(sinif), ad = id => (l.find(x => x[0] === id) || DERS_KONU.find(x => x[0] === id) || [0, id])[1]; if (d.konular && d.konular.length) return d.konular.map(ad); if (d.beceri) return Object.keys(d.beceri).map(k => BECERI_KONU[k]).filter(Boolean).map(ad); return []; }
-try { for (let i = 1; i < 19; i++) localStorage.removeItem('sinyal-demo-v' + i); } catch (x) { }
+try { for (let i = 1; i < 20; i++) localStorage.removeItem('sinyal-demo-v' + i); } catch (x) { }
 
 export const BUGUN = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })();
 export const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -28,7 +28,7 @@ export const gun = n => { const d = new Date(BUGUN); d.setDate(d.getDate() + n);
 export const tarihOku = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
 export const fark = s => Math.round((tarihOku(s) - BUGUN) / 864e5);
 // KVKK aydınlatma metni (kurs Ayarlar › KVKK'dan değiştirebilir): veri sorumlusu kurs; hukuki sebep, aktarım ve haklar
-export const aydinlatmaMetni = () => S.kurs.aydinlatma || `${S.kurs.ad || 'Kursumuz'} (veri sorumlusu) olarak kimlik, iletişim, öğrenim, sağlık raporu ve adli sicil bilgilerinizi; ders, sınav ve ödeme kayıtlarınızı sürücü kursu eğitiminin yürütülmesi, sözleşmenin ifası ve MEB mevzuatından doğan yükümlülükler (MEBBİS kaydı, ders programı, sınav bildirimi) için işliyoruz (KVKK m.5/2-c, ç; m.6). Ders hatırlatmaları ve ödeme takibi kursun meşru menfaatine dayanır; kampanya ve tanıtım mesajları yalnız izninizle gönderilir. Verileriniz kursun kullandığı ÖzSinyal yazılımı aracılığıyla Google (Almanya), Cloudflare ve Meta (WhatsApp) altyapısında tutulur; bu nedenle yurt dışına aktarılır. Yetkili kurumlar (MEB, vergi idaresi) dışında paylaşılmaz ve mevzuattaki süre boyunca saklanır. KVKK m.11 kapsamındaki haklarınız (bilgi isteme, düzeltme, silme, itiraz) için kursa başvurabilirsiniz; ayrıntılar: servetskr.github.io/sinyal/gizlilik.html`;
+export const aydinlatmaMetni = () => S.kurs.aydinlatma || `${S.kurs.ad || 'Kursumuz'} (veri sorumlusu) olarak kimlik, iletişim, öğrenim, sağlık raporu ve adli sicil bilgilerinizi; ders, sınav ve ödeme kayıtlarınızı sürücü kursu eğitiminin yürütülmesi, sözleşmenin ifası ve MEB mevzuatından doğan yükümlülükler (MEBBİS kaydı, ders programı, sınav bildirimi) için işliyoruz (KVKK m.5/2-c, ç; m.6). Ders hatırlatmaları ve ödeme takibi kursun meşru menfaatine dayanır; kampanya ve tanıtım mesajları yalnız izninizle gönderilir. Verileriniz kursun kullandığı mdSinyal yazılımı aracılığıyla Google (Almanya), Cloudflare ve Meta (WhatsApp) altyapısında tutulur; bu nedenle yurt dışına aktarılır. Yetkili kurumlar (MEB, vergi idaresi) dışında paylaşılmaz ve mevzuattaki süre boyunca saklanır. KVKK m.11 kapsamındaki haklarınız (bilgi isteme, düzeltme, silme, itiraz) için kursa başvurabilirsiniz; ayrıntılar: servetskr.github.io/sinyal/gizlilik.html`;
 // Ders iptali ve değişikliği: ders saatinden en az 24 saat önce (takvim günü değil, gerçek saat)
 export const dersKalanSaat = d => (new Date(d.tarih + 'T' + (/^\d{2}:\d{2}$/.test(d.saat || '') ? d.saat : '00:00') + ':00') - Date.now()) / 36e5;
 // Para girişi: "1.250,50" → 1250.5, "24.000" → 24000, "24,000.00" → 24000; eksi ve geçersiz değer 0 olur
@@ -296,7 +296,7 @@ function uret() {
   // adaylar (ön kayıt) · kayıt görüşmeleri tek takvimde (sosyal.slotlar) tutulur
   const gunAdi = t => tarihOku(t).toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' });
   const yG = isGunuIleri(gun(1)), gG = isGunuIleri(gun(2));
-  const BEYAN = 'Merhaba, ben Sinyal Sürücü Kursu adına yanıt veren yapay zekâ asistanıyım. ';
+  const BEYAN = 'Merhaba, ben Örnek Sürücü Kursu adına yanıt veren yapay zekâ asistanıyım. ';
   const adaylar = [
     { ad: 'Deniz Akın', kaynak: 'Google Haritalar', kanal: 'WhatsApp', sinif: 'B-O', asama: 'Yeni', saat: '08:12', gun: 0, m: [['aday', 'Merhaba, otomatik vites ehliyet için fiyat öğrenebilir miyim?'], ['asistan', 'Merhaba Deniz Bey, B otomatik sınıfı kurs ücretimiz 26.500 TL. Peşinatın ardından 5 aya kadar taksit yapıyoruz. Ne zaman başlamayı düşünüyorsunuz?']] },
     { ad: 'Sena Uğur', kaynak: 'Instagram', kanal: 'Instagram', sinif: 'B', asama: 'Bilgi verildi', saat: '23:41', gun: -1, m: [['aday', 'Kaç günde ehliyet alınıyor?'], ['asistan', 'Teorik dersler yaklaşık 4 hafta, ardından e-sınav ve direksiyon eğitimi geliyor. Ortalama 2–3 ayda ehliyetinizi alıyorsunuz.'], ['aday', 'Taksit var mı?'], ['asistan', 'Evet, peşinat sonrası 5 aya kadar taksit yapıyoruz. Size uygun bir saat için kayıt görüşmesi ayarlayalım mı?']] },
@@ -394,14 +394,14 @@ function uret() {
   // Sosyal medya asistanı (DengChat modülü)
   const sosyal = {
     kanallar: [
-      { id: 'igm', ad: 'Instagram mesajları', hesap: '@sinyalsurucukursu', bagli: true, cevap: true, mod: '7/24', son: '08:12', izin: gun(-12), sonCevapDk: 3 },
-      { id: 'igy', ad: 'Instagram yorumları', hesap: '@sinyalsurucukursu', bagli: true, cevap: true, mod: '7/24', son: '07:58', izin: gun(-12), sonCevapDk: 17 },
+      { id: 'igm', ad: 'Instagram mesajları', hesap: '@orneksurucukursu', bagli: true, cevap: true, mod: '7/24', son: '08:12', izin: gun(-12), sonCevapDk: 3 },
+      { id: 'igy', ad: 'Instagram yorumları', hesap: '@orneksurucukursu', bagli: true, cevap: true, mod: '7/24', son: '07:58', izin: gun(-12), sonCevapDk: 17 },
       { id: 'wp', ad: 'WhatsApp Business', hesap: '0222 000 00 00', bagli: true, cevap: true, mod: 'Mesai dışı', son: '08:12', izin: gun(-40), sonCevapDk: 3, birlikte: true },
-      { id: 'fb', ad: 'Facebook Messenger', hesap: 'Sinyal Sürücü Kursu', bagli: false, cevap: false, mod: '7/24', son: null, izin: null, sonCevapDk: null },
+      { id: 'fb', ad: 'Facebook Messenger', hesap: 'Örnek Sürücü Kursu', bagli: false, cevap: false, mod: '7/24', son: null, izin: null, sonCevapDk: null },
     ],
     ayar: {
       ad: 'Kurs asistanı', ton: 'Samimi', emoji: false, susma: 24, devir: { indirim: true, sikayet: true, saglik: true, insan: true, bilinmeyen: true },
-      fiyat: 'sorulan', randevu: true, gizleOnay: true, hizSiniri: true, onayModu: 'otomatik', model: 'ÖzSinyal Asistan TR',
+      fiyat: 'sorulan', randevu: true, gizleOnay: true, hizSiniri: true, onayModu: 'otomatik', model: 'mdSinyal Asistan TR',
       veri: { konum: 'tr', maskele: true, aydinlatma: true, saklamaAy: 12 },
       bildirim: { kisiler: ['u1', 'u2'], kanal: 'WhatsApp', ikinciDk: 15, bekletme: true, sessiz: true, sessizBas: '22:00', sessizBit: '08:00' },
     },
@@ -466,7 +466,7 @@ function uret() {
   return {
     sosyal, subeler, guvenlik, entegrasyon, isDurum: {},
     personel, izinler, bekleme, hesaplar, kazanim, gruplar, arsiv, mevzuat, ogretmenler, kullanicilar, islemler, asistanBilgi, devredilen, sms: { bakiye: 1840, kanal: 'WhatsApp' }, gunSonu: [],
-    kurs: { ad: 'Sinyal Sürücü Kursu', sehir: 'Eskişehir', tel: '0222 000 00 00', adres: 'Odunpazarı / Eskişehir', yetkili: 'Servet Sakar', puan: 4.9, yorumSayisi: 286, imzaYontemi: 'ikili', kuralKontrol: gun(-13), web: 'sinyalsurucukursu.com', aksamOzet: true, gunlukDersSiniri: 2, egitmenGunlukSinir: 8, ekDersUcreti: 900, devamsizlikSiniri: 4, programOnGun: 5, sinavBildirimIsGunu: 4, geceDersi: 2, tekrarBekleme: 15, asgariYas: 18, saklamaYil: 10, sinavHak: 4, tekrarUcret: { esinav: 1250, dsinav: 2000 }, borcluDers: 'uyar', indirimler: [{ ad: 'Öğrenci belgesi', tutar: 1000 }] },
+    kurs: { ad: 'Örnek Sürücü Kursu', sehir: 'Eskişehir', tel: '0222 000 00 00', adres: 'Odunpazarı / Eskişehir', yetkili: 'Servet Sakar', puan: 4.9, yorumSayisi: 286, imzaYontemi: 'ikili', kuralKontrol: gun(-13), web: 'sinyalsurucukursu.com', aksamOzet: true, gunlukDersSiniri: 2, egitmenGunlukSinir: 8, ekDersUcreti: 900, devamsizlikSiniri: 4, programOnGun: 5, sinavBildirimIsGunu: 4, geceDersi: 2, tekrarBekleme: 15, asgariYas: 18, saklamaYil: 10, sinavHak: 4, tekrarUcret: { esinav: 1250, dsinav: 2000 }, borcluDers: 'uyar', indirimler: [{ ad: 'Öğrenci belgesi', tutar: 1000 }] },
     egitmenler, araclar, kursiyerler, dersler, teorik, sinavlar, hareket, adaylar, otomasyonlar, duyurular,
     gonderimler: [],
   };
@@ -631,7 +631,7 @@ export function kaydet() { subeTamamla(); noTamamla(); odemeUzlas(); mebDegisimI
   if (kaydetDinleyici) kaydetDinleyici(); }
 // Bulut (gerçek kurs): veri Firestore'dan gelir; yerel kopya kursa özel anahtarda tutulur, günlük yenilenmez
 export function bulutVeri(yeni, kursId) { mebIz = null; ANAHTAR = 'sinyal-bulut-' + kursId; yeni._bulut = true; S = goc(yeni); if (!String(kursId).startsWith('ogr-')) { try { localStorage.removeItem(ANAHTAR); } catch (e) { } } }
-export function demoyaDon() { mebIz = null; ANAHTAR = 'sinyal-demo-v19'; S = yukle(); }
+export function demoyaDon() { mebIz = null; ANAHTAR = 'sinyal-demo-v20'; S = yukle(); }
 // Yeni kurs: ayarlar ve şablonlar hazır, kayıtlar boş
 export function bosVeri({ kursAd, yetkili, sehir, mudurTel }) {
   const o = uret();
@@ -694,7 +694,7 @@ export function selam(x) {
   if (S.egitmenler.includes(x)) return `Merhaba ${ilk} Hoca,`;
   return x.cinsiyet === 'Kadın' ? `Merhaba ${ilk} Hanım,` : x.cinsiyet === 'Erkek' ? `Merhaba ${ilk} Bey,` : `Sayın ${tam},`;
 }
-// Özel ada hâl eki: "Sinyal Sürücü Kursu" → Kursu’na / Kursu’nda / Kursu’ndan / Kursu’nun
+// Özel ada hâl eki: "Örnek Sürücü Kursu" → Kursu’na / Kursu’nda / Kursu’ndan / Kursu’nun
 export function adEk(ad, hal) {
   ad = String(ad || '').trim(); if (!hal || !ad) return ad;
   const kc = ad.toLocaleLowerCase('tr'), sesliler = 'aeıioöuü', son = [...kc].reverse().find(c => sesliler.includes(c)) || 'e';

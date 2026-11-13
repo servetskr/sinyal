@@ -1,4 +1,4 @@
-// ÖzSinyal tanıtım sitesi: telefonda menü, beliren bölümler, Özellikler alt menüsü, SSS süzgeci ve arama, İletişim formu (WhatsApp'a hazır mesaj)
+// mdSinyal tanıtım sitesi: telefonda menü, beliren bölümler, Özellikler alt menüsü, SSS süzgeci ve arama, İletişim formu (WhatsApp'a hazır mesaj)
 (() => {
   const d = document, kok = d.documentElement;
   // telefonda menü (ana sayfada tanıtım bölümü yeniden çizilebildiği için olay belgeye bağlı)
@@ -60,7 +60,7 @@
     const v = n => (f.elements[n] && f.elements[n].value || '').trim();
     if (!v('ad') || !v('kurs')) { (v('ad') ? f.elements.kurs : f.elements.ad).focus(); return; }
     const bilgi = [`Ad soyad: ${v('ad')}`, `Kurs: ${v('kurs')}`, v('sehir') ? `Şehir: ${v('sehir')}` : '', v('tel') ? `Telefon: ${v('tel')}` : ''].filter(Boolean);
-    const metin = [`Merhaba, ${v('konu') || 'ÖzSinyal hakkında bilgi almak'} istiyorum.`, bilgi.join('\n'), v('not')].filter(Boolean).join('\n\n');
+    const metin = [`Merhaba, ${v('konu') || 'mdSinyal hakkında bilgi almak'} istiyorum.`, bilgi.join('\n'), v('not')].filter(Boolean).join('\n\n');
     window.open('https://wa.me/905013636536?text=' + encodeURIComponent(metin), '_blank', 'noopener');
   });
 })();

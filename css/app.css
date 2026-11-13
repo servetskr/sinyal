@@ -1,4 +1,4 @@
-/* Sinyal — trafik levhası dili.
+/* mdSinyal — trafik levhası dili.
    Levha mavisi panolar, beton zemin, karayolu yazısı (Overpass), durumlar gerçek levha biçimleriyle. */
 :root{
   --zemin:#e8e7e1; --zemin-2:#dedcd4; --panel:#fbfbf8; --panel-2:#f2f1ec;
@@ -35,7 +35,7 @@ h1,h2,h3,h4{color:var(--murekkep);font-family:var(--baslik);font-weight:800;line
 .logo-isaret{width:34px;height:34px;flex:none}
 .logo b{display:block;font-family:var(--baslik);font-size:22px;font-weight:900;line-height:1}
 .logo small{display:block;font-size:12px;opacity:.85;margin-top:3px}
-.logo b .oz,.sh-marka b .oz,.yk-marka .oz{font-weight:500;opacity:.55}
+.logo b .mk,.sh-marka b .mk,.yk-marka .mk{font-weight:500;opacity:.55}
 .yan-baslik{font-family:var(--baslik);font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;opacity:.7;padding:12px 12px 4px}
 .yan nav a{display:flex;align-items:center;gap:10px;padding:7px 12px;border-radius:7px;font-family:var(--baslik);font-weight:700;font-size:15.5px;line-height:1.25}
 .yan nav a .ok{font-weight:900;width:16px;text-align:center}
@@ -1501,7 +1501,7 @@ button.oto-gidecek:hover{text-decoration:underline}
   .liste li>div[style*="flex:1"]{min-width:0}
 }
 
-/* Genel bakış (v105): Sinyal bu ay sizin için */
+/* Genel bakış (v105): mdSinyal bu ay sizin için */
 .sinyal-ay{background:linear-gradient(135deg,#0a3f86,#0a4da2 55%,#1d5fb8);color:#fff;border-radius:20px;padding:22px 22px 18px;margin-bottom:18px;box-shadow:0 18px 40px -26px rgba(10,77,162,.8)}
 .sinyal-ay-bas small{display:block;font:700 12.5px/1 var(--baslik);letter-spacing:.06em;text-transform:uppercase;opacity:.75}
 .sinyal-ay-bas h3{font:800 clamp(20px,2.6vw,26px)/1.25 var(--baslik);margin:10px 0 6px;color:#fff;letter-spacing:-.01em}
@@ -1782,7 +1782,7 @@ button.oto-gidecek:hover{text-decoration:underline}
 .ort-yigin{display:flex;flex-direction:column;gap:16px}
 .ort-tablo td.mono{white-space:nowrap}
 @media (max-width:760px){ .tablo-kap>.tablo.ort-tablo{min-width:0} }
-/* Sinyal Yönetim kabuğu */
+/* mdSinyal Yönetim kabuğu */
 .ort-ust-sag{margin-left:auto;display:flex;align-items:center;gap:12px;min-width:0}
 .ort-ust-sag small{font-size:13px;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ort-ust .bulut-durum{color:#fff;opacity:.85}
@@ -1804,7 +1804,7 @@ button.oto-gidecek:hover{text-decoration:underline}
 @media (pointer:coarse){ .dg-kucuk{min-height:44px} }
 :root{--soluk:#5f656d}
 
-/* ================= Sinyal uygulaması (v130): öğrenci ve öğretmen telefonu =================
+/* ================= mdSinyal uygulaması (v130): öğrenci ve öğretmen telefonu =================
    Sistem yazı tipi (iPhone'da SF, Android'de Roboto), iOS gruplu liste düzeni, tek yazı ölçeği:
    büyük başlık 34 · bölüm 20 · satır 17 · açıklama 14-15 · dipnot 13.
    Ana sayfada lacivert "gece yolu" üst bölümü tek mesajı taşır; geri kalan her şey sade listeler. */
@@ -2067,14 +2067,14 @@ body.hero-acik.hero-gunduz.kaydi .app-ust{background:rgba(23,79,153,.84)}
 @media (prefers-reduced-motion:reduce){.u-bulut-kay{animation:none}}
 body.portal-modu .ogr-icerik{max-width:none}
 
-/* Sinyal Yönetim hesap oluşturma: ortaklık bilgileri açılır bölümde */
+/* mdSinyal Yönetim hesap oluşturma: ortaklık bilgileri açılır bölümde */
 .yh-ortak{margin:6px 0 2px;padding:12px 14px;border-radius:14px;background:var(--panel-2,#f4f4f7)}
 .yh-ortak summary{cursor:pointer;font-weight:700;color:var(--murekkep)}
 .yh-ortak summary small{display:block;font-weight:400;font-size:13px;color:var(--soluk)}
 .yh-ortak[open] summary{margin-bottom:10px}
 .yh-ortak .og-alan{margin-top:10px}
 
-/* ================= Sinyal Yönetim (v142): uygulama dili; Özet · Kurslar · Defter ================= */
+/* ================= mdSinyal Yönetim (v142): uygulama dili; Özet · Kurslar · Defter ================= */
 .ort-kabuk .ort-ana{padding:0}
 .yn-hero{background:radial-gradient(90% 70% at 85% 0%,#1d3f78,transparent 60%),linear-gradient(180deg,#0b1830,#10254a);color:#fff;padding:16px 20px 60px}
 .yn-ic{max-width:760px;margin:0 auto}
@@ -2170,7 +2170,7 @@ body.portal-modu .ogr-icerik{max-width:none}
 @media (min-width:760px){.ort-kabuk .app-ust{padding-left:max(16px,calc(50% - 380px));padding-right:max(16px,calc(50% - 380px))}}
 .yn .u-satir-govde small{white-space:normal}
 
-/* ===== Sinyal Yönetim v143: bilgisayarda yan menü, telefonda alt sekme; Ajanda ve Gelir-Gider ===== */
+/* ===== mdSinyal Yönetim v143: bilgisayarda yan menü, telefonda alt sekme; Ajanda ve Gelir-Gider ===== */
 .yn{min-height:calc(100vh - 52px)}
 .yn-ana{min-width:0}
 .yn-yan{display:none}
@@ -2369,7 +2369,7 @@ body.sahip-modu{
 .sh-mesaj{white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit;font-size:14px;line-height:1.45;background:var(--panel-2);border-radius:12px;padding:12px 14px;color:var(--metin)}
 @media (min-width:720px){.sh-arac{grid-template-columns:minmax(0,1fr) auto;align-items:center}.sh-suz button{flex:0 0 auto}}
 @media (max-width:420px){.sh-satir-sag small{display:none}.sh-bas h1{font-size:28px}}
-/* Sahip araçları Sinyal Yönetim içinde (Hesaplar bölümü) */
+/* Sahip araçları mdSinyal Yönetim içinde (Hesaplar bölümü) */
 .sh-gomulu{min-height:0}
 .sh-gomulu.sh-giris{display:grid;place-items:center;min-height:0;padding:8px 0 24px}
 .sh-gomulu .sh-bas{margin-top:0;align-items:center}
@@ -2475,7 +2475,7 @@ body.sahip-modu{
 .sh-durum-sec button{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:18px;background:#fff;border:1px solid var(--cizgi);font-size:14px;font-weight:600;color:#3a3d42}
 .sh-durum-sec button i{width:8px;height:8px;border-radius:50%;background:var(--t-renk,#8e9198)}
 .sh-durum-sec button.secili{background:#0b1830;border-color:#0b1830;color:#fff}
-/* Kurs tarafı: Sinyal Destek */
+/* Kurs tarafı: mdSinyal Destek */
 .ds-tur{margin-bottom:4px}
 .ds-wa{display:flex;align-items:center;gap:10px;margin-top:14px;padding:12px 14px;border-radius:12px;background:#eef6f0;color:#14663a;font-weight:600;font-size:14.5px}
 .ds-wa .ik{width:20px;height:20px;flex:none}

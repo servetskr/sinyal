@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "ÖzSinyal MEBBİS Yardımcısı",
-  "version": "1.7.0",
-  "description": "ÖzSinyal'deki kayıt, direksiyon programı ve sınav bilgilerini kursun kendi MEBBİS oturumunda forma yazar; MEBBİS listelerini ÖzSinyal'e aktarır. Şifre istemez, saklamaz.",
+  "name": "mdSinyal MEBBİS Yardımcısı",
+  "version": "1.8.0",
+  "description": "mdSinyal'deki kayıt, direksiyon programı ve sınav bilgilerini kursun kendi MEBBİS oturumunda forma yazar; MEBBİS listelerini mdSinyal'e aktarır. Şifre istemez, saklamaz.",
   "permissions": [
     "storage"
   ],
@@ -26,8 +26,8 @@
     {
       "matches": [
         "https://servetskr.github.io/sinyal/*",
-        "https://ozsinyal.com/*",
-        "https://www.ozsinyal.com/*"
+        "https://mdsinyal.com/*",
+        "https://www.mdsinyal.com/*"
       ],
       "js": [
         "sinyal.js"

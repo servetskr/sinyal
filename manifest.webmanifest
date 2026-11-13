@@ -1,6 +1,6 @@
 {
-  "name": "ÖzSinyal · Sürücü kursu otomasyonu",
-  "short_name": "ÖzSinyal",
+  "name": "mdSinyal · Sürücü kursu otomasyonu",
+  "short_name": "mdSinyal",
   "description": "Öğrenci, ders, sınav, kasa, MEB işleri ve WhatsApp mesajları tek uygulamada.",
   "lang": "tr",
   "start_url": "./",
@@ -9,8 +9,8 @@
   "background_color": "#e8e7e1",
   "theme_color": "#0a4da2",
   "icons": [
-    { "src": "img/simge/sinyal-192.png?s=2", "sizes": "192x192", "type": "image/png" },
-    { "src": "img/simge/sinyal-512.png?s=2", "sizes": "512x512", "type": "image/png" },
-    { "src": "img/simge/sinyal-maske-512.png?s=2", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "img/simge/mdsinyal-192.png?s=3", "sizes": "192x192", "type": "image/png" },
+    { "src": "img/simge/mdsinyal-512.png?s=3", "sizes": "512x512", "type": "image/png" },
+    { "src": "img/simge/mdsinyal-maske-512.png?s=3", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

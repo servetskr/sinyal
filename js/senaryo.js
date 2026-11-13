@@ -1,11 +1,11 @@
-import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, kalanBorc, gecikenler, islem, gonderimEkle, SINIFLAR, ustaAraci, isGunuIleri, yerelZaman, selam, kursAdi } from './veri.js?v=183';
-import { e, ik, isaret, bildir, tl, tamTarih, tarihUzun, saatDe, saatE, apiAcik, belgeWhatsApp, giden, waSirali, waAc, ekranNotu } from './ui.js?v=183';
-import { wpGonder, bildirimler, odemeBilgisi, yorumMetni } from './sayfalar1.js?v=183';
-import { belgeHtml, dosyaAdi } from './sayfalar3.js?v=183';
-import { ornekGonder } from './zamanlayici.js?v=183';
-import { imzaIste } from './imza.js?v=183';
-import { bosSlotlar } from './risk.js?v=183';
-import { risk } from './veri.js?v=183';
+import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, kalanBorc, gecikenler, islem, gonderimEkle, SINIFLAR, ustaAraci, isGunuIleri, yerelZaman, selam, kursAdi } from './veri.js?v=184';
+import { e, ik, isaret, bildir, tl, tamTarih, tarihUzun, saatDe, saatE, apiAcik, belgeWhatsApp, giden, waSirali, waAc, ekranNotu } from './ui.js?v=184';
+import { wpGonder, bildirimler, odemeBilgisi, yorumMetni } from './sayfalar1.js?v=184';
+import { belgeHtml, dosyaAdi } from './sayfalar3.js?v=184';
+import { ornekGonder } from './zamanlayici.js?v=184';
+import { imzaIste } from './imza.js?v=184';
+import { bosSlotlar } from './risk.js?v=184';
+import { risk } from './veri.js?v=184';
 
 /* ================= DEMO SENARYOLARI =================
    Kursun gerçek işlemlerini örnek kayıtlar üzerinde çalıştırır; her senaryonun mesajları
@@ -28,7 +28,7 @@ const hocaAd = h => h.ad.split(' ')[0] + ' Hoca';
 const SENARYOLAR = [
   ['Kayıt ve evrak', [
     { id: 'hos', ad: 'Yeni kayıt: hoş geldin ve ödeme planı', kim: ['Öğrenci'], ne: 'Kayıt tamamlanınca', calis: () => { const k = bul.borclu(), g = S.gruplar.find(x => x.id === k.teorikGrup); wpGonder(k, `${selam(k)} ${kursAdi('e')} hoş geldiniz. Sınıfınız: ${SINIFLAR[k.sinif].ad}.${g ? ` Teorik dersleriniz ${tamTarih(g.baslangic)} tarihinde ${g.ad.toLocaleLowerCase('tr')} ile başlıyor.` : ''} Ödeme planınız: peşinat ${tl(k.odeme.pesin)}; ${k.odeme.taksitler.map((t, i) => `${i + 1}) ${tamTarih(t.vade)} · ${tl(t.tutar)}`).join(', ')}. ${odemeBilgisi()}`, 'Hoş geldin'); } },
-    { id: 'imza', ad: 'Sözleşmeyi telefondan imzalat', kim: ['Öğrenci', 'Kursa gelen'], ne: 'Öğrenci kursta imzalamadıysa', ipucu: 'Telefonuna gelen linki aç, sözleşmeyi oku ve parmağınla imzala. İmza sana “KURSA GELEN” olarak döner. O dönüş linkine bilgisayardaki WhatsApp Web’den tıkla: imza ÖzSinyal’e işlenir ve sözleşmenin PDF’i öğrenciye gider.', calis: async () => { const k = S.kursiyerler.find(x => !x.evrak.sozlesme) || bul.teorik(); await imzaIste('sozlesme', k); } },
+    { id: 'imza', ad: 'Sözleşmeyi telefondan imzalat', kim: ['Öğrenci', 'Kursa gelen'], ne: 'Öğrenci kursta imzalamadıysa', ipucu: 'Telefonuna gelen linki aç, sözleşmeyi oku ve parmağınla imzala. İmza sana “KURSA GELEN” olarak döner. O dönüş linkine bilgisayardaki WhatsApp Web’den tıkla: imza mdSinyal’e işlenir ve sözleşmenin PDF’i öğrenciye gider.', calis: async () => { const k = S.kursiyerler.find(x => !x.evrak.sozlesme) || bul.teorik(); await imzaIste('sozlesme', k); } },
     { id: 'sozpdf', ad: 'Sözleşmenin PDF’i öğrenciye', kim: ['Öğrenci'], ne: 'İmza sonrası ya da istenince', belge: true, calis: () => { const k = bul.borclu(); return belgeWhatsApp(belgeHtml('sozlesme', k.id), dosyaAdi('Sözleşme', tamAd(k)), `${selam(k)} kurs sözleşmenizin kopyası ekte. ${S.kurs.ad}`, tamAd(k), 'ÖĞRENCİ'); } },
     { id: 'evrak', ad: 'Eksik evrak hatırlatması', kim: ['Öğrenci'], ne: 'Kayıttan 3 ve 10 gün sonra 11:00', calis: () => ornekGonder('o4') },
   ]],

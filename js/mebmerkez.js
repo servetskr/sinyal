@@ -1,14 +1,14 @@
 // MEBBİS aktarım merkezi: MEBBİS'e gidecek işler türlerine göre sekmelerde, filtrelenir, seçilir, toplu aktarılır.
 // Aktarımı MEBBİS Yardımcısı (Chrome eklentisi) kursun kendi MEBBİS oturumunda yürütür; MEBBİS'ten veri çekme de buradan başlar.
-import { S, fark, SINIFLAR, egitmen, sb, seciliSube, cokSube, kursiyer, tamAd, islem, kaydet } from './veri.js?v=183';
-import { e, tarih, rozet, isaret, ik, sekmeler, bos } from './ui.js?v=183';
-import * as EK from './eklenti.js?v=183';
+import { S, fark, SINIFLAR, egitmen, sb, seciliSube, cokSube, kursiyer, tamAd, islem, kaydet } from './veri.js?v=184';
+import { e, tarih, rozet, isaret, ik, sekmeler, bos } from './ui.js?v=184';
+import * as EK from './eklenti.js?v=184';
 
 const TURLER = [['kayit', 'Kursiyer kaydı'], ['program', 'Direksiyon programı'], ['sinav', 'Sınav bildirimi'], ['odeme', 'Tahsilat'], ['al', 'MEBBİS’ten al']];
 const CEK = [
-  ['sinav', 'Sınav sonuçları', 'e-Sınav ve direksiyon sonuçları ÖzSinyal’in sonuç penceresine dolar; siz kaydedersiniz.'],
-  ['mutabakat', 'MEBBİS ile karşılaştır', 'MEBBİS’teki kursiyer listesi ÖzSinyal’le karşılaştırılır, farklar gösterilir.'],
-  ['kursiyer', 'Kursiyer listesi', 'Geçişte MEBBİS’teki kursiyerleri ÖzSinyal’e alır.'],
+  ['sinav', 'Sınav sonuçları', 'e-Sınav ve direksiyon sonuçları mdSinyal’in sonuç penceresine dolar; siz kaydedersiniz.'],
+  ['mutabakat', 'MEBBİS ile karşılaştır', 'MEBBİS’teki kursiyer listesi mdSinyal’le karşılaştırılır, farklar gösterilir.'],
+  ['kursiyer', 'Kursiyer listesi', 'Geçişte MEBBİS’teki kursiyerleri mdSinyal’e alır.'],
   ['taksit', 'Ödemeler', 'MEBBİS’teki ödeme kayıtlarını alır.'],
   ['ogretmen', 'Usta öğreticiler', 'Personel listesini alır.'],
   ['arac', 'Araçlar', 'Araç listesini plakalarıyla alır.'],
@@ -48,7 +48,7 @@ export function merkezSekme() {
   if (silinecek.length) h += `<div class="kart" style="margin-bottom:14px;border-color:var(--sari)"><div class="kart-bas"><h3>MEBBİS’ten silinecek dersler</h3><small>MEBBİS’e girildikten sonra iptal edildi ya da silindi · ${silinecek.length}</small></div><ul class="liste" style="margin-top:6px">${silinecek.map(x => { const kk = kursiyer(x.kursiyer); return `<li><span style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(kk ? tamAd(kk) : 'Silinmiş kursiyer')}</b><small style="display:block;color:var(--soluk)">${tarih(x.tarih)} ${e(x.saat)} · ${e((egitmen(x.egitmen) || {}).ad || '')}</small></span><button class="dg dg-cizgi dg-kucuk" data-meb-sildim="${e(x.id)}">MEBBİS’ten sildim</button></li>`; }).join('')}</ul><p class="og-not" style="margin:0 16px 14px">Taşınan dersler ise “Direksiyon programı” listesine “DEĞİŞTİ” notuyla yeniden düştü; MEBBİS’te eski kaydı düzeltin.</p></div>`;
   h += `<div class="kart"><div style="padding:12px 16px 0">${sekmeler(TURLER.map(([k, ad]) => [k, ad, k === 'al' ? null : sayi(k)]), m.tur, 'mm-tur')}</div>`;
   if (m.tur === 'al') {
-    h += `<div class="kart-govde"><p style="font-size:14px;color:var(--metin);margin-bottom:14px">Yardımcı MEBBİS sekmesine geçer, ilgili listeyi kendisi açar ve buraya getirir. ÖzSinyal hiçbir şeyi onayınız olmadan kaydetmez.</p>
+    h += `<div class="kart-govde"><p style="font-size:14px;color:var(--metin);margin-bottom:14px">Yardımcı MEBBİS sekmesine geçer, ilgili listeyi kendisi açar ve buraya getirir. mdSinyal hiçbir şeyi onayınız olmadan kaydetmez.</p>
       <div class="izgara iz-3">${CEK.map(([k, ad, a]) => { const z = (S.mebCekim || {})[k]; return `<div class="kart" style="box-shadow:none"><div class="kart-govde"><b style="color:var(--murekkep);font-size:15.5px;display:block">${ad}</b><p style="font-size:13.5px;color:var(--metin);margin:4px 0 12px">${a}</p><button class="dg dg-ana dg-kucuk" data-meb-cekbtn="${k}" ${subeSorun ? 'disabled' : ''}>${ik('indir')}MEBBİS’ten çek</button>${z ? `<small style="display:block;color:var(--soluk);margin-top:8px">Son: ${tarih(z.slice(0, 10))} ${z.slice(11, 16)}</small>` : ''}</div></div>`; }).join('')}</div></div></div>`;
     return h;
   }
