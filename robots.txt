@@ -1,3 +1,5 @@
-# mdSinyal: alan adı bağlanana kadar arama motorlarına kapalı (site_ayar.json > yayinda)
+# mdSinyal
 User-agent: *
-Disallow: /
+Allow: /
+
+Sitemap: https://mdsinyal.com/sitemap.xml

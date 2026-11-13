@@ -7,20 +7,20 @@
 //  · Demo (örnek kurs): Authorization başlığı yok → her mesaj ALICI'ya (demo telefonu) gider, yalnız ALICI'dan gelenler işlenir. Eskisi gibi.
 //  · Gerçek kurs: Authorization (Firebase oturumu) + X-Kurs → kursun kendi WhatsApp hattından (KV 'hat:<kurs>') alıcının numarasına gider;
 //    gelen mesajlar ve belgeler kursa ayrı tutulur ('gelen:<kurs>', 'medya-<kurs>-<id>'), yalnız kursun üyeleri okur.
-const IZINLI = ['https://servetskr.github.io', 'http://localhost:4481', 'http://127.0.0.1:4481'];
+const IZINLI = ['https://mdsinyal.com', 'https://servetskr.github.io', 'http://localhost:4481', 'http://127.0.0.1:4481'];
 const HEDEF = /^(https:\/\/servetskr\.github\.io\/sinyal\/|http:\/\/localhost:4481\/)/;
 const kucuk = s => String(s || '').toLocaleLowerCase('tr');
 const ASISTAN = [
   [/süre|sure|kaç gün|kac gun|kaç ay|kac ay|kaç hafta|kac hafta|ne kadar sür|ne zaman biter|bitiyor/, 'Kurs yaklaşık 6–8 hafta sürüyor: önce 34 saat teorik ders ve e-sınav, ardından 14 direksiyon dersi ve direksiyon sınavı. Akşam grubuyla çalışırken de rahatça bitirebilirsiniz.', 'Kurs süresi'],
-  [/otomatik/, 'B otomatik kurs ücretimiz 26.500 TL. Peşinattan sonra kalanı 5 aya kadar taksitle ödeyebilirsiniz. Kayıt için evden başvurabilirsiniz: https://servetskr.github.io/sinyal/#/kayit', 'Fiyat · B otomatik'],
-  [/manuel|b sınıf|b sinif|\bb\b|araba|otomobil/, 'B manuel kurs ücretimiz 24.000 TL. Peşinattan sonra kalanı 5 aya kadar taksitle ödeyebilirsiniz. Kayıt için evden başvurabilirsiniz: https://servetskr.github.io/sinyal/#/kayit', 'Fiyat · B manuel'],
-  [/motor|motosiklet|a2/, 'A2 motosiklet kurs ücretimiz 18.500 TL; taksit yapabiliyoruz. Kayıt için evden başvurabilirsiniz: https://servetskr.github.io/sinyal/#/kayit', 'Fiyat · A2'],
+  [/otomatik/, 'B otomatik kurs ücretimiz 26.500 TL. Peşinattan sonra kalanı 5 aya kadar taksitle ödeyebilirsiniz. Kayıt için evden başvurabilirsiniz: https://mdsinyal.com/#/kayit', 'Fiyat · B otomatik'],
+  [/manuel|b sınıf|b sinif|\bb\b|araba|otomobil/, 'B manuel kurs ücretimiz 24.000 TL. Peşinattan sonra kalanı 5 aya kadar taksitle ödeyebilirsiniz. Kayıt için evden başvurabilirsiniz: https://mdsinyal.com/#/kayit', 'Fiyat · B manuel'],
+  [/motor|motosiklet|a2/, 'A2 motosiklet kurs ücretimiz 18.500 TL; taksit yapabiliyoruz. Kayıt için evden başvurabilirsiniz: https://mdsinyal.com/#/kayit', 'Fiyat · A2'],
   [/kamyon|c sınıf|c sinif|\bc\b/, 'C kamyon kurs ücretimiz 31.000 TL; taksit yapabiliyoruz. B ehliyetiniz varsa yetkilimiz size ayrıca bilgi verecek.', 'Fiyat · C'],
   [/fiyat|ücret|ucret|kaç para|kac para|taksit|ne kadar/, 'Kurs ücretlerimiz: B manuel 24.000 TL, B otomatik 26.500 TL, A2 motosiklet 18.500 TL, C kamyon 31.000 TL. Peşinattan sonra 5 aya kadar taksit yapıyoruz. Hangi sınıf için düşünüyorsunuz?', 'Fiyat ve taksit'],
   [/evrak|belge|rapor|gerekli|neler lazım|ne lazım/, 'Kayıt için kimlik kartı, sürücü sağlık raporu, öğrenim belgesi, adli sicil kaydı ve 2 vesikalık fotoğraf yeterli. Sağlık raporunu aile hekiminizden alabilirsiniz.', 'Evrak'],
   [/saat|ne zaman|başla|basla|grup|kurs günleri|hafta/, 'Teorik dersler hafta içi her akşam 18:30 grubunda, salı ve perşembe 10:00 sabah grubunda yapılıyor. Yeni akşam grubumuz 3 Kasım’da başlıyor.', 'Ders saatleri'],
   [/adres|nerede|nerdesiniz|konum|yer/, 'Odunpazarı / Eskişehir’deyiz. Kayıt görüşmesi için uygun olduğunuz günü yazarsanız saat ayarlayalım.', 'Adres'],
-  [/kayıt|kayit|kaydol|yazıl|yazil/, 'Kaydınızı evden de yapabilirsiniz: https://servetskr.github.io/sinyal/#/kayit — isterseniz Örnek Sürücü Kursu’na uğrayarak da kayıt olabilirsiniz.', 'Kayıt'],
+  [/kayıt|kayit|kaydol|yazıl|yazil/, 'Kaydınızı evden de yapabilirsiniz: https://mdsinyal.com/#/kayit — isterseniz Örnek Sürücü Kursu’na uğrayarak da kayıt olabilirsiniz.', 'Kayıt'],
   [/^(merhaba|selam|slm|mrb|iyi günler|iyi akşamlar|günaydın)\b/, 'Merhaba, Örnek Sürücü Kursu’na hoş geldiniz. Ben kursun dijital asistanıyım. Kurs ücreti, evraklar, ders saatleri ya da kayıt hakkında sorabilirsiniz.', 'Karşılama'],
 ];
 // Kursun sorusuna verilen kısa cevaplar (evet/hayır): asistan teşekkür eder, cevap mdSinyal'de ilgili mesaja işlenir
@@ -28,7 +28,7 @@ const CEVAP = [[/^(evet|olur|tamam|tamamd[ıi]r|gelece[ğg]im|gelirim|uygun|kat[
 const cevapTuru = m => { const t = kucuk(m).trim(); for (const [r, k] of CEVAP) if (r.test(t)) return k; return null; };
 const asistanCevap = m => { const t = kucuk(m).trim(); if (cevapTuru(t)) return { metin: 'Teşekkürler, cevabınızı aldık ve kursa ilettik.', konu: 'Cevap' }; for (const [r, c, k] of ASISTAN) if (r.test(t)) return { metin: c, konu: k }; return { metin: 'Sorunuzu kurs yetkilimize ilettim, kısa süre içinde size dönecek. Bu arada ücret, evrak ya da ders saatleriyle ilgili sorularınızı hemen cevaplayabilirim.', konu: 'Yetkiliye devredildi', devir: true }; };
 // Demo hattına yazan adayla adım adım sohbet (durum KV'de 1 gün tutulur): kayıt → sınıf → bilgi → link / randevu / aranma
-const KURS_AD = 'Örnek Sürücü Kursu', KAYIT_LINK = 'https://servetskr.github.io/sinyal/#/kayit', KURS_ADRES = 'Vişnelik Mah. Atatürk Blv. No:12, Odunpazarı / Eskişehir';
+const KURS_AD = 'Örnek Sürücü Kursu', KAYIT_LINK = 'https://mdsinyal.com/#/kayit', KURS_ADRES = 'Vişnelik Mah. Atatürk Blv. No:12, Odunpazarı / Eskişehir';
 const DEMO_SINIF = [
   ['B manuel (otomobil)', '24.000 TL', 34, 14, /manuel|otomobil|araba|\bb\b/],
   ['B otomatik', '26.500 TL', 34, 14, /otomatik/],

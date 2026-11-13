@@ -1,22 +1,22 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=187';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=187';
-import * as Y1 from './sayfalar1.js?v=187';
-import * as Y2 from './sayfalar2.js?v=187';
-import * as P from './portal.js?v=187';
-import * as Y3 from './sayfalar3.js?v=187';
-import * as Y4 from './sayfalar4.js?v=187';
-import * as Y5 from './sayfalar5.js?v=187';
-import * as IM from './imza.js?v=187';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=187';
-import * as SN from './senaryo.js?v=187';
-import * as OZ from './ozellik.js?v=187';
-import { durumlariGuncelle } from './mesaj.js?v=187';
-import { yeniMenu } from './yeni.js?v=187';
-import * as B from './bulut.js?v=187';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=187';
-import * as AN from './analiz.js?v=187';
-import * as ORT from './ortak.js?v=187';
-import * as SH from './sahip.js?v=187';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=188';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=188';
+import * as Y1 from './sayfalar1.js?v=188';
+import * as Y2 from './sayfalar2.js?v=188';
+import * as P from './portal.js?v=188';
+import * as Y3 from './sayfalar3.js?v=188';
+import * as Y4 from './sayfalar4.js?v=188';
+import * as Y5 from './sayfalar5.js?v=188';
+import * as IM from './imza.js?v=188';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=188';
+import * as SN from './senaryo.js?v=188';
+import * as OZ from './ozellik.js?v=188';
+import { durumlariGuncelle } from './mesaj.js?v=188';
+import { yeniMenu } from './yeni.js?v=188';
+import * as B from './bulut.js?v=188';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=188';
+import * as AN from './analiz.js?v=188';
+import * as ORT from './ortak.js?v=188';
+import * as SH from './sahip.js?v=188';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -483,7 +483,7 @@ async function yonetimHesapEkrani(kod) {
   const kok = document.getElementById('uyg');
   if (!dv) { kok.innerHTML = ogrKap(`<div class="og-giris-bas"><h1>Bu link geçersiz</h1><p>Hesap açma linkinin süresi dolmuş ya da daha önce kullanılmış.</p></div><a class="dg dg-ana og-giris-dg" href="#/yonetim">mdSinyal Yönetim girişine git</a>`); return; }
   const alan = (ad, et, ek) => `<label class="og-alan"><span class="og-alan-et">${et}</span><span class="og-girdi"><input name="${ad}" ${ek}></span></label>`;
-  kok.innerHTML = ogrKap(`<div class="og-giris-bas"><h1>mdSinyal Yönetim hesabı</h1><p>Bir kez yapılır. Sonra her seferinde <b>sinyal/#/yonetim</b> adresinden e-postan ve şifrenle girersin.</p></div>
+  kok.innerHTML = ogrKap(`<div class="og-giris-bas"><h1>mdSinyal Yönetim hesabı</h1><p>Bir kez yapılır. Sonra her seferinde <b>mdsinyal.com/#/yonetim</b> adresinden e-postan ve şifrenle girersin.</p></div>
     <form novalidate class="og-giris-form" id="f-yh">${ogrAlan('kad', 'E-posta adresin', 'email', 'kursiyer', 'placeholder="ornek@gmail.com" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required')}${ogrAlan('ad', 'Adın soyadın', 'text', 'kursiyer', 'value="Servet Sakar" autocomplete="name" required')}
       <details class="yh-ortak"><summary>Ortaklık bilgileri <small>sözleşmeye göre dolu; gerekirse düzelt</small></summary>
         ${alan('oad', 'Ortağın adı soyadı', 'value="Eyüp Çağlar"')}${alan('oran', 'Gelir payı (%)', 'inputmode="numeric" value="40"')}${alan('bas', 'Sözleşme tarihi', 'type="date" value="2026-11-10"')}${alan('bt', 'Borcun aktarıldığı tarih (son gün bundan 6 ay sonra)', 'type="date" value="2026-11-10"')}${alan('anapara', 'Anapara (₺)', 'inputmode="numeric" value="50.000"')}${alan('iade', 'Yeni satış başına anapara iadesi (₺)', 'inputmode="numeric" value="2.000"')}
