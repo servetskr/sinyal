@@ -404,24 +404,29 @@
   const g = kok.attachShadow({ mode: 'open' });
   g.innerHTML = `<style>:host{all:initial}*{box-sizing:border-box;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;margin:0}
     .k{position:fixed;left:16px;bottom:16px;z-index:2147483647;width:340px;background:#0f1d33;color:#fff;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.35);padding:14px 16px;font-size:13.5px;line-height:1.45}
-    .k.gizli{display:none}b{font-weight:700}.ust{display:flex;align-items:center;gap:8px;margin-bottom:6px}.ust i{width:10px;height:10px;border-radius:50%;background:#ffc21a;flex:none}
+    .k.gizli{display:none}b{font-weight:700}.ust{display:flex;align-items:center;gap:8px;margin-bottom:6px}.ust i{width:10px;height:10px;border-radius:50%;background:#ffc21a;flex:none}.ust b{flex:1}.ust .yz{font-size:12px;color:#b9c3d6;font-variant-numeric:tabular-nums}.ust .kc{width:24px;height:24px;padding:0;border-radius:6px;background:rgba(255,255,255,.12);color:#fff;font-size:15px;line-height:1;transition:transform .3s}
+    .k{transition:width .3s cubic-bezier(.2,.8,.2,1),padding .3s}.gv{max-height:460px;transition:max-height .32s cubic-bezier(.2,.8,.2,1),opacity .2s;overflow:hidden}.k.kucuk{width:250px;padding-bottom:10px}.k.kucuk .ust{margin-bottom:0}.k.kucuk .gv{max-height:0;opacity:0}.k.kucuk .kc{transform:rotate(180deg)}
+    @media (prefers-reduced-motion:reduce){.k,.gv,.kc{transition:none}}
     .bar{height:6px;background:rgba(255,255,255,.15);border-radius:3px;margin:10px 0 6px;overflow:hidden}.bar i{display:block;height:100%;background:#ffc21a;transition:width .3s}
     small{color:#b9c3d6;display:block}.kod{margin-top:10px;background:#fff;color:#14284b;border-radius:10px;padding:10px}.kod img{display:block;max-width:100%;margin:6px 0;border:1px solid #ddd;border-radius:6px}
     input{width:100%;height:38px;border:1.5px solid #c8d0de;border-radius:8px;padding:0 10px;font-size:16px;letter-spacing:2px}
     button{cursor:pointer;border:0;border-radius:8px;height:34px;padding:0 12px;font-weight:700;font-size:13px}.ana{background:#ffc21a;color:#14284b}.cz{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.35)}
     .alt{display:flex;gap:8px;margin-top:10px;justify-content:flex-end}</style>
-    <div class="k gizli"><div class="ust"><i></i><b>mdSinyal · MEBBİS’te çalışıyor</b></div><div data-adim></div><div class="bar"><i style="width:0"></i></div><small data-alt></small><div data-kod></div><div class="alt"><button class="cz" data-dur>Durdur</button></div></div>`;
+    <div class="k gizli"><div class="ust" title="Sürükleyerek taşıyın · çift tıklayınca köşesine döner"><i></i><b>mdSinyal · MEBBİS’te çalışıyor</b><span class="yz" data-yz></span><button class="kc" data-kucult aria-label="Küçült ya da büyüt">▾</button></div><div class="gv"><div data-adim></div><div class="bar"><i style="width:0"></i></div><small data-alt></small><div data-kod></div><div class="alt"><button class="cz" data-dur>Durdur</button></div></div></div>`;
   const kart = g.querySelector('.k'), q = s => g.querySelector(s);
+  if (window.__sinyalTasi) window.__sinyalTasi(kart, g.querySelector('.ust'), 'is');   // tasi.js
+  q('[data-kucult]').addEventListener('click', () => { kart.classList.toggle('kucuk'); gonder({ tur: 'ayar-koy', ad: 'is-kucuk', deger: kart.classList.contains('kucuk') }); });
+  gonder({ tur: 'ayar-al', ad: 'is-kucuk' }).then(v => { if (v) kart.classList.add('kucuk'); });
   let durdur = false;
   q('[data-dur]').addEventListener('click', () => { durdur = true; q('[data-alt]').textContent = 'Durduruluyor…'; });
-  const goster = (adim, oran, alt) => { kart.classList.remove('gizli'); if (adim != null) q('[data-adim]').textContent = adim; if (oran != null) q('.bar i').style.width = Math.round(Math.min(1, oran) * 100) + '%'; if (alt != null) q('[data-alt]').textContent = alt; };
+  const goster = (adim, oran, alt) => { if (kart.classList.contains('gizli')) dispatchEvent(new Event('sinyal-is-basladi')); kart.classList.remove('gizli'); if (adim != null) q('[data-adim]').textContent = adim; if (oran != null) { q('.bar i').style.width = Math.round(Math.min(1, oran) * 100) + '%'; q('[data-yz]').textContent = '%' + Math.round(Math.min(1, oran) * 100); } if (alt != null) q('[data-alt]').textContent = alt; };
   // Güvenlik kodu: MEBBİS'in o anki kod resmi gösterilir, kullanıcı yazar (kod otomatik çözülmez)
   function kodIste(doc) {
     return new Promise(async ok => {
       const giris = elBul(doc, 'txtGirisResmi'); let src = '';
       const img = doc.querySelector('img[src*="uvenlik" i], img[src*="aptcha" i], img[src*="Resim" i][src*=".aspx" i], img[id*="Guvenlik" i], img[id*="Resim" i]') || (giris && giris.parentElement && giris.parentElement.querySelector('img'));
       if (img) { try { const r = await fetch(new URL(img.getAttribute('src'), doc.__url || location.href).href, { credentials: 'include' }); src = URL.createObjectURL(await r.blob()); } catch (x) { } }
-      const k = q('[data-kod]');
+      kart.classList.remove('kucuk'); const k = q('[data-kod]');
       k.innerHTML = `<div class="kod"><b>MEBBİS güvenlik kodu istiyor</b>${src ? `<img src="${src}" alt="Güvenlik kodu">` : '<small style="color:#a12a20">Kod resmi alınamadı; MEBBİS sayfasının üstündeki kodu yazın.</small>'}<input maxlength="6" autocomplete="off" aria-label="Güvenlik kodu"><div class="alt"><button class="cz" style="color:#14284b;border-color:#c8d0de" data-iptal>Atla</button><button class="ana" data-tamam>Devam</button></div></div>`;
       const inp = k.querySelector('input'); inp.focus();
       const bit = v => { k.innerHTML = ''; ok(v); };

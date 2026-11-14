@@ -131,18 +131,18 @@
 
   // iş türleri: aciliyet eşitse sınav > program > kayıt > tahsilat
   const TURLER = [
-    ['sinav', 'Sınav bildirimi', 'direksiyon sınavına kursiyer bildirimi'],
+    ['sinav', 'Sınav randevusu', 'uygulama sınavı randevu girişi'],
     ['program', 'Direksiyon programı', 'direksiyon eğitimi programı giriş'],
-    ['kayit', 'Kursiyer kaydı', 'kursiyer kayıt'],
-    ['odeme', 'Tahsilat', 'kursiyer ödeme bilgisi giriş'],
+    ['kayit', 'Kayıt', 'aday dönem kayıt'],
+    ['odeme', 'Fatura', 'fatura kayıt'],
   ];
   const AD = Object.fromEntries(TURLER.map(x => [x[0], x[1]])), FORM = Object.fromEntries(TURLER.map(x => [x[0], x[2]])), SIRA = Object.fromEntries(TURLER.map((x, i) => [x[0], i]));
   const AL = [
-    ['kursiyer', 'Kursiyer listesi', 'kayıtlı kursiyer listesi', 'Geçişte kursiyerleri mdSinyal’e alır.'],
+    ['kursiyer', 'Öğrenci listesi', 'dönem adayları listesi', 'Açık listedeki öğrencileri mdSinyal’e alır.'],
     ['sinav', 'Sınav sonuçları', 'e-sınav ya da direksiyon sınavı sonuç listesi', 'Sonuçlar mdSinyal’in sonuç penceresine dolar.'],
-    ['mutabakat', 'MEBBİS ile karşılaştır', 'kursiyer listesi', 'mdSinyal’de olup MEBBİS’te olmayanları gösterir.'],
+    ['mutabakat', 'MEBBİS ile karşılaştır', 'dönem adayları listesi', 'mdSinyal’de olup MEBBİS’te olmayanları gösterir.'],
     ['grup', 'Dönem grupları', 'grup şube tanımlama', 'MEBBİS’teki dönem, grup ve şubeleri alır.'],
-    ['ogretmen', 'Usta öğreticiler', 'personel (usta öğretici) listesi', 'Öğretmenleri mdSinyal’e alır.'],
+    ['ogretmen', 'Öğretmenler', 'personel listesi', 'Öğretmenleri izin numaralarıyla alır.'],
     ['arac', 'Araçlar', 'araç listesi', 'Araçları plakalarıyla alır.'],
   ];
   const bugun = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
@@ -155,7 +155,7 @@
     :host{all:initial}*{box-sizing:border-box;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;margin:0}
     .p{position:fixed;right:16px;bottom:16px;z-index:2147483647;width:360px;max-height:82vh;display:flex;flex-direction:column;background:#fff;color:#1d1d1d;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.28);border:1px solid #dcdcdc;font-size:13.5px;line-height:1.35}
     .b{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#14284b;color:#fff;border-radius:14px 14px 0 0;cursor:pointer;user-select:none}.b b{flex:1;font-size:14px}.b i{width:14px;height:14px;background:#f2b705;transform:rotate(45deg);border-radius:2px;flex:none}.b small{opacity:.85}
-    .gizli .b{border-radius:14px}.gizli .g{display:none}
+    .p{transition:width .3s cubic-bezier(.2,.8,.2,1),border-radius .3s}.gizli{width:250px}.sir small b{display:inline;font-size:inherit;margin:0;color:#14284b}.gizli .b{border-radius:14px}.g{transition:max-height .32s cubic-bezier(.2,.8,.2,1),padding .32s,opacity .2s;max-height:76vh}.gizli .g{max-height:0;padding-top:0;padding-bottom:0;opacity:0;overflow:hidden}.b .ok2{width:22px;height:22px;display:grid;place-items:center;border-radius:6px;background:rgba(255,255,255,.12);font-size:15px;line-height:1;transition:transform .3s}.gizli .b .ok2{transform:rotate(180deg)}@media (prefers-reduced-motion:reduce){.p,.g,.b .ok2{transition:none}}
     .g{padding:10px 12px 12px;overflow:auto}
     h4{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#6b7280;margin:12px 0 6px}
     input.ara{width:100%;border:1px solid #d6d9de;border-radius:9px;padding:8px 10px;font-size:13.5px;margin-bottom:10px}
@@ -189,9 +189,11 @@
     .e2{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0f0}.e2 span{color:#555;font-size:12.5px}.e2 b{text-align:right;cursor:copy;word-break:break-word}.e2 b:hover{color:#2f6fde}.gst{background:none;color:#8a94a6;font-size:11px;padding:0;font-weight:500;text-decoration:underline}
     kbd{font:11px ui-monospace,monospace;background:#f3f4f6;border:1px solid #d1d5db;border-radius:4px;padding:0 4px;color:#374151}
     </style>
-    <div class="p" lang="tr"><div class="b" data-k><i></i><b>mdSinyal MEBBİS Yardımcısı</b><small data-sayi></small></div><div class="g" data-g></div></div>`;
+    <div class="p" lang="tr"><div class="b" data-k title="Sürükleyerek taşıyın · tıklayınca küçülür · çift tıklayınca köşesine döner"><i></i><b>mdSinyal MEBBİS Yardımcısı</b><small data-sayi></small><span class="ok2" aria-hidden="true">▾</span></div><div class="g" data-g></div></div>`;
   (document.body || document.documentElement).appendChild(kok);
   const p = g.querySelector('.p'), govde = g.querySelector('[data-g]');
+  if (window.__sinyalTasi) window.__sinyalTasi(p, g.querySelector('.b'), 'panel');   // tasi.js: sürükleyerek taşıma, konumu hatırlama
+  addEventListener('sinyal-is-basladi', () => p.classList.add('gizli'));   // arka plan işi başlayınca panel küçülür, ekranı kapatmaz
   const durum = { hatalar: new Set(), ekran: 'ana', filtre: null, sec: null, al: null, sonuc: {}, mesaj: '', ara: '', q: { isler: [] }, sayfa: {}, tablo: null, temizle: false, alAcik: false, oto: true, soru: false, bekle: null, dolanId: null };
   const e = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   // bekleyen işler en acilden: son gün, sonra tür sırası
@@ -209,15 +211,15 @@
     let h = '';
     // ANA: yalnız sıradaki iş ve Başla
     if (durum.ekran === 'ana') {
-      if (!hepsi.length) h += `<div class="bos"><b>Aktarılacak iş yok</b><p>mdSinyal’de <b>MEB işlemleri › MEBBİS aktarımı</b> ekranında işleri seçip <b>MEBBİS’e aktar</b>’a basın. Yardımcı buraya gelip sırayla yürütür.</p></div><button class="buyuk" data-sinyal>mdSinyal’i aç</button>`;
-      else {
+      h += `<div class="sir" style="border-color:#c9d6f2;background:#f6f9ff"><b>MEBBİS işleri mdSinyal’den başlar</b><small style="margin-bottom:0">mdSinyal › MEB işlemleri: <b>MEBBİS’ten güncelle</b> bilgileri çeker, <b>Hepsini MEBBİS’e yaz</b> bekleyen işleri girer. Yardımcı bu sekmede ekran açmadan yürütür; siz yalnız güvenlik kodu istenirse kodu yazarsınız.</small></div>`;
+      h += `<button class="buyuk" data-sinyal>mdSinyal’i aç</button>`;
+      if (hepsi.length) {
         const say = TURLER.map(([k, ad]) => [ad, sirali(k).length]).filter(x => x[1]).map(([ad, n]) => `${n} ${ad.toLocaleLowerCase('tr')}`).join(' · ');
-        h += `<p class="kucuk">MEBBİS’e aktarılacak</p><div class="sir"><b>${hepsi.length} iş</b><small>${e(say)}</small></div>`;
-        h += `<button class="buyuk" data-basla>${durum.q.isler.some(x => x.bitti) ? 'Devam et' : 'Aktarımı başlat'}</button>`;
+        h += `<h4>Ekranda doldurma sırası (yedek yol)</h4><div class="sir"><b>${hepsi.length} iş</b><small>${e(say)}</small><button class="cz" data-basla style="width:100%">${durum.q.isler.some(x => x.bitti) ? 'Ekranda doldurmaya devam et' : 'Ekranda doldur'}</button></div>`;
       }
+      h += `<button class="satir" data-git="alsec"><span>Açık ekrandaki listeyi mdSinyal’e gönder</span><b>›</b></button>`;
       if (giris) h += `<p class="not">MEBBİS’e kendi şifrenizle girin; Yardımcı giriş sayfasında hiçbir şey yazmaz.</p>`;
-      h += `<button class="buyuk" data-git="alsec" style="margin-top:8px;background:#fff;color:#14284b;border:1.5px solid #c8d0de">MEBBİS’ten veri çek</button><p class="not">Toplu çekme ve toplu yazma için mdSinyal’de <b>MEB işlemleri › MEBBİS aktarımı</b> ekranındaki <b>MEBBİS’ten güncelle</b> ve <b>MEBBİS’e yaz</b> düğmeleri; Yardımcı ekran açmadan yürütür.</p>`;
-      h += `<div class="alt"><button data-sinyal>mdSinyal’e dön</button><button data-git="ayar">Ayarlar</button></div>`;
+      h += `<div class="alt"><button data-git="ayar">Ayarlar</button></div>`;
     }
     // BİTTİ: özet
     if (durum.ekran === 'bitti') {
