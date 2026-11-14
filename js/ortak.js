@@ -160,8 +160,14 @@ function musteriPenceresi(m, yenile) {
       <div class="izgara iz-2" style="gap:12px">${alan('Paket', `<select name="paket">${['Yıllık', 'Aylık'].map(x => `<option ${m && m.paket === x ? 'selected' : ''}>${x}</option>`).join('')}</select>`)}${alan('Şube sayısı', `<input name="sube" inputmode="numeric" value="${m ? m.sube || 1 : 1}">`)}</div>
       <div class="izgara iz-2" style="gap:12px">${alan('Başlangıç', `<input name="bas" type="date" value="${m ? m.bas || '' : gun(0)}">`)}${alan('Durum', `<select name="durum">${['Aktif', 'Deneme', 'Ayrıldı'].map(x => `<option ${(m ? m.durum : 'Aktif') === x ? 'selected' : ''}>${x}</option>`).join('')}</select>`)}</div>
       ${alan('Not <small style="font-weight:400;color:var(--soluk)">isteğe bağlı</small>', `<input name="not" value="${e(m ? m.not || '' : '')}">`)}</form>`,
-    altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-ortm">Kaydet</button>`,
-    onAc(p) { p.querySelector('form').addEventListener('submit', ev => { ev.preventDefault(); const f = ev.target, ad = f.ad.value.trim(); if (ad.length < 2) return bildir('Kurs adını yazın', 'uyari');
+    altlik: `${m ? '<button class="dg dg-cizgi" data-ortm-sil style="margin-right:auto;color:var(--u-kirmizi)">Sil</button>' : ''}<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-ortm">Kaydet</button>`,
+    onAc(p) {
+      const sil = p.querySelector('[data-ortm-sil]'); if (sil) sil.addEventListener('click', () => { kapatPencere();
+        if ((v.tahsilatlar || []).some(t => t.musteri === m.id)) return bildir('Bu müşterinin tahsilatı var; silmek yerine durumunu “Ayrıldı” yapın', 'uyari');
+        silOnay(m.ad + ' müşteri listesinden silinsin mi? Kurslar’daki kartı “Soğuk” olarak kalır.', () => { geriAlNoktasi(); v.musteriler = v.musteriler.filter(x => x !== m);
+          (v.kurslar || []).forEach(k => { if (k.musteri === m.id) { delete k.musteri; if (k.durum === 'Müşteri') k.durum = 'Soğuk'; } });
+          kaydetYayinla('Ortaklık: müşteriyi sildi', m.ad); yenile(); }); });
+      p.querySelector('form').addEventListener('submit', ev => { ev.preventDefault(); const f = ev.target, ad = f.ad.value.trim(); if (ad.length < 2) return bildir('Kurs adını yazın', 'uyari');
       const x = { ad, paket: f.paket.value, sube: Math.max(1, +f.sube.value.replace(/\D/g, '') || 1), bas: f.bas.value || gun(0), durum: f.durum.value, not: f.not.value.trim() };
       if (m) Object.assign(m, x); else (v.musteriler = v.musteriler || []).push({ id: kimlik(), ...x });
       musteriKursEsle(v);
@@ -460,7 +466,15 @@ function kursPenceresi(k, yenile) {
         if (bagli && x.durum !== 'Müşteri' && bagli.durum !== 'Ayrıldı') bagli.durum = 'Ayrıldı';
         if (bagli && !adEs(bagli.ad, ad)) bagli.ad = ad;
         kaydetYayinla(k ? 'mdSinyal Yönetim: kursu güncelledi' : 'mdSinyal Yönetim: kurs ekledi', ad); kapatPencere(); bildir('Kaydedildi'); yenile(); });
-      const sil = p.querySelector('[data-yn-kurs-sil]'); if (sil) sil.addEventListener('click', () => { kapatPencere(); silOnay(k.ad + ' kurslar listesinden silinsin mi?', () => { geriAlNoktasi(); v.kurslar = v.kurslar.filter(y => y !== k); kaydetYayinla('mdSinyal Yönetim: kursu sildi', k.ad); yenile(); }); });
+      // Kart müşteriye bağlıysa müşteri de kalkar; yoksa eşleme (musteriKursEsle) kartı her açılışta geri üretir.
+      // Tahsilatı olan müşteri silinmez (pay ve borç hesabı bozulmasın), "Ayrıldı" olur; ayrılan müşterinin kartı yeniden üretilmez.
+      const sil = p.querySelector('[data-yn-kurs-sil]'); if (sil) sil.addEventListener('click', () => { kapatPencere();
+        const m = (v.musteriler || []).find(x => x.id === k.musteri) || (!k.musteri && (v.musteriler || []).find(x => adEs(x.ad, k.ad)));
+        const tahsilatli = m && (v.tahsilatlar || []).some(t => t.musteri === m.id);
+        const ek = !m ? '' : tahsilatli ? ' Ortaklık’taki müşteri kaydı tahsilatları korunarak “Ayrıldı” olarak işaretlenir.' : ' Ortaklık › Müşteri kurslar listesinden de çıkarılır.';
+        silOnay(k.ad + ' kurslar listesinden silinsin mi?' + ek, () => { geriAlNoktasi(); v.kurslar = v.kurslar.filter(y => y !== k);
+          if (m) { if (tahsilatli) m.durum = 'Ayrıldı'; else v.musteriler = v.musteriler.filter(x => x !== m); }
+          kaydetYayinla('mdSinyal Yönetim: kursu sildi', k.ad); yenile(); }); });
     } });
 }
 // Dosyadan kurs ekleme: { kurslar: [{ ad, durum, kisiler, not, sonraki, zaman, teklif, itiraz }] }; aynı adlı kurs varsa atlanır

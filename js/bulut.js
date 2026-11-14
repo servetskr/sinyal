@@ -411,6 +411,11 @@ async function sayacAyir(yil, enAz = 0) {
   const { db, F } = fb, ref = F.doc(db, 'kurslar', bulut.kurs, 'sayac', 'makbuz-' + yil);
   return F.runTransaction(db, async t => { const d = await t.get(ref); const n = Math.max(d.exists() ? d.data().n || 0 : 0, enBuyukMakbuz(yil), enAz) + 1; t.set(ref, { n }); return n; });
 }
+// Fatura numarası: seri + yıl başına sunucu sayacı (kurslar/{kurs}/sayac/fatura-<seri><yıl>); yerelde en büyük numaradan aşağı düşmez
+export async function faturaNoAyir(seri, yil, enAz = 0) {
+  const { db, F } = fb, ref = F.doc(db, 'kurslar', bulut.kurs, 'sayac', 'fatura-' + seri + yil);
+  return sure(F.runTransaction(db, async t => { const d = await t.get(ref); const n = Math.max(d.exists() ? d.data().n || 0 : 0, enAz) + 1; t.set(ref, { n }); return n; }), 10000);
+}
 let rezervSuruyor = null;
 function rezervAl(yil) {
   if (rezervSuruyor) return rezervSuruyor;
