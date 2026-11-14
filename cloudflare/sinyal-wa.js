@@ -8,7 +8,7 @@
 //  · Gerçek kurs: Authorization (Firebase oturumu) + X-Kurs → kursun kendi WhatsApp hattından (KV 'hat:<kurs>') alıcının numarasına gider;
 //    gelen mesajlar ve belgeler kursa ayrı tutulur ('gelen:<kurs>', 'medya-<kurs>-<id>'), yalnız kursun üyeleri okur.
 const IZINLI = ['https://mdsinyal.com', 'https://servetskr.github.io', 'http://localhost:4481', 'http://127.0.0.1:4481'];
-const HEDEF = /^(https:\/\/servetskr\.github\.io\/sinyal\/|http:\/\/localhost:4481\/)/;
+const HEDEF = /^(https:\/\/mdsinyal\.com\/|https:\/\/servetskr\.github\.io\/sinyal\/|http:\/\/localhost:4481\/)/;
 const kucuk = s => String(s || '').toLocaleLowerCase('tr');
 const ASISTAN = [
   [/süre|sure|kaç gün|kac gun|kaç ay|kac ay|kaç hafta|kac hafta|ne kadar sür|ne zaman biter|bitiyor/, 'Kurs yaklaşık 6–8 hafta sürüyor: önce 34 saat teorik ders ve e-sınav, ardından 14 direksiyon dersi ve direksiyon sınavı. Akşam grubuyla çalışırken de rahatça bitirebilirsiniz.', 'Kurs süresi'],
@@ -274,7 +274,7 @@ export default {
     if (req.method === 'GET') {
       if (!yol) return cevap({ ok: true, hazir: !!(env.WA_TOKEN && env.PHONE_ID && env.ALICI), belge: true, kisa: !!env.LINK, kursHatti: true, sablon: !!env.SABLON_AD, demoHatlari: { usta: !!env.PHONE_ID_USTA, mudur: !!env.PHONE_ID_MUDUR } });
       const anahtar = yol.startsWith('k/') ? yol.slice(2) : yol;
-      if (/^(gelen$|(hat|hatno|gelen|medya|durum|yedek)[:-])/.test(anahtar)) return cevap({ ok: false }, 404);  // iç kayıtlar kısa link gibi okunamaz
+      if (/^(gelen$|(hat|hatno|gelen|medya|durum|yedek|kisaad|kursad)[:-])/.test(anahtar)) return cevap({ ok: false }, 404);  // iç kayıtlar kısa link gibi okunamaz
       const v = env.LINK ? await env.LINK.get(anahtar) : null;
       if (yol.startsWith('k/')) return cevap(v ? { ok: true, hedef: v } : { ok: false }, v ? 200 : 404);
       if (v) return Response.redirect(v, 302);
@@ -282,6 +282,22 @@ export default {
     }
     if (req.method !== 'POST' || (!gercek && !IZINLI.includes(origin))) return cevap({ ok: false, hata: 'Izin yok' }, 403);
     let b; try { b = await req.json(); } catch (x) { return cevap({ ok: false, hata: 'Gecersiz istek' }, 400); }
+    // Kursa özel kısa link (mdsinyal.com/haller): yalnız kurs müdürü, kendi kursu için seçer. Ad başka kurstaysa verilmez; eski ad boşalır.
+    if (yol === 'kisa-ad') {
+      if (!env.LINK) return cevap({ ok: false, hata: 'Kisa link deposu bagli degil' }, 500);
+      if (!gercek || rol !== 'mudur') return cevap({ ok: false, hata: 'Yalniz kurs muduru' }, 403);
+      const ad = String((b && b.ad) || '').toLowerCase(), hedef = String((b && b.hedef) || '');
+      const AYRILMIS = ['ozellikler', 'iletisim', 'giris', 'gizlilik', 'eklenti', 'fonts', 'demo', 'yonetim', 'sinyal', 'mdsinyal', 'admin', 'destek', 'kayit', 'blog', 'webhook', 'kisa', 'yedek', 'durum', 'gelen', 'medya'];
+      if (!/^[a-z0-9-]{4,30}$/.test(ad) || AYRILMIS.includes(ad) || /^(hat|hatno|gelen|medya|durum|yedek|kisaad|kursad|takip)[:-]/.test(ad)) return cevap({ ok: false, hata: 'Bu ad kullanilamaz: 4-30 karakter, kucuk harf, rakam ve tire' }, 400);
+      if (!HEDEF.test(hedef) || hedef.length > 2000) return cevap({ ok: false, hata: 'Gecersiz hedef' }, 400);
+      const sahip = await env.LINK.get('kisaad:' + ad);
+      if (sahip && sahip !== kursId) return cevap({ ok: false, hata: 'Bu ad baska bir kursta' }, 409);
+      if (!sahip && await env.LINK.get(ad)) return cevap({ ok: false, hata: 'Bu ad dolu; baska bir ad secin' }, 409);
+      const eski = await env.LINK.get('kursad:' + kursId);
+      if (eski && eski !== ad) { await env.LINK.delete(eski); await env.LINK.delete('kisaad:' + eski); }
+      await env.LINK.put(ad, hedef); await env.LINK.put('kisaad:' + ad, kursId); await env.LINK.put('kursad:' + kursId, ad);
+      return cevap({ ok: true, ad });
+    }
     if (yol === 'kisa') {
       if (!env.LINK) return cevap({ ok: false, hata: 'Kisa link deposu bagli degil' }, 500);
       const hedef = String((b && b.hedef) || '');
