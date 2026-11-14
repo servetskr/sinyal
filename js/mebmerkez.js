@@ -1,11 +1,11 @@
 // MEBBİS aktarım merkezi: MEBBİS'e gidecek işler türlerine göre sekmelerde, filtrelenir, seçilir, toplu aktarılır.
 // Aktarımı MEBBİS Yardımcısı (Chrome eklentisi) kursun kendi MEBBİS oturumunda yürütür; MEBBİS'ten veri çekme de buradan başlar.
-import { S, fark, SINIFLAR, egitmen, sb, seciliSube, cokSube, kursiyer, tamAd, islem, kaydet } from './veri.js?v=202';
-import { e, tarih, rozet, isaret, ik, sekmeler, bos } from './ui.js?v=202';
-import * as EK from './eklenti.js?v=202';
-import * as MT from './mebtoplu.js?v=202';
+import { S, fark, SINIFLAR, egitmen, sb, seciliSube, cokSube, kursiyer, tamAd, islem, kaydet } from './veri.js?v=203';
+import { e, tarih, rozet, isaret, ik, sekmeler, bos } from './ui.js?v=203';
+import * as EK from './eklenti.js?v=203';
+import * as MT from './mebtoplu.js?v=203';
 
-const TURLER = [['kayit', 'Kayıt'], ['grup', 'Dönem grubu'], ['onay', 'Kurum onayı'], ['teorik', 'Teorik program'], ['program', 'Direksiyon programı'], ['esinav', 'e-Sınav başvurusu'], ['sinav', 'Sınav randevusu'], ['fatura', 'Fatura'], ['al', 'MEBBİS’ten al']];
+const TURLER = [['kayit', 'Kayıt'], ['evrak', 'Evrak'], ['grup', 'Dönem grubu'], ['onay', 'Kurum onayı'], ['teorik', 'Teorik program'], ['program', 'Direksiyon programı'], ['esinav', 'e-Sınav başvurusu'], ['sinav', 'Sınav randevusu'], ['fatura', 'Fatura'], ['al', 'MEBBİS’ten al']];
 const butunIsler = hepsi => [...EK.mebIsleri(hepsi), ...MT.ekIsler(hepsi)];
 const CEK = [
   ['grup', 'Dönem grupları', 'MEBBİS’teki dönem, grup ve şubeler (ör. Kasım 1A) mdSinyal’e grup kartı olarak gelir. İlk kurulumda önce bunu çekin.'],

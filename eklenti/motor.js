@@ -336,6 +336,42 @@
     return { ok: true, alt };
   }
 
+  /* ---------- aday evrak ekranları (yalnız kurum onayı bekleyen adaylar listelenir) ---------- */
+  // Aday seçimi: seçenek değeri TC ya da metinde ad soyad
+  async function adayEkrani(yol, is) {
+    let s = await getir(yol); const b = {};
+    s = await sec(s, b, 'cmbEgitimDonemi', is.donem);
+    const el = elBul(s.doc, 'cmbAdayAdSoyad'); if (!el) throw new MebHata('Aday seçimi yok');
+    const n = norm(is.adSoyad), o = [...el.options].find(x => x.value === is.tc) || [...el.options].find(x => x.textContent.includes(is.tc)) || [...el.options].find(x => n && norm(x.textContent).includes(n));
+    if (!o) throw new MebHata('Aday bu ekranda listelenmiyor (kurum onayı verilmiş olabilir; onaydan sonra evrak değiştirilemez)');
+    s = await sec(s, b, 'cmbAdayAdSoyad', o.value);
+    return { s, b };
+  }
+  const EVRAK = {
+    ogrenim: ['/SKT/skt02003.aspx', 'öğrenim', async (s, b, v) => { b[adOf(s.doc, 'txtOgrenimBelgesiVeren')] = v.veren; s = await sec(s, b, 'cmbOgrenimBelgesiTuru', v.tur, { metinle: true }); b[adOf(s.doc, 'Us_tarih1_txtTarihGiris')] = v.tarih; b[adOf(s.doc, 'txtOgrenimBelgeSayi')] = v.sayi; return s; }],
+    saglik: ['/SKT/skt02004.aspx', 'sağlık raporu', async (s, b, v) => {
+      // e-Nabız rapor referans numarası ile giriş (alan, kutu işaretlenince açılıyor olabilir)
+      if (v.refNo) { const k = elBul(s.doc, 'chkRefNo'); if (k) { b[k.name] = k.value || 'on'; if (/__doPostBack/.test(k.getAttribute('onclick') || k.getAttribute('onchange') || '')) { s = await postla(s, b, { tetik: 'chkRefNo' }); } } const r = [...anaForm(s.doc).querySelectorAll('input[type=text]')].find(x => /ref/i.test(x.id || x.name)); if (r) b[r.name] = v.refNo; }
+      const oz = elBul(s.doc, 'cmbAdayOzurDurumu'); if (!oz) throw new MebHata('Özür durumu alanı yok');
+      const ara = v.ozur === 'Var' ? ['özürlü', 'engelli', 'var'] : ['yok', 'özürsüz', 'engelsiz', 'sağlam'];
+      const o = [...oz.options].find(x => x.value !== '-1' && ara.some(a => norm(x.textContent).includes(norm(a)))); if (!o) throw new MebHata('Özür durumu seçeneği eşleşmedi: ' + [...oz.options].map(x => metin(x)).join(', '));
+      b[oz.name] = o.value; return s;
+    }],
+    adli: ['/SKT/skt02005.aspx', 'adli sicil', async (s, b, v) => { b[adOf(s.doc, 'txtSavcilikBelgesiVeren')] = v.veren; b[adOf(s.doc, 'Us_tarih1_txtTarihGiris')] = v.tarih; b[adOf(s.doc, 'txtSavcilikBelgeSayi')] = v.sayi; return s; }],
+    parmak: ['/SKT/SKT02010.aspx', 'parmak izi', async (s, b, v) => { b[adOf(s.doc, 'txtParmakİziBelgesiVeren')] = v.veren; b[adOf(s.doc, 'Us_tarih1_txtTarihGiris')] = v.tarih; b[adOf(s.doc, 'txtParmakİziSayi')] = v.sayi; return s; }],
+  };
+  // is: { donem, tc, adSoyad, evrak: { ogrenim, saglik, adli, parmak } } → her ekran ayrı kaydedilir; hata verenler not edilir
+  async function evrakYaz(is, kodIste, sessiz) {
+    const tamam = [], hata = [];
+    for (const [ne, [yol, ad, doldur]] of Object.entries(EVRAK)) {
+      const v = (is.evrak || {})[ne]; if (!v) continue;
+      try { let { s, b } = await adayEkrani(yol, is); s = await doldur(s, b, v); await kaydetDogrula(s, b, async (d, k) => basari(k), kodIste); tamam.push(ad); }
+      catch (h) { if (h.tur === 'oturum') throw h; hata.push(ad + ': ' + h.message); }
+    }
+    const not = [tamam.length ? tamam.join(', ') + ' girildi' : '', ...hata].filter(Boolean).join(' · ');
+    if (hata.length && !sessiz) throw new MebHata(not);
+    return { ok: true, not };
+  }
   /* ---------- yeni aday kaydı (SKT02001) + fotoğraf (SKT02002) + sözleşme tarihi (SKT02011) ---------- */
   // is: { donem, grupNo, subeNo, tc, istenen, mevcut, belgeNo, cep, foto (dataURL 350×450), sozlesme (gg/aa/yyyy) }
   async function kayitYaz(is, kodIste) {
@@ -357,10 +393,11 @@
     // evrak ekranları yalnız kurum onayı bekleyen adayları listeler: kayıttan hemen sonra
     if (is.foto) { try { let f = (await zincir('/SKT/skt02002.aspx', [['cmbEgitimDonemi', is.donem], ['cmbAdayAdSoyad', is.tc]])); f.b[adOf(f.s.doc, 'resField')] = is.foto; const r = await postla(f.s, f.b, { dugme: 'ButtonSave' }), m = mesajlar(r.doc, r.doc.documentElement.innerHTML); if (!basari(m)) throw new MebHata(m.l.join(' · ') || 'fotoğraf kaydı doğrulanamadı'); notlar.push('fotoğraf yüklendi'); /* fotoğraf ekranının kendi Kaydet düğmesi: ButtonSave */ } catch (h) { if (h.tur === 'oturum') throw h; notlar.push('fotoğraf: ' + h.message); } }
     if (is.sozlesme) { try { let f = (await zincir('/SKT/skt02011.aspx', [['cmbEgitimDonemi', is.donem], ['cmbAdayAdSoyad', is.tc]])); f.b[adOf(f.s.doc, 'Us_tarih1_txtTarihGiris')] = is.sozlesme; await kaydetDogrula(f.s, f.b, async (d, k) => basari(k), kodIste); notlar.push('sözleşme tarihi girildi'); } catch (h) { if (h.tur === 'oturum') throw h; notlar.push('sözleşme: ' + h.message); } }
+    if (is.evrak) { const r = await evrakYaz(is, kodIste, true); if (r.not) notlar.push(r.not); }
     return { ok: true, not: notlar.join(' · ') };
   }
 
-  const YAZMA = { program: programYaz, teorik: teorikYaz, randevu: randevuYaz, fatura: faturaYaz, esinav: esinavYaz, grup: grupYaz, onay: onayYaz, kayit: kayitYaz };
+  const YAZMA = { evrak: (is, k) => evrakYaz(is, k, false), program: programYaz, teorik: teorikYaz, randevu: randevuYaz, fatura: faturaYaz, esinav: esinavYaz, grup: grupYaz, onay: onayYaz, kayit: kayitYaz };
 
   /* ---------- durum kartı (sayfanın sol altında) ---------- */
   const kok = document.createElement('div'); kok.id = 'sinyal-motor';

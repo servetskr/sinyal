@@ -1,10 +1,11 @@
 // MEBBİS toplu çekme ve toplu yazma (mdSinyal tarafı). İşi MEBBİS Yardımcısı'nın arka plan motoru (eklenti/motor.js)
 // kursun kendi MEBBİS oturumunda, ekran açmadan yürütür; sonuç buraya gelir ve kayıtlarla eşlenir.
-import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, sb, sbDers, cokSube, seciliSube, eksikEvrak } from './veri.js?v=202';
-import { bildir, pencere, kapatPencere, e, ik, isaret, rozet, tarih } from './ui.js?v=202';
-import * as GR from './gruplar.js?v=202';
-import * as EK from './eklenti.js?v=202';
-import { yenile } from './app.js?v=202';
+import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, sb, sbDers, cokSube, seciliSube, eksikEvrak } from './veri.js?v=203';
+import { bildir, pencere, kapatPencere, e, ik, isaret, rozet, tarih } from './ui.js?v=203';
+import * as GR from './gruplar.js?v=203';
+import * as EK from './eklenti.js?v=203';
+import { yenile } from './app.js?v=203';
+import * as ME from './mebevrak.js?v=203';
 
 export const CEKILECEK = [
   ['gruplar', 'Dönem grupları', 'Dönem, grup ve şubeler; eksik grup kartları açılır'],
@@ -23,7 +24,7 @@ const gonder = (tur, veri) => window.postMessage({ kaynak: 'sinyal-sayfa', tur, 
 function hazirMi() {
   if (!EK.eklenti.var) { EK.kurulumPenceresi(); return false; }
   // toplu motor Yardımcı 1.9.0 ile geldi; eski sürüm bu işi tanımaz
-  const sv = String(EK.eklenti.surum || '0').split('.').map(Number); if (sv[0] < 1 || (sv[0] === 1 && (sv[1] || 0) < 9)) { pencere({ baslik: 'MEBBİS Yardımcısı’nı güncelleyin', icerik: `<p>Toplu çekme ve toplu yazma Yardımcı’nın <b>1.9.0</b> sürümüyle geldi; bu tarayıcıda <b>${e(EK.eklenti.surum || 'eski sürüm')}</b> kurulu.</p><p style="margin-top:8px"><a href="${EK.EKLENTI_ZIP}" download style="color:var(--levha);font-weight:700">Yeni sürümü indirin</a>, Chrome’da chrome://extensions sayfasında eski klasörün yerine açın ya da Chrome Web Mağazası güncellemesini bekleyin.</p>`, altlik: '<button class="dg dg-ana" data-kapat>Tamam</button>' }); return false; }
+  const sv = String(EK.eklenti.surum || '0').split('.').map(Number); if (sv[0] < 1 || (sv[0] === 1 && (sv[1] || 0) < 10)) { pencere({ baslik: 'MEBBİS Yardımcısı’nı güncelleyin', icerik: `<p>Toplu çekme ve toplu yazma için Yardımcı’nın <b>1.10.0</b> sürümü gerekiyor; bu tarayıcıda <b>${e(EK.eklenti.surum || 'eski sürüm')}</b> kurulu.</p><p style="margin-top:8px"><a href="${EK.EKLENTI_ZIP}" download style="color:var(--levha);font-weight:700">Yeni sürümü indirin</a>, Chrome’da chrome://extensions sayfasında eski klasörün yerine açın ya da Chrome Web Mağazası güncellemesini bekleyin.</p>`, altlik: '<button class="dg dg-ana" data-kapat>Tamam</button>' }); return false; }
   if (cokSube() && !seciliSube()) { bildir('Önce üstten şube seçin; her şubenin MEBBİS hesabı ayrı', 'uyari'); return false; }
   if (durum.calisiyor && Date.now() - durum.baslama < 30 * 60e3) { bildir('MEBBİS’te süren bir iş var; bitince yenisini başlatın', 'uyari'); return false; }
   return true;
@@ -70,6 +71,10 @@ export function ekIsler(hepsi) {
   sb(S.kursiyerler).filter(k => !k.kapali && k.mebIslendi && mebGrup(k) && !eksikEvrak(k).length && (hepsi || !k.mebOnay) && !((k.meb || {}).kurumOnay || '').match(/onaylandı/i)).forEach(k => {
     l.push({ ...is_('onay', 'onay-' + k.id, `${tamAd(k)} · ${mebGrup(k).ad}`, { ad: tamAd(k), sinif: k.sinif, egitmen: k.egitmen, tarih: k.kayit, detay: 'Kurum onayı' }, mebGrup(k).baslangic, 'Grup başlamadan', { kursiyer: k.id }), bitti: !!k.mebOnay });
   });
+  sb(S.kursiyerler).filter(k => !k.kapali && k.mebIslendi && mebGrup(k) && k.mebEvrak && !k.mebOnay && (hepsi || !k.mebEvrakGirildi)).forEach(k => {
+    const { eksik } = ME.evrakPaketi(k);
+    l.push({ ...is_('evrak', 'evrak-' + k.id, `${tamAd(k)} · ${mebGrup(k).ad}`, { ad: tamAd(k), sinif: k.sinif, egitmen: k.egitmen, tarih: k.kayit, detay: eksik.length ? 'Eksik: ' + eksik.join(', ') : 'Öğrenim, sağlık, adli sicil, parmak izi' }, mebGrup(k).baslangic, 'Kurum onayından önce (onaydan sonra değişmez)', { kursiyer: k.id }), bitti: !!k.mebEvrakGirildi });
+  });
   (S.teorik || []).filter(t => { const g = GR.grupBul(t.grup); return g && GR.mebGrubuMu(g) && (hepsi ? fark(t.tarih) >= -14 : !t.meb && fark(t.tarih) >= 0); }).forEach(t => {
     const g = GR.grupBul(t.grup), o = ogretmenOf(t.ogretmen);
     l.push({ ...is_('teorik', 'teorik-' + t.id, `${g.ad} · ${t.tarih.split('-').reverse().join('.')} ${t.saat} · ${dersTuru(t.konu)}`, { ad: g.ad, tarih: t.tarih, detay: `${t.sure || 1} saat · ${o.ad || ''}` }, t.tarih, 'Ders gününden önce', { teorik: t.id }), bitti: !!t.meb });
@@ -107,7 +112,12 @@ async function hazirla(ids) {
       if (!/^\d{11}$/.test(k.tc || '')) { ekle(x, 'TC kimlik no eksik'); continue; }
       if (!cep10(k.tel)) { ekle(x, 'Cep telefonu 10 hane değil'); continue; }
       const mevcut = k.mevcutEhliyet && k.mevcutEhliyet !== 'Yok' ? k.mevcutEhliyet + ' SINIFI' : '';
-      l.push({ id: x.id, tur: 'kayit', baslik: tamAd(k), donem: g.donem, grupNo: g.grupNo, subeNo: subeNo(g), tc: k.tc, istenen: sertifikaMetni(k), mevcut, belgeNo: mevcut ? String((k.oncekiBelge || {}).sayi || '') : '', cep: cep10(k.tel), foto: await fotoHazirla(k.foto), sozlesme: k.sozlesmeImza && k.sozlesmeImza.tarih ? trT(k.sozlesmeImza.tarih) : '' });
+      l.push({ id: x.id, tur: 'kayit', baslik: tamAd(k), donem: g.donem, grupNo: g.grupNo, subeNo: subeNo(g), tc: k.tc, istenen: sertifikaMetni(k), mevcut, belgeNo: mevcut ? String((k.oncekiBelge || {}).sayi || '') : '', cep: cep10(k.tel), foto: await fotoHazirla(k.foto), sozlesme: k.sozlesmeImza && k.sozlesmeImza.tarih ? trT(k.sozlesmeImza.tarih) : '', adSoyad: tamAd(k), evrak: k.mebEvrak ? ME.evrakPaketi(k).l : null });
+    }
+    if (x.tur === 'evrak') {
+      const k = kursiyer(r.kursiyer), g = k && mebGrup(k); if (!g) { ekle(x, 'Dönem grubuna atanmamış'); continue; }
+      const { l: ev } = ME.evrakPaketi(k); if (!Object.keys(ev).length) { ekle(x, 'Evrak bilgisi girilmemiş (öğrenci dosyası › Bilgiler › Düzenle)'); continue; }
+      l.push({ id: x.id, tur: 'evrak', baslik: tamAd(k), donem: g.donem, tc: k.tc, adSoyad: tamAd(k), evrak: ev });
     }
     if (x.tur === 'grup') { const g = GR.grupBul(r.grup); if (!g) continue; l.push({ id: x.id, tur: 'grup', baslik: g.ad, donem: g.donem, donemAd: GR.donemAdi(g.donem), grupNo: g.grupNo, subeNo: subeNo(g), sube: g.sube, baslangic: trT(g.baslangic) }); }
     if (x.tur === 'teorik') {
@@ -186,11 +196,12 @@ export function durumGeldi(r) {
 }
 function yazilanlariIsle(l) {
   let n = 0; S.mebDurum = S.mebDurum || {};
-  const isaretle = (id, ok) => {
+  const isaretle = (id, ok, not) => {
     const [tur, ...p] = id.split('-'), r = p.join('-');
     if (tur === 'ders') { const d = S.dersler.find(y => y.id === r); if (d && ok && !d.meb) { d.meb = true; delete d.mebDegisti; return 1; } }
     if (tur === 'teorik') { const t = (S.teorik || []).find(y => y.id === r); if (t && ok && !t.meb) { t.meb = true; return 1; } }
-    if (tur === 'kayit') { const k = kursiyer(r); if (k && ok && !k.mebIslendi) { k.mebIslendi = true; return 1; } }
+    if (tur === 'kayit') { const k = kursiyer(r); if (k && ok && !k.mebIslendi) { k.mebIslendi = true; if (k.mebEvrak && !/(öğrenim|sağlık raporu|adli sicil|parmak izi): /.test(not || '')) k.mebEvrakGirildi = gun(0); return 1; } }
+    if (tur === 'evrak') { const k = kursiyer(r); if (k && ok && !k.mebEvrakGirildi) { k.mebEvrakGirildi = gun(0); return 1; } }
     if (tur === 'onay') { const k = kursiyer(r); if (k && ok && !k.mebOnay) { k.mebOnay = gun(0); return 1; } }
     if (tur === 'esinav') { const k = kursiyer(r); if (k && ok && !k.mebEsinav) { k.mebEsinav = gun(0); return 1; } }
     if (tur === 'fatura') { const f = (S.faturalar || []).find(y => String(y.no) === r); if (f && ok && !f.meb) { f.meb = gun(0); return 1; } }
@@ -199,7 +210,7 @@ function yazilanlariIsle(l) {
     return 0;
   };
   l.forEach(x => {
-    if (x.ok) { n += isaretle(x.id, true); if (S.mebDurum[x.id]) { delete S.mebDurum[x.id]; n++; } }
+    if (x.ok) { n += isaretle(x.id, true, x.not); if (S.mebDurum[x.id]) { delete S.mebDurum[x.id]; n++; } }
     else if (!S.mebDurum[x.id] || S.mebDurum[x.id].durum !== 'hata' || S.mebDurum[x.id].not !== x.not) { S.mebDurum[x.id] = { durum: 'hata', zaman: Date.now(), not: x.not }; n++; }
   });
   if (n) kaydet();
@@ -320,7 +331,7 @@ function ozetGoster(o, yazilan) {
     icerik: `<ul style="list-style:none;display:grid;gap:10px">${l.join('') || '<li>Yeni bilgi yok.</li>'}</ul>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button>${o.kursiyerler && o.kursiyerler.yok.length ? `<button class="dg dg-cizgi" data-al-yok>${ik('indir')}${o.kursiyerler.yok.length} adayı mdSinyal’e al</button>` : ''}${o.sinavlar ? `<button class="dg dg-ana" data-sonuc>Sonuçları doldur</button>` : ''}`,
     onAc(d) {
-      const y = d.querySelector('[data-al-yok]'); if (y) y.addEventListener('click', () => { const x = o.kursiyerler.yok; kapatPencere(); import('./sayfalar5.js?v=202').then(m => { location.hash = '#/ayarlar/aktarim'; setTimeout(() => m.aktarimYukle([x[0].baslik, ...x.map(z => z.satir)], 'kursiyer', 'MEBBİS'), 300); }); });
+      const y = d.querySelector('[data-al-yok]'); if (y) y.addEventListener('click', () => { const x = o.kursiyerler.yok; kapatPencere(); import('./sayfalar5.js?v=203').then(m => { location.hash = '#/ayarlar/aktarim'; setTimeout(() => m.aktarimYukle([x[0].baslik, ...x.map(z => z.satir)], 'kursiyer', 'MEBBİS'), 300); }); });
       const s = d.querySelector('[data-sonuc]'); if (s) s.addEventListener('click', () => { kapatPencere(); EK.sinavSonucuAl(sinavTablosu(o.sinavlar)); });
     },
   });
