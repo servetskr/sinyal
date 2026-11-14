@@ -1,23 +1,23 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=197';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=197';
-import * as Y1 from './sayfalar1.js?v=197';
-import * as Y2 from './sayfalar2.js?v=197';
-import * as P from './portal.js?v=197';
-import * as Y3 from './sayfalar3.js?v=197';
-import * as Y4 from './sayfalar4.js?v=197';
-import * as Y5 from './sayfalar5.js?v=197';
-import * as IM from './imza.js?v=197';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=197';
-import * as SN from './senaryo.js?v=197';
-import * as OZ from './ozellik.js?v=197';
-import { durumlariGuncelle } from './mesaj.js?v=197';
-import { yeniMenu } from './yeni.js?v=197';
-import * as B from './bulut.js?v=197';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=197';
-import * as AN from './analiz.js?v=197';
-import * as GZ from './guzergah.js?v=197';
-import * as ORT from './ortak.js?v=197';
-import * as SH from './sahip.js?v=197';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=199';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=199';
+import * as Y1 from './sayfalar1.js?v=199';
+import * as Y2 from './sayfalar2.js?v=199';
+import * as P from './portal.js?v=199';
+import * as Y3 from './sayfalar3.js?v=199';
+import * as Y4 from './sayfalar4.js?v=199';
+import * as Y5 from './sayfalar5.js?v=199';
+import * as IM from './imza.js?v=199';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=199';
+import * as SN from './senaryo.js?v=199';
+import * as OZ from './ozellik.js?v=199';
+import { durumlariGuncelle } from './mesaj.js?v=199';
+import { yeniMenu } from './yeni.js?v=199';
+import * as B from './bulut.js?v=199';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=199';
+import * as AN from './analiz.js?v=199';
+import * as GZ from './guzergah.js?v=199';
+import * as ORT from './ortak.js?v=199';
+import * as SH from './sahip.js?v=199';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -365,13 +365,10 @@ function sessionStorageAl(k) { try { return sessionStorage.getItem(k); } catch (
 const LOGO = `<div class="logo" style="border-bottom:0;margin:0 0 6px"><svg class="logo-isaret" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="#141e33"/><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="1.2"/><g fill="none" stroke="#ffc21a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20l12 12-12 12" stroke-opacity=".38"/><path d="M33 20l12 12-12 12"/></g></svg><span><b><span class="mk">md</span>Sinyal</b><small>Sürücü kursu otomasyonu</small></span></div>`;
 const IPUCLARI = ['Yaya geçidinde öncelik her zaman yayanındır.', 'Sarı ışık “dur”a hazırlan demektir, hızlan demek değildir.', 'Öndeki araçla aranda en az 2 saniyelik mesafe bırak.', 'Emniyet kemeri arka koltukta da takılır.', 'Şerit değiştirmeden önce sinyal ver, aynaya ve kör noktana bak.', 'Yağmurda takip mesafesini iki katına çıkar.', 'Kavşağa girmeden önce hızını düşür, sağdan gelene yol ver.'];
 let ipucuSayac = null;
-// Yükleme ekranı: trafik ışığında bekleyen kurs arabası; altında birkaç saniyede bir değişen kısa trafik ipucu
+// Yükleme ekranı (kurumsal): lacivert zemin, logo, ad, ince çubuk ve durum metni
 function bekleEkrani(metin) {
-  let n = 0;
-  document.getElementById('uyg').innerHTML = `<div class="yukleme" role="status" aria-live="polite"><div class="yk-gokbulut b1" aria-hidden="true"></div><div class="yk-gokbulut b2" aria-hidden="true"></div><div class="yk-ust"><div class="yk-marka"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="#141e33"/><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="1.2"/><g fill="none" stroke="#ffc21a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20l12 12-12 12" stroke-opacity=".38"/><path d="M33 20l12 12-12 12"/></g></svg><span><span class="mk">md</span>Sinyal</span></div><p class="yk-baslik">${e(String(metin).replace(/…$/, ''))}</p><p class="yk-alt">İlk açılışta birkaç saniye sürebilir</p><div class="yk-cubuk" aria-hidden="true"><i></i></div><div class="yukle-ipucu" aria-live="off"><svg viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="9" fill="#1f5fbf"/><path d="M15 6.5 23 21.5H7Z" fill="#fff"/><circle cx="15" cy="12.4" r="1.4" fill="#0b2546"/><path d="M14.8 14.2l-.7 3.6m.7-3.6 2 2.4m-2-2.4-1.8 1.7m1.1 1.9-1.6 2m1.6-2 1.8 1.8" stroke="#0b2546" stroke-width="1.05" stroke-linecap="round"/></svg><div><i>Biliyor muydun?</i><span>${e(IPUCLARI[n])}</span></div></div></div><div class="yukle-sahne" data-yk></div></div>`;
-  const sahne = document.querySelector('#uyg [data-yk]'); if (sahne && window.sinyalYukleme) window.sinyalYukleme(sahne);
   clearInterval(ipucuSayac);
-  ipucuSayac = setInterval(() => { const p = document.querySelector('.yukle-ipucu'); if (!p) return clearInterval(ipucuSayac); p.style.opacity = 0; setTimeout(() => { n = (n + 1) % IPUCLARI.length; p.querySelector('span').textContent = IPUCLARI[n]; p.style.opacity = 1; }, 350); }, 3600);
+  document.getElementById('uyg').innerHTML = `<div class="yukleme" role="status" aria-live="polite"><div class="yk-ic"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="#1b2b45"/><g fill="none" stroke="#ffc21a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20l12 12-12 12" stroke-opacity=".38"/><path d="M33 20l12 12-12 12"/></g></svg><b class="yk-ad"><span class="mk">md</span>Sinyal</b><div class="yk-cubuk" aria-hidden="true"><i></i></div><p class="yk-alt">${e(metin || 'mdSinyal açılıyor')}</p></div></div>`;
 }
 // Gerçek kurs hesabıyla oturum aç
 function bulutOturumu(u, yeniGiris) {
@@ -763,6 +760,7 @@ else if (B.bulutKayitli()) {
   const kp = sessionStorageAl('sinyal-kapandi'); if (kp) { try { sessionStorage.removeItem('sinyal-kapandi'); } catch (x) { } setTimeout(() => bildir(kp + ' dakika işlem yapılmadığı için oturum kapandı; tekrar giriş yapın', 'uyari'), 400); }
 }
 else if (sessionStorageAl('sinyal-kapandi')) { const kp = sessionStorageAl('sinyal-kapandi'); try { sessionStorage.removeItem('sinyal-kapandi'); } catch (x) { } oturum.kullanici = null; girisEkrani('pin'); setTimeout(() => bildir(kp + ' dakika işlem yapılmadığı için oturum kapandı; tekrar giriş yapın', 'uyari'), 400); }
+else if (oturum.kullanici && !oturum.kullanici.bulut && oturum.kullanici.rol === 'ogrenci') ogrenciCiz(true);
 else if (oturum.kullanici && !oturum.kullanici.bulut) { iskelet(); if (!location.hash) location.hash = oturum.kullanici.rol === 'usta' ? '#/egitmen' : '#/genel'; sonAd = rota().ad; yenile(); }
 else girisEkrani(location.hash.startsWith('#/imza-geldi/') ? 'pin' : 'tanitim');
 
