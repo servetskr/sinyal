@@ -1,43 +1,13 @@
-// Öğren: öğrencinin teorik çalışma yolu. Üstte "kaldığın yer", altında ünite ünite konular (asfalt yol üstünde),
-// her konu kısa okuma kartları + araya giren kısa sorular + "akılda kalsın" + sonuç ekranından oluşan bir ders.
-// Oyunlaştırma yok (seri, puan, can): yalnız tamamlanan konu ve doğru sayısı tutulur.
-// Kayıt: k.okunan[id] = tarih (eski "Okudum" ile aynı alan), k.dersSonuc[id] = [doğru, toplam, tarih]; yarım ders yalnız bu cihazda.
-import { S, kaydet, gun, ogrOzellik } from './veri.js?v=204';
+// Öğren: içerik haritası (ana ekran) ve modül sayfaları. Ders oynatıcı js/ogr/ders.js, ortak veri js/ogr/ogrveri.js.
+import { S, ogrOzellik } from './veri.js?v=204';
 import { e, ik } from './ui.js?v=204';
 import { MUFREDAT } from './ogrenci.js?v=204';
-import * as HZ from './hazirlik.js?v=204';
-import { SORU_KONU } from './soruKonu.js?v=204';
-
-const UNITE_AD = { trafik: 'Trafik ve çevre', ilkyardim: 'İlk yardım', motor: 'Araç tekniği', adab: 'Trafik adabı' };
-// konu kapağı: o konuyu en iyi anlatan doğrulanmış levha; yoksa ünitenin levhası
-const KAPAK = {
-  'trafik-1': 'T-19', 'trafik-2': 'T-20', 'trafik-3': 'T-16', 'trafik-4': 'T-21', 'trafik-5': 'TT-25', 'trafik-6': 'TT-27', 'trafik-7': 'P-3a',
-  'trafik-8': 'B-49a', 'trafik-9': 'B-20', 'trafik-12': 'TT-30', 'trafik-13': 'T-26', 'trafik-14': 'T-12', 'trafik-15': 'T-37', 'trafik-16': 'TT-24',
-  'trafik-20': 'T-13', 'motor-2': 'B-26', 'motor-11': 'B-24', 'adab-3': 'T-11', 'adab-5': 'T-20',
-};
-const UNITE_KAPAK = { trafik: 'T-20', motor: 'B-24', adab: 'T-11' };
-// İlk yardım bilgi işareti (mavi levha, beyaz zemin üstünde kırmızı haç): levha kütüphanesinde yok, burada çizilir
-const ILKYARDIM_SVG = '<svg viewBox="0 0 120 120" role="img" aria-label="İlk yardım"><rect x="18" y="8" width="84" height="104" rx="8" fill="#0a4da2"/><rect x="24" y="14" width="72" height="92" rx="5" fill="none" stroke="#fff" stroke-width="2.5"/><rect x="31" y="24" width="58" height="58" fill="#fff"/><path d="M53 31h14v16h16v14H67v16H53V61H37V47h16z" fill="#d52b1e"/></svg>';
-
-let LV = null, SR = null, DR = null;
-const levhaYukle = () => LV ? Promise.resolve(LV) : import('./levha.js?v=204').then(m => (LV = m)).catch(() => (LV = { LEVHA: {} }));
-const yukle = () => Promise.all([levhaYukle(), SR || import('./sorular.js?v=204').then(m => (SR = m.SORULAR)), DR || import('./dersler.js?v=204').then(m => (DR = m.DERSLER))]);
-export const onYukle = cb => { if (!LV) levhaYukle().then(() => cb && cb()); };
-
-const kapakSvg = id => { const key = id.replace(/-\d+$/, ''); const kod = KAPAK[id] || UNITE_KAPAK[key]; if (!kod) return ILKYARDIM_SVG; const l = LV && LV.LEVHA[kod]; return l ? l.svg : ''; };
-const konular = () => MUFREDAT.flatMap(([key, , , bas]) => bas.map((b, i) => ({ id: key + '-' + (i + 1), key, no: i + 1, ad: b })));
-const bitti = (k, id) => !!(k.okunan || {})[id];
-const sonuc = (k, id) => (k.dersSonuc || {})[id];
-const YARIM = 'sinyal-ders-yarim';
-const yarimOku = k => { try { const y = JSON.parse(localStorage.getItem(YARIM) || 'null'); return y && y.k === k.id ? y : null; } catch (x) { return null; } };
-const yarimYaz = (k, id, adim, top) => { try { localStorage.setItem(YARIM, JSON.stringify({ k: k.id, id, adim, top })); } catch (x) { } };
-const yarimSil = () => { try { localStorage.removeItem(YARIM); } catch (x) { } };
-export function siradaki(k) {
-  const y = yarimOku(k), l = konular();
-  if (y && l.some(x => x.id === y.id) && !bitti(k, y.id)) return { ...l.find(x => x.id === y.id), adim: y.adim, top: y.top };
-  return l.find(x => !bitti(k, x.id)) || null;
-}
-const sayac = (k, key) => { const l = konular().filter(x => x.key === key); return [l.filter(x => bitti(k, x.id)).length, l.length]; };
+import { UNITE_AD, ILKYARDIM_SVG, kapakSvg, konular, bitti, sonuc, siradaki, sayac, levhaYukle, veriler, altEkran, altAc, altKapat } from './ogr/ogrveri.js?v=204';
+import { dersBaslat } from './ogr/ders.js?v=204';
+import { SAHNELER } from './tehlike.js?v=204';
+import { esc, oi, sayfaBas, geri, bolum, heroKart, gorsel, dugme, liste, satir, konuSatir, serit, bos, stilEkle } from './ogr/ui.js?v=204';
+export { siradaki, dersBaslat };
+export const onYukle = cb => { if (!veriler().LV) levhaYukle().then(() => cb && cb()); };
 
 /* ---------- Öğren ana ekranı ---------- */
 export function ustHtml(k) {
@@ -55,11 +25,10 @@ export function ustHtml(k) {
   </div></section>`;
 }
 // İçerik haritası: dört ünite + sınava hazırlık; her biri ayrı modül sayfası açar
-let modul = null;
-export const modulAcik = () => modul;
-export const modulKapat = () => { modul = null; };
+export const modulAcik = () => altEkran();
+export const modulKapat = () => altKapat();
 const SINAV_SVG = '<svg viewBox="0 0 120 120" role="img" aria-label="e-Sınav"><rect x="10" y="22" width="100" height="76" rx="8" fill="#0a4da2"/><rect x="16" y="28" width="88" height="64" rx="5" fill="none" stroke="#fff" stroke-width="2.5"/><text x="60" y="58" text-anchor="middle" font-family="Overpass,Arial,sans-serif" font-weight="800" font-size="19" fill="#fff">e-SINAV</text><text x="60" y="80" text-anchor="middle" font-family="Overpass,Arial,sans-serif" font-weight="700" font-size="14" fill="#fff">50 SORU</text></svg>';
-const modulSvg = key => key === 'sinav' ? SINAV_SVG : key === 'ilkyardim' ? ILKYARDIM_SVG : ((LV && LV.LEVHA[{ trafik: 'T-20', motor: 'B-24', adab: 'T-11' }[key]]) || {}).svg || '';
+const modulSvg = key => key === 'sinav' ? SINAV_SVG : key === 'ilkyardim' ? ILKYARDIM_SVG : ((veriler().LV && veriler().LV.LEVHA[{ trafik: 'T-20', motor: 'B-24', adab: 'T-11' }[key]]) || {}).svg || '';
 export function haritaHtml(k) {
   const s = siradaki(k), son = (k.deneme || []).slice(-1)[0];
   const sat = (key, no, ad, alt, b, t, cip) => `<li class="ogn-mod ${cip[0]}"><button data-ogn-modul="${key}"><span class="ogn-mod-art" aria-hidden="true">${modulSvg(key)}</span>
@@ -85,142 +54,161 @@ export function modulHtml(k, key) {
 }
 export function bagla(kap, k, yenile) {
   kap.addEventListener('click', ev => {
-    const md = ev.target.closest('[data-ogn-modul]'); if (md) { modul = md.dataset.ognModul; yenile(); return scrollTo(0, 0); }
-    if (ev.target.closest('[data-ogn-harita]')) { modul = null; yenile(); return scrollTo(0, 0); }
-    const d = ev.target.closest('[data-ogn-ders]'); if (d) dersAc(k, d.dataset.ognDers, yenile);
+    const md = ev.target.closest('[data-ogn-modul]'); if (md) { altAc(md.dataset.ognModul); yenile(); return scrollTo(0, 0); }
+    if (ev.target.closest('[data-ogn-harita]')) { altKapat(); yenile(); return scrollTo(0, 0); }
+    const d = ev.target.closest('[data-ogn-ders]'); if (d) dersBaslat(k, d.dataset.ognDers, yenile);
   });
 }
 
-/* ---------- ders oynatıcı ---------- */
-// cümlelere böl ("md.", "vb." gibi kısaltmalarda bölme), ~240 karakterlik kartlara topla
-const KISA = /(?:md|vb|vs|örn|bkz|no|sn|dk|yy|km\/s|Doç|Dr)\.$/i;
-function kartlara(paragraflar) {
-  const kart = [], uz = l => l.join(' ').length;
-  paragraflar.forEach(p => {
-    const cumle = []; let bas = 0;
-    for (const m of p.matchAll(/[.!?](?=\s+[A-ZÇĞİÖŞÜ0-9“"(])/g)) { const c = p.slice(bas, m.index + 1).trim(); if (KISA.test(c)) continue; cumle.push(c); bas = m.index + 1; }
-    const kalan = p.slice(bas).trim(); if (kalan) cumle.push(kalan);
-    let cur = [];
-    const uz = l => l.join(' ').length;
-    cumle.forEach(c => { if (cur.length && uz([...cur, c]) > 430) { kart.push(cur); cur = [c]; } else cur.push(c); });
-    if (cur.length) kart.push(cur);
-  });
-  // çok kısa kartı öncekine ekle
-  for (let i = kart.length - 1; i > 0; i--) if (uz(kart[i]) < 140) { kart[i - 1].push(...kart[i]); kart.splice(i, 1); }
-  return kart;
+/* ---------- yeni tasarım (js/ogr/ekran.js yönlendiricisi çağırır) ---------- */
+// Öğren ana ekranı, modül sayfaları (trafik|ilkyardim|motor|adab) ve tüm konular (tum | tum:<modül>).
+const MODUL_GORSEL = { trafik: 'modul-trafik', ilkyardim: 'modul-ilkyardim', motor: 'modul-motor', adab: 'modul-adab' };
+const DERS_SORU = 5; // her kısa derste 5 soru (ogr/ders.js sorulariSec; her konunun havuzunda en az 5 soru var)
+const KESFET = [['etkilesim:ikaz', 'İkaz lambaları', 'ikaz'], ['etkilesim:motor', '4 zamanlı motor', 'motor'], ['etkilesim:kalkis', 'Debriyaj ve kalkış', 'motor']];
+const buyukHarf = t => t ? t.charAt(0).toLocaleUpperCase('tr') + t.slice(1) : t;
+// "Trafik işaretleri: uyarı, tanzim ve bilgi levhaları" → ["Trafik işaretleri", "Uyarı, tanzim ve bilgi levhaları"]
+const baslikBol = ad => { const i = ad.indexOf(':'); return i > 0 ? [ad.slice(0, i).trim(), buyukHarf(ad.slice(i + 1).trim())] : [ad, '']; };
+// arama için sadeleştir: küçük harf, Türkçe harfler ve noktalama yok sayılır ("isaret" → "işaretleri")
+const sade = t => String(t).toLocaleLowerCase('tr').replace(/[çğıöşüâîû]/g, c => ({ ç: 'c', ğ: 'g', ı: 'i', ö: 'o', ş: 's', ü: 'u', â: 'a', î: 'i', û: 'u' }[c])).replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+const modulKonular = key => konular().filter(x => x.key === key);
+// modülde sıradaki konu: yarım ders bu modüldeyse o, yoksa modülün ilk bitmemiş konusu
+const modulSiradaki = (k, key) => { const s = siradaki(k); if (s && s.key === key) return s.id; const x = modulKonular(key).find(y => !bitti(k, y.id)); return x ? x.id : null; };
+function konuSatiri(k, x, siraId = null) {
+  const ok = bitti(k, x.id), r = sonuc(k, x.id);
+  const ek = ok && r ? `<small class="ox-ogr-sonuc">${r[0]} / ${r[1]} doğru</small>` : '';
+  return konuSatir({ no: x.no, ad: `<span>${esc(x.ad)}</span>${ek}`, durum: ok ? 'bitti' : x.id === siraId ? 'siradaki' : '', attrs: { 'data-og-ders': x.id, 'data-ox-ogr-sade': sade(x.ad), 'aria-label': `${x.no}. konu: ${x.ad}${ok ? ', tamamlandı' : x.id === siraId ? ', sıradaki' : ''}` } });
 }
-// metindeki sayı + birim, yasak ve zorunluluk ifadelerini vurgula (öğrencinin aklında kalacak yerler)
-const vurgu = t => e(t).replace(/(%\s?\d+[\d.,]*|\d+[\d.,]*\s?(?:km\/s(?:aat)?|km|metre|m|cm|saniye|dakika|saat|gün|ay|yıl|yaş|promil|kg|ton|puan|kez)\b)/g, '<em>$1</em>');
-const karistir = l => { const a = l.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-function sorulariSec(id, n = 5) {
-  const key = id.replace(/-\d+$/, ''), no = +id.split('-').pop(), c = no.toString(36), havuz = [];
-  for (let i = 0; i < SORU_KONU.length && i < SR.length; i++) if (SORU_KONU[i] === c && SR[i][0] === key) havuz.push(i);
-  return karistir(havuz).slice(0, n);
-}
-function adimlar(id) {
-  const d = DR[id] || { paragraflar: [] }, kartlar = kartlara(d.paragraflar), sor = sorulariSec(id), l = [{ tur: 'kapak' }];
-  const araSoru = Math.min(2, Math.max(0, sor.length - 3)); let si = 0;
-  kartlar.forEach((m, i) => { l.push({ tur: 'oku', m }); if (si < araSoru && (i + 1) % 2 === 0 && i < kartlar.length - 1) l.push({ tur: 'soru', qi: sor[si++] }); });
-  if ((d.videolar || []).length) l.push({ tur: 'video', v: d.videolar[0] });
-  if ((d.akilda || []).length) l.push({ tur: 'akilda', l: d.akilda });
-  while (si < sor.length) l.push({ tur: 'soru', qi: sor[si++] });
-  l.push({ tur: 'son' });
-  return l;
-}
-const gorsel = g => !g ? '' : String(g).startsWith('L:') ? ((LV && LV.LEVHA[g.slice(2)]) || {}).svg || '' : g;
 
-let acik = null;
-export const dersBaslat = (k, id, yenile) => dersAc(k, id, yenile);
-// sesli dinleme: telefonun Türkçe sesiyle o anki kart okunur (internet ya da ücret gerekmez)
-const sesVar = () => ogrOzellik('sesli') && 'speechSynthesis' in window;
-const sus = () => { try { speechSynthesis.cancel(); } catch (x) { } };
-function oku(metinler, bitince) { sus(); const ses = speechSynthesis.getVoices().find(v => /^tr/i.test(v.lang)); metinler.filter(Boolean).forEach((t, i, l) => { const u = new SpeechSynthesisUtterance(t); u.lang = 'tr-TR'; if (ses) u.voice = ses; u.rate = 0.95; if (i === l.length - 1) u.onend = bitince; speechSynthesis.speak(u); }); }
-async function dersAc(k, id, yenile) {
-  if (acik) return;
-  const kok = document.createElement('div');
-  kok.className = 'ogn-oyn'; kok.setAttribute('role', 'dialog'); kok.setAttribute('aria-modal', 'true');
-  kok.innerHTML = `<div class="ogn-oyn-ust"><button class="ogn-kapat" data-ogn-kapat aria-label="Dersi kapat">${ik('kapat')}</button><div class="ogn-serit"><i></i></div>${sesVar() ? `<button class="ogn-ses" data-ogn-ses aria-label="Sesli dinle" aria-pressed="false">${ik('ses')}</button>` : ''}</div><div class="ogn-sahne"><p class="ogn-yukleniyor">Ders hazırlanıyor…</p></div>`;
-  document.body.appendChild(kok); document.body.classList.add('ogn-acik'); acik = kok;
-  requestAnimationFrame(() => kok.classList.add('gir'));
-  try { await yukle(); } catch (x) { kok.querySelector('.ogn-sahne').innerHTML = '<p class="ogn-yukleniyor">Ders yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.</p>'; }
-  const key = id.replace(/-\d+$/, ''), no = +id.split('-').pop(), m = MUFREDAT.find(x => x[0] === key), ad = m ? m[3][no - 1] : id;
-  const L = adimlar(id), y = yarimOku(k);
-  let i = y && y.id === id && y.adim < L.length - 1 ? Math.min(y.adim, L.length - 2) : 0;
-  const cevap = [];  // [qi, seçilen]
-  const sahne = kok.querySelector('.ogn-sahne'), serit = kok.querySelector('.ogn-serit i');
-  const sesDg = kok.querySelector('[data-ogn-ses]'), sesKapat = () => { sus(); if (sesDg) sesDg.setAttribute('aria-pressed', 'false'); };
-  const kapat = () => { sesKapat(); kok.classList.remove('gir'); kok.classList.add('cik'); document.body.classList.remove('ogn-acik'); acik = null; document.removeEventListener('keydown', tus); setTimeout(() => kok.remove(), 260); yenile(); };
-  const tus = ev => { if (ev.key === 'Escape') kapat(); };
-  document.addEventListener('keydown', tus);
-  const sonrakiKonu = () => { const l = konular(), j = l.findIndex(x => x.id === id); return l.slice(j + 1).find(x => !bitti(k, x.id)) || null; };
-
-  function ciz(yon = 1) {
-    sesKapat();
-    const a = L[i], ilerle = Math.round(i / (L.length - 1) * 100);
-    serit.style.width = ilerle + '%';
-    if (i > 0 && a.tur !== 'son') yarimYaz(k, id, i, L.length);
-    let h = '';
-    if (a.tur === 'kapak') {
-      const okuSay = L.filter(x => x.tur === 'oku').length, soruSay = L.filter(x => x.tur === 'soru').length;
-      h = `<div class="ogn-kart kapak"><div class="ogn-sanat" aria-hidden="true">${kapakSvg(id)}</div>
-        <p class="ogn-goz koyu">${e(UNITE_AD[key])} · ${no}. konu</p><h2 class="ogn-h2">${e(ad)}</h2>
-        <p class="ogn-meta">${okuSay} kart · ${soruSay} soru · yaklaşık ${Math.max(3, Math.round((okuSay * 40 + soruSay * 20) / 60))} dakika</p>
-        ${(DR[id] && DR[id].akilda || []).length ? `<div class="ogn-hedef"><p>Bu konuda öğreneceklerin</p><ul>${DR[id].akilda.slice(0, 3).map(x => `<li>${e(x)}</li>`).join('')}</ul></div>` : ''}</div>
-        <div class="ogn-alt"><button class="ogn-dg" data-ogn-ileri>${i === 0 && y && y.id === id ? 'Baştan başla' : 'Başla'}</button></div>`;
-    } else if (a.tur === 'oku') {
-      const sira = L.slice(0, i + 1).filter(x => x.tur === 'oku').length, top = L.filter(x => x.tur === 'oku').length;
-      h = `<div class="ogn-kart"><div class="ogn-kart-bas"><span class="ogn-mini" aria-hidden="true">${kapakSvg(id)}</span><span><b>${e(ad)}</b><small>${sira} / ${top}</small></span></div>
-        <p class="ogn-lead">${vurgu(a.m[0])}</p>${a.m.length > 1 ? `<p class="ogn-okur">${vurgu(a.m.slice(1).join(' '))}</p>` : ''}</div>
-        <div class="ogn-alt"><button class="ogn-dg" data-ogn-ileri>Devam</button></div>`;
-    } else if (a.tur === 'video') {
-      h = `<div class="ogn-kart"><p class="ogn-goz">Kısa video</p><h2 class="ogn-h2 kucuk">${e(a.v.baslik)}</h2>
-        <button class="ogn-video" data-ogn-video="${e(a.v.id)}" aria-label="Videoyu oynat: ${e(a.v.baslik)}"><img src="https://i.ytimg.com/vi/${encodeURIComponent(a.v.id)}/hqdefault.jpg" alt="" loading="lazy"><span aria-hidden="true">${ik('sag')}</span></button>
-        <p class="ogn-meta">${e(a.v.kanal || '')}</p></div>
-        <div class="ogn-alt"><button class="ogn-dg" data-ogn-ileri>Devam</button></div>`;
-    } else if (a.tur === 'akilda') {
-      h = `<div class="ogn-kart"><div class="ogn-akilda"><p class="ogn-akilda-bas">Akılda kalsın</p><ul>${a.l.map(x => `<li>${vurgu(x)}</li>`).join('')}</ul></div></div>
-        <div class="ogn-alt"><button class="ogn-dg" data-ogn-ileri>Devam</button></div>`;
-    } else if (a.tur === 'soru') {
-      const q = SR[a.qi], c = a.c;
-      h = `<div class="ogn-kart ogn-soru"><p class="ogn-goz sari"><i aria-hidden="true"></i>Kısa soru</p>
-        ${q[4] ? `<div class="ogn-soru-gorsel">${gorsel(q[4])}</div>` : ''}<p class="ogn-kok">${e(q[1])}</p>
-        <div class="ogn-siklar">${q[2].map((s, j) => `<button class="ogn-sik ${c == null ? '' : j === q[3] ? 'dogru' : j === c ? 'yanlis' : 'soluk'}" data-ogn-sik="${j}" ${c == null ? '' : 'disabled'}><kbd>${'ABCD'[j]}</kbd><span>${e(s)}</span></button>`).join('')}</div></div>
-        ${c == null ? '' : `<div class="ogn-geri ${c === q[3] ? 'iyi' : 'kotu'}" role="status"><p class="ogn-geri-bas"><span>${ik(c === q[3] ? 'tik' : 'kapat')}</span>${c === q[3] ? 'Doğru' : 'Doğrusu ' + 'ABCD'[q[3]]}</p>${q[5] ? `<p>${e(q[5])}</p>` : ''}<button class="ogn-dg" data-ogn-ileri>Devam</button></div>`}`;
-    } else if (a.tur === 'son') {
-      const d = cevap.filter(([qi, c]) => SR[qi][3] === c).length, t = cevap.length, sk = sonrakiKonu();
-      h = `<div class="ogn-kart son"><div class="ogn-sanat kucuk" aria-hidden="true">${kapakSvg(id)}</div><p class="ogn-goz koyu">Konu tamamlandı</p><h2 class="ogn-h2">${e(ad)}</h2>
-        ${t ? `<div class="ogn-skor"><b>${d}</b><span>/${t}</span><small>soruyu doğru cevapladın</small></div>
-        <p class="ogn-meta">${d === t ? 'Hepsi doğru.' : `Yanlış yaptığın ${t - d} soru tekrar listene eklendi; birkaç gün sonra yeniden sorulacak.`}</p>` : ''}</div>
-        <div class="ogn-alt">${sk ? `<button class="ogn-dg cift" data-ogn-sonraki="${sk.id}"><small>Sıradaki konu</small><span>${e(sk.ad)}</span></button>` : ''}<button class="ogn-dg ikinci" data-ogn-kapat>Öğren'e dön</button></div>`;
-    }
-    sahne.innerHTML = `<div class="ogn-ekran ${yon < 0 ? 'geri' : ''}">${h}</div>`;
-    const ilk = sahne.querySelector('[data-ogn-ileri],[data-ogn-sik],[data-ogn-sonraki]'); if (ilk && a.tur !== 'soru') ilk.focus({ preventScroll: true });
+function anaHtml(k) {
+  const tum = konular(), biten = tum.filter(x => bitti(k, x.id)).length, s = siradaki(k);
+  const esGecti = !!(k.esinav && k.esinav.sonuc === 'Geçti');
+  let hero;
+  if (!s) {
+    hero = heroKart({ ust: 'Eğitim konuları', baslik: 'Hepsini bitirdin', alt: `${tum.length} konunun hepsi tamam.`, meta: esGecti ? 'Bilgini denemeyle taze tut.' : 'Sırada deneme sınavı var.', gorsel: 'hero-arac', cls: 'ox-ogr-hero', dugme: dugme('Deneme sınavına geç', { 'data-ox-alt': 'deneme' }, { genis: true, ok: true }) });
+  } else {
+    const ilk = !biten && !s.adim, yarim = !!s.adim, [bas, kalan] = baslikBol(s.ad);
+    const yuzde = yarim && s.top ? Math.round(s.adim / s.top * 100) : 0;
+    hero = heroKart({
+      ust: ilk ? 'İlk adımın' : yarim ? 'Kaldığın yer' : 'Sıradaki konu',
+      baslik: esc(ilk ? 'Trafiğe ilk adım' : bas),
+      alt: esc(ilk ? s.ad : kalan || UNITE_AD[s.key]),
+      meta: yarim ? `${s.no}. konu · %${yuzde} tamamlandı` : `${s.no}. konu · ${DERS_SORU} soru`,
+      gorsel: 'hero-arac', cls: 'ox-ogr-hero',
+      icerik: yarim ? `<div class="ox-ogr-hero-serit">${serit(yuzde)}</div>` : '',
+      dugme: dugme(ilk ? 'İlk dersine başla' : 'Derse devam et', { 'data-og-ders': s.id }, { genis: true, ok: true }),
+    });
   }
-  function bitir() {
-    const d = cevap.filter(([qi, c]) => SR[qi][3] === c).length;
-    k.okunan = k.okunan || {}; k.okunan[id] = k.okunan[id] || gun(0);
-    k.dersSonuc = k.dersSonuc || {}; k.dersSonuc[id] = [d, cevap.length, gun(0)];
-    if (cevap.length) {
-      const yanlis = cevap.filter(([qi, c]) => SR[qi][3] !== c).map(([qi]) => qi), dogru = cevap.filter(([qi, c]) => SR[qi][3] === c).map(([qi]) => qi);
-      k.yanlislar = [...new Set([...(k.yanlislar || []).filter(x => !dogru.includes(x)), ...yanlis])];
-      k.konuAnaliz = k.konuAnaliz || {}; const a = k.konuAnaliz[key] || [0, 0]; k.konuAnaliz[key] = [a[0] + d, a[1] + cevap.length];
-      HZ.gorulenEkle(k, cevap.map(([qi]) => qi)); HZ.tekrarGuncelle(k, cevap.map(([qi, c]) => [qi, SR[qi][3] === c]));
-    }
-    yarimSil(); kaydet();
-  }
-  kok.addEventListener('click', ev => {
-    const t = ev.target;
-    if (t.closest('[data-ogn-kapat]')) return kapat();
-    if (t.closest('[data-ogn-ses]')) {
-      if (sesDg.getAttribute('aria-pressed') === 'true') return sesKapat();
-      const a = L[i], q = a.tur === 'soru' ? SR[a.qi] : null;
-      const metin = a.tur === 'kapak' ? [ad, ...((DR[id] && DR[id].akilda) || []).slice(0, 3)] : a.tur === 'oku' ? [a.m.join(' ')] : a.tur === 'akilda' ? ['Akılda kalsın.', ...a.l] : a.tur === 'video' ? [a.v.baslik] : q ? [q[1], ...q[2].map((x, j) => 'ABCD'[j] + ': ' + x), ...(a.c != null && q[5] ? [q[5]] : [])] : [sahne.innerText];
-      sesDg.setAttribute('aria-pressed', 'true'); return oku(metin, () => sesDg.setAttribute('aria-pressed', 'false'));
-    }
-    const v = t.closest('[data-ogn-video]'); if (v) { const f = document.createElement('iframe'); f.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(v.dataset.ognVideo) + '?autoplay=1&rel=0&playsinline=1'; f.title = v.getAttribute('aria-label'); f.allow = 'autoplay; encrypted-media; picture-in-picture'; f.allowFullscreen = true; f.className = 'ogn-video'; v.replaceWith(f); return; }
-    const s = t.closest('[data-ogn-sik]'); if (s && L[i].c == null) { const c = +s.dataset.ognSik; L[i].c = c; cevap.push([L[i].qi, c]); ciz(); const g = sahne.querySelector('.ogn-geri .ogn-dg'); if (g) g.focus({ preventScroll: true }); if (navigator.vibrate && c !== SR[L[i].qi][3]) try { navigator.vibrate(30); } catch (x) { } return; }
-    if (t.closest('[data-ogn-ileri]')) { if (i < L.length - 1) { i++; if (L[i].tur === 'son') bitir(); ciz(1); } return; }
-    const sn = t.closest('[data-ogn-sonraki]'); if (sn) { sesKapat(); kok.remove(); document.body.classList.remove('ogn-acik'); acik = null; document.removeEventListener('keydown', tus); return dersAc(k, sn.dataset.ognSonraki, yenile); }
-  });
-  ciz();
+  const moduller = MUFREDAT.map(([key]) => {
+    const [b, t] = sayac(k, key);
+    const alt = b === t ? `<small class="yesil">Tamamlandı</small>` : `<small>${b ? `${b} / ${t}` : t} konu</small>`;
+    return `<button type="button" class="ox-ogr-mod" data-ox-alt="${key}" aria-label="${esc(UNITE_AD[key])}: ${b} / ${t} konu tamamlandı"><span class="ox-ogr-mod-yazi"><b>${esc(UNITE_AD[key])}</b>${alt}</span>${gorsel(MODUL_GORSEL[key], '', 'ox-ogr-mod-g ' + key)}</button>`;
+  }).join('');
+  const son = (k.deneme || []).slice(-1)[0], gecti = esGecti;
+  const denemeAlt = `50 soru · 45 dakika<br>${gecti ? 'E-sınavı geçtin.' : son != null ? `Son deneme puanın: ${son}` : 'Hazır olduğunda kendini dene.'}`;
+  return `<header class="ox-sayfa-bas ox-ogr-bas"><div><h1>Öğren</h1><p>İyi sürücülük, sağlam bilgiyle başlar.</p></div><span class="ox-sayfa-sag" aria-label="${biten} / ${tum.length} konu tamamlandı">${biten} / ${tum.length} konu</span></header>`
+    + hero
+    + bolum('Eğitim konuları', `${MUFREDAT.length} alan`)
+    + `<div class="ox-ogr-izgara">${moduller}</div>`
+    + `<div class="ox-ogr-araclar">`
+    + liste([satir({ ikon: 'panoSoru', baslik: 'Deneme sınavı', alt: denemeAlt, sag: `<span class="ox-bag">İncele${oi('ok')}</span>`, ok: false, attrs: { 'data-ox-alt': 'deneme' }, cls: 'ox-ogr-deneme' })])
+    + liste([satir({ ikon: 'kartlar', baslik: 'Çalışma araçları', alt: 'Hızlı test ve konu tekrarı', attrs: { 'data-ox-alt': 'araclar' } })])
+    + `</div>`;
 }
+
+function modulSayfa(k, key) {
+  const l = modulKonular(key), [b, t] = sayac(k, key), siraId = modulSiradaki(k, key);
+  // ilk 5 konu; ilerlemiş öğrencide sıradaki konu görünsün diye pencere kayar (bir önceki biten konu da görünür)
+  const i0 = siraId ? l.findIndex(x => x.id === siraId) : 0, bas0 = Math.max(0, Math.min(i0 - 1, l.length - 5));
+  // Tehlike algısı ve Keşfet araçları kursun öğrenci uygulaması ayarına bağlı (Ayarlar › Öğrenci uygulaması)
+  const th = (k.tehlike || []).slice(-1)[0], kesfet = KESFET.filter(([, , oz]) => ogrOzellik(oz));
+  const ek = key === 'trafik' && ogrOzellik('tehlike')
+    ? `<button type="button" class="ox-ogr-mod genis ox-ogr-teh" data-ox-alt="tehlike"><span class="ox-ogr-mod-yazi"><b>Tehlike algısı</b><small>${SAHNELER.length} sahne${th ? ` · son puanın ${th.puan} / ${th.en}` : ''}</small></span>${gorsel('modul-adab', '', 'ox-ogr-mod-g adab')}</button>`
+    : key === 'motor' && kesfet.length ? bolum('Keşfet') + liste(kesfet.map(([a, ad]) => satir({ baslik: ad, attrs: { 'data-ox-alt': a }, cls: 'ox-ogr-kesfet' }))) : '';
+  return geri('Öğren', { 'data-ox-alt': '' })
+    + `<div class="ox-ogr-mbas">${sayfaBas(esc(UNITE_AD[key]), `${t} konu · ${b} tamamlandı`, gorsel(MODUL_GORSEL[key], '', 'ox-ogr-mbas-g ' + key))}</div>`
+    + liste(l.slice(bas0, bas0 + 5).map(x => konuSatiri(k, x, siraId)), 'ox-ogr-konular')
+    + dugme(`Tüm ${t} konuyu gör`, { 'data-ox-alt': 'tum:' + key }, { tur: 'ikincil', genis: true, ok: true }).replace('class="ox-dg', 'class="ox-ogr-tumdg ox-dg')
+    + ek;
+}
+
+function tumHtml(k, key) {
+  const tek = MUFREDAT.some(m => m[0] === key);
+  const grup = m => { const l = modulKonular(m), [b, t] = sayac(k, m); return `<section class="ox-ogr-grup" data-ox-ogr-grup>${tek ? '' : bolum(esc(UNITE_AD[m]), `${b} / ${t}`)}${liste(l.map(x => konuSatiri(k, x)))}</section>`; };
+  return geri(tek ? esc(UNITE_AD[key]) : 'Öğren', { 'data-ox-alt': tek ? key : '' })
+    + sayfaBas('Tüm konular', tek ? `${esc(UNITE_AD[key])} (${modulKonular(key).length} konu)` : `${MUFREDAT.length} alan · ${konular().length} konu`)
+    + `<label class="ox-ogr-ara">${oi('ara')}<input type="search" placeholder="Konu ara…" aria-label="Konu ara" autocomplete="off" enterkeyhint="search" data-ox-ogr-ara></label>`
+    + `<div class="ox-ogr-tum${tek ? ' tek' : ''}">${(tek ? [key] : MUFREDAT.map(m => m[0])).map(grup).join('')}</div>`
+    + `<div class="ox-ogr-yok" data-ox-ogr-yok hidden>${bos('ara', 'Bu aramayla konu bulunamadı', 'Başka bir kelimeyle dene.')}</div>`;
+}
+// arama: ekran yeniden çizilmez (klavye ve odak kaybolmasın); satırlar yalnız gizlenir
+function tumBagla(kap) {
+  const girdi = kap.querySelector('[data-ox-ogr-ara]'); if (!girdi) return;
+  const yok = kap.querySelector('[data-ox-ogr-yok]');
+  girdi.addEventListener('input', () => {
+    const q = sade(girdi.value); let toplam = 0;
+    kap.querySelectorAll('[data-ox-ogr-grup]').forEach(g => {
+      let ilk = true, say = 0;
+      g.querySelectorAll('.ox-konu').forEach(r => {
+        const gor = !q || r.dataset.oxOgrSade.includes(q);
+        r.hidden = !gor; r.classList.toggle('ox-ogr-ilk', gor && ilk); if (gor) { ilk = false; say++; }
+      });
+      g.hidden = !say; toplam += say;
+    });
+    yok.hidden = !!toplam;
+  });
+}
+
+export function ekran(ctx) {
+  const { k } = ctx, a = altEkran() || '';
+  if (MODUL_GORSEL[a]) return { html: modulSayfa(k, a) };
+  if (a === 'tum' || a.startsWith('tum:')) return { html: tumHtml(k, a.slice(4)), baglan: tumBagla };
+  return { html: anaHtml(k) };
+}
+
+stilEkle('ox-ogren', `
+.ox-ogr-bas{display:block;position:relative}
+.ox-ogr-bas h1{padding-right:120px}
+.ox-ogr-bas .ox-sayfa-sag{position:absolute;right:0;top:6px;padding:0}
+/* modul-adab.webp temizlendi; kırpma gerekmez */
+/* hero: referanstaki gibi alt başlık ("Trafikle ilgili temel kavramlar") 393 genişlikte tek satıra sığsın diye yazı sütunu %61, çizim %38 */
+.ox-ogr-hero .ox-hero-gorsel{top:22px;right:6px;width:38%;max-width:176px;height:auto;aspect-ratio:3/2}
+.ox-ogr-hero.gorselli .ox-hero-yazi{max-width:61%}
+.ox-ogr-hero .ox-hero-alt{color:var(--ox-metin)}
+.ox-ogr-hero-serit{position:relative;z-index:1;max-width:61%;margin-top:10px}
+.ox-ogr-izgara{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ox-ogr-mod{position:relative;display:block;width:100%;min-height:100px;padding:16px 14px 14px 16px;text-align:left;background:var(--ox-kart);border:1px solid var(--ox-cizgi)!important;border-radius:var(--ox-r);box-shadow:var(--ox-golge);overflow:hidden}
+.ox-ogr-mod:active{background:#f2f5fa}
+.ox-ogr-mod-yazi{position:relative;z-index:1;display:grid;gap:4px;max-width:66%}
+.ox-ogr-mod-yazi b{font-size:16px;line-height:1.25;font-weight:700;letter-spacing:-.01em;color:var(--ox-bas)}
+.ox-ogr-mod-yazi small{display:flex;align-items:center;gap:3px;font-size:14px;line-height:1.3;color:var(--ox-ikincil);white-space:nowrap}
+.ox-ogr-mod-yazi small.yesil{color:var(--ox-yesil)}
+.ox-ogr-mod-yazi small .ox-i{width:15px;height:15px;stroke-width:2.6}
+.ox-ogr-mod-g{position:absolute;right:4px;bottom:8px;width:42%;max-width:80px;height:auto;aspect-ratio:6/5;object-fit:contain;pointer-events:none}
+@media (max-width:389px){.ox-ogr-mod-g{width:38%}.ox-ogr-mod-yazi{max-width:70%}}
+.ox-ogr-mod.genis{min-height:104px;margin-top:20px;padding:20px 16px;display:flex;align-items:center}
+.ox-ogr-mod.genis .ox-ogr-mod-yazi{max-width:58%}
+.ox-ogr-mod.genis .ox-ogr-mod-g{width:120px;max-width:none;right:12px;top:auto;bottom:4px}
+.ox-ogr-araclar{display:grid;gap:12px;margin-top:20px}
+.ox-ogr-deneme .ox-satir-govde small{line-height:1.4}
+.ox-ogr-deneme .ox-satir-sag .ox-bag{font-size:16px}
+.ox-ogr-mbas .ox-sayfa-bas{align-items:center;margin:0 0 24px}
+.ox-ogr-mbas .ox-sayfa-bas>div{min-width:0}
+.ox-ogr-mbas .ox-sayfa-sag{padding:0;display:block}
+.ox-ogr-mbas-g{width:min(140px,34vw);height:auto;aspect-ratio:6/5;object-fit:contain}
+.ox-ogr-konular .ox-konu-ad,.ox-ogr-tum .ox-konu-ad{display:grid;gap:2px}
+.ox-ogr-sonuc{font-size:14px;font-weight:500;color:var(--ox-ikincil)}
+.ox-ogr-tumdg{margin-top:16px}
+.ox-ogr-tumdg span{flex:1;text-align:center;padding-left:29px}
+.ox-ogr-kesfet{min-height:52px}
+.ox-ogr-kesfet .ox-satir-govde b{font-weight:500}
+.ox-ogr-ara{display:flex;align-items:center;gap:10px;height:48px;padding:0 14px;margin-bottom:16px;background:var(--ox-kart);border:1px solid var(--ox-cizgi);border-radius:var(--ox-r-dg);box-shadow:var(--ox-golge);color:var(--ox-soluk);cursor:text}
+.ox-ogr-ara:focus-within{border-color:var(--ox-mavi);box-shadow:0 0 0 3px var(--ox-mavi-acik)}
+.ox-ogr-ara .ox-i{width:20px;height:20px;stroke-width:2}
+.ox-ogr-ara input{flex:1;min-width:0;height:100%;border:0;outline:0;background:none;padding:0;font:inherit;font-size:16px;color:var(--ox-bas);-webkit-appearance:none;appearance:none}
+.ox-ogr-ara input::placeholder{color:var(--ox-soluk)}
+.ox-ogr-ara input::-webkit-search-cancel-button{-webkit-appearance:none}
+.ox-ogr-tum [hidden],.ox-ogr-yok[hidden]{display:none!important}
+.ox-ogr-tum .ox-konu.ox-ogr-ilk::before{display:none}
+.ox-ogr-grup .ox-bolum{margin-top:24px}
+.ox-ogr-grup:first-child .ox-bolum{margin-top:4px}
+`);

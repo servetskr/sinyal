@@ -85,3 +85,7 @@ export function tehlikeAc(k) {
     },
   });
 }
+
+/* ---------- yeni öğrenci tasarımı (js/ogr/araclar.js): sayfa içi oyun aynı sahne ve puanlamayı kullanır ---------- */
+export const TEHLIKE_SURE = T;
+export const tehlikePuanla = puanla;

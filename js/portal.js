@@ -21,6 +21,7 @@ import { soruKonu } from './soruKonu.js?v=204';
 import { MUFREDAT } from './ogrenci.js?v=204';
 import * as TK from './takvim.js?v=204';
 import * as OGR from './ogren.js?v=204';
+import * as OX from './ogr/ekran.js?v=204';
 
 let egId = 'e1', egSekme = 'bugun';
 let ogId = null, ogSekme = (() => { try { return sessionStorage.getItem('sinyal-og-sekme') || 'durum'; } catch (x) { return 'durum'; } })();
@@ -505,6 +506,16 @@ function sinavMenu(k) {
   const icerik = `<section class="og-grup"><h3 class="og-grup-bas">Ders içerikleri</h3>${OG.teorikModul(k, false)}</section>`;
   return ozet + `<section class="og-grup"><h3 class="og-grup-bas">Sınavların</h3>${OG.sinavlarHtml(k)}${GZ.ogrenciHtml(k)}</section>` + (dirOnce ? dirBolum + esBolum : esBolum + dirBolum);
 }
+// Öğrenci ekranlarında ortak eylemler (ödeme, ders saati değişikliği, randevu, kursa yaz, ek ders cevabı): eski ve yeni tasarım birlikte kullanır
+function ogGenelTik(t, k) {
+  const o = t.closest('[data-ode]'); if (o) odemeYap(k, +o.dataset.ode);
+  const oe = t.closest('[data-og-ekders]'); if (oe) { if (oe.dataset.ogEkders === 'evet') ekDersKabul(k); else { k.ekDersTeklif = null; kaydet(); bildirimler([{ kim: 'mudur', metin: `${tamAd(k)} ek direksiyon dersi teklifini istemedi.`, tur: 'Kursiyer cevabı' }], 'Ek ders'); bildir('Cevabın kursa iletildi'); yenile(); } }
+  const ob = t.closest('[data-og-bos]'); if (ob) bosTeklifKabul(ob.dataset.ogBos, k.id, true);
+  const dg = t.closest('[data-degis]'); if (dg) { const sd2 = sonrakiDers(k), m = `Merhaba, ben ${tamAd(k)}. ${sd2 ? tarihUzun(sd2.tarih) + ' ' + sd2.saat + ' direksiyon dersimin saatini' : 'Ders saatimi'} değiştirmek istiyorum.`; gonderimEkle(S.kurs.ad, m, 'Kursiyer talebi'); const kno = S.kurs.wp || S.kurs.wpGenel || S.kurs.tel; if (!waNumara(kno)) return bildir('Kursun WhatsApp numarası kayıtlı değil; kursu arayın' + (S.kurs.tel ? ': ' + S.kurs.tel : ''), 'uyari'); if (waAc(kno, m, 'WhatsApp', tamAd(k), false, 'KURSA GELEN') !== 'api') bildir('WhatsApp açıldı; mesajı kursa gönder', 'wp'); }
+  if (t.closest('[data-iste]')) return randevuAl(k);
+  { const ky = t.closest('[data-kursa-yaz]'); if (ky) return kursaYaz(k, ky.dataset.kursaYaz); }
+  const oi = t.closest('[data-og-iptal]'); if (oi) return randevuIptal(k, oi.dataset.ogIptal);
+}
 const OG_SEKME = [['durum', 'Ana sayfa', 'genel'], ['ders', 'Derslerim', 'takvim'], ['sinav', 'Öğren', 'teorik'], ['odeme', 'Ödeme', 'kart'], ['evrak', 'Belgeler', 'belge']];
 export function ogrenciPortal() {
   // önizlemede ilk açılan öğrenci dolu bir örnek olsun: planlı dersi, ödenmemiş taksiti ve puanlanmış dersleri olan
@@ -514,6 +525,11 @@ export function ogrenciPortal() {
   const k = kursiyer(ogId), S0 = SINIFLAR[k.sinif];
   const sd = sonrakiDers(k);
   const sinav = S.sinavlar.filter(s => s.kursiyerler.includes(k.id) && fark(s.tarih) >= 0 && !(s.sonuc || {})[k.id]).sort((a, b) => a.tarih.localeCompare(b.tarih))[0];
+  // Yeni öğrenci tasarımı (js/ogr/): öğrencinin kendi telefonunda. Personel önizlemesi eski düzende kalır.
+  if (oturum.kullanici && oturum.kullanici.rol === 'ogrenci') {
+    const y = OX.ciz(ogSekme, { k, S0, sd, sinav, yenile, git: (sk, alt) => { ogSekme = sk; sekmeSakla(); if (alt !== undefined) OX.altAc(alt); yenile(true); }, genelTik: t => ogGenelTik(t, k), odemeYap: i => odemeYap(k, i), temaUst });
+    if (y) return y;
+  }
   let govde = '';
   if (ogSekme === 'durum') govde = ogGovde(k, sd, sinav);
   if (ogSekme === 'ders') govde = OG.derslerHtml(k);
@@ -557,6 +573,7 @@ export function ogrenciPortal() {
     </div>
     <nav class="og-sekme" aria-label="Öğrenci paneli">${OG_SEKME.map(([kk, t, i]) => `<button data-ogs="${kk}" class="${kk === ogSekme ? 'secili' : ''}" ${kk === ogSekme ? 'aria-current="page"' : ''}>${ik(i)}<span>${t}</span></button>`).join('')}</nav>`,
     baglan(kap) {
+      document.body.classList.remove('ox-modu', 'ox-tam-acik');
       if (kendi) temaUst(ogSekme === 'durum' || ogrenUst);
       if (ogrenAna) OGR.bagla(kap, k, yenile);
       clearInterval(sayac);
@@ -568,9 +585,7 @@ export function ogrenciPortal() {
         const t = ev.target;
         const s = t.closest('[data-ogs]'); if (s) { if (s.dataset.ogs === 'sinav' && ogSekme === 'sinav' && !test.mod) OGR.modulKapat(); if (test.mod && test.i >= test.liste.length) test = { mod: null }; else if (test.mod) { test.duraklat = true; testSakla(k); } ogSekme = s.dataset.ogs; sekmeSakla(); yenile(true); }
         const gt = t.closest('[data-git]'); if (gt) { const [sk, md] = gt.dataset.git.split(':'); if (md) OG.modulAc(md); ogSekme = sk; sekmeSakla(); yenile(true); return; }
-        const o = t.closest('[data-ode]'); if (o) odemeYap(k, +o.dataset.ode);
-        const oe = t.closest('[data-og-ekders]'); if (oe) { if (oe.dataset.ogEkders === 'evet') ekDersKabul(k); else { k.ekDersTeklif = null; kaydet(); bildirimler([{ kim: 'mudur', metin: `${tamAd(k)} ek direksiyon dersi teklifini istemedi.`, tur: 'Kursiyer cevabı' }], 'Ek ders'); bildir('Cevabın kursa iletildi'); yenile(); } }
-        const ob = t.closest('[data-og-bos]'); if (ob) bosTeklifKabul(ob.dataset.ogBos, k.id, true);
+        ogGenelTik(t, k);
         const tb = t.closest('[data-test-basla]'); if (tb && !tb.disabled) { if (tb.matches('[data-og-sinava]')) ogSekme = 'sinav'; sorulariYukle().then(() => { testBaslat(tb.dataset.testBasla, k, tb.dataset.konu); yenile(true); }).catch(() => { }); }
         if (t.closest('[data-test-menu]')) { testBirak(k); yenile(true); }
         if (t.closest('[data-test-devam]')) { test.duraklat = false; test.sonTik = Date.now(); yenile(true); }
@@ -583,10 +598,6 @@ export function ogrenciPortal() {
           yenile();
         }
         if (t.closest('[data-sonraki]')) { test.i++; test.cevap = null; if (test.i >= test.liste.length) testBitir(k); else testSakla(k); yenile(); }
-        const dg = t.closest('[data-degis]'); if (dg) { const sd2 = sonrakiDers(k), m = `Merhaba, ben ${tamAd(k)}. ${sd2 ? tarihUzun(sd2.tarih) + ' ' + sd2.saat + ' direksiyon dersimin saatini' : 'Ders saatimi'} değiştirmek istiyorum.`; gonderimEkle(S.kurs.ad, m, 'Kursiyer talebi'); const kno = S.kurs.wp || S.kurs.wpGenel || S.kurs.tel; if (!waNumara(kno)) return bildir('Kursun WhatsApp numarası kayıtlı değil; kursu arayın' + (S.kurs.tel ? ': ' + S.kurs.tel : ''), 'uyari'); if (waAc(kno, m, 'WhatsApp', tamAd(k), false, 'KURSA GELEN') !== 'api') bildir('WhatsApp açıldı; mesajı kursa gönder', 'wp'); }
-        if (t.closest('[data-iste]')) return randevuAl(k);
-        { const ky = t.closest('[data-kursa-yaz]'); if (ky) return kursaYaz(k, ky.dataset.kursaYaz); }
-        const oi = t.closest('[data-og-iptal]'); if (oi) return randevuIptal(k, oi.dataset.ogIptal);
       });
     },
   };

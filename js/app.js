@@ -3,6 +3,7 @@ import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, s
 import * as Y1 from './sayfalar1.js?v=204';
 import * as Y2 from './sayfalar2.js?v=204';
 import * as P from './portal.js?v=204';
+import * as OXU from './ogr/ui.js?v=204';
 import * as Y3 from './sayfalar3.js?v=204';
 import * as Y4 from './sayfalar4.js?v=204';
 import * as Y5 from './sayfalar5.js?v=204';
@@ -29,7 +30,7 @@ const SAYFALAR = {
 };
 const ROL_AD = { mudur: 'Kurs müdürü', sekreter: 'Ön büro', usta: 'Usta öğretici', ortak: 'Ortak' };
 const YASAK = { mudur: [], sekreter: ['raporlar', 'ayarlar', 'guven', 'kurulum', 'senaryo', 'karlilik', 'analiz'], usta: Object.keys(SAYFALAR).filter(k => !['egitmen', 'imza-geldi'].includes(k)), ortak: Object.keys(SAYFALAR) };
-const izinli = ad => { const u = oturum.kullanici; return u && !YASAK[u.rol].includes(ad) && !((u.ziyaretci || u.bulut) && ad === 'senaryo'); };
+const izinli = ad => { const u = oturum.kullanici; return u && !(YASAK[u.rol] || Object.keys(SAYFALAR)).includes(ad) && !((u.ziyaretci || u.bulut) && ad === 'senaryo'); };
 
 // Menü günlük işe göre: önce bugün, sonra öğrenci işleri, para, kurum işleri, analiz; az kullanılanlar en altta
 const MENU = [
@@ -598,7 +599,7 @@ function ogrenciCiz(kaydir) {
   const kok = document.getElementById('uyg');
   if (!kok.querySelector('.ogr-kabuk')) {
     const og = kursiyer(oturum.kullanici.kursiyer), adSoyad = og ? tamAd(og) : (oturum.kullanici.ad || 'Öğrenci');
-    kok.innerHTML = `<div class="ogr-kabuk"><header class="app-ust">${APP_LOGO}<span class="app-ust-ad"><b>${e(S.kurs.ad)}</b><small>Öğrenci</small></span><button type="button" class="app-profil" data-hesap aria-label="Hesabım: ${e(adSoyad)}">${basHarf(adSoyad)}</button></header><main id="icerik" class="ogr-icerik"></main></div>`;
+    kok.innerHTML = `<div class="ogr-kabuk">${OXU.ustCubuk({ logo: APP_LOGO, kurs: S.kurs.ad, ad: adSoyad, foto: og && og.foto })}<header class="app-ust">${APP_LOGO}<span class="app-ust-ad"><b>${e(S.kurs.ad)}</b><small>Öğrenci</small></span><button type="button" class="app-profil" data-hesap aria-label="Hesabım: ${e(adSoyad)}">${basHarf(adSoyad)}</button></header><main id="icerik" class="ogr-icerik"></main></div>`;
   }
   document.body.classList.add('portal-modu'); temaRengi(true);
   const yer = document.getElementById('icerik'); let s;

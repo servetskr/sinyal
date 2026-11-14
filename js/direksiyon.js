@@ -135,3 +135,6 @@ export function direksiyonAc(k, id, yenile) {
     },
   });
 }
+
+/* ---------- yeni öğrenci tasarımı (js/ogr/araclar.js): aynı form bölümleri, ek anlatımlar ve şemalar ---------- */
+export { bolumler as dirBolumler, hataBolum as dirHataBolum, SEMA as DIR_SEMA, KAYNAK_HATA as DIR_KAYNAK, arac as dirAracSvg };

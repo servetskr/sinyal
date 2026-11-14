@@ -279,7 +279,7 @@ export function ogBagla(kap, k, yenile) {
     { const kd = t.closest('[data-og-kod]'); if (kd) { try { navigator.clipboard.writeText(kd.dataset.ogKod); bildir('Ödeme kodu kopyalandı'); } catch (x) { bildir('Kod: ' + kd.dataset.ogKod); } return; } }
     { const ib = t.closest('[data-og-iban]'); if (ib) { const v = (ib.dataset.ogIban || S.kurs.iban || '').replace(/\s/g, ''); try { navigator.clipboard.writeText(v); bildir('IBAN kopyalandı'); } catch (x) { bildir('IBAN: ' + v); } return; } }
     const mb = t.closest('[data-og-makbuz]'); if (mb) return belgeGoster('makbuz', k.id, mb.dataset.ogMakbuz, 'Makbuz');
-    const bg = t.closest('[data-og-belge]'); if (bg) return belgeGoster(bg.dataset.ogBelge, k.id, undefined, bg.closest('li').querySelector('b').textContent);
+    const bg = t.closest('[data-og-belge]'); if (bg) return belgeGoster(bg.dataset.ogBelge, k.id, undefined, bg.dataset.ad || ((bg.closest('li') || bg).querySelector('b') || {}).textContent || '');
   });
   kap.addEventListener('change', ev => {
     const inp = ev.target.closest('[data-og-evrak]'); if (!inp || !inp.files[0]) return;

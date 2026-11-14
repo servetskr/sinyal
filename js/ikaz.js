@@ -81,3 +81,7 @@ export function ikazAc() {
     },
   });
 }
+
+/* ---------- yeni öğrenci tasarımı (js/ogr/araclar.js) ---------- */
+// renk kodu → [renk, ad, anlam]
+export const IKAZ_RENK = RENK;
