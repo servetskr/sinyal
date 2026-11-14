@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=204';
+import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=205';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -488,7 +488,7 @@ function sifreSor(neden, ok) {
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Onayla</button>`,
     onAc(d) {
       const inp = d.querySelector('[data-sifre-tekrar]'), btn = d.querySelector('[data-k]');
-      const dene = () => { btn.disabled = true; import('./bulut.js?v=204').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
+      const dene = () => { btn.disabled = true; import('./bulut.js?v=205').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
       btn.addEventListener('click', dene); inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') dene(); }); setTimeout(() => inp.focus(), 50);
     },
   });
@@ -511,7 +511,10 @@ const TERIMLER = [
   [new RegExp(`(?<!${H})(usta öğretici|Usta öğretici|USTA ÖĞRETİCİ)(${H}*)`, 'gu'), (m, k, ek) => ek.toLocaleLowerCase('tr') in OGRETICI_EK ? buyuk(k, 'öğretmen') + OGRETICI_EK[ek.toLocaleLowerCase('tr')] : m],
   [new RegExp(`(?<!${H})(kursiyer|Kursiyer|KURSİYER)(${H}*)`, 'gu'), (m, k, ek) => ek.toLocaleLowerCase('tr') in KURSIYER_EK ? buyuk(k, 'öğrenci') + (k === k.toLocaleUpperCase('tr') ? KURSIYER_EK[ek.toLocaleLowerCase('tr')].toLocaleUpperCase('tr') : KURSIYER_EK[ek.toLocaleLowerCase('tr')]) : m],
   // "usta" ve "hoca" kavram olarak; "Hüseyin Hoca" gibi hitaplar kalır
-  [new RegExp(`(?<!${H})(usta|Usta)(${H}*)`, 'gu'), (m, k, ek) => ek in USTA_EK ? buyuk(k, 'öğretmen') + USTA_EK[ek] : m],
+  // Küçük harfli "usta" her zaman kavramdır. Büyük harfli "Usta" kişi adının parçasıysa (soyadı, "Ahmet Usta" hitabı, "Usta Ali") olduğu gibi kalır:
+  // önünde ya da arkasında büyük harfle başlayan bir kelime varsa ad sayılır.
+  [new RegExp(`(?<!${H})(usta)(${H}*)`, 'gu'), (m, k, ek) => ek in USTA_EK ? 'öğretmen' + USTA_EK[ek] : m],
+  [new RegExp(`(?<![\\p{Lu}]${H}+ )(?<!${H})(Usta)(${H}*)(?! [\\p{Lu}])`, 'gu'), (m, k, ek) => ek in USTA_EK ? 'Öğretmen' + USTA_EK[ek] : m],
   [new RegExp(`(?<![\\p{Lu}]${H}+ )(?<!${H})(hoca|Hoca|HOCA)(${H}*)`, 'gu'), (m, k, ek) => ek.toLocaleLowerCase('tr') in USTA_EK ? buyuk(k, 'öğretmen') + (k === 'HOCA' ? USTA_EK[ek.toLocaleLowerCase('tr')].toLocaleUpperCase('tr') : USTA_EK[ek.toLocaleLowerCase('tr')]) : m],
 ];
 export function sadeDil(s) {

@@ -509,6 +509,8 @@ function goc(o) {
   if (o.mevzuat) o.mevzuat = o.mevzuat.filter(m => !/yetkisiz yazılım/.test(m.konu || ''));  // kaldırılan kayıt (30 Ekim 2026)
   if (o.kurs.mebYontem === 'arac' && !o.mebArac) o.kurs.mebYontem = 'sirali';
   // demo: PIN’le giren her cihazda WhatsApp gönderimi hazır gelsin (mesajlar yalnız demo numarasına gider); Ayarlar’dan boşaltılırsa kapalı kalır
+  // alan adı geçişi (v188): eski workers.dev adresi kayıtlı kurslar yeni adrese geçer (aynı worker, kendi alan adımız)
+  if (typeof o.kurs.waApi === 'string' && /^https:\/\/sinyal-wa\.[a-z0-9-]+\.workers\.dev/i.test(o.kurs.waApi)) o.kurs.waApi = 'https://api.mdsinyal.com';
   if (demo && o.kurs.waApi === undefined) { o.kurs.waApi = 'https://api.mdsinyal.com'; o.kurs.waApiVarsayilan = true; }
   if (o.sosyal) o.sosyal.kanallar.forEach(c => { if (!c.gercek) { c.bagli = c.id === 'wp' ? !!o.kurs.waApi : false; c.cevap = c.bagli && c.cevap; } });
   // eksik alanlı sınav kaydı (ör. eski sunum verisi) sayfaları çökertmesin

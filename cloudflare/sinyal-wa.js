@@ -7,7 +7,7 @@
 //  · Demo (örnek kurs): Authorization başlığı yok → her mesaj ALICI'ya (demo telefonu) gider, yalnız ALICI'dan gelenler işlenir. Eskisi gibi.
 //  · Gerçek kurs: Authorization (Firebase oturumu) + X-Kurs → kursun kendi WhatsApp hattından (KV 'hat:<kurs>') alıcının numarasına gider;
 //    gelen mesajlar ve belgeler kursa ayrı tutulur ('gelen:<kurs>', 'medya-<kurs>-<id>'), yalnız kursun üyeleri okur.
-const IZINLI = ['https://mdsinyal.com', 'https://servetskr.github.io', 'http://localhost:4481', 'http://127.0.0.1:4481'];
+const IZINLI = ['https://mdsinyal.com', 'http://localhost:4481', 'http://127.0.0.1:4481'];
 const HEDEF = /^(https:\/\/mdsinyal\.com\/|https:\/\/servetskr\.github\.io\/sinyal\/|http:\/\/localhost:4481\/)/;
 const kucuk = s => String(s || '').toLocaleLowerCase('tr');
 const ASISTAN = [

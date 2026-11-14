@@ -1,10 +1,10 @@
 // Öğrenci paneli sekmeleri: dersler (yaklaşan + defter + gelişim + teorik konular), sınavlar, ödemeler, belgeler; bölümler açılır kapanır modüller
-import { odemeKodu, ibanlar, ibanBicim, S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen, ogrOzellik, oturum, DERS_TUR_AD, iptalEdilebilir } from './veri.js?v=204';
-import * as TK from './takvim.js?v=204';
-import { randevuEngeli, engelYazilir } from './risk.js?v=204';
-import { bildirimler } from './sayfalar1.js?v=204';
-import { e, tl, ik, rozet, ilerleme, pencere, kapatPencere, bildir, tarih, goreli, isaret, belgeYazdir, fotoKucult } from './ui.js?v=204';
-import { belgeHtml } from './sayfalar3.js?v=204';
+import { odemeKodu, ibanlar, ibanBicim, S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen, ogrOzellik, oturum, DERS_TUR_AD, iptalEdilebilir } from './veri.js?v=205';
+import * as TK from './takvim.js?v=205';
+import { randevuEngeli, engelYazilir } from './risk.js?v=205';
+import { bildirimler } from './sayfalar1.js?v=205';
+import { e, tl, ik, rozet, ilerleme, pencere, kapatPencere, bildir, tarih, goreli, isaret, belgeYazdir, fotoKucult } from './ui.js?v=205';
+import { belgeHtml } from './sayfalar3.js?v=205';
 
 // MEB teorik eğitim programı: konu, ders saati, başlıklar (anahtarlar soru bankasıyla aynı)
 export const MUFREDAT = [
@@ -173,7 +173,7 @@ export function dokumTablo(k, ogrenciIcin = true) {
   const o = k.odeme, l = [[k.kayit, 'Kurs ücreti · ' + SINIFLAR[k.sinif].ad, o.toplam, 0]];
   (o.ekler || []).forEach(x => l.push([x.tarih || k.kayit, x.ad, x.tutar, 0]));
   if (o.pesin) l.push([o.pesinTarih || k.kayit, 'Peşinat ödendi', 0, o.pesin]);
-  o.taksitler.forEach((t, i) => { const ad = t.aciklama === 'Peşinat' ? 'Peşinat' : (t.aciklama || (i + 1) + '. taksit'); if (t.odendi) l.push([t.odendi === true ? t.vade : t.odendi, ad + ' ödendi', 0, t.tutar]); else if (t.kismi) l.push([t.vade, ad + ' · kısmi ödeme', 0, t.kismi]); });
+  o.taksitler.forEach((t, i) => { const ad = t.aciklama || taksitAd(k, i); if (t.odendi) l.push([t.odendi === true ? t.vade : t.odendi, ad + ' ödendi', 0, t.tutar]); else if (t.kismi) l.push([t.vade, ad + ' · kısmi ödeme', 0, t.kismi]); });
   (o.ekler || []).filter(x => x.odendi).forEach(x => l.push([x.odendi === true ? (x.tarih || k.kayit) : x.odendi, x.ad + ' ödendi', 0, x.tutar]));
   if (o.iade) l.push([o.iadeTarih || gun(0), 'İade', 0, -o.iade]);
   l.sort((a, b) => String(a[0]).localeCompare(String(b[0])) || (b[2] ? 1 : 0) - (a[2] ? 1 : 0));
@@ -185,13 +185,15 @@ export function hesapDokumu(k) {
   return `<details class="kart og-kart"><summary class="og-bas" style="cursor:pointer"><div><small>Hesap dökümün</small><b>Kalem kalem borç ve ödemeler</b></div></summary>${dokumTablo(k)}</details>`;
 }
 export const sonrakiTaksit = k => k.odeme.taksitler.map((t, i) => ({ t, i })).find(x => !x.t.odendi && !x.t.iptal);
-const taksitAd = (k, i) => { const l = k.odeme.taksitler, t = l[i]; return t.aciklama === 'Peşinat' ? 'Peşinat' : (i + 1 - (l[0] && l[0].aciklama === 'Peşinat' ? 1 : 0)) + '. taksit'; };
+export const taksitAd = (k, i) => { const l = k.odeme.taksitler, t = l[i]; return t.aciklama === 'Peşinat' ? 'Peşinat' : (i + 1 - (l[0] && l[0].aciklama === 'Peşinat' ? 1 : 0)) + '. taksit'; };
 export function odemelerHtml(k) {
   const toplam = k.odeme.toplam + ekToplam(k), od = odenen(k), kalan = kalanBorc(k), sn = sonrakiTaksit(k);
   const makbuzlar = S.hareket.filter(h => h.kursiyer === k.id && h.tur === 'Gelir').sort((a, b) => b.tarih.localeCompare(a.tarih));
   const gec = sn && fark(sn.t.vade) < 0;
+  const fazla = Math.max(0, od - toplam);  // fazla ödeme 0 görünmesin (denetim): kursa iade ya da sonraki kaleme sayılması için sorulur
   return `<section class="kart og-kart og-para"><small>Kalan borcun</small><b class="og-para-tutar sayi ${kalan ? '' : 'tamam'}">${tl(kalan)}</b>${ilerleme(od, toplam, 'yesil')}
       <div class="og-para-alt"><span>Ödenen <b class="sayi">${tl(od)}</b></span><span>Toplam <b class="sayi">${tl(toplam)}</b></span></div>
+      ${fazla ? `<p class="og-not" style="margin-top:8px">Fazla ödemen var: <b class="sayi">${tl(fazla)}</b>. İade ya da sonraki ücrete sayılması için kursuna sor.</p>` : ''}
       ${sn ? `<div class="og-sonraki ${gec ? 'gecikti' : ''}"><div><b>${taksitAd(k, sn.i)} · ${tl(sn.t.tutar - (sn.t.kismi || 0))}</b><small>Vade ${tarih(sn.t.vade)}${gec ? ' · gecikti' : fark(sn.t.vade) <= 7 ? ' · ' + goreli(sn.t.vade).toLocaleLowerCase('tr') : ''}</small></div><button class="dg dg-ana dg-kucuk" data-ode="${sn.i}">Nasıl öderim?</button></div>` : '<p class="og-tamam">Tüm ödemelerin tamam.</p>'}</section>
     <section class="kart og-kart"><div class="og-bas"><div><small>Ödeme planın</small><b>${k.odeme.taksitler.some(t => t.aciklama !== 'Peşinat') ? k.odeme.taksitler.filter(t => t.aciklama !== 'Peşinat').length + ' taksit' : 'Peşin'}</b></div></div>
       <div class="og-taksitler">
@@ -218,7 +220,7 @@ export function belgelerHtml(k) {
 /* ---------- konu anlatımı ---------- */
 // İçerik ayrı dosyada; yalnız açılınca yüklenir (açılış hızını etkilemesin)
 let dersYuk = null;
-const dersleriYukle = () => dersYuk || (dersYuk = import('./dersler.js?v=204').then(m => m.DERSLER).catch(() => ({})));
+const dersleriYukle = () => dersYuk || (dersYuk = import('./dersler.js?v=205').then(m => m.DERSLER).catch(() => ({})));
 async function dersAc(k, id, yenile) {
   const D = await dersleriYukle(), d = D[id], [key, no] = [id.replace(/-\d+$/, ''), +id.split('-').pop()], konu = MUFREDAT.find(x => x[0] === key), baslik = konu ? konu[3][no - 1] : id;
   const sonraki = konu && no < konu[3].length ? key + '-' + (no + 1) : null;
@@ -255,7 +257,7 @@ async function dersAc(k, id, yenile) {
 
 /* ---------- olaylar ---------- */
 // direksiyon hazırlık bölümü ayrı dosyada (resmî form maddeleriyle); yer tutucu varsa yüklenir
-const dirYukle = () => import('./direksiyon.js?v=204');
+const dirYukle = () => import('./direksiyon.js?v=205');
 export function ogBagla(kap, k, yenile) {
   const yer = kap.querySelectorAll('[data-dir-yer]'); if (yer.length) dirYukle().then(m => yer.forEach(y => { y.innerHTML = m.direksiyonHtml(k, true); })).catch(() => { });
   kap.addEventListener('toggle', ev => { const m = ev.target; if (!m.matches || !m.matches('[data-modul]')) return; const id = m.dataset.modul; if (m.open) { ACIK.add(id); KAPALI.delete(id); } else { ACIK.delete(id); KAPALI.add(id); } }, true);
@@ -263,12 +265,12 @@ export function ogBagla(kap, k, yenile) {
     const t = ev.target;
     if (t.closest('.tk2') && TK.takvimTikla(t, ogTk)) return yenile();
     const dr = t.closest('[data-dir]'); if (dr) return dirYukle().then(m => m.direksiyonAc(k, dr.dataset.dir, yenile));
-    if (t.closest('[data-ikaz]')) return import('./ikaz.js?v=204').then(m => m.ikazAc());
-    if (t.closest('[data-motor4]')) return import('./motor.js?v=204').then(m => m.motorAc());
-    if (t.closest('[data-debriyaj]')) return import('./motor.js?v=204').then(m => m.debriyajAc());
-    if (t.closest('[data-tehlike]')) return import('./tehlike.js?v=204').then(m => m.tehlikeAc(k));
+    if (t.closest('[data-ikaz]')) return import('./ikaz.js?v=205').then(m => m.ikazAc());
+    if (t.closest('[data-motor4]')) return import('./motor.js?v=205').then(m => m.motorAc());
+    if (t.closest('[data-debriyaj]')) return import('./motor.js?v=205').then(m => m.debriyajAc());
+    if (t.closest('[data-tehlike]')) return import('./tehlike.js?v=205').then(m => m.tehlikeAc(k));
     if (t.closest('[data-kur-android]') && window.__kurulum) { window.__kurulum.prompt(); window.__kurulum.userChoice.finally(() => { window.__kurulum = null; yenile(); }); return; }
-    const od = t.closest('[data-og-ders]'); if (od) return import('./ogren.js?v=204').then(m => m.dersBaslat(k, od.dataset.ogDers, yenile)).catch(() => dersAc(k, od.dataset.ogDers, yenile));
+    const od = t.closest('[data-og-ders]'); if (od) return import('./ogren.js?v=205').then(m => m.dersBaslat(k, od.dataset.ogDers, yenile)).catch(() => dersAc(k, od.dataset.ogDers, yenile));
     const yz = t.closest('[data-og-yildiz]'); if (yz) { const kart = yz.closest('.og-degerlendir'), n = +yz.dataset.ogYildiz; kart.dataset.puan = n; kart.querySelectorAll('[data-og-yildiz]').forEach(b => b.classList.toggle('secili', +b.dataset.ogYildiz <= n)); kart.querySelector('[data-og-puan]').disabled = false; return; }
     const oo = t.closest('[data-og-onay]'); if (oo) { const d = S.dersler.find(x => x.id === oo.dataset.ogOnay); if (!d) return; d.ogrenciOnay = { durum: 'onay', tarih: gun(0) }; islem('Öğrenci dersi onayladı', tamAd(k) + ' · ' + d.tarih + ' ' + d.saat); kaydet(); bildir('Teşekkürler, ders onaylandı'); return yenile(); }
     const oi = t.closest('[data-og-itiraz]'); if (oi) { const d = S.dersler.find(x => x.id === oi.dataset.ogItiraz); if (!d) return;
