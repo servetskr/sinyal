@@ -2,11 +2,11 @@
 // her konu kısa okuma kartları + araya giren kısa sorular + "akılda kalsın" + sonuç ekranından oluşan bir ders.
 // Oyunlaştırma yok (seri, puan, can): yalnız tamamlanan konu ve doğru sayısı tutulur.
 // Kayıt: k.okunan[id] = tarih (eski "Okudum" ile aynı alan), k.dersSonuc[id] = [doğru, toplam, tarih]; yarım ders yalnız bu cihazda.
-import { S, kaydet, gun } from './veri.js?v=201';
-import { e, ik } from './ui.js?v=201';
-import { MUFREDAT } from './ogrenci.js?v=201';
-import * as HZ from './hazirlik.js?v=201';
-import { SORU_KONU } from './soruKonu.js?v=201';
+import { S, kaydet, gun, ogrOzellik } from './veri.js?v=202';
+import { e, ik } from './ui.js?v=202';
+import { MUFREDAT } from './ogrenci.js?v=202';
+import * as HZ from './hazirlik.js?v=202';
+import { SORU_KONU } from './soruKonu.js?v=202';
 
 const UNITE_AD = { trafik: 'Trafik ve çevre', ilkyardim: 'İlk yardım', motor: 'Araç tekniği', adab: 'Trafik adabı' };
 // konu kapağı: o konuyu en iyi anlatan doğrulanmış levha; yoksa ünitenin levhası
@@ -20,8 +20,8 @@ const UNITE_KAPAK = { trafik: 'T-20', motor: 'B-24', adab: 'T-11' };
 const ILKYARDIM_SVG = '<svg viewBox="0 0 120 120" role="img" aria-label="İlk yardım"><rect x="18" y="8" width="84" height="104" rx="8" fill="#0a4da2"/><rect x="24" y="14" width="72" height="92" rx="5" fill="none" stroke="#fff" stroke-width="2.5"/><rect x="31" y="24" width="58" height="58" fill="#fff"/><path d="M53 31h14v16h16v14H67v16H53V61H37V47h16z" fill="#d52b1e"/></svg>';
 
 let LV = null, SR = null, DR = null;
-const levhaYukle = () => LV ? Promise.resolve(LV) : import('./levha.js?v=201').then(m => (LV = m)).catch(() => (LV = { LEVHA: {} }));
-const yukle = () => Promise.all([levhaYukle(), SR || import('./sorular.js?v=201').then(m => (SR = m.SORULAR)), DR || import('./dersler.js?v=201').then(m => (DR = m.DERSLER))]);
+const levhaYukle = () => LV ? Promise.resolve(LV) : import('./levha.js?v=202').then(m => (LV = m)).catch(() => (LV = { LEVHA: {} }));
+const yukle = () => Promise.all([levhaYukle(), SR || import('./sorular.js?v=202').then(m => (SR = m.SORULAR)), DR || import('./dersler.js?v=202').then(m => (DR = m.DERSLER))]);
 export const onYukle = cb => { if (!LV) levhaYukle().then(() => cb && cb()); };
 
 const kapakSvg = id => { const key = id.replace(/-\d+$/, ''); const kod = KAPAK[id] || UNITE_KAPAK[key]; if (!kod) return ILKYARDIM_SVG; const l = LV && LV.LEVHA[kod]; return l ? l.svg : ''; };
@@ -130,11 +130,16 @@ function adimlar(id) {
 const gorsel = g => !g ? '' : String(g).startsWith('L:') ? ((LV && LV.LEVHA[g.slice(2)]) || {}).svg || '' : g;
 
 let acik = null;
+export const dersBaslat = (k, id, yenile) => dersAc(k, id, yenile);
+// sesli dinleme: telefonun Türkçe sesiyle o anki kart okunur (internet ya da ücret gerekmez)
+const sesVar = () => ogrOzellik('sesli') && 'speechSynthesis' in window;
+const sus = () => { try { speechSynthesis.cancel(); } catch (x) { } };
+function oku(metinler, bitince) { sus(); const ses = speechSynthesis.getVoices().find(v => /^tr/i.test(v.lang)); metinler.filter(Boolean).forEach((t, i, l) => { const u = new SpeechSynthesisUtterance(t); u.lang = 'tr-TR'; if (ses) u.voice = ses; u.rate = 0.95; if (i === l.length - 1) u.onend = bitince; speechSynthesis.speak(u); }); }
 async function dersAc(k, id, yenile) {
   if (acik) return;
   const kok = document.createElement('div');
   kok.className = 'ogn-oyn'; kok.setAttribute('role', 'dialog'); kok.setAttribute('aria-modal', 'true');
-  kok.innerHTML = `<div class="ogn-oyn-ust"><button class="ogn-kapat" data-ogn-kapat aria-label="Dersi kapat">${ik('kapat')}</button><div class="ogn-serit"><i></i></div></div><div class="ogn-sahne"><p class="ogn-yukleniyor">Ders hazırlanıyor…</p></div>`;
+  kok.innerHTML = `<div class="ogn-oyn-ust"><button class="ogn-kapat" data-ogn-kapat aria-label="Dersi kapat">${ik('kapat')}</button><div class="ogn-serit"><i></i></div>${sesVar() ? `<button class="ogn-ses" data-ogn-ses aria-label="Sesli dinle" aria-pressed="false">${ik('ses')}</button>` : ''}</div><div class="ogn-sahne"><p class="ogn-yukleniyor">Ders hazırlanıyor…</p></div>`;
   document.body.appendChild(kok); document.body.classList.add('ogn-acik'); acik = kok;
   requestAnimationFrame(() => kok.classList.add('gir'));
   try { await yukle(); } catch (x) { kok.querySelector('.ogn-sahne').innerHTML = '<p class="ogn-yukleniyor">Ders yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.</p>'; }
@@ -143,12 +148,14 @@ async function dersAc(k, id, yenile) {
   let i = y && y.id === id && y.adim < L.length - 1 ? Math.min(y.adim, L.length - 2) : 0;
   const cevap = [];  // [qi, seçilen]
   const sahne = kok.querySelector('.ogn-sahne'), serit = kok.querySelector('.ogn-serit i');
-  const kapat = () => { kok.classList.remove('gir'); kok.classList.add('cik'); document.body.classList.remove('ogn-acik'); acik = null; document.removeEventListener('keydown', tus); setTimeout(() => kok.remove(), 260); yenile(); };
+  const sesDg = kok.querySelector('[data-ogn-ses]'), sesKapat = () => { sus(); if (sesDg) sesDg.setAttribute('aria-pressed', 'false'); };
+  const kapat = () => { sesKapat(); kok.classList.remove('gir'); kok.classList.add('cik'); document.body.classList.remove('ogn-acik'); acik = null; document.removeEventListener('keydown', tus); setTimeout(() => kok.remove(), 260); yenile(); };
   const tus = ev => { if (ev.key === 'Escape') kapat(); };
   document.addEventListener('keydown', tus);
   const sonrakiKonu = () => { const l = konular(), j = l.findIndex(x => x.id === id); return l.slice(j + 1).find(x => !bitti(k, x.id)) || null; };
 
   function ciz(yon = 1) {
+    sesKapat();
     const a = L[i], ilerle = Math.round(i / (L.length - 1) * 100);
     serit.style.width = ilerle + '%';
     if (i > 0 && a.tur !== 'son') yarimYaz(k, id, i, L.length);
@@ -204,10 +211,16 @@ async function dersAc(k, id, yenile) {
   kok.addEventListener('click', ev => {
     const t = ev.target;
     if (t.closest('[data-ogn-kapat]')) return kapat();
+    if (t.closest('[data-ogn-ses]')) {
+      if (sesDg.getAttribute('aria-pressed') === 'true') return sesKapat();
+      const a = L[i], q = a.tur === 'soru' ? SR[a.qi] : null;
+      const metin = a.tur === 'kapak' ? [ad, ...((DR[id] && DR[id].akilda) || []).slice(0, 3)] : a.tur === 'oku' ? [a.m.join(' ')] : a.tur === 'akilda' ? ['Akılda kalsın.', ...a.l] : a.tur === 'video' ? [a.v.baslik] : q ? [q[1], ...q[2].map((x, j) => 'ABCD'[j] + ': ' + x), ...(a.c != null && q[5] ? [q[5]] : [])] : [sahne.innerText];
+      sesDg.setAttribute('aria-pressed', 'true'); return oku(metin, () => sesDg.setAttribute('aria-pressed', 'false'));
+    }
     const v = t.closest('[data-ogn-video]'); if (v) { const f = document.createElement('iframe'); f.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(v.dataset.ognVideo) + '?autoplay=1&rel=0&playsinline=1'; f.title = v.getAttribute('aria-label'); f.allow = 'autoplay; encrypted-media; picture-in-picture'; f.allowFullscreen = true; f.className = 'ogn-video'; v.replaceWith(f); return; }
     const s = t.closest('[data-ogn-sik]'); if (s && L[i].c == null) { const c = +s.dataset.ognSik; L[i].c = c; cevap.push([L[i].qi, c]); ciz(); const g = sahne.querySelector('.ogn-geri .ogn-dg'); if (g) g.focus({ preventScroll: true }); if (navigator.vibrate && c !== SR[L[i].qi][3]) try { navigator.vibrate(30); } catch (x) { } return; }
     if (t.closest('[data-ogn-ileri]')) { if (i < L.length - 1) { i++; if (L[i].tur === 'son') bitir(); ciz(1); } return; }
-    const sn = t.closest('[data-ogn-sonraki]'); if (sn) { kok.remove(); document.body.classList.remove('ogn-acik'); acik = null; document.removeEventListener('keydown', tus); return dersAc(k, sn.dataset.ognSonraki, yenile); }
+    const sn = t.closest('[data-ogn-sonraki]'); if (sn) { sesKapat(); kok.remove(); document.body.classList.remove('ogn-acik'); acik = null; document.removeEventListener('keydown', tus); return dersAc(k, sn.dataset.ognSonraki, yenile); }
   });
   ciz();
 }
