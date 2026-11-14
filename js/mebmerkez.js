@@ -1,9 +1,9 @@
 // MEBBİS aktarım merkezi: MEBBİS'e gidecek işler türlerine göre sekmelerde, filtrelenir, seçilir, toplu aktarılır.
 // Aktarımı MEBBİS Yardımcısı (Chrome eklentisi) kursun kendi MEBBİS oturumunda yürütür; MEBBİS'ten veri çekme de buradan başlar.
-import { S, fark, SINIFLAR, egitmen, sb, seciliSube, cokSube, kursiyer, tamAd, islem, kaydet } from './veri.js?v=204';
-import { e, tarih, rozet, isaret, ik, sekmeler, bos } from './ui.js?v=204';
-import * as EK from './eklenti.js?v=204';
-import * as MT from './mebtoplu.js?v=204';
+import { S, fark, SINIFLAR, egitmen, sb, seciliSube, cokSube, kursiyer, tamAd, islem, kaydet } from './veri.js?v=205';
+import { e, tarih, rozet, isaret, ik, sekmeler, bos } from './ui.js?v=205';
+import * as EK from './eklenti.js?v=205';
+import * as MT from './mebtoplu.js?v=205';
 
 const TURLER = [['kayit', 'Kayıt'], ['evrak', 'Evrak'], ['grup', 'Dönem grubu'], ['onay', 'Kurum onayı'], ['teorik', 'Teorik program'], ['program', 'Direksiyon programı'], ['esinav', 'e-Sınav başvurusu'], ['sinav', 'Sınav randevusu'], ['fatura', 'Fatura'], ['al', 'MEBBİS’ten al']];
 const butunIsler = hepsi => [...EK.mebIsleri(hepsi), ...MT.ekIsler(hepsi)];
