@@ -1,26 +1,27 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=193';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=193';
-import * as Y1 from './sayfalar1.js?v=193';
-import * as Y2 from './sayfalar2.js?v=193';
-import * as P from './portal.js?v=193';
-import * as Y3 from './sayfalar3.js?v=193';
-import * as Y4 from './sayfalar4.js?v=193';
-import * as Y5 from './sayfalar5.js?v=193';
-import * as IM from './imza.js?v=193';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=193';
-import * as SN from './senaryo.js?v=193';
-import * as OZ from './ozellik.js?v=193';
-import { durumlariGuncelle } from './mesaj.js?v=193';
-import { yeniMenu } from './yeni.js?v=193';
-import * as B from './bulut.js?v=193';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=193';
-import * as AN from './analiz.js?v=193';
-import * as ORT from './ortak.js?v=193';
-import * as SH from './sahip.js?v=193';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=194';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=194';
+import * as Y1 from './sayfalar1.js?v=194';
+import * as Y2 from './sayfalar2.js?v=194';
+import * as P from './portal.js?v=194';
+import * as Y3 from './sayfalar3.js?v=194';
+import * as Y4 from './sayfalar4.js?v=194';
+import * as Y5 from './sayfalar5.js?v=194';
+import * as IM from './imza.js?v=194';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=194';
+import * as SN from './senaryo.js?v=194';
+import * as OZ from './ozellik.js?v=194';
+import { durumlariGuncelle } from './mesaj.js?v=194';
+import { yeniMenu } from './yeni.js?v=194';
+import * as B from './bulut.js?v=194';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=194';
+import * as AN from './analiz.js?v=194';
+import * as GZ from './guzergah.js?v=194';
+import * as ORT from './ortak.js?v=194';
+import * as SH from './sahip.js?v=194';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
-  plan: Y1.plan, teorik: Y1.teorik, sinavlar: Y2.sinavlar, kasa: Y2.kasa, filo: Y2.filo,
+  plan: Y1.plan, teorik: Y1.teorik, sinavlar: Y2.sinavlar, guzergah: GZ.sayfa, kasa: Y2.kasa, filo: Y2.filo,
   mesajlar: Y2.mesajlar, meb: Y2.meb, raporlar: Y2.raporlar, ayarlar: Y2.ayarlar,
   egitmen: P.egitmenPortal, ogrenci: P.ogrenciPortal,
   belgeler: Y3.belgeler, kayit: Y3.kayitSayfasi, guven: Y3.guven, mebbis: Y3.mebbisAsistani,
@@ -33,7 +34,7 @@ const izinli = ad => { const u = oturum.kullanici; return u && !YASAK[u.rol].inc
 // Menü günlük işe göre: önce bugün, sonra öğrenci işleri, para, kurum işleri, analiz; az kullanılanlar en altta
 const MENU = [
   ['Bugün', [['genel', 'Genel bakış', '↑'], ['mesajlar', 'Mesajlar', '↗'], ['adaylar', 'Yeni öğrenciler', '↗']]],
-  ['Öğrenciler', [['kursiyerler', 'Kursiyerler', '→'], ['plan', 'Direksiyon planı', '→'], ['teorik', 'Teorik dersler', '→'], ['sinavlar', 'Sınavlar', '→']]],
+  ['Öğrenciler', [['kursiyerler', 'Kursiyerler', '→'], ['plan', 'Direksiyon planı', '→'], ['teorik', 'Teorik dersler', '→'], ['sinavlar', 'Sınavlar', '→'], ['guzergah', 'Sınav güzergâhları', '→']]],
   ['Para', [['kasa', 'Kasa ve ödemeler', '→']]],
   ['Kurum', [['meb', 'MEB işlemleri', '→'], ['belgeler', 'Belgeler ve çıktılar', '→'], ['filo', 'Ekip ve araçlar', '→']]],
   ['Analiz', [['analiz', 'Analiz', '→'], ['raporlar', 'Raporlar', '→'], ['karlilik', 'Kârlılık ve kapasite', '→']]],
