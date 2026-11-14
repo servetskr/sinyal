@@ -2,11 +2,11 @@
 // her konu kısa okuma kartları + araya giren kısa sorular + "akılda kalsın" + sonuç ekranından oluşan bir ders.
 // Oyunlaştırma yok (seri, puan, can): yalnız tamamlanan konu ve doğru sayısı tutulur.
 // Kayıt: k.okunan[id] = tarih (eski "Okudum" ile aynı alan), k.dersSonuc[id] = [doğru, toplam, tarih]; yarım ders yalnız bu cihazda.
-import { S, kaydet, gun, ogrOzellik } from './veri.js?v=203';
-import { e, ik } from './ui.js?v=203';
-import { MUFREDAT } from './ogrenci.js?v=203';
-import * as HZ from './hazirlik.js?v=203';
-import { SORU_KONU } from './soruKonu.js?v=203';
+import { S, kaydet, gun, ogrOzellik } from './veri.js?v=204';
+import { e, ik } from './ui.js?v=204';
+import { MUFREDAT } from './ogrenci.js?v=204';
+import * as HZ from './hazirlik.js?v=204';
+import { SORU_KONU } from './soruKonu.js?v=204';
 
 const UNITE_AD = { trafik: 'Trafik ve çevre', ilkyardim: 'İlk yardım', motor: 'Araç tekniği', adab: 'Trafik adabı' };
 // konu kapağı: o konuyu en iyi anlatan doğrulanmış levha; yoksa ünitenin levhası
@@ -20,8 +20,8 @@ const UNITE_KAPAK = { trafik: 'T-20', motor: 'B-24', adab: 'T-11' };
 const ILKYARDIM_SVG = '<svg viewBox="0 0 120 120" role="img" aria-label="İlk yardım"><rect x="18" y="8" width="84" height="104" rx="8" fill="#0a4da2"/><rect x="24" y="14" width="72" height="92" rx="5" fill="none" stroke="#fff" stroke-width="2.5"/><rect x="31" y="24" width="58" height="58" fill="#fff"/><path d="M53 31h14v16h16v14H67v16H53V61H37V47h16z" fill="#d52b1e"/></svg>';
 
 let LV = null, SR = null, DR = null;
-const levhaYukle = () => LV ? Promise.resolve(LV) : import('./levha.js?v=203').then(m => (LV = m)).catch(() => (LV = { LEVHA: {} }));
-const yukle = () => Promise.all([levhaYukle(), SR || import('./sorular.js?v=203').then(m => (SR = m.SORULAR)), DR || import('./dersler.js?v=203').then(m => (DR = m.DERSLER))]);
+const levhaYukle = () => LV ? Promise.resolve(LV) : import('./levha.js?v=204').then(m => (LV = m)).catch(() => (LV = { LEVHA: {} }));
+const yukle = () => Promise.all([levhaYukle(), SR || import('./sorular.js?v=204').then(m => (SR = m.SORULAR)), DR || import('./dersler.js?v=204').then(m => (DR = m.DERSLER))]);
 export const onYukle = cb => { if (!LV) levhaYukle().then(() => cb && cb()); };
 
 const kapakSvg = id => { const key = id.replace(/-\d+$/, ''); const kod = KAPAK[id] || UNITE_KAPAK[key]; if (!kod) return ILKYARDIM_SVG; const l = LV && LV.LEVHA[kod]; return l ? l.svg : ''; };
