@@ -1,10 +1,12 @@
 // e-Sınava hazırlık: son denemeler, konu başarısı ve soru bankasında görülen soru oranından tek puan;
 // yanlış yapılan sorular aralıklı tekrar takvimine girer (1, 3, 7, 14, 30 gün sonra yeniden sorulur).
-import { gun } from './veri.js?v=201';
-import { e, ilerleme } from './ui.js?v=201';
-import { SORU_KONU } from './soruKonu.js?v=201';
+import { gun } from './veri.js?v=202';
+import { e, ilerleme } from './ui.js?v=202';
+import { SORU_KONU } from './soruKonu.js?v=202';
 
 const N = SORU_KONU.length;
+// kapsam hedefi sabit: banka büyüdükçe öğrencinin puanı düşmesin (eski hedef bankanın yarısıydı, ~975 soru)
+const HEDEF = 1000;
 const KAT = { trafik: ['Trafik ve çevre', 23], ilkyardim: ['İlk yardım', 12], motor: ['Motor ve araç tekniği', 9], adab: ['Trafik adabı', 6] };
 export const ARALIK = [0, 1, 3, 7, 14, 30];
 
@@ -32,7 +34,7 @@ export function hazirlik(k) {
   const den = (k.deneme || []).slice(-3), dOrt = den.length ? Math.round(den.reduce((a, b) => a + b, 0) / den.length) : 0;
   const konular = Object.entries(KAT).map(([kn, [ad, w]]) => ({ kn, ad, w, o: konuOran(k, kn) }));
   const konuP = Math.round(konular.reduce((a, x) => a + (x.o || 0) * x.w, 0) / 50);
-  const gor = gorulenSay(k), kaps = Math.min(100, Math.round(gor / (N * 0.5) * 100));
+  const gor = gorulenSay(k), kaps = Math.min(100, Math.round(gor / HEDEF * 100));
   const puan = Math.round(dOrt * 0.5 + konuP * 0.3 + kaps * 0.2), gecen = den.filter(p => p >= 70).length;
   const durum = puan >= 75 && gecen >= 2 ? 'hazir' : puan >= 50 ? 'yaklasti' : 'calis';
   const oneri = [], tb = tekrarBugun(k).length, zayif = konular.filter(x => x.o == null || x.o < 70).sort((a, b) => (a.o ?? -1) - (b.o ?? -1));
@@ -40,7 +42,7 @@ export function hazirlik(k) {
   if (den.length < 2) oneri.push(`${den.length ? 'Bir' : 'İki'} deneme sınavı daha çöz`);
   else if (gecen < 2) oneri.push('Son denemelerinden en az ikisinde 70’i geç');
   zayif.slice(0, 2).forEach(x => oneri.push(x.o == null ? `${x.ad} konusundan test çöz` : `${x.ad} konusunu çalış (%${x.o})`));
-  if (kaps < 100 && oneri.length < 3) oneri.push(`Soru bankasının ${gor}/${N} sorusunu gördün; çözmeye devam`);
+  if (kaps < 100 && oneri.length < 3) oneri.push(`${gor}/${HEDEF.toLocaleString('tr-TR')} soru gördün; çözmeye devam`);
   return { puan, durum, dOrt, konuP, kaps, gor, deneme: den.length, gecen, konular, oneri };
 }
 const DURUM = { hazir: ['Sınava hazırsın', 'var(--yesil)'], yaklasti: ['Yaklaşıyorsun', 'var(--sari-koyu, #b07a00)'], calis: ['Biraz daha çalışmalısın', 'var(--kirmizi)'] };
