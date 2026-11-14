@@ -2,11 +2,11 @@
 // her konu kısa okuma kartları + araya giren kısa sorular + "akılda kalsın" + sonuç ekranından oluşan bir ders.
 // Oyunlaştırma yok (seri, puan, can): yalnız tamamlanan konu ve doğru sayısı tutulur.
 // Kayıt: k.okunan[id] = tarih (eski "Okudum" ile aynı alan), k.dersSonuc[id] = [doğru, toplam, tarih]; yarım ders yalnız bu cihazda.
-import { S, kaydet, gun } from './veri.js?v=199';
-import { e, ik } from './ui.js?v=199';
-import { MUFREDAT } from './ogrenci.js?v=199';
-import * as HZ from './hazirlik.js?v=199';
-import { SORU_KONU } from './soruKonu.js?v=199';
+import { S, kaydet, gun } from './veri.js?v=200';
+import { e, ik } from './ui.js?v=200';
+import { MUFREDAT } from './ogrenci.js?v=200';
+import * as HZ from './hazirlik.js?v=200';
+import { SORU_KONU } from './soruKonu.js?v=200';
 
 const UNITE_AD = { trafik: 'Trafik ve çevre', ilkyardim: 'İlk yardım', motor: 'Araç tekniği', adab: 'Trafik adabı' };
 // konu kapağı: o konuyu en iyi anlatan doğrulanmış levha; yoksa ünitenin levhası
@@ -20,8 +20,8 @@ const UNITE_KAPAK = { trafik: 'T-20', motor: 'B-24', adab: 'T-11' };
 const ILKYARDIM_SVG = '<svg viewBox="0 0 120 120" role="img" aria-label="İlk yardım"><rect x="18" y="8" width="84" height="104" rx="8" fill="#0a4da2"/><rect x="24" y="14" width="72" height="92" rx="5" fill="none" stroke="#fff" stroke-width="2.5"/><rect x="31" y="24" width="58" height="58" fill="#fff"/><path d="M53 31h14v16h16v14H67v16H53V61H37V47h16z" fill="#d52b1e"/></svg>';
 
 let LV = null, SR = null, DR = null;
-const levhaYukle = () => LV ? Promise.resolve(LV) : import('./levha.js?v=199').then(m => (LV = m)).catch(() => (LV = { LEVHA: {} }));
-const yukle = () => Promise.all([levhaYukle(), SR || import('./sorular.js?v=199').then(m => (SR = m.SORULAR)), DR || import('./dersler.js?v=199').then(m => (DR = m.DERSLER))]);
+const levhaYukle = () => LV ? Promise.resolve(LV) : import('./levha.js?v=200').then(m => (LV = m)).catch(() => (LV = { LEVHA: {} }));
+const yukle = () => Promise.all([levhaYukle(), SR || import('./sorular.js?v=200').then(m => (SR = m.SORULAR)), DR || import('./dersler.js?v=200').then(m => (DR = m.DERSLER))]);
 export const onYukle = cb => { if (!LV) levhaYukle().then(() => cb && cb()); };
 
 const kapakSvg = id => { const key = id.replace(/-\d+$/, ''); const kod = KAPAK[id] || UNITE_KAPAK[key]; if (!kod) return ILKYARDIM_SVG; const l = LV && LV.LEVHA[kod]; return l ? l.svg : ''; };
@@ -40,7 +40,6 @@ export function siradaki(k) {
 const sayac = (k, key) => { const l = konular().filter(x => x.key === key); return [l.filter(x => bitti(k, x.id)).length, l.length]; };
 
 /* ---------- Öğren ana ekranı ---------- */
-let acikUnite = null;
 export function ustHtml(k) {
   const s = siradaki(k), tum = konular(), biten = tum.filter(x => bitti(k, x.id)).length;
   if (!s) return `<section class="ogn-ust"><div class="ogn-ust-ic"><p class="ogn-goz">Öğren</p><h1 class="ogn-h1">Bütün konuları bitirdin</h1><p class="ogn-ust-alt">${tum.length} konunun hepsini tamamladın. Deneme sınavlarıyla hazır kal.</p><button class="ogn-dg-sari" data-test-basla="deneme">Deneme sınavı çöz ${ik('sag')}</button></div></section>`;
@@ -55,22 +54,39 @@ export function ustHtml(k) {
     <button class="ogn-dg-sari" data-ogn-ders="${s.id}">${adim ? 'Devam et' : 'Başla'} ${ik('sag')}</button>
   </div></section>`;
 }
-export function yolHtml(k) {
-  const s = siradaki(k), acik = acikUnite || (s ? s.key : 'trafik');
-  return MUFREDAT.map(([key, ad, , bas]) => {
-    const [b, t] = sayac(k, key), ac = key === acik;
-    const levha = `<button class="ogn-levha ${key === 'trafik' ? 'yesil' : ''}" data-ogn-unite="${key}" aria-expanded="${ac}"><span class="ogn-levha-ic"><b>${e(ad)}</b><span>${b}/${t}</span>${ik(ac ? 'asagi' : 'sag')}</span></button>`;
-    if (!ac) return `<section class="ogn-unite kapali">${levha}<span class="ogn-unite-cubuk"><i style="width:${Math.round(b / t * 100)}%"></i></span></section>`;
-    return `<section class="ogn-unite">${levha}<ol class="ogn-yol">${bas.map((baslik, i) => {
-      const id = key + '-' + (i + 1), ok = bitti(k, id), simdi = s && s.id === id, r = sonuc(k, id);
-      const durum = ok ? (r ? `${r[0]}/${r[1]} doğru` : 'Tamamlandı') : simdi ? (s.adim ? 'Kaldığın yer' : 'Sıradaki') : 'Kısa kartlar · 5 soru';
-      return `<li class="${ok ? 'bitti' : simdi ? 'simdi' : 'sonra'}"><button data-ogn-ders="${id}"><span class="ogn-isaret" aria-hidden="true">${ok ? ik('tik') : simdi ? `<b>${i + 1}</b>` : i + 1}</span><span class="ogn-konu"><b>${e(baslik)}</b><small>${durum}</small></span></button></li>`;
-    }).join('')}</ol></section>`;
-  }).join('');
+// İçerik haritası: dört ünite + sınava hazırlık; her biri ayrı modül sayfası açar
+let modul = null;
+export const modulAcik = () => modul;
+export const modulKapat = () => { modul = null; };
+const SINAV_SVG = '<svg viewBox="0 0 120 120" role="img" aria-label="e-Sınav"><rect x="10" y="22" width="100" height="76" rx="8" fill="#0a4da2"/><rect x="16" y="28" width="88" height="64" rx="5" fill="none" stroke="#fff" stroke-width="2.5"/><text x="60" y="58" text-anchor="middle" font-family="Overpass,Arial,sans-serif" font-weight="800" font-size="19" fill="#fff">e-SINAV</text><text x="60" y="80" text-anchor="middle" font-family="Overpass,Arial,sans-serif" font-weight="700" font-size="14" fill="#fff">50 SORU</text></svg>';
+const modulSvg = key => key === 'sinav' ? SINAV_SVG : key === 'ilkyardim' ? ILKYARDIM_SVG : ((LV && LV.LEVHA[{ trafik: 'T-20', motor: 'B-24', adab: 'T-11' }[key]]) || {}).svg || '';
+export function haritaHtml(k) {
+  const s = siradaki(k), son = (k.deneme || []).slice(-1)[0];
+  const sat = (key, no, ad, alt, b, t, cip) => `<li class="ogn-mod ${cip[0]}"><button data-ogn-modul="${key}"><span class="ogn-mod-art" aria-hidden="true">${modulSvg(key)}</span>
+    <span class="ogn-mod-yazi"><small>${no}. modül</small><b>${e(ad)}</b><span>${alt}</span>${t ? `<span class="ogn-mod-cubuk"><i style="width:${Math.round(b / t * 100)}%"></i></span>` : ''}</span>
+    <span class="ogn-cip ${cip[0]}">${cip[1]}</span></button></li>`;
+  const uniteler = MUFREDAT.map(([key, ad], n) => { const [b, t] = sayac(k, key); const cip = b === t ? ['bitti', 'Tamamlandı'] : s && s.key === key ? ['simdi', 'Sıradaki'] : b ? ['', 'Devam'] : ['', 'Başla']; return sat(key, n + 1, ad, `${b}/${t} konu`, b, t, cip); }).join('');
+  const sinav = sat('sinav', MUFREDAT.length + 1, 'Sınava hazırlan', son != null ? `Son deneme puanın ${son}` : 'Deneme sınavı, yanlışların, tekrar', 0, 0, (k.esinav && k.esinav.sonuc === 'Geçti') ? ['bitti', 'Geçtin'] : !s ? ['simdi', 'Sıradaki'] : ['', 'Aç']);
+  return `<h2 class="ogn-bolum-bas ilk">İçerik haritası</h2><ol class="ogn-harita">${uniteler}${sinav}</ol>`;
+}
+export function modulBas(baslik, alt, b, t) {
+  return `<header class="ogn-mod-bas"><button class="ogn-geri-dg" data-ogn-harita>${ik('sol')}İçerik haritası</button><h1>${e(baslik)}</h1>${alt ? `<p>${alt}</p>` : ''}${t ? `<span class="ogn-mod-cubuk buyuk"><i style="width:${Math.round(b / t * 100)}%"></i></span>` : ''}</header>`;
+}
+const ARACLAR = { trafik: [['data-tehlike', 'Tehlike algısı']], motor: [['data-ikaz', 'İkaz lambaları'], ['data-motor4', '4 zamanlı motor'], ['data-debriyaj', 'Debriyaj ve kalkış']] };
+export function modulHtml(k, key) {
+  const m = MUFREDAT.find(x => x[0] === key), s = siradaki(k), [b, t] = sayac(k, key);
+  const liste = `<ol class="ogn-yol tek">${m[3].map((baslik, i) => {
+    const id = key + '-' + (i + 1), ok = bitti(k, id), simdi = s && s.id === id, r = sonuc(k, id);
+    const durum = ok ? (r ? `${r[0]}/${r[1]} doğru` : 'Tamamlandı') : simdi ? (s.adim ? 'Kaldığın yer' : 'Sıradaki') : 'Kısa kartlar · 5 soru';
+    return `<li class="${ok ? 'bitti' : simdi ? 'simdi' : 'sonra'}"><button data-ogn-ders="${id}"><span class="ogn-isaret" aria-hidden="true">${ok ? ik('tik') : simdi ? `<b>${i + 1}</b>` : i + 1}</span><span class="ogn-konu"><b>${e(baslik)}</b><small>${durum}</small></span></button></li>`;
+  }).join('')}</ol>`;
+  const ar = (ARACLAR[key] || []).length ? `<h2 class="ogn-bolum-bas">Bu modülde ayrıca</h2><div class="ogn-araclar">${ARACLAR[key].map(([a, t2]) => `<button class="ogn-arac" ${a}>${e(t2)}${ik('sag')}</button>`).join('')}</div>` : '';
+  return modulBas(m[1], `${b}/${t} konu tamamlandı`, b, t) + liste + ar;
 }
 export function bagla(kap, k, yenile) {
   kap.addEventListener('click', ev => {
-    const u = ev.target.closest('[data-ogn-unite]'); if (u) { acikUnite = acikUnite === u.dataset.ognUnite && u.getAttribute('aria-expanded') === 'true' ? '__' : u.dataset.ognUnite; return yenile(); }
+    const md = ev.target.closest('[data-ogn-modul]'); if (md) { modul = md.dataset.ognModul; yenile(); return scrollTo(0, 0); }
+    if (ev.target.closest('[data-ogn-harita]')) { modul = null; yenile(); return scrollTo(0, 0); }
     const d = ev.target.closest('[data-ogn-ders]'); if (d) dersAc(k, d.dataset.ognDers, yenile);
   });
 }

@@ -2834,3 +2834,32 @@ body.ogn-acik{overflow:hidden}
 .ogn-dg.cift span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ogn-sanat{height:clamp(140px,25vh,230px)}
 .ogn-sanat svg{width:clamp(96px,16vh,150px);height:clamp(96px,16vh,150px)}
+/* Öğren · içerik haritası ve modül sayfaları */
+.ogn-harita{position:relative;list-style:none;margin:0;padding:0}
+.ogn-harita::before{content:"";position:absolute;left:41px;top:36px;bottom:36px;border-left:2px dashed #c3c8d0}
+.ogn-mod{position:relative;z-index:1;margin-bottom:12px}
+.ogn-mod button{display:grid;grid-template-columns:56px minmax(0,1fr) auto;align-items:center;gap:14px;width:100%;padding:14px 14px 14px 13px;border-radius:18px;background:#fff;box-shadow:0 1px 2px rgba(11,24,48,.06),0 8px 20px -14px rgba(11,24,48,.35);text-align:left;transition:transform .15s}
+.ogn-mod button:active{transform:scale(.985)}
+.ogn-mod.simdi button{box-shadow:0 0 0 2px var(--u-sari),0 10px 24px -14px rgba(11,24,48,.45)}
+.ogn-mod-art{display:grid;place-items:center;width:56px;height:56px;border-radius:14px;background:#f5f2ea}
+.ogn-mod-art svg{width:42px;height:42px}
+.ogn-mod-yazi{min-width:0}
+.ogn-mod-yazi small{display:block;font-size:12.5px;font-weight:500;color:var(--u-ucuncul)}
+.ogn-mod-yazi b{display:block;margin:1px 0 2px;font:700 17px/1.2 var(--baslik);letter-spacing:-.01em;color:var(--murekkep)}
+.ogn-mod-yazi>span:not(.ogn-mod-cubuk){display:block;font-size:13.5px;color:var(--u-ikincil);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ogn-mod-cubuk{display:block;height:4px;margin-top:8px;border-radius:2px;background:#e8eaee;overflow:hidden}
+.ogn-mod-cubuk i{display:block;height:100%;border-radius:2px;background:var(--u-yesil)}
+.ogn-mod-cubuk.buyuk{height:6px;margin-top:14px}
+.ogn-cip{align-self:start;margin-top:2px;padding:4px 9px;border-radius:999px;background:#eef0f3;font-size:12.5px;font-weight:600;color:var(--u-ikincil);white-space:nowrap}
+.ogn-cip.simdi{background:#fff3c9;color:#7a5200}
+.ogn-cip.bitti{background:#e5f4ea;color:#14663a}
+.ogn-mod-bas{margin:8px 4px 18px}
+.ogn-geri-dg{display:inline-flex;align-items:center;gap:2px;margin-left:-6px;padding:6px 6px 6px 0;font-size:16px;font-weight:500;color:var(--u-vurgu)}
+.ogn-geri-dg .ik{width:22px;height:22px;stroke-width:2.4}
+.ogn-mod-bas h1{margin-top:6px;font:700 30px/1.1 var(--baslik);letter-spacing:-.025em;color:var(--murekkep)}
+.ogn-mod-bas p{margin-top:6px;font-size:15px;color:var(--u-ikincil);font-variant-numeric:tabular-nums}
+.ogn-yol.tek{padding-top:4px}
+.ogn-yol.tek::before{top:0;border-radius:20px}
+.ogn-araclar{display:grid;gap:8px}
+.ogn-arac{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:52px;padding:0 16px;border-radius:14px;background:#fff;box-shadow:0 1px 2px rgba(11,24,48,.06);font-size:16px;font-weight:500;color:var(--murekkep)}
+.ogn-arac .ik{width:18px;height:18px;color:var(--u-ucuncul)}
