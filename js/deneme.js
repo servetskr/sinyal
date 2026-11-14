@@ -1,8 +1,8 @@
 // Deneme uygulama sınavı: öğretmen telefonda MEB değerlendirme formunun (EK-4 otomobil / EK-3 motosiklet) maddelerini işaretler.
 // Formdaki kurallar uygulanır: 5 mavi madde, toplam 2 sarı ihlal ya da 1 kırmızı ihlal → sınav biter, başarısız.
-import { S, kaydet, gun, SINIFLAR, tamAd, egitmen, arac, islem, motorSinif, ek3Sinif, oturum } from './veri.js?v=195';
-import { e, pencere, kapatPencere, bildir, belgeYazdir } from './ui.js?v=195';
-import { EK3, EK4 } from './formlar.js?v=195';
+import { S, kaydet, gun, SINIFLAR, tamAd, egitmen, arac, islem, motorSinif, ek3Sinif, oturum } from './veri.js?v=197';
+import { e, pencere, kapatPencere, bildir, belgeYazdir } from './ui.js?v=197';
+import { EK3, EK4 } from './formlar.js?v=197';
 
 const RENK = { m: 'Mavi', s: 'Sarı', k: 'Kırmızı' };
 const maddeler = sinif => (ek3Sinif(sinif) ? EK3 : EK4).flatMap(([b, bas, l], bi) => l.map(([sira, metin, renk], mi) => ({ id: bi + '.' + mi, bol: b, bas, sira, metin, renk })));
@@ -49,7 +49,7 @@ export function denemeAc(k, yenile) {
 }
 // Kayıtlı denemenin işaretli EK-3/EK-4 çıktısı
 export async function denemeYazdir(k, kayit) {
-  const R = await import('./resmi.js?v=195');
+  const R = await import('./resmi.js?v=197');
   const html = R.resmiHtml('ek34', k, false, kayit.isaret);
   belgeYazdir(html, 'Deneme uygulama sınavı · ' + tamAd(k) + ' · ' + kayit.tarih);
 }

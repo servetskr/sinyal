@@ -831,5 +831,460 @@ export const DERSLER = {
 "kanal": "ÖZEL ÖĞRETİM KURUMLARI GENEL MÜDÜRLÜĞÜ"
 }
 ]
+},
+"trafik-13": {
+ "paragraflar": [
+  "Hemzemin geçit, karayolu ile demiryolunun aynı seviyede kesiştiği bariyerli veya bariyersiz geçittir. Geçide yaklaşan sürücü hızını azaltır ve dikkatini artırır. Hemzemin geçitlerde ve bunlara yaklaşırken öndeki aracı geçmek yasaktır. Geçidin üzerinde duraklamak ve park etmek de yasaktır. Kırmızı-beyaz çarpı (X) biçimindeki levha demiryolu hemzemin geçidini gösterir.",
+  "Bariyer inmeye başladıysa ya da kırmızı ışıklar yanıp sönüyor ve sesli uyarı duyuluyorsa sürücü geçide girmeden durur ve bariyerin açılmasını bekler. Işıklı işaret ve bariyer bulunmayan geçitte sürücü geçmeden önce durur, iki yöne de bakar, tren gelmediğinden emin olunca geçer. Karşı tarafta aracın sığacağı boş yer yoksa geçide girilmez; geçit üzerinde vites değiştirmemek için uygun viteste geçilir. Araç geçitte kalırsa yolcular hemen indirilip hattan uzaklaştırılır.",
+  "Tünele yaklaşırken hız azaltılır. Yeterince aydınlatılmamış tünele girerken uzağı gösteren farlar yakılır, karşıdan araç gelince yakını gösteren farlara geçilir. Güneşten karanlık tünele giren gözün uyum sağlaması zaman alır; bu nedenle güneş gözlüğü önceden çıkarılır. Tünellerde ve köprülerde duraklamak yasaktır; gidiş ve gelişte birer şeridi olan köprü ve tünellerde geçme yapılmaz. Köprü ve viyadükler kışın çevredeki yoldan önce buzlanabilir, vadi ve köprü geçişlerinde yan rüzgâra karşı direksiyon sıkı tutulur.",
+  "Tehlikeli eğim, araçların emniyetle devam edebilmesi için vites küçültmeyi gerektiren yokuştur. Uzun inişte sürücü uygun düşük vitese geçer ve motor freninden yararlanır; sürekli fren yapmak frenleri ısıtıp etkisini azaltır. Eğimli yolda motoru durdurup vitesi boşa alarak inmek yasaktır. Dar ve dik yolda karşılaşmada çıkan aracın geçişi güçse inen araç varsa sığınma cebine girer, yoksa sağa yanaşıp durur."
+ ],
+ "akilda": [
+  "Hemzemin geçitte ve yaklaşırken geçme yapılmaz; geçit üzerinde duraklanmaz.",
+  "Bariyer inerken veya kırmızı ışıklar yanıp sönerken geçide girilmez.",
+  "Bariyersiz geçitte önce durulur, tren gelmediğinden emin olunca geçilir.",
+  "Karanlık tünelde uzun far; karşılaşmada kısa far.",
+  "Köprüler kışın daha önce buzlanır.",
+  "Uzun inişte düşük vites ve motor freni; boşta inmek yasaktır."
+ ],
+ "kaynak": [
+  "2918 sayılı KTK md. 52, 54, 60: https://www.mevzuat.gov.tr/MevzuatMetin/1.5.2918.pdf",
+  "Karayolları Trafik Yönetmeliği (hemzemin geçitler, tüneller ve eğimli yollarla ilgili hükümler): https://www.mevzuat.gov.tr/mevzuat?MevzuatNo=8182&MevzuatTur=7&MevzuatTertip=5",
+  "Trafik İşaretleri Hakkında Yönetmelik (demiryolu geçidi ve tehlikeli eğim levhaları): https://www.kgm.gov.tr/SiteCollectionDocuments/KGMdocuments/Trafik/KanunYonetmelik/TrafikIsaretYonetmelik.pdf"
+ ]
+},
+"trafik-14": {
+ "paragraflar": [
+  "Yaya trafiğin en korunmasız kullanıcısıdır. Yaya geçidi, taşıt yolunda yayaların güvenle geçmesi için işaretlerle belirlenmiş alandır. Görevli veya ışıklı işaret bulunmayan, ancak işaretlenmiş yaya ve okul geçitlerine yaklaşan sürücü yavaşlar; geçen ya da geçmek üzere olan yayaya durarak ilk geçiş hakkını verir. Işıklı kavşakta sağa veya sola dönen sürücü, kendi ışığı yeşil olsa da kurallara uygun karşıya geçen yayalara yol verir. Yaya ve okul geçitlerine yaklaşırken öndeki araç geçilmez, geçitlerin üzerinde duraklanmaz.",
+  "Yayalar varsa yaya yolunu, yoksa banketi kullanır. İkisi de yoksa iki yönlü yolda taşıt yolunun sol kenarından, karşıdan gelen trafiği görerek yürür. Yaklaşık 100 metre içinde geçit veya kavşak yoksa trafiği engellemeden en kısa doğrultuda karşıya geçebilir. Gece yürümek zorunda kalan yaya açık renk giysi, yansıtıcı veya ışık kullanır. Görevli yönetimindeki yürüyüş kolunun arasından geçilmez.",
+  "Çocuklar trafikte tehlikeyi tam değerlendiremez; aracı gördükleri için sürücünün de kendilerini gördüğünü sanabilirler. Sürücü okul, oyun alanı ve park hâlindeki araçların arasından çocukların aniden çıkabileceğini hesaba katar. Okul geçidinde görevli varsa onun işaretlerine uyulur; okul geçidi görevlisi olacak öğrenci en az 12 yaşını doldurmuş olmalıdır.",
+  "Okul taşıtı, öğrencileri ve yalnızca gözetici ile hizmetlileri taşıyan araçtır. Üzerinde “DUR” yazılı kırmızı ışıklı lamba bulunur; çapı en az 30 santimetredir, fren ışıklarıyla birlikte yanmaz ve öğrenciler inip binene kadar yanık tutulur. Bu ışık yandığında diğer sürücüler durur ve iniş-biniş bitene kadar bekler. Okul taşıtlarında öğrencilere yardım eden bir rehber kişi bulunur ve camlar sabittir."
+ ],
+ "akilda": [
+  "Işıksız ama işaretli yaya ve okul geçidinde yavaşla, durarak yayaya yol ver.",
+  "Dönen sürücü, yeşil ışıkta bile karşıya geçen yayaya yol verir.",
+  "Yaya ve okul geçidine yaklaşırken geçme yapılmaz.",
+  "Yaya yolu ve banket yoksa yaya taşıt yolunun sol kenarından yürür.",
+  "Okul taşıtının “DUR” ışığı yanınca durulur; ışık iniş-biniş bitene kadar yanar.",
+  "Okul geçidi görevlisi öğrenci en az 12 yaşındadır; işaretlerine uyulur."
+ ],
+ "kaynak": [
+  "2918 sayılı KTK md. 54, 60, 68, 74: https://www.mevzuat.gov.tr/MevzuatMetin/1.5.2918.pdf",
+  "Karayolları Trafik Yönetmeliği md. 102, 138, 146 ve okul taşıtlarıyla ilgili hükümler: https://www.mevzuat.gov.tr/mevzuat?MevzuatNo=8182&MevzuatTur=7&MevzuatTertip=5",
+  "Okul Servis Araçları Hizmet Yönetmeliği"
+ ]
+},
+"trafik-15": {
+ "paragraflar": [
+  "Gece görüş mesafesi farların aydınlattığı alanla sınırlıdır. Sürücü hızını, durma mesafesi farların aydınlattığı mesafeyi aşmayacak şekilde ayarlar. Yerleşim yeri dışında karşılaşma yoksa uzağı gösteren, karşılaşmada, takipte ve aydınlatılmış yolda yakını gösteren farlar kullanılır. Karşıdan gelen aracın farı gözü kamaştırırsa sürücü hızını azaltır ve bakışını yolun sağ kenarına kaydırır. Alkol, yorgunluk ve kirli cam gece görüşünü daha da zayıflatır.",
+  "Sisli havada yakını gösteren farlar ve sis lambaları yakılır. Uzun far yakılmaz; ışık sis damlacıklarından yansıyıp görüşü azaltır. Yalnız sis lambasıyla araç sürülemez. Sisli, karlı ve yağmurlu havada hız düşürülür, takip mesafesi artırılır, zorunlu olmadıkça geçme yapılmaz. Sis lambaları yalnızca sis, kar ve şiddetli yağmurda kullanılır.",
+  "Yağmur yolu kaygan yapar; uzun kuraklıktan sonraki ilk yağmurda yol, toz ve yağ birikintisi yüzünden daha da kaygandır. Su birikintisine hızla girilirse lastik yolla temasını kaybedip su yüzeyinde kızaklayabilir. Bu durumda sürücü gazı bırakır, ani fren ve sert direksiyon hareketinden kaçınır. Islak yolda durma mesafesi uzadığı için takip mesafesi kuru yola göre artırılır.",
+  "Karlı ve buzlu yolda kalkış, hızlanma, frenleme ve dönüşler yumuşak yapılır; ani hareket kaymaya yol açar. Kış lastiği kullanılır ve hız azaltılır. Kış lastiğinin zorunlu olduğu dönemi ve araç cinslerini Ulaştırma ve Altyapı Bakanlığı belirler. Kamyon, çekici ve otobüs sürücüleri karlı ve buzlu havada kar zinciri bulundurmak ve gerektiğinde takmak zorundadır. Köprüler, viyadükler ve gölgede kalan yol kesimleri daha önce buzlanır; “gizli buzlanma” levhası görüldüğünde özellikle dikkatli olunur."
+ ],
+ "akilda": [
+  "Gece hız, farların aydınlattığı mesafede durulabilecek kadar olmalıdır.",
+  "Göz kamaşırsa yavaşla, yolun sağ kenarına bak.",
+  "Siste uzun far yakılmaz; kısa far ve sis lambası kullanılır.",
+  "Su üzerinde kızaklamada gazı bırak, ani fren ve direksiyondan kaçın.",
+  "Islak, karlı ve buzlu yolda takip mesafesi artırılır.",
+  "Köprü ve viyadükler daha önce buzlanır; kamyon, çekici ve otobüste kar zinciri bulundurulur."
+ ],
+ "kaynak": [
+  "2918 sayılı KTK md. 52, 64: https://www.mevzuat.gov.tr/MevzuatMetin/1.5.2918.pdf",
+  "Karayolları Trafik Yönetmeliği md. 101, 135 (ışıkların kullanılması) ve kış lastiğiyle ilgili hükümler: https://www.mevzuat.gov.tr/mevzuat?MevzuatNo=8182&MevzuatTur=7&MevzuatTertip=5",
+  "MEB Trafik ve Çevre Bilgisi ders modülü"
+ ]
+},
+"trafik-16": {
+ "paragraflar": [
+  "Taşıma sınırı, bir aracın güvenle taşıyabileceği en çok yük ağırlığı veya yolcu sayısıdır. Yüklü ağırlık ise aracın boş ağırlığı ile sürücü, yolcu ve eşyanın toplam ağırlığıdır. Araç taşıma sınırının üstünde yüklenemez. Azami yüklü ağırlığını yüzde 20'den fazla aşan aracın, fazla yük uygun hâle getirilmeden yoluna devam etmesine izin verilmez. Gabari, aracın yüklü veya yüksüz güvenli seyri için belirlenen uzunluk, genişlik ve yükseklik ölçüleridir.",
+  "Yük, sürücünün görüşünü engellemeyecek, plakaları ve ışıkları örtmeyecek, yola dökülmeyecek ve sarkmayacak şekilde yüklenip sağlamca bağlanır. Kamyon ve kamyonetlerde yük üzerinde insan taşımak yasaktır. Ağırlığın düzgün dağıtılmaması aracın dengesini bozar, frenleme ve virajda kaymaya yol açabilir. Kullanılmayan tavan bagajı ve gereksiz yük de yakıt tüketimini artırır.",
+  "Römork, motorlu araçla çekilen ve insan veya yük taşımak için yapılmış motorsuz taşıttır; yükünün bir kısmı çeken araca binen römork yarı römorktur. B sınıfı belgeyle azami yüklü ağırlığı 750 kilograma kadar hafif römork çekilebilir. Römorklu araçta azami hız, aynı cins römorksuz aracınkinden 10 km/s düşüktür; römorklu otomobil şehirlerarası çift yönlü yolda en çok 80 km/s ile gider. Bir taşıt katarında en çok iki römork bulunabilir.",
+  "Arızalı araç, kurtarıcı dışında başka bir araçla yalnız en yakın bakım-onarım yerine kadar çekilebilir. Çekilen araçta onu yönetecek bir sürücü bulunur; araçlarda birer hizmetli dışında yolcu taşınmaz. Çekilen aracın ağırlığı çeken aracın taşıma sınırını geçemez. İki araç arasındaki açıklık en fazla 5 metredir; freni bozuk araç ise aralarında en fazla 1 metre bırakan, yaklaşmayı önleyen çeki demiriyle çekilir. Servis freni bozuk aracı çeken araç en çok 15 km/s ile gider. Işıkları bozuk araç gece çekilirken arkasına kırmızı ışık veya yansıtıcı konur. Kendi hareket gücü olmayan arızalı römork yalnız kurtarıcıyla çekilir."
+ ],
+ "akilda": [
+  "Yük görüşü, plakayı ve ışıkları örtmez; dökülmeyecek şekilde bağlanır.",
+  "Kamyon ve kamyonette yük üzerinde insan taşınmaz.",
+  "B sınıfıyla en çok 750 kg'lık hafif römork çekilir.",
+  "Römorklu araçta azami hız 10 km/s düşüktür.",
+  "Çekmede araçlar arası en fazla 5 m; freni bozuk araçta çeki demiriyle en fazla 1 m.",
+  "Arızalı araç başka araçla yalnız en yakın onarım yerine kadar çekilir."
+ ],
+ "kaynak": [
+  "2918 sayılı KTK md. 65 (taşıma sınırı ve yükleme): https://www.mevzuat.gov.tr/MevzuatMetin/1.5.2918.pdf",
+  "Karayolları Trafik Yönetmeliği (yükleme, taşıma sınırı, araç çekme ve hız sınırları cetveli): https://www.mevzuat.gov.tr/mevzuat?MevzuatNo=8182&MevzuatTur=7&MevzuatTertip=5",
+  "2918 sayılı KTK md. 39 (sürücü belgesi sınıfları)"
+ ]
+},
+"trafik-17": {
+ "paragraflar": [
+  "Alkol, beyni yavaşlatan bir maddedir. Az miktarda bile tepki süresini uzatır, görüş alanını daraltır, mesafe ve hız tahminini bozar, aydınlığa ve karanlığa uyumu güçleştirir. Alkollü sürücü kendini olduğundan daha becerikli sanır ve daha fazla risk alır. Boş mideyle ya da sakinleştirici ilaçlarla birlikte alınan alkolün etkisi artar. Kahve, soğuk duş veya temiz hava alkolü vücuttan atmaz; yalnızca zaman atar.",
+  "Hususi otomobil sürücüsü için sınır 0,50 promil, diğer araç sürücüleri ve aday sürücüler için 0,20 promildir. Sürücüler alkol ve uyuşturucu kontrolüne her zaman tabi tutulabilir. Ölçümü yaptırmayı reddeden sürücünün belgesi 5 yıl geri alınır. Uyuşturucu veya uyarıcı madde aldığı tespit edilen sürücünün belgesi iptal edilir. Ölümlü veya yaralanmalı kazaya karışan sürücünün alkol ve uyuşturucu yönünden muayenesi zorunludur.",
+  "Yorgunluk ve uykusuzluk da alkol kadar tehlikelidir. Sık esneme, göz kapaklarının ağırlaşması, şeritten kayma ve son birkaç kilometreyi hatırlamamak yorgunluk belirtileridir. Bu belirtiler görülünce güvenli bir yerde mola verilip dinlenilir; müzik açmak veya camı açmak çözüm değildir. Uzun yola dinlenmiş çıkılır ve molalar önceden planlanır. Uzun süre yüksek hızla giden sürücüde reflekslerin yavaşlamasına hız sarhoşluğu denir.",
+  "Bazı ilaçlar uyku, baş dönmesi veya dikkat azalması yapar. Bu tür ilaç kullanan kişi, ilacın etkisi geçene kadar araç kullanmaz. Sürücü belgesinde gözlük veya lens şartı varsa araç kullanırken takılır. Sürücüde sürücülüğe engel olacak aşikâr bir sağlık değişikliği görülürse belgesi geri alınır ve sağlık kuruluşunda muayenesi istenir. Hasta, aşırı öfkeli veya çok stresli hâlde de araç kullanılmamalıdır."
+ ],
+ "akilda": [
+  "Alkol tepki süresini uzatır, görüşü daraltır, gece görüşünü bozar.",
+  "Kahve veya soğuk duş alkolü atmaz; yalnız zaman atar.",
+  "Sınır: hususi otomobilde 0,50; diğer araçlarda ve aday sürücüde 0,20 promil.",
+  "Ölçümü reddetmek: belge 5 yıl geri alınır; uyuşturucu: belge iptal.",
+  "Yorgunluk belirtisinde güvenli yerde mola verip dinlen.",
+  "Uyku yapan ilacın etkisi geçmeden araç kullanılmaz."
+ ],
+ "kaynak": [
+  "2918 sayılı KTK md. 48: https://www.mevzuat.gov.tr/MevzuatMetin/1.5.2918.pdf",
+  "Karayolları Trafik Yönetmeliği (alkol, uyuşturucu ve uyarıcı madde hükümleri): https://www.mevzuat.gov.tr/mevzuat?MevzuatNo=8182&MevzuatTur=7&MevzuatTertip=5",
+  "MEB Trafik ve Çevre Bilgisi ile Trafik Adabı ders modülleri"
+ ]
+},
+"trafik-18": {
+ "paragraflar": [
+  "Tescili zorunlu araçlar, tescil belgesi ve tescil plakası alınmadan karayoluna çıkarılamaz. İlk tescil için satın alma veya gümrükten çekme tarihinden itibaren 3 ay içinde başvurulur. Tescilli araçların satış ve devri noterde yapılır; noter dışında yapılan satış geçersizdir. Noterin yeni malik adına düzenlediği geçici belge bir ay geçerlidir. Araç üzerinde mevzuata uygun yapılan değişiklik 30 gün içinde tescil kaydına işletilir. Hurdaya ayrılan aracın kaydını sildirmek için bir ay içinde başvurulur.",
+  "Tescil belgesi ve plaka araçta uygun durumda bulundurulur. Plakalar okunaklı olmalı, üzeri kapatılmamalı ve değiştirilmemelidir. Tescilli aracı plakasız kullanan sürücünün belgesi 30 gün geri alınır, araç 30 gün trafikten men edilir. Plakanın okunmasını bilerek engelleyecek değişiklik yapılan araç da 30 gün men edilir ve plaka uygun hâle getirilmeden teslim edilmez. Başka araca ait ya da sahte plaka kullananlar ayrıca Türk Ceza Kanunu'na göre cezalandırılır.",
+  "Araçlar Bakanlığa ait veya Bakanlıkça yetkilendirilen muayene istasyonlarında muayene edilir. Hususi otomobil ilk kez üç yaşında, sonra iki yılda bir muayene olur. Muayene için tescil veya sahiplik belgesi ile geçerli zorunlu mali sorumluluk (trafik) sigortası gerekir. Muayenesi yapılmadan ya da emniyetsiz raporuna rağmen trafiğe çıkarılan araç men edilip en yakın istasyona gönderilir. Kazaya karışan ve zabıtaca gerekli görülen araç, süresi dolmasa da özel muayeneye girer.",
+  "Otomobilde ilk yardım çantası, en az 1 kilogramlık el yangın söndürme cihazı ve iki adet reflektör bulunur. Yangın söndürme cihazı A, B ve C sınıfı yangınlara etkili olmalı ve kolay erişilen bir yerde durmalıdır. Üç veya daha fazla dingilli araçlarda iki tekerlek takozu bulundurulur. Kamyon, çekici ve otobüslerde kışın kar zinciri bulundurulması zorunludur."
+ ],
+ "akilda": [
+  "Tescil belgesi ve plaka alınmadan araç trafiğe çıkamaz.",
+  "Yeni araç 3 ay içinde tescil ettirilir; satış noterde yapılır.",
+  "Araçta yapılan değişiklik 30 gün içinde tescile işletilir.",
+  "Plakasız araç kullanmak: belge 30 gün geri, araç 30 gün men.",
+  "Hususi otomobil: ilk muayene 3 yaşında, sonra 2 yılda bir.",
+  "Otomobilde ilk yardım çantası, 1 kg yangın söndürücü ve 2 reflektör bulunur."
+ ],
+ "kaynak": [
+  "2918 sayılı KTK md. 20 (tescil), 30 (donanım), 34 (muayene), 91 (zorunlu sigorta): https://www.mevzuat.gov.tr/MevzuatMetin/1.5.2918.pdf",
+  "Karayolları Trafik Yönetmeliği (tescil, araç donanımı ve muayene hükümleri): https://www.mevzuat.gov.tr/mevzuat?MevzuatNo=8182&MevzuatTur=7&MevzuatTertip=5",
+  "Araç Muayene İstasyonlarının Açılması, İşletilmesi ve Araçların Muayenesi Hakkında Yönetmelik"
+ ]
+},
+"trafik-19": {
+ "paragraflar": [
+  "Yolu kullananlar önce trafik görevlisinin işaretlerine uyar; görevli ile trafik ışığı farklı bir şey gösteriyorsa görevliye uyulur. Görevli kolunu dikey olarak yukarı kaldırdığında bu, bütün yönler için dikkat ve dur anlamına gelir: kavşağa girmemiş sürücü durur, kavşağın içindeki sürücü kavşağı boşaltır.",
+  "Görevli kollarını yatay olarak yana uzattığında göğsü ve sırtı yönünden gelen sürücüler durur, kolların uzandığı doğrultudan gelenler geçebilir. Görevli işaretini yaptıktan sonra kollarını indirirse daha önce verdiği emir değişmez. Görevlinin elindeki kırmızı ışığı sallaması, ışığı yönelttiği doğrultudakiler için dur emridir. Uzun sesli tek veya aralıklı düdük dur, kısa sesli tek veya aralıklı düdük uyarı anlamındadır.",
+  "Trafiği düzenlemek ve denetlemek trafik zabıtasının görevidir; trafik zabıtasının bulunmadığı ya da yetersiz kaldığı yerlerde bu görevi genel zabıta yapar. Trafik zabıtasınca belgesi verilmiş okul geçidi görevlisi de görev sırasında trafiği yöneten kişinin yetkilerine sahiptir. Işıklı işaretlerle yönetilen kavşaklarda görevliler, zorunluluk olmadıkça yönetime müdahale etmez.",
+  "Denetimde sürücü görevlinin işaretiyle aracını güvenli biçimde durdurur ve talimatlara uyar. Sürücü belgesi araç kullanırken yanında bulunur ve istendiğinde gösterilir; tescil belgesi de araçta bulundurulur. Sürücüler alkol kontrolüne her zaman tabi tutulabilir. Zabıtanın dur ikazına uymayarak kaçan sürücünün belgesi 60 gün geri alınır, aracı 60 gün trafikten men edilir. Hız radar dışında başka usullerle de ölçülebilir; radar yerini bildiren cihazları araçta bulundurmak yasaktır. Denetimin düzen için yapıldığını bilen sürücü görevliye saygıyla davranır."
+ ],
+ "akilda": [
+  "Uyma sırasında ilk sırada trafik görevlisi vardır.",
+  "Kol dikey yukarıda: kavşağa girmemişsen dur, içindeysen kavşağı boşalt.",
+  "Kollar yatayda: göğüs ve sırt yönünden gelen durur, kol doğrultusundan gelen geçer.",
+  "Uzun düdük dur, kısa düdük uyarıdır; sallanan kırmızı ışık dur emridir.",
+  "Kollar indirilince önceki emir geçerliliğini korur.",
+  "Dur ikazına uymayıp kaçmak: belge 60 gün geri, araç 60 gün men."
+ ],
+ "kaynak": [
+  "2918 sayılı KTK md. 47 (trafik işaret ve görevlilerine uyma zorunluluğu), md. 48 (alkol kontrolü): https://www.mevzuat.gov.tr/MevzuatMetin/1.5.2918.pdf",
+  "Karayolları Trafik Yönetmeliği (görevlilerin işaret ve talimatları): https://www.mevzuat.gov.tr/mevzuat?MevzuatNo=8182&MevzuatTur=7&MevzuatTertip=5"
+ ]
+},
+"trafik-20": {
+ "paragraflar": [
+  "Motosiklet sürücüsü ve yolcusu koruma başlığı (kask) takar; başlıkta koruma gözlüğü yoksa ayrıca gözlük takılır. Motosiklet devamlı iki elle sürülür. Motorlu bisiklet ve bisiklet en az bir elle sürülür; tek el yalnız işaret verirken bırakılabilir. Bisiklet, motorlu bisiklet ve motosikletler bir şeritte en fazla iki tanesi yan yana sürülebilir. Başka bir araca tutunarak gitmek, elde paket taşımak ve yaya alanlarında sürmek yasaktır. Tek teker üzerinde gitmek gibi akrobatik hareketler yapan sürücünün belgesi 60 gün geri alınır.",
+  "Motorlu bisiklet (moped), silindir hacmi en fazla 50 cm³ ve azami hızı 45 km/s olan taşıttır; M sınıfı belgeyle kullanılır, yerleşim yeri içinde en çok 30 km/s ile gider ve otoyola giremez. Ayrı bisiklet yolu varsa bisiklet ve elektrikli skuter orayı kullanır. Sürücü bisikletliyi geçerken yeterli yan mesafe bırakır, dönüşte bisiklet yolundakine yol verir ve kapı açmadan önce arkasını kontrol eder. Motosikletliler kolay görülmediği için aynalara ve kör noktaya ayrıca dikkat edilir.",
+  "Lastik tekerlekli traktör ticari taşımada kullanılmayan bir tarım aracıdır ve F sınıfı belgeyle sürülür. Traktör otoyola giremez; şehirlerarası çift yönlü yolda en çok 30, bölünmüş yolda 40 km/s ile gider. İşaretsiz kavşakta diğer motorlu araçlara yol verir. Tarım ürünlerinin toplanması için traktör römorkunda, oturmaları şartıyla taşıma sınırının her tonu için en çok üç kişi taşınabilir. Yavaş giden tarım aracını geçecek sürücü sabırlı olur ve ancak güvenli yerde geçer.",
+  "Yerleşim yeri dışındaki yollarda zorunlu hâller dışında taşıt yolunda hayvan bulundurmak yasaktır. Sürü mümkünse taşıt yolu dışından götürülür; zorunluysa en sağ şeritte, en az genişliği işgal ederek ilerler. Sürünün boyu 30 metreden kısa olmalı, uzunsa kısımlara ayrılıp aralarında en az 30 metre bırakılmalıdır. Hayvanla çekilen araçla gece tehlikeli madde taşınmaz ve hayvan, sürme yeteneği olmayana verilmez. Hayvan sürüsüne yaklaşan sürücü yavaşlar, gerekirse durur ve korna çalarak hayvanları ürkütmez."
+ ],
+ "akilda": [
+  "Motosiklette sürücü ve yolcu kask takar; motosiklet iki elle sürülür.",
+  "Bir şeritte en fazla iki bisiklet veya motosiklet yan yana gidebilir.",
+  "Moped: en çok 50 cm³, yerleşim içinde 30 km/s, otoyola giremez.",
+  "Traktör F sınıfıyla sürülür ve otoyola giremez.",
+  "Sürü 30 m'den kısa tutulur; kısımlar arasında en az 30 m bırakılır.",
+  "Hayvan sürüsüne yaklaşınca yavaşla, gerekirse dur, ürkütme."
+ ],
+ "kaynak": [
+  "2918 sayılı KTK md. 3, 39, 78: https://www.mevzuat.gov.tr/MevzuatMetin/1.5.2918.pdf",
+  "Karayolları Trafik Yönetmeliği (bisiklet, motorlu bisiklet ve motosiklet; lastik tekerlekli traktörler; hayvanlarla ilgili kurallar ve hız sınırları cetveli): https://www.mevzuat.gov.tr/mevzuat?MevzuatNo=8182&MevzuatTur=7&MevzuatTertip=5"
+ ]
+},
+"adab-5": {
+ "paragraflar": [
+  "Geçiş üstünlüğü, görevdeki cankurtaran (ambulans), itfaiye, zabıta ve afet araçları gibi araçlara tanınır. Bu araçlar hakkını ancak görev hâlinde, sesli ve ışıklı işaret vererek ve can ve mal güvenliğini tehlikeye sokmadan kullanabilir. Karşılaştıklarında sıralama cankurtaran, itfaiye, zabıta araçları, trafik görevlisi araçları ve afet araçlarıdır. Yol bakım ve kurtarıcı araçlarındaki sarı ışık geçiş üstünlüğü vermez, yalnızca uyarır.",
+  "Sesli ve ışıklı işaret veren araç yaklaşınca sürücü sakin kalır, sinyal verip sağa yanaşır ve gerekirse durur. Kavşaktaysa kavşağı hemen boşaltır. Ani fren, panikle şerit değiştirme ve kırmızı ışıkta kontrolsüz ilerleme yeni tehlike yaratır. Ambulansın açtığı yoldan arkasına takılıp hızla gitmek tehlikelidir ve adaba aykırıdır. Emniyet şeridini işgal etmek hem yasaktır hem de acil araçların yolunu kapatır. Ambulans ve itfaiyeye yol vermeyen sürücünün belgesi 30 gün geri alınır, aracı 30 gün men edilir; beş yıl içinde ikinci kez olursa belge iptal edilir.",
+  "Kaza yerinden geçen sürücü ilk yardım önlemi almak ve en yakın zabıtaya veya sağlık kuruluşuna haber vermekle yükümlüdür. Önce kendi güvenliğini sağlar, aracını trafiği engellemeyecek yere alır, dörtlülerini yakar ve 112'yi arar. Yaralıyı zorunlu olmadıkça yerinden oynatmaz. Yetkililer isterse yaralıyı sağlık kuruluşuna götürür; sağlık ekibi gelince onların talimatlarına uyar.",
+  "Kazazedeye saygı, onun mahremiyetini korumaktır. Kaza yerinde meraklı kalabalık oluşturmak, yavaşlayıp seyretmek ve fotoğraf ya da video çekmek hem kurtarma çalışmasını engeller hem de arkadan çarpma gibi yeni kazalara yol açar. Yaralının yakınlarını üzecek görüntüleri paylaşmak saygısızlıktır. Kazazedenin eşyalarına dokunulmaz, izler bozulmaz; görev yapanlara alan açılır."
+ ],
+ "akilda": [
+  "Geçiş üstünlüğü olan araca sağa yanaşarak yol ver, gerekirse dur.",
+  "Kavşaktaysan kavşağı hemen boşalt; ani ve panik manevra yapma.",
+  "Ambulansın ardından onun açtığı yoldan gitmek tehlikelidir.",
+  "Sarı ışıklı yol bakım ve kurtarıcı araçlarının geçiş üstünlüğü yoktur.",
+  "Kaza yerinde önce güvenlik, sonra 112 ve ilk yardım.",
+  "Kaza yerinde seyretme, fotoğraf ve video çekme; kazazedenin mahremiyetini koru."
+ ],
+ "kaynak": [
+  "2918 sayılı KTK md. 55 (geçiş üstünlüğü olan araçlar), md. 82 (kaza yerinden geçenlerin yükümlülükleri): https://www.mevzuat.gov.tr/MevzuatMetin/1.5.2918.pdf",
+  "Karayolları Trafik Yönetmeliği md. 142 (geçiş üstünlüğü): https://www.mevzuat.gov.tr/mevzuat?MevzuatNo=8182&MevzuatTur=7&MevzuatTertip=5",
+  "İlk Yardım Yönetmeliği"
+ ]
+},
+"adab-6": {
+ "paragraflar": [
+  "Dikkat dağınıklığı, sürücünün dikkatinin yoldan ve sürüş görevinden başka bir şeye kaymasıdır. Üç türü vardır: gözün yoldan ayrılması, ellerin direksiyondan ayrılması ve zihnin sürüşten uzaklaşması. Telefonla mesajlaşmak üçünü birden yaptığı için en tehlikeli davranışlardandır. Saatte 90 km hızla giden araç bir saniyede 25 metre yol alır; birkaç saniyelik bir bakış, yolun uzun bir bölümünü görmeden gitmek demektir.",
+  "Seyir hâlinde cep telefonunu elde tutarak kullanmak yasaktır. Telefonun elektronik sistemlerle, ele alınmadan kullanılması bu yasağın dışındadır; ancak eller serbest konuşma da zihni meşgul eder. Son bir yıl içinde telefon kuralını üç veya daha fazla ihlal eden sürücünün belgesi her seferinde 30 gün geri alınır. Önemli bir görüşme gerekiyorsa sürücü güvenli bir yerde durup konuşur.",
+  "Sürüş sırasında yemek yemek, makyaj yapmak, harita incelemek, navigasyon ayarlamak, eşya aramak ve yolcularla tartışmak da dikkati dağıtır. Yüksek sesli müzik dışarıdaki ambulans sirenini ve korna sesini duymayı zorlaştırır. Yanındaki kişiye göre sürücünün davranışı değişebilir; arkadaşlarına gösteriş yapmak için risk almak sorumsuzluktur.",
+  "Sorumlu sürücü dikkat dağıtıcıları yola çıkmadan önce ortadan kaldırır: güzergâhı ve navigasyonu önceden ayarlar, telefonu sessize alır veya ulaşamayacağı yere koyar, eşyaları sabitler. Çocukların ve evcil hayvanların güvenli biçimde yerleşmesini sağlar. Yorgun, uykusuz ya da çok gerginse araç kullanmaz. Kendi dikkatinin sınırlı olduğunu bilen sürücü, başkalarının hatalarını da önceden sezer."
+ ],
+ "akilda": [
+  "Dikkat dağınıklığı: göz yoldan, el direksiyondan, zihin sürüşten ayrılır.",
+  "90 km/s'te araç saniyede 25 metre yol alır.",
+  "Seyir hâlinde telefonu elde tutarak kullanmak yasaktır.",
+  "Bir yılda telefon kuralının 3. ihlalinden itibaren belge her seferinde 30 gün geri alınır.",
+  "Yemek, makyaj, harita ve navigasyon ayarı sürüş sırasında yapılmaz.",
+  "Navigasyonu ve telefonu yola çıkmadan ayarla."
+ ],
+ "kaynak": [
+  "2918 sayılı KTK md. 73 (seyir hâlinde cep telefonu kullanma): https://www.mevzuat.gov.tr/MevzuatMetin/1.5.2918.pdf",
+  "Karayolları Trafik Yönetmeliği: https://www.mevzuat.gov.tr/mevzuat?MevzuatNo=8182&MevzuatTur=7&MevzuatTertip=5",
+  "MEB Trafik Adabı ders modülü"
+ ]
+},
+"adab-7": {
+ "paragraflar": [
+  "Trafik kültürü, toplumun benimsediği, uyulduğunda desteklenen ve aykırı davranışın hoş karşılanmadığı trafik davranışlarının bütünüdür. Trafik kültürünün eksikliği çoğu zaman kurallara uymadaki isteksizlikten ve kuralların neden konduğunu bilmemekten kaynaklanır. Bu kültür en çok eğitimle ve olumlu davranışların süreklilik kazanmasıyla oluşur. Yazılı olmayan kuralların da zamanla yaşam biçimine dönüşmesi gerekir.",
+  "Örnek sürücü, kurallara yalnız denetim olduğunda değil her zaman uyar. Hız sınırına, takip mesafesine ve sinyal kullanımına özen gösterir. Kavşağı tıkamaz, emniyet şeridini kullanmaz, engelliler için ayrılmış yere park etmez. Şeridin daraldığı yerde araçların sırayla birleşmesine (fermuar usulü) izin verir. Yol verene el kaldırarak teşekkür etmek ve hata yapınca özür dilemek gerginliği azaltır.",
+  "Çocuklar trafik davranışını büyüklerini izleyerek öğrenir. Emniyet kemeri takan, kırmızıda bekleyen ve yayaya yol veren bir anne baba, çocuğuna en iyi trafik dersini verir. Toplu taşıma şoförleri, kurs eğitmenleri ve meslekten sürücüler de çevrelerine örnek olur.",
+  "Trafik kazaları yalnız kazaya karışanları değil; aileleri, sağlık sistemini ve ülke ekonomisini de etkiler. Kurallara uymak, aracın bakımını aksatmamak, gereksiz yere rölantide beklememek ve kısa yolları yürüyerek ya da toplu taşımayla yapmak toplumsal sorumluluğun parçasıdır. Hatalı davranışı görünce ders vermeye kalkmak yerine sakin kalmak, gerekirse yetkililere bildirmek doğru tutumdur."
+ ],
+ "akilda": [
+  "Trafik kültürü eğitimle ve olumlu davranışların sürmesiyle oluşur.",
+  "Örnek sürücü kurala denetim olmasa da uyar.",
+  "Şerit daralmasında fermuar usulü sırayla birleşilir.",
+  "Kavşağı tıkama, emniyet şeridini ve engelli park yerini kullanma.",
+  "Çocuklar trafiği büyüklerini izleyerek öğrenir.",
+  "Hatalı sürücüye ders vermeye kalkma; sakin kal, gerekirse yetkiliye bildir."
+ ],
+ "kaynak": [
+  "2918 sayılı KTK md. 46, 47: https://www.mevzuat.gov.tr/MevzuatMetin/1.5.2918.pdf",
+  "MEB Trafik Adabı ders modülü"
+ ]
+},
+"ilkyardim-9": {
+ "paragraflar": [
+  "Vücudun en küçük yapı birimi hücredir. Benzer hücreler dokuyu, dokular organları, birlikte çalışan organlar da sistemleri oluşturur. İlk yardımcı için en önemli sistemler solunum, dolaşım ve sinir sistemidir; bunlardan biri durursa diğerleri de kısa sürede çalışamaz hâle gelir. Beyin oksijensizliğe yaklaşık 4–6 dakika dayanabilir.",
+  "Solunum sistemi, solunum yolları ve akciğerlerden oluşur; görevi oksijen almak ve karbondioksiti dışarı atmaktır. Hava burunda ısıtılır, nemlendirilir ve tozdan temizlenir; sonra yutak, gırtlak, soluk borusu ve bronşlardan geçerek akciğerlere ulaşır. Gaz alışverişi akciğerlerdeki hava keseciklerinde (alveoller) olur. Gırtlak kapağı (epiglot), yutkunurken yiyeceklerin soluk borusuna kaçmasını önler. Sağlıklı yetişkinde solunum sayısı dakikada 12–20'dir.",
+  "Dolaşım sistemi kalp, kan damarları ve kandan oluşur; dokulara oksijen ve besin taşır, atıkları geri toplar. Kalp göğüs kafesinin ortasındadır ve dört odacıklıdır: üstte iki kulakçık, altta iki karıncık. Vücuttan gelen kirli kan sağ kulakçığa döner; sağ karıncıktan akciğerlere gidip temizlenir (küçük dolaşım). Temiz kan sol karıncıktan en büyük atardamar olan aort ile bütün vücuda pompalanır (büyük dolaşım). Atardamarlar kalpten dokulara, toplardamarlar dokulardan kalbe kan taşır; kılcal damarlar ikisi arasında köprü kurar. Alyuvar oksijen taşır, akyuvar vücudu mikroplara karşı korur, trombosit pıhtılaşmayı sağlar; kanın sıvı kısmı plazmadır. Yetişkinde nabız dakikada 60–100'dür.",
+  "Sinir sistemi bilinç, düşünme, hareket ile solunum ve dolaşımın düzenlenmesini yönetir. Merkezi sinir sistemi beyin ve omurilikten oluşur; omurilik, omurganın içinde korunur. Bu yüzden omurga yaralanması felce yol açabilir. Hareket sistemi kemikler, eklemler ve kaslardan oluşur; kafatası beyni, göğüs kafesi kalp ve akciğerleri korur. Deri ise vücudu dış etkenlere karşı koruyan ve ısıyı düzenlemeye yardım eden en büyük organdır."
+ ],
+ "akilda": [
+  "Sıralama: hücre → doku → organ → sistem.",
+  "Gaz alışverişi akciğerlerdeki hava keseciklerinde (alveoller) olur.",
+  "Kirli kan sağ kulakçığa döner; büyük dolaşım sol karıncıktan aort ile başlar.",
+  "Alyuvar oksijen taşır, akyuvar savunma yapar, trombosit pıhtılaşmayı sağlar.",
+  "Merkezi sinir sistemi: beyin ve omurilik.",
+  "Yetişkinde solunum 12–20, nabız 60–100 / dakika; beyin oksijensizliğe 4–6 dakika dayanır."
+ ],
+ "kaynak": [
+  "İlkyardım Yönetmeliği (Sağlık Bakanlığı): https://www.resmigazete.gov.tr/eskiler/2015/07/20150729-2.htm",
+  "MEB – Sağlık Bakanlığı içerikli ilk yardım eğitimi, İnsan Vücudu (Sistemler) bölümü",
+  "MEB İlk Yardım: https://ilkyardim.meb.gov.tr/"
+ ]
+},
+"ilkyardim-10": {
+ "paragraflar": [
+  "Solunum yolu tıkanıklığı, havanın akciğerlere geçişinin yabancı bir cisimle engellenmesidir. Yetişkinlerde en çok yemek yerken, çocuklarda oyuncak parçası, fındık, bozuk para gibi cisimlerle olur. Bilinç düzeyi azalmış kişide dilin geriye kaçması da hava yolunu tıkayabilir. Önce “Boğuluyor musun?” diye sorulur ve kişinin konuşup öksürebildiğine bakılır.",
+  "Kısmi tıkanıklıkta kişi konuşabilir, öksürebilir ve nefes alabilir. Öksürük, cismi çıkarmanın en etkili yoludur; kişi öksürmeye teşvik edilir ve başka müdahale yapılmaz. Tam tıkanıklıkta kişi konuşamaz, öksüremez, nefes alamaz; çoğu zaman ellerini boğazına götürür ve yüzü morarmaya başlar. Bu durumda zaman kaybetmeden müdahale edilir, 112 aranır ya da aratılır. Öksürüğü etkisizleşen kısmi tıkanıklık da tam tıkanıklık gibi ele alınır.",
+  "Bilinci açık yetişkin ve 1 yaşından büyük çocukta ilk yardımcı yana geçer, kişiyi bir eliyle göğsünden destekleyip öne eğer ve kürek kemiklerinin arasına el topuğuyla 5 kez sırt vuruşu yapar. Cisim çıkmazsa 5 kez karın basısı (Heimlich) uygulanır: ilk yardımcı arkaya geçer, kollarıyla karnı sarar, yumruğunu başparmak tarafı karına gelecek şekilde göbek ile göğüs kemiğinin alt ucu arasına koyar ve içeri-yukarı doğru bastırır. Cisim çıkana ya da bilinç kaybolana kadar beşer sırt vuruşu ve karın basısı dönüşümlü sürdürülür. Gebelerde ve çok şişman kişilerde karın yerine göğüs kemiğinin alt yarısına bası yapılır.",
+  "Bebekte (1 yaş altı) karın basısı yapılmaz. Bebek, başı gövdesinden aşağıda olacak şekilde kol üzerine yüzüstü yatırılır ve kürek kemikleri arasına 5 sırt vuruşu yapılır. Cisim çıkmazsa sırtüstü çevrilir, göğüs kemiği üzerine iki parmakla 5 göğüs basısı uygulanır. Kişinin bilinci kaybolursa sert zemine yatırılır, 112 aranır ve temel yaşam desteğine başlanır. Ağza körlemesine parmak sokulmaz; yalnızca görünen ve çıkarılabilen cisim alınır. Karın basısı uygulanan kişi, cisim çıksa bile sağlık kuruluşunda kontrol edilmelidir."
+ ],
+ "akilda": [
+  "Kısmi tıkanıklık (konuşabiliyor, öksürebiliyor): öksürmeye teşvik et, müdahale etme.",
+  "Tam tıkanıklıkta yetişkin ve çocuk: 5 sırt vuruşu, ardından 5 karın basısı, dönüşümlü.",
+  "Karın basısında yumruk göbek ile göğüs kemiğinin alt ucu arasına; yön içeri ve yukarı.",
+  "Gebe ve çok şişman kişide karın yerine göğüs basısı.",
+  "Bebekte karın basısı yok: 5 sırt vuruşu + 5 göğüs basısı.",
+  "Bilinç kaybolursa yere yatır, 112'yi ara, temel yaşam desteğine başla."
+ ],
+ "kaynak": [
+  "MEB – Sağlık Bakanlığı içerikli ilk yardım eğitimi, Solunum Yolu Tıkanıklığında İlk Yardım bölümü",
+  "Avrupa Resüsitasyon Konseyi (ERC) Kılavuzları 2025: https://cprguidelines.eu/"
+ ]
+},
+"ilkyardim-11": {
+ "paragraflar": [
+  "Trafik kazalarındaki ölümlerin büyük bölümü kafatası ve omurga yaralanmalarından kaynaklanır. Bu yüzden bilinci kapalı kaza yaralısında, belirti olmasa bile kafa ve omurga yaralanması varmış gibi davranılır. Belirtiler arasında bilinç değişikliği, baş ağrısı, kusma, kulak ya da burundan kan veya berrak sıvı gelmesi, göz çevresinde morarma, göz bebeklerinin eşit olmaması, kol ve bacaklarda karıncalanma, his kaybı ya da hareket edememe sayılabilir.",
+  "Kafa ve omurga yaralanması şüphesinde temel kural baş-boyun-gövde eksenini korumaktır. Yaralı zorunlu olmadıkça hareket ettirilmez, baş ilk yardımcının elleriyle nazikçe sabit tutulur, 112 aranır. Bilinci kapalı yaralıda hava yolu, baş geriye itilmeden çene itme yöntemiyle açılır. Kulaktan ya da burundan gelen kan veya sıvı tıkanmaz. Uyum göstermeyen yaralı zorla bir pozisyona getirilmez. Başına darbe alıp belirti göstermeyen kişi de 24 saat gözlenmelidir. Taşıma gerekiyorsa sert sedye kullanılır.",
+  "Göğüs yaralanmalarında kaburga kırığı, nefes alırken artan ağrıyla kendini gösterir. Delici göğüs yaralanmasında solunum zorluğu ve kan tükürme görülebilir. Nefes alıp verdikçe hava giren ve çıkan açık göğüs yarası hava geçirmeyecek şekilde tamamen kapatılmaz; açık bırakılır ya da üzerine hava geçirebilen temiz bir örtü konur. Bilinci açık yaralı yarı oturur pozisyonda bekletilir, 112 aranır.",
+  "Karın yaralanmalarında iç kanama ve şok tehlikesi yüksektir; karnın tahta gibi sert ve çok ağrılı olması ciddi bir belirtidir. Bilinci açık yaralı sırtüstü yatırılıp dizleri bükülür. Dışarı çıkmış organlar içeri sokulmaz, üzeri nemli ve temiz bir bezle örtülür. Göğüse ya da karna saplanmış cisim çıkarılmaz, çünkü ciddi kanamaya yol açabilir; etrafı desteklenerek sabitlenir. Yaralıya ağızdan yiyecek veya içecek verilmez."
+ ],
+ "akilda": [
+  "Kaza yaralısı bilinçsizse kafa ve omurga yaralanması varmış gibi davran.",
+  "Baş-boyun-gövde ekseni korunur; zorunlu olmadıkça yaralı oynatılmaz.",
+  "Boyun yaralanması şüphesinde hava yolu çene itme ile açılır.",
+  "Kulak ve burundan gelen kan veya sıvı tıkanmaz.",
+  "Açık göğüs yarası tamamen kapatılmaz; bilinci açık yaralı yarı oturur bekler.",
+  "Karın yarası: dizler bükülü sırtüstü, organlar içeri sokulmaz, nemli bezle örtülür; saplanan cisim çıkarılmaz."
+ ],
+ "kaynak": [
+  "MEB – Sağlık Bakanlığı içerikli ilk yardım eğitimi, Yaralanmalarda İlk Yardım (kafa, omurga, göğüs, karın) bölümü",
+  "MEB, Genel İlk Yardım Bilgileri (2025): https://ilkyardim.meb.gov.tr/media/wzmdvhcw/1-genel-ilk-yardim-bilgileri.pdf",
+  "Avrupa Resüsitasyon Konseyi (ERC) Kılavuzları 2025, İlk Yardım bölümü: https://cprguidelines.eu/"
+ ]
+},
+"ilkyardim-12": {
+ "paragraflar": [
+  "Göze toz ya da küçük bir yabancı madde kaçtığında göz ovuşturulmaz. Göz kapakları açık tutularak bol ve temiz suyla yıkanır. Gözde kimyasal madde varsa yıkama hemen başlar ve uzun süre devam eder; baş, yaralı göz aşağıda kalacak şekilde yana çevrilir ki kimyasal sağlam göze akmasın. Kişi sağlık kuruluşuna kendisi araç kullanmadan, bir yakınının yardımıyla gider.",
+  "Göze saplanmış cisim çıkarılmaya çalışılmaz. Cisim, etrafı desteklenerek sabitlenir ve her iki göz de kapatılır; çünkü iki göz birlikte hareket eder, sağlam gözün hareketi yaralı gözü de oynatır. 112 aranır ya da kişi sağlık kuruluşuna yönlendirilir.",
+  "Kulağa kaçan yabancı cisim için kulağa çöp, kürdan gibi bir şey sokulmaz; cisim daha içeri itilebilir ve kulak zarı zarar görebilir. Kişi sağlık kuruluşuna yönlendirilir. Kafaya darbe aldıktan sonra kulaktan kan ya da berrak sıvı geliyorsa kulak tıkanmaz, akıntı engellenmez ve 112 aranır. Buruna yabancı cisim kaçtığında boş burun deliği kanadına bastırılır ve kişiden burnundan sertçe nefes vermesi istenir; çıkmazsa burna bir şey sokulmadan sağlık kuruluşuna gidilir.",
+  "Burun kanamasında kişi oturtulur ve başı hafifçe öne eğilir. Burun kanatları iki parmakla 10–15 dakika sıkılır; bu sırada kişi ağzından nefes alır. Burun üzerine soğuk uygulama yapılabilir. Baş geriye yatırılmaz; kan boğaza ve mideye akar, bulantı ve kusmaya yol açabilir. Kanama durmazsa ya da kafa darbesinden sonra başladıysa kişi sağlık kuruluşuna yönlendirilir veya 112 aranır."
+ ],
+ "akilda": [
+  "Göz ovuşturulmaz; toz ve kimyasal bol temiz suyla yıkanır.",
+  "Kimyasal yıkanırken yaralı göz aşağıda kalır.",
+  "Göze saplanan cisim çıkarılmaz; sabitlenir, iki göz birden kapatılır.",
+  "Kulağa ve burna bir şey sokulmaz; kafa darbesinden sonra gelen akıntı tıkanmaz.",
+  "Burun kanaması: oturt, başı öne eğ, burun kanatlarını 10–15 dakika sık, ağızdan nefes aldır.",
+  "Burun kanamasında baş geriye yatırılmaz."
+ ],
+ "kaynak": [
+  "MEB – Sağlık Bakanlığı içerikli ilk yardım eğitimi, Göz, Kulak ve Burun Yaralanmalarında İlk Yardım bölümü",
+  "MEB, Kanamalar (burun kanaması): https://ilkyardim.meb.gov.tr/media/rkabmkio/8-kanamalar.pdf"
+ ]
+},
+"ilkyardim-13": {
+ "paragraflar": [
+  "Suda boğulmada ilk yardımcı önce kendi güvenliğini düşünür. Suda kurtarma eğitimi yoksa suya girmez; can simidi, ip ya da uzun bir cisim uzatarak yardım eder. Suya atlama sonucu oluşan olaylarda omurga yaralanması akla gelmelidir. Sudan çıkarılan kişinin bilinci ve solunumu değerlendirilir. Solumuyorsa hava yolu açılır, 5 kurtarıcı soluk verilir ve temel yaşam desteğine başlanır; akciğerdeki suyu boşaltmaya çalışarak zaman kaybedilmez. OED takılacaksa göğüs önce kurulanır. Islak giysiler çıkarılıp üstü örtülür. Kendine gelen kişi de sağlık kuruluşunda kontrol edilmelidir.",
+  "Elektrik çarpmasında önce akım kesilir; sigorta ya da şalter kapatılır. Akım kesilemiyorsa ilk yardımcı kuru bir zeminde durur ve kişiyi tahta çubuk gibi iletken olmayan bir cisimle akımdan ayırır; çıplak elle dokunmaz. Yüksek gerilim hatlarına yaklaşılmaz, 112 aranır. Elektrik, akımın giriş ve çıkış noktalarında yanığa ve kalp ritim bozukluğuna yol açabilir; dışarıdan küçük görünen yanığın altında ciddi hasar olabilir. Solunum yoksa temel yaşam desteği uygulanır.",
+  "Kedi ve köpek ısırmasında yara bol sabunlu suyla yıkanır, temiz bir bezle örtülür ve kişi kuduz ile tetanos aşısı yönünden sağlık kuruluşuna yönlendirilir. Yılan ısırmasında kişi sakinleştirilir, ısırılan bölge hareketsiz tutulur, yüzük ve saat çıkarılır, 112 aranır. Yara kesilmez, zehir emilmeye çalışılmaz, turnike uygulanmaz. Yılanın görünüşü ekibe bildirilir. Akrep sokmasında kişi yatırılır, bölge hareket ettirilmez ve sağlık kuruluşuna ulaşılır.",
+  "Arı sokmasında deride kalan iğne, kart gibi sert bir kenarla sıyrılarak çıkarılır; sıkıştırılmaz, çünkü zehir kesesindeki zehir deriye boşalabilir. Bölgeye soğuk uygulama yapılır. Ağız içi ya da boğaz sokmalarında, çok sayıda sokmada ve nefes darlığı, yaygın kızarıklık gibi alerji belirtilerinde hemen 112 aranır. Kene vücuda yapışmışsa üzerine kolonya, benzin gibi bir şey dökülmez, yakılmaz, ezilmez; çıplak elle dokunulmadan, mümkünse sağlık kuruluşunda çıkartılır. Denizanası sokmasında bölge ovulmaz."
+ ],
+ "akilda": [
+  "Suda kurtarma eğitimi yoksa suya girme; ip, can simidi ya da uzun bir cisim uzat.",
+  "Sudan çıkan ve solumayan kişiye 5 kurtarıcı soluk, ardından temel yaşam desteği.",
+  "Elektrik çarpmasında önce akımı kes; kesemiyorsan iletken olmayan bir cisimle ayır.",
+  "Köpek ısırması: bol sabunlu su; kuduz ve tetanos için sağlık kuruluşu.",
+  "Yılan ısırmasında kesme, emme ve turnike yok; bölge hareketsiz tutulur.",
+  "Arı iğnesi kartla sıyrılır; kene yakılmaz, ezilmez, üzerine madde dökülmez."
+ ],
+ "kaynak": [
+  "MEB – Sağlık Bakanlığı içerikli ilk yardım eğitimi, Boğulmalar, Elektrik Çarpması, Hayvan Isırmaları ve Böcek Sokmaları bölümleri",
+  "MEB, Yanık, Soğuk ve Sıcak Acillerinde İlk Yardım (elektrik yanığı): https://ilkyardim.meb.gov.tr/media/inpjnwna/15-yanik-so%C4%9Fuk-ve-sicak-acillerinde-ilk-yardim.pdf",
+  "Avrupa Resüsitasyon Konseyi (ERC) Kılavuzları 2025 (boğulma): https://cprguidelines.eu/"
+ ]
+},
+"ilkyardim-14": {
+ "paragraflar": [
+  "Göğüs ağrısının en önemli nedenlerinden biri kalp krizidir. Kalp krizinde ağrı genellikle göğsün ortasında baskı, sıkışma ya da yanma şeklindedir; sol kola, çeneye, boyna veya sırta yayılabilir. Soğuk terleme, bulantı, nefes darlığı ve yoğun ölüm korkusu eşlik edebilir. Ağrı dinlenmekle geçmez ve nefes alıp vermekle şiddeti değişmez. Hazımsızlık ya da gaz sancısıyla karıştırılabilir. Kadınlarda, yaşlılarda ve şeker hastalarında belirtiler daha az belirgin olabilir. Kalp spazmı (anjina) ağrısı ise daha kısa sürer ve dinlenmekle geçer.",
+  "Kalp krizi şüphesinde ağrı birkaç dakikadır sürse bile hemen 112 aranır. Kişi hareket ettirilmez, yarı oturur pozisyonda dinlendirilir, sıkan giysileri gevşetilir ve sakinleştirilir. Doktorunun verdiği kendi kalp ilacı yanındaysa almasına yardım edilir; ilk yardımcı kendiliğinden ilaç vermez. Bilinç kaybolur ve normal solunum durursa temel yaşam desteğine başlanır, varsa OED getirtilir.",
+  "İnme (felç), beyindeki bir damarın tıkanması ya da kanaması sonucu beynin bir bölümünün zarar görmesidir. FAST ile tanınır: Yüz (gülümserken bir taraf düşüyor mu), Kol (iki kol kaldırıldığında biri aşağı iniyor mu), Konuşma (bozuk ya da anlaşılmaz mı), Zaman (hemen 112). Belirtilerin başladığı saat not edilip ekibe bildirilir; tedavide zaman çok önemlidir. Yutma güçlüğü olabileceği için yiyecek ve içecek verilmez. Belirtiler birkaç dakikada geçse bile kişi sağlık kuruluşuna başvurmalıdır.",
+  "Alerjik reaksiyon; arı sokması, besin ya da ilaç gibi bir maddeye vücudun aşırı tepkisidir. Hafif tepkide kaşıntı ve kızarıklık görülür. Ağır tepkiye (anafilaktik şok) hırıltılı solunum, nefes darlığı, yüzde, dudakta ve dilde şişme, yaygın kızarıklık ve şok belirtileri eşlik eder; hayatı tehdit eder. Hemen 112 aranır. Kişinin doktorunca verilmiş adrenalin kalemi varsa kullanmasına yardım edilir. Nefes darlığı olan kişi oturtulur; şok belirtisi varsa yatırılıp bacakları kaldırılır. Bilinci kapanır ama solursa derlenme pozisyonu verilir."
+ ],
+ "akilda": [
+  "Kalp krizi ağrısı: göğüste baskı, sol kola ve çeneye yayılır, dinlenmekle geçmez.",
+  "Kalp krizi şüphesinde hemen 112; kişi yarı oturur, hareketsiz bekletilir.",
+  "İlk yardımcı ilaç vermez; kişi doktorunun verdiği kendi ilacını alabilir.",
+  "İnmede FAST: Yüz, Kol, Konuşma, Zaman; belirtilerin başlama saati not edilir.",
+  "İnme şüphesinde yiyecek ve içecek verilmez; belirtiler geçse de sağlık kuruluşuna gidilir.",
+  "Anafilaksi: nefes darlığı, yüz ve dilde şişme, yaygın kızarıklık; hemen 112."
+ ],
+ "kaynak": [
+  "MEB, Şok ve Göğüs Ağrılarında İlk Yardım: https://ilkyardim.meb.gov.tr/media/nwtnimfd/9-%C5%9Fok-ve-goe%C4%9Fues-a%C4%9Frilarinda-ilk-yardim.pdf",
+  "MEB, Bilinç Bozuklukları ve Ciddi Hastalık Durumunda İlk Yardım: https://ilkyardim.meb.gov.tr/media/lolhi0mr/7_bilin%C3%A7_bozukluklari_ve_ciddi_hastalik_durumunda_ilk_yardim.pdf",
+  "Avrupa Resüsitasyon Konseyi (ERC) Kılavuzları 2025, İlk Yardım bölümü: https://cprguidelines.eu/"
+ ]
+},
+"motor-7": {
+ "paragraflar": [
+  "Gösterge paneli, aracın durumunu sürücüye bildirir. Hız göstergesi aracın hızını km/saat olarak, takometre (devir saati) motorun dakikadaki devir sayısını gösterir. Yakıt göstergesi depodaki yakıtı, hararet göstergesi motorun sıcaklığını, kilometre sayacı da aracın yaptığı yolu gösterir. Hararet göstergesi kırmızı bölgeye çıkarsa araç güvenli bir yerde durdurulur.",
+  "Uyarı lambalarının rengi önem derecesini anlatır. Kırmızı lamba ciddi bir sorun ya da tehlike bildirir; sürücü güvenli bir yerde durup sorunu kontrol eder. Sarı (turuncu) lamba bir arıza veya uyarı olduğunu gösterir; araç en kısa sürede kontrol ettirilir. Yeşil lambalar bir sistemin devrede olduğunu bildirir; sinyal, kısa far ve park lambası gibi. Mavi far simgesi uzun farların açık olduğunu gösterir.",
+  "Kontak açılınca uyarı lambalarının çoğu kısa bir süre yanar; bu, lambaların çalıştığını gösteren bir kontroldür. Motor çalıştıktan sonra yağ basıncı ve şarj lambaları sönmelidir. Seyir sırasında yağ basıncı (yağdanlık) lambası yanarsa hemen güvenli bir yerde durulup motor kapatılır. Şarj (akü) lambası şarj sisteminde arıza olduğunu gösterir; yola devam edilirse akü boşalır ve motor durabilir. Fren uyarı lambası el freni indirildiği hâlde yanıyorsa fren hidroliği azalmış olabilir. Emniyet kemeri lambası, kemeri takılı olmayan biri olduğunu bildirir.",
+  "Motor arıza lambası (motor şekilli, sarı) yanarsa araç en kısa sürede serviste kontrol ettirilir. ABS lambası yanıyorsa normal fren çalışır ama ABS devrede olmayabilir. ESP lambası yanıp sönüyorsa sistem o anda kaymayı önlemek için çalışıyordur; sürekli yanıyorsa arıza vardır. Lastik basıncı lambası yanarsa lastikler en kısa sürede kontrol edilir. Dizel araçta kızdırma lambası yanarken marşa basılmaz, sönmesi beklenir. Yakıt rezerv lambası deponun azaldığını bildirir. Lambaların anlamı aracın kullanım kılavuzunda yazar."
+ ],
+ "akilda": [
+  "Kırmızı lamba: güvenli yerde dur. Sarı lamba: en kısa sürede kontrol ettir. Yeşil ve mavi: bilgi.",
+  "Mavi far simgesi uzun farların açık olduğunu gösterir.",
+  "Motor çalışınca yağ basıncı ve şarj lambaları sönmelidir.",
+  "Seyirde yağ basıncı lambası yanarsa hemen dur, motoru kapat.",
+  "El freni indirildiği hâlde fren lambası yanıyorsa fren hidroliği az olabilir.",
+  "Dizelde kızdırma lambası sönmeden marşa basılmaz."
+ ],
+ "kaynak": [
+  "MEB Araç Tekniği modülü (gösterge paneli ve uyarı lambaları)",
+  "Aracın kullanım kılavuzu",
+  "2918 sayılı KTK md. 30 (araçların teknik şartlara uygun bulundurulması): https://www.mevzuat.gov.tr/mevzuat?MevzuatNo=2918&MevzuatTur=1&MevzuatTertip=5"
+ ]
+},
+"motor-8": {
+ "paragraflar": [
+  "Araçta kısa far, uzun far, park (konum) lambası, ön sis farı, arka sis lambası, sinyal ve dörtlü flaşör, fren (stop) lambası, geri vites lambası ve plaka lambası bulunur. Sis farları ve arka sis lambası yalnızca sis, kar ve şiddetli yağmur gibi görüşü azaltan durumlarda yakılır; arka sis lambası arkadaki sürücünün gözünü alabileceği için görüş düzelince kapatılır. Farların ayarı bozuk ve yukarı bakıyorsa karşıdan gelenlerin gözü kamaşır. Far camları temiz tutulmalı, araçta yedek ampul bulundurulmalıdır.",
+  "Silecekler camı iz bırakmadan silmelidir; lastikleri yıprandığında camda iz kalır ve görüş azalır. Kuru camda silecek çalıştırmak hem camı hem lastiği yıpratır. Cam suyu deposuna kışın antifrizli cam suyu konur. Bazı araçlarda silecek, yağmur algılayıcıyla kendiliğinden çalışır.",
+  "Kalorifer ısıyı motorun soğutma suyundan alır; bu yüzden motor ısınmadan sıcak hava vermez. Klima kompresörü gücünü motordan aldığı için yakıt tüketimini artırır. Camlar buğulandığında hava ön cama yönlendirilir; klima havayı kuruttuğu için buğuyu hızla giderir. Arka cam ısıtıcısı arka camdaki buğuyu ve buzu çözer. İç hava dolaşımı uzun süre açık kalırsa camlar buğulanabilir ve araç içindeki hava ağırlaşarak sürücüyü yorabilir.",
+  "Emniyet kemeri ve hava yastıkları kaza anında yolcuyu korur; hava yastığı ancak kemerle birlikte etkili olur. Kemer, omuz ve kalçadan geçecek şekilde takılır; kolun altından geçirilen kemer takılmamış sayılır. Koltuk başlığı, çarpışmada boynun geriye savrulmasını azaltacak yükseklikte ayarlanır. 150 cm'den kısa ve 36 kg'dan hafif çocuklar ağırlığına uygun çocuk bağlama sistemiyle taşınır. Ön hava yastığı kapatılmamış koltuğa yüzü geriye dönük çocuk koltuğu konmaz. Aynalar yola çıkmadan önce ayarlanır."
+ ],
+ "akilda": [
+  "Sis farı ve arka sis lambası yalnız sis, kar ve şiddetli yağmurda yakılır.",
+  "Yukarı bakan far karşıdan gelenin gözünü kamaştırır.",
+  "Kalorifer ısıyı motor soğutma suyundan alır; klima yakıt tüketimini artırır.",
+  "Buğuyu en hızlı klima ile ön cama yönlendirilen hava giderir.",
+  "Hava yastığı kemerle birlikte korur; ön hava yastığı açıksa önde arkası dönük çocuk koltuğu olmaz.",
+  "150 cm'den kısa, 36 kg'dan hafif çocuk için çocuk bağlama sistemi zorunludur."
+ ],
+ "kaynak": [
+  "Karayolları Trafik Yönetmeliği (ışıkların kullanımı, emniyet kemeri ve çocuk bağlama sistemleri): https://www.mevzuat.gov.tr/mevzuat?MevzuatNo=8182&MevzuatTur=7&MevzuatTertip=5",
+  "MEB Araç Tekniği modülü (aydınlatma, silecek, ısıtma-havalandırma)",
+  "Aracın kullanım kılavuzu"
+ ]
+},
+"motor-9": {
+ "paragraflar": [
+  "Araçtaki güvenlik sistemleri iki gruptur. Aktif güvenlik sistemleri kazayı önlemeye yardım eder; ABS, ESP, çekiş kontrolü ve fren destek sistemi bunlardandır. Pasif güvenlik sistemleri ise kaza anında yaralanmayı azaltır; emniyet kemeri, hava yastığı ve koltuk başlığı gibi.",
+  "ABS (kilitlenme önleyici fren sistemi), sert frenlemede tekerleklerin kilitlenmesini önler ve frenlerken direksiyon hâkimiyetinin korunmasını sağlar. ABS'li araçta acil frenlemede pedala sürekli ve kuvvetle basılır, pedal pompalanmaz. Bu sırada pedalda titreşim ve ses hissedilmesi normaldir. ABS fren mesafesini her koşulda kısaltmaz; gevşek çakıl veya karlı zeminde mesafe uzayabilir. EBD fren gücünü tekerlekler arasında yüke göre dağıtır. Fren destek sistemi, acil frenlemeyi algılayıp fren basıncını artırır.",
+  "Çekiş kontrol sistemi (ASR/TCS), kalkışta ve kaygan zeminde tekerleklerin boşa dönmesini (patinaj) önler. ESP (elektronik denge programı), aracın savrulma eğilimini algılar; ilgili tekerleği frenleyip gerekirse motor gücünü azaltarak aracı dengeler. ESP lambası yanıp sönüyorsa sistem çalışıyordur; bu, yolun kaygan olduğunun işaretidir ve hız azaltılmalıdır. Yokuş kalkış desteği, yokuşta kalkarken aracın kısa bir süre geri kaymasını engeller.",
+  "Hız sabitleyici, sürücünün seçtiği hızı korur; kaygan ve yoğun trafikli yollarda kullanılmaması uygundur. Uyarlanabilir hız sabitleyici öndeki araçla mesafeyi de korur. Şerit takip uyarısı, kör nokta uyarısı, acil durum fren sistemi, park algılayıcıları ve geri görüş kamerası sürücüye yardım eder. Bu sistemlerin hepsi destekleyicidir; fizik kurallarını aşamaz ve sürücünün dikkatinin yerine geçmez. Sorumluluk her zaman sürücüdedir. Bir sistemin uyarı lambası yanıyorsa araç serviste kontrol ettirilir."
+ ],
+ "akilda": [
+  "Aktif güvenlik kazayı önler (ABS, ESP); pasif güvenlik yaralanmayı azaltır (kemer, hava yastığı).",
+  "ABS tekerleği kilitlenmekten korur, frenlerken direksiyon hâkimiyeti sürer.",
+  "ABS'li araçta acil frende pedala sürekli ve kuvvetle bas, pompalama.",
+  "ABS fren mesafesini her koşulda kısaltmaz.",
+  "ASR/TCS patinajı önler; ESP savrulmayı algılayıp tekerleği frenler.",
+  "Sürüş destek sistemleri sürücünün dikkatinin yerine geçmez."
+ ],
+ "kaynak": [
+  "MEB Araç Tekniği modülü (fren sistemleri ve sürüş güvenliği sistemleri)",
+  "Aracın kullanım kılavuzu"
+ ]
+},
+"motor-10": {
+ "paragraflar": [
+  "Hibrit araçta içten yanmalı motorun yanında bir elektrik motoru ve yüksek gerilimli bir batarya bulunur. Tam hibrit araç kısa mesafeleri ve düşük hızları yalnızca elektrikle gidebilir. Hafif hibritte elektrik motoru yalnızca benzinli ya da dizel motora destek olur. Şarj edilebilir (plug-in) hibritin bataryası prizden de şarj edilir ve daha uzun mesafeyi elektrikle gidebilir. Hibrit sistemler özellikle şehir içinde yakıt tüketimini ve egzoz salımını azaltır.",
+  "Tam elektrikli araçta içten yanmalı motor, yakıt deposu ve egzoz yoktur; aracı elektrik motoru, enerjiyi batarya sağlar. Yavaşlarken ve frenlerken elektrik motoru jeneratör gibi çalışır ve enerjiyi bataryaya geri kazandırır; buna rejeneratif (geri kazanımlı) frenleme denir. Bu yüzden şehir içinde menzil iyi kullanılır. Soğuk hava, yüksek hız, ısıtma ve klima kullanımı menzili azaltır.",
+  "Elektrikli araçlar düşük hızda çok sessizdir; yayalar ve görme engelliler aracı duymayabilir, bu yüzden sürücü otoparklarda ve yerleşim yerlerinde ekstra dikkatli olmalıdır. Birçok araç düşük hızda yapay bir uyarı sesi çıkarır. Araç “hazır” durumundayken motor sesi olmadığı için kapalı sanılabilir; araçtan inmeden önce park konumu seçilir, el freni çekilir ve araç kapatılır.",
+  "Bataryayı ve araca güç taşıyan yüksek gerilim kabloları genellikle turuncu renklidir; bu kablolara ve parçalara dokunulmaz, onarımı yalnızca yetkili servis yapar. Şarj, uygun ve sağlam şarj ekipmanıyla yapılır; ev tipi şarj yavaş, hızlı şarj istasyonları daha hızlıdır. Kaza ya da yangında kontak kapatılır, kişiler araçtan uzaklaştırılır ve 112 aranır; batarya yangını zor söner ve yeniden alevlenebilir. Hibrit ve elektrikli araçların çoğu tekerlekleri yerdeyken çekilmemelidir; kullanım kılavuzuna bakılır, gerekirse taşıyıcı kurtarıcı çağrılır."
+ ],
+ "akilda": [
+  "Hibrit: içten yanmalı motor + elektrik motoru + batarya; plug-in hibrit prizden de şarj olur.",
+  "Yavaşlarken enerjinin bataryaya geri kazanılmasına rejeneratif frenleme denir.",
+  "Soğuk hava, yüksek hız, ısıtma ve klima menzili azaltır.",
+  "Elektrikli araç sessizdir; yayalar duymayabilir, düşük hızda ekstra dikkat.",
+  "Turuncu yüksek gerilim kablolarına dokunulmaz.",
+  "Elektrikli ve hibrit aracı çekmeden önce kullanım kılavuzuna bakılır."
+ ],
+ "kaynak": [
+  "MEB Araç Tekniği modülü (hibrit ve elektrikli araçlar)",
+  "Aracın kullanım kılavuzu"
+ ]
+},
+"motor-11": {
+ "paragraflar": [
+  "Yolda arızalanan araç mümkünse yol dışına, olmazsa banket ya da yolun en sağına alınır ve dörtlü flaşör yakılır. Aracın ışıkları 150 metreden açıkça görülmüyorsa önüne ve arkasına 150 metreden görülebilecek reflektör konur; viraj veya tepe üstünde reflektör araçtan en az 30 metre uzağa yerleştirilir. Yolcular trafikten uzak, güvenli bir yerde bekler.",
+  "Lastik değiştirmek için araç düz ve sağlam bir zemine alınır, el freni çekilir, araç vitese takılır (otomatik viteste P konumu) ve gerekirse çapraz tekerleğe takoz konur. Bijonlar araç yerdeyken hafifçe gevşetilir. Kriko, kullanım kılavuzunda gösterilen kaldırma noktasına yerleştirilir ve tekerlek yerden kesilinceye kadar kaldırılır. Kriko üzerindeki aracın altına girilmez. Bijonlar sökülür, stepne takılır, bijonlar çapraz sırayla sıkılır; araç indirildikten sonra son sıkma yapılır. Ardından stepnenin basıncı kontrol edilir. Geçici (ince) stepnelerde üzerinde yazan hız sınırına uyulur ve patlak lastik en kısa sürede onarılır.",
+  "Akü takviyesinde iki akünün gerilimi aynı olmalıdır. İki aracın da kontağı kapatılır. Kırmızı kablo iki akünün artı (+) kutupları arasına bağlanır: önce boş akünün, sonra dolu akünün artısına. Siyah kablo önce dolu akünün eksi (−) kutbuna, sonra boş akülü aracın motor bloğu ya da şasisi gibi boyasız bir metal noktasına bağlanır. Önce takviye veren araç çalıştırılır, birkaç dakika sonra diğer araç çalıştırılır. Kablolar ters sırayla sökülür. Kablo uçları birbirine değdirilmez; akü yanında kıvılcım ve ateşten kaçınılır.",
+  "Sürülemeyen aracı kurtarıcıyla taşımak en güvenli yoldur. Başka bir araçla çekilecekse yalnızca en yakın bakım-onarım yerine kadar çekilebilir. Çekilen araçta onu yönetecek bir sürücü bulunur ve iki araçta birer hizmetli dışında yolcu taşınmaz. Çekilen aracın ağırlığı, çeken aracın çekme sınırını aşmamalıdır. İki araç arasındaki açıklık en fazla 5 metredir; açıklık 2,5 metreden fazlaysa bağlantının ortasına kırmızı bir bez ya da yansıtıcı konur. Aksine işaret yoksa arızalı aracı çeken aracın hızı en fazla saatte 20 km, servis freni bozuk aracı çekerken en fazla 15 km'dir. Işıkları bozuk araç gece çekiliyorsa arkasına kırmızı ışık ya da yansıtıcı konur."
+ ],
+ "akilda": [
+  "Arızada önce dörtlü flaşör; reflektör 150 m'den görülmeli, virajda en az 30 m geriye konur.",
+  "Bijonlar araç yerdeyken gevşetilir, çapraz sırayla sıkılır.",
+  "Kriko üzerindeki aracın altına girilmez.",
+  "Akü takviyesinde aküler aynı voltajda olmalı; kırmızı kablo artıdan artıya.",
+  "Çekmede araçlar arası en fazla 5 m; 2,5 m'den fazlaysa ortaya kırmızı bez veya yansıtıcı.",
+  "Çeken araç en fazla 20 km/saat; servis freni bozuk aracı çekerken 15 km/saat."
+ ],
+ "kaynak": [
+  "Karayolları Trafik Yönetmeliği (arızalı araçlar, reflektör, araçların çekilmesi, hız sınırları): https://www.mevzuat.gov.tr/mevzuat?MevzuatNo=8182&MevzuatTur=7&MevzuatTertip=5",
+  "MEB Araç Tekniği modülü (lastik değiştirme, akü takviyesi)",
+  "Aracın kullanım kılavuzu"
+ ]
 }
 };
