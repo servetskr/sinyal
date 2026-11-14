@@ -2,8 +2,8 @@
 // mdSinyal Yönetim panelinin “Hesaplar” bölümünde açılır (yalnız Servet; ortak görmez).
 // Yetki Firebase güvenlik kurallarından değil, Google hesabından gelir: Firebase projesinin sahibi olan Google hesabıyla
 // bağlanılır, Google IAM izin verirse işlem yapılır. Sunucu, gizli anahtar yok; erişim belirteci yalnız bellekte durur (1 saat).
-import { e, ik, pencere, kapatPencere, bildir, tl } from './ui.js?v=194';
-import { S, kaydet, islem } from './veri.js?v=194';
+import { e, ik, pencere, kapatPencere, bildir, tl } from './ui.js?v=195';
+import { S, kaydet, islem, bulutKanca } from './veri.js?v=195';
 
 const PROJE = 'sinyal-5d37a';
 const ISTEMCI = '451344576006-sua0mu4d4qcssc0lv8g01qic26hr6os7.apps.googleusercontent.com';  // Google OAuth istemci kimliği (herkese açık bilgidir; yetkiyi Google hesabı verir)
@@ -50,10 +50,16 @@ async function baglan() {
   });
 }
 const bagli = () => !!belirtec && Date.now() < bitis;
+// Google bağlantısı olmadan da liste açılır: Firestore okumaları Yönetim oturumunun Firebase kimliğiyle yapılır
+// (güvenlik kuralı: sahip hesabı her şeyi okuyabilir). Şifre, kapatma, silme ve link işlemleri Google ister.
+const okuyabilir = () => bagli() || !!(bulutKanca && bulutKanca.yetki);
 
 async function api(url, govde, yontem) {
-  if (!bagli()) { belirtec = null; throw Object.assign(new Error('Google bağlantısının süresi doldu; yeniden bağlan'), { yetki: true }); }
-  const r = await fetch(url, { method: yontem || (govde ? 'POST' : 'GET'), headers: { Authorization: 'Bearer ' + belirtec, ...(govde ? { 'Content-Type': 'application/json' } : {}) }, body: govde ? JSON.stringify(govde) : undefined });
+  let yetki = null;
+  if (bagli()) yetki = 'Bearer ' + belirtec;
+  else if (url.startsWith(FS) && bulutKanca && bulutKanca.yetki && (!yontem || yontem === 'GET') && (!govde || /:(batchGet|runQuery)$/.test(url))) { try { yetki = (await bulutKanca.yetki()).Authorization; } catch (x) { } }
+  if (!yetki) { belirtec = null; throw Object.assign(new Error('Bu işlem için Google hesabınla onay ver'), { yetki: true }); }
+  const r = await fetch(url, { method: yontem || (govde ? 'POST' : 'GET'), headers: { Authorization: yetki, ...(govde ? { 'Content-Type': 'application/json' } : {}) }, body: govde ? JSON.stringify(govde) : undefined });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) {
     if (r.status === 401) { belirtec = null; try { sessionStorage.removeItem(SAKLA); } catch (x) { } }
@@ -80,9 +86,13 @@ const belgeSil = yol => api(FS + '/' + yol, null, 'DELETE');
 // ---- veriler ----
 async function yukle() {
   let users = [], sayfa = '';
-  do {
+  if (bagli()) do {
     const j = await api(IT + '/accounts:batchGet?maxResults=1000' + (sayfa ? '&nextPageToken=' + encodeURIComponent(sayfa) : ''));
     users = users.concat(j.users || []); sayfa = j.nextPageToken || '';
+  } while (sayfa);
+  else do {
+    const j = await api(FS + '/kullanicilar?pageSize=300' + (sayfa ? '&pageToken=' + encodeURIComponent(sayfa) : ''));
+    users = users.concat((j.documents || []).map(d => ({ localId: d.name.split('/').pop(), firestore: true }))); sayfa = j.nextPageToken || '';
   } while (sayfa);
   const kd = await belgeler(users.map(u => 'kullanicilar/' + u.localId));
   const kb = uid => kd['kullanicilar/' + uid] || null;
@@ -101,20 +111,21 @@ async function yukle() {
     const rol = d.rol === 'ogrenci' ? 'ogrenci' : uye ? uye.rol : null;
     const telM = String(u.email || '').match(/^(90\d{10})\./);
     let ad = (uye && uye.ad) || u.displayName || '';
-    if (rol === 'ogrenci') { try { const k = JSON.parse((ogr['kurslar/' + kurs + '/ogrenciler/' + d.kod] || {}).v || '{}').kursiyerler[0]; ad = [k.ad, k.soyad].filter(Boolean).join(' ') || ad; } catch (x) { } }
+    let ogrTel = '';
+    if (rol === 'ogrenci') { try { const k = JSON.parse((ogr['kurslar/' + kurs + '/ogrenciler/' + d.kod] || {}).v || '{}').kursiyerler[0]; ad = [k.ad, k.soyad].filter(Boolean).join(' ') || ad; ogrTel = String(k.tel || '').replace(/\D/g, '').replace(/^0/, '90'); } catch (x) { } }
     const yonetim = kursAd === YONETIM_KURS || /@yonetim\.sinyal\.invalid$/.test(u.email || '');
     const kullaniciAdi = /@yonetim\.sinyal\.invalid$/.test(u.email || '') ? u.email.split('@')[0] : '';
     return {
-      uid: u.localId, eposta: u.email || '', kullaniciAdi, ad: ad || kullaniciAdi || (telM ? 'Öğrenci' : u.email || 'Adsız hesap'),
-      tel: telM ? telM[1] : '', rol, kurs, kursAd, yonetim, kapali: !!u.disabled,
-      olusturma: u.createdAt ? +u.createdAt : 0, sonGiris: u.lastLoginAt ? +u.lastLoginAt : 0,
+      uid: u.localId, eposta: u.email || (uye && uye.eposta) || '', kullaniciAdi, ad: ad || kullaniciAdi || (telM || rol === 'ogrenci' ? 'Öğrenci' : u.email || (uye && uye.eposta) || 'Adsız hesap'),
+      tel: telM ? telM[1] : ogrTel, rol, kurs, kursAd, yonetim, kapali: !!u.disabled,
+      olusturma: u.createdAt ? +u.createdAt : 0, sonGiris: u.firestore ? null : u.lastLoginAt ? +u.lastLoginAt : 0,
     };
   });
   talepler = tl;
   // silinen hesaplar: 7 gün içinde geri alınabilir; süresi dolanlar şimdi kalıcı silinir
   let sl = [];
   try { const j = await api(FS + '/sahipSilinecek?pageSize=300'); sl = (j.documents || []).map(d => ({ ...alanlar(d.fields), uid: d.name.split('/').pop() })); } catch (x) { }
-  for (const x of sl.filter(x => kalanGun(x) <= 0)) { try { await kaliciSil(x); } catch (y) { } }
+  if (bagli()) for (const x of sl.filter(x => kalanGun(x) <= 0)) { try { await kaliciSil(x); } catch (y) { } }
   silinecekler = sl.filter(x => kalanGun(x) > 0);
   for (const h of hesaplar) { const x = silinecekler.find(y => y.uid === h.uid); if (x) h.silinecek = x.zaman; }
   // her kursun verisi: istatistik ve destek talepleri
@@ -202,6 +213,7 @@ async function davetLinki(yonetim) {
 
 // ---- metinler ----
 const zamanMetni = ms => {
+  if (ms === null) return '';
   if (!ms) return 'hiç girmedi';
   const g = Math.floor((Date.now() - ms) / 864e5);
   if (g <= 0) return 'bugün girdi'; if (g === 1) return 'dün girdi'; if (g < 30) return g + ' gün önce girdi';
@@ -224,7 +236,7 @@ const waLinki = (tel, metin) => 'https://wa.me/' + (tel || '') + '?text=' + enco
 export function sahipGomulu(yer, eposta, gor = 'hesaplar') {
   kok = yer; gomulu = true; gorunum = gor; ipucu = /@/.test(eposta || '') && !/\.invalid$/.test(eposta) ? eposta : '';
   ciz();
-  if (bagli() && !hesaplar && !yukleniyor) yenile();
+  if (okuyabilir() && !hesaplar && !yukleniyor) yenile();
   if (!kok.dataset.shBagli) { kok.dataset.shBagli = '1'; kok.addEventListener('click', tikla); kok.addEventListener('input', yaz); }
 }
 export function sahipEkrani(yer) {
@@ -235,12 +247,12 @@ export function sahipEkrani(yer) {
   if (!kok.dataset.shBagli) { kok.dataset.shBagli = '1'; kok.addEventListener('click', tikla); kok.addEventListener('input', yaz); }
 }
 const ust = () => `<header class="sh-ust"><div class="sh-marka"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="#141e33"/><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="1.2"/><g fill="none" stroke="#ffc21a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20l12 12-12 12" stroke-opacity=".38"/><path d="M33 20l12 12-12 12"/></g></svg><span><b><span class="mk">md</span>Sinyal</b><small>Sahip paneli</small></span></div>
-  ${bagli() ? `<button class="sh-yenile" data-sh-yenile ${yukleniyor ? 'disabled' : ''}>${ik('sifirla')}<span>${yukleniyor ? 'Yükleniyor…' : 'Yenile'}</span></button>` : ''}</header>`;
+  ${okuyabilir() ? `<button class="sh-yenile" data-sh-yenile ${yukleniyor ? 'disabled' : ''}>${ik('sifirla')}<span>${yukleniyor ? 'Yükleniyor…' : 'Yenile'}</span></button>` : ''}</header>`;
 
 const kabuk = (ic, giris) => gomulu ? `<div class="sh sh-gomulu${giris ? ' sh-giris' : ''}">${ic}</div>` : `<div class="sh">${ust()}<main class="sh-govde${giris ? ' sh-giris' : ''}">${ic}</main></div>`;
 function ciz() {
   if (!kok || (gomulu ? !kok.isConnected : !document.body.classList.contains('sahip-modu'))) return;
-  if (!bagli()) {
+  if (!okuyabilir() || (!bagli() && hataMetni && !hesaplar && !yukleniyor)) {
     kok.innerHTML = kabuk(`<div class="sh-giris-kart">
         <span class="sh-giris-ik">${ik('kilit')}</span>
         <h1>${gorunum === 'destek' ? 'Destek talepleri ve hizmetler' : 'Bütün hesaplar ve kurslar'}</h1>
@@ -261,7 +273,7 @@ function ciz() {
   const sekme = [['kurslar', 'Kurslar', kursSay], ['hesaplar', 'Hesaplar', gorunur.length], ['silinen', 'Silinenler', silinecekler.length]];
   kok.innerHTML = kabuk(`
     <div class="sh-bas"><div><h1>Hesaplar</h1><p>${kursSay} kurs · ${gorunur.length} hesap</p></div>
-      <div class="sh-bas-dg">${gomulu ? `<button class="dg dg-cizgi dg-kucuk" data-sh-yenile ${yukleniyor ? 'disabled' : ''}>${ik('sifirla')}${yukleniyor ? 'Yükleniyor…' : 'Yenile'}</button>` : ''}<button class="dg dg-cizgi dg-kucuk" data-sh-davet="kurs">${ik('arti')}Kurs hesabı linki</button><button class="dg dg-cizgi dg-kucuk" data-sh-davet="yonetim">${ik('arti')}Yönetim hesabı linki</button></div></div>
+      <div class="sh-bas-dg">${!bagli() ? `<button class="dg dg-hafif dg-kucuk" data-sh-baglan title="Son giriş tarihleri, şifre ve silme işlemleri için">${ik('kilit')}Google ile bağlan</button>` : ''}${gomulu ? `<button class="dg dg-cizgi dg-kucuk" data-sh-yenile ${yukleniyor ? 'disabled' : ''}>${ik('sifirla')}${yukleniyor ? 'Yükleniyor…' : 'Yenile'}</button>` : ''}<button class="dg dg-cizgi dg-kucuk" data-sh-davet="kurs">${ik('arti')}Kurs hesabı linki</button><button class="dg dg-cizgi dg-kucuk" data-sh-davet="yonetim">${ik('arti')}Yönetim hesabı linki</button></div></div>
     ${talepHtml}
     <div class="sh-suz sh-alt" role="tablist">${sekme.map(([k, a, n]) => `<button role="tab" aria-selected="${alt === k}" class="${alt === k ? 'secili' : ''}" data-sh-alt="${k}">${a}${n ? ` <em>${n}</em>` : ''}</button>`).join('')}</div>
     ${alt === 'kurslar' ? kursIstHtml() : alt === 'silinen' ? silinenHtml() : `<div class="sh-arac"><label class="sh-ara">${ik('ara')}<input type="search" data-sh-ara placeholder="İsim, telefon, e-posta ya da kurs ara" value="${e(arama)}" autocomplete="off"></label>
@@ -334,6 +346,7 @@ async function tikla(ev) {
   if (t.closest('[data-sh-yenile]')) return yenile();
   const al = t.closest('[data-sh-alt]'); if (al) { alt = al.dataset.shAlt; return ciz(); }
   const kr = t.closest('[data-sh-kurs]'); if (kr) { alt = 'hesaplar'; suzgec = 'hepsi'; arama = (kursIst[kr.dataset.shKurs] || {}).ad || ''; return ciz(); }
+  if (!bagli() && t.closest('[data-sh-davet],[data-sh-sifre],[data-sh-hesap],[data-sh-geri]')) { try { await baglan(); hataMetni = ''; } catch (x) { return bildir(x.message, 'uyari'); } }
   const gr = t.closest('[data-sh-geri]'); if (gr) { const x = silinecekler.find(y => y.uid === gr.dataset.shGeri); if (!x) return; gr.disabled = true; try { await silmeGeriAl(x); bildir(x.ad + ' geri alındı; yeniden girebilir'); ciz(); } catch (y) { gr.disabled = false; islemHata(y); } return; }
   if (gorunum === 'destek' && await destekTikla(t)) return;
   const s = t.closest('[data-sh-suz]'); if (s) { suzgec = s.dataset.shSuz; kok.querySelectorAll('[data-sh-suz]').forEach(b => { b.classList.toggle('secili', b === s); b.setAttribute('aria-selected', b === s); }); const r = kok.querySelector('[data-sh-sonuc]'); if (r) r.innerHTML = sonucHtml(); return; }
@@ -347,7 +360,7 @@ function hesapPenceresi(h) {
   const satir = (et, d) => d ? `<div class="sh-bilgi-satir"><span>${et}</span><b>${e(d)}</b></div>` : '';
   pencere({
     baslik: h.ad,
-    icerik: `<div class="sh-bilgi">${satir('Rol', rolAd(h))}${satir('Kurs', h.yonetim ? '' : h.kursAd)}${satir(h.kullaniciAdi ? 'Kullanıcı adı' : h.tel ? 'Telefon' : 'E-posta', h.kullaniciAdi || (h.tel ? telGoster(h.tel) : h.eposta))}${satir('Son giriş', zamanMetni(h.sonGiris).replace(/ girdi$/, ''))}${satir('Açıldı', h.olusturma ? new Date(h.olusturma).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : '')}${h.kapali ? satir('Durum', 'Giriş kapalı') : ''}</div>
+    icerik: `<div class="sh-bilgi">${satir('Rol', rolAd(h))}${satir('Kurs', h.yonetim ? '' : h.kursAd)}${satir(h.kullaniciAdi ? 'Kullanıcı adı' : h.tel ? 'Telefon' : 'E-posta', h.kullaniciAdi || (h.tel ? telGoster(h.tel) : h.eposta))}${h.sonGiris === null ? '' : satir('Son giriş', zamanMetni(h.sonGiris).replace(/ girdi$/, ''))}${satir('Açıldı', h.olusturma ? new Date(h.olusturma).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : '')}${h.kapali ? satir('Durum', 'Giriş kapalı') : ''}</div>
       <div class="sh-islem">
         <button class="sh-islem-dg birincil" data-p-sifre>${ik('kilit')}<span><b>Yeni şifre ver</b><small>Geçici şifre oluşur, WhatsApp’tan gönderirsin${h.rol === 'ogrenci' ? '; öğrenci ilk girişte kendi şifresini belirler' : ''}</small></span></button>
         <button class="sh-islem-dg" data-p-kapat>${ik(h.kapali ? 'tik' : 'kapat')}<span><b>${h.kapali ? 'Girişi aç' : 'Girişi kapat'}</b><small>${h.kapali ? 'Hesap yeniden kullanılabilir' : 'Veriler kalır; bu kişi giremez'}</small></span></button>
@@ -416,6 +429,7 @@ async function davetPenceresi(yonetim) {
 export const hazirla = () => { gsiYukle().catch(() => { }); };
 export function otoBaglan() {
   if (bagli() || !ISTEMCI) return;
+  if (okuyabilir()) { if (!hesaplar && !yukleniyor) yenile(); return; }  // Google penceresi açılmaz; işlemde istenir
   baglan().then(() => { hataMetni = ''; hesaplar = null; ciz(); return yenile(); }).catch(x => { hataMetni = x.message; ciz(); });
 }
 // Henüz Yönetim hesabı yokken (ilk kurulum ya da hesap silindiyse): Google'da yetkili kişi kendine kurulum linki açar.
