@@ -1,7 +1,7 @@
 // Gösterge paneli ikaz lambaları (öğrenci ekranı › Araç tekniği): lambaya dokun → adı, rengi, ne yapılır; ardından kısa test.
 // Renk anlamı ve “motorun derhal durdurulması gereken arızalar” MEB araç tekniği dersi öğretim programına göre (2020, D bölümü);
 // semboller ISO 2575’teki yaygın biçimlerin sadeleştirilmiş çizimidir. Aracın kendi kullanım kılavuzu her zaman önceliklidir.
-import { e, pencere } from './ui.js?v=191';
+import { e, pencere } from './ui.js?v=192';
 
 const RENK = { k: ['#e0362c', 'Kırmızı', 'Tehlike: güvenli bir yerde hemen dur'], s: ['#f2a20c', 'Sarı / turuncu', 'Arıza ya da uyarı: en kısa sürede kontrol ettir'], y: ['#2fae5a', 'Yeşil', 'Bilgi: sistem açık'], m: ['#2f6fde', 'Mavi', 'Bilgi: uzun far açık'] };
 const c = 'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"';
@@ -15,7 +15,7 @@ export const LAMBALAR = [
   { id: 'fren', r: 'k', ad: 'Fren sistemi / el freni', svg: `<circle cx="12" cy="12" r="5.5" ${c}/><path d="M12 9v3.5" ${c}/><circle cx="12" cy="14.8" r=".9" fill="currentColor"/><path d="M5 7.5a7 7 0 0 0 0 9M19 7.5a7 7 0 0 1 0 9" ${c}/>`,
     anlam: 'El freni çekili ya da fren hidroliği eksik.', yap: 'Önce el frenini kontrol et. El freni inik olduğu hâlde yanıyorsa frenler zayıflayabilir: güvenli yerde dur ve fren hidroliğini kontrol ettirmeden sürme.' },
   { id: 'kemer', r: 'k', ad: 'Emniyet kemeri', svg: `<circle cx="11" cy="5" r="1.9" ${c}/><path d="M9.5 8.5h3l1 6h2.5l1.5 5M9.5 8.5l-1 7h5" ${c}/><path d="M8 8.5l7.5 8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>`,
-    anlam: 'Sürücünün ya da bir yolcunun emniyet kemeri takılı değil.', yap: 'Kemeri tak, yolculara da taktır. Direksiyon sınavında kemeri takmamak sınavı bitirir.' },
+    anlam: 'Sürücünün ya da bir yolcunun emniyet kemeri takılı değil.', yap: 'Kemeri tak, yolculara da taktır. Uygulama sınavında kemeri takmamak sınavı bitirir.' },
   { id: 'airbag', r: 'k', ad: 'Hava yastığı', svg: `<circle cx="8" cy="5.5" r="1.8" ${c}/><path d="M7 9l-1 6h4.5l1.5 4M7 9h2.5l1 4.5" ${c}/><circle cx="16" cy="11" r="3.5" ${c}/>`,
     anlam: 'Hava yastığı sisteminde arıza var; kazada hava yastığı açılmayabilir.', yap: 'Servise götürüp kontrol ettir. Bu sırada kemerin her zaman takılı olsun.' },
   { id: 'motor', r: 's', ad: 'Motor arıza', svg: `<path d="M5 10h2V8h7l1.5 2H18v2h1.5v-1.5H21v6h-1.5V15H18v2h-6l-2-2H7v-1.5H5z" ${c}/><path d="M9.5 8V6.5h3" ${c}/>`,

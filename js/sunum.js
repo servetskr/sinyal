@@ -1,7 +1,7 @@
 // Sunum verisi: gerçek kurs hesabında bir öğrenciyi, öğretmenini ve müdürü baştan sona göstermek için az sayıda örnek kayıt.
 // Öğrenciye öğretmen atanır; geçmiş dersler (puanlı), bugün ve sonraki günlerde planlı dersler, ödeme planı ve sınav tarihi eklenir.
 // Eklenen her kayıt "sunum: true" taşır; kaldırınca yalnız bunlar silinir ve öğrencinin önceki bilgileri geri gelir. Öğrencinin hesabına dokunulmaz.
-import { S, gun, SINIFLAR, tamAd, islem, konuOner } from './veri.js?v=191';
+import { S, gun, SINIFLAR, tamAd, islem, konuOner } from './veri.js?v=192';
 
 const kucuk = s => String(s || '').toLocaleLowerCase('tr').trim();
 // tek öğrenci / tek öğretmen varsa o; birden çoksa adıyla (Servet Sakar, Ahmet)
@@ -44,8 +44,8 @@ export function sunumVerisiEkle() {
   // bugün: şu andan sonraki iki saat (akşam geç ise yarın sabah), sonra iki ders daha
   const simdi = new Date().getHours(), bugunSaatler = [simdi + 1, simdi + 3].filter(x => x >= 8 && x <= 19).map(x => String(x).padStart(2, '0') + ':00');
   (bugunSaatler.length ? bugunSaatler.map(s => [0, s]) : [[1, '09:00'], [1, '11:00']]).concat([[2, '10:00'], [4, '15:00']]).forEach(([n, s]) => S.dersler.push(ders(n, s, { durum: 'Planlandı' })));
-  // direksiyon sınavı 10 gün sonra
-  S.sinavlar.push({ id: 's-sunum', tur: 'Direksiyon', tarih: gun(10), saat: '09:30', yer: (S.kurs.sehir ? S.kurs.sehir + ' ' : '') + 'direksiyon sınav alanı', kursiyerler: [k.id], sunum: true, sonuc: {} });
+  // uygulama sınavı 10 gün sonra
+  S.sinavlar.push({ id: 's-sunum', tur: 'Direksiyon', tarih: gun(10), saat: '09:30', yer: (S.kurs.sehir ? S.kurs.sehir + ' ' : '') + 'uygulama sınav alanı', kursiyerler: [k.id], sunum: true, sonuc: {} });
   islem('Sunum verisi eklendi', tamAd(k) + ' · ' + h.ad);
   return { ok: true, k, h };
 }

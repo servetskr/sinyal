@@ -1,9 +1,9 @@
 // Öğrenci hesapları (kurs tarafı): müdür ya da ön büro hesabı açar, giriş bilgileri öğrenciye WhatsApp'tan gider,
 // öğrenci ilk girişte kendi şifresini belirler. Şifresini unutan öğrencinin talebi buraya düşer; tek dokunuşla yeni geçici şifre gider.
-import { S, kaydet, gun, tamAd, islem, selam, oturum, sb, SINIFLAR, egitmen, eksikEvrak, kursAdi } from './veri.js?v=191';
-import { e, ik, tarih, pencere, kapatPencere, bildir, waSirali, tl, tamTarih, apiAcik } from './ui.js?v=191';
-import * as B from './bulut.js?v=191';
-import { wpGonder, alici, odemeBilgisi } from './sayfalar1.js?v=191';
+import { S, kaydet, gun, tamAd, islem, selam, oturum, sb, SINIFLAR, egitmen, eksikEvrak, kursAdi } from './veri.js?v=192';
+import { e, ik, tarih, pencere, kapatPencere, bildir, waSirali, tl, tamTarih, apiAcik } from './ui.js?v=192';
+import * as B from './bulut.js?v=192';
+import { wpGonder, alici, odemeBilgisi } from './sayfalar1.js?v=192';
 
 const yetkili = () => oturum.kullanici && ['mudur', 'sekreter'].includes(oturum.kullanici.rol);
 const talepVar = k => B.bulutta() && !!k.hesap && (B.bulut.sifreTalep || []).some(t => t.tel === k.hesap.tel);
@@ -45,7 +45,7 @@ export async function karsilama(k, { hos = true, hesap = true, sonra } = {}) {
   if (r) l.push(ogr(`Öğrenci uygulamanız hazır.\nGiriş: ${B.ogrenciGirisLinki()}\nKullanıcı adı: ${B.telGoster(r.tel)}\nGeçici şifre: ${r.sifre}\nİlk girişte şifrenizi değiştirmeyi unutmayın. Ders programınızı, ödemelerinizi ve sınavlarınızı buradan görebilir, sınava çalışabilirsiniz.`));
   if (hos) {
     const o = k.odeme, t = o.taksitler.filter(x => !x.iptal);
-    l.push(ogr(t.length ? `Ödeme planınız (toplam ${tl(o.toplam)}):\n${o.pesin ? `• Peşinat: ${tl(o.pesin)} (ödendi)\n` : ''}${t.map((x, i) => `• ${x.aciklama || (i + 1) + '. taksit'}: ${tamTarih(x.vade)} · ${tl(x.tutar)}${x.odendi ? ' (ödendi)' : ''}`).join('\n')}\n${odemeBilgisi()}` : `Kurs ücretiniz ${tl(o.toplam)}${o.pesin >= o.toplam ? ' peşin ödendi, teşekkürler.' : '. ' + odemeBilgisi()}`));
+    l.push(ogr(t.length ? `Ödeme planınız (toplam ${tl(o.toplam)}):\n${o.pesin ? `• Peşinat: ${tl(o.pesin)} (ödendi)\n` : ''}${t.map((x, i) => `• ${x.aciklama || (i + 1) + '. taksit'}: ${tamTarih(x.vade)} · ${tl(x.tutar)}${x.odendi ? ' (ödendi)' : ''}`).join('\n')}\n${odemeBilgisi(k)}` : `Kurs ücretiniz ${tl(o.toplam)}${o.pesin >= o.toplam ? ' peşin ödendi, teşekkürler.' : '. ' + odemeBilgisi()}`));
     const g = (S.gruplar || []).find(x => x.id === k.teorikGrup);
     if (g) l.push(ogr(`Teorik dersleriniz ${tamTarih(g.baslangic)} tarihinde başlıyor: ${g.ad}${g.saat ? ', ' + g.saat : ''}. Derslere kimliğinizle gelin.`));
     const h = egitmen(k.egitmen);

@@ -1,8 +1,8 @@
-// Deneme direksiyon sınavı: öğretmen telefonda MEB değerlendirme formunun (EK-4 otomobil / EK-3 motosiklet) maddelerini işaretler.
+// Deneme uygulama sınavı: öğretmen telefonda MEB değerlendirme formunun (EK-4 otomobil / EK-3 motosiklet) maddelerini işaretler.
 // Formdaki kurallar uygulanır: 5 mavi madde, toplam 2 sarı ihlal ya da 1 kırmızı ihlal → sınav biter, başarısız.
-import { S, kaydet, gun, SINIFLAR, tamAd, egitmen, arac, islem, motorSinif, ek3Sinif, oturum } from './veri.js?v=191';
-import { e, pencere, kapatPencere, bildir, belgeYazdir } from './ui.js?v=191';
-import { EK3, EK4 } from './formlar.js?v=191';
+import { S, kaydet, gun, SINIFLAR, tamAd, egitmen, arac, islem, motorSinif, ek3Sinif, oturum } from './veri.js?v=192';
+import { e, pencere, kapatPencere, bildir, belgeYazdir } from './ui.js?v=192';
+import { EK3, EK4 } from './formlar.js?v=192';
 
 const RENK = { m: 'Mavi', s: 'Sarı', k: 'Kırmızı' };
 const maddeler = sinif => (ek3Sinif(sinif) ? EK3 : EK4).flatMap(([b, bas, l], bi) => l.map(([sira, metin, renk], mi) => ({ id: bi + '.' + mi, bol: b, bas, sira, metin, renk })));
@@ -22,7 +22,7 @@ export function denemeAc(k, yenile) {
     return ust + `<li class="dn-m" data-m="${x.id}" data-r="${x.renk}"><span class="dn-renk dn-${x.renk}">${x.renk === 's' ? '<i></i><i></i>' : ''}</span><span class="dn-metin"><b>${e(x.sira)})</b> ${e(x.metin)}</span></li>`;
   }).join('');
   pencere({
-    baslik: 'Deneme direksiyon sınavı · ' + tamAd(k), genis: true,
+    baslik: 'Deneme uygulama sınavı · ' + tamAd(k), genis: true,
     icerik: `<p style="font-size:13.5px;color:var(--soluk);margin-bottom:8px">${e(SINIFLAR[k.sinif] ? SINIFLAR[k.sinif].ad : k.sinif)}${ar ? ' · ' + e(ar.plaka) : ''} · ${motorSinif(k.sinif) ? 'EK-3' : 'EK-4'} maddeleri. Hatalı davranışa dokunun; sarı maddeye ikinci kez dokunmak ikinci ihlali işaretler, üçüncüsü siler.</p>
       <div class="dn-durum" data-durum></div>
       <ul class="dn-liste">${satirlar}</ul>
@@ -41,7 +41,7 @@ export function denemeAc(k, yenile) {
         const r = sonucHesap(isaret, k.sinif), hatalar = l.filter(x => isaret[x.id]).map(x => ({ id: x.id, sira: x.sira, metin: x.metin, renk: x.renk, n: isaret[x.id], bas: x.bas }));
         const kayit = { id: 'dd' + Date.now(), tarih: gun(0), egitmen: k.egitmen, kim: oturum.kullanici ? oturum.kullanici.ad : '', arac: ar ? ar.id : null, sonuc: r.bitti ? 'Kaldı' : 'Geçti', neden: r.neden, say: r.say, isaret: { ...isaret }, hatalar, not: d.querySelector('[data-not]').value.trim().slice(0, 300) };
         k.dDeneme = [...(k.dDeneme || []), kayit].slice(-10);
-        islem('Deneme direksiyon sınavı yaptı', tamAd(k) + ' · ' + kayit.sonuc + (r.neden ? ' (' + r.neden + ')' : ''));
+        islem('Deneme uygulama sınavı yaptı', tamAd(k) + ' · ' + kayit.sonuc + (r.neden ? ' (' + r.neden + ')' : ''));
         kaydet(); kapatPencere(); bildir(`${tamAd(k)} deneme sınavı: ${kayit.sonuc === 'Geçti' ? 'geçerdi' : 'kalırdı'}${r.neden ? ' · ' + r.neden : ''}`, kayit.sonuc === 'Geçti' ? '' : 'uyari'); if (yenile) yenile();
       });
     },
@@ -49,9 +49,9 @@ export function denemeAc(k, yenile) {
 }
 // Kayıtlı denemenin işaretli EK-3/EK-4 çıktısı
 export async function denemeYazdir(k, kayit) {
-  const R = await import('./resmi.js?v=191');
+  const R = await import('./resmi.js?v=192');
   const html = R.resmiHtml('ek34', k, false, kayit.isaret);
-  belgeYazdir(html, 'Deneme direksiyon sınavı · ' + tamAd(k) + ' · ' + kayit.tarih);
+  belgeYazdir(html, 'Deneme uygulama sınavı · ' + tamAd(k) + ' · ' + kayit.tarih);
 }
 export const sonDeneme = k => (k.dDeneme || []).slice(-1)[0] || null;
 export const denemeOzet = x => `${x.tarih.split('-').reverse().join('.')} · ${x.sonuc === 'Geçti' ? 'geçerdi' : 'kalırdı'}${x.neden ? ' (' + x.neden + ')' : ''}${x.hatalar && x.hatalar.length ? ' · ' + x.hatalar.length + ' hata' : ''}`;

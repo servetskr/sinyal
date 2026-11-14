@@ -1,6 +1,6 @@
 // Mesaj merkezi: grup ya da tek tek seçilen kişilere kişiye özel WhatsApp mesajı, planlı gönderim, iletildi/okundu takibi
-import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, kalanBorc, gecikenler, gecikenTutar, eksikEvrak, sonrakiDers, risk, islem, sb, aktifSiniflar, SINIFLAR, selam, kursAdi, adEk, yerelZaman, bulutKanca } from './veri.js?v=191';
-import { e, tl, ik, rozet, bos, pencere, kapatPencere, bildir, tarihUzun, apiAcik, apiGonder, etiket, waSirali, ziyaretci, isaret, waIstek } from './ui.js?v=191';
+import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, kalanBorc, gecikenler, gecikenTutar, eksikEvrak, sonrakiDers, risk, islem, sb, aktifSiniflar, SINIFLAR, selam, kursAdi, adEk, yerelZaman, bulutKanca } from './veri.js?v=192';
+import { e, tl, ik, rozet, bos, pencere, kapatPencere, bildir, tarihUzun, apiAcik, apiGonder, etiket, waSirali, ziyaretci, isaret, waIstek } from './ui.js?v=192';
 
 const durum = { grup: 'aktif', sinif: '', ogretmen: '', secili: null, sira: 0, zaman: 'simdi', metin: null, sablon: '', ek: null, cevapIste: false, tanitim: false };
 // Kampanya/tanıtım mesajı yalnız kampanya izni olan öğrencilere gider; eski kayıtlardaki birleşik rıza izin sayılır
@@ -55,7 +55,7 @@ function degerler(r) {
     selam: r.tip === 'aday' ? selam({ ad: r.ad }) : selam(r.kisi), ad: String(r.ad).split(' ')[0], kurs: S.kurs.ad, kursa: kursAdi('e'), kursta: kursAdi('de'),
     borc: k ? tl(kalanBorc(k)) : '', geciken: k && gecikenler(k).length ? tl(gecikenTutar(k)) : '',
     ders: d ? `${tarihUzun(d.tarih)} saat ${d.saat}` : '', ogretmen: h ? h.ad : '',
-    sinav: s ? `${s.tur === 'e-Sınav' ? 'e-sınavınız' : 'direksiyon sınavınız'} ${tarihUzun(s.tarih)} saat ${s.saat}, yer: ${s.yer}` : '',
+    sinav: s ? `${s.tur === 'e-Sınav' ? 'e-sınavınız' : 'uygulama sınavınız'} ${tarihUzun(s.tarih)} saat ${s.saat}, yer: ${s.yer}` : '',
     evrak: k ? eksikEvrak(k).map(x => x[1].toLocaleLowerCase('tr')).join(', ') : '',
   };
 }

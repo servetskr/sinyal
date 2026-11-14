@@ -1,22 +1,22 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=191';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=191';
-import * as Y1 from './sayfalar1.js?v=191';
-import * as Y2 from './sayfalar2.js?v=191';
-import * as P from './portal.js?v=191';
-import * as Y3 from './sayfalar3.js?v=191';
-import * as Y4 from './sayfalar4.js?v=191';
-import * as Y5 from './sayfalar5.js?v=191';
-import * as IM from './imza.js?v=191';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=191';
-import * as SN from './senaryo.js?v=191';
-import * as OZ from './ozellik.js?v=191';
-import { durumlariGuncelle } from './mesaj.js?v=191';
-import { yeniMenu } from './yeni.js?v=191';
-import * as B from './bulut.js?v=191';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=191';
-import * as AN from './analiz.js?v=191';
-import * as ORT from './ortak.js?v=191';
-import * as SH from './sahip.js?v=191';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=192';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=192';
+import * as Y1 from './sayfalar1.js?v=192';
+import * as Y2 from './sayfalar2.js?v=192';
+import * as P from './portal.js?v=192';
+import * as Y3 from './sayfalar3.js?v=192';
+import * as Y4 from './sayfalar4.js?v=192';
+import * as Y5 from './sayfalar5.js?v=192';
+import * as IM from './imza.js?v=192';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=192';
+import * as SN from './senaryo.js?v=192';
+import * as OZ from './ozellik.js?v=192';
+import { durumlariGuncelle } from './mesaj.js?v=192';
+import { yeniMenu } from './yeni.js?v=192';
+import * as B from './bulut.js?v=192';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=192';
+import * as AN from './analiz.js?v=192';
+import * as ORT from './ortak.js?v=192';
+import * as SH from './sahip.js?v=192';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -421,6 +421,7 @@ function kursAcEkrani(davetKod) {
       <label>Cep telefonunuz <small style="font-weight:400;opacity:.85">yeni kayıt, iptal ve günlük özet WhatsApp’tan buraya gelir</small><input name="tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="05xx xxx xx xx"></label>
       <label>E-posta<input name="eposta" type="email" inputmode="email" autocomplete="username" required></label>
       <label>Şifre (en az 8 karakter)<input name="sifre" type="password" autocomplete="new-password" required minlength="8"></label>
+      <label>Şifre (tekrar)<input name="sifre2" type="password" autocomplete="new-password" required minlength="8"></label>
       <label class="giris-onay"><input type="checkbox" name="onay"><span><a href="gizlilik.html" target="_blank" rel="noopener" style="color:inherit;font-weight:700;text-decoration:underline">Gizlilik ve veri işleme şartlarını</a> okudum: kursum veri sorumlusu, mdSinyal veri işleyendir; veriler Google (Frankfurt, Almanya), Cloudflare ve Meta (WhatsApp) altyapısında işlenir.</span></label>
       <button class="dg dg-koyu" type="submit">Kurs hesabını aç</button></form>
     <p class="giris-baglar"><button type="button" data-geri>← Giriş ekranına dön</button></p></div></div>`;
@@ -432,6 +433,7 @@ function kursAcEkrani(davetKod) {
     if (f.ad.value.trim().length < 3) return bildir('Adınızı ve soyadınızı yazın', 'uyari');
     if (!/^\S+@\S+\.\S+$/.test(f.eposta.value.trim())) return bildir('E-posta adresini kontrol edin', 'uyari');
     if (f.sifre.value.length < 8) return bildir('Şifre en az 8 karakter olmalı', 'uyari');
+    if (f.sifre.value !== f.sifre2.value) { bildir('İki şifre aynı değil; şifreyi tekrar yazın', 'uyari'); return f.sifre2.focus(); }
     if (!f.onay.checked) return bildir('Verilerin nerede saklanacağını okuduğunuzu işaretleyin', 'uyari');
     btn.disabled = true; btn.textContent = 'Hesap açılıyor…';
     B.kursAc({ kursAd: f.kurs.value.trim(), yetkili: f.ad.value.trim(), sehir: f.sehir.value.trim(), eposta: f.eposta.value.trim(), sifre: f.sifre.value, mudurTel: f.tel.value.trim(), davetKod })
@@ -653,16 +655,18 @@ async function davetEkrani() {
       <label data-yeni>Adınız soyadınız<input name="ad" value="${e(dv.ad)}" autocomplete="name"></label>
       <label>E-posta<input name="eposta" type="email" inputmode="email" autocomplete="username" required></label>
       <label><span data-sifre-et>Şifre belirleyin (en az 8 karakter)</span><input name="sifre" type="password" autocomplete="new-password" required></label>
+      <label data-yeni>Şifre (tekrar)<input name="sifre2" type="password" autocomplete="new-password"></label>
       <button class="dg dg-koyu" type="submit">Hesabımı aç ve katıl</button></form>
     <p class="giris-baglar"><button type="button" data-mevcut>Zaten mdSinyal hesabım var</button></p></div></div>`;
   let yeni = true;
   const f = kok.querySelector('form'), btn = f.querySelector('[type=submit]');
-  kok.querySelector('[data-mevcut]').addEventListener('click', ev => { yeni = !yeni; kok.querySelector('[data-yeni]').hidden = !yeni; kok.querySelector('[data-sifre-et]').textContent = yeni ? 'Şifre belirleyin (en az 8 karakter)' : 'Şifre'; f.sifre.autocomplete = yeni ? 'new-password' : 'current-password'; btn.textContent = yeni ? 'Hesabımı aç ve katıl' : 'Giriş yap ve katıl'; ev.target.textContent = yeni ? 'Zaten mdSinyal hesabım var' : 'Yeni hesap açacağım'; });
+  kok.querySelector('[data-mevcut]').addEventListener('click', ev => { yeni = !yeni; kok.querySelectorAll('[data-yeni]').forEach(x => { x.hidden = !yeni; }); kok.querySelector('[data-sifre-et]').textContent = yeni ? 'Şifre belirleyin (en az 8 karakter)' : 'Şifre'; f.sifre.autocomplete = yeni ? 'new-password' : 'current-password'; btn.textContent = yeni ? 'Hesabımı aç ve katıl' : 'Giriş yap ve katıl'; ev.target.textContent = yeni ? 'Zaten mdSinyal hesabım var' : 'Yeni hesap açacağım'; });
   f.addEventListener('submit', ev => {
     ev.preventDefault();
     if (yeni && f.ad.value.trim().length < 3) return bildir('Adınızı ve soyadınızı yazın', 'uyari');
     if (!/^\S+@\S+\.\S+$/.test(f.eposta.value.trim())) return bildir('E-posta adresini kontrol edin', 'uyari');
     if (yeni && f.sifre.value.length < 8) return bildir('Şifre en az 8 karakter olmalı', 'uyari');
+    if (yeni && f.sifre.value !== f.sifre2.value) { bildir('İki şifre aynı değil; şifreyi tekrar yazın', 'uyari'); return f.sifre2.focus(); }
     btn.disabled = true; const t = btn.textContent; btn.textContent = 'Bağlanıyor…';
     B.davetKabul(kurs, kod, { eposta: f.eposta.value.trim(), sifre: f.sifre.value, ad: f.ad.value.trim(), yeni })
       .then(u => { location.hash = ''; bulutOturumu(u, true); bildir(dv.kursAd + ' hesabına katıldınız'); })

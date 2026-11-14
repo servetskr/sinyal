@@ -12,7 +12,7 @@ const BEKLENEN_TUKETIM = { C: 22, 'C-O': 22, A2: 3.5, A: 4.5, M: 2.5 };
 export const motorSinif = sinif => /^(A|M)/.test(String(sinif || ''));
 // Ders türleri: simülatör ve eğitim alanı saatleri 9/1/2025'ten beri asgari direksiyon saatine eklenir (MTSK Yön. değişikliği)
 export const DERS_TUR_AD = { trafik: 'Direksiyon (trafikte)', alan: 'Eğitim alanı', simulator: 'Simülatör' };
-// Direksiyon sınav formu: M, A1, A2, A ve B1 EK-3 ile, diğer sınıflar EK-4 ile değerlendirilir
+// Uygulama sınav formu: M, A1, A2, A ve B1 EK-3 ile, diğer sınıflar EK-4 ile değerlendirilir
 export const ek3Sinif = sinif => motorSinif(sinif) || String(sinif || '') === 'B1';
 export const konuListesi = sinif => motorSinif(sinif) ? DERS_KONU_MOTOR : DERS_KONU;
 // Kaçıncı derste hangi konular: kursun ders sayısına göre plana oranlanır (öneri; öğretmen değiştirir)
@@ -306,7 +306,7 @@ function uret() {
     { ad: 'Melike Tan', kaynak: 'Instagram', kanal: 'Instagram', sinif: 'B-O', asama: 'Kayıt', saat: '11:30', gun: -3, m: [['aday', 'Yarın kayda geleceğim, evrakları getireyim mi?'], ['asistan', 'Evet, sağlık raporu ve öğrenim belgesi yeterli; fotoğrafı kursta çekiyoruz.']] },
     { ad: 'Barış Yalçın', kaynak: 'Web sitesi', kanal: 'WhatsApp', sinif: 'B', asama: 'Kaybedildi', saat: '16:44', gun: -6, not: 'Fiyatı yüksek buldu', m: [['aday', 'Başka yerde 21 bin dediler.'], ['asistan', 'Anlıyorum. Fiyatımıza sınav günü araç ve ek tekrar dersi dahil. Karar verirseniz buradayız.']] },
     { ad: 'Gizem Önal', kaynak: 'Google Haritalar', kanal: 'WhatsApp', sinif: 'B', asama: 'Görüşme', saat: '10:18', gun: -1, takip: gun(2), m: [['aday', 'Öğrenciyim, indirim oluyor mu?'], ['asistan', 'Öğrenci belgesiyle kayıtta 1.000 TL indirim uyguluyoruz.'], ['aday', 'Gelip konuşmak istiyorum'], ['asistan', `${gunAdi(gG)} 14:00 için kayıt görüşmenizi oluşturdum. Öğrenci belgenizi getirmeyi unutmayın.`]] },
-    { ad: 'Kadir Bayram', kaynak: 'Google Haritalar', kanal: 'WhatsApp', sinif: 'B', asama: 'Yeni', saat: '09:47', gun: 0, m: [['aday', 'Sınavda kalırsam tekrar ücret ödüyor muyum?'], ['asistan', BEYAN + 'e-Sınav tekrarında MEB’in oturum ücreti 1.250 TL, direksiyon sınavı tekrarında 2.000 TL alıyoruz; sınav günü kurs aracı dahil. Her sınav için 4 hakkınız var.']] },
+    { ad: 'Kadir Bayram', kaynak: 'Google Haritalar', kanal: 'WhatsApp', sinif: 'B', asama: 'Yeni', saat: '09:47', gun: 0, m: [['aday', 'Sınavda kalırsam tekrar ücret ödüyor muyum?'], ['asistan', BEYAN + 'e-Sınav tekrarında MEB’in oturum ücreti 1.250 TL, uygulama sınavı tekrarında 2.000 TL alıyoruz; sınav günü kurs aracı dahil. Her sınav için 4 hakkınız var.']] },
     { ad: 'Ebru Çınar', kaynak: 'Tavsiye', kanal: 'WhatsApp', sinif: 'B-O', asama: 'Bilgi verildi', saat: '21:03', gun: -4, takip: gun(-1), m: [['aday', 'Annem için soruyorum, 52 yaşında, zor olur mu?'], ['asistan', 'Hiç zor değil; otomatik vitesle başlayan pek çok kursiyerimiz var. Eğitmenimiz Nurcan Hanım çok sabırlıdır.']] },
     { ad: 'Tunahan Ersoy', kaynak: 'Instagram', kanal: 'Instagram', sinif: 'A2', asama: 'Kayıt', saat: '13:15', gun: -5, m: [['aday', 'Kaydoldum teşekkürler']] },
     { ad: 'Pınar Gök', kaynak: 'Google Haritalar', kanal: 'WhatsApp', sinif: 'B', asama: 'Kaybedildi', saat: '12:00', gun: -8, not: 'Cevap vermedi', m: [['aday', 'Fiyat?'], ['asistan', 'B manuel 24.000 TL, taksit imkânı var.']] },
@@ -317,7 +317,7 @@ function uret() {
     { id: 'o2', ad: 'Taksit hatırlatması', ne: 'Vadeden 3 gün önce ve vade günü', kanal: 'WhatsApp', acik: true, gonderim: 138, sablon: '{selam} {vade} tarihli {tutar} taksidinizin hatırlatmasıdır. {odeme}' },
     { id: 'o3', ad: 'Sınav bilgilendirmesi', ne: 'Sınava 3 gün ve 1 gün kala', kanal: 'WhatsApp', acik: true, gonderim: 96, sablon: '{selam} {tur} sınavınız {tarih} {saatte}, yer: {yer}. Kimliğinizi yanınıza almayı unutmayın. {kurs}' },
     { id: 'o4', ad: 'Eksik evrak hatırlatması', ne: 'Kayıttan 3 gün sonra, evrak eksikse', kanal: 'WhatsApp', acik: true, gonderim: 41, sablon: '{selam} kaydınızı tamamlamak için {evrak} eksik. {kursa} getirdiğinizde işlemlerinizi hemen başlatıyoruz.' },
-    { id: 'o5', ad: 'Google yorum isteği', ne: 'Direksiyon sınavını geçince', kanal: 'WhatsApp', acik: true, gonderim: 57, sablon: '{selam} tebrikler, artık ehliyetiniz var! {kurs} hakkında Google’da birkaç cümle yazarsanız çok seviniriz: {link}' },
+    { id: 'o5', ad: 'Google yorum isteği', ne: 'Uygulama sınavını geçince', kanal: 'WhatsApp', acik: true, gonderim: 57, sablon: '{selam} tebrikler, artık ehliyetiniz var! {kurs} hakkında Google’da birkaç cümle yazarsanız çok seviniriz: {link}' },
     { id: 'o6', ad: 'Kalan kursiyere ek ders önerisi', ne: 'Sınav sonucu girildiğinde', kanal: 'WhatsApp', acik: true, gonderim: 12, sablon: '{selam} bu sefer olmadı ama çok yakındınız. Bir sonraki sınava kadar 2 ek ders ayarlayalım mı?' },
     { id: 'o8', ad: 'e-Sınav randevusu ve giriş belgesi', ne: 'Randevu kesinleşince', kanal: 'WhatsApp', acik: true, gonderim: 64, sablon: '{selam} e-sınav randevunuz {tarih} {saatte}, yer: {yer}. Giriş belgeniz ekte; kimliğinizi unutmayın.' },
     { id: 'o9', ad: 'Sınav sonucu bildirimi', ne: 'Sonuç girilince', kanal: 'WhatsApp', acik: true, gonderim: 88, sablon: '{selam} {tur} sınav sonucunuz: {sonuc}. {kalan_hak}' },
@@ -362,7 +362,7 @@ function uret() {
   ];
   kursiyerler.forEach(k => { if (k.evrak.saglik) { const t = tarihOku(k.kayit); t.setDate(t.getDate() - ara(2, 20)); k.saglikRapor = { no: '2026/' + ara(10000, 99999), tarih: iso(t).split('-').reverse().join('.') }; } if (k.evrak.adli) k.adliSicil = { barkod: 'ASB' + ara(100000, 999999) + ara(1000, 9999) }; });
   kursiyerler.forEach(k => { if (k.asama === 'Ehliyet' && k.dsinav) { const d = fark(k.dsinav.tarih); k.kapanis = d < -12 ? { sertifika: gun(d + 3), arsiv: gun(d + 6) } : d < -5 ? { sertifika: gun(d + 3) } : {}; } });
-  kursiyerler.forEach(k => { k.odeme.ekler = []; if (k.esinav) k.odeme.ekler.push({ ad: 'e-Sınav ücreti', tutar: 1250, odendi: k.kayit }); if (k.dsinav && k.dsinav.hak > 1) k.odeme.ekler.push({ ad: 'Direksiyon sınavı tekrar ücreti', tutar: 2000, odendi: null }); if (k.dsinav && k.dsinav.sonuc === 'Kaldı') k.odeme.ekler.push({ ad: 'Sınav tekrar ücreti', tutar: 2000, odendi: null }); });
+  kursiyerler.forEach(k => { k.odeme.ekler = []; if (k.esinav) k.odeme.ekler.push({ ad: 'e-Sınav ücreti', tutar: 1250, odendi: k.kayit }); if (k.dsinav && k.dsinav.hak > 1) k.odeme.ekler.push({ ad: 'Uygulama sınavı tekrar ücreti', tutar: 2000, odendi: null }); if (k.dsinav && k.dsinav.sonuc === 'Kaldı') k.odeme.ekler.push({ ad: 'Sınav tekrar ücreti', tutar: 2000, odendi: null }); });
   const ogretmenler = [
     { id: 'o1', ad: 'Ayten Duman', brans: 'Trafik ve çevre', tel: '0532 771 40 12' },
     { id: 'o2', ad: 'Dr. Serkan Ak', brans: 'İlk yardım', tel: '0505 318 62 90' },
@@ -383,7 +383,7 @@ function uret() {
     { konu: 'Evraklar', metin: 'Sağlık raporu, öğrenim belgesi, biyometrik fotoğraf, kimlik. Fotoğrafı kursta çekiyoruz.', onay: gun(-12) },
     { konu: 'Ders saatleri', metin: 'Teorik dersler hafta içi 18:30 ve Salı-Perşembe 10:00. Direksiyon Pazartesi–Cumartesi 09:00–18:00.', onay: gun(-12) },
     { konu: 'Süre', metin: 'Teorik yaklaşık 4 hafta, ardından e-sınav ve direksiyon eğitimi; ortalama 2–3 ay.', onay: gun(-12) },
-    { konu: 'Sınav ücretleri', metin: 'e-Sınav ücreti oturum başına 1.250 TL (MEB 2026 kılavuzu), kurs ücretine dahil değil. Direksiyon sınavı tekrarında 2.000 TL; sınav günü kurs aracı dahil. Her sınav için 4 hak var.', onay: gun(-5) },
+    { konu: 'Sınav ücretleri', metin: 'e-Sınav ücreti oturum başına 1.250 TL (MEB 2026 kılavuzu), kurs ücretine dahil değil. Uygulama sınavı tekrarında 2.000 TL; sınav günü kurs aracı dahil. Her sınav için 4 hak var.', onay: gun(-5) },
   ];
   const devredilen = [
     { ad: 'Ozan Demirci', aday: 'l5', kanal: 'WhatsApp', konu: 'Bilinmeyen soru', mesaj: 'B ehliyetim var, C ye geçiş ne kadar?', neden: 'Kurs bilgisinde B’den C’ye geçiş ücreti yok', saat: '07:55', bildirim: [['07:55', 'Servet Sakar', 'WhatsApp']] },
@@ -421,7 +421,7 @@ function uret() {
     gonderiler: [
       { id: 'g1', gorsel: 'img/kayit.webp', metin: 'Kasım grubu kayıtları başladı. Teorik dersler 18:30’da.', begeni: 214, gun: -2 },
       { id: 'g2', gorsel: 'img/arac-a2.webp', metin: 'Otomatik vitesli yeni aracımız filoya katıldı.', begeni: 158, gun: -5 },
-      { id: 'g3', gorsel: 'img/arac-a4.webp', metin: 'Bu hafta 9 kursiyerimiz direksiyon sınavını geçti. Tebrikler!', begeni: 302, gun: -8 },
+      { id: 'g3', gorsel: 'img/arac-a4.webp', metin: 'Bu hafta 9 kursiyerimiz uygulama sınavını geçti. Tebrikler!', begeni: 302, gun: -8 },
     ],
     yorumlar: [
       { id: 'y1', gonderi: 'g1', kim: '@elif.krk', metin: 'Fiyat ne kadar?', saat: '07:58', gun: 0, durum: 'dm', cevap: 'Merhaba, ücret bilgisini özelden yazdım.' },
@@ -516,7 +516,7 @@ function goc(o) {
   // gerçek kurs: demo kursun gönderim sayıları devralınmasın (bir kez sıfırlanır; sonra gerçek gönderimlerle artar)
   // işaret kuralın kendisinde: kurs ayarlarına (tek parça kaydedilir) dokunulmaz; önbellekten açılan eski bir cihaz ayarları geri yazamasın
   if (o._bulut) (o.otomasyonlar || []).forEach(x => { if (!x.gercekSayac) { x.gonderim = 0; x.gercekSayac = true; } });
-  (o.otomasyonlar || []).forEach(x => { if (x.id === 'o8') x.sablon = '{selam} e-sınav randevunuz {tarih} {saatte}, yer: {yer}. Kimliğinizi ve e-sınav ücreti dekontunu yanınıza alın.'; if (x.id === 'o6') x.ne = 'Direksiyon sınavından kalınca'; });
+  (o.otomasyonlar || []).forEach(x => { if (x.id === 'o8') x.sablon = '{selam} e-sınav randevunuz {tarih} {saatte}, yer: {yer}. Kimliğinizi ve e-sınav ücreti dekontunu yanınıza alın.'; if (x.id === 'o6') x.ne = 'Uygulama sınavından kalınca'; });
   if (o.kazanim && !o.kazanim.gercek) o.kazanim = { gercek: true, doldurulan: 0, ekDers: 0, yorum: 0 };
   // geçmiş derslerin beceri puanları (usta öğretici ders bitiminde 1–5 verir); eski kayıtlara kursiyerin seyrine göre doldurulur
   const hs = x => { let h = 7; for (const c of String(x)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
@@ -634,6 +634,15 @@ export function ibanGecerli(s) {
   let m = 0; for (const ch of (x.slice(4) + x.slice(0, 4)).replace(/[A-Z]/g, c => c.charCodeAt(0) - 55)) m = (m * 10 + +ch) % 97;
   return m === 1;
 }
+// Ücret kalemleri (Ayarlar › Sınıf ve ücretler): ek ve özel direksiyon dersi sınıfa göre, uygulama sınavı ücreti hakka göre
+// (1., 2., 3. sınav farklı olabilir), kitap ve evrak gibi diğer kalemler liste. Girilmemişse eski tek değerler kullanılır.
+export const ekDersFiyat = sinif => { const v = SINIFLAR[sinif] && SINIFLAR[sinif].ekDers; return v != null ? v : (S.kurs.ekDersUcreti || 0); };
+export const ozelDersFiyat = sinif => { const v = SINIFLAR[sinif] && SINIFLAR[sinif].ozelDers; return v != null ? v : ekDersFiyat(sinif); };
+export const uygulamaSinavUcreti = hak => { const l = S.kurs.uygulamaUcret; if (Array.isArray(l) && l.length) return +l[Math.min(Math.max(hak, 1), l.length) - 1] || 0; return hak > 1 ? ((S.kurs.tekrarUcret || {}).dsinav || 0) : 0; };
+export const esinavUcreti = hak => hak > 1 ? ((S.kurs.tekrarUcret || {}).esinav || 0) : (S.kurs.esinavUcreti ?? 1250);
+export const digerUcretler = () => S.kurs.digerUcretler || [];
+// Havale açıklama kodu: her öğrenciye sabit, kısa bir kod (kimliğinden türetilir, saklanmaz). Başkası yatırsa da açıklamadaki kodla ödemenin kime ait olduğu bulunur.
+export const odemeKodu = k => { if (!k || !k.id) return ''; let t = 2166136261; const s = String(k.id); for (let i = 0; i < s.length; i++) { t ^= s.charCodeAt(i); t = Math.imul(t, 16777619); } t >>>= 0; const h = 'ACDEFHJKMNPRTVWXY3479'; let o = ''; for (let i = 0; i < 5; i++) { o += h[t % h.length]; t = Math.floor(t / h.length); } return 'MD' + o; };
 // Mesajlarda: "TR.. (Banka · Hesap sahibi)"
 export const ibanMetni = (K = S.kurs) => { const h = ibanVarsayilan(K); if (!h) return ''; const ek = [h.banka, h.alici || K.ad].filter(Boolean).join(' · '); return h.iban + (ek ? ' (' + ek + ')' : ''); };
 let kaydetDinleyici = null;
@@ -672,7 +681,7 @@ export const SOZLESME_VARSAYILAN = [
   'Eğitim. Kurs {teorik} saat teorik ders ve {direksiyon} ders saati direksiyon eğitimi verir. Ders programı kursiyere yazılı ya da elektronik olarak bildirilir.',
   'Ücret ve ödeme. Kurs ücreti ve ödeme planı yukarıdaki tablodadır. MEB e-sınav ücreti oturum başına {tekrarE} olup kurs ücretine dahil değildir. Vadesinde ödenmeyen taksit için kursiyere hatırlatma yapılır.',
   'Devam. Kursiyer derslere zamanında katılır. Gelemeyeceği direksiyon dersini en az bir gün önce bildirir. Bildirmeden gelinmeyen dersin yerine konan ders için {ekDers} ek ders ücreti alınır.',
-  'Sınavlar. Kursiyerin her sınav için {hak} hakkı vardır. Direksiyon sınavının tekrarında {tekrarD} alınır. Haklarını dolduran kursiyer yeni dönem kaydı yaptırır.',
+  'Sınavlar. Kursiyerin her sınav için {hak} hakkı vardır. Uygulama sınavının tekrarında {tekrarD} alınır. Haklarını dolduran kursiyer yeni dönem kaydı yaptırır.',
   'Ek ders. Zorunlu dersler dışında kursiyerin isteğiyle verilen her direksiyon dersinin ücreti {ekDers}’dir.',
   'Fesih ve iade. Kursiyer dönem başlamadan ayrılırsa sözleşmedeki eğitim ücretinin %10’u dışındaki kısım; dönem başladıktan sonra ayrılırsa ücretin %10’u ile aldığı teorik ve direksiyon ders saatlerinin karşılığı düşülerek kalan kısım iade edilir. İade, ayrılış tarihinden itibaren en geç bir ay içinde kursiyerin banka hesabına yapılır (Özel Öğretim Kurumları Yönetmeliği m.56). Ödenmiş sınav ücretleri ve harçlar iade kapsamında değildir.',
   'Kişisel veriler. Kursiyere 6698 sayılı Kanun kapsamındaki aydınlatma metni verilmiştir; sağlık raporu ve adli sicil bilgileri yalnızca MEB kaydı için işlenir.',
@@ -695,7 +704,7 @@ export const arac = id => S.araclar.find(a => a.id === id) || ((S.cikanlar || {}
 export function arsivle(tur, x) { S.cikanlar = S.cikanlar || { egitmen: [], arac: [] }; S.cikanlar[tur].push({ ...x, cikis: gun(0) }); }
 export const tamAd = k => k.ad + ' ' + k.soyad;
 // öğrenci uygulamasının ek özellikleri: kurs Ayarlar › Öğrenci uygulaması’ndan kapatabilir (varsayılan açık)
-export const OGR_OZELLIK = [['hazirlik', 'Sınava hazırlık puanı ve öneriler'], ['tekrar', 'Aralıklı tekrar (yanlış soruların yeniden sorulması)'], ['direksiyon', 'Direksiyon sınavına hazırlık (resmî form maddeleri, park ve dönüş şemaları)'], ['ikaz', 'Gösterge paneli ve ikaz lambaları'], ['motor', '4 zamanlı motor ve debriyaj denemesi'], ['tehlike', 'Tehlike algısı çalışması'], ['sesli', 'Konu anlatımlarını sesli dinleme'], ['dersOnay', 'Ders defteri: öğrenci her direksiyon dersini kendi telefonundan onaylar ya da itiraz eder (varsayılan kapalı)']];
+export const OGR_OZELLIK = [['hazirlik', 'Sınava hazırlık puanı ve öneriler'], ['tekrar', 'Aralıklı tekrar (yanlış soruların yeniden sorulması)'], ['direksiyon', 'Uygulama sınavına hazırlık (resmî form maddeleri, park ve dönüş şemaları)'], ['ikaz', 'Gösterge paneli ve ikaz lambaları'], ['motor', '4 zamanlı motor ve debriyaj denemesi'], ['tehlike', 'Tehlike algısı çalışması'], ['sesli', 'Konu anlatımlarını sesli dinleme'], ['dersOnay', 'Ders defteri: öğrenci her direksiyon dersini kendi telefonundan onaylar ya da itiraz eder (varsayılan kapalı)']];
 const OGR_KAPALI = ['dersOnay'];  // kursun açması gereken özellikler
 export const ogrOzellik = ad => { const v = ((S.kurs || {}).ogrOzellik || {})[ad]; return OGR_KAPALI.includes(ad) ? v === true : v !== false; };
 // Mesaj hitabı: "Merhaba Elif Hanım," / "Merhaba Hüseyin Hoca,"; cinsiyeti bilinmeyen (aday vb.) için "Sayın Deniz Akın,"
@@ -787,7 +796,7 @@ export function risk(k) {
     if (gel) { p += Math.min(24, gel * 8); n.push(gel + ' derse gelmedi'); }
     const kisa = S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Yapıldı' && d.sure != null && d.sure < 40).length;
     if (kisa >= 2) { p += 8; n.push(kisa + ' ders 40 dakikadan kısa'); }
-    if (k.dsinav && k.dsinav.sonuc === 'Kaldı') { p += 20; n.push('Direksiyon sınavından kaldı'); }
+    if (k.dsinav && k.dsinav.sonuc === 'Kaldı') { p += 20; n.push('Uygulama sınavından kaldı'); }
     const dd = (k.dDeneme || []).slice(-1)[0];
     if (dd && dd.sonuc === 'Kaldı') { p += 25; n.push('Son deneme sınavında kalırdı' + (dd.neden ? ' (' + dd.neden + ')' : '')); }
     else if (dd && dd.sonuc === 'Geçti') p = Math.max(0, p - 10);
@@ -796,7 +805,7 @@ export function risk(k) {
   }
   if ((k.notlar || []).some(x => /zorlan|unut|panik|gergin/i.test(x.metin))) { p += 12; n.push('Usta öğretici notu'); }
   const puan = Math.min(100, Math.round(p));
-  return { puan, ort, nedenler: n, seviye: puan >= 50 ? 'Yüksek' : puan >= 25 ? 'Orta' : 'Düşük', tur: direksiyon ? 'Direksiyon sınavı' : 'e-Sınav', beceri: direksiyon ? beceriOzet(k) : null, oneri: direksiyon ? (puan >= 50 ? 4 : puan >= 25 ? 2 : 0) : 0 };
+  return { puan, ort, nedenler: n, seviye: puan >= 50 ? 'Yüksek' : puan >= 25 ? 'Orta' : 'Düşük', tur: direksiyon ? 'Uygulama sınavı' : 'e-Sınav', beceri: direksiyon ? beceriOzet(k) : null, oneri: direksiyon ? (puan >= 50 ? 4 : puan >= 25 ? 2 : 0) : 0 };
 }
 
 export const ogretmen = id => (S.ogretmenler || []).find(o => o.id === id);

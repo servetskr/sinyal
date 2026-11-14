@@ -1,7 +1,7 @@
 // Araç tekniği canlandırmaları (öğrenci ekranı): 4 zamanlı motor ve debriyaj/kalkış denemesi.
 // 4 zaman: MEB Araç Tekniği programı (2020) A bölümü, motorun çalışma prensibi. Debriyaj denemesi temsilîdir:
-// pedal hızlı bırakılırsa motor yük altında düşük devire iner ve stop eder (direksiyon sınavında kalkış/rampa hatalarının çoğu).
-import { e, pencere } from './ui.js?v=191';
+// pedal hızlı bırakılırsa motor yük altında düşük devire iner ve stop eder (uygulama sınavında kalkış/rampa hatalarının çoğu).
+import { e, pencere } from './ui.js?v=192';
 
 const ZAMAN = [
   ['Emme', 'Piston aşağı iner, emme supabı açıktır; silindire hava (benzinli motorda hava-yakıt karışımı) dolar.', '#5aa9e6'],
@@ -55,7 +55,7 @@ export function debriyajAc() {
   let anim = null, son = null;
   pencere({
     baslik: 'Debriyaj: stop ettirmeden kalkış', genis: true,
-    icerik: `<p style="font-size:14px">Araç birinci viteste, el freni indirilmiş. Debriyaj pedalını <b>yavaşça</b> bırak, kavrama noktasında hafif gaz ver. Pedalı birden bırakırsan motor stop eder: direksiyon sınavında kalkış ve rampa hatalarının çoğu budur.</p>
+    icerik: `<p style="font-size:14px">Araç birinci viteste, el freni indirilmiş. Debriyaj pedalını <b>yavaşça</b> bırak, kavrama noktasında hafif gaz ver. Pedalı birden bırakırsan motor stop eder: uygulama sınavında kalkış ve rampa hatalarının çoğu budur.</p>
       <svg viewBox="-10 -5 20 10" style="width:100%;max-width:420px;display:block;margin:10px auto" data-db role="img" aria-label="Debriyaj diskleri"></svg>
       <div class="db-gosterge"><span>Motor devri <b data-db-devir>850</b> d/dk</span><span>Hız <b data-db-hiz>0</b> km/sa</span></div>
       <p data-db-durum style="min-height:2.6em;font-size:14.5px;font-weight:600;margin:6px 0"></p>

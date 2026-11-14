@@ -1,6 +1,6 @@
-import { S, BUGUN, iso, kapaliGun, ASAMALAR, KAYNAKLAR, kursiyer, tamAd, eksikEvrak, gecikenler, gecikenTutar, memnuniyet, sb, sbDers } from './veri.js?v=191';
-import { e, tl, sayi, rozet, asamaRozet, olcumler, sekmeler, ilerleme, bos, ekranNotu, ayAdi } from './ui.js?v=191';
-import { riskliler } from './risk.js?v=191';
+import { S, BUGUN, iso, kapaliGun, ASAMALAR, KAYNAKLAR, kursiyer, tamAd, eksikEvrak, gecikenler, gecikenTutar, memnuniyet, sb, sbDers } from './veri.js?v=192';
+import { e, tl, sayi, rozet, asamaRozet, olcumler, sekmeler, ilerleme, bos, ekranNotu, ayAdi } from './ui.js?v=192';
+import { riskliler } from './risk.js?v=192';
 
 /* ================= ANALİZ =================
    Öğrenci, usta öğretici ve kurs göstergeleri tek sayfada. Sekme hash'ten gelir: #/analiz/<ogrenci|usta|kurs> */
@@ -70,7 +70,7 @@ function ogrenciler() {
   <div class="ara-bosluk"></div>
   <div class="izgara iz-2">
     ${kart('Aşamalara göre', `${acik.length} açık kayıt`, `<div class="kart-govde">${asama.map(([a, n]) => cubuk(asamaRozet(a), n, maxA, { href: '#/kursiyerler/' + encodeURIComponent(a), tur: a === 'Ehliyet' ? 'yesil' : '' })).join('')}</div>`)}
-    ${kart('Sınav başarısı', 'Sınava girenlerin son sonucu', `<div class="kart-govde">${sinavSatir('e-Sınav', es)}${sinavSatir('Direksiyon sınavı', ds)}
+    ${kart('Sınav başarısı', 'Sınava girenlerin son sonucu', `<div class="kart-govde">${sinavSatir('e-Sınav', es)}${sinavSatir('Uygulama sınavı', ds)}
       ${sureler.length ? `<p style="font-size:13px;color:var(--soluk)">Kayıttan ehliyete en kısa ${Math.min(...sureler)}, en uzun ${Math.max(...sureler)} gün.</p>` : ''}</div>`)}
   </div>
   <div class="ara-bosluk"></div>
@@ -104,11 +104,11 @@ function ustalar() {
   return `${olcumler([
     [`Ders · ${ayAd(0)}`, sayi(buAyT), `${ayAd(1)}: ${sayi(gecenT)}`],
     ['Öğrenci memnuniyeti', tumM.ort != null ? virgul(tumM.ort) + ' / 5' : '—', tumM.n ? `${sayi(tumM.n)} değerlendirme` : 'Henüz puan verilmedi'],
-    ['Direksiyon sınavı', yzMetin(dsT.oran), dsT.giren ? `${dsT.gecen}/${dsT.giren} geçti · ilk denemede ${yzMetin(dsT.ilkOran)}` : 'Henüz sonuç yok'],
+    ['Uygulama sınavı', yzMetin(dsT.oran), dsT.giren ? `${dsT.gecen}/${dsT.giren} geçti · ilk denemede ${yzMetin(dsT.ilkOran)}` : 'Henüz sonuç yok'],
     ['Ders itirazı', sayi(itirazT), itirazT ? 'Öğrenci “ders yapılmadı” dedi' : 'İtiraz yok'],
   ])}
   <div class="ara-bosluk"></div>
-  ${kart('Usta öğretici karşılaştırması', `Yapılan direksiyon dersleri · ${ayAd(0)} ve ${ayAd(1)}`, `<div class="tablo-kap" style="margin-top:10px"><table class="tablo"><thead><tr><th>Usta öğretici</th><th style="min-width:150px">${e(ayAd(0))}</th><th class="sag">${e(ayAd(1))}</th><th class="sag">Ort. süre</th><th class="sag">Memnuniyet</th><th style="min-width:140px">Direksiyon sınavı</th><th class="sag">Gelmedi</th><th class="sag">İtiraz</th></tr></thead><tbody>
+  ${kart('Usta öğretici karşılaştırması', `Yapılan direksiyon dersleri · ${ayAd(0)} ve ${ayAd(1)}`, `<div class="tablo-kap" style="margin-top:10px"><table class="tablo"><thead><tr><th>Usta öğretici</th><th style="min-width:150px">${e(ayAd(0))}</th><th class="sag">${e(ayAd(1))}</th><th class="sag">Ort. süre</th><th class="sag">Memnuniyet</th><th style="min-width:140px">Uygulama sınavı</th><th class="sag">Gelmedi</th><th class="sag">İtiraz</th></tr></thead><tbody>
     ${satir.map(x => `<tr>
       <td><b style="color:var(--murekkep)">${e(x.h.ad)}</b>${x.h.siniflar ? soluk(e([].concat(x.h.siniflar).join(', '))) : ''}</td>
       <td><span class="sayi" style="font-size:13px">${x.buAy} ders</span>${ilerleme(x.buAy, maxD)}</td>
@@ -120,7 +120,7 @@ function ustalar() {
       <td class="sag">${x.itiraz ? rozet(x.itiraz, 'kirmizi') : '<span class="sayi">0</span>'}</td>
     </tr>`).join('')}
   </tbody></table></div>
-  <p style="font-size:13px;color:var(--soluk);padding:4px 20px 18px">Sınav başarısı, usta öğreticiye bağlı kursiyerlerin son direksiyon sınavı sonucudur. Ortalama süre, başlat–bitir ile kaydedilen derslerden hesaplanır; 40 dakikanın altı kısa ders sayılır. Gelmedi ve itiraz sayıları tüm kayıtlardandır.</p>`)}`;
+  <p style="font-size:13px;color:var(--soluk);padding:4px 20px 18px">Sınav başarısı, usta öğreticiye bağlı kursiyerlerin son uygulama sınavı sonucudur. Ortalama süre, başlat–bitir ile kaydedilen derslerden hesaplanır; 40 dakikanın altı kısa ders sayılır. Gelmedi ve itiraz sayıları tüm kayıtlardandır.</p>`)}`;
 }
 
 /* ---------- Kurs ---------- */
@@ -192,7 +192,7 @@ export function analiz(alt) {
   const govde = { ogrenci: ogrenciler, usta: ustalar, kurs }[sekme]();
   const not = {
     ogrenci: 'Kursiyerler hangi aşamada, sınavı geçiyorlar mı, kim zorlanıyor, kim derse gelmiyor. Ada tıklayınca kursiyerin dosyası açılır.',
-    usta: 'Her usta öğreticinin bu ay ve geçen ay verdiği ders, öğrenci puanı ve öğrencilerinin direksiyon sınavı başarısı yan yana.',
+    usta: 'Her usta öğreticinin bu ay ve geçen ay verdiği ders, öğrenci puanı ve öğrencilerinin uygulama sınavı başarısı yan yana.',
     kurs: 'Bu ayı geçen ayla karşılaştırın: yeni kayıt, tahsilat, gider, direksiyon doluluğu ve öğrencilerin kursu nereden bulduğu.',
   }[sekme];
   return {
