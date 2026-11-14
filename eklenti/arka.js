@@ -19,6 +19,12 @@ chrome.runtime.onMessage.addListener((m, kimden, cevap) => {
       await chrome.windows.update(yeniSekme.windowId, { focused: true }).catch(() => { });
       return { sekme: 'acildi' };
     }
+    // toplu iş (arka plan motoru): mdSinyal koyar, MEBBİS sekmesindeki motor yürütür ve ilerledikçe sonucu yazar, mdSinyal sonucu alır
+    if (m.tur === 'toplu-koy') { await koy('toplu', { ...m.is, zaman: Date.now(), sonuc: null, bitti: false }); await chrome.storage.session.remove('topluSonuc'); return { ok: true }; }
+    if (m.tur === 'toplu-al') { const t = await al('toplu'); return t && Date.now() - t.zaman < 6 * 3600e3 ? t : null; }
+    if (m.tur === 'toplu-durum') { const t = await al('toplu'); if (!t || t.id !== m.id) return { ok: false }; t.sonuc = m.sonuc; t.bitti = !!m.bitti; await koy('toplu', t); await koy('topluSonuc', { id: m.id, sonuc: m.sonuc, bitti: !!m.bitti, zaman: Date.now() }); return { ok: true }; }
+    if (m.tur === 'toplu-sonuc-al') { const r = await al('topluSonuc'); if (r && r.bitti) { await chrome.storage.session.remove(['topluSonuc', 'toplu']); } return r || null; }
+    if (m.tur === 'toplu-iptal') { await chrome.storage.session.remove(['toplu', 'topluSonuc']); return { ok: true }; }
     if (m.tur === 'hedef-koy') { await koy('hedef', m.hedef); return { ok: true }; }
     if (m.tur === 'hedef-al') return (await al('hedef')) || null;
     if (m.tur === 'hedef-sil') { await chrome.storage.session.remove('hedef'); return { ok: true }; }
