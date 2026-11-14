@@ -1,17 +1,17 @@
 // Öğrenci paneli sekmeleri: dersler (yaklaşan + defter + gelişim + teorik konular), sınavlar, ödemeler, belgeler; bölümler açılır kapanır modüller
-import { odemeKodu, ibanlar, ibanBicim, S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen, ogrOzellik, oturum, DERS_TUR_AD, iptalEdilebilir } from './veri.js?v=195';
-import * as TK from './takvim.js?v=195';
-import { randevuEngeli, engelYazilir } from './risk.js?v=195';
-import { bildirimler } from './sayfalar1.js?v=195';
-import { e, tl, ik, rozet, ilerleme, pencere, kapatPencere, bildir, tarih, goreli, isaret, belgeYazdir, fotoKucult } from './ui.js?v=195';
-import { belgeHtml } from './sayfalar3.js?v=195';
+import { odemeKodu, ibanlar, ibanBicim, S, kaydet, gun, fark, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen, ogrOzellik, oturum, DERS_TUR_AD, iptalEdilebilir } from './veri.js?v=197';
+import * as TK from './takvim.js?v=197';
+import { randevuEngeli, engelYazilir } from './risk.js?v=197';
+import { bildirimler } from './sayfalar1.js?v=197';
+import { e, tl, ik, rozet, ilerleme, pencere, kapatPencere, bildir, tarih, goreli, isaret, belgeYazdir, fotoKucult } from './ui.js?v=197';
+import { belgeHtml } from './sayfalar3.js?v=197';
 
 // MEB teorik eğitim programı: konu, ders saati, başlıklar (anahtarlar soru bankasıyla aynı)
 export const MUFREDAT = [
-  ['trafik', 'Trafik ve çevre bilgisi', 16, ['Trafikle ilgili temel kavramlar', 'Trafik işaretleri: uyarı, tanzim ve bilgi levhaları', 'Yol çizgileri ve ışıklı işaretler', 'Kavşaklar ve geçiş hakkı', 'Hız sınırları ve takip mesafesi', 'Sollama, şerit değiştirme ve dönüşler', 'Duraklama ve park etme', 'Araç ışıklarının kullanımı', 'Otoyol ve bölünmüş yollar', 'Trafik kazaları, sorumluluk ve sigorta', 'Sürücü belgeleri, cezalar ve ceza puanları', 'Çevre: egzoz, gürültü ve yakıt tasarrufu']],
-  ['ilkyardim', 'İlk yardım bilgisi', 8, ['İlk yardımın temel ilkeleri ve olay yerini değerlendirme', 'Hasta ya da yaralının değerlendirilmesi: bilinç ve solunum', 'Temel yaşam desteği: yetişkin, çocuk, bebek', 'Kanamalar ve şok', 'Yaralanmalar: kırık, çıkık, burkulma', 'Yanık, donma ve sıcak çarpması', 'Bilinç bozuklukları ve zehirlenmeler', 'Hasta ya da yaralı taşıma; trafik kazasında ilk yardım']],
-  ['motor', 'Araç tekniği bilgisi', 6, ['Motor ve çalışma prensibi', 'Yakıt, yağlama ve soğutma sistemleri', 'Elektrik ve ateşleme sistemi', 'Aktarma organları ve vites', 'Fren, direksiyon, süspansiyon ve lastikler', 'Periyodik bakım ve günlük kontroller']],
-  ['adab', 'Trafik adabı', 4, ['Trafikte saygı ve empati', 'Öfke kontrolü ve stresle başa çıkma', 'Yaya, bisikletli ve engelli hakları', 'Sürücünün sorumluluğu ve iletişim']],
+  ['trafik', 'Trafik ve çevre bilgisi', 16, ['Trafikle ilgili temel kavramlar', 'Trafik işaretleri: uyarı, tanzim ve bilgi levhaları', 'Yol çizgileri ve ışıklı işaretler', 'Kavşaklar ve geçiş hakkı', 'Hız sınırları ve takip mesafesi', 'Sollama, şerit değiştirme ve dönüşler', 'Duraklama ve park etme', 'Araç ışıklarının kullanımı', 'Otoyol ve bölünmüş yollar', 'Trafik kazaları, sorumluluk ve sigorta', 'Sürücü belgeleri, cezalar ve ceza puanları', 'Çevre: egzoz, gürültü ve yakıt tasarrufu', 'Demiryolu geçitleri, tüneller, köprüler ve yokuşlar', 'Yayalar, okul taşıtları ve yaya geçitleri', 'Gece, sis, yağmur, kar ve buzlu yolda sürüş', 'Yükleme, çekme ve römork kuralları', 'Alkol, uyuşturucu, yorgunluk ve sürücü sağlığı', 'Tescil, muayene, plaka ve zorunlu donanım', 'Trafik görevlisinin işaretleri ve trafik denetimi', 'Motosiklet, bisiklet, tarım aracı ve hayvanlar']],
+  ['ilkyardim', 'İlk yardım bilgisi', 8, ['İlk yardımın temel ilkeleri ve olay yerini değerlendirme', 'Hasta ya da yaralının değerlendirilmesi: bilinç ve solunum', 'Temel yaşam desteği: yetişkin, çocuk, bebek', 'Kanamalar ve şok', 'Yaralanmalar: kırık, çıkık, burkulma', 'Yanık, donma ve sıcak çarpması', 'Bilinç bozuklukları ve zehirlenmeler', 'Hasta ya da yaralı taşıma; trafik kazasında ilk yardım', 'İnsan vücudu: temel sistemler', 'Solunum yolu tıkanıklığı', 'Baş, omurga, göğüs ve karın yaralanmaları', 'Göz, kulak ve burun yaralanmaları; burun kanaması', 'Boğulma, elektrik çarpması, ısırık ve sokmalar', 'Göğüs ağrısı, inme ve alerjik reaksiyonlar']],
+  ['motor', 'Araç tekniği bilgisi', 6, ['Motor ve çalışma prensibi', 'Yakıt, yağlama ve soğutma sistemleri', 'Elektrik ve ateşleme sistemi', 'Aktarma organları ve vites', 'Fren, direksiyon, süspansiyon ve lastikler', 'Periyodik bakım ve günlük kontroller', 'Gösterge paneli ve uyarı ışıkları', 'Aydınlatma, silecek, klima ve araç donanımları', 'Sürüş destek sistemleri: ABS, ESP ve diğerleri', 'Hibrit ve elektrikli araçlar', 'Yolda arıza: lastik değiştirme, akü takviyesi, çekme']],
+  ['adab', 'Trafik adabı', 4, ['Trafikte saygı ve empati', 'Öfke kontrolü ve stresle başa çıkma', 'Yaya, bisikletli ve engelli hakları', 'Sürücünün sorumluluğu ve iletişim', 'Geçiş üstünlüğü olan araçlara ve kazazedeye saygı', 'Dikkat dağınıklığı, telefon ve sorumlu sürücülük', 'Trafik kültürü, örnek sürücülük ve toplumsal sorumluluk']],
 ];
 const MEB_TOPLAM = MUFREDAT.reduce((a, x) => a + x[2], 0);
 // Öğrencinin teorik saatleri konulara MEB saat oranında dağılır (yoklama konu bazında tutulmadığı için)
@@ -217,7 +217,7 @@ export function belgelerHtml(k) {
 /* ---------- konu anlatımı ---------- */
 // İçerik ayrı dosyada; yalnız açılınca yüklenir (açılış hızını etkilemesin)
 let dersYuk = null;
-const dersleriYukle = () => dersYuk || (dersYuk = import('./dersler.js?v=195').then(m => m.DERSLER).catch(() => ({})));
+const dersleriYukle = () => dersYuk || (dersYuk = import('./dersler.js?v=197').then(m => m.DERSLER).catch(() => ({})));
 async function dersAc(k, id, yenile) {
   const D = await dersleriYukle(), d = D[id], [key, no] = [id.replace(/-\d+$/, ''), +id.split('-').pop()], konu = MUFREDAT.find(x => x[0] === key), baslik = konu ? konu[3][no - 1] : id;
   const sonraki = konu && no < konu[3].length ? key + '-' + (no + 1) : null;
@@ -254,7 +254,7 @@ async function dersAc(k, id, yenile) {
 
 /* ---------- olaylar ---------- */
 // direksiyon hazırlık bölümü ayrı dosyada (resmî form maddeleriyle); yer tutucu varsa yüklenir
-const dirYukle = () => import('./direksiyon.js?v=195');
+const dirYukle = () => import('./direksiyon.js?v=197');
 export function ogBagla(kap, k, yenile) {
   const yer = kap.querySelectorAll('[data-dir-yer]'); if (yer.length) dirYukle().then(m => yer.forEach(y => { y.innerHTML = m.direksiyonHtml(k, true); })).catch(() => { });
   kap.addEventListener('toggle', ev => { const m = ev.target; if (!m.matches || !m.matches('[data-modul]')) return; const id = m.dataset.modul; if (m.open) { ACIK.add(id); KAPALI.delete(id); } else { ACIK.delete(id); KAPALI.add(id); } }, true);
@@ -262,10 +262,10 @@ export function ogBagla(kap, k, yenile) {
     const t = ev.target;
     if (t.closest('.tk2') && TK.takvimTikla(t, ogTk)) return yenile();
     const dr = t.closest('[data-dir]'); if (dr) return dirYukle().then(m => m.direksiyonAc(k, dr.dataset.dir, yenile));
-    if (t.closest('[data-ikaz]')) return import('./ikaz.js?v=195').then(m => m.ikazAc());
-    if (t.closest('[data-motor4]')) return import('./motor.js?v=195').then(m => m.motorAc());
-    if (t.closest('[data-debriyaj]')) return import('./motor.js?v=195').then(m => m.debriyajAc());
-    if (t.closest('[data-tehlike]')) return import('./tehlike.js?v=195').then(m => m.tehlikeAc(k));
+    if (t.closest('[data-ikaz]')) return import('./ikaz.js?v=197').then(m => m.ikazAc());
+    if (t.closest('[data-motor4]')) return import('./motor.js?v=197').then(m => m.motorAc());
+    if (t.closest('[data-debriyaj]')) return import('./motor.js?v=197').then(m => m.debriyajAc());
+    if (t.closest('[data-tehlike]')) return import('./tehlike.js?v=197').then(m => m.tehlikeAc(k));
     if (t.closest('[data-kur-android]') && window.__kurulum) { window.__kurulum.prompt(); window.__kurulum.userChoice.finally(() => { window.__kurulum = null; yenile(); }); return; }
     const od = t.closest('[data-og-ders]'); if (od) return dersAc(k, od.dataset.ogDers, yenile);
     const yz = t.closest('[data-og-yildiz]'); if (yz) { const kart = yz.closest('.og-degerlendir'), n = +yz.dataset.ogYildiz; kart.dataset.puan = n; kart.querySelectorAll('[data-og-yildiz]').forEach(b => b.classList.toggle('secili', +b.dataset.ogYildiz <= n)); kart.querySelector('[data-og-puan]').disabled = false; return; }

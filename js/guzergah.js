@@ -2,10 +2,10 @@
 // Müdür/ön büro güzergâhları (başlangıç yeri, harita, tarif) ekler. Öğretmen telefondan püf noktası ekler; ofis cihazı işler, hemen görünür.
 // Aday sınavdan sonra deneyimini yazar; kurs müdürü onaylayınca diğer adaylar görür (adı "Elif Ö." gibi kısaltılır).
 // Veri S.kurs.guzergahlar içinde durur; böylece öğrenci ve öğretmen ekranlarına kendiliğinden gider. Onay bekleyen deneyim yalnız adayın kendi kaydındadır.
-import { S, kaydet, gun, islem, oturum, tamAd, kursiyer } from './veri.js?v=195';
-import { e, ik, tarih, pencere, kapatPencere, bildir } from './ui.js?v=195';
+import { S, kaydet, gun, islem, oturum, tamAd, kursiyer } from './veri.js?v=197';
+import { e, ik, tarih, pencere, kapatPencere, bildir } from './ui.js?v=197';
 
-const yenile = () => import('./app.js?v=195').then(m => m.yenile());
+const yenile = () => import('./app.js?v=197').then(m => m.yenile());
 export const guzergahlar = () => S.kurs.guzergahlar || [];
 const yeniId = () => 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 const kisaAd = k => [k.ad, k.soyad ? k.soyad.charAt(0) + '.' : ''].filter(Boolean).join(' ');
