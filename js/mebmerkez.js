@@ -3,13 +3,14 @@
 import { S, fark, SINIFLAR, egitmen, sb, seciliSube, cokSube, kursiyer, tamAd, islem, kaydet } from './veri.js?v=195';
 import { e, tarih, rozet, isaret, ik, sekmeler, bos } from './ui.js?v=195';
 import * as EK from './eklenti.js?v=195';
+import * as MT from './mebtoplu.js?v=195';
 
 const TURLER = [['kayit', 'Kursiyer kaydı'], ['program', 'Direksiyon programı'], ['sinav', 'Sınav bildirimi'], ['odeme', 'Tahsilat'], ['al', 'MEBBİS’ten al']];
 const CEK = [
+  ['grup', 'Dönem grupları', 'MEBBİS’teki dönem, grup ve şubeler (ör. Kasım 1A) mdSinyal’e grup kartı olarak gelir. İlk kurulumda önce bunu çekin.'],
   ['sinav', 'Sınav sonuçları', 'e-Sınav ve direksiyon sonuçları mdSinyal’in sonuç penceresine dolar; siz kaydedersiniz.'],
   ['mutabakat', 'MEBBİS ile karşılaştır', 'MEBBİS’teki kursiyer listesi mdSinyal’le karşılaştırılır, farklar gösterilir.'],
   ['kursiyer', 'Kursiyer listesi', 'Geçişte MEBBİS’teki kursiyerleri mdSinyal’e alır.'],
-  ['taksit', 'Ödemeler', 'MEBBİS’teki ödeme kayıtlarını alır.'],
   ['ogretmen', 'Usta öğreticiler', 'Personel listesini alır.'],
   ['arac', 'Araçlar', 'Araç listesini plakalarıyla alır.'],
 ];
@@ -48,7 +49,7 @@ export function merkezSekme() {
   if (silinecek.length) h += `<div class="kart" style="margin-bottom:14px;border-color:var(--sari)"><div class="kart-bas"><h3>MEBBİS’ten silinecek dersler</h3><small>MEBBİS’e girildikten sonra iptal edildi ya da silindi · ${silinecek.length}</small></div><ul class="liste" style="margin-top:6px">${silinecek.map(x => { const kk = kursiyer(x.kursiyer); return `<li><span style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(kk ? tamAd(kk) : 'Silinmiş kursiyer')}</b><small style="display:block;color:var(--soluk)">${tarih(x.tarih)} ${e(x.saat)} · ${e((egitmen(x.egitmen) || {}).ad || '')}</small></span><button class="dg dg-cizgi dg-kucuk" data-meb-sildim="${e(x.id)}">MEBBİS’ten sildim</button></li>`; }).join('')}</ul><p class="og-not" style="margin:0 16px 14px">Taşınan dersler ise “Direksiyon programı” listesine “DEĞİŞTİ” notuyla yeniden düştü; MEBBİS’te eski kaydı düzeltin.</p></div>`;
   h += `<div class="kart"><div style="padding:12px 16px 0">${sekmeler(TURLER.map(([k, ad]) => [k, ad, k === 'al' ? null : sayi(k)]), m.tur, 'mm-tur')}</div>`;
   if (m.tur === 'al') {
-    h += `<div class="kart-govde"><p style="font-size:14px;color:var(--metin);margin-bottom:14px">Yardımcı MEBBİS sekmesine geçer, ilgili listeyi kendisi açar ve buraya getirir. mdSinyal hiçbir şeyi onayınız olmadan kaydetmez.</p>
+    h += `<div class="kart-govde">${MT.topluKart(subeSorun)}<b style="display:block;margin:6px 0 8px;color:var(--murekkep)">Tek liste (açık ekrandan)</b><p style="font-size:14px;color:var(--metin);margin-bottom:14px">Yardımcı MEBBİS sekmesine geçer, ilgili listeyi kendisi açar ve buraya getirir. mdSinyal hiçbir şeyi onayınız olmadan kaydetmez.</p>
       <div class="izgara iz-3">${CEK.map(([k, ad, a]) => { const z = (S.mebCekim || {})[k]; return `<div class="kart" style="box-shadow:none"><div class="kart-govde"><b style="color:var(--murekkep);font-size:15.5px;display:block">${ad}</b><p style="font-size:13.5px;color:var(--metin);margin:4px 0 12px">${a}</p><button class="dg dg-ana dg-kucuk" data-meb-cekbtn="${k}" ${subeSorun ? 'disabled' : ''}>${ik('indir')}MEBBİS’ten çek</button>${z ? `<small style="display:block;color:var(--soluk);margin-top:8px">Son: ${tarih(z.slice(0, 10))} ${z.slice(11, 16)}</small>` : ''}</div></div>`; }).join('')}</div></div></div>`;
     return h;
   }
@@ -67,11 +68,12 @@ export function merkezSekme() {
   h += `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:14px 16px;border-top:1.5px solid var(--cizgi);position:sticky;bottom:0;background:#fff;border-radius:0 0 12px 12px">
     <span style="flex:1;color:var(--soluk);font-size:14px">${n ? `<b style="color:var(--murekkep)">${n}</b> iş seçili` : `${secilebilir.length} iş aktarılmayı bekliyor`}</span>
     ${secilebilir.length ? `<button class="dg dg-cizgi" data-mm-tumu>${hepsiSecili ? 'Seçimi kaldır' : 'Tümünü seç'}</button>` : ''}
-    <button class="dg dg-ana" style="height:46px;padding:0 20px;font-size:15.5px" data-mm-aktar ${n && !subeSorun ? '' : 'disabled'}>${ik('ok')}Seçilenleri MEBBİS’e aktar${n ? ` (${n})` : ''}</button></div></div>`;
+    ${m.tur === 'program' ? `<button class="dg dg-cizgi" data-mm-aktar ${n && !subeSorun ? '' : 'disabled'} title="Eski yöntem: MEBBİS'te formu açıp siz kaydedersiniz">Ekranda doldur</button><button class="dg dg-ana" style="height:46px;padding:0 20px;font-size:15.5px" data-mm-yaz ${n && !subeSorun ? '' : 'disabled'}>${ik('ok')}MEBBİS’e yaz${n ? ` (${n})` : ''}</button>` : `<button class="dg dg-ana" style="height:46px;padding:0 20px;font-size:15.5px" data-mm-aktar ${n && !subeSorun ? '' : 'disabled'}>${ik('ok')}Seçilenleri MEBBİS’e aktar${n ? ` (${n})` : ''}</button>`}</div>${m.tur === 'program' ? `<p style="padding:0 16px 14px;font-size:13px;color:var(--soluk)">“MEBBİS’e yaz”: Yardımcı dersleri ekran açmadan girer, her birini MEBBİS listesinden okuyup doğrular; güvenlik kodu istenirse yalnız kodu siz yazarsınız.</p>` : ''}</div>`;
   return h;
 }
 
 export function merkezBaglan(k, yenile) {
+  MT.topluBaglan(k, yenile);
   const odakla = sec => setTimeout(() => { const el = k.querySelector(sec); if (el) { el.focus(); if (el.setSelectionRange) el.setSelectionRange(el.value.length, el.value.length); } }, 0);
   k.addEventListener('click', ev => {
     const t = ev.target;
@@ -81,6 +83,7 @@ export function merkezBaglan(k, yenile) {
     const sat = t.closest('[data-mm-satir]'); if (sat && !t.closest('input')) { const id = sat.dataset.mmSatir, x = EK.mebIsleri().find(y => y.id === id); if (!x) return; m.secili.has(id) ? m.secili.delete(id) : m.secili.add(id); return yenile(); }
     const hp = t.closest('[data-mm-hepsi], [data-mm-tumu]'); if (hp) { const l = suzulmus(EK.mebIsleri(true)).filter(x => !x.bitti), hepsi = l.length && l.every(x => m.secili.has(x.id)); l.forEach(x => hepsi ? m.secili.delete(x.id) : m.secili.add(x.id)); return yenile(); }
     if (t.closest('[data-mm-aktar]')) { const ids = [...m.secili]; m.secili.clear(); EK.yardimciyaGonder(ids); return yenile(); }
+    if (t.closest('[data-mm-yaz]')) { const ids = [...m.secili]; m.secili.clear(); MT.programiYaz(ids); return yenile(); }
   });
   k.addEventListener('change', ev => {
     const t = ev.target;

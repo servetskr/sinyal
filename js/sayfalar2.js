@@ -374,7 +374,7 @@ export function ustaDuzenle(id) {
       <div class="alan"><label>Brüt maaş (₺)</label><input name="maas" inputmode="numeric" value="${x.maas}"></div>
       <div class="alan"><label>Ders başı prim (₺)</label><input name="prim" inputmode="numeric" value="${x.prim}"></div>
       <div class="alan"><label>Usta öğretici sertifikası bitişi</label><input name="sertifika" type="date" value="${tarihGir(x.belgeler.sertifika)}"></div>
-      <div class="alan"><label>MEB çalışma izni no</label><input name="calismaIzinNo" value="${e(x.calismaIzinNo || '')}" placeholder="MEBBİS’teki izin onayı"></div>
+      <div class="alan"><label>MEBBİS izin no</label><input name="calismaIzinNo" value="${e(x.calismaIzinNo || '')}" inputmode="numeric" placeholder="ör. 5048176"><small style="color:var(--soluk)">MEBBİS’in ders ve sınav ekranlarında “İzin No:5048176 AD SOYAD” diye görünen numara. Direksiyon programı ve sınav aktarımında öğretmen bununla seçilir.</small></div>
       <div class="alan"><label>Sağlık raporu bitişi</label><input name="saglik" type="date" value="${tarihGir(x.belgeler.saglik)}"></div>
       <div class="alan"><label>Adli sicil kaydı geçerliliği</label><input name="adli" type="date" value="${tarihGir(x.belgeler.adli)}"></div>
       <div class="alan"><label>Kursta başlama yılı</label><input name="baslama" inputmode="numeric" value="${e(x.baslama)}"></div></form>

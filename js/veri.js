@@ -536,7 +536,7 @@ function goc(o) {
   if (o.kurs.teorikPay === undefined) o.kurs.teorikPay = 35;
   if (demo && !o._e1) {
     o._e1 = true; o.kurs.tarifeIlan = o.kurs.tarifeIlan || String(new Date().getFullYear());
-    (o.egitmenler || []).forEach((x, i, l) => { if (!x.calismaIzinNo && i < l.length - 1) x.calismaIzinNo = String(34816290 + i * 7311); });
+    (o.egitmenler || []).forEach((x, i, l) => { if (!x.calismaIzinNo && i < l.length - 1) x.calismaIzinNo = String(5048176 + i * 7311); /* MEBBİS izin no 7 hane */ });
     const sv = (o.kursiyerler || []).filter(k => k.asama === 'Sınav' && !(k.dsinav && k.dsinav.sonuc === 'Geçti'));
     sv.forEach((k, i) => { if (!k.hazirYazi && i < sv.length - 1) k.hazirYazi = { tarih: gun(-3 - i), egitmen: k.egitmen, kim: 'Demo', ...(i ? { yuklendi: gun(-2 - i) } : {}) }; });
     (o.hareket || []).filter(h => h.tur === 'Gelir' && h.kursiyer && h.yontem === 'Nakit').forEach((h, i) => { if (i > 1) h.bankaya = h.tarih; });

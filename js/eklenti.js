@@ -2,6 +2,7 @@
 // MEBBİS’ten gelen listeyi aktarım ekranına ver, MEBBİS’te kaydedilen işleri mdSinyal’de işlendi olarak işaretle.
 import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, eksikEvrak, sb, sbDers, sbSinav, oturum, cokSube, seciliSube } from './veri.js?v=195';
 import { bildir, pencere, e, ik, isaret } from './ui.js?v=195';
+import * as GR from './gruplar.js?v=195';
 
 export const eklenti = { var: false, surum: null };
 const sayfadan = (tur, veri) => window.postMessage({ kaynak: 'sinyal-sayfa', tur, veri }, location.origin);
@@ -14,6 +15,14 @@ const tel = t => { const d = String(t || '').replace(/\D/g, '').replace(/^90/, '
 const adSoy = ad => { const p = String(ad || '').trim().split(/\s+/); return [p.slice(0, -1).join(' ') || p[0] || '', p.length > 1 ? p[p.length - 1] : '']; };
 const alan = (etiket, deger, es = []) => deger == null || deger === '' ? null : { etiket, deger: String(deger), es };
 const TC = ['T.C. Kimlik No', ['tc', 'tckimlikno', 'kimlikno', 'tckn', 'tcno', 'tckimliknumarasi']];
+// MEBBİS cep telefonu alanı başında 0 olmadan 10 hane ister (5XXXXXXXXX)
+const cep10 = t => { const d = String(t || '').replace(/\D/g, '').replace(/^90/, '').replace(/^0/, ''); return d.length === 10 ? d : ''; };
+// Kursiyerin dönem grubu MEBBİS'teki seçim zinciri olarak: Dönem "2026 - Kasım" → Grup "Grup 1" → Şube "A Şubesi"
+const grupAlanlari = k => { const g = GR.kursiyerGrubu(k); return g && GR.mebGrubuMu(g) ? [alan('Dönem', GR.donemAdi(g.donem), ['donem', 'donemi', 'egitimdonemi']), alan('Grup', 'Grup ' + g.grupNo, ['grup', 'grubu', 'grupadi']), alan('Şube', g.sube + ' Şubesi', ['sube', 'subesi', 'subeadi'])] : []; };
+// MEBBİS'te personel seçeneği "İzin No:5048176 AD SOYAD": izin no varsa onunla seçilir (aynı adlı iki personel karışmaz)
+const personel = eg => (eg && (eg.calismaIzinNo ? String(eg.calismaIzinNo).replace(/\D/g, '') : eg.ad)) || '';
+// İstenen sertifika MEBBİS metniyle: "B SINIFI SERTİFİKA (Manuel)" / "B SINIFI SERTİFİKA (Otomatik)"
+const sertifikaMetni = k => { const b = String(k.sinif || '').replace(/-O$/, ''), oto = /-O$/.test(k.sinif || ''); return b === 'B' ? `B SINIFI SERTİFİKA (${oto ? 'Otomatik' : 'Manuel'})` : `${b} SINIFI SERTİFİKA`; };
 
 // Son gün hesabı: panel işleri en acilden başlayarak sıralar
 const gunEkle = (t, n) => { const d = new Date(t + 'T12:00:00'); d.setDate(d.getDate() + n); return iso(d); };
@@ -23,30 +32,32 @@ const isGunuGeri = (t, n) => { const d = new Date(t + 'T12:00:00'); while (n > 0
 // meta: aktarım merkezinde filtre ve tablo için (ad, sınıf, öğretmen, tarih, detay)
 export function mebIsleri(hepsi) {
   const isler = [];
-  sb(S.kursiyerler).filter(k => !k.kapali && !eksikEvrak(k).length && (!k.mebIslendi || (hepsi && fark(k.kayit) >= -90))).forEach(k => {
+  sb(S.kursiyerler).filter(k => !k.kapali && !eksikEvrak(k).length && GR.kursiyerGrubu(k) && (!k.mebIslendi || (hepsi && fark(k.kayit) >= -90))).forEach(k => {
     const n = k.nufus || {}, S0 = SINIFLAR[k.sinif] || {};
     const ilk = S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Planlandı').map(d => d.tarih).sort()[0];
     isler.push({ id: 'kayit-' + k.id, tur: 'kayit', ref: { kursiyer: k.id }, bitti: !!k.mebIslendi, meta: { ad: tamAd(k), sinif: k.sinif, egitmen: k.egitmen, tarih: k.kayit, detay: (SINIFLAR[k.sinif] || {}).ad || k.sinif }, son: ilk ? gunEkle(ilk, -(S.kurs.programOnGun || 5)) : gun(3), neden: ilk ? 'İlk dersinden önce' : 'Kayıttan sonra', baslik: tamAd(k), alanlar: [
-      alan(TC[0], k.tc, TC[1]), alan('Adı', k.ad, ['ad', 'adi']), alan('Soyadı', k.soyad, ['soyad', 'soyadi']), alan('Baba Adı', n.baba, ['babaadi']), alan('Ana Adı', n.ana, ['anaadi', 'anneadi']),
-      alan('Doğum Yeri', n.dogumYeri, ['dogumyeri']), alan('Doğum Tarihi', tr(k.dogumTarihi), ['dogumtarihi']), alan('Cinsiyeti', k.cinsiyet, ['cinsiyet']), alan('Öğrenim Durumu', k.ogrenim, ['ogrenim', 'ogrenimdurumu', 'egitimdurumu']),
-      alan('Cep Telefonu', tel(k.tel), ['telefon', 'ceptelefonu', 'gsm', 'tel']), alan('Adres', k.adres, ['adres', 'ikametadresi']), alan('Sertifika Sınıfı', String(S0.ad || k.sinif).split(' ·')[0], ['sinif', 'sertifikasinifi', 'surucubelgesisinifi', 'kurssinifi']),
-      alan('Kayıt Tarihi', tr(k.kayit), ['kayittarihi']), alan('Eğitim Ücreti', k.odeme && (k.odeme.sozlesme || k.odeme.toplam), ['ucret', 'egitimucreti', 'kursucreti']),
+      // MEBBİS Aday Dönem Kayıt (SKT02001): dönem/grup/şube, TC ("Bilgileri Getir" ad, baba adı, doğum bilgilerini MERNİS'ten getirir),
+      // istenen sertifika, varsa mevcut belge, cep telefonu. Diğer bilgiler MEBBİS'te bu formda yok.
+      ...grupAlanlari(k), alan(TC[0], k.tc, TC[1]), alan('İstenen Sertifika Sınıfı', sertifikaMetni(k), ['istenensurucubelgesisinifi', 'istenensertifikasinifi', 'istenenehliyetsinifi', 'sertifikasinifi', 'sinif']),
+      alan('Mevcut Sürücü Belgesi Sınıfı', k.mevcutEhliyet && k.mevcutEhliyet !== 'Yok' ? k.mevcutEhliyet + ' SINIFI' : null, ['mevcutsurucubelgesisinifi', 'mevcutehliyetsinifi', 'mevcutbelge']),
+      alan('Cep Telefonu', cep10(k.tel), ['ceptelefonu', 'ceptelefonno', 'telefon', 'gsm', 'tel']),
     ].filter(Boolean) });
   });
   sbDers(S.dersler).filter(d => d.durum === 'Planlandı' && ((fark(d.tarih) >= 0 && !d.meb) || (hepsi && d.meb && fark(d.tarih) >= -14))).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat)).forEach(d => {
     const k = kursiyer(d.kursiyer); if (!k) return; const eg = egitmen(d.egitmen) || {}, ar = arac(d.arac) || {};
     isler.push({ id: 'ders-' + d.id, tur: 'program', ref: { ders: d.id }, bitti: !!d.meb, meta: { ad: tamAd(k), sinif: k.sinif, egitmen: d.egitmen, tarih: d.tarih, detay: `${d.mebDegisti ? 'DEĞİŞTİ (MEBBİS’teki eski kayıt: ' + d.mebDegisti.eski + ') · ' : ''}${tr(d.tarih)} ${d.saat} · ${eg.ad || ''} · ${ar.plaka || ''}` }, son: gunEkle(d.tarih, -(S.kurs.programOnGun || 5)), neden: `Dersten ${S.kurs.programOnGun || 5} gün önce`, baslik: `${tamAd(k)} · ${tr(d.tarih)} ${d.saat}`, alanlar: [
       alan('Tarih', tr(d.tarih), ['derstarihi', 'tarih', 'egitimtarihi']), alan('Saat', d.saat, ['dersaati', 'baslangicsaati', 'saat']), alan(TC[0], k.tc, TC[1]), alan('Kursiyer', tamAd(k), ['kursiyer', 'kursiyeradi', 'adisoyadi']),
-      alan('Usta Öğretici', eg.ad, ['ustaogretici', 'ogretici', 'egitici', 'personel']), alan('Araç Plakası', ar.plaka, ['plaka', 'aracplakasi', 'arac']),
+      alan('Eğitimi Veren Personel', personel(eg), ['egitimiverenpersonel', 'dersiverenpersonel', 'ustaogretici', 'ogretici', 'egitici', 'personel']), alan('Eğitim Alınan Araç', ar.plaka, ['egitimalinanarac', 'plaka', 'aracplakasi', 'arac']),
+      ...grupAlanlari(k),
     ].filter(Boolean) });
   });
   sbSinav(S.sinavlar).filter(s => s.tur === 'Direksiyon' && fark(s.tarih) >= (hepsi ? -14 : 0)).forEach(s => (s.kursiyerler || []).map(kursiyer).filter(Boolean).filter(k => (s.mebKisi || []).includes(k.id) ? hepsi : (!s.mebBildirim && fark(s.tarih) >= 0)).forEach(k => {
     const d = S.dersler.filter(x => x.kursiyer === k.id && x.arac).sort((a, b) => b.tarih.localeCompare(a.tarih))[0], ar = arac(d && d.arac) || {}, eg = egitmen(k.egitmen) || {};
     isler.push({ id: 'sinav-' + s.id + '-' + k.id, tur: 'sinav', ref: { sinav: s.id, kursiyer: k.id }, bitti: (s.mebKisi || []).includes(k.id), meta: { ad: tamAd(k), sinif: k.sinif, egitmen: k.egitmen, tarih: s.tarih, detay: `${tr(s.tarih)} ${s.saat || ''} · ${s.yer || ''}` }, son: isGunuGeri(s.tarih, 4), neden: 'Sınavdan 4 iş günü önce', baslik: `${tamAd(k)} · ${tr(s.tarih)} sınavı`, alanlar: [
-      alan('Sınav Tarihi', tr(s.tarih), ['sinavtarihi', 'tarih']), alan(TC[0], k.tc, TC[1]), alan('Kursiyer', tamAd(k), ['kursiyer', 'adisoyadi']), alan('Araç Plakası', ar.plaka, ['plaka', 'aracplakasi', 'sinavaraci']), alan('Usta Öğretici', eg.ad, ['ustaogretici', 'ogretici']),
+      alan('Sınav Tarihi', tr(s.tarih), ['sinavtarihi', 'tarih']), alan(TC[0], k.tc, TC[1]), alan('Kursiyer', tamAd(k), ['kursiyer', 'adisoyadi']), alan('Araç Plakası', ar.plaka, ['plaka', 'aracplakasi', 'sinavaraci']), alan('Usta Öğretici', personel(eg), ['ustaogretici', 'ogretici']),
     ].filter(Boolean) });
   }));
-  // eğitim ücreti tahsilatları MEBBİS’e işlenir (Özel Öğretim Kurumları Yönetmeliği m.55/3)
+  // eğitim ücreti tahsilatları (MEBBİS'te tahsilat ekranı yok; karşılığı SKT02013 Fatura Kayıt: MTSK Yönetmeliği 12/1)
   (S.hareket || []).filter(h => h.tur === 'Gelir' && h.kursiyer && ['Kurs ücreti', 'Taksit'].includes(h.kategori) && (!h.meb || hepsi) && fark(h.tarih) >= -60).forEach(h => {
     const k = kursiyer(h.kursiyer); if (!k) return;
     isler.push({ id: 'odeme-' + h.id, tur: 'odeme', ref: { hareket: h.id }, bitti: !!h.meb, meta: { ad: tamAd(k), sinif: k.sinif, egitmen: k.egitmen, tarih: h.tarih, detay: `${h.tutar} ₺ · ${tr(h.tarih)} · ${h.yontem || ''}` }, neden: 'Tahsilat kaydı (süre sınırı yok)', baslik: `${tamAd(k)} · ${h.tutar} ₺ · ${tr(h.tarih)}`, alanlar: [
@@ -71,7 +82,7 @@ export function yardimciyaGonder(idler) {
 }
 
 // MEBBİS'ten veri çek: Yardımcı MEBBİS sekmesine geçer, ilgili listeyi kendisi açar ve mdSinyal'e gönderir
-const CEK_AD = { kursiyer: 'kursiyer listesini', sinav: 'sınav sonuçlarını', mutabakat: 'kursiyer listesini karşılaştırma için', taksit: 'ödemeleri', ogretmen: 'usta öğretici listesini', arac: 'araç listesini' };
+const CEK_AD = { grup: 'dönem gruplarını', kursiyer: 'kursiyer listesini', sinav: 'sınav sonuçlarını', mutabakat: 'kursiyer listesini karşılaştırma için', taksit: 'ödemeleri', ogretmen: 'usta öğretici listesini', arac: 'araç listesini' };
 export function mebbistenCek(amac) {
   if (!eklenti.var) return kurulumPenceresi();
   sayfadan('cek', { amac });
@@ -120,12 +131,13 @@ function tabloGeldi(veri) {
   S.mebCekim = { ...(S.mebCekim || {}), [veri.amac || 'liste']: gun(0) + ' ' + new Date().toTimeString().slice(0, 5) }; kaydet();
   if (veri.amac === 'mutabakat') return import('./ozellik.js?v=195').then(m => { if (m.mutabakatTablodan(sat, 'MEBBİS · ' + (veri.baslik || 'liste'))) { location.hash = '#/meb/mutabakat'; yenileFn(); } });
   if (veri.amac === 'sinav') return sinavSonucuAl(sat);
+  if (veri.amac === 'grup') return GR.mebbisGruplariAl(sat);
   const t = ['kursiyer', 'taksit', 'arac', 'ogretmen'].includes(veri.amac) ? veri.amac : turTahmin(sat[0] || []);
   import('./sayfalar5.js?v=195').then(m => { location.hash = '#/ayarlar/aktarim'; setTimeout(() => { m.aktarimYukle(sat, t, 'MEBBİS'); bildir(`MEBBİS’ten ${n} satırlık liste geldi; sütunları kontrol edip aktarın`); }, 300); });
 }
 // Sınav sonuç listesi: TC ile kursiyer bulunur, en uygun oturumun sonuç penceresi dolu açılır; kaydetmeyi kullanıcı yapar
 const nrm = x => String(x || '').toLocaleLowerCase('tr').replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/[^a-z0-9]/g, '');
-function sinavSonucuAl(sat) {
+export function sinavSonucuAl(sat) {
   const bas = sat[0].map(nrm), bul = (...l) => bas.findIndex(h => l.some(x => h.includes(x)));
   const iTc = bul('tc', 'kimlik'), iSon = bul('sonuc', 'durum', 'basari', 'netice'), iPuan = bul('puan', 'notu'), iTar = bul('tarih');
   if (iTc < 0) return bildir('Listede TC kimlik numarası sütunu bulunamadı', 'uyari');
@@ -163,6 +175,7 @@ export function eklentiBaslat() {
     if (tur === 'tablo' && veri && veri.satirlar) tabloGeldi(veri);
     if (tur === 'bitenler' && Array.isArray(veri)) bitenleriIsle(veri);
     if (tur === 'hatalar' && Array.isArray(veri)) hatalariIsle(veri);
+    if (tur === 'toplu-durum' && veri && S && S.kursiyerler && oturum.kullanici) import('./mebtoplu.js?v=195').then(m => m.durumGeldi(veri));
   });
   sayfadan('ping', {});
   setTimeout(() => sayfadan('ping', {}), 1500);

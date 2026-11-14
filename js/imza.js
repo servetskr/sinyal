@@ -1,6 +1,7 @@
 import { S, kaydet, kursiyer, egitmen, arac, tamAd, SINIFLAR, islem, gonderimEkle, yerelZaman, eksikEvrak, selam, kursAdi, adEk, bulutKanca } from './veri.js?v=195';
 import { e, tl, ik, isaret, bildir, tamTarih, tarihUzun, pencere, kapatPencere, waAc, waUrl, apiAcik, belgeWhatsApp, etiket, kisaLink } from './ui.js?v=195';
 import { sozlesmeMaddeleri, belgeHtml, dosyaAdi, sozlesmeDondur } from './sayfalar3.js?v=195';
+import * as GR from './gruplar.js?v=195';
 
 /* ================= UZAKTAN İMZA =================
    1) Kurs "WhatsApp'tan imzaya gönder" der: belge özeti linke paketlenir, kursun anahtarıyla mühürlenir,
@@ -142,7 +143,7 @@ async function imzaIsle(paket) {
   const zaman = r.z ? new Date(r.z) : new Date(), z = zaman.toISOString().slice(0, 10) === yerelZaman().slice(0, 10) ? yerelZaman() : r.z.slice(0, 16);
   if (t.tur === 'sozlesme') {
     k.sozlesmeImza = { tarih: z.slice(0, 10), yontem: 'Uzaktan (WhatsApp linki)', url: resim, ad: r.ad, cihaz: r.cihaz, metin: t.metin || sozlesmeDondur(k) };
-    k.evrak.sozlesme = true; if (!eksikEvrak(k).length && ['Kayıt', 'Evrak'].includes(k.asama)) k.asama = 'Teorik';
+    k.evrak.sozlesme = true; GR.aktifEt(k);  // evrak tamam ve dönem grubuna atanmışsa aktif olur
   } else t.dersler.forEach(id => { const d = S.dersler.find(x => x.id === id); if (d) d.imza = { ...(d.imza || {}), zaman: d.imza && d.imza.zaman ? d.imza.zaman : z, kursiyer: resim, kursiyerUzaktan: z, kursiyerBekliyor: false, usta: d.imza ? d.imza.usta : null }; });
   t.durum = 'imzalandi'; t.imzaZaman = z; t.imzalayan = r.ad;
   islem('Uzaktan imza işlendi', tamAd(k) + ' · ' + (t.tur === 'sozlesme' ? 'sözleşme' : t.dersler.length + ' ders')); kaydet();
