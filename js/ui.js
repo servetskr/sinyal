@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=191';
+import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=192';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -488,7 +488,7 @@ function sifreSor(neden, ok) {
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Onayla</button>`,
     onAc(d) {
       const inp = d.querySelector('[data-sifre-tekrar]'), btn = d.querySelector('[data-k]');
-      const dene = () => { btn.disabled = true; import('./bulut.js?v=191').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
+      const dene = () => { btn.disabled = true; import('./bulut.js?v=192').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
       btn.addEventListener('click', dene); inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') dene(); }); setTimeout(() => inp.focus(), 50);
     },
   });
@@ -563,3 +563,15 @@ if (typeof MutationObserver !== 'undefined' && document.body) {
   let bekleyen = 0;
   new MutationObserver(() => { if (bekleyen) return; bekleyen = requestAnimationFrame(() => { bekleyen = 0; etiketBagla(document.body); gunSeridiOrtala(document.body); }); }).observe(document.body, { childList: true, subtree: true });
 }
+
+// Girişler varsayılan olarak BÜYÜK HARF (kursların MEBBİS ve evraktaki yazımı): ad, soyad, kurs adı, adres, not…
+// Hariç: e-posta, şifre, web adresi, telefon ve sayı alanları, mesaj metinleri ve data-kucuk ile işaretlenen alanlar.
+const BH_HARIC = /^(tel|wp|waApi|phoneId|pin|pin2|yorum|demo|onburoTel|mudurTel|acilTel|kad|token|eposta|email|sifre|sifre2|web|url|link|kisaAd)$/i;
+document.addEventListener('input', ev => {
+  const i = ev.target;
+  if (ev.isComposing || !(i instanceof HTMLInputElement) || i.type !== 'text' || i.readOnly) return;
+  if (BH_HARIC.test(i.name || '') || /^(email|url|tel|numeric|decimal)$/.test(i.inputMode || '') || /username|email|url/.test(i.autocomplete || '') || i.closest('[data-kucuk]')) return;
+  const u = i.value.toLocaleUpperCase('tr');
+  if (u === i.value) return;
+  const a = i.selectionStart, b = i.selectionEnd; i.value = u; try { i.setSelectionRange(a, b); } catch (x) { }
+}, true);

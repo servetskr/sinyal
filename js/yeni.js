@@ -1,8 +1,8 @@
 // "+ Yeni": kursa eklenebilecek her şey tek pencereden (öğrenci, aday, ödeme, ders, sınav, mesaj, öğretmen, araç, şube, gelir/gider)
-import { S, oturum, gun, fark, tamAd, gecikenler, sb, kapaliGun } from './veri.js?v=191';
-import { e, ik, tl, pencere, kapatPencere, bildir, tarihUzun } from './ui.js?v=191';
-import { kursiyerFormu, tahsilAl, adayEkle, dersPlanlaAc } from './sayfalar1.js?v=191';
-import { oturumEkle, aracDuzenle, ustaDuzenle, hareketEkle } from './sayfalar2.js?v=191';
+import { S, oturum, gun, fark, tamAd, gecikenler, sb, kapaliGun } from './veri.js?v=192';
+import { e, ik, tl, pencere, kapatPencere, bildir, tarihUzun } from './ui.js?v=192';
+import { kursiyerFormu, tahsilAl, adayEkle, dersPlanlaAc } from './sayfalar1.js?v=192';
+import { oturumEkle, aracDuzenle, ustaDuzenle, hareketEkle } from './sayfalar2.js?v=192';
 
 const HERKES = ['mudur', 'sekreter'], MUDUR = ['mudur'];
 const SECENEKLER = [
@@ -13,7 +13,7 @@ const SECENEKLER = [
     ['ders', 'direksiyon', 'Direksiyon dersi', 'Öğretmen, gün ve saat seçip planla', HERKES, () => dersSec()],
   ]],
   ['Sınav ve mesaj', [
-    ['sinav', 'sinav', 'Sınav oturumu', 'e-Sınav ya da direksiyon sınavı', HERKES, () => oturumEkle()],
+    ['sinav', 'sinav', 'Sınav oturumu', 'e-Sınav ya da uygulama sınavı', HERKES, () => oturumEkle()],
     ['mesaj', 'wp', 'Mesaj gönder', 'Bir gruba ya da tek tek kişilere', HERKES, () => { location.hash = '#/mesajlar/yeni'; }],
   ]],
   ['Kurum', [
