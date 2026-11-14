@@ -2675,3 +2675,9 @@ tr.tik{font:inherit;color:inherit;margin-right:0}
 .iban-liste>[data-iban-ekle]{justify-self:start}
 .og-iban-kart .og-bas+.og-bas{margin-top:12px;padding-top:12px;border-top:1px solid var(--cizgi-2)}
 .og-iban-kart .og-bas small+small{display:block;margin-top:2px}
+/* Dar sağ sütunlar (Windows'ta %125 ölçek, ~1230 px): taşma düzeltmeleri (v193) */
+.yl-satir{grid-template-columns:34px minmax(0,1fr) auto}
+.yl-ad{min-width:0;overflow-wrap:anywhere}
+.yl-deger{font-size:clamp(22px,2.3vw,34px)}
+.dg.dg-sar{white-space:normal;height:auto;min-height:34px;padding-top:6px;padding-bottom:6px;line-height:1.25;text-align:left;max-width:100%}
+.dg.dg-sar .ik{flex:none}
