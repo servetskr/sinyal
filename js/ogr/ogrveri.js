@@ -1,5 +1,5 @@
 // Öğren ortak verisi: konu listesi, ilerleme, yarım ders, kapak levhaları ve içerik yükleme (Öğren ekranları ve ders oynatıcı birlikte kullanır)
-import { MUFREDAT } from '../ogrenci.js?v=206';
+import { MUFREDAT } from '../ogrenci.js?v=207';
 
 export const UNITE_AD = { trafik: 'Trafik ve çevre', ilkyardim: 'İlk yardım', motor: 'Araç tekniği', adab: 'Trafik adabı' };
 // konu kapağı: o konuyu en iyi anlatan doğrulanmış levha; yoksa ünitenin levhası
@@ -14,8 +14,8 @@ export const ILKYARDIM_SVG = '<svg viewBox="0 0 120 120" role="img" aria-label="
 
 let LV = null, SR = null, DR = null;
 export const veriler = () => ({ LV, SR, DR });
-export const levhaYukle = () => LV ? Promise.resolve(LV) : import('../levha.js?v=206').then(m => (LV = m)).catch(() => (LV = { LEVHA: {} }));
-export const yukle = () => Promise.all([levhaYukle(), SR || import('../sorular.js?v=206').then(m => (SR = m.SORULAR)), DR || import('../dersler.js?v=206').then(m => (DR = m.DERSLER))]);
+export const levhaYukle = () => LV ? Promise.resolve(LV) : import('../levha.js?v=207').then(m => (LV = m)).catch(() => (LV = { LEVHA: {} }));
+export const yukle = () => Promise.all([levhaYukle(), SR || import('../sorular.js?v=207').then(m => (SR = m.SORULAR)), DR || import('../dersler.js?v=207').then(m => (DR = m.DERSLER))]);
 export const onYukle = cb => { if (!LV) levhaYukle().then(() => cb && cb()); };
 
 export const kapakSvg = id => { const key = id.replace(/-\d+$/, ''); const kod = KAPAK[id] || UNITE_KAPAK[key]; if (!kod) return ILKYARDIM_SVG; const l = LV && LV.LEVHA[kod]; return l ? l.svg : ''; };
