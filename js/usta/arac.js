@@ -2,10 +2,10 @@
 // Eski portal.js "Aracın" bölümü (model, plaka, bakıma kalan km), guzergah.js ustaHtml (güzergâhlar, püf noktaları, kursa iletilen notlar,
 // "Püf noktası ekle" formu: data-gz-usta, guzergah.js'teki ortak submit dinleyicisi işler) ve app.js hesap penceresi (Kursu ara, mdSinyal Destek:
 // data-destek, Çıkış yap / Kullanıcı değiştir: data-cikis; ikisi de app.js'teki belge dinleyicisinde çalışır) buraya taşındı.
-import { S, SINIFLAR, oturum, tarihOku } from '../veri.js?v=207';
-import { ayAdi, tarih } from '../ui.js?v=207';
-import { guzergahlar } from '../guzergah.js?v=207';
-import { esc, oi, sayfaBas, geri, bolum, kart, gorsel, dugme, satir, liste, radyo, ikonKutu, bos, not, stilEkle } from '../ogr/ui.js?v=207';
+import { S, SINIFLAR, oturum, tarihOku } from '../veri.js?v=208';
+import { ayAdi, tarih } from '../ui.js?v=208';
+import { guzergahlar } from '../guzergah.js?v=208';
+import { esc, oi, sayfaBas, geri, bolum, kart, gorsel, dugme, satir, liste, radyo, ikonKutu, bos, not, stilEkle } from '../ogr/ui.js?v=208';
 
 const geriBugun = () => geri('Bugün', { 'data-ux-alt': '' });
 const uzunTarih = t => { if (!t) return ''; const d = tarihOku(t); return d.getDate() + ' ' + ayAdi(d.getMonth(), true) + ' ' + d.getFullYear(); };

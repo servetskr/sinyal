@@ -1,24 +1,24 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=207';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=207';
-import * as Y1 from './sayfalar1.js?v=207';
-import * as Y2 from './sayfalar2.js?v=207';
-import * as P from './portal.js?v=207';
-import * as OXU from './ogr/ui.js?v=207';
-import * as Y3 from './sayfalar3.js?v=207';
-import * as Y4 from './sayfalar4.js?v=207';
-import * as Y5 from './sayfalar5.js?v=207';
-import * as IM from './imza.js?v=207';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=207';
-import * as SN from './senaryo.js?v=207';
-import * as OZ from './ozellik.js?v=207';
-import { durumlariGuncelle } from './mesaj.js?v=207';
-import { yeniMenu } from './yeni.js?v=207';
-import * as B from './bulut.js?v=207';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=207';
-import * as AN from './analiz.js?v=207';
-import * as GZ from './guzergah.js?v=207';
-import * as ORT from './ortak.js?v=207';
-import * as SH from './sahip.js?v=207';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=208';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=208';
+import * as Y1 from './sayfalar1.js?v=208';
+import * as Y2 from './sayfalar2.js?v=208';
+import * as P from './portal.js?v=208';
+import * as OXU from './ogr/ui.js?v=208';
+import * as Y3 from './sayfalar3.js?v=208';
+import * as Y4 from './sayfalar4.js?v=208';
+import * as Y5 from './sayfalar5.js?v=208';
+import * as IM from './imza.js?v=208';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=208';
+import * as SN from './senaryo.js?v=208';
+import * as OZ from './ozellik.js?v=208';
+import { durumlariGuncelle } from './mesaj.js?v=208';
+import { yeniMenu } from './yeni.js?v=208';
+import * as B from './bulut.js?v=208';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=208';
+import * as AN from './analiz.js?v=208';
+import * as GZ from './guzergah.js?v=208';
+import * as ORT from './ortak.js?v=208';
+import * as SH from './sahip.js?v=208';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -593,7 +593,7 @@ function kursAcEkrani(davetKod) {
       <label>E-posta<input name="eposta" type="email" inputmode="email" autocomplete="username" required></label>
       <label>Şifre (en az 8 karakter)<input name="sifre" type="password" autocomplete="new-password" required minlength="8"></label>
       <label>Şifre (tekrar)<input name="sifre2" type="password" autocomplete="new-password" required minlength="8"></label>
-      <label class="giris-onay"><input type="checkbox" name="onay"><span><a href="gizlilik.html" target="_blank" rel="noopener" style="color:inherit;font-weight:700;text-decoration:underline">Gizlilik ve veri işleme şartlarını</a> okudum: kursum veri sorumlusu, mdSinyal veri işleyendir; veriler Google (Frankfurt, Almanya), Cloudflare ve Meta (WhatsApp) altyapısında işlenir.</span></label>
+      <label class="giris-onay"><input type="checkbox" name="onay"><span><a href="gizlilik.html" target="_blank" rel="noopener" style="color:inherit;font-weight:700;text-decoration:underline">Gizlilik ve veri işleme şartlarını</a> okudum: kursum veri sorumlusu, mdSinyal veri işleyendir; veriler Google, Cloudflare ve Meta (WhatsApp) bulut altyapısında işlenir.</span></label>
       <button class="dg dg-koyu" type="submit">Kurs hesabını aç</button></form>
     <p class="giris-baglar"><button type="button" data-geri>← Giriş ekranına dön</button></p></div></div>`;
   const kok = document.getElementById('uyg');
@@ -961,7 +961,7 @@ async function davetEkrani() {
 document.addEventListener('click', ev => { if (ev.target.closest('[data-yeniden-yukle]')) location.reload(); });
 document.addEventListener('click', ev => {
   if (ev.target.closest('[data-cikis]')) kapatPencere();
-  if (ev.target.closest('[data-hesap]')) { if (oturum.kullanici && oturum.kullanici.rol === 'usta' && document.body.classList.contains('ox-modu')) return import('./usta/ekran.js?v=207').then(m => { m.hesapAc(); yenile(true); }); return hesapSayfasi(); }
+  if (ev.target.closest('[data-hesap]')) { if (oturum.kullanici && oturum.kullanici.rol === 'usta' && document.body.classList.contains('ox-modu')) return import('./usta/ekran.js?v=208').then(m => { m.hesapAc(); yenile(true); }); return hesapSayfasi(); }
   if (ev.target.closest('[data-destek]')) return destekPenceresi();
   // Yönetim: Hesaplar telefonda profil menüsünden açılır (alt çubuk 6 sekme kalır)
   if (ev.target.closest('[data-yn-hesaplar]')) { kapatPencere(); ORT.sekmeSec('hesaplar'); yonetimCiz(true); SH.otoBaglan(); return; }

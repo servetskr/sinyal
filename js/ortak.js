@@ -2,9 +2,9 @@
 // Kurs hesaplarından ayrı bir hesapta çalışır (S.kurs.tur === 'yonetim'); kurs ekranları açılmaz.
 // Üyeler: yönetici (müdür rolü, her şeyi girer) ve ortak (kendi e-posta ve şifresiyle girer, yalnız görür).
 // Kursiyer bilgisi yoktur: yalnız müşteri kurs adı, tahsilat, pay ve ödemeler.
-import { S, kaydet, gun, fark, tarihOku, iso, ayEkle, kapaliGun, islem, geriAlNoktasi } from './veri.js?v=207';
-import { e, ik, rozet, pencere, kapatPencere, bildir, tarih, tarihUzun, ayAdi, olcumler, belgeYazdir, fotoKucult, csvIndir, gunKisa } from './ui.js?v=207';
-import * as B from './bulut.js?v=207';
+import { S, kaydet, gun, fark, tarihOku, iso, ayEkle, kapaliGun, islem, geriAlNoktasi } from './veri.js?v=208';
+import { e, ik, rozet, pencere, kapatPencere, bildir, tarih, tarihUzun, ayAdi, olcumler, belgeYazdir, fotoKucult, csvIndir, gunKisa } from './ui.js?v=208';
+import * as B from './bulut.js?v=208';
 
 export const TURLER = ['İlk yıllık abonelik', 'Aylık abonelik', 'Abonelik yenileme', 'Ek şube', 'Kurulum', 'Eğitim', 'Destek', 'Ücretli modül', 'Diğer mdSinyal hizmeti'];
 const PARA = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -452,7 +452,7 @@ function kursPenceresi(k, yenile) {
       ${a('not', 'Notlar', `<span class="og-girdi yn-alan-uzun"><textarea name="not" rows="4" placeholder="Ne konuşuldu, nerede kaldı, ek bilgiler">${e(k ? k.not || '' : '')}</textarea></span>`)}
       ${a('sonraki', 'Sonraki adım', girdi('sonraki', k && k.sonraki, 'placeholder="Örn. Cuma öğlen ara"'))}
       ${a('zaman', 'Ne zaman', girdi('zaman', k && k.zaman, 'placeholder="Örn. Salı 10:00"'))}
-      ${a('teklif', 'Teklif', girdi('teklif', k && k.teklif, 'placeholder="Örn. 15.000 ₺"'))}
+      ${a('teklif', 'Teklif', girdi('teklif', k && k.teklif, 'placeholder="Örn. 7.500 ₺"'))}
       ${a('itiraz', 'Çekinceleri <small>noktalı virgülle ayır</small>', girdi('itiraz', k && k.itiraz, 'placeholder="Örn. Fiyat pahalı; e-Arşiv"'))}</form>`,
     altlik: `${k ? '<button class="dg dg-cizgi" data-yn-kurs-sil style="margin-right:auto;color:var(--u-kirmizi)">Sil</button>' : ''}<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-ynk">Kaydet</button>`,
     onAc(p) {
