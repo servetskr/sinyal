@@ -72,6 +72,15 @@ const P = {
   ilkyardim: '<rect x="3.5" y="7" width="17" height="12.5" rx="2.4"/><path d="M9 7V5.3A1.3 1.3 0 0 1 10.3 4h3.4A1.3 1.3 0 0 1 15 5.3V7M12 10.5v5.5M9.2 13.2h5.6"/>',
   trafik: '<rect x="8" y="2.5" width="8" height="15" rx="3"/><circle cx="12" cy="6.2" r="1.2"/><circle cx="12" cy="10" r="1.2"/><circle cx="12" cy="13.8" r="1.2"/><path d="M12 17.5v4"/>',
   piston: '<rect x="6.5" y="3.5" width="11" height="7.5" rx="1.6"/><path d="M6.5 6.2h11M10 11l-1.2 5.3M14 11l1.2 5.3"/><circle cx="12" cy="18.3" r="2.4"/>',
+  kisiler: '<circle cx="9" cy="8.2" r="3.4"/><path d="M2.8 19.5c.6-3.4 3-5.3 6.2-5.3s5.6 1.9 6.2 5.3"/><circle cx="16.8" cy="8.8" r="2.8"/><path d="M16.2 14.3c2.6.2 4.4 1.9 5 5.2"/>',
+  cuzdan: '<rect x="3" y="6" width="18" height="13.5" rx="2.8"/><path d="M3 10h18M15.5 14.6h2.5"/><path d="M6 6V5.2A1.7 1.7 0 0 1 8 3.5l9.5 1.6" />',
+  nokta3: '<path d="M6 12h.01M12 12h.01M18 12h.01" stroke-width="3"/>',
+  konum: '<path d="M12 21s-6.5-5.7-6.5-11a6.5 6.5 0 0 1 13 0c0 5.3-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/>',
+  imza: '<path d="M3.5 17.5c2.5-3 4.5-9 6.5-9s-1 8 1 8 3-4 4.5-4 .5 3 2 3 2-1 3-2"/><path d="M3.5 20.5h17"/>',
+  kalem: '<path d="M4 20l1-4.2L15.6 5.2a1.9 1.9 0 0 1 2.7 0l.5.5a1.9 1.9 0 0 1 0 2.7L8.2 19 4 20z"/><path d="M13.8 7l3.2 3.2"/>',
+  oynatDaire: '<circle cx="12" cy="12" r="8.5"/><path d="M10.2 8.6v6.8l5.4-3.4z"/>',
+  durdur: '<rect x="6.5" y="6.5" width="11" height="11" rx="2"/>',
+  ayrinti: '<path d="M4 6h16M4 12h16M4 18h10"/>',
   kalp: '<path d="M12 20s-7.5-4.5-7.5-10.2A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 7.5 2.8C19.5 15.5 12 20 12 20z"/>',
   wp: '<path d="M20.5 11.6a8.4 8.4 0 0 1-12.3 7.5L3.5 20.5l1.4-4.5A8.4 8.4 0 1 1 20.5 11.6z"/><path d="M9 8.8c0 3 2.3 5.6 5.5 6.2l1-1.4-1.6-1-1 .7a4 4 0 0 1-2.2-2.2l.7-1-1-1.6z"/>',
   cikis: '<path d="M14.5 4.5H18a1.5 1.5 0 0 1 1.5 1.5v12a1.5 1.5 0 0 1-1.5 1.5h-3.5M10 16.5 5.5 12 10 7.5M5.5 12h10"/>',
@@ -96,7 +105,9 @@ export function ustCubuk({ logo, kurs, ad, foto }) {
 
 /* ---------- alt sekme çubuğu ---------- */
 export const SEKMELER = [['durum', 'Ana sayfa', 'ev'], ['ders', 'Derslerim', 'takvim'], ['sinav', 'Öğren', 'kitap'], ['odeme', 'Ödeme', 'kart'], ['evrak', 'Belgeler', 'belge']];
-export const sekmeCubugu = (secili, rozet = {}) => `<nav class="ox-sekme" aria-label="Öğrenci uygulaması">${SEKMELER.map(([k, t, i]) => `<button type="button" data-ogs="${k}" class="${k === secili ? 'secili' : ''}" ${k === secili ? 'aria-current="page"' : ''}><span class="ox-sekme-ik">${oi(i)}${rozet[k] ? `<em>${rozet[k]}</em>` : ''}</span><span>${t}</span></button>`).join('')}</nav>`;
+export const USTA_SEKMELER = [['bugun', 'Bugün', 'ev'], ['hafta', 'Program', 'takvim'], ['kursiyer', 'Öğrenciler', 'kisiler'], ['kazanc', 'Kazancım', 'cuzdan']];
+// sekmeCubugu(secili, rozet, liste, öznitelik): öğrenci için data-ogs, öğretmen için data-egs
+export const sekmeCubugu = (secili, rozet = {}, liste = SEKMELER, attr = 'data-ogs') => `<nav class="ox-sekme" aria-label="${liste === SEKMELER ? 'Öğrenci' : 'Öğretmen'} uygulaması">${liste.map(([k, t, i]) => `<button type="button" ${attr}="${k}" class="${k === secili ? 'secili' : ''}" ${k === secili ? 'aria-current="page"' : ''}><span class="ox-sekme-ik">${oi(i)}${rozet[k] ? (rozet[k] === true ? '<em class="nokta"></em>' : `<em>${rozet[k]}</em>`) : ''}</span><span>${t}</span></button>`).join('')}</nav>`;
 
 /* ---------- sayfa iskeleti ---------- */
 // sayfa başlığı: büyük başlık, altında tek satır açıklama; sağda (isteğe bağlı) mavi sayaç ya da bağlantı
@@ -116,7 +127,7 @@ export function heroKart({ ust = '', baslik = '', alt = '', meta = '', gorsel: g
 // çizim: img/ogr/<ad>.webp — boyutu CSS'te sabit, yüklenirken yer kaplar (kayma olmaz)
 // GORSEL_SURUM: çizimler değişince artır (servis çalışanı sürüm ekli dosyayı önbellekten verir). Ek bilerek "?${'v'}=" diye yazılır:
 // sw.js, içindeki sürüm ekleri uygulama sürümüyle uyuşmayan JS dosyasını önbelleğe almaz.
-const GORSEL_SURUM = 2;
+const GORSEL_SURUM = 3;
 export const gorsel = (ad, alt = '', cls = '') => `<img class="ox-gorsel ${cls}" src="img/ogr/${ad}.webp?${'v'}=${GORSEL_SURUM}" alt="${esc(alt)}" decoding="async" draggable="false">`;
 
 /* ---------- düğmeler ---------- */
@@ -180,6 +191,11 @@ body.ox-modu{--ox-mavi:#0a66f2;--ox-mavi-bas:#0052cc;--ox-mavi-acik:#e9f1fe;--ox
   background:var(--ox-zemin);color:var(--ox-metin);font-family:var(--ox-yazi);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
 body.ox-modu .ogr-kabuk{background:var(--ox-zemin);min-height:100vh}
 body.ox-modu .ogr-kabuk>.app-ust{display:none}
+/* öğretmen kabuğu: eski üst çubuk ve kenar boşlukları yeni tasarımda gizli */
+body.ox-modu.usta-modu .ana>.app-ust{display:none}
+body.ox-modu.usta-modu .icerik{padding:0!important;max-width:none!important;margin:0!important;background:var(--ox-zemin)}
+body.ox-modu.usta-modu .ana{background:var(--ox-zemin)}
+body:not(.ox-modu) .ana>.ox-ust{display:none}
 .ox,.ox *{box-sizing:border-box}
 .ox{font-family:var(--ox-yazi);color:var(--ox-metin);font-size:15px;line-height:1.4;letter-spacing:-.005em;max-width:560px;margin:0 auto;padding:0 16px calc(104px + env(safe-area-inset-bottom))}
 :where(.ox,.ox-akis) :where(button){font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;text-align:inherit;-webkit-appearance:none;appearance:none;min-height:0;box-shadow:none}
@@ -214,6 +230,7 @@ body.ox-tam-acik .ox-ust{display:none!important}
 .ox-sekme button.secili{color:var(--ox-mavi);font-weight:600}
 .ox-sekme button.secili .ox-sekme-ik{background:var(--ox-mavi-orta)}
 .ox-sekme button.secili .ox-i{stroke-width:2.05}
+.ox-sekme em.nokta{min-width:0;width:10px;height:10px;padding:0;top:2px;right:12px;background:var(--ox-turuncu)}
 .ox-sekme em{position:absolute;top:0;right:8px;min-width:17px;height:17px;padding:0 4px;border-radius:999px;background:var(--ox-kirmizi);color:#fff;font:600 10.5px/17px var(--ox-yazi);font-style:normal;text-align:center;box-shadow:0 0 0 2px #fff}
 @media (min-width:760px){.ox-sekme{left:50%;right:auto;transform:translateX(-50%);bottom:14px;width:500px;border:1px solid var(--ox-cizgi);border-radius:20px;box-shadow:0 14px 34px -16px rgba(16,24,40,.3);padding-bottom:6px}}
 
