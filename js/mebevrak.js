@@ -1,7 +1,7 @@
 // MEBBİS aday evrak ekranlarının istediği bilgiler (belge değil, belge üzerindeki bilgiler):
 // Öğrenim (SKT02003), Sağlık raporu (SKT02004), Sabıka/adli sicil (SKT02005), Parmak izi (SKT02010, menüde "İmza").
 // Kayıt formunda ve öğrenci dosyasında girilir; "MEBBİS'e yaz" kayıtla birlikte bu ekranları da doldurur.
-import { e } from './ui.js?v=205';
+import { e } from './ui.js?v=206';
 
 export const OGRENIM_BELGELERI = ['Diploma', 'Mezuniyet Belgesi', 'Öğrenim Belgesi', 'Tasdikname', 'Geçici Mezuniyet Belgesi'];
 // MEBBİS metin kuralı: " < > ' ! & = yasak, baş/son boşluk yasak, uzunluk sınırı

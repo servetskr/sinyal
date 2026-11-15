@@ -1,7 +1,8 @@
-import { S, kaydet, kursiyer, egitmen, arac, tamAd, SINIFLAR, islem, gonderimEkle, yerelZaman, eksikEvrak, selam, kursAdi, adEk, bulutKanca } from './veri.js?v=205';
-import { e, tl, ik, isaret, bildir, tamTarih, tarihUzun, pencere, kapatPencere, waAc, waUrl, apiAcik, belgeWhatsApp, etiket, kisaLink } from './ui.js?v=205';
-import { sozlesmeMaddeleri, belgeHtml, dosyaAdi, sozlesmeDondur } from './sayfalar3.js?v=205';
-import * as GR from './gruplar.js?v=205';
+import { S, kaydet, kursiyer, egitmen, arac, tamAd, SINIFLAR, islem, gonderimEkle, yerelZaman, eksikEvrak, selam, kursAdi, adEk, bulutKanca } from './veri.js?v=206';
+import { e, tl, ik, isaret, bildir, tamTarih, tarihUzun, pencere, kapatPencere, waAc, waUrl, apiAcik, belgeWhatsApp, etiket, kisaLink } from './ui.js?v=206';
+import { sozlesmeMaddeleri, belgeHtml, dosyaAdi, sozlesmeDondur } from './sayfalar3.js?v=206';
+import * as GR from './gruplar.js?v=206';
+import { stilEkle as oxStil, oi, sayfaBas as oxSayfaBas, bolum as oxBolum, liste as oxListe, satir as oxSatir, ikonKutu, dugme as oxDugme, not as oxNot, gorsel as oxGorsel } from './ogr/ui.js?v=206';
 
 /* ================= UZAKTAN İMZA =================
    1) Kurs "WhatsApp'tan imzaya gönder" der: belge özeti linke paketlenir, kursun anahtarıyla mühürlenir,
@@ -83,40 +84,186 @@ function vektordenResim(v) {
   return cv.toDataURL('image/png');
 }
 
+/* --- kursiyerin imza sayfası: öğrenci uygulamasının tasarım dili (js/ogr/ui.js, ox-); sınıflar ox-uim- önekli ---
+   Sayfa giriş yapmadan, uygulama kabuğu olmadan açılır; ox değişkenleri body.ox-modu yerine kendi kabuğunda tanımlanır
+   (body'ye ox-modu eklenmez, böylece aynı sekmede açılan başka ekranlara sızmaz). */
+const IM_LOGO = '<svg class="logo-isaret" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="#141e33"/><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="1.2"/><g fill="none" stroke="#ffc21a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20l12 12-12 12" stroke-opacity=".38"/><path d="M33 20l12 12-12 12"/></g></svg>';
+function oxDegisken() {
+  const s = document.querySelector('style[data-ox="ox-temel"]'), m = s && /body\.ox-modu\{([^}]*)\}/.exec(s.textContent);
+  return m ? m[1].split(';').map(x => x.trim()).filter(x => x.startsWith('--')).join(';') : '';
+}
+function imStil() {
+  oxStil('ox-uim', `
+.ox-uim-kabuk{${oxDegisken()};min-height:100vh;min-height:100dvh;background:var(--ox-zemin);color:var(--ox-metin);font-family:var(--ox-yazi);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+body.ox-uim-acik{background:#f7f8fa}
+.ox-uim-kabuk *{box-sizing:border-box}
+.ox-uim-ust{position:sticky;top:0;z-index:25;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;background:rgba(247,248,250,.86);-webkit-backdrop-filter:saturate(180%) blur(18px);backdrop-filter:saturate(180%) blur(18px);border-bottom:.5px solid transparent;transition:border-color .2s}
+.ox-uim-ust.kaydi{border-bottom-color:var(--ox-cizgi)}
+.ox-uim-ust .ox-ust-ic{min-height:44px}
+.ox.ox-uim{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
+.ox-uim h1,.ox-uim h2,.ox-uim b{font-family:inherit}
+.ox-uim .ox-sayfa-bas{margin-top:10px}
+.ox-uim .ox-sayfa-bas p{font-size:15px;line-height:1.35}
+/* bilgi satırları: simge + etiket + değer */
+.ox-uim-bilgi{padding:2px 0}
+.ox-uim-bs{position:relative;display:grid;grid-template-columns:22px 80px minmax(0,1fr);align-items:start;gap:12px;padding:13px 16px}
+.ox-uim-bs+.ox-uim-bs::before{content:"";position:absolute;top:0;left:50px;right:16px;border-top:1px solid var(--ox-ayrac)}
+.ox-uim-bs>.ox-i{width:22px;height:22px;color:var(--ox-mavi);margin-top:-1px}
+.ox-uim-bs-et{font-size:15px;line-height:1.35;color:var(--ox-ikincil)}
+.ox-uim-bs-d{min-width:0;display:grid;gap:1px;font-size:15.5px;line-height:1.35;font-weight:600;color:var(--ox-bas);overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.ox-uim-bs-d small{font-size:14px;font-weight:400;color:var(--ox-ikincil)}
+/* ödeme planı sıra numarası */
+.ox-uim-no{flex:none;display:grid;place-items:center;width:36px;height:36px;border-radius:50%;border:1.5px solid var(--ox-cizgi);font-size:14.5px;font-weight:700;color:var(--ox-ikincil);font-variant-numeric:tabular-nums}
+.ox-uim .ox-liste .ox-satir{min-height:60px}
+.ox-uim .ox-liste>.ox-satir:has(.ox-uim-no)+.ox-satir::before{left:66px}
+/* sözleşme maddeleri */
+.ox-uim-metin{position:relative;padding:16px 16px 14px;font-size:14.5px;line-height:1.5;color:var(--ox-metin)}
+.ox-uim-metin p+p{margin-top:10px}
+.ox-uim-metin p b{color:var(--ox-bas);font-weight:700}
+.ox-uim-metin.kapali{max-height:300px;overflow:hidden}
+.ox-uim-metin.kapali::after{content:"";position:absolute;left:0;right:0;bottom:0;height:96px;background:linear-gradient(rgba(255,255,255,0),#fff 82%);pointer-events:none}
+.ox-uim-ac{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;min-height:48px;color:var(--ox-mavi);font-size:15.5px;font-weight:600;border-top:1px solid var(--ox-ayrac)}
+.ox-uim-ac .ox-i{width:20px;height:20px;stroke-width:2.1;transition:transform .2s}
+.ox-uim-ac[aria-expanded="true"] .ox-i{transform:rotate(180deg)}
+/* imza formu */
+.ox-uim-form{margin-top:12px;overflow:hidden}
+.ox-uim-onay{position:relative;display:flex;align-items:center;gap:12px;min-height:58px;padding:12px 16px;font-size:16px;line-height:1.35;font-weight:500;color:var(--ox-bas);cursor:pointer;border-bottom:1px solid var(--ox-ayrac)}
+.ox-uim-onay input{position:absolute;opacity:0;width:1px;height:1px;margin:0;pointer-events:none}
+.ox-uim-onay input:checked+.ox-kutucuk-k{background:var(--ox-mavi);border-color:var(--ox-mavi);color:#fff}
+.ox-uim-onay input:focus-visible+.ox-kutucuk-k{outline:2.5px solid var(--ox-mavi);outline-offset:2px}
+.ox-uim-alan{padding:16px 16px 0}
+.ox-uim-alan:last-child{padding-bottom:16px}
+.ox-uim-et{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:24px;margin-bottom:8px;font-size:15px;font-weight:700;color:var(--ox-bas)}
+.ox-uim-girdi{display:block;width:100%;height:50px;padding:0 14px;border:1px solid var(--ox-cizgi);border-radius:var(--ox-r-dg);background:#fff;font:inherit;font-size:16px;color:var(--ox-bas);outline:none;-webkit-appearance:none;appearance:none;transition:border-color .15s,box-shadow .15s}
+.ox-uim-girdi::placeholder{color:var(--ox-soluk)}
+.ox-uim-girdi:focus{border-color:var(--ox-mavi);box-shadow:0 0 0 3px var(--ox-mavi-acik)}
+.ox-uim-temizle{position:relative;display:inline-flex;align-items:center;gap:5px;min-height:32px;padding:0 4px;color:var(--ox-mavi);font-size:15px;font-weight:600}
+.ox-uim-temizle::after{content:"";position:absolute;inset:-6px -6px}
+.ox-uim-temizle .ox-i{width:18px;height:18px;stroke-width:2.1}
+.ox-uim-tuval{position:relative;border:1.5px dashed #c9d2e2;border-radius:14px;background:#fbfcfe;overflow:hidden}
+.ox-uim-tuval canvas{display:block;width:100%;height:auto;aspect-ratio:3/1;touch-action:none;position:relative;z-index:1}
+.ox-uim-tuval-ipucu{position:absolute;inset:0 0 24% 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--ox-soluk);font-size:14.5px;pointer-events:none;transition:opacity .15s}
+.ox-uim-tuval-ipucu .ox-i{width:24px;height:24px}
+.ox-uim-tuval::after{content:"";position:absolute;left:18px;right:18px;bottom:24%;border-top:1px solid #e3e8f0;pointer-events:none}
+.ox-uim-tuval.dolu .ox-uim-tuval-ipucu{opacity:0}
+.ox-uim-dg{margin-top:16px}
+.ox-uim-onay.hata{background:var(--ox-kirmizi-acik)}
+.ox-uim-onay.hata .ox-kutucuk-k{border-color:var(--ox-kirmizi)}
+.ox-uim-girdi.hata{border-color:var(--ox-kirmizi);box-shadow:0 0 0 3px var(--ox-kirmizi-acik)}
+.ox-uim-tuval.hata{border-color:var(--ox-kirmizi);background:#fffafa}
+.ox-uim-tuval.hata .ox-uim-tuval-ipucu{color:var(--ox-kirmizi)}
+@keyframes ox-uim-titre{0%,100%{transform:none}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.ox-uim-onay.hata .ox-kutucuk-k,.ox-uim-girdi.hata,.ox-uim-tuval.hata{animation:ox-uim-titre .28s ease 1}
+@media (prefers-reduced-motion:reduce){.ox-uim-kabuk *{animation:none!important;transition:none!important}}
+/* bildirim: bu sayfada öğrenci uygulamasının diliyle (koyu lacivert hap, ince gölge) */
+body.ox-uim-acik .bildirimler{left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));align-items:center}
+body.ox-uim-acik .bildirim{max-width:528px;width:100%;gap:10px;padding:13px 16px;border-radius:14px;background:#0f1d40;box-shadow:0 12px 30px -12px rgba(15,29,64,.45);font:600 15px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;letter-spacing:-.005em}
+body.ox-uim-acik .bildirim-uyari svg{color:#ffc21a}
+body.ox-uim-acik .bildirim-wp{background:#18a058}
+/* sonuç ve hata */
+.ox-uim-sonuc{display:grid;justify-items:center;text-align:center;padding:20px 4px 4px}
+.ox-uim-sonuc .ox-gorsel{width:150px;aspect-ratio:210/230;height:auto}
+.ox-uim-sonuc h1{margin-top:14px;font-size:25px;line-height:1.15;font-weight:800;letter-spacing:-.022em;color:var(--ox-bas);text-wrap:balance}
+.ox-uim-sonuc p{margin-top:8px;max-width:340px;font-size:15.5px;line-height:1.4;color:var(--ox-ikincil);text-wrap:pretty}
+.ox-uim-sonuc .ox-ik-kutu{margin-top:8px}
+.ox-uim-ozet{margin-top:22px}
+.ox-uim-dgler{display:grid;gap:10px;margin-top:18px}
+`);
+}
+const imBilgi = satirlar => `<div class="ox-kart ox-uim-bilgi">${satirlar.filter(Boolean).map(([ik2, et, d, alt]) => `<div class="ox-uim-bs">${oi(ik2)}<span class="ox-uim-bs-et">${et}</span><span class="ox-uim-bs-d"><span>${d}</span>${alt ? `<small>${alt}</small>` : ''}</span></div>`).join('')}</div>`;
+const tarihYil = s => s ? tarihUzun(s).split(' ').slice(0, 2).join(' ') + ' ' + String(s).slice(0, 4) : '—';
+const sureDk = (s, su) => { if (su) return su; const m = /(\d{1,2}):(\d{2})\s*[–-]\s*(\d{1,2}):(\d{2})/.exec(s || ''); return m ? (m[3] * 60 + +m[4]) - (m[1] * 60 + +m[2]) : null; };
+
+// Belgenin öğrenciye gösterilen hali: ders (takip formu) ya da sözleşme
 function belgeGorunumu(p) {
   const b = p.belge;
-  const bas = `<h1>${p.tur === 'sozlesme' ? 'Kursiyer eğitim sözleşmesi' : 'Direksiyon eğitimi takip formu'}</h1><p class="a4-alt">${e(b.kurs.ad)} · ${e(b.kurs.adres)} · ${e(b.kurs.tel)}</p>`;
-  if (p.tur === 'sozlesme') return bas + `<table><tr><th>Kursiyer</th><td>${e(b.kisi.ad)}</td><th>TC kimlik no</th><td>${e(b.kisi.tc)}</td></tr><tr><th>Sertifika sınıfı</th><td>${e(b.sinif)}</td><th>Kayıt tarihi</th><td>${tamTarih(b.kayit)}</td></tr><tr><th>Kurs ücreti</th><td>${tl(b.odeme.toplam)}${b.odeme.indirim ? `<br><small>${e(b.odeme.indirim.ad)} indirimi −${tl(b.odeme.indirim.tutar)}</small>` : ''}</td><th>Peşinat</th><td>${tl(b.odeme.pesin)} · ${tamTarih(b.odeme.pesinTarih)}</td></tr></table>
-    <p><b>Ödeme planı</b></p><table><tr><th>#</th><th>Vade</th><th>Tutar</th></tr>${b.odeme.taksit.map(([v, t], i) => `<tr><td>${i + 1}</td><td>${tamTarih(v)}</td><td>${tl(t)}</td></tr>`).join('') || '<tr><td colspan="3">Peşin ödendi</td></tr>'}</table>
-    ${b.madde.map((m, i) => { const n = m.indexOf('. '); const bk = n > 0 && n < 40; return `<p><b>${i + 1}. ${bk ? e(m.slice(0, n)) + '.' : ''}</b> ${e(bk ? m.slice(n + 2) : m)}</p>`; }).join('')}`;
-  return bas + `<p><b>Kursiyer:</b> ${e(b.kisi.ad)} · ${e(b.sinif)}</p><table><tr><th>Tarih</th><th>Saat</th><th>Usta öğretici</th><th>Araç</th></tr>${b.ders.map(([t, s, u, pl, su]) => `<tr><td>${tamTarih(t)}</td><td>${e(s)}${su ? ' (' + su + ' dk)' : ''}</td><td>${e(u)}</td><td>${e(pl)}</td></tr>`).join('')}</table><p>Yukarıdaki direksiyon derslerini aldığımı onaylarım.</p>`;
+  if (p.tur === 'sozlesme') {
+    const o = b.odeme;
+    const bilgi = imBilgi([
+      ['kisi', 'Öğrenci', e(b.kisi.ad), b.kisi.tc ? 'TC ' + e(b.kisi.tc) : ''],
+      ['direksiyon', 'Sınıf', e(b.sinif)],
+      ['takvim', 'Kayıt tarihi', tarihYil(b.kayit)],
+      ['fis', 'Kurs ücreti', tl(o.toplam), o.indirim ? `${e(o.indirim.ad)} indirimi −${tl(o.indirim.tutar)}` : ''],
+      ['kart', 'Peşinat', tl(o.pesin), o.pesinTarih ? tarihYil(o.pesinTarih) : ''],
+      b.kurs.adres || b.kurs.tel ? ['konum', 'Kurs', e(b.kurs.ad), [b.kurs.adres, b.kurs.tel].filter(Boolean).map(e).join('<br>')] : null,
+    ]);
+    const plan = o.taksit.length
+      ? oxListe(o.taksit.map(([v, t], i) => oxSatir({ sol: `<span class="ox-uim-no">${i + 1}</span>`, baslik: `${i + 1}. taksit`, alt: tarihYil(v), sag: tl(t), ok: false })))
+      : oxListe([oxSatir({ ikon: 'tik', ton: 'yesil', baslik: 'Peşin ödendi', alt: 'Taksit yok', ok: false })]);
+    const maddeler = b.madde.map((m, i) => { const n = m.indexOf('. '); const bk = n > 0 && n < 40; return `<p><b>${i + 1}. ${bk ? e(m.slice(0, n)) + '.' : ''}</b> ${e(bk ? m.slice(n + 2) : m)}</p>`; }).join('');
+    return bilgi + oxBolum('Ödeme planı', o.taksit.length ? o.taksit.length + ' taksit' : '') + plan
+      + oxBolum('Sözleşme maddeleri', b.madde.length + ' madde')
+      + `<div class="ox-kart"><div class="ox-uim-metin${b.madde.length > 3 ? ' kapali' : ''}" id="ox-uim-metin">${maddeler}</div>${b.madde.length > 3 ? `<button type="button" class="ox-uim-ac" data-uim-ac aria-expanded="false" aria-controls="ox-uim-metin"><span>Tamamını oku</span>${oi('asagi')}</button>` : ''}</div>`;
+  }
+  const dersler = b.ders;
+  if (dersler.length === 1) {
+    const [t, s, u, pl, su] = dersler[0], dk = sureDk(s, su);
+    return imBilgi([
+      ['kisi', 'Öğrenci', e(b.kisi.ad), e(b.sinif)],
+      ['takvim', 'Tarih', tarihUzun(t), e(s)],
+      dk ? ['kronometre', 'Süre', dk + ' dakika'] : null,
+      ['direksiyon', 'Öğretmen', e(u)],
+      pl ? ['arac', 'Araç', e(pl)] : null,
+    ]);
+  }
+  return imBilgi([['kisi', 'Öğrenci', e(b.kisi.ad), e(b.sinif)]])
+    + oxBolum('Dersler', dersler.length + ' ders')
+    + oxListe(dersler.map(([t, s, u, pl, su]) => { const dk = sureDk(s, su); return oxSatir({ ikon: 'direksiyon', baslik: tarihUzun(t), alt: `${e(s)}${dk ? ' · ' + dk + ' dk' : ''}<br>${e(u)}${pl ? ' · ' + e(pl) : ''}`, ok: false }); }));
+}
+
+// eksik alanı işaretler: kırmızı çerçeve, görünür yere kaydırır, odaklar (doğrulama mantığı aynı; uyarı yine bildir ile)
+function imHata(el, odak) {
+  if (!el) return;
+  el.classList.remove('hata'); void el.offsetWidth; el.classList.add('hata');
+  el.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  if (odak) try { odak.focus({ preventScroll: true }); } catch (x) { }
+}
+const imKabuk = (kursAd, ic) => `<div class="ox-uim-kabuk"><header class="ox-uim-ust"><div class="ox-ust-ic"><span class="ox-marka">${IM_LOGO}<span class="ox-marka-ad"><b><i>md</i>Sinyal</b><small>${e(kursAd)}</small></span></span></div></header><main class="ox ox-uim">${ic}</main></div>`;
+let imKaydirma = false;
+function imHazirla() {
+  imStil();
+  document.body.classList.add('portal-modu', 'ox-uim-acik');
+  const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = '#f7f8fa';
+  if (imKaydirma) return; imKaydirma = true;
+  addEventListener('scroll', () => { const u = document.querySelector('.ox-uim-ust'); if (u) u.classList.toggle('kaydi', scrollY > 4); }, { passive: true });
+  addEventListener('hashchange', () => { if (!location.hash.startsWith('#/imza/')) document.body.classList.remove('ox-uim-acik'); });
 }
 
 // Kursiyer tarafı: girişsiz imza sayfası.
 export async function imzaSayfasi(kok, paket) {
-  document.body.classList.add('portal-modu');
+  imHazirla();
   let p;
   try { p = await paketAc(paket); if (!p || !p.belge || !p.id) throw 0; } catch (x) {
-    kok.innerHTML = `<div class="imza-sayfa"><div class="kart" style="padding:24px">${isaret('dur', 40)}<h2 style="margin:12px 0 6px">Link açılamadı</h2><p>Link eksik kopyalanmış olabilir. Sürücü kursunuza yazıp yeni bağlantı isteyin.</p></div></div>`; return;
+    document.title = 'İmza linki açılamadı · mdSinyal';
+    kok.innerHTML = imKabuk('İmza sayfası', `<section class="ox-uim-sonuc" style="padding-top:48px">${ikonKutu('uyari', 'kirmizi', true)}<h1>Link açılamadı</h1><p>Link eksik kopyalanmış olabilir. Sürücü kursunuza yazıp yeni bağlantı isteyin.</p></section>`); return;
   }
-  const b = p.belge;
-  kok.innerHTML = `<div class="imza-sayfa">
-    <div class="imza-ust"><b>${e(b.kurs.ad)}</b><small>İmza isteği · ${e(b.kisi.ad)}</small></div>
-    <div class="kart" style="padding:12px;overflow:auto"><div class="a4">${belgeGorunumu(p)}</div></div>
-    <div class="kart" style="padding:18px">
-      <label style="display:flex;gap:10px;align-items:flex-start;font-size:14.5px"><input type="checkbox" data-okudum style="width:20px;height:20px;margin-top:2px"><span>${p.tur === 'sozlesme' ? 'Sözleşmeyi okudum, kabul ediyorum.' : 'Bu dersleri aldığımı onaylıyorum.'}</span></label>
-      <div class="alan" style="margin-top:12px"><label for="i-ad">Adınız soyadınız</label><input id="i-ad" class="girdi" autocomplete="name" placeholder="${e(b.kisi.ad)}"></div>
-      <p class="et" style="margin:14px 0 6px">İmzanız · parmağınızla çizin</p><canvas class="imza-alan" width="900" height="300" aria-label="İmza alanı"></canvas>
-      <div style="display:flex;gap:8px;margin-top:12px"><button class="dg dg-cizgi" data-temizle type="button">Temizle</button><button class="dg dg-ana" style="flex:1" data-imzala>${ik('wp')}İmzala ve gönder</button></div>
-      <p style="font-size:12.5px;color:var(--soluk);margin-top:10px">İmzanız WhatsApp’tan ${e(b.kurs.ad)}’na gider; WhatsApp açılınca mesajı göndermeniz yeterli.</p>
-    </div></div>`;
-  const t = tuval(kok.querySelector('canvas'));
-  kok.querySelector('[data-temizle]').addEventListener('click', () => t.temizle());
+  const b = p.belge, soz = p.tur === 'sozlesme', dersSay = soz ? 0 : (b.ders || []).length;
+  const baslik = soz ? 'Sözleşme imzası' : 'Ders imzası';
+  document.title = baslik + ' · ' + b.kurs.ad;
+  const altMetin = soz ? 'Sözleşmenizi okuyun, onaylayıp imzalayın.' : dersSay > 1 ? 'Derslerinizi kontrol edip imzalayın.' : 'Dersinizi kontrol edip imzalayın.';
+  kok.innerHTML = imKabuk(b.kurs.ad, `${oxSayfaBas(baslik, altMetin)}
+    ${belgeGorunumu(p)}
+    <div class="ox-kart ox-uim-form">
+      <label class="ox-uim-onay"><input type="checkbox" data-okudum><span class="ox-kutucuk-k">${oi('tik')}</span><span>${soz ? 'Sözleşmeyi okudum, kabul ediyorum.' : dersSay > 1 ? 'Bu dersleri aldığımı onaylıyorum.' : 'Bu dersi aldığımı onaylıyorum.'}</span></label>
+      <div class="ox-uim-alan"><label class="ox-uim-et" for="i-ad">Ad Soyad</label><input id="i-ad" class="ox-uim-girdi" autocomplete="name" autocapitalize="words" enterkeyhint="done" placeholder="Adınızı ve soyadınızı yazın"></div>
+      <div class="ox-uim-alan"><div class="ox-uim-et"><span id="i-imza-et">İmza</span><button type="button" class="ox-uim-temizle" data-temizle>${oi('sifirla')}<span>Temizle</span></button></div>
+        <div class="ox-uim-tuval"><canvas width="900" height="300" role="img" aria-labelledby="i-imza-et" aria-label="İmza alanı: parmağınızla imzanızı çizin"></canvas><span class="ox-uim-tuval-ipucu">${oi('kalem')}<span>Parmağınızla imza atın</span></span></div></div>
+    </div>
+    <div class="ox-uim-dg">${oxDugme('İmzala ve gönder', { 'data-imzala': true }, { genis: true })}</div>
+    ${oxNot(`İmzanız WhatsApp’tan ${e(b.kurs.ad)}’na gider; WhatsApp açılınca mesajı göndermeniz yeterli.`, 'kalkan')}`);
+  const cv = kok.querySelector('canvas'), kutu = kok.querySelector('.ox-uim-tuval');
+  const t = tuval(cv);
+  cv.addEventListener('pointerdown', () => { kutu.classList.add('dolu'); kutu.classList.remove('hata'); });
+  kok.querySelector('[data-okudum]').addEventListener('change', () => kok.querySelector('.ox-uim-onay').classList.remove('hata'));
+  kok.querySelector('#i-ad').addEventListener('input', ev => ev.target.classList.remove('hata'));
+  kok.querySelector('[data-temizle]').addEventListener('click', () => { t.temizle(); kutu.classList.remove('dolu'); });
+  const ac = kok.querySelector('[data-uim-ac]');
+  if (ac) ac.addEventListener('click', () => { const m = kok.querySelector('#ox-uim-metin'), acik = m.classList.toggle('kapali'); ac.setAttribute('aria-expanded', String(!acik)); ac.querySelector('span').textContent = acik ? 'Tamamını oku' : 'Daha az göster'; if (acik && ac.getBoundingClientRect().top < 72) ac.scrollIntoView({ block: 'center' }); });
   kok.querySelector('[data-imzala]').addEventListener('click', async () => {
     const ad = kok.querySelector('#i-ad').value.trim();
-    if (!kok.querySelector('[data-okudum]').checked) return bildir('Önce okuyup onay kutusunu işaretleyin', 'uyari');
-    if (ad.length < 3) return bildir('Adınızı soyadınızı yazın', 'uyari');
-    if (t.bos()) return bildir('İmza alanına imzanızı çizin', 'uyari');
+    if (!kok.querySelector('[data-okudum]').checked) { imHata(kok.querySelector('.ox-uim-onay'), kok.querySelector('[data-okudum]')); return bildir('Önce okuyup onay kutusunu işaretleyin', 'uyari'); }
+    if (ad.length < 3) { imHata(kok.querySelector('#i-ad'), kok.querySelector('#i-ad')); return bildir('Adınızı soyadınızı yazın', 'uyari'); }
+    if (t.bos()) { imHata(kutu, null); return bildir('İmza alanına imzanızı çizin', 'uyari'); }
     const donus = adres() + '#/imza-geldi/' + await paketle({ v: 1, id: p.id, tur: p.tur, k: p.k, ozet: p.ozet, m: p.m, ad, z: new Date().toISOString(), cihaz: (navigator.userAgent.match(/\(([^)]+)\)/) || [])[1] || '', s: t.vektor() });
     const kisa = await kisaLink(donus, 'imza geldi ' + b.kisi.ad, p.id, p.api);
     const metin = `${b.kisi.ad} · ${p.tur === 'sozlesme' ? 'sözleşme' : 'ders katılım (takip formu)'} imzam. Kurs ekranında kendiliğinden işlenir; işlenmezse linke dokunun:\n${kisa}`;
@@ -125,8 +272,15 @@ export async function imzaSayfasi(kok, paket) {
     // gerçek kursta öğrencinin telefonu servise kimliksiz yazamaz: imza kısa link deposundan kursa ulaşır, olmazsa WhatsApp hazır mesajla açılır
     if (p.api && !p.g) { try { const r = await fetch(p.api, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ metin: (p.dk ? `${adEk(b.kurs.ad, 'e').toLocaleUpperCase('tr')} GELEN MESAJ · gönderen: ${b.kisi.ad}\n(Gerçekte bu mesaj öğrencinin telefonundan ${adEk(b.kurs.ad, 'in')} WhatsApp hattına gelir.)\n――――――――\n` : '') + metin }) }); otomatik = otomatik || r.ok; } catch (x) { } }
     if (!otomatik) { if (p.g) { const w = window.open(waUrl(b.kurs.wp, metin), '_blank'); if (w) try { w.opener = null; } catch (x) { } } else otomatik = waAc(b.kurs.wp, metin, 'WhatsApp', b.kisi.ad, false, 'KURSA GELEN') === 'api'; }
-    kok.querySelector('.imza-sayfa').innerHTML = `<div class="imza-ust"><b>${e(b.kurs.ad)}</b><small>${e(b.kisi.ad)}</small></div><div class="kart" style="padding:24px;text-align:center">${isaret('tamam', 56)}<h2 style="margin:14px 0 6px">${otomatik ? `İmzanız ${e(adEk(b.kurs.ad, 'e'))} gönderildi` : 'Son adım: WhatsApp mesajını gönderin'}</h2><p>${otomatik ? 'Teşekkürler; kurs imzanızı kayda alacak.' : `İmzanız hazır. WhatsApp açıldı; mesajı ${e(adEk(b.kurs.ad, 'e'))} gönderince imzanız kayda geçer.`}</p>
-      <div style="display:grid;gap:8px;margin-top:16px"><button class="dg dg-wp" data-tekrar>${ik('wp')}WhatsApp’ı yeniden aç</button><button class="dg dg-cizgi" data-kopyala>Linki kopyala</button></div></div>`;
+    const zaman = yerelZaman();
+    kok.querySelector('.ox-uim').innerHTML = `<section class="ox-uim-sonuc">${oxGorsel('belge-tamam', '')}<h1>${otomatik ? `İmzanız ${e(adEk(b.kurs.ad, 'e'))} gönderildi` : 'Son adım: WhatsApp mesajını gönderin'}</h1><p>${otomatik ? 'Teşekkürler; kurs imzanızı kayda alacak.' : `İmzanız hazır. WhatsApp açıldı; mesajı ${e(adEk(b.kurs.ad, 'e'))} gönderince imzanız kayda geçer.`}</p></section>
+      <div class="ox-uim-ozet">${imBilgi([
+        ['kisi', 'İmzalayan', e(ad)],
+        [soz ? 'belge' : 'panoTik', 'Belge', soz ? 'Kurs sözleşmesi' : 'Ders takip formu', soz ? '' : dersSay + ' ders'],
+        ['saat', 'Zaman', tarihYil(zaman.slice(0, 10)).replace(/ \d{4}$/, '') + ', ' + zaman.slice(11, 16)],
+      ])}</div>
+      <div class="ox-uim-dgler">${oxDugme('WhatsApp’ı yeniden aç', { 'data-tekrar': true }, { tur: otomatik ? 'ikincil' : 'ana', genis: true, ikon: 'wp' })}${oxDugme('Linki kopyala', { 'data-kopyala': true }, { tur: 'cizgi', genis: true })}</div>`;
+    scrollTo(0, 0);
     kok.querySelector('[data-tekrar]').addEventListener('click', () => waAc(b.kurs.wp, metin));
     kok.querySelector('[data-kopyala]').addEventListener('click', () => { navigator.clipboard.writeText(kisa).then(() => bildir('Link kopyalandı'), () => bildir('Kopyalanamadı; WhatsApp’ı yeniden açın', 'uyari')); });
   });
@@ -168,25 +322,101 @@ export async function imzaKontrol() {
       } catch (x) { }
     }
   } finally { kontrolde = false; }
-  if (n) import('./app.js?v=205').then(m => m.yenile());
+  if (n) import('./app.js?v=206').then(m => m.yenile());
   return n;
 }
 
+/* --- kursa gelen imza sayfası: öğrencinin imza sayfasıyla aynı dil (ox-, sınıflar ox-uim-g önekli) ---
+   Kurs ekranında (müdür / ön büro) kurs kabuğunun içinde, öğretmen ekranında öğretmen kabuğunda (ox-modu) açılır.
+   Mantık değişmedi: imzaIsle paketi çözer, mührü doğrular, kayda işler; sayfa yalnız sonucu gösterir. */
+function imGStil() {
+  imStil();
+  oxStil('ox-uim-g', `
+.ox-uim-g{${oxDegisken()}}
+body:not(.ox-modu) .ox.ox-uim-g{margin:0;padding:4px 0 32px}
+body.ox-modu .ox.ox-uim-g{padding-top:2px}
+.ox-uim-g a{text-decoration:none}
+.ox-uim-g .ox-geri{text-decoration:none}
+/* durum kartı */
+.ox-uim-durum{display:flex;align-items:flex-start;gap:14px;padding:16px;border-radius:var(--ox-r);border:1px solid var(--ox-cizgi);background:var(--ox-kart);box-shadow:var(--ox-golge)}
+.ox-uim-durum.tamam{background:var(--ox-yesil-acik);border-color:#cbe9d6}
+.ox-uim-durum.zaten{background:var(--ox-mavi-acik);border-color:#d3e3fc}
+.ox-uim-durum.hata{background:var(--ox-kirmizi-acik);border-color:#f6cfd0}
+.ox-uim-durum .ox-ik-kutu{width:48px;height:48px;border-radius:14px;background:#fff}
+.ox-uim-durum .ox-ik-kutu .ox-i{width:26px;height:26px;stroke-width:2}
+.ox-uim-durum-y{flex:1;min-width:0;display:grid;gap:3px;padding-top:2px}
+.ox-uim-durum-y h2{font-size:18px;line-height:1.25;font-weight:800;letter-spacing:-.018em;color:var(--ox-bas);margin:0;text-wrap:balance}
+.ox-uim-durum-y p{font-size:14.5px;line-height:1.4;color:var(--ox-ikincil);margin:0;overflow-wrap:anywhere;text-wrap:pretty}
+.ox-uim-durum.tamam .ox-uim-durum-y p{color:#2e5a40}
+.ox-uim-durum.hata .ox-uim-durum-y p{color:#7a2326}
+.ox-uim-durum.bekle .ox-ik-kutu .ox-i{animation:ox-uim-don 1s linear infinite}
+@keyframes ox-uim-don{to{transform:rotate(360deg)}}
+.ox-uim-g .ox-uim-bilgi{margin-top:12px}
+.ox-uim-bs-d.yesil>span{color:var(--ox-yesil)}
+/* imza önizlemesi: kutu ölçüsü sabit (3:1), resim yüklenince kayma olmaz */
+.ox-uim-onizle{padding:12px}
+.ox-uim-onizle-k{position:relative;aspect-ratio:3/1;border-radius:12px;background:#fbfcfe;border:1px solid var(--ox-ayrac);overflow:hidden}
+.ox-uim-onizle-k::after{content:"";position:absolute;left:18px;right:18px;bottom:24%;border-top:1px solid #e3e8f0;pointer-events:none}
+.ox-uim-onizle-k img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain}
+.ox-uim-onizle figcaption{display:flex;justify-content:space-between;gap:12px;margin-top:10px;padding:0 4px;font-size:14px;line-height:1.35;color:var(--ox-ikincil)}
+.ox-uim-onizle figcaption b{min-width:0;font-weight:600;color:var(--ox-bas);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ox-uim-onizle figcaption span{flex:none;font-variant-numeric:tabular-nums}
+.ox-uim-g .ox-uim-dgler{margin-top:24px}
+@media (prefers-reduced-motion:reduce){.ox-uim-durum.bekle .ox-ik-kutu .ox-i{animation:none}}
+`);
+}
+const imZaman = z => z ? tarihYil(z.slice(0, 10)) + ', ' + z.slice(11, 16) : '—';
+// cihaz bilgisi linkte tarayıcının ham metni olarak gelir ("iPhone; CPU iPhone OS 18_0 like Mac OS X"); ekranda okunur hali
+function imCihaz(c) {
+  c = String(c || ''); let m;
+  if ((m = /(iPhone|iPad)[^]*?OS (\d+)(?:_(\d+))?/.exec(c))) return `${m[1]} · iOS ${m[2]}${m[3] && m[3] !== '0' ? '.' + m[3] : ''}`;
+  if ((m = /Android (\d+(?:\.\d+)?)/.exec(c))) return 'Android ' + m[1];
+  if (/Macintosh|Mac OS X/.test(c)) return 'Mac';
+  if (/Windows/.test(c)) return 'Windows';
+  return c.slice(0, 40);
+}
+const imDurum = (tur, ikon, baslik, metin) => `<div class="ox-uim-durum ${tur}" role="status">${ikonKutu(ikon, tur === 'tamam' ? 'yesil' : tur === 'hata' ? 'kirmizi' : tur === 'bekle' ? 'gri' : 'mavi')}<div class="ox-uim-durum-y"><h2>${baslik}</h2>${metin ? `<p>${metin}</p>` : ''}</div></div>`;
+
 // Kurs tarafı: dönüş linki → doğrula, kayda işle.
 export function imzaGeldi(paket) {
+  imGStil();
+  const usta = document.body.classList.contains('usta-modu');
+  // ilgili ekran: kurs ekranında öğrencinin dosyası, öğretmen ekranında Bugün
+  const donDg = k => `<div class="ox-uim-dgler">${usta
+    ? `<a class="ox-dg ox-dg-ana genis" href="#/egitmen">${oi('ev')}<span>Bugün ekranına dön</span></a>`
+    : k ? `<a class="ox-dg ox-dg-ana genis" href="#/kursiyer/${encodeURIComponent(k.id)}">${oi('kisi')}<span>Öğrenci dosyasını aç</span></a>`
+      : `<a class="ox-dg ox-dg-cizgi genis" href="#/kursiyerler">${oi('kisiler')}<span>Kursiyerlere dön</span></a>`}</div>`;
+  const ust = usta ? `<a class="ox-geri" href="#/egitmen">${oi('sol')}<span>Bugün</span></a>${oxSayfaBas('Gelen imza', 'Öğrencinin WhatsApp’tan gönderdiği imza.')}` : '';
   return {
-    baslik: 'Gelen imza', alt: 'Kursiyerin WhatsApp’tan gönderdiği imza',
-    html: `<div class="kart" style="max-width:640px;padding:22px" id="imza-sonuc"><p>İmza doğrulanıyor…</p></div>`,
+    baslik: 'Gelen imza', alt: 'Öğrencinin gönderdiği imza',
+    html: `<div class="ox ox-uim ox-uim-g" id="imza-sonuc" aria-live="polite">${ust}<div data-uim-g>${imDurum('bekle', 'sifirla', 'İmza doğrulanıyor…', 'Mühür ve belge özeti kontrol ediliyor.')}</div></div>`,
     async baglan(kap) {
-      const yer = kap.querySelector('#imza-sonuc');
+      // öğretmen: öğretmen ekranının kabuğu (marka çubuğu; kurs ekranının alt menüsü ve kenar menüsü gizli)
+      if (usta) { document.body.classList.add('ox-modu', 'portal-modu'); document.body.classList.remove('ox-tam-acik'); const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = '#f7f8fa'; }
+      const yer = kap.querySelector('[data-uim-g]');
       const s = await imzaIsle(paket);
-      if (s.hata) { yer.innerHTML = `${isaret('dur', 40)}<h2 style="margin:12px 0 6px">${s.hata[0]}</h2><p>${s.hata[1]}</p>`; return; }
-      const { t, k, r, resim } = s;
-      if (s.zaten) { yer.innerHTML = `${isaret('tamam', 40)}<h2 style="margin:12px 0 6px">Bu imza zaten işlendi</h2><p>${tamTarih(t.imzaZaman.slice(0, 10))} ${t.imzaZaman.slice(11, 16)}</p><a class="dg dg-ana" href="#/kursiyer/${k.id}">Kursiyer dosyası</a>`; return; }
-      yer.innerHTML = `${isaret('tamam', 40)}<h2 style="margin:12px 0 6px">İmza kayda işlendi</h2><p>${e(tamAd(k))} · ${t.tur === 'sozlesme' ? 'kursiyer sözleşmesi' : t.dersler.length + ' dersin takip formu'}</p>
-        <div style="border:1px solid var(--cizgi);border-radius:8px;background:#fff;margin:14px 0;padding:8px;max-width:320px"><img src="${resim}" alt="Kursiyerin imzası" style="width:100%"></div>
-        <dl class="bilgi-tablo"><dt>İmzalayan</dt><dd>${e(r.ad)}</dd><dt>Zaman</dt><dd>${s.zaman.toLocaleString('tr-TR', { dateStyle: 'medium', timeStyle: 'short' })}</dd><dt>Cihaz</dt><dd>${e(r.cihaz || '—')}</dd><dt>Doğrulama</dt><dd>Mühür ve belge özeti eşleşti</dd></dl>
-        <div style="display:flex;gap:8px;margin-top:16px"><a class="dg dg-ana" href="#/kursiyer/${k.id}">Kursiyer dosyası</a></div>`;
+      if (!yer.isConnected) return;
+      if (s.hata) { yer.innerHTML = imDurum('hata', 'uyari', e(s.hata[0]), e(s.hata[1])) + oxNot('İmza kayda geçmedi. Öğrenciye yeni imza linki gönderip tekrar imzalamasını isteyin.', 'bilgi') + donDg(null); return; }
+      const { t, k, r, resim } = s, soz = t.tur === 'sozlesme';
+      const dersler = soz ? [] : t.dersler.map(id => S.dersler.find(d => d.id === id)).filter(Boolean).sort((a, b) => (a.tarih + (a.bas || a.saat)).localeCompare(b.tarih + (b.bas || b.saat)));
+      const dSaat = d => `${d.bas || d.saat}${d.bit ? '–' + d.bit : ''}`, dUsta = d => (egitmen(d.egitmen) || {}).ad || '';
+      const belgeAd = soz ? 'Kurs sözleşmesi' : 'Ders takip formu';
+      const imzalayan = s.zaten ? (t.imzalayan || r.ad) : r.ad, zaman = imZaman(t.imzaZaman);
+      const durum = s.zaten
+        ? imDurum('zaten', 'panoTik', 'Bu imza zaten işlendi', `${e(zaman)} tarihinde kayda geçmişti; yeniden işlenmedi.`)
+        : imDurum('tamam', 'tik', 'İmza kayda işlendi', `${e(tamAd(k))} · ${soz ? 'kurs sözleşmesi' : t.dersler.length > 1 ? t.dersler.length + ' dersin takip formu' : 'ders takip formu'}`);
+      const bilgi = imBilgi([
+        ['kisi', 'Öğrenci', e(tamAd(k)), SINIFLAR[k.sinif] ? e(SINIFLAR[k.sinif].ad) : ''],
+        [soz ? 'belge' : 'panoTik', 'Belge', belgeAd, soz ? '' : t.dersler.length + ' ders'],
+        dersler.length === 1 ? ['takvim', 'Ders', tarihUzun(dersler[0].tarih), e([dSaat(dersler[0]), dUsta(dersler[0])].filter(Boolean).join(' · '))] : null,
+        ['imza', 'İmzalayan', e(imzalayan)],
+        ['saat', 'Zaman', e(zaman)],
+        r.cihaz ? ['tel', 'Cihaz', e(imCihaz(r.cihaz))] : null,
+        ['kalkan', 'Doğrulama', 'Mühür eşleşti', 'Belge özeti değişmemiş'],
+      ]).replace('<span class="ox-uim-bs-d"><span>Mühür eşleşti', '<span class="ox-uim-bs-d yesil"><span>Mühür eşleşti');
+      const liste = dersler.length > 1 ? oxBolum('Dersler', dersler.length + ' ders') + oxListe(dersler.map(d => oxSatir({ ikon: 'direksiyon', baslik: tarihUzun(d.tarih), alt: e([dSaat(d), dUsta(d)].filter(Boolean).join(' · ')), ok: false }))) : '';
+      const onizle = oxBolum('İmza') + `<figure class="ox-kart ox-uim-onizle"><div class="ox-uim-onizle-k"><img src="${resim}" alt="${e(imzalayan)} imzası" width="600" height="200"></div><figcaption><b>${e(imzalayan)}</b><span>${e(zaman)}</span></figcaption></figure>`;
+      yer.innerHTML = durum + bilgi + liste + onizle + donDg(k);
     },
   };
 }
@@ -199,6 +429,6 @@ export function imzayaGonderPenceresi(k, tur, dersIdleri) {
     icerik: `<p style="font-size:14.5px">${e(tamAd(k))} kişisine ${tur === 'sozlesme' ? 'sözleşme' : dersIdleri.length + ' dersin takip formu'} için imza linki gidecek. ${apiAcik() ? 'Mesaj WhatsApp’tan otomatik gönderilir.' : `WhatsApp, ${e(k.tel)} numarasına hazır mesajla açılır; siz gönderirsiniz.`}</p>
       ${apiAcik() ? `<p class="ipucu" style="margin-top:12px">${isaret('bilgi', 18)}<span>Link WhatsApp’tan otomatik gider. Kursiyer imzalayınca imza kendiliğinden kayda işlenir ve ekranda bildirim çıkar.</span></p>` : kursWp() ? `<p class="ipucu" style="margin-top:12px">${isaret('bilgi', 18)}<span>Kursiyer imzalayınca imza kursun WhatsApp hattına (${e(kursWp())}) link olarak gelir. O linke dokunduğunuzda imza doğrulanır ve kayda işlenir.</span></p>` : `<div class="alan" style="margin-top:14px"><label for="i-wp">İmzalar hangi WhatsApp numarasına gelsin?</label><input id="i-wp" class="girdi" inputmode="tel" placeholder="05xx xxx xx xx" autocomplete="tel"><small style="color:var(--soluk)">Kursun WhatsApp hattı; bir kez girilir, Ayarlar › Kurs bilgileri’nden değişir.</small></div>`}${b ? `<p style="margin-top:10px;font-size:13.5px;color:var(--soluk)">Önceki link ${b.tarih.slice(0, 10).split('-').reverse().join('.')} ${b.tarih.slice(11, 16)}’de gönderildi; yenisi eskisinin yerine geçer.</p>` : ''}`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-wp" data-k>${ik('wp')}${apiAcik() ? 'İmza linkini gönder' : 'WhatsApp’ı aç'}</button>`,
-    onAc(d) { d.querySelector('[data-k]').addEventListener('click', async () => { const w = d.querySelector('#i-wp'); if (w) { const n = w.value.replace(/\D/g, ''); if (!/^0?5\d{9}$/.test(n) && !/^905\d{9}$/.test(n)) return bildir('Geçerli bir cep telefonu girin', 'uyari'); S.kurs.wp = w.value.trim(); islem('Kursun WhatsApp hattını girdi'); kaydet(); } await imzaIste(tur, k, dersIdleri); kapatPencere(); bildir(apiAcik() ? 'İmza linki WhatsApp’tan gönderildi' : 'İmza linki hazırlandı; WhatsApp’ta mesajı gönderin', 'wp'); import('./app.js?v=205').then(m => m.yenile()); }); },
+    onAc(d) { d.querySelector('[data-k]').addEventListener('click', async () => { const w = d.querySelector('#i-wp'); if (w) { const n = w.value.replace(/\D/g, ''); if (!/^0?5\d{9}$/.test(n) && !/^905\d{9}$/.test(n)) return bildir('Geçerli bir cep telefonu girin', 'uyari'); S.kurs.wp = w.value.trim(); islem('Kursun WhatsApp hattını girdi'); kaydet(); } await imzaIste(tur, k, dersIdleri); kapatPencere(); bildir(apiAcik() ? 'İmza linki WhatsApp’tan gönderildi' : 'İmza linki hazırlandı; WhatsApp’ta mesajı gönderin', 'wp'); import('./app.js?v=206').then(m => m.yenile()); }); },
   });
 }

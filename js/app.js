@@ -1,23 +1,24 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=205';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=205';
-import * as Y1 from './sayfalar1.js?v=205';
-import * as Y2 from './sayfalar2.js?v=205';
-import * as P from './portal.js?v=205';
-import * as Y3 from './sayfalar3.js?v=205';
-import * as Y4 from './sayfalar4.js?v=205';
-import * as Y5 from './sayfalar5.js?v=205';
-import * as IM from './imza.js?v=205';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=205';
-import * as SN from './senaryo.js?v=205';
-import * as OZ from './ozellik.js?v=205';
-import { durumlariGuncelle } from './mesaj.js?v=205';
-import { yeniMenu } from './yeni.js?v=205';
-import * as B from './bulut.js?v=205';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=205';
-import * as AN from './analiz.js?v=205';
-import * as GZ from './guzergah.js?v=205';
-import * as ORT from './ortak.js?v=205';
-import * as SH from './sahip.js?v=205';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=206';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=206';
+import * as Y1 from './sayfalar1.js?v=206';
+import * as Y2 from './sayfalar2.js?v=206';
+import * as P from './portal.js?v=206';
+import * as OXU from './ogr/ui.js?v=206';
+import * as Y3 from './sayfalar3.js?v=206';
+import * as Y4 from './sayfalar4.js?v=206';
+import * as Y5 from './sayfalar5.js?v=206';
+import * as IM from './imza.js?v=206';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=206';
+import * as SN from './senaryo.js?v=206';
+import * as OZ from './ozellik.js?v=206';
+import { durumlariGuncelle } from './mesaj.js?v=206';
+import { yeniMenu } from './yeni.js?v=206';
+import * as B from './bulut.js?v=206';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=206';
+import * as AN from './analiz.js?v=206';
+import * as GZ from './guzergah.js?v=206';
+import * as ORT from './ortak.js?v=206';
+import * as SH from './sahip.js?v=206';
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -29,7 +30,7 @@ const SAYFALAR = {
 };
 const ROL_AD = { mudur: 'Kurs müdürü', sekreter: 'Ön büro', usta: 'Usta öğretici', ortak: 'Ortak' };
 const YASAK = { mudur: [], sekreter: ['raporlar', 'ayarlar', 'guven', 'kurulum', 'senaryo', 'karlilik', 'analiz'], usta: Object.keys(SAYFALAR).filter(k => !['egitmen', 'imza-geldi'].includes(k)), ortak: Object.keys(SAYFALAR) };
-const izinli = ad => { const u = oturum.kullanici; return u && !YASAK[u.rol].includes(ad) && !((u.ziyaretci || u.bulut) && ad === 'senaryo'); };
+const izinli = ad => { const u = oturum.kullanici; return u && !(YASAK[u.rol] || Object.keys(SAYFALAR)).includes(ad) && !((u.ziyaretci || u.bulut) && ad === 'senaryo'); };
 
 // Menü günlük işe göre: önce bugün, sonra öğrenci işleri, para, kurum işleri, analiz; az kullanılanlar en altta
 const MENU = [
@@ -114,7 +115,7 @@ function iskelet() {
       <div class="yan-alt"><b>${e(oturum.kullanici.ad)}</b><span>${ROL_AD[oturum.kullanici.rol]}</span>${S.kurs.demoNumara ? `<span style="display:block;margin-top:4px;font-size:12px;opacity:.85">Mesajlar → ${e(S.kurs.demoNumara)}</span>` : ''}<button class="dg dg-cizgi dg-kucuk" style="margin-top:8px;width:100%;background:transparent;color:#fff;border-color:#fff" data-cikis>${oturum.kullanici.bulut ? 'Çıkış yap' : 'Kullanıcı değiştir'}</button></div>
     </div></aside>
     <div class="ana">
-      ${oturum.kullanici.rol === 'usta' ? `<header class="app-ust">${APP_LOGO}<span class="app-ust-ad"><b>${e(S.kurs.ad)}</b>${oturum.kullanici.bulut ? '<span id="bulut-durum" class="bulut-durum" role="status"></span>' : '<small>Öğretmen</small>'}</span><h1 id="ust-baslik" class="gizli-et">Öğretmen ekranı</h1><small id="ust-alt" hidden></small><button type="button" class="app-profil" data-hesap aria-label="Hesabım: ${e(oturum.kullanici.ad)}">${basHarf(oturum.kullanici.ad)}</button></header>` : `<header class="ust">
+      ${oturum.kullanici.rol === 'usta' ? `${(() => { const eg = S.egitmenler.find(x => x.id === oturum.kullanici.usta); return OXU.ustCubuk({ logo: APP_LOGO, kurs: S.kurs.ad, ad: (eg && eg.ad) || oturum.kullanici.ad, foto: eg && eg.foto }); })()}<header class="app-ust">${APP_LOGO}<span class="app-ust-ad"><b>${e(S.kurs.ad)}</b>${oturum.kullanici.bulut ? '<span id="bulut-durum" class="bulut-durum" role="status"></span>' : '<small>Öğretmen</small>'}</span><h1 id="ust-baslik" class="gizli-et">Öğretmen ekranı</h1><small id="ust-alt" hidden></small><button type="button" class="app-profil" data-hesap aria-label="Hesabım: ${e(oturum.kullanici.ad)}">${basHarf(oturum.kullanici.ad)}</button></header>` : `<header class="ust">
         <button class="dg-ikon mobil-ust-sol" data-yan aria-label="Menüyü aç">${ik('menu')}</button>
         <div class="ust-baslik"><small id="ust-alt">${bugunMetni()}</small>${oturum.kullanici.bulut ? '<span id="bulut-durum" class="bulut-durum" role="status"></span>' : ''}<h1 id="ust-baslik">Genel bakış</h1></div>
         <a class="dg dg-hafif portal-geri" href="#/genel">← Panele dön</a>
@@ -165,6 +166,8 @@ export function yenile(kaydirma = false) {
   const portal = r.ad === 'egitmen' || r.ad === 'ogrenci' || r.ad === 'kayit';
   document.body.classList.toggle('portal-modu', portal);
   document.body.classList.toggle('usta-modu', oturum.kullanici.rol === 'usta');
+  // yeni tasarım sınıfları yalnız öğrenci ve öğretmen ekranında; kurs ekranlarına sızmasın
+  if (!['ogrenci', 'usta'].includes(oturum.kullanici.rol)) document.body.classList.remove('ox-modu', 'ox-tam-acik', 'ox-akis-acik');
   temaRengi(portal && oturum.kullanici.rol === 'usta');
   let s;
   try { s = SAYFALAR[r.ad](r.id); }
@@ -290,9 +293,170 @@ function demoyaGir() {
   try { sessionStorage.setItem('sinyal-oturum', JSON.stringify(oturum.kullanici)); } catch (x) { }
   iskelet(); location.hash = '#/genel'; sonAd = rota().ad; yenile(true); window.scrollTo(0, 0);
 }
+/* ---------- öğretmen girişi (#/ogretmen-giris) ve şifre yenileme: öğrenci/öğretmen uygulamasının ox- dili; sınıflar ox-ugr- önekli ----------
+   body'ye ox-modu eklenmez: ox değişkenleri kendi kabuğunda tanımlanır (imza sayfası gibi), böylece öğrenci girişine ve kurs girişine sızmaz.
+   Kabuk .giris sınıfını da taşır: oturum yokken yenile() ekranda .giris varsa giriş ekranını yeniden çizmez. Giriş mantığı eski formla aynı. */
+const UGR_ZARF = '<svg class="ox-i" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.6"/><path d="m3.8 7.4 8.2 5.8 8.2-5.8"/></svg>';
+const UGR_GOZ_KAPALI = '<svg class="ox-i" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.4 5.7c.5-.1 1-.2 1.6-.2 6 0 9.5 6.5 9.5 6.5a16 16 0 0 1-2.5 3.3M6.7 6.8C4.1 8.5 2.5 12 2.5 12S6 18.5 12 18.5c1.8 0 3.4-.6 4.8-1.4M9.9 9.9a3 3 0 0 0 4.2 4.2M3.5 3.5l17 17"/></svg>';
+function ugrStil() {
+  const s = document.querySelector('style[data-ox="ox-temel"]'), m = s && /body\.ox-modu\{([^}]*)\}/.exec(s.textContent);
+  const dg = m ? m[1].split(';').map(x => x.trim()).filter(x => x.startsWith('--')).join(';') : '';
+  OXU.stilEkle('ox-ugr', `
+.ox-ugr.giris{${dg};display:block;min-height:100vh;min-height:100dvh;padding:0;gap:0;place-items:normal;align-content:normal;position:relative;isolation:auto;background:var(--ox-zemin);color:var(--ox-metin);font-family:var(--ox-yazi);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+html body:has(.ox-ugr){background:#f7f8fa}
+.ox-ugr *{box-sizing:border-box}
+.ox-ugr :is(h1,h2,b,input,button,label){font-family:inherit}
+.ox-ugr-ust{position:sticky;top:0;z-index:5;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;background:rgba(247,248,250,.86);-webkit-backdrop-filter:saturate(180%) blur(18px);backdrop-filter:saturate(180%) blur(18px)}
+.ox-ugr-ust .ox-ust-ic{min-height:44px}
+.ox.ox-ugr-govde{padding-bottom:calc(36px + env(safe-area-inset-bottom))}
+.ox-ugr-sayfa .ox-sayfa-bas{margin:18px 0 24px}
+.ox-ugr-sayfa .ox-geri+.ox-sayfa-bas{margin-top:4px}
+.ox-ugr-sayfa .ox-sayfa-bas h1:focus{outline:0}
+.ox-ugr-sayfa .ox-sayfa-bas p{font-size:15.5px;line-height:1.4}
+.ox-ugr-gir{animation:oxUgrGir .26s cubic-bezier(.2,.7,.3,1)}
+@keyframes oxUgrGir{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+/* alanlar: simgeli beyaz kutu, odakta mavi halka, hatada kırmızı çerçeve ve altında kısa açıklama */
+.ox-ugr-form{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.ox-ugr-gizli{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.ox-ugr-kutu{position:relative;display:flex;align-items:center;height:56px;background:var(--ox-kart);border:1px solid var(--ox-cizgi);border-radius:14px;box-shadow:var(--ox-golge);transition:border-color .15s,box-shadow .15s}
+.ox-ugr-kutu:focus-within{border-color:var(--ox-mavi);box-shadow:0 0 0 3.5px rgba(10,102,242,.14)}
+.ox-ugr-kutu>.ox-i{position:absolute;left:16px;top:50%;margin-top:-11px;color:var(--ox-soluk);pointer-events:none;transition:color .15s}
+.ox-ugr-kutu:focus-within>.ox-i{color:var(--ox-mavi)}
+.ox-ugr-kutu input{flex:1;min-width:0;width:0;height:100%;margin:0;border:0;border-radius:14px;background:transparent;padding:0 16px 0 50px;font-size:17px;font-weight:400;letter-spacing:-.01em;color:var(--ox-bas);outline:0;box-shadow:none;-webkit-appearance:none;appearance:none}
+.ox-ugr-kutu input::placeholder{color:var(--ox-soluk);opacity:1}
+.ox-ugr-kutu input:-webkit-autofill{-webkit-box-shadow:0 0 0 40px #fff inset;-webkit-text-fill-color:var(--ox-bas);caret-color:var(--ox-bas)}
+.ox-ugr-kutu:has(.ox-ugr-goz) input{padding-right:4px}
+.ox-ugr .ox-ugr-goz{flex:none;display:grid;place-items:center;width:52px;height:100%;border-radius:0 14px 14px 0;color:var(--ox-ikincil)}
+.ox-ugr .ox-ugr-goz:focus-visible{outline-offset:-4px}
+.ox-ugr-goz .ox-i+.ox-i,.ox-ugr-goz.acik .ox-i:first-child{display:none}
+.ox-ugr-goz.acik .ox-i+.ox-i{display:block}
+.ox-ugr-alan.hatali .ox-ugr-kutu{border-color:var(--ox-kirmizi);box-shadow:0 0 0 3.5px rgba(229,72,77,.12)}
+.ox-ugr-alan.hatali .ox-ugr-kutu>.ox-i{color:var(--ox-kirmizi)}
+.ox-ugr-ipucu{display:flex;align-items:center;gap:6px;margin:7px 2px 0;font-size:14px;line-height:1.3;color:var(--ox-kirmizi)}
+.ox-ugr-ipucu .ox-i{width:17px;height:17px;stroke-width:2}
+.ox-ugr-ipucu[hidden]{display:none}
+/* durum kutuları: kırmızı (giriş olmadı) ve yeşil (bağlantı gönderildi) */
+.ox-ugr-uyari,.ox-ugr-tamam{display:flex;align-items:flex-start;gap:11px;padding:13px 15px;border-radius:14px;font-size:15px;line-height:1.4;overflow-wrap:anywhere}
+.ox-ugr-uyari{background:var(--ox-kirmizi-acik);border:1px solid #f8d0d1;color:#7a2326}
+.ox-ugr-uyari .ox-i{width:21px;height:21px;color:var(--ox-kirmizi)}
+.ox-ugr-uyari[hidden]{display:none}
+.ox-ugr-tamam{margin-top:16px;padding:15px 16px;background:var(--ox-yesil-acik);border:1px solid #c5e8d3;color:#145c36}
+.ox-ugr-tamam .ox-i{width:24px;height:24px;margin-top:-1px;color:var(--ox-yesil);stroke-width:2}
+.ox-ugr-tamam b{display:block;font-size:16px;font-weight:700;color:#0f5130;margin-bottom:2px}
+.ox-ugr-tamam p{font-size:14.5px;color:#2a6b47}
+.ox-ugr-uyari>span,.ox-ugr-tamam>div{flex:1;min-width:0}
+/* düğmeler */
+.ox-ugr .ox-ugr-dg{min-height:52px;margin-top:4px}
+.ox-ugr .ox-ugr-dg:disabled{opacity:1}
+.ox-ugr .ox-dg-ana.ox-ugr-dg:disabled{background:#4a8cf5}
+.ox-ugr-don{width:18px;height:18px;flex:none;border-radius:50%;border:2.2px solid rgba(255,255,255,.4);border-top-color:#fff;animation:oxUgrDon .7s linear infinite}
+.ox-dg-ikincil .ox-ugr-don{border-color:rgba(10,102,242,.25);border-top-color:var(--ox-mavi)}
+@keyframes oxUgrDon{to{transform:rotate(360deg)}}
+.ox-ugr-unut{display:flex;justify-content:center;margin-top:18px}
+.ox-ugr-unut .ox-bag{min-height:44px}
+.ox-ugr-unut .ox-bag::after{inset:0 -8px}
+/* başka giriş yolları */
+.ox-ugr-ara{display:flex;align-items:center;gap:12px;margin:30px 0 12px;font-size:14px;font-weight:600;color:var(--ox-ikincil)}
+.ox-ugr-ara::before,.ox-ugr-ara::after{content:"";flex:1;border-top:1px solid var(--ox-cizgi)}
+.ox-ugr .ox-liste .ox-satir{min-height:66px}
+.ox-ugr .ox-not{margin-top:18px}
+.ox-ugr-son{display:flex;justify-content:center;margin-top:22px}
+.ox-ugr-son .ox-bag{min-height:44px;font-size:15px;font-weight:500;color:var(--ox-ikincil)}
+.ox-ugr-son .ox-bag::after{inset:0 -8px}
+/* başarısız girişten sonra gelen yardım kutusu (sahip.js yardimHtml) */
+.ox-ugr .og-yardim{margin-top:16px;padding:16px;border-radius:var(--ox-r);background:var(--ox-kart);border:1px solid var(--ox-cizgi);box-shadow:var(--ox-golge);gap:6px;animation:oxUgrGir .26s cubic-bezier(.2,.7,.3,1)}
+.ox-ugr .og-yardim b{font-size:16px;font-weight:700;color:var(--ox-bas)}
+.ox-ugr .og-yardim p{font-size:14.5px;line-height:1.45;color:var(--ox-ikincil)}
+.ox-ugr .og-yardim .og-yardim-dg{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;height:auto;margin-top:8px;padding:10px 16px;border:0;border-radius:var(--ox-r-dg);background:var(--ox-mavi-acik);color:var(--ox-mavi);font-size:15.5px;font-weight:600;line-height:1.3;white-space:normal;box-shadow:none}
+.ox-ugr .og-yardim .og-yardim-dg:disabled{opacity:1;background:var(--ox-yesil-acik);color:var(--ox-yesil)}
+@media (prefers-reduced-motion:reduce){.ox-ugr-gir,.ox-ugr .og-yardim{animation:none}.ox-ugr-don{animation-duration:2s}}
+`);
+}
+function ogretmenGirisi() {
+  ugrStil();
+  document.title = 'Öğretmen girişi · mdSinyal';
+  const kayitli = B.bulutKayitli(), { oi, esc } = OXU, EPOSTA = /^\S+@\S+\.\S+$/;
+  const kok = document.getElementById('uyg');
+  kok.innerHTML = `<div class="giris ox-ugr"><header class="ox-ugr-ust"><div class="ox-ust-ic"><span class="ox-marka">${APP_LOGO}<span class="ox-marka-ad"><b><i>md</i>Sinyal</b><small>Öğretmen uygulaması</small></span></span></div></header><main class="ox ox-ugr-govde"></main></div>`;
+  const govde = kok.querySelector('.ox-ugr-govde');
+  let eposta = (kayitli && kayitli.eposta) || '';
+  const alan = (ad, tip, ikon, etiket, ek = '', goz = false) => `<div class="ox-ugr-alan" data-alan="${ad}"><label class="ox-ugr-gizli" for="ugr-${ad}">${etiket}</label><span class="ox-ugr-kutu">${ikon}<input id="ugr-${ad}" name="${ad}" type="${tip}" placeholder="${etiket}" aria-describedby="ugr-${ad}-ipucu" ${ek}>${goz ? `<button type="button" class="ox-ugr-goz" data-ugr-goz aria-label="Şifreyi göster" aria-pressed="false">${oi('goz')}${UGR_GOZ_KAPALI}</button>` : ''}</span><p class="ox-ugr-ipucu" id="ugr-${ad}-ipucu" hidden></p></div>`;
+  const alanHata = (f, ad, metin) => { const a = f.querySelector(`[data-alan="${ad}"]`), p = a.querySelector('.ox-ugr-ipucu'), i = a.querySelector('input'); a.classList.add('hatali'); i.setAttribute('aria-invalid', 'true'); p.innerHTML = oi('uyari') + `<span>${esc(metin)}</span>`; p.hidden = false; i.focus(); };
+  const temizle = f => { f.querySelectorAll('.ox-ugr-alan.hatali').forEach(a => { a.classList.remove('hatali'); a.querySelector('input').removeAttribute('aria-invalid'); a.querySelector('.ox-ugr-ipucu').hidden = true; }); const u = f.querySelector('.ox-ugr-uyari'); u.hidden = true; u.innerHTML = ''; };
+  const uyari = (f, metin) => { const u = f.querySelector('.ox-ugr-uyari'); u.innerHTML = oi('uyari') + `<span>${esc(metin)}</span>`; u.hidden = false; };
+  const yukle = (btn, metin) => { btn.disabled = true; btn.innerHTML = `<span class="ox-ugr-don" aria-hidden="true"></span><span>${metin}</span>`; };
+  const birak = (btn, metin) => { btn.disabled = false; btn.innerHTML = `<span>${metin}</span>`; };
+  const ac = (html, odak, anim = true) => { govde.innerHTML = `<div class="ox-ugr-sayfa${anim ? ' ox-ugr-gir' : ''}">${html}</div>`; window.scrollTo(0, 0); if (odak) { const o = govde.querySelector(odak); if (o) o.focus({ preventScroll: true }); } };
+  const ortak = f => { f.addEventListener('input', ev => { const a = ev.target.closest('.ox-ugr-alan'); if (a && a.classList.contains('hatali')) { a.classList.remove('hatali'); ev.target.removeAttribute('aria-invalid'); a.querySelector('.ox-ugr-ipucu').hidden = true; } if (ev.target.name === 'eposta') eposta = ev.target.value; }); };
+
+  function girisGoster(odak, anim = true) {
+    ac(`${OXU.sayfaBas('Öğretmen girişi', 'Kurs müdürünüzün davetiyle belirlediğiniz <span style="white-space:nowrap">e-posta</span> ve şifreyle girin.')}
+      <form class="ox-ugr-form" novalidate>
+        ${alan('eposta', 'email', UGR_ZARF, 'E-posta', `autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false" required value="${esc(eposta)}"`)}
+        ${alan('sifre', 'password', oi('kilit'), 'Şifre', 'autocomplete="current-password" required', true)}
+        <div class="ox-ugr-uyari" role="alert" hidden></div>
+        <button type="submit" class="ox-dg ox-dg-ana genis ox-ugr-dg"><span>Giriş yap</span></button>
+      </form>
+      <div class="ox-ugr-unut"><button type="button" class="ox-bag" data-sifre-unut>Şifremi unuttum</button></div>
+      <div data-yardim></div>
+      <p class="ox-ugr-ara">Öğretmen değil misiniz?</p>
+      ${OXU.liste([
+        OXU.satir({ baslik: 'Kurs müdürü ya da ön büroyum', alt: 'Kurs hesabının e-postası ve şifresiyle girin', attrs: { 'data-giris-pin': true } }),
+        OXU.satir({ baslik: 'Öğrenciyim', alt: 'Telefon numaranız ve şifrenizle girin', attrs: { 'data-ogrenci-giris': true } }),
+      ])}
+      ${OXU.not('Davetiniz yoksa kurs müdürünüze yazın. Davet bağlantısı WhatsApp’tan gelir.', 'wp')}
+      <div class="ox-ugr-son"><button type="button" class="ox-bag" data-tanitim>mdSinyal nedir?</button></div>`, odak, anim);
+    const f = govde.querySelector('form');
+    ortak(f);
+    f.querySelector('[data-ugr-goz]').addEventListener('click', ev => { const b = ev.currentTarget, i = f.sifre, acik = i.type === 'password'; i.type = acik ? 'text' : 'password'; b.classList.toggle('acik', acik); b.setAttribute('aria-pressed', acik); b.setAttribute('aria-label', acik ? 'Şifreyi gizle' : 'Şifreyi göster'); });
+    govde.querySelector('[data-sifre-unut]').addEventListener('click', () => { eposta = f.eposta.value; yenilemeGoster(); });
+    govde.querySelector('[data-giris-pin]').addEventListener('click', () => { girisEkrani('pin'); window.scrollTo(0, 0); });
+    // yalnız adres değişir; öğrenci girişini hashchange çizer (iki kez çizilirse gozBagla iki dinleyici ekler, şifre göster düğmesi çalışmaz)
+    govde.querySelector('[data-ogrenci-giris]').addEventListener('click', () => { location.hash = '#/ogrenci-giris'; });
+    govde.querySelector('[data-tanitim]').addEventListener('click', () => { girisEkrani('tanitim'); window.scrollTo(0, 0); });
+    f.addEventListener('submit', ev => {
+      ev.preventDefault(); const btn = f.querySelector('[type=submit]'), yer = govde.querySelector('[data-yardim]');
+      temizle(f);
+      if (!f.eposta.value.trim()) return alanHata(f, 'eposta', 'E-posta adresinizi yazın');
+      if (!EPOSTA.test(f.eposta.value.trim())) return alanHata(f, 'eposta', 'E-posta adresini kontrol edin');
+      if (!f.sifre.value) return alanHata(f, 'sifre', 'Şifrenizi girin');
+      yukle(btn, 'Giriliyor…'); yer.innerHTML = '';
+      B.girisYap(f.eposta.value, f.sifre.value, kodSor).then(u => bulutOturumu(u, true)).catch(x => { birak(btn, 'Giriş yap'); uyari(f, B.hataMetni(x)); if (SH.girisHatasiMi(x)) yardimAc(govde, { kim: f.eposta.value.trim(), tur: 'kurs', eposta: f.eposta.value.trim() }); });
+    });
+  }
+
+  function yenilemeGoster() {
+    ac(`${OXU.geri('Giriş', { 'data-ugr-geri': true })}
+      ${OXU.sayfaBas('Şifre yenileme', 'Hesabınıza şifre yenileme bağlantısı göndereceğiz.')}
+      <form class="ox-ugr-form" novalidate>
+        ${alan('eposta', 'email', UGR_ZARF, 'E-posta', `autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false" required value="${esc(eposta)}"`)}
+        <div class="ox-ugr-uyari" role="alert" hidden></div>
+        <button type="submit" class="ox-dg ox-dg-ana genis ox-ugr-dg"><span>Bağlantı gönder</span></button>
+      </form>
+      <div data-ugr-tamam aria-live="polite"></div>
+      ${OXU.not('Bağlantıyı açıp yeni şifrenizi belirleyin, sonra bu ekrandan girin.')}`);
+    const h1 = govde.querySelector('.ox-sayfa-bas h1'); h1.tabIndex = -1; h1.focus({ preventScroll: true });
+    const f = govde.querySelector('form'), tamam = govde.querySelector('[data-ugr-tamam]');
+    ortak(f);
+    govde.querySelector('[data-ugr-geri]').addEventListener('click', () => girisGoster('[data-sifre-unut]'));
+    f.addEventListener('submit', ev => {
+      ev.preventDefault(); const btn = f.querySelector('[type=submit]'), ep = f.eposta.value.trim();
+      temizle(f);
+      if (!ep) return alanHata(f, 'eposta', 'E-posta adresinizi yazın');
+      if (!EPOSTA.test(ep)) return alanHata(f, 'eposta', 'E-posta adresini kontrol edin');
+      yukle(btn, 'Gönderiliyor…'); tamam.innerHTML = '';
+      B.sifreSifirla(ep).then(() => {
+        btn.classList.replace('ox-dg-ana', 'ox-dg-ikincil'); birak(btn, 'Tekrar gönder');
+        tamam.innerHTML = `<div class="ox-ugr-tamam ox-ugr-gir">${oi('dogru')}<div><b>Bağlantı gönderildi.</b><p><span>${esc(ep)}</span> adresine şifre yenileme bağlantısı iletildi. Gelen kutunuzu ve spam klasörünü kontrol edin.</p></div></div>`;
+      }).catch(x => { birak(btn, btn.classList.contains('ox-dg-ikincil') ? 'Tekrar gönder' : 'Bağlantı gönder'); uyari(f, B.hataMetni(x)); });
+    });
+  }
+
+  girisGoster(null, false);
+}
 function girisEkrani(mod = 'tanitim') {
   B.sdkHazirla();
-  document.body.classList.remove('portal-modu');
+  document.body.classList.remove('portal-modu', 'ox-modu', 'ox-tam-acik', 'ox-akis-acik');
   const kok0 = document.getElementById('uyg');
   if (mod === 'tanitim' && TANITIM) {
     if (!kok0.querySelector('#tanitim') || kok0.querySelector('#tanitim').hidden) kok0.innerHTML = TANITIM;
@@ -307,6 +471,7 @@ function girisEkrani(mod = 'tanitim') {
     return;
   }
   if (mod === 'kursac') return kursAcEkrani();
+  if (mod === 'ogretmen') return ogretmenGirisi();
   // öğretmen: kurs müdürünün davetiyle belirlediği e-posta ve şifreyle girer (aynı hesap sistemi, yalnız kendi ders ekranını görür)
   const ogt = mod === 'ogretmen';
   document.title = (ogt ? 'Öğretmen girişi' : 'Giriş') + ' · mdSinyal';
@@ -329,7 +494,7 @@ function girisEkrani(mod = 'tanitim') {
   kok.querySelector('[data-tanitim]').addEventListener('click', () => { girisEkrani('tanitim'); window.scrollTo(0, 0); });
   const ka = kok.querySelector('[data-kurs-ac]'); if (ka) ka.addEventListener('click', () => pencere({ baslik: 'Kurs hesabı nasıl açılır?', icerik: '<p style="font-size:14.5px">mdSinyal hesabı kurulumla birlikte açılır: kayıtlarınızı taşırız, ekibinize kısa bir eğitim veririz. Görüşmek için <b>Servet Sakar · 0501 363 65 36</b> (telefon ve WhatsApp). Size özel hesap açma linki gönderilir.</p>', altlik: '<button class="dg dg-ana" data-kapat>Tamam</button>' }));
   const gp = kok.querySelector('[data-giris-pin]'); if (gp) gp.addEventListener('click', () => { girisEkrani('pin'); window.scrollTo(0, 0); });
-  kok.querySelector('[data-ogrenci-giris]').addEventListener('click', () => { location.hash = '#/ogrenci-giris'; ogrenciGirisEkrani(); });
+  kok.querySelector('[data-ogrenci-giris]').addEventListener('click', () => { if (location.hash === '#/ogrenci-giris') ogrenciGirisEkrani(); else location.hash = '#/ogrenci-giris'; });  // ekranı hashchange çizer (iki kez çizilirse şifre göster düğmesi bozuluyordu)
   kok.querySelector('[data-sifre-unut]').addEventListener('click', () => {
     const ep = kok.querySelector('[name=eposta]').value.trim();
     if (!/^\S+@\S+\.\S+$/.test(ep)) { bildir('Önce e-posta adresinizi yazın', 'uyari'); return kok.querySelector('[name=eposta]').focus(); }
@@ -461,6 +626,8 @@ function yardimAc(kok, { kim, tur, eposta, tel }) {
   if (kb) kb.addEventListener('click', () => { kb.disabled = true; B.ogrenciSifreTalep(tel).then(() => { kb.textContent = 'Kursuna iletildi; yeni şifren WhatsApp’tan gelecek'; }).catch(x => { kb.disabled = false; bildir(B.hataMetni(x), 'uyari'); }); });
 }
 function gozBagla(kok) {
+  // #uyg ekranlar arasında aynı öğe kalır: dinleyici bir kez bağlanır (iki kez bağlanırsa her dokunuş iki kez çevirir, şifre göster çalışmaz)
+  if (kok._gozBagli) return; kok._gozBagli = true;
   kok.addEventListener('click', ev => { const b = ev.target.closest('[data-goz]'); if (!b) return; const i = b.parentElement.querySelector('input'), ac = i.type === 'password'; i.type = ac ? 'text' : 'password'; b.setAttribute('aria-pressed', ac); b.setAttribute('aria-label', ac ? 'Şifreyi gizle' : 'Şifreyi göster'); b.classList.toggle('acik', ac); });
 }
 // mdSinyal Yönetim alt linki: #/yonetim (giriş) ve #/yonetim/kur/<davet kodu> (tek seferlik hesap oluşturma + kurulum)
@@ -598,7 +765,7 @@ function ogrenciCiz(kaydir) {
   const kok = document.getElementById('uyg');
   if (!kok.querySelector('.ogr-kabuk')) {
     const og = kursiyer(oturum.kullanici.kursiyer), adSoyad = og ? tamAd(og) : (oturum.kullanici.ad || 'Öğrenci');
-    kok.innerHTML = `<div class="ogr-kabuk"><header class="app-ust">${APP_LOGO}<span class="app-ust-ad"><b>${e(S.kurs.ad)}</b><small>Öğrenci</small></span><button type="button" class="app-profil" data-hesap aria-label="Hesabım: ${e(adSoyad)}">${basHarf(adSoyad)}</button></header><main id="icerik" class="ogr-icerik"></main></div>`;
+    kok.innerHTML = `<div class="ogr-kabuk">${OXU.ustCubuk({ logo: APP_LOGO, kurs: S.kurs.ad, ad: adSoyad, foto: og && og.foto })}<header class="app-ust">${APP_LOGO}<span class="app-ust-ad"><b>${e(S.kurs.ad)}</b><small>Öğrenci</small></span><button type="button" class="app-profil" data-hesap aria-label="Hesabım: ${e(adSoyad)}">${basHarf(adSoyad)}</button></header><main id="icerik" class="ogr-icerik"></main></div>`;
   }
   document.body.classList.add('portal-modu'); temaRengi(true);
   const yer = document.getElementById('icerik'); let s;
@@ -689,7 +856,7 @@ async function davetEkrani() {
 document.addEventListener('click', ev => { if (ev.target.closest('[data-yeniden-yukle]')) location.reload(); });
 document.addEventListener('click', ev => {
   if (ev.target.closest('[data-cikis]')) kapatPencere();
-  if (ev.target.closest('[data-hesap]')) return hesapSayfasi();
+  if (ev.target.closest('[data-hesap]')) { if (oturum.kullanici && oturum.kullanici.rol === 'usta' && document.body.classList.contains('ox-modu')) return import('./usta/ekran.js?v=206').then(m => { m.hesapAc(); yenile(true); }); return hesapSayfasi(); }
   if (ev.target.closest('[data-destek]')) return destekPenceresi();
   // Yönetim: Hesaplar telefonda profil menüsünden açılır (alt çubuk 6 sekme kalır)
   if (ev.target.closest('[data-yn-hesaplar]')) { kapatPencere(); ORT.sekmeSec('hesaplar'); yonetimCiz(true); SH.otoBaglan(); return; }

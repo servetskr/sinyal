@@ -1,26 +1,28 @@
-import { dersSirasi, oturum, islem, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, yerelZaman, BECERI, risk, ekToplam, selam, kursAdi, konuListesi, konuOner, DERS_TUR_AD, dersKalanSaat, dersIptalIz } from './veri.js?v=205';
-import { e, saatDe, saatE, tl, ik, rozet, avatar, csvIndir, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani, waAc, waNumara } from './ui.js?v=205';
-import { yenile } from './app.js?v=205';
-import { ekDersKabul, bosTeklifKabul, wpGonder, bildirimler } from './sayfalar1.js?v=205';
-import { KONULAR } from './konular.js?v=205';
+import { dersSirasi, oturum, islem, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, yerelZaman, BECERI, risk, ekToplam, selam, kursAdi, konuListesi, konuOner, DERS_TUR_AD, dersKalanSaat, dersIptalIz } from './veri.js?v=206';
+import { e, saatDe, saatE, tl, ik, rozet, avatar, csvIndir, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani, waAc, waNumara } from './ui.js?v=206';
+import { yenile } from './app.js?v=206';
+import { ekDersKabul, bosTeklifKabul, wpGonder, bildirimler } from './sayfalar1.js?v=206';
+import { KONULAR } from './konular.js?v=206';
 // Soru bankası büyük; yalnız Sınavlar sekmesi ya da test açılınca yüklenir (açılış hızını etkilemesin)
 let SORULAR = [], soruYuk = null;
 // Sorular ve levha çizimleri yalnız sınav sekmesinde yüklenir; levhalı sorularda görsel "L:<kod>" olarak durur
 let levhaSvg = () => '';
 // yüklenemezse (zayıf internet) bir sonraki dokunuşta yeniden denenir; öğrenciye haber verilir
-const sorulariYukle = () => soruYuk || (soruYuk = Promise.all([import('./sorular.js?v=205'), import('./levha.js?v=205').catch(() => null)]).then(([m, l]) => { SORULAR = m.SORULAR; if (l) levhaSvg = l.levhaSvg; }).catch(x => { soruYuk = null; bildir('Sorular yüklenemedi; internet bağlantını kontrol edip tekrar dene', 'uyari'); throw x; }));
+const sorulariYukle = () => soruYuk || (soruYuk = Promise.all([import('./sorular.js?v=206'), import('./levha.js?v=206').catch(() => null)]).then(([m, l]) => { SORULAR = m.SORULAR; if (l) levhaSvg = l.levhaSvg; }).catch(x => { soruYuk = null; bildir('Sorular yüklenemedi; internet bağlantını kontrol edip tekrar dene', 'uyari'); throw x; }));
 const gorselHtml = g => !g ? '' : String(g).startsWith('L:') ? levhaSvg(g.slice(2)) : g;
-import { randevuAl, randevuIptal, kursaYaz } from './ozellik.js?v=205';
-import * as OG from './ogrenci.js?v=205';
-import * as HZ from './hazirlik.js?v=205';
-import { ogrOzellik, ibanlar, ibanBicim, odemeKodu } from './veri.js?v=205';
-import * as GZ from './guzergah.js?v=205';
-import { ustaAlacak } from './risk.js?v=205';
-import { ayAdi } from './ozellik.js?v=205';
-import { soruKonu } from './soruKonu.js?v=205';
-import { MUFREDAT } from './ogrenci.js?v=205';
-import * as TK from './takvim.js?v=205';
-import * as OGR from './ogren.js?v=205';
+import { randevuAl, randevuIptal, kursaYaz } from './ozellik.js?v=206';
+import * as OG from './ogrenci.js?v=206';
+import * as HZ from './hazirlik.js?v=206';
+import { ogrOzellik, ibanlar, ibanBicim, odemeKodu } from './veri.js?v=206';
+import * as GZ from './guzergah.js?v=206';
+import { ustaAlacak } from './risk.js?v=206';
+import { ayAdi } from './ozellik.js?v=206';
+import { soruKonu } from './soruKonu.js?v=206';
+import { MUFREDAT } from './ogrenci.js?v=206';
+import * as TK from './takvim.js?v=206';
+import * as OGR from './ogren.js?v=206';
+import * as OX from './ogr/ekran.js?v=206';
+import * as UX from './usta/ekran.js?v=206';
 
 let egId = 'e1', egSekme = 'bugun';
 let ogId = null, ogSekme = (() => { try { return sessionStorage.getItem('sinyal-og-sekme') || 'durum'; } catch (x) { return 'durum'; } })();
@@ -32,29 +34,75 @@ const sekmeCubugu = (liste, secili, ad) => `<nav class="portal-sekme" aria-label
 const beceriGiris = () => `<p class="et">Bu dersin beceri puanı <small style="font-weight:400;color:var(--soluk)">1 zayıf · 5 sınava hazır</small></p><div class="beceri-giris">${BECERI.map(([b, ad]) => `<div class="beceri-sat"><span>${ad}</span><div class="secim">${[1, 2, 3, 4, 5].map(n => `<label><input type="radio" name="b-${b}" value="${n}"><span>${n}</span></label>`).join('')}</div></div>`).join('')}</div>`;
 // Takip formuna yazılacak konular (zorunlu alan): sıradaki ders için öneri işaretli gelir
 const konuGiris = (ks, no) => { const on = konuOner(ks.sinif, no, SINIFLAR[ks.sinif].direksiyon); return `<p class="et" style="margin-top:4px">Bu derste çalışılan konular <small style="font-weight:400;color:var(--soluk)">takip formuna yazılır</small></p><div class="secim konu-sec">${konuListesi(ks.sinif).map(([id, ad]) => `<label><input type="checkbox" name="konu" value="${id}" ${on.includes(id) ? 'checked' : ''}><span>${ad}</span></label>`).join('')}</div>`; };
-const konuOku = p => [...p.querySelectorAll('[name=konu]:checked')].map(x => x.value);
-const beceriOku = p => { const o = {}; BECERI.forEach(([b]) => { const v = p.querySelector(`[name="b-${b}"]:checked`); if (v) o[b] = +v.value; }); return Object.keys(o).length ? o : null; };
+export const konuOku = p => [...p.querySelectorAll('[name=konu]:checked')].map(x => x.value);
+export const beceriOku = p => { const o = {}; BECERI.forEach(([b]) => { const v = p.querySelector(`[name="b-${b}"]:checked`); if (v) o[b] = +v.value; }); return Object.keys(o).length ? o : null; };
 // Ders sonu: beceri puanı kaydedilir; kalma riski "yüksek"e çıkarsa müdüre haber gider
-function riskKontrol(ks, once) {
+export function riskKontrol(ks, once) {
   const r = risk(ks); if (!r || r.puan < 50 || (once && once.puan >= 50)) return;
   bildirimler([{ kim: 'mudur', metin: `${tamAd(ks)} için uygulama sınavı kalma riski yüksek (${r.puan}/100): ${r.nedenler.join('; ')}. Ek ders önermek için kursiyer dosyasını açın.`, tur: 'Sınav riski' }], 'Sınav riski yükseldi');
 }
 // Ders konumu: başlangıçta ve bitişte alınır; ekran açık kaldıkça 4 dakikada bir iz noktası düşer (web uygulaması arka planda konum alamaz)
 let izleyici = null;
-const konumOku = p => ({ enlem: +p.coords.latitude.toFixed(5), boylam: +p.coords.longitude.toFixed(5), dogruluk: Math.round(p.coords.accuracy) });
-function izBaslat(d) {
+export const konumOku = p => ({ enlem: +p.coords.latitude.toFixed(5), boylam: +p.coords.longitude.toFixed(5), dogruluk: Math.round(p.coords.accuracy) });
+export function izBaslat(d) {
   if (!navigator.geolocation || izleyici != null) return;
   let son = 0;
   izleyici = navigator.geolocation.watchPosition(p => { if (Date.now() - son < 4 * 60e3 || d.durum !== 'Planlandı') return; son = Date.now(); const k = konumOku(p); (d.iz = d.iz || []).push([new Date().toTimeString().slice(0, 5), k.enlem, k.boylam]); if (d.iz.length > 40) d.iz.shift(); kaydet(); }, () => { }, { maximumAge: 60e3 });
 }
-function izBitir(d) {
+export function izBitir(d) {
   if (izleyici != null && navigator.geolocation) navigator.geolocation.clearWatch(izleyici);
   izleyici = null;
   if (navigator.geolocation) navigator.geolocation.getCurrentPosition(p => { d.konumBit = konumOku(p); kaydet(); }, () => { d.konumBit = false; kaydet(); }, { timeout: 15000, maximumAge: 60e3 });
 }
+/* --- Ders kaydı (iş mantığı): eski pencereler ve yeni öğretmen ekranı (js/usta/ders.js) aynı işlevleri çağırır --- */
+// İmza kaydı: iki imza yerinde ya da öğretmen imzaladı, öğrencininki WhatsApp linkiyle bekleniyor
+export const imzaYerinde = (kursiyerImza, ustaImza) => ({ zaman: yerelZaman(), kursiyer: kursiyerImza, usta: ustaImza });
+export const imzaUzaktan = ustaImza => ({ zaman: yerelZaman(), kursiyer: null, kursiyerBekliyor: true, usta: ustaImza });
+// Dersi "yapıldı" kaydeder: konu, beceri, not (öğrenci notlarına da), süre ve konum bitişi; ders sayısı bir artar.
+// Geçmiş günden ya da başlatılmadan kapatılan derste süre boş kalır, "sonradan kapatıldı" işaretlenir. Kısa ders (<40 dk) uyarılır.
+// Öğrenci imzası bekleniyorsa imza linki WhatsApp'tan istenir. kapat: kayıttan hemen sonra (bildirim ve yenilemeden önce) çağrılır.
+export async function dersKaydet(d, { konular = [], beceri = null, not = '', imza = null } = {}, { kapat = null, sessiz = false } = {}) {
+  const ks = kursiyer(d.kursiyer), gecmis = d.tarih < gun(0), once = risk(ks), uzak = !!(imza && imza.kursiyerBekliyor);
+  d.beceri = beceri && Object.keys(beceri).length ? beceri : null; d.konular = konuListesi(ks.sinif).map(x => x[0]).filter(id => konular.includes(id)).concat(konular.filter(id => !konuListesi(ks.sinif).some(x => x[0] === id)));
+  const n = String(not || '').trim().slice(0, 300); if (n) { d.not = n; ks.notlar.unshift({ tarih: gun(0), metin: n }); }
+  d.durum = 'Yapıldı'; d.imza = imza;
+  if (gecmis || !d.bas) { d.sonradan = gun(0); } else { d.bit = new Date().toTimeString().slice(0, 5); izBitir(d); d.sure = d.basZaman ? Math.round((Date.now() - d.basZaman) / 60e3) : null; }
+  ks.direksiyon = Math.min(SINIFLAR[ks.sinif].direksiyon, ks.direksiyon + 1);
+  if (uzak) {
+    islem('Ders tamamlandı, öğrenci imzası istendi', tamAd(ks) + ' · ' + d.tarih + ' ' + d.saat); kaydet(); if (kapat) kapat();
+    const m = await import('./imza.js?v=206'); await m.imzaIste('ders', ks, [d.id]); if (!sessiz) bildir('Ders kaydedildi; imza linki öğrenciye gidiyor', 'wp');
+  } else {
+    if (d.sure != null && d.sure < 40) bildir(`Ders ${d.sure} dk sürdü; kısa ders olarak işaretlendi`, 'uyari');
+    islem('Ders imzalı tamamlandı', tamAd(ks) + ' · ' + d.tarih + ' ' + d.saat); kaydet(); if (kapat) kapat(); if (!sessiz) bildir('Ders imzalandı ve takip formuna işlendi');
+  }
+  yenile(); riskKontrol(ks, once);
+}
+// Öğretmen dersi iptal eder: iptal kaydı saklanır, ders silinir; öğrenciye ve kurs müdürüne nedeniyle bildirilir (nedenKod: IPTAL_NEDEN anahtarı)
+export function dersIptalEt(d, nedenKod, not = '', { kapat = null } = {}) {
+  const ks = kursiyer(d.kursiyer), h = egitmen(d.egitmen), nk = IPTAL_NEDEN.some(x => x[0] === nedenKod) ? nedenKod : IPTAL_NEDEN[0][0];
+  const neden = IPTAL_NEDEN.find(x => x[0] === nk)[1]; not = String(not || '').trim();
+  dersIptalIz(d, neden, not); S.dersler = S.dersler.filter(x => x !== d);
+  islem('Öğretmen dersi iptal etti', tamAd(ks) + ' · ' + d.tarih + ' ' + d.saat + ' · ' + neden); kaydet(); if (kapat) kapat();
+  const ogrMetin = nk === 'ogrenci' ? `${selam(ks)} ${tarihUzun(d.tarih)} ${d.saat} direksiyon dersiniz isteğiniz üzerine iptal edildi. Yeni saat için ${kursAdi('e')} yazabilirsiniz. ${h.ad}` : `${selam(ks)} ${tarihUzun(d.tarih)} ${d.saat} direksiyon dersiniz iptal edildi (${neden.toLocaleLowerCase('tr')}). Size yeni saat verilecek. ${h.ad}`;
+  bildirimler([{ kim: ks, metin: ogrMetin, tur: 'Ders iptali' }, { kim: 'mudur', metin: `${h.ad}, ${tamAd(ks)} öğrencisinin ${tarih(d.tarih)} ${d.saat} dersini iptal etti: ${neden}${not ? ' · ' + not : ''}. Saat boşaldı; öğrenciye yeni saat verin.`, tur: 'Ders iptali' }], 'Ders iptal edildi');
+  yenile();
+}
+// "Gelmedi": ders saati gelmeden işaretlenemez (false döner); öğrenciye ve kurs müdürüne haber gider
+export const gelmediOlur = d => !!d && dersKalanSaat(d) <= 0;
+export function gelmediYap(d, { kapat = null } = {}) {
+  if (!gelmediOlur(d)) { bildir('Ders saati gelmeden “gelmedi” işaretlenemez', 'uyari'); return false; }
+  const ks = kursiyer(d.kursiyer), h = egitmen(d.egitmen);
+  d.durum = 'Gelmedi'; islem('Gelmedi işaretledi', tamAd(ks) + ' · ' + d.tarih + ' ' + d.saat); kaydet(); if (kapat) kapat();
+  bildirimler([{ kim: ks, metin: `${selam(ks)} ${d.tarih === gun(0) ? '' : tarih(d.tarih) + ' '}${d.saat} direksiyon dersinde sizi bekledim ancak gelmediniz. Yeni saat için ${kursAdi('e')} yazabilirsiniz. ${h.ad}`, tur: 'Gelmedi bildirimi' }, { kim: 'mudur', metin: `${tamAd(ks)} ${tarih(d.tarih)} ${d.saat} dersine gelmedi; ${h.ad} işaretledi.`, tur: 'Gelmedi bildirimi' }], 'Derse gelmedi');
+  yenile();
+  return true;
+}
+// Öğretmenin öğrenci notu (kurs müdürü de görür); boş not yazılmaz
+export function notEkle(ks, metin) { const v = String(metin || '').trim(); if (!v) return false; ks.notlar.unshift({ tarih: gun(0), metin: v }); kaydet(); return true; }
+
 // Dersi bitirme: 3 adım (konular → değerlendirme → imzalar). Öğrenci yanında değilse imza WhatsApp'tan istenir.
 // Geçmiş günden kapanmamış ders de buradan kapatılır (başlangıç saati yoksa süre boş kalır, "sonradan kapatıldı" işaretlenir).
-function dersKapat(d) {
+export function dersKapat(d) {
   const ks = kursiyer(d.kursiyer), no = ks.direksiyon + 1, h = egitmen(d.egitmen), gecmis = d.tarih < gun(0);
   pencere({
     baslik: 'Dersi bitir', korumali: true,
@@ -79,36 +127,24 @@ function dersKapat(d) {
       };
       p.querySelector('[data-temizle-imza]').addEventListener('click', () => { ik_.temizle(); iu.temizle(); });
       geri.addEventListener('click', () => { if (adim === 1) return kapatPencere(); adim--; goster(); });
-      // ortak kayıt: konu, beceri, not, süre, konum bitişi; ders sayısı bir artar
-      const isle = imza => {
-        const once = risk(ks); d.beceri = beceriOku(p); d.konular = konuOku(p);
-        const not = p.querySelector('[data-ders-not]').value.trim().slice(0, 300); if (not) { d.not = not; ks.notlar.unshift({ tarih: gun(0), metin: not }); }
-        d.durum = 'Yapıldı'; d.imza = imza;
-        if (gecmis || !d.bas) { d.sonradan = gun(0); } else { d.bit = new Date().toTimeString().slice(0, 5); izBitir(d); d.sure = d.basZaman ? Math.round((Date.now() - d.basZaman) / 60e3) : null; }
-        ks.direksiyon = Math.min(SINIFLAR[ks.sinif].direksiyon, ks.direksiyon + 1);
-        return once;
-      };
+      const secim = () => ({ konular: konuOku(p), beceri: beceriOku(p), not: p.querySelector('[data-ders-not]').value });
       ileri.addEventListener('click', () => {
         if (adim === 1 && !konuOku(p).length) return bildir('Takip formu için dersin konusunu seç', 'uyari');
         if (adim < 3) { adim++; return goster(); }
         if (ik_.bos() || iu.bos()) return bildir('İki imza da gerekli. Öğrenci yanında değilse “WhatsApp’tan imzalat”', 'uyari');
-        const once = isle({ zaman: yerelZaman(), kursiyer: ik_.url(), usta: iu.url() });
-        if (d.sure != null && d.sure < 40) bildir(`Ders ${d.sure} dk sürdü; kısa ders olarak işaretlendi`, 'uyari');
-        islem('Ders imzalı tamamlandı', tamAd(ks) + ' · ' + d.tarih + ' ' + d.saat); kaydet(); kapatPencere(); bildir('Ders imzalandı ve takip formuna işlendi'); yenile(); riskKontrol(ks, once);
+        dersKaydet(d, { ...secim(), imza: imzaYerinde(ik_.url(), iu.url()) }, { kapat: kapatPencere });
       });
-      uzak.addEventListener('click', async () => {
+      uzak.addEventListener('click', () => {
         if (iu.bos()) return bildir('Önce sen imzala; öğrencinin imzası WhatsApp’tan istenir', 'uyari');
-        const once = isle({ zaman: yerelZaman(), kursiyer: null, kursiyerBekliyor: true, usta: iu.url() });
-        islem('Ders tamamlandı, öğrenci imzası istendi', tamAd(ks) + ' · ' + d.tarih + ' ' + d.saat); kaydet(); kapatPencere();
-        const m = await import('./imza.js?v=205'); await m.imzaIste('ders', ks, [d.id]); bildir('Ders kaydedildi; imza linki öğrenciye gidiyor', 'wp'); yenile(); riskKontrol(ks, once);
+        dersKaydet(d, { ...secim(), imza: imzaUzaktan(iu.url()) }, { kapat: kapatPencere });
       });
     },
   });
 }
 // Ders iptali (öğretmen tarafı): ders silinir, öğrenciye ve kurs müdürüne nedeniyle bildirilir; boşalan saati müdür doldurur
-const IPTAL_NEDEN = [['ogrenci', 'Öğrenci gelemeyeceğini bildirdi'], ['arac', 'Araç arızalı'], ['hava', 'Hava koşulları uygun değil'], ['ben', 'Ben gelemiyorum'], ['diger', 'Diğer']];
-function dersIptal(d) {
-  const ks = kursiyer(d.kursiyer), h = egitmen(d.egitmen);
+export const IPTAL_NEDEN = [['ogrenci', 'Öğrenci gelemeyeceğini bildirdi'], ['arac', 'Araç arızalı'], ['hava', 'Hava koşulları uygun değil'], ['ben', 'Ben gelemiyorum'], ['diger', 'Diğer']];
+export function dersIptal(d) {
+  const ks = kursiyer(d.kursiyer);
   pencere({
     baslik: 'Ders iptal edilsin mi?',
     icerik: `<p style="margin-bottom:12px"><b>${e(tamAd(ks))}</b> · ${goreli(d.tarih)} ${d.saat}. Ders silinir; öğrenciye ve kurs müdürüne haber gider, müdür yeni saat verir.</p>
@@ -116,35 +152,24 @@ function dersIptal(d) {
       <div class="alan" style="margin-top:12px"><label>Açıklama <small style="font-weight:400;color:var(--soluk)">isteğe bağlı</small></label><input class="girdi" data-iptal-not maxlength="200"></div>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-iptal-et>Dersi iptal et</button>`,
     onAc(p) {
-      p.querySelector('[data-iptal-et]').addEventListener('click', () => {
-        const nk = p.querySelector('[name=neden]:checked').value, neden = IPTAL_NEDEN.find(x => x[0] === nk)[1], not = p.querySelector('[data-iptal-not]').value.trim();
-        dersIptalIz(d, neden, not); S.dersler = S.dersler.filter(x => x !== d);
-        islem('Öğretmen dersi iptal etti', tamAd(ks) + ' · ' + d.tarih + ' ' + d.saat + ' · ' + neden); kaydet(); kapatPencere();
-        const ogrMetin = nk === 'ogrenci' ? `${selam(ks)} ${tarihUzun(d.tarih)} ${d.saat} direksiyon dersiniz isteğiniz üzerine iptal edildi. Yeni saat için ${kursAdi('e')} yazabilirsiniz. ${h.ad}` : `${selam(ks)} ${tarihUzun(d.tarih)} ${d.saat} direksiyon dersiniz iptal edildi (${neden.toLocaleLowerCase('tr')}). Size yeni saat verilecek. ${h.ad}`;
-        bildirimler([{ kim: ks, metin: ogrMetin, tur: 'Ders iptali' }, { kim: 'mudur', metin: `${h.ad}, ${tamAd(ks)} öğrencisinin ${tarih(d.tarih)} ${d.saat} dersini iptal etti: ${neden}${not ? ' · ' + not : ''}. Saat boşaldı; öğrenciye yeni saat verin.`, tur: 'Ders iptali' }], 'Ders iptal edildi');
-        yenile();
-      });
+      p.querySelector('[data-iptal-et]').addEventListener('click', () => dersIptalEt(d, p.querySelector('[name=neden]:checked').value, p.querySelector('[data-iptal-not]').value, { kapat: kapatPencere }));
     },
   });
 }
 // "Gelmedi" yanlışlıkla basılmasın: onay alınır, sonra öğrenciye ve müdüre haber gider
-function gelmediIsaretle(d) {
+export function gelmediIsaretle(d) {
   if (!d) return;
-  if (dersKalanSaat(d) > 0) return bildir('Ders saati gelmeden “gelmedi” işaretlenemez', 'uyari');
-  const ks = kursiyer(d.kursiyer), h = egitmen(d.egitmen);
+  if (!gelmediOlur(d)) return bildir('Ders saati gelmeden “gelmedi” işaretlenemez', 'uyari');
+  const ks = kursiyer(d.kursiyer);
   pencere({
     baslik: 'Öğrenci gelmedi mi?', icerik: `<p><b>${e(tamAd(ks))}</b> · ${d.tarih === gun(0) ? 'bugün' : tarih(d.tarih)} ${d.saat}. Ders “gelmedi” olarak kapanır; öğrenciye ve kurs müdürüne haber gider.</p>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-gelmedi-onay>Gelmedi</button>`,
     onAc(p) {
-      p.querySelector('[data-gelmedi-onay]').addEventListener('click', () => {
-        d.durum = 'Gelmedi'; islem('Gelmedi işaretledi', tamAd(ks) + ' · ' + d.tarih + ' ' + d.saat); kaydet(); kapatPencere();
-        bildirimler([{ kim: ks, metin: `${selam(ks)} ${d.tarih === gun(0) ? '' : tarih(d.tarih) + ' '}${d.saat} direksiyon dersinde sizi bekledim ancak gelmediniz. Yeni saat için ${kursAdi('e')} yazabilirsiniz. ${h.ad}`, tur: 'Gelmedi bildirimi' }, { kim: 'mudur', metin: `${tamAd(ks)} ${tarih(d.tarih)} ${d.saat} dersine gelmedi; ${h.ad} işaretledi.`, tur: 'Gelmedi bildirimi' }], 'Derse gelmedi');
-        yenile();
-      });
+      p.querySelector('[data-gelmedi-onay]').addEventListener('click', () => gelmediYap(d, { kapat: kapatPencere }));
     },
   });
 }
-function dersDiger(d) {
+export function dersDiger(d) {
   const ks = kursiyer(d.kursiyer);
   pencere({
     baslik: tamAd(ks), icerik: `<div class="eg-menu">
@@ -157,10 +182,20 @@ function dersDiger(d) {
         const b = ev.target.closest('[data-m]'); if (!b) return;
         if (b.dataset.m === 'iptal') return dersIptal(d);
         if (b.dataset.m === 'gelmedi') return gelmediIsaretle(d);
-        if (b.dataset.m === 'not') return pencere({ baslik: 'Not · ' + tamAd(ks), icerik: `<div class="alan"><label>Ders notu</label><textarea class="girdi" rows="3" placeholder="Örn. park etmede iyi, şerit değiştirmede ayna kontrolünü unutuyor"></textarea></div>`, altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Kaydet</button>`, onAc(q) { q.querySelector('[data-k]').addEventListener('click', () => { const v = q.querySelector('textarea').value.trim(); if (v) { ks.notlar.unshift({ tarih: gun(0), metin: v }); kaydet(); } kapatPencere(); bildir('Not kaydedildi; kurs müdürü de görür'); yenile(); }); } });
+        if (b.dataset.m === 'not') return pencere({ baslik: 'Not · ' + tamAd(ks), icerik: `<div class="alan"><label>Ders notu</label><textarea class="girdi" rows="3" placeholder="Örn. park etmede iyi, şerit değiştirmede ayna kontrolünü unutuyor"></textarea></div>`, altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Kaydet</button>`, onAc(q) { q.querySelector('[data-k]').addEventListener('click', () => { notEkle(ks, q.querySelector('textarea').value); kapatPencere(); bildir('Not kaydedildi; kurs müdürü de görür'); yenile(); }); } });
       });
     },
   });
+}
+// Dersi başlat: yalnız bugünkü ders, aynı anda tek ders; başlangıç saati ve konum kaydedilir (eski ve yeni öğretmen ekranı birlikte kullanır)
+export function dersBaslat(d, eg) {
+  if (!d) return;
+  if (d.tarih !== gun(0)) return bildir('Yalnız bugünkü ders başlatılabilir', 'uyari');
+  if (S.dersler.some(x => x !== d && x.egitmen === eg.id && x.tarih === gun(0) && x.durum === 'Planlandı' && x.bas)) return bildir('Önce başlattığın dersi bitir', 'uyari');
+  d.bas = new Date().toTimeString().slice(0, 5); d.basZaman = Date.now(); d.konum = null; islem('Dersi başlattı', tamAd(kursiyer(d.kursiyer)) + ' · ' + d.bas); kaydet(); yenile();
+  if (!navigator.geolocation) return bildir('Ders başladı; bu cihaz konum vermiyor', 'uyari');
+  izBaslat(d);
+  navigator.geolocation.getCurrentPosition(p => { d.konum = konumOku(p); kaydet(); bildir('Ders başladı; başlangıç saati ve konum kaydedildi'); yenile(); }, () => { d.konum = false; kaydet(); bildir('Ders başladı; süre kendiliğinden yazılacak'); yenile(); }, { timeout: 10000, maximumAge: 60000 });
 }
 const DURUM_TON = { 'Yapıldı': 'yesil', 'Gelmedi': 'kirmizi', 'İptal': 'notr' };
 // Günün saatine göre selam (öğretmen ve öğrenci ekranının başlığı)
@@ -226,7 +261,7 @@ const AV_RENK = ['#2f6fde', '#c2410c', '#0f8a5f', '#7a5cd6', '#b4233a', '#0e7490
 const avDaire = (k, cls = '') => k.foto ? `<img class="u-av ${cls}" src="${e(k.foto)}" alt="">` : `<span class="u-av ${cls}" style="--r:${AV_RENK[[...((k.ad || '') + (k.soyad || ''))].reduce((a, c) => a + c.charCodeAt(0), 0) % AV_RENK.length]}" aria-hidden="true">${e(((k.ad || '?')[0] + ((k.soyad || '')[0] || '')).toLocaleUpperCase('tr'))}</span>`;
 // sayfa üstü rengi: üst bölüm varsa telefonun durum çubuğu da lacivert olur
 const temaUst = koyu => { if (koyu) heroBoyutla(); if (koyu && window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) document.querySelectorAll('svg.u-gece').forEach(g => { try { g.pauseAnimations(); } catch (x) { } }); document.body.classList.toggle('hero-acik', koyu); document.body.classList.toggle('hero-gunduz', koyu && gunduzMu()); const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = koyu ? (gunduzMu() ? '#174f99' : '#0b1830') : '#f2f2f7'; };
-const dersNo = (d, k) => dersSirasi(d, k) || k.direksiyon;
+export const dersNo = (d, k) => dersSirasi(d, k) || k.direksiyon;
 // Sıradaki (ya da sürmekte olan) ders: üst bölüme taşan büyük kart, tek ana düğme
 function egSiraKart(d) {
   const k = kursiyer(d.kursiyer); if (!k) return '';
@@ -251,14 +286,14 @@ function egSatir(d, siradaki) {
     <span class="u-satir-govde"><b>${e(tamAd(k))}</b><small>${acik ? no + '. ders' : no + ' ders'} · ${e(S0.ad)}${d.durum === 'Yapıldı' && d.sure != null ? ' · ' + d.sure + ' dk' + (d.sure < 40 ? ' (kısa)' : '') : ''}</small>${imzaBek ? `<small class="uyari">İmza bekleniyor · <button class="u-bag" data-imza-tekrar="${e(d.id)}">linki yeniden gönder</button></small>` : ''}</span>${sag}${acik && !gecmis ? `<button class="u-nokta" data-ders-diger="${e(d.id)}" aria-label="${e(tamAd(k))} için diğer işlemler">${ik('nokta')}</button>` : ''}</div>`;
 }
 // Öğrenci ayrıntısı (öğretmen): alttan açılan sayfa
-function egOgrAc(k) {
+export function egOgrAc(k) {
   const S0 = SINIFLAR[k.sinif], sd = sonrakiDers(k), dd = (k.dDeneme || []).slice(-1)[0], r = risk(k), tel = (k.tel || '').replace(/\s/g, '');
   const sat = (ikon, ton, b, s2) => `<div class="u-satir"><span class="u-ik ${ton}">${ik(ikon)}</span><span class="u-satir-govde"><b>${b}</b>${s2 ? `<small>${s2}</small>` : ''}</span></div>`;
   pencere({ baslik: 'Öğrenci', alt: true, icerik: `<div class="u-ogr-ust">${avDaire(k, 'buyuk')}<div><b>${e(tamAd(k))}</b><small>${e(S0.ad)} · ${e(k.asama)}</small></div></div>
     ${S0.direksiyon ? `<div class="u-ilerleme"><span>Direksiyon dersleri</span><b>${k.direksiyon}<small>/${S0.direksiyon}</small></b>${ilerleme(k.direksiyon, S0.direksiyon, 'yesil')}</div>` : ''}
     <div class="u-liste">${sat('takvim', 'mavi', 'Sonraki ders', sd ? tarihUzun(sd.tarih) + ' · ' + sd.saat : 'Planlı ders yok')}${dd ? sat('sinav', dd.sonuc === 'Geçti' ? 'yesil' : 'kirmizi', 'Son deneme sınavı', dd.sonuc === 'Geçti' ? 'Sınavı geçerdi' : 'Sınavdan kalırdı') : ''}${r && r.puan >= 50 ? sat('uyari', 'turuncu', 'Sınav riski yüksek', 'Ek ders ve deneme önerilir') : ''}</div>
     <div class="u-sayfa-dg"><button class="u-dg birincil" data-ogr-deneme>${ik('sinav')}Deneme sınavı yap</button>${tel ? `<a class="u-dg" href="tel:${e(tel)}">${ik('tel')}Ara</a>` : ''}</div>`,
-    onAc(d) { d.querySelector('[data-ogr-deneme]').addEventListener('click', () => { kapatPencere(); import('./deneme.js?v=205').then(m => m.denemeAc(k, yenile)); }); } });
+    onAc(d) { d.querySelector('[data-ogr-deneme]').addEventListener('click', () => { kapatPencere(); import('./deneme.js?v=206').then(m => m.denemeAc(k, yenile)); }); } });
 }
 let egProg = { mod: 'hafta', kay: 0 }, egAra = '';
 const araMetin = t => String(t || '').toLocaleLowerCase('tr');
@@ -266,7 +301,7 @@ const araMetin = t => String(t || '').toLocaleLowerCase('tr');
 function araSuz(k) {
   const q = araMetin(egAra).trim(), sil = k.querySelector('[data-ara-sil]'); if (sil) sil.hidden = !q;
   let gorunen = 0;
-  k.querySelectorAll('[data-ara-grup]').forEach(g => { let n = 0; g.querySelectorAll('[data-ara]').forEach(r => { const v = !q || r.dataset.ara.includes(q) || r.dataset.ara.replace(/\s/g, '').includes(q.replace(/\s/g, '')); r.hidden = !v; if (v) n++; }); g.hidden = !n; gorunen += n; });
+  k.querySelectorAll('[data-ara-grup]').forEach(g => { let n = 0; g.querySelectorAll('[data-ara-m]').forEach(r => { const v = !q || r.dataset.araM.includes(q) || r.dataset.araM.replace(/\s/g, '').includes(q.replace(/\s/g, '')); r.hidden = !v; if (v) n++; }); g.hidden = !n; gorunen += n; });
   const yok = k.querySelector('[data-ara-yok]'); if (yok) yok.hidden = gorunen > 0;
 }
 const isoGun = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -280,16 +315,16 @@ function progAralik() {
   const [a1, b1] = [tarihOku(gunler[0]), tarihOku(gunler[6])];
   return { gunler, metin: a1.getMonth() === b1.getMonth() ? `${a1.getDate()}–${b1.getDate()} ${AY_U[b1.getMonth()]}` : `${a1.getDate()} ${AY_U[a1.getMonth()]} – ${b1.getDate()} ${AY_U[b1.getMonth()]}` };
 }
-const progDurum = d => d.durum === 'Planlandı' ? (d.tarih < gun(0) ? ['Kapanmadı', 'turuncu'] : d.bas ? ['Derste', 'mavi'] : ['Planlı', '']) : d.durum === 'Yapıldı' ? ['Yapıldı', 'yesil'] : d.durum === 'Gelmedi' ? ['Gelmedi', 'kirmizi'] : [d.durum, ''];
+export const progDurum = d => d.durum === 'Planlandı' ? (d.tarih < gun(0) ? ['Kapanmadı', 'turuncu'] : d.bas ? ['Derste', 'mavi'] : ['Planlı', '']) : d.durum === 'Yapıldı' ? ['Yapıldı', 'yesil'] : d.durum === 'Gelmedi' ? ['Gelmedi', 'kirmizi'] : [d.durum, ''];
 // Programı Excel'e: gösterilen dönemin dersleri (telefon ve kimlik bilgisi yok)
-async function progIndir(eg) {
+export async function progIndir(eg) {
   const { gunler, metin } = progAralik(), set = new Set(gunler);
   const l = S.dersler.filter(d => d.egitmen === eg.id && set.has(d.tarih)).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat));
   if (!l.length) return bildir('Bu dönemde ders yok', 'uyari');
   const sat = [['Tarih', 'Gün', 'Saat', 'Öğrenci', 'Sınıf', 'Ders no', 'Araç', 'Durum', 'Süre (dk)'], ...l.map(d => { const k = kursiyer(d.kursiyer), a = d.arac && arac(d.arac); return [d.tarih.split('-').reverse().join('.'), gunKisa(d.tarih), d.saat, k ? tamAd(k) : '', k ? SINIFLAR[k.sinif].ad : '', k ? dersNo(d, k) : '', a ? a.plaka : '', progDurum(d)[0], d.sure != null ? d.sure : '']; })];
   const ad = 'ders-programi-' + gunler[0] + '_' + gunler[gunler.length - 1];
   try {
-    await import('./sayfalar5.js?v=205').then(m => m.xlsxYukle());
+    await import('./sayfalar5.js?v=206').then(m => m.xlsxYukle());
     const X = window.XLSX, ws = X.utils.aoa_to_sheet(sat), wb = X.utils.book_new();
     ws['!cols'] = [12, 6, 7, 24, 14, 8, 12, 11, 9].map(w => ({ wch: w })); ws['!autofilter'] = { ref: 'A1:I' + sat.length };
     X.utils.book_append_sheet(wb, ws, 'Program'); X.writeFile(wb, ad + '.xlsx');
@@ -306,6 +341,7 @@ export function egitmenPortal() {
   if (!eg) return { baslik: 'Öğretmen ekranı', alt: 'Telefondan kullanılan ekran', html: `<div class="portal portal-og"><div class="u-bos">${ik('kursiyer')}<b>${usta ? 'Hesabın bir öğretmen kaydına bağlı değil' : 'Henüz öğretmen yok'}</b><p>${usta ? 'Kurs müdürü Ayarlar › Kullanıcılar’dan seni yeniden davet etmeli.' : 'Filo › Öğretmenler’den öğretmen ekleyince ders ekranı burada görünür.'}</p></div></div>` };
   egId = eg.id;
   if (!EG_SEKME.some(x => x[0] === egSekme)) egSekme = 'bugun';
+  if (usta) { const y = UX.ciz(eg, { yenile, temaUst }); if (y) return y; const us = UX.sekmeSimdi(); if (EG_SEKME.some(x => x[0] === us)) egSekme = us; }
   const benim = S.dersler.filter(d => d.egitmen === eg.id);
   const bugun = benim.filter(d => d.tarih === gun(0)).sort((a, b) => a.saat.localeCompare(b.saat));
   const kapanmamis = benim.filter(d => d.durum === 'Planlandı' && d.tarih < gun(0) && d.tarih >= gun(-60)).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat));
@@ -342,7 +378,7 @@ export function egitmenPortal() {
     // Arama kutusu; öğrenciler farklı ehliyet sınıflarındaysa sınıfa göre gruplanır
     const gruplar = new Map(); ogrenciler.forEach(k => { const ad = SINIFLAR[k.sinif].ad; if (!gruplar.has(ad)) gruplar.set(ad, []); gruplar.get(ad).push(k); });
     const satir = k => { const S0 = SINIFLAR[k.sinif], sd = sonrakiDers(k), r = risk(k);
-      return `<button class="u-satir dokun" data-ogr-ac="${e(k.id)}" data-ara="${e(araMetin(tamAd(k) + ' ' + (k.tel || '') + ' ' + (k.no || '')))}">${avDaire(k)}<span class="u-satir-govde"><b>${e(tamAd(k))}</b><small>${r && r.puan >= 50 ? '<span class="uyari">Sınav riski yüksek</span> · ' : ''}${sd ? 'Sonraki ' + goreli(sd.tarih).toLocaleLowerCase('tr') + ' ' + sd.saat : e(k.asama)}</small></span>${S0.direksiyon ? `<span class="u-deger">${k.direksiyon}/${S0.direksiyon}</span>` : ''}${ik('sag')}</button>`; };
+      return `<button class="u-satir dokun" data-ogr-ac="${e(k.id)}" data-ara-m="${e(araMetin(tamAd(k) + ' ' + (k.tel || '') + ' ' + (k.no || '')))}">${avDaire(k)}<span class="u-satir-govde"><b>${e(tamAd(k))}</b><small>${r && r.puan >= 50 ? '<span class="uyari">Sınav riski yüksek</span> · ' : ''}${sd ? 'Sonraki ' + goreli(sd.tarih).toLocaleLowerCase('tr') + ' ' + sd.saat : e(k.asama)}</small></span>${S0.direksiyon ? `<span class="u-deger">${k.direksiyon}/${S0.direksiyon}</span>` : ''}${ik('sag')}</button>`; };
     govde = `<header class="u-baslik"><h1>Öğrenciler</h1><small>${ogrenciler.length ? ogrenciler.length + ' öğrencin var' : 'Henüz öğrencin yok'}</small></header>
       ${ogrenciler.length ? `<label class="u-ara">${ik('ara')}<input type="search" data-ogr-ara placeholder="İsim ya da telefonla ara" value="${e(egAra)}" autocomplete="off" enterkeyhint="search" aria-label="Öğrenci ara"><button type="button" class="u-ara-sil" data-ara-sil aria-label="Aramayı temizle" ${egAra ? '' : 'hidden'}>${ik('kapat')}</button></label>
         ${gruplar.size > 1 ? [...gruplar].map(([ad, l]) => `<section class="u-grup" data-ara-grup><h2 class="u-grup-bas">${e(ad)}<span>${l.length} öğrenci</span></h2><div class="u-liste">${l.map(satir).join('')}</div></section>`).join('') : `<div class="u-liste" data-ara-grup>${ogrenciler.map(satir).join('')}</div>`}
@@ -366,6 +402,7 @@ export function egitmenPortal() {
       ${hero}<div class="portal portal-og ${hero ? 'hero-alti' : ''}">${govde}</div>
       <nav class="og-sekme" aria-label="Öğretmen ekranı">${EG_SEKME.map(([kk, t, i]) => `<button data-egs="${kk}" class="${kk === egSekme ? 'secili' : ''}" ${kk === egSekme ? 'aria-current="page"' : ''}>${ik(i)}<span>${t}${kk === 'bugun' && kapanmamis.length ? ' <em>' + kapanmamis.length + '</em>' : ''}</span></button>`).join('')}</nav>`,
     baglan(k) {
+      document.body.classList.remove('ox-modu', 'ox-tam-acik');
       if (usta) temaUst(!!hero);
       k.addEventListener('change', ev => { if (ev.target.matches('[data-eg]')) { egId = ev.target.value; yenile(); } });
       k.addEventListener('input', ev => { if (ev.target.matches('[data-ogr-ara]')) { egAra = ev.target.value; araSuz(k); } });
@@ -373,23 +410,14 @@ export function egitmenPortal() {
       k.addEventListener('click', ev => {
         const t = ev.target;
         const oa = t.closest('[data-ogr-ac]'); if (oa) return egOgrAc(kursiyer(oa.dataset.ogrAc));
-        const s = t.closest('[data-egs]'); if (s) { egSekme = s.dataset.egs; return yenile(true); }
+        const s = t.closest('[data-egs]'); if (s) { egSekme = s.dataset.egs; if (usta) { UX.sekmeAc(egSekme); UX.altAc(''); } return yenile(true); }
         const pm = t.closest('[data-prog-mod]'); if (pm) { egProg = { mod: pm.dataset.progMod, kay: 0 }; return yenile(); }
         const pg = t.closest('[data-prog-git]'); if (pg) { egProg.kay = +pg.dataset.progGit ? egProg.kay + +pg.dataset.progGit : 0; return yenile(); }
         if (t.closest('[data-prog-indir]')) return progIndir(eg);
         if (t.closest('[data-ara-sil]')) { egAra = ''; const i = k.querySelector('[data-ogr-ara]'); i.value = ''; araSuz(k); return i.focus(); }
-        const db = t.closest('[data-ders-basla]'); if (db) {
-          const d = S.dersler.find(x => x.id === db.dataset.dersBasla);
-          if (d.tarih !== gun(0)) return bildir('Yalnız bugünkü ders başlatılabilir', 'uyari');
-          if (benim.some(x => x !== d && x.tarih === gun(0) && x.durum === 'Planlandı' && x.bas)) return bildir('Önce başlattığın dersi bitir', 'uyari');
-          d.bas = new Date().toTimeString().slice(0, 5); d.basZaman = Date.now(); d.konum = null; islem('Dersi başlattı', tamAd(kursiyer(d.kursiyer)) + ' · ' + d.bas); kaydet(); yenile();
-          if (!navigator.geolocation) return bildir('Ders başladı; bu cihaz konum vermiyor', 'uyari');
-          izBaslat(d);
-          navigator.geolocation.getCurrentPosition(p => { d.konum = konumOku(p); kaydet(); bildir('Ders başladı; başlangıç saati ve konum kaydedildi'); yenile(); }, () => { d.konum = false; kaydet(); bildir('Ders başladı; süre kendiliğinden yazılacak'); yenile(); }, { timeout: 10000, maximumAge: 60000 });
-          return;
-        }
+        const db = t.closest('[data-ders-basla]'); if (db) return dersBaslat(S.dersler.find(x => x.id === db.dataset.dersBasla), eg);
         const y = t.closest('[data-yapildi]'); if (y) return dersKapat(S.dersler.find(x => x.id === y.dataset.yapildi));
-        const it = t.closest('[data-imza-tekrar]'); if (it) { const d = S.dersler.find(x => x.id === it.dataset.imzaTekrar); import('./imza.js?v=205').then(m => m.imzaIste('ders', kursiyer(d.kursiyer), [d.id])); return; }
+        const it = t.closest('[data-imza-tekrar]'); if (it) { const d = S.dersler.find(x => x.id === it.dataset.imzaTekrar); import('./imza.js?v=206').then(m => m.imzaIste('ders', kursiyer(d.kursiyer), [d.id])); return; }
         const g = t.closest('[data-gelmedi]'); if (g) return gelmediIsaretle(S.dersler.find(x => x.id === g.dataset.gelmedi));
         const dg = t.closest('[data-ders-diger]'); if (dg) return dersDiger(S.dersler.find(x => x.id === dg.dataset.dersDiger));
       });
@@ -505,6 +533,16 @@ function sinavMenu(k) {
   const icerik = `<section class="og-grup"><h3 class="og-grup-bas">Ders içerikleri</h3>${OG.teorikModul(k, false)}</section>`;
   return ozet + `<section class="og-grup"><h3 class="og-grup-bas">Sınavların</h3>${OG.sinavlarHtml(k)}${GZ.ogrenciHtml(k)}</section>` + (dirOnce ? dirBolum + esBolum : esBolum + dirBolum);
 }
+// Öğrenci ekranlarında ortak eylemler (ödeme, ders saati değişikliği, randevu, kursa yaz, ek ders cevabı): eski ve yeni tasarım birlikte kullanır
+function ogGenelTik(t, k) {
+  const o = t.closest('[data-ode]'); if (o) odemeYap(k, +o.dataset.ode);
+  const oe = t.closest('[data-og-ekders]'); if (oe) { if (oe.dataset.ogEkders === 'evet') ekDersKabul(k); else { k.ekDersTeklif = null; kaydet(); bildirimler([{ kim: 'mudur', metin: `${tamAd(k)} ek direksiyon dersi teklifini istemedi.`, tur: 'Kursiyer cevabı' }], 'Ek ders'); bildir('Cevabın kursa iletildi'); yenile(); } }
+  const ob = t.closest('[data-og-bos]'); if (ob) bosTeklifKabul(ob.dataset.ogBos, k.id, true);
+  const dg = t.closest('[data-degis]'); if (dg) { const sd2 = sonrakiDers(k), m = `Merhaba, ben ${tamAd(k)}. ${sd2 ? tarihUzun(sd2.tarih) + ' ' + sd2.saat + ' direksiyon dersimin saatini' : 'Ders saatimi'} değiştirmek istiyorum.`; gonderimEkle(S.kurs.ad, m, 'Kursiyer talebi'); const kno = S.kurs.wp || S.kurs.wpGenel || S.kurs.tel; if (!waNumara(kno)) return bildir('Kursun WhatsApp numarası kayıtlı değil; kursu arayın' + (S.kurs.tel ? ': ' + S.kurs.tel : ''), 'uyari'); if (waAc(kno, m, 'WhatsApp', tamAd(k), false, 'KURSA GELEN') !== 'api') bildir('WhatsApp açıldı; mesajı kursa gönder', 'wp'); }
+  if (t.closest('[data-iste]')) return randevuAl(k);
+  { const ky = t.closest('[data-kursa-yaz]'); if (ky) return kursaYaz(k, ky.dataset.kursaYaz); }
+  const oi = t.closest('[data-og-iptal]'); if (oi) return randevuIptal(k, oi.dataset.ogIptal);
+}
 const OG_SEKME = [['durum', 'Ana sayfa', 'genel'], ['ders', 'Derslerim', 'takvim'], ['sinav', 'Öğren', 'teorik'], ['odeme', 'Ödeme', 'kart'], ['evrak', 'Belgeler', 'belge']];
 export function ogrenciPortal() {
   // önizlemede ilk açılan öğrenci dolu bir örnek olsun: planlı dersi, ödenmemiş taksiti ve puanlanmış dersleri olan
@@ -514,7 +552,14 @@ export function ogrenciPortal() {
   const k = kursiyer(ogId), S0 = SINIFLAR[k.sinif];
   const sd = sonrakiDers(k);
   const sinav = S.sinavlar.filter(s => s.kursiyerler.includes(k.id) && fark(s.tarih) >= 0 && !(s.sonuc || {})[k.id]).sort((a, b) => a.tarih.localeCompare(b.tarih))[0];
+  // Yeni öğrenci tasarımı (js/ogr/): öğrencinin kendi telefonunda. Personel önizlemesi eski düzende kalır.
+  if (oturum.kullanici && oturum.kullanici.rol === 'ogrenci') {
+    const y = OX.ciz(ogSekme, { k, S0, sd, sinav, yenile, git: (sk, alt) => { ogSekme = sk; sekmeSakla(); if (alt !== undefined) OX.altAc(alt); yenile(true); }, genelTik: t => ogGenelTik(t, k), odemeYap: i => odemeYap(k, i), temaUst });
+    if (y) return y;
+  }
   let govde = '';
+  // eski düzen Öğren modülü: alt ekran değeri yeni tasarımla ortak (sessionStorage 'sinyal-og-alt'); eski düzen yalnız bildiği değerleri açar
+  const ogm = (m => m === 'sinav' || MUFREDAT.some(x => x[0] === m) ? m : null)(OGR.modulAcik());
   if (ogSekme === 'durum') govde = ogGovde(k, sd, sinav);
   if (ogSekme === 'ders') govde = OG.derslerHtml(k);
   if (ogSekme === 'odeme') govde = OG.odemelerHtml(k);
@@ -522,7 +567,7 @@ export function ogrenciPortal() {
     if (!SORULAR.length) sorulariYukle().then(() => { if (location.hash.startsWith('#/ogrenci')) yenile(); }).catch(() => { });
     const MOD_AD = { deneme: 'Deneme sınavı', hizli: 'Hızlı test', konu: 'Konu çalışması', yanlis: 'Yanlışlarım', tekrar: 'Bugünkü tekrar' };
     testGeriYukle(k);
-    if (!test.mod) { const m = OGR.modulAcik(); govde = m === 'sinav' ? OGR.modulBas('Sınava hazırlan', 'Deneme sınavı, tekrar ve sınav bilgilerin') + sinavMenu(k) : m ? OGR.modulHtml(k, m) : OGR.haritaHtml(k); }
+    if (!test.mod) { const m = ogm; govde = m === 'sinav' ? OGR.modulBas('Sınava hazırlan', 'Deneme sınavı, tekrar ve sınav bilgilerin') + sinavMenu(k) : m ? OGR.modulHtml(k, m) : OGR.haritaHtml(k); }
     else if (test.duraklat && test.i < test.liste.length) {
       const kalanDk = test.mod === 'deneme' ? Math.max(1, Math.ceil((45 * 60e3 - (test.harcanan || 0)) / 60e3)) : 0;
       govde = `<div class="kart soru" style="text-align:center"><small style="color:var(--soluk)">Yarım kalan test</small><h3 style="margin:6px 0 4px;font-size:22px">${MOD_AD[test.mod]}</h3><p style="color:var(--metin)">${test.i}/${test.liste.length} soru cevaplandı${kalanDk ? ' · ' + kalanDk + ' dakikan var' : ''}</p>${ilerleme(test.i, test.liste.length)}<div style="display:grid;gap:10px;margin-top:16px"><button class="dg dg-ana og-giris-dg" data-test-devam>Kaldığın yerden devam et</button><button class="dg dg-hafif" data-test-menu>Testi bırak</button></div></div>`;
@@ -545,7 +590,7 @@ export function ogrenciPortal() {
     }
   }
   if (ogSekme === 'evrak') govde = OG.belgelerHtml(k);
-  const ogrenAna = ogSekme === 'sinav' && !test.mod, ogrenUst = ogrenAna && !OGR.modulAcik();
+  const ogrenAna = ogSekme === 'sinav' && !test.mod, ogrenUst = ogrenAna && !ogm;
   if (ogrenUst) OGR.onYukle(() => { if (ogSekme === 'sinav') yenile(); });
   const kendi = !!(oturum.kullanici && oturum.kullanici.rol === 'ogrenci');
   return {
@@ -557,6 +602,7 @@ export function ogrenciPortal() {
     </div>
     <nav class="og-sekme" aria-label="Öğrenci paneli">${OG_SEKME.map(([kk, t, i]) => `<button data-ogs="${kk}" class="${kk === ogSekme ? 'secili' : ''}" ${kk === ogSekme ? 'aria-current="page"' : ''}>${ik(i)}<span>${t}</span></button>`).join('')}</nav>`,
     baglan(kap) {
+      document.body.classList.remove('ox-modu', 'ox-tam-acik');
       if (kendi) temaUst(ogSekme === 'durum' || ogrenUst);
       if (ogrenAna) OGR.bagla(kap, k, yenile);
       clearInterval(sayac);
@@ -568,9 +614,7 @@ export function ogrenciPortal() {
         const t = ev.target;
         const s = t.closest('[data-ogs]'); if (s) { if (s.dataset.ogs === 'sinav' && ogSekme === 'sinav' && !test.mod) OGR.modulKapat(); if (test.mod && test.i >= test.liste.length) test = { mod: null }; else if (test.mod) { test.duraklat = true; testSakla(k); } ogSekme = s.dataset.ogs; sekmeSakla(); yenile(true); }
         const gt = t.closest('[data-git]'); if (gt) { const [sk, md] = gt.dataset.git.split(':'); if (md) OG.modulAc(md); ogSekme = sk; sekmeSakla(); yenile(true); return; }
-        const o = t.closest('[data-ode]'); if (o) odemeYap(k, +o.dataset.ode);
-        const oe = t.closest('[data-og-ekders]'); if (oe) { if (oe.dataset.ogEkders === 'evet') ekDersKabul(k); else { k.ekDersTeklif = null; kaydet(); bildirimler([{ kim: 'mudur', metin: `${tamAd(k)} ek direksiyon dersi teklifini istemedi.`, tur: 'Kursiyer cevabı' }], 'Ek ders'); bildir('Cevabın kursa iletildi'); yenile(); } }
-        const ob = t.closest('[data-og-bos]'); if (ob) bosTeklifKabul(ob.dataset.ogBos, k.id, true);
+        ogGenelTik(t, k);
         const tb = t.closest('[data-test-basla]'); if (tb && !tb.disabled) { if (tb.matches('[data-og-sinava]')) ogSekme = 'sinav'; sorulariYukle().then(() => { testBaslat(tb.dataset.testBasla, k, tb.dataset.konu); yenile(true); }).catch(() => { }); }
         if (t.closest('[data-test-menu]')) { testBirak(k); yenile(true); }
         if (t.closest('[data-test-devam]')) { test.duraklat = false; test.sonTik = Date.now(); yenile(true); }
@@ -583,10 +627,6 @@ export function ogrenciPortal() {
           yenile();
         }
         if (t.closest('[data-sonraki]')) { test.i++; test.cevap = null; if (test.i >= test.liste.length) testBitir(k); else testSakla(k); yenile(); }
-        const dg = t.closest('[data-degis]'); if (dg) { const sd2 = sonrakiDers(k), m = `Merhaba, ben ${tamAd(k)}. ${sd2 ? tarihUzun(sd2.tarih) + ' ' + sd2.saat + ' direksiyon dersimin saatini' : 'Ders saatimi'} değiştirmek istiyorum.`; gonderimEkle(S.kurs.ad, m, 'Kursiyer talebi'); const kno = S.kurs.wp || S.kurs.wpGenel || S.kurs.tel; if (!waNumara(kno)) return bildir('Kursun WhatsApp numarası kayıtlı değil; kursu arayın' + (S.kurs.tel ? ': ' + S.kurs.tel : ''), 'uyari'); if (waAc(kno, m, 'WhatsApp', tamAd(k), false, 'KURSA GELEN') !== 'api') bildir('WhatsApp açıldı; mesajı kursa gönder', 'wp'); }
-        if (t.closest('[data-iste]')) return randevuAl(k);
-        { const ky = t.closest('[data-kursa-yaz]'); if (ky) return kursaYaz(k, ky.dataset.kursaYaz); }
-        const oi = t.closest('[data-og-iptal]'); if (oi) return randevuIptal(k, oi.dataset.ogIptal);
       });
     },
   };

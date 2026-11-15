@@ -20,18 +20,7 @@ export const DERSLER = {
 "KTK md. 3, 46, 47",
 "https://www.mevzuat.gov.tr/mevzuat?MevzuatNo=2918&MevzuatTur=1&MevzuatTertip=5"
 ],
-"videolar": [
-{
-"id": "l27JuT9pgw8",
-"baslik": "Trafikte kuralların önemi (Spot Film)",
-"kanal": "Trafik Başkanlığı EGM"
-},
-{
-"id": "_4EuOofsWkI",
-"baslik": "Bütün trafik kuralları bir nedene dayanır. Bu da insanları trafik kazalarından korumaya yarar. #tbt",
-"kanal": "Trafik Başkanlığı EGM"
-}
-]
+"videolar": []
 },
 "trafik-2": {
 "paragraflar": [
@@ -820,11 +809,6 @@ export const DERSLER = {
 "Karayolları Trafik Yönetmeliği md. 150 (koruyucu tertibat, çocuk bağlama sistemleri)"
 ],
 "videolar": [
-{
-"id": "xcj14aGEYBQ",
-"baslik": "Bir Kural Bir Ömür Boyu Sürecek Bir Fark Yaratır (Spot Film)",
-"kanal": "Trafik Başkanlığı EGM"
-},
 {
 "id": "vtUqqna3X2c",
 "baslik": "Cep Telefonu Kullanımı   Trafik Hayattır",

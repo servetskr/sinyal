@@ -1,7 +1,7 @@
 // Araç tekniği canlandırmaları (öğrenci ekranı): 4 zamanlı motor ve debriyaj/kalkış denemesi.
 // 4 zaman: MEB Araç Tekniği programı (2020) A bölümü, motorun çalışma prensibi. Debriyaj denemesi temsilîdir:
 // pedal hızlı bırakılırsa motor yük altında düşük devire iner ve stop eder (uygulama sınavında kalkış/rampa hatalarının çoğu).
-import { e, pencere } from './ui.js?v=205';
+import { e, pencere } from './ui.js?v=206';
 
 const ZAMAN = [
   ['Emme', 'Piston aşağı iner, emme supabı açıktır; silindire hava (benzinli motorda hava-yakıt karışımı) dolar.', '#5aa9e6'],
@@ -96,4 +96,72 @@ export function debriyajAc() {
       anim = requestAnimationFrame(kare);
     },
   });
+}
+
+/* ---------- yeni öğrenci tasarımı (js/ogr/araclar.js): sayfa içi canlandırmalar ---------- */
+// Aynı 4 zaman ve aynı krank-biyel geometrisi; renkli kesit çizimi (silindir kapağı, supaplar, buji, piston, biyel, krank).
+export const MOTOR_ZAMAN = ZAMAN;
+const GAZ = [['#cfe8fb', '#8cc6f2'], ['#8cc0f0', '#4f93dc'], ['#ffd25a', '#ff7a1a'], ['#d3d7de', '#9aa1ad']];
+export function motorKesit(a) {  // a: krank açısı 0–720 → viewBox "-5 -12.4 10 15.6"
+  const r = 1.6, l = 4.6, th = a * Math.PI / 180, py = -(r * Math.cos(th) + Math.sqrt(l * l - (r * Math.sin(th)) ** 2)), z = Math.floor((a % 720) / 180);
+  const cx = r * Math.sin(th), cy = -r * Math.cos(th), H = -(r + l) - 1.6, ust = py - 1.05, f = (a % 180) / 180;
+  const emme = z === 0 ? .5 * Math.sin(f * Math.PI) : 0, egz = z === 3 ? .5 * Math.sin(f * Math.PI) : 0, kivilcim = z === 2 && (a % 180) < 30;
+  const [g1, g2] = GAZ[z];
+  const supap = (x, ac, renk) => `<g transform="translate(${x} ${H + ac})"><rect x="-.09" y="-2.3" width=".18" height="2.3" fill="#7b8494"/><path d="M-.62 0h1.24l-.3-.26h-.64z" fill="${renk}" stroke="#4b5363" stroke-width=".05"/></g>`;
+  const ok = (x1, y1, x2, y2, renk) => `<path d="M${x1} ${y1}L${x2} ${y2}" stroke="${renk}" stroke-width=".22" stroke-linecap="round" fill="none" marker-end="url(#oxm-ok-${renk === '#2f7de1' ? 'm' : 'g'})"/>`;
+  return `<defs><linearGradient id="oxm-gaz" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${g2}"/><stop offset="1" stop-color="${g1}"/></linearGradient>
+    <linearGradient id="oxm-metal" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#a9b2bf"/><stop offset=".45" stop-color="#eef1f5"/><stop offset="1" stop-color="#9aa4b2"/></linearGradient>
+    <linearGradient id="oxm-blok" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#b9c2ce"/><stop offset=".5" stop-color="#dfe4ea"/><stop offset="1" stop-color="#b3bcc8"/></linearGradient>
+    <radialGradient id="oxm-isik" cx=".5" cy=".2" r=".8"><stop offset="0" stop-color="#fff3b0" stop-opacity=".95"/><stop offset="1" stop-color="#ff9a2a" stop-opacity="0"/></radialGradient>
+    <marker id="oxm-ok-m" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="3.4" markerHeight="3.4" orient="auto"><path d="M0 0L10 5L0 10z" fill="#2f7de1"/></marker>
+    <marker id="oxm-ok-g" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="3.4" markerHeight="3.4" orient="auto"><path d="M0 0L10 5L0 10z" fill="#7b8494"/></marker></defs>
+    <path d="M-3.2 ${H - 1.15}l-1.3-1.5h1.7l1.1 1.5zM3.2 ${H - 1.15}l1.3-1.5h-1.7l-1.1 1.5z" fill="url(#oxm-blok)" stroke="#6f7888" stroke-width=".07" stroke-linejoin="round"/>
+    <rect x="-3.25" y="${H - 1.7}" width="6.5" height="1.75" rx=".45" fill="url(#oxm-blok)" stroke="#6f7888" stroke-width=".07"/>
+    <rect x="-2.85" y="${H - .05}" width="5.7" height="${2.45 - H}" rx="1.1" fill="url(#oxm-blok)" stroke="#6f7888" stroke-width=".07"/>
+    <rect x="-2.12" y="${H}" width="4.24" height="${-H + 1.2}" rx=".25" fill="#4d5a6e"/>
+    <circle cx="0" cy="0" r="2.05" fill="#3f4b5e"/>
+    <rect x="-2.12" y="${H}" width="4.24" height="${ust - H}" fill="url(#oxm-gaz)"/>${z === 2 ? `<rect x="-2.12" y="${H}" width="4.24" height="${ust - H}" fill="url(#oxm-isik)" opacity="${(1 - f) * .9 + .1}"/>` : ''}
+    ${supap(-1.1, emme, '#5d9be6')}${supap(1.1, egz, '#9aa1ad')}
+    <rect x="-.26" y="${H - 2.45}" width=".52" height=".75" rx=".12" fill="#f4f6f9" stroke="#6f7888" stroke-width=".06"/><rect x="-.15" y="${H - 1.72}" width=".3" height="1.62" fill="#5b6475"/>
+    ${kivilcim ? `<circle cx="0" cy="${H + .25}" r=".75" fill="#ffe14d" opacity=".55"/><path d="M0 ${H - .1}l-.32 .42h.3l-.22 .48" stroke="#fff6a8" stroke-width=".14" fill="none" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
+    ${z === 0 && f < .85 ? ok(-4.1, H - 2.4, -2.5, H - .9, '#2f7de1') : ''}${z === 3 && f > .1 ? ok(2.5, H - .9, 4.1, H - 2.4, '#7b8494') : ''}
+    <path d="M-.32 ${py}L${cx - .3} ${cy}L${cx + .3} ${cy}L.32 ${py}z" fill="url(#oxm-metal)" stroke="#6f7888" stroke-width=".06" stroke-linejoin="round"/>
+    <rect x="-2.04" y="${ust}" width="4.08" height="1.85" rx=".22" fill="url(#oxm-metal)" stroke="#6f7888" stroke-width=".07"/>
+    <path d="M-2.04 ${ust + .38}h4.08M-2.04 ${ust + .62}h4.08" stroke="#8a93a2" stroke-width=".07"/>
+    <circle cx="0" cy="${py}" r=".3" fill="#cfd5dd" stroke="#6f7888" stroke-width=".06"/>
+    <circle cx="0" cy="0" r="1.25" fill="url(#oxm-metal)" stroke="#6f7888" stroke-width=".07"/><circle cx="${cx}" cy="${cy}" r=".72" fill="url(#oxm-metal)" stroke="#6f7888" stroke-width=".07"/><circle cx="${cx}" cy="${cy}" r=".3" fill="#4d5a6e"/><circle r=".34" fill="#4d5a6e"/>`;
+}
+
+// Debriyaj denemesi: debriyajAc ile aynı model (pedal 0 = basılı, 100 = bırakılmış). d nesnesini her karede ilerletir.
+export const debriyajYeni = () => ({ ped: 0, gaz: 0, devir: 850, tekerDevir: 0, motorAci: 0, diskAci: 0, stop: false, hiz: 0 });
+export function debriyajAdim(d, dt) {
+  const k = kavra(d.ped);
+  if (!d.stop) {
+    const hedef = 850 + d.gaz * 30;
+    d.devir += (hedef - d.devir) * Math.min(1, dt * 8);
+    const fark = d.devir - d.tekerDevir;
+    d.devir -= k * fark * dt * 16;
+    d.tekerDevir += k * fark * dt * 1.2;
+    d.tekerDevir = Math.max(0, d.tekerDevir - dt * 40);
+    if (d.devir < 500 && k > .3) { d.stop = true; d.devir = 0; }
+  } else { d.tekerDevir = Math.max(0, d.tekerDevir - dt * 600); }
+  d.hiz = Math.round(d.tekerDevir / 3000 * 25);
+  d.motorAci = (d.motorAci + d.devir / 60 * 360 * dt * .05) % 360; d.diskAci = (d.diskAci + d.tekerDevir / 60 * 360 * dt * .05) % 360;
+  d.kavrama = k;
+  return d;
+}
+// durum: 'stop' | 'basili' | 'kavrama' | 'tamam' | 'birakildi'
+export const debriyajDurum = d => { const k = d.kavrama == null ? kavra(d.ped) : d.kavrama; return d.stop ? 'stop' : k <= .05 ? 'basili' : k < .95 ? 'kavrama' : d.hiz > 3 ? 'tamam' : 'birakildi'; };
+export const DEBRIYAJ_METIN = {
+  basili: 'Debriyaj basılı: motor ile tekerlekler ayrık.',
+  kavrama: 'Kavrama noktası: diskler sürtünerek kavrıyor, araç yavaşça ilerlemeye başlar. Burada pedalı bir an bekletip hafif gaz ver.',
+  tamam: 'Kalkış tamam: diskler tam kavradı.',
+  birakildi: 'Debriyaj bırakıldı.',
+  stop: 'Motor stop etti. Debriyajı çok hızlı bıraktın ya da gaz vermedin. Sınavda bu sarı hata; iki kez olursa sınav biter.',
+};
+// viewBox "-10 -4.1 20 8.2": solda motor (volan), sağda debriyaj diski; pedal bırakıldıkça diskler birleşir
+export function debriyajCizim(d) {
+  const k = d.kavrama == null ? kavra(d.ped) : d.kavrama, ayrik = (1 - k) * 1.4;
+  const disk = (x, aci, a1, a2) => `<g transform="translate(${x} 0)"><rect x="-.65" y="-3.7" width="1.3" height="7.4" rx=".35" fill="${a1}" stroke="${a2}" stroke-width=".08"/>${[0, 1, 2, 3].map(i => { const y = 3 * Math.cos((aci + i * 90) * Math.PI / 180); return `<rect x="-.5" y="${(y - .24).toFixed(3)}" width="1" height=".48" rx=".12" fill="#fff" opacity="${(.3 + .55 * Math.max(0, Math.sin((aci + i * 90) * Math.PI / 180))).toFixed(3)}"/>`; }).join('')}</g>`;
+  return `<line x1="-8.6" y1="0" x2="${-1.2 - ayrik / 2}" y2="0" stroke="#8a93a2" stroke-width=".55" stroke-linecap="round"/><line x1="${1.2 + ayrik / 2}" y1="0" x2="8.6" y2="0" stroke="#8a93a2" stroke-width=".55" stroke-linecap="round"/>${disk(-.72 - ayrik / 2, d.motorAci, '#c9d1dc', '#6f7888')}${disk(.72 + ayrik / 2, d.diskAci, '#f2c27a', '#a8742a')}`;
 }
