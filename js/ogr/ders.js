@@ -241,7 +241,7 @@ async function dersAc(k, id, yenile, { gecmisVar = false, odak = null } = {}) {
       mt ? satir({ ikon: 'grafik', ton: 'mavi', baslik: `${mb} / ${mt} modül ilerlemesi`, alt: serit(mb / mt * 100, 'mavi', true), cls: 'ox-dr-ilerleme' }) : '',
     ].filter(Boolean);
     return {
-      h: `<div class="ox-dr-son">${ikonKutu('panoTik', 'mavi', true)}<h1 class="ox-dr-baslik">Konuyu tamamladın</h1><p class="ox-dr-alt">${esc(ad)}</p></div>
+      h: `<div class="ox-dr-son">${cizim('ders-tamam', '', 'ox-dr-son-cizim')}<h1 class="ox-dr-baslik">Konuyu tamamladın</h1><p class="ox-dr-alt">${esc(ad)}</p></div>
         ${satirlar.length ? liste(satirlar, 'ox-dr-sonuc') : ''}
         ${sk ? `<button type="button" class="ox-dr-siradaki" data-ox-dr-sonraki="${esc(sk.id)}"><span><small>Sıradaki konu</small><b>${esc(sk.ad)}</b></span><span class="ox-chev">${oi('sag')}</span></button>` : ''}`,
       dg: `<div class="ox-dr-dgler">${sk ? dugme('Sıradaki konu', { 'data-ox-dr-sonraki': sk.id }, { genis: true, ok: true }) : ''}${dugme('Öğren’e dön', { 'data-ox-dr-kapat': true }, { tur: sk ? 'ikincil' : 'ana', genis: true })}</div>`,
@@ -409,3 +409,4 @@ stilEkle('ox-ders', `
 @media (max-height:700px){.ox-dr-hero{width:min(64%,240px);margin-bottom:12px}.ox-dr-hero.ox-dr-c-adab{width:min(52%,200px)}.ox-dr-levha{height:144px}.ox-dr-levha svg{height:100px}.ox-dr-levha-resim{height:120px}.ox-dr-son .ox-ik-kutu.buyuk{width:72px;height:72px;border-radius:22px;margin-bottom:14px}.ox-dr-son .ox-ik-kutu.buyuk .ox-i{width:38px;height:38px}.ox-dr-sonuc{margin-top:18px}}
 @media (prefers-reduced-motion:reduce){.ox-dr{transition:none}}
 `);
+stilEkle('ox-dr-son-cizim', '.ox-dr-son-cizim{display:block;width:min(220px,62%);height:auto;aspect-ratio:4/3;margin:0 auto 6px;object-fit:contain}');

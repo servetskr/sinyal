@@ -9,7 +9,7 @@ import * as HZ from '../hazirlik.js?v=206';
 import { KONULAR } from '../konular.js?v=206';
 import { soruKonu, SORU_KONU } from '../soruKonu.js?v=206';
 import { UNITE_AD, konular, altAc, altKapat, altEkran as altSimdi } from './ogrveri.js?v=206';
-import { esc, oi, sayfaBas, geri, bolum, kart, heroKart, dugme, ikonKutu, satir, liste, cip, serit, not, bos, sekmeler, kutucuk, radyo, akisUst, akisAlt, sik, cevapKutu, baglanti, stilEkle, tl, odakTuzagi } from './ui.js?v=206';
+import { esc, oi, sayfaBas, geri, bolum, kart, heroKart, dugme, ikonKutu, satir, liste, cip, serit, not, bos, sekmeler, kutucuk, radyo, akisUst, akisAlt, sik, cevapKutu, baglanti, stilEkle, tl, odakTuzagi, gorsel } from './ui.js?v=206';
 
 const SURE = 45 * 60e3, GECME = 70, HARF = 'ABCD';
 const MOD_AD = { deneme: 'Deneme sınavı', hizli: 'Hızlı test', konu: 'Konu testi', yanlis: 'Yanlışlarım', tekrar: 'Bugünkü tekrar' };
@@ -234,7 +234,7 @@ function denemeGirisHtml(k) {
     dugme: `<div class="ox-snv-dgler ox-snv-yan">${dugme('Devam et', { 'data-snv': 'devam' }, { ok: true })}${dugme('Baştan başla', { 'data-snv': 'bastan' }, { tur: 'metin' })}</div>` }) : '';
   const dg = y ? '' : `<div class="ox-snv-dgler">${dugme('Denemeye başla', { 'data-snv-basla': 'deneme' }, { ok: true, genis: true })}</div>`;
   return geri('Öğren', { 'data-ox-alt': '' })
-    + `<div class="ox-snv-simge">${ikonKutu('panoSoru', 'mavi', true)}</div>`
+    + `<div class="ox-snv-simge">${gorsel('deneme-pano', '', 'ox-snv-cizim')}</div>`
     + sayfaBas('Deneme sınavı', `50 soru · 45 dakika · ${GECME} geçme puanı`) + yarimH
     + kart(`<ol class="ox-snv-madde">${madde.map((m, i) => `<li><span>${i + 1}</span>${m}</li>`).join('')}</ol>`, 'ox-snv-kural')
     + bolum('Son denemelerin', son.length ? `${k.deneme.length} deneme` : '') + sonH + dg;
@@ -342,7 +342,7 @@ function testAyarHtml() {
 function tekrarHtml(k) {
   const tb = HZ.tekrarBugun(k).length, top = HZ.tekrarToplam(k);
   const ic = tb
-    ? `<div class="ox-snv-merkez">${ikonKutu('kartlar', 'mavi', true)}<b>${tb} soru hazır.</b><p>${tb > 20 ? 'Bu turda 20 soru sorulur. ' : ''}Tekrar listende toplam ${top} soru var.</p></div><div class="ox-snv-dgler">${dugme('Tekrara başla', { 'data-snv-basla': 'tekrar' }, { ok: true, genis: true })}</div>`
+    ? `<div class="ox-snv-merkez">${gorsel('tekrar-kartlar', '', 'ox-snv-cizim')}<b>${tb} soru hazır.</b><p>${tb > 20 ? 'Bu turda 20 soru sorulur. ' : ''}Tekrar listende toplam ${top} soru var.</p></div><div class="ox-snv-dgler">${dugme('Tekrara başla', { 'data-snv-basla': 'tekrar' }, { ok: true, genis: true })}</div>`
     : bos('kartlar', 'Bugün tekrar sorun yok', top ? `Tekrar listende ${top} soru var; zamanı gelince burada görünür.` : 'Yanlış yaptığın sorular burada birikir ve ertesi gün yeniden sorulur.', dugme('Hızlı test çöz', { 'data-snv-basla': 'hizli' }, { tur: 'ikincil' }));
   return geri('Çalışma araçları', { 'data-ox-alt': 'araclar' }) + sayfaBas('Bugünkü tekrar', 'Önceki yanlışlarını pekiştir.') + ic
     + `<div class="ox-snv-bilgi">${oi('bilgi')}<span><b>Nasıl çalışır?</b>Yanlış yaptığın sorular 1, 3, 7, 14 ve 30 gün sonra yeniden sorulur. Doğru bildikçe aralık uzar, beşinci doğruda listeden çıkar.</span></div>`;
@@ -696,3 +696,4 @@ stilEkle('ox-sinav', `
 .ox-snv-ys.yer .ox-satir-govde i{display:block;height:12px;border-radius:6px;background:var(--ox-gri-acik)}
 .ox-snv-ys.yer .ox-satir-govde i+i{width:60%;margin-top:8px}
 `);
+stilEkle('ox-snv-cizim', '.ox-snv-cizim{display:block;width:min(220px,62%);height:auto;aspect-ratio:4/3;margin:0 auto 4px;object-fit:contain}');

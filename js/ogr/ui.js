@@ -116,7 +116,7 @@ export function heroKart({ ust = '', baslik = '', alt = '', meta = '', gorsel: g
 // çizim: img/ogr/<ad>.webp — boyutu CSS'te sabit, yüklenirken yer kaplar (kayma olmaz)
 // GORSEL_SURUM: çizimler değişince artır (servis çalışanı sürüm ekli dosyayı önbellekten verir). Ek bilerek "?${'v'}=" diye yazılır:
 // sw.js, içindeki sürüm ekleri uygulama sürümüyle uyuşmayan JS dosyasını önbelleğe almaz.
-const GORSEL_SURUM = 1;
+const GORSEL_SURUM = 2;
 export const gorsel = (ad, alt = '', cls = '') => `<img class="ox-gorsel ${cls}" src="img/ogr/${ad}.webp?${'v'}=${GORSEL_SURUM}" alt="${esc(alt)}" decoding="async" draggable="false">`;
 
 /* ---------- düğmeler ---------- */
@@ -246,7 +246,7 @@ button.ox-kart:active,button.ox-satir:active,button.ox-konu:active{background:#f
 .ox-hero-meta{margin-top:10px;font-size:14px;color:var(--ox-ikincil)}
 .ox-hero-gorsel{position:absolute;right:8px;top:14px;width:46%;max-width:210px;aspect-ratio:3/2;object-fit:contain;mix-blend-mode:multiply;pointer-events:none}
 .ox-hero-dg{position:relative;z-index:1;margin-top:18px}
-.ox-gorsel{display:block;user-select:none;-webkit-user-select:none}
+.ox-gorsel{display:block;object-fit:contain;user-select:none;-webkit-user-select:none}
 
 /* düğmeler */
 .ox-dg{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 20px;border-radius:var(--ox-r-dg);font-size:16.5px;font-weight:600;letter-spacing:-.005em;white-space:nowrap;transition:background-color .15s,transform .1s}
