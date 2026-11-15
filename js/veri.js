@@ -525,6 +525,33 @@ function goc(o) {
   const kz = {}; (o.kursiyerler || []).forEach(k => { kz[k.id] = k; });
   // örnek trafik cezaları
   if (demo && !o.cezalar && o.araclar && o.araclar.length > 1) o.cezalar = [{ id: 'c1', arac: o.araclar[1].id, egitmen: o.araclar[1].egitmen || null, tarih: gun(-12), teblig: gun(-10), tur: 'Hız sınırı', tutar: 2167, odendi: null }, { id: 'c2', arac: o.araclar[0].id, egitmen: o.araclar[0].egitmen || null, tarih: gun(-40), teblig: gun(-36), tur: 'Hatalı park', tutar: 1408, odendi: gun(-30), odenen: 1056 }];
+  // örnek sınav güzergâhları (yalnız demo; gerçek kurs verisi _bulut işaretlidir, bosVeri de uret()'in kursunu goc'tan geçirmeden kullanır):
+  // öğretmenin Bugün › Sınav güzergâhları, öğrencinin Direksiyon hazırlığı › Güzergâhlar ekranları dolu görünsün. Kurs silerse bir daha eklenmez.
+  if (demo && !o._gzOrnek) {
+    o._gzOrnek = true;
+    if (!(o.kurs.guzergahlar || []).length) {
+      const eg = o.egitmenler || [], egAd = i => (eg[i % Math.max(1, eg.length)] || {}).ad || 'Öğretmen', ofis = o.kurs.yetkili || 'Kurs';
+      const gecen = (o.kursiyerler || []).filter(k => k.dsinav && k.dsinav.sonuc === 'Geçti').slice(0, 2).map(k => ({ ad: [k.ad, k.soyad ? k.soyad.charAt(0) + '.' : ''].filter(Boolean).join(' '), tarih: k.dsinav.tarih || gun(-9) }));
+      o.kurs.guzergahlar = [
+        { id: 'gz-ornek-1', ad: '1. güzergâh · Çevre yolu', baslangic: 'Organize Sanayi sınav alanı', mesafe: 8.4, harita: '',
+          tarif: 'Sınav alanından sağa çıkılır, OSB 5. Cadde boyunca ilk ışıklı kavşağa kadar düz gidilir.\nIşıklardan sola dönülüp çevre yolu bağlantısına girilir; hızlanma şeridinden çevre yoluna katılınır.\nİkinci kavşaktan sağa çıkılır, okul önündeki 30 km/s bölgesinden geçilerek sınav alanına dönülür.',
+          puflar: [
+            { id: 'gzp-1a', metin: 'Sınav alanı çıkışındaki yaya geçidinde yaya olmasa da tam dur; görevli ilk bunu izliyor.', kim: egAd(0), rol: 'usta', tarih: gun(-24) },
+            { id: 'gzp-1b', metin: 'Çevre yoluna katılırken hızlanma şeridini sonuna kadar kullan; aynaya ve omuz üstüne bakmadan sola geçme.', kim: egAd(1), rol: 'usta', tarih: gun(-15) },
+            { id: 'gzp-1c', metin: 'Dönüşteki okul bölgesinde 30 km/s levhası var; levhadan önce yavaşla.', kim: ofis, rol: 'ofis', tarih: gun(-9) },
+          ],
+          deneyimler: gecen[0] ? [{ id: 'gzd-1a', metin: 'Çevre yoluna çıkarken trafik yoğundu; acele etmeden boşluğu bekledim, görevli bunu olumlu karşıladı.', ad: gecen[0].ad, sonuc: 'Geçti', tarih: gecen[0].tarih }] : [] },
+        { id: 'gz-ornek-2', ad: '2. güzergâh · Sanayi içi', baslangic: 'Organize Sanayi sınav alanı', mesafe: 4.6, harita: '',
+          tarif: 'Sınav alanından sola çıkılır, sanayi içindeki dar yollara girilir.\nYokuşta durup el freniyle kalkış istenir; ardından ara sokakta geri park ve dar alanda geri dönüş yapılır.\nIşıksız dörtlü kavşaktan düz geçilip sınav alanına dönülür.',
+          puflar: [
+            { id: 'gzp-2a', metin: 'Yokuşta el frenini indirmeden önce aracı debriyajla hafifçe yükle; geri kayma hata sayılıyor.', kim: egAd(0), rol: 'usta', tarih: gun(-20) },
+            { id: 'gzp-2b', metin: 'Geri parkta direksiyonu araç dururken çevirme; araç ağır ağır ilerlerken çevir.', kim: egAd(2), rol: 'usta', tarih: gun(-12) },
+            { id: 'gzp-2c', metin: 'Işıksız dörtlü kavşakta sağdan gelene yol ver; yol boş görünse de yavaşlayıp iki yana bak.', kim: egAd(1), rol: 'usta', tarih: gun(-5) },
+          ],
+          deneyimler: gecen[1] ? [{ id: 'gzd-2a', metin: 'Yokuşta biraz geri kaydım ama hemen toparladım; el frenini erken indirmeyin.', ad: gecen[1].ad, sonuc: 'Geçti', tarih: gecen[1].tarih }] : [] },
+      ];
+    }
+  }
   // öğrencinin derse verdiği puanlar (örnek veri; yaklaşık her 3 dersten 2'si puanlanmış)
   const YORUM = ['Çok sabırlı, her şeyi tekrar tekrar anlattı.', 'Park etmeyi sonunda öğrendim, teşekkürler.', 'Biraz hızlı gittik ama faydalı oldu.', 'Yokuşta kalkışı iyi çalıştık.', 'Araç çok temizdi, ders zamanında başladı.', 'Ders 10 dakika geç başladı.', 'Kavşaklarda daha çok pratik istiyorum.'];
   if (demo) (o.dersler || []).forEach(d => { if (d.durum !== 'Yapıldı' || d.ogrenciPuan !== undefined) return; const h = hs(d.id + 'p'); if (h % 3 === 0) { d.ogrenciPuan = null; return; } const puan = [5, 5, 4, 5, 4, 3, 5, 4][h % 8], yorum = h % 5 === 0 ? YORUM[h % YORUM.length] : ''; d.ogrenciPuan = { puan: yorum.includes('geç başladı') ? 3 : puan, yorum, tarih: d.tarih }; });

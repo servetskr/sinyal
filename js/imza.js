@@ -326,21 +326,97 @@ export async function imzaKontrol() {
   return n;
 }
 
+/* --- kursa gelen imza sayfası: öğrencinin imza sayfasıyla aynı dil (ox-, sınıflar ox-uim-g önekli) ---
+   Kurs ekranında (müdür / ön büro) kurs kabuğunun içinde, öğretmen ekranında öğretmen kabuğunda (ox-modu) açılır.
+   Mantık değişmedi: imzaIsle paketi çözer, mührü doğrular, kayda işler; sayfa yalnız sonucu gösterir. */
+function imGStil() {
+  imStil();
+  oxStil('ox-uim-g', `
+.ox-uim-g{${oxDegisken()}}
+body:not(.ox-modu) .ox.ox-uim-g{margin:0;padding:4px 0 32px}
+body.ox-modu .ox.ox-uim-g{padding-top:2px}
+.ox-uim-g a{text-decoration:none}
+.ox-uim-g .ox-geri{text-decoration:none}
+/* durum kartı */
+.ox-uim-durum{display:flex;align-items:flex-start;gap:14px;padding:16px;border-radius:var(--ox-r);border:1px solid var(--ox-cizgi);background:var(--ox-kart);box-shadow:var(--ox-golge)}
+.ox-uim-durum.tamam{background:var(--ox-yesil-acik);border-color:#cbe9d6}
+.ox-uim-durum.zaten{background:var(--ox-mavi-acik);border-color:#d3e3fc}
+.ox-uim-durum.hata{background:var(--ox-kirmizi-acik);border-color:#f6cfd0}
+.ox-uim-durum .ox-ik-kutu{width:48px;height:48px;border-radius:14px;background:#fff}
+.ox-uim-durum .ox-ik-kutu .ox-i{width:26px;height:26px;stroke-width:2}
+.ox-uim-durum-y{flex:1;min-width:0;display:grid;gap:3px;padding-top:2px}
+.ox-uim-durum-y h2{font-size:18px;line-height:1.25;font-weight:800;letter-spacing:-.018em;color:var(--ox-bas);margin:0;text-wrap:balance}
+.ox-uim-durum-y p{font-size:14.5px;line-height:1.4;color:var(--ox-ikincil);margin:0;overflow-wrap:anywhere;text-wrap:pretty}
+.ox-uim-durum.tamam .ox-uim-durum-y p{color:#2e5a40}
+.ox-uim-durum.hata .ox-uim-durum-y p{color:#7a2326}
+.ox-uim-durum.bekle .ox-ik-kutu .ox-i{animation:ox-uim-don 1s linear infinite}
+@keyframes ox-uim-don{to{transform:rotate(360deg)}}
+.ox-uim-g .ox-uim-bilgi{margin-top:12px}
+.ox-uim-bs-d.yesil>span{color:var(--ox-yesil)}
+/* imza önizlemesi: kutu ölçüsü sabit (3:1), resim yüklenince kayma olmaz */
+.ox-uim-onizle{padding:12px}
+.ox-uim-onizle-k{position:relative;aspect-ratio:3/1;border-radius:12px;background:#fbfcfe;border:1px solid var(--ox-ayrac);overflow:hidden}
+.ox-uim-onizle-k::after{content:"";position:absolute;left:18px;right:18px;bottom:24%;border-top:1px solid #e3e8f0;pointer-events:none}
+.ox-uim-onizle-k img{position:relative;z-index:1;display:block;width:100%;height:100%;object-fit:contain}
+.ox-uim-onizle figcaption{display:flex;justify-content:space-between;gap:12px;margin-top:10px;padding:0 4px;font-size:14px;line-height:1.35;color:var(--ox-ikincil)}
+.ox-uim-onizle figcaption b{min-width:0;font-weight:600;color:var(--ox-bas);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ox-uim-onizle figcaption span{flex:none;font-variant-numeric:tabular-nums}
+.ox-uim-g .ox-uim-dgler{margin-top:24px}
+@media (prefers-reduced-motion:reduce){.ox-uim-durum.bekle .ox-ik-kutu .ox-i{animation:none}}
+`);
+}
+const imZaman = z => z ? tarihYil(z.slice(0, 10)) + ', ' + z.slice(11, 16) : '—';
+// cihaz bilgisi linkte tarayıcının ham metni olarak gelir ("iPhone; CPU iPhone OS 18_0 like Mac OS X"); ekranda okunur hali
+function imCihaz(c) {
+  c = String(c || ''); let m;
+  if ((m = /(iPhone|iPad)[^]*?OS (\d+)(?:_(\d+))?/.exec(c))) return `${m[1]} · iOS ${m[2]}${m[3] && m[3] !== '0' ? '.' + m[3] : ''}`;
+  if ((m = /Android (\d+(?:\.\d+)?)/.exec(c))) return 'Android ' + m[1];
+  if (/Macintosh|Mac OS X/.test(c)) return 'Mac';
+  if (/Windows/.test(c)) return 'Windows';
+  return c.slice(0, 40);
+}
+const imDurum = (tur, ikon, baslik, metin) => `<div class="ox-uim-durum ${tur}" role="status">${ikonKutu(ikon, tur === 'tamam' ? 'yesil' : tur === 'hata' ? 'kirmizi' : tur === 'bekle' ? 'gri' : 'mavi')}<div class="ox-uim-durum-y"><h2>${baslik}</h2>${metin ? `<p>${metin}</p>` : ''}</div></div>`;
+
 // Kurs tarafı: dönüş linki → doğrula, kayda işle.
 export function imzaGeldi(paket) {
+  imGStil();
+  const usta = document.body.classList.contains('usta-modu');
+  // ilgili ekran: kurs ekranında öğrencinin dosyası, öğretmen ekranında Bugün
+  const donDg = k => `<div class="ox-uim-dgler">${usta
+    ? `<a class="ox-dg ox-dg-ana genis" href="#/egitmen">${oi('ev')}<span>Bugün ekranına dön</span></a>`
+    : k ? `<a class="ox-dg ox-dg-ana genis" href="#/kursiyer/${encodeURIComponent(k.id)}">${oi('kisi')}<span>Öğrenci dosyasını aç</span></a>`
+      : `<a class="ox-dg ox-dg-cizgi genis" href="#/kursiyerler">${oi('kisiler')}<span>Kursiyerlere dön</span></a>`}</div>`;
+  const ust = usta ? `<a class="ox-geri" href="#/egitmen">${oi('sol')}<span>Bugün</span></a>${oxSayfaBas('Gelen imza', 'Öğrencinin WhatsApp’tan gönderdiği imza.')}` : '';
   return {
-    baslik: 'Gelen imza', alt: 'Kursiyerin WhatsApp’tan gönderdiği imza',
-    html: `<div class="kart" style="max-width:640px;padding:22px" id="imza-sonuc"><p>İmza doğrulanıyor…</p></div>`,
+    baslik: 'Gelen imza', alt: 'Öğrencinin gönderdiği imza',
+    html: `<div class="ox ox-uim ox-uim-g" id="imza-sonuc" aria-live="polite">${ust}<div data-uim-g>${imDurum('bekle', 'sifirla', 'İmza doğrulanıyor…', 'Mühür ve belge özeti kontrol ediliyor.')}</div></div>`,
     async baglan(kap) {
-      const yer = kap.querySelector('#imza-sonuc');
+      // öğretmen: öğretmen ekranının kabuğu (marka çubuğu; kurs ekranının alt menüsü ve kenar menüsü gizli)
+      if (usta) { document.body.classList.add('ox-modu', 'portal-modu'); document.body.classList.remove('ox-tam-acik'); const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = '#f7f8fa'; }
+      const yer = kap.querySelector('[data-uim-g]');
       const s = await imzaIsle(paket);
-      if (s.hata) { yer.innerHTML = `${isaret('dur', 40)}<h2 style="margin:12px 0 6px">${s.hata[0]}</h2><p>${s.hata[1]}</p>`; return; }
-      const { t, k, r, resim } = s;
-      if (s.zaten) { yer.innerHTML = `${isaret('tamam', 40)}<h2 style="margin:12px 0 6px">Bu imza zaten işlendi</h2><p>${tamTarih(t.imzaZaman.slice(0, 10))} ${t.imzaZaman.slice(11, 16)}</p><a class="dg dg-ana" href="#/kursiyer/${k.id}">Kursiyer dosyası</a>`; return; }
-      yer.innerHTML = `${isaret('tamam', 40)}<h2 style="margin:12px 0 6px">İmza kayda işlendi</h2><p>${e(tamAd(k))} · ${t.tur === 'sozlesme' ? 'kursiyer sözleşmesi' : t.dersler.length + ' dersin takip formu'}</p>
-        <div style="border:1px solid var(--cizgi);border-radius:8px;background:#fff;margin:14px 0;padding:8px;max-width:320px"><img src="${resim}" alt="Kursiyerin imzası" style="width:100%"></div>
-        <dl class="bilgi-tablo"><dt>İmzalayan</dt><dd>${e(r.ad)}</dd><dt>Zaman</dt><dd>${s.zaman.toLocaleString('tr-TR', { dateStyle: 'medium', timeStyle: 'short' })}</dd><dt>Cihaz</dt><dd>${e(r.cihaz || '—')}</dd><dt>Doğrulama</dt><dd>Mühür ve belge özeti eşleşti</dd></dl>
-        <div style="display:flex;gap:8px;margin-top:16px"><a class="dg dg-ana" href="#/kursiyer/${k.id}">Kursiyer dosyası</a></div>`;
+      if (!yer.isConnected) return;
+      if (s.hata) { yer.innerHTML = imDurum('hata', 'uyari', e(s.hata[0]), e(s.hata[1])) + oxNot('İmza kayda geçmedi. Öğrenciye yeni imza linki gönderip tekrar imzalamasını isteyin.', 'bilgi') + donDg(null); return; }
+      const { t, k, r, resim } = s, soz = t.tur === 'sozlesme';
+      const dersler = soz ? [] : t.dersler.map(id => S.dersler.find(d => d.id === id)).filter(Boolean).sort((a, b) => (a.tarih + (a.bas || a.saat)).localeCompare(b.tarih + (b.bas || b.saat)));
+      const dSaat = d => `${d.bas || d.saat}${d.bit ? '–' + d.bit : ''}`, dUsta = d => (egitmen(d.egitmen) || {}).ad || '';
+      const belgeAd = soz ? 'Kurs sözleşmesi' : 'Ders takip formu';
+      const imzalayan = s.zaten ? (t.imzalayan || r.ad) : r.ad, zaman = imZaman(t.imzaZaman);
+      const durum = s.zaten
+        ? imDurum('zaten', 'panoTik', 'Bu imza zaten işlendi', `${e(zaman)} tarihinde kayda geçmişti; yeniden işlenmedi.`)
+        : imDurum('tamam', 'tik', 'İmza kayda işlendi', `${e(tamAd(k))} · ${soz ? 'kurs sözleşmesi' : t.dersler.length > 1 ? t.dersler.length + ' dersin takip formu' : 'ders takip formu'}`);
+      const bilgi = imBilgi([
+        ['kisi', 'Öğrenci', e(tamAd(k)), SINIFLAR[k.sinif] ? e(SINIFLAR[k.sinif].ad) : ''],
+        [soz ? 'belge' : 'panoTik', 'Belge', belgeAd, soz ? '' : t.dersler.length + ' ders'],
+        dersler.length === 1 ? ['takvim', 'Ders', tarihUzun(dersler[0].tarih), e([dSaat(dersler[0]), dUsta(dersler[0])].filter(Boolean).join(' · '))] : null,
+        ['imza', 'İmzalayan', e(imzalayan)],
+        ['saat', 'Zaman', e(zaman)],
+        r.cihaz ? ['tel', 'Cihaz', e(imCihaz(r.cihaz))] : null,
+        ['kalkan', 'Doğrulama', 'Mühür eşleşti', 'Belge özeti değişmemiş'],
+      ]).replace('<span class="ox-uim-bs-d"><span>Mühür eşleşti', '<span class="ox-uim-bs-d yesil"><span>Mühür eşleşti');
+      const liste = dersler.length > 1 ? oxBolum('Dersler', dersler.length + ' ders') + oxListe(dersler.map(d => oxSatir({ ikon: 'direksiyon', baslik: tarihUzun(d.tarih), alt: e([dSaat(d), dUsta(d)].filter(Boolean).join(' · ')), ok: false }))) : '';
+      const onizle = oxBolum('İmza') + `<figure class="ox-kart ox-uim-onizle"><div class="ox-uim-onizle-k"><img src="${resim}" alt="${e(imzalayan)} imzası" width="600" height="200"></div><figcaption><b>${e(imzalayan)}</b><span>${e(zaman)}</span></figcaption></figure>`;
+      yer.innerHTML = durum + bilgi + liste + onizle + donDg(k);
     },
   };
 }
