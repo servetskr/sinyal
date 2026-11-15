@@ -173,7 +173,7 @@ export function dokumTablo(k, ogrenciIcin = true) {
   const o = k.odeme, l = [[k.kayit, 'Kurs ücreti · ' + SINIFLAR[k.sinif].ad, o.toplam, 0]];
   (o.ekler || []).forEach(x => l.push([x.tarih || k.kayit, x.ad, x.tutar, 0]));
   if (o.pesin) l.push([o.pesinTarih || k.kayit, 'Peşinat ödendi', 0, o.pesin]);
-  o.taksitler.forEach((t, i) => { const ad = t.aciklama === 'Peşinat' ? 'Peşinat' : (t.aciklama || (i + 1) + '. taksit'); if (t.odendi) l.push([t.odendi === true ? t.vade : t.odendi, ad + ' ödendi', 0, t.tutar]); else if (t.kismi) l.push([t.vade, ad + ' · kısmi ödeme', 0, t.kismi]); });
+  o.taksitler.forEach((t, i) => { const ad = t.aciklama || taksitAd(k, i); if (t.odendi) l.push([t.odendi === true ? t.vade : t.odendi, ad + ' ödendi', 0, t.tutar]); else if (t.kismi) l.push([t.vade, ad + ' · kısmi ödeme', 0, t.kismi]); });
   (o.ekler || []).filter(x => x.odendi).forEach(x => l.push([x.odendi === true ? (x.tarih || k.kayit) : x.odendi, x.ad + ' ödendi', 0, x.tutar]));
   if (o.iade) l.push([o.iadeTarih || gun(0), 'İade', 0, -o.iade]);
   l.sort((a, b) => String(a[0]).localeCompare(String(b[0])) || (b[2] ? 1 : 0) - (a[2] ? 1 : 0));
@@ -185,13 +185,15 @@ export function hesapDokumu(k) {
   return `<details class="kart og-kart"><summary class="og-bas" style="cursor:pointer"><div><small>Hesap dökümün</small><b>Kalem kalem borç ve ödemeler</b></div></summary>${dokumTablo(k)}</details>`;
 }
 export const sonrakiTaksit = k => k.odeme.taksitler.map((t, i) => ({ t, i })).find(x => !x.t.odendi && !x.t.iptal);
-const taksitAd = (k, i) => { const l = k.odeme.taksitler, t = l[i]; return t.aciklama === 'Peşinat' ? 'Peşinat' : (i + 1 - (l[0] && l[0].aciklama === 'Peşinat' ? 1 : 0)) + '. taksit'; };
+export const taksitAd = (k, i) => { const l = k.odeme.taksitler, t = l[i]; return t.aciklama === 'Peşinat' ? 'Peşinat' : (i + 1 - (l[0] && l[0].aciklama === 'Peşinat' ? 1 : 0)) + '. taksit'; };
 export function odemelerHtml(k) {
   const toplam = k.odeme.toplam + ekToplam(k), od = odenen(k), kalan = kalanBorc(k), sn = sonrakiTaksit(k);
   const makbuzlar = S.hareket.filter(h => h.kursiyer === k.id && h.tur === 'Gelir').sort((a, b) => b.tarih.localeCompare(a.tarih));
   const gec = sn && fark(sn.t.vade) < 0;
+  const fazla = Math.max(0, od - toplam);  // fazla ödeme 0 görünmesin (denetim): kursa iade ya da sonraki kaleme sayılması için sorulur
   return `<section class="kart og-kart og-para"><small>Kalan borcun</small><b class="og-para-tutar sayi ${kalan ? '' : 'tamam'}">${tl(kalan)}</b>${ilerleme(od, toplam, 'yesil')}
       <div class="og-para-alt"><span>Ödenen <b class="sayi">${tl(od)}</b></span><span>Toplam <b class="sayi">${tl(toplam)}</b></span></div>
+      ${fazla ? `<p class="og-not" style="margin-top:8px">Fazla ödemen var: <b class="sayi">${tl(fazla)}</b>. İade ya da sonraki ücrete sayılması için kursuna sor.</p>` : ''}
       ${sn ? `<div class="og-sonraki ${gec ? 'gecikti' : ''}"><div><b>${taksitAd(k, sn.i)} · ${tl(sn.t.tutar - (sn.t.kismi || 0))}</b><small>Vade ${tarih(sn.t.vade)}${gec ? ' · gecikti' : fark(sn.t.vade) <= 7 ? ' · ' + goreli(sn.t.vade).toLocaleLowerCase('tr') : ''}</small></div><button class="dg dg-ana dg-kucuk" data-ode="${sn.i}">Nasıl öderim?</button></div>` : '<p class="og-tamam">Tüm ödemelerin tamam.</p>'}</section>
     <section class="kart og-kart"><div class="og-bas"><div><small>Ödeme planın</small><b>${k.odeme.taksitler.some(t => t.aciklama !== 'Peşinat') ? k.odeme.taksitler.filter(t => t.aciklama !== 'Peşinat').length + ' taksit' : 'Peşin'}</b></div></div>
       <div class="og-taksitler">

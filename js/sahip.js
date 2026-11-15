@@ -548,13 +548,20 @@ async function destekTikla(t) {
 // ---- giriş ekranları için: giremeyene kendiliğinden yardım ----
 // Şifre yanlış girilince form altında açılır; kişi “şifremi unuttum”u aramak zorunda kalmaz.
 export function yardimHtml({ kim = '', tur = 'kurs', eposta = false }) {
-  const metin = `Merhaba, mdSinyal${tur === 'yonetim' ? ' Yönetim' : ''}’e giremiyorum. ${kim ? 'Hesabım: ' + kim + '. ' : ''}Yeni şifre rica ediyorum.`;
-  return `<div class="og-yardim" role="status">
+  // Kurs ve Yönetim hesabında yeni şifre yalnız e-postaya gelen sıfırlama linkiyle alınır (WhatsApp'tan şifre istenmez).
+  // E-postası olmayan Yönetim kullanıcı adı için: hesabı açan yöneticiden yeni şifre istenir (Yönetim › Hesaplar › Yeni şifre ver).
+  const metin = `Merhaba, mdSinyal’e giremiyorum. ${kim ? 'Hesabım: ' + kim + '. ' : ''}Yeni şifre rica ediyorum.`;
+  if (tur === 'ogrenci') return `<div class="og-yardim" role="status">
     <b>Giremedin mi?</b>
-    <p>${tur === 'ogrenci' ? 'Şifreni hatırlamaya uğraşma. Kursuna haber ver, yeni şifren WhatsApp’tan gelsin.' : 'Şifreni hatırlamaya uğraşma. mdSinyal’e WhatsApp’tan yaz, birkaç dakikada yeni şifren gelsin.'}</p>
-    ${tur === 'ogrenci' ? '<button type="button" class="dg dg-ana og-yardim-dg" data-yardim-kurs>Kursuma haber ver</button>' : `<a class="dg dg-wp og-yardim-dg" target="_blank" rel="noopener" href="${e(waLinki(DESTEK_TEL, metin))}">${ik('wp')}WhatsApp’tan yeni şifre iste</a>`}
-    ${eposta ? '<button type="button" class="og-bag" data-yardim-eposta>Ya da e-postama sıfırlama linki gönder</button>' : ''}
-    ${tur === 'ogrenci' ? `<a class="og-bag" target="_blank" rel="noopener" href="${e(waLinki(DESTEK_TEL, metin))}">Kursuna ulaşamıyorsan mdSinyal’e yaz</a>` : ''}
+    <p>Şifreni hatırlamaya uğraşma. Kursuna haber ver, yeni şifren WhatsApp’tan gelsin.</p>
+    <button type="button" class="dg dg-ana og-yardim-dg" data-yardim-kurs>Kursuma haber ver</button>
+    <a class="og-bag" target="_blank" rel="noopener" href="${e(waLinki(DESTEK_TEL, metin))}">Kursuna ulaşamıyorsan mdSinyal’e yaz</a>
+  </div>`;
+  return `<div class="og-yardim" role="status">
+    <b>Giremediniz mi?</b>
+    ${eposta ? `<p>Şifrenizi hatırlamaya uğraşmayın. E-postanıza bir sıfırlama linki gönderelim, yeni şifrenizi kendiniz belirleyin.</p>
+    <button type="button" class="dg dg-ana og-yardim-dg" data-yardim-eposta>E-postama sıfırlama linki gönder</button>`
+    : `<p>${tur === 'yonetim' ? 'Kullanıcı adıyla açılan hesaplarda yeni şifreyi hesabı açan yönetici verir. E-posta adresinizle girdiyseniz e-postanızı yazıp “Şifremi unuttum”a basın.' : 'E-posta adresinizi yazıp “Şifremi unuttum”a basın; sıfırlama linki gelen kutunuza gelir.'}</p>`}
   </div>`;
 }
 export const girisHatasiMi = x => !!x && (/invalid-credential|wrong-password|user-not-found|invalid-login|user-disabled/.test(x.code || '') || /hatalı|hesap yok/.test(x.kullanici || ''));

@@ -511,7 +511,10 @@ const TERIMLER = [
   [new RegExp(`(?<!${H})(usta öğretici|Usta öğretici|USTA ÖĞRETİCİ)(${H}*)`, 'gu'), (m, k, ek) => ek.toLocaleLowerCase('tr') in OGRETICI_EK ? buyuk(k, 'öğretmen') + OGRETICI_EK[ek.toLocaleLowerCase('tr')] : m],
   [new RegExp(`(?<!${H})(kursiyer|Kursiyer|KURSİYER)(${H}*)`, 'gu'), (m, k, ek) => ek.toLocaleLowerCase('tr') in KURSIYER_EK ? buyuk(k, 'öğrenci') + (k === k.toLocaleUpperCase('tr') ? KURSIYER_EK[ek.toLocaleLowerCase('tr')].toLocaleUpperCase('tr') : KURSIYER_EK[ek.toLocaleLowerCase('tr')]) : m],
   // "usta" ve "hoca" kavram olarak; "Hüseyin Hoca" gibi hitaplar kalır
-  [new RegExp(`(?<!${H})(usta|Usta)(${H}*)`, 'gu'), (m, k, ek) => ek in USTA_EK ? buyuk(k, 'öğretmen') + USTA_EK[ek] : m],
+  // Küçük harfli "usta" her zaman kavramdır. Büyük harfli "Usta" kişi adının parçasıysa (soyadı, "Ahmet Usta" hitabı, "Usta Ali") olduğu gibi kalır:
+  // önünde ya da arkasında büyük harfle başlayan bir kelime varsa ad sayılır.
+  [new RegExp(`(?<!${H})(usta)(${H}*)`, 'gu'), (m, k, ek) => ek in USTA_EK ? 'öğretmen' + USTA_EK[ek] : m],
+  [new RegExp(`(?<![\\p{Lu}]${H}+ )(?<!${H})(Usta)(${H}*)(?! [\\p{Lu}])`, 'gu'), (m, k, ek) => ek in USTA_EK ? 'Öğretmen' + USTA_EK[ek] : m],
   [new RegExp(`(?<![\\p{Lu}]${H}+ )(?<!${H})(hoca|Hoca|HOCA)(${H}*)`, 'gu'), (m, k, ek) => ek.toLocaleLowerCase('tr') in USTA_EK ? buyuk(k, 'öğretmen') + (k === 'HOCA' ? USTA_EK[ek.toLocaleLowerCase('tr')].toLocaleUpperCase('tr') : USTA_EK[ek.toLocaleLowerCase('tr')]) : m],
 ];
 export function sadeDil(s) {
