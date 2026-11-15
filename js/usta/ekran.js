@@ -29,6 +29,8 @@ const yaz = (a, v) => { try { if (v) sessionStorage.setItem(a, v); else sessionS
 let sekme = oku('sinyal-eg-sekme', 'bugun'), alt = oku('sinyal-eg-alt', '');
 if (!USTA_SEKMELER.some(x => x[0] === sekme)) sekme = 'bugun';
 export const altAc = a => { alt = a || ''; yaz('sinyal-eg-alt', alt); };
+// üst çubuktaki avatar (data-hesap): öğretmende yeni Hesabım ekranı
+export const hesapAc = () => { sekme = 'bugun'; yaz('sinyal-eg-sekme', 'bugun'); altAc('hesap'); };
 const sekmeAc = s => { sekme = s; yaz('sinyal-eg-sekme', s); };
 const MODUL = { bugun: BGN, hafta: PRG, kursiyer: OGR, kazanc: KZN };
 const ARAC_ALT = /^(arac|guzergah|hesap)(:|$)/;

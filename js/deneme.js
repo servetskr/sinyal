@@ -14,8 +14,10 @@ export function sonucHesap(isaret, sinif) {
   if (say.m >= 5) neden.push(say.m + ' mavi madde');
   return { say, bitti: neden.length > 0, neden: neden.join(', ') };
 }
+// Denemenin yapıldığı araç: öğrencinin son dersindeki araç, yoksa öğretmenin o sınıftaki aracı
+export function denemeAraci(k) { const d = S.dersler.filter(x => x.kursiyer === k.id && x.arac).sort((a, b) => b.tarih.localeCompare(a.tarih))[0]; return arac(d && d.arac) || S.araclar.find(a => a.egitmen === k.egitmen && a.sinif === k.sinif); }
 export function denemeAc(k, yenile) {
-  const l = maddeler(k.sinif), ar = (() => { const d = S.dersler.filter(x => x.kursiyer === k.id && x.arac).sort((a, b) => b.tarih.localeCompare(a.tarih))[0]; return arac(d && d.arac) || S.araclar.find(a => a.egitmen === k.egitmen && a.sinif === k.sinif); })();
+  const l = maddeler(k.sinif), ar = denemeAraci(k);
   const isaret = {}; let bolum = '';
   const satirlar = l.map(x => {
     const ust = x.bol + x.bas !== bolum ? `<li class="dn-bas">${x.bol === 'I' ? 'I. Bölüm · Araç bilgisi sorgulama' : (x.bol === 'II' ? 'II. Bölüm · ' : 'III. Bölüm · ') + e(x.bas.replace(/^\d+\.\s*/, ''))}</li>` : ''; bolum = x.bol + x.bas;
@@ -38,15 +40,54 @@ export function denemeAc(k, yenile) {
       });
       durum();
       d.querySelector('[data-bitir]').addEventListener('click', () => {
-        const r = sonucHesap(isaret, k.sinif), hatalar = l.filter(x => isaret[x.id]).map(x => ({ id: x.id, sira: x.sira, metin: x.metin, renk: x.renk, n: isaret[x.id], bas: x.bas }));
-        const kayit = { id: 'dd' + Date.now(), tarih: gun(0), egitmen: k.egitmen, kim: oturum.kullanici ? oturum.kullanici.ad : '', arac: ar ? ar.id : null, sonuc: r.bitti ? 'Kaldı' : 'Geçti', neden: r.neden, say: r.say, isaret: { ...isaret }, hatalar, not: d.querySelector('[data-not]').value.trim().slice(0, 300) };
-        k.dDeneme = [...(k.dDeneme || []), kayit].slice(-10);
-        islem('Deneme uygulama sınavı yaptı', tamAd(k) + ' · ' + kayit.sonuc + (r.neden ? ' (' + r.neden + ')' : ''));
-        kaydet(); kapatPencere(); bildir(`${tamAd(k)} deneme sınavı: ${kayit.sonuc === 'Geçti' ? 'geçerdi' : 'kalırdı'}${r.neden ? ' · ' + r.neden : ''}`, kayit.sonuc === 'Geçti' ? '' : 'uyari'); if (yenile) yenile();
+        const kayit = denemeKaydet(k, isaret, d.querySelector('[data-not]').value, ar), r = { neden: kayit.neden };
+        kapatPencere(); bildir(`${tamAd(k)} deneme sınavı: ${kayit.sonuc === 'Geçti' ? 'geçerdi' : 'kalırdı'}${r.neden ? ' · ' + r.neden : ''}`, kayit.sonuc === 'Geçti' ? '' : 'uyari'); if (yenile) yenile();
       });
     },
   });
 }
+// Denemeyi öğrencinin kaydına işler (dDeneme, işlem geçmişi) ve kaydı döner. Eski pencere (denemeAc) ve öğretmen uygulamasının yeni ekranı kullanır.
+export function denemeKaydet(k, isaret, not = '', ar = denemeAraci(k)) {
+  const l = maddeler(k.sinif), r = sonucHesap(isaret, k.sinif), hatalar = l.filter(x => isaret[x.id]).map(x => ({ id: x.id, sira: x.sira, metin: x.metin, renk: x.renk, n: isaret[x.id], bas: x.bas }));
+  const kayit = { id: 'dd' + Date.now(), tarih: gun(0), egitmen: k.egitmen, kim: oturum.kullanici ? oturum.kullanici.ad : '', arac: ar ? ar.id : null, sonuc: r.bitti ? 'Kaldı' : 'Geçti', neden: r.neden, say: r.say, isaret: { ...isaret }, hatalar, not: String(not || '').trim().slice(0, 300) };
+  k.dDeneme = [...(k.dDeneme || []), kayit].slice(-10);
+  islem('Deneme uygulama sınavı yaptı', tamAd(k) + ' · ' + kayit.sonuc + (r.neden ? ' (' + r.neden + ')' : ''));
+  kaydet();
+  return kayit;
+}
+// Formun adı: motosiklet ve B1 sınıfı EK-3, diğerleri EK-4 (madde listesiyle aynı kural)
+export const denemeFormAd = sinif => ek3Sinif(sinif) ? 'EK-3' : 'EK-4';
+export const denemeMaddeleri = maddeler;
+// Bölüm başlığı: "3. KALKIŞ YAPMA (ARACI HAREKETE GEÇİRME)" → { no: '3', ad: 'Kalkış yapma (aracı harekete geçirme)', not: '' }
+// Parantezdeki sınıf kısıtı ("B1" hariç, sadece "B" …) öğrencinin sınıfına göre bölümü gizler; kısıtsız açıklama (güzergâhta varsa) not olarak kalır.
+// Harf sınırı Türkçe harfleri de sayar: "(Güzergahta …)" içindeki "G" sınıf kodu sanılmasın (\b, "ü"yü harf saymaz)
+const SINIF_KOD = /(?<![\p{L}\p{N}])(B1|BE|C1E|CE|D1E|DE|C1|D1|A1|A2|B|C|D|A|M|F|G)(?![\p{L}\p{N}])/gu;
+const cumle = t => { const k = t.toLocaleLowerCase('tr').trim().replace(/\((\p{L})\)/gu, (_, h) => '(' + h.toLocaleUpperCase('tr') + ')'); return k.charAt(0).toLocaleUpperCase('tr') + k.slice(1); };
+function bolumBilgi(bol, bas, sinif) {
+  const m = String(bas).match(/^(\d+)\.\s*(.*)$/), govde = m ? m[2] : bas, no = m ? m[1] : bol;
+  const p = govde.match(/^(.*?)\s*\(([^()]*)\)\s*$/), ana = p ? p[1] : govde, ic = p ? p[2].trim() : '';
+  const kodlar = ic.match(SINIF_KOD) || [], taban = String(sinif || '').split('-')[0];
+  let gorunur = true, not = '';
+  if (kodlar.length && /hariç/i.test(ic)) gorunur = !kodlar.includes(taban);
+  else if (kodlar.length) gorunur = kodlar.includes(taban);
+  const adParca = ic && !kodlar.length && ic === ic.toLocaleUpperCase('tr') ? `${ana} (${ic})` : ana;
+  if (ic && !kodlar.length && ic !== ic.toLocaleUpperCase('tr')) not = ic.replace(/\s+/g, ' ');
+  return { no, ad: cumle(adParca.replace(/\s+/g, ' ')), not, gorunur };
+}
+// Telefonda gösterilen form: öğrencinin sınıfına uymayan bölümler çıkarılır. Madde kimlikleri sonucHesap ile aynıdır.
+export function denemeFormu(sinif) {
+  const l = maddeler(sinif), bolumler = [];
+  l.forEach(x => {
+    const key = x.bol + '|' + x.bas;
+    let b = bolumler[bolumler.length - 1];
+    if (!b || b.key !== key) { b = { key, bol: x.bol, ...bolumBilgi(x.bol, x.bas, sinif), maddeler: [] }; bolumler.push(b); }
+    b.maddeler.push(x);
+  });
+  return { form: denemeFormAd(sinif), bolumler: bolumler.filter(b => b.gorunur) };
+}
+// Bir maddenin bölüm adı (kayıtlı hatalar için): bas → kısa ad
+export const denemeBolumAd = (bol, bas, sinif) => bolumBilgi(bol, bas, sinif).ad;
+
 // Kayıtlı denemenin işaretli EK-3/EK-4 çıktısı
 export async function denemeYazdir(k, kayit) {
   const R = await import('./resmi.js?v=206');
