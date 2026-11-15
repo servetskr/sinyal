@@ -57,7 +57,7 @@ function hero(a) {
       <p class="ox-ukz-tutar">${tl(odendi ? a.brut : a.kalan)}</p>
       <p class="ox-ukz-brut${odendi ? ' odendi' : ''}">${odendi ? oi('tik') + '<span>Brüt · tamamı ödendi</span>' : 'Brüt tutar'}</p></div>
     ${gorsel('usta-cuzdan', '', 'ox-hero-gorsel ox-ukz-cuzdan')}
-    <div class="ox-ukz-serit">${oi('takvim')}<span>${a.ders ? `${a.ders} ders tamamlandı` : 'Henüz tamamlanan ders yok'}</span><small>${buAy ? 'Bu ay' : esc(ayAd(a.ay))}</small></div>
+    <div class="ox-ukz-serit">${oi('takvim')}<span>${a.ders ? `${a.ders} ders tamamlandı` : 'Henüz ders yok'}</span><small>${buAy ? 'Bu ay' : esc(ayAd(a.ay))}</small></div>
   </section>`;
 }
 
@@ -78,7 +78,7 @@ function gecmis(eg) {
   const gor = hepsi ? l : l.slice(0, 3);
   const sag = l.length > 3 ? baglanti(hepsi ? 'Daha az' : 'Tümü', { 'data-ox-ukz-hepsi': true, 'aria-expanded': String(hepsi) }, !hepsi) : '';
   return bolum('Ödeme geçmişi', sag) + liste(gor.map(([g, a]) => {
-    const durum = a.kalan ? `<small class="bekliyor">${tl(a.kalan)} bekliyor</small>` : `<small class="odendi">${oi('tik')}Ödendi</small>`;
+    const durum = a.kalan ? `<small class="bekliyor">${tl(a.kalan)} kaldı</small>` : `<small class="odendi">${oi('tik')}Ödendi</small>`;
     return `<button type="button" class="ox-satir ox-ukz-gecmis${g === ayGeri ? ' secili' : ''}" data-ox-ukz-sec="${g}" aria-label="${esc(ayAd(a.ay))}: ${a.ders} ders, ${esc(tl(a.brut))} brüt, ${a.kalan ? esc(tl(a.kalan)) + ' bekliyor' : 'ödendi'}. Bu ayı göster">
       ${yaprak(ayKisa(a.ay), a.ay.slice(0, 4))}
       <span class="ox-satir-govde"><b>${esc(ayAd(a.ay))}</b><small>${a.ders} ders${a.avans ? ' · avans ' + tl(a.avans) : ''}</small></span>
@@ -248,3 +248,6 @@ stilEkle('ox-ukazanc', `
 .ox-ukz-daha:active{background:#f2f5fa}
 @media (max-width:380px){.ox-ukz-tutar{font-size:32px}.ox-ukz-kutu b{font-size:22px}.ox-ukz-kutu{padding:13px 14px 12px}}
 `);
+stilEkle('ox-ukz-dar', `.ox-ukz-gecmis .ox-satir-govde{min-width:84px}
+.ox-ukz-gecmis .ox-satir-govde b{white-space:nowrap}
+@media (max-width:360px){.ox-ukz-gecmis{gap:10px;padding:12px 12px}.ox-ukz-gecmis-sag b{font-size:16px}}`);

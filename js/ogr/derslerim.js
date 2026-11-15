@@ -437,3 +437,4 @@ button.ox-drs-kart:active{transform:scale(.985)}
 // yönlendirici kancaları: 'program' | 'gelisim' | 'gecmis' sekmesini açar
 export const ac = g => { sekme = ['program', 'gelisim', 'gecmis'].includes(g) ? g : 'program'; acik = null; ayAcik = false; };
 export const sifirla = () => { sekme = 'program'; secili = null; acik = null; ayAcik = false; };
+stilEkle('ox-drs-dar', `@media (max-width:360px){.ox-drs-kart{grid-template-areas:"bas bas bas bas" "cip cip cip cip" "saat . tarih ok" "kim . plaka ."}.ox-drs-cip{justify-self:start;margin:2px 0 4px 54px}.ox-drs-bas b{white-space:normal;overflow:visible;text-overflow:clip}}`);
