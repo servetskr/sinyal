@@ -5,16 +5,16 @@
 //      sınav güzergâhları ve aday deneyimleri (js/guzergah.js), manevra anlatımları, son deneme uygulama sınavı.
 // Kural (direksiyon.js başı): sınav alanına konan kolaylaştırıcı işaretlere dayalı tarif verilmez (MTSK Yön. md.26/9); anlatım ayna, sinyal ve ölçüyle.
 // Alt ekrandan başka bir alt ekrana gidip dönüş: 'etkilesim:kalkis|direksiyon:puf:b5' (| sonrası geri bağlantısının gideceği yer).
-import { S, kaydet, gun, fark, SINIFLAR, ogrOzellik, motorSinif } from '../veri.js?v=204';
-import { tarih, tarihUzun } from '../ui.js?v=204';
-import { SAHNELER, sahneSvg, TEHLIKE_SURE, tehlikePuanla } from '../tehlike.js?v=204';
-import { guzergahlar } from '../guzergah.js?v=204';
-import { altAc } from './ogrveri.js?v=204';
-import { esc, oi, sayfaBas, geri, bolum, gorsel, dugme, ikonKutu, satir, liste, cip, serit, not, bos, sekmeler, radyo, sik, cevapKutu, stilEkle } from './ui.js?v=204';
+import { S, kaydet, gun, fark, SINIFLAR, ogrOzellik, motorSinif } from '../veri.js?v=205';
+import { tarih, tarihUzun } from '../ui.js?v=205';
+import { SAHNELER, sahneSvg, TEHLIKE_SURE, tehlikePuanla } from '../tehlike.js?v=205';
+import { guzergahlar } from '../guzergah.js?v=205';
+import { altAc } from './ogrveri.js?v=205';
+import { esc, oi, sayfaBas, geri, bolum, gorsel, dugme, ikonKutu, satir, liste, cip, serit, not, bos, sekmeler, radyo, sik, cevapKutu, stilEkle } from './ui.js?v=205';
 
 /* ---------- geç yüklenen modüller (ikaz, motor, direksiyon + resmî formlar) ---------- */
 const MOD = {}, SOZ = {};
-const KAYNAK = { ikaz: () => import('../ikaz.js?v=204'), motor: () => import('../motor.js?v=204'), dir: () => import('../direksiyon.js?v=204') };
+const KAYNAK = { ikaz: () => import('../ikaz.js?v=205'), motor: () => import('../motor.js?v=205'), dir: () => import('../direksiyon.js?v=205') };
 const yukle = ad => MOD[ad] ? Promise.resolve(MOD[ad]) : (SOZ[ad] = SOZ[ad] || KAYNAK[ad]().then(m => (MOD[ad] = m)).catch(x => { SOZ[ad] = null; throw x; }));
 if (typeof window !== 'undefined') setTimeout(() => Object.keys(KAYNAK).forEach(a => yukle(a).catch(() => { })), 1500);
 // modül gelene kadar aynı yerde boş alan; gelince ekran yeniden çizilir (başlık ve sekmeler yerinde kalır)

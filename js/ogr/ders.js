@@ -1,11 +1,11 @@
 // Kısa ders oynatıcı (tam ekran katman, yeni tasarım): ders başlangıcı, okuma kartları, araya giren kısa sorular, video,
 // akılda kalsın ve ders sonucu. Katman ui.js .ox-akis + akisUst/akisAlt/sik/cevapKutu ile kurulur; sınıflar ox-dr- önekli.
-import { kaydet, gun, ogrOzellik } from '../veri.js?v=204';
-import { MUFREDAT } from '../ogrenci.js?v=204';
-import * as HZ from '../hazirlik.js?v=204';
-import { SORU_KONU } from '../soruKonu.js?v=204';
-import { UNITE_AD, kapakSvg, konular, bitti, sayac, yarimOku, yarimYaz, yarimSil, yukle, veriler } from './ogrveri.js?v=204';
-import { esc, oi, gorsel as cizim, dugme, ikonKutu, satir, liste, serit, bolum, akisUst, akisAlt, sik, cevapKutu, stilEkle } from './ui.js?v=204';
+import { kaydet, gun, ogrOzellik } from '../veri.js?v=205';
+import { MUFREDAT } from '../ogrenci.js?v=205';
+import * as HZ from '../hazirlik.js?v=205';
+import { SORU_KONU } from '../soruKonu.js?v=205';
+import { UNITE_AD, kapakSvg, konular, bitti, sayac, yarimOku, yarimYaz, yarimSil, yukle, veriler } from './ogrveri.js?v=205';
+import { esc, oi, gorsel as cizim, dugme, ikonKutu, satir, liste, serit, bolum, akisUst, akisAlt, sik, cevapKutu, stilEkle } from './ui.js?v=205';
 
 /* ---------- ders içeriği ---------- */
 // cümlelere böl ("md.", "vb." gibi kısaltmalarda bölme), ~430 karakterlik kartlara topla
