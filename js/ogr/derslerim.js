@@ -141,7 +141,7 @@ function programHtml(k, ctx, l) {
 function ayrintiHtml(k, ctx, o) {
   const d = o.d, h = egitmen(d.egitmen), a = d.arac && arac(d.arac), plan = d.durum === 'Planlandı', b = kartBilgi(o, k, ctx.sd), sira = dersSirasi(d, k);
   const kalan = plan ? (new Date(d.tarih + 'T' + d.saat + ':00') - Date.now()) / 36e5 : 0;
-  const ozet = `<div class="ox-kart ox-drs-ozet ${b.ton}"><div class="ox-drs-ozet-ust">${ikonKutu('direksiyon', b.ton === 'turuncu' ? 'turuncu' : 'mavi')}<span class="ox-drs-ozet-ad"><b>${esc(b.ad)}</b><small>${sira ? sira + '. direksiyon dersin' : esc(d.durum === 'Gelmedi' ? 'Gelmedin' : d.durum)}</small></span>${b.cip}</div>
+  const ozet = `<div class="ox-kart ox-drs-ozet ${b.ton}"><div class="ox-drs-ozet-ust">${ikonKutu('direksiyon', b.ton === 'turuncu' ? 'turuncu' : 'mavi')}<span class="ox-drs-ozet-ad"><b>${esc(b.ad)}</b><small>${sira ? sira + '. direksiyon dersin' : 'Direksiyon dersi'}</small></span>${b.cip}</div>
     <b class="ox-drs-ozet-saat">${esc(d.saat)}</b><p class="ox-drs-ozet-tarih">${esc(tarihUzun(d.tarih))} · ${esc(goreliKisa(d.tarih))}</p></div>`;
   const kurs = S.kurs || {}, adres = [kurs.ad, kurs.adres].filter(Boolean).join(', ');
   const bilgi = [
@@ -213,7 +213,7 @@ function onayKart(d, baslikli = true) {
 function degerlendirKutu(d, baslikli = true) {
   const h = egitmen(d.egitmen);
   return `<div class="ox-kart ox-drs-deg og-degerlendir">${baslikli ? `<div class="ox-drs-deg-ust"><b>Son dersin nasıldı?</b><small>${esc(goreliKisa(d.tarih))} ${esc(d.saat)} · ${esc(h ? h.ad : '')}</small></div>` : ''}
-    <div class="ox-drs-yildiz" role="radiogroup" aria-label="Puan">${[1, 2, 3, 4, 5].map(n => `<button type="button" data-og-yildiz="${n}" aria-label="${n} yıldız">${oi('yildiz')}</button>`).join('')}</div>
+    <div class="ox-drs-yildiz" role="radiogroup" aria-label="Puan">${[1, 2, 3, 4, 5].map(n => `<button type="button" role="radio" aria-checked="false" data-og-yildiz="${n}" aria-label="${n} yıldız">${oi('yildiz')}</button>`).join('')}</div>
     <textarea data-og-yorum rows="2" maxlength="300" placeholder="İstersen kısa bir not yaz" aria-label="Not"></textarea>
     <div class="ox-drs-deg-alt"><small>Puanını yalnız kurs yönetimi görür.</small>${dugme('Gönder', { 'data-og-puan': d.id, disabled: true }, { kucuk: true })}</div></div>`;
 }

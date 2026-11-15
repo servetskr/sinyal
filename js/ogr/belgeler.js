@@ -75,8 +75,9 @@ stilEkle('ox-belgeler', `
 .ox-blg-not .ox-not{margin:0}
 .ox-blg-yaz{display:flex;align-items:center;gap:10px;min-height:44px;color:var(--ox-mavi);font-size:15.5px;font-weight:600}
 .ox-blg-yaz .ox-i{width:21px;height:21px}
-.ox-blg-yukle{display:inline-flex;align-items:center;gap:5px;height:34px;padding:0 12px;border-radius:10px;background:var(--ox-mavi-acik);color:var(--ox-mavi);font-size:14.5px;font-weight:600;cursor:pointer}
+.ox-blg-yukle{position:relative;display:inline-flex;align-items:center;gap:5px;height:34px;padding:0 12px;border-radius:10px;background:var(--ox-mavi-acik);color:var(--ox-mavi);font-size:14.5px;font-weight:600;cursor:pointer}
 .ox-blg-yukle .ox-i{width:17px;height:17px;stroke-width:2.2}
+.ox-blg-yukle::after{content:"";position:absolute;inset:-5px -2px}
 `);
 // yönlendirici kancaları: 'evrak' evrak listesini açar
 export const ac = g => { gorunum = g || 'ana'; };

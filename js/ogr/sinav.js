@@ -9,7 +9,7 @@ import * as HZ from '../hazirlik.js?v=206';
 import { KONULAR } from '../konular.js?v=206';
 import { soruKonu, SORU_KONU } from '../soruKonu.js?v=206';
 import { UNITE_AD, konular, altAc, altKapat, altEkran as altSimdi } from './ogrveri.js?v=206';
-import { esc, oi, sayfaBas, geri, bolum, kart, heroKart, dugme, ikonKutu, satir, liste, cip, serit, not, bos, sekmeler, kutucuk, radyo, akisUst, akisAlt, sik, cevapKutu, baglanti, stilEkle, tl } from './ui.js?v=206';
+import { esc, oi, sayfaBas, geri, bolum, kart, heroKart, dugme, ikonKutu, satir, liste, cip, serit, not, bos, sekmeler, kutucuk, radyo, akisUst, akisAlt, sik, cevapKutu, baglanti, stilEkle, tl, odakTuzagi } from './ui.js?v=206';
 
 const SURE = 45 * 60e3, GECME = 70, HARF = 'ABCD';
 const MOD_AD = { deneme: 'Deneme sınavı', hizli: 'Hızlı test', konu: 'Konu testi', yanlis: 'Yanlışlarım', tekrar: 'Bugünkü tekrar' };
@@ -49,6 +49,8 @@ function testGeriYukle(k) {
       // eski düzende (portal.js) başlamış deneme: cevaplar sırayla verilmişti
       if (test.mod === 'deneme' && !Array.isArray(test.sec)) { test.sec = test.liste.map((_, j) => j < test.cevaplar.length ? test.cevaplar[j][1] : null); test.i = Math.min(test.i, test.liste.length - 1); }
       if (test.mod === 'deneme' && !Array.isArray(test.isaret)) test.isaret = [];
+      // eski düzende başlamış konu testi: ayar (opts) saklanmamıştı; "Yeniden çöz" aynı ünitede 10 soruluk yeni test açsın
+      if (test.mod === 'konu' && !test.opts && test.konu) test.opts = { tur: 'karisik', uniteler: [test.konu], n: 10 };
     }
   } catch (x) { }
 }
@@ -68,12 +70,17 @@ function listeKur(mod, k, o = {}) {
   return karistir(idx()).slice(0, 10);
 }
 // Başka ekranlar da kullanabilir (ör. ana sayfadaki "Deneme sınavı çöz"): baslat('deneme', ctx)
-export async function baslat(mod, ctx, o = {}) {
+// Yarım kalan test varsa önce sorulur (yeni test aynı kaydı ezer); zorla: soru sorma
+export async function baslat(mod, ctx, o = {}, zorla = false) {
+  testGeriYukle(ctx.k);
+  if (!zorla && test.mod && test.duraklat && !test.sonuc) return degisOnay(ctx, () => baslat(mod, ctx, o, true));
   try { await sorulariYukle(); } catch (x) { bildir('Sorular yüklenemedi; internet bağlantını kontrol edip tekrar dene', 'uyari'); return; }
   const { k } = ctx, l = listeKur(mod, k, o);
   if (!l.length) { bildir(mod === 'konu' ? 'Seçtiğin konularda soru bulunamadı' : 'Çözülecek soru yok', 'uyari'); return; }
   test = { mod, k: k.id, konu: o.uniteler && o.uniteler.length === 1 && o.tur !== 'konu' ? o.uniteler[0] : undefined, opts: o, liste: l, i: 0, dogru: 0, cevap: null, basla: Date.now(), harcanan: 0, sonTik: Date.now(), cevaplar: [] };
-  if (mod === 'deneme') { test.sec = l.map(() => null); test.isaret = []; altAc('deneme'); }
+  if (mod === 'deneme') { test.sec = l.map(() => null); test.isaret = []; }
+  // yenilemede ya da çıkışta yarım test kartının göründüğü ekran açılsın (deneme girişi ya da Çalışma araçları)
+  altAc(mod === 'deneme' ? 'deneme' : 'araclar');
   gorunum = 'soru'; modal = null; incele = null; gecis = true;
   testSakla(k); ctx.yenile(true);
 }
@@ -235,9 +242,25 @@ function denemeGirisHtml(k) {
 
 /* ---------- 19 · çalışma araçları ---------- */
 function yarimHero() {
-  if (!test.mod || !test.duraklat || test.mod === 'deneme') return '';
-  return heroKart({ ust: 'Yarım kalan test', baslik: esc(MOD_AD[test.mod] + (test.konu ? ' · ' + uniteAd(test.konu) : '')), alt: `${cevaplanan()} / ${test.liste.length} soru yanıtlandı`, cls: 'ox-snv-yarim',
-    dugme: `<div class="ox-snv-dgler ox-snv-yan">${dugme('Devam et', { 'data-snv': 'devam' }, { ok: true })}${dugme('Testi bırak', { 'data-snv': 'birak' }, { tur: 'metin' })}</div>` });
+  if (!test.mod || !test.duraklat || test.sonuc) return '';
+  const dn = test.mod === 'deneme', kalan = dn ? ` · ${Math.max(1, Math.ceil(kalanMs() / 60e3))} dakikan kaldı` : '';
+  return heroKart({ ust: dn ? 'Yarım kalan denemen' : 'Yarım kalan test', baslik: esc(MOD_AD[test.mod] + (test.konu ? ' · ' + uniteAd(test.konu) : '')), alt: `${cevaplanan()} / ${test.liste.length} soru yanıtlandı${kalan}`, cls: 'ox-snv-yarim',
+    dugme: `<div class="ox-snv-dgler ox-snv-yan">${dugme('Devam et', { 'data-snv': 'devam' }, { ok: true })}${dugme(dn ? 'Denemeyi bırak' : 'Testi bırak', { 'data-snv': 'birak' }, { tur: 'metin' })}</div>` });
+}
+// Öğren ana ekranı için: yarım test kartı (yoksa '') ve düğmeleri
+export function yarimKart(ctx) { testGeriYukle(ctx.k); return yarimHero(); }
+export function yarimBagla(kap, ctx) {
+  const y = kap.querySelector('.ox-snv-yarim'); if (!y) return;
+  y.addEventListener('click', ev => {
+    const a = ev.target.closest('[data-snv]'); if (!a) return;
+    if (a.dataset.snv === 'devam') devamEt(ctx);
+    else if (a.dataset.snv === 'birak') { testBirak(ctx.k); ctx.yenile(); }
+  });
+}
+function devamEt(ctx) {
+  if (!test.mod) return;
+  // yenilemede yarım test kartının göründüğü ekran açılsın (test-ayar/tekrar/yanlislar ya da Öğren ana ekranından devam edilmiş olabilir)
+  return sorulariYukle().then(() => { test.duraklat = false; test.sonTik = Date.now(); gorunum = 'soru'; gecis = true; altAc(test.mod === 'deneme' ? 'deneme' : 'araclar'); ctx.yenile(true); }).catch(() => bildir('Sorular yüklenemedi; internet bağlantını kontrol edip tekrar dene', 'uyari'));
 }
 function hazirlikHtml(k) {
   const esGecti = k.esinav && k.esinav.sonuc === 'Geçti';
@@ -271,7 +294,7 @@ function sinavlarHtml(k) {
   };
   return bolum('Sınavların') + kartH('e-Sınav', k.esinav, sonr('e-Sınav'), ['T.C. kimlik kartın (fotokopi geçmez)', 'e-Sınav ücreti dekontu', 'Sınavdan 30 dakika önce sınav merkezinde ol'], tu.esinav, 'Teorik derslerin bitince kurs e-sınav randevunu alır.')
     + (dir ? kartH('Uygulama sınavı', k.dsinav, sonr('Direksiyon'), ['T.C. kimlik kartın', 'Gözlük ya da lens kullanıyorsan yanında olsun', 'Sınavdan 30 dakika önce sınav yerinde ol'], tu.dsinav, 'Direksiyon derslerin bitince kurs sınav tarihini bildirir.',
-      ogrOzellik('direksiyon') ? `<div class="ox-snv-sv-bag">${baglanti('Uygulama sınavına hazırlan', { 'data-ox-alt': 'direksiyon' }, true)}</div>` : '') : '');
+      ogrOzellik('direksiyon') ? `<div class="ox-snv-sv-bag">${baglanti('Uygulama sınavına hazırlan', { 'data-ox-alt': 'direksiyon:|araclar' }, true)}</div>` : '') : '');
 }
 function araclarHtml(k) {
   const yn = (k.yanlislar || []).length, tb = ogrOzellik('tekrar') ? HZ.tekrarBugun(k).length : null, th = k.tehlike || [];
@@ -279,12 +302,12 @@ function araclarHtml(k) {
   const satirlar = [
     satir({ ikon: 'yanlis', baslik: 'Yanlışlarım', alt: yn ? `${yn} soru` : 'Henüz yanlış sorun yok.', attrs: { 'data-ox-alt': 'yanlislar' } }),
     tb != null ? satir({ ikon: 'sifirla', baslik: 'Bugünkü tekrar', alt: tb ? `${tb} soru hazır` : 'Bugün tekrar sorun yok.', altTon: tb ? 'mavi' : '', attrs: { 'data-ox-alt': 'tekrar' } }) : '',
-    ogrOzellik('tehlike') ? satir({ ikon: 'ikaz', baslik: 'Tehlike algısı', alt: th.length ? `Son puan ${th[th.length - 1].puan}/${th[th.length - 1].en}` : '8 sahne', attrs: { 'data-ox-alt': 'tehlike' } }) : '',
+    ogrOzellik('tehlike') ? satir({ ikon: 'ikaz', baslik: 'Tehlike algısı', alt: th.length ? `Son puan ${th[th.length - 1].puan}/${th[th.length - 1].en}` : '8 sahne', attrs: { 'data-ox-alt': 'tehlike:|araclar' } }) : '',
   ].filter(Boolean);
   const cozulen = Object.values(k.konuAnaliz || {}).reduce((a, x) => a + ((x && x[1]) || 0), 0), dn = (k.deneme || []).length;
   return geri('Öğren', { 'data-ox-alt': '' }) + sayfaBas('Çalışma araçları', 'Pratik yap, eksiklerini tamamla.')
     + yarimHero()
-    + `<div class="ox-snv-kutular">${kutu('kronometre', 'Hızlı test', '10 soru', { 'data-snv-basla': 'hizli' })}${kutu('panoListe', 'Konu testi', '20 soru', { 'data-ox-alt': 'test-ayar' })}</div>`
+    + `<div class="ox-snv-kutular">${kutu('kronometre', 'Hızlı test', '10 soru', { 'data-snv-basla': 'hizli' })}${kutu('panoListe', 'Konu testi', `${ayar.n} soru`, { 'data-ox-alt': 'test-ayar' })}</div>`
     + liste(satirlar, 'ox-snv-araclar')
     + `<p class="ox-snv-toplam">Toplam: ${sayi(dn)} deneme · ${sayi(cozulen)} soru çözüldü</p>`
     + hazirlikHtml(k) + konuBasariHtml(k) + sinavlarHtml(k)
@@ -370,13 +393,49 @@ export function altEkran(ad, ctx) {
   return { html, baglan: kap => bagla(kap, ctx) };
 }
 
+/* ---------- yarım test varken yeni test: onay penceresi (sayfa içinde, akış dışında) ---------- */
+let degis = null; // { perde, birak }
+function degisKapat() {
+  if (!degis) return;
+  const d = degis; degis = null; d.birak(); d.perde.remove();
+}
+function degisOnay(ctx, yeni) {
+  degisKapat();
+  const kok = document.querySelector('.ox') || document.body, dn = test.mod === 'deneme';
+  const ad = esc(MOD_AD[test.mod] + (test.konu ? ' · ' + uniteAd(test.konu) : ''));
+  kok.insertAdjacentHTML('beforeend', `<div class="ox-snv-perde ox-snv-sabit" data-snv-degis><div class="ox-snv-modal" role="dialog" aria-modal="true" aria-labelledby="ox-snv-d-bas" aria-describedby="ox-snv-d-not">
+    <button type="button" class="ox-ikon-dg ox-snv-modal-x" data-snv-d="kapat" aria-label="Kapat">${oi('kapat')}</button>
+    <h2 id="ox-snv-d-bas">${dn ? 'Yarım denemen var' : 'Yarım testin var'}</h2>
+    <p class="ox-snv-modal-alt">${ad} · ${cevaplanan()} / ${test.liste.length} soru yanıtlandı</p>
+    <p class="ox-snv-modal-not" id="ox-snv-d-not">Yeni test başlarsan ${dn ? 'yarım denemen ve kalan süresi' : 'yarım testin'} silinir.</p>
+    <div class="ox-snv-modal-dg sar">${dugme(dn ? 'Denemeye dön' : 'Teste dön', { 'data-snv-d': 'devam' }, { tur: 'ikincil' })}${dugme('Yeni test başlat', { 'data-snv-d': 'yeni' })}</div></div></div>`);
+  const perde = kok.lastElementChild, cik = odakTuzagi(perde);
+  degis = { perde, birak: cik };
+  perde.addEventListener('keydown', ev => { if (ev.key === 'Escape') { ev.stopPropagation(); degisKapat(); } });
+  perde.addEventListener('click', ev => {
+    ev.stopPropagation();
+    const b = ev.target.closest('[data-snv-d]');
+    if (!b) { if (!ev.target.closest('.ox-snv-modal')) degisKapat(); return; }
+    const is = b.dataset.snvD;
+    degisKapat();
+    if (is === 'devam') devamEt(ctx);
+    else if (is === 'yeni') yeni();
+  });
+  const od = perde.querySelector('[data-snv-d="devam"]'); if (od) od.focus({ preventScroll: true });
+}
+
 /* ---------- olaylar ---------- */
 let tusBagli = false;
-function modalKapat() { modal = null; const p = document.querySelector('[data-snv-perde]'); if (p) p.remove(); }
+// pencere açıkken odak içeride kalır, arkadaki sayfa etkisizdir (odakTuzagi); kapanınca ya da ekran yeniden çizilince bırakılır
+let serbest = null;
+const tuzakBirak = () => { if (serbest) { const f = serbest; serbest = null; f(); } };
+const tuzakKur = p => { tuzakBirak(); if (p) serbest = odakTuzagi(p); };
+function modalKapat() { modal = null; const p = document.querySelector('[data-snv-perde]'); tuzakBirak(); if (p) p.remove(); }
 function modalAc(m) {
   modal = m; const a = document.querySelector('.ox-snv-akis'); if (!a) return;
   const eski = a.querySelector('[data-snv-perde]'); if (eski) eski.remove();
   a.insertAdjacentHTML('beforeend', modalHtml());
+  tuzakKur(a.querySelector('[data-snv-perde]'));
   const odak = a.querySelector('.ox-snv-modal [data-snv="bitir"], .ox-snv-modal [data-snv-neden]'); if (odak) odak.focus({ preventScroll: true });
 }
 // yeniden çizerken soru gövdesinin kaydırma yerini koru
@@ -388,8 +447,10 @@ function yerinde(ctx, sonra) {
 }
 function bagla(kap, ctx) {
   const { k } = ctx;
+  tuzakBirak(); degisKapat();
   if (!tusBagli) { tusBagli = true; document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && modal && document.querySelector('[data-snv-perde]')) modalKapat(); }); }
   if (kap.querySelector('[data-snv-ekran="deneme"]')) sayacKur(ctx);
+  { const p = kap.querySelector('[data-snv-perde]'); if (p) tuzakKur(p); }
   // sekme değişirken: gösterilen sonuç kapanır, süren test duraklar (ekran.js'in dinleyicisinden önce çalışır)
   kap.addEventListener('click', ev => {
     if (!ev.target.closest('[data-ogs]') || !test.mod) return;
@@ -438,9 +499,9 @@ function bagla(kap, ctx) {
       if (test.mod && !test.sonuc) { test.duraklat = true; testSakla(k); clearInterval(sayac); sayac = null; }
       modal = null; gorunum = 'soru'; altAc(test.mod === 'deneme' ? 'deneme' : 'araclar'); return ctx.yenile(true);
     }
-    if (is === 'devam') { if (!test.mod) return; return sorulariYukle().then(() => { test.duraklat = false; test.sonTik = Date.now(); gorunum = 'soru'; gecis = true; ctx.yenile(true); }).catch(() => bildir('Sorular yüklenemedi; internet bağlantını kontrol edip tekrar dene', 'uyari')); }
+    if (is === 'devam') return devamEt(ctx);
     if (is === 'birak') { testBirak(k); return ctx.yenile(); }
-    if (is === 'bastan') { testBirak(k); return baslat('deneme', ctx); }
+    if (is === 'bastan') { testBirak(k); return baslat('deneme', ctx, {}, true); }
     if (is === 'isaret') { const j = test.i, l = test.isaret, i = l.indexOf(j); if (i < 0) l.push(j); else l.splice(i, 1); testSakla(k); a.classList.toggle('acik', i < 0); a.setAttribute('aria-pressed', String(i < 0)); a.innerHTML = `${oi('bayrak', i < 0 ? 'dolu' : '')}<span>${i < 0 ? 'İşaretlendi' : 'İşaretle'}</span>`; return; }
     if (is === 'sonraki') { if (test.i < test.liste.length - 1) { test.i++; gecis = true; testSakla(k); } return ctx.yenile(); }
     if (is === 'liste') { modal = null; gorunum = 'liste'; return ctx.yenile(); }
@@ -453,7 +514,7 @@ function bagla(kap, ctx) {
     if (is === 'incele-sonraki') { if (incele < test.sonuc.inceleme.length - 1) { incele++; gecis = true; } else incele = null; return ctx.yenile(true); }
     if (is === 'incele-kapat') { incele = null; return ctx.yenile(true); }
     if (is === 'sonuc-kapat') { const dn = test.mod === 'deneme'; test = { mod: null }; incele = null; if (dn) altKapat(); else altAc('araclar'); return ctx.yenile(true); }
-    if (is === 'yeniden') { const m = test.mod, o = test.opts || {}; test = { mod: null }; incele = null; return baslat(m, ctx, o); }
+    if (is === 'yeniden') { const m = test.mod, o = test.opts || {}; test = { mod: null }; incele = null; return baslat(m, ctx, o, true); }
     if (is === 'ayar-basla') { const o = ayar.tur === 'konu' ? { tur: 'konu', dersler: ayar.dersler.slice(), n: ayar.n } : { tur: 'karisik', uniteler: ayar.uniteler.slice(), n: ayar.n }; return baslat('konu', ctx, o); }
     if (is === 'bildir') return sorulariYukle().then(() => modalAc({ tur: 'bildir', qi: +a.dataset.qi }));
     if (is === 'bildir-gonder' && modal && modal.tur === 'bildir') {
@@ -515,12 +576,14 @@ stilEkle('ox-sinav', `
 /* pencere (bitirme onayı, soru bildirimi) */
 .ox-snv-perde{position:absolute;inset:0;z-index:5;display:grid;place-items:center;padding:24px 16px;background:rgba(15,29,64,.42);animation:oxSnvPerde .2s ease}
 .ox-snv-modal{position:relative;width:100%;max-width:400px;max-height:100%;overflow-y:auto;background:#fff;border-radius:var(--ox-r-b);padding:28px 20px 20px;box-shadow:0 24px 48px -16px rgba(16,24,40,.35);text-align:center;animation:oxSnvModal .24s cubic-bezier(.2,.8,.2,1)}
+.ox-snv-perde.ox-snv-sabit{position:fixed;z-index:70}
 .ox-snv-modal-x{position:absolute;top:6px;right:6px}
 .ox-snv-modal h2{font-size:23px;line-height:1.15;font-weight:800;letter-spacing:-.022em;color:var(--ox-bas);padding:0 32px}
 .ox-snv-modal-alt{margin-top:8px;font-size:16px;color:var(--ox-ikincil);font-variant-numeric:tabular-nums}
 .ox-snv-modal-not{margin-top:6px;font-size:14px;color:var(--ox-soluk)}
 .ox-snv-modal-dg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:22px}
 .ox-snv-modal-dg .ox-dg{padding:0 12px}
+.ox-snv-modal-dg.sar{display:flex;flex-wrap:wrap}.ox-snv-modal-dg.sar .ox-dg{flex:1 1 auto}
 .ox-snv-modal.ox-snv-m-bildir{text-align:left}
 .ox-snv-modal.ox-snv-m-bildir h2{padding:0 32px 0 0}
 .ox-snv-alinti{margin-top:8px;font-size:14.5px;line-height:1.4;color:var(--ox-ikincil)}
@@ -545,7 +608,7 @@ stilEkle('ox-sinav', `
 .ox-snv-gri{display:grid;place-items:center;min-height:56px;padding:12px 16px;border-radius:var(--ox-r);background:var(--ox-gri-acik);font-size:15px;color:var(--ox-ikincil);text-align:center}
 .ox-snv-dgler{display:grid;gap:10px;margin-top:20px}
 .ox-snv-dgler.ox-snv-ust{margin-top:4px}
-.ox-snv-dgler.ox-snv-yan{display:flex;align-items:center;gap:8px;margin-top:0}
+.ox-snv-dgler.ox-snv-yan{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;margin-top:0}
 .ox .ox-not+.ox-snv-dgler{margin-top:14px}
 /* sonuç */
 .ox-snv-puan{text-align:center;padding:24px 20px 20px}

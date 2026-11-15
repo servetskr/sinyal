@@ -67,7 +67,7 @@ const isKart = ({ ikon, ton, baslik, alt = '', sag = '', alttaki = '' }) => kart
 
 function yapilacaklar(k, S0, sd, sinav) {
   const l = [], sn = OG.sonrakiTaksit(k);
-  if (sn && fark(sn.t.vade) < 0) l.push(isKart({ ikon: 'kart', ton: 'kirmizi', baslik: 'Taksitin gecikti', alt: `${tl(sn.t.tutar - (sn.t.kismi || 0))} · vade ${tarih(sn.t.vade)}`, sag: dugme('Öde', { 'data-ode': sn.i }, { kucuk: true }) }));
+  if (sn && fark(sn.t.vade) < 0) l.push(isKart({ ikon: 'kart', ton: 'kirmizi', baslik: 'Taksitin gecikti', alt: `${tl(sn.t.tutar - (sn.t.kismi || 0))} · vade ${tarih(sn.t.vade).replace(/ /g, '\u00a0')}`, sag: dugme('Öde', { 'data-ode': sn.i }, { kucuk: true }) }));
   if (k.ekDersTeklif) l.push(isKart({
     ikon: 'direksiyon', ton: 'mavi', baslik: `${k.ekDersTeklif.n} ek ders önerisi`, alt: `${tl(k.ekDersTeklif.tutar)} · kabul edersen ödeme planına eklenir`,
     alttaki: dugme('Hayır', { 'data-og-ekders': 'hayir' }, { tur: 'cizgi', kucuk: true }) + dugme('Kabul et', { 'data-og-ekders': 'evet' }, { kucuk: true }),
@@ -88,7 +88,7 @@ function yapilacaklar(k, S0, sd, sinav) {
       }));
     }
   }
-  if (sn && fark(sn.t.vade) >= 0 && fark(sn.t.vade) <= 10) l.push(isKart({ ikon: 'kart', ton: 'turuncu', baslik: kalanGun(sn.t.vade, 'Taksitin', 'Taksitine'), alt: `${tl(sn.t.tutar - (sn.t.kismi || 0))} · vade ${tarih(sn.t.vade)}`, sag: dugme('Öde', { 'data-ode': sn.i }, { tur: 'ikincil', kucuk: true }) }));
+  if (sn && fark(sn.t.vade) >= 0 && fark(sn.t.vade) <= 10) l.push(isKart({ ikon: 'kart', ton: 'turuncu', baslik: kalanGun(sn.t.vade, 'Taksitin', 'Taksitine'), alt: `${tl(sn.t.tutar - (sn.t.kismi || 0))} · vade ${tarih(sn.t.vade).replace(/ /g, '\u00a0')}`, sag: dugme('Öde', { 'data-ode': sn.i }, { tur: 'ikincil', kucuk: true }) }));
   const tb = ogrOzellik('tekrar') ? HZ.tekrarBugun(k).length : 0;
   if (tb) l.push(isKart({ ikon: 'sifirla', ton: 'mor', baslik: `Bugün ${tb} tekrar sorun var`, alt: 'Yanlış yaptığın sorular aralıklarla yeniden gelir', sag: dugme('Başla', { 'data-ox-git': 'sinav:tekrar' }, { tur: 'ikincil', kucuk: true }) }));
   if (sinav && sd && fark(sinav.tarih) <= 14) l.push(isKart({ ikon: SINAV_IK, ton: 'mor', baslik: kalanGun(sinav.tarih, `${esc(sinav.tur)} sınavın`, `${esc(sinav.tur)} sınavına`), alt: [`${uzunTarih(sinav.tarih)} ${esc(sinav.saat)}`, esc(sinav.yer || '')].filter(Boolean).join(' · '), sag: dugme('Gör', { 'data-ogs': 'ders' }, { tur: 'ikincil', kucuk: true }) }));
@@ -204,8 +204,9 @@ export function ekran(ctx) {
         }
         const yz = ev.target.closest('[data-og-yildiz]');
         if (yz) { const n = +yz.dataset.ogYildiz; yz.parentElement.querySelectorAll('[data-og-yildiz]').forEach(b => b.setAttribute('aria-checked', String(+b.dataset.ogYildiz === n))); }
-        if (ev.target.closest('[data-og-puan]')) degAcik = false;
       });
+      // gönderimde panel kapansın: ogBagla yeniden çizmeden önce (yakalama evresi)
+      kap.addEventListener('click', ev => { if (ev.target.closest('[data-og-puan]')) degAcik = false; }, true);
     },
   };
 }

@@ -4,19 +4,22 @@
 //   24 Direksiyon hazırlığı ('direksiyon[:kriter[:<id>]|guzergah|puf[:<id>]]'): resmî değerlendirme formu bölümleri (js/direksiyon.js),
 //      sınav güzergâhları ve aday deneyimleri (js/guzergah.js), manevra anlatımları, son deneme uygulama sınavı.
 // Kural (direksiyon.js başı): sınav alanına konan kolaylaştırıcı işaretlere dayalı tarif verilmez (MTSK Yön. md.26/9); anlatım ayna, sinyal ve ölçüyle.
-// Alt ekrandan başka bir alt ekrana gidip dönüş: 'etkilesim:kalkis|direksiyon:puf:b5' (| sonrası geri bağlantısının gideceği yer).
+// Alt ekrandan başka bir alt ekrana gidip dönüş: 'etkilesim:kalkis|direksiyon:puf:b5' (ilk | sonrası geri bağlantısının gideceği yer;
+// dönüş yeri kendi dönüşünü taşıyabilir: 'etkilesim:ikaz|direksiyon:puf:b5|araclar'). Gelinen yer: modül (trafik, motor…), 'araclar', 'direksiyon…'.
+// Kök ekranlarda ':' şart (ekran.js yönlendiricisi 'ad:' ya da 'ad' bekler): 'tehlike:|trafik', 'direksiyon:|araclar'.
 import { S, kaydet, gun, fark, SINIFLAR, ogrOzellik, motorSinif } from '../veri.js?v=206';
 import { tarih, tarihUzun } from '../ui.js?v=206';
 import { SAHNELER, sahneSvg, TEHLIKE_SURE, tehlikePuanla } from '../tehlike.js?v=206';
 import { guzergahlar } from '../guzergah.js?v=206';
-import { altAc } from './ogrveri.js?v=206';
+import { altAc, UNITE_AD } from './ogrveri.js?v=206';
 import { esc, oi, sayfaBas, geri, bolum, gorsel, dugme, ikonKutu, satir, liste, cip, serit, not, bos, sekmeler, radyo, sik, cevapKutu, stilEkle } from './ui.js?v=206';
 
 /* ---------- geç yüklenen modüller (ikaz, motor, direksiyon + resmî formlar) ---------- */
 const MOD = {}, SOZ = {};
 const KAYNAK = { ikaz: () => import('../ikaz.js?v=206'), motor: () => import('../motor.js?v=206'), dir: () => import('../direksiyon.js?v=206') };
 const yukle = ad => MOD[ad] ? Promise.resolve(MOD[ad]) : (SOZ[ad] = SOZ[ad] || KAYNAK[ad]().then(m => (MOD[ad] = m)).catch(x => { SOZ[ad] = null; throw x; }));
-if (typeof window !== 'undefined') setTimeout(() => Object.keys(KAYNAK).forEach(a => yukle(a).catch(() => { })), 1500);
+// ön yükleme yalnız öğrencinin kendi telefonunda (yeni tasarım açıkken); personel oturumunda bu dosyalar indirilmez
+if (typeof window !== 'undefined') setTimeout(() => { if (document.body.classList.contains('ox-modu')) Object.keys(KAYNAK).forEach(a => yukle(a).catch(() => { })); }, 1500);
 // modül gelene kadar aynı yerde boş alan; gelince ekran yeniden çizilir (başlık ve sekmeler yerinde kalır)
 const bekle = (ust, ad, ctx, boy = 420) => ({
   html: ust + `<div class="ox-arc-yer" style="min-height:${boy}px" aria-busy="true"></div>`,
@@ -36,6 +39,10 @@ function dongu(el, kare) {
 const azHareket = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (x) { return false; } };
 const yuvarlak = (ikon, etiket, attrs) => `<button type="button" class="ox-arc-yuvarlak" aria-label="${etiket}" ${attrs}>${oi(ikon, ikon === 'oynat' ? 'dolu' : '')}</button>`;
 const ogreGeri = () => geri('Öğren', { 'data-ox-alt': '' });
+// gelinen yere dönen geri düğmesi; dönüş bilgisi yoksa Öğren
+const donGeri = (k, d) => d ? geri(esc(donusAd(k, d)), { 'data-ox-alt': d }) : ogreGeri();
+// direksiyon sayfaları arasında gezinirken dönüş bilgisi korunsun (ikinci geri de gelinen yere götürsün)
+const donEk = (html, d) => !d ? html : html.replace(/data-ox-alt="((?:direksiyon|etkilesim)[^"]*)"/g, (_, a) => `data-ox-alt="${a.includes(':') || a.includes('|') ? a : a + ':'}|${esc(d)}"`);
 
 /* =====================================================================
    22 · Tehlike algısı
@@ -81,9 +88,9 @@ function thGovde(k) {
       + (gecmis.length ? bolum('Son sonuçların') + liste(gecmis.map(x => satir({ ikon: 'grafik', ton: x.puan >= x.en * .6 ? 'yesil' : 'turuncu', baslik: `${x.puan} / ${x.en} puan`, alt: esc(tarih(x.tarih)) }))) : '') : '');
 }
 
-function tehlikeEkran(ctx) {
+function tehlikeEkran(ctx, donus) {
   const { k } = ctx;
-  const ust = ogreGeri() + sayfaBas('Tehlike algısı', 'Trafikteki riskleri erken fark et.');
+  const ust = donGeri(k, donus) + sayfaBas('Tehlike algısı', 'Trafikteki riskleri erken fark et.');
   if (!ogrOzellik('tehlike')) return { html: ust + bos('uyari', 'Bu çalışma kursunda kapalı', 'Kursun açtığında burada olacak.') };
   // ekran başka bir nedenle yeniden çizildiyse oyun sürer; sekmeden çıkıp dönüldüyse duraklatılmış gelir
   if (TH.durum === 'oynuyor' && performance.now() - TH.kareZaman > 1200) TH.durum = 'duraklat';
@@ -280,7 +287,7 @@ function kalkisBagla(kap) {
 function etkilesimEkran(ctx, sekme, donus) {
   const acik = ETK.filter(x => ogrOzellik(x[3]));
   const sec = acik.find(x => x[0] === sekme) || acik.find(x => x[0] === 'motor') || acik[0];
-  const ger = donus ? geri(esc(donusAd(ctx.k, donus)), { 'data-ox-alt': donus }) : ogreGeri();
+  const ger = donGeri(ctx.k, donus);
   if (!sec) return { html: ger + sayfaBas('Araç etkileşimleri', 'Aracını tanı.') + bos('arac', 'Bu çalışma kursunda kapalı', 'Kursun açtığında burada olacak.') };
   const ust = ger + sayfaBas('Araç etkileşimleri', sec[2]) + sekmeler(acik.map(x => [x[0], x[1]]), sec[0], 'data-ox-arc-sekme', 'hap');
   const ad = sec[0] === 'ikaz' ? 'ikaz' : 'motor';
@@ -306,7 +313,12 @@ const PUF_ONEMLI = ['I', 3, 5, 18, 8, 4];
 const sirala = (l, h) => [...l].sort((a, b) => (h.has(b.bas) ? 1 : 0) - (h.has(a.bas) ? 1 : 0) || (PUF_ONEMLI.indexOf(a.no) < 0 ? 99 : PUF_ONEMLI.indexOf(a.no)) - (PUF_ONEMLI.indexOf(b.no) < 0 ? 99 : PUF_ONEMLI.indexOf(b.no)));
 const madde = l => l.replace(/\s*\((?:"|“)[^)]*\)\s*\.?$/, '');
 function donusAd(k, d) {
-  const [, alt = '', id = ''] = d.split(':');
+  const y = d.split('|')[0];
+  if (UNITE_AD[y]) return UNITE_AD[y];
+  if (y === 'araclar') return 'Çalışma araçları';
+  if (y === 'deneme') return 'Deneme sınavı';
+  if (y.split(':')[0] !== 'direksiyon') return 'Öğren';
+  const [, alt = '', id = ''] = y.split(':');
   if (!alt) return 'Direksiyon hazırlığı';
   if (id && MOD.dir) { const b = MOD.dir.dirBolumler(k).find(x => x.id === id); if (b) return b.ad; }
   return alt === 'kriter' ? 'Sınav kriterleri' : alt === 'puf' ? 'Püf noktaları' : alt === 'guzergah' ? 'Güzergâhlar' : 'Geri';
@@ -327,10 +339,10 @@ function denemeHtml(k) {
       ${h.length ? `<p class="ox-arc-et">Çalışman gerekenler</p><ul class="ox-arc-hatalar">${h.slice(0, 6).map(x => `<li class="${x.renk === 'k' ? 'k' : 's'}">${oi(x.renk === 'k' ? 'yanlis' : 'uyari')}<span>${esc(madde(x.metin || ''))}<small>${x.renk === 'k' ? 'Kırmızı hata' : 'Sarı hata'}</small></span></li>`).join('')}</ul>` : '<p class="ox-arc-den-p">Hiç hata yapmadın.</p>'}
       ${dd.not ? `<p class="ox-arc-den-not">Öğretmeninin notu: “${esc(dd.not)}”</p>` : ''}</div>`;
 }
-function dirAna(k) {
+function dirAna(k, donus) {
   const [ik, metin] = dirSinav(k);
   const sat = (baslik, alt, a) => liste([satir({ baslik, alt, attrs: { 'data-ox-alt': a } })]);
-  return ogreGeri()
+  return donGeri(k, donus)
     + `<div class="ox-arc-dbas">${sayfaBas('Direksiyon hazırlığı', 'Sınav öncesi pratik bilgiler.')}${gorsel('modul-adab', '', 'ox-arc-dbas-g')}</div>`
     + `<div class="ox-arc-dsat">${sat('Sınav kriterleri', 'Direksiyon sınavında dikkat edilenler.', 'direksiyon:kriter')}${sat('Güzergâhlar', 'Sık kullanılan sınav güzergâhları.', 'direksiyon:guzergah')}${sat('Püf noktaları', 'Sınavda işini kolaylaştıracak öneriler.', 'direksiyon:puf')}</div>`
     + `<p class="ox-arc-bilgi">${oi(ik)}<span>${metin}</span></p>`
@@ -448,10 +460,10 @@ function guzergahHtml(k) {
     + (l.length ? `<div class="ox-arc-gzler">${kartlar}</div>` : `<div class="ox-kart">${bos('harita', 'Henüz güzergâh eklenmedi', 'Kursun sınav güzergâhlarını eklediğinde burada görünür.')}</div>`)
     + paylas;
 }
-function direksiyonEkran(ctx, alt) {
+function direksiyonEkran(ctx, alt, donus) {
   const { k } = ctx, [bol = '', id = ''] = alt.split(':');
-  if (!(SINIFLAR[k.sinif] || {}).direksiyon || !ogrOzellik('direksiyon')) return { html: ogreGeri() + sayfaBas('Direksiyon hazırlığı', 'Sınav öncesi pratik bilgiler.') + bos('direksiyon', 'Bu bölüm senin sınıfın için yok', 'Ehliyet sınıfında direksiyon eğitimi olmadığı için burada çalışılacak bir şey yok.') };
-  if (!bol) return { html: dirAna(k) };
+  if (!(SINIFLAR[k.sinif] || {}).direksiyon || !ogrOzellik('direksiyon')) return { html: donGeri(k, donus) + sayfaBas('Direksiyon hazırlığı', 'Sınav öncesi pratik bilgiler.') + bos('direksiyon', 'Bu bölüm senin sınıfın için yok', 'Ehliyet sınıfında direksiyon eğitimi olmadığı için burada çalışılacak bir şey yok.') };
+  if (!bol) return { html: dirAna(k, donus) };
   if (bol === 'guzergah') return { html: guzergahHtml(k) };
   if (!MOD.dir) return bekle(geri('Direksiyon hazırlığı', { 'data-ox-alt': 'direksiyon' }), 'dir', ctx, 600);
   if (bol === 'kriter' && id) {
@@ -475,10 +487,10 @@ function direksiyonEkran(ctx, alt) {
 /* ---------- dışa aktarım ---------- */
 export function altEkran(ad, ctx) {
   durdur();
-  const [yol, donus = ''] = String(ad || '').split('|'), [ana, ...r] = yol.split(':');
-  if (ana === 'tehlike') return tehlikeEkran(ctx);
+  const s = String(ad || ''), b = s.indexOf('|'), yol = b < 0 ? s : s.slice(0, b), donus = b < 0 ? '' : s.slice(b + 1), [ana, ...r] = yol.split(':');
+  if (ana === 'tehlike') return tehlikeEkran(ctx, donus);
   if (ana === 'etkilesim') return etkilesimEkran(ctx, r[0] || 'motor', donus);
-  if (ana === 'direksiyon') return direksiyonEkran(ctx, r.join(':'));
+  if (ana === 'direksiyon') { const y = direksiyonEkran(ctx, r.join(':'), donus); if (y && donus) y.html = donEk(y.html, donus); return y; }
   return null;
 }
 

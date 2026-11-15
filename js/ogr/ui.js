@@ -161,6 +161,15 @@ export const sik = (harf, metin, durum = '', attrs) => `<button type="button" cl
 // geri bildirim kutusu: "Doğru cevap: C" + açıklama (yeşil ya da kırmızı ton)
 export const cevapKutu = (iyi, baslik, metin = '', ek = '') => `<div class="ox-cevap ${iyi ? 'iyi' : 'kotu'}" role="status"><b>${baslik}</b>${metin ? `<p>${metin}</p>` : ''}${ek}</div>`;
 
+/* ---------- odak tuzağı (tam ekran ders, sınav penceresi) ---------- */
+// kok açıkken sayfanın geri kalanı inert olur: Tab ve ekran okuyucu arkaya düşmez. Dönen işlev serbest bırakır ve odağı eski yerine verir.
+export function odakTuzagi(kok) {
+  const onceki = document.activeElement, kapanan = [];
+  for (let el = kok; el && el !== document.body && el.parentElement; el = el.parentElement)
+    for (const k of el.parentElement.children) if (k !== el && !k.inert && k.tagName !== 'SCRIPT' && k.tagName !== 'STYLE') { k.inert = true; kapanan.push(k); }
+  return () => { kapanan.forEach(k => { k.inert = false; }); if (onceki && onceki.isConnected && onceki.focus) { try { onceki.focus({ preventScroll: true }); } catch (x) { } } };
+}
+
 /* ---------- tasarım belirteçleri ve ortak stiller ---------- */
 stilEkle('ox-temel', `
 body.ox-modu{--ox-mavi:#0a66f2;--ox-mavi-bas:#0052cc;--ox-mavi-acik:#e9f1fe;--ox-mavi-orta:#d8e6fd;--ox-hero:#e7f0fd;--ox-hero-2:#eef4fe;
@@ -213,14 +222,15 @@ body.ox-tam-acik .ox-ust{display:none!important}
 .ox-sayfa-bas h1{font-size:27px;line-height:1.12;font-weight:800;letter-spacing:-.025em;color:var(--ox-bas)}
 .ox-sayfa-bas p{margin-top:5px;font-size:15.5px;color:var(--ox-ikincil)}
 .ox-sayfa-sag{flex:none;padding-bottom:4px;font-size:16px;font-weight:700;color:var(--ox-mavi);white-space:nowrap}
-.ox-geri{display:inline-flex;align-items:center;gap:2px;margin:10px 0 2px -6px;padding:6px 8px 6px 2px;color:var(--ox-mavi);font-size:16px;font-weight:500;border-radius:10px}
+.ox-geri{display:inline-flex;align-items:center;gap:2px;min-height:44px;margin:5px 0 -3px -6px;padding:11px 8px 11px 2px;color:var(--ox-mavi);font-size:16px;font-weight:500;border-radius:10px}
 .ox-geri .ox-i{width:22px;height:22px;stroke-width:2.1}
 .ox-geri+.ox-sayfa-bas{margin-top:4px}
 .ox-bolum{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:28px 0 12px}
 .ox-bolum h2{font-size:20px;line-height:1.2;font-weight:800;letter-spacing:-.02em;color:var(--ox-bas)}
 .ox-bolum-sag{flex:none;font-size:15px;color:var(--ox-ikincil)}
-.ox-bag{display:inline-flex;align-items:center;gap:6px;color:var(--ox-mavi);font-size:15.5px;font-weight:600}
+.ox-bag{position:relative;display:inline-flex;align-items:center;gap:6px;color:var(--ox-mavi);font-size:15.5px;font-weight:600}
 .ox-bag .ox-i{width:20px;height:20px;stroke-width:2.1}
+.ox-bag::after{content:"";position:absolute;inset:-11px -6px}
 
 /* kartlar */
 .ox-kart{background:var(--ox-kart);border:1px solid var(--ox-cizgi);border-radius:var(--ox-r);box-shadow:var(--ox-golge)}
@@ -244,7 +254,8 @@ button.ox-kart:active,button.ox-satir:active,button.ox-konu:active{background:#f
 .ox-dg.genis{display:flex;width:100%}
 .ox-dg.okl{justify-content:space-between}
 .ox-dg.okl.ortala{justify-content:center}
-.ox-dg.kucuk{min-height:38px;padding:0 14px;font-size:15px;border-radius:10px}
+.ox-dg.kucuk{position:relative;min-height:38px;padding:0 14px;font-size:15px;border-radius:10px}
+.ox-dg.kucuk::after{content:"";position:absolute;inset:-3px 0}
 .ox-dg .ox-i{width:21px;height:21px;stroke-width:2.1}
 .ox-dg-ana{background:var(--ox-mavi);color:#fff!important;box-shadow:0 1px 2px rgba(10,102,242,.25)}
 .ox-dg-ana:active{background:var(--ox-mavi-bas)}
@@ -259,7 +270,8 @@ button.ox-kart:active,button.ox-satir:active,button.ox-konu:active{background:#f
 .ox-satir{position:relative;display:flex;align-items:center;gap:14px;width:100%;min-height:64px;padding:12px 16px;text-align:left;background:var(--ox-kart)}
 .ox-liste>.ox-satir+.ox-satir::before,.ox-liste>.ox-konu+.ox-konu::before{content:"";position:absolute;top:0;right:16px;left:16px;border-top:1px solid var(--ox-ayrac)}
 .ox-liste>.ox-satir:has(.ox-ik-kutu)+.ox-satir::before{left:72px}
-.ox-satir-govde{flex:1;min-width:0;display:grid;gap:2px}
+.ox-satir-govde{flex:1;min-width:0;display:grid;grid-template-columns:minmax(0,1fr);gap:2px}
+.ox-satir-govde b,.ox-satir-govde small{overflow-wrap:anywhere}
 .ox-satir-govde b{font-size:16px;line-height:1.25;font-weight:700;letter-spacing:-.01em;color:var(--ox-bas)}
 .ox-satir-govde small{font-size:14px;line-height:1.3;color:var(--ox-ikincil)}
 .ox-satir-govde small.mavi{color:var(--ox-mavi)}.ox-satir-govde small.yesil{color:var(--ox-yesil)}.ox-satir-govde small.kirmizi{color:var(--ox-kirmizi)}
@@ -307,7 +319,8 @@ button.ox-kart:active,button.ox-satir:active,button.ox-konu:active{background:#f
 .ox-sekmeler.cizgi button.secili{color:var(--ox-mavi);font-weight:600}
 .ox-sekmeler.cizgi button.secili::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2.5px;border-radius:2px;background:var(--ox-mavi)}
 .ox-sekmeler.hap{padding:3px;gap:3px;background:var(--ox-gri-acik);border-radius:12px}
-.ox-sekmeler.hap button{min-height:38px;border-radius:10px;font-size:15px}
+.ox-sekmeler.hap button{position:relative;min-height:38px;border-radius:10px;font-size:15px}
+.ox-sekmeler.hap button::after{content:"";position:absolute;inset:-6px 0}
 .ox-sekmeler.hap button.secili{background:var(--ox-mavi);color:#fff;font-weight:600;box-shadow:0 1px 2px rgba(10,102,242,.25)}
 .ox-kutucuk,.ox-radyo{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:10px 16px;font-size:16px;color:var(--ox-bas);text-align:left;position:relative;background:var(--ox-kart)}
 .ox-liste>.ox-kutucuk+.ox-kutucuk::before,.ox-liste>.ox-radyo+.ox-radyo::before{content:"";position:absolute;top:0;right:16px;left:16px;border-top:1px solid var(--ox-ayrac)}
@@ -344,5 +357,19 @@ button.ox-kart:active,button.ox-satir:active,button.ox-konu:active{background:#f
 .ox-cevap.iyi{background:var(--ox-yesil-acik);color:#145c36}.ox-cevap.iyi b{color:var(--ox-yesil)}
 .ox-cevap.kotu{background:var(--ox-kirmizi-acik);color:#7a2326}.ox-cevap.kotu b{color:var(--ox-kirmizi)}
 body.ox-akis-acik{overflow:hidden}
+body.ox-modu .perde{background:rgba(15,29,64,.42)}
+body.ox-modu .pencere{font-family:var(--ox-yazi);color:var(--ox-metin);border-top:0;border-radius:20px;box-shadow:0 24px 60px -20px rgba(15,29,64,.4)}
+body.ox-modu .pencere header{padding:16px 12px 0 20px}
+body.ox-modu .pencere header h2{font-family:var(--ox-yazi);font-size:19px;font-weight:800;letter-spacing:-.02em;color:var(--ox-bas)}
+body.ox-modu .pencere header .dg-ikon{width:44px;height:44px;border-radius:12px;color:var(--ox-bas)}
+body.ox-modu .pencere-govde{padding:12px 20px 18px;font-size:15px;line-height:1.45}
+body.ox-modu .pencere footer{background:#fff;border-top:1px solid var(--ox-ayrac);border-radius:0 0 20px 20px;padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
+body.ox-modu .pencere .dg{font-family:var(--ox-yazi);min-height:44px;border-radius:12px;font-size:15.5px;font-weight:600;padding:0 16px;box-shadow:none}
+body.ox-modu .pencere .dg-ana{background:var(--ox-mavi);border-color:var(--ox-mavi);color:#fff}
+body.ox-modu .pencere .dg-cizgi{background:#fff;border:1px solid var(--ox-cizgi);color:var(--ox-bas)}
+body.ox-modu .pencere .dg-hafif{background:var(--ox-mavi-acik);border-color:transparent;color:var(--ox-mavi)}
+body.ox-modu .pencere .dg-tehlike,body.ox-modu .pencere .dg-kirmizi{background:var(--ox-kirmizi-acik);border-color:transparent;color:var(--ox-kirmizi)}
+body.ox-modu .pencere .girdi,body.ox-modu .pencere input:not([type=checkbox]):not([type=radio]),body.ox-modu .pencere select,body.ox-modu .pencere textarea{font-family:var(--ox-yazi);border-radius:12px;border:1px solid var(--ox-cizgi);font-size:16px}
+body.ox-modu .pencere.genis{width:min(760px,100%)}
 @media (prefers-reduced-motion:reduce){.ox *,.ox-akis *{transition:none!important;animation:none!important}}
 `);

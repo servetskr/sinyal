@@ -24,7 +24,8 @@ export const bitti = (k, id) => !!(k.okunan || {})[id];
 export const sonuc = (k, id) => (k.dersSonuc || {})[id];
 export const YARIM = 'sinyal-ders-yarim';
 export const yarimOku = k => { try { const y = JSON.parse(localStorage.getItem(YARIM) || 'null'); return y && y.k === k.id ? y : null; } catch (x) { return null; } };
-export const yarimYaz = (k, id, adim, top) => { try { localStorage.setItem(YARIM, JSON.stringify({ k: k.id, id, adim, top })); } catch (x) { } };
+// ek: { sor: [qi...], cevap: [[qi, seçilen]...] } — derse dönünce aynı sorular ve verilen cevaplar geri gelir (eski kayıtlarda yoktur)
+export const yarimYaz = (k, id, adim, top, ek = {}) => { try { localStorage.setItem(YARIM, JSON.stringify({ k: k.id, id, adim, top, ...ek })); } catch (x) { } };
 export const yarimSil = () => { try { localStorage.removeItem(YARIM); } catch (x) { } };
 export function siradaki(k) {
   const y = yarimOku(k), l = konular();

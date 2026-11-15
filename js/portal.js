@@ -531,6 +531,8 @@ export function ogrenciPortal() {
     if (y) return y;
   }
   let govde = '';
+  // eski düzen Öğren modülü: alt ekran değeri yeni tasarımla ortak (sessionStorage 'sinyal-og-alt'); eski düzen yalnız bildiği değerleri açar
+  const ogm = (m => m === 'sinav' || MUFREDAT.some(x => x[0] === m) ? m : null)(OGR.modulAcik());
   if (ogSekme === 'durum') govde = ogGovde(k, sd, sinav);
   if (ogSekme === 'ders') govde = OG.derslerHtml(k);
   if (ogSekme === 'odeme') govde = OG.odemelerHtml(k);
@@ -538,7 +540,7 @@ export function ogrenciPortal() {
     if (!SORULAR.length) sorulariYukle().then(() => { if (location.hash.startsWith('#/ogrenci')) yenile(); }).catch(() => { });
     const MOD_AD = { deneme: 'Deneme sınavı', hizli: 'Hızlı test', konu: 'Konu çalışması', yanlis: 'Yanlışlarım', tekrar: 'Bugünkü tekrar' };
     testGeriYukle(k);
-    if (!test.mod) { const m = OGR.modulAcik(); govde = m === 'sinav' ? OGR.modulBas('Sınava hazırlan', 'Deneme sınavı, tekrar ve sınav bilgilerin') + sinavMenu(k) : m ? OGR.modulHtml(k, m) : OGR.haritaHtml(k); }
+    if (!test.mod) { const m = ogm; govde = m === 'sinav' ? OGR.modulBas('Sınava hazırlan', 'Deneme sınavı, tekrar ve sınav bilgilerin') + sinavMenu(k) : m ? OGR.modulHtml(k, m) : OGR.haritaHtml(k); }
     else if (test.duraklat && test.i < test.liste.length) {
       const kalanDk = test.mod === 'deneme' ? Math.max(1, Math.ceil((45 * 60e3 - (test.harcanan || 0)) / 60e3)) : 0;
       govde = `<div class="kart soru" style="text-align:center"><small style="color:var(--soluk)">Yarım kalan test</small><h3 style="margin:6px 0 4px;font-size:22px">${MOD_AD[test.mod]}</h3><p style="color:var(--metin)">${test.i}/${test.liste.length} soru cevaplandı${kalanDk ? ' · ' + kalanDk + ' dakikan var' : ''}</p>${ilerleme(test.i, test.liste.length)}<div style="display:grid;gap:10px;margin-top:16px"><button class="dg dg-ana og-giris-dg" data-test-devam>Kaldığın yerden devam et</button><button class="dg dg-hafif" data-test-menu>Testi bırak</button></div></div>`;
@@ -561,7 +563,7 @@ export function ogrenciPortal() {
     }
   }
   if (ogSekme === 'evrak') govde = OG.belgelerHtml(k);
-  const ogrenAna = ogSekme === 'sinav' && !test.mod, ogrenUst = ogrenAna && !OGR.modulAcik();
+  const ogrenAna = ogSekme === 'sinav' && !test.mod, ogrenUst = ogrenAna && !ogm;
   if (ogrenUst) OGR.onYukle(() => { if (ogSekme === 'sinav') yenile(); });
   const kendi = !!(oturum.kullanici && oturum.kullanici.rol === 'ogrenci');
   return {

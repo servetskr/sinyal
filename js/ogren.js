@@ -5,6 +5,7 @@ import { MUFREDAT } from './ogrenci.js?v=206';
 import { UNITE_AD, ILKYARDIM_SVG, kapakSvg, konular, bitti, sonuc, siradaki, sayac, levhaYukle, veriler, altEkran, altAc, altKapat } from './ogr/ogrveri.js?v=206';
 import { dersBaslat } from './ogr/ders.js?v=206';
 import { SAHNELER } from './tehlike.js?v=206';
+import { yarim, yarimKart, yarimBagla } from './ogr/sinav.js?v=206';
 import { esc, oi, sayfaBas, geri, bolum, heroKart, gorsel, dugme, liste, satir, konuSatir, serit, bos, stilEkle } from './ogr/ui.js?v=206';
 export { siradaki, dersBaslat };
 export const onYukle = cb => { if (!veriler().LV) levhaYukle().then(() => cb && cb()); };
@@ -64,7 +65,8 @@ export function bagla(kap, k, yenile) {
 // Öğren ana ekranı, modül sayfaları (trafik|ilkyardim|motor|adab) ve tüm konular (tum | tum:<modül>).
 const MODUL_GORSEL = { trafik: 'modul-trafik', ilkyardim: 'modul-ilkyardim', motor: 'modul-motor', adab: 'modul-adab' };
 const DERS_SORU = 5; // her kısa derste 5 soru (ogr/ders.js sorulariSec; her konunun havuzunda en az 5 soru var)
-const KESFET = [['etkilesim:ikaz', 'İkaz lambaları', 'ikaz'], ['etkilesim:motor', '4 zamanlı motor', 'motor'], ['etkilesim:kalkis', 'Debriyaj ve kalkış', 'motor']];
+// "|motor": geri düğmesi Araç tekniği sayfasına döner (js/ogr/araclar.js dönüş deseni)
+const KESFET = [['etkilesim:ikaz|motor', 'İkaz lambaları', 'ikaz'], ['etkilesim:motor|motor', '4 zamanlı motor', 'motor'], ['etkilesim:kalkis|motor', 'Debriyaj ve kalkış', 'motor']];
 const buyukHarf = t => t ? t.charAt(0).toLocaleUpperCase('tr') + t.slice(1) : t;
 // "Trafik işaretleri: uyarı, tanzim ve bilgi levhaları" → ["Trafik işaretleri", "Uyarı, tanzim ve bilgi levhaları"]
 const baslikBol = ad => { const i = ad.indexOf(':'); return i > 0 ? [ad.slice(0, i).trim(), buyukHarf(ad.slice(i + 1).trim())] : [ad, '']; };
@@ -79,7 +81,8 @@ function konuSatiri(k, x, siraId = null) {
   return konuSatir({ no: x.no, ad: `<span>${esc(x.ad)}</span>${ek}`, durum: ok ? 'bitti' : x.id === siraId ? 'siradaki' : '', attrs: { 'data-og-ders': x.id, 'data-ox-ogr-sade': sade(x.ad), 'aria-label': `${x.no}. konu: ${x.ad}${ok ? ', tamamlandı' : x.id === siraId ? ', sıradaki' : ''}` } });
 }
 
-function anaHtml(k) {
+function anaHtml(k, ctx) {
+  const yt = yarim(ctx), yarimDeneme = !!(yt && yt.mod === 'deneme');
   const tum = konular(), biten = tum.filter(x => bitti(k, x.id)).length, s = siradaki(k);
   const esGecti = !!(k.esinav && k.esinav.sonuc === 'Geçti');
   let hero;
@@ -104,13 +107,13 @@ function anaHtml(k) {
     return `<button type="button" class="ox-ogr-mod" data-ox-alt="${key}" aria-label="${esc(UNITE_AD[key])}: ${b} / ${t} konu tamamlandı"><span class="ox-ogr-mod-yazi"><b>${esc(UNITE_AD[key])}</b>${alt}</span>${gorsel(MODUL_GORSEL[key], '', 'ox-ogr-mod-g ' + key)}</button>`;
   }).join('');
   const son = (k.deneme || []).slice(-1)[0], gecti = esGecti;
-  const denemeAlt = `50 soru · 45 dakika<br>${gecti ? 'E-sınavı geçtin.' : son != null ? `Son deneme puanın: ${son}` : 'Hazır olduğunda kendini dene.'}`;
+  const denemeAlt = `50 soru · 45 dakika<br>${yarimDeneme ? 'Yarım kalan denemen var.' : gecti ? 'E-sınavı geçtin.' : son != null ? `Son deneme puanın: ${son}` : 'Hazır olduğunda kendini dene.'}`;
   return `<header class="ox-sayfa-bas ox-ogr-bas"><div><h1>Öğren</h1><p>İyi sürücülük, sağlam bilgiyle başlar.</p></div><span class="ox-sayfa-sag" aria-label="${biten} / ${tum.length} konu tamamlandı">${biten} / ${tum.length} konu</span></header>`
-    + hero
+    + (yt ? yarimKart(ctx) : '') + hero
     + bolum('Eğitim konuları', `${MUFREDAT.length} alan`)
     + `<div class="ox-ogr-izgara">${moduller}</div>`
     + `<div class="ox-ogr-araclar">`
-    + liste([satir({ ikon: 'panoSoru', baslik: 'Deneme sınavı', alt: denemeAlt, sag: `<span class="ox-bag">İncele${oi('ok')}</span>`, ok: false, attrs: { 'data-ox-alt': 'deneme' }, cls: 'ox-ogr-deneme' })])
+    + liste([satir({ ikon: 'panoSoru', baslik: 'Deneme sınavı', alt: denemeAlt, sag: `<span class="ox-bag">${yarimDeneme ? 'Devam et' : 'İncele'}${oi('ok')}</span>`, ok: false, attrs: { 'data-ox-alt': 'deneme' }, cls: 'ox-ogr-deneme' })])
     + liste([satir({ ikon: 'kartlar', baslik: 'Çalışma araçları', alt: 'Hızlı test ve konu tekrarı', attrs: { 'data-ox-alt': 'araclar' } })])
     + `</div>`;
 }
@@ -122,7 +125,7 @@ function modulSayfa(k, key) {
   // Tehlike algısı ve Keşfet araçları kursun öğrenci uygulaması ayarına bağlı (Ayarlar › Öğrenci uygulaması)
   const th = (k.tehlike || []).slice(-1)[0], kesfet = KESFET.filter(([, , oz]) => ogrOzellik(oz));
   const ek = key === 'trafik' && ogrOzellik('tehlike')
-    ? `<button type="button" class="ox-ogr-mod genis ox-ogr-teh" data-ox-alt="tehlike"><span class="ox-ogr-mod-yazi"><b>Tehlike algısı</b><small>${SAHNELER.length} sahne${th ? ` · son puanın ${th.puan} / ${th.en}` : ''}</small></span>${gorsel('modul-adab', '', 'ox-ogr-mod-g adab')}</button>`
+    ? `<button type="button" class="ox-ogr-mod genis ox-ogr-teh" data-ox-alt="tehlike:|trafik"><span class="ox-ogr-mod-yazi"><b>Tehlike algısı</b><small>${SAHNELER.length} sahne${th ? ` · son puanın ${th.puan} / ${th.en}` : ''}</small></span>${gorsel('modul-adab', '', 'ox-ogr-mod-g adab')}</button>`
     : key === 'motor' && kesfet.length ? bolum('Keşfet') + liste(kesfet.map(([a, ad]) => satir({ baslik: ad, attrs: { 'data-ox-alt': a }, cls: 'ox-ogr-kesfet' }))) : '';
   return geri('Öğren', { 'data-ox-alt': '' })
     + `<div class="ox-ogr-mbas">${sayfaBas(esc(UNITE_AD[key]), `${t} konu · ${b} tamamlandı`, gorsel(MODUL_GORSEL[key], '', 'ox-ogr-mbas-g ' + key))}</div>`
@@ -162,7 +165,7 @@ export function ekran(ctx) {
   const { k } = ctx, a = altEkran() || '';
   if (MODUL_GORSEL[a]) return { html: modulSayfa(k, a) };
   if (a === 'tum' || a.startsWith('tum:')) return { html: tumHtml(k, a.slice(4)), baglan: tumBagla };
-  return { html: anaHtml(k) };
+  return { html: anaHtml(k, ctx), baglan: kap => yarimBagla(kap, ctx) };
 }
 
 stilEkle('ox-ogren', `

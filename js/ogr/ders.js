@@ -5,7 +5,7 @@ import { MUFREDAT } from '../ogrenci.js?v=206';
 import * as HZ from '../hazirlik.js?v=206';
 import { SORU_KONU } from '../soruKonu.js?v=206';
 import { UNITE_AD, kapakSvg, konular, bitti, sayac, yarimOku, yarimYaz, yarimSil, yukle, veriler } from './ogrveri.js?v=206';
-import { esc, oi, gorsel as cizim, dugme, ikonKutu, satir, liste, serit, bolum, akisUst, akisAlt, sik, cevapKutu, stilEkle } from './ui.js?v=206';
+import { esc, oi, gorsel as cizim, dugme, ikonKutu, satir, liste, serit, bolum, akisUst, akisAlt, sik, cevapKutu, stilEkle, odakTuzagi } from './ui.js?v=206';
 
 /* ---------- ders içeriği ---------- */
 // cümlelere böl ("md.", "vb." gibi kısaltmalarda bölme), ~430 karakterlik kartlara topla
@@ -36,9 +36,16 @@ function sorulariSec(id, n = 5) {
   for (let i = 0; i < SORU_KONU.length && i < SR.length; i++) if (SORU_KONU[i] === c && SR[i][0] === key) havuz.push(i);
   return karistir(havuz).slice(0, n);
 }
+// yarım kayıttaki soru listesi hâlâ bu konunun sorularından mı (veri değişmiş olabilir)
+function kayitliSorular(id, sor) {
+  const key = id.replace(/-\d+$/, ''), c = (+id.split('-').pop()).toString(36), SR = veriler().SR;
+  if (!Array.isArray(sor) || !sor.length || new Set(sor).size !== sor.length) return null;
+  return sor.every(qi => Number.isInteger(qi) && qi >= 0 && qi < SR.length && qi < SORU_KONU.length && SORU_KONU[qi] === c && SR[qi][0] === key) ? sor : null;
+}
 // adımlar: kapak, okuma kartları (her iki kartta bir ara soru), video, akılda kalsın, kalan sorular, sonuç
-function adimlar(id) {
-  const d = veriler().DR[id] || { paragraflar: [] }, kartlar = kartlara(d.paragraflar || []), sor = sorulariSec(id), l = [{ tur: 'kapak' }];
+// sor verilirse (yarım kalan derse dönüş) aynı sorularla aynı adımlar kurulur
+function adimlar(id, sor = sorulariSec(id)) {
+  const d = veriler().DR[id] || { paragraflar: [] }, kartlar = kartlara(d.paragraflar || []), l = [{ tur: 'kapak' }];
   const araSoru = Math.min(2, Math.max(0, sor.length - 3)); let si = 0;
   kartlar.forEach((m, i) => { l.push({ tur: 'oku', m }); if (si < araSoru && (i + 1) % 2 === 0 && i < kartlar.length - 1) l.push({ tur: 'soru', qi: sor[si++] }); });
   if ((d.videolar || []).length) l.push({ tur: 'video', v: d.videolar[0] });
@@ -95,6 +102,8 @@ async function dersAc(k, id, yenile, { gecmisVar = false, odak = null } = {}) {
     + `<div class="ox-akis-govde" data-ox-dr-govde><div class="ox-dr-bekle" role="status">Ders hazırlanıyor…</div></div>`
     + akisAlt('');
   document.body.appendChild(kok); document.body.classList.add('ox-akis-acik'); acik = kok;
+  // tam ekran katman açıkken arka plan inert: Tab ve ekran okuyucu katmanın içinde kalır
+  const serbest = odakTuzagi(kok);
   requestAnimationFrame(() => requestAnimationFrame(() => kok.classList.add('gir')));
 
   const govde = kok.querySelector('[data-ox-dr-govde]'), alt = kok.querySelector('.ox-akis-alt');
@@ -107,7 +116,7 @@ async function dersAc(k, id, yenile, { gecmisVar = false, odak = null } = {}) {
   if (!gecmis) { try { history.pushState({ oxDers: 1 }, ''); gecmis = true; } catch (x) { } }
   const sok = (gecmisten = false) => {
     sesKapat(); document.removeEventListener('keydown', tus); window.removeEventListener('popstate', geriTus);
-    govde.removeEventListener('scroll', golge); acik = null;
+    govde.removeEventListener('scroll', golge); acik = null; serbest();
     if (gecmis && !gecmisten) { try { if (history.state && history.state.oxDers) history.back(); } catch (x) { } }
   };
   const kapat = (gecmisten = false) => {
@@ -124,7 +133,16 @@ async function dersAc(k, id, yenile, { gecmisVar = false, odak = null } = {}) {
     }, 280);
     yenile();
   };
-  const tus = ev => { if (ev.key === 'Escape') { ev.preventDefault(); kapat(); } };
+  // Tab katmanın son düğmesinden ilkine (Shift+Tab tersine) döner; arka plan zaten inert
+  const odaklar = () => [...kok.querySelectorAll('button:not([disabled]),a[href],iframe,[tabindex]:not([tabindex="-1"])')]
+    .filter(el => el.checkVisibility ? el.checkVisibility({ visibilityProperty: true }) : el.offsetParent !== null);
+  const tus = ev => {
+    if (ev.key === 'Escape') { ev.preventDefault(); kapat(); return; }
+    if (ev.key !== 'Tab' || acik !== kok) return;
+    const l = odaklar(); if (!l.length) return;
+    const a = document.activeElement, ilk = l[0], son = l[l.length - 1];
+    if (ev.shiftKey ? (a === ilk || !kok.contains(a)) : (a === son || !kok.contains(a))) { ev.preventDefault(); (ev.shiftKey ? son : ilk).focus(); }
+  };
   const geriTus = () => kapat(true);
   document.addEventListener('keydown', tus);
   window.addEventListener('popstate', geriTus);
@@ -142,9 +160,21 @@ async function dersAc(k, id, yenile, { gecmisVar = false, odak = null } = {}) {
     return;
   }
 
-  const L = adimlar(id), y = yarimOku(k), DR = veriler().DR[id] || {}, SR = veriler().SR;
-  let i = y && y.id === id && y.adim < L.length - 1 ? Math.min(y.adim, L.length - 2) : 0;
+  // yarım kalan derse dönüş: kayıtta soru listesi varsa aynı sorular ve verilen cevaplar geri yüklenir
+  // (eski biçimdeki {k, id, adim, top} kayıtlarında yoktur; o zaman sorular yeniden seçilir, kaldığı adımdan sürer)
+  const y = yarimOku(k), ayni = !!(y && y.id === id), sor = ayni ? kayitliSorular(id, y.sor) : null;
+  const L = sor ? adimlar(id, sor) : adimlar(id), DR = veriler().DR[id] || {}, SR = veriler().SR;
+  let i = ayni && Number.isInteger(y.adim) && y.adim > 0 && y.adim < L.length - 1 ? y.adim : 0;
   const cevap = [];  // [qi, seçilen]
+  if (sor && i > 0 && Array.isArray(y.cevap)) {
+    const sorAdim = new Map(L.map((a, j) => [a.tur === 'soru' ? a.qi : -1, j]));
+    y.cevap.forEach(e => {
+      const [qi, c] = Array.isArray(e) ? e : [], j = sorAdim.get(qi);
+      if (j == null || j < 0 || j > i || L[j].c != null || !Number.isInteger(c) || c < 0 || c >= SR[qi][2].length) return;
+      L[j].c = c; cevap.push([qi, c]);
+    });
+  }
+  const yarimKaydet = () => yarimYaz(k, id, i, L.length, { sor: L.filter(a => a.tur === 'soru').map(a => a.qi), cevap: cevap.map(e => e.slice()) });
   const okuSay = L.filter(x => x.tur === 'oku').length, soruSay = L.filter(x => x.tur === 'soru').length, icerikSay = Math.max(1, L.length - 2);
   const sonrakiKonu = () => { const l = konular(), j = l.findIndex(x => x.id === id); return l.slice(j + 1).find(x => !bitti(k, x.id)) || null; };
   const ileriDg = (metin = 'Devam', ek = {}) => dugme(metin, { 'data-ox-dr-ileri': true, ...ek }, { genis: true, ok: true });
@@ -197,7 +227,7 @@ async function dersAc(k, id, yenile, { gecmisVar = false, odak = null } = {}) {
       const q = SR[a.qi], c = a.c, g = soruGorsel(q[4]), cevaplandi = c != null, iyi = c === q[3];
       const durum = j => !cevaplandi ? '' : j === q[3] ? 'dogru' : j === c ? 'yanlis' : '';
       return {
-        h: `${g ? `<div class="ox-dr-soru-gorsel">${g}</div>` : ''}<p class="ox-dr-kok" id="ox-dr-kok">${esc(q[1])}</p>
+        h: `${g ? `<div class="ox-dr-soru-gorsel">${g}</div>` : ''}<p class="ox-dr-kok" id="ox-dr-kok" tabindex="-1">${esc(q[1])}</p>
           <div class="ox-dr-siklar" role="group" aria-labelledby="ox-dr-kok">${q[2].map((s, j) => sik('ABCD'[j], esc(s), durum(j), { 'data-ox-dr-sik': j, disabled: cevaplandi, 'aria-label': `${'ABCD'[j]}: ${s}${cevaplandi && j === q[3] ? ' (doğru cevap)' : cevaplandi && j === c ? ' (senin cevabın)' : ''}` })).join('')}</div>
           ${cevaplandi ? cevapKutu(true, `<span class="ox-dr-gizli">${iyi ? 'Doğru bildin. ' : 'Yanlış. '}</span>Doğru cevap: ${'ABCD'[q[3]]}`, q[5] ? esc(q[5]) : '') : ''}`,
         dg: ileriDg('Devam', { disabled: !cevaplandi }),
@@ -214,7 +244,7 @@ async function dersAc(k, id, yenile, { gecmisVar = false, odak = null } = {}) {
       h: `<div class="ox-dr-son">${ikonKutu('panoTik', 'mavi', true)}<h1 class="ox-dr-baslik">Konuyu tamamladın</h1><p class="ox-dr-alt">${esc(ad)}</p></div>
         ${satirlar.length ? liste(satirlar, 'ox-dr-sonuc') : ''}
         ${sk ? `<button type="button" class="ox-dr-siradaki" data-ox-dr-sonraki="${esc(sk.id)}"><span><small>Sıradaki konu</small><b>${esc(sk.ad)}</b></span><span class="ox-chev">${oi('sag')}</span></button>` : ''}`,
-      dg: `<div class="ox-dr-dgler">${sk ? dugme('Sıradaki konu', { 'data-ox-dr-sonraki': sk.id }, { genis: true, ok: true }) : ''}${dugme('Öğren\'e dön', { 'data-ox-dr-kapat': true }, { tur: sk ? 'ikincil' : 'ana', genis: true })}</div>`,
+      dg: `<div class="ox-dr-dgler">${sk ? dugme('Sıradaki konu', { 'data-ox-dr-sonraki': sk.id }, { genis: true, ok: true }) : ''}${dugme('Öğren’e dön', { 'data-ox-dr-kapat': true }, { tur: sk ? 'ikincil' : 'ana', genis: true })}</div>`,
     };
   }
 
@@ -223,7 +253,7 @@ async function dersAc(k, id, yenile, { gecmisVar = false, odak = null } = {}) {
     sesKapat();
     const a = L[i];
     ust(a);
-    if (yeni && i > 0 && a.tur !== 'son') yarimYaz(k, id, i, L.length);
+    if (yeni && i > 0 && a.tur !== 'son') yarimKaydet();
     const { h, dg } = icerik(a), kay = govde.scrollTop;
     govde.innerHTML = `<div class="ox-dr-ekran ox-dr-e-${a.tur}${yeni ? ' yeni' : ''}">${h}</div>`;
     alt.innerHTML = dg;
@@ -231,7 +261,11 @@ async function dersAc(k, id, yenile, { gecmisVar = false, odak = null } = {}) {
     golge();
     const kr = govde.querySelector('[data-ox-dr-kucuk]');
     if (kr) { const bak = () => { if (!kr.naturalWidth || kr.naturalWidth <= 120) kr.classList.add('yok'); }; if (kr.complete) bak(); else { kr.addEventListener('load', bak, { once: true }); kr.addEventListener('error', bak, { once: true }); } }
-    if (yeni && a.tur !== 'soru') { const f = alt.querySelector('.ox-dg-ana'); if (f) f.focus({ preventScroll: true }); }
+    // odak katmanın içinde kalsın: soru adımında soru kökü (cevaplanmışsa, yarım dersten dönüşte, Devam), öteki adımlarda ana düğme
+    if (yeni) {
+      const f = a.tur !== 'soru' ? alt.querySelector('.ox-dg-ana') : a.c != null ? alt.querySelector('[data-ox-dr-ileri]') : govde.querySelector('.ox-dr-kok');
+      if (f) f.focus({ preventScroll: true });
+    }
   }
 
   function bitir() {
@@ -266,6 +300,7 @@ async function dersAc(k, id, yenile, { gecmisVar = false, odak = null } = {}) {
     const s = t.closest('[data-ox-dr-sik]');
     if (s && L[i].tur === 'soru' && L[i].c == null) {
       const c = +s.dataset.oxDrSik; L[i].c = c; cevap.push([L[i].qi, c]);
+      yarimKaydet();  // ileri basılmadan kapatılsa da cevap kaybolmasın
       ciz(false);
       const kutu = govde.querySelector('.ox-cevap'); if (kutu) kutu.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       const g = alt.querySelector('[data-ox-dr-ileri]'); if (g) g.focus({ preventScroll: true });
@@ -352,6 +387,7 @@ stilEkle('ox-ders', `
 /* soru */
 .ox-dr-soru-gorsel{display:grid;place-items:center;height:132px;margin-bottom:16px}
 .ox-dr-soru-gorsel svg{display:block;height:124px;width:auto;max-width:100%}
+.ox-dr-kok:focus{outline:none}
 .ox-dr-kok{margin:4px 0 18px;font-size:20px;line-height:1.3;font-weight:700;letter-spacing:-.015em;color:var(--ox-bas)}
 .ox-dr .ox-sik:disabled{cursor:default}
 .ox-dr .ox-sik:not(:disabled):active{background:var(--ox-gri-acik)}
