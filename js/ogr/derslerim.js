@@ -2,13 +2,13 @@
 // öğretmen notları) ve Geçmiş (yapılan dersler, öğrenci onayı, değerlendirme).
 // Eski ogrenci.js derslerHtml / programHtml / yaklasanHtml / degerlendirKart / ders defteri işlevleri buraya taşındı;
 // onay, itiraz, yıldız, takvim dosyası (data-og-*) ogrenci.js ogBagla'da; ders al, kursa yaz, saat değiştir, iptal portal.js ogGenelTik'te çalışır.
-import { S, BECERI, DERS_TUR_AD, egitmen, arac, ogretmen, fark, gun, tarihOku, iso, iptalEdilebilir, dersSirasi, kapaliGun, ogrOzellik, tamAd } from '../veri.js?v=207';
-import { tarihUzun, gunAdi, gunKisa, ayAdi } from '../ui.js?v=207';
-import * as TK from '../takvim.js?v=207';
-import { onayBekleyen, MUFREDAT } from '../ogrenci.js?v=207';
-import { randevuEngeli, engelYazilir } from '../risk.js?v=207';
-import { kursaYaz } from '../ozellik.js?v=207';
-import { esc, oi, sayfaBas, geri, bolum, kart, liste, satir, ikonKutu, cip, serit, not, bos, dugme, sekmeler, stilEkle } from './ui.js?v=207';
+import { S, BECERI, DERS_TUR_AD, egitmen, arac, ogretmen, fark, gun, tarihOku, iso, iptalEdilebilir, dersSirasi, kapaliGun, ogrOzellik, tamAd } from '../veri.js?v=208';
+import { tarihUzun, gunAdi, gunKisa, ayAdi } from '../ui.js?v=208';
+import * as TK from '../takvim.js?v=208';
+import { onayBekleyen, MUFREDAT } from '../ogrenci.js?v=208';
+import { randevuEngeli, engelYazilir } from '../risk.js?v=208';
+import { kursaYaz } from '../ozellik.js?v=208';
+import { esc, oi, sayfaBas, geri, bolum, kart, liste, satir, ikonKutu, cip, serit, not, bos, dugme, sekmeler, stilEkle } from './ui.js?v=208';
 
 /* ---------- ekran durumu (yeniden çizimde korunur) ---------- */
 let sekme = 'program';   // 'program' | 'gelisim' | 'gecmis'
