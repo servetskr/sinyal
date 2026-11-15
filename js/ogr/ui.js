@@ -114,7 +114,10 @@ export function heroKart({ ust = '', baslik = '', alt = '', meta = '', gorsel: g
   return `<section class="ox-hero ${g ? 'gorselli' : ''} ${cls}"><div class="ox-hero-yazi">${ust ? `<p class="ox-hero-ust">${ust}</p>` : ''}${baslik ? `<h2>${baslik}</h2>` : ''}${alt ? `<p class="ox-hero-alt">${alt}</p>` : ''}${meta ? `<p class="ox-hero-meta">${meta}</p>` : ''}</div>${g ? gorsel(g, '', 'ox-hero-gorsel') : ''}${icerik}${d ? `<div class="ox-hero-dg">${d}</div>` : ''}</section>`;
 }
 // çizim: img/ogr/<ad>.webp — boyutu CSS'te sabit, yüklenirken yer kaplar (kayma olmaz)
-export const gorsel = (ad, alt = '', cls = '') => `<img class="ox-gorsel ${cls}" src="img/ogr/${ad}.webp?v=1" alt="${esc(alt)}" decoding="async" draggable="false">`;
+// GORSEL_SURUM: çizimler değişince artır (servis çalışanı sürüm ekli dosyayı önbellekten verir). Ek bilerek "?${'v'}=" diye yazılır:
+// sw.js, içindeki sürüm ekleri uygulama sürümüyle uyuşmayan JS dosyasını önbelleğe almaz.
+const GORSEL_SURUM = 1;
+export const gorsel = (ad, alt = '', cls = '') => `<img class="ox-gorsel ${cls}" src="img/ogr/${ad}.webp?${'v'}=${GORSEL_SURUM}" alt="${esc(alt)}" decoding="async" draggable="false">`;
 
 /* ---------- düğmeler ---------- */
 // tur: ana (dolu mavi) | ikincil (açık mavi) | cizgi (beyaz, çerçeveli) | metin (yalnız mavi yazı) | tehlike
