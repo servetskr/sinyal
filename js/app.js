@@ -494,7 +494,7 @@ function girisEkrani(mod = 'tanitim') {
   kok.querySelector('[data-tanitim]').addEventListener('click', () => { girisEkrani('tanitim'); window.scrollTo(0, 0); });
   const ka = kok.querySelector('[data-kurs-ac]'); if (ka) ka.addEventListener('click', () => pencere({ baslik: 'Kurs hesabı nasıl açılır?', icerik: '<p style="font-size:14.5px">mdSinyal hesabı kurulumla birlikte açılır: kayıtlarınızı taşırız, ekibinize kısa bir eğitim veririz. Görüşmek için <b>Servet Sakar · 0501 363 65 36</b> (telefon ve WhatsApp). Size özel hesap açma linki gönderilir.</p>', altlik: '<button class="dg dg-ana" data-kapat>Tamam</button>' }));
   const gp = kok.querySelector('[data-giris-pin]'); if (gp) gp.addEventListener('click', () => { girisEkrani('pin'); window.scrollTo(0, 0); });
-  kok.querySelector('[data-ogrenci-giris]').addEventListener('click', () => { location.hash = '#/ogrenci-giris'; ogrenciGirisEkrani(); });
+  kok.querySelector('[data-ogrenci-giris]').addEventListener('click', () => { if (location.hash === '#/ogrenci-giris') ogrenciGirisEkrani(); else location.hash = '#/ogrenci-giris'; });  // ekranı hashchange çizer (iki kez çizilirse şifre göster düğmesi bozuluyordu)
   kok.querySelector('[data-sifre-unut]').addEventListener('click', () => {
     const ep = kok.querySelector('[name=eposta]').value.trim();
     if (!/^\S+@\S+\.\S+$/.test(ep)) { bildir('Önce e-posta adresinizi yazın', 'uyari'); return kok.querySelector('[name=eposta]').focus(); }

@@ -336,7 +336,7 @@ function denemeHtml(k) {
   const gecti = dd.sonuc === 'Geçti', h = dd.hatalar || [];
   return bolum('Deneme uygulama sınavın', esc(tarih(dd.tarih)))
     + `<div class="ox-kart ox-arc-den"><div class="ox-arc-den-ust">${ikonKutu(gecti ? 'dogru' : 'yanlis', gecti ? 'yesil' : 'kirmizi')}<span class="ox-arc-den-ad"><b>${gecti ? 'Gerçek sınavda geçerdin' : 'Gerçek sınavda kalırdın'}</b><small>Öğretmeninin resmî formla yaptığı prova</small></span>${cip(gecti ? 'Geçti' : 'Kaldı', gecti ? 'yesil' : 'kirmizi')}</div>
-      ${h.length ? `<p class="ox-arc-et">Çalışman gerekenler</p><ul class="ox-arc-hatalar">${h.slice(0, 6).map(x => `<li class="${x.renk === 'k' ? 'k' : 's'}">${oi(x.renk === 'k' ? 'yanlis' : 'uyari')}<span>${esc(madde(x.metin || ''))}<small>${x.renk === 'k' ? 'Kırmızı hata' : 'Sarı hata'}</small></span></li>`).join('')}</ul>` : '<p class="ox-arc-den-p">Hiç hata yapmadın.</p>'}
+      ${h.length ? `<p class="ox-arc-et">Çalışman gerekenler</p><ul class="ox-arc-hatalar">${h.slice(0, 6).map(x => `<li class="${x.renk === 'k' ? 'k' : x.renk === 's' ? 's' : 'm'}">${oi(x.renk === 'k' ? 'yanlis' : x.renk === 's' ? 'uyari' : 'bilgi')}<span>${esc(madde(x.metin || ''))}<small>${x.renk === 'k' ? 'Kırmızı hata' : x.renk === 's' ? 'Sarı hata' : 'Araç bilgisi'}</small></span></li>`).join('')}</ul>` : '<p class="ox-arc-den-p">Hiç hata yapmadın.</p>'}
       ${dd.not ? `<p class="ox-arc-den-not">Öğretmeninin notu: “${esc(dd.not)}”</p>` : ''}</div>`;
 }
 function dirAna(k, donus) {
@@ -624,7 +624,7 @@ stilEkle('ox-araclar', `
 .ox-arc-hatalar{list-style:none;display:grid;gap:10px}
 .ox-arc-hatalar li{display:flex;align-items:flex-start;gap:10px;font-size:15px;line-height:1.4;color:var(--ox-bas)}
 .ox-arc-hatalar li .ox-i{width:20px;height:20px;margin-top:1px}
-.ox-arc-hatalar li.k .ox-i{color:var(--ox-kirmizi)}.ox-arc-hatalar li.s .ox-i{color:var(--ox-turuncu)}
+.ox-arc-hatalar li.k .ox-i{color:var(--ox-kirmizi)}.ox-arc-hatalar li.s .ox-i{color:var(--ox-turuncu)}.ox-arc-hatalar li.m .ox-i{color:var(--ox-mavi)}
 .ox-arc-hatalar small{display:block;font-size:13px;color:var(--ox-ikincil)}
 .ox-arc-den-not{margin-top:14px;padding-top:12px;border-top:1px solid var(--ox-ayrac);font-size:14.5px;line-height:1.45;color:var(--ox-ikincil)}
 .ox-arc-kural{display:grid;gap:10px;padding:14px 16px}
