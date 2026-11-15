@@ -247,3 +247,5 @@ button.ox-upr-ders:active{transform:scale(.985)}
 .ox-upr-dip .ox-bag{min-height:44px;font-size:15px}
 .ox-upr-excel{margin-top:8px}
 `);
+stilEkle('ox-upr-dar', `@media (max-width:400px){.ox-upr-ad,.ox-upr-alt{white-space:normal!important;overflow:visible!important;text-overflow:clip!important}}
+.ox-upr-kbas .ox-sekmeler.hap button{min-height:38px}`);

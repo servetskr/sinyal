@@ -288,7 +288,7 @@ button.ox-kart:active,button.ox-satir:active,button.ox-konu:active{background:#f
 .ox-liste>.ox-satir+.ox-satir::before,.ox-liste>.ox-konu+.ox-konu::before{content:"";position:absolute;top:0;right:16px;left:16px;border-top:1px solid var(--ox-ayrac)}
 .ox-liste>.ox-satir:has(.ox-ik-kutu)+.ox-satir::before{left:72px}
 .ox-satir-govde{flex:1;min-width:0;display:grid;grid-template-columns:minmax(0,1fr);gap:2px}
-.ox-satir-govde b,.ox-satir-govde small{overflow-wrap:anywhere}
+.ox-satir-govde b,.ox-satir-govde small{overflow-wrap:break-word}
 .ox-satir-govde b{font-size:16px;line-height:1.25;font-weight:700;letter-spacing:-.01em;color:var(--ox-bas)}
 .ox-satir-govde small{font-size:14px;line-height:1.3;color:var(--ox-ikincil)}
 .ox-satir-govde small.mavi{color:var(--ox-mavi)}.ox-satir-govde small.yesil{color:var(--ox-yesil)}.ox-satir-govde small.kirmizi{color:var(--ox-kirmizi)}

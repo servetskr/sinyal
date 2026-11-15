@@ -305,3 +305,5 @@ stilEkle('ox-ubg', `
 .ox-ubg-dip{margin-top:16px;font-size:14px;line-height:1.45;color:var(--ox-ikincil)}
 @media (prefers-reduced-motion:reduce){.ox-ubg-etiket.canli i{animation:none}}
 `);
+stilEkle('ox-ubg-dar', `.ox-ubg-kim h2{overflow-wrap:normal!important;word-break:normal!important;hyphens:none}
+@media (max-width:350px){.ox-ubg-saat{min-width:84px!important}}`);
