@@ -293,7 +293,7 @@ function demoyaGir() {
 }
 function girisEkrani(mod = 'tanitim') {
   B.sdkHazirla();
-  document.body.classList.remove('portal-modu');
+  document.body.classList.remove('portal-modu', 'ox-modu', 'ox-tam-acik', 'ox-akis-acik');
   const kok0 = document.getElementById('uyg');
   if (mod === 'tanitim' && TANITIM) {
     if (!kok0.querySelector('#tanitim') || kok0.querySelector('#tanitim').hidden) kok0.innerHTML = TANITIM;

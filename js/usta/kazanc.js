@@ -7,8 +7,11 @@ import { ustaAlacak } from '../risk.js?v=206';
 import { esc, oi, tl, geri, bolum, baglanti, kart, liste, satir, ikonKutu, cip, not, bos, sekmeler, gorsel, stilEkle } from '../ogr/ui.js?v=206';
 
 /* ---------- ekran durumu (yeniden çizimde korunur) ---------- */
-let ayGeri = 0;        // seçili ay: 0 bu ay, 1 geçen ay …
-let filtre = 'tumu';   // ayrıntı süzgeci: 'tumu' | 'imza' | 'kisa'
+const DURUM = 'sinyal-eg-kazanc';
+const _d = (() => { try { return JSON.parse(sessionStorage.getItem(DURUM) || '{}'); } catch (x) { return {}; } })();
+let ayGeri = +_d.ayGeri || 0;        // seçili ay: 0 bu ay, 1 geçen ay … (sayfa yenilense de kalır)
+let filtre = _d.filtre || 'tumu';   // ayrıntı süzgeci: 'tumu' | 'imza' | 'kisa'
+const durumYaz = () => { try { sessionStorage.setItem(DURUM, JSON.stringify({ ayGeri, filtre })); } catch (x) { } };
 let hepsi = false;     // ödeme geçmişinde bütün aylar
 let dersHepsi = false; // ayrıntıda bütün dersler (ilk 8'den sonrası)
 const DERS_ILK = 8;
@@ -138,6 +141,7 @@ function ayrintiHtml(eg) {
 
 /* ---------- dışa açılan ---------- */
 export function ekran(ctx) {
+  durumYaz();  // seçili ay ve süzgeç sayfa yenilense de kalsın
   const { eg } = ctx; P = ctx.P;
   const ayr = ctx.alt === 'ayrinti' && !ucretYok(eg);
   return {

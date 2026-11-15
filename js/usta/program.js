@@ -52,7 +52,7 @@ function dersKart(d, ctx) {
   const k = kursiyer(d.kursiyer); if (!k) return '';
   const ad = esc(tamAd(k)), acik = d.durum === 'Planlandı', gecmis = d.tarih < gun(0), sira = ctx.siradaki && ctx.siradaki.id === d.id && !d.bas;
   const imzaBek = d.durum === 'Yapıldı' && d.imza && d.imza.kursiyerBekliyor;
-  const [dt, ton] = ctx.P.progDurum(d);
+  let [dt, ton] = ctx.P.progDurum(d); if (dt === 'Kapanmadı') dt = 'Kaydı eksik';  // Bugün ekranıyla aynı ad
   const alt = `${esc(sinifAd(k))} · ${ctx.P.dersNo(d, k)}. ders`;
   const sag = sira ? '<span class="ox-upr-sira">Sıradaki</span>'
     : imzaBek ? cip('İmza bekliyor', 'turuncu')

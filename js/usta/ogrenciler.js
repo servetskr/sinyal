@@ -12,7 +12,10 @@ import { esc, oi, sayfaBas, geri, bolum, baglanti, kart, liste, satir, ikonKutu,
 let filtre = 'tumu';        // 'tumu' | 'direksiyon' | 'sinav' | 'diger'
 let ara = '';               // arama metni
 let gecmisHepsi = false;    // öğrenci ayrıntısı: ders geçmişinin tamamı
-let taslak = null;          // { id, isaret: {}, not: '', acik: [bölüm anahtarları] }: kaydedilmemiş deneme; ekran kapanınca korunur
+// { id, isaret: {}, not: '', acik: [bölüm anahtarları] }: kaydedilmemiş deneme; ekran kapansa ya da sayfa yenilense de korunur
+const TASLAK = 'sinyal-eg-deneme';
+let taslak = (() => { try { return JSON.parse(sessionStorage.getItem(TASLAK) || 'null'); } catch (x) { return null; } })();
+const taslakYaz = () => { try { if (taslak) sessionStorage.setItem(TASLAK, JSON.stringify(taslak)); else sessionStorage.removeItem(TASLAK); } catch (x) { } };
 let serbest = null;         // tam ekran denemenin odak tuzağı
 
 const tuzakBirak = () => { if (serbest) { const f = serbest; serbest = null; f(); } };
@@ -105,9 +108,9 @@ function ayrintiHtml(ctx, k) {
   const gecmis = S.dersler.filter(d => d.kursiyer === k.id && (d.durum === 'Yapıldı' || d.durum === 'Gelmedi')).sort((a, b) => (b.tarih + b.saat).localeCompare(a.tarih + a.saat));
   const gosterilen = gecmisHepsi ? gecmis : gecmis.slice(0, 4);
   const gSatir = d => {
-    const ok = d.durum === 'Yapıldı', no = ok ? dersSirasi(d, k) : null, bek = ok && (!d.imza || d.imza.kursiyerBekliyor);
+    const ok = d.durum === 'Yapıldı', no = ok ? dersSirasi(d, k) : null, bek = ok && d.imza && d.imza.kursiyerBekliyor, eks = ok && !d.imza;
     return satir({ sol: ikonKutu(ok ? 'tik' : 'yanlis', ok ? 'yesil' : 'kirmizi'), baslik: `${esc(gunAy(d.tarih))} · ${esc(d.saat)}`, alt: esc([no ? no + '. ders' : 'Ders yapılmadı', ok && d.sure != null ? d.sure + ' dk' : ''].filter(Boolean).join(' · ')),
-      sag: !ok ? cip('Gelmedi', 'kirmizi') : bek ? cip('İmza bekleniyor', 'turuncu') : `<span class="ox-uog-imzali" role="img" aria-label="İmzalı">${oi('imza')}</span>`, ok: false });
+      sag: !ok ? cip('Gelmedi', 'kirmizi') : bek ? cip('İmza bekliyor', 'turuncu') : eks ? cip('İmza eksik', 'turuncu') : `<span class="ox-uog-imzali" role="img" aria-label="İmzalı">${oi('imza')}</span>`, ok: false });
   };
   const gecmisH = bolum('Ders geçmişi', gecmis.length > 4 ? baglanti(gecmisHepsi ? 'Daha az' : 'Tümü', { 'data-uog-gecmis': true }) : gecmis.length ? `${gecmis.length} ders` : '')
     + (gecmis.length ? liste(gosterilen.map(gSatir), 'ox-uog-gecmis') : liste([satir({ sol: ikonKutu('gecmis', 'gri'), baslik: 'Henüz yapılan ders yok', alt: 'Dersler yapıldıkça burada listelenir.', ok: false })]));
@@ -133,7 +136,7 @@ function sayacHtml(r) {
 }
 const durumCip = r => r.bitti ? cip('Sınav biterdi', 'kirmizi') : cip('Devam ediyor', 'mavi');
 function denemeHtml(ctx, k) {
-  if (!taslak || taslak.id !== k.id) taslak = { id: k.id, isaret: {}, not: '', acik: [] };
+  if (!taslak || taslak.id !== k.id) { taslak = { id: k.id, isaret: {}, not: '', acik: [] }; taslakYaz(); }
   const t = taslak, f = denemeFormu(k.sinif), r = sonucHesap(t.isaret, k.sinif), ar = denemeAraci(k);
   const bolumler = f.bolumler.map(b => {
     const acik = t.acik.includes(b.key), n = b.maddeler.length;
@@ -155,9 +158,9 @@ function denemeHtml(ctx, k) {
 function denemeBagla(ctx, k, kap) {
   const kok = kap.querySelector('.ox-uog-dn'); if (!kok) return;
   document.body.classList.add('ox-akis-acik');
-  tuzakBirak(); serbest = odakTuzagi(kok);
+  tuzakBirak(); const bu = odakTuzagi(kok); serbest = bu;
   // ekran başka bir yoldan (geri tuşu, yeniden çizim) kalkarsa odak tuzağı ve kaydırma kilidi bırakılır
-  const izle = new MutationObserver(() => { if (!kok.isConnected) { izle.disconnect(); tuzakBirak(); if (!document.querySelector('.ox-akis')) document.body.classList.remove('ox-akis-acik'); } });
+  const izle = new MutationObserver(() => { if (!kok.isConnected) { izle.disconnect(); if (serbest === bu) tuzakBirak(); if (!document.querySelector('.ox-akis')) document.body.classList.remove('ox-akis-acik'); } });
   izle.observe(document.body, { childList: true, subtree: true });
   const f = denemeFormu(k.sinif), bul = key => f.bolumler.find(b => b.key === key), t = taslak;
   const kapat = () => { tuzakBirak(); document.body.classList.remove('ox-akis-acik'); ctx.altAc('ogr:' + k.id); };
@@ -168,7 +171,7 @@ function denemeBagla(ctx, k, kap) {
     const bt = kok.querySelector('[data-uog-biter]'); bt.hidden = !r.bitti; if (r.bitti) bt.querySelector('span').textContent = 'Gerçek sınavda burada biterdi: ' + r.neden;
   };
   kok.addEventListener('keydown', ev => { if (ev.key === 'Escape') { ev.stopPropagation(); kapat(); } });
-  kok.addEventListener('input', ev => { if (ev.target.matches('[data-uog-not]')) t.not = ev.target.value; });
+  kok.addEventListener('input', ev => { if (ev.target.matches('[data-uog-not]')) { t.not = ev.target.value; taslakYaz(); } });
   kok.addEventListener('click', ev => {
     ev.stopPropagation();
     const e = ev.target;
@@ -178,7 +181,7 @@ function denemeBagla(ctx, k, kap) {
       const bl = ba.closest('[data-uog-bl]'), key = bl.dataset.uogBl, ac = !t.acik.includes(key);
       t.acik = ac ? [...t.acik, key] : t.acik.filter(x => x !== key);
       bl.classList.toggle('acik', ac); ba.setAttribute('aria-expanded', ac); bl.querySelector('.ox-uog-bl-icerik').hidden = !ac;
-      return;
+      taslakYaz(); return;
     }
     const md = e.closest('[data-uog-md]');
     if (md) {
@@ -187,14 +190,12 @@ function denemeBagla(ctx, k, kap) {
       md.dataset.n = n || ''; md.classList.toggle('secili', !!n); md.setAttribute('aria-pressed', !!n);
       md.querySelector('[data-uog-durum]').textContent = `, ${RENK_AD[renk]} madde: ${durumYaz(n)}`;
       const bl = md.closest('[data-uog-bl]'), b = bul(bl.dataset.uogBl); if (b) bl.querySelector('[data-uog-bl-cip]').innerHTML = bolumCip(b, t.isaret);
-      return guncelle();
+      taslakYaz(); return guncelle();
     }
     if (e.closest('[data-uog-bitir]')) {
-      const once = risk(k), nt = kok.querySelector('[data-uog-not]');
+      const nt = kok.querySelector('[data-uog-not]');
       denemeKaydet(k, t.isaret, nt ? nt.value : t.not);
-      taslak = null; tuzakBirak(); document.body.classList.remove('ox-akis-acik');
-      // risk "yüksek"e çıktıysa kurs müdürüne haber (ders sonundaki kuralla aynı)
-      try { ctx.P.riskKontrol(k, once); } catch (x) { console.error(x); }
+      taslak = null; taslakYaz(); tuzakBirak(); document.body.classList.remove('ox-akis-acik');
       ctx.altAc('sonuc:' + k.id);
     }
   });
@@ -256,7 +257,7 @@ export function ekran(ctx) {
           suz(kap); return;
         }
         if (t.closest('[data-uog-gecmis]')) { gecmisHepsi = !gecmisHepsi; ctx.yenile(); return; }
-        if (t.closest('[data-uog-taslak-sil]')) { taslak = null; ctx.yenile(); }
+        if (t.closest('[data-uog-taslak-sil]')) { taslak = null; taslakYaz(); ctx.yenile(); }
       });
     },
   };

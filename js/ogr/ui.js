@@ -375,7 +375,7 @@ button.ox-kart:active,button.ox-satir:active,button.ox-konu:active{background:#f
 .ox-cevap.kotu{background:var(--ox-kirmizi-acik);color:#7a2326}.ox-cevap.kotu b{color:var(--ox-kirmizi)}
 body.ox-akis-acik{overflow:hidden}
 body.ox-modu .bildirimler{left:16px;right:16px;bottom:calc(84px + env(safe-area-inset-bottom));align-items:center;z-index:300}
-body.ox-modu.ox-tam-acik .bildirimler,body.ox-modu.ox-akis-acik .bildirimler{bottom:calc(88px + env(safe-area-inset-bottom))}
+body.ox-modu.ox-tam-acik .bildirimler,body.ox-modu.ox-akis-acik .bildirimler{bottom:auto;top:calc(64px + env(safe-area-inset-top))}
 body.ox-modu .bildirim{max-width:520px;width:100%;box-sizing:border-box;background:#0f1d40;color:#fff;border-radius:16px;padding:13px 16px;gap:12px;font-family:var(--ox-yazi);font-size:15px;font-weight:500;line-height:1.35;box-shadow:0 12px 32px -12px rgba(15,29,64,.45)}
 body.ox-modu .bildirim .ik{width:20px;height:20px;flex:none;color:#7fb2ff}
 body.ox-modu .bildirim-uyari{background:#0f1d40}body.ox-modu .bildirim-uyari .ik{color:#ffb547}

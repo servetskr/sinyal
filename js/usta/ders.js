@@ -97,7 +97,7 @@ function sonucHtml(d, k) {
   const ic = `<div class="ox-udr-sonuc ${A.anim ? '' : 'gir'}"><span class="ox-udr-tik" aria-hidden="true">${oi('tik')}</span><h1 id="ox-udr-bas">Ders kaydedildi</h1>
     <p>${esc(tamAd(k))}</p><p class="ox-udr-sonuc-alt">${esc(sinifAd(k))} · ${P.dersNo(d, k)}. ders</p></div>${uyari}${liste(satirlar, 'ox-udr-ozet')}`;
   const alt = (uzak ? dugme('İmza linkini yeniden gönder', { 'data-imza-tekrar': d.id }, { tur: 'ikincil', ikon: 'wp', genis: true }) : '')
-    + dugme('Bugün’e dön', { 'data-udr-kapat': true }, { genis: true });
+    + dugme('Bugün’e dön', { 'data-udr-bugun': true }, { genis: true });
   return `<div class="ox-akis-ust"><button type="button" class="ox-ikon-dg" data-udr-kapat aria-label="Kapat">${oi('kapat')}</button><span></span><span></span></div>`
     + `<div class="ox-akis-govde ox-udr-govde">${ic}</div><div class="ox-akis-alt ox-udr-alt ${uzak ? 'dikey' : ''}">${alt}</div>`;
 }
@@ -187,6 +187,7 @@ function bagla(kok, d, k, ctx) {
 
   kok.addEventListener('click', ev => {
     const t = ev.target;
+    if (t.closest('[data-udr-bugun]')) { A = null; tuval = null; sakla(); temizle(); return ctx.git('bugun'); }
     if (t.closest('[data-udr-kapat]')) return kapat(ctx);
     if (t.closest('[data-udr-geri]')) return adimGit(Math.max(1, A.adim - 1));
     const kn = t.closest('[data-udr-konu]');
@@ -337,7 +338,7 @@ export function gelmedi(d, ctx) {
   const k = kursiyer(d.kursiyer); if (!k) return;
   katmanAc(`<div class="ox-udr-modal" role="alertdialog" aria-modal="true" aria-labelledby="ox-udr-g-bas" aria-describedby="ox-udr-g-not">
     <button type="button" class="ox-ikon-dg ox-udr-modal-x" data-udr-k-kapat aria-label="Kapat">${oi('kapat')}</button>
-    <h2 id="ox-udr-g-bas">Öğrenci gelmedi mi?</h2><p class="ox-udr-modal-alt">${esc(tamAd(k))} · ${gunMetin(d.tarih).toLocaleLowerCase('tr')} ${esc(d.saat)}</p>
+    <h2 id="ox-udr-g-bas">Öğrenci gelmedi mi?</h2><p class="ox-udr-modal-alt">${esc(tamAd(k))} · ${Math.abs(fark(d.tarih)) <= 1 ? gunMetin(d.tarih).toLocaleLowerCase('tr') : gunMetin(d.tarih)} ${esc(d.saat)}</p>
     <p class="ox-udr-modal-not" id="ox-udr-g-not">Ders “gelmedi” olarak kapanır; öğrenciye ve kurs müdürüne haber gider.</p>
     <div class="ox-udr-modal-dg">${dugme('Vazgeç', { 'data-udr-k-kapat': true, 'data-udr-k-odak': true }, { tur: 'ikincil' })}${dugme('Gelmedi', { 'data-udr-gelmedi': true })}</div></div>`, false, el => {
     el.querySelector('[data-udr-gelmedi]').addEventListener('click', () => {

@@ -63,7 +63,7 @@ export const imzaUzaktan = ustaImza => ({ zaman: yerelZaman(), kursiyer: null, k
 // Öğrenci imzası bekleniyorsa imza linki WhatsApp'tan istenir. kapat: kayıttan hemen sonra (bildirim ve yenilemeden önce) çağrılır.
 export async function dersKaydet(d, { konular = [], beceri = null, not = '', imza = null } = {}, { kapat = null, sessiz = false } = {}) {
   const ks = kursiyer(d.kursiyer), gecmis = d.tarih < gun(0), once = risk(ks), uzak = !!(imza && imza.kursiyerBekliyor);
-  d.beceri = beceri && Object.keys(beceri).length ? beceri : null; d.konular = konular;
+  d.beceri = beceri && Object.keys(beceri).length ? beceri : null; d.konular = konuListesi(ks.sinif).map(x => x[0]).filter(id => konular.includes(id)).concat(konular.filter(id => !konuListesi(ks.sinif).some(x => x[0] === id)));
   const n = String(not || '').trim().slice(0, 300); if (n) { d.not = n; ks.notlar.unshift({ tarih: gun(0), metin: n }); }
   d.durum = 'Yapıldı'; d.imza = imza;
   if (gecmis || !d.bas) { d.sonradan = gun(0); } else { d.bit = new Date().toTimeString().slice(0, 5); izBitir(d); d.sure = d.basZaman ? Math.round((Date.now() - d.basZaman) / 60e3) : null; }
@@ -341,7 +341,7 @@ export function egitmenPortal() {
   if (!eg) return { baslik: 'Öğretmen ekranı', alt: 'Telefondan kullanılan ekran', html: `<div class="portal portal-og"><div class="u-bos">${ik('kursiyer')}<b>${usta ? 'Hesabın bir öğretmen kaydına bağlı değil' : 'Henüz öğretmen yok'}</b><p>${usta ? 'Kurs müdürü Ayarlar › Kullanıcılar’dan seni yeniden davet etmeli.' : 'Filo › Öğretmenler’den öğretmen ekleyince ders ekranı burada görünür.'}</p></div></div>` };
   egId = eg.id;
   if (!EG_SEKME.some(x => x[0] === egSekme)) egSekme = 'bugun';
-  if (usta) { const y = UX.ciz(eg, { yenile, temaUst }); if (y) return y; }
+  if (usta) { const y = UX.ciz(eg, { yenile, temaUst }); if (y) return y; const us = UX.sekmeSimdi(); if (EG_SEKME.some(x => x[0] === us)) egSekme = us; }
   const benim = S.dersler.filter(d => d.egitmen === eg.id);
   const bugun = benim.filter(d => d.tarih === gun(0)).sort((a, b) => a.saat.localeCompare(b.saat));
   const kapanmamis = benim.filter(d => d.durum === 'Planlandı' && d.tarih < gun(0) && d.tarih >= gun(-60)).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat));
@@ -410,7 +410,7 @@ export function egitmenPortal() {
       k.addEventListener('click', ev => {
         const t = ev.target;
         const oa = t.closest('[data-ogr-ac]'); if (oa) return egOgrAc(kursiyer(oa.dataset.ogrAc));
-        const s = t.closest('[data-egs]'); if (s) { egSekme = s.dataset.egs; return yenile(true); }
+        const s = t.closest('[data-egs]'); if (s) { egSekme = s.dataset.egs; if (usta) { UX.sekmeAc(egSekme); UX.altAc(''); } return yenile(true); }
         const pm = t.closest('[data-prog-mod]'); if (pm) { egProg = { mod: pm.dataset.progMod, kay: 0 }; return yenile(); }
         const pg = t.closest('[data-prog-git]'); if (pg) { egProg.kay = +pg.dataset.progGit ? egProg.kay + +pg.dataset.progGit : 0; return yenile(); }
         if (t.closest('[data-prog-indir]')) return progIndir(eg);
