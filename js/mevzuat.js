@@ -1,9 +1,10 @@
 // Mevzuat uyum kuralları: ücret, tahsilat, iade, ücretsiz kontenjan, sınava hazır yazısı, planlama ve personel denetimleri.
 // Dayanak: Özel Öğretim Kurumları Yönetmeliği (RG 5/9/2025-33008 değişikliği: m.54, m.55/3, m.56/3-b, m.56/4), MTSK Yönetmeliği
 // (m.7/7 ve Danıştay 8. D. 8/10/2025 YD kararı, m.15, m.16/8, m.20, m.43), 5580 sayılı Kanun m.13 (%3 ücretsiz).
-import { S, gun, fark, SINIFLAR, tamAd, islem, kaydet, oturum, egitmen, sb, sbDers } from './veri.js?v=208';
-import { e, tl, tarih, pencere, kapatPencere, bildir, belgeYazdir, isaret } from './ui.js?v=208';
-import { denetimUyarilari } from './denetim.js?v=208';
+import { S, gun, fark, SINIFLAR, SINIF_VARSAYILAN, tamAd, islem, kaydet, oturum, egitmen, sb, sbDers, gerekliDireksiyon, direksiyonAyrinti, ustaAraci } from './veri.js?v=209';
+import { e, tl, tarih, pencere, kapatPencere, bildir, belgeYazdir, isaret } from './ui.js?v=209';
+import { denetimUyarilari } from './denetim.js?v=209';
+import { kuralEkle } from './kurallar.js?v=209';
 
 const OOKY = 'Özel Öğretim Kurumları Yönetmeliği';
 const yil = () => gun(0).slice(0, 4);
@@ -17,14 +18,15 @@ export const odenenEgitim = k => k.odeme.pesin + k.odeme.taksitler.reduce((a, t)
 // Teorik ve direksiyon ders saati ücretleri ayrı hesaplanır (ÖÖKY m.55/1-ç). Kurs saat ücreti girmediyse sözleşme ücreti,
 // kursun belirlediği teorik payına göre saatlere bölünür.
 export function saatUcretleri(k) {
-  const S0 = SINIFLAR[k.sinif] || { teorik: 34, direksiyon: 14 }, u = sozlesmeUcreti(k), su = (S0.saatUcret || {});
-  const pay = S0.direksiyon ? (S.kurs.teorikPay ?? 35) / 100 : 1;
-  return { teorik: su.teorik || Math.round(u * pay / Math.max(1, S0.teorik)), direksiyon: S0.direksiyon ? (su.direksiyon || Math.round(u * (1 - pay) / S0.direksiyon)) : 0, kaynak: su.teorik ? 'tarife' : 'pay' };
+  // direksiyon saati öğrenciye özgü (farklı sınıf, eski kayıt): sözleşme ücreti bu öğrencinin asgari saatine bölünür
+  const S0 = SINIFLAR[k.sinif] || { teorik: 34, direksiyon: 14 }, u = sozlesmeUcreti(k), su = (S0.saatUcret || {}), dir = gerekliDireksiyon(k);
+  const pay = dir ? (S.kurs.teorikPay ?? 35) / 100 : 1;
+  return { teorik: su.teorik || Math.round(u * pay / Math.max(1, S0.teorik)), direksiyon: dir ? (su.direksiyon || Math.round(u * (1 - pay) / dir)) : 0, kaynak: su.teorik ? 'tarife' : 'pay' };
 }
 // ÖÖKY m.56/3-b: dönem başlamadan ayrılana ücretin %10'u dışındaki kısım; başladıktan sonra %10 + aldığı ders saatleri düşülür.
 export function yasalIade(k) {
   const u = sozlesmeUcreti(k), su = saatUcretleri(k), S0 = SINIFLAR[k.sinif] || {};
-  const ts = Math.min(k.teorik || 0, S0.teorik || 0), ds = Math.min(k.direksiyon || 0, S0.direksiyon || 0), basladi = ts > 0 || ds > 0;
+  const ts = Math.min(k.teorik || 0, S0.teorik || 0), ds = Math.min(k.direksiyon || 0, gerekliDireksiyon(k)), basladi = ts > 0 || ds > 0;
   const kesinti = Math.round(u * 0.1), teorikT = basladi ? ts * su.teorik : 0, direksiyonT = basladi ? ds * su.direksiyon : 0;
   const hak = Math.min(u, kesinti + teorikT + direksiyonT), od = odenenEgitim(k);
   return { ucret: u, kesinti, ts, ds, su, teorikT, direksiyonT, hak, odenen: od, iade: Math.max(0, od - hak), alacak: Math.max(0, hak - od), basladi };
@@ -82,18 +84,18 @@ export function ucretsizYap(k, yenile) {
 }
 
 /* ---------- sınava hazır yazısı (m.7/7; Danıştay 8. D. 8/10/2025 YD: modül onayı yetmez, yazı taranıp yüklenir) ---------- */
-export const hazirGerekli = k => k.asama === 'Sınav' && !(k.dsinav && k.dsinav.sonuc === 'Geçti') && (SINIFLAR[k.sinif] || {}).direksiyon > 0;
+export const hazirGerekli = k => k.asama === 'Sınav' && !(k.dsinav && k.dsinav.sonuc === 'Geçti') && gerekliDireksiyon(k) > 0;
 export function hazirKarti(k) {
-  if (!(SINIFLAR[k.sinif] || {}).direksiyon) return '';
-  const h = k.hazirYazi, S0 = SINIFLAR[k.sinif], tamam = k.direksiyon >= S0.direksiyon;
+  if (!gerekliDireksiyon(k)) return '';
+  const h = k.hazirYazi, gd = gerekliDireksiyon(k), tamam = k.direksiyon >= gd;
   return `<div class="kart" style="margin-bottom:14px${hazirGerekli(k) && !h ? ';border-color:var(--kirmizi)' : ''}"><div class="kart-bas"><h3>Sınava hazır yazısı</h3><small>Usta öğretici yazıyla bildirir, kurs tarayıp MEBBİS’e yükler (md.7/7)</small></div><div class="kart-govde">
-    <p style="font-size:14px;margin-bottom:10px">${h ? `${e((egitmen(h.egitmen) || {}).ad || '')} · ${tarih(h.tarih)} · ${h.yuklendi ? 'MEBBİS’e yüklendi ' + tarih(h.yuklendi) : '<b style="color:var(--kirmizi)">MEBBİS’e yüklenmedi</b>'}` : tamam ? 'Direksiyon dersleri tamam; yazı henüz verilmedi.' : `${k.direksiyon}/${S0.direksiyon} ders · dersler bitince verilir.`}</p>
+    <p style="font-size:14px;margin-bottom:10px">${h ? `${e((egitmen(h.egitmen) || {}).ad || '')} · ${tarih(h.tarih)} · ${h.yuklendi ? 'MEBBİS’e yüklendi ' + tarih(h.yuklendi) : '<b style="color:var(--kirmizi)">MEBBİS’e yüklenmedi</b>'}` : tamam ? 'Direksiyon dersleri tamam; yazı henüz verilmedi.' : `${k.direksiyon}/${gd} ders · dersler bitince verilir.`}</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="dg ${h ? 'dg-cizgi' : 'dg-ana'} dg-kucuk" data-hazir-yazi>${h ? 'Yazıyı yeniden yazdır' : 'Yazıyı hazırla ve yazdır'}</button>${h && !h.yuklendi ? '<button class="dg dg-cizgi dg-kucuk" data-hazir-yuklendi>MEBBİS’e yükledim</button>' : ''}</div>
     <p style="font-size:12.5px;color:var(--soluk);margin-top:8px">Danıştay 8. Dairesi 8 Ekim 2025’te “onay modülden de verilebilir” hükmünü durdurdu; karar imzalı yazıyla bildirilir, yazı kursta saklanır.</p></div></div>`;
 }
 // öğrenci dosyasındaki tıklamalar (dosya yeniden çizildiği için olay yetkisiyle)
 export function hazirTikla(ev, k, yenile) {
-  if (ev.target.closest('[data-hazir-yazi]')) { import('./resmi.js?v=208').then(m => m.resmiAc('hazir', k.id)); return true; }
+  if (ev.target.closest('[data-hazir-yazi]')) { import('./resmi.js?v=209').then(m => m.resmiAc('hazir', k.id)); return true; }
   if (ev.target.closest('[data-hazir-yuklendi]')) { k.hazirYazi.yuklendi = gun(0); islem('Sınava hazır yazısını MEBBİS’e yükledi', tamAd(k)); kaydet(); bildir('Kaydedildi'); if (yenile) yenile(); return true; }
   return false;
 }
@@ -121,12 +123,26 @@ export function mevzuatKurallari() {
   ks.filter(k => k.dsinav && k.dsinav.sonuc === 'Kaldı' && k.dsinavPlan && !(k.hakBitti && !k.hakBitti.cozuldu)).forEach(k => { const n = S.dersler.filter(d => d.kursiyer === k.id && d.tarih > k.dsinav.tarih && d.tarih < k.dsinavPlan && d.durum !== 'Gelmedi').length; if (n < 2) l.push(['yasak', `${tamAd(k)} · tekrar sınavdan önce ${n}/2 saat ek ders`, 'Direksiyon sınavında başarısız olan, ilan edilen ücretle en az 2 saat ek ders almadan sınava giremez (MTSK Yönetmeliği m.15).', '#/plan']); });
   // Ders saatleri 07:00–23:00 (m.20)
   sbDers(S.dersler).filter(d => d.durum === 'Planlandı' && fark(d.tarih) >= 0 && d.saat && (d.saat < '07:00' || d.saat >= '23:00')).slice(0, 3).forEach(d => l.push(['yasak', `${tarih(d.tarih)} ${d.saat} dersi izin verilen saatlerin dışında`, 'Dersler 07:00–23:00 arasında yapılır (MTSK Yönetmeliği m.20).', '#/plan']));
-  // Araç başına dönemde en fazla 12 kursiyer (m.16/8): son 60 gün ve planlı dersler
-  const ak = {}; S.dersler.filter(d => d.arac && fark(d.tarih) >= -60).forEach(d => { (ak[d.arac] = ak[d.arac] || new Set()).add(d.kursiyer); });
-  Object.entries(ak).filter(([, s]) => s.size > 12).forEach(([id, s]) => { const a = S.araclar.find(x => x.id === id); if (a) l.push(['uyari', `${a.plaka} · ${s.size} kursiyer`, 'Bir araç için dönemde en fazla 12 kursiyer kaydedilebilir (MTSK Yönetmeliği m.16/8). Dersleri araçlar arasında dağıtın.', '#/filo']); });
+  // Araç başına bir eğitim döneminde en fazla 12 kursiyer kaydı (m.16/8). Dönem: kursiyerin MEB grubu (yoksa kayıt ayı); araç: usta öğreticisinin o sınıftaki aracı,
+  // yoksa son dersindeki araç. Kontenjan dışı (m.6/4: belgeli, özel ders alan) sayılmaz. B belgeliye A1 eğitimi veren araçta sınır 24 (m.39/5).
+  // Sınav aracı başına 10 aday (m.30/2) sınav randevusunda ayrıca denetlenir.
+  { const bu = gun(0).slice(0, 7), ilk = (() => { const d = new Date(gun(0) + 'T12:00'); d.setMonth(d.getMonth() - 2); return d.toISOString().slice(0, 7); })(), ak = {};
+    ks.filter(k => !k.kontenjanDisi && gerekliDireksiyon(k) > 0).forEach(k => {
+      const g = (S.gruplar || []).find(x => x.id === k.teorikGrup), gd = g && g.donem ? String(g.donem).replace(/^(\d{4})-?(\d{2}).*$/, '$1-$2') : '', donem = (/^\d{4}-\d{2}$/.test(gd) ? gd : '') || String(k.kayit || '').slice(0, 7); if (!/^\d{4}-\d{2}$/.test(donem) || donem < ilk) return;  // grup dönemi MEBBİS biçiminde (202611)
+      const a = ustaAraci(k.egitmen, k.sinif) || (S.araclar || []).find(x => x.id === ((S.dersler.filter(d => d.kursiyer === k.id && d.arac).sort((x, y) => (y.tarih + y.saat).localeCompare(x.tarih + x.saat))[0]) || {}).arac);
+      if (!a) return; const key = a.id + '|' + donem; (ak[key] = ak[key] || []).push(k); });
+    Object.entries(ak).forEach(([key, l2]) => { const [id, donem] = key.split('|'), a = S.araclar.find(x => x.id === id), a1b = l2.every(k => k.sinif === 'A1' && k.mevcutEhliyet === 'B'), sinir = a1b ? 24 : 12;
+      if (a && l2.length > sinir) l.push([donem >= bu ? 'uyari' : 'bilgi', `${a.plaka} · ${donem.split('-').reverse().join('.')} döneminde ${l2.length} kursiyer`, `Bir eğitim döneminde bir direksiyon eğitim ve sınav aracı için en çok ${sinir} kursiyer kaydı yapılır (MTSK Yönetmeliği m.16/8${a1b ? ', m.39/5' : ''}). Kursiyerleri başka usta öğretici ve araçlara dağıtın.`, '#/filo']); }); }
+  // Kursun sınıf ayarındaki direksiyon saati yönetmelik asgarisinin altında (md.7/1)
+  Object.entries(SINIFLAR).filter(([key, v]) => v.aktif && SINIF_VARSAYILAN[key] && v.direksiyon < SINIF_VARSAYILAN[key].direksiyon).forEach(([key, v]) => l.push(['yasak', `${v.ad} · direksiyon ${v.direksiyon} ders, yönetmelik asgarisi ${SINIF_VARSAYILAN[key].direksiyon}`, 'İlk kez belge alan için alanda ya da simülatörde en az 2 saat ve akan trafikte asgari saat verilir (MTSK md.7/1). Ayarlar › Sınıf ve ücretler’den düzeltin; kural tarihinden önce kaydolan öğrencilerin sayısı değişmez.', '#/ayarlar/sinif']));
+  // Kural tarihinden önce kaydolup eski ders sayısında dondurulan, eğitimi süren öğrenciler: güncel asgari daha yüksekse müdür dosyadan karar verir (md.7/1, md.7/6)
+  { const dn = ks.filter(k => !k.kapali && k.asama !== 'Ehliyet' && !(k.dsinav && k.dsinav.sonuc === 'Geçti')).map(k => ({ k, r: direksiyonAyrinti(k) })).filter(({ r }) => r.donuk && r.yeni && r.yeni.saat > r.saat);
+    if (dn.length) l.push(['uyari', `${dn.length} öğrenci eski direksiyon ders sayısında (${dn.slice(0, 3).map(({ k, r }) => tamAd(k) + ' ' + r.saat + '→' + r.yeni.saat).join(', ')}${dn.length > 3 ? '…' : ''})`, 'Bu öğrenciler kural tarihinden önce kaydoldu; sayıları bozulmasın diye eski değerde tutuluyor. Güncel mevzuatın asgarisi daha yüksek (MTSK md.7/1, farklı sınıfta md.39). Asgari saatin altında eğitim usta öğretici ve kurs hakkında işlem sebebidir (md.7/6): öğrenci dosyasında “Güncel mevzuata geçir” ile güncelleyin ya da il MEM’in uygulamasını sorun.', '#/kursiyer/' + dn[0].k.id]); }
   // Çalışma izni olmayan usta öğreticiye ders (eksik personel çalıştırma: 5580 m.7/2-e, 10 brüt asgari ücret)
   const yakin = sbDers(S.dersler).filter(d => d.durum === 'Planlandı' && fark(d.tarih) >= 0 && fark(d.tarih) <= 7);
   S.egitmenler.filter(x => !x.calismaIzinNo && yakin.some(d => d.egitmen === x.id)).forEach(x => l.push(['uyari', `${x.ad} · MEB çalışma izni no girilmemiş`, 'Çalışma izni onaylanmamış personelle ders yapılamaz; eksik personel çalıştırmanın cezası brüt asgari ücretin 10 katı (5580 m.7/2-e). İzin varsa numarasını girin.', '#/filo/egitmen']));
   l.push(...denetimUyarilari());
   return l;
 }
+// Kural motoruna kayıt: MEB işlemleri › Kurallar listesinde MEB kurallarından sonra gelir (kurallar.js)
+kuralEkle({ id: 'MZ', sira: 900, ad: 'Mevzuat uyumu: ücret, tahsilat, iade, ücretsiz kontenjan, hazır yazısı, ders saatleri, araç başına kursiyer, personel izni, denetim', dayanak: 'ÖÖKY m.54, 55/3, 56/3-b, 56/4; MTSK Yön. md.7/1, 7/7, 15, 16/8, 20, 43; 5580 m.7/2-e, m.13', kapsam: 'kurs', ciddiyet: 'uyari', kontrol(l) { l.push(...mevzuatKurallari()); } });

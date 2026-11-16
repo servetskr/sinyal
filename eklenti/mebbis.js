@@ -1,6 +1,7 @@
 // mdSinyal MEBBİS Yardımcısı · MEBBİS tarafı. Kursun kendi MEBBİS oturumunda çalışır; şifre istemez, saklamaz.
 // 1) mdSinyal’in sıraya koyduğu işin alanlarını açık formda etiketlerinden bulup doldurur; bulamadığını kullanıcı bir kez gösterir (öğrenilir).
-// 2) Sayfadaki listeyi (tablo) mdSinyal’e aktarır. Kaydet’e ve güvenlik koduna her zaman kullanıcı basar; eklenti formu göndermez.
+// 2) Sayfadaki listeyi (tablo) mdSinyal’e aktarır. Bu “Ekranda doldur” yolunda Kaydet’e ve güvenlik koduna kullanıcı basar; panel formu göndermez.
+// Toplu yazma ayrı yoldur (motor.js): yetkili mdSinyal’de bir kez onaylar, motor yazar, kaydeder ve doğrular; güvenlik kodunu yine yetkili girer.
 (() => {
   if (window.__sinyalMebbis) return; window.__sinyalMebbis = true;
   // Çerçeveler arası mesajlar yalnız aynı kökene (MEBBİS) gider; başka kaynaktan bir çerçeveye kursiyer verisi gitmez

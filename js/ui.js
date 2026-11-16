@@ -1,4 +1,4 @@
-import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=208';
+import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=209';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -160,9 +160,17 @@ export function kapatPencere() { if (acikPencere) { acikPencere.remove(); acikPe
 document.addEventListener('keydown', ev => { if (ev.key !== 'Tab' || !acikPencere) return; const l = [...acikPencere.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')].filter(x => x.offsetParent !== null); if (!l.length) return; const ilk = l[0], son = l[l.length - 1]; if (ev.shiftKey && document.activeElement === ilk) { ev.preventDefault(); son.focus(); } else if (!ev.shiftKey && document.activeElement === son) { ev.preventDefault(); ilk.focus(); } else if (!acikPencere.contains(document.activeElement)) { ev.preventDefault(); ilk.focus(); } });
 document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !(acikPencere && acikPencere.dataset.korumali)) kapatPencere(); });
 
+// Tam ekran akışta (öğretmenin "Dersi bitir" adımları, öğrencinin tam ekran ekranları) bildirimler üstte durur: aynı anda yalnız
+// en yenisi görünür, başlığı ve adım göstergesini kapatacak yığın oluşmaz. Aynı metin ikinci kez gelirse eskisi kaldırılır.
+const bildirimSil = b => { if (b.dataset.gidiyor) return; b.dataset.gidiyor = '1'; b.classList.add('git'); setTimeout(() => b.remove(), 300); };
+export function bildirimKapat(tur = '') {
+  document.querySelectorAll('.bildirimler .bildirim' + (tur ? '.bildirim-' + tur : '')).forEach(bildirimSil);
+}
 export function bildir(metin, tur = 'tamam', geriAlinir = false) {
   let k = document.querySelector('.bildirimler');
   if (!k) { k = document.createElement('div'); k.className = 'bildirimler'; k.setAttribute('aria-live', 'polite'); document.body.appendChild(k); }
+  const tam = document.body.classList.contains('ox-tam-acik') || document.body.classList.contains('ox-akis-acik');
+  [...k.querySelectorAll('.bildirim')].forEach(x => { if (tam || (x.querySelector('span') || {}).textContent === String(metin)) bildirimSil(x); });
   const b = document.createElement('div');
   b.className = 'bildirim bildirim-' + tur;
   b.innerHTML = ik(tur === 'tamam' ? 'tik' : tur === 'wp' ? 'wp' : 'uyari') + '<span>' + e(metin) + '</span>' + (geriAlinir ? '<button class="bildirim-geri" data-geri-al>Geri al</button>' : '');
@@ -328,7 +336,7 @@ function onizle(liste, baslik, bitince) {
   pencere({
     baslik: baslik || 'Gidecek mesaj',
     icerik: `<p class="ipucu" style="margin-bottom:12px">${isaret('bilgi', 18)}<span>Demo görünümü: gerçek kullanımda ${liste.length > 1 ? 'bu ' + liste.length + ' mesaj' : 'bu mesaj'} WhatsApp’tan kendiliğinden gider. Burada yalnız gösteriliyor.</span></p>
-      <div style="display:grid;gap:10px;max-height:52vh;overflow:auto">${liste.map(x => `<div><small style="display:block;color:var(--soluk);margin-bottom:4px">${e(x.ad || '')}${x.rol ? ' · ' + (x.rol === 'KURSA GELEN' ? adEk(S.kurs.ad, 'e') : ROL_YAZI[x.rol] || x.rol.toLocaleLowerCase('tr')) : ''}</small><div class="balon giden" style="max-width:100%;white-space:pre-line">${e(x.metin)}</div></div>`).join('')}</div>`,
+      <div style="display:grid;gap:10px;max-height:52vh;overflow:auto">${liste.map(x => `<div><small style="display:block;color:var(--soluk);margin-bottom:4px">${e(x.ad || '')}${x.rol ? ' · ' + (x.rol === 'KURSA GELEN' ? adEk(S.kurs.ad, 'e') : ROL_YAZI[x.rol] || x.rol.toLocaleLowerCase('tr')) : ''}</small><div class="balon giden" style="max-width:100%;white-space:pre-line;overflow-wrap:anywhere">${e(x.metin)}</div></div>`).join('')}</div>`,
     altlik: '<button class="dg dg-ana" data-onizle-tamam>Tamam</button>',
     onAc(d) { d.querySelector('[data-onizle-tamam]').addEventListener('click', () => { kapatPencere(); if (bitince) bitince(new Set(liste.map((x, i) => i))); }); },
   });
@@ -449,17 +457,60 @@ export function fotoKucult(dosya, max = 640) {
 }
 
 // Parmakla imza alanı: { bos(), url(), temizle() }
+// İmza ölçü denetimi: tek dokunuş, nokta ya da düz çizgi imza sayılmaz. MEBBİS'in imza ölçüsü bilinmediği için (doğrulanamadı)
+// makul alt sınır kullanılır; değerler tuvalin oranıdır, kurs Ayarlar › MEB kuralları'ndan değiştirebilir (S.kurs.imzaAsgari, % tuval eni).
+// en ≥ %15 tuval eni, boy ≥ %15 tuval boyu, toplam çizgi ≥ uzunluk × tuval eni (varsayılan %50), en az 8 nokta,
+// kalınlık ≥ %8 tuval boyu (çizginin ana eksenine dik yöndeki yayılımı: düz çizgi, eğik düz çizgi, köşe dokunuşu + çizgi geçmez).
+// Ölçüye yalnız mürekkep bırakan darbeler (en az iki noktalı) girer; tek dokunuş sınır kutusunu büyütmez.
+export const IMZA_ASGARI = { en: 0.15, boy: 0.15, uzunluk: 0.5, nokta: 8, kalinlik: 0.08 };
+// Ortak ölçü: darbeler [[x, y], ...] dizileri (tuval pikseli ya da vektör ölçeği). Ekrandaki imza (imzaAlani), uzaktan imza tuvali ve
+// kursa dönen imza vektörü aynı işlevle ölçülürse ölçüt birdir. kalinlik: çizgi parçalarının, uzunluklarıyla ağırlıklı ana eksene dik
+// izdüşümünde %10–%90 aralığı (uçtaki küçük bir nokta ya da kısa çizik düz çizgiyi imza yapmasın).
+export function imzaOlcuHesap(cizgiler, W = 0, H = 0) {
+  const l = (Array.isArray(cizgiler) ? cizgiler : []).filter(s => Array.isArray(s) && s.length > 1);
+  let nokta = 0, uzunluk = 0, x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  const par = [];
+  l.forEach(s => s.forEach((p, i) => {
+    const x = +p[0] || 0, y = +p[1] || 0; nokta++;
+    x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y);
+    if (i) { const px = +s[i - 1][0] || 0, py = +s[i - 1][1] || 0, d = Math.hypot(x - px, y - py); if (d > 0) { uzunluk += d; par.push([(x + px) / 2, (y + py) / 2, d]); } }
+  }));
+  let kalinlik = 0;
+  if (par.length > 1 && uzunluk > 0) {
+    let mx = 0, my = 0; par.forEach(([x, y, w]) => { mx += x * w; my += y * w; }); mx /= uzunluk; my /= uzunluk;
+    let sxx = 0, syy = 0, sxy = 0; par.forEach(([x, y, w]) => { const dx = x - mx, dy = y - my; sxx += w * dx * dx; syy += w * dy * dy; sxy += w * dx * dy; });
+    const a = Math.atan2(2 * sxy, sxx - syy) / 2, nx = -Math.sin(a), ny = Math.cos(a);
+    const iz = par.map(([x, y, w]) => [(x - mx) * nx + (y - my) * ny, w]).sort((p, q) => p[0] - q[0]);
+    const dilim = q => { let t = 0; for (const [v, w] of iz) { t += w; if (t >= q * uzunluk) return v; } return iz[iz.length - 1][0]; };
+    kalinlik = Math.max(0, dilim(0.9) - dilim(0.1));
+  }
+  return { nokta, uzunluk: Math.round(uzunluk), en: nokta ? Math.round(x1 - x0) : 0, boy: nokta ? Math.round(y1 - y0) : 0, kalinlik: Math.round(kalinlik), cizgi: l.length, W, H };
+}
+export function imzaOlcuDenetle(o, cv) {
+  const W = (cv && cv.width) || o.W || 1, H = (cv && cv.height) || o.H || 1, ay = S && S.kurs ? S.kurs.imzaAsgari : undefined, u = ay === 0 ? 0 : +ay > 0 ? +ay / 100 : IMZA_ASGARI.uzunluk;  // 0: yalnız uzunluk sınırı kapanır, tek dokunuş/düz çizgi denetimi sürer
+  if (!o.nokta) return 'İmza alanı boş';
+  if (o.nokta < IMZA_ASGARI.nokta || o.uzunluk < W * 0.04) return 'Tek dokunuş imza sayılmaz; imzanızı çizin';
+  if (o.en < W * IMZA_ASGARI.en || o.boy < H * IMZA_ASGARI.boy || (o.kalinlik != null && o.kalinlik < H * IMZA_ASGARI.kalinlik)) return 'İmza çok küçük ya da düz bir çizgi; alanı kullanarak yeniden imzalayın';
+  if (o.uzunluk < W * u) return 'İmza çok kısa; tam imzanızı atın';
+  return '';
+}
 export function imzaAlani(cv) {
   const c = cv.getContext('2d'); c.lineWidth = 4; c.lineCap = 'round'; c.lineJoin = 'round'; c.strokeStyle = '#111';
-  let ciz = false, bos = true;
+  // bos: tuvalde mürekkep yok. Darbeler nokta dizisi olarak tutulur; ölçü (imzaOlcuHesap) yalnız mürekkep bırakan darbelerden hesaplanır:
+  // dokunulup kaldırılan (hareketsiz) nokta ölçüye girmez, sınır kutusunu büyütmez.
+  let bos = true, su = null, cizgiler = [];
   // boş alanda soluk ipucu; ilk dokunuşta silinir (denetim B011)
   const ipucu = () => { c.save(); c.fillStyle = 'rgba(17,17,17,.3)'; c.font = `600 ${Math.max(14, Math.round(cv.height * 0.13))}px system-ui,-apple-system,sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('Buraya parmakla imza atın', cv.width / 2, cv.height / 2); c.restore(); };
   ipucu();
   const n = ev => { const r = cv.getBoundingClientRect(); return [(ev.clientX - r.left) * cv.width / r.width, (ev.clientY - r.top) * cv.height / r.height]; };
-  cv.addEventListener('pointerdown', ev => { if (bos) c.clearRect(0, 0, cv.width, cv.height); ciz = true; c.beginPath(); c.moveTo(...n(ev)); try { cv.setPointerCapture(ev.pointerId); } catch (x) { } });
-  cv.addEventListener('pointermove', ev => { if (!ciz) return; c.lineTo(...n(ev)); c.stroke(); bos = false; });
-  cv.addEventListener('pointerup', () => ciz = false);
-  return { bos: () => bos, url: () => { const k = document.createElement('canvas'); k.width = 300; k.height = 100; k.getContext('2d').drawImage(cv, 0, 0, 300, 100); return k.toDataURL('image/png'); }, temizle: () => { c.clearRect(0, 0, cv.width, cv.height); bos = true; ipucu(); } };
+  cv.addEventListener('pointerdown', ev => { if (bos) c.clearRect(0, 0, cv.width, cv.height); su = [n(ev)]; cizgiler.push(su); c.beginPath(); c.moveTo(...su[0]); try { cv.setPointerCapture(ev.pointerId); } catch (x) { } });
+  cv.addEventListener('pointermove', ev => { if (!su) return; const p = n(ev), o = su[su.length - 1]; if (p[0] === o[0] && p[1] === o[1]) return; su.push(p); c.lineTo(...p); c.stroke(); bos = false; });
+  const bitir = () => { if (su && su.length < 2) cizgiler.pop(); su = null; };
+  cv.addEventListener('pointerup', bitir); cv.addEventListener('pointercancel', bitir);
+  const olcu = () => imzaOlcuHesap(cizgiler, cv.width, cv.height);
+  const sorun = () => bos ? 'İmza alanı boş' : imzaOlcuDenetle(olcu(), cv);
+  // bos(): geçerli imza yok (boş ya da ölçünün altında: tek dokunuş, nokta, düz çizgi). Mürekkep var mı: murekkep()
+  return { bos: () => !!sorun(), murekkep: () => !bos, sorun, olcu, url: () => { const k = document.createElement('canvas'); k.width = 300; k.height = 100; k.getContext('2d').drawImage(cv, 0, 0, 300, 100); return k.toDataURL('image/png'); }, temizle: () => { c.clearRect(0, 0, cv.width, cv.height); bos = true; su = null; cizgiler = []; ipucu(); } };
 }
 
 // Hassas işlemden önce oturumdaki kullanıcının PIN'ini tekrar sorar (Ayarlar › Güvenlik'te kapatılabilir)
@@ -488,7 +539,7 @@ function sifreSor(neden, ok) {
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Onayla</button>`,
     onAc(d) {
       const inp = d.querySelector('[data-sifre-tekrar]'), btn = d.querySelector('[data-k]');
-      const dene = () => { btn.disabled = true; import('./bulut.js?v=208').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
+      const dene = () => { btn.disabled = true; import('./bulut.js?v=209').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
       btn.addEventListener('click', dene); inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') dene(); }); setTimeout(() => inp.focus(), 50);
     },
   });

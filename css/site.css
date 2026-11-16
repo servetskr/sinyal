@@ -297,3 +297,6 @@ a.st-mod:hover h3{text-decoration:underline;text-decoration-thickness:2px;text-u
   .st-dgler .st-btn{flex:1 1 auto}
 }
 @media (prefers-reduced-motion:reduce){.st-btn{transition:none}}
+
+/* alt sayfalarda tarayıcının varsayılan 8px kenar boşluğu çerçeve gibi görünmesin */
+body.st{margin:0}

@@ -4,10 +4,11 @@
 // ve öğrenci ayrıntısı (data-ogr-ac) yönlendiricide (usta/ekran.js) çalışır.
 // İndirme: P.progIndir(eg) portal.js'in kendi (eski ekrandaki) dönemine bakar; yeni ekranın gösterdiği dönemi (seçili hafta ya da ay)
 // indirmek için data-prog-indir burada yakalanır ve aynı sütunlarla o dönemin dosyası üretilir.
-import { S, gun, fark, tarihOku, iso, kursiyer, arac, tamAd, SINIFLAR, kapaliGun } from '../veri.js?v=208';
-import { gunAdi, gunKisa, ayAdi, tarihUzun, bildir, csvIndir } from '../ui.js?v=208';
-import * as TK from '../takvim.js?v=208';
-import { esc, oi, sayfaBas, kart, bos, dugme, cip, sekmeler, stilEkle } from '../ogr/ui.js?v=208';
+import { S, gun, fark, tarihOku, iso, kursiyer, arac, tamAd, SINIFLAR, kapaliGun } from '../veri.js?v=209';
+import { gunAdi, gunKisa, ayAdi, tarihUzun, bildir, csvIndir } from '../ui.js?v=209';
+import * as TK from '../takvim.js?v=209';
+import { esc, oi, sayfaBas, kart, bos, dugme, cip, sekmeler, stilEkle } from '../ogr/ui.js?v=209';
+import { geceCip } from './bugun.js?v=209';
 
 /* ---------- ekran durumu (yeniden çizimde korunur) ---------- */
 let mod = 'hafta';   // 'hafta' | 'ay'
@@ -53,7 +54,7 @@ function dersKart(d, ctx) {
   const ad = esc(tamAd(k)), acik = d.durum === 'Planlandı', gecmis = d.tarih < gun(0), sira = ctx.siradaki && ctx.siradaki.id === d.id && !d.bas;
   const imzaBek = d.durum === 'Yapıldı' && d.imza && d.imza.kursiyerBekliyor;
   let [dt, ton] = ctx.P.progDurum(d); if (dt === 'Kapanmadı') dt = 'Kaydı eksik';  // Bugün ekranıyla aynı ad
-  const alt = `${esc(sinifAd(k))} · ${ctx.P.dersNo(d, k)}. ders`;
+  const alt = `${esc(sinifAd(k))} · ${ctx.P.dersNo(d, k)}. ders${d.durum === 'İptal' ? '' : geceCip(d)}`;
   const sag = sira ? '<span class="ox-upr-sira">Sıradaki</span>'
     : imzaBek ? cip('İmza bekliyor', 'turuncu')
     : acik && !gecmis && !d.bas ? ''
@@ -161,7 +162,7 @@ async function indir(ctx) {
   const ad = 'ders-programi-' + gunler[0] + '_' + gunler[gunler.length - 1];
   const metin = mod === 'ay' ? `${ayAdi(tarihOku(secili).getMonth(), true)} ${tarihOku(secili).getFullYear()}` : aralikMetin(gunler);
   try {
-    await import('../sayfalar5.js?v=208').then(m => m.xlsxYukle());
+    await import('../sayfalar5.js?v=209').then(m => m.xlsxYukle());
     const X = window.XLSX, ws = X.utils.aoa_to_sheet(sat), wb = X.utils.book_new();
     ws['!cols'] = [12, 6, 7, 24, 14, 8, 12, 11, 9].map(w => ({ wch: w })); ws['!autofilter'] = { ref: 'A1:I' + sat.length };
     X.utils.book_append_sheet(wb, ws, 'Program'); X.writeFile(wb, ad + '.xlsx');

@@ -5,7 +5,7 @@
   const OLAY = [
     ['08:31', 'wa', 'Adayın sorusu cevaplandı', 'WhatsApp asistanı · kayıt linki gönderildi'],
     ['08:45', 'wa', 'Taksit hatırlatması gitti', '12 öğrenciye, kursun numarasından'],
-    ['09:02', 'kayit', 'Elif Yıldız evden kaydoldu', 'Sözleşmeyi telefondan imzaladı'],
+    ['09:02', 'kayit', 'Elif Yıldız kayıt formundan kaydoldu', 'Sözleşmeyi telefondan imzaladı'],
     ['09:20', 'plan', 'Yarının 18 dersi planlandı', 'Araç ve öğretmen çakışması yok'],
     ['10:05', 'para', 'Ödeme alındı', 'Mert Kaya · makbuz 1043'],
     ['10:40', 'meb', '3 kayıt MEBBİS’e hazır', 'Onayınızı bekliyor'],

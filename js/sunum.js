@@ -1,7 +1,8 @@
 // Sunum verisi: gerçek kurs hesabında bir öğrenciyi, öğretmenini ve müdürü baştan sona göstermek için az sayıda örnek kayıt.
 // Öğrenciye öğretmen atanır; geçmiş dersler (puanlı), bugün ve sonraki günlerde planlı dersler, ödeme planı ve sınav tarihi eklenir.
 // Eklenen her kayıt "sunum: true" taşır; kaldırınca yalnız bunlar silinir ve öğrencinin önceki bilgileri geri gelir. Öğrencinin hesabına dokunulmaz.
-import { S, gun, SINIFLAR, tamAd, islem, konuOner } from './veri.js?v=208';
+import { S, gun, SINIFLAR, tamAd, islem, konuOner } from './veri.js?v=209';
+import { gerekliDireksiyon } from './veri.js?v=209';
 
 const kucuk = s => String(s || '').toLocaleLowerCase('tr').trim();
 // tek öğrenci / tek öğretmen varsa o; birden çoksa adıyla (Servet Sakar, Ahmet)
@@ -36,7 +37,7 @@ export function sunumVerisiEkle() {
   // geçmiş 5 ders: puanlar giderek iyileşir; sonuncusu öğrencinin onayını bekler, notu öğrencinin ekranında görünür
   const puan = [[2, 3, 2, 2, 2], [3, 3, 3, 2, 3], [3, 4, 3, 3, 3], [4, 4, 4, 3, 3], [4, 4, 4, 4, 3]];
   [[-12, '10:00'], [-9, '14:00'], [-7, '11:00'], [-5, '15:00'], [-2, '10:00']].forEach(([n, s], i) => S.dersler.push(ders(n, s, {
-    durum: 'Yapıldı', bas: s, bit: bit(s), sure: 50, meb: i < 4, konular: konuOner(k.sinif, i + 1, S0.direksiyon).slice(0, 2),
+    durum: 'Yapıldı', bas: s, bit: bit(s), sure: 50, meb: i < 4, konular: konuOner(k.sinif, i + 1, gerekliDireksiyon(k)).slice(0, 2),
     beceri: Object.fromEntries([['kalkis', 0], ['serit', 1], ['kavsak', 2], ['park', 3], ['rampa', 4]].map(([b, j]) => [b, puan[i][j]])),
     imza: { zaman: gun(n) + 'T' + bit(s), kursiyer: null, usta: null },
     ...(i < 4 ? { ogrenciOnay: { durum: 'onay', tarih: gun(n) } } : { not: 'Kalkışta debriyajı daha yavaş bırak; ayna kontrolün iyi. Bir sonraki derste geri park çalışacağız.' }),

@@ -1,8 +1,9 @@
 // MEBBİS dönem grupları. MEBBİS'teki "Dönem Grup Açılış Tarihi" ve "Grup Şube Tanımlama" ekranlarıyla birebir:
 // dönem YYYYAA, grup 1–3 (her grubun tek başlangıç tarihi, ayın 1'i ile 10'u arası), şube A–H. Ad: "Kasım 1A".
 // Kursiyer kaydı grubun başlangıcından önce yapılır (MTSK Yönetmeliği 12/2); evrakı tamam ve gruba atanmış kursiyer aktiftir.
-import { S, kaydet, gun, fark, iso, SINIFLAR, tamAd, islem, eksikEvrak, sb } from './veri.js?v=208';
-import { e, pencere, kapatPencere, bildir, rozet, tarih, isaret, ik } from './ui.js?v=208';
+import { S, kaydet, gun, fark, iso, SINIFLAR, tamAd, islem, eksikEvrak, sb } from './veri.js?v=209';
+import { e, pencere, kapatPencere, bildir, rozet, tarih, isaret, ik } from './ui.js?v=209';
+import * as KR from './kurallar.js?v=209';
 
 export const AYLAR = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 export const SUBELER = 'ABCDEFGH'.split('');   // MEBBİS'te şube seçenekleri A..H (8 şube)
@@ -185,7 +186,7 @@ export function gruplarKarti() {
   const l = (S.gruplar || []).filter(g => !g.baslangic || fark(g.baslangic) >= -120).sort((a, b) => String(b.baslangic).localeCompare(String(a.baslangic)) || String(a.ad).localeCompare(String(b.ad), 'tr'));
   const bek = sb(S.kursiyerler).filter(bekleyenMi);
   return `<div class="kart"><div class="kart-bas"><h3>Dönem grupları</h3><small>MEBBİS’teki dönem, grup ve şubelerle aynı</small><div class="sag"><button class="dg dg-ana dg-kucuk" data-grup-yeni>${ik('arti')}Yeni grup</button></div></div>
-    ${l.length ? `<ul class="liste" style="margin-top:8px">${l.map(g => { const n = kisiler(g).length, bas = fark(g.baslangic); return `<li><div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(g.ad)}</b>${mebGrubuMu(g) ? '' : ' ' + rozet('MEBBİS dışı', 'notr')}<small style="display:block;color:var(--soluk)">${mebGrubuMu(g) ? e(donemAdi(g.donem)) + ' · Grup ' + g.grupNo + ' · ' + g.sube + ' Şubesi · ' : ''}${bas > 0 ? tarih(g.baslangic) + ' başlıyor' : bas === 0 ? 'bugün başlıyor' : tarih(g.baslangic) + ' başladı'}${g.sinif ? ' · ' + e(((SINIFLAR[g.sinif] || {}).ad || g.sinif).split(' ·')[0]) : ''}${g.derslik ? ' · ' + e(g.derslik) : ''}</small></div>
+    ${l.length ? `<ul class="liste grup-liste" style="margin-top:8px">${l.map(g => { const n = kisiler(g).length, bas = fark(g.baslangic); return `<li><div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(g.ad)}</b>${mebGrubuMu(g) ? '' : ' ' + rozet('MEBBİS dışı', 'notr')}<small style="display:block;color:var(--soluk)">${mebGrubuMu(g) ? e(donemAdi(g.donem)) + ' · Grup ' + g.grupNo + ' · ' + g.sube + ' Şubesi · ' : ''}${bas > 0 ? tarih(g.baslangic) + ' başlıyor' : bas === 0 ? 'bugün başlıyor' : tarih(g.baslangic) + ' başladı'}${g.sinif ? ' · ' + e(((SINIFLAR[g.sinif] || {}).ad || g.sinif).split(' ·')[0]) : ''}${g.derslik ? ' · ' + e(g.derslik) : ''}</small></div>
       <span class="sag"><span class="sayi" style="font-size:13px">${n}${g.kontenjan ? '/' + g.kontenjan : ''} kişi · teorik ${teorikDurum(g).toplam}/34 saat</span><button class="dg dg-cizgi dg-kucuk" data-teorik-ekle="${e(g.id)}">Ders ekle</button><button class="dg dg-cizgi dg-kucuk" data-grup-ata="${e(g.id)}">Kursiyer ata</button>${mebGrubuMu(g) ? `<button class="dg dg-hafif dg-kucuk" data-grup-duzenle="${e(g.id)}" aria-label="Düzenle">${ik('kalem')}</button>` : ''}</span></li>`; }).join('')}</ul>`
       : `<div class="kart-govde"><p style="color:var(--metin)">Henüz dönem grubu yok. MEBBİS’te açtığınız grubu burada da açın (ör. <b>Kasım 1A</b>); kayıtta grup seçimi zorunlu. MEBBİS Yardımcısı kuruluysa <b>MEB işlemleri › MEBBİS’ten al › Dönem grupları</b> ile MEBBİS’teki grupları da çekebilirsiniz.</p></div>`}
     ${bek.length ? `<div class="kart-bas" style="padding-top:18px"><h3>Bekleyen kursiyerler</h3><small>Kaydı yapıldı; gruba atanmadı ya da evrakı eksik · ${bek.length}</small></div>
@@ -253,14 +254,28 @@ export function teorikDersPencere(g, sonra) {
       <div class="alan"><label for="td-tekrar">Kaç gün</label><select id="td-tekrar" name="tekrar">${Array.from({ length: 15 }, (_, i) => i + 1).map(n => `<option value="${n}">${n === 1 ? 'Yalnız bu gün' : n + ' gün art arda'}</option>`).join('')}</select></div>
       <label class="tam" style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" name="haftasonu" style="width:18px;height:18px"> Hafta sonu da ders yapılır</label>
       <div class="alan"><label for="td-dl">Derslik</label><input id="td-dl" name="derslik" value="${e(g.derslik || 'Derslik 1')}"></div>
-      <small id="td-ozet" class="tam" style="color:var(--soluk)"></small></form>`
+      <small id="td-ozet" class="tam" style="color:var(--soluk)"></small><div id="td-uyari" class="tam" style="display:grid;gap:6px"></div></form>`
       : `<p>Teorik ders eklemek için önce bir teorik öğretmen ekleyin (MEBBİS izin numarasıyla).</p>`,
     altlik: og.length ? `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-teorik">Dersleri ekle</button>` : `<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-ogr-ekle>Öğretmen ekle</button>`,
     onAc(dl) {
       const oe = dl.querySelector('[data-ogr-ekle]'); if (oe) oe.addEventListener('click', () => { kapatPencere(); ogretmenPencere(null, () => teorikDersPencere(g, sonra)); });
       const f = dl.querySelector('form'); if (!f) return;
       const gunler = () => { const l = [], d0 = new Date(f.tarih.value + 'T12:00:00'); let n = +f.tekrar.value; for (let i = 0; n > 0 && i < 60; i++) { const d = new Date(d0); d.setDate(d0.getDate() + i); if (!f.haftasonu.checked && (d.getDay() === 0 || d.getDay() === 6)) continue; l.push(iso(d)); n--; } return l; };
-      const ozet = () => { const l = f.tarih.value ? gunler() : [], bas = +f.saat.value.slice(0, 2), sure = +f.sure.value; dl.querySelector('#td-ozet').textContent = l.length ? `${l.length} gün × ${sure} saat = ${l.length * sure} saat · ${l[0].split('-').reverse().join('.')}${l.length > 1 ? ' – ' + l[l.length - 1].split('-').reverse().join('.') : ''} · ${String(bas).padStart(2, '0')}:00–${String(bas + sure - 1).padStart(2, '0')}:50${bas + sure > 23 ? ' · 23:00’ü geçiyor' : ''}` : ''; };
+      // Aynı gün denetimi: grubun o günkü teorik saati + eklenecek saat, kural motorundan (kurallar.js teorikKontrol, MTSK md.16/4 günde 2–6 saat).
+      // Saatleri çakışan ders eklenmez; günlük saat sınırı uyarıdır (Eyüp Bey teyidine kadar engel değil), ikinci basışta eklenir.
+      const dgEkle = dl.querySelector('[form=f-teorik]');
+      const denetle = (l, bas, sure) => {
+        const cakisma = l.filter(t => (S.teorik || []).some(x => x.grup === g.id && x.tarih === t && (() => { const b = +String(x.saat || '').slice(0, 2), s2 = +x.sure || 1; return b < bas + sure && bas < b + s2; })()));
+        const uyari = l.map(t => KR.teorikKontrol(g.id, t, sure).mesaj).filter(Boolean);
+        return { cakisma, uyari };
+      };
+      const uyariYaz = (dn, vurgu) => {
+        const ku = dl.querySelector('#td-uyari'), kisalt = a => a.length > 3 ? [...a.slice(0, 3), `ve ${a.length - 3} gün daha`] : a;
+        ku.innerHTML = (dn.cakisma.length ? `<p class="ipucu uyari">${isaret('dur', 18)}<span>${dn.cakisma.length} günde bu saatlerde grubun zaten dersi var: ${e(kisalt(dn.cakisma.map(t => tarih(t))).join(', '))}. Başka saat ya da gün seçin.</span></p>` : '')
+          + (dn.uyari.length ? `<p class="ipucu${vurgu ? ' uyari' : ''}">${isaret('uyari', 18)}<span>${e(kisalt(dn.uyari).join(' '))} ${dn.cakisma.length ? '' : '<small style="display:block;color:var(--soluk)">Uyarıdır; yine de eklemek için “Yine de ekle”ye basın. MEBBİS teorik programı bu haliyle kabul etmeyebilir.</small>'}</span></p>` : '');
+        if (dgEkle) dgEkle.textContent = !dn.cakisma.length && dn.uyari.length && f.dataset.onay === dn.uyari.join('|') ? 'Yine de ekle' : 'Dersleri ekle';
+      };
+      const ozet = () => { const l = f.tarih.value ? gunler() : [], bas = +f.saat.value.slice(0, 2), sure = +f.sure.value; dl.querySelector('#td-ozet').textContent = l.length ? `${l.length} gün × ${sure} saat = ${l.length * sure} saat · ${l[0].split('-').reverse().join('.')}${l.length > 1 ? ' – ' + l[l.length - 1].split('-').reverse().join('.') : ''} · ${String(bas).padStart(2, '0')}:00–${String(bas + sure - 1).padStart(2, '0')}:50${bas + sure > 23 ? ' · 23:00’ü geçiyor' : ''}` : ''; delete f.dataset.onay; uyariYaz(denetle(l, bas, sure)); };
       f.addEventListener('change', ozet); f.addEventListener('input', ozet); ozet();
       f.addEventListener('submit', ev => {
         ev.preventDefault();
@@ -268,10 +283,12 @@ export function teorikDersPencere(g, sonra) {
         if (!f.tarih.value || !l.length) return bildir('İlk ders gününü seçin', 'uyari');
         if (bas + sure > 23) return bildir('Dersler 23:00’e kadar bitmeli (MTSK Yönetmeliği 20/1)', 'uyari');
         if (l[0] < g.baslangic) return bildir(`Teorik dersler grubun başlangıcından (${tarih(g.baslangic)}) önce olamaz`, 'uyari');
-        const cak = l.filter(t => (S.teorik || []).some(x => x.grup === g.id && x.tarih === t)); if (cak.length && !confirm(`${cak.length} günde bu grubun zaten dersi var. Yine de eklensin mi?`)) return;
+        const dn = denetle(l, bas, sure);
+        if (dn.cakisma.length) { uyariYaz(dn, true); return bildir(`${dn.cakisma.length} günde bu saatlerde grubun zaten dersi var`, 'uyari'); }
+        if (dn.uyari.length && f.dataset.onay !== dn.uyari.join('|')) { f.dataset.onay = dn.uyari.join('|'); uyariYaz(dn, true); return bildir('Günlük teorik saat uyarısını okuyun; eklemek için “Yine de ekle”ye basın', 'uyari'); }
         const z = Date.now(); S.teorik = S.teorik || [];
         l.forEach((t, i) => S.teorik.push({ id: 't' + z + i, tarih: t, saat: String(bas).padStart(2, '0') + ':00', sure, konu: f.tur.value, salon: f.derslik.value.trim() || 'Derslik 1', grup: g.id, ogretmen: f.ogretmen.value, katilim: 0, mevcut: kisiler(g).length }));
-        islem('Teorik ders planladı', `${g.ad} · ${f.tur.value} · ${l.length} gün`); kaydet(); kapatPencere();
+        islem('Teorik ders planladı', `${g.ad} · ${f.tur.value} · ${l.length} gün${dn.uyari.length ? ' · uyarıya rağmen: ' + dn.uyari.length + ' gün 2–6 saat dışında (md.16/4)' : ''}`); kaydet(); kapatPencere();
         bildir(`${l.length} gün teorik ders eklendi (${l.length * sure} saat). MEB işlemleri › Teorik program sekmesinden MEBBİS’e yazılır.`, 'tamam');
         sonra && sonra();
       });

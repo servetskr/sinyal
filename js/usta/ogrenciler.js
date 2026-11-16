@@ -3,10 +3,12 @@
 // (tam ekran; MEB EK-3/EK-4 formu) · 'sonuc:<id>' son denemenin sonucu.
 // Eski portal.js'ten taşınanlar: kursiyer listesi ve araSuz (yeniden çizmeden arama), egOgrAc (ayrıntı penceresi), deneme.js denemeAc (pencere).
 // Deneme mantığı (form, 5 mavi / 2 sarı / 1 kırmızı kuralı, kayıt) deneme.js'teki dışa aktarımlardan gelir; burada kopyası yok.
-import { S, SINIFLAR, kursiyer, tamAd, sonrakiDers, risk, fark, tarihOku, dersSirasi } from '../veri.js?v=208';
-import { gunAdi, ayAdi } from '../ui.js?v=208';
-import { sonucHesap, denemeFormu, denemeKaydet, denemeAraci, denemeBolumAd, denemeFormAd, sonDeneme } from '../deneme.js?v=208';
-import { esc, oi, sayfaBas, geri, bolum, baglanti, kart, liste, satir, ikonKutu, cip, serit, ayrac, not, bos, dugme, sekmeler, akisUst, akisAlt, odakTuzagi, stilEkle } from '../ogr/ui.js?v=208';
+import { S, SINIFLAR, kursiyer, tamAd, sonrakiDers, risk, fark, tarihOku, dersSirasi } from '../veri.js?v=209';
+import { gerekliDireksiyon } from '../veri.js?v=209';
+import { gunAdi, ayAdi } from '../ui.js?v=209';
+import { sonucHesap, denemeFormu, denemeKaydet, denemeAraci, denemeBolumAd, denemeFormAd, sonDeneme } from '../deneme.js?v=209';
+import { geceSayim } from './bugun.js?v=209';
+import { esc, oi, sayfaBas, geri, bolum, baglanti, kart, liste, satir, ikonKutu, cip, serit, ayrac, not, bos, dugme, sekmeler, akisUst, akisAlt, odakTuzagi, stilEkle } from '../ogr/ui.js?v=209';
 
 /* ---------- ekran durumu (yeniden çizimde korunur) ---------- */
 let filtre = 'tumu';        // 'tumu' | 'direksiyon' | 'sinav' | 'diger'
@@ -39,8 +41,8 @@ const ogrBul = (ctx, id) => ctx.ogrenciler.find(k => k.id === id) || (() => { co
 function ogrSatir(k) {
   const S0 = SINIFLAR[k.sinif] || {}, sd = sonrakiDers(k), r = riskli(k), sv = !sd && sinavi(k);
   const sonraki = sd ? `${gunEtiket(sd.tarih)} · ${esc(sd.saat)}` : sv ? `Sınav: ${gunEtiket(sv.tarih)} · ${esc(sv.saat)}` : k.asama === 'Direksiyon' ? 'Planlı ders yok' : esc(k.asama) + ' aşamasında';
-  const dir = S0.direksiyon && (k.direksiyon > 0 || k.asama === 'Direksiyon' || k.asama === 'Sınav');
-  const ilerleme = dir ? `<span class="ox-uog-il">${serit(k.direksiyon / S0.direksiyon * 100, k.direksiyon >= S0.direksiyon ? 'yesil' : 'mavi', true)}<small>${k.direksiyon} ders tamamlandı</small></span>` : '';
+  const dir = gerekliDireksiyon(k) && (k.direksiyon > 0 || k.asama === 'Direksiyon' || k.asama === 'Sınav');
+  const ilerleme = dir ? `<span class="ox-uog-il">${serit(k.direksiyon / gerekliDireksiyon(k) * 100, k.direksiyon >= gerekliDireksiyon(k) ? 'yesil' : 'mavi', true)}<small>${k.direksiyon} ders tamamlandı</small></span>` : '';
   const ad = esc(tamAd(k));
   return `<button type="button" class="ox-satir ox-uog-ogr" data-ogr-ac="${esc(k.id)}" data-uog-m="${esc(araMetin(tamAd(k) + ' ' + (k.tel || '') + ' ' + (k.no || '')))}" aria-label="${ad}${r ? ', ek çalışma öneriliyor' : ''}: ayrıntılar">
     ${avatar(k)}<span class="ox-uog-ogr-g"><b>${ad}${r ? '<i class="ox-uog-nokta"></i>' : ''}</b><small>${sonraki}</small>${ilerleme}${r ? '<em class="ox-uog-risk">Ek çalışma öneriliyor</em>' : ''}</span><span class="ox-chev">${oi('sag')}</span></button>`;
@@ -90,13 +92,14 @@ function suz(kap) {
 /* ---------- 16 · öğrenci ayrıntısı ---------- */
 function ayrintiHtml(ctx, k) {
   const S0 = SINIFLAR[k.sinif] || {}, sd = sonrakiDers(k), r = riskli(k), dd = sonDeneme(k), sv = sinavi(k), tel = String(k.tel || '').replace(/[^\d+]/g, '');
-  const sdGun = sd && (fark(sd.tarih) <= 1 ? gunEtiket(sd.tarih) : gunAy(sd.tarih));
+  const sdGun = sd && (fark(sd.tarih) <= 1 ? gunEtiket(sd.tarih) : gunAy(sd.tarih)), gc = geceSayim(k);
   const meta = [
-    S0.direksiyon ? `<span>${oi('tik')}${k.direksiyon} ders tamamlandı</span>` : '',
+    gerekliDireksiyon(k) ? `<span>${oi('tik')}${k.direksiyon} ders tamamlandı</span>` : '',
+    gc ? `<span class="ox-uog-gece${gc.y >= gc.g ? ' tamam' : ''}"><svg class="ox-i" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>Gece dersi ${Math.min(gc.y, gc.g)}/${gc.g}</span>` : '',
     sd ? `<span>${oi('saat')}Sonraki ders: ${esc(sd.saat)} (${sdGun})</span>` : sv ? `<span>${oi('bayrak')}Sınav: ${gunAy(sv.tarih)} · ${esc(sv.saat)}</span>` : `<span>${oi('saat')}Planlı ders yok</span>`,
   ].filter(Boolean).join('');
   const profil = `<div class="ox-kart ox-uog-profil"><div class="ox-uog-profil-ust">${avatar(k, 'buyuk')}<div class="ox-uog-profil-ad"><h1>${esc(tamAd(k))}</h1><p>${sinifYaz(k)}</p>${cip(esc(k.asama) + ' aşamasında', k.asama === 'Sınav' ? 'mor' : k.asama === 'Direksiyon' ? 'mavi' : 'gri')}</div></div>
-    ${ayrac()}<div class="ox-uog-meta">${meta}</div>${S0.direksiyon ? `<div class="ox-uog-profil-il">${serit(k.direksiyon / S0.direksiyon * 100, k.direksiyon >= S0.direksiyon ? 'yesil' : 'mavi')}<small>${k.direksiyon}/${S0.direksiyon}</small></div>` : ''}</div>`;
+    ${ayrac()}<div class="ox-uog-meta">${meta}</div>${gerekliDireksiyon(k) ? `<div class="ox-uog-profil-il">${serit(k.direksiyon / gerekliDireksiyon(k) * 100, k.direksiyon >= gerekliDireksiyon(k) ? 'yesil' : 'mavi')}<small>${k.direksiyon}/${gerekliDireksiyon(k)}</small></div>` : ''}</div>`;
   const uyari = r ? `<div class="ox-uog-uyari" role="note">${oi('uyari')}<div><b>Ek çalışma öneriliyor</b>${r.nedenler.length ? `<p>${esc(r.nedenler.slice(0, 2).join(' · '))}</p>` : ''}</div></div>` : '';
   const ddSatir = dd
     ? satir({ sol: ikonKutu(dd.sonuc === 'Geçti' ? 'dogru' : 'uyari', dd.sonuc === 'Geçti' ? 'yesil' : 'turuncu'), baslik: dd.sonuc === 'Geçti' ? 'Sınavı geçerdi' : 'Sınavdan kalırdı', alt: esc(`${gunAy(dd.tarih)}${dd.neden ? ' · ' + dd.neden : ''}${dd.hatalar && dd.hatalar.length ? ' · ' + dd.hatalar.length + ' madde' : ''}`), attrs: { 'data-ux-alt': 'sonuc:' + k.id } })
@@ -321,6 +324,7 @@ stilEkle('ox-uogrenciler', `
 .ox-uog-meta{display:flex;flex-wrap:wrap;gap:6px 16px}
 .ox-uog-meta span{display:inline-flex;align-items:center;gap:6px;font-size:14.5px;color:var(--ox-metin)}
 .ox-uog-meta .ox-i{width:18px;height:18px;stroke-width:2;color:var(--ox-mavi)}
+.ox-uog-meta .ox-uog-gece .ox-i{color:var(--ox-mor)}.ox-uog-meta .ox-uog-gece.tamam .ox-i{color:var(--ox-yesil)}
 .ox-uog-profil-il{display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;margin-top:12px}
 .ox-uog-profil-il small{font-size:13.5px;font-weight:600;color:var(--ox-ikincil);font-variant-numeric:tabular-nums}
 .ox-uog-uyari{display:flex;gap:12px;align-items:flex-start;margin-top:12px;padding:14px 16px;border-radius:var(--ox-r);background:var(--ox-turuncu-acik);border:1px solid color-mix(in srgb,var(--ox-turuncu) 22%,#fff)}
