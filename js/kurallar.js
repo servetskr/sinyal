@@ -5,14 +5,14 @@
 // 'uyari', 'bilgi'. Dizinin üstünde ek alanlar: kural (kimlik), kursiyer (id), kursiyerler (birden çok kişiye ait oturum bulgusunda kimlik listesi, ör. Y04), kisa (öğrenci dosyasında ad olmadan başlık), yalnizDosya, eylem.
 // DOM yok; yalnız veri.js'e bağlı (Node'da denenebilir). Bugün: veri.js BUGUN / gun().
 // Yeni kurallar ilk sürümde yalnız "uyarı"dır; Eyüp Bey teyit edince engele çevrilebilir (belgeler/eksikler/eyup-sorular.md).
-import { S, gun, fark, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar } from './veri.js?v=209';
+import { S, gun, fark, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar } from './veri.js?v=210';
 
 /* ---------- yardımcılar (ui.js'teki biçimlerle aynı; ui.js DOM'a bağlı olduğu için burada kopyası) ---------- */
 const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
 const tarih = s => { if (!s) return '—'; const d = tarihOku(s); return d.getDate() + ' ' + AY[d.getMonth()]; };
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
 const tl = n => TL.format(Math.round(n)) + ' ₺';
-// MEB süreleri iş günüyle sayılır: Pazartesi–Cuma, resmî tatil ve bayramlar hariç; Cumartesi kurs ayarına bağlı (veri.js mebIsGunuSay)
+// MEB süreleri iş günüyle sayılır: tek tanım veri.js mebIsGunuMu (Pazartesi–Cuma; resmî tatil, bayram, arife ve idari izin hariç; eyup-sorular-cevaplar.md madde 11)
 const isGunu = n => n > 0 ? mebIsGunuSay(gun(0), gun(n)) : 0;
 const gunEkle = (t, n) => { const d = tarihOku(t); d.setDate(d.getDate() + n); return iso(d); };
 const bul = (tur, baslik, aciklama, link, ek) => Object.assign([tur, baslik, aciklama, link], ek || {});
@@ -22,6 +22,9 @@ const simdi = () => Date.now();
 const sonGunMetni = (son, tarihli) => { const n = mebIsGunuSay(gun(0), son); return fark(son) < 0 ? (tarihli ? `Son gün ${tarih(son)} idi; süre geçti.` : 'Süre geçti.') : fark(son) === 0 ? 'Son gün bugün.' : tarihli ? `Son gün ${tarih(son)}; ${n} iş günü kaldı.` : `Son güne ${n} iş günü kaldı.`; };
 const grupAdi = id => { const g = (S.gruplar || []).find(x => x.id === id); return g ? g.ad : id === 'sabah' ? 'Sabah grubu' : id === 'aksam' ? 'Akşam grubu' : 'Teorik grup'; };
 const CIDDIYET_TUR = { engel: 'yasak', uyari: 'uyari', bilgi: 'bilgi' };
+// MEBBİS'ten çekilen "Haklarının Tamamlanacağı Tarih": yönetmelikte 120 gün geçmiyor; büyük olasılıkla MEBBİS'in iç sınırı, il MEM yazısı olup olmadığı
+// teyit bekliyor (eyup-sorular-cevaplar.md madde 7). Ne "MEB kuralı" ne "MEB kuralı değil" denir: yalnız MEBBİS'in gösterdiği tarih olarak ayrı yazılır.
+const mebSinir = k => k && k.meb && /^\d{4}-\d{2}-\d{2}/.test(k.meb.haklarSonGun || '') ? ` MEBBİS’in gösterdiği son tarih (yönetmelikte yok): ${tarih(k.meb.haklarSonGun)}.` : '';
 
 /* ---------- kurallar ---------- */
 const KURALLAR = [
@@ -35,9 +38,11 @@ const KURALLAR = [
       Object.entries(gr).filter(([, n]) => n > sinir).forEach(([a, n]) => { const k = kursiyer(a.split('|')[0]); if (k) l.push(['yasak', `${tamAd(k)} için ${tarih(a.split('|')[1])} günü ${n} saat direksiyon var`, `Günde en fazla ${sinir} saat (MTSK Yön. md.16/4).`, '#/plan']); }); } },
   { id: 'M03', sira: 30, ad: 'Asgari direksiyon saati tamamlanmadan sınav yok', dayanak: 'MTSK Yön. md.7/1, md.39', kapsam: 'kursiyer', ciddiyet: 'engel',
     kontrol(l) { sb(S.kursiyerler).filter(k => k.asama === 'Sınav' && !k.dsinav && k.direksiyon < gerekliDireksiyon(k)).forEach(k => l.push(['yasak', `${tamAd(k)} sınava hazır görünüyor ama ${k.direksiyon}/${gerekliDireksiyon(k)} ders`, 'Asgari direksiyon saati tamamlanmadan sınava giremez (MTSK md.7/1, farklı sınıfta md.39).', '#/kursiyer/' + k.id])); } },
-  // gece dersi: gün batımından sonra başlayan ders (md.20/1; saat il koordinatından hesaplanır ya da kursun girdiği il MEM saati), en az 2 saat (md.7/3)
-  { id: 'M04', sira: 40, ad: 'Gece direksiyon dersi', dayanak: 'MTSK Yön. md.7/3, md.20/1', kapsam: 'kursiyer', ciddiyet: 'bilgi', ayar: 'geceDersi',
-    kontrol(l) { sb(S.kursiyerler).filter(k => ['Direksiyon', 'Sınav'].includes(k.asama) && geceGerekli(k) && k.direksiyon >= gerekliDireksiyon(k) - 4).forEach(k => { const gg = geceGerekli(k), g = sbDers(S.dersler).filter(d => d.kursiyer === k.id && d.durum !== 'Gelmedi' && d.durum !== 'İptal' && geceDersMi(d)).length; if (g < gg) l.push(['bilgi', `${tamAd(k)} · gece dersi ${g}/${gg}`, `Gün batımından sonra en az ${gg} saat ders planlanmalı (MTSK md.7/3). Bugün gün batımı ${geceBaslangic(gun(0))}; bu saatten sonra başlayan ders gece dersi sayılır.${k.sinif === 'CE' ? ' CE md.7/3 listesinde yok; il MEM uygulamasını teyit edin.' : ''}`, '#/plan']); }); } },
+  // gece dersi: gün batımından sonra başlayan ders (md.20/1; başlangıç kurs ayarı: il MEM saati ya da gün batımı hesabı, madde 6), en az 2 saat (md.7/3).
+  // CE ve G md.7/3 listesinde yok: zorunlu değil (madde 5; CE'de kurs ayarı geceCE ile açılabilir). Sağlık raporunda gece kısıtı olana gece dersi planlanmaz (md.7/3 son cümle).
+  { id: 'M04', sira: 40, ad: 'Gece direksiyon dersi', dayanak: 'MTSK Yön. md.7/3, md.20/1 (CE ve G’de zorunlu değil)', kapsam: 'kursiyer', ciddiyet: 'bilgi', ayar: 'geceDersi',
+    kontrol(l, K, c) { sb(S.kursiyerler).filter(k => ['Direksiyon', 'Sınav'].includes(k.asama) && geceGerekli(k) && k.direksiyon >= gerekliDireksiyon(k) - 4).forEach(k => { const gg = geceGerekli(k), g = sbDers(S.dersler).filter(d => d.kursiyer === k.id && d.durum !== 'Gelmedi' && d.durum !== 'İptal' && geceDersMi(d)).length; if (g < gg) l.push(['bilgi', `${tamAd(k)} · gece dersi ${g}/${gg}`, `Gün batımından sonra en az ${gg} saat ders planlanmalı (MTSK md.7/3). Bugün gece dersi başlangıcı ${geceBaslangic(gun(0))}; bu saatten sonra başlayan ders gece dersi sayılır.`, '#/plan']); });
+      c.yakin.filter(d => geceDersMi(d) && geceKisitli(kursiyer(d.kursiyer))).forEach(d => l.push(['uyari', `${tamAd(kursiyer(d.kursiyer))} · ${tarih(d.tarih)} ${d.saat} gece dersi`, 'Sağlık raporunda gece kısıtı var; bu kursiyere gece eğitimi verilmez (MTSK md.7/3). Dersi gün batımından önceye alın.', '#/plan'])); } },
   { id: 'M05', sira: 50, ad: 'Uygulama sınavı MEBBİS’e iş günü öncesinden bildirilir', dayanak: 'MTSK Yön. md.15/1, md.30/2 (sınavdan en geç 4 iş günü önce; ikinci dört hakta md.15/4)', kapsam: 'sinav', ciddiyet: 'engel', ayar: 'sinavBildirimIsGunu',
     kontrol(l, K) { sbSinav(S.sinavlar).filter(s => s.tur === 'Direksiyon' && fark(s.tarih) >= 0 && !s.mebBildirim && isGunu(fark(s.tarih)) <= K.sinavBildirimIsGunu + 2).forEach(s => l.push(['dur', `${tarih(s.tarih)} uygulama sınavı MEBBİS’e bildirilmedi`, `Kursiyer, usta öğretici ve araç bilgileri sınavdan en geç ${K.sinavBildirimIsGunu} iş günü önce girilmeli. ${sonGunMetni(mebIsGunuGeri(s.tarih, K.sinavBildirimIsGunu), true)}`, '#/meb'])); } },
   { id: 'M06', sira: 60, ad: 'Sağlık raporunda “sürücü olur”', dayanak: 'Sürücü adaylarının sağlık şartları; MEBBİS kayıt şartı', kapsam: 'kursiyer', ciddiyet: 'engel',
@@ -48,14 +53,18 @@ const KURALLAR = [
   { id: 'M08', sira: 80, ad: 'Kaldıktan sonra 2 ek ders yapılmadan tekrar sınav yok', dayanak: 'MTSK Yön. md.15', kapsam: 'kursiyer', ciddiyet: 'uyari',
     kontrol(l) { sb(S.kursiyerler).filter(k => k.dsinav && k.dsinav.sonuc === 'Kaldı' && !k.dsinav.girmedi && k.dsinavPlan && S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Yapıldı' && d.tarih > k.dsinav.tarih).length < 2).forEach(k => l.push(['uyari', `${tamAd(k)} tekrar uygulama sınavına yazıldı ama kaldıktan sonra 2 ek ders tamamlanmadı`, 'Sınavdan önce en az 2 saat ek direksiyon dersi yapılmalı.', '#/kursiyer/' + k.id])); } },
   { id: 'M09', sira: 90, ad: 'Tekrar sınav öncesi bekleme', dayanak: 'Kurs ayarı (mevzuatta sabit gün yok)', kapsam: 'kursiyer', ciddiyet: 'uyari', ayar: 'tekrarBekleme',
-    kontrol(l, K) { sb(S.kursiyerler).filter(k => k.dsinav && k.dsinav.sonuc === 'Kaldı' && k.dsinavPlan && (tarihOku(k.dsinavPlan) - tarihOku(k.dsinav.tarih)) / 864e5 < K.tekrarBekleme).forEach(k => l.push(bul('uyari', `${tamAd(k)} tekrar sınavı bekleme süresinden önce`, `Kaldıktan sonra en az ${K.tekrarBekleme} gün (kurs ayarı).`, '#/sinavlar', { kursiyer: k.id }))); } },
-  // Grup başlama tarihinden itibaren son e-sınav hakkı için randevu alma süresi 90 günü geçemez (MTSK md.15/1, ilk cümle)
-  { id: 'M10', sira: 100, ad: 'Grup başlangıcından 90 gün içinde e-sınav randevusu', dayanak: 'MTSK Yön. md.15/1', kapsam: 'kursiyer', ciddiyet: 'uyari',
-    kontrol(l) { sb(S.kursiyerler).filter(k => !k.kapali && !k.muaf && !(k.esinav && k.esinav.sonuc === 'Geçti') && ['Kayıt', 'Evrak', 'Teorik', 'Sınav'].includes(k.asama)).forEach(k => { const g = (S.gruplar || []).find(x => x.id === k.teorikGrup); if (!g || !/^\d{4}-\d{2}-\d{2}/.test(g.baslangic || '') || fark(g.baslangic) > 0) return; const kalan = 90 + fark(g.baslangic); if (kalan <= 20) l.push([kalan < 0 ? 'dur' : kalan <= 7 ? 'yasak' : 'uyari', `${tamAd(k)} · grup başlangıcından bu yana ${90 - kalan} gün, e-sınavı geçmedi`, (kalan < 0 ? `Son e-sınav hakkı için randevu süresi (grup başlangıcından 90 gün) ${-kalan} gün önce doldu; durumu MEBBİS’ten kontrol edin, gerekirse yeniden kayıt.` : `Son e-sınav hakkı için randevu ${kalan} gün içinde alınmalı (MTSK md.15/1: grup başlama tarihinden itibaren 90 gün).`) + (k.meb && k.meb.haklarSonGun ? ` MEBBİS’e göre hakların tamamlanacağı son gün: ${tarih(k.meb.haklarSonGun)}.` : ''), '#/kursiyer/' + k.id]); }); } },
-  // e-sınavı geçtikten sonra direksiyon derslerinin tamamlanma süresi (MTSK md.15/1-b: 90 gün; sınav tarihini MEM belirler). MEBBİS'ten çekilen "Haklarının Tamamlanacağı Tarih" varsa o da gösterilir.
-  { id: 'M11', sira: 110, ad: 'e-Sınavdan sonra direksiyon süresi', dayanak: 'MTSK Yön. md.15/1-b', kapsam: 'kursiyer', ciddiyet: 'uyari', ayar: 'direksiyonSure',
+    kontrol(l, K) { sb(S.kursiyerler).filter(k => k.dsinav && k.dsinav.sonuc === 'Kaldı' && !k.dsinav.girmedi && k.dsinavPlan && (tarihOku(k.dsinavPlan) - tarihOku(k.dsinav.tarih)) / 864e5 < K.tekrarBekleme).forEach(k => l.push(bul('uyari', `${tamAd(k)} tekrar sınavı bekleme süresinden önce`, `Kaldıktan sonra en az ${K.tekrarBekleme} gün (kurs ayarı).`, '#/sinavlar', { kursiyer: k.id }))); } },
+  // Grup başlama tarihinden itibaren son e-sınav hakkı için randevu alma süresi 90 günü geçemez (MTSK md.15/1, ilk cümle): grup başlangıcı + 90 gün = son e-sınav randevusu.
+  // Yaklaşınca (20 gün kala) ve geçince uyarı (eyup-sorular-cevaplar.md madde 7). MEBBİS'ten çekilen "Haklarının Tamamlanacağı Tarih" (çoğu zaman 120 gün)
+  // yönetmelikte geçmiyor: "MEBBİS’in gösterdiği son tarih (yönetmelikte yok)" diye ayrı gösterilir (mebSinir).
+  { id: 'M10', sira: 100, ad: 'Grup başlangıcından 90 gün içinde son e-sınav randevusu', dayanak: 'MTSK Yön. md.15/1', kapsam: 'kursiyer', ciddiyet: 'uyari',
+    kontrol(l) { sb(S.kursiyerler).filter(k => !k.kapali && !k.muaf && !(k.esinav && k.esinav.sonuc === 'Geçti') && ['Kayıt', 'Evrak', 'Teorik', 'Sınav'].includes(k.asama)).forEach(k => { const g = (S.gruplar || []).find(x => x.id === k.teorikGrup); if (!g || !/^\d{4}-\d{2}-\d{2}/.test(g.baslangic || '') || fark(g.baslangic) > 0) return; const kalan = 90 + fark(g.baslangic); if (kalan <= 20) l.push([kalan < 0 ? 'dur' : kalan <= 7 ? 'yasak' : 'uyari', `${tamAd(k)} · grup başlangıcından bu yana ${90 - kalan} gün, e-sınavı geçmedi`, (kalan < 0 ? `Son e-sınav hakkı için randevu süresi (grup başlangıcı ${tarih(g.baslangic)} + 90 gün = ${tarih(gunEkle(g.baslangic, 90))}) ${-kalan} gün önce doldu. Süresi içinde mazeretsiz e-sınava girmeyen kursiyer yeniden kayıt yaptırabilir; durumu MEBBİS’ten kontrol edin.` : `Son e-sınav hakkı için randevu en geç ${tarih(gunEkle(g.baslangic, 90))} tarihine kadar alınmalı; ${kalan} gün kaldı (MTSK md.15/1: grup başlama tarihinden itibaren 90 gün).`) + mebSinir(k), '#/kursiyer/' + k.id]); }); } },
+  // e-sınavı geçtikten sonra direksiyon derslerinin tamamlanma süresi (MTSK md.15/1-b: bütün sınıflarda 90 gün; sınav tarihini MEM belirler). MEBBİS'ten çekilen
+  // "Haklarının Tamamlanacağı Tarih" varsa mebSinir ile ayrıca gösterilir. Eski "60 gün" kuralı (md.12/4, RG 12/9/2019) 9/1/2025'te kalktı;
+  // M, A1, A2, B1 dahil hiçbir sınıfa 60 gün uygulanmaz (eyup-sorular-cevaplar.md madde 8).
+  { id: 'M11', sira: 110, ad: 'e-Sınavdan sonra direksiyon süresi', dayanak: 'MTSK Yön. md.15/1-b (bütün sınıflar 90 gün)', kapsam: 'kursiyer', ciddiyet: 'uyari', ayar: 'direksiyonSure',
     kontrol(l, K) { const SURE = K.direksiyonSure || 90;
-      sb(S.kursiyerler).filter(k => !k.kapali && ['Direksiyon', 'Sınav'].includes(k.asama) && !(k.dsinav && k.dsinav.sonuc === 'Geçti')).forEach(k => { const es = S.sinavlar.filter(s => s.tur === 'e-Sınav' && (s.sonuc || {})[k.id] === 'Geçti').sort((a, b) => b.tarih.localeCompare(a.tarih))[0]; if (!es) return; const gecen = -fark(es.tarih), kalan = SURE - gecen; if (kalan <= 20) l.push([kalan < 0 ? 'dur' : kalan <= 7 ? 'yasak' : 'uyari', `${tamAd(k)} · e-sınavdan bu yana ${gecen} gün`, (kalan < 0 ? `${SURE} günlük süre ${-kalan} gün önce doldu; durumu MEBBİS’ten kontrol edin.` : `Direksiyon derslerinin tamamlanması için ${kalan} gün kaldı (MTSK md.15/1-b, ${SURE} gün).`) + (k.meb && k.meb.haklarSonGun ? ` MEBBİS’e göre hakların tamamlanacağı son gün: ${tarih(k.meb.haklarSonGun)}.` : ''), '#/kursiyer/' + k.id]); }); } },
+      sb(S.kursiyerler).filter(k => !k.kapali && ['Direksiyon', 'Sınav'].includes(k.asama) && !(k.dsinav && k.dsinav.sonuc === 'Geçti')).forEach(k => { const es = S.sinavlar.filter(s => s.tur === 'e-Sınav' && (s.sonuc || {})[k.id] === 'Geçti').sort((a, b) => b.tarih.localeCompare(a.tarih))[0]; if (!es) return; const gecen = -fark(es.tarih), kalan = SURE - gecen; if (kalan <= 20) l.push([kalan < 0 ? 'dur' : kalan <= 7 ? 'yasak' : 'uyari', `${tamAd(k)} · e-sınavdan bu yana ${gecen} gün`, (kalan < 0 ? `${SURE} günlük süre ${-kalan} gün önce doldu; durumu MEBBİS’ten kontrol edin.` : `Direksiyon derslerinin tamamlanması için ${kalan} gün kaldı (MTSK md.15/1-b, ${SURE} gün).`) + mebSinir(k), '#/kursiyer/' + k.id]); }); } },
   { id: 'M12', sira: 120, ad: 'Araç muayene ve sigortası', dayanak: 'MTSK Yön. (eğitim aracı belgeleri)', kapsam: 'arac', ciddiyet: 'engel',
     kontrol(l) { S.araclar.filter(a => [a.muayene, a.sigorta].some(t => t && fark(t) < 0)).forEach(a => l.push(['dur', `${a.plaka} belgesi süresi dolmuş`, 'Bu araçla ders ve sınav yapılamaz.', '#/filo'])); } },
   { id: 'M13', sira: 130, ad: 'Usta öğretici belgeleri', dayanak: 'MTSK Yön. (personel belgeleri)', kapsam: 'personel', ciddiyet: 'engel',
@@ -75,18 +84,22 @@ const KURALLAR = [
         // MEBBİS'ten çekilen sınav kayıtlarında onaydan sonra bu iki koddan birine (ya da ikinci sınava kadar bir sınava) yazılmışsa uyarı yok
         if (((k.meb || {}).uygulamaSinavlari || []).some(x => x && ((x.kod && [s1.kod, s2.kod].includes(x.kod)) || (/^\d{4}-\d{2}-\d{2}/.test(x.tarih || '') && x.tarih > onay && x.tarih <= s2.tarih)))) return;
         const kisaT = `${tarih(s2.tarih)} sınavına yazılmazsa 1 hak yanar`, ac = `Sınava hazır onayı ${tarih(onay)}. Onaydan sonraki ikinci farklı kodlu sınava girmeyen kursiyerin bir sınav hakkı kullanılmış sayılır (MTSK Yön. md.7/7). Sonraki sınavlar: ${tarih(s1.tarih)}, ${tarih(s2.tarih)}.${(() => { const sl = takvim.filter(s => s.tarih > s2.tarih), i = sl.findIndex(s => (s.kursiyerler || []).includes(k.id)); return i >= 0 ? ` Şu an ${tarih(sl[i].tarih)} sınavına yazılı; bu, onaydan sonraki ${i + 3}. sınav.` : ''; })()}${takvim.kurs ? ' İlçe sınav takvimi MEBBİS’ten alınmadı; kursun oturumları esas alındı (teyit bekliyor).' : ''}`;
-        if (fark(s2.tarih) < 0) l.push(bul('uyari', `${tamAd(k)} · hazır onayından sonraki iki sınava girmedi`, `${ac} Bir hak düşmüş olabilir; MEBBİS’te kalan hakkı kontrol edin.`, '#/kursiyer/' + k.id, { kursiyer: k.id, kisa: 'Hazır onayından sonraki iki sınava girmedi: 1 hak düşmüş olabilir' }));
+        // hak düştüyse öğrenci dosyasından sınav kaydı olmadan işlenir (eylem 'hak-yandi'; eyup-sorular-cevaplar.md madde 10)
+        if (fark(s2.tarih) < 0) l.push(bul('uyari', `${tamAd(k)} · hazır onayından sonraki iki sınava girmedi`, `${ac} Bir hak düşmüş olabilir; MEBBİS’te kalan hakkı kontrol edin, düştüyse öğrenci dosyasından işleyin.`, '#/kursiyer/' + k.id, { kursiyer: k.id, kisa: 'Hazır onayından sonraki iki sınava girmedi: 1 hak düşmüş olabilir', eylem: 'hak-yandi', tarih: s2.tarih }));
         else if (fark(s1.tarih) < 0 || fark(s2.tarih) <= 10) l.push(bul('uyari', `${tamAd(k)} · ${kisaT}`, ac, '#/kursiyer/' + k.id, { kursiyer: k.id, kisa: kisaT.charAt(0).toLocaleUpperCase('tr') + kisaT.slice(1) }));
       });
     } },
-  // 15/4: dört uygulama sınavında kalan, son sonuçtan itibaren 60 gün içinde başvurursa ikinci dört hak; 15/5: süre geçerse yeniden kayıt
-  { id: 'Y02', sira: 210, ad: 'İkinci dört sınav hakkı için 60 gün', dayanak: 'MTSK Yön. md.15/4, md.15/5', kapsam: 'kursiyer', ciddiyet: 'uyari', bugun: true, bugunAd: n => `${n} öğrenci ikinci dört hak süresinde (md.15/4)`,
+  // 15/4: dört uygulama sınavında kalan, son sonuçtan itibaren 60 gün içinde ücreti öder ve sınıfın direksiyon saati kadar dersi yeniden alırsa ikinci dört hak;
+  // 15/5: süre geçerse yeniden kayıt (3 yıl içinde teorikten muaf); 13/2: kalan haklardan vazgeçip başka kursa nakil, dört hak bitmeden de olur;
+// 15/6: ilk haklarını manuelde kullanan kalan haklarından vazgeçip ikinci dört hakta otomatikle (ya da tersi) devam eder, değişiklik modüle işlenir.
+  // Direksiyon hakkı 4+4 sayılır, e-sınavın 4 hakkından ayrı (veri.js sinavHakSiniri). eyup-sorular-cevaplar.md madde 9.
+  { id: 'Y02', sira: 210, ad: 'İkinci dört sınav hakkı için 60 gün', dayanak: 'MTSK Yön. md.15/4, md.15/5, md.13/2', kapsam: 'kursiyer', ciddiyet: 'uyari', teyit: '60 günün yalnız ödeme ve başvuru için mi, derslerin bitmesi için de mi geçerli olduğu yönetmelikte ayrılmıyor.', bugun: true, bugunAd: n => `${n} öğrenci ikinci dört hak süresinde (md.15/4)`,
     kontrol(l) {
       sb(S.kursiyerler).filter(k => !k.kapali && k.hakBitti && k.hakBitti.tur === 'Direksiyon' && !k.hakBitti.cozuldu && !k.ikinciHak).forEach(k => {
         const son = ikinciHakSonGun(k); if (!son) return l.push(bul('bilgi', `${tamAd(k)} · ikinci dört hak süresi hesaplanamadı`, `Dört uygulama sınavı hakkı bitti ama son sınavın tarihi kayıtlı değil. Son sınav sonucundan itibaren ${IKINCI_HAK_GUN} gün içinde başvurursa dört hak daha verilir (MTSK Yön. md.15/4); tarihi MEBBİS’ten kontrol edin.`, '#/kursiyer/' + k.id, { kursiyer: k.id, kisa: `İkinci dört hak: son sınav tarihi kayıtlı değil, ${IKINCI_HAK_GUN} günlük süreyi MEBBİS’ten kontrol edin`, bugun: false }));
         const kalan = fark(son);
         if (kalan < 0) return l.push(bul('bilgi', `${tamAd(k)} · ikinci dört hak süresi doldu`, `Son sınav sonucundan itibaren ${IKINCI_HAK_GUN} günlük başvuru süresi ${tarih(son)} tarihinde doldu (MTSK Yön. md.15/4). Kursiyer yeniden kayıt yaptırabilir; 3 yıl içinde kaydolursa teorik eğitim ve sınavdan muaftır (md.15/5).`, '#/kursiyer/' + k.id, { kursiyer: k.id, kisa: `İkinci dört hak süresi ${tarih(son)} tarihinde doldu`, bugun: false }));
-        l.push(bul(kalan <= 15 ? 'uyari' : 'bilgi', `${tamAd(k)} · ikinci dört hak için ${kalan} gün kaldı`, `Dört uygulama sınavı hakkı bitti. ${tarih(son)} tarihine kadar başvurup ilan edilen ders ücretini öder ve sınıfının direksiyon saati kadar ders alırsa dört sınav hakkı daha verilir (MTSK Yön. md.15/4). Süre son sınavın tarihinden sayılıyor; sonuç daha geç açıklandıysa MEBBİS’teki tarihe bakın.`, '#/kursiyer/' + k.id, { kursiyer: k.id, kisa: `İkinci dört hak için ${kalan} gün kaldı (son gün ${tarih(son)})`, bugun: kalan <= 15 }));
+        l.push(bul(kalan <= 15 ? 'uyari' : 'bilgi', `${tamAd(k)} · ikinci dört hak için ${kalan} gün kaldı`, `Dört uygulama sınavı hakkı bitti. ${tarih(son)} tarihine kadar başvurup ilan edilen ders ücretini öder ve sınıfının direksiyon saati kadar ders alırsa dört sınav hakkı daha verilir (MTSK Yön. md.15/4). Süre son sınavın tarihinden sayılıyor; sonuç daha geç açıklandıysa MEBBİS’teki tarihe bakın. Kursiyer kalan haklarından vazgeçip başka kursa nakil de olabilir (md.13/2). İlk haklarını manuel araçta kullanan, kalan haklarından vazgeçerek ikinci dört hakta otomatik araçla (ya da tersi) devam edebilir; değişiklik Özel MTSK Modülü’ne işlenir (md.15/6).`, '#/kursiyer/' + k.id, { kursiyer: k.id, kisa: `İkinci dört hak için ${kalan} gün kaldı (son gün ${tarih(son)})`, bugun: kalan <= 15 }));
       });
       // ikinci dört hak başladı: sınıfın direksiyon saati kadar ders tamamlanmadan sınava yazılmaz; sınava 4 iş günü önce onay (md.15/4)
       sb(S.kursiyerler).filter(k => !k.kapali && k.ikinciHak && !(k.dsinav && k.dsinav.sonuc === 'Geçti')).forEach(k => {
@@ -111,12 +124,17 @@ const KURALLAR = [
           }
         });
       });
+      // yabancı dilde e-sınav: teorik eğitim valilik izniyle görevlendirilen tercümanla alınır; tercüman kaydı yoksa yalnız öğrenci dosyasında hatırlatılır (madde 13)
+      sb(S.kursiyerler).filter(k => !k.kapali && !(k.esinav && k.esinav.sonuc === 'Geçti') && k.esinavTercih && k.esinavTercih.dil && k.esinavTercih.dil !== 'Türkçe' && !(k.esinavTercih.tercuman && k.esinavTercih.tercuman.ad)).forEach(k =>
+        l.push(bul('bilgi', `${tamAd(k)} · e-sınav tercümanı kayıtlı değil`, '', '#/kursiyer/' + k.id, { kursiyer: k.id, kisa: `${k.esinavTercih.dil} e-sınav: teorik derslerdeki tercümanı kaydedin (valilik izniyle görevlendirilir)`, eylem: 'esinav-tercih', yalnizDosya: true })));
     } },
   // 43/5: sınav ücretleri sınavdan 6 iş günü önce döner sermaye hesabına yatırılır; liste ve makbuz il/ilçe MEM'e verilir.
   // mdSinyal'de döner sermaye ödemesi tutulmuyor: kursiyerin sınav ücreti kalemi ödenmediyse uyarı, yoksa yalnız hatırlatma.
   // Sınav ücreti kursiyerin ek kalemidir: k.odeme.ekler[{ sinav: oturum id, odendi }] (sayfalar2.js sinavUcreti, oturuma yazılınca eklenir).
   // kursiyerler: ücreti ödenmemiş kursiyerlerin kimlikleri (ödeyen ve ücret kalemi olmayan listede yok; hatırlatmada boş). MEBBİS onay ekranı bununla eşler.
-  { id: 'Y04', sira: 230, ad: 'Sınav ücreti 6 iş günü önce yatırılır', dayanak: 'MTSK Yön. md.43/5', kapsam: 'sinav', ciddiyet: 'uyari', ayar: 'sinavUcretIsGunu', teyit: 'Kursun “Uygulama sınavı ücreti” kaleminin döner sermaye ücretiyle aynı şey olup olmadığı; iş gününde Cumartesi.', bugun: true, bugunAd: n => `${n} uygulama sınavının ücret makbuzu bekliyor (6 iş günü, md.43/5)`,
+  // Kural kesinleşti (madde 12: 6 iş günü, kurs ücretinden ayrı, tutar yıllık tarife); yalnız arife ve idari izin günlerinin iş günü sayılıp sayılmadığı teyit bekliyor (madde 11).
+  // dosya: ücreti ödenmemiş her kursiyere öğrenci dosyasında ayrıca geri sayım (yalnizDosya; kursiyerBulgulari)
+  { id: 'Y04', sira: 230, ad: 'Sınav ücreti 6 iş günü önce yatırılır', dayanak: 'MTSK Yön. md.43/5', kapsam: 'sinav', dosya: true, ciddiyet: 'uyari', ayar: 'sinavUcretIsGunu', teyit: 'Arife ve idari izin günlerinin iş günü sayılıp sayılmadığı; şimdilik sayılmıyor, son gün erkene çekiliyor.', bugun: true, bugunAd: n => `${n} uygulama sınavının ücret makbuzu bekliyor (6 iş günü, md.43/5)`,
     kontrol(l, K) {
       const N = +K.sinavUcretIsGunu || 6;
       sbSinav(S.sinavlar).filter(s => s.tur === 'Direksiyon' && fark(s.tarih) >= 0 && (s.kursiyerler || []).length && !s.ucretMem).forEach(s => {
@@ -125,7 +143,9 @@ const KURALLAR = [
         const gecti = fark(son) < 0, sure = gecti ? `son gün ${tarih(son)} geçti` : fark(son) === 0 ? 'son gün bugün' : `son gün ${tarih(son)}`;
         const metin = `Sınav ücretleri sınav tarihinden ${N} iş günü önce döner sermaye hesabına yatırılır; liste ve makbuz il/ilçe MEM’e verilir (MTSK Yön. md.43/5). ${sonGunMetni(son)}`;
         if (odenmedi.length) l.push(bul('uyari', `${tarih(s.tarih)} uygulama sınavı · ${odenmedi.length} kursiyerin sınav ücreti ödenmedi (${sure})`, `${metin} Ödemeyenler: ${odenmedi.slice(0, 4).map(tamAd).join(', ')}${odenmedi.length > 4 ? '…' : ''}.`, '#/sinavlar', { sinav: s.id, kursiyerler: odenmedi.map(k => k.id) }));
-        else l.push(bul(gecti ? 'uyari' : 'bilgi', `${tarih(s.tarih)} uygulama sınavı · ücret ve makbuz listesi (${sure})`, `${metin} Yatırılıp makbuz verildiyse Sınavlar ekranında oturumda “Makbuz MEM’e verildi”yi işaretleyin. Ücretin kapsamı teyit bekliyor.`, '#/sinavlar', { sinav: s.id, kursiyerler: [] }));
+        else l.push(bul(gecti ? 'uyari' : 'bilgi', `${tarih(s.tarih)} uygulama sınavı · ücret ve makbuz listesi (${sure})`, `${metin} Yatırılıp makbuz verildiyse Sınavlar ekranında oturumda “Makbuz MEM’e verildi”yi işaretleyin.`, '#/sinavlar', { sinav: s.id, kursiyerler: [] }));
+        // öğrenci dosyası: ücreti ödenmemiş kursiyere geri sayım
+        odenmedi.forEach(k => l.push(bul('uyari', `${tamAd(k)} · uygulama sınavı ücreti ödenmedi`, metin, '#/kursiyer/' + k.id, { kursiyer: k.id, yalnizDosya: true, eylem: 'odeme', kisa: `Uygulama sınavı (${tarih(s.tarih)}) ücreti ödenmedi: ${gecti ? `son gün ${tarih(son)} geçti` : fark(son) === 0 ? 'son gün bugün' : `son gün ${tarih(son)}, ${mebIsGunuSay(gun(0), son)} iş günü kaldı`}. Ücret sınavdan ${N} iş günü önce döner sermayeye yatırılır.` })));
       });
     } },
   // 16/4: kurslarda günde 2 saatten az, 6 saatten fazla teorik ders yapılamaz (grup ve gün başına toplam)
@@ -183,7 +203,9 @@ export function dersKontrol(o) {
   if (!ar && tur !== 'simulator') sorun.push(`Bu saatte boş ${SINIFLAR[k.sinif].ad} aracı yok.`);
   // Bütün sınıflar: e-sınavı geçtiği tarihten itibaren direksiyon dersleri 90 günü geçmeyecek şekilde planlanır (MTSK md.15/1-b; ek dersler de bu süreyi aşamaz, md.7/7)
   { const sure = kuralAyar('direksiyonSure'); if (k.esinav && k.esinav.sonuc === 'Geçti' && k.esinav.tarih && !k.esinav.muaf && fark(k.esinav.tarih) <= 0 && (tarihOku(planGun) - tarihOku(k.esinav.tarih)) / 864e5 > sure) not.push(`e-Sınavı ${tarih(k.esinav.tarih)} tarihinde geçti; direksiyon dersleri e-sınavdan sonra ${sure} gün içinde tamamlanacak şekilde planlanır (MTSK md.15/1-b). Bu ders süreyi aşıyor.`); }
-  { const gg = geceGerekli(k), gy = DL.filter(x => x.kursiyer === k.id && x.durum !== 'Gelmedi' && x.durum !== 'İptal' && geceDersMi(x)).length; if (gg && geceDersMi({ tarih: planGun, saat })) not.push(`Gece dersi sayılır (gün batımından sonra; o gün gece ${geceBaslangic(planGun)}). Gece: ${gy}/${gg} saat.`); }
+  { const gg = geceGerekli(k), gy = DL.filter(x => x.kursiyer === k.id && x.durum !== 'Gelmedi' && x.durum !== 'İptal' && geceDersMi(x)).length, gc = geceDersMi({ tarih: planGun, saat });
+    if (gc && geceKisitli(k)) sorun.push(`Sağlık raporunda gece kısıtı var; gece eğitimi verilmez (MTSK md.7/3). O gün gece dersi başlangıcı ${geceBaslangic(planGun)}.`);
+    else if (gg && gc) not.push(`Gece dersi sayılır (gün batımından sonra; o gün gece ${geceBaslangic(planGun)}). Gece: ${gy}/${gg} saat.`); }
   // md.23/1: direksiyon programı MEBBİS’e dersten en az N gün önce girilir (M01 ile aynı ölçü: ders tarihi − ekleme günü)
   { const n = kuralAyar('programOnGun'), g = (tarihOku(planGun) - tarihOku(gun(0))) / 864e5; if (g >= 0 && g < n) not.push(`MEBBİS’e en az ${n} gün önce girilmeli; geç girilen program md.23/1’e aykırı.`); }
   if (ar && [ar.muayene, ar.sigorta].some(t => t && t < planGun)) sorun.push(ar.plaka + ' muayene/sigorta süresi dolmuş; bu tarihte ders planlanamaz.');
@@ -228,6 +250,7 @@ export function bugunListesi() {
   });
 }
 // Öğrenci dosyası: bu kursiyere ait bulgular (yalnız Bugün'e açık, yani yeni kurallar; eski kurallar dosyada ayrıca gösteriliyor)
-export const kursiyerBulgulari = k => calistir(r => r.bugun && r.kapsam === 'kursiyer').filter(x => x.kursiyer === k.id);
+// dosya: kapsamı kursiyer olmayan ama kişiye özel satır da üreten kurallar (ör. Y04 sınav ücreti)
+export const kursiyerBulgulari = k => calistir(r => r.bugun && (r.kapsam === 'kursiyer' || r.dosya)).filter(x => x.kursiyer === k.id);
 // MEBBİS'e yazmayı durduracak engel var mı (ileride mebtoplu kullanır): verilen kursiyer için engel seviyesindeki bulgular
 export const mebEngel = kid => calistir(r => r.ciddiyet === 'engel').filter(x => ['dur', 'yasak'].includes(x[0]) && (x.kursiyer === kid || String(x[3]).endsWith('/' + kid)));

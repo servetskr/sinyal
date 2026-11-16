@@ -1,10 +1,10 @@
 // Mevzuat uyum kuralları: ücret, tahsilat, iade, ücretsiz kontenjan, sınava hazır yazısı, planlama ve personel denetimleri.
 // Dayanak: Özel Öğretim Kurumları Yönetmeliği (RG 5/9/2025-33008 değişikliği: m.54, m.55/3, m.56/3-b, m.56/4), MTSK Yönetmeliği
 // (m.7/7 ve Danıştay 8. D. 8/10/2025 YD kararı, m.15, m.16/8, m.20, m.43), 5580 sayılı Kanun m.13 (%3 ücretsiz).
-import { S, gun, fark, SINIFLAR, SINIF_VARSAYILAN, tamAd, islem, kaydet, oturum, egitmen, sb, sbDers, gerekliDireksiyon, direksiyonAyrinti, ustaAraci } from './veri.js?v=209';
-import { e, tl, tarih, pencere, kapatPencere, bildir, belgeYazdir, isaret } from './ui.js?v=209';
-import { denetimUyarilari } from './denetim.js?v=209';
-import { kuralEkle } from './kurallar.js?v=209';
+import { S, gun, fark, SINIFLAR, SINIF_VARSAYILAN, tamAd, islem, kaydet, oturum, egitmen, sb, sbDers, gerekliDireksiyon, direksiyonAyrinti, ustaAraci } from './veri.js?v=210';
+import { e, tl, tarih, pencere, kapatPencere, bildir, belgeYazdir, isaret } from './ui.js?v=210';
+import { denetimUyarilari } from './denetim.js?v=210';
+import { kuralEkle } from './kurallar.js?v=210';
 
 const OOKY = 'Özel Öğretim Kurumları Yönetmeliği';
 const yil = () => gun(0).slice(0, 4);
@@ -95,7 +95,7 @@ export function hazirKarti(k) {
 }
 // öğrenci dosyasındaki tıklamalar (dosya yeniden çizildiği için olay yetkisiyle)
 export function hazirTikla(ev, k, yenile) {
-  if (ev.target.closest('[data-hazir-yazi]')) { import('./resmi.js?v=209').then(m => m.resmiAc('hazir', k.id)); return true; }
+  if (ev.target.closest('[data-hazir-yazi]')) { import('./resmi.js?v=210').then(m => m.resmiAc('hazir', k.id)); return true; }
   if (ev.target.closest('[data-hazir-yuklendi]')) { k.hazirYazi.yuklendi = gun(0); islem('Sınava hazır yazısını MEBBİS’e yükledi', tamAd(k)); kaydet(); bildir('Kaydedildi'); if (yenile) yenile(); return true; }
   return false;
 }
@@ -120,14 +120,16 @@ export function mevzuatKurallari() {
   // Sınava hazır yazısı
   ks.filter(k => hazirGerekli(k) && (!k.hazirYazi || !k.hazirYazi.yuklendi)).forEach(k => l.push([k.hazirYazi ? 'uyari' : 'yasak', `${tamAd(k)} · sınava hazır yazısı ${k.hazirYazi ? 'MEBBİS’e yüklenmedi' : 'yok'}`, 'Usta öğretici kararını yazıyla bildirir; kurs yazıyı tarayıp modüle yükler (md.7/7, Danıştay 8. D. 8/10/2025 YD).', '#/kursiyer/' + k.id]));
   // Direksiyonda kalan: tekrar sınavdan önce en az 2 saat ders (m.15)
-  ks.filter(k => k.dsinav && k.dsinav.sonuc === 'Kaldı' && k.dsinavPlan && !(k.hakBitti && !k.hakBitti.cozuldu)).forEach(k => { const n = S.dersler.filter(d => d.kursiyer === k.id && d.tarih > k.dsinav.tarih && d.tarih < k.dsinavPlan && d.durum !== 'Gelmedi').length; if (n < 2) l.push(['yasak', `${tamAd(k)} · tekrar sınavdan önce ${n}/2 saat ek ders`, 'Direksiyon sınavında başarısız olan, ilan edilen ücretle en az 2 saat ek ders almadan sınava giremez (MTSK Yönetmeliği m.15).', '#/plan']); });
+  ks.filter(k => k.dsinav && k.dsinav.sonuc === 'Kaldı' && !k.dsinav.girmedi && k.dsinavPlan && !(k.hakBitti && !k.hakBitti.cozuldu)).forEach(k => { const n = S.dersler.filter(d => d.kursiyer === k.id && d.tarih > k.dsinav.tarih && d.tarih < k.dsinavPlan && d.durum !== 'Gelmedi').length; if (n < 2) l.push(['yasak', `${tamAd(k)} · tekrar sınavdan önce ${n}/2 saat ek ders`, 'Direksiyon sınavında başarısız olan, ilan edilen ücretle en az 2 saat ek ders almadan sınava giremez (MTSK Yönetmeliği m.15).', '#/plan']); });
   // Ders saatleri 07:00–23:00 (m.20)
   sbDers(S.dersler).filter(d => d.durum === 'Planlandı' && fark(d.tarih) >= 0 && d.saat && (d.saat < '07:00' || d.saat >= '23:00')).slice(0, 3).forEach(d => l.push(['yasak', `${tarih(d.tarih)} ${d.saat} dersi izin verilen saatlerin dışında`, 'Dersler 07:00–23:00 arasında yapılır (MTSK Yönetmeliği m.20).', '#/plan']));
   // Araç başına bir eğitim döneminde en fazla 12 kursiyer kaydı (m.16/8). Dönem: kursiyerin MEB grubu (yoksa kayıt ayı); araç: usta öğreticisinin o sınıftaki aracı,
-  // yoksa son dersindeki araç. Kontenjan dışı (m.6/4: belgeli, özel ders alan) sayılmaz. B belgeliye A1 eğitimi veren araçta sınır 24 (m.39/5).
+  // yoksa son dersindeki araç. Kontenjan dışı (m.6/4: belgeli, özel ders alan) sayılmaz; nakil gelen (m.13/2) ve B belgesiyle A1 alan (m.39/5) sayılır,
+  // B belgeliye A1 eğitimi veren araçta sınır 24 (eyup-sorular-cevaplar.md madde 15). Direksiyon dersi olmayan (G, yalnız teorik) sayıma girmez.
+  // KTK md.118 ile belgesi geri alınıp teorik derse gelen sürücü (k.ktk118, MEB istisnaları penceresinden işaretlenir) cevap gelene kadar sayıma alınmaz (madde 15, teyit bekliyor).
   // Sınav aracı başına 10 aday (m.30/2) sınav randevusunda ayrıca denetlenir.
   { const bu = gun(0).slice(0, 7), ilk = (() => { const d = new Date(gun(0) + 'T12:00'); d.setMonth(d.getMonth() - 2); return d.toISOString().slice(0, 7); })(), ak = {};
-    ks.filter(k => !k.kontenjanDisi && gerekliDireksiyon(k) > 0).forEach(k => {
+    ks.filter(k => !k.kontenjanDisi && !k.ktk118 && gerekliDireksiyon(k) > 0).forEach(k => {
       const g = (S.gruplar || []).find(x => x.id === k.teorikGrup), gd = g && g.donem ? String(g.donem).replace(/^(\d{4})-?(\d{2}).*$/, '$1-$2') : '', donem = (/^\d{4}-\d{2}$/.test(gd) ? gd : '') || String(k.kayit || '').slice(0, 7); if (!/^\d{4}-\d{2}$/.test(donem) || donem < ilk) return;  // grup dönemi MEBBİS biçiminde (202611)
       const a = ustaAraci(k.egitmen, k.sinif) || (S.araclar || []).find(x => x.id === ((S.dersler.filter(d => d.kursiyer === k.id && d.arac).sort((x, y) => (y.tarih + y.saat).localeCompare(x.tarih + x.saat))[0]) || {}).arac);
       if (!a) return; const key = a.id + '|' + donem; (ak[key] = ak[key] || []).push(k); });
@@ -135,6 +137,9 @@ export function mevzuatKurallari() {
       if (a && l2.length > sinir) l.push([donem >= bu ? 'uyari' : 'bilgi', `${a.plaka} · ${donem.split('-').reverse().join('.')} döneminde ${l2.length} kursiyer`, `Bir eğitim döneminde bir direksiyon eğitim ve sınav aracı için en çok ${sinir} kursiyer kaydı yapılır (MTSK Yönetmeliği m.16/8${a1b ? ', m.39/5' : ''}). Kursiyerleri başka usta öğretici ve araçlara dağıtın.`, '#/filo']); }); }
   // Kursun sınıf ayarındaki direksiyon saati yönetmelik asgarisinin altında (md.7/1)
   Object.entries(SINIFLAR).filter(([key, v]) => v.aktif && SINIF_VARSAYILAN[key] && v.direksiyon < SINIF_VARSAYILAN[key].direksiyon).forEach(([key, v]) => l.push(['yasak', `${v.ad} · direksiyon ${v.direksiyon} ders, yönetmelik asgarisi ${SINIF_VARSAYILAN[key].direksiyon}`, 'İlk kez belge alan için alanda ya da simülatörde en az 2 saat ve akan trafikte asgari saat verilir (MTSK md.7/1). Ayarlar › Sınıf ve ücretler’den düzeltin; kural tarihinden önce kaydolan öğrencilerin sayısı değişmez.', '#/ayarlar/sinif']));
+  // Elle girilen (il tablosu) direksiyon saati md.39 alt sınırının altında: M→B1 12 saat (madde 1), B→A1 2 yıllık B'de yarı süre (md.39/5), otomatikten manuele
+  // yarı süre (madde 2, yorum: teyit bekliyor). md.7/6 yaptırımı yalnız md.7/1 sürelerine bağlı (madde 5), bu uyarıda anılmaz.
+  ks.filter(k => !k.kapali && k.asama !== 'Ehliyet' && !(k.dsinav && k.dsinav.sonuc === 'Geçti')).forEach(k => { const r = direksiyonAyrinti(k); if (r.elle && r.altinda) l.push(['uyari', `${tamAd(k)} · ${r.saat} ders, alt sınır ${String(r.alt).replace('.', ',')} saat`, `Elle girilen ders sayısı (il tablosu) alt sınırın altında kalıyor (MTSK ${r.altDayanak || 'md.39'}). İl MEM’in yazılı uygulamasını kontrol edin.`, '#/kursiyer/' + k.id]); });
   // Kural tarihinden önce kaydolup eski ders sayısında dondurulan, eğitimi süren öğrenciler: güncel asgari daha yüksekse müdür dosyadan karar verir (md.7/1, md.7/6)
   { const dn = ks.filter(k => !k.kapali && k.asama !== 'Ehliyet' && !(k.dsinav && k.dsinav.sonuc === 'Geçti')).map(k => ({ k, r: direksiyonAyrinti(k) })).filter(({ r }) => r.donuk && r.yeni && r.yeni.saat > r.saat);
     if (dn.length) l.push(['uyari', `${dn.length} öğrenci eski direksiyon ders sayısında (${dn.slice(0, 3).map(({ k, r }) => tamAd(k) + ' ' + r.saat + '→' + r.yeni.saat).join(', ')}${dn.length > 3 ? '…' : ''})`, 'Bu öğrenciler kural tarihinden önce kaydoldu; sayıları bozulmasın diye eski değerde tutuluyor. Güncel mevzuatın asgarisi daha yüksek (MTSK md.7/1, farklı sınıfta md.39). Asgari saatin altında eğitim usta öğretici ve kurs hakkında işlem sebebidir (md.7/6): öğrenci dosyasında “Güncel mevzuata geçir” ile güncelleyin ya da il MEM’in uygulamasını sorun.', '#/kursiyer/' + dn[0].k.id]); }

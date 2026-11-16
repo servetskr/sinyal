@@ -1,5 +1,5 @@
-import { S, gun, fark, SINIFLAR, egitmen, kapaliGun, dersAraci, risk, kursAdi } from './veri.js?v=209';
-import { gerekliDireksiyon, kuralAyar } from './veri.js?v=209';
+import { S, gun, fark, SINIFLAR, egitmen, kapaliGun, dersAraci, risk, kursAdi } from './veri.js?v=210';
+import { gerekliDireksiyon, kuralAyar, geceKisitli, geceDersMi } from './veri.js?v=210';
 
 const ort = l => l.length ? l.reduce((a, x) => a + x, 0) / l.length : null;
 export const riskliler = (l = S.kursiyerler) => l.map(k => ({ k, r: risk(k) })).filter(x => x.r && x.r.puan >= 25).sort((a, b) => b.r.puan - a.r.puan);
@@ -92,15 +92,18 @@ export function otomatikPlan({ gunSay = 7, haftalik = 3 } = {}) {
   }
   return oneri;
 }
+// Kursiyerin alabileceği boş saatler (kendi dersini alma, iptal sonrası teklif, ders taşıma). Sağlık raporunda gece kısıtı olana gün batımından
+// sonraki saatler sunulmaz (MTSK Yön. md.7/3 son cümle; eyup-sorular-cevaplar.md madde 5).
 export function bosSlotlar(k, gunSay = 7) {
   const h = egitmen(k.egitmen); if (!h) return [];
-  const l = [];
+  const l = [], geceYok = geceKisitli(k);
   for (let n = 1; n <= gunSay + 3 && l.length < 40; n++) {
     const g = gun(n); if (kapaliGun(g)) continue;
     if ((S.izinler || []).some(i => i.kim === h.id && g >= i.bas && g <= i.bit)) continue;
     const oGun = S.dersler.filter(d => d.kursiyer === k.id && d.tarih === g).length;
     if (oGun >= kuralAyar('gunlukDersSiniri')) continue;
     KAPASITE_SAAT.forEach(sa => {
+      if (geceYok && geceDersMi({ tarih: g, saat: sa })) return;
       if (S.dersler.some(d => d.tarih === g && d.saat === sa && (d.egitmen === h.id || d.kursiyer === k.id) && d.durum !== 'İptal')) return;
       const ar = dersAraci(h.id, k.sinif, g, sa); if (!ar) return;
       if ([ar.muayene, ar.sigorta].some(t => t && t < g)) return;
