@@ -1,12 +1,12 @@
 // Öğren: içerik haritası (ana ekran) ve modül sayfaları. Ders oynatıcı js/ogr/ders.js, ortak veri js/ogr/ogrveri.js.
-import { S, ogrOzellik } from './veri.js?v=208';
-import { e, ik } from './ui.js?v=208';
-import { MUFREDAT } from './ogrenci.js?v=208';
-import { UNITE_AD, ILKYARDIM_SVG, kapakSvg, konular, bitti, sonuc, siradaki, sayac, levhaYukle, veriler, altEkran, altAc, altKapat } from './ogr/ogrveri.js?v=208';
-import { dersBaslat } from './ogr/ders.js?v=208';
-import { SAHNELER } from './tehlike.js?v=208';
-import { yarim, yarimKart, yarimBagla } from './ogr/sinav.js?v=208';
-import { esc, oi, sayfaBas, geri, bolum, heroKart, gorsel, dugme, liste, satir, konuSatir, serit, bos, stilEkle } from './ogr/ui.js?v=208';
+import { S, ogrOzellik } from './veri.js?v=209';
+import { e, ik } from './ui.js?v=209';
+import { MUFREDAT } from './ogrenci.js?v=209';
+import { UNITE_AD, ILKYARDIM_SVG, kapakSvg, konular, bitti, sonuc, siradaki, sayac, levhaYukle, veriler, altEkran, altAc, altKapat } from './ogr/ogrveri.js?v=209';
+import { dersBaslat } from './ogr/ders.js?v=209';
+import { SAHNELER } from './tehlike.js?v=209';
+import { yarim, yarimKart, yarimBagla } from './ogr/sinav.js?v=209';
+import { esc, oi, sayfaBas, geri, bolum, heroKart, gorsel, dugme, liste, satir, konuSatir, serit, bos, stilEkle } from './ogr/ui.js?v=209';
 export { siradaki, dersBaslat };
 export const onYukle = cb => { if (!veriler().LV) levhaYukle().then(() => cb && cb()); };
 
@@ -107,7 +107,7 @@ function anaHtml(k, ctx) {
     return `<button type="button" class="ox-ogr-mod" data-ox-alt="${key}" aria-label="${esc(UNITE_AD[key])}: ${b} / ${t} konu tamamlandı"><span class="ox-ogr-mod-yazi"><b>${esc(UNITE_AD[key])}</b>${alt}</span>${gorsel(MODUL_GORSEL[key], '', 'ox-ogr-mod-g ' + key)}</button>`;
   }).join('');
   const son = (k.deneme || []).slice(-1)[0], gecti = esGecti;
-  const denemeAlt = `50 soru · 45 dakika<br>${yarimDeneme ? 'Yarım kalan denemen var.' : gecti ? 'E-sınavı geçtin.' : son != null ? `Son deneme puanın: ${son}` : 'Hazır olduğunda kendini dene.'}`;
+  const denemeAlt = `50 soru · 45 dakika<br>${yarimDeneme ? 'Yarım kalan denemen var.' : gecti ? 'e-Sınavı geçtin.' : son != null ? `Son deneme puanın: ${son}` : 'Hazır olduğunda kendini dene.'}`;
   return `<header class="ox-sayfa-bas ox-ogr-bas"><div><h1>Öğren</h1><p>İyi sürücülük, sağlam bilgiyle başlar.</p></div><span class="ox-sayfa-sag" aria-label="${biten} / ${tum.length} konu tamamlandı">${biten} / ${tum.length} konu</span></header>`
     + (yt ? yarimKart(ctx) : '') + hero
     + bolum('Eğitim konuları', `${MUFREDAT.length} alan`)

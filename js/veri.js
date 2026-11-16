@@ -27,8 +27,9 @@ export const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStar
 export const gun = n => { const d = new Date(BUGUN); d.setDate(d.getDate() + n); return iso(d); };
 export const tarihOku = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
 export const fark = s => Math.round((tarihOku(s) - BUGUN) / 864e5);
-// KVKK aydınlatma metni (kurs Ayarlar › KVKK'dan değiştirebilir): veri sorumlusu kurs; hukuki sebep, aktarım ve haklar
-export const aydinlatmaMetni = () => S.kurs.aydinlatma || `${S.kurs.ad || 'Kursumuz'} (veri sorumlusu) olarak kimlik, iletişim, öğrenim, sağlık raporu ve adli sicil bilgilerinizi; ders, sınav ve ödeme kayıtlarınızı sürücü kursu eğitiminin yürütülmesi, sözleşmenin ifası ve MEB mevzuatından doğan yükümlülükler (MEBBİS kaydı, ders programı, sınav bildirimi) için işliyoruz (KVKK m.5/2-c, ç; m.6). Ders hatırlatmaları ve ödeme takibi kursun meşru menfaatine dayanır; kampanya ve tanıtım mesajları yalnız izninizle gönderilir. Verileriniz kursun kullandığı mdSinyal yazılımı aracılığıyla Google (Almanya), Cloudflare ve Meta (WhatsApp) altyapısında tutulur; bu nedenle yurt dışına aktarılır. Yetkili kurumlar (MEB, vergi idaresi) dışında paylaşılmaz ve mevzuattaki süre boyunca saklanır. KVKK m.11 kapsamındaki haklarınız (bilgi isteme, düzeltme, silme, itiraz) için kursa başvurabilirsiniz; ayrıntılar: mdsinyal.com/gizlilik.html`;
+// KVKK aydınlatma metni (kurs Ayarlar › KVKK'dan değiştirebilir): veri sorumlusu kurs; hukuki sebep, aktarım ve haklar.
+// Veri konumu (ülke/bölge adı) müşteriye görünen metne yazılmaz: "bulut altyapısı"; yurt dışı aktarım (KVKK m.9) bölge adı vermeden belirtilir.
+export const aydinlatmaMetni = () => S.kurs.aydinlatma || `${S.kurs.ad || 'Kursumuz'} (veri sorumlusu) olarak kimlik, iletişim, öğrenim, sağlık raporu ve adli sicil bilgilerinizi; ders, sınav ve ödeme kayıtlarınızı sürücü kursu eğitiminin yürütülmesi, sözleşmenin ifası ve MEB mevzuatından doğan yükümlülükler (MEBBİS kaydı, ders programı, sınav bildirimi) için işliyoruz (KVKK m.5/2-c, ç; m.6). Ders hatırlatmaları ve ödeme takibi kursun meşru menfaatine dayanır; kampanya ve tanıtım mesajları yalnız izninizle gönderilir. Verileriniz kursun kullandığı mdSinyal yazılımının bulut altyapısında (Google, Cloudflare ve Meta/WhatsApp hizmetleri) tutulur; bu hizmetlerin sunucuları yurt dışında bulunduğu için verileriniz yurt dışına aktarılır (KVKK m.9). Yetkili kurumlar (MEB, vergi idaresi) dışında paylaşılmaz ve mevzuattaki süre boyunca saklanır. KVKK m.11 kapsamındaki haklarınız (bilgi isteme, düzeltme, silme, itiraz) için kursa başvurabilirsiniz; ayrıntılar: mdsinyal.com/gizlilik.html`;
 // Ders iptali ve değişikliği: ders saatinden en az 24 saat önce (takvim günü değil, gerçek saat)
 export const dersKalanSaat = d => (new Date(d.tarih + 'T' + (/^\d{2}:\d{2}$/.test(d.saat || '') ? d.saat : '00:00') + ':00') - Date.now()) / 36e5;
 // Para girişi: "1.250,50" → 1250.5, "24.000" → 24000, "24,000.00" → 24000; eksi ve geçersiz değer 0 olur
@@ -50,31 +51,37 @@ export function taksitBol(top, n) { top = Math.round(top); if (top <= 0) return 
 export const iptalEdilebilir = d => !!d && d.durum === 'Planlandı' && dersKalanSaat(d) >= 24;
 // Kurs kapalı günleri: Pazar, sabit resmî tatiller ve dini bayramlar (kurs Ayarlar'dan ek kapalı gün girer).
 export const TATILLER = ['01-01', '04-23', '05-01', '05-19', '07-15', '08-30', '10-29'];
-// Dini bayramlar (Diyanet takvimi; arife yarım gün olduğu için kapalı sayılmaz). Her yıl eklenmeli: 2028 için Ağustos 2027'de Diyanet takvimine bakın
-const BAYRAMLAR = ['2026-03-20', '2026-03-21', '2026-03-22', '2026-05-27', '2026-05-28', '2026-05-29', '2026-05-30', '2027-03-09', '2027-03-10', '2027-03-11', '2027-05-16', '2027-05-17', '2027-05-18', '2027-05-19'];
+// Dini bayramlar (Diyanet takvimi; arife yarım gün olduğu için kapalı sayılmaz). Her yıl eklenmeli: 2029 için 2028 ortasında Diyanet takvimine bakın.
+// 2028 kaynağı: Diyanet İşleri Başkanlığı, vakithesaplama.diyanet.gov.tr/icerik.php?icerik=185 (2028 dini günler; 16.11.2026'da okundu):
+//   Ramazan Bayramı 26-28 Şubat 2028 (arife 25 Şubat Cuma), Kurban Bayramı 5-8 Mayıs 2028 (arife 4 Mayıs Perşembe)
+const BAYRAMLAR = ['2026-03-20', '2026-03-21', '2026-03-22', '2026-05-27', '2026-05-28', '2026-05-29', '2026-05-30', '2027-03-09', '2027-03-10', '2027-03-11', '2027-05-16', '2027-05-17', '2027-05-18', '2027-05-19',
+  '2028-02-26', '2028-02-27', '2028-02-28', '2028-05-05', '2028-05-06', '2028-05-07', '2028-05-08'];
 export const kapaliGun = t => tarihOku(t).getDay() === 0 ? 'Pazar' : (TATILLER.includes(t.slice(5)) || BAYRAMLAR.includes(t)) ? 'Resmî tatil' : null;
 export const isGunuIleri = t => { const d = tarihOku(t); while (kapaliGun(iso(d))) d.setDate(d.getDate() + 1); return iso(d); };
 
 // Sınıflar: varsayılanlar; kurs Ayarlar › Sınıf ve ücretler'den ücret, saat, yaş ve hangi sınıfları verdiğini değiştirir (S.kurs.siniflar'da kalıcı).
 // teyit: ders saatleri ve yaş yönetmelikten varsayılan; kurs kendi il MEM uygulamasıyla teyit etmeli.
+// Direksiyon: ilk kez belge alan için alanda/simülatörde en az 2 saat + akan trafik asgarisi (MTSK Yön. md.7/1, RG 9/7/2024; 9/1/2025'ten beri toplama sayılır).
+// G: yalnız operatör belgeliler kaydolur, direksiyon dersi yok (md.6/2, 12/3-b). Yaşlar KTY md.76 (A: A2 ile 20, A2'siz 24; F 18).
 export const SINIF_VARSAYILAN = {
+  'M': { ad: 'M · Motorlu bisiklet', ucret: null, teorik: 34, direksiyon: 14, yas: 16, tur: 'ehliyet', aktif: false, teyit: true },
   'A1': { ad: 'A1 · Hafif motosiklet', ucret: null, teorik: 34, direksiyon: 14, yas: 16, tur: 'ehliyet', aktif: false, teyit: true },
   'A2': { ad: 'A2 · Motosiklet', ucret: 18500, teorik: 34, direksiyon: 14, yas: 18, tur: 'ehliyet', aktif: true },
-  'A': { ad: 'A · Motosiklet (sınırsız)', ucret: null, teorik: 34, direksiyon: 14, yas: 20, tur: 'ehliyet', aktif: false, teyit: true },
+  'A': { ad: 'A · Motosiklet (sınırsız)', ucret: null, teorik: 34, direksiyon: 14, yas: 20, yasA2siz: 24, tur: 'ehliyet', aktif: false, teyit: true },
   'B1': { ad: 'B1 · Dört tekerlekli motosiklet', ucret: null, teorik: 34, direksiyon: 14, yas: 16, tur: 'ehliyet', aktif: false, teyit: true },
-  'B': { ad: 'B · Manuel', ucret: 24000, teorik: 34, direksiyon: 14, yas: 18, tur: 'ehliyet', aktif: true },
-  'B-O': { ad: 'B · Otomatik', ucret: 26500, teorik: 34, direksiyon: 14, yas: 18, tur: 'ehliyet', aktif: true },
-  'BE': { ad: 'BE · Römorklu otomobil', ucret: null, teorik: 34, direksiyon: 14, yas: 18, tur: 'ehliyet', aktif: false, teyit: true },
-  'C1': { ad: 'C1 · Hafif kamyon', ucret: null, teorik: 34, direksiyon: 16, yas: 18, tur: 'ehliyet', aktif: false, teyit: true },
-  'C1E': { ad: 'C1E · Römorklu hafif kamyon', ucret: null, teorik: 34, direksiyon: 16, yas: 18, tur: 'ehliyet', aktif: false, teyit: true },
-  'C': { ad: 'C · Kamyon', ucret: 31000, teorik: 34, direksiyon: 20, yas: 21, tur: 'ehliyet', aktif: true },
-  'CE': { ad: 'CE · Çekici (tır)', ucret: null, teorik: 34, direksiyon: 20, yas: 21, tur: 'ehliyet', aktif: false, teyit: true },
-  'D1': { ad: 'D1 · Minibüs', ucret: null, teorik: 34, direksiyon: 20, yas: 21, tur: 'ehliyet', aktif: false, teyit: true },
-  'D1E': { ad: 'D1E · Römorklu minibüs', ucret: null, teorik: 34, direksiyon: 20, yas: 21, tur: 'ehliyet', aktif: false, teyit: true },
-  'D': { ad: 'D · Otobüs', ucret: null, teorik: 34, direksiyon: 20, yas: 24, tur: 'ehliyet', aktif: false, teyit: true },
-  'DE': { ad: 'DE · Römorklu otobüs', ucret: null, teorik: 34, direksiyon: 20, yas: 24, tur: 'ehliyet', aktif: false, teyit: true },
-  'F': { ad: 'F · Traktör', ucret: null, teorik: 34, direksiyon: 14, yas: 17, tur: 'ehliyet', aktif: false, teyit: true },
-  'G': { ad: 'G · İş makinesi', ucret: null, teorik: 34, direksiyon: 14, yas: 18, tur: 'ehliyet', aktif: false, teyit: true },
+  'B': { ad: 'B · Manuel', ucret: 24000, teorik: 34, direksiyon: 16, yas: 18, tur: 'ehliyet', aktif: true },
+  'B-O': { ad: 'B · Otomatik', ucret: 26500, teorik: 34, direksiyon: 16, yas: 18, tur: 'ehliyet', aktif: true },
+  'BE': { ad: 'BE · Römorklu otomobil', ucret: null, teorik: 34, direksiyon: 8, yas: 18, tur: 'ehliyet', aktif: false, teyit: true },
+  'C1': { ad: 'C1 · Hafif kamyon', ucret: null, teorik: 34, direksiyon: 12, yas: 18, tur: 'ehliyet', aktif: false, teyit: true },
+  'C1E': { ad: 'C1E · Römorklu hafif kamyon', ucret: null, teorik: 34, direksiyon: 8, yas: 18, tur: 'ehliyet', aktif: false, teyit: true },
+  'C': { ad: 'C · Kamyon', ucret: 31000, teorik: 34, direksiyon: 22, yas: 21, tur: 'ehliyet', aktif: true },
+  'CE': { ad: 'CE · Çekici (tır)', ucret: null, teorik: 34, direksiyon: 8, yas: 21, tur: 'ehliyet', aktif: false, teyit: true },
+  'D1': { ad: 'D1 · Minibüs', ucret: null, teorik: 34, direksiyon: 9, yas: 21, tur: 'ehliyet', aktif: false, teyit: true },
+  'D1E': { ad: 'D1E · Römorklu minibüs', ucret: null, teorik: 34, direksiyon: 8, yas: 21, tur: 'ehliyet', aktif: false, teyit: true },
+  'D': { ad: 'D · Otobüs', ucret: null, teorik: 34, direksiyon: 16, yas: 24, tur: 'ehliyet', aktif: false, teyit: true },
+  'DE': { ad: 'DE · Römorklu otobüs', ucret: null, teorik: 34, direksiyon: 8, yas: 24, tur: 'ehliyet', aktif: false, teyit: true },
+  'F': { ad: 'F · Traktör', ucret: null, teorik: 34, direksiyon: 14, yas: 18, tur: 'ehliyet', aktif: false, teyit: true },
+  'G': { ad: 'G · İş makinesi', ucret: null, teorik: 34, direksiyon: 0, yas: 18, tur: 'ehliyet', aktif: false, teyit: true },
   'SRC1': { ad: 'SRC1 · Uluslararası yolcu taşımacılığı', ucret: null, teorik: 40, direksiyon: 0, yas: 21, tur: 'src', aktif: false, teyit: true },
   'SRC2': { ad: 'SRC2 · Yurt içi yolcu taşımacılığı', ucret: null, teorik: 40, direksiyon: 0, yas: 21, tur: 'src', aktif: false, teyit: true },
   'SRC3': { ad: 'SRC3 · Uluslararası eşya taşımacılığı', ucret: null, teorik: 40, direksiyon: 0, yas: 21, tur: 'src', aktif: false, teyit: true },
@@ -85,13 +92,148 @@ export const SINIF_VARSAYILAN = {
 export const SINIFLAR = JSON.parse(JSON.stringify(SINIF_VARSAYILAN));
 export const aktifSiniflar = () => Object.entries(SINIFLAR).filter(([, v]) => v.aktif);
 export const satistaSiniflar = () => aktifSiniflar().filter(([, v]) => v.ucret > 0);
+/* ---------- MEB sayıları: öğrenciye özgü direksiyon saati, yaş, gece dersi, iş günü ---------- */
+// v208'e kadarki varsayılan saatler: yeni kural tarihinden önce kaydolan kursiyerlerin saati bununla dondurulur (ders sayısı ve ilerleme geriye dönük bozulmasın)
+const ESKI_DIREKSIYON = { A1: 14, A2: 14, A: 14, B1: 14, B: 14, 'B-O': 14, BE: 14, C1: 16, C1E: 16, C: 20, CE: 20, D1: 20, D1E: 20, D: 20, DE: 20, F: 14, OP: 16 };
+// G dondurulmaz: G'de direksiyon eğitimi hiç yok (md.6/2, 12/3-b); sınıf düzeyindeki geçişler (e-sınav → Ehliyet) de 0 saati kullanıyor
+// Bu tarihten (dahil) sonra kaydolan kursiyerler yeni saatlerle (md.7/1 ve md.39) hesaplanır; öncekiler eski saatte kalır. Müdür dosyadan tek tek yeni kurala geçirebilir.
+export const DERS_KURAL_TARIH = '2026-11-17';
+// Mevcut sürücü belgesi seçenekleri: 2016 sonrası 17 sınıf (KTY md.76) + eski tip E (KTY geçici md.10, Tablo 2)
+export const MEVCUT_BELGELER = ['M', 'A1', 'A2', 'A', 'B1', 'B', 'BE', 'C1', 'C1E', 'C', 'CE', 'D1', 'D1E', 'D', 'DE', 'F', 'G', 'E'];
+// MTSK Yön. md.39/1 Tablo 1 (mevcut belge → istenen sınıf): akan trafik saati. Boş hücre: tabloda değer yok.
+const TABLO1 = {
+  M: { A1: 12, A2: 12, A: 12, B1: 12, B: 14, F: 12 }, A1: { A2: 6, A: 6, B1: 6, B: 14, F: 12 }, A2: { A: 6, B1: 6, B: 14, F: 12 }, A: { B1: 6, B: 14, F: 12 },
+  B1: { A1: 12, A2: 12, A: 12, B: 14, F: 12 }, B: { A1: 12, A2: 12, A: 12, BE: 6, C1: 10, C: 20, D1: 7, D: 14 }, BE: { A1: 12, A2: 12, A: 12, C1: 10, C: 20, D1: 7, D: 14 },
+  C1: { A1: 12, A2: 12, A: 12, BE: 6, C1E: 6, C: 10, D1: 4, D: 10 }, C1E: { A1: 12, A2: 12, A: 12, C: 10, D1: 4, D: 10 },
+  C: { A1: 12, A2: 12, A: 12, BE: 6, CE: 6, D1: 4, D: 7 }, CE: { A1: 12, A2: 12, A: 12, D1: 4, D: 7 },
+  D1: { A1: 12, A2: 12, A: 12, BE: 6, C1: 5, C: 14, D: 7 }, D1E: { A1: 12, A2: 12, A: 12, C1: 5, C: 14, D: 7 },
+  D: { A1: 12, A2: 12, A: 12, BE: 6, C1: 5, C: 10, D1E: 6, DE: 6 }, DE: { A1: 12, A2: 12, A: 12, C1: 5, C: 10 },
+  F: { A1: 12, A2: 12, A: 12, B1: 12, B: 14 }, G: { A1: 12, A2: 12, A: 12, B1: 12, B: 14 },
+};
+// Tablo 2: KTY geçici md.10 kapsamındaki eski tip belgeler
+const TABLO2 = {
+  A1: { A2: 6, A: 6, B1: 6, B: 14, F: 12 }, A2: { B: 14, F: 12 }, B: { A1: 12, A2: 12, A: 12, BE: 6, C1: 5, C: 14, D: 7 },
+  C: { A1: 12, A2: 12, A: 12, BE: 6, C1E: 6, CE: 6, D1E: 6, D: 7 }, D: { A1: 12, A2: 12, A: 12, DE: 6 },
+  E: { A1: 12, A2: 12, A: 12, BE: 6, C1E: 6, D1E: 6, DE: 6 }, F: { A1: 12, A2: 12, A: 12, B1: 12, B: 14 }, G: { A1: 12, A2: 12, A: 12, B1: 12, B: 14 },
+};
+// İl tablosuyla çelişen ya da yönetmelikte ayrı kuralı olan hücreler: değer tablodan, ekranda "teyit bekliyor"
+const TABLO_TEYIT = { 'M>B1': 'İl tablosunda 8 saat görünüyor; Tablo 1’de 12 + 2.', 'B>A1': 'md.39/5: en az 2 yıllık B belgeliye süre yarıya inebilir (il tablosu 8).' };
+const B_ICERIR = ['B', 'BE', 'C1', 'C1E', 'C', 'CE', 'D1', 'D1E', 'D', 'DE', 'E'];
+const DENEYIM = { BE: B_ICERIR, C1: B_ICERIR, C: B_ICERIR, D1: B_ICERIR, D: B_ICERIR, C1E: ['C1', 'C1E', 'C', 'CE', 'E'], CE: ['C', 'CE', 'E'], D1E: ['D1', 'D1E', 'D', 'DE', 'E'], DE: ['D', 'DE', 'E'] };
+const DENEYIM_AD = { BE: 'B', C1: 'en az B', C: 'en az B', D1: 'en az B', D: 'en az B', C1E: 'C1', CE: 'C', D1E: 'D1', DE: 'D' };
+// KTY md.76/3 yaş istisnası (emniyet, TSK, jandarma/sahil güvenlik personeli, sürücü yetiştiren yüksekokul mezunu): A, C, D ve D1 sınıflarında
+// asgari yaş 20'ye iner ve önceki belge (deneyim, md.76/1-b) şartı aranmaz; diğer sınıflarda değişmez. Yaş şartı hiç kalkmaz.
+// Kapsam araştırma notuna dayanır (belgeler/eksikler/meb-sayilari.md), Eyüp Bey teyidi bekliyor (eyup-sorular.md). k.yasIstisna = { tur, not, tarih, kim }.
+// Kayıt formu, kursiyer dosyası (şerit ve ön kontrol kartı) ve MEBBİS ön kontrol aynı işlevleri kullanır: asgariYasHesap, deneyimEksik, yasDenetim, mebOnKontrol.
+export const YAS_ISTISNA_SINIF = ['A', 'C', 'D', 'D1'];
+export const YAS_ISTISNA_YAS = 20;
+export const yasIstisnaKapsar = sinif => YAS_ISTISNA_SINIF.includes(sinif);
+// KTY md.76/1-b: istenen sınıf için gereken önceki belge yoksa uyarı metni (engel değil). istisna: kursiyerde md.76/3 yaş istisnası var (kapsamdaki sınıfta şart aranmaz)
+export function deneyimEksik(sinif, mevcut, istisna) { const h = sinif === 'B-O' ? 'B' : sinif, l = DENEYIM[h]; if (!l || l.includes(mevcut) || (istisna && yasIstisnaKapsar(h))) return null; return `${h} sınıfı için ${DENEYIM_AD[h]} sınıfı sürücü belgesi gerekir (KTY md.76/1-b).`; }
+const mevcutKod = m => (m && m !== 'Yok') ? String(m) : '';
+// Sınıf ve mevcut belgeden asgari direksiyon saati: { saat, kaynak, teyit }
+export function direksiyonHesap(sinif, mevcut, o = {}) {
+  const S0 = SINIFLAR[sinif] || {}, ilk = +S0.direksiyon || 0, m = mevcutKod(mevcut);
+  if (!ilk) return { saat: 0, kaynak: 'Bu sınıfta direksiyon eğitimi yok' };
+  if ((S0.tur || 'ehliyet') !== 'ehliyet' || !m) return { saat: ilk, kaynak: 'İlk kez belge: 2 saat alan ya da simülatör + akan trafik (md.7/1)', teyit: !!S0.teyit && sinif === 'D1E' };
+  const h = sinif === 'B-O' ? 'B' : sinif;
+  if (m === h) return { saat: ilk, teyit: true, kaynak: o.otomatik ? 'Belgesi “sadece otomatik”: manuel için yarı süre (md.39/2). Hangi sayının yarısı il tablosuna göre değişiyor; il MEM değerini dosyadan elle girin.' : `Zaten ${m} belgesi var; ilk kez belge saati kullanıldı.` };
+  const eski = !!o.eski || m === 'E', T = eski ? TABLO2 : TABLO1, v = (T[m] || {})[h];
+  if (v == null) return { saat: ilk, teyit: true, kaynak: `${m} → ${h}: Tablo ${eski ? 2 : 1}’de değer yok; ilk kez belge saati kullanıldı.` };
+  const not = TABLO_TEYIT[m + '>' + h];
+  return { saat: v + 2, teyit: !!not || eski, kaynak: `Farklı sınıf (md.39, Tablo ${eski ? 2 : 1}): ${v} saat akan trafik + 2 saat alan ya da simülatör${not ? '. ' + not : ''}${eski ? '. Eski belge ölçütü (17/4/2015 mi, 1/1/2016 mı) teyit bekliyor.' : ''}` };
+}
+// Yeni kurala göre mi hesaplanır? Gerçek kursta kural tarihinden önceki kayıtlar eski saatte donar (demo her zaman yeni kural)
+export const eskiDersKurali = k => !!(S && S._bulut) && !!k && k.dersKural !== 2 && String(k.kayit || '') < DERS_KURAL_TARIH;
+// Öğrenciye özgü gerekli direksiyon saati ve açıklaması
+export function direksiyonAyrinti(k) {
+  if (!k) return { saat: 0, kaynak: '' };
+  const S0 = SINIFLAR[k.sinif] || {};
+  let r;
+  if (k.gerekliElle != null && k.gerekliElle !== '' && isFinite(+k.gerekliElle)) r = { saat: Math.max(0, Math.round(+k.gerekliElle)), kaynak: 'Kurs müdürünün girdiği değer' + (k.gerekliElleNot ? ': ' + k.gerekliElleNot : ''), elle: true };
+  else if (eskiDersKurali(k)) { const ko = (((S.kurs || {}).siniflar || {})[k.sinif] || {}), ks = ko.donukDireksiyon !== undefined ? ko.donukDireksiyon : ko.direksiyon, sa = ks != null ? +ks : (ESKI_DIREKSIYON[k.sinif] ?? (+S0.direksiyon || 0)); r = { saat: sa, kaynak: `${DERS_KURAL_TARIH.split('-').reverse().join('.')} öncesi kayıt: eski ders sayısı korunuyor`, donuk: true, yeni: direksiyonHesap(k.sinif, k.mevcutEhliyet, { otomatik: k.mevcutOtomatik, eski: k.mevcutEski }) }; }
+  else r = direksiyonHesap(k.sinif, k.mevcutEhliyet, { otomatik: k.mevcutOtomatik, eski: k.mevcutEski });
+  // ikinci dört hak (md.15/4): sınıfın direksiyon saati kadar ders yeniden alınır
+  if (k.ikinciHak && +k.ikinciHak.hedef > r.saat) r = { ...r, ilk: r.saat, saat: +k.ikinciHak.hedef, kaynak: r.kaynak + ' · ikinci dört hak için ' + (+k.ikinciHak.hedef - (+k.ikinciHak.onceki || 0)) + ' ders daha (md.15/4)' };
+  return r;
+}
+export const gerekliDireksiyon = k => direksiyonAyrinti(k).saat;
+// Asgari yaş (KTY md.76): sınıf tablosundaki yaş (Ayarlar › Sınıf ve ücretler; tek kaynak). A sınıfı en az 2 yıllık A2 ile 20, A2'siz 24.
+// istisna: md.76/3 yaş istisnası; kapsamdaki sınıfta yaş 20'ye iner. Dönüş: { yas, not, istisna (yaş istisnayla indi), normal (istisnasız yaş) }
+export function asgariYasHesap(sinif, mevcut, belgeTarih, istisna) {
+  const r = asgariYasTemel(sinif, mevcut, belgeTarih);
+  if (istisna && yasIstisnaKapsar(sinif) && r.yas > YAS_ISTISNA_YAS) return { yas: YAS_ISTISNA_YAS, not: 'yaş istisnası (KTY md.76/3)', istisna: true, normal: r.yas };
+  return { ...r, normal: r.yas };
+}
+function asgariYasTemel(sinif, mevcut, belgeTarih) {
+  const S0 = SINIFLAR[sinif] || {}, y = S0.yas || 18;
+  if (sinif !== 'A') return { yas: y, not: '' };
+  const a2 = mevcutKod(mevcut) === 'A2', sure = belgeTarih ? (BUGUN - tarihOku(String(belgeTarih).slice(0, 10))) / (365.25 * 864e5) : null;
+  if (a2 && (sure == null || sure >= 2)) return { yas: y, not: sure == null ? 'A2 belgesi en az 2 yıllık olmalı; belge tarihini girin.' : 'En az 2 yıllık A2 belgesiyle' };
+  return { yas: S0.yasA2siz || 24, not: a2 ? 'A2 belgesi 2 yıldan yeni: 24 yaş aranır' : 'A2 belgesi yok: 24 yaş aranır' };
+}
+// Ekrana HTML olarak basılan kısa metinlerde kullanıcı verisi (istisna türü) için kaçış
+const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// Yaş denetimi (kayıt formu, kursiyer dosyası ve MEBBİS ön kontrol aynı sonucu gösterir). k: { sinif, dogumTarihi, mevcutEhliyet, oncekiBelge, yasIstisna }
+// { tamam, yas, asg, istisna, satir (ön kontrol satırı, HTML), uyari (kayıt formunda kaydı durduran düz metin) }
+export function yasDenetim(k) {
+  const y = yas(k.dogumTarihi), ist = !!k.yasIstisna, ay = asgariYasHesap(k.sinif, k.mevcutEhliyet, (k.oncekiBelge || {}).tarih, ist), asg = ay.yas, tamam = y == null || y >= asg;
+  const ad = (SINIFLAR[k.sinif] || {}).ad || k.sinif, tur = ist ? esc(k.yasIstisna.tur || 'istisna') : '';
+  let satir = `Yaş ${y == null ? '?' : y} · en az ${asg}`;
+  if (ay.istisna) satir += ` · yaş istisnası (KTY md.76/3, teyit bekliyor): ${tur}; istisnasız ${ay.normal}`;
+  else { if (ay.not && k.sinif === 'A') satir += ' (' + ay.not + ')'; if (ist) satir += ` · yaş istisnası ${esc(ad)} sınıfında yaşı değiştirmez`; }
+  const uyari = tamam ? '' : ist
+    ? `Kursiyer ${y} yaşında. KTY md.76/3 istisnası yaş şartını kaldırmaz: ${ad} için ${ay.istisna ? 'istisnayla ' : ''}en az ${asg} yaş gerekir (istisna yalnız A, C, D ve D1 sınıflarında yaşı 20’ye indirir).`
+    : `Kursiyer ${y} yaşında; ${ad} için en az ${asg} yaş gerekir${ay.not ? ' (' + ay.not + ')' : ''}. KTY md.76/3 istisnası varsa (emniyet, TSK, sürücü yüksekokulu vb.) “Yaş istisnası var”ı işaretleyip dayanağını yazın.`;
+  return { tamam, yas: y, asg, istisna: !!ay.istisna, normal: ay.normal, satir, uyari };
+}
+// Gece dersi: md.7/3 listesindeki sınıflar en az 2 saat (G yok; CE listede değil, teyit bekliyor: kurs ayarı uygulanmaya devam eder)
+// Kural motorunun okuduğu sayı ayarları (Ayarlar › MEB kuralları): [en az, en çok, varsayılan]; sayfalar5.js KURAL_KAYNAK'taki min/max/varsayilan ile aynı.
+// Eskiden kaydedilmiş geçersiz değer (boş, 0, eksi, aralık dışı) varsayılanla okunur: ekranda görünen değer ile kodun kullandığı değer aynı olur.
+// programOnGun alt sınırı 5: MTSK Yön. md.23/1 direksiyon programını en az 5 gün önce ister; eskiden kaydedilmiş 1–4 değeri 5 okunur.
+export const KURAL_ARALIK = { programOnGun: [5, 30, 5], gunlukDersSiniri: [1, 2, 2], geceDersi: [1, 10, 2], sinavBildirimIsGunu: [1, 20, 4], direksiyonSure: [1, 365, 90], sinavUcretIsGunu: [1, 30, 6], tekrarBekleme: [0, 120, 15], devamsizlikSiniri: [1, 34, 4] };
+export const kuralAyar = a => { const [en, ust, v] = KURAL_ARALIK[a], x = S && S.kurs ? S.kurs[a] : undefined; return x !== '' && x != null && isFinite(+x) && +x >= en && +x <= ust ? +x : v; };
+export const geceGerekli = k => { if (!k || !gerekliDireksiyon(k) || k.sinif === 'G') return 0; return kuralAyar('geceDersi'); };
+// Gün batımı: il merkezi koordinatı (yaklaşık) ve tarihten; Türkiye UTC+3. Gece dersi gün batımından sonra başlar (md.20/1).
+const IL_KOORD = { adana: [37.0, 35.32], adıyaman: [37.76, 38.28], afyonkarahisar: [38.76, 30.54], ağrı: [39.72, 43.05], amasya: [40.65, 35.83], ankara: [39.93, 32.86], antalya: [36.89, 30.71], artvin: [41.18, 41.82], aydın: [37.85, 27.84], balıkesir: [39.65, 27.88], bilecik: [40.14, 29.98], bingöl: [38.88, 40.5], bitlis: [38.4, 42.11], bolu: [40.74, 31.61], burdur: [37.72, 30.29], bursa: [40.19, 29.06], çanakkale: [40.15, 26.41], çankırı: [40.6, 33.62], çorum: [40.55, 34.95], denizli: [37.78, 29.09], diyarbakır: [37.91, 40.24], edirne: [41.68, 26.56], elazığ: [38.68, 39.22], erzincan: [39.75, 39.49], erzurum: [39.9, 41.27], eskişehir: [39.78, 30.52], gaziantep: [37.07, 37.38], giresun: [40.91, 38.39], gümüşhane: [40.46, 39.48], hakkari: [37.58, 43.74], hatay: [36.2, 36.16], ısparta: [37.76, 30.55], mersin: [36.8, 34.64], istanbul: [41.01, 28.98], izmir: [38.42, 27.14], kars: [40.6, 43.1], kastamonu: [41.39, 33.78], kayseri: [38.72, 35.49], kırklareli: [41.73, 27.22], kırşehir: [39.15, 34.16], kocaeli: [40.77, 29.92], konya: [37.87, 32.48], kütahya: [39.42, 29.98], malatya: [38.35, 38.31], manisa: [38.61, 27.43], kahramanmaraş: [37.58, 36.94], mardin: [37.31, 40.74], muğla: [37.22, 28.36], muş: [38.74, 41.49], nevşehir: [38.62, 34.71], niğde: [37.97, 34.68], ordu: [40.98, 37.88], rize: [41.03, 40.52], sakarya: [40.78, 30.4], samsun: [41.29, 36.33], siirt: [37.93, 41.94], sinop: [42.03, 35.15], sivas: [39.75, 37.02], tekirdağ: [40.98, 27.51], tokat: [40.31, 36.55], trabzon: [41.0, 39.72], tunceli: [39.11, 39.55], şanlıurfa: [37.16, 38.79], uşak: [38.68, 29.41], van: [38.5, 43.38], yozgat: [39.82, 34.81], zonguldak: [41.45, 31.79], aksaray: [38.37, 34.03], bayburt: [40.26, 40.23], karaman: [37.18, 33.22], kırıkkale: [39.85, 33.51], batman: [37.88, 41.13], şırnak: [37.52, 42.46], bartın: [41.63, 32.34], ardahan: [41.11, 42.7], ığdır: [39.92, 44.04], yalova: [40.65, 29.27], karabük: [41.2, 32.62], kilis: [36.72, 37.12], osmaniye: [37.07, 36.25], düzce: [40.84, 31.16], afyon: [38.76, 30.54], antep: [37.07, 37.38], urfa: [37.16, 38.79], maraş: [37.58, 36.94] };
+// Türkçe harfler sadeleştirilerek eşlenir ("Eskisehir", "ESKİŞEHİR", "Odunpazarı / Eskişehir" aynı ili verir); bulunamazsa Ankara
+const ilSade = x => String(x || '').toLocaleLowerCase('tr').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ı/g, 'i').replace(/ç/g, 'c').replace(/ğ/g, 'g').replace(/ö/g, 'o').replace(/ş/g, 's').replace(/ü/g, 'u');
+export function kursIli(K = (S && S.kurs) || {}) {
+  const t = ilSade(K.il || K.sehir || K.adres), adlar = Object.keys(IL_KOORD).sort((a, b) => b.length - a.length);
+  return adlar.find(a => t.includes(ilSade(a))) || 'ankara';
+}
+export function gunBatimi(t, il) {
+  const [lat, lon] = IL_KOORD[il || kursIli()] || IL_KOORD.ankara, [y, m, d] = String(t).slice(0, 10).split('-').map(Number), r = Math.PI / 180;
+  const N = Math.round((Date.UTC(y, m - 1, d) - Date.UTC(y, 0, 0)) / 864e5), g = 2 * Math.PI / 365 * (N - 1 + 0.25);
+  const eqt = 229.18 * (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g) - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));
+  const dek = 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g) - 0.006758 * Math.cos(2 * g) + 0.000907 * Math.sin(2 * g) - 0.002697 * Math.cos(3 * g) + 0.00148 * Math.sin(3 * g);
+  const ha = Math.acos(Math.cos(90.833 * r) / (Math.cos(lat * r) * Math.cos(dek)) - Math.tan(lat * r) * Math.tan(dek)) / r;
+  const dk = Math.ceil(720 - 4 * (lon - ha) - eqt + 180);
+  return String(Math.floor(dk / 60)).padStart(2, '0') + ':' + String(dk % 60).padStart(2, '0');
+}
+// Gece dersinin başladığı saat: kursun girdiği il MEM saati (ay bazında, S.kurs.geceSaatleri { '01': '17:45', ... }) yoksa hesaplanan gün batımı
+export function geceBaslangic(t) {
+  const K = (S && S.kurs) || {}, elle = K.geceSaatleri && K.geceSaatleri[String(t).slice(5, 7)];
+  return /^\d{2}:\d{2}$/.test(elle || '') ? elle : gunBatimi(t);
+}
+export const geceDersMi = d => !!d && !!d.tarih && /^\d{2}:\d{2}/.test(d.saat || '') && d.saat.slice(0, 5) >= geceBaslangic(d.tarih);
+// MEB iş günü (MTSK sürelerinde: sınav onayı 4 iş günü, randevu 4 iş günü, mazeret 5 iş günü): Pazartesi–Cuma, resmî tatil ve bayramlar hariç.
+// Arife iş günü sayılır (yarım gün). Cumartesi: kurs ayarı mebCumartesi açıksa iş günü sayılır (varsayılan kapalı).
+export const mebIsGunuMu = t => { const g = tarihOku(t).getDay(); if (g === 0 || (g === 6 && !(S && S.kurs && S.kurs.mebCumartesi))) return false; return !(TATILLER.includes(t.slice(5)) || BAYRAMLAR.includes(t)); };
+// bas hariç, bit dahil iş günü sayısı
+export const mebIsGunuSay = (bas, bit) => { let n = 0; const d = tarihOku(bas), b = tarihOku(bit); while (d < b) { d.setDate(d.getDate() + 1); if (mebIsGunuMu(iso(d))) n++; } return n; };
+// t'den n iş günü önceki gün
+export const mebIsGunuGeri = (t, n) => { const d = tarihOku(t); let i = 0; while (i < n) { d.setDate(d.getDate() - 1); if (mebIsGunuMu(iso(d))) i++; } return iso(d); };
+// Sınav hakları (MTSK md.15): e-sınav 4; uygulama ilk 4, 60 gün içinde başvurana 4 daha (md.15/4). Kurs ayarı sinavHak ilk dört hakkın sayısıdır.
+export const sinavHakSiniri = (k, tur) => { const n = (S && S.kurs && S.kurs.sinavHak) || 4; return tur === 'e-Sınav' ? n : n * (k && k.ikinciHak ? 2 : 1); };
+export const IKINCI_HAK_GUN = 60;
 // Ödeme yöntemleri tek listede (raporlar, kasa ve muhasebe aynı adları kullanır)
 export const YONTEMLER = ['Nakit', 'Kart', 'Havale'];
 export const yontemAd = y => y === 'Havale' ? 'Havale/EFT' : y;
 // Ay ekleme: 31 Ocak + 1 ay = 28/29 Şubat (taşma yok)
 export const ayEkle = (t, n) => { const d = tarihOku(t), g = d.getDate(); d.setDate(1); d.setMonth(d.getMonth() + n); const son = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); d.setDate(Math.min(g, son)); return iso(d); };
-// İki tarih arasındaki iş günü (bas hariç, bit dahil; Pazar ve tatiller sayılmaz)
-export const isGunuSay = (bas, bit) => { let n = 0; const d = tarihOku(bas), b = tarihOku(bit); while (d < b) { d.setDate(d.getDate() + 1); if (!kapaliGun(iso(d))) n++; } return n; };
+// İki tarih arasındaki iş günü (bas hariç, bit dahil). Eski ad: MEB iş günü sayımına bağlı (Cumartesi kurs ayarına göre, bayram ve tatiller hariç); ayrı bir hesap tutulmaz
+export const isGunuSay = (bas, bit) => mebIsGunuSay(bas, bit);
 
 export const ASAMALAR = ['Kayıt', 'Evrak', 'Teorik', 'Direksiyon', 'Sınav', 'Ehliyet'];
 export const EVRAKLAR = [
@@ -296,7 +438,7 @@ function uret() {
   // adaylar (ön kayıt) · kayıt görüşmeleri tek takvimde (sosyal.slotlar) tutulur
   const gunAdi = t => tarihOku(t).toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' });
   const yG = isGunuIleri(gun(1)), gG = isGunuIleri(gun(2));
-  const BEYAN = 'Merhaba, ben Örnek Sürücü Kursu adına yanıt veren yapay zekâ asistanıyım. ';
+  const BEYAN = 'Merhaba, ben Örnek Sürücü Kursu adına yanıt veren otomatik asistanım. ';
   const adaylar = [
     { ad: 'Deniz Akın', kaynak: 'Google Haritalar', kanal: 'WhatsApp', sinif: 'B-O', asama: 'Yeni', saat: '08:12', gun: 0, m: [['aday', 'Merhaba, otomatik vites ehliyet için fiyat öğrenebilir miyim?'], ['asistan', 'Merhaba Deniz Bey, B otomatik sınıfı kurs ücretimiz 26.500 TL. Peşinatın ardından 5 aya kadar taksit yapıyoruz. Ne zaman başlamayı düşünüyorsunuz?']] },
     { ad: 'Sena Uğur', kaynak: 'Instagram', kanal: 'Instagram', sinif: 'B', asama: 'Bilgi verildi', saat: '23:41', gun: -1, m: [['aday', 'Kaç günde ehliyet alınıyor?'], ['asistan', 'Teorik dersler yaklaşık 4 hafta, ardından e-sınav ve direksiyon eğitimi geliyor. Ortalama 2–3 ayda ehliyetinizi alıyorsunuz.'], ['aday', 'Taksit var mı?'], ['asistan', 'Evet, peşinat sonrası 5 aya kadar taksit yapıyoruz. Size uygun bir saat için kayıt görüşmesi ayarlayalım mı?']] },
@@ -607,7 +749,8 @@ export function makbuzNoVer(h) {
   return h.no;
 }
 // Sınıf ayarlarını kalıcı yaz
-export function sinifKaydet(k, alan) { if (alan && 'ucret' in alan) S.kurs.ucretOnay = gun(0); Object.assign(SINIFLAR[k], alan); S.kurs.siniflar[k] = { ...(S.kurs.siniflar[k] || {}), ...alan }; }
+// Saat değişince eski kayıtların dondurulmuş değeri (kural tarihinden önceki kurs ayarı ya da v208 varsayılanı) bir kez saklanır
+export function sinifKaydet(k, alan) { if (alan && 'ucret' in alan) S.kurs.ucretOnay = gun(0); if (alan && 'direksiyon' in alan && ESKI_DIREKSIYON[k] !== undefined && ((S.kurs.siniflar || {})[k] || {}).donukDireksiyon === undefined) { const o = (S.kurs.siniflar || {})[k] || {}; alan = { ...alan, donukDireksiyon: o.direksiyon != null ? o.direksiyon : ESKI_DIREKSIYON[k] }; } Object.assign(SINIFLAR[k], alan); S.kurs.siniflar[k] = { ...(S.kurs.siniflar[k] || {}), ...alan }; }
 // MEBBİS'e girilmiş dersin değişmesi: hangi yoldan olursa olsun (sürükle, taşı, iptal, öğrenci/öğretmen telefonu, WhatsApp) kaydette fark edilir.
 // Saati/öğretmeni/aracı değişen ders yeniden "MEBBİS'e girilecek" olur; silinen ders "MEBBİS'ten silinecek" listesine yazılır.
 let mebIz = null;
@@ -862,12 +1005,12 @@ export function mebOnKontrol(k) {
   const l = [];
   l.push([tcGecerli(k.tc || ''), 'TC kimlik numarası geçerli biçimde']);
   l.push([!S.kursiyerler.some(x => x !== k && x.id !== k.id && x.tc && x.tc === k.tc && x.sinif === k.sinif && x.asama !== 'Ehliyet'), 'Aynı TC ile aynı sınıfa açık kayıt yok']);
-  const y = yas(k.dogumTarihi);
   l.push([!!k.dogumTarihi, 'Doğum tarihi girildi']);
-  const asg = (SINIFLAR[k.sinif] && SINIFLAR[k.sinif].yas) || S.kurs.asgariYas;
-  l.push([y == null || y >= asg, `Yaş ${y == null ? '?' : y} · en az ${asg}`]);
+  // yaş ve önceki belge: KTY md.76/3 yaş istisnası (k.yasIstisna) burada uygulanır; kayıt formu ve dosya da bu satırları gösterir
+  { const yd = yasDenetim(k); l.push([yd.tamam, yd.satir]); }
+  { const de = deneyimEksik(k.sinif, k.mevcutEhliyet); if (de) l.push(k.yasIstisna && yasIstisnaKapsar(k.sinif) ? [true, `${de} · aranmaz: yaş istisnası (KTY md.76/3, teyit bekliyor): ${esc(k.yasIstisna.tur || 'istisna')}`] : [false, de]); }
   const g = (S.gruplar || []).find(x => x.id === k.teorikGrup);
-  l.push([!g || !['Kayıt', 'Evrak'].includes(k.asama) || k.kayit <= g.baslangic, g ? `Kayıt grubun başlangıcından önce (${g.ad} ${g.baslangic.split('-').reverse().join('.')})` : 'Grup seçildi']);
+  l.push(g ? [!['Kayıt', 'Evrak'].includes(k.asama) || k.kayit <= g.baslangic, `Kayıt grubun başlangıcından önce (${g.ad} ${g.baslangic.split('-').reverse().join('.')})`] : [false, 'Dönem grubu seçilmedi']);
   EVRAKLAR.filter(([x]) => x !== 'sozlesme').forEach(([x, t]) => l.push([!!k.evrak[x], t]));
   l.push([!!k.cinsiyet, 'Cinsiyet seçildi']);
   l.push([!!(k.saglikRapor && k.saglikRapor.no && k.saglikRapor.tarih), 'Sağlık raporu numarası ve tarihi girildi']);

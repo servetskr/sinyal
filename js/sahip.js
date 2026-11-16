@@ -2,8 +2,8 @@
 // mdSinyal Yönetim panelinin “Hesaplar” bölümünde açılır (yalnız Servet; ortak görmez).
 // Yetki Firebase güvenlik kurallarından değil, Google hesabından gelir: Firebase projesinin sahibi olan Google hesabıyla
 // bağlanılır, Google IAM izin verirse işlem yapılır. Sunucu, gizli anahtar yok; erişim belirteci yalnız bellekte durur (1 saat).
-import { e, ik, pencere, kapatPencere, bildir, tl } from './ui.js?v=208';
-import { S, kaydet, islem, bulutKanca } from './veri.js?v=208';
+import { e, ik, pencere, kapatPencere, bildir, tl } from './ui.js?v=209';
+import { S, kaydet, islem, bulutKanca } from './veri.js?v=209';
 
 const PROJE = 'sinyal-5d37a';
 const ISTEMCI = '451344576006-sua0mu4d4qcssc0lv8g01qic26hr6os7.apps.googleusercontent.com';  // Google OAuth istemci kimliği (herkese açık bilgidir; yetkiyi Google hesabı verir)
@@ -133,7 +133,7 @@ async function yukle() {
   for (const k of kursIdler) {
     const ad = (kurslar['kurslar/' + k] || {}).ad || 'Adı bilinmeyen kurs';
     if (ad === YONETIM_KURS) continue;
-    try { kursIst[k] = await kursIstatistik(k, ad, (kurslar['kurslar/' + k] || {}).sehir || ''); } catch (x) { kursIst[k] = { ad, hata: x.message }; }
+    try { kursIst[k] = await kursIstatistik(k, ad, (kurslar['kurslar/' + k] || {}).sehir || ''); } catch (x) { kursIst[k] = { ad, hata: turkceHata(x) }; }
   }
 }
 const kalanGun = x => SIL_GUN - Math.floor((Date.now() - Date.parse(x.zaman)) / 864e5);
@@ -237,14 +237,14 @@ export function sahipGomulu(yer, eposta, gor = 'hesaplar') {
   kok = yer; gomulu = true; gorunum = gor; ipucu = /@/.test(eposta || '') && !/\.invalid$/.test(eposta) ? eposta : '';
   ciz();
   if (okuyabilir() && !hesaplar && !yukleniyor) yenile();
-  if (!kok.dataset.shBagli) { kok.dataset.shBagli = '1'; kok.addEventListener('click', tikla); kok.addEventListener('input', yaz); }
+  if (!kok.dataset.shBagli) { kok.dataset.shBagli = '1'; kok.addEventListener('click', tikla); kok.addEventListener('input', yaz); kok.addEventListener('submit', gonder); }
 }
 export function sahipEkrani(yer) {
   kok = yer || document.getElementById('uyg'); gomulu = false;
   document.body.classList.remove('portal-modu', 'yonetim-modu'); document.body.classList.add('sahip-modu');
   document.title = 'mdSinyal · Sahip paneli';
   ciz();
-  if (!kok.dataset.shBagli) { kok.dataset.shBagli = '1'; kok.addEventListener('click', tikla); kok.addEventListener('input', yaz); }
+  if (!kok.dataset.shBagli) { kok.dataset.shBagli = '1'; kok.addEventListener('click', tikla); kok.addEventListener('input', yaz); kok.addEventListener('submit', gonder); }
 }
 const ust = () => `<header class="sh-ust"><div class="sh-marka"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="#141e33"/><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="1.2"/><g fill="none" stroke="#ffc21a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20l12 12-12 12" stroke-opacity=".38"/><path d="M33 20l12 12-12 12"/></g></svg><span><b><span class="mk">md</span>Sinyal</b><small>Sahip paneli</small></span></div>
   ${okuyabilir() ? `<button class="sh-yenile" data-sh-yenile ${yukleniyor ? 'disabled' : ''}>${ik('sifirla')}<span>${yukleniyor ? 'Yükleniyor…' : 'Yenile'}</span></button>` : ''}</header>`;
@@ -326,9 +326,12 @@ function sonucHtml() {
     }).join('') : `<div class="sh-bos">${ik('ara')}<b>Eşleşen hesap yok</b><small>Aramayı ya da süzgeci değiştir.</small></div>`;
 }
 
+// Tarayıcının ham ağ hatası (Chrome 'Failed to fetch', Safari 'Load failed', Firefox 'NetworkError…') Türkçe gösterilir
+const turkceHata = x => { const m = (x && x.message) || String(x || ''); return /^(Failed to fetch|Load failed)$|NetworkError|network error/i.test(m) ? 'Sunucuya ulaşılamadı; internet bağlantını kontrol et' : m; };
+
 async function yenile() {
   yukleniyor = true; ciz();
-  try { await yukle(); hataMetni = ''; } catch (x) { hataMetni = x.message; if (x.yetki) belirtec = null; bildir(x.message, 'uyari'); }
+  try { await yukle(); hataMetni = ''; } catch (x) { hataMetni = turkceHata(x); if (x.yetki) belirtec = null; bildir(turkceHata(x), 'uyari'); }
   yukleniyor = false; ciz();
 }
 
@@ -340,13 +343,13 @@ async function tikla(ev) {
   const t = ev.target;
   if (t.closest('[data-sh-baglan]')) {
     const b = t.closest('button'); b.disabled = true;
-    try { await baglan(); hataMetni = ''; hesaplar = null; ciz(); await yenile(); } catch (x) { hataMetni = x.message; b.disabled = false; ciz(); }
+    try { await baglan(); hataMetni = ''; hesaplar = null; ciz(); await yenile(); } catch (x) { hataMetni = turkceHata(x); b.disabled = false; ciz(); }
     return;
   }
   if (t.closest('[data-sh-yenile]')) return yenile();
   const al = t.closest('[data-sh-alt]'); if (al) { alt = al.dataset.shAlt; return ciz(); }
   const kr = t.closest('[data-sh-kurs]'); if (kr) { alt = 'hesaplar'; suzgec = 'hepsi'; arama = (kursIst[kr.dataset.shKurs] || {}).ad || ''; return ciz(); }
-  if (!bagli() && t.closest('[data-sh-davet],[data-sh-sifre],[data-sh-hesap],[data-sh-geri]')) { try { await baglan(); hataMetni = ''; } catch (x) { return bildir(x.message, 'uyari'); } }
+  if (!bagli() && t.closest('[data-sh-davet],[data-sh-sifre],[data-sh-hesap],[data-sh-geri]')) { try { await baglan(); hataMetni = ''; } catch (x) { return bildir(turkceHata(x), 'uyari'); } }
   const gr = t.closest('[data-sh-geri]'); if (gr) { const x = silinecekler.find(y => y.uid === gr.dataset.shGeri); if (!x) return; gr.disabled = true; try { await silmeGeriAl(x); bildir(x.ad + ' geri alındı; yeniden girebilir'); ciz(); } catch (y) { gr.disabled = false; islemHata(y); } return; }
   if (gorunum === 'destek' && await destekTikla(t)) return;
   const s = t.closest('[data-sh-suz]'); if (s) { suzgec = s.dataset.shSuz; kok.querySelectorAll('[data-sh-suz]').forEach(b => { b.classList.toggle('secili', b === s); b.setAttribute('aria-selected', b === s); }); const r = kok.querySelector('[data-sh-sonuc]'); if (r) r.innerHTML = sonucHtml(); return; }
@@ -354,7 +357,7 @@ async function tikla(ev) {
   const sf = t.closest('[data-sh-sifre]'); if (sf) { const h = hesaplar.find(x => x.uid === sf.dataset.shSifre); if (h) sifrePenceresi(h); return; }
   const h = t.closest('[data-sh-hesap]'); if (h) { const x = hesaplar.find(y => y.uid === h.dataset.shHesap); if (x) hesapPenceresi(x); }
 }
-const islemHata = x => { bildir(x.message, 'uyari'); if (x.yetki) { kapatPencere(); ciz(); } };
+const islemHata = x => { bildir(turkceHata(x), 'uyari'); if (x.yetki) { kapatPencere(); ciz(); } };
 
 function hesapPenceresi(h) {
   const satir = (et, d) => d ? `<div class="sh-bilgi-satir"><span>${et}</span><b>${e(d)}</b></div>` : '';
@@ -430,7 +433,7 @@ export const hazirla = () => { gsiYukle().catch(() => { }); };
 export function otoBaglan() {
   if (bagli() || !ISTEMCI) return;
   if (okuyabilir()) { if (!hesaplar && !yukleniyor) yenile(); return; }  // Google penceresi açılmaz; işlemde istenir
-  baglan().then(() => { hataMetni = ''; hesaplar = null; ciz(); return yenile(); }).catch(x => { hataMetni = x.message; ciz(); });
+  baglan().then(() => { hataMetni = ''; hesaplar = null; ciz(); return yenile(); }).catch(x => { hataMetni = turkceHata(x); ciz(); });
 }
 // Henüz Yönetim hesabı yokken (ilk kurulum ya da hesap silindiyse): Google'da yetkili kişi kendine kurulum linki açar.
 // Yetkiyi yine Google IAM verir; projede yetkisi olmayan Google hesabı link oluşturamaz.
@@ -456,11 +459,75 @@ const kimlikUret = () => 's' + Date.now().toString(36) + Math.random().toString(
 
 function destekHtml() {
   const v = isl(), l = tumTalepler(), acik = l.filter(t => tDurum(t) !== 'Çözüldü').length, ay = bugunIso().slice(0, 7), hAy = v.hizmetler.filter(h => String(h.tarih || '').startsWith(ay));
-  const sek = [['talepler', 'Talepler', acik], ['hizmetler', 'Hizmetler', v.hizmetler.length]];
+  const sek = [['talepler', 'Talepler', acik], ['hizmetler', 'Hizmetler', v.hizmetler.length], ['hatalar', 'Son hatalar', hataRozet()]];
   return `<div class="sh-bas"><div><h1>Destek</h1><p>${acik} açık talep · bu ay ${hAy.length} hizmet</p></div>
       <div class="sh-bas-dg"><button class="dg dg-cizgi dg-kucuk" data-sh-yenile ${yukleniyor ? 'disabled' : ''}>${ik('sifirla')}${yukleniyor ? 'Yükleniyor…' : 'Yenile'}</button><button class="dg dg-cizgi dg-kucuk" data-sh-talep-ekle>${ik('arti')}Talep ekle</button><button class="dg dg-ana dg-kucuk" data-sh-hizmet-ekle>${ik('arti')}Hizmet ekle</button></div></div>
     <div class="sh-suz sh-alt" role="tablist">${sek.map(([k, a, n]) => `<button role="tab" aria-selected="${destekAlt === k}" class="${destekAlt === k ? 'secili' : ''}" data-sh-dalt="${k}">${a}${n ? ` <em>${n}</em>` : ''}</button>`).join('')}</div>
-    ${destekAlt === 'talepler' ? talepListeHtml(l) : hizmetListeHtml(v.hizmetler)}`;
+    ${destekAlt === 'talepler' ? talepListeHtml(l) : destekAlt === 'hatalar' ? hataListeHtml() : hizmetListeHtml(v.hizmetler)}`;
+}
+// ---- Son hatalar (worker GET /hata) ----
+// Uygulama hataları kişisel veri içermeden worker'da 7 gün tutulur (app.js gönderir; e-posta, uzun sayı, adres sorgusu silinir).
+// Okuma yalnız platform sahibine: Yönetim oturumunun Firebase kimliği (sahip hesabı) ya da worker'daki SAHIP_ANAHTAR.
+// Anahtar yalnız bu sekmenin belleğinde durur; hiçbir yere yazılmaz.
+const HATA_API = 'https://api.mdsinyal.com/hata';
+const hata = { liste: null, toplam: 0, toplamBilinir: false, yukleniyor: false, hata: '', yetkisiz: false, anahtar: '' };
+// sekme rozeti: worker toplamı verirse o (KV listesi en çok 1000 anahtar okur: 1000 ise '1000+'), vermezse yüklenen liste (en çok 300: '300+')
+const HATA_LISTE_EN = 300, HATA_SAY_EN = 1000;
+const hataRozet = () => !hata.liste ? 0 : hata.toplamBilinir ? (hata.toplam >= HATA_SAY_EN ? HATA_SAY_EN + '+' : hata.toplam) : (hata.liste.length >= HATA_LISTE_EN ? HATA_LISTE_EN + '+' : hata.liste.length);
+async function hataYetki() {
+  if (hata.anahtar) return 'Bearer ' + hata.anahtar;
+  if (bulutKanca && bulutKanca.yetki) { try { return (await bulutKanca.yetki()).Authorization || ''; } catch (x) { } }
+  return '';
+}
+async function hataGetir(ek = '') {
+  const yetki = await hataYetki();
+  if (!yetki) throw Object.assign(new Error('Yetki yok'), { yetkisiz: true });
+  const r = await fetch(HATA_API + ek, { headers: { Authorization: yetki } });
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 403 || r.status === 401) throw Object.assign(new Error('Yetki yok'), { yetkisiz: true });
+  if (!r.ok || !j.ok) throw new Error(j.hata || ('Sunucu ' + r.status + ' döndü'));
+  return j;
+}
+async function hatalarYukle() {
+  if (hata.yukleniyor) return;
+  hata.yukleniyor = true; hata.hata = ''; ciz();
+  try { const j = await hataGetir(); hata.liste = j.liste || []; hata.toplamBilinir = typeof j.toplam === 'number' && j.toplam >= hata.liste.length; hata.toplam = hata.toplamBilinir ? j.toplam : hata.liste.length; hata.yetkisiz = false; }
+  catch (x) { if (x.yetkisiz) { hata.yetkisiz = true; if (hata.anahtar) { hata.anahtar = ''; hata.hata = 'Anahtar kabul edilmedi'; } } else hata.hata = turkceHata(x); }
+  hata.yukleniyor = false; ciz();
+}
+const hataZaman = iso => { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); };
+const ROL_KISA = { mudur: 'müdür', sekreter: 'ön büro', usta: 'öğretmen', ortak: 'ortak', ogrenci: 'öğrenci', ziyaretci: 'ziyaretçi', demo: 'demo', yok: '' };
+function hataListeHtml() {
+  if (hata.liste === null && !hata.yukleniyor && !hata.yetkisiz && !hata.hata) { setTimeout(hatalarYukle, 0); }
+  const anahtarFormu = `<form data-sh-hata-anahtar style="display:flex;gap:8px;margin-top:14px;width:100%;max-width:360px"><span class="og-girdi" style="flex:1;min-width:0"><input type="password" name="anahtar" autocomplete="off" placeholder="SAHIP_ANAHTAR" aria-label="Sahip anahtarı"></span><button class="dg dg-ana dg-kucuk" type="submit">Göster</button></form>`;
+  if (hata.yetkisiz) return `<div class="sh-bos">${ik('kilit')}<b>Hata kayıtlarını yalnız platform sahibi görür</b><small>mdSinyal Yönetim’e platform sahibinin hesabıyla girdiysen liste kendiliğinden açılır. Başka hesapla girdiysen worker’daki SAHIP_ANAHTAR değerini yaz; anahtar bu sekmenin belleğinde kalır, hiçbir yere kaydedilmez. Anahtar tanımlı değilse: <code>wrangler secret put SAHIP_ANAHTAR</code>.</small>${anahtarFormu}${hata.hata ? `<p class="sh-hata">${ik('uyari')}<span>${e(hata.hata)}</span></p>` : ''}</div>`;
+  if (hata.hata && !hata.liste) return `<div class="sh-bos">${ik('uyari')}<b>Hata kayıtları okunamadı</b><small>${e(hata.hata)}</small><button class="dg dg-cizgi dg-kucuk" data-sh-hata-yenile>Yeniden dene</button></div>`;
+  if (!hata.liste) return `<div class="sh-bos">${ik('saat')}<b>Hata kayıtları yükleniyor…</b></div>`;
+  const ust = `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 0 12px"><small style="color:var(--soluk);font-size:13px">Son 7 gün · ${hataRozet()} kayıt${(hata.toplamBilinir ? hata.toplam > hata.liste.length : hata.liste.length >= HATA_LISTE_EN) ? ' (en yeni ' + hata.liste.length + ')' : ''}</small><button class="dg dg-cizgi dg-kucuk" data-sh-hata-yenile ${hata.yukleniyor ? 'disabled' : ''}>${ik('sifirla')}${hata.yukleniyor ? 'Yükleniyor…' : 'Yenile'}</button></div>`;
+  if (!hata.liste.length) return ust + `<div class="sh-bos">${ik('tik')}<b>Son 7 günde hata yok</b><small>Uygulamada beklenmeyen bir hata olunca burada görünür: tarih, sürüm, sayfa, mesaj ve kaç kez yaşandığı.</small></div>`;
+  // data-resmi: teknik metin (rota, yığın) sade dil çevirisine uğramasın (ui.js sadelestir)
+  return ust + `<div class="sh-liste" data-resmi>${hata.liste.map(x => `<button class="sh-satir" data-sh-hata="${e(x.id)}">
+    <span class="sh-av sh-av-yok">${ik('uyari')}</span>
+    <span class="sh-satir-ic"><b>${e(String(x.m || 'Mesaj yok').slice(0, 140))}</b><small>${e([hataZaman(x.son), x.s ? 'v' + x.s : '', x.r || '', ROL_KISA[x.rol] || ''].filter(Boolean).join(' · '))}</small></span>
+    <span class="sh-satir-sag">${+x.sayi > 1 ? `<em class="sh-rozet">${+x.sayi} kez</em>` : '<small>1 kez</small>'}${ik('sag')}</span></button>`).join('')}</div>
+    <p class="sh-dip">Kayıtlar kişisel veri içermez: e-posta, telefon ve T.C. gibi uzun sayılar sunucuda silinir; kurs yalnız kısaltılmış kimliğiyle sayılır. Aynı hata 10 dakikada bir kez yazılır, arada gelenler sayıya eklenir. Kayıtlar 7 gün sonra kendiliğinden silinir.</p>`;
+}
+function gonder(ev) {
+  const f = ev.target.closest('[data-sh-hata-anahtar]'); if (!f) return;
+  ev.preventDefault(); const v = f.anahtar.value.trim(); if (!v) return bildir('Anahtarı yaz', 'uyari');
+  hata.anahtar = v; hata.yetkisiz = false; hata.hata = ''; hata.liste = null; hatalarYukle();
+}
+async function hataPenceresi(id) {
+  const x = (hata.liste || []).find(y => y.id === id); if (!x) return;
+  const satir = (et, d) => d ? `<div class="krsd-satir"><span>${et}</span><b>${e(d)}</b></div>` : '';
+  const ic = k => `<div class="krsd" data-resmi><div class="krsd-liste">${satir('Son', hataZaman(k.son))}${satir('İlk', hataZaman(k.ilk))}${satir('Kaç kez', String(k.sayi || 1))}${satir('Sürüm', k.s ? 'v' + k.s : '')}${satir('Sayfa', k.r)}${satir('Rol', ROL_KISA[k.rol] || '')}${satir('Tarayıcı', k.tr)}${k.kurslar ? satir('Kurs sayısı', String(k.kurslar.length)) : ''}${satir('Tür', k.t === 'soz' ? 'Söz (promise) hatası' : '')}</div>
+    <h3 class="krsd-bas">Mesaj</h3><p class="krsd-not">${e(k.m || '')}</p>
+    ${k.y ? `<h3 class="krsd-bas">Yığın</h3><pre style="white-space:pre-wrap;word-break:break-word;font:12px/1.5 ui-monospace,Menlo,monospace;background:var(--panel-2,#f4f4f7);border-radius:10px;padding:10px 12px;margin:0;max-height:260px;overflow:auto">${e(k.y)}</pre>` : k.y === undefined ? '<p class="sh-dip" data-sh-hata-bekle>Ayrıntı yükleniyor…</p>' : ''}</div>`;
+  pencere({ baslik: 'Hata ayrıntısı', alt: true, icerik: `<div data-sh-hata-ic>${ic(x)}</div>`, altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button>`,
+    onAc: async p => {
+      try { const j = await hataGetir('?id=' + encodeURIComponent(x.id)); const yer = p.querySelector('[data-sh-hata-ic]'); if (yer && j.kayit) yer.innerHTML = ic({ ...x, ...j.kayit, y: j.kayit.y || '' }); }
+      catch (y) { const b = p.querySelector('[data-sh-hata-bekle]'); if (b) b.textContent = 'Ayrıntı okunamadı: ' + (y.yetkisiz ? 'yetki yok' : turkceHata(y)); }
+    } });
 }
 function talepListeHtml(l) {
   if (!l.length) return `<div class="sh-bos">${ik('mesaj')}<b>Destek talebi yok</b><small>Kurslar mdSinyal’de Hesabım › mdSinyal Destek’ten talep açınca burada görünür. WhatsApp ya da telefonla gelenleri “Talep ekle” ile kaydet.</small></div>`;
@@ -538,6 +605,8 @@ function hizmetPenceresi(h, on = {}) {
 }
 async function destekTikla(t) {
   const d = t.closest('[data-sh-dalt]'); if (d) { destekAlt = d.dataset.shDalt; ciz(); return true; }
+  if (t.closest('[data-sh-hata-yenile]')) { hatalarYukle(); return true; }
+  const hk = t.closest('[data-sh-hata]'); if (hk) { hataPenceresi(hk.dataset.shHata); return true; }
   if (t.closest('[data-sh-talep-ekle]')) { talepEklePenceresi(); return true; }
   if (t.closest('[data-sh-hizmet-ekle]')) { hizmetPenceresi(null); return true; }
   const tk = t.closest('[data-sh-talep]'); if (tk) { const x = tumTalepler().find(y => tKey(y) === tk.dataset.shTalep); if (x) talepPenceresi(x); return true; }

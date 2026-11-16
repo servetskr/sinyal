@@ -7,6 +7,11 @@
 //  · Demo (örnek kurs): Authorization başlığı yok → her mesaj ALICI'ya (demo telefonu) gider, yalnız ALICI'dan gelenler işlenir. Eskisi gibi.
 //  · Gerçek kurs: Authorization (Firebase oturumu) + X-Kurs → kursun kendi WhatsApp hattından (KV 'hat:<kurs>') alıcının numarasına gider;
 //    gelen mesajlar ve belgeler kursa ayrı tutulur ('gelen:<kurs>', 'medya-<kurs>-<id>'), yalnız kursun üyeleri okur.
+// Güvenlik (v209): APP_SECRET (gizli; Meta › Uygulama ayarları › Temel › Uygulama gizli anahtarı, virgülle birden fazla) tanımlıysa
+//   POST /webhook isteğinin X-Hub-Signature-256 başlığı (HMAC-SHA256, ham gövde) doğrulanır; uymazsa 403. Tanımlı değilse eski davranış sürer,
+//   günlüğe bir kez uyarı yazılır. VERIFY_TOKEN (isteğe bağlı) abonelik belirtecini koddan çıkarır; yoksa eski sabit kullanılır.
+// /hata: uygulama hatalarının kişisel veri içermeyen kısa kaydı (POST, sitenin kendi adresinden); KV 'hata:<gün>:<iz>' 7 gün.
+//   GET /hata yalnız platform sahibine: Firebase oturum belirteci (sahip uid) ya da SAHIP_ANAHTAR (gizli) ile.
 const IZINLI = ['https://mdsinyal.com', 'http://localhost:4481', 'http://127.0.0.1:4481'];
 const HEDEF = /^(https:\/\/mdsinyal\.com\/|https:\/\/servetskr\.github\.io\/sinyal\/|http:\/\/localhost:4481\/)/;
 const kucuk = s => String(s || '').toLocaleLowerCase('tr');
@@ -138,13 +143,94 @@ async function medyaAl(env, m, token, anahtar) {
   } catch (x) { }
   return null;
 }
+// ---- Meta webhook imzası (X-Hub-Signature-256) ----
+let imzaUyarisi = false;
+const hex = u8 => [...new Uint8Array(u8)].map(x => x.toString(16).padStart(2, '0')).join('');
+const esit = (a, b) => { if (a.length !== b.length) return false; let f = 0; for (let i = 0; i < a.length; i++) f |= a.charCodeAt(i) ^ b.charCodeAt(i); return f === 0; };
+async function hmacHex(gizli, veri) {
+  const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(gizli), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return hex(await crypto.subtle.sign('HMAC', k, veri));
+}
+// true: geçerli imza ya da APP_SECRET tanımlı değil (geçiş dönemi); false: imza yok ya da uymuyor
+async function metaImzaDogru(env, ham, baslik) {
+  const gizliler = String(env.APP_SECRET || '').split(',').map(x => x.trim()).filter(Boolean);
+  if (!gizliler.length) { if (!imzaUyarisi) { imzaUyarisi = true; console.warn(JSON.stringify({ tur: 'uyari', konu: 'APP_SECRET tanımlı değil; Meta webhook imzası denetlenmiyor' })); } return true; }
+  const m = /^sha256=([0-9a-f]{64})$/i.exec(String(baslik || '').trim()); if (!m) return false;
+  const gelen = m[1].toLowerCase();
+  for (const g of gizliler) if (esit(await hmacHex(g, ham), gelen)) return true;
+  return false;
+}
+// ---- uygulama hata kayıtları ----
+const SAHIP_UID = 'BRqadaBjfLdWjA3NtHL568z41Ng2', FIREBASE_KEY = 'AIzaSyDbcCLYjyvOBQgUNErTMHtWCCIVJulQ7F4';
+const HATA_GUN = 7 * 86400, hataIp = new Map(), hataIpGun = new Map(), hataBekleyen = new Map();
+let hataYazim = { gun: '', n: 0 };
+// kişisel veri sızmasın: e-posta, uzun sayı (TC, telefon), adresin sorgu/parça kısmı silinir; yalnız izin verilen karakterler kalır
+const hataTemiz = (s, n) => String(s || '').replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, '<e-posta>').replace(/\d[\d\s().-]{5,}\d/g, '<sayı>').replace(/(https?:\/\/[^\s/]+)?(\/[^\s?#:)]*)[?#][^\s:)]*/g, '$2').replace(/[^\p{L}\p{N}\s.,:;!?'"()<>\[\]{}\/\\_=+*&%$#@|~^`-]/gu, '').slice(0, n);
+async function hataAl(req, env, cevap) {
+  if (!env.LINK) return cevap({ ok: false }, 500);
+  const ip = req.headers.get('CF-Connecting-IP') || '', dk = Math.floor(Date.now() / 60e3), sayac = hataIp.get(ip);
+  if (sayac && sayac.dk === dk && sayac.n >= 20) return cevap({ ok: false, hata: 'sinir' }, 429);
+  hataIp.set(ip, sayac && sayac.dk === dk ? { dk, n: sayac.n + 1 } : { dk, n: 1 }); if (hataIp.size > 5000) hataIp.clear();
+  const ham = await req.text(); if (!ham || ham.length > 2048) return cevap({ ok: false, hata: 'boyut' }, 400);
+  let b; try { b = JSON.parse(ham); } catch (x) { return cevap({ ok: false, hata: 'gecersiz' }, 400); }
+  const k = {
+    s: String(b.s || '').replace(/\D/g, '').slice(0, 6), r: String(b.r || '').replace(/[^#/a-z0-9-]/gi, '').slice(0, 40),
+    rol: ['mudur', 'sekreter', 'usta', 'ortak', 'ogrenci', 'ziyaretci', 'demo', 'yok'].includes(b.rol) ? b.rol : 'yok',
+    t: b.t === 'soz' ? 'soz' : 'hata', m: hataTemiz(b.m, 300), y: hataTemiz(b.y, 600), ks: /^[0-9a-f]{8}$|^demo$/.test(b.ks || '') ? b.ks : '',
+    tr: String(b.tr || '').replace(/[^\w .()/-]/g, '').slice(0, 40),
+  };
+  if (!k.m) return cevap({ ok: false, hata: 'bos' }, 400);
+  const iz = (await hmacHex('hata', new TextEncoder().encode([k.s, k.m, k.y.split('\n')[0]].join('|')))).slice(0, 12);
+  console.log(JSON.stringify({ tur: 'uygulama-hatasi', iz, ...k }));  // Workers Logs (gözlem açık)
+  const simdi = new Date(), gun = simdi.toISOString().slice(0, 10), anahtar = 'hata:' + gun + ':' + iz;
+  const eski = await env.LINK.get(anahtar, { type: 'json' }).catch(() => null);
+  // KV yazımı sınırlı (ücretsiz plan): aynı iz 10 dakikada bir yazılır, arada gelenler sayılır; günlük üst sınır
+  if (eski && simdi - new Date(eski.son) < 10 * 60e3) { hataBekleyen.set(anahtar, (hataBekleyen.get(anahtar) || 0) + 1); return new Response(null, { status: 204, headers: cevap.cors }); }
+  if (hataYazim.gun !== gun) hataYazim = { gun, n: 0 };
+  // Origin başlığı tarayıcı dışından taklit edilebilir: tek kaynak KV yazım hakkını (kısa link, imza, durum kayıtlarıyla ortak) tüketmesin
+  const ipg = hataIpGun.get(ip); if (ipg && ipg.gun === gun && ipg.n >= 10) return new Response(null, { status: 204, headers: cevap.cors });
+  if (hataYazim.n >= (+env.HATA_GUNLUK_SINIR || 100)) return new Response(null, { status: 204, headers: cevap.cors });
+  hataYazim.n++; hataIpGun.set(ip, ipg && ipg.gun === gun ? { gun, n: ipg.n + 1 } : { gun, n: 1 }); if (hataIpGun.size > 5000) hataIpGun.clear();
+  const ek = hataBekleyen.get(anahtar) || 0; hataBekleyen.delete(anahtar);
+  const kayit = { iz, ilk: eski ? eski.ilk : simdi.toISOString(), son: simdi.toISOString(), sayi: (eski ? eski.sayi : 0) + 1 + ek, ...k, kurslar: [...new Set([...(eski && eski.kurslar || []), k.ks].filter(Boolean))].slice(0, 8) };
+  await env.LINK.put(anahtar, JSON.stringify(kayit), { expirationTtl: HATA_GUN, metadata: { sayi: kayit.sayi, son: kayit.son, s: k.s, r: k.r, rol: k.rol, m: k.m.slice(0, 160) } });
+  return new Response(null, { status: 204, headers: cevap.cors });
+}
+// platform sahibi mi: SAHIP_ANAHTAR (gizli) ya da Firebase kimliği (Google'ın Identity Toolkit'i belirteci doğrular)
+async function sahipMi(req, env) {
+  const tok = (req.headers.get('Authorization') || '').replace(/^Bearer /, '').trim(); if (!tok) return false;
+  if (env.SAHIP_ANAHTAR && esit(tok, String(env.SAHIP_ANAHTAR))) return true;
+  if (tok.split('.').length !== 3) return false;
+  try {
+    const r = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=' + (env.FIREBASE_KEY || FIREBASE_KEY), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: tok }) });
+    if (!r.ok) return false;
+    const j = await r.json(); return !!(j.users && j.users[0] && j.users[0].localId === (env.SAHIP_UID || SAHIP_UID));
+  } catch (x) { return false; }
+}
+async function hataListe(req, env, url, cevap) {
+  if (!(await sahipMi(req, env))) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
+  if (!env.LINK) return cevap({ ok: true, liste: [] });
+  const id = url.searchParams.get('id');
+  if (id) { if (!/^\d{4}-\d{2}-\d{2}:[0-9a-f]{12}$/.test(id)) return cevap({ ok: false }, 400); const v = await env.LINK.get('hata:' + id, { type: 'json' }); return v ? cevap({ ok: true, kayit: v }) : cevap({ ok: false }, 404); }
+  const gun = url.searchParams.get('gun'), on = 'hata:' + (/^\d{4}-\d{2}-\d{2}$/.test(gun || '') ? gun + ':' : '');
+  const l = await env.LINK.list({ prefix: on, limit: 1000 });
+  const liste = l.keys.map(k => ({ id: k.name.slice(5), gun: k.name.slice(5, 15), ...(k.metadata || {}) })).sort((a, b) => String(b.son).localeCompare(String(a.son))).slice(0, 300);
+  return cevap({ ok: true, liste, toplam: l.keys.length });
+}
 export default {
   async fetch(req, env) {
     const url = new URL(req.url), origin = req.headers.get('Origin') || '';
     const cors = { 'Access-Control-Allow-Origin': IZINLI.includes(origin) ? origin : IZINLI[0], 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Kurs, X-Yedek, X-Sikistirma', 'Access-Control-Expose-Headers': 'X-Sikistirma', 'Vary': 'Origin' };
     const cevap = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
+    cevap.cors = cors;
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
     const yol = decodeURIComponent(url.pathname.replace(/^\/+|\/+$/g, ''));
+    // uygulama hataları: POST girişsiz (yalnız sitenin kendi adresinden), GET yalnız platform sahibi
+    if (yol === 'hata') {
+      if (req.method === 'POST') return IZINLI.includes(origin) ? hataAl(req, env, cevap) : cevap({ ok: false, hata: 'Izin yok' }, 403);
+      if (req.method === 'GET') return hataListe(req, env, url, cevap);
+      return cevap({ ok: false }, 405);
+    }
     const G = 'https://graph.facebook.com/v25.0/' + env.PHONE_ID;
     // Gerçek kurs isteği: Firebase oturumu + kurs kimliği (yoksa demo yolu)
     const gercek = !!req.headers.get('Authorization') && yol !== 'yedek';
@@ -202,11 +288,14 @@ export default {
     }
     // Meta webhook doğrulaması (abonelik kurulurken bir kez)
     if (yol === 'webhook' && req.method === 'GET') {
-      if (url.searchParams.get('hub.mode') === 'subscribe' && url.searchParams.get('hub.verify_token') === 'sinyal-dogrulama') return new Response(url.searchParams.get('hub.challenge') || '', { status: 200 });
+      if (url.searchParams.get('hub.mode') === 'subscribe' && url.searchParams.get('hub.verify_token') === (env.VERIFY_TOKEN || 'sinyal-dogrulama')) return new Response(url.searchParams.get('hub.challenge') || '', { status: 200 });
       return new Response('Dogrulanamadi', { status: 403 });
     }
     if (yol === 'webhook' && req.method === 'POST') {
-      let p; try { p = await req.json(); } catch (x) { return new Response('ok'); }
+      // Meta her isteği uygulamanın gizli anahtarıyla imzalar; ham gövde üzerinden doğrulanır (APP_SECRET yoksa eski davranış)
+      const ham = await req.arrayBuffer();
+      if (!(await metaImzaDogru(env, ham, req.headers.get('X-Hub-Signature-256')))) { console.warn(JSON.stringify({ tur: 'uyari', konu: 'webhook imzası geçersiz', ip: req.headers.get('CF-Connecting-IP') || '' })); return new Response('Imza gecersiz', { status: 403 }); }
+      let p; try { p = JSON.parse(new TextDecoder().decode(ham)); } catch (x) { return new Response('ok'); }
       const v = p && p.entry && p.entry[0] && p.entry[0].changes && p.entry[0].changes[0] && p.entry[0].changes[0].value;
       // gönderilen mesajların durumu (gönderildi / iletildi / okundu): mdSinyal ekranında ✓✓ olarak görünür
       const st = v && v.statuses;
@@ -274,7 +363,15 @@ export default {
     if (req.method === 'GET') {
       if (!yol) return cevap({ ok: true, hazir: !!(env.WA_TOKEN && env.PHONE_ID && env.ALICI), belge: true, kisa: !!env.LINK, kursHatti: true, sablon: !!env.SABLON_AD, demoHatlari: { usta: !!env.PHONE_ID_USTA, mudur: !!env.PHONE_ID_MUDUR } });
       const anahtar = yol.startsWith('k/') ? yol.slice(2) : yol;
-      if (/^(gelen$|(hat|hatno|gelen|medya|durum|yedek|kisaad|kursad)[:-])/.test(anahtar)) return cevap({ ok: false }, 404);  // iç kayıtlar kısa link gibi okunamaz
+      if (/^(gelen$|(hat|hatno|gelen|medya|durum|yedek|kisaad|kursad|hata|sohbet)[:-])/.test(anahtar)) return cevap({ ok: false }, 404);  // iç kayıtlar kısa link gibi okunamaz
+      // imza dönüşü: sunucu kaydı (zaman, IP, ülke, tarayıcı) yalnız imza isteğinin mührünü bilen kursa verilir (?ka=)
+      if (yol.startsWith('k/takip-') && env.LINK) {
+        const g = await env.LINK.getWithMetadata(anahtar), md = g.metadata || null;
+        if (!g.value) return cevap({ ok: false }, 404);
+        const ka = url.searchParams.get('ka') || '';
+        const bilgi = md && md.ka && ka && esit(ka, md.ka) ? { zaman: md.zaman || '', ip: md.ip || '', ulke: md.ulke || '', ua: md.ua || '' } : null;
+        return cevap({ ok: true, hedef: g.value, ...(bilgi ? { bilgi } : {}) });
+      }
       const v = env.LINK ? await env.LINK.get(anahtar) : null;
       if (yol.startsWith('k/')) return cevap(v ? { ok: true, hedef: v } : { ok: false }, v ? 200 : 404);
       if (v) return Response.redirect(v, 302);
@@ -287,8 +384,8 @@ export default {
       if (!env.LINK) return cevap({ ok: false, hata: 'Kisa link deposu bagli degil' }, 500);
       if (!gercek || rol !== 'mudur') return cevap({ ok: false, hata: 'Yalniz kurs muduru' }, 403);
       const ad = String((b && b.ad) || '').toLowerCase(), hedef = String((b && b.hedef) || '');
-      const AYRILMIS = ['ozellikler', 'iletisim', 'giris', 'gizlilik', 'eklenti', 'fonts', 'demo', 'yonetim', 'sinyal', 'mdsinyal', 'admin', 'destek', 'kayit', 'blog', 'webhook', 'kisa', 'yedek', 'durum', 'gelen', 'medya'];
-      if (!/^[a-z0-9-]{4,30}$/.test(ad) || AYRILMIS.includes(ad) || /^(hat|hatno|gelen|medya|durum|yedek|kisaad|kursad|takip)[:-]/.test(ad)) return cevap({ ok: false, hata: 'Bu ad kullanilamaz: 4-30 karakter, kucuk harf, rakam ve tire' }, 400);
+      const AYRILMIS = ['ozellikler', 'iletisim', 'giris', 'gizlilik', 'eklenti', 'fonts', 'demo', 'yonetim', 'sinyal', 'mdsinyal', 'admin', 'destek', 'kayit', 'blog', 'webhook', 'kisa', 'yedek', 'durum', 'gelen', 'medya', 'hata'];
+      if (!/^[a-z0-9-]{4,30}$/.test(ad) || AYRILMIS.includes(ad) || /^(hat|hatno|gelen|medya|durum|yedek|kisaad|kursad|takip|hata|sohbet)[:-]/.test(ad)) return cevap({ ok: false, hata: 'Bu ad kullanilamaz: 4-30 karakter, kucuk harf, rakam ve tire' }, 400);
       if (!HEDEF.test(hedef) || hedef.length > 2000) return cevap({ ok: false, hata: 'Gecersiz hedef' }, 400);
       const sahip = await env.LINK.get('kisaad:' + ad);
       if (sahip && sahip !== kursId) return cevap({ ok: false, hata: 'Bu ad baska bir kursta' }, 409);
@@ -304,10 +401,18 @@ export default {
       if (!HEDEF.test(hedef) || hedef.length > 200000) return cevap({ ok: false, hata: 'Gecersiz hedef' }, 400);
       // kısa ve tahmin edilemez: kişinin adı linkte görünmez (32 harflik alfabe, 7 karakter, çakışırsa yeniden)
       const harf = 'abcdefghijkmnpqrstuvwxyz23456789', uret = () => [...crypto.getRandomValues(new Uint8Array(7))].map(x => harf[x & 31]).join('');
+      // imza dönüşü (takip): bir kez yazılır; üzerine başka imza konamaz. Yanına sunucu kanıtı (zaman, IP, ülke, tarayıcı) eklenir.
+      const tk = b.takip ? 'takip-' + sade(b.takip) : '';
+      let tkYaz = !!tk;
+      if (tk) { const var0 = await env.LINK.get(tk); if (var0 && var0 !== hedef) return cevap({ ok: false, hata: 'Bu imza zaten gönderildi' }, 409); if (var0) tkYaz = false; }
       let slug = uret(); for (let i = 0; i < 4 && await env.LINK.get(slug); i++) slug = uret();
       await env.LINK.put(slug, hedef, { expirationTtl: 5184000 });
-      if (b.takip) await env.LINK.put('takip-' + sade(b.takip), hedef, { expirationTtl: 5184000 });
-      return cevap({ ok: true, slug });
+      if (tkYaz) {
+        const ka = /^[0-9a-f]{16,64}$/.test(String(b.ka || '')) ? String(b.ka) : '';
+        const md = { zaman: new Date().toISOString(), ip: req.headers.get('CF-Connecting-IP') || '', ulke: (req.cf && req.cf.country) || '', ua: String(req.headers.get('User-Agent') || '').slice(0, 300), ...(ka ? { ka } : {}) };
+        await env.LINK.put(tk, hedef, { expirationTtl: 5184000, metadata: md });
+      }
+      return cevap({ ok: true, slug, ...(tkYaz ? { sunucuZaman: new Date().toISOString() } : {}) });
     }
     if (yol) return cevap({ ok: false, hata: 'Bilinmeyen adres' }, 404);
     let metin = String((b && b.metin) || '').trim().slice(0, 4000);

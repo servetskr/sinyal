@@ -2,13 +2,14 @@
 // öğretmen notları) ve Geçmiş (yapılan dersler, öğrenci onayı, değerlendirme).
 // Eski ogrenci.js derslerHtml / programHtml / yaklasanHtml / degerlendirKart / ders defteri işlevleri buraya taşındı;
 // onay, itiraz, yıldız, takvim dosyası (data-og-*) ogrenci.js ogBagla'da; ders al, kursa yaz, saat değiştir, iptal portal.js ogGenelTik'te çalışır.
-import { S, BECERI, DERS_TUR_AD, egitmen, arac, ogretmen, fark, gun, tarihOku, iso, iptalEdilebilir, dersSirasi, kapaliGun, ogrOzellik, tamAd } from '../veri.js?v=208';
-import { tarihUzun, gunAdi, gunKisa, ayAdi } from '../ui.js?v=208';
-import * as TK from '../takvim.js?v=208';
-import { onayBekleyen, MUFREDAT } from '../ogrenci.js?v=208';
-import { randevuEngeli, engelYazilir } from '../risk.js?v=208';
-import { kursaYaz } from '../ozellik.js?v=208';
-import { esc, oi, sayfaBas, geri, bolum, kart, liste, satir, ikonKutu, cip, serit, not, bos, dugme, sekmeler, stilEkle } from './ui.js?v=208';
+import { S, BECERI, DERS_TUR_AD, egitmen, arac, ogretmen, fark, gun, tarihOku, iso, iptalEdilebilir, dersSirasi, kapaliGun, ogrOzellik, tamAd } from '../veri.js?v=209';
+import { gerekliDireksiyon } from '../veri.js?v=209';
+import { tarihUzun, gunAdi, gunKisa, ayAdi } from '../ui.js?v=209';
+import * as TK from '../takvim.js?v=209';
+import { onayBekleyen, MUFREDAT, sinavAdi, hakDurum } from '../ogrenci.js?v=209';
+import { randevuEngeli, engelYazilir } from '../risk.js?v=209';
+import { kursaYaz } from '../ozellik.js?v=209';
+import { esc, oi, sayfaBas, geri, bolum, kart, liste, satir, ikonKutu, cip, serit, not, bos, dugme, sekmeler, stilEkle } from './ui.js?v=209';
 
 /* ---------- ekran durumu (yeniden çizimde korunur) ---------- */
 let sekme = 'program';   // 'program' | 'gelisim' | 'gecmis'
@@ -78,8 +79,9 @@ function kartBilgi(o, k, sd) {
     return { ikon: 'kitap', ad: 'Teorik ders', cip: gecti ? (t.yoklama ? cip(vardi ? 'Katıldın' : 'Katılmadın', vardi ? 'yesil' : 'kirmizi') : cip('Bitti', 'gri')) : o.tarih === bugun ? cip('Bugün', 'gri') : cip('Teorik', 'mor'),
       ton: !gecti && o.tarih === bugun ? 'turuncu' : '', kim: t.konu + (og ? ' · ' + og.ad : ''), kimIkon: 'kitap', sag2: t.salon || '', sag2Ikon: 'harita', ac: false };
   }
-  const s = o.s, r = (s.sonuc || {})[k.id];
-  return { ikon: 'bayrak', ad: s.tur + ' sınavı', cip: r && r.sonuc ? cip(esc(r.sonuc), r.sonuc === 'Geçti' ? 'yesil' : 'kirmizi') : cip('Sınav', 'mor'), ton: '',
+  // sınav sonucu s.sonuc[k.id] içinde düz metin ('Geçti' | 'Kaldı' | 'Girmedi'); eski kayıtta { sonuc } olabilir
+  const s = o.s, r0 = (s.sonuc || {})[k.id], r = typeof r0 === 'string' ? r0 : r0 && r0.sonuc;
+  return { ikon: 'bayrak', ad: sinavAdi(s.tur), cip: r ? cip(esc(r), r === 'Geçti' ? 'yesil' : 'kirmizi') : cip('Sınav', 'mor'), ton: '',
     kim: s.yer || '', kimIkon: 'harita', sag2: '', sag2Ikon: '', ac: false };
 }
 function dersKart(o, k, sd) {
@@ -104,7 +106,7 @@ function gunHucre(t, l, ay) {
   return `<button type="button" class="ox-drs-gun ${cls}" data-ox-drs-gun="${t}" aria-pressed="${t === secili}" aria-label="${esc(tarihUzun(t))}${t === gun(0) ? ', bugün' : ''}${n ? ', ' + n + ' ders' : kap ? ', kurs kapalı' : ''}">${ay ? '' : `<small>${gunKisa(t)}</small>`}<b>${dt.getDate()}</b><i class="${n ? 'var' : ''}"></i></button>`;
 }
 function programHtml(k, ctx, l) {
-  const dir = !!ctx.S0.direksiyon, sd = ctx.sd, dt = tarihOku(secili);
+  const dir = !!gerekliDireksiyon(k), sd = ctx.sd, dt = tarihOku(secili), bitti = k.asama === 'Ehliyet', hd = hakDurum(k);  // hd: sınav hakkı doldu, karar kursta
   const ay = `<div class="ox-drs-ay"><button type="button" class="ox-drs-ay-ad" data-ox-drs-ay aria-expanded="${ayAcik}" aria-label="${ayAcik ? 'Hafta görünümüne dön' : 'Ay görünümünü aç'}"><span>${ayAdi(dt.getMonth(), true)} ${dt.getFullYear()}</span>${oi(ayAcik ? 'yukari' : 'asagi')}</button>
     <span class="ox-drs-gez"><button type="button" data-ox-drs-git="-1" aria-label="${ayAcik ? 'Önceki ay' : 'Önceki hafta'}"><span>${oi('sol')}</span></button><button type="button" data-ox-drs-git="1" aria-label="${ayAcik ? 'Sonraki ay' : 'Sonraki hafta'}"><span>${oi('sag')}</span></button></span></div>`;
   const takvim = ayAcik
@@ -116,14 +118,15 @@ function programHtml(k, ctx, l) {
   if (gunun.length) govde = gunun.map(o => dersKart(o, k, sd)).join('');
   else {
     const sonraki = l.find(o => o.tarih > secili && fark(o.tarih) >= 0), ileride = l.some(o => fark(o.tarih) >= 0);
-    const baslik = kap ? (kap === 'Pazar' ? 'Pazar günü kurs kapalı' : 'Resmî tatil, kurs kapalı') : ileride ? 'Bu gün dersin yok' : 'Planlı dersin yok';
-    const alt = sonraki ? `Sıradaki dersin: ${esc(gunBaslik(sonraki.tarih))}, ${esc(sonraki.saat)}`
-      : ileride ? 'Bu günden sonra planlı dersin yok.' : dir && k.asama === 'Direksiyon' ? 'Aşağıdan direksiyon dersi alabilirsin.' : 'Programın belli olunca burada görünür.';
+    const tamam = bitti && !ileride;  // ehliyetini almış: yeni ders beklenmez
+    const baslik = tamam ? 'Kursun tamamlandı' : kap ? (kap === 'Pazar' ? 'Pazar günü kurs kapalı' : 'Resmî tatil, kurs kapalı') : ileride ? 'Bu gün dersin yok' : 'Planlı dersin yok';
+    const alt = tamam ? 'Yeni dersin yok.' : sonraki ? `Sıradaki dersin: ${esc(gunBaslik(sonraki.tarih))}, ${esc(sonraki.saat)}`
+      : ileride ? 'Bu günden sonra planlı dersin yok.' : hd ? 'Kurs seninle görüşünce programın burada görünür.' : dir && k.asama === 'Direksiyon' ? 'Aşağıdan direksiyon dersi alabilirsin.' : 'Programın belli olunca burada görünür.';
     govde = kart(bos('takvim', baslik, alt, sonraki ? dugme('Sıradaki derse git', { 'data-ox-drs-gun': sonraki.tarih }, { tur: 'ikincil', kucuk: true }) : ''), 'ox-drs-bos');
   }
   // Ders alma: alınabiliyorsa düğme; alınamıyorsa nedeni ve (işe yarıyorsa) kursa yazma yolu
   let al = '';
-  if (dir && k.asama !== 'Ehliyet') {
+  if (dir && !bitti && !hd) {
     const engel = randevuEngeli(k);
     if (!engel) al = `<button type="button" class="ox-drs-ekle" data-iste>${oi('arti')}<span>Direksiyon dersi al</span></button>`;
     else if (engelYazilir(engel)) { const ek = /hepsi planlandı/.test(engel); al = liste([satir({ ikon: 'wp', ton: 'yesil', baslik: ek ? 'Ek ders için kursa yaz' : 'Ders için kursa yaz', alt: esc(engel.split(/(?<=\.)\s/)[0]), attrs: { 'data-kursa-yaz': ek ? 'ek' : 'ders' } })], 'ox-drs-engel'); }
@@ -134,7 +137,7 @@ function programHtml(k, ctx, l) {
     + `<div class="ox-bolum ox-drs-gun-bas"><h2>${esc(gunBaslik(secili))}</h2>${sayi ? `<span class="ox-bolum-sag">${sayi}</span>` : ''}</div>`
     + `<div class="ox-drs-kartlar">${govde}</div>` + al
     + (ileri ? `<button type="button" class="ox-drs-tel" data-og-takvim>${oi('takvim')}<span>Telefon takvimine ekle</span></button>` : '')
-    + `<p class="ox-drs-dip">Program değişirse WhatsApp’tan haber verilir.</p>`;
+    + (bitti ? '' : `<p class="ox-drs-dip">Program değişirse WhatsApp’tan haber verilir.</p>`);
 }
 
 /* ---------- ders ayrıntısı ---------- */
@@ -184,9 +187,9 @@ function ayrintiHtml(k, ctx, o) {
 const beceriSatir = (ad, v, once) => `<div class="ox-drs-bs"><span class="ox-drs-bs-ad">${esc(ad)}</span><span class="ox-drs-bs-d ${puanTon(v)}">${virgul(v)}${once != null ? `<em class="${v >= once ? 'yukari' : 'asagi'}" role="img" aria-label="${v >= once ? 'öncekine göre arttı' : 'öncekine göre azaldı'}">${oi(v >= once ? 'yukari' : 'asagi')}</em>` : ''}</span>${serit(v / 5 * 100, puanTon(v))}</div>`;
 const notKart = d => `<figure class="ox-kart ox-drs-not"><blockquote>“${esc(d.not)}”</blockquote><figcaption>${esc((egitmen(d.egitmen) || {}).ad || '')} · ${esc(gunAy(d.tarih))}</figcaption></figure>`;
 function gelisimHtml(k, ctx) {
-  const S0 = ctx.S0, dir = !!S0.direksiyon;
+  const S0 = ctx.S0, dir = !!gerekliDireksiyon(k);
   const kutu = (ust, n, top, birim) => `<div class="ox-kart ox-drs-ilerleme"><small>${ust}</small><b>${n}<span>/${top} ${birim}</span></b>${serit(top ? n / top * 100 : 0, n >= top ? 'yesil' : 'mavi')}</div>`;
-  let h = `<div class="ox-drs-ilerlemeler ${dir ? '' : 'tek'}">${dir ? kutu('Direksiyon', k.direksiyon, S0.direksiyon, 'ders') : ''}${kutu('Teorik', k.teorik, S0.teorik, 'saat')}</div>`;
+  let h = `<div class="ox-drs-ilerlemeler ${dir ? '' : 'tek'}">${dir ? kutu('Direksiyon', k.direksiyon, gerekliDireksiyon(k), 'ders') : ''}${kutu('Teorik', k.teorik, S0.teorik, 'saat')}</div>`;
   if (dir) {
     const { l, son, once } = beceriOzet(k), sayi = Math.min(3, l.length);
     if (l.length) {
@@ -218,10 +221,10 @@ function degerlendirKutu(d, baslikli = true) {
     <div class="ox-drs-deg-alt"><small>Puanını yalnız kurs yönetimi görür.</small>${dugme('Gönder', { 'data-og-puan': d.id, disabled: true }, { kucuk: true })}</div></div>`;
 }
 function gecmisHtml(k, ctx) {
-  const S0 = ctx.S0, onayAcik = !!S0.direksiyon && ogrOzellik('dersOnay');
+  const S0 = ctx.S0, onayAcik = !!gerekliDireksiyon(k) && ogrOzellik('dersOnay');
   const gecmis = S.dersler.filter(d => d.kursiyer === k.id && d.durum !== 'Planlandı' && d.durum !== 'İptal').sort((a, b) => (b.tarih + b.saat).localeCompare(a.tarih + a.saat));
   const yap = yapilanlar(k);
-  if (!gecmis.length) return kart(bos('gecmis', 'Henüz yapılan dersin yok', S0.direksiyon ? 'Direksiyon derslerin yapıldıkça burada listelenir.' : 'Yapılan derslerin burada listelenir.'), 'ox-drs-bos');
+  if (!gecmis.length) return kart(bos('gecmis', 'Henüz yapılan dersin yok', gerekliDireksiyon(k) ? 'Direksiyon derslerin yapıldıkça burada listelenir.' : 'Yapılan derslerin burada listelenir.'), 'ox-drs-bos');
   let h = '';
   const deg = yap.find(d => fark(d.tarih) >= -7 && !d.ogrenciPuan);
   if (deg) h += degerlendirKutu(deg);
@@ -231,10 +234,10 @@ function gecmisHtml(k, ctx) {
   if (onayAcik) {
     const onay = yap.filter(d => d.ogrenciOnay && d.ogrenciOnay.durum === 'onay').length, itiraz = yap.filter(d => d.ogrenciOnay && d.ogrenciOnay.durum === 'itiraz').length;
     const c = (ad, n, ton = '') => `<div><small>${ad}</small><b class="${ton}">${n}</b></div>`;
-    h += bolum('Ders defterin') + `<div class="ox-kart ox-drs-defter">${c('Sözleşmede', S0.direksiyon + (k.ekDersHakki || 0))}${c('Yapıldı', yap.length)}${c('Onayladın', onay, onay ? 'yesil' : '')}${itiraz ? c('İtiraz', itiraz, 'kirmizi') : c('MEBBİS’te', yap.filter(d => d.meb).length)}</div>`;
+    h += bolum('Ders defterin') + `<div class="ox-kart ox-drs-defter">${c('Sözleşmede', gerekliDireksiyon(k) + (k.ekDersHakki || 0))}${c('Yapıldı', yap.length)}${c('Onayladın', onay, onay ? 'yesil' : '')}${itiraz ? c('İtiraz', itiraz, 'kirmizi') : c('MEBBİS’te', yap.filter(d => d.meb).length)}</div>`;
   }
   const gelmedi = gecmis.filter(d => d.durum === 'Gelmedi').length;
-  h += bolum('Yapılan dersler', `${k.direksiyon}/${S0.direksiyon}${gelmedi ? ' · ' + gelmedi + ' gelmedin' : ''}`) + liste(gecmis.map(d => {
+  h += bolum('Yapılan dersler', `${k.direksiyon}/${gerekliDireksiyon(k)}${gelmedi ? ' · ' + gelmedi + ' gelmedin' : ''}`) + liste(gecmis.map(d => {
     const ok = d.durum === 'Yapıldı', o2 = d.ogrenciOnay, h2 = egitmen(d.egitmen);
     const sag = !ok ? cip(d.durum === 'Gelmedi' ? 'Gelmedin' : esc(d.durum), 'kirmizi') : o2 ? cip(o2.durum === 'onay' ? 'Onayladın' : 'İtiraz', o2.durum === 'onay' ? 'yesil' : 'kirmizi') : d.ogrenciPuan ? `<span class="ox-drs-puan-k" aria-label="${d.ogrenciPuan.puan}/5 yıldız">${oi('yildiz', 'dolu')}${d.ogrenciPuan.puan}</span>` : '';
     return satir({ sol: ikonKutu(ok ? 'tik' : 'yanlis', ok ? 'yesil' : 'kirmizi'), baslik: `${esc(gunAy(d.tarih))} · ${esc(d.saat)}`, alt: esc([h2 && h2.ad, d.sure ? d.sure + ' dk' : ''].filter(Boolean).join(' · ')), sag, attrs: { 'data-ox-drs-ac': d.id } });
@@ -251,7 +254,7 @@ export function ekran(ctx) {
   if (ac) html = ayrintiHtml(k, ctx, { tur: 'direksiyon', id: ac.id, tarih: ac.tarih, saat: ac.saat, d: ac });
   else {
     acik = null;
-    const ob = ctx.S0.direksiyon && ogrOzellik('dersOnay') ? onayBekleyen(k) : 0;
+    const ob = gerekliDireksiyon(k) && ogrOzellik('dersOnay') ? onayBekleyen(k) : 0;
     const sekmeAd = [['program', 'Programım'], ['gelisim', 'Gelişim'], ['gecmis', ob ? `Geçmiş<em class="ox-drs-rozet" aria-label=", ${ob} onay bekliyor">${ob}</em>` : 'Geçmiş']];
     html = `<div class="ox-drs-sayfa">` + sayfaBas('Derslerim') + sekmeler(sekmeAd, sekme, 'data-ox-drs-sekme', 'cizgi')
       + `<div class="ox-drs-govde ${sekme}" role="tabpanel">${sekme === 'gelisim' ? gelisimHtml(k, ctx) : sekme === 'gecmis' ? gecmisHtml(k, ctx) : programHtml(k, ctx, l)}</div></div>`;

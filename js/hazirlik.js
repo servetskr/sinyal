@@ -1,11 +1,12 @@
 // e-Sınava hazırlık: son denemeler, konu başarısı ve soru bankasında görülen soru oranından tek puan;
 // yanlış yapılan sorular aralıklı tekrar takvimine girer (1, 3, 7, 14, 30 gün sonra yeniden sorulur).
-import { gun } from './veri.js?v=208';
-import { e, ilerleme } from './ui.js?v=208';
-import { SORU_KONU } from './soruKonu.js?v=208';
+import { gun } from './veri.js?v=209';
+import { e, ilerleme } from './ui.js?v=209';
+import { SORU_KONU } from './soruKonu.js?v=209';
 
 const N = SORU_KONU.length;
-// kapsam hedefi sabit: banka büyüdükçe öğrencinin puanı düşmesin (eski hedef bankanın yarısıydı, ~975 soru)
+// kapsam hedefi sabit: banka büyüdükçe öğrencinin puanı düşmesin (eski hedef bankanın yarısıydı, ~975 soru).
+// Ekranda çubuk ve yazı aynı paydayı gösterir: "Hedef 1.000 soru: x soru gördün" (havuzun tamamı ayrıca yazılır)
 const HEDEF = 1000;
 const KAT = { trafik: ['Trafik ve çevre', 23], ilkyardim: ['İlk yardım', 12], motor: ['Motor ve araç tekniği', 9], adab: ['Trafik adabı', 6] };
 export const ARALIK = [0, 1, 3, 7, 14, 30];
@@ -42,8 +43,8 @@ export function hazirlik(k) {
   if (den.length < 2) oneri.push(`${den.length ? 'Bir' : 'İki'} deneme sınavı daha çöz`);
   else if (gecen < 2) oneri.push('Son denemelerinden en az ikisinde 70’i geç');
   zayif.slice(0, 2).forEach(x => oneri.push(x.o == null ? `${x.ad} konusundan test çöz` : `${x.ad} konusunu çalış (%${x.o})`));
-  if (kaps < 100 && oneri.length < 3) oneri.push(`${gor}/${HEDEF.toLocaleString('tr-TR')} soru gördün; çözmeye devam`);
-  return { puan, durum, dOrt, konuP, kaps, gor, deneme: den.length, gecen, konular, oneri };
+  if (kaps < 100 && oneri.length < 3) oneri.push('Soru bankasından soru çöz');
+  return { puan, durum, dOrt, konuP, kaps, gor, hedef: HEDEF, deneme: den.length, gecen, konular, oneri };
 }
 const DURUM = { hazir: ['Sınava hazırsın', 'var(--yesil)'], yaklasti: ['Yaklaşıyorsun', 'var(--sari-koyu, #b07a00)'], calis: ['Biraz daha çalışmalısın', 'var(--kirmizi)'] };
 const DURUM_PERSONEL = { hazir: 'e-Sınava hazır', yaklasti: 'Yaklaşıyor', calis: 'Hazır değil' };
@@ -54,6 +55,6 @@ export function hazirlikKarti(k, ogrenci) {
   return `<div class="kart" style="padding:16px 18px${ogrenci ? '' : ';margin-bottom:14px'}"><div style="display:flex;align-items:center;gap:14px">
       <div style="width:76px;height:76px;border-radius:50%;flex:none;display:grid;place-items:center;background:conic-gradient(${renk} ${h.puan * 3.6}deg, var(--cizgi-2, #e6e6e6) 0)"><div style="width:60px;height:60px;border-radius:50%;background:var(--panel, #fff);display:grid;place-items:center"><b style="font-family:var(--baslik);font-size:22px;color:var(--murekkep)">${h.puan}</b></div></div>
       <div><small style="color:var(--soluk)">${ogrenci ? 'e-Sınava hazırlığın' : 'e-Sınava hazırlık (öğrencinin çalışmasından)'}</small><b style="display:block;font-family:var(--baslik);font-size:19px;color:${renk}">${ogrenci ? ad : DURUM_PERSONEL[h.durum]}</b><small style="color:var(--soluk)">${h.deneme ? `Son ${h.deneme} deneme ortalaması ${h.dOrt}` : 'Henüz deneme sınavı yok'}</small></div></div>
-    <div style="display:grid;gap:10px;margin-top:14px">${cubuk('Deneme sınavları', h.dOrt, h.deneme ? `${h.gecen}/${h.deneme} denemede 70 ve üstü` : '')}${cubuk('Konu başarısı', h.konuP, h.konular.filter(x => x.o != null).map(x => x.ad + ' %' + x.o).join(' · '))}${cubuk('Soru bankası', h.kaps, `${h.gor}/${N} soru görüldü`)}</div>
+    <div style="display:grid;gap:10px;margin-top:14px">${cubuk('Deneme sınavları', h.dOrt, h.deneme ? `${h.gecen}/${h.deneme} denemede 70 ve üstü` : '')}${cubuk('Konu başarısı', h.konuP, h.konular.filter(x => x.o != null).map(x => x.ad + ' %' + x.o).join(' · '))}${cubuk('Soru bankası', h.kaps, `Hedef ${HEDEF.toLocaleString('tr-TR')} soru: ${h.gor.toLocaleString('tr-TR')} soru ${ogrenci ? 'gördün' : 'görüldü'}`)}</div>
     ${h.oneri.length ? `<p style="font-size:13.5px;margin-top:12px"><b style="color:var(--murekkep)">${ogrenci ? 'Şimdi ne yapmalısın' : 'Öneri'}:</b> ${e(h.oneri.join(' · '))}</p>` : ''}</div>`;
 }

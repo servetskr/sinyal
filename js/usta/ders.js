@@ -2,10 +2,11 @@
 // dersi iptal et, not ekle, kapatılmamış dersin kaydını tamamla (tam ekran, .ox-akis) ile ders menüsü (alttan sayfa) ve
 // "Öğrenci gelmedi mi?" onayı (pencere). Kayıt kuralları portal.js'te: dersKaydet, dersIptalEt, gelmediYap, notEkle (eski pencereler de onları çağırır).
 // Akış durumu sessionStorage'da tutulur (adım, seçilen konular, puanlar, not); sayfa yenilenirse aynı adımdan sürer, imzalar yeniden atılır.
-import { S, BECERI, SINIFLAR, kursiyer, egitmen, tamAd, gun, fark, tarihOku, konuListesi, konuOner } from '../veri.js?v=208';
-import { bildir, imzaAlani, tarihUzun, ayAdi } from '../ui.js?v=208';
-import * as P from '../portal.js?v=208';
-import { esc, oi, dugme, satir, liste, kutucuk, radyo, not, stilEkle, odakTuzagi } from '../ogr/ui.js?v=208';
+import { S, BECERI, SINIFLAR, kursiyer, egitmen, tamAd, gun, fark, tarihOku, konuListesi, konuOner, geceDersMi } from '../veri.js?v=209';
+import { gerekliDireksiyon } from '../veri.js?v=209';
+import { bildir, bildirimKapat, imzaAlani, tarihUzun, ayAdi } from '../ui.js?v=209';
+import * as P from '../portal.js?v=209';
+import { esc, oi, dugme, satir, liste, kutucuk, radyo, not, stilEkle, odakTuzagi } from '../ogr/ui.js?v=209';
 
 /* ---------- akış durumu ---------- */
 // A: { ekran: 'bitir' | 'sonuc' | 'iptal' | 'not' | 'kayit', id, adim, konular, beceri, not, neden, iptalNot, metin, gir, anim }
@@ -17,7 +18,8 @@ let tuval = null;         // imza tuvalleri: yeniden çizimde (ör. arka planda 
 const temizle = () => { if (birak) { birak(); birak = null; } document.body.classList.remove('ox-akis-acik'); };
 const ders = () => A && S.dersler.find(x => x.id === A.id);
 const ac = (yeni, ctx) => { A = yeni; tuval = null; sakla(); ctx.yenile(true); };
-const kapat = ctx => { A = null; tuval = null; sakla(); temizle(); ctx.yenile(true); };
+// kullanıcı akışı kapatınca bekleyen uyarılar da kapanır (ör. "konusunu seç" uyarısı Bugün ekranında kalmasın)
+const kapat = ctx => { bildirimKapat('uyari'); A = null; tuval = null; sakla(); temizle(); ctx.yenile(true); };
 
 /* ---------- metin yardımcıları ---------- */
 const gunAy = t => { const d = tarihOku(t); return d.getDate() + ' ' + ayAdi(d.getMonth(), true); };
@@ -26,7 +28,7 @@ const gunMetin = t => { const f = fark(t); return f === 0 ? 'Bugün' : f === -1 
 const sinifAd = k => { const S0 = SINIFLAR[k.sinif] || {}, kod = String(k.sinif || '').replace(/-O$/, ''), v = k.vites || String(S0.ad || '').split(' · ')[1] || ''; return kod ? `${kod} sınıfı${v ? ' · ' + v : ''}` : ''; };
 const harf = k => ((k.ad || '?')[0] + ((k.soyad || '')[0] || '')).toLocaleUpperCase('tr');
 const avatar = k => `<span class="ox-udr-av" aria-hidden="true">${k.foto ? `<img src="${esc(k.foto)}" alt="">` : esc(harf(k))}</span>`;
-const dersAlt = (d, k) => `${gunMetin(d.tarih)} · ${esc(d.saat)} · ${P.dersNo(d, k)}. ders`;
+const dersAlt = (d, k) => `${gunMetin(d.tarih)} · ${esc(d.saat)} · ${P.dersNo(d, k)}. ders${geceDersMi(d) ? ' · gece dersi' : ''}`;
 // küçük ders kartı: öğrenci, gün, saat, kaçıncı ders (iptal ve not ekranlarının başında)
 const dersKart = (d, k) => liste([satir({ sol: avatar(k), baslik: esc(tamAd(k)), alt: dersAlt(d, k), ok: false })], 'ox-udr-ders');
 
@@ -61,7 +63,7 @@ function degerHtml(d, k) {
     + `<p class="ox-udr-ipucu-y">Öğrenci notu kendi ekranında görür.</p>`;
 }
 const tuvalHtml = (kim, baslik, ek = '') => `<div class="ox-udr-imza"><div class="ox-udr-imza-bas"><span><b>${baslik}</b>${ek ? `<small>· ${ek}</small>` : ''}</span><button type="button" class="ox-udr-temizle" data-udr-temizle="${kim}" hidden>${oi('sifirla')}<span>Temizle</span></button></div>
-  <div class="ox-udr-tuval"><canvas data-udr-imza="${kim}" aria-label="${baslik}: parmağınızla imza atın"></canvas><span class="ox-udr-tuval-ip" aria-hidden="true">${oi('kalem')}<span>İmza atın</span></span></div></div>`;
+  <div class="ox-udr-tuval"><canvas data-udr-imza="${kim}" aria-label="${baslik}: parmağınızla imza atın"></canvas><span class="ox-udr-tuval-ip" aria-hidden="true">${oi('kalem')}<span>İmza atın</span></span></div><p class="ox-udr-imza-uyari" data-udr-uyari="${kim}" role="status" hidden></p></div>`;
 function imzaHtml(d, k) {
   const h = egitmen(d.egitmen);
   return baslikH('İmzalar') + tuvalHtml('k', 'Öğrenci imzası', esc(tamAd(k))) + tuvalHtml('u', 'Öğretmen imzası', esc(h ? h.ad : ''))
@@ -159,7 +161,7 @@ export function bitirAc(d, ctx) {
   if (!d || d.durum !== 'Planlandı') return;
   const k = kursiyer(d.kursiyer); if (!k) return;
   const no = k.direksiyon + 1, l = konuListesi(k.sinif).map(x => x[0]);
-  const oner = konuOner(k.sinif, no, SINIFLAR[k.sinif].direksiyon).filter(x => l.includes(x));
+  const oner = konuOner(k.sinif, no, gerekliDireksiyon(k)).filter(x => l.includes(x));
   ac({ ekran: 'bitir', id: d.id, adim: 1, konular: oner.slice(), oner, beceri: {}, not: '', gir: false }, ctx);
 }
 export const iptal = (d, ctx) => { if (d && d.durum === 'Planlandı') ac({ ekran: 'iptal', id: d.id, neden: P.IPTAL_NEDEN[0][0], iptalNot: '' }, ctx); };
@@ -176,7 +178,8 @@ function bagla(kok, d, k, ctx) {
   if (A.gir) { A.gir = false; sakla(); }
   if (A.ekran === 'sonuc' && !A.anim) { A.anim = true; sakla(); }
   const g = kok.querySelector('.ox-akis-govde');
-  const adimGit = n => { A.adim = n; A.gir = true; sakla(); ctx.yenile(true); };
+  // adım değişince önceki adımın uyarıları kapanır (adım göstergesinin üstünde kalmasın)
+  const adimGit = n => { bildirimKapat('uyari'); A.adim = n; A.gir = true; sakla(); ctx.yenile(true); };
 
   // 1–2: "Daha fazla konu için kaydırın" / "Not eklemek için kaydırın" yalnız aşağıda içerik kaldıkça görünür
   const ip = kok.querySelector('.ox-udr-kaydir');
@@ -187,7 +190,7 @@ function bagla(kok, d, k, ctx) {
 
   kok.addEventListener('click', ev => {
     const t = ev.target;
-    if (t.closest('[data-udr-bugun]')) { A = null; tuval = null; sakla(); temizle(); return ctx.git('bugun'); }
+    if (t.closest('[data-udr-bugun]')) { bildirimKapat('uyari'); A = null; tuval = null; sakla(); temizle(); return ctx.git('bugun'); }
     if (t.closest('[data-udr-kapat]')) return kapat(ctx);
     if (t.closest('[data-udr-geri]')) return adimGit(Math.max(1, A.adim - 1));
     const kn = t.closest('[data-udr-konu]');
@@ -211,7 +214,7 @@ function bagla(kok, d, k, ctx) {
     }
     if (t.closest('[data-udr-tamam]') || t.closest('[data-udr-uzak]')) return kaydet(kok, d, ctx, !!t.closest('[data-udr-uzak]'));
     const tm = t.closest('[data-udr-temizle]');
-    if (tm && tuval) { const x = tuval[tm.dataset.udrTemizle]; if (x) { x.api.temizle(); ipucuSil(x.cv); tuvalDurum(kok); } return; }
+    if (tm && tuval) { const x = tuval[tm.dataset.udrTemizle]; if (x) { clearTimeout(x.zs); x.uyar = false; x.api.temizle(); ipucuSil(x.cv); tuvalDurum(kok); } return; }
     const nd = t.closest('[data-udr-neden]');
     if (nd) { A.neden = nd.dataset.udrNeden; sakla(); kok.querySelectorAll('[data-udr-neden]').forEach(b => { const s = b === nd; b.classList.toggle('secili', s); b.setAttribute('aria-checked', String(s)); }); return; }
     if (t.closest('[data-udr-iptal-et]')) return P.dersIptalEt(d, A.neden, A.iptalNot || '', { kapat: () => { A = null; tuval = null; sakla(); temizle(); } });
@@ -247,32 +250,45 @@ function imzalariKur(kok, d) {
     yeni.width = Math.round((r.width || 335) * o); yeni.height = Math.round((r.height || 112) * o);
     const api = imzaAlani(yeni); ipucuSil(yeni);
     yeni.getContext('2d').lineWidth = Math.max(2.5, 2.2 * o);
-    const bak = () => tuvalDurum(yeni.closest('.ox-udr'));
+    // geçersiz imza uyarısı çizim bitince (1,2 sn yeni çizgi gelmezse) ya da kaydetmeye basınca çıkar; çok çizgili imzanın ilk çizgisinde değil
+    const x = { cv: yeni, api, uyar: false, zs: 0 };
+    const bak = () => { tuvalDurum(yeni.closest('.ox-udr')); clearTimeout(x.zs); x.zs = setTimeout(() => { x.uyar = true; tuvalDurum(yeni.closest('.ox-udr')); }, 1200); };
+    yeni.addEventListener('pointerdown', () => { clearTimeout(x.zs); if (x.uyar) { x.uyar = false; tuvalDurum(yeni.closest('.ox-udr')); } });
     yeni.addEventListener('pointerup', bak); yeni.addEventListener('pointercancel', bak);
-    tuval[kim] = { cv: yeni, api };
+    tuval[kim] = x;
   });
   tuvalDurum(kok);
 }
+// Temizle ve "dolu" görünümü tuvalde çizgi olup olmadığına bakar (murekkep); geçerlilik ayrı (bos(): ölçünün altındaki çizgi de "imza yok").
+// Çizgi var ama geçersizse (tek dokunuş, düz/kısa çizgi) tuvalin altında açık uyarı çıkar, Temizle görünür kalır.
+const murekkepVar = x => x.api.murekkep ? x.api.murekkep() : !x.api.bos();
+const imzaSorun = x => (x.api.sorun ? x.api.sorun() : '') || 'İmza çok kısa; yeniden atın';
 function tuvalDurum(kok) {
   if (!kok || !tuval) return;
   ['k', 'u'].forEach(kim => {
     const x = tuval[kim]; if (!x) return;
-    const dolu = !x.api.bos(), kap = x.cv.closest('.ox-udr-imza'); if (!kap) return;
-    kap.classList.toggle('dolu', dolu);
+    const kap = x.cv.closest('.ox-udr-imza'); if (!kap) return;
+    const dolu = murekkepVar(x), gecersiz = dolu && x.uyar && x.api.bos();
+    kap.classList.toggle('dolu', dolu); kap.classList.toggle('gecersiz', gecersiz);
     const b = kap.querySelector('[data-udr-temizle]'); if (b) b.hidden = !dolu;
+    const u = kap.querySelector('[data-udr-uyari]'); if (u) { u.hidden = !gecersiz; u.textContent = gecersiz ? imzaSorun(x) : ''; }
   });
 }
+// kaydetmeden önce: boş ya da geçersiz imza için kimin imzası olduğunu söyleyen mesaj ('' = geçerli)
+const imzaEksik = (x, ad) => !x.api.bos() ? '' : murekkepVar(x) ? `${ad}: ${imzaSorun(x)}` : '';
 
 function kaydet(kok, d, ctx, uzak) {
   const ik = tuval && tuval.k, iu = tuval && tuval.u;
   if (!ik || !iu) return;
-  if (uzak) { if (iu.api.bos()) return bildir('Önce sen imzala; öğrencinin imzası WhatsApp’tan istenir', 'uyari'); }
-  else if (ik.api.bos() || iu.api.bos()) return bildir('İki imza da gerekli. Öğrenci yanında değilse “WhatsApp’tan imzalat”', 'uyari');
+  iu.uyar = true; if (!uzak) ik.uyar = true;   // geçersiz imzanın uyarısı tuvalin altında hemen görünsün
+  if (uzak) { if (iu.api.bos()) { tuvalDurum(kok); return bildir(imzaEksik(iu, 'Öğretmen imzası') || 'Önce sen imzala; öğrencinin imzası WhatsApp’tan istenir', 'uyari'); } }
+  else if (ik.api.bos() || iu.api.bos()) { tuvalDurum(kok); return bildir(imzaEksik(ik, 'Öğrenci imzası') || imzaEksik(iu, 'Öğretmen imzası') || 'İki imza da gerekli. Öğrenci yanında değilse “WhatsApp’tan imzalat”', 'uyari'); }
   kok.querySelectorAll('[data-udr-tamam],[data-udr-uzak]').forEach(b => { b.disabled = true; });
   const imza = uzak ? P.imzaUzaktan(iu.api.url()) : P.imzaYerinde(ik.api.url(), iu.api.url());
   const secim = { konular: A.konular.slice(), beceri: A.beceri && Object.keys(A.beceri).length ? { ...A.beceri } : null, not: A.not || '', imza };
   // kayıttan hemen sonra sonuç ekranı; uzaktan imzada link hazırlanırken (kısa link, WhatsApp) sonuç ekranı açık durur
-  P.dersKaydet(d, secim, { sessiz: true, kapat: () => { A = { ekran: 'sonuc', id: d.id }; tuval = null; sakla(); if (uzak) ctx.yenile(true); } })
+  // kayıt başarılı: bekleyen bütün bildirimler kapanır (kısa ders uyarısı sonuç ekranında zaten yazıyor)
+  P.dersKaydet(d, secim, { sessiz: true, kapat: () => { bildirimKapat(); A = { ekran: 'sonuc', id: d.id }; tuval = null; sakla(); if (uzak) ctx.yenile(true); } })
     .catch(x => { console.error(x); bildir('İmza linki gönderilemedi; “Yeniden gönder”e dokun', 'uyari'); });
 }
 
@@ -423,6 +439,9 @@ stilEkle('ox-uders', `
 .ox-udr-tuval-ip{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:7px;font-size:15px;font-weight:500;color:var(--ox-soluk);pointer-events:none;transition:opacity .15s}
 .ox-udr-tuval-ip .ox-i{width:19px;height:19px}
 .ox-udr-imza.dolu .ox-udr-tuval-ip{opacity:0}
+.ox-udr-imza.gecersiz .ox-udr-tuval{border-color:var(--ox-turuncu)}
+.ox-udr-imza-uyari{margin-top:6px;font-size:14px;line-height:1.35;font-weight:500;color:color-mix(in srgb,var(--ox-kirmizi) 78%,#000)}
+.ox-udr-imza-uyari[hidden]{display:none}
 .ox-udr-alt.dikey{flex-direction:column;gap:10px}
 .ox-udr-alt .ox-dg-cizgi .ox-i,.ox-udr-alt .ox-dg-ikincil .ox-i{color:#1fa855}
 

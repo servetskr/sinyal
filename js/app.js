@@ -1,24 +1,55 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=208';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=208';
-import * as Y1 from './sayfalar1.js?v=208';
-import * as Y2 from './sayfalar2.js?v=208';
-import * as P from './portal.js?v=208';
-import * as OXU from './ogr/ui.js?v=208';
-import * as Y3 from './sayfalar3.js?v=208';
-import * as Y4 from './sayfalar4.js?v=208';
-import * as Y5 from './sayfalar5.js?v=208';
-import * as IM from './imza.js?v=208';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=208';
-import * as SN from './senaryo.js?v=208';
-import * as OZ from './ozellik.js?v=208';
-import { durumlariGuncelle } from './mesaj.js?v=208';
-import { yeniMenu } from './yeni.js?v=208';
-import * as B from './bulut.js?v=208';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=208';
-import * as AN from './analiz.js?v=208';
-import * as GZ from './guzergah.js?v=208';
-import * as ORT from './ortak.js?v=208';
-import * as SH from './sahip.js?v=208';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=209';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=209';
+import * as Y1 from './sayfalar1.js?v=209';
+import * as Y2 from './sayfalar2.js?v=209';
+import * as P from './portal.js?v=209';
+import * as OXU from './ogr/ui.js?v=209';
+import * as Y3 from './sayfalar3.js?v=209';
+import * as Y4 from './sayfalar4.js?v=209';
+import * as Y5 from './sayfalar5.js?v=209';
+import * as IM from './imza.js?v=209';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=209';
+import * as SN from './senaryo.js?v=209';
+import * as OZ from './ozellik.js?v=209';
+import { durumlariGuncelle } from './mesaj.js?v=209';
+import { yeniMenu } from './yeni.js?v=209';
+import * as B from './bulut.js?v=209';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=209';
+import * as AN from './analiz.js?v=209';
+import * as GZ from './guzergah.js?v=209';
+import * as ORT from './ortak.js?v=209';
+import * as SH from './sahip.js?v=209';
+
+/* ---------- uygulama hatalarının otomatik bildirimi ----------
+   window.onerror / unhandledrejection → worker /hata (api.mdsinyal.com). Gönderilen: sürüm, rota adı (#/ad; kimlik ve kod kırpılır), rol,
+   hata mesajı ve yığının ilk satırları (e-posta, uzun sayı ve adreslerin sorgu kısmı silinir), kurs kimliğinin özeti (SHA-256 ilk 8).
+   Kişi adı, TC, telefon gönderilmez. Sınır: aynı hata oturumda bir kez, oturumda en çok 10, dakikada en çok 3, cihazda günde en çok 20.
+   Yalnız mdsinyal.com'da gönderilir (denemede localStorage 'sinyal-hata-test' = '1'). */
+const HATA_SURUM = new URL(import.meta.url).searchParams.get('v') || '';
+const hataDurum = { n: 0, dk: 0, dkN: 0, gorulen: new Set() };
+const hataTemiz = (x, n) => String(x || '').replace(/[\w.+-]+@[\w-]+(\.[\w-]+)+/g, '<e-posta>').replace(/\d[\d\s().-]{5,}\d/g, '<sayı>').replace(/(https?:\/\/[^\s/]+)?(\/[^\s?#:)]*)[?#][^\s:)]*/g, '$2').slice(0, n);
+const hataAcik = () => { if (location.hostname === 'mdsinyal.com') return true; try { return localStorage.getItem('sinyal-hata-test') === '1'; } catch (x) { return false; } };
+async function hataBildir(tur, hata, yer) {
+  try {
+    if (!hataAcik() || hataDurum.n >= 10) return;
+    const m = hataTemiz(hata && hata.message ? (hata.name && !String(hata.message).startsWith(hata.name) ? hata.name + ': ' : '') + hata.message : hata, 300);
+    if (!m || /^Script error\.?$/.test(m) || /ResizeObserver loop/.test(m)) return;
+    const y = hataTemiz(((hata && hata.stack) || yer || '').split('\n').slice(0, 5).join('\n'), 600), iz = m + '|' + y.split('\n')[0];
+    if (hataDurum.gorulen.has(iz)) return; hataDurum.gorulen.add(iz);
+    const dk = Math.floor(Date.now() / 60e3); if (hataDurum.dk !== dk) { hataDurum.dk = dk; hataDurum.dkN = 0; } if (hataDurum.dkN >= 3) return;
+    const bugun = new Date().toISOString().slice(0, 10); let g = { gun: bugun, n: 0 };
+    try { const v = JSON.parse(localStorage.getItem('sinyal-hata-sayac') || 'null'); if (v && v.gun === bugun) g = v; } catch (x) { }
+    if (g.n >= 20) return; g.n++; try { localStorage.setItem('sinyal-hata-sayac', JSON.stringify(g)); } catch (x) { }
+    hataDurum.n++; hataDurum.dkN++;
+    const u = oturum.kullanici, kurs = (B.bulut && B.bulut.kurs) || '';
+    const ks = kurs ? [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(kurs)))].slice(0, 4).map(x => x.toString(16).padStart(2, '0')).join('') : (u ? 'demo' : '');
+    const govde = JSON.stringify({ t: tur, s: HATA_SURUM, r: ((location.hash.match(/^#\/[a-z-]+/i) || [''])[0]).slice(0, 40), rol: u ? (u.ziyaretci ? 'ziyaretci' : u.rol || 'yok') : 'yok', m, y, ks, tr: ((navigator.userAgent.match(/(Firefox|Edg|OPR|SamsungBrowser|CriOS|Chrome|Version)\/(\d+)/) || [])[0] || '').slice(0, 30) + (/Mobile/.test(navigator.userAgent) ? ' mobil' : '') });
+    const adres = B.WORKER + '/hata', blob = new Blob([govde], { type: 'text/plain' });
+    if (!(navigator.sendBeacon && navigator.sendBeacon(adres, blob))) fetch(adres, { method: 'POST', body: govde, headers: { 'Content-Type': 'text/plain' }, keepalive: true, mode: 'cors', credentials: 'omit' }).catch(() => { });
+  } catch (x) { }
+}
+window.addEventListener('error', ev => { if (ev && ev.target && ev.target !== window && !ev.error) return; hataBildir('hata', ev.error || ev.message, ev.filename ? `${ev.filename}:${ev.lineno}:${ev.colno}` : ''); });
+window.addEventListener('unhandledrejection', ev => { const r = ev && ev.reason; if (r && (r.kullanici || r.code === 'permission-denied' || r.name === 'AbortError')) return; hataBildir('soz', r instanceof Error ? r : String(r && r.message || r || 'Promise reddedildi')); });
 
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -39,7 +70,7 @@ const MENU = [
   ['Para', [['kasa', 'Kasa ve ödemeler', '→']]],
   ['Kurum', [['meb', 'MEB işlemleri', '→'], ['belgeler', 'Belgeler ve çıktılar', '→'], ['filo', 'Ekip ve araçlar', '→']]],
   ['Analiz', [['analiz', 'Analiz', '→'], ['raporlar', 'Raporlar', '→'], ['karlilik', 'Kârlılık ve kapasite', '→']]],
-  ['Diğer', [['sosyal', 'Sosyal medya asistanı', '↗'], ['kayit', 'Evden kayıt sayfası', '↗'], ['ogrenci', 'Kursiyer ekranı', '↗'], ['senaryo', 'Demo senaryoları', '↗'], ['kurulum', 'Kurulum', '→'], ['guven', 'Verileriniz ve güvenlik', '→'], ['ayarlar', 'Ayarlar', '→']]],
+  ['Diğer', [['sosyal', 'Sosyal medya asistanı', '↗'], ['kayit', 'Kayıt formu', '↗'], ['ogrenci', 'Kursiyer ekranı', '↗'], ['senaryo', 'Demo senaryoları', '↗'], ['kurulum', 'Kurulum', '→'], ['guven', 'Verileriniz ve güvenlik', '→'], ['ayarlar', 'Ayarlar', '→']]],
 ];
 // Aramada sayfaların yanında özellikler de çıkar (ör. "müşavir" yazınca müşavir paketi)
 const OZELLIKLER = [['Müşavir paketi (Excel)', '#/ayarlar/entegrasyon', 'muhasebe fatura e-arşiv luca'], ['Sunum verisi (örnek dersler)', '#/ayarlar/kurs', 'sunum örnek ders öğretmen tanıtım'], ['Otomatik planla', '#/plan', 'ders dağıt program'], ['WhatsApp hattını bağla', '#/ayarlar/kurs', 'otomatik mesaj api'], ['İki adımlı giriş', '#/ayarlar/guvenlik', 'doğrulama kodu güvenlik'], ['Ders defteri (öğrenci onayı)', '#/ayarlar/ogrenciapp', 'itiraz onay'], ['Öğrenci uygulaması ayarları', '#/ayarlar/ogrenciapp', 'kursiyer ekranı'], ['Sınıf ve ücretler', '#/ayarlar/sinif', 'fiyat taban ücret'], ['Kullanıcılar ve davet', '#/ayarlar/kullanici', 'çalışan personel'], ['Yedekler', '#/ayarlar/guvenlik', 'yedek geri yükle'], ['İşlem geçmişi', '#/ayarlar/gecmis', 'log kim ne yaptı'], ['KVKK ve anonimleştirme', '#/ayarlar/kvkk', 'kişisel veri imha'], ['Veri aktarımı (Excel)', '#/ayarlar/aktarim', 'içe aktar eski program'], ['Denetim modu', '#/meb', 'müfettiş denetim'], ['MEBBİS Yardımcısı', '#/meb', 'eklenti chrome'], ['Puantaj ve personel özeti', '#/ayarlar/entegrasyon', 'bordro maaş prim']];
@@ -291,6 +322,7 @@ function demoyaGir() {
   const u = S.kullanicilar.find(x => x.rol === 'mudur') || { id: 'u1', ad: 'Kurs müdürü' };
   oturum.kullanici = { id: u.id, ad: u.ad, rol: 'mudur', ziyaretci: true };
   try { sessionStorage.setItem('sinyal-oturum', JSON.stringify(oturum.kullanici)); } catch (x) { }
+  sonHareket = Date.now(); hareketYaz(true);
   iskelet(); location.hash = '#/genel'; sonAd = rota().ad; yenile(true); window.scrollTo(0, 0);
 }
 /* ---------- öğretmen girişi (#/ogretmen-giris) ve şifre yenileme: öğrenci/öğretmen uygulamasının ox- dili; sınıflar ox-ugr- önekli ----------
@@ -298,7 +330,23 @@ function demoyaGir() {
    Kabuk .giris sınıfını da taşır: oturum yokken yenile() ekranda .giris varsa giriş ekranını yeniden çizmez. Giriş mantığı eski formla aynı. */
 const UGR_ZARF = '<svg class="ox-i" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.6"/><path d="m3.8 7.4 8.2 5.8 8.2-5.8"/></svg>';
 const UGR_GOZ_KAPALI = '<svg class="ox-i" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.4 5.7c.5-.1 1-.2 1.6-.2 6 0 9.5 6.5 9.5 6.5a16 16 0 0 1-2.5 3.3M6.7 6.8C4.1 8.5 2.5 12 2.5 12S6 18.5 12 18.5c1.8 0 3.4-.6 4.8-1.4M9.9 9.9a3 3 0 0 0 4.2 4.2M3.5 3.5l17 17"/></svg>';
+// Kutulu alanlar (.ox-ugr-kutu giriş ve ilk şifre, .og-girdi şifremi değiştir): çerçeve, zemin ve odak halkası yalnız dış kutuda.
+// İçteki input'u genel kurallar ikinci kez çerçeveliyordu: ox pencere kuralı (ogr/ui.js "body.ox-modu .pencere input") ve
+// app.css'teki [aria-invalid="true"] (!important gölge). Seçiciler bu ikisinden daha özgül tutulur.
+function girdiKutuStil() {
+  OXU.stilEkle('ox-girdi-kutu', `
+html body :is(.ox-ugr-kutu,.og-girdi) input:not([type=checkbox]):not([type=radio]):not([type=submit]){border:0;border-radius:0;background:transparent;box-shadow:none;outline:0;-webkit-appearance:none;appearance:none}
+html body :is(.ox-ugr-kutu,.og-girdi) input[aria-invalid="true"]:not([type=radio]):not([type=checkbox]){border-color:transparent!important;box-shadow:none!important}
+html body :is(.ox-ugr-kutu,.og-girdi) input:not([type=checkbox]):not([type=radio]):focus-visible{outline:0}
+html body.ox-modu .pencere .og-girdi{border:1px solid var(--ox-cizgi);border-radius:14px;background:var(--ox-kart,#fff);box-shadow:var(--ox-golge,none)}
+html body.ox-modu .pencere .og-girdi:focus-within{border-color:var(--ox-mavi);box-shadow:0 0 0 3.5px rgba(10,102,242,.14)}
+html body.ox-modu .pencere .og-girdi:focus-within>.ik{color:var(--ox-mavi)}
+html body.ox-modu .pencere .og-girdi:has(input[aria-invalid="true"])>.ik{color:var(--ox-kirmizi,var(--kirmizi))}
+html body .og-girdi:has(input[aria-invalid="true"]),html body.ox-modu .pencere .og-girdi:has(input[aria-invalid="true"]){border-color:var(--ox-kirmizi,var(--kirmizi));box-shadow:0 0 0 3.5px rgba(229,72,77,.12)}
+`);
+}
 function ugrStil() {
+  girdiKutuStil();
   const s = document.querySelector('style[data-ox="ox-temel"]'), m = s && /body\.ox-modu\{([^}]*)\}/.exec(s.textContent);
   const dg = m ? m[1].split(';').map(x => x.trim()).filter(x => x.startsWith('--')).join(';') : '';
   OXU.stilEkle('ox-ugr', `
@@ -528,6 +576,7 @@ function girisEkrani(mod = 'tanitim') {
     delete S.guvenlik.deneme[secilen.id];
     oturum.kullanici = { id: secilen.id, ad: secilen.ad, rol: secilen.rol, usta: secilen.usta };
     try { sessionStorage.setItem('sinyal-oturum', JSON.stringify(oturum.kullanici)); } catch (x) { }
+    sonHareket = Date.now(); hareketYaz(true);
     islem('Giriş yaptı'); kaydet();
     let bekleyen = null; try { bekleyen = sessionStorage.getItem('sinyal-bekleyen'); sessionStorage.removeItem('sinyal-bekleyen'); } catch (x) { }
     iskelet(); location.hash = bekleyen || (secilen.rol === 'usta' ? '#/egitmen' : '#/genel'); sonAd = rota().ad; yenile(true);
@@ -548,7 +597,7 @@ function bulutOturumu(u, yeniGiris) {
   oturum.kullanici = u;
   try { sessionStorage.setItem('sinyal-oturum', JSON.stringify(u)); } catch (x) { }
   if (yeniGiris) { islem('Giriş yaptı'); kaydet(); }
-  sonHareket = Date.now(); sonYazim = 0; hareketYaz();
+  sonHareket = Date.now(); hareketYaz(true);
   let bekleyen = null; try { bekleyen = sessionStorage.getItem('sinyal-bekleyen'); sessionStorage.removeItem('sinyal-bekleyen'); } catch (x) { }
   if (yonetimIstendi && !ORT.yonetimModu() && u.rol !== 'ortak') {
     document.getElementById('uyg').innerHTML = ogrKap(`<div class="og-giris-bas"><h1>mdSinyal Yönetim</h1><p>Bu tarayıcıda bir kurs hesabı açık (${e(u.ad)}). mdSinyal Yönetim'e girmek için önce bu hesaptan çık.</p></div><button class="dg dg-ana og-giris-dg" data-yon-cik>Çıkış yap ve mdSinyal Yönetim'e gir</button><a class="dg dg-hafif og-giris-dg" href="#/genel" data-yon-don style="margin-top:10px">Kurs hesabıma dön</a>`);
@@ -862,6 +911,7 @@ async function ogrenciModu(kurs, kod, yeniSifre) {
   if (yeniSifre) bildir('Şifreniz kaydedildi');
 }
 function ogrenciSifreDegistir() {
+  girdiKutuStil();
   pencere({ baslik: 'Şifremi değiştir', icerik: `<form id="f-osifre" class="og-giris-form" novalidate>${ogrAlan('eski', 'Şu anki şifren', 'password', 'kilit', 'autocomplete="current-password"')}${ogrAlan('s1', 'Yeni şifre', 'password', 'kilit', 'autocomplete="new-password"')}${ogrAlan('s2', 'Yeni şifre (tekrar)', 'password', 'kilit', 'autocomplete="new-password"')}${SIFRE_KURAL}</form>`,
     altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-osifre">Şifreyi değiştir</button>',
     onAc(d) { const f = d.querySelector('form'), btn = d.querySelector('[form=f-osifre]'); gozBagla(d); sifreIzle(f, btn); f.eski.focus(); f.addEventListener('submit', ev => { ev.preventDefault(); if (btn.disabled) return; if (!f.eski.value) { bildir('Şu anki şifreni yaz', 'uyari'); return f.eski.focus(); } btn.disabled = true; B.ogrenciSifreBelirle(f.s1.value, f.eski.value).then(() => { kapatPencere(); bildir('Şifren değiştirildi'); }).catch(x => { btn.disabled = false; bildir(B.hataMetni(x), 'uyari'); }); }); } });
@@ -961,30 +1011,47 @@ async function davetEkrani() {
 document.addEventListener('click', ev => { if (ev.target.closest('[data-yeniden-yukle]')) location.reload(); });
 document.addEventListener('click', ev => {
   if (ev.target.closest('[data-cikis]')) kapatPencere();
-  if (ev.target.closest('[data-hesap]')) { if (oturum.kullanici && oturum.kullanici.rol === 'usta' && document.body.classList.contains('ox-modu')) return import('./usta/ekran.js?v=208').then(m => { m.hesapAc(); yenile(true); }); return hesapSayfasi(); }
+  if (ev.target.closest('[data-hesap]')) { if (oturum.kullanici && oturum.kullanici.rol === 'usta' && document.body.classList.contains('ox-modu')) return import('./usta/ekran.js?v=209').then(m => { m.hesapAc(); yenile(true); }); return hesapSayfasi(); }
   if (ev.target.closest('[data-destek]')) return destekPenceresi();
   // Yönetim: Hesaplar telefonda profil menüsünden açılır (alt çubuk 6 sekme kalır)
   if (ev.target.closest('[data-yn-hesaplar]')) { kapatPencere(); ORT.sekmeSec('hesaplar'); yonetimCiz(true); SH.otoBaglan(); return; }
   if (ev.target.closest('[data-ogr-cikis]')) return B.ogrenciCikis().then(() => { location.hash = '#/ogrenci-giris'; location.reload(); });
   if (ev.target.closest('[data-ogr-sifre]')) { kapatPencere(); return ogrenciSifreDegistir(); }
   if (ev.target.closest('[data-cikis]') && oturum.kullanici && oturum.kullanici.bulut) { const yon = ORT.yonetimModu() || oturum.kullanici.rol === 'ortak'; islem('Çıkış yaptı'); kaydet(); B.cikisYap().then(() => { try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } location.hash = yon ? '#/yonetim' : ''; location.reload(); }); return; }
-  if (ev.target.closest('[data-cikis]')) { const zy = ziyaretci(); islem('Çıkış yaptı'); kaydet(); oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } location.hash = ''; girisEkrani(zy ? 'tanitim' : 'pin'); window.scrollTo(0, 0); }
+  if (ev.target.closest('[data-cikis]')) { const zy = ziyaretci(); islem('Çıkış yaptı'); kaydet(); oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); localStorage.removeItem(HAREKET_DEMO); } catch (x) { } location.hash = ''; girisEkrani(zy ? 'tanitim' : 'pin'); window.scrollTo(0, 0); }
   const g = ev.target.closest('[data-geri-al]'); if (g) { if (geriAl()) { bildir('Son işlem geri alındı'); yenile(); } }
 });
 
 // Hareketsiz kalınca oturumu kapat (Ayarlar › Güvenlik)
-// Son hareket cihazda da tutulur: sekme kapatılıp sonra açılınca süre dolmuşsa yeniden giriş istenir
-let sonHareket = Date.now(), sonYazim = 0;
-const hareketYaz = () => { if (!oturum.kullanici || !oturum.kullanici.bulut || Date.now() - sonYazim < 30e3) return; sonYazim = Date.now(); try { localStorage.setItem('sinyal-son-hareket', JSON.stringify({ t: sonHareket, dk: (S.guvenlik && S.guvenlik.oturumDk) || 30 })); } catch (x) { } };
+// Son hareket cihazda da tutulur (localStorage, sekmeler arasında ortak): sekme kapatılıp sonra açılınca süre dolmuşsa yeniden giriş istenir;
+// iki sekme açıksa boşta duran sekme, öbüründe çalışılırken oturumu kapatmaz. Kurs hesabı 'sinyal-son-hareket', demo (PIN ve tanıtım) 'sinyal-son-hareket-demo'.
+const HAREKET = 'sinyal-son-hareket', HAREKET_DEMO = 'sinyal-son-hareket-demo';
+const hareketAnahtar = () => oturum.kullanici && oturum.kullanici.bulut ? HAREKET : HAREKET_DEMO;
+const oturumDk = () => (S.guvenlik && S.guvenlik.oturumDk) || 30;
+const hareketOku = a => { try { const h = JSON.parse(localStorage.getItem(a) || 'null'); return h && +h.t ? h : null; } catch (x) { return null; } };
+let sonHareket = Date.now(), sonYazim = 0, sonYazilan = 0;
+// en fazla 30 sn'de bir yazılır. zorla = true: girişte hemen; 'bekleyen': zamanlayıcıda, yazılmamış hareket varsa 30 sn beklemeden.
+// Öbür sekmenin yazdığı daha yeni değer geri alınmaz (büyük olan kalır).
+const hareketYaz = zorla => {
+  const u = oturum.kullanici; if (!u || u.rol === 'ogrenci') return;
+  if (!zorla && Date.now() - sonYazim < 30e3) return;
+  if (zorla !== true && sonHareket <= sonYazilan) return;
+  const a = hareketAnahtar(), ortak = hareketOku(a), t = Math.max(sonHareket, ortak ? ortak.t : 0);
+  sonYazim = Date.now(); sonYazilan = sonHareket;
+  try { localStorage.setItem(a, JSON.stringify({ t, dk: oturumDk() })); } catch (x) { }
+};
 ['click', 'keydown', 'touchstart', 'scroll'].forEach(t => document.addEventListener(t, () => { sonHareket = Date.now(); hareketYaz(); }, { passive: true, capture: true }));
+// öbür sekmedeki hareket bu sekmenin sayacını da ileri alır
+window.addEventListener('storage', ev => { if (!oturum.kullanici || ev.key !== hareketAnahtar()) return; try { const h = JSON.parse(ev.newValue || 'null'); if (h && +h.t > sonHareket) { sonHareket = +h.t; sonYazilan = Math.max(sonYazilan, sonHareket); } } catch (x) { } });
 setInterval(() => {
   if (!oturum.kullanici || imzaLinki() || oturum.kullanici.rol === 'ogrenci') return;
-  const dk = (S.guvenlik && S.guvenlik.oturumDk) || 30;
-  if (Date.now() - sonHareket < dk * 60e3) return;
+  if (sonHareket > sonYazilan) hareketYaz('bekleyen');
+  const dk = oturumDk(), ortak = hareketOku(hareketAnahtar()), son = Math.max(sonHareket, ortak ? ortak.t : 0);
+  if (Date.now() - son < dk * 60e3) return;
   islem('Oturum kapandı', dk + ' dk hareketsiz'); kaydet();
   if (oturum.kullanici.bulut) { oturum.kullanici = null; B.cikisYap().then(() => { try { sessionStorage.removeItem('sinyal-oturum'); sessionStorage.setItem('sinyal-kapandi', String(dk)); } catch (x) { } location.reload(); }); return; }
-  oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { }
-  girisEkrani('pin'); bildir(dk + ' dakika işlem yapılmadığı için oturum kapandı', 'uyari');
+  const zy = !!oturum.kullanici.ziyaretci; oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); localStorage.removeItem(HAREKET_DEMO); } catch (x) { }
+  girisEkrani(zy ? 'tanitim' : 'pin'); bildir(dk + ' dakika işlem yapılmadığı için oturum kapandı', 'uyari');
 }, 30e3);
 
 // Uzaktan imzalar: kursiyer imzalayınca kayda kendiliğinden işlenir
@@ -1022,7 +1089,8 @@ else if (ogrKayit && !B.bulutKayitli()) {
   // son görülen panel önbellekten hemen; oturum ve güncel veri arkadan gelir
   const ok = ogrKayit.kod && B.ogrenciOnbellek(ogrKayit.kod);
   if (ok) { oturum.kullanici = { id: 'ogr-' + ok.id, ad: tamAd(ok), rol: 'ogrenci', kursiyer: ok.id }; ogrenciCiz(true); } else bekleEkrani('Öğrenci paneli açılıyor…'); B.ogrenciOturumu().then(u => !u ? ogrenciGirisEkrani() : u.ilkGiris ? sifreBelirleEkrani(u) : ogrenciModu(u.kurs, u.kod)).catch(() => ogrenciGirisEkrani()); }
-else if (B.bulutKayitli() && (() => { try { const h = JSON.parse(localStorage.getItem('sinyal-son-hareket') || 'null'); return h && Date.now() - h.t > (h.dk || 30) * 60e3; } catch (x) { return false; } })()) {
+// son hareket kaydı yoksa (silinmiş ya da eski sürümden kalmış cihaz) güvenli varsayılan: oturum kapanır, bir kez yeniden giriş istenir
+else if (B.bulutKayitli() && (() => { const h = hareketOku(HAREKET); return !h || Date.now() - h.t > (h.dk || 30) * 60e3; })()) {
   oturum.kullanici = null; bekleEkrani('Oturum kapatılıyor…');
   B.cikisYap().finally(() => { girisEkrani('pin'); setTimeout(() => bildir('Uzun süre işlem yapılmadığı için oturum kapandı; tekrar giriş yapın', 'uyari'), 400); });
 }
@@ -1032,6 +1100,11 @@ else if (B.bulutKayitli()) {
   const kp = sessionStorageAl('sinyal-kapandi'); if (kp) { try { sessionStorage.removeItem('sinyal-kapandi'); } catch (x) { } setTimeout(() => bildir(kp + ' dakika işlem yapılmadığı için oturum kapandı; tekrar giriş yapın', 'uyari'), 400); }
 }
 else if (sessionStorageAl('sinyal-kapandi')) { const kp = sessionStorageAl('sinyal-kapandi'); try { sessionStorage.removeItem('sinyal-kapandi'); } catch (x) { } oturum.kullanici = null; girisEkrani('pin'); setTimeout(() => bildir(kp + ' dakika işlem yapılmadığı için oturum kapandı; tekrar giriş yapın', 'uyari'), 400); }
+// demo (PIN ya da tanıtım) oturumu sekme geri açılınca/çoğaltılınca sessionStorage'dan döner: süre burada da denetlenir; kayıt yoksa kapanır
+else if (oturum.kullanici && !oturum.kullanici.bulut && oturum.kullanici.rol !== 'ogrenci' && (() => { const h = hareketOku(HAREKET_DEMO); return !h || Date.now() - h.t > (h.dk || 30) * 60e3; })()) {
+  const zy = !!oturum.kullanici.ziyaretci; oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); localStorage.removeItem(HAREKET_DEMO); } catch (x) { }
+  girisEkrani(zy ? 'tanitim' : 'pin'); if (!zy) setTimeout(() => bildir('Uzun süre işlem yapılmadığı için oturum kapandı; tekrar giriş yapın', 'uyari'), 400);  // tanıtım ziyaretçisine uyarı gösterilmez
+}
 else if (oturum.kullanici && !oturum.kullanici.bulut && oturum.kullanici.rol === 'ogrenci') ogrenciCiz(true);
 else if (oturum.kullanici && !oturum.kullanici.bulut) { iskelet(); if (!location.hash) location.hash = oturum.kullanici.rol === 'usta' ? '#/egitmen' : '#/genel'; sonAd = rota().ad; yenile(); }
 else girisEkrani(location.hash.startsWith('#/imza-geldi/') ? 'pin' : 'tanitim');

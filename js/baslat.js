@@ -2,11 +2,12 @@
 // Yazı tipleri ve uygulama stili engellemeden yüklenir (satır içi onload yerine; içerik güvenlik politikası satır içi koda izin vermez)
 // yazı tipleri artık kendi sunucumuzdan, normal stil dosyası olarak yüklenir (css/fonts.css)
 const css = document.getElementById('app-css');
-const cssHazir = () => new Promise(r => { if (css.media === 'all' && css.sheet) return r(); css.media = 'all'; css.addEventListener('load', r, { once: true }); setTimeout(r, 5000); });
+// stil dosyası media=print ile önceden inmiş olabilir (önbellek, hızlı ağ): o zaman load olayı bir daha gelmez; sheet varsa hemen geç
+const cssHazir = () => new Promise(r => { const yuklu = !!css.sheet; css.media = 'all'; if (yuklu) return r(); css.addEventListener('load', r, { once: true }); css.addEventListener('error', r, { once: true }); setTimeout(r, 5000); });
 // Açılış animasyonu yalnız yükleme sürdüğü kadar görünür (yapay bekleme yok); uygulama kodu önceden indirilir (modulepreload)
 const acilisBekle = () => Promise.resolve();
-const onYukle = () => { try { const l = document.createElement('link'); l.rel = 'modulepreload'; l.href = 'js/app.js?v=208'; document.head.appendChild(l); } catch (e) { } };
-const yukle = () => window.__uyg || (window.__uyg = (onYukle(), Promise.all([cssHazir(), acilisBekle()])).then(() => import('./app.js?v=208')).then(m => { window.__hazir = true; return m; }));
+const onYukle = () => { try { const l = document.createElement('link'); l.rel = 'modulepreload'; l.href = 'js/app.js?v=209'; document.head.appendChild(l); } catch (e) { } };
+const yukle = () => window.__uyg || (window.__uyg = (onYukle(), Promise.all([cssHazir(), acilisBekle()])).then(() => import('./app.js?v=209')).then(m => { window.__hazir = true; return m; }));
 let hemen = true;
 try { hemen = /^#\/./.test(location.hash) || !!(sessionStorage.getItem('sinyal-oturum') || sessionStorage.getItem('sinyal-kapandi') || localStorage.getItem('sinyal-bulut') || localStorage.getItem('sinyal-ogrenci')); } catch (e) { }
 if (hemen) yukle();

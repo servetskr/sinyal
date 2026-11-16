@@ -1,8 +1,8 @@
 // MEB resmî formları: MTSK Yönetmeliği eklerinin düzeninde, kayıtlardan dolan ya da boş (elle doldurmak için) çıktılar.
 // Kaynak: mevzuat.gov.tr 7.5.18408 ekleri (EK-1, EK-3, EK-4, EK-5, EK-8, EK-10, EK-12) ve md.17/3, md.42 içerik şartları.
-import { S, kaydet, gun, oturum, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, ek3Sinif, dersKonulari, gorunum, sb, sbSinav } from './veri.js?v=208';
-import { e, pencere, bildir, belgeYazdir, ik } from './ui.js?v=208';
-import { EK3, EK4, EK3_NOT, EK4_NOT, EK12 } from './formlar.js?v=208';
+import { S, kaydet, gun, oturum, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, ek3Sinif, dersKonulari, gorunum, sb, sbSinav, gerekliDireksiyon, geceDersMi } from './veri.js?v=209';
+import { e, pencere, bildir, belgeYazdir, ik } from './ui.js?v=209';
+import { EK3, EK4, EK3_NOT, EK4_NOT, EK12 } from './formlar.js?v=209';
 
 const trTarih = t => t ? String(t).slice(0, 10).split('-').reverse().join('.') : '';
 const BUYUK = s => String(s || '').toLocaleUpperCase('tr');
@@ -201,7 +201,8 @@ function dersDefteri(grupId, bos) {
 function hazir(k, bos) {
   const K = kurum(k), S0 = SINIFLAR[k.sinif] || {}, h = k.hazirYazi || {}, eg = egitmen(h.egitmen || k.egitmen) || {}, a = ogrenciAraci(k);
   const dersler = S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Yapıldı').sort((x, y) => (x.tarih + x.saat).localeCompare(y.tarih + y.saat));
-  const gece = dersler.filter(d => d.saat >= '18:00').length, v = x => bos ? '' : (x || '');
+  // gece dersi: gün batımından sonra başlayan ders (md.20/1; il MEM saati girilmişse o, yoksa il merkezinin gün batımı)
+  const gece = dersler.filter(geceDersMi).length, v = x => bos ? '' : (x || '');
   return sar(`<div class="rf-orta" style="margin:10px 0 18px;font-weight:700">${bos ? '…………………………………………' : e(BUYUK(K.ad))} MÜDÜRLÜĞÜNE</div>
     <p style="text-indent:2em;text-align:justify">Kursumuzda ${bos ? '……' : e(S0.ad || k.sinif)} sınıfı sertifika programında direksiyon eğitimi alan, bilgileri aşağıda yazılı kursiyer, programın öngördüğü direksiyon eğitimi derslerini tamamlamış olup direksiyon eğitimi dersi sınavına girmeye hazırdır.</p>
     <p style="text-indent:2em">Bilgilerinize arz ederim.</p>
@@ -210,7 +211,7 @@ function hazir(k, bos) {
       <tr><td class="rf-et">Adı soyadı</td><td>${e(v(tamAd(k)))}</td></tr>
       <tr><td class="rf-et">Sertifika sınıfı</td><td>${e(v(S0.ad))}</td></tr>
       <tr><td class="rf-et">Direksiyon eğitimine başlama</td><td>${bos ? '' : trTarih((dersler[0] || {}).tarih)}</td></tr>
-      <tr><td class="rf-et">Tamamlanan direksiyon dersi</td><td>${bos ? '' : dersler.length + ' ders saati (asgari ' + (S0.direksiyon || '') + ')'}${bos ? '' : ' · gece ' + gece + ' saat'}</td></tr>
+      <tr><td class="rf-et">Tamamlanan direksiyon dersi</td><td>${bos ? '' : dersler.length + ' ders saati (asgari ' + (gerekliDireksiyon(k) || '') + ')'}${bos ? '' : ' · gece ' + gece + ' saat'}</td></tr>
       <tr><td class="rf-et">Eğitim aracı</td><td>${e(v(a ? a.plaka + ' · ' + (a.model || '') : ''))}</td></tr>
     </table>
     <div class="rf-imzalar" style="margin-top:28px"><div></div><div>${bos ? '…/…/……' : trTarih(h.tarih || gun(0))}<br>Direksiyon Eğitimi Dersi Usta Öğreticisi<br>${e(v(eg.ad))}<br>${bos || !eg.tc ? '' : 'T.C. ' + e(eg.tc) + '<br>'}İmza</div></div>

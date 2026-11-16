@@ -1,11 +1,10 @@
-import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, kalanBorc, gecikenler, islem, gonderimEkle, SINIFLAR, ustaAraci, isGunuIleri, yerelZaman, selam, kursAdi } from './veri.js?v=208';
-import { e, ik, isaret, bildir, tl, tamTarih, tarihUzun, saatDe, saatE, apiAcik, belgeWhatsApp, giden, waSirali, waAc, ekranNotu } from './ui.js?v=208';
-import { wpGonder, bildirimler, odemeBilgisi, yorumMetni } from './sayfalar1.js?v=208';
-import { belgeHtml, dosyaAdi } from './sayfalar3.js?v=208';
-import { ornekGonder } from './zamanlayici.js?v=208';
-import { imzaIste } from './imza.js?v=208';
-import { bosSlotlar } from './risk.js?v=208';
-import { risk } from './veri.js?v=208';
+import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, kalanBorc, gecikenler, islem, gonderimEkle, SINIFLAR, ustaAraci, isGunuIleri, yerelZaman, selam, kursAdi } from './veri.js?v=209';
+import { e, ik, isaret, bildir, tl, tamTarih, tarihUzun, saatDe, saatE, apiAcik, belgeWhatsApp, giden, waSirali, waAc, ekranNotu } from './ui.js?v=209';
+import { wpGonder, bildirimler, odemeBilgisi, yorumMetni } from './sayfalar1.js?v=209';
+import { belgeHtml, dosyaAdi } from './sayfalar3.js?v=209';
+import { ornekGonder } from './zamanlayici.js?v=209';
+import { imzaIste } from './imza.js?v=209';
+import { bosSlotlar } from './risk.js?v=209';
 
 /* ================= DEMO SENARYOLARI =================
    Kursun gerçek işlemlerini örnek kayıtlar üzerinde çalıştırır; her senaryonun mesajları
@@ -55,7 +54,6 @@ const SENARYOLAR = [
     { id: 'senet', ad: 'Senet PDF’i', kim: ['Öğrenci'], ne: 'Senetli satışta', belge: true, calis: () => { const k = bul.senetli(); return belgeWhatsApp(belgeHtml('senet', k.id), dosyaAdi('Senet', tamAd(k)), `${selam(k)} ödeme planınıza ait senetler ekte; ${kursAdi('e')} gelirken imzalayıp getirebilirsiniz. ${S.kurs.ad}`, tamAd(k), 'ÖĞRENCİ'); } },
   ]],
   ['Sınav riski', [
-    { id: 'riskmudur', ad: 'Düşük beceri puanı: müdüre risk uyarısı', kim: ['Müdür'], ne: 'Hoca ders sonu puan verince risk yükselirse', calis: () => { const x = S.kursiyerler.map(k => ({ k, r: risk(k) })).filter(y => y.r && y.r.tur === 'Uygulama sınavı').sort((a, b) => b.r.puan - a.r.puan)[0]; if (!x) return bildir('Riskli kursiyer yok', 'uyari'); bildirimler([{ kim: 'mudur', metin: `${tamAd(x.k)} için uygulama sınavı kalma riski yüksek (${x.r.puan}/100): ${x.r.nedenler.join('; ')}. Ek ders önermek için kursiyer dosyasını açın.`, tur: 'Sınav riski' }], 'Sınav riski yükseldi'); } },
     { id: 'riskders', ad: 'Riskli öğrenciye otomatik ek ders teklifi', kim: ['Öğrenci'], ne: 'Risk yükselince ertesi gün 12:00', calis: () => ornekGonder('o15') },
     { id: 'dondur', ad: 'Kayıt donduruldu: hocaya ders iptali', kim: ['Hoca'], ne: 'Müdür kaydı dondurunca ya da kapatınca', calis: () => { const k = bul.direksiyon(), h = egitmen(k.egitmen), l = S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Planlandı' && fark(d.tarih) >= 0).slice(0, 3); bildirimler([{ kim: h, metin: `${hocaAd(h)}, ${tamAd(k)} kaydını dondurdu; ${l.length ? l.map(d => tarihUzun(d.tarih) + ' ' + d.saat).join(', ') + ' dersleri iptal edildi.' : 'planlı dersi yoktu.'}`, tur: 'Ders iptali' }], 'Dersler iptal edildi'); } },
   ]],

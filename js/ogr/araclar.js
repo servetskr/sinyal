@@ -7,16 +7,17 @@
 // Alt ekrandan başka bir alt ekrana gidip dönüş: 'etkilesim:kalkis|direksiyon:puf:b5' (ilk | sonrası geri bağlantısının gideceği yer;
 // dönüş yeri kendi dönüşünü taşıyabilir: 'etkilesim:ikaz|direksiyon:puf:b5|araclar'). Gelinen yer: modül (trafik, motor…), 'araclar', 'direksiyon…'.
 // Kök ekranlarda ':' şart (ekran.js yönlendiricisi 'ad:' ya da 'ad' bekler): 'tehlike:|trafik', 'direksiyon:|araclar'.
-import { S, kaydet, gun, fark, SINIFLAR, ogrOzellik, motorSinif } from '../veri.js?v=208';
-import { tarih, tarihUzun } from '../ui.js?v=208';
-import { SAHNELER, sahneSvg, TEHLIKE_SURE, tehlikePuanla } from '../tehlike.js?v=208';
-import { guzergahlar } from '../guzergah.js?v=208';
-import { altAc, UNITE_AD } from './ogrveri.js?v=208';
-import { esc, oi, sayfaBas, geri, bolum, gorsel, dugme, ikonKutu, satir, liste, cip, serit, not, bos, sekmeler, radyo, sik, cevapKutu, stilEkle } from './ui.js?v=208';
+import { S, kaydet, gun, fark, SINIFLAR, ogrOzellik, motorSinif } from '../veri.js?v=209';
+import { tarih, tarihUzun } from '../ui.js?v=209';
+import { SAHNELER, sahneSvg, TEHLIKE_SURE, tehlikePuanla } from '../tehlike.js?v=209';
+import { guzergahlar } from '../guzergah.js?v=209';
+import { altAc, UNITE_AD } from './ogrveri.js?v=209';
+import { hakDurum } from '../ogrenci.js?v=209';
+import { esc, oi, sayfaBas, geri, bolum, gorsel, dugme, ikonKutu, satir, liste, cip, serit, not, bos, sekmeler, radyo, sik, cevapKutu, stilEkle } from './ui.js?v=209';
 
 /* ---------- geç yüklenen modüller (ikaz, motor, direksiyon + resmî formlar) ---------- */
 const MOD = {}, SOZ = {};
-const KAYNAK = { ikaz: () => import('../ikaz.js?v=208'), motor: () => import('../motor.js?v=208'), dir: () => import('../direksiyon.js?v=208') };
+const KAYNAK = { ikaz: () => import('../ikaz.js?v=209'), motor: () => import('../motor.js?v=209'), dir: () => import('../direksiyon.js?v=209') };
 const yukle = ad => MOD[ad] ? Promise.resolve(MOD[ad]) : (SOZ[ad] = SOZ[ad] || KAYNAK[ad]().then(m => (MOD[ad] = m)).catch(x => { SOZ[ad] = null; throw x; }));
 // ön yükleme yalnız öğrencinin kendi telefonunda (yeni tasarım açıkken); personel oturumunda bu dosyalar indirilmez
 if (typeof window !== 'undefined') setTimeout(() => { if (document.body.classList.contains('ox-modu')) Object.keys(KAYNAK).forEach(a => yukle(a).catch(() => { })); }, 1500);
@@ -328,6 +329,7 @@ function dirSinav(k) {
   if (dGecti) return ['dogru', 'Uygulama sınavını geçtin.'];
   const s = (S.sinavlar || []).filter(x => x.tur === 'Direksiyon' && (x.kursiyerler || []).includes(k.id) && fark(x.tarih) >= 0 && !(x.sonuc || {})[k.id]).sort((a, b) => a.tarih.localeCompare(b.tarih))[0];
   if (s) { const n = fark(s.tarih); return ['takvim', `Sınavın ${esc(tarihUzun(s.tarih))}${s.saat ? ' ' + esc(s.saat) : ''}${s.yer ? ', ' + esc(s.yer) : ''}. ${n === 0 ? 'Bugün.' : n === 1 ? 'Yarın.' : n + '\u00a0gün\u00a0kaldı.'}`]; }
+  const hd = hakDurum(k); if (hd && hd.tur === 'Direksiyon') return ['uyari', esc(hd.metin)];  // hak doldu: kursun kararı bekleniyor
   if (k.dsinav && k.dsinav.sonuc) return ['bilgi', 'Sınava yeniden gireceksin; tarihi kurs bildirecek.'];
   return ['bilgi', 'Sınav tarihi henüz belirlenmedi.'];
 }
@@ -344,7 +346,7 @@ function dirAna(k, donus) {
   const sat = (baslik, alt, a) => liste([satir({ baslik, alt, attrs: { 'data-ox-alt': a } })]);
   return donGeri(k, donus)
     + `<div class="ox-arc-dbas">${sayfaBas('Direksiyon hazırlığı', 'Sınav öncesi pratik bilgiler.')}${gorsel('modul-adab', '', 'ox-arc-dbas-g')}</div>`
-    + `<div class="ox-arc-dsat">${sat('Sınav kriterleri', 'Direksiyon sınavında dikkat edilenler.', 'direksiyon:kriter')}${sat('Güzergâhlar', 'Sık kullanılan sınav güzergâhları.', 'direksiyon:guzergah')}${sat('Püf noktaları', 'Sınavda işini kolaylaştıracak öneriler.', 'direksiyon:puf')}</div>`
+    + `<div class="ox-arc-dsat">${sat('Sınav kriterleri', 'Uygulama sınavında dikkat edilenler.', 'direksiyon:kriter')}${sat('Güzergâhlar', 'Sık kullanılan sınav güzergâhları.', 'direksiyon:guzergah')}${sat('Püf noktaları', 'Sınavda işini kolaylaştıracak öneriler.', 'direksiyon:puf')}</div>`
     + `<p class="ox-arc-bilgi">${oi(ik)}<span>${metin}</span></p>`
     + denemeHtml(k);
 }

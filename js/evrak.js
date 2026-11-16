@@ -1,7 +1,7 @@
 // WhatsApp'tan gelen evrak: öğrenci belgenin fotoğrafını ya da PDF'ini kursun numarasına atar; belge doğru öğrencinin
 // dosyasına, doğru başlığa düşer. Okunmayacak kadar bulanıksa işaretlenir, tek tuşla yeniden istenir.
-import { S, kaydet, gun, EVRAKLAR, tamAd, islem, eksikEvrak, gonderimEkle, selam, evrakKaynak } from './veri.js?v=208';
-import { e, pencere, kapatPencere, bildir, fotoKucult, ik, waIstek, waAc, apiAcik } from './ui.js?v=208';
+import { S, kaydet, gun, EVRAKLAR, tamAd, islem, eksikEvrak, gonderimEkle, selam, evrakKaynak } from './veri.js?v=209';
+import { e, pencere, kapatPencere, bildir, fotoKucult, ik, waIstek, waAc, apiAcik } from './ui.js?v=209';
 
 const rakam = x => String(x || '').replace(/\D/g, '');
 const kucuk = s => String(s || '').toLocaleLowerCase('tr');
@@ -27,7 +27,7 @@ function turBul(metin, k, istek) {
   return { key: eksik[0] || (k ? eksikEvrak(k)[0] || [null] : [null])[0] || 'saglik', tahmin: true };
 }
 // Bulanıklık: küçültülmüş gri görüntüde Laplace varyansı (düşükse yazı seçilmiyor demektir)
-async function netlik(veri) {
+export async function netlik(veri) {
   const im = new Image(); im.src = veri; await im.decode();
   const g = 360, o = g / Math.max(im.width, im.height), w = Math.round(im.width * o), h = Math.round(im.height * o);
   const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.drawImage(im, 0, 0, w, h);
@@ -38,6 +38,12 @@ async function netlik(veri) {
   return n ? Math.round(t2 / n - (t / n) ** 2) : 0;
 }
 export const BULANIK_SINIR = 250;  // net belge fotoğrafında binlerce, belirgin bulanıkta ~100
+// Eşik kurs ayarı (Ayarlar › MEB kuralları › Evrak bulanıklık eşiği, S.kurs.bulanikSinir); 0 yazılırsa denetim kapalı.
+// Varsayılan 250 gerçek evrakla ayarlanmadı: kurs "onayla / yeniden iste" kararlarından sonra değeri düzeltebilir.
+export const bulanikSinir = () => { const v = S && S.kurs && S.kurs.bulanikSinir; return v === 0 ? 0 : +v > 0 ? +v : BULANIK_SINIR; };
+export const bulanikMi = net => net != null && bulanikSinir() > 0 && net < bulanikSinir();
+// Uygulama içi yüklemeler için: { net, bulanik }. WhatsApp'tan gelen evrakla aynı ölçü ve eşik. Yazılı belge içindir; vesikalık fotoğrafa uygulanmaz.
+export async function netlikOlc(veri) { if (!/^data:image\//.test(String(veri || ''))) return null; const net = await netlik(veri); return { net, bulanik: bulanikMi(net) }; }
 async function indir(x) {
   const r = await waIstek('/medya/' + encodeURIComponent(x.medya.id));
   if (!r.ok) throw new Error('indirilemedi');
@@ -48,7 +54,7 @@ async function indir(x) {
 }
 function dosyayaKoy(k, key, b, ek) {
   k.evrakYuklenen = k.evrakYuklenen || {};
-  k.evrakYuklenen[key] = { tarih: gun(0), dosya: ek.dosya || (b.tur === 'pdf' ? 'whatsapp.pdf' : 'whatsapp.jpg'), boyut: b.veri ? b.veri.length : 0, tur: b.tur, veri: b.veri, kanal: 'WhatsApp', net: b.net, bulanik: b.net != null && b.net < BULANIK_SINIR, tahmin: !!ek.tahmin, buyuk: !!b.buyuk };
+  k.evrakYuklenen[key] = { tarih: gun(0), dosya: ek.dosya || (b.tur === 'pdf' ? 'whatsapp.pdf' : 'whatsapp.jpg'), boyut: b.veri ? b.veri.length : 0, tur: b.tur, veri: b.veri, kanal: 'WhatsApp', net: b.net, bulanik: bulanikMi(b.net), tahmin: !!ek.tahmin, buyuk: !!b.buyuk };
 }
 // gelenKontrol'den çağrılır
 export async function evrakGeldi(x) {
@@ -65,12 +71,12 @@ export async function evrakGeldi(x) {
   dosyayaKoy(s.k, t.key, b, { dosya: x.medya.dosya, tahmin: t.tahmin });
   islem('WhatsApp’tan evrak geldi', tamAd(s.k) + ' · ' + turAd(t.key) + (t.tahmin ? ' (tür tahmini)' : '') + ' · ' + s.neden);
   gonderimEkle(S.kurs.ad, tamAd(s.k) + ' “' + turAd(t.key) + '” belgesini WhatsApp’tan gönderdi; kontrol bekliyor', 'Öğrenci evrakı');
-  bildir(`${tamAd(s.k)} WhatsApp’tan ${turAd(t.key).toLocaleLowerCase('tr')} gönderdi${b.net != null && b.net < BULANIK_SINIR ? ' · bulanık olabilir' : ''}`, b.net != null && b.net < BULANIK_SINIR ? 'uyari' : 'wp');
+  bildir(`${tamAd(s.k)} WhatsApp’tan ${turAd(t.key).toLocaleLowerCase('tr')} gönderdi${bulanikMi(b.net) ? ' · bulanık olabilir' : ''}`, bulanikMi(b.net) ? 'uyari' : 'wp');
   kaydet();
   // otomatik gönderim açıksa öğrenciye alındı cevabı ve kalan belgeler (bulanıksa yeniden iste)
   if (apiAcik()) {
     const kalan = eksikEvrak(s.k).filter(([x]) => x !== 'sozlesme' && !(s.k.evrakYuklenen || {})[x]).map(([, ad]) => ad.toLocaleLowerCase('tr'));
-    const bulanik = b.net != null && b.net < BULANIK_SINIR;
+    const bulanik = bulanikMi(b.net);
     waAc(s.k.tel, bulanik ? `${selam(s.k)} gönderdiğiniz ${turAd(t.key).toLocaleLowerCase('tr')} bulanık görünüyor; yazılar okunacak şekilde, ışıkta yeniden çekip gönderebilir misiniz?` : `${selam(s.k)} ${turAd(t.key).toLocaleLowerCase('tr')} belgeniz alındı, teşekkürler.${kalan.length ? ' Kalan belgeler: ' + kalan.join(', ') + '.' : ' Belgeleriniz tamam; kurs kontrol edip kaydınıza işleyecek.'}`, 'WhatsApp', tamAd(s.k), false, 'ÖĞRENCİ', 'Evrak alındı');
   }
   return true;
@@ -188,6 +194,16 @@ export async function tumEvrakPdf(k) {
 export function pdfOnizleme(d, al) {
   let donme = 0, im = null;
   const img = d.querySelector('[data-onizle]');
+  // Öğrenci uygulamasından ya da ofisten yüklenen fotoğrafın netliği burada ölçülür (WhatsApp'takiyle aynı eşik); bulanıksa pencerede uyarı
+  if (img) (async () => {
+    try {
+      const { k, key, kaynak } = al(), x = evrakKaynak(k, key, kaynak), y = kaynak === 'yuklenen' ? (k.evrakYuklenen || {})[key] : null;
+      if (!x || x.tur === 'pdf' || key === 'foto') return;  // vesikalık yüzde yazı yok: Laplace ölçüsü belge için
+      const n = y && y.net != null ? { net: y.net, bulanik: bulanikMi(y.net) } : await netlikOlc(x.veri); if (!n) return;
+      if (y && y.net == null) { y.net = n.net; y.bulanik = n.bulanik; kaydet(); }
+      if (n.bulanik && !d.querySelector('[data-bulanik-uyari]') && !(y && d.querySelector('.ipucu.uyari'))) img.insertAdjacentHTML('beforebegin', `<p class="ipucu uyari" data-bulanik-uyari style="margin-bottom:10px">${ik('uyari')}<span>Fotoğraf bulanık görünüyor (netlik ${n.net}, eşik ${bulanikSinir()}). Yazılar okunmuyorsa öğrenciden yeniden isteyin; MEBBİS okunmayan belgeyi reddedebilir.</span></p>`);
+    } catch (z) { }
+  })();
   d.querySelectorAll('[data-dondur]').forEach(b => b.addEventListener('click', async () => {
     if (!img) return;
     try { const { k, key, kaynak } = al(); im = im || await resimAc(evrakKaynak(k, key, kaynak).veri); donme = (donme + 90) % 360; img.src = tuval(im, donme, 1600).toDataURL('image/jpeg', 0.85); } catch (y) { bildir('Fotoğraf döndürülemedi', 'uyari'); }

@@ -1,4 +1,4 @@
-// Firebase web uygulaması ayarları (proje: sinyal-5d37a, Firestore: europe-west3 Frankfurt).
+// Firebase web uygulaması ayarları (proje: sinyal-5d37a).
 // Bu değerler gizli değildir; erişimi Firestore güvenlik kuralları ve kullanıcı girişi korur.
 export const FIREBASE = {
   apiKey: 'AIzaSyDbcCLYjyvOBQgUNErTMHtWCCIVJulQ7F4',

@@ -1,0 +1,213 @@
+{
+ "surum": "2026.11.16-1",
+ "enAzYardimci": "1.12.0",
+ "aciklama": "mdSinyal MEBBİS Yardımcısı ekran haritası. Yalnız veri: ekran yolları, alan kimlikleri, seçenek değerleri.",
+ "ekran": {
+  "skt01001": {
+   "ad": "SKT01001 Kurum Bilgileri",
+   "yol": "/SKT/skt01001.aspx",
+   "zorunlu": []
+  },
+  "skt01002": {
+   "ad": "SKT01002 Kurum Araç Giriş",
+   "yol": "/SKT/skt01002.aspx",
+   "zorunlu": [
+    "dropTurSecim"
+   ]
+  },
+  "skt01005": {
+   "ad": "SKT01005 Uygulama Sınavı Randevu Girişi",
+   "yol": "/SKT/skt01005.aspx",
+   "zorunlu": [
+    "cmbSinavTarihi",
+    "cmbSertifika",
+    "btnListele",
+    "btnRandevu",
+    "hiddenKaydet"
+   ]
+  },
+  "skt02001": {
+   "ad": "SKT02001 Aday Dönem Kayıt",
+   "yol": "/SKT/skt02001.aspx",
+   "zorunlu": [
+    "Button1"
+   ]
+  },
+  "skt02002": {
+   "ad": "SKT02002 Aday Fotoğraf Kayıt",
+   "yol": "/SKT/skt02002.aspx",
+   "zorunlu": [
+    "cmbEgitimDonemi",
+    "cmbAdayAdSoyad",
+    "ButtonSave"
+   ]
+  },
+  "skt02003": {
+   "ad": "SKT02003 Öğrenim Bilgisi",
+   "yol": "/SKT/skt02003.aspx",
+   "zorunlu": [
+    "cmbEgitimDonemi",
+    "cmbAdayAdSoyad"
+   ]
+  },
+  "skt02004": {
+   "ad": "SKT02004 Sağlık Raporu",
+   "yol": "/SKT/skt02004.aspx",
+   "zorunlu": [
+    "cmbEgitimDonemi",
+    "cmbAdayAdSoyad"
+   ]
+  },
+  "skt02005": {
+   "ad": "SKT02005 Adli Sicil",
+   "yol": "/SKT/skt02005.aspx",
+   "zorunlu": [
+    "cmbEgitimDonemi",
+    "cmbAdayAdSoyad"
+   ]
+  },
+  "skt02006": {
+   "ad": "SKT02006 Dönem Adaylarını Onaylama",
+   "yol": "/SKT/skt02006.aspx",
+   "zorunlu": [
+    "cmbEgitimDonemi",
+    "cmbDurumu",
+    "cmbOgrenciDurumu",
+    "btnListele"
+   ]
+  },
+  "skt02007": {
+   "ad": "SKT02007 e-Sınav Başvuru",
+   "yol": "/SKT/skt02007.aspx",
+   "zorunlu": [
+    "btnUcretListe",
+    "txtTcKimlikNo",
+    "btnTCGetir",
+    "cmbEgitimDonemi",
+    "cmbIstenenEhliyetSinifi",
+    "hiddenKaydet"
+   ]
+  },
+  "skt02009": {
+   "ad": "SKT02009 Aday Durum Görüntüleme",
+   "yol": "/SKT/skt02009.aspx",
+   "zorunlu": [
+    "txtTcKimlikNo",
+    "ImageButton1"
+   ]
+  },
+  "skt02010": {
+   "ad": "SKT02010 Parmak İzi",
+   "yol": "/SKT/SKT02010.aspx",
+   "zorunlu": [
+    "cmbEgitimDonemi",
+    "cmbAdayAdSoyad"
+   ]
+  },
+  "skt02011": {
+   "ad": "SKT02011 Sözleşme",
+   "yol": "/SKT/skt02011.aspx",
+   "zorunlu": [
+    "cmbEgitimDonemi",
+    "cmbAdayAdSoyad"
+   ]
+  },
+  "skt02013": {
+   "ad": "SKT02013 Fatura Kayıt",
+   "yol": "/SKT/skt02013.aspx",
+   "zorunlu": [
+    "cmbEgitimDonemi",
+    "txtTC",
+    "btnTC",
+    "hiddenKaydet"
+   ]
+  },
+  "skt03001": {
+   "ad": "SKT03001 Dönem Grup Açılış",
+   "yol": "/SKT/skt03001.aspx",
+   "zorunlu": [
+    "cmbDonemi",
+    "cmbGrupAdi",
+    "Us_tarih1_txtTarihGiris",
+    "cmbKurumOnayDurumu",
+    "hiddenKaydet"
+   ]
+  },
+  "skt03002": {
+   "ad": "SKT03002 Grup Şube Tanımlama",
+   "yol": "/SKT/skt03002.aspx",
+   "zorunlu": [
+    "cmbDonemi",
+    "cmbGrupAdi",
+    "cmbSubesi",
+    "cmbKurumOnayDurumu",
+    "hiddenKaydet"
+   ]
+  },
+  "skt03003": {
+   "ad": "SKT03003 Teorik Ders Programı Giriş",
+   "yol": "/SKT/skt03003.aspx",
+   "zorunlu": [
+    "cmbDonemi",
+    "cmbGrupAdi",
+    "cmbSubesi",
+    "btnListeleGrid",
+    "hiddenKaydet"
+   ]
+  },
+  "skt03004": {
+   "ad": "SKT03004 Direksiyon Ders Programı Giriş",
+   "yol": "/SKT/skt03004.aspx",
+   "zorunlu": [
+    "cmbDonem",
+    "cmbGrup",
+    "cmbSube",
+    "btnAdayGetir",
+    "hiddenKaydet"
+   ]
+  },
+  "skt04003": {
+   "ad": "SKT04003 Sınav Bilgileri Görüntüleme",
+   "yol": "/SKT/skt04003.aspx",
+   "zorunlu": [
+    "cmbSinavTuru"
+   ]
+  },
+  "ook00001": {
+   "ad": "OOK00001",
+   "yol": "/Ookgm/ook00001.aspx",
+   "zorunlu": []
+  },
+  "ook12001": {
+   "ad": "OOK12001 Personel Arama",
+   "yol": "/Ookgm/ook12001.aspx",
+   "zorunlu": []
+  },
+  "ook54001": {
+   "ad": "OOK54001 Personel",
+   "yol": "/Ookgm/ook54001.aspx",
+   "zorunlu": []
+  }
+ },
+ "deger": {
+  "durumKurumBekliyor": "0",
+  "durumKurumOnayli": "1",
+  "durumTumu": "4",
+  "ogrenciTumu": "0",
+  "turArac": "1",
+  "turSimulator": "2",
+  "sinavUygulama": "2",
+  "sinavEsinav": "3",
+  "sonDurumlar": "5,6,11"
+ },
+ "metin": {
+  "izinNo": "İzin No:",
+  "onaylandi": "Onaylandı",
+  "tamam": "Tamam",
+  "grup": "Grup ",
+  "grupTire": "Grup-",
+  "sube": " Ş",
+  "subeUzun": " ŞUBES",
+  "normal": "Normal"
+ }
+}

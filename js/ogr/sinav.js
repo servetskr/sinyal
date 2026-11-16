@@ -3,13 +3,14 @@
 // aynı localStorage anahtarı 'sinyal-test-'+k.id, aynı veri etkileri: k.konuAnaliz, k.yanlislar, k.deneme, HZ.gorulenEkle, HZ.tekrarGuncelle, kaydet()).
 // Ekranlar: deneme girişi, deneme sorusu, soru listesi, bitirme onayı, sonuç, yanlış inceleme (tam ekran akışlar);
 // çalışma araçları, test ayarları, bugünkü tekrar, yanlışlarım (Öğren alt ekranları).
-import { S, kaydet, SINIFLAR, fark, gonderimEkle, ogrOzellik, tamAd } from '../veri.js?v=208';
-import { bildir, tarih, goreli, gunKisa } from '../ui.js?v=208';
-import * as HZ from '../hazirlik.js?v=208';
-import { KONULAR } from '../konular.js?v=208';
-import { soruKonu, SORU_KONU } from '../soruKonu.js?v=208';
-import { UNITE_AD, konular, altAc, altKapat, altEkran as altSimdi } from './ogrveri.js?v=208';
-import { esc, oi, sayfaBas, geri, bolum, kart, heroKart, dugme, ikonKutu, satir, liste, cip, serit, not, bos, sekmeler, kutucuk, radyo, akisUst, akisAlt, sik, cevapKutu, baglanti, stilEkle, tl, odakTuzagi, gorsel } from './ui.js?v=208';
+import { S, kaydet, SINIFLAR, fark, gonderimEkle, ogrOzellik, tamAd, sinavHakSiniri } from '../veri.js?v=209';
+import { bildir, tarih, goreli, gunKisa } from '../ui.js?v=209';
+import * as HZ from '../hazirlik.js?v=209';
+import { hakDurum } from '../ogrenci.js?v=209';
+import { KONULAR } from '../konular.js?v=209';
+import { soruKonu, SORU_KONU } from '../soruKonu.js?v=209';
+import { UNITE_AD, konular, altAc, altKapat, altEkran as altSimdi } from './ogrveri.js?v=209';
+import { esc, oi, sayfaBas, geri, bolum, kart, heroKart, dugme, ikonKutu, satir, liste, cip, serit, not, bos, sekmeler, kutucuk, radyo, akisUst, akisAlt, sik, cevapKutu, baglanti, stilEkle, tl, odakTuzagi, gorsel } from './ui.js?v=209';
 
 const SURE = 45 * 60e3, GECME = 70, HARF = 'ABCD';
 const MOD_AD = { deneme: 'Deneme sınavı', hizli: 'Hızlı test', konu: 'Konu testi', yanlis: 'Yanlışlarım', tekrar: 'Bugünkü tekrar' };
@@ -19,7 +20,7 @@ const sayi = n => (+n || 0).toLocaleString('tr-TR');
 
 /* ---------- soru bankası (yalnız gerekince yüklenir) ---------- */
 let SR = null, LV = null, yuk = null;
-const sorulariYukle = () => SR ? Promise.resolve() : yuk || (yuk = Promise.all([import('../sorular.js?v=208'), import('../levha.js?v=208').catch(() => null)])
+const sorulariYukle = () => SR ? Promise.resolve() : yuk || (yuk = Promise.all([import('../sorular.js?v=209'), import('../levha.js?v=209').catch(() => null)])
   .then(([m, l]) => { SR = m.SORULAR; LV = l; }).catch(x => { yuk = null; throw x; }));
 const gorselHtml = g => !g ? '' : String(g).startsWith('L:') ? (LV && LV.levhaSvg ? LV.levhaSvg(g.slice(2)) : '') : String(g);
 const karistir = l => { const a = l.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -271,7 +272,7 @@ function hazirlikHtml(k) {
   return bolum('Sınava hazırlığın', `${h.puan} / 100`) + kart(`<div class="ox-snv-hz-ust">${ikonKutu(h.durum === 'hazir' ? 'kalkan' : 'hedef', DUR[1])}<span class="ox-satir-govde"><b class="ox-snv-ton ${DUR[1]}">${DUR[0]}</b><small>${h.deneme ? `Son ${h.deneme} deneme ortalaması ${h.dOrt}` : 'Henüz deneme sınavı yok'}</small></span></div>
     ${satirH('Deneme sınavları', h.dOrt, h.deneme ? `${h.gecen}/${h.deneme} denemede ${GECME} ve üstü` : '')}
     ${satirH('Konu başarısı', h.konuP, h.konular.filter(x => x.o != null).map(x => esc(uniteAd(x.kn)) + ' %' + x.o).join(' · '))}
-    ${satirH('Soru bankası', h.kaps, `${sayi(h.gor)} / ${sayi(SORU_KONU.length)} soru görüldü`)}
+    ${satirH('Soru bankası', h.kaps, `Hedef ${sayi(h.hedef)} soru: ${sayi(h.gor)} soru gördün`)}
     ${h.oneri.length ? `<div class="ox-snv-oneri"><b>Şimdi ne yapmalısın</b><ul>${h.oneri.map(o => `<li>${esc(o)}</li>`).join('')}</ul></div>` : ''}`, 'ox-snv-hz');
 }
 function konuBasariHtml(k) {
@@ -282,17 +283,23 @@ function konuBasariHtml(k) {
   }));
 }
 function sinavlarHtml(k) {
-  const hak = S.kurs.sinavHak || 4, tu = S.kurs.tekrarUcret || {}, dir = !!SINIFLAR[k.sinif].direksiyon;
+  // hak sınırı öğrenciye göre (md.15): e-Sınav 4; uygulama ilk 4, ikinci dört hak başlatıldıysa 8
+  const tu = S.kurs.tekrarUcret || {}, dir = !!SINIFLAR[k.sinif].direksiyon;
   const sonr = tur => (S.sinavlar || []).filter(s => s.tur === tur && (s.kursiyerler || []).includes(k.id) && fark(s.tarih) >= 0 && !(s.sonuc || {})[k.id]).sort((a, b) => a.tarih.localeCompare(b.tarih))[0];
   const kartH = (tur, x, sn, getir, ucret, bilgi, ek = '') => {
     if (x && x.sonuc === 'Geçti') return kart(`<div class="ox-snv-sv-bas">${ikonKutu('dogru', 'yesil')}<span class="ox-satir-govde"><b>${tur}</b><small class="yesil">Geçtin${x.puan ? ' · ' + x.puan + ' puan' : ''}</small></span>${cip('Tamam', 'yesil')}</div>`, 'ox-snv-sv');
-    const kalan = Math.max(0, hak - ((x && x.hak) || 0));
+    const veri = tur === 'e-Sınav' ? 'e-Sınav' : 'Direksiyon', hak = sinavHakSiniri(k, veri), kalan = Math.max(0, hak - ((x && x.hak) || 0));
+    // hak doldu (kurs henüz karar vermedi): "Bekliyor", randevu, tekrar ücreti ve "yanına al" satırları yerine durum metni
+    const hd = hakDurum(k);
+    if (hd && hd.tur === veri && !sn) return kart(`<div class="ox-snv-sv-bas">${ikonKutu('uyari', 'turuncu')}<span class="ox-satir-govde"><b>${tur}</b><small>Sınav hakkın kalmadı</small></span>${cip('Hak doldu', 'turuncu')}</div>
+      <p class="ox-snv-sv-yer">${oi('bilgi')}<span>${esc(hd.metin)}</span></p>
+      <div class="ox-snv-sv-dl"><div><span>Kalan sınav hakkın</span><b>${kalan} / ${hak}</b></div></div>`, 'ox-snv-sv');
     return kart(`<div class="ox-snv-sv-bas">${ikonKutu('takvim', sn ? 'mavi' : 'gri')}<span class="ox-satir-govde"><b>${tur}</b><small>${sn ? `${gunKisa(sn.tarih)} ${tarih(sn.tarih)} · ${esc(sn.saat)}` : 'Henüz tarih yok'}</small></span>${sn ? cip(esc(goreli(sn.tarih))) : cip('Bekliyor', 'gri')}</div>
       <p class="ox-snv-sv-yer">${sn && sn.yer ? `${oi('harita')}<span>${esc(sn.yer)}</span>` : `${oi('bilgi')}<span>${bilgi}</span>`}</p>
       <div class="ox-snv-sv-dl"><div><span>Kalan sınav hakkın</span><b>${kalan} / ${hak}</b></div><div><span>Kalırsan tekrar sınav ücreti</span><b>${ucret ? tl(ucret) : '—'}</b></div></div>
       <details class="ox-snv-sv-getir"${sn && fark(sn.tarih) <= 7 ? ' open' : ''}><summary><span>Sınav günü yanına al</span>${oi('asagi')}</summary><ul>${getir.map(g => `<li>${oi('tik')}<span>${esc(g)}</span></li>`).join('')}</ul></details>${ek}`, 'ox-snv-sv');
   };
-  return bolum('Sınavların') + kartH('e-Sınav', k.esinav, sonr('e-Sınav'), ['T.C. kimlik kartın (fotokopi geçmez)', 'e-Sınav ücreti dekontu', 'Sınavdan 30 dakika önce sınav merkezinde ol'], tu.esinav, 'Teorik derslerin bitince kurs e-sınav randevunu alır.')
+  return bolum('Sınavların') + kartH('e-Sınav', k.esinav, sonr('e-Sınav'), ['T.C. kimlik kartın (fotokopi geçmez)', 'e-Sınav ücreti dekontu', 'Sınavdan 30 dakika önce sınav merkezinde ol'], tu.esinav, 'Teorik derslerin bitince kurs e-Sınav randevunu alır.')
     + (dir ? kartH('Uygulama sınavı', k.dsinav, sonr('Direksiyon'), ['T.C. kimlik kartın', 'Gözlük ya da lens kullanıyorsan yanında olsun', 'Sınavdan 30 dakika önce sınav yerinde ol'], tu.dsinav, 'Direksiyon derslerin bitince kurs sınav tarihini bildirir.',
       ogrOzellik('direksiyon') ? `<div class="ox-snv-sv-bag">${baglanti('Uygulama sınavına hazırlan', { 'data-ox-alt': 'direksiyon:|araclar' }, true)}</div>` : '') : '');
 }
@@ -311,7 +318,7 @@ function araclarHtml(k) {
     + liste(satirlar, 'ox-snv-araclar')
     + `<p class="ox-snv-toplam">Toplam: ${sayi(dn)} deneme · ${sayi(cozulen)} soru çözüldü</p>`
     + hazirlikHtml(k) + konuBasariHtml(k) + sinavlarHtml(k)
-    + not(`Havuzda ${sayi(SORU_KONU.length)} soru var. Sonuçların teorik öğretmenine gider; zayıf olduğun konuya ek ders konur.`);
+    + not(`Havuzda ${sayi(SORU_KONU.length)} soru var. Sonuçların kursun ekranında görünür.`);
 }
 
 /* ---------- 20 · test ayarları ---------- */
@@ -660,6 +667,7 @@ stilEkle('ox-sinav', `
 .ox-snv-sv-dl{margin-top:10px;border-top:1px solid var(--ox-ayrac)}
 .ox-snv-sv-dl div{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:10px 0;border-bottom:1px solid var(--ox-ayrac);font-size:15px;color:var(--ox-metin)}
 .ox-snv-sv-dl b{flex:none;font-weight:600;color:var(--ox-bas);font-variant-numeric:tabular-nums}
+.ox-snv-sv-dl:last-child div:last-child{border-bottom:0;padding-bottom:0}
 .ox-snv-sv-getir summary{display:flex;align-items:center;justify-content:space-between;min-height:44px;list-style:none;cursor:pointer;font-size:15px;font-weight:600;color:var(--ox-mavi)}
 .ox-snv-sv-getir summary::-webkit-details-marker{display:none}
 .ox-snv-sv-getir summary .ox-i{width:20px;height:20px;transition:transform .2s}

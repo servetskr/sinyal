@@ -1,9 +1,9 @@
 // Öğrenci hesapları (kurs tarafı): müdür ya da ön büro hesabı açar, giriş bilgileri öğrenciye WhatsApp'tan gider,
 // öğrenci ilk girişte kendi şifresini belirler. Şifresini unutan öğrencinin talebi buraya düşer; tek dokunuşla yeni geçici şifre gider.
-import { S, kaydet, gun, tamAd, islem, selam, oturum, sb, SINIFLAR, egitmen, eksikEvrak, kursAdi } from './veri.js?v=208';
-import { e, ik, tarih, pencere, kapatPencere, bildir, waSirali, tl, tamTarih, apiAcik } from './ui.js?v=208';
-import * as B from './bulut.js?v=208';
-import { wpGonder, alici, odemeBilgisi } from './sayfalar1.js?v=208';
+import { S, kaydet, gun, tamAd, islem, selam, oturum, sb, SINIFLAR, egitmen, eksikEvrak, kursAdi } from './veri.js?v=209';
+import { e, ik, tarih, pencere, kapatPencere, bildir, waSirali, tl, tamTarih, apiAcik } from './ui.js?v=209';
+import * as B from './bulut.js?v=209';
+import { wpGonder, alici, odemeBilgisi } from './sayfalar1.js?v=209';
 
 const yetkili = () => oturum.kullanici && ['mudur', 'sekreter'].includes(oturum.kullanici.rol);
 const talepVar = k => B.bulutta() && !!k.hesap && (B.bulut.sifreTalep || []).some(t => t.tel === k.hesap.tel);
@@ -32,13 +32,15 @@ export function hesapSeridi(k) {
 // Kayıt sonrası karşılama: öğrenciye konusuna göre ayrı mesajlar (hoş geldin, eksik evrak, uygulama girişi, ödeme planı, teorik ders),
 // usta öğreticiye yeni öğrenci bildirimi, kurs müdürüne kayıt özeti. İstenirse öğrenci hesabı önce açılır, geçici şifre 3. mesajla gider.
 // sonra: kayıttan sonra açılacak pencere (sözleşme). Mesajlar otomatik gidiyorsa hemen açılır; elle gönderilecekse liste kapanınca açılır.
-export async function karsilama(k, { hos = true, hesap = true, sonra } = {}) {
+// kaynak: 'evden' = kayıt formu (öğrenci kendisi kaydoldu; kayıt peşinatla kesinleşir, müdür özetinde "Yeni kayıt (kayıt formu)" yazar)
+export async function karsilama(k, { hos = true, hesap = true, sonra, kaynak = '' } = {}) {
+  const evden = kaynak === 'evden';
   const api = apiAcik(); if (api && sonra) sonra();
   let r = null;
   if (hesap && !k.hesap) r = await ac(k).then(x => { islem('Öğrenci hesabı açtı', tamAd(k)); kaydet(); return x; }).catch(x => { bildir('Öğrenci hesabı açılamadı: ' + B.hataMetni(x) + '. Öğrenci dosyasından tekrar deneyin', 'uyari'); return null; });
   const a = alici(k), ogr = metin => ({ ad: a.ad, tel: a.tel, rol: a.rol, metin, tur: 'Hoş geldin' }), l = [];
   if (hos) {
-    l.push(ogr(`${selam(k)} ${S.kurs.ad} ailesine hoş geldiniz! Kaydınız tamamlandı. Sınıfınız: ${SINIFLAR[k.sinif].ad}.`));
+    l.push(ogr(`${selam(k)} ${S.kurs.ad} ailesine hoş geldiniz! ${evden ? 'Kaydınız alındı; peşinat ödenince kesinleşir.' : 'Kaydınız tamamlandı.'} Sınıfınız: ${SINIFLAR[k.sinif].ad}.`));
     const ek = eksikEvrak(k).filter(([x]) => x !== 'sozlesme');
     if (ek.length) l.push(ogr(`Kaydınızı tamamlamak için şu belgeler eksik:\n${ek.map(([, ad]) => '• ' + ad).join('\n')}\nBelgelerin fotoğrafını ya da PDF'ini bu numaraya WhatsApp'tan gönderebilirsiniz; her belge doğrudan dosyanıza işlenir.`));
   }
@@ -52,8 +54,8 @@ export async function karsilama(k, { hos = true, hesap = true, sonra } = {}) {
     if (h) { const b = alici(h); l.push({ ad: b.ad, tel: b.tel, rol: b.rol, tur: 'Yeni öğrenci', metin: `${h.ad.split(' ')[0]} Hoca, yeni öğrenciniz: ${tamAd(k)} · ${SINIFLAR[k.sinif].ad} · ${k.tel}. Direksiyon dersleri e-sınavdan sonra planlanacak; planlanınca size ayrıca bildirim gelir.` }); }
   }
   // kurs müdürüne her yeni kayıtta özet (kaydı müdür kendisi yaptıysa da kayıt olarak gelir)
-  const m = alici('mudur'), h = egitmen(k.egitmen), ek = eksikEvrak(k).filter(([x]) => x !== 'sozlesme'), kim = oturum.kullanici && oturum.kullanici.ad, o = k.odeme;
-  l.push({ ad: m.ad, tel: m.tel, rol: m.rol, tur: 'Yeni kayıt', metin: `Yeni kayıt: ${tamAd(k)} · ${SINIFLAR[k.sinif].ad} · ${k.tel}\nÜcret ${tl(o.toplam)}${o.pesin ? ' · peşinat ' + tl(o.pesin) : ''}${o.taksitler.filter(x => !x.iptal && x.aciklama !== 'Peşinat').length ? ' · ' + o.taksitler.filter(x => !x.iptal && x.aciklama !== 'Peşinat').length + ' taksit' : ''}${h ? '\nUsta öğretici: ' + h.ad : ''}${ek.length ? '\nEksik evrak: ' + ek.map(([, ad]) => ad.toLocaleLowerCase('tr')).join(', ') : ''}${kim ? '\nKaydeden: ' + kim : ''}` });
+  const m = alici('mudur'), h = egitmen(k.egitmen), ek = eksikEvrak(k).filter(([x]) => x !== 'sozlesme'), kim = oturum.kullanici && oturum.kullanici.ad, o = k.odeme, pes = o.taksitler.find(x => !x.iptal && x.aciklama === 'Peşinat' && !x.odendi), bul = Object.keys(k.evrakYuklenen || {}).filter(x => k.evrakYuklenen[x].bulanik);
+  l.push({ ad: m.ad, tel: m.tel, rol: m.rol, tur: 'Yeni kayıt', metin: `Yeni kayıt${evden ? ' (kayıt formu)' : ''}: ${tamAd(k)} · ${SINIFLAR[k.sinif].ad} · ${k.tel}\nÜcret ${tl(o.toplam)}${o.pesin ? ' · peşinat ' + tl(o.pesin) : ''}${o.taksitler.filter(x => !x.iptal && x.aciklama !== 'Peşinat').length ? ' · ' + o.taksitler.filter(x => !x.iptal && x.aciklama !== 'Peşinat').length + ' taksit' : ''}${h ? '\nUsta öğretici: ' + h.ad : ''}${ek.length ? '\nEksik evrak: ' + ek.map(([, ad]) => ad.toLocaleLowerCase('tr')).join(', ') : ''}${bul.length ? '\nBulanık evrak, kontrol edin: ' + bul.length + ' belge' : ''}${evden ? '\nSözleşme ekranda imzalandı.' + (pes ? ' Peşinat ' + tl(pes.tutar) + ' henüz ödenmedi.' : '') + '\nKayıt: kayıt formu' : kim ? '\nKaydeden: ' + kim : ''}` });
   waSirali(l, 'Kayıt mesajları', { sessiz: true, bitince: api ? undefined : sonra });
 }
 export function hesapAcSessiz(k) {

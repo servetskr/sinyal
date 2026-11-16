@@ -164,6 +164,7 @@ h1,h2,h3,h4{color:var(--murekkep);font-family:var(--baslik);font-weight:800;line
 .plaka i{background:#123fa5;color:#fff;font-style:normal;font-size:8.5px;font-family:var(--baslik);font-weight:800;display:flex;align-items:flex-end;padding:0 3px 1px;margin-right:7px;line-height:1}
 .kisi{display:flex;align-items:center;gap:10px;min-width:0}
 .kisi b{color:var(--murekkep);font-weight:700;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px}
+.kisi>div{min-width:0}
 .kisi small{color:var(--soluk);font-size:13px;display:block}
 
 /* araç görseli */
@@ -1375,6 +1376,32 @@ button.oto-gidecek:hover{text-decoration:underline}
   .oto .sag .anahtar{margin-left:auto}
   .liste .sag .rozet{white-space:normal;max-width:140px;text-align:right}
   .liste li>div[style*="flex:1"]{min-width:0}
+}
+/* telefonda kursiyer dosyası › Dersler ve Teorik › Dönem grupları: rozetler/düğmeler alt satıra iner, sayfa yana taşmaz (masaüstü değişmez) */
+@media (max-width:760px){
+  .ders-liste>li,.grup-liste>li{flex-wrap:wrap;row-gap:8px}
+  .ders-liste>li>div{flex:1 1 0;min-width:0}
+  .ders-liste .sag{flex:1 1 100%;margin-left:0;flex-wrap:wrap;gap:6px;padding-left:64px}
+  .ders-liste .sag .rozet{max-width:none;text-align:left;height:auto;min-height:23px;padding-top:3px;padding-bottom:3px;line-height:1.25}
+  .grup-liste>li>div{flex:1 1 100%!important}
+  .grup-liste .sag{flex:1 1 100%;margin-left:0;flex-wrap:wrap;gap:8px}
+  .grup-liste .sag>.sayi{flex:1 1 100%}
+}
+/* telefonda Sosyal › Instagram yorumları: durum rozeti ve düğmeler yorumun altına iner (sağ kenar kırpılmaz) */
+@media (max-width:760px){
+  .yorum-liste>li>div{flex:1 1 100%!important;min-width:0!important}
+  .yorum-liste .sag{flex:1 1 100%;margin-left:0;justify-content:flex-start;gap:6px}
+  .yorum-liste .sag .rozet{max-width:none;text-align:left;height:auto;min-height:23px;padding-top:3px;padding-bottom:3px;line-height:1.25}
+}
+/* çok dar telefonda (≤380) Teorik oturum satırı: sayı, çubuk ve düğme alt satıra iner */
+@media (max-width:380px){
+  .teorik-liste>li{flex-wrap:wrap;row-gap:8px}
+  .teorik-liste>li>div{flex:1 1 0;min-width:0}
+  .teorik-liste .sag{flex:1 1 100%;margin-left:0;padding-left:64px;flex-wrap:wrap}
+}
+/* çok dar telefonda (≤340) kart içindeki ızgara/sütun öğeleri daralabilsin (Sosyal › Kurallar gibi) */
+@media (max-width:340px){
+  .kart-govde>*,.izgara>*{min-width:0}
 }
 
 /* Genel bakış (v105): mdSinyal bu ay sizin için */
