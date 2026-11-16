@@ -1,8 +1,8 @@
 // MEBBİS aday evrak ekranlarının istediği bilgiler (belge değil, belge üzerindeki bilgiler):
 // Öğrenim (SKT02003), Sağlık raporu (SKT02004), Sabıka/adli sicil (SKT02005), Parmak izi (SKT02010, menüde "İmza").
 // Kayıt formunda ve öğrenci dosyasında girilir; "MEBBİS'e yaz" kayıtla birlikte bu ekranları da doldurur.
-import { e, isaret } from './ui.js?v=209';
-import { S, gun } from './veri.js?v=209';
+import { e, isaret } from './ui.js?v=210';
+import { S, gun } from './veri.js?v=210';
 
 export const OGRENIM_BELGELERI = ['Diploma', 'Mezuniyet Belgesi', 'Öğrenim Belgesi', 'Tasdikname', 'Geçici Mezuniyet Belgesi'];
 // MEBBİS metin kuralı: " < > ' ! & = yasak, baş/son boşluk yasak, uzunluk sınırı
@@ -12,12 +12,16 @@ const tarihYaz = v => v ? v.split('-').reverse().join('.') : '';
 
 /* ---------- Evrak tarih denetimi (uyarı, engel değil) ----------
    Kesin: belge tarihi gelecekte ya da doğumdan önce olamaz; biyometrik fotoğraf son 6 ayda çekilmiş olmalı (MTSK Yön. md.11/1-a-3).
-   Teyit bekliyor: sağlık raporu ve adli sicil belgesinin kaç ay geçerli sayılacağı yönetmelikte yazılı değil (md.11/1-a-4, 11/1-a-5).
+   Sağlık raporu: MTSK süre koymuyor. Varsayılan 12 ay, Sağlık Raporları Yönetmeliği md.66/1'in genel kuralı (durum bildirir rapor, başka tarih yazmıyorsa
+   1 yıl); sürücü raporuna uygulanışı teyit bekliyor. Raporda geçerlilik (bitiş) tarihi girildiyse ay hesabı yapılmaz, o tarih kullanılır.
+   Adli sicil: mevzuatta süre yok; 6 ay kurs kararıdır (belirleyici olan Bakanlığın adli mercilerden teyidi). eyup-sorular-cevaplar.md madde 16.
    Süreler Ayarlar › MEB kuralları'ndan değişir; 0 yazılırsa o denetim kapanır. MEBBİS'e işlenmiş kayıtta süre uyarısı çıkmaz (belge kabul edilmiş). */
-export const BELGE_SURE = { saglikGecerlilikAy: 24, adliGecerlilikAy: 6, fotoGecerlilikAy: 6 };
+// Yeni Sağlık Raporları Yönetmeliği yürürlüğü (RG 19/5/2026); öncesinde verilen raporlar kendi süreleri bitene kadar geçerli (geçici md.1/2)
+const SAGLIK_YON_TARIH = '2026-05-19';
+export const BELGE_SURE = { saglikGecerlilikAy: 12, adliGecerlilikAy: 6, fotoGecerlilikAy: 6 };
 export const belgeSure = key => { const v = S && S.kurs ? S.kurs[key] : undefined; return v === 0 ? 0 : +v > 0 ? +v : BELGE_SURE[key]; };
-// Kurs Ayarlar'da kendi değerini girmediyse süre "teyit bekliyor" sayılır (fotoğrafın 6 ayı yönetmelikte yazılı)
-export const sureTeyitli = key => key === 'fotoGecerlilikAy' || !!(S && S.kurs && S.kurs[key] !== undefined);
+// Kurs Ayarlar'da kendi değerini girmediyse sağlık raporu süresi "teyit bekliyor" sayılır (fotoğrafın 6 ayı yönetmelikte yazılı; adli sicilin 6 ayı kurs kararı)
+export const sureTeyitli = key => key === 'fotoGecerlilikAy' || key === 'adliGecerlilikAy' || !!(S && S.kurs && S.kurs[key] !== undefined);
 // Geçersiz tarih (31.02 gibi) boş sayılır; yanlış uyarı üretmesin
 const isoYap = t => { const x = String(t || '').trim(), m = x.match(/^(\d{2})[./](\d{2})[./](\d{4})$/), v = m ? `${m[3]}-${m[2]}-${m[1]}` : /^\d{4}-\d{2}-\d{2}/.test(x) ? x.slice(0, 10) : ''; if (!v) return ''; const d = new Date(v + 'T00:00:00Z'); return !isNaN(d) && d.toISOString().slice(0, 10) === v ? v : ''; };
 const ayEkleIso = (t, n) => { const [y, a, g] = t.split('-').map(Number), d = new Date(Date.UTC(y, a - 1 + n, g)); if (d.getUTCDate() !== g) d.setUTCDate(0); return d.toISOString().slice(0, 10); };
@@ -28,17 +32,21 @@ export function tarihUyarilari(k, ham = {}) {
   k = k || {}; const v = k.mebEvrak || {}, bugun = gun(0), l = [];
   const dogum = isoYap(ham.dogum !== undefined ? ham.dogum : k.dogumTarihi), ref = isoYap(k.kayit) || bugun;
   const belgeler = [
-    ['saglik', 'Sağlık raporu', isoYap(ham.saglik !== undefined ? ham.saglik : (k.saglikRapor || {}).tarih), 'saglikGecerlilikAy', 'MTSK Yön. md.11/1-a-4 (sürücü olur raporu)'],
-    ['adli', 'Adli sicil belgesi', isoYap(ham.adli !== undefined ? ham.adli : (v.adli || {}).tarih), 'adliGecerlilikAy', 'MTSK Yön. md.11/1-a-5 (barkotlu adli sicil belgesi)'],
+    ['saglik', 'Sağlık raporu', isoYap(ham.saglik !== undefined ? ham.saglik : (k.saglikRapor || {}).tarih), 'saglikGecerlilikAy', 'MTSK Yön. md.11/1-a-4 (sürücü olur raporu); süre yönetmelikte yok, 12 ay Sağlık Raporları Yön. md.66/1 genel kuralı'],
+    ['adli', 'Adli sicil belgesi', isoYap(ham.adli !== undefined ? ham.adli : (v.adli || {}).tarih), 'adliGecerlilikAy', 'MTSK Yön. md.11/1-a-5 (barkotlu adli sicil belgesi); süre mevzuatta yok, kurs kararı'],
     ['ogrenim', 'Öğrenim belgesi', isoYap(ham.ogrenim !== undefined ? ham.ogrenim : (v.ogrenim || {}).tarih), null, ''],
     ['parmak', 'Parmak izi belgesi', isoYap(ham.parmak !== undefined ? ham.parmak : (v.parmak || {}).tarih), null, ''],
   ];
+  const dg0 = k.dogrulama || {};
   belgeler.forEach(([alan, ad, t, sure, dayanak]) => {
     if (!t) return;
     if (t > bugun) return l.push({ alan, metin: `${ad} tarihi (${tYaz(t)}) bugünden sonra görünüyor; belgedeki tarihi kontrol edin.`, dayanak: 'Tarih denetimi' });
     if (dogum && t < dogum) return l.push({ alan, metin: `${ad} tarihi (${tYaz(t)}) doğum tarihinden önce; yanlış girilmiş olabilir.`, dayanak: 'Tarih denetimi' });
-    const ay = sure ? belgeSure(sure) : 0;
-    if (ay && !k.mebIslendi && ayEkleIso(t, ay) < ref) l.push({ alan, metin: `${ad} ${k.kayit ? 'kayıt tarihinde' : 'bugün'} ${ayFarki(t, ref)} aylık; kurs ayarı en fazla ${ay} ay. Yeni belge istenebilir.`, dayanak: dayanak + '; geçerlilik süresi yönetmelikte yazılı değil, kurs ayarı', teyit: !sureTeyitli(sure) });
+    // belgenin üzerindeki geçerlilik tarihi girildiyse (doğrulamada) ay hesabı yerine o tarih kullanılır (aşağıda)
+    const ay = sure && !(alan === 'saglik' && dg0.saglik && isoYap(dg0.saglik.gecerlilik)) ? belgeSure(sure) : 0;
+    // 19.05.2026'dan önce verilen sağlık raporu kendi süresi bitene kadar geçerli (Sağlık Raporları Yön. geçici md.1/2): 12 ay kuralı ona doğrudan uygulanmaz, uyarıya not eklenir
+    const gecis = alan === 'saglik' && t < SAGLIK_YON_TARIH ? ` Rapor ${tYaz(SAGLIK_YON_TARIH)} öncesi: yeni Sağlık Raporları Yönetmeliği’ne göre kendi süresi bitene kadar geçerli; raporda yazan süreye bakın.` : '';
+    if (ay && !k.mebIslendi && ayEkleIso(t, ay) < ref) l.push({ alan, metin: `${ad} ${k.kayit ? 'kayıt tarihinde' : 'bugün'} ${ayFarki(t, ref)} aylık; kurs ayarı en fazla ${ay} ay. ${gecis ? gecis.trim() : 'Yeni belge istenebilir.'}`, dayanak: dayanak + (gecis ? '; Sağlık Raporları Yön. geçici md.1/2' : '') + '; Ayarlar › MEB kuralları', teyit: !sureTeyitli(sure) });
   });
   const dg = k.dogrulama || {};
   [['saglik', 'Sağlık raporu'], ['adli', 'Adli sicil belgesi']].forEach(([x, ad]) => { const gs = dg[x] && isoYap(dg[x].gecerlilik); if (gs && gs < bugun) l.push({ alan: x, metin: `${ad} üzerindeki geçerlilik tarihi (${tYaz(gs)}) geçmiş.`, dayanak: 'Belgenin kendi geçerlilik tarihi (doğrulamada girildi)' }); });

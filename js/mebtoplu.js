@@ -1,14 +1,14 @@
 // MEBBİS toplu çekme ve toplu yazma (mdSinyal tarafı). İşi MEBBİS Yardımcısı'nın arka plan motoru (eklenti/motor.js)
 // kursun kendi MEBBİS oturumunda, ekran açmadan yürütür; sonuç buraya gelir ve kayıtlarla eşlenir.
 // Gönderilen ve gelen iletilerin adları ve alanları: js/eklenti.js başındaki ileti sözleşmesi tablosu (eklenti/sinyal.js'te de aynısı).
-import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, sb, sbDers, cokSube, seciliSube, eksikEvrak } from './veri.js?v=209';
-import { bildir, pencere, kapatPencere, e, ik, isaret, rozet, tarih } from './ui.js?v=209';
-import * as GR from './gruplar.js?v=209';
-import * as EK from './eklenti.js?v=209';
-import { yenile } from './app.js?v=209';
-import * as ME from './mebevrak.js?v=209';
-import * as MK from './mebkayit.js?v=209';
-import * as KR from './kurallar.js?v=209';
+import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, sb, sbDers, cokSube, seciliSube, eksikEvrak } from './veri.js?v=210';
+import { bildir, pencere, kapatPencere, e, ik, isaret, rozet, tarih } from './ui.js?v=210';
+import * as GR from './gruplar.js?v=210';
+import * as EK from './eklenti.js?v=210';
+import { yenile } from './app.js?v=210';
+import * as ME from './mebevrak.js?v=210';
+import * as MK from './mebkayit.js?v=210';
+import * as KR from './kurallar.js?v=210';
 
 export const CEKILECEK = [
   ['gruplar', 'Dönem grupları', 'Dönem, grup ve şubeler; eksik grup kartları açılır'],
@@ -89,8 +89,9 @@ export function ekIsler(hepsi) {
     l.push({ ...is_('grup', 'grup-' + g.id, `${g.ad} · ${GR.donemAdi(g.donem)}, Grup ${g.grupNo}, ${g.sube} Şubesi`, { ad: g.ad, tarih: g.baslangic, detay: tarih(g.baslangic) + ' başlıyor' }, g.baslangic, 'Kayıtlardan önce MEBBİS’te açılmalı', { grup: g.id }), bitti: !!g.meb });
   });
   // kurum onayı: MEBBİS'e kaydedilmiş, evrakı tamam, henüz onaylanmamış (onaydan sonra fotoğraf ve bilgi düzeltilemez)
+  // md.12/1: kayıt belgesi sistemden alınır, kursiyere imzalatılır, sisteme geri yüklenir; öğrenci dosyasında "Yükledim" işaretlenmediyse satırda hatırlatılır (madde 17)
   sb(S.kursiyerler).filter(k => !k.kapali && k.mebIslendi && mebGrup(k) && !eksikEvrak(k).length && (hepsi || !k.mebOnay) && !((k.meb || {}).kurumOnay || '').match(/onaylandı/i)).forEach(k => {
-    l.push({ ...is_('onay', 'onay-' + k.id, `${tamAd(k)} · ${mebGrup(k).ad}`, { ad: tamAd(k), sinif: k.sinif, egitmen: k.egitmen, tarih: k.kayit, detay: 'Kurum onayı' }, mebGrup(k).baslangic, 'Grup başlamadan', { kursiyer: k.id }), bitti: !!k.mebOnay });
+    l.push({ ...is_('onay', 'onay-' + k.id, `${tamAd(k)} · ${mebGrup(k).ad}`, { ad: tamAd(k), sinif: k.sinif, egitmen: k.egitmen, tarih: k.kayit, detay: 'Kurum onayı' + (k.mebOnay || (k.kayitBelgesi && k.kayitBelgesi.yuklendi) ? '' : ' · önce imzalı kayıt belgesini yükleyin (md.12/1)') }, mebGrup(k).baslangic, 'Grup başlamadan', { kursiyer: k.id }), bitti: !!k.mebOnay });
   });
   sb(S.kursiyerler).filter(k => !k.kapali && k.mebIslendi && mebGrup(k) && k.mebEvrak && !k.mebOnay && (hepsi || !k.mebEvrakGirildi)).forEach(k => {
     const { eksik } = ME.evrakPaketi(k);
@@ -652,7 +653,7 @@ function ozetGoster(o, yazilan) {
     icerik: `<ul style="list-style:none;display:grid;gap:10px">${l.join('') || '<li>Yeni bilgi yok.</li>'}</ul>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button>${o.kursiyerler && o.kursiyerler.yok.length ? `<button class="dg dg-cizgi" data-al-yok>${ik('indir')}${o.kursiyerler.yok.length} adayı mdSinyal’e al</button>` : ''}${o.sinavlar ? `<button class="dg dg-ana" data-sonuc>Sonuçları doldur</button>` : ''}`,
     onAc(d) {
-      const y = d.querySelector('[data-al-yok]'); if (y) y.addEventListener('click', () => { const x = o.kursiyerler.yok; kapatPencere(); import('./sayfalar5.js?v=209').then(m => { location.hash = '#/ayarlar/aktarim'; setTimeout(() => m.aktarimYukle([x[0].baslik, ...x.map(z => z.satir)], 'kursiyer', 'MEBBİS'), 300); }); });
+      const y = d.querySelector('[data-al-yok]'); if (y) y.addEventListener('click', () => { const x = o.kursiyerler.yok; kapatPencere(); import('./sayfalar5.js?v=210').then(m => { location.hash = '#/ayarlar/aktarim'; setTimeout(() => m.aktarimYukle([x[0].baslik, ...x.map(z => z.satir)], 'kursiyer', 'MEBBİS'), 300); }); });
       const s = d.querySelector('[data-sonuc]'); if (s) s.addEventListener('click', () => { kapatPencere(); EK.sinavSonucuAl(sinavTablosu(o.sinavlar)); });
     },
   });

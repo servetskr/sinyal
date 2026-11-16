@@ -1,12 +1,12 @@
-import * as EK from './eklenti.js?v=209';
-import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, kursiyer, DERS_TUR_AD, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube, tutarOku } from './veri.js?v=209';
-import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor, belgeYazdir, kisaLink } from './ui.js?v=209';
-import { yenile } from './app.js?v=209';
-import * as B from './bulut.js?v=209';
-import { wpGonder } from './sayfalar1.js?v=209';
-import * as ME from './mebevrak.js?v=209';
-import * as KR from './kurallar.js?v=209';
-import { gunBatimi, kursIli } from './veri.js?v=209';
+import * as EK from './eklenti.js?v=210';
+import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, kursiyer, DERS_TUR_AD, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube, tutarOku } from './veri.js?v=210';
+import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor, belgeYazdir, kisaLink } from './ui.js?v=210';
+import { yenile } from './app.js?v=210';
+import * as B from './bulut.js?v=210';
+import { wpGonder } from './sayfalar1.js?v=210';
+import * as ME from './mebevrak.js?v=210';
+import * as KR from './kurallar.js?v=210';
+import { gunBatimi, kursIli } from './veri.js?v=210';
 
 /* ================= MEB KURALLARI: KAYNAK VE SORUMLULUK ================= */
 const MTSK = 'MTSK Yönetmeliği (ÖÖKGM, Ocak 2025 metni)';
@@ -26,8 +26,8 @@ export const KURAL_KAYNAK = {
   ekDersUcreti: { ad: 'Ek direksiyon dersi ücreti', birim: '₺', tur: 'kurs', min: 0, max: 100000, kaynak: 'Kurs kararı (il taban ücretinin altında olamaz)' },
   // Kayıt kalitesi: uyarı üretir, kaydı engellemez. Varsayılanı olan ve dayanağı kesin olmayan değerler "Teyit bekliyor" görünür; kurs kendi değerini girince kalkar. 0 = denetim kapalı.
   // min/max: girişte geçerli aralık (dışındaki değer kaydedilmez); boş bırakılırsa varsayılana döner.
-  saglikGecerlilikAy: { ad: 'Sağlık raporu kaç ay geçerli sayılsın (uyarı)', birim: 'ay', tur: 'kurs', varsayilan: 24, min: 0, max: 120, teyit: true, kaynak: 'MTSK Yön. md.11/1-a-4 “sürücü olur” raporu ister, süre yazmaz. Varsayılan 24 ay il MEM’e sorulacak; 0 yazılırsa uyarı kapanır.' },
-  adliGecerlilikAy: { ad: 'Adli sicil belgesi kaç ay geçerli sayılsın (uyarı)', birim: 'ay', tur: 'kurs', varsayilan: 6, min: 0, max: 120, teyit: true, kaynak: 'MTSK Yön. md.11/1-a-5 barkotlu belge ister, süre yazmaz. Varsayılan 6 ay il MEM’e sorulacak; 0 yazılırsa uyarı kapanır.' },
+  saglikGecerlilikAy: { ad: 'Sağlık raporu kaç ay geçerli sayılsın (uyarı)', birim: 'ay', tur: 'kurs', varsayilan: 12, min: 0, max: 120, teyit: true, kaynak: 'MTSK Yön. md.11/1-a-4 “sürücü olur” raporu ister, süre yazmaz. Varsayılan 12 ay: Sağlık Raporları Yönetmeliği md.66/1’in genel kuralı (başka tarih yazmayan rapor 1 yıl); sürücü raporuna uygulanışı teyit bekliyor. Raporda geçerlilik tarihi girildiyse o tarih kullanılır. 19.05.2026’dan önce verilen raporlar kendi süreleri bitene kadar geçerli (geçici md.1/2). 0 yazılırsa uyarı kapanır.' },
+  adliGecerlilikAy: { ad: 'Adli sicil belgesi kaç ay geçerli sayılsın (uyarı)', birim: 'ay', tur: 'kurs', varsayilan: 6, min: 0, max: 120, kaynak: 'Kurs kararı: mevzuatta adli sicil belgesi için süre yok (MTSK Yön. md.11/1-a-5 barkotlu belge ister). Belirleyici olan Bakanlığın adli mercilerden yaptığı teyit; 0 yazılırsa uyarı kapanır.' },
   bulanikSinir: { ad: 'Evrak fotoğrafı bulanıklık eşiği', birim: 'netlik', tur: 'kurs', varsayilan: 250, min: 0, max: 100000, teyit: true, kaynak: 'mdSinyal ölçüsü: net belgede binlerce, bulanıkta yaklaşık 100 çıkar. Eşiğin altındaki fotoğraf “bulanık olabilir” diye işaretlenir. Gerçek evrakla ayarlanmadı; 0 = kapalı.' },
   imzaAsgari: { ad: 'İmzada en az çizgi uzunluğu', birim: '% alan eni', tur: 'kurs', varsayilan: 50, min: 0, max: 100, teyit: true, kaynak: 'MEBBİS’in imza ölçüsü bilinmiyor. Tek dokunuş, nokta ve düz çizgi imza sayılmaz; bu değer toplam çizgi uzunluğunun alt sınırıdır. 0 yazılırsa yalnız uzunluk sınırı kapanır.' },
 };
@@ -69,10 +69,15 @@ function kurallarSekme() {
     ${digerAyar.map(k => `<tr><td><b style="color:var(--murekkep)">${e(KURAL_KAYNAK[k].ad)}</b></td><td style="white-space:nowrap">${kuralGirdi(k)}</td><td class="m-tam" style="font-size:13.5px">${kaynakHtml(KURAL_KAYNAK[k])}</td><td>${degerDurum(k)}</td></tr>`).join('')}
   </tbody></table></div></div>
   <div class="ara-bosluk"></div>
-  <div class="kart"><div class="kart-bas"><h3>Gece dersi başlangıç saati</h3><small>MTSK Yön. md.7/3, md.20/1 · gün batımından sonra başlayan ders gece dersi sayılır</small></div><div class="kart-govde">
-    <p style="font-size:14px;margin-bottom:12px">İl MEM’iniz ay ay saat ilan ettiyse girin. Boş bırakılan ayda saat ${e(ilAd)} için gün batımından hesaplanır (ayın 15’i: soluk yazan saat).</p>
+  <div class="kart"><div class="kart-bas"><h3>Gece dersi başlangıcı</h3><small>MTSK Yön. md.7/3, md.20/1 · gün batımından sonra başlayan ders gece dersi sayılır</small></div><div class="kart-govde">
+    <p style="font-size:14px;margin-bottom:12px">Yönetmelikte sabit bir saat yok; gece dersi gün batımından sonra başlar. İl MEM’in Özel MTSK Modülü’ne girdiği saat ay ay buraya girilebilir. Boş bırakılan ayda saat ${e(ilAd)} için gün batımından hesaplanır (ayın 15’i: soluk yazan saat).</p>
     <div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(130px,1fr))">${AY_ADI.map((ad, i) => { const ay = String(i + 1).padStart(2, '0'), v = /^\d{2}:\d{2}$/.test(gece[ay] || '') ? gece[ay] : ''; return `<label style="display:grid;gap:4px;font-size:13.5px"><span style="color:var(--murekkep);font-weight:700">${ad}</span><input class="girdi" type="time" data-gece-ay="${ay}" value="${v}" aria-label="${ad} gece dersi başlangıcı" style="height:36px"><small style="color:var(--soluk)">${v ? 'il MEM saati' : 'hesap: ' + gunBatimi(yil + '-' + ay + '-15')}</small></label>`; }).join('')}</div>
-    <label style="display:flex;gap:8px;align-items:flex-start;margin-top:14px;font-size:14px"><input type="checkbox" data-meb-cumartesi ${K.mebCumartesi ? 'checked' : ''} style="width:18px;height:18px;margin-top:2px"><span>MEB sürelerinde Cumartesi iş günü sayılsın <small style="display:block;color:var(--soluk)">Sınav bildirimi (4 iş günü), sınav ücreti (6 iş günü) gibi iş günüyle sayılan sürelerde. Resmî tatil ve bayramlar hiç sayılmaz. Varsayılan kapalı (Pazartesi–Cuma); il MEM uygulamasına göre açın. ${rozet('Teyit bekliyor', 'sari')}</small></span></label>
+    <label style="display:flex;gap:8px;align-items:flex-start;margin-top:14px;font-size:14px"><input type="checkbox" data-gece-ce ${K.geceCE ? 'checked' : ''} style="width:18px;height:18px;margin-top:2px"><span>CE adayında da gece dersi aransın <small style="display:block;color:var(--soluk)">Yönetmelik CE ve G için gece dersi istemiyor (md.7/3). İl MEM’iniz CE’de gece dersi arıyorsa açın.</small></span></label>
+  </div></div>
+  <div class="ara-bosluk"></div>
+  <div class="kart"><div class="kart-bas"><h3>MEB sürelerinde iş günü</h3><small>Sınav bildirimi (4 iş günü), sınav ücreti (6 iş günü) gibi iş günüyle sayılan süreler</small></div><div class="kart-govde">
+    <p style="font-size:14px;margin-bottom:12px">İş günü Pazartesi–Cuma’dır; Cumartesi, Pazar, resmî tatil ve bayramlar sayılmaz. Arife günleri ve idari izin günleri de sayılmaz, böylece son gün erkene çekilir. ${rozet('Teyit bekliyor', 'sari')} <small style="color:var(--soluk)">Arife sabahı mesai var; il MEM’in bu yarım günleri nasıl saydığı sorulacak.</small></p>
+    <label style="display:grid;gap:4px;font-size:13.5px;max-width:520px"><span style="color:var(--murekkep);font-weight:700">İdari izin günleri</span><input class="girdi" data-idari-izin value="${e((Array.isArray(K.idariIzin) ? K.idariIzin : []).map(t => t.split('-').reverse().join('.')).join(', '))}" placeholder="ör. 02.01.2027, 03.01.2027" autocomplete="off" style="height:36px"><small style="color:var(--soluk)">Cumhurbaşkanlığı genelgesiyle verilen günler; virgülle ayırın.</small></label>
   </div></div>
   <div class="ara-bosluk"></div>
   ${personelFotoKarti()}
@@ -713,7 +718,7 @@ export function ayarBaglan(k) {
   });
   k.addEventListener('click', ev => {
     if (ev.target.closest('[data-kurtarma-indir]')) { const a2 = document.createElement('a'); a2.href = URL.createObjectURL(new Blob([localStorage.getItem('sinyal-kurtarma') || '[]'], { type: 'application/json' })); a2.download = 'mdsinyal-kaydedilemeyenler.json'; a2.click(); setTimeout(() => URL.revokeObjectURL(a2.href), 3000); }
-    if (ev.target.closest('[data-kurtarma-sil]') && confirm('Kaydedilemeyen değişiklikler bu cihazdan silinsin mi? Önce indirdiğinizden emin olun.')) { try { localStorage.removeItem('sinyal-kurtarma'); } catch (x) { } import('./bulut.js?v=209').then(B => { B.bulut.kalici = ''; B.durumYaz(); }); yenile(); }
+    if (ev.target.closest('[data-kurtarma-sil]') && confirm('Kaydedilemeyen değişiklikler bu cihazdan silinsin mi? Önce indirdiğinizden emin olun.')) { try { localStorage.removeItem('sinyal-kurtarma'); } catch (x) { } import('./bulut.js?v=210').then(B => { B.bulut.kalici = ''; B.durumYaz(); }); yenile(); }
   });
   davetListesi(k); yedekListesi(k); sunucuKaydi(k); if (B.bulutta()) ikiAdimSatiri(k);
   k.addEventListener('change', ev => {
@@ -737,7 +742,11 @@ export function ayarBaglan(k) {
       if (ham === '') { delete S.kurs.mebParcaDk; islem('MEBBİS parça süresini değiştirdi', eski + ' → 30 dk (varsayılan)'); kaydet(); bildir('Parça süresi varsayılana döndü: 30 dakika'); return yenile(); }
       if (!PARCA_GECERLI(ham)) { t.value = eski; return bildir('Parça süresi 10 ile 40 dakika arasında bir tam sayı olmalı. Değer değişmedi.', 'uyari'); }
       S.kurs.mebParcaDk = +ham; islem('MEBBİS parça süresini değiştirdi', eski + ' → ' + ham + ' dk'); kaydet(); bildir(`Yardımcı işleri ${ham} dakikalık parçalara bölecek`); return; }
-    if (t.matches('[data-meb-cumartesi]')) { S.kurs.mebCumartesi = t.checked; islem('MEB iş günü ayarını değiştirdi', 'Cumartesi ' + (t.checked ? 'iş günü sayılır' : 'sayılmaz')); kaydet(); bildir(t.checked ? 'Cumartesi MEB sürelerinde iş günü sayılacak' : 'MEB süreleri Pazartesi–Cuma sayılacak'); yenile(); }
+    if (t.matches('[data-gece-ce]')) { S.kurs.geceCE = t.checked; islem('Gece dersi ayarını değiştirdi', 'CE adayında gece dersi ' + (t.checked ? 'aranır' : 'aranmaz')); kaydet(); bildir(t.checked ? 'CE adayında da gece dersi aranacak' : 'CE adayında gece dersi aranmayacak'); yenile(); }
+    if (t.matches('[data-idari-izin]')) { const ham = t.value.split(/[,;\s]+/).map(x => x.trim()).filter(Boolean), l = [], hatali = [];
+      ham.forEach(x => { const m = x.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})$/), v = m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : /^\d{4}-\d{2}-\d{2}$/.test(x) ? x : ''; const d = v && new Date(v + 'T00:00:00Z'); if (d && !isNaN(d) && d.toISOString().slice(0, 10) === v) { if (!l.includes(v)) l.push(v); } else hatali.push(x); });
+      if (hatali.length) return bildir('Tarihi gg.aa.yyyy biçiminde girin: ' + hatali.slice(0, 3).join(', '), 'uyari');
+      l.sort(); if (l.length) S.kurs.idariIzin = l; else delete S.kurs.idariIzin; islem('İdari izin günlerini değiştirdi', l.length ? l.map(x => x.split('-').reverse().join('.')).join(', ') : 'yok'); kaydet(); bildir(l.length ? `${l.length} idari izin günü MEB sürelerinde sayılmayacak` : 'İdari izin günü yok'); yenile(); }
     if (t.matches('[data-sube-alan]')) { const [i, alan] = t.dataset.subeAlan.split(':'); S.subeler[+i][alan] = t.value.trim(); islem('Şube bilgisini güncelledi', S.subeler[+i].ad); kaydet(); bildir('Şube bilgisi kaydedildi'); }
     if (t.matches('[data-meb-yontem]')) { if (t.value === 'arac' && !mebAracHazir()) mebAracKur(); S.kurs.mebYontem = t.value; islem('MEBBİS giriş yöntemini değiştirdi', t.value === 'arac' ? 'MEBBİS Yardımcısı' : 'Sıralı giriş'); kaydet(); bildir(t.value === 'arac' ? 'MEBBİS Yardımcısı seçildi' : 'Sıralı girişe dönüldü'); yenile(); }
     if (t.matches('[data-imza]')) { S.kurs.imzaYontemi = t.value; islem('İmza yöntemini değiştirdi', t.value); kaydet(); bildir('İmza yöntemi kaydedildi'); yenile(); }
@@ -778,7 +787,7 @@ export function ayarBaglan(k) {
     const kl = t.closest('[data-kayit-link]'); if (kl) { const id = kl.dataset.kayitLink, l = kayitLinki(id), ad = id ? ((S.subeler.find(x => x.id === id) || {}).ad || 'şube') : ''; panoya(l).then(ok => ok === false ? bildir('Kopyalanamadı. Link: ' + l, 'uyari') : bildir((ad ? ad + ' kayıt formu linki' : 'Genel kayıt formu linki') + ' kopyalandı. Kurs hesabıyla açılmış cihazda açılır.')); return; }
     if (t.closest('[data-sube-ekle]')) { const n = S.subeler.length + 1; S.subeler.push({ id: 's' + Date.now(), ad: 'Yeni şube ' + n, semt: '', kurumKodu: '', mudur: '', mebbis: '' }); islem('Şube ekledi'); kaydet(); bildir('Şube eklendi; kurum kodunu ve müdürünü yazın'); yenile(); }
     if (t.closest('[data-kural-onay]')) { S.kurs.kuralOnay = { kim: oturum.kullanici ? oturum.kullanici.ad : '', tarih: gun(0) }; islem('Kural değerlerini onayladı'); kaydet(); bildir('Kural değerleri onaylandı'); yenile(); }
-    const bo = t.closest('[data-belge-ac]'); if (bo) import('./sayfalar3.js?v=209').then(m => m.belgeAc(bo.dataset.belgeAc));
+    const bo = t.closest('[data-belge-ac]'); if (bo) import('./sayfalar3.js?v=210').then(m => m.belgeAc(bo.dataset.belgeAc));
     const ok = t.closest('[data-oturum-kapat]'); if (ok) { const o = S.guvenlik.oturumlar.splice(+ok.dataset.oturumKapat, 1)[0]; islem('Oturumu kapattırdı', o.kim + ' · ' + o.cihaz); kaydet(); bildir(o.kim + ' · ' + o.cihaz + ' oturumu kapatıldı'); yenile(); }
     const fs = t.closest('[data-fis]'); if (fs) { const n = +fs.dataset.fis, d = new Date(BUGUN); d.setMonth(d.getMonth() - n); csvIndir(`muhasebe-fisleri-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}.csv`, muhasebeFisi(n)); islem('Muhasebe fişlerini indirdi'); kaydet(); }
     if (t.closest('[data-parasut]')) pencere({ baslik: 'Paraşüt · bağlantı gerekli', icerik: `<div class="ipucu uyari" style="margin-bottom:12px">${isaret('uyari', 22)}<span>Paraşüt bağlantısı için kursun Paraşüt hesabından alınan API anahtarı gerekir. Anahtar girilene kadar tahsilatlar Paraşüt’e aktarılmaz.</span></div><p style="font-size:14.5px">Bu arada aylık muhasebe fişini CSV olarak indirip Paraşüt’e veya muhasebecinize yükleyebilirsiniz; fişte her tahsilat, gider ve iade ayrı satırdır.</p>`, altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-pfis>Bu ayın fişini indir</button>', onAc(d) { d.querySelector('[data-pfis]').addEventListener('click', () => { const d0 = new Date(BUGUN); csvIndir(`muhasebe-fisleri-${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}.csv`, muhasebeFisi(0)); islem('Muhasebe fişlerini indirdi'); kaydet(); kapatPencere(); }); } });
