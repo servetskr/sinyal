@@ -3,12 +3,12 @@
 // (tam ekran; MEB EK-3/EK-4 formu) · 'sonuc:<id>' son denemenin sonucu.
 // Eski portal.js'ten taşınanlar: kursiyer listesi ve araSuz (yeniden çizmeden arama), egOgrAc (ayrıntı penceresi), deneme.js denemeAc (pencere).
 // Deneme mantığı (form, 5 mavi / 2 sarı / 1 kırmızı kuralı, kayıt) deneme.js'teki dışa aktarımlardan gelir; burada kopyası yok.
-import { S, SINIFLAR, kursiyer, tamAd, sonrakiDers, risk, fark, tarihOku, dersSirasi } from '../veri.js?v=224';
-import { gerekliDireksiyon } from '../veri.js?v=224';
-import { gunAdi, ayAdi } from '../ui.js?v=224';
-import { sonucHesap, denemeFormu, denemeKaydet, denemeAraci, denemeBolumAd, denemeFormAd, sonDeneme } from '../deneme.js?v=224';
-import { geceSayim } from './bugun.js?v=224';
-import { esc, oi, sayfaBas, geri, bolum, baglanti, kart, liste, satir, ikonKutu, cip, serit, ayrac, not, bos, dugme, sekmeler, akisUst, akisAlt, odakTuzagi, stilEkle } from '../ogr/ui.js?v=224';
+import { S, SINIFLAR, kursiyer, tamAd, sonrakiDers, risk, fark, tarihOku, dersSirasi } from '../veri.js?v=225';
+import { gerekliDireksiyon } from '../veri.js?v=225';
+import { gunAdi, ayAdi } from '../ui.js?v=225';
+import { sonucHesap, denemeFormu, denemeKaydet, denemeAraci, denemeBolumAd, denemeFormAd, sonDeneme } from '../deneme.js?v=225';
+import { geceSayim } from './bugun.js?v=225';
+import { esc, oi, sayfaBas, geri, bolum, baglanti, kart, liste, satir, ikonKutu, cip, serit, ayrac, not, bos, dugme, sekmeler, akisUst, akisAlt, odakTuzagi, stilEkle } from '../ogr/ui.js?v=225';
 
 /* ---------- ekran durumu (yeniden çizimde korunur) ---------- */
 let filtre = 'tumu';        // 'tumu' | 'direksiyon' | 'sinav' | 'diger'

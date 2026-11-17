@@ -4,11 +4,11 @@
 // ve öğrenci ayrıntısı (data-ogr-ac) yönlendiricide (usta/ekran.js) çalışır.
 // İndirme: P.progIndir(eg) portal.js'in kendi (eski ekrandaki) dönemine bakar; yeni ekranın gösterdiği dönemi (seçili hafta ya da ay)
 // indirmek için data-prog-indir burada yakalanır ve aynı sütunlarla o dönemin dosyası üretilir.
-import { S, gun, fark, tarihOku, iso, kursiyer, arac, tamAd, SINIFLAR, kapaliGun } from '../veri.js?v=224';
-import { gunAdi, gunKisa, ayAdi, tarihUzun, bildir, csvIndir } from '../ui.js?v=224';
-import * as TK from '../takvim.js?v=224';
-import { esc, oi, sayfaBas, kart, bos, dugme, cip, sekmeler, stilEkle } from '../ogr/ui.js?v=224';
-import { geceCip } from './bugun.js?v=224';
+import { S, gun, fark, tarihOku, iso, kursiyer, arac, tamAd, SINIFLAR, kapaliGun } from '../veri.js?v=225';
+import { gunAdi, gunKisa, ayAdi, tarihUzun, bildir, csvIndir } from '../ui.js?v=225';
+import * as TK from '../takvim.js?v=225';
+import { esc, oi, sayfaBas, kart, bos, dugme, cip, sekmeler, stilEkle } from '../ogr/ui.js?v=225';
+import { geceCip } from './bugun.js?v=225';
 
 /* ---------- ekran durumu (yeniden çizimde korunur) ---------- */
 let mod = 'hafta';   // 'hafta' | 'ay'
@@ -162,7 +162,7 @@ async function indir(ctx) {
   const ad = 'ders-programi-' + gunler[0] + '_' + gunler[gunler.length - 1];
   const metin = mod === 'ay' ? `${ayAdi(tarihOku(secili).getMonth(), true)} ${tarihOku(secili).getFullYear()}` : aralikMetin(gunler);
   try {
-    await import('../sayfalar5.js?v=224').then(m => m.xlsxYukle());
+    await import('../sayfalar5.js?v=225').then(m => m.xlsxYukle());
     const X = window.XLSX, ws = X.utils.aoa_to_sheet(sat), wb = X.utils.book_new();
     ws['!cols'] = [12, 6, 7, 24, 14, 8, 12, 11, 9].map(w => ({ wch: w })); ws['!autofilter'] = { ref: 'A1:I' + sat.length };
     X.utils.book_append_sheet(wb, ws, 'Program'); X.writeFile(wb, ad + '.xlsx');
