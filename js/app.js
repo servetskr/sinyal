@@ -1,25 +1,25 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=229';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=229';
-import * as Y1 from './sayfalar1.js?v=229';
-import * as Y2 from './sayfalar2.js?v=229';
-import * as P from './portal.js?v=229';
-import * as OXU from './ogr/ui.js?v=229';
-import * as Y3 from './sayfalar3.js?v=229';
-import * as Y4 from './sayfalar4.js?v=229';
-import * as Y5 from './sayfalar5.js?v=229';
-import * as IM from './imza.js?v=229';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=229';
-import * as SN from './senaryo.js?v=229';
-import * as OZ from './ozellik.js?v=229';
-import { durumlariGuncelle } from './mesaj.js?v=229';
-import { yeniMenu } from './yeni.js?v=229';
-import * as B from './bulut.js?v=229';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=229';
-import * as AN from './analiz.js?v=229';
-import * as GZ from './guzergah.js?v=229';
-import * as ORT from './ortak.js?v=229';
-import * as SH from './sahip.js?v=229';
-import * as MZ from './sayfa-mevzuat.js?v=229';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=230';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=230';
+import * as Y1 from './sayfalar1.js?v=230';
+import * as Y2 from './sayfalar2.js?v=230';
+import * as P from './portal.js?v=230';
+import * as OXU from './ogr/ui.js?v=230';
+import * as Y3 from './sayfalar3.js?v=230';
+import * as Y4 from './sayfalar4.js?v=230';
+import * as Y5 from './sayfalar5.js?v=230';
+import * as IM from './imza.js?v=230';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=230';
+import * as SN from './senaryo.js?v=230';
+import * as OZ from './ozellik.js?v=230';
+import { durumlariGuncelle } from './mesaj.js?v=230';
+import { yeniMenu } from './yeni.js?v=230';
+import * as B from './bulut.js?v=230';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=230';
+import * as AN from './analiz.js?v=230';
+import * as GZ from './guzergah.js?v=230';
+import * as ORT from './ortak.js?v=230';
+import * as SH from './sahip.js?v=230';
+import * as MZ from './sayfa-mevzuat.js?v=230';
 
 /* ---------- uygulama hatalarının otomatik bildirimi ----------
    window.onerror / unhandledrejection → worker /hata (api.mdsinyal.com). Gönderilen: sürüm, rota adı (#/ad; kimlik ve kod kırpılır), rol,
@@ -312,7 +312,7 @@ document.addEventListener('change', ev => { const s = ev.target.closest('[data-s
 Y5.temaUygula();
 
 let sonAd = null;
-window.addEventListener('hashchange', () => { if (location.hash.startsWith('#/kapi')) return kapiEkrani(); if (GIRIS_YOL[location.hash] && oturum.kullanici && oturum.kullanici.ziyaretci) { oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } } if (!oturum.kullanici && !B.bulutKayitli()) { if (location.hash === '#/demo') return demoyaGir(); if (GIRIS_YOL[location.hash]) { girisEkrani(GIRIS_YOL[location.hash]); return window.scrollTo(0, 0); } } if (location.hash === '#/sahip') { ORT.sekmeSec('hesaplar'); location.hash = '#/yonetim'; return; } if (imzaLinki()) return imzaSayfasiAc(); if (!(oturum.kullanici && oturum.kullanici.bulut)) { if (yonetimKurYolu()) return yonetimHesapEkrani(yonetimKurYolu()); if (yonetimGirisYolu()) return yonetimGirisEkrani(); } if (kursDavetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return kursDavetEkrani(); if (oturum.kullanici && oturum.kullanici.rol === 'ogrenci') return; if (ogrYolu()) return eskiLink(); if (location.hash === '#/ogrenci-giris') return ogrenciGirisEkrani((oturum.kullanici && oturum.kullanici.bulut) || B.bulutKayitli() ? 'Bu cihazda bir personel hesabı açık. Öğrenci olarak girersen o oturum kapanır.' : undefined); if (davetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return davetEkrani(); const r = rota(); yenile(r.ad !== sonAd); sonAd = r.ad; });
+window.addEventListener('hashchange', () => { if (location.hash.startsWith('#/kapi')) return kapiEkrani(); if (demoSoru() != null && oturum.kullanici && oturum.kullanici.ziyaretci) { location.hash = '#/mevzuat?q=' + demoSoru(); return; } if (GIRIS_YOL[location.hash] && oturum.kullanici && oturum.kullanici.ziyaretci) { oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } } if (!oturum.kullanici && !B.bulutKayitli()) { if (location.hash === '#/demo' || demoSoru() != null) return demoyaGir(); if (GIRIS_YOL[location.hash]) { girisEkrani(GIRIS_YOL[location.hash]); return window.scrollTo(0, 0); } } if (location.hash === '#/sahip') { ORT.sekmeSec('hesaplar'); location.hash = '#/yonetim'; return; } if (imzaLinki()) return imzaSayfasiAc(); if (!(oturum.kullanici && oturum.kullanici.bulut)) { if (yonetimKurYolu()) return yonetimHesapEkrani(yonetimKurYolu()); if (yonetimGirisYolu()) return yonetimGirisEkrani(); } if (kursDavetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return kursDavetEkrani(); if (oturum.kullanici && oturum.kullanici.rol === 'ogrenci') return; if (ogrYolu()) return eskiLink(); if (location.hash === '#/ogrenci-giris') return ogrenciGirisEkrani((oturum.kullanici && oturum.kullanici.bulut) || B.bulutKayitli() ? 'Bu cihazda bir personel hesabı açık. Öğrenci olarak girersen o oturum kapanır.' : undefined); if (davetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return davetEkrani(); const r = rota(); yenile(r.ad !== sonAd); sonAd = r.ad; });
 
 // QR’dan gelen ilk sayfa index.html’de hazır durur (beklemeden görünsün); sonradan dönmek için saklanır
 const TANITIM = (() => { const t = document.getElementById('tanitim'); return t ? t.outerHTML : ''; })();
@@ -331,12 +331,15 @@ const kodSor = () => new Promise(coz => {
     },
   });
 });
+// #/demo?mevzuat=<soru>: sitedeki rehberden gelen soru demoda doğrudan mevzuat asistanında açılır
+const demoSoru = () => { const m = location.hash.match(/^#\/demo\?(?:.*&)?mevzuat=([^&]*)/); return m ? m[1] : null; };
 function demoyaGir() {
+  const soru = demoSoru();
   const u = S.kullanicilar.find(x => x.rol === 'mudur') || { id: 'u1', ad: 'Kurs müdürü' };
   oturum.kullanici = { id: u.id, ad: u.ad, rol: 'mudur', ziyaretci: true };
   try { sessionStorage.setItem('sinyal-oturum', JSON.stringify(oturum.kullanici)); } catch (x) { }
   sonHareket = Date.now(); hareketYaz(true);
-  iskelet(); location.hash = '#/genel'; sonAd = rota().ad; yenile(true); window.scrollTo(0, 0);
+  iskelet(); location.hash = soru != null ? '#/mevzuat?q=' + soru : '#/genel'; sonAd = rota().ad; yenile(true); window.scrollTo(0, 0);
 }
 /* ---------- öğretmen girişi (#/ogretmen-giris) ve şifre yenileme: öğrenci/öğretmen uygulamasının ox- dili; sınıflar ox-ugr- önekli ----------
    body'ye ox-modu eklenmez: ox değişkenleri kendi kabuğunda tanımlanır (imza sayfası gibi), böylece öğrenci girişine ve kurs girişine sızmaz.
@@ -1010,7 +1013,7 @@ async function davetEkrani() {
 document.addEventListener('click', ev => { if (ev.target.closest('[data-yeniden-yukle]')) location.reload(); });
 document.addEventListener('click', ev => {
   if (ev.target.closest('[data-cikis]')) kapatPencere();
-  if (ev.target.closest('[data-hesap]')) { if (oturum.kullanici && oturum.kullanici.rol === 'usta' && document.body.classList.contains('ox-modu')) return import('./usta/ekran.js?v=229').then(m => { m.hesapAc(); yenile(true); }); return hesapSayfasi(); }
+  if (ev.target.closest('[data-hesap]')) { if (oturum.kullanici && oturum.kullanici.rol === 'usta' && document.body.classList.contains('ox-modu')) return import('./usta/ekran.js?v=230').then(m => { m.hesapAc(); yenile(true); }); return hesapSayfasi(); }
   if (ev.target.closest('[data-destek]')) return destekPenceresi();
   // Yönetim: Hesaplar telefonda profil menüsünden açılır (alt çubuk 6 sekme kalır)
   if (ev.target.closest('[data-yn-hesaplar]')) { kapatPencere(); ORT.sekmeSec('hesaplar'); yonetimCiz(true); SH.otoBaglan(); return; }
@@ -1082,7 +1085,8 @@ else if (davetYolu()) davetEkrani();
 else if (kursDavetYolu()) kursDavetEkrani();
 else if (yonetimKurYolu() && !B.bulutKayitli()) yonetimHesapEkrani(yonetimKurYolu());
 else if (yonetimGirisYolu() && !B.bulutKayitli()) yonetimGirisEkrani();
-else if (location.hash === '#/demo' && !B.bulutKayitli() && !oturum.kullanici) demoyaGir();
+else if ((location.hash === '#/demo' || demoSoru() != null) && !B.bulutKayitli() && !oturum.kullanici) demoyaGir();
+else if (demoSoru() != null && oturum.kullanici && oturum.kullanici.ziyaretci) location.hash = '#/mevzuat?q=' + demoSoru();
 else if (GIRIS_YOL[location.hash] && !B.bulutKayitli() && !oturum.kullanici) girisEkrani(GIRIS_YOL[location.hash]);
 else if (ogrKayit && !B.bulutKayitli()) {
   // son görülen panel önbellekten hemen; oturum ve güncel veri arkadan gelir
@@ -1124,4 +1128,4 @@ async function surumBak() {
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') surumBak(); });
 setTimeout(surumBak, 4000);
 // kullanım analizi (kişisel veri içermez; kullanim.js): ekran, düğme adı, süre, hata türü sayılır, günde bir özet yazılır
-setTimeout(() => import('./kullanim.js?v=229').then(m => m.baslat()).catch(() => { }), 1500);
+setTimeout(() => import('./kullanim.js?v=230').then(m => m.baslat()).catch(() => { }), 1500);
