@@ -2,11 +2,11 @@
 // mdSinyal Yönetim panelinin “Hesaplar” bölümünde açılır (yalnız Servet; ortak görmez).
 // Yetki Firebase güvenlik kurallarından değil, Google hesabından gelir: Firebase projesinin sahibi olan Google hesabıyla
 // bağlanılır, Google IAM izin verirse işlem yapılır. Sunucu, gizli anahtar yok; erişim belirteci yalnız bellekte durur (1 saat).
-import { e, ik, pencere, kapatPencere, bildir, tl, siteLink } from './ui.js?v=227';
-import { S, kaydet, islem, bulutKanca } from './veri.js?v=227';
-import { ogrenciPanelMetni, WORKER } from './bulut.js?v=227';
-import { EMU } from './firebase-ayar.js?v=227';
-import { kabuk as epKabuk, kutular, bolum, satirlar, bos, not, nokta, dugme, R, SITE } from './eposta-kabuk.js?v=227';
+import { e, ik, pencere, kapatPencere, bildir, tl, siteLink } from './ui.js?v=228';
+import { S, kaydet, islem, bulutKanca } from './veri.js?v=228';
+import { ogrenciPanelMetni, WORKER } from './bulut.js?v=228';
+import { EMU } from './firebase-ayar.js?v=228';
+import { kabuk as epKabuk, kutular, bolum, satirlar, bos, not, nokta, dugme, R, SITE } from './eposta-kabuk.js?v=228';
 
 // EMU (firebase-ayar.js, yalnız localhost + açık işaret): REST istekleri yerel emülatöre gider, Google onayı yerine emülatörün yönetici belirteci kullanılır
 const PROJE = EMU ? EMU.proje : 'sinyal-5d37a';
@@ -960,7 +960,7 @@ let kuOtoBakildi = false;
 async function kullanimHaftalik() {
   if (kuOtoBakildi || !(S.kurs && S.kurs.sahipAnaliz) || !Object.keys(kursIst).length) return; kuOtoBakildi = true;
   try {
-    const { gecenHafta } = await import('./eposta.js?v=227'), h = gecenHafta();
+    const { gecenHafta } = await import('./eposta.js?v=228'), h = gecenHafta();
     if (S.kurs.sahipAnalizSon === h.donem) return;
     const T = await kullanimOku(aralikGunler(h.bas, h.bit));
     const j = await kullanimGonder(T, h.bas.split('-').reverse().join('.') + ' – ' + h.bit.split('-').reverse().join('.'), h.donem);
@@ -1076,7 +1076,7 @@ async function mevzuatYonetYukle() {
   if (mo.yukleniyor) return; mo.yukleniyor = true; mo.hata = ''; ciz();
   try {
     const [o, t] = await Promise.all([fetch(WORKER + '/mevzuat/ortak?t=' + Date.now()).then(r => r.json()), moIstek('/mevzuat/ortak/takip')]);
-    mo.veri = o; mo.takip = t.takip || {}; mo.yetkisiz = false;
+    mo.veri = o; mo.takip = t.takip || {}; mo.bulten = t.bulten || { acik: false }; mo.yetkisiz = false;
     if (!mo.statik) { try { const ic = await (await fetch(siteLink('veri/mevzuat/icindekiler.txt'))).text(); mo.statik = (ic.split('\n')[0].replace(/^Belgeler:\s*/, '').split('; ').map(x => x.split(' = ')).filter(x => x.length === 2)); mo.toc = ic.split('\n').slice(1).filter(x => / — /.test(x)); } catch (x) { mo.statik = []; mo.toc = []; } }
   } catch (x) { if (x.yetkisiz) mo.yetkisiz = true; else mo.hata = turkceHata(x); }
   mo.yukleniyor = false; ciz();
@@ -1094,6 +1094,7 @@ function mevzuatYonetHtml() {
   const bildirim = x => x.tur === 'rg' ? `<b>Resmî Gazete · ${e(moTarih(x.tarih))}</b><small style="white-space:normal">${e(x.baslik)}</small>` : x.tur === 'kaynak' ? `<b>Kaynak değişti: ${e(x.ad)}</b><small style="white-space:normal">Resmî dosya güncellenmiş olabilir. Yeni metni indirip “Belge ekle” ile yükle, eskisini “Değişti” olarak işaretle.</small>` : `<b>Kaynağa ulaşılamadı: ${e(x.ad)}</b><small>${e(String(x.hata || ''))}</small>`;
   return `<div class="sh-mz" data-resmi>
     <section class="sh-grup"><h2>Takip<span>${t.son ? 'son denetim ' + e(moTarih(t.son)) + ' · her gün 07:00' : 'henüz denetlenmedi · her gün 07:00'}${t.rgSon ? ' · Resmî Gazete: ' + e(t.rgSon.durum) : ''}</span></h2>
+      <div class="sh-mz-bulten"><span><b>Haftalık bülten</b><small>${mo.bulten && mo.bulten.acik ? 'Açık: her pazartesi, o hafta yeni bir şey varsa onaylı e-posta adresi olan kurslara gider' + (mo.bulten.son ? ' · son gönderim ' + e(moTarih(mo.bulten.son)) + (mo.bulten.sayi != null ? ', ' + mo.bulten.sayi + ' kurs' : '') : '') : 'Kapalı: açınca duyurular, eklenen belgeler ve Resmî Gazete başlıkları haftada bir kurslara e-postayla gider'}</small></span><button class="dg dg-cizgi dg-kucuk" data-sh-mo-bulten-dene>Örneği bana gönder</button><button class="dg ${mo.bulten && mo.bulten.acik ? 'dg-cizgi' : 'dg-ana'} dg-kucuk" data-sh-mo-bulten="${mo.bulten && mo.bulten.acik ? '0' : '1'}">${mo.bulten && mo.bulten.acik ? 'Kapat' : 'Aç'}</button></div>
       <div class="sh-mz-dg"><button class="dg dg-cizgi dg-kucuk" data-sh-mo-denetle ${mo.denetleniyor ? 'disabled' : ''}>${ik('sifirla')}${mo.denetleniyor ? 'Denetleniyor…' : 'Şimdi denetle'}</button><button class="dg dg-cizgi dg-kucuk" data-sh-mo-yenile>${ik('sifirla')}Yenile</button></div>
       ${yeni.length ? `<div class="sh-liste">${yeni.slice(0, 20).map(x => `<a class="sh-satir" href="${e(x.adres)}" target="_blank" rel="noopener"><span class="sh-av ${x.tur === 'erisilemedi' ? 'sh-av-yok' : 'sh-av-hizmet'}">${ik(x.tur === 'rg' ? 'belge' : 'uyari')}</span><span class="sh-satir-ic">${bildirim(x)}</span>${ik('sag')}</a>`).join('')}</div>` : `<p class="sh-dip">Yeni bildirim yok. ${Object.keys(t.kaynak || {}).length} kaynak adresi ve Resmî Gazete fihristi her gün denetlenir; değişiklik olunca burada ve e-postanda görünür.</p>`}
     </section>
@@ -1118,6 +1119,7 @@ function mevzuatYonetHtml() {
         <label class="tam">Açıklama<textarea name="metin" rows="2" maxlength="800" placeholder="Kurslar için kısa açıklama: ne değişti, ne zamandan itibaren"></textarea></label>
         <label class="tam">Kursların yapması gerekenler (isteğe bağlı, her satıra bir)<textarea name="yapilacaklar" rows="2"></textarea></label>
         <label>Kimi ilgilendirir<input name="kimi" maxlength="120" placeholder="Ör. kurs müdürü, ön büro"></label>
+        <label>Yürürlük tarihi (isteğe bağlı)<input name="yururluk" type="date"></label>
         <label>Resmî bağlantı (isteğe bağlı)<input name="bag" type="url" placeholder="https://www.resmigazete.gov.tr/..."></label>
         <button class="dg dg-ana dg-kucuk" type="submit">Yayınla</button>
       </form>
@@ -1186,12 +1188,13 @@ async function etkiTaslagi(id) {
       <label class="tam">Açıklama<textarea name="metin" rows="3" maxlength="800">${e(t.metin)}</textarea></label>
       <label class="tam">Kursların yapması gerekenler (her satıra bir)<textarea name="yapilacaklar" rows="4">${e(t.yapilacaklar.join('\n'))}</textarea></label>
       <label>Kimi ilgilendirir<input name="kimi" maxlength="120" value="${e(t.kimi)}"></label>
+      <label>Yürürlük tarihi${t.yururluk ? ' (belgede: ' + e(t.yururluk) + ')' : ''}<input type="date" name="yururluk" value="${/^\d{4}-\d{2}-\d{2}$/.test(t.yururluk) ? e(t.yururluk) : ''}"></label>
       <label>Resmî bağlantı<input name="bag" type="url" value="${e(t.bag)}"></label>
     </form>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-p-etki-yayinla>Yayınla</button>`,
     onAc: p => p.querySelector('[data-p-etki-yayinla]').addEventListener('click', async () => {
       const f = p.querySelector('form'); if (!f.baslik.value.trim()) return bildir('Başlık yaz', 'uyari');
-      kapatPencere(); await moIslem('/mevzuat/ortak/duyuru', { baslik: f.baslik.value.trim(), metin: f.metin.value.trim(), yapilacaklar: f.yapilacaklar.value, kimi: f.kimi.value.trim(), bag: f.bag.value.trim(), belge: t.belge }, 'Duyuru yayınlandı');
+      kapatPencere(); await moIslem('/mevzuat/ortak/duyuru', { baslik: f.baslik.value.trim(), metin: f.metin.value.trim(), yapilacaklar: f.yapilacaklar.value, kimi: f.kimi.value.trim(), bag: f.bag.value.trim(), belge: t.belge, yururluk: f.yururluk.value }, 'Duyuru yayınlandı');
     }) });
 }
 function mevzuatBelgePenceresi() {
@@ -1235,7 +1238,7 @@ function gonder(ev) {
   const fd = ev.target.closest('[data-sh-mo-durum]');
   if (fd) { ev.preventDefault(); if (!fd.belge.value) return bildir('Belge seç', 'uyari'); return moIslem('/mevzuat/ortak/durum', { belge: fd.belge.value, durum: fd.durum.value, not: fd.not.value.trim(), yerine: fd.yerine.value }, 'Belge durumu kaydedildi'); }
   const fu = ev.target.closest('[data-sh-mo-duyuru]');
-  if (fu) { ev.preventDefault(); if (!fu.baslik.value.trim()) return bildir('Başlık yaz', 'uyari'); return moIslem('/mevzuat/ortak/duyuru', { baslik: fu.baslik.value.trim(), metin: fu.metin.value.trim(), bag: fu.bag.value.trim(), yapilacaklar: fu.yapilacaklar.value, kimi: fu.kimi.value.trim() }, 'Duyuru yayınlandı'); }
+  if (fu) { ev.preventDefault(); if (!fu.baslik.value.trim()) return bildir('Başlık yaz', 'uyari'); return moIslem('/mevzuat/ortak/duyuru', { baslik: fu.baslik.value.trim(), metin: fu.metin.value.trim(), bag: fu.bag.value.trim(), yapilacaklar: fu.yapilacaklar.value, kimi: fu.kimi.value.trim(), yururluk: fu.yururluk.value }, 'Duyuru yayınlandı'); }
   const f = ev.target.closest('[data-sh-hata-anahtar]'); if (!f) return;
   ev.preventDefault(); const v = f.anahtar.value.trim(); if (!v) return bildir('Anahtarı yaz', 'uyari');
   hata.anahtar = v; hata.yetkisiz = false; hata.hata = ''; hata.liste = null; hatalarYukle();
@@ -1332,6 +1335,8 @@ async function destekTikla(t) {
   if (t.closest('[data-sh-ag-yenile]')) { asistanGeriYukle(); return true; }
   if (t.closest('[data-sh-mo-yenile]')) { mo.veri = null; mevzuatYonetYukle(); return true; }
   if (t.closest('[data-sh-mo-ekle]')) { mevzuatBelgePenceresi(); return true; }
+  const mb = t.closest('[data-sh-mo-bulten]'); if (mb) { try { const j = await moIstek('/mevzuat/ortak/bulten', { yontem: 'POST', govde: { acik: mb.dataset.shMoBulten === '1' } }); mo.bulten = j.bulten; bildir(j.bulten.acik ? 'Haftalık bülten açıldı' : 'Haftalık bülten kapatıldı'); ciz(); } catch (x) { bildir(turkceHata(x), 'uyari'); } return true; }
+  if (t.closest('[data-sh-mo-bulten-dene]')) { try { const j = await moIstek('/mevzuat/ortak/bulten', { yontem: 'POST', govde: { dene: true } }); bildir(j.gonderilen ? 'Örnek bülten e-postana gönderildi' : 'Gönderilemedi: ' + (j.neden || ''), j.gonderilen ? undefined : 'uyari'); } catch (x) { bildir(turkceHata(x), 'uyari'); } return true; }
   const me = t.closest('[data-sh-mo-etki]'); if (me) { await etkiTaslagi(me.dataset.shMoEtki); return true; }
   if (t.closest('[data-sh-mo-denetle]')) { mo.denetleniyor = true; ciz(); try { const j = await moIstek('/mevzuat/ortak/takip-calistir', { yontem: 'POST', govde: {} }); mo.takip = j.takip; bildir('Denetim bitti'); } catch (x) { bildir(turkceHata(x), 'uyari'); } mo.denetleniyor = false; ciz(); return true; }
   const ms = t.closest('[data-sh-mo-sil]'); if (ms) { if (!ms.dataset.onay) { ms.dataset.onay = '1'; ms.textContent = 'Silmeyi onayla'; return true; } await moIslem('/mevzuat/ortak/sil', { id: ms.dataset.shMoSil }, 'Belge silindi'); return true; }

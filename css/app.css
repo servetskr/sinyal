@@ -2946,3 +2946,62 @@ form.mz-geri textarea{width:100%;border:1.5px solid var(--cizgi);border-radius:1
 .mz-kanit-uyari{color:#a45a00}
 p.mz-kanit-uyari{margin:-4px 0 10px;font-size:13px}
 .mz-kanit .ik,.mz-kanit-uyari .ik{width:14px;height:14px}
+/* mevzuat asistanı v228: soru alanı, sekmeler, Güncel takvimi, Kaydettiklerim, madde araç çubuğu, değişiklik geçmişi */
+.mz-hero{background:linear-gradient(135deg,#132447 0%,#1e3a6e 100%);border-radius:18px;padding:18px;margin:0 0 14px;box-shadow:0 10px 30px -18px rgba(15,23,41,.6)}
+.mz-hero .mz-ara{margin:0}
+.mz-hero .mz-kutu input{border-color:transparent;height:58px;font-size:17px;box-shadow:0 2px 0 rgba(0,0,0,.08)}
+.mz-hero .mz-kutu .ik{color:var(--levha)}
+.mz-hero .mz-ara>.dg{height:58px;background:#ffc21a;border-color:#ffc21a;color:#0f1729;font-weight:800}
+.mz-hero-alt{margin:10px 2px 0;font-size:13px;color:#c9d5ea}
+.mz-sekmeler{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;border-bottom:1.5px solid var(--cizgi);margin:0 0 16px;padding:0 2px}
+.mz-sekmeler::-webkit-scrollbar{display:none}
+.mz-sekme{flex:none;display:inline-flex;gap:7px;align-items:center;height:44px;padding:0 12px;border:0;background:none;color:var(--soluk);font-size:14.5px;font-weight:700;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1.5px}
+.mz-sekme .ik{width:18px;height:18px}
+.mz-sekme:hover{color:var(--murekkep)}
+.mz-sekme.secili{color:var(--levha-koyu);border-bottom-color:var(--levha)}
+.mz-sekme em{font-style:normal;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#ffc21a;color:#0f1729;font-size:12px;display:inline-grid;place-items:center}
+.mz-panel[hidden]{display:none}
+.mz-tanitim{display:flex;gap:10px;align-items:center;width:100%;text-align:left;border:1.5px solid #e8c45a;background:#fffaf0;border-radius:14px;padding:12px 14px;margin:0 0 16px;cursor:pointer}
+.mz-tanitim>span{flex:1;min-width:0}
+.mz-tanitim b{display:block;color:var(--murekkep)}
+.mz-tanitim small{display:block;color:var(--soluk);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mz-tanitim>.ik{flex:none;color:var(--soluk)}
+.mz-ornekler>span{width:100%;font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:var(--soluk)}
+.mz-konu-kisa{background:#fff;border:1px solid var(--cizgi);color:var(--murekkep)}
+.mz-tumu{border:0;background:none;color:var(--levha);font-weight:700;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:2px}
+.mz-tumu .ik{width:16px;height:16px}
+.mz-takvim{background:#fff;border:1.5px solid var(--cizgi);border-radius:14px;padding:12px 14px;margin:0 0 16px}
+.mz-takvim h3{font-size:15px;color:var(--murekkep);margin:0 0 8px}
+.mz-takvim ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.mz-takvim li{display:flex;gap:12px;align-items:center;min-width:0}
+.mz-takvim li>span:last-child{flex:1;min-width:0;font-size:14.5px;color:var(--murekkep);overflow-wrap:anywhere}
+.mz-takvim-gun{flex:none;width:86px;border-radius:10px;background:var(--panel-2);padding:6px 8px;text-align:center}
+.mz-takvim-gun b{display:block;font-size:15px;color:var(--murekkep)}
+.mz-takvim-gun small{display:block;font-size:11.5px;color:var(--soluk)}
+.mz-takvim-gun.yakin{background:#fff1d6}
+.mz-takvim-gun.yakin b{color:#a45a00}
+.mz-kayit-liste>li{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:12px 20px;flex-wrap:wrap}
+.mz-kayit-satir{flex:1;min-width:200px}
+.mz-kayit-satir b{display:block;color:var(--murekkep);overflow-wrap:anywhere}
+.mz-kayit-satir small{color:var(--soluk);font-size:12.5px}
+.mz-kayit-not{font-size:14px;color:var(--metin);margin:4px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.mz-kayit-satir .mz-uyari-not{margin:6px 0}
+.mz-kayit-dg{display:flex;gap:6px;flex:none}
+.mz-madde-arac{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 12px}
+.mz-fav-dg .ik{width:16px;height:16px}
+.mz-fav-dg.secili{background:#fff6dc;border-color:#e8c45a;color:#7a5200}
+.mz-fav-dg.secili .ik{fill:#ffc21a}
+.mz-gecmis summary{padding:10px 0;font-weight:700;color:var(--murekkep)}
+.mz-gecmis ol{margin:0 0 6px;padding-left:20px;font-size:14px;line-height:1.6}
+.mz-gecmis a{color:var(--levha)}
+@media (max-width:560px){.mz-hero{padding:12px;border-radius:14px}.mz-hero .mz-kutu input{height:52px;font-size:16px}.mz-hero .mz-ara>.dg{height:52px;padding:0 16px}.mz-sekme{padding:0 10px;font-size:14px}.mz-sekme span{display:inline}}
+/* üst çubuk: mevzuat asistanı kısayolu */
+.asistan-dugme{display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 14px;border-radius:12px;background:#132447;color:#fff;font-weight:700;font-size:14px;text-decoration:none;flex:none;white-space:nowrap}
+.asistan-dugme .ik{width:18px;height:18px;color:#ffc21a}
+.asistan-dugme:hover{background:#1e3a6e}
+@media (max-width:900px){.asistan-dugme{width:40px;padding:0;justify-content:center}.asistan-dugme span{display:none}}
+.dn-dayanak{color:var(--levha);text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px;font-weight:600}
+.sh-mz-bulten{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#fff;border:1px solid var(--cizgi);border-radius:14px;padding:10px 12px;margin:0 0 10px}
+.sh-mz-bulten>span{flex:1;min-width:200px}
+.sh-mz-bulten b{display:block;color:var(--murekkep);font-size:14.5px}
+.sh-mz-bulten small{color:var(--soluk);font-size:12.5px}
