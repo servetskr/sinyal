@@ -1,8 +1,8 @@
-import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas, sb, sbDers, sbSinav, gorunum, subede, SOZLESME_VARSAYILAN, satistaSiniflar, ayEkle, YONTEMLER, yontemAd, selam, kursAdi, dersKonulari, evrakKaynak, ayniTcKayit, taksitBol, aydinlatmaMetni, gerekliDireksiyon, cokSube, varsayilanSube, kuralAyar } from './veri.js?v=215';
-import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler, imzaAlani, tamTarih, yaziyla, belgeYazdir, waAc, apiAcik, belgeWhatsApp, waSirali } from './ui.js?v=215';
-import { yenile } from './app.js?v=215';
-import { siraliPencere } from './sayfalar5.js?v=215';
-import * as GR from './gruplar.js?v=215';
+import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas, sb, sbDers, sbSinav, gorunum, subede, SOZLESME_VARSAYILAN, satistaSiniflar, ayEkle, YONTEMLER, yontemAd, selam, kursAdi, dersKonulari, evrakKaynak, ayniTcKayit, taksitBol, aydinlatmaMetni, gerekliDireksiyon, cokSube, varsayilanSube, kuralAyar } from './veri.js?v=216';
+import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler, imzaAlani, tamTarih, yaziyla, belgeYazdir, waAc, apiAcik, belgeWhatsApp, waSirali } from './ui.js?v=216';
+import { yenile } from './app.js?v=216';
+import { siraliPencere } from './sayfalar5.js?v=216';
+import * as GR from './gruplar.js?v=216';
 
 /* ================= BELGELER VE ÇIKTILAR ================= */
 const gorunumSube = () => gorunum.sube;
@@ -175,7 +175,7 @@ export function sozlesmeImzalat(k) {
     onAc(d) {
       const ia = imzaAlani(d.querySelector('[data-imza]'));
       d.querySelector('[data-temizle]').addEventListener('click', () => ia.temizle());
-      d.querySelector('[data-uzaktan]').addEventListener('click', () => import('./imza.js?v=215').then(m => m.imzayaGonderPenceresi(k, 'sozlesme')));
+      d.querySelector('[data-uzaktan]').addEventListener('click', () => import('./imza.js?v=216').then(m => m.imzayaGonderPenceresi(k, 'sozlesme')));
       d.querySelector('[data-yazdir]').addEventListener('click', () => { belgeYazdir(belgeHtml('sozlesme', k.id) + '<div class="sayfa-sonu"></div>' + belgeHtml('sozlesme', k.id), 'Sözleşme · ' + tamAd(k)); islem('Sözleşme yazdırdı', tamAd(k)); kaydet(); bildir('İki nüsha yazdırıldı. İmzalı nüshayı teslim alınca Evraklar’da “İmzalı sözleşme”yi işaretleyin'); });
       d.querySelector('[data-imzala]').addEventListener('click', () => {
         { const so = ia.sorun(); if (so) return bildir(so === 'İmza alanı boş' ? 'Kursiyer imza alanına imzalasın' : so, 'uyari'); }
@@ -189,7 +189,7 @@ export function sozlesmeImzalat(k) {
 }
 export function belgeAc(tur, id) {
   const s = SABLONLAR.find(x => x[0] === tur);
-  if (s && s[3] === 'resmi') return import('./resmi.js?v=215').then(m => m.resmiAc(tur, id, kid => belgeHtml('takip', kid)));
+  if (s && s[3] === 'resmi') return import('./resmi.js?v=216').then(m => m.resmiAc(tur, id, kid => belgeHtml('takip', kid)));
   const yazdirBtn = `<button class="dg dg-ana" data-yazdir>${ik('belge')}Yazdır / PDF</button>`;
   if (s[3] === 'tek') { pencere({ baslik: s[1], genis: true, icerik: `<div style="background:var(--zemin);padding:18px;border-radius:8px;max-height:66vh;overflow:auto"><div class="a4" id="a4">${belgeHtml(tur)}</div></div>`, altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button>${yazdirBtn}`, onAc(d) { d.querySelector('[data-yazdir]').addEventListener('click', () => { belgeYazdir(belgeHtml(tur), s[1]); islem(s[1] + ' yazdırdı'); kaydet(); }); } }); return; }
   const gelir = () => S.hareket.filter(h => h.tur === 'Gelir' && h.kursiyer && subede(kursiyer(h.kursiyer))).sort((a, b) => (b.tarih + b.id).localeCompare(a.tarih + a.id));
@@ -232,7 +232,7 @@ const kayitBulanik = key => !!(kayit.net && kayit.net[key] && kayit.net[key].bul
 // Kayıt formunun karşılaması (kod adı evden… eskiden kalma): öğrenci hesabı (geçici şifre WhatsApp'tan), hoş geldin, ödeme planı, teorik ders, usta öğreticiye ve müdüre bildirim.
 // Demoda gerçek hesap açılmaz (hesap.js ac); demo görünümünde (ziyaretçi) mesajlar yalnız ekranda önizlenir, kimseye gitmez.
 export function evdenKayitKarsila(k) {
-  return import('./hesap.js?v=215').then(HS => HS.karsilama(k, { hos: true, hesap: true, kaynak: 'evden' })).catch(() => bildir('Karşılama mesajları hazırlanamadı; öğrenci dosyasından “Hesap aç” ile gönderin', 'uyari'));
+  return import('./hesap.js?v=216').then(HS => HS.karsilama(k, { hos: true, hesap: true, kaynak: 'evden' })).catch(() => bildir('Karşılama mesajları hazırlanamadı; öğrenci dosyasından “Hesap aç” ile gönderin', 'uyari'));
 }
 // subeId: kayıt sayfası bir şubeye bağlıysa (#/kayit/<şube kimliği>) yeni kursiyer o şubeye yazılır
 export function kayitSayfasi(subeId) {
@@ -272,7 +272,7 @@ export function kayitSayfasi(subeId) {
       k.addEventListener('change', ev => {
         if (ev.target.name === 'sinif') { kayit.sinif = ev.target.value; yenile(); }
         const f = ev.target.closest('[data-evrak]');
-        if (f && f.files[0]) { const key = f.dataset.evrak; fotoKucult(f.files[0]).then(async u => { kayit.evrak[key] = u; const EV = await import('./evrak.js?v=215'); kayit.net[key] = key === 'foto' ? null : await EV.netlikOlc(u).catch(() => null); if (kayitBulanik(key)) bildir('Fotoğraf bulanık görünüyor; yazılar okunacak şekilde yeniden çekin', 'uyari'); yenile(); }).catch(() => bildir('Fotoğraf okunamadı', 'uyari')); }
+        if (f && f.files[0]) { const key = f.dataset.evrak; fotoKucult(f.files[0]).then(async u => { kayit.evrak[key] = u; const EV = await import('./evrak.js?v=216'); kayit.net[key] = key === 'foto' ? null : await EV.netlikOlc(u).catch(() => null); if (kayitBulanik(key)) bildir('Fotoğraf bulanık görünüyor; yazılar okunacak şekilde yeniden çekin', 'uyari'); yenile(); }).catch(() => bildir('Fotoğraf okunamadı', 'uyari')); }
       });
       const cv = k.querySelector('canvas.imza-alan'), ia = cv ? imzaAlani(cv) : null;
       k.addEventListener('click', ev => {
@@ -372,7 +372,7 @@ export function mebbisAsistani(id) {
       mebKlavye = ev => { if (mebSira.kid !== k.id || ev.key !== 'Enter' || (ev.target.closest && ev.target.closest('input,textarea,select,button'))) return; ev.preventDefault(); if (tum[mebSira.i]) siraKopyala(); else kap.querySelector('[data-tamam]')?.click(); };
       kap.addEventListener('change', ev => { const a = ev.target.closest('[data-alan]'); if (!a) return; const v = a.value.trim(); if (a.dataset.alan === 'adli-barkod') k.adliSicil = { barkod: v }; else { k.saglikRapor = k.saglikRapor || {}; k.saglikRapor[a.dataset.alan === 'rapor-no' ? 'no' : 'tarih'] = v; } kaydet(); yenile(); });
       kap.addEventListener('click', ev => {
-        const mp = ev.target.closest('[data-meb-pdf]'); if (mp) { mp.disabled = true; return import('./evrak.js?v=215').then(m => m.evrakPdfIndir(k, mp.dataset.mebPdf, { ad: `${k.tc}_${mp.dataset.mebPdf}.pdf` })).finally(() => { mp.disabled = false; }); }
+        const mp = ev.target.closest('[data-meb-pdf]'); if (mp) { mp.disabled = true; return import('./evrak.js?v=216').then(m => m.evrakPdfIndir(k, mp.dataset.mebPdf, { ad: `${k.tc}_${mp.dataset.mebPdf}.pdf` })).finally(() => { mp.disabled = false; }); }
         const c = ev.target.closest('[data-kopyala]');
         if (c) { const al = tum.find(x => x[0] === c.dataset.kopyala); kopyala(al[2]).then(ok => { k.mebGirildi[al[0]] = true; kaydet(); bildir(ok === false ? 'Kopyalanamadı; değeri elle seçin' : al[1] + ' kopyalandı'); yenile(); }); }
         if (ev.target.closest('[data-tamam]')) {
@@ -425,7 +425,7 @@ const plakaMetin = a => e(a.plaka) + ' · ' + e(a.model);
 
 /* ================= PAKET VE GÜVENCE ================= */
 export function guven() {
-  const dk = (S.guvenlik && S.guvenlik.oturumDk) || 30, bulutta = !!(oturum.kullanici && oturum.kullanici.bulut);
+  const dk = (S.guvenlik && +S.guvenlik.oturumDk) || 0, bulutta = !!(oturum.kullanici && oturum.kullanici.bulut);
   const madde = (t, b, a, etiket) => `<li style="align-items:flex-start">${isaret(t, 24)}<div style="flex:1"><b style="color:var(--murekkep);display:block">${b}${etiket ? ` <span class="rozet rozet-${etiket === 'Bugün' ? 'yesil' : 'mavi'}" style="font-size:11px;vertical-align:middle">${etiket}</span>` : ''}</b><small style="color:var(--metin);font-size:14px">${a}</small></div></li>`;
   return {
     baslik: 'Verileriniz ve güvenlik', alt: 'Veriler nerede durur, nasıl korunur, kimin elindedir',
@@ -444,7 +444,7 @@ export function guven() {
         ${madde('tamam', 'Öğrenci yalnız kendini görür', 'Öğrenciye kendine özel link gider; linkte yalnız kendi programı, dersleri, ödemeleri ve belgeleri durur, TC numarası maskelidir. Öğrencinin yaptıkları (evrak, ders alma, iptal) kursun ekranında denetlenip işlenir; ödeme ve evrak onayını değiştiremez.', 'Bugün')}
         ${madde('tamam', 'Hassas işlemde ikinci onay', 'TC kimlik numarasını tam göstermek gibi işlemler şifreyi yeniden ister; TC listelerde maskeli görünür.', 'Bugün')}
         ${madde('tamam', 'Kim ne yaptı, kayıtlı', 'Her işlem kullanıcı adı ve saatiyle işlem geçmişine yazılır; yanlış işlem geri alınabilir.', 'Bugün')}
-        ${madde('tamam', 'Bırakılan ekran kapanır', `${dk} dakika işlem yapılmazsa oturum kendiliğinden kapanır (Ayarlar › Güvenlik).`, 'Bugün')}
+        ${madde('tamam', 'Bırakılan ekran kapanır', dk ? `${dk} dakika işlem yapılmazsa oturum kendiliğinden kapanır (Ayarlar › Güvenlik).` : 'İstenirse belirli bir süre işlem yapılmayınca oturum kendiliğinden kapanır (Ayarlar › Güvenlik; şu an kapalı).', 'Bugün')}
         ${madde('bilgi', 'İki adımlı giriş', 'Şifreye ek olarak telefondaki doğrulama uygulamasının (Google Authenticator vb.) kodu; her kişi kendi hesabında açar (Ayarlar › Güvenlik). Kurulumda kursunuz için açılır.', 'Kurulumda')}
       </ul></div>
       <div class="kart"><div class="kart-bas"><h3>Saldırı ya da arıza olursa</h3></div><ul class="liste" style="margin-top:8px">
@@ -487,7 +487,7 @@ export function guven() {
         };
         const csvYap = () => Object.entries(sayfalar).forEach(([ad, l], i) => setTimeout(() => csvIndir('mdsinyal-' + ad.toLocaleLowerCase('tr').replace(/\s+/g, '-') + '.csv', l), i * 400));
         const tamYedek = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S)], { type: 'application/json' })); a.download = 'mdsinyal-tam-yedek-' + gun(0) + '.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); };
-        import('./sayfalar5.js?v=215').then(m => m.xlsxYukle()).then(() => {
+        import('./sayfalar5.js?v=216').then(m => m.xlsxYukle()).then(() => {
           const X = window.XLSX, wb = X.utils.book_new();
           // Excel'de formül olarak çalışmasın: = + - @ ile başlayan metinlerin başına ' konur
           const guvenli = l => l.map(r => r.map(h => typeof h === 'string' && /^[=+\-@]/.test(h) ? "'" + h : h));
