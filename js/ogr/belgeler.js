@@ -1,8 +1,8 @@
 // Belgeler sekmesi (yeni tasarım): kayıt evraklarının durumu, evrak listesi (yükleme), sözleşme ve formlar.
-import { EVRAKLAR, SINIFLAR, tamAd } from '../veri.js?v=224';
-import { tarih } from '../ui.js?v=224';
-import { kursaYaz } from '../ozellik.js?v=224';
-import { esc, oi, sayfaBas, geri, bolum, heroKart, baglanti, liste, satir, ikonKutu, cip, not, stilEkle } from './ui.js?v=224';
+import { EVRAKLAR, SINIFLAR, tamAd } from '../veri.js?v=225';
+import { tarih } from '../ui.js?v=225';
+import { kursaYaz } from '../ozellik.js?v=225';
+import { esc, oi, sayfaBas, geri, bolum, heroKart, baglanti, liste, satir, ikonKutu, cip, not, stilEkle } from './ui.js?v=225';
 
 let gorunum = 'ana'; // 'ana' | 'evrak'
 

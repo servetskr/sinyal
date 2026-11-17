@@ -2,11 +2,11 @@
 // mdSinyal Yönetim panelinin “Hesaplar” bölümünde açılır (yalnız Servet; ortak görmez).
 // Yetki Firebase güvenlik kurallarından değil, Google hesabından gelir: Firebase projesinin sahibi olan Google hesabıyla
 // bağlanılır, Google IAM izin verirse işlem yapılır. Sunucu, gizli anahtar yok; erişim belirteci yalnız bellekte durur (1 saat).
-import { e, ik, pencere, kapatPencere, bildir, tl, siteLink } from './ui.js?v=224';
-import { S, kaydet, islem, bulutKanca } from './veri.js?v=224';
-import { ogrenciPanelMetni, WORKER } from './bulut.js?v=224';
-import { EMU } from './firebase-ayar.js?v=224';
-import { kabuk as epKabuk, kutular, bolum, satirlar, bos, not, nokta, dugme, R, SITE } from './eposta-kabuk.js?v=224';
+import { e, ik, pencere, kapatPencere, bildir, tl, siteLink } from './ui.js?v=225';
+import { S, kaydet, islem, bulutKanca } from './veri.js?v=225';
+import { ogrenciPanelMetni, WORKER } from './bulut.js?v=225';
+import { EMU } from './firebase-ayar.js?v=225';
+import { kabuk as epKabuk, kutular, bolum, satirlar, bos, not, nokta, dugme, R, SITE } from './eposta-kabuk.js?v=225';
 
 // EMU (firebase-ayar.js, yalnız localhost + açık işaret): REST istekleri yerel emülatöre gider, Google onayı yerine emülatörün yönetici belirteci kullanılır
 const PROJE = EMU ? EMU.proje : 'sinyal-5d37a';
@@ -958,7 +958,7 @@ let kuOtoBakildi = false;
 async function kullanimHaftalik() {
   if (kuOtoBakildi || !(S.kurs && S.kurs.sahipAnaliz) || !Object.keys(kursIst).length) return; kuOtoBakildi = true;
   try {
-    const { gecenHafta } = await import('./eposta.js?v=224'), h = gecenHafta();
+    const { gecenHafta } = await import('./eposta.js?v=225'), h = gecenHafta();
     if (S.kurs.sahipAnalizSon === h.donem) return;
     const T = await kullanimOku(aralikGunler(h.bas, h.bit));
     const j = await kullanimGonder(T, h.bas.split('-').reverse().join('.') + ' – ' + h.bit.split('-').reverse().join('.'), h.donem);
@@ -1091,7 +1091,7 @@ function mevzuatYonetHtml() {
   const secenek = (l, sec = '') => l.map(([k, a]) => `<option value="${e(k)}"${k === sec ? ' selected' : ''}>${e(a)}</option>`).join('');
   const bildirim = x => x.tur === 'rg' ? `<b>Resmî Gazete · ${e(moTarih(x.tarih))}</b><small style="white-space:normal">${e(x.baslik)}</small>` : x.tur === 'kaynak' ? `<b>Kaynak değişti: ${e(x.ad)}</b><small style="white-space:normal">Resmî dosya güncellenmiş olabilir. Yeni metni indirip “Belge ekle” ile yükle, eskisini “Değişti” olarak işaretle.</small>` : `<b>Kaynağa ulaşılamadı: ${e(x.ad)}</b><small>${e(String(x.hata || ''))}</small>`;
   return `<div class="sh-mz" data-resmi>
-    <section class="sh-grup"><h2>Takip<span>${t.son ? 'son denetim ' + e(moTarih(t.son)) + ' · her gün 07:00' : 'henüz denetlenmedi · her gün 07:00'}</span></h2>
+    <section class="sh-grup"><h2>Takip<span>${t.son ? 'son denetim ' + e(moTarih(t.son)) + ' · her gün 07:00' : 'henüz denetlenmedi · her gün 07:00'}${t.rgSon ? ' · Resmî Gazete: ' + e(t.rgSon.durum) : ''}</span></h2>
       <div class="sh-mz-dg"><button class="dg dg-cizgi dg-kucuk" data-sh-mo-denetle ${mo.denetleniyor ? 'disabled' : ''}>${ik('sifirla')}${mo.denetleniyor ? 'Denetleniyor…' : 'Şimdi denetle'}</button><button class="dg dg-cizgi dg-kucuk" data-sh-mo-yenile>${ik('sifirla')}Yenile</button></div>
       ${yeni.length ? `<div class="sh-liste">${yeni.slice(0, 20).map(x => `<a class="sh-satir" href="${e(x.adres)}" target="_blank" rel="noopener"><span class="sh-av ${x.tur === 'erisilemedi' ? 'sh-av-yok' : 'sh-av-hizmet'}">${ik(x.tur === 'rg' ? 'belge' : 'uyari')}</span><span class="sh-satir-ic">${bildirim(x)}</span>${ik('sag')}</a>`).join('')}</div>` : `<p class="sh-dip">Yeni bildirim yok. ${Object.keys(t.kaynak || {}).length} kaynak adresi ve Resmî Gazete fihristi her gün denetlenir; değişiklik olunca burada ve e-postanda görünür.</p>`}
     </section>

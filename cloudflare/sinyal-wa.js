@@ -814,10 +814,11 @@ async function mvTakip(env, { hepsi = false, simdi = new Date() } = {}) {
   // Resmî Gazete: bugünün fihristi (ana sayı ve 2 mükerrer)
   const rg = t.rg || [];
   const y = gun.slice(0, 4), a = gun.slice(5, 7), g = gun.slice(8, 10);
+  let rgDurum = 'okundu';
   for (const ek of ['', 'M1', 'M2']) {
     try {
       const r = await fetch(`https://www.resmigazete.gov.tr/eskiler/${y}/${a}/${y}${a}${g}${ek}.htm`, { signal: AbortSignal.timeout(8000) });
-      if (!r.ok || !/html/i.test(r.headers.get('content-type') || '')) break;
+      if (!r.ok || !/html/i.test(r.headers.get('content-type') || '')) { if (!ek) rgDurum = r.status === 404 ? 'yayım yok' : 'ulaşılamadı (' + r.status + ')'; break; }
       const metin = w1254(new Uint8Array(await r.arrayBuffer()));
       for (const m of metin.matchAll(/<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi)) {
         const baslik = m[2].replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim().replace(/^[–—-]+\s*/, '');
@@ -826,9 +827,9 @@ async function mvTakip(env, { hepsi = false, simdi = new Date() } = {}) {
         const adres = /^https?:/.test(m[1]) ? m[1] : `https://www.resmigazete.gov.tr/eskiler/${y}/${a}/${m[1]}`;
         if (!rg.some(x => x.adres === adres)) { const x = { tarih: gun, baslik: baslik.slice(0, 200), adres, anahtar: es }; rg.unshift(x); yeni.push({ tur: 'rg', ...x }); }
       }
-    } catch (x) { break; }
+    } catch (x) { if (!ek) rgDurum = 'ulaşılamadı'; break; }
   }
-  const sonuc = { son: new Date().toISOString(), kaynak: kay, rg: rg.slice(0, 60), yeni: [...yeni, ...(t.yeni || [])].slice(0, 60) };
+  const sonuc = { son: new Date().toISOString(), rgSon: { tarih: gun, durum: rgDurum }, kaynak: kay, rg: rg.slice(0, 60), yeni: [...yeni, ...(t.yeni || [])].slice(0, 60) };
   await env.LINK.put(MO + ':takip', JSON.stringify(sonuc));
   const S = typeof epSaglayici === 'function' ? epSaglayici(env) : null;
   if (yeni.length && S && env.SAHIP_EPOSTA) {
