@@ -1,6 +1,6 @@
 // Mesaj merkezi: grup ya da tek tek seçilen kişilere kişiye özel WhatsApp mesajı, planlı gönderim, iletildi/okundu takibi
-import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, kalanBorc, gecikenler, gecikenTutar, eksikEvrak, sonrakiDers, risk, islem, sb, aktifSiniflar, SINIFLAR, selam, kursAdi, adEk, yerelZaman, bulutKanca } from './veri.js?v=211';
-import { e, tl, ik, rozet, bos, pencere, kapatPencere, bildir, tarihUzun, apiAcik, apiGonder, etiket, waSirali, ziyaretci, isaret, waIstek } from './ui.js?v=211';
+import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, kalanBorc, gecikenler, gecikenTutar, eksikEvrak, sonrakiDers, risk, islem, sb, aktifSiniflar, SINIFLAR, selam, kursAdi, adEk, yerelZaman, bulutKanca } from './veri.js?v=212';
+import { e, tl, ik, rozet, bos, pencere, kapatPencere, bildir, tarihUzun, apiAcik, apiGonder, etiket, waSirali, ziyaretci, isaret, waIstek, metaHata } from './ui.js?v=212';
 
 const durum = { grup: 'aktif', sinif: '', ogretmen: '', secili: null, sira: 0, zaman: 'simdi', metin: null, sablon: '', ek: null, cevapIste: false, tanitim: false };
 // Kampanya/tanıtım mesajı yalnız kampanya izni olan öğrencilere gider; eski kayıtlardaki birleşik rıza izin sayılır
@@ -69,7 +69,7 @@ const seciliListe = () => { const l = liste(); if (!durum.secili) durum.secili =
 /* ---------- iletildi / okundu ---------- */
 const DURUM_SIRA = { sent: 1, delivered: 2, read: 3, failed: 9 };
 const DURUM_AD = { sent: 'Gönderildi', delivered: 'İletildi', read: 'Okundu', failed: 'İletilemedi' };
-export const tik = id => { const d = (S.waDurum || {})[id]; if (!id) return ''; return `<span class="tik tik-${d || 'bekliyor'}" title="${DURUM_AD[d] || 'Gönderildi'}">${d === 'failed' ? '!' : d === 'delivered' || d === 'read' ? '✓✓' : '✓'}</span>`; };
+export const tik = id => { const d = (S.waDurum || {})[id]; if (!id) return ''; const hk = d === 'failed' && (S.waDurum || {})['!' + id]; return `<span class="tik tik-${d || 'bekliyor'}" title="${hk ? e('İletilemedi: ' + metaHata({ kod: hk })) : DURUM_AD[d] || 'Gönderildi'}">${d === 'failed' ? '!' : d === 'delivered' || d === 'read' ? '✓✓' : '✓'}</span>`; };
 let durumda = false, sonSorgu = 0;
 export async function durumlariGuncelle() {
   if (durumda || !apiAcik() || Date.now() - sonSorgu < 8000) return false;
@@ -81,6 +81,8 @@ export async function durumlariGuncelle() {
     const j = await (await waIstek('/durum?ids=' + encodeURIComponent(ids.join(',')))).json();
     if (!j.ok) return false;
     S.waDurum = S.waDurum || {}; let degisti = false;
+    // iletilemeyen mesajın Meta hata kodu aynı haritada '!<id>' anahtarıyla durur (yeni üst düzey alan açılmaz)
+    Object.entries(j.kod || {}).forEach(([id, k]) => { if (S.waDurum['!' + id] !== k) { S.waDurum['!' + id] = k; degisti = true; } });
     Object.entries(j.durum || {}).forEach(([id, d]) => { if ((DURUM_SIRA[d] || 0) > (DURUM_SIRA[S.waDurum[id]] || 0)) { S.waDurum[id] = d; degisti = true; } });
     if (degisti) kaydet();
     return degisti;

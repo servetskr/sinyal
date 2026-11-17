@@ -129,6 +129,12 @@ function demoHatSec(env, metin, rol) {
 }
 // Kursun kendi WhatsApp hattı (Meta'daki telefon numarası kimliği + kalıcı erişim anahtarı); anahtar tarayıcıya hiç dönmez
 const kursHat = async (env, kurs) => { try { return JSON.parse((await env.LINK.get('hat:' + kurs)) || 'null'); } catch (x) { return null; } };
+// Onaylı şablonla gönderim: tek gövde değişkeni ({{1}}); değişken satır sonu ve 4'ten fazla boşluk içeremez (Meta kuralı)
+const sablonParam = metin => metin.replace(/\s*\n+\s*/g, ' · ').replace(/[\t ]{4,}/g, '   ').slice(0, 1000);
+const sablonGovde = (to, ad, dil, metin) => ({ messaging_product: 'whatsapp', to, type: 'template', template: { name: ad, language: { code: dil || 'tr' }, components: [{ type: 'body', parameters: [{ type: 'text', text: sablonParam(metin) }] }] } });
+// Kişinin kursun hattına en son yazdığı an (webhook yazar, 25 saat tutulur). Pencere açık değilse serbest metin Meta'da sonradan
+// 131047 ile düşer ve bu hata isteğin cevabında değil webhook'ta gelir; bu yüzden şablon tanımlı kursta pencere kapalıysa doğrudan şablon gider.
+const pencereAcik = async (env, kurs, to) => { const t = +(await env.LINK.get('son:' + kurs + ':' + rakam(to)) || 0); return t > 0 && Date.now() - t < 23.5 * 3600e3; };
 // Gönderim gövdesi: metin ya da belge (PDF/fotoğraf önce Meta'ya yüklenir)
 async function mesajGovdesi(b, metin, to, phoneId, token) {
   if (!(b.belge && b.belge.base64)) return { govde: { messaging_product: 'whatsapp', to, type: 'text', text: { body: metin, preview_url: true } } };
@@ -161,8 +167,10 @@ async function hmacHex(gizli, veri) {
   return hex(await crypto.subtle.sign('HMAC', k, veri));
 }
 // true: geçerli imza ya da APP_SECRET tanımlı değil (geçiş dönemi); false: imza yok ya da uymuyor
-async function metaImzaDogru(env, ham, baslik) {
+async function metaImzaDogru(env, ham, baslik, ekGizli) {
   const gizliler = String(env.APP_SECRET || '').split(',').map(x => x.trim()).filter(Boolean);
+  // kursun kendi uygulama anahtarı varsa imza zorunlu olur (global APP_SECRET tanımlı olmasa da)
+  if (ekGizli) gizliler.push(ekGizli);
   if (!gizliler.length) { if (!imzaUyarisi) { imzaUyarisi = true; console.warn(JSON.stringify({ tur: 'uyari', konu: 'APP_SECRET tanımlı değil; Meta webhook imzası denetlenmiyor' })); } return true; }
   const m = /^sha256=([0-9a-f]{64})$/i.exec(String(baslik || '').trim()); if (!m) return false;
   const gelen = m[1].toLowerCase();
@@ -425,40 +433,74 @@ export default {
     if (yol === 'hat') {
       if (!gercek) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
       const h = await kursHat(env, kursId);
-      if (req.method === 'GET') return cevap({ ok: true, bagli: !!h, no: h ? h.no : '', ad: h ? h.ad : '' });
+      if (req.method === 'GET') return cevap({ ok: true, bagli: !!h, no: h ? h.no : '', ad: h ? h.ad : '', sablon: (h && h.sablon) || '', gizli: !!(h && h.appSecret), ...(h && h.dog && rol === 'mudur' ? { webhook: { adres: new URL(req.url).origin + '/webhook', belirtec: h.dog } } : {}) });
       if (rol !== 'mudur') return cevap({ ok: false, hata: 'Hattı yalnız kurs müdürü bağlar' }, 403);
       let b; try { b = await req.json(); } catch (x) { return cevap({ ok: false, hata: 'Gecersiz istek' }, 400); }
-      if (b.sil) { if (h) await env.LINK.delete('hatno:' + h.phoneId); await env.LINK.delete('hat:' + kursId); return cevap({ ok: true, bagli: false }); }
-      const phoneId = rakam(b.phoneId), token = String(b.token || '').trim();
+      if (b.sil) { if (h) { await env.LINK.delete('hatno:' + h.phoneId); if (h.dog) await env.LINK.delete('hatdog:' + h.dog); } await env.LINK.delete('hat:' + kursId); return cevap({ ok: true, bagli: false }); }
+      const phoneId = rakam(b.phoneId), token = String(b.token || '').trim(), wabaId = rakam(b.wabaId), appSecret = String(b.appSecret || '').trim(), pin = rakam(b.pin);
+      const sablon = String(b.sablon || '').trim().toLowerCase(), sablonDil = String(b.sablonDil || 'tr').trim() || 'tr';
+      if (sablon && !/^[a-z0-9_]{1,512}$/.test(sablon)) return cevap({ ok: false, hata: 'Şablon adı yalnız küçük harf, rakam ve alt çizgi içerebilir' }, 400);
+      if (appSecret && !/^[0-9a-f]{32}$/i.test(appSecret)) return cevap({ ok: false, hata: 'Uygulama gizli anahtarı 32 karakter olmalı (Meta › Uygulama ayarları › Temel)' }, 400);
       if (!phoneId || token.length < 20) return cevap({ ok: false, hata: 'Telefon numarası kimliği ve erişim anahtarı gerekli' }, 400);
       // DEMO_HAT_KURSLAR (virgülle kurs kimlikleri): mdSinyal'in kendi deneme kursları demo hattını gönderim için bağlayabilir; gelen mesajlar yine demoya gider
       const demoIzin = String(env.DEMO_HAT_KURSLAR || '').split(',').map(s => s.trim()).filter(Boolean).includes(kursId);
       if (!demoIzin && [env.PHONE_ID, env.PHONE_ID_USTA, env.PHONE_ID_MUDUR].filter(Boolean).map(rakam).includes(phoneId)) return cevap({ ok: false, hata: 'Bu, mdSinyal demo hattı; kursun kendi hattını girin' }, 400);
       const sahip = await env.LINK.get('hatno:' + phoneId);
       if (sahip && sahip !== kursId) return cevap({ ok: false, hata: 'Bu hat başka bir kursa bağlı' }, 409);
-      const r = await fetch('https://graph.facebook.com/v25.0/' + phoneId + '?fields=display_phone_number,verified_name', { headers: { Authorization: 'Bearer ' + token } });
+      const r = await fetch('https://graph.facebook.com/v25.0/' + phoneId + '?fields=display_phone_number,verified_name,platform_type,name_status,quality_rating', { headers: { Authorization: 'Bearer ' + token } });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) return cevap({ ok: false, hata: 'Meta hattı doğrulamadı: ' + ((j.error && j.error.message) || r.status) }, 400);
+      const G2 = 'https://graph.facebook.com/v25.0/', yetki = { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, uyarilar = [];
+      // Numara Cloud API'ye kayıtlı değilse (platform_type ≠ CLOUD_API) mesaj gitmez (Meta 133010): iki adımlı doğrulama PIN'iyle kaydedilir
+      if (j.platform_type && j.platform_type !== 'CLOUD_API') {
+        if (!pin) return cevap({ ok: false, kayitGerekli: true, hata: 'Numara henüz Cloud API’ye kayıtlı değil. 6 haneli iki adımlı doğrulama PIN’ini girip yeniden deneyin (yeni numarada PIN’i siz belirlersiniz)' }, 400);
+        if (!/^\d{6}$/.test(pin)) return cevap({ ok: false, kayitGerekli: true, hata: 'PIN 6 haneli olmalı' }, 400);
+        const rk = await fetch(G2 + phoneId + '/register', { method: 'POST', headers: yetki, body: JSON.stringify({ messaging_product: 'whatsapp', pin }) });
+        const jk = await rk.json().catch(() => ({}));
+        if (!rk.ok) return cevap({ ok: false, kayitGerekli: true, hata: 'Numara Cloud API’ye kaydedilemedi: ' + ((jk.error && jk.error.message) || rk.status) }, 400);
+      }
+      if (j.name_status && !/^(APPROVED|AVAILABLE_WITHOUT_REVIEW)$/.test(j.name_status)) uyarilar.push('Görünen ad Meta onayında (' + j.name_status + '); onaylanana kadar mesajlarda numara görünür ve gönderim sınırlı olabilir');
+      // Webhook aboneliği: WhatsApp hesabı (WABA) kursun uygulamasına abone edilmezse gelen mesajlar ve iletildi/okundu bilgisi hiç gelmez
+      if (wabaId) {
+        const ra = await fetch(G2 + wabaId + '/subscribed_apps', { method: 'POST', headers: yetki });
+        if (!ra.ok) { const ja = await ra.json().catch(() => ({})); uyarilar.push('Gelen mesaj aboneliği açılamadı: ' + ((ja.error && ja.error.message) || ra.status)); }
+        if (sablon) {
+          const rs = await fetch(G2 + wabaId + '/message_templates?fields=name,status,category,language&name=' + encodeURIComponent(sablon), { headers: yetki });
+          const js = await rs.json().catch(() => ({})), t = ((js && js.data) || []).find(x => x.name === sablon && (x.language || '').toLowerCase().startsWith(sablonDil.toLowerCase().slice(0, 2)));
+          if (!rs.ok) uyarilar.push('Şablon denetlenemedi: ' + ((js.error && js.error.message) || rs.status));
+          else if (!t) uyarilar.push('“' + sablon + '” şablonu bu hesapta (' + sablonDil + ') bulunamadı');
+          else if (t.status !== 'APPROVED') uyarilar.push('“' + sablon + '” şablonu henüz onaylı değil (' + t.status + ')');
+          else if (t.category !== 'UTILITY') uyarilar.push('“' + sablon + '” şablonu ' + t.category + ' sınıfında; hizmet (UTILITY) sınıfı daha ucuzdur');
+        }
+      } else uyarilar.push('WhatsApp hesap kimliği (WABA ID) girilmedi: gelen mesaj aboneliği ve şablon denetlenmedi');
       if (h && h.phoneId !== phoneId) await env.LINK.delete('hatno:' + h.phoneId);
-      await env.LINK.put('hat:' + kursId, JSON.stringify({ phoneId, token, no: j.display_phone_number || '', ad: j.verified_name || '' }));
+      // kursa özel webhook doğrulama belirteci (kursun kendi Meta uygulamasında girilir; ortak belirteç paylaşılmaz)
+      const dog = (h && h.dog) || [...crypto.getRandomValues(new Uint8Array(12))].map(x => x.toString(16).padStart(2, '0')).join('');
+      const kayit = { phoneId, token, no: j.display_phone_number || '', ad: j.verified_name || '', dog, ...(wabaId ? { wabaId } : {}), ...(sablon ? { sablon, sablonDil } : {}), ...(appSecret ? { appSecret } : h && h.appSecret ? { appSecret: h.appSecret } : {}) };
+      await env.LINK.put('hat:' + kursId, JSON.stringify(kayit));
       await env.LINK.put('hatno:' + phoneId, kursId);
-      return cevap({ ok: true, bagli: true, no: j.display_phone_number || '', ad: j.verified_name || '' });
+      if (!h || h.dog !== dog) await env.LINK.put('hatdog:' + dog, kursId);
+      return cevap({ ok: true, bagli: true, no: kayit.no, ad: kayit.ad, kalite: j.quality_rating || '', sablon: kayit.sablon || '', gizli: !!kayit.appSecret, uyarilar, webhook: { adres: new URL(req.url).origin + '/webhook', belirtec: dog } });
     }
     // Meta webhook doğrulaması (abonelik kurulurken bir kez)
     if (yol === 'webhook' && req.method === 'GET') {
-      if (url.searchParams.get('hub.mode') === 'subscribe' && url.searchParams.get('hub.verify_token') === (env.VERIFY_TOKEN || 'sinyal-dogrulama')) return new Response(url.searchParams.get('hub.challenge') || '', { status: 200 });
+      const vt = String(url.searchParams.get('hub.verify_token') || '');
+      if (url.searchParams.get('hub.mode') === 'subscribe' && (vt === (env.VERIFY_TOKEN || 'sinyal-dogrulama') || (/^[0-9a-f]{24}$/.test(vt) && env.LINK && await env.LINK.get('hatdog:' + vt)))) return new Response(url.searchParams.get('hub.challenge') || '', { status: 200 });
       return new Response('Dogrulanamadi', { status: 403 });
     }
     if (yol === 'webhook' && req.method === 'POST') {
       // Meta her isteği uygulamanın gizli anahtarıyla imzalar; ham gövde üzerinden doğrulanır (APP_SECRET yoksa eski davranış)
       const ham = await req.arrayBuffer();
-      if (!(await metaImzaDogru(env, ham, req.headers.get('X-Hub-Signature-256')))) { console.warn(JSON.stringify({ tur: 'uyari', konu: 'webhook imzası geçersiz', ip: req.headers.get('CF-Connecting-IP') || '' })); return new Response('Imza gecersiz', { status: 403 }); }
+      // kursun kendi Meta uygulamasından gelen istek o uygulamanın gizli anahtarıyla imzalıdır: gövdedeki hat kimliğinden kurs bulunur, imza onunla da denenir
+      let ekGizli = '';
+      try { const on = JSON.parse(new TextDecoder().decode(ham)), pid = on.entry[0].changes[0].value.metadata.phone_number_id, ks = pid && env.LINK && await env.LINK.get('hatno:' + pid), hh = ks && await kursHat(env, ks); ekGizli = (hh && hh.appSecret) || ''; } catch (x) { }
+      if (!(await metaImzaDogru(env, ham, req.headers.get('X-Hub-Signature-256'), ekGizli))) { console.warn(JSON.stringify({ tur: 'uyari', konu: 'webhook imzası geçersiz', ip: req.headers.get('CF-Connecting-IP') || '' })); return new Response('Imza gecersiz', { status: 403 }); }
       let p; try { p = JSON.parse(new TextDecoder().decode(ham)); } catch (x) { return new Response('ok'); }
       const v = p && p.entry && p.entry[0] && p.entry[0].changes && p.entry[0].changes[0] && p.entry[0].changes[0].value;
       // gönderilen mesajların durumu (gönderildi / iletildi / okundu): mdSinyal ekranında ✓✓ olarak görünür
       const st = v && v.statuses;
       if (st && st.length) {
-        if (env.LINK) { const SIRA = { sent: 1, delivered: 2, read: 3, failed: 9 }; for (const s of st) { const k = 'durum-' + s.id, eski = await env.LINK.get(k); if ((SIRA[s.status] || 0) > (SIRA[eski] || 0)) await env.LINK.put(k, s.status, { expirationTtl: 1209600 }); } }
+        if (env.LINK) { const SIRA = { sent: 1, delivered: 2, read: 3, failed: 9 }; for (const s of st) { const k = 'durum-' + s.id, eski = await env.LINK.get(k); if ((SIRA[s.status] || 0) > (SIRA[eski] || 0)) await env.LINK.put(k, s.status, { expirationTtl: 1209600 }); const hk = s.status === 'failed' && s.errors && s.errors[0] && s.errors[0].code; if (hk) await env.LINK.put('hatakod-' + s.id, String(hk), { expirationTtl: 1209600 }); } }
         return new Response('ok');
       }
       const m = v && v.messages && v.messages[0];
@@ -471,6 +513,7 @@ export default {
         const medya = (m.type === 'image' || m.type === 'document') ? await medyaAl(env, m, h.token, 'medya-' + kurs + '-' + m.id) : null;
         const metin = m.type === 'text' ? m.text.body : (m[m.type] && m[m.type].caption) || (m.type === 'image' ? '(fotoğraf)' : m.type === 'document' ? '(belge)' : '(' + m.type + ')');
         await fetch('https://graph.facebook.com/v25.0/' + telId + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + h.token, 'Content-Type': 'application/json' }, body: JSON.stringify({ messaging_product: 'whatsapp', status: 'read', message_id: m.id }) }).catch(() => {});
+        if (h.sablon) await env.LINK.put('son:' + kurs + ':' + rakam(m.from), String(Date.now()), { expirationTtl: 90000 }).catch(() => {});  // 24 saat penceresi (yalnız şablonlu kursta yazılır: KV yazma kotası)
         const da = !medya && m.type === 'text' ? await dersAkisi(env, kurs, m.from, metin) : null;
         if (da) {
           await fetch('https://graph.facebook.com/v25.0/' + telId + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + h.token, 'Content-Type': 'application/json' }, body: JSON.stringify({ messaging_product: 'whatsapp', to: m.from, type: 'text', text: { body: da.metin } }) }).catch(() => {});
@@ -505,8 +548,9 @@ export default {
     if (yol === 'durum' && req.method === 'GET') {
       if (!gercek && !IZINLI.includes(origin)) return cevap({ ok: false, hata: 'Izin yok' }, 403);
       const ids = String(url.searchParams.get('ids') || '').split(',').filter(Boolean).slice(0, 100), durum = {};
-      if (env.LINK) await Promise.all(ids.map(async id => { const d = await env.LINK.get('durum-' + id); if (d) durum[id] = d; }));
-      return cevap({ ok: true, durum });
+      const kod = {};
+      if (env.LINK) await Promise.all(ids.map(async id => { const d = await env.LINK.get('durum-' + id); if (d) durum[id] = d; if (d === 'failed') { const hk = await env.LINK.get('hatakod-' + id); if (hk) kod[id] = +hk; } }));
+      return cevap({ ok: true, durum, kod });
     }
     if (yol.startsWith('medya/') && req.method === 'GET') {
       if (!gercek && !IZINLI.includes(origin)) return cevap({ ok: false, hata: 'Izin yok' }, 403);
@@ -592,6 +636,13 @@ export default {
       if (!/^\d{11,15}$/.test(to)) return cevap({ ok: false, hata: 'Alıcının telefon numarası geçersiz' }, 400);
       phoneId = h.phoneId; token = h.token;
     }
+    // şablonu tanımlı kursta, kişi son 24 saatte yazmadıysa serbest metin denenmez (Meta sonradan 131047 ile düşürür): doğrudan şablon
+    if (gercek && h.sablon && !(b.belge && b.belge.base64) && env.LINK && !(await pencereAcik(env, kursId, to))) {
+      const rs = await fetch('https://graph.facebook.com/v25.0/' + phoneId + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(sablonGovde(to, h.sablon, h.sablonDil, metin)) });
+      const js = await rs.json().catch(() => ({}));
+      if (rs.ok) return cevap({ ok: true, id: js.messages && js.messages[0] && js.messages[0].id, sablon: true });
+      return cevap({ ok: false, kod: js.error && js.error.code, hata: 'Şablonla gönderilemedi: ' + ((js.error && js.error.message) || 'Meta hatasi') }, 502);
+    }
     const g = await mesajGovdesi(b, metin, to, phoneId, token);
     if (g.hata) return cevap(g.hata, 502);
     const r = await fetch('https://graph.facebook.com/v25.0/' + phoneId + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(g.govde) });
@@ -600,8 +651,7 @@ export default {
       const kod = j.error && j.error.code, sablon = (h && h.sablon) || env.SABLON_AD;
       // 24 saat penceresi kapalı: onaylı şablonla tekrar (yalnız metin mesajı; şablon değişkeni satır sonu içeremez)
       if (kod === 131047 && sablon && !(b.belge && b.belge.base64)) {
-        const param = metin.replace(/\s*\n+\s*/g, ' · ').replace(/[\t ]{4,}/g, '   ').slice(0, 1000);
-        const r2 = await fetch('https://graph.facebook.com/v25.0/' + phoneId + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'template', template: { name: sablon, language: { code: env.SABLON_DIL || 'tr' }, components: [{ type: 'body', parameters: [{ type: 'text', text: param }] }] } }) });
+        const r2 = await fetch('https://graph.facebook.com/v25.0/' + phoneId + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(sablonGovde(to, sablon, (h && h.sablonDil) || env.SABLON_DIL, metin)) });
         const j2 = await r2.json().catch(() => ({}));
         if (r2.ok) return cevap({ ok: true, id: j2.messages && j2.messages[0] && j2.messages[0].id, sablon: true });
         return cevap({ ok: false, kod: j2.error && j2.error.code, hata: 'Şablonla da gönderilemedi: ' + ((j2.error && j2.error.message) || 'Meta hatasi') }, 502);

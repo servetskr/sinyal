@@ -1,20 +1,20 @@
-import { ekDersFiyat, uygulamaSinavUcreti, esinavUcreti, digerUcretler, ibanlar, ibanVarsayilan, ibanBicim, ibanGecerli, S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, gonderimEkle, risk, islem, geriAlNoktasi, oturum, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube, kapaliGun, YONTEMLER, yontemAd, gecikenTutar, aktifSiniflar, sinifKaydet, ayEkle, isGunuSay, arsivle, selam, kursAdi, memnuniyet, tuketim, beklenenTuketim, OGR_OZELLIK, ogrOzellik, mudurTel, tutarOku, aydinlatmaMetni } from './veri.js?v=211';
-import * as MZ from './mevzuat.js?v=211';
-import * as DN from './denetim.js?v=211';
-import { alanHatalari, e, saatDe, saatE, tl, sayi, ik, rozet, asamaRozet, avatar, plaka, ilerleme, bos, pencere, kapatPencere, bildir, sekmeler, tarih, tarihUzun, goreli, cubukGrafik, halka, ayAdi, csvIndir, waAc, waSirali, tamTarih, apiAcik, isaret, ekranNotu, aracGorsel, olcumler, yonLevhasi } from './ui.js?v=211';
-import { yenile } from './app.js?v=211';
-import { AYAR_SEKMELERI, ayarBaglan, personelOzeti, mebAracKur, mebAktar, mebCek, MEB_BILGI } from './sayfalar5.js?v=211';
-import * as MB from './mebmerkez.js?v=211';
-import * as EKL from './eklenti.js?v=211';
-import { wpGonder, tahsilAl, ekDersOner, kisiListe, odemeBilgisi, yorumMetni, alici, mudurMu, bildirimler } from './sayfalar1.js?v=211';
-import { denetimEksikleri, mebSiraBaslat } from './sayfalar3.js?v=211';
-import * as OZ from './ozellik.js?v=211';
-import * as EP from './eposta.js?v=211';
-import { kurallariHazirla, zamanliKural, kuralSaati, ornekGonder, zamanlayiciCalistir, kuyruguGonder, gidecekler } from './zamanlayici.js?v=211';
-import * as MM from './mesaj.js?v=211';
-import * as BL from './bulut.js?v=211';
-import * as KR from './kurallar.js?v=211';
-import { SINIF_VARSAYILAN, gerekliDireksiyon, geceGerekli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, sinavHakSiniri, DERS_KURAL_TARIH, kuralAyar } from './veri.js?v=211';
+import { ekDersFiyat, uygulamaSinavUcreti, esinavUcreti, digerUcretler, ibanlar, ibanVarsayilan, ibanBicim, ibanGecerli, S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, gonderimEkle, risk, islem, geriAlNoktasi, oturum, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube, kapaliGun, YONTEMLER, yontemAd, gecikenTutar, aktifSiniflar, sinifKaydet, ayEkle, isGunuSay, arsivle, selam, kursAdi, memnuniyet, tuketim, beklenenTuketim, OGR_OZELLIK, ogrOzellik, mudurTel, tutarOku, aydinlatmaMetni } from './veri.js?v=212';
+import * as MZ from './mevzuat.js?v=212';
+import * as DN from './denetim.js?v=212';
+import { alanHatalari, e, saatDe, saatE, tl, sayi, ik, rozet, asamaRozet, avatar, plaka, ilerleme, bos, pencere, kapatPencere, bildir, sekmeler, tarih, tarihUzun, goreli, cubukGrafik, halka, ayAdi, csvIndir, waAc, waSirali, tamTarih, apiAcik, isaret, ekranNotu, aracGorsel, olcumler, yonLevhasi } from './ui.js?v=212';
+import { yenile } from './app.js?v=212';
+import { AYAR_SEKMELERI, ayarBaglan, personelOzeti, mebAracKur, mebAktar, mebCek, MEB_BILGI } from './sayfalar5.js?v=212';
+import * as MB from './mebmerkez.js?v=212';
+import * as EKL from './eklenti.js?v=212';
+import { wpGonder, tahsilAl, ekDersOner, kisiListe, odemeBilgisi, yorumMetni, alici, mudurMu, bildirimler } from './sayfalar1.js?v=212';
+import { denetimEksikleri, mebSiraBaslat } from './sayfalar3.js?v=212';
+import * as OZ from './ozellik.js?v=212';
+import * as EP from './eposta.js?v=212';
+import { kurallariHazirla, zamanliKural, kuralSaati, ornekGonder, zamanlayiciCalistir, kuyruguGonder, gidecekler } from './zamanlayici.js?v=212';
+import * as MM from './mesaj.js?v=212';
+import * as BL from './bulut.js?v=212';
+import * as KR from './kurallar.js?v=212';
+import { SINIF_VARSAYILAN, gerekliDireksiyon, geceGerekli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, sinavHakSiniri, DERS_KURAL_TARIH, kuralAyar } from './veri.js?v=212';
 
 const durum = { sinav: 'yaklasan', kasa: 'hareket', filo: 'arac', mesaj: 'gelen', meb: 'aktarim', ayar: 'kurs' };
 let secSohbet = null, gecmisKim = '', sohbetAcik = false;
@@ -299,7 +299,7 @@ export function kasa(alt) {
           altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Kaydet</button>', onAc(p) { p.querySelector('[data-k]').addEventListener('click', () => { const v = tutarOku(p.querySelector('[name=v]').value), tt = p.querySelector('[name=t]').value || gun(0); hs.bakiye = v; hs.acilis = tt; islem('Açılış bakiyesini girdi', hs.ad + ' · ' + tl(v) + ' · ' + tt); kaydet(); kapatPencere(); bildir('Açılış bakiyesi kaydedildi'); yenile(); }); } }); }
         const hd = t.closest('[data-h-duz]'); if (hd) hareketDuzelt(S.hareket.find(x => x.id === hd.dataset.hDuz));
         const bk = t.closest('[data-bankaya]'); if (bk) { const h = S.hareket.find(x => x.id === bk.dataset.bankaya); if (h) { h.bankaya = gun(0); islem('Nakit tahsilatı bankaya yatırdı', h.aciklama + ' · ' + tl(h.tutar)); kaydet(); bildir('Bankaya yatırıldı olarak işaretlendi'); yenile(); } }
-        const sn = t.closest('[data-senet]'); if (sn) import('./sayfalar3.js?v=211').then(m => m.belgeAc('senet', sn.dataset.senet));
+        const sn = t.closest('[data-senet]'); if (sn) import('./sayfalar3.js?v=212').then(m => m.belgeAc('senet', sn.dataset.senet));
         const senetBul = el => { const [kid, i] = el.split('|'), k = kursiyer(kid); return { k, i: +i, t: k.odeme.taksitler[+i] }; };
         const sti = t.closest('[data-senet-tahsil]'); if (sti) { const { k, i } = senetBul(sti.dataset.senetTahsil); return tahsilAl(k, i); }
         const sih = t.closest('[data-senet-ihtar]'); if (sih) { const { k, i, t: tk } = senetBul(sih.dataset.senetIhtar); tk.senetTakip = [{ durum: 'Hatırlatıldı', tarih: gun(0) }, ...(tk.senetTakip || [])]; islem('Senet hatırlatması gönderdi', tamAd(k) + ' · ' + (i + 1) + '. senet'); kaydet(); wpGonder(k, `${selam(k)} ${tamTarih(tk.vade)} vadeli ${tl(tk.tutar - (tk.kismi || 0))} tutarındaki senedinizin ödemesi gecikmiş görünüyor. En geç 7 gün içinde ödeme yapmanızı rica ederiz; aksi hâlde senet yasal takibe verilecektir. ${odemeBilgisi(k)}`, 'Senet hatırlatması'); return yenile(); }
@@ -378,7 +378,7 @@ function faturaKes() {
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-kes>${taslak ? 'Taslağı hazırla' : 'Faturayı kes'}</button>`,
     onAc(d) {
       const ilk = d.querySelector('[name=h]:not([disabled])'); if (ilk) ilk.checked = true;
-      d.querySelectorAll('[data-fatura-ac]').forEach(b => b.addEventListener('click', ev => { ev.preventDefault(); import('./sayfalar3.js?v=211').then(m => m.belgeAc('fatura', b.dataset.faturaAc)); }));
+      d.querySelectorAll('[data-fatura-ac]').forEach(b => b.addEventListener('click', ev => { ev.preventDefault(); import('./sayfalar3.js?v=212').then(m => m.belgeAc('fatura', b.dataset.faturaAc)); }));
       d.querySelector('[data-kes]').addEventListener('click', async ev => {
         const sec = d.querySelector('[name=h]:checked'); if (!sec) return bildir('Faturası kesilmemiş bir tahsilat seçin', 'uyari');
         const h = S.hareket.find(x => x.id === sec.value), k = kursiyer(h.kursiyer);
@@ -388,13 +388,13 @@ function faturaKes() {
         const yil = gun(0).slice(0, 4), seri = (g.earsiv.seri || 'SNY').toUpperCase().slice(0, 3);
         const enBuyuk = Math.max(0, ...S.faturalar.filter(f => String(f.no).startsWith(seri + yil)).map(f => +String(f.no).slice(seri.length + 4) || 0));
         let sira = enBuyuk + 1;
-        if (S._bulut) { const btn = ev.currentTarget; btn.disabled = true; try { sira = await (await import('./bulut.js?v=211')).faturaNoAyir(seri, yil, enBuyuk); } catch (x) { btn.disabled = false; return bildir('Fatura numarası için internet bağlantısı gerekiyor; bağlantıyı kontrol edip yeniden deneyin', 'uyari'); } btn.disabled = false; }
+        if (S._bulut) { const btn = ev.currentTarget; btn.disabled = true; try { sira = await (await import('./bulut.js?v=212')).faturaNoAyir(seri, yil, enBuyuk); } catch (x) { btn.disabled = false; return bildir('Fatura numarası için internet bağlantısı gerekiyor; bağlantıyı kontrol edip yeniden deneyin', 'uyari'); } btn.disabled = false; }
         const no = seri + yil + String(sira).padStart(9, '0');
         const ettn = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())).toUpperCase();
         S.faturalar.push({ no, ettn, tarih: gun(0), kursiyer: k.id, hareket: h.id, tutar: h.tutar, kdv: g.kdv ?? 20, aciklama: SINIFLAR[k.sinif].ad + ' sertifika sınıfı sürücü kursu eğitim hizmeti' + (h.kategori && h.kategori !== 'Kurs ücreti' ? ' · ' + h.kategori.toLowerCase() : ''), yontem: h.yontem, odemeTarih: h.tarih, durum: taslak ? 'taslak' : 'sira' });
         h.fatura = no; islem('Fatura kesti', no + ' · ' + tamAd(k) + ' · ' + tl(h.tutar)); kaydet();
         bildir((taslak ? 'Fatura taslağı ' : 'Fatura ') + no + (taslak ? ' hazırlandı' : ' kesildi')); yenile();
-        import('./sayfalar3.js?v=211').then(m => m.belgeAc('fatura', no));
+        import('./sayfalar3.js?v=212').then(m => m.belgeAc('fatura', no));
       });
     },
   });
@@ -668,13 +668,13 @@ export function meb(alt) {
         const s = t.closest('[data-sekme]'); if (s) { durum.meb = s.dataset.sekme; if (location.hash !== '#/meb') location.hash = '#/meb'; else yenile(); }
         if (t.closest('[data-evrak-toplu]')) { const ml = x => `${selam(x)} kaydınızı tamamlamak için şu evraklar eksik: ${eksikEvrak(x).map(z => z[1].toLocaleLowerCase('tr')).join(', ')}. ${kursAdi('e')} getirebilir ya da fotoğraflarını buraya gönderebilirsiniz.`; waSirali(kisiListe(eksik, ml), 'Eksik evrak hatırlatması'); }
         const c = t.closest('[data-csv]'); if (c) { csvIndir('esinav-basvuru.csv', [['TC', 'Ad', 'Soyad', 'Telefon', 'Sınıf', 'Teorik saat'], ...esinav.map(x => [x.tc, x.ad, x.soyad, x.tel, SINIFLAR[x.sinif].ad, x.teorik])]); bildir('Liste indirildi'); }
-        if (t.closest('[data-denetim-dosya]')) import('./sayfalar3.js?v=211').then(m => m.belgeAc('denetim'));
+        if (t.closest('[data-denetim-dosya]')) import('./sayfalar3.js?v=212').then(m => m.belgeAc('denetim'));
       });
       if (durum.meb === 'mutabakat') OZ.mutabakatBaglan(k);
       k.addEventListener('click', ev => {
         const t = ev.target;
-        if (t.closest('[data-program]')) import('./sayfalar3.js?v=211').then(m => m.programPenceresi());
-        const sb = t.closest('[data-sinav-bildir]'); if (sb) import('./sayfalar3.js?v=211').then(m => m.sinavBildirimPenceresi(sb.dataset.sinavBildir));
+        if (t.closest('[data-program]')) import('./sayfalar3.js?v=212').then(m => m.programPenceresi());
+        const sb = t.closest('[data-sinav-bildir]'); if (sb) import('./sayfalar3.js?v=212').then(m => m.sinavBildirimPenceresi(sb.dataset.sinavBildir));
       });
     },
   };
@@ -758,23 +758,50 @@ function ibanPenceresi(h) {
     },
   });
 }
-// Kursun WhatsApp Business hattı: Meta'daki telefon numarası kimliği ve kalıcı erişim anahtarı servise kaydedilir (tarayıcıda tutulmaz)
+// Kursun WhatsApp Business hattı: Meta'daki telefon numarası kimliği ve kalıcı erişim anahtarı servise kaydedilir (tarayıcıda tutulmaz).
+// Servis bağlarken numaranın Cloud API kaydını (gerekirse PIN ile), gelen mesaj aboneliğini (WABA kimliği) ve şablonu denetler;
+// kurulum adımları: sinyal-kaynak/belgeler/whatsapp-kurulum-simulasyonu.md
 function hatBaglaPenceresi() {
+  const alan = (ad, etiket, ek = '', not = '') => `<div class="alan tam"><label>${etiket}</label><input name="${ad}" ${ek}>${not ? `<small style="color:var(--soluk)">${not}</small>` : ''}</div>`;
   pencere({
     baslik: 'WhatsApp hattını bağla',
-    icerik: `<p style="font-size:14px">Meta Business hesabınızda WhatsApp › API ayarlarından iki bilgiyi alın. Kurulumda mdSinyal ekibi size yardımcı olur.</p>
-      <div class="form-izgara" style="margin-top:12px"><div class="alan tam"><label>Telefon numarası kimliği (Phone number ID)</label><input name="phoneId" inputmode="numeric" placeholder="1234567890…"></div><div class="alan tam"><label>Kalıcı erişim anahtarı (System user token)</label><input name="token" type="password" autocomplete="off" placeholder="EAAG…"></div></div>
-      <p class="ipucu" style="margin-top:10px">${isaret('kilit', 18)}<span>Anahtar mdSinyal’in WhatsApp servisinde saklanır; bu ekranda ya da başka bir cihazda bir daha gösterilmez.</span></p>`,
+    icerik: `<p style="font-size:14px">Bilgileri Meta Business hesabınızdaki uygulamanın WhatsApp › API ayarları ekranından alın. Kurulumda mdSinyal ekibi size yardımcı olur.</p>
+      <div class="form-izgara" style="margin-top:12px">
+        ${alan('phoneId', 'Telefon numarası kimliği (Phone number ID)', 'inputmode="numeric" placeholder="1234567890…"')}
+        ${alan('token', 'Kalıcı erişim anahtarı (System user token)', 'type="password" autocomplete="off" placeholder="EAAG…"')}
+        ${alan('wabaId', 'WhatsApp Business hesap kimliği (WABA ID)', 'inputmode="numeric" placeholder="1029384756…"', 'Öğrencilerin yazdıkları mdSinyal’e bu kimlikle gelir')}
+        ${alan('sablon', 'Onaylı mesaj şablonunun adı <small style="font-weight:400">önerilir</small>', 'autocomplete="off" placeholder="sinyal_bildirim"', 'Son 24 saatte size yazmamış kişiye (hatırlatma, gün sonu özeti) mesaj yalnız şablonla gider')}
+        ${alan('appSecret', 'Uygulama gizli anahtarı (App secret) <small style="font-weight:400">önerilir</small>', 'type="password" autocomplete="off" placeholder="32 karakter"', 'Meta › Uygulama ayarları › Temel. Gelen mesajların gerçekten Meta’dan geldiği bununla doğrulanır')}
+        <div class="alan tam" data-pin-alan hidden><label>İki adımlı doğrulama PIN’i (6 hane)</label><input name="pin" inputmode="numeric" maxlength="6" autocomplete="off"><small style="color:var(--soluk)">Numara Cloud API’ye ilk kez kaydediliyor. Yeni numarada PIN’i siz belirlersiniz; bir yere not edin.</small></div>
+      </div>
+      <p class="ipucu" style="margin-top:10px">${isaret('kilit', 18)}<span>Anahtarlar mdSinyal’in WhatsApp servisinde saklanır; bu ekranda ya da başka bir cihazda bir daha gösterilmez.</span></p>`,
     altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-hat-kaydet>Bağla</button>',
     onAc(d) {
       d.querySelector('[data-hat-kaydet]').addEventListener('click', ev => {
-        const phoneId = d.querySelector('[name=phoneId]').value.trim(), token = d.querySelector('[name=token]').value.trim();
-        if (!phoneId || !token) return bildir('İki alanı da doldurun', 'uyari');
+        const v = ad => (d.querySelector(`[name=${ad}]`) || {}).value.trim();
+        const govde = { phoneId: v('phoneId'), token: v('token'), wabaId: v('wabaId'), sablon: v('sablon'), appSecret: v('appSecret'), pin: v('pin') };
+        if (!govde.phoneId || !govde.token) return bildir('Telefon numarası kimliği ve erişim anahtarı gerekli', 'uyari');
         ev.target.disabled = true; ev.target.textContent = 'Doğrulanıyor…';
-        import('./bulut.js?v=211').then(B => B.waHat({ phoneId, token }).then(j => { S.kurs.waHat = { no: j.no, ad: j.ad }; S.kurs.waApi = B.WORKER; S.kurs.waApiVarsayilan = false; delete S.kurs.demoNumara; islem('WhatsApp hattını bağladı', j.no); kaydet(); kapatPencere(); bildir(j.no + ' bağlandı; mesajlar artık otomatik gidecek'); yenile(); }))
-          .catch(x => { ev.target.disabled = false; ev.target.textContent = 'Bağla'; bildir(x.kullanici || x.message, 'uyari'); });
+        import('./bulut.js?v=212').then(B => B.waHat(govde).then(j => {
+          S.kurs.waHat = { no: j.no, ad: j.ad, ...(j.sablon ? { sablon: j.sablon } : {}) }; S.kurs.waApi = B.WORKER; S.kurs.waApiVarsayilan = false; delete S.kurs.demoNumara;
+          islem('WhatsApp hattını bağladı', j.no); kaydet(); kapatPencere(); yenile(); hatSonucPenceresi(j);
+        }))
+          .catch(x => { ev.target.disabled = false; ev.target.textContent = 'Bağla'; if (x.kayitGerekli) { const p = d.querySelector('[data-pin-alan]'); p.hidden = false; p.querySelector('input').focus(); } bildir(x.kullanici || x.message, 'uyari'); });
       });
     },
+  });
+}
+// Bağlandıktan sonra: Meta'nın uyarıları ve kursun kendi uygulamasına girilecek webhook adresi ile doğrulama belirteci
+function hatSonucPenceresi(j) {
+  const w = j.webhook || {}, u = j.uyarilar || [];
+  pencere({
+    baslik: j.no + ' bağlandı',
+    icerik: `<p style="font-size:14px">Mesajlar artık bu numaradan otomatik gidecek.${j.sablon ? '' : ' Onaylı şablon girilmediği için yalnız son 24 saatte size yazmış kişilere gider.'}</p>
+      ${u.length ? `<div class="ipucu" style="margin-top:10px;display:block"><b>Kontrol edilecekler</b><ul style="margin:6px 0 0 18px;font-size:13.5px">${u.map(x => `<li>${e(x)}</li>`).join('')}</ul></div>` : ''}
+      ${w.adres ? `<p style="font-size:14px;margin-top:12px"><b>Gelen mesajlar için</b> Meta › uygulamanız › WhatsApp › Yapılandırma › Webhook ekranına şunları girin, sonra <b>messages</b> alanına abone olun:</p>
+      <div class="form-izgara" style="margin-top:8px"><div class="alan tam"><label>Geri arama adresi (Callback URL)</label><input readonly value="${e(w.adres)}" data-kopyala></div><div class="alan tam"><label>Doğrulama belirteci (Verify token)</label><input readonly value="${e(w.belirtec)}" data-kopyala></div></div>` : ''}`,
+    altlik: '<button class="dg dg-ana" data-kapat>Tamam</button>',
+    onAc(d) { d.querySelectorAll('[data-kopyala]').forEach(i => i.addEventListener('click', () => { i.select(); try { navigator.clipboard.writeText(i.value).then(() => bildir('Kopyalandı')); } catch (x) { } })); },
   });
 }
 // KVKK saklama süresi dolan (ehliyeti alalı saklama yılı geçen) kursiyerler; anonimleştirilenler hariç
@@ -784,7 +811,7 @@ const imhaListesi = () => S.kursiyerler.filter(k => !k.anonim && k.dsinav && k.d
 // Öğrenci uygulaması hesabı ve kişisel linki kapatılır; ders imzaları, konumlar, notlar, yüklenen belgeler; kasa ve mesaj kayıtlarındaki ad da silinir.
 async function anonimlestir(k) {
   const ad = tamAd(k);
-  if (k.hesap || k.panelKod) { try { const B = await import('./bulut.js?v=211'); await B.ogrenciHesapKapat(k); } catch (x) { } }
+  if (k.hesap || k.panelKod) { try { const B = await import('./bulut.js?v=212'); await B.ogrenciHesapKapat(k); } catch (x) { } }
   ['tel', 'tc', 'adres', 'dogumTarihi', 'dogum', 'eposta', 'veli', 'foto', 'evrakFoto', 'evrakYuklenen', 'dogrulama', 'saglikRapor', 'adliSicil', 'acil', 'notlar', 'ozelNotlar', 'ozelNot', 'ozelNotTarih', 'sozlesmeImza', 'kvkk', 'ogrenim', 'cinsiyet', 'hesap', 'hesapAktif', 'panelKod', 'sonGiris', 'babaAdi', 'anaAdi', 'dogumYeri',
     // MEBBİS'ten gelen ve MEB evrakı için girilen kişisel bilgiler (v198–v203): nüfus, önceki belge, sağlık/adli sicil/öğrenim, kimlik doğrulama fotoğrafı, evrak PDF'leri, MEBBİS kayıt dökümü
     'mebEvrak', 'mebEvrakGirildi', 'nufus', 'oncekiBelge', 'dogrulamaFoto', 'evrakPdf', 'fotoTarih', 'meb', 'mebNo', 'mebEsinav'].forEach(x => delete k[x]);
@@ -804,7 +831,7 @@ export function ayarlar(alt) {
   let govde = '';
   if (durum.ayar === 'kurs') govde = `<div class="kart"><div class="kart-govde"><form class="form-izgara" id="f-kurs">
       <div class="alan"><label>Kurs adı</label><input name="ad" value="${e(S.kurs.ad)}"></div><div class="alan"><label>Şehir</label><input name="sehir" value="${e(S.kurs.sehir)}"></div>
-      <div class="alan"><label>Telefon</label><input name="tel" value="${e(S.kurs.tel)}"></div><div class="alan"><label>WhatsApp hattı</label><input name="wp" inputmode="tel" placeholder="05xx xxx xx xx" value="${e(S.kurs.wp || '')}"><small style="color:var(--soluk)">Öğrencilerin yazdığı numara: imzalar ve talepler buraya gelir</small></div><div class="alan"><label>Kurs müdürünün cep telefonu</label><input name="mudurTel" inputmode="tel" placeholder="05xx xxx xx xx" value="${e(S.kurs.mudurTel || '')}"><small style="color:var(--soluk)">Yeni kayıt, ders iptali, gelmedi, belge yükleme, akşam ve gün sonu özeti WhatsApp’tan buraya gelir. Kursun hattından farklı olmalı.</small></div><div class="alan"><label>Ön büro cep telefonu <small style="font-weight:400">isteğe bağlı</small></label><input name="onburoTel" inputmode="tel" placeholder="Boşsa müdüre gider" value="${e(S.kurs.onburoTel || '')}"></div>${S._bulut ? `<div class="alan tam" style="border:1px dashed var(--cizgi);border-radius:8px;padding:12px"><label>WhatsApp otomatik gönderim · kursun kendi WhatsApp Business hattı</label>${S.kurs.waHat ? `<p style="font-size:14px;margin:4px 0 8px"><b>${e(S.kurs.waHat.no || '')}</b>${S.kurs.waHat.ad ? ' · ' + e(S.kurs.waHat.ad) : ''} bağlı. Hatırlatmalar ve belgeler bu numaradan, öğrencinin kendi numarasına otomatik gider.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="dg dg-cizgi dg-kucuk" data-hat-bagla>Değiştir</button><button type="button" class="dg dg-cizgi dg-kucuk" data-hat-kaldir>Bağlantıyı kaldır</button></div>` : `<p style="font-size:14px;margin:4px 0 8px">Bağlı değil: her mesajda WhatsApp hazır metinle açılır, gönder tuşuna siz basarsınız. Otomatik gönderim için kursun WhatsApp Business (Cloud API) hattını bağlayın.</p><button type="button" class="dg dg-ana dg-kucuk" data-hat-bagla>WhatsApp hattını bağla</button>`}</div>` : `<div class="alan tam" style="border:1px dashed var(--cizgi);border-radius:8px;padding:12px"><label>Mesaj yönlendirme (demo) · bütün kursiyer mesajları bu numaraya gitsin</label><input name="demo" inputmode="tel" placeholder="Boş bırakırsanız mesajlar kursiyerin kendi numarasına gider" value="${e(S.kurs.demoNumara || '')}"><label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:13.5px;font-weight:400"><input type="checkbox" name="demoKime" ${S.kurs.demoKime !== false ? 'checked' : ''}> Mesajın başına kime gittiğini yaz (“[Ayşe Yılmaz için]”)</label></div>
+      <div class="alan"><label>Telefon</label><input name="tel" value="${e(S.kurs.tel)}"></div><div class="alan"><label>WhatsApp hattı</label><input name="wp" inputmode="tel" placeholder="05xx xxx xx xx" value="${e(S.kurs.wp || '')}"><small style="color:var(--soluk)">Öğrencilerin yazdığı numara: imzalar ve talepler buraya gelir</small></div><div class="alan"><label>Kurs müdürünün cep telefonu</label><input name="mudurTel" inputmode="tel" placeholder="05xx xxx xx xx" value="${e(S.kurs.mudurTel || '')}"><small style="color:var(--soluk)">Yeni kayıt, ders iptali, gelmedi, belge yükleme, akşam ve gün sonu özeti WhatsApp’tan buraya gelir. Kursun hattından farklı olmalı.</small></div><div class="alan"><label>Ön büro cep telefonu <small style="font-weight:400">isteğe bağlı</small></label><input name="onburoTel" inputmode="tel" placeholder="Boşsa müdüre gider" value="${e(S.kurs.onburoTel || '')}"></div>${S._bulut ? `<div class="alan tam" style="border:1px dashed var(--cizgi);border-radius:8px;padding:12px"><label>WhatsApp otomatik gönderim · kursun kendi WhatsApp Business hattı</label>${S.kurs.waHat ? `<p style="font-size:14px;margin:4px 0 8px"><b>${e(S.kurs.waHat.no || '')}</b>${S.kurs.waHat.ad ? ' · ' + e(S.kurs.waHat.ad) : ''} bağlı. Hatırlatmalar ve belgeler bu numaradan, öğrencinin kendi numarasına otomatik gider.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="dg dg-cizgi dg-kucuk" data-hat-bilgi>Kurulum bilgisi</button><button type="button" class="dg dg-cizgi dg-kucuk" data-hat-bagla>Değiştir</button><button type="button" class="dg dg-cizgi dg-kucuk" data-hat-kaldir>Bağlantıyı kaldır</button></div>` : `<p style="font-size:14px;margin:4px 0 8px">Bağlı değil: her mesajda WhatsApp hazır metinle açılır, gönder tuşuna siz basarsınız. Otomatik gönderim için kursun WhatsApp Business (Cloud API) hattını bağlayın.</p><button type="button" class="dg dg-ana dg-kucuk" data-hat-bagla>WhatsApp hattını bağla</button>`}</div>` : `<div class="alan tam" style="border:1px dashed var(--cizgi);border-radius:8px;padding:12px"><label>Mesaj yönlendirme (demo) · bütün kursiyer mesajları bu numaraya gitsin</label><input name="demo" inputmode="tel" placeholder="Boş bırakırsanız mesajlar kursiyerin kendi numarasına gider" value="${e(S.kurs.demoNumara || '')}"><label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:13.5px;font-weight:400"><input type="checkbox" name="demoKime" ${S.kurs.demoKime !== false ? 'checked' : ''}> Mesajın başına kime gittiğini yaz (“[Ayşe Yılmaz için]”)</label></div>
       <div class="alan tam" style="border:1px dashed var(--cizgi);border-radius:8px;padding:12px"><label>WhatsApp otomatik gönderim (API adresi)</label><div style="display:flex;gap:8px"><input name="waApi" style="flex:1" placeholder="https://…workers.dev" value="${e(S.kurs.waApi || '')}"><button type="button" class="dg dg-cizgi dg-kucuk" data-api-dene>Bağlantıyı dene</button></div><small style="color:var(--soluk)">Doluysa mesajlar WhatsApp açılmadan otomatik gider. Boşsa her mesajda WhatsApp hazır metinle açılır.</small></div>`}${S._bulut ? `<div class="alan tam"><label>Kursa özel link</label><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span style="color:var(--metin);font-size:14px">mdsinyal.com/</span><input name="kisaAd" data-kucuk style="flex:1;min-width:140px" maxlength="30" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="ornek: haller" value="${e(S.kurs.kisaAd || '')}"><button type="button" class="dg dg-cizgi dg-kucuk" data-kisa-ad>${S.kurs.kisaAd ? 'Değiştir' : 'Linki oluştur'}</button>${S.kurs.kisaAd ? `<button type="button" class="dg dg-hafif dg-kucuk" data-kisa-kopyala>Kopyala</button>` : ''}</div><small style="color:var(--soluk)">Öğrenciler ve öğretmenler bu linkten kursunuzun giriş sayfasına ulaşır; kayıt olmak isteyen WhatsApp’tan yazar. Küçük harf, rakam ve tire; en az 4 karakter.</small></div>` : ''}<div class="alan tam"><label>Banka hesapları (havale/EFT)</label>${ibanListeHtml()}<small style="color:var(--soluk)">Varsayılan hesap taksit hatırlatmalarında yazılır; öğrenci uygulamasında bütün hesaplar adlarıyla görünür.</small></div><div class="alan tam"><label>Google yorum linki</label><input name="yorum" placeholder="Google İşletme Profili › Yorum iste bağlantısı" value="${e(S.kurs.yorumLink || '')}"></div><div class="alan"><label>Adres</label><input name="adres" value="${e(S.kurs.adres)}"></div>
       <div class="alan"><label>Kursiyer başı günlük direksiyon sınırı</label><input name="gds" type="number" min="1" max="2" step="1" value="${S.kurs.gunlukDersSiniri >= 1 && S.kurs.gunlukDersSiniri <= 2 ? S.kurs.gunlukDersSiniri : 2}"><small style="color:var(--soluk)">MTSK Yön. md.16/4: günde en fazla 2 saat</small></div>
       <div class="alan"><label>Usta öğretici başı günlük ders sınırı</label><input name="egs" type="number" min="1" max="16" step="1" value="${S.kurs.egitmenGunlukSinir >= 1 ? S.kurs.egitmenGunlukSinir : 8}"></div>
@@ -867,8 +894,8 @@ export function ayarlar(alt) {
       });
       k.addEventListener('click', ev => {
         const s = ev.target.closest('[data-sekme]'); if (s) { durum.ayar = s.dataset.sekme; yenile(); }
-        if (ev.target.closest('[data-sunum-ekle]') && (!S._bulut || S.kurs.sunumAcik)) return import('./sunum.js?v=211').then(m => { const r = m.sunumVerisiEkle(); if (!r.ok) return bildir(r.hata, 'uyari'); kaydet(); bildir(`Sunum verisi eklendi: ${r.k.ad} · ${r.h.ad}. Öğretmen ekranında bugünkü dersler hazır`); yenile(); });
-        if (ev.target.closest('[data-sunum-kaldir]')) return import('./sunum.js?v=211').then(m => { m.sunumVerisiKaldir(); kaydet(); bildir('Sunum verisi kaldırıldı; öğrencinin önceki bilgileri geri geldi'); yenile(); });
+        if (ev.target.closest('[data-sunum-ekle]') && (!S._bulut || S.kurs.sunumAcik)) return import('./sunum.js?v=212').then(m => { const r = m.sunumVerisiEkle(); if (!r.ok) return bildir(r.hata, 'uyari'); kaydet(); bildir(`Sunum verisi eklendi: ${r.k.ad} · ${r.h.ad}. Öğretmen ekranında bugünkü dersler hazır`); yenile(); });
+        if (ev.target.closest('[data-sunum-kaldir]')) return import('./sunum.js?v=212').then(m => { m.sunumVerisiKaldir(); kaydet(); bildir('Sunum verisi kaldırıldı; öğrencinin önceki bilgileri geri geldi'); yenile(); });
         if (ev.target.closest('[data-kisa-kopyala]')) { const l = 'https://mdsinyal.com/' + S.kurs.kisaAd; try { navigator.clipboard.writeText(l); bildir('Link kopyalandı: ' + l); } catch (x) { bildir(l); } return; }
         if (ev.target.closest('[data-kisa-ad]')) {
           if (!mudurMu()) return bildir('Kısa linki yalnız kurs müdürü belirler', 'uyari');
@@ -877,7 +904,7 @@ export function ayarlar(alt) {
           // sitenin kendi adresleri kursa verilmez (belgeler/link-standardi.md; sunucu da aynı listeyi denetler)
           if (['ozellikler', 'iletisim', 'giris', 'gizlilik', 'eklenti', 'fonts', 'demo', 'yonetim', 'sinyal', 'mdsinyal', 'admin', 'destek', 'kayit', 'blog', 'ogrenci', 'ogretmen', 'hesap', 'sifre', 'davet', 'imza', 'prototip'].includes(ad)) { bildir('Bu ad mdSinyal sayfalarına ayrılmış; başka bir ad seçin', 'uyari'); return i.focus(); }
           const b = ev.target.closest('[data-kisa-ad]'); b.disabled = true;
-          return import('./bulut.js?v=211').then(B => { const wp = String(S.kurs.wp || S.kurs.tel || '').replace(/\D/g, '').replace(/^0/, '90'); const hedef = 'https://mdsinyal.com/#/kapi?k=' + encodeURIComponent(B.bulut.kurs) + '&ad=' + encodeURIComponent(S.kurs.ad || '') + (wp ? '&wp=' + wp : ''); return B.kisaAdAyarla(ad, hedef); })
+          return import('./bulut.js?v=212').then(B => { const wp = String(S.kurs.wp || S.kurs.tel || '').replace(/\D/g, '').replace(/^0/, '90'); const hedef = 'https://mdsinyal.com/#/kapi?k=' + encodeURIComponent(B.bulut.kurs) + '&ad=' + encodeURIComponent(S.kurs.ad || '') + (wp ? '&wp=' + wp : ''); return B.kisaAdAyarla(ad, hedef); })
             .then(() => { S.kurs.kisaAd = ad; islem('Kursa özel linki belirledi', 'mdsinyal.com/' + ad); kaydet(); bildir('Link hazır: mdsinyal.com/' + ad); yenile(); })
             .catch(x => { b.disabled = false; bildir(x.kullanici || x.message, 'uyari'); });
         }
@@ -885,8 +912,9 @@ export function ayarlar(alt) {
         { const ib = ev.target.closest('[data-iban-duzenle]'); if (ib) return ibanPenceresi(ibanlar().find(x => x.id === ib.dataset.ibanDuzenle)); }
         if (ev.target.closest('[data-api-dene]')) { const u = k.querySelector('[name=waApi]').value.trim(); if (!/^https:\/\//.test(u)) return bildir('https:// ile başlayan adresi girin', 'uyari'); fetch(u).then(r => r.json()).then(j => bildir(j.hazir ? 'Bağlantı hazır; kaydedip mesaj gönderebilirsiniz' : 'Servis çalışıyor ama erişim anahtarı (WA_TOKEN) eksik', j.hazir ? 'tamam' : 'uyari')).catch(() => bildir('Servise ulaşılamadı; adresi kontrol edin', 'uyari')); }
         if (ev.target.closest('[data-anonim]')) { if (!mudurMu()) return bildir('Yalnız müdür yapabilir', 'uyari'); const l = imhaListesi(); pencere({ baslik: 'Süresi dolanları anonimleştir', icerik: `<p style="font-size:14.5px">${l.length} kursiyerin adı, telefonu, TC kimlik numarası, adresi, evrak fotoğrafları, ders imzaları, konumları ve notları silinir; öğrenci uygulaması hesabı kapanır. Ödeme ve ders kayıtları isimsiz olarak kalır. <b>Bu işlem geri alınamaz.</b></p>`, altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-anonim-onay>Anonimleştir</button>', onAc(d) { d.querySelector('[data-anonim-onay]').addEventListener('click', async () => { d.querySelector('[data-anonim-onay]').disabled = true; for (const k of l) await anonimlestir(k); islem('Saklama süresi dolan kayıtları anonimleştirdi', l.length + ' kursiyer'); kaydet(); kapatPencere(); bildir(l.length + ' kayıt anonimleştirildi'); yenile(); }); } }); }
+        if (ev.target.closest('[data-hat-bilgi]')) { if (!mudurMu()) return bildir('Yalnız kurs müdürü', 'uyari'); import('./bulut.js?v=212').then(B => B.waHat()).then(j => hatSonucPenceresi({ ...j, no: j.no || (S.kurs.waHat || {}).no || '', uyarilar: [] })).catch(x => bildir(x.kullanici || x.message, 'uyari')); return; }
         if (ev.target.closest('[data-hat-bagla]')) { if (!mudurMu()) return bildir('WhatsApp hattını yalnız kurs müdürü bağlar', 'uyari'); return hatBaglaPenceresi(); }
-        if (ev.target.closest('[data-hat-kaldir]')) { if (!mudurMu()) return bildir('Yalnız kurs müdürü', 'uyari'); import('./bulut.js?v=211').then(B => B.waHat({ sil: true })).then(() => { delete S.kurs.waHat; S.kurs.waApi = ''; islem('WhatsApp hattının bağlantısını kaldırdı'); kaydet(); bildir('WhatsApp hattı kaldırıldı; mesajlar hazır metinle açılacak'); yenile(); }).catch(x => bildir(x.kullanici || x.message, 'uyari')); return; }
+        if (ev.target.closest('[data-hat-kaldir]')) { if (!mudurMu()) return bildir('Yalnız kurs müdürü', 'uyari'); import('./bulut.js?v=212').then(B => B.waHat({ sil: true })).then(() => { delete S.kurs.waHat; S.kurs.waApi = ''; islem('WhatsApp hattının bağlantısını kaldırdı'); kaydet(); bildir('WhatsApp hattı kaldırıldı; mesajlar hazır metinle açılacak'); yenile(); }).catch(x => bildir(x.kullanici || x.message, 'uyari')); return; }
         if (ev.target.closest('[data-ucret-onay]')) { if (!mudurMu()) return bildir('Yalnız müdür onaylar', 'uyari'); S.kurs.ucretOnay = gun(0); islem('Sınıf ücretlerini onayladı'); kaydet(); bildir('Ücretler onaylandı'); return yenile(); }
         if (ev.target.closest('[data-kd-olustur]')) { const not = (k.querySelector('[data-kd-not]') || {}).value || ''; const yer = k.querySelector('[data-kd-sonuc]'); yer.textContent = 'Oluşturuluyor…'; return BL.kursDavetOlustur(not).then(d => { islem('Kurs hesabı linki oluşturdu', not); kaydet(); yer.innerHTML = `<p style="font-size:13.5px;word-break:break-all;background:var(--panel-2);border-radius:8px;padding:10px 12px">${e(d.link)}</p><button class="dg dg-cizgi dg-kucuk" style="margin-top:8px" data-kd-kopya="${e(d.link)}">Linki kopyala</button>`; }).catch(x => { yer.textContent = BL.hataMetni(x); }); }
         const kdk = ev.target.closest('[data-kd-kopya]'); if (kdk) { try { navigator.clipboard.writeText(kdk.dataset.kdKopya); bildir('Link kopyalandı'); } catch (x) { bildir(kdk.dataset.kdKopya); } return; }
