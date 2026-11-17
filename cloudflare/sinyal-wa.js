@@ -450,10 +450,15 @@ function mvParcala(metin) {
 // toMarkdown çıktısından dosya adı, üst veri ve sayfa başlıkları atılır
 const mvMdTemizle = md => String(md || '').replace(/[ \t]+\n/g, '\n').replace(/^#{1,3} [^\n]*\.(pdf|docx)\s*\n/i, '').replace(/^#{1,3} Metadata\s*\n[\s\S]*?(?=^#{1,3} |(?![\s\S]))/im, '').replace(/^#{1,3} Contents\s*$/gim, '').replace(/^#{1,4} Page \d+\s*$/gim, '').replace(/\n{3,}/g, '\n\n').trim();
 // OpenAI uyumlu sohbet çağrısı; anahtar ve ham cevap günlüğe yazılmaz
-async function mvLlm(env, mesajlar, enCok) {
+// json: response_format json_object istenir; sağlayıcı bu alanı tanımazsa (400/422) bir kez onsuz denenir (istem zaten kesin JSON şart koşar)
+async function mvLlm(env, mesajlar, enCok, { json = false } = {}) {
   if (!env.LLM_KEY) throw new MvHata('Yapay zekâ henüz bağlı değil', 503, { kurulu: false });
   let r;
-  try { r = await fetch(env.LLM_URL || MV_LLM_URL, { method: 'POST', headers: { Authorization: 'Bearer ' + env.LLM_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: env.LLM_MODEL || MV_LLM_MODEL, messages: mesajlar, reasoning_effort: 'none', temperature: 0.2, max_completion_tokens: enCok }), signal: AbortSignal.timeout(55000) }); }
+  const istek = rf => fetch(env.LLM_URL || MV_LLM_URL, { method: 'POST', headers: { Authorization: 'Bearer ' + env.LLM_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: env.LLM_MODEL || MV_LLM_MODEL, messages: mesajlar, reasoning_effort: 'none', temperature: 0.2, max_completion_tokens: enCok, ...(rf ? { response_format: { type: 'json_object' } } : {}) }), signal: AbortSignal.timeout(55000) });
+  try {
+    r = await istek(json);
+    if (json && (r.status === 400 || r.status === 422)) { console.warn(JSON.stringify({ tur: 'uyari', konu: 'yapay zekâ', not: 'response_format desteklenmedi; istemle JSON isteniyor', durum: r.status })); r = await istek(false); }
+  }
   catch (x) { console.warn(JSON.stringify({ tur: 'uyari', konu: 'yapay zekâ', hata: (x && x.name) || 'ag' })); throw new MvHata('Yapay zekâya ulaşılamadı; biraz sonra tekrar deneyin', 502); }
   if (!r.ok) { console.warn(JSON.stringify({ tur: 'uyari', konu: 'yapay zekâ', durum: r.status })); throw new MvHata(r.status === 429 ? 'Yapay zekâ şu an yoğun; bir dakika sonra tekrar deneyin' : r.status === 401 || r.status === 403 ? 'Yapay zekâ anahtarı geçersiz; platform yöneticisine bildirin' : 'Yapay zekâ şu an cevap vermiyor; biraz sonra tekrar deneyin', 502); }
   const j = await r.json().catch(() => null), m = j && j.choices && j.choices[0] && j.choices[0].message;
@@ -474,10 +479,42 @@ const MV_OZET_ISTEM = 'Sürücü kursu müdürüne MEB\'den (il/ilçe millî eğ
   'Yazıda kursa düşen bir iş yoksa ikinci başlığın altına "- Kursa düşen bir iş yok." yaz.';
 const MV_CEVAP_ISTEM = 'Sürücü kursu personelinin mevzuat sorusunu YALNIZ aşağıda numaralanmış kaynaklara dayanarak cevaplıyorsun. Kurallar:\n' +
   '- Kaynaklarda olmayan bilgi ekleme, genel bilgini kullanma.\n' +
-  '- Her cümlenin sonunda dayandığı kaynağın numarasını [1] ya da [2][3] biçiminde ver.\n' +
-  '- Kaynaklarda cevap yoksa yalnız şunu yaz: Verilen kaynaklarda bu sorunun cevabı yok.\n' +
-  '- Hukuki görüş ya da tavsiye verme; kaynağın ne dediğini aktar. Kaynaklar çelişiyorsa ikisini de numarasıyla belirt.\n' +
-  '- Sade Türkçe, kısa yaz (en çok 6 cümle ya da madde).';
+  '- Sayı, süre, tutar, tarih ve oranları kaynaktaki gibi birebir yaz; yuvarlama, hesaplama yapma.\n' +
+  '- Her ayrıntı ve adımda dayandığın kaynağın numarasını "kaynak" dizisine yaz (ör. [1] ya da [2,3]). Yalnız verilen numaraları kullan.\n' +
+  '- Kaynaklarda cevap yoksa "bulunamadi": true ver ve "kisa" alanına "Verilen kaynaklarda bu sorunun cevabı yok." yaz; diğer alanları boş bırak.\n' +
+  '- Hukuki görüş ya da tavsiye verme; kaynağın ne dediğini aktar. Kaynaklar çelişiyorsa ikisini de "dikkat" alanında numarasıyla belirt.\n' +
+  '- Kaynak etiketi mdSinyal Rehberi olanlar açıklamadır; çelişkide resmî madde esastır.\n' +
+  '- İstisna, ilden ile uygulama farkı ya da yürürlüğe girmemiş (taslak) hüküm varsa "dikkat" alanına yaz; yoksa boş dize bırak.\n' +
+  '- Sade Türkçe yaz; "kisa" 1–2 cümle, en çok 6 ayrıntı, en çok 6 adım. Adım yalnız soru bir işlemin nasıl yapılacağını soruyorsa yazılır.\n' +
+  'Cevabı YALNIZ şu biçimde, geçerli bir JSON nesnesi olarak ver (önce ya da sonra başka metin, kod bloğu yazma):\n' +
+  '{"kisa":"1–2 cümle doğrudan cevap","ayrinti":[{"metin":"sayı, süre ya da şart","kaynak":[1]}],"adimlar":[{"metin":"yapılacak iş","kaynak":[2]}],"dikkat":"","bulunamadi":false}';
+// Cevap biçimi: LLM'in JSON'u ayrıştırılır ve doğrulanır; kaynak numarası 1..n dışında olanlar atılır, kaynağı kalmayan ayrıntı/adım gösterilmez.
+// JSON bozuksa düz metin { kisa: metin, duz: true } olur. cevap alanı eski istemciler için düz metin özetidir ([n] atıflarıyla).
+const MV_CB = { kisa: 500, metin: 400, dikkat: 500, liste: 8, kaynak: 4, duz: 3000 };
+const MV_YOK = 'Verilen kaynaklarda bu sorunun cevabı yok.';
+const mvKes = (s, n) => { s = String(s || '').replace(/[\u0000-\u0008\u000b-\u001f]/g, ' ').replace(/[ \t]+/g, ' ').trim(); if (s.length <= n) return s; const k = s.lastIndexOf(' ', n - 1); return s.slice(0, k > n * 0.6 ? k : n - 1).trimEnd() + '…'; };
+// metindeki [n] atıflarından aralık dışı olanlar silinir
+const mvAtifSuz = (s, n) => s.replace(/\s*\[(\d{1,3})\]/g, (x, k) => (+k >= 1 && +k <= n ? x : '')).trim();
+function mvCevapCoz(ham, n) {
+  const duz = () => { const t = mvKes(mvAtifSuz(String(ham || '').replace(/^```(?:json)?\s*|\s*```$/g, ''), n), MV_CB.duz) || MV_YOK; return { kisa: t, ayrinti: [], adimlar: [], dikkat: '', bulunamadi: false, duz: true, cevap: t }; };
+  let j = null; const s = String(ham || ''), a = s.indexOf('{'), z = s.lastIndexOf('}');
+  if (a >= 0 && z > a) { try { j = JSON.parse(s.slice(a, z + 1)); } catch (x) { j = null; } }
+  if (!j || typeof j !== 'object' || Array.isArray(j) || (typeof j.kisa !== 'string' && j.bulunamadi !== true)) return duz();
+  const liste = l => (Array.isArray(l) ? l : []).map(x => {
+    if (typeof x === 'string') x = { metin: x };
+    if (!x || typeof x.metin !== 'string') return null;
+    const ks = new Set((Array.isArray(x.kaynak) ? x.kaynak : [x.kaynak]).map(Number).filter(k => Number.isInteger(k) && k >= 1 && k <= n));
+    // metne gömülü [n] atıfları kaynağa taşınır
+    const metin = mvKes(x.metin.replace(/\s*\[(\d{1,3})\]/g, (y, k) => { if (+k >= 1 && +k <= n) ks.add(+k); return ''; }), MV_CB.metin);
+    return metin && ks.size ? { metin, kaynak: [...ks].sort((p, q) => p - q).slice(0, MV_CB.kaynak) } : null;
+  }).filter(Boolean).slice(0, MV_CB.liste);
+  const bulunamadi = j.bulunamadi === true;
+  const o = { kisa: mvKes(mvAtifSuz(typeof j.kisa === 'string' ? j.kisa : '', n), MV_CB.kisa), ayrinti: bulunamadi ? [] : liste(j.ayrinti), adimlar: bulunamadi ? [] : liste(j.adimlar), dikkat: bulunamadi ? '' : mvKes(mvAtifSuz(typeof j.dikkat === 'string' ? j.dikkat : '', n), MV_CB.dikkat), bulunamadi };
+  if (!o.kisa) { if (!bulunamadi && !o.ayrinti.length) return duz(); o.kisa = bulunamadi ? MV_YOK : ''; }
+  const at = l => l.map(k => '[' + k + ']').join('');
+  o.cevap = [o.kisa, o.ayrinti.map(x => '- ' + x.metin + ' ' + at(x.kaynak)).join('\n'), o.adimlar.length ? 'Yapılacaklar:\n' + o.adimlar.map((x, i) => (i + 1) + '. ' + x.metin + ' ' + at(x.kaynak)).join('\n') : '', o.dikkat ? 'Dikkat: ' + o.dikkat : ''].filter(Boolean).join('\n\n');
+  return o;
+}
 const MV_RESIM_ISTEM = 'Bu fotoğraf resmî bir yazının sayfası. Sayfada yazan metni olduğu gibi, Türkçe karakterleri koruyarak düz metne çevir. Yorum, özet ya da açıklama ekleme; yalnız metni yaz. Okunamayan yerlere [okunamadı] yaz. Fotoğrafta metin yoksa yalnız BOS yaz.';
 const mvOzetle = (env, ad, metin) => mvLlm(env, [{ role: 'system', content: MV_OZET_ISTEM }, { role: 'user', content: (ad ? 'Yazının adı: ' + ad + '\n\n' : '') + 'Metin:\n' + metin.slice(0, MV.ozetKar) }], 700);
 const mvTemiz = (s, n) => String(s || '').replace(/[\u0000-\u001f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
@@ -611,8 +648,10 @@ async function mevzuatUc(req, env, url, yol, cevap, { gercek, rol, kursId, origi
     let top = 0; for (const x of k) { if (!x || typeof x.t !== 'string' || !x.t.trim()) return cevap({ ok: false, hata: 'Kaynak metni boş' }, 400); top += x.t.length + String(x.etiket || '').length; }
     if (top > MV.kaynakKar) return cevap({ ok: false, hata: 'Kaynaklar toplam ' + MV.kaynakKar.toLocaleString('tr-TR') + ' karakteri geçemez' }, 400);
     if (mvSinirAsti('l:' + kursId, 10)) return cevap({ ok: false, hata: 'Çok sık istek yapıldı; bir dakika sonra tekrar deneyin' }, 429);
-    const govde = 'Soru: ' + soru + '\n\nKaynaklar:\n' + k.map((x, i) => '[' + (i + 1) + '] ' + mvTemiz(x.etiket, 200) + '\n' + x.t.trim()).join('\n\n');
-    return cevap({ ok: true, cevap: await mvLlm(env, [{ role: 'system', content: MV_CEVAP_ISTEM }, { role: 'user', content: govde }], 900) });
+    // resmî olmayan kaynak (mdSinyal rehberi ve sık sorulanlar) istemciden resmi:false ile gelir; etiketi her durumda "mdSinyal Rehberi" ile başlar
+    const mvEtiket = x => { const et = mvTemiz(x.etiket, 200); return x.resmi === false && !/^mdSinyal Rehberi/.test(et) ? 'mdSinyal Rehberi · ' + et : et; };
+    const govde = 'Soru: ' + soru + '\n\nKaynaklar:\n' + k.map((x, i) => '[' + (i + 1) + '] ' + mvEtiket(x) + '\n' + x.t.trim()).join('\n\n');
+    return cevap({ ok: true, ...mvCevapCoz(await mvLlm(env, [{ role: 'system', content: MV_CEVAP_ISTEM }, { role: 'user', content: govde }], 1100, { json: true }), k.length) });
   }
   return cevap({ ok: false, hata: 'Bilinmeyen adres' }, 404);
 }

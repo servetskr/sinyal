@@ -2,13 +2,16 @@
    İki küme: 'ortak' (bütün kurslara aynı derlem: veri/mevzuat/dizin.json + vektor.bin) ve 'kurs' (kursa gelen yazılar: worker /mevzuat/hepsi).
    Arama üç yoldan gelir ve birleşir:
    1) Madde yakalama: "madde 15", "md.15", "m.15/1", "mtsk 15", "ööky 56", "15. madde" → o maddenin parçaları en üstte.
-   2) Kelime: Türkçe sadeleştirme + hafif kök kırpma + BM25 (parça metni, belge kısa adı, madde no ve başlık).
+   2) Kelime: Türkçe sadeleştirme + hafif kök kırpma + BM25 (parça metni, belge kısa adı, madde no ve başlık); gündelik söz resmî karşılığıyla da aranır (ESANLAM).
    3) Anlam: sorgu vektörü (worker /mevzuat/gom, dışarıdan verilen gom() ile) × N×D int8 vektörler (nokta çarpımı).
-   Kelime ve anlam listeleri RRF (k=60) ile birleşir. gom() yoksa ya da hata verirse yalnız kelime araması döner, anlamKapali: true. */
+   Kelime ve anlam listeleri RRF (k=60) ile birleşir; aynı maddenin sonraki parçaları geriye kayar (çeşitlilik). gom() yoksa ya da hata verirse yalnız kelime araması döner, anlamKapali: true. */
 
 const SURUM = '?v=213';
 const RRF_K = 60, LISTE_N = 60;
+const KELIME_AG = 1, ANLAM_AG = 1;  // RRF ağırlıkları; k 10/30/100 ve ağırlık 0,8–1,5 denendi, fark en çok 1 soru
 const BM25_K1 = 1.2, BM25_B = 0.75;
+const MADDE_BASI = 1;  // aynı maddenin ilk parçası yerinde kalır, sonrakiler başka maddelerden sonraya kayar
+const BASLIK_KAT = 2;  // madde başlığı dizine iki kez girer (1 ve 3 denendi, 53'lük sette gerileme)
 
 /* ---------- Türkçe sadeleştirme ---------- */
 const HARF = { 'ı': 'i', 'İ': 'i', 'ğ': 'g', 'ş': 's', 'ç': 'c', 'ö': 'o', 'ü': 'u', 'â': 'a', 'î': 'i', 'û': 'u' };
@@ -75,6 +78,123 @@ export function kokler(metin) {
   const l = sadele(metin).match(KELIME) || [];
   const o = [];
   for (const w of l) { if (DURAK.has(w) || (w.length < 2 && !/\d/.test(w))) continue; o.push(terim(w)); }
+  return o;
+}
+
+/* ---------- gündelik dil → resmî terim (yalnız kelime araması) ---------- */
+// Kurs müdürünün ve kursiyerin dilindeki sözcük, derlemdeki resmî karşılığıyla da aranır: "ehliyet" → "sürücü belgesi", "hoca" → "usta öğretici".
+// Eklenen terimin BM25 ağırlığı ES_AGIRLIK (asıl terim 1); sorguda zaten geçen terim yeniden eklenmez. Anlam araması bu listeyi kullanmaz.
+// Liste arac/mevzuat/soru-seti-2.json'daki gündelik söyleyişlerden çıkarıldı. Sol: söyleyişler (ekli biçimleri de yazılır), sağ: resmî karşılık.
+const ES_AGIRLIK = 0.7;
+const ESANLAM = [
+  ['ehliyet ehliyeti ehliyetim ehliyetli ehliyetsiz ehliyetini ehliyetiyle', 'sürücü belgesi'],
+  ['hoca hocam hocamız hocası hocayı hocalar hocalarımız hocanın eğitmen eğitmeni eğitmenler', 'usta öğretici'],
+  ['öğrenci öğrenciler öğrencimiz öğrenciyi öğrenciye öğrencinin öğrencileri', 'kursiyer'],
+  ['aday adayı adaylar', 'kursiyer'],
+  ['yazılı|yazılı sınav|teorik sınav|teori sınavı', 'elektronik sınav'],
+  ['pratik|pratik sınav|direksiyon sınavı|direksiyon sınavında|direksiyon sınavına|direksiyon sınavları', 'direksiyon eğitimi uygulama sınavı'],
+  ['kaldı kaldım kalırsa kalan kalınca kaldığında kalmış kalanlar kaldıktan', 'başarısız'],
+  ['geçti geçerse geçemedi geçemezse', 'başarılı başarısız'],
+  ['hak hakkı hakkım hakları hakkını', 'sınav hakkı'],
+  ['rapor raporu raporunu raporlu', 'sağlık raporu'],
+  ['sabıka sabıkası sabıkalı', 'adli sicil'],
+  ['taksit taksitli taksitle taksitler', 'ücret ödeme'],
+  ['para parası parasını fiyat fiyatı fiyatlar ücreti', 'ücret'],
+  ['iade|geri verilir|geri alabilir|geri öder|parasını geri', 'ücret iade'],
+  ['mem|il milli eğitim|ilçe milli eğitim|milli eğitim', 'millî eğitim müdürlüğü'],
+  ['motor motorla motorda motoru motorcu', 'motosiklet A sınıfı'],
+  ['araba arabası arabayı arabaya arabayla arabalar arabanın arabada', 'araç otomobil'],
+  ['otobüs otobüse', 'otobüs D sınıfı'],
+  ['minibüs', 'D1 sınıfı'],
+  ['kamyon kamyonla kamyonu', 'kamyon C sınıfı'],
+  ['kamyonet|küçük kamyon', 'C1 sınıfı'],
+  ['tır tırı', 'CE sınıfı çekici'],
+  ['traktör traktörle', 'traktör F sınıfı'],
+  ['römork römorklu', 'BE CE römork'],
+  ['karavan', 'römork BE'],
+  ['otomatik|otomatik vites', 'otomatik vites'],
+  ['diploma diplomanın diploması diplomasını', 'öğrenim belgesi'],
+  ['foto fotoğraf vesikalık', 'fotoğraf'],
+  ['dk', 'dakika'],
+  ['sistem sisteme sistemde sistemden mebbis mebbise mebbiste', 'Özel MTSK Modülü MEBBİS'],
+  ['sekreter sekreterimiz', 'büro personeli'],
+  ['müfettiş müfettişler teftiş', 'denetim'],
+  ['yoklama yoklaması', 'inceleme ve kontrol devam'],
+  ['başka kursa|kurs değiştir|kursunu değiştir', 'nakil'],
+  ['taşınma taşınmak taşınırsak taşıyacağız', 'kurum nakli bina'],
+  ['satmak satabilir satış satarsam devretmek devir', 'devir'],
+  ['kapanırsa kapanma kapatırsa kapandı kapanan', 'kapatılması faaliyet'],
+  ['grup grubu gruplar', 'grup eğitim dönemi'],
+  ['tabela tabelası', 'levha'],
+  ['pazar|pazar günü|bayram|tatil günü', 'haftanın bütün günleri resmî tatil'],
+  ['sabah akşam', 'çalışma saatleri'],
+  ['ceza cezası cezasi', 'idari para cezası'],
+  ['otoban otobanda', 'otoyol'],
+  ['kemer kemeri', 'emniyet kemeri'],
+  ['indirim indirimli|erken öde|erken ödersem', 'peşin ödeme indirim'],
+  ['renk körü|renk körlüğü', 'renk görme'],
+  ['oturma izni|oturum izni', 'ikamet izni'],
+  ['okuma yazma|okuma yazması|okuryazar', 'okur yazar'],
+  ['ilkokul ilkokulu', 'ilköğretim'],
+  ['kol saati|telefon|telefonla', 'elektronik cihaz'],
+  ['elektrik gitti|elektrikler gitti|elektrik kesildi', 'elektrik kesintisi teknik arıza'],
+  ['kiralık kiraladık kiralamak', 'kiralama kira'],
+  ['kar lastiği', 'kış lastiği'],
+  ['bozuldu bozulursa bozulmuş', 'arıza'],
+  ['öldü vefat cenaze', 'ölüm'],
+  ['rampa rampada', 'eğim'],
+  ['hacklendi|çalındı|sızdı', 'veri ihlali güvenlik'],
+  ['silinmesi silinsin silsin silmek', 'silme imha'],
+  ['verbis', 'veri sorumluları sicili'],
+  ['şifre şifresi şifremi', 'parola kullanıcı'],
+  ['joker', 'yerine başka kişinin sınava girmesi'],
+  ['yabancı yabancının', 'yabancı uyruklu'],
+  ['dosya dosyası dosyasına evrak evraklar', 'belge kayıt'],
+  ['özürlü özürlüler', 'engelli'],
+  ['puan puanı puanda', 'ceza puanı'],
+  ['hız hızı hızla', 'azami hız'],
+  ['vites', 'vites'],
+  ['fark farkı', 'sınıf değişikliği'],
+  ['müdür müdürü', 'kurs müdürü'],
+  ['harç harcı', 'harç'],
+  ['polis polisin', 'trafik görevlisi'],
+];
+// Sürücü belgesi sınıfları: tek harfli sınıflar (A, B, C, D, E, F, G, M) kelime aramasında atılan tek harf olduğundan ayrı bir terimle dizine girer ("#d").
+const SINIF_TEK = new Set(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'm']);
+// Derlem metninde: büyük harfli tek harf (ardından tire, nokta ya da harf gelmezse): "D, DE sınıfı", "B sınıfı"
+export function sinifTerimleri(metin) {
+  const o = [];
+  for (const m of String(metin || '').matchAll(/(?<![\p{L}\p{N}\-/.])([ABCDEFGM])(?![\p{L}\p{N}\-)’'.])/gu)) o.push('#' + m[1].toLowerCase());
+  return o;
+}
+// Sorguda: tek harf (e hariç; "e sınav" sınıf değildir) ya da ardından sınıf/ehliyet/sürücü gelen E
+function sorguSinif(s) {
+  const l = sadele(s).match(KELIME) || [], o = [];
+  for (let i = 0; i < l.length; i++) {
+    const w = l[i]; if (w.length !== 1 || !SINIF_TEK.has(w)) continue;
+    if (w === 'e' && !/^(sinif|ehliyet|surucu)/.test(l[i + 1] || '')) continue;
+    o.push('#' + w);
+  }
+  return o;
+}
+// sadeleşmiş metnin durak kelimesi atılmadan terim dizisi (eşanlam eşleştirmesi için; "tır" durak kelimesi "tir" ile aynı yazılır)
+const hamTerimler = s => (sadele(s).match(KELIME) || []).map(terim);
+const ES_KUR = ESANLAM.map(([sol, sag]) => ({
+  sol: (sol.includes('|') ? sol.split('|') : sol.split(' ')).map(x => hamTerimler(x)).filter(x => x.length),
+  sag: [...kokler(sag), ...sinifTerimleri(sag)],
+}));
+// Sorgu → { terim: ağırlık }. Asıl terimler 1, sınıf terimleri 1, eşanlamdan gelenler ES_AGIRLIK.
+export function genislet(sorgu, { esanlam = true } = {}) {
+  const o = new Map();
+  for (const w of kokler(sorgu)) o.set(w, 1);
+  for (const w of sorguSinif(sorgu)) o.set(w, 1);
+  if (!esanlam) return o;
+  const h = hamTerimler(sorgu);
+  const icinde = seq => { for (let i = 0; i + seq.length <= h.length; i++) { let ok = true; for (let j = 0; j < seq.length; j++) if (h[i + j] !== seq[j]) { ok = false; break; } if (ok) return true; } return false; };
+  for (const e of ES_KUR) {
+    if (!e.sol.some(icinde)) continue;
+    for (const w of e.sag) if (!o.has(w)) o.set(w, ES_AGIRLIK);
+  }
   return o;
 }
 
@@ -164,18 +284,187 @@ export const FILTRELER = [
   ['hepsi', 'Hepsi'],
   ['mevzuat', 'Yönetmelik ve kanunlar'],
   ['yazi', 'MEB yazıları'],
-  ['program', 'Ders programları'],
+  ['program', 'Kılavuz ve programlar'],
+  ['rehber', 'mdSinyal rehberi'],
+  ['sss', 'Sık sorulanlar'],
   ['kurs', 'Kursumuza gelenler'],
 ];
+const MEVZUAT_TUR = new Set(['yonetmelik', 'kanun', 'yonerge', 'teblig']);
+const KILAVUZ_TUR = new Set(['program', 'kilavuz', 'rehber-resmi', 'bilgilendirme', 'form']);
 const FILTRE_UYAR = {
   hepsi: () => true,
-  mevzuat: (k, b) => k === 'ortak' && (b.tur === 'yonetmelik' || b.tur === 'kanun'),
+  mevzuat: (k, b) => k === 'ortak' && MEVZUAT_TUR.has(b.tur),
   yazi: (k, b) => b.tur === 'yazi',
-  program: (k, b) => b.tur === 'program' || b.tur === 'kilavuz',
+  program: (k, b) => k === 'ortak' && KILAVUZ_TUR.has(b.tur),
+  rehber: (k, b) => b.tur === 'rehber',
+  sss: (k, b) => b.tur === 'sss',
   kurs: k => k === 'kurs',
 };
+// mdSinyal'in kendi açıklama metinleri (rehber, sık sorulanlar): resmi:false
+export const resmiDegil = b => !!b && b.resmi === false;
+
+/* ---------- dayanak etiketleri ---------- */
+// Rehber ve sık sorulan metinlerindeki köşeli parantezli dayanaklar: [MTSK md.7/3], [MTSK md.28A/1-b], [KTY geç. md.10],
+// [e-Sınav Kılavuzu 2026 Bölüm 5.1], [Direksiyon Programı: <bölüm>], [NVİ SSS: <soru parçası>] ...
+// [Uygulama: …] ve [Duyuru: …] derlemde bir yere bağlanmaz.
+export const ETIKET_RE = /\[([^\[\]\n]{2,160})\]/g;
+const ETIKET_ONEK = [
+  ['MTSK', 'mtsk'], ['KTY değişikliği RG 17/4/2015', 'kty-2015'], ['KTY', 'kty'], ['KTK', 'ktk'], ['ÖÖKY', 'ooky'], ['5580', 'k5580'], ['KVKK', 'k6698'],
+  ['657', 'k657'], ['2429', 'k2429'], ['Sağlık Raporları Yön.', 'saglik'], ['Sağlık Şartları Yön.', 'saglik-sart'], ['Standartlar Yönergesi', 'standart'],
+  ['Kabahatler K.', 'k5326'], ['İş Kanunu', 'k4857'], ['Değerli Kağıtlar Tebliği 2026', 'degerli-kagit'], ['Trafik İşaretleri Yön.', 'tiy'],
+];
+const ETIKET_PROGRAM = { 'Direksiyon': 'prg-direksiyon', 'Trafik ve Çevre': 'prg-trafik', 'Araç Tekniği': 'prg-arac', 'Trafik Adabı': 'prg-adab', 'İlk Yardım': 'prg-ilkyardim', 'A1 Fark': 'prg-a1fark' };
+// Etiket metni (köşeli parantezsiz) → { belge, m | mIcerir, fikra? } ya da null
+export function etiketCoz(e) {
+  e = String(e || '').trim();
+  let r;
+  if (/^(Uygulama|Duyuru)\b/.test(e)) return null;
+  if ((r = e.match(/^MTSK EK-(\d+)$/))) return { belge: 'mtsk-ek', m: `EK-${r[1]}` };
+  if ((r = e.match(/^e-Sınav Kılavuzu 2026 Bölüm ([\d.]+)$/))) return { belge: 'esinav', m: `Bölüm ${r[1]}` };
+  if ((r = e.match(/^Denetim Rehberi Bölüm ([\d.]+)$/))) return { belge: 'denetim', m: `Bölüm ${r[1]}` };
+  if ((r = e.match(/^Ücretsiz Kursiyer Kılavuzu Bölüm ([\dA-Z.]+)$/))) return { belge: 'ucretsiz', m: `Bölüm ${r[1]}` };
+  if (/^Harç Tebliği 2026 \(9\) sayılı tarife$/.test(e)) return { belge: 'harc2026', m: '(9) Sayılı Tarife' };
+  if (/^NVİ 2026 bedel tablosu$/.test(e)) return { belge: 'nvi-ucret', m: 'Sürücü belgesi bedelleri' };
+  if ((r = e.match(/^NVİ SSS: (.+)$/))) return { belge: 'nvi-sss', mIcerir: r[1] };
+  if (/^BİGM KVKK yazısı(?: \([a-zçğ]+\))?$/.test(e)) return { belge: 'kvkk-yazi', m: 'Yazı' };
+  if (/^ÖÖKGM B ile A1 yazısı$/.test(e)) return { belge: 'b-a1', m: 'Yazı' };
+  if ((r = e.match(/^(.+) Programı: (.+)$/)) && ETIKET_PROGRAM[r[1]]) return { belge: ETIKET_PROGRAM[r[1]], m: r[2] };
+  for (const [on, belge] of ETIKET_ONEK) {
+    if (!e.startsWith(on + ' ')) continue;
+    r = e.slice(on.length + 1).match(/^(geç\. |ek )?md\.(\d+)([A-Z])?(?:\/(\d+))?(?:-[\wçğıöşü-]+)?$/u);
+    if (!r) return null;
+    const tur = r[1] === 'geç. ' ? 'Geçici Madde ' : r[1] === 'ek ' ? 'Ek Madde ' : 'Madde ';
+    return { belge, m: tur + r[2] + (r[3] ? '/' + r[3] : ''), fikra: r[4] ? +r[4] : null };
+  }
+  return null;
+}
+// Çözülen etiketin ortak derlemdeki parça sırası (fıkra verilmişse o fıkrayı içeren parça); bulunamazsa -1
+export function etiketBul(kume, c) {
+  if (!kume || !c) return -1;
+  const bi = kume.belgeler.findIndex(b => b.id === c.belge); if (bi < 0) return -1;
+  const kat = x => sadele(x);
+  let ilk = -1;
+  for (let i = 0; i < kume.parcalar.length; i++) {
+    const p = kume.parcalar[i]; if (p.b !== bi) continue;
+    if (c.mIcerir ? !kat(p.m).includes(kat(c.mIcerir)) : p.m !== c.m) continue;
+    if (ilk < 0) ilk = i;
+    if (!c.fikra || !p.f) return i;
+    const [a, z = a] = String(p.f).split('/').pop().split('-').map(x => parseInt(x, 10));
+    if (c.fikra >= a && c.fikra <= z) return i;
+  }
+  return ilk;
+}
+
+const TUR_AGIRLIK = { program: 0.85, 'rehber-resmi': 0.85, bilgilendirme: 0.85, form: 0.85 };
+// mdSinyal metinleri (rehber, sık sorulanlar) listeyi doldurmasın: ilk sırada resmî parça, ilk 6'da en çok 2 ve ilk 10'da en çok 3 mdSinyal parçası.
+// Fazlası sıradaki resmî parçalardan sonraya kayar (kendi aralarındaki sıra korunur). Yalnız mdSinyal parçası varsa (filtre) olduğu gibi kalır.
+export function dengele(sira, degil) {
+  // karşılaştırma listedeki sıraya göre (skora göre değil): çeşitlilik için geriye alınan parçalar yüksek skorlu olsa da yerinde kalır
+  const yer = new Map(sira.map((x, i) => [x, i]));
+  const R = sira.filter(([id]) => !degil(id)), D = sira.filter(([id]) => degil(id));
+  if (!R.length || !D.length) return sira;
+  const o = []; let r = 0, d = 0;
+  const sinir = n => n < 1 ? 0 : n < 6 ? 2 : n < 10 ? 3 : Infinity;
+  while (r < R.length || d < D.length) {
+    const dSay = o.filter(([id]) => degil(id)).length;
+    const dAlabilir = d < D.length && dSay < sinir(o.length);
+    if (dAlabilir && (r >= R.length || yer.get(D[d]) < yer.get(R[r]))) o.push(D[d++]);
+    else if (r < R.length) o.push(R[r++]);
+    else o.push(D[d++]);
+  }
+  return o;
+}
+
+/* ---------- yapay zekâya gidecek kaynaklar ---------- */
+// Sonuç listesinden "Yapay zekâya sor" kaynakları: ilk BAKILAN sonuca bakılır, en çok ENCOK madde (worker sınırı 8 kaynak / 14.000 karakter).
+// Aynı maddenin listedeki bütün parçaları metin sırasıyla tek kaynakta birleşir; bir belgeden en çok BELGE_BASI madde, mdSinyal metninden en çok 2 kaynak
+// (yer kalırsa sınırlar gevşer). Her kaynak { etiket, t, resmi?, i } döner; i: kaynağın ilk parçasının sonuç listesindeki sırası (atıf bağlantısı için).
+export const KAYNAK = { encok: 8, bakilan: 20, belgeBasi: 3, mdsinyal: 2, kar: 13500, parcaKar: 3000 };
+const kaynakEtiket = s => `${s.belge.kisa || s.belge.ad || 'Belge'}${s.parca.m ? ' ' + s.parca.m : ''}`;
+export function kaynakSec(sonuc, { etiket = kaynakEtiket, ...secenek } = {}) {
+  const K = { ...KAYNAK, ...secenek };
+  const l = sonuc || [];  // birleştirme bütün listeden (aynı maddenin sonraki parçaları listenin sonuna ertelenmiş olabilir), seçim ilk K.bakilan sonuçtan
+  const anahtar = s => s.parca.m ? `${s.kaynak}|${s.parca.b}|${s.parca.m}` : `${s.kaynak}|#${s.sira}`;
+  const gruplar = new Map();
+  l.forEach((s, i) => { const a = anahtar(s); if (!gruplar.has(a)) gruplar.set(a, { i, s, l: [] }); gruplar.get(a).l.push(s); });
+  const sirali = [...gruplar.values()];
+  const secilen = [], belgeSay = new Map(); let md = 0;
+  const belgeAnah = g => g.s.kaynak + '|' + g.s.parca.b;
+  for (const gevsek of [false, true]) {
+    for (const g of sirali) {
+      if (secilen.length >= K.encok) break;
+      if (g.i >= K.bakilan || secilen.includes(g)) continue;
+      const r = resmiDegil(g.s.belge), bs = belgeSay.get(belgeAnah(g)) || 0;
+      if (!gevsek && (r ? md >= K.mdsinyal : bs >= K.belgeBasi)) continue;
+      secilen.push(g); belgeSay.set(belgeAnah(g), bs + 1); if (r) md++;
+    }
+  }
+  secilen.sort((a, b) => a.i - b.i);
+  const o = []; let toplam = 0;
+  for (const g of secilen) {
+    const parcalar = g.l.slice().sort((a, b) => a.sira - b.sira);
+    const r = resmiDegil(g.s.belge);
+    const et = r ? 'mdSinyal Rehberi · ' + (g.s.belge.tur === 'sss' ? 'Sık sorulan: ' : '') + (g.s.parca.m || '') : etiket(g.s);
+    const kalan = K.kar - toplam - et.length; if (kalan < 200) break;
+    const t = parcalar.map(x => String(x.parca.t || '').trim()).filter(Boolean).join('\n').slice(0, Math.min(K.parcaKar, kalan));
+    if (!t) continue;
+    toplam += t.length + et.length;
+    o.push(r ? { etiket: et, t, resmi: false, i: g.i } : { etiket: et, t, i: g.i });
+  }
+  return o;
+}
 
 /* ---------- motor ---------- */
+/* ---------- kısa cevap kutusu (sık sorulanlar; yapay zekâsız) ---------- */
+// Kısa cevap adayı: ilk 'bakilan' sonuçtaki sık sorulanlardan sorusu (ve diğer söylenişleri) sorguyla en çok kökü paylaşan.
+// Gösterilmesi için paylaşım ≥ 'pay' ve dayanak maddelerinden biri ilk 'teyit' resmî sonuçta olmalı ('ilk' > 0 ise paylaşım düşükken
+// ilk 'ilk' sıradaki sık sorulan da gösterilir; ölçümde yanlış cevabı çok artırdığı için kapalı).
+// Sınıf adları (B, C, D1, CE…) kök listesine girmez (tek harf); burada ayrıca eşleştirilir: "B'li C" sorusunda "C'li D" cevabı seçilmesin
+const SINIF_RE = /(?<![\p{L}\d])(?:A1|A2|B1|BE|C1E|C1|CE|D1E|D1|DE|[ABCDFGM])(?![\p{L}\d])/gu;
+const siniflar = t => (String(t || '').match(SINIF_RE) || []);
+// Eşikler soru-seti-2 ile ölçüldü (arac/mevzuat/degerlendirme-2.md, "Kısa cevap kutusu")
+export const KISA = { bakilan: 10, pay: 0.6, ilk: 0, teyit: 5 };
+// teyit > 0: sık sorulanın dayanak maddelerinden biri ilk 'teyit' resmî sonuç arasında da çıkmalı (arama ile cevap aynı maddeyi gösteriyor)
+const dayanakTeyit = (l, p, n) => { const d = (p.sss && p.sss.dayanak) || []; if (!d.length) return false; return l.filter(s => !resmiDegil(s.belge)).slice(0, n).some(s => d.some(x => x.belge === s.belge.id && x.m === s.parca.m)); };
+export function kisaCevapSec(l, sorguKok, sorgu = '', { bakilan = KISA.bakilan, pay: esik = KISA.pay, ilk: ilkN = KISA.ilk, teyit = KISA.teyit } = {}) {
+  const sec = p => (p && (!teyit || dayanakTeyit(l, p, teyit)) ? p : null);
+  const q = new Set(sorguKok || []), qs = siniflar(sorgu), aday = l.slice(0, bakilan).map((s, i) => ({ s, i })).filter(x => x.s.parca.sss && x.s.kaynak === 'ortak');
+  if (!aday.length) return null;
+  const pay = x => {
+    const soru = String(x.s.parca.t).split('\nCevap:')[0];
+    let n = 0; if (q.size) { const k = new Set(kokler(soru)); for (const w of q) if (k.has(w)) n++; }
+    const kp = q.size ? n / q.size : 0;
+    if (!qs.length) return kp;
+    // sınıflar: aynı sırada geçenler tam, sırası farklı olanlar yarım puan (B→C sorusu C→B cevabından iyidir)
+    const as = siniflar(String(x.s.parca.m)); let sp = 0;
+    qs.forEach((c, j) => { if (as[j] === c) sp += 1; else if (as.includes(c)) sp += 0.5; });
+    return (kp + sp / qs.length) / 2;
+  };
+  const en = aday.map(x => ({ ...x, p: pay(x) })).sort((a, b) => b.p - a.p || a.i - b.i)[0];
+  if (en.p >= esik) return sec(en.s.parca);
+  const ilk = aday.find(x => x.i < ilkN);
+  return ilk ? sec(ilk.s.parca) : null;
+}
+
+/* ---------- yapay zekâ cevabı (worker /mevzuat/cevapla) ---------- */
+// Worker cevabı: { kisa, ayrinti:[{metin,kaynak:[n]}], adimlar:[…], dikkat, bulunamadi, duz?, cevap }; kaynak n → ekranda c.harita[n-1]. sonuç kartı
+// Eski worker yalnız { cevap } döndürürse düz metin gösterilir.
+export function cevapNormalle(j) {
+  j = j || {};
+  const liste = l => (Array.isArray(l) ? l : []).filter(x => x && typeof x.metin === 'string' && x.metin.trim()).map(x => ({ metin: x.metin.trim(), kaynak: (Array.isArray(x.kaynak) ? x.kaynak : []).map(Number).filter(Number.isInteger) }));
+  if (typeof j.kisa === 'string' && (j.kisa.trim() || j.bulunamadi)) return { kisa: j.kisa.trim() || 'Bu maddelerde sorunuzun cevabı bulunamadı.', ayrinti: liste(j.ayrinti), adimlar: liste(j.adimlar), dikkat: typeof j.dikkat === 'string' ? j.dikkat.trim() : '', bulunamadi: j.bulunamadi === true, duz: j.duz === true };
+  const t = String(j.cevap || '').trim();
+  return { kisa: t || 'Bu maddelerde sorunuzun cevabı bulunamadı.', ayrinti: [], adimlar: [], dikkat: '', bulunamadi: !t, duz: true };
+}
+// kopyalanan düz metin: cevap + kaynak listesi
+export function cevapDuzMetin(y, etiketler = []) {
+  const at = l => (l || []).map(n => '[' + n + ']').join('');
+  return [y.kisa, y.ayrinti.length ? 'Ayrıntılar:\n' + y.ayrinti.map(x => '- ' + x.metin + (x.kaynak.length ? ' ' + at(x.kaynak) : '')).join('\n') : '',
+    y.adimlar.length ? 'Yapılacaklar:\n' + y.adimlar.map((x, i) => (i + 1) + '. ' + x.metin + (x.kaynak.length ? ' ' + at(x.kaynak) : '')).join('\n') : '',
+    y.dikkat ? 'Dikkat: ' + y.dikkat : '', etiketler.length ? 'Kaynaklar:\n' + etiketler.map((x, i) => '[' + (i + 1) + '] ' + x).join('\n') : '',
+    'Cevap yalnız bu maddelere dayanır; kesin karar için il milli eğitim müdürlüğüne danışın.'].filter(Boolean).join('\n\n');
+}
+
 export function yeniMotor() {
   const kume = { ortak: null, kurs: null };  // { belgeler, parcalar, vek: Int8Array, D, takma }
   let dizin = null;  // birleşik BM25 dizini (iki kümenin parçaları)
@@ -195,7 +484,7 @@ export function yeniMotor() {
       const k = kume[ad]; if (!k) continue;
       for (let i = 0; i < k.parcalar.length; i++) {
         const p = k.parcalar[i], b = k.belgeler[p.b] || {};
-        const l = kokler(`${p.t || ''} ${b.kisa || b.ad || ''} ${p.m || ''} ${p.baslik || ''} ${p.baslik || ''}`);
+        const l = kokler(`${p.t || ''} ${b.kisa || b.ad || ''} ${p.m || ''} ${(p.baslik ? (p.baslik + ' ').repeat(BASLIK_KAT) : '')}`).concat(sinifTerimleri(`${p.t || ''} ${p.baslik || ''}`));
         const id = kayit.length; kayit.push([ad, i]); uz.push(l.length);
         const sayac = new Map(); for (const w of l) sayac.set(w, (sayac.get(w) || 0) + 1);
         for (const [w, f] of sayac) { let x = terim.get(w); if (!x) terim.set(w, x = []); x.push(id, f); }
@@ -207,15 +496,17 @@ export function yeniMotor() {
   }
   const hazirDizin = () => dizin || dizinKur();
 
+  // qk: terim dizisi (ağırlık 1) ya da Map terim → ağırlık (genislet())
   function bm25(qk, uygun) {
     const d = hazirDizin(), skor = new Map();
-    for (const w of new Set(qk)) {
+    const ag = qk instanceof Map ? qk : new Map([...new Set(qk)].map(w => [w, 1]));
+    for (const [w, a] of ag) {
       const p = d.terim.get(w); if (!p) continue;
       const df = p.length / 2, idf = Math.log(1 + (d.N - df + 0.5) / (df + 0.5));
       for (let j = 0; j < p.length; j += 2) {
         const id = p[j], f = p[j + 1];
         if (!uygun(id)) continue;
-        const s = idf * (f * (BM25_K1 + 1)) / (f + BM25_K1 * (1 - BM25_B + BM25_B * d.uz[id] / d.ort));
+        const s = a * idf * (f * (BM25_K1 + 1)) / (f + BM25_K1 * (1 - BM25_B + BM25_B * d.uz[id] / d.ort));
         skor.set(id, (skor.get(id) || 0) + s);
       }
     }
@@ -238,7 +529,7 @@ export function yeniMotor() {
 
   const kayitAl = id => { const [ad, i] = hazirDizin().kayit[id]; const k = kume[ad]; const p = k.parcalar[i]; return { ad, i, p, b: k.belgeler[p.b] || {} }; };
 
-  async function ara(sorgu, { filtre = 'hepsi', n = 30, gom = null, anlam = true } = {}) {
+  async function ara(sorgu, { filtre = 'hepsi', n = 30, gom = null, anlam = true, esanlam = true } = {}) {
     const t0 = Date.now();
     sorgu = String(sorgu || '').trim();
     const sonuc = { sonuc: [], anlamKapali: false, madde: null, kokler: [], sure: 0 };
@@ -253,6 +544,8 @@ export function yeniMotor() {
     const qk = md ? kokler(md.kalan) : [];
     const tumKok = kokler(sorgu);
     sonuc.kokler = [...new Set(tumKok)];
+    // vurgu: sorgunun kökleri ve eşanlamdan gelen resmî terimler ("ehliyet" aranınca "sürücü belgesi" de işaretlenir)
+    sonuc.vurguKok = [...genislet(sorgu, { esanlam })].map(([w]) => w).filter(w => w[0] !== '#');
     const maddeIdler = [];
     const ss = sadele(sorgu), mdTur = /cetvel/.test(ss) ? 'cetvel' : md && md.gecici ? 'gecici' : /(?:^|[^\p{L}])ek\s*(?:madde|md)/u.test(ss) ? 'ek' : 'madde';
     if (md) {
@@ -276,7 +569,7 @@ export function yeniMotor() {
     sonuc.maddeYok = !!md && !maddeIdler.length;
 
     // 2) kelime (madde yakalandıysa kalan kelimelerle; kalan yoksa bütün sorguyla)
-    const kelime = bm25(md && qk.length ? qk : tumKok, uygun).slice(0, LISTE_N);
+    const kelime = bm25(genislet(md && qk.length ? md.kalan : sorgu, { esanlam }), uygun).slice(0, LISTE_N);
 
     // 3) anlam
     let anlamL = [];
@@ -301,14 +594,26 @@ export function yeniMotor() {
 
     // RRF birleştirme
     const rrf = new Map(), kSira = new Map(), aSira = new Map();
-    kelime.forEach(([id], r) => { kSira.set(id, r); rrf.set(id, (rrf.get(id) || 0) + 1 / (RRF_K + r + 1)); });
-    anlamL.forEach(([id], r) => { aSira.set(id, r); rrf.set(id, (rrf.get(id) || 0) + 1 / (RRF_K + r + 1)); });
-    const sira = [...rrf].sort((a, b) => b[1] - a[1]);
+    kelime.forEach(([id], r) => { kSira.set(id, r); rrf.set(id, (rrf.get(id) || 0) + KELIME_AG / (RRF_K + r + 1)); });
+    anlamL.forEach(([id], r) => { aSira.set(id, r); rrf.set(id, (rrf.get(id) || 0) + ANLAM_AG / (RRF_K + r + 1)); });
+    // Belge türü önceliği: aynı derecede eşleşen parçalarda bağlayıcı metin (kanun, yönetmelik, yönerge, tebliğ, kılavuz) öne geçer;
+    // ders programı, denetim rehberi ve kurum bilgilendirmesi biraz geride kalır (0,85: aynı eşleşmede yaklaşık 10 sıra). Kurs yazıları ve mdSinyal metinleri 1.
+    for (const [id, x] of rrf) { const b = kayitAl(id).b; rrf.set(id, x * (TUR_AGIRLIK[b.tur] || 1)); }
+    // Çeşitlilik: aynı maddenin ikinci ve sonraki parçaları, başka maddelerin hepsinden sonraya kayar (madde penceresi zaten bütün maddeyi gösterir).
+    // Sonra dengele: mdSinyal metinleri ilk sıraları doldurmaz.
+    const mSay = new Map(), once = [], ertele = [];
+    for (const x of [...rrf].sort((a, b) => b[1] - a[1])) {
+      const { ad, p } = kayitAl(x[0]);
+      if (!p.m) { once.push(x); continue; }
+      const key = ad + '|' + p.b + '|' + p.m, c = mSay.get(key) || 0; mSay.set(key, c + 1);
+      (c < MADDE_BASI ? once : ertele).push(x);
+    }
+    const sira = dengele(once.concat(ertele), id => resmiDegil(kayitAl(id).b));
     const goruldu = new Set();
     const ekle = (id, skor, neden) => {
       if (goruldu.has(id)) return; goruldu.add(id);
       const { ad, i, p, b } = kayitAl(id);
-      const set = new Set(tumKok), pk = new Set(kokler(`${p.t || ''} ${p.baslik || ''}`));
+      const set = new Set(sonuc.vurguKok), pk = new Set(kokler(`${p.t || ''} ${p.baslik || ''}`));
       sonuc.sonuc.push({ kaynak: ad, belge: b, parca: p, sira: i, skor, neden, vurgu: [...set].filter(w => pk.has(w)) });
     };
     maddeIdler.forEach((id, r) => ekle(id, 1 + 1 / (r + 1), 'madde'));
