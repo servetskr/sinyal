@@ -1,0 +1,349 @@
+Belgeler: mtsk = MTSK Yönetmeliği; mtsk-ek = MTSK Yönetmeliği Ekleri; esinav = e-Sınav Kılavuzu 2026; ktk = Karayolları Trafik Kanunu; kty = Karayolları Trafik Yönetmeliği; ooky = Özel Öğretim Kurumları Yönetmeliği; k5580 = 5580 sayılı Kanun; tiy = Trafik İşaretleri Yönetmeliği; saglik = Sağlık Raporları Yönetmeliği; prg-trafik = Trafik ve Çevre Dersi Programı; prg-arac = Araç Tekniği Dersi Programı; prg-adab = Trafik Adabı Dersi Programı; prg-ilkyardim = İlk Yardım Dersi Programı; prg-direksiyon = B, D1, D Direksiyon Programı; prg-a1fark = A1 Fark Sınıfı Direksiyon Programı; kvkk-yazi = BİGM KVKK Yazısı (29/6/2026); k6698 = KVKK (6698); k657 = 657 sayılı Kanun; k2429 = 2429 sayılı Kanun; standart = Standartlar Yönergesi; denetim = MTSK Denetim Rehberi; ucretsiz = Ücretsiz Kursiyer Kılavuzu 2026; saglik-sart = Sürücü Sağlık Şartları Yönetmeliği; b-a1 = ÖÖKGM B ile A1 yazısı (27/2/2024); harc2026 = Harç Tebliği 2026; degerli-kagit = Değerli Kağıtlar Tebliği 2026; nvi-sss = NVİ Sürücü Belgesi SSS; nvi-ucret = NVİ 2026 Bedel Tablosu; prg-dir-mab1 = M, A1, A2, A ve B1 Direksiyon Programı; prg-dir-c = C1 ve C Direksiyon Programı; prg-dir-romork = Römorklu Araçlar (BE, C1E, CE, D1E ve DE) Direksiyon Programı; prg-dir-f = F Direksiyon Programı; k5326 = Kabahatler Kanunu; k4857 = İş Kanunu; kty-2015 = KTY değişikliği RG 17/4/2015
+mtsk: Madde 4 — Tanımlar
+mtsk: Madde 5 — Kurslarda verilen eğitimin amacı
+mtsk: Madde 6 — Araç cinslerine göre sürücü belgesine dönüştürülmek üzere verile
+mtsk: Madde 7 — Sertifika sınıflarının eğitim süreleri
+mtsk: Madde 8 — Kursların açılması
+mtsk: Madde 9 — Kursların kapatılması ve cezalandırılması
+mtsk: Madde 10 — Kurslara müracaat esasları
+mtsk: Madde 11 — Kayıtta istenecek belgeler
+mtsk: Madde 12 — Kursiyer kaydı
+mtsk: Madde 13 — Kursiyerlerin nakli
+mtsk: Madde 14 — Kursa devam
+mtsk: Madde 15 — Sınav hakkı ve kayıt yenileme
+mtsk: Madde 16 — Kurslarda eğitim ve öğretim
+mtsk: Madde 16/A — Emniyet kemeri simülasyon eğitimi
+mtsk: Madde 17 — Direksiyon eğitim ve sınav araçları
+mtsk: Madde 18 — Direksiyon eğitim alanı ve direksiyon eğitim simülatörü
+mtsk: Madde 19 — Direksiyon eğitimi
+mtsk: Madde 20 — Çalışma saatleri
+mtsk: Madde 21 — Ders saatleri
+mtsk: Madde 22 — Öğretim programları
+mtsk: Madde 23 — Çalışma planları
+mtsk: Madde 24 — Görevlendirme ve görevden ayrılma
+mtsk: Madde 25 — Görev, yetki ve sorumluluklar
+mtsk: Madde 26 — Kursta görevlendirilecek personel
+mtsk: Madde 27 — Eğitim personelinde aranacak şartlar
+mtsk: Madde 28 — Sınavlar
+mtsk: Madde 28/A — İl/ilçe millî eğitim müdürlüğünün direksiyon eğitimi dersi sınav
+mtsk: Madde 28/B — İl sınav sorumlusu ve il sınav sorumlusu yardımcısı
+mtsk: Madde 29 — Direksiyon eğitimi dersi sınav yürütme komisyonu
+mtsk: Madde 29/A — Sınav sürecini kontrol edecek ve denetleyecekler
+mtsk: Madde 29/B — Güvenlik personeli
+mtsk: Madde 30 — Direksiyon eğitimi dersi sınavı
+mtsk: Madde 31 — Direksiyon eğitimi dersi sınavı uygulama ve değerlendirme komisy
+mtsk: Madde 31/A — Direksiyon eğitimi dersi sınavı uygulama ve değerlendirme komisy
+mtsk: Madde 32 — Direksiyon eğitimi dersi sınav değerlendirme formu
+mtsk: Madde 33 — Direksiyon eğitimi dersi sınav uygulama ve değerlendirme komisyo
+mtsk: Madde 34 — “B”, “BE”, “D1”, “D”, “D1E”, “DE”, “C1”, “C1E”, “C”, “CE” ve “F”
+mtsk: Madde 35 — “M”, “A1”, “A2”, “A” ve “B1” sınıfı sertifika sınavı
+mtsk: Madde 36 — Römork takılarak yapılacak sınavlar
+mtsk: Madde 37 — Sertifikaların düzenlenmesi esasları
+mtsk: Madde 38 — Sertifikaların verilmesi
+mtsk: Madde 39 — Farklı bir sınıf sertifika alma
+mtsk: Madde 41 — Kurslarda kullanılacak belgeler
+mtsk: Madde 42 — Defter ve dosyalar ile saklanma süresi
+mtsk: Madde 43 — Kursiyer ve sınav ücretleri ile görev alanlara ödenecek ücretler
+mtsk: Madde 44 — Ücretsiz veya indirimli okutulacak kursiyerler
+mtsk: Madde 45 — Sertifikaların sürücü belgesine dönüştürülmesi
+mtsk: Madde 46 — Denetim
+mtsk: Madde 46/A — (Ek:RG-19/10/2017- 30215)
+mtsk: Madde 47 — Beyanların doğruluğu
+mtsk: Madde 48 — Yönetmelikte hüküm bulunmayan hususlar
+mtsk: Madde 49 — Yürürlükten kaldırılan yönetmelik
+mtsk: Geçici Madde 1 — Eğitim personeli
+mtsk: Geçici Madde 15 — Sınav sorumlusu tamamlayıcı eğitimi
+mtsk: Geçici Madde 16 — Hizmet içi eğitim
+mtsk: Geçici Madde 17 — Sınav uygulama alanlarının düzenlenmesi
+mtsk-ek: EK-1 — Özel motorlu taşıt sürücüleri kursuna
+mtsk-ek: EK-3 — Direksiyon eğitimi dersi sınav değerlendirme formu
+mtsk-ek: EK-4 — Direksiyon eğitimi dersi sınav değerlendirme formu
+mtsk-ek: EK-5 — “k” sınıfı sürücü aday belgesi
+mtsk-ek: EK-6 — Motorlu taşıt sürücü sertifikası
+mtsk-ek: EK-8 — Özel motorlu taşıt sürücüleri kursu direksiyon
+mtsk-ek: EK-9 — Kursiyer sayısına göre sınavlarda görev alacaklar
+mtsk-ek: EK-10 — Sınav aracı değişiklik formu
+mtsk-ek: EK-11 — Direksiyon eğitimi dersi sınavı denetim formu
+mtsk-ek: EK-12 — Direksiyon eğitimi dersi sınavı araç kontrol formu
+mtsk-ek: EK-15 — ………………….ili
+mtsk-ek: EK-16 — Özel motorlu taşıt sürücüleri kurslarında verilen teorik
+mtsk-ek: EK-17 — Özel motorlu taşıt sürücüleri kurslarında verilen direksiyon uyg
+mtsk-ek: EK-21 — ………………….ili
+esinav: Bölüm I — İletişim
+esinav: Bölüm II — Kısaltmalar ve tanımlar
+esinav: Bölüm 1 — Genel açıklamalar
+esinav: Bölüm 2 — E-Sınav başvuru şartları
+esinav: Bölüm 3 — E-Sınav başvuru ücreti ve ödeme işlemleri
+esinav: Bölüm 4 — Aday başvuru işlemleri
+esinav: Bölüm 5.1 — Özel MTSK Müdürlüklerinin Yapacağı İşlemler
+esinav: Bölüm 5.2 — İl/İlçe Millî Eğitim Müdürlüklerinin Yapacağı İşlemler
+esinav: Bölüm 6 — E-Sınav giriş belgesi
+esinav: Bölüm 7 — E-Sınav uygulaması
+esinav: Bölüm 8.1 — e-Sınav Bina Yöneticileri
+esinav: Bölüm 8.2 — E-Sınav salon görevlileri
+esinav: Bölüm 8.3 — e-Sınav Salon Başkanı ve Gözetmeninin Birlikte Yürüteceği İş ve 
+esinav: Bölüm 8.4 — Sınav Uygulama Modülünde Yer Alan Sınav İptal Seçeneklerinin Kul
+esinav: Bölüm 9.1 — Adayların sınava alınmayacağı durumlar
+esinav: Bölüm 9.2 — Adayların sınavının geçersiz sayılacağı durumlar
+esinav: Bölüm 10 — Değerlendirme
+esinav: Bölüm 11 — E-Sınav itirazları
+esinav: Bölüm 12 — Sınav sonuçlarının açıklanması
+esinav: Bölüm 13.1 — e-Sınavın Tekrarlanmasına İlişkin Uygulama
+ktk: Madde 36 — Sürücü belgesi alma zorunluluğu
+ktk: Madde 37 — Sürücü belgesi alması zorunlu olmayanlarda aranacak şartlar
+ktk: Madde 38 — Sürücü belgesi sınıfları, belge sahiplerine sürme yetkisi verile
+ktk: Madde 39 — Sürücü belgelerine ait esaslar
+ktk: Madde 41 — Sürücü adaylarında aranacak şartlar
+ktk: Madde 42 — Sürücü adaylarının sınavları ile sürücü belgelerinin verilmesi e
+ktk: Madde 43 — Askeri araç sürücülerinin sınavları
+ktk: Madde 44 — Adres değişikliklerinin bildirilmesi ve sürücü belgelerinin taşı
+ktk: Madde 45 — Sürücülerin sağlık şartlarında sonradan meydana gelen değişiklik
+ktk: Madde 46 — Karayollarında trafiğin akışı
+ktk: Madde 47 — Trafik işaret ve kurallarına uyma zorunluluğu
+ktk: Madde 48 — Alkol, uyuşturucu veya uyarıcı maddelerin etkisi altında araç sü
+ktk: Madde 49 — Takograf cihazı bulundurulması ve kullanılması zorunlu olan taşı
+ktk: Ek Madde 17 — Aday sürücülük
+ktk: Geçici Madde 2 — 6085 sayılı Karayolları Trafik Kanununa göre verilmiş olan şoför
+kty: Madde 75 — Sürücü Belgelerinin Sınıfları
+kty: Madde 76 — Sürücü Adaylarında Aranacak Şartlar
+kty: Madde 79 — Psiko-teknik Değerlendirme ve Psikiyatri Uzmanı Muayenesi
+kty: Madde 80 — Uluslararası Sürücü Belgesi
+kty: Madde 81 — Sürücü belgelerinin düzenlenmesi, kişiselleştirilmesi ve teslimi
+kty: Madde 82 — “K” Sınıfı Sürücü Aday Belgesi
+kty: Madde 83 — Zayi Edilen Veya Yıpranan Sürücü Belgelerinin Değiştirilmesi
+kty: Madde 84 — Askeri Araç Sürücülerinin Sınavları ve Belgelerinin Verilmesi
+kty: Madde 85 — Araçların Sürülmesinde Yetki Durumu
+kty: Madde 86 — Römork Takarak Araç Kullanma
+kty: Madde 87 — Sürücü belgelerinin geçerlilik süresi ve yenilenmesi
+kty: Madde 88 — Dış ülkelerden alınan sürücü belgeleri ile ülkemizde araç kullan
+kty: Madde 89 — Adres Değişikliklerini Bildirme ve Sürücü Belgelerini Bulundurma
+kty: Madde 90 — Sürücü belgelerinin trafik görevlilerince geri alınması halleri 
+kty: Madde 91 — Sürücü Belgelerinin Yetkililerce İncelenmek Üzere Geçici Olarak 
+kty: Madde 92 — Yabancı Kişilerin Türkiye’de Tescilli Araçları Kullanma Yetkisi
+kty: Madde 93 — Sürücü belgelerinin şekil ve içeriği
+kty: Madde 94 — Karayollarında Trafiğin Akışı ve Karayolunun Kullanılması
+kty: Madde 95 — Trafik İşaretlerine Uyma
+kty: Madde 96 — Trafiğin Yönetimi
+kty: Madde 97 — Araç Sürme Yasağı Alkol, uyuşturucu veya uyarıcı maddeler etkisi
+kty: Madde 98 — Araç Kullanma ve Dinlenme Sürelerine Uyma Mecburiyeti ve Denetle
+kty: Madde 99 — Takoğraf Cihazı ile Sürücü Çalışma Belgesi Bulundurma ve Kullanm
+kty: Madde 100 — Hız sınırları
+kty: Madde 101 — Hız Sınırlarına Uyma ve Hızın Gerekli Şartlara Uygunluğunu Sağla
+kty: Geçici Madde 10 — (Ek:RG-17/4/2015-29329) (11) Bu maddenin yürürlüğe girdiği tarih
+ooky: Madde 22 — Usulsüz kapatma
+ooky: Madde 23 — Mühür ve evrakın teslimi
+ooky: Madde 24 — Kurumların yönetimi
+ooky: Madde 25 — Kurumlarda görevlendirilecek personel
+ooky: Madde 26 — Görevlendirme
+ooky: Madde 40 — Ücretli ders görevi
+ooky: Madde 41 — Ücretli ders görevi için istenilecek belgeler
+ooky: Madde 42 — Özlük hakları
+ooky: Madde 43 — Sözleşme
+ooky: Madde 44 — İşten ayrılma
+ooky: Madde 45 — Özlük dosyası
+ooky: Madde 46 — Öğretim programları, ders çizelgeleri ve başarının değerlendiril
+ooky: Madde 46/A — Sınavlar
+ooky: Madde 47 — (1) Okullarda resmî dengi okullarda oluşturulan birlik, kurul ve
+ooky: Madde 48 — Sınıf mevcutları ve grupların oluşturulması
+ooky: Madde 49 — Öğretim dili
+ooky: Madde 50 — Azınlık okulları
+ooky: Madde 51 — Öğrenci veya kursiyer kayıt ve nakil işlemleri
+ooky: Madde 52 — Merkezi ortak sınavlar
+ooky: Madde 52/A — Yatılılık hizmeti
+ooky: Madde 53 — Ücret tespiti
+ooky: Madde 54 — Ücretlerin ilanı
+ooky: Madde 55 — Ücretlerin alınma şekli
+ooky: Madde 56 — Ücretlerin iadesi
+ooky: Madde 57 — Ücretsiz okutulacak öğrenci ve kursiyerlerin oranı ile dağılımı
+ooky: Madde 58 — Ücretsiz okutulacak öğrenci ve kursiyerlerin başvurusu
+ooky: Madde 59 — Ücretsiz öğrenci değerlendirme kurulu
+ooky: Madde 60 — Ücretsiz okuyacak öğrenci ve kursiyerlerin ücretlerinin iadesi
+ooky: Madde 65 — Kimlik kartı
+k5580: Madde 2 — Tanımlar
+k5580: Madde 3 — Yabancı Okullar ve Azınlık Okulları Kurum açma izni
+k5580: Madde 4 — Kurucu/kurucu temsilcisinin nitelikleri ve kurum binaları
+k5580: Madde 5 — Milletlerarası özel öğretim kurumları, yabancı okullar ve azınlı
+k5580: Madde 6 — Eğitim-öğretim ve kurumların yönetimi
+k5580: Madde 7 — Kurum açma izninin iptali, kurumun kapatılması, devri ve nakli
+k5580: Madde 8 — Kurumlarda çalıştırılacak personel
+k5580: Madde 9 — Özlük hakları ve sorumluluklar
+k5580: Madde 10 — Çalışma izninin iptali ve geçici görevlendirme
+k5580: Madde 11 — Denetim, reklâm ve ilânlar
+k5580: Madde 12 — Kurumlar, faaliyetlerini sadece kazanç sağlamak için düzenleyeme
+k5580: Madde 13 — Öğrenim ücreti ve diğer ücretler, ücretsiz öğrenim ve yabancı uy
+k5580: Madde 14 — Yürürlükten kaldırılan kanun, yönetmelikler ve hüküm bulunmayan 
+k5580: Ek Madde 1 — (Ek: 1/3/2014-6528/12 md.) 2022-2023 eğitim ve öğretim yılı için
+k5580: Ek Madde 2 — (Ek: 3/10/2016-KHK-676/78 md.; Değiştirilerek kabul: 1/2/2018707
+k5580: Geçici Madde 1 — Bu Kanunda öngörülen yönetmelikler yürürlüğe girinceye kadar, me
+k5580: Geçici Madde 2 — Bu Kanun yürürlüğe girmeden önce, resmî okullarda görevli olup k
+k5580: Geçici Madde 3 — Bu Kanunun 12 nci maddesi 2006-2007 öğretim yılından itibaren uy
+k5580: Geçici Madde 4 — 2828 sayılı Sosyal Hizmetler ve Çocuk Esirgeme Kurumu Kanunu hük
+k5580: Geçici Madde 5 — (Ek: 1/3/2014-6528/13 md.) (İptal birinci fıkra: Anayasa Mahkeme
+k5580: Geçici Madde 6 — (Ek: 3/10/2016-KHK-676/79 md.; Aynen kabul: 1/2/20187070/65 md.)
+k5580: Geçici Madde 7 — (Ek:11/11/2020-7256/39 md.) Bu maddeyi ihdas eden Kanunla değişt
+k5580: Geçici Madde 8 — (Ek:24/7/2026-7590/20 md.) Bu maddenin yürürlüğe girdiği tarihte
+tiy: — Trafik İşaretleri Yönetmeliği
+saglik: Madde 4 — Tanımlar
+saglik: Madde 7 — Kimlik tespiti
+saglik: Madde 13 — Engelli sağlık kurulu raporlarının düzenlenmesi
+saglik: Madde 35 — Sürücü ve sürücü adayları sağlık raporları
+saglik: Madde 57 — Sürücü sağlık raporlarına itiraz
+saglik: Madde 66 — Raporların geçerlilik süresi ve yürürlükten kalkması
+saglik: Madde 67 — Elektronik sistem
+saglik: Madde 68 — Bildirim yükümlülüğü
+saglik: Geçici Madde 1 — Sistem entegrasyonu süreci ve mevcut raporların durumu
+prg-trafik: — Trafik ve Çevre Dersi Programı
+prg-arac: — Araç Tekniği Dersi Programı
+prg-adab: — Trafik Adabı Dersi Programı
+prg-ilkyardim: — İlk Yardım Dersi Programı
+prg-direksiyon: — B, D1, D Direksiyon Programı
+prg-a1fark: — A1 Fark Sınıfı Direksiyon Programı
+kvkk-yazi: Yazı — Kişisel verilerin korunması kapsamında alınacak tedbirler
+k6698: Madde 3 — Tanımlar
+k6698: Madde 4 — Genel ilkeler
+k6698: Madde 5 — Kişisel verilerin işlenme şartları
+k6698: Madde 6 — Özel nitelikli kişisel verilerin işlenme şartları
+k6698: Madde 7 — Kişisel verilerin silinmesi, yok edilmesi veya anonim hâle getir
+k6698: Madde 8 — Kişisel verilerin aktarılması
+k6698: Madde 9 — Kişisel verilerin yurt dışına aktarılması
+k6698: Madde 10 — Veri sorumlusunun aydınlatma yükümlülüğü
+k6698: Madde 11 — İlgili kişinin hakları
+k6698: Madde 12 — Veri güvenliğine ilişkin yükümlülükler
+k6698: Madde 13 — Veri sorumlusuna başvuru
+k657: Madde 99 — Çalışma Saatleri, İzinler Çalışma saatleri
+k657: Madde 100 — Günlük çalışma saatlerinin tesbiti
+k657: Madde 101 — Günün 24 saatinde devamlılık gösteren hizmetlerde çalışma saat v
+k2429: Madde 1 — 1923 yılında Cumhuriyetin ilan edildiği 29 Ekim günü Ulusal Bayr
+k2429: Madde 2 — Aşağıda sayılan resmi ve dini bayram günleri ile yılbaşı günü, 1
+k2429: Madde 3 — A) Hafta tatili Pazar günüdür. Bu tatil 35 saatten az olmamak üz
+k2429: Madde 4 — Ulusal ve resmi bayramlarda yapılacak törenler Milli Savunma, İç
+k2429: Madde 5 — 27/5/1935 tarihli ve 2739 sayılı Ulusal Bayram ve Genel Tatiller
+k2429: Geçici Madde 1 — (Ek:28/12/1999 - 4500/ 1 md.) 31 Aralık 1999 tarihi tam gün gene
+k2429: Madde 6 — Bu Kanun yayımı tarihinde yürürlüğe girer.
+k2429: Madde 7 — Bu Kanun hükümlerini Bakanlar Kurulu yürütür.
+standart: Madde 4 — Tanımlar
+standart: Madde 5 — İnceleme raporları
+standart: Madde 6 — Yerleşim planı
+standart: Madde 7 — Derslik ve diğer ders yapılan bölümlerin pencere alanı
+standart: Madde 8 — Dersliklerde her öğrenci/kursiyer çocuk için kullanım alanı
+standart: Madde 9 — Derslik kapıları
+standart: Madde 10 — Merdivenler
+standart: Madde 11 — Tavan yüksekliği
+standart: Madde 12 — Koridorlar
+standart: Madde 13 — Su deposu
+standart: Madde 35 — Özel motorlu taşıt sürücüleri kurslarında bulunması gereken bölü
+standart: Madde 36 — Direksiyon eğitimi ve sınav aracı
+standart: Madde 37 — Direksiyon eğitim alanı ve direksiyon eğitim simülatörü
+standart: Madde 38 — Kurumların bölümlerinde bulunması gereken araç gereçler
+standart: Madde 39 — İsteğe bağlı olarak düzenlenebilecek bölümler
+standart: Madde 40 — Bölümlerin ölçümü ve kontenjan tespiti
+standart: Madde 41 — Mevcut kurumlar
+standart: Madde 42 — Yürürlükten kaldırılan mevzuat
+denetim: Bölüm 2.1 — Kuruma Ait Temel Bilgiler
+denetim: Bölüm 2.2 — Fiziki Durum
+denetim: Bölüm 2.3 — Güvenlik Önlemleri
+denetim: Bölüm 2.4 — Direksiyon Eğitim ve Sınav Araçları
+denetim: Bölüm 3.1 — Planlama
+denetim: Bölüm 3.2 — Dönem ve Grupların Oluşturulması
+denetim: Bölüm 3.3 — Teorik Eğitim ve Direksiyon Eğitimi
+denetim: Bölüm 3.4 — Kursiyer Devam-Devamsızlık
+denetim: Bölüm 3.5 — Sınav İş ve İşlemleri
+denetim: Bölüm 3.6 — Sertifikaların Düzenlenmesi
+denetim: Bölüm 4.1 — Açılış ve Hizmete Başlangıç
+denetim: Bölüm 4.2 — Personel Atama/Görevlendirme
+denetim: Bölüm 4.3 — İşten Ayrılma
+denetim: Bölüm 4.4 — Kayıt
+denetim: Bölüm 4.5 — Defter, Belge Tutma ve Arşivleme
+denetim: Bölüm 4.6 — Reklam ve İlan Süreci
+denetim: Bölüm 4.7 — Bilişim Sistemleri
+denetim: Bölüm 4.8 — Disiplin İş ve İşlemleri
+denetim: Bölüm 5.1 — Kursiyer Ücretleri
+denetim: Bölüm 5.2 — Ücretsiz Okutulacak Kursiyerler
+denetim: Bölüm 5.3 — Çalışma İşlemleri ve Ek Ders Görevi
+denetim: Bölüm 5.4 — Personelin Özlük Hakları, Sosyal Güvenlik ve Vergi İşlemleri
+denetim: Bölüm 6 — İl/ilçe millî eğitim müdürlüklerince yapılması gereken çalışmala
+denetim: Bölüm 6.1 — Eğitim-Öğretim Faaliyetlerine Yönelik Çalışmalar
+denetim: Bölüm 6.2 — Yönetim İş ve İşlemlerine Yönelik Çalışmalar
+denetim: Bölüm 6.3 — Mali İş ve İşlemlere Yönelik Çalışmalar
+denetim: Bölüm 7 — İzleme ve değerlendirme
+ucretsiz: Bölüm 1 — Genel hükümler
+ucretsiz: Bölüm 2 — Tanımlar ve kısaltmalar
+ucretsiz: Bölüm 4.A — MTSK ve iş makineleri kurslarına başvuru ve yerleştirme: başvuru
+ucretsiz: Bölüm 4.B — MTSK ve iş makineleri kurslarına başvuru ve yerleştirme: tercih 
+ucretsiz: Bölüm 4.C — MTSK ve iş makineleri kurslarına başvuru ve yerleştirme: yerleşt
+ucretsiz: Bölüm 6 — Taahhütname (18 yaşını dolduran kursiyer)
+saglik-sart: Madde 4 — Sürücü adaylarının ve sürücülerin sahip olmaları gereken sağlık 
+saglik-sart: Madde 5 — Göz muayenesine ilişkin esaslar
+saglik-sart: Madde 6 — İç hastalıkları muayenesine ilişkin esaslar
+saglik-sart: Madde 7 — Kulak-burun-boğaz muayenesine ilişkin esaslar
+saglik-sart: Madde 8 — Kas iskelet sistemi muayenesine ilişkin esaslar
+saglik-sart: Madde 9 — Ruh ve sinir hastalıkları muayenesine ilişkin esaslar
+saglik-sart: Madde 10 — Araçlarda bulundurulması gereken ilk yardım malzemeleri
+saglik-sart: Madde 11 — (1) Bu Yönetmelikte belirtilen hükümlere uymayan sürücüler, 2918
+saglik-sart: Madde 12 — Düzenleme yetkisi
+b-a1: Yazı — B sınıfı sürücü belgesi ile A1 sınıfı motosiklet kullanılması (2
+harc2026: Madde 3 — Harç miktarlarının hesaplanması
+harc2026: (9) Sayılı Tarife — Trafik harçları: sürücü belgesi ve vize harçları
+degerli-kagit: Madde 3 — Değerli kağıt bedelleri
+degerli-kagit: Madde 4 — Yürürlükten kaldırılan tebliğ
+nvi-sss: Sürücü belgesi randevusu nasıl alınır? — Sürücü belgesi randevuları, randevu.nvi.gov.tr internet adresi, 
+nvi-sss: Sürücü belgesi başvurusu nereye yapılır? — Sürücü belgesi başvuruları Genel Müdürlüğümüzce belirlenen 983 i
+nvi-sss: Sürücü belgesi harç, değerli kâğıt ve vakıf ücretleri nasıl öğrenebilirim? — https://randevu.nvi.gov.tr/pages/applicationprices web adresinde
+nvi-sss: Yeni tip sürücü belgesi ne zaman verilmeye başlandı? — Yeni tip sürücü belgesinin düzenlenmesine 01.01.2016 tarihi itib
+nvi-sss: Geçerlilik süresi biten yeni tip sürücü belgesi ile araç kullanıldığı takdirde kişiler ne gibi durumla karşılaşırlar? — 01.01.2016 tarihinde düzenlenen B sınıfı yeni tip sürücü belgesi
+nvi-sss: Sürücü belgesinin süresini uzatabilir miyim? — Sürücü belgelerinin süresi yenileme başvurusu yapılarak uzatılab
+nvi-sss: Kişisel bilgilerimde değişiklik olduğunda sürücü belgemi değiştirmeli miyim? — Ad, soyadı gibi kişisel bilgilerde değişiklik olması halinde değ
+nvi-sss: Sürücü Belgesi Başvurularında Randevu Saatinden Ne Kadar Önce Nüfus Müdürlüğünde Olmalıyım? Randevu Saatini Geçirenlerin Başvuruları Alınacak mı? — Randevu saatinizin 30 dakika öncesinden 60 dakika sonrasına kada
+nvi-sss: Sürücü Belgesinde Kullanılacak Fotoğraf Nasıl Olmalıdır? — Sürücü belgelerinde kullanılacak fotoğrafın kişinin son halini g
+nvi-sss: Sürücü Belgemi Teslim Aldığımda Nelere Dikkat Etmeliyim? — Sürücü belgesi teslim aldığında sürücü belgesi kimlik bilgileri,
+nvi-sss: Vekâletname İle Sürücü Belgesi başvurusu alınabilir mi? — Sürücü belgesi müracaatlarının bizzat şahsın kendisi tarafından 
+nvi-sss: Kimlik Belgesi Olmadan Sürücü Belgesi Başvurusu Yapılabilir mi? — Kişinin kimliğini ispata yarayan ve doğruluğu sorgulanabilen kim
+nvi-sss: Kaybolan ve çalınan sürücü belgelerinin yeniden başvurularında ücret ödeyecek miyim? — Sürücü belgeleri kayıp veya çalıntı durumunda yenileniyor olsa b
+nvi-sss: Parmak İzini Neden Alıyorsunuz? — Polis Vazife ve Salahiyetler Kanununun 5 inci maddesinin (b) ben
+nvi-sss: Otomatik vitesli araç kullanmak için sürücü belgem bulunmakta fakat manuel vitesli araç kullanmak için belge aldım. Ne yapmalıyım? — Sadece otomatik vitesli araç kullanmak üzere sürücü belgesi alan
+nvi-sss: Sürücü Belgeleri İçin Değerli Kâğıt Bedeli, Harç Bedeli ve Vakıf Payı Neye Göre Belirlenir/Nerelere Yatırılır? — Değerli Kağıt Bedeli ve harçlar her yıl için Hazine ve Maliye Ba
+nvi-sss: Aday Sürücülük Nedir? — 01.01.2016 tarihinden sonra ilk defa sürücü belgesi alanlar ile 
+nvi-sss: Hatalı Basılan Sürücü Belgeleri ve Bedel Tespiti Nedir? — Donanım, yazılım, baskı hatasından kaynaklanan ve kalite kontrol
+nvi-sss: Sürücü Belgesi Başvurumu sürücü sertifikamı aldığım il/ilçe dışında herhangi bir nüfus müdürlüğünden yapabilir miyim? — Sürücü belgesi başvuruları sürücü sertifikasının alındığı yere b
+nvi-sss: Sürücü Belgesi Başvuru Sırasında İstenilen Belgeler Nelerdir? — (1) İlk kayıt işlemlerinde ibraz edilecek ve/veya elektronik ort
+nvi-sss: Sürücü Belgesi Almak İçin Yaş Şartları Nelerdir? — • M, A1 ve B1 sınıfı sürücü belgesi alacakların 16,
+nvi-sss: Sürücü Belgesi Almak İçin Deneyim Şartlar Nelerdir? — • A sınıfı sürücü belgesi alacakların en az iki yıllık A2 sınıfı
+nvi-sss: Başvuru Yaptığım Sürücü Belgemin Hangi Aşamada Olduğunu Nasıl Öğrenebilirim? — Nüfus ve Vatandaşlık İşleri Genel Müdürlüğünün https://randevu.n
+nvi-sss: Sürücü Belgesi Almak İçin Öğrenim durumu Şartları Nelerdir? — En az ilköğretim eğitiminin tamamlanmış olması gerekmektedir.
+nvi-sss: Sürücü Belgesi Almak İçin Sağlık Şartları Nelerdir? — Kişilerin, 26.09.2006 tarihli ve 26301 sayılı Resmî Gazete’ de y
+nvi-sss: Sürücü Belgesi Sağlık Raporlarını Nereden Alabilirim? — Sağlık raporları, Sağlık Bakanlığınca yetkilendirilen sağlık kur
+nvi-sss: Sürücü Belgesi Almak İçin Sertifika Gerekli midir? — Sürücü sınavlarını başararak, motorlu taşıt sürücüsü sertifikası
+nvi-sss: Sürücü Belgesi Almak İçin Adli Sicil Kaydı Şartları Nelerdir? — Sürücü belgesi alacak kişilerin adli sicil kayıtlarında; 26.09.2
+nvi-sss: Geçerlilik Süresi Dolmadan Sürücü Belgesi Değiştirilir mi? — Geçerlilik süresi dolmadan kayıp/çalıntı, üzerinde yer alan kiml
+nvi-sss: Sürücü Belgeleri Geçerlilik Süreleri Kaç Yıldır? — • C1,C1E,C,CE,D1,D1E,D ve DE sınıfı sürücü belgeleri 5 yıl,
+nvi-sss: Gerçeğe Aykırı Beyanlar Hakkında Yapılacak İşlemler Nelerdir? — Sürücü belgesi başvurularında gerçeğe aykırı beyanda bulunduklar
+nvi-sss: Sürücü Belgesi Başvurusunda Bulundum. Belgem Bana Nasıl Ulaştırılacak? — Başvuruların değerlendirilmesi sonucunda herhangi bir sorun bulu
+nvi-sss: Sürücü Belgesi Sırasında Teslim Alacak Kişi Belirtmedim. Benim Dışımda Vekaletname Verdiğim Kişi Sürücü Belgemi Teslim Alabilir mi? — Sürücü belgesi başvuru ve teslimlerinde vekalet ile işlem yapılm
+nvi-sss: Düzenlenen Sürücü Belgesinin Gönderimi ile İlgili Her Hangi Bir Ücret Ödemem Gerekir mi? — PTT tarafından adrese gönderilen sürücü belgeleri için her hangi
+nvi-sss: Evde Bulunmadığımdan Sürücü Belgemin Nüfus Müdürlüğüne Geri İade Edildiğini Öğrendim. Ne Yapmalıyım? — Başvuru yaptığınız müdürlüğe veya başvuru sırasında belirttiğini
+nvi-sss: Sürücü Belgem Dağıtım Esnasında Kaybolursa Ne Yapmam Gerekir? — Sürücü belgesinin dağıtım sırasında kaybolduğuna ilişkin posta g
+nvi-sss: Yurtdışından Aldığım Sürücü Belgesi Türkiye’de Geçerli Midir? — 01.01.2016 tarihinden itibaren yurtdışından alınan sürücü belges
+nvi-sss: Türkiye’den Aldığım Sürücü Belgesi Yurtdışında da Geçerli Midir? — 01.01.2016 tarihinden itibaren düzenlenmeye başlayan yeni tip sü
+nvi-sss: Yurtdışında Yaşayan Vatandaşlar Sürücü Belgesi Müracaatında Konsolosluklara Başvuru Yapabilir mi? — Sürücü Belgesi başvuruları 15.02.2021 tarihinden itibaren yurtdı
+nvi-sss: Mavi Kart Sahibi Kişiler Ticari Araç Kullanabilir Mi? — Dış Ülkelerde Yaşayan Mavi Kart sahibi kişiler sahip oldukları s
+nvi-sss: Sertifika Süresi kaç yıl geçerlidir? — 09.07.2022 ve sonrasında alınan Sürücü Sertifikalarında süre sın
+nvi-sss: Sürücü Sağlık raporları kaç yıl geçerlidir? — Sağlık Raporları Usul ve Esasları Hakkında Yönergenin 42. maddes
+nvi-sss: Yapılan değişiklik gereğince B sınıfı sürücü belgesi olan kişiler A1 sertifikası ile kullanılan motosikletleri hangi şartlarda kullanabilirler ve A1 sertifikalarını sürücü belgesine eklettirmek isteyenlerin ücret ödemeleri gerekmekte midir? — Karayolları Trafik Yönetmeliğinin 85 inci maddesine ‘’B sınıfı s
+nvi-sss: Eski tip sürücü belgesi değiştirilmediği takdirde kişiler ne gibi durumla karşılaşırlar? — Kasım 2025 tarihi itibarıyla eski tip sürücü belgeleri geçerlili
+nvi-sss: Yabancı ülkelerden alınan sürücü belgesinin ülkemiz sürücü belgesine dönüştürme (tebdil) işleminden sonra sürücü belgesine nasıl bir işlem yapılmaktadır? — Ülkemiz sürücü belgesi ile değiştirilen dış ülkelerden alınmış s
+nvi-ucret: Sürücü belgesi bedelleri — 2026 yılı harç ve hizmet bedelleri
+prg-dir-mab1: — M, A1, A2, A ve B1 Direksiyon Programı
+prg-dir-c: — C1 ve C Direksiyon Programı
+prg-dir-romork: — Römorklu Araçlar (BE, C1E, CE, D1E ve DE) Direksiyon Programı
+prg-dir-f: — F Direksiyon Programı
+k5326: Madde 17 — İdarî para cezası
+k5326: Madde 27 — Başvuru yolu
+k4857: Madde 53 — Yıllık ücretli izin hakkı ve izin süreleri
+k4857: Madde 54 — Yıllık ücretli izne hak kazanma ve izni kullanma dönemi
+k4857: Madde 55 — Aşağıdaki süreler yıllık ücretli izin hakkının hesabında çalışıl
+k4857: Madde 56 — Yıllık ücretli iznin uygulanması
+k4857: Madde 57 — Yıllık izin ücreti
+k4857: Madde 58 — İzinde çalışma yasağı
+k4857: Madde 59 — Sözleşmenin sona ermesinde izin ücreti
+k4857: Madde 60 — İzinlere ilişkin düzenlemeler
+kty-2015: — KTY değişikliği RG 17/4/2015
