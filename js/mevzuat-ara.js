@@ -6,7 +6,7 @@
    3) Anlam: sorgu vektörü (worker /mevzuat/gom, dışarıdan verilen gom() ile) × N×D int8 vektörler (nokta çarpımı).
    Kelime ve anlam listeleri RRF (k=60) ile birleşir; aynı maddenin sonraki parçaları geriye kayar (çeşitlilik). gom() yoksa ya da hata verirse yalnız kelime araması döner, anlamKapali: true. */
 
-const SURUM = '?v=222';
+const SURUM = '?v=223';
 const RRF_K = 60, LISTE_N = 60;
 const KELIME_AG = 1, ANLAM_AG = 1;  // RRF ağırlıkları; k 10/30/100 ve ağırlık 0,8–1,5 denendi, fark en çok 1 soru
 const BM25_K1 = 1.2, BM25_B = 0.75;
@@ -451,7 +451,7 @@ export function kisaCevapSec(l, sorguKok, sorgu = '', { bakilan = KISA.bakilan, 
 // Eski worker yalnız { cevap } döndürürse düz metin gösterilir.
 export function cevapNormalle(j) {
   j = j || {};
-  const liste = l => (Array.isArray(l) ? l : []).filter(x => x && typeof x.metin === 'string' && x.metin.trim()).map(x => ({ metin: x.metin.trim(), kaynak: (Array.isArray(x.kaynak) ? x.kaynak : []).map(Number).filter(Number.isInteger) }));
+  const liste = l => (Array.isArray(l) ? l : []).filter(x => x && typeof x.metin === 'string' && x.metin.trim()).map(x => ({ metin: x.metin.trim(), kaynak: (Array.isArray(x.kaynak) ? x.kaynak : []).map(Number).filter(Number.isInteger), ...(typeof x.soru === 'string' && x.soru.trim() ? { soru: x.soru.trim() } : {}) }));
   if (typeof j.kisa === 'string' && (j.kisa.trim() || j.bulunamadi)) return { kisa: j.kisa.trim() || 'Bu maddelerde sorunuzun cevabı bulunamadı.', ayrinti: liste(j.ayrinti), adimlar: liste(j.adimlar), dikkat: typeof j.dikkat === 'string' ? j.dikkat.trim() : '', eksik: typeof j.eksik === 'string' ? j.eksik.trim() : '', bulunamadi: j.bulunamadi === true, duz: j.duz === true };
   const t = String(j.cevap || '').trim();
   return { kisa: t || 'Bu maddelerde sorunuzun cevabı bulunamadı.', ayrinti: [], adimlar: [], dikkat: '', eksik: '', bulunamadi: !t, duz: true };
@@ -459,7 +459,7 @@ export function cevapNormalle(j) {
 // kopyalanan düz metin: cevap + kaynak listesi
 export function cevapDuzMetin(y, etiketler = []) {
   const at = l => (l || []).map(n => '[' + n + ']').join('');
-  return [y.kisa, y.ayrinti.length ? 'Ayrıntılar:\n' + y.ayrinti.map(x => '- ' + x.metin + (x.kaynak.length ? ' ' + at(x.kaynak) : '')).join('\n') : '',
+  return [y.kisa, y.ayrinti.length ? 'Ayrıntılar:\n' + y.ayrinti.map(x => '- ' + (x.soru ? x.soru + ' ' : '') + x.metin + (x.kaynak.length ? ' ' + at(x.kaynak) : '')).join('\n') : '',
     y.adimlar.length ? 'Yapılacaklar:\n' + y.adimlar.map((x, i) => (i + 1) + '. ' + x.metin + (x.kaynak.length ? ' ' + at(x.kaynak) : '')).join('\n') : '',
     y.dikkat ? 'Dikkat: ' + y.dikkat : '', y.eksik ? 'Kaynaklarda yok: ' + y.eksik : '', etiketler.length ? 'Kaynaklar:\n' + etiketler.map((x, i) => '[' + (i + 1) + '] ' + x).join('\n') : '',
     'Cevap yalnız bu maddelere dayanır; kesin karar için il milli eğitim müdürlüğüne danışın.'].filter(Boolean).join('\n\n');

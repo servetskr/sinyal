@@ -26,3 +26,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://mdsinyal.com/sitemap.xml
+Sitemap: https://mdsinyal.com/rehber/sitemap.xml

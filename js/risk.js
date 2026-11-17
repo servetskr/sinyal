@@ -1,5 +1,5 @@
-import { S, gun, fark, SINIFLAR, egitmen, kapaliGun, dersAraci, risk, kursAdi } from './veri.js?v=222';
-import { gerekliDireksiyon, kuralAyar, geceKisitli, geceDersMi } from './veri.js?v=222';
+import { S, gun, fark, SINIFLAR, egitmen, kapaliGun, dersAraci, risk, kursAdi } from './veri.js?v=223';
+import { gerekliDireksiyon, kuralAyar, geceKisitli, geceDersMi } from './veri.js?v=223';
 
 // B Engelli adayı kendi (raporuna uygun) aracıyla eğitim alıyorsa (MTSK Yön. md.7/5) ders kurs aracı olmadan planlanır (arac: null, "kendi aracı")
 export const kendiAracli = k => !!k && k.sinif === 'B-EN' && !!k.kendiArac;

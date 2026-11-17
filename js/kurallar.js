@@ -5,7 +5,7 @@
 // 'uyari', 'bilgi'. Dizinin üstünde ek alanlar: kural (kimlik), kursiyer (id), kursiyerler (birden çok kişiye ait oturum bulgusunda kimlik listesi, ör. Y04), kisa (öğrenci dosyasında ad olmadan başlık), yalnizDosya, eylem.
 // DOM yok; yalnız veri.js'e bağlı (Node'da denenebilir). Bugün: veri.js BUGUN / gun().
 // Yeni kurallar ilk sürümde yalnız "uyarı"dır; Eyüp Bey teyit edince engele çevrilebilir (belgeler/eksikler/eyup-sorular.md).
-import { S, gun, fark, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket } from './veri.js?v=222';
+import { S, gun, fark, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket } from './veri.js?v=223';
 
 /* ---------- yardımcılar (ui.js'teki biçimlerle aynı; ui.js DOM'a bağlı olduğu için burada kopyası) ---------- */
 const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];

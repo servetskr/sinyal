@@ -2,11 +2,11 @@
    Arama motoru js/mevzuat-ara.js: ortak derlem (veri/mevzuat) + kursa gelen yazılar (worker /mevzuat/*).
    Anlam araması için sorgu vektörü worker'dan gelir (/mevzuat/gom); ulaşılamazsa yalnız kelimeyle aranır.
    Yerel denemede (localhost) worker'a istek gitmez; yerel worker için localStorage 'sinyal-mevzuat-api' = 'http://127.0.0.1:8787'. */
-import { S, oturum, bulutKanca } from './veri.js?v=222';
-import { e, ik, rozet, bos, pencere, kapatPencere, bildir, ekranNotu, isaret, tamTarih, ilerleme } from './ui.js?v=222';
-import { WORKER } from './bulut.js?v=222';
-import { motor, yukle, yuklendi, base64Int8, kokler, alinti, FILTRELER, ETIKET_RE, etiketCoz, etiketBul, resmiDegil, kisaCevapSec, cevapNormalle, cevapDuzMetin } from './mevzuat-ara.js?v=222';
-import { kavramYukle, asistanAra, asistanKaynak, asistanSoru } from './mevzuat-anla.js?v=222';
+import { S, oturum, bulutKanca } from './veri.js?v=223';
+import { e, ik, rozet, bos, pencere, kapatPencere, bildir, ekranNotu, isaret, tamTarih, ilerleme } from './ui.js?v=223';
+import { WORKER } from './bulut.js?v=223';
+import { motor, yukle, yuklendi, base64Int8, kokler, alinti, FILTRELER, ETIKET_RE, etiketCoz, etiketBul, resmiDegil, kisaCevapSec, cevapNormalle, cevapDuzMetin } from './mevzuat-ara.js?v=223';
+import { kavramYukle, asistanAra, asistanKaynak, asistanSoru } from './mevzuat-anla.js?v=223';
 
 const TUR_AD = { yonetmelik: 'Yönetmelik', kanun: 'Kanun', yonerge: 'Yönerge', teblig: 'Tebliğ', kilavuz: 'Kılavuz', program: 'Ders programı', yazi: 'MEB yazısı', form: 'Form',
   'rehber-resmi': 'Denetim rehberi', bilgilendirme: 'Resmî bilgilendirme', rehber: 'mdSinyal rehberi (resmî metin değil)', sss: 'mdSinyal sık sorulanlar (resmî metin değil)' };
@@ -131,6 +131,7 @@ function baglan(k) {
   const form = k.querySelector('[data-mz-form]'), inp = form.q;
   // gönderince asistan cevaplar (yapay zekâ); yazarken yalnız sonuçlar tazelenir
   form.addEventListener('submit', ev => { ev.preventDefault(); clearTimeout(zamanlayici); inp.blur(); aramaYap(k, inp.value, true, true); });
+  k.addEventListener('submit', ev => { const f = ev.target.closest('[data-mz-geri-form]'); if (!f) return; ev.preventDefault(); geriGonder(k, false, f.not.value.trim().slice(0, 300)); });
   // yazarken yalnız kelime araması (anında), durunca anlamla birlikte
   inp.addEventListener('input', () => {
     clearTimeout(zamanlayici);
@@ -147,6 +148,7 @@ function baglan(k) {
     if (t.closest('[data-mz-daha]')) { durum.goster += 15; return sonucCiz(k); }
     if (t.closest('[data-mz-sor]')) return asistanSor(k);
     if (t.closest('[data-mz-kopyala]')) return cevapKopyala();
+    const gb = t.closest('[data-mz-geri]'); if (gb) { if (gb.dataset.mzGeri === 'evet') return geriGonder(k, true); durum.cevap.geri = 'hayir'; sonucCiz(k); const n = k.querySelector('#mz-geri-not'); if (n) n.focus(); return; }
     const g = t.closest('[data-mz-git]');
     if (g) { const n = +g.dataset.mzGit; if (n > durum.goster) { durum.goster = n; sonucCiz(k); } const c = k.querySelector(`[data-mz-kart="${n - 1}"]`); if (c) { c.scrollIntoView({ behavior: 'smooth', block: 'center' }); c.classList.remove('mz-parla'); void c.offsetWidth; c.classList.add('mz-parla'); } return; }
     if (t.closest('[data-mz-tekrar]')) { durum.yukHata = ''; return ilkYukleme(k); }
@@ -180,12 +182,17 @@ async function ilkYukleme(k) {
 }
 
 let aramaNo = 0;
+// Son sorular (yalnız bu cihazda, en çok 6; gizli pencerede ya da depolama kapalıysa tutulmaz)
+const SON_ANAHTAR = 'sinyal-mevzuat-son';
+const sonSorular = () => { try { const l = JSON.parse(localStorage.getItem(SON_ANAHTAR) || '[]'); return Array.isArray(l) ? l.filter(x => typeof x === 'string').slice(0, 6) : []; } catch (x) { return []; } };
+const sonaEkle = q => { try { localStorage.setItem(SON_ANAHTAR, JSON.stringify([q, ...sonSorular().filter(x => x !== q)].slice(0, 6))); } catch (x) { } };
 async function aramaYap(k, q, anlam, sor = false) {
   q = String(q || '').trim().slice(0, 300);
   if (q !== durum.q) durum.cevap = null;
   durum.q = q; hashYaz(q); durum.goster = 15;
   if (!yuklendi()) return;
   if (!q) { durum.son = null; return sonucCiz(k); }
+  if (sor) sonaEkle(q);
   const no = ++aramaNo;
   // asistan araması: soru + kavramın resmî terimli araması + kavramın dayanak maddeleri + sınıf geçişi tablosu (js/mevzuat-anla.js)
   const r = await asistanAra(motor, q, { filtre: durum.filtre, n: 40, gom: anlam ? gom : null, kh: durum.kh });
@@ -215,7 +222,8 @@ async function resimKucult(dosya) {
 function sonucCiz(k) {
   const yer = k.querySelector('[data-mz-sonuc]'); if (!yer) return;
   if (!durum.q) {
-    yer.innerHTML = `<div class="mz-ornekler"><span>Örnek sorular:</span>${ORNEKLER.map(o => `<button type="button" class="mz-ornek" data-mz-ornek="${e(o)}">${e(o)}</button>`).join('')}</div>${konuHaritasi()}`;
+    const son = sonSorular();
+    yer.innerHTML = `${son.length ? `<div class="mz-ornekler"><span>Son sorularınız:</span>${son.map(o => `<button type="button" class="mz-ornek mz-son" data-mz-ornek="${e(o)}">${e(o)}</button>`).join('')}</div>` : ''}<div class="mz-ornekler"><span>Örnek sorular:</span>${ORNEKLER.map(o => `<button type="button" class="mz-ornek" data-mz-ornek="${e(o)}">${e(o)}</button>`).join('')}</div>${konuHaritasi()}`;
     return;
   }
   if (!durum.son) { yer.innerHTML = `<div class="kart mz-bekle">${isaret('bilgi', 22)}<span>Aranıyor…</span></div>`; return; }
@@ -285,7 +293,9 @@ function cevapGovde(c) {
   if (y.duz) return `<div class="mz-cevap-metin">${paragraf(y.kisa).replace(/\[(\d{1,2})\]/g, (x, n) => atifDugme(c, +n) || x)}</div>`;
   return `<div class="mz-cevap-yap">
     <p class="mz-cevap-kisa${y.bulunamadi ? ' yok' : ''}">${atifliHtml(y.kisa, c)}</p>
-    ${y.ayrinti.length ? `<h4 class="mz-ara-baslik">Ayrıntılar</h4><ul class="mz-cevap-ayrinti">${y.ayrinti.map(x => `<li><span>${atifliHtml(x.metin, c)}</span>${cipler(c, x.kaynak)}</li>`).join('')}</ul>` : ''}
+    ${y.ayrinti.length ? (y.ayrinti.some(x => x.soru)
+      ? `<dl class="mz-cevap-sorular">${y.ayrinti.map(x => `<div>${x.soru ? `<dt>${e(x.soru)}</dt>` : ''}<dd><span>${atifliHtml(x.metin, c)}</span>${cipler(c, x.kaynak)}</dd></div>`).join('')}</dl>`
+      : `<h4 class="mz-ara-baslik">Ayrıntılar</h4><ul class="mz-cevap-ayrinti">${y.ayrinti.map(x => `<li><span>${atifliHtml(x.metin, c)}</span>${cipler(c, x.kaynak)}</li>`).join('')}</ul>`) : ''}
     ${y.adimlar.length ? `<h4 class="mz-ara-baslik">Adım adım</h4><ol class="mz-cevap-adim">${y.adimlar.map(x => `<li><span>${atifliHtml(x.metin, c)}</span>${cipler(c, x.kaynak)}</li>`).join('')}</ol>` : ''}
     ${y.dikkat ? `<p class="mz-uyari-not">${atifliHtml(y.dikkat, c)}</p>` : ''}
     ${y.eksik ? `<p class="mz-eksik"><b>Kaynaklarda yok:</b> ${atifliHtml(y.eksik, c)}</p>` : ''}
@@ -312,7 +322,8 @@ function asistanKutusu(r, l) {
     govde = `<ol class="mz-adimlar" aria-live="polite">${sira.map((x, i) => `<li class="${i < n ? 'bitti' : i === n ? 'simdi' : ''}">${e(ASAMA_AD[x])}${x === 'cevap' && c.n ? ` <small>(${c.n} madde)</small>` : ''}</li>`).join('')}</ol>`;
   } else if (c && c.hata) govde = `<p class="mz-cevap-hata">${e(c.hata)}</p>`;
   else if (c && c.yanit) govde = `${cevapGovde(c)}
-    <div class="mz-cevap-alt"><p class="mz-cevap-not">Cevap yalnız köşeli parantezdeki maddelere dayanır; kesin karar için il milli eğitim müdürlüğüne danışın.</p><button type="button" class="dg dg-cizgi dg-kucuk" data-mz-kopyala>Kopyala</button></div>`;
+    <div class="mz-cevap-alt"><p class="mz-cevap-not">Cevap yalnız köşeli parantezdeki maddelere dayanır; kesin karar için il milli eğitim müdürlüğüne danışın.</p><div class="mz-cevap-dg"><button type="button" class="dg dg-cizgi dg-kucuk" data-mz-kopyala>Kopyala</button><a class="dg dg-cizgi dg-kucuk" href="${e(paylasUrl(c))}" target="_blank" rel="noopener">${ik('wp')}Paylaş</a></div></div>
+    ${geriBildirim(c)}`;
   else if (pasif) govde = `<p class="mz-cevap-not mz-pasif">${e(pasif)}</p>`;
   const dugme = !pasif && !(c && c.bekliyor) ? `<button type="button" class="dg dg-cizgi dg-kucuk" data-mz-sor>${c && (c.yanit || c.hata) ? 'Yeniden sor' : 'Cevapla'}</button>` : '';
   return `<section class="mz-asistan${c && c.yanit ? ' dolu' : ''}${c && c.bekliyor ? ' calisiyor' : ''}" aria-label="Asistanın cevabı">
@@ -321,8 +332,11 @@ function asistanKutusu(r, l) {
     ${hizliBilgi(r)}
     ${govde}
     ${c && (c.yanit || c.bekliyor) ? '' : kisaCevap(l, r)}
+    ${ilgiliSorular(l)}
   </section>`;
 }
+// WhatsApp'ta paylaş: kişi seçimi WhatsApp'ta yapılır; metin mevzuat dilinde kalır (sadeDil uygulanmaz), 3.500 karakterde kesilir
+const paylasUrl = c => { let t = 'Soru: ' + c.q + '\n\n' + cevapDuzMetin(c.yanit, c.etiketler) + '\n\nmdSinyal mevzuat asistanı'; if (t.length > 3500) t = t.slice(0, 3490) + '…'; return 'https://wa.me/?text=' + encodeURIComponent(t); };
 function cevapKopyala() {
   const c = durum.cevap; if (!c || !c.yanit) return;
   const t = cevapDuzMetin(c.yanit, c.etiketler);
@@ -345,11 +359,32 @@ async function asistanSor(k) {
   const kaynaklar = secilen.map(x => ({ etiket: x.etiket, t: x.t, ...(x.resmi === false ? { resmi: false } : {}) }));
   Object.assign(c, { asama: 'cevap', n: kaynaklar.length, harita: secilen.map(x => (x.i >= 0 ? x.i + 1 : { sira: x.sira })), etiketler: kaynaklar.map(x => x.etiket) });
   sonucCiz(k);
-  try { c.yanit = cevapNormalle(await api('/mevzuat/cevapla', { method: 'POST', govde: { soru: asistanSoru(q, r), kaynaklar }, sure: 50000 })); bitir(); }
+  // geçici hata (502, ağ kopması, zaman aşımı) bir kez yeniden denenir; 429/503/4xx denenmez
+  const sor = () => api('/mevzuat/cevapla', { method: 'POST', govde: { soru: asistanSoru(q, r), kaynaklar }, sure: 50000 });
+  try { let j; try { j = await sor(); } catch (x) { if (!(x.durum >= 500 && x.durum !== 503) && x.durum) throw x; if (x.kapali) throw x; await new Promise(z => setTimeout(z, 1500)); if (!guncel()) return; j = await sor(); } c.yanit = cevapNormalle(j); bitir(); }
   catch (x) {
     if (x.durum === 503 || x.kurulu === false) { durum.llmYok = true; return bitir('Yapay zekâ henüz bağlı değil; aşağıdaki maddelerden okuyabilirsiniz.'); }
     bitir(x.kapali ? 'Yerel denemede yapay zekâ servisi kapalı.' : x.durum === 429 && x.kullanici ? x.kullanici : 'Cevap alınamadı; biraz sonra yeniden deneyin.');
   }
+}
+
+// Geri bildirim: "işinize yaradı mı?" (personel; soru, cevap ve kaynak etiketleri mdSinyal'e iletilir, TC/telefon worker'da silinir)
+function geriBildirim(c) {
+  if (c.geri === 'gitti') return `<p class="mz-geri-tamam">${ik('tik')}Teşekkürler, iletildi.</p>`;
+  if (c.geri === 'hayir') return `<form class="mz-geri" data-mz-geri-form><label for="mz-geri-not">Ne eksik ya da yanlış? (isteğe bağlı)</label><textarea id="mz-geri-not" name="not" rows="2" maxlength="300" placeholder="Ör. il MEM 2 saat değil 4 saat istiyor"></textarea><div class="mz-geri-alt"><small>Sorunuz ve cevap, iyileştirme için mdSinyal'e iletilir. Kişisel bilgi yazmayın.</small><button type="submit" class="dg dg-ana dg-kucuk">Gönder</button></div></form>`;
+  return `<div class="mz-geri"><span>Bu cevap işinize yaradı mı?</span><button type="button" class="dg dg-cizgi dg-kucuk" data-mz-geri="evet">${ik('tik')}Evet</button><button type="button" class="dg dg-cizgi dg-kucuk" data-mz-geri="hayir">Eksik ya da yanlış</button></div>`;
+}
+async function geriGonder(k, iyi, not = '') {
+  const c = durum.cevap; if (!c || !c.yanit || c.geri === 'gitti') return;
+  c.geri = 'gitti'; sonucCiz(k);
+  try { await api('/mevzuat/geri', { method: 'POST', govde: { soru: c.q, iyi, not, kaynaklar: c.etiketler || [], cevap: c.yanit.kisa } }); }
+  catch (x) { /* geri bildirim kaybolursa kullanıcıyı yormayız */ }
+}
+// İlgili sorular: sonuçlardaki sık sorulanlardan (gösterilen hazır cevap dışında) en çok 4; dokununca o soru sorulur
+function ilgiliSorular(l) {
+  const gor = new Set(), q = durum.q.toLocaleLowerCase('tr-TR');
+  const s = l.filter(x => x.parca.sss && x.kaynak === 'ortak').map(x => x.parca.m).filter(m => m && m.toLocaleLowerCase('tr-TR') !== q && !gor.has(m) && gor.add(m)).slice(0, 4);
+  return s.length ? `<div class="mz-ilgili-sorular"><span>İlgili sorular</span>${s.map(m => `<button type="button" class="mz-ornek" data-mz-ornek="${e(m)}">${e(m)}</button>`).join('')}</div>` : '';
 }
 
 /* ---------- konu haritası ---------- */
