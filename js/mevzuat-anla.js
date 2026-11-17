@@ -6,7 +6,7 @@
    - Atıf takibi: seçilen maddelerin içinde geçen "39 uncu madde", "Karayolları Trafik Yönetmeliğinin 85 inci maddesi" gibi atıflar
      yapay zekâya giden kaynaklara eklenir (çok adımlı kanıt).
    Ölçüm: sinyal-kaynak arac/mevzuat/olc-asistan.mjs (soru-seti-2 ve bağımsız soru-seti-3). */
-import { sadele, kokler, dengele, resmiDegil, kaynakSec, KAYNAK } from './mevzuat-ara.js?v=218';
+import { sadele, kokler, dengele, resmiDegil, kaynakSec, KAYNAK } from './mevzuat-ara.js?v=219';
 
 /* ---------- kavramlar ---------- */
 // kavram.json → derlenmiş kalıplar (bir kez)
@@ -199,6 +199,13 @@ let kavramYukleniyor = null;
 // veri/mevzuat/kavram.json: ilk kullanımda indirilir; inmezse asistan kavramsız (yalnız arama ve yapay zekâ) çalışır
 export function kavramYukle({ getir = (u) => fetch(u), kok = new URL('../veri/mevzuat/', import.meta.url).href } = {}) {
   if (kavramYukleniyor) return kavramYukleniyor;
-  kavramYukleniyor = getir(kok + 'kavram.json?v=218').then(r => (r.ok ? r.json() : null)).then(kavramKur).catch(() => null);
+  kavramYukleniyor = getir(kok + 'kavram.json?v=219').then(r => (r.ok ? r.json() : null)).then(kavramKur).catch(() => null);
   return kavramYukleniyor;
+}
+
+// Yapay zekâya giden soru: sınıf geçişi algılandıysa yorum farkı olmasın diye açık not eklenir ("A'dan B'ye" genel bir kalıp sanılmasın)
+export function asistanSoru(soru, r) {
+  const g = r && r.gecis;
+  if (!g) return soru;
+  return (soru + `\n(Not: soruda ${g.mevcut} sınıfı sürücü belgesi olan kişinin ${g.hedef} sınıfı sertifika almak istemesi soruluyor${g.eski ? '; belge eski tip' : ''}.)`).slice(0, 400);
 }

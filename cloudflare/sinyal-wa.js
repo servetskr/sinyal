@@ -482,6 +482,8 @@ const MV_CEVAP_ISTEM = 'Sürücü kursu personelinin (kurs müdürü, ön büro,
   '- Sayı, süre, tutar, yaş, saat, tarih ve oranları kaynaktaki gibi birebir yaz; yuvarlama, toplama, hesaplama yapma.\n' +
   '- Her ayrıntı ve adımda dayandığın kaynağın numarasını "kaynak" dizisine yaz (ör. [1] ya da [2,3]). Yalnız verilen numaraları kullan; kaynağı olmayan cümle yazma.\n' +
   '- Soru birden çok şey soruyorsa (ör. kaç saat ders, sınava girer mi, yaş şartı) her birini ayrı ayrıntı olarak cevapla.\n' +
+  '- Bir şeyin kaynaklarda olmadığını söylemeden önce bütün kaynakları baştan sona oku; sorulan süre, gün, saat, yaş, tutar, belge ya da şart herhangi bir kaynakta geçiyorsa mutlaka yaz.\n' +
+  '- Soruda "(Not: …)" varsa soruyu o açıklamaya göre anla.\n' +
   '- Soru bir işin nasıl yapılacağını soruyorsa "adimlar" alanına sırasıyla yaz (kim, ne zaman, hangi süre içinde). Değilse "adimlar" boş kalır.\n' +
   '- Cevabın bir kısmı kaynaklarda yoksa o kısmı uydurma: "eksik" alanına neyin bulunamadığını ve bakılacak resmî yeri yaz (il/ilçe millî eğitim müdürlüğü, ÖÖKGM, nüfus müdürlüğü, Resmî Gazete gibi).\n' +
   '- Kaynaklarda cevap hiç yoksa "bulunamadi": true ver, "kisa" alanına "Verilen kaynaklarda bu sorunun cevabı yok." yaz, "eksik" alanına bakılacak resmî yeri yaz; diğer alanlar boş kalır.\n' +

@@ -4,8 +4,8 @@
 // Sayaçlar cihazda (localStorage) birikir; gün değişince önceki günün özeti bir kez yazılır: kurslar/{kurs}/kullanim/{gün}_{cihaz}
 // (cihaz başına günde 1 yazım; Firebase ücretsiz plan kotasının çok altında). Yazılamayan özetler en çok 14 gün cihazda bekler.
 // Özet hangi kursta biriktiyse yalnız o kursa yazılır. Kurs müdürü Ayarlar › Veri ve e-posta'dan kapatabilir.
-import { S, oturum, bulutKanca } from './veri.js?v=218';
-import { bildirKanca } from './ui.js?v=218';
+import { S, oturum, bulutKanca } from './veri.js?v=219';
+import { bildirKanca } from './ui.js?v=219';
 
 const ANAHTAR = 'sinyal-kullanim', BEKLEYEN = 'sinyal-kullanim-bekleyen';
 const SEKMELI = new Set(['ayarlar', 'meb', 'kasa', 'filo', 'mesajlar', 'sinavlar', 'sosyal', 'raporlar', 'yonetim', 'sahip']);

@@ -2,11 +2,11 @@
    Arama motoru js/mevzuat-ara.js: ortak derlem (veri/mevzuat) + kursa gelen yazılar (worker /mevzuat/*).
    Anlam araması için sorgu vektörü worker'dan gelir (/mevzuat/gom); ulaşılamazsa yalnız kelimeyle aranır.
    Yerel denemede (localhost) worker'a istek gitmez; yerel worker için localStorage 'sinyal-mevzuat-api' = 'http://127.0.0.1:8787'. */
-import { S, oturum, bulutKanca } from './veri.js?v=218';
-import { e, ik, rozet, bos, pencere, kapatPencere, bildir, ekranNotu, isaret, tamTarih, ilerleme } from './ui.js?v=218';
-import { WORKER } from './bulut.js?v=218';
-import { motor, yukle, yuklendi, base64Int8, kokler, alinti, FILTRELER, ETIKET_RE, etiketCoz, etiketBul, resmiDegil, kisaCevapSec, cevapNormalle, cevapDuzMetin } from './mevzuat-ara.js?v=218';
-import { kavramYukle, asistanAra, asistanKaynak } from './mevzuat-anla.js?v=218';
+import { S, oturum, bulutKanca } from './veri.js?v=219';
+import { e, ik, rozet, bos, pencere, kapatPencere, bildir, ekranNotu, isaret, tamTarih, ilerleme } from './ui.js?v=219';
+import { WORKER } from './bulut.js?v=219';
+import { motor, yukle, yuklendi, base64Int8, kokler, alinti, FILTRELER, ETIKET_RE, etiketCoz, etiketBul, resmiDegil, kisaCevapSec, cevapNormalle, cevapDuzMetin } from './mevzuat-ara.js?v=219';
+import { kavramYukle, asistanAra, asistanKaynak, asistanSoru } from './mevzuat-anla.js?v=219';
 
 const TUR_AD = { yonetmelik: 'Yönetmelik', kanun: 'Kanun', yonerge: 'Yönerge', teblig: 'Tebliğ', kilavuz: 'Kılavuz', program: 'Ders programı', yazi: 'MEB yazısı', form: 'Form',
   'rehber-resmi': 'Denetim rehberi', bilgilendirme: 'Resmî bilgilendirme', rehber: 'mdSinyal rehberi (resmî metin değil)', sss: 'mdSinyal sık sorulanlar (resmî metin değil)' };
@@ -345,7 +345,7 @@ async function asistanSor(k) {
   const kaynaklar = secilen.map(x => ({ etiket: x.etiket, t: x.t, ...(x.resmi === false ? { resmi: false } : {}) }));
   Object.assign(c, { asama: 'cevap', n: kaynaklar.length, harita: secilen.map(x => (x.i >= 0 ? x.i + 1 : { sira: x.sira })), etiketler: kaynaklar.map(x => x.etiket) });
   sonucCiz(k);
-  try { c.yanit = cevapNormalle(await api('/mevzuat/cevapla', { method: 'POST', govde: { soru: q, kaynaklar }, sure: 50000 })); bitir(); }
+  try { c.yanit = cevapNormalle(await api('/mevzuat/cevapla', { method: 'POST', govde: { soru: asistanSoru(q, r), kaynaklar }, sure: 50000 })); bitir(); }
   catch (x) {
     if (x.durum === 503 || x.kurulu === false) { durum.llmYok = true; return bitir('Yapay zekâ henüz bağlı değil; aşağıdaki maddelerden okuyabilirsiniz.'); }
     bitir(x.kapali ? 'Yerel denemede yapay zekâ servisi kapalı.' : x.durum === 429 && x.kullanici ? x.kullanici : 'Cevap alınamadı; biraz sonra yeniden deneyin.');
