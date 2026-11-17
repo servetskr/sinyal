@@ -1,5 +1,6 @@
 // mdSinyal → WhatsApp Cloud API köprüsü + kısa link deposu (Cloudflare Worker)
 // Ortam: WA_TOKEN (gizli), PHONE_ID, ALICI; KV bağlaması LINK (kısa linkler 60 gün + gelen mesajlar)
+// Link düzeni (sinyal-kaynak/belgeler/link-standardi.md): kısa kodlar mdsinyal.com/<kod>, /d/<kod> davet, /i/<kod> imza; site 404.html'i GET /k/<kod> ile çözer
 // SABLON_AD (isteğe bağlı, ör. sinyal_bildirim) + SABLON_DIL (varsayılan tr): kişi son 24 saatte yazmadıysa (Meta 131047) mesaj bu onaylı
 // şablonla, tek değişkene ({{1}}) konarak tekrar denenir. Kursun kendi hattında şablon adı hat kaydındaki 'sablon' alanından da gelebilir.
 // /webhook: Meta'dan gelen WhatsApp mesajları → kurs asistanı cevaplar, mesaj mdSinyal'in gelen kutusuna (KV 'gelen') yazılır
@@ -12,20 +13,21 @@
 //   günlüğe bir kez uyarı yazılır. VERIFY_TOKEN (isteğe bağlı) abonelik belirtecini koddan çıkarır; yoksa eski sabit kullanılır.
 // /hata: uygulama hatalarının kişisel veri içermeyen kısa kaydı (POST, sitenin kendi adresinden); KV 'hata:<gün>:<iz>' 7 gün.
 //   GET /hata yalnız platform sahibine: Firebase oturum belirteci (sahip uid) ya da SAHIP_ANAHTAR (gizli) ile.
+// /eposta: kursun rapor ve yedek e-postaları (onaylı adreslere); /eposta/sahip platform sahibinin analiz e-postası. Ayrıntı eposta() üstünde.
 const IZINLI = ['https://mdsinyal.com', 'http://localhost:4481', 'http://127.0.0.1:4481'];
 const HEDEF = /^(https:\/\/mdsinyal\.com\/|https:\/\/servetskr\.github\.io\/sinyal\/|http:\/\/localhost:4481\/)/;
 const kucuk = s => String(s || '').toLocaleLowerCase('tr');
 const ASISTAN = [
   [/süre|sure|kaç gün|kac gun|kaç ay|kac ay|kaç hafta|kac hafta|ne kadar sür|ne zaman biter|bitiyor/, 'Kurs yaklaşık 6–8 hafta sürüyor: önce 34 saat teorik ders ve e-sınav, ardından 14 direksiyon dersi ve direksiyon sınavı. Akşam grubuyla çalışırken de rahatça bitirebilirsiniz.', 'Kurs süresi'],
-  [/otomatik/, 'B otomatik kurs ücretimiz 26.500 TL. Peşinattan sonra kalanı 5 aya kadar taksitle ödeyebilirsiniz. Kayıt için evden başvurabilirsiniz: https://mdsinyal.com/#/kayit', 'Fiyat · B otomatik'],
-  [/manuel|b sınıf|b sinif|\bb\b|araba|otomobil/, 'B manuel kurs ücretimiz 24.000 TL. Peşinattan sonra kalanı 5 aya kadar taksitle ödeyebilirsiniz. Kayıt için evden başvurabilirsiniz: https://mdsinyal.com/#/kayit', 'Fiyat · B manuel'],
-  [/motor|motosiklet|a2/, 'A2 motosiklet kurs ücretimiz 18.500 TL; taksit yapabiliyoruz. Kayıt için evden başvurabilirsiniz: https://mdsinyal.com/#/kayit', 'Fiyat · A2'],
+  [/otomatik/, 'B otomatik kurs ücretimiz 26.500 TL. Peşinattan sonra kalanı 5 aya kadar taksitle ödeyebilirsiniz. Kayıt için kursa uğrayabilir ya da buradan randevu alabilirsiniz.', 'Fiyat · B otomatik'],
+  [/manuel|b sınıf|b sinif|\bb\b|araba|otomobil/, 'B manuel kurs ücretimiz 24.000 TL. Peşinattan sonra kalanı 5 aya kadar taksitle ödeyebilirsiniz. Kayıt için kursa uğrayabilir ya da buradan randevu alabilirsiniz.', 'Fiyat · B manuel'],
+  [/motor|motosiklet|a2/, 'A2 motosiklet kurs ücretimiz 18.500 TL; taksit yapabiliyoruz. Kayıt için kursa uğrayabilir ya da buradan randevu alabilirsiniz.', 'Fiyat · A2'],
   [/kamyon|c sınıf|c sinif|\bc\b/, 'C kamyon kurs ücretimiz 31.000 TL; taksit yapabiliyoruz. B ehliyetiniz varsa yetkilimiz size ayrıca bilgi verecek.', 'Fiyat · C'],
   [/fiyat|ücret|ucret|kaç para|kac para|taksit|ne kadar/, 'Kurs ücretlerimiz: B manuel 24.000 TL, B otomatik 26.500 TL, A2 motosiklet 18.500 TL, C kamyon 31.000 TL. Peşinattan sonra 5 aya kadar taksit yapıyoruz. Hangi sınıf için düşünüyorsunuz?', 'Fiyat ve taksit'],
   [/evrak|belge|rapor|gerekli|neler lazım|ne lazım/, 'Kayıt için kimlik kartı, sürücü sağlık raporu, öğrenim belgesi, adli sicil kaydı ve 2 vesikalık fotoğraf yeterli. Sağlık raporunu aile hekiminizden alabilirsiniz.', 'Evrak'],
   [/saat|ne zaman|başla|basla|grup|kurs günleri|hafta/, 'Teorik dersler hafta içi her akşam 18:30 grubunda, salı ve perşembe 10:00 sabah grubunda yapılıyor. Yeni akşam grubumuz 3 Kasım’da başlıyor.', 'Ders saatleri'],
   [/adres|nerede|nerdesiniz|konum|yer/, 'Odunpazarı / Eskişehir’deyiz. Kayıt görüşmesi için uygun olduğunuz günü yazarsanız saat ayarlayalım.', 'Adres'],
-  [/kayıt|kayit|kaydol|yazıl|yazil/, 'Kaydınızı evden de yapabilirsiniz: https://mdsinyal.com/#/kayit — isterseniz Örnek Sürücü Kursu’na uğrayarak da kayıt olabilirsiniz.', 'Kayıt'],
+  [/kayıt|kayit|kaydol|yazıl|yazil/, 'Kayıt için Örnek Sürücü Kursu’na uğrayabilirsiniz. Uygun olduğunuz günü yazarsanız saat ayarlayalım.', 'Kayıt'],
   [/^(merhaba|selam|slm|mrb|iyi günler|iyi akşamlar|günaydın)\b/, 'Merhaba, Örnek Sürücü Kursu’na hoş geldiniz. Ben kursun dijital asistanıyım. Kurs ücreti, evraklar, ders saatleri ya da kayıt hakkında sorabilirsiniz.', 'Karşılama'],
 ];
 // Kursun sorusuna verilen kısa cevaplar (evet/hayır): asistan teşekkür eder, cevap mdSinyal'de ilgili mesaja işlenir
@@ -33,7 +35,7 @@ const CEVAP = [[/^(evet|olur|tamam|tamamd[ıi]r|gelece[ğg]im|gelirim|uygun|kat[
 const cevapTuru = m => { const t = kucuk(m).trim(); for (const [r, k] of CEVAP) if (r.test(t)) return k; return null; };
 const asistanCevap = m => { const t = kucuk(m).trim(); if (cevapTuru(t)) return { metin: 'Teşekkürler, cevabınızı aldık ve kursa ilettik.', konu: 'Cevap' }; for (const [r, c, k] of ASISTAN) if (r.test(t)) return { metin: c, konu: k }; return { metin: 'Sorunuzu kurs yetkilimize ilettim, kısa süre içinde size dönecek. Bu arada ücret, evrak ya da ders saatleriyle ilgili sorularınızı hemen cevaplayabilirim.', konu: 'Yetkiliye devredildi', devir: true }; };
 // Demo hattına yazan adayla adım adım sohbet (durum KV'de 1 gün tutulur): kayıt → sınıf → bilgi → link / randevu / aranma
-const KURS_AD = 'Örnek Sürücü Kursu', KAYIT_LINK = 'https://mdsinyal.com/#/kayit', KURS_ADRES = 'Vişnelik Mah. Atatürk Blv. No:12, Odunpazarı / Eskişehir';
+const KURS_AD = 'Örnek Sürücü Kursu', KURS_ADRES = 'Vişnelik Mah. Atatürk Blv. No:12, Odunpazarı / Eskişehir';
 const DEMO_SINIF = [
   ['B manuel (otomobil)', '24.000 TL', 34, 14, /manuel|otomobil|araba|\bb\b/],
   ['B otomatik', '26.500 TL', 34, 14, /otomatik/],
@@ -42,7 +44,7 @@ const DEMO_SINIF = [
 ];
 const MENU = 'Size nasıl yardımcı olabilirim?\n\n1. Kayıt ve ücretler\n2. Gerekli belgeler\n3. Ders saatleri\n4. Adres\n5. Yetkiliyle görüşmek\n\nSeçtiğiniz maddenin rakamını yazmanız yeterli (örneğin 1).';
 const SINIF_MENU = 'Hangi ehliyet sınıfını düşünüyorsunuz?\n\n' + DEMO_SINIF.map((s, i) => `${i + 1}. ${s[0]} · ${s[1]}`).join('\n') + '\n\nSeçtiğiniz sınıfın rakamını yazmanız yeterli (örneğin 1).';
-const sinifBilgi = s => `*${s[0]}*\n\nÜcret: ${s[1]} (peşinattan sonra 5 aya kadar taksit)\nEğitim: ${s[2]} saat teorik ders ve ${s[3]} direksiyon dersi\nSüre: yaklaşık 6–8 hafta\n\nNasıl devam edelim?\n\n1. Evden kayıt linkini gönder\n2. Kursa gelip kayıt olmak istiyorum\n3. Yetkili beni arasın\n\nSeçtiğiniz maddenin rakamını yazmanız yeterli.`;
+const sinifBilgi = s => `*${s[0]}*\n\nÜcret: ${s[1]} (peşinattan sonra 5 aya kadar taksit)\nEğitim: ${s[2]} saat teorik ders ve ${s[3]} direksiyon dersi\nSüre: yaklaşık 6–8 hafta\n\nNasıl devam edelim?\n\n1. Kayıt için gerekenleri gönder\n2. Kursa gelip kayıt olmak istiyorum\n3. Yetkili beni arasın\n\nSeçtiğiniz maddenin rakamını yazmanız yeterli.`;
 const BELGE = 'Kayıt için gerekenler:\n\n• Kimlik kartı\n• Sürücü sağlık raporu (aile hekiminizden alabilirsiniz)\n• Öğrenim belgesi\n• Adli sicil kaydı (e-Devlet)\n• 2 vesikalık fotoğraf\n\nBelgelerin fotoğrafını bu numaraya gönderebilirsiniz.';
 const SAAT = 'Teorik dersler:\n\n• Akşam grubu: hafta içi her akşam 18:30\n• Sabah grubu: salı ve perşembe 10:00\n\nYeni akşam grubumuz yakında başlıyor; kontenjan sınırlı.';
 const ADRES = `Adresimiz: ${KURS_ADRES}\n\nGelmeden önce yazarsanız sizi bekleriz.`;
@@ -78,7 +80,7 @@ async function sohbet(env, kimden, metin) {
   const sinifBul = () => DEMO_SINIF.findIndex(s => s[4].test(t));
   let c = null;
   if (d.adim === 'sinif' && ((no && DEMO_SINIF[no - 1]) || sinifBul() >= 0)) { const i = no ? +no - 1 : sinifBul(); c = { metin: sinifBilgi(DEMO_SINIF[i]), konu: 'Kayıt · ' + DEMO_SINIF[i][0], d: { adim: 'devam', sinif: i } }; }
-  else if (d.adim === 'devam' && no === '1') c = { metin: `Kaydınızı evden birkaç dakikada yapabilirsiniz:\n${KAYIT_LINK}\n\nBilgilerinizi girip belgelerinizin fotoğrafını yüklüyor, sözleşmeyi telefondan imzalıyorsunuz. Takıldığınız yerde buraya yazmanız yeterli.`, konu: 'Kayıt · link gönderildi', d: {} };
+  else if (d.adim === 'devam' && no === '1') c = { metin: BELGE + '\n\nKayıt kurs ofisinde yapılır. Gelmek istediğiniz günü belirlemek için 2, yetkilimizin aramasını isterseniz 3 yazın.', konu: 'Kayıt · evrak gönderildi', d: { adim: 'devam', sinif: d.sinif } };
   else if (d.adim === 'devam' && no === '2') c = { metin: `Memnuniyetle bekleriz. Hangi gün ve saat size uygun? Yazdığınız zamanı yetkilimize iletip size onaylatacağım.\n\n${ADRES}`, konu: 'Kayıt · randevu', d: { adim: 'randevu' } };
   else if ((d.adim === 'devam' && no === '3') || (d.adim === 'menu' && no === '5') || /yetkili|ara(y[ıi]n|s[ıi]n)|telefon edin|biri arasın/.test(t)) c = { metin: 'Talebinizi yetkilimize ilettim; en kısa sürede sizi bu numaradan arayacak. Uygun olmadığınız saat varsa yazabilirsiniz.', konu: 'Aranma talebi', devir: true, d: {} };
   else if (d.adim === 'randevu' && !no) c = { metin: `Teşekkürler. "${String(metin).trim().slice(0, 60)}" talebinizi yetkilimize ilettim; onaylayınca size buradan yazacağız.`, konu: 'Kayıt · randevu talebi', devir: true, d: {} };
@@ -108,6 +110,13 @@ async function uyeRol(req, kurs) {
   return (d.fields && d.fields.rol && d.fields.rol.stringValue) || null;
 }
 const PERSONEL = ['mudur', 'sekreter', 'usta'];
+// kursun adı: isteği yapanın kimliğiyle kurs belgesinden (Firestore REST, yalnız ad alanı); okunamazsa boş
+async function kursAdiOku(req, kurs) {
+  try {
+    const r = await fetch('https://firestore.googleapis.com/v1/projects/sinyal-5d37a/databases/(default)/documents/kurslar/' + kurs + '?mask.fieldPaths=ad', { headers: { Authorization: req.headers.get('Authorization') || '' } });
+    if (!r.ok) return ''; const d = await r.json(); return String((d.fields && d.fields.ad && d.fields.ad.stringValue) || '').replace(/[\r\n<>]/g, ' ').trim().slice(0, 80);
+  } catch (x) { return ''; }
+}
 // Demo hatları: öğrenci (PHONE_ID), usta öğretici (PHONE_ID_USTA), kurs müdürü (PHONE_ID_MUDUR). Hepsi demo telefonuna (ALICI) yazar.
 // Usta ve müdür hatları tanımlıysa mesaj alıcının rolüne göre o hattan gider ve başındaki "ALICI: …" açıklaması silinir.
 const demoHatlar = env => ({ ogrenci: [env.PHONE_ID, env.WA_TOKEN], usta: env.PHONE_ID_USTA ? [env.PHONE_ID_USTA, env.WA_TOKEN_USTA || env.WA_TOKEN] : null, mudur: env.PHONE_ID_MUDUR ? [env.PHONE_ID_MUDUR, env.WA_TOKEN_MUDUR || env.WA_TOKEN] : null });
@@ -217,9 +226,156 @@ async function hataListe(req, env, url, cevap) {
   const liste = l.keys.map(k => ({ id: k.name.slice(5), gun: k.name.slice(5, 15), ...(k.metadata || {}) })).sort((a, b) => String(b.son).localeCompare(String(a.son))).slice(0, 300);
   return cevap({ ok: true, liste, toplam: l.keys.length });
 }
+// Link önizlemesi (WhatsApp): mdsinyal.com/d/*, /i/*, /h/* bu servise route edilirse (Cloudflare vekili açık olmalı;
+// belgeler/link-standardi.md), sitenin 404.html yönlendiricisi 200 durum koduyla ve linkin türüne uygun başlıkla döner.
+// Route yoksa bu kod hiç çalışmaz; api.mdsinyal.com'a etkisi yoktur.
+const ONIZLEME = {
+  d: ['Çalışan daveti · mdSinyal', 'Kurs ekibine katılmak için dokunun.'],
+  i: ['İmza isteği · mdSinyal', 'Belgeyi okuyup telefondan imzalamak için dokunun.'],
+  h: ['Kurs hesabı açma · mdSinyal', 'Kursunuzun mdSinyal hesabını açmak için dokunun.'],
+};
+
+// ---- /eposta: kursun rapor ve yedek e-postaları (sinyal-kaynak/belgeler/eposta-gonderici.md) ----
+// Sağlayıcı soyut: RESEND_API_KEY (önerilen) ya da GMAIL_CLIENT_ID + GMAIL_CLIENT_SECRET + GMAIL_REFRESH_TOKEN (Gmail API).
+// Gönderen: EPOSTA_GONDEREN (ör. "mdSinyal <rapor@mdsinyal.com>"). Sahibin analiz e-postası: SAHIP_EPOSTA.
+// Kötüye kullanım engeli: alıcı yalnız kursun ONAYLI adresleri (müdür ekler, adrese giden onay linkine dokunulunca açılır);
+// gövde ve ek boyutu sınırlı; kurs başına günde EPOSTA_GUNLUK_SINIR (varsayılan 12) e-posta; günlük/haftalık/aylık rapor dönem başına bir kez.
+// KV: 'epadres:<kurs>' adres listesi (belirteç tutulmaz) · 'eponay:<belirteç>' 7 gün · 'epsay:<kurs>:<gün>' sayaç 2 gün · 'epgitti:<kurs>:<tür>:<dönem>' 40 gün
+// Bu anahtarlar GET /k/ okuyucusunda engelli (iç kayıt). Sayaç ve 'bir kez' kaydı KV'de oku-yaz: paralel isteklerde YAKLAŞIK sınırdır.
+// Ücretsiz Workers planında istek başına işlemci süresi kısa: ek en çok ~1,2 milyon base64 karakter (~900 KB), worker eki ayrıştırmaz.
+const EP_TUR = ['gunluk', 'haftalik', 'aylik', 'deneme', 'yedek'], EP_EN_FAZLA_ADRES = 3;
+const epGecerli = a => /^[^\s@<>,;"]{1,64}@[A-Za-z0-9.-]{1,180}\.[A-Za-z]{2,24}$/.test(a);
+const epGun = () => new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10);
+const b64 = s => { const b = new TextEncoder().encode(s); let x = ''; for (let i = 0; i < b.length; i += 0x8000) x += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(x); };
+const epKacis = s => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function epSaglayici(env) {
+  const kimden = env.EPOSTA_GONDEREN || 'mdSinyal <rapor@mdsinyal.com>';
+  if (env.RESEND_API_KEY) return { ad: 'resend', async gonder(o) {
+    const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: 'Bearer ' + env.RESEND_API_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: kimden, to: o.kime, subject: o.konu, html: o.html, text: o.metin || undefined, ...(o.ek ? { attachments: [{ filename: o.ek.ad, content: o.ek.b64 }] } : {}) }) });
+    if (!r.ok) throw new Error('Resend ' + r.status + ': ' + (await r.text()).slice(0, 200));
+  } };
+  if (env.GMAIL_CLIENT_ID && env.GMAIL_CLIENT_SECRET && env.GMAIL_REFRESH_TOKEN) return { ad: 'gmail', async gonder(o) {
+    const t = await (await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ client_id: env.GMAIL_CLIENT_ID, client_secret: env.GMAIL_CLIENT_SECRET, refresh_token: env.GMAIL_REFRESH_TOKEN, grant_type: 'refresh_token' }) })).json();
+    if (!t.access_token) throw new Error('Gmail belirteci alınamadı');
+    const s1 = 'k' + crypto.randomUUID().replace(/-/g, ''), s2 = 'a' + crypto.randomUUID().replace(/-/g, ''), satir = x => { const l = []; for (let i = 0; i < x.length; i += 76) l.push(x.slice(i, i + 76)); return l.join('\r\n') + '\r\n'; };
+    const govde = ['Content-Type: multipart/alternative; boundary=' + s2, '', '--' + s2, 'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: base64', '', satir(b64(o.metin || '')),
+      '--' + s2, 'Content-Type: text/html; charset=UTF-8', 'Content-Transfer-Encoding: base64', '', satir(b64(o.html)), '--' + s2 + '--'].join('\r\n');
+    const mime = ['From: ' + kimden, 'To: ' + o.kime.join(', '), 'Subject: =?UTF-8?B?' + b64(o.konu) + '?=', 'MIME-Version: 1.0', 'Content-Type: multipart/mixed; boundary=' + s1, '', '--' + s1, govde,
+      ...(o.ek ? ['--' + s1, 'Content-Type: application/octet-stream; name="' + o.ek.ad + '"', 'Content-Disposition: attachment; filename="' + o.ek.ad + '"', 'Content-Transfer-Encoding: base64', '', satir(o.ek.b64)] : []), '--' + s1 + '--'].join('\r\n');
+    const r = await fetch('https://gmail.googleapis.com/upload/gmail/v1/users/me/messages/send?uploadType=media', { method: 'POST', headers: { Authorization: 'Bearer ' + t.access_token, 'Content-Type': 'message/rfc822' }, body: mime });
+    if (!r.ok) throw new Error('Gmail ' + r.status + ': ' + (await r.text()).slice(0, 200));
+  } };
+  return null;
+}
+const epSay = async (env, kurs) => { const a = 'epsay:' + kurs + ':' + epGun(); return { a, n: +((await env.LINK.get(a)) || 0) }; };
+const epSayYaz = (env, s) => env.LINK.put(s.a, String(s.n + 1), { expirationTtl: 2 * 86400 });
+const epAdresler = async (env, kurs) => { try { return JSON.parse((await env.LINK.get('epadres:' + kurs)) || '[]'); } catch (x) { return []; } };
+const epSayfa = (baslik, metin, form) => new Response(`<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${epKacis(baslik)} · mdSinyal</title></head><body style="margin:0;background:#0f1729;color:#e9edf5;font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;display:grid;place-items:center;min-height:100vh;padding:16px;box-sizing:border-box"><main style="max-width:420px;text-align:center"><h1 style="font-size:22px;margin:0 0 8px">${epKacis(baslik)}</h1><p style="margin:0 0 20px;color:#b8c2d6">${epKacis(metin)}</p>${form ? `<form method="post" action="https://api.mdsinyal.com/eposta/onay"><input type="hidden" name="t" value="${epKacis(form)}"><button type="submit" style="font:inherit;color:#fff;background:#2563eb;border:0;padding:12px 20px;border-radius:12px;font-weight:600;cursor:pointer">Adresimi onayla</button></form>` : `<a href="https://mdsinyal.com/" style="color:#fff;background:#2563eb;padding:12px 20px;border-radius:12px;text-decoration:none;font-weight:600;display:inline-block">mdSinyal’i aç</a>`}</main></body></html>`, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex' } });
+async function eposta(req, env, url, yol, cevap) {
+  if (!env.LINK) return cevap({ ok: false, hata: 'Depo yok' }, 500);
+  const S = epSaglayici(env);
+  // onay linki (e-postadaki düğme): girişsiz; belirteç tek kullanımlık. GET yalnız sayfayı gösterir (e-posta güvenlik tarayıcıları
+  // linkleri kendiliğinden açar); onay, sayfadaki 'Adresimi onayla' düğmesinin POST isteğiyle olur.
+  if (yol === 'eposta/onay' && (req.method === 'GET' || req.method === 'POST')) {
+    let t = url.searchParams.get('t') || '';
+    if (req.method === 'POST') { const f = await req.formData().catch(() => null); t = (f && String(f.get('t') || '')) || t; }
+    if (!/^[a-f0-9]{32}$/.test(t)) return epSayfa('Link geçersiz', 'Onay linki eksik ya da bozuk.');
+    let o; try { o = JSON.parse((await env.LINK.get('eponay:' + t)) || 'null'); } catch (x) { o = null; }
+    if (!o) return epSayfa('Linkin süresi dolmuş', 'Kurs müdürü adresi Ayarlar › Veri ve e-posta bölümünden yeniden ekleyebilir.');
+    const l = await epAdresler(env, o.kurs), x = l.find(y => y.a === o.a);
+    if (!x || (o.z && x.z !== o.z)) return epSayfa('Link geçersiz', 'Bu adres kursun listesinden çıkarılmış ya da yeni bir onay linki gönderilmiş.');
+    if (x.onay) return epSayfa('E-posta adresi zaten onaylı', 'Bu sayfayı kapatabilirsiniz.');
+    if (req.method === 'GET') return epSayfa('E-posta adresini onaylayın', o.a + ' adresine kursun mdSinyal raporları ve yedekleri gelecek. Onaylıyorsanız düğmeye basın.', t);
+    x.onay = true; delete x.t; await env.LINK.put('epadres:' + o.kurs, JSON.stringify(l)); await env.LINK.delete('eponay:' + t).catch(() => {});
+    return epSayfa('E-posta adresi onaylandı', 'Bu adrese artık kursun raporları ve yedekleri gelecek. Bu sayfayı kapatabilirsiniz.');
+  }
+  // kurs silinince (Yönetim › Hesaplar › Kursu sil): kursun e-posta kayıtları silinir; yalnız platform sahibi
+  if (yol === 'eposta/sahip-sil' && req.method === 'POST') {
+    if (!(await sahipMi(req, env))) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
+    const b = await req.json().catch(() => ({})), k = String(b.kurs || ''); if (!/^[A-Za-z0-9]{10,40}$/.test(k)) return cevap({ ok: false, hata: 'gecersiz' }, 400);
+    await env.LINK.delete('epadres:' + k);
+    const g = await env.LINK.list({ prefix: 'epgitti:' + k + ':', limit: 1000 }); for (const x of g.keys) await env.LINK.delete(x.name).catch(() => {});
+    return cevap({ ok: true, silinen: g.keys.length + 1 });  // eponay:<belirteç> kayıtları 7 günde düşer; adres listesi olmadan onaylanamaz
+  }
+  // platform sahibinin haftalık analiz e-postası
+  if (yol === 'eposta/sahip' && req.method === 'POST') {
+    if (!(await sahipMi(req, env))) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
+    if (!S || !env.SAHIP_EPOSTA) return cevap({ ok: false, kurulu: false, hata: 'E-posta servisi henüz kurulmadı' }, 503);
+    const b = await req.json().catch(() => ({})); if (typeof b.html !== 'string' || b.html.length > 300e3) return cevap({ ok: false, hata: 'gecersiz' }, 400);
+    // haftalık analiz dönem başına bir kez (birden çok cihaz aynı hafta açsa da)
+    const donem = String(b.donem || '').replace(/[^\w-]/g, '').slice(0, 20), tek = donem ? 'epgitti:_sahip:' + donem : null;
+    if (tek && await env.LINK.get(tek)) return cevap({ ok: true, zatenGitti: true });
+    const s = await epSay(env, '_sahip'); if (s.n >= 5) return cevap({ ok: false, hata: 'Bugünlük sınır doldu' }, 429);
+    try { await S.gonder({ kime: [env.SAHIP_EPOSTA], konu: String(b.konu || 'mdSinyal kullanım analizi').slice(0, 150), html: b.html, metin: String(b.metin || '').slice(0, 50e3) }); } catch (x) { console.error(x); return cevap({ ok: false, hata: 'Gönderilemedi' }, 502); }
+    await epSayYaz(env, s); if (tek) await env.LINK.put(tek, '1', { expirationTtl: 40 * 86400 }); return cevap({ ok: true });
+  }
+  const kurs = req.headers.get('X-Kurs') || url.searchParams.get('kurs') || '', rol = await uyeRol(req, kurs);
+  if (!rol || !['mudur', 'sekreter'].includes(rol)) return cevap({ ok: false, hata: 'Yetki yok' }, 403);  // öğretmen adresleri görmez
+  const l = await epAdresler(env, kurs);
+  if (yol === 'eposta' && req.method === 'GET') return cevap({ ok: true, kurulu: !!S, adresler: l.map(x => ({ a: x.a, onay: !!x.onay })), enFazla: EP_EN_FAZLA_ADRES });
+  // adres ekle / çıkar: yalnız kurs müdürü; eklenen adrese onay linki gider
+  if (yol === 'eposta/adres' && req.method === 'POST') {
+    if (rol !== 'mudur') return cevap({ ok: false, hata: 'Adresleri yalnız kurs müdürü değiştirir' }, 403);
+    const b = await req.json().catch(() => ({})), a = String(b.adres || '').trim().toLowerCase();
+    if (!epGecerli(a)) return cevap({ ok: false, hata: 'E-posta adresi geçersiz' }, 400);
+    if (b.sil) { await env.LINK.put('epadres:' + kurs, JSON.stringify(l.filter(x => x.a !== a))); return cevap({ ok: true }); }
+    if (!S) return cevap({ ok: false, kurulu: false, hata: 'E-posta servisi henüz kurulmadı' }, 503);
+    const var_ = l.find(x => x.a === a); if (var_ && var_.onay) return cevap({ ok: true, onay: true });
+    if (!var_ && l.length >= EP_EN_FAZLA_ADRES) return cevap({ ok: false, hata: 'En fazla ' + EP_EN_FAZLA_ADRES + ' adres eklenebilir' }, 400);
+    const s = await epSay(env, kurs); if (s.n >= (+env.EPOSTA_GUNLUK_SINIR || 12)) return cevap({ ok: false, hata: 'Bugünlük e-posta sınırı doldu; yarın tekrar deneyin' }, 429);
+    const t = [...crypto.getRandomValues(new Uint8Array(16))].map(x => x.toString(16).padStart(2, '0')).join('');
+    // kurs adı istemciden alınmaz (konuya istenen metin yazılamasın): müdürün kimliğiyle kurs belgesinden okunur, okunamazsa genel ad
+    const link = 'https://api.mdsinyal.com/eposta/onay?t=' + t, kursAd = (await kursAdiOku(req, kurs)) || 'mdSinyal kullanan bir sürücü kursu';
+    try { await S.gonder({ kime: [a], konu: 'mdSinyal · e-posta adresinizi onaylayın', metin: `${kursAd}, bu adresi mdSinyal raporları ve yedekleri için ekledi. Onaylamak için linki açın: ${link}\nSiz eklemediyseniz bu e-postayı silin; onaylanmayan adrese başka e-posta gelmez.`,
+      html: `<div style="font:15px/1.5 system-ui,sans-serif;color:#111827;max-width:520px"><p><b>${epKacis(kursAd)}</b>, bu adresi mdSinyal raporları ve yedekleri için ekledi.</p><p><a href="${link}" style="display:inline-block;background:#2563eb;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:600">Adresimi onayla</a></p><p style="color:#6b7280;font-size:13px">Siz eklemediyseniz bu e-postayı silin; onaylanmayan adrese başka e-posta gelmez. Link 7 gün geçerli.</p></div>` }); }
+    catch (x) { console.error(x); return cevap({ ok: false, hata: 'Onay e-postası gönderilemedi' }, 502); }
+    await epSayYaz(env, s);
+    if (var_ && var_.t) await env.LINK.delete('eponay:' + var_.t).catch(() => {});  // eski biçim kayıt
+    // listede belirteç tutulmaz; yalnız son gönderilen linkin zamanı (z) onaylayabilir
+    const z = new Date().toISOString(), yeni = { a, onay: false, z }; await env.LINK.put('epadres:' + kurs, JSON.stringify(var_ ? l.map(x => x.a === a ? yeni : x) : l.concat(yeni)));
+    await env.LINK.put('eponay:' + t, JSON.stringify({ kurs, a, z }), { expirationTtl: 7 * 86400 });
+    return cevap({ ok: true, onay: false });
+  }
+  // rapor / yedek gönder: müdür ve ön büro; alıcılar sunucudaki onaylı adresler (istekteki adres kullanılmaz)
+  if (yol === 'eposta/gonder' && req.method === 'POST') {
+    if (!['mudur', 'sekreter'].includes(rol)) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
+    if (!S) return cevap({ ok: false, kurulu: false, hata: 'E-posta servisi henüz kurulmadı' }, 503);
+    const kime = l.filter(x => x.onay).map(x => x.a); if (!kime.length) return cevap({ ok: false, adresYok: true, hata: 'Onaylı e-posta adresi yok' }, 400);
+    const ham = await req.text(); if (ham.length > 2e6) return cevap({ ok: false, hata: 'Dosya çok büyük' }, 413);  // istemci eki 1,2 milyon karakterle sınırlar
+    let b; try { b = JSON.parse(ham); } catch (x) { return cevap({ ok: false, hata: 'gecersiz' }, 400); }
+    const tur = EP_TUR.includes(b.tur) ? b.tur : null, donem = String(b.donem || '').replace(/[^\w-]/g, '').slice(0, 20);
+    if (!tur || typeof b.html !== 'string' || b.html.length > 400e3) return cevap({ ok: false, hata: 'gecersiz' }, 400);
+    let ek = null; if (b.ek) { const ad = String(b.ek.ad || '').replace(/[^\w.-]/g, '').slice(0, 80); const v = b.ek.b64;
+      // eki baştan sona taramak işlemci süresini aşar: uzunluk ve uçlar denetlenir, geçersiz base64'ü sağlayıcı reddeder
+      if (!/\.(xlsx|json|gz)$/.test(ad) || typeof v !== 'string' || v.length > 1.2e6 || v.length % 4 || !/^[A-Za-z0-9+/]{1,64}$/.test(v.slice(0, 64)) || !/^[A-Za-z0-9+/=]{1,64}$/.test(v.slice(-64))) return cevap({ ok: false, hata: 'ek geçersiz' }, 400); ek = { ad, b64: v }; }
+    const tek = ['gunluk', 'haftalik', 'aylik'].includes(tur) && donem ? 'epgitti:' + kurs + ':' + tur + ':' + donem : null;
+    if (tek && await env.LINK.get(tek)) return cevap({ ok: true, zatenGitti: true });
+    const s = await epSay(env, kurs); if (s.n >= (+env.EPOSTA_GUNLUK_SINIR || 12)) return cevap({ ok: false, hata: 'Bugünlük e-posta sınırı doldu' }, 429);
+    try { await S.gonder({ kime, konu: String(b.konu || 'mdSinyal raporu').slice(0, 150), html: b.html, metin: String(b.metin || '').slice(0, 100e3), ek }); } catch (x) { console.error(x); return cevap({ ok: false, hata: 'Gönderilemedi' }, 502); }
+    await epSayYaz(env, s); if (tek) await env.LINK.put(tek, '1', { expirationTtl: 40 * 86400 });
+    return cevap({ ok: true, kime: kime.length });
+  }
+  return cevap({ ok: false }, 404);
+}
+
+async function onizleme(req, url) {
+  const t = ONIZLEME[url.pathname.split('/')[1].toLowerCase()];
+  const r = await fetch('https://mdsinyal.com/404.html', { cf: { cacheTtl: 300 } }).catch(() => null);
+  if (!r || !r.ok) return fetch(req);
+  const icerik = v => ({ element(e) { e.setAttribute('content', v); } });
+  return new HTMLRewriter()
+    .on('title', { element(e) { e.setInnerContent(t[0]); } })
+    .on('meta[property="og:title"]', icerik(t[0]))
+    .on('meta[property="og:description"]', icerik(t[1]))
+    .transform(new Response(r.body, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'X-Robots-Tag': 'noindex' } }));
+}
+
 export default {
   async fetch(req, env) {
     const url = new URL(req.url), origin = req.headers.get('Origin') || '';
+    if (url.hostname === 'mdsinyal.com' && req.method === 'GET' && /^\/[dihDIH]\/[A-Za-z0-9_-]/.test(url.pathname)) return onizleme(req, url);
     const cors = { 'Access-Control-Allow-Origin': IZINLI.includes(origin) ? origin : IZINLI[0], 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Kurs, X-Yedek, X-Sikistirma', 'Access-Control-Expose-Headers': 'X-Sikistirma', 'Vary': 'Origin' };
     const cevap = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
     cevap.cors = cors;
@@ -231,6 +387,8 @@ export default {
       if (req.method === 'GET') return hataListe(req, env, url, cevap);
       return cevap({ ok: false }, 405);
     }
+    // kursun rapor ve yedek e-postaları (kimlik denetimi eposta() içinde)
+    if (yol === 'eposta' || yol.startsWith('eposta/')) return eposta(req, env, url, yol, cevap);
     const G = 'https://graph.facebook.com/v25.0/' + env.PHONE_ID;
     // Gerçek kurs isteği: Firebase oturumu + kurs kimliği (yoksa demo yolu)
     const gercek = !!req.headers.get('Authorization') && yol !== 'yedek';
@@ -363,15 +521,18 @@ export default {
     if (req.method === 'GET') {
       if (!yol) return cevap({ ok: true, hazir: !!(env.WA_TOKEN && env.PHONE_ID && env.ALICI), belge: true, kisa: !!env.LINK, kursHatti: true, sablon: !!env.SABLON_AD, demoHatlari: { usta: !!env.PHONE_ID_USTA, mudur: !!env.PHONE_ID_MUDUR } });
       const anahtar = yol.startsWith('k/') ? yol.slice(2) : yol;
-      if (/^(gelen$|(hat|hatno|gelen|medya|durum|yedek|kisaad|kursad|hata|sohbet)[:-])/.test(anahtar)) return cevap({ ok: false }, 404);  // iç kayıtlar kısa link gibi okunamaz
+      if (/^(gelen$|(hat|hatno|gelen|medya|durum|yedek|kisaad|kursad|hata|sohbet|epadres|eponay|epsay|epgitti)[:-])/.test(anahtar)) return cevap({ ok: false }, 404);  // iç kayıtlar (e-posta adresleri ve onay belirteçleri dahil) kısa link gibi okunamaz
       // imza dönüşü: sunucu kaydı (zaman, IP, ülke, tarayıcı) yalnız imza isteğinin mührünü bilen kursa verilir (?ka=)
       if (yol.startsWith('k/takip-') && env.LINK) {
         const g = await env.LINK.getWithMetadata(anahtar), md = g.metadata || null;
         if (!g.value) return cevap({ ok: false }, 404);
         const ka = url.searchParams.get('ka') || '';
-        const bilgi = md && md.ka && ka && esit(ka, md.ka) ? { zaman: md.zaman || '', ip: md.ip || '', ulke: md.ulke || '', ua: md.ua || '' } : null;
+        // imza paketi (ad, imza, cihaz) yalnız mührü bilen kursa verilir; mührü olmayan eski kayıtlar eskisi gibi okunur
+        if (md && md.ka && !(ka && esit(ka, md.ka))) return cevap({ ok: false }, 404);
+        const bilgi = md && md.ka ? { zaman: md.zaman || '', ip: md.ip || '', ulke: md.ulke || '', ua: md.ua || '' } : null;
         return cevap({ ok: true, hedef: g.value, ...(bilgi ? { bilgi } : {}) });
       }
+      if (anahtar.startsWith('takip-')) return cevap({ ok: false }, 404);  // imza dönüşü yalnız yukarıdaki k/takip- yolundan, mühürle okunur
       const v = env.LINK ? await env.LINK.get(anahtar) : null;
       if (yol.startsWith('k/')) return cevap(v ? { ok: true, hedef: v } : { ok: false }, v ? 200 : 404);
       if (v) return Response.redirect(v, 302);
@@ -384,7 +545,7 @@ export default {
       if (!env.LINK) return cevap({ ok: false, hata: 'Kisa link deposu bagli degil' }, 500);
       if (!gercek || rol !== 'mudur') return cevap({ ok: false, hata: 'Yalniz kurs muduru' }, 403);
       const ad = String((b && b.ad) || '').toLowerCase(), hedef = String((b && b.hedef) || '');
-      const AYRILMIS = ['ozellikler', 'iletisim', 'giris', 'gizlilik', 'eklenti', 'fonts', 'demo', 'yonetim', 'sinyal', 'mdsinyal', 'admin', 'destek', 'kayit', 'blog', 'webhook', 'kisa', 'yedek', 'durum', 'gelen', 'medya', 'hata'];
+      const AYRILMIS = ['ozellikler', 'iletisim', 'giris', 'gizlilik', 'eklenti', 'fonts', 'demo', 'yonetim', 'sinyal', 'mdsinyal', 'admin', 'destek', 'kayit', 'blog', 'webhook', 'kisa', 'yedek', 'durum', 'gelen', 'medya', 'hata', 'ogrenci', 'ogretmen', 'hesap', 'sifre', 'davet', 'imza', 'prototip'];  // sitenin kendi adresleri (link-standardi.md)
       if (!/^[a-z0-9-]{4,30}$/.test(ad) || AYRILMIS.includes(ad) || /^(hat|hatno|gelen|medya|durum|yedek|kisaad|kursad|takip|hata|sohbet)[:-]/.test(ad)) return cevap({ ok: false, hata: 'Bu ad kullanilamaz: 4-30 karakter, kucuk harf, rakam ve tire' }, 400);
       if (!HEDEF.test(hedef) || hedef.length > 2000) return cevap({ ok: false, hata: 'Gecersiz hedef' }, 400);
       const sahip = await env.LINK.get('kisaad:' + ad);
@@ -400,13 +561,17 @@ export default {
       const hedef = String((b && b.hedef) || '');
       if (!HEDEF.test(hedef) || hedef.length > 200000) return cevap({ ok: false, hata: 'Gecersiz hedef' }, 400);
       // kısa ve tahmin edilemez: kişinin adı linkte görünmez (32 harflik alfabe, 7 karakter, çakışırsa yeniden)
-      const harf = 'abcdefghijkmnpqrstuvwxyz23456789', uret = () => [...crypto.getRandomValues(new Uint8Array(7))].map(x => harf[x & 31]).join('');
+      // tur (isteğe bağlı): 'd' davet → mdsinyal.com/d/<kod>, 'i' imza → mdsinyal.com/i/<kod>; hedef türe uymalı. Davet kodu daha uzun (10 harf).
+      // gun (isteğe bağlı, 1-60): linkin geçerlilik süresi; verilmezse 60 gün
+      const tur = String((b && b.tur) || ''), gun = Math.min(60, Math.max(1, Math.round(+(b && b.gun) || 60)));
+      if (tur && !({ d: /#\/davet\/|\/d\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+$/, i: /#\/imza(-geldi)?\// }[tur] || /^$/).test(hedef)) return cevap({ ok: false, hata: 'Gecersiz tur' }, 400);
+      const harf = 'abcdefghijkmnpqrstuvwxyz23456789', boy = tur === 'd' ? 10 : 7, uret = () => [...crypto.getRandomValues(new Uint8Array(boy))].map(x => harf[x & 31]).join('');
       // imza dönüşü (takip): bir kez yazılır; üzerine başka imza konamaz. Yanına sunucu kanıtı (zaman, IP, ülke, tarayıcı) eklenir.
       const tk = b.takip ? 'takip-' + sade(b.takip) : '';
       let tkYaz = !!tk;
       if (tk) { const var0 = await env.LINK.get(tk); if (var0 && var0 !== hedef) return cevap({ ok: false, hata: 'Bu imza zaten gönderildi' }, 409); if (var0) tkYaz = false; }
       let slug = uret(); for (let i = 0; i < 4 && await env.LINK.get(slug); i++) slug = uret();
-      await env.LINK.put(slug, hedef, { expirationTtl: 5184000 });
+      await env.LINK.put(slug, hedef, { expirationTtl: gun * 86400 });
       if (tkYaz) {
         const ka = /^[0-9a-f]{16,64}$/.test(String(b.ka || '')) ? String(b.ka) : '';
         const md = { zaman: new Date().toISOString(), ip: req.headers.get('CF-Connecting-IP') || '', ulke: (req.cf && req.cf.country) || '', ua: String(req.headers.get('User-Agent') || '').slice(0, 300), ...(ka ? { ka } : {}) };

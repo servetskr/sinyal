@@ -1,12 +1,12 @@
-import * as EK from './eklenti.js?v=210';
-import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, kursiyer, DERS_TUR_AD, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube, tutarOku } from './veri.js?v=210';
-import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor, belgeYazdir, kisaLink } from './ui.js?v=210';
-import { yenile } from './app.js?v=210';
-import * as B from './bulut.js?v=210';
-import { wpGonder } from './sayfalar1.js?v=210';
-import * as ME from './mebevrak.js?v=210';
-import * as KR from './kurallar.js?v=210';
-import { gunBatimi, kursIli } from './veri.js?v=210';
+import * as EK from './eklenti.js?v=211';
+import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, kursiyer, DERS_TUR_AD, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube, tutarOku } from './veri.js?v=211';
+import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor, belgeYazdir, kisaLink, siteLink } from './ui.js?v=211';
+import { yenile } from './app.js?v=211';
+import * as B from './bulut.js?v=211';
+import { wpGonder } from './sayfalar1.js?v=211';
+import * as ME from './mebevrak.js?v=211';
+import * as KR from './kurallar.js?v=211';
+import { gunBatimi, kursIli } from './veri.js?v=211';
 
 /* ================= MEB KURALLARI: KAYNAK VE SORUMLULUK ================= */
 const MTSK = 'MTSK Yönetmeliği (ÖÖKGM, Ocak 2025 metni)';
@@ -60,7 +60,7 @@ function kurallarSekme() {
       <td>${a ? degerDurum(r.ayar) : ''}${r.teyit ? ` <span title="${e(r.teyit)}">${rozet('Teyit bekliyor', 'sari')}</span>` : ''}${!a && !r.teyit ? '<span style="color:var(--soluk)">Mevzuattan</span>' : ''}</td></tr>`; }).join('')}
   </tbody></table></div>
   <div class="kart-govde" style="border-top:1px solid var(--cizgi-2);display:grid;gap:12px">
-    <p style="font-size:14px;display:flex;gap:8px;align-items:flex-start">${isaret('tamam', 18)}<span><b>Son mevzuat kontrolü:</b> ${tarih(kontrol)} · Resmî Gazete ve ÖÖKGM duyuruları her hafta taranır.</span></p>
+    <p style="font-size:14px;display:flex;gap:8px;align-items:flex-start">${isaret('tamam', 18)}<span><b>Son mevzuat kontrolü:</b> ${tarih(kontrol)}. Yönetmelik değişince kurallar güncellenir ve size bildirilir.</span></p>
     <p style="font-size:14px;display:flex;gap:8px;align-items:flex-start">${isaret('bilgi', 18)}<span><b>Sorumluluk:</b> Kontroller yardımcıdır. MEBBİS’e giriş ve son karar kurs yetkilisindedir; mdSinyal’in hatalı uyarısından doğan zarar sözleşmenin “Mevzuat kontrolleri” maddesinde düzenlenir.</span></p>
     <div style="display:flex;gap:8px;flex-wrap:wrap">${K.kuralOnay ? `<span class="rozet rozet-yesil" style="height:34px;display:inline-flex;align-items:center">Değerleri ${e(K.kuralOnay.kim)} onayladı · ${tarih(K.kuralOnay.tarih)}</span>` : `<button class="dg dg-ana" data-kural-onay>Değerleri kontrol ettim, onaylıyorum</button>`}<button class="dg dg-cizgi" data-belge-ac="hizmet">Sözleşmedeki maddeyi gör</button></div>
   </div></div>
@@ -594,7 +594,8 @@ function gorunumSekme() {
 
 /* ================= AYAR SEKMELERİ (sayfalar2.ayarlar buradan çağırır) ================= */
 // Kayıt formu: #/kayit (genel) ya da #/kayit/<şube kimliği> (sayfalar3.js kayitSayfasi, app.js rota: ad/id)
-const kayitLinki = id => location.origin + location.pathname + '#/kayit' + (id ? '/' + encodeURIComponent(id) : '');
+// kısa adres: mdsinyal.com/kayit ve /kayit/<şube> (404.html ve kayit/index.html uygulamanın #/kayit ekranını açar; belgeler/link-standardi.md)
+const kayitLinki = id => siteLink('kayit' + (id ? '/' + encodeURIComponent(id) : ''));
 function subelerSekme() {
   return `${ekranNotu('Her şube MEB’e göre ayrı izinli bir kurumdur: kendi kurum kodu, müdürü ve MEBBİS hesabı vardır. MEB işlemleri, sınavlar ve denetim dosyası şube seçilerek yapılır; kasa, kursiyer ve araçlar şubeye göre ayrılır.')}
   <div class="kart"><div class="tablo-kap"><table class="tablo tablo-mobil"><thead><tr><th>Şube</th><th>MEB kurum kodu</th><th>Kurs müdürü</th><th>MEBBİS hesabı</th><th>Kursiyer</th><th>Kayıt formu</th></tr></thead><tbody>${S.subeler.map((x, i) => `<tr><td><input class="girdi" style="height:34px" data-sube-alan="${i}:ad" value="${e(x.ad)}"></td><td><input class="girdi mono" style="height:34px;width:110px" inputmode="numeric" data-sube-alan="${i}:kurumKodu" value="${e(x.kurumKodu || '')}"></td><td><input class="girdi" style="height:34px" data-sube-alan="${i}:mudur" value="${e(x.mudur || '')}"></td><td><input class="girdi" style="height:34px" data-sube-alan="${i}:mebbis" value="${e(x.mebbis || '')}"></td><td class="mono">${S.kursiyerler.filter(k => k.sube === x.id && k.asama !== 'Ehliyet').length}</td><td><button type="button" class="dg dg-hafif dg-kucuk" data-kayit-link="${e(x.id)}" title="${e(kayitLinki(x.id))}">${ik('belge')}Kayıt formu linki</button></td></tr>`).join('')}</tbody></table></div>
@@ -644,7 +645,7 @@ function davetFormu() {
 // Davet: öğretmenin telefonu kayıtlıysa link kursun hattından kendiliğinden gider (hat bağlı değilse WhatsApp hazır mesajla açılır)
 async function davetGoster(ad, link, kisi, rol) {
   // kısa ve okunur link: servetskr.github.io/sinyal/ahmet-yilmaz-davet-x7k2 (servis yoksa uzun link kalır)
-  link = await kisaLink(link, ad + ' davet', null);
+  link = await kisaLink(link, 'davet', null, undefined, { gun: 8 });
   const ilk = ad.split(' ')[0], hitap = rol === 'usta' ? `${ilk} Hoca` : ilk;
   const metin = `Merhaba ${hitap},\n\n*${S.kurs.ad}* sizi mdSinyal'e ${{ mudur: 'kurs müdürü', sekreter: 'ön büro çalışanı', usta: 'usta öğretici' }[rol] || 'çalışan'} olarak davet etti.\n\nHesabınızı oluşturmak için:\n${link}\n\nLink 7 gün geçerlidir ve yalnız size özeldir.`;
   const otomatik = !!(kisi && kisi.tel);
@@ -718,7 +719,7 @@ export function ayarBaglan(k) {
   });
   k.addEventListener('click', ev => {
     if (ev.target.closest('[data-kurtarma-indir]')) { const a2 = document.createElement('a'); a2.href = URL.createObjectURL(new Blob([localStorage.getItem('sinyal-kurtarma') || '[]'], { type: 'application/json' })); a2.download = 'mdsinyal-kaydedilemeyenler.json'; a2.click(); setTimeout(() => URL.revokeObjectURL(a2.href), 3000); }
-    if (ev.target.closest('[data-kurtarma-sil]') && confirm('Kaydedilemeyen değişiklikler bu cihazdan silinsin mi? Önce indirdiğinizden emin olun.')) { try { localStorage.removeItem('sinyal-kurtarma'); } catch (x) { } import('./bulut.js?v=210').then(B => { B.bulut.kalici = ''; B.durumYaz(); }); yenile(); }
+    if (ev.target.closest('[data-kurtarma-sil]') && confirm('Kaydedilemeyen değişiklikler bu cihazdan silinsin mi? Önce indirdiğinizden emin olun.')) { try { localStorage.removeItem('sinyal-kurtarma'); } catch (x) { } import('./bulut.js?v=211').then(B => { B.bulut.kalici = ''; B.durumYaz(); }); yenile(); }
   });
   davetListesi(k); yedekListesi(k); sunucuKaydi(k); if (B.bulutta()) ikiAdimSatiri(k);
   k.addEventListener('change', ev => {
@@ -787,7 +788,7 @@ export function ayarBaglan(k) {
     const kl = t.closest('[data-kayit-link]'); if (kl) { const id = kl.dataset.kayitLink, l = kayitLinki(id), ad = id ? ((S.subeler.find(x => x.id === id) || {}).ad || 'şube') : ''; panoya(l).then(ok => ok === false ? bildir('Kopyalanamadı. Link: ' + l, 'uyari') : bildir((ad ? ad + ' kayıt formu linki' : 'Genel kayıt formu linki') + ' kopyalandı. Kurs hesabıyla açılmış cihazda açılır.')); return; }
     if (t.closest('[data-sube-ekle]')) { const n = S.subeler.length + 1; S.subeler.push({ id: 's' + Date.now(), ad: 'Yeni şube ' + n, semt: '', kurumKodu: '', mudur: '', mebbis: '' }); islem('Şube ekledi'); kaydet(); bildir('Şube eklendi; kurum kodunu ve müdürünü yazın'); yenile(); }
     if (t.closest('[data-kural-onay]')) { S.kurs.kuralOnay = { kim: oturum.kullanici ? oturum.kullanici.ad : '', tarih: gun(0) }; islem('Kural değerlerini onayladı'); kaydet(); bildir('Kural değerleri onaylandı'); yenile(); }
-    const bo = t.closest('[data-belge-ac]'); if (bo) import('./sayfalar3.js?v=210').then(m => m.belgeAc(bo.dataset.belgeAc));
+    const bo = t.closest('[data-belge-ac]'); if (bo) import('./sayfalar3.js?v=211').then(m => m.belgeAc(bo.dataset.belgeAc));
     const ok = t.closest('[data-oturum-kapat]'); if (ok) { const o = S.guvenlik.oturumlar.splice(+ok.dataset.oturumKapat, 1)[0]; islem('Oturumu kapattırdı', o.kim + ' · ' + o.cihaz); kaydet(); bildir(o.kim + ' · ' + o.cihaz + ' oturumu kapatıldı'); yenile(); }
     const fs = t.closest('[data-fis]'); if (fs) { const n = +fs.dataset.fis, d = new Date(BUGUN); d.setMonth(d.getMonth() - n); csvIndir(`muhasebe-fisleri-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}.csv`, muhasebeFisi(n)); islem('Muhasebe fişlerini indirdi'); kaydet(); }
     if (t.closest('[data-parasut]')) pencere({ baslik: 'Paraşüt · bağlantı gerekli', icerik: `<div class="ipucu uyari" style="margin-bottom:12px">${isaret('uyari', 22)}<span>Paraşüt bağlantısı için kursun Paraşüt hesabından alınan API anahtarı gerekir. Anahtar girilene kadar tahsilatlar Paraşüt’e aktarılmaz.</span></div><p style="font-size:14.5px">Bu arada aylık muhasebe fişini CSV olarak indirip Paraşüt’e veya muhasebecinize yükleyebilirsiniz; fişte her tahsilat, gider ve iade ayrı satırdır.</p>`, altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-pfis>Bu ayın fişini indir</button>', onAc(d) { d.querySelector('[data-pfis]').addEventListener('click', () => { const d0 = new Date(BUGUN); csvIndir(`muhasebe-fisleri-${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}.csv`, muhasebeFisi(0)); islem('Muhasebe fişlerini indirdi'); kaydet(); kapatPencere(); }); } });

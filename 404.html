@@ -1,19 +1,47 @@
 <!doctype html>
-<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>mdSinyal</title><meta property="og:title" content="mdSinyal · Sürücü kursu otomasyonu"><meta property="og:description" content="Öğrenci kaydı, direksiyon planı, ödeme, sınav ve MEB işleri tek yerde."><meta property="og:image" content="https://mdsinyal.com/img/site/paylas-103.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image">
-<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(60% 40% at 50% 100%,rgba(255,170,70,.14),transparent 70%),#070b14;color:rgba(214,222,238,.75);font:17px/1.55 system-ui,-apple-system,sans-serif}main{max-width:420px;padding:28px;text-align:center}main svg{width:56px;height:56px;margin-bottom:18px}b{display:block;font-size:22px;color:#fff;margin-bottom:6px}a.git{display:inline-flex;align-items:center;margin-top:22px;min-height:48px;padding:0 22px;border-radius:12px;background:#ffc21a;color:#0b1220;font-weight:800;text-decoration:none}a.git[hidden]{display:none}.mk{font-weight:400;opacity:.55}</style></head>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>mdSinyal</title><meta name="robots" content="noindex"><meta property="og:title" content="mdSinyal linki"><meta property="og:description" content="Sürücü kursunuzun gönderdiği link. Açmak için dokunun."><meta property="og:site_name" content="mdSinyal"><meta property="og:image" content="https://mdsinyal.com/img/site/paylas-103.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image">
+<style>body{margin:0;min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;background:radial-gradient(60% 40% at 50% 100%,rgba(255,170,70,.14),transparent 70%),#070b14;color:rgba(214,222,238,.75);font:17px/1.55 system-ui,-apple-system,sans-serif}main{max-width:420px;padding:28px;text-align:center}main svg{width:56px;height:56px;margin-bottom:18px}b{display:block;font-size:22px;color:#fff;margin-bottom:6px}a.git{display:inline-flex;align-items:center;margin-top:22px;min-height:48px;padding:0 22px;border-radius:12px;background:#ffc21a;color:#0b1220;font-weight:800;text-decoration:none}a.git[hidden]{display:none}.mk{font-weight:400;opacity:.55}</style></head>
 <body><main><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="#141e33"/><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="1.2"/><g fill="none" stroke="#ffc21a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20l12 12-12 12" stroke-opacity=".38"/><path d="M33 20l12 12-12 12"/></g></svg><b><span class="mk">md</span>Sinyal</b><p id="m">Link açılıyor…</p><a class="git" id="git" href="/sinyal/" hidden>Ana sayfaya dön</a></main>
 <script>
+// mdSinyal link yönlendiricisi. GitHub Pages bilinmeyen her adreste bu sayfayı açar; adres uygulamanın ekranına çevrilir.
+// Link düzeni: belgeler/link-standardi.md (sinyal-kaynak). Eski linkler (#/davet/..., mdsinyal.com/<kısa kod>) aynen çalışır.
 (async () => {
   // site alan adının kökünde (/) ya da GitHub Pages altında (/sinyal/) çalışabilir
   const KOK = /^\/sinyal(\/|$)/.test(location.pathname) ? '/sinyal/' : '/';
-  document.getElementById('git').href = KOK;
-  const yol = location.pathname.slice(KOK.length).replace(/\/+$/, '');
-  const m = document.getElementById('m');
-  if (!yol || !/^[a-z0-9-]{4,90}$/.test(yol)) { m.textContent = 'Aradığınız sayfa bulunamadı.'; document.getElementById('git').hidden = false; return; }
+  const git = document.getElementById('git'), m = document.getElementById('m');
+  git.href = KOK;
+  let yol = location.pathname.slice(KOK.length).replace(/\/+$/, '');
+  try { yol = decodeURIComponent(yol); } catch (x) { }
+  const p = yol.split('/'), ac = h => location.replace(KOK + h);
+  // telefon klavyesi ilk harfi büyük yazabilir (mdsinyal.com/Ogrenci): yalnız ilk parça küçük harfe çevrilir, kodlar olduğu gibi kalır
+  const p0 = (p[0] || '').toLocaleLowerCase('tr').replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c');
+  const yok = t => { m.textContent = t || 'Aradığınız sayfa bulunamadı.'; git.hidden = false; };
+  const KOD = /^[A-Za-z0-9_-]{4,64}$/, KISA = /^[a-z0-9]{6,16}$/;
+  // 1) Sabit adresler (sunucuya sorulmaz)
+  const SABIT = { ogrenci: '#/ogrenci-giris', ogretmen: '#/ogretmen-giris', yonetim: '#/yonetim', kayit: '#/kayit', demo: '#/demo' };
+  if (p.length === 1 && SABIT[p0]) return ac(SABIT[p0]);
+  // 2) Kodu linkin içinde olanlar: /d/<kurs>/<kod> davet, /h/<kod> kurs hesabı açma, /yonetim/<kod> Yönetim kurulumu, /kayit/<şube>
+  if (p0 === 'd' && p.length === 3 && KOD.test(p[1]) && KOD.test(p[2])) return ac('#/davet/' + p[1] + '/' + p[2]);
+  if (p0 === 'h' && p.length === 2 && KOD.test(p[1])) return ac('#/yeni-kurs/' + p[1]);
+  if (p0 === 'yonetim' && p.length === 2 && KOD.test(p[1])) return ac('#/yonetim/kur/' + p[1]);
+  if (p0 === 'kayit' && p.length === 2 && /^[A-Za-z0-9_-]{1,64}$/.test(p[1])) return ac('#/kayit/' + encodeURIComponent(p[1]));
+  // 3) Kısa kodlar (api.mdsinyal.com): /d/<kod> davet, /i/<kod> imza; /<kod> eski kısa linkler ve kursa özel ad (mdsinyal.com/kursunuz)
+  let kod = '', tur = '';
+  if (p.length === 2 && (p0 === 'd' || p0 === 'i') && KISA.test(p[1])) { kod = p[1]; tur = p0; }
+  // iç kayıtlar (takip-<imza> gibi) link olarak açılmaz
+  else if (p.length === 1 && /^[a-z0-9-]{4,90}$/.test(p0) && !/^(takip|hat|hatno|gelen|medya|durum|yedek|kisaad|kursad|hata|sohbet)[:-]/.test(p0)) kod = p0;
+  if (!kod) return yok();
+  m.textContent = { d: 'Davet açılıyor…', i: 'İmza sayfası açılıyor…' }[tur] || 'Link açılıyor…';
   try {
-    const j = await (await fetch('https://api.mdsinyal.com/k/' + yol)).json();
-    if (j.ok && j.hedef) { location.replace(j.hedef); return; }
+    const dur = new AbortController(); setTimeout(() => dur.abort(), 8000);
+    const j = await (await fetch('https://api.mdsinyal.com/k/' + kod, { signal: dur.signal })).json();
+    const h = j && j.ok && j.hedef ? new URL(j.hedef) : null;
+    // yalnız mdSinyal'in kendi adreslerine gidilir
+    // yalnız mdSinyal'in kendi adreslerine (https; yerelde http) ve linkin önekine uyan ekrana gidilir: d/ davet, i/ imza
+    const kendi = h && (h.protocol === 'https:' ? /^(mdsinyal\.com|servetskr\.github\.io)$/ : h.protocol === 'http:' ? /^(localhost|127\.0\.0\.1)$/ : /^$/).test(h.hostname);
+    const uyar = h && (tur === 'd' ? /^#\/davet\//.test(h.hash) || /\/d\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+$/.test(h.pathname) : tur === 'i' ? /^#\/imza(-geldi)?\//.test(h.hash) : true);
+    if (kendi && uyar) { location.replace(h.href); return; }
   } catch (e) { }
-  m.textContent = 'Bu linkin süresi dolmuş ya da link hatalı. Kursa yazıp yeni link isteyin.'; document.getElementById('git').hidden = false;
+  yok(tur === 'd' ? 'Bu davetin süresi dolmuş ya da link hatalı. Kurs müdüründen yeni davet linki isteyin.' : 'Bu linkin süresi dolmuş ya da link hatalı. Kursa yazıp yeni link isteyin.');
 })();
 </script></body></html>

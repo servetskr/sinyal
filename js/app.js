@@ -1,24 +1,24 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=210';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=210';
-import * as Y1 from './sayfalar1.js?v=210';
-import * as Y2 from './sayfalar2.js?v=210';
-import * as P from './portal.js?v=210';
-import * as OXU from './ogr/ui.js?v=210';
-import * as Y3 from './sayfalar3.js?v=210';
-import * as Y4 from './sayfalar4.js?v=210';
-import * as Y5 from './sayfalar5.js?v=210';
-import * as IM from './imza.js?v=210';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=210';
-import * as SN from './senaryo.js?v=210';
-import * as OZ from './ozellik.js?v=210';
-import { durumlariGuncelle } from './mesaj.js?v=210';
-import { yeniMenu } from './yeni.js?v=210';
-import * as B from './bulut.js?v=210';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=210';
-import * as AN from './analiz.js?v=210';
-import * as GZ from './guzergah.js?v=210';
-import * as ORT from './ortak.js?v=210';
-import * as SH from './sahip.js?v=210';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=211';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=211';
+import * as Y1 from './sayfalar1.js?v=211';
+import * as Y2 from './sayfalar2.js?v=211';
+import * as P from './portal.js?v=211';
+import * as OXU from './ogr/ui.js?v=211';
+import * as Y3 from './sayfalar3.js?v=211';
+import * as Y4 from './sayfalar4.js?v=211';
+import * as Y5 from './sayfalar5.js?v=211';
+import * as IM from './imza.js?v=211';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=211';
+import * as SN from './senaryo.js?v=211';
+import * as OZ from './ozellik.js?v=211';
+import { durumlariGuncelle } from './mesaj.js?v=211';
+import { yeniMenu } from './yeni.js?v=211';
+import * as B from './bulut.js?v=211';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=211';
+import * as AN from './analiz.js?v=211';
+import * as GZ from './guzergah.js?v=211';
+import * as ORT from './ortak.js?v=211';
+import * as SH from './sahip.js?v=211';
 
 /* ---------- uygulama hatalarının otomatik bildirimi ----------
    window.onerror / unhandledrejection → worker /hata (api.mdsinyal.com). Gönderilen: sürüm, rota adı (#/ad; kimlik ve kod kırpılır), rol,
@@ -593,6 +593,8 @@ function bekleEkrani(metin) {
 }
 // Gerçek kurs hesabıyla oturum aç
 function bulutOturumu(u, yeniGiris) {
+  // demo hesabı (Yönetim › Hesaplar › Hesap oluştur › Demo): bulut verisine bağlanmaz, bu cihazdaki örnek verili demo açılır
+  if (u && u.demo) { if (location.hash !== '#/demo') history.replaceState(null, '', '#/demo'); demoyaGir(); return bildir('Demo hesabıyla girdin: örnek verilerle çalışır, hiçbir mesaj gönderilmez'); }
   const yonetimIstendi = yonetimGirisYolu();
   oturum.kullanici = u;
   try { sessionStorage.setItem('sinyal-oturum', JSON.stringify(u)); } catch (x) { }
@@ -673,13 +675,11 @@ function sifreIzle(f, btn) {
   f.addEventListener('input', g); g();
 }
 // Şifre yanlış girilince yardım kartı kendiliğinden açılır (kişi “şifremi unuttum”u aramaz)
-function yardimAc(kok, { kim, tur, eposta, tel }) {
+function yardimAc(kok, { kim, tur, eposta }) {
   const yer = kok.querySelector('[data-yardim]'); if (!yer) return;
   yer.innerHTML = SH.yardimHtml({ kim, tur, eposta: !!eposta });
   const ep = yer.querySelector('[data-yardim-eposta]');
   if (ep) ep.addEventListener('click', () => { ep.disabled = true; B.sifreSifirla(eposta).then(() => { ep.textContent = 'Link gönderildi; gelen kutunu ve spam klasörünü kontrol et'; }).catch(x => { ep.disabled = false; bildir(B.hataMetni(x), 'uyari'); }); });
-  const kb = yer.querySelector('[data-yardim-kurs]');
-  if (kb) kb.addEventListener('click', () => { kb.disabled = true; B.ogrenciSifreTalep(tel).then(() => { kb.textContent = 'Kursuna iletildi; yeni şifren WhatsApp’tan gelecek'; }).catch(x => { kb.disabled = false; bildir(B.hataMetni(x), 'uyari'); }); });
 }
 function gozBagla(kok) {
   // #uyg ekranlar arasında aynı öğe kalır: dinleyici bir kez bağlanır (iki kez bağlanırsa her dokunuş iki kez çevirir, şifre göster çalışmaz)
@@ -727,7 +727,7 @@ async function yonetimHesapEkrani(kod) {
   const kok = document.getElementById('uyg');
   if (!dv) { kok.innerHTML = ogrKap(`<div class="og-giris-bas"><h1>Bu link geçersiz</h1><p>Hesap açma linkinin süresi dolmuş ya da daha önce kullanılmış.</p></div><a class="dg dg-ana og-giris-dg" href="#/yonetim">mdSinyal Yönetim girişine git</a>`); return; }
   const alan = (ad, et, ek) => `<label class="og-alan"><span class="og-alan-et">${et}</span><span class="og-girdi"><input name="${ad}" ${ek}></span></label>`;
-  kok.innerHTML = ogrKap(`<div class="og-giris-bas"><h1>mdSinyal Yönetim hesabı</h1><p>Bir kez yapılır. Sonra her seferinde <b>mdsinyal.com/#/yonetim</b> adresinden e-postan ve şifrenle girersin.</p></div>
+  kok.innerHTML = ogrKap(`<div class="og-giris-bas"><h1>mdSinyal Yönetim hesabı</h1><p>Bir kez yapılır. Sonra her seferinde <b>mdsinyal.com/yonetim</b> adresinden e-postan ve şifrenle girersin.</p></div>
     <form novalidate class="og-giris-form" id="f-yh">${ogrAlan('kad', 'E-posta adresin', 'email', 'kursiyer', 'placeholder="ornek@gmail.com" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required')}${ogrAlan('ad', 'Adın soyadın', 'text', 'kursiyer', 'value="Servet Sakar" autocomplete="name" required')}
       <details class="yh-ortak"><summary>Ortaklık bilgileri <small>sözleşmeye göre dolu; gerekirse düzelt</small></summary>
         ${alan('oad', 'Ortağın adı soyadı', 'value="Eyüp Çağlar"')}${alan('oran', 'Gelir payı (%)', 'inputmode="numeric" value="40"')}${alan('bas', 'Sözleşme tarihi', 'type="date" value="2026-11-10"')}${alan('bt', 'Borcun aktarıldığı tarih (son gün bundan 6 ay sonra)', 'type="date" value="2026-11-10"')}${alan('anapara', 'Anapara (₺)', 'inputmode="numeric" value="50.000"')}${alan('iade', 'Yeni satış başına anapara iadesi (₺)', 'inputmode="numeric" value="2.000"')}
@@ -782,15 +782,13 @@ function ugrOgrStil() {
 .ox-ugr-kural li.ok .ox-i{background:var(--ox-yesil)}
 /* kurallar sağlanana kadar kapalı düğme (yükleniyorken mavi kalır) */
 .ox-ugr .ox-ugr-sb .ox-dg-ana.ox-ugr-dg:disabled:not(:has(.ox-ugr-don)){background:#e6eaf0;color:var(--ox-soluk)!important;box-shadow:none}
-/* talep gönderildi: düğme gizlenir */
-.ox-ugr .ox-ugr-dg[hidden]{display:none}
+/* şifremi unuttum: ne yapılacağı, numaralı adımlar */
+.ox-ugr-yol{list-style:none;display:grid;gap:10px;margin:4px 0 18px;padding:0}
+.ox-ugr-yol li{display:flex;align-items:flex-start;gap:12px;padding:13px 15px;border-radius:14px;background:var(--ox-gri-acik);color:var(--ox-metin);font-size:15.5px;line-height:1.4}
+.ox-ugr-yol li>b{flex:none;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--ox-mavi-acik);color:var(--ox-mavi);font-size:13.5px;font-weight:700}
+.ox-ugr-yol li>span{flex:1;min-width:0;padding-top:2px;overflow-wrap:anywhere}
 /* bölünmesin (e-posta) */
 .ox-ugr-nb{white-space:nowrap}
-/* başarısız girişten sonra gelen yardım kutusundaki bağlantı (sahip.js yardimHtml, öğrenci türü) */
-.ox-ugr .og-yardim .og-bag{display:inline-flex;align-items:center;justify-self:center;min-height:44px;padding:0 4px;color:var(--ox-mavi);font-size:15px;font-weight:600;text-align:center}
-.ox-ugr .og-yardim .og-bag:hover{text-decoration:none}
-.ox-ugr .og-yardim .og-yardim-dg{text-align:center}
-.ox-ugr .og-yardim .og-yardim-dg:disabled{color:#146c3e}
 @media (prefers-reduced-motion:reduce){.ox-ugr-adim li,.ox-ugr-kural li,.ox-ugr-kural .ox-i{transition:none}}
 `);
 }
@@ -839,36 +837,24 @@ function ogrenciGirisEkrani(not) {
       if (f.tel.value.replace(/\D/g, '').length < 10) return alanHata(f, 'tel', 'Cep telefonunu yaz');
       if (!f.sifre.value) return alanHata(f, 'sifre', 'Şifreni yaz');
       yukle(btn, 'Giriliyor…'); yer.innerHTML = '';
-      B.ogrenciGiris(f.tel.value, f.sifre.value).then(u => u.ilkGiris ? sifreBelirleEkrani(u) : ogrenciModu(u.kurs, u.kod)).catch(x => { birak(btn, 'Giriş yap'); uyari(f, B.hataMetni(x)); if (SH.girisHatasiMi(x) && !/hesap yok/.test(x.kullanici || '')) yardimAc(govde, { kim: f.tel.value.trim(), tur: 'ogrenci', tel: f.tel.value }); });
+      B.ogrenciGiris(f.tel.value, f.sifre.value).then(u => u.ilkGiris ? sifreBelirleEkrani(u) : ogrenciModu(u.kurs, u.kod)).catch(x => { birak(btn, 'Giriş yap'); uyari(f, B.hataMetni(x)); if (SH.girisHatasiMi(x) && !/hesap yok/.test(x.kullanici || '')) yardimAc(govde, { kim: f.tel.value.trim(), tur: 'ogrenci' }); });
     });
   }
 
-  // şifremi unuttum: talep kursa düşer, kurs yeni geçici şifreyi WhatsApp'tan gönderir; gönderilince düğme gizlenir, yeşil kutu kalır
+  // şifremi unuttum: öğrenci hesabını ve yeni geçici şifreyi kurs verir. Girişten talep gönderilmez
+  // ("WhatsApp'tan iste" 16 Kas 2026'da kaldırıldı); ekran yalnız ne yapılacağını söyler.
   function unuttumGoster() {
     ac(`${OXU.geri('Giriş', { 'data-ugr-geri': true })}
-      ${OXU.sayfaBas('Şifremi unuttum', 'Kursuna haber verelim; yeni geçici şifren WhatsApp’tan gelsin.')}
-      <form class="ox-ugr-form" novalidate>
-        ${telAlan()}
-        <div class="ox-ugr-uyari" role="alert" hidden></div>
-        <button type="submit" class="ox-dg ox-dg-ana genis ox-ugr-dg"><span>Kursuma haber ver</span></button>
-      </form>
-      <div data-ugr-tamam aria-live="polite"></div>
-      ${OXU.not('Yeni şifren bu numaranın WhatsApp’ına gelir. Gelmezse kursunu ara.', 'wp')}`);
+      ${OXU.sayfaBas('Şifremi unuttum', 'Öğrenci hesabını kursun açar; yeni şifreni de kursun verir.')}
+      <ol class="ox-ugr-yol">
+        <li><b>1</b><span>Kursuna “şifremi unuttum” de: telefonla ara ya da kursa uğra.</span></li>
+        <li><b>2</b><span>Kursun sana yeni geçici şifre verir.</span></li>
+        <li><b>3</b><span>Cep telefonun ve geçici şifrenle gir, sonra kendi şifreni belirle.</span></li>
+      </ol>
+      <button type="button" class="ox-dg ox-dg-ana genis ox-ugr-dg" data-ugr-geri2><span>Giriş ekranına dön</span></button>`);
     const h1 = govde.querySelector('.ox-sayfa-bas h1'); h1.tabIndex = -1; h1.focus({ preventScroll: true });
-    const f = govde.querySelector('form'), tamam = govde.querySelector('[data-ugr-tamam]');
-    ortak(f);
     govde.querySelector('[data-ugr-geri]').addEventListener('click', () => girisGoster('[data-sifre-unut]'));
-    f.addEventListener('submit', ev => {
-      ev.preventDefault(); const btn = f.querySelector('[type=submit]');
-      if (btn.disabled) return;
-      temizle(f);
-      if (f.tel.value.replace(/\D/g, '').length < 10) return alanHata(f, 'tel', 'Önce cep telefonunu yaz; yeni şifre o numaraya gelir');
-      yukle(btn, 'Gönderiliyor…'); tamam.innerHTML = '';
-      B.ogrenciSifreTalep(f.tel.value).then(() => {
-        btn.hidden = true;  // talep bir kez gider (eski ekranda da düğme kapalı kalıyordu)
-        tamam.innerHTML = `<div class="ox-ugr-tamam ox-ugr-gir">${oi('dogru')}<div><b>Kursuna iletildi.</b><p>Yeni geçici şifren WhatsApp’tan gelecek.</p></div></div>`;
-      }).catch(x => { birak(btn, 'Kursuma haber ver'); uyari(f, B.hataMetni(x)); f.tel.focus(); });
-    });
+    govde.querySelector('[data-ugr-geri2]').addEventListener('click', () => girisGoster('[data-sifre-unut]'));
   }
 
   girisGoster(null, false);
@@ -887,7 +873,7 @@ function sifreBelirleEkrani(u) {
       <div class="ox-ugr-uyari" role="alert" hidden></div>
       <button type="submit" class="ox-dg ox-dg-ana genis ox-ugr-dg"><span>Kaydet ve panele geç</span></button>
     </form>
-    ${OXU.not('Şifreni kimseyle paylaşma. Unutursan giriş ekranından yenisini isteyebilirsin.', 'kilit')}</div>`, '#ugr-s1');
+    ${OXU.not('Şifreni kimseyle paylaşma. Unutursan kursun sana yeni geçici şifre verir.', 'kilit')}</div>`, '#ugr-s1');
   const f = govde.querySelector('form'), btn = f.querySelector('[type=submit]'); ugrGozler(f); ugrGirdiTemizle(f); sifreIzle(f, btn);
   f.addEventListener('submit', ev => {
     ev.preventDefault(); if (btn.disabled) return;
@@ -1011,7 +997,7 @@ async function davetEkrani() {
 document.addEventListener('click', ev => { if (ev.target.closest('[data-yeniden-yukle]')) location.reload(); });
 document.addEventListener('click', ev => {
   if (ev.target.closest('[data-cikis]')) kapatPencere();
-  if (ev.target.closest('[data-hesap]')) { if (oturum.kullanici && oturum.kullanici.rol === 'usta' && document.body.classList.contains('ox-modu')) return import('./usta/ekran.js?v=210').then(m => { m.hesapAc(); yenile(true); }); return hesapSayfasi(); }
+  if (ev.target.closest('[data-hesap]')) { if (oturum.kullanici && oturum.kullanici.rol === 'usta' && document.body.classList.contains('ox-modu')) return import('./usta/ekran.js?v=211').then(m => { m.hesapAc(); yenile(true); }); return hesapSayfasi(); }
   if (ev.target.closest('[data-destek]')) return destekPenceresi();
   // Yönetim: Hesaplar telefonda profil menüsünden açılır (alt çubuk 6 sekme kalır)
   if (ev.target.closest('[data-yn-hesaplar]')) { kapatPencere(); ORT.sekmeSec('hesaplar'); yonetimCiz(true); SH.otoBaglan(); return; }
@@ -1123,3 +1109,5 @@ async function surumBak() {
 }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') surumBak(); });
 setTimeout(surumBak, 4000);
+// kullanım analizi (kişisel veri içermez; kullanim.js): ekran, düğme adı, süre, hata türü sayılır, günde bir özet yazılır
+setTimeout(() => import('./kullanim.js?v=211').then(m => m.baslat()).catch(() => { }), 1500);

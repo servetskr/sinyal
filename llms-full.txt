@@ -1,0 +1,204 @@
+# mdSinyal
+
+> mdSinyal (MD Sinyal), sürücü kursları için yönetim yazılımı: direksiyon planı, tahsilat ve kasa, sınav takibi, MEBBİS işlemleri, WhatsApp asistanı ve öğrenci/öğretmen uygulaması tek sistemde.
+
+## Kısaca
+
+- Ne: Türkiye’deki özel motorlu taşıt sürücü kursları (MTSK) için yönetim programı. Üretici: MD Yazılım, Eskişehir.
+- Nasıl çalışır: web tabanlı; tarayıcıda açılır, kurulum, Windows sürümü ya da sunucu bilgisayar gerekmez. Bilgisayar, tablet ve telefonda çalışır.
+- Kimler kullanır: kurs müdürü ve ön büro (bilgisayardan), öğretmen (usta öğretici) ve öğrenci (telefondan). Herkes yalnız kendi rolünün ekranlarını görür.
+- Kullanıcı sayısı: sınırsız. Birden fazla şube tek hesapta.
+- Ücret: kurs başına abonelik; yıllık ödemede kurulum, kayıt aktarımı ve eğitim dahil. Güncel fiyat WhatsApp’tan ya da tanıtım görüşmesinde verilir.
+- Geçiş: eski programdaki (Tabim, Akınsoft, Wenntec vb.) kursiyer, taksit/ödeme, araç ve öğretmen listeleri Excel ya da CSV ile aktarılır; aktarımı istenirse mdSinyal ekibi yapar. Geçiş çoğu kursta bir gün sürer; kurulum günü ekip eğitimi verilir.
+- MEBBİS: MEBBİS’e girilecek işler (kursiyer kaydı, direksiyon programı, sınav, fatura bilgisi) son tarihleriyle listelenir. MEBBİS Yardımcısı adlı Chrome eklentisi formları kursun kendi açtığı MEBBİS oturumunda doldurur; kaydı kurs yetkilisi onaylar. MEBBİS şifresi istenmez ve saklanmaz.
+- WhatsApp: mesajlar kursun kendi WhatsApp Business hattından (Meta) gider. Ders, taksit ve kayıt görüşmesi hatırlatmaları bu hattan gönderilir. Ders değişikliği isteyen öğrenciye asistan, kursta mdSinyal açıkken birkaç dakika içinde 24 saat kuralına uygun boş saatleri önerir, seçilen saat plana işlenir. Diğer mesajlar mdSinyal’in gelen kutusunda toplanır ve kurs ekibi yanıtlar.
+- Öğrenci ve öğretmen uygulaması: uygulama mağazasından indirilmez; mdsinyal.com telefonda açılıp ana ekrana eklenir.
+- Güvenlik ve KVKK: veriler bulutta şifreli tutulur, her gün yedeklenir, her işlem kimin yaptığıyla kaydedilir. Kurs veri sorumlusu, mdSinyal veri işleyendir. Sözleşme biterse veriler 30 gün içinde Excel ve tam yedek olarak kursa teslim edilir, sonra silinir.
+- İletişim: WhatsApp ve telefon 0501 363 65 36 (+90 501 363 65 36). Kursa özel tanıtım görüşmesi ücretsizdir. Eskişehir’deki kurslara yerinde, diğer şehirlere uzaktan kurulum.
+- Demo: https://mdsinyal.com/#/demo (örnek bir kursla açılır, kayıt gerekmez).
+
+## Özellikler
+
+### WhatsApp asistanı
+
+Adaylar ve öğrencilerle iletişim kursun kendi WhatsApp numarasından yürür. Ders, taksit ve kayıt görüşmesi hatırlatmaları kursun kendi hattından gönderilir. Ders değişikliği isteyen öğrenciye asistan, kursta mdSinyal açıkken birkaç dakika içinde 24 saat kuralına uygun boş saatleri sunar; öğrencinin seçtiği saat plana işlenir. Diğer bütün mesajlar mdSinyal’in gelen kutusunda toplanır, ilgili personel yanıtlar.
+
+- Kursun kendi WhatsApp Business hattı
+- Ders değişikliğinde uygun saat önerisi
+- Bütün yazışmalar tek gelen kutusunda
+
+### Kasa ve tahsilat
+
+Tahsilat ve alacaklar tek ekrandan izlenir. Kayıtta taksit planı oluşturulur, her ödemeye makbuz kesilir. Günün tahsilatı, geciken taksitler ve toplam alacak anlık olarak görünür; her öğrencinin havale açıklama kodu ödemenin kime ait olduğunu gösterir. Günlük kasa ve aylık özet mali müşavir için Excel’e aktarılır.
+
+- Taksit planı ve makbuz
+- Geciken ödemeler listesi
+- Birden fazla banka hesabı ve havale kodu
+
+### Direksiyon planı
+
+Direksiyon programı araç ve öğretmen bazında hazırlanır. Dersler öğretmen ve araç müsaitliğine göre yerleştirilir; aynı araca ya da öğretmene aynı saatte iki ders verilmesi engellenir. Günlük ders sınırı, muayene ve belge süreleri planlarken denetlenir. Öğrenci ders değişikliğini WhatsApp üzerinden ister, 24 saat kuralına uygun saatler sunulur.
+
+- Gün, hafta ve ay görünümü
+- Çakışma ve süre denetimi
+- Değişiklikler öğrenciye ve öğretmene bildirilir
+
+### Sınav hazırlığı
+
+Öğrencinin sınava hazırlığı ölçülür. Öğrenciler deneme sınavlarını kendi telefonlarından çözer. Kurs, hangi öğrencinin hangi konuda eksik olduğunu ve kimin sınava hazır olduğunu görür; e-Sınav ve uygulama sınavı sonuçları kalan haklarla birlikte izlenir.
+
+- Telefondan deneme sınavı
+- Konu bazında eksik analizi
+- Sınav sonuçları ve kalan haklar
+
+### Raporlar ve analiz
+
+Kursun performansı tek ekranda. Aylık kayıt, tahsilat, sınav başarısı ve araç doluluğu her gün güncellenir. Kârlılık ve kapasite raporları hangi araç ve öğretmenin ne kadar verimli çalıştığını, adaydan kayda dönüşüm oranı ise kayıt performansını gösterir.
+
+- Kayıt, tahsilat ve sınav başarısı
+- Kârlılık ve kapasite
+- Adaydan kayda dönüşüm
+
+### MEBBİS işlemleri
+
+MEBBİS işlemleri tek ekrandan yürütülür. Kursiyer kayıtları, direksiyon programları, sınav bildirimleri ve fatura bilgileri son tarihleriyle listelenir. MEBBİS Yardımcısı (Chrome eklentisi) formları kursun kendi açtığı MEBBİS oturumunda doldurur; kaydı kurs yetkilisi onaylar. MEBBİS şifresi mdSinyal’de tutulmaz.
+
+- Son tarih takibi
+- Formlar kursun kendi oturumunda doldurulur
+- MEBBİS şifresi istenmez
+
+### Güvenlik ve yedek
+
+Bütün kayıtlar her gün yedeklenir. Veriler bulutta şifreli olarak saklanır; yedeğin bir kopyası ayrı bir yerde tutulur. Her kullanıcı yalnız kendi rolünün ekranlarını görür; yapılan her işlem sunucuda kayıt altına alınır. KVKK için veri işleme sözleşmesi ve anonimleştirme araçları hazırdır.
+
+- Her gün yedek
+- Rol bazlı yetkilendirme
+- KVKK araçları
+
+### Diğer özellikler
+
+- Evden kayıt ve uzaktan sözleşme: Aday bilgilerini kendisi girer, sözleşmeyi telefonundan imzalar.
+- Eksik evrak takibi: Eksik belgeler listelenir; son günüyle öğrenciye iletilir.
+- Teorik ders ve yoklama: Teorik ders programı ve devam takibi.
+- Öğretmen uygulaması: Günlük dersler, öğrenci imzası, haftalık program ve kazanç.
+- Öğrenci uygulaması: Ders, ödeme planı, sınav ve belgeler öğrencinin telefonunda.
+- Şubeler ve yetkiler: Birden fazla şube tek hesapta; personele rol bazında yetki.
+- Mali müşavir paketi: Tahsilat ve kasa kayıtları Excel’e aktarılır.
+- Bir günde geçiş: Mevcut programdaki kayıtlar tarafımızdan aktarılır.
+
+## Kullanıcılar
+
+- Kurs müdürü (bütün kurs): Genel bakış, tahsilat, raporlar, MEB işleri ve ayarlar. Her işin kimin tarafından yapıldığı kayıt altındadır.
+- Ön büro (kayıt ve kasa): Öğrenci kaydı, evrak, ödeme alma, direksiyon planı ve öğrenciyle yazışma.
+- Öğretmen (telefon): Günün dersleri, öğrenci imzası, haftalık program ve kazanç. Yalnız kendi öğrencilerini görür.
+- Öğrenci (telefon): Dersler, ödeme planı, sınav hazırlığı ve belgeler. Ders değişikliğini kendisi ister.
+
+## Geçiş süreci
+
+1. Tanıtım görüşmesi: Kursunuza gelir, mdSinyal’i kendi işleyişinize göre gösteririz. Şube ve araç sayınıza göre teklif veririz.
+2. Kurulum ve aktarım: Mevcut programınızdaki öğrenci, ödeme ve ders kayıtlarını biz aktarırız. Geçiş genellikle bir gün sürer.
+3. Eğitim ve kullanım: Müdür, ön büro ve öğretmenlere kendi ekranlarını gösteririz. Sonrasında sorularınızı WhatsApp’tan yanıtlarız.
+
+## Yakında
+
+MEB, direksiyon sınavı için yeni yönetmelik taslağı hazırladı: sınavın serbest güzergâhta, akan trafikte yapılması ve kamerayla kaydedilmesi gündemde. Metin henüz Resmî Gazete’de yayımlanmadı. Yayımlandığında mdSinyal yeni kurallara göre güncellenir.
+
+- Yeni sınav kuralları: Yönetmelik yayımlanır ve direksiyon sınavının süresini ya da sınav günü kurallarını değiştirirse, mdSinyal’deki sınav günü planlama kuralları yeni metne göre güncellenir.
+- Yeni sınava göre hazırlık: Direksiyon sınavı serbest güzergâhta yapılmaya başlarsa öğrencinin sınav hazırlık içeriği yeni sınav düzenine göre yenilenir.
+- Sınav aracında kamera takibi: Direksiyon sınavı kamerayla kaydedilmeye başlar ve sınav aracına kamera ya da konum cihazı gerekirse, cihazın durumu araç kartında takip edilir.
+
+## Sık sorulan sorular
+
+### Genel
+
+**mdSinyal nedir?**
+mdSinyal (MD Sinyal), Türkiye’deki sürücü kursları (MTSK) için web tabanlı yönetim programıdır. Kayıt, evrak, direksiyon planı, teorik dersler, sınavlar, tahsilat, MEBBİS işleri ve WhatsApp hatırlatmaları tek yerde yürür; müdür, ön büro, öğretmen ve öğrenci her biri kendi ekranını kullanır. MD Yazılım’ın (Eskişehir) ürünüdür.
+
+**mdSinyal’de hangi özellikler var?**
+WhatsApp asistanı ve hatırlatmalar, direksiyon planı, kasa ve tahsilat (taksit, makbuz, senet, geciken ödemeler), sınav hazırlığı ve sınav sonuçları, MEBBİS işlemleri, raporlar (kayıt, tahsilat, başarı, kârlılık), teorik ders ve yoklama, eksik evrak takibi, denetim modu, öğrenci ve öğretmen uygulaması, şubeler ve yetkiler, Excel ile veri aktarımı ve her gün bulut yedeği.
+
+**Bilgisayara kurulum gerekiyor mu?**
+Hayır. mdSinyal tarayıcıda çalışır; bilgisayarda, tablette ve telefonda açılır. Windows sürümü ya da sunucu bilgisayar gerekmez. Telefonda ana ekrana eklenince uygulama gibi açılır.
+
+**Ücret nasıl belirlenir?**
+Kurs başına abonelikle kullanılır; kullanıcı sayısında sınır yoktur. Yıllık ödemede kurulum, kayıt aktarımı ve eğitim ücrete dahildir. Güncel fiyatı WhatsApp’tan ya da tanıtım görüşmesinde paylaşıyoruz.
+
+**Fatura ve muhasebe nasıl yürür?**
+Tahsilat, makbuz, senet, gelir-gider ve günlük kasa mdSinyal’de tutulur. Aylık muhasebe dökümü Excel ya da CSV olarak mali müşavire verilir. Faturayı şimdilik mali müşaviriniz ya da kullandığınız e-Arşiv programı keser; fatura numaraları mdSinyal’e toplu olarak alınabilir.
+
+**İnternet kesilirse ne olur?**
+Kısa kesintilerde ekranlar açık kalır; yaptığınız değişiklikler bağlantı gelince kaydedilir. Üst çubuktaki “Kaydedildi” yazısı her şeyin sunucuya ulaştığını gösterir.
+
+### Kurulum ve geçiş
+
+**Tabim ya da başka bir programdan mdSinyal’e nasıl geçilir?**
+Eski programınızdaki kursiyer, taksit ve ödeme, araç ve öğretmen listelerini Excel’e alırsınız. mdSinyal bu dosyaları (Excel ya da CSV) sütun adlarından tanır; aktarırken TC kimlik numarasını, aynı kişinin iki kez girilmesini, eksik telefonu ve tanınmayan sınıfı denetler. İsterseniz dosyaları bize gönderirsiniz, aktarımı biz yaparız. Taşımadan sonra eksik kalan kayıt varsa listesini veririz. Tabim, Akınsoft, Wenntec gibi programlardan geçişte aynı yol izlenir.
+
+**Geçiş ne kadar sürer?**
+Çoğu kursta bir gün: sabah kayıt aktarımı ve kurulum, öğleden sonra ekip eğitimi. Ertesi gün mdSinyal’le çalışmaya başlarsınız.
+
+**Ekibe eğitim veriyor musunuz?**
+Evet. Kurulum günü müdür, ön büro ve öğretmenlere kendi ekranlarını gösteririz. Sonrasında takıldığınız her şeyi WhatsApp’tan sorabilirsiniz.
+
+**Kaç kullanıcı ve şube açabiliriz?**
+Kullanıcı sayısında sınır yoktur: müdür, ön büro, bütün öğretmenler ve öğrenciler kendi hesabıyla girer. Birden fazla şube tek hesapta yönetilir; ekranlar şubeye göre süzülür. Personel rolüne göre yetkilendirilir.
+
+### Güvenlik ve KVKK
+
+**Verilerimiz nerede tutuluyor?**
+Bulutta, şifreli olarak. Her gün yedek alınır; yedeğin bir kopyası ayrı bir yerde tutulur.
+
+**Kim neyi görebilir?**
+Herkes kendi e-posta ya da telefonuyla girer. Öğretmen yalnız kendi öğrencilerini ve derslerini, öğrenci yalnız kendi bilgilerini görür. Bir kursun çalışanı başka kursun verisini göremez. Yapılan her işlem kimin yaptığıyla birlikte kaydedilir.
+
+**KVKK açısından durum nedir?**
+Kursiyer bilgilerinin veri sorumlusu kurstur; mdSinyal veri işleyendir ve bu bilgileri yalnız hizmeti sunmak için işler. Veri işleme sözleşmesi, aydınlatma metni kaydı ve anonimleştirme araçları hazırdır. Ayrıntılar gizlilik sayfasında.
+
+**mdSinyal’i bırakırsak verilerimiz ne olur?**
+Sözleşme hangi nedenle biterse bitsin, kursun bütün verileri 30 gün içinde Excel ve tam yedek dosyası olarak (belgeler, fotoğraflar ve imzalar dahil) size teslim edilir. Ardından veriler ve yedekleri en geç 30 gün içinde silinir ve silindiği size bildirilir.
+
+### Öğrenci ve öğretmen
+
+**Öğrenci ve öğretmen uygulaması var mı?**
+Var. Öğrenci derslerini, ödeme planını, sınav hazırlığını ve belgelerini; öğretmen günlük derslerini, öğrenci imzasını, haftalık programını ve kazancını telefonundan görür. Uygulama mağazasından indirilmez: mdsinyal.com telefonda açılıp ana ekrana eklenir, uygulama gibi çalışır.
+
+**Öğrenciler nasıl giriş yapar?**
+Cep telefonu numarası ve şifreyle. İlk şifre kayıttan sonra kursun WhatsApp’ından gelir; öğrenci ilk girişte kendi şifresini belirler.
+
+**Şifresini unutan ne yapar?**
+Giriş ekranında şifre yanlış girilince yardım kartı kendiliğinden çıkar. Öğrenci kursuna haber verir; kurs ekibi mdSinyal’e WhatsApp’tan yazar, dakikalar içinde yeni şifre verilir.
+
+**Öğretmenler nasıl eklenir?**
+Kurs müdürü öğretmene davet linki gönderir; öğretmen kendi e-postası ve şifresiyle hesabını açar ve yalnız kendi ders ekranını görür.
+
+### WhatsApp
+
+**WhatsApp mesajları hangi numaradan gider?**
+Kursunuzun kendi WhatsApp Business hattından. Hat Meta üzerinde kurs adına açılır; kurulumda birlikte bağlarız.
+
+**WhatsApp mesajları ücretli mi?**
+Meta, işletmelerin gönderdiği bazı mesaj türlerini ücretlendirir. Bu ücretler varsa doğrudan kursa yansır; mdSinyal üzerine ücret eklemez.
+
+**Asistan neleri kendisi yapar?**
+Ders değişikliği isteyen öğrenciye, dersine 24 saatten fazla varsa aynı öğretmenle uygun boş saatleri önerir (kursta mdSinyal açıkken birkaç dakika içinde); öğrencinin seçtiği saat plana işlenir; dersine 24 saatten az kalan öğrenci kursu aramaya yönlendirilir. Ders, taksit ve kayıt görüşmesi hatırlatmaları kursun hattından gider. Ücret, evrak, adres gibi diğer sorular mdSinyal’in gelen kutusuna düşer ve ekibiniz yanıtlar.
+
+### MEB
+
+**MEBBİS’e otomatik işliyor mu?**
+MEBBİS Yardımcısı (Chrome eklentisi) formları sizin açtığınız MEBBİS oturumunda doldurur. MEBBİS şifrenizi istemez ve saklamaz; her kaydı “Kaydet”e basarak siz onaylarsınız.
+
+**MEB denetimine hazırlıkta yardımcı oluyor mu?**
+Evet. Denetim modu, denetimde bakılan eksikleri tek listede gösterir: süresi dolan ya da dolmak üzere olan personel ve araç belgeleri (muayene, sigorta), imzasız ya da kısa süren direksiyon dersleri, eksik kursiyer evrakı ve KVKK aydınlatması kaydı olmayan kursiyerler.
+
+**Yeni sürücü kursu yönetmeliği gelince mdSinyal ne yapacak?**
+MEB’in hazırladığı taslak (direksiyon sınavının serbest güzergâhta yapılması ve kamerayla kaydedilmesi gibi) henüz Resmî Gazete’de yayımlanmadı. Yayımlanan metin sınav süresini ya da sınav günü kurallarını değiştirirse mdSinyal’deki planlama kuralları buna göre güncellenir; sınav serbest güzergâhta yapılmaya başlarsa sınav hazırlık içeriği yeni sınava göre yenilenir. Yönetmelik direksiyon ders saatlerini de değiştirirse kural tablosu da yeni saatlere göre güncellenir.
+
+## Sayfalar
+
+- [Ana sayfa](https://mdsinyal.com/): genel tanıtım, modüller, kullanıcı rolleri, geçiş adımları
+- [Özellikler](https://mdsinyal.com/ozellikler/): her özelliğin açıklaması ve ekranı
+- [Sık sorulan sorular](https://mdsinyal.com/sss/): kurulum ve geçiş, güvenlik ve KVKK, WhatsApp, MEBBİS
+- [İletişim](https://mdsinyal.com/iletisim/): tanıtım görüşmesi isteği
+- [Gizlilik ve KVKK](https://mdsinyal.com/gizlilik.html): işlenen veriler, hukuki sebepler, saklama süreleri
+
+Son güncelleme: 2026-11-16

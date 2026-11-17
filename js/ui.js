@@ -1,4 +1,5 @@
-import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=210';
+import { EMU } from './firebase-ayar.js?v=211';
+import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=211';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -118,6 +119,7 @@ let acikPencere = null;
 let oncekiOdak = null;
 // Formdaki eksik ya da hatalı alanları birlikte işaretler, ilk alana kaydırır; liste: [[alan, mesaj], ...]. Hata varsa true döner.
 export function alanHatalari(form, liste) {
+  if (bildirKanca.f && liste && liste.length) try { bildirKanca.f('form'); } catch (x) { }
   form.querySelectorAll('.alan-hata').forEach(x => x.remove());
   form.querySelectorAll('[aria-invalid="true"]').forEach(x => x.removeAttribute('aria-invalid'));
   form.querySelectorAll('.alan.hatali').forEach(x => x.classList.remove('hatali'));
@@ -166,7 +168,10 @@ const bildirimSil = b => { if (b.dataset.gidiyor) return; b.dataset.gidiyor = '1
 export function bildirimKapat(tur = '') {
   document.querySelectorAll('.bildirimler .bildirim' + (tur ? '.bildirim-' + tur : '')).forEach(bildirimSil);
 }
+// Kullanım analizi (kullanim.js) uyarı ve form hatalarını sayar; metin aktarılmaz, yalnız tür
+export const bildirKanca = { f: null };
 export function bildir(metin, tur = 'tamam', geriAlinir = false) {
+  if (bildirKanca.f && tur === 'uyari') try { bildirKanca.f('uyari'); } catch (x) { }
   let k = document.querySelector('.bildirimler');
   if (!k) { k = document.createElement('div'); k.className = 'bildirimler'; k.setAttribute('aria-live', 'polite'); document.body.appendChild(k); }
   const tam = document.body.classList.contains('ox-tam-acik') || document.body.classList.contains('ox-akis-acik');
@@ -234,16 +239,28 @@ export const etiket = (ad, rol) => {
   const kim = ROL_KIME[rol];
   return `ALICI: ${rol || 'KİŞİ'}${ad && rol !== 'MÜDÜR' ? ' · ' + ad : ''}\n(Gerçekte bu mesaj ${kim || 'alıcının'} telefonuna gider.)\n――――――――\n`;
 };
-// Uzun linki (imza paketi vb.) kısa ve açıklayıcı linke çevirir: servetskr.github.io/sinyal/sozlesme-imzasi-ad-soyad-x7k2pq
-export async function kisaLink(hedef, ad, takip, api) {
+// ---- Link düzeni (sinyal-kaynak/belgeler/link-standardi.md) ----
+// Bütün linkler sitenin kökünden ve kısa yollarla verilir: mdsinyal.com/ogrenci, /ogretmen, /giris, /kayit, /d/<kod> davet, /i/<kod> imza,
+// /h/<kod> kurs hesabı açma. Yollar 404.html'de (ya da gerçek sayfa klasöründe) uygulamanın #/ ekranına çevrilir; eski #/ linkleri de çalışır.
+export const siteKok = () => location.origin + location.pathname.replace(/[^/]*$/, '');
+export const siteLink = (yol = '') => siteKok() + String(yol).replace(/^\/+/, '');
+// Hedefin türü kısa linkin önekini belirler: davet → d/, imza (gönderim ve dönüş) → i/, öbürleri önek almaz (eski düzen)
+const kisaOnek = h => /#\/davet\/|\/d\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+$/.test(h) ? 'd' : /#\/imza(-geldi)?\//.test(h) ? 'i' : '';
+// Uzun linki (imza paketi, davet) sunucuda kısa koda çevirir: mdsinyal.com/i/x7k2pqm. Sunucu yoksa ya da hata verirse uzun link döner.
+// secenek: { gun } kısa linkin geçerlilik süresi (gün; varsayılan 60)
+export async function kisaLink(hedef, ad, takip, api, secenek = {}) {
   const a = api || (S && S.kurs && S.kurs.waApi); if (!a) return hedef;
+  // zaten kısa olan link yeniden kısaltılmaz
+  if (/\/(d|i)\/[a-z0-9]{6,16}$/.test(hedef)) return hedef;
   try {
-    const kok = new URL(a).origin;
-    const r = await fetch(kok + '/kisa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hedef, ad, takip }) });
+    const kok = waKok(a), tur = kisaOnek(hedef);
+    // sunucu 5 saniyede cevap vermezse uzun link kullanılır (düğme beklemede kalmaz)
+    const dur = typeof AbortController !== 'undefined' ? new AbortController() : null; if (dur) setTimeout(() => dur.abort(), 5000);
+    const r = await fetch(kok + '/kisa', { ...(dur ? { signal: dur.signal } : {}), method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hedef, ad, takip, ...(tur ? { tur } : {}), ...(secenek.gun ? { gun: secenek.gun } : {}), ...(secenek.ka ? { ka: secenek.ka } : {}) }) });
     const j = await r.json(); if (!r.ok || !j.ok) return hedef;
-    // kısa link sitenin kendi adresinde açılır (404 sayfası yönlendirir); yerel geliştirmede servisin adresi kullanılır
+    // kısa link sitenin kendi adresinde açılır (404.html çözer); yerel geliştirmede servisin adresi kullanılır (servis 302 ile yönlendirir)
     if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return kok + '/' + j.slug;
-    return location.origin + location.pathname.replace(/[^/]*$/, '') + j.slug;
+    return siteLink((tur ? tur + '/' : '') + j.slug);
   } catch (x) { return hedef; }
 }
 export function yonlendir(tel, metin, ad, rol) {
@@ -254,11 +271,13 @@ export function yonlendir(tel, metin, ad, rol) {
 // Otomatik gönderim: Ayarlar'da WhatsApp API adresi varsa mesaj WhatsApp açılmadan doğrudan gider (Cloud API köprüsü).
 // Ziyaretçi (giriş yapmadan inceleyen) modunda hiçbir mesaj gönderilmez, adres kayıtlı olsa bile
 // Gerçek kursta otomatik gönderim, kursun kendi WhatsApp hattı bağlıysa açılır (Ayarlar › Kurs bilgileri)
+// Servisin kökü. Yerel emülatör testinde (EMU) gerçek servise hiçbir istek gitmez: kapalı yerel adrese yönlenir
+export const waKok = (a = S && S.kurs && S.kurs.waApi) => EMU ? 'http://127.0.0.1:9' : new URL(a).origin;
 export const apiAcik = () => !!(S && S.kurs && S.kurs.waApi) && !(oturum.kullanici && oturum.kullanici.ziyaretci) && (!S._bulut || !!S.kurs.waHat);
 // WhatsApp servisine istek: gerçek kursta kursun kimliğiyle (servis kursun üyesi olduğunu doğrular), örnek kursta kimliksiz
 export async function waIstek(yol, ayar = {}) {
   const h = { ...(ayar.headers || {}), ...(S._bulut && bulutKanca.yetki ? await bulutKanca.yetki() : {}) };
-  return fetch(new URL(S.kurs.waApi).origin + yol, { ...ayar, headers: h });
+  return fetch(waKok() + yol, { ...ayar, headers: h });
 }
 // Gönderilen WhatsApp mesajlarının oturum günlüğü (senaryo ekranındaki telefon önizlemesi bunu gösterir)
 export const giden = [];
@@ -539,7 +558,7 @@ function sifreSor(neden, ok) {
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Onayla</button>`,
     onAc(d) {
       const inp = d.querySelector('[data-sifre-tekrar]'), btn = d.querySelector('[data-k]');
-      const dene = () => { btn.disabled = true; import('./bulut.js?v=210').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
+      const dene = () => { btn.disabled = true; import('./bulut.js?v=211').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
       btn.addEventListener('click', dene); inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') dene(); }); setTimeout(() => inp.focus(), 50);
     },
   });
