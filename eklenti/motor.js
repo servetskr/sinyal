@@ -46,6 +46,7 @@
       skt03003: { ad: 'SKT03003 Teorik Ders Programı Giriş', yol: '/SKT/skt03003.aspx', zorunlu: ['cmbDonemi', 'cmbGrupAdi', 'cmbSubesi', 'btnListeleGrid', 'hiddenKaydet'] },
       skt03004: { ad: 'SKT03004 Direksiyon Ders Programı Giriş', yol: '/SKT/skt03004.aspx', zorunlu: ['cmbDonem', 'cmbGrup', 'cmbSube', 'btnAdayGetir', 'hiddenKaydet'] },
       skt04003: { ad: 'SKT04003 Sınav Bilgileri Görüntüleme', yol: '/SKT/skt04003.aspx', zorunlu: ['cmbSinavTuru'] },
+      skt04001: { ad: 'SKT04001 Teorik Ders Programı Görüntüleme', yol: '/SKT/skt04001.aspx', zorunlu: ['cmbDonemi', 'btnListeleGrid'] },
       ook00001: { ad: 'OOK00001', yol: '/Ookgm/ook00001.aspx', zorunlu: [] },
       ook12001: { ad: 'OOK12001 Personel Arama', yol: '/Ookgm/ook12001.aspx', zorunlu: [] },
       ook54001: { ad: 'OOK54001 Personel', yol: '/Ookgm/ook54001.aspx', zorunlu: [] },
@@ -346,7 +347,37 @@
       return o;
     },
   };
-  const CEKME_EKRAN = { gruplar: ['skt03002', 'skt03001'], kursiyerler: ['skt02006'], personel: [], araclar: ['skt01002'], sinavlar: ['skt04003'], dosya: ['skt02009'] };
+  // 1.13.0 okuma işleri (yalnız beyaz listedeki okuma düğmeleri; site henüz göstermiyor, sonuç sonuc.veri'de):
+  //  randevular: skt01005 "Randevu Verilmiş Aday Listesi" (seçimden bağımsız, bütün verilmiş randevular) + sıradaki sınav günü × sertifika "Listele" (randevu verilebilecekler)
+  //  ucretler: skt02007 "Ücret Yatıran Aday Listesi" · teorik: skt04001 son 4 dönemin teorik programı
+  Object.assign(CEKME, {
+    async randevular(ilerle) {
+      const t = await getir('/SKT/skt01005.aspx');
+      const v = await postla(t, {}, { dugme: 'btnRandevu' });
+      const o = { verilmis: tabloId(v.doc, 'dgListele1') || { baslik: [], satirlar: [], stil: [] }, uygun: [] };
+      const tar = [...((elBul(t.doc, 'cmbSinavTarihi') || { options: [] }).options)].filter(x => x.value && x.value !== '-1');
+      const ser = [...((elBul(t.doc, 'cmbSertifika') || { options: [] }).options)].filter(x => x.value && x.value !== '-1');
+      for (const x of tar.slice(0, 1)) for (const y of ser) {
+        ilerle(`Randevu listesi ${metin(x)} · ${metin(y)}`, 0.5);
+        const r = await postla(t, { cmbSinavTarihi: x.value, cmbSertifika: y.value }, { dugme: 'btnListele' });
+        const tb = tabloId(r.doc, 'dgListele');
+        o.uygun.push({ tarih: metin(x), sertifika: metin(y), sertifikaDeger: y.value, ...(tb || { baslik: [], satirlar: [], stil: [] }) });
+      }
+      return o;
+    },
+    async ucretler() {
+      const t = await getir('/SKT/skt02007.aspx'), r = await postla(t, {}, { dugme: 'btnUcretListe' });
+      return tabloId(r.doc, 'gvUcretListe') || { baslik: [], satirlar: [], stil: [] };
+    },
+    async teorik(ilerle) {
+      const t = await getir('/SKT/skt04001.aspx'), el = elBul(t.doc, 'cmbDonemi'); if (!el) throw ekranHata(t.doc, 'cmbDonemi');
+      const ay = new Date(), simdi = ay.getFullYear() * 100 + ay.getMonth() + 1;
+      const dl = [...el.options].map(o => o.value).filter(v => /^\d{6}$/.test(v) && +v <= simdi + 1).sort().reverse().slice(0, 4), o = [];
+      for (const d of dl) { ilerle(`Teorik program ${d.slice(0, 4)}/${d.slice(4)}`, 0.5); const r = await postla(t, { cmbDonemi: d }, { dugme: 'btnListeleGrid' }); const tb = tabloBaslikla(r.doc, /ders/, /saat/) || tabloId(r.doc, 'dgDonemler'); o.push({ donem: d, ...(tb || { baslik: [], satirlar: [], stil: [] }) }); }
+      return o;
+    },
+  });
+  const CEKME_EKRAN = { gruplar: ['skt03002', 'skt03001'], kursiyerler: ['skt02006'], personel: [], araclar: ['skt01002'], sinavlar: ['skt04003'], dosya: ['skt02009'], randevular: ['skt01005'], ucretler: ['skt02007'], teorik: ['skt04001'] };
   // Aday Durum Görüntüleme: tek adayın bütün dosyası
   async function adayDosyasi(taban, tc) {
     const r = await postla(taban, { txtTcKimlikNo: tc }, { dugme: 'ImageButton1' });

@@ -173,6 +173,14 @@
     "cmbSinavTuru"
    ]
   },
+  "skt04001": {
+   "ad": "SKT04001 Teorik Ders Programı Görüntüleme",
+   "yol": "/SKT/skt04001.aspx",
+   "zorunlu": [
+    "cmbDonemi",
+    "btnListeleGrid"
+   ]
+  },
   "ook00001": {
    "ad": "OOK00001",
    "yol": "/Ookgm/ook00001.aspx",
