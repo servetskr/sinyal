@@ -1,24 +1,24 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=211';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=211';
-import * as Y1 from './sayfalar1.js?v=211';
-import * as Y2 from './sayfalar2.js?v=211';
-import * as P from './portal.js?v=211';
-import * as OXU from './ogr/ui.js?v=211';
-import * as Y3 from './sayfalar3.js?v=211';
-import * as Y4 from './sayfalar4.js?v=211';
-import * as Y5 from './sayfalar5.js?v=211';
-import * as IM from './imza.js?v=211';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=211';
-import * as SN from './senaryo.js?v=211';
-import * as OZ from './ozellik.js?v=211';
-import { durumlariGuncelle } from './mesaj.js?v=211';
-import { yeniMenu } from './yeni.js?v=211';
-import * as B from './bulut.js?v=211';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=211';
-import * as AN from './analiz.js?v=211';
-import * as GZ from './guzergah.js?v=211';
-import * as ORT from './ortak.js?v=211';
-import * as SH from './sahip.js?v=211';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=212';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=212';
+import * as Y1 from './sayfalar1.js?v=212';
+import * as Y2 from './sayfalar2.js?v=212';
+import * as P from './portal.js?v=212';
+import * as OXU from './ogr/ui.js?v=212';
+import * as Y3 from './sayfalar3.js?v=212';
+import * as Y4 from './sayfalar4.js?v=212';
+import * as Y5 from './sayfalar5.js?v=212';
+import * as IM from './imza.js?v=212';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=212';
+import * as SN from './senaryo.js?v=212';
+import * as OZ from './ozellik.js?v=212';
+import { durumlariGuncelle } from './mesaj.js?v=212';
+import { yeniMenu } from './yeni.js?v=212';
+import * as B from './bulut.js?v=212';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=212';
+import * as AN from './analiz.js?v=212';
+import * as GZ from './guzergah.js?v=212';
+import * as ORT from './ortak.js?v=212';
+import * as SH from './sahip.js?v=212';
 
 /* ---------- uygulama hatalarının otomatik bildirimi ----------
    window.onerror / unhandledrejection → worker /hata (api.mdsinyal.com). Gönderilen: sürüm, rota adı (#/ad; kimlik ve kod kırpılır), rol,
@@ -997,7 +997,7 @@ async function davetEkrani() {
 document.addEventListener('click', ev => { if (ev.target.closest('[data-yeniden-yukle]')) location.reload(); });
 document.addEventListener('click', ev => {
   if (ev.target.closest('[data-cikis]')) kapatPencere();
-  if (ev.target.closest('[data-hesap]')) { if (oturum.kullanici && oturum.kullanici.rol === 'usta' && document.body.classList.contains('ox-modu')) return import('./usta/ekran.js?v=211').then(m => { m.hesapAc(); yenile(true); }); return hesapSayfasi(); }
+  if (ev.target.closest('[data-hesap]')) { if (oturum.kullanici && oturum.kullanici.rol === 'usta' && document.body.classList.contains('ox-modu')) return import('./usta/ekran.js?v=212').then(m => { m.hesapAc(); yenile(true); }); return hesapSayfasi(); }
   if (ev.target.closest('[data-destek]')) return destekPenceresi();
   // Yönetim: Hesaplar telefonda profil menüsünden açılır (alt çubuk 6 sekme kalır)
   if (ev.target.closest('[data-yn-hesaplar]')) { kapatPencere(); ORT.sekmeSec('hesaplar'); yonetimCiz(true); SH.otoBaglan(); return; }
@@ -1110,4 +1110,4 @@ async function surumBak() {
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') surumBak(); });
 setTimeout(surumBak, 4000);
 // kullanım analizi (kişisel veri içermez; kullanim.js): ekran, düğme adı, süre, hata türü sayılır, günde bir özet yazılır
-setTimeout(() => import('./kullanim.js?v=211').then(m => m.baslat()).catch(() => { }), 1500);
+setTimeout(() => import('./kullanim.js?v=212').then(m => m.baslat()).catch(() => { }), 1500);

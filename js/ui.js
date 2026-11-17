@@ -1,5 +1,5 @@
-import { EMU } from './firebase-ayar.js?v=211';
-import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=211';
+import { EMU } from './firebase-ayar.js?v=212';
+import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=212';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -294,7 +294,7 @@ function aliciTel(kime) {
   return kisi ? waNumara(kisi.tel) : '';
 }
 // Meta'nın İngilizce hata kodları Türkçe ve ne yapılacağını söyleyen bir cümleye çevrilir (müşterinin önünde anlaşılmaz uyarı çıkmasın)
-function metaHata(j) {
+export function metaHata(j) {
   const k = +j.kod || 0, m = String(j.hata || '');
   if (k === 131030 || /not in allowed list/i.test(m)) return 'Deneme hattı yalnızca Meta’da izin verilen numaralara mesaj gönderebilir. Kursun kendi WhatsApp hattı bağlanınca bütün öğrencilere gider';
   if (k === 131047 || /24 hours|re-engagement/i.test(m)) return 'WhatsApp 24 saat penceresi kapalı: kişi son 24 saatte kursa yazmamış. Onaylı mesaj şablonu tanımlanınca bu mesajlar da gider';
@@ -558,7 +558,7 @@ function sifreSor(neden, ok) {
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Onayla</button>`,
     onAc(d) {
       const inp = d.querySelector('[data-sifre-tekrar]'), btn = d.querySelector('[data-k]');
-      const dene = () => { btn.disabled = true; import('./bulut.js?v=211').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
+      const dene = () => { btn.disabled = true; import('./bulut.js?v=212').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
       btn.addEventListener('click', dene); inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') dene(); }); setTimeout(() => inp.focus(), 50);
     },
   });
