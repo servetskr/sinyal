@@ -2,11 +2,11 @@
 // mdSinyal Yönetim panelinin “Hesaplar” bölümünde açılır (yalnız Servet; ortak görmez).
 // Yetki Firebase güvenlik kurallarından değil, Google hesabından gelir: Firebase projesinin sahibi olan Google hesabıyla
 // bağlanılır, Google IAM izin verirse işlem yapılır. Sunucu, gizli anahtar yok; erişim belirteci yalnız bellekte durur (1 saat).
-import { e, ik, pencere, kapatPencere, bildir, tl, siteLink } from './ui.js?v=225';
-import { S, kaydet, islem, bulutKanca } from './veri.js?v=225';
-import { ogrenciPanelMetni, WORKER } from './bulut.js?v=225';
-import { EMU } from './firebase-ayar.js?v=225';
-import { kabuk as epKabuk, kutular, bolum, satirlar, bos, not, nokta, dugme, R, SITE } from './eposta-kabuk.js?v=225';
+import { e, ik, pencere, kapatPencere, bildir, tl, siteLink } from './ui.js?v=226';
+import { S, kaydet, islem, bulutKanca } from './veri.js?v=226';
+import { ogrenciPanelMetni, WORKER } from './bulut.js?v=226';
+import { EMU } from './firebase-ayar.js?v=226';
+import { kabuk as epKabuk, kutular, bolum, satirlar, bos, not, nokta, dugme, R, SITE } from './eposta-kabuk.js?v=226';
 
 // EMU (firebase-ayar.js, yalnız localhost + açık işaret): REST istekleri yerel emülatöre gider, Google onayı yerine emülatörün yönetici belirteci kullanılır
 const PROJE = EMU ? EMU.proje : 'sinyal-5d37a';
@@ -344,6 +344,8 @@ async function yenile() {
 }
 
 function yaz(ev) {
+  const sa = ev.target.closest('[data-sh-sss-ara]');
+  if (sa) { mo.hazirAra = sa.value; const l = kok.querySelector('[data-sh-sss-hazir-liste]'); if (l && mo.hazir) { const q = mo.hazirAra.toLocaleLowerCase('tr-TR'); l.innerHTML = hazirListeHtml(mo.hazir.filter(x => !q || (x.soru + ' ' + x.kisa).toLocaleLowerCase('tr-TR').includes(q)).slice(0, 40), (mo.veri && mo.veri.sss) || { gizli: [] }); } return; }
   const a = ev.target.closest('[data-sh-ara]'); if (!a) return;
   arama = a.value; const s = kok.querySelector('[data-sh-sonuc]'); if (s) s.innerHTML = sonucHtml();
 }
@@ -958,7 +960,7 @@ let kuOtoBakildi = false;
 async function kullanimHaftalik() {
   if (kuOtoBakildi || !(S.kurs && S.kurs.sahipAnaliz) || !Object.keys(kursIst).length) return; kuOtoBakildi = true;
   try {
-    const { gecenHafta } = await import('./eposta.js?v=225'), h = gecenHafta();
+    const { gecenHafta } = await import('./eposta.js?v=226'), h = gecenHafta();
     if (S.kurs.sahipAnalizSon === h.donem) return;
     const T = await kullanimOku(aralikGunler(h.bas, h.bit));
     const j = await kullanimGonder(T, h.bas.split('-').reverse().join('.') + ' – ' + h.bit.split('-').reverse().join('.'), h.donem);
@@ -1053,7 +1055,7 @@ function asistanGeriHtml() {
   if (!l.length) return ust + `<div class="sh-bos">${ik('tik')}<b>${ag.liste.length ? 'Bu süzgeçte kayıt yok' : 'Henüz geri bildirim yok'}</b><small>Kurslar mevzuat asistanının cevabına “İşe yaradı” ya da “Eksik ya da yanlış” dediğinde burada görünür. Yanlış denenleri inceleyip rehbere, sık sorulanlara ya da derleme eklemek asistanı iyileştirir.</small></div>`;
   return ust + `<div class="sh-liste" data-resmi>${l.map(x => `<div class="sh-satir" style="cursor:default;align-items:flex-start">
     <span class="sh-av ${x.iyi ? 'sh-av-hizmet' : 'sh-av-yok'}">${ik(x.iyi ? 'tik' : 'uyari')}</span>
-    <span class="sh-satir-ic"><b>${e(String(x.soru || '').slice(0, 200))}</b>${x.cevap ? `<small style="white-space:normal">Cevap: ${e(String(x.cevap).slice(0, 300))}</small>` : ''}${x.not ? `<small style="white-space:normal;color:var(--murekkep)">Not: ${e(x.not)}</small>` : ''}<small>${e([hataZaman(x.z), ROL_KISA[x.rol] || '', x.kurs ? 'kurs ' + String(x.kurs).slice(0, 6) : '', (x.etiketler || []).slice(0, 3).join(', ')].filter(Boolean).join(' · '))}</small></span></div>`).join('')}</div>
+    <span class="sh-satir-ic"><b>${e(String(x.soru || '').slice(0, 200))}</b>${x.cevap ? `<small style="white-space:normal">Cevap: ${e(String(x.cevap).slice(0, 300))}</small>` : ''}${x.not ? `<small style="white-space:normal;color:var(--murekkep)">Not: ${e(x.not)}</small>` : ''}<small>${e([hataZaman(x.z), ROL_KISA[x.rol] || '', x.kurs ? 'kurs ' + String(x.kurs).slice(0, 6) : '', (x.etiketler || []).slice(0, 3).join(', ')].filter(Boolean).join(' · '))}</small></span>${!x.iyi ? `<button class="dg dg-cizgi dg-kucuk" style="flex:none" data-sh-ag-sss="${ag.liste.indexOf(x)}">SSS yaz</button>` : ''}</div>`).join('')}</div>
     <p class="sh-dip">Son ${ag.toplam} kayıttan en yeni 100’ü. Kayıtlar 90 gün tutulur; T.C. kimlik, telefon ve e-posta sunucuda silinir.</p>`;
 }
 // ---- Mevzuat derlemi yönetimi (worker /mevzuat/ortak/*) ----
@@ -1061,7 +1063,7 @@ function asistanGeriHtml() {
 // Günlük takip (worker cron, 07:00) derlem kaynaklarının değişip değişmediğini ve Resmî Gazete'deki ilgili başlıkları bildirir.
 const MO_TUR = [['yonetmelik', 'Yönetmelik'], ['kanun', 'Kanun'], ['yonerge', 'Yönerge'], ['teblig', 'Tebliğ'], ['kilavuz', 'Kılavuz'], ['yazi', 'MEB yazısı'], ['bilgilendirme', 'Resmî bilgilendirme'], ['form', 'Form'], ['program', 'Ders programı']];
 const MO_DURUM = [['degisti', 'Değişti'], ['kalkti', 'Yürürlükten kalktı'], ['taslak', 'Taslak / yürürlükte değil']];
-const mo = { veri: null, takip: null, statik: null, yukleniyor: false, hata: '', yetkisiz: false, denetleniyor: false };
+const mo = { veri: null, takip: null, statik: null, yukleniyor: false, hata: '', yetkisiz: false, denetleniyor: false, toc: null, hazir: null, hazirAra: '', hazirYukleniyor: false };
 async function moIstek(yol, { yontem = 'GET', govde } = {}) {
   const yetki = await hataYetki(); if (!yetki) throw Object.assign(new Error('Yetki yok'), { yetkisiz: true });
   const r = await fetch(WORKER + yol, { method: yontem, headers: { Authorization: yetki, ...(govde ? { 'Content-Type': 'application/json' } : {}) }, body: govde ? JSON.stringify(govde) : undefined });
@@ -1075,7 +1077,7 @@ async function mevzuatYonetYukle() {
   try {
     const [o, t] = await Promise.all([fetch(WORKER + '/mevzuat/ortak?t=' + Date.now()).then(r => r.json()), moIstek('/mevzuat/ortak/takip')]);
     mo.veri = o; mo.takip = t.takip || {}; mo.yetkisiz = false;
-    if (!mo.statik) { try { const ic = await (await fetch(siteLink('veri/mevzuat/icindekiler.txt'))).text(); mo.statik = (ic.split('\n')[0].replace(/^Belgeler:\s*/, '').split('; ').map(x => x.split(' = ')).filter(x => x.length === 2)); } catch (x) { mo.statik = []; } }
+    if (!mo.statik) { try { const ic = await (await fetch(siteLink('veri/mevzuat/icindekiler.txt'))).text(); mo.statik = (ic.split('\n')[0].replace(/^Belgeler:\s*/, '').split('; ').map(x => x.split(' = ')).filter(x => x.length === 2)); mo.toc = ic.split('\n').slice(1).filter(x => / — /.test(x)); } catch (x) { mo.statik = []; mo.toc = []; } }
   } catch (x) { if (x.yetkisiz) mo.yetkisiz = true; else mo.hata = turkceHata(x); }
   mo.yukleniyor = false; ciz();
 }
@@ -1109,6 +1111,7 @@ function mevzuatYonetHtml() {
       </form>
       ${Object.keys(durum).length ? `<div class="sh-liste">${Object.entries(durum).map(([id, d]) => `<div class="sh-satir" style="cursor:default"><span class="sh-av sh-av-yok">${ik('uyari')}</span><span class="sh-satir-ic"><b>${e(adi(id))} · ${e((MO_DURUM.find(x => x[0] === d.durum) || [, d.durum])[1])}</b><small style="white-space:normal">${e([d.not, d.yerine ? 'yerine: ' + adi(d.yerine) : '', moTarih(d.tarih)].filter(Boolean).join(' · '))}</small></span><button class="dg dg-hafif dg-kucuk" data-sh-mo-durum-sil="${e(id)}">Kaldır</button></div>`).join('')}</div>` : ''}
     </section>
+    ${sssBolumHtml()}
     <section class="sh-grup"><h2>Duyurular<span>kursların mevzuat ekranında “Güncel değişiklikler”</span></h2>
       <form class="sh-mz-form" data-sh-mo-duyuru>
         <label class="tam">Başlık<input name="baslik" maxlength="120" required placeholder="Ör. 2027 sürücü belgesi harçları yayımlandı"></label>
@@ -1119,6 +1122,56 @@ function mevzuatYonetHtml() {
       ${duyurular.length ? `<div class="sh-liste">${duyurular.map(d => `<div class="sh-satir" style="cursor:default"><span class="sh-av sh-av-hizmet">${ik('bilgi')}</span><span class="sh-satir-ic"><b>${e(d.baslik)}</b><small style="white-space:normal">${e([moTarih(d.tarih), d.metin].filter(Boolean).join(' · '))}</small></span><button class="dg dg-hafif dg-kucuk" data-sh-mo-duyuru-sil="${e(d.id)}">Sil</button></div>`).join('')}</div>` : ''}
     </section>
   </div>`;
+}
+// Sık sorulanlar: panelden yazılan kayıtlar (bütün kurslarda hazır cevap ve asistan kaynağı) ve statik derlemdeki hazır cevapları gizleme/düzeltme
+function sssBolumHtml() {
+  const v = (mo.veri && mo.veri.sss) || { kayitlar: [], gizli: [] };
+  const ara = mo.hazirAra.toLocaleLowerCase('tr-TR');
+  const hazir = mo.hazir ? mo.hazir.filter(x => !ara || (x.soru + ' ' + x.kisa).toLocaleLowerCase('tr-TR').includes(ara)).slice(0, 40) : null;
+  return `<section class="sh-grup"><h2>Sık sorulanlar<span>${v.kayitlar.length} panelden yazılan · ${v.gizli.length} gizlenen hazır cevap</span></h2>
+    <div class="sh-mz-dg"><button class="dg dg-ana dg-kucuk" data-sh-sss-ekle>${ik('arti')}SSS ekle</button>${mo.hazir ? '' : `<button class="dg dg-cizgi dg-kucuk" data-sh-sss-hazir ${mo.hazirYukleniyor ? 'disabled' : ''}>${ik('ara')}${mo.hazirYukleniyor ? 'Yükleniyor…' : 'Mevcut hazır cevapları göster'}</button>`}</div>
+    ${v.kayitlar.length ? `<div class="sh-liste">${v.kayitlar.map(k => `<div class="sh-satir" style="cursor:default;align-items:flex-start"><span class="sh-av sh-av-hizmet">${ik('mesaj')}</span><span class="sh-satir-ic"><b>${e(k.soru)}</b><small style="white-space:normal">${e(k.kisa)}</small><small>${e([moTarih(k.tarih), k.dayanak.map(d => d.belge + ' ' + d.m).join(', ')].join(' · '))}</small></span><span style="display:flex;gap:6px;flex:none"><button class="dg dg-cizgi dg-kucuk" data-sh-sss-duzen="${e(k.id)}">Düzenle</button><button class="dg dg-hafif dg-kucuk" data-sh-sss-sil="${e(k.id)}">Sil</button></span></div>`).join('')}</div>`
+      : `<p class="sh-dip">Kursların sık sorduğu ya da asistanın eksik cevapladığı bir soruyu buradan yaz: kısa cevap, ayrıntılar ve dayanak maddeleri. Kayıt bütün kurslarda “Hazır cevap” olarak çıkar ve asistanın kaynağı olur.</p>`}
+    ${hazir ? `<form class="sh-mz-form tek" style="margin-top:10px" onsubmit="return false"><label class="tam">Hazır cevaplarda ara (${mo.hazir.length})<input data-sh-sss-ara value="${e(mo.hazirAra)}" placeholder="Ör. gece dersi, nakil, iade" autocomplete="off"></label></form>
+      <div class="sh-liste" data-sh-sss-hazir-liste>${hazirListeHtml(hazir, v)}</div>` : ''}
+  </section>`;
+}
+function hazirListeHtml(hazir, v) {
+  return hazir.map(x => { const g = v.gizli.includes(x.id); return `<div class="sh-satir" style="cursor:default;align-items:flex-start;${g ? 'opacity:.55' : ''}"><span class="sh-av ${g ? 'sh-av-yok' : 'sh-av-hizmet'}">${ik(g ? 'kapat' : 'mesaj')}</span><span class="sh-satir-ic"><b>${e(x.soru)}</b><small style="white-space:normal">${e(x.kisa)}</small></span><span style="display:flex;gap:6px;flex:none"><button class="dg dg-cizgi dg-kucuk" data-sh-sss-duzelt="${e(x.id)}">Düzelt</button><button class="dg dg-hafif dg-kucuk" data-sh-sss-gizle="${e(x.id)}" data-gizle="${g ? '0' : '1'}">${g ? 'Aç' : 'Gizle'}</button></span></div>`; }).join('');
+}
+async function hazirCevaplarYukle() {
+  mo.hazirYukleniyor = true; ciz();
+  try {
+    const dz = await (await fetch(siteLink('veri/mevzuat/dizin.json'))).json(), bi = dz.belgeler.findIndex(b => b.id === 'sss');
+    mo.hazir = dz.parcalar.filter(p => p.b === bi && p.sss).map(p => ({ id: p.sss.id, soru: p.m, kisa: p.sss.kisa, ayrinti: p.sss.ayrinti || [], adimlar: p.sss.adimlar || [], dikkat: p.sss.dikkat || '', dayanak: (p.sss.dayanak || []).map(d => d.belge + ': ' + d.m), konu: p.baslik || '' }));
+  } catch (x) { bildir('Hazır cevaplar okunamadı: ' + turkceHata(x), 'uyari'); }
+  mo.hazirYukleniyor = false; ciz();
+}
+// SSS formu: k = mevcut kayıt (düzenle); on = { yerine, soru, … } (hazır cevabı düzelt ya da geri bildirimden yaz)
+function sssPenceresi(k = null, on = {}) {
+  const x = k || on, sat = l => e((l || []).join('\n'));
+  const day = k ? k.dayanak.map(d => d.belge + ': ' + d.m) : (on.dayanak || []);
+  pencere({ baslik: k ? 'SSS düzenle' : on.yerine ? 'Hazır cevabı düzelt' : 'SSS ekle', korumali: false,
+    icerik: `<form class="sh-mz-form tek" data-p-sss novalidate>
+      ${on.yerine ? `<p class="sh-dip tam">Kaydedince eski hazır cevap gizlenir, yerine bu kayıt çıkar.</p>` : ''}
+      <label class="tam">Soru<input name="soru" maxlength="200" value="${e(x.soru || '')}" placeholder="Ör. Kursiyer direksiyon dersine kendi aracıyla gelebilir mi?"></label>
+      <label class="tam">Diğer söylenişler (her satıra bir)<textarea name="esler" rows="2">${sat(x.esler)}</textarea></label>
+      <label class="tam">Kısa cevap<textarea name="kisa" rows="2" maxlength="600">${e(x.kisa || '')}</textarea></label>
+      <label class="tam">Ayrıntılar (her satıra bir)<textarea name="ayrinti" rows="3">${sat(x.ayrinti)}</textarea></label>
+      <label class="tam">Adımlar (isteğe bağlı, her satıra bir)<textarea name="adimlar" rows="2">${sat(x.adimlar)}</textarea></label>
+      <label class="tam">Dikkat (isteğe bağlı)<input name="dikkat" maxlength="400" value="${e(x.dikkat || '')}"></label>
+      <label class="tam">Dayanak maddeler (yazmaya başlayınca liste açılır)${[0, 1, 2, 3].map(i => `<input name="dayanak" list="sh-toc" value="${e(day[i] || '')}" placeholder="${i ? '' : 'Ör. mtsk: Madde 17'}" style="margin-top:4px" autocomplete="off">`).join('')}</label>
+      <datalist id="sh-toc">${(mo.toc || []).map(t => `<option value="${e(t)}">`).join('')}</datalist>
+      <p class="sh-hata tam" data-p-sss-durum hidden></p>
+    </form>`,
+    altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-p-sss-kaydet>Kaydet</button>`,
+    onAc: p => p.querySelector('[data-p-sss-kaydet]').addEventListener('click', async () => {
+      const f = p.querySelector('form'), d = p.querySelector('[data-p-sss-durum]'), dg = p.querySelector('[data-p-sss-kaydet]');
+      const govde = { ...(k ? { id: k.id } : {}), ...(on.yerine ? { yerine: on.yerine } : {}), soru: f.soru.value.trim(), esler: f.esler.value, kisa: f.kisa.value.trim(), ayrinti: f.ayrinti.value, adimlar: f.adimlar.value, dikkat: f.dikkat.value.trim(), konu: x.konu || '', dayanak: [...f.querySelectorAll('[name=dayanak]')].map(i => i.value.trim()).filter(Boolean) };
+      dg.disabled = true; d.hidden = true;
+      try { await moIstek('/mevzuat/ortak/sss', { yontem: 'POST', govde }); kapatPencere(); bildir('SSS kaydedildi; bütün kurslarda görünür'); mo.veri = null; ciz(); }
+      catch (y) { dg.disabled = false; d.hidden = false; d.textContent = y.yetkisiz ? 'Yetki yok' : turkceHata(y); }
+    }) });
 }
 function mevzuatBelgePenceresi() {
   pencere({ baslik: 'Platforma belge ekle', korumali: false,
@@ -1262,6 +1315,13 @@ async function destekTikla(t) {
   const ms = t.closest('[data-sh-mo-sil]'); if (ms) { if (!ms.dataset.onay) { ms.dataset.onay = '1'; ms.textContent = 'Silmeyi onayla'; return true; } await moIslem('/mevzuat/ortak/sil', { id: ms.dataset.shMoSil }, 'Belge silindi'); return true; }
   const md = t.closest('[data-sh-mo-durum-sil]'); if (md) { await moIslem('/mevzuat/ortak/durum', { belge: md.dataset.shMoDurumSil, durum: '' }, 'Durum kaldırıldı'); return true; }
   const mu = t.closest('[data-sh-mo-duyuru-sil]'); if (mu) { await moIslem('/mevzuat/ortak/duyuru', { sil: mu.dataset.shMoDuyuruSil }, 'Duyuru silindi'); return true; }
+  if (t.closest('[data-sh-sss-ekle]')) { if (!mo.toc) await mevzuatYonetYukle(); sssPenceresi(); return true; }
+  if (t.closest('[data-sh-sss-hazir]')) { hazirCevaplarYukle(); return true; }
+  const sd = t.closest('[data-sh-sss-duzen]'); if (sd) { const k = ((mo.veri && mo.veri.sss) || { kayitlar: [] }).kayitlar.find(x => x.id === sd.dataset.shSssDuzen); if (k) sssPenceresi(k); return true; }
+  const sz = t.closest('[data-sh-sss-duzelt]'); if (sz) { const x = (mo.hazir || []).find(y => y.id === sz.dataset.shSssDuzelt); if (x) sssPenceresi(null, { ...x, yerine: x.id }); return true; }
+  const sg = t.closest('[data-sh-sss-gizle]'); if (sg) { await moIslem('/mevzuat/ortak/sss-gizle', { id: sg.dataset.shSssGizle, gizle: sg.dataset.gizle === '1' }, sg.dataset.gizle === '1' ? 'Hazır cevap gizlendi' : 'Hazır cevap açıldı'); return true; }
+  const ss = t.closest('[data-sh-sss-sil]'); if (ss) { if (!ss.dataset.onay) { ss.dataset.onay = '1'; ss.textContent = 'Silmeyi onayla'; return true; } await moIslem('/mevzuat/ortak/sss-sil', { id: ss.dataset.shSssSil }, 'SSS silindi'); return true; }
+  const as = t.closest('[data-sh-ag-sss]'); if (as) { const x = (ag.liste || [])[+as.dataset.shAgSss]; if (x) { if (!mo.toc) await mevzuatYonetYukle(); sssPenceresi(null, { soru: x.soru }); } return true; }
   const agz = t.closest('[data-sh-ag-suz]'); if (agz) { ag.suz = agz.dataset.shAgSuz; ciz(); return true; }
   const hk = t.closest('[data-sh-hata]'); if (hk) { hataPenceresi(hk.dataset.shHata); return true; }
   if (t.closest('[data-sh-talep-ekle]')) { talepEklePenceresi(); return true; }

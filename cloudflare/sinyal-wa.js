@@ -737,7 +737,7 @@ async function mevzuatOrtak(req, env, url, yol, cevap) {
   const GET = req.method === 'GET', POST = req.method === 'POST';
   const acik = (t, ct = 'application/json') => new Response(t, { headers: { ...cevap.cors, 'Content-Type': ct, 'Cache-Control': 'public, max-age=120' } });
   if (!env.LINK) return cevap({ ok: false, hata: 'Depo yok' }, 500);
-  if (yol === 'mevzuat/ortak' && GET) return acik(await moOku(env, 'ozet', async () => JSON.stringify({ ok: true, belgeler: await mvJson(env, MO, []), durum: await mvJson(env, MO + ':durum', {}), duyurular: await mvJson(env, MO + ':duyuru', []) })));
+  if (yol === 'mevzuat/ortak' && GET) return acik(await moOku(env, 'ozet', async () => JSON.stringify({ ok: true, belgeler: await mvJson(env, MO, []), durum: await mvJson(env, MO + ':durum', {}), duyurular: await mvJson(env, MO + ':duyuru', []), sss: await mvJson(env, MO + ':sss', { kayitlar: [], gizli: [] }) })));
   if (yol === 'mevzuat/ortak/hepsi' && GET) return acik(await moOku(env, 'hepsi', async () => (await env.LINK.get(MO + ':hepsi')) || mvHepsiBos()));
   if (yol.startsWith('mevzuat/ortak/belge/') && GET) {
     const id = yol.slice(20); if (!mvId(id)) return cevap({ ok: false, hata: 'Belge bulunamadı' }, 404);
@@ -782,8 +782,52 @@ async function mevzuatOrtak(req, env, url, yol, cevap) {
     }
     await env.LINK.put(MO + ':duyuru', JSON.stringify(l)); await moOnbellekSil(); return cevap({ ok: true, duyurular: l });
   }
+  // Sık sorulanlar (platform): { id?, soru, esler[], kisa, ayrinti[], adimlar[], dikkat, dayanak: ['mtsk: Madde 7', …], yerine? (gizlenecek hazır cevap kimliği) }
+  // Aramaya girer (parça b = 'sss:<id>', gömülü); dayanaklar içindekiler listesiyle doğrulanır (listede olmayan madde kabul edilmez).
+  if (yol === 'mevzuat/ortak/sss') {
+    const k = moSssDogrula(b, (await mvIcindekiler()).set); if (k.hata) return cevap({ ok: false, hata: k.hata }, 400);
+    const v = await mvJson(env, MO + ':sss', { kayitlar: [], gizli: [] }), id = b.id && v.kayitlar.some(x => x.id === b.id) ? b.id : 's' + Date.now().toString(36);
+    const kayit = { id, ...k.kayit, tarih: new Date().toISOString().slice(0, 10) };
+    const metin = moSssMetin(kayit), bayt = await mvGom(env, [MEVZUAT_GOM.onekBelge + 'Sık sorulan\n' + metin]);
+    let ham = await env.LINK.get(MO + ':hepsi'); if (ham) ham = mvHepsiSil(ham, 'sss:' + id);
+    ham = mvHepsiEkle(ham, [{ b: 'sss:' + id, t: metin }], bayt);
+    v.kayitlar = [kayit, ...v.kayitlar.filter(x => x.id !== id)].slice(0, 500);
+    if (/^[a-z0-9-]{3,60}$/.test(b.yerine || '') && !v.gizli.includes(b.yerine)) v.gizli.push(b.yerine);
+    await env.LINK.put(MO + ':hepsi', ham); await env.LINK.put(MO + ':sss', JSON.stringify(v)); await moOnbellekSil();
+    return cevap({ ok: true, kayit, gizli: v.gizli });
+  }
+  if (yol === 'mevzuat/ortak/sss-sil') {
+    const v = await mvJson(env, MO + ':sss', { kayitlar: [], gizli: [] }), id = String(b.id || '');
+    if (!v.kayitlar.some(x => x.id === id)) return cevap({ ok: false, hata: 'Kayıt bulunamadı' }, 404);
+    const ham = await env.LINK.get(MO + ':hepsi'); if (ham) await env.LINK.put(MO + ':hepsi', mvHepsiSil(ham, 'sss:' + id));
+    v.kayitlar = v.kayitlar.filter(x => x.id !== id); await env.LINK.put(MO + ':sss', JSON.stringify(v)); await moOnbellekSil();
+    return cevap({ ok: true });
+  }
+  // mevcut (statik derlemdeki) hazır cevabı gizle / geri aç: { id, gizle: true|false }
+  if (yol === 'mevzuat/ortak/sss-gizle') {
+    const id = String(b.id || ''); if (!/^[a-z0-9-]{3,60}$/.test(id)) return cevap({ ok: false, hata: 'Kimlik geçersiz' }, 400);
+    const v = await mvJson(env, MO + ':sss', { kayitlar: [], gizli: [] });
+    v.gizli = b.gizle === false ? v.gizli.filter(x => x !== id) : [...new Set([...v.gizli, id])];
+    await env.LINK.put(MO + ':sss', JSON.stringify(v)); await moOnbellekSil(); return cevap({ ok: true, gizli: v.gizli });
+  }
   return cevap({ ok: false, hata: 'Bilinmeyen adres' }, 404);
 }
+// SSS kaydı doğrulama ve arama metni (statik SSS parçalarıyla aynı biçim: "Soru: …\n(Diğer söylenişler: …)\nCevap: …")
+function moSssDogrula(b, set) {
+  const satirlar = (l, n, u) => (Array.isArray(l) ? l : String(l || '').split('\n')).map(x => mvKes(String(x || '').replace(/[<>]/g, ' '), u)).filter(Boolean).slice(0, n);
+  const soru = mvKes(String(b.soru || '').replace(/[<>]/g, ' '), 200), kisa = mvKes(String(b.kisa || '').replace(/[<>]/g, ' '), 600);
+  if (soru.length < 5) return { hata: 'Soruyu yazın' };
+  if (kisa.length < 5) return { hata: 'Kısa cevabı yazın' };
+  const dayanak = [];
+  for (const d of satirlar(b.dayanak, 6, 200)) {
+    const k = d.replace(/\s+—.*$/, '').replace(/^([a-z0-9-]+)\s*:\s*/, '$1: ').trim();
+    if (!set || !set.has(k)) return { hata: 'Dayanak içindekiler listesinde yok: ' + d };
+    const [belge, m] = k.split(': '); dayanak.push({ belge, m });
+  }
+  if (!dayanak.length) return { hata: 'En az bir dayanak madde seçin' };
+  return { kayit: { soru, esler: satirlar(b.esler, 6, 200), kisa, ayrinti: satirlar(b.ayrinti, 8, 400), adimlar: satirlar(b.adimlar, 8, 300), dikkat: mvKes(String(b.dikkat || '').replace(/[<>]/g, ' '), 400), dayanak, konu: mvTemiz(b.konu, 60) } };
+}
+const moSssMetin = k => ['Soru: ' + k.soru, k.esler.length ? '(Diğer söylenişler: ' + k.esler.join(' / ') + ')' : '', 'Cevap: ' + k.kisa, ...k.ayrinti, ...k.adimlar.map((x, i) => (i + 1) + '. ' + x), k.dikkat ? 'Dikkat: ' + k.dikkat : '', 'Dayanak: ' + k.dayanak.map(d => d.belge + ' ' + d.m).join(', ')].filter(Boolean).join('\n');
 // Günlük takip (cron): derlemin kaynak adresleri (site: veri/mevzuat/kaynaklar.json) değişmiş mi (ETag / Last-Modified / boyut) ve
 // Resmî Gazete fihristinde ilgili başlık var mı. Ücretsiz planda çağrı başına 50 alt istek: her gün adreslerin yarısı denetlenir.
 // Değişiklik ve yeni başlık KV mortak:takip'e yazılır (1 yazma); SAHIP_EPOSTA kuruluysa sahibe e-posta gider.

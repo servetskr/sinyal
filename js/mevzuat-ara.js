@@ -6,7 +6,7 @@
    3) Anlam: sorgu vektörü (worker /mevzuat/gom, dışarıdan verilen gom() ile) × N×D int8 vektörler (nokta çarpımı).
    Kelime ve anlam listeleri RRF (k=60) ile birleşir; aynı maddenin sonraki parçaları geriye kayar (çeşitlilik). gom() yoksa ya da hata verirse yalnız kelime araması döner, anlamKapali: true. */
 
-const SURUM = '?v=225';
+const SURUM = '?v=226';
 const RRF_K = 60, LISTE_N = 60;
 const KELIME_AG = 1, ANLAM_AG = 1;  // RRF ağırlıkları; k 10/30/100 ve ağırlık 0,8–1,5 denendi, fark en çok 1 soru
 const BM25_K1 = 1.2, BM25_B = 0.75;
@@ -432,7 +432,7 @@ export const KISA = { bakilan: 10, pay: 0.6, ilk: 0, teyit: 5 };
 const dayanakTeyit = (l, p, n) => { const d = (p.sss && p.sss.dayanak) || []; if (!d.length) return false; return l.filter(s => !resmiDegil(s.belge)).slice(0, n).some(s => d.some(x => x.belge === s.belge.id && x.m === s.parca.m)); };
 export function kisaCevapSec(l, sorguKok, sorgu = '', { bakilan = KISA.bakilan, pay: esik = KISA.pay, ilk: ilkN = KISA.ilk, teyit = KISA.teyit } = {}) {
   const sec = p => (p && (!teyit || dayanakTeyit(l, p, teyit)) ? p : null);
-  const q = new Set(sorguKok || []), qs = siniflar(sorgu), aday = l.slice(0, bakilan).map((s, i) => ({ s, i })).filter(x => x.s.parca.sss && x.s.kaynak === 'ortak');
+  const q = new Set(sorguKok || []), qs = siniflar(sorgu), aday = l.slice(0, bakilan).map((s, i) => ({ s, i })).filter(x => x.s.parca.sss && (x.s.kaynak === 'ortak' || x.s.kaynak === 'ek'));
   if (!aday.length) return null;
   const pay = x => {
     const soru = String(x.s.parca.t).split('\nCevap:')[0];
@@ -471,6 +471,7 @@ export function cevapDuzMetin(y, etiketler = []) {
 
 export function yeniMotor() {
   const kume = { ortak: null, ek: null, kurs: null };  // { belgeler, parcalar, vek: Int8Array, D, takma }; ek: platformun sonradan eklediği ortak belgeler
+  let gizliSss = new Set();
   let durum = {};  // belge id → { durum: degisti|kalkti|taslak, not, yerine, tarih } (platform sahibi işaretler)
   let dizin = null;  // birleşik BM25 dizini (iki kümenin parçaları)
   let model = '', boyut = 0, onek = { sorgu: '', belge: '' };
@@ -541,7 +542,7 @@ export function yeniMotor() {
     if (!sorgu || !kume.ortak && !kume.kurs) return sonuc;
     const d = hazirDizin();
     const uyar = FILTRE_UYAR[filtre] || FILTRE_UYAR.hepsi;
-    const uygun = id => { const [ad, i] = d.kayit[id]; const k = kume[ad]; return uyar(ad, k.belgeler[k.parcalar[i].b] || {}); };
+    const uygun = id => { const [ad, i] = d.kayit[id]; const k = kume[ad], p = k.parcalar[i]; if (p.sss && gizliSss.has(p.sss.id)) return false; return uyar(ad, k.belgeler[p.b] || {}); };
 
     // 1) madde
     const md = maddeYakala(sorgu, takmalar());
@@ -672,10 +673,19 @@ export function yeniMotor() {
     },
     kursSil() { kume.kurs = null; dizin = null; },
     // Platformun eklediği ortak belgeler: hepsi = /mevzuat/ortak/hepsi, liste = /mevzuat/ortak belgeleri (resmî, bütün kurslarda)
-    ekKur(hepsi, liste) {
+    // sss: { kayitlar: [{ id, soru, esler, kisa, ayrinti, adimlar, dikkat, dayanak, konu }] } → parça b = 'sss:<id>' (statik SSS biçiminde)
+    ekKur(hepsi, liste, sss = null) {
       const belgeler = (liste || []).map(x => ({ ...x, kisa: x.ad, tur: x.tur || 'yazi', ek: true }));
       const yer = new Map(belgeler.map((b, i) => [b.id, i])), parcalar = [];
+      const kayit = new Map(((sss && sss.kayitlar) || []).map(x => [x.id, x]));
+      let sbi = -1;
       for (const p of (hepsi && hepsi.parcalar) || []) {
+        if (String(p.b).startsWith('sss:')) {
+          const k = kayit.get(String(p.b).slice(4)); if (!k) continue;
+          if (sbi < 0) { sbi = belgeler.length; belgeler.push({ id: 'psss', ad: 'mdSinyal Sık Sorulan Sorular (güncel)', kisa: 'mdSinyal SSS', tur: 'sss', resmi: false, ek: true }); }
+          parcalar.push({ b: sbi, m: k.soru, baslik: k.konu || '', t: p.t || '', id: p.b, sss: { kisa: k.kisa, ayrinti: k.ayrinti || [], adimlar: k.adimlar || [], dikkat: k.dikkat || '', dayanak: k.dayanak || [], id: k.id } });
+          continue;
+        }
         const bi = yer.get(p.b); if (bi == null) continue;
         const m = (String(p.t || '').match(/^\s*((?:Geçici\s+)?Madde\s+\d+)/i) || [])[1] || '';
         parcalar.push({ b: bi, m, t: p.t || '', id: p.b });
@@ -686,6 +696,8 @@ export function yeniMotor() {
     },
     ekSil() { kume.ek = null; dizin = null; },
     durumKur(d) { durum = d && typeof d === 'object' ? d : {}; },
+    // platform sahibinin gizlediği (yerine yenisini yazdığı) statik hazır cevaplar aramaya girmez
+    sssGizle(l) { gizliSss = new Set(Array.isArray(l) ? l : []); },
     get durum() { return durum; },
     ara, madde,
     dizinKur, takmalar,
