@@ -1,25 +1,25 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=227';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=227';
-import * as Y1 from './sayfalar1.js?v=227';
-import * as Y2 from './sayfalar2.js?v=227';
-import * as P from './portal.js?v=227';
-import * as OXU from './ogr/ui.js?v=227';
-import * as Y3 from './sayfalar3.js?v=227';
-import * as Y4 from './sayfalar4.js?v=227';
-import * as Y5 from './sayfalar5.js?v=227';
-import * as IM from './imza.js?v=227';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=227';
-import * as SN from './senaryo.js?v=227';
-import * as OZ from './ozellik.js?v=227';
-import { durumlariGuncelle } from './mesaj.js?v=227';
-import { yeniMenu } from './yeni.js?v=227';
-import * as B from './bulut.js?v=227';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=227';
-import * as AN from './analiz.js?v=227';
-import * as GZ from './guzergah.js?v=227';
-import * as ORT from './ortak.js?v=227';
-import * as SH from './sahip.js?v=227';
-import * as MZ from './sayfa-mevzuat.js?v=227';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=228';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=228';
+import * as Y1 from './sayfalar1.js?v=228';
+import * as Y2 from './sayfalar2.js?v=228';
+import * as P from './portal.js?v=228';
+import * as OXU from './ogr/ui.js?v=228';
+import * as Y3 from './sayfalar3.js?v=228';
+import * as Y4 from './sayfalar4.js?v=228';
+import * as Y5 from './sayfalar5.js?v=228';
+import * as IM from './imza.js?v=228';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=228';
+import * as SN from './senaryo.js?v=228';
+import * as OZ from './ozellik.js?v=228';
+import { durumlariGuncelle } from './mesaj.js?v=228';
+import { yeniMenu } from './yeni.js?v=228';
+import * as B from './bulut.js?v=228';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=228';
+import * as AN from './analiz.js?v=228';
+import * as GZ from './guzergah.js?v=228';
+import * as ORT from './ortak.js?v=228';
+import * as SH from './sahip.js?v=228';
+import * as MZ from './sayfa-mevzuat.js?v=228';
 
 /* ---------- uygulama hatalarının otomatik bildirimi ----------
    window.onerror / unhandledrejection → worker /hata (api.mdsinyal.com). Gönderilen: sürüm, rota adı (#/ad; kimlik ve kod kırpılır), rol,
@@ -70,7 +70,7 @@ const MENU = [
   ['Bugün', [['genel', 'Genel bakış', '↑'], ['mesajlar', 'Mesajlar', '↗'], ['adaylar', 'Yeni öğrenciler', '↗']]],
   ['Öğrenciler', [['kursiyerler', 'Kursiyerler', '→'], ['plan', 'Direksiyon planı', '→'], ['teorik', 'Teorik dersler', '→'], ['sinavlar', 'Sınavlar', '→'], ['guzergah', 'Sınav güzergâhları', '→']]],
   ['Para', [['kasa', 'Kasa ve ödemeler', '→']]],
-  ['Kurum', [['meb', 'MEB işlemleri', '→'], ['mevzuat', 'Mevzuat ve MEB yazıları', '→'], ['belgeler', 'Belgeler ve çıktılar', '→'], ['filo', 'Ekip ve araçlar', '→']]],
+  ['Kurum', [['meb', 'MEB işlemleri', '→'], ['mevzuat', 'Mevzuat asistanı', '→'], ['belgeler', 'Belgeler ve çıktılar', '→'], ['filo', 'Ekip ve araçlar', '→']]],
   ['Analiz', [['analiz', 'Analiz', '→'], ['raporlar', 'Raporlar', '→'], ['karlilik', 'Kârlılık ve kapasite', '→']]],
   ['Diğer', [['sosyal', 'Sosyal medya asistanı', '↗'], ['kayit', 'Kayıt formu', '↗'], ['ogrenci', 'Kursiyer ekranı', '↗'], ['senaryo', 'Demo senaryoları', '↗'], ['kurulum', 'Kurulum', '→'], ['guven', 'Verileriniz ve güvenlik', '→'], ['ayarlar', 'Ayarlar', '→']]],
 ];
@@ -156,6 +156,7 @@ function iskelet() {
         <a class="dg dg-hafif portal-geri" href="#/genel">← Panele dön</a>
         ${(S.subeler || []).length > 1 && oturum.kullanici.rol !== 'usta' ? `<label class="sube-sec"><span class="gizli-et">Şube</span><select data-sube aria-label="Şube">${['', ...S.subeler.map(x => x.id)].map(id => `<option value="${id}" ${gorunum.sube === id ? 'selected' : ''}>${id ? e(S.subeler.find(x => x.id === id).ad) : 'Tüm şubeler'}</option>`).join('')}</select></label>` : ''}
         <button class="arama" data-ara aria-label="Ara">${ik('ara')}<span>Kursiyer, aday, plaka ara</span><kbd>⌘K</kbd></button>
+        ${oturum.kullanici.rol !== 'usta' && izinli('mevzuat') ? `<a class="asistan-dugme" href="#/mevzuat" title="Mevzuat asistanı: yönetmelik ve MEB yazılarından dayanaklı cevap" aria-label="Mevzuat asistanına sor">${ik('robot')}<span>Asistana sor</span></a>` : ''}
         ${oturum.kullanici.rol !== 'usta' ? `<button class="yeni-dugme" data-yeni-menu aria-label="Yeni ekle">${ik('arti')}<span>Yeni</span></button>` : ''}
         <button class="kullanici-cip" data-hesap title="Hesabım: ekranlar ve çıkış" aria-label="${e(oturum.kullanici.ad)} · ${ROL_AD[oturum.kullanici.rol]} · hesap menüsü"><i class="kc-bas" aria-hidden="true">${basHarf(oturum.kullanici.ad)}</i><b>${e(oturum.kullanici.ad)}</b><small>${ROL_AD[oturum.kullanici.rol]}</small></button>
       </header>`}
@@ -255,7 +256,12 @@ function aramaAc() {
         const q = inp.value.trim().toLocaleLowerCase('tr');
         const sonuc = (q ? kayitlar.filter(k => (k.t + ' ' + k.a).toLocaleLowerCase('tr').includes(q)) : kayitlar.filter(k => k.g === 'Sayfalar')).slice(0, 14);
         const ham = inp.value.trim().slice(0, 300);
-        if (ham.length >= 2 && izinli('mevzuat')) sonuc.push({ t: 'Mevzuatta ara: ' + ham, a: 'Yönetmelik, kılavuz ve MEB yazıları', h: '#/mevzuat?q=' + encodeURIComponent(ham), g: 'Mevzuat' });
+        // soru gibi yazılanlar (soru işareti, soru sözü ya da 4+ kelime) mevzuat asistanına gider ve ilk öneri olur
+        if (ham.length >= 2 && izinli('mevzuat')) {
+          const soru = /\?|(^|\s)(nasıl|kaç|neden|niye|ne zaman|hangi|kim|mi|mı|mu|mü|zorunlu|gerekir|lazım)(\s|$)/i.test(ham) || ham.split(/\s+/).length >= 4;
+          const x = { t: 'Asistana sor: ' + ham, a: 'Mevzuat asistanı · yönetmelik ve MEB yazılarından dayanaklı cevap', h: '#/mevzuat?q=' + encodeURIComponent(ham), g: 'Mevzuat asistanı' };
+          if (soru) sonuc.unshift(x); else sonuc.push(x);
+        }
         let g = '';
         ul.innerHTML = sonuc.length ? sonuc.map((k, i) => (k.g !== g ? `<li class="grup">${(g = k.g)}</li>` : '') + `<li><a href="${k.h}" class="${i === 0 ? 'odak' : ''}"><b>${e(k.t)}</b><small>${e(k.a)}</small></a></li>`).join('') : '<li class="grup">Sonuç yok</li>';
       };
@@ -1004,7 +1010,7 @@ async function davetEkrani() {
 document.addEventListener('click', ev => { if (ev.target.closest('[data-yeniden-yukle]')) location.reload(); });
 document.addEventListener('click', ev => {
   if (ev.target.closest('[data-cikis]')) kapatPencere();
-  if (ev.target.closest('[data-hesap]')) { if (oturum.kullanici && oturum.kullanici.rol === 'usta' && document.body.classList.contains('ox-modu')) return import('./usta/ekran.js?v=227').then(m => { m.hesapAc(); yenile(true); }); return hesapSayfasi(); }
+  if (ev.target.closest('[data-hesap]')) { if (oturum.kullanici && oturum.kullanici.rol === 'usta' && document.body.classList.contains('ox-modu')) return import('./usta/ekran.js?v=228').then(m => { m.hesapAc(); yenile(true); }); return hesapSayfasi(); }
   if (ev.target.closest('[data-destek]')) return destekPenceresi();
   // Yönetim: Hesaplar telefonda profil menüsünden açılır (alt çubuk 6 sekme kalır)
   if (ev.target.closest('[data-yn-hesaplar]')) { kapatPencere(); ORT.sekmeSec('hesaplar'); yonetimCiz(true); SH.otoBaglan(); return; }
@@ -1118,4 +1124,4 @@ async function surumBak() {
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') surumBak(); });
 setTimeout(surumBak, 4000);
 // kullanım analizi (kişisel veri içermez; kullanim.js): ekran, düğme adı, süre, hata türü sayılır, günde bir özet yazılır
-setTimeout(() => import('./kullanim.js?v=227').then(m => m.baslat()).catch(() => { }), 1500);
+setTimeout(() => import('./kullanim.js?v=228').then(m => m.baslat()).catch(() => { }), 1500);

@@ -2,18 +2,18 @@
    Arama motoru js/mevzuat-ara.js: ortak derlem (veri/mevzuat) + kursa gelen yazılar (worker /mevzuat/*).
    Anlam araması için sorgu vektörü worker'dan gelir (/mevzuat/gom); ulaşılamazsa yalnız kelimeyle aranır.
    Yerel denemede (localhost) worker'a istek gitmez; yerel worker için localStorage 'sinyal-mevzuat-api' = 'http://127.0.0.1:8787'. */
-import { S, oturum, bulutKanca } from './veri.js?v=227';
-import { e, ik, rozet, bos, pencere, kapatPencere, bildir, ekranNotu, isaret, tamTarih, ilerleme } from './ui.js?v=227';
-import { WORKER } from './bulut.js?v=227';
-import { motor, yukle, yuklendi, base64Int8, kokler, alinti, FILTRELER, ETIKET_RE, etiketCoz, etiketBul, resmiDegil, kisaCevapSec, cevapNormalle, cevapDuzMetin } from './mevzuat-ara.js?v=227';
-import { kavramYukle, asistanAra, asistanKaynak, asistanSoru, kanitDenetle, sayilarBul } from './mevzuat-anla.js?v=227';
+import { S, oturum, bulutKanca } from './veri.js?v=228';
+import { e, ik, rozet, bos, pencere, kapatPencere, bildir, ekranNotu, isaret, tamTarih, ilerleme } from './ui.js?v=228';
+import { WORKER } from './bulut.js?v=228';
+import { motor, yukle, yuklendi, base64Int8, kokler, alinti, FILTRELER, ETIKET_RE, etiketCoz, etiketBul, resmiDegil, kisaCevapSec, cevapNormalle, cevapDuzMetin } from './mevzuat-ara.js?v=228';
+import { kavramYukle, asistanAra, asistanKaynak, asistanSoru, kanitDenetle, sayilarBul } from './mevzuat-anla.js?v=228';
 
 const TUR_AD = { yonetmelik: 'Yönetmelik', kanun: 'Kanun', yonerge: 'Yönerge', teblig: 'Tebliğ', kilavuz: 'Kılavuz', program: 'Ders programı', yazi: 'MEB yazısı', form: 'Form',
   'rehber-resmi': 'Denetim rehberi', bilgilendirme: 'Resmî bilgilendirme', rehber: 'mdSinyal rehberi (resmî metin değil)', sss: 'mdSinyal sık sorulanlar (resmî metin değil)' };
 const ORNEKLER = ['A ehliyeti olan B almak isterse ne yapmalı?', 'Direksiyon sınavında dört kez kalan ne yapar?', 'Gece dersi hangi sınıflarda zorunlu?', 'Kursiyer başka kursa nakil olabilir mi?', 'Kurstan ayrılana ücret iadesi nasıl yapılır?', 'MTSK madde 15'];
 // yapay zekâya giden kaynaklar: en çok 10 madde, 19.500 karakter (worker sınırı 10 / 20.000)
 const KAYNAK_AYAR = { encok: 10, kar: 19500 };
-const durum = { q: '', filtre: 'hepsi', son: null, yukHata: '', goster: 15, cevap: null, llmYok: false, kursListe: null, kursHata: '', kursHepsi: null, gomKapali: 0, kh: null };
+const durum = { sekme: 'sor', fav: null, q: '', filtre: 'hepsi', son: null, yukHata: '', goster: 15, cevap: null, llmYok: false, kursListe: null, kursHata: '', kursHepsi: null, gomKapali: 0, kh: null };
 const gomOnbellek = new Map();
 
 /* ---------- servis ---------- */
@@ -120,16 +120,6 @@ async function ortakEkYukle() {
 // duyurular: en yeni 3'ü gösterilir; görülmeyenler "yeni" sayılır (bu cihazda son görülen duyuru)
 const GORDU = 'sinyal-mevzuat-duyuru';
 const sonGorulen = () => { try { return localStorage.getItem(GORDU) || ''; } catch (x) { return ''; } };
-function duyurularHtml() {
-  const l = (durum.ortak && durum.ortak.duyurular) || []; if (!l.length) return '';
-  const gor = sonGorulen(), yeni = l.filter(x => !gor || x.id > gor).length;
-  try { localStorage.setItem(GORDU, l[0].id); } catch (x) { }
-  return `<section class="mz-duyurular" aria-label="Mevzuat duyuruları"><div class="mz-duyuru-bas">${isaret('bilgi', 20)}<b>Güncel değişiklikler</b>${yeni ? rozet(yeni + ' yeni', 'sari') : ''}</div>
-    ${l.slice(0, 3).map(x => `<article class="mz-duyuru"><small>${e([tarihYaz(x.tarih), x.kimi ? 'İlgili: ' + x.kimi : ''].filter(Boolean).join(' · '))}</small><b>${e(x.baslik)}</b>${x.metin ? `<p>${e(x.metin)}</p>` : ''}
-      ${(x.yapilacaklar || []).length ? `<p class="mz-duyuru-et">Kursun yapması gerekenler</p><ul class="mz-yapilacak">${x.yapilacaklar.map(y => `<li>${e(y)}</li>`).join('')}</ul>` : ''}
-      <div class="mz-duyuru-dg">${x.belge ? `<button type="button" class="dg dg-cizgi dg-kucuk" data-mz-ekbelge="${e(x.belge)}">Belgeyi aç</button>` : ''}${x.bag ? `<a class="dg-baglanti" href="${e(x.bag)}" target="_blank" rel="noopener">Resmî metni aç</a>` : ''}</div></article>`).join('')}
-  </section>`;
-}
 
 /* ---------- yardımcılar ---------- */
 const hashQ = () => { const h = location.hash.split('?')[1] || ''; try { return new URLSearchParams(h).get('q') || ''; } catch (x) { return ''; } };
@@ -169,23 +159,49 @@ export function ozetBol(ozet) {
 }
 const paragraf = m => String(m || '').split(/\n{2,}|\n(?=\s*[-•*])/).map(x => x.trim()).filter(Boolean).map(x => `<p>${e(x).replace(/\n/g, '<br>')}</p>`).join('');
 
+/* ---------- sekmeler ---------- */
+// Sor (asistan ve dayanaklar) · Konular (kayıttan sertifikaya konu haritası) · Güncel (duyurular, yaklaşan yürürlükler) · Belgeler · Kaydettiklerim
+const SEKMELER = [['sor', 'Sor', 'robot'], ['konular', 'Konular', 'teorik'], ['guncel', 'Güncel', 'uyari'], ['belgeler', 'Belgeler', 'belge'], ['kayit', 'Kaydettiklerim', 'yildiz']];
+function sekmeSayi(k) {
+  if (k === 'guncel') { const l = (durum.ortak && durum.ortak.duyurular) || [], g = sonGorulen(); return l.filter(x => !g || x.id > g).length; }
+  if (k === 'kayit') return (durum.fav || []).filter(x => motor.durum[x.b]).length;
+  return 0;
+}
+const sekmelerHtml = () => SEKMELER.map(([k, a, i]) => { const n = sekmeSayi(k); return `<button type="button" role="tab" class="mz-sekme${durum.sekme === k ? ' secili' : ''}" aria-selected="${durum.sekme === k}" data-mz-sekme="${k}">${ik(i)}<span>${a}</span>${n ? `<em>${n}</em>` : ''}</button>`; }).join('');
+function sekmeSec(k, ad) {
+  durum.sekme = ad;
+  k.querySelectorAll('[data-mz-panel]').forEach(p => { p.hidden = p.dataset.mzPanel !== ad; });
+  if (ad === 'guncel') { guncelCiz(k); try { const l = (durum.ortak && durum.ortak.duyurular) || []; if (l.length) localStorage.setItem(GORDU, l[0].id); } catch (x) { } }
+  if (ad === 'konular') { const y = k.querySelector('[data-mz-harita]'); if (y) y.innerHTML = konuHaritasi() || `<div class="kart mz-bekle">${isaret('bilgi', 22)}<span>Konular yükleniyor…</span></div>`; }
+  if (ad === 'kayit') kayitCiz(k);
+  const n = k.querySelector('[data-mz-sekmeler]'); if (n) n.innerHTML = sekmelerHtml();
+}
+
 /* ---------- ekran ---------- */
 export function mevzuat() {
   const q = hashQ();
   if (q && q !== durum.q) { durum.q = q; durum.son = null; durum.cevap = null; }
   return {
-    baslik: 'Mevzuat ve MEB yazıları',
-    alt: 'Sorunuzu yazın: asistan yönetmelik, kılavuz ve MEB yazılarından dayanağıyla cevaplar',
+    baslik: 'Mevzuat asistanı',
+    alt: 'Yönetmelik, kılavuz ve MEB yazılarından dayanağıyla cevap',
     // data-resmi: mevzuat ve yazı metinleri yönetmelikteki dille kalır (ui.js sadeDil 'kursiyer'i 'öğrenci' yapmaz)
     html: `<div class="mz" data-resmi>
-      <form class="mz-ara" role="search" data-mz-form>
-        <label class="mz-kutu">${ik('ara')}<input type="search" name="q" value="${e(durum.q)}" placeholder="Ör. A ehliyeti olan B almak isterse ne yapmalı?" aria-label="Sorunuzu yazın" autocomplete="off" enterkeyhint="send" maxlength="300"></label>
-        <button class="dg dg-ana" type="submit">Sor</button>
-      </form>
-      <div class="mz-cipler" role="group" aria-label="Belge türü">${FILTRELER.map(([k, t]) => `<button type="button" class="mz-cip ${k === durum.filtre ? 'secili' : ''}" aria-pressed="${k === durum.filtre}" data-mz-filtre="${k}">${e(t)}</button>`).join('')}</div>
-      <div data-mz-sonuc aria-live="polite"></div>
-      <div data-mz-kurs></div>
-      <div data-mz-ortak></div>
+      <section class="mz-hero">
+        <form class="mz-ara" role="search" data-mz-form>
+          <label class="mz-kutu">${ik('robot')}<input type="search" name="q" value="${e(durum.q)}" placeholder="Sorunuzu yazın: ör. A ehliyeti olan B almak isterse ne yapmalı?" aria-label="Sorunuzu yazın" autocomplete="off" enterkeyhint="send" maxlength="300"></label>
+          <button class="dg dg-ana" type="submit">Sor</button>
+        </form>
+        <p class="mz-hero-alt" data-mz-hero-alt>Cevaplar resmî maddelere dayanır; her satırın kaynağını açıp okuyabilirsiniz.</p>
+      </section>
+      <nav class="mz-sekmeler" role="tablist" aria-label="Mevzuat bölümleri" data-mz-sekmeler>${sekmelerHtml()}</nav>
+      <div class="mz-panel" data-mz-panel="sor" ${durum.sekme === 'sor' ? '' : 'hidden'}>
+        <div class="mz-cipler" role="group" aria-label="Belge türü" data-mz-cipler ${durum.q ? '' : 'hidden'}>${FILTRELER.map(([k, t]) => `<button type="button" class="mz-cip ${k === durum.filtre ? 'secili' : ''}" aria-pressed="${k === durum.filtre}" data-mz-filtre="${k}">${e(t)}</button>`).join('')}</div>
+        <div data-mz-sonuc aria-live="polite"></div>
+      </div>
+      <div class="mz-panel" data-mz-panel="konular" ${durum.sekme === 'konular' ? '' : 'hidden'}><div data-mz-harita></div></div>
+      <div class="mz-panel" data-mz-panel="guncel" ${durum.sekme === 'guncel' ? '' : 'hidden'}><div data-mz-guncel></div></div>
+      <div class="mz-panel" data-mz-panel="belgeler" ${durum.sekme === 'belgeler' ? '' : 'hidden'}><div data-mz-kurs></div><div data-mz-ortak></div></div>
+      <div class="mz-panel" data-mz-panel="kayit" ${durum.sekme === 'kayit' ? '' : 'hidden'}><div data-mz-kayit></div></div>
     </div>`,
     baglan: baglan,
   };
@@ -195,10 +211,11 @@ let zamanlayici = null;
 function baglan(k) {
   const form = k.querySelector('[data-mz-form]'), inp = form.q;
   // gönderince asistan cevaplar (yapay zekâ); yazarken yalnız sonuçlar tazelenir
-  form.addEventListener('submit', ev => { ev.preventDefault(); clearTimeout(zamanlayici); inp.blur(); aramaYap(k, inp.value, true, true); });
+  form.addEventListener('submit', ev => { ev.preventDefault(); clearTimeout(zamanlayici); inp.blur(); if (durum.sekme !== 'sor') sekmeSec(k, 'sor'); aramaYap(k, inp.value, true, true); });
   k.addEventListener('submit', ev => { const f = ev.target.closest('[data-mz-geri-form]'); if (!f) return; ev.preventDefault(); geriGonder(k, false, f.not.value.trim().slice(0, 300)); });
   // yazarken yalnız kelime araması (anında), durunca anlamla birlikte
   inp.addEventListener('input', () => {
+    if (durum.sekme !== 'sor') sekmeSec(k, 'sor');
     clearTimeout(zamanlayici);
     const v = inp.value;
     zamanlayici = setTimeout(() => { aramaYap(k, v, false); zamanlayici = setTimeout(() => aramaYap(k, v, true), 700); }, 250);
@@ -207,7 +224,11 @@ function baglan(k) {
     const t = ev.target;
     const f = t.closest('[data-mz-filtre]');
     if (f) { durum.filtre = f.dataset.mzFiltre; k.querySelectorAll('[data-mz-filtre]').forEach(b => { const s = b === f; b.classList.toggle('secili', s); b.setAttribute('aria-pressed', s); }); durum.son = null; durum.cevap = null; return aramaYap(k, inp.value, true); }
-    const o = t.closest('[data-mz-ornek]'); if (o) { inp.value = o.dataset.mzOrnek; return aramaYap(k, inp.value, true, true); }
+    const o = t.closest('[data-mz-ornek]'); if (o) { inp.value = o.dataset.mzOrnek; if (durum.sekme !== 'sor') sekmeSec(k, 'sor'); window.scrollTo({ top: 0, behavior: 'smooth' }); return aramaYap(k, inp.value, true, true); }
+    const sk = t.closest('[data-mz-sekme]'); if (sk) return sekmeSec(k, sk.dataset.mzSekme);
+    const fv = t.closest('[data-mz-fav-ac]'); if (fv) return favoriAc(fv.dataset.mzFavAc);
+    const fs = t.closest('[data-mz-fav-sil]'); if (fs) return favoriYaz(k, { k: fs.dataset.mzFavSil, sil: true });
+    const fn = t.closest('[data-mz-fav-not]'); if (fn) return favoriNot(k, fn.dataset.mzFavNot);
     const kv = t.closest('[data-mz-kavram]'); if (kv) return kavramAc(k, kv.dataset.mzKavram, inp);
     const eb = t.closest('[data-mz-ekbelge]'); if (eb) return ekBelgeAc(eb.dataset.mzEkbelge);
     const a = t.closest('[data-mz-ac]'); if (a) { const s = durum.son && durum.son.r.sonuc[+a.dataset.mzAc]; if (s) sonucAc(s); return; }
@@ -240,6 +261,9 @@ async function ilkYukleme(k) {
   if (!durum.ortak) await ortakEkYukle();
   if (!k.isConnected) return;
   ortakBolumu(k); kursBolumu(k);
+  { const n = k.querySelector('[data-mz-sekmeler]'); if (n) n.innerHTML = sekmelerHtml(); }
+  if (durum.sekme !== 'sor') sekmeSec(k, durum.sekme);
+  favoriYukle(k);
   if (durum.son && durum.son.q === durum.q && durum.son.filtre === durum.filtre) sonucCiz(k);
   else if (durum.q) aramaYap(k, durum.q, true, !durum.cevap);
   else sonucCiz(k);
@@ -290,10 +314,15 @@ function sonucCiz(k) {
   const yer = k.querySelector('[data-mz-sonuc]'); if (!yer) return;
   if (!durum.q) {
     const son = sonSorular();
-    yer.innerHTML = `${duyurularHtml()}${son.length ? `<div class="mz-ornekler"><span>Son sorularınız:</span>${son.map(o => `<button type="button" class="mz-ornek mz-son" data-mz-ornek="${e(o)}">${e(o)}</button>`).join('')}</div>` : ''}<div class="mz-ornekler"><span>Örnek sorular:</span>${ORNEKLER.map(o => `<button type="button" class="mz-ornek" data-mz-ornek="${e(o)}">${e(o)}</button>`).join('')}</div>${konuHaritasi()}`;
+    const yeni = sekmeSayi('guncel'), kh = durum.kh;
+    yer.innerHTML = `${yeni ? `<button type="button" class="mz-tanitim" data-mz-sekme="guncel">${isaret('bilgi', 20)}<span><b>${yeni} yeni mevzuat değişikliği</b><small>${e(((durum.ortak.duyurular || [])[0] || {}).baslik || '')}</small></span>${ik('sag')}</button>` : ''}
+      ${son.length ? `<div class="mz-ornekler"><span>Son sorularınız</span>${son.map(o => `<button type="button" class="mz-ornek mz-son" data-mz-ornek="${e(o)}">${e(o)}</button>`).join('')}</div>` : ''}
+      <div class="mz-ornekler"><span>Örnek sorular</span>${ORNEKLER.map(o => `<button type="button" class="mz-ornek" data-mz-ornek="${e(o)}">${e(o)}</button>`).join('')}</div>
+      ${kh ? `<div class="mz-ornekler"><span>Sık bakılan konular</span>${['r25', 'r22', 'r14', 'r26', 'r27', 'r13'].map(id => kh.harita.get(id)).filter(Boolean).map(x => `<button type="button" class="mz-ornek mz-konu-kisa" data-mz-kavram="${e(x.id)}">${e(x.ad)}</button>`).join('')}<button type="button" class="mz-tumu" data-mz-sekme="konular">Bütün konular ${ik('sag')}</button></div>` : ''}`;
     return;
   }
   if (!durum.son) { yer.innerHTML = `<div class="kart mz-bekle">${isaret('bilgi', 22)}<span>Aranıyor…</span></div>`; return; }
+  { const c = k.querySelector('[data-mz-cipler]'); if (c) c.hidden = false; }
   const { r } = durum.son, l = r.sonuc;
   const not = r.anlamKapali && durum.son.anlam ? ' · anlam araması şu an kapalı, yalnız kelimeyle arandı' : '';
   const maddeNot = r.maddeYok ? `<p class="mz-not">Aradığınız madde bu derlemde yok: madde numarası hatalı olabilir ya da o bölüm sürücü kurslarıyla ilgisi olmadığı için alınmadı. ${l.length ? 'Aşağıda kelimeyle bulunanlar var.' : ''}</p>` : '';
@@ -466,6 +495,71 @@ function ilgiliSorular(l) {
   return s.length ? `<div class="mz-ilgili-sorular"><span>İlgili sorular</span>${s.map(m => `<button type="button" class="mz-ornek" data-mz-ornek="${e(m)}">${e(m)}</button>`).join('')}</div>` : '';
 }
 
+/* ---------- Güncel: duyurular ve yaklaşan yürürlükler ---------- */
+const gunFarki = t => Math.round((Date.parse(t + 'T12:00:00') - Date.parse(new Date().toISOString().slice(0, 10) + 'T12:00:00')) / 864e5);
+const duyuruHtml = x => `<article class="mz-duyuru"><small>${e([tarihYaz(x.tarih), x.kimi ? 'İlgili: ' + x.kimi : '', x.yururluk ? 'Yürürlük: ' + tarihYaz(x.yururluk) : ''].filter(Boolean).join(' · '))}</small><b>${e(x.baslik)}</b>${x.metin ? `<p>${e(x.metin)}</p>` : ''}
+  ${(x.yapilacaklar || []).length ? `<p class="mz-duyuru-et">Kursun yapması gerekenler</p><ul class="mz-yapilacak">${x.yapilacaklar.map(y => `<li>${e(y)}</li>`).join('')}</ul>` : ''}
+  <div class="mz-duyuru-dg">${x.belge ? `<button type="button" class="dg dg-cizgi dg-kucuk" data-mz-ekbelge="${e(x.belge)}">Belgeyi aç</button>` : ''}${x.bag ? `<a class="dg-baglanti" href="${e(x.bag)}" target="_blank" rel="noopener">Resmî metni aç</a>` : ''}</div></article>`;
+function guncelCiz(k) {
+  const yer = k.querySelector('[data-mz-guncel]'); if (!yer) return;
+  const l = (durum.ortak && durum.ortak.duyurular) || [], bugun = new Date().toISOString().slice(0, 10);
+  const yaklasan = l.filter(x => x.yururluk && x.yururluk >= bugun).sort((a, b) => a.yururluk.localeCompare(b.yururluk));
+  yer.innerHTML = `${yaklasan.length ? `<section class="mz-takvim" aria-label="Yaklaşan yürürlükler"><h3>Yaklaşan yürürlükler</h3><ol>${yaklasan.map(x => { const g = gunFarki(x.yururluk); return `<li><span class="mz-takvim-gun${g <= 30 ? ' yakin' : ''}"><b>${g === 0 ? 'Bugün' : g + ' gün'}</b><small>${e(tarihYaz(x.yururluk))}</small></span><span>${e(x.baslik)}</span></li>`; }).join('')}</ol></section>` : ''}
+    ${l.length ? `<section class="mz-duyurular" aria-label="Mevzuat duyuruları"><div class="mz-duyuru-bas">${isaret('bilgi', 20)}<b>Güncel değişiklikler</b></div>${l.map(duyuruHtml).join('')}</section>`
+      : `<div class="kart">${bos('Şu an duyuru yok', 'Mevzuatta sürücü kurslarını ilgilendiren bir değişiklik olduğunda burada ve bu sekmenin üstünde sayıyla görünür.')}</div>`}
+    <p class="mz-not">Yeni yürürlüğe giren ve henüz taslak olan düzenlemeler: <button type="button" class="mz-dayanak" data-mz-kavram="r36">Rehber · Yaklaşan ve yeni değişiklikler</button></p>`;
+}
+
+/* ---------- Kaydettiklerim: kursun kaydettiği maddeler ve notları ---------- */
+// Gerçek kursta worker'da (kurs başına, bütün personel görür); demoda yalnız bu oturumda. Kaydedilen madde sonradan "değişti/kalktı"
+// diye işaretlenirse sekmede sayıyla ve satırda uyarıyla görünür.
+async function favoriYukle(k) {
+  if (!personel()) { durum.fav = durum.fav || []; return; }
+  try { durum.fav = (await api('/mevzuat/favori')).liste || []; } catch (x) { durum.fav = durum.fav || []; }
+  if (k.isConnected) { const n = k.querySelector('[data-mz-sekmeler]'); if (n) n.innerHTML = sekmelerHtml(); if (durum.sekme === 'kayit') kayitCiz(k); }
+}
+async function favoriYaz(k, x) {
+  const anahtar = x.k || (x.b + '|' + x.m);
+  if (personel()) { try { durum.fav = (await api('/mevzuat/favori', { method: 'POST', govde: x.k ? { b: anahtar.split('|')[0], m: anahtar.split('|').slice(1).join('|'), sil: true } : x })).liste || []; } catch (y) { return bildir(y.kullanici || 'Kaydedilemedi', 'uyari'), false; } }
+  else {
+    const l = (durum.fav || []).filter(y => y.k !== anahtar);
+    durum.fav = x.sil ? l : [{ k: anahtar, b: x.b, m: x.m, ad: x.ad, not: x.not || '', tarih: new Date().toISOString().slice(0, 10) }, ...l];
+  }
+  if (k && k.isConnected) { const n = k.querySelector('[data-mz-sekmeler]'); if (n) n.innerHTML = sekmelerHtml(); if (durum.sekme === 'kayit') kayitCiz(k); }
+  return true;
+}
+function favoriNot(k, anahtar) {
+  const x = (durum.fav || []).find(y => y.k === anahtar); if (!x) return;
+  pencere({ baslik: 'Not', korumali: false, icerik: `<div class="alan"><label for="mz-fav-not">${e(x.ad || x.m)}</label><textarea id="mz-fav-not" rows="4" maxlength="500" placeholder="Ör. İl MEM bu maddeyi şöyle uyguluyor…">${e(x.not || '')}</textarea></div>`,
+    altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-mz-not-kaydet>Kaydet</button>`,
+    onAc: d => d.querySelector('[data-mz-not-kaydet]').addEventListener('click', async () => { const not = d.querySelector('textarea').value.trim(); if (await favoriYaz(k, { b: x.b, m: x.m, ad: x.ad, not })) { kapatPencere(); bildir('Not kaydedildi'); } }) });
+}
+function favoriAc(anahtar) {
+  const [b, ...mm] = anahtar.split('|'), m = mm.join('|'), kume = motor.kume.ortak;
+  const bi = kume ? kume.belgeler.findIndex(x => x.id === b) : -1;
+  const i = bi >= 0 ? kume.parcalar.findIndex(p => p.b === bi && (p.m || '') === m) : -1;
+  if (i >= 0) return maddeAc(i);
+  if (motor.kume.ek && motor.kume.ek.belgeler.some(x => x.id === b)) return ekBelgeAc(b);
+  bildir('Bu madde derlemde artık yok', 'uyari');
+}
+function kayitCiz(k) {
+  const yer = k.querySelector('[data-mz-kayit]'); if (!yer) return;
+  const l = durum.fav || [];
+  if (!l.length) { yer.innerHTML = `<div class="kart">${bos('Kaydedilen madde yok', 'Bir maddeyi açıp “Kaydet”e dokunun; burada notunuzla birlikte durur. Madde değişirse burada uyarı görürsünüz.')}</div>`; return; }
+  yer.innerHTML = `${!personel() ? '<p class="mz-not">Demoda kaydedilenler yalnız bu oturumda durur; gerçek kursta bütün personel görür.</p>' : ''}<div class="kart"><ul class="liste mz-kayit-liste">${l.map(x => { const d = motor.durum[x.b]; return `<li><div class="mz-kayit-satir"><b>${e(x.ad || x.m)}</b>${d ? `<p class="mz-uyari-not">${e(durumNotu(d))}</p>` : ''}${x.not ? `<p class="mz-kayit-not">${e(x.not)}</p>` : ''}<small>${e(tarihYaz(x.tarih))}</small></div><div class="mz-kayit-dg"><button type="button" class="dg dg-cizgi dg-kucuk" data-mz-fav-ac="${e(x.k)}">Aç</button><button type="button" class="dg dg-hafif dg-kucuk" data-mz-fav-not="${e(x.k)}">Not</button><button type="button" class="dg dg-hafif dg-kucuk" data-mz-fav-sil="${e(x.k)}">Kaldır</button></div></li>`; }).join('')}</ul></div>`;
+}
+
+/* ---------- madde değişiklik geçmişi (metindeki "Değişik/Ek/Mülga" notlarından) ---------- */
+export function degisiklikGecmisi(metin) {
+  const o = new Map();
+  for (const m of String(metin || '').matchAll(/\((Değişik|Ek|Mülga)(?:\s+(?:fıkra|ibare|cümle|bent|madde|paragraf|tanım))?\s*:\s*(RG-)?(\d{1,2})\/(\d{1,2})\/(\d{4})\s*-\s*(\d{4,5})(?:\/(\d+)\s*md\.?)?\s*\)/gu)) {
+    const [, tur, rg, g, a, y, no, md] = m, iso = `${y}-${a.padStart(2, '0')}-${g.padStart(2, '0')}`, k = iso + '|' + tur;
+    if (!o.has(k)) o.set(k, { tur, iso, rg: !!rg, no, md: md || '', adres: `https://www.resmigazete.gov.tr/eskiler/${y}/${a.padStart(2, '0')}/${y}${a.padStart(2, '0')}${g.padStart(2, '0')}.htm` });
+  }
+  return [...o.values()].sort((x, y) => x.iso.localeCompare(y.iso));
+}
+const gecmisHtml = l => !l.length ? '' : `<details class="daha mz-gecmis"><summary>Değişiklik geçmişi (${l.length})</summary><ol>${l.map(x => `<li><b>${e(tarihYaz(x.iso))}</b> · ${e(x.tur === 'Değişik' ? 'Değiştirildi' : x.tur === 'Ek' ? 'Eklendi' : 'Yürürlükten kaldırıldı')} · ${x.rg ? 'Resmî Gazete sayı ' + e(x.no) : e(x.no) + ' sayılı Kanun' + (x.md ? ' md.' + e(x.md) : '')} <a href="${e(x.adres)}" target="_blank" rel="noopener">Resmî Gazete</a></li>`).join('')}</ol><p class="mz-not">Maddenin şimdiki metni gösteriliyor; değişikliklerin tarihi metindeki notlardan çıkarıldı. Eski metin için o günün Resmî Gazete'sine bakın.</p></details>`;
+
 /* ---------- konu haritası ---------- */
 // Soru yokken: kurs işinin aşamaları ve her aşamadaki konular (rehber bölümleri ve ek konular)
 function konuHaritasi() {
@@ -502,19 +596,27 @@ function maddeAc(i, kokSet = new Set()) {
   const altBas = p => { if (!rd || p.sss || !p.baslik || p.baslik === onceBas) return ''; onceBas = p.baslik; return `<h4 class="mz-alt-baslik">${e(p.baslik)}</h4>`; };
   const metin = md.parcalar.map(p => p.sss ? kisaCevapHtml(p, kokSet) : `${altBas(p)}<p>${p.f ? `<b class="mz-fikra">(${e(String(p.f).split('/')[1] || p.f)})</b> ` : ''}${etiketliHtml(p.t, kokSet)}</p>`).join('');
   const kurallar = [...new Set(md.parcalar.flatMap(p => p.kural || []))];
+  const favK = b.id + '|' + (md.m || ''), favVar = () => (durum.fav || []).some(x => x.k === favK);
+  const favDg = () => `${ik('yildiz')}${favVar() ? 'Kaydedildi' : 'Kaydet'}`;
   pencere({
     baslik: `${b.kisa || b.ad}${md.m ? ' · ' + md.m : ''}`, genis: true,
     icerik: `<div class="mz-madde" data-resmi>
+      ${!rd ? `<div class="mz-madde-arac"><button type="button" class="dg dg-cizgi dg-kucuk mz-fav-dg${favVar() ? ' secili' : ''}" data-mz-fav-kaydet aria-pressed="${favVar()}">${favDg()}</button>${motor.durum[b.id] ? `<span class="mz-uyari-not">${e(durumNotu(motor.durum[b.id]))}</span>` : ''}</div>` : ''}
       ${rd ? `<p class="mz-uyari-not">mdSinyal'in açıklama metnidir, resmî metin değildir. Köşeli parantezdeki dayanağa dokunarak resmî maddeyi açın.</p>` : ''}
       ${md.baslik && !rd ? `<h3>${e(md.baslik)}</h3>` : ''}
       <div class="mz-madde-metin">${metin}</div>
+      ${!rd ? gecmisHtml(degisiklikGecmisi(md.parcalar.map(p => p.t).join('\n'))) : ''}
       ${kuralBag(kurallar)}
       <div class="mz-komsu">${md.onceki != null ? `<button type="button" class="dg dg-cizgi dg-kucuk" data-mz-komsu="${md.onceki}">${ik('sol')}${e(md.oncekiAd || 'Önceki')}</button>` : '<span></span>'}${md.sonraki != null ? `<button type="button" class="dg dg-cizgi dg-kucuk" data-mz-komsu="${md.sonraki}">${e(md.sonrakiAd || 'Sonraki')}${ik('sag')}</button>` : ''}</div>
       <div class="mz-kaynak"><b>${e(b.ad || b.kisa)}</b><small>${[TUR_AD[b.tur], b.tarih ? 'Yayım ' + tarihYaz(b.tarih) : '', b.guncel ? 'son değişiklik ' + tarihYaz(b.guncel) : ''].filter(Boolean).map(e).join(' · ')}</small>
         ${b.notlar ? `<p class="mz-uyari-not">${e(b.notlar)}</p>` : ''}
         ${b.kaynak && /^https:\/\//.test(b.kaynak) ? `<a class="dg-baglanti" href="${e(b.kaynak)}" target="_blank" rel="noopener">Resmî metni aç</a>` : ''}</div>
     </div>`,
-    onAc: d => d.addEventListener('click', ev => { const x = ev.target.closest('[data-mz-komsu]'); if (x) return maddeAc(+x.dataset.mzKomsu, kokSet); const y = ev.target.closest('[data-mz-etiket]'); if (y) maddeAc(+y.dataset.mzEtiket, kokSet); }),
+    onAc: d => d.addEventListener('click', async ev => {
+      const f = ev.target.closest('[data-mz-fav-kaydet]');
+      if (f) { const k = document.querySelector('.mz'), ok = await favoriYaz(k && k.closest('#icerik') ? k.parentElement : null, favVar() ? { k: favK, sil: true } : { b: b.id, m: md.m || '', ad: (b.kisa || b.ad) + (md.m ? ' ' + md.m : '') + (md.baslik ? ' · ' + md.baslik : '') }); if (ok) { f.innerHTML = favDg(); f.classList.toggle('secili', favVar()); f.setAttribute('aria-pressed', favVar()); bildir(favVar() ? 'Kaydedildi: Kaydettiklerim sekmesinde' : 'Kayıttan çıkarıldı'); const kk = document.querySelector('[data-mz-sekmeler]'); if (kk) kk.innerHTML = sekmelerHtml(); } return; }
+      const x = ev.target.closest('[data-mz-komsu]'); if (x) return maddeAc(+x.dataset.mzKomsu, kokSet); const y = ev.target.closest('[data-mz-etiket]'); if (y) maddeAc(+y.dataset.mzEtiket, kokSet);
+    }),
   });
 }
 

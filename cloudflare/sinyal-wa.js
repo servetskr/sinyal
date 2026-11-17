@@ -750,7 +750,13 @@ async function mevzuatOrtak(req, env, url, yol, cevap) {
     return acik(JSON.stringify({ ok: true, belge: v }));
   }
   if (!(await sahipMi(req, env))) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
-  if (yol === 'mevzuat/ortak/takip' && GET) return cevap({ ok: true, takip: await mvJson(env, MO + ':takip', {}) });
+  if (yol === 'mevzuat/ortak/takip' && GET) return cevap({ ok: true, takip: await mvJson(env, MO + ':takip', {}), bulten: await mvJson(env, MO + ':bulten', { acik: false }) });
+  // haftalık bülten: { acik: true|false } ya da { dene: true } (yalnız sahibin adresine örnek)
+  if (yol === 'mevzuat/ortak/bulten' && POST) {
+    const b = await req.json().catch(() => ({})), v = await mvJson(env, MO + ':bulten', { acik: false });
+    if (b.dene) { const r = await mvBulten(env, { dene: true, zorla: true }); return cevap({ ok: true, ...r }); }
+    v.acik = b.acik === true; await env.LINK.put(MO + ':bulten', JSON.stringify(v)); return cevap({ ok: true, bulten: v });
+  }
   if (yol === 'mevzuat/ortak/takip-calistir' && POST) { await mvTakip(env, { hepsi: true }); return cevap({ ok: true, takip: await mvJson(env, MO + ':takip', {}) }); }
   if (!POST) return cevap({ ok: false, hata: 'Bilinmeyen adres' }, 404);
   if (yol === 'mevzuat/ortak/yukle') {
@@ -783,8 +789,8 @@ async function mevzuatOrtak(req, env, url, yol, cevap) {
       const baslik = mvTemiz(b.baslik, 120), metin = mvKes(String(b.metin || '').replace(/[<>]/g, ' '), 800), bag = /^https:\/\/[^\s<>"]{4,300}$/.test(b.bag || '') ? b.bag : '';
       if (!baslik) return cevap({ ok: false, hata: 'Duyurunun başlığını yazın' }, 400);
       const yapilacaklar = (Array.isArray(b.yapilacaklar) ? b.yapilacaklar : String(b.yapilacaklar || '').split('\n')).map(x => mvKes(String(x || '').replace(/[<>]/g, ' '), 300)).filter(Boolean).slice(0, 8);
-      const belge = /^[a-z0-9-]{2,30}$/.test(b.belge || '') ? b.belge : '', kimi = mvTemiz(b.kimi, 120);
-      const x = { id: b.id && l.some(y => y.id === b.id) ? b.id : Date.now().toString(36), baslik, metin, bag, yapilacaklar, belge, kimi, tarih: new Date().toISOString().slice(0, 10) };
+      const belge = /^[a-z0-9-]{2,30}$/.test(b.belge || '') ? b.belge : '', kimi = mvTemiz(b.kimi, 120), yururluk = /^\d{4}-\d{2}-\d{2}$/.test(b.yururluk || '') ? b.yururluk : '';
+      const x = { id: b.id && l.some(y => y.id === b.id) ? b.id : Date.now().toString(36), baslik, metin, bag, yapilacaklar, belge, kimi, yururluk, tarih: new Date().toISOString().slice(0, 10) };
       l = [x, ...l.filter(y => y.id !== x.id)].slice(0, 30);
     }
     await env.LINK.put(MO + ':duyuru', JSON.stringify(l)); await moOnbellekSil(); return cevap({ ok: true, duyurular: l });
@@ -849,6 +855,32 @@ function moSssDogrula(b, set) {
   return { kayit: { soru, esler: satirlar(b.esler, 6, 200), kisa, ayrinti: satirlar(b.ayrinti, 8, 400), adimlar: satirlar(b.adimlar, 8, 300), dikkat: mvKes(String(b.dikkat || '').replace(/[<>]/g, ' '), 400), dayanak, konu: mvTemiz(b.konu, 60) } };
 }
 const moSssMetin = k => ['Soru: ' + k.soru, k.esler.length ? '(Diğer söylenişler: ' + k.esler.join(' / ') + ')' : '', 'Cevap: ' + k.kisa, ...k.ayrinti, ...k.adimlar.map((x, i) => (i + 1) + '. ' + x), k.dikkat ? 'Dikkat: ' + k.dikkat : '', 'Dayanak: ' + k.dayanak.map(d => d.belge + ' ' + d.m).join(', ')].filter(Boolean).join('\n');
+// Haftalık bülten (pazartesi, cron): son 7 günün duyuruları, eklenen belgeleri ve Resmî Gazete başlıkları, onaylı e-posta adresi olan
+// kurslara gider. Sahip panelden açar (varsayılan kapalı); yeni bir şey yoksa gönderilmez. Ücretsiz e-posta kotası için en çok 80 kurs.
+async function mvBulten(env, { dene = false, zorla = false, simdi = new Date() } = {}) {
+  const S = epSaglayici(env); if (!S || !env.LINK) return { gonderilen: 0, neden: 'e-posta servisi yok' };
+  const v = await mvJson(env, MO + ':bulten', { acik: false });
+  if (!dene && (!v.acik || (v.son && Date.now() - Date.parse(v.son) < 6 * 864e5))) return { gonderilen: 0, neden: 'kapalı ya da bu hafta gönderildi' };
+  const sinir = new Date(simdi.getTime() - 7 * 864e5).toISOString().slice(0, 10);
+  const duy = (await mvJson(env, MO + ':duyuru', [])).filter(x => x.tarih >= sinir), bel = (await mvJson(env, MO, [])).filter(x => String(x.eklenme).slice(0, 10) >= sinir), rg = ((await mvJson(env, MO + ':takip', {})).rg || []).filter(x => x.tarih >= sinir);
+  if (!duy.length && !bel.length && !rg.length && !zorla) return { gonderilen: 0, neden: 'bu hafta yeni bir şey yok' };
+  const k = epKacis, bol = (bas, ic) => ic ? `<h2 style="margin:20px 0 8px;font-size:16px;color:#0f1729">${bas}</h2>${ic}` : '';
+  const govde = bol('Güncel değişiklikler', duy.map(x => `<div style="margin:0 0 12px"><b>${k(x.baslik)}</b>${x.yururluk ? ` <span style="color:#a45a00">· yürürlük ${k(x.yururluk)}</span>` : ''}<div style="color:#374151">${k(x.metin || '')}</div>${(x.yapilacaklar || []).length ? '<ul style="margin:6px 0 0;padding-left:18px">' + x.yapilacaklar.map(y => `<li>${k(y)}</li>`).join('') + '</ul>' : ''}</div>`).join(''))
+    + bol('mdSinyal’e eklenen resmî belgeler', bel.length ? '<ul style="padding-left:18px;margin:0">' + bel.map(x => `<li>${k(x.ad)}${x.tarih ? ' (' + k(x.tarih) + ')' : ''}</li>`).join('') + '</ul>' : '')
+    + bol('Resmî Gazete’de ilgili başlıklar', rg.length ? '<ul style="padding-left:18px;margin:0">' + rg.map(x => `<li>${k(x.tarih)}: <a href="${k(x.adres)}">${k(x.baslik)}</a></li>`).join('') + '</ul>' : '')
+    + `<p style="margin:20px 0 0"><a href="https://mdsinyal.com/#/mevzuat" style="background:#ffc21a;color:#0f1729;padding:10px 16px;border-radius:10px;font-weight:700;text-decoration:none">Mevzuat asistanını aç</a></p>`;
+  const html = epKabuk('Bu hafta mevzuatta', govde || '<p>Bu hafta yeni bir değişiklik yok.</p>', 'Bu e-postayı mdSinyal kullanan kursunuzun onaylı adresine gönderiyoruz.', 'Sürücü kursunuzu ilgilendiren değişiklikler');
+  const metin = 'Bu hafta mevzuatta\n\n' + duy.map(x => '- ' + x.baslik + (x.metin ? ': ' + x.metin : '')).join('\n') + (bel.length ? '\n\nEklenen belgeler:\n' + bel.map(x => '- ' + x.ad).join('\n') : '') + '\n\nhttps://mdsinyal.com/#/mevzuat';
+  if (dene) { if (!env.SAHIP_EPOSTA) return { gonderilen: 0, neden: 'SAHIP_EPOSTA tanımlı değil' }; await S.gonder({ kime: [env.SAHIP_EPOSTA], konu: 'Örnek: mdSinyal mevzuat bülteni', html, metin }); return { gonderilen: 1, neden: 'örnek sahibin adresine gitti' }; }
+  const l = await env.LINK.list({ prefix: 'epadres:', limit: 200 }); let n = 0;
+  for (const key of l.keys) {
+    if (n >= 80) break;
+    const adr = (await mvJson(env, key.name, [])).filter(x => x.onay).map(x => x.a); if (!adr.length) continue;
+    try { await S.gonder({ kime: adr.slice(0, 3), konu: 'mdSinyal · Bu hafta mevzuatta', html, metin }); n++; } catch (x) { console.warn(JSON.stringify({ tur: 'uyari', konu: 'bülten', hata: String((x && x.message) || x).slice(0, 120) })); }
+  }
+  v.son = new Date().toISOString(); v.sayi = n; await env.LINK.put(MO + ':bulten', JSON.stringify(v));
+  return { gonderilen: n };
+}
 // Günlük takip (cron): derlemin kaynak adresleri (site: veri/mevzuat/kaynaklar.json) değişmiş mi (ETag / Last-Modified / boyut) ve
 // Resmî Gazete fihristinde ilgili başlık var mı. Ücretsiz planda çağrı başına 50 alt istek: her gün adreslerin yarısı denetlenir.
 // Değişiklik ve yeni başlık KV mortak:takip'e yazılır (1 yazma); SAHIP_EPOSTA kuruluysa sahibe e-posta gider.
@@ -987,6 +1019,18 @@ async function mevzuatUc(req, env, url, yol, cevap, { gercek, rol, kursId, origi
     const v = await env.LINK.get(on + ':' + id); if (!v) return cevap({ ok: false, hata: 'Belge bulunamadı' }, 404);
     return cevap({ ok: true, belge: JSON.parse(v) });
   }
+  // kaydedilen maddeler (kurs başına): GET liste, POST { b, m, ad, not?, sil? } — KV mfav:<kurs> (en çok 200)
+  if (yol === 'mevzuat/favori') {
+    const fk = 'mfav:' + kursId, l = await mvJson(env, fk, []);
+    if (GET) return cevap({ ok: true, liste: l });
+    if (mvSinirAsti('fv:' + kursId, 30)) return cevap({ ok: false, hata: 'Çok sık işlem; bir dakika sonra tekrar deneyin' }, 429);
+    const bb = await req.json().catch(() => null); if (!bb) return cevap({ ok: false, hata: 'Gecersiz istek' }, 400);
+    const anahtar = String(bb.b || '').slice(0, 40) + '|' + String(bb.m || '').slice(0, 120);
+    if (!/^[a-z0-9-]{2,40}\|/.test(anahtar)) return cevap({ ok: false, hata: 'Madde geçersiz' }, 400);
+    let yeni = l.filter(x => x.k !== anahtar);
+    if (!bb.sil) yeni = [{ k: anahtar, b: anahtar.split('|')[0], m: anahtar.split('|')[1], ad: mvTemiz(bb.ad, 160), not: mvTemiz(bb.not, 500), kim: rol, tarih: new Date().toISOString().slice(0, 10) }, ...yeni].slice(0, 200);
+    await env.LINK.put(fk, JSON.stringify(yeni)); return cevap({ ok: true, liste: yeni });
+  }
   if (!POST) return cevap({ ok: false, hata: 'Bilinmeyen adres' }, 404);
   if (yol === 'mevzuat/yukle') {
     if (!buro) return cevap({ ok: false, hata: 'Belgeyi yalnız kurs müdürü ve ön büro yükler' }, 403);
@@ -1071,7 +1115,7 @@ async function onizleme(req, url) {
 
 export default {
   // günlük mevzuat takibi (wrangler.toml [triggers] crons)
-  async scheduled(olay, env, ctx) { ctx.waitUntil(mvTakip(env).catch(x => console.error(JSON.stringify({ tur: 'hata', konu: 'mevzuat takip', hata: String((x && x.message) || x).slice(0, 200) })))); },
+  async scheduled(olay, env, ctx) { ctx.waitUntil(mvTakip(env).then(() => (new Date().getUTCDay() === 1 ? mvBulten(env) : null)).catch(x => console.error(JSON.stringify({ tur: 'hata', konu: 'mevzuat takip', hata: String((x && x.message) || x).slice(0, 200) })))); },
   async fetch(req, env) {
     const url = new URL(req.url), origin = req.headers.get('Origin') || '';
     if (url.hostname === 'mdsinyal.com' && req.method === 'GET' && /^\/[dihDIH]\/[A-Za-z0-9_-]/.test(url.pathname)) return onizleme(req, url);

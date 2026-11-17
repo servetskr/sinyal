@@ -1,14 +1,16 @@
 // Denetim modu: habersiz denetimde (MTSK Yön. m.46/A) tek ekran: şu an hangi derste kim, hangi araçta, MEBBİS programına uygun mu;
 // araçta bulunması gereken belgeler (m.17/3), öz kontrol listesi (EK-16/17 maddelerinden) ve tek tıkla çıktılar.
 // Denetim kayıtları: bulgu, eksik giderme süresi (m.46: 20 gün) ve 5580 m.7/2 cezalarında tekerrür (7590 sayılı Kanun: tekrarda 5 kat, üçüncüde ruhsat iptali).
-import { S, kaydet, gun, fark, tamAd, islem, kursiyer, egitmen, arac, oturum, sbDers, sb, tutarOku } from './veri.js?v=227';
-import { e, ik, isaret, pencere, kapatPencere, bildir, tarih, rozet } from './ui.js?v=227';
+import { S, kaydet, gun, fark, tamAd, islem, kursiyer, egitmen, arac, oturum, sbDers, sb, tutarOku } from './veri.js?v=228';
+import { e, ik, isaret, pencere, kapatPencere, bildir, tarih, rozet } from './ui.js?v=228';
 
 const simdi = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
 const dk = s => { const [h, m] = String(s || '0:0').split(':').map(Number); return h * 60 + (m || 0); };
 const ayEkle = (t, n) => { const d = new Date(t + 'T12:00'); d.setMonth(d.getMonth() + n); return d.toISOString().slice(0, 10); };
 export const BENT = { a: ['a', 'Yerleşim planında izinsiz değişiklik', 5, 4], b: ['b', 'Yanıltıcı reklam ya da ilan', 5, 4], c: ['c', 'İzinsiz ders çizelgesi ya da program uygulama', 5, 4], d: ['d', 'Yönetmeliğe aykırı diğer fiiller', 5, 4], e: ['e', 'Eksik ya da mevzuata aykırı personel çalıştırma', 10, 5], f: ['f', 'Millî Eğitim Temel Kanunu’na aykırılık', 10, 5], g: ['g', 'Kurum açma şartını kaybetme', 20, 5] };
 
+// öz kontrol metnindeki MTSK atıfları ("m.17/3-a", "m.46/A/7", "m.42") mevzuat asistanında o maddeyi açar
+const dayanakBagla = metin => e(metin).replace(/\bm\.(\d{1,2})(\/[A-Z])?((?:\/[\w-]+)*)/g, (x, no, ek) => `<a class="dn-dayanak" href="#/mevzuat?q=${encodeURIComponent('MTSK madde ' + no + (ek || ''))}" data-kapat title="MTSK Yönetmeliği madde ${no}${ek || ''}: mevzuat asistanında aç">${x}</a>`);
 function anlik() {
   const bugun = gun(0), n = dk(simdi());
   const dersler = sbDers(S.dersler).filter(d => d.tarih === bugun && d.durum !== 'İptal');
@@ -56,8 +58,8 @@ export function denetimModuAc(yenile) {
     return `<p style="font-size:14px">${tarih(bugun)} · saat ${simdi()} · bugün ${a.dersler.length} direksiyon dersi, ${a.kalan} tanesi henüz başlamadı.</p>
       <h4 style="margin-top:12px">Şu an yapılan direksiyon dersleri</h4>${a.suan.length ? a.suan.map(dersSatir).join('') : `<p class="og-not">Şu an direksiyon dersi yok.${a.dersler.length ? ' Sıradaki: ' + e((a.dersler.find(d => dk(d.saat) > dk(simdi())) || {}).saat || '—') : ''}</p>`}
       <h4 style="margin-top:12px">Şu an yapılan teorik dersler</h4>${a.teorik.length ? a.teorik.map(t => `<div class="kart" style="padding:12px 14px;margin-bottom:10px"><b>${e(t.saat)} · ${e(t.salon || '')} · ${e(t.konu || '')}</b><div style="margin-top:6px"><button class="dg dg-cizgi dg-kucuk" data-dn-yazdir="dersdefteri|${e(t.grup || '')}">${ik('belge')}Ders defteri ve yoklama</button></div></div>`).join('') : '<p class="og-not">Şu an teorik ders yok.</p>'}
-      <h4 style="margin-top:12px">Öz kontrol</h4><ul class="dn-oz">${kl.map(([id, metin, oto, not, belge]) => { const v = oto === true ? true : oto === false ? false : ik2[id]; return `<li class="${v === true ? 'ok' : v === false ? 'no' : ''}"><button type="button" data-dn-isaret="${id}" ${oto != null ? 'disabled' : ''} aria-label="${e(metin)}">${v === true ? '✓' : v === false ? '!' : ''}</button><span>${e(metin)}${v === false && not ? `<small>${e(not)}</small>` : ''}${oto != null ? '<small>mdSinyal kayıtlarından kontrol edildi</small>' : ''}</span>${belge ? `<button class="dg dg-hafif dg-kucuk" data-dn-yazdir="${belge}|">${ik('belge')}Yazdır</button>` : ''}</li>`; }).join('')}</ul>
-      <p class="og-not" style="margin-top:8px">Denetçi EK-16 (teorik) ve EK-17 (direksiyon) kontrol formlarını doldurur; bu liste o formlardaki ve m.17/3, m.42, m.46/A’daki maddelerden hazırlandı.</p>`;
+      <h4 style="margin-top:12px">Öz kontrol</h4><ul class="dn-oz">${kl.map(([id, metin, oto, not, belge]) => { const v = oto === true ? true : oto === false ? false : ik2[id]; return `<li class="${v === true ? 'ok' : v === false ? 'no' : ''}"><button type="button" data-dn-isaret="${id}" ${oto != null ? 'disabled' : ''} aria-label="${e(metin)}">${v === true ? '✓' : v === false ? '!' : ''}</button><span>${dayanakBagla(metin)}${v === false && not ? `<small>${e(not)}</small>` : ''}${oto != null ? '<small>mdSinyal kayıtlarından kontrol edildi</small>' : ''}</span>${belge ? `<button class="dg dg-hafif dg-kucuk" data-dn-yazdir="${belge}|">${ik('belge')}Yazdır</button>` : ''}</li>`; }).join('')}</ul>
+      <p class="og-not" style="margin-top:8px">Denetçi EK-16 (teorik) ve EK-17 (direksiyon) kontrol formlarını doldurur; bu liste o formlardaki ve m.17/3, m.42, m.46/A’daki maddelerden hazırlandı. Altı çizili maddeye dokununca mevzuat asistanında açılır. <a class="dn-dayanak" href="#/mevzuat?q=${encodeURIComponent('MEB denetim rehberi denetimde bakılanlar')}" data-kapat>MEB denetim rehberinde neye bakılır?</a></p>`;
   };
   pencere({
     baslik: 'Denetim modu', genis: true, icerik: `<div data-dn>${ciz()}</div>`,
@@ -66,7 +68,7 @@ export function denetimModuAc(yenile) {
       const g = p.querySelector('[data-dn]');
       g.addEventListener('click', ev => {
         const i = ev.target.closest('[data-dn-isaret]'); if (i && !i.disabled) { const x = S.denetimKontrol.isaret; x[i.dataset.dnIsaret] = x[i.dataset.dnIsaret] === true ? false : x[i.dataset.dnIsaret] === false ? undefined : true; kaydet(); g.innerHTML = ciz(); return; }
-        const y = ev.target.closest('[data-dn-yazdir]'); if (y) { const [tur, id] = y.dataset.dnYazdir.split('|'); return import('./sayfalar3.js?v=227').then(m => m.belgeAc(tur, id || undefined)); }
+        const y = ev.target.closest('[data-dn-yazdir]'); if (y) { const [tur, id] = y.dataset.dnYazdir.split('|'); return import('./sayfalar3.js?v=228').then(m => m.belgeAc(tur, id || undefined)); }
       });
       const zaman = setInterval(() => { if (!document.body.contains(p)) return clearInterval(zaman); if (!g.querySelector(':focus')) g.innerHTML = ciz(); }, 60000);
       p.querySelector('[data-dn-kayit]').addEventListener('click', () => { kapatPencere(); setTimeout(() => denetimKaydiAc(yenile), 200); });
