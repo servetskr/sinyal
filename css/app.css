@@ -2929,3 +2929,20 @@ form.mz-geri textarea{width:100%;border:1.5px solid var(--cizgi);border-radius:1
 .sh-mz-form>.dg{justify-self:start}
 .sh-mz-form.tek{border:0;padding:0;background:none}
 .sh-mz .sh-satir .dg{flex:none}
+.mz-duyuru-et{font-size:13px!important;font-weight:800;color:var(--murekkep)!important;margin:6px 0 2px!important}
+.mz-duyuru .mz-yapilacak{margin:0 0 6px;padding-left:20px;font-size:14.5px;line-height:1.5}
+.mz-duyuru-dg{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+/* cevap doğrulama: kaynakta gör, rakam denetimi */
+.mz-kanit{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;margin-top:4px;font-size:12.5px}
+.mz-kanit details{min-width:0;width:100%}
+.mz-kanit summary{cursor:pointer;color:var(--levha);font-weight:700;width:max-content;list-style:none}
+.mz-kanit summary::-webkit-details-marker{display:none}
+.mz-kanit summary::before{content:"▸ "}
+.mz-kanit details[open] summary::before{content:"▾ "}
+.mz-kanit blockquote{margin:4px 0 2px;padding:6px 10px;border-left:3px solid var(--levha);background:var(--panel-2);border-radius:0 8px 8px 0;font-size:13.5px;line-height:1.5;color:var(--metin);overflow-wrap:anywhere}
+.mz-kanit small{color:var(--soluk)}
+.mz-kanit-ok,.mz-kanit-uyari{display:inline-flex;gap:4px;align-items:center;font-weight:700}
+.mz-kanit-ok{color:var(--yesil)}
+.mz-kanit-uyari{color:#a45a00}
+p.mz-kanit-uyari{margin:-4px 0 10px;font-size:13px}
+.mz-kanit .ik,.mz-kanit-uyari .ik{width:14px;height:14px}

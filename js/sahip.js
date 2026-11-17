@@ -2,11 +2,11 @@
 // mdSinyal Yönetim panelinin “Hesaplar” bölümünde açılır (yalnız Servet; ortak görmez).
 // Yetki Firebase güvenlik kurallarından değil, Google hesabından gelir: Firebase projesinin sahibi olan Google hesabıyla
 // bağlanılır, Google IAM izin verirse işlem yapılır. Sunucu, gizli anahtar yok; erişim belirteci yalnız bellekte durur (1 saat).
-import { e, ik, pencere, kapatPencere, bildir, tl, siteLink } from './ui.js?v=226';
-import { S, kaydet, islem, bulutKanca } from './veri.js?v=226';
-import { ogrenciPanelMetni, WORKER } from './bulut.js?v=226';
-import { EMU } from './firebase-ayar.js?v=226';
-import { kabuk as epKabuk, kutular, bolum, satirlar, bos, not, nokta, dugme, R, SITE } from './eposta-kabuk.js?v=226';
+import { e, ik, pencere, kapatPencere, bildir, tl, siteLink } from './ui.js?v=227';
+import { S, kaydet, islem, bulutKanca } from './veri.js?v=227';
+import { ogrenciPanelMetni, WORKER } from './bulut.js?v=227';
+import { EMU } from './firebase-ayar.js?v=227';
+import { kabuk as epKabuk, kutular, bolum, satirlar, bos, not, nokta, dugme, R, SITE } from './eposta-kabuk.js?v=227';
 
 // EMU (firebase-ayar.js, yalnız localhost + açık işaret): REST istekleri yerel emülatöre gider, Google onayı yerine emülatörün yönetici belirteci kullanılır
 const PROJE = EMU ? EMU.proje : 'sinyal-5d37a';
@@ -960,7 +960,7 @@ let kuOtoBakildi = false;
 async function kullanimHaftalik() {
   if (kuOtoBakildi || !(S.kurs && S.kurs.sahipAnaliz) || !Object.keys(kursIst).length) return; kuOtoBakildi = true;
   try {
-    const { gecenHafta } = await import('./eposta.js?v=226'), h = gecenHafta();
+    const { gecenHafta } = await import('./eposta.js?v=227'), h = gecenHafta();
     if (S.kurs.sahipAnalizSon === h.donem) return;
     const T = await kullanimOku(aralikGunler(h.bas, h.bit));
     const j = await kullanimGonder(T, h.bas.split('-').reverse().join('.') + ' – ' + h.bit.split('-').reverse().join('.'), h.donem);
@@ -1099,7 +1099,7 @@ function mevzuatYonetHtml() {
     </section>
     <section class="sh-grup"><h2>Platforma eklenen belgeler<span>${belgeler.length} belge · bütün kurslarda aramada ve asistanda</span></h2>
       <div class="sh-mz-dg"><button class="dg dg-ana dg-kucuk" data-sh-mo-ekle>${ik('arti')}Belge ekle</button></div>
-      ${belgeler.length ? `<div class="sh-liste">${belgeler.map(b => `<div class="sh-satir" style="cursor:default"><span class="sh-av sh-av-hizmet">${ik('belge')}</span><span class="sh-satir-ic"><b>${e(b.ad)}</b><small>${e([(MO_TUR.find(x => x[0] === b.tur) || [, b.tur])[1], b.kurum, b.tarih ? moTarih(b.tarih) : '', b.parca + ' parça', 'eklendi ' + moTarih(b.eklenme)].filter(Boolean).join(' · '))}</small></span><button class="dg dg-hafif dg-kucuk" data-sh-mo-sil="${e(b.id)}">Sil</button></div>`).join('')}</div>` : `<p class="sh-dip">Yeni bir yönetmelik değişikliği, MEB yazısı, harç tebliği ya da kılavuz çıktığında buradan ekle. PDF, Word, fotoğraf ya da metin olur; metni okunur, özetlenir, bütün kursların aramasına ve asistanına hemen girer.</p>`}
+      ${belgeler.length ? `<div class="sh-liste">${belgeler.map(b => `<div class="sh-satir" style="cursor:default"><span class="sh-av sh-av-hizmet">${ik('belge')}</span><span class="sh-satir-ic"><b>${e(b.ad)}</b><small>${e([(MO_TUR.find(x => x[0] === b.tur) || [, b.tur])[1], b.kurum, b.tarih ? moTarih(b.tarih) : '', b.parca + ' parça', 'eklendi ' + moTarih(b.eklenme)].filter(Boolean).join(' · '))}</small></span><span style="display:flex;gap:6px;flex:none"><button class="dg dg-cizgi dg-kucuk" data-sh-mo-etki="${e(b.id)}">Duyuru taslağı</button><button class="dg dg-hafif dg-kucuk" data-sh-mo-sil="${e(b.id)}">Sil</button></span></div>`).join('')}</div>` : `<p class="sh-dip">Yeni bir yönetmelik değişikliği, MEB yazısı, harç tebliği ya da kılavuz çıktığında buradan ekle. PDF, Word, fotoğraf ya da metin olur; metni okunur, özetlenir, bütün kursların aramasına ve asistanına hemen girer.</p>`}
     </section>
     <section class="sh-grup"><h2>Belge durumları<span>eskiyen belge aramada geri düşer, asistan uyarır</span></h2>
       <form class="sh-mz-form" data-sh-mo-durum>
@@ -1116,7 +1116,9 @@ function mevzuatYonetHtml() {
       <form class="sh-mz-form" data-sh-mo-duyuru>
         <label class="tam">Başlık<input name="baslik" maxlength="120" required placeholder="Ör. 2027 sürücü belgesi harçları yayımlandı"></label>
         <label class="tam">Açıklama<textarea name="metin" rows="2" maxlength="800" placeholder="Kurslar için kısa açıklama: ne değişti, ne zamandan itibaren"></textarea></label>
-        <label class="tam">Resmî bağlantı (isteğe bağlı)<input name="bag" type="url" placeholder="https://www.resmigazete.gov.tr/..."></label>
+        <label class="tam">Kursların yapması gerekenler (isteğe bağlı, her satıra bir)<textarea name="yapilacaklar" rows="2"></textarea></label>
+        <label>Kimi ilgilendirir<input name="kimi" maxlength="120" placeholder="Ör. kurs müdürü, ön büro"></label>
+        <label>Resmî bağlantı (isteğe bağlı)<input name="bag" type="url" placeholder="https://www.resmigazete.gov.tr/..."></label>
         <button class="dg dg-ana dg-kucuk" type="submit">Yayınla</button>
       </form>
       ${duyurular.length ? `<div class="sh-liste">${duyurular.map(d => `<div class="sh-satir" style="cursor:default"><span class="sh-av sh-av-hizmet">${ik('bilgi')}</span><span class="sh-satir-ic"><b>${e(d.baslik)}</b><small style="white-space:normal">${e([moTarih(d.tarih), d.metin].filter(Boolean).join(' · '))}</small></span><button class="dg dg-hafif dg-kucuk" data-sh-mo-duyuru-sil="${e(d.id)}">Sil</button></div>`).join('')}</div>` : ''}
@@ -1173,6 +1175,25 @@ function sssPenceresi(k = null, on = {}) {
       catch (y) { dg.disabled = false; d.hidden = false; d.textContent = y.yetkisiz ? 'Yetki yok' : turkceHata(y); }
     }) });
 }
+// Eklenen belgeden "kursları nasıl etkiler" duyuru taslağı: yapay zekâ çıkarır, sahip düzenler ve yayınlar
+async function etkiTaslagi(id) {
+  bildir('Taslak hazırlanıyor…');
+  let t; try { t = (await moIstek('/mevzuat/ortak/etki', { yontem: 'POST', govde: { belge: id } })).taslak; } catch (x) { return bildir(x.yetkisiz ? 'Yetki yok' : turkceHata(x), 'uyari'); }
+  pencere({ baslik: 'Duyuru taslağı', korumali: false,
+    icerik: `<form class="sh-mz-form tek" data-p-etki novalidate>
+      <p class="sh-dip tam">Yapay zekâ belgeden çıkardı. Okuyup düzelt; yayınlayınca bütün kursların mevzuat ekranında görünür.${t.yururluk ? ' Yürürlük: ' + e(t.yururluk) + '.' : ''}</p>
+      <label class="tam">Başlık<input name="baslik" maxlength="120" value="${e(t.baslik)}"></label>
+      <label class="tam">Açıklama<textarea name="metin" rows="3" maxlength="800">${e(t.metin)}</textarea></label>
+      <label class="tam">Kursların yapması gerekenler (her satıra bir)<textarea name="yapilacaklar" rows="4">${e(t.yapilacaklar.join('\n'))}</textarea></label>
+      <label>Kimi ilgilendirir<input name="kimi" maxlength="120" value="${e(t.kimi)}"></label>
+      <label>Resmî bağlantı<input name="bag" type="url" value="${e(t.bag)}"></label>
+    </form>`,
+    altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-p-etki-yayinla>Yayınla</button>`,
+    onAc: p => p.querySelector('[data-p-etki-yayinla]').addEventListener('click', async () => {
+      const f = p.querySelector('form'); if (!f.baslik.value.trim()) return bildir('Başlık yaz', 'uyari');
+      kapatPencere(); await moIslem('/mevzuat/ortak/duyuru', { baslik: f.baslik.value.trim(), metin: f.metin.value.trim(), yapilacaklar: f.yapilacaklar.value, kimi: f.kimi.value.trim(), bag: f.bag.value.trim(), belge: t.belge }, 'Duyuru yayınlandı');
+    }) });
+}
 function mevzuatBelgePenceresi() {
   pencere({ baslik: 'Platforma belge ekle', korumali: false,
     icerik: `<form class="sh-mz-form tek" data-p-mo novalidate>
@@ -1214,7 +1235,7 @@ function gonder(ev) {
   const fd = ev.target.closest('[data-sh-mo-durum]');
   if (fd) { ev.preventDefault(); if (!fd.belge.value) return bildir('Belge seç', 'uyari'); return moIslem('/mevzuat/ortak/durum', { belge: fd.belge.value, durum: fd.durum.value, not: fd.not.value.trim(), yerine: fd.yerine.value }, 'Belge durumu kaydedildi'); }
   const fu = ev.target.closest('[data-sh-mo-duyuru]');
-  if (fu) { ev.preventDefault(); if (!fu.baslik.value.trim()) return bildir('Başlık yaz', 'uyari'); return moIslem('/mevzuat/ortak/duyuru', { baslik: fu.baslik.value.trim(), metin: fu.metin.value.trim(), bag: fu.bag.value.trim() }, 'Duyuru yayınlandı'); }
+  if (fu) { ev.preventDefault(); if (!fu.baslik.value.trim()) return bildir('Başlık yaz', 'uyari'); return moIslem('/mevzuat/ortak/duyuru', { baslik: fu.baslik.value.trim(), metin: fu.metin.value.trim(), bag: fu.bag.value.trim(), yapilacaklar: fu.yapilacaklar.value, kimi: fu.kimi.value.trim() }, 'Duyuru yayınlandı'); }
   const f = ev.target.closest('[data-sh-hata-anahtar]'); if (!f) return;
   ev.preventDefault(); const v = f.anahtar.value.trim(); if (!v) return bildir('Anahtarı yaz', 'uyari');
   hata.anahtar = v; hata.yetkisiz = false; hata.hata = ''; hata.liste = null; hatalarYukle();
@@ -1311,6 +1332,7 @@ async function destekTikla(t) {
   if (t.closest('[data-sh-ag-yenile]')) { asistanGeriYukle(); return true; }
   if (t.closest('[data-sh-mo-yenile]')) { mo.veri = null; mevzuatYonetYukle(); return true; }
   if (t.closest('[data-sh-mo-ekle]')) { mevzuatBelgePenceresi(); return true; }
+  const me = t.closest('[data-sh-mo-etki]'); if (me) { await etkiTaslagi(me.dataset.shMoEtki); return true; }
   if (t.closest('[data-sh-mo-denetle]')) { mo.denetleniyor = true; ciz(); try { const j = await moIstek('/mevzuat/ortak/takip-calistir', { yontem: 'POST', govde: {} }); mo.takip = j.takip; bildir('Denetim bitti'); } catch (x) { bildir(turkceHata(x), 'uyari'); } mo.denetleniyor = false; ciz(); return true; }
   const ms = t.closest('[data-sh-mo-sil]'); if (ms) { if (!ms.dataset.onay) { ms.dataset.onay = '1'; ms.textContent = 'Silmeyi onayla'; return true; } await moIslem('/mevzuat/ortak/sil', { id: ms.dataset.shMoSil }, 'Belge silindi'); return true; }
   const md = t.closest('[data-sh-mo-durum-sil]'); if (md) { await moIslem('/mevzuat/ortak/durum', { belge: md.dataset.shMoDurumSil, durum: '' }, 'Durum kaldırıldı'); return true; }

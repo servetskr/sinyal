@@ -2,11 +2,11 @@
    Arama motoru js/mevzuat-ara.js: ortak derlem (veri/mevzuat) + kursa gelen yazılar (worker /mevzuat/*).
    Anlam araması için sorgu vektörü worker'dan gelir (/mevzuat/gom); ulaşılamazsa yalnız kelimeyle aranır.
    Yerel denemede (localhost) worker'a istek gitmez; yerel worker için localStorage 'sinyal-mevzuat-api' = 'http://127.0.0.1:8787'. */
-import { S, oturum, bulutKanca } from './veri.js?v=226';
-import { e, ik, rozet, bos, pencere, kapatPencere, bildir, ekranNotu, isaret, tamTarih, ilerleme } from './ui.js?v=226';
-import { WORKER } from './bulut.js?v=226';
-import { motor, yukle, yuklendi, base64Int8, kokler, alinti, FILTRELER, ETIKET_RE, etiketCoz, etiketBul, resmiDegil, kisaCevapSec, cevapNormalle, cevapDuzMetin } from './mevzuat-ara.js?v=226';
-import { kavramYukle, asistanAra, asistanKaynak, asistanSoru } from './mevzuat-anla.js?v=226';
+import { S, oturum, bulutKanca } from './veri.js?v=227';
+import { e, ik, rozet, bos, pencere, kapatPencere, bildir, ekranNotu, isaret, tamTarih, ilerleme } from './ui.js?v=227';
+import { WORKER } from './bulut.js?v=227';
+import { motor, yukle, yuklendi, base64Int8, kokler, alinti, FILTRELER, ETIKET_RE, etiketCoz, etiketBul, resmiDegil, kisaCevapSec, cevapNormalle, cevapDuzMetin } from './mevzuat-ara.js?v=227';
+import { kavramYukle, asistanAra, asistanKaynak, asistanSoru, kanitDenetle, sayilarBul } from './mevzuat-anla.js?v=227';
 
 const TUR_AD = { yonetmelik: 'Yönetmelik', kanun: 'Kanun', yonerge: 'Yönerge', teblig: 'Tebliğ', kilavuz: 'Kılavuz', program: 'Ders programı', yazi: 'MEB yazısı', form: 'Form',
   'rehber-resmi': 'Denetim rehberi', bilgilendirme: 'Resmî bilgilendirme', rehber: 'mdSinyal rehberi (resmî metin değil)', sss: 'mdSinyal sık sorulanlar (resmî metin değil)' };
@@ -125,7 +125,9 @@ function duyurularHtml() {
   const gor = sonGorulen(), yeni = l.filter(x => !gor || x.id > gor).length;
   try { localStorage.setItem(GORDU, l[0].id); } catch (x) { }
   return `<section class="mz-duyurular" aria-label="Mevzuat duyuruları"><div class="mz-duyuru-bas">${isaret('bilgi', 20)}<b>Güncel değişiklikler</b>${yeni ? rozet(yeni + ' yeni', 'sari') : ''}</div>
-    ${l.slice(0, 3).map(x => `<article class="mz-duyuru"><small>${e(tarihYaz(x.tarih))}</small><b>${e(x.baslik)}</b>${x.metin ? `<p>${e(x.metin)}</p>` : ''}${x.bag ? `<a class="dg-baglanti" href="${e(x.bag)}" target="_blank" rel="noopener">Resmî metni aç</a>` : ''}</article>`).join('')}
+    ${l.slice(0, 3).map(x => `<article class="mz-duyuru"><small>${e([tarihYaz(x.tarih), x.kimi ? 'İlgili: ' + x.kimi : ''].filter(Boolean).join(' · '))}</small><b>${e(x.baslik)}</b>${x.metin ? `<p>${e(x.metin)}</p>` : ''}
+      ${(x.yapilacaklar || []).length ? `<p class="mz-duyuru-et">Kursun yapması gerekenler</p><ul class="mz-yapilacak">${x.yapilacaklar.map(y => `<li>${e(y)}</li>`).join('')}</ul>` : ''}
+      <div class="mz-duyuru-dg">${x.belge ? `<button type="button" class="dg dg-cizgi dg-kucuk" data-mz-ekbelge="${e(x.belge)}">Belgeyi aç</button>` : ''}${x.bag ? `<a class="dg-baglanti" href="${e(x.bag)}" target="_blank" rel="noopener">Resmî metni aç</a>` : ''}</div></article>`).join('')}
   </section>`;
 }
 
@@ -207,6 +209,7 @@ function baglan(k) {
     if (f) { durum.filtre = f.dataset.mzFiltre; k.querySelectorAll('[data-mz-filtre]').forEach(b => { const s = b === f; b.classList.toggle('secili', s); b.setAttribute('aria-pressed', s); }); durum.son = null; durum.cevap = null; return aramaYap(k, inp.value, true); }
     const o = t.closest('[data-mz-ornek]'); if (o) { inp.value = o.dataset.mzOrnek; return aramaYap(k, inp.value, true, true); }
     const kv = t.closest('[data-mz-kavram]'); if (kv) return kavramAc(k, kv.dataset.mzKavram, inp);
+    const eb = t.closest('[data-mz-ekbelge]'); if (eb) return ekBelgeAc(eb.dataset.mzEkbelge);
     const a = t.closest('[data-mz-ac]'); if (a) { const s = durum.son && durum.son.r.sonuc[+a.dataset.mzAc]; if (s) sonucAc(s); return; }
     if (t.closest('[data-mz-daha]')) { durum.goster += 15; return sonucCiz(k); }
     if (t.closest('[data-mz-sor]')) return asistanSor(k);
@@ -352,16 +355,24 @@ const atifDugme = (c, n) => {
 };
 // metindeki [n] atıfları düğmeye döner, gerisi kaçışlı
 const atifliHtml = (t, c) => e(t).replace(/\s*\[(\d{1,2})\]/g, (x, n) => atifDugme(c, +n) || x);  // atıftan önceki boşluk atılır: "zorunludur[1]."
+// Kaynakta gör: cevap satırının dayandığı cümle ve rakam denetimi (tarayıcıda; js/mevzuat-anla.js kanitDenetle)
+function kanitHtml(c, x) {
+  if (!c.kaynakMetin || !x.kaynak || !x.kaynak.length) return '';
+  const k = kanitDenetle(x.metin, x.kaynak.map(n => ({ no: n, t: c.kaynakMetin[n - 1] || '' })));
+  const isaretH = k.eksik.length ? `<span class="mz-kanit-uyari">${ik('uyari')}${e(k.eksik.join(', '))} kaynakta geçmiyor; maddeyi okuyun</span>` : k.sayi ? `<span class="mz-kanit-ok">${ik('tik')}Rakam kaynakta</span>` : '';
+  return `<div class="mz-kanit">${isaretH}${k.cumle ? `<details><summary>Kaynakta gör</summary><blockquote>${e(k.cumle)}</blockquote><small>[${k.no}] ${e((c.etiketler || [])[k.no - 1] || '')}</small></details>` : ''}</div>`;
+}
 const cipler = (c, l) => { const h = (l || []).map(n => atifDugme(c, n)).join(''); return h ? `<span class="mz-atiflar">${h}</span>` : ''; };
 function cevapGovde(c) {
   const y = c.yanit;
   if (y.duz) return `<div class="mz-cevap-metin">${paragraf(y.kisa).replace(/\[(\d{1,2})\]/g, (x, n) => atifDugme(c, +n) || x)}</div>`;
   return `<div class="mz-cevap-yap">
     <p class="mz-cevap-kisa${y.bulunamadi ? ' yok' : ''}">${atifliHtml(y.kisa, c)}</p>
+    ${(() => { if (!c.kaynakMetin || y.bulunamadi) return ''; const tum = new Set(c.kaynakMetin.flatMap(t => sayilarBul(t, true)).concat(sayilarBul(c.q, true))), eksik = [...new Set(sayilarBul(y.kisa))].filter(n => !tum.has(n)); return eksik.length ? `<p class="mz-kanit-uyari">${ik('uyari')}${e(eksik.join(', '))} gönderilen maddelerde geçmiyor; dayanağı okuyarak kontrol edin.</p>` : ''; })()}
     ${y.ayrinti.length ? (y.ayrinti.some(x => x.soru)
-      ? `<dl class="mz-cevap-sorular">${y.ayrinti.map(x => `<div>${x.soru ? `<dt>${e(x.soru)}</dt>` : ''}<dd><span>${atifliHtml(x.metin, c)}</span>${cipler(c, x.kaynak)}</dd></div>`).join('')}</dl>`
-      : `<h4 class="mz-ara-baslik">Ayrıntılar</h4><ul class="mz-cevap-ayrinti">${y.ayrinti.map(x => `<li><span>${atifliHtml(x.metin, c)}</span>${cipler(c, x.kaynak)}</li>`).join('')}</ul>`) : ''}
-    ${y.adimlar.length ? `<h4 class="mz-ara-baslik">Adım adım</h4><ol class="mz-cevap-adim">${y.adimlar.map(x => `<li><span>${atifliHtml(x.metin, c)}</span>${cipler(c, x.kaynak)}</li>`).join('')}</ol>` : ''}
+      ? `<dl class="mz-cevap-sorular">${y.ayrinti.map(x => `<div>${x.soru ? `<dt>${e(x.soru)}</dt>` : ''}<dd><span>${atifliHtml(x.metin, c)}</span>${cipler(c, x.kaynak)}${kanitHtml(c, x)}</dd></div>`).join('')}</dl>`
+      : `<h4 class="mz-ara-baslik">Ayrıntılar</h4><ul class="mz-cevap-ayrinti">${y.ayrinti.map(x => `<li><span>${atifliHtml(x.metin, c)}</span>${cipler(c, x.kaynak)}${kanitHtml(c, x)}</li>`).join('')}</ul>`) : ''}
+    ${y.adimlar.length ? `<h4 class="mz-ara-baslik">Adım adım</h4><ol class="mz-cevap-adim">${y.adimlar.map(x => `<li><span>${atifliHtml(x.metin, c)}</span>${cipler(c, x.kaynak)}${kanitHtml(c, x)}</li>`).join('')}</ol>` : ''}
     ${y.dikkat ? `<p class="mz-uyari-not">${atifliHtml(y.dikkat, c)}</p>` : ''}
     ${y.eksik ? `<p class="mz-eksik"><b>Kaynaklarda yok:</b> ${atifliHtml(y.eksik, c)}</p>` : ''}
   </div>`;
@@ -423,7 +434,7 @@ async function asistanSor(k) {
   const secilen = asistanKaynak(motor, r, { etiket, ...KAYNAK_AYAR });
   if (!secilen.length) return bitir('Bu soruyla ilgili madde bulunamadı. Soruyu başka kelimelerle yazmayı deneyin.');
   const kaynaklar = secilen.map(x => ({ etiket: x.etiket, t: x.t, ...(x.resmi === false ? { resmi: false } : {}) }));
-  Object.assign(c, { asama: 'cevap', n: kaynaklar.length, harita: secilen.map(x => (x.i >= 0 ? x.i + 1 : { sira: x.sira })), etiketler: kaynaklar.map(x => x.etiket) });
+  Object.assign(c, { kaynakMetin: kaynaklar.map(x => x.t), asama: 'cevap', n: kaynaklar.length, harita: secilen.map(x => (x.i >= 0 ? x.i + 1 : { sira: x.sira })), etiketler: kaynaklar.map(x => x.etiket) });
   sonucCiz(k);
   // geçici hata (502, ağ kopması, zaman aşımı) bir kez yeniden denenir; 429/503/4xx denenmez
   // cevap akarak gelir: kısa cevap yazıldıkça kutuya düşer (bütün sayfa yeniden çizilmez)

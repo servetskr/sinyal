@@ -6,7 +6,7 @@
    - Atıf takibi: seçilen maddelerin içinde geçen "39 uncu madde", "Karayolları Trafik Yönetmeliğinin 85 inci maddesi" gibi atıflar
      yapay zekâya giden kaynaklara eklenir (çok adımlı kanıt).
    Ölçüm: sinyal-kaynak arac/mevzuat/olc-asistan.mjs (soru-seti-2 ve bağımsız soru-seti-3). */
-import { sadele, kokler, dengele, resmiDegil, kaynakSec, KAYNAK } from './mevzuat-ara.js?v=226';
+import { sadele, kokler, dengele, resmiDegil, kaynakSec, KAYNAK } from './mevzuat-ara.js?v=227';
 
 /* ---------- kavramlar ---------- */
 // kavram.json → derlenmiş kalıplar (bir kez)
@@ -221,7 +221,7 @@ let kavramYukleniyor = null;
 // veri/mevzuat/kavram.json: ilk kullanımda indirilir; inmezse asistan kavramsız (yalnız arama ve yapay zekâ) çalışır
 export function kavramYukle({ getir = (u) => fetch(u), kok = new URL('../veri/mevzuat/', import.meta.url).href } = {}) {
   if (kavramYukleniyor) return kavramYukleniyor;
-  kavramYukleniyor = getir(kok + 'kavram.json?v=226').then(r => (r.ok ? r.json() : null)).then(kavramKur).catch(() => null);
+  kavramYukleniyor = getir(kok + 'kavram.json?v=227').then(r => (r.ok ? r.json() : null)).then(kavramKur).catch(() => null);
   return kavramYukleniyor;
 }
 
@@ -230,4 +230,29 @@ export function asistanSoru(soru, r) {
   const g = r && r.gecis;
   if (!g) return soru;
   return (soru + `\n(Not: soruda ${g.mevcut} sınıfı sürücü belgesi olan kişinin ${g.hedef} sınıfı sertifika almak istemesi soruluyor${g.eski ? '; belge eski tip' : ''}.)`).slice(0, 400);
+}
+
+/* ---------- cevap doğrulama (tarayıcıda) ---------- */
+// Cevap satırının dayandığı kaynaklarda: en çok kökü paylaşan cümle (gösterilir) ve satırdaki rakamların kaynakta geçip geçmediği.
+// Yazıyla sayılar ("beş", "kırkbeş", "ikinci") ve biçim farkları ("2.500" = "2500", "0.20" = "0,20") eşlenir. Madde, fıkra ve [n] atıfları rakam sayılmaz.
+const YAZI_SAYI = { bir: 1, iki: 2, üç: 3, dört: 4, beş: 5, altı: 6, yedi: 7, sekiz: 8, dokuz: 9, on: 10, onbeş: 15, yirmi: 20, otuz: 30, kırk: 40, kırkbeş: 45, elli: 50, altmış: 60, yetmiş: 70, seksen: 80, doksan: 90, yüz: 100, birinci: 1, ikinci: 2, üçüncü: 3, dördüncü: 4, beşinci: 5 };
+export function sayilarBul(t, yazili = false) {
+  t = String(t || '').replace(/\[[\d,\s]+\]/g, ' ').replace(/\b(?:md\.?|madde(?:si|sinin|sine)?|fıkra(?:sı)?|bent)\s*\d+(?:\/\d+)*/giu, ' ').replace(/\d+\s*(?:inci|ıncı|uncu|üncü|nci|ncı|ncu|ncü|\.)\s*(?:madde|fıkra|bent)/giu, ' ');
+  const o = [...t.matchAll(/(?<![\p{L}\d])(\d{1,2}:\d{2}|\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:[.,]\d+)?)(?![\d])/gu)].map(m => { const x = m[1]; return /^0[.,]\d+$/.test(x) ? x.replace('.', ',').replace(/0+$/, '') : x.replace(/\.(?=\d{3}(\D|$))/g, '').replace(/,0+$/, ''); });
+  if (yazili) for (const m of t.toLocaleLowerCase('tr-TR').matchAll(/\p{L}+/gu)) if (YAZI_SAYI[m[0]] != null) o.push(String(YAZI_SAYI[m[0]]));
+  return o;
+}
+export function kanitDenetle(metin, kaynaklar) {
+  const qk = new Set(kokler(metin)), say = [...new Set(sayilarBul(metin))];
+  let en = null;
+  kaynaklar.forEach(({ no, t }) => {
+    for (const c of String(t || '').split(/(?<=[.;:!?])\s+|\n+/)) {
+      const cc = c.trim(); if (cc.length < 12) continue;
+      const ck = new Set(kokler(cc)); let p = 0; for (const w of qk) if (ck.has(w)) p++;
+      const ps = say.filter(x => sayilarBul(cc, true).includes(x)).length * 2;
+      if (!en || p + ps > en.p) en = { p: p + ps, cumle: cc.length > 360 ? cc.slice(0, 357) + '…' : cc, no };
+    }
+  });
+  const hepsi = new Set(kaynaklar.flatMap(x => sayilarBul(x.t, true)));
+  return { cumle: en && en.p > 0 ? en.cumle : '', no: en ? en.no : null, sayi: say.length, eksik: say.filter(x => !hepsi.has(x)) };
 }
