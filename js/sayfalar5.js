@@ -825,7 +825,7 @@ export function kurulumAdimlari() {
   return [
     ['Kurs bilgileri ve şubeler', !!(S.kurs.tel && S.kurs.adres), 'Siz · 3 dk', '#/ayarlar/kurs', 'Ad, adres, telefon; birden fazla şube varsa şubeler.'],
     ['Banka hesapları', !!S.kurs.iban, 'Siz · 2 dk', '#/ayarlar/kurs', 'Havale/EFT için IBAN’lar; her birine ad verin (ör. “Taksit ödemeleri”). Öğrenci uygulamasında ve hatırlatmalarda görünür.'],
-    ['Sınıflar ve ücretler', !S._bulut || S.kurs.ucretOnay !== null, 'Siz · 5 dk', '#/ayarlar/sinif', 'Kurs ücreti, ek ve özel ders ücreti sınıfa göre; e-Sınav ve uygulama sınavı ücretleri hakka göre; kitap, evrak gibi diğer kalemler. Kontrol edip onaylayın.'],
+    ['Sınıflar ve ücretler', !S._bulut || S.kurs.ucretOnay !== null, 'Siz · 5 dk', '#/ayarlar/sinif', 'İlinizin valilik taban fiyat listesi mdSinyal’de varsa ücretler taban fiyatla hazır gelir. Kurs ücreti, geçiş (fark) ücretleri, ek ve özel ders ücreti; e-Sınav ve uygulama sınavı ücretleri hakka göre; kitap, evrak gibi diğer kalemler. Kontrol edip onaylayın.'],
     ['Ekip ve araçlar', S.egitmenler.length > 0 && S.araclar.length > 0, 'Biz · aktarımla', '#/filo', 'Usta öğreticiler, belgeleri ve araçlar.'],
     ['Kursiyerleri aktar', S.kursiyerler.length > 0, 'Biz · 1 gün', '#/ayarlar/aktarim', 'Eski programdan kursiyer, taksit ve ödeme geçmişi.'],
     ['MEB kural değerlerini onayla', !!S.kurs.kuralOnay, 'Siz · 2 dk', '#/ayarlar/kurallar', 'Değerler kaynağıyla gelir; kurs müdürü onaylar.'],

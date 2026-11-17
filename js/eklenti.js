@@ -50,7 +50,8 @@ const grupAlanlari = k => { const g = GR.kursiyerGrubu(k); return g && GR.mebGru
 // MEBBİS'te personel seçeneği "İzin No:5048176 AD SOYAD": izin no varsa onunla seçilir (aynı adlı iki personel karışmaz)
 const personel = eg => (eg && (eg.calismaIzinNo ? String(eg.calismaIzinNo).replace(/\D/g, '') : eg.ad)) || '';
 // İstenen sertifika MEBBİS metniyle: "B SINIFI SERTİFİKA (Manuel)" / "B SINIFI SERTİFİKA (Otomatik)"
-const sertifikaMetni = k => { const b = String(k.sinif || '').replace(/-O$/, ''), oto = /-O$/.test(k.sinif || ''); return b === 'B' ? `B SINIFI SERTİFİKA (${oto ? 'Otomatik' : 'Manuel'})` : `${b} SINIFI SERTİFİKA`; };
+// B Engelli ve 100 ceza puanı eğitiminin MEBBİS'teki sertifika adı doğrulanmadı: alan boş bırakılır, kurs elle seçer
+const sertifikaMetni = k => { if (['B-EN', 'CEZA'].includes(k.sinif)) return null; const b = String(k.sinif || '').replace(/-O$/, ''), oto = /-O$/.test(k.sinif || ''); return b === 'B' ? `B SINIFI SERTİFİKA (${oto ? 'Otomatik' : 'Manuel'})` : `${b} SINIFI SERTİFİKA`; };
 
 // Son gün hesabı: panel işleri en acilden başlayarak sıralar
 const gunEkle = (t, n) => { const d = new Date(t + 'T12:00:00'); d.setDate(d.getDate() + n); return iso(d); };

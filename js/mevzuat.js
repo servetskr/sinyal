@@ -1,10 +1,11 @@
 // Mevzuat uyum kuralları: ücret, tahsilat, iade, ücretsiz kontenjan, sınava hazır yazısı, planlama ve personel denetimleri.
 // Dayanak: Özel Öğretim Kurumları Yönetmeliği (RG 5/9/2025-33008 değişikliği: m.54, m.55/3, m.56/3-b, m.56/4), MTSK Yönetmeliği
 // (m.7/7 ve Danıştay 8. D. 8/10/2025 YD kararı, m.15, m.16/8, m.20, m.43), 5580 sayılı Kanun m.13 (%3 ücretsiz).
-import { S, gun, fark, SINIFLAR, SINIF_VARSAYILAN, tamAd, islem, kaydet, oturum, egitmen, sb, sbDers, gerekliDireksiyon, direksiyonAyrinti, ustaAraci } from './veri.js?v=218';
+import { tabanListesi, tabanDurumu, kursiyerTaban, sinifTabani, satirUcreti, ekDersTabani, ozelDersTabani, ekDersFiyat, ozelDersFiyat, digerUcretler, S, gun, fark, SINIFLAR, SINIF_VARSAYILAN, tamAd, islem, kaydet, oturum, egitmen, sb, sbDers, gerekliDireksiyon, direksiyonAyrinti, ustaAraci } from './veri.js?v=218';
 import { e, tl, tarih, pencere, kapatPencere, bildir, belgeYazdir, isaret } from './ui.js?v=218';
 import { denetimUyarilari } from './denetim.js?v=218';
 import { kuralEkle } from './kurallar.js?v=218';
+import { listeAdi, satirAdi, gecisSatirlari, gecerlilikMetni, donemAdi } from './taban.js?v=218';
 
 const OOKY = 'Özel Öğretim Kurumları Yönetmeliği';
 const yil = () => gun(0).slice(0, 4);
@@ -106,8 +107,8 @@ export function mevzuatKurallari() {
   // Tahsilat kurum banka hesabına (ÖÖKY m.55/3, 5/9/2025)
   const nakit = (S.hareket || []).filter(h => h.tur === 'Gelir' && h.kursiyer && ['Kurs ücreti', 'Taksit'].includes(h.kategori) && h.yontem === 'Nakit' && fark(h.tarih) >= -30 && !h.bankaya);
   if (nakit.length) l.push(['uyari', `Son 30 günde ${nakit.length} eğitim ücreti nakit alındı (${tl(nakit.reduce((a, h) => a + h.tutar, 0))})`, `${OOKY} m.55/3 (5 Eylül 2025): eğitim ücreti kurum adına açılmış, MEB’e bildirilmiş banka hesabına yatırılarak tahsil edilir. Nakdi bankaya yatırın; tahsilatlar MEBBİS’e işlenir.`, '#/kasa']);
-  // Tarife: il taban ücreti (MTSK m.43), ocak sonu ilanı (ÖÖKY m.54/1-a)
-  Object.entries(SINIFLAR).filter(([, v]) => v.aktif && v.ucret && v.taban && v.ucret < v.taban).forEach(([, v]) => l.push(['yasak', `${v.ad} ücreti il taban ücretinin altında`, `${tl(v.ucret)} < taban ${tl(v.taban)}. Kurs, valilik komisyonunun belirlediği taban ücretten az ücret belirleyemez (MTSK Yönetmeliği m.43).`, '#/ayarlar/sinif']));
+  // Tarife: il taban ücreti (MTSK m.43) — il taban listesi varsa T01–T06 kuralları (aşağıda), yoksa kursun elle girdiği taban ücret; ocak sonu ilanı (ÖÖKY m.54/1-a)
+  if (!tabanListesi()) Object.entries(SINIFLAR).filter(([, v]) => v.aktif && v.ucret && v.taban && v.ucret < v.taban).forEach(([, v]) => l.push(['yasak', `${v.ad} ücreti il taban ücretinin altında`, `${tl(v.ucret)} < taban ${tl(v.taban)}. Kurs, valilik komisyonunun belirlediği taban ücretten az ücret belirleyemez (MTSK Yönetmeliği m.43).`, '#/ayarlar/sinif']));
   if (K.tarifeIlan !== yil() && +gun(0).slice(5, 7) <= 2) l.push([+gun(0).slice(5, 7) === 1 ? 'uyari' : 'yasak', `${yil()} ücretleri MEBBİS’e ilan edilmedi`, `Ücret Ocak sonuna kadar ilan edilir; ilandan önce tahsilat yapılamaz (${OOKY} m.54). İlan ettiyseniz Ayarlar › Sınıf ve ücretler’den işaretleyin.`, '#/ayarlar/sinif']);
   // İndirim ilan edilen ücretin %50'sini aşamaz; ilanın üstünde ücret alınamaz (ÖÖKY m.54/1)
   ks.filter(k => !k.kapali && !k.ucretsiz && k.asama !== 'Ehliyet').forEach(k => { const ilan = (SINIFLAR[k.sinif] || {}).ucret, u = sozlesmeUcreti(k); if (!ilan) return;
@@ -151,3 +152,39 @@ export function mevzuatKurallari() {
 }
 // Kural motoruna kayıt: MEB işlemleri › Kurallar listesinde MEB kurallarından sonra gelir (kurallar.js)
 kuralEkle({ id: 'MZ', sira: 900, ad: 'Mevzuat uyumu: ücret, tahsilat, iade, ücretsiz kontenjan, hazır yazısı, ders saatleri, araç başına kursiyer, personel izni, denetim', dayanak: 'ÖÖKY m.54, 55/3, 56/3-b, 56/4; MTSK Yön. md.7/1, 7/7, 15, 16/8, 20, 43; 5580 m.7/2-e, m.13', kapsam: 'kurs', ciddiyet: 'uyari', kontrol(l) { l.push(...mevzuatKurallari()); } });
+
+/* ---------- il taban fiyat listesi (valilik maliyet tablosu; veri js/taban.js) ---------- */
+// Listesi olmayan ilde bu kurallar hiçbir şey üretmez (T05 hariç: ilin eski listesi varsa yenisinin gelmediğini hatırlatır).
+// Not numaraları belgedeki sırayla: 4 kurs ücreti dışında ücret yok, 5 sınav/harç/kart kursiyere ait, 6 kampanya yok, 7 taban altı burs yok, 8 kayıt kurs merkezinde.
+const bul = (tur, baslik, aciklama, link, ek) => Object.assign([tur, baslik, aciklama, link], ek || {});  // kurallar.js ile aynı biçim
+const TABAN_DAYANAK = 'Valilik Sürücü Eğitimi Maliyetlerini Belirleme Komisyonu kararı (il taban fiyat listesi); MTSK Yön. md.43/4';
+const tabanAd = r => r.tur === 'ilave' ? 'İlave direksiyon dersi' : r.tur === 'ozel' ? 'Belgeliye özel direksiyon dersi' : satirAdi(r);
+// Kursiyerden kurs ücreti dışında alınabilecek ek kalemler: ek ve özel ders, ikinci dört hak dersi, sınav ücretleri (kursiyerin kendi masrafı, döner sermayeye yatırılır)
+const yasalEk = x => !!x && (!!x.sinav || /sınav|^(ek direksiyon dersi|özel ders|ikinci dört hak)/i.test(String(x.ad || '')));
+const aktifKursiyerler = () => sb(S.kursiyerler).filter(k => !k.kapali && k.asama !== 'Ehliyet');
+kuralEkle({ id: 'T01', sira: 860, ad: 'Kurs ücretleri il taban fiyatının altında olamaz', dayanak: TABAN_DAYANAK, kapsam: 'kurs', ciddiyet: 'engel',
+  kontrol(l) { const L = tabanListesi(); if (!L) return; const A = listeAdi(L);
+    Object.entries(SINIFLAR).filter(([, v]) => v.aktif && v.ucret).forEach(([k, v]) => { const t = sinifTabani(k, L); if (t != null && v.ucret < t) l.push(['yasak', `${v.ad} ücreti taban ücretin altında`, `Kurs ücreti ${tl(v.ucret)}, ${A} ${tl(t)}. Taban altında ücret işlem sebebidir (MTSK Yön. md.43/4).`, '#/ayarlar/sinif']); });
+    const g = gecisSatirlari(L).filter(r => satirUcreti(r, r.s[0], L) < r.toplam); if (g.length) l.push(['yasak', `${g.length} geçiş ücreti taban ücretin altında`, `${g.slice(0, 3).map(r => `${tabanAd(r)} ${tl(satirUcreti(r, r.s[0], L))} < ${tl(r.toplam)}`).join(' · ')}${g.length > 3 ? ' …' : ''} (${A}).`, '#/ayarlar/sinif']);
+    const ek = ekDersTabani(L), oz = ozelDersTabani(L), dusuk = [];
+    Object.entries(SINIFLAR).filter(([, v]) => v.aktif && v.ucret).forEach(([k, v]) => { if (ek && ekDersFiyat(k) < ek) dusuk.push(`${v.ad.split(' ·')[0]} ek ders ${tl(ekDersFiyat(k))}`); if (oz && ozelDersFiyat(k) < oz) dusuk.push(`${v.ad.split(' ·')[0]} özel ders ${tl(ozelDersFiyat(k))}`); });
+    if (dusuk.length) l.push(['yasak', 'Ek ya da özel ders ücreti taban ücretin altında', `${[...new Set(dusuk)].slice(0, 4).join(' · ')}${dusuk.length > 4 ? ' …' : ''}. ${A}: ilave direksiyon dersi ${tl(ek || 0)}, sürücü belgelilere özel direksiyon eğitimi ${tl(oz || 0)} (ders başına).`, '#/ayarlar/sinif']); } });
+kuralEkle({ id: 'T02', sira: 861, ad: 'Kursiyerin ücreti taban fiyatın altında (indirim ve burs dahil)', dayanak: TABAN_DAYANAK + '; liste notu 7', kapsam: 'kursiyer', ciddiyet: 'uyari', bugun: true, bugunAd: n => `${n} öğrencinin ücreti il taban fiyatının altında`,
+  kontrol(l) { aktifKursiyerler().filter(k => !k.ucretsiz).forEach(k => { const x = kursiyerTaban(k); if (!x || x.taban == null) return; const u = sozlesmeUcreti(k); if (u >= x.taban) return;
+    l.push(bul('uyari', `${tamAd(k)} · ücret ${tl(u)}, taban ${tl(x.taban)}`, `${listeAdi(x.liste)}, “${satirAdi(x.satir)}” satırı ${tl(x.taban)}. İndirim, kampanya ya da burs dahil bu ücretin altında ücret alınamaz (liste notu 6–7; MTSK Yön. md.43/4). %3 ücretsiz kontenjandaysa “Ücretsiz kursiyer” olarak işaretleyin.`, '#/kursiyer/' + k.id, { kursiyer: k.id, kisa: `Ücret ${tl(u)}: ${listeAdi(x.liste)} tabanı ${tl(x.taban)} (${satirAdi(x.satir)})`, eylem: 'odeme' })); }); } });
+kuralEkle({ id: 'T03', sira: 862, ad: 'Kurs ücreti dışında ücret alınmaz (kitap, evrak, materyal)', dayanak: 'İl taban fiyat listesi notu 4 ve 5; MTSK Yön. md.43/4', kapsam: 'kursiyer', ciddiyet: 'uyari', bugun: true, bugunAd: n => `${n} kurs ücreti dışı kalem (il taban listesi notu 4)`,
+  kontrol(l) { const L = tabanListesi(); if (!L) return; const A = listeAdi(L);
+    if (digerUcretler().length) l.push(['uyari', `Ayarlar’da ${digerUcretler().length} kurs ücreti dışı kalem tanımlı (${digerUcretler().slice(0, 3).map(x => x.ad).join(', ')})`, `${A}, not 4: eğitim materyalleri dahil kursiyerlerden kurs ücretleri dışında hiçbir isim altında ücret talep edilemez. Not 5: sınav ücretleri, kayıt belgelerinin masrafları, harç ve kart ücreti kursiyerin kendi masrafıdır, kurs ücretine eklenemez.`, '#/ayarlar/sinif']);
+    aktifKursiyerler().forEach(k => { const d = ((k.odeme || {}).ekler || []).filter(x => !yasalEk(x)); if (!d.length) return; const t = d.reduce((a, x) => a + (+x.tutar || 0), 0);
+      l.push(bul('uyari', `${tamAd(k)} · kurs ücreti dışında ${d.length} kalem (${tl(t)})`, `${d.map(x => x.ad).join(', ')}. ${A}, not 4: eğitim materyalleri dahil kurs ücreti dışında hiçbir ad altında ücret talep edilemez.`, '#/kursiyer/' + k.id, { kursiyer: k.id, kisa: `Kurs ücreti dışı kalem: ${d.map(x => x.ad).join(', ')} (${A}, not 4)`, eylem: 'odeme' })); }); } });
+kuralEkle({ id: 'T04', sira: 863, ad: 'İndirim kampanyası düzenlenmez (kardeş, arkadaş, toplu kayıt, promosyon)', dayanak: 'İl taban fiyat listesi notu 6; MTSK Yön. md.43/4', kapsam: 'kursiyer', ciddiyet: 'uyari',
+  kontrol(l) { const L = tabanListesi(); if (!L) return; const A = listeAdi(L);
+    const ki = (S.kurs.indirimler || []).filter(x => x && +x.tutar > 0); if (ki.length) l.push(['uyari', `Kayıt indirimi tanımlı: ${ki.map(x => `${x.ad} ${tl(x.tutar)}`).join(', ')}`, `${A}, not 6: promosyon, ödül, hediye, kardeş, arkadaş, toplu kayıt indirimi vb. hiçbir isim altında kampanya düzenlenemez. İndirimi Ayarlar › Kurs’tan kaldırın ya da il MEM’e danışın.`, '#/ayarlar/kurs']);
+    const ks = aktifKursiyerler().filter(k => !k.ucretsiz && ((k.odeme || {}).indirim || ((k.odeme || {}).indirimler || []).length) && String(k.kayit || '') >= L.donemBas);
+    if (ks.length) l.push(['uyari', `${ks.length} kursiyere indirim uygulandı (${ks.slice(0, 3).map(tamAd).join(', ')}${ks.length > 3 ? '…' : ''})`, `${A}, not 6: hiçbir isim altında indirim kampanyası düzenlenemez; not 7: taban ücretin altında burs verilemez. Taban altına düşenler ayrıca “ücret taban fiyatın altında” uyarısında görünür.`, '#/kursiyerler']); } });
+kuralEkle({ id: 'T05', sira: 864, ad: 'İl taban fiyat listesi güncel', dayanak: 'İl taban fiyat listesi notu 9 (geçerlilik dönemi)', kapsam: 'kurs', ciddiyet: 'uyari', bugun: true, bugunAd: () => 'Yeni il taban fiyat listesi bekleniyor',
+  kontrol(l) { const d = tabanDurumu(); if (d.durum === 'bitti') l.push(bul('uyari', `${listeAdi(d.son)} süresi doldu`, `Liste ${gecerlilikMetni(d.son)} geçerliydi. Valiliğin yeni listesini mdSinyal’e iletin; gelene kadar taban ücret denetimi yapılmaz ve yeni kayıtlarda taban görünmez.`, '#/ayarlar/sinif'));
+    else if (d.durum === 'bitiyor') l.push(bul('bilgi', `${listeAdi(d.son)} bu ay bitiyor`, `Liste ${donemAdi(d.son.donemBit)} kurs dönemine kadar geçerli. Valilik komisyonunun yeni yıl listesini gelir gelmez bize iletin; yeni liste girilince ücretleriniz yeni tabanla karşılaştırılır.`, '#/ayarlar/sinif')); } });
+kuralEkle({ id: 'T06', sira: 865, ad: 'Kayıt kurs merkezinde ve müdür gözetiminde', dayanak: 'İl taban fiyat listesi notu 8; MTSK Yön. md.12/1, md.43/4', kapsam: 'kurs', ciddiyet: 'bilgi',
+  kontrol(l) { const L = tabanListesi(); if (!L) return; const ks = aktifKursiyerler().filter(k => k.sozlesmeImza && k.sozlesmeImza.kanal === 'Online kayıt' && fark(k.kayit) >= -60);
+    if (ks.length) l.push(['bilgi', `Son 60 günde ${ks.length} kayıt online kayıt formundan geldi`, `${listeAdi(L)}, not 8: kursiyer kayıt iş ve işlemleri kurs merkezinde ve kurs müdürünün gözetiminde yapılır; merkez dışında, gözetimsiz kayıt tespitinde md.43/4 uygulanır. Formdan gelen adayın evrakını ve imzasını kursta müdür gözetiminde tamamlayın.`, '#/kursiyerler']); } });

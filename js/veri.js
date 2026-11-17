@@ -1,4 +1,5 @@
 // mdSinyal demo verisi: tarihler bugüne göre üretilir, tarayıcıda saklanır.
+import { listeBul, listeDurumu, kursunIli, satirBul, tabanTutar, sinifSatiri, ozelSatir, donemi } from './taban.js?v=218';
 let ANAHTAR = 'sinyal-demo-v20';
 // Usta öğreticinin ders sonunda puanladığı beceriler
 export const BECERI = [['kalkis', 'Kalkış ve duruş'], ['serit', 'Şerit ve ayna'], ['kavsak', 'Kavşak ve öncelik'], ['park', 'Park'], ['rampa', 'Rampa ve yokuş']];
@@ -78,6 +79,9 @@ export const SINIF_VARSAYILAN = {
   'B1': { ad: 'B1 · Dört tekerlekli motosiklet', ucret: null, teorik: 34, direksiyon: 14, yas: 16, tur: 'ehliyet', aktif: false, teyit: true },
   'B': { ad: 'B · Manuel', ucret: 24000, teorik: 34, direksiyon: 16, yas: 18, tur: 'ehliyet', aktif: true },
   'B-O': { ad: 'B · Otomatik', ucret: 26500, teorik: 34, direksiyon: 16, yas: 18, tur: 'ehliyet', aktif: true },
+  // B Engelli: engel durumuna göre aparatlı ya da otomatik araç (raporundaki şartları taşıyan araç, MTSK Yön. md.7/5); il taban listelerinde ayrı satır.
+  // Saat ve yaş B ile aynı; md.39 tablolarında B sayılır (anaSinif). Kendi aracıyla eğitimde direksiyon ücretinin yarısı ödenir (md.7/5, k.kendiArac).
+  'B-EN': { ad: 'B · Engelli', ucret: null, teorik: 34, direksiyon: 16, yas: 18, tur: 'ehliyet', aktif: false, teyit: true },
   'BE': { ad: 'BE · Römorklu otomobil', ucret: null, teorik: 34, direksiyon: 8, yas: 18, tur: 'ehliyet', aktif: false, teyit: true },
   'C1': { ad: 'C1 · Hafif kamyon', ucret: null, teorik: 34, direksiyon: 12, yas: 18, tur: 'ehliyet', aktif: false, teyit: true },
   'C1E': { ad: 'C1E · Römorklu hafif kamyon', ucret: null, teorik: 34, direksiyon: 8, yas: 18, tur: 'ehliyet', aktif: false, teyit: true },
@@ -95,6 +99,9 @@ export const SINIF_VARSAYILAN = {
   'SRC4': { ad: 'SRC4 · Yurt içi eşya taşımacılığı', ucret: null, teorik: 40, direksiyon: 0, yas: 21, tur: 'src', aktif: false, teyit: true },
   'SRC5': { ad: 'SRC5 · Tehlikeli madde taşımacılığı', ucret: null, teorik: 24, direksiyon: 0, yas: 21, tur: 'src', aktif: false, teyit: true },
   'OP': { ad: 'İş makinesi operatörlüğü', ucret: null, teorik: 40, direksiyon: 16, yas: 18, tur: 'operator', aktif: false, teyit: true },
+  // 100 ceza puanı eğitimi (KTK md.118): belgesi geri alınan sürücünün teorik eğitimi; direksiyon yok. 34 saat il taban listesinden (Eskişehir 2026 F11).
+  // Bu sınıfa kaydolan kursiyer KTK md.118 işaretini kendiliğinden alır (araç kontenjanına sayılmaz). MEBBİS'e elle girilir (sertifika adı doğrulanmadı).
+  'CEZA': { ad: 'Ceza · 100 ceza puanı eğitimi', ucret: null, teorik: 34, direksiyon: 0, yas: 18, tur: 'egitim', aktif: false, teyit: true },
 };
 export const SINIFLAR = JSON.parse(JSON.stringify(SINIF_VARSAYILAN));
 export const aktifSiniflar = () => Object.entries(SINIFLAR).filter(([, v]) => v.aktif);
@@ -135,7 +142,9 @@ const ARTI2_TEYIT = 'bu 2 saat teyit bekliyor';
 // Otomatikten manuele (md.39/2 "direksiyon eğitimi dersinin yarısı"): en tutarlı okuma md.7/1 akan trafik saatinin yarısı, +2 yok (madde 2; yorum, teyit bekliyor).
 // Akan trafik = md.7/1'deki ilk kez belge saati − 2 (alan ya da simülatör). Yönetmelik değeri SINIF_VARSAYILAN'dan okunur (kursun Ayarlar'da değiştirdiği saatten değil).
 // Saat ve ücrette il tablosu kullanılır (müdür dosyadan elle girer).
-export const otomatikAltSinir = sinif => { const S0 = SINIF_VARSAYILAN[sinif === 'B-O' ? 'B' : sinif] || {}, ilk = +S0.direksiyon || 0; return ilk > 2 ? (ilk - 2) / 2 : 0; };
+// B otomatik ve B Engelli md.39 tablolarında, deneyim ve otomatik/manuel hesabında B sayılır
+export const anaSinif = sinif => sinif === 'B-O' || sinif === 'B-EN' ? 'B' : sinif;
+export const otomatikAltSinir = sinif => { const S0 = SINIF_VARSAYILAN[anaSinif(sinif)] || {}, ilk = +S0.direksiyon || 0; return ilk > 2 ? (ilk - 2) / 2 : 0; };
 // Belge tarihinden n yıl sonrası (29 Şubat → 28 Şubat); tarih yoksa null. A2 ile A (KTY md.76/1-b) ve B ile A1 (md.39/5) için.
 const tarihMi = t => /^\d{4}-\d{2}-\d{2}/.test(String(t || '')) ? String(t).slice(0, 10) : '';
 const yilSonra = (bt, n) => { if (!tarihMi(bt)) return null; const d = tarihOku(tarihMi(bt)), g = d.getDate(); d.setDate(1); d.setFullYear(d.getFullYear() + n); d.setDate(Math.min(g, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate())); return d; };
@@ -163,7 +172,7 @@ export const yasIstisnaSorun = yi => !yi ? '' : !YAS_ISTISNA_OKUL[yi.okul] ? 'ok
 export const yasIstisnaGecerli = yi => !!yi && !yasIstisnaSorun(yi);
 export const yasIstisnaMetin = yi => !yi ? '' : yi.okul && YAS_ISTISNA_OKUL[yi.okul] ? `${YAS_ISTISNA_OKUL[yi.okul]} ${YAS_ISTISNA_DURUM[yi.durum] || ''}`.trim() : (yi.tur || 'istisna');
 // KTY md.76/1-b: istenen sınıf için gereken önceki belge yoksa uyarı metni (engel değil). istisna: kursiyerde md.76/3 yaş istisnası var (kapsamdaki sınıfta şart aranmaz)
-export function deneyimEksik(sinif, mevcut, istisna) { const h = sinif === 'B-O' ? 'B' : sinif, l = DENEYIM[h]; if (!l || l.includes(mevcut) || (istisna && yasIstisnaKapsar(h))) return null; return `${h} sınıfı için ${DENEYIM_AD[h]} sınıfı sürücü belgesi gerekir (KTY md.76/1-b).`; }
+export function deneyimEksik(sinif, mevcut, istisna) { const h = anaSinif(sinif), l = DENEYIM[h]; if (!l || l.includes(mevcut) || (istisna && yasIstisnaKapsar(h))) return null; return `${h} sınıfı için ${DENEYIM_AD[h]} sınıfı sürücü belgesi gerekir (KTY md.76/1-b).`; }
 const mevcutKod = m => (m && m !== 'Yok') ? String(m) : '';
 // Sınıf ve mevcut belgeden asgari direksiyon saati: { saat, kaynak, teyit, alt (elle girilen değer için alt sınır), altDayanak, altNot }
 // o: { otomatik, eski, belgeTarih (mevcut belgenin veriliş tarihi; B→A1 md.39/5) }
@@ -171,7 +180,7 @@ export function direksiyonHesap(sinif, mevcut, o = {}) {
   const S0 = SINIFLAR[sinif] || {}, ilk = +S0.direksiyon || 0, m = mevcutKod(mevcut);
   if (!ilk) return { saat: 0, kaynak: 'Bu sınıfta direksiyon eğitimi yok' };
   if ((S0.tur || 'ehliyet') !== 'ehliyet' || !m) return { saat: ilk, kaynak: 'İlk kez belge: 2 saat alan ya da simülatör + akan trafik (md.7/1)', teyit: !!S0.teyit && sinif === 'D1E' };
-  const h = sinif === 'B-O' ? 'B' : sinif;
+  const h = anaSinif(sinif);
   if (m === h) { if (!o.otomatik) return { saat: ilk, teyit: true, kaynak: `Zaten ${m} belgesi var; ilk kez belge saati kullanıldı.` };
     const alt = otomatikAltSinir(h);
     return { saat: ilk, teyit: true, alt, altDayanak: 'md.39/2; en tutarlı okumaya göre akan trafik saatinin yarısı, teyit bekliyor', kaynak: `Belgesi “sadece otomatik”: manuel için direksiyon eğitiminin yarısı (md.39/2). En tutarlı okumaya göre alt sınır akan trafik saatinin yarısı: ${virgul(alt)} saat, +2 eklenmez (teyit bekliyor). Saat ve ücrette il tablosu kullanılır: il MEM değerini dosyadan elle girin.` }; }
@@ -377,6 +386,7 @@ function uret() {
     const ad = kadin ? sec(ADLAR_K) : sec(ADLAR_E);
     kursiyerler.push({
       id: 'k' + (101 + i), ad, soyad: sec(SOYADLAR), tel: tel(), dogum: (2008 - ara(0, 24)) + '', sinif, kayit, egitmen,
+      ...(sinif === 'C' ? { mevcutEhliyet: 'B', oncekiBelge: { sinif: 'B', tarih: gun(-2400 - i * 9) } } : {}),  // C, B belgesiyle alınır (KTY md.76/1-b)
       asama, teorik, direksiyon, evrak: ev, mebIslendi: yas > 7 && r() < 0.92, esinav, dsinav,
       odeme: { toplam: S.ucret, pesin, pesinTarih: kayit, taksitler },
       kaynak: sec(['Google Haritalar', 'Google Haritalar', 'Google Haritalar', 'Instagram', 'Instagram', 'Tavsiye', 'Tavsiye', 'WhatsApp', 'Web sitesi']),
@@ -667,7 +677,7 @@ function uret() {
   return {
     sosyal, subeler, guvenlik, entegrasyon, isDurum: {},
     personel, izinler, bekleme, hesaplar, kazanim, gruplar, arsiv, mevzuat, ogretmenler, kullanicilar, islemler, asistanBilgi, devredilen, sms: { bakiye: 1840, kanal: 'WhatsApp' }, gunSonu: [],
-    kurs: { ad: 'Örnek Sürücü Kursu', sehir: 'Eskişehir', tel: '0222 000 00 00', adres: 'Odunpazarı / Eskişehir', yetkili: 'Servet Sakar', puan: 4.9, yorumSayisi: 286, imzaYontemi: 'ikili', kuralKontrol: gun(-13), web: 'sinyalsurucukursu.com', aksamOzet: true, gunlukDersSiniri: 2, egitmenGunlukSinir: 8, ekDersUcreti: 900, devamsizlikSiniri: 4, programOnGun: 5, sinavBildirimIsGunu: 4, geceDersi: 2, tekrarBekleme: 15, asgariYas: 18, saklamaYil: 10, sinavHak: 4, tekrarUcret: { esinav: 1250, dsinav: 2000 }, borcluDers: 'uyar', indirimler: [{ ad: 'Öğrenci belgesi', tutar: 1000 }] },
+    kurs: { ad: 'Örnek Sürücü Kursu', sehir: 'Eskişehir', tel: '0222 000 00 00', adres: 'Odunpazarı / Eskişehir', yetkili: 'Servet Sakar', puan: 4.9, yorumSayisi: 286, imzaYontemi: 'ikili', kuralKontrol: gun(-13), web: 'sinyalsurucukursu.com', aksamOzet: true, gunlukDersSiniri: 2, egitmenGunlukSinir: 8, ekDersUcreti: 1750, devamsizlikSiniri: 4, programOnGun: 5, sinavBildirimIsGunu: 4, geceDersi: 2, tekrarBekleme: 15, asgariYas: 18, saklamaYil: 10, sinavHak: 4, tekrarUcret: { esinav: 1250, dsinav: 2000 }, borcluDers: 'uyar', indirimler: [{ ad: 'Öğrenci belgesi', tutar: 1000 }] },
     egitmenler, araclar, kursiyerler, dersler, teorik, sinavlar, hareket, adaylar, otomasyonlar, duyurular,
     gonderimler: [],
   };
@@ -870,10 +880,64 @@ export function ibanGecerli(s) {
 // Ücret kalemleri (Ayarlar › Sınıf ve ücretler): ek ve özel direksiyon dersi sınıfa göre, uygulama sınavı ücreti hakka göre
 // (1., 2., 3. sınav farklı olabilir), kitap ve evrak gibi diğer kalemler liste. Girilmemişse eski tek değerler kullanılır.
 export const ekDersFiyat = sinif => { const v = SINIFLAR[sinif] && SINIFLAR[sinif].ekDers; return v != null ? v : (S.kurs.ekDersUcreti || 0); };
-export const ozelDersFiyat = sinif => { const v = SINIFLAR[sinif] && SINIFLAR[sinif].ozelDers; return v != null ? v : ekDersFiyat(sinif); };
+// Özel ders (belgeliye özel direksiyon eğitimi, md.6/4): sınıfa özel ücret, yoksa kursun özel ders ücreti, o da yoksa ek ders ücreti
+export const ozelDersFiyat = sinif => { const v = SINIFLAR[sinif] && SINIFLAR[sinif].ozelDers; return v != null ? v : (S.kurs.ozelDersUcreti || ekDersFiyat(sinif)); };
 export const uygulamaSinavUcreti = hak => { const l = S.kurs.uygulamaUcret; if (Array.isArray(l) && l.length) return +l[Math.min(Math.max(hak, 1), l.length) - 1] || 0; return hak > 1 ? ((S.kurs.tekrarUcret || {}).dsinav || 0) : 0; };
 export const esinavUcreti = hak => hak > 1 ? ((S.kurs.tekrarUcret || {}).esinav || 0) : (S.kurs.esinavUcreti ?? 1250);
 export const digerUcretler = () => S.kurs.digerUcretler || [];
+
+/* ---------- il taban fiyat listesi (valilik maliyet tablosu; veri js/taban.js) ---------- */
+// Kursun ilindeki, o dönemde geçerli liste. Listesi girilmemiş ilde null: hiçbir taban tutar tahmin edilmez, elle girilen "il taban ücreti" kullanılır.
+export const tabanListesi = (t = gun(0)) => listeBul(kursunIli(S.kurs), t);
+export const tabanDurumu = (t = gun(0)) => listeDurumu(kursunIli(S.kurs), t);
+// Kursiyerin dönemi: dönem grubunun ayı (MEBBİS grubu), yoksa kayıt tarihi (liste dönem bazlı geçerli: Eskişehir 2026 = Şubat 2026–Ocak 2027 dönemleri)
+export const kursiyerDonemi = k => { const g = (S.gruplar || []).find(x => x.id === (k || {}).teorikGrup); return donemi(g && g.donem) || donemi(g && g.baslangic) || donemi(k && k.kayit) || donemi(gun(0)); };
+// Sınıfın etkin taban ücreti: listedeki ilk kez belge satırı; listesi olmayan ilde kursun elle girdiği değer. Listede satırı olmayan sınıf (C, D…) null.
+export const sinifTabani = (sinif, L = tabanListesi()) => { const r = sinifSatiri(L, sinif); return r ? r.toplam : L ? null : ((SINIFLAR[sinif] || {}).taban || null); };
+// Ek ve özel ders tabanı (listede "ilave direksiyon ders saat ücreti" ve "sürücü belgelilere özel direksiyon eğitimi")
+export const ekDersTabani = (L = tabanListesi()) => { const r = ozelSatir(L, 'ilave'); return r ? r.toplam : null; };
+export const ozelDersTabani = (L = tabanListesi()) => { const r = ozelSatir(L, 'ozel'); return r ? r.toplam : null; };
+// Kursun bu satır için istediği ücret: ilk belge satırı sınıf ücreti; ilave/özel ders ek ve özel ders ücreti; geçiş satırları S.kurs.gecisUcret.
+// Geçiş ücreti girilmediyse: yalnız mevcut belgeyle alınan sınıfta (C, D, C1, römork…; listede ilk kez belge satırı yok) kursun sınıf ücreti, diğerlerinde taban.
+// Böylece kursun daha önce girdiği C ücreti liste gelince sessizce tabana inmez.
+export function satirUcreti(r, sinif, L = tabanListesi()) {
+  if (!r) return SINIFLAR[sinif] ? SINIFLAR[sinif].ucret : null;
+  if (['ilk', 'teorik', 'ceza'].includes(r.tur)) return (SINIFLAR[sinif] || SINIFLAR[r.s[0]] || {}).ucret ?? null;
+  if (r.tur === 'ilave') return ekDersFiyat(sinif);
+  if (r.tur === 'ozel') return ozelDersFiyat(sinif);
+  const v = (S.kurs.gecisUcret || {})[r.id]; if (v != null && v !== '' && isFinite(+v)) return +v;
+  const su = (SINIFLAR[sinif] || {}).ucret; return su && L && !sinifSatiri(L, sinif) ? su : r.toplam;
+}
+// Geçiş satırının varsayılan ücreti nereden geliyor: 'kurs' (girilen), 'sinif' (sınıf ücreti), 'taban'
+export const satirUcretKaynagi = (r, sinif, L = tabanListesi()) => { const v = (S.kurs.gecisUcret || {})[r.id]; if (v != null && v !== '' && isFinite(+v)) return 'kurs'; return (SINIFLAR[sinif] || {}).ucret && L && !sinifSatiri(L, sinif) ? 'sinif' : 'taban'; };
+// Kursiyerin (ya da kayıt formundaki taslağın) listedeki satırı, taban tutarı ve kursun ücreti. Liste yoksa null.
+// Dönüş: { liste, satir, yorum[], neden, taban, tabanNot, ucret, saat (belgedeki direksiyon saati), sistemSaat (md.7/md.39 hesabı), saatFark }
+export function kursiyerTaban(k, L) {
+  if (!k || !k.sinif) return null;
+  if (L === undefined) L = tabanListesi(kursiyerDonemi(k));
+  if (!L) return null;
+  const bt = (k.oncekiBelge || {}).tarih || '', iki = yilSonra(bt, 2), m = mevcutKod(k.mevcutEhliyet);
+  const o = { sinif: k.sinif, mevcut: m, eski: !!k.mevcutEski, otomatik: !!k.mevcutOtomatik, esinavMuaf: !!k.muaf, a1Muaf: !!(iki && iki <= BUGUN), kendiArac: k.sinif === 'B-EN' && !!k.kendiArac };
+  const b = satirBul(L, o), r = b.satir, tt = tabanTutar(r, o), yorum = [...b.yorum];
+  // A1: belge tarihi yoksa "A1 Muafiyetli" (en az 2 yıllık belge) satırı seçilemez
+  if (r && !bt && m && L.satirlar.some(x => x.a1muaf && x.s.includes(k.sinif) && (x.m.includes(m) || (x.mY || []).includes(m)))) { const mu = L.satirlar.find(x => x.a1muaf); yorum.push(`Belge tarihi girilmedi. Belge en az 2 yıllıksa “A1 Muafiyetli” satırı uygulanır (${mu.direksiyon.saat} ders, ${mu.toplam.toLocaleString('tr-TR')} ₺).`); }
+  const sh = direksiyonHesap(k.sinif, k.mevcutEhliyet, { otomatik: k.mevcutOtomatik, eski: k.mevcutEski, belgeTarih: bt }), saat = r && r.direksiyon && r.tur !== 'ilave' && r.tur !== 'ozel' ? r.direksiyon.saat : 0;
+  return { liste: L, satir: r, yorum, neden: b.neden, taban: tt ? tt.tutar : null, tabanNot: tt ? tt.aciklama : '', ucret: r ? satirUcreti(r, k.sinif, L) : null, saat, sistemSaat: sh.saat, saatFark: !!r && saat !== sh.saat };
+}
+// Kurulumda (ücretler henüz onaylanmadı) ya da müdür istediğinde: listedeki taban ücretleri kurs ücreti olarak yazar.
+// hepsi: true → listede satırı olan bütün sınıflar tabana eşitlenir (kurulum); false → yalnız boş ya da tabanın altındakiler yükseltilir. Değişen sınıf sayısı döner.
+export function tabanUcretleriYaz(hepsi, L = tabanListesi()) {
+  if (!L) return 0; let n = 0; const onay = S.kurs.ucretOnay;
+  Object.keys(SINIFLAR).forEach(k => { const r = sinifSatiri(L, k); if (!r) return; const u = SINIFLAR[k].ucret; if (hepsi ? u !== r.toplam : !(u >= r.toplam)) { sinifKaydet(k, { ucret: r.toplam }); n++; } });
+  const ek = ekDersTabani(L); if (ek && (hepsi || !(S.kurs.ekDersUcreti >= ek))) { if (S.kurs.ekDersUcreti !== ek) n++; S.kurs.ekDersUcreti = ek; }
+  // sınıfa özel ek/özel ders ücreti tabanın altındaysa yükseltilir
+  const oz = ozelDersTabani(L); Object.keys(SINIFLAR).forEach(k => { const v = SINIFLAR[k]; const a = {}; if (ek && v.ekDers != null && v.ekDers < ek) a.ekDers = ek; if (oz && v.ozelDers != null && v.ozelDers < oz) a.ozelDers = oz; if (Object.keys(a).length) { sinifKaydet(k, a); n++; } });
+  // mevcut belgeyle alınan sınıflar (C, D…): sınıf ücreti o sınıfa giden satırların en yüksek tabanının altındaysa yükseltilir
+  Object.keys(SINIFLAR).forEach(k => { if (sinifSatiri(L, k) || !SINIFLAR[k].ucret) return; const t = Math.max(0, ...L.satirlar.filter(r => ['fark', 'oto', 'romork', 'esinav'].includes(r.tur) && r.s.includes(k)).map(r => r.toplam)); if (t && SINIFLAR[k].ucret < t) { sinifKaydet(k, { ucret: t }); n++; } });
+  if (hepsi) { S.kurs.gecisUcret = {}; S.kurs.ucretOnay = onay; }  // kurulum: ücretler hâlâ müdürün onayını bekler
+  else { const g = S.kurs.gecisUcret || {}; L.satirlar.forEach(r => { if (g[r.id] != null && +g[r.id] < r.toplam) { delete g[r.id]; n++; } }); S.kurs.gecisUcret = g; }
+  return n;
+}
 // Havale açıklama kodu: her öğrenciye sabit, kısa bir kod (kimliğinden türetilir, saklanmaz). Başkası yatırsa da açıklamadaki kodla ödemenin kime ait olduğu bulunur.
 export const odemeKodu = k => { if (!k || !k.id) return ''; let t = 2166136261; const s = String(k.id); for (let i = 0; i < s.length; i++) { t ^= s.charCodeAt(i); t = Math.imul(t, 16777619); } t >>>= 0; const h = 'ACDEFHJKMNPRTVWXY3479'; let o = ''; for (let i = 0; i < 5; i++) { o += h[t % h.length]; t = Math.floor(t / h.length); } return 'MD' + o; };
 // Mesajlarda: "TR.. (Banka · Hesap sahibi)"
@@ -903,6 +967,8 @@ export function bosVeri({ kursAd, yetkili, sehir, mudurTel }) {
   // demodan kalan görüşme günü kapatması ve hazır ücretler yeni kursa taşınmaz: ücretler kurulumda müdür onaylayana kadar "onaylanmadı" sayılır
   const gs = (o.sosyal && o.sosyal.gorusmeSablon) || o.gorusmeSablon; if (gs) gs.kapali = [];
   o.kurs.ucretOnay = null;
+  // il taban listesi varsa sınıf ve ek ders ücretleri taban fiyatla hazır gelir; geçiş ücretleri girilmedikçe taban sayılır (satirUcreti). Müdür kontrol edip onaylar.
+  { const L = listeBul(kursunIli(o.kurs), iso(BUGUN)); if (L) { o.kurs.siniflar = o.kurs.siniflar || {}; Object.keys(SINIF_VARSAYILAN).forEach(k => { const r = sinifSatiri(L, k); if (r) o.kurs.siniflar[k] = { ...(o.kurs.siniflar[k] || {}), ucret: r.toplam }; }); const ek = ozelSatir(L, 'ilave'); if (ek) o.kurs.ekDersUcreti = ek.toplam; o.kurs.tabanKurulum = L.id; } }
   delete o._gun; o._bulut = true;
   return o;
 }

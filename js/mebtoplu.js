@@ -176,6 +176,8 @@ export async function hazirla(ids, { foto = true, koru = null } = {}) {
       const k = kursiyer(r.kursiyer), g = k && mebGrup(k); if (!g) { ekle(x, 'Dönem grubuna atanmamış'); continue; }
       if (!/^\d{11}$/.test(k.tc || '')) { ekle(x, 'TC kimlik no eksik'); continue; }
       if (!cep10(k.tel)) { ekle(x, 'Cep telefonu 10 hane değil'); continue; }
+      // MEBBİS'teki sertifika adı doğrulanmadı: yanlış sınıfla kayıt açılmasın diye toplu yazmaya alınmaz
+      if (['B-EN', 'CEZA'].includes(k.sinif)) { ekle(x, (SINIFLAR[k.sinif] || {}).ad + ': MEBBİS’teki sertifika adı doğrulanmadı, kaydı MEBBİS’e elle girin'); continue; }
       const mevcut = k.mevcutEhliyet && k.mevcutEhliyet !== 'Yok' ? k.mevcutEhliyet + ' SINIFI' : '';
       l.push({ id: x.id, tur: 'kayit', baslik: tamAd(k), donem: g.donem, grupNo: g.grupNo, subeNo: subeNo(g), tc: k.tc, istenen: sertifikaMetni(k), mevcut, belgeNo: mevcut ? String((k.oncekiBelge || {}).sayi || '') : '', cep: cep10(k.tel), foto: foto ? await fotoHazirla(k.foto) : '', sozlesme: k.sozlesmeImza && k.sozlesmeImza.tarih ? trT(k.sozlesmeImza.tarih) : '', adSoyad: tamAd(k), evrak: k.mebEvrak ? ME.evrakPaketi(k).l : null });
     }
