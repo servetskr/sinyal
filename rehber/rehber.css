@@ -111,6 +111,43 @@ a.st-rh-dy:hover{background:var(--k-lac);border-color:var(--k-lac);color:#fff}
 .st-rh-esler{margin-top:12px!important;font-size:14px!important;color:var(--k-soluk)!important}
 .st-rh-cv .st-rh-dyler{margin-top:12px}
 .st-rh-bos{padding:20px 0;color:var(--k-metin)}
+/* v229: okunabilirlik — rakam şeridi, bölüm kartları, cümle maddeleri, açılır sorular */
+.st-rh-metin{font-size:16.5px;line-height:1.65}
+.st-rh-rakam{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:0 0 28px}
+.st-rh-rakam div{background:var(--k-lac);color:#fff;border-radius:14px;padding:16px 16px 14px;display:grid;gap:6px;align-content:start}
+.st-rh-rakam b{font:800 26px/1.1 var(--k-baslik);color:var(--k-sari);letter-spacing:-.01em}
+.st-rh-rakam span{font-size:13.5px;line-height:1.45;color:var(--k-acik)}
+.st-rh-rakam div:only-child{grid-column:1/-1}
+.st-rh-rakam span{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.st-rh-bk{background:#fff;border:1px solid var(--k-cizgi);border-radius:16px;padding:22px 24px 10px;margin:0 0 16px;scroll-margin-top:96px}
+.st-rh-metin .st-rh-bk h2{font-size:20px;line-height:1.3;margin:0 0 12px;display:flex;align-items:center;gap:10px}
+.st-rh-metin .st-rh-bk h2::before{content:"";width:6px;height:22px;border-radius:3px;background:var(--k-sari);flex:none}
+.st-rh-metin .st-rh-madde{list-style:none;padding:0;margin:0 0 12px;display:grid;gap:10px}
+.st-rh-metin .st-rh-madde li{position:relative;padding:0 0 0 22px;margin:0}
+.st-rh-metin ul.st-rh-madde li::before{content:"";position:absolute;left:4px;top:.72em;width:7px;height:7px;border-radius:50%;background:var(--k-sari)}
+.st-rh-metin ol.st-rh-madde{counter-reset:md}
+.st-rh-metin ol.st-rh-madde li{counter-increment:md;padding-left:32px}
+.st-rh-metin ol.st-rh-madde li::before{content:counter(md);position:absolute;left:0;top:.1em;width:22px;height:22px;border-radius:50%;background:var(--k-lac);color:#fff;font:700 12px/22px var(--k-baslik);text-align:center}
+.st-rh-metin .st-rh-bk>p{margin:0 0 12px}
+.st-rh-metin .st-rh-dy{font-size:11.5px;padding:0 6px;background:#f3f5f8;border-color:#e6eaf0;color:#5b6678;vertical-align:1px}
+.st-rh-metin .st-rh-uyari{margin:20px 0 0;font-size:14px}
+.st-rh-akordiyon{display:grid;gap:10px}
+.st-rh-ak{background:#fff;border:1px solid var(--k-cizgi);border-radius:12px}
+.st-rh-ak summary,.st-rh-cv summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;gap:12px;align-items:center}
+.st-rh-ak summary::-webkit-details-marker,.st-rh-cv summary::-webkit-details-marker{display:none}
+.st-rh-ak summary{padding:16px 18px;font:700 16.5px/1.35 var(--k-baslik);color:var(--k-lac)}
+.st-rh-ak summary::after,.st-rh-cv summary::after{content:"+";flex:none;width:26px;height:26px;border-radius:50%;border:1px solid var(--k-cizgi);display:grid;place-items:center;font-size:17px;line-height:1;color:var(--k-lac)}
+.st-rh-ak[open] summary::after,.st-rh-cv[open] summary::after{content:"−";background:var(--k-lac);color:#fff;border-color:var(--k-lac)}
+.st-rh-ak>div{padding:0 18px 16px;display:grid;gap:10px}
+.st-rh-ak>div p{font-size:15.5px;line-height:1.6;color:var(--k-metin)}
+.st-rh-ak-git{margin-left:auto;font-weight:600;color:var(--k-lac);text-decoration:underline;text-decoration-color:var(--k-sari);text-underline-offset:3px}
+.st-rh-cv{border:0;border-bottom:1px solid var(--k-cizgi);padding:0}
+.st-rh-cv summary{padding:18px 0}
+.st-rh-cv summary h3{margin:0;font-size:17.5px}
+.st-rh-cv-ic{padding:0 0 20px}
+.st-rh-cv .st-rh-baglanti{position:static;opacity:1;margin-left:auto;font-size:13px;color:var(--k-soluk);text-decoration:underline;padding:0}
+.st-rh-kartlar span,.st-rh-ayni span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+@media (max-width:600px){.st-rh-bk{padding:18px 16px 6px;border-radius:14px}.st-rh-rakam{grid-template-columns:repeat(2,minmax(0,1fr))}.st-rh-rakam b{font-size:22px}.st-rh-metin .st-rh-bk h2{font-size:18.5px}}
 @media (max-width:1080px){
   .st-rh-izgara{grid-template-columns:minmax(0,1fr) 240px;gap:40px}
   .st-rh-sss-izgara{grid-template-columns:240px minmax(0,1fr)}
