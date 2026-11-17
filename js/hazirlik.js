@@ -1,8 +1,8 @@
 // e-Sınava hazırlık: son denemeler, konu başarısı ve soru bankasında görülen soru oranından tek puan;
 // yanlış yapılan sorular aralıklı tekrar takvimine girer (1, 3, 7, 14, 30 gün sonra yeniden sorulur).
-import { gun } from './veri.js?v=218';
-import { e, ilerleme } from './ui.js?v=218';
-import { SORU_KONU } from './soruKonu.js?v=218';
+import { gun } from './veri.js?v=221';
+import { e, ilerleme } from './ui.js?v=221';
+import { SORU_KONU } from './soruKonu.js?v=221';
 
 const N = SORU_KONU.length;
 // kapsam hedefi sabit: banka büyüdükçe öğrencinin puanı düşmesin (eski hedef bankanın yarısıydı, ~975 soru).

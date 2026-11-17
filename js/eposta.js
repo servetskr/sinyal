@@ -4,10 +4,11 @@
 // Tetikleme sunucusuz: günlük rapor gün sonu kapatılınca; haftalık ve aylık rapor dönemin ilk açılışında, tek cihazdan
 // (bulut.js sahiplen: kurslar/{kurs}/gonderim belgesi bir kez oluşturulabilir; kilit 3 saatlik dilime bağlı, gönderemeyen cihazın yerine
 // sonraki dilimde başka cihaz dener) ve worker'da dönem başına bir kez. Açık kalan sekmede saatte bir yeniden bakılır.
-import { S, kaydet, gun, islem, oturum, bulutKanca, tamAd, gecikenler } from './veri.js?v=218';
-import { e, tl, ik, bildir, rozet, tamTarih } from './ui.js?v=218';
-import { WORKER, bulut, bulutta } from './bulut.js?v=218';
-import { tumExcelIndir, tumExcelB64, tumExcelBlob, tamYedekIndir, tamYedekMetni, dosyaAdi } from './excel-tum.js?v=218';
+import { S, kaydet, gun, islem, oturum, bulutKanca, tamAd, gecikenler } from './veri.js?v=221';
+import { e, tl, ik, bildir, rozet, tamTarih } from './ui.js?v=221';
+import { WORKER, bulut, bulutta } from './bulut.js?v=221';
+import { kabuk, kutular, bolum, satirlar, bos, devam, not, nokta, dugme, R, SITE } from './eposta-kabuk.js?v=221';
+import { tumExcelIndir, tumExcelB64, tumExcelBlob, tamYedekIndir, tamYedekMetni, dosyaAdi } from './excel-tum.js?v=221';
 
 const TURLER = [['gunluk', 'Günlük rapor', 'Gün sonu kapatılınca: kasa, dersler, ödemeler ve uyarılar'], ['haftalik', 'Haftalık rapor', 'Her pazartesi ilk açılışta, geçen haftanın özeti'], ['aylik', 'Aylık rapor', 'Her ayın ilk açılışında, geçen ayın özeti ve kayıtlar Excel eki olarak']];
 export const raporAyar = () => ({ gunluk: true, haftalik: true, aylik: true, ...((S.kurs || {}).epostaRapor || {}) });
@@ -64,28 +65,40 @@ export function raporVerisi(bas, bit, ek = {}) {
   return { bas, bit, gelir: top(gel), gelirN: gel.length, gider: top(gid), giderN: gid.length, yontem, dersN: ders.length, dersDurum, sinav, yeni, odeme, geciken, gecikenTutar, yarinDers, uyari: ek.uyari || [], kasa: ek.kasa || null, kapatilan: (S.gunSonu || []).filter(g => aralik(g, bas, bit)).length };
 }
 async function uyarilar() {
-  try { const KR = await import('./kurallar.js?v=218'); const agir = t => ({ dur: 0, yasak: 1, uyari: 2, bilgi: 3 }[t] ?? 4); return KR.tumu().filter(x => x[0] !== 'bilgi').sort((a, b) => agir(a[0]) - agir(b[0])).map(x => ({ tur: x[0], baslik: String(x[1] || ''), aciklama: String(x[2] || '') })); }
+  try { const KR = await import('./kurallar.js?v=221'); const agir = t => ({ dur: 0, yasak: 1, uyari: 2, bilgi: 3 }[t] ?? 4); return KR.tumu().filter(x => x[0] !== 'bilgi').sort((a, b) => agir(a[0]) - agir(b[0])).map(x => ({ tur: x[0], baslik: String(x[1] || ''), aciklama: String(x[2] || '') })); }
   catch (x) { return []; }
 }
 const BASLIK = { gunluk: 'Günlük rapor', haftalik: 'Haftalık rapor', aylik: 'Aylık rapor', deneme: 'Deneme raporu', yedek: 'Veri yedeği' };
 const donemMetni = v => v.bas === v.bit ? tamTarih(v.bas) : tamTarih(v.bas) + ' – ' + tamTarih(v.bit);
-// E-posta gövdesi: satır içi stil (e-posta programları dış stil dosyası okumaz), telefonda tek sütun
+// E-posta gövdesi: ortak kabuk (eposta-kabuk.js), satır içi stil; telefonda tek sütun
 export function raporHtml(tur, v, notlar = []) {
-  const ka = (...x) => x.map(s => e(String(s))).join(''), satir = (a, b) => `<tr><td style="padding:6px 0;color:#4b5563">${ka(a)}</td><td style="padding:6px 0;text-align:right;font-weight:600;color:#111827">${b}</td></tr>`;
-  const bolum = (b, ic) => `<h2 style="font-size:16px;margin:22px 0 6px;color:#0f1729">${e(b)}</h2>${ic}`, tablo = s => `<table role="presentation" style="width:100%;border-collapse:collapse;font-size:14px">${s}</table>`;
-  const liste = (l, f, bosMetin) => l.length ? `<ul style="margin:4px 0;padding-left:18px;font-size:14px;color:#111827">${l.map(x => `<li style="margin:3px 0">${f(x)}</li>`).join('')}</ul>` : `<p style="font-size:14px;color:#6b7280;margin:4px 0">${e(bosMetin)}</p>`;
-  const kasa = v.kasa ? satir('Kasa sayımı', e(tl(v.kasa.say)) + (v.kasa.fark ? ` <span style="color:#b91c1c">(fark ${e(tl(v.kasa.fark))})</span>` : ' <span style="color:#15803d">(fark yok)</span>')) : '';
-  return `<div style="font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:#111827;max-width:600px;margin:0 auto;padding:8px">
-<p style="margin:0;color:#6b7280;font-size:13px">${e(S.kurs.ad || 'Sürücü kursu')} · ${e(donemMetni(v))}</p>
-<h1 style="font-size:22px;margin:4px 0 12px;color:#0f1729">${e(BASLIK[tur] || 'Rapor')}</h1>
-${notlar.map(n => `<p style="background:#eff6ff;border-radius:10px;padding:10px 12px;font-size:14px;margin:8px 0">${e(n)}</p>`).join('')}
-${bolum('Kasa', tablo(satir('Tahsilat', e(tl(v.gelir)) + ` <small style="color:#6b7280;font-weight:400">${v.gelirN} işlem</small>`) + Object.entries(v.yontem).map(([y, t]) => satir('· ' + y, e(tl(t)))).join('') + satir('Gider', e(tl(v.gider))) + satir('Net', e(tl(v.gelir - v.gider))) + kasa + (v.bas !== v.bit ? satir('Kapatılan gün', String(v.kapatilan)) : '')))}
-${bolum('Dersler', tablo(satir('Toplam ders', String(v.dersN)) + Object.entries(v.dersDurum).map(([d, n]) => satir('· ' + d, String(n))).join('') + (v.bas === v.bit ? satir('Yarın planlı ders', String(v.yarinDers)) : '')))}
-${bolum('Sınavlar', liste(v.sinav, s => `${e(tamTarih(s.tarih))} · ${e(s.tur)} · ${s.kisi} kişi${s.gecti + s.kaldi ? ` · <b>${s.gecti} geçti</b>, ${s.kaldi} kaldı` : ''}`, 'Bu dönemde sınav yok.'))}
-${bolum('Yeni kayıtlar (' + v.yeni.length + ')', liste(v.yeni.slice(0, 25), k => e(k.ad) + (k.sinif ? ` <small style="color:#6b7280">${e(k.sinif)}</small>` : ''), 'Bu dönemde yeni kayıt yok.') + (v.yeni.length > 25 ? `<p style="font-size:13px;color:#6b7280">ve ${v.yeni.length - 25} kişi daha</p>` : ''))}
-${bolum('Ödemeler (' + v.odeme.length + ')', liste(v.odeme.slice(0, 25), o => `${e(o.ad || 'Kursiyer')} · <b>${e(tl(o.tutar))}</b>${o.yontem ? ' · ' + e(o.yontem) : ''}${v.bas !== v.bit ? ' · ' + e(tamTarih(o.tarih)) : ''}`, 'Bu dönemde kursiyer ödemesi yok.') + (v.geciken ? `<p style="font-size:14px;margin:6px 0;color:#b45309">Gecikmiş taksiti olan ${v.geciken} kursiyer · toplam ${e(tl(v.gecikenTutar))}</p>` : ''))}
-${bolum('Uyarılar (' + v.uyari.length + ')', liste(v.uyari.slice(0, 12), u => `<b>${e(u.baslik)}</b>${u.aciklama ? `<br><small style="color:#6b7280">${e(u.aciklama)}</small>` : ''}`, 'Kural uyarısı yok.') + (v.uyari.length > 12 ? `<p style="font-size:13px;color:#6b7280">ve ${v.uyari.length - 12} uyarı daha; hepsi mdSinyal › MEB işlemleri › Kurallar ve takvim’de.</p>` : ''))}
-<p style="margin:26px 0 0;font-size:12.5px;color:#6b7280">Bu e-posta kursunuzun mdSinyal hesabından, kursun onayladığı adrese gönderildi. Hangi raporların geleceğini mdSinyal › Ayarlar › Veri ve e-posta bölümünden değiştirebilirsiniz.</p></div>`;
+  const tek = v.bas === v.bit, net = v.gelir - v.gider, sat = satirlar, ac = s => `<span style="color:${R.soluk};font-weight:400">${s}</span>`;
+  const engel = v.uyari.filter(u => u.tur === 'dur' || u.tur === 'yasak').length;
+  const dikkat = [
+    ...(v.kasa && v.kasa.fark ? [not(`<b>Kasa sayımında fark var:</b> ${e(tl(v.kasa.fark))}. Sayılan ${e(tl(v.kasa.say))}.`, 'kirmizi')] : []),
+    ...(engel ? [not(`<b>${engel} engel</b> var: kural dışı ders ya da sınav. Ayrıntısı aşağıda, Uyarılar bölümünde.`, 'kirmizi')] : []),
+    ...(v.geciken ? [not(`<b>Gecikmiş taksit:</b> ${v.geciken} kursiyer, toplam ${e(tl(v.gecikenTutar))}.`, 'amber')] : [])];
+  const kasaS = [[ 'Tahsilat ' + ac(`· ${v.gelirN} işlem`), e(tl(v.gelir)) ], ...Object.entries(v.yontem).sort((a, b) => b[1] - a[1]).map(([y, t]) => [e(y), e(tl(t)), { soluk: true, girinti: true }]),
+    [ 'Gider ' + ac(`· ${v.giderN || 0} işlem`), e(tl(v.gider)) ], [ '<b>Net</b>', e(tl(net)), { renk: net < 0 ? R.kirmizi : R.yesil } ],
+    ...(v.kasa ? [[ 'Kasa sayımı', e(tl(v.kasa.say)) + (v.kasa.fark ? ` <span style="color:${R.kirmizi}">· fark ${e(tl(v.kasa.fark))}</span>` : ` <span style="color:${R.yesil};font-weight:600">· fark yok</span>`) ]] : []),
+    ...(!tek ? [[ 'Kapatılan gün', String(v.kapatilan) ]] : [])];
+  const dersS = Object.entries(v.dersDurum).sort((a, b) => b[1] - a[1]).map(([d, n]) => [e(d), String(n)]).concat(tek ? [[ 'Yarın planlı ders', String(v.yarinDers), { soluk: true } ]] : []);
+  const sinavS = v.sinav.map(s => [`${e(s.tur)} ${ac('· ' + e(tamTarih(s.tarih)))}`, s.gecti + s.kaldi ? `<span style="color:${R.yesil}">${s.gecti} geçti</span> · <span style="color:${R.kirmizi}">${s.kaldi} kaldı</span>` : `${s.kisi} kişi`, { alt: s.gecti + s.kaldi ? `${s.kisi} kişi girdi` : 'Sonuç girilmedi' }]);
+  const uyRenk = t => t === 'dur' || t === 'yasak' ? R.kirmizi : t === 'uyari' ? '#d97706' : R.soluk;
+  const govde = [
+    notlar.map(n => not(e(n))).join(''),
+    kutular([['Tahsilat', tl(v.gelir), v.gelirN + ' işlem'], ['Net', tl(net), 'gider ' + tl(v.gider), net < 0 ? R.kirmizi : R.lacivert], ['Ders', String(v.dersN), tek ? `yarın ${v.yarinDers} ders` : (v.dersDurum['Yapıldı'] || 0) + ' yapıldı'], ['Yeni kayıt', String(v.yeni.length), v.odeme.length + ' kursiyer ödemesi']]),
+    dikkat.join(''),
+    bolum('Kasa', sat(kasaS)),
+    bolum('Dersler', v.dersN ? sat(dersS) : bos('Bu dönemde ders yok.'), v.dersN),
+    bolum('Sınavlar', v.sinav.length ? sat(sinavS) : bos('Bu dönemde sınav yok.'), v.sinav.length),
+    bolum('Yeni kayıtlar', v.yeni.length ? sat(v.yeni.slice(0, 25).map(x => [e(x.ad), x.sinif ? `<span style="font-weight:600;color:${R.soluk}">${e(x.sinif)}</span>` : ''])) + (v.yeni.length > 25 ? devam(`ve ${v.yeni.length - 25} kişi daha`) : '') : bos('Bu dönemde yeni kayıt yok.'), v.yeni.length),
+    bolum('Kursiyer ödemeleri', v.odeme.length ? sat(v.odeme.slice(0, 25).map(o => [e(o.ad || 'Kursiyer'), e(tl(o.tutar)), { alt: [o.yontem, !tek ? tamTarih(o.tarih) : ''].filter(Boolean).map(e).join(' · ') }])) + (v.odeme.length > 25 ? devam(`ve ${v.odeme.length - 25} ödeme daha`) : '') : bos('Bu dönemde kursiyer ödemesi yok.'), v.odeme.length),
+    bolum('Uyarılar', v.uyari.length ? sat(v.uyari.slice(0, 12).map(u => [nokta(uyRenk(u.tur)) + `<span style="font-weight:600">${e(u.baslik)}</span>`, '', { alt: u.aciklama ? e(u.aciklama) : '' }])) + (v.uyari.length > 12 ? devam(`ve ${v.uyari.length - 12} uyarı daha; hepsi mdSinyal › MEB işlemleri › Kurallar ve takvim’de.`) : '') : bos('Kural uyarısı yok.'), v.uyari.length),
+    dugme('mdSinyal’i aç', SITE + '/#/genel')].join('\n');
+  return kabuk({ ust: `${S.kurs.ad || 'Sürücü kursu'} · ${donemMetni(v)}`, baslik: BASLIK[tur] || 'Rapor', govde,
+    onizleme: `Tahsilat ${tl(v.gelir)} · net ${tl(net)} · ${v.dersN} ders · ${v.yeni.length} yeni kayıt${v.uyari.length ? ' · ' + v.uyari.length + ' uyarı' : ''}`,
+    alt: 'Bu e-posta kursunuzun mdSinyal hesabından, kursun onayladığı adrese gönderildi. Hangi raporların geleceğini mdSinyal › Ayarlar › Veri ve e-posta bölümünden değiştirebilirsiniz.' });
 }
 export function raporMetni(tur, v) {
   return [`${S.kurs.ad || ''} · ${BASLIK[tur] || 'Rapor'} · ${donemMetni(v)}`, '', `Tahsilat: ${tl(v.gelir)} (${v.gelirN} işlem)`, `Gider: ${tl(v.gider)}`, `Net: ${tl(v.gelir - v.gider)}`, ...(v.kasa ? [`Kasa sayımı: ${tl(v.kasa.say)}${v.kasa.fark ? ' · fark ' + tl(v.kasa.fark) : ' · fark yok'}`] : []),

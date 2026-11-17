@@ -281,6 +281,16 @@ function epSaglayici(env) {
 const epSay = async (env, kurs) => { const a = 'epsay:' + kurs + ':' + epGun(); return { a, n: +((await env.LINK.get(a)) || 0) }; };
 const epSayYaz = (env, s) => env.LINK.put(s.a, String(s.n + 1), { expirationTtl: 2 * 86400 });
 const epAdresler = async (env, kurs) => { try { return JSON.parse((await env.LINK.get('epadres:' + kurs)) || '[]'); } catch (x) { return []; } };
+// e-posta kabuğu (onay e-postası): uygulamadaki js/eposta-kabuk.js ile aynı görünüm; renk değişirse ikisini birlikte değiştir
+const epKabuk = (baslik, govde, alt, onizleme) => `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>${epKacis(baslik)}</title></head><body style="margin:0;padding:0;background:#f3f5f9">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0">${epKacis(onizleme || '')}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f5f9"><tr><td align="center" style="padding:20px 10px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#111827">
+<tr><td style="background:#0f1729;padding:16px 24px"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="vertical-align:middle"><img src="https://mdsinyal.com/img/simge/mdsinyal-192.png" width="32" height="32" alt="" style="display:block;border:0;border-radius:8px"></td><td style="vertical-align:middle;padding-left:10px;font-size:19px;color:#ffffff"><span style="opacity:.55;font-weight:500">md</span><b style="font-weight:800">Sinyal</b></td></tr></table></td></tr>
+<tr><td style="height:4px;background:#ffc21a;font-size:0;line-height:0">&nbsp;</td></tr>
+<tr><td style="padding:24px 24px 28px"><h1 style="margin:0 0 16px;font-size:24px;line-height:1.25;color:#0f1729;font-weight:800">${epKacis(baslik)}</h1>${govde}</td></tr>
+<tr><td style="padding:16px 24px 20px;background:#fafbfc;border-top:1px solid #e8ebf1;font-size:12.5px;line-height:1.5;color:#6b7280">${alt ? `<div>${epKacis(alt)}</div>` : ''}<div style="margin-top:6px"><a href="https://mdsinyal.com" style="color:#6b7280;font-weight:700;text-decoration:none">mdSinyal</a> · sürücü kursu yönetim programı</div></td></tr>
+</table></td></tr></table></body></html>`;
 const epSayfa = (baslik, metin, form) => new Response(`<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${epKacis(baslik)} · mdSinyal</title></head><body style="margin:0;background:#0f1729;color:#e9edf5;font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;display:grid;place-items:center;min-height:100vh;padding:16px;box-sizing:border-box"><main style="max-width:420px;text-align:center"><h1 style="font-size:22px;margin:0 0 8px">${epKacis(baslik)}</h1><p style="margin:0 0 20px;color:#b8c2d6">${epKacis(metin)}</p>${form ? `<form method="post" action="https://api.mdsinyal.com/eposta/onay"><input type="hidden" name="t" value="${epKacis(form)}"><button type="submit" style="font:inherit;color:#fff;background:#2563eb;border:0;padding:12px 20px;border-radius:12px;font-weight:600;cursor:pointer">Adresimi onayla</button></form>` : `<a href="https://mdsinyal.com/" style="color:#fff;background:#2563eb;padding:12px 20px;border-radius:12px;text-decoration:none;font-weight:600;display:inline-block">mdSinyal’i aç</a>`}</main></body></html>`, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex' } });
 async function eposta(req, env, url, yol, cevap) {
   if (!env.LINK) return cevap({ ok: false, hata: 'Depo yok' }, 500);
@@ -338,7 +348,10 @@ async function eposta(req, env, url, yol, cevap) {
     // kurs adı istemciden alınmaz (konuya istenen metin yazılamasın): müdürün kimliğiyle kurs belgesinden okunur, okunamazsa genel ad
     const link = 'https://api.mdsinyal.com/eposta/onay?t=' + t, kursAd = (await kursAdiOku(req, kurs)) || 'mdSinyal kullanan bir sürücü kursu';
     try { await S.gonder({ kime: [a], konu: 'mdSinyal · e-posta adresinizi onaylayın', metin: `${kursAd}, bu adresi mdSinyal raporları ve yedekleri için ekledi. Onaylamak için linki açın: ${link}\nSiz eklemediyseniz bu e-postayı silin; onaylanmayan adrese başka e-posta gelmez.`,
-      html: `<div style="font:15px/1.5 system-ui,sans-serif;color:#111827;max-width:520px"><p><b>${epKacis(kursAd)}</b>, bu adresi mdSinyal raporları ve yedekleri için ekledi.</p><p><a href="${link}" style="display:inline-block;background:#2563eb;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:600">Adresimi onayla</a></p><p style="color:#6b7280;font-size:13px">Siz eklemediyseniz bu e-postayı silin; onaylanmayan adrese başka e-posta gelmez. Link 7 gün geçerli.</p></div>` }); }
+      html: epKabuk('E-posta adresinizi onaylayın', `<p style="margin:0 0 12px;font-size:15px;line-height:1.55"><b>${epKacis(kursAd)}</b>, bu adresi mdSinyal’deki <b>rapor ve yedek e-postaları</b> için ekledi.</p>
+<p style="margin:0;font-size:15px;line-height:1.55">Onaylarsanız günlük, haftalık ve aylık raporlar ile yedekler bu adrese gelir. Hangi raporların geleceğini kurs müdürü seçer.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin:22px 0 6px"><tr><td style="border-radius:10px;background:#ffc21a"><a href="${link}" style="display:inline-block;padding:13px 24px;font-size:15px;font-weight:800;color:#0f1729;text-decoration:none;border-radius:10px">Adresimi onayla</a></td></tr></table>
+<p style="margin:14px 0 0;font-size:13px;color:#6b7280">Link 7 gün geçerli. Açılan sayfada bir kez daha “Adresimi onayla” düğmesine basmanız istenir.</p>`, 'Siz eklemediyseniz bu e-postayı silin; onaylanmayan adrese başka e-posta gelmez.', kursAd + ' rapor ve yedek e-postaları için onayınızı bekliyor') }); }
     catch (x) { console.error(x); return cevap({ ok: false, hata: 'Onay e-postası gönderilemedi' }, 502); }
     await epSayYaz(env, s);
     if (var_ && var_.t) await env.LINK.delete('eponay:' + var_.t).catch(() => {});  // eski biçim kayıt
@@ -377,7 +390,7 @@ async function eposta(req, env, url, yol, cevap) {
 // OpenAI uyumlu dil modeli: LLM_KEY (gizli), LLM_URL, LLM_MODEL (düz değişken; varsayılanlar aşağıda). LLM_KEY yoksa bu uçlar 503 kurulu:false.
 const MEVZUAT_GOM = { model: '@cf/google/embeddinggemma-2', boyut: 256, onekSorgu: 'task: search result | query: ', onekBelge: 'title: none | text: ' };  // veri/mevzuat/dizin.json (surum 2026-11-17) ile aynı
 const MV_LLM_URL = 'https://api-cdn.deploy.com/api/v1/chat/completions', MV_LLM_MODEL = 'deepseek-ai/deepseek-v4.1-flash-1017';
-const MV = { belge: 300, metin: 200000, dosya: 10e6, resim: 1.6e6, parca: 900, ortusme: 150, kaynak: 8, kaynakKar: 14000, gomKar: 400, soru: 400, ozetKar: 24000 };
+const MV = { belge: 300, metin: 200000, dosya: 10e6, resim: 1.6e6, parca: 900, ortusme: 150, kaynak: 10, kaynakKar: 20000, gomKar: 400, soru: 400, ozetKar: 24000 };
 const MV_TUR = { 'application/pdf': 'pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx', 'image/jpeg': 'resim', 'image/png': 'resim', 'text/plain': 'metin', 'text/markdown': 'metin' };
 class MvHata extends Error { constructor(m, s, ek) { super(m); this.s = s || 500; this.ek = ek || {}; } }
 // izolat belleğinde dakikalık sayaç (KV yazması yok); izolatlar arası kesin değil, kötüye kullanımı kesmeye yeter
@@ -477,26 +490,31 @@ const MV_OZET_ISTEM = 'Sürücü kursu müdürüne MEB\'den (il/ilçe millî eğ
   '- <madde; tarih, süre, sayı ve madde numarası varsa aynen yaz>\n' +
   'Kimi ilgilendirir: <kısa; örneğin kurs müdürü, ön büro, usta öğreticiler, kursiyerler>\n' +
   'Yazıda kursa düşen bir iş yoksa ikinci başlığın altına "- Kursa düşen bir iş yok." yaz.';
-const MV_CEVAP_ISTEM = 'Sürücü kursu personelinin mevzuat sorusunu YALNIZ aşağıda numaralanmış kaynaklara dayanarak cevaplıyorsun. Kurallar:\n' +
-  '- Kaynaklarda olmayan bilgi ekleme, genel bilgini kullanma.\n' +
-  '- Sayı, süre, tutar, tarih ve oranları kaynaktaki gibi birebir yaz; yuvarlama, hesaplama yapma.\n' +
-  '- Her ayrıntı ve adımda dayandığın kaynağın numarasını "kaynak" dizisine yaz (ör. [1] ya da [2,3]). Yalnız verilen numaraları kullan.\n' +
-  '- Kaynaklarda cevap yoksa "bulunamadi": true ver ve "kisa" alanına "Verilen kaynaklarda bu sorunun cevabı yok." yaz; diğer alanları boş bırak.\n' +
+const MV_CEVAP_ISTEM = 'Sürücü kursu personelinin (kurs müdürü, ön büro, usta öğretici) mevzuat sorusunu YALNIZ aşağıda numaralanmış kaynaklara dayanarak cevaplıyorsun. Kurallar:\n' +
+  '- Kaynaklarda olmayan bilgi ekleme, genel bilgini kullanma. Emin olmadığın şeyi yazma.\n' +
+  '- Sayı, süre, tutar, yaş, saat, tarih ve oranları kaynaktaki gibi birebir yaz; yuvarlama, toplama, hesaplama yapma.\n' +
+  '- Her ayrıntı ve adımda dayandığın kaynağın numarasını "kaynak" dizisine yaz (ör. [1] ya da [2,3]). Yalnız verilen numaraları kullan; kaynağı olmayan cümle yazma.\n' +
+  '- Soru birden çok şey soruyorsa (ör. kaç saat ders, sınava girer mi, yaş şartı) her birini ayrı ayrıntı olarak cevapla.\n' +
+  '- Bir şeyin kaynaklarda olmadığını söylemeden önce bütün kaynakları baştan sona oku; sorulan süre, gün, saat, yaş, tutar, belge ya da şart herhangi bir kaynakta geçiyorsa mutlaka yaz.\n' +
+  '- Soruda "(Not: …)" varsa soruyu o açıklamaya göre anla.\n' +
+  '- Soru bir işin nasıl yapılacağını soruyorsa "adimlar" alanına sırasıyla yaz (kim, ne zaman, hangi süre içinde). Değilse "adimlar" boş kalır.\n' +
+  '- Cevabın bir kısmı kaynaklarda yoksa o kısmı uydurma: "eksik" alanına neyin bulunamadığını ve bakılacak resmî yeri yaz (il/ilçe millî eğitim müdürlüğü, ÖÖKGM, nüfus müdürlüğü, Resmî Gazete gibi).\n' +
+  '- Kaynaklarda cevap hiç yoksa "bulunamadi": true ver, "kisa" alanına "Verilen kaynaklarda bu sorunun cevabı yok." yaz, "eksik" alanına bakılacak resmî yeri yaz; diğer alanlar boş kalır.\n' +
   '- Hukuki görüş ya da tavsiye verme; kaynağın ne dediğini aktar. Kaynaklar çelişiyorsa ikisini de "dikkat" alanında numarasıyla belirt.\n' +
-  '- Kaynak etiketi mdSinyal Rehberi olanlar açıklamadır; çelişkide resmî madde esastır.\n' +
+  '- Etiketi "mdSinyal Rehberi" ile başlayan kaynaklar açıklamadır; çelişkide resmî madde esastır. "(atıf)" etiketli kaynak, başka bir maddenin gönderme yaptığı maddedir.\n' +
   '- İstisna, ilden ile uygulama farkı ya da yürürlüğe girmemiş (taslak) hüküm varsa "dikkat" alanına yaz; yoksa boş dize bırak.\n' +
-  '- Sade Türkçe yaz; "kisa" 1–2 cümle, en çok 6 ayrıntı, en çok 6 adım. Adım yalnız soru bir işlemin nasıl yapılacağını soruyorsa yazılır.\n' +
+  '- Sade, kısa Türkçe yaz; kurs müdürüne konuşur gibi. "kisa" 1–3 cümle ve sorunun doğrudan cevabı olsun (rakam varsa rakamla). En çok 6 ayrıntı, en çok 7 adım.\n' +
   'Cevabı YALNIZ şu biçimde, geçerli bir JSON nesnesi olarak ver (önce ya da sonra başka metin, kod bloğu yazma):\n' +
-  '{"kisa":"1–2 cümle doğrudan cevap","ayrinti":[{"metin":"sayı, süre ya da şart","kaynak":[1]}],"adimlar":[{"metin":"yapılacak iş","kaynak":[2]}],"dikkat":"","bulunamadi":false}';
+  '{"kisa":"doğrudan cevap","ayrinti":[{"metin":"sayı, süre ya da şart","kaynak":[1]}],"adimlar":[{"metin":"yapılacak iş","kaynak":[2]}],"dikkat":"","eksik":"","bulunamadi":false}';
 // Cevap biçimi: LLM'in JSON'u ayrıştırılır ve doğrulanır; kaynak numarası 1..n dışında olanlar atılır, kaynağı kalmayan ayrıntı/adım gösterilmez.
 // JSON bozuksa düz metin { kisa: metin, duz: true } olur. cevap alanı eski istemciler için düz metin özetidir ([n] atıflarıyla).
-const MV_CB = { kisa: 500, metin: 400, dikkat: 500, liste: 8, kaynak: 4, duz: 3000 };
+const MV_CB = { kisa: 600, metin: 400, dikkat: 500, eksik: 400, liste: 8, kaynak: 4, duz: 3000 };
 const MV_YOK = 'Verilen kaynaklarda bu sorunun cevabı yok.';
 const mvKes = (s, n) => { s = String(s || '').replace(/[\u0000-\u0008\u000b-\u001f]/g, ' ').replace(/[ \t]+/g, ' ').trim(); if (s.length <= n) return s; const k = s.lastIndexOf(' ', n - 1); return s.slice(0, k > n * 0.6 ? k : n - 1).trimEnd() + '…'; };
 // metindeki [n] atıflarından aralık dışı olanlar silinir
 const mvAtifSuz = (s, n) => s.replace(/\s*\[(\d{1,3})\]/g, (x, k) => (+k >= 1 && +k <= n ? x : '')).trim();
 function mvCevapCoz(ham, n) {
-  const duz = () => { const t = mvKes(mvAtifSuz(String(ham || '').replace(/^```(?:json)?\s*|\s*```$/g, ''), n), MV_CB.duz) || MV_YOK; return { kisa: t, ayrinti: [], adimlar: [], dikkat: '', bulunamadi: false, duz: true, cevap: t }; };
+  const duz = () => { const t = mvKes(mvAtifSuz(String(ham || '').replace(/^```(?:json)?\s*|\s*```$/g, ''), n), MV_CB.duz) || MV_YOK; return { kisa: t, ayrinti: [], adimlar: [], dikkat: '', eksik: '', bulunamadi: false, duz: true, cevap: t }; };
   let j = null; const s = String(ham || ''), a = s.indexOf('{'), z = s.lastIndexOf('}');
   if (a >= 0 && z > a) { try { j = JSON.parse(s.slice(a, z + 1)); } catch (x) { j = null; } }
   if (!j || typeof j !== 'object' || Array.isArray(j) || (typeof j.kisa !== 'string' && j.bulunamadi !== true)) return duz();
@@ -509,13 +527,73 @@ function mvCevapCoz(ham, n) {
     return metin && ks.size ? { metin, kaynak: [...ks].sort((p, q) => p - q).slice(0, MV_CB.kaynak) } : null;
   }).filter(Boolean).slice(0, MV_CB.liste);
   const bulunamadi = j.bulunamadi === true;
-  const o = { kisa: mvKes(mvAtifSuz(typeof j.kisa === 'string' ? j.kisa : '', n), MV_CB.kisa), ayrinti: bulunamadi ? [] : liste(j.ayrinti), adimlar: bulunamadi ? [] : liste(j.adimlar), dikkat: bulunamadi ? '' : mvKes(mvAtifSuz(typeof j.dikkat === 'string' ? j.dikkat : '', n), MV_CB.dikkat), bulunamadi };
+  const o = { kisa: mvKes(mvAtifSuz(typeof j.kisa === 'string' ? j.kisa : '', n), MV_CB.kisa), ayrinti: bulunamadi ? [] : liste(j.ayrinti), adimlar: bulunamadi ? [] : liste(j.adimlar), dikkat: bulunamadi ? '' : mvKes(mvAtifSuz(typeof j.dikkat === 'string' ? j.dikkat : '', n), MV_CB.dikkat), eksik: mvKes(mvAtifSuz(typeof j.eksik === 'string' ? j.eksik : '', n), MV_CB.eksik), bulunamadi };
   if (!o.kisa) { if (!bulunamadi && !o.ayrinti.length) return duz(); o.kisa = bulunamadi ? MV_YOK : ''; }
   const at = l => l.map(k => '[' + k + ']').join('');
-  o.cevap = [o.kisa, o.ayrinti.map(x => '- ' + x.metin + ' ' + at(x.kaynak)).join('\n'), o.adimlar.length ? 'Yapılacaklar:\n' + o.adimlar.map((x, i) => (i + 1) + '. ' + x.metin + ' ' + at(x.kaynak)).join('\n') : '', o.dikkat ? 'Dikkat: ' + o.dikkat : ''].filter(Boolean).join('\n\n');
+  o.cevap = [o.kisa, o.ayrinti.map(x => '- ' + x.metin + ' ' + at(x.kaynak)).join('\n'), o.adimlar.length ? 'Yapılacaklar:\n' + o.adimlar.map((x, i) => (i + 1) + '. ' + x.metin + ' ' + at(x.kaynak)).join('\n') : '', o.dikkat ? 'Dikkat: ' + o.dikkat : '', o.eksik ? 'Kaynaklarda yok: ' + o.eksik : ''].filter(Boolean).join('\n\n');
   return o;
 }
-const MV_RESIM_ISTEM = 'Bu fotoğraf resmî bir yazının sayfası. Sayfada yazan metni olduğu gibi, Türkçe karakterleri koruyarak düz metne çevir. Yorum, özet ya da açıklama ekleme; yalnız metni yaz. Okunamayan yerlere [okunamadı] yaz. Fotoğrafta metin yoksa yalnız BOS yaz.';
+// Soruyu anlama (/mevzuat/anla): soruyu derlemin içindekiler listesindeki maddelere ve resmî terimli aramalara çevirir.
+// İçindekiler sitenin kendi dosyasıdır (veri/mevzuat/icindekiler.txt; arac/mevzuat/kavram/yaz.mjs üretir); izolatta 10 dakika tutulur.
+// Cevap { sorgular: [≤3], maddeler: [{ b, m }] (yalnız listede olanlar), konu }; site bu maddeleri ve aramaları kendi derleminde arar.
+const MV_ANLA_ISTEM = 'Sürücü kursu personelinin sorusunu mevzuat aramasına hazırlıyorsun. Aşağıda derlemdeki resmî belgelerin içindekiler listesi var ' +
+  '(her satır "belge: madde — başlık"). Görevin:\n' +
+  '1) Sorunun cevabının bulunabileceği maddeleri listeden seç (en ilgili önce, en çok 6). Satırı tam yazıldığı gibi "belge: madde" olarak yaz ' +
+  '(ör. "mtsk: Madde 39"). Belgenin tek satırı varsa yalnız "belge:" yaz. Listede olmayan madde yazma.\n' +
+  '2) Soruyu resmî terimlerle 1–3 kısa arama cümlesine çevir (ehliyet → sürücü belgesi, hoca → usta öğretici, öğrenci → kursiyer, ' +
+  'yazılı sınav → elektronik sınav, pratik → direksiyon eğitimi dersi sınavı). Sınıf geçişi sorularında hem farklı sınıf sertifika ' +
+  'hem hedef sınıfın yaş/deneyim şartını düşün. Birden çok konuya değen soruda her konu için ayrı arama yaz.\n' +
+  '3) Konuyu 2–5 kelimeyle adlandır.\n' +
+  'YALNIZ şu JSON nesnesini ver: {"maddeler":["mtsk: Madde 39"],"sorgular":["..."],"konu":"..."}';
+const MV_ICINDE = { t: '', zaman: 0, set: null };
+async function mvIcindekiler() {
+  if (MV_ICINDE.t && Date.now() - MV_ICINDE.zaman < 600000) return MV_ICINDE;
+  const r = await fetch('https://mdsinyal.com/veri/mevzuat/icindekiler.txt', { cf: { cacheTtl: 600 } }).catch(() => null);
+  const t = r && r.ok ? await r.text() : '';
+  if (!t) { if (MV_ICINDE.t) return MV_ICINDE; throw new MvHata('Mevzuat listesi alınamadı; biraz sonra tekrar deneyin', 503); }
+  const set = new Set();
+  for (const s of t.split('\n')) { const m = s.match(/^([a-z0-9-]+):\s?(.*?)\s?— /); if (m) set.add(m[1] + ': ' + m[2].trim()); }
+  Object.assign(MV_ICINDE, { t: t.slice(0, 40000), zaman: Date.now(), set });
+  return MV_ICINDE;
+}
+function mvAnlaCoz(ham, set) {
+  let j = null; const s = String(ham || ''), a = s.indexOf('{'), z = s.lastIndexOf('}');
+  if (a >= 0 && z > a) { try { j = JSON.parse(s.slice(a, z + 1)); } catch (x) { j = null; } }
+  if (!j || typeof j !== 'object') return { sorgular: [], maddeler: [], konu: '' };
+  const maddeler = [];
+  for (const x of (Array.isArray(j.maddeler) ? j.maddeler : []).slice(0, 10)) {
+    const k = String(x || '').replace(/\s+/g, ' ').trim().replace(/^([a-z0-9-]+)\s*:\s*/, '$1: ');
+    const m = k.match(/^([a-z0-9-]+): ?(.*)$/); if (!m) continue;
+    if (m[2] ? !set.has(k) : ![...set].some(y => y.startsWith(m[1] + ': '))) continue;
+    if (!maddeler.some(y => y.b === m[1] && y.m === m[2])) maddeler.push({ b: m[1], m: m[2] });
+    if (maddeler.length >= 6) break;
+  }
+  const sorgular = (Array.isArray(j.sorgular) ? j.sorgular : []).filter(x => typeof x === 'string').map(x => mvKes(x, 160)).filter(Boolean).slice(0, 3);
+  return { sorgular, maddeler, konu: mvKes(typeof j.konu === 'string' ? j.konu : '', 60) };
+}
+async function mvAnla(env, soru) {
+  const ic = await mvIcindekiler();
+  return mvAnlaCoz(await mvLlm(env, [{ role: 'system', content: MV_ANLA_ISTEM + '\n\nİçindekiler:\n' + ic.t }, { role: 'user', content: 'Soru: ' + soru }], 400, { json: true }), ic.set);
+}
+// Kurs başına günlük yapay zekâ sınırı: Cache API'de sayaç (KV yazması harcamaz; veri merkezi başına, kötüye kullanımı kesmeye yeter)
+const MV_GUNLUK = 300;
+async function mvGunlukAsti(kursId) {
+  try {
+    const c = caches.default, g = new Date().toISOString().slice(0, 10), k = new Request('https://sayac.mdsinyal.invalid/mv/' + encodeURIComponent(kursId) + '/' + g);
+    const r = await c.match(k), n = (r ? +(await r.text()) || 0 : 0) + 1;
+    await c.put(k, new Response(String(n), { headers: { 'Cache-Control': 'max-age=90000' } }));
+    return n > MV_GUNLUK;
+  } catch (x) { return false; }
+}
+// Ölçüm ucu (/mevzuat/olcum/anla, /mevzuat/olcum/cevapla): yalnız MV_OLCUM gizli değeri tanımlıyken ve X-Olcum başlığı eşleşirse.
+// Asistanın cevap doğruluğu ölçülürken kullanılır; ölçüm bitince gizli değer silinir ve uç kapanır (404).
+async function mvOlcumIzin(req, env) {
+  if (!env.MV_OLCUM || String(env.MV_OLCUM).length < 32) return false;
+  const a = new TextEncoder().encode(req.headers.get('X-Olcum') || ''), b = new TextEncoder().encode(env.MV_OLCUM);
+  if (a.length !== b.length) return false;
+  try { return crypto.subtle.timingSafeEqual(a, b); } catch (x) { let d = 0; for (let i = 0; i < a.length; i++) d |= a[i] ^ b[i]; return d === 0; }
+}
+const MV_RESIM_ISTEM ='Bu fotoğraf resmî bir yazının sayfası. Sayfada yazan metni olduğu gibi, Türkçe karakterleri koruyarak düz metne çevir. Yorum, özet ya da açıklama ekleme; yalnız metni yaz. Okunamayan yerlere [okunamadı] yaz. Fotoğrafta metin yoksa yalnız BOS yaz.';
 const mvOzetle = (env, ad, metin) => mvLlm(env, [{ role: 'system', content: MV_OZET_ISTEM }, { role: 'user', content: (ad ? 'Yazının adı: ' + ad + '\n\n' : '') + 'Metin:\n' + metin.slice(0, MV.ozetKar) }], 700);
 const mvTemiz = (s, n) => String(s || '').replace(/[\u0000-\u001f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
 // hepsi değeri (GET cevabıyla aynı dize)
@@ -541,6 +619,24 @@ function mvHepsiSil(ham, id) {
 // belge kimliği: yüklemede üretilen 12 karakter; 'hepsi' (arama kümesinin anahtarı) belge sayılmaz
 const mvId = id => /^[a-z0-9]{6,24}$/.test(id) && id !== 'hepsi';
 const mvDizin = async (env, kurs) => { try { return JSON.parse((await env.LINK.get('mbelge:' + kurs)) || '[]'); } catch (x) { return []; } };
+// /mevzuat/cevapla gövdesi: { soru, kaynaklar: [{ etiket, t, resmi? }] } (site seçer; en çok MV.kaynak kaynak, MV.kaynakKar karakter)
+const mvSoru = b => {
+  const soru = b && typeof b.soru === 'string' ? b.soru.trim() : '';
+  if (!soru) throw new MvHata('Soru boş', 400);
+  if (soru.length > MV.soru) throw new MvHata('Soru en çok ' + MV.soru + ' karakter olabilir', 400);
+  return soru;
+};
+async function mvCevapla(env, b) {
+  const soru = mvSoru(b), k = Array.isArray(b.kaynaklar) ? b.kaynaklar : null;
+  if (!k || !k.length) throw new MvHata('Kaynak yok', 400);
+  if (k.length > MV.kaynak) throw new MvHata('En çok ' + MV.kaynak + ' kaynak gönderilebilir', 400);
+  let top = 0; for (const x of k) { if (!x || typeof x.t !== 'string' || !x.t.trim()) throw new MvHata('Kaynak metni boş', 400); top += x.t.length + String(x.etiket || '').length; }
+  if (top > MV.kaynakKar) throw new MvHata('Kaynaklar toplam ' + MV.kaynakKar.toLocaleString('tr-TR') + ' karakteri geçemez', 400);
+  // resmî olmayan kaynak (mdSinyal rehberi ve sık sorulanlar) istemciden resmi:false ile gelir; etiketi her durumda "mdSinyal Rehberi" ile başlar
+  const mvEtiket = x => { const et = mvTemiz(x.etiket, 200); return x.resmi === false && !/^mdSinyal Rehberi/.test(et) ? 'mdSinyal Rehberi · ' + et : et; };
+  const govde = 'Soru: ' + soru + '\n\nKaynaklar:\n' + k.map((x, i) => '[' + (i + 1) + '] ' + mvEtiket(x) + '\n' + x.t.trim()).join('\n\n');
+  return mvCevapCoz(await mvLlm(env, [{ role: 'system', content: MV_CEVAP_ISTEM }, { role: 'user', content: govde }], 1400, { json: true }), k.length);
+}
 async function mevzuat(req, env, url, yol, cevap, o) {
   try { return await mevzuatUc(req, env, url, yol, cevap, o); }
   catch (x) { if (x instanceof MvHata) return cevap({ ok: false, ...x.ek, hata: x.message }, x.s); console.error(JSON.stringify({ tur: 'hata', konu: 'mevzuat', yol, hata: String((x && x.message) || x).slice(0, 200) })); return cevap({ ok: false, hata: 'Beklenmeyen bir hata oldu; tekrar deneyin' }, 500); }
@@ -558,6 +654,15 @@ async function mevzuatUc(req, env, url, yol, cevap, { gercek, rol, kursId, origi
     // site motoru (js/mevzuat-ara.js) dizin.json'daki sorgu önekini kendisi ekler; önek zaten varsa ikinci kez eklenmez
     const girdi = MEVZUAT_GOM.onekSorgu && metin.startsWith(MEVZUAT_GOM.onekSorgu) ? metin : MEVZUAT_GOM.onekSorgu + metin;
     return cevap({ ok: true, v: mvB64(await mvGom(env, [girdi])) });
+  }
+  if (yol.startsWith('mevzuat/olcum/')) {
+    if (!POST || !(await mvOlcumIzin(req, env))) return cevap({ ok: false, hata: 'Bilinmeyen adres' }, 404);
+    if (mvSinirAsti('olcum', 120)) return cevap({ ok: false, hata: 'Çok sık istek' }, 429);
+    const b = await req.json().catch(() => null);
+    if (!b) return cevap({ ok: false, hata: 'Gecersiz istek' }, 400);
+    if (yol === 'mevzuat/olcum/anla') return cevap({ ok: true, ...(await mvAnla(env, mvSoru(b))) });
+    if (yol === 'mevzuat/olcum/cevapla') return cevap({ ok: true, ...(await mvCevapla(env, b)) });
+    return cevap({ ok: false, hata: 'Bilinmeyen adres' }, 404);
   }
   if (!gercek || !PERSONEL.includes(rol)) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
   if (!env.LINK) return cevap({ ok: false, hata: 'Depo yok' }, 500);
@@ -640,18 +745,15 @@ async function mevzuatUc(req, env, url, yol, cevap, { gercek, rol, kursId, origi
       }
       return cevap({ ok: true, ozet });
     }
-    const soru = typeof b.soru === 'string' ? b.soru.trim() : '', k = Array.isArray(b.kaynaklar) ? b.kaynaklar : null;
-    if (!soru) return cevap({ ok: false, hata: 'Soru boş' }, 400);
-    if (soru.length > MV.soru) return cevap({ ok: false, hata: 'Soru en çok ' + MV.soru + ' karakter olabilir' }, 400);
-    if (!k || !k.length) return cevap({ ok: false, hata: 'Kaynak yok' }, 400);
-    if (k.length > MV.kaynak) return cevap({ ok: false, hata: 'En çok ' + MV.kaynak + ' kaynak gönderilebilir' }, 400);
-    let top = 0; for (const x of k) { if (!x || typeof x.t !== 'string' || !x.t.trim()) return cevap({ ok: false, hata: 'Kaynak metni boş' }, 400); top += x.t.length + String(x.etiket || '').length; }
-    if (top > MV.kaynakKar) return cevap({ ok: false, hata: 'Kaynaklar toplam ' + MV.kaynakKar.toLocaleString('tr-TR') + ' karakteri geçemez' }, 400);
     if (mvSinirAsti('l:' + kursId, 10)) return cevap({ ok: false, hata: 'Çok sık istek yapıldı; bir dakika sonra tekrar deneyin' }, 429);
-    // resmî olmayan kaynak (mdSinyal rehberi ve sık sorulanlar) istemciden resmi:false ile gelir; etiketi her durumda "mdSinyal Rehberi" ile başlar
-    const mvEtiket = x => { const et = mvTemiz(x.etiket, 200); return x.resmi === false && !/^mdSinyal Rehberi/.test(et) ? 'mdSinyal Rehberi · ' + et : et; };
-    const govde = 'Soru: ' + soru + '\n\nKaynaklar:\n' + k.map((x, i) => '[' + (i + 1) + '] ' + mvEtiket(x) + '\n' + x.t.trim()).join('\n\n');
-    return cevap({ ok: true, ...mvCevapCoz(await mvLlm(env, [{ role: 'system', content: MV_CEVAP_ISTEM }, { role: 'user', content: govde }], 1100, { json: true }), k.length) });
+    if (await mvGunlukAsti(kursId)) return cevap({ ok: false, hata: 'Bugünkü yapay zekâ sınırı doldu; yarın tekrar deneyin. Arama sonuçları çalışmaya devam eder' }, 429);
+    return cevap({ ok: true, ...(await mvCevapla(env, b)) });
+  }
+  if (yol === 'mevzuat/anla') {
+    if (!env.LLM_KEY) return cevap({ ok: false, kurulu: false, hata: 'Yapay zekâ henüz bağlı değil' }, 503);
+    const soru = mvSoru(b);
+    if (mvSinirAsti('a:' + kursId, 10)) return cevap({ ok: false, hata: 'Çok sık istek yapıldı; bir dakika sonra tekrar deneyin' }, 429);
+    return cevap({ ok: true, ...(await mvAnla(env, soru)) });
   }
   return cevap({ ok: false, hata: 'Bilinmeyen adres' }, 404);
 }
