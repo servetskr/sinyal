@@ -1,11 +1,11 @@
 // Mevzuat uyum kuralları: ücret, tahsilat, iade, ücretsiz kontenjan, sınava hazır yazısı, planlama ve personel denetimleri.
 // Dayanak: Özel Öğretim Kurumları Yönetmeliği (RG 5/9/2025-33008 değişikliği: m.54, m.55/3, m.56/3-b, m.56/4), MTSK Yönetmeliği
 // (m.7/7 ve Danıştay 8. D. 8/10/2025 YD kararı, m.15, m.16/8, m.20, m.43), 5580 sayılı Kanun m.13 (%3 ücretsiz).
-import { ekTur, teorikVar, tabanListesi, tabanDurumu, kursiyerTaban, sinifTabani, satirUcreti, ekDersTabani, ozelDersTabani, ekDersFiyat, ozelDersFiyat, digerUcretler, S, gun, fark, SINIFLAR, SINIF_VARSAYILAN, tamAd, islem, kaydet, oturum, egitmen, sb, sbDers, gerekliDireksiyon, direksiyonAyrinti, ustaAraci } from './veri.js?v=223';
+import { iso, kursiyerDonemi, ekTur, teorikVar, tabanListesi, tabanDurumu, kursiyerTaban, sinifTabani, satirUcreti, ekDersTabani, ozelDersTabani, ekDersFiyat, ozelDersFiyat, digerUcretler, S, gun, fark, SINIFLAR, SINIF_VARSAYILAN, tamAd, islem, kaydet, oturum, egitmen, sb, sbDers, gerekliDireksiyon, direksiyonAyrinti, ustaAraci } from './veri.js?v=223';
 import { e, tl, tarih, pencere, kapatPencere, bildir, belgeYazdir, isaret } from './ui.js?v=223';
 import { denetimUyarilari } from './denetim.js?v=223';
 import { kuralEkle } from './kurallar.js?v=223';
-import { listeAdi, satirAdi, gecisSatirlari, gecerlilikMetni, donemAdi } from './taban.js?v=223';
+import { listeAdi, satirAdi, gecisSatirlari, gecerlilikMetni, donemAdi, donemi } from './taban.js?v=223';
 
 const OOKY = 'Özel Öğretim Kurumları Yönetmeliği';
 const yil = () => gun(0).slice(0, 4);
@@ -67,16 +67,18 @@ export function iadeBelgesi(k, r, odenen) {
 }
 
 /* ---------- ücretsiz kursiyer kontenjanı (5580 m.13: en az %3) ---------- */
-export function ucretsizDurum() {
-  const y = yil(), l = S.kursiyerler.filter(k => String(k.kayit || '').slice(0, 4) === y);
+// Kontenjan her kurs dönemi için ayrı sayılır (denetim rehberi 5.2; ücretsiz kursiyer kılavuzu: yerleştirme dönem başlamadan yapılır).
+// Dönem: kursiyerin MEBBİS dönem grubunun ayı, grubu yoksa kayıt ayı (veri.js kursiyerDonemi). donem verilmezse bugünün dönemi.
+export function ucretsizDurum(donem = donemi(gun(0))) {
+  const l = S.kursiyerler.filter(k => kursiyerDonemi(k) === donem);  // dönemde kaydolan herkes (sonradan ayrılan dahil)
   const n = l.length, gerek = Math.floor(n * 0.03 + 0.5), var_ = l.filter(k => k.ucretsiz).length;
-  return { yil: y, n, gerek, var: var_, eksik: Math.max(0, gerek - var_) };
+  return { donem, donemAd: donemAdi(donem), yil: donem.slice(0, 4), n, gerek, var: var_, eksik: Math.max(0, gerek - var_) };
 }
 export function ucretsizYap(k, yenile) {
-  const d0 = ucretsizDurum();
+  const d0 = ucretsizDurum(kursiyerDonemi(k));
   pencere({
     baslik: 'Ücretsiz kursiyer · ' + tamAd(k),
-    icerik: `<p style="font-size:14px;margin-bottom:12px">Kurs, kursiyer sayısının en az %3’ünü ücretsiz okutur (5580 sayılı Kanun m.13). ${d0.yil} kayıtları: ${d0.n} · gereken en az ${d0.gerek} · kayıtlı ${d0.var}.</p>
+    icerik: `<p style="font-size:14px;margin-bottom:12px">Kurs, her dönemde kursiyer sayısının en az %3’ünü ücretsiz okutur (5580 sayılı Kanun m.13). ${d0.donemAd} dönemi: ${d0.n} kursiyer · gereken en az ${d0.gerek} · ücretsiz ${d0.var}.</p>
       <div class="alan"><label>Dayanak</label><select class="girdi" data-n><option>Şehit / gazi yakını</option><option>Koruma kararı bulunan</option><option>Kurul kararı (müdür + iki eğitim personeli)</option><option>MEBBİS yerleştirmesi</option></select></div>
       <div class="alan" style="margin-top:12px"><label>Karar ya da yazı no (isteğe bağlı)</label><input class="girdi" data-no></div>
       <p class="ipucu" style="margin-top:12px">${isaret('bilgi', 18)}<span>Açık taksitler iptal edilir. Ücretsiz kursiyerler program başlamadan MEBBİS’e işlenir; EK-7 başvuru ve EK-8 değerlendirme formu ücretsiz kursiyer dosyasında saklanır.</span></p>`,
@@ -123,7 +125,9 @@ export function mevzuatKurallari() {
     if (u < ilan * 0.5) l.push(['yasak', `${tamAd(k)} · indirim ilan edilen ücretin yarısını aşıyor`, `Sözleşme ${tl(u)}, ilan ${tl(ilan)}. İndirim oranı %50’yi aşamaz (${OOKY} m.54/1-a); %3 kontenjandaysa “Ücretsiz kursiyer” olarak işaretleyin.`, '#/kursiyer/' + k.id]);
     else if (u > ilan && String(k.kayit).slice(0, 4) === yil()) l.push(['uyari', `${tamAd(k)} · ilan edilen ücretin üstünde kayıt`, `Sözleşme ${tl(u)}, ilan ${tl(ilan)}. İlan edilenin üstünde ücret istenemez (${OOKY} m.54/1-d).`, '#/kursiyer/' + k.id]); });
   // %3 ücretsiz kontenjan
-  const uc = ucretsizDurum(); if (uc.eksik) l.push(['bilgi', `Ücretsiz kursiyer kontenjanı: ${uc.var}/${uc.gerek}`, `${uc.yil} yılında ${uc.n} kayıt; en az %3’ü ücretsiz okutulur (5580 m.13). Yıllık kayıt üzerinden yaklaşık hesap; MEBBİS’teki dönem kontenjanıyla karşılaştırın.`, '#/kursiyerler']);
+  // içinde bulunulan ve bir sonraki dönem (yerleştirme dönem başlamadan yapılır); kaydı olmayan dönem atlanır
+  { const bu = donemi(gun(0)), d = new Date(gun(0) + 'T12:00'); d.setDate(1); d.setMonth(d.getMonth() + 1); const sonra = donemi(iso(d));
+    [bu, sonra].map(ucretsizDurum).filter(uc => uc.n && uc.eksik).forEach(uc => l.push(['bilgi', `${uc.donemAd} dönemi ücretsiz kursiyer kontenjanı: ${uc.var}/${uc.gerek}`, `Bu dönemde ${uc.n} kursiyer; en az %3’ü ücretsiz okutulur (5580 m.13). Yerleştirmeyi il/ilçe MEM MEBBİS’ten yapar; kurs program başlamadan kontenjanı kadar adayı sistemden çeker. MEBBİS’teki dönem kontenjanıyla karşılaştırın.`, '#/kursiyerler'])); }
   // Yasal iade süresi (ÖÖKY m.56/4: en geç 1 ay)
   S.kursiyerler.filter(k => k.kapali && k.kapali.iadeSon && !k.kapali.iadeYapildi).forEach(k => { const kalan = fark(k.kapali.iadeSon); l.push([kalan < 0 ? 'dur' : kalan <= 7 ? 'yasak' : 'uyari', `${tamAd(k)} · ${tl(k.kapali.iadeTutar || 0)} iade ${kalan < 0 ? -kalan + ' gün gecikti' : kalan + ' gün içinde yapılmalı'}`, `Ayrılan kursiyere iade, ayrılıştan itibaren en geç 1 ay içinde yapılır (${OOKY} m.56/4).`, '#/kursiyer/' + k.id]); });
   // Sınava hazır yazısı
