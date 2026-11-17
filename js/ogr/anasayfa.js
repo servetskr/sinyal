@@ -1,11 +1,11 @@
 // Ana sayfa sekmesi (yeni tasarım): selam, ehliyet yolculuğu (Teorik · Direksiyon · Sınav), yapılacaklar (teklif, onay, uyarı),
 // sıradaki ders (takvim yaprağı) ve son dersin değerlendirmesi, sınava hazırlık kartı, kurs işlemleri (ödeme, belgeler), ana ekrana ekle.
-import { S, ASAMALAR, EVRAKLAR, egitmen, arac, ogretmen, fark, tarihOku, kalanBorc, ogrOzellik } from '../veri.js?v=220';
-import { gerekliDireksiyon } from '../veri.js?v=220';
-import { gunKisa, gunAdi, ayAdi, tarih } from '../ui.js?v=220';
-import * as OG from '../ogrenci.js?v=220';
-import * as HZ from '../hazirlik.js?v=220';
-import { esc, oi, tl, sayfaBas, bolum, baglanti, kart, heroKart, gorsel, dugme, ikonKutu, bos, stilEkle } from './ui.js?v=220';
+import { S, ASAMALAR, EVRAKLAR, egitmen, arac, ogretmen, fark, tarihOku, kalanBorc, ogrOzellik } from '../veri.js?v=221';
+import { gerekliDireksiyon } from '../veri.js?v=221';
+import { gunKisa, gunAdi, ayAdi, tarih } from '../ui.js?v=221';
+import * as OG from '../ogrenci.js?v=221';
+import * as HZ from '../hazirlik.js?v=221';
+import { esc, oi, tl, sayfaBas, bolum, baglanti, kart, heroKart, gorsel, dugme, ikonKutu, bos, stilEkle } from './ui.js?v=221';
 
 // sınav simgesi: kontrol listeli pano ve küçük bayrak (ui.js'te yok)
 const SINAV_IK = '<svg class="ox-i" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 20.5H6a2 2 0 0 1-2-2V6.5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v5"/><path d="M8.5 4.5V3.8a1.3 1.3 0 0 1 1.3-1.3h2.4a1.3 1.3 0 0 1 1.3 1.3v.7"/><path d="m7.2 9.6 1.2 1.2 2.2-2.3M12.6 9.6h1.9M7.2 14.6l1.2 1.2 2.2-2.3M12.6 14.6h.4"/><path d="M16 21.5v-7.3h4.8l-.9 1.8.9 1.8H16"/></svg>';
