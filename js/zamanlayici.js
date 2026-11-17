@@ -1,5 +1,5 @@
 import { planlilariGonder } from './mesaj.js?v=221';
-import { odemeKodu, ibanMetni, S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, gecikenler, kalanBorc, islem, gonderimEkle, yerelZaman, oturum, kapaliGun, SINIFLAR, risk, selam, kursAdi, bulutKanca, mudurTel } from './veri.js?v=221';
+import { odemeKodu, ibanMetni, S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, gecikenler, kalanBorc, islem, gonderimEkle, yerelZaman, oturum, kapaliGun, SINIFLAR, risk, selam, kursAdi, bulutKanca, mudurTel, ekDersFiyat, ekDersTabani } from './veri.js?v=221';
 import { tl, tamTarih, tarihUzun, saatDe, apiAcik, apiGonder, etiket, bildir, waSirali } from './ui.js?v=221';
 import { denetimSkoru } from './ozellik.js?v=221';
 
@@ -67,7 +67,9 @@ const URET = {
   o14: ornek => (S.gruplar || []).filter(g => ornek ? fark(g.baslangic) >= 0 : fark(g.baslangic) === 2).flatMap(g => S.kursiyerler.filter(k => k.teorikGrup === g.id && ['Kayıt', 'Evrak', 'Teorik'].includes(k.asama) && !k.teorik).map(k => ({ anahtar: 'o14|' + g.id + '|' + k.id, kim: ogr(k), metin: doldur('o14', { kisi: k, ad: k.ad, tarih: tarihUzun(g.baslangic), saatte: saatDe(TEORIK_SAAT[g.id] || '18:30'), grup: g.ad.toLocaleLowerCase('tr'), derslik: g.derslik }) }))),
 };
 URET.o16 = ornek => { const bg = gun(0).slice(5); const l = S.kursiyerler.filter(k => !k.kapali && k.dogumTarihi && (ornek || k.dogumTarihi.slice(5) === bg)); return (ornek ? l.slice(0, 1) : l).map(k => ({ anahtar: 'o16|' + k.id + '|' + gun(0).slice(0, 4), kim: ogr(k), metin: doldur('o16', { kisi: k, ad: k.ad }) })); };
-URET.o15 = ornek => S.kursiyerler.map(k => ({ k, r: risk(k) })).filter(({ k, r }) => r && r.oneri && (ornek ? r.puan >= 25 : r.puan >= 50) && !k.ekDersTeklif).sort((a, b) => b.r.puan - a.r.puan).map(({ k, r }) => ({ anahtar: 'o15|' + k.id, kim: ogr(k), etki: { tur: 'ekders', k: k.id, n: r.oneri, tutar: r.oneri * S.kurs.ekDersUcreti }, metin: doldur('o15', { kisi: k, ad: k.ad, n: r.oneri, tutar: tl(r.oneri * S.kurs.ekDersUcreti), odak: r.beceri && r.beceri.zayif.length ? '; özellikle ' + r.beceri.zayif.join(', ').toLocaleLowerCase('tr') + ' üzerinde çalışacağız' : '' }) }));
+// Ek ders teklifinin birim ücreti: sınıfa özel ek ders ücreti, yoksa kursun ek ders ücreti, o da yoksa il taban listesindeki ilave ders ücreti; taban altına inmez
+const ekDersBirim = sinif => { const f = ekDersFiyat(sinif) || ekDersTabani() || 0, t = ekDersTabani() || 0; return Math.max(f, t); };
+URET.o15 = ornek => S.kursiyerler.map(k => ({ k, r: risk(k) })).filter(({ k, r }) => r && r.oneri && (ornek ? r.puan >= 25 : r.puan >= 50) && !k.ekDersTeklif).sort((a, b) => b.r.puan - a.r.puan).map(({ k, r }) => ({ anahtar: 'o15|' + k.id, kim: ogr(k), etki: { tur: 'ekders', k: k.id, n: r.oneri, tutar: r.oneri * ekDersBirim(k.sinif) }, metin: doldur('o15', { kisi: k, ad: k.ad, n: r.oneri, tutar: tl(r.oneri * ekDersBirim(k.sinif)), odak: r.beceri && r.beceri.zayif.length ? '; özellikle ' + r.beceri.zayif.join(', ').toLocaleLowerCase('tr') + ' üzerinde çalışacağız' : '' }) }));
 // Mesaj gidince kayda işlenecek sonuç (ör. ek ders teklifi kursiyer ekranında görünür)
 function etkiUygula(x) {
   if (!x.etki || x.etki.tur !== 'ekders') return;

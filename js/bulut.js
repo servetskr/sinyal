@@ -798,7 +798,7 @@ function ogrenciUygula(docId, g) {
       }
       if (k.ekDersTeklif && y.ekDersTeklif === null) {
         const t = k.ekDersTeklif;
-        if ((y.ekDersHakki || 0) > (k.ekDersHakki || 0)) { k.odeme.taksitler.push({ vade: gun(30), tutar: t.tutar, odendi: null, yontem: null, aciklama: t.n + ' ek direksiyon dersi' }); k.odeme.toplam += t.tutar; S.kazanim.ekDers++; k.ekDersHakki = (k.ekDersHakki || 0) + t.n; notlar.push(t.n + ' ek ders teklifini kabul etti'); }
+        if ((y.ekDersHakki || 0) > (k.ekDersHakki || 0)) { k.odeme.ekler = k.odeme.ekler || []; k.odeme.ekler.push({ ad: 'Ek direksiyon dersi × ' + t.n, tutar: t.tutar, odendi: null, tur: 'ders', tarih: gun(0) }); /* sözleşme ücretine karışmaz (iade, taban denetimi) */ S.kazanim.ekDers++; k.ekDersHakki = (k.ekDersHakki || 0) + t.n; notlar.push(t.n + ' ek ders teklifini kabul etti'); }
         else notlar.push('ek ders teklifini istemedi');
         k.ekDersTeklif = null;
       }
@@ -985,7 +985,7 @@ function ustaUygula(docId, g) {
       // tamamlanan ders sayısı (kursiyer.direksiyon) kurs cihazında tutulur: öğretmenin kursiyer kaydındaki sayı alınmaz (yalnız not ve deneme gelir).
       // Öğretmen telefonundan bitirilen ders burada sayılmazsa kursiyerin ders sayısı artmıyordu (senkron testi 17 Kas 2026; portal.js dersKaydet ile aynı kural).
       { const k = S.kursiyerler.find(z => z.id === d.kursiyer), sonraYapildi = d.durum === 'Yapıldı';
-        if (k && onceYapildi !== sonraYapildi) k.direksiyon = sonraYapildi ? Math.min(gerekliDireksiyon(k), (k.direksiyon || 0) + 1) : Math.max(0, (k.direksiyon || 0) - 1); }
+        if (k && onceYapildi !== sonraYapildi) k.direksiyon = sonraYapildi ? (k.direksiyon || 0) + 1 : Math.max(0, (k.direksiyon || 0) - 1); }  // ek dersler de sayılır
     } else if (x.a === 'kursiyerler' && y) {
       const k = S.kursiyerler.find(z => z.id === x.id); if (!benimMi(k)) continue;
       (y.notlar || []).slice(0, 50).forEach(n => { if (n && typeof n.metin === 'string' && !(k.notlar || []).some(m => m.tarih === n.tarih && m.metin === n.metin)) (k.notlar = k.notlar || []).unshift({ tarih: String(n.tarih || '').slice(0, 10), metin: n.metin.slice(0, 500) }); });

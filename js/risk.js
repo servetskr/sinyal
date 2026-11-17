@@ -1,6 +1,8 @@
 import { S, gun, fark, SINIFLAR, egitmen, kapaliGun, dersAraci, risk, kursAdi } from './veri.js?v=221';
 import { gerekliDireksiyon, kuralAyar, geceKisitli, geceDersMi } from './veri.js?v=221';
 
+// B Engelli adayı kendi (raporuna uygun) aracıyla eğitim alıyorsa (MTSK Yön. md.7/5) ders kurs aracı olmadan planlanır (arac: null, "kendi aracı")
+export const kendiAracli = k => !!k && k.sinif === 'B-EN' && !!k.kendiArac;
 const ort = l => l.length ? l.reduce((a, x) => a + x, 0) / l.length : null;
 export const riskliler = (l = S.kursiyerler) => l.map(k => ({ k, r: risk(k) })).filter(x => x.r && x.r.puan >= 25).sort((a, b) => b.r.puan - a.r.puan);
 
@@ -54,7 +56,7 @@ export function randevuEngeli(k) {
   if (k.kapali) return 'Kaydın şu an ' + (k.kapali.tur === 'dondur' ? 'dondurulmuş' : 'kapalı') + `; ders için ${kursAdi('e')} yaz.`;
   if (!S.kurs.kendiRandevu) return `${kursAdi()} direksiyon saatlerini kendisi planlıyor; ders için ${kursAdi('e')} yaz.`;
   if (!['Direksiyon', 'Sınav'].includes(k.asama)) return k.asama === 'Teorik' || k.asama === 'Kayıt' || k.asama === 'Evrak' ? 'Direksiyon derslerin e-sınavı geçince açılır.' : 'Şu an direksiyon dersin yok.';
-  const S0 = SINIFLAR[k.sinif]; if (!S0.direksiyon) return 'Bu sınıfta direksiyon dersi yok.';
+  const S0 = SINIFLAR[k.sinif]; if (!S0 || !S0.direksiyon || !gerekliDireksiyon(k)) return 'Bu sınıfta direksiyon dersi yok.';
   const planli = S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Planlandı').length;
   if (k.direksiyon + planli >= gerekliDireksiyon(k) + (k.ekDersHakki || 0)) return `Zorunlu ${gerekliDireksiyon(k)} dersinin hepsi planlandı. Ek ders için ${kursAdi('e')} yazabilirsin.`;
   const gec = k.odeme.taksitler.filter(t => !t.odendi && !t.iptal && fark(t.vade) < 0);
@@ -84,8 +86,10 @@ export function otomatikPlan({ gunSay = 7, haftalik = 3 } = {}) {
       if (Object.values(h.belgeler || {}).some(t => t && t < g)) continue;  // sertifika, sağlık raporu ya da adli sicil süresi dolmuş usta öğreticiye ders önerilmez (elle eklemede de engelli)
       for (const sa of KAPASITE_SAAT) {
         if (dolu.has('u' + g + sa + h.id) || dolu.has('k' + g + sa + x.k.id)) continue;
-        const ar = dersAraci(h.id, x.k.sinif, g, sa); if (!ar || dolu.has('a' + g + sa + ar.id) || [ar.muayene, ar.sigorta].some(t => t && t < g)) continue;
-        const d = { kursiyer: x.k.id, egitmen: h.id, arac: ar.id, tarih: g, saat: sa };
+        // araç: B Engelli için önce aparatlı (B-EN), sonra otomatik B aracı (aracSiniflari); kendi aracıyla gelende kurs aracı aranmaz
+        const kendi = kendiAracli(x.k), ar = kendi ? null : dersAraci(h.id, x.k.sinif, g, sa);
+        if (!kendi && (!ar || dolu.has('a' + g + sa + ar.id) || [ar.muayene, ar.sigorta].some(t => t && t < g))) continue;
+        const d = { kursiyer: x.k.id, egitmen: h.id, arac: ar ? ar.id : null, tarih: g, saat: sa, ...(kendi ? { kendiArac: true } : {}) };
         ekle(d); oneri.push(d); x.kalan--; break;
       }
     }
@@ -96,7 +100,7 @@ export function otomatikPlan({ gunSay = 7, haftalik = 3 } = {}) {
 // sonraki saatler sunulmaz (MTSK Yön. md.7/3 son cümle; eyup-sorular-cevaplar.md madde 5).
 export function bosSlotlar(k, gunSay = 7) {
   const h = egitmen(k.egitmen); if (!h) return [];
-  const l = [], geceYok = geceKisitli(k);
+  const l = [], geceYok = geceKisitli(k), kendi = kendiAracli(k);
   for (let n = 1; n <= gunSay + 3 && l.length < 40; n++) {
     const g = gun(n); if (kapaliGun(g)) continue;
     if ((S.izinler || []).some(i => i.kim === h.id && g >= i.bas && g <= i.bit)) continue;
@@ -105,6 +109,7 @@ export function bosSlotlar(k, gunSay = 7) {
     KAPASITE_SAAT.forEach(sa => {
       if (geceYok && geceDersMi({ tarih: g, saat: sa })) return;
       if (S.dersler.some(d => d.tarih === g && d.saat === sa && (d.egitmen === h.id || d.kursiyer === k.id) && d.durum !== 'İptal')) return;
+      if (kendi) return l.push({ tarih: g, saat: sa, egitmen: h.id, arac: null, kendiArac: true, aracAd: 'kendi aracı' });
       const ar = dersAraci(h.id, k.sinif, g, sa); if (!ar) return;
       if ([ar.muayene, ar.sigorta].some(t => t && t < g)) return;
       l.push({ tarih: g, saat: sa, egitmen: h.id, arac: ar.id });

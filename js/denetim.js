@@ -1,7 +1,7 @@
 // Denetim modu: habersiz denetimde (MTSK Yön. m.46/A) tek ekran: şu an hangi derste kim, hangi araçta, MEBBİS programına uygun mu;
 // araçta bulunması gereken belgeler (m.17/3), öz kontrol listesi (EK-16/17 maddelerinden) ve tek tıkla çıktılar.
 // Denetim kayıtları: bulgu, eksik giderme süresi (m.46: 20 gün) ve 5580 m.7/2 cezalarında tekerrür (7590 sayılı Kanun: tekrarda 5 kat, üçüncüde ruhsat iptali).
-import { S, kaydet, gun, fark, tamAd, islem, kursiyer, egitmen, arac, oturum, sbDers, sb, tutarOku } from './veri.js?v=221';
+import { S, kaydet, gun, fark, tamAd, islem, kursiyer, egitmen, arac, oturum, sbDers, sb, tutarOku, tabanListesi } from './veri.js?v=221';
 import { e, ik, isaret, pencere, kapatPencere, bildir, tarih, rozet } from './ui.js?v=221';
 
 const simdi = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
@@ -46,6 +46,8 @@ function kontroller(a) {
     ['ek5', 'Akan trafikteki kursiyerlerin K sınıfı aday belgesi (EK-5) geçerli', sb(S.kursiyerler).filter(k => k.asama === 'Direksiyon').every(k => kBelge(k)[0] === 'tamam') ? true : false, 'Bazı kursiyerlerin K belgesi yok ya da süresi dolmuş', 'ek5'],
     ['yoklama', 'Teorik derste yoklama alındı; kursta olmayan kursiyer devamsız yazıldı (m.46/A/8)', null, '', 'dersdefteri'],
     ['ilan', 'Ücret ilanı kursta görünür yerde asılı', S.kurs.tarifeIlan === gun(0).slice(0, 4) ? null : false, 'Bu yılın ücret ilanı işaretlenmemiş'],
+    // il taban fiyat listesi olan ilde: ücretler listeye uygun, liste ve ücret ilanı kursta asılı (uygunluğu T01 kuralı denetler)
+    ...(tabanListesi() ? [['taban', 'Ücretler il taban fiyat listesine uygun, liste ve ücret ilanı kursta asılı (T01)', null]] : []),
     ['defter', 'Gelen-giden evrak defteri, personel özlük dosyaları ve ücretsiz kursiyer dosyası güncel (m.42)', null],
   ];
 }

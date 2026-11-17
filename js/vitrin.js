@@ -3,9 +3,9 @@
 // Tanıtım bölümü uygulama tarafından yeniden çizilebildiği için her şey baslat() ile kurulur ve eskisi temizlenir (window.__vitrin).
 (() => {
   const OLAY = [
-    ['08:31', 'wa', 'Adayın mesajı gelen kutusuna düştü', 'Ön büro yanıtladı · kayıt linki gönderildi'],
+    ['08:31', 'wa', 'Adayın mesajı gelen kutusuna düştü', 'Ön büro yanıtladı · kayıt görüşmesi ayarlandı'],
     ['08:45', 'wa', 'Taksit hatırlatması gitti', '12 öğrenciye, kursun numarasından'],
-    ['09:02', 'kayit', 'Elif Yıldız kayıt formundan kaydoldu', 'Sözleşmeyi telefondan imzaladı'],
+    ['09:02', 'kayit', 'Elif Yıldız kayıt görüşmesine geldi', 'Kayıt kursta tamamlandı · sözleşme müdür gözetiminde imzalandı'],
     ['09:20', 'plan', 'Yarının 18 dersi planlandı', 'Araç ve öğretmen çakışması yok'],
     ['10:05', 'para', 'Ödeme alındı', 'Mert Kaya · makbuz 1043'],
     ['10:40', 'meb', '3 kayıt MEBBİS’e hazır', 'Onayınızı bekliyor'],

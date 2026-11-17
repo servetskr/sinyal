@@ -1,9 +1,9 @@
 // Mesaj merkezi: grup ya da tek tek seçilen kişilere kişiye özel WhatsApp mesajı, planlı gönderim, iletildi/okundu takibi
-import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, kalanBorc, gecikenler, gecikenTutar, eksikEvrak, sonrakiDers, risk, islem, sb, aktifSiniflar, SINIFLAR, selam, kursAdi, adEk, yerelZaman, bulutKanca } from './veri.js?v=221';
+import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, kalanBorc, gecikenler, gecikenTutar, eksikEvrak, sonrakiDers, risk, islem, sb, aktifSiniflar, SINIFLAR, selam, kursAdi, adEk, yerelZaman, bulutKanca, tabanListesi } from './veri.js?v=221';
 import { e, tl, ik, rozet, bos, pencere, kapatPencere, bildir, tarihUzun, apiAcik, apiGonder, etiket, waSirali, ziyaretci, isaret, waIstek, metaHata } from './ui.js?v=221';
 
 const durum = { grup: 'aktif', sinif: '', ogretmen: '', secili: null, sira: 0, zaman: 'simdi', metin: null, sablon: '', ek: null, cevapIste: false, tanitim: false };
-// Kampanya/tanıtım mesajı yalnız kampanya izni olan öğrencilere gider; eski kayıtlardaki birleşik rıza izin sayılır
+// Tanıtım (ticari ileti) mesajı yalnız izni olan öğrencilere gider; eski kayıtlardaki birleşik rıza izin sayılır
 const tanitimIzni = k => !!(k.kvkk && (k.kvkk.pazarlama === undefined ? k.kvkk.riza : k.kvkk.pazarlama));  // izin kaydı yoksa gönderilmez
 // Ekli dosyalar localStorage’a yazılmaz (büyük olabilir); gönderim süresince bellekte durur
 const EKLER = {};
@@ -35,7 +35,7 @@ const SABLONLAR = [
   ['Sınav hatırlatma', '{selam} {sinav}. Kimliğinizi yanınıza almayı unutmayın. Başarılar!'],
   ['Katılım sorusu', '{selam} {ders} direksiyon dersinize gelebilecek misiniz?', true],
   ['Ders iptali (hava)', '{selam} bugün hava koşulları nedeniyle direksiyon dersleri yapılamayacaktır. Dersiniz için size yeni saat bildireceğiz. {kurs}'],
-  ['Arkadaşını getir', '{selam} yeni teorik grubumuz önümüzdeki hafta başlıyor. Ehliyet almak isteyen bir tanıdığınız varsa bu mesajı iletebilirsiniz. {kurs}'],
+  ['Yeni grup duyurusu', '{selam} yeni teorik grubumuz önümüzdeki hafta başlıyor. Ders günleri ve saatleri için {kursa} uğrayabilir ya da bu mesajı yanıtlayabilirsiniz. {kurs}'],
   ['Öğretmen toplantısı', '{selam} yarın 08:30’da kısa bir ekip toplantımız var; katılımınızı rica ederiz. {kurs}'],
 ];
 
@@ -144,7 +144,7 @@ export function yeniMesajHtml() {
   <div class="kart"><div class="kart-bas"><h3>Yeni mesaj</h3><small>Kişiye özel, WhatsApp’tan</small></div><div class="kart-govde mm-govde">
     <div class="mm-adim"><span class="et">1 · Kime?</span>
       <div class="secim mm-gruplar">${GRUPLAR.map(([v, t]) => `<label><input type="radio" name="mm-grup" value="${v}" ${durum.grup === v ? 'checked' : ''}><span>${t}<b>${kisiler(v, durum.sinif, durum.ogretmen).length}</b></span></label>`).join('')}</div>
-      ${ogrenciGrubu ? `<div class="mm-suz"><select class="girdi" data-mm-sinif aria-label="Sınıf"><option value="">Bütün sınıflar</option>${aktifSiniflar().map(([k, v]) => `<option value="${k}" ${durum.sinif === k ? 'selected' : ''}>${e(v.ad)}</option>`).join('')}</select><select class="girdi" data-mm-ogretmen aria-label="Öğretmen"><option value="">Bütün öğretmenler</option>${S.egitmenler.map(h => `<option value="${h.id}" ${durum.ogretmen === h.id ? 'selected' : ''}>${e(h.ad)}</option>`).join('')}</select></div><label class="mm-tanitim" style="display:flex;gap:8px;align-items:center;font-size:13.5px;margin:6px 0"><input type="checkbox" data-mm-tanitim ${durum.tanitim ? 'checked' : ''}> Kampanya / tanıtım mesajı (yalnız izin verenlere gider)</label>` : ''}
+      ${ogrenciGrubu ? `<div class="mm-suz"><select class="girdi" data-mm-sinif aria-label="Sınıf"><option value="">Bütün sınıflar</option>${aktifSiniflar().map(([k, v]) => `<option value="${k}" ${durum.sinif === k ? 'selected' : ''}>${e(v.ad)}</option>`).join('')}</select><select class="girdi" data-mm-ogretmen aria-label="Öğretmen"><option value="">Bütün öğretmenler</option>${S.egitmenler.map(h => `<option value="${h.id}" ${durum.ogretmen === h.id ? 'selected' : ''}>${e(h.ad)}</option>`).join('')}</select></div><label class="mm-tanitim" style="display:flex;gap:8px;align-items:center;font-size:13.5px;margin:6px 0"><input type="checkbox" data-mm-tanitim ${durum.tanitim ? 'checked' : ''}> Tanıtım (ticari ileti) mesajı (yalnız izin verenlere gider)</label>` : ''}
       <details class="mm-kisiler" ${l.length <= 8 ? 'open' : ''}><summary><b>${sec.length}</b> / ${l.length} kişi seçili · listeyi gör, tek tek çıkar</summary>
         <div class="mm-kisi-ust"><button type="button" class="dg dg-hafif dg-kucuk" data-mm-hepsi="1">Hepsini seç</button><button type="button" class="dg dg-hafif dg-kucuk" data-mm-hepsi="0">Hiçbirini</button></div>
         <ul>${l.map(x => `<li><label><input type="checkbox" data-mm-kisi="${x.anahtar}" ${durum.secili.has(x.anahtar) ? 'checked' : ''}><span><b>${e(x.ad)}</b><small>${e(x.alt)}</small></span></label></li>`).join('') || `<li>${bos('Bu grupta kimse yok', 'Başka bir grup seçin.')}</li>`}</ul></details>
@@ -208,16 +208,24 @@ export function yeniMesajBagla(k, yenile) {
   });
 }
 
-function gonderTikla(yenile) {
+// İl taban fiyat listesi notu 6: hiçbir ad altında indirim, kampanya, promosyon, hediye ya da ödül yapılamaz; böyle bir toplu mesaj göndermeden önce sorulur
+const KAMPANYA_RX = /indirim|kampanya|hediye|promosyon|ödül|bedava/i;
+function gonderTikla(yenile, not6Tamam = false) {
   const sec = seciliListe(), m = durum.metin.trim();
   if (!sec.length) return bildir('Önce kişi seçin', 'uyari');
   if (!m) return bildir('Mesajı yazın', 'uyari');
+  if (!not6Tamam && KAMPANYA_RX.test(m) && tabanListesi()) {
+    const kelime = (m.match(KAMPANYA_RX) || [''])[0];
+    return pencere({ baslik: 'Mesajda indirim ya da kampanya geçiyor', icerik: `<p style="font-size:14.5px">Mesajda “${e(kelime)}” yazıyor. İl taban fiyat listesinin 6. notuna göre promosyon, ödül, hediye, kardeş, arkadaş, toplu kayıt dahil hiçbir ad altında indirim ve kampanya yapılamaz.</p><p style="font-size:14.5px;margin-top:8px">Mesaj bir indirim ya da kampanya duyurmuyorsa (ör. “indirim yapılamıyor” diyorsa) gönderebilirsiniz.</p>`,
+      altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç, düzelteyim</button><button class="dg dg-ana" data-not6-gonder>İndirim duyurmuyor, gönder</button>`,
+      onAc(d) { d.querySelector('[data-not6-gonder]').addEventListener('click', () => { kapatPencere(); gonderTikla(yenile, true); }); } });
+  }
   // kişiye özel alanı boş kalan varsa yarım cümle gitmesin: önce sor
   const bosOlan = sec.filter(r => bosKalan(m, r).length);
   if (bosOlan.length) {
     return pencere({ baslik: 'Bazı kişilerde bilgi eksik', icerik: `<p style="font-size:14.5px">${bosOlan.length} kişide mesajdaki ${[...new Set(bosOlan.flatMap(r => bosKalan(m, r)))].map(a => '“' + (ALANLAR.find(z => z[0] === a) || [a, a])[1].toLocaleLowerCase('tr') + '”').join(', ')} bilgisi yok; bu kişilere mesaj yarım cümleyle gider.</p><ul class="liste" style="max-height:36vh;overflow:auto;margin-top:10px">${bosOlan.map(r => `<li>${e(r.ad)}</li>`).join('')}</ul>`,
       altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button>${bosOlan.length < sec.length ? `<button class="dg dg-ana" data-bos-cikar>Onları çıkar, ${sec.length - bosOlan.length} kişiye gönder</button>` : ''}`,
-      onAc(d) { const b = d.querySelector('[data-bos-cikar]'); if (b) b.addEventListener('click', () => { bosOlan.forEach(r => durum.secili.delete(r.anahtar)); kapatPencere(); gonderTikla(yenile); }); } });
+      onAc(d) { const b = d.querySelector('[data-bos-cikar]'); if (b) b.addEventListener('click', () => { bosOlan.forEach(r => durum.secili.delete(r.anahtar)); kapatPencere(); gonderTikla(yenile, true); }); } });
   }
   const kisilerL = sec.map(r => ({ ad: r.ad, tel: r.tel, rol: r.rol, metin: sonMetin(kisiyeOzel(m, r)) }));
   const baslik = durum.sablon || (GRUPLAR.find(g => g[0] === durum.grup) || [0, 'Mesaj'])[1];

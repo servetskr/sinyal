@@ -1,6 +1,7 @@
-import { S, kaydet, kursiyer, egitmen, arac, tamAd, SINIFLAR, islem, gonderimEkle, yerelZaman, eksikEvrak, selam, kursAdi, adEk, bulutKanca } from './veri.js?v=221';
+import { kursiyerTaban, sinifEtiket, S, kaydet, kursiyer, egitmen, arac, tamAd, SINIFLAR, islem, gonderimEkle, yerelZaman, eksikEvrak, selam, kursAdi, adEk, bulutKanca } from './veri.js?v=221';
 import { e, tl, ik, isaret, bildir, tamTarih, tarihUzun, pencere, kapatPencere, waAc, waUrl, apiAcik, belgeWhatsApp, etiket, kisaLink, waKok, imzaOlcuDenetle, imzaOlcuHesap, IMZA_ASGARI } from './ui.js?v=221';
 import { sozlesmeMaddeleri, belgeHtml, dosyaAdi, sozlesmeDondur } from './sayfalar3.js?v=221';
+import { satirAdi, listeAdi } from './taban.js?v=221';
 import * as GR from './gruplar.js?v=221';
 import { stilEkle as oxStil, oi, sayfaBas as oxSayfaBas, bolum as oxBolum, liste as oxListe, satir as oxSatir, ikonKutu, dugme as oxDugme, not as oxNot, gorsel as oxGorsel } from './ogr/ui.js?v=221';
 
@@ -51,7 +52,7 @@ const kursWp = () => S.kurs.wp || '';
 function belgeModeli(tur, k, dersIdleri) {
   const kurs = { ad: S.kurs.ad, tel: S.kurs.tel, adres: S.kurs.adres, yetkili: S.kurs.yetkili, wp: kursWp() };
   const kisi = { ad: tamAd(k), tc: k.tc ? k.tc.slice(0, 3) + '•••••' + k.tc.slice(-3) : '', tel: k.tel };
-  if (tur === 'sozlesme') return { kurs, kisi, sinif: SINIFLAR[k.sinif].ad, kayit: k.kayit, odeme: { toplam: k.odeme.toplam, pesin: k.odeme.pesin, pesinTarih: k.odeme.pesinTarih, taksit: k.odeme.taksitler.map(t => [t.vade, t.tutar]), indirim: k.odeme.indirim || null }, madde: sozlesmeMaddeleri(k) };
+  if (tur === 'sozlesme') { const x = kursiyerTaban(k); return { kurs, kisi, sinif: sinifEtiket(k.sinif, k), kayit: k.kayit, odeme: { toplam: k.odeme.toplam, pesin: k.odeme.pesin, pesinTarih: k.odeme.pesinTarih, taksit: k.odeme.taksitler.map(t => [t.vade, t.tutar]), indirim: x ? null : (k.odeme.indirim || null) }, taban: x && x.satir ? { ad: satirAdi(x.satir), tutar: x.taban, liste: listeAdi(x.liste) } : null, madde: sozlesmeMaddeleri(k) }; }  // il taban listesi: öğrenci imzalamadan önce taban ve not 4–5 görünür; indirim satırı gösterilmez (not 6)
   return { kurs, kisi, sinif: SINIFLAR[k.sinif].ad, ders: dersIdleri.map(id => S.dersler.find(d => d.id === id)).filter(Boolean).map(d => [d.tarih, d.bas ? d.bas + '–' + d.bit : d.saat, egitmen(d.egitmen).ad, d.arac ? arac(d.arac).plaka : '', d.sure || null]) };
 }
 
@@ -226,7 +227,8 @@ function belgeGorunumu(p) {
       ['kisi', 'Öğrenci', e(b.kisi.ad), b.kisi.tc ? 'TC ' + e(b.kisi.tc) : ''],
       ['direksiyon', 'Sınıf', e(b.sinif)],
       ['takvim', 'Kayıt tarihi', tarihYil(b.kayit)],
-      ['fis', 'Kurs ücreti', tl(o.toplam), o.indirim ? `${e(o.indirim.ad)} indirimi −${tl(o.indirim.tutar)}` : ''],
+      ['fis', 'Kurs ücreti', tl(o.toplam), o.indirim ? `${e(o.indirim.ad)} indirimi −${tl(o.indirim.tutar)}` : 'KDV dahil'],
+      b.taban ? ['fis', 'Taban ücret', tl(b.taban.tutar), `${e(b.taban.ad)} · ${e(b.taban.liste)} · kurs ücreti dışında, eğitim materyalleri dahil ücret alınmaz; sınav, harç ve kart ücreti kursiyerin kendi masrafıdır`] : null,
       ['kart', 'Peşinat', tl(o.pesin), o.pesinTarih ? tarihYil(o.pesinTarih) : ''],
       b.kurs.adres || b.kurs.tel ? ['konum', 'Kurs', e(b.kurs.ad), [b.kurs.adres, b.kurs.tel].filter(Boolean).map(e).join('<br>')] : null,
     ]);

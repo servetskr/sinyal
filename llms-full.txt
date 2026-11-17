@@ -77,7 +77,7 @@ Bütün kayıtlar her gün yedeklenir. Veriler bulutta şifreli olarak saklanır
 
 ### Diğer özellikler
 
-- Evden kayıt ve uzaktan sözleşme: Aday bilgilerini kendisi girer, sözleşmeyi telefonundan imzalar.
+- Kursta tablette kayıt: Aday bilgilerini kursta tablette girer; sözleşme müdür gözetiminde ekranda imzalanır.
 - Eksik evrak takibi: Eksik belgeler listelenir; son günüyle öğrenciye iletilir.
 - Teorik ders ve yoklama: Teorik ders programı ve devam takibi.
 - Öğretmen uygulaması: Günlük dersler, öğrenci imzası, haftalık program ve kazanç.
@@ -201,4 +201,4 @@ MEB’in hazırladığı taslak (direksiyon sınavının serbest güzergâhta ya
 - [İletişim](https://mdsinyal.com/iletisim/): tanıtım görüşmesi isteği
 - [Gizlilik ve KVKK](https://mdsinyal.com/gizlilik.html): işlenen veriler, hukuki sebepler, saklama süreleri
 
-Son güncelleme: 2026-11-16
+Son güncelleme: 2026-11-17

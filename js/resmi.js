@@ -1,6 +1,6 @@
 // MEB resmî formları: MTSK Yönetmeliği eklerinin düzeninde, kayıtlardan dolan ya da boş (elle doldurmak için) çıktılar.
 // Kaynak: mevzuat.gov.tr 7.5.18408 ekleri (EK-1, EK-3, EK-4, EK-5, EK-8, EK-10, EK-12) ve md.17/3, md.42 içerik şartları.
-import { S, kaydet, gun, oturum, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, ek3Sinif, dersKonulari, gorunum, sb, sbSinav, gerekliDireksiyon, geceDersMi } from './veri.js?v=221';
+import { S, kaydet, gun, oturum, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, ek3Sinif, dersKonulari, gorunum, sb, sbSinav, gerekliDireksiyon, geceDersMi, aracSiniflari, egitimSinifi } from './veri.js?v=221';
 import { e, pencere, bildir, belgeYazdir, ik } from './ui.js?v=221';
 import { EK3, EK4, EK3_NOT, EK4_NOT, EK12 } from './formlar.js?v=221';
 
@@ -15,7 +15,7 @@ const kisaAd = () => String(S.kurs.resmiAd || S.kurs.ad || '').replace(/^özel\s
 const kurum = k => { const s = subeOf(k), kisa = kisaAd(); return { kisa, ad: 'Özel ' + kisa + ' Motorlu Taşıt Sürücüleri Kursu', il: S.kurs.sehir || '', ilce: s.semt || '', mudur: s.mudur || S.kurs.yetkili || '', adres: S.kurs.adres || '', kurucu: S.kurs.kurucu || '', kod: s.kurumKodu || '' }; };
 const adSoyad = ad => { const p = String(ad || '').trim().split(/\s+/); return [p.slice(0, -1).join(' ') || p[0] || '', p.length > 1 ? p[p.length - 1] : '']; };
 const aracSinifi = a => a ? (SINIFLAR[a.sinif] ? SINIFLAR[a.sinif].ad : a.sinif) : '';
-const ogrenciAraci = k => { const d = S.dersler.filter(x => x.kursiyer === k.id && x.arac).sort((a, b) => b.tarih.localeCompare(a.tarih))[0]; return arac(d && d.arac) || S.araclar.find(a => a.egitmen === k.egitmen && a.sinif === k.sinif) || S.araclar.find(a => a.egitmen === k.egitmen) || null; };
+const ogrenciAraci = k => { const d = S.dersler.filter(x => x.kursiyer === k.id && x.arac).sort((a, b) => b.tarih.localeCompare(a.tarih))[0]; return arac(d && d.arac) || S.araclar.find(a => a.egitmen === k.egitmen && aracSiniflari(k.sinif).includes(a.sinif)) || S.araclar.find(a => a.egitmen === k.egitmen) || null; };
 
 // Ortak görünüm: yalnız .rf içinde geçerli; ekranda ve yazdırmada aynı
 const STIL = `<style>.rf{font-family:Arial,"Helvetica Neue",sans-serif;font-size:11.5px;line-height:1.4;color:#000}.rf *{box-sizing:border-box}
@@ -41,7 +41,7 @@ function ek1(k, bos) {
   return sar(`<div class="rf-ek">(Değişik:RG-5/12/2015-29553) EK-1</div>
     <div class="rf-ust"><div style="width:3.5cm"></div><div class="rf-bas" style="flex:1">ÖZEL MOTORLU TAŞIT SÜRÜCÜLERİ KURSUNA<br>MÜRACAAT FORMU</div><div class="rf-foto">${!bos && k.foto ? `<img src="${k.foto}" alt="">` : 'FOTOĞRAF'}</div></div>
     <p class="rf-orta" style="font-weight:700;margin-top:10px">${bos ? '……………………………………….. KURSU' : e(BUYUK(K.ad))} MÜDÜRLÜĞÜNE</p>
-    <p style="text-indent:40px">( ${bos ? '….' : e(S0 ? S0.ad.split(' ')[0] : k.sinif)} ) sınıfı sürücü sertifikası almak istiyorum. Gerekli işlemin yapılmasını arz ederim.</p>
+    <p style="text-indent:40px">${!bos && egitimSinifi(k.sinif) ? '100 ceza puanı eğitimine katılmak istiyorum' : `( ${bos ? '….' : e(S0 ? S0.ad.split(' ')[0] : k.sinif)} ) sınıfı${!bos && k.sinif === 'B-EN' ? ' (engelli)' : ''} sürücü sertifikası almak istiyorum`}. Gerekli işlemin yapılmasını arz ederim.</p>
     <div class="rf-imzalar"><div></div><div style="text-align:left">Adı ve Soyadı: ${e(ad)}<br>İmza:<br>${tarih}</div></div>
     <table style="margin-top:8px"><tr><td rowspan="14" class="rf-dikey"><span>SÜRÜCÜ SERTİFİKASI TALEP EDENİN</span></td><td colspan="6" class="rf-ara">NÜFUS CÜZDANINDAKİ KAYITLARA GÖRE</td></tr>
       ${c2(['Adı Soyadı', ad], ['T.C. Kimlik No', k.tc])}${c2(['Baba Adı', n.baba], ['Doğum Yeri', n.dogumYeri])}${c2(['Ana Adı', n.ana], ['Doğum Tarihi (Gün/Ay/Yıl)', trTarih(k.dogumTarihi)])}

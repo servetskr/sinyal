@@ -12,7 +12,7 @@ import { tarih, tarihUzun } from '../ui.js?v=221';
 import { SAHNELER, sahneSvg, TEHLIKE_SURE, tehlikePuanla } from '../tehlike.js?v=221';
 import { guzergahlar } from '../guzergah.js?v=221';
 import { altAc, UNITE_AD } from './ogrveri.js?v=221';
-import { hakDurum } from '../ogrenci.js?v=221';
+import { hakDurum, debriyajVar } from '../ogrenci.js?v=221';
 import { esc, oi, sayfaBas, geri, bolum, gorsel, dugme, ikonKutu, satir, liste, cip, serit, not, bos, sekmeler, radyo, sik, cevapKutu, stilEkle } from './ui.js?v=221';
 
 /* ---------- geç yüklenen modüller (ikaz, motor, direksiyon + resmî formlar) ---------- */
@@ -286,7 +286,7 @@ function kalkisBagla(kap) {
 }
 
 function etkilesimEkran(ctx, sekme, donus) {
-  const acik = ETK.filter(x => ogrOzellik(x[3]));
+  const acik = ETK.filter(x => ogrOzellik(x[3]) && (x[0] !== 'kalkis' || debriyajVar(ctx.k)));  // debriyaj: otomatik ve engelli (B-O, B-EN) sınıfında yok
   const sec = acik.find(x => x[0] === sekme) || acik.find(x => x[0] === 'motor') || acik[0];
   const ger = donGeri(ctx.k, donus);
   if (!sec) return { html: ger + sayfaBas('Araç etkileşimleri', 'Aracını tanı.') + bos('arac', 'Bu çalışma kursunda kapalı', 'Kursun açtığında burada olacak.') };
@@ -429,7 +429,7 @@ function pufAyrinti(k, id) {
   const ek = b.ek, don = '|direksiyon:puf:' + id;
   const ekDg = [
     b.no === 'I' && ogrOzellik('ikaz') ? dugme('Gösterge paneli ve ikaz lambaları', { 'data-ox-alt': 'etkilesim:ikaz' + don }, { tur: 'ikincil', genis: true, ikon: 'ikaz', ok: true }) : '',
-    [3, 18, 4, 5].includes(b.no) && !motorSinif(k.sinif) && ogrOzellik('motor') ? dugme('Debriyajı dene: stop ettirmeden kalkış', { 'data-ox-alt': 'etkilesim:kalkis' + don }, { tur: 'ikincil', genis: true, ikon: 'arac', ok: true }) : '',
+    [3, 18, 4, 5].includes(b.no) && debriyajVar(k) && ogrOzellik('motor') ? dugme('Debriyajı dene: stop ettirmeden kalkış', { 'data-ox-alt': 'etkilesim:kalkis' + don }, { tur: 'ikincil', genis: true, ikon: 'arac', ok: true }) : '',
   ].join('');
   return geri('Püf noktaları', { 'data-ox-alt': 'direksiyon:puf' })
     + sayfaBas(esc(b.ad), ek.ozet ? esc(ek.ozet) : '')

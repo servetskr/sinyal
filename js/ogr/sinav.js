@@ -6,7 +6,8 @@
 import { S, kaydet, SINIFLAR, fark, gonderimEkle, ogrOzellik, tamAd, sinavHakSiniri } from '../veri.js?v=221';
 import { bildir, tarih, goreli, gunKisa } from '../ui.js?v=221';
 import * as HZ from '../hazirlik.js?v=221';
-import { hakDurum } from '../ogrenci.js?v=221';
+import { hakDurum, tekrarUcret, esinavVar, TEORIKSIZ_METIN } from '../ogrenci.js?v=221';
+import { gerekliDireksiyon, egitimSinifi } from '../veri.js?v=221';
 import { KONULAR } from '../konular.js?v=221';
 import { soruKonu, SORU_KONU } from '../soruKonu.js?v=221';
 import { UNITE_AD, konular, altAc, altKapat, altEkran as altSimdi } from './ogrveri.js?v=221';
@@ -264,6 +265,7 @@ function devamEt(ctx) {
   return sorulariYukle().then(() => { test.duraklat = false; test.sonTik = Date.now(); gorunum = 'soru'; gecis = true; altAc(test.mod === 'deneme' ? 'deneme' : 'araclar'); ctx.yenile(true); }).catch(() => bildir('Sorular yüklenemedi; internet bağlantını kontrol edip tekrar dene', 'uyari'));
 }
 function hazirlikHtml(k) {
+  if (!esinavVar(k)) return '';  // e-sınavı olmayan öğrenci (fark, muaf, 100 ceza): e-Sınav hazırlık puanı gösterilmez
   const esGecti = k.esinav && k.esinav.sonuc === 'Geçti';
   if (esGecti) return bolum('Sınava hazırlığın') + liste([satir({ ikon: 'dogru', ton: 'yesil', baslik: 'e-Sınavı geçtin', alt: `${k.esinav.puan ? k.esinav.puan + ' puan · ' : ''}İstersen çalışmaya devam edebilirsin.` })]);
   if (!ogrOzellik('hazirlik')) return '';
@@ -284,11 +286,12 @@ function konuBasariHtml(k) {
 }
 function sinavlarHtml(k) {
   // hak sınırı öğrenciye göre (md.15): e-Sınav 4; uygulama ilk 4, ikinci dört hak başlatıldıysa 8
-  const tu = S.kurs.tekrarUcret || {}, dir = !!SINIFLAR[k.sinif].direksiyon;
+  // tekrar sınav ücreti hak sırasına göre (veri.js uygulamaSinavUcreti / esinavUcreti); öğrencinin kendi masrafı, kurs ücretine dahil değil (liste not 5)
+  const dir = gerekliDireksiyon(k) > 0;
   const sonr = tur => (S.sinavlar || []).filter(s => s.tur === tur && (s.kursiyerler || []).includes(k.id) && fark(s.tarih) >= 0 && !(s.sonuc || {})[k.id]).sort((a, b) => a.tarih.localeCompare(b.tarih))[0];
-  const kartH = (tur, x, sn, getir, ucret, bilgi, ek = '') => {
+  const kartH = (tur, x, sn, getir, bilgi, ek = '') => {
     if (x && x.sonuc === 'Geçti') return kart(`<div class="ox-snv-sv-bas">${ikonKutu('dogru', 'yesil')}<span class="ox-satir-govde"><b>${tur}</b><small class="yesil">Geçtin${x.puan ? ' · ' + x.puan + ' puan' : ''}</small></span>${cip('Tamam', 'yesil')}</div>`, 'ox-snv-sv');
-    const veri = tur === 'e-Sınav' ? 'e-Sınav' : 'Direksiyon', hak = sinavHakSiniri(k, veri), kalan = Math.max(0, hak - ((x && x.hak) || 0));
+    const veri = tur === 'e-Sınav' ? 'e-Sınav' : 'Direksiyon', hak = sinavHakSiniri(k, veri), kalan = Math.max(0, hak - ((x && x.hak) || 0)), tk = tekrarUcret(k, veri, x);
     // hak doldu (kurs henüz karar vermedi): "Bekliyor", randevu, tekrar ücreti ve "yanına al" satırları yerine durum metni
     const hd = hakDurum(k);
     if (hd && hd.tur === veri && !sn) return kart(`<div class="ox-snv-sv-bas">${ikonKutu('uyari', 'turuncu')}<span class="ox-satir-govde"><b>${tur}</b><small>Sınav hakkın kalmadı</small></span>${cip('Hak doldu', 'turuncu')}</div>
@@ -296,11 +299,12 @@ function sinavlarHtml(k) {
       <div class="ox-snv-sv-dl"><div><span>Kalan sınav hakkın</span><b>${kalan} / ${hak}</b></div></div>`, 'ox-snv-sv');
     return kart(`<div class="ox-snv-sv-bas">${ikonKutu('takvim', sn ? 'mavi' : 'gri')}<span class="ox-satir-govde"><b>${tur}</b><small>${sn ? `${gunKisa(sn.tarih)} ${tarih(sn.tarih)} · ${esc(sn.saat)}` : 'Henüz tarih yok'}</small></span>${sn ? cip(esc(goreli(sn.tarih))) : cip('Bekliyor', 'gri')}</div>
       <p class="ox-snv-sv-yer">${sn && sn.yer ? `${oi('harita')}<span>${esc(sn.yer)}</span>` : `${oi('bilgi')}<span>${bilgi}</span>`}</p>
-      <div class="ox-snv-sv-dl"><div><span>Kalan sınav hakkın</span><b>${kalan} / ${hak}</b></div><div><span>Kalırsan tekrar sınav ücreti</span><b>${ucret ? tl(ucret) : '—'}</b></div></div>
+      <div class="ox-snv-sv-dl"><div><span>Kalan sınav hakkın</span><b>${kalan} / ${hak}</b></div><div><span>${tk.etiket} <small>${tk.not}</small></span><b>${tk.tutar ? tl(tk.tutar) : '—'}</b></div></div>
       <details class="ox-snv-sv-getir"${sn && fark(sn.tarih) <= 7 ? ' open' : ''}><summary><span>Sınav günü yanına al</span>${oi('asagi')}</summary><ul>${getir.map(g => `<li>${oi('tik')}<span>${esc(g)}</span></li>`).join('')}</ul></details>${ek}`, 'ox-snv-sv');
   };
-  return bolum('Sınavların') + kartH('e-Sınav', k.esinav, sonr('e-Sınav'), ['T.C. kimlik kartın (fotokopi geçmez)', 'e-Sınav ücreti dekontu', 'Sınavdan 30 dakika önce sınav merkezinde ol'], tu.esinav, 'Teorik derslerin bitince kurs e-Sınav randevunu alır.')
-    + (dir ? kartH('Uygulama sınavı', k.dsinav, sonr('Direksiyon'), ['T.C. kimlik kartın', 'Gözlük ya da lens kullanıyorsan yanında olsun', 'Sınavdan 30 dakika önce sınav yerinde ol'], tu.dsinav, 'Direksiyon derslerin bitince kurs sınav tarihini bildirir.',
+  if (egitimSinifi(k.sinif)) return bolum('Sınavların') + not('Bu eğitimin sınavı yok. Teorik derslerin tamamına katılınca eğitim belgen kurstan verilir.');
+  return bolum('Sınavların') + (esinavVar(k) ? kartH('e-Sınav', k.esinav, sonr('e-Sınav'), ['T.C. kimlik kartın (fotokopi geçmez)', 'e-Sınav ücreti dekontu', 'Sınavdan 30 dakika önce sınav merkezinde ol'], 'Teorik derslerin bitince kurs e-Sınav randevunu alır.') : not(TEORIKSIZ_METIN))
+    + (dir ? kartH('Uygulama sınavı', k.dsinav, sonr('Direksiyon'), ['T.C. kimlik kartın', 'Gözlük ya da lens kullanıyorsan yanında olsun', 'Sınavdan 30 dakika önce sınav yerinde ol'], 'Direksiyon derslerin bitince kurs sınav tarihini bildirir.',
       ogrOzellik('direksiyon') ? `<div class="ox-snv-sv-bag">${baglanti('Uygulama sınavına hazırlan', { 'data-ox-alt': 'direksiyon:|araclar' }, true)}</div>` : '') : '');
 }
 function araclarHtml(k) {

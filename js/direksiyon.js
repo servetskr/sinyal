@@ -2,7 +2,7 @@
 // gelir; öğrenci hangi davranışın sınavı bitirdiğini (kırmızı) ya da iki kez yapılınca bitirdiğini (sarı) görür. Geri park (EK-13),
 // L dönüşü (EK-19) ve dar alanda geri dönüş (EK-20) yönetmelikteki ölçülerle çizilip adım adım oynatılır.
 // Kural: sınav alanına konan kolaylaştırıcı işaretlere dayalı tarif verilmez (MTSK Yön. md.26/9); anlatım ayna, sinyal ve ölçüyle.
-import { S, kaydet, gun, motorSinif, ek3Sinif, SINIFLAR, ogrOzellik } from './veri.js?v=221';
+import { S, kaydet, gun, motorSinif, ek3Sinif, SINIFLAR, ogrOzellik, anaSinif } from './veri.js?v=221';
 import { e, ik, pencere, rozet, tarih } from './ui.js?v=221';
 import { EK3, EK4 } from './formlar.js?v=221';
 
@@ -35,7 +35,7 @@ function bolumler(k) {
   return f.map(([bol, bas, l], i) => {
     const no = bol === 'I' ? 'I' : bolumNo(bas), ek = motor ? {} : (EK[no] || {});
     const ad = ek.ad || bas.replace(/^\d+\.\s*/, '').replace(/\s*\(.*\)\s*$/, '').toLocaleLowerCase('tr').replace(/^./, c => c.toLocaleUpperCase('tr'));
-    if (/Sadece "B"/.test(bas) && !/^B(-O)?$/.test(k.sinif)) return null;
+    if (/Sadece "B"/.test(bas) && anaSinif(k.sinif) !== 'B') return null;  // B, B otomatik ve B Engelli
     if (/RÖMORKLU/.test(bas) && !romorkSinif) return null;
     if (!motor && /^8\./.test(bas) && romorkSinif) return null;
     return { id: 'b' + i, bol, bas, ad, l, ek, no };

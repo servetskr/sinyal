@@ -25,7 +25,7 @@
 //   tablo · bitenler · hatalar                                               bu dosya (tek liste ve "Ekranda doldur" yolu)
 // Kurs verisi yüklenmeden (giriş öncesi) gelen toplu-durum işlenmez, Yardımcı yeniden verir; harita-durum ise bekletilir (bekleyenleriIsle).
 // =====
-import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, eksikEvrak, sb, sbDers, sbSinav, oturum, cokSube, seciliSube, mebIsGunuGeri, kuralAyar } from './veri.js?v=221';
+import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, eksikEvrak, sb, sbDers, sbSinav, oturum, cokSube, seciliSube, mebIsGunuGeri, kuralAyar, egitimSinifi } from './veri.js?v=221';
 import { bildir, pencere, e, ik, isaret } from './ui.js?v=221';
 import * as GR from './gruplar.js?v=221';
 import * as MK from './mebkayit.js?v=221';
@@ -51,6 +51,7 @@ const grupAlanlari = k => { const g = GR.kursiyerGrubu(k); return g && GR.mebGru
 const personel = eg => (eg && (eg.calismaIzinNo ? String(eg.calismaIzinNo).replace(/\D/g, '') : eg.ad)) || '';
 // İstenen sertifika MEBBİS metniyle: "B SINIFI SERTİFİKA (Manuel)" / "B SINIFI SERTİFİKA (Otomatik)"
 // B Engelli ve 100 ceza puanı eğitiminin MEBBİS'teki sertifika adı doğrulanmadı: alan boş bırakılır, kurs elle seçer
+// (mebtoplu.js sertifikaMetni de bu iki sınıfta null döner; toplu kayıt işi bu kursiyerleri durdurur)
 const sertifikaMetni = k => { if (['B-EN', 'CEZA'].includes(k.sinif)) return null; const b = String(k.sinif || '').replace(/-O$/, ''), oto = /-O$/.test(k.sinif || ''); return b === 'B' ? `B SINIFI SERTİFİKA (${oto ? 'Otomatik' : 'Manuel'})` : `${b} SINIFI SERTİFİKA`; };
 
 // Son gün hesabı: panel işleri en acilden başlayarak sıralar
@@ -82,9 +83,9 @@ export function mebIsleri(hepsi) {
       ...grupAlanlari(k),
     ].filter(Boolean) });
   });
-  sbSinav(S.sinavlar).filter(s => s.tur === 'Direksiyon' && fark(s.tarih) >= (hepsi ? -14 : 0)).forEach(s => (s.kursiyerler || []).map(kursiyer).filter(Boolean).filter(k => (s.mebKisi || []).includes(k.id) ? hepsi : (!s.mebBildirim && fark(s.tarih) >= 0)).forEach(k => {
+  sbSinav(S.sinavlar).filter(s => s.tur === 'Direksiyon' && fark(s.tarih) >= (hepsi ? -14 : 0)).forEach(s => (s.kursiyerler || []).map(kursiyer).filter(Boolean).filter(k => !egitimSinifi(k.sinif)).filter(k => (s.mebKisi || []).includes(k.id) ? hepsi : (!s.mebBildirim && fark(s.tarih) >= 0)).forEach(k => {
     const d = S.dersler.filter(x => x.kursiyer === k.id && x.arac).sort((a, b) => b.tarih.localeCompare(a.tarih))[0], ar = arac(d && d.arac) || {}, eg = egitmen(k.egitmen) || {};
-    isler.push({ id: 'sinav-' + s.id + '-' + k.id, tur: 'sinav', ref: { sinav: s.id, kursiyer: k.id }, bitti: (s.mebKisi || []).includes(k.id), meta: { ad: tamAd(k), sinif: k.sinif, egitmen: k.egitmen, tarih: s.tarih, detay: `${tr(s.tarih)} ${s.saat || ''} · ${s.yer || ''}` }, son: isGunuGeri(s.tarih, sinavIsGunu()), neden: `Sınavdan ${sinavIsGunu()} iş günü önce`, baslik: `${tamAd(k)} · ${tr(s.tarih)} sınavı`, alanlar: [
+    isler.push({ id: 'sinav-' + s.id + '-' + k.id, tur: 'sinav', ref: { sinav: s.id, kursiyer: k.id }, bitti: (s.mebKisi || []).includes(k.id), meta: { ad: tamAd(k), sinif: k.sinif, egitmen: k.egitmen, tarih: s.tarih, detay: `${tr(s.tarih)} ${s.saat || ''} · ${s.yer || ''}` + (k.sinif === 'B-EN' ? ' · B Engelli: MEBBİS’te B olarak; rapor kodu ve kendi aracı modüle ayrıca tanımlanır' : '') }, son: isGunuGeri(s.tarih, sinavIsGunu()), neden: `Sınavdan ${sinavIsGunu()} iş günü önce`, baslik: `${tamAd(k)} · ${tr(s.tarih)} sınavı`, alanlar: [
       alan('Sınav Tarihi', tr(s.tarih), ['sinavtarihi', 'tarih']), alan(TC[0], k.tc, TC[1]), alan('Kursiyer', tamAd(k), ['kursiyer', 'adisoyadi']), alan('Araç Plakası', ar.plaka, ['plaka', 'aracplakasi', 'sinavaraci']), alan('Usta Öğretici', personel(eg), ['ustaogretici', 'ogretici']),
     ].filter(Boolean) });
   }));

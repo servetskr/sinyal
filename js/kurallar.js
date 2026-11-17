@@ -5,7 +5,7 @@
 // 'uyari', 'bilgi'. Dizinin üstünde ek alanlar: kural (kimlik), kursiyer (id), kursiyerler (birden çok kişiye ait oturum bulgusunda kimlik listesi, ör. Y04), kisa (öğrenci dosyasında ad olmadan başlık), yalnizDosya, eylem.
 // DOM yok; yalnız veri.js'e bağlı (Node'da denenebilir). Bugün: veri.js BUGUN / gun().
 // Yeni kurallar ilk sürümde yalnız "uyarı"dır; Eyüp Bey teyit edince engele çevrilebilir (belgeler/eksikler/eyup-sorular.md).
-import { S, gun, fark, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar } from './veri.js?v=221';
+import { S, gun, fark, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket } from './veri.js?v=221';
 
 /* ---------- yardımcılar (ui.js'teki biçimlerle aynı; ui.js DOM'a bağlı olduğu için burada kopyası) ---------- */
 const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
@@ -200,7 +200,8 @@ export function gunlukDersSorun(kid, t, DL = S.dersler) {
 export function dersKontrol(o) {
   const { k, eg, ar, tur, tarih: planGun, saat } = o, sorun = [], not = [], DL = o.taslak && o.taslak.length ? S.dersler.concat(o.taslak.map(x => ({ durum: 'Planlandı', ...x }))) : S.dersler;
   const planli = DL.filter(x => x.kursiyer === k.id && x.durum === 'Planlandı').length;
-  if (!ar && tur !== 'simulator') sorun.push(`Bu saatte boş ${SINIFLAR[k.sinif].ad} aracı yok.`);
+  // B Engelli kendi aracıyla (md.7/5): kurs aracı gerekmez; araç MEBBİS'te modüle tanımlı olmalı (araçsız ders uyarıyla serbest)
+  if (!ar && tur !== 'simulator') { if (k.sinif === 'B-EN' && k.kendiArac) not.push('Kendi aracıyla (md.7/5): araç modüle tanımlı olmalı.'); else sorun.push(`Bu saatte boş ${sinifEtiket(k.sinif, k)} aracı yok.`); }
   // Bütün sınıflar: e-sınavı geçtiği tarihten itibaren direksiyon dersleri 90 günü geçmeyecek şekilde planlanır (MTSK md.15/1-b; ek dersler de bu süreyi aşamaz, md.7/7)
   { const sure = kuralAyar('direksiyonSure'); if (k.esinav && k.esinav.sonuc === 'Geçti' && k.esinav.tarih && !k.esinav.muaf && fark(k.esinav.tarih) <= 0 && (tarihOku(planGun) - tarihOku(k.esinav.tarih)) / 864e5 > sure) not.push(`e-Sınavı ${tarih(k.esinav.tarih)} tarihinde geçti; direksiyon dersleri e-sınavdan sonra ${sure} gün içinde tamamlanacak şekilde planlanır (MTSK md.15/1-b). Bu ders süreyi aşıyor.`); }
   { const gg = geceGerekli(k), gy = DL.filter(x => x.kursiyer === k.id && x.durum !== 'Gelmedi' && x.durum !== 'İptal' && geceDersMi(x)).length, gc = geceDersMi({ tarih: planGun, saat });

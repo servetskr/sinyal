@@ -4,7 +4,7 @@
 // Eski portal.js'ten taşınanlar: kursiyer listesi ve araSuz (yeniden çizmeden arama), egOgrAc (ayrıntı penceresi), deneme.js denemeAc (pencere).
 // Deneme mantığı (form, 5 mavi / 2 sarı / 1 kırmızı kuralı, kayıt) deneme.js'teki dışa aktarımlardan gelir; burada kopyası yok.
 import { S, SINIFLAR, kursiyer, tamAd, sonrakiDers, risk, fark, tarihOku, dersSirasi } from '../veri.js?v=221';
-import { gerekliDireksiyon } from '../veri.js?v=221';
+import { gerekliDireksiyon, sinifEtiket } from '../veri.js?v=221';
 import { gunAdi, ayAdi } from '../ui.js?v=221';
 import { sonucHesap, denemeFormu, denemeKaydet, denemeAraci, denemeBolumAd, denemeFormAd, sonDeneme } from '../deneme.js?v=221';
 import { geceSayim } from './bugun.js?v=221';
@@ -30,7 +30,9 @@ const araMetin = t => String(t || '').toLocaleLowerCase('tr');
 const gunAy = t => { const d = tarihOku(t); return d.getDate() + ' ' + ayAdi(d.getMonth(), true); };
 const gunEtiket = t => { const f = fark(t); return f === 0 ? 'Bugün' : f === 1 ? 'Yarın' : f > 1 && f < 7 ? gunAdi(t) : gunAy(t); };
 // "B · Manuel" → "B sınıfı · Manuel"
-const sinifYaz = k => { const S0 = SINIFLAR[k.sinif]; if (!S0) return esc(k.sinif || ''); const [kod, ...r] = S0.ad.split(' · '); return esc(`${kod} sınıfı${r.length ? ' · ' + r.join(' · ') : ''}`); };
+// direksiyon sayacı: zorunlu sayının üstü "ek ders" olarak ayrı (17/16 yerine 16/16 · 1 ek ders)
+const dirSay = k => { const g = gerekliDireksiyon(k), n = +k.direksiyon || 0; return { n: Math.min(n, g), g, ek: Math.max(0, n - g), yuzde: g ? Math.min(100, n / g * 100) : 0 }; };
+const sinifYaz = k => SINIFLAR[k.sinif] ? esc(sinifEtiket(k.sinif, k.id ? k : null)) : esc(k.sinif || '');
 const harf = k => esc(((k.ad || '?')[0] + ((k.soyad || '')[0] || '')).toLocaleUpperCase('tr'));
 const avatar = (k, cls = '') => `<span class="ox-uog-av ${cls}" aria-hidden="true">${k.foto ? `<img src="${esc(k.foto)}" alt="" decoding="async">` : harf(k)}</span>`;
 const riskli = k => { const r = risk(k); return r && r.puan >= 50 ? r : null; };
@@ -42,7 +44,7 @@ function ogrSatir(k) {
   const S0 = SINIFLAR[k.sinif] || {}, sd = sonrakiDers(k), r = riskli(k), sv = !sd && sinavi(k);
   const sonraki = sd ? `${gunEtiket(sd.tarih)} · ${esc(sd.saat)}` : sv ? `Sınav: ${gunEtiket(sv.tarih)} · ${esc(sv.saat)}` : k.asama === 'Direksiyon' ? 'Planlı ders yok' : esc(k.asama) + ' aşamasında';
   const dir = gerekliDireksiyon(k) && (k.direksiyon > 0 || k.asama === 'Direksiyon' || k.asama === 'Sınav');
-  const ilerleme = dir ? `<span class="ox-uog-il">${serit(k.direksiyon / gerekliDireksiyon(k) * 100, k.direksiyon >= gerekliDireksiyon(k) ? 'yesil' : 'mavi', true)}<small>${k.direksiyon} ders tamamlandı</small></span>` : '';
+  const ilerleme = dir ? `<span class="ox-uog-il">${serit(dirSay(k).yuzde, k.direksiyon >= gerekliDireksiyon(k) ? 'yesil' : 'mavi', true)}<small>${dirSay(k).n} ders tamamlandı${dirSay(k).ek ? ` · ${dirSay(k).ek} ek ders` : ''}</small></span>` : '';
   const ad = esc(tamAd(k));
   return `<button type="button" class="ox-satir ox-uog-ogr" data-ogr-ac="${esc(k.id)}" data-uog-m="${esc(araMetin(tamAd(k) + ' ' + (k.tel || '') + ' ' + (k.no || '')))}" aria-label="${ad}${r ? ', ek çalışma öneriliyor' : ''}: ayrıntılar">
     ${avatar(k)}<span class="ox-uog-ogr-g"><b>${ad}${r ? '<i class="ox-uog-nokta"></i>' : ''}</b><small>${sonraki}</small>${ilerleme}${r ? '<em class="ox-uog-risk">Ek çalışma öneriliyor</em>' : ''}</span><span class="ox-chev">${oi('sag')}</span></button>`;
@@ -94,12 +96,12 @@ function ayrintiHtml(ctx, k) {
   const S0 = SINIFLAR[k.sinif] || {}, sd = sonrakiDers(k), r = riskli(k), dd = sonDeneme(k), sv = sinavi(k), tel = String(k.tel || '').replace(/[^\d+]/g, '');
   const sdGun = sd && (fark(sd.tarih) <= 1 ? gunEtiket(sd.tarih) : gunAy(sd.tarih)), gc = geceSayim(k);
   const meta = [
-    gerekliDireksiyon(k) ? `<span>${oi('tik')}${k.direksiyon} ders tamamlandı</span>` : '',
+    gerekliDireksiyon(k) ? `<span>${oi('tik')}${dirSay(k).n} ders tamamlandı${dirSay(k).ek ? ` · ${dirSay(k).ek} ek ders` : ''}</span>` : '',
     gc ? `<span class="ox-uog-gece${gc.y >= gc.g ? ' tamam' : ''}"><svg class="ox-i" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>Gece dersi ${Math.min(gc.y, gc.g)}/${gc.g}</span>` : '',
     sd ? `<span>${oi('saat')}Sonraki ders: ${esc(sd.saat)} (${sdGun})</span>` : sv ? `<span>${oi('bayrak')}Sınav: ${gunAy(sv.tarih)} · ${esc(sv.saat)}</span>` : `<span>${oi('saat')}Planlı ders yok</span>`,
   ].filter(Boolean).join('');
   const profil = `<div class="ox-kart ox-uog-profil"><div class="ox-uog-profil-ust">${avatar(k, 'buyuk')}<div class="ox-uog-profil-ad"><h1>${esc(tamAd(k))}</h1><p>${sinifYaz(k)}</p>${cip(esc(k.asama) + ' aşamasında', k.asama === 'Sınav' ? 'mor' : k.asama === 'Direksiyon' ? 'mavi' : 'gri')}</div></div>
-    ${ayrac()}<div class="ox-uog-meta">${meta}</div>${gerekliDireksiyon(k) ? `<div class="ox-uog-profil-il">${serit(k.direksiyon / gerekliDireksiyon(k) * 100, k.direksiyon >= gerekliDireksiyon(k) ? 'yesil' : 'mavi')}<small>${k.direksiyon}/${gerekliDireksiyon(k)}</small></div>` : ''}</div>`;
+    ${ayrac()}<div class="ox-uog-meta">${meta}</div>${gerekliDireksiyon(k) ? `<div class="ox-uog-profil-il">${serit(dirSay(k).yuzde, k.direksiyon >= gerekliDireksiyon(k) ? 'yesil' : 'mavi')}<small>${dirSay(k).n}/${dirSay(k).g}${dirSay(k).ek ? ` · ek ${dirSay(k).ek}` : ''}</small></div>` : ''}</div>`;
   const uyari = r ? `<div class="ox-uog-uyari" role="note">${oi('uyari')}<div><b>Ek çalışma öneriliyor</b>${r.nedenler.length ? `<p>${esc(r.nedenler.slice(0, 2).join(' · '))}</p>` : ''}</div></div>` : '';
   const ddSatir = dd
     ? satir({ sol: ikonKutu(dd.sonuc === 'Geçti' ? 'dogru' : 'uyari', dd.sonuc === 'Geçti' ? 'yesil' : 'turuncu'), baslik: dd.sonuc === 'Geçti' ? 'Sınavı geçerdi' : 'Sınavdan kalırdı', alt: esc(`${gunAy(dd.tarih)}${dd.neden ? ' · ' + dd.neden : ''}${dd.hatalar && dd.hatalar.length ? ' · ' + dd.hatalar.length + ' madde' : ''}`), attrs: { 'data-ux-alt': 'sonuc:' + k.id } })
@@ -112,7 +114,7 @@ function ayrintiHtml(ctx, k) {
   const gosterilen = gecmisHepsi ? gecmis : gecmis.slice(0, 4);
   const gSatir = d => {
     const ok = d.durum === 'Yapıldı', no = ok ? dersSirasi(d, k) : null, bek = ok && d.imza && d.imza.kursiyerBekliyor, eks = ok && !d.imza;
-    return satir({ sol: ikonKutu(ok ? 'tik' : 'yanlis', ok ? 'yesil' : 'kirmizi'), baslik: `${esc(gunAy(d.tarih))} · ${esc(d.saat)}`, alt: esc([no ? no + '. ders' : 'Ders yapılmadı', ok && d.sure != null ? d.sure + ' dk' : ''].filter(Boolean).join(' · ')),
+    return satir({ sol: ikonKutu(ok ? 'tik' : 'yanlis', ok ? 'yesil' : 'kirmizi'), baslik: `${esc(gunAy(d.tarih))} · ${esc(d.saat)}`, alt: esc([no ? (gerekliDireksiyon(k) && no > gerekliDireksiyon(k) ? `Ek ders ${no - gerekliDireksiyon(k)}` : no + '. ders') : 'Ders yapılmadı', ok && d.sure != null ? d.sure + ' dk' : ''].filter(Boolean).join(' · ')),
       sag: !ok ? cip('Gelmedi', 'kirmizi') : bek ? cip('İmza bekliyor', 'turuncu') : eks ? cip('İmza eksik', 'turuncu') : `<span class="ox-uog-imzali" role="img" aria-label="İmzalı">${oi('imza')}</span>`, ok: false });
   };
   const gecmisH = bolum('Ders geçmişi', gecmis.length > 4 ? baglanti(gecmisHepsi ? 'Daha az' : 'Tümü', { 'data-uog-gecmis': true }) : gecmis.length ? `${gecmis.length} ders` : '')

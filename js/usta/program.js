@@ -4,7 +4,7 @@
 // ve öğrenci ayrıntısı (data-ogr-ac) yönlendiricide (usta/ekran.js) çalışır.
 // İndirme: P.progIndir(eg) portal.js'in kendi (eski ekrandaki) dönemine bakar; yeni ekranın gösterdiği dönemi (seçili hafta ya da ay)
 // indirmek için data-prog-indir burada yakalanır ve aynı sütunlarla o dönemin dosyası üretilir.
-import { S, gun, fark, tarihOku, iso, kursiyer, arac, tamAd, SINIFLAR, kapaliGun } from '../veri.js?v=221';
+import { S, gun, fark, tarihOku, iso, kursiyer, arac, tamAd, SINIFLAR, kapaliGun, sinifEtiket } from '../veri.js?v=221';
 import { gunAdi, gunKisa, ayAdi, tarihUzun, bildir, csvIndir } from '../ui.js?v=221';
 import * as TK from '../takvim.js?v=221';
 import { esc, oi, sayfaBas, kart, bos, dugme, cip, sekmeler, stilEkle } from '../ogr/ui.js?v=221';
@@ -20,7 +20,8 @@ const ayGunleri = t => { const d = tarihOku(t), n = new Date(d.getFullYear(), d.
 const gunAy = t => { const d = tarihOku(t); return d.getDate() + ' ' + ayAdi(d.getMonth(), true); };
 const gunBaslik = t => { const f = fark(t); return (f === 1 ? 'Yarın' : f === -1 ? 'Dün' : gunAdi(t)) + ', ' + gunAy(t); };
 const aralikMetin = g => { const a = tarihOku(g[0]), b = tarihOku(g[g.length - 1]); return a.getMonth() === b.getMonth() ? `${a.getDate()}–${b.getDate()} ${ayAdi(b.getMonth(), true)}` : `${gunAy(g[0])} – ${gunAy(g[g.length - 1])}`; };
-const sinifAd = k => { const S0 = k && SINIFLAR[k.sinif]; return S0 ? S0.ad.replace(' · ', ' ') : ''; };
+// "B Manuel", "B Engelli", "100 ceza puanı eğitimi" (veri.js sinifEtiket, kısa yazım)
+const sinifAd = k => k && SINIFLAR[k.sinif] ? sinifEtiket(k.sinif, k).replace(' sınıfı · ', ' ').replace(/ sınıfı$/, '') : '';
 
 // gösterilen dönemin günleri: pazartesiden başlayan hafta ya da takvim ayı
 const donem = () => mod === 'ay' ? ayGunleri(secili) : TK.haftaGunleri(secili);
@@ -54,7 +55,7 @@ function dersKart(d, ctx) {
   const ad = esc(tamAd(k)), acik = d.durum === 'Planlandı', gecmis = d.tarih < gun(0), sira = ctx.siradaki && ctx.siradaki.id === d.id && !d.bas;
   const imzaBek = d.durum === 'Yapıldı' && d.imza && d.imza.kursiyerBekliyor;
   let [dt, ton] = ctx.P.progDurum(d); if (dt === 'Kapanmadı') dt = 'Kaydı eksik';  // Bugün ekranıyla aynı ad
-  const alt = `${esc(sinifAd(k))} · ${ctx.P.dersNo(d, k)}. ders${d.durum === 'İptal' ? '' : geceCip(d)}`;
+  const alt = `${esc(sinifAd(k))} · ${esc(ctx.P.dersEtiket(d, k))}${d.durum === 'İptal' ? '' : geceCip(d)}`;
   const sag = sira ? '<span class="ox-upr-sira">Sıradaki</span>'
     : imzaBek ? cip('İmza bekliyor', 'turuncu')
     : acik && !gecmis && !d.bas ? ''
@@ -157,7 +158,7 @@ async function indir(ctx) {
   if (!l.length) return bildir(mod === 'ay' ? 'Bu ay ders yok' : 'Bu hafta ders yok', 'uyari');
   const sat = [['Tarih', 'Gün', 'Saat', 'Öğrenci', 'Sınıf', 'Ders no', 'Araç', 'Durum', 'Süre (dk)'], ...l.map(d => {
     const k = kursiyer(d.kursiyer), a = d.arac && arac(d.arac);
-    return [d.tarih.split('-').reverse().join('.'), gunKisa(d.tarih), d.saat, k ? tamAd(k) : '', k ? SINIFLAR[k.sinif].ad : '', k ? ctx.P.dersNo(d, k) : '', a ? a.plaka : '', ctx.P.progDurum(d)[0], d.sure != null ? d.sure : ''];
+    return [d.tarih.split('-').reverse().join('.'), gunKisa(d.tarih), d.saat, k ? tamAd(k) : '', k ? sinifEtiket(k.sinif, k) : '', k ? (/^Ek/.test(ctx.P.dersEtiket(d, k)) ? ctx.P.dersEtiket(d, k) : ctx.P.dersNo(d, k)) : '', a ? a.plaka : d.kendiArac || (k && k.kendiArac) ? 'Kendi aracı' : '', ctx.P.progDurum(d)[0], d.sure != null ? d.sure : ''];
   })];
   const ad = 'ders-programi-' + gunler[0] + '_' + gunler[gunler.length - 1];
   const metin = mod === 'ay' ? `${ayAdi(tarihOku(secili).getMonth(), true)} ${tarihOku(secili).getFullYear()}` : aralikMetin(gunler);
