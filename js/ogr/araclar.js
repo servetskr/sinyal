@@ -7,17 +7,17 @@
 // Alt ekrandan başka bir alt ekrana gidip dönüş: 'etkilesim:kalkis|direksiyon:puf:b5' (ilk | sonrası geri bağlantısının gideceği yer;
 // dönüş yeri kendi dönüşünü taşıyabilir: 'etkilesim:ikaz|direksiyon:puf:b5|araclar'). Gelinen yer: modül (trafik, motor…), 'araclar', 'direksiyon…'.
 // Kök ekranlarda ':' şart (ekran.js yönlendiricisi 'ad:' ya da 'ad' bekler): 'tehlike:|trafik', 'direksiyon:|araclar'.
-import { S, kaydet, gun, fark, SINIFLAR, ogrOzellik, motorSinif } from '../veri.js?v=221';
-import { tarih, tarihUzun } from '../ui.js?v=221';
-import { SAHNELER, sahneSvg, TEHLIKE_SURE, tehlikePuanla } from '../tehlike.js?v=221';
-import { guzergahlar } from '../guzergah.js?v=221';
-import { altAc, UNITE_AD } from './ogrveri.js?v=221';
-import { hakDurum, debriyajVar } from '../ogrenci.js?v=221';
-import { esc, oi, sayfaBas, geri, bolum, gorsel, dugme, ikonKutu, satir, liste, cip, serit, not, bos, sekmeler, radyo, sik, cevapKutu, stilEkle } from './ui.js?v=221';
+import { S, kaydet, gun, fark, SINIFLAR, ogrOzellik, motorSinif } from '../veri.js?v=222';
+import { tarih, tarihUzun } from '../ui.js?v=222';
+import { SAHNELER, sahneSvg, TEHLIKE_SURE, tehlikePuanla } from '../tehlike.js?v=222';
+import { guzergahlar } from '../guzergah.js?v=222';
+import { altAc, UNITE_AD } from './ogrveri.js?v=222';
+import { hakDurum, debriyajVar } from '../ogrenci.js?v=222';
+import { esc, oi, sayfaBas, geri, bolum, gorsel, dugme, ikonKutu, satir, liste, cip, serit, not, bos, sekmeler, radyo, sik, cevapKutu, stilEkle } from './ui.js?v=222';
 
 /* ---------- geç yüklenen modüller (ikaz, motor, direksiyon + resmî formlar) ---------- */
 const MOD = {}, SOZ = {};
-const KAYNAK = { ikaz: () => import('../ikaz.js?v=221'), motor: () => import('../motor.js?v=221'), dir: () => import('../direksiyon.js?v=221') };
+const KAYNAK = { ikaz: () => import('../ikaz.js?v=222'), motor: () => import('../motor.js?v=222'), dir: () => import('../direksiyon.js?v=222') };
 const yukle = ad => MOD[ad] ? Promise.resolve(MOD[ad]) : (SOZ[ad] = SOZ[ad] || KAYNAK[ad]().then(m => (MOD[ad] = m)).catch(x => { SOZ[ad] = null; throw x; }));
 // ön yükleme yalnız öğrencinin kendi telefonunda (yeni tasarım açıkken); personel oturumunda bu dosyalar indirilmez
 if (typeof window !== 'undefined') setTimeout(() => { if (document.body.classList.contains('ox-modu')) Object.keys(KAYNAK).forEach(a => yukle(a).catch(() => { })); }, 1500);

@@ -1,12 +1,12 @@
 // Ödeme sekmesi (yeni tasarım): kalan borç, sıradaki taksit, ödeme planı; taksit ayrıntısı (makbuz, ödeme yolu),
 // peşinat ve ek ücretler, makbuzlar ve hesap dökümü. Eski js/ogrenci.js odemelerHtml/dokumTablo/hesapDokumu işlevlerinin yerini alır.
 // "Nasıl öderim?" düğmesi taksit ayrıntısını açar: eski portal.js odemeYap() penceresindeki IBAN, ödeme kodu ve dekont gönderme orada, yeni düzende.
-import { S, SINIFLAR, tarihOku, fark, gun, tamAd, odenen, kalanBorc, ekToplam, ibanlar, ibanBicim, odemeKodu } from '../veri.js?v=221';
-import { ayAdi } from '../ui.js?v=221';
-import { kursaYaz } from '../ozellik.js?v=221';
-import { ekTur } from '../veri.js?v=221';
-import { kursOzet, kursEkleri, kursUcretiAdi, odemeNotu, RESMI_METIN } from '../ogrenci.js?v=221';
-import { esc, oi, tl, sayfaBas, geri, bolum, kart, dugme, liste, satir, ikonKutu, cip, serit, not, bos, stilEkle } from './ui.js?v=221';
+import { S, SINIFLAR, tarihOku, fark, gun, tamAd, odenen, kalanBorc, ekToplam, ibanlar, ibanBicim, odemeKodu } from '../veri.js?v=222';
+import { ayAdi } from '../ui.js?v=222';
+import { kursaYaz } from '../ozellik.js?v=222';
+import { ekTur } from '../veri.js?v=222';
+import { kursOzet, kursEkleri, kursUcretiAdi, odemeNotu, RESMI_METIN } from '../ogrenci.js?v=222';
+import { esc, oi, tl, sayfaBas, geri, bolum, kart, dugme, liste, satir, ikonKutu, cip, serit, not, bos, stilEkle } from './ui.js?v=222';
 
 let gorunum = 'ana'; // 'ana' | 'diger' | 't:<taksit-i>'
 
