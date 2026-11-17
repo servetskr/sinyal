@@ -717,6 +717,168 @@ async function mvGeriListe(req, env, url, cevap) {
   for (const k of anahtar) { const v = await env.LINK.get(k); if (v) { try { liste.push(JSON.parse(v)); } catch (x) { } } }
   return cevap({ ok: true, liste: liste.sort((a, b) => String(b.z).localeCompare(String(a.z))), toplam: l.keys.length });
 }
+// ── Ortak derlem: platform sahibinin eklediği belgeler, belge durumları, duyurular, günlük takip (/mevzuat/ortak/*) ──
+// Sitenin statik derlemi (veri/mevzuat) yalnız yayınla değişir; mevzuat sık değiştiği için platform sahibi panelden yeni resmî belge ekler,
+// eskiyen belgeyi işaretler ve duyuru yazar. Bunlar yayın beklemeden bütün kurslarda (demo dâhil) görünür.
+// KV: mortak (belge listesi), mortak:<id>, mortak:hepsi (aramaya giren parçalar + vektörler), mortak:durum, mortak:duyuru, mortak:takip
+// Okuma herkese açık (resmî belge metinleri, kişisel veri yok; 2 dakika önbellekli); yazma yalnız sahip (sahipMi).
+const MO = 'mortak', MO_TUR = ['yonetmelik', 'kanun', 'yonerge', 'teblig', 'kilavuz', 'yazi', 'bilgilendirme', 'form', 'program'];
+const MO_DURUM = { degisti: 'Değişti', kalkti: 'Yürürlükten kalktı', taslak: 'Taslak / yürürlükte değil' };
+const moOnbellek = u => new Request('https://onbellek.mdsinyal.invalid/mortak/' + u);
+async function moOnbellekSil() { try { for (const u of ['ozet', 'hepsi']) await caches.default.delete(moOnbellek(u)); } catch (x) { } }
+async function moOku(env, ad, uret) {  // Cache API (2 dk) → KV
+  const k = moOnbellek(ad);
+  try { const r = await caches.default.match(k); if (r) return await r.text(); } catch (x) { }
+  const t = await uret();
+  try { await caches.default.put(k, new Response(t, { headers: { 'Cache-Control': 'max-age=120' } })); } catch (x) { }
+  return t;
+}
+async function mevzuatOrtak(req, env, url, yol, cevap) {
+  const GET = req.method === 'GET', POST = req.method === 'POST';
+  const acik = (t, ct = 'application/json') => new Response(t, { headers: { ...cevap.cors, 'Content-Type': ct, 'Cache-Control': 'public, max-age=120' } });
+  if (!env.LINK) return cevap({ ok: false, hata: 'Depo yok' }, 500);
+  if (yol === 'mevzuat/ortak' && GET) return acik(await moOku(env, 'ozet', async () => JSON.stringify({ ok: true, belgeler: await mvJson(env, MO, []), durum: await mvJson(env, MO + ':durum', {}), duyurular: await mvJson(env, MO + ':duyuru', []) })));
+  if (yol === 'mevzuat/ortak/hepsi' && GET) return acik(await moOku(env, 'hepsi', async () => (await env.LINK.get(MO + ':hepsi')) || mvHepsiBos()));
+  if (yol.startsWith('mevzuat/ortak/belge/') && GET) {
+    const id = yol.slice(20); if (!mvId(id)) return cevap({ ok: false, hata: 'Belge bulunamadı' }, 404);
+    const v = await mvJson(env, MO + ':' + id, null); if (!v) return cevap({ ok: false, hata: 'Belge bulunamadı' }, 404);
+    return acik(JSON.stringify({ ok: true, belge: v }));
+  }
+  if (!(await sahipMi(req, env))) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
+  if (yol === 'mevzuat/ortak/takip' && GET) return cevap({ ok: true, takip: await mvJson(env, MO + ':takip', {}) });
+  if (yol === 'mevzuat/ortak/takip-calistir' && POST) { await mvTakip(env, { hepsi: true }); return cevap({ ok: true, takip: await mvJson(env, MO + ':takip', {}) }); }
+  if (!POST) return cevap({ ok: false, hata: 'Bilinmeyen adres' }, 404);
+  if (yol === 'mevzuat/ortak/yukle') {
+    if (mvSinirAsti('oy', 20)) return cevap({ ok: false, hata: 'Çok sık yükleme yapıldı; bir dakika sonra tekrar deneyin' }, 429);
+    const q = url.searchParams, tur = MO_TUR.includes(q.get('tur')) ? q.get('tur') : 'yazi', kaynak = /^https:\/\/[^\s<>"]{4,300}$/.test(q.get('kaynak') || '') ? q.get('kaynak') : '';
+    const belge = await mvBelgeYukle(req, env, url, MO, { sinir: 'l:ortak', ek: { tur, kaynak, kurum: mvTemiz(q.get('kurum'), 80) } });
+    await moOnbellekSil(); return cevap({ ok: true, belge });
+  }
+  const b = await req.json().catch(() => null); if (!b) return cevap({ ok: false, hata: 'Gecersiz istek' }, 400);
+  if (yol === 'mevzuat/ortak/sil') {
+    const id = String(b.id || ''), dizin = await mvJson(env, MO, []);
+    if (!dizin.some(x => x.id === id)) return cevap({ ok: false, hata: 'Belge bulunamadı' }, 404);
+    const ham = await env.LINK.get(MO + ':hepsi'); if (ham) await env.LINK.put(MO + ':hepsi', mvHepsiSil(ham, id));
+    await env.LINK.put(MO, JSON.stringify(dizin.filter(x => x.id !== id))); await env.LINK.delete(MO + ':' + id);
+    await moOnbellekSil(); return cevap({ ok: true });
+  }
+  // belge durumu: { belge: 'mtsk' | <eklenen belge id>, durum: degisti|kalkti|taslak|'' (temizle), not, yerine }
+  if (yol === 'mevzuat/ortak/durum') {
+    const id = String(b.belge || ''); if (!/^[a-z0-9-]{2,30}$/.test(id)) return cevap({ ok: false, hata: 'Belge kimliği geçersiz' }, 400);
+    const d = await mvJson(env, MO + ':durum', {});
+    if (!b.durum) delete d[id];
+    else { if (!MO_DURUM[b.durum]) return cevap({ ok: false, hata: 'Durum geçersiz' }, 400); d[id] = { durum: b.durum, not: mvTemiz(b.not, 400), yerine: /^[a-z0-9-]{2,30}$/.test(b.yerine || '') ? b.yerine : '', tarih: new Date().toISOString().slice(0, 10) }; }
+    await env.LINK.put(MO + ':durum', JSON.stringify(d)); await moOnbellekSil(); return cevap({ ok: true, durum: d });
+  }
+  // duyuru: { id? (düzenle), baslik, metin, bag?, sil? }; en yeni 30 duyuru tutulur
+  if (yol === 'mevzuat/ortak/duyuru') {
+    let l = await mvJson(env, MO + ':duyuru', []);
+    if (b.sil) l = l.filter(x => x.id !== b.sil);
+    else {
+      const baslik = mvTemiz(b.baslik, 120), metin = mvKes(String(b.metin || '').replace(/[<>]/g, ' '), 800), bag = /^https:\/\/[^\s<>"]{4,300}$/.test(b.bag || '') ? b.bag : '';
+      if (!baslik) return cevap({ ok: false, hata: 'Duyurunun başlığını yazın' }, 400);
+      const x = { id: b.id && l.some(y => y.id === b.id) ? b.id : Date.now().toString(36), baslik, metin, bag, tarih: new Date().toISOString().slice(0, 10) };
+      l = [x, ...l.filter(y => y.id !== x.id)].slice(0, 30);
+    }
+    await env.LINK.put(MO + ':duyuru', JSON.stringify(l)); await moOnbellekSil(); return cevap({ ok: true, duyurular: l });
+  }
+  return cevap({ ok: false, hata: 'Bilinmeyen adres' }, 404);
+}
+// Günlük takip (cron): derlemin kaynak adresleri (site: veri/mevzuat/kaynaklar.json) değişmiş mi (ETag / Last-Modified / boyut) ve
+// Resmî Gazete fihristinde ilgili başlık var mı. Ücretsiz planda çağrı başına 50 alt istek: her gün adreslerin yarısı denetlenir.
+// Değişiklik ve yeni başlık KV mortak:takip'e yazılır (1 yazma); SAHIP_EPOSTA kuruluysa sahibe e-posta gider.
+const RG_ANAHTAR = ['motorlu taşıt sürücüleri', 'karayolları trafik', 'özel öğretim kurumları', 'sürücü', 'harçlar kanunu', 'değerli kağıt', 'trafik', 'millî eğitim bakanlığı özel'];
+// windows-1254 (Resmî Gazete fihristi): Türkçe harfler dışında Latin-1 ile aynı
+const W1254 = { 0xD0: 'Ğ', 0xDD: 'İ', 0xDE: 'Ş', 0xF0: 'ğ', 0xFD: 'ı', 0xFE: 'ş' };
+const w1254 = u => { let o = ''; for (let i = 0; i < u.length; i++) { const c = u[i]; o += W1254[c] || String.fromCharCode(c); } return o; };
+async function mvTakip(env, { hepsi = false, simdi = new Date() } = {}) {
+  if (!env.LINK) return null;
+  const t = await mvJson(env, MO + ':takip', {}), kay = t.kaynak || {}, gun = simdi.toISOString().slice(0, 10), yeni = [];
+  let liste = [];
+  try { const r = await fetch('https://mdsinyal.com/veri/mevzuat/kaynaklar.json', { cf: { cacheTtl: 3600 } }); if (r.ok) liste = (await r.json()).kaynaklar || []; } catch (x) { }
+  const gunNo = Math.floor(simdi.getTime() / 864e5), secili = liste.filter((x, i) => hepsi ? i < 40 : i % 2 === gunNo % 2).slice(0, 40);
+  for (const k of secili) {
+    let iz = null;
+    try {
+      let r = await fetch(k.adres, { method: 'HEAD', redirect: 'follow', signal: AbortSignal.timeout(8000) });
+      if (r.status === 405 || r.status === 403) { r = await fetch(k.adres, { redirect: 'follow', signal: AbortSignal.timeout(8000) }); try { r.body && r.body.cancel(); } catch (x) { } }
+      iz = r.ok ? { e: r.headers.get('etag') || '', l: r.headers.get('last-modified') || '', b: r.headers.get('content-length') || '' } : { hata: r.status };
+    } catch (x) { iz = { hata: 'ulasilamadi' }; }
+    const once = kay[k.id] || null;
+    const ozel = x => x && !x.hata ? (x.e || '') + '|' + (x.l || '') + '|' + (x.b || '') : '';
+    const degisti = once && once.iz && ozel(once.iz) && ozel(iz) && ozel(iz) !== ozel(once.iz);
+    kay[k.id] = { ad: k.ad || k.id, adres: k.adres, iz, son: gun, ...(once && once.degisti ? { degisti: once.degisti } : {}) };
+    if (degisti) { kay[k.id].degisti = gun; yeni.push({ tur: 'kaynak', id: k.id, ad: k.ad || k.id, adres: k.adres }); }
+    else if (iz && iz.hata && !(once && once.iz && once.iz.hata)) yeni.push({ tur: 'erisilemedi', id: k.id, ad: k.ad || k.id, adres: k.adres, hata: iz.hata });
+  }
+  // Resmî Gazete: bugünün fihristi (ana sayı ve 2 mükerrer)
+  const rg = t.rg || [];
+  const y = gun.slice(0, 4), a = gun.slice(5, 7), g = gun.slice(8, 10);
+  for (const ek of ['', 'M1', 'M2']) {
+    try {
+      const r = await fetch(`https://www.resmigazete.gov.tr/eskiler/${y}/${a}/${y}${a}${g}${ek}.htm`, { signal: AbortSignal.timeout(8000) });
+      if (!r.ok || !/html/i.test(r.headers.get('content-type') || '')) break;
+      const metin = w1254(new Uint8Array(await r.arrayBuffer()));
+      for (const m of metin.matchAll(/<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi)) {
+        const baslik = m[2].replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim().replace(/^[–—-]+\s*/, '');
+        if (!baslik || /ilânları|ilanları|döviz kurları/i.test(baslik)) continue;
+        const kb = baslik.toLocaleLowerCase('tr-TR'), es = RG_ANAHTAR.filter(w => kb.includes(w)); if (!es.length) continue;
+        const adres = /^https?:/.test(m[1]) ? m[1] : `https://www.resmigazete.gov.tr/eskiler/${y}/${a}/${m[1]}`;
+        if (!rg.some(x => x.adres === adres)) { const x = { tarih: gun, baslik: baslik.slice(0, 200), adres, anahtar: es }; rg.unshift(x); yeni.push({ tur: 'rg', ...x }); }
+      }
+    } catch (x) { break; }
+  }
+  const sonuc = { son: new Date().toISOString(), kaynak: kay, rg: rg.slice(0, 60), yeni: [...yeni, ...(t.yeni || [])].slice(0, 60) };
+  await env.LINK.put(MO + ':takip', JSON.stringify(sonuc));
+  const S = typeof epSaglayici === 'function' ? epSaglayici(env) : null;
+  if (yeni.length && S && env.SAHIP_EPOSTA) {
+    const satir = yeni.map(x => x.tur === 'rg' ? `Resmî Gazete (${x.tarih}): ${x.baslik} — ${x.adres}` : x.tur === 'kaynak' ? `Kaynak değişti: ${x.ad} — ${x.adres}` : `Kaynağa ulaşılamadı (${x.hata}): ${x.ad} — ${x.adres}`);
+    try { await S.gonder({ kime: [env.SAHIP_EPOSTA], konu: 'mdSinyal mevzuat takibi · ' + yeni.length + ' yeni bildirim', metin: 'Bugünkü mevzuat takibi:\n\n' + satir.join('\n') + '\n\nAyrıntı ve belge ekleme: mdSinyal Yönetim › Destek › Mevzuat' }); } catch (x) { console.warn(JSON.stringify({ tur: 'uyari', konu: 'takip e-postası' })); }
+  }
+  return sonuc;
+}
+// Belge yükleme (kurs yazısı ya da platformun ortak derleme eklediği belge): metni çıkarır, parçalar, gömer, özetler, KV'ye yazar (3 yazma)
+// on: KV öneki (mbelge:<kurs> ya da mortak); sinir: dakikalık özet sınırı anahtarı; ek: { tur, kaynak, kurum } (ortak belge bilgileri)
+async function mvBelgeYukle(req, env, url, on, { sinir, ek = {} }) {
+  const ct = String(req.headers.get('Content-Type') || '').split(';')[0].trim().toLowerCase(), tur = MV_TUR[ct];
+  if (!tur) throw new MvHata('Bu dosya türü desteklenmiyor. PDF, Word (DOCX), fotoğraf (JPEG/PNG) yükleyin ya da metni yapıştırın', 415);
+  if (+req.headers.get('Content-Length') > MV.dosya) throw new MvHata('Dosya en çok 10 MB olabilir', 413);
+  const dizin = await mvJson(env, on, []);
+  if (dizin.length >= MV.belge) throw new MvHata('En çok ' + MV.belge + ' belge saklanabilir; önce eski belgeleri silin', 409);
+  const buf = await req.arrayBuffer();
+  if (!buf.byteLength) throw new MvHata('Dosya boş', 400);
+  if (buf.byteLength > MV.dosya) throw new MvHata('Dosya en çok 10 MB olabilir', 413);
+  const q = url.searchParams, tarih = /^\d{4}-\d{2}-\d{2}$/.test(q.get('tarih') || '') ? q.get('tarih') : '', sayi = mvTemiz(q.get('sayi'), 80);
+  let metin = '';
+  if (tur === 'metin') metin = new TextDecoder().decode(buf);
+  else if (tur === 'resim') {
+    if (buf.byteLength > MV.resim) throw new MvHata('Fotoğraf çok büyük; daha yakından ve tek sayfa çekin ya da metni yapıştırın', 413);
+    if (!env.LLM_KEY) throw new MvHata('Fotoğraf için yapay zekâ bağlı değil; metni yapıştırın', 503, { kurulu: false });
+    metin = await mvLlm(env, [{ role: 'user', content: [{ type: 'text', text: MV_RESIM_ISTEM }, { type: 'image_url', image_url: { url: 'data:' + ct + ';base64,' + mvB64(new Uint8Array(buf)) } }] }], 3000);
+    if (/^BOS\.?$/i.test(metin)) metin = '';
+  } else {
+    if (!env.AI || !env.AI.toMarkdown) throw new MvHata('Belge okuma servisi bağlı değil; metni yapıştırın', 503);
+    let r; try { r = (await env.AI.toMarkdown([{ name: 'belge.' + tur, blob: new Blob([buf], { type: ct }) }]))[0]; } catch (x) { r = null; console.warn(JSON.stringify({ tur: 'uyari', konu: 'toMarkdown', hata: String((x && x.message) || x).slice(0, 160) })); }
+    metin = r && r.format !== 'error' ? mvMdTemizle(r.data) : '';
+  }
+  metin = metin.replace(/\u0000/g, '').trim();
+  if (metin.replace(/[^0-9A-Za-zÇĞİÖŞÜçğıöşü]/g, '').length < 20) throw new MvHata('Bu belgenin metni okunamadı (taranmış olabilir); metni yapıştırın', 422);
+  metin = metin.slice(0, MV.metin);
+  const ad = mvTemiz(q.get('ad'), 150) || mvTemiz((metin.split('\n').find(s => s.trim()) || '').replace(/^#+\s*/, ''), 100);
+  const parcalar = mvParcala(metin);
+  const bayt = await mvGom(env, parcalar.map(t => MEVZUAT_GOM.onekBelge + ad + '\n' + t));
+  let ozet = '';
+  if (env.LLM_KEY && !mvSinirAsti(sinir, 10)) { try { ozet = await mvOzetle(env, ad, metin); } catch (x) { ozet = ''; } }
+  const id = Date.now().toString(36) + [...crypto.getRandomValues(new Uint8Array(4))].map(x => (x % 36).toString(36)).join('');
+  const belge = { id, ad, tarih, sayi, tur: ek.tur || 'yazi', ozet, parca: parcalar.length, eklenme: new Date().toISOString(), ...(ek.kaynak ? { kaynak: ek.kaynak } : {}), ...(ek.kurum ? { kurum: ek.kurum } : {}) };
+  const hepsi = mvHepsiEkle(await env.LINK.get(on + ':hepsi'), parcalar.map(t => ({ b: id, t })), bayt);
+  if (hepsi.length > 20e6) throw new MvHata('Belge arşivi doldu; önce eski belgeleri silin', 409);  // KV değeri en çok 25 MiB bayt; sınır karakter: Türkçe harf 2, '…' 3 bayt
+  await env.LINK.put(on + ':' + id, JSON.stringify({ ...belge, metin, parcalar }));
+  await env.LINK.put(on + ':hepsi', hepsi);
+  dizin.unshift(belge); await env.LINK.put(on, JSON.stringify(dizin));
+  return belge;
+}
+const mvJson = async (env, k, v0) => { try { const v = await env.LINK.get(k); return v ? JSON.parse(v) : v0; } catch (x) { return v0; } };
 async function mevzuat(req, env, url, yol, cevap, o) {
   try { return await mevzuatUc(req, env, url, yol, cevap, o); }
   catch (x) { if (x instanceof MvHata) return cevap({ ok: false, ...x.ek, hata: x.message }, x.s); console.error(JSON.stringify({ tur: 'hata', konu: 'mevzuat', yol, hata: String((x && x.message) || x).slice(0, 200) })); return cevap({ ok: false, hata: 'Beklenmeyen bir hata oldu; tekrar deneyin' }, 500); }
@@ -763,42 +925,7 @@ async function mevzuatUc(req, env, url, yol, cevap, { gercek, rol, kursId, origi
   if (yol === 'mevzuat/yukle') {
     if (!buro) return cevap({ ok: false, hata: 'Belgeyi yalnız kurs müdürü ve ön büro yükler' }, 403);
     if (mvSinirAsti('y:' + kursId, 20)) return cevap({ ok: false, hata: 'Çok sık yükleme yapıldı; bir dakika sonra tekrar deneyin' }, 429);
-    const ct = String(req.headers.get('Content-Type') || '').split(';')[0].trim().toLowerCase(), tur = MV_TUR[ct];
-    if (!tur) return cevap({ ok: false, hata: 'Bu dosya türü desteklenmiyor. PDF, Word (DOCX), fotoğraf (JPEG/PNG) yükleyin ya da metni yapıştırın' }, 415);
-    if (+req.headers.get('Content-Length') > MV.dosya) return cevap({ ok: false, hata: 'Dosya en çok 10 MB olabilir' }, 413);
-    const dizin = await mvDizin(env, kursId);
-    if (dizin.length >= MV.belge) return cevap({ ok: false, hata: 'En çok ' + MV.belge + ' belge saklanabilir; önce eski belgeleri silin' }, 409);
-    const buf = await req.arrayBuffer();
-    if (!buf.byteLength) return cevap({ ok: false, hata: 'Dosya boş' }, 400);
-    if (buf.byteLength > MV.dosya) return cevap({ ok: false, hata: 'Dosya en çok 10 MB olabilir' }, 413);
-    const q = url.searchParams, tarih = /^\d{4}-\d{2}-\d{2}$/.test(q.get('tarih') || '') ? q.get('tarih') : '', sayi = mvTemiz(q.get('sayi'), 80);
-    let metin = '';
-    if (tur === 'metin') metin = new TextDecoder().decode(buf);
-    else if (tur === 'resim') {
-      if (buf.byteLength > MV.resim) return cevap({ ok: false, hata: 'Fotoğraf çok büyük; daha yakından ve tek sayfa çekin ya da metni yapıştırın' }, 413);
-      if (!env.LLM_KEY) return cevap({ ok: false, kurulu: false, hata: 'Fotoğraf için yapay zekâ bağlı değil; metni yapıştırın' }, 503);
-      metin = await mvLlm(env, [{ role: 'user', content: [{ type: 'text', text: MV_RESIM_ISTEM }, { type: 'image_url', image_url: { url: 'data:' + ct + ';base64,' + mvB64(new Uint8Array(buf)) } }] }], 3000);
-      if (/^BOS\.?$/i.test(metin)) metin = '';
-    } else {
-      if (!env.AI || !env.AI.toMarkdown) return cevap({ ok: false, hata: 'Belge okuma servisi bağlı değil; metni yapıştırın' }, 503);
-      let r; try { r = (await env.AI.toMarkdown([{ name: 'belge.' + tur, blob: new Blob([buf], { type: ct }) }]))[0]; } catch (x) { r = null; console.warn(JSON.stringify({ tur: 'uyari', konu: 'toMarkdown', hata: String((x && x.message) || x).slice(0, 160) })); }
-      metin = r && r.format !== 'error' ? mvMdTemizle(r.data) : '';
-    }
-    metin = metin.replace(/\u0000/g, '').trim();
-    if (metin.replace(/[^0-9A-Za-zÇĞİÖŞÜçğıöşü]/g, '').length < 20) return cevap({ ok: false, hata: 'Bu belgenin metni okunamadı (taranmış olabilir); metni yapıştırın' }, 422);
-    metin = metin.slice(0, MV.metin);
-    const ad = mvTemiz(q.get('ad'), 150) || mvTemiz((metin.split('\n').find(s => s.trim()) || '').replace(/^#+\s*/, ''), 100);
-    const parcalar = mvParcala(metin);
-    const bayt = await mvGom(env, parcalar.map(t => MEVZUAT_GOM.onekBelge + ad + '\n' + t));
-    let ozet = '';
-    if (env.LLM_KEY && !mvSinirAsti('l:' + kursId, 10)) { try { ozet = await mvOzetle(env, ad, metin); } catch (x) { ozet = ''; } }
-    const id = Date.now().toString(36) + [...crypto.getRandomValues(new Uint8Array(4))].map(x => (x % 36).toString(36)).join('');
-    const belge = { id, ad, tarih, sayi, tur: 'yazi', ozet, parca: parcalar.length, eklenme: new Date().toISOString() };
-    const hepsi = mvHepsiEkle(await env.LINK.get(on + ':hepsi'), parcalar.map(t => ({ b: id, t })), bayt);
-    if (hepsi.length > 20e6) return cevap({ ok: false, hata: 'Belge arşivi doldu; önce eski belgeleri silin' }, 409);  // KV değeri en çok 25 MiB bayt; sınır karakter: Türkçe harf 2, '…' 3 bayt
-    await env.LINK.put(on + ':' + id, JSON.stringify({ ...belge, metin, parcalar }));
-    await env.LINK.put(on + ':hepsi', hepsi);
-    dizin.unshift(belge); await env.LINK.put(on, JSON.stringify(dizin));
+    const belge = await mvBelgeYukle(req, env, url, on, { sinir: 'l:' + kursId });
     return cevap({ ok: true, belge });
   }
   const b = await req.json().catch(() => null);
@@ -877,6 +1004,8 @@ async function onizleme(req, url) {
 }
 
 export default {
+  // günlük mevzuat takibi (wrangler.toml [triggers] crons)
+  async scheduled(olay, env, ctx) { ctx.waitUntil(mvTakip(env).catch(x => console.error(JSON.stringify({ tur: 'hata', konu: 'mevzuat takip', hata: String((x && x.message) || x).slice(0, 200) })))); },
   async fetch(req, env) {
     const url = new URL(req.url), origin = req.headers.get('Origin') || '';
     if (url.hostname === 'mdsinyal.com' && req.method === 'GET' && /^\/[dihDIH]\/[A-Za-z0-9_-]/.test(url.pathname)) return onizleme(req, url);
@@ -895,6 +1024,8 @@ export default {
     if (yol === 'eposta' || yol.startsWith('eposta/')) return eposta(req, env, url, yol, cevap);
     const G = 'https://graph.facebook.com/v25.0/' + env.PHONE_ID;
     // Gerçek kurs isteği: Firebase oturumu + kurs kimliği (yoksa demo yolu)
+    // ortak derlem eklemeleri: okuma herkese açık, yazma platform sahibi (kurs üyeliği aranmaz)
+    if (yol === 'mevzuat/ortak' || yol.startsWith('mevzuat/ortak/')) { try { return await mevzuatOrtak(req, env, url, yol, cevap); } catch (x) { if (x instanceof MvHata) return cevap({ ok: false, ...x.ek, hata: x.message }, x.s); console.error(JSON.stringify({ tur: 'hata', konu: 'mevzuat ortak', hata: String((x && x.message) || x).slice(0, 200) })); return cevap({ ok: false, hata: 'Beklenmeyen bir hata oldu; tekrar deneyin' }, 500); } }
     // asistan geri bildirim listesi (platform sahibi; kurs üyeliği aranmaz)
     if (yol === 'mevzuat/geri' && req.method === 'GET') { try { return await mvGeriListe(req, env, url, cevap); } catch (x) { return cevap({ ok: false, hata: 'Okunamadı' }, 500); } }
     const gercek = !!req.headers.get('Authorization') && yol !== 'yedek';

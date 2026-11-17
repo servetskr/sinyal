@@ -2,11 +2,11 @@
    Arama motoru js/mevzuat-ara.js: ortak derlem (veri/mevzuat) + kursa gelen yazılar (worker /mevzuat/*).
    Anlam araması için sorgu vektörü worker'dan gelir (/mevzuat/gom); ulaşılamazsa yalnız kelimeyle aranır.
    Yerel denemede (localhost) worker'a istek gitmez; yerel worker için localStorage 'sinyal-mevzuat-api' = 'http://127.0.0.1:8787'. */
-import { S, oturum, bulutKanca } from './veri.js?v=223';
-import { e, ik, rozet, bos, pencere, kapatPencere, bildir, ekranNotu, isaret, tamTarih, ilerleme } from './ui.js?v=223';
-import { WORKER } from './bulut.js?v=223';
-import { motor, yukle, yuklendi, base64Int8, kokler, alinti, FILTRELER, ETIKET_RE, etiketCoz, etiketBul, resmiDegil, kisaCevapSec, cevapNormalle, cevapDuzMetin } from './mevzuat-ara.js?v=223';
-import { kavramYukle, asistanAra, asistanKaynak, asistanSoru } from './mevzuat-anla.js?v=223';
+import { S, oturum, bulutKanca } from './veri.js?v=224';
+import { e, ik, rozet, bos, pencere, kapatPencere, bildir, ekranNotu, isaret, tamTarih, ilerleme } from './ui.js?v=224';
+import { WORKER } from './bulut.js?v=224';
+import { motor, yukle, yuklendi, base64Int8, kokler, alinti, FILTRELER, ETIKET_RE, etiketCoz, etiketBul, resmiDegil, kisaCevapSec, cevapNormalle, cevapDuzMetin } from './mevzuat-ara.js?v=224';
+import { kavramYukle, asistanAra, asistanKaynak, asistanSoru } from './mevzuat-anla.js?v=224';
 
 const TUR_AD = { yonetmelik: 'Yönetmelik', kanun: 'Kanun', yonerge: 'Yönerge', teblig: 'Tebliğ', kilavuz: 'Kılavuz', program: 'Ders programı', yazi: 'MEB yazısı', form: 'Form',
   'rehber-resmi': 'Denetim rehberi', bilgilendirme: 'Resmî bilgilendirme', rehber: 'mdSinyal rehberi (resmî metin değil)', sss: 'mdSinyal sık sorulanlar (resmî metin değil)' };
@@ -108,11 +108,37 @@ async function kursKumesi() {
 }
 const kursYenile = async () => { durum.kursHepsi = null; motor.kursSil(); durum.son = null; await kursListesi(true); };
 
+/* ---------- platformun ortak eklemeleri: yeni belgeler, belge durumları, duyurular (worker /mevzuat/ortak, herkese açık) ---------- */
+async function ortakEkYukle() {
+  try {
+    const j = await api('/mevzuat/ortak', { sure: 8000 });
+    durum.ortak = { belgeler: j.belgeler || [], durum: j.durum || {}, duyurular: j.duyurular || [] };
+    motor.durumKur(durum.ortak.durum);
+    if (durum.ortak.belgeler.length) { const h = await api('/mevzuat/ortak/hepsi', { sure: 20000 }); motor.ekKur(h, durum.ortak.belgeler); }
+  } catch (x) { durum.ortak = durum.ortak || { belgeler: [], durum: {}, duyurular: [], hata: true }; }
+}
+// duyurular: en yeni 3'ü gösterilir; görülmeyenler "yeni" sayılır (bu cihazda son görülen duyuru)
+const GORDU = 'sinyal-mevzuat-duyuru';
+const sonGorulen = () => { try { return localStorage.getItem(GORDU) || ''; } catch (x) { return ''; } };
+function duyurularHtml() {
+  const l = (durum.ortak && durum.ortak.duyurular) || []; if (!l.length) return '';
+  const gor = sonGorulen(), yeni = l.filter(x => !gor || x.id > gor).length;
+  try { localStorage.setItem(GORDU, l[0].id); } catch (x) { }
+  return `<section class="mz-duyurular" aria-label="Mevzuat duyuruları"><div class="mz-duyuru-bas">${isaret('bilgi', 20)}<b>Güncel değişiklikler</b>${yeni ? rozet(yeni + ' yeni', 'sari') : ''}</div>
+    ${l.slice(0, 3).map(x => `<article class="mz-duyuru"><small>${e(tarihYaz(x.tarih))}</small><b>${e(x.baslik)}</b>${x.metin ? `<p>${e(x.metin)}</p>` : ''}${x.bag ? `<a class="dg-baglanti" href="${e(x.bag)}" target="_blank" rel="noopener">Resmî metni aç</a>` : ''}</article>`).join('')}
+  </section>`;
+}
+
 /* ---------- yardımcılar ---------- */
 const hashQ = () => { const h = location.hash.split('?')[1] || ''; try { return new URLSearchParams(h).get('q') || ''; } catch (x) { return ''; } };
 const hashYaz = q => { const h = '#/mevzuat' + (q ? '?q=' + encodeURIComponent(q) : ''); if (location.hash !== h) try { history.replaceState(null, '', h); } catch (x) { } };
 const vurguHtml = (a) => (a.bastaKesik ? '… ' : '') + a.parcalar.map(p => p.m ? `<mark>${e(p.t)}</mark>` : e(p.t)).join('') + (a.sondaKesik ? ' …' : '');
-const etiket = s => `${s.belge.kisa || s.belge.ad || 'Belge'}${s.parca.m ? ' ' + s.parca.m : ''}`;
+// yapay zekâya giden etiket: platformun "değişti/kalktı" işareti etikete yazılır ki cevap eski hükmü güncelmiş gibi aktarmasın
+const DURUM_AD = { degisti: 'Değişti', kalkti: 'Yürürlükten kalktı', taslak: 'Taslak, yürürlükte değil' };
+const durumNotu = d => d ? DURUM_AD[d.durum] + (d.not ? ': ' + d.not : '') + (d.yerine ? ' (yerine: ' + belgeAdi(d.yerine) + ')' : '') : '';
+const belgeAdi = id => { for (const k of [motor.kume.ortak, motor.kume.ek]) { const b = k && k.belgeler.find(x => x.id === id); if (b) return b.kisa || b.ad || id; } return id; };
+const etiket = s => `${s.belge.kisa || s.belge.ad || 'Belge'}${s.parca.m ? ' ' + s.parca.m : ''}${s.kaynak === 'ek' ? ' (mdSinyal\'e ' + tarihYaz(String(s.belge.eklenme || '').slice(0, 10)) + ' eklendi' + (s.belge.tarih ? ', belge tarihi ' + tarihYaz(s.belge.tarih) : '') + ')' : ''}${s.durum ? ' [DİKKAT: ' + durumNotu(s.durum) + ']' : ''}`;
+const yeniMi = b => b && b.eklenme && Date.now() - Date.parse(b.eklenme) < 60 * 864e5;
 // mdSinyal'in açıklama metinleri (rehber, sık sorulanlar) rozetle ayrılır; resmî metin değildir
 const resmiRozet = b => !resmiDegil(b) ? '' : b.tur === 'sss' ? rozet('Sık sorulan', 'sari') : rozet('mdSinyal rehberi · resmî metin değil', 'sari');
 // Metindeki [MTSK md.7/3] gibi dayanak etiketleri: derlemde bulunanlar tıklanır, o maddeyi açar ([Uygulama: …] düz kalır)
@@ -208,6 +234,7 @@ async function ilkYukleme(k) {
     }
   }
   if (!durum.kh) durum.kh = await kavramYukle();
+  if (!durum.ortak) await ortakEkYukle();
   if (!k.isConnected) return;
   ortakBolumu(k); kursBolumu(k);
   if (durum.son && durum.son.q === durum.q && durum.son.filtre === durum.filtre) sonucCiz(k);
@@ -260,7 +287,7 @@ function sonucCiz(k) {
   const yer = k.querySelector('[data-mz-sonuc]'); if (!yer) return;
   if (!durum.q) {
     const son = sonSorular();
-    yer.innerHTML = `${son.length ? `<div class="mz-ornekler"><span>Son sorularınız:</span>${son.map(o => `<button type="button" class="mz-ornek mz-son" data-mz-ornek="${e(o)}">${e(o)}</button>`).join('')}</div>` : ''}<div class="mz-ornekler"><span>Örnek sorular:</span>${ORNEKLER.map(o => `<button type="button" class="mz-ornek" data-mz-ornek="${e(o)}">${e(o)}</button>`).join('')}</div>${konuHaritasi()}`;
+    yer.innerHTML = `${duyurularHtml()}${son.length ? `<div class="mz-ornekler"><span>Son sorularınız:</span>${son.map(o => `<button type="button" class="mz-ornek mz-son" data-mz-ornek="${e(o)}">${e(o)}</button>`).join('')}</div>` : ''}<div class="mz-ornekler"><span>Örnek sorular:</span>${ORNEKLER.map(o => `<button type="button" class="mz-ornek" data-mz-ornek="${e(o)}">${e(o)}</button>`).join('')}</div>${konuHaritasi()}`;
     return;
   }
   if (!durum.son) { yer.innerHTML = `<div class="kart mz-bekle">${isaret('bilgi', 22)}<span>Aranıyor…</span></div>`; return; }
@@ -277,9 +304,10 @@ function sonucCiz(k) {
     const sss = s.parca.sss;
     const a = alinti(sss ? sss.kisa : s.parca.t, kokSet, 300);
     return `<li class="mz-sonuc${resmiDegil(s.belge) ? ' mz-resmi-degil' : ''}" data-mz-kart="${i}">
-      <div class="mz-ust"><span class="mz-sira">${i + 1}</span><b class="mz-belge">${e(s.belge.kisa || s.belge.ad)}</b>${s.parca.m && !sss ? rozet(s.parca.m, 'mavi') : ''}${resmiRozet(s.belge)}${s.kaynak === 'kurs' ? rozet('Kursumuza gelen', 'uyari') : ''}<span class="mz-neden mz-n-${ns}" title="Neden bulundu">${e(nd)}</span></div>
+      <div class="mz-ust"><span class="mz-sira">${i + 1}</span><b class="mz-belge">${e(s.belge.kisa || s.belge.ad)}</b>${s.parca.m && !sss ? rozet(s.parca.m, 'mavi') : ''}${resmiRozet(s.belge)}${s.kaynak === 'kurs' ? rozet('Kursumuza gelen', 'uyari') : ''}${s.kaynak === 'ek' && yeniMi(s.belge) ? rozet('Yeni eklendi', 'yesil') : ''}${s.durum ? rozet(DURUM_AD[s.durum.durum], 'kirmizi') : ''}<span class="mz-neden mz-n-${ns}" title="Neden bulundu">${e(nd)}</span></div>
       ${sss ? `<h4>${e(s.parca.m)}</h4>` : s.parca.baslik ? `<h4>${e(s.parca.baslik)}</h4>` : ''}
       <p class="mz-alinti">${vurguHtml(a)}</p>
+      ${s.durum ? `<p class="mz-uyari-not mz-durum-not">${e(durumNotu(s.durum))}</p>` : ''}
       <div class="mz-alt">${kuralBag(s.parca.kural)}<button type="button" class="dg dg-cizgi dg-kucuk" data-mz-ac="${i}">${s.kaynak === 'kurs' ? 'Yazıyı aç' : sss ? 'Cevabın tamamı' : resmiDegil(s.belge) ? 'Bölümü aç' : s.parca.m ? 'Maddeyi aç' : 'Metni aç'}</button></div>
     </li>`;
   };
@@ -450,6 +478,7 @@ function kavramAc(k, id, inp) {
 /* ---------- madde penceresi ---------- */
 function sonucAc(s) {
   if (s.kaynak === 'kurs') return kursBelgesiAc(s.belge.id);
+  if (s.kaynak === 'ek') return ekBelgeAc(s.belge.id);
   maddeAc(s.sira, new Set(durum.son ? durum.son.r.vurguKok || durum.son.r.kokler : []));
 }
 function maddeAc(i, kokSet = new Set()) {
@@ -477,12 +506,30 @@ function maddeAc(i, kokSet = new Set()) {
   });
 }
 
+// Platformun eklediği ortak belge: özet, kaynak bağlantısı ve tam metin (herkese açık uç)
+async function ekBelgeAc(id) {
+  const d = pencere({ baslik: 'Belge', genis: true, icerik: `<div class="mz-bekle">${isaret('bilgi', 22)}<span>Belge açılıyor…</span></div>` });
+  { const g = d && d.querySelector('.pencere-govde'); if (g) g.setAttribute('data-resmi', ''); }
+  let b; try { b = (await api('/mevzuat/ortak/belge/' + encodeURIComponent(id))).belge; } catch (x) { if (d.isConnected) d.querySelector('.pencere-govde').innerHTML = bos('Belge açılamadı', 'Bağlantınızı kontrol edip yeniden deneyin.'); return; }
+  if (!d.isConnected || !b) return;
+  const oz = ozetBol(b.ozet), du = motor.durum[b.id];
+  d.querySelector('header h2').textContent = b.ad || 'Belge';
+  d.querySelector('.pencere-govde').innerHTML = `<div class="mz-yazi">
+    <p class="mz-meta">${[TUR_AD[b.tur] || '', b.kurum || '', b.tarih ? tarihYaz(b.tarih) : '', b.sayi ? 'Sayı ' + b.sayi : '', b.eklenme ? 'mdSinyal’e eklendi ' + tarihYaz(String(b.eklenme).slice(0, 10)) : ''].filter(Boolean).map(e).join(' · ')}</p>
+    ${du ? `<p class="mz-uyari-not">${e(durumNotu(du))}</p>` : ''}
+    ${oz.ozet ? `<h4 class="mz-ara-baslik">Özet</h4><div class="mz-ozet">${paragraf(oz.ozet)}</div>` : ''}
+    ${oz.yapilacak.length ? `<h4 class="mz-ara-baslik">Kursların yapması gerekenler</h4><ul class="mz-yapilacak">${oz.yapilacak.map(z => `<li>${e(z)}</li>`).join('')}</ul>` : ''}
+    ${b.kaynak && /^https:\/\//.test(b.kaynak) ? `<a class="dg-baglanti" href="${e(b.kaynak)}" target="_blank" rel="noopener">Resmî metni aç</a>` : ''}
+    <details class="daha mz-tam"><summary>Tam metin</summary><div class="mz-tam-metin">${e(b.metin || '')}</div></details>
+  </div>`;
+}
+
 /* ---------- ortak belgeler ---------- */
 function ortakBolumu(k) {
   const yer = k.querySelector('[data-mz-ortak]'); if (!yer || !motor.kume.ortak) return;
-  const l = motor.kume.ortak.belgeler;
+  const ek = (motor.kume.ek && motor.kume.ek.belgeler) || [], l = [...ek, ...motor.kume.ortak.belgeler];
   yer.innerHTML = `<div class="bolum-bas mz-bolum"><div><h2>Aranan belgeler</h2></div></div>
-    <div class="kart"><details class="daha mz-ortak"><summary>${l.length} belge: yönetmelikler, kanunlar, kılavuzlar, programlar ve mdSinyal rehberi</summary><ul class="liste">${l.map(b => `<li><div class="mz-ortak-satir"><b>${e(b.ad)}</b><small>${[TUR_AD[b.tur] || '', b.tarih ? tarihYaz(b.tarih) : '', b.guncel && b.guncel !== b.tarih ? 'değişiklik ' + tarihYaz(b.guncel) : ''].filter(Boolean).map(e).join(' · ')}</small>${resmiDegil(b) && b.notlar ? `<p class="mz-uyari-not">${e(b.notlar)}</p>` : ''}${b.ozet ? `<p>${e(b.ozet)}</p>` : ''}${b.kaynak && /^https:\/\//.test(b.kaynak) ? `<a class="dg-baglanti" href="${e(b.kaynak)}" target="_blank" rel="noopener">Resmî kaynak</a>` : ''}</div></li>`).join('')}</ul></details></div>`;
+    <div class="kart"><details class="daha mz-ortak"><summary>${l.length} belge: yönetmelikler, kanunlar, kılavuzlar, programlar ve mdSinyal rehberi${ek.length ? ` · ${ek.length} yeni eklenen` : ''}</summary><ul class="liste">${l.map(b => `<li><div class="mz-ortak-satir"><b>${e(b.ad)}${b.ek && yeniMi(b) ? ' ' + rozet('Yeni eklendi', 'yesil') : ''}${motor.durum[b.id] ? ' ' + rozet(DURUM_AD[motor.durum[b.id].durum], 'kirmizi') : ''}</b>${motor.durum[b.id] ? `<p class="mz-uyari-not">${e(durumNotu(motor.durum[b.id]))}</p>` : ''}<small>${[TUR_AD[b.tur] || '', b.tarih ? tarihYaz(b.tarih) : '', b.guncel && b.guncel !== b.tarih ? 'değişiklik ' + tarihYaz(b.guncel) : ''].filter(Boolean).map(e).join(' · ')}</small>${resmiDegil(b) && b.notlar ? `<p class="mz-uyari-not">${e(b.notlar)}</p>` : ''}${b.ozet ? `<p>${e(b.ozet)}</p>` : ''}${b.kaynak && /^https:\/\//.test(b.kaynak) ? `<a class="dg-baglanti" href="${e(b.kaynak)}" target="_blank" rel="noopener">Resmî kaynak</a>` : ''}</div></li>`).join('')}</ul></details></div>`;
 }
 
 /* ---------- kursa gelen yazılar ---------- */
