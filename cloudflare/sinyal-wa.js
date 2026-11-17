@@ -512,6 +512,7 @@ const MV_CEVAP_ISTEM_2 = 'Sürücü kursu personelinin (kurs müdürü, ön bür
   'Kurallar:\n' +
   '- Her alt soru için "sorular" dizisine kısa bir soru başlığı ve cevabını yaz; cevapta kaynaklardaki ilgili bütün sayı, süre, yaş, saat, gün, tutar, belge ve şartları birebir yaz. Kısaltmak için bilgi atlama.\n' +
   '- Sayıları kaynaktaki gibi yaz; yuvarlama, toplama, yüzde hesabı yapma.\n' +
+  '- Metne "kaynak 3" ya da "(kaynak 2 ve 5)" yazma; numaraları yalnız "kaynak" dizisine koy.\n' +
   '- Her cevabın "kaynak" dizisine dayandığın kaynak numaralarını yaz (yalnız verilen numaralar). Kaynağı olmayan cümle yazma; kaynaklarda olmayan bilgi ekleme, genel bilgini kullanma.\n' +
   '- Bir alt sorunun cevabı kaynaklarda yoksa o alt soruyu "yok": true ile işaretle ve "eksik" alanına neyin bulunamadığını ve bakılacak resmî yeri (il/ilçe millî eğitim müdürlüğü, ÖÖKGM, nüfus müdürlüğü, Resmî Gazete gibi) yaz. "Yok" demeden önce bütün kaynakları baştan sona oku.\n' +
   '- Soru bir işin nasıl yapılacağını soruyorsa "adimlar" alanına sırasıyla yaz (kim, ne zaman, hangi süre içinde); değilse boş bırak.\n' +
@@ -522,7 +523,7 @@ const MV_CEVAP_ISTEM_2 = 'Sürücü kursu personelinin (kurs müdürü, ön bür
   '- Sade Türkçe, kurs müdürüne konuşur gibi. En çok 6 alt soru, en çok 7 adım.\n' +
   'YALNIZ şu JSON nesnesini ver:\n' +
   '{"kisa":"...","sorular":[{"soru":"kısa alt soru","cevap":"cevap","kaynak":[1],"yok":false}],"adimlar":[{"metin":"...","kaynak":[2]}],"dikkat":"","eksik":"","bulunamadi":false}';
-const MV_ISTEM_SURUM = 1;  // istem 2 ölçümle karşılaştırılıp daha iyiyse 2 yapılır (olc-cevap.mjs --istem 2)
+const MV_ISTEM_SURUM = 2;  // 17 Kas ölçümü (set 3, 379 soru): beklenen rakam %60,1 → %63,3, dayanak %88,9 ≈ %88,6, uydurma rakam 0; istem 1 ölçüm ucunda seçilebilir
 // Cevap biçimi: LLM'in JSON'u ayrıştırılır ve doğrulanır; kaynak numarası 1..n dışında olanlar atılır, kaynağı kalmayan ayrıntı/adım gösterilmez.
 // JSON bozuksa düz metin { kisa: metin, duz: true } olur. cevap alanı eski istemciler için düz metin özetidir ([n] atıflarıyla).
 const MV_CB = { kisa: 600, metin: 400, dikkat: 500, eksik: 400, liste: 8, kaynak: 4, duz: 3000 };
@@ -530,6 +531,8 @@ const MV_YOK = 'Verilen kaynaklarda bu sorunun cevabı yok.';
 const mvKes = (s, n) => { s = String(s || '').replace(/[\u0000-\u0008\u000b-\u001f]/g, ' ').replace(/[ \t]+/g, ' ').trim(); if (s.length <= n) return s; const k = s.lastIndexOf(' ', n - 1); return s.slice(0, k > n * 0.6 ? k : n - 1).trimEnd() + '…'; };
 // metindeki [n] atıflarından aralık dışı olanlar silinir
 const mvAtifSuz = (s, n) => s.replace(/\s*\[(\d{1,3})\]/g, (x, k) => (+k >= 1 && +k <= n ? x : '')).trim();
+// metne yazıyla sızan kaynak anışları ("(kaynak 8 ve 10)", "kaynak 3'e göre") silinir; numaralar zaten kaynak dizisinde
+const mvKaynakAnisSil = t => String(t || '').replace(/\s*\(\s*kaynak(?:lar)?\s*\d{1,2}(?:\s*(?:,|ve|-)\s*\d{1,2})*\s*\)/gi, '').replace(/\s*\bkaynak(?:lar)?\s*\d{1,2}(?:\s*(?:,|ve)\s*\d{1,2})*(?:['’]?(?:e|a|ye|ya|de|da|te|ta)\s+göre)?/gi, '');
 function mvCevapCoz(ham, n) {
   const duz = () => { const t = mvKes(mvAtifSuz(String(ham || '').replace(/^```(?:json)?\s*|\s*```$/g, ''), n), MV_CB.duz) || MV_YOK; return { kisa: t, ayrinti: [], adimlar: [], dikkat: '', eksik: '', bulunamadi: false, duz: true, cevap: t }; };
   let j = null; const s = String(ham || ''), a = s.indexOf('{'), z = s.lastIndexOf('}');
@@ -540,14 +543,14 @@ function mvCevapCoz(ham, n) {
     if (!x || typeof x.metin !== 'string') return null;
     const ks = new Set((Array.isArray(x.kaynak) ? x.kaynak : [x.kaynak]).map(Number).filter(k => Number.isInteger(k) && k >= 1 && k <= n));
     // metne gömülü [n] atıfları kaynağa taşınır
-    const metin = mvKes(x.metin.replace(/\s*\[(\d{1,3})\]/g, (y, k) => { if (+k >= 1 && +k <= n) ks.add(+k); return ''; }), MV_CB.metin);
+    const metin = mvKes(mvKaynakAnisSil(x.metin).replace(/\s*\[(\d{1,3})\]/g, (y, k) => { if (+k >= 1 && +k <= n) ks.add(+k); return ''; }), MV_CB.metin);
     const soru = mvKes(typeof x.soru === 'string' ? x.soru.replace(/\s*\[(\d{1,3})\]/g, '') : '', 120);
     return metin && ks.size ? { metin, kaynak: [...ks].sort((p, q) => p - q).slice(0, MV_CB.kaynak), ...(soru ? { soru } : {}) } : null;
   }).filter(Boolean).slice(0, MV_CB.liste);
   // istem 2: "sorular" [{ soru, cevap, kaynak, yok }] → ayrıntı { soru, metin, kaynak } (cevabı olmayan alt soru ayrıntıya girmez; eksik alanında anlatılır)
   if (Array.isArray(j.sorular) && j.sorular.length) j.ayrinti = j.sorular.filter(x => x && !x.yok && typeof x.cevap === 'string').map(x => ({ metin: x.cevap, kaynak: x.kaynak, soru: typeof x.soru === 'string' ? x.soru : '' }));
   const bulunamadi = j.bulunamadi === true;
-  const o = { kisa: mvKes(mvAtifSuz(typeof j.kisa === 'string' ? j.kisa : '', n), MV_CB.kisa), ayrinti: bulunamadi ? [] : liste(j.ayrinti), adimlar: bulunamadi ? [] : liste(j.adimlar), dikkat: bulunamadi ? '' : mvKes(mvAtifSuz(typeof j.dikkat === 'string' ? j.dikkat : '', n), MV_CB.dikkat), eksik: mvKes(mvAtifSuz(typeof j.eksik === 'string' ? j.eksik : '', n), MV_CB.eksik), bulunamadi };
+  const o = { kisa: mvKes(mvAtifSuz(mvKaynakAnisSil(typeof j.kisa === 'string' ? j.kisa : ''), n), MV_CB.kisa), ayrinti: bulunamadi ? [] : liste(j.ayrinti), adimlar: bulunamadi ? [] : liste(j.adimlar), dikkat: bulunamadi ? '' : mvKes(mvAtifSuz(typeof j.dikkat === 'string' ? j.dikkat : '', n), MV_CB.dikkat), eksik: mvKes(mvAtifSuz(typeof j.eksik === 'string' ? j.eksik : '', n), MV_CB.eksik), bulunamadi };
   if (!o.kisa) { if (!bulunamadi && !o.ayrinti.length) return duz(); o.kisa = bulunamadi ? MV_YOK : ''; }
   const at = l => l.map(k => '[' + k + ']').join('');
   o.cevap = [o.kisa, o.ayrinti.map(x => '- ' + (x.soru ? x.soru + ': ' : '') + x.metin + ' ' + at(x.kaynak)).join('\n'), o.adimlar.length ? 'Yapılacaklar:\n' + o.adimlar.map((x, i) => (i + 1) + '. ' + x.metin + ' ' + at(x.kaynak)).join('\n') : '', o.dikkat ? 'Dikkat: ' + o.dikkat : '', o.eksik ? 'Kaynaklarda yok: ' + o.eksik : ''].filter(Boolean).join('\n\n');
@@ -646,7 +649,8 @@ const mvSoru = b => {
   if (soru.length > MV.soru) throw new MvHata('Soru en çok ' + MV.soru + ' karakter olabilir', 400);
   return soru;
 };
-async function mvCevapla(env, b, istem = 0) {
+// Cevap hazırlığı: doğrulama, istem, önbellek anahtarı; önbellekte varsa hazir dolu döner
+async function mvCevapHazirla(b, istem = 0) {
   const soru = mvSoru(b), k = Array.isArray(b.kaynaklar) ? b.kaynaklar : null;
   if (!k || !k.length) throw new MvHata('Kaynak yok', 400);
   if (k.length > MV.kaynak) throw new MvHata('En çok ' + MV.kaynak + ' kaynak gönderilebilir', 400);
@@ -655,13 +659,63 @@ async function mvCevapla(env, b, istem = 0) {
   // resmî olmayan kaynak (mdSinyal rehberi ve sık sorulanlar) istemciden resmi:false ile gelir; etiketi her durumda "mdSinyal Rehberi" ile başlar
   const mvEtiket = x => { const et = mvTemiz(x.etiket, 200); return x.resmi === false && !/^mdSinyal Rehberi/.test(et) ? 'mdSinyal Rehberi · ' + et : et; };
   const govde = 'Soru: ' + soru + '\n\nKaynaklar:\n' + k.map((x, i) => '[' + (i + 1) + '] ' + mvEtiket(x) + '\n' + x.t.trim()).join('\n\n');
-  const surum = istem === 1 || istem === 2 ? istem : MV_ISTEM_SURUM, sistem = surum === 2 ? MV_CEVAP_ISTEM_2 : MV_CEVAP_ISTEM;
+  const surum = istem === 1 || istem === 2 ? istem : MV_ISTEM_SURUM;
+  const h = { n: k.length, surum, mesajlar: [{ role: 'system', content: surum === 2 ? MV_CEVAP_ISTEM_2 : MV_CEVAP_ISTEM }, { role: 'user', content: govde }], enCok: surum === 2 ? 1800 : 1400, anahtar: null, hazir: null };
   // önbellek (Cache API, 7 gün): aynı istem + soru + kaynaklar → aynı cevap; ücretsiz, KV yazması yok, veri merkezi başına
-  let anahtar = null;
-  try { const h = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(surum + '\n' + govde))); anahtar = new Request('https://onbellek.mdsinyal.invalid/mv/cevap/' + [...h].map(x => x.toString(16).padStart(2, '0')).join('')); const r = await caches.default.match(anahtar); if (r) return { ...(await r.json()), onbellek: true }; } catch (x) { anahtar = null; }
-  const o = mvCevapCoz(await mvLlm(env, [{ role: 'system', content: sistem }, { role: 'user', content: govde }], surum === 2 ? 1800 : 1400, { json: true }), k.length);
-  if (anahtar && !o.duz) { try { await caches.default.put(anahtar, new Response(JSON.stringify(o), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=604800' } })); } catch (x) { } }
-  return o;
+  try { const d = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(surum + '\n' + govde))); h.anahtar = new Request('https://onbellek.mdsinyal.invalid/mv/cevap/' + [...d].map(x => x.toString(16).padStart(2, '0')).join('')); const r = await caches.default.match(h.anahtar); if (r) h.hazir = { ...(await r.json()), onbellek: true }; } catch (x) { h.anahtar = null; }
+  return h;
+}
+const mvCevapSakla = async (h, o) => { if (h.anahtar && !o.duz) { try { await caches.default.put(h.anahtar, new Response(JSON.stringify(o), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=604800' } })); } catch (x) { } } };
+async function mvCevapla(env, b, istem = 0) {
+  const h = await mvCevapHazirla(b, istem); if (h.hazir) return h.hazir;
+  const o = mvCevapCoz(await mvLlm(env, h.mesajlar, h.enCok, { json: true }), h.n);
+  await mvCevapSakla(h, o); return o;
+}
+// Akışlı dil modeli çağrısı (stream: true): her içerik parçası onParca'ya verilir, sonunda bütün metin döner
+async function mvLlmAkis(env, mesajlar, enCok, { json = false } = {}, onParca = () => { }) {
+  if (!env.LLM_KEY) throw new MvHata('Yapay zekâ henüz bağlı değil', 503, { kurulu: false });
+  const istek = rf => fetch(env.LLM_URL || MV_LLM_URL, { method: 'POST', headers: { Authorization: 'Bearer ' + env.LLM_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: env.LLM_MODEL || MV_LLM_MODEL, messages: mesajlar, reasoning_effort: 'none', temperature: 0.2, max_completion_tokens: enCok, stream: true, ...(rf ? { response_format: { type: 'json_object' } } : {}) }), signal: AbortSignal.timeout(55000) });
+  let r;
+  try { r = await istek(json); if (json && (r.status === 400 || r.status === 422)) r = await istek(false); }
+  catch (x) { console.warn(JSON.stringify({ tur: 'uyari', konu: 'yapay zekâ akış', hata: (x && x.name) || 'ag' })); throw new MvHata('Yapay zekâya ulaşılamadı; biraz sonra tekrar deneyin', 502); }
+  if (!r.ok || !r.body) { console.warn(JSON.stringify({ tur: 'uyari', konu: 'yapay zekâ akış', durum: r.status })); throw new MvHata(r.status === 429 ? 'Yapay zekâ şu an yoğun; bir dakika sonra tekrar deneyin' : 'Yapay zekâ şu an cevap vermiyor; biraz sonra tekrar deneyin', 502); }
+  const okur = r.body.pipeThrough(new TextDecoderStream()).getReader();
+  let tampon = '', tum = '';
+  for (;;) {
+    const { value, done } = await okur.read(); if (done) break;
+    tampon += value; let i;
+    while ((i = tampon.indexOf('\n')) >= 0) {
+      const satir = tampon.slice(0, i).trim(); tampon = tampon.slice(i + 1);
+      if (!satir.startsWith('data:')) continue;
+      const d = satir.slice(5).trim(); if (!d || d === '[DONE]') continue;
+      let j = null; try { j = JSON.parse(d); } catch (x) { continue; }
+      const c = j && j.choices && j.choices[0] && j.choices[0].delta && j.choices[0].delta.content;
+      if (typeof c === 'string' && c) { tum += c; await onParca(c); }
+    }
+  }
+  tum = tum.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+  if (!tum) throw new MvHata('Yapay zekâ boş cevap verdi; tekrar deneyin', 502);
+  return tum;
+}
+// Olay akışı cevabı (text/event-stream): yaz({ d }) parça, yaz({ son }) doğrulanmış cevap, yaz({ hata, s }) hata
+function mvAkisYanit(cors, is) {
+  const { readable, writable } = new TransformStream(), w = writable.getWriter(), enc = new TextEncoder();
+  const yaz = o => w.write(enc.encode('data: ' + JSON.stringify(o) + '\n\n'));
+  (async () => {
+    try { await is(yaz); }
+    catch (x) { if (!(x instanceof MvHata)) console.error(JSON.stringify({ tur: 'hata', konu: 'mevzuat akış', hata: String((x && x.message) || x).slice(0, 200) })); await yaz({ hata: x instanceof MvHata ? x.message : 'Beklenmeyen bir hata oldu; tekrar deneyin', s: (x && x.s) || 500 }).catch(() => { }); }
+    finally { await w.close().catch(() => { }); }
+  })();
+  return new Response(readable, { headers: { ...cors, 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no' } });
+}
+// Asistan geri bildirimleri: yalnız platform sahibi okur (GET /mevzuat/geri?gun=YYYY-MM-DD; kurs üyeliği denetiminden önce yönlendirilir)
+async function mvGeriListe(req, env, url, cevap) {
+  if (!(await sahipMi(req, env))) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
+  if (!env.LINK) return cevap({ ok: true, liste: [], toplam: 0 });
+  const gun = url.searchParams.get('gun'), l = await env.LINK.list({ prefix: 'mvgeri:' + (/^\d{4}-\d{2}-\d{2}$/.test(gun || '') ? gun : ''), limit: 200 });
+  const anahtar = l.keys.map(k => k.name).sort().reverse().slice(0, 100), liste = [];
+  for (const k of anahtar) { const v = await env.LINK.get(k); if (v) { try { liste.push(JSON.parse(v)); } catch (x) { } } }
+  return cevap({ ok: true, liste: liste.sort((a, b) => String(b.z).localeCompare(String(a.z))), toplam: l.keys.length });
 }
 async function mevzuat(req, env, url, yol, cevap, o) {
   try { return await mevzuatUc(req, env, url, yol, cevap, o); }
@@ -689,13 +743,6 @@ async function mevzuatUc(req, env, url, yol, cevap, { gercek, rol, kursId, origi
     if (yol === 'mevzuat/olcum/anla') return cevap({ ok: true, ...(await mvAnla(env, mvSoru(b))) });
     if (yol === 'mevzuat/olcum/cevapla') return cevap({ ok: true, ...(await mvCevapla(env, b, +b.istem || 0)) });
     return cevap({ ok: false, hata: 'Bilinmeyen adres' }, 404);
-  }
-  // platform sahibi: geri bildirimleri okur (GET /mevzuat/geri?gun=YYYY-MM-DD)
-  if (yol === 'mevzuat/geri' && GET) {
-    if (!(await sahipMi(req, env))) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
-    const gun = url.searchParams.get('gun'), l = await env.LINK.list({ prefix: 'mvgeri:' + (/^\d{4}-\d{2}-\d{2}$/.test(gun || '') ? gun : ''), limit: 200 });
-    const liste = []; for (const k of l.keys.slice(0, 100)) { const v = await env.LINK.get(k.name, { type: 'json' }); if (v) liste.push(v); }
-    return cevap({ ok: true, liste: liste.sort((a, b) => String(b.z).localeCompare(String(a.z))), toplam: l.keys.length });
   }
   if (!gercek || !PERSONEL.includes(rol)) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
   if (!env.LINK) return cevap({ ok: false, hata: 'Depo yok' }, 500);
@@ -780,7 +827,16 @@ async function mevzuatUc(req, env, url, yol, cevap, { gercek, rol, kursId, origi
     }
     if (mvSinirAsti('l:' + kursId, 10)) return cevap({ ok: false, hata: 'Çok sık istek yapıldı; bir dakika sonra tekrar deneyin' }, 429);
     if (await mvGunlukAsti(kursId)) return cevap({ ok: false, hata: 'Bugünkü yapay zekâ sınırı doldu; yarın tekrar deneyin. Arama sonuçları çalışmaya devam eder' }, 429);
-    return cevap({ ok: true, ...(await mvCevapla(env, b)) });
+    if (b.akis !== true) return cevap({ ok: true, ...(await mvCevapla(env, b)) });
+    // akış: doğrulama ve önbellek önce (hata düz JSON döner), sonra parça parça
+    const h = await mvCevapHazirla(b);
+    if (h.hazir) return cevap({ ok: true, ...h.hazir });
+    if (!env.LLM_KEY) return cevap({ ok: false, kurulu: false, hata: 'Yapay zekâ henüz bağlı değil' }, 503);
+    return mvAkisYanit(cevap.cors, async yaz => {
+      const o = mvCevapCoz(await mvLlmAkis(env, h.mesajlar, h.enCok, { json: true }, d => yaz({ d })), h.n);
+      await mvCevapSakla(h, o);
+      await yaz({ son: { ok: true, ...o } });
+    });
   }
   // asistan geri bildirimi: { soru, iyi: true|false, not?, kaynaklar?: [etiket] } → KV mvgeri:<gün>:<rastgele> (90 gün), kurs başı günde 30
   if (yol === 'mevzuat/geri') {
@@ -835,6 +891,8 @@ export default {
     if (yol === 'eposta' || yol.startsWith('eposta/')) return eposta(req, env, url, yol, cevap);
     const G = 'https://graph.facebook.com/v25.0/' + env.PHONE_ID;
     // Gerçek kurs isteği: Firebase oturumu + kurs kimliği (yoksa demo yolu)
+    // asistan geri bildirim listesi (platform sahibi; kurs üyeliği aranmaz)
+    if (yol === 'mevzuat/geri' && req.method === 'GET') { try { return await mvGeriListe(req, env, url, cevap); } catch (x) { return cevap({ ok: false, hata: 'Okunamadı' }, 500); } }
     const gercek = !!req.headers.get('Authorization') && yol !== 'yedek';
     const kursId = req.headers.get('X-Kurs') || url.searchParams.get('kurs') || '';
     let rol = null;

@@ -2,11 +2,11 @@
    Arama motoru js/mevzuat-ara.js: ortak derlem (veri/mevzuat) + kursa gelen yazılar (worker /mevzuat/*).
    Anlam araması için sorgu vektörü worker'dan gelir (/mevzuat/gom); ulaşılamazsa yalnız kelimeyle aranır.
    Yerel denemede (localhost) worker'a istek gitmez; yerel worker için localStorage 'sinyal-mevzuat-api' = 'http://127.0.0.1:8787'. */
-import { S, oturum, bulutKanca } from './veri.js?v=222';
-import { e, ik, rozet, bos, pencere, kapatPencere, bildir, ekranNotu, isaret, tamTarih, ilerleme } from './ui.js?v=222';
-import { WORKER } from './bulut.js?v=222';
-import { motor, yukle, yuklendi, base64Int8, kokler, alinti, FILTRELER, ETIKET_RE, etiketCoz, etiketBul, resmiDegil, kisaCevapSec, cevapNormalle, cevapDuzMetin } from './mevzuat-ara.js?v=222';
-import { kavramYukle, asistanAra, asistanKaynak, asistanSoru } from './mevzuat-anla.js?v=222';
+import { S, oturum, bulutKanca } from './veri.js?v=223';
+import { e, ik, rozet, bos, pencere, kapatPencere, bildir, ekranNotu, isaret, tamTarih, ilerleme } from './ui.js?v=223';
+import { WORKER } from './bulut.js?v=223';
+import { motor, yukle, yuklendi, base64Int8, kokler, alinti, FILTRELER, ETIKET_RE, etiketCoz, etiketBul, resmiDegil, kisaCevapSec, cevapNormalle, cevapDuzMetin } from './mevzuat-ara.js?v=223';
+import { kavramYukle, asistanAra, asistanKaynak, asistanSoru } from './mevzuat-anla.js?v=223';
 
 const TUR_AD = { yonetmelik: 'Yönetmelik', kanun: 'Kanun', yonerge: 'Yönerge', teblig: 'Tebliğ', kilavuz: 'Kılavuz', program: 'Ders programı', yazi: 'MEB yazısı', form: 'Form',
   'rehber-resmi': 'Denetim rehberi', bilgilendirme: 'Resmî bilgilendirme', rehber: 'mdSinyal rehberi (resmî metin değil)', sss: 'mdSinyal sık sorulanlar (resmî metin değil)' };
@@ -38,6 +38,43 @@ async function api(yol, { method = 'GET', govde, sure = 20000 } = {}) {
     if (!r.ok || j.ok === false) throw Object.assign(new Error(j.hata || 'Servis hatası (' + r.status + ')'), { durum: r.status, kurulu: j.kurulu, kullanici: j.hata });
     return j;
   } finally { clearTimeout(zt); }
+}
+// Akışlı istek (text/event-stream): { d } parçaları onParca'ya, { son } sonuç, { hata } hata. Sunucu akış yerine düz JSON dönerse
+// (önbellekteki cevap, doğrulama hatası, eski worker) o kullanılır.
+async function apiAkis(yol, govde, onParca, sure = 60000) {
+  const kok = apiKok();
+  if (!kok) throw Object.assign(new Error('Yerel denemede servis kapalı'), { kapali: true });
+  const h = { ...(await kimlik()), 'Content-Type': 'application/json' };
+  const ac = new AbortController(), zt = setTimeout(() => ac.abort(), sure);
+  try {
+    const r = await fetch(kok + yol, { method: 'POST', headers: h, body: JSON.stringify({ ...govde, akis: true }), signal: ac.signal, credentials: 'omit' });
+    if (!/event-stream/.test(r.headers.get('Content-Type') || '') || !r.body || typeof TextDecoderStream === 'undefined') {
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.ok === false) throw Object.assign(new Error(j.hata || 'Servis hatası (' + r.status + ')'), { durum: r.status, kurulu: j.kurulu, kullanici: j.hata });
+      return j;
+    }
+    const okur = r.body.pipeThrough(new TextDecoderStream()).getReader();
+    let tampon = '', son = null;
+    for (;;) {
+      const { value, done } = await okur.read(); if (done) break;
+      tampon += value; let i;
+      while ((i = tampon.indexOf('\n\n')) >= 0) {
+        const ev = tampon.slice(0, i); tampon = tampon.slice(i + 2);
+        if (!ev.startsWith('data: ')) continue;
+        let o; try { o = JSON.parse(ev.slice(6)); } catch (x) { continue; }
+        if (typeof o.d === 'string') onParca(o.d);
+        else if (o.son) son = o.son;
+        else if (o.hata) throw Object.assign(new Error(o.hata), { durum: o.s || 502, kullanici: o.hata });
+      }
+    }
+    if (!son) throw Object.assign(new Error('Cevap yarıda kesildi'), { durum: 502 });
+    return son;
+  } finally { clearTimeout(zt); }
+}
+// Akan JSON'dan "kisa" alanının o ana kadar gelen kısmı (yarım kaçış dizileri atılır)
+export function kisaKismi(t) {
+  const m = String(t || '').match(/"kisa"\s*:\s*"((?:[^"\\]|\\.)*)/); if (!m) return '';
+  return m[1].replace(/\\u([0-9a-fA-F]{4})/g, (x, h) => String.fromCharCode(parseInt(h, 16))).replace(/\\u[0-9a-fA-F]{0,3}$|\\$/, '').replace(/\\n/g, ' ').replace(/\\(.)/g, '$1').replace(/\s*\[\d+(?:,\s*\d+)*\]?/g, '');
 }
 // Sorgu vektörü: aynı sorgu bir kez sorulur; servis hata verirse bir dakika denenmez (her aramada bekleme olmasın)
 async function gom(metin) {
@@ -319,7 +356,8 @@ function asistanKutusu(r, l) {
   let govde = '';
   if (c && c.bekliyor) {
     const sira = ['topla', 'cevap'], n = sira.indexOf(c.asama);
-    govde = `<ol class="mz-adimlar" aria-live="polite">${sira.map((x, i) => `<li class="${i < n ? 'bitti' : i === n ? 'simdi' : ''}">${e(ASAMA_AD[x])}${x === 'cevap' && c.n ? ` <small>(${c.n} madde)</small>` : ''}</li>`).join('')}</ol>`;
+    const akan = c.asama === 'cevap' ? kisaKismi(c.akan) : '';
+    govde = `${akan ? `<p class="mz-cevap-kisa mz-akiyor" data-mz-akis>${e(akan)}</p>` : `<p class="mz-cevap-kisa mz-akiyor" data-mz-akis hidden></p>`}<ol class="mz-adimlar" aria-live="polite">${sira.map((x, i) => `<li class="${i < n ? 'bitti' : i === n ? 'simdi' : ''}">${e(ASAMA_AD[x])}${x === 'cevap' && c.n ? ` <small>(${c.n} madde)</small>` : ''}</li>`).join('')}</ol>`;
   } else if (c && c.hata) govde = `<p class="mz-cevap-hata">${e(c.hata)}</p>`;
   else if (c && c.yanit) govde = `${cevapGovde(c)}
     <div class="mz-cevap-alt"><p class="mz-cevap-not">Cevap yalnız köşeli parantezdeki maddelere dayanır; kesin karar için il milli eğitim müdürlüğüne danışın.</p><div class="mz-cevap-dg"><button type="button" class="dg dg-cizgi dg-kucuk" data-mz-kopyala>Kopyala</button><a class="dg dg-cizgi dg-kucuk" href="${e(paylasUrl(c))}" target="_blank" rel="noopener">${ik('wp')}Paylaş</a></div></div>
@@ -360,7 +398,9 @@ async function asistanSor(k) {
   Object.assign(c, { asama: 'cevap', n: kaynaklar.length, harita: secilen.map(x => (x.i >= 0 ? x.i + 1 : { sira: x.sira })), etiketler: kaynaklar.map(x => x.etiket) });
   sonucCiz(k);
   // geçici hata (502, ağ kopması, zaman aşımı) bir kez yeniden denenir; 429/503/4xx denenmez
-  const sor = () => api('/mevzuat/cevapla', { method: 'POST', govde: { soru: asistanSoru(q, r), kaynaklar }, sure: 50000 });
+  // cevap akarak gelir: kısa cevap yazıldıkça kutuya düşer (bütün sayfa yeniden çizilmez)
+  const parca = d => { c.akan = (c.akan || '') + d; if (!guncel()) return; const el = k.querySelector('[data-mz-akis]'); if (!el) return; const t = kisaKismi(c.akan); if (t) { el.hidden = false; el.textContent = t; } };
+  const sor = () => { c.akan = ''; return apiAkis('/mevzuat/cevapla', { soru: asistanSoru(q, r), kaynaklar }, parca); };
   try { let j; try { j = await sor(); } catch (x) { if (!(x.durum >= 500 && x.durum !== 503) && x.durum) throw x; if (x.kapali) throw x; await new Promise(z => setTimeout(z, 1500)); if (!guncel()) return; j = await sor(); } c.yanit = cevapNormalle(j); bitir(); }
   catch (x) {
     if (x.durum === 503 || x.kurulu === false) { durum.llmYok = true; return bitir('Yapay zekâ henüz bağlı değil; aşağıdaki maddelerden okuyabilirsiniz.'); }

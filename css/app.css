@@ -2905,3 +2905,6 @@ form.mz-geri textarea{width:100%;border:1.5px solid var(--cizgi);border-radius:1
 .mz-cevap-dg{display:flex;gap:8px;flex-wrap:wrap}
 .mz-cevap-dg .dg .ik{width:16px;height:16px}
 .mz-ornek.mz-son{background:#fff;border:1px solid var(--cizgi);color:var(--metin)}
+.mz-akiyor::after{content:"";display:inline-block;width:8px;height:1.05em;margin-left:3px;vertical-align:-2px;background:var(--levha);animation:mz-imlec 1s steps(2,start) infinite}
+@keyframes mz-imlec{to{visibility:hidden}}
+@media (prefers-reduced-motion:reduce){.mz-akiyor::after{animation:none}}
