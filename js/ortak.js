@@ -2,9 +2,9 @@
 // Kurs hesaplarından ayrı bir hesapta çalışır (S.kurs.tur === 'yonetim'); kurs ekranları açılmaz.
 // Üyeler: yönetici (müdür rolü, her şeyi girer) ve ortak (kendi e-posta ve şifresiyle girer, yalnız görür).
 // Kursiyer bilgisi yoktur: yalnız müşteri kurs adı, tahsilat, pay ve ödemeler.
-import { S, kaydet, gun, fark, tarihOku, iso, ayEkle, kapaliGun, islem, geriAlNoktasi } from './veri.js?v=213';
-import { e, ik, rozet, pencere, kapatPencere, bildir, tarih, tarihUzun, ayAdi, olcumler, belgeYazdir, fotoKucult, csvIndir, gunKisa } from './ui.js?v=213';
-import * as B from './bulut.js?v=213';
+import { S, kaydet, gun, fark, tarihOku, iso, ayEkle, kapaliGun, islem, geriAlNoktasi } from './veri.js?v=218';
+import { e, ik, rozet, pencere, kapatPencere, bildir, tarih, tarihUzun, ayAdi, olcumler, belgeYazdir, fotoKucult, csvIndir, gunKisa } from './ui.js?v=218';
+import * as B from './bulut.js?v=218';
 
 export const TURLER = ['İlk yıllık abonelik', 'Aylık abonelik', 'Abonelik yenileme', 'Ek şube', 'Kurulum', 'Eğitim', 'Destek', 'Ücretli modül', 'Diğer mdSinyal hizmeti'];
 const PARA = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -352,7 +352,7 @@ export function yonetimHtml(rol) {
   const say = { ajanda: bugunIs, kurslar: (v.kurslar || []).length };
   const borcAlt = h.kalanBorc ? (h.vadeGun != null && h.vadeGun >= 0 ? `${tarih(h.vade)} · ${h.vadeGun} gün` : 'son gün geçti') : 'kapandı';
   const olc = yon ? [[ayAd(ay.ay) + ' geliri', para(kasa.gelir), 'KDV hariç'], ['Gider', para(kasa.gider), kasa.hr.filter(x => x.tur === 'Gider').length + ' kalem'], ['Sana kalan', para(kasa.net), 'ortak payı düşülmüş'], ['Kalan borç', para(h.kalanBorc), borcAlt]]
-    : [[ayAd(ay.ay) + ' tahsilat', para(ay.net), 'KDV hariç'], ['Bu ay pay', para(ay.pay), 'ödeme ' + tarih(ay.son)], ['Ödenmemiş pay', para(h.odenmemisPay), h.odenenPay ? para(h.odenenPay) + ' ödendi' : 'henüz ödeme yok'], ['Kalan borç', para(h.kalanBorc), borcAlt]];
+    : [[ayAd(ay.ay) + ' tahsilat', para(ay.net), 'KDV hariç'], ['Bu ay gider', para(kasa.gider), kasa.hr.filter(x => x.tur === 'Gider').length + ' kalem · Gelir-Gider’de'], ['Bu ay pay', para(ay.pay), (h.odenmemisPay ? 'ödenmemiş ' + para(h.odenmemisPay) : 'ödeme ' + tarih(ay.son))], ['Kalan borç', para(h.kalanBorc), borcAlt]];
   if (sekme === 'kurslar') { const kl = v.kurslar || [], ks = d => kl.filter(k => k.durum === d).length; olc.splice(0, 4, ['Toplam', kl.length + ' kurs', 'görüşülen ve takip edilen'], ['Sıcak', ks('Sıcak') + ' kurs', 'satışa en yakın'], ['Görüşülüyor', ks('Görüşülüyor') + ks('Riskli') + ' kurs', ks('Riskli') ? ks('Riskli') + ' tanesi riskli' : 'karar bekleniyor'], ['Müşteri', ks('Müşteri') + ' kurs', 'mdSinyal’i kullanan']); }
   const baslik = bol.find(b => b[0] === sekme)[1];
   const ust = `<section class="yn-hero"><div class="yn-ic"><small>${yon ? 'mdSinyal Yönetim' : 'Ortak paneli · yalnız görüntüleme'}</small><h1>${sekme === 'ozet' ? (yon ? 'Merhaba ' + e(String(S.kurs.yetkili || 'Servet').split(' ')[0]) : e(o.ad)) : baslik}</h1><p>${yon ? `${tarihUzun(gun(0))} · ${bugunIs ? bugunIs + ' iş seni bekliyor' : 'bugün için bekleyen iş yok'}` : `Satışlardan %${h.oran} pay · sözleşme ${tarih(o.baslangic)}`}</p>

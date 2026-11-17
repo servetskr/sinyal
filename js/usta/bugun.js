@@ -3,11 +3,11 @@
 // Alt ekran: 'kapanmamis' (geçmiş günlerden kapatılmamış dersler: Yapıldı / Gelmedi). Aracım, güzergâhlar ve hesap js/usta/arac.js'tedir.
 // Eski portal.js egitmenPortal() "bugun" bölümünün bütün işlevleri burada: dersi başlat, bitir ve imzalat, ders menüsü (⋯), başlat (sıradaki dışındaki
 // ders için, saati gelince), kapatılmamış derste Yapıldı / Gelmedi, imza linkini yeniden gönder, son not, konum durumu, araç ve bakım, güzergâh püf noktaları.
-import { S, SINIFLAR, gun, fark, tarihOku, kursiyer, tamAd, sbDers, geceDersMi, geceGerekli } from '../veri.js?v=213';
-import { gerekliDireksiyon } from '../veri.js?v=213';
-import { tarihUzun, ayAdi, gunAdi } from '../ui.js?v=213';
-import { guzergahlar } from '../guzergah.js?v=213';
-import { esc, oi, bolum, baglanti, kart, gorsel, dugme, satir, liste, cip, bos, geri, sayfaBas, stilEkle } from '../ogr/ui.js?v=213';
+import { S, SINIFLAR, gun, fark, tarihOku, kursiyer, tamAd, sbDers, geceDersMi, geceGerekli } from '../veri.js?v=218';
+import { gerekliDireksiyon } from '../veri.js?v=218';
+import { tarihUzun, ayAdi, gunAdi } from '../ui.js?v=218';
+import { guzergahlar } from '../guzergah.js?v=218';
+import { esc, oi, bolum, baglanti, kart, gorsel, dugme, satir, liste, cip, bos, geri, sayfaBas, stilEkle } from '../ogr/ui.js?v=218';
 
 /* ---------- yardımcılar ---------- */
 const SERT = /[çfhkpsşt]$/;

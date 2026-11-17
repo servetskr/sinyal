@@ -2,10 +2,10 @@
 // mdSinyal Yönetim panelinin “Hesaplar” bölümünde açılır (yalnız Servet; ortak görmez).
 // Yetki Firebase güvenlik kurallarından değil, Google hesabından gelir: Firebase projesinin sahibi olan Google hesabıyla
 // bağlanılır, Google IAM izin verirse işlem yapılır. Sunucu, gizli anahtar yok; erişim belirteci yalnız bellekte durur (1 saat).
-import { e, ik, pencere, kapatPencere, bildir, tl, siteLink } from './ui.js?v=213';
-import { S, kaydet, islem, bulutKanca } from './veri.js?v=213';
-import { ogrenciPanelMetni, WORKER } from './bulut.js?v=213';
-import { EMU } from './firebase-ayar.js?v=213';
+import { e, ik, pencere, kapatPencere, bildir, tl, siteLink } from './ui.js?v=218';
+import { S, kaydet, islem, bulutKanca } from './veri.js?v=218';
+import { ogrenciPanelMetni, WORKER } from './bulut.js?v=218';
+import { EMU } from './firebase-ayar.js?v=218';
 
 // EMU (firebase-ayar.js, yalnız localhost + açık işaret): REST istekleri yerel emülatöre gider, Google onayı yerine emülatörün yönetici belirteci kullanılır
 const PROJE = EMU ? EMU.proje : 'sinyal-5d37a';
@@ -280,7 +280,7 @@ function ciz() {
   const sekme = [['kurslar', 'Kurslar', kursSay], ['hesaplar', 'Hesaplar', gorunur.length], ['kullanim', 'Kullanım', 0], ['silinen', 'Silinenler', silinecekler.length]];
   kok.innerHTML = kabuk(`
     <div class="sh-bas"><div><h1>Hesaplar</h1><p>${kursSay} kurs · ${gorunur.length} hesap</p></div>
-      <div class="sh-bas-dg">${!bagli() ? `<button class="dg dg-hafif dg-kucuk" data-sh-baglan title="Son giriş tarihleri, şifre ve silme işlemleri için">${ik('kilit')}Google ile bağlan</button>` : ''}${gomulu ? `<button class="dg dg-cizgi dg-kucuk" data-sh-yenile ${yukleniyor ? 'disabled' : ''}>${ik('sifirla')}${yukleniyor ? 'Yükleniyor…' : 'Yenile'}</button>` : ''}<button class="dg dg-ana dg-kucuk" data-sh-hesap-ac>${ik('arti')}Hesap oluştur</button><button class="dg dg-cizgi dg-kucuk" data-sh-davet="kurs">${ik('arti')}Kurs hesabı linki</button><button class="dg dg-cizgi dg-kucuk" data-sh-davet="yonetim">${ik('arti')}Yönetim hesabı linki</button></div></div>
+      <div class="sh-bas-dg">${!bagli() ? `<button class="dg dg-hafif dg-kucuk" data-sh-baglan title="Son giriş tarihleri, şifre ve silme işlemleri için">${ik('kilit')}Google ile bağlan</button>` : ''}${gomulu ? `<button class="dg dg-cizgi dg-kucuk" data-sh-yenile ${yukleniyor ? 'disabled' : ''}>${ik('sifirla')}${yukleniyor ? 'Yükleniyor…' : 'Yenile'}</button>` : ''}<button class="dg dg-ana dg-kucuk" data-sh-hesap-ac>${ik('arti')}Hesap oluştur</button><button class="dg dg-cizgi dg-kucuk" data-sh-numara>${ik('tel')}Numarayı serbest bırak</button><button class="dg dg-cizgi dg-kucuk" data-sh-davet="kurs">${ik('arti')}Kurs hesabı linki</button><button class="dg dg-cizgi dg-kucuk" data-sh-davet="yonetim">${ik('arti')}Yönetim hesabı linki</button></div></div>
     <div class="sh-suz sh-alt" role="tablist">${sekme.map(([k, a, n]) => `<button role="tab" aria-selected="${alt === k}" class="${alt === k ? 'secili' : ''}" data-sh-alt="${k}">${a}${n ? ` <em>${n}</em>` : ''}</button>`).join('')}</div>
     ${alt === 'kurslar' ? kursIstHtml() : alt === 'kullanim' ? kullanimHtml() : alt === 'silinen' ? silinenHtml() : `<div class="sh-arac"><label class="sh-ara">${ik('ara')}<input type="search" data-sh-ara placeholder="İsim, telefon, e-posta ya da kurs ara" value="${e(arama)}" autocomplete="off"></label>
       <div class="sh-suz" role="tablist">${SUZGEC.map(([k, a]) => `<button role="tab" aria-selected="${suzgec === k}" class="${suzgec === k ? 'secili' : ''}" data-sh-suz="${k}">${a}</button>`).join('')}</div></div>
@@ -357,12 +357,13 @@ async function tikla(ev) {
   const al = t.closest('[data-sh-alt]'); if (al) { alt = al.dataset.shAlt; return ciz(); }
   if (alt === 'kullanim' && gorunum !== 'destek' && await kullanimTikla(t)) return;
   const kr = t.closest('[data-sh-kurs]'); if (kr) return kursPenceresi(kr.dataset.shKurs);
-  if (!bagli() && t.closest('[data-sh-davet],[data-sh-sifre],[data-sh-hesap],[data-sh-geri],[data-sh-hesap-ac]')) { try { await baglan(); hataMetni = ''; } catch (x) { return bildir(turkceHata(x), 'uyari'); } }
+  if (!bagli() && t.closest('[data-sh-davet],[data-sh-sifre],[data-sh-hesap],[data-sh-geri],[data-sh-hesap-ac],[data-sh-numara]')) { try { await baglan(); hataMetni = ''; } catch (x) { return bildir(turkceHata(x), 'uyari'); } }
   const gr = t.closest('[data-sh-geri]'); if (gr) { const x = silinecekler.find(y => y.uid === gr.dataset.shGeri); if (!x) return; gr.disabled = true; try { await silmeGeriAl(x); bildir(x.ad + ' geri alındı; yeniden girebilir'); ciz(); } catch (y) { gr.disabled = false; islemHata(y); } return; }
   if (gorunum === 'destek' && await destekTikla(t)) return;
   const s = t.closest('[data-sh-suz]'); if (s) { suzgec = s.dataset.shSuz; kok.querySelectorAll('[data-sh-suz]').forEach(b => { b.classList.toggle('secili', b === s); b.setAttribute('aria-selected', b === s); }); const r = kok.querySelector('[data-sh-sonuc]'); if (r) r.innerHTML = sonucHtml(); return; }
   const d = t.closest('[data-sh-davet]'); if (d) return davetPenceresi(d.dataset.shDavet === 'yonetim');
   const ha = t.closest('[data-sh-hesap-ac]'); if (ha) return hesapAcPenceresi({ kurs: ha.dataset.shHesapAc || '' });
+  if (t.closest('[data-sh-numara]')) return numaraPenceresi();
   const sf = t.closest('[data-sh-sifre]'); if (sf) { const h = hesaplar.find(x => x.uid === sf.dataset.shSifre); if (h) sifrePenceresi(h); return; }
   const h = t.closest('[data-sh-hesap]'); if (h) { const x = hesaplar.find(y => y.uid === h.dataset.shHesap); if (x) hesapPenceresi(x); }
 }
@@ -594,6 +595,39 @@ async function kursSil(k, adim) {
   delete kursIst[k]; delete veriOnbellek[k];
   hesaplar = (hesaplar || []).filter(h => h.kurs !== k);
   silinecekler = silinecekler.filter(y => y.kurs !== k);
+}
+
+// ---- Numarayı serbest bırak: öğrenci telefonu başka (çoğu zaman deneme ya da eski) bir kursa bağlı kaldıysa yeni kurs hesap açamaz.
+// Kayıt bulunur, hangi kursa bağlı olduğu ve kaç hesabın girişinde kullanıldığı gösterilir; onayla silinir. O kurstaki eski öğrenci hesabı
+// bu numarayla artık giriş yapamaz (kurs isterse yeniden hesap açar).
+function numaraPenceresi() {
+  pencere({
+    baslik: 'Numarayı serbest bırak',
+    icerik: `<p style="font-size:14px">Öğrenci hesabı açılırken “Bu telefon numarasıyla başka bir kursta öğrenci hesabı var” uyarısı çıkıyorsa numara eski bir kursa bağlı kalmıştır. Numarayı yaz, hangi kursa bağlı olduğuna bak ve serbest bırak.</p>
+      <div class="form-izgara" style="margin-top:12px"><div class="alan tam"><label>Telefon</label><input name="tel" inputmode="tel" placeholder="05xx xxx xx xx" autocomplete="off"></div></div><div data-sonuc style="margin-top:10px"></div>`,
+    altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-bul>Bul</button>',
+    onAc(d) {
+      const sonuc = d.querySelector('[data-sonuc]');
+      d.querySelector('[data-bul]').addEventListener('click', async ev => {
+        const tel = telNorm(d.querySelector('[name=tel]').value); if (!tel) return bildir('Geçerli bir cep telefonu yazın', 'uyari');
+        ev.target.disabled = true; sonuc.textContent = 'Aranıyor…';
+        try {
+          const tj = await api(FS + ':batchGet', { documents: [tamYol('telefonlar/' + tel)] });
+          const tb = (tj.find(y => y.found) || {}).found;
+          if (!tb) { sonuc.innerHTML = '<p>Bu numara hiçbir kursa bağlı değil; hesap açılabilir.</p>'; return; }
+          const a = alanlar(tb.fields), kb = await api(FS + ':batchGet', { documents: [tamYol('kurslar/' + a.k)] });
+          const kd = (kb.find(y => y.found) || {}).found, kursAd = kd ? (alanlar(kd.fields).ad || 'Adı bilinmeyen kurs') : 'Silinmiş kurs';
+          const n = Object.keys(a.h || {}).length;
+          sonuc.innerHTML = `<div class="ipucu" style="display:block"><b>${e(kursAd)}</b> kursuna bağlı · ${n ? n + ' öğrenci hesabının girişinde kullanılıyor' : 'açık öğrenci hesabı yok'}</div><button class="dg dg-ana" style="margin-top:10px" data-birak>Serbest bırak</button>`;
+          sonuc.querySelector('[data-birak]').addEventListener('click', async b => {
+            b.target.disabled = true;
+            try { await commit([{ delete: tamYol('telefonlar/' + tel) }]); islem('Telefon numarasını serbest bıraktı', kursAd); bildir('Numara serbest; artık yeni kursta öğrenci hesabı açılabilir', 'tamam'); kapatPencere(); }
+            catch (x) { b.target.disabled = false; bildir(turkceHata(x), 'uyari'); }
+          });
+        } catch (x) { sonuc.textContent = ''; bildir(turkceHata(x), 'uyari'); } finally { ev.target.disabled = false; }
+      });
+    },
+  });
 }
 
 // ---- Hesap oluştur: önce kurs ve rol, sonra kişi ----
@@ -918,7 +952,7 @@ let kuOtoBakildi = false;
 async function kullanimHaftalik() {
   if (kuOtoBakildi || !(S.kurs && S.kurs.sahipAnaliz) || !Object.keys(kursIst).length) return; kuOtoBakildi = true;
   try {
-    const { gecenHafta } = await import('./eposta.js?v=213'), h = gecenHafta();
+    const { gecenHafta } = await import('./eposta.js?v=218'), h = gecenHafta();
     if (S.kurs.sahipAnalizSon === h.donem) return;
     const T = await kullanimOku(aralikGunler(h.bas, h.bit));
     const j = await kullanimGonder(T, h.bas.split('-').reverse().join('.') + ' – ' + h.bit.split('-').reverse().join('.'), h.donem);

@@ -1,18 +1,18 @@
 // MEBBİS toplu çekme ve toplu yazma (mdSinyal tarafı). İşi MEBBİS Yardımcısı'nın arka plan motoru (eklenti/motor.js)
 // kursun kendi MEBBİS oturumunda, ekran açmadan yürütür; sonuç buraya gelir ve kayıtlarla eşlenir.
 // Gönderilen ve gelen iletilerin adları ve alanları: js/eklenti.js başındaki ileti sözleşmesi tablosu (eklenti/sinyal.js'te de aynısı).
-import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, sb, sbDers, cokSube, seciliSube, eksikEvrak } from './veri.js?v=213';
-import { bildir, pencere, kapatPencere, e, ik, isaret, rozet, tarih } from './ui.js?v=213';
-import * as GR from './gruplar.js?v=213';
-import * as EK from './eklenti.js?v=213';
-import { yenile } from './app.js?v=213';
-import * as ME from './mebevrak.js?v=213';
-import * as MK from './mebkayit.js?v=213';
-import * as KR from './kurallar.js?v=213';
+import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, sb, sbDers, cokSube, seciliSube, eksikEvrak } from './veri.js?v=218';
+import { bildir, pencere, kapatPencere, e, ik, isaret, rozet, tarih } from './ui.js?v=218';
+import * as GR from './gruplar.js?v=218';
+import * as EK from './eklenti.js?v=218';
+import { yenile } from './app.js?v=218';
+import * as ME from './mebevrak.js?v=218';
+import * as MK from './mebkayit.js?v=218';
+import * as KR from './kurallar.js?v=218';
 
 export const CEKILECEK = [
   ['gruplar', 'Dönem grupları', 'Dönem, grup ve şubeler; eksik grup kartları açılır'],
-  ['kursiyerler', 'Kursiyerler', 'Bütün dönemler, her öğrenci durumu ayrı; durum, onay, evrak, haklar'],
+  ['kursiyerler', 'Kursiyer karşılaştırma', 'MEBBİS kayıtları mdSinyal’e alınmaz; sertifika sınıfı, mevcut belge, ad ve cinsiyet farkları listelenir'],
   ['dosya', 'Aday dosyaları', 'Aktif kursiyerlerin grubu, hakları, son tarihleri, sınav geçmişi'],
   ['personel', 'Personel', 'İzin no, branş, çalışma izni bitişi'],
   ['araclar', 'Araçlar', 'Muayene, şanzıman, MEBBİS durumu, simülatör'],
@@ -555,27 +555,37 @@ const ETIKET = new Set(['12', '13', '14', '15', '24']);
 function kursiyerleriIsle(liste) {
   const kisi = new Map();
   liste.forEach(t => {
-    const b = t.baslik, i = { tc: sutun(b, 'kimlik'), ad: sutun(b, 'adisoyadi', 'adsoyad'), donem: sutun(b, /^donemi?$/), mevcut: sutun(b, 'mevcut'), istenen: sutun(b, 'istenen'), evrak: sutun(b, 'evrak'), kurum: sutun(b, 'kurumonay'), ilce: sutun(b, 'ilce', 'memonay'), adli: sutun(b, 'adli'), ders: sutun(b, 'uygulamaders'), sinav: sutun(b, 'sinavtarihi'), uh: sutun(b, 'uygulamahak'), eh: sutun(b, 'esinavhak') };
+    const b = t.baslik, i = { tc: sutun(b, 'kimlik'), ad: sutun(b, 'adisoyadi', 'adsoyad'), donem: sutun(b, /^donemi?$/), mevcut: sutun(b, 'mevcut'), istenen: sutun(b, 'istenen'), evrak: sutun(b, 'evrak'), kurum: sutun(b, 'kurumonay'), ilce: sutun(b, 'ilce', 'memonay'), adli: sutun(b, 'adli'), ders: sutun(b, 'uygulamaders'), sinav: sutun(b, 'sinavtarihi'), uh: sutun(b, 'uygulamahak'), eh: sutun(b, 'esinavhak'), cins: sutun(b, 'cinsiyet') };
     t.satirlar.forEach(r => {
       const tc = String(r[i.tc] || '').replace(/\D/g, ''); if (tc.length !== 11) return;
-      const x = kisi.get(tc) || { tc, ad: r[i.ad], kayitlar: [], etiketler: [], satir: r, baslik: b };
+      const x = kisi.get(tc) || { tc, ad: r[i.ad], kayitlar: [], etiketler: [], satir: r, baslik: b, cins: i.cins >= 0 ? r[i.cins] : '' };
       const al = j => j >= 0 ? r[j] : '';
       if (ETIKET.has(t.durum)) x.etiketler.push(t.durumAd);
       else x.kayitlar.push({ durumKod: t.durum, durum: t.durumAd, donem: al(i.donem), mevcut: al(i.mevcut), istenen: al(i.istenen), evrak: al(i.evrak), kurumOnay: al(i.kurum), ilceOnay: al(i.ilce), adli: al(i.adli), uygulamaDers: al(i.ders), sinavTarihi: al(i.sinav), uygulamaHak: al(i.uh), esinavHak: al(i.eh) });
       kisi.set(tc, x);
     });
   });
-  let eslesen = 0; const yok = [];
+  let eslesen = 0; const yok = [], farklar = [];
+  // MEBBİS kaydı mdSinyal'e AKTARILMAZ (adaylar önceki programdan alınır); yalnız farklar gösterilir: sertifika sınıfı, mevcut belge, ad, cinsiyet
+  const kod = v => { const m = String(v || '').toLocaleUpperCase('tr').replace(/İ/g, 'I').match(/\b(A1|A2|B1|BE|C1E|C1|CE|D1E|D1|DE|SRC\d|[ABCDFGM])\b/); return m ? m[1] : ''; };
+  const sinifKod = k => kod(((SINIFLAR[k.sinif] || {}).ad || k.sinif || '').split('·')[0]);
   const donemSira = d => { const m = String(d).match(/(\d{4})\D+(\S+)/); return m ? m[1] + String(GR.AYLAR.findIndex(a => nrm(a) === nrm(m[2])) + 1).padStart(2, '0') : String(d); };
   kisi.forEach(x => {
     const son = x.kayitlar.sort((a, b) => donemSira(b.donem).localeCompare(donemSira(a.donem)))[0];
     const k = S.kursiyerler.find(y => y.tc === x.tc);
     if (!k) { if (son && !['5', '6', '11'].includes(son.durumKod)) yok.push(x); return; }
     eslesen++;
+    const fk = [];
+    if (son && kod(son.istenen) && sinifKod(k) && kod(son.istenen) !== sinifKod(k)) fk.push(['Sertifika sınıfı', kod(son.istenen), sinifKod(k)]);
+    if (son && son.mevcut != null && kod(son.mevcut) !== kod(k.mevcutEhliyet)) fk.push(['Mevcut belge', kod(son.mevcut) || 'yok', kod(k.mevcutEhliyet) || 'yok']);
+    if (x.ad && nrm(x.ad) !== nrm(tamAd(k))) fk.push(['Ad soyad', x.ad, tamAd(k)]);
+    if (x.cins && k.cinsiyet && nrm(x.cins).slice(0, 1) !== nrm(k.cinsiyet).slice(0, 1)) fk.push(['Cinsiyet', x.cins, k.cinsiyet]);
+    if (fk.length) farklar.push({ id: k.id, ad: tamAd(k), fk });
+    k.mebFark = fk.length ? { tarih: gun(0), fk } : null;
     k.meb = { ...(k.meb || {}), ...(son || {}), etiketler: x.etiketler, kayitSayisi: x.kayitlar.length, okuma: gun(0) };
     k.mebIslendi = true;
   });
-  return { toplam: kisi.size, eslesen, yok };
+  return { toplam: kisi.size, eslesen, yok, farklar };
 }
 function personeliIsle(t) {
   const b = t.baslik, i = { izin: sutun(b, 'izinno'), tc: sutun(b, 'kimlik'), ad: sutun(b, /^adi?$/), soyad: sutun(b, /^soyadi?$/), gorev: sutun(b, /^gorevi$/), brans: sutun(b, 'brans'), bitis: sutun(b, 'izinbitis'), durum: sutun(b, /^durumu$/) };
@@ -642,7 +652,11 @@ function ozetGoster(o, yazilan) {
   if (yazilan.length) l.push(satir(`${ok} iş MEBBİS’e girildi${kontrol ? `; ${kontrol} tanesini MEBBİS’te kontrol edin (yalnız MEBBİS mesajı görüldü)` : ' ve doğrulandı'}`, hata.length ? `<span style="color:var(--kirmizi);font-weight:700">${hata.length} iş girilemedi</span>: ${hata.slice(0, 4).map(x => e(MK.maskele(x.not))).join(' · ')}` : ''));
   if (yazilan.length) l.push(`<li style="font-size:13px;color:var(--soluk)">Her kaydın sonucu işlem kaydına yazıldı (Ayarlar › Güvenlik › İşlem geçmişi).</li>`);
   if (o.gruplar) l.push(satir(`Dönem grupları: ${o.gruplar.yeni} yeni${o.gruplar.var_ ? `, ${o.gruplar.var_} zaten vardı` : ''}`));
-  if (o.kursiyerler) l.push(satir(`Kursiyerler: MEBBİS’te ${o.kursiyerler.toplam} aday, ${o.kursiyerler.eslesen} mdSinyal’le eşleşti`, o.kursiyerler.yok.length ? `${o.kursiyerler.yok.length} aday MEBBİS’te var, mdSinyal’de yok` : ''));
+  if (o.kursiyerler) {
+    const kr = o.kursiyerler, fr = kr.farklar || [];
+    l.push(satir(`Kursiyerler: MEBBİS’te ${kr.toplam} aday, ${kr.eslesen} mdSinyal’le eşleşti${fr.length ? `, <span style="color:var(--kirmizi)">${fr.length} kişide fark var</span>` : ', fark yok'}`, kr.yok.length ? `MEBBİS’te olup mdSinyal’de olmayan ${kr.yok.length} aday (mdSinyal’e alınmaz; adaylar önceki programdan aktarılır): ${kr.yok.slice(0, 8).map(z => e(z.ad || z.tc)).join(', ')}${kr.yok.length > 8 ? '…' : ''}` : ''));
+    if (fr.length) l.push(`<li><div class="tablo-kap"><table class="tablo"><thead><tr><th>Kursiyer</th><th>Alan</th><th>MEBBİS’te</th><th>mdSinyal’de</th></tr></thead><tbody>${fr.flatMap(z => z.fk.map(([a, m, b2], j) => `<tr>${j ? '<td></td>' : `<td><a href="#/kursiyer/${e(z.id)}" data-kapat>${e(z.ad)}</a></td>`}<td>${e(a)}</td><td><b>${e(m)}</b></td><td>${e(b2)}</td></tr>`)).join('')}</tbody></table></div><small style="color:var(--soluk)">Hangisi doğruysa onu düzeltin: mdSinyal’de öğrenci dosyasından, MEBBİS’te kendi ekranından. mdSinyal hiçbir bilgiyi kendiliğinden değiştirmedi.</small></li>`);
+  }
   if (o.dosya) l.push(satir(`Aday dosyaları: ${o.dosya.okunan} okundu, ${o.dosya.atanan} kursiyer dönem grubuna atandı`));
   if (o.personel) l.push(satir(`Personel: ${o.personel.guncel} kişinin izin no’su güncellendi`, o.personel.yeni.length ? `mdSinyal’de olmayan: ${o.personel.yeni.map(e).join(', ')}` : ''));
   if (o.araclar) l.push(satir(`Araçlar: ${o.araclar.guncel} aracın muayene tarihi güncellendi`, o.araclar.yeni.length ? `mdSinyal’de olmayan: ${o.araclar.yeni.map(e).join(', ')}` : ''));
@@ -651,9 +665,9 @@ function ozetGoster(o, yazilan) {
   pencere({
     baslik: 'MEBBİS işi bitti',
     icerik: `<ul style="list-style:none;display:grid;gap:10px">${l.join('') || '<li>Yeni bilgi yok.</li>'}</ul>`,
-    altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button>${o.kursiyerler && o.kursiyerler.yok.length ? `<button class="dg dg-cizgi" data-al-yok>${ik('indir')}${o.kursiyerler.yok.length} adayı mdSinyal’e al</button>` : ''}${o.sinavlar ? `<button class="dg dg-ana" data-sonuc>Sonuçları doldur</button>` : ''}`,
+    altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button>${o.sinavlar ? `<button class="dg dg-ana" data-sonuc>Sonuçları doldur</button>` : ''}`,
     onAc(d) {
-      const y = d.querySelector('[data-al-yok]'); if (y) y.addEventListener('click', () => { const x = o.kursiyerler.yok; kapatPencere(); import('./sayfalar5.js?v=213').then(m => { location.hash = '#/ayarlar/aktarim'; setTimeout(() => m.aktarimYukle([x[0].baslik, ...x.map(z => z.satir)], 'kursiyer', 'MEBBİS'), 300); }); });
+      const y = d.querySelector('[data-al-yok]'); if (y) y.addEventListener('click', () => { const x = o.kursiyerler.yok; kapatPencere(); import('./sayfalar5.js?v=218').then(m => { location.hash = '#/ayarlar/aktarim'; setTimeout(() => m.aktarimYukle([x[0].baslik, ...x.map(z => z.satir)], 'kursiyer', 'MEBBİS'), 300); }); });
       const s = d.querySelector('[data-sonuc]'); if (s) s.addEventListener('click', () => { kapatPencere(); EK.sinavSonucuAl(sinavTablosu(o.sinavlar)); });
     },
   });

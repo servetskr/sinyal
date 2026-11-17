@@ -649,7 +649,7 @@ function uret() {
   kursiyerler.forEach((k, i) => { if (k.dogrulama && k.dogrulama.saglik) k.dogrulama.saglik.gecerlilik = gun(i % 11 === 0 ? 20 : 200 + i * 3); });
 
   const guvenlik = {
-    ikiAdim: { mudur: true, sekreter: true, usta: false }, oturumDk: 60, ipKisit: false, hassasOnay: true,
+    ikiAdim: { mudur: true, sekreter: true, usta: false }, oturumDk: 0, ipKisit: false, hassasOnay: true,
     oturumlar: [
       { kim: 'Servet Sakar', cihaz: 'Chrome · Mac', yer: 'Eskişehir', son: 'Şimdi', bu: true },
       { kim: 'Servet Sakar', cihaz: 'Safari · iPhone', yer: 'Eskişehir', son: '2 saat önce' },
@@ -707,6 +707,8 @@ function goc(o) {
   // gerçek entegrasyon kurulana kadar bağlı görünmez
   if (o.entegrasyon && !o.entegrasyon.gercek) { o.entegrasyon.earsiv.bagli = false; delete o.entegrasyon.pos; o.entegrasyon.muhasebe.bagli = false; o.entegrasyon.muhasebe.tur = 'Excel'; }
   if (o.mebArac && !o.mebArac.gercek) o.mebArac = null;
+  // 17 Kas 2026: oturum varsayılan olarak kendiliğinden kapanmaz (kurslar gün boyu başka programla birlikte çalışıyor); süre Ayarlar › Güvenlik'ten seçilebilir
+  if (o.guvenlik && !o.guvenlik.oturumSurum) { o.guvenlik.oturumDk = 0; o.guvenlik.oturumSurum = 1; }
   if (o.mevzuat) o.mevzuat = o.mevzuat.filter(m => !/yetkisiz yazılım/.test(m.konu || ''));  // kaldırılan kayıt (30 Ekim 2026)
   if (o.kurs.mebYontem === 'arac' && !o.mebArac) o.kurs.mebYontem = 'sirali';
   // demo: PIN’le giren her cihazda WhatsApp gönderimi hazır gelsin (mesajlar yalnız demo numarasına gider); Ayarlar’dan boşaltılırsa kapalı kalır

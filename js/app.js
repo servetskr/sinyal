@@ -1,25 +1,25 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=213';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=213';
-import * as Y1 from './sayfalar1.js?v=213';
-import * as Y2 from './sayfalar2.js?v=213';
-import * as P from './portal.js?v=213';
-import * as OXU from './ogr/ui.js?v=213';
-import * as Y3 from './sayfalar3.js?v=213';
-import * as Y4 from './sayfalar4.js?v=213';
-import * as Y5 from './sayfalar5.js?v=213';
-import * as IM from './imza.js?v=213';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=213';
-import * as SN from './senaryo.js?v=213';
-import * as OZ from './ozellik.js?v=213';
-import { durumlariGuncelle } from './mesaj.js?v=213';
-import { yeniMenu } from './yeni.js?v=213';
-import * as B from './bulut.js?v=213';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=213';
-import * as AN from './analiz.js?v=213';
-import * as GZ from './guzergah.js?v=213';
-import * as ORT from './ortak.js?v=213';
-import * as SH from './sahip.js?v=213';
-import * as MZ from './sayfa-mevzuat.js?v=213';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=218';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=218';
+import * as Y1 from './sayfalar1.js?v=218';
+import * as Y2 from './sayfalar2.js?v=218';
+import * as P from './portal.js?v=218';
+import * as OXU from './ogr/ui.js?v=218';
+import * as Y3 from './sayfalar3.js?v=218';
+import * as Y4 from './sayfalar4.js?v=218';
+import * as Y5 from './sayfalar5.js?v=218';
+import * as IM from './imza.js?v=218';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=218';
+import * as SN from './senaryo.js?v=218';
+import * as OZ from './ozellik.js?v=218';
+import { durumlariGuncelle } from './mesaj.js?v=218';
+import { yeniMenu } from './yeni.js?v=218';
+import * as B from './bulut.js?v=218';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=218';
+import * as AN from './analiz.js?v=218';
+import * as GZ from './guzergah.js?v=218';
+import * as ORT from './ortak.js?v=218';
+import * as SH from './sahip.js?v=218';
+import * as MZ from './sayfa-mevzuat.js?v=218';
 
 /* ---------- uygulama hatalarının otomatik bildirimi ----------
    window.onerror / unhandledrejection → worker /hata (api.mdsinyal.com). Gönderilen: sürüm, rota adı (#/ad; kimlik ve kod kırpılır), rol,
@@ -106,6 +106,8 @@ function hesapSayfasi() {
   pencere({ baslik: 'Hesabım', alt: true, icerik: `<div class="hs-kim"><span class="app-profil buyuk" aria-hidden="true">${basHarf(ad)}</span><div><b>${e(ad)}</b><small>${e(S.kurs.ad)} · ${ogr ? 'Öğrenci' : ORT.yonetimModu() || u.rol === 'ortak' ? (u.rol === 'mudur' ? 'Yönetici' : 'Ortak · yalnız görüntüler') : ROL_AD[u.rol]}</small></div></div>
     <div class="hs-liste">${ogr ? `<button type="button" data-ogr-sifre>${satir('kilit', 'Şifremi değiştir')}${ik('sag')}</button>` : ''}
       ${tel && !ORT.yonetimModu() && u.rol !== 'ortak' ? `<a href="tel:${e(tel)}">${satir('tel', 'Kursu ara', e(S.kurs.tel))}${ik('sag')}</a>` : ''}
+      ${!ogr && !ORT.yonetimModu() && ['mudur', 'sekreter'].includes(u.rol) ? `<a href="#/genel" data-kapat>${satir('genel', 'Kurs ekranı', 'Müdür ve ön büro paneli')}${ik('sag')}</a><a href="#/egitmen" data-kapat>${satir('kursiyer', 'Öğretmen ekranı', 'Usta öğreticinin telefonda gördüğü; öğretmen seçilir')}${ik('sag')}</a><a href="#/ogrenci" data-kapat>${satir('tel', 'Öğrenci ekranı', 'Öğrencinin telefonda gördüğü; öğrenci seçilir')}${ik('sag')}</a>` : ''}
+      ${!ogr && u.rol !== 'usta' ? `<a href="yardimci/" target="_blank" rel="noopener">${satir('indir', 'MEBBİS Yardımcısı’nı kur', 'En güncel sürüm ve kurulum adımları · mdsinyal.com/yardimci')}${ik('sag')}</a>` : ''}
       ${ORT.yonetimModu() && u.rol === 'mudur' ? `<button type="button" data-yn-hesaplar>${satir('kilit', 'Hesaplar', 'Kurs hesapları, kullanıcılar, şifre yenileme')}${ik('sag')}</button>` : ''}
       ${!ogr && !ORT.yonetimModu() && u.rol !== 'ortak' ? `<button type="button" data-destek>${satir('mesaj', 'mdSinyal Destek', 'Sorun, soru ya da istek bildir')}${ik('sag')}</button>` : ''}</div>
     <div class="hs-liste"><button type="button" class="hs-cikis" ${ogr ? 'data-ogr-cikis' : 'data-cikis'}>${satir('cikis', u.bulut || ogr ? 'Çıkış yap' : 'Kullanıcı değiştir', '', 'kirmizi')}</button></div>` });
@@ -155,7 +157,7 @@ function iskelet() {
         ${(S.subeler || []).length > 1 && oturum.kullanici.rol !== 'usta' ? `<label class="sube-sec"><span class="gizli-et">Şube</span><select data-sube aria-label="Şube">${['', ...S.subeler.map(x => x.id)].map(id => `<option value="${id}" ${gorunum.sube === id ? 'selected' : ''}>${id ? e(S.subeler.find(x => x.id === id).ad) : 'Tüm şubeler'}</option>`).join('')}</select></label>` : ''}
         <button class="arama" data-ara aria-label="Ara">${ik('ara')}<span>Kursiyer, aday, plaka ara</span><kbd>⌘K</kbd></button>
         ${oturum.kullanici.rol !== 'usta' ? `<button class="yeni-dugme" data-yeni-menu aria-label="Yeni ekle">${ik('arti')}<span>Yeni</span></button>` : ''}
-        <button class="kullanici-cip" data-cikis title="Kullanıcı değiştir" aria-label="${e(oturum.kullanici.ad)} · ${ROL_AD[oturum.kullanici.rol]} · kullanıcı değiştir"><i class="kc-bas" aria-hidden="true">${basHarf(oturum.kullanici.ad)}</i><b>${e(oturum.kullanici.ad)}</b><small>${ROL_AD[oturum.kullanici.rol]}</small></button>
+        <button class="kullanici-cip" data-hesap title="Hesabım: ekranlar ve çıkış" aria-label="${e(oturum.kullanici.ad)} · ${ROL_AD[oturum.kullanici.rol]} · hesap menüsü"><i class="kc-bas" aria-hidden="true">${basHarf(oturum.kullanici.ad)}</i><b>${e(oturum.kullanici.ad)}</b><small>${ROL_AD[oturum.kullanici.rol]}</small></button>
       </header>`}
       ${oturum.kullanici.ziyaretci ? `<div class="ziyaretci-serit"><span><b>Demo görünümü</b> · örnek verilerle. Mesajlar kimseye gitmez, ekranda gösterilir.</span><button data-cikis>Çık</button></div>` : ''}
       <main class="icerik" id="icerik"></main>
@@ -1002,13 +1004,13 @@ async function davetEkrani() {
 document.addEventListener('click', ev => { if (ev.target.closest('[data-yeniden-yukle]')) location.reload(); });
 document.addEventListener('click', ev => {
   if (ev.target.closest('[data-cikis]')) kapatPencere();
-  if (ev.target.closest('[data-hesap]')) { if (oturum.kullanici && oturum.kullanici.rol === 'usta' && document.body.classList.contains('ox-modu')) return import('./usta/ekran.js?v=213').then(m => { m.hesapAc(); yenile(true); }); return hesapSayfasi(); }
+  if (ev.target.closest('[data-hesap]')) { if (oturum.kullanici && oturum.kullanici.rol === 'usta' && document.body.classList.contains('ox-modu')) return import('./usta/ekran.js?v=218').then(m => { m.hesapAc(); yenile(true); }); return hesapSayfasi(); }
   if (ev.target.closest('[data-destek]')) return destekPenceresi();
   // Yönetim: Hesaplar telefonda profil menüsünden açılır (alt çubuk 6 sekme kalır)
   if (ev.target.closest('[data-yn-hesaplar]')) { kapatPencere(); ORT.sekmeSec('hesaplar'); yonetimCiz(true); SH.otoBaglan(); return; }
-  if (ev.target.closest('[data-ogr-cikis]')) return B.ogrenciCikis().then(() => { location.hash = '#/ogrenci-giris'; location.reload(); });
+  if (ev.target.closest('[data-ogr-cikis]')) return B.ogrenciCikis().then(() => location.replace(new URL('giris/?cikis=1', location.href.split('#')[0].replace(/[^/]*$/, '')).href));
   if (ev.target.closest('[data-ogr-sifre]')) { kapatPencere(); return ogrenciSifreDegistir(); }
-  if (ev.target.closest('[data-cikis]') && oturum.kullanici && oturum.kullanici.bulut) { const yon = ORT.yonetimModu() || oturum.kullanici.rol === 'ortak'; islem('Çıkış yaptı'); kaydet(); B.cikisYap().then(() => { try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } location.hash = yon ? '#/yonetim' : ''; location.reload(); }); return; }
+  if (ev.target.closest('[data-cikis]') && oturum.kullanici && oturum.kullanici.bulut) { const yon = ORT.yonetimModu() || oturum.kullanici.rol === 'ortak'; islem('Çıkış yaptı'); kaydet(); B.cikisYap().then(() => { try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } if (yon) { location.hash = '#/yonetim'; location.reload(); } else location.replace(new URL('giris/?cikis=1', location.href.split('#')[0].replace(/[^/]*$/, '')).href); }); return; }
   if (ev.target.closest('[data-cikis]')) { const zy = ziyaretci(); islem('Çıkış yaptı'); kaydet(); oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); localStorage.removeItem(HAREKET_DEMO); } catch (x) { } location.hash = ''; girisEkrani(zy ? 'tanitim' : 'pin'); window.scrollTo(0, 0); }
   const g = ev.target.closest('[data-geri-al]'); if (g) { if (geriAl()) { bildir('Son işlem geri alındı'); yenile(); } }
 });
@@ -1018,7 +1020,7 @@ document.addEventListener('click', ev => {
 // iki sekme açıksa boşta duran sekme, öbüründe çalışılırken oturumu kapatmaz. Kurs hesabı 'sinyal-son-hareket', demo (PIN ve tanıtım) 'sinyal-son-hareket-demo'.
 const HAREKET = 'sinyal-son-hareket', HAREKET_DEMO = 'sinyal-son-hareket-demo';
 const hareketAnahtar = () => oturum.kullanici && oturum.kullanici.bulut ? HAREKET : HAREKET_DEMO;
-const oturumDk = () => (S.guvenlik && S.guvenlik.oturumDk) || 30;
+const oturumDk = () => { const v = S && S.guvenlik ? S.guvenlik.oturumDk : 0; return +v > 0 ? +v : 0; };  // 0: kendiliğinden kapanmaz
 const hareketOku = a => { try { const h = JSON.parse(localStorage.getItem(a) || 'null'); return h && +h.t ? h : null; } catch (x) { return null; } };
 let sonHareket = Date.now(), sonYazim = 0, sonYazilan = 0;
 // en fazla 30 sn'de bir yazılır. zorla = true: girişte hemen; 'bekleyen': zamanlayıcıda, yazılmamış hareket varsa 30 sn beklemeden.
@@ -1038,7 +1040,7 @@ setInterval(() => {
   if (!oturum.kullanici || imzaLinki() || oturum.kullanici.rol === 'ogrenci') return;
   if (sonHareket > sonYazilan) hareketYaz('bekleyen');
   const dk = oturumDk(), ortak = hareketOku(hareketAnahtar()), son = Math.max(sonHareket, ortak ? ortak.t : 0);
-  if (Date.now() - son < dk * 60e3) return;
+  if (!dk || Date.now() - son < dk * 60e3) return;
   islem('Oturum kapandı', dk + ' dk hareketsiz'); kaydet();
   if (oturum.kullanici.bulut) { oturum.kullanici = null; B.cikisYap().then(() => { try { sessionStorage.removeItem('sinyal-oturum'); sessionStorage.setItem('sinyal-kapandi', String(dk)); } catch (x) { } location.reload(); }); return; }
   const zy = !!oturum.kullanici.ziyaretci; oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); localStorage.removeItem(HAREKET_DEMO); } catch (x) { }
@@ -1081,13 +1083,14 @@ else if (ogrKayit && !B.bulutKayitli()) {
   const ok = ogrKayit.kod && B.ogrenciOnbellek(ogrKayit.kod);
   if (ok) { oturum.kullanici = { id: 'ogr-' + ok.id, ad: tamAd(ok), rol: 'ogrenci', kursiyer: ok.id }; ogrenciCiz(true); } else bekleEkrani('Öğrenci paneli açılıyor…'); B.ogrenciOturumu().then(u => !u ? ogrenciGirisEkrani() : u.ilkGiris ? sifreBelirleEkrani(u) : ogrenciModu(u.kurs, u.kod)).catch(() => ogrenciGirisEkrani()); }
 // son hareket kaydı yoksa (silinmiş ya da eski sürümden kalmış cihaz) güvenli varsayılan: oturum kapanır, bir kez yeniden giriş istenir
-else if (B.bulutKayitli() && (() => { const h = hareketOku(HAREKET); return !h || Date.now() - h.t > (h.dk || 30) * 60e3; })()) {
+else if (B.bulutKayitli() && (() => { const h = hareketOku(HAREKET); return !!(h && +h.dk > 0 && Date.now() - h.t > h.dk * 60e3); })()) {
   oturum.kullanici = null; bekleEkrani('Oturum kapatılıyor…');
   B.cikisYap().finally(() => { girisEkrani('pin'); setTimeout(() => bildir('Uzun süre işlem yapılmadığı için oturum kapandı; tekrar giriş yapın', 'uyari'), 400); });
 }
 else if (B.bulutKayitli()) {
   oturum.kullanici = null; bekleEkrani('Kurs verisi yükleniyor…');
-  B.bulutBaslat().then(u => { if (u) bulutOturumu(u, false); else girisEkrani('pin'); }).catch(x => { girisEkrani('pin'); bildir(B.hataMetni(x), 'uyari'); });
+  const girisIstendi = GIRIS_YOL[location.hash];  // giriş sayfasından gelindi ama bu cihazda zaten açık oturum var
+  B.bulutBaslat().then(u => { if (u) { bulutOturumu(u, false); if (girisIstendi) setTimeout(() => bildir('Bu cihazda zaten girişlisiniz. Başka bir hesapla girmek için sağ üstteki profilinizden “Çıkış yap”a basın.', 'uyari'), 900); } else girisEkrani('pin'); }).catch(x => { girisEkrani('pin'); bildir(B.hataMetni(x), 'uyari'); });
   const kp = sessionStorageAl('sinyal-kapandi'); if (kp) { try { sessionStorage.removeItem('sinyal-kapandi'); } catch (x) { } setTimeout(() => bildir(kp + ' dakika işlem yapılmadığı için oturum kapandı; tekrar giriş yapın', 'uyari'), 400); }
 }
 else if (sessionStorageAl('sinyal-kapandi')) { const kp = sessionStorageAl('sinyal-kapandi'); try { sessionStorage.removeItem('sinyal-kapandi'); } catch (x) { } oturum.kullanici = null; girisEkrani('pin'); setTimeout(() => bildir(kp + ' dakika işlem yapılmadığı için oturum kapandı; tekrar giriş yapın', 'uyari'), 400); }
@@ -1115,4 +1118,4 @@ async function surumBak() {
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') surumBak(); });
 setTimeout(surumBak, 4000);
 // kullanım analizi (kişisel veri içermez; kullanim.js): ekran, düğme adı, süre, hata türü sayılır, günde bir özet yazılır
-setTimeout(() => import('./kullanim.js?v=213').then(m => m.baslat()).catch(() => { }), 1500);
+setTimeout(() => import('./kullanim.js?v=218').then(m => m.baslat()).catch(() => { }), 1500);
