@@ -14,6 +14,7 @@
 // /hata: uygulama hatalarının kişisel veri içermeyen kısa kaydı (POST, sitenin kendi adresinden); KV 'hata:<gün>:<iz>' 7 gün.
 //   GET /hata yalnız platform sahibine: Firebase oturum belirteci (sahip uid) ya da SAHIP_ANAHTAR (gizli) ile.
 // /eposta: kursun rapor ve yedek e-postaları (onaylı adreslere); /eposta/sahip platform sahibinin analiz e-postası. Ayrıntı eposta() üstünde.
+// /mevzuat/*: mevzuat arama (sorgu gömme), kursa gelen MEB yazılarını yükleme/listeleme/silme, özet ve kaynaklı cevap. Ayrıntı mevzuatUc() üstünde.
 const IZINLI = ['https://mdsinyal.com', 'http://localhost:4481', 'http://127.0.0.1:4481'];
 const HEDEF = /^(https:\/\/mdsinyal\.com\/|https:\/\/servetskr\.github\.io\/sinyal\/|http:\/\/localhost:4481\/)/;
 const kucuk = s => String(s || '').toLocaleLowerCase('tr');
@@ -368,6 +369,254 @@ async function eposta(req, env, url, yol, cevap) {
   return cevap({ ok: false }, 404);
 }
 
+// ── Mevzuat ve MEB yazıları (/mevzuat/*) ──
+// Gömme (embedding) Workers AI ile (env.AI); ortak derlem (site: veri/mevzuat/dizin.json + vektor.bin) ile AYNI model, boyut ve önekler olmalı.
+// Kursa gelen yazılar KV'de: mbelge:<kurs> (dizin, en yeni başta), mbelge:<kurs>:<id> (meta + metin + parçalar), mbelge:<kurs>:hepsi
+// (GET /mevzuat/hepsi cevabının kendisi: {"ok":true,"boyut","model","parcalar":[{b,t}],"v":"<base64 int8 N×D>"}; ekleme ve silme
+// dize üstünde yapılır, büyük JSON çözülmez: işlemci sınırı). Yükleme 3 KV yazması yapar. Özet, cevap ve fotoğraf için
+// OpenAI uyumlu dil modeli: LLM_KEY (gizli), LLM_URL, LLM_MODEL (düz değişken; varsayılanlar aşağıda). LLM_KEY yoksa bu uçlar 503 kurulu:false.
+const MEVZUAT_GOM = { model: '@cf/google/embeddinggemma-2', boyut: 256, onekSorgu: 'task: search result | query: ', onekBelge: 'title: none | text: ' };  // veri/mevzuat/dizin.json (surum 2026-11-17) ile aynı
+const MV_LLM_URL = 'https://api-cdn.deploy.com/api/v1/chat/completions', MV_LLM_MODEL = 'deepseek-ai/deepseek-v4.1-flash-1017';
+const MV = { belge: 300, metin: 200000, dosya: 10e6, resim: 1.6e6, parca: 900, ortusme: 150, kaynak: 8, kaynakKar: 14000, gomKar: 400, soru: 400, ozetKar: 24000 };
+const MV_TUR = { 'application/pdf': 'pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx', 'image/jpeg': 'resim', 'image/png': 'resim', 'text/plain': 'metin', 'text/markdown': 'metin' };
+class MvHata extends Error { constructor(m, s, ek) { super(m); this.s = s || 500; this.ek = ek || {}; } }
+// izolat belleğinde dakikalık sayaç (KV yazması yok); izolatlar arası kesin değil, kötüye kullanımı kesmeye yeter
+const MV_SAYAC = new Map();
+const mvSinirAsti = (anahtar, enCok) => { const k = anahtar + '|' + Math.floor(Date.now() / 60000); if (MV_SAYAC.size > 5000) MV_SAYAC.clear(); const n = (MV_SAYAC.get(k) || 0) + 1; MV_SAYAC.set(k, n); return n > enCok; };
+const mvB64 = u => { let x = ''; for (let i = 0; i < u.length; i += 0x8000) x += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(x); };
+// base64 sonuna bayt ekler: yalnız son dörtlü çözülür (eski vektörler baştan kodlanmaz)
+const mvB64Ekle = (eski, yeni) => {
+  if (!eski) return mvB64(yeni);
+  if (!eski.endsWith('=')) return eski + mvB64(yeni);
+  const son = atob(eski.slice(-4)), u = new Uint8Array(son.length + yeni.length);
+  for (let i = 0; i < son.length; i++) u[i] = son.charCodeAt(i);
+  u.set(yeni, son.length); return eski.slice(0, -4) + mvB64(u);
+};
+// vektörler: L2 normalleştir → int8 (sözleşme: max(-127, min(127, round(x*127))))
+function mvInt8(vekler, D) {
+  const out = new Int8Array(vekler.length * D);
+  for (let i = 0; i < vekler.length; i++) {
+    const v = vekler[i]; let n = 0;
+    for (let j = 0; j < D; j++) n += v[j] * v[j];
+    n = Math.sqrt(n) || 1;
+    for (let j = 0; j < D; j++) { const x = Math.round(v[j] / n * 127); out[i * D + j] = x > 127 ? 127 : x < -127 ? -127 : x; }
+  }
+  return new Uint8Array(out.buffer);
+}
+// Workers AI gömme: 50'şerlik gruplar. bge-m3 { text: [...] } → data: [[...]]; embeddinggemma-2 OpenAI biçimi { input: [...], dimensions }
+// → data: [{ index, embedding }] (17 Kas 2026 yerel duman testinde doğrulandı).
+// Model daha uzun vektör dönerse ilk D boyut alınır (Matryoshka) ve mvInt8 yeniden normalleştirir.
+async function mvGom(env, metinler) {
+  if (!env.AI) throw new MvHata('Arama servisi bağlı değil', 503);
+  const { model, boyut: D } = MEVZUAT_GOM, out = [];
+  for (let i = 0; i < metinler.length; i += 50) {
+    const grup = metinler.slice(i, i + 50), girdi = /bge-m3/.test(model) ? { text: grup } : { input: grup, dimensions: D };
+    let r; try { r = await env.AI.run(model, girdi); } catch (x) { console.warn(JSON.stringify({ tur: 'uyari', konu: 'gömme', hata: String((x && x.message) || x).slice(0, 160) })); throw new MvHata('Arama şu an yapılamıyor (günlük sınır dolmuş olabilir); biraz sonra tekrar deneyin', 503); }
+    let d = (r && (r.data || r.embeddings || r.response)) || [];
+    if (d[0] && !Array.isArray(d[0]) && !ArrayBuffer.isView(d[0])) d = d.slice().sort((a, b) => a.index - b.index).map(x => x.embedding);
+    if (d.length !== grup.length) throw new MvHata('Arama servisi beklenmeyen cevap verdi', 502);
+    for (const v of d) { if (!v || v.length < D) throw new MvHata('Arama servisi beklenmeyen cevap verdi', 502); out.push(v.length > D ? v.slice(0, D) : v); }
+  }
+  return mvInt8(out, D);
+}
+// Metni ~900 karakterlik, 150 karakter örtüşen parçalara böler. Paragraflara saygılı; "Madde N" başlığı yeni parça açar (örtüşmesiz).
+const MV_MADDE = /^(MADDE|Madde)\s+\d+/;
+function mvParcala(metin) {
+  const P = MV.parca, O = MV.ortusme, birim = [];  // birim: [metin, paragraf başı mı, madde başı mı]
+  for (let p of metin.replace(/\r\n?/g, '\n').replace(/[ \t]+/g, ' ').replace(/ ?\n ?/g, '\n').split(/\n\s*\n|\n(?=\s*(?:MADDE|Madde)\s+\d+)/)) {
+    p = p.trim(); if (!p) continue;
+    const madde = MV_MADDE.test(p);
+    if (p.length <= P) { birim.push([p, true, madde]); continue; }
+    // uzun paragraf: cümlelere, cümle de uzunsa boşluktan kes
+    let ilk = true;
+    for (let c of p.split(/(?<=[.!?;:])\s+/)) {
+      while (c.length > P) { let k = c.lastIndexOf(' ', P); if (k < P / 2) k = P; birim.push([c.slice(0, k).trim(), ilk, ilk && madde]); ilk = false; c = c.slice(k).trim(); }
+      if (c) { birim.push([c, ilk, ilk && madde]); ilk = false; }
+    }
+  }
+  const parcalar = []; let cur = '';
+  for (const [t, pb, madde] of birim) {
+    const ara = pb ? '\n\n' : ' ';
+    if (!cur) { cur = t; continue; }
+    if (cur.length + ara.length + t.length <= P && !(madde && cur.length > P / 3)) { cur += ara + t; continue; }
+    parcalar.push(cur);
+    if (madde) { cur = t; continue; }
+    let ek = cur.slice(-O); const k = ek.indexOf(' '); if (k > 0 && k < O / 2) ek = ek.slice(k + 1);
+    cur = (ek.length < cur.length ? '… ' + ek + ara : '') + t;
+  }
+  if (cur.trim()) parcalar.push(cur.trim());
+  return parcalar;
+}
+// toMarkdown çıktısından dosya adı, üst veri ve sayfa başlıkları atılır
+const mvMdTemizle = md => String(md || '').replace(/[ \t]+\n/g, '\n').replace(/^#{1,3} [^\n]*\.(pdf|docx)\s*\n/i, '').replace(/^#{1,3} Metadata\s*\n[\s\S]*?(?=^#{1,3} |(?![\s\S]))/im, '').replace(/^#{1,3} Contents\s*$/gim, '').replace(/^#{1,4} Page \d+\s*$/gim, '').replace(/\n{3,}/g, '\n\n').trim();
+// OpenAI uyumlu sohbet çağrısı; anahtar ve ham cevap günlüğe yazılmaz
+async function mvLlm(env, mesajlar, enCok) {
+  if (!env.LLM_KEY) throw new MvHata('Yapay zekâ henüz bağlı değil', 503, { kurulu: false });
+  let r;
+  try { r = await fetch(env.LLM_URL || MV_LLM_URL, { method: 'POST', headers: { Authorization: 'Bearer ' + env.LLM_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: env.LLM_MODEL || MV_LLM_MODEL, messages: mesajlar, reasoning_effort: 'none', temperature: 0.2, max_completion_tokens: enCok }), signal: AbortSignal.timeout(55000) }); }
+  catch (x) { console.warn(JSON.stringify({ tur: 'uyari', konu: 'yapay zekâ', hata: (x && x.name) || 'ag' })); throw new MvHata('Yapay zekâya ulaşılamadı; biraz sonra tekrar deneyin', 502); }
+  if (!r.ok) { console.warn(JSON.stringify({ tur: 'uyari', konu: 'yapay zekâ', durum: r.status })); throw new MvHata(r.status === 429 ? 'Yapay zekâ şu an yoğun; bir dakika sonra tekrar deneyin' : r.status === 401 || r.status === 403 ? 'Yapay zekâ anahtarı geçersiz; platform yöneticisine bildirin' : 'Yapay zekâ şu an cevap vermiyor; biraz sonra tekrar deneyin', 502); }
+  const j = await r.json().catch(() => null), m = j && j.choices && j.choices[0] && j.choices[0].message;
+  let c = m && m.content; if (Array.isArray(c)) c = c.map(x => (x && x.text) || '').join('');
+  c = String(c || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+  if (!c) throw new MvHata('Yapay zekâ boş cevap verdi; tekrar deneyin', 502);
+  return c;
+}
+const MV_OZET_ISTEM = 'Sürücü kursu müdürüne MEB\'den (il/ilçe millî eğitim müdürlüğü ya da bakanlık) gelen resmî yazıyı özetliyorsun. Kurallar:\n' +
+  '- Yalnız verilen metne dayan. Metinde olmayan hiçbir şeyi yazma, tahmin yürütme.\n' +
+  '- T.C. kimlik numarası, telefon, adres, e-posta gibi kişisel verileri özete taşıma.\n' +
+  '- Sade ve doğru Türkçe yaz; resmî kısaltmaları (MEB, MTSK, e-sınav) olduğu gibi bırak.\n' +
+  'Biçim tam olarak şu olsun (başka bir şey ekleme):\n' +
+  'Ana fikir: <tek cümle>\n' +
+  'Kursun yapması gerekenler:\n' +
+  '- <madde; tarih, süre, sayı ve madde numarası varsa aynen yaz>\n' +
+  'Kimi ilgilendirir: <kısa; örneğin kurs müdürü, ön büro, usta öğreticiler, kursiyerler>\n' +
+  'Yazıda kursa düşen bir iş yoksa ikinci başlığın altına "- Kursa düşen bir iş yok." yaz.';
+const MV_CEVAP_ISTEM = 'Sürücü kursu personelinin mevzuat sorusunu YALNIZ aşağıda numaralanmış kaynaklara dayanarak cevaplıyorsun. Kurallar:\n' +
+  '- Kaynaklarda olmayan bilgi ekleme, genel bilgini kullanma.\n' +
+  '- Her cümlenin sonunda dayandığı kaynağın numarasını [1] ya da [2][3] biçiminde ver.\n' +
+  '- Kaynaklarda cevap yoksa yalnız şunu yaz: Verilen kaynaklarda bu sorunun cevabı yok.\n' +
+  '- Hukuki görüş ya da tavsiye verme; kaynağın ne dediğini aktar. Kaynaklar çelişiyorsa ikisini de numarasıyla belirt.\n' +
+  '- Sade Türkçe, kısa yaz (en çok 6 cümle ya da madde).';
+const MV_RESIM_ISTEM = 'Bu fotoğraf resmî bir yazının sayfası. Sayfada yazan metni olduğu gibi, Türkçe karakterleri koruyarak düz metne çevir. Yorum, özet ya da açıklama ekleme; yalnız metni yaz. Okunamayan yerlere [okunamadı] yaz. Fotoğrafta metin yoksa yalnız BOS yaz.';
+const mvOzetle = (env, ad, metin) => mvLlm(env, [{ role: 'system', content: MV_OZET_ISTEM }, { role: 'user', content: (ad ? 'Yazının adı: ' + ad + '\n\n' : '') + 'Metin:\n' + metin.slice(0, MV.ozetKar) }], 700);
+const mvTemiz = (s, n) => String(s || '').replace(/[\u0000-\u001f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
+// hepsi değeri (GET cevabıyla aynı dize)
+const mvHepsiBas = () => '{"ok":true,"boyut":' + MEVZUAT_GOM.boyut + ',"model":' + JSON.stringify(MEVZUAT_GOM.model) + ',"parcalar":[';
+const mvHepsiBos = () => mvHepsiBas() + '],"v":""}';
+function mvHepsiEkle(ham, parcalar, bayt) {
+  if (!ham || !ham.startsWith(mvHepsiBas())) { if (ham) console.warn(JSON.stringify({ tur: 'uyari', konu: 'mevzuat gömme modeli değişti; eski parçalar aramadan düştü' })); ham = mvHepsiBos(); }
+  const iv = ham.lastIndexOf('],"v":"'), bas = ham.slice(0, iv), v = ham.slice(iv + 7, -2), ek = JSON.stringify(parcalar).slice(1, -1);
+  return bas + (ek && !bas.endsWith('[') ? ',' : '') + ek + '],"v":"' + mvB64Ekle(v, bayt) + '"}';
+}
+// belgenin parçaları hepsi'de ardışık: dizeden çıkarılır, vektör satırları ikili dizede kesilir (JSON çözülmez)
+function mvHepsiSil(ham, id) {
+  if (!ham || !ham.startsWith(mvHepsiBas())) return ham;
+  const D = MEVZUAT_GOM.boyut, i0 = mvHepsiBas().length, iv = ham.lastIndexOf('],"v":"'), bas = '{"b":' + JSON.stringify(id) + ',"t":';
+  const s = ham.indexOf(bas, i0); if (s < 0 || s > iv) return ham;
+  let once = 0; for (let p = ham.indexOf('{"b":"', i0); p >= 0 && p < s; p = ham.indexOf('{"b":"', p + 6)) once++;
+  let k = 1, e = iv;
+  for (let p = s; ;) { const n = ham.indexOf(',{"b":"', p + 1); if (n < 0 || n > iv) break; if (ham.startsWith(bas, n + 1)) { k++; p = n; continue; } e = n; break; }
+  let a = s, z = e; if (z < iv) z++; else if (a > i0) a--;  // ayırıcı virgül
+  const v = ham.slice(iv + 7, -2), bin = v ? atob(v) : '', v2 = bin ? btoa(bin.slice(0, once * D) + bin.slice((once + k) * D)) : '';
+  return ham.slice(0, a) + ham.slice(z, iv) + '],"v":"' + v2 + '"}';
+}
+// belge kimliği: yüklemede üretilen 12 karakter; 'hepsi' (arama kümesinin anahtarı) belge sayılmaz
+const mvId = id => /^[a-z0-9]{6,24}$/.test(id) && id !== 'hepsi';
+const mvDizin = async (env, kurs) => { try { return JSON.parse((await env.LINK.get('mbelge:' + kurs)) || '[]'); } catch (x) { return []; } };
+async function mevzuat(req, env, url, yol, cevap, o) {
+  try { return await mevzuatUc(req, env, url, yol, cevap, o); }
+  catch (x) { if (x instanceof MvHata) return cevap({ ok: false, ...x.ek, hata: x.message }, x.s); console.error(JSON.stringify({ tur: 'hata', konu: 'mevzuat', yol, hata: String((x && x.message) || x).slice(0, 200) })); return cevap({ ok: false, hata: 'Beklenmeyen bir hata oldu; tekrar deneyin' }, 500); }
+}
+async function mevzuatUc(req, env, url, yol, cevap, { gercek, rol, kursId, origin }) {
+  const POST = req.method === 'POST', GET = req.method === 'GET';
+  // sorgu gömme: demo (kimliksiz, yalnız sitenin adresinden, IP başına dakikada 30) ve personel
+  if (yol === 'mevzuat/gom') {
+    if (!POST) return cevap({ ok: false }, 405);
+    if (!gercek && !IZINLI.includes(origin)) return cevap({ ok: false, hata: 'Izin yok' }, 403);
+    if (gercek ? mvSinirAsti('g:' + kursId, 120) : mvSinirAsti('gi:' + (req.headers.get('CF-Connecting-IP') || ''), 30)) return cevap({ ok: false, hata: 'Çok sık arama yapıldı; bir dakika sonra tekrar deneyin' }, 429);
+    const b = await req.json().catch(() => null), metin = b && typeof b.metin === 'string' ? b.metin.trim() : '';
+    if (!metin) return cevap({ ok: false, hata: 'Aranacak metin boş' }, 400);
+    if (metin.length > MV.gomKar) return cevap({ ok: false, hata: 'Arama metni en çok ' + MV.gomKar + ' karakter olabilir' }, 400);
+    // site motoru (js/mevzuat-ara.js) dizin.json'daki sorgu önekini kendisi ekler; önek zaten varsa ikinci kez eklenmez
+    const girdi = MEVZUAT_GOM.onekSorgu && metin.startsWith(MEVZUAT_GOM.onekSorgu) ? metin : MEVZUAT_GOM.onekSorgu + metin;
+    return cevap({ ok: true, v: mvB64(await mvGom(env, [girdi])) });
+  }
+  if (!gercek || !PERSONEL.includes(rol)) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
+  if (!env.LINK) return cevap({ ok: false, hata: 'Depo yok' }, 500);
+  const on = 'mbelge:' + kursId, buro = rol === 'mudur' || rol === 'sekreter';
+  if (yol === 'mevzuat/belgeler' && GET) return cevap({ ok: true, liste: await mvDizin(env, kursId) });
+  // akış olarak aktarılır: büyük değer çözülüp yeniden kodlanmaz (işlemci sınırı; 3,5 MB'ta ~12 ms)
+  if (yol === 'mevzuat/hepsi' && GET) return new Response((await env.LINK.get(on + ':hepsi', { type: 'stream' })) || mvHepsiBos(), { headers: { ...cevap.cors, 'Content-Type': 'application/json' } });
+  if (yol.startsWith('mevzuat/belge/') && GET) {
+    const id = yol.slice(14); if (!mvId(id)) return cevap({ ok: false, hata: 'Belge bulunamadı' }, 404);
+    const v = await env.LINK.get(on + ':' + id); if (!v) return cevap({ ok: false, hata: 'Belge bulunamadı' }, 404);
+    return cevap({ ok: true, belge: JSON.parse(v) });
+  }
+  if (!POST) return cevap({ ok: false, hata: 'Bilinmeyen adres' }, 404);
+  if (yol === 'mevzuat/yukle') {
+    if (!buro) return cevap({ ok: false, hata: 'Belgeyi yalnız kurs müdürü ve ön büro yükler' }, 403);
+    if (mvSinirAsti('y:' + kursId, 20)) return cevap({ ok: false, hata: 'Çok sık yükleme yapıldı; bir dakika sonra tekrar deneyin' }, 429);
+    const ct = String(req.headers.get('Content-Type') || '').split(';')[0].trim().toLowerCase(), tur = MV_TUR[ct];
+    if (!tur) return cevap({ ok: false, hata: 'Bu dosya türü desteklenmiyor. PDF, Word (DOCX), fotoğraf (JPEG/PNG) yükleyin ya da metni yapıştırın' }, 415);
+    if (+req.headers.get('Content-Length') > MV.dosya) return cevap({ ok: false, hata: 'Dosya en çok 10 MB olabilir' }, 413);
+    const dizin = await mvDizin(env, kursId);
+    if (dizin.length >= MV.belge) return cevap({ ok: false, hata: 'En çok ' + MV.belge + ' belge saklanabilir; önce eski belgeleri silin' }, 409);
+    const buf = await req.arrayBuffer();
+    if (!buf.byteLength) return cevap({ ok: false, hata: 'Dosya boş' }, 400);
+    if (buf.byteLength > MV.dosya) return cevap({ ok: false, hata: 'Dosya en çok 10 MB olabilir' }, 413);
+    const q = url.searchParams, tarih = /^\d{4}-\d{2}-\d{2}$/.test(q.get('tarih') || '') ? q.get('tarih') : '', sayi = mvTemiz(q.get('sayi'), 80);
+    let metin = '';
+    if (tur === 'metin') metin = new TextDecoder().decode(buf);
+    else if (tur === 'resim') {
+      if (buf.byteLength > MV.resim) return cevap({ ok: false, hata: 'Fotoğraf çok büyük; daha yakından ve tek sayfa çekin ya da metni yapıştırın' }, 413);
+      if (!env.LLM_KEY) return cevap({ ok: false, kurulu: false, hata: 'Fotoğraf için yapay zekâ bağlı değil; metni yapıştırın' }, 503);
+      metin = await mvLlm(env, [{ role: 'user', content: [{ type: 'text', text: MV_RESIM_ISTEM }, { type: 'image_url', image_url: { url: 'data:' + ct + ';base64,' + mvB64(new Uint8Array(buf)) } }] }], 3000);
+      if (/^BOS\.?$/i.test(metin)) metin = '';
+    } else {
+      if (!env.AI || !env.AI.toMarkdown) return cevap({ ok: false, hata: 'Belge okuma servisi bağlı değil; metni yapıştırın' }, 503);
+      let r; try { r = (await env.AI.toMarkdown([{ name: 'belge.' + tur, blob: new Blob([buf], { type: ct }) }]))[0]; } catch (x) { r = null; console.warn(JSON.stringify({ tur: 'uyari', konu: 'toMarkdown', hata: String((x && x.message) || x).slice(0, 160) })); }
+      metin = r && r.format !== 'error' ? mvMdTemizle(r.data) : '';
+    }
+    metin = metin.replace(/\u0000/g, '').trim();
+    if (metin.replace(/[^0-9A-Za-zÇĞİÖŞÜçğıöşü]/g, '').length < 20) return cevap({ ok: false, hata: 'Bu belgenin metni okunamadı (taranmış olabilir); metni yapıştırın' }, 422);
+    metin = metin.slice(0, MV.metin);
+    const ad = mvTemiz(q.get('ad'), 150) || mvTemiz((metin.split('\n').find(s => s.trim()) || '').replace(/^#+\s*/, ''), 100);
+    const parcalar = mvParcala(metin);
+    const bayt = await mvGom(env, parcalar.map(t => MEVZUAT_GOM.onekBelge + ad + '\n' + t));
+    let ozet = '';
+    if (env.LLM_KEY && !mvSinirAsti('l:' + kursId, 10)) { try { ozet = await mvOzetle(env, ad, metin); } catch (x) { ozet = ''; } }
+    const id = Date.now().toString(36) + [...crypto.getRandomValues(new Uint8Array(4))].map(x => (x % 36).toString(36)).join('');
+    const belge = { id, ad, tarih, sayi, tur: 'yazi', ozet, parca: parcalar.length, eklenme: new Date().toISOString() };
+    const hepsi = mvHepsiEkle(await env.LINK.get(on + ':hepsi'), parcalar.map(t => ({ b: id, t })), bayt);
+    if (hepsi.length > 20e6) return cevap({ ok: false, hata: 'Belge arşivi doldu; önce eski belgeleri silin' }, 409);  // KV değeri en çok 25 MiB bayt; sınır karakter: Türkçe harf 2, '…' 3 bayt
+    await env.LINK.put(on + ':' + id, JSON.stringify({ ...belge, metin, parcalar }));
+    await env.LINK.put(on + ':hepsi', hepsi);
+    dizin.unshift(belge); await env.LINK.put(on, JSON.stringify(dizin));
+    return cevap({ ok: true, belge });
+  }
+  const b = await req.json().catch(() => null);
+  if (!b) return cevap({ ok: false, hata: 'Gecersiz istek' }, 400);
+  if (yol === 'mevzuat/sil') {
+    if (rol !== 'mudur') return cevap({ ok: false, hata: 'Belgeyi yalnız kurs müdürü siler' }, 403);
+    const id = String(b.id || ''), dizin = await mvDizin(env, kursId);
+    if (!dizin.some(x => x.id === id)) return cevap({ ok: false, hata: 'Belge bulunamadı' }, 404);
+    const ham = await env.LINK.get(on + ':hepsi');
+    if (ham) await env.LINK.put(on + ':hepsi', mvHepsiSil(ham, id));
+    await env.LINK.put(on, JSON.stringify(dizin.filter(x => x.id !== id)));
+    await env.LINK.delete(on + ':' + id);
+    return cevap({ ok: true });
+  }
+  if (yol === 'mevzuat/ozetle' || yol === 'mevzuat/cevapla') {
+    if (!env.LLM_KEY) return cevap({ ok: false, kurulu: false, hata: 'Yapay zekâ henüz bağlı değil' }, 503);
+    if (yol === 'mevzuat/ozetle') {
+      let metin = typeof b.metin === 'string' ? b.metin.trim() : '', kayit = null;
+      if (b.id) { const v = mvId(String(b.id)) ? await env.LINK.get(on + ':' + String(b.id)) : null; if (!v) return cevap({ ok: false, hata: 'Belge bulunamadı' }, 404); kayit = JSON.parse(v); metin = kayit.metin || ''; }
+      if (!metin) return cevap({ ok: false, hata: 'Özetlenecek metin boş' }, 400);
+      if (!kayit && metin.length > MV.metin) return cevap({ ok: false, hata: 'Metin çok uzun' }, 413);
+      if (mvSinirAsti('l:' + kursId, 10)) return cevap({ ok: false, hata: 'Çok sık istek yapıldı; bir dakika sonra tekrar deneyin' }, 429);
+      const ozet = await mvOzetle(env, kayit ? kayit.ad : '', metin);
+      // kayıtlı belgenin özeti saklanır (ön büro ve müdür; 2 KV yazması)
+      if (kayit && buro) {
+        kayit.ozet = ozet; await env.LINK.put(on + ':' + kayit.id, JSON.stringify(kayit));
+        const dizin = await mvDizin(env, kursId), x = dizin.find(y => y.id === kayit.id); if (x) { x.ozet = ozet; await env.LINK.put(on, JSON.stringify(dizin)); }
+      }
+      return cevap({ ok: true, ozet });
+    }
+    const soru = typeof b.soru === 'string' ? b.soru.trim() : '', k = Array.isArray(b.kaynaklar) ? b.kaynaklar : null;
+    if (!soru) return cevap({ ok: false, hata: 'Soru boş' }, 400);
+    if (soru.length > MV.soru) return cevap({ ok: false, hata: 'Soru en çok ' + MV.soru + ' karakter olabilir' }, 400);
+    if (!k || !k.length) return cevap({ ok: false, hata: 'Kaynak yok' }, 400);
+    if (k.length > MV.kaynak) return cevap({ ok: false, hata: 'En çok ' + MV.kaynak + ' kaynak gönderilebilir' }, 400);
+    let top = 0; for (const x of k) { if (!x || typeof x.t !== 'string' || !x.t.trim()) return cevap({ ok: false, hata: 'Kaynak metni boş' }, 400); top += x.t.length + String(x.etiket || '').length; }
+    if (top > MV.kaynakKar) return cevap({ ok: false, hata: 'Kaynaklar toplam ' + MV.kaynakKar.toLocaleString('tr-TR') + ' karakteri geçemez' }, 400);
+    if (mvSinirAsti('l:' + kursId, 10)) return cevap({ ok: false, hata: 'Çok sık istek yapıldı; bir dakika sonra tekrar deneyin' }, 429);
+    const govde = 'Soru: ' + soru + '\n\nKaynaklar:\n' + k.map((x, i) => '[' + (i + 1) + '] ' + mvTemiz(x.etiket, 200) + '\n' + x.t.trim()).join('\n\n');
+    return cevap({ ok: true, cevap: await mvLlm(env, [{ role: 'system', content: MV_CEVAP_ISTEM }, { role: 'user', content: govde }], 900) });
+  }
+  return cevap({ ok: false, hata: 'Bilinmeyen adres' }, 404);
+}
+
 async function onizleme(req, url) {
   const t = ONIZLEME[url.pathname.split('/')[1].toLowerCase()];
   const r = await fetch('https://mdsinyal.com/404.html', { cf: { cacheTtl: 300 } }).catch(() => null);
@@ -403,6 +652,8 @@ export default {
     const kursId = req.headers.get('X-Kurs') || url.searchParams.get('kurs') || '';
     let rol = null;
     if (gercek) { rol = await uyeRol(req, kursId); if (!rol || !PERSONEL.includes(rol)) return cevap({ ok: false, hata: 'Yetki yok' }, 403); }
+    // mevzuat ve MEB yazıları: arama, yükleme, özet, cevap (kimlik ve yetki mevzuatUc() içinde; /mevzuat/gom demoya da açık)
+    if (yol === 'mevzuat' || yol.startsWith('mevzuat/')) return mevzuat(req, env, url, yol, cevap, { gercek, rol, kursId, origin });
     // Kurs verisinin günlük yedeği (Firestore'dan ayrı yerde): kimlik, kullanıcının kendi Firebase oturumuyla Firestore'dan doğrulanır
     if (yol === 'yedek') {
       const kurs = req.method === 'POST' ? req.headers.get('X-Kurs') || '' : url.searchParams.get('kurs') || '';
@@ -565,7 +816,7 @@ export default {
     if (req.method === 'GET') {
       if (!yol) return cevap({ ok: true, hazir: !!(env.WA_TOKEN && env.PHONE_ID && env.ALICI), belge: true, kisa: !!env.LINK, kursHatti: true, sablon: !!env.SABLON_AD, demoHatlari: { usta: !!env.PHONE_ID_USTA, mudur: !!env.PHONE_ID_MUDUR } });
       const anahtar = yol.startsWith('k/') ? yol.slice(2) : yol;
-      if (/^(gelen$|(hat|hatno|gelen|medya|durum|yedek|kisaad|kursad|hata|sohbet|epadres|eponay|epsay|epgitti)[:-])/.test(anahtar)) return cevap({ ok: false }, 404);  // iç kayıtlar (e-posta adresleri ve onay belirteçleri dahil) kısa link gibi okunamaz
+      if (/^(gelen$|(hat|hatno|gelen|medya|durum|yedek|kisaad|kursad|hata|sohbet|epadres|eponay|epsay|epgitti|mbelge)[:-])/.test(anahtar)) return cevap({ ok: false }, 404);  // iç kayıtlar (e-posta adresleri ve onay belirteçleri dahil) kısa link gibi okunamaz
       // imza dönüşü: sunucu kaydı (zaman, IP, ülke, tarayıcı) yalnız imza isteğinin mührünü bilen kursa verilir (?ka=)
       if (yol.startsWith('k/takip-') && env.LINK) {
         const g = await env.LINK.getWithMetadata(anahtar), md = g.metadata || null;
@@ -589,8 +840,8 @@ export default {
       if (!env.LINK) return cevap({ ok: false, hata: 'Kisa link deposu bagli degil' }, 500);
       if (!gercek || rol !== 'mudur') return cevap({ ok: false, hata: 'Yalniz kurs muduru' }, 403);
       const ad = String((b && b.ad) || '').toLowerCase(), hedef = String((b && b.hedef) || '');
-      const AYRILMIS = ['ozellikler', 'iletisim', 'giris', 'gizlilik', 'eklenti', 'fonts', 'demo', 'yonetim', 'sinyal', 'mdsinyal', 'admin', 'destek', 'kayit', 'blog', 'webhook', 'kisa', 'yedek', 'durum', 'gelen', 'medya', 'hata', 'ogrenci', 'ogretmen', 'hesap', 'sifre', 'davet', 'imza', 'prototip'];  // sitenin kendi adresleri (link-standardi.md)
-      if (!/^[a-z0-9-]{4,30}$/.test(ad) || AYRILMIS.includes(ad) || /^(hat|hatno|gelen|medya|durum|yedek|kisaad|kursad|takip|hata|sohbet)[:-]/.test(ad)) return cevap({ ok: false, hata: 'Bu ad kullanilamaz: 4-30 karakter, kucuk harf, rakam ve tire' }, 400);
+      const AYRILMIS = ['ozellikler', 'iletisim', 'giris', 'gizlilik', 'eklenti', 'fonts', 'demo', 'yonetim', 'sinyal', 'mdsinyal', 'admin', 'destek', 'kayit', 'blog', 'webhook', 'kisa', 'yedek', 'durum', 'gelen', 'medya', 'hata', 'ogrenci', 'ogretmen', 'hesap', 'sifre', 'davet', 'imza', 'prototip', 'mevzuat'];  // sitenin kendi adresleri (link-standardi.md)
+      if (!/^[a-z0-9-]{4,30}$/.test(ad) || AYRILMIS.includes(ad) || /^(hat|hatno|gelen|medya|durum|yedek|kisaad|kursad|takip|hata|sohbet|mbelge)[:-]/.test(ad)) return cevap({ ok: false, hata: 'Bu ad kullanilamaz: 4-30 karakter, kucuk harf, rakam ve tire' }, 400);
       if (!HEDEF.test(hedef) || hedef.length > 2000) return cevap({ ok: false, hata: 'Gecersiz hedef' }, 400);
       const sahip = await env.LINK.get('kisaad:' + ad);
       if (sahip && sahip !== kursId) return cevap({ ok: false, hata: 'Bu ad baska bir kursta' }, 409);
