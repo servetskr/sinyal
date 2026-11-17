@@ -201,4 +201,4 @@ MEB’in hazırladığı taslak (direksiyon sınavının serbest güzergâhta ya
 - [İletişim](https://mdsinyal.com/iletisim/): tanıtım görüşmesi isteği
 - [Gizlilik ve KVKK](https://mdsinyal.com/gizlilik.html): işlenen veriler, hukuki sebepler, saklama süreleri
 
-Son güncelleme: 2026-11-17
+Son güncelleme: 2026-11-18

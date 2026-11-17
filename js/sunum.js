@@ -1,8 +1,8 @@
 // Sunum verisi: gerçek kurs hesabında bir öğrenciyi, öğretmenini ve müdürü baştan sona göstermek için az sayıda örnek kayıt.
 // Öğrenciye öğretmen atanır; geçmiş dersler (puanlı), bugün ve sonraki günlerde planlı dersler, ödeme planı ve sınav tarihi eklenir.
 // Eklenen her kayıt "sunum: true" taşır; kaldırınca yalnız bunlar silinir ve öğrencinin önceki bilgileri geri gelir. Öğrencinin hesabına dokunulmaz.
-import { S, gun, SINIFLAR, tamAd, islem, konuOner } from './veri.js?v=228';
-import { gerekliDireksiyon } from './veri.js?v=228';
+import { S, gun, SINIFLAR, tamAd, islem, konuOner } from './veri.js?v=229';
+import { gerekliDireksiyon } from './veri.js?v=229';
 
 const kucuk = s => String(s || '').toLocaleLowerCase('tr').trim();
 // tek öğrenci / tek öğretmen varsa o; birden çoksa adıyla (Servet Sakar, Ahmet)
