@@ -6,7 +6,7 @@
    3) Anlam: sorgu vektörü (worker /mevzuat/gom, dışarıdan verilen gom() ile) × N×D int8 vektörler (nokta çarpımı).
    Kelime ve anlam listeleri RRF (k=60) ile birleşir. gom() yoksa ya da hata verirse yalnız kelime araması döner, anlamKapali: true. */
 
-const SURUM = '?v=216';
+const SURUM = '?v=217';
 const RRF_K = 60, LISTE_N = 60;
 const BM25_K1 = 1.2, BM25_B = 0.75;
 
