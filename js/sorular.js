@@ -3,7 +3,7 @@
 // Mevzuat: 2918 sayılı KTK (7574 ve 7590 sayılı kanunlarla 2026 değişiklikleri), Karayolları Trafik Yönetmeliği, Trafik İşaretleri Yönetmeliği, KGM işaret el kitabı; ilk yardım: SB İlk Yardım Eğitim Kitabı (2024); motor: MEB Araç Tekniği Dersi Programı (2020); adab: MEB Trafik Adabı Dersi Programı (2018).
 // Eski sorular yerinde kalır (öğrencilerin yanlış listeleri sıraya bağlı); yeniler sona eklenir. 14 Kas 2026: 2.267 yeni soru (yazım + ayrı doğruluk denetimi), toplam 4.216.
 // 16-17 Kas 2026 müfredat denetimi (dayanak: sinyal-kaynak/belgeler/soru-bankasi/olcut.md, kaynak.md, denetim-raporu.md): 4.216 sorunun hepsi denetlendi ve ikinci bir doğrulayıcıdan geçti. 2.225 soru düzeltildi, 161 soru kaldırılıp aynı indekse aynı konudan yeni soru yazıldı, 42 soru yerine yazılacak soru beklediği için yerinde bırakıldı (HAVUZ_DISI; seçimden dışlanması portal.js ve ogr/sinav.js yamasına bağlı). Sıra ve indeksler değişmedi.
-export { KONULAR } from './konular.js?v=214';
+export { KONULAR } from './konular.js?v=215';
 
 // Müfredat dışı bulunup yerine yeni soru yazılamayan motor soruları (olcut.md 0.3: satıra dokunulmaz). Test seçiminde kullanılmamalı.
 export const HAVUZ_DISI = [340,344,362,1197,2728,2730,2736,2739,2741,2752,2759,2788,2795,2832,2835,2844,3028,3029,3030,3031,3034,3035,3037,3039,3040,3041,3045,3049,3050,3051,3053,3054,3055,3056,3057,3060,3061,3062,3063,3065,3066,3082];

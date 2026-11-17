@@ -1,9 +1,9 @@
 // Öğrenci hesapları (kurs tarafı): müdür ya da ön büro hesabı açar, giriş bilgileri öğrenciye WhatsApp'tan gider,
 // öğrenci ilk girişte kendi şifresini belirler. Şifresini unutan öğrenci kursa söyler; buradan tek dokunuşla yeni geçici şifre gider.
-import { S, kaydet, gun, tamAd, islem, selam, oturum, sb, SINIFLAR, egitmen, eksikEvrak, kursAdi } from './veri.js?v=214';
-import { e, ik, tarih, pencere, kapatPencere, bildir, waSirali, tl, tamTarih, apiAcik } from './ui.js?v=214';
-import * as B from './bulut.js?v=214';
-import { wpGonder, alici, odemeBilgisi } from './sayfalar1.js?v=214';
+import { S, kaydet, gun, tamAd, islem, selam, oturum, sb, SINIFLAR, egitmen, eksikEvrak, kursAdi } from './veri.js?v=215';
+import { e, ik, tarih, pencere, kapatPencere, bildir, waSirali, tl, tamTarih, apiAcik } from './ui.js?v=215';
+import * as B from './bulut.js?v=215';
+import { wpGonder, alici, odemeBilgisi, bilgiDuzenle } from './sayfalar1.js?v=215';
 
 const yetkili = () => oturum.kullanici && ['mudur', 'sekreter'].includes(oturum.kullanici.rol);
 
@@ -70,7 +70,11 @@ export function hesapTikla(ev, k, yenile) {
       wpGonder(k, mesaj(k, r), 'Öğrenci hesabı');
       bildir(r.yeniden ? 'Yeni geçici şifre WhatsApp’tan gönderildi' : 'Hesap açıldı; giriş bilgileri WhatsApp’tan gönderildi' + (B.bulutta() ? '' : ' (demo: gerçek hesap açılmaz)'));
       yenile();
-    }).catch(x => { b.disabled = false; bildir(B.hataMetni(x), 'uyari'); });
+    }).catch(x => {
+      b.disabled = false; const m = B.hataMetni(x); bildir(m, 'uyari');
+      // numara başka kursta kayıtlı ya da geçersizse numara düzenleme ekranı hemen açılır (not 16)
+      if (/numara/i.test(m) && /başka bir kursta|geçersiz/i.test(m)) { bilgiDuzenle(k); setTimeout(() => { const t = document.querySelector('.pencere [name=tel]'); if (t) { t.focus(); t.select(); } }, 120); }
+    });
     return true;
   }
   if (ev.target.closest('[data-hesap-kapat]')) {
@@ -82,6 +86,37 @@ export function hesapTikla(ev, k, yenile) {
   return false;
 }
 // Hesabı olmayan öğrencilere toplu hesap: hesaplar sırayla açılır, mesajlar sıralı gönderim ekranından gider
+// Öğrenci uygulaması durumu (not 15): kim kullanıyor, kimin hesabı açık ama hiç girmedi, kimin hesabı yok; davet tek tek ya da toplu gider
+export const uygulamaDurum = k => !k.hesap ? (B.telNorm(k.tel) ? 'yok' : 'gecersiz') : k.hesapAktif ? 'aktif' : 'girmedi';
+export function uygulamaOzet() {
+  const l = sb(S.kursiyerler).filter(k => !k.kapali && k.asama !== 'Ehliyet'), say = d => l.filter(k => uygulamaDurum(k) === d).length;
+  return { toplam: l.length, aktif: say('aktif'), girmedi: say('girmedi'), yok: say('yok') + say('gecersiz') };
+}
+export function uygulamaPenceresi(yenile) {
+  const DURUM = { aktif: ['Kullanıyor', 'yesil'], girmedi: ['Hesap açık · hiç girmedi', 'uyari'], yok: ['Hesap yok', ''], gecersiz: ['Telefon geçersiz', 'kirmizi'] };
+  const SIRA = { girmedi: 0, yok: 1, gecersiz: 2, aktif: 3 };
+  const ciz = d => {
+    const l = sb(S.kursiyerler).filter(k => !k.kapali && k.asama !== 'Ehliyet').sort((a, b) => SIRA[uygulamaDurum(a)] - SIRA[uygulamaDurum(b)] || tamAd(a).localeCompare(tamAd(b), 'tr'));
+    const o = uygulamaOzet();
+    d.querySelector('.pencere-govde').innerHTML = `<p style="font-size:14px;margin-bottom:10px">Öğrenci uygulamasının giriş linki (${e(B.ogrenciGirisLinki())}), telefon numarası ve geçici şifre WhatsApp'tan gider. <b>${o.aktif}</b> öğrenci kullanıyor, <b>${o.girmedi}</b> öğrencinin hesabı açık ama hiç girmedi, <b>${o.yok}</b> öğrencinin hesabı yok.</p>
+      ${l.length ? `<ul class="liste" style="max-height:340px;overflow:auto">${l.map(k => { const du = uygulamaDurum(k), [ad, renk] = DURUM[du]; return `<li style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1;min-width:160px"><b>${e(tamAd(k))}</b><small style="display:block;color:var(--soluk)">${e(B.telGoster(B.telNorm(k.tel) || '') || k.tel || '')}${du === 'aktif' && k.sonGiris ? ' · son giriş ' + tarih(k.sonGiris) : ''}</small></span><span class="rozet ${renk}">${ad}</span>${du === 'yok' ? `<button type="button" class="dg dg-ana dg-kucuk" data-u-ac="${e(k.id)}">Hesap aç ve gönder</button>` : du === 'girmedi' ? `<button type="button" class="dg dg-cizgi dg-kucuk" data-u-ac="${e(k.id)}">Daveti yeniden gönder</button>` : du === 'gecersiz' ? `<a class="dg dg-hafif dg-kucuk" href="#/kursiyer/${e(k.id)}">Numarayı düzelt</a>` : ''}</li>`; }).join('')}</ul>` : '<p>Aktif öğrenci yok.</p>'}`;
+  };
+  const d = pencere({
+    baslik: 'Öğrenci uygulaması daveti', genis: true, icerik: '',
+    altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-u-toplu>Hesabı olmayanların hepsine</button>`,
+    onAc(d) {
+      d.addEventListener('click', ev => {
+        if (ev.target.closest('[data-u-toplu]')) { kapatPencere(); return topluHesap(yenile); }
+        const b = ev.target.closest('[data-u-ac]'); if (!b) return;
+        const k = S.kursiyerler.find(x => String(x.id) === b.dataset.uAc); if (!k) return;
+        b.disabled = true;
+        ac(k).then(r => { islem(r.yeniden ? 'Öğrenciye yeni geçici şifre gönderdi' : 'Öğrenci hesabı açtı', tamAd(k)); kaydet(); wpGonder(k, mesaj(k, r), 'Öğrenci hesabı'); bildir(r.yeniden ? 'Yeni giriş bilgileri WhatsApp’tan gönderildi' : 'Hesap açıldı; giriş bilgileri WhatsApp’tan gönderildi'); ciz(d); yenile && yenile(); })
+          .catch(x => { b.disabled = false; const m = B.hataMetni(x); bildir(m, 'uyari'); if (/numara/i.test(m) && /başka bir kursta|geçersiz/i.test(m)) { kapatPencere(); bilgiDuzenle(k); } });
+      });
+    },
+  });
+  ciz(d);
+}
 export function topluHesap(yenile) {
   const l = sb(S.kursiyerler).filter(k => !k.kapali && k.asama !== 'Ehliyet' && !k.hesap), gecersiz = l.filter(k => !B.telNorm(k.tel)), uygun = l.filter(k => B.telNorm(k.tel));
   if (!l.length) return bildir('Aktif öğrencilerin hepsinin hesabı açık');
