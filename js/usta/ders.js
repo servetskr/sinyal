@@ -2,11 +2,11 @@
 // dersi iptal et, not ekle, kapatılmamış dersin kaydını tamamla (tam ekran, .ox-akis) ile ders menüsü (alttan sayfa) ve
 // "Öğrenci gelmedi mi?" onayı (pencere). Kayıt kuralları portal.js'te: dersKaydet, dersIptalEt, gelmediYap, notEkle (eski pencereler de onları çağırır).
 // Akış durumu sessionStorage'da tutulur (adım, seçilen konular, puanlar, not); sayfa yenilenirse aynı adımdan sürer, imzalar yeniden atılır.
-import { S, BECERI, SINIFLAR, kursiyer, egitmen, tamAd, gun, fark, tarihOku, konuListesi, konuOner, geceDersMi } from '../veri.js?v=212';
-import { gerekliDireksiyon } from '../veri.js?v=212';
-import { bildir, bildirimKapat, imzaAlani, tarihUzun, ayAdi } from '../ui.js?v=212';
-import * as P from '../portal.js?v=212';
-import { esc, oi, dugme, satir, liste, kutucuk, radyo, not, stilEkle, odakTuzagi } from '../ogr/ui.js?v=212';
+import { S, BECERI, SINIFLAR, kursiyer, egitmen, tamAd, gun, fark, tarihOku, konuListesi, konuOner, geceDersMi } from '../veri.js?v=213';
+import { gerekliDireksiyon } from '../veri.js?v=213';
+import { bildir, bildirimKapat, imzaAlani, tarihUzun, ayAdi } from '../ui.js?v=213';
+import * as P from '../portal.js?v=213';
+import { esc, oi, dugme, satir, liste, kutucuk, radyo, not, stilEkle, odakTuzagi } from '../ogr/ui.js?v=213';
 
 /* ---------- akış durumu ---------- */
 // A: { ekran: 'bitir' | 'sonuc' | 'iptal' | 'not' | 'kayit', id, adim, konular, beceri, not, neden, iptalNot, metin, gir, anim }

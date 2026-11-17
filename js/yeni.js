@@ -1,8 +1,8 @@
 // "+ Yeni": kursa eklenebilecek her şey tek pencereden (öğrenci, aday, ödeme, ders, sınav, mesaj, öğretmen, araç, şube, gelir/gider)
-import { S, oturum, gun, fark, tamAd, gecikenler, sb, kapaliGun } from './veri.js?v=212';
-import { e, ik, tl, pencere, kapatPencere, bildir, tarihUzun } from './ui.js?v=212';
-import { kursiyerFormu, tahsilAl, adayEkle, dersPlanlaAc } from './sayfalar1.js?v=212';
-import { oturumEkle, aracDuzenle, ustaDuzenle, hareketEkle } from './sayfalar2.js?v=212';
+import { S, oturum, gun, fark, tamAd, gecikenler, sb, kapaliGun } from './veri.js?v=213';
+import { e, ik, tl, pencere, kapatPencere, bildir, tarihUzun } from './ui.js?v=213';
+import { kursiyerFormu, tahsilAl, adayEkle, dersPlanlaAc } from './sayfalar1.js?v=213';
+import { oturumEkle, aracDuzenle, ustaDuzenle, hareketEkle } from './sayfalar2.js?v=213';
 
 const HERKES = ['mudur', 'sekreter'], MUDUR = ['mudur'];
 const SECENEKLER = [

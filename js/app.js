@@ -1,24 +1,25 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=212';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=212';
-import * as Y1 from './sayfalar1.js?v=212';
-import * as Y2 from './sayfalar2.js?v=212';
-import * as P from './portal.js?v=212';
-import * as OXU from './ogr/ui.js?v=212';
-import * as Y3 from './sayfalar3.js?v=212';
-import * as Y4 from './sayfalar4.js?v=212';
-import * as Y5 from './sayfalar5.js?v=212';
-import * as IM from './imza.js?v=212';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=212';
-import * as SN from './senaryo.js?v=212';
-import * as OZ from './ozellik.js?v=212';
-import { durumlariGuncelle } from './mesaj.js?v=212';
-import { yeniMenu } from './yeni.js?v=212';
-import * as B from './bulut.js?v=212';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=212';
-import * as AN from './analiz.js?v=212';
-import * as GZ from './guzergah.js?v=212';
-import * as ORT from './ortak.js?v=212';
-import * as SH from './sahip.js?v=212';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=213';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=213';
+import * as Y1 from './sayfalar1.js?v=213';
+import * as Y2 from './sayfalar2.js?v=213';
+import * as P from './portal.js?v=213';
+import * as OXU from './ogr/ui.js?v=213';
+import * as Y3 from './sayfalar3.js?v=213';
+import * as Y4 from './sayfalar4.js?v=213';
+import * as Y5 from './sayfalar5.js?v=213';
+import * as IM from './imza.js?v=213';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=213';
+import * as SN from './senaryo.js?v=213';
+import * as OZ from './ozellik.js?v=213';
+import { durumlariGuncelle } from './mesaj.js?v=213';
+import { yeniMenu } from './yeni.js?v=213';
+import * as B from './bulut.js?v=213';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=213';
+import * as AN from './analiz.js?v=213';
+import * as GZ from './guzergah.js?v=213';
+import * as ORT from './ortak.js?v=213';
+import * as SH from './sahip.js?v=213';
+import * as MZ from './sayfa-mevzuat.js?v=213';
 
 /* ---------- uygulama hatalarının otomatik bildirimi ----------
    window.onerror / unhandledrejection → worker /hata (api.mdsinyal.com). Gönderilen: sürüm, rota adı (#/ad; kimlik ve kod kırpılır), rol,
@@ -58,6 +59,7 @@ const SAYFALAR = {
   egitmen: P.egitmenPortal, ogrenci: P.ogrenciPortal,
   belgeler: Y3.belgeler, kayit: Y3.kayitSayfasi, guven: Y3.guven, mebbis: Y3.mebbisAsistani,
   sosyal: Y4.sosyal, kurulum: Y5.kurulum, 'imza-geldi': IM.imzaGeldi, senaryo: SN.senaryolar, karlilik: OZ.karlilik, analiz: AN.analiz,
+  mevzuat: MZ.mevzuat,
 };
 const ROL_AD = { mudur: 'Kurs müdürü', sekreter: 'Ön büro', usta: 'Usta öğretici', ortak: 'Ortak' };
 const YASAK = { mudur: [], sekreter: ['raporlar', 'ayarlar', 'guven', 'kurulum', 'senaryo', 'karlilik', 'analiz'], usta: Object.keys(SAYFALAR).filter(k => !['egitmen', 'imza-geldi'].includes(k)), ortak: Object.keys(SAYFALAR) };
@@ -68,7 +70,7 @@ const MENU = [
   ['Bugün', [['genel', 'Genel bakış', '↑'], ['mesajlar', 'Mesajlar', '↗'], ['adaylar', 'Yeni öğrenciler', '↗']]],
   ['Öğrenciler', [['kursiyerler', 'Kursiyerler', '→'], ['plan', 'Direksiyon planı', '→'], ['teorik', 'Teorik dersler', '→'], ['sinavlar', 'Sınavlar', '→'], ['guzergah', 'Sınav güzergâhları', '→']]],
   ['Para', [['kasa', 'Kasa ve ödemeler', '→']]],
-  ['Kurum', [['meb', 'MEB işlemleri', '→'], ['belgeler', 'Belgeler ve çıktılar', '→'], ['filo', 'Ekip ve araçlar', '→']]],
+  ['Kurum', [['meb', 'MEB işlemleri', '→'], ['mevzuat', 'Mevzuat ve MEB yazıları', '→'], ['belgeler', 'Belgeler ve çıktılar', '→'], ['filo', 'Ekip ve araçlar', '→']]],
   ['Analiz', [['analiz', 'Analiz', '→'], ['raporlar', 'Raporlar', '→'], ['karlilik', 'Kârlılık ve kapasite', '→']]],
   ['Diğer', [['sosyal', 'Sosyal medya asistanı', '↗'], ['kayit', 'Kayıt formu', '↗'], ['ogrenci', 'Kursiyer ekranı', '↗'], ['senaryo', 'Demo senaryoları', '↗'], ['kurulum', 'Kurulum', '→'], ['guven', 'Verileriniz ve güvenlik', '→'], ['ayarlar', 'Ayarlar', '→']]],
 ];
@@ -175,6 +177,7 @@ const imzaLinki = () => location.hash.startsWith('#/imza/') ? location.hash.slic
 function imzaSayfasiAc() { IM.imzaSayfasi(document.getElementById('uyg'), imzaLinki()); }
 function rota() {
   const h = (location.hash || '#/genel').slice(2).split('/');
+  h[0] = h[0].split('?')[0];  // #/mevzuat?q=… gibi sorgu ekli rotalar
   return { ad: SAYFALAR[h[0]] ? h[0] : 'genel', id: h[1] ? decodeURIComponent(h[1]) : null };
 }
 
@@ -249,6 +252,8 @@ function aramaAc() {
       const ciz = () => {
         const q = inp.value.trim().toLocaleLowerCase('tr');
         const sonuc = (q ? kayitlar.filter(k => (k.t + ' ' + k.a).toLocaleLowerCase('tr').includes(q)) : kayitlar.filter(k => k.g === 'Sayfalar')).slice(0, 14);
+        const ham = inp.value.trim().slice(0, 300);
+        if (ham.length >= 2 && izinli('mevzuat')) sonuc.push({ t: 'Mevzuatta ara: ' + ham, a: 'Yönetmelik, kılavuz ve MEB yazıları', h: '#/mevzuat?q=' + encodeURIComponent(ham), g: 'Mevzuat' });
         let g = '';
         ul.innerHTML = sonuc.length ? sonuc.map((k, i) => (k.g !== g ? `<li class="grup">${(g = k.g)}</li>` : '') + `<li><a href="${k.h}" class="${i === 0 ? 'odak' : ''}"><b>${e(k.t)}</b><small>${e(k.a)}</small></a></li>`).join('') : '<li class="grup">Sonuç yok</li>';
       };
@@ -997,7 +1002,7 @@ async function davetEkrani() {
 document.addEventListener('click', ev => { if (ev.target.closest('[data-yeniden-yukle]')) location.reload(); });
 document.addEventListener('click', ev => {
   if (ev.target.closest('[data-cikis]')) kapatPencere();
-  if (ev.target.closest('[data-hesap]')) { if (oturum.kullanici && oturum.kullanici.rol === 'usta' && document.body.classList.contains('ox-modu')) return import('./usta/ekran.js?v=212').then(m => { m.hesapAc(); yenile(true); }); return hesapSayfasi(); }
+  if (ev.target.closest('[data-hesap]')) { if (oturum.kullanici && oturum.kullanici.rol === 'usta' && document.body.classList.contains('ox-modu')) return import('./usta/ekran.js?v=213').then(m => { m.hesapAc(); yenile(true); }); return hesapSayfasi(); }
   if (ev.target.closest('[data-destek]')) return destekPenceresi();
   // Yönetim: Hesaplar telefonda profil menüsünden açılır (alt çubuk 6 sekme kalır)
   if (ev.target.closest('[data-yn-hesaplar]')) { kapatPencere(); ORT.sekmeSec('hesaplar'); yonetimCiz(true); SH.otoBaglan(); return; }
@@ -1110,4 +1115,4 @@ async function surumBak() {
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') surumBak(); });
 setTimeout(surumBak, 4000);
 // kullanım analizi (kişisel veri içermez; kullanim.js): ekran, düğme adı, süre, hata türü sayılır, günde bir özet yazılır
-setTimeout(() => import('./kullanim.js?v=212').then(m => m.baslat()).catch(() => { }), 1500);
+setTimeout(() => import('./kullanim.js?v=213').then(m => m.baslat()).catch(() => { }), 1500);
