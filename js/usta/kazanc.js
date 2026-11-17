@@ -1,10 +1,10 @@
 // Öğretmen › Kazancım (yeni tasarım): ay seçici, bu ayın kalan alacağı (brüt), kazanç dökümü (sabit ücret, ders primi, avans, yapılan ödeme),
 // kontrol bekleyen dersler (imza eksik, 40 dakikadan kısa) ve önceki ayların ödeme durumu. Alt ekran 'ayrinti': ayın dersleri (süzgeçli) ve ödemeler.
 // Hesap js/risk.js ustaAlacak() ile yapılır; ofisin hakediş tablosu da aynı işlevi kullanır. Eski portal.js "Kazancım" bilgilerinin hepsi burada.
-import { S, kursiyer, tamAd, tarihOku } from '../veri.js?v=218';
-import { ayAdi, gunKisa } from '../ui.js?v=218';
-import { ustaAlacak } from '../risk.js?v=218';
-import { esc, oi, tl, geri, bolum, baglanti, kart, liste, satir, ikonKutu, cip, not, bos, sekmeler, gorsel, stilEkle } from '../ogr/ui.js?v=218';
+import { S, kursiyer, tamAd, tarihOku } from '../veri.js?v=219';
+import { ayAdi, gunKisa } from '../ui.js?v=219';
+import { ustaAlacak } from '../risk.js?v=219';
+import { esc, oi, tl, geri, bolum, baglanti, kart, liste, satir, ikonKutu, cip, not, bos, sekmeler, gorsel, stilEkle } from '../ogr/ui.js?v=219';
 
 /* ---------- ekran durumu (yeniden çizimde korunur) ---------- */
 const DURUM = 'sinyal-eg-kazanc';
