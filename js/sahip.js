@@ -2,10 +2,11 @@
 // mdSinyal Yönetim panelinin “Hesaplar” bölümünde açılır (yalnız Servet; ortak görmez).
 // Yetki Firebase güvenlik kurallarından değil, Google hesabından gelir: Firebase projesinin sahibi olan Google hesabıyla
 // bağlanılır, Google IAM izin verirse işlem yapılır. Sunucu, gizli anahtar yok; erişim belirteci yalnız bellekte durur (1 saat).
-import { e, ik, pencere, kapatPencere, bildir, tl, siteLink } from './ui.js?v=220';
-import { S, kaydet, islem, bulutKanca } from './veri.js?v=220';
-import { ogrenciPanelMetni, WORKER } from './bulut.js?v=220';
-import { EMU } from './firebase-ayar.js?v=220';
+import { e, ik, pencere, kapatPencere, bildir, tl, siteLink } from './ui.js?v=221';
+import { S, kaydet, islem, bulutKanca } from './veri.js?v=221';
+import { ogrenciPanelMetni, WORKER } from './bulut.js?v=221';
+import { EMU } from './firebase-ayar.js?v=221';
+import { kabuk as epKabuk, kutular, bolum, satirlar, bos, not, nokta, dugme, R, SITE } from './eposta-kabuk.js?v=221';
 
 // EMU (firebase-ayar.js, yalnız localhost + açık işaret): REST istekleri yerel emülatöre gider, Google onayı yerine emülatörün yönetici belirteci kullanılır
 const PROJE = EMU ? EMU.proje : 'sinyal-5d37a';
@@ -926,17 +927,22 @@ const kullanimEpostaKart = haftalik => `<div class="sh-ist" style="cursor:defaul
   <button class="dg dg-cizgi dg-kucuk" style="margin-top:12px" data-sh-ku-gonder ${KU.gonderiliyor || !KU.veri ? 'disabled' : ''}>${ik('mesaj')}${KU.gonderiliyor ? 'Gönderiliyor…' : 'Bu görünümü şimdi gönder'}</button></div>`;
 // e-posta gövdesi: satır içi stil
 function kullanimEpostaHtml(T, baslik) {
-  const L = kullanimListeleri(T), h = s => `<h2 style="font-size:16px;margin:22px 0 6px;color:#0f1729">${s}</h2>`, sat = (a, b) => `<tr><td style="padding:5px 0;color:#374151">${e(a)}</td><td style="padding:5px 0;text-align:right;font-weight:600;color:#111827">${e(String(b))}</td></tr>`;
-  const tb = l => l.length ? `<table role="presentation" style="width:100%;border-collapse:collapse;font-size:14px">${l.join('')}</table>` : '<p style="font-size:14px;color:#6b7280">Veri yok.</p>';
-  return `<div style="font:15px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;color:#111827;max-width:600px;margin:0 auto;padding:8px">
-<p style="margin:0;color:#6b7280;font-size:13px">mdSinyal · ${e(baslik)}</p><h1 style="font-size:22px;margin:4px 0 12px">Kullanım analizi</h1>
-${tb([sat('Kullanan kurs', Object.keys(T.kurs).length), sat('Cihaz-gün', T.cg), sat('Kullanım süresi', dk(T.sn)), sat('Açılış', T.ot), sat('Telefondan', '%' + (T.cg ? Math.round(T.cihaz.telefon / T.cg * 100) : 0))])}
-${h('En çok zaman geçirilen ekranlar')}${tb(L.ekran.map(([a, s]) => sat(ekranYaz(a) + ' (' + s[0] + ' açılış)', dk(s[1]))))}
-${h('En çok yapılan işlemler')}${tb(L.dugme.map(([a, n]) => sat(dugmeYaz(a), n + ' kez')))}
-${h('Takılınan yerler')}${tb(L.takil.map(([a, s]) => sat(ekranYaz(a), takilMetni(s))))}
-${L.hata.length ? h('Hata türleri') + tb(L.hata.map(([a, n]) => sat(a === 'form' ? 'Form uyarısı' : a, n))) : ''}
-${h('Kurslar')}${tb(L.kurs.map(([, k]) => sat(k.ad + ' · ' + k.cihaz + ' cihaz · ' + k.gun + ' gün', dk(k.sn))))}
-<p style="margin:24px 0 0;font-size:12.5px;color:#6b7280">Kişisel veri içermez: yalnız ekran ve düğme adları, süreler ve sayılar. Ayrıntı: mdSinyal Yönetim › Hesaplar › Kullanım.</p></div>`;
+  const L = kullanimListeleri(T), kursN = Object.keys(T.kurs).length, tel = T.cg ? Math.round(T.cihaz.telefon / T.cg * 100) : 0;
+  const ac = s => `<span style="color:${R.soluk};font-weight:400">${s}</span>`;
+  const govde = !T.cg ? [
+    kutular([['Kullanan kurs', '0', 'bu dönemde'], ['Kullanım süresi', '0 dk', 'toplam']]),
+    not('<b>Bu dönemde kullanım özeti yok.</b> Kurslar uygulamayı kullandıkça her cihaz günde bir özet yazar; özet ertesi gün burada görünür. Hiç gelmiyorsa Firestore kuralında <b>kullanim</b> bloğunun yayında olduğunu kontrol edin.'),
+    dugme('Kullanım sayfasını aç', SITE + '/#/yonetim')].join('\n') : [
+    kutular([['Kullanan kurs', String(kursN), T.cg + ' cihaz-gün'], ['Kullanım süresi', dk(T.sn), T.ot + ' açılış'], ['Telefondan', '%' + tel, 'cihaz-günlerin'], ['Hata', String(Object.values(T.hata).reduce((a, n) => a + n, 0)), L.takil.length + ' ekranda takılma']]),
+    bolum('En çok zaman geçirilen ekranlar', L.ekran.length ? satirlar(L.ekran.map(([a, s]) => [e(ekranYaz(a)) + ' ' + ac('· ' + s[0] + ' açılış'), e(dk(s[1]))])) : bos('Veri yok.')),
+    bolum('En çok yapılan işlemler', L.dugme.length ? satirlar(L.dugme.map(([a, n]) => [e(dugmeYaz(a)), n + ' kez'])) : bos('Veri yok.')),
+    bolum('Takılınan yerler', L.takil.length ? satirlar(L.takil.map(([a, s]) => [nokta('#d97706') + e(ekranYaz(a)), '', { alt: e(takilMetni(s)) }])) : bos('Belirgin bir takılma yok.'), L.takil.length || null),
+    L.hata.length ? bolum('Hata türleri', satirlar(L.hata.map(([a, n]) => [e(a === 'form' ? 'Form uyarısı' : a), String(n), { renk: R.kirmizi }]))) : '',
+    bolum('Kurslar', satirlar(L.kurs.map(([, x]) => [`<b>${e(x.ad)}</b>`, e(dk(x.sn)), { alt: `${x.cihaz} cihaz · ${x.gun} gün` }])), kursN),
+    dugme('Kullanım sayfasını aç', SITE + '/#/yonetim')].join('\n');
+  return epKabuk({ ust: 'mdSinyal Yönetim · ' + baslik, baslik: 'Kullanım analizi', govde,
+    onizleme: T.cg ? `${kursN} kurs · ${dk(T.sn)} kullanım · %${tel} telefondan` : 'Bu dönemde kullanım özeti yok',
+    alt: 'Kişisel veri içermez: yalnız ekran ve düğme adları, süreler ve sayılar. Ayrıntı: mdSinyal Yönetim › Hesaplar › Kullanım.' });
 }
 async function kullanimGonder(T, baslik, donem) {
   const yetki = await hataYetki(); if (!yetki) throw new Error('Yetki yok: platform sahibinin hesabıyla gir');
@@ -952,7 +958,7 @@ let kuOtoBakildi = false;
 async function kullanimHaftalik() {
   if (kuOtoBakildi || !(S.kurs && S.kurs.sahipAnaliz) || !Object.keys(kursIst).length) return; kuOtoBakildi = true;
   try {
-    const { gecenHafta } = await import('./eposta.js?v=220'), h = gecenHafta();
+    const { gecenHafta } = await import('./eposta.js?v=221'), h = gecenHafta();
     if (S.kurs.sahipAnalizSon === h.donem) return;
     const T = await kullanimOku(aralikGunler(h.bas, h.bit));
     const j = await kullanimGonder(T, h.bas.split('-').reverse().join('.') + ' – ' + h.bit.split('-').reverse().join('.'), h.donem);
