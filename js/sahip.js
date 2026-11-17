@@ -2,10 +2,10 @@
 // mdSinyal Yönetim panelinin “Hesaplar” bölümünde açılır (yalnız Servet; ortak görmez).
 // Yetki Firebase güvenlik kurallarından değil, Google hesabından gelir: Firebase projesinin sahibi olan Google hesabıyla
 // bağlanılır, Google IAM izin verirse işlem yapılır. Sunucu, gizli anahtar yok; erişim belirteci yalnız bellekte durur (1 saat).
-import { e, ik, pencere, kapatPencere, bildir, tl, siteLink } from './ui.js?v=219';
-import { S, kaydet, islem, bulutKanca } from './veri.js?v=219';
-import { ogrenciPanelMetni, WORKER } from './bulut.js?v=219';
-import { EMU } from './firebase-ayar.js?v=219';
+import { e, ik, pencere, kapatPencere, bildir, tl, siteLink } from './ui.js?v=220';
+import { S, kaydet, islem, bulutKanca } from './veri.js?v=220';
+import { ogrenciPanelMetni, WORKER } from './bulut.js?v=220';
+import { EMU } from './firebase-ayar.js?v=220';
 
 // EMU (firebase-ayar.js, yalnız localhost + açık işaret): REST istekleri yerel emülatöre gider, Google onayı yerine emülatörün yönetici belirteci kullanılır
 const PROJE = EMU ? EMU.proje : 'sinyal-5d37a';
@@ -952,7 +952,7 @@ let kuOtoBakildi = false;
 async function kullanimHaftalik() {
   if (kuOtoBakildi || !(S.kurs && S.kurs.sahipAnaliz) || !Object.keys(kursIst).length) return; kuOtoBakildi = true;
   try {
-    const { gecenHafta } = await import('./eposta.js?v=219'), h = gecenHafta();
+    const { gecenHafta } = await import('./eposta.js?v=220'), h = gecenHafta();
     if (S.kurs.sahipAnalizSon === h.donem) return;
     const T = await kullanimOku(aralikGunler(h.bas, h.bit));
     const j = await kullanimGonder(T, h.bas.split('-').reverse().join('.') + ' – ' + h.bit.split('-').reverse().join('.'), h.donem);
