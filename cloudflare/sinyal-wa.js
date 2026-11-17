@@ -616,6 +616,11 @@ async function mvOlcumIzin(req, env) {
   if (a.length !== b.length) return false;
   try { return crypto.subtle.timingSafeEqual(a, b); } catch (x) { let d = 0; for (let i = 0; i < a.length; i++) d |= a[i] ^ b[i]; return d === 0; }
 }
+const MV_ETKI_ISTEM = 'Sürücü kurslarına (özel MTSK) hizmet veren platformun editörüsün. Verilen resmî belge ya da değişikliğin sürücü kurslarını nasıl etkilediğini kurs müdürüne anlatacak kısa bir duyuru taslağı hazırla. Kurallar:\n' +
+  '- Yalnız verilen metne dayan; metinde olmayan hiçbir şeyi yazma, tahmin yürütme. Tarih, süre, tutar ve madde numaralarını aynen yaz.\n' +
+  '- Kursu ilgilendirmeyen kısımları atla. Belge kursları hiç ilgilendirmiyorsa ozet alanına bunu yaz, yapilacaklar boş kalsın.\n' +
+  '- Sade Türkçe, kurs müdürüne konuşur gibi.\n' +
+  'YALNIZ şu JSON nesnesini ver: {"baslik":"en çok 10 kelime","ozet":"2-4 cümle: ne değişti, ne zamandan itibaren","yapilacaklar":["kursun yapması gereken somut iş (son tarih varsa yaz)"],"kimi":"kurs müdürü, ön büro, usta öğretici, kursiyer gibi","yururluk":"yürürlük tarihi metinde varsa, yoksa boş"}';
 const MV_RESIM_ISTEM ='Bu fotoğraf resmî bir yazının sayfası. Sayfada yazan metni olduğu gibi, Türkçe karakterleri koruyarak düz metne çevir. Yorum, özet ya da açıklama ekleme; yalnız metni yaz. Okunamayan yerlere [okunamadı] yaz. Fotoğrafta metin yoksa yalnız BOS yaz.';
 const mvOzetle = (env, ad, metin) => mvLlm(env, [{ role: 'system', content: MV_OZET_ISTEM }, { role: 'user', content: (ad ? 'Yazının adı: ' + ad + '\n\n' : '') + 'Metin:\n' + metin.slice(0, MV.ozetKar) }], 700);
 const mvTemiz = (s, n) => String(s || '').replace(/[\u0000-\u001f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
@@ -777,10 +782,26 @@ async function mevzuatOrtak(req, env, url, yol, cevap) {
     else {
       const baslik = mvTemiz(b.baslik, 120), metin = mvKes(String(b.metin || '').replace(/[<>]/g, ' '), 800), bag = /^https:\/\/[^\s<>"]{4,300}$/.test(b.bag || '') ? b.bag : '';
       if (!baslik) return cevap({ ok: false, hata: 'Duyurunun başlığını yazın' }, 400);
-      const x = { id: b.id && l.some(y => y.id === b.id) ? b.id : Date.now().toString(36), baslik, metin, bag, tarih: new Date().toISOString().slice(0, 10) };
+      const yapilacaklar = (Array.isArray(b.yapilacaklar) ? b.yapilacaklar : String(b.yapilacaklar || '').split('\n')).map(x => mvKes(String(x || '').replace(/[<>]/g, ' '), 300)).filter(Boolean).slice(0, 8);
+      const belge = /^[a-z0-9-]{2,30}$/.test(b.belge || '') ? b.belge : '', kimi = mvTemiz(b.kimi, 120);
+      const x = { id: b.id && l.some(y => y.id === b.id) ? b.id : Date.now().toString(36), baslik, metin, bag, yapilacaklar, belge, kimi, tarih: new Date().toISOString().slice(0, 10) };
       l = [x, ...l.filter(y => y.id !== x.id)].slice(0, 30);
     }
     await env.LINK.put(MO + ':duyuru', JSON.stringify(l)); await moOnbellekSil(); return cevap({ ok: true, duyurular: l });
+  }
+  // "Bu değişiklik kursları nasıl etkiler" taslağı: eklenen belgenin metninden yapay zekâ özet, yapılacaklar ve kimi ilgilendirdiğini çıkarır.
+  // Taslak yalnız sahibe döner; sahip düzenleyip duyuru olarak yayınlar (otomatik yayın yok).
+  if (yol === 'mevzuat/ortak/etki') {
+    if (!env.LLM_KEY) return cevap({ ok: false, kurulu: false, hata: 'Yapay zekâ henüz bağlı değil' }, 503);
+    const id = String(b.belge || ''), kayit = mvId(id) ? await mvJson(env, MO + ':' + id, null) : null;
+    const metin = kayit ? kayit.metin : mvKes(String(b.metin || ''), MV.ozetKar);
+    if (!metin || metin.length < 40) return cevap({ ok: false, hata: 'Belge ya da metin bulunamadı' }, 404);
+    if (mvSinirAsti('l:ortak', 10)) return cevap({ ok: false, hata: 'Çok sık istek; bir dakika sonra tekrar deneyin' }, 429);
+    const ham = await mvLlm(env, [{ role: 'system', content: MV_ETKI_ISTEM }, { role: 'user', content: (kayit ? 'Belge: ' + kayit.ad + (kayit.tarih ? ' (' + kayit.tarih + ')' : '') + '\n\n' : '') + 'Metin:\n' + metin.slice(0, MV.ozetKar) }], 900, { json: true });
+    let j = null; try { const a = ham.indexOf('{'), z = ham.lastIndexOf('}'); j = JSON.parse(ham.slice(a, z + 1)); } catch (x) { j = null; }
+    if (!j || typeof j.ozet !== 'string') return cevap({ ok: false, hata: 'Taslak çıkarılamadı; tekrar deneyin' }, 502);
+    const liste = l => (Array.isArray(l) ? l : []).map(x => mvKes(String(x || ''), 300)).filter(Boolean).slice(0, 8);
+    return cevap({ ok: true, taslak: { baslik: mvKes(String(j.baslik || (kayit && kayit.ad) || ''), 120), metin: mvKes(j.ozet, 800), yapilacaklar: liste(j.yapilacaklar), kimi: mvKes(String(j.kimi || ''), 120), yururluk: mvKes(String(j.yururluk || ''), 120), belge: kayit ? kayit.id : '', bag: (kayit && kayit.kaynak) || '' } });
   }
   // Sık sorulanlar (platform): { id?, soru, esler[], kisa, ayrinti[], adimlar[], dikkat, dayanak: ['mtsk: Madde 7', …], yerine? (gizlenecek hazır cevap kimliği) }
   // Aramaya girer (parça b = 'sss:<id>', gömülü); dayanaklar içindekiler listesiyle doğrulanır (listede olmayan madde kabul edilmez).
