@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MEBBİS Yardımcısı · mdSinyal</title><meta name="robots" content="noindex"><meta name="description" content="mdSinyal MEBBİS Yardımcısı'nı kurs bilgisayarına kurun: indirin, klasöre açın, Chrome'a yükleyin.">
+<link rel="icon" href="../favicon.svg?s=3" type="image/svg+xml">
+<!-- Kısa adres: mdsinyal.com/yardimci → Yardımcı'nın en güncel sürümünü indirme ve kurulum adımları (sürüm eklenti/manifest.json ile aynı tutulur) -->
+<style>
+:root{--z:#070b14;--k:#101827;--c:rgba(255,255,255,.1);--m:rgba(214,222,238,.78);--s:#ffc21a}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;min-height:100dvh;background:radial-gradient(60% 40% at 50% 100%,rgba(255,170,70,.12),transparent 70%),var(--z);color:var(--m);font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;display:flex;justify-content:center;padding:28px 16px}
+main{width:100%;max-width:620px}header{display:flex;gap:14px;align-items:center;margin-bottom:18px}header svg{width:48px;height:48px;flex:none}
+h1{font-size:24px;line-height:1.25;color:#fff;margin:0}h1 small{display:block;font-size:14px;font-weight:500;color:var(--m);margin-top:4px}
+.indir{display:flex;align-items:center;justify-content:center;gap:10px;min-height:54px;margin:18px 0 8px;padding:0 22px;border-radius:14px;background:var(--s);color:#0b1220;font-weight:800;font-size:17px;text-decoration:none}
+.not{font-size:13.5px;margin:0 0 22px;text-align:center}
+ol{list-style:none;counter-reset:a;padding:0;margin:0;display:grid;gap:10px}
+ol li{counter-increment:a;position:relative;background:var(--k);border:1px solid var(--c);border-radius:14px;padding:14px 16px 14px 56px}
+ol li:before{content:counter(a);position:absolute;left:16px;top:14px;width:28px;height:28px;border-radius:50%;background:rgba(255,194,26,.16);color:var(--s);font-weight:800;display:grid;place-items:center;font-size:14px}
+ol li b{color:#fff}code{font:600 14px ui-monospace,Menlo,monospace;background:rgba(255,255,255,.08);color:#fff;padding:2px 6px;border-radius:6px;overflow-wrap:anywhere}
+h2{font-size:17px;color:#fff;margin:26px 0 10px}ul{margin:0;padding-left:20px;display:grid;gap:6px;font-size:15px}
+a{color:var(--s)}.alt{margin-top:28px;font-size:14px;text-align:center}
+</style></head>
+<body><main>
+<header><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="#141e33"/><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="1.2"/><g fill="none" stroke="#ffc21a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20l12 12-12 12" stroke-opacity=".38"/><path d="M33 20l12 12-12 12"/></g></svg>
+<h1>mdSinyal MEBBİS Yardımcısı<small>Sürüm 1.12.0 · kurs bilgisayarına bir kez kurulur</small></h1></header>
+<p>Yardımcı, MEBBİS işlerini mdSinyal’den tek düğmeyle yapmanızı sağlayan küçük bir Chrome eklentisidir. MEBBİS’e siz girersiniz; Yardımcı şifrenizi istemez, görmez, saklamaz.</p>
+<a class="indir" href="../eklenti/mdsinyal-mebbis.zip" download="mdsinyal-mebbis-1.12.0.zip">Yardımcıyı indir (zip, 66 KB)</a>
+<p class="not">Chrome ya da Microsoft Edge kullanın. Telefon ve tablette kurulmaz.</p>
+<ol>
+<li><b>İndirilen zip dosyasını açın.</b> İndirilenler klasöründe dosyaya sağ tıklayıp “Tümünü ayıkla” (Mac’te çift tıklama) deyin. Çıkan klasörü kalıcı bir yere, örneğin <b>Belgeler</b>’e taşıyın. Klasörü sonradan silmeyin; Yardımcı oradan çalışır.</li>
+<li>Chrome’un adres çubuğuna <code>chrome://extensions</code> yazıp Enter’a basın. Edge’de <code>edge://extensions</code>.</li>
+<li>Sağ üstteki <b>Geliştirici modu</b> anahtarını açın (Edge’de sol altta).</li>
+<li><b>Paketlenmemiş öğe yükle</b>’ye basın ve 1. adımdaki klasörü seçin. İçinde <code>manifest.json</code> olan klasör seçilmeli; iç içe iki klasör varsa içtekini seçin.</li>
+<li>Listede <b>mdSinyal MEBBİS Yardımcısı 1.12.0</b> görünür. Aynı adla eski bir sürüm de varsa onu <b>Kaldır</b>’la silin.</li>
+<li>mdSinyal sekmesini yenileyin. Kurs hesabında <b>MEB işlemleri › MEBBİS Yardımcısı</b> penceresinde “Yardımcı bu tarayıcıda kurulu (sürüm 1.12.0)” yazar.</li>
+</ol>
+<h2>Yeni sürüm çıkınca</h2>
+<ul><li>Bu sayfadan yeni zip’i indirip aynı klasörün içine açın (eski dosyaların yerine geçsin).</li><li><code>chrome://extensions</code> sayfasında Yardımcı’nın kartındaki yenile (↻) düğmesine basın.</li></ul>
+<h2>Bilmeniz gerekenler</h2>
+<ul><li>Chrome açılışta “Geliştirici modu uzantılarını devre dışı bırak” diye sorabilir; “Vazgeç” deyin.</li><li>Yardımcı yalnız MEBBİS ve mdsinyal.com sayfalarında çalışır. Güvenlik kodunu ve geri alınamaz adımları siz yaparsınız.</li><li>Chrome Web Mağazası sürümü onaylanınca tek tıkla kurulabilecek.</li></ul>
+<p class="alt"><a href="../#/giris">mdSinyal’e giriş</a> · <a href="../">Ana sayfa</a></p>
+</main></body></html>

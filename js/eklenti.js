@@ -25,10 +25,10 @@
 //   tablo · bitenler · hatalar                                               bu dosya (tek liste ve "Ekranda doldur" yolu)
 // Kurs verisi yüklenmeden (giriş öncesi) gelen toplu-durum işlenmez, Yardımcı yeniden verir; harita-durum ise bekletilir (bekleyenleriIsle).
 // =====
-import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, eksikEvrak, sb, sbDers, sbSinav, oturum, cokSube, seciliSube, mebIsGunuGeri, kuralAyar } from './veri.js?v=216';
-import { bildir, pencere, e, ik, isaret } from './ui.js?v=216';
-import * as GR from './gruplar.js?v=216';
-import * as MK from './mebkayit.js?v=216';
+import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, eksikEvrak, sb, sbDers, sbSinav, oturum, cokSube, seciliSube, mebIsGunuGeri, kuralAyar } from './veri.js?v=217';
+import { bildir, pencere, e, ik, isaret } from './ui.js?v=217';
+import * as GR from './gruplar.js?v=217';
+import * as MK from './mebkayit.js?v=217';
 
 export const eklenti = { var: false, surum: null, ozellik: [], harita: null };
 const sayfadan = (tur, veri) => window.postMessage({ kaynak: 'sinyal-sayfa', tur, veri }, location.origin);
@@ -109,7 +109,7 @@ export function yardimciyaGonder(idler, gidince) {
     bildir(`${isler.length} iş MEBBİS’e aktarılıyor. MEBBİS sekmesi açılıyor; girmediyseniz kendi şifrenizle girin, Yardımcı sırayla yürütür.`);
   };
   // kural bulguları (engel kırmızı, uyarı turuncu) önce bilgi olarak görünür; bu yol durdurmaz. Bulgu yoksa ya da denetim yüklenemezse hemen gönderilir.
-  import('./mebtoplu.js?v=216').then(m => m.kuralBilgi(isler.map(x => x.id), gonder, { dugme: 'Ekranda doldur' }), () => gonder());
+  import('./mebtoplu.js?v=217').then(m => m.kuralBilgi(isler.map(x => x.id), gonder, { dugme: 'Ekranda doldur' }), () => gonder());
 }
 
 // MEBBİS'ten veri çek: Yardımcı MEBBİS sekmesine geçer, ilgili listeyi kendisi açar ve mdSinyal'e gönderir
@@ -128,7 +128,7 @@ export function kurulumPenceresi() {
       <ul class="liste" style="margin:8px 0">${[['MEBBİS’e yaz', 'Kayıt, evrak, dönem grubu, kurum onayı, teorik ve direksiyon programı, e-sınav başvurusu, sınav randevusu ve fatura MEB işlemleri › MEBBİS aktarımı’nda sıraya girer. “Hepsini MEBBİS’e yaz”a basınca yazılacaklar tek pencerede görünür; onaylarsınız, Yardımcı MEBBİS oturumunuzda sırayla kaydeder ve MEBBİS listesinden okuyarak denetler. Güvenlik kodu çıkarsa siz yazarsınız. Her kaydın sonucu işlem kaydına yazılır.'], ['MEBBİS’ten güncelle', 'Dönem grupları, öğrenciler (durum, onay, hak ve son günler), öğretmen izinleri, araçlar ve sınav sonuçları tek düğmeyle mdSinyal’e gelir. Tek bir listeyi almak için MEBBİS’te listeyi açıp “Listeyi mdSinyal’e gönder”e de basabilirsiniz.'], ['MEBBİS ekranı değişirse', 'Yardımcı beklediği alanı bulamazsa o ekrana yazmaz ve MEBBİS aktarımı ekranında kırmızı uyarı çıkar. O sürede işleri “Elle gir” ile girersiniz. MEBBİS aktarımı ekranındaki “Ekranları denetle” hiçbir şey yazmadan bütün ekranlara baktırır. (“Ekranda doldur” yedek yolunda bulamadığı alanı bir kez gösterirsiniz.)']].map(([a, b]) => `<li style="align-items:flex-start">${isaret('bilgi', 20)}<div><b style="color:var(--murekkep)">${a}</b><small style="display:block;color:var(--metin);font-size:13.5px">${b}</small></div></li>`).join('')}</ul>
       <h4 style="margin-top:10px">Kurulum (bir kez, kurs bilgisayarında)</h4>
       <ol style="padding-left:18px;display:grid;gap:8px;font-size:14px;margin-top:6px"><li><a href="${EKLENTI_ZIP}" download style="color:var(--levha);font-weight:700">Yardımcıyı indirin</a> ve zip dosyasını bir klasöre açın.</li><li>Chrome’da adres çubuğuna <b>chrome://extensions</b> yazın, sağ üstten <b>Geliştirici modu</b>nu açın.</li><li><b>Paketlenmemiş öğe yükle</b>’ye basıp açtığınız klasörü seçin.</li><li>mdSinyal sayfasını yenileyin; bu pencerede “kurulu” yazısı görünür.</li></ol>
-      <p class="og-not" style="margin-top:10px">Chrome Web Mağazası’ndaki sürüm onaylanınca tek tıkla kurulacak.</p>`,
+      <p class="og-not" style="margin-top:10px">Adım adım kurulum ve en güncel sürüm her zaman <a href="yardimci/" target="_blank" rel="noopener" style="color:var(--levha);font-weight:700">mdsinyal.com/yardimci</a> adresinde; bu adresi kurs bilgisayarına gönderebilirsiniz. Chrome Web Mağazası’ndaki sürüm onaylanınca tek tıkla kurulacak.</p>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button>${eklenti.var ? '<button class="dg dg-ana" data-eklenti-gonder>İşleri gönder</button>' : ''}`,
     onAc(d) { const b = d.querySelector('[data-eklenti-gonder]'); if (b) b.addEventListener('click', () => { d.querySelector('[data-kapat]').click(); yardimciyaGonder(); }); },
   });
@@ -170,11 +170,11 @@ function hatalariIsle(l) {
 function tabloGeldi(veri) {
   const sat = veri.satirlar, n = sat.length - 1;
   S.mebCekim = { ...(S.mebCekim || {}), [veri.amac || 'liste']: gun(0) + ' ' + new Date().toTimeString().slice(0, 5) }; kaydet();
-  if (veri.amac === 'mutabakat') return import('./ozellik.js?v=216').then(m => { if (m.mutabakatTablodan(sat, 'MEBBİS · ' + (veri.baslik || 'liste'))) { location.hash = '#/meb/mutabakat'; yenileFn(); } });
+  if (veri.amac === 'mutabakat') return import('./ozellik.js?v=217').then(m => { if (m.mutabakatTablodan(sat, 'MEBBİS · ' + (veri.baslik || 'liste'))) { location.hash = '#/meb/mutabakat'; yenileFn(); } });
   if (veri.amac === 'sinav') return sinavSonucuAl(sat);
   if (veri.amac === 'grup') return GR.mebbisGruplariAl(sat);
   const t = ['kursiyer', 'taksit', 'arac', 'ogretmen'].includes(veri.amac) ? veri.amac : turTahmin(sat[0] || []);
-  import('./sayfalar5.js?v=216').then(m => { location.hash = '#/ayarlar/aktarim'; setTimeout(() => { m.aktarimYukle(sat, t, 'MEBBİS'); bildir(`MEBBİS’ten ${n} satırlık liste geldi; sütunları kontrol edip aktarın`); }, 300); });
+  import('./sayfalar5.js?v=217').then(m => { location.hash = '#/ayarlar/aktarim'; setTimeout(() => { m.aktarimYukle(sat, t, 'MEBBİS'); bildir(`MEBBİS’ten ${n} satırlık liste geldi; sütunları kontrol edip aktarın`); }, 300); });
 }
 // Sınav sonuç listesi: TC ile kursiyer bulunur, en uygun oturumun sonuç penceresi dolu açılır; kaydetmeyi kullanıcı yapar
 const nrm = x => String(x || '').toLocaleLowerCase('tr').replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/[^a-z0-9]/g, '');
@@ -203,7 +203,7 @@ export function sinavSonucuAl(sat) {
   if (!sira.length) return bildir('Listedeki kişilerden sonucu girilmemiş bir sınav oturumunda olan bulunamadı', 'uyari');
   const [sid, hazir] = sira[0], s = S.sinavlar.find(x => x.id === sid);
   location.hash = '#/sinavlar';
-  import('./sayfalar2.js?v=216').then(m => setTimeout(() => {
+  import('./sayfalar2.js?v=217').then(m => setTimeout(() => {
     m.sonucGir(s, hazir);
     bildir(`${Object.keys(hazir).length} kursiyerin sonucu MEBBİS’ten dolduruldu; kontrol edip “Sonuçları kaydet”e basın.${sira.length > 1 ? ` ${sira.length - 1} oturum daha var; kaydettikten sonra listeyi tekrar gönderin.` : ''}${bulunamayan ? ` ${bulunamayan} satır eşleşmedi.` : ''}`);
   }, 400));
@@ -227,11 +227,11 @@ export function eklentiBaslat() {
     if (tur === 'tablo' && veri && veri.satirlar) tabloGeldi(veri);
     if (tur === 'bitenler' && Array.isArray(veri)) bitenleriIsle(veri);
     if (tur === 'hatalar' && Array.isArray(veri)) hatalariIsle(veri);
-    if (tur === 'toplu-durum' && veri && S && S.kursiyerler && oturum.kullanici) import('./mebtoplu.js?v=216').then(m => m.durumGeldi(veri));
+    if (tur === 'toplu-durum' && veri && S && S.kursiyerler && oturum.kullanici) import('./mebtoplu.js?v=217').then(m => m.durumGeldi(veri));
     // Yardımcı 1.12 → mdSinyal (eklenti/sinyal.js iletir): yarım iş varken yeni iş reddi, kayıp yükün yeniden istenmesi, ekran değişti
-    if (tur === 'toplu-alindi' && veri && veri.mesgul && oturum.kullanici) import('./mebtoplu.js?v=216').then(m => m.mesgulGeldi(veri));
-    if (tur === 'toplu-yuk-iste' && veri && S && S.kursiyerler && oturum.kullanici) import('./mebtoplu.js?v=216').then(m => m.yukIste(veri));
-    if (tur === 'toplu-yuk-alindi' && veri && oturum.kullanici) import('./mebtoplu.js?v=216').then(m => m.yukAlindi(veri));
+    if (tur === 'toplu-alindi' && veri && veri.mesgul && oturum.kullanici) import('./mebtoplu.js?v=217').then(m => m.mesgulGeldi(veri));
+    if (tur === 'toplu-yuk-iste' && veri && S && S.kursiyerler && oturum.kullanici) import('./mebtoplu.js?v=217').then(m => m.yukIste(veri));
+    if (tur === 'toplu-yuk-alindi' && veri && oturum.kullanici) import('./mebtoplu.js?v=217').then(m => m.yukAlindi(veri));
     if (tur === 'ekran-degisti' && veri && S && S.kursiyerler && oturum.kullanici) { if (MK.ekranDegisti(Array.isArray(veri.ekranlar) ? veri.ekranlar : [veri], veri.id || '')) yenileFn(); }
   });
   sayfadan('ping', {});

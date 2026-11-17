@@ -1,14 +1,14 @@
 // MEBBİS toplu çekme ve toplu yazma (mdSinyal tarafı). İşi MEBBİS Yardımcısı'nın arka plan motoru (eklenti/motor.js)
 // kursun kendi MEBBİS oturumunda, ekran açmadan yürütür; sonuç buraya gelir ve kayıtlarla eşlenir.
 // Gönderilen ve gelen iletilerin adları ve alanları: js/eklenti.js başındaki ileti sözleşmesi tablosu (eklenti/sinyal.js'te de aynısı).
-import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, sb, sbDers, cokSube, seciliSube, eksikEvrak } from './veri.js?v=216';
-import { bildir, pencere, kapatPencere, e, ik, isaret, rozet, tarih } from './ui.js?v=216';
-import * as GR from './gruplar.js?v=216';
-import * as EK from './eklenti.js?v=216';
-import { yenile } from './app.js?v=216';
-import * as ME from './mebevrak.js?v=216';
-import * as MK from './mebkayit.js?v=216';
-import * as KR from './kurallar.js?v=216';
+import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, sb, sbDers, cokSube, seciliSube, eksikEvrak } from './veri.js?v=217';
+import { bildir, pencere, kapatPencere, e, ik, isaret, rozet, tarih } from './ui.js?v=217';
+import * as GR from './gruplar.js?v=217';
+import * as EK from './eklenti.js?v=217';
+import { yenile } from './app.js?v=217';
+import * as ME from './mebevrak.js?v=217';
+import * as MK from './mebkayit.js?v=217';
+import * as KR from './kurallar.js?v=217';
 
 export const CEKILECEK = [
   ['gruplar', 'Dönem grupları', 'Dönem, grup ve şubeler; eksik grup kartları açılır'],
@@ -667,7 +667,7 @@ function ozetGoster(o, yazilan) {
     icerik: `<ul style="list-style:none;display:grid;gap:10px">${l.join('') || '<li>Yeni bilgi yok.</li>'}</ul>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button>${o.sinavlar ? `<button class="dg dg-ana" data-sonuc>Sonuçları doldur</button>` : ''}`,
     onAc(d) {
-      const y = d.querySelector('[data-al-yok]'); if (y) y.addEventListener('click', () => { const x = o.kursiyerler.yok; kapatPencere(); import('./sayfalar5.js?v=216').then(m => { location.hash = '#/ayarlar/aktarim'; setTimeout(() => m.aktarimYukle([x[0].baslik, ...x.map(z => z.satir)], 'kursiyer', 'MEBBİS'), 300); }); });
+      const y = d.querySelector('[data-al-yok]'); if (y) y.addEventListener('click', () => { const x = o.kursiyerler.yok; kapatPencere(); import('./sayfalar5.js?v=217').then(m => { location.hash = '#/ayarlar/aktarim'; setTimeout(() => m.aktarimYukle([x[0].baslik, ...x.map(z => z.satir)], 'kursiyer', 'MEBBİS'), 300); }); });
       const s = d.querySelector('[data-sonuc]'); if (s) s.addEventListener('click', () => { kapatPencere(); EK.sinavSonucuAl(sinavTablosu(o.sinavlar)); });
     },
   });
