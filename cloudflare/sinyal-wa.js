@@ -741,6 +741,10 @@ async function mevzuatUc(req, env, url, yol, cevap, { gercek, rol, kursId, origi
     const b = await req.json().catch(() => null);
     if (!b) return cevap({ ok: false, hata: 'Gecersiz istek' }, 400);
     if (yol === 'mevzuat/olcum/anla') return cevap({ ok: true, ...(await mvAnla(env, mvSoru(b))) });
+    if (yol === 'mevzuat/olcum/cevapla' && b.akis === true) {  // canlı akış denemesi (sitedeki yol ile aynı)
+      const h = await mvCevapHazirla(b, +b.istem || 0); if (h.hazir) return cevap({ ok: true, ...h.hazir });
+      return mvAkisYanit(cevap.cors, async yaz => { const o = mvCevapCoz(await mvLlmAkis(env, h.mesajlar, h.enCok, { json: true }, d => yaz({ d })), h.n); await mvCevapSakla(h, o); await yaz({ son: { ok: true, ...o } }); });
+    }
     if (yol === 'mevzuat/olcum/cevapla') return cevap({ ok: true, ...(await mvCevapla(env, b, +b.istem || 0)) });
     return cevap({ ok: false, hata: 'Bilinmeyen adres' }, 404);
   }
