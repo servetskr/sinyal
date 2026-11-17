@@ -25,10 +25,10 @@
 //   tablo · bitenler · hatalar                                               bu dosya (tek liste ve "Ekranda doldur" yolu)
 // Kurs verisi yüklenmeden (giriş öncesi) gelen toplu-durum işlenmez, Yardımcı yeniden verir; harita-durum ise bekletilir (bekleyenleriIsle).
 // =====
-import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, eksikEvrak, sb, sbDers, sbSinav, oturum, cokSube, seciliSube, mebIsGunuGeri, kuralAyar } from './veri.js?v=214';
-import { bildir, pencere, e, ik, isaret } from './ui.js?v=214';
-import * as GR from './gruplar.js?v=214';
-import * as MK from './mebkayit.js?v=214';
+import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, eksikEvrak, sb, sbDers, sbSinav, oturum, cokSube, seciliSube, mebIsGunuGeri, kuralAyar } from './veri.js?v=215';
+import { bildir, pencere, e, ik, isaret } from './ui.js?v=215';
+import * as GR from './gruplar.js?v=215';
+import * as MK from './mebkayit.js?v=215';
 
 export const eklenti = { var: false, surum: null, ozellik: [], harita: null };
 const sayfadan = (tur, veri) => window.postMessage({ kaynak: 'sinyal-sayfa', tur, veri }, location.origin);
@@ -109,7 +109,7 @@ export function yardimciyaGonder(idler, gidince) {
     bildir(`${isler.length} iş MEBBİS’e aktarılıyor. MEBBİS sekmesi açılıyor; girmediyseniz kendi şifrenizle girin, Yardımcı sırayla yürütür.`);
   };
   // kural bulguları (engel kırmızı, uyarı turuncu) önce bilgi olarak görünür; bu yol durdurmaz. Bulgu yoksa ya da denetim yüklenemezse hemen gönderilir.
-  import('./mebtoplu.js?v=214').then(m => m.kuralBilgi(isler.map(x => x.id), gonder, { dugme: 'Ekranda doldur' }), () => gonder());
+  import('./mebtoplu.js?v=215').then(m => m.kuralBilgi(isler.map(x => x.id), gonder, { dugme: 'Ekranda doldur' }), () => gonder());
 }
 
 // MEBBİS'ten veri çek: Yardımcı MEBBİS sekmesine geçer, ilgili listeyi kendisi açar ve mdSinyal'e gönderir
@@ -170,11 +170,11 @@ function hatalariIsle(l) {
 function tabloGeldi(veri) {
   const sat = veri.satirlar, n = sat.length - 1;
   S.mebCekim = { ...(S.mebCekim || {}), [veri.amac || 'liste']: gun(0) + ' ' + new Date().toTimeString().slice(0, 5) }; kaydet();
-  if (veri.amac === 'mutabakat') return import('./ozellik.js?v=214').then(m => { if (m.mutabakatTablodan(sat, 'MEBBİS · ' + (veri.baslik || 'liste'))) { location.hash = '#/meb/mutabakat'; yenileFn(); } });
+  if (veri.amac === 'mutabakat') return import('./ozellik.js?v=215').then(m => { if (m.mutabakatTablodan(sat, 'MEBBİS · ' + (veri.baslik || 'liste'))) { location.hash = '#/meb/mutabakat'; yenileFn(); } });
   if (veri.amac === 'sinav') return sinavSonucuAl(sat);
   if (veri.amac === 'grup') return GR.mebbisGruplariAl(sat);
   const t = ['kursiyer', 'taksit', 'arac', 'ogretmen'].includes(veri.amac) ? veri.amac : turTahmin(sat[0] || []);
-  import('./sayfalar5.js?v=214').then(m => { location.hash = '#/ayarlar/aktarim'; setTimeout(() => { m.aktarimYukle(sat, t, 'MEBBİS'); bildir(`MEBBİS’ten ${n} satırlık liste geldi; sütunları kontrol edip aktarın`); }, 300); });
+  import('./sayfalar5.js?v=215').then(m => { location.hash = '#/ayarlar/aktarim'; setTimeout(() => { m.aktarimYukle(sat, t, 'MEBBİS'); bildir(`MEBBİS’ten ${n} satırlık liste geldi; sütunları kontrol edip aktarın`); }, 300); });
 }
 // Sınav sonuç listesi: TC ile kursiyer bulunur, en uygun oturumun sonuç penceresi dolu açılır; kaydetmeyi kullanıcı yapar
 const nrm = x => String(x || '').toLocaleLowerCase('tr').replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/[^a-z0-9]/g, '');
@@ -203,7 +203,7 @@ export function sinavSonucuAl(sat) {
   if (!sira.length) return bildir('Listedeki kişilerden sonucu girilmemiş bir sınav oturumunda olan bulunamadı', 'uyari');
   const [sid, hazir] = sira[0], s = S.sinavlar.find(x => x.id === sid);
   location.hash = '#/sinavlar';
-  import('./sayfalar2.js?v=214').then(m => setTimeout(() => {
+  import('./sayfalar2.js?v=215').then(m => setTimeout(() => {
     m.sonucGir(s, hazir);
     bildir(`${Object.keys(hazir).length} kursiyerin sonucu MEBBİS’ten dolduruldu; kontrol edip “Sonuçları kaydet”e basın.${sira.length > 1 ? ` ${sira.length - 1} oturum daha var; kaydettikten sonra listeyi tekrar gönderin.` : ''}${bulunamayan ? ` ${bulunamayan} satır eşleşmedi.` : ''}`);
   }, 400));
@@ -227,11 +227,11 @@ export function eklentiBaslat() {
     if (tur === 'tablo' && veri && veri.satirlar) tabloGeldi(veri);
     if (tur === 'bitenler' && Array.isArray(veri)) bitenleriIsle(veri);
     if (tur === 'hatalar' && Array.isArray(veri)) hatalariIsle(veri);
-    if (tur === 'toplu-durum' && veri && S && S.kursiyerler && oturum.kullanici) import('./mebtoplu.js?v=214').then(m => m.durumGeldi(veri));
+    if (tur === 'toplu-durum' && veri && S && S.kursiyerler && oturum.kullanici) import('./mebtoplu.js?v=215').then(m => m.durumGeldi(veri));
     // Yardımcı 1.12 → mdSinyal (eklenti/sinyal.js iletir): yarım iş varken yeni iş reddi, kayıp yükün yeniden istenmesi, ekran değişti
-    if (tur === 'toplu-alindi' && veri && veri.mesgul && oturum.kullanici) import('./mebtoplu.js?v=214').then(m => m.mesgulGeldi(veri));
-    if (tur === 'toplu-yuk-iste' && veri && S && S.kursiyerler && oturum.kullanici) import('./mebtoplu.js?v=214').then(m => m.yukIste(veri));
-    if (tur === 'toplu-yuk-alindi' && veri && oturum.kullanici) import('./mebtoplu.js?v=214').then(m => m.yukAlindi(veri));
+    if (tur === 'toplu-alindi' && veri && veri.mesgul && oturum.kullanici) import('./mebtoplu.js?v=215').then(m => m.mesgulGeldi(veri));
+    if (tur === 'toplu-yuk-iste' && veri && S && S.kursiyerler && oturum.kullanici) import('./mebtoplu.js?v=215').then(m => m.yukIste(veri));
+    if (tur === 'toplu-yuk-alindi' && veri && oturum.kullanici) import('./mebtoplu.js?v=215').then(m => m.yukAlindi(veri));
     if (tur === 'ekran-degisti' && veri && S && S.kursiyerler && oturum.kullanici) { if (MK.ekranDegisti(Array.isArray(veri.ekranlar) ? veri.ekranlar : [veri], veri.id || '')) yenileFn(); }
   });
   sayfadan('ping', {});

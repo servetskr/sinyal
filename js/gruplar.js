@@ -1,9 +1,9 @@
 // MEBBİS dönem grupları. MEBBİS'teki "Dönem Grup Açılış Tarihi" ve "Grup Şube Tanımlama" ekranlarıyla birebir:
 // dönem YYYYAA, grup 1–3 (her grubun tek başlangıç tarihi, ayın 1'i ile 10'u arası), şube A–H. Ad: "Kasım 1A".
 // Kursiyer kaydı grubun başlangıcından önce yapılır (MTSK Yönetmeliği 12/2); evrakı tamam ve gruba atanmış kursiyer aktiftir.
-import { S, kaydet, gun, fark, iso, SINIFLAR, tamAd, islem, eksikEvrak, sb } from './veri.js?v=214';
-import { e, pencere, kapatPencere, bildir, rozet, tarih, isaret, ik } from './ui.js?v=214';
-import * as KR from './kurallar.js?v=214';
+import { S, kaydet, gun, fark, iso, SINIFLAR, tamAd, islem, eksikEvrak, sb } from './veri.js?v=215';
+import { e, pencere, kapatPencere, bildir, rozet, tarih, isaret, ik } from './ui.js?v=215';
+import * as KR from './kurallar.js?v=215';
 
 export const AYLAR = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 export const SUBELER = 'ABCDEFGH'.split('');   // MEBBİS'te şube seçenekleri A..H (8 şube)
@@ -85,6 +85,7 @@ export function grupFormu(on = {}, sonra) {
   const v = { donem: (g0 && g0.donem) || on.donem || bugunDonem, grupNo: (g0 && g0.grupNo) || on.grupNo || 1, sube: (g0 && g0.sube) || on.sube || 'A', baslangic: (g0 && g0.baslangic) || '', sinif: (g0 && g0.sinif) || on.sinif || '', derslik: (g0 && g0.derslik) || '', kontenjan: (g0 && g0.kontenjan) || '' };
   const sinifler = Object.entries(SINIFLAR).filter(([k, x]) => x.aktif !== false && !/^(SRC|OP)/.test(k));
   pencere({
+    ust: !!on.ust,  // kayıt formundan açılınca kayıt formu kapanmaz (girilen bilgiler korunur)
     baslik: g0 ? 'Grubu düzenle · ' + g0.ad : 'Yeni dönem grubu',
     icerik: `<form id="f-grup" class="form-izgara" novalidate>
       <p class="ipucu tam">${isaret('bilgi', 18)}<span>MEBBİS’teki dönem grubuyla aynı olmalı: dönem, grup (1–3), şube (A–H) ve başlangıç tarihi (ayın 1’i ile 10’u arası). Kursiyer, grubun başlangıcından önce kaydedilir.</span></p>

@@ -1,5 +1,5 @@
-import { EMU } from './firebase-ayar.js?v=214';
-import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=214';
+import { EMU } from './firebase-ayar.js?v=215';
+import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=215';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -140,8 +140,11 @@ export function alanHatalari(form, liste) {
   bildir(liste.length === 1 ? liste[0][1] : `${liste.length} alan eksik ya da hatalı; işaretli alanları düzeltin`, 'uyari');
   return true;
 }
-export function pencere({ baslik, icerik, altlik = '', genis = false, onAc, korumali = false, alt = false }) {
-  kapatPencere(); oncekiOdak = document.activeElement;
+// ust: true → açık pencere kapanmaz, gizlenip yığına konur; üstteki kapanınca (kaydet ya da vazgeç) alttaki girilen bilgilerle geri gelir
+const yigin = [];
+export function pencere({ baslik, icerik, altlik = '', genis = false, onAc, korumali = false, alt = false, ust = false }) {
+  if (ust && acikPencere) { acikPencere.hidden = true; yigin.push({ d: acikPencere, odak: oncekiOdak }); acikPencere = null; } else tumPencereleriKapat();
+  oncekiOdak = document.activeElement;
   const d = document.createElement('div');
   d.className = 'perde' + (alt ? ' alt-sayfa' : '');  // alt: telefonda alttan açılan sayfa (hesap menüsü gibi)
   d.innerHTML = `<div class="pencere ${genis ? 'genis' : ''}" role="dialog" aria-modal="true" aria-label="${e(baslik)}">
@@ -157,7 +160,8 @@ export function pencere({ baslik, icerik, altlik = '', genis = false, onAc, koru
   if (onAc) onAc(d);
   return d;
 }
-export function kapatPencere() { if (acikPencere) { acikPencere.remove(); acikPencere = null; document.body.classList.remove('kilitli'); if (oncekiOdak && oncekiOdak.isConnected && oncekiOdak.focus) { try { oncekiOdak.focus(); } catch (x) { } } oncekiOdak = null; } }
+function tumPencereleriKapat() { while (yigin.length) yigin.pop().d.remove(); kapatPencere(); }
+export function kapatPencere() { if (acikPencere && yigin.length) { acikPencere.remove(); const o = yigin.pop(); acikPencere = o.d; acikPencere.hidden = false; oncekiOdak = o.odak; return; } if (acikPencere) { acikPencere.remove(); acikPencere = null; document.body.classList.remove('kilitli'); if (oncekiOdak && oncekiOdak.isConnected && oncekiOdak.focus) { try { oncekiOdak.focus(); } catch (x) { } } oncekiOdak = null; } }
 // Pencere açıkken Tab odağı pencerenin içinde döner (klavye ve ekran okuyucu kullanıcıları arkadaki sayfaya düşmesin)
 document.addEventListener('keydown', ev => { if (ev.key !== 'Tab' || !acikPencere) return; const l = [...acikPencere.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')].filter(x => x.offsetParent !== null); if (!l.length) return; const ilk = l[0], son = l[l.length - 1]; if (ev.shiftKey && document.activeElement === ilk) { ev.preventDefault(); son.focus(); } else if (!ev.shiftKey && document.activeElement === son) { ev.preventDefault(); ilk.focus(); } else if (!acikPencere.contains(document.activeElement)) { ev.preventDefault(); ilk.focus(); } });
 document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !(acikPencere && acikPencere.dataset.korumali)) kapatPencere(); });
@@ -558,7 +562,7 @@ function sifreSor(neden, ok) {
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Onayla</button>`,
     onAc(d) {
       const inp = d.querySelector('[data-sifre-tekrar]'), btn = d.querySelector('[data-k]');
-      const dene = () => { btn.disabled = true; import('./bulut.js?v=214').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
+      const dene = () => { btn.disabled = true; import('./bulut.js?v=215').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
       btn.addEventListener('click', dene); inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') dene(); }); setTimeout(() => inp.focus(), 50);
     },
   });
