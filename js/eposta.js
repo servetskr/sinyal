@@ -4,11 +4,11 @@
 // Tetikleme sunucusuz: günlük rapor gün sonu kapatılınca; haftalık ve aylık rapor dönemin ilk açılışında, tek cihazdan
 // (bulut.js sahiplen: kurslar/{kurs}/gonderim belgesi bir kez oluşturulabilir; kilit 3 saatlik dilime bağlı, gönderemeyen cihazın yerine
 // sonraki dilimde başka cihaz dener) ve worker'da dönem başına bir kez. Açık kalan sekmede saatte bir yeniden bakılır.
-import { S, kaydet, gun, islem, oturum, bulutKanca, tamAd, gecikenler } from './veri.js?v=222';
-import { e, tl, ik, bildir, rozet, tamTarih } from './ui.js?v=222';
-import { WORKER, bulut, bulutta } from './bulut.js?v=222';
-import { kabuk, kutular, bolum, satirlar, bos, devam, not, nokta, dugme, R, SITE } from './eposta-kabuk.js?v=222';
-import { tumExcelIndir, tumExcelB64, tumExcelBlob, tamYedekIndir, tamYedekMetni, dosyaAdi } from './excel-tum.js?v=222';
+import { S, kaydet, gun, islem, oturum, bulutKanca, tamAd, gecikenler } from './veri.js?v=223';
+import { e, tl, ik, bildir, rozet, tamTarih } from './ui.js?v=223';
+import { WORKER, bulut, bulutta } from './bulut.js?v=223';
+import { kabuk, kutular, bolum, satirlar, bos, devam, not, nokta, dugme, R, SITE } from './eposta-kabuk.js?v=223';
+import { tumExcelIndir, tumExcelB64, tumExcelBlob, tamYedekIndir, tamYedekMetni, dosyaAdi } from './excel-tum.js?v=223';
 
 const TURLER = [['gunluk', 'Günlük rapor', 'Gün sonu kapatılınca: kasa, dersler, ödemeler ve uyarılar'], ['haftalik', 'Haftalık rapor', 'Her pazartesi ilk açılışta, geçen haftanın özeti'], ['aylik', 'Aylık rapor', 'Her ayın ilk açılışında, geçen ayın özeti ve kayıtlar Excel eki olarak']];
 export const raporAyar = () => ({ gunluk: true, haftalik: true, aylik: true, ...((S.kurs || {}).epostaRapor || {}) });
@@ -65,7 +65,7 @@ export function raporVerisi(bas, bit, ek = {}) {
   return { bas, bit, gelir: top(gel), gelirN: gel.length, gider: top(gid), giderN: gid.length, yontem, dersN: ders.length, dersDurum, sinav, yeni, odeme, geciken, gecikenTutar, yarinDers, uyari: ek.uyari || [], kasa: ek.kasa || null, kapatilan: (S.gunSonu || []).filter(g => aralik(g, bas, bit)).length };
 }
 async function uyarilar() {
-  try { const KR = await import('./kurallar.js?v=222'); const agir = t => ({ dur: 0, yasak: 1, uyari: 2, bilgi: 3 }[t] ?? 4); return KR.tumu().filter(x => x[0] !== 'bilgi').sort((a, b) => agir(a[0]) - agir(b[0])).map(x => ({ tur: x[0], baslik: String(x[1] || ''), aciklama: String(x[2] || '') })); }
+  try { const KR = await import('./kurallar.js?v=223'); const agir = t => ({ dur: 0, yasak: 1, uyari: 2, bilgi: 3 }[t] ?? 4); return KR.tumu().filter(x => x[0] !== 'bilgi').sort((a, b) => agir(a[0]) - agir(b[0])).map(x => ({ tur: x[0], baslik: String(x[1] || ''), aciklama: String(x[2] || '') })); }
   catch (x) { return []; }
 }
 const BASLIK = { gunluk: 'Günlük rapor', haftalik: 'Haftalık rapor', aylik: 'Aylık rapor', deneme: 'Deneme raporu', yedek: 'Veri yedeği' };

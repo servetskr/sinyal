@@ -2,11 +2,11 @@
 // mdSinyal Yönetim panelinin “Hesaplar” bölümünde açılır (yalnız Servet; ortak görmez).
 // Yetki Firebase güvenlik kurallarından değil, Google hesabından gelir: Firebase projesinin sahibi olan Google hesabıyla
 // bağlanılır, Google IAM izin verirse işlem yapılır. Sunucu, gizli anahtar yok; erişim belirteci yalnız bellekte durur (1 saat).
-import { e, ik, pencere, kapatPencere, bildir, tl, siteLink } from './ui.js?v=222';
-import { S, kaydet, islem, bulutKanca } from './veri.js?v=222';
-import { ogrenciPanelMetni, WORKER } from './bulut.js?v=222';
-import { EMU } from './firebase-ayar.js?v=222';
-import { kabuk as epKabuk, kutular, bolum, satirlar, bos, not, nokta, dugme, R, SITE } from './eposta-kabuk.js?v=222';
+import { e, ik, pencere, kapatPencere, bildir, tl, siteLink } from './ui.js?v=223';
+import { S, kaydet, islem, bulutKanca } from './veri.js?v=223';
+import { ogrenciPanelMetni, WORKER } from './bulut.js?v=223';
+import { EMU } from './firebase-ayar.js?v=223';
+import { kabuk as epKabuk, kutular, bolum, satirlar, bos, not, nokta, dugme, R, SITE } from './eposta-kabuk.js?v=223';
 
 // EMU (firebase-ayar.js, yalnız localhost + açık işaret): REST istekleri yerel emülatöre gider, Google onayı yerine emülatörün yönetici belirteci kullanılır
 const PROJE = EMU ? EMU.proje : 'sinyal-5d37a';
@@ -838,11 +838,11 @@ const kimlikUret = () => 's' + Date.now().toString(36) + Math.random().toString(
 
 function destekHtml() {
   const v = isl(), l = tumTalepler(), acik = l.filter(t => tDurum(t) !== 'Çözüldü').length, ay = bugunIso().slice(0, 7), hAy = v.hizmetler.filter(h => String(h.tarih || '').startsWith(ay));
-  const sek = [['talepler', 'Talepler', acik], ['hizmetler', 'Hizmetler', v.hizmetler.length], ['hatalar', 'Son hatalar', hataRozet()]];
+  const sek = [['talepler', 'Talepler', acik], ['hizmetler', 'Hizmetler', v.hizmetler.length], ['hatalar', 'Son hatalar', hataRozet()], ['asistan', 'Asistan', ag.liste ? ag.liste.filter(x => !x.iyi).length : 0]];
   return `<div class="sh-bas"><div><h1>Destek</h1><p>${acik} açık talep · bu ay ${hAy.length} hizmet</p></div>
       <div class="sh-bas-dg"><button class="dg dg-cizgi dg-kucuk" data-sh-yenile ${yukleniyor ? 'disabled' : ''}>${ik('sifirla')}${yukleniyor ? 'Yükleniyor…' : 'Yenile'}</button><button class="dg dg-cizgi dg-kucuk" data-sh-talep-ekle>${ik('arti')}Talep ekle</button><button class="dg dg-ana dg-kucuk" data-sh-hizmet-ekle>${ik('arti')}Hizmet ekle</button></div></div>
     <div class="sh-suz sh-alt" role="tablist">${sek.map(([k, a, n]) => `<button role="tab" aria-selected="${destekAlt === k}" class="${destekAlt === k ? 'secili' : ''}" data-sh-dalt="${k}">${a}${n ? ` <em>${n}</em>` : ''}</button>`).join('')}</div>
-    ${destekAlt === 'talepler' ? talepListeHtml(l) : destekAlt === 'hatalar' ? hataListeHtml() : hizmetListeHtml(v.hizmetler)}`;
+    ${destekAlt === 'talepler' ? talepListeHtml(l) : destekAlt === 'hatalar' ? hataListeHtml() : destekAlt === 'asistan' ? asistanGeriHtml() : hizmetListeHtml(v.hizmetler)}`;
 }
 // ---- Kullanım (kullanim.js özetleri) ----
 // Her cihaz günde bir kez kurslar/{kurs}/kullanim/{gün}_{cihaz} belgesine { o: JSON metni, g: gün } yazar. Kişisel veri yok:
@@ -958,7 +958,7 @@ let kuOtoBakildi = false;
 async function kullanimHaftalik() {
   if (kuOtoBakildi || !(S.kurs && S.kurs.sahipAnaliz) || !Object.keys(kursIst).length) return; kuOtoBakildi = true;
   try {
-    const { gecenHafta } = await import('./eposta.js?v=222'), h = gecenHafta();
+    const { gecenHafta } = await import('./eposta.js?v=223'), h = gecenHafta();
     if (S.kurs.sahipAnalizSon === h.donem) return;
     const T = await kullanimOku(aralikGunler(h.bas, h.bit));
     const j = await kullanimGonder(T, h.bas.split('-').reverse().join('.') + ' – ' + h.bit.split('-').reverse().join('.'), h.donem);
@@ -1023,6 +1023,38 @@ function hataListeHtml() {
     <span class="sh-satir-ic"><b>${e(String(x.m || 'Mesaj yok').slice(0, 140))}</b><small>${e([hataZaman(x.son), x.s ? 'v' + x.s : '', x.r || '', ROL_KISA[x.rol] || ''].filter(Boolean).join(' · '))}</small></span>
     <span class="sh-satir-sag">${+x.sayi > 1 ? `<em class="sh-rozet">${+x.sayi} kez</em>` : '<small>1 kez</small>'}${ik('sag')}</span></button>`).join('')}</div>
     <p class="sh-dip">Kayıtlar kişisel veri içermez: e-posta, telefon ve T.C. gibi uzun sayılar sunucuda silinir; kurs yalnız kısaltılmış kimliğiyle sayılır. Aynı hata 10 dakikada bir kez yazılır, arada gelenler sayıya eklenir. Kayıtlar 7 gün sonra kendiliğinden silinir.</p>`;
+}
+// ---- Mevzuat asistanı geri bildirimleri (worker GET /mevzuat/geri) ----
+// Kurs personeli "Bu cevap işinize yaradı mı?" dediğinde soru, kısa cevap, kaynak etiketleri ve notu 90 gün tutulur (TC, telefon, e-posta silinir).
+// Okuma yalnız platform sahibine, hata listesiyle aynı yetkiyle.
+const ag = { liste: null, toplam: 0, yukleniyor: false, hata: '', yetkisiz: false, suz: 'kotu' };
+async function asistanGeriYukle() {
+  if (ag.yukleniyor) return;
+  ag.yukleniyor = true; ag.hata = ''; ciz();
+  try {
+    const yetki = await hataYetki(); if (!yetki) throw Object.assign(new Error('Yetki yok'), { yetkisiz: true });
+    const r = await fetch(WORKER + '/mevzuat/geri', { headers: { Authorization: yetki } }), j = await r.json().catch(() => ({}));
+    if (r.status === 401 || r.status === 403) throw Object.assign(new Error('Yetki yok'), { yetkisiz: true });
+    if (!r.ok || !j.ok) throw new Error(j.hata || ('Sunucu ' + r.status + ' döndü'));
+    ag.liste = j.liste || []; ag.toplam = j.toplam || ag.liste.length; ag.yetkisiz = false;
+  } catch (x) { if (x.yetkisiz) ag.yetkisiz = true; else ag.hata = turkceHata(x); }
+  ag.yukleniyor = false; ciz();
+}
+function asistanGeriHtml() {
+  if (ag.liste === null && !ag.yukleniyor && !ag.yetkisiz && !ag.hata) setTimeout(asistanGeriYukle, 0);
+  if (ag.yetkisiz) return `<div class="sh-bos">${ik('kilit')}<b>Geri bildirimleri yalnız platform sahibi görür</b><small>mdSinyal Yönetim’e platform sahibinin hesabıyla gir; “Son hatalar” sekmesindeki anahtarla da açılır.</small></div>`;
+  if (ag.hata && !ag.liste) return `<div class="sh-bos">${ik('uyari')}<b>Geri bildirimler okunamadı</b><small>${e(ag.hata)}</small><button class="dg dg-cizgi dg-kucuk" data-sh-ag-yenile>Yeniden dene</button></div>`;
+  if (!ag.liste) return `<div class="sh-bos">${ik('saat')}<b>Geri bildirimler yükleniyor…</b></div>`;
+  const iyi = ag.liste.filter(x => x.iyi).length, kotu = ag.liste.length - iyi;
+  const l = ag.liste.filter(x => ag.suz === 'hepsi' || (ag.suz === 'kotu' ? !x.iyi : x.iyi));
+  const ust = `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:4px 0 12px">
+    <div class="sh-suz" role="tablist">${[['kotu', 'Eksik ya da yanlış', kotu], ['iyi', 'İşe yaradı', iyi], ['hepsi', 'Hepsi', ag.liste.length]].map(([k, a, n]) => `<button role="tab" aria-selected="${ag.suz === k}" class="${ag.suz === k ? 'secili' : ''}" data-sh-ag-suz="${k}">${a} <em>${n}</em></button>`).join('')}</div>
+    <button class="dg dg-cizgi dg-kucuk" data-sh-ag-yenile ${ag.yukleniyor ? 'disabled' : ''}>${ik('sifirla')}Yenile</button></div>`;
+  if (!l.length) return ust + `<div class="sh-bos">${ik('tik')}<b>${ag.liste.length ? 'Bu süzgeçte kayıt yok' : 'Henüz geri bildirim yok'}</b><small>Kurslar mevzuat asistanının cevabına “İşe yaradı” ya da “Eksik ya da yanlış” dediğinde burada görünür. Yanlış denenleri inceleyip rehbere, sık sorulanlara ya da derleme eklemek asistanı iyileştirir.</small></div>`;
+  return ust + `<div class="sh-liste" data-resmi>${l.map(x => `<div class="sh-satir" style="cursor:default;align-items:flex-start">
+    <span class="sh-av ${x.iyi ? 'sh-av-hizmet' : 'sh-av-yok'}">${ik(x.iyi ? 'tik' : 'uyari')}</span>
+    <span class="sh-satir-ic"><b>${e(String(x.soru || '').slice(0, 200))}</b>${x.cevap ? `<small style="white-space:normal">Cevap: ${e(String(x.cevap).slice(0, 300))}</small>` : ''}${x.not ? `<small style="white-space:normal;color:var(--murekkep)">Not: ${e(x.not)}</small>` : ''}<small>${e([hataZaman(x.z), ROL_KISA[x.rol] || '', x.kurs ? 'kurs ' + String(x.kurs).slice(0, 6) : '', (x.etiketler || []).slice(0, 3).join(', ')].filter(Boolean).join(' · '))}</small></span></div>`).join('')}</div>
+    <p class="sh-dip">Son ${ag.toplam} kayıttan en yeni 100’ü. Kayıtlar 90 gün tutulur; T.C. kimlik, telefon ve e-posta sunucuda silinir.</p>`;
 }
 function gonder(ev) {
   const f = ev.target.closest('[data-sh-hata-anahtar]'); if (!f) return;
@@ -1118,6 +1150,8 @@ function hizmetPenceresi(h, on = {}) {
 async function destekTikla(t) {
   const d = t.closest('[data-sh-dalt]'); if (d) { destekAlt = d.dataset.shDalt; ciz(); return true; }
   if (t.closest('[data-sh-hata-yenile]')) { hatalarYukle(); return true; }
+  if (t.closest('[data-sh-ag-yenile]')) { asistanGeriYukle(); return true; }
+  const agz = t.closest('[data-sh-ag-suz]'); if (agz) { ag.suz = agz.dataset.shAgSuz; ciz(); return true; }
   const hk = t.closest('[data-sh-hata]'); if (hk) { hataPenceresi(hk.dataset.shHata); return true; }
   if (t.closest('[data-sh-talep-ekle]')) { talepEklePenceresi(); return true; }
   if (t.closest('[data-sh-hizmet-ekle]')) { hizmetPenceresi(null); return true; }
