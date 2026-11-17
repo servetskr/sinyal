@@ -2,10 +2,10 @@
    Arama motoru js/mevzuat-ara.js: ortak derlem (veri/mevzuat) + kursa gelen yazılar (worker /mevzuat/*).
    Anlam araması için sorgu vektörü worker'dan gelir (/mevzuat/gom); ulaşılamazsa yalnız kelimeyle aranır.
    Yerel denemede (localhost) worker'a istek gitmez; yerel worker için localStorage 'sinyal-mevzuat-api' = 'http://127.0.0.1:8787'. */
-import { S, oturum, bulutKanca } from './veri.js?v=215';
-import { e, ik, rozet, bos, pencere, kapatPencere, bildir, ekranNotu, isaret, tamTarih, ilerleme } from './ui.js?v=215';
-import { WORKER } from './bulut.js?v=215';
-import { motor, yukle, yuklendi, base64Int8, kokler, alinti, FILTRELER } from './mevzuat-ara.js?v=215';
+import { S, oturum, bulutKanca } from './veri.js?v=216';
+import { e, ik, rozet, bos, pencere, kapatPencere, bildir, ekranNotu, isaret, tamTarih, ilerleme } from './ui.js?v=216';
+import { WORKER } from './bulut.js?v=216';
+import { motor, yukle, yuklendi, base64Int8, kokler, alinti, FILTRELER } from './mevzuat-ara.js?v=216';
 
 const TUR_AD = { yonetmelik: 'Yönetmelik', kanun: 'Kanun', kilavuz: 'Kılavuz', program: 'Ders programı', yazi: 'MEB yazısı', form: 'Form' };
 const ORNEKLER = ['Akşam direksiyon dersi zorunlu mu?', 'MTSK madde 15', 'Sınav ücreti ne zaman yatırılır?', 'Kursiyere ücret iadesi'];
