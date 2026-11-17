@@ -63,7 +63,7 @@ body{min-height:100vh;min-height:100dvh;display:flex;justify-content:center;back
 const g = document.getElementById('g'), q = new URLSearchParams(location.search);
 const mode = q.get('mode') || '', kod = q.get('oobCode') || '';
 // Proje anahtarı linkten değil, sitenin kendi ayarından alınır (gizli değildir; js/firebase-ayar.js)
-const { FIREBASE } = await import('../js/firebase-ayar.js?v=223');
+const { FIREBASE } = await import('../js/firebase-ayar.js?v=224');
 const API = 'https://identitytoolkit.googleapis.com/v1/accounts:';
 // Giriş ekranı: sabit seçim sayfası (kurs ekibi, öğretmen, öğrenci). Linkteki continueUrl bilerek kullanılmaz:
 // uygulama devam adresi göndermez ve dışarıdan gelen adres (ör. javascript:) düğmeye girerse sitenin kökeninde kod çalışabilir.

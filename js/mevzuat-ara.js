@@ -6,7 +6,7 @@
    3) Anlam: sorgu vektörü (worker /mevzuat/gom, dışarıdan verilen gom() ile) × N×D int8 vektörler (nokta çarpımı).
    Kelime ve anlam listeleri RRF (k=60) ile birleşir; aynı maddenin sonraki parçaları geriye kayar (çeşitlilik). gom() yoksa ya da hata verirse yalnız kelime araması döner, anlamKapali: true. */
 
-const SURUM = '?v=223';
+const SURUM = '?v=224';
 const RRF_K = 60, LISTE_N = 60;
 const KELIME_AG = 1, ANLAM_AG = 1;  // RRF ağırlıkları; k 10/30/100 ve ağırlık 0,8–1,5 denendi, fark en çok 1 soru
 const BM25_K1 = 1.2, BM25_B = 0.75;
@@ -293,9 +293,9 @@ const MEVZUAT_TUR = new Set(['yonetmelik', 'kanun', 'yonerge', 'teblig']);
 const KILAVUZ_TUR = new Set(['program', 'kilavuz', 'rehber-resmi', 'bilgilendirme', 'form']);
 const FILTRE_UYAR = {
   hepsi: () => true,
-  mevzuat: (k, b) => k === 'ortak' && MEVZUAT_TUR.has(b.tur),
+  mevzuat: (k, b) => (k === 'ortak' || k === 'ek') && MEVZUAT_TUR.has(b.tur),
   yazi: (k, b) => b.tur === 'yazi',
-  program: (k, b) => k === 'ortak' && KILAVUZ_TUR.has(b.tur),
+  program: (k, b) => (k === 'ortak' || k === 'ek') && KILAVUZ_TUR.has(b.tur),
   rehber: (k, b) => b.tur === 'rehber',
   sss: (k, b) => b.tur === 'sss',
   kurs: k => k === 'kurs',
@@ -356,6 +356,10 @@ export function etiketBul(kume, c) {
 }
 
 const TUR_AGIRLIK = { program: 0.85, 'rehber-resmi': 0.85, bilgilendirme: 0.85, form: 0.85 };
+// Platform sahibinin işaretlediği belge durumu: yürürlükten kalkan ve değişen belge geri düşer (yerine eklenen belge öne çıkar)
+const DURUM_AGIRLIK = { kalkti: 0.5, degisti: 0.75, taslak: 0.7 };
+// arama kümeleri ve birleşik dizindeki sıraları: statik derlem, platform eklemeleri, kursun yazıları
+const KUMELER = ['ortak', 'ek', 'kurs'];
 // mdSinyal metinleri (rehber, sık sorulanlar) listeyi doldurmasın: ilk sırada resmî parça, ilk 6'da en çok 2 ve ilk 10'da en çok 3 mdSinyal parçası.
 // Fazlası sıradaki resmî parçalardan sonraya kayar (kendi aralarındaki sıra korunur). Yalnız mdSinyal parçası varsa (filtre) olduğu gibi kalır.
 export function dengele(sira, degil) {
@@ -466,7 +470,8 @@ export function cevapDuzMetin(y, etiketler = []) {
 }
 
 export function yeniMotor() {
-  const kume = { ortak: null, kurs: null };  // { belgeler, parcalar, vek: Int8Array, D, takma }
+  const kume = { ortak: null, ek: null, kurs: null };  // { belgeler, parcalar, vek: Int8Array, D, takma }; ek: platformun sonradan eklediği ortak belgeler
+  let durum = {};  // belge id → { durum: degisti|kalkti|taslak, not, yerine, tarih } (platform sahibi işaretler)
   let dizin = null;  // birleşik BM25 dizini (iki kümenin parçaları)
   let model = '', boyut = 0, onek = { sorgu: '', belge: '' };
 
@@ -480,7 +485,7 @@ export function yeniMotor() {
     const t0 = Date.now();
     const kayit = [];  // [küme, sıra]
     const terim = new Map(); const uz = [];
-    for (const ad of ['ortak', 'kurs']) {
+    for (const ad of KUMELER) {
       const k = kume[ad]; if (!k) continue;
       for (let i = 0; i < k.parcalar.length; i++) {
         const p = k.parcalar[i], b = k.belgeler[p.b] || {};
@@ -578,13 +583,13 @@ export function yeniMotor() {
       try { v = await gom((onek.sorgu || '') + sorgu); } catch (x) { v = null; }
       if (v && v.length === boyut) {
         const aday = [];
-        for (const ad of ['ortak', 'kurs']) {
+        for (const ad of KUMELER) {
           const k = kume[ad]; if (!k || !k.vek || k.D !== boyut) continue;
           const s = noktalar(v, k.vek, k.D, k.parcalar.length);
           aday.push([ad, s]);
         }
         // küme sırasını birleşik dizindeki sıraya çevir
-        const bas = { ortak: 0, kurs: kume.ortak ? kume.ortak.parcalar.length : 0 };
+        const bas = {}; let top = 0; for (const ad of KUMELER) { bas[ad] = top; top += kume[ad] ? kume[ad].parcalar.length : 0; }
         const l = [];
         for (const [ad, s] of aday) for (let i = 0; i < s.length; i++) { const id = bas[ad] + i; if (s[i] > 0 && uygun(id)) l.push([id, s[i]]); }
         l.sort((a, b) => b[1] - a[1]);
@@ -598,7 +603,7 @@ export function yeniMotor() {
     anlamL.forEach(([id], r) => { aSira.set(id, r); rrf.set(id, (rrf.get(id) || 0) + ANLAM_AG / (RRF_K + r + 1)); });
     // Belge türü önceliği: aynı derecede eşleşen parçalarda bağlayıcı metin (kanun, yönetmelik, yönerge, tebliğ, kılavuz) öne geçer;
     // ders programı, denetim rehberi ve kurum bilgilendirmesi biraz geride kalır (0,85: aynı eşleşmede yaklaşık 10 sıra). Kurs yazıları ve mdSinyal metinleri 1.
-    for (const [id, x] of rrf) { const b = kayitAl(id).b; rrf.set(id, x * (TUR_AGIRLIK[b.tur] || 1)); }
+    for (const [id, x] of rrf) { const b = kayitAl(id).b, d = durum[b.id]; rrf.set(id, x * (TUR_AGIRLIK[b.tur] || 1) * (d ? DURUM_AGIRLIK[d.durum] || 1 : 1)); }
     // Çeşitlilik: aynı maddenin ikinci ve sonraki parçaları, başka maddelerin hepsinden sonraya kayar (madde penceresi zaten bütün maddeyi gösterir).
     // Sonra dengele: mdSinyal metinleri ilk sıraları doldurmaz.
     const mSay = new Map(), once = [], ertele = [];
@@ -614,7 +619,7 @@ export function yeniMotor() {
       if (goruldu.has(id)) return; goruldu.add(id);
       const { ad, i, p, b } = kayitAl(id);
       const set = new Set(sonuc.vurguKok), pk = new Set(kokler(`${p.t || ''} ${p.baslik || ''}`));
-      sonuc.sonuc.push({ kaynak: ad, belge: b, parca: p, sira: i, skor, neden, vurgu: [...set].filter(w => pk.has(w)) });
+      sonuc.sonuc.push({ kaynak: ad, belge: b, parca: p, sira: i, skor, neden, vurgu: [...set].filter(w => pk.has(w)), ...(durum[b.id] ? { durum: durum[b.id] } : {}) });
     };
     maddeIdler.forEach((id, r) => ekle(id, 1 + 1 / (r + 1), 'madde'));
     for (const [id, s] of sira) {
@@ -666,10 +671,26 @@ export function yeniMotor() {
       return kumeKur('kurs', belgeler, parcalar, uyumlu ? v : null, D);
     },
     kursSil() { kume.kurs = null; dizin = null; },
+    // Platformun eklediği ortak belgeler: hepsi = /mevzuat/ortak/hepsi, liste = /mevzuat/ortak belgeleri (resmî, bütün kurslarda)
+    ekKur(hepsi, liste) {
+      const belgeler = (liste || []).map(x => ({ ...x, kisa: x.ad, tur: x.tur || 'yazi', ek: true }));
+      const yer = new Map(belgeler.map((b, i) => [b.id, i])), parcalar = [];
+      for (const p of (hepsi && hepsi.parcalar) || []) {
+        const bi = yer.get(p.b); if (bi == null) continue;
+        const m = (String(p.t || '').match(/^\s*((?:Geçici\s+)?Madde\s+\d+)/i) || [])[1] || '';
+        parcalar.push({ b: bi, m, t: p.t || '', id: p.b });
+      }
+      const D = +(hepsi && hepsi.boyut) || boyut, v = hepsi && hepsi.v ? (typeof hepsi.v === 'string' ? base64Int8(hepsi.v) : hepsi.v) : null;
+      const uyumlu = !model || !hepsi || !hepsi.model || hepsi.model === model;
+      return kumeKur('ek', belgeler, parcalar, uyumlu && v && v.length === parcalar.length * D ? v : null, D);
+    },
+    ekSil() { kume.ek = null; dizin = null; },
+    durumKur(d) { durum = d && typeof d === 'object' ? d : {}; },
+    get durum() { return durum; },
     ara, madde,
     dizinKur, takmalar,
     get kume() { return kume; },
-    get bilgi() { const d = hazirDizin(); return { model, boyut, onek, parca: d.N, terim: d.terim.size, kurulum: d.sure, ortak: kume.ortak ? kume.ortak.parcalar.length : 0, kurs: kume.kurs ? kume.kurs.parcalar.length : 0, ortakVektor: !!(kume.ortak && kume.ortak.vek), kursVektor: !!(kume.kurs && kume.kurs.vek) }; },
+    get bilgi() { const d = hazirDizin(); return { model, boyut, onek, parca: d.N, terim: d.terim.size, kurulum: d.sure, ortak: kume.ortak ? kume.ortak.parcalar.length : 0, ek: kume.ek ? kume.ek.parcalar.length : 0, kurs: kume.kurs ? kume.kurs.parcalar.length : 0, ortakVektor: !!(kume.ortak && kume.ortak.vek), kursVektor: !!(kume.kurs && kume.kurs.vek) }; },
   };
 }
 
