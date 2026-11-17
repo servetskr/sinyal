@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Hesap işlemi · mdSinyal</title><meta name="robots" content="noindex"><meta name="referrer" content="no-referrer"><meta name="theme-color" content="#070b14">
+<link rel="icon" href="../favicon.svg?s=3" type="image/svg+xml">
+<meta property="og:title" content="mdSinyal hesap işlemi"><meta property="og:description" content="Şifre yenileme ve e-posta doğrulama."><meta property="og:site_name" content="mdSinyal"><meta property="og:locale" content="tr_TR"><meta property="og:image" content="https://mdsinyal.com/img/site/paylas-103.jpg">
+<!--
+  mdSinyal e-posta eylem sayfası: mdsinyal.com/hesap/?mode=...&oobCode=...
+  Firebase konsolu › Authentication › Templates › customize action URL = https://mdsinyal.com/hesap/
+  mode=resetPassword (şifre yenileme), verifyEmail (e-posta doğrulama), recoverEmail (e-posta değişikliğini geri alma).
+  Firebase SDK yüklenmez; Identity Toolkit REST çağrılır (Spark planında çalışır, sunucu gerekmez). Kod tek kullanımlıktır, sayfa kodu saklamaz.
+  Link düzeni: sinyal-kaynak/belgeler/link-standardi.md, kurulum: belgeler/eposta-gonderici.md
+-->
+<style>
+:root{--st-zemin:#070b14;--st-kart:#0f1626;--st-cizgi:rgba(255,255,255,.1);--st-yazi:rgba(214,222,238,.78);--st-beyaz:#fff;--st-sari:#ffc21a;--st-yesil:#34d399;--st-kirmizi:#ff8a7a}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--st-zemin)}
+body{min-height:100vh;min-height:100dvh;display:flex;justify-content:center;background:radial-gradient(60% 40% at 50% 100%,rgba(255,170,70,.14),transparent 70%),var(--st-zemin);color:var(--st-yazi);font:17px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+.st-hk{width:100%;max-width:440px;padding:calc(28px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));display:flex;flex-direction:column}
+.st-hk-marka{display:flex;align-items:center;gap:10px;color:var(--st-beyaz);font-weight:800;font-size:19px;text-decoration:none;margin-bottom:34px}
+.st-hk-marka svg{width:34px;height:34px}.st-hk-marka i{font-style:normal;font-weight:400;opacity:.55}
+.st-hk-govde{flex:1;display:flex;flex-direction:column;animation:st-gir .38s cubic-bezier(.2,.8,.2,1) both}
+@keyframes st-gir{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.st-hk h1{margin:0 0 8px;color:var(--st-beyaz);font-size:27px;line-height:1.2;letter-spacing:-.01em}
+.st-hk p{margin:0 0 22px}
+.st-hk-eposta{display:inline-block;max-width:100%;overflow-wrap:anywhere;color:var(--st-beyaz);font-weight:700}
+.st-hk-alan{position:relative;margin-bottom:14px}
+.st-hk-alan label{display:block;font-size:14px;font-weight:700;color:var(--st-beyaz);margin-bottom:6px}
+.st-hk-alan input{width:100%;height:54px;padding:0 54px 0 16px;border-radius:14px;border:1.5px solid var(--st-cizgi);background:var(--st-kart);color:var(--st-beyaz);font:inherit;font-size:17px;outline:none;transition:border-color .15s}
+.st-hk-alan input:focus{border-color:var(--st-sari)}
+.st-hk-goz{position:absolute;right:4px;bottom:3px;width:48px;height:48px;border:0;background:none;color:var(--st-yazi);border-radius:12px;cursor:pointer;display:grid;place-items:center}
+.st-hk-goz svg{width:22px;height:22px}
+.st-hk-kural{list-style:none;margin:4px 0 22px;padding:0;display:grid;gap:6px;font-size:15px}
+.st-hk-kural li{display:flex;align-items:center;gap:9px;transition:color .2s}
+.st-hk-kural li::before{content:"";width:18px;height:18px;border-radius:50%;border:1.5px solid var(--st-cizgi);flex:none;transition:all .2s}
+.st-hk-kural li.st-tamam{color:var(--st-beyaz)}
+.st-hk-kural li.st-tamam::before{border-color:var(--st-yesil);background:var(--st-yesil) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23062018' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 12.5l4 4 8-9'/%3E%3C/svg%3E") center/12px no-repeat}
+.st-hk-dg{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:54px;margin-top:auto;padding:0 22px;border:0;border-radius:14px;background:var(--st-sari);color:#0b1220;font:inherit;font-weight:800;font-size:17px;text-decoration:none;cursor:pointer;transition:transform .12s,opacity .15s}
+.st-hk-dg:active{transform:scale(.98)}
+.st-hk-dg[disabled]{opacity:.45;cursor:default}
+.st-hk-dg.st-ikinci{background:transparent;color:var(--st-beyaz);border:1.5px solid var(--st-cizgi);margin-top:10px}
+.st-hk-hata{margin:-6px 0 16px;color:var(--st-kirmizi);font-size:15px;min-height:0}
+.st-hk-hata:empty{display:none}
+.st-hk-ikon{width:72px;height:72px;border-radius:24px;display:grid;place-items:center;margin-bottom:22px}
+.st-hk-ikon svg{width:36px;height:36px}
+.st-hk-ikon.st-iyi{background:rgba(52,211,153,.14);color:var(--st-yesil)}
+.st-hk-ikon.st-kotu{background:rgba(255,138,122,.13);color:var(--st-kirmizi)}
+.st-hk-ikon.st-bekle{background:rgba(255,194,26,.12);color:var(--st-sari)}
+.st-hk-ikon.st-iyi path{stroke-dasharray:30;stroke-dashoffset:30;animation:st-ciz .5s .15s ease-out forwards}
+@keyframes st-ciz{to{stroke-dashoffset:0}}
+.st-hk-don{animation:st-don 1s linear infinite;transform-origin:center}
+@keyframes st-don{to{transform:rotate(360deg)}}
+.st-hk-alt{margin-top:22px;font-size:14px;text-align:center;opacity:.75}
+.st-hk-alt a{color:var(--st-yazi)}
+@media (min-width:600px){.st-hk{justify-content:center}.st-hk-govde{flex:none}.st-hk-dg{margin-top:8px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.st-hk-ikon.st-iyi path{stroke-dashoffset:0}}
+</style></head>
+<body><div class="st-hk">
+<a class="st-hk-marka" href="../"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="#141e33"/><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="1.2"/><g fill="none" stroke="#ffc21a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20l12 12-12 12" stroke-opacity=".38"/><path d="M33 20l12 12-12 12"/></g></svg><span><i>md</i>Sinyal</span></a>
+<main class="st-hk-govde" id="g" aria-live="polite"><div class="st-hk-ikon st-bekle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path class="st-hk-don" d="M12 3a9 9 0 1 0 9 9"/></svg></div><h1>Link kontrol ediliyor…</h1></main>
+<noscript><p>Bu sayfa için tarayıcınızda JavaScript açık olmalı.</p></noscript>
+</div>
+<script type="module">
+const g = document.getElementById('g'), q = new URLSearchParams(location.search);
+const mode = q.get('mode') || '', kod = q.get('oobCode') || '';
+// Proje anahtarı linkten değil, sitenin kendi ayarından alınır (gizli değildir; js/firebase-ayar.js)
+const { FIREBASE } = await import('../js/firebase-ayar.js?v=211');
+const API = 'https://identitytoolkit.googleapis.com/v1/accounts:';
+// Giriş ekranı: sabit seçim sayfası (kurs ekibi, öğretmen, öğrenci). Linkteki continueUrl bilerek kullanılmaz:
+// uygulama devam adresi göndermez ve dışarıdan gelen adres (ör. javascript:) düğmeye girerse sitenin kökeninde kod çalışabilir.
+const girisAdresi = '../giris/';
+const e = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const IKON = {
+  iyi: '<div class="st-hk-ikon st-iyi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>',
+  kotu: '<div class="st-hk-ikon st-kotu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 7v6M12 17h.01"/><circle cx="12" cy="12" r="9.5"/></svg></div>',
+};
+const GOZ = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
+async function istek(yol, govde) {
+  const r = await fetch(API + yol + '?key=' + FIREBASE.apiKey, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(govde) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { const h = new Error(String((j.error && j.error.message) || 'HATA')); h.kod = h.message.split(/[ :]/)[0]; throw h; }
+  return j;
+}
+const HATA = {
+  EXPIRED_OOB_CODE: 'Bu linkin süresi dolmuş.', INVALID_OOB_CODE: 'Bu link daha önce kullanılmış ya da hatalı.',
+  USER_DISABLED: 'Bu hesap kapatılmış. Kurs müdürünüzle görüşün.', USER_NOT_FOUND: 'Bu hesap artık yok.', EMAIL_NOT_FOUND: 'Bu hesap artık yok.',
+  WEAK_PASSWORD: 'Şifre çok zayıf; daha uzun bir şifre seçin.', TOO_MANY_ATTEMPTS_TRY_LATER: 'Çok fazla deneme yapıldı. Biraz sonra yeniden deneyin.',
+};
+const hataMetni = x => HATA[x.kod] || (x instanceof TypeError ? 'İnternet bağlantısı yok gibi görünüyor. Bağlantıyı kontrol edip yeniden deneyin.' : 'Bir sorun çıktı. Biraz sonra yeniden deneyin.');
+const ciz = h => { g.style.animation = 'none'; void g.offsetWidth; g.style.animation = ''; g.innerHTML = h; };
+const sonuc = (iyi, baslik, metin, dugme) => ciz(`${iyi ? IKON.iyi : IKON.kotu}<h1>${baslik}</h1><p>${metin}</p><a class="st-hk-dg" href="${e(girisAdresi)}">${dugme || 'Giriş ekranına git'}</a>${iyi ? '' : '<p class="st-hk-alt">Yardım için kurs müdürünüze ya da <a href="https://wa.me/905013636536">mdSinyal desteğe</a> yazın.</p>'}`);
+const gecersiz = x => sonuc(false, 'Bu link artık geçersiz', e(hataMetni(x)) + (mode === 'resetPassword' ? ' Giriş ekranında “Şifremi unuttum”a yeniden basın; yeni link e-postanıza gelir.' : ''));
+
+const BILINEN = ['resetPassword', 'verifyEmail', 'recoverEmail'];
+if (kod && /^[A-Za-z]{3,40}$/.test(mode) && !BILINEN.includes(mode)) {
+  // Bu sayfanın tanımadığı Firebase e-postaları (ör. iki adımlı doğrulamayı geri alma, e-posta değiştirme)
+  // Firebase'in kendi işlem sayfasına aynı parametrelerle geçer; böylece güvenlik linkleri çalışmaya devam eder.
+  ciz('<h1>Link açılıyor…</h1>');
+  location.replace('https://' + FIREBASE.projectId + '.firebaseapp.com/__/auth/action' + location.search);
+} else if (!kod || !BILINEN.includes(mode)) {
+  sonuc(false, 'Link eksik ya da hatalı', 'E-postadaki düğmeye yeniden dokunun. Link bölünmüşse tamamını kopyalayıp tarayıcıya yapıştırın.');
+} else if (mode === 'verifyEmail') {
+  try { await istek('update', { oobCode: kod }); sonuc(true, 'E-posta adresiniz doğrulandı', 'Artık bu adresle girebilir, şifrenizi unutursanız yenileme linkini bu adrese alabilirsiniz.'); } catch (x) { gecersiz(x); }
+} else if (mode === 'recoverEmail') {
+  try { const j = await istek('update', { oobCode: kod }); sonuc(true, 'E-posta adresiniz geri alındı', `Hesabınızın e-postası yeniden <span class="st-hk-eposta">${e(j.email || '')}</span> oldu. Bu değişikliği siz yapmadıysanız şifrenizi de yenileyin.`); } catch (x) { gecersiz(x); }
+} else {
+  // şifre yenileme: önce kodun geçerli olduğu ve hangi hesaba ait olduğu öğrenilir (kod harcanmaz)
+  let eposta = '', gecerli = true;
+  try { eposta = (await istek('resetPassword', { oobCode: kod })).email || ''; } catch (x) { gecerli = false; gecersiz(x); }
+  if (gecerli) {
+    ciz(`<h1>Yeni şifre belirleyin</h1><p>${eposta ? `<span class="st-hk-eposta">${e(eposta)}</span> hesabı için` : 'Hesabınız için'} yeni şifrenizi yazın.</p>
+      <form id="f" novalidate>
+        <input type="email" name="kullanici" value="${e(eposta)}" autocomplete="username" hidden>
+        <div class="st-hk-alan"><label for="s1">Yeni şifre</label><input id="s1" type="password" autocomplete="new-password" minlength="8" required><button type="button" class="st-hk-goz" data-goz="s1" aria-label="Şifreyi göster">${GOZ}</button></div>
+        <div class="st-hk-alan"><label for="s2">Yeni şifre (tekrar)</label><input id="s2" type="password" autocomplete="new-password" minlength="8" required><button type="button" class="st-hk-goz" data-goz="s2" aria-label="Şifreyi göster">${GOZ}</button></div>
+        <ul class="st-hk-kural"><li data-k="boy">En az 8 karakter</li><li data-k="ayni">İki şifre aynı</li></ul>
+        <div class="st-hk-hata" id="h" role="alert"></div>
+        <button class="st-hk-dg" id="kaydet" disabled>Şifreyi kaydet</button>
+      </form>`);
+    const f = g.querySelector('#f'), s1 = f.querySelector('#s1'), s2 = f.querySelector('#s2'), b = f.querySelector('#kaydet'), h = f.querySelector('#h');
+    const denetle = () => { const boy = s1.value.length >= 8, ayni = !!s2.value && s1.value === s2.value; f.querySelector('[data-k=boy]').classList.toggle('st-tamam', boy); f.querySelector('[data-k=ayni]').classList.toggle('st-tamam', ayni); b.disabled = !(boy && ayni); return boy && ayni; };
+    f.addEventListener('input', () => { h.textContent = ''; denetle(); });
+    f.querySelectorAll('[data-goz]').forEach(d => d.addEventListener('click', () => { const i = f.querySelector('#' + d.dataset.goz), ac = i.type === 'password'; i.type = ac ? 'text' : 'password'; d.setAttribute('aria-label', ac ? 'Şifreyi gizle' : 'Şifreyi göster'); }));
+    s1.focus();
+    f.addEventListener('submit', async ev => {
+      ev.preventDefault(); if (!denetle()) return;
+      b.disabled = true; b.textContent = 'Kaydediliyor…';
+      try { await istek('resetPassword', { oobCode: kod, newPassword: s1.value }); sonuc(true, 'Şifreniz yenilendi', 'Yeni şifrenizle girebilirsiniz. Öbür cihazlarda açık oturumlar bir süre sonra yeniden giriş ister.'); }
+      catch (x) { if (['EXPIRED_OOB_CODE', 'INVALID_OOB_CODE', 'USER_DISABLED', 'USER_NOT_FOUND', 'EMAIL_NOT_FOUND'].includes(x.kod)) return gecersiz(x); h.textContent = hataMetni(x); b.textContent = 'Şifreyi kaydet'; b.disabled = false; }
+    });
+  }
+}
+</script>
+</body></html>

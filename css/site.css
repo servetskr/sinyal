@@ -160,6 +160,18 @@ a.st-mod:hover h3{text-decoration:underline;text-decoration-thickness:2px;text-u
 .oz-diger-k .st-ik svg{width:20px;height:20px}
 .oz-diger-k b{display:block;font:700 16px/1.3 var(--k-baslik);color:var(--k-lac);margin-bottom:6px}
 .oz-diger-k p{font-size:14px;color:var(--k-metin)}
+/* Yakında: yeni MEB yönetmeliğine hazırlık (Özellikler sayfası) */
+.st-yak{background:#fff;padding:88px 0}
+.st-yak h2{font-size:34px;line-height:1.15;color:var(--k-lac);margin-top:14px}
+.st-yak-on{max-width:760px;margin-top:14px;color:var(--k-metin)}
+.st-yak-izgara{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:36px}
+.st-yak-k{background:var(--k-zemin);border:1px solid var(--k-cizgi);border-radius:12px;padding:22px}
+.st-yak-ust{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.st-yak-k .st-ik{width:38px;height:38px;margin:0}
+.st-yak-k .st-ik svg{width:20px;height:20px}
+.st-yak-et{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--k-lac);background:#fff;border:1px solid var(--k-cizgi);border-radius:999px;padding:4px 10px;white-space:nowrap}
+.st-yak-k b{display:block;font:700 16px/1.3 var(--k-baslik);color:var(--k-lac);margin-bottom:6px}
+.st-yak-k p{font-size:14px;color:var(--k-metin)}
 
 /* ---------- SSS ---------- */
 .sss-sayfa{padding:72px 0 96px}
@@ -192,8 +204,8 @@ a.st-mod:hover h3{text-decoration:underline;text-decoration-thickness:2px;text-u
 .il-izgara{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:56px;align-items:start}
 .il-sol h1{font-size:40px;line-height:1.12;color:var(--k-lac);margin:14px 0}
 .il-on{color:var(--k-metin);font-size:17px}
-.il-wa{display:flex;align-items:center;gap:16px;margin:28px 0 20px;padding:18px 20px;border-radius:12px;background:var(--k-lac);color:#fff}
-.il-wa:hover{background:var(--k-lac-2)}
+.il-wa,.st a.il-wa{display:flex;align-items:center;gap:16px;margin:28px 0 20px;padding:18px 20px;border-radius:12px;background:var(--k-lac);color:#fff}
+.il-wa:hover,.st a.il-wa:hover{background:var(--k-lac-2)}
 .il-wa-ik{display:grid;place-items:center;width:44px;height:44px;border-radius:10px;background:#128c4b;flex:none}
 .il-wa-ik svg{width:24px;height:24px;fill:none;stroke:#fff;stroke-width:1.8}
 .il-wa b{display:block;font:700 18px/1.2 var(--k-baslik)}
@@ -265,7 +277,7 @@ a.st-mod:hover h3{text-decoration:underline;text-decoration-thickness:2px;text-u
   .st-adimlar{grid-template-columns:1fr}
   .st-alt-izgara{grid-template-columns:1fr 1fr}
   .st-alt-marka{grid-column:1/-1}
-  .oz-izgara,.sss-izgara,.il-izgara{grid-template-columns:1fr}
+  .oz-izgara,.sss-izgara,.il-izgara,.st-yak-izgara{grid-template-columns:1fr}
   .oz-liste,.sss-yan{position:static}
   .oz-liste{grid-auto-flow:column;grid-auto-columns:minmax(220px,1fr);overflow-x:auto;padding-bottom:6px}
   .st-girisler,.st-giris-alt{grid-template-columns:1fr}
@@ -281,7 +293,8 @@ a.st-mod:hover h3{text-decoration:underline;text-decoration-thickness:2px;text-u
   .st-kah h1{font-size:36px}
   .st-kah-alt{font-size:16px}
   .st-bolum{padding:64px 0}
-  .st-bolum h2,.oz-diger h2{font-size:28px}
+  .st-bolum h2,.oz-diger h2,.st-yak h2{font-size:28px}
+  .st-yak{padding:64px 0}
   .st-bas{padding:44px 0 40px}
   .st-bas h1{font-size:32px}
   .st-gercek-ic,.st-mod-izgara,.st-roller,.oz-diger-izgara,.st-alt-izgara{grid-template-columns:1fr}
@@ -300,3 +313,15 @@ a.st-mod:hover h3{text-decoration:underline;text-decoration-thickness:2px;text-u
 
 /* alt sayfalarda tarayıcının varsayılan 8px kenar boşluğu çerçeve gibi görünmesin */
 body.st{margin:0}
+
+/* Yatay telefon (viewport-fit=cover): Dynamic Island/çentik tarafında içerik kenara girmesin */
+@media (orientation:landscape) and (max-height:500px){
+  body.st .st-kap{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
+}
+
+/* Tarayıcı testi (17 Kas): 320-360px genişlikte gizlilik tablosu ve iletişim ızgarası sayfayı yana taşırıyordu */
+@media (max-width:600px){
+  .st-yazi table{font-size:14px}
+  .st-yazi th,.st-yazi td{padding:7px 6px;overflow-wrap:anywhere}
+  .il-izgara{grid-template-columns:minmax(0,1fr)}
+}

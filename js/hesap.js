@@ -1,13 +1,11 @@
 // Öğrenci hesapları (kurs tarafı): müdür ya da ön büro hesabı açar, giriş bilgileri öğrenciye WhatsApp'tan gider,
-// öğrenci ilk girişte kendi şifresini belirler. Şifresini unutan öğrencinin talebi buraya düşer; tek dokunuşla yeni geçici şifre gider.
-import { S, kaydet, gun, tamAd, islem, selam, oturum, sb, SINIFLAR, egitmen, eksikEvrak, kursAdi } from './veri.js?v=210';
-import { e, ik, tarih, pencere, kapatPencere, bildir, waSirali, tl, tamTarih, apiAcik } from './ui.js?v=210';
-import * as B from './bulut.js?v=210';
-import { wpGonder, alici, odemeBilgisi } from './sayfalar1.js?v=210';
+// öğrenci ilk girişte kendi şifresini belirler. Şifresini unutan öğrenci kursa söyler; buradan tek dokunuşla yeni geçici şifre gider.
+import { S, kaydet, gun, tamAd, islem, selam, oturum, sb, SINIFLAR, egitmen, eksikEvrak, kursAdi } from './veri.js?v=211';
+import { e, ik, tarih, pencere, kapatPencere, bildir, waSirali, tl, tamTarih, apiAcik } from './ui.js?v=211';
+import * as B from './bulut.js?v=211';
+import { wpGonder, alici, odemeBilgisi } from './sayfalar1.js?v=211';
 
 const yetkili = () => oturum.kullanici && ['mudur', 'sekreter'].includes(oturum.kullanici.rol);
-const talepVar = k => B.bulutta() && !!k.hesap && (B.bulut.sifreTalep || []).some(t => t.tel === k.hesap.tel);
-export const talepEdenler = () => (B.bulutta() ? (B.bulut.sifreTalep || []) : []).map(t => S.kursiyerler.find(k => k.hesap && k.hesap.tel === t.tel && !k.kapali)).filter(Boolean);
 
 export const mesaj = (k, r) => `${selam(k)}\n\n*${S.kurs.ad}* öğrenci uygulamasında ${r.yeniden ? 'şifreniz yenilendi' : 'hesabınız açıldı'}.\n\n*Giriş:* ${B.ogrenciGirisLinki()}\n*Telefon:* ${B.telGoster(r.tel)}\n*Geçici şifre:* ${r.sifre}\n\nİlk girişte kendi şifrenizi belirleyeceksiniz.${r.yeniden ? '' : ' Ders programınızı, ödemelerinizi ve sınavlarınızı buradan görebilir, belgelerinizi yükleyebilirsiniz.'}\n\nŞifrenizi kimseyle paylaşmayın.`;
 
@@ -22,10 +20,10 @@ async function kapat(k) { if (B.bulutta()) return B.ogrenciHesapKapat(k); k.hesa
 
 export function hesapSeridi(k) {
   if (!yetkili() || k.kapali) return '';
-  const h = k.hesap, t = talepVar(k);
+  const h = k.hesap;
   const durum = h ? [B.telGoster(h.tel), 'açıldı ' + tarih(h.acildi), h.sifirlandi ? 'şifre yenilendi ' + tarih(h.sifirlandi) : '', k.hesapAktif ? 'kullanıyor' + (k.sonGiris ? ' · son giriş ' + tarih(k.sonGiris) : '') : 'ilk giriş bekleniyor'].filter(Boolean).join(' · ') : 'Öğrenci kendi telefonundan program, ders, ödeme, sınav ve evraklarını görsün; ders alsın, evrak yüklesin, deneme sınavı çözsün';
-  return `<div class="panel-serit"${t ? ' style="border-color:var(--kirmizi)"' : ''}><span>${ik('tel')}<b>Öğrenci hesabı</b><small>${e(durum)}${t ? ' · <b style="color:var(--kirmizi)">şifresini unuttu</b>' : ''}</small></span><span class="sag" style="gap:6px">${h
-    ? `<button type="button" class="dg ${t ? 'dg-ana' : 'dg-hafif'} dg-kucuk" data-hesap-sifre>Yeni geçici şifre gönder</button><button type="button" class="dg dg-hafif dg-kucuk" data-hesap-kapat>Hesabı kapat</button>`
+  return `<div class="panel-serit"><span>${ik('tel')}<b>Öğrenci hesabı</b><small>${e(durum)}</small></span><span class="sag" style="gap:6px">${h
+    ? `<button type="button" class="dg dg-hafif dg-kucuk" data-hesap-sifre>Yeni geçici şifre gönder</button><button type="button" class="dg dg-hafif dg-kucuk" data-hesap-kapat>Hesabı kapat</button>`
     : `<button type="button" class="dg dg-ana dg-kucuk" data-hesap-ac>Hesap aç ve WhatsApp’tan gönder</button>`}</span></div>`;
 }
 // kayıt sırasında: hesap arka planda açılır, giriş bilgileri gönderilir

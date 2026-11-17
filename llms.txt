@@ -1,0 +1,40 @@
+# mdSinyal
+
+> mdSinyal (MD Sinyal), sürücü kursları için yönetim yazılımı: direksiyon planı, tahsilat ve kasa, sınav takibi, MEBBİS işlemleri, WhatsApp asistanı ve öğrenci/öğretmen uygulaması tek sistemde.
+
+## Kısaca
+
+- Ne: Türkiye’deki özel motorlu taşıt sürücü kursları (MTSK) için yönetim programı. Üretici: MD Yazılım, Eskişehir.
+- Nasıl çalışır: web tabanlı; tarayıcıda açılır, kurulum, Windows sürümü ya da sunucu bilgisayar gerekmez. Bilgisayar, tablet ve telefonda çalışır.
+- Kimler kullanır: kurs müdürü ve ön büro (bilgisayardan), öğretmen (usta öğretici) ve öğrenci (telefondan). Herkes yalnız kendi rolünün ekranlarını görür.
+- Kullanıcı sayısı: sınırsız. Birden fazla şube tek hesapta.
+- Ücret: kurs başına abonelik; yıllık ödemede kurulum, kayıt aktarımı ve eğitim dahil. Güncel fiyat WhatsApp’tan ya da tanıtım görüşmesinde verilir.
+- Geçiş: eski programdaki (Tabim, Akınsoft, Wenntec vb.) kursiyer, taksit/ödeme, araç ve öğretmen listeleri Excel ya da CSV ile aktarılır; aktarımı istenirse mdSinyal ekibi yapar. Geçiş çoğu kursta bir gün sürer; kurulum günü ekip eğitimi verilir.
+- MEBBİS: MEBBİS’e girilecek işler (kursiyer kaydı, direksiyon programı, sınav, fatura bilgisi) son tarihleriyle listelenir. MEBBİS Yardımcısı adlı Chrome eklentisi formları kursun kendi açtığı MEBBİS oturumunda doldurur; kaydı kurs yetkilisi onaylar. MEBBİS şifresi istenmez ve saklanmaz.
+- WhatsApp: mesajlar kursun kendi WhatsApp Business hattından (Meta) gider. Ders, taksit ve kayıt görüşmesi hatırlatmaları bu hattan gönderilir. Ders değişikliği isteyen öğrenciye asistan, kursta mdSinyal açıkken birkaç dakika içinde 24 saat kuralına uygun boş saatleri önerir, seçilen saat plana işlenir. Diğer mesajlar mdSinyal’in gelen kutusunda toplanır ve kurs ekibi yanıtlar.
+- Öğrenci ve öğretmen uygulaması: uygulama mağazasından indirilmez; mdsinyal.com telefonda açılıp ana ekrana eklenir.
+- Güvenlik ve KVKK: veriler bulutta şifreli tutulur, her gün yedeklenir, her işlem kimin yaptığıyla kaydedilir. Kurs veri sorumlusu, mdSinyal veri işleyendir. Sözleşme biterse veriler 30 gün içinde Excel ve tam yedek olarak kursa teslim edilir, sonra silinir.
+- İletişim: WhatsApp ve telefon 0501 363 65 36 (+90 501 363 65 36). Kursa özel tanıtım görüşmesi ücretsizdir. Eskişehir’deki kurslara yerinde, diğer şehirlere uzaktan kurulum.
+- Demo: https://mdsinyal.com/#/demo (örnek bir kursla açılır, kayıt gerekmez).
+
+## Sayfalar
+
+- [Ana sayfa](https://mdsinyal.com/): genel tanıtım, modüller, kullanıcı rolleri, geçiş adımları
+- [Özellikler](https://mdsinyal.com/ozellikler/): her özelliğin açıklaması ve ekranı
+- [Sık sorulan sorular](https://mdsinyal.com/sss/): kurulum ve geçiş, güvenlik ve KVKK, WhatsApp, MEBBİS
+- [İletişim](https://mdsinyal.com/iletisim/): tanıtım görüşmesi isteği
+- [Gizlilik ve KVKK](https://mdsinyal.com/gizlilik.html): işlenen veriler, hukuki sebepler, saklama süreleri
+
+## Yakında
+
+MEB, direksiyon sınavı için yeni yönetmelik taslağı hazırladı: sınavın serbest güzergâhta, akan trafikte yapılması ve kamerayla kaydedilmesi gündemde. Metin henüz Resmî Gazete’de yayımlanmadı. Yayımlandığında mdSinyal yeni kurallara göre güncellenir.
+
+- Yeni sınav kuralları: Yönetmelik yayımlanır ve direksiyon sınavının süresini ya da sınav günü kurallarını değiştirirse, mdSinyal’deki sınav günü planlama kuralları yeni metne göre güncellenir.
+- Yeni sınava göre hazırlık: Direksiyon sınavı serbest güzergâhta yapılmaya başlarsa öğrencinin sınav hazırlık içeriği yeni sınav düzenine göre yenilenir.
+- Sınav aracında kamera takibi: Direksiyon sınavı kamerayla kaydedilmeye başlar ve sınav aracına kamera ya da konum cihazı gerekirse, cihazın durumu araç kartında takip edilir.
+
+## Ayrıntılı metin
+
+- [llms-full.txt](https://mdsinyal.com/llms-full.txt): bütün özellikler ve sık sorulan soruların tam metni
+
+Son güncelleme: 2026-11-16

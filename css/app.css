@@ -476,7 +476,7 @@ body.portal-modu .icerik{max-width:none}
 }
 @media (max-width:900px){
   .uyg{grid-template-columns:1fr}
-  .yan{position:fixed;left:0;top:0;bottom:0;width:292px;z-index:90;transform:translateX(-105%);transition:transform .25s;padding:10px}
+  .yan{position:fixed;left:0;top:0;bottom:0;height:auto;width:292px;z-index:90;transform:translateX(-105%);transition:transform .25s;padding:10px 10px max(10px,env(safe-area-inset-bottom))}
   .yan.acik{transform:none}
   .yan-perde{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:80}
   .ust{padding:10px 16px;gap:10px;min-height:62px}
@@ -540,7 +540,7 @@ body.portal-modu .icerik{max-width:none}
 body.portal-modu .arama{display:none}
 
 /* giriş */
-.giris{min-height:100vh;display:grid;place-items:center;padding:24px 16px;background:var(--zemin)}
+.giris{min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:24px 16px;background:var(--zemin)}
 .giris-levha{width:min(560px,100%);background:var(--levha);color:#fff;border-radius:16px;box-shadow:inset 0 0 0 5px var(--levha),inset 0 0 0 7px #fff;padding:28px 28px 24px}
 .giris-levha h1{color:#fff;font-size:30px;font-weight:900;margin-top:10px}
 .giris-levha>p{opacity:.88;margin:4px 0 18px}
@@ -1009,7 +1009,7 @@ button.oto-gidecek:hover{text-decoration:underline}
 .panel-serit b{font-family:var(--baslik);color:var(--murekkep)}
 .panel-serit small{color:var(--soluk);font-size:13px}
 /* öğrencinin kendi telefonundaki kabuk */
-.ogr-kabuk{min-height:100vh;background:var(--zemin)}
+.ogr-kabuk{min-height:100vh;min-height:100dvh;background:var(--zemin)}
 .ogr-icerik{max-width:640px;margin:0 auto;padding:16px 16px 96px}
 .konu-sec{gap:6px;margin-bottom:12px}
 .konu-sec label span{font-size:13px;padding:6px 10px}
@@ -1646,7 +1646,7 @@ button.oto-gidecek:hover{text-decoration:underline}
 .ort-onay input{width:18px;height:18px;margin-top:2px;accent-color:var(--levha);flex:none}
 .ort-onay small{display:block;color:var(--soluk);font-size:12.5px}
 .ort-onizle{margin-top:12px;font-size:14px;color:var(--metin);min-height:1.2em}
-.ort-kabuk{min-height:100vh;background:var(--zemin)}
+.ort-kabuk{min-height:100vh;min-height:100dvh;background:var(--zemin)}
 .ort-ana{max-width:880px;margin:0 auto;padding:18px 16px 60px}
 @media (max-width:640px){
   .ort-tablo thead{display:none}
@@ -2646,3 +2646,42 @@ tr.tik{font:inherit;color:inherit;margin-right:0}
 .ogn-test-birak{display:block;margin:18px auto 0;padding:10px 14px;font-size:15px;font-weight:500;color:var(--u-ikincil)}
 .og-ogren-bag{margin-top:18px}
 .og-ogren-bag .u-satir-govde small{white-space:normal}
+
+/* Tarayıcı testi (17 Kas): esnek satırdaki yazı alanı kendi doğal genişliğinin altına inebilsin (320px'te #/sosyal › Kurallar satırı taşıyordu) */
+.girdi{min-width:0}
+/* .alan input{width:100%;height:42px} onay kutusunu da yayıyordu; WebKit'te kutu 290px'e uzayıp yanındaki yazıyı taşırıyordu */
+.alan input[type=checkbox],.alan input[type=radio]{width:18px;height:18px;padding:0;flex:none;border:0;background:none;margin:0}
+/* iOS Safari: 16px altı yazılı alana dokununca sayfa yakınlaşıp yana kayar; yalnız iOS'ta (masaüstü Safari ve Chrome etkilenmez) */
+@supports (-webkit-touch-callout:none){
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]):not([type=button]):not([type=submit]):not([type=reset]),select,textarea{font-size:16px!important}
+  .komut input,.og-girdi input,.u-ara input,.ox-ugr-kutu input{font-size:17px!important}
+  .giris-pin input,input[data-iki-kod]{font-size:20px!important}
+  input[data-kod]{font-size:22px!important}
+  .alan input.tahsil-tutar{font-size:28px!important}
+  /* iOS tarih/saat alanı: boşken genişliğini yazıya göre daraltıyor (width:100% yok sayılıyor), değer sağa yaslanıyor */
+  input:is([type=date],[type=time],[type=datetime-local],[type=month]){-webkit-appearance:none;appearance:none;min-width:0}
+  input:is([type=date],[type=time],[type=datetime-local],[type=month])::-webkit-date-and-time-value{text-align:left;min-height:1.5em}
+}
+/* Dokunmatik: yazı alanı odaktayken sabit alt sekme çubuğu (iOS'ta klavyenin hemen üstüne biner, görünür alanı 60px daraltır) gizlenir */
+@media (hover:none) and (pointer:coarse){
+  body:has(:is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=button]):not([type=submit]):not([type=file]),textarea,[contenteditable=true]):focus) :is(.alt-menu,.ox-sekme){display:none}
+}
+/* Yatay telefon (viewport-fit=cover): Dynamic Island/çentik tarafında içerik kenara girmesin */
+@media (orientation:landscape) and (max-height:500px){
+  body:not(.st){padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+  .yan{padding-left:max(10px,env(safe-area-inset-left))}
+  .alt-menu,body .ox-sekme{padding-left:max(8px,env(safe-area-inset-left));padding-right:max(8px,env(safe-area-inset-right))}
+}
+/* 320px telefonda öğretmen › Program › Ay başlığındaki Hafta/Ay düğmesi karttan 35px taşıyordu */
+@media (max-width:359px){
+  .ox .ox-upr-kbas{gap:0;flex-wrap:wrap;row-gap:8px}
+  .ox .ox-upr-kbas .ox-sekmeler.hap{width:100px;margin-left:auto}
+  .ox .ox-upr-kbas .ox-sekmeler.hap button{font-size:14px;padding-left:4px;padding-right:4px}
+}
+/* 901-1100px (masaüstü düzeni, dar içerik): Ayarlar grup satırı ve öğrenci dosyası bilgi tablosu sayfayı yana taşırıyordu */
+.ayar-grup{min-width:0;max-width:100%}
+@media (min-width:901px){.ayar-grup .sekmeler{flex-wrap:wrap}}
+.bilgi-tablo{grid-template-columns:auto minmax(0,1fr)}
+.bilgi-tablo dd{min-width:0;overflow-wrap:anywhere}
+.bilgi-tablo dd .dg{max-width:100%;height:auto;white-space:normal;text-align:left;line-height:1.25;padding-top:6px;padding-bottom:6px}
+.bilgi-tablo dd .rozet{max-width:100%;white-space:normal;height:auto;min-height:23px;line-height:1.2;padding-top:3px;padding-bottom:3px}
