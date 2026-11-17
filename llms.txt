@@ -36,5 +36,6 @@ MEB, direksiyon sınavı için yeni yönetmelik taslağı hazırladı: sınavın
 ## Ayrıntılı metin
 
 - [llms-full.txt](https://mdsinyal.com/llms-full.txt): bütün özellikler ve sık sorulan soruların tam metni
+- [Sürücü Kursu Rehberi](https://mdsinyal.com/rehber/): kayıttan sertifikaya 36 bölüm, her cümle resmî dayanağıyla; [mevzuat soruları](https://mdsinyal.com/rehber/sss/)
 
-Son güncelleme: 2026-11-16
+Son güncelleme: 2026-11-17

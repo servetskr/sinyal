@@ -6,7 +6,7 @@
    - Atıf takibi: seçilen maddelerin içinde geçen "39 uncu madde", "Karayolları Trafik Yönetmeliğinin 85 inci maddesi" gibi atıflar
      yapay zekâya giden kaynaklara eklenir (çok adımlı kanıt).
    Ölçüm: sinyal-kaynak arac/mevzuat/olc-asistan.mjs (soru-seti-2 ve bağımsız soru-seti-3). */
-import { sadele, kokler, dengele, resmiDegil, kaynakSec, KAYNAK } from './mevzuat-ara.js?v=221';
+import { sadele, kokler, dengele, resmiDegil, kaynakSec, KAYNAK } from './mevzuat-ara.js?v=222';
 
 /* ---------- kavramlar ---------- */
 // kavram.json → derlenmiş kalıplar (bir kez)
@@ -97,9 +97,28 @@ export function atiflar(metin, belgeId) {
   return o;
 }
 
+/* ---------- soru parçalama ---------- */
+// Çok parçalı soru ("kaç saat ders alır, e-sınava girer mi, kayıtta ne getirir") parçalarına bölünür; her parça ayrıca aranır ki
+// ikinci, üçüncü parçanın maddesi de kaynaklara girsin. Ayırıcı: soru işareti, noktalı virgül, virgül ya da "ve/peki/ayrıca" + soru sözü.
+const SORU_SOZ = /(?:^|\s)(kac|ne|neler|nasil|hangi|kim|nerede|nereye|neden|mi|mu|mı|mü|midir|olur mu|gerekir|lazim|zorunlu)(?:\s|$)/;
+export function soruParcala(soru, enCok = 4) {
+  const ham = String(soru || '').replace(/\s+/g, ' ').trim();
+  const l = ham.split(/[?;]+|,\s+|\s+(?:ve|peki|ayrıca|bir de|hem de|yoksa)\s+(?=\S+\s+\S+)/iu).map(x => x.trim()).filter(Boolean);
+  const o = [];
+  for (const x of l) {
+    const sx = ' ' + sadele(x) + ' ', kk = kokler(x);
+    if (!kk.length || (!SORU_SOZ.test(sx) && kk.length < 2)) { if (o.length) o[o.length - 1] += ' ' + x; else o.push(x); continue; }
+    o.push(x);
+  }
+  if (o.length < 2) return [];
+  // kısa parçaya ilk parçanın konusu eklenir: "gece dersi zorunlu mu, kaçta başlıyor" → "gece dersi kaçta başlıyor"
+  const konu = (o[0].match(/[\p{L}\p{N}]+/gu) || []).filter(w => (kokler(w).length || SINIF_SET.has(sadele(w))) && !SORU_SOZ.test(' ' + sadele(w) + ' ')).slice(0, 4).join(' ');
+  return o.slice(0, enCok).map((x, i) => (i && kokler(x).length < 3 && konu ? konu + ' ' + x : x));
+}
+
 /* ---------- çok sorgulu arama ---------- */
 // Ağırlıklar iki sette birlikte seçildi: set 2'ye göre ayarlanan 1/0,3 bağımsız set 3'te geriletiyordu (87,8 → 82,3); 0,3/0 ikisinde de iyileştirir (olc-asistan.mjs).
-export const ASISTAN = { k: 60, asil: 1, kavramSorgu: 0, kavramMadde: 0.3, kavramN: 2, maddeN: 6, llmSorgu: 0.6, llmMadde: 0.6, gecis: 1.2, rehber: 0.6 };
+export const ASISTAN = { k: 60, parca: 0.4, asil: 1, kavramSorgu: 0, kavramMadde: 0.3, kavramN: 2, maddeN: 6, llmSorgu: 0.6, llmMadde: 0.6, gecis: 1.2, rehber: 0.6 };
 
 // Belge id + madde → o maddenin, soruyla en çok kökü paylaşan parçası (yoksa ilki)
 function maddeParcasi(motor, b, m, qk) {
@@ -132,6 +151,9 @@ export async function asistanAra(motor, soru, { gom = null, kh = null, llm = nul
   const qk = new Set(kokler(soru));
   const listeler = [{ l: asil.sonuc, w: A.asil }];
   const ek = [];  // { i (ortak parça), w, r }
+  // çok parçalı soru: her parça ayrıca aranır (kelime + anlam)
+  const parcalar = A.parca > 0 ? soruParcala(soru) : [];
+  for (const q of parcalar) { const r = await motor.ara(q, { n: 30, gom, filtre }); listeler.push({ l: r.sonuc, w: A.parca }); }
   // sınıf geçişi: fark sınıfı kavramı ve hedef sınıfın yaş/deneyim şartı; tablo parçası en üste
   let fark = null;
   if (gecis) {
@@ -162,7 +184,7 @@ export async function asistanAra(motor, soru, { gom = null, kh = null, llm = nul
   for (const x of sirali) { const s = nesne.get(x[0]), p = s.parca; if (!p.m) { once.push(x); continue; } const key = s.kaynak + '|' + p.b + '|' + p.m, c = mSay.get(key) || 0; mSay.set(key, c + 1); (c < 1 ? once : ertele).push(x); }
   const sira = dengele(once.concat(ertele), a => resmiDegil(nesne.get(a).belge));
   const sonuc = madde.map(a => nesne.get(a)).concat(sira.map(([a, p]) => ({ ...nesne.get(a), skor: p }))).slice(0, n);
-  return { ...asil, sonuc, kavramlar: kav.map(x => x.k), gecis, fark };
+  return { ...asil, sonuc, kavramlar: kav.map(x => x.k), gecis, fark, parcalar };
 }
 
 // Yapay zekâya gidecek kaynaklar: kaynakSec + yer kalırsa seçilen resmî maddelerin atıf yaptığı maddeler (çok adımlı kanıt).
@@ -199,7 +221,7 @@ let kavramYukleniyor = null;
 // veri/mevzuat/kavram.json: ilk kullanımda indirilir; inmezse asistan kavramsız (yalnız arama ve yapay zekâ) çalışır
 export function kavramYukle({ getir = (u) => fetch(u), kok = new URL('../veri/mevzuat/', import.meta.url).href } = {}) {
   if (kavramYukleniyor) return kavramYukleniyor;
-  kavramYukleniyor = getir(kok + 'kavram.json?v=221').then(r => (r.ok ? r.json() : null)).then(kavramKur).catch(() => null);
+  kavramYukleniyor = getir(kok + 'kavram.json?v=222').then(r => (r.ok ? r.json() : null)).then(kavramKur).catch(() => null);
   return kavramYukleniyor;
 }
 
