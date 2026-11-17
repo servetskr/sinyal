@@ -2,11 +2,11 @@
    Arama motoru js/mevzuat-ara.js: ortak derlem (veri/mevzuat) + kursa gelen yazılar (worker /mevzuat/*).
    Anlam araması için sorgu vektörü worker'dan gelir (/mevzuat/gom); ulaşılamazsa yalnız kelimeyle aranır.
    Yerel denemede (localhost) worker'a istek gitmez; yerel worker için localStorage 'sinyal-mevzuat-api' = 'http://127.0.0.1:8787'. */
-import { S, oturum, bulutKanca } from './veri.js?v=225';
-import { e, ik, rozet, bos, pencere, kapatPencere, bildir, ekranNotu, isaret, tamTarih, ilerleme } from './ui.js?v=225';
-import { WORKER } from './bulut.js?v=225';
-import { motor, yukle, yuklendi, base64Int8, kokler, alinti, FILTRELER, ETIKET_RE, etiketCoz, etiketBul, resmiDegil, kisaCevapSec, cevapNormalle, cevapDuzMetin } from './mevzuat-ara.js?v=225';
-import { kavramYukle, asistanAra, asistanKaynak, asistanSoru } from './mevzuat-anla.js?v=225';
+import { S, oturum, bulutKanca } from './veri.js?v=226';
+import { e, ik, rozet, bos, pencere, kapatPencere, bildir, ekranNotu, isaret, tamTarih, ilerleme } from './ui.js?v=226';
+import { WORKER } from './bulut.js?v=226';
+import { motor, yukle, yuklendi, base64Int8, kokler, alinti, FILTRELER, ETIKET_RE, etiketCoz, etiketBul, resmiDegil, kisaCevapSec, cevapNormalle, cevapDuzMetin } from './mevzuat-ara.js?v=226';
+import { kavramYukle, asistanAra, asistanKaynak, asistanSoru } from './mevzuat-anla.js?v=226';
 
 const TUR_AD = { yonetmelik: 'Yönetmelik', kanun: 'Kanun', yonerge: 'Yönerge', teblig: 'Tebliğ', kilavuz: 'Kılavuz', program: 'Ders programı', yazi: 'MEB yazısı', form: 'Form',
   'rehber-resmi': 'Denetim rehberi', bilgilendirme: 'Resmî bilgilendirme', rehber: 'mdSinyal rehberi (resmî metin değil)', sss: 'mdSinyal sık sorulanlar (resmî metin değil)' };
@@ -112,9 +112,9 @@ const kursYenile = async () => { durum.kursHepsi = null; motor.kursSil(); durum.
 async function ortakEkYukle() {
   try {
     const j = await api('/mevzuat/ortak', { sure: 8000 });
-    durum.ortak = { belgeler: j.belgeler || [], durum: j.durum || {}, duyurular: j.duyurular || [] };
-    motor.durumKur(durum.ortak.durum);
-    if (durum.ortak.belgeler.length) { const h = await api('/mevzuat/ortak/hepsi', { sure: 20000 }); motor.ekKur(h, durum.ortak.belgeler); }
+    durum.ortak = { belgeler: j.belgeler || [], durum: j.durum || {}, duyurular: j.duyurular || [], sss: j.sss || { kayitlar: [], gizli: [] } };
+    motor.durumKur(durum.ortak.durum); motor.sssGizle(durum.ortak.sss.gizli);
+    if (durum.ortak.belgeler.length || durum.ortak.sss.kayitlar.length) { const h = await api('/mevzuat/ortak/hepsi', { sure: 20000 }); motor.ekKur(h, durum.ortak.belgeler, durum.ortak.sss); }
   } catch (x) { durum.ortak = durum.ortak || { belgeler: [], durum: {}, duyurular: [], hata: true }; }
 }
 // duyurular: en yeni 3'ü gösterilir; görülmeyenler "yeni" sayılır (bu cihazda son görülen duyuru)
@@ -451,7 +451,7 @@ async function geriGonder(k, iyi, not = '') {
 // İlgili sorular: sonuçlardaki sık sorulanlardan (gösterilen hazır cevap dışında) en çok 4; dokununca o soru sorulur
 function ilgiliSorular(l) {
   const gor = new Set(), q = durum.q.toLocaleLowerCase('tr-TR');
-  const s = l.filter(x => x.parca.sss && x.kaynak === 'ortak').map(x => x.parca.m).filter(m => m && m.toLocaleLowerCase('tr-TR') !== q && !gor.has(m) && gor.add(m)).slice(0, 4);
+  const s = l.filter(x => x.parca.sss && (x.kaynak === 'ortak' || x.kaynak === 'ek')).map(x => x.parca.m).filter(m => m && m.toLocaleLowerCase('tr-TR') !== q && !gor.has(m) && gor.add(m)).slice(0, 4);
   return s.length ? `<div class="mz-ilgili-sorular"><span>İlgili sorular</span>${s.map(m => `<button type="button" class="mz-ornek" data-mz-ornek="${e(m)}">${e(m)}</button>`).join('')}</div>` : '';
 }
 
@@ -478,6 +478,7 @@ function kavramAc(k, id, inp) {
 /* ---------- madde penceresi ---------- */
 function sonucAc(s) {
   if (s.kaynak === 'kurs') return kursBelgesiAc(s.belge.id);
+  if (s.kaynak === 'ek' && s.parca.sss) return pencere({ baslik: 'Sık sorulan', genis: true, icerik: `<div class="mz-madde" data-resmi><p class="mz-uyari-not">mdSinyal'in hazırladığı cevaptır, resmî metin değildir. Dayanağa dokunarak resmî maddeyi açın.</p>${kisaCevapHtml(s.parca)}</div>`, onAc: d => d.addEventListener('click', ev => { const y = ev.target.closest('[data-mz-etiket]'); if (y) maddeAc(+y.dataset.mzEtiket); }) });
   if (s.kaynak === 'ek') return ekBelgeAc(s.belge.id);
   maddeAc(s.sira, new Set(durum.son ? durum.son.r.vurguKok || durum.son.r.kokler : []));
 }
