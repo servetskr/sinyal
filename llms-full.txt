@@ -101,6 +101,19 @@ Bütün kayıtlar her gün yedeklenir. Veriler bulutta şifreli olarak saklanır
 
 ## Yakında
 
+Aşağıdaki özellikler hazırlanıyor. Yeni özellikler aynı fiyata dahildir; ayrıca ücret istenmez. Kurs hesabını mdSinyal ekibi açar ve kurulumu sizinle birlikte yapar.
+
+- WhatsApp’ı tek dokunuşla bağlama: Kursunuz kendi WhatsApp numarasını mdSinyal içinden, Meta’nın kendi penceresiyle bağlar. Ayar ekranlarıyla uğraşmazsınız.
+- e-Arşiv fatura: Tahsilatın faturası mdSinyal’den kesilir ve kursunuzun seçtiği entegratöre kendi hesabınızla gider. Eksik fatura denetimi bugün de var.
+- Kartla ödeme linki ve QR kod: Öğrenci taksitini telefonundan kartla öder; ödeme kursunuzun ödeme kuruluşu hesabına geçer, kasaya ve taksite kendiliğinden işlenir.
+- MEBBİS Yardımcısı Chrome mağazasında: Yardımcı mağazadan tek tıkla kurulur, kendiliğinden güncellenir.
+- Web sitenizden kayıt formu: Kursunuzun sitesine konan formdan gelen başvuru doğrudan mdSinyal’e düşer.
+- SMS yedeği: WhatsApp’ı olmayan öğrenciye hatırlatma, kursunuzun SMS hesabından gider.
+- MEİS beyanında ön doldurma: Yıllık bina ve donanım beyanında geçen yılın değerleri hazır gelir; siz kontrol edip kaydedersiniz.
+- Uygulama kapalıyken de hatırlatma: Ders ve taksit hatırlatmaları kurs bilgisayarı kapalı olsa da zamanında gider.
+
+### Yeni yönetmeliğe hazırlık
+
 MEB, direksiyon sınavı için yeni yönetmelik taslağı hazırladı: sınavın serbest güzergâhta, akan trafikte yapılması ve kamerayla kaydedilmesi gündemde. Metin henüz Resmî Gazete’de yayımlanmadı. Yayımlandığında mdSinyal yeni kurallara göre güncellenir.
 
 - Yeni sınav kuralları: Yönetmelik yayımlanır ve direksiyon sınavının süresini ya da sınav günü kurallarını değiştirirse, mdSinyal’deki sınav günü planlama kuralları yeni metne göre güncellenir.
@@ -138,7 +151,10 @@ Eski programınızdaki kursiyer, taksit ve ödeme, araç ve öğretmen listeleri
 Çoğu kursta bir gün: sabah kayıt aktarımı ve kurulum, öğleden sonra ekip eğitimi. Ertesi gün mdSinyal’le çalışmaya başlarsınız.
 
 **Ekibe eğitim veriyor musunuz?**
-Evet. Kurulum günü müdür, ön büro ve öğretmenlere kendi ekranlarını gösteririz. Sonrasında takıldığınız her şeyi WhatsApp’tan sorabilirsiniz.
+Evet. Kurulum günü müdür, ön büro ve öğretmenlere kendi ekranlarını gösteririz. Sonrasında takıldığınız her şeyi uygulamadaki destek talebinden ya da WhatsApp destek hattından sorabilirsiniz.
+
+**Destek nasıl alınır?**
+Uygulamada Hesabım › mdSinyal Destek’ten talep açarsınız; cevap aynı ekrana gelir. Acil işler için WhatsApp destek hattı 0501 363 65 36. Talepler ve mesajlar hafta içi 09:00–18:00 arası cevaplanır. E-posta: destek@mdsinyal.com.
 
 **Kaç kullanıcı ve şube açabiliriz?**
 Kullanıcı sayısında sınır yoktur: müdür, ön büro, bütün öğretmenler ve öğrenciler kendi hesabıyla girer. Birden fazla şube tek hesapta yönetilir; ekranlar şubeye göre süzülür. Personel rolüne göre yetkilendirilir.
@@ -186,6 +202,9 @@ Ders değişikliği isteyen öğrenciye, dersine 24 saatten fazla varsa aynı ö
 
 **MEBBİS’e otomatik işliyor mu?**
 Onayınızla, evet. Kurs yetkilisi yazılacak kayıtları kontrol eder ve bir kez “MEBBİS’e yaz” ile onaylar; MEBBİS Yardımcısı (Chrome ya da Edge eklentisi) sizin açtığınız MEBBİS oturumunda formları doldurur, kaydeder ve kaydın MEBBİS’e geçtiğini doğrular. Güvenlik kodunu ve geri alınamaz adımları yetkili yapar; yazma istediğiniz an durdurulur. MEBBİS şifreniz istenmez, görülmez, saklanmaz.
+
+**Öğrencinin adresi kayıtta nasıl girilir?**
+Adresi öğrencinin e-Devlet › Adres Bilgilerim sayfasındaki gibi girin; adres kodu varsa yazın. Kayıt ekranında adres e-Devlet’teki sırayla alınır: il, ilçe, mahalle, cadde ya da sokak, dış kapı no ve iç kapı no. Adres kodu (UAVT) 10 hanelidir, e-Devlet’teki adres sayfasında yazar; girilmesi isteğe bağlıdır. MEBBİS’teki adres beyanı da aynı sırayla seçilir; adres e-Devlet’teki gibi girilirse aktarımda fark çıkmaz.
 
 **MEB denetimine hazırlıkta yardımcı oluyor mu?**
 Evet. Denetim modu, denetimde bakılan eksikleri tek listede gösterir: süresi dolan ya da dolmak üzere olan personel ve araç belgeleri (muayene, sigorta), imzasız ya da kısa süren direksiyon dersleri, eksik kursiyer evrakı ve KVKK aydınlatması kaydı olmayan kursiyerler.

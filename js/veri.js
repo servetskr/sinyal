@@ -968,6 +968,14 @@ function uret() {
     kdv: 10, fatura: 'tahsilat',  // 5580 kapsamındaki eğitim: KDV kararı II sayılı liste B-15, %10 (10/7/2023'ten beri)
   };
 
+  // KAY-086: demoda bir mükerrer kayıt (eski programdan ikinci kez aktarılmış gibi: T.C. boş; ad, soyad, doğum tarihi ve telefon aynı).
+  // Öğrenciler'de "olası mükerrer" şeridi çıkar. Rastgele sayı kullanılmaz (demo sırası bozulmasın), en sonda eklenir.
+  { const k0 = kursiyerler.filter(x => x.asama === 'Teorik' && !x.kapali && x.odeme.taksitler.length).slice(-1)[0];   // ilk teorik öğrenci ücretsiz kontenjan örneği olur (aşağıda), o seçilmez
+    if (k0) { const c = JSON.parse(JSON.stringify(k0)), kt = gun(-3);
+      Object.assign(c, { id: 'k990', tc: '', kayit: kt, mebIslendi: false, teorik: 0, direksiyon: 0, deneme: [], esinav: null, dsinav: null, notlar: [{ tarih: kt, metin: 'Eski programdan aktarıldı' }],
+        odeme: { toplam: k0.odeme.toplam, pesin: 2000, pesinTarih: kt, taksitler: [{ vade: gun(27), tutar: Math.round((k0.odeme.toplam - 2000) / 2), odendi: null, yontem: null }, { vade: gun(57), tutar: k0.odeme.toplam - 2000 - Math.round((k0.odeme.toplam - 2000) / 2), odendi: null, yontem: null }] } });
+      delete c.kayitBelgesi; delete c.no; kursiyerler.push(c);
+      hareket.unshift({ id: 'h990', tarih: kt, tur: 'Gelir', kategori: 'Peşinat', aciklama: c.ad + ' ' + c.soyad + ' · peşinat', tutar: 2000, yontem: 'Nakit', kursiyer: 'k990' }); } }
   return {
     sosyal, subeler, guvenlik, entegrasyon, isDurum: {},
     personel, izinler, bekleme, hesaplar, kazanim, gruplar, arsiv, mevzuat, ogretmenler, kullanicilar, islemler, asistanBilgi, devredilen, sms: { bakiye: 1840, kanal: 'WhatsApp' }, gunSonu: [],

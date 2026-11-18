@@ -25,15 +25,16 @@
 const IZINLI = ['https://mdsinyal.com', 'http://localhost:4481', 'http://127.0.0.1:4481'];
 const HEDEF = /^(https:\/\/mdsinyal\.com\/|https:\/\/servetskr\.github\.io\/sinyal\/|http:\/\/localhost:4481\/)/;
 const kucuk = s => String(s || '').toLocaleLowerCase('tr');
-// Demo kursun sınıfları (uygulamadaki örnek kursla aynı ücretler; hepsi Eskişehir 2026 il taban fiyatının üstünde, KDV dahil).
+// Demo kursun sınıfları (uygulamadaki örnek kursla aynı ücretler, KDV dahil). Örnek kursta ücreti olmayan B Engelli ve 100 ceza puanı eğitimi
+// Eskişehir 2026 il taban fiyatıyla yazılır (js/taban.js F8 = 23.510, F11 = 10.030; MSJ-004). Diğerleri tabanın üstünde.
 // [ad, ücret, teorik saat, direksiyon dersi, sorudaki kelimeler, ek not]. C: B belgesiyle (listede ilk kez belge satırı yok; B → C 22 ders, teorik yok).
 const DEMO_SINIF = [
   ['B manuel (otomobil)', '24.000 TL', 34, 16, /manuel|otomobil|araba|\bb\b/],
   ['B otomatik', '26.500 TL', 34, 16, /otomatik/],
-  ['B Engelli', '24.000 TL', 34, 16, /engelli|engel durum|aparatl/, 'Eğitim, sağlık raporunuzdaki şartlara uygun araçla verilir; raporunuzu kayıt görüşmesinde yetkilimiz değerlendirir.'],
+  ['B Engelli', '23.510 TL', 34, 16, /engelli|engel durum|aparatl/, 'Eğitim, sağlık raporunuzdaki şartlara uygun araçla verilir; raporunuzu kayıt görüşmesinde yetkilimiz değerlendirir.'],
   ['A2 motosiklet', '18.500 TL', 34, 14, /motor|motosiklet|\ba2\b/],
   ['C kamyon (B belgesiyle)', '31.000 TL', 0, 22, /kamyon|\bc\b/, 'B belgesi olanlar içindir; başka bir belgeniz varsa yetkilimiz ücreti ayrıca söyler.'],
-  ['100 ceza puanı eğitimi', '10.500 TL', 34, 0, /ceza puan|100 ceza|el kon|geri al[ıi]n/, '100 ceza puanı nedeniyle geri alınan sürücü belgesi için yalnız teorik eğitimdir; derslerin tamamına devam gerekir.'],
+  ['100 ceza puanı eğitimi', '10.030 TL', 34, 0, /ceza puan|100 ceza|el kon|geri al[ıi]n/, '100 ceza puanı nedeniyle geri alınan sürücü belgesi için yalnız teorik eğitimdir; derslerin tamamına devam gerekir.'],
 ];
 const KDV = ' (KDV dahil)';
 // İl taban fiyat listesi notu 6: hiçbir ad altında indirim ve kampanya yapılamaz (demo kurs Eskişehir'de)
@@ -44,8 +45,8 @@ const ucretListesi = (ayrac = '\n') => DEMO_SINIF.map((s, i) => `${i + 1}. ${s[0
 const ASISTAN = [
   [INDIRIM, INDIRIM_CEVAP, 'İndirim sorusu · il taban listesi not 6'],
   [/süre|sure|kaç gün|kac gun|kaç ay|kac ay|kaç hafta|kac hafta|ne kadar sür|ne zaman biter|bitiyor/, 'B sınıfı kurs yaklaşık 6–8 hafta sürüyor: önce 34 saat teorik ders ve e-sınav, ardından 16 direksiyon dersi ve direksiyon sınavı. Akşam grubuyla çalışırken de rahatça bitirebilirsiniz.', 'Kurs süresi'],
-  [/engelli|engel durum|aparatl/, 'B Engelli kurs ücretimiz 24.000 TL' + KDV + '. Eğitim, sağlık raporunuzdaki şartlara uygun araçla verilir; raporunuzu kayıt görüşmesinde yetkilimiz değerlendirir. Kayıt için kursa uğrayabilir ya da buradan randevu alabilirsiniz.', 'Fiyat · B Engelli'],
-  [/ceza puan|100 ceza|el kon|geri al[ıi]n/, '100 ceza puanı eğitimi ücretimiz 10.500 TL' + KDV + '. 100 ceza puanı nedeniyle geri alınan sürücü belgesi için 34 saatlik yalnız teorik eğitimdir; derslerin tamamına devam gerekir. Kayıt için kursa uğrayabilir ya da buradan randevu alabilirsiniz.', 'Fiyat · 100 ceza'],
+  [/engelli|engel durum|aparatl/, 'B Engelli kurs ücretimiz 23.510 TL' + KDV + ' (Eskişehir 2026 il taban fiyatı). Eğitim, sağlık raporunuzdaki şartlara uygun araçla verilir; raporunuzu kayıt görüşmesinde yetkilimiz değerlendirir. Kayıt için kursa uğrayabilir ya da buradan randevu alabilirsiniz.', 'Fiyat · B Engelli'],
+  [/ceza puan|100 ceza|el kon|geri al[ıi]n/, '100 ceza puanı eğitimi ücretimiz 10.030 TL' + KDV + ' (Eskişehir 2026 il taban fiyatı). 100 ceza puanı nedeniyle geri alınan sürücü belgesi için 34 saatlik yalnız teorik eğitimdir; derslerin tamamına devam gerekir. Kayıt için kursa uğrayabilir ya da buradan randevu alabilirsiniz.', 'Fiyat · 100 ceza'],
   [/kamyon|c sınıf|c sinif|\bc\b/, 'B belgesiyle C kamyon kurs ücretimiz 31.000 TL' + KDV + ', 22 direksiyon dersi; taksit yapabiliyoruz. Başka bir belgeniz varsa yetkilimiz ücreti ayrıca söyler.', 'Fiyat · C'],
   [/otomatik/, 'B otomatik kurs ücretimiz 26.500 TL' + KDV + '. Peşinattan sonra kalanı 5 aya kadar taksitle ödeyebilirsiniz. Kayıt için kursa uğrayabilir ya da buradan randevu alabilirsiniz.', 'Fiyat · B otomatik'],
   [/manuel|b sınıf|b sinif|\bb\b|araba|otomobil/, 'B manuel kurs ücretimiz 24.000 TL' + KDV + '. Peşinattan sonra kalanı 5 aya kadar taksitle ödeyebilirsiniz. Kayıt için kursa uğrayabilir ya da buradan randevu alabilirsiniz.', 'Fiyat · B manuel'],

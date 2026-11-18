@@ -172,6 +172,7 @@ a.st-mod:hover h3{text-decoration:underline;text-decoration-thickness:2px;text-u
 .st-yak-et{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--k-lac);background:#fff;border:1px solid var(--k-cizgi);border-radius:999px;padding:4px 10px;white-space:nowrap}
 .st-yak-k b{display:block;font:700 16px/1.3 var(--k-baslik);color:var(--k-lac);margin-bottom:6px}
 .st-yak-k p{font-size:14px;color:var(--k-metin)}
+.st-yak-alt{font:700 24px/1.2 var(--k-baslik);color:var(--k-lac);margin-top:64px}
 
 /* ---------- SSS ---------- */
 .sss-sayfa{padding:72px 0 96px}
