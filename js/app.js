@@ -325,6 +325,22 @@ document.addEventListener('change', ev => { const s = ev.target.closest('[data-s
 Y5.temaUygula();
 
 let sonAd = null;
+// DIG-055: sayfadaki kaydet düğmeli formda (Ayarlar › Kurs bilgileri gibi) değişiklik varken başka sayfaya geçilirse sorulur; sayfa kapanırken de tarayıcı uyarır.
+// Değişince kendiliğinden kaydedilen alanlar ve pencereler (kendi taslak kuralı var, DIG-059) bu denetime girmez.
+let sayfaKirli = null, sonHash = location.hash, geriAlindi = false;
+const kirliForm = () => sayfaKirli && document.contains(sayfaKirli) && !sayfaKirli.closest('.perde') ? sayfaKirli : (sayfaKirli = null);
+document.addEventListener('input', ev => { if (!ev.isTrusted) return; const f = ev.target.closest && ev.target.closest('#icerik form'); if (!f || f.closest('.perde') || f.dataset.kirliDegil !== undefined || !f.querySelector('button[type=submit], button:not([type]), input[type=submit]')) return; sayfaKirli = f; }, true);
+document.addEventListener('submit', ev => { if (ev.target === sayfaKirli) sayfaKirli = null; }, true);
+addEventListener('beforeunload', ev => { if (kirliForm()) { ev.preventDefault(); ev.returnValue = ''; } });
+window.addEventListener('hashchange', ev => {
+  if (geriAlindi) { geriAlindi = false; return; }
+  const yeni = location.hash;
+  if (!kirliForm() || yeni === sonHash) { sonHash = yeni; return; }
+  ev.stopImmediatePropagation(); geriAlindi = false; history.replaceState(history.state, '', sonHash || '#/genel');
+  pencere({ baslik: 'Kaydedilmedi, çıkılsın mı?', icerik: '<p style="font-size:14px">Bu sayfada değiştirdiğiniz bilgiler henüz kaydedilmedi. Çıkarsanız değişiklikler kaybolur.</p>', taslak: false,
+    altlik: '<button class="dg dg-cizgi" data-kc-cik>Kaydetmeden çık</button><button class="dg dg-ana" data-kapat>Geri dön</button>',
+    onAc(p) { p.querySelector('[data-kc-cik]').addEventListener('click', () => { sayfaKirli = null; kapatPencere(); location.hash = yeni; }); } });
+});
 window.addEventListener('hashchange', () => { if (location.hash.startsWith('#/kapi')) return kapiEkrani(); if (demoSoru() != null && oturum.kullanici && oturum.kullanici.ziyaretci) { location.hash = '#/mevzuat?q=' + demoSoru(); return; } if (GIRIS_YOL[location.hash] && oturum.kullanici && oturum.kullanici.ziyaretci) { oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } } if (!oturum.kullanici && !B.bulutKayitli()) { if (location.hash === '#/demo' || demoSoru() != null) return demoyaGir(); if (GIRIS_YOL[location.hash]) { girisEkrani(GIRIS_YOL[location.hash]); return window.scrollTo(0, 0); } } if (location.hash === '#/sahip') { ORT.sekmeSec('hesaplar'); location.hash = '#/yonetim'; return; } if (imzaLinki()) return imzaSayfasiAc(); if (!(oturum.kullanici && oturum.kullanici.bulut)) { if (yonetimKurYolu()) return yonetimHesapEkrani(yonetimKurYolu()); if (yonetimGirisYolu()) return yonetimGirisEkrani(); } if (kursDavetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return kursDavetEkrani(); if (oturum.kullanici && oturum.kullanici.rol === 'ogrenci') return; if (ogrYolu()) return eskiLink(); if (location.hash === '#/ogrenci-giris') return ogrenciGirisEkrani((oturum.kullanici && oturum.kullanici.bulut) || B.bulutKayitli() ? 'Bu cihazda bir personel hesabı açık. Öğrenci olarak girersen o oturum kapanır.' : undefined); if (davetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return davetEkrani(); const r = rota(); yenile(r.ad !== sonAd); sonAd = r.ad; });
 
 // QR’dan gelen ilk sayfa index.html’de hazır durur (beklemeden görünsün); sonradan dönmek için saklanır
