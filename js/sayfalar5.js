@@ -1,5 +1,5 @@
 import * as EK from './eklenti.js?v=234';
-import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, kursiyer, DERS_TUR_AD, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube, tutarOku } from './veri.js?v=234';
+import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, kursiyer, DERS_TUR_AD, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube, tutarOku, gunBatimi, kursIli, sinifEtiket, ekTur, kursiyerTaban, gerekliDireksiyon, tabanListesi, ekDersTabani, eskiBelgeTarihi, MEVCUT_BELGELER } from './veri.js?v=234';
 import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor, belgeYazdir, kisaLink, siteLink } from './ui.js?v=234';
 import { yenile } from './app.js?v=234';
 import * as B from './bulut.js?v=234';
@@ -7,6 +7,8 @@ import { wpGonder } from './sayfalar1.js?v=234';
 import * as ME from './mebevrak.js?v=234';
 import * as KR from './kurallar.js?v=234';
 import { gunBatimi, kursIli } from './veri.js?v=234';
+import { listeAdi } from './taban.js?v=234';
+import { muafMi, muafSonGun } from './gruplar.js?v=234';
 
 /* ================= MEB KURALLARI: KAYNAK VE SORUMLULUK ================= */
 const MTSK = 'MTSK Yönetmeliği (ÖÖKGM, Ocak 2025 metni)';
@@ -202,20 +204,43 @@ function sunucuKaydi(k) {
 /* ================= ENTEGRASYONLAR: MUHASEBE, E-ARŞİV, POS, PERSONEL ================= */
 const HESAP = { Nakit: ['100', 'Kasa'], Havale: ['102', 'Bankalar'], Kart: ['108', 'Diğer hazır değerler (POS)'], alici: ['120', 'Alıcılar'], kdvIn: ['191', 'İndirilecek KDV'], kdvOut: ['391', 'Hesaplanan KDV'], gelir: ['600', 'Yurt içi satışlar'], iade: ['610', 'Satıştan iadeler'], gider: ['770', 'Genel yönetim giderleri'] };
 const KDVLI_GIDER = ['Yakıt', 'Bakım', 'Fatura', 'Reklam'];
-// Tahakkuk esaslı fiş. fatura='kayit': kurs ücretinin tamamı kayıtta faturalanır (120 alacak açılır, tahsilat 120'yi kapatır).
-// fatura='tahsilat': her tahsilatta e-Arşiv kesilir (satış ve KDV tahsilat anında).
+// Sınav ücreti, harç ve kart ücreti kursiyerin kendi masrafıdır (il taban listesi not 5): kurs yalnız emanet alır, döner sermayeye aktarır.
+// Kurs geliri değildir, KDV'ye tabi değildir, faturaya girmez: 336 emanet hesabında izlenir.
+const EMANET = ['336', 'Diğer çeşitli borçlar (sınav ücreti emaneti)'];
+// Kursiyer tahsilatının türü: 'kurs' (kurs ücreti, peşinat, taksit), ek kalem tahsilatında kalemin türü ('ders' | 'resmi' | 'diger').
+// Ek kalem tahsilatında hareketin kategorisi kalemin adıdır; kalem hâlâ öğrencide duruyorsa onun türü (x.tur) kullanılır.
+export function hareketTur(h) {
+  if (!h || h.tur !== 'Gelir' || iadeMi(h)) return '';
+  if (['Kurs ücreti', 'Taksit', 'Peşinat'].includes(h.kategori)) return 'kurs';
+  const k = h.kursiyer && kursiyer(h.kursiyer), x = k && ((k.odeme || {}).ekler || []).find(y => y.ad === h.kategori);
+  return ekTur(x || { ad: h.kategori || String(h.aciklama || '').split(' · ').slice(-1)[0] });
+}
+export const resmiTahsilat = h => hareketTur(h) === 'resmi';
+// Tahakkuk esaslı fiş. fatura='kayit': kurs ücretinin tamamı kayıtta faturalanır (120 alacak açılır, yalnız kurs ücreti ve taksit tahsilatı 120'yi kapatır;
+// ek ders gibi ek kalemler tahsilatta faturalanır: 600 + 391). fatura='tahsilat': her tahsilatta e-Arşiv kesilir (satış ve KDV tahsilat anında).
+// Sınav ücreti gibi resmî kalemler iki modda da 336 emanete yazılır (KDV'siz). Tahsilat iptali asıl tahsilatın fişini ters çevirir.
 export function muhasebeFisi(ay = 0) {
-  const en = S.entegrasyon, oran = (en.kdv ?? 20) / 100, kayitta = en.fatura === 'kayit';
+  const en = S.entegrasyon, oran = (en.kdv ?? 10) / 100, kayitta = en.fatura === 'kayit';
   const d0 = new Date(BUGUN); d0.setDate(1); d0.setMonth(d0.getMonth() - ay);
   const buAy = t => { const d = tarihOku(t); return d.getMonth() === d0.getMonth() && d.getFullYear() === d0.getFullYear(); };
   const ayir = tutar => { const net = Math.round(tutar / (1 + oran) * 100) / 100; return [net, Math.round((tutar - net) * 100) / 100]; };
   const satir = [['Tarih', 'Fiş no', 'Hesap kodu', 'Hesap adı', 'Açıklama', 'Borç', 'Alacak', 'Evrak no']];
   let no = 0, ev = ''; const fis = (tarih_, aciklama, kalemler) => { const f = 'S' + String(++no).padStart(4, '0'); kalemler.forEach(([h, b, a, ek]) => satir.push([tarih_, f, h[0], h[1] + (ek ? ' · ' + ek : ''), aciklama, b || '', a || '', ev])); };
+  // tahsilatın fiş satırları: [açıklama eki, kalemler]
+  const gelirKalem = h => { const para = HESAP[h.yontem] || HESAP.Nakit, tur = hareketTur(h);
+    if (tur === 'resmi') return [' · emanet (KDV’siz, döner sermayeye aktarılır)', [[para, h.tutar], [EMANET, 0, h.tutar]]];
+    if (kayitta && h.kursiyer && tur === 'kurs') return [' · tahsilat', [[para, h.tutar], [HESAP.alici, 0, h.tutar]]];
+    const [n, v] = ayir(h.tutar); return [' · e-Arşiv', [[para, h.tutar], [HESAP.gelir, 0, n], [HESAP.kdvOut, 0, v]]]; };
   if (kayitta) S.kursiyerler.filter(k => buAy(k.kayit)).forEach(k => { const [n, v] = ayir(k.odeme.toplam); fis(k.kayit, tamAd(k) + ' · kurs ücreti faturası', [[HESAP.alici, k.odeme.toplam], [HESAP.gelir, 0, n], [HESAP.kdvOut, 0, v]]); });
   S.hareket.filter(h => buAy(h.tarih)).sort((a, b) => a.tarih.localeCompare(b.tarih)).forEach(h => {
     const para = HESAP[h.yontem] || HESAP.Nakit; ev = h.fatura || h.no || '';  // evrak: fatura varsa fatura, yoksa makbuz
     if (h.kategori === 'İade') { const [n, v] = ayir(h.tutar); return fis(h.tarih, h.aciklama, [[HESAP.iade, n], [HESAP.kdvOut, v], [para, 0, h.tutar]]); }
-    if (h.tur === 'Gelir') { if (kayitta && h.kursiyer) return fis(h.tarih, h.aciklama + ' · tahsilat', [[para, h.tutar], [HESAP.alici, 0, h.tutar]]); const [n, v] = ayir(h.tutar); return fis(h.tarih, h.aciklama + ' · e-Arşiv', [[para, h.tutar], [HESAP.gelir, 0, n], [HESAP.kdvOut, 0, v]]); }
+    if (h.tur === 'Gelir') { const [ek, kl] = gelirKalem(h); return fis(h.tarih, h.aciklama + ek, kl); }
+    // tahsilat iptali: asıl tahsilatın fişi borç/alacak yer değiştirerek ters kaydedilir (KDV ve alacak da geri döner); asıl bulunamazsa gider
+    if (h.kategori === 'Tahsilat iptali') { const o = h.iptalEdilen && S.hareket.find(x => x.id === h.iptalEdilen && x.tur === 'Gelir');
+      if (o) { const [, kl] = gelirKalem({ ...o, tutar: h.tutar, yontem: h.yontem || o.yontem }); return fis(h.tarih, h.aciklama + ' · ters kayıt', kl.map(([hs, b, a, x]) => [hs, a || 0, b || 0, x])); } }
+    // sınav harcı ödemesi (döner sermaye): kursiyerden emanet alınan tutar kapanır
+    if (h.kategori === 'Sınav harcı') return fis(h.tarih, h.aciklama, [[EMANET, h.tutar], [para, 0, h.tutar]]);
     if (KDVLI_GIDER.includes(h.kategori)) { const [n, v] = ayir(h.tutar); return fis(h.tarih, h.aciklama, [[HESAP.gider, n, 0, h.kategori], [HESAP.kdvIn, v], [para, 0, h.tutar]]); }
     fis(h.tarih, h.aciklama, [[HESAP.gider, h.tutar, 0, h.kategori], [para, 0, h.tutar]]);
   });
@@ -247,9 +272,9 @@ const kurus = n => Math.round(n * 100) / 100;
 const kdvAyir = (t, oran) => { const n = kurus(t / (1 + oran)); return [n, kurus(t - n)]; };
 // iade hareketinde kursiyer kimliği yok; açıklamanın başındaki ad soyaddan bulunur
 const hareketKisi = h => h.kursiyer ? kursiyer(h.kursiyer) : iadeMi(h) ? S.kursiyerler.find(k => (h.aciklama || '').startsWith(tamAd(k) + ' ·')) : null;
-const sinifAd = s => !s ? '' : s === 'B-O' ? 'B sınıfı (otomatik)' : s + ' sınıfı';
+const sinifAd = (s, k) => !s ? '' : sinifEtiket(s, k);
 function faturaAciklama(h, k) {
-  const sn = k ? sinifAd(k.sinif) : '', tk = (h.aciklama || '').match(/(\d+)\. taksit/);
+  const sn = k ? sinifAd(k.sinif, k) : '', tk = (h.aciklama || '').match(/(\d+)\. taksit/);
   if (iadeMi(h)) { const neden = (h.aciklama || '').split(' · ').slice(2).join(' · '); return 'Sürücü kursu eğitim ücreti iadesi' + (sn ? ' · ' + sn : '') + (neden ? ' · ' + neden : ''); }
   return (['Kurs ücreti', 'Taksit'].includes(h.kategori) ? 'Sürücü kursu eğitim ücreti' + (tk ? ' (' + tk[1] + '. taksit)' : '') : h.kategori || 'Hizmet bedeli') + (sn ? ' · ' + sn : '');
 }
@@ -257,16 +282,18 @@ function ayVerisi(ay = 0) {
   const d0 = new Date(BUGUN); d0.setDate(1); d0.setMonth(d0.getMonth() - ay);
   const buAy = t => { if (!t) return false; const d = tarihOku(t); return d.getMonth() === d0.getMonth() && d.getFullYear() === d0.getFullYear(); };
   const hr = S.hareket.filter(h => buAy(h.tarih)).sort((a, b) => (a.tarih + (a.no || '')).localeCompare(b.tarih + (b.no || '')));
-  return { d0, buAy, kdv: S.entegrasyon.kdv ?? 20, oran: (S.entegrasyon.kdv ?? 20) / 100, ayAd: d0.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' }), ek: d0.getFullYear() + '-' + String(d0.getMonth() + 1).padStart(2, '0'),
-    gelir: hr.filter(h => h.tur === 'Gelir' && !iadeMi(h)), iade: hr.filter(iadeMi), gider: hr.filter(h => h.tur !== 'Gelir' && !iadeMi(h)), ders: S.dersler.filter(d => d.durum === 'Yapıldı' && buAy(d.tarih)) };
+  return { d0, buAy, kdv: S.entegrasyon.kdv ?? 10, oran: (S.entegrasyon.kdv ?? 10) / 100, ayAd: d0.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' }), ek: d0.getFullYear() + '-' + String(d0.getMonth() + 1).padStart(2, '0'),
+    gelir: hr.filter(h => h.tur === 'Gelir' && !iadeMi(h)), iade: hr.filter(iadeMi), emanet: hr.filter(resmiTahsilat), gider: hr.filter(h => h.tur !== 'Gelir' && !iadeMi(h)), ders: S.dersler.filter(d => d.durum === 'Yapıldı' && buAy(d.tarih)) };
 }
 // Fatura listesi: müşavirin fatura keseceği her tahsilat bir satır; iadeler ayrı bölümde eksi tutarla
 export function faturaListesi(ay = 0) {
   const v = ayVerisi(ay), bas = ['Sıra', 'Tarih', 'Alıcı adı soyadı', 'TC kimlik no', 'Adres', 'Açıklama', 'KDV hariç tutar', 'KDV oranı (%)', 'KDV tutarı', 'Toplam (KDV dahil)', 'Ödeme yöntemi', 'Makbuz no', 'Fatura no'];
   const satir = (h, i) => { const k = hareketKisi(h), [n, kv] = kdvAyir(h.tutar, v.oran), x = iadeMi(h) ? -1 : 1; return [i + 1, trTarih(h.tarih), k ? tamAd(k) : (h.kim || ''), k ? k.tc || '' : '', k ? k.adres || '' : '', faturaAciklama(h, k), x * n, v.kdv, x * kv, x * h.tutar, h.yontem || '', h.no || '', h.fatura || '']; };
   const toplam = l => { const r = l.map(satir); return ['', '', 'Toplam', '', '', l.length + ' satır', kurus(r.reduce((a, x) => a + x[6], 0)), '', kurus(r.reduce((a, x) => a + x[8], 0)), kurus(r.reduce((a, x) => a + x[9], 0))]; };
-  const sat = [bas, ...v.gelir.map(satir), toplam(v.gelir)];
+  const fl = v.gelir.filter(h => !resmiTahsilat(h));  // sınav ücreti, harç, kart: kursiyerin masrafı, emanet; fatura kesilmez
+  const sat = [bas, ...fl.map(satir), toplam(fl)];
   if (v.iade.length) sat.push([], ['İadeler (iade faturası ya da gider pusulası için; tutarlar eksi)'], bas, ...v.iade.map(satir), toplam(v.iade));
+  if (v.emanet.length) sat.push([], [`Not: ${v.emanet.length} tahsilat (${kurus(v.emanet.reduce((a, h) => a + h.tutar, 0))} ₺) sınav ücreti, harç ya da kart ücretidir; kursiyerin kendi masrafı olarak emanet (336) alındı, döner sermayeye aktarılır. Kurs geliri değildir, fatura kesilmez.`]);
   if (S.entegrasyon.fatura === 'kayit') sat.push([], ['Not: Ayarlarda “kayıtta tamamı” seçili. Kurs ücretinin faturası kayıtta kesildiyse taksit tahsilatları için ayrıca fatura gerekmez; Muhasebe fişleri sayfasına bakın.']);
   return sat;
 }
@@ -299,7 +326,7 @@ function aylikOzet(ay = 0) {
   const dt = {}; v.ders.forEach(d => { const a = DERS_TUR_AD[d.tur] || 'Direksiyon (trafikte)'; dt[a] = (dt[a] || 0) + 1; });
   const per = personelOzeti(ay).slice(2);
   return { ...v, gelirT: top(v.gelir), iadeT: top(v.iade), giderT: top(v.gider), yontem: ['Nakit', 'Havale', 'Kart'].map(y => [y, top(v.gelir.filter(h => h.yontem === y))]),
-    kat: Object.entries(kat).sort((a, b) => b[1] - a[1]), kdvH: kurus(hs('391', 6) - hs('391', 5)), kdvI: hs('191', 5), kisi: per.length, brut: per.reduce((a, r) => a + (+r[7] || 0), 0), dersT: Object.entries(dt), faturasiz: v.gelir.filter(h => !h.fatura).length };
+    kat: Object.entries(kat).sort((a, b) => b[1] - a[1]), kdvH: kurus(hs('391', 6) - hs('391', 5)), kdvI: hs('191', 5), kisi: per.length, brut: per.reduce((a, r) => a + (+r[7] || 0), 0), dersT: Object.entries(dt), faturasiz: v.gelir.filter(h => !h.fatura && !resmiTahsilat(h)).length, emanetT: top(v.emanet) };
 }
 const YONTEM_AD = { Nakit: 'Nakit', Havale: 'Havale/EFT', Kart: 'Kart (POS)' };
 // Mali müşavir paketi: özet, fatura listesi, banka/POS mutabakatı, giderler, muhasebe ve Luca fişleri, personel özeti ve puantaj tek Excel dosyasında
@@ -309,7 +336,7 @@ export async function musavirPaketi(ay = 0) {
   const giderS = [['Tarih', 'Kategori', 'Açıklama', 'Tutar', 'Ödeme yöntemi', 'Makbuz / fatura no']];
   o.gider.forEach(h => giderS.push([trTarih(h.tarih), h.kategori || '', h.aciklama || '', h.tutar, h.yontem || '', h.fatura || h.no || '']));
   const ozet = [[S.kurs.ad + ' · ' + o.ayAd + ' mali müşavir paketi'], S.entegrasyon.vkn ? ['Vergi kimlik no', S.entegrasyon.vkn] : [], [],
-    ['Tahsilat (iade hariç)', o.gelirT], ...o.yontem.map(([y, t]) => ['  ' + YONTEM_AD[y], t]), ['İadeler', o.iadeT], ['Net tahsilat', o.gelirT - o.iadeT], [],
+    ['Tahsilat (iade hariç)', o.gelirT], ...o.yontem.map(([y, t]) => ['  ' + YONTEM_AD[y], t]), ...(o.emanetT ? [['  İçinde sınav ücreti emaneti (KDV’siz, 336; kurs geliri değil)', o.emanetT]] : []), ['İadeler', o.iadeT], ['Net tahsilat', o.gelirT - o.iadeT], [],
     ['Toplam gider (iade hariç)', o.giderT], ...o.kat.map(([k, t]) => ['  ' + k, t]), [],
     ['KDV oranı (%)', o.kdv], ['Hesaplanan KDV (tahmini)', o.kdvH], ['İndirilecek KDV (tahmini)', o.kdvI], [],
     ['Personel brüt toplamı (prim dahil)', o.brut], ['Yapılan ders', o.ders.length], ['Faturası kesilmemiş tahsilat', o.faturasiz], [],
@@ -317,7 +344,7 @@ export async function musavirPaketi(ay = 0) {
     ['Giderler', 'Ayın giderleri (iadeler hariç).'], ['Muhasebe fişleri', 'Her hareketin hesap kodlu fiş satırları (genel düzen; Logo, Mikro, Zirve).'],
     ['Luca fiş aktarımı', 'Luca “Excel’den fiş aktarımı” için. Sütun adları Luca sürümüne göre değişebilir; aktarım ekranında sütunları eşleyin. Hesap kodları ana hesaptır (100, 102, 600…); alt hesap kullanıyorsanız (ör. 100.01) düzeltin.'],
     ['Personel özeti', 'Brüt ücret, ders primi, izin ve avans; bordro için.'], ['Puantaj', 'Usta öğreticilerin ay içinde verdiği her ders.'], [],
-    ['Not', 'mdSinyal makbuzu fatura yerine geçmez. Faturaları kestikten sonra “Fatura listesi” sayfasındaki Fatura no sütununu doldurup kursa geri gönderin; kurs dosyayı mdSinyal’e yükleyince numaralar makbuzlara işlenir. KDV oranını ve sınav ücreti gibi kalemlerin KDV durumunu siz teyit edin.']];
+    ['Not', 'mdSinyal makbuzu fatura yerine geçmez. Faturaları kestikten sonra “Fatura listesi” sayfasındaki Fatura no sütununu doldurup kursa geri gönderin; kurs dosyayı mdSinyal’e yükleyince numaralar makbuzlara işlenir. Sınav ücreti, harç ve kart ücreti kursiyerin kendi masrafıdır (il taban listesi not 5): kurs geliri olarak değil 336 emanet hesabına KDV’siz işlendi ve fatura listesine alınmadı. Sürücü kursu eğitim hizmetinde KDV %10’dur (KDV kararı II sayılı liste B-15); oranı siz teyit edin.']];
   const wb = XLSX.utils.book_new();
   [['Özet', ozet], ['Fatura listesi', faturaListesi(ay)], ['Banka ve POS', bankaPos(ay)], ['Giderler', giderS], ['Muhasebe fişleri', muhasebeFisi(ay)], ['Luca fiş aktarımı', lucaFisi(ay)], ['Personel özeti', personelOzeti(ay)], ['Puantaj', puantaj(ay)]]
     .forEach(([ad, veri]) => XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(veri), ad));
@@ -329,7 +356,7 @@ export function aylikOzetHtml(ay = 0) {
   const tablo = (bas, govde) => `<div class="son"><h3 style="font-size:13px;margin:14px 0 4px">${bas}</h3><table>${govde}</table></div>`;
   return `<h1>Aylık mali özet</h1><p class="a4-alt">${e(S.kurs.ad)} · ${e(o.ayAd)}${S.entegrasyon.vkn ? ' · VKN ' + e(S.entegrasyon.vkn) : ''}</p>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start">
-    <div>${tablo('Tahsilat', o.yontem.map(([y, t]) => s(YONTEM_AD[y], tl(t))).join('') + s('Toplam tahsilat', tl(o.gelirT), 1) + s('İadeler', o.iadeT ? '− ' + tl(o.iadeT) : tl(0)) + s('Net tahsilat', tl(o.gelirT - o.iadeT), 1))}
+    <div>${tablo('Tahsilat', o.yontem.map(([y, t]) => s(YONTEM_AD[y], tl(t))).join('') + s('Toplam tahsilat', tl(o.gelirT), 1) + (o.emanetT ? s('İçinde sınav ücreti emaneti (gelir değil)', tl(o.emanetT)) : '') + s('İadeler', o.iadeT ? '− ' + tl(o.iadeT) : tl(0)) + s('Net tahsilat', tl(o.gelirT - o.iadeT), 1))}
       ${tablo('KDV (tahmini, %' + o.kdv + ')', s('Hesaplanan KDV (391)', tl(o.kdvH)) + s('İndirilecek KDV (191)', tl(o.kdvI)) + s(o.kdvH >= o.kdvI ? 'Ödenecek KDV' : 'Devreden KDV', tl(Math.abs(o.kdvH - o.kdvI)), 1))}</div>
     <div>${tablo('Giderler', (o.kat.length ? o.kat.map(([k, t]) => s(k, tl(t))).join('') : s('Bu ay gider yok', '—')) + s('Toplam gider', tl(o.giderT), 1))}
       ${tablo('Personel ve ders', s('Personel', o.kisi + ' kişi') + s('Brüt ücret toplamı (prim dahil)', tl(o.brut), 1) + o.dersT.map(([a, n]) => s(a, n + ' ders')).join('') + s('Yapılan ders', o.ders.length + ' ders', 1))}</div>
@@ -369,10 +396,10 @@ function entegrasyonSekme() {
     ${kart('e-Arşiv fatura', g.earsiv.bagli, `<p style="font-size:14px">${g.earsiv.bagli ? 'Tahsilat alındığında fatura entegratörünüz üzerinden kesilir, PDF’i kursiyere WhatsApp’tan gider. Kursiyer bilgileri kayıttan gelir.' : 'e-Arşiv bağlantısı hazırlanıyor. O zamana kadar faturayı mali müşaviriniz keser: aşağıdaki müşavir paketindeki “Fatura listesi” sayfası her tahsilatı TC, adres ve KDV ayrımıyla verir; kesilen fatura numaralarını aynı kartta geri yükleyebilirsiniz.'}</p><div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px"><div class="alan" style="width:140px"><label for="e-seri">Fatura seri öneki</label><input id="e-seri" class="girdi" maxlength="3" data-earsiv-alan="seri" value="${e(g.earsiv.seri || 'SNY')}"></div><div class="alan" style="width:170px"><label for="e-vkn">Vergi kimlik no</label><input id="e-vkn" class="girdi" inputmode="numeric" maxlength="11" data-earsiv-alan="vkn" value="${e(g.vkn || '')}"></div></div><small style="color:var(--soluk)">${(S.faturalar || []).length} fatura kesildi.</small>`)}
     <div class="kart"><div class="kart-bas">${isaret(g.muhasebe.bagli ? 'tamam' : 'bilgi', 24)}<h3>Muhasebe</h3><span class="sag">${g.muhasebe.bagli ? rozet('Paraşüt bağlı', 'yesil') : rozet('Excel ile aktarım', 'mavi')}</span></div><div class="kart-govde" style="display:grid;gap:12px">
       <p style="font-size:14px">Kasadaki her hareket muhasebe fişine çevrilir. Logo, Mikro, Luca ve Zirve için aylık fiş dosyası hazırlanır.</p>
-      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end"><div class="alan" style="width:130px"><label for="kdv">KDV oranı (%)</label><input id="kdv" class="girdi" type="number" min="0" max="20" data-kdv value="${g.kdv ?? 20}"></div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end"><div class="alan" style="width:240px;max-width:100%"><label for="kdv">KDV oranı (%)</label><input id="kdv" class="girdi" type="number" min="0" max="20" data-kdv value="${g.kdv ?? 10}"><small style="color:var(--soluk);font-size:12px">Sürücü kursu eğitim hizmeti: %10 (KDV kararı II sayılı liste B-15)</small></div>
         <div><b style="color:var(--murekkep);font-size:14px">Kurs ücreti ne zaman faturalanıyor?</b><div class="secim" style="margin-top:6px">${[['tahsilat', 'Her tahsilatta'], ['kayit', 'Kayıtta tamamı (taksitler alacak)']].map(([v, t]) => `<label><input type="radio" name="fatura" value="${v}" data-fatura ${g.fatura === v ? 'checked' : ''}><span>${t}</span></label>`).join('')}</div></div></div>
       <small style="color:var(--soluk)">Oranı ve faturalama zamanını mali müşavirinizle teyit edin; fişler buna göre üretilir.</small>
-      <div class="tablo-kap"><table class="tablo"><thead><tr><th>mdSinyal’de</th><th>Muhasebe hesabı</th></tr></thead><tbody>${[['Nakit / havale / kart', [HESAP.Nakit[0] + ' / ' + HESAP.Havale[0] + ' / ' + HESAP.Kart[0], 'Kasa, bankalar, POS']], ['Kurs ücreti (KDV hariç)', HESAP.gelir], ['Hesaplanan KDV', HESAP.kdvOut], ...(g.fatura === 'kayit' ? [['Taksit alacağı', HESAP.alici]] : []), ['İade', HESAP.iade], ['Gider (yakıt, bakım, fatura, reklam KDV’li)', [HESAP.gider[0] + ' + ' + HESAP.kdvIn[0], 'Gider + indirilecek KDV']], ['Maaş, kira, harç', HESAP.gider]].map(([a, h]) => `<tr><td>${a}</td><td class="mono">${h[0]} · ${e(h[1])}</td></tr>`).join('')}</tbody></table></div>
+      <div class="tablo-kap"><table class="tablo"><thead><tr><th>mdSinyal’de</th><th>Muhasebe hesabı</th></tr></thead><tbody>${[['Nakit / havale / kart', [HESAP.Nakit[0] + ' / ' + HESAP.Havale[0] + ' / ' + HESAP.Kart[0], 'Kasa, bankalar, POS']], ['Kurs ücreti (KDV hariç)', HESAP.gelir], ['Hesaplanan KDV', HESAP.kdvOut], ...(g.fatura === 'kayit' ? [['Taksit alacağı', HESAP.alici]] : []), ['Sınav ücreti, harç, kart (kursiyerin masrafı; KDV’siz emanet, faturaya girmez)', EMANET], ['Sınav harcı ödemesi (döner sermaye)', EMANET], ['İade', HESAP.iade], ['Gider (yakıt, bakım, fatura, reklam KDV’li)', [HESAP.gider[0] + ' + ' + HESAP.kdvIn[0], 'Gider + indirilecek KDV']], ['Maaş, kira', HESAP.gider], ['Tahsilat iptali', ['ters kayıt', 'asıl tahsilatın fişi tersine çevrilir']]].map(([a, h]) => `<tr><td>${a}</td><td class="mono">${h[0]} · ${e(h[1])}</td></tr>`).join('')}</tbody></table></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="dg dg-ana" data-fis="0">${ik('indir')}Bu ayın muhasebe fişleri</button><button class="dg dg-cizgi" data-fis="1">Geçen ay</button></div></div></div>
     <div class="kart"><div class="kart-bas">${isaret('bilgi', 24)}<h3>Mali müşavir ve personel</h3></div><div class="kart-govde" style="display:grid;gap:12px">
       <p style="font-size:14px">Bordro ve SGK işlemleri mali müşavirinizde kalır. mdSinyal ona her ay ihtiyaç duyduğu özeti hazırlar: maaş, yapılan ders, ders primi, izin.</p>
@@ -400,6 +427,12 @@ const ALANLAR = [
   ['adres', 'Adres', ['adres', 'ikametadresi']],
   ['teorikDers', 'Yapılan teorik ders', ['teorik', 'teorikders', 'teorikdersler', 'katildigiteorik']],
   ['direksiyonDers', 'Yapılan direksiyon dersi', ['direksiyon', 'direksiyonders', 'yapilandireksiyon', 'direksiyondersi']],
+  // il taban listesinde satır mevcut belgeye göre seçilir (fark, otomatikten manuele, eski tip, A1 muafiyetli, e-sınav muaf)
+  ['mevcut', 'Mevcut belge', ['mevcutbelge', 'mevcutehliyet', 'mevcutsurucubelgesi', 'mevcutbelgesinifi', 'oncekibelge', 'eskiehliyet', 'sahipoldugubelge']],
+  ['belgeTarih', 'Belge tarihi', ['belgetarihi', 'mevcutbelgetarihi', 'belgeverilistarihi', 'ehliyettarihi', 'oncekibelgetarihi']],
+  ['otomatik', 'Sadece otomatik', ['sadeceotomatik', 'otomatikbelge', 'belgesadeceotomatik']],
+  ['eski', '2016 öncesi belge', ['2016oncesi', '2016oncesibelge', 'eskitip', 'eskitipbelge']],
+  ['muafTarih', 'e-Sınav muaf tarihi', ['esinavmuaftarihi', 'esinavmuaf', 'muaftarihi', 'esinavmuafiyettarihi', 'esinavgectigitarih']],
 ];
 const TAKSIT_ALAN = [
   ['tc', 'TC kimlik no', ['tc', 'tckimlikno', 'tckn', 'kimlikno']],
@@ -470,10 +503,25 @@ const tarihCoz = v => {
   return `${y}-${String(a).padStart(2, '0')}-${String(g).padStart(2, '0')}`;
 };
 // Sınıf: bütün ehliyet sınıfları (A1, A2, A, B1, B, BE, C1, C1E, C, CE, D1, D1E, D, DE, F, G, M); "otomatik" B-O; tanınmazsa null (satır hata verir, B sayılmaz)
-const sinifCoz = v => { const t = norm(v); if (!t) return null; if (/otomatik|^bo$|^b-?o\b|^bot/.test(t)) return SINIFLAR['B-O'] ? 'B-O' : 'B';
+// B Engelli ("B Engelli", "B-EN") ve 100 ceza puanı eğitimi ("Ceza") düzenli ifadeden önce yakalanır: yoksa B-EN → BE (römork), Ceza → CE (çekici) okunur
+const sinifCoz = v => { const t = norm(v); if (!t) return null; if (/engel/.test(t) || /^b-?en$/.test(t)) return SINIFLAR['B-EN'] ? 'B-EN' : null; if (/ceza/.test(t)) return SINIFLAR['CEZA'] ? 'CEZA' : null;
+  if (/otomatik|^bo$|^b-?o\b|^bot/.test(t)) return SINIFLAR['B-O'] ? 'B-O' : 'B';
   const m = String(v).toLocaleUpperCase('tr').replace(/İ/g, 'I').replace(/[\s.\-_]/g, '').match(/^(?:SINIF)?(A1|A2|B1|BE|C1E|C1|CE|D1E|D1|DE|A|B|C|D|F|G|M)(?![0-9E])/);
   return m && SINIFLAR[m[1]] ? m[1] : null; };
 const tutarCoz = v => tutarOku(v);
+// Mevcut belge: "B", "B sınıfı", "Yok"; tanınmazsa null (boş '' = belge yok)
+const mevcutCoz = v => { const t = String(v || '').trim(); if (!t || /^(yok|-|—|hayır|hayir|0)$/i.test(t)) return '';
+  const m = t.toLocaleUpperCase('tr').replace(/İ/g, 'I').replace(/[\s.\-_]/g, '').match(/^(?:SINIF)?(A1|A2|B1|BE|C1E|C1|CE|D1E|D1|DE|A|B|C|D|E|F|G|M)(?![0-9E])/);
+  return m && MEVCUT_BELGELER.includes(m[1]) ? m[1] : null; };
+const evetMi = v => ['evet', 'var', 'x', '1', 'true', 'e', 'dogru', 'otomatik', 'eski'].includes(norm(v));
+// Satırdan kursiyer taslağı (taban satırı ve gerekli direksiyon hesabı için; aktarımda da bu alanlar yazılır)
+function aktarimTaslak(x) {
+  const sn = sinifCoz(x.sinif) || 'B', kt = tarihCoz(x.kayit) || gun(0), mv = mevcutCoz(x.mevcut) || '', bt = mv ? tarihCoz(x.belgeTarih) : '', mt = tarihCoz(x.muafTarih);
+  const d = { sinif: sn, kayit: kt, mevcutEhliyet: mv };
+  if (mv) { d.oncekiBelge = { sinif: mv, tarih: bt || '' }; if (evetMi(x.otomatik)) d.mevcutOtomatik = true; if (mv === 'E' || evetMi(x.eski) || eskiBelgeTarihi(bt)) d.mevcutEski = true; }
+  if (mt && muafMi({ muaf: { esinavTarih: mt } }, kt)) d.muaf = { esinavTarih: mt, son: muafSonGun(mt) };
+  return d;
+}
 // CSV kodlaması: önce UTF-8; geçersizse Türkçe Windows (1254) — Türkçe Excel'in kaydettiği CSV'de ı, ş, ğ bozulmasın
 async function csvMetin(dosya) { const b = await dosya.arrayBuffer(); let t; try { t = new TextDecoder('utf-8', { fatal: true }).decode(b); } catch (x) { t = new TextDecoder('windows-1254').decode(b); } return t.replace(/^\ufeff/, ''); }
 function kontrolEt(r, i = 0) {
@@ -511,6 +559,12 @@ function kontrolEt(r, i = 0) {
   if (String(x.tel).replace(/\D/g, '').length < 10) uyari.push('Telefon eksik');
   if (String(x.sinif || '').trim() && !sinifCoz(x.sinif)) hata.push('Sınıf tanınmadı: “' + String(x.sinif).slice(0, 20) + '” (kursta açık sınıflardan biri olmalı)');
   else if (!String(x.sinif || '').trim()) uyari.push('Sınıf yok → B');
+  if (String(x.mevcut || '').trim() && mevcutCoz(x.mevcut) === null) uyari.push('Mevcut belge okunamadı: “' + String(x.mevcut).slice(0, 12) + '” (belgesiz sayılacak)');
+  if (String(x.muafTarih || '').trim()) { const mt = tarihCoz(x.muafTarih); if (!mt) uyari.push('e-Sınav muaf tarihi okunamadı'); else if (!muafMi({ muaf: { esinavTarih: mt } }, tarihCoz(x.kayit) || gun(0))) uyari.push('e-Sınav muafiyeti süresi dolmuş (3 yıl)'); }
+  // il taban listesi: ücret boşsa öğrencinin satır ücreti yazılır; tabanın altındaki ücret uyarılır (kayıt engellenmez, kural motoru da gösterir)
+  if (!hata.length) { const tx = kursiyerTaban(aktarimTaslak(x)), u = tutarCoz(x.toplam);
+    if (tx && tx.satir) { if (!u && tx.ucret) uyari.push('Ücret yok → ' + tl(tx.ucret) + ' (taban listesindeki satır)'); else if (u && tx.taban != null && u < tx.taban) uyari.push('Ücret il tabanının altında (' + tl(tx.taban) + ')'); }
+    else if (tx && tx.kapsar) uyari.push('Eski tip belge bu sınıfı zaten kapsıyor; kurs eğitimi gerekmez'); }
   // TC'siz kayıtta aynı ad soyad ve telefon zaten varsa mükerrer sayılır
   if (!x.tc && x.ad && S.kursiyerler.some(k => norm(k.ad + k.soyad) === norm(String(x.ad) + String(x.soyad)) && String(k.tel || '').replace(/\D/g, '').slice(-10) === String(x.tel || '').replace(/\D/g, '').slice(-10))) hata.push('Aynı ad ve telefonla kayıtlı');
   return { x, hata, uyari };
@@ -566,11 +620,19 @@ function aktarimUygula() {
   if (aktarim.tur !== 'kursiyer') { aktarim.sonuc = { id, n, atla, tur: aktarim.tur }; aktarim.satirlar = null; islem(aktarim.tur === 'taksit' ? 'Taksit planı aktardı' : 'Araç aktardı', n + ' kayıt'); kaydet(); return; }
   aktarim.satirlar.map(kontrolEt).forEach(({ x, hata }, i) => {
     if (hata.length) { atla++; return; }
-    const sn = sinifCoz(x.sinif) || 'B', toplam = tutarCoz(x.toplam) || SINIFLAR[sn].ucret, od = Math.min(tutarCoz(x.odenen), toplam), kt = tarihCoz(x.kayit) || gun(0);
+    const taslak = aktarimTaslak(x), sn = taslak.sinif, kt = taslak.kayit, tx = kursiyerTaban(taslak);
+    // ücret boşsa: taban listesindeki satırın ücreti (fark, muaf, eski tip…), liste yoksa sınıf ücreti
+    const toplam = tutarCoz(x.toplam) || (tx && tx.satir && tx.ucret) || SINIFLAR[sn].ucret || 0, od = Math.min(tutarCoz(x.odenen), toplam);
     const eg = S.egitmenler.find(z => z.siniflar.includes(sn) && (z.sube === varsayilanSube())) || S.egitmenler.find(z => z.siniflar.includes(sn)) || null;  // öğretmen henüz yoksa boş kalır, sonra atanır
-    const td = Math.min(SINIFLAR[sn].teorik, Math.round(tutarCoz(x.teorikDers))), dd = Math.min(SINIFLAR[sn].direksiyon, Math.round(tutarCoz(x.direksiyonDers)));
-    const asama = dd > 0 ? 'Direksiyon' : td >= SINIFLAR[sn].teorik ? 'Sınav' : td > 0 ? 'Teorik' : 'Evrak';
-    S.kursiyerler.push({ id: 'k' + Date.now() + i, aktarim: id, ad: String(x.ad).trim(), soyad: String(x.soyad).trim(), tel: x.tel, tc: String(x.tc || '').trim(), dogumTarihi: tarihCoz(x.dogum), dogum: tarihCoz(x.dogum).slice(0, 4), adres: x.adres || '', ogrenim: '', sinif: sn, kayit: kt, egitmen: eg ? eg.id : null, sube: varsayilanSube(), asama, teorik: td, direksiyon: dd, evrak: Object.fromEntries(EVRAKLAR.map(([z]) => [z, false])), mebIslendi: aktarim.kaynak === 'MEBBİS', esinav: null, dsinav: null, odeme: { toplam, pesin: od, pesinTarih: kt, taksitler: [], senetli: false }, kaynak: 'Aktarım', yorum: null, notlar: [{ tarih: gun(0), metin: 'Eski programdan aktarıldı.' }], deneme: [], acil: null, kvkk: null });
+    // direksiyon: öğrencinin gerekli saati (mevcut belge, otomatik, eski tip…); sınıfın genel saatiyle kırpılmaz
+    const td = taslak.muaf ? SINIFLAR[sn].teorik : Math.min(SINIFLAR[sn].teorik, Math.round(tutarCoz(x.teorikDers))), dd = Math.min(gerekliDireksiyon(taslak), Math.round(tutarCoz(x.direksiyonDers)));
+    const asama = dd > 0 || taslak.muaf ? 'Direksiyon' : td >= SINIFLAR[sn].teorik ? 'Sınav' : td > 0 ? 'Teorik' : 'Evrak';
+    const yeni = { id: 'k' + Date.now() + i, aktarim: id, ad: String(x.ad).trim(), soyad: String(x.soyad).trim(), tel: x.tel, tc: String(x.tc || '').trim(), dogumTarihi: tarihCoz(x.dogum), dogum: tarihCoz(x.dogum).slice(0, 4), adres: x.adres || '', ogrenim: '', sinif: sn, kayit: kt, egitmen: eg ? eg.id : null, sube: varsayilanSube(), asama, teorik: td, direksiyon: dd, evrak: Object.fromEntries(EVRAKLAR.map(([z]) => [z, false])), mebIslendi: aktarim.kaynak === 'MEBBİS', esinav: null, dsinav: null, odeme: { toplam, sozlesme: toplam, pesin: od, pesinTarih: kt, taksitler: [], senetli: false }, kaynak: 'Aktarım', yorum: null, notlar: [{ tarih: gun(0), metin: 'Eski programdan aktarıldı.' }], deneme: [], acil: null, kvkk: null };
+    ['mevcutEhliyet', 'oncekiBelge', 'mevcutOtomatik', 'mevcutEski'].forEach(a => { if (taslak[a]) yeni[a] = taslak[a]; });
+    if (taslak.muaf) { yeni.muaf = taslak.muaf; yeni.esinav = { sonuc: 'Geçti', puan: null, tarih: taslak.muaf.esinavTarih, muaf: true }; }
+    // il taban listesindeki satır aktarım anındaki hâliyle saklanır (kayıt formundaki gibi; denetimde dayanak)
+    if (tx && tx.satir) yeni.taban = { liste: tx.liste.id, satir: tx.satir.id, tutar: tx.taban, ucret: tx.ucret, tarih: gun(0) };
+    S.kursiyerler.push(yeni);
     n++;
   });
   aktarim.sonuc = { id, n, atla, tur: 'kursiyer' }; aktarim.satirlar = null;
@@ -698,7 +760,7 @@ function sozlesmeSekme() {
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="dg dg-ana" data-sozlesme-kaydet>Kaydet</button><button class="dg dg-cizgi" data-belge-ac="sozlesme">Önizle</button>${S.kurs.sozlesme ? '<button class="dg dg-hafif" data-sozlesme-varsayilan>Varsayılana dön</button>' : ''}</div></div></div>
     <div class="kart"><div class="kart-bas"><h3>Nasıl yazılır</h3></div><div class="kart-govde" style="font-size:14px;display:grid;gap:10px">
       <p>Her madde ayrı paragraf; aralarında bir boş satır bırakın. İlk cümlenin başındaki kısa başlık (“Ücret ve ödeme.”) kalın yazılır.</p>
-      <p>Şu alanlar her kursiyer için otomatik dolar:</p><ul style="margin-left:18px">${[['{kurs}', 'kurs adı'], ['{sinif}', 'sertifika sınıfı'], ['{teorik}', 'teorik saat'], ['{direksiyon}', 'direksiyon ders sayısı'], ['{hak}', 'sınav hakkı'], ['{tekrarE}', 'e-sınav ücreti'], ['{tekrarD}', 'direksiyon tekrar ücreti'], ['{ekDers}', 'ek ders ücreti']].map(([a, b]) => `<li><code>${a}</code> ${b}</li>`).join('')}</ul>
+      <p>Şu alanlar her kursiyer için otomatik dolar:</p><ul style="margin-left:18px">${[['{kurs}', 'kurs adı'], ['{sinif}', 'sertifika sınıfı'], ['{teorik}', 'teorik saat'], ['{direksiyon}', 'direksiyon ders sayısı'], ['{hak}', 'sınav hakkı'], ['{tekrarE}', 'e-sınav ücreti'], ['{tekrarD}', 'direksiyon tekrar ücreti'], ['{ekDers}', 'ek ders ücreti'], ['{teorikSaatUcreti}', 'teorik ders saati ücreti'], ['{direksiyonSaatUcreti}', 'direksiyon ders saati ücreti'], ['{kdv}', 'KDV oranı']].map(([a, b]) => `<li><code>${a}</code> ${b}</li>`).join('')}</ul>
       <p style="color:var(--soluk)">Taraf bilgileri, ücret, indirim ve ödeme planı tablosu sözleşmenin başına kendiliğinden eklenir. Metni avukatınıza ya da mali müşavirinize okutun.</p></div></div></div>`;
 }
 export const AYAR_SEKMELERI = { kullanici: kullaniciSekme, sozlesme: sozlesmeSekme, subeler: subelerSekme, kurallar: kurallarSekme, guvenlik: guvenlikSekme, entegrasyon: entegrasyonSekme, aktarim: aktarimSekme, gorunum: gorunumSekme };
@@ -733,6 +795,8 @@ export function ayarBaglan(k) {
         islem('Kural değerini varsayılana döndürdü', r.ad + ': ' + eski + ' → ' + r.varsayilan); kaydet(); bildir(`${r.ad}: varsayılan değer (${r.varsayilan} ${r.birim}) kullanılacak`); return yenile(); }
       const v = +ham;
       if (!/^\d+$/.test(ham) || !kuralGecerli(key, v)) { t.value = eski ?? ''; return bildir(`${r.ad}: ${r.max != null ? `${r.min ?? 0} ile ${r.max} arasında` : `en az ${r.min ?? 0}`} bir tam sayı girin${(r.min ?? 0) === 0 && r.teyit ? ' (0 = denetim kapalı)' : ''}. Değer değişmedi.`, 'uyari'); }
+      // ek ders ücreti il taban listesindeki ilave direksiyon ders saat ücretinin altındaysa onay istenir (tek kaynak: Sınıf ve ücretler)
+      if (key === 'ekDersUcreti') { const tb = ekDersTabani(), L = tabanListesi(); if (tb && v < tb && !confirm(`${L ? listeAdi(L) : 'İl taban fiyat listesi'}: ilave direksiyon ders saat ücreti en az ${tl(tb)} (KDV dahil). Girilen ${tl(v)} bunun altında; il taban listesinin altında ücret alınamaz. Yine de kaydedilsin mi?`)) { t.value = eski ?? ''; return; } }
       S.kurs[key] = v; if (r.tur === 'mevzuat') { S.kurs.kuralDegisen = S.kurs.kuralDegisen || {}; if (v === r.varsayilan) delete S.kurs.kuralDegisen[key]; else S.kurs.kuralDegisen[key] = true; }
       islem('Kural değerini değiştirdi', r.ad + ': ' + eski + ' → ' + v); kaydet(); bildir('Kural kaydedildi'); yenile(); }
     if (t.matches('[data-gece-ay]')) { const ay = t.dataset.geceAy, v = t.value, ad = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'][+ay - 1], eski = (S.kurs.geceSaatleri || {})[ay] || 'hesaplanan';
@@ -795,7 +859,7 @@ export function ayarBaglan(k) {
     const mp = t.closest('[data-musavir-paket]'); if (mp) { mp.disabled = true; musavirPaketi(+mp.dataset.musavirPaket).then(() => { islem('Mali müşavir paketini indirdi'); kaydet(); bildir('Müşavir paketi indirildi'); }).catch(x => bildir(x.message, 'uyari')).finally(() => { mp.disabled = false; }); }
     const mpd = t.closest('[data-musavir-pdf]'); if (mpd) { const n = +mpd.dataset.musavirPdf, d = new Date(BUGUN); d.setDate(1); d.setMonth(d.getMonth() - n); belgeYazdir(aylikOzetHtml(n), 'Aylık mali özet · ' + d.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' })); islem('Aylık mali özeti yazdırdı'); kaydet(); }
     if (t.closest('[data-personel-ozet]')) { csvIndir('personel-ozeti.csv', personelOzeti()); islem('Personel özetini indirdi'); kaydet(); }
-    if (t.closest('[data-sablon-csv]')) csvIndir(`sinyal-${aktarim.tur}-sablonu.csv`, [TUR_ALAN().map(a => a[1]), { kursiyer: ['12345678950', 'Ali', 'Yıldız', '0532 000 00 01', '14.03.2004', 'B', '02.10.2026', '24000', '8000', 'Odunpazarı', '12', '3'], taksit: ['12345678950', '02.11.2026', '4000', '', 'Kart'], arac: ['26 AB 123', 'Renault Clio', '2023', 'B', '12.05.2027', '01.03.2027'] }[aktarim.tur]]);
+    if (t.closest('[data-sablon-csv]')) csvIndir(`sinyal-${aktarim.tur}-sablonu.csv`, [TUR_ALAN().map(a => a[1]), { kursiyer: ['12345678950', 'Ali', 'Yıldız', '0532 000 00 01', '14.03.2004', 'B', '02.10.2026', '24000', '8000', 'Odunpazarı', '12', '3', 'Yok', '', '', '', ''], taksit: ['12345678950', '02.11.2026', '4000', '', 'Kart'], arac: ['26 AB 123', 'Renault Clio', '2023', 'B', '12.05.2027', '01.03.2027'] }[aktarim.tur]]);
     if (t.closest('[data-aktar-onay]')) { aktarimUygula(); yenile(); }
     if (t.closest('[data-aktarim-yeni]')) { aktarim.satirlar = null; aktarim.sonuc = null; yenile(); }
     if (t.closest('[data-aktarim-geri]')) { const id = aktarim.sonuc.id; S.kursiyerler = S.kursiyerler.filter(x => x.aktarim !== id); S.kursiyerler.forEach(k => { k.odeme.taksitler = k.odeme.taksitler.filter(x => x.aktarim !== id); }); S.hareket = S.hareket.filter(x => x.aktarim !== id); S.araclar = S.araclar.filter(x => x.aktarim !== id); islem('Aktarımı geri aldı', aktarim.sonuc.n + ' kayıt'); kaydet(); aktarim.sonuc = null; bildir('Aktarım geri alındı'); yenile(); }
@@ -825,7 +889,7 @@ export function kurulumAdimlari() {
   return [
     ['Kurs bilgileri ve şubeler', !!(S.kurs.tel && S.kurs.adres), 'Siz · 3 dk', '#/ayarlar/kurs', 'Ad, adres, telefon; birden fazla şube varsa şubeler.'],
     ['Banka hesapları', !!S.kurs.iban, 'Siz · 2 dk', '#/ayarlar/kurs', 'Havale/EFT için IBAN’lar; her birine ad verin (ör. “Taksit ödemeleri”). Öğrenci uygulamasında ve hatırlatmalarda görünür.'],
-    ['Sınıflar ve ücretler', !S._bulut || S.kurs.ucretOnay !== null, 'Siz · 5 dk', '#/ayarlar/sinif', 'Kurs ücreti, ek ve özel ders ücreti sınıfa göre; e-Sınav ve uygulama sınavı ücretleri hakka göre; kitap, evrak gibi diğer kalemler. Kontrol edip onaylayın.'],
+    ['Sınıflar ve ücretler', !S._bulut || S.kurs.ucretOnay !== null, 'Siz · 5 dk', '#/ayarlar/sinif', 'İlinizin valilik taban fiyat listesi mdSinyal’de varsa ücretler taban fiyatla hazır gelir. Kurs ücreti, geçiş (fark) ücretleri, ek ve özel ders ücreti; e-Sınav ve uygulama sınavı ücretleri hakka göre; ' + (tabanListesi() ? 'kurs ücreti dışında kalem alınamaz (il taban listesi not 4).' : 'kitap, evrak gibi diğer kalemler.') + ' Kontrol edip onaylayın.'],
     ['Ekip ve araçlar', S.egitmenler.length > 0 && S.araclar.length > 0, 'Biz · aktarımla', '#/filo', 'Usta öğreticiler, belgeleri ve araçlar.'],
     ['Kursiyerleri aktar', S.kursiyerler.length > 0, 'Biz · 1 gün', '#/ayarlar/aktarim', 'Eski programdan kursiyer, taksit ve ödeme geçmişi.'],
     ['MEB kural değerlerini onayla', !!S.kurs.kuralOnay, 'Siz · 2 dk', '#/ayarlar/kurallar', 'Değerler kaynağıyla gelir; kurs müdürü onaylar.'],

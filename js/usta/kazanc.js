@@ -95,7 +95,7 @@ function anaHtml(eg) {
 
 /* ---------- Kazanç ayrıntısı ---------- */
 function dersSatir(d) {
-  const k = kursiyer(d.kursiyer), no = k && P && P.dersNo ? P.dersNo(d, k) : '';
+  const k = kursiyer(d.kursiyer), no = k && P && P.dersEtiket ? P.dersEtiket(d, k) : '';  // "5. ders" ya da zorunlu sayının üstünde "Ek ders 1/2"
   const im = imzaEksik(d), ks = kisaMi(d);
   const sag = im || ks ? `<span class="ox-ukz-cipler">${im ? cip('İmza eksik', 'turuncu') : ''}${ks ? cip('Kısa ders', 'ox-ukz-sari') : ''}</span>`
     : `<span class="ox-ukz-tamam" role="img" aria-label="Kontrol tamam">${oi('tik')}</span>`;
@@ -103,7 +103,7 @@ function dersSatir(d) {
   return satir({
     sol: yaprak(gunKisa(d.tarih).toLocaleUpperCase('tr'), String(dt.getDate()), 'kucuk'),
     baslik: esc(k ? tamAd(k) : 'Öğrenci'),
-    alt: [esc(d.saat || ''), no ? no + '. ders' : '', d.sure != null ? d.sure + ' dk' : ''].filter(Boolean).join(' · '),
+    alt: [esc(d.saat || ''), no ? esc(no) : '', d.sure != null ? d.sure + ' dk' : ''].filter(Boolean).join(' · '),
     sag, ok: false, cls: 'ox-ukz-ders',
   });
 }

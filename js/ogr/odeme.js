@@ -4,6 +4,8 @@
 import { S, SINIFLAR, tarihOku, fark, gun, tamAd, odenen, kalanBorc, ekToplam, ibanlar, ibanBicim, odemeKodu } from '../veri.js?v=234';
 import { ayAdi } from '../ui.js?v=234';
 import { kursaYaz } from '../ozellik.js?v=234';
+import { ekTur } from '../veri.js?v=234';
+import { kursOzet, kursEkleri, kursUcretiAdi, odemeNotu, RESMI_METIN } from '../ogrenci.js?v=234';
 import { esc, oi, tl, sayfaBas, geri, bolum, kart, dugme, liste, satir, ikonKutu, cip, serit, not, bos, stilEkle } from './ui.js?v=234';
 
 let gorunum = 'ana'; // 'ana' | 'diger' | 't:<taksit-i>'
@@ -39,7 +41,8 @@ const fisSimge = () => `<span class="ox-ode-fis" aria-hidden="true">${oi('fis')}
 
 /* ---------- ana ekran ---------- */
 function heroHtml(k) {
-  const toplam = k.odeme.toplam + ekToplam(k), od = odenen(k), kalan = kalanBorc(k), y = yuzde(od, toplam);
+  // kurs borcu: resmî masraflar (sınav ücreti, harç, kart) kurs ücretine dahil değil, burada sayılmaz (il taban listesi not 5)
+  const oz = kursOzet(k), toplam = oz.toplam, od = oz.odenen, kalan = oz.kalan, y = yuzde(od, toplam);
   return `<section class="ox-hero ox-ode-hero"><p class="ox-hero-ust">Kalan borcun</p><p class="ox-ode-tutar${kalan ? '' : ' tamam'}">${tl(kalan)}</p>
     <div class="ox-ode-ilerleme">${serit(y.o, kalan ? 'mavi' : 'yesil')}<span>${y.metin}</span></div>
     <div class="ox-ode-iki"><div><small>Ödenen</small><b>${tl(od)}</b></div><div><small>Toplam</small><b>${tl(toplam)}</b></div></div></section>`;
@@ -48,9 +51,9 @@ function heroHtml(k) {
 function siradakiHtml(k) {
   const sn = sonraki(k);
   if (!sn) {
-    const kalan = kalanBorc(k);
+    const kalan = kursOzet(k).kalan;
     if (kalan > 0) {
-      const ekAcik = (k.odeme.ekler || []).filter(x => !x.odendi).map(x => esc(x.ad));
+      const ekAcik = kursEkleri(k).filter(x => !x.odendi).map(x => esc(x.ad));
       return kart(`<div class="ox-ode-sira-bas"><b>Kalan ödemen</b><span>${ekAcik.length ? 'Ek ücret' : ''}</span></div>
         <div class="ox-ode-sira-orta ad"><b>${ekAcik.length ? ekAcik.join(', ') : 'Kalan tutar'}</b><b>${tl(kalan)}</b></div>
         <p class="ox-ode-sira-not">Kursta kartla ya da havale/EFT ile ödeyebilirsin.</p>
@@ -91,13 +94,14 @@ function planHtml(k) {
     if (k.odeme.pesin) satirlar.push(satir({ sol: durumDaire('odendi'), baslik: 'Peşin ödeme', alt: gunAy(k.odeme.pesinTarih) + ' · Ödendi', sag: `<span class="ox-ode-t">${tl(k.odeme.pesin)}</span>`, attrs: { 'data-ox-ode': 'diger' }, cls: 'ox-ode-satir' }));
     l.forEach((t, i) => { if (pesinatMi(t)) satirlar.push(planSatir(k, t, i, siraI)); });
   }
-  const ekler = (k.odeme.ekler || []).map(x => x.ad);
-  const parca = [taksitVar && (k.odeme.pesin || l.some(pesinatMi)) ? 'Peşinat' : '', ...ekler].filter(Boolean);
+  const ekler = kursEkleri(k).map(x => x.ad);
+  const parca = [taksitVar && (k.odeme.pesin || l.some(pesinatMi)) ? 'Peşinat' : '', ...ekler, kursOzet(k).resmi.length ? 'Resmî masrafların' : ''].filter(Boolean);
   const dBas = parca[0] === 'Peşinat' ? 'Peşinat ve diğer ödemeler' : parca.length ? 'Diğer ödemeler' : 'Makbuzlar ve hesap dökümü';
   const dAlt = parca.length ? parca.map(esc).join(' · ') : 'Ödediğin her tutar kalem kalem';
   return bolum('Ödeme planın')
     + (satirlar.length ? liste(satirlar, 'ox-ode-plan') : kart(bos('kart', 'Ödeme planı yok', 'Ücret ve taksitlerin kursta belirlenince burada görünür.'), 'ox-ode-bos'))
-    + liste([satir({ sol: fisSimge(), baslik: dBas, alt: dAlt, attrs: { 'data-ox-ode': 'diger' }, cls: 'ox-ode-satir' })], 'ox-ode-diger');
+    + liste([satir({ sol: fisSimge(), baslik: dBas, alt: dAlt, attrs: { 'data-ox-ode': 'diger' }, cls: 'ox-ode-satir' })], 'ox-ode-diger')
+    + not('Tutarlar KDV dahildir.');
 }
 
 const anaHtml = k => sayfaBas('Ödeme', 'Ödemelerin tek yerde.') + heroHtml(k) + siradakiHtml(k) + planHtml(k);
@@ -149,11 +153,12 @@ function taksitHtml(k, i) {
 /* ---------- peşinat, ek ücretler, makbuzlar, hesap dökümü ---------- */
 // eski dokumTablo ile aynı satırlar: kurs ücreti, ek kalemler, ödemeler ve iade; yürüyen bakiyeyle
 function dokumSatirlari(k) {
-  const o = k.odeme, l = [[k.kayit, 'Kurs ücreti · ' + ((SINIFLAR[k.sinif] || {}).ad || ''), o.toplam, 0]];
-  (o.ekler || []).forEach(x => l.push([x.tarih || k.kayit, x.ad, x.tutar, 0]));
+  // resmî masraflar kurs hesabına girmez (Resmî masrafların bölümünde ayrı); son satırın kalanı kurs borcudur
+  const o = k.odeme, l = [[k.kayit, kursUcretiAdi(k), o.toplam, 0]], ekler = kursEkleri(k);
+  ekler.forEach(x => l.push([x.tarih || k.kayit, x.ad, x.tutar, 0]));
   if (o.pesin) l.push([o.pesinTarih || k.kayit, 'Peşinat ödendi', 0, o.pesin]);
   o.taksitler.forEach((t, i) => { const ad = pesinatMi(t) ? 'Peşinat' : (t.aciklama || taksitAd(k, i)); if (t.odendi) l.push([odemeGunu(t), ad + ' ödendi', 0, t.tutar]); else if (t.kismi) l.push([t.vade, ad + ' · kısmi ödeme', 0, t.kismi]); });
-  (o.ekler || []).filter(x => x.odendi).forEach(x => l.push([x.odendi === true ? (x.tarih || k.kayit) : x.odendi, x.ad + ' ödendi', 0, x.tutar]));
+  ekler.filter(x => x.odendi).forEach(x => l.push([x.odendi === true ? (x.tarih || k.kayit) : x.odendi, x.ad + ' ödendi', 0, x.tutar]));
   if (o.iade) l.push([o.iadeTarih || gun(0), 'İade', 0, -o.iade]);
   l.sort((a, b) => String(a[0]).localeCompare(String(b[0])) || (b[2] ? 1 : 0) - (a[2] ? 1 : 0));
   let b = 0;
@@ -164,15 +169,18 @@ function digerHtml(k) {
   const o = k.odeme, ekS = [];
   if (o.pesin) ekS.push(satir({ sol: durumDaire('odendi'), baslik: o.taksitler.some(t => !pesinatMi(t)) ? 'Peşinat' : 'Peşin ödeme', alt: gunAy(o.pesinTarih) + ' · Ödendi', sag: `<span class="ox-ode-t">${tl(o.pesin)}</span>`, ok: false, cls: 'ox-ode-satir' }));
   o.taksitler.forEach((t, i) => { if (pesinatMi(t)) ekS.push(planSatir(k, t, i, -1)); });
-  (o.ekler || []).forEach(x => ekS.push(satir({
+  const ekSatir = (x, bekler) => satir({
     sol: x.odendi ? durumDaire('odendi') : durumDaire('', '+'), baslik: esc(x.ad),
-    alt: x.odendi ? (typeof x.odendi === 'string' ? gunAy(x.odendi) + ' · ' : '') + 'Ödendi' : 'Ek ücret · kursta ödenir',
+    alt: x.odendi ? (typeof x.odendi === 'string' ? gunAy(x.odendi) + ' · ' : '') + 'Ödendi' : bekler,
     sag: `<span class="ox-ode-t">${tl(x.tutar)}</span>`, ok: false, cls: 'ox-ode-satir',
-  })));
+  });
+  kursEkleri(k).forEach(x => ekS.push(ekSatir(x, ekTur(x) === 'ders' ? 'İlave direksiyon dersi · kursta ödenir' : 'Ek ücret · kursta ödenir')));
+  const res = kursOzet(k).resmi;
   const m = makbuzlar(k), d = dokumSatirlari(k);
   return geri('Ödeme', { 'data-ox-ode': 'ana' })
     + sayfaBas('Diğer ödemeler', 'Peşinat, ek ücretler ve makbuzların.')
     + (ekS.length ? bolum('Peşinat ve ek ücretler') + liste(ekS) : '')
+    + (res.length ? bolum('Resmî masrafların') + liste(res.map(x => ekSatir(x, 'Senin masrafın'))) + not(RESMI_METIN) : '')
     + bolum('Makbuzların', m.length ? m.length + ' ödeme' : '')
     + (m.length ? liste(m.map(makbuzSatir)) : kart(bos('fis', 'Henüz makbuz yok', 'Ödeme yapınca makbuzun burada görünür.'), 'ox-ode-bos'))
     + bolum('Hesap dökümün')
@@ -181,7 +189,7 @@ function digerHtml(k) {
       sag: x.borc ? `<span class="ox-ode-t">${tl(x.borc)}</span>` : `<span class="ox-ode-t ${x.od < 0 ? 'iade' : 'od'}">${x.od < 0 ? '−' + tl(-x.od) : '+' + tl(x.od)}</span>`,
       ok: false, cls: 'ox-ode-satir ox-ode-dokum',
     })))
-    + not('Burada olmayan bir ücret senden istenirse kursa sor. Sınav tekrar ücreti ve ek ders gibi kalemler eklenince bu listede görünür.')
+    + not(odemeNotu())
     + `<button type="button" class="ox-ode-yaz" data-ox-ode-yaz="">${oi('mesaj')}<span>Ödemenle ilgili kursa yaz</span></button>`;
 }
 

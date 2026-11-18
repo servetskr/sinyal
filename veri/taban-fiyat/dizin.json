@@ -1,0 +1,14 @@
+{
+ "aciklama": "İl taban fiyat listeleri (valilik maliyet tabloları). Kaynak: js/taban.js; üretici: sinyal-kaynak/arac/taban/disa-aktar.mjs",
+ "listeler": [
+  {
+   "id": "eskisehir-2026",
+   "il": "Eskişehir",
+   "yil": 2026,
+   "donemBas": "2026-02",
+   "donemBit": "2027-01",
+   "json": "eskisehir-2026.json",
+   "md": "eskisehir-2026.md"
+  }
+ ]
+}

@@ -1,4 +1,8 @@
-import { S, BUGUN, iso, kapaliGun, ASAMALAR, KAYNAKLAR, kursiyer, tamAd, eksikEvrak, gecikenler, gecikenTutar, memnuniyet, sb, sbDers } from './veri.js?v=234';
+import { S, BUGUN, iso, kapaliGun, ASAMALAR, KAYNAKLAR, kursiyer, tamAd, eksikEvrak, gecikenler, gecikenTutar, memnuniyet, sb, sbDers, ekTur } from './veri.js?v=234';
+// Sınav ücreti, harç, kart tahsilatı kurs geliri değildir (kursiyerin masrafı, emanet; il taban listesi not 5). Ek kalem tahsilatında kategori kalemin adıdır.
+// Karşılığı olan döner sermaye ödemesi (gider "Sınav harcı") da kurs gideri sayılmaz. (sayfalar5.js hareketTur ile aynı kural)
+const resmiHareket = h => { if (h.tur === 'Gider') return h.kategori === 'Sınav harcı'; if (h.tur !== 'Gelir' || ['Kurs ücreti', 'Taksit', 'Peşinat', 'İade'].includes(h.kategori)) return false;
+  const k = h.kursiyer && kursiyer(h.kursiyer), x = k && ((k.odeme || {}).ekler || []).find(y => y.ad === h.kategori); return ekTur(x || { ad: h.kategori }) === 'resmi'; };
 import { e, tl, sayi, rozet, asamaRozet, olcumler, sekmeler, ilerleme, bos, ekranNotu, ayAdi } from './ui.js?v=234';
 import { riskliler } from './risk.js?v=234';
 
@@ -141,8 +145,8 @@ function kurs() {
   const adaylar = sb(S.adaylar || []);
   const ay = n => {
     const kayit = liste.filter(k => ayda(k.kayit, n)).length;
-    const gelir = hareket.filter(h => h.tur === 'Gelir' && ayda(h.tarih, n)).reduce((a, h) => a + (+h.tutar || 0), 0);
-    const gider = hareket.filter(h => h.tur === 'Gider' && ayda(h.tarih, n)).reduce((a, h) => a + (+h.tutar || 0), 0);
+    const gelir = hareket.filter(h => h.tur === 'Gelir' && !resmiHareket(h) && ayda(h.tarih, n)).reduce((a, h) => a + (+h.tutar || 0), 0);
+    const gider = hareket.filter(h => h.tur === 'Gider' && !resmiHareket(h) && ayda(h.tarih, n)).reduce((a, h) => a + (+h.tutar || 0), 0);
     const ders = dersler.filter(d => ['Yapıldı', 'Planlandı'].includes(d.durum) && ayda(d.tarih, n)).length;
     const kapasite = ustaSay * isGunu(n) * 8;
     return { kayit, gelir, gider, net: gelir - gider, ders, kapasite, doluluk: yuzde(ders, kapasite) };

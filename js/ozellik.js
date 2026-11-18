@@ -1,5 +1,5 @@
 import { cevapIsle } from './mesaj.js?v=234';
-import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli, sonrakiDers, selam, bulutKanca, iptalEdilebilir, oturum, dersIptalIz, gonderimEkle } from './veri.js?v=234';
+import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli, sonrakiDers, selam, bulutKanca, iptalEdilebilir, oturum, dersIptalIz, gonderimEkle, gerekliDireksiyon, ekDersFiyat, ekDersTabani } from './veri.js?v=234';
 import { gerekliDireksiyon } from './veri.js?v=234';
 import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos, waIstek, ziyaretci, apiGonder, waAc, waNumara } from './ui.js?v=234';
 import { yenile } from './app.js?v=234';
@@ -45,7 +45,8 @@ const renkIsi = (n, max) => n ? `background:color-mix(in srgb, var(--yesil) ${Ma
 export function karlilik() {
   const mal = dersMaliyeti(), m = S.kurs.maliyet, kap = bosKapasite(6), hk = hakedis(0);
   const siniflar = aktifSiniflar().filter(([, v]) => v.ucret && v.direksiyon).map(([k, v]) => ({ k, v, x: sinifKari(k) }));
-  const ekKar = S.kurs.ekDersUcreti - mal.toplam, maxB = S.egitmenler.length || 1;
+  // ek ders ücreti: kursun ücreti, il taban listesinde ilave ders tabanının altına inmez (liste not 6, 7: indirim yok)
+  const ekUcret = Math.max(+ekDersFiyat('B') || 0, ekDersTabani() || 0), ekKar = ekUcret - mal.toplam, maxB = S.egitmenler.length || 1;
   const ayAd = new Date().toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
   const ayar = (a, ad, birim, adim = 1) => `<div class="alan" style="width:150px"><label>${ad}</label><div style="display:flex;align-items:center;gap:6px"><input class="girdi" type="number" min="0" step="${adim}" data-maliyet="${a}" value="${m[a]}"><small style="color:var(--soluk);white-space:nowrap">${birim}</small></div></div>`;
   return {
@@ -54,7 +55,7 @@ export function karlilik() {
     <div class="kart"><div class="kart-bas"><h3>Ders başı kâr</h3><small>Kurs ücretinin %${m.pay}’i direksiyon eğitimine ayrılır, ders sayısına bölünür</small></div>
       <div class="tablo-kap"><table class="tablo"><thead><tr><th>Sınıf</th><th style="text-align:right">Ders geliri</th><th style="text-align:right">Yakıt</th><th style="text-align:right">Usta primi</th><th style="text-align:right">Bakım ve lastik</th><th style="text-align:right">Ders başı kâr</th><th style="text-align:right">Marj</th></tr></thead><tbody>
         ${siniflar.map(({ k, v, x }) => `<tr><td><b>${e(v.ad)}</b><small style="display:block;color:var(--soluk)">${tl(v.ucret)} · ${v.direksiyon} ders</small></td><td class="sayi" style="text-align:right">${tl(x.gelir)}</td><td class="sayi" style="text-align:right">${tl(x.maliyet.yakit)}</td><td class="sayi" style="text-align:right">${tl(x.maliyet.prim)}</td><td class="sayi" style="text-align:right">${tl(x.maliyet.bakim)}</td><td class="sayi" style="text-align:right;font-weight:800;color:${x.kar > 0 ? 'var(--yesil)' : 'var(--kirmizi)'}">${tl(x.kar)}</td><td style="text-align:right">${rozet('%' + x.marj, x.marj >= 40 ? 'yesil' : x.marj >= 20 ? 'sari' : 'kirmizi')}</td></tr>`).join('')}
-        <tr><td><b>Ek direksiyon dersi</b><small style="display:block;color:var(--soluk)">Kursiyerin ayrıca ödediği ders</small></td><td class="sayi" style="text-align:right">${tl(S.kurs.ekDersUcreti)}</td><td class="sayi" style="text-align:right">${tl(mal.yakit)}</td><td class="sayi" style="text-align:right">${tl(mal.prim)}</td><td class="sayi" style="text-align:right">${tl(mal.bakim)}</td><td class="sayi" style="text-align:right;font-weight:800;color:${ekKar > 0 ? 'var(--yesil)' : 'var(--kirmizi)'}">${tl(ekKar)}</td><td style="text-align:right">${rozet('%' + Math.round(ekKar / S.kurs.ekDersUcreti * 100), 'yesil')}</td></tr>
+        <tr><td><b>Ek direksiyon dersi</b><small style="display:block;color:var(--soluk)">Kursiyerin ayrıca ödediği ders</small></td><td class="sayi" style="text-align:right">${tl(ekUcret)}</td><td class="sayi" style="text-align:right">${tl(mal.yakit)}</td><td class="sayi" style="text-align:right">${tl(mal.prim)}</td><td class="sayi" style="text-align:right">${tl(mal.bakim)}</td><td class="sayi" style="text-align:right;font-weight:800;color:${ekKar > 0 ? 'var(--yesil)' : 'var(--kirmizi)'}">${tl(ekKar)}</td><td style="text-align:right">${ekUcret ? rozet('%' + Math.round(ekKar / ekUcret * 100), ekKar > 0 ? 'yesil' : 'kirmizi') : '—'}</td></tr>
       </tbody></table></div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;padding:6px 20px 18px">${ayar('yakit', 'Yakıt fiyatı', '₺/litre', 0.5)}${ayar('tuketim', 'Tüketim', 'L/100 km', 0.1)}${ayar('km', 'Ders başı yol', 'km')}${ayar('bakim', 'Bakım ve lastik', '₺/ders')}${ayar('pay', 'Direksiyon payı', '% ücret')}</div>
       <p style="font-size:13px;color:var(--soluk);padding:0 20px 18px">Usta primi, ustaların ders başı primlerinin ortalamasıdır (${tl(mal.prim)}). Sabit maaş, kira ve sigorta bu tabloda yok; aşağıdaki hakediş tablosunda görünür.</p></div>
@@ -65,7 +66,7 @@ export function karlilik() {
         ${kap.gunler.map((g, i) => `<div role="row"><span class="bas" style="text-align:left">${gunKisa(g)} ${+g.slice(8)}</span>${kap.hucre[i].map(c => `<span style="${renkIsi(c.bos, maxB)}" title="${tarih(g)} ${c.sa} · ${c.bos} usta boş">${c.bos || '·'}</span>`).join('')}</div>`).join('')}
       </div>
       <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:16px;align-items:flex-end">
-        <div><small style="color:var(--soluk)">Boş saatlerin ders değeri (ek ders fiyatıyla)</small><b style="display:block;font-family:var(--baslik);font-size:28px;color:var(--murekkep)">${tl(kap.toplam * S.kurs.ekDersUcreti)}</b></div>
+        <div><small style="color:var(--soluk)">Boş saatlerin ders değeri (ek ders fiyatıyla)</small><b style="display:block;font-family:var(--baslik);font-size:28px;color:var(--murekkep)">${tl(kap.toplam * ekUcret)}</b></div>
         <div><small style="color:var(--soluk)">Yalnız %20’si dolsa kalan kâr</small><b style="display:block;font-family:var(--baslik);font-size:28px;color:var(--yesil)">${tl(Math.round(kap.toplam * 0.2) * ekKar)}</b></div>
         <a class="dg dg-cizgi dg-kucuk" style="margin-left:auto" href="#/sinavlar/risk">Riskli kursiyerlere ek ders öner</a><a class="dg dg-ana dg-kucuk" href="#/plan">Planı aç</a></div>
       <p style="font-size:13px;color:var(--soluk);margin-top:10px">Kutudaki sayı o saatte boş olan usta öğretici sayısı. İzinli ustalar, resmî tatiller ve pazar günleri sayılmaz.</p></div></div>
@@ -173,7 +174,7 @@ export function mutabakatBaglan(k) {
 /* ================= KURSİYERİN KENDİ RANDEVUSU ================= */
 // Öğrenci kursa WhatsApp'tan yazar (ders isteği): mesaj kursun gelen kutusuna da düşer
 export function kursaYaz(k, neden = 'ders', metin = '') {
-  const m = metin || `Merhaba, ben ${tamAd(k)}. ${neden === 'ek' ? 'Zorunlu direksiyon derslerim planlandı; ek direksiyon dersi almak istiyorum.' : 'Direksiyon dersi almak istiyorum; uygun saatleri yazar mısınız?'}`;
+  const m = metin || `Merhaba, ben ${tamAd(k)}. ${neden === 'ek' ? 'Zorunlu direksiyon derslerim planlandı; ek direksiyon dersi almak istiyorum.' : neden === 'ekTeklif' ? 'Ek direksiyon dersi önerinizdeki ücreti sormak istiyorum.' : 'Direksiyon dersi almak istiyorum; uygun saatleri yazar mısınız?'}`;
   gonderimEkle(S.kurs.ad, m, 'Kursiyer talebi');
   const kno = S.kurs.wp || S.kurs.wpGenel || S.kurs.tel;
   if (!waNumara(kno)) return bildir('Kursun WhatsApp numarası kayıtlı değil; kursu arayın' + (S.kurs.tel ? ': ' + S.kurs.tel : ''), 'uyari');
@@ -193,7 +194,7 @@ export function randevuAl(k, sonra) {
   const S0 = SINIFLAR[k.sinif], planli = S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Planlandı').length;
   pencere({
     baslik: 'Direksiyon dersi al',
-    icerik: `<p style="color:var(--soluk);margin-bottom:12px">${e(h.ad)} hocanın boş saatleri. Seçtiğin saat hemen senin olur; hoca ve kurs bilgilendirilir. ${k.direksiyon + planli}/${gerekliDireksiyon(k)} dersin planlı.</p>
+    icerik: `<p style="color:var(--soluk);margin-bottom:12px">${e(h.ad)} hocanın boş saatleri. Seçtiğin saat hemen senin olur; hoca ve kurs bilgilendirilir. ${Math.min(k.direksiyon + planli, gerekliDireksiyon(k) + (k.ekDersHakki || 0))}/${gerekliDireksiyon(k) + (k.ekDersHakki || 0)} dersin planlı${k.ekDersHakki ? ` (${k.ekDersHakki} ek ders dahil)` : ''}.</p>
       ${gunler.map(g => `<p class="et" style="margin:10px 0 6px">${tarihUzun(g)}</p><div class="secim">${l.filter(x => x.tarih === g).map(x => `<label><input type="radio" name="slot" value="${x.tarih}|${x.saat}"><span>${x.saat}</span></label>`).join('')}</div>`).join('')}
       <p style="font-size:12.5px;color:var(--soluk);margin-top:12px">Dersten 24 saat öncesine kadar Derslerim’den iptal edebilirsin.</p>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Dersi al</button>`,
@@ -203,10 +204,10 @@ export function randevuAl(k, sonra) {
         const [tg, sa] = v.value.split('|'), x = bosSlotlar(k, 10).find(y => y.tarih === tg && y.saat === sa);
         if (!x) { kapatPencere(); bildir('Bu saat az önce doldu; başka bir saat seç', 'uyari'); return yenile(); }
         const ar = arac(x.arac);
-        S.dersler.push({ id: 'd' + Date.now(), kursiyer: k.id, egitmen: x.egitmen, arac: x.arac, tarih: tg, saat: sa, durum: 'Planlandı', eklendi: gun(0), kaynak: 'kursiyer' });
+        S.dersler.push({ id: 'd' + Date.now(), kursiyer: k.id, egitmen: x.egitmen, arac: x.arac, tarih: tg, saat: sa, durum: 'Planlandı', eklendi: gun(0), kaynak: 'kursiyer', ...(x.kendiArac ? { kendiArac: true } : {}) });
         islem('Kursiyer kendi dersini aldı', tamAd(k) + ' · ' + tarih(tg) + ' ' + sa); kaydet(); kapatPencere(); yenile();
         bildir(oturum.kullanici && oturum.kullanici.rol === 'ogrenci' ? `${tarihUzun(tg)} ${saatDe(sa)} ders isteğin kursa iletildi; kurs onaylayınca kesinleşir` : `${tarihUzun(tg)} ${saatDe(sa)} dersin planlandı`);
-        bildirimler([{ kim: h, metin: `${h.ad.split(' ')[0]} Hoca, ${tamAd(k)} kursiyer ekranından ${tarihUzun(tg)} ${saatDe(sa)} direksiyon dersi aldı${ar ? ' (' + ar.plaka + ')' : ''}. Kursiyerin ${k.direksiyon + planli + 1}. dersi.`, tur: 'Kursiyer randevusu' }, { kim: 'mudur', metin: `${tamAd(k)} ${tarihUzun(tg)} ${saatDe(sa)} ${h.ad} ile direksiyon dersini kendisi aldı.`, tur: 'Kursiyer randevusu' }], 'Kursiyer ders aldı');
+        bildirimler([{ kim: h, metin: `${h.ad.split(' ')[0]} Hoca, ${tamAd(k)} kursiyer ekranından ${tarihUzun(tg)} ${saatDe(sa)} direksiyon dersi aldı${ar ? ' (' + ar.plaka + ')' : x.kendiArac ? ' (kendi aracı)' : ''}. Kursiyerin ${k.direksiyon + planli + 1}. dersi.`, tur: 'Kursiyer randevusu' }, { kim: 'mudur', metin: `${tamAd(k)} ${tarihUzun(tg)} ${saatDe(sa)} ${h.ad} ile direksiyon dersini kendisi aldı.`, tur: 'Kursiyer randevusu' }], 'Kursiyer ders aldı');
         if (sonra) sonra();
       });
     },

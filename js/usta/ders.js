@@ -2,7 +2,7 @@
 // dersi iptal et, not ekle, kapatılmamış dersin kaydını tamamla (tam ekran, .ox-akis) ile ders menüsü (alttan sayfa) ve
 // "Öğrenci gelmedi mi?" onayı (pencere). Kayıt kuralları portal.js'te: dersKaydet, dersIptalEt, gelmediYap, notEkle (eski pencereler de onları çağırır).
 // Akış durumu sessionStorage'da tutulur (adım, seçilen konular, puanlar, not); sayfa yenilenirse aynı adımdan sürer, imzalar yeniden atılır.
-import { S, BECERI, SINIFLAR, kursiyer, egitmen, tamAd, gun, fark, tarihOku, konuListesi, konuOner, geceDersMi } from '../veri.js?v=234';
+import { S, BECERI, SINIFLAR, kursiyer, egitmen, tamAd, gun, fark, tarihOku, konuListesi, konuOner, geceDersMi, gerekliDireksiyon, sinifEtiket } from '../veri.js?v=234';
 import { gerekliDireksiyon } from '../veri.js?v=234';
 import { bildir, bildirimKapat, imzaAlani, tarihUzun, ayAdi } from '../ui.js?v=234';
 import * as P from '../portal.js?v=234';
@@ -25,7 +25,7 @@ const kapat = ctx => { bildirimKapat('uyari'); A = null; tuval = null; sakla(); 
 const gunAy = t => { const d = tarihOku(t); return d.getDate() + ' ' + ayAdi(d.getMonth(), true); };
 const gunMetin = t => { const f = fark(t); return f === 0 ? 'Bugün' : f === -1 ? 'Dün' : f === 1 ? 'Yarın' : gunAy(t); };
 // "B sınıfı · Manuel" (Bugün ekranındaki sıradaki ders kartıyla aynı yazım)
-const sinifAd = k => { const S0 = SINIFLAR[k.sinif] || {}, kod = String(k.sinif || '').replace(/-O$/, ''), v = k.vites || String(S0.ad || '').split(' · ')[1] || ''; return kod ? `${kod} sınıfı${v ? ' · ' + v : ''}` : ''; };
+const sinifAd = k => k && k.sinif ? sinifEtiket(k.sinif, k) : '';
 const harf = k => ((k.ad || '?')[0] + ((k.soyad || '')[0] || '')).toLocaleUpperCase('tr');
 const avatar = k => `<span class="ox-udr-av" aria-hidden="true">${k.foto ? `<img src="${esc(k.foto)}" alt="">` : esc(harf(k))}</span>`;
 const dersAlt = (d, k) => `${gunMetin(d.tarih)} · ${esc(d.saat)} · ${P.dersNo(d, k)}. ders${geceDersMi(d) ? ' · gece dersi' : ''}`;
@@ -97,7 +97,7 @@ function sonucHtml(d, k) {
   ].filter(Boolean);
   const uyari = uzak ? `<div class="ox-udr-uyari" role="status">${oi('saat')}<span><b>Öğrenci imzası bekleniyor</b><small>Öğrenci WhatsApp’taki linkten imzalayınca takip formuna işlenir. Link ulaşmadıysa yeniden gönder.</small></span></div>` : '';
   const ic = `<div class="ox-udr-sonuc ${A.anim ? '' : 'gir'}"><span class="ox-udr-tik" aria-hidden="true">${oi('tik')}</span><h1 id="ox-udr-bas">Ders kaydedildi</h1>
-    <p>${esc(tamAd(k))}</p><p class="ox-udr-sonuc-alt">${esc(sinifAd(k))} · ${P.dersNo(d, k)}. ders</p></div>${uyari}${liste(satirlar, 'ox-udr-ozet')}`;
+    <p>${esc(tamAd(k))}</p><p class="ox-udr-sonuc-alt">${esc(sinifAd(k))} · ${esc(P.dersEtiket(d, k))}</p></div>${uyari}${liste(satirlar, 'ox-udr-ozet')}`;
   const alt = (uzak ? dugme('İmza linkini yeniden gönder', { 'data-imza-tekrar': d.id }, { tur: 'ikincil', ikon: 'wp', genis: true }) : '')
     + dugme('Bugün’e dön', { 'data-udr-bugun': true }, { genis: true });
   return `<div class="ox-akis-ust"><button type="button" class="ox-ikon-dg" data-udr-kapat aria-label="Kapat">${oi('kapat')}</button><span></span><span></span></div>`
@@ -127,7 +127,7 @@ function notHtml(d, k) {
 function kayitHtml(d, k) {
   const gecen = -fark(d.tarih);
   const ic = liste([
-    satir({ sol: avatar(k), baslik: esc(tamAd(k)), alt: `${esc(sinifAd(k))} · ${P.dersNo(d, k)}. ders`, ok: false }),
+    satir({ sol: avatar(k), baslik: esc(tamAd(k)), alt: `${esc(sinifAd(k))} · ${esc(P.dersEtiket(d, k))}`, ok: false }),
     satir({ ikon: 'takvim', ton: 'turuncu', baslik: `${esc(tarihUzun(d.tarih))} · ${esc(d.saat)}`, alt: gecen > 0 ? `${gecen === 1 ? 'Dün' : gecen + ' gün önce'} · kapatılmadı` : 'Kapatılmadı', altTon: 'turuncu', ok: false }),
   ], 'ox-udr-ders')
     + baslikH('Ders durumunu tamamla')

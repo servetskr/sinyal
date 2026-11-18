@@ -2,7 +2,7 @@
 // Eski portal.js "Aracın" bölümü (model, plaka, bakıma kalan km), guzergah.js ustaHtml (güzergâhlar, püf noktaları, kursa iletilen notlar,
 // "Püf noktası ekle" formu: data-gz-usta, guzergah.js'teki ortak submit dinleyicisi işler) ve app.js hesap penceresi (Kursu ara, mdSinyal Destek:
 // data-destek, Çıkış yap / Kullanıcı değiştir: data-cikis; ikisi de app.js'teki belge dinleyicisinde çalışır) buraya taşındı.
-import { S, SINIFLAR, oturum, tarihOku } from '../veri.js?v=234';
+import { S, SINIFLAR, oturum, tarihOku, sinifEtiket, anaSinif } from '../veri.js?v=234';
 import { ayAdi, tarih } from '../ui.js?v=234';
 import { guzergahlar } from '../guzergah.js?v=234';
 import { kisaMetin } from '../guncelleme.js?v=234';
@@ -15,8 +15,9 @@ const harfler = ad => String(ad || '?').trim().split(/\s+/).filter(Boolean).map(
 
 /* ---------- Aracım ---------- */
 function aracKart(a) {
-  const kod = String(a.sinif || '').replace(/-O$/, ''), S0 = SINIFLAR[a.sinif] || {};
-  const vites = a.vites || String(S0.ad || '').split(' · ')[1] || '';
+  // sınıf: "B sınıfı · Otomatik/Engelli" (veri.js sinifEtiket); vites satırı yalnız manuel/otomatik bilgisi varsa ("Vites: Engelli" yazılmaz)
+  const kod = a.sinif ? anaSinif(a.sinif) : '', S0 = SINIFLAR[a.sinif] || {}, parca = String(S0.ad || '').split(' · ')[1] || '';
+  const vites = a.vites || (/manuel|otomatik/i.test(parca) ? parca : '');
   const km = (+a.bakimKm || 0) - (+a.km || 0);
   const bakim = a.bakimKm ? liste([satir({
     sol: ikonKutu('ayar', km <= 0 ? 'kirmizi' : km <= 500 ? 'turuncu' : 'mavi'),
@@ -28,7 +29,7 @@ function aracKart(a) {
     ['Kilometre', a.km ? sayi(a.km) + ' km' : ''], ['Muayene', uzunTarih(a.muayene)], ['Trafik sigortası', uzunTarih(a.sigorta)], ['Kasko', uzunTarih(a.kasko)],
   ].filter(([, v]) => v != null && v !== '');
   return `<section class="ox-hero ox-uar-arac">${gorsel('usta-arac', a.model || 'Araç', 'ox-uar-arac-g')}
-      <div class="ox-uar-arac-yazi"><h2>${esc(a.model || 'Araç')}</h2><p class="ox-uar-plaka">${esc(a.plaka || '')}</p>${kod ? `<p>${esc(kod)} sınıfı${vites ? ' · ' + esc(vites) : ''}</p>` : ''}</div></section>`
+      <div class="ox-uar-arac-yazi"><h2>${esc(a.model || 'Araç')}</h2><p class="ox-uar-plaka">${esc(a.plaka || '')}</p>${a.sinif ? `<p>${esc(sinifEtiket(a.sinif))}${vites && !/manuel|otomatik/i.test(sinifEtiket(a.sinif)) ? ' · ' + esc(vites) : ''}</p>` : ''}</div></section>`
     + (bakim ? `<div class="ox-uar-ara">${bakim}</div>` : '')
     + bolum('Araç bilgileri')
     + `<div class="ox-liste ox-uar-tablo">${tablo.map(([e, v]) => `<div class="ox-uar-tsat"><span>${esc(e)}</span><b>${esc(v)}</b></div>`).join('')}</div>`;

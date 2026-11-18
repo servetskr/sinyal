@@ -63,10 +63,16 @@ function formUyariYenile(f) {
   const h = tarihUyariHtml(tarihUyarilari(k, { dogum: formDeger(f, ['dogumTarihi', 'dogum']), saglik: formDeger(f, ['raporTarih', 'rtar']), adli: formDeger(f, ['meAdTarih']), ogrenim: formDeger(f, ['meOgTarih']), parmak: formDeger(f, ['mePiTarih']) }));
   kutu.innerHTML = h; kutu.style.display = h ? '' : 'none';
 }
-if (typeof document !== 'undefined') document.addEventListener('change', ev => { const t = ev.target; if (!t || !t.name || !/^(dogumTarihi|dogum|raporTarih|rtar|meAdTarih|meOgTarih|mePiTarih)$/.test(t.name)) return; const f = t.closest('form'); if (f) formUyariYenile(f); });
+// B Engelli (B-EN) kursiyerde engel durumu varsayılan "Var" (sağlık raporunda engel kaydı olan aday). Kayıt formunda sınıf B-EN seçilince
+// engel durumu elle değiştirilmediyse "Var" olur; elle seçilen değer korunur.
+const ENGEL_VARSAYILAN = sinif => sinif === 'B-EN' ? 'Var' : 'Yok';
+if (typeof document !== 'undefined') document.addEventListener('change', ev => { const t = ev.target; if (!t || !t.name) return; const f0 = t.closest('form');
+  if (f0 && t.name === 'meSgOzur') t.dataset.elle = '1';
+  if (f0 && t.name === 'sinif') { const oz = f0.querySelector('[name=meSgOzur]'); if (oz && !oz.dataset.elle) oz.value = ENGEL_VARSAYILAN(t.value); }
+  if (!/^(dogumTarihi|dogum|raporTarih|rtar|meAdTarih|meOgTarih|mePiTarih)$/.test(t.name)) return; const f = t.closest('form'); if (f) formUyariYenile(f); });
 
 export function evrakHtml(k) {
-  const v = (k && k.mebEvrak) || {}, o = v.ogrenim || {}, a = v.adli || {}, p = v.parmak || {}, s = v.saglik || {};
+  const v = (k && k.mebEvrak) || {}, o = v.ogrenim || {}, a = v.adli || {}, p = v.parmak || {}, s = v.saglik || {}, oz = s.ozur || ENGEL_VARSAYILAN(k && k.sinif);
   const alan = (ad, et, deger, ek = '') => `<div class="alan"><label>${et}</label><input name="${ad}" value="${e(deger || '')}" autocomplete="off" ${ek}></div>`;
   const tarihAlan = (ad, et, deger) => `<div class="alan"><label>${et}</label><input name="${ad}" type="date" value="${e(tarihGir(deger))}"></div>`;
   const tu = tarihUyariHtml(tarihUyarilari(k));
@@ -77,7 +83,7 @@ export function evrakHtml(k) {
       <div class="alan"><label>Belge türü</label><select name="meOgTur"><option value="">Seçin</option>${OGRENIM_BELGELERI.map(x => `<option ${o.tur === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
       ${tarihAlan('meOgTarih', 'Belge tarihi', o.tarih)}${alan('meOgSayi', 'Belge sayısı', o.sayi, 'maxlength="10"')}
       <b class="tam" style="font-size:13.5px">Sağlık raporu</b>
-      <div class="alan"><label>Engel durumu</label><select name="meSgOzur"><option value="Yok" ${s.ozur !== 'Var' ? 'selected' : ''}>Engeli yok</option><option value="Var" ${s.ozur === 'Var' ? 'selected' : ''}>Engeli var</option></select></div>
+      <div class="alan"><label>Engel durumu</label><select name="meSgOzur"><option value="Yok" ${oz !== 'Var' ? 'selected' : ''}>Engeli yok</option><option value="Var" ${oz === 'Var' ? 'selected' : ''}>Engeli var</option></select>${k && k.sinif === 'B-EN' && oz !== 'Var' ? '<small style="color:var(--kirmizi)">B Engelli: engel durumu “Var” olmalı</small>' : ''}</div>
       ${alan('meSgRef', 'Rapor referans no (e-Nabız)', s.refNo, 'maxlength="30"')}
       <b class="tam" style="font-size:13.5px">Adli sicil (sabıka) belgesi</b>
       ${alan('meAdVeren', 'Belgeyi veren', a.veren || 'E-DEVLET', 'maxlength="100"')}${tarihAlan('meAdTarih', 'Belge tarihi', a.tarih)}${alan('meAdSayi', 'Belge sayısı', a.sayi, 'maxlength="10"')}
@@ -89,7 +95,7 @@ export function evrakOku(f) {
   const g = n => (f.querySelector(`[name="${n}"]`) || {}).value || '';
   const blok = (veren, tarih, sayi) => (g(veren).trim() && (g(tarih) || g(sayi).trim())) ? { veren: temiz(g(veren)), tarih: tarihYaz(g(tarih)), sayi: temiz(g(sayi), 10) } : null;
   const o = blok('meOgVeren', 'meOgTarih', 'meOgSayi'); if (o) o.tur = g('meOgTur');
-  const sg = { ozur: g('meSgOzur') || 'Yok', refNo: temiz(g('meSgRef'), 30) };
+  const sg = { ozur: g('meSgOzur') || ENGEL_VARSAYILAN((f.querySelector('[name="sinif"]:checked') || f.querySelector('[name="sinif"]') || {}).value), refNo: temiz(g('meSgRef'), 30) };
   return { ogrenim: o, saglik: sg, adli: blok('meAdVeren', 'meAdTarih', 'meAdSayi'), parmak: blok('mePiVeren', 'mePiTarih', 'mePiSayi') };
 }
 // MEBBİS'e gidecek evrak paketi (motor: evrakYaz); eksik blok gönderilmez, eksik listesine yazılır
@@ -97,7 +103,8 @@ const trT = t => String(t || '').split('.').join('/');   // 07.12.2026 → 07/12
 export function evrakPaketi(k) {
   const v = k.mebEvrak || {}, l = {}, eksik = [];
   if (v.ogrenim && v.ogrenim.tur) l.ogrenim = { veren: v.ogrenim.veren, tur: v.ogrenim.tur, tarih: trT(v.ogrenim.tarih), sayi: v.ogrenim.sayi }; else eksik.push('öğrenim belgesi');
-  l.saglik = { ozur: (v.saglik || {}).ozur || 'Yok', refNo: (v.saglik || {}).refNo || '' };   // rapor no e-Nabız referans no ile aynı olmayabilir: yalnız elle girilen gider
+  l.saglik = { ozur: (v.saglik || {}).ozur || ENGEL_VARSAYILAN(k.sinif), refNo: (v.saglik || {}).refNo || '' };
+  if (k.sinif === 'B-EN' && l.saglik.ozur !== 'Var') eksik.push('B Engelli: engel durumu Var olmalı');   // rapor no e-Nabız referans no ile aynı olmayabilir: yalnız elle girilen gider
   if (v.adli) l.adli = { veren: v.adli.veren, tarih: trT(v.adli.tarih), sayi: v.adli.sayi }; else eksik.push('adli sicil');
   if (v.parmak) l.parmak = { veren: v.parmak.veren, tarih: trT(v.parmak.tarih), sayi: v.parmak.sayi }; else eksik.push('parmak izi');
   return { l, eksik };

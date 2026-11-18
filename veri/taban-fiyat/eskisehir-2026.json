@@ -1,0 +1,1793 @@
+{
+ "id": "eskisehir-2026",
+ "il": "Eskişehir",
+ "yil": 2026,
+ "donemBas": "2026-02",
+ "donemBit": "2027-01",
+ "gecerlilik": "Şubat 2026 kurs döneminden Ocak 2027 kurs dönemine kadar",
+ "kurum": "T.C. Eskişehir Valiliği Sürücü Eğitimi Maliyetlerini Belirleme Komisyonu",
+ "belge": "2026 Yılı Sürücü Sertifikaları Eğitim Maliyet Tablosu",
+ "dosya": "4- 2026 YILI TABAN FİYAT LİSTESİ SERTİFİKA SIRALI ( %31,07 ARTIŞ ).pdf",
+ "kdvDahil": true,
+ "aciklama": "Valilik komisyonunun belirlediği TABAN (en düşük) ücretlerdir; her kurs kendi ücretini bunların altında olmamak üzere belirler. Tutarlar KDV dahil, TL.",
+ "satirlar": [
+  {
+   "id": "F1",
+   "sayfa": 1,
+   "mevcut": "",
+   "istenen": "M",
+   "tur": "ilk",
+   "mevcutKodlar": null,
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "M"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": {
+    "saat": 34,
+    "ucret": 195,
+    "toplam": 6630
+   },
+   "direksiyon": {
+    "saat": 14,
+    "ucret": 840,
+    "toplam": 11760
+   },
+   "toplam": 18390
+  },
+  {
+   "id": "F2",
+   "sayfa": 1,
+   "mevcut": "",
+   "istenen": "A1",
+   "tur": "ilk",
+   "mevcutKodlar": null,
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "A1"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": {
+    "saat": 34,
+    "ucret": 195,
+    "toplam": 6630
+   },
+   "direksiyon": {
+    "saat": 14,
+    "ucret": 840,
+    "toplam": 11760
+   },
+   "toplam": 18390
+  },
+  {
+   "id": "F3",
+   "sayfa": 1,
+   "mevcut": "",
+   "istenen": "A2",
+   "tur": "ilk",
+   "mevcutKodlar": null,
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "A2"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": {
+    "saat": 34,
+    "ucret": 195,
+    "toplam": 6630
+   },
+   "direksiyon": {
+    "saat": 14,
+    "ucret": 840,
+    "toplam": 11760
+   },
+   "toplam": 18390
+  },
+  {
+   "id": "F4",
+   "sayfa": 1,
+   "mevcut": "",
+   "istenen": "A",
+   "tur": "ilk",
+   "mevcutKodlar": null,
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "A"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": {
+    "saat": 34,
+    "ucret": 195,
+    "toplam": 6630
+   },
+   "direksiyon": {
+    "saat": 14,
+    "ucret": 840,
+    "toplam": 11760
+   },
+   "toplam": 18390
+  },
+  {
+   "id": "F5",
+   "sayfa": 1,
+   "mevcut": "",
+   "istenen": "B1",
+   "tur": "ilk",
+   "mevcutKodlar": null,
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "B1"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": {
+    "saat": 34,
+    "ucret": 195,
+    "toplam": 6630
+   },
+   "direksiyon": {
+    "saat": 14,
+    "ucret": 840,
+    "toplam": 11760
+   },
+   "toplam": 18390
+  },
+  {
+   "id": "F6",
+   "sayfa": 1,
+   "mevcut": "",
+   "istenen": "B Manuel",
+   "tur": "ilk",
+   "mevcutKodlar": null,
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "B"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": {
+    "saat": 34,
+    "ucret": 195,
+    "toplam": 6630
+   },
+   "direksiyon": {
+    "saat": 16,
+    "ucret": 1055,
+    "toplam": 16880
+   },
+   "toplam": 23510
+  },
+  {
+   "id": "F7",
+   "sayfa": 1,
+   "mevcut": "",
+   "istenen": "B Otomatik",
+   "tur": "ilk",
+   "mevcutKodlar": null,
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "B-O"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": {
+    "saat": 34,
+    "ucret": 195,
+    "toplam": 6630
+   },
+   "direksiyon": {
+    "saat": 16,
+    "ucret": 1055,
+    "toplam": 16880
+   },
+   "toplam": 23510
+  },
+  {
+   "id": "F8",
+   "sayfa": 1,
+   "mevcut": "",
+   "istenen": "B Engelli",
+   "tur": "ilk",
+   "mevcutKodlar": null,
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "B-EN"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": {
+    "saat": 34,
+    "ucret": 195,
+    "toplam": 6630
+   },
+   "direksiyon": {
+    "saat": 16,
+    "ucret": 1055,
+    "toplam": 16880
+   },
+   "toplam": 23510
+  },
+  {
+   "id": "F9",
+   "sayfa": 1,
+   "mevcut": "",
+   "istenen": "F",
+   "tur": "ilk",
+   "mevcutKodlar": null,
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "F"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": {
+    "saat": 34,
+    "ucret": 195,
+    "toplam": 6630
+   },
+   "direksiyon": {
+    "saat": 14,
+    "ucret": 840,
+    "toplam": 11760
+   },
+   "toplam": 18390
+  },
+  {
+   "id": "F10",
+   "sayfa": 1,
+   "mevcut": "",
+   "istenen": "G",
+   "tur": "teorik",
+   "mevcutKodlar": null,
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "G"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": {
+    "saat": 34,
+    "ucret": 295,
+    "toplam": 10030
+   },
+   "direksiyon": null,
+   "toplam": 10030
+  },
+  {
+   "id": "F11",
+   "sayfa": 1,
+   "mevcut": "",
+   "istenen": "100 CEZA",
+   "tur": "ceza",
+   "mevcutKodlar": null,
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "CEZA"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": {
+    "saat": 34,
+    "ucret": 295,
+    "toplam": 10030
+   },
+   "direksiyon": null,
+   "toplam": 10030
+  },
+  {
+   "id": "F12",
+   "sayfa": 1,
+   "mevcut": "E Sınav Muafiyetli",
+   "istenen": "A1-A2-A Sınıfı",
+   "tur": "esinav",
+   "mevcutKodlar": null,
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "A1",
+    "A2",
+    "A"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 14,
+    "ucret": 1120,
+    "toplam": 15680
+   },
+   "toplam": 15680
+  },
+  {
+   "id": "F13",
+   "sayfa": 1,
+   "mevcut": "E Sınav Muafiyetli",
+   "istenen": "B Sınıfı",
+   "tur": "esinav",
+   "mevcutKodlar": null,
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "B",
+    "B-O"
+   ],
+   "istenenKodlarYorum": [
+    "B-EN"
+   ],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 16,
+    "ucret": 1220,
+    "toplam": 19520
+   },
+   "toplam": 19520
+  },
+  {
+   "id": "F14",
+   "sayfa": 1,
+   "mevcut": "A1 - A2 - A",
+   "istenen": "B",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "A1",
+    "A2",
+    "A"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "B",
+    "B-O"
+   ],
+   "istenenKodlarYorum": [
+    "B-EN"
+   ],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 16,
+    "ucret": 1225,
+    "toplam": 19600
+   },
+   "toplam": 19600
+  },
+  {
+   "id": "F15",
+   "sayfa": 1,
+   "mevcut": "F",
+   "istenen": "B",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "F"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "B",
+    "B-O"
+   ],
+   "istenenKodlarYorum": [
+    "B-EN"
+   ],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 16,
+    "ucret": 1225,
+    "toplam": 19600
+   },
+   "toplam": 19600
+  },
+  {
+   "id": "F16",
+   "sayfa": 1,
+   "mevcut": "G",
+   "istenen": "B",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "G"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "B",
+    "B-O"
+   ],
+   "istenenKodlarYorum": [
+    "B-EN"
+   ],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 16,
+    "ucret": 1225,
+    "toplam": 19600
+   },
+   "toplam": 19600
+  },
+  {
+   "id": "F17",
+   "sayfa": 1,
+   "mevcut": "B Otomatik",
+   "istenen": "B Manuel",
+   "tur": "oto",
+   "mevcutKodlar": [
+    "B"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "B"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 10,
+    "ucret": 1960,
+    "toplam": 19600
+   },
+   "toplam": 19600
+  },
+  {
+   "id": "F18",
+   "sayfa": 1,
+   "mevcut": "B-C-D-F-G",
+   "istenen": "A1 Muafiyetli",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "B",
+    "C",
+    "D",
+    "F",
+    "G"
+   ],
+   "mevcutKodlarYorum": [
+    "BE",
+    "C1",
+    "C1E",
+    "CE",
+    "D1",
+    "D1E",
+    "DE"
+   ],
+   "istenenKodlar": [
+    "A1"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": true,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 8,
+    "ucret": 1475,
+    "toplam": 11800
+   },
+   "toplam": 11800
+  },
+  {
+   "id": "F19",
+   "sayfa": 1,
+   "mevcut": "B-C-D-F-G",
+   "istenen": "A1",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "B",
+    "C",
+    "D",
+    "F",
+    "G"
+   ],
+   "mevcutKodlarYorum": [
+    "BE",
+    "C1",
+    "C1E",
+    "CE",
+    "D1",
+    "D1E",
+    "DE"
+   ],
+   "istenenKodlar": [
+    "A1"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 14,
+    "ucret": 1125,
+    "toplam": 15750
+   },
+   "toplam": 15750
+  },
+  {
+   "id": "F20",
+   "sayfa": 1,
+   "mevcut": "E 01.01.2016 ÖNCESİ",
+   "istenen": "A1",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "E"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "A1"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": true,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 14,
+    "ucret": 1125,
+    "toplam": 15750
+   },
+   "toplam": 15750
+  },
+  {
+   "id": "F21",
+   "sayfa": 1,
+   "mevcut": "M",
+   "istenen": "A1",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "M"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "A1"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 14,
+    "ucret": 1125,
+    "toplam": 15750
+   },
+   "toplam": 15750
+  },
+  {
+   "id": "F22",
+   "sayfa": 1,
+   "mevcut": "B1",
+   "istenen": "A1",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "B1"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "A1"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 14,
+    "ucret": 1125,
+    "toplam": 15750
+   },
+   "toplam": 15750
+  },
+  {
+   "id": "F23",
+   "sayfa": 1,
+   "mevcut": "A1 Otomatik",
+   "istenen": "A1 Manuel",
+   "tur": "oto",
+   "mevcutKodlar": [
+    "A1"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "A1"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 9,
+    "ucret": 1750,
+    "toplam": 15750
+   },
+   "toplam": 15750
+  },
+  {
+   "id": "F24",
+   "sayfa": 1,
+   "mevcut": "A1",
+   "istenen": "A2",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "A1"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "A2"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 8,
+    "ucret": 2125,
+    "toplam": 17000
+   },
+   "toplam": 17000
+  },
+  {
+   "id": "F25",
+   "sayfa": 1,
+   "mevcut": "A1 01.01.2016 ÖNCESİ",
+   "istenen": "A2",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "A1"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "A2"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": true,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 8,
+    "ucret": 2125,
+    "toplam": 17000
+   },
+   "toplam": 17000
+  },
+  {
+   "id": "F26",
+   "sayfa": 1,
+   "mevcut": "B-C-D-F-G",
+   "istenen": "A2",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "B",
+    "C",
+    "D",
+    "F",
+    "G"
+   ],
+   "mevcutKodlarYorum": [
+    "BE",
+    "C1",
+    "C1E",
+    "CE",
+    "D1",
+    "D1E",
+    "DE"
+   ],
+   "istenenKodlar": [
+    "A2"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 14,
+    "ucret": 1214.5,
+    "toplam": 17003
+   },
+   "toplam": 17003
+  },
+  {
+   "id": "F27",
+   "sayfa": 1,
+   "mevcut": "E 01.01.2016 ÖNCESİ",
+   "istenen": "A2",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "E"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "A2"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": true,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 14,
+    "ucret": 1214.5,
+    "toplam": 17003
+   },
+   "toplam": 17003
+  },
+  {
+   "id": "F28",
+   "sayfa": 1,
+   "mevcut": "M",
+   "istenen": "A2",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "M"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "A2"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 14,
+    "ucret": 1214.5,
+    "toplam": 17003
+   },
+   "toplam": 17003
+  },
+  {
+   "id": "F29",
+   "sayfa": 1,
+   "mevcut": "B1",
+   "istenen": "A2",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "B1"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "A2"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 14,
+    "ucret": 1214.5,
+    "toplam": 17003
+   },
+   "toplam": 17003
+  },
+  {
+   "id": "F30",
+   "sayfa": 1,
+   "mevcut": "A2 Otomatik",
+   "istenen": "A2 Manuel",
+   "tur": "oto",
+   "mevcutKodlar": [
+    "A2"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "A2"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 9,
+    "ucret": 1889,
+    "toplam": 17001
+   },
+   "toplam": 17001
+  },
+  {
+   "id": "F31",
+   "sayfa": 2,
+   "mevcut": "A1",
+   "istenen": "A",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "A1"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "A"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 8,
+    "ucret": 2450,
+    "toplam": 19600
+   },
+   "toplam": 19600
+  },
+  {
+   "id": "F32",
+   "sayfa": 2,
+   "mevcut": "A1 01.01.2016 ÖNCESİ",
+   "istenen": "A",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "A1"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "A"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": true,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 8,
+    "ucret": 2450,
+    "toplam": 19600
+   },
+   "toplam": 19600
+  },
+  {
+   "id": "F33",
+   "sayfa": 2,
+   "mevcut": "A2",
+   "istenen": "A",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "A2"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "A"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 8,
+    "ucret": 2450,
+    "toplam": 19600
+   },
+   "toplam": 19600
+  },
+  {
+   "id": "F34",
+   "sayfa": 2,
+   "mevcut": "B-C-D-F-G",
+   "istenen": "A",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "B",
+    "C",
+    "D",
+    "F",
+    "G"
+   ],
+   "mevcutKodlarYorum": [
+    "BE",
+    "C1",
+    "C1E",
+    "CE",
+    "D1",
+    "D1E",
+    "DE"
+   ],
+   "istenenKodlar": [
+    "A"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 14,
+    "ucret": 1400,
+    "toplam": 19600
+   },
+   "toplam": 19600
+  },
+  {
+   "id": "F35",
+   "sayfa": 2,
+   "mevcut": "E 01.01.2016 ÖNCESİ",
+   "istenen": "A",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "E"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "A"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": true,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 14,
+    "ucret": 1400,
+    "toplam": 19600
+   },
+   "toplam": 19600
+  },
+  {
+   "id": "F36",
+   "sayfa": 2,
+   "mevcut": "M",
+   "istenen": "A",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "M"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "A"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 14,
+    "ucret": 1400,
+    "toplam": 19600
+   },
+   "toplam": 19600
+  },
+  {
+   "id": "F37",
+   "sayfa": 2,
+   "mevcut": "B1",
+   "istenen": "A",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "B1"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "A"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 14,
+    "ucret": 1400,
+    "toplam": 19600
+   },
+   "toplam": 19600
+  },
+  {
+   "id": "F38",
+   "sayfa": 2,
+   "mevcut": "A Otomatik",
+   "istenen": "A Manuel",
+   "tur": "oto",
+   "mevcutKodlar": [
+    "A"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "A"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 9,
+    "ucret": 2178,
+    "toplam": 19602
+   },
+   "toplam": 19602
+  },
+  {
+   "id": "F39",
+   "sayfa": 2,
+   "mevcut": "M",
+   "istenen": "B1",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "M"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "B1"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 8,
+    "ucret": 2450,
+    "toplam": 19600
+   },
+   "toplam": 19600
+  },
+  {
+   "id": "F40",
+   "sayfa": 2,
+   "mevcut": "A1",
+   "istenen": "B1",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "A1"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "B1"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 8,
+    "ucret": 2450,
+    "toplam": 19600
+   },
+   "toplam": 19600
+  },
+  {
+   "id": "F41",
+   "sayfa": 2,
+   "mevcut": "A1 01.01.2016 ÖNCESİ",
+   "istenen": "B1",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "A1"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "B1"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": true,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 8,
+    "ucret": 2450,
+    "toplam": 19600
+   },
+   "toplam": 19600
+  },
+  {
+   "id": "F42",
+   "sayfa": 2,
+   "mevcut": "A2",
+   "istenen": "B1",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "A2"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "B1"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 8,
+    "ucret": 2450,
+    "toplam": 19600
+   },
+   "toplam": 19600
+  },
+  {
+   "id": "F43",
+   "sayfa": 2,
+   "mevcut": "A",
+   "istenen": "B1",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "A"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "B1"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 8,
+    "ucret": 2450,
+    "toplam": 19600
+   },
+   "toplam": 19600
+  },
+  {
+   "id": "F44",
+   "sayfa": 2,
+   "mevcut": "B1 Otomatik",
+   "istenen": "B1 Manuel",
+   "tur": "oto",
+   "mevcutKodlar": [
+    "B1"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "B1"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 9,
+    "ucret": 2178,
+    "toplam": 19602
+   },
+   "toplam": 19602
+  },
+  {
+   "id": "F45",
+   "sayfa": 2,
+   "mevcut": "B",
+   "istenen": "C1",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "B"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "C1"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 12,
+    "ucret": 2075,
+    "toplam": 24900
+   },
+   "toplam": 24900
+  },
+  {
+   "id": "F46",
+   "sayfa": 2,
+   "mevcut": "B 01.01.2016 ÖNCESİ",
+   "istenen": "C1",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "B"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "C1"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": true,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 7,
+    "ucret": 3557.5,
+    "toplam": 24902.5
+   },
+   "toplam": 24902.5
+  },
+  {
+   "id": "F47",
+   "sayfa": 2,
+   "mevcut": "D1",
+   "istenen": "C1",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "D1"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "C1"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 7,
+    "ucret": 3557.5,
+    "toplam": 24902.5
+   },
+   "toplam": 24902.5
+  },
+  {
+   "id": "F48",
+   "sayfa": 2,
+   "mevcut": "D",
+   "istenen": "C1",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "D"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "C1"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 7,
+    "ucret": 3557.5,
+    "toplam": 24902.5
+   },
+   "toplam": 24902.5
+  },
+  {
+   "id": "F49",
+   "sayfa": 2,
+   "mevcut": "C1 Otomatik",
+   "istenen": "C1 Manuel",
+   "tur": "oto",
+   "mevcutKodlar": [
+    "C1"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "C1"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 7,
+    "ucret": 3557.5,
+    "toplam": 24902.5
+   },
+   "toplam": 24902.5
+  },
+  {
+   "id": "F50",
+   "sayfa": 2,
+   "mevcut": "B",
+   "istenen": "D1",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "B"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "D1"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 9,
+    "ucret": 2767,
+    "toplam": 24903
+   },
+   "toplam": 24903
+  },
+  {
+   "id": "F51",
+   "sayfa": 2,
+   "mevcut": "C1",
+   "istenen": "D1",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "C1"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "D1"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 6,
+    "ucret": 4150,
+    "toplam": 24900
+   },
+   "toplam": 24900
+  },
+  {
+   "id": "F52",
+   "sayfa": 2,
+   "mevcut": "C",
+   "istenen": "D1",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "C"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "D1"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 6,
+    "ucret": 4150,
+    "toplam": 24900
+   },
+   "toplam": 24900
+  },
+  {
+   "id": "F53",
+   "sayfa": 2,
+   "mevcut": "D1 Otomatik",
+   "istenen": "D1 Manuel",
+   "tur": "oto",
+   "mevcutKodlar": [
+    "D1"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "D1"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 6,
+    "ucret": 4150,
+    "toplam": 24900
+   },
+   "toplam": 24900
+  },
+  {
+   "id": "F54",
+   "sayfa": 2,
+   "mevcut": "B",
+   "istenen": "C",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "B"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "C"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 22,
+    "ucret": 1318.18,
+    "toplam": 29000
+   },
+   "toplam": 29000
+  },
+  {
+   "id": "F55",
+   "sayfa": 2,
+   "mevcut": "B 01.01.2016 ÖNCESİ",
+   "istenen": "C",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "B"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "C"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": true,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 16,
+    "ucret": 1812.5,
+    "toplam": 29000
+   },
+   "toplam": 29000
+  },
+  {
+   "id": "F56",
+   "sayfa": 2,
+   "mevcut": "C1",
+   "istenen": "C",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "C1"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "C"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 12,
+    "ucret": 2416.67,
+    "toplam": 29000
+   },
+   "toplam": 29000
+  },
+  {
+   "id": "F57",
+   "sayfa": 2,
+   "mevcut": "D1",
+   "istenen": "C",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "D1"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "C"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 16,
+    "ucret": 1812.5,
+    "toplam": 29000
+   },
+   "toplam": 29000
+  },
+  {
+   "id": "F58",
+   "sayfa": 2,
+   "mevcut": "D",
+   "istenen": "C",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "D"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "C"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 12,
+    "ucret": 2416.67,
+    "toplam": 29000
+   },
+   "toplam": 29000
+  },
+  {
+   "id": "F59",
+   "sayfa": 2,
+   "mevcut": "C Otomatik",
+   "istenen": "C Manuel",
+   "tur": "oto",
+   "mevcutKodlar": [
+    "C"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "C"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 12,
+    "ucret": 2416.67,
+    "toplam": 29000
+   },
+   "toplam": 29000
+  },
+  {
+   "id": "F60",
+   "sayfa": 2,
+   "mevcut": "F-B-C1-C-D1-D",
+   "istenen": "BE-C1E-CE-D1E-DE RÖMORK",
+   "tur": "romork",
+   "mevcutKodlar": [
+    "F",
+    "B",
+    "C1",
+    "C",
+    "D1",
+    "D"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "BE",
+    "C1E",
+    "CE",
+    "D1E",
+    "DE"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 8,
+    "ucret": 3250,
+    "toplam": 26000
+   },
+   "toplam": 26000
+  },
+  {
+   "id": "F61",
+   "sayfa": 3,
+   "mevcut": "B",
+   "istenen": "D",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "B"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "D"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 16,
+    "ucret": 1625,
+    "toplam": 26000
+   },
+   "toplam": 26000
+  },
+  {
+   "id": "F62",
+   "sayfa": 3,
+   "mevcut": "B 01.01.2016 ÖNCESİ",
+   "istenen": "D",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "B"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "D"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": true,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 9,
+    "ucret": 2888.89,
+    "toplam": 26000
+   },
+   "toplam": 26000
+  },
+  {
+   "id": "F63",
+   "sayfa": 3,
+   "mevcut": "C1",
+   "istenen": "D",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "C1"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "D"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 12,
+    "ucret": 2166.67,
+    "toplam": 26000
+   },
+   "toplam": 26000
+  },
+  {
+   "id": "F64",
+   "sayfa": 3,
+   "mevcut": "C",
+   "istenen": "D",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "C"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "D"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 9,
+    "ucret": 2888.89,
+    "toplam": 26000
+   },
+   "toplam": 26000
+  },
+  {
+   "id": "F65",
+   "sayfa": 3,
+   "mevcut": "D1",
+   "istenen": "D",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "D1"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "D"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 9,
+    "ucret": 2888.89,
+    "toplam": 26000
+   },
+   "toplam": 26000
+  },
+  {
+   "id": "F66",
+   "sayfa": 3,
+   "mevcut": "D Otomatik",
+   "istenen": "D Manuel",
+   "tur": "oto",
+   "mevcutKodlar": [
+    "D"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "D"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 9,
+    "ucret": 2888.89,
+    "toplam": 26000
+   },
+   "toplam": 26000
+  },
+  {
+   "id": "F67",
+   "sayfa": 3,
+   "mevcut": "G",
+   "istenen": "F",
+   "tur": "fark",
+   "mevcutKodlar": [
+    "G"
+   ],
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [
+    "F"
+   ],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 14,
+    "ucret": 1300,
+    "toplam": 18200
+   },
+   "toplam": 18200
+  },
+  {
+   "id": "F68",
+   "sayfa": 3,
+   "mevcut": "Tüm sertifika sınıfları için",
+   "istenen": "İlave direksiyon ders saat ücreti",
+   "tur": "ilave",
+   "mevcutKodlar": null,
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 1,
+    "ucret": 1750,
+    "toplam": 1750
+   },
+   "toplam": 1750
+  },
+  {
+   "id": "F69",
+   "sayfa": 3,
+   "mevcut": "Sürücü belgelilere",
+   "istenen": "Özel direksiyon eğitimi",
+   "tur": "ozel",
+   "mevcutKodlar": null,
+   "mevcutKodlarYorum": [],
+   "istenenKodlar": [],
+   "istenenKodlarYorum": [],
+   "eskiBelge": false,
+   "a1Muafiyetli": false,
+   "teorik": null,
+   "direksiyon": {
+    "saat": 1,
+    "ucret": 1750,
+    "toplam": 1750
+   },
+   "toplam": 1750
+  }
+ ],
+ "notlar": [
+  {
+   "no": 1,
+   "konu": "kdv",
+   "metin": "Yukarıda belirtilen ücretlere KDV dahildir. KDV oranında yapılacak değişiklikler için gerek duyulursa komisyon tekrar toplanarak karar verebilir veya liste güncellenerek kurumlara bildirilir."
+  },
+  {
+   "no": 2,
+   "konu": "saat",
+   "metin": "Yukarıda belirtilen ders saatlerinde yönetmelik gereği olabilecek değişikliklerde gerek duyulması halinde ders saat ücretlerinin yeniden belirlenmesi için komisyon tekrar toplanarak karar verebilir veya liste güncellenerek kurumlara bildirilir."
+  },
+  {
+   "no": 3,
+   "konu": "otomatik",
+   "metin": "Yukarıda otomatik veya manuel olarak özellikle belirtilenler dışındaki sertifika sınıfları için belirlenen ücretler, aynı sertifika sınıfına ait otomatik veya manuel seçenekleri fark etmeksizin uygulanacak belirlenen ücretlerdir."
+  },
+  {
+   "no": 4,
+   "konu": "ekUcret",
+   "metin": "Eğitim materyalleri de dahil olmak üzere kursiyerlerden kurs ücretleri dışında hiçbir isim altında ücret talep edilemez."
+  },
+  {
+   "no": 5,
+   "konu": "masraf",
+   "metin": "Teorik ve direksiyon sınav ücretleri, kursiyerin kayıt belgeleri ile ilgili masrafları, sürücü belgesi harcı ve kart ücreti vb. masrafları kursiyerin kendisine ait olup, kurs ücretlerine dahil edilerek veya ilave edilerek uygulanamaz."
+  },
+  {
+   "no": 6,
+   "konu": "kampanya",
+   "metin": "Promosyon, ödül, hediye, başarı ödülü, takdir ödülü, kardeş indirimi, arkadaş indirimi, toplu kayıt indirimi vb. hiçbir isim altında kampanya düzenlenemez."
+  },
+  {
+   "no": 7,
+   "konu": "burs",
+   "metin": "Özel Öğretim Kurumları Yönetmeliği’nin 62. ve 63. maddeleri kapsamında kurumca bursluluk sınavı düzenlenmesi durumunda dahi, maliyet ders saat ücretleri belirlendiğinden dolayı yukarıdaki ücretlerin altında burs verilemez. Aykırı hareket eden kurumlar hakkında MTSK Yönetmeliği’nin 43. maddesi (4.) fıkrası gereği uygulanır."
+  },
+  {
+   "no": 8,
+   "konu": "kayitYeri",
+   "metin": "MTSK Yönetmeliği’nin 12. maddesinin (1.) fıkrası gereği, kursiyer kayıt iş ve işlemleri kurs merkezinde ve kurs müdürünün gözetiminde yapılır. Kurs merkezi dışında ve kurs müdürünün gözetiminden yoksun yapılacak kursiyer kaydı ile ilgili her türlü iş ve işlemlerin tespiti durumunda, tespiti yapılan kuruma MTSK Yönetmeliği’nin 43. maddesi (4.) fıkrası gereği uygulanır."
+  },
+  {
+   "no": 9,
+   "konu": "gecerlilik",
+   "metin": "İş bu 2026 yılı Şubat kurs döneminden geçerli olmak üzere 2026 yılı tüm kurs dönemleri ve 2027 yılı Ocak ayı kurs dönemleri için uygulanmak üzere belirlenen eğitim maliyet tablosu ve notlarına aykırı davranan kurumlar hakkında MTSK Yönetmeliği’nin 43. maddesi (4.) fıkrası gereği uygulanır."
+  }
+ ]
+}

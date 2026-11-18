@@ -18,14 +18,33 @@
 const IZINLI = ['https://mdsinyal.com', 'http://localhost:4481', 'http://127.0.0.1:4481'];
 const HEDEF = /^(https:\/\/mdsinyal\.com\/|https:\/\/servetskr\.github\.io\/sinyal\/|http:\/\/localhost:4481\/)/;
 const kucuk = s => String(s || '').toLocaleLowerCase('tr');
+// Demo kursun sınıfları (uygulamadaki örnek kursla aynı ücretler; hepsi Eskişehir 2026 il taban fiyatının üstünde, KDV dahil).
+// [ad, ücret, teorik saat, direksiyon dersi, sorudaki kelimeler, ek not]. C: B belgesiyle (listede ilk kez belge satırı yok; B → C 22 ders, teorik yok).
+const DEMO_SINIF = [
+  ['B manuel (otomobil)', '24.000 TL', 34, 16, /manuel|otomobil|araba|\bb\b/],
+  ['B otomatik', '26.500 TL', 34, 16, /otomatik/],
+  ['B Engelli', '24.000 TL', 34, 16, /engelli|engel durum|aparatl/, 'Eğitim, sağlık raporunuzdaki şartlara uygun araçla verilir; raporunuzu kayıt görüşmesinde yetkilimiz değerlendirir.'],
+  ['A2 motosiklet', '18.500 TL', 34, 14, /motor|motosiklet|\ba2\b/],
+  ['C kamyon (B belgesiyle)', '31.000 TL', 0, 22, /kamyon|\bc\b/, 'B belgesi olanlar içindir; başka bir belgeniz varsa yetkilimiz ücreti ayrıca söyler.'],
+  ['100 ceza puanı eğitimi', '10.500 TL', 34, 0, /ceza puan|100 ceza|el kon|geri al[ıi]n/, '100 ceza puanı nedeniyle geri alınan sürücü belgesi için yalnız teorik eğitimdir; derslerin tamamına devam gerekir.'],
+];
+const KDV = ' (KDV dahil)';
+// İl taban fiyat listesi notu 6: hiçbir ad altında indirim ve kampanya yapılamaz (demo kurs Eskişehir'de)
+const INDIRIM = /indirim|kampanya|promosyon|hediye|toplu kay[ıi]t|pazarl[ıi]k|son fiyat|daha ucuz|(kardeş|kardes|arkadaş|arkadas)\S*\s+(gel|kay|beraber|birlikte)/;
+const INDIRIM_CEVAP = 'İl taban fiyat listesi gereği öğrenci, kardeş, arkadaş, toplu kayıt dahil hiçbir ad altında indirim ve kampanya yapılamıyor; ücretlerimiz il taban fiyatına uygundur.';
+const egitimMetni = s => s[2] && s[3] ? `${s[2]} saat teorik ders ve ${s[3]} direksiyon dersi` : s[3] ? `${s[3]} direksiyon dersi (teorik ders yok)` : `${s[2]} saat teorik ders (direksiyon yok)`;
+const ucretListesi = (ayrac = '\n') => DEMO_SINIF.map((s, i) => `${i + 1}. ${s[0]} · ${s[1]}`).join(ayrac);
 const ASISTAN = [
-  [/süre|sure|kaç gün|kac gun|kaç ay|kac ay|kaç hafta|kac hafta|ne kadar sür|ne zaman biter|bitiyor/, 'Kurs yaklaşık 6–8 hafta sürüyor: önce 34 saat teorik ders ve e-sınav, ardından 14 direksiyon dersi ve direksiyon sınavı. Akşam grubuyla çalışırken de rahatça bitirebilirsiniz.', 'Kurs süresi'],
-  [/otomatik/, 'B otomatik kurs ücretimiz 26.500 TL. Peşinattan sonra kalanı 5 aya kadar taksitle ödeyebilirsiniz. Kayıt için kursa uğrayabilir ya da buradan randevu alabilirsiniz.', 'Fiyat · B otomatik'],
-  [/manuel|b sınıf|b sinif|\bb\b|araba|otomobil/, 'B manuel kurs ücretimiz 24.000 TL. Peşinattan sonra kalanı 5 aya kadar taksitle ödeyebilirsiniz. Kayıt için kursa uğrayabilir ya da buradan randevu alabilirsiniz.', 'Fiyat · B manuel'],
-  [/motor|motosiklet|a2/, 'A2 motosiklet kurs ücretimiz 18.500 TL; taksit yapabiliyoruz. Kayıt için kursa uğrayabilir ya da buradan randevu alabilirsiniz.', 'Fiyat · A2'],
-  [/kamyon|c sınıf|c sinif|\bc\b/, 'C kamyon kurs ücretimiz 31.000 TL; taksit yapabiliyoruz. B ehliyetiniz varsa yetkilimiz size ayrıca bilgi verecek.', 'Fiyat · C'],
-  [/fiyat|ücret|ucret|kaç para|kac para|taksit|ne kadar/, 'Kurs ücretlerimiz: B manuel 24.000 TL, B otomatik 26.500 TL, A2 motosiklet 18.500 TL, C kamyon 31.000 TL. Peşinattan sonra 5 aya kadar taksit yapıyoruz. Hangi sınıf için düşünüyorsunuz?', 'Fiyat ve taksit'],
-  [/evrak|belge|rapor|gerekli|neler lazım|ne lazım/, 'Kayıt için kimlik kartı, sürücü sağlık raporu, öğrenim belgesi, adli sicil kaydı ve 2 vesikalık fotoğraf yeterli. Sağlık raporunu aile hekiminizden alabilirsiniz.', 'Evrak'],
+  [INDIRIM, INDIRIM_CEVAP, 'İndirim sorusu · il taban listesi not 6'],
+  [/süre|sure|kaç gün|kac gun|kaç ay|kac ay|kaç hafta|kac hafta|ne kadar sür|ne zaman biter|bitiyor/, 'B sınıfı kurs yaklaşık 6–8 hafta sürüyor: önce 34 saat teorik ders ve e-sınav, ardından 16 direksiyon dersi ve direksiyon sınavı. Akşam grubuyla çalışırken de rahatça bitirebilirsiniz.', 'Kurs süresi'],
+  [/engelli|engel durum|aparatl/, 'B Engelli kurs ücretimiz 24.000 TL' + KDV + '. Eğitim, sağlık raporunuzdaki şartlara uygun araçla verilir; raporunuzu kayıt görüşmesinde yetkilimiz değerlendirir. Kayıt için kursa uğrayabilir ya da buradan randevu alabilirsiniz.', 'Fiyat · B Engelli'],
+  [/ceza puan|100 ceza|el kon|geri al[ıi]n/, '100 ceza puanı eğitimi ücretimiz 10.500 TL' + KDV + '. 100 ceza puanı nedeniyle geri alınan sürücü belgesi için 34 saatlik yalnız teorik eğitimdir; derslerin tamamına devam gerekir. Kayıt için kursa uğrayabilir ya da buradan randevu alabilirsiniz.', 'Fiyat · 100 ceza'],
+  [/kamyon|c sınıf|c sinif|\bc\b/, 'B belgesiyle C kamyon kurs ücretimiz 31.000 TL' + KDV + ', 22 direksiyon dersi; taksit yapabiliyoruz. Başka bir belgeniz varsa yetkilimiz ücreti ayrıca söyler.', 'Fiyat · C'],
+  [/otomatik/, 'B otomatik kurs ücretimiz 26.500 TL' + KDV + '. Peşinattan sonra kalanı 5 aya kadar taksitle ödeyebilirsiniz. Kayıt için kursa uğrayabilir ya da buradan randevu alabilirsiniz.', 'Fiyat · B otomatik'],
+  [/manuel|b sınıf|b sinif|\bb\b|araba|otomobil/, 'B manuel kurs ücretimiz 24.000 TL' + KDV + '. Peşinattan sonra kalanı 5 aya kadar taksitle ödeyebilirsiniz. Kayıt için kursa uğrayabilir ya da buradan randevu alabilirsiniz.', 'Fiyat · B manuel'],
+  [/motor|motosiklet|a2/, 'A2 motosiklet kurs ücretimiz 18.500 TL' + KDV + '; taksit yapabiliyoruz. Kayıt için kursa uğrayabilir ya da buradan randevu alabilirsiniz.', 'Fiyat · A2'],
+  [/fiyat|ücret|ucret|kaç para|kac para|taksit|ne kadar/, 'Kurs ücretlerimiz' + KDV + ': ' + DEMO_SINIF.map(s => `${s[0]} ${s[1]}`).join(', ') + '. Peşinattan sonra 5 aya kadar taksit yapıyoruz. Hangi sınıf için düşünüyorsunuz?', 'Fiyat ve taksit'],
+  [/evrak|belge|rapor|gerekli|neler lazım|ne lazım/, 'Kayıt için kimlik kartı, sürücü sağlık raporu, öğrenim belgesi, adli sicil kaydı ve biyometrik fotoğraf (kursta çekilir, ücret alınmaz) yeterli. Sağlık raporunu aile hekiminizden alabilirsiniz. Belgeleri önceden gönderebilirsiniz; kayıt kurs merkezinde tamamlanır.', 'Evrak'],
   [/saat|ne zaman|başla|basla|grup|kurs günleri|hafta/, 'Teorik dersler hafta içi her akşam 18:30 grubunda, salı ve perşembe 10:00 sabah grubunda yapılıyor. Yeni akşam grubumuz 3 Kasım’da başlıyor.', 'Ders saatleri'],
   [/adres|nerede|nerdesiniz|konum|yer/, 'Odunpazarı / Eskişehir’deyiz. Kayıt görüşmesi için uygun olduğunuz günü yazarsanız saat ayarlayalım.', 'Adres'],
   [/kayıt|kayit|kaydol|yazıl|yazil/, 'Kayıt için Örnek Sürücü Kursu’na uğrayabilirsiniz. Uygun olduğunuz günü yazarsanız saat ayarlayalım.', 'Kayıt'],
@@ -37,16 +56,10 @@ const cevapTuru = m => { const t = kucuk(m).trim(); for (const [r, k] of CEVAP) 
 const asistanCevap = m => { const t = kucuk(m).trim(); if (cevapTuru(t)) return { metin: 'Teşekkürler, cevabınızı aldık ve kursa ilettik.', konu: 'Cevap' }; for (const [r, c, k] of ASISTAN) if (r.test(t)) return { metin: c, konu: k }; return { metin: 'Sorunuzu kurs yetkilimize ilettim, kısa süre içinde size dönecek. Bu arada ücret, evrak ya da ders saatleriyle ilgili sorularınızı hemen cevaplayabilirim.', konu: 'Yetkiliye devredildi', devir: true }; };
 // Demo hattına yazan adayla adım adım sohbet (durum KV'de 1 gün tutulur): kayıt → sınıf → bilgi → link / randevu / aranma
 const KURS_AD = 'Örnek Sürücü Kursu', KURS_ADRES = 'Vişnelik Mah. Atatürk Blv. No:12, Odunpazarı / Eskişehir';
-const DEMO_SINIF = [
-  ['B manuel (otomobil)', '24.000 TL', 34, 14, /manuel|otomobil|araba|\bb\b/],
-  ['B otomatik', '26.500 TL', 34, 14, /otomatik/],
-  ['A2 motosiklet', '18.500 TL', 34, 14, /motor|motosiklet|\ba2\b/],
-  ['C kamyon', '31.000 TL', 34, 20, /kamyon|\bc\b/],
-];
 const MENU = 'Size nasıl yardımcı olabilirim?\n\n1. Kayıt ve ücretler\n2. Gerekli belgeler\n3. Ders saatleri\n4. Adres\n5. Yetkiliyle görüşmek\n\nSeçtiğiniz maddenin rakamını yazmanız yeterli (örneğin 1).';
-const SINIF_MENU = 'Hangi ehliyet sınıfını düşünüyorsunuz?\n\n' + DEMO_SINIF.map((s, i) => `${i + 1}. ${s[0]} · ${s[1]}`).join('\n') + '\n\nSeçtiğiniz sınıfın rakamını yazmanız yeterli (örneğin 1).';
-const sinifBilgi = s => `*${s[0]}*\n\nÜcret: ${s[1]} (peşinattan sonra 5 aya kadar taksit)\nEğitim: ${s[2]} saat teorik ders ve ${s[3]} direksiyon dersi\nSüre: yaklaşık 6–8 hafta\n\nNasıl devam edelim?\n\n1. Kayıt için gerekenleri gönder\n2. Kursa gelip kayıt olmak istiyorum\n3. Yetkili beni arasın\n\nSeçtiğiniz maddenin rakamını yazmanız yeterli.`;
-const BELGE = 'Kayıt için gerekenler:\n\n• Kimlik kartı\n• Sürücü sağlık raporu (aile hekiminizden alabilirsiniz)\n• Öğrenim belgesi\n• Adli sicil kaydı (e-Devlet)\n• 2 vesikalık fotoğraf\n\nBelgelerin fotoğrafını bu numaraya gönderebilirsiniz.';
+const SINIF_MENU = 'Hangi ehliyet sınıfını düşünüyorsunuz? Ücretler KDV dahildir.\n\n' + ucretListesi() + '\n\nSeçtiğiniz sınıfın rakamını yazmanız yeterli (örneğin 1).';
+const sinifBilgi = s => `*${s[0]}*\n\nÜcret: ${s[1]}, KDV dahil (peşinattan sonra 5 aya kadar taksit)\nEğitim: ${egitimMetni(s)}${s[5] ? '\n' + s[5] : ''}\nSüre: ${s[3] ? 'yaklaşık 6–8 hafta' : 'teorik grubun programı kadar'}\n\nNasıl devam edelim?\n\n1. Kayıt için gerekenleri gönder\n2. Kursa gelip kayıt olmak istiyorum\n3. Yetkili beni arasın\n\nSeçtiğiniz maddenin rakamını yazmanız yeterli.`;
+const BELGE = 'Kayıt için gerekenler:\n\n• Kimlik kartı\n• Sürücü sağlık raporu (aile hekiminizden alabilirsiniz)\n• Öğrenim belgesi\n• Adli sicil kaydı (e-Devlet)\n• Biyometrik fotoğraf (kursta çekilir, ücret alınmaz)\n\nBelgelerin fotoğrafını önceden bu numaraya gönderebilirsiniz; kayıt kurs merkezinde tamamlanır.';
 const SAAT = 'Teorik dersler:\n\n• Akşam grubu: hafta içi her akşam 18:30\n• Sabah grubu: salı ve perşembe 10:00\n\nYeni akşam grubumuz yakında başlıyor; kontenjan sınırlı.';
 const ADRES = `Adresimiz: ${KURS_ADRES}\n\nGelmeden önce yazarsanız sizi bekleriz.`;
 // Kayıtlı öğrencinin ders değişikliği: asistan isteği tanır, kursun uygulaması uygun saatleri hesaplayıp gönderir (POST / + sohbetDurum),
@@ -78,17 +91,19 @@ async function sohbet(env, kimden, metin) {
   const anahtar = 'sohbet:' + rakam(kimden); let d = {};
   try { d = JSON.parse((await env.LINK.get(anahtar)) || '{}'); } catch (x) { d = {}; }
   const t = kucuk(metin).trim(), no = (t.match(/^([1-9])\s*[.)]?$/) || [])[1], selam = /^(merhaba|selam|slm|mrb|iyi günler|iyi akşamlar|günaydın)/.test(t);
-  const sinifBul = () => DEMO_SINIF.findIndex(s => s[4].test(t));
+  // ek notu olan sınıflar (B Engelli, C, 100 ceza) önce: "engelli otomatik" B Engelli, "B'm var C" C sayılır
+  const sinifBul = () => { const l = DEMO_SINIF.map((s, i) => i).sort((a, b) => !!DEMO_SINIF[b][5] - !!DEMO_SINIF[a][5]); const i = l.find(i => DEMO_SINIF[i][4].test(t)); return i === undefined ? -1 : i; };
   let c = null;
   if (d.adim === 'sinif' && ((no && DEMO_SINIF[no - 1]) || sinifBul() >= 0)) { const i = no ? +no - 1 : sinifBul(); c = { metin: sinifBilgi(DEMO_SINIF[i]), konu: 'Kayıt · ' + DEMO_SINIF[i][0], d: { adim: 'devam', sinif: i } }; }
-  else if (d.adim === 'devam' && no === '1') c = { metin: BELGE + '\n\nKayıt kurs ofisinde yapılır. Gelmek istediğiniz günü belirlemek için 2, yetkilimizin aramasını isterseniz 3 yazın.', konu: 'Kayıt · evrak gönderildi', d: { adim: 'devam', sinif: d.sinif } };
+  else if (d.adim === 'devam' && no === '1') c = { metin: BELGE + '\n\nKayıt kurs merkezinde, müdür gözetiminde tamamlanır; sözleşme orada imzalanır. Gelmek istediğiniz günü belirlemek için 2, yetkilimizin aramasını isterseniz 3 yazın.', konu: 'Kayıt · evrak gönderildi', d: { adim: 'devam', sinif: d.sinif } };
   else if (d.adim === 'devam' && no === '2') c = { metin: `Memnuniyetle bekleriz. Hangi gün ve saat size uygun? Yazdığınız zamanı yetkilimize iletip size onaylatacağım.\n\n${ADRES}`, konu: 'Kayıt · randevu', d: { adim: 'randevu' } };
   else if ((d.adim === 'devam' && no === '3') || (d.adim === 'menu' && no === '5') || /yetkili|ara(y[ıi]n|s[ıi]n)|telefon edin|biri arasın/.test(t)) c = { metin: 'Talebinizi yetkilimize ilettim; en kısa sürede sizi bu numaradan arayacak. Uygun olmadığınız saat varsa yazabilirsiniz.', konu: 'Aranma talebi', devir: true, d: {} };
   else if (d.adim === 'randevu' && !no) c = { metin: `Teşekkürler. "${String(metin).trim().slice(0, 60)}" talebinizi yetkilimize ilettim; onaylayınca size buradan yazacağız.`, konu: 'Kayıt · randevu talebi', devir: true, d: {} };
   else if (d.adim === 'menu' && no) c = { '1': { metin: SINIF_MENU, konu: 'Kayıt', d: { adim: 'sinif' } }, '2': { metin: BELGE, konu: 'Evrak', d: { adim: 'menu' } }, '3': { metin: SAAT, konu: 'Ders saatleri', d: { adim: 'menu' } }, '4': { metin: ADRES, konu: 'Adres', d: { adim: 'menu' } } }[no] || null;
+  else if (INDIRIM.test(t)) c = { metin: INDIRIM_CEVAP, konu: 'İndirim sorusu · il taban listesi not 6', d: { adim: 'menu' } };
   else if (/kay[ıi]t|kaydol|yaz[ıi]l|ehliyet al|ba[şs]vur/.test(t)) c = { metin: `${selam ? 'Merhaba, ' : ''}${KURS_AD}’na hoş geldiniz. Kayıt düşünmenize çok sevindik.\n\n${SINIF_MENU}`, konu: 'Kayıt', d: { adim: 'sinif' } };
   else if (sinifBul() >= 0 && /fiyat|ücret|ucret|ka[çc]|ne kadar|bilgi/.test(t)) { const i = sinifBul(); c = { metin: sinifBilgi(DEMO_SINIF[i]), konu: 'Fiyat · ' + DEMO_SINIF[i][0], d: { adim: 'devam', sinif: i } }; }
-  else if (/fiyat|ücret|ucret|kaç para|kac para|taksit|ne kadar/.test(t)) c = { metin: 'Kurs ücretlerimiz:\n\n' + DEMO_SINIF.map((s, i) => `${i + 1}. ${s[0]} · ${s[1]}`).join('\n') + '\n\nPeşinattan sonra 5 aya kadar taksit yapıyoruz. Hangi sınıfı düşünüyorsanız rakamını yazın (örneğin 1), ayrıntıları göndereyim.', konu: 'Fiyat ve taksit', d: { adim: 'sinif' } };
+  else if (/fiyat|ücret|ucret|kaç para|kac para|taksit|ne kadar/.test(t)) c = { metin: 'Kurs ücretlerimiz (KDV dahil):\n\n' + ucretListesi() + '\n\nPeşinattan sonra 5 aya kadar taksit yapıyoruz. İl taban fiyat listesi gereği indirim ve kampanya yapılmaz. Hangi sınıfı düşünüyorsanız rakamını yazın (örneğin 1), ayrıntıları göndereyim.', konu: 'Fiyat ve taksit', d: { adim: 'sinif' } };
   else if (/evrak|belge|rapor|gerekli|neler lazım|ne lazım/.test(t)) c = { metin: BELGE, konu: 'Evrak', d: { adim: 'menu' } };
   else if (/saat|ne zaman|başla|basla|grup|kurs günleri/.test(t)) c = { metin: SAAT, konu: 'Ders saatleri', d: { adim: 'menu' } };
   else if (/adres|nerede|nerdesiniz|konum/.test(t)) c = { metin: ADRES, konu: 'Adres', d: { adim: 'menu' } };
@@ -1283,7 +1298,7 @@ export default {
       const metin = m.type === 'text' ? m.text.body : (m[m.type] && m[m.type].caption) || (m.type === 'image' ? '(fotoğraf)' : m.type === 'document' ? '(belge)' : '(' + m.type + ')');
       const demoKurs = env.LINK && !medya && m.type === 'text' ? await env.LINK.get('hatno:' + env.PHONE_ID) : null;
       const da = env.LINK && !medya && m.type === 'text' ? await dersAkisi(env, demoKurs, m.from, metin) : null;
-      const c = medya ? { metin: 'Belgenizi aldık, teşekkürler. Kurs kontrol edip kaydınıza işleyecek; eksik ya da okunmuyorsa size yazacağız.', konu: 'Evrak' } : da ? da : env.LINK ? await sohbet(env, m.from, metin) : asistanCevap(metin);
+      const c = medya ? { metin: 'Belgenizi aldık, teşekkürler. Kurs kontrol edip kaydınıza işleyecek; eksik ya da okunmuyorsa size yazacağız. Kayıt kurs merkezinde tamamlanır.', konu: 'Evrak' } : da ? da : env.LINK ? await sohbet(env, m.from, metin) : asistanCevap(metin);
       if (da && da.kurs) await kursaDusur(env, da.kurs, m, v, metin, da).catch(() => {});
       const ust = '';  // asistan cevabı yazan kişiye gider; etiket gerekmez
       const yaz = body => fetch(G + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + env.WA_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });

@@ -1,7 +1,7 @@
 // MEBBİS dönem grupları. MEBBİS'teki "Dönem Grup Açılış Tarihi" ve "Grup Şube Tanımlama" ekranlarıyla birebir:
 // dönem YYYYAA, grup 1–3 (her grubun tek başlangıç tarihi, ayın 1'i ile 10'u arası), şube A–H. Ad: "Kasım 1A".
 // Kursiyer kaydı grubun başlangıcından önce yapılır (MTSK Yönetmeliği 12/2); evrakı tamam ve gruba atanmış kursiyer aktiftir.
-import { S, kaydet, gun, fark, iso, SINIFLAR, tamAd, islem, eksikEvrak, sb } from './veri.js?v=234';
+import { S, kaydet, gun, fark, iso, SINIFLAR, tamAd, islem, eksikEvrak, sb, anaSinif } from './veri.js?v=234';
 import { e, pencere, kapatPencere, bildir, rozet, tarih, isaret, ik } from './ui.js?v=234';
 import * as KR from './kurallar.js?v=234';
 
@@ -47,13 +47,13 @@ export function aktifEt(k) {
 /* ---------- seçenekler ---------- */
 // Kayıtta seçilebilecek gruplar: başlamamış (kayıt başlangıçtan önce) ve sınıfa uygun (grup sınıfa ayrılmışsa)
 export function kayitGruplari(sinif) {
-  return (S.gruplar || []).filter(g => g.baslangic && fark(g.baslangic) >= 0 && (!g.sinif || !sinif || g.sinif === sinif || g.sinif === String(sinif).replace('-O', '')))
+  return (S.gruplar || []).filter(g => g.baslangic && fark(g.baslangic) >= 0 && (!g.sinif || !sinif || g.sinif === sinif || g.sinif === anaSinif(String(sinif))))
     .sort((a, b) => a.baslangic.localeCompare(b.baslangic) || String(a.ad).localeCompare(String(b.ad), 'tr'));
 }
 // Var olan kursiyeri atarken: son 4 ay ve sonrası (MEBBİS'te zaten o grupta olan eski kursiyerler de eşlenebilsin)
 function atanabilirGruplar(sinif) {
   const sinir = iso(new Date(Date.now() - 120 * 864e5));
-  return (S.gruplar || []).filter(g => !g.baslangic || g.baslangic >= sinir).filter(g => !g.sinif || !sinif || g.sinif === sinif || g.sinif === String(sinif).replace('-O', ''))
+  return (S.gruplar || []).filter(g => !g.baslangic || g.baslangic >= sinir).filter(g => !g.sinif || !sinif || g.sinif === sinif || g.sinif === anaSinif(String(sinif)))
     .sort((a, b) => String(b.baslangic).localeCompare(String(a.baslangic)));
 }
 export const grupSecenekleri = (l, secili) => l.map(g => `<option value="${e(g.id)}" ${g.id === secili ? 'selected' : ''}>${e(grupMetni(g))}</option>`).join('');
@@ -157,7 +157,7 @@ export function grupAtaPencere(k, sonra) {
 }
 // Grup kartından toplu atama: gruba uygun, grubu olmayan ya da bekleyen kursiyerler
 export function topluAtaPencere(g, sonra) {
-  const aday = sb(S.kursiyerler).filter(k => !k.kapali && k.teorikGrup !== g.id && (!kursiyerGrubu(k) || bekleyenMi(k)) && ['Kayıt', 'Evrak', 'Teorik'].includes(k.asama) && (!g.sinif || k.sinif === g.sinif || k.sinif.replace('-O', '') === g.sinif))
+  const aday = sb(S.kursiyerler).filter(k => !k.kapali && k.teorikGrup !== g.id && (!kursiyerGrubu(k) || bekleyenMi(k)) && ['Kayıt', 'Evrak', 'Teorik'].includes(k.asama) && (!g.sinif || k.sinif === g.sinif || anaSinif(k.sinif) === g.sinif))
     .sort((a, b) => String(b.kayit).localeCompare(String(a.kayit)));
   pencere({
     baslik: g.ad + ' · kursiyer ata',

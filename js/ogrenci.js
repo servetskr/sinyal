@@ -1,6 +1,8 @@
 // Öğrenci paneli sekmeleri: dersler (yaklaşan + defter + gelişim + teorik konular), sınavlar, ödemeler, belgeler; bölümler açılır kapanır modüller
 import { odemeKodu, ibanlar, ibanBicim, S, kaydet, gun, fark, tarihOku, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen, ogrOzellik, oturum, DERS_TUR_AD, iptalEdilebilir } from './veri.js?v=234';
 import { gerekliDireksiyon, sinavHakSiniri } from './veri.js?v=234';
+import { sinifEtiket, egitimSinifi, teorikVar, ekTur, kursBorcu, resmiMasraflar, kursiyerTaban, tabanListesi, ekDersTabani, ekDersFiyat, uygulamaSinavUcreti, esinavUcreti, motorSinif } from './veri.js?v=234';
+import { satirAdi } from './taban.js?v=234';
 import * as TK from './takvim.js?v=234';
 import { randevuEngeli, engelYazilir } from './risk.js?v=234';
 import { bildirimler } from './sayfalar1.js?v=234';
@@ -18,6 +20,55 @@ export const MUFREDAT = [
 const MEB_TOPLAM = MUFREDAT.reduce((a, x) => a + x[2], 0);
 // Öğrencinin teorik saatleri konulara MEB saat oranında dağılır (yoklama konu bazında tutulmadığı için)
 const konuSaat = k => { const S0 = SINIFLAR[k.sinif], oran = Math.min(1, k.teorik / Math.max(1, S0.teorik)); return MUFREDAT.map(([key, , saat]) => [key, Math.round(saat * oran)]); };
+
+/* ---------- öğrenci ekranlarında ortak: teorik/e-sınav var mı, ders sayacı, ücret metinleri (il taban listesi notları 1, 4, 5, 6) ---------- */
+// Fark, e-sınav muafı, otomatikten manuele ve römork öğrencisinde teorik eğitim ve e-sınav yok; 100 ceza puanı eğitiminde teorik var, sınav yok (MTSK md.16/3)
+export const TEORIKSIZ_METIN = 'Teorik eğitim ve e-sınav yok: yalnız direksiyon eğitimi alıyorsun.';
+export const EGITIM_BITTI_METIN = 'Eğitimin tamamlandı, eğitim belgen kurstan verilir.';
+export const esinavVar = k => teorikVar(k) && !egitimSinifi(k.sinif);
+// Debriyaj çalışması: motosiklet, otomatik ve engelli (otomatik/aparatlı araç) sınıflarında yok
+export const debriyajVar = k => !motorSinif(k.sinif) && !['B-O', 'B-EN'].includes(k.sinif);
+// Direksiyon sayacı: zorunlu sayının üstü ek ders olarak ayrı sayılır (17/16 yerine 16/16 · 1 ek ders)
+export const dirSayac = k => { const g = gerekliDireksiyon(k), n = +k.direksiyon || 0; return { n: g ? Math.min(n, g) : n, g, ek: g ? Math.max(0, n - g) : 0 }; };
+export const dirEkMetin = k => { const x = dirSayac(k); return x.ek ? ` · ${x.ek} ek ders` : ''; };
+// Kurs borcu özeti: resmî masraflar (sınav ücreti, harç, kart) kurs ücretine dahil değil, borca sayılmaz; ayrı gösterilir
+const topla = l => l.reduce((a, x) => a + (+x.tutar || 0), 0);
+export function kursOzet(k) {
+  const res = resmiMasraflar(k), toplam = k.odeme.toplam + ekToplam(k) - topla(res), od = odenen(k) - topla(res.filter(x => x.odendi));
+  return { toplam, odenen: Math.max(0, od), kalan: kursBorcu(k), fazla: Math.max(0, od - toplam), resmi: res, resmiKalan: topla(res.filter(x => !x.odendi)) };
+}
+export const kursEkleri = k => (k.odeme.ekler || []).filter(x => ekTur(x) !== 'resmi');
+export const RESMI_METIN = 'Kurs ücretine dahil değil; sınav ücreti ilgili kuruma senin adına yatırılır.';
+// "Kurs ücreti · B → C": il listesindeki satırı (yoksa sınıf adı)
+export function kursUcretiAdi(k) {
+  let x = null; try { x = kursiyerTaban(k); } catch (er) { }
+  return 'Kurs ücreti · ' + (x && x.satir ? satirAdi(x.satir) : sinifEtiket(k.sinif, k));
+}
+export function odemeNotu() {
+  return tabanListesi()
+    ? 'Tutarlar KDV dahildir. Kurs ücreti dışında, eğitim materyalleri dahil hiçbir ad altında ücret istenemez. Yalnız isteğinle aldığın ilave direksiyon dersi eklenir. Sınav ücretleri, belge masrafları, harç ve kart ücreti senin masrafındır ve kurs ücretine eklenemez.'
+    : 'Tutarlar KDV dahildir. Burada olmayan bir ücret senden istenirse kursa sor. Sınav ücretleri, belge masrafları, harç ve kart ücreti senin masrafındır ve kurs ücretine eklenemez.';
+}
+// Tekrar sınav ücreti (hak sırasına göre; öğrencinin kendi masrafı). x: k.esinav / k.dsinav
+export function tekrarUcret(k, veri, x) {
+  const n = (x && x.hak) || 0, sira = Math.max(2, n + 1);
+  return { etiket: n ? 'Tekrar sınav ücreti' : 'Kalırsan tekrar sınav ücreti', tutar: veri === 'e-Sınav' ? esinavUcreti(sira) : uygulamaSinavUcreti(sira), not: '(senin masrafın, kurs ücretine dahil değil)' };
+}
+// Ek ders teklifi: "2 ders × 1.750 ₺"; birim ücret il tabanının altındaysa kabul düğmesi yerine kursa sorulur
+export function ekDersTeklifBilgi(k) {
+  const t = k.ekDersTeklif; if (!t) return null;
+  const n = +t.n || 0, birim = n ? (+t.tutar || 0) / n : 0, taban = ekDersTabani() || 0, alti = !!taban && birim < taban;
+  return {
+    baslik: `${n} ek ders önerisi`, kabul: !alti,
+    alt: `${n} ders × ${tl(birim)}${n > 1 ? ' = ' + tl(t.tutar) : ''} · ${alti ? 'ücret il taban fiyatının altında; kabul etmeden önce kursa sor' : 'kabul edersen ödeme planına eklenir'}`,
+  };
+}
+// Boş saat teklifi: zorunlu dersi (ve ödenmiş ek dersi) kalan öğrenciye ek ücret yok; kalmayana ilave ders ücreti (indirim yok: liste not 6)
+export function bosSaatUcret(k) {
+  const planli = S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Planlandı').length;
+  if ((+k.direksiyon || 0) + planli < gerekliDireksiyon(k) + (k.ekDersHakki || 0)) return 'Zorunlu derslerinden sayılır, ek ücret yok';
+  return 'İlave direksiyon dersi · ' + tl(Math.max(+ekDersFiyat(k.sinif) || 0, ekDersTabani() || 0));
+}
 
 /* ---------- modül: başlığı hep görünen, dokununca açılan bölüm ---------- */
 // Öğrencinin açtığı/kapattığı bölüm yeniden çizimde öyle kalır (bir işlem yapınca açtığı yer kapanmasın)
@@ -68,7 +119,7 @@ export function degerlendirKart(k) {
 /* ---------- Program ---------- */
 function programOlaylari(k) {
   const l = [];
-  if (['Kayıt', 'Evrak', 'Teorik'].includes(k.asama)) (S.teorik || []).filter(t => t.grup === (k.teorikGrup || 'aksam') && fark(t.tarih) >= 0 && fark(t.tarih) <= 14).forEach(t => { const o = ogretmen(t.ogretmen); l.push({ tarih: t.tarih, saat: t.saat, tur: 'teorik', baslik: 'Teorik · ' + t.konu, alt: [t.salon, t.sure + ' saat', o && o.ad].filter(Boolean).join(' · ') }); });
+  if (teorikVar(k) && ['Kayıt', 'Evrak', 'Teorik'].includes(k.asama)) (S.teorik || []).filter(t => t.grup === (k.teorikGrup || 'aksam') && fark(t.tarih) >= 0 && fark(t.tarih) <= 14).forEach(t => { const o = ogretmen(t.ogretmen); l.push({ tarih: t.tarih, saat: t.saat, tur: 'teorik', baslik: 'Teorik · ' + t.konu, alt: [t.salon, t.sure + ' saat', o && o.ad].filter(Boolean).join(' · ') }); });
   S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Planlandı' && fark(d.tarih) >= 0).forEach(d => { const h = egitmen(d.egitmen), a = d.arac && arac(d.arac); l.push({ id: d.id, iptal: iptalEdilebilir(d), tarih: d.tarih, saat: d.saat, tur: 'direksiyon', baslik: 'Direksiyon dersi', alt: [h && h.ad, a && a.model + ' · ' + a.plaka].filter(Boolean).join(' · ') }); });
   S.sinavlar.filter(s => s.kursiyerler.includes(k.id) && fark(s.tarih) >= 0 && !(s.sonuc || {})[k.id]).forEach(s => l.push({ tarih: s.tarih, saat: s.saat, tur: 'sinav', baslik: sinavAdi(s.tur), alt: s.yer }));
   return l.sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat));
@@ -84,7 +135,7 @@ export function yaklasanHtml(k) {
 // Ders programı: gün / hafta / ay. Teorik dersler, direksiyon dersleri (yapılanlar soluk) ve sınavlar aynı takvimde
 const ogTk = TK.takvimDurum('ogrenci', 'hafta', true);
 function takvimOlaylari(k) {
-  const l = [], teorikDonem = ['Kayıt', 'Evrak', 'Teorik'].includes(k.asama) || (S.teorik || []).some(t => (t.yoklama || []).includes(k.id));
+  const l = [], teorikDonem = (teorikVar(k) && ['Kayıt', 'Evrak', 'Teorik'].includes(k.asama)) || (S.teorik || []).some(t => (t.yoklama || []).includes(k.id));
   if (teorikDonem) (S.teorik || []).filter(t => t.grup === (k.teorikGrup || 'aksam') && t.tarih >= (k.kayit || '')).forEach(t => { const o = ogretmen(t.ogretmen); l.push({ tarih: t.tarih, saat: t.saat, ton: 'teorik', baslik: 'Teorik · ' + t.konu, alt: [t.salon, t.sure + ' saat', o && o.ad].filter(Boolean).join(' · ') }); });
   S.dersler.filter(d => d.kursiyer === k.id && d.durum !== 'İptal' && !(d.durum === 'Planlandı' && fark(d.tarih) < 0)).forEach(d => { const h = egitmen(d.egitmen), a = d.arac && arac(d.arac), plan = d.durum === 'Planlandı';
     l.push({ tarih: d.tarih, saat: d.saat, ton: plan ? 'direksiyon' : d.durum === 'Yapıldı' ? 'yapildi' : 'gelmedi', baslik: (d.tur && d.tur !== 'trafik' ? DERS_TUR_AD[d.tur] : 'Direksiyon dersi') + (plan ? (d.onayBekliyor ? ' · kurs onayı bekleniyor' : '') : d.durum === 'Yapıldı' ? ' · yapıldı' : ' · gelmedin'), alt: [h && h.ad, a && a.plaka].filter(Boolean).join(' · '),
@@ -115,19 +166,20 @@ function beceriOzet(k) {
 const virgul = v => v.toFixed(1).replace('.', ',');
 // Teorik konular (ders içerikleri): Derslerim ve Sınav ekranında aynı bölüm
 export function teorikModul(k, acik = false) {
-  const S0 = SINIFLAR[k.sinif], ks = Object.fromEntries(konuSaat(k));
+  if (egitimSinifi(k.sinif)) return '';  // 100 ceza puanı eğitimi: MTSK müfredat kartı yok
+  const S0 = SINIFLAR[k.sinif], ks = Object.fromEntries(konuSaat(k)), tv = teorikVar(k);
   const okn = key => MUFREDAT.find(x => x[0] === key)[3].filter((b, i) => (k.okunan || {})[key + '-' + (i + 1)]).length;
   const okunan = MUFREDAT.reduce((a, [key]) => a + okn(key), 0), konuTop = MUFREDAT.reduce((a, x) => a + x[3].length, 0);
-  return modul('teorik', { ikon: 'teorik', baslik: 'Teorik dersler ve konular', ozet: `${k.teorik}/${S0.teorik} saat · ${okunan}/${konuTop} konu okundu`, sag: k.teorik >= S0.teorik ? rozet('Bitti', 'yesil') : '', acik },
-    `${MUFREDAT.map(([key, ad, saat, basliklar]) => `<details class="og-konu"><summary><span><b>${e(ad)}</b><small>${ks[key]}/${saat} saat · ${okn(key)}/${basliklar.length} konu okundu</small></span>${ilerleme(ks[key], saat, ks[key] >= saat ? 'yesil' : '')}</summary>
+  return modul('teorik', { ikon: 'teorik', baslik: 'Teorik dersler ve konular', ozet: `${tv ? `${k.teorik}/${S0.teorik} saat · ` : ''}${okunan}/${konuTop} konu okundu`, sag: tv && k.teorik >= S0.teorik ? rozet('Bitti', 'yesil') : '', acik },
+    `${MUFREDAT.map(([key, ad, saat, basliklar]) => `<details class="og-konu"><summary><span><b>${e(ad)}</b><small>${tv ? `${ks[key]}/${saat} saat · ` : ''}${okn(key)}/${basliklar.length} konu okundu</small></span>${tv ? ilerleme(ks[key], saat, ks[key] >= saat ? 'yesil' : '') : ilerleme(okn(key), basliklar.length, okn(key) >= basliklar.length ? 'yesil' : '')}</summary>
       <ul class="og-basliklar">${basliklar.map((b, i) => { const id = key + '-' + (i + 1), ok = (k.okunan || {})[id]; return `<li><button type="button" data-og-ders="${id}" class="${ok ? 'okundu' : ''}"><span>${ok ? '✓' : i + 1}</span>${e(b)}</button></li>`; }).join('')}</ul>
-      <div class="og-konu-dg">${key === 'trafik' && ogrOzellik('tehlike') ? `<button class="dg dg-cizgi dg-kucuk" data-tehlike>${ik('uyari')}Tehlike algısı</button>` : ''}${key === 'motor' ? `${ogrOzellik('ikaz') ? `<button class="dg dg-cizgi dg-kucuk" data-ikaz>${ik('uyari')}İkaz lambaları</button>` : ''}${ogrOzellik('motor') ? '<button class="dg dg-cizgi dg-kucuk" data-motor4>4 zamanlı motor</button><button class="dg dg-cizgi dg-kucuk" data-debriyaj>Debriyaj ve kalkış</button>' : ''}` : ''}<button class="dg dg-ana dg-kucuk" data-test-basla="konu" data-konu="${key}" data-og-sinava>${ik('sinav')}Bu konudan test</button></div></details>`).join('')}
+      <div class="og-konu-dg">${key === 'trafik' && ogrOzellik('tehlike') ? `<button class="dg dg-cizgi dg-kucuk" data-tehlike>${ik('uyari')}Tehlike algısı</button>` : ''}${key === 'motor' ? `${ogrOzellik('ikaz') ? `<button class="dg dg-cizgi dg-kucuk" data-ikaz>${ik('uyari')}İkaz lambaları</button>` : ''}${ogrOzellik('motor') ? '<button class="dg dg-cizgi dg-kucuk" data-motor4>4 zamanlı motor</button>' + (debriyajVar(k) ? '<button class="dg dg-cizgi dg-kucuk" data-debriyaj>Debriyaj ve kalkış</button>' : '') : ''}` : ''}<button class="dg dg-ana dg-kucuk" data-test-basla="konu" data-konu="${key}" data-og-sinava>${ik('sinav')}Bu konudan test</button></div></details>`).join('')}
     <p class="og-not">Konular MEB’in sürücü kursu teorik eğitim programına göredir (toplam ${MEB_TOPLAM} saat).</p>`);
 }
 export function derslerHtml(k) {
   const S0 = SINIFLAR[k.sinif], dir = !!gerekliDireksiyon(k), ks = Object.fromEntries(konuSaat(k)), teorikOnce = ['Kayıt', 'Evrak', 'Teorik'].includes(k.asama);
   const okunan = Object.keys(k.okunan || {}).length, konuTop = MUFREDAT.reduce((a, x) => a + x[3].length, 0);
-  const teorik = `<section class="u-grup og-ogren-bag"><div class="u-liste"><button class="u-satir dokun" data-git="sinav"><span class="u-ik mor">${ik('teorik')}</span><span class="u-satir-govde"><b>Konu anlatımları ve testler</b><small>${okunan}/${konuTop} konu tamamlandı · teorik ${k.teorik}/${S0.teorik} saat</small></span>${ik('sag')}</button></div></section>`;
+  const tv = teorikVar(k), teorik = egitimSinifi(k.sinif) ? '' : `<section class="u-grup og-ogren-bag"><div class="u-liste"><button class="u-satir dokun" data-git="sinav"><span class="u-ik mor">${ik('teorik')}</span><span class="u-satir-govde"><b>Konu anlatımları ve testler</b><small>${okunan}/${konuTop} konu tamamlandı${tv ? ` · teorik ${k.teorik}/${S0.teorik} saat` : ''}</small></span>${ik('sag')}</button></div></section>`;
   if (!dir) return programHtml(k) + teorik;
   const { yapilan, son, once } = beceriOzet(k), notlar = yapilan.filter(d => d.not).slice(-2).reverse();
   const zayif = son.filter(([, v]) => v != null).sort((a, b) => a[1] - b[1])[0];
@@ -137,13 +189,13 @@ export function derslerHtml(k) {
     ${notlar.map(d => `<blockquote class="og-alinti">“${e(d.not)}”<small>${e((egitmen(d.egitmen) || {}).ad || '')} · ${tarih(d.tarih)}</small></blockquote>`).join('')}`) : '';
   const gecmis = S.dersler.filter(d => d.kursiyer === k.id && d.durum !== 'Planlandı').sort((a, b) => (b.tarih + b.saat).localeCompare(a.tarih + a.saat));
   const satir = d => `<li class="og-olay"><div class="og-zaman"><small>${gunK(d.tarih)}</small><b class="mono">${d.saat}</b></div><div class="og-olay-ad"><b>${d.durum === 'Yapıldı' ? 'Ders yapıldı' : e(d.durum)}</b><small>${e((egitmen(d.egitmen) || {}).ad || '')}</small></div>${rozet(d.durum, d.durum === 'Yapıldı' ? 'yesil' : d.durum === 'Gelmedi' ? 'kirmizi' : 'notr')}</li>`;
-  const direksiyon = modul('direksiyon', { ikon: 'direksiyon', baslik: 'Geçmiş direksiyon derslerin', ozet: `${k.direksiyon}/${gerekliDireksiyon(k)} ders yapıldı${gecmis.some(d => d.durum === 'Gelmedi') ? ' · ' + gecmis.filter(d => d.durum === 'Gelmedi').length + ' gelmedi' : ''}`, acik: false },
+  const direksiyon = modul('direksiyon', { ikon: 'direksiyon', baslik: 'Geçmiş direksiyon derslerin', ozet: `${dirSayac(k).n}/${gerekliDireksiyon(k)} ders yapıldı${dirEkMetin(k)}${gecmis.some(d => d.durum === 'Gelmedi') ? ' · ' + gecmis.filter(d => d.durum === 'Gelmedi').length + ' gelmedi' : ''}`, acik: false },
     gecmis.length ? `<ul class="og-olaylar">${gecmis.map(satir).join('')}</ul>` : '<p class="og-bos">Henüz yapılan direksiyon dersin yok.</p>');
   // Ders alınabiliyorsa ana düğme; alınamıyorsa nedeni ve (işe yarıyorsa) kursa yazma yolu
   const engel = k.asama !== 'Ehliyet' ? randevuEngeli(k) : null;
   const al = k.asama === 'Ehliyet' || hakDurum(k) ? '' : !engel ? `<button class="dg dg-ana og-genis" data-iste>${ik('arti')}Direksiyon dersi al</button>`
     : engelYazilir(engel) ? `<div class="og-ders-engel"><span>${e(engel)}</span><button class="dg dg-cizgi" data-kursa-yaz="${/hepsi planlandı/.test(engel) ? 'ek' : 'ders'}">${ik('wp')}Kursa yaz</button></div>` : '';
-  const ilerl = `<div class="og-sayac"><div><small>Direksiyon</small><b>${k.direksiyon}<span>/${gerekliDireksiyon(k)}</span></b>${ilerleme(k.direksiyon, gerekliDireksiyon(k), 'yesil')}</div><div><small>Teorik</small><b>${k.teorik}<span>/${S0.teorik}</span></b>${ilerleme(k.teorik, S0.teorik, 'yesil')}</div></div>`;
+  const ds = dirSayac(k), ilerl = `<div class="og-sayac"><div><small>Direksiyon${ds.ek ? ` · ${ds.ek} ek ders` : ''}</small><b>${ds.n}<span>/${ds.g}</span></b>${ilerleme(ds.n, ds.g, 'yesil')}</div>${tv ? `<div><small>Teorik</small><b>${k.teorik}<span>/${S0.teorik}</span></b>${ilerleme(k.teorik, S0.teorik, 'yesil')}</div>` : ''}</div>${tv ? '' : `<p class="og-not">${TEORIKSIZ_METIN}</p>`}`;
   return ilerl + (teorikOnce ? programHtml(k) + teorik + (ogrOzellik('dersOnay') ? dersDefteri(k) : '') + gelisim + direksiyon
     : al + programHtml(k) + (ogrOzellik('dersOnay') ? dersDefteri(k) : '') + gelisim + direksiyon + teorik);
 }
@@ -164,21 +216,22 @@ function dersDefteri(k) {
 
 /* ---------- Sınavlar ---------- */
 export function sinavlarHtml(k) {
-  const tu = S.kurs.tekrarUcret || {};  // hak sınırı öğrenciye göre (md.15): e-Sınav 4; uygulama ilk 4, ikinci dört hakta 8
-  const kart = (id, tur, x, sonraki, getir, ucret) => {
+  // hak sınırı öğrenciye göre (md.15): e-Sınav 4; uygulama ilk 4, ikinci dört hakta 8. Tekrar ücreti hak sırasına göre, öğrencinin kendi masrafı (liste not 5)
+  const kart = (id, tur, x, sonraki, getir) => {
     if (x && x.sonuc === 'Geçti') return `<div class="og-satir og-satir-tamam"><span class="og-m-ik">${ik('tik')}</span><div><b>${tur}</b><small>Geçtin${x.puan ? ' · ' + x.puan + ' puan' : ''}</small></div>${rozet('Tamam', 'yesil')}</div>`;
-    const veri = tur === 'e-Sınav' ? 'e-Sınav' : 'Direksiyon', hak = sinavHakSiniri(k, veri), kalan = Math.max(0, hak - ((x && x.hak) || 0));
+    const veri = tur === 'e-Sınav' ? 'e-Sınav' : 'Direksiyon', hak = sinavHakSiniri(k, veri), kalan = Math.max(0, hak - ((x && x.hak) || 0)), tk = tekrarUcret(k, veri, x);
     const hd = hakDurum(k), doldu = hd && hd.tur === veri && !sonraki;  // hak doldu: bekleme, randevu ve tekrar ücreti satırları gizli
     if (doldu) return modul(id, { ikon: 'sinav', baslik: tur, ozet: 'Sınav hakkın kalmadı', sag: rozet('Hak doldu', 'uyari'), acik: true },
       `<p class="og-not" style="margin:0 0 10px">${e(hd.metin)}</p><div class="og-satirlar"><div><span>Kalan sınav hakkın</span><b>${kalan} / ${hak}</b></div></div>`);
     return modul(id, { ikon: 'sinav', baslik: tur, ozet: sonraki ? `${gunK(sonraki.tarih)} ${sonraki.saat} · ${e(sonraki.yer)}` : 'Henüz tarih yok', sag: sonraki ? rozet(goreli(sonraki.tarih), 'mavi') : rozet('Bekliyor', 'notr'), acik: !!sonraki && fark(sonraki.tarih) <= 7 },
       `${sonraki ? `<p class="og-yer">${ik('harita')}${e(sonraki.yer)}</p>` : `<p class="og-not" style="margin:0 0 10px">${tur === 'e-Sınav' ? 'Teorik derslerin bitince kurs e-Sınav randevunu alır.' : 'Direksiyon derslerin bitince kurs sınav tarihini bildirir.'}</p>`}
-      <div class="og-satirlar"><div><span>Kalan sınav hakkın</span><b>${kalan} / ${hak}</b></div><div><span>Kalırsan tekrar sınav ücreti</span><b>${ucret ? tl(ucret) : '—'}</b></div></div>
+      <div class="og-satirlar"><div><span>Kalan sınav hakkın</span><b>${kalan} / ${hak}</b></div><div><span>${tk.etiket} <small>${tk.not}</small></span><b>${tk.tutar ? tl(tk.tutar) : '—'}</b></div></div>
       <p class="et" style="margin-top:12px">Yanına al</p><ul class="og-getir">${getir.map(g => `<li>${isaret('tamam', 16)}${e(g)}</li>`).join('')}</ul>`);
   };
   const sonr = tur => S.sinavlar.filter(s => s.tur === tur && s.kursiyerler.includes(k.id) && fark(s.tarih) >= 0 && !(s.sonuc || {})[k.id]).sort((a, b) => a.tarih.localeCompare(b.tarih))[0];
-  return kart('esinav', 'e-Sınav', k.esinav, sonr('e-Sınav'), ['T.C. kimlik kartın (fotokopi geçmez)', 'e-Sınav ücreti dekontu', 'Sınavdan 30 dakika önce sınav merkezinde ol'], tu.esinav)
-    + (gerekliDireksiyon(k) ? kart('dsinav', 'Uygulama sınavı', k.dsinav, sonr('Direksiyon'), ['T.C. kimlik kartın', 'Gözlük ya da lens kullanıyorsan yanında olsun', 'Sınavdan 30 dakika önce sınav yerinde ol'], tu.dsinav) : '');
+  if (egitimSinifi(k.sinif)) return `<p class="og-not">Bu eğitimin sınavı yok. Teorik derslerin tamamına katılınca eğitim belgen kurstan verilir.</p>`;
+  return (esinavVar(k) ? kart('esinav', 'e-Sınav', k.esinav, sonr('e-Sınav'), ['T.C. kimlik kartın (fotokopi geçmez)', 'e-Sınav ücreti dekontu', 'Sınavdan 30 dakika önce sınav merkezinde ol']) : `<p class="og-not">${TEORIKSIZ_METIN}</p>`)
+    + (gerekliDireksiyon(k) ? kart('dsinav', 'Uygulama sınavı', k.dsinav, sonr('Direksiyon'), ['T.C. kimlik kartın', 'Gözlük ya da lens kullanıyorsan yanında olsun', 'Sınavdan 30 dakika önce sınav yerinde ol']) : '');
 }
 // Son deneme uygulama sınavı (öğretmenin resmî formla yaptığı prova)
 export function dirDenemeHtml(k) {
@@ -190,17 +243,19 @@ export function dirDenemeHtml(k) {
 
 /* ---------- Ödemeler ---------- */
 // Hesap dökümü: kurs ücreti, ek kalemler, ödemeler ve iade satır satır, yürüyen bakiyeyle (ek ücret ve iade anlaşmazlıklarını önler)
+// Öğrenciye kurs hesabı gösterilir: resmî masraflar (sınav ücreti, harç, kart) ödemeler bölümünde ayrı; kursa ise hepsi, resmî olanlar işaretli.
 export function dokumTablo(k, ogrenciIcin = true) {
-  const o = k.odeme, l = [[k.kayit, 'Kurs ücreti · ' + SINIFLAR[k.sinif].ad, o.toplam, 0]];
-  (o.ekler || []).forEach(x => l.push([x.tarih || k.kayit, x.ad, x.tutar, 0]));
+  const o = k.odeme, l = [[k.kayit, kursUcretiAdi(k), o.toplam, 0]], resmi = x => ekTur(x) === 'resmi', ekler = (o.ekler || []).filter(x => !ogrenciIcin || !resmi(x));
+  const ekAd = x => x.ad + (!ogrenciIcin && resmi(x) ? ' (resmî masraf, emanet)' : '');
+  ekler.forEach(x => l.push([x.tarih || k.kayit, ekAd(x), x.tutar, 0]));
   if (o.pesin) l.push([o.pesinTarih || k.kayit, 'Peşinat ödendi', 0, o.pesin]);
   o.taksitler.forEach((t, i) => { const ad = t.aciklama || taksitAd(k, i); if (t.odendi) l.push([t.odendi === true ? t.vade : t.odendi, ad + ' ödendi', 0, t.tutar]); else if (t.kismi) l.push([t.vade, ad + ' · kısmi ödeme', 0, t.kismi]); });
-  (o.ekler || []).filter(x => x.odendi).forEach(x => l.push([x.odendi === true ? (x.tarih || k.kayit) : x.odendi, x.ad + ' ödendi', 0, x.tutar]));
+  ekler.filter(x => x.odendi).forEach(x => l.push([x.odendi === true ? (x.tarih || k.kayit) : x.odendi, ekAd(x) + ' ödendi', 0, x.tutar]));
   if (o.iade) l.push([o.iadeTarih || gun(0), 'İade', 0, -o.iade]);
   l.sort((a, b) => String(a[0]).localeCompare(String(b[0])) || (b[2] ? 1 : 0) - (a[2] ? 1 : 0));
   let b = 0;
   return `<div class="tablo-kap"><table class="tablo"><thead><tr><th>Tarih</th><th>Açıklama</th><th style="text-align:right">Borç</th><th style="text-align:right">Ödeme</th><th style="text-align:right">Kalan</th></tr></thead><tbody>${l.map(([t, ad, borc, od]) => { b += borc - od; return `<tr><td class="mono">${tarih(t)}</td><td>${e(ad)}</td><td class="sayi" style="text-align:right">${borc ? tl(borc) : ''}</td><td class="sayi" style="text-align:right;color:var(--yesil)">${od ? tl(od) : ''}</td><td class="sayi" style="text-align:right">${tl(Math.max(0, b))}</td></tr>`; }).join('')}</tbody></table></div>
-    ${ogrenciIcin ? '<p class="og-not">Burada olmayan bir ücret senden istenirse kursa sor. Sınav tekrar ücreti ve ek ders gibi kalemler eklenince bu listede görünür.</p>' : ''}`;
+    ${ogrenciIcin ? `<p class="og-not">${odemeNotu()}</p>` : ''}`;
 }
 export function hesapDokumu(k) {
   return `<details class="kart og-kart"><summary class="og-bas" style="cursor:pointer"><div><small>Hesap dökümün</small><b>Kalem kalem borç ve ödemeler</b></div></summary>${dokumTablo(k)}</details>`;
@@ -208,10 +263,10 @@ export function hesapDokumu(k) {
 export const sonrakiTaksit = k => k.odeme.taksitler.map((t, i) => ({ t, i })).find(x => !x.t.odendi && !x.t.iptal);
 export const taksitAd = (k, i) => { const l = k.odeme.taksitler, t = l[i]; return t.aciklama === 'Peşinat' ? 'Peşinat' : (i + 1 - (l[0] && l[0].aciklama === 'Peşinat' ? 1 : 0)) + '. taksit'; };
 export function odemelerHtml(k) {
-  const toplam = k.odeme.toplam + ekToplam(k), od = odenen(k), kalan = kalanBorc(k), sn = sonrakiTaksit(k);
+  const oz = kursOzet(k), toplam = oz.toplam, od = oz.odenen, kalan = oz.kalan, sn = sonrakiTaksit(k);
   const makbuzlar = S.hareket.filter(h => h.kursiyer === k.id && h.tur === 'Gelir').sort((a, b) => b.tarih.localeCompare(a.tarih));
   const gec = sn && fark(sn.t.vade) < 0;
-  const fazla = Math.max(0, od - toplam);  // fazla ödeme 0 görünmesin (denetim): kursa iade ya da sonraki kaleme sayılması için sorulur
+  const fazla = oz.fazla;  // fazla ödeme 0 görünmesin (denetim): kursa iade ya da sonraki kaleme sayılması için sorulur
   return `<section class="kart og-kart og-para"><small>Kalan borcun</small><b class="og-para-tutar sayi ${kalan ? '' : 'tamam'}">${tl(kalan)}</b>${ilerleme(od, toplam, 'yesil')}
       <div class="og-para-alt"><span>Ödenen <b class="sayi">${tl(od)}</b></span><span>Toplam <b class="sayi">${tl(toplam)}</b></span></div>
       ${fazla ? `<p class="og-not" style="margin-top:8px">Fazla ödemen var: <b class="sayi">${tl(fazla)}</b>. İade ya da sonraki ücrete sayılması için kursuna sor.</p>` : ''}
@@ -220,7 +275,11 @@ export function odemelerHtml(k) {
       <div class="og-taksitler">
       ${k.odeme.pesin ? `<div class="og-taksit odendi"><span class="no">P</span><div><b>Peşinat</b><small>${tarih(k.odeme.pesinTarih)}</small></div><span class="sayi">${tl(k.odeme.pesin)}</span><span class="og-durum">${ik('tik')}</span></div>` : ''}
       ${k.odeme.taksitler.map((t, i) => { const g = !t.odendi && !t.iptal && fark(t.vade) < 0; return `<div class="og-taksit ${t.odendi ? 'odendi' : t.iptal ? 'iptal' : g ? 'gecikti' : ''}"><span class="no">${t.aciklama === 'Peşinat' ? 'P' : taksitAd(k, i).split('.')[0]}</span><div><b>${taksitAd(k, i)}</b><small>Vade ${tarih(t.vade)}${g ? ' · gecikti' : ''}${t.kismi ? ' · ' + tl(t.kismi) + ' ödendi' : ''}</small></div><span class="sayi">${tl(t.tutar)}</span>${t.odendi ? `<span class="og-durum">${ik('tik')}</span>` : t.iptal ? rozet('İptal', 'notr') : `<button class="dg dg-cizgi dg-kucuk" data-ode="${i}">Öde</button>`}</div>`; }).join('')}
-      ${(k.odeme.ekler || []).map(x => `<div class="og-taksit ${x.odendi ? 'odendi' : ''}"><span class="no">+</span><div><b>${e(x.ad)}</b><small>Ek kalem</small></div><span class="sayi">${tl(x.tutar)}</span>${x.odendi ? `<span class="og-durum">${ik('tik')}</span>` : rozet('Kursta', 'sari')}</div>`).join('')}</div></section>
+      ${kursEkleri(k).map(x => `<div class="og-taksit ${x.odendi ? 'odendi' : ''}"><span class="no">+</span><div><b>${e(x.ad)}</b><small>${ekTur(x) === 'ders' ? 'İlave ders' : 'Ek kalem'}</small></div><span class="sayi">${tl(x.tutar)}</span>${x.odendi ? `<span class="og-durum">${ik('tik')}</span>` : rozet('Kursta', 'sari')}</div>`).join('')}</div>
+      <p class="og-not" style="margin-top:8px">Tutarlar KDV dahildir.</p></section>
+    ${oz.resmi.length ? `<section class="kart og-kart"><div class="og-bas"><div><small>Resmî masrafların</small><b>${oz.resmiKalan ? tl(oz.resmiKalan) + ' ödenecek' : 'Ödendi'}</b></div></div>
+      <div class="og-taksitler">${oz.resmi.map(x => `<div class="og-taksit ${x.odendi ? 'odendi' : ''}"><span class="no">₺</span><div><b>${e(x.ad)}</b><small>Senin masrafın</small></div><span class="sayi">${tl(x.tutar)}</span>${x.odendi ? `<span class="og-durum">${ik('tik')}</span>` : rozet('Bekliyor', 'notr')}</div>`).join('')}</div>
+      <p class="og-not" style="margin-top:8px">${RESMI_METIN}</p></section>` : ''}
     ${ibanlar().length ? `<section class="kart og-kart og-iban-kart">${ibanlar().map(h => `<div class="og-bas"><div><small>${e(h.ad || 'Havale / EFT')} · ${e([h.banka, h.alici || S.kurs.ad].filter(Boolean).join(' · '))}</small><b class="mono og-iban">${e(ibanBicim(h.iban))}</b>${h.not ? `<small>${e(h.not)}</small>` : ''}</div><button class="dg dg-cizgi dg-kucuk" data-og-iban="${e(h.iban)}">Kopyala</button></div>`).join('')}<p class="og-not">Açıklamaya ödeme kodunu yaz: <b class="mono">${e(odemeKodu(k))}</b> <button class="dg dg-hafif dg-kucuk" data-og-kod="${e(odemeKodu(k))}">Kodu kopyala</button><br>Başkası yatırsa da kod sayesinde ödemenin sana ait olduğu anlaşılır. Ödemen kursa ulaşınca makbuzun burada görünür.</p></section>` : ''}
     ${modul('makbuz', { ikon: 'belge', baslik: 'Makbuzların', ozet: makbuzlar.length ? makbuzlar.length + ' ödeme · son ' + tarih(makbuzlar[0].tarih) : 'Henüz ödeme yok' },
       makbuzlar.length ? `<ul class="og-defter">${makbuzlar.map(h => `<li class="og-defter-satir"><div style="flex:1;min-width:0"><b class="sayi">${tl(h.tutar)}</b><small>${tarih(h.tarih)} · ${e(h.yontem || '')}${h.no ? ' · ' + e(h.no) : ''}</small></div><button class="dg dg-hafif dg-kucuk" data-og-makbuz="${h.id}">Makbuz</button></li>`).join('')}</ul>` : '<p class="og-bos">Ödeme yapınca makbuzun burada görünür.</p>')}

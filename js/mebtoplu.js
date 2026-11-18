@@ -1,7 +1,7 @@
 // MEBBİS toplu çekme ve toplu yazma (mdSinyal tarafı). İşi MEBBİS Yardımcısı'nın arka plan motoru (eklenti/motor.js)
 // kursun kendi MEBBİS oturumunda, ekran açmadan yürütür; sonuç buraya gelir ve kayıtlarla eşlenir.
 // Gönderilen ve gelen iletilerin adları ve alanları: js/eklenti.js başındaki ileti sözleşmesi tablosu (eklenti/sinyal.js'te de aynısı).
-import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, sb, sbDers, cokSube, seciliSube, eksikEvrak } from './veri.js?v=234';
+import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, sb, sbDers, cokSube, seciliSube, eksikEvrak, anaSinif, egitimSinifi, ekTur, kursiyerTaban, tutarOku } from './veri.js?v=234';
 import { bildir, pencere, kapatPencere, e, ik, isaret, rozet, tarih } from './ui.js?v=234';
 import * as GR from './gruplar.js?v=234';
 import * as EK from './eklenti.js?v=234';
@@ -9,6 +9,7 @@ import { yenile } from './app.js?v=234';
 import * as ME from './mebevrak.js?v=234';
 import * as MK from './mebkayit.js?v=234';
 import * as KR from './kurallar.js?v=234';
+import { sozlesmeUcreti } from './mevzuat.js?v=234';
 
 export const CEKILECEK = [
   ['gruplar', 'Dönem grupları', 'Dönem, grup ve şubeler; eksik grup kartları açılır'],
@@ -69,8 +70,12 @@ export function ekranDenetle() {
 const trT = t => String(t || '').slice(0, 10).split('-').reverse().join('/');          // 2026-12-07 → 07/12/2026
 const cep10 = t => { const d = String(t || '').replace(/\D/g, '').replace(/^90/, '').replace(/^0/, ''); return d.length === 10 ? d : ''; };
 const izin = o => String((o && o.calismaIzinNo) || '').replace(/\D/g, '');
-const tabanSinif = s => String(s || '').replace(/-O$/, '');
-const sertifikaMetni = k => { const b = tabanSinif(k.sinif), oto = /-O$/.test(k.sinif || ''); return b === 'B' ? `B SINIFI SERTİFİKA (${oto ? 'Otomatik' : 'Manuel'})` : `${b} SINIFI SERTİFİKA`; };
+// MEBBİS'te ayrı B otomatik ve B Engelli sınıfı yok: e-sınav ve randevuda ana sınıf (B-O, B-EN → B) gider
+const tabanSinif = s => anaSinif(String(s || ''));
+const B_EN_NOT = 'B Engelli: MEBBİS’te B olarak; rapor kodu ve kendi aracı modüle ayrıca tanımlanır';
+const CEZA_NOT = '100 ceza puanı eğitimi: e-sınav ve uygulama sınavı yok';
+// Kayıttaki istenen sertifika: B Engelli ve 100 ceza eğitiminin MEBBİS adı doğrulanmadı (eklenti.js sertifikaMetni ile aynı: null, kayıt elle girilir)
+const sertifikaMetni = k => { if (['B-EN', 'CEZA'].includes(k.sinif)) return null; const b = tabanSinif(k.sinif), oto = /-O$/.test(k.sinif || ''); return b === 'B' ? `B SINIFI SERTİFİKA (${oto ? 'Otomatik' : 'Manuel'})` : `${b} SINIFI SERTİFİKA`; };
 const mebGrup = k => { const g = GR.kursiyerGrubu(k); return g && GR.mebGrubuMu(g) ? g : null; };
 const subeNo = g => GR.SUBELER.indexOf(g.sube) + 1;
 const SINAV_SAATLERI = ['08:30', '09:15', '10:00', '10:45', '11:30', '13:00', '13:45', '14:30', '15:15', '16:00'];   // 40 dk + 5 dk, öğle arası 12:15
@@ -92,6 +97,10 @@ const simulatorSicil = d => {
 };
 const dersTuru = konu => { const n = nrm(konu); return /ilk ?yard|ilkyard/.test(n) ? 'İlkyardım' : /arac|motor|teknik/.test(n) ? 'Araç Tekniği' : /adab|adap/.test(n) ? 'Trafik Adabı' : 'Trafik ve Çevre'; };
 const ogretmenOf = id => (S.ogretmenler || []).find(o => o.id === id) || egitmen(id) || {};
+// Faturanın bağlı olduğu tahsilat resmî kalem mi (sınav ücreti, harç, kart): ek kalem tahsilatında hareket kategorisi kalemin adıdır
+// (sayfalar5.js hareketTur ile aynı kural). Kurs ücreti, peşinat ve taksit resmî değildir.
+const resmiFatura = f => { const h = f && f.hareket && (S.hareket || []).find(x => x.id === f.hareket); if (!h || ['Kurs ücreti', 'Taksit', 'Peşinat'].includes(h.kategori)) return false;
+  const k = kursiyer(h.kursiyer || f.kursiyer), x = k && ((k.odeme || {}).ekler || []).find(y => y.ad === h.kategori); return ekTur(x || { ad: h.kategori }) === 'resmi'; };
 const is_ = (tur, id, baslik, meta, son, neden, ref) => ({ id, tur, baslik, meta, son, neden, ref, alanlar: [], bitti: false });
 
 // Aktarım merkezinde listelenen yeni iş türleri (kayıt, direksiyon programı ve sınav listesi eklenti.js'te)
@@ -113,10 +122,11 @@ export function ekIsler(hepsi) {
     const g = GR.grupBul(t.grup), o = ogretmenOf(t.ogretmen);
     l.push({ ...is_('teorik', 'teorik-' + t.id, `${g.ad} · ${t.tarih.split('-').reverse().join('.')} ${t.saat} · ${dersTuru(t.konu)}`, { ad: g.ad, tarih: t.tarih, detay: `${t.sure || 1} saat · ${o.ad || ''}` }, t.tarih, 'Ders gününden önce', { teorik: t.id }), bitti: !!t.meb });
   });
-  sb(S.kursiyerler).filter(k => !k.kapali && k.asama === 'Teorik' && mebGrup(k) && !k.muaf && (!k.mevcutEhliyet || k.mevcutEhliyet === 'Yok') && !(k.esinav && k.esinav.sonuc === 'Geçti') && (k.teorik || 0) >= ((SINIFLAR[k.sinif] || {}).teorik || 34) && (hepsi || !k.mebEsinav)).forEach(k => {
-    l.push({ ...is_('esinav', 'esinav-' + k.id, `${tamAd(k)} · ${tabanSinif(k.sinif)}`, { ad: tamAd(k), sinif: k.sinif, egitmen: k.egitmen, tarih: k.kayit, detay: 'Teorik tamam; e-sınav ücreti yatmış olmalı' }, null, 'Son e-sınav randevusu grup başlangıcından 90 gün içinde', { kursiyer: k.id }), bitti: !!k.mebEsinav });
+  sb(S.kursiyerler).filter(k => !k.kapali && k.asama === 'Teorik' && mebGrup(k) && !k.muaf && !egitimSinifi(k.sinif) && (!k.mevcutEhliyet || k.mevcutEhliyet === 'Yok') && !(k.esinav && k.esinav.sonuc === 'Geçti') && (k.teorik || 0) >= ((SINIFLAR[k.sinif] || {}).teorik || 34) && (hepsi || !k.mebEsinav)).forEach(k => {
+    l.push({ ...is_('esinav', 'esinav-' + k.id, `${tamAd(k)} · ${tabanSinif(k.sinif)}`, { ad: tamAd(k), sinif: k.sinif, egitmen: k.egitmen, tarih: k.kayit, detay: 'Teorik tamam; e-sınav ücreti yatmış olmalı' + (k.sinif === 'B-EN' ? ' · ' + B_EN_NOT : '') }, null, 'Son e-sınav randevusu grup başlangıcından 90 gün içinde', { kursiyer: k.id }), bitti: !!k.mebEsinav });
   });
-  (S.faturalar || []).filter(f => f.no && f.kursiyer && (hepsi || !f.meb) && fark(f.tarih) >= -120).forEach(f => {
+  // sınav ücreti, harç, kart (resmî kalem) faturası MEBBİS fatura modülüne girilmez: kursiyerin masrafı, kurs geliri değil (il taban listesi not 5)
+  (S.faturalar || []).filter(f => f.no && f.kursiyer && !resmiFatura(f) && (hepsi || !f.meb) && fark(f.tarih) >= -120).forEach(f => {
     const k = kursiyer(f.kursiyer); if (!k) return;
     l.push({ ...is_('fatura', 'fatura-' + f.no, `${tamAd(k)} · ${f.no} · ${f.tutar} ₺`, { ad: tamAd(k), sinif: k.sinif, egitmen: k.egitmen, tarih: f.tarih, detay: `${trT(f.tarih).replace(/\//g, '.')} · ${f.tutar} ₺` }, null, 'Fatura modüle girilir (12/1)', { fatura: f.no }), bitti: !!f.meb });
   });
@@ -188,12 +198,14 @@ export async function hazirla(ids, { foto = true, koru = null } = {}) {
       const k = kursiyer(r.kursiyer), g = k && mebGrup(k); if (!g) { ekle(x, 'Dönem grubuna atanmamış'); continue; }
       if (!/^\d{11}$/.test(k.tc || '')) { ekle(x, 'TC kimlik no eksik'); continue; }
       if (!cep10(k.tel)) { ekle(x, 'Cep telefonu 10 hane değil'); continue; }
+      // MEBBİS'teki sertifika adı doğrulanmadı: yanlış sınıfla kayıt açılmasın diye toplu yazmaya alınmaz
+      if (['B-EN', 'CEZA'].includes(k.sinif)) { ekle(x, (SINIFLAR[k.sinif] || {}).ad + ': MEBBİS’teki sertifika adı doğrulanmadı, kaydı MEBBİS’e elle girin'); continue; }
       const mevcut = k.mevcutEhliyet && k.mevcutEhliyet !== 'Yok' ? k.mevcutEhliyet + ' SINIFI' : '';
       l.push({ id: x.id, tur: 'kayit', baslik: tamAd(k), donem: g.donem, grupNo: g.grupNo, subeNo: subeNo(g), tc: k.tc, istenen: sertifikaMetni(k), mevcut, belgeNo: mevcut ? String((k.oncekiBelge || {}).sayi || '') : '', cep: cep10(k.tel), foto: foto ? await fotoHazirla(k.foto) : '', sozlesme: k.sozlesmeImza && k.sozlesmeImza.tarih ? trT(k.sozlesmeImza.tarih) : '', adSoyad: tamAd(k), evrak: k.mebEvrak ? ME.evrakPaketi(k).l : null });
     }
     if (x.tur === 'evrak') {
       const k = kursiyer(r.kursiyer), g = k && mebGrup(k); if (!g) { ekle(x, 'Dönem grubuna atanmamış'); continue; }
-      const { l: ev } = ME.evrakPaketi(k); if (!Object.keys(ev).length) { ekle(x, 'Evrak bilgisi girilmemiş (öğrenci dosyası › Bilgiler › Düzenle)'); continue; }
+      const { l: ev } = ME.evrakPaketi(k); if (k.sinif === 'B-EN' && (ev.saglik || {}).ozur !== 'Var') { ekle(x, 'B Engelli: engel durumu “Var” olmalı (öğrenci dosyası › Bilgiler › MEBBİS evrak bilgileri)'); continue; } if (!Object.keys(ev).length) { ekle(x, 'Evrak bilgisi girilmemiş (öğrenci dosyası › Bilgiler › Düzenle)'); continue; }
       l.push({ id: x.id, tur: 'evrak', baslik: tamAd(k), donem: g.donem, tc: k.tc, adSoyad: tamAd(k), evrak: ev });
     }
     if (x.tur === 'grup') { const g = GR.grupBul(r.grup); if (!g) continue; l.push({ id: x.id, tur: 'grup', baslik: g.ad, donem: g.donem, donemAd: GR.donemAdi(g.donem), grupNo: g.grupNo, subeNo: subeNo(g), sube: g.sube, baslangic: trT(g.baslangic) }); }
@@ -206,9 +218,10 @@ export async function hazirla(ids, { foto = true, koru = null } = {}) {
       const dl = String(t.salon || g.derslik || '').match(/\d+/);
       l.push({ id: x.id, tur: 'teorik', baslik: x.baslik, donem: g.donem, grupNo: g.grupNo, subeNo: subeNo(g), tarih: trT(t.tarih), saatler, dersTuru: dersTuru(t.konu), derslik: dl ? 'DERSLİK-' + dl[0] : '', izinNo: izin(o), personelAd: o.ad || '', egitimTuru: 'Normal' });
     }
-    if (x.tur === 'esinav') { const k = kursiyer(r.kursiyer), g = k && mebGrup(k); if (!g) { ekle(x, 'Dönem grubuna atanmamış'); continue; } l.push({ id: x.id, tur: 'esinav', baslik: tamAd(k), tc: k.tc, donem: g.donem, istenen: tabanSinif(k.sinif) + ' SINIFI', gun: String(S.kurs.esinavGun || '0') }); }
+    if (x.tur === 'esinav') { const k = kursiyer(r.kursiyer), g = k && mebGrup(k); if (!g) { ekle(x, 'Dönem grubuna atanmamış'); continue; } if (egitimSinifi(k.sinif)) { ekle(x, CEZA_NOT); continue; } l.push({ id: x.id, tur: 'esinav', baslik: tamAd(k), tc: k.tc, donem: g.donem, istenen: tabanSinif(k.sinif) + ' SINIFI', gun: String(S.kurs.esinavGun || '0') }); }
     if (x.tur === 'fatura') {
       const f = (S.faturalar || []).find(y => y.no === r.fatura), k = f && kursiyer(f.kursiyer), g = k && mebGrup(k); if (!g) { ekle(x, 'Öğrenci dönem grubuna atanmamış'); continue; }
+      if (resmiFatura(f)) { ekle(x, 'Sınav ücreti, harç ya da kart faturası: kursiyerin masrafı, MEBBİS fatura modülüne girilmez'); continue; }
       l.push({ id: x.id, tur: 'fatura', baslik: x.baslik, donem: g.donem, tc: k.tc, no: String(f.no), tarih: trT(f.tarih), tutar: String(Math.round(f.tutar * 100) / 100).replace('.', ',') });
     }
   }
@@ -220,8 +233,9 @@ export async function hazirla(ids, { foto = true, koru = null } = {}) {
   const rnd = {}, sinavIds = new Set(sec.filter(x => x.tur === 'sinav').map(x => x.id));
   sec.filter(x => x.tur === 'sinav').forEach(x => {
     const s = S.sinavlar.find(y => y.id === x.ref.sinav), k = kursiyer(x.ref.kursiyer); if (!s || !k) return;
+    if (egitimSinifi(k.sinif)) return ekle(x, CEZA_NOT);
     const ar = sinavAraci(k), eg = egitmen(ar.egitmen) || egitmen(k.egitmen) || {};
-    if (!ar.plaka) return ekle(x, 'Sınav aracı bulunamadı (öğrencinin dersinde araç yok)');
+    if (!ar.plaka) return ekle(x, k.sinif === 'B-EN' && k.kendiArac ? 'Kendi aracıyla (md.7/5): aracın plakası modüle tanımlı olmalı; randevuyu MEBBİS’e elle girin' : 'Sınav aracı bulunamadı (öğrencinin dersinde araç yok)');
     const anahtar = s.id + '|' + tabanSinif(k.sinif);
     const j = rnd[anahtar] = rnd[anahtar] || { id: 'randevu-' + anahtar, tur: 'randevu', baslik: `Sınav ${trT(s.tarih).replace(/\//g, '.')} · ${tabanSinif(k.sinif)}`, tarih: trT(s.tarih), sertifika: tabanSinif(k.sinif) + ' SINIFI', adaylar: [] };
     j.adaylar.push({ id: x.id, tc: k.tc, plaka: ar.plaka.replace(/\s/g, ''), izinNo: izin(eg), personelAd: eg.ad || '', saat: '' });
@@ -643,6 +657,15 @@ function araclariIsle(v) {
   return { guncel, yeni, simulator };
 }
 // Aday dosyası: grup/şube eşleşir (grup kartı yoksa açılır), haklar ve son tarihler kursiyere yazılır
+// MEBBİS'teki kayıt ücreti (aday dosyası "Kayıt ücreti" sütunu, k.meb.kayitUcretiTL) il tabanı ve sözleşme ücretiyle karşılaştırılır.
+// Kural motoru bu fonksiyonu (canlı hesap) ya da dosya okunduğundaki anlık görüntüyü (k.meb.ucretKontrol) kullanabilir.
+// Dönüş: null (MEBBİS ücreti okunmadı) ya da { meb, sozlesme, taban, satir, tabanAlti, sozlesmeFarki, fark }
+export function mebUcretDurumu(k) {
+  const meb = k && k.meb && (k.meb.kayitUcretiTL || tutarOku(k.meb.kayitUcreti)); if (!meb) return null;
+  let tx = null; try { tx = kursiyerTaban(k); } catch (y) { }
+  const soz = k.odeme ? sozlesmeUcreti(k) : null, taban = tx && tx.taban != null ? tx.taban : null;
+  return { meb, sozlesme: soz, taban, satir: tx && tx.satir ? tx.satir.id : null, tabanAlti: taban != null && meb < taban, sozlesmeFarki: soz != null && Math.abs(meb - soz) >= 1, fark: soz != null ? Math.round((meb - soz) * 100) / 100 : null };
+}
 function dosyalariIsle(l) {
   let atanan = 0, okunan = 0;
   l.forEach(x => {
@@ -660,7 +683,8 @@ function dosyalariIsle(l) {
       if (g) { GR.grupAta(k, g); atanan++; }
     }
     const uyg = x.uygulama ? x.uygulama.satirlar.map(y => { const bb = x.uygulama.baslik; return { kod: y[sutun(bb, 'sinavkodu')], tarih: tarihIso(y[sutun(bb, 'sinavtarihi')]), durum: y[sutun(bb, 'sinavdurumu')], sonuc: y[sutun(bb, 'sinavsonucu')] }; }) : [];
-    k.meb = { ...(k.meb || {}), donem: ds || (k.meb || {}).donem, durum: r[i.durum] || (k.meb || {}).durum, uygulamaHak: r[i.uh], esinavHak: r[i.eh], kayitUcreti: r[i.ucret], uygulamaSorumlu: r[i.uyg], haklarSonGun: esSon, ikinciDireksiyon: tarihIso(x.ikinciDireksiyon), uygunluk: tarihIso(x.uygunluk), uygulamaSinavlari: uyg, sertifikaTarihi: x.sertifika && x.sertifika.satirlar.length ? tarihIso(x.sertifika.satirlar[x.sertifika.satirlar.length - 1][sutun(x.sertifika.baslik, 'tarih')]) : '', dosyaOkuma: gun(0) };
+    k.meb = { ...(k.meb || {}), donem: ds || (k.meb || {}).donem, durum: r[i.durum] || (k.meb || {}).durum, uygulamaHak: r[i.uh], esinavHak: r[i.eh], kayitUcreti: r[i.ucret], uygulamaSorumlu: r[i.uyg], haklarSonGun: esSon, ikinciDireksiyon: tarihIso(x.ikinciDireksiyon), uygunluk: tarihIso(x.uygunluk), kayitUcretiTL: tutarOku(r[i.ucret]) || null, uygulamaSinavlari: uyg, sertifikaTarihi: x.sertifika && x.sertifika.satirlar.length ? tarihIso(x.sertifika.satirlar[x.sertifika.satirlar.length - 1][sutun(x.sertifika.baslik, 'tarih')]) : '', dosyaOkuma: gun(0) };
+    { const u = mebUcretDurumu(k); if (u) k.meb.ucretKontrol = { ...u, tarih: gun(0) }; else delete k.meb.ucretKontrol; }
   });
   return { okunan, atanan };
 }

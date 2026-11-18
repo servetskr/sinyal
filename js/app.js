@@ -1,4 +1,4 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=234';
+import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec, sinifEtiket } from './veri.js?v=234';
 import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=234';
 import * as Y1 from './sayfalar1.js?v=234';
 import * as Y2 from './sayfalar2.js?v=234';
@@ -242,7 +242,7 @@ function rolSec(r) {
 function aramaAc() {
   if (!oturum.kullanici || oturum.kullanici.rol === 'usta') return;
   const kayitlar = [
-    ...S.kursiyerler.map(k => ({ t: tamAd(k), a: 'Kursiyer · ' + k.sinif + ' · ' + k.tel, h: '#/kursiyer/' + k.id, g: 'Kursiyerler' })),
+    ...S.kursiyerler.map(k => ({ t: tamAd(k), a: 'Kursiyer · ' + sinifEtiket(k.sinif, k) + ' · ' + k.tel, h: '#/kursiyer/' + k.id, g: 'Kursiyerler' })),
     ...S.adaylar.map(a => ({ t: a.ad, a: 'Aday · ' + a.asama, h: '#/adaylar/' + a.id, g: 'Adaylar' })),
     ...S.araclar.map(a => ({ t: a.plaka, a: a.model, h: '#/filo', g: 'Araçlar' })),
     ...S.egitmenler.map(x => ({ t: x.ad, a: 'Usta öğretici', h: '#/filo', g: 'Usta öğreticiler' })),
