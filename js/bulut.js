@@ -2,7 +2,7 @@
 // kurslar/{kurs}/v altında parça parça durur. Her kayıt ayrı alan olarak yazılır: iki kişi aynı anda
 // farklı kayıtları değiştirirse ikisi de korunur. Fotoğraf ve imzalar kurslar/{kurs}/dosyalar'da ayrı belge.
 import { FIREBASE, EMU, emuBagla } from './firebase-ayar.js?v=234';
-import { S, bulutVeri, bosVeri, kaydetDinle, kaydet, oturum, bulutKanca, makbuzSira, islem, iso, EVRAKLAR, gun, fark, tamAd, iptalEdilebilir, dersIptalIz, geceKisitli, geceDersMi, gerekliDireksiyon } from './veri.js?v=234';
+import { kuralAyar, S, bulutVeri, bosVeri, kaydetDinle, kaydet, oturum, bulutKanca, makbuzSira, islem, iso, EVRAKLAR, gun, fark, tamAd, iptalEdilebilir, dersIptalIz, geceKisitli, geceDersMi, gerekliDireksiyon } from './veri.js?v=234';
 
 const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
 const YEREL = 'sinyal-bulut';
@@ -833,7 +833,12 @@ function ogrenciUygula(docId, g) {
         if (S.dersler.some(z => z.tarih === y.tarih && z.saat === y.saat && (z.egitmen === y.egitmen || z.kursiyer === k.id) && z.durum !== 'İptal')) { notlar.push(y.tarih + ' ' + y.saat + ' ders isteği reddedildi: saat dolu'); retler.push(y.tarih + ' ' + y.saat + ' ders isteğin alınamadı: o saat dolmuş. Başka bir saat seç.'); continue; }
         // sağlık raporunda gece kısıtı olana gece dersi verilmez (MTSK Yön. md.7/3 son cümle): öğrenci panelinden gelen gece saati reddedilir
         if (geceKisitli(k) && geceDersMi(y)) { notlar.push(y.tarih + ' ' + y.saat + ' ders isteği reddedildi: gece kısıtı'); retler.push(y.tarih + ' ' + y.saat + ' ders isteğin alınamadı: sağlık raporuna göre gece dersi alamazsın. Gün batımından önceki bir saat seç.'); continue; }
-        S.dersler.push({ id: String(x.id), kursiyer: k.id, egitmen: y.egitmen, arac: S.araclar.some(a => a.id === y.arac) ? y.arac : null, tarih: y.tarih, saat: y.saat, durum: 'Planlandı', eklendi: bugun, kaynak: 'kursiyer' });
+        // DIR-020: iki telefon aynı anda yazarsa açık kalmasın — günlük 2 saat sınırı (md.16/4, kuralAyar) ve araç çakışması kabulde yeniden denetlenir
+        { const sinir = kuralAyar('gunlukDersSiniri'), gunluk = S.dersler.filter(z => z.kursiyer === k.id && z.tarih === y.tarih && z.durum !== 'İptal').length;
+          if (gunluk >= sinir) { notlar.push(y.tarih + ' ' + y.saat + ' ders isteği reddedildi: günlük sınır'); retler.push(y.tarih + ' ' + y.saat + ' ders isteğin alınamadı: aynı gün en çok ' + sinir + ' saat direksiyon dersi alınabilir. Başka bir gün seç.'); continue; } }
+        const arac0 = S.araclar.some(a => a.id === y.arac) ? y.arac : null, aracDolu = arac0 && S.dersler.some(z => z.arac === arac0 && z.tarih === y.tarih && z.saat === y.saat && z.durum !== 'İptal');
+        if (aracDolu) { notlar.push(y.tarih + ' ' + y.saat + ' ders isteği reddedildi: araç dolu'); retler.push(y.tarih + ' ' + y.saat + ' ders isteğin alınamadı: o saatte araç başka derste. Başka bir saat seç.'); continue; }
+        S.dersler.push({ id: String(x.id), kursiyer: k.id, egitmen: y.egitmen, arac: arac0, tarih: y.tarih, saat: y.saat, durum: 'Planlandı', eklendi: bugun, kaynak: 'kursiyer' });
         const t = (S.bosTeklif || []).find(z => z.tarih === y.tarih && z.saat === y.saat && z.egitmen === y.egitmen); if (t) { S.bosTeklif = S.bosTeklif.filter(z => z !== t); S.kazanim.doldurulan++; }
         notlar.push(y.tarih + ' ' + y.saat + ' direksiyon dersi aldı');
       }
