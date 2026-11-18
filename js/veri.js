@@ -1017,6 +1017,19 @@ function mebDegisimIzle() {
 }
 // Taban yüklemede kurulur: sayfa açıldıktan sonraki ilk değişiklik de (saat, öğretmen, araç, eğitim türü) MEBBİS kaydını eskitir.
 mebDegisimIzle();
+// YON-023: kaydeden izi bütün ana kayıt türlerinde — yüklemede var olan kimlikler taban sayılır; sonra eklenen kayıt ilk kaydette kaydedeni ve zamanını alır
+// (sunucudan gelen kayıtlar tabana eklenir, başkasının kaydı bu cihazın kullanıcısıyla işaretlenmez). Değiştiren izi düzenleme pencerelerinde yazılır.
+const IZ_KOL = ['kursiyerler', 'dersler', 'adaylar', 'sinavlar', 'gruplar', 'egitmenler', 'araclar', 'teorik'];
+let izTaban = null;
+// Değişiklik de kaydette yakalanır: kayıt başına içerik izi (JSON) tabanla karşılaştırılır, farklıysa değiştiren ve zamanı yazılır.
+const izMetin = x => { const { degistiren, degisZamani, ...y } = x; return JSON.stringify(y); };
+export function izTabaniYenile() { try { subeTamamla(); noTamamla(); odemeUzlas(); } catch (x) { } izTaban = {}; IZ_KOL.forEach(c => { izTaban[c] = new Map(((S && S[c]) || []).filter(x => x && x.id).map(x => [x.id, izMetin(x)])); }); }
+function kayitIz() { let u; try { u = oturum.kullanici; } catch (x) { return; } if (!u || !izTaban) return; const ad = u.ad || u.id || '', z = new Date().toISOString();
+  IZ_KOL.forEach(c => ((S[c]) || []).forEach(x => { if (!x || !x.id) return; const m = izMetin(x), o = izTaban[c].get(x.id);
+    if (o === undefined) { if (!x.kaydeden) { x.kaydeden = ad; x.kayitZamani = z; } izTaban[c].set(x.id, izMetin(x)); }
+    else if (o !== m) { x.degistiren = ad; x.degisZamani = z; izTaban[c].set(x.id, m); } })); }
+export const degisti = x => { let u = null; try { u = oturum.kullanici; } catch (y) { } if (x && u) { x.degistiren = u.ad || u.id || ''; x.degisZamani = new Date().toISOString(); } };
+izTabaniYenile();
 // Ödeme uzlaştırma: taksitin ödenmiş tutarı, onu ödeyen kasa hareketlerinden (dağılım) aşağı düşemez.
 // İki cihaz aynı kursiyeri farklı anlarda değiştirip eski kopya yazılırsa "ödendi" işareti silinebiliyordu; hareket ayrı kayıt olduğu için kalır ve buradan geri gelir.
 function odemeUzlas() {
@@ -1271,12 +1284,12 @@ export function tarifeAnlik() { const K = S.kurs || {}; const sn = {}; Object.en
 function tarifeYilKontrol() { if (!S.kurs) return; const y = gun(0).slice(0, 4); if (!S.kurs.tarifeYil) { S.kurs.tarifeYil = y; return; } if (S.kurs.tarifeYil < y) { S.kurs.tarifeArsiv = { ...(S.kurs.tarifeArsiv || {}), [S.kurs.tarifeYil]: S.kurs.tarifeArsiv && S.kurs.tarifeArsiv[S.kurs.tarifeYil] || tarifeAnlik() }; S.kurs.tarifeYil = y; } }
 function hareketIz() { let u; try { u = oturum.kullanici; } catch (x) { return; } if (!u) return; const ad = u.ad || u.id || '', simdi = Date.now(); for (const h of S.hareket || []) { if (h.kaydeden) continue; const m = /^h(\d{13})/.exec(h.id || ''); if (m && simdi - +m[1] < 600000) { h.kaydeden = ad; h.kayitZamani = new Date(+m[1]).toISOString(); } } }
 export const izMetni = h => [h.kaydeden ? 'Kaydeden ' + h.kaydeden + (h.kayitZamani ? ' · ' + h.kayitZamani.slice(8, 10) + '.' + h.kayitZamani.slice(5, 7) + ' ' + new Date(h.kayitZamani).toTimeString().slice(0, 5) : '') : '', h.degistiren ? 'Değiştiren ' + h.degistiren + (h.degisZamani ? ' · ' + h.degisZamani.slice(8, 10) + '.' + h.degisZamani.slice(5, 7) + ' ' + new Date(h.degisZamani).toTimeString().slice(0, 5) : '') : ''].filter(Boolean).join(' · ');
-export function kaydet() { dIdx = null; subeTamamla(); noTamamla(); odemeUzlas(); mebDegisimIzle(); hareketIz(); try { tarifeYilKontrol(); } catch (x) { } (S.hareket || []).forEach(h => { if (h.tur === 'Gelir' && !h.no) makbuzNoVer(h); }); // Kurs personelinin bulut verisi cihaza tam kopya olarak yazılmaz (Firestore kendi önbelleğini tutar; çıkışta silinir); demo ve öğrencinin kendi küçük kopyası yazılır
+export function kaydet() { dIdx = null; subeTamamla(); noTamamla(); odemeUzlas(); mebDegisimIzle(); hareketIz(); kayitIz(); try { tarifeYilKontrol(); } catch (x) { } (S.hareket || []).forEach(h => { if (h.tur === 'Gelir' && !h.no) makbuzNoVer(h); }); // Kurs personelinin bulut verisi cihaza tam kopya olarak yazılmaz (Firestore kendi önbelleğini tutar; çıkışta silinir); demo ve öğrencinin kendi küçük kopyası yazılır
   if (!ANAHTAR.startsWith('sinyal-bulut-') || ANAHTAR.startsWith('sinyal-bulut-ogr-')) { try { localStorage.setItem(ANAHTAR, JSON.stringify(S)); } catch (e) { } }
   if (kaydetDinleyici) kaydetDinleyici(); }
 // Bulut (gerçek kurs): veri Firestore'dan gelir; yerel kopya kursa özel anahtarda tutulur, günlük yenilenmez
-export function bulutVeri(yeni, kursId) { mebIz = null; ANAHTAR = 'sinyal-bulut-' + kursId; yeni._bulut = true; S = goc(yeni); mebDegisimIzle(); if (!String(kursId).startsWith('ogr-')) { try { localStorage.removeItem(ANAHTAR); } catch (e) { } } }
-export function demoyaDon() { mebIz = null; ANAHTAR = 'sinyal-demo-v20'; S = yukle(); mebDegisimIzle(); }
+export function bulutVeri(yeni, kursId) { mebIz = null; ANAHTAR = 'sinyal-bulut-' + kursId; yeni._bulut = true; S = goc(yeni); mebDegisimIzle(); izTabaniYenile(); if (!String(kursId).startsWith('ogr-')) { try { localStorage.removeItem(ANAHTAR); } catch (e) { } } }
+export function demoyaDon() { mebIz = null; ANAHTAR = 'sinyal-demo-v20'; S = yukle(); mebDegisimIzle(); izTabaniYenile(); }
 // Yeni kurs: ayarlar ve şablonlar hazır, kayıtlar boş
 export function bosVeri({ kursAd, yetkili, sehir, mudurTel }) {
   const o = uret();
