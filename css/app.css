@@ -3293,3 +3293,26 @@ p.mz-kanit-uyari{margin:-4px 0 10px;font-size:13px}
 .yd-tablo th,.yd-tablo td{padding:6px 7px;font-size:12.5px;white-space:nowrap}
 .yd-tablo td.yd-yok{color:var(--kirmizi);font-weight:800}
 @media (max-width:600px){.vr-suzgec>.sekmeler,.vr-suzgec>.dg,.vr-suzgec>small{grid-column:1/-1;min-width:0;max-width:100%;overflow-x:auto}.vr-suzgec>span:empty{display:none}}
+/* e-Sınav yolu (Sınavlar › e-Sınav yolu, TEO-007) */
+.ey{padding:0 0 8px}
+.ey-cipler{display:flex;gap:8px;overflow-x:auto;padding:14px 16px 12px;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+.ey-cip{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:96px;padding:9px 12px;border-radius:12px;border:1.5px solid var(--cizgi);background:var(--panel);cursor:pointer;text-align:left;font:inherit;color:var(--metin)}
+.ey-cip b{font-family:var(--baslik);font-size:20px;line-height:1;color:var(--murekkep)}
+.ey-cip span{font-size:12px;font-weight:700;white-space:nowrap}
+.ey-cip.bos{opacity:.55}
+.ey-cip.secili{border-color:var(--murekkep);background:var(--murekkep);color:#fff}
+.ey-cip.secili b{color:var(--levha,#ffc21a)}
+.ey-bolum{padding:6px 16px 4px}
+.ey-bolum-bas{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:8px 0 6px}
+.ey-bolum-bas h3{font-size:15px;color:var(--murekkep)}
+.ey-bolum-bas small{color:var(--soluk);font-size:12.5px}
+.ey-liste{list-style:none;display:grid;gap:8px;margin:0 0 6px}
+.ey-kart{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:10px 12px;border-radius:12px;background:var(--zemin);flex-wrap:wrap}
+.ey-kart .kisi{flex:1 1 220px;min-width:0}
+.ey-kart .kisi small{display:block;white-space:normal}
+.ey-rozet{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.ey-eylem{display:flex;gap:6px;flex-wrap:wrap}
+/* öğrenci dosyası özetinde e-sınav satırı (TEO-011) */
+.kart.es-satir{display:flex;align-items:center;gap:12px;padding:12px 16px;flex-wrap:wrap}
+.kart.es-satir b{flex:1 1 200px;font-size:14.5px;color:var(--murekkep)}
+.es-satir-ik{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;background:color-mix(in srgb,var(--mor,#6744b8) 14%,transparent);color:var(--mor,#6744b8)}

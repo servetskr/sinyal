@@ -292,6 +292,24 @@ export const mebIsGunuGeri = (t, n) => { const d = tarihOku(t); let i = 0; while
 // Sınav hakları (MTSK md.15): e-sınav 4; uygulama ilk 4, 60 gün içinde başvurana 4 daha (md.15/4). Kurs ayarı sinavHak ilk dört hakkın sayısıdır.
 export const sinavHakSiniri = (k, tur) => { const n = (S && S.kurs && S.kurs.sinavHak) || 4; return tur === 'e-Sınav' ? n : n * (k && k.ikinciHak ? 2 : 1); };
 export const IKINCI_HAK_GUN = 60;
+// e-Sınav hak durumu (TEO-009): kullanilan = yerel e-Sınav oturumlarında sonucu olan (Girmedi dahil) oturum sayısı; sira = sıradaki hak.
+// MEBBİS "E-Sınav Hak" (SKT02009) sıradaki hakkı gösterir: 1–4 "sıradaki N. hak" (kullanılan = değer − 1), 5 "süre doldu", 0 "hakkı doldu".
+export function esinavHakDurum(k) {
+  const sinir = sinavHakSiniri(k, 'e-Sınav'), id = k && k.id;
+  const kullanilan = (S.sinavlar || []).filter(s => s.tur === 'e-Sınav' && s.sonuc && ['Geçti', 'Kaldı', 'Girmedi'].includes(s.sonuc[id])).length || (k && k.esinav && !k.esinav.muaf && k.esinav.hak ? +k.esinav.hak : 0);
+  const ham = k && k.meb && k.meb.esinavHak != null && String(k.meb.esinavHak).trim() !== '' ? +String(k.meb.esinavHak).replace(/\D/g, '') : null;
+  const anlam = ham == null || isNaN(ham) ? '' : ham === 0 ? 'hakkı doldu' : ham === 5 ? 'süre doldu' : ham >= 1 && ham <= 4 ? `sıradaki ${ham}. hak` : '';
+  const mebKullanilan = ham >= 1 && ham <= 4 ? ham - 1 : null;
+  return { kullanilan, sira: Math.min(kullanilan + 1, sinir), sinir, meb: { ham, anlam, kullanilan: mebKullanilan }, fark: mebKullanilan != null && mebKullanilan !== kullanilan };
+}
+// e-Sınav ücreti hak numarasına bağlı (TEO-010, SOR-093): k.esinavUcret = { '1': { tarih, kaynak: 'mebbis'|'elle', kim }, '2': … }.
+// Aday kalınca sıradaki hakkın anahtarı boştur: ücret kendiliğinden "bekleniyor"a döner. Eski tek alan yok sayılmaz: sıradaki hak 1 ise k.esinavUcretYatti kabul.
+export const esinavUcretiVar = (k, sira = esinavHakDurum(k).sira) => !!(k && ((k.esinavUcret || {})[String(sira)] || (sira === 1 && k.esinavUcretYatti)));
+export function esinavUcretiIsle(k, kaynak = 'elle', tarih = null) {
+  const sira = String(esinavHakDurum(k).sira), l = { ...(k.esinavUcret || {}) };
+  if (l[sira]) return false;   // aynı hak için ikinci okuma tarihi ezmez
+  l[sira] = { tarih: tarih || iso(new Date()), kaynak, ...(kaynak === 'elle' && oturum && oturum.kullanici ? { kim: oturum.kullanici.ad } : {}) }; k.esinavUcret = l; return true;
+}
 // Ödeme yöntemleri tek listede (raporlar, kasa ve muhasebe aynı adları kullanır)
 export const YONTEMLER = ['Nakit', 'Kart', 'Havale'];
 // Tahsilatta önce seçili gelen yöntem: kurs ayarı (Ayarlar › Kurs; SOR-085, RAP-009); ayarlanmadıysa eskisi gibi Kart

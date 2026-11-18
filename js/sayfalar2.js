@@ -20,13 +20,14 @@ import { SINIF_VARSAYILAN, gerekliDireksiyon, geceGerekli, geceDersMi, geceBasla
 import { listeAdi, gecerlilikMetni } from './taban.js?v=234';
 import * as RK from './rapor-kasa.js?v=234';
 import * as GR from './gruplar.js?v=234';
+import * as TY from './teorikyol.js?v=234';
 
 const durum = { sinav: 'yaklasan', kasa: 'hareket', filo: 'arac', mesaj: 'gelen', meb: 'aktarim', ayar: 'kurs' };
 let secSohbet = null, gecmisKim = '', sohbetAcik = false;
 
 /* ================= SINAVLAR ================= */
 export function sinavlar(alt) {
-  if (['yaklasan', 'gecmis', 'risk'].includes(alt)) durum.sinav = alt;
+  if (['yaklasan', 'gecmis', 'risk', 'yol'].includes(alt)) durum.sinav = alt;
   const gec = sbSinav(S.sinavlar).filter(s => Object.keys(s.sonuc || {}).length);
   const oran = tur => { const l = gec.filter(s => s.tur === tur).flatMap(s => Object.values(s.sonuc || {})); return l.length ? Math.round(l.filter(x => x === 'Geçti').length / l.length * 100) : 0; };
   const kalanlar = sb(S.kursiyerler).filter(k => k.dsinav && k.dsinav.sonuc === 'Kaldı');
@@ -57,9 +58,10 @@ export function sinavlar(alt) {
       <div class="kart gosterge"><small>Sınava hazır</small><b>${sb(S.kursiyerler).filter(k => k.asama === 'Sınav' && !k.dsinav && !k.dsinavPlan).length}</b><span>Direksiyon derslerini bitirdi, oturum bekliyor</span></div>
       <div class="kart gosterge"><small>Tekrar sınava girecek</small><b>${kalanlar.length}</b><span>${(() => { const t = kalanlar.filter(k => k.ekDersTeklif).length, y = kalanlar.filter(k => S.sinavlar.some(s => s.tur === 'Direksiyon' && fark(s.tarih) >= 0 && s.kursiyerler.includes(k.id))).length; return kalanlar.length ? `${y} kişi yeni oturuma yazıldı · ${t} kişiye ek ders teklif edildi` : 'Kalan kursiyer yok'; })()}</span></div>
     </div><div class="ara-bosluk"></div>
-    <div class="bolum-bas"><div id="sek">${sekmeler([['yaklasan', 'Yaklaşan', sbSinav(S.sinavlar).filter(s => fark(s.tarih) >= 0).length], ['gecmis', 'Geçmiş', sbSinav(S.sinavlar).filter(s => fark(s.tarih) < 0).length], ['risk', 'Kalma riski', riskli.length]], durum.sinav)}</div><div class="sag"><button class="dg dg-ana" data-yeni>${ik('arti')}Sınav oturumu ekle</button></div></div>
-    ${durum.sinav === 'risk' ? `<div class="kart"><div class="kart-bas"><h3>Sınavda kalabilecek kursiyerler</h3><small>Usta öğreticinin ders sonu beceri puanları, deneme sınavları, devamsızlık ve önceki sonuçlardan hesaplanır</small>${riskli.some(x => x.r.puan >= 50 && x.r.oneri && !x.k.ekDersTeklif) ? `<div class="sag"><button class="dg dg-wp dg-kucuk" data-toplu-ekders>${ik('wp')}Yüksek risklilere ek ders teklif et</button></div>` : ''}</div><ul class="liste" style="margin-top:8px">${riskli.map(({ k, r }) => `<li>${isaret(r.puan >= 50 ? 'uyari' : 'bilgi', 28)}<a class="kisi" href="#/kursiyer/${k.id}" style="flex:1"><div><b>${e(tamAd(k))} · ${r.seviye} risk · ${r.puan}/100</b><small>${r.tur} · ${e(r.nedenler.join(' · '))}</small></div></a><span class="sag">${k.ekDersTeklif ? rozet(k.ekDersTeklif.n + ' ders teklif edildi', 'mavi') : `<button class="dg dg-ana dg-kucuk" data-ekders="${k.id}">Ek ders öner</button>`}</span></li>`).join('') || '<li>' + bos('Riskli kursiyer yok', 'Herkes sınava hazır görünüyor.') + '</li>'}</ul></div>` : `<div class="izgara iz-2">${liste.map(kartSinav).join('') || `<div class="kart">${bos('Oturum yok', 'Yeni bir sınav oturumu ekleyin.')}</div>`}</div>`}`,
+    <div class="bolum-bas"><div id="sek">${sekmeler([['yaklasan', 'Yaklaşan', sbSinav(S.sinavlar).filter(s => fark(s.tarih) >= 0).length], ['gecmis', 'Geçmiş', sbSinav(S.sinavlar).filter(s => fark(s.tarih) < 0).length], ['yol', 'e-Sınav yolu', TY.yolAdaylari().filter(k => !['muaf', 'gecti'].includes(TY.esinavAsamasi(k))).length], ['risk', 'Kalma riski', riskli.length]], durum.sinav)}</div><div class="sag"><button class="dg dg-ana" data-yeni>${ik('arti')}Sınav oturumu ekle</button></div></div>
+    ${durum.sinav === 'yol' ? TY.yolHtml() : durum.sinav === 'risk' ? `<div class="kart"><div class="kart-bas"><h3>Sınavda kalabilecek kursiyerler</h3><small>Usta öğreticinin ders sonu beceri puanları, deneme sınavları, devamsızlık ve önceki sonuçlardan hesaplanır</small>${riskli.some(x => x.r.puan >= 50 && x.r.oneri && !x.k.ekDersTeklif) ? `<div class="sag"><button class="dg dg-wp dg-kucuk" data-toplu-ekders>${ik('wp')}Yüksek risklilere ek ders teklif et</button></div>` : ''}</div><ul class="liste" style="margin-top:8px">${riskli.map(({ k, r }) => `<li>${isaret(r.puan >= 50 ? 'uyari' : 'bilgi', 28)}<a class="kisi" href="#/kursiyer/${k.id}" style="flex:1"><div><b>${e(tamAd(k))} · ${r.seviye} risk · ${r.puan}/100</b><small>${r.tur} · ${e(r.nedenler.join(' · '))}</small></div></a><span class="sag">${k.ekDersTeklif ? rozet(k.ekDersTeklif.n + ' ders teklif edildi', 'mavi') : `<button class="dg dg-ana dg-kucuk" data-ekders="${k.id}">Ek ders öner</button>`}</span></li>`).join('') || '<li>' + bos('Riskli kursiyer yok', 'Herkes sınava hazır görünüyor.') + '</li>'}</ul></div>` : `<div class="izgara iz-2">${liste.map(kartSinav).join('') || `<div class="kart">${bos('Oturum yok', 'Yeni bir sınav oturumu ekleyin.')}</div>`}</div>`}`,
     baglan(k) {
+      if (durum.sinav === 'yol') TY.yolBaglan(k, yenile, { oturumaEkle: tekOturumaEkle, sonucGir });
       k.addEventListener('click', ev => {
         const t = ev.target;
         const s = t.closest('[data-sekme]'); if (s) { durum.sinav = s.dataset.sekme; yenile(); }
@@ -99,6 +101,18 @@ export function oturumEkle() {
 // Otomatik mesaj kuralı açık mı (Mesajlar › Otomatik mesajlar)
 const kuralAcik = id => (S.otomasyonlar.find(o => o.id === id) || {}).acik !== false;
 // Sınav ücreti oturuma yazılınca eklenir: e-sınav her oturumda, uygulama sınavı tekrarda
+// e-Sınav yolundan tek adayı yaklaşan e-sınav oturumuna ekler (TEO-007); oturum yoksa yeni oturum açtırır
+function tekOturumaEkle(k) {
+  if (!k) return;
+  const l = sbSinav(S.sinavlar).filter(s => s.tur === 'e-Sınav' && fark(s.tarih) >= 0 && !(s.kursiyerler || []).includes(k.id)).sort((a, b) => a.tarih.localeCompare(b.tarih));
+  if (!l.length) return pencere({ baslik: 'e-Sınav oturumu yok', icerik: `<p>${e(tamAd(k))} için yaklaşan e-sınav oturumu yok. MEBBİS’te başvurusunu yapıp verilen randevuyu oturum olarak ekleyin.</p>`, altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-yeni-ot>${ik('arti')}Yeni oturum</button>`, onAc(d) { d.querySelector('[data-yeni-ot]').addEventListener('click', () => { kapatPencere(); oturumEkle(); }); } });
+  pencere({
+    baslik: tamAd(k) + ' · e-sınav oturumu',
+    icerik: `<div class="secim" style="display:grid;gap:8px">${l.map((s, i) => `<label><input type="radio" name="o" value="${s.id}" ${i ? '' : 'checked'}><span>${tarihUzun(s.tarih)} ${e(s.saat || '')} · ${e(s.yer || '')} · ${(s.kursiyerler || []).length} kişi</span></label>`).join('')}</div>`,
+    altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-ekle-ot>Ekle</button>`,
+    onAc(d) { d.querySelector('[data-ekle-ot]').addEventListener('click', () => { const s = S.sinavlar.find(x => x.id === (d.querySelector('[name=o]:checked') || {}).value); if (!s) return; s.kursiyerler.push(k.id); sinavUcreti(k, s); islem('Sınava kursiyer yazdı', 'e-Sınav · ' + tarih(s.tarih) + ' · ' + tamAd(k)); kaydet(); kapatPencere(); bildir(`${tamAd(k)} ${tarih(s.tarih)} e-sınav oturumuna eklendi`, 'tamam'); yenile(); }); },
+  });
+}
 function sinavUcreti(k, s) {
   const es = s.tur === 'e-Sınav', o = es ? k.esinav : k.dsinav, hak = (o && o.sonuc !== 'Geçti' ? o.hak : 0) + 1;
   const tutar = es ? esinavUcreti(hak) : uygulamaSinavUcreti(hak);

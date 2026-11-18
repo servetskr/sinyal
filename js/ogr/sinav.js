@@ -7,6 +7,7 @@ import { S, kaydet, SINIFLAR, fark, gonderimEkle, ogrOzellik, tamAd, sinavHakSin
 import { bildir, tarih, goreli, gunKisa } from '../ui.js?v=234';
 import * as HZ from '../hazirlik.js?v=234';
 import { hakDurum, tekrarUcret, esinavVar, TEORIKSIZ_METIN } from '../ogrenci.js?v=234';
+import * as TY from '../teorikyol.js?v=234';
 import { KONULAR } from '../konular.js?v=234';
 import { soruKonu, SORU_KONU } from '../soruKonu.js?v=234';
 import { UNITE_AD, konular, altAc, altKapat, altEkran as altSimdi } from './ogrveri.js?v=234';
@@ -302,7 +303,7 @@ function sinavlarHtml(k) {
       <details class="ox-snv-sv-getir"${sn && fark(sn.tarih) <= 7 ? ' open' : ''}><summary><span>Sınav günü yanına al</span>${oi('asagi')}</summary><ul>${getir.map(g => `<li>${oi('tik')}<span>${esc(g)}</span></li>`).join('')}</ul></details>${ek}`, 'ox-snv-sv');
   };
   if (egitimSinifi(k.sinif)) return bolum('Sınavların') + not('Bu eğitimin sınavı yok. Teorik derslerin tamamına katılınca eğitim belgen kurstan verilir.');
-  return bolum('Sınavların') + (esinavVar(k) ? kartH('e-Sınav', k.esinav, sonr('e-Sınav'), ['T.C. kimlik kartın (fotokopi geçmez)', 'e-Sınav ücreti dekontu', 'Sınavdan 30 dakika önce sınav merkezinde ol'], 'Teorik derslerin bitince kurs e-Sınav randevunu alır.') : not(TEORIKSIZ_METIN))
+  return bolum('Sınavların') + (esinavVar(k) ? kartH('e-Sınav', k.esinav, sonr('e-Sınav'), ['T.C. kimlik kartın (fotokopi geçmez)', 'e-Sınav ücreti dekontu', 'Sınavdan 30 dakika önce sınav merkezinde ol'], 'Teorik derslerin bitince kurs e-Sınav randevunu alır.', (t => t && !(k.esinav && k.esinav.sonuc === 'Geçti') ? `<p class="ox-snv-sv-yer">${oi('bilgi')}<span>${esc(t)}${/ücret bekleniyor/.test(t) ? '. Ücreti yatırıp dekontu kursuna ilet.' : ''}</span></p>` : '')(TY.esinavSatiri(k))) : not(TEORIKSIZ_METIN))
     + (dir ? kartH('Uygulama sınavı', k.dsinav, sonr('Direksiyon'), ['T.C. kimlik kartın', 'Gözlük ya da lens kullanıyorsan yanında olsun', 'Sınavdan 30 dakika önce sınav yerinde ol'], 'Direksiyon derslerin bitince kurs sınav tarihini bildirir.',
       ogrOzellik('direksiyon') ? `<div class="ox-snv-sv-bag">${baglanti('Uygulama sınavına hazırlan', { 'data-ox-alt': 'direksiyon:|araclar' }, true)}</div>` : '') : '');
 }
