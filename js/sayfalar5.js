@@ -297,7 +297,8 @@ const trTarih = t => t ? t.slice(8, 10) + '.' + t.slice(5, 7) + '.' + t.slice(0,
 const kurus = n => Math.round(n * 100) / 100;
 const kdvAyir = (t, oran) => { const n = kurus(t / (1 + oran)); return [n, kurus(t - n)]; };
 // iade hareketinde kursiyer kimliği yok; açıklamanın başındaki ad soyaddan bulunur
-const hareketKisi = h => h.kursiyer ? kursiyer(h.kursiyer) : iadeMi(h) ? S.kursiyerler.find(k => (h.aciklama || '').startsWith(tamAd(k) + ' ·')) : null;
+// PAR-049: öğrenci kimlikten bulunur; ad eşlemesi yalnız eski (kimliksiz) iade kayıtları için ve tek eşleşme varsa
+const hareketKisi = h => h.kursiyer ? kursiyer(h.kursiyer) : iadeMi(h) ? (l => l.length === 1 ? l[0] : null)(S.kursiyerler.filter(k => (h.aciklama || '').startsWith(tamAd(k) + ' ·'))) : null;
 const sinifAd = (s, k) => !s ? '' : sinifEtiket(s, k);
 function faturaAciklama(h, k) {
   const sn = k ? sinifAd(k.sinif, k) : '', tk = (h.aciklama || '').match(/(\d+)\. taksit/);
