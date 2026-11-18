@@ -1610,7 +1610,7 @@ export default {
         const ka = url.searchParams.get('ka') || '';
         // imza paketi (ad, imza, cihaz) yalnız mührü bilen kursa verilir; mührü olmayan eski kayıtlar eskisi gibi okunur
         if (md && md.ka && !(ka && esit(ka, md.ka))) return cevap({ ok: false }, 404);
-        const bilgi = md && md.ka ? { zaman: md.zaman || '', ip: md.ip || '', ulke: md.ulke || '', ua: md.ua || '' } : null;
+        const bilgi = md && md.ka ? { zaman: md.zaman || '', ip: md.ip || '', ulke: md.ulke || '', ua: md.ua || '', boyut: md.boyut || g.value.length } : null;
         return cevap({ ok: true, hedef: g.value, ...(bilgi ? { bilgi } : {}) });
       }
       if (anahtar.startsWith('takip-')) return cevap({ ok: false }, 404);  // imza dönüşü yalnız yukarıdaki k/takip- yolundan, mühürle okunur
@@ -1655,7 +1655,7 @@ export default {
       await env.LINK.put(slug, hedef, { expirationTtl: gun * 86400 });
       if (tkYaz) {
         const ka = /^[0-9a-f]{16,64}$/.test(String(b.ka || '')) ? String(b.ka) : '';
-        const md = { zaman: new Date().toISOString(), ip: req.headers.get('CF-Connecting-IP') || '', ulke: (req.cf && req.cf.country) || '', ua: String(req.headers.get('User-Agent') || '').slice(0, 300), ...(ka ? { ka } : {}) };
+        const md = { zaman: new Date().toISOString(), ip: req.headers.get('CF-Connecting-IP') || '', ulke: (req.cf && req.cf.country) || '', ua: String(req.headers.get('User-Agent') || '').slice(0, 300), boyut: hedef.length, ...(ka ? { ka } : {}) };  // YON-005: boyut da kanıta
         await env.LINK.put(tk, hedef, { expirationTtl: 5184000, metadata: md });
       }
       return cevap({ ok: true, slug, ...(tkYaz ? { sunucuZaman: new Date().toISOString() } : {}) });
