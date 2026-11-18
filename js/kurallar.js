@@ -178,13 +178,15 @@ const KURALLAR = [
       const N = +K.sinavUcretIsGunu || 6;
       sbSinav(S.sinavlar).filter(s => s.tur === 'Direksiyon' && fark(s.tarih) >= 0 && (s.kursiyerler || []).length && !s.ucretMem).forEach(s => {
         const kalan = mebIsGunuSay(gun(0), s.tarih), son = mebIsGunuGeri(s.tarih, N); if (kalan > N + 2) return;  // kalan: sınava iş günü (yalnız gösterme eşiği)
-        const ks = s.kursiyerler.map(kursiyer).filter(Boolean), odenmedi = ks.filter(k => ((k.odeme || {}).ekler || []).some(x => x.sinav === s.id && !x.odendi));
+        // PAR-022/063: kurs toplu yatırdıysa (oturum dekontu) 43/5 yerine geldi; aday kendisi yatırıyorsa kurs kalemi aranmaz. Ödenmemiş kalem ≤N iş günü: yasak, ≤N+2: uyarı
+        if (s.dekont && +s.dekont.tutar) return;
+        const ks = s.kursiyerler.map(kursiyer).filter(Boolean), odenmedi = ks.filter(k => (((k.sinavKip || {})[s.id]) || (S.kurs.sinavUcretKip === 'aday' ? 'aday' : 'kurs')) === 'kurs' && ((k.odeme || {}).ekler || []).some(x => x.sinav === s.id && !x.odendi)), sev = kalan <= N ? 'yasak' : 'uyari';
         const gecti = fark(son) < 0, sure = gecti ? `son gün ${tarih(son)} geçti` : fark(son) === 0 ? 'son gün bugün' : `son gün ${tarih(son)}`;
         const metin = `Sınav ücretleri sınav tarihinden ${N} iş günü önce döner sermaye hesabına yatırılır; liste ve makbuz il/ilçe MEM’e verilir (MTSK Yön. md.43/5). ${sonGunMetni(son)}`;
-        if (odenmedi.length) l.push(bul('uyari', `${tarih(s.tarih)} uygulama sınavı · ${odenmedi.length} kursiyerin sınav ücreti ödenmedi (${sure})`, `${metin} Ödemeyenler: ${odenmedi.slice(0, 4).map(tamAd).join(', ')}${odenmedi.length > 4 ? '…' : ''}.`, '#/sinavlar', { sinav: s.id, kursiyerler: odenmedi.map(k => k.id) }));
-        else l.push(bul(gecti ? 'uyari' : 'bilgi', `${tarih(s.tarih)} uygulama sınavı · ücret ve makbuz listesi (${sure})`, `${metin} Yatırılıp makbuz verildiyse Sınavlar ekranında oturumda “Makbuz MEM’e verildi”yi işaretleyin.`, '#/sinavlar', { sinav: s.id, kursiyerler: [] }));
+        if (odenmedi.length) l.push(bul(sev, `${tarih(s.tarih)} uygulama sınavı · ${odenmedi.length} kursiyerin sınav ücreti ödenmedi (${sure})`, `${metin} Ödemeyenler: ${odenmedi.slice(0, 4).map(tamAd).join(', ')}${odenmedi.length > 4 ? '…' : ''}.`, '#/sinavlar', { sinav: s.id, kursiyerler: odenmedi.map(k => k.id) }));
+        else l.push(bul(gecti ? 'uyari' : 'bilgi', `${tarih(s.tarih)} uygulama sınavı · ücret ve makbuz listesi (${sure})`, `${metin} Yatırdıysanız Sınavlar ekranında oturuma dekontu girin; makbuz verildiyse “Makbuz MEM’e verildi”yi işaretleyin.`, '#/sinavlar', { sinav: s.id, kursiyerler: [] }));
         // öğrenci dosyası: ücreti ödenmemiş kursiyere geri sayım
-        odenmedi.forEach(k => l.push(bul('uyari', `${tamAd(k)} · uygulama sınavı ücreti ödenmedi`, metin, '#/kursiyer/' + k.id, { kursiyer: k.id, yalnizDosya: true, eylem: 'odeme', kisa: `Uygulama sınavı (${tarih(s.tarih)}) ücreti ödenmedi: ${gecti ? `son gün ${tarih(son)} geçti` : fark(son) === 0 ? 'son gün bugün' : `son gün ${tarih(son)}, ${mebIsGunuSay(gun(0), son)} iş günü kaldı`}. Ücret sınavdan ${N} iş günü önce döner sermayeye yatırılır.` })));
+        odenmedi.forEach(k => l.push(bul(sev, `${tamAd(k)} · uygulama sınavı ücreti ödenmedi`, metin, '#/kursiyer/' + k.id, { kursiyer: k.id, yalnizDosya: true, eylem: 'odeme', kisa: `Uygulama sınavı (${tarih(s.tarih)}) ücreti ödenmedi: ${gecti ? `son gün ${tarih(son)} geçti` : fark(son) === 0 ? 'son gün bugün' : `son gün ${tarih(son)}, ${mebIsGunuSay(gun(0), son)} iş günü kaldı`}. Ücret sınavdan ${N} iş günü önce döner sermayeye yatırılır.` })));
       });
     } },
   // 16/4: kurslarda günde 2 saatten az, 6 saatten fazla teorik ders yapılamaz (grup ve gün başına toplam)

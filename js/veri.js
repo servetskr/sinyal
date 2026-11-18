@@ -705,6 +705,8 @@ function uret() {
   kursiyerler.forEach(k => { if (k.evrak.saglik) { const t = tarihOku(k.kayit); t.setDate(t.getDate() - ara(2, 20)); k.saglikRapor = { no: '2026/' + ara(10000, 99999), tarih: iso(t).split('-').reverse().join('.') }; } if (k.evrak.adli) k.adliSicil = { barkod: 'ASB' + ara(100000, 999999) + ara(1000, 9999) }; });
   kursiyerler.forEach(k => { if (k.asama === 'Ehliyet' && k.dsinav) { const d = fark(k.dsinav.tarih); k.kapanis = d < -12 ? { sertifika: gun(d + 3), arsiv: gun(d + 6) } : d < -5 ? { sertifika: gun(d + 3) } : {}; } });
   kursiyerler.forEach(k => { k.odeme.ekler = []; if (k.esinav) k.odeme.ekler.push({ ad: 'e-Sınav ücreti', tutar: 1250, odendi: k.kayit }); if (k.dsinav && k.dsinav.hak > 1) k.odeme.ekler.push({ ad: 'Uygulama sınavı tekrar ücreti', tutar: 2000, odendi: null }); if (k.dsinav && k.dsinav.sonuc === 'Kaldı') k.odeme.ekler.push({ ad: 'Sınav tekrar ücreti', tutar: 2000, odendi: null }); });
+  // PAR-023: yaklaşan uygulama sınavlarında aday başı sınav ücreti kalemi (çoğu ödenmiş, birkaçı ödenmemiş)
+  sinavlar.filter(s => s.tur === 'Direksiyon' && !Object.keys(s.sonuc).length).forEach(s => s.kursiyerler.forEach((id, i) => { const k = kursiyerler.find(x => x.id === id); if (k) k.odeme.ekler.push({ ad: `Uygulama sınavı ücreti (${((k.dsinav && k.dsinav.hak) || 0) + 1}. sınav)`, tutar: 2000, odendi: i % 4 === 3 ? null : k.kayit, sinav: s.id, tur: 'resmi' }); }));
   const ogretmenler = [
     { id: 'o1', ad: 'Ayten Duman', brans: 'Trafik ve çevre', tel: '0532 771 40 12' },
     { id: 'o2', ad: 'Dr. Serkan Ak', brans: 'İlk yardım', tel: '0505 318 62 90' },
@@ -1030,7 +1032,14 @@ export function ibanGecerli(s) {
 export const ekDersFiyat = sinif => { const v = SINIFLAR[sinif] && SINIFLAR[sinif].ekDers; return v != null ? v : (S.kurs.ekDersUcreti || ekDersTabani() || 0); };
 // Özel ders (belgeliye özel direksiyon eğitimi, md.6/4): sınıfa özel ücret, yoksa kursun özel ders ücreti, o da yoksa ek ders ücreti
 export const ozelDersFiyat = sinif => { const v = SINIFLAR[sinif] && SINIFLAR[sinif].ozelDers; return v != null ? v : (S.kurs.ozelDersUcreti || ekDersFiyat(sinif)); };
-export const uygulamaSinavUcreti = hak => { const l = S.kurs.uygulamaUcret; if (Array.isArray(l) && l.length) return +l[Math.min(Math.max(hak, 1), l.length) - 1] || 0; return hak > 1 ? ((S.kurs.tekrarUcret || {}).dsinav || 0) : 0; };
+// PAR-025/064: MEB uygulama (direksiyon) sınavı ücreti yıllık (S.kurs.mebSinavUcreti { '2026': 2000 }); her hakta aynı (MTSK md.43/5: döner sermayeye aday başı).
+// Kurs ilk sınavın ücretini kendisi karşılıyorsa (S.kurs.ilkSinavKurs) öğrenciden alınmaz, kalem 'kurs ödedi' olarak emanette görünür.
+// Kim yatırır (PAR-063): S.kurs.sinavUcretKip 'kurs' (kurs tahsil edip toplu yatırır: emanet kalemi, oturum dekontu) | 'aday' (aday kendisi yatırır: kurs borcuna girmez)
+export const mebSinavUcreti = (t = gun(0)) => +((S.kurs.mebSinavUcreti || {})[String(t).slice(0, 4)]) || 0;
+// gösterim ve liste tutarı: yılın ücreti girilmemişse eski ayardaki (hak başı) tekrar sınavı ücreti
+export const mebSinavUcretiGoster = (t = gun(0)) => mebSinavUcreti(t) || (Array.isArray(S.kurs.uygulamaUcret) && +S.kurs.uygulamaUcret[1]) || +((S.kurs.tekrarUcret || {}).dsinav) || 0;
+export const sinavUcretKip = () => S.kurs.sinavUcretKip === 'aday' ? 'aday' : 'kurs';
+export const uygulamaSinavUcreti = (hak, t) => { const y = mebSinavUcreti(t); if (y) return hak <= 1 && S.kurs.ilkSinavKurs ? 0 : y; const l = S.kurs.uygulamaUcret; if (Array.isArray(l) && l.length) return +l[Math.min(Math.max(hak, 1), l.length) - 1] || 0; return hak > 1 ? ((S.kurs.tekrarUcret || {}).dsinav || 0) : 0; };
 export const esinavUcreti = hak => hak > 1 ? ((S.kurs.tekrarUcret || {}).esinav || 0) : (S.kurs.esinavUcreti ?? 1250);
 export const digerUcretler = () => S.kurs.digerUcretler || [];
 
@@ -1154,8 +1163,10 @@ export function ekTur(x) {
   return 'diger';
 }
 // Türe göre ek kalem toplamı ve kursiyerin kurs borcu (resmî masraflar hariç: öğrenci ekranı)
-export const ekToplamTur = (k, turler) => ((k.odeme || {}).ekler || []).filter(x => turler.includes(ekTur(x))).reduce((a, x) => a + (+x.tutar || 0), 0);
-export const kursBorcu = k => { const res = ((k.odeme || {}).ekler || []).filter(x => ekTur(x) === 'resmi'), odRes = res.filter(x => x.odendi).reduce((a, x) => a + (+x.tutar || 0), 0); return Math.max(0, k.odeme.toplam + ekToplam(k) - res.reduce((a, x) => a + (+x.tutar || 0), 0) - (odenen(k) - odRes)); };
+// PAR-064: kursOdedi kalemi (ilk sınav ücretini kurs karşıladı) öğrencinin borcuna da ödediğine de girmez; yalnız emanette görünür
+const ogrEkler = k => ((k.odeme || {}).ekler || []).filter(x => !x.kursOdedi);
+export const ekToplamTur = (k, turler) => ogrEkler(k).filter(x => turler.includes(ekTur(x))).reduce((a, x) => a + (+x.tutar || 0), 0);
+export const kursBorcu = k => { const res = ogrEkler(k).filter(x => ekTur(x) === 'resmi'), odRes = res.filter(x => x.odendi).reduce((a, x) => a + (+x.tutar || 0), 0); return Math.max(0, k.odeme.toplam + ekToplam(k) - res.reduce((a, x) => a + (+x.tutar || 0), 0) - (odenen(k) - odRes)); };
 export const resmiMasraflar = k => ((k.odeme || {}).ekler || []).filter(x => ekTur(x) === 'resmi');
 
 /* ---------- il taban fiyat listesi (valilik maliyet tablosu; veri js/taban.js) ---------- */
@@ -1370,8 +1381,8 @@ export function dersAraci(egId, sinif, t, saat, haric) {
   for (const s of aracSiniflari(sinif)) { const a = S.araclar.filter(a => a.sinif === s && a !== o).find(bos); if (a) return a; }
   return S.araclar.filter(a => a !== o && aracUygun(a, sinif)).find(bos) || null;
 }
-export const ekToplam = k => (k.odeme.ekler || []).reduce((a, x) => a + x.tutar, 0);
-export const odenen = k => k.odeme.pesin + k.odeme.taksitler.reduce((a, t) => a + (t.odendi ? t.tutar : (t.kismi || 0)), 0) + (k.odeme.ekler || []).filter(x => x.odendi).reduce((a, x) => a + x.tutar, 0) - (k.odeme.iade || 0);
+export const ekToplam = k => ogrEkler(k).reduce((a, x) => a + x.tutar, 0);
+export const odenen = k => k.odeme.pesin + k.odeme.taksitler.reduce((a, t) => a + (t.odendi ? t.tutar : (t.kismi || 0)), 0) + ogrEkler(k).filter(x => x.odendi).reduce((a, x) => a + x.tutar, 0) - (k.odeme.iade || 0);
 export const kalanBorc = k => Math.max(0, k.odeme.toplam + ekToplam(k) - odenen(k));
 export const gecikenler = k => k.odeme.taksitler.filter(t => !t.odendi && !t.iptal && fark(t.vade) < 0);
 export const gecikenTutar = k => gecikenler(k).reduce((a, t) => a + t.tutar - (t.kismi || 0), 0);

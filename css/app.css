@@ -3493,3 +3493,13 @@ input[type="tel"], input[inputmode="tel"], input[inputmode="numeric"], input[nam
 .il-resim img { flex: 1; min-width: 0; object-fit: cover; }
 .il-onizle { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
 .il-onizle img { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; }
+/* PAR-023/024: sınav oturumunda ücret rozeti ve döner sermaye dekontu */
+button.rozet { cursor: pointer; font: inherit; font-family: var(--baslik); font-size: 11.5px; font-weight: 800; }
+button.rozet:focus-visible { outline: 2px solid var(--levha); outline-offset: 2px; }
+.su-dekont { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; padding: 10px 20px; border-top: 1px solid var(--cizgi-2); font-size: 13.5px; }
+.su-dekont > span { display: inline-flex; gap: 6px; align-items: center; min-width: 0; flex: 1 1 260px; }
+.su-kipler { border: 1px solid var(--cizgi); border-radius: 8px; padding: 10px 12px; display: grid; gap: 6px; }
+.su-kipler legend { font-weight: 700; font-size: 13.5px; padding: 0 4px; }
+.su-kipler small { color: var(--soluk); font-size: 12.5px; }
+.su-kipler label { display: flex; gap: 8px; align-items: center; font-size: 14px; min-height: 32px; }
+.su-kipler input { width: 18px; height: 18px; }
