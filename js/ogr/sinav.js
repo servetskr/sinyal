@@ -8,6 +8,8 @@ import { bildir, tarih, goreli, gunKisa } from '../ui.js?v=234';
 import * as HZ from '../hazirlik.js?v=234';
 import { hakDurum, tekrarUcret, esinavVar, TEORIKSIZ_METIN } from '../ogrenci.js?v=234';
 import * as TY from '../teorikyol.js?v=234';
+import * as B from '../bulut.js?v=234';
+const SURUM = new URL(import.meta.url).searchParams.get('v') || '';
 import { KONULAR } from '../konular.js?v=234';
 import { soruKonu, SORU_KONU } from '../soruKonu.js?v=234';
 import { UNITE_AD, konular, altAc, altKapat, altEkran as altSimdi } from './ogrveri.js?v=234';
@@ -299,6 +301,19 @@ function konuBasariHtml(k) {
     return `<button type="button" class="ox-satir ox-snv-ks" data-snv-basla="konu" data-unite="${kn}">${ikonKutu(ik, ton)}<span class="ox-satir-govde"><b>${esc(uniteAd(kn))}</b>${serit(o || 0, zayif ? 'turuncu' : 'yesil', true)}<small class="${zayif ? 'kirmizi' : ''}">${o == null ? 'Henüz soru çözmedin' : `${sayi(t)} soru${zayif ? ' · çalışman gerek' : ''}`}</small></span><span class="ox-satir-sag ${zayif ? 'zayif' : ''}">${o == null ? '–' : '%' + o}</span><span class="ox-chev">${oi('sag')}</span></button>`;
   }));
 }
+// UYG-018: hatalı soru bildirimi mdSinyal'e (worker /soru-bildir); düzeltilen bildirimler günde bir kez sorulur, öğrenciye bir kez söylenir
+async function kursIzi() { const kurs = (B.bulut && B.bulut.kurs) || ''; if (!kurs) return 'demo'; return [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(kurs)))].slice(0, 4).map(x => x.toString(16).padStart(2, '0')).join(''); }
+async function soruBildirGonder(qi, neden, aciklama, metin) {
+  if (!(B.bulut && B.bulut.kurs)) return;   // demo ve yerel denemede gönderilmez
+  try { await fetch(B.WORKER + '/soru-bildir', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ qi, neden, aciklama, metin: String(metin || '').slice(0, 160), surum: String(SURUM || ''), ks: await kursIzi() }), mode: 'cors', credentials: 'omit', keepalive: true }); } catch (x) { }
+}
+let duzeltilenSoru = null;
+function duzeltilenleriSor(k, yenile) {
+  if (!(B.bulut && B.bulut.kurs)) return;
+  const l = (k.bildirilenSorular || []).filter(q => !(k.bildirimDuzeltildi || []).includes(q)); if (!l.length) return;
+  const an = 'sinyal-soru-durum', bugun = new Date().toISOString().slice(0, 10); try { if (localStorage.getItem(an) === bugun) return; localStorage.setItem(an, bugun); } catch (x) { }
+  fetch(B.WORKER + '/soru-bildir/yonet?durum=' + l.join(','), { mode: 'cors', credentials: 'omit' }).then(r => r.json()).then(j => { const d = (j && j.duzeltildi) || []; if (!d.length) return; k.bildirimDuzeltildi = [...new Set([...(k.bildirimDuzeltildi || []), ...d])]; duzeltilenSoru = d.length; kaydet(); yenile && yenile(); }).catch(() => { });
+}
 // UYG-003: öğrencinin yüklediği e-sınav ücreti dekontu bu hak için mi (kurs onaylayınca ücret yattı sayılır)
 const dekontVar = k => !!(k.esinavDekont && String(k.esinavDekont.sira) === String(esinavHakDurum(k).sira));
 function sinavlarHtml(k) {
@@ -338,6 +353,7 @@ function araclarHtml(k) {
     + `<div class="ox-snv-kutular">${kutu('kronometre', 'Hızlı test', '10 soru', { 'data-snv-basla': 'hizli' })}${kutu('panoListe', 'Konu testi', `${ayar.n} soru`, { 'data-ox-alt': 'test-ayar' })}</div>`
     + liste(satirlar, 'ox-snv-araclar')
     + `<p class="ox-snv-toplam">Toplam: ${sayi(dn)} deneme · ${sayi(cozulen)} soru çözüldü</p>`
+    + (duzeltilenSoru ? (n => (duzeltilenSoru = null, not(`Bildirdiğin ${n} soru incelendi ve düzeltildi. Teşekkürler!`, 'dogru')))(duzeltilenSoru) : '')
     + hazirlikHtml(k) + konuBasariHtml(k) + sinavlarHtml(k)
     + not(`Havuzda ${sayi(SORU_KONU.length)} soru var. Sonuçların kursun ekranında görünür.`);
 }
@@ -413,7 +429,7 @@ export function altEkran(ad, ctx) {
   testGeriYukle(k);
   let html;
   if (a === 'deneme') html = denemeGirisHtml(k);
-  else if (a === 'araclar') html = araclarHtml(k);
+  else if (a === 'araclar') { duzeltilenleriSor(k, () => ctx.yenile()); html = araclarHtml(k); }
   else if (a === 'test-ayar') html = testAyarHtml();
   else if (a === 'tekrar') html = tekrarHtml(k);
   else if (a === 'yanlislar') { html = yanlislarHtml(k); if (!SR && (k.yanlislar || []).length) sorulariYukle().then(() => ctx.yenile()).catch(() => { }); }
@@ -548,6 +564,9 @@ function bagla(kap, ctx) {
     if (is === 'bildir-gonder' && modal && modal.tur === 'bildir') {
       const qi = modal.qi, q = SR[qi], m = document.querySelector('.ox-snv-modal'), sn = m.querySelector('[data-snv-neden].secili'), ac = (m.querySelector('[data-snv-aciklama]').value || '').trim().slice(0, 300);
       gonderimEkle(S.kurs.ad, `${tamAd(k)} soru bildirdi (#${qi + 1}): ${NEDEN[sn ? +sn.dataset.snvNeden : 0]}${ac ? ' · ' + ac : ''} · “${q[1].slice(0, 90)}”`, 'Soru bildirimi');
+      // UYG-018: mdSinyal'in soru bankası kuyruğuna da gider (kişi bilgisi gitmez: soru no, neden, açıklama, kursun kısa izi)
+      soruBildirGonder(qi, NEDEN[sn ? +sn.dataset.snvNeden : 0], ac, q[1]);
+      k.bildirilenSorular = [...new Set([...(k.bildirilenSorular || []), qi])].slice(-30);
       kaydet(); modalKapat(); bildir('Teşekkürler, soru incelenmek üzere iletildi');
     }
   });

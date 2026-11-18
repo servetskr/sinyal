@@ -274,6 +274,43 @@ async function talepYonet(req, env, url, cevap) {
   const kayitlar = (await Promise.all(l.keys.sort((a, b) => b.name.localeCompare(a.name)).slice(0, 100).map(x => env.LINK.get(x.name, { type: 'json' }).catch(() => null)))).filter(Boolean);
   return cevap({ ok: true, liste: kayitlar, toplam: l.keys.length });
 }
+// ---- hatalı soru bildirimi (UYG-018): öğrenci uygulamasından girişsiz POST (yalnız sitenin adresinden); soru başına tek kayıt, 1 yıl ----
+// Sahip Destek › Soru bankası'nda görür ve 'düzeltildi' der; öğrenci uygulaması bildirdiği soruların durumunu herkese açık uçtan sorar (yalnız numara ve durum).
+const SORU_GUN = 365 * 86400, soruIp = new Map();
+async function soruBildirAl(req, env, cevap) {
+  if (!env.LINK) return cevap({ ok: false }, 500);
+  const ip = req.headers.get('CF-Connecting-IP') || '', on = Math.floor(Date.now() / 600e3), sy = soruIp.get(ip);
+  if (sy && sy.on === on && sy.n >= 10) return cevap({ ok: false, hata: 'sinir' }, 429);
+  soruIp.set(ip, sy && sy.on === on ? { on, n: sy.n + 1 } : { on, n: 1 }); if (soruIp.size > 5000) soruIp.clear();
+  let b; try { const h = await req.text(); if (h.length > 3000) return cevap({ ok: false }, 400); b = JSON.parse(h); } catch (x) { return cevap({ ok: false }, 400); }
+  const qi = +b.qi; if (!Number.isInteger(qi) || qi < 0 || qi > 99999) return cevap({ ok: false }, 400);
+  const yeni = { neden: talepMetin(b.neden, 60), aciklama: hataTemiz(b.aciklama, 300), surum: String(b.surum || '').replace(/\D/g, '').slice(0, 6), ks: /^[0-9a-f]{8}$|^demo$/.test(b.ks || '') ? b.ks : '', z: new Date().toISOString() };
+  const eski = await env.LINK.get('soru:' + qi, { type: 'json' }).catch(() => null);
+  const k = { qi, metin: talepMetin(b.metin, 160) || (eski && eski.metin) || '', ilk: eski ? eski.ilk : yeni.z, son: yeni.z, sayi: (eski ? eski.sayi : 0) + 1, durum: eski && eski.durum === 'duzeltildi' ? 'yeni' : (eski && eski.durum) || 'yeni', bildirimler: [...((eski && eski.bildirimler) || []), yeni].slice(-10) };
+  await env.LINK.put('soru:' + qi, JSON.stringify(k), { expirationTtl: SORU_GUN, metadata: { sayi: k.sayi, son: k.son, durum: k.durum } });
+  return cevap({ ok: true });
+}
+async function soruBildirYonet(req, env, url, cevap) {
+  if (!env.LINK) return cevap({ ok: true, liste: [] });
+  // herkese açık: ?durum=1,2,3 → yalnız düzeltilenlerin numarası
+  if (req.method === 'GET' && url.searchParams.has('durum')) {
+    const ids = String(url.searchParams.get('durum')).split(',').map(Number).filter(x => Number.isInteger(x) && x >= 0).slice(0, 30);
+    const l = await Promise.all(ids.map(i => env.LINK.get('soru:' + i, { type: 'json' }).catch(() => null)));
+    return cevap({ ok: true, duzeltildi: l.filter(x => x && x.durum === 'duzeltildi').map(x => x.qi) });
+  }
+  if (!(await sahipMi(req, env))) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
+  if (req.method === 'POST') {
+    let b; try { b = await req.json(); } catch (x) { return cevap({ ok: false }, 400); }
+    const qi = +b.qi, v = Number.isInteger(qi) ? await env.LINK.get('soru:' + qi, { type: 'json' }) : null; if (!v) return cevap({ ok: false }, 404);
+    if (b.sil) { await env.LINK.delete('soru:' + qi); return cevap({ ok: true }); }
+    const y = { ...v, durum: ['yeni', 'duzeltildi', 'reddedildi'].includes(b.durum) ? b.durum : v.durum, sahipNot: talepMetin(b.not ?? v.sahipNot, 300), karar: new Date().toISOString() };
+    await env.LINK.put('soru:' + qi, JSON.stringify(y), { expirationTtl: SORU_GUN, metadata: { sayi: y.sayi, son: y.son, durum: y.durum } });
+    return cevap({ ok: true, kayit: y });
+  }
+  const l = await env.LINK.list({ prefix: 'soru:', limit: 1000 });
+  const kayitlar = (await Promise.all(l.keys.sort((a, b) => String((b.metadata || {}).son).localeCompare(String((a.metadata || {}).son))).slice(0, 150).map(x => env.LINK.get(x.name, { type: 'json' }).catch(() => null)))).filter(Boolean);
+  return cevap({ ok: true, liste: kayitlar, toplam: l.keys.length });
+}
 // platform sahibi mi: SAHIP_ANAHTAR (gizli) ya da Firebase kimliği (Google'ın Identity Toolkit'i belirteci doğrular)
 async function sahipMi(req, env) {
   const tok = (req.headers.get('Authorization') || '').replace(/^Bearer /, '').trim(); if (!tok) return false;
@@ -1204,6 +1241,8 @@ export default {
     // site formları: POST girişsiz (yalnız sitenin kendi adresinden); yönetim (liste, durum, silme) yalnız platform sahibi
     if (yol === 'talep' && req.method === 'POST') return IZINLI.includes(origin) ? talepAl(req, env, cevap) : cevap({ ok: false, hata: 'Izin yok' }, 403);
     if (yol === 'talep/yonet') return talepYonet(req, env, url, cevap);
+    if (yol === 'soru-bildir' && req.method === 'POST') return IZINLI.includes(origin) ? soruBildirAl(req, env, cevap) : cevap({ ok: false, hata: 'Izin yok' }, 403);
+    if (yol === 'soru-bildir/yonet') return soruBildirYonet(req, env, url, cevap);
     // kursun rapor ve yedek e-postaları (kimlik denetimi eposta() içinde)
     if (yol === 'eposta' || yol.startsWith('eposta/')) return eposta(req, env, url, yol, cevap);
     const G = 'https://graph.facebook.com/v25.0/' + env.PHONE_ID;
