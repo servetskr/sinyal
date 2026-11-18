@@ -351,18 +351,31 @@ function yazdimNot(a, id, taban, j) {
 function birlestir(tj, bj, oj) {
   let t, b, o; try { t = JSON.parse(tj); b = JSON.parse(bj); o = JSON.parse(oj); } catch (x) { return null; }
   if (![t, b, o].every(z => z && typeof z === 'object' && !Array.isArray(z))) return null;
-  const m = { ...o }; let degisti = false;
+  const m = { ...o }; let degisti = false; const cakisan = [];
   new Set([...Object.keys(t), ...Object.keys(b)]).forEach(f => {
-    const tv = JSON.stringify(t[f]), bv = JSON.stringify(b[f]);
-    if (bv !== tv && JSON.stringify(o[f]) === tv) { if (b[f] === undefined) delete m[f]; else m[f] = b[f]; degisti = true; }
+    const tv = JSON.stringify(t[f]), bv = JSON.stringify(b[f]), ov = JSON.stringify(o[f]);
+    if (bv !== tv && ov === tv) { if (b[f] === undefined) delete m[f]; else m[f] = b[f]; degisti = true; }
+    else if (bv !== tv && ov !== tv && ov !== bv) cakisan.push({ f, benim: b[f], onlar: o[f] });   // DIG-025: iki cihaz aynı alanı değiştirdi; sonra yazanınki kalır
   });
+  if (cakisan.length) birlestir.cakisan = { cakisan, ad: [o.ad, o.soyad].filter(x => typeof x === 'string').join(' ') || o.plaka || o.baslik || '' };
   return degisti ? JSON.stringify(m) : null;
+}
+// DIG-025: kaybeden cihaza uyarı. Sizin değeriniz kurtarma kaydına yazılır (Ayarlar › Veri aktarımı); uygulama 'sinyal-cakisma' olayıyla ekranda söyler.
+const ALAN_AD = { ad: 'ad', soyad: 'soyad', tel: 'telefon', adres: 'adres', ogrenim: 'öğrenim', eposta: 'e-posta', sinif: 'sınıf', egitmen: 'öğretmen', saat: 'saat', tarih: 'tarih', arac: 'araç', notlar: 'notlar', odeme: 'ödeme planı', evrak: 'evrak', durum: 'durum', not: 'not', plaka: 'plaka', muayene: 'muayene', sigorta: 'sigorta' };
+const KAYIT_AD = { kursiyerler: 'öğrenci', dersler: 'ders', egitmenler: 'öğretmen', araclar: 'araç', sinavlar: 'sınav', adaylar: 'yeni öğrenci', teorik: 'teorik ders', gorusmeler: 'görüşme' };
+function cakismaBildir(a, k, c, benimJ) {
+  try { kurtarmaYaz([{ id: a + '~' + k, w: { a, t: benimJ } }], { code: 'cakisma: aynı alanı başka cihaz değiştirdi (' + c.cakisan.map(x => x.f).join(', ') + ')' }); } catch (x) { }
+  const alan = c.cakisan.map(x => ALAN_AD[x.f] || x.f).join(', '), kim = (KAYIT_AD[a] || 'kayıt') + (c.ad ? ' ' + c.ad : '');
+  const deger = c.cakisan.filter(x => ['string', 'number'].includes(typeof x.benim)).map(x => `${ALAN_AD[x.f] || x.f}: “${String(x.benim).slice(0, 60)}”`).join(', ');
+  try { window.dispatchEvent(new CustomEvent('sinyal-cakisma', { detail: { metin: `Başka bir cihaz aynı anda ${kim} kaydının ${alan} bilgisini değiştirdi; onun değeri geçerli oldu.${deger ? ' Sizin yazdığınız: ' + deger + '.' : ''} Gerekirse yeniden girin; sizin değeriniz Ayarlar › Veri aktarımı › kurtarma kaydında.`, a, k } })); } catch (x) { }
 }
 function gelenBirlestir(a, k, v) {
   const anah = a + '\u0001' + k, y = yazdim.get(anah); if (!y) return v;
   if (v === y.benim || Date.now() - y.t > YAZDIM_SURE) { yazdim.delete(anah); return v; }
   if (y.taban == null) return v;
-  const m = birlestir(y.taban, y.benim, v); if (!m) return v;
+  birlestir.cakisan = null; const m = birlestir(y.taban, y.benim, v), c = birlestir.cakisan; birlestir.cakisan = null;
+  if (c) cakismaBildir(a, k, c, y.benim);
+  if (!m) return v;
   y.benim = m; y.t = Date.now();  // birleşik hâl yazılacak (son'daki sunucu hâlinden farklı olduğu için farklar bulur)
   return m;
 }

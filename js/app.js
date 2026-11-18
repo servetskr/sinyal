@@ -60,6 +60,9 @@ function duyuruAlani(kap) {
   DY.yukle().then(() => { const s = kap.querySelector('[data-sg-alan="alt"]'); if (!s || kap.querySelector('[data-dy-liste]')) return; const n = DY.okunmamis().length;
     s.insertAdjacentHTML('afterend', `<p class="dy-bag-satir"><button type="button" class="sg-bag" data-dy-liste>Duyurular${n ? ` · ${n} yeni` : ''}</button></p>`); setTimeout(() => DY.goster(), 1200); });
 }
+// DIG-025: iki cihaz aynı alanı aynı anda değiştirince kaybeden cihaz uyarılır (bulut.js birleştirme)
+addEventListener('sinyal-cakisma', ev => { const m = ev.detail && ev.detail.metin; if (!m) return; if (document.querySelector('.perde')) return bildir(m, 'uyari');
+  pencere({ baslik: 'Değişikliğiniz başka cihazınkiyle çakıştı', taslak: false, icerik: `<p style="font-size:14px">${e(m)}</p>`, altlik: '<button class="dg dg-ana" data-kapat>Tamam</button>' }); });
 document.addEventListener('click', ev => { if (ev.target.closest('[data-dy-liste]')) { ev.preventDefault(); DY.listeAc().then(() => document.querySelectorAll('[data-dy-liste]').forEach(b => { b.textContent = 'Duyurular'; })); } });
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
