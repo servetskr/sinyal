@@ -482,6 +482,9 @@ async function baglan(u, ilkVeri) {
     // yeni cihazda ilk veri sunucudan gelmezse giriş ekranı sonsuza kadar beklemesin: oturum kayıtlı, sayfa bir kez yenilenir (önbellekli açılış yolu çalışır)
     const bekci = setTimeout(() => { if (!ilk) return; try { if (!sessionStorage.getItem('sinyal-yeniden')) { sessionStorage.setItem('sinyal-yeniden', '1'); yenidenAc(); } } catch (x) { } }, 25000);
     const coz = () => { clearTimeout(bekci); try { sessionStorage.removeItem('sinyal-yeniden'); } catch (x) { } coz0(); };
+    // DENETİM Ö7 (YON-081): sahip kursu askıya alır ya da kapatırsa açık oturumlar hemen kapanır (sunucu kuralı yazmayı zaten reddeder;
+    // istemci boşuna yazmayı denemesin, kurtarma kaydı birikmesin). Giriş ekranı nedeni söyler.
+    dinleyiciler.push(F.onSnapshot(F.doc(db, 'kurslar', u.kurs), d => { const v = d.exists() ? d.data() : {}; if (v.durum === 'askida' || v.durum === 'kapali') cikisYap().then(() => location.reload()); }, () => { }));
     dinleyiciler.push(F.onSnapshot(F.collection(db, 'kurslar', u.kurs, 'v'), { includeMetadataChanges: true }, q => {
       bulut.durum = q.metadata.fromCache ? 'cevrimdisi' : 'cevrimici';
       // ilk sunucu görüntüsü: sunucuGeldi, sunucudaki hâl uygulandıktan SONRA açılır. Eskiden önce açılıyordu; önbellekle açılan cihazın
@@ -1200,6 +1203,7 @@ async function ustaBaglan(u) {
     }, x => { bulut.durum = 'hata'; bulut.hata = hataMetni(x); console.error(x); ustaKur({}, u); bitir(); durumYaz(); }));
   });
   // hesabı kapatılan ya da rolü değişen öğretmen çıkarılır
+  dinleyiciler.push(F.onSnapshot(F.doc(db, 'kurslar', u.kurs), d => { const v = d.exists() ? d.data() : {}; if (v.durum === 'askida' || v.durum === 'kapali') cikisYap().then(() => location.reload()); }, () => { }));   // YON-081
   dinleyiciler.push(F.onSnapshot(F.doc(db, 'kurslar', u.kurs, 'uyeler', u.uid), d => {
     if (!d.exists()) { cikisYap().then(() => location.reload()); return; }
     const ben = d.data(); if (ben.rol !== 'usta' || (ben.usta || null) !== (u.usta || null)) location.reload();
