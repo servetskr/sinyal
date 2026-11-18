@@ -88,7 +88,7 @@ export const suruyor = () => durum.calisiyor && Date.now() - (durum.sonIlerleme 
 // Toplu iş, Durdur/Devam, onaylı teslim, kurum denetimi ve "Ekranları denetle" Yardımcı 1.12.0 ile geldi
 export const GEREKEN_SURUM = '1.12.0';
 // DENETİM Ö6: bu yayının Yardımcı'sı 1.17.0. 1.12–1.16 çalışır ama yeni okumaları tanımaz: o okumalar işe konmaz, kullanıcıya hangi sürümün gerektiği söylenir.
-export const ONERILEN_SURUM = '1.17.0';
+export const ONERILEN_SURUM = '1.18.0';
 export const CEK_SURUM = { teorik: '1.13.0', ucretler: '1.13.0', randevular: '1.13.0', kurum: '1.14.0', ucretIlani: '1.15.0', yetki: '1.16.0', direksiyonProgrami: '1.16.0', fotograf: '1.17.0', sonuclar: '1.17.0', merkezler: '1.17.0', kimlikler: '1.17.0', iban: '1.18.0' };
 export const DONEM_SIL_SURUM = '1.18.0';   // MEB-184: Aday Dönem Sil işini tanıyan Yardımcı (eskisi 'bu iş türünü tanımıyor' der, hiçbir şey göndermez)
 export const surumEnAz = (gerek, var_ = EK.eklenti.surum) => { const sv = String(var_ || '0').split('.').map(Number), g = String(gerek).split('.').map(Number); for (let i = 0; i < 3; i++) if ((sv[i] || 0) !== (g[i] || 0)) return (sv[i] || 0) > (g[i] || 0); return true; };
