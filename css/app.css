@@ -3773,3 +3773,7 @@ tr.secili-satir td { background: rgba(10, 77, 162, .06); }
 .toplu-cubuk { position: sticky; top: 0; z-index: 3; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px 12px; background: var(--murekkep); color: #fff; border-radius: 10px; margin: 6px 0; }
 .toplu-cubuk .dg { background: #fff; }
 .toplu-cubuk .ks-bosluk { flex: 1; }
+/* KAY-084 */
+.tc-gecmis { border: 1px solid var(--cizgi); background: var(--panel-2); border-radius: 10px; padding: 10px 12px; margin: 8px 0; font-size: 13.5px; }
+.tc-gecmis small { color: var(--soluk); }
+.tc-gecmis ul { list-style: none; display: grid; gap: 3px; margin-top: 6px; }
