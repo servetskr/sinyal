@@ -3,7 +3,7 @@
 // aynı localStorage anahtarı 'sinyal-test-'+k.id, aynı veri etkileri: k.konuAnaliz, k.yanlislar, k.deneme, HZ.gorulenEkle, HZ.tekrarGuncelle, kaydet()).
 // Ekranlar: deneme girişi, deneme sorusu, soru listesi, bitirme onayı, sonuç, yanlış inceleme (tam ekran akışlar);
 // çalışma araçları, test ayarları, bugünkü tekrar, yanlışlarım (Öğren alt ekranları).
-import { S, kaydet, SINIFLAR, fark, gonderimEkle, ogrOzellik, tamAd, kalanHak, gerekliDireksiyon, egitimSinifi, esinavHakDurum } from '../veri.js?v=234';
+import { S, kaydet, SINIFLAR, fark, gonderimEkle, ogrOzellik, tamAd, kalanHak, gerekliDireksiyon, egitimSinifi, esinavHakDurum, mufredatResmiDers } from '../veri.js?v=234';
 import { bildir, tarih, goreli, gunKisa } from '../ui.js?v=234';
 import * as HZ from '../hazirlik.js?v=234';
 import { hakDurum, tekrarUcret, esinavVar, TEORIKSIZ_METIN } from '../ogrenci.js?v=234';
@@ -146,7 +146,9 @@ function sayacKur(ctx) {
 /* ---------- ortak parçalar ---------- */
 const gorselKutu = q => { const g = gorselHtml(q[4]); return g ? `<div class="ox-snv-gorsel" aria-hidden="true">${g}</div>` : ''; };
 const kaynakHtml = q => q[6] ? `<small class="ox-snv-kaynak">${esc(q[6])}</small>` : '';
-const baglarHtml = (qi, konuyuOku = true) => { const id = konuyuOku ? soruKonu(qi, SR[qi][0]) : null; return `<div class="ox-snv-baglar">${id ? baglanti('Konuyu oku', { 'data-og-ders': id }, true) : '<span></span>'}${baglanti('Soruda hata var', { 'data-snv': 'bildir', 'data-qi': qi }, true)}</div>`; };
+// UYG-014: sorunun MEB teorik ders programındaki yeri (soru → konu anlatımı → resmî ders; veri.js mufredatResmiDers)
+const resmiDersEtiket = qi => { const id = soruKonu(qi, SR[qi][0]); if (!id) return ''; const [kat, no] = id.split('-'), d = mufredatResmiDers(kat, +no); return d ? `<p class="ox-snv-resmi">${esc(uniteAd(kat))} dersi · MEB programında ${d}. ders</p>` : ''; };
+const baglarHtml = (qi, konuyuOku = true) => { const id = konuyuOku ? soruKonu(qi, SR[qi][0]) : null; return `${resmiDersEtiket(qi)}<div class="ox-snv-baglar">${id ? baglanti('Konuyu oku', { 'data-og-ders': id }, true) : '<span></span>'}${baglanti('Soruda hata var', { 'data-snv': 'bildir', 'data-qi': qi }, true)}</div>`; };
 const NEDEN = ['Doğru cevap yanlış işaretlenmiş', 'Soru ya da şıklar anlaşılmıyor', 'Bilgi güncel değil', 'Görsel hatalı', 'Diğer'];
 function modalHtml() {
   if (!modal) return '';
@@ -553,6 +555,7 @@ function bagla(kap, ctx) {
 
 /* ---------- stiller (yalnız ui.js değişkenleri) ---------- */
 stilEkle('ox-sinav', `
+.ox-snv-resmi{margin:10px 0 0;font-size:12.5px;color:var(--ox-ikincil)}
 .ox-snv-oneri{display:flex!important;align-items:center;gap:12px;width:100%;text-align:left;padding:14px 16px;margin:0 0 12px;border-color:#f5d39a;background:var(--ox-turuncu-acik)}.ox-snv-oneri .ox-satir-govde{flex:1;min-width:0;display:grid;gap:2px}.ox-snv-oneri b{font-size:16px}.ox-snv-oneri small{color:var(--ox-ikincil);font-size:13px}
 .ox-snv-akis .ox-akis-ust{grid-template-columns:72px 1fr 72px}
 .ox-snv-akis .ox-akis-sag{font-size:14.5px;font-weight:600;color:var(--ox-bas);font-variant-numeric:tabular-nums;padding-right:8px}
