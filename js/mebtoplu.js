@@ -194,10 +194,13 @@ export async function hazirla(ids, { foto = true, koru = null } = {}) {
   const l = [], hata = [], ekle = (x, not) => hata.push([x.id, not]);
   // direksiyon programı
   const p = programIsleri(sec.filter(x => x.tur === 'program').map(x => x.id)); l.push(...p.l); p.hatalar.forEach(([id, , not]) => hata.push([id, not]));
+  // MEBBİS'te sıra zorunlu: grup → şube → kayıt (skt02001: "…Grup ve Şube Tanımlaması Bulunamadı"). Bu işte yazılacak gruplar kayıtlardan önce gider. DON-005
+  const yazilacakGrup = new Set(sec.filter(x => x.tur === 'grup').map(x => (x.ref || {}).grup));
   for (const x of sec) {
     const r = x.ref || {};
     if (x.tur === 'kayit') {
       const k = kursiyer(r.kursiyer), g = k && mebGrup(k); if (!g) { ekle(x, 'Dönem grubuna atanmamış'); continue; }
+      if (!g.meb && !yazilacakGrup.has(g.id)) { ekle(x, `“${g.ad}” grubu MEBBİS’e yazılmadı: önce grubu ve şubesini yazın (şubesiz gruba kayıt yapılamaz) ya da MEBBİS’te varsa “MEBBİS’ten al › Dönem grupları”yla eşleyin`); continue; }
       if (!/^\d{11}$/.test(k.tc || '')) { ekle(x, 'TC kimlik no eksik'); continue; }
       if (!cep10(k.tel)) { ekle(x, 'Cep telefonu 10 hane değil'); continue; }
       // B Engelli'nin MEBBİS'teki sertifika adı doğrulanmadı: yanlış sınıfla kayıt açılmasın diye toplu yazmaya alınmaz.
@@ -228,6 +231,8 @@ export async function hazirla(ids, { foto = true, koru = null } = {}) {
       l.push({ id: x.id, tur: 'fatura', baslik: x.baslik, donem: g.donem, tc: k.tc, no: String(f.no), tarih: trT(f.tarih), tutar: String(Math.round(f.tutar * 100) / 100).replace('.', ',') });
     }
   }
+  // grup ve şube işleri önce (kayıt grubun MEBBİS'te açılmasını bekler)
+  l.sort((a, b) => (a.tur === 'grup' ? 0 : 1) - (b.tur === 'grup' ? 0 : 1));
   // kurum onayı: dönem başına tek kayıt
   const onay = {}; sec.filter(x => x.tur === 'onay').forEach(x => { const k = kursiyer(x.ref.kursiyer), g = k && mebGrup(k); if (!g) return ekle(x, 'Dönem grubuna atanmamış'); (onay[g.donem] = onay[g.donem] || []).push({ id: x.id, tc: k.tc }); });
   Object.entries(onay).forEach(([donem, adaylar]) => l.push({ id: 'onay-' + donem, tur: 'onay', baslik: 'Kurum onayı · ' + GR.donemAdi(donem), donem, adaylar }));

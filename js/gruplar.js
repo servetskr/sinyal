@@ -2,7 +2,7 @@
 // dönem YYYYAA, grup 1–3 (her grubun tek başlangıç tarihi, ayın 1'i ile 10'u arası), şube A–H. Ad: "Kasım 1A".
 // Kursiyer kaydı grubun başlangıcından önce yapılır (MTSK Yönetmeliği 12/2); evrakı tamam ve gruba atanmış kursiyer aktiftir.
 import { S, kaydet, gun, fark, iso, SINIFLAR, tamAd, islem, eksikEvrak, sb, anaSinif, mebKurum } from './veri.js?v=234';
-import { e, pencere, kapatPencere, bildir, rozet, tarih, isaret, ik } from './ui.js?v=234';
+import { e, pencere, kapatPencere, bildir, rozet, tarih, isaret, ik, pencereSor } from './ui.js?v=234';
 import * as KR from './kurallar.js?v=234';
 
 export const AYLAR = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -64,9 +64,17 @@ function donemSecenekleri(secili) {
   const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1);
   const l = []; for (let i = 0; i < 4; i++) { l.push(iso(d).slice(0, 4) + iso(d).slice(5, 7)); d.setMonth(d.getMonth() + 1); }
   if (secili && !l.includes(secili)) l.unshift(secili);
-  return l.map(x => `<option value="${x}" ${x === secili ? 'selected' : ''}>${e(donemAdi(x))}</option>`).join('');
+  const ac = acilabilirDonem();
+  return l.map(x => `<option value="${x}" ${x === secili ? 'selected' : ''}>${e(donemAdi(x))}${x === ac ? ' · MEBBİS’te açık' : ''}</option>`).join('');
 }
 const ayBasi = donem => `${String(donem).slice(0, 4)}-${String(donem).slice(4, 6)}`;
+// MEBBİS skt03001'de açılabilen dönem (17 Kas canlı: yalnız 202612): kayıt ve onay ayın 10'unda kapanır, sonraki ayın grubu bu ayın ortasından açılır.
+// Ayın 1–10'u: içinde bulunulan ay; 11'inden sonra: gelecek ay. MEBBİS'te zaten açılmış grubu girerken başka dönem de seçilebilir (yalnız uyarı). DON-005
+export function acilabilirDonem(t = gun(0)) { const d = new Date(t + 'T12:00'); if (d.getDate() > 10) { d.setDate(1); d.setMonth(d.getMonth() + 1); } return donemOf(iso(d)); }
+export function donemUyarisi(g) {
+  const ac = acilabilirDonem(); if (!g || !/^\d{6}$/.test(g.donem) || g.donem === ac) return '';
+  return g.donem < ac ? `MEBBİS’te ${donemAdi(g.donem)} dönemi için yeni grup açılamaz (şu an yalnız ${donemAdi(ac)} açık). MEBBİS’te zaten açılmış grubu giriyorsanız devam edin.` : `MEBBİS ${donemAdi(g.donem)} dönemini ${donemAdi(String(+g.donem - (String(g.donem).endsWith('01') ? 89 : 1)))} ayının ortasında açar; şimdilik yalnız ${donemAdi(ac)} açık.`;
+}
 export function grupHatasi(g, haric) {
   if (!/^\d{6}$/.test(g.donem)) return 'Dönemi seçin';
   if (!GRUP_NOLAR.includes(+g.grupNo)) return 'Grup 1, 2 ya da 3 olmalı';
@@ -97,7 +105,8 @@ export function grupFormu(on = {}, sonra) {
       <div class="alan"><label for="g-sinif">Sınıf</label><select id="g-sinif" name="sinif"><option value="">Bütün sınıflar</option>${sinifler.map(([k, x]) => `<option value="${k}" ${v.sinif === k ? 'selected' : ''}>${e(x.ad.split(' ·')[0])}</option>`).join('')}</select><small style="color:var(--soluk)">İlk kez ehliyet alanlar genelde aynı gruptadır; ehliyet türüne göre ayrı grup gerekiyorsa sınıf seçin.</small></div>
       <div class="alan"><label for="g-dl">Derslik</label><input id="g-dl" name="derslik" value="${e(v.derslik)}" placeholder="Derslik 1"></div>
       <div class="alan"><label for="g-kon">Kontenjan</label><input id="g-kon" name="kontenjan" inputmode="numeric" value="${e(v.kontenjan)}" placeholder="Boş bırakılabilir"><small id="g-kon-not" style="color:var(--soluk)"></small></div>
-      <div class="alan tam"><span class="et">MEBBİS’teki adı</span><b id="g-ad" style="font-size:18px;color:var(--murekkep)"></b> <small id="g-hata" style="display:block;color:var(--kirmizi);font-weight:700;margin-top:4px"></small></div>
+      <div class="alan tam"><span class="et">MEBBİS’teki adı</span><b id="g-ad" style="font-size:18px;color:var(--murekkep)"></b> <small id="g-hata" style="display:block;color:var(--kirmizi);font-weight:700;margin-top:4px"></small><small id="g-donem-not" style="display:block;color:var(--turuncu);font-weight:600;margin-top:4px"></small></div>
+      ${g0 ? '' : `<p class="ipucu tam">${isaret('uyari', 18)}<span>MEBBİS’te sıra: önce grup (Dönem Grup Açılış), sonra şube (Grup Şube Tanımlama), sonra kayıt. Bir dönemde en çok 3 grup açılır; <b>grup başlangıç tarihi sonradan değiştirilemez</b>.</span></p>`}
       ${kilit ? `<p class="ipucu uyari tam">${isaret('uyari', 18)}<span>Bu gruba ${kilit} kursiyer atanmış; dönem, grup, şube ve tarih değiştirilemez (MEBBİS’te de açılış tarihi sonradan değişmez).</span></p>` : ''}
     </form>`,
     altlik: `${g0 && !kilit ? '<button class="dg dg-cizgi" data-grup-sil style="margin-right:auto;color:var(--kirmizi)">Grubu sil</button>' : ''}<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-grup">${g0 ? 'Kaydet' : 'Grubu oluştur'}</button>`,
@@ -117,12 +126,16 @@ export function grupFormu(on = {}, sonra) {
           n.style.color = asar ? 'var(--kirmizi)' : 'var(--soluk)'; n.style.fontWeight = asar ? '700' : '';
           n.textContent = asar ? `MEBBİS’te ${uyg ? uyg.ad + ' ' : 'en büyük derslik '}kontenjanı ${sinir}; grup kontenjanı bunu aşamaz` : sinir ? `MEBBİS’te ${uyg ? uyg.ad : 'derslik'} kontenjanı ${sinir}${mk.binaKontenjan ? ' · bina ' + mk.binaKontenjan : ''}` : mk.binaKontenjan ? 'MEBBİS’te bina kontenjanı ' + mk.binaKontenjan : ''; } }
         d.querySelector('#g-hata').textContent = f.baslangic.value ? grupHatasi(oku(), g0 && g0.id) : '';
+        d.querySelector('#g-donem-not').textContent = g0 ? '' : donemUyarisi(x);
       };
       f.addEventListener('change', guncelle); f.addEventListener('input', guncelle); guncelle();
-      const sil = d.querySelector('[data-grup-sil]'); if (sil) sil.addEventListener('click', () => { if (!confirm(g0.ad + ' silinsin mi? MEBBİS’teki grup silinmez.')) return; S.gruplar = S.gruplar.filter(y => y.id !== g0.id); islem('Dönem grubunu sildi', g0.ad); kaydet(); kapatPencere(); bildir(g0.ad + ' silindi'); sonra && sonra(null); });
+      const sil = d.querySelector('[data-grup-sil]'); if (sil) sil.addEventListener('click', () => pencereSor(d, { baslik: g0.ad + ' silinsin mi?', metin: `Grup yalnız mdSinyal’den silinir; MEBBİS’teki gruba dokunulmaz. MEBBİS’te grubu silerseniz o gruba kayıtlı adaylar da silinir; MEBBİS’te silme işini kendiniz yapın.`, secenekler: [['sil', 'mdSinyal’den sil', 'dg-cizgi'], ['vazgec', 'Vazgeç', 'dg-ana']] }, c => { if (c !== 'sil') return; S.gruplar = S.gruplar.filter(y => y.id !== g0.id); islem('Dönem grubunu sildi', g0.ad); kaydet(); kapatPencere(); bildir(g0.ad + ' silindi'); sonra && sonra(null); }));
       f.addEventListener('submit', ev => {
         ev.preventDefault();
         const x = oku(), h = grupHatasi(x, g0 && g0.id); if (h) return bildir(h, 'uyari');
+        // yeni grup: MEBBİS'te başlangıç tarihi sonradan değişmez; kesin karar bir kez sorulur (aynı grubun yeni şubesinde tarih zaten belli)
+        const kardes0 = !g0 && (S.gruplar || []).some(y => mebGrubuMu(y) && y.donem === x.donem && +y.grupNo === x.grupNo);
+        if (!g0 && !kardes0 && !f.dataset.kesin) return pencereSor(d, { baslik: 'Başlangıç tarihi kesin mi?', metin: `${grupAdi(x.donem, x.grupNo, x.sube)} ${tarih(x.baslangic)} tarihinde başlayacak. MEBBİS’te grup başlangıç tarihi sonradan değiştirilemez; bu dönemde Grup ${x.grupNo} bu tarihle açılır.${donemUyarisi(x) ? ' ' + donemUyarisi(x) : ''}`, secenekler: [['evet', 'Evet, grubu aç', 'dg-ana'], ['vazgec', 'Tarihi değiştireceğim', 'dg-cizgi']] }, c => { if (c === 'evet') { f.dataset.kesin = '1'; f.requestSubmit(); } });
         const g = g0 || { id: 'g' + x.donem + '-' + x.grupNo + x.sube, kaynak: 'mdSinyal' };
         Object.assign(g, { ...x, ad: grupAdi(x.donem, x.grupNo, x.sube) });
         if (!g0) { S.gruplar = [...(S.gruplar || []), g]; islem('Dönem grubu açtı', g.ad + ' · ' + g.baslangic); } else islem('Dönem grubunu düzenledi', g.ad);
