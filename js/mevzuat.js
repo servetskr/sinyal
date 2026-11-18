@@ -5,7 +5,7 @@ import { S, gun, fark, kuralAyar, SINIFLAR, SINIF_VARSAYILAN, tamAd, islem, kayd
 import { e, tl, tarih, pencere, kapatPencere, bildir, belgeYazdir, isaret } from './ui.js?v=234';
 import { denetimUyarilari } from './denetim.js?v=234';
 import { kuralEkle } from './kurallar.js?v=234';
-import { listeAdi, satirAdi, gecisSatirlari, gecerlilikMetni, donemAdi, donemi } from './taban.js?v=234';
+import { listeAdi, satirAdi, gecisSatirlari, gecerlilikMetni, donemAdi, donemi, satirBul, tabanTutar } from './taban.js?v=234';
 
 const OOKY = 'Özel Öğretim Kurumları Yönetmeliği';
 const yil = () => gun(0).slice(0, 4);
@@ -235,7 +235,9 @@ export function ilanSatiri(sinif, mevcut, I) {
   return m ? l.find(r => r.istenen === sinif && r.mevcut.includes(ilanKod(m))) || null : l.find(r => r.istenen === sinif && !r.mevcut.length) || null;
 }
 kuralEkle({ id: 'T09', sira: 868, ad: 'Kurs ücretleri MEB’e bildirilen ücret ilanıyla uyumlu', dayanak: ILAN_DAYANAK + '; MTSK Yön. md.43/4', kapsam: 'kurs', ciddiyet: 'engel',
-  kontrol(l) { const I = S.kurs.mebUcretIlani; if (!I || !(I.satirlar || []).length) return; const L = tabanListesi(), yil = I.yil ? I.yil + ' ilanı' : 'ücret ilanı';
+  // PAR-066: ilan yılının il listesi (1 Şubat değişimi: '2026-2027' ilanı → Şubat 2026'da geçerli liste); bütün ilan satırları (belgeli/fark satırları dahil) tabanla karşılaştırılır
+  kontrol(l) { const I = S.kurs.mebUcretIlani; if (!I || !(I.satirlar || []).length) return; const L = (/^\d{4}/.test(I.yil || '') && tabanListesi(String(I.yil).slice(0, 4) + '-02-01')) || tabanListesi(), yil = I.yil ? I.yil + ' ilanı' : 'ücret ilanı';
+    if (L) ilanSatirlari(I).filter(r => r.mevcut.length).forEach(r => { const x = satirBul(L, { sinif: r.istenen, mevcut: r.mevcut[0], otomatik: r.mevcutOtomatik }); const tt = x && x.satir ? tabanTutar(x.satir) : null, t = tt ? tt.tutar : null; if (t != null && r.toplam < t) l.push(['uyari', `İlan satırı il tabanının altında: ${r.sinif}`, `MEBBİS’teki ${yil} ${tl(r.toplam)}, ${listeAdi(L)} (${satirAdi(x.satir)}) ${tl(t)}. Taban altında ücret alınamaz (MTSK Yön. md.43/2, 43/4); ilanı MEBBİS’te en az taban ücrete güncelleyin.`, '#/ayarlar/sinif']); });
     Object.entries(SINIFLAR).filter(([, v]) => v.aktif && v.ucret).forEach(([k, v]) => { const r = ilanSatiri(k, '', I); if (!r) return;
       if (v.ucret > r.toplam) l.push(['yasak', `${v.ad} ücreti MEB’e bildirilen ilanın üzerinde`, `Kurs ücreti ${tl(v.ucret)}, MEBBİS’teki ${yil} ${tl(r.toplam)}${r.saatUcret ? ` (${tl(r.saatUcret)} × ${r.dersSayisi || '?'} ders)` : ''}. İlan edilen ücretin üzerinde ücret istenemez (ÖÖKY md.54/1-d): ilanı MEBBİS’te güncelleyin ya da ücreti düşürün.`, '#/ayarlar/sinif']);
       const t = L ? sinifTabani(k, L) : null; if (t != null && r.toplam < t) l.push(['uyari', `${v.ad}: MEB’e bildirilen ilan il taban fiyatının altında`, `MEBBİS’teki ${yil} ${tl(r.toplam)}, ${listeAdi(L)} ${tl(t)}. Taban altında ücret alınamaz, ilanın üzerinde de ücret istenemez; ücret ilanını MEBBİS’te en az taban ücrete güncelleyin (Özel Öğretim Kurumları › ücret ilanı).`, '#/ayarlar/sinif']); }); } });

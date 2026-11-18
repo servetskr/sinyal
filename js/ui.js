@@ -175,12 +175,14 @@ export function alanlariYaz(kok, o) {
 const saatKisa = iso => { try { const d = new Date(iso), b = new Date(); return (d.toDateString() === b.toDateString() ? 'bugün ' : d.getDate() + ' ' + AY[d.getMonth()] + ' ') + d.toTimeString().slice(0, 5); } catch (x) { return ''; } };
 export const taslakZamani = saatKisa;
 // Pencerenin içinde soru katmanı (tarayıcının confirm kutusu yerine): secenekler [[deger, metin, sinif]], sec(deger)
-export function pencereSor(d, { baslik, metin, secenekler }, sec) {
+// girdi: { etiket, enAz } verilirse kısa bir metin (gerekçe) istenir; 'vazgec' dışındaki seçimde en az enAz harf zorunlu, sec(secim, metin)
+export function pencereSor(d, { baslik, metin, secenekler, girdi }, sec) {
   const p = d.querySelector('.pencere'); if (!p || p.querySelector('.pencere-sor')) return;
   const o = document.createElement('div'); o.className = 'pencere-sor'; o.setAttribute('role', 'alertdialog'); o.setAttribute('aria-label', baslik);
-  o.innerHTML = `<div class="pencere-sor-ic"><h3>${e(baslik)}</h3>${metin ? `<p>${metin}</p>` : ''}${secenekler.map(([v, t, c]) => `<button type="button" class="dg ${c || 'dg-cizgi'}" data-sor="${e(v)}">${t}</button>`).join('')}</div>`;
+  o.innerHTML = `<div class="pencere-sor-ic"><h3>${e(baslik)}</h3>${metin ? `<p>${metin}</p>` : ''}${girdi ? `<label style="display:block;text-align:left;font-size:13.5px;margin:6px 0 10px">${e(girdi.etiket)}<input class="girdi" data-sor-girdi maxlength="200" style="margin-top:4px"></label>` : ''}${secenekler.map(([v, t, c]) => `<button type="button" class="dg ${c || 'dg-cizgi'}" data-sor="${e(v)}">${t}</button>`).join('')}</div>`;
   p.appendChild(o); requestAnimationFrame(() => o.classList.add('acik'));
-  o.addEventListener('click', ev => { ev.stopPropagation(); const b = ev.target.closest('[data-sor]'); if (!b) return; o.remove(); sec(b.dataset.sor); });
+  o.addEventListener('click', ev => { ev.stopPropagation(); const b = ev.target.closest('[data-sor]'); if (!b) return; const gi = o.querySelector('[data-sor-girdi]'), gv = gi ? gi.value.trim() : '';
+    if (gi && b.dataset.sor !== 'vazgec' && gv.length < (girdi.enAz || 1)) { gi.focus(); gi.setAttribute('aria-invalid', 'true'); return; } o.remove(); sec(b.dataset.sor, gv); });
   o.addEventListener('keydown', ev => { if (ev.key === 'Escape') { ev.stopPropagation(); o.remove(); sec('vazgec'); } });
   setTimeout(() => { const b = o.querySelector('[data-sor]'); if (b) b.focus(); }, 30);
 }
