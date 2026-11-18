@@ -76,7 +76,7 @@ export function sinavlar(alt) {
           const l = riskli.filter(x => x.r.puan >= 50 && x.r.oneri && !x.k.ekDersTeklif);
           l.forEach(({ k, r }) => { k.ekDersTeklif = { n: r.oneri, tutar: r.oneri * ekDersFiyat(k.sinif), tarih: gun(0), neden: 'risk' }; });
           islem('Riskli kursiyerlere ek ders teklif etti', l.length + ' kursiyer'); kaydet(); yenile();
-          waSirali(l.map(({ k, r }) => { const a = alici(k); return { ad: a.ad, tel: a.tel, rol: a.rol, tur: 'Ek ders teklifi', metin: `${selam(k)} son derslerinize göre ${r.tur.toLocaleLowerCase('tr')} öncesi ${r.oneri} ek direksiyon dersi (${tl(r.oneri * S.kurs.ekDersUcreti)}) öneriyoruz${r.beceri && r.beceri.zayif.length ? '; özellikle ' + r.beceri.zayif.join(', ').toLocaleLowerCase('tr') + ' üzerinde çalışacağız' : ''}. Kursiyer ekranından ya da bu mesaja “evet” yazarak onaylayabilirsiniz.` }; }), 'Ek ders teklifi');
+          waSirali(l.map(({ k, r }) => { const a = alici(k); return { ad: a.ad, tel: a.tel, rol: a.rol, tur: 'Ek ders teklifi', metin: `${selam(k)} son derslerinize göre ${r.tur.toLocaleLowerCase('tr')} öncesi ${r.oneri} ek direksiyon dersi (${tl(r.oneri * ekDersFiyat(k.sinif))}) öneriyoruz${r.beceri && r.beceri.zayif.length ? '; özellikle ' + r.beceri.zayif.join(', ').toLocaleLowerCase('tr') + ' üzerinde çalışacağız' : ''}. Kursiyer ekranından ya da bu mesaja “evet” yazarak onaylayabilirsiniz.` }; }), 'Ek ders teklifi');
         }
         const so = t.closest('[data-sonuc]'); if (so) sonucGir(S.sinavlar.find(x => x.id === so.dataset.sonuc));
         const sd = t.closest('[data-sonuc-duzelt]'); if (sd) sonucDuzeltListe(S.sinavlar.find(x => x.id === sd.dataset.sonucDuzelt));

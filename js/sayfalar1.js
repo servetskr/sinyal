@@ -96,7 +96,7 @@ export function genel(alt) {
   const belgeBiten = sb(S.araclar).filter(a => !a.kapali && [a.sigorta, a.muayene].some(t => t && fark(t) < 0));   // süresi dolmuş; 30 gün içinde bitecekler kural A05'te (DIG-010)
   const haftaSinav = S.sinavlar.filter(s => fark(s.tarih) >= 0 && fark(s.tarih) <= 7);
   const asamaSay = ASAMALAR.map(a => sb(S.kursiyerler).filter(k => k.asama === a && (a !== 'Ehliyet' || (k.dsinav && fark(k.dsinav.tarih) > -30))).length);
-  const ortDers = S.kurs.ekDersUcreti;
+  const ortDers = ekDersFiyat('B') || 0;   // PAR-068: kursun ek ders ücreti boşsa il taban listesindeki ilave ders ücreti
   const kz = S.kazanim;
 
   const devir = (S.devredilen || []).length + ((S.sosyal && S.sosyal.yorumlar.filter(y => y.durum === 'devir').length) || 0);

@@ -1245,6 +1245,9 @@ export function bosVeri({ kursAd, yetkili, sehir, mudurTel }) {
   // demodan kalan görüşme günü kapatması ve hazır ücretler yeni kursa taşınmaz: ücretler kurulumda müdür onaylayana kadar "onaylanmadı" sayılır
   const gs = (o.sosyal && o.sosyal.gorusmeSablon) || o.gorusmeSablon; if (gs) gs.kapali = [];
   o.kurs.ucretOnay = null;
+  // PAR-068: demonun para değerleri gerçek kursa geçmez — ek ders ücreti boş (il taban listesindeki 'ilave ders' satırı kullanılır, yoksa kurulumda girilir),
+  // uygulama sınavı tekrar ücreti boş (MEB direksiyon sınav ücreti her yıl kursça girilir), indirim yok (taban altı olmasın, PAR-001); e-sınav ücreti MEB kılavuzundaki resmî tutardır
+  o.kurs.ekDersUcreti = null; o.kurs.ozelDersUcreti = null; o.kurs.tekrarUcret = { esinav: 1250, dsinav: null }; delete o.kurs.uygulamaUcret; o.kurs.indirimler = [];
   // il taban listesi varsa sınıf ve ek ders ücretleri taban fiyatla hazır gelir; geçiş ücretleri girilmedikçe taban sayılır (satirUcreti). Müdür kontrol edip onaylar.
   { const L = listeBul(kursunIli(o.kurs), iso(BUGUN)); if (L) { o.kurs.siniflar = o.kurs.siniflar || {}; Object.keys(SINIF_VARSAYILAN).forEach(k => { const r = sinifSatiri(L, k); if (r) o.kurs.siniflar[k] = { ...(o.kurs.siniflar[k] || {}), ucret: r.toplam }; }); const ek = ozelSatir(L, 'ilave'); if (ek) o.kurs.ekDersUcreti = ek.toplam; o.kurs.tabanKurulum = L.id; } }
   delete o._gun; o._bulut = true;
