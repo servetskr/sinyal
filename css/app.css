@@ -3586,3 +3586,7 @@ button.rozet:focus-visible { outline: 2px solid var(--levha); outline-offset: 2p
 .onkosul-serit a { color: var(--levha); font-weight: 700; white-space: nowrap; }
 /* YON-028: bilgilendirme metni */
 .bilgi-metin { max-height: 50vh; overflow: auto; font-size: 14.5px; line-height: 1.55; color: var(--metin); border: 1px solid var(--cizgi); border-radius: 8px; padding: 12px 14px; background: var(--zemin, #fafafa); }
+/* YON-063: kişisel tercihler */
+body.yazi-kucuk{zoom:.92}
+body.dugme-sol .pencere footer{flex-direction:row-reverse;justify-content:flex-end}
+body.suzgec-yapiskan .sayfa-kursiyerler .filtre{position:sticky;top:0;z-index:6;background:var(--panel,#fff);border-bottom:1px solid var(--cizgi)}

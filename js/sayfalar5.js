@@ -5,6 +5,7 @@ import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPenc
 import { yenile } from './app.js?v=234';
 import { destekWa } from './iletisim.js?v=234';
 import * as ON from './onay.js?v=234';
+import * as TC from './tercih.js?v=234';
 import { ONKOSUL, onkosulTamam, onkosulHaritasi } from './onkosul.js?v=234';
 import * as B from './bulut.js?v=234';
 import { wpGonder } from './sayfalar1.js?v=234';
@@ -708,18 +709,10 @@ function aktarimBakiye(id) {
 }
 
 /* ================= GÖRÜNÜM ================= */
-export function temaUygula() {
-  let t = {}; try { t = JSON.parse(localStorage.getItem('sinyal-gorunum') || '{}'); } catch (x) { }
-  document.body.classList.toggle('tema-sade', t.tema === 'sade');
-  document.body.classList.toggle('yazi-buyuk', t.yazi === 'buyuk');
-  return t;
-}
+// YON-063: görünüm tercihleri kişi başına (js/tercih.js); bu sekme ve kullanıcı menüsündeki pencere aynı içeriği gösterir
+export function temaUygula() { return TC.tercihUygula(); }
 function gorunumSekme() {
-  const t = temaUygula();
-  return `<div class="izgara iz-2"><div class="kart"><div class="kart-bas"><h3>Görünüm</h3><small>Yalnızca bu cihazda</small></div><div class="kart-govde" style="display:grid;gap:16px">
-    <div><b style="color:var(--murekkep)">Tema</b><div class="secim" style="margin-top:8px">${[['levha', 'Levha (mavi)'], ['sade', 'Sade (açık)']].map(([v, a]) => `<label><input type="radio" name="tema" value="${v}" data-gorunum="tema" ${(t.tema || 'levha') === v ? 'checked' : ''}><span>${a}</span></label>`).join('')}</div></div>
-    <div><b style="color:var(--murekkep)">Yazı boyutu</b><div class="secim" style="margin-top:8px">${[['normal', 'Normal'], ['buyuk', 'Büyük']].map(([v, a]) => `<label><input type="radio" name="yazi" value="${v}" data-gorunum="yazi" ${(t.yazi || 'normal') === v ? 'checked' : ''}><span>${a}</span></label>`).join('')}</div></div>
-  </div></div><div class="kart"><div class="kart-govde"><p style="font-size:14px">Sade tema gün boyu açık kalan ekranlar için daha dinlendiricidir: koyu mavi bloklar açık zemine, büyük harfli başlıklar normal yazıya döner. Yazı boyutu “Büyük” seçilince tüm ekranlar yaklaşık %12 büyür.</p></div></div></div>`;
+  return `<div class="izgara iz-2"><div class="kart"><div class="kart-bas"><h3>Görünüm ve tercihler</h3><small>Size özel · her cihazda</small></div><div class="kart-govde">${TC.tercihHtml()}</div></div><div class="kart"><div class="kart-govde"><p style="font-size:14px">Sade tema gün boyu açık kalan ekranlar için daha dinlendiricidir: koyu mavi bloklar açık zemine, büyük harfli başlıklar normal yazıya döner. Ön büro ve öğretmenler kendi tercihlerini sağ üstteki adlarına dokunup “Görünüm ve tercihler”den seçer.</p></div></div></div>`;
 }
 
 /* ================= AYAR SEKMELERİ (sayfalar2.ayarlar buradan çağırır) ================= */
@@ -775,7 +768,7 @@ const kulSubeSec = u => cokSube() && u.rol !== 'mudur' && oturum.kullanici && ot
 function yetkiKarti() {
   if (!oturum.kullanici || oturum.kullanici.rol !== 'mudur') return '';
   const y = S.kurs.yetki || {}, ek = y.ekran || {}, is = y.islem || {};
-  return `<div class="kart" style="margin-top:16px"><div class="kart-bas"><h3>Ön büro yetkileri</h3><small>Ön büro rolündeki herkese uygulanır · yetkiyi yalnız müdür verir</small></div><div class="kart-govde yt-izgara">
+  return `<div class="kart" style="margin-top:16px"><div class="kart-bas"><h3>Ön büro yetkileri</h3><small>Ön büro rolündeki herkese uygulanır · yetkiyi yalnız müdür verir; kimse kendinde olmayan yetkiyi veremez</small></div><div class="kart-govde yt-izgara">
     <fieldset><legend>Ekranlar</legend>${YETKI_EKRAN.map(([k, t]) => { const v = ek[k] === false ? 'kapali' : ek[k] === 'gor' ? 'gor' : 'tam'; return `<label class="yt-satir"><span>${t}</span><select class="girdi" data-yetki-ekran="${k}" aria-label="${t}">${EKRAN_DUZEY.map(([d, a]) => `<option value="${d}" ${d === v ? 'selected' : ''}>${a}</option>`).join('')}</select></label>`; }).join('')}<small style="color:var(--soluk)">“Yalnız görür”: ekranı açar, kayıt ekleyemez, değiştiremez, silemez. Raporlar, Ayarlar ve Kurulum yalnız müdüre açıktır.</small></fieldset>
     <fieldset><legend>Yapabileceği hassas işlemler</legend>${YETKI_ISLEM.map(([k, t]) => `<label class="ind-tik"><input type="checkbox" data-yetki-islem="${k}" ${is[k] ? 'checked' : ''}> ${t}</label>`).join('')}<small style="color:var(--soluk)">Taksit sayısı sınırı: Ayarlar › Kurs bilgileri › En çok taksit (ön büro). Şube ve kasa kısıtı kullanıcı satırında.</small></fieldset></div></div>`;
 }
@@ -906,7 +899,7 @@ export function ayarBaglan(k) {
   davetListesi(k); yedekListesi(k); sunucuKaydi(k); if (B.bulutta()) ikiAdimSatiri(k);
   k.addEventListener('change', ev => {
     const t = ev.target;
-    if (t.matches('[data-uye-rol]')) { const u = S.kullanicilar.find(x => x.id === t.dataset.uyeRol); B.uyeGuncelle(u.id, { rol: t.value }).then(() => { islem('Rol değiştirdi', u.ad + ' · ' + ROL[t.value]); kaydet(); bildir(u.ad + ' artık ' + ROL[t.value]); }).catch(x => { bildir(B.hataMetni(x), 'uyari'); yenile(); }); return; }
+    if (t.matches('[data-uye-rol]')) { if (!oturum.kullanici || oturum.kullanici.rol !== 'mudur') { t.value = (S.kullanicilar.find(x => x.id === t.dataset.uyeRol) || {}).rol || ''; return bildir('Rolü yalnız kurs müdürü değiştirir; kimse kendinde olmayan yetkiyi veremez', 'uyari'); } const u = S.kullanicilar.find(x => x.id === t.dataset.uyeRol); B.uyeGuncelle(u.id, { rol: t.value }).then(() => { islem('Rol değiştirdi', u.ad + ' · ' + ROL[t.value]); kaydet(); bildir(u.ad + ' artık ' + ROL[t.value]); }).catch(x => { bildir(B.hataMetni(x), 'uyari'); yenile(); }); return; }
     const pf = t.closest('[data-personel-foto]'); if (pf && pf.files && pf.files[0]) { const [tur, id] = pf.dataset.personelFoto.split(':'), x = (tur === 'usta' ? S.egitmenler : S.ogretmenler || []).find(y => y.id === id); if (!x) return; personelFotoKirp(pf.files[0]).then(u => { x.foto = u; x.fotoTarih = gun(0); islem('Personel fotoğrafı ekledi', x.ad); kaydet(); bildir(x.ad + ' fotoğrafı kaydedildi'); yenile(); }).catch(() => bildir('Fotoğraf okunamadı', 'uyari')); return; }
     if (t.matches('[data-kural]')) { const key = t.dataset.kural, r = KURAL_KAYNAK[key], eski = kuralDeger(key), ham = t.value.trim();
       // boş: varsayılana döner (teyit bekleyen değerde kurs değeri silinir, "Teyit bekliyor" geri gelir). Aralık dışı, eksi ya da sayı olmayan değer kaydedilmez.
@@ -973,7 +966,7 @@ export function ayarBaglan(k) {
     if (t.matches('[data-musavir]')) { S.entegrasyon.musavir.eposta = t.value.trim(); kaydet(); bildir('E-posta kaydedildi'); yenile(); }
     if (t.matches('[data-akt-tur]')) { aktarim.tur = t.value; aktarim.satirlar = null; aktarim.esles = {}; yenile(); }
     if (t.matches('[data-esles]')) { aktarim.esles[t.dataset.esles] = t.value; yenile(); }
-    if (t.matches('[data-gorunum]')) { let g = {}; try { g = JSON.parse(localStorage.getItem('sinyal-gorunum') || '{}'); } catch (x) { } g[t.dataset.gorunum] = t.value; try { localStorage.setItem('sinyal-gorunum', JSON.stringify(g)); } catch (x) { } temaUygula(); }
+    if (TC.tercihDegisti(t)) return;
     const fy = t.closest('[data-fatura-yukle]'); if (fy && fy.files[0]) { faturaNoAktar(fy.files[0]).catch(() => bildir('Dosya okunamadı; Excel ya da CSV olduğundan emin olun', 'uyari')).finally(() => { fy.value = ''; }); return; }
     const f = t.closest('[data-csv-yukle]');
     if (f && f.files[0]) {

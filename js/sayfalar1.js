@@ -1,6 +1,7 @@
 import { islemYetkili, gordu, satirUcretKaynagi, makbuzNoVer, taksitAyar, taksitSiniri, taksitVade, bankaHesaplari, varsayilanHesap, kursiyerDersleri, kayitDondurmaMi, planAyar, dersSaatleri, EGITIM_TURU, egitimTuruOf, mebEtiketleri, dersSayaci, arifeMi, ustaRengi, haftalikSinir, haftaDers, ekDersFiyat, ozelDersFiyat, uygulamaSinavUcreti, esinavUcreti, digerUcretler, odemeKodu, ibanMetni, dersSirasi, S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, risk, BECERI, islem, geriAlNoktasi, oturum, tcGecerli, tcMaskele, DERS_TUR_AD, ek3Sinif, ogretmen, yas, mebOnKontrol, sb, sbDers, sbSinav, kapaliGun, ustaAraci, dersAraci, yerelZaman, aktifSiniflar, satistaSiniflar, YONTEMLER, yontemAd, ayEkle, gecikenTutar, selam, kursAdi, tuketim, beklenenTuketim, mudurTel, evrakKaynak, tutarOku, taksitBol, ayniTcKayit, dersIptalIz, egitimSinifi, ekTur, aracSiniflari, kursiyerTaban, tabanListesi, ekDersTabani, ozelDersTabani, programUyarisi, varsayilanYontem, teorikVar, belgeliMi, esinavsizBelgeli, teorikSaat, TEORIK_MUAF_DERS, dersKonulariResmi } from './veri.js?v=234';
 import { ziyaretci, alanHatalari, e, saatDe, saatE, tl, sayi, ik, rozet, asamaRozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, sekmeler, tarih, tarihUzun, goreli, gunKisa, cubukGrafik, halka, ayAdi, isaret, yonLevhasi, olcumler, aracGorsel, ekranNotu, bugunMetni, fotoKucult, waAc, waSirali, tamTarih, pinSor, taslaklar, taslakBul, taslakSil, taslakSakla, alanlariOku, alanlariYaz, taslakZamani, pencereSor } from './ui.js?v=234';
 import { yenile } from './app.js?v=234';
+import * as TC from './tercih.js?v=234';
 import { denetimEksikleri, sozlesmeImzalat, sozlesmeDondur } from './sayfalar3.js?v=234';
 import { bosSaatler } from './sayfalar4.js?v=234';
 import { evrakDogrula, kurulumAdimlari, kurulumKarti, kurulumKarsila } from './sayfalar5.js?v=234';
@@ -731,6 +732,9 @@ export function kursiyerFormu(on = {}) {
 
 export function kursiyerler(filtre) {
   let sekme = filtre && ASAMALAR.includes(filtre) ? filtre : 'Tümü', q = '', sinif = '', grup = '', hizmet = '', borclu = false, avukatta = false, bekleyen = filtre === 'bekleyen';
+  // YON-063: yapışkan süzgeç (adresle gelen süzgeç önceliklidir) ve sayfa başına kayıt
+  { const ys = !filtre && TC.suzgecOku('kursiyerler'); if (ys) ({ sekme = 'Tümü', q = '', sinif = '', grup = '', hizmet = '', borclu = false, avukatta = false, bekleyen = false } = ys); }
+  const sayfaBasi = +TC.tercihler().sayfaBasi || 0; let gosterilen = sayfaBasi;
   // DIG-036: hizmet türü (sürücü kursu, 100 ceza puanı eğitimi, SRC, iş makinesi): kursta birden çok tür varsa süzgeç görünür
   const HIZMET = { ehliyet: 'Sürücü kursu', egitim: '100 ceza puanı eğitimi', src: 'SRC', operator: 'İş makinesi' }, hizmetOf = k => (SINIFLAR[k.sinif] || {}).tur || 'ehliyet';
   const hizmetler = [...new Set(sb(S.kursiyerler).map(hizmetOf))].filter(x => HIZMET[x]);
@@ -746,7 +750,8 @@ export function kursiyerler(filtre) {
   function satirlar() {
     const l = suzulen();
     if (!l.length) return `<tr><td colspan="7">${bos('Bu filtreye uyan kursiyer yok', 'Filtreyi değiştirin ya da yeni kursiyer ekleyin.')}</td></tr>`;
-    return l.map(k => {
+    const kalanSay = sayfaBasi && l.length > gosterilen ? l.length - gosterilen : 0;
+    return (kalanSay ? l.slice(0, gosterilen) : l).map(k => {
       const g = gecikenler(k), sd = sonrakiDers(k), S0 = SINIFLAR[k.sinif];
       return `<tr class="tik" data-git="${k.id}" tabindex="0">
         <td class="m-tam"><div class="kisi">${avatar(k.ad, k.soyad, k.foto)}<div><b>${e(tamAd(k))}${mudurMu() && ozelNotlar(k).length ? `<span class="ozel-isaret" title="Özel not var">${ik('kilit')}</span>` : ''}</b><small><span class="num">${e(k.tel)}</span></small></div></div></td>
@@ -757,7 +762,7 @@ export function kursiyerler(filtre) {
         <td class="m-gizle">${(() => { const r = risk(k); if (!r) return '<span style="color:var(--soluk)">—</span>'; const renk = r.puan >= 50 ? 'var(--kirmizi)' : r.puan >= 25 ? 'var(--sari)' : 'var(--yesil)'; return `<span class="risk-cubuk" title="${e(r.nedenler.join(', ') || 'Risk yok')}"><i style="width:${Math.max(6, r.puan)}%;background:${renk}"></i></span> <small style="color:var(--soluk)">${r.puan >= 50 ? 'Yüksek' : r.puan >= 25 ? 'Orta' : 'Düşük'}</small>`; })()}</td>
         <td class="m-gizle">${sd ? goreli(sd.tarih) + ' <span class="mono">' + sd.saat + '</span>' : '<span style="color:var(--soluk)">—</span>'}</td>
       </tr>`;
-    }).join('');
+    }).join('') + (kalanSay ? `<tr><td colspan="7" style="text-align:center"><button class="dg dg-cizgi dg-kucuk" data-daha>Daha fazla göster (${Math.min(sayfaBasi, kalanSay)} / ${kalanSay} kaldı)</button></td></tr>` : '');
   }
   return {
     baslik: 'Kursiyerler', alt: sb(S.kursiyerler).length + ' kayıt · ' + aktifler().length + ' aktif',
@@ -778,9 +783,13 @@ export function kursiyerler(filtre) {
       <div class="tablo-kap"><table class="tablo tablo-mobil"><thead><tr><th>Kursiyer</th><th>Sınıf</th><th>Aşama</th><th>Direksiyon</th><th>Kalan ödeme</th><th>Sınav riski</th><th>Sonraki ders</th></tr></thead><tbody id="tb">${satirlar()}</tbody></table></div>
     </div>`,
     baglan(k) {
-      const tb = k.querySelector('#tb'), ciz = () => { tb.innerHTML = satirlar(); k.querySelector('#ist').innerHTML = istatistik(); };
+      const tb = k.querySelector('#tb'), ciz = (daha) => { if (!daha) gosterilen = sayfaBasi; tb.innerHTML = satirlar(); k.querySelector('#ist').innerHTML = istatistik(); TC.suzgecYaz('kursiyerler', { sekme, q, sinif, grup, hizmet, borclu, avukatta, bekleyen }); };
+      // yapışkan süzgeçten gelen değerler kutulara yazılır
+      { const qi = k.querySelector('[data-q]'); if (qi) qi.value = q; [['[data-sinif]', sinif], ['[data-grup]', grup], ['[data-hizmet]', hizmet]].forEach(([sel, v]) => { const x = k.querySelector(sel); if (x && v) x.value = v; });
+        [['[data-borclu]', borclu], ['[data-avukatta]', avukatta], ['[data-bekleyen]', bekleyen]].forEach(([sel, v]) => { const x = k.querySelector(sel); if (x) x.classList.toggle('secili', !!v); }); if (q || sinif || grup || hizmet || borclu || avukatta || bekleyen) ciz(); }
       k.addEventListener('click', ev => {
         const s = ev.target.closest('[data-sekme]'); if (s) { sekme = s.dataset.sekme; k.querySelector('#sek').innerHTML = sekmeler([['Tümü', 'Tümü', say('Tümü')], ...ASAMALAR.map(a => [a, a, say(a)])], sekme); ciz(); }
+        if (ev.target.closest('[data-daha]')) { gosterilen += sayfaBasi; return ciz(true); }
         const g = ev.target.closest('[data-git]'); if (g) location.hash = '#/kursiyer/' + g.dataset.git;
         if (ev.target.closest('[data-yeni]')) kursiyerFormu();
         if (yarimKayitTikla(ev)) return;

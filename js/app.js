@@ -25,6 +25,7 @@ import * as RM from './raporlar.js?v=234';
 import * as GU from './guncelleme.js?v=234';
 import * as DY from './duyuru.js?v=234';
 import * as IL from './ilan.js?v=234';
+import * as TC from './tercih.js?v=234';
 
 /* ---------- uygulama hatalarının otomatik bildirimi ----------
    window.onerror / unhandledrejection → worker /hata (api.mdsinyal.com). Gönderilen: sürüm, rota adı (#/ad; kimlik ve kod kırpılır), rol,
@@ -65,6 +66,8 @@ function duyuruAlani(kap) {
 // DIG-025: iki cihaz aynı alanı aynı anda değiştirince kaybeden cihaz uyarılır (bulut.js birleştirme)
 addEventListener('sinyal-cakisma', ev => { const m = ev.detail && ev.detail.metin; if (!m) return; if (document.querySelector('.perde')) return bildir(m, 'uyari');
   pencere({ baslik: 'Değişikliğiniz başka cihazınkiyle çakıştı', taslak: false, icerik: `<p style="font-size:14px">${e(m)}</p>`, altlik: '<button class="dg dg-ana" data-kapat>Tamam</button>' }); });
+// YON-063: kişisel tercihler penceresi (kullanıcı menüsünden)
+document.addEventListener('click', ev => { if (!ev.target.closest('[data-tercih]')) return; ev.preventDefault(); import('./tercih.js?v=234').then(TC => { kapatPencere(); setTimeout(() => pencere({ baslik: 'Görünüm ve tercihler', icerik: TC.tercihHtml(), altlik: '<button class="dg dg-ana" data-kapat>Tamam</button>', onAc(p) { p.addEventListener('change', e2 => { if (TC.tercihDegisti(e2.target)) yenile(); }); } }), 200); }); });
 document.addEventListener('click', ev => { if (ev.target.closest('[data-nasil]')) { ev.preventDefault(); return import('./nasil.js?v=234').then(m => m.nasilAc()); } });   // DIG-031
 document.addEventListener('click', ev => { if (ev.target.closest('[data-dy-liste]')) { ev.preventDefault(); DY.listeAc().then(() => document.querySelectorAll('[data-dy-liste]').forEach(b => { b.textContent = 'Duyurular'; })); } });
 const SAYFALAR = {
@@ -122,6 +125,7 @@ function hesapSayfasi() {
     <div class="hs-liste">${ogr ? `<button type="button" data-ogr-sifre>${satir('kilit', 'Şifremi değiştir')}${ik('sag')}</button>` : ''}
       ${tel && !ORT.yonetimModu() && u.rol !== 'ortak' ? `<a href="tel:${e(tel)}">${satir('tel', 'Kursu ara', e(S.kurs.tel))}${ik('sag')}</a>` : ''}
       ${!ogr && !ORT.yonetimModu() && ['mudur', 'sekreter'].includes(u.rol) ? `<a href="#/genel" data-kapat>${satir('genel', 'Kurs ekranı', 'Müdür ve ön büro paneli')}${ik('sag')}</a><a href="#/egitmen" data-kapat>${satir('kursiyer', 'Öğretmen ekranı', 'Usta öğreticinin telefonda gördüğü; öğretmen seçilir')}${ik('sag')}</a><a href="#/ogrenci" data-kapat>${satir('tel', 'Öğrenci ekranı', 'Öğrencinin telefonda gördüğü; öğrenci seçilir')}${ik('sag')}</a>` : ''}
+      ${!ogr && ['mudur', 'sekreter'].includes(u.rol) && !ORT.yonetimModu() ? `<button type="button" data-tercih>${satir('ayar', 'Görünüm ve tercihler', 'Yazı boyu, tema, liste, süzgeç, sekme')}${ik('sag')}</button>` : ''}
       ${!ogr && u.rol !== 'usta' && !ORT.yonetimModu() ? `<button type="button" data-nasil>${satir('belge', 'Nasıl yapılır?', 'Sık işlerin adım adım anlatımı')}${ik('sag')}</button>` : ''}
       ${!ogr && u.rol !== 'usta' ? `<a href="yardimci/" target="_blank" rel="noopener">${satir('indir', 'MEBBİS Yardımcısı’nı kur', 'En güncel sürüm ve kurulum adımları · mdsinyal.com/yardimci')}${ik('sag')}</a>` : ''}
       ${ORT.yonetimModu() && u.rol === 'mudur' ? `<button type="button" data-yn-hesaplar>${satir('kilit', 'Hesaplar', 'Kurs hesapları, kullanıcılar, şifre yenileme')}${ik('sag')}</button>` : ''}
@@ -158,7 +162,7 @@ let bilgiSoruldu = false;
 const yetkiImza = () => JSON.stringify((S.kurs || {}).yetki || null) + '|' + ((oturum.kullanici || {}).rol || '');
 let sonYetki = '';
 function iskelet() {
-  sonYetki = yetkiImza(); kurallariHazirla(); zamanlayiciBaslat();
+  sonYetki = yetkiImza(); kurallariHazirla(); zamanlayiciBaslat(); Y5.temaUygula();
   { const ks = kullaniciSubesi(); if (ks && gorunum.sube !== ks) subeSec(ks); }  // PAR-040: şubeye kısıtlı kullanıcı
   const say = sayaclar();
   // az kullanılanlar ("Diğer") kapalı bir grupta durur; içindeki sayfa açıkken grup açık gelir
@@ -223,6 +227,8 @@ export function yenile(kaydirma = false) {
   (S.sinavlar || []).forEach(x => { if (!x.sonuc || typeof x.sonuc !== 'object') x.sonuc = {}; if (!Array.isArray(x.kursiyerler)) x.kursiyerler = []; });
   if (!document.getElementById('icerik') || yetkiImza() !== sonYetki) iskelet();
   let r = rota();
+  // YON-063: sekme hatırlama — menüden sekmesiz gelince en son sekme
+  if (TC.SEKMELI.includes(r.ad)) { if (r.id == null) { const son = TC.sekmeOku(r.ad); if (son && son.startsWith('#/' + r.ad + '/')) { history.replaceState(null, '', son); r = rota(); } } else TC.sekmeYaz(r.ad, location.hash); }
   kurulumAkisi();
   if (!izinli(r.ad)) { if (oturum.kullanici.rol === 'sekreter' && SAYFALAR[r.ad]) bildir(ekranYetkili(r.ad) ? 'Bu ekran yalnız kurs müdürüne açık' : 'Bu ekran ön büroya kapalı; müdür Ayarlar › Kullanıcılar › Ön büro yetkileri’nden açabilir', 'uyari'); location.hash = oturum.kullanici.rol === 'usta' ? '#/egitmen' : '#/genel'; return; }
   const yer = document.getElementById('icerik');
@@ -246,7 +252,7 @@ export function yenile(kaydirma = false) {
   if (ekranDuzey(r.ad === 'kursiyer' ? 'kursiyerler' : r.ad) === 'gor') saltOkunur(kap);
   kurulumSeridi(kap);
   // YON-028: açık onaylı bilgilendirmeler; oturum başına bir kez, sayfa oturduktan sonra (başka pencere açıksa sonraki girişe)
-  if (!bilgiSoruldu && ['mudur', 'sekreter'].includes(oturum.kullanici.rol)) { bilgiSoruldu = true; setTimeout(() => import('./onay.js?v=234').then(m => m.bilgiGoster()), 1500); }
+  if (!bilgiSoruldu && ['mudur', 'sekreter'].includes(oturum.kullanici.rol)) { bilgiSoruldu = true; const dene = n => { if (document.querySelector('.perde')) { if (n < 40) setTimeout(() => dene(n + 1), 3000); return; } import('./onay.js?v=234').then(m => m.bilgiGoster()); }; setTimeout(() => dene(0), 1500); }  // başka pencere açıksa kapanınca (en çok 2 dk)
   if (s.baglan) { try { s.baglan(kap); } catch (x) { console.error(x); } }
   if (r.ad === 'genel' || r.ad === 'adaylar') B.onKayitlariAl().then(n => { if (n) { bildir(`Web sitesinden ${n} ön kayıt geldi; Yeni öğrenciler’de`); if (location.hash.startsWith('#/adaylar')) yenile(); } });   // DIG-035
   if (r.ad === 'genel') { GU.anaEkranaEkle(kap); duyuruAlani(kap); }  // kurulu sürüm, “Güncellemeleri denetle”, yeni sürüm kartı; DIG-040 duyurular
