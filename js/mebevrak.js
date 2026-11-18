@@ -7,7 +7,8 @@ import { S, gun } from './veri.js?v=234';
 // KAY-011: engel bilgisi (MEBBİS'e 'Var/Yok' gider; ayrıntı e-sınav ve aday belgesi için kursta tutulur)
 export const ENGEL_TURLERI = ['Ortopedik (el/kol)', 'Ortopedik (yürüyemiyor)', 'İşitme, dil ve konuşma', 'Görme (bir gözü görmüyor)', 'Görme (büyüteçle)', 'Süreğen hastalık'];
 export const AB_KODLARI = [['01', 'Görüş düzeltme / koruma'], ['01.01', 'Gözlük'], ['01.02', 'Kontakt lens'], ['01.05', 'Göz siperi'], ['01.06', 'Gözlük veya kontakt lens'], ['01.07', 'Özel optik araç'], ['02', 'İşitme cihazı / iletişim yardımı'], ['03', 'Protez / ortez'], ['03.01', 'Kol protezi / ortezi'], ['03.02', 'Bacak protezi / ortezi']];
-export const OGRENIM_BELGELERI = ['Diploma', 'Mezuniyet Belgesi', 'Öğrenim Belgesi', 'Tasdikname', 'Geçici Mezuniyet Belgesi'];
+// KAY-116: MEBBİS skt02003 'Öğrenim Belgesi Türü' listesinin 14 değeri (Çizgi'nin MEBBİS listesi); motor seçeneği metniyle seçer
+export const OGRENIM_BELGELERI = ['II. Kademe Okur Yazarlık Belgesi', 'İlkokul Diploma', 'İlköğretim Diploma', 'İlköğretim Tasdikname', 'Açık İlköğretim Öğrenci Belgesi', 'Ortaokul Diploma', 'Ortaokul Tasdikname', 'Lise Diploma', 'Lise Tasdikname', 'Lise Öğrenci Belgesi', 'Üniversite Öğrenci Belgesi', 'Üniversite Diploma', 'Üniversite Geçici Mezuniyet Belgesi', 'Denklik/Öğrenim Belgesinin Noter Tasdikli Türkçe Tercümesi'];
 // MEBBİS metin kuralı: " < > ' ! & = yasak, baş/son boşluk yasak, uzunluk sınırı
 export const temiz = (v, n) => String(v || '').replace(/["<>'!&=]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n || 100);
 const tarihGir = t => { const m = String(t || '').match(/^(\d{2})\.(\d{2})\.(\d{4})$/); return m ? `${m[3]}-${m[2]}-${m[1]}` : String(t || '').slice(0, 10); };
@@ -87,7 +88,7 @@ export function evrakHtml(k) {
     <div class="form-izgara" style="margin-top:10px">
       <b class="tam" style="font-size:13.5px">Öğrenim belgesi</b>
       ${alan('meOgVeren', 'Belgeyi veren okul', o.veren, 'maxlength="100" list="me-dl-og" placeholder="ör. Tepebaşı Anadolu Lisesi"')}${dl('me-dl-og', son5('ogrenim'))}
-      <div class="alan"><label>Belge türü</label><select name="meOgTur"><option value="">Seçin</option>${OGRENIM_BELGELERI.map(x => `<option ${o.tur === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
+      <div class="alan"><label>Belge türü</label><select name="meOgTur"><option value="">Seçin</option>${o.tur && !OGRENIM_BELGELERI.includes(o.tur) ? `<option value="" selected>Eski kayıt: ${e(o.tur)} · yeniden seçin</option>` : ''}${OGRENIM_BELGELERI.map(x => `<option ${o.tur === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
       ${tarihAlan('meOgTarih', 'Belge tarihi', o.tarih)}${alan('meOgSayi', 'Belge sayısı', o.sayi, 'maxlength="10"')}
       <b class="tam" style="font-size:13.5px">Sağlık raporu</b>
       <div class="alan"><label>Engel durumu</label><select name="meSgOzur"><option value="Yok" ${oz !== 'Var' ? 'selected' : ''}>Engeli yok</option><option value="Var" ${oz === 'Var' ? 'selected' : ''}>Engeli var</option></select>${k && k.sinif === 'B-EN' && oz !== 'Var' ? '<small style="color:var(--kirmizi)">B Engelli: engel durumu “Var” olmalı</small>' : ''}</div>
@@ -112,7 +113,7 @@ export function evrakOku(f) {
 const trT = t => String(t || '').split('.').join('/');   // 07.12.2026 → 07/12/2026
 export function evrakPaketi(k) {
   const v = k.mebEvrak || {}, l = {}, eksik = [];
-  if (v.ogrenim && v.ogrenim.tur) l.ogrenim = { veren: v.ogrenim.veren, tur: v.ogrenim.tur, tarih: trT(v.ogrenim.tarih), sayi: v.ogrenim.sayi }; else eksik.push('öğrenim belgesi');
+  if (v.ogrenim && v.ogrenim.tur && !OGRENIM_BELGELERI.includes(v.ogrenim.tur)) eksik.push('öğrenim belge türü MEBBİS listesinden yeniden seçilmeli'); else if (v.ogrenim && v.ogrenim.tur) l.ogrenim = { veren: v.ogrenim.veren, tur: v.ogrenim.tur, tarih: trT(v.ogrenim.tarih), sayi: v.ogrenim.sayi }; else eksik.push('öğrenim belgesi');
   l.saglik = { ozur: (v.saglik || {}).ozur || ENGEL_VARSAYILAN(k.sinif), refNo: (v.saglik || {}).refNo || '' };
   if (k.sinif === 'B-EN' && l.saglik.ozur !== 'Var') eksik.push('B Engelli: engel durumu Var olmalı');   // rapor no e-Nabız referans no ile aynı olmayabilir: yalnız elle girilen gider
   if (v.adli) l.adli = { veren: v.adli.veren, tarih: trT(v.adli.tarih), sayi: v.adli.sayi }; else eksik.push('adli sicil');
