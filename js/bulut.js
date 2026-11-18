@@ -676,6 +676,8 @@ async function gunlukYedek() {
   const d = await F.getDoc(F.doc(db, 'kurslar', bulut.kurs, 'yedekler', tarih)).catch(() => null);
   if (d && d.exists()) return;
   try { await yedekAl(); } catch (x) { if (x.code !== 'permission-denied') throw x; }  // başka cihaz aynı anda aldıysa ikinci kopya reddedilir
+  // YON-040: dönem sonu yedeği — yeni ayın ilk açılışında geçen ayın (dönemin) kapanış hâli etiketli olarak bir kez alınır ve saklama temizliğinde silinmez
+  try { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); const ay = iso(d).slice(0, 7).replace('-', ''), etk = 'donem-sonu-' + ay; const l = await yedekler(); if (!l.some(y => y.etiket === etk)) await yedekAl(etk); } catch (x) { if (x.code !== 'permission-denied') console.error(x); }
   if (bulut.rol === 'mudur') eskiYedekleriSil().catch(() => { });
 }
 export async function yedekler() {
@@ -693,6 +695,7 @@ async function eskiYedekleriSil() {
   const aylik = new Set([...ayIlk].map(x => x.split('|')[1]));
   for (const y of l) {
     if (!y.olusturma || y.olusturma.getTime() > sinir) continue;
+    if (String(y.etiket || '').startsWith('donem-sonu')) continue;  // YON-040: dönem sonu yedekleri silinmez
     if (aylik.has(y.id) && y.olusturma.getTime() > yilSinir) continue;
     const b = F.writeBatch(db), kok = ['kurslar', bulut.kurs, 'yedekler'];
     for (let i = 0; i < y.parca; i++) b.delete(F.doc(db, ...kok, y.id + '~' + i));
@@ -712,6 +715,21 @@ export async function yedekOku(y) {
   }
   const tum = new Uint8Array(parcalar.reduce((a, p) => a + p.length, 0)); let o = 0; parcalar.forEach(p => { tum.set(p, o); o += p.length; });
   return JSON.parse(await ac(tum, y.sikistirma));
+}
+// YON-039: yedeği doğrula — kurs verisini değiştirmez. Firestore ve Cloudflare kopyası ayrı okunur, SHA-256'ları karşılaştırılır; açılıp JSON çözülür,
+// öğrenci ve kasa kaydı sayıları yedeğin bilgisiyle karşılaştırılır; sonuç işlem kaydına, son doğrulama tarihi kurs ayarına (ayda bir hatırlatma) yazılır.
+export async function yedekDogrula(y) {
+  const { db, F } = await sdk(), kok = ['kurslar', bulut.kurs, 'yedekler'], sha = async b => [...new Uint8Array(await crypto.subtle.digest('SHA-256', b))].map(x => x.toString(16).padStart(2, '0')).join('');
+  const birlestir = l => { const t = new Uint8Array(l.reduce((a, p) => a + p.length, 0)); let o = 0; l.forEach(p => { t.set(p, o); o += p.length; }); return t; };
+  const r = { id: y.id, firestore: '', dis: '', ayni: null, ogrenci: null, hareket: null, sayiTutar: null, cozuldu: false, hata: [] };
+  let fs = null; try { const p = []; for (let i = 0; i < y.parca; i++) { const d = await F.getDoc(F.doc(db, ...kok, y.id + '~' + i)); p.push(d.data().v.toUint8Array()); } fs = birlestir(p); r.firestore = await sha(fs); } catch (x) { r.hata.push('Firebase kopyası okunamadı'); }
+  let dis = null; try { const tok = await fb.auth.currentUser.getIdToken(); const q = await fetch(WORKER + '/yedek?kurs=' + encodeURIComponent(bulut.kurs) + '&id=' + encodeURIComponent(y.id), { headers: { Authorization: 'Bearer ' + tok } }); if (q.ok) { dis = new Uint8Array(await q.arrayBuffer()); r.dis = await sha(dis); } } catch (x) { }
+  if (!dis) r.hata.push('Cloudflare kopyası yok ya da okunamadı');
+  r.ayni = r.firestore && r.dis ? r.firestore === r.dis : null; if (r.ayni === false) r.hata.push('İki kopya birbirini tutmuyor');
+  const veri = fs || dis; if (veri) { try { const o = JSON.parse(await ac(veri, y.sikistirma)); r.cozuldu = true; r.ogrenci = (o.kursiyerler || []).length; r.hareket = (o.hareket || []).length; r.sayiTutar = r.ogrenci === (y.ogrenci || 0) && r.hareket === (y.hareket || 0); if (!r.sayiTutar) r.hata.push('Sayılar yedek bilgisini tutmuyor'); } catch (x) { r.hata.push('Yedek açılamadı (bozuk)'); } }
+  S.kurs.yedekDogrulama = { tarih: iso(new Date()), id: y.id, sonuc: r.cozuldu && r.sayiTutar !== false && r.ayni !== false ? 'tamam' : 'sorun' };
+  islem('Yedeği doğruladı', `${y.id} · ${r.cozuldu ? `${r.ogrenci} öğrenci, ${r.hareket} kasa kaydı` : 'açılamadı'}${r.ayni === true ? ' · iki kopya aynı' : ''}${r.hata.length ? ' · ' + r.hata.join(', ') : ''}`); kaydet();
+  return r;
 }
 // Seçilen güne geri dön: önce şimdiki hâlin yedeği alınır, sonra her kayıt yedekteki hâline getirilir
 export async function geriYukle(y) {

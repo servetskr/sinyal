@@ -5,7 +5,7 @@
 // 'uyari', 'bilgi'. Dizinin üstünde ek alanlar: kural (kimlik), kursiyer (id), kursiyerler (birden çok kişiye ait oturum bulgusunda kimlik listesi, ör. Y04), kisa (öğrenci dosyasında ad olmadan başlık), yalnizDosya, eylem.
 // DOM yok; yalnız veri.js'e bağlı (Node'da denenebilir). Bugün: veri.js BUGUN / gun().
 // Yeni kurallar ilk sürümde yalnız "uyarı"dır; Eyüp Bey teyit edince engele çevrilebilir (belgeler/eksikler/eyup-sorular.md).
-import { kursiyerDersleri, S, gun, fark, aracUygun, belgeliMi, dersSayaci, kayitDondurmaMi, izinDurumu, mebIsGunuIleri, haftalikSinir, haftaDers, ustaYetkili, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
+import { oturum, kursiyerDersleri, S, gun, fark, aracUygun, belgeliMi, dersSayaci, kayitDondurmaMi, izinDurumu, mebIsGunuIleri, haftalikSinir, haftaDers, ustaYetkili, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
 
 /* ---------- yardımcılar (ui.js'teki biçimlerle aynı; ui.js DOM'a bağlı olduğu için burada kopyası) ---------- */
 const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
@@ -100,6 +100,10 @@ const KURALLAR = [
           if (l2.length) l.push(bul('uyari', `MTV ${ay === 1 ? '1' : '2'}. taksit: ${l2.length} aracın ödemesi kayıtlı değil`, `Son gün ${ay === 1 ? '31 Ocak' : '31 Temmuz'}. Ödeyince Ekip ve araçlar’da araç kartından “Masraf ekle › MTV” ile kaydedin: ${l2.slice(0, 6).map(a => a.plaka).join(', ')}${l2.length > 6 ? '…' : ''}.`, '#/filo', { bugun: true })); } }
     } },
   // DIG-009: görüşme kaydında tekrar arama zamanı gelen (günü bugün ya da geçmiş, kapatılmamış); liste süzgeciyle aynı ölçüt (gorusme.js kontrolGelen)
+  // YON-039: gerçek kurs hesabında yedek ayda bir doğrulanır (Ayarlar › Güvenlik › Yedekler › Doğrula); yalnız müdüre
+  { id: 'G02', sira: 125, ad: 'Yedek ayda bir doğrulanır', dayanak: 'Kurs içi güvenlik (yedekten dönüş tatbikatı)', kapsam: 'kurs', ciddiyet: 'bilgi', bugun: true, bugunAd: () => 'Yedeği doğrulayın (ayda bir)',
+    kontrol(l) { if (!S._bulut || !oturum.kullanici || oturum.kullanici.rol !== 'mudur') return; const d = S.kurs.yedekDogrulama; if (d && fark(d.tarih) > -30 && d.sonuc === 'tamam') return;
+      l.push(['bilgi', d ? (d.sonuc === 'tamam' ? `Yedek en son ${tarih(d.tarih)} doğrulandı; ayda bir doğrulayın` : `Son yedek doğrulamasında sorun çıktı (${tarih(d.tarih)})`) : 'Yedekler hiç doğrulanmadı', 'Ayarlar › Güvenlik › Yedekler’de son yedeğin yanındaki “Doğrula”: yedek açılır, iki kopya karşılaştırılır, kurs verisi değişmez.', '#/ayarlar/guvenlik']); } },
   { id: 'G01', sira: 124, ad: 'Tekrar aranacak görüşmeler', dayanak: 'Kurs içi takip (görüşme kaydı)', kapsam: 'kurs', ciddiyet: 'bilgi', bugun: true, bugunAd: n => `${n} kişi tekrar aranacak`,
     kontrol(l) { (S.gorusmeler || []).filter(g => g.kontrol && !g.kapandi && g.kontrol.slice(0, 10) <= gun(0)).forEach(g => { const ad = (g.kisi && g.kisi.ad) || 'Görüşme', gec = g.kontrol.slice(0, 10) < gun(0);
       l.push(bul(gec ? 'uyari' : 'bilgi', `${ad} · tekrar ara ${gec ? tarih(g.kontrol.slice(0, 10)) + ' (geçti)' : 'bugün ' + (g.kontrol.slice(11, 16) || '')}`, `${g.konu || 'Görüşme'}${g.etiket ? ' · ' + g.etiket : ''}${g.detay ? ' · ' + g.detay.slice(0, 100) : ''}`, '#/adaylar', { bugun: true })); }); } },
