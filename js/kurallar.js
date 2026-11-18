@@ -208,6 +208,14 @@ const KURALLAR = [
         const son = mebIsGunuIleri(String(x.ayrildi || x.cikis).slice(0, 10), 5), g = fark(son);
         l.push(bul(g < 0 ? 'dur' : 'uyari', `${x.ad} ayrıldı · MEM’e bildirim ${g < 0 ? 'süresi geçti (' + tarih(son) + ')' : g === 0 ? 'bugün son gün' : 'son gün ' + tarih(son)}`, 'Ayrılış en geç 5 iş günü içinde il/ilçe MEM’e bildirilir; valilik 7 iş günü içinde ayrılış onayı verir; dönem içinde ayrılanın yerine 10 gün içinde yeni personel teklif edilir (ÖÖKY md.44). Bildirdiyseniz Ekip ve araçlar › Usta öğreticiler’de “MEM’e bildirildi” deyin.', '#/filo/egitmen', { personel: [x.id] })); });
     } },
+  // DIR-023: direksiyon devamsızlığı (MTSK Yön. md.14/2-3) — 'Gelmedi' dersleri gerekli direksiyon saatinin 1/5'i ya da daha azıysa bir defaya mahsus,
+  // ücreti alınarak telafi programı uygulanır; 1/5'i aşan ya da telafiye de gelmeyen için kaydın silinmesi gündeme gelir (kurs müdürü değerlendirir)
+  { id: 'M18', sira: 136, ad: 'Direksiyon devamsızlığı (1/5)', dayanak: 'MTSK Yön. md.14/2-3', kapsam: 'kursiyer', ciddiyet: 'uyari', bugun: true, bugunAd: n => `${n} öğrencinin direksiyon devamsızlığı var`,
+    kontrol(l) { sb(S.kursiyerler).filter(k => !k.kapali && ['Direksiyon', 'Sınav'].includes(k.asama) && gerekliDireksiyon(k)).forEach(k => {
+      const g = S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Gelmedi').length; if (!g) return;
+      const G = gerekliDireksiyon(k), sinir = G / 5, telafi = S.dersler.filter(d => d.kursiyer === k.id && d.tur === 'telafi').length;
+      if (g > sinir) l.push(bul('uyari', `${tamAd(k)} · direksiyon devamsızlığı ${g} ders (1/5 sınırı ${Math.floor(sinir)})`, `Gerekli ${G} saatin 1/5’i aşıldı; telafi programı hakkı yok, kaydın silinmesi gündeme gelir (MTSK Yön. md.14/2). Kurs müdürü değerlendirsin.`, '#/kursiyer/' + k.id, { kursiyer: k.id }));
+      else l.push(bul('bilgi', `${tamAd(k)} · ${g} direksiyon dersine gelmedi`, `1/5 sınırı içinde (${Math.floor(sinir)} ders): bir defaya mahsus, ücreti alınarak telafi programı uygulanabilir${telafi ? ' (telafi dersi planlı)' : ''}. Telafiye de gelmezse kaydı silinir (md.14/3).`, '#/kursiyer/' + k.id, { kursiyer: k.id })); }); } },
   // DIR-047: planlı derslerde aynı araç ya da aynı simülatör aynı saatte iki derste (sürükle-bırak, eski kayıt, aktarım sonrası) → engel; MEBBİS ikinciyi kabul etmez
   { id: 'M17', sira: 135, ad: 'Araç ve simülatör çakışması', dayanak: 'MEBBİS ders programı (aynı araç/cihaz aynı saatte bir derste)', kapsam: 'ders', ciddiyet: 'engel', bugun: true, bugunAd: n => `${n} araç/simülatör çakışması`,
     kontrol(l, K, c) { const g = new Map(); c.yakin.forEach(d => { const a = d.tur === 'simulator' ? (d.simulator ? 'sim:' + d.simulator : null) : d.arac ? 'arac:' + d.arac : null; if (!a) return; const an = a + '|' + d.tarih + '|' + d.saat; if (!g.has(an)) g.set(an, []); g.get(an).push(d); });
