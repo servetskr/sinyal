@@ -3785,3 +3785,6 @@ tr.secili-satir td { background: rgba(10, 77, 162, .06); }
 .kursiyer-tablo[data-gizli~="odeme"] th:nth-child(7), .kursiyer-tablo[data-gizli~="odeme"] td:nth-child(7) { display: none; }
 .kursiyer-tablo[data-gizli~="risk"] th:nth-child(8), .kursiyer-tablo[data-gizli~="risk"] td:nth-child(8) { display: none; }
 .kursiyer-tablo[data-gizli~="ders"] th:nth-child(9), .kursiyer-tablo[data-gizli~="ders"] td:nth-child(9) { display: none; }
+/* MEB-028: e-sınav başvuru listesinde bölüm başlıkları */
+.tablo tr.mm-bolum td { background: var(--panel-2); color: var(--murekkep); font-size: 13.5px; padding: 8px 12px; border-top: 1.5px solid var(--cizgi); }
+.tablo tr.mm-bolum small { color: var(--soluk); font-weight: 400; }

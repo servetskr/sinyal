@@ -139,7 +139,7 @@ export function ekIsler(hepsi) {
   sb(S.kursiyerler).filter(k => !k.kapali && k.asama === 'Teorik' && mebGrup(k) && !k.muaf && !egitimSinifi(k.sinif) && (!k.mevcutEhliyet || k.mevcutEhliyet === 'Yok') && !(k.esinav && k.esinav.sonuc === 'Geçti') && (k.teorik || 0) >= teorikSaat(k) && (hepsi || !k.mebEsinav || (k.esinav && k.esinav.tarih && k.mebEsinav < k.esinav.tarih))).forEach(k => {
     // başvuru hak başına: kalan adayın yeni hakkı için yeniden başvuru; ücret sıradaki hakka bağlı (TEO-010)
     const hd = esinavHakDurum(k), uc = esinavUcretiVar(k, hd.sira);
-    l.push({ ...is_('esinav', 'esinav-' + k.id, `${tamAd(k)} · ${tabanSinif(k.sinif)}`, { ad: tamAd(k), sinif: k.sinif, egitmen: k.egitmen, tarih: k.kayit, detay: `Teorik tamam · ${hd.sira}. hak · ${uc ? 'ücret yattı' : 'ücret bekleniyor (MEBBİS başvuruyu almaz)'}` + (k.sinif === 'B-EN' ? ' · ' + B_EN_NOT : '') }, null, 'Son e-sınav randevusu grup başlangıcından 90 gün içinde', { kursiyer: k.id }), bitti: !!k.mebEsinav });
+    l.push({ ...is_('esinav', 'esinav-' + k.id, `${tamAd(k)} · ${tabanSinif(k.sinif)}`, { ad: tamAd(k), sinif: k.sinif, egitmen: k.egitmen, tarih: k.kayit, ucretYok: !uc, kid: k.id, hak: hd.sira, detay: `Teorik tamam · ${hd.sira}. hak · ${uc ? 'ücret yattı' : 'ücret bekleniyor (MEBBİS başvuruyu almaz)'}` + (k.sinif === 'B-EN' ? ' · ' + B_EN_NOT : '') }, null, 'Son e-sınav randevusu grup başlangıcından 90 gün içinde', { kursiyer: k.id }), bitti: !!k.mebEsinav });
   });
   // sınav ücreti, harç, kart (resmî kalem) faturası MEBBİS fatura modülüne girilmez: kursiyerin masrafı, kurs geliri değil (il taban listesi not 5)
   // PAR-054: iptal edilen ve taslak (mali değeri olmayan) fatura MEBBİS'e gitmez
@@ -678,6 +678,7 @@ export function ucretleriIsle(t) {
   const i = sutun(t.baslik || [], 'kimlik', /^tc/); let yeni = 0, ayni = 0, yok = 0;
   (t.satirlar || []).forEach(r => { const { tc, gecerli } = MN.tcTemiz(r[i >= 0 ? i : 0]); if (!gecerli) return; const k = S.kursiyerler.find(x => x.tc === tc && !x.kapali); if (!k) { yok++; return; }
     if (k.esinav && k.esinav.sonuc === 'Geçti') return; if (esinavUcretiIsle(k, 'mebbis', gun(0))) yeni++; else ayni++; });
+  S.mebUcretYok = { n: yok, tarih: gun(0) };   // MEB-028: yalnız sayı (kişisel veri tutulmaz)
   if (yeni) islem('MEBBİS’ten e-sınav ücretlerini aldı', yeni + ' aday');
   return { yeni, ayni, yok, toplam: (t.satirlar || []).length };
 }
