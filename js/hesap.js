@@ -8,7 +8,7 @@ import { wpGonder, alici, odemeBilgisi, bilgiDuzenle } from './sayfalar1.js?v=23
 
 const yetkili = () => oturum.kullanici && ['mudur', 'sekreter'].includes(oturum.kullanici.rol);
 
-export const mesaj = (k, r) => `${selam(k)}\n\n*${S.kurs.ad}* öğrenci uygulamasında ${r.yeniden ? 'şifreniz yenilendi' : 'hesabınız açıldı'}.\n\n*Giriş:* ${B.ogrenciGirisLinki()}\n*Telefon:* ${B.telGoster(r.tel)}${r.eposta ? `\n*ya da e-posta:* ${r.eposta} (e-postanıza gelen doğrulama bağlantısına dokunun)` : ''}\n*Geçici şifre:* ${r.sifre}\n\nİlk girişte kendi şifrenizi belirleyeceksiniz.${r.yeniden ? '' : ' Ders programınızı, ödemelerinizi ve sınavlarınızı buradan görebilir, belgelerinizi yükleyebilirsiniz.'}\n\nŞifrenizi kimseyle paylaşmayın.`;
+export const mesaj = (k, r) => `${selam(k)}\n\n*${S.kurs.ad}* öğrenci uygulamasında ${r.yeniden ? 'şifreniz yenilendi' : 'hesabınız açıldı'}.\n\n*Giriş:* ${B.ogrenciGirisLinki()}${r.eposta ? `\n*E-posta:* ${r.eposta} (e-postanıza gelen doğrulama bağlantısına da dokunun)` : `\n*Telefon:* ${B.telGoster(r.tel)}`}\n*Geçici şifre:* ${r.sifre}\n\nİlk girişte kendi şifrenizi belirleyeceksiniz.${r.yeniden ? '' : ' Ders programınızı, ödemelerinizi ve sınavlarınızı buradan görebilir, belgelerinizi yükleyebilirsiniz.'}\n\nŞifrenizi kimseyle paylaşmayın.`;
 
 // Demoda gerçek hesap açılmaz: akış ve mesaj aynıdır, mesaj yalnız demo numarasına gider
 async function ac(k) {
@@ -35,7 +35,7 @@ function devirGonder(k, yenile) {
 export function hesapSeridi(k) {
   if (!yetkili() || k.kapali) return '';
   const h = k.hesap;
-  const durum = h ? [B.telGoster(h.tel), 'açıldı ' + tarih(h.acildi), h.sifirlandi ? 'şifre yenilendi ' + tarih(h.sifirlandi) : '', k.hesapAktif ? 'kullanıyor' + (k.sonGiris ? ' · son giriş ' + tarih(k.sonGiris) : '') : 'ilk giriş bekleniyor'].filter(Boolean).join(' · ') : 'Öğrenci kendi telefonundan program, ders, ödeme, sınav ve evraklarını görsün; ders alsın, evrak yüklesin, deneme sınavı çözsün';
+  const durum = h ? [h.eposta || B.telGoster(h.tel), 'açıldı ' + tarih(h.acildi), h.sifirlandi ? 'şifre yenilendi ' + tarih(h.sifirlandi) : '', k.hesapAktif ? 'kullanıyor' + (k.sonGiris ? ' · son giriş ' + tarih(k.sonGiris) : '') : 'ilk giriş bekleniyor'].filter(Boolean).join(' · ') : 'Öğrenci kendi telefonundan program, ders, ödeme, sınav ve evraklarını görsün; ders alsın, evrak yüklesin, deneme sınavı çözsün';
   return `<div class="panel-serit"><span>${ik('tel')}<b>Öğrenci hesabı</b><small>${e(durum)}</small></span><span class="sag" style="gap:6px">${h
     ? `<button type="button" class="dg dg-hafif dg-kucuk" data-hesap-sifre>Yeni geçici şifre gönder</button><button type="button" class="dg dg-hafif dg-kucuk" data-hesap-kapat>Hesabı kapat</button>`
     : k.devir && k.devir.durum !== 'kapandi' ? `<small style="color:var(--sari-koyu,#a15c00)">Numara devri bekleniyor (${tarih(k.devir.tarih)})</small><button type="button" class="dg dg-cizgi dg-kucuk" data-devir-durum>Durumu yenile</button><button type="button" class="dg dg-hafif dg-kucuk" data-devir-iste>Bağlantıyı yeniden gönder</button>`
@@ -57,7 +57,7 @@ export async function karsilama(k, { hos = true, hesap = true, sonra, kaynak = '
     const ek = eksikEvrak(k).filter(([x]) => x !== 'sozlesme');
     if (ek.length) l.push(ogr(`Kaydınızı tamamlamak için şu belgeler eksik:\n${ek.map(([, ad]) => '• ' + ad).join('\n')}\nBelgelerin fotoğrafını ya da PDF'ini bu numaraya WhatsApp'tan gönderebilirsiniz; her belge doğrudan dosyanıza işlenir.`));
   }
-  if (r) l.push(ogr(`Öğrenci uygulamanız hazır.\nGiriş: ${B.ogrenciGirisLinki()}\nKullanıcı adı: ${B.telGoster(r.tel)}\nGeçici şifre: ${r.sifre}\nİlk girişte şifrenizi değiştirmeyi unutmayın. Ders programınızı, ödemelerinizi ve sınavlarınızı buradan görebilir, sınava çalışabilirsiniz.`));
+  if (r) l.push(ogr(`Öğrenci uygulamanız hazır.\nGiriş: ${B.ogrenciGirisLinki()}\nKullanıcı adı: ${r.eposta || B.telGoster(r.tel)}\nGeçici şifre: ${r.sifre}\nİlk girişte şifrenizi değiştirmeyi unutmayın. Ders programınızı, ödemelerinizi ve sınavlarınızı buradan görebilir, sınava çalışabilirsiniz.`));
   if (hos) {
     // ücret notu (il taban listesi notları 1, 4): KDV dahil; liste varken kurs ücreti dışında ücret alınmaz
     const o = k.odeme, t = o.taksitler.filter(x => !x.iptal), kdv = tabanListesi() ? '\nTutarlar KDV dahildir; kurs ücreti dışında hiçbir ad altında ücret alınmaz.' : '\nTutarlar KDV dahildir.';
@@ -157,7 +157,7 @@ export function topluHesap(yenile) {
         const sec = uygun.filter(k => d.querySelector(`[data-ogr="${k.id}"]`).checked); if (!sec.length) return bildir('Öğrenci seçin', 'uyari');
         const b = ev.target; b.disabled = true; const giden = [], hata = [];
         d.querySelectorAll('[data-k]').forEach(x => { x.disabled = true; });
-        for (const [i, k] of sec.entries()) { b.textContent = `Açılıyor ${i + 1}/${sec.length}…`; try { const r = await ac(k); if (kartla) kartlar.push({ ad: tamAd(k), tel: r.tel, sifre: r.sifre }); else { const a = alici(k); giden.push({ ad: a.ad, tel: a.tel, rol: a.rol, tur: 'Öğrenci hesabı', metin: mesaj(k, r) }); } } catch (x) { hata.push(tamAd(k) + ': ' + B.hataMetni(x)); } }
+        for (const [i, k] of sec.entries()) { b.textContent = `Açılıyor ${i + 1}/${sec.length}…`; try { const r = await ac(k); if (kartla) kartlar.push({ ad: tamAd(k), tel: r.tel, eposta: r.eposta, sifre: r.sifre }); else { const a = alici(k); giden.push({ ad: a.ad, tel: a.tel, rol: a.rol, tur: 'Öğrenci hesabı', metin: mesaj(k, r) }); } } catch (x) { hata.push(tamAd(k) + ': ' + B.hataMetni(x)); } }
         islem('Toplu öğrenci hesabı açtı', (giden.length + kartlar.length) + ' öğrenci' + (kartla ? ' · giriş kartı' : '')); kaydet(); kapatPencere(); yenile();
         if (hata.length) bildir(hata.length + ' hesap açılamadı: ' + hata[0], 'uyari');
         if (giden.length) waSirali(giden, 'Öğrenci hesapları · giriş bilgileri');
@@ -175,7 +175,7 @@ async function qrResim(metin, boy = 160) {
 }
 export async function girisKartlari(l) {
   const link = B.ogrenciGirisLinki(), qr = await qrResim(link, 140), kurs = kursAdi();
-  const kart = x => `<div style="border:1px dashed #889;border-radius:10px;padding:12px 14px;display:flex;gap:12px;align-items:center;break-inside:avoid;height:58mm;box-sizing:border-box">${qr ? `<img src="${qr}" alt="" style="width:30mm;height:30mm">` : ''}<div style="font-size:11.5pt;line-height:1.45"><b style="font-size:12.5pt">${e(x.ad)}</b><br>${e(kurs)} öğrenci uygulaması<br>Giriş: <b>${e(link.replace(/^https?:\/\//, ''))}</b><br>Telefon: <b>${e(B.telGoster(x.tel))}</b><br>Geçici şifre: <b style="font-family:monospace;font-size:13pt">${e(x.sifre)}</b><br><small>İlk girişte kendi şifreni belirle. Kartı kimseyle paylaşma.</small></div></div>`;
+  const kart = x => `<div style="border:1px dashed #889;border-radius:10px;padding:12px 14px;display:flex;gap:12px;align-items:center;break-inside:avoid;height:58mm;box-sizing:border-box">${qr ? `<img src="${qr}" alt="" style="width:30mm;height:30mm">` : ''}<div style="font-size:11.5pt;line-height:1.45"><b style="font-size:12.5pt">${e(x.ad)}</b><br>${e(kurs)} öğrenci uygulaması<br>Giriş: <b>${e(link.replace(/^https?:\/\//, ''))}</b><br>${x.eposta ? `E-posta: <b>${e(x.eposta)}</b>` : `Telefon: <b>${e(B.telGoster(x.tel))}</b>`}<br>Geçici şifre: <b style="font-family:monospace;font-size:13pt">${e(x.sifre)}</b><br><small>İlk girişte kendi şifreni belirle. Kartı kimseyle paylaşma.</small></div></div>`;
   const sayfalar = []; for (let i = 0; i < l.length; i += 8) sayfalar.push(`<div style="display:grid;grid-template-columns:1fr 1fr;gap:6mm;${i + 8 < l.length ? 'page-break-after:always;' : ''}">${l.slice(i, i + 8).map(kart).join('')}</div>`);
   const { belgeYazdir } = await import('./ui.js?v=234');
   return belgeYazdir(sayfalar.join(''), 'Öğrenci giriş kartları');

@@ -67,9 +67,9 @@ function duyuruAlani(kap) {
 // DIG-025: iki cihaz aynı alanı aynı anda değiştirince kaybeden cihaz uyarılır (bulut.js birleştirme)
 addEventListener('sinyal-cakisma', ev => { const m = ev.detail && ev.detail.metin; if (!m) return; if (document.querySelector('.perde')) return bildir(m, 'uyari');
   pencere({ baslik: 'Değişikliğiniz başka cihazınkiyle çakıştı', taslak: false, icerik: `<p style="font-size:14px">${e(m)}</p>`, altlik: '<button class="dg dg-ana" data-kapat>Tamam</button>' }); });
-// YON-082: öğrenci e-postasını ekler; doğrulama bağlantısına dokununca hesabın e-postası olur (telefonla giriş ilk e-posta girişinden sonra yine çalışır)
+// YON-082 / YON-002: öğrenci e-postasını ekler; doğrulama bağlantısına dokununca hesabın e-postası olur, telefonla giriş kapanır (eşlemede gerçek e-posta durmaz)
 document.addEventListener('click', ev => { if (!ev.target.closest('[data-ogr-eposta]')) return; ev.preventDefault(); kapatPencere();
-  setTimeout(() => pencere({ baslik: B.ogrenciEposta() ? 'E-postanı değiştir' : 'E-postanı ekle', icerik: `<form data-oe><label class="og-alan"><span class="og-alan-et">E-posta</span><span class="og-girdi"><input name="e" type="email" autocomplete="email" required value="${e(B.ogrenciEposta())}"></span></label><p style="font-size:13.5px;color:var(--soluk);margin-top:8px">Bu adrese bir doğrulama bağlantısı gelir; dokununca e-postanla girersin, şifreni unutursan bağlantı e-postana gelir. Bağlantıdan sonra bir kez e-postanla gir; telefonla giriş de çalışmaya devam eder.</p></form>`,
+  setTimeout(() => pencere({ baslik: B.ogrenciEposta() ? 'E-postanı değiştir' : 'E-postanı ekle', icerik: `<form data-oe><label class="og-alan"><span class="og-alan-et">E-posta</span><span class="og-girdi"><input name="e" type="email" autocomplete="email" required value="${e(B.ogrenciEposta())}"></span></label><p style="font-size:13.5px;color:var(--soluk);margin-top:8px">Bu adrese bir doğrulama bağlantısı gelir. Dokununca bundan sonra e-postan ve şifrenle girersin; telefonla giriş kapanır. Şifreni unutursan bağlantı e-postana gelir.</p></form>`,
     altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-oe-gonder>Bağlantı gönder</button>', onAc(p) { p.querySelector('[data-oe-gonder]').addEventListener('click', () => { const v = p.querySelector('[name=e]').value.trim(); if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return bildir('E-postanı yaz', 'uyari'); B.ogrenciEpostaEkle(v).then(() => { kapatPencere(); bildir(v + ' adresine doğrulama bağlantısı gönderildi; gelen kutuna ve istenmeyen klasörüne bak'); }).catch(x => bildir(B.hataMetni(x), 'uyari')); }); } }), 200); });
 // YON-072: birden çok kursta hesabı olan kişi kurs değiştirir
 document.addEventListener('click', ev => { if (!ev.target.closest('[data-kurs-degistir]')) return; ev.preventDefault(); kapatPencere();
@@ -173,7 +173,7 @@ export function destekPenceresi(hazirMetin = '') {
     } });
 }
 // YON-018: ön büro yetkisi başka cihazdan değişince menü yeniden çizilsin
-let bilgiSoruldu = false, ipDenetlendi = false, devirBakildi = false;
+let bilgiSoruldu = false, ipDenetlendi = false, devirBakildi = false, epostaTemizlendi = false;
 const yetkiImza = () => JSON.stringify((S.kurs || {}).yetki || null) + '|' + ((oturum.kullanici || {}).rol || '');
 let sonYetki = '';
 function iskelet() {
@@ -268,6 +268,8 @@ export function yenile(kaydirma = false) {
   kurulumSeridi(kap); epostaSeridi(kap);
   // YON-074: onaylanmış numara devirleri (bu kurs eski kurssa) ofis cihazında işlenir; oturum başına ve 10 dakikada bir
   if (!devirBakildi && oturum.kullanici.bulut && ['mudur', 'sekreter'].includes(oturum.kullanici.rol)) { devirBakildi = true; const bak = () => B.devirleriIsle().then(n => { if (n) { bildir(n + ' öğrencinin numarası onayıyla başka kursa devredildi; hesapları kapandı'); yenile(); } }).catch(() => { }); setTimeout(bak, 6000); setInterval(bak, 600000); }
+  // YON-002 göçü: eski sürümün telefon eşlemesine yazdığı gerçek e-postalar bir kez silinir (cihaz ve kurs başına; tekrar zararsız)
+  if (!epostaTemizlendi && oturum.kullanici.bulut && ['mudur', 'sekreter', 'subemudur'].includes(oturum.kullanici.rol)) { epostaTemizlendi = true; setTimeout(() => B.telEslemeleriTemizle().catch(() => { }), 9000); }
   // YON-021: ön büro IP yetkilendirmesi (oturum başına bir kez); izin yoksa içerik kapanır, yalnız çıkış
   if (!ipDenetlendi && oturum.kullanici.bulut && oturum.kullanici.rol === 'sekreter') { ipDenetlendi = true; import('./ipliste.js?v=234').then(m => m.ipDenetle()).then(d => { if (d.izin) return; islem('İzinsiz IP’den giriş denedi', d.ip); kaydet(); document.getElementById('icerik') && document.getElementById('icerik').replaceChildren();
     const girise = () => B.cikisYap().then(() => { try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } location.hash = '#/giris'; location.reload(); });
@@ -585,7 +587,7 @@ function ogretmenGirisi() {
       <p class="ox-ugr-ara">Öğretmen değil misiniz?</p>
       ${OXU.liste([
         OXU.satir({ baslik: 'Kurs müdürü ya da ön büroyum', alt: 'Kurs hesabının e-postası ve şifresiyle girin', attrs: { 'data-giris-pin': true } }),
-        OXU.satir({ baslik: 'Öğrenciyim', alt: 'Telefon numaranız ve şifrenizle girin', attrs: { 'data-ogrenci-giris': true } }),
+        OXU.satir({ baslik: 'Öğrenciyim', alt: 'E-postanız ve şifrenizle girin', attrs: { 'data-ogrenci-giris': true } }),
       ])}
       ${OXU.not('Davetiniz yoksa kurs müdürünüze yazın. Davet bağlantısı WhatsApp’tan gelir.', 'wp')}
       <div class="ox-ugr-son"><button type="button" class="ox-bag" data-tanitim>mdSinyal nedir?</button></div>`, odak, anim);
@@ -665,7 +667,7 @@ function girisEkrani(mod = 'tanitim') {
     <h1>${ogt ? 'Öğretmen girişi' : 'Kurs hesabınızla girin'}</h1><p>${ogt ? 'Kurs müdürünün WhatsApp’tan gönderdiği davetle belirlediğiniz e-posta ve şifreyle girin. Bugünkü dersleriniz, haftanız ve öğrencileriniz açılır. Davetiniz yoksa kurs müdürünüze yazın.' : 'Kurs müdürü, ön büro ve öğretmenler kendi e-postası ve şifresiyle girer; herkes yalnız kendi ekranlarını görür.'}</p>
     <form class="giris-eposta" novalidate><label>E-posta<input name="eposta" type="email" autocomplete="username" inputmode="email" required value="${e((kayitli && kayitli.eposta) || '')}"></label><label>Şifre<input name="sifre" type="password" autocomplete="current-password" required></label><button class="dg dg-koyu" type="submit">Giriş yap</button></form>
     <p class="giris-baglar"><button type="button" data-sifre-unut>Şifremi unuttum</button>${ogt ? '<button type="button" data-giris-pin>Kurs müdürü ya da ön büroyum</button>' : '<button type="button" data-kurs-ac>Kursum için hesap açmak istiyorum</button>'}</p><div data-yardim></div>
-    <button class="giris-demo" type="button" data-ogrenci-giris style="margin:18px 0 0"><b>Öğrenciyim</b><small>Telefon numaranız ve şifrenizle girin</small><span aria-hidden="true">→</span></button>${ogt ? '' : '<button class="giris-demo" data-demo style="margin:10px 0 0"><b>Demoyu incele</b><small>Giriş gerekmez · örnek verilerle · mesaj gönderilmez</small><span aria-hidden="true">→</span></button>'}
+    <button class="giris-demo" type="button" data-ogrenci-giris style="margin:18px 0 0"><b>Öğrenciyim</b><small>E-postanız ve şifrenizle girin</small><span aria-hidden="true">→</span></button>${ogt ? '' : '<button class="giris-demo" data-demo style="margin:10px 0 0"><b>Demoyu incele</b><small>Giriş gerekmez · örnek verilerle · mesaj gönderilmez</small><span aria-hidden="true">→</span></button>'}
     <details class="giris-ornek"${ogt ? ' hidden' : ''}${mod === 'pin-demo' || sessionStorageAl('sinyal-bekleyen') ? ' open' : ''}><summary>Demo: örnek kursta çalışan olarak dene (PIN)</summary>
     <p class="giris-not" style="margin:8px 0 10px">Demo kursun kullanıcıları. Gerçek kurs hesabında PIN yerine e-posta ve şifre kullanılır.</p>
     <div class="giris-kisiler">${S.kullanicilar.map(u => `<button class="giris-kisi" data-kim="${u.id}"><b>${e(u.ad)}</b><small>${ROL_AD[u.rol]}</small></button>`).join('')}</div>
@@ -799,7 +801,7 @@ function kursAcEkrani(davetKod) {
 }
 // Öğrenci hesabı: telefon numarası + şifre. Hesabı kurs açar, geçici şifre WhatsApp'tan gelir; ilk girişte öğrenci kendi şifresini belirler.
 const ogrYolu = () => /^#\/ogr\/[A-Za-z0-9]+\/[a-z0-9]+$/.test(location.hash);
-function eskiLink() { history.replaceState(null, '', '#/ogrenci-giris'); ogrenciGirisEkrani('Öğrenci paneli artık kendi hesabınızla açılıyor. Kursunuzun WhatsApp’tan gönderdiği telefon numarası ve şifreyle girin.'); }
+function eskiLink() { history.replaceState(null, '', '#/ogrenci-giris'); ogrenciGirisEkrani('Öğrenci paneli artık kendi hesabınızla açılıyor. E-postanız (ya da kursun verdiği telefon numarası) ve şifrenizle girin.'); }
 // Öğrenci giriş ekranları: açık zemin, tek kart, büyük dokunma alanları, şifreyi göster düğmesi ve canlı şifre kuralları
 const ogrKap = (ic, alt = '') => `<div class="og-giris"><div class="og-giris-ust">${LOGO}</div><main class="og-giris-kart">${ic}</main>${alt}</div>`;
 const ogrAlan = (ad, et, tur, ikon, ek = '') => `<label class="og-alan"><span class="og-alan-et">${et}</span><span class="og-girdi">${ik(ikon)}<input name="${ad}" type="${tur}" ${ek}>${tur === 'password' ? `<button type="button" class="og-goz" data-goz aria-label="Şifreyi göster" aria-pressed="false">${ik('goz')}</button>` : ''}</span></label>`;
@@ -939,12 +941,12 @@ function ogrenciGirisEkrani(not) {
   const { oi, esc } = OXU;
   const { govde, alan, alanHata, temizle, uyari, yukle, birak, ac } = ugrKabuk('Öğrenci uygulaması');
   let tel = '';
-  // YON-082: telefon ya da e-posta
-  const telAlan = () => alan('tel', 'text', oi('tel'), 'Cep telefonun ya da e-postan', `autocomplete="username" autocapitalize="off" spellcheck="false" required value="${esc(tel)}"`, false, '05xx xxx xx xx ya da e-posta');
+  // YON-002: e-posta (e-postası olmayan eski öğrenci telefonla girer)
+  const telAlan = () => alan('tel', 'text', oi('mesaj'), 'E-postan', `inputmode="email" autocomplete="username" autocapitalize="off" spellcheck="false" required value="${esc(tel)}"`, false, 'ornek@eposta.com · e-postan yoksa cep telefonun');
   const ortak = f => ugrGirdiTemizle(f, t => { if (t.name === 'tel') tel = t.value; });
 
   function girisGoster(odak, anim = true) {
-    ac(`${OXU.sayfaBas('Öğrenci girişi', 'Kursuna kayıtlı cep telefonun (ya da e-postan) ve şifrenle gir.')}
+    ac(`${OXU.sayfaBas('Öğrenci girişi', 'E-postan ve şifrenle gir. E-postan yoksa kursun verdiği cep telefonu numarasıyla girebilirsin.')}
       ${not ? `<div class="ox-ugr-bilgi" role="status">${oi('uyari')}<span>${esc(not)}</span></div>` : ''}
       <form class="ox-ugr-form" novalidate>
         ${telAlan()}
@@ -969,7 +971,7 @@ function ogrenciGirisEkrani(not) {
     f.addEventListener('submit', ev => {
       ev.preventDefault(); const btn = f.querySelector('[type=submit]'), yer = govde.querySelector('[data-yardim]');
       temizle(f);
-      if (!f.tel.value.includes('@') && f.tel.value.replace(/\D/g, '').length < 10) return alanHata(f, 'tel', 'Cep telefonunu ya da e-postanı yaz');
+      if (!f.tel.value.includes('@') && f.tel.value.replace(/\D/g, '').length < 10) return alanHata(f, 'tel', 'E-postanı yaz (e-postan yoksa cep telefonunu)');
       if (!f.sifre.value) return alanHata(f, 'sifre', 'Şifreni yaz');
       yukle(btn, 'Giriliyor…'); yer.innerHTML = '';
       B.ogrenciGiris(f.tel.value, f.sifre.value).then(u => u.ilkGiris ? sifreBelirleEkrani(u) : ogrenciModu(u.kurs, u.kod)).catch(x => { birak(btn, 'Giriş yap'); uyari(f, B.hataMetni(x)); if (SH.girisHatasiMi(x) && !/hesap yok/.test(x.kullanici || '')) yardimAc(govde, { kim: f.tel.value.trim(), tur: 'ogrenci' }); });
