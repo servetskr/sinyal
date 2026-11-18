@@ -429,7 +429,7 @@ export function kursiyerFormu(on = {}) {
         <label class="alan tam" style="flex-direction:row;display:flex;gap:10px;align-items:center;font-size:14px"><span class="anahtar"><input type="checkbox" name="aracKullanabiliyor"><i></i></span>Araç kullanabiliyor <small style="color:var(--soluk)">öğretmen ilk derste bilsin</small></label>
       </div></div>
       <div class="ks-blok"><details data-ks-tercih><summary>${ik('arti')}Sınav tercihleri ve istisnalar <small style="font:400 13px var(--govde);color:var(--soluk)">e-sınav muafiyeti, e-sınav dili, aday belgesi iptali · çoğu öğrencide boş kalır</small></summary><div class="form-izgara">
-        <div class="alan"><span class="et">e-Sınav muafiyeti</span><label style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" name="muaf" style="width:18px;height:18px"> Muaf aday: son 3 yılda e-sınavı geçti (md.15/5)</label><input name="muafTarih" type="date" aria-label="e-Sınavı geçtiği tarih" style="margin-top:6px;display:none"><small id="k-muaf-not" style="color:var(--soluk);display:none"></small></div>
+        <div class="alan"><span class="et">e-Sınav muafiyeti</span><label style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" name="muaf" style="width:18px;height:18px"> Muaf aday: e-sınavı geçmişti, son sınavından bu yana 3 yıl dolmadı (md.15/5)</label><input name="muafTarih" type="date" aria-label="Son girdiği sınavın tarihi" title="Son girdiği sınavın tarihi (e-sınav ya da uygulama, hangisi sonsa)" style="margin-top:6px;display:none"><small id="k-muaf-not" style="color:var(--soluk);display:none"></small></div>
         <div class="alan"><label for="k-esdil">e-Sınav dili</label><select id="k-esdil" name="esinavDil"><option value="tr" selected>Türkçe</option><option value="yd">Yabancı dil</option><option value="isaret">Türkçe, işaret dili videosuyla (işitme engelli)</option></select><input name="esinavYabanci" placeholder="Hangi dil? (ör. İngilizce)" autocomplete="off" aria-label="Yabancı dil" style="margin-top:6px" hidden><input name="esinavTercuman" placeholder="Teorik derslerdeki tercümanın adı" autocomplete="off" aria-label="Tercümanın adı" style="margin-top:6px" hidden><small style="color:var(--soluk)">Yabancı dil ya da işaret dili, e-sınav randevusundan en az 48 saat önce MEBBİS’e işlenir.</small></div>
         <div class="alan tam"><span class="et">Aday belgesi iptali</span><label style="display:flex;gap:8px;align-items:center;font-size:13.5px"><input type="checkbox" name="adayIptal" style="width:18px;height:18px"> Aday sürücü belgesi iptal edilmişti</label><label data-aday-ceza hidden style="display:flex;gap:8px;align-items:center;font-size:13.5px;margin-top:4px"><input type="checkbox" name="adayCeza" style="width:18px;height:18px"> İdari para cezalarının tamamı ödendi</label><small data-aday-not hidden style="color:var(--soluk)">Cezaların tamamı ödenmeden kursta eğitime başlanamaz (KTK ek md.17).</small></div>
       </div></details></div>`)}
@@ -477,7 +477,7 @@ export function kursiyerFormu(on = {}) {
       const indirimTutar = () => 0;   // taban fiyat kararı (2026): kayıtta indirim yok; müdür dosyadan uygular
       const grupDeger = () => f.grup.value === '__bekle' ? '' : f.grup.value;
       // il taban listesi: mevcut belge + istenen sınıfa göre satır, taban ve kursun ücreti (liste yoksa null; ücret sınıf ücreti)
-      const adayX = () => { const m = f.mevcut.value; return { sinif: f.sinif.value, kayit: gun(0), teorikGrup: grupDeger(), mevcutEhliyet: m, mevcutEski: !!m && f.mevcutEski.checked, mevcutOtomatik: !!m && f.mevcutOtomatik.checked, oncekiBelge: m ? { tarih: f.mevcutTarih.value } : null, muaf: f.muaf.checked ? { esinavTarih: f.muafTarih.value } : null, kendiArac: f.sinif.value === 'B-EN' && f.kendiArac.checked }; };
+      const adayX = () => { const m = f.mevcut.value; return { sinif: f.sinif.value, kayit: gun(0), teorikGrup: grupDeger(), mevcutEhliyet: m, mevcutEski: !!m && f.mevcutEski.checked, mevcutOtomatik: !!m && f.mevcutOtomatik.checked, oncekiBelge: m ? { tarih: f.mevcutTarih.value } : null, muaf: f.muaf.checked ? { sonSinav: f.muafTarih.value, esinavTarih: f.muafTarih.value } : null, kendiArac: f.sinif.value === 'B-EN' && f.kendiArac.checked }; };
       const tabanX = () => kursiyerTaban(adayX());
       const ucret0 = (x = tabanX()) => x && x.satir && x.ucret != null ? x.ucret : SINIFLAR[f.sinif.value].ucret;
       const guncelle = () => {
@@ -487,7 +487,7 @@ export function kursiyerFormu(on = {}) {
           const gs = GR.grupBul(f.grup.value), gd = gs && GR.grupDoluluk(gs), tkl = teorikVar(adayX()), su = gs ? GR.subeUyarisi(tkl, gs) : '', bs = !gs && !tkl && GR.belgeliAyri() ? gl.find(GR.belgeliSubesi) : null;
           d.querySelector('#k-grup-not').innerHTML = su ? `<b style="color:var(--turuncu)">${e(su)}</b>` : bs ? `Bu aday teorik derse girmez; <b>${e(bs.ad)}</b> belgeliler şubesi önerilir.` : gd && gd.dolu ? `<b style="color:var(--kirmizi)">${e(gs.ad)} dolu (${gd.n}/${gd.k}).</b> Başka bir şube seçin${GR.sonrakiSube(gs) ? ` ya da “Yeni grup” ile <b>${e(GR.grupAdi(gs.donem, gs.grupNo, GR.sonrakiSube(gs)))}</b> şubesini açın` : ''}.` : f.grup.value === '__bekle' ? 'Öğrenci bekleyen dönemde kalır; MEBBİS kaydı grup atanınca yapılır. Grup belliyse listeden seçin.' : 'MEBBİS’teki dönem, grup ve şube. Yeni grup açarken girdikleriniz kaybolmaz.';
           const mt = f.muafTarih, mn = d.querySelector('#k-muaf-not'); mt.style.display = mn.style.display = f.muaf.checked ? '' : 'none';
-          if (f.muaf.checked && mt.value) { const son = GR.muafSonGun(mt.value), ok = gun(0) <= son; mn.innerHTML = ok ? `Muaf: yalnız direksiyon sınavına girer (son gün ${tarih(son)}).` : `<b style="color:var(--kirmizi)">Muafiyet ${tarih(son)} tarihinde bitti</b>; e-sınava yeniden girer.`; } else mn.textContent = 'Son girdiği e-sınavın tarihini girin; muafiyet 3 yıl eksi 1 gün sürer.'; }
+          if (f.muaf.checked && mt.value) { const son = GR.muafSonGun(mt.value), ok = mt.value <= gun(0) && gun(0) <= son; mn.innerHTML = mt.value > gun(0) ? '<b style="color:var(--kirmizi)">Sınav tarihi bugünden sonra olamaz</b>' : ok ? `Son girdiği sınavın tarihi (e-sınav ya da uygulama, hangisi sonsa). Muaf: yalnız direksiyon sınavına girer (son gün ${tarih(son)} ${son.slice(0, 4)}).` : `<b style="color:var(--kirmizi)">Muafiyet ${tarih(son)} ${son.slice(0, 4)} tarihinde bitti</b> (son sınavdan 3 yıl); teorik eğitime ve e-sınava yeniden girer.`; } else mn.textContent = 'Son girdiği e-sınavın tarihini girin; muafiyet 3 yıl eksi 1 gün sürer.'; }
         f.esinavYabanci.hidden = f.esinavTercuman.hidden = f.esinavDil.value !== 'yd';
         { const ai = f.adayIptal.checked; d.querySelector('[data-aday-ceza]').hidden = d.querySelector('[data-aday-not]').hidden = !ai; }
         yasIstisnaSenkron(f, 'yasIstisna');
@@ -543,7 +543,8 @@ export function kursiyerFormu(on = {}) {
         { const yd = yasDenetim({ sinif: f.sinif.value, dogumTarihi: f.dogumTarihi.value, mevcutEhliyet: f.mevcut.value, oncekiBelge: f.mevcut.value ? { tarih: f.mevcutTarih.value } : null, yasIstisna: f.yasIstisna.checked ? yasIstisnaOku(f, 'yasIstisna') : null }); if (!yd.tamam && f.dogumTarihi.value) h.push([f.dogumTarihi, yd.uyari]); }
         if (f.yasIstisna.checked && !f.yasIstisnaOkul.value) h.push([f.yasIstisnaOkul, 'Yaş istisnasının okul türünü seçin (KTY md.76/3)']);
         if (f.yasIstisna.checked && f.yasIstisnaNot.value.trim().length < 5) h.push([f.yasIstisnaNot, 'Yaş istisnasının dayanağını yazın (belge adı ve no)']);
-        if (f.muaf.checked && !f.muafTarih.value) h.push([f.muafTarih, 'Son girdiği e-sınavın tarihini girin']);
+        if (f.muaf.checked && !f.muafTarih.value) h.push([f.muafTarih, 'Son girdiği sınavın (e-sınav ya da uygulama) tarihini girin']);
+        else if (f.muaf.checked && f.muafTarih.value > gun(0)) h.push([f.muafTarih, 'Sınav tarihi bugünden sonra olamaz']);
         if (f.esinavDil.value === 'yd' && !f.esinavYabanci.value.trim()) h.push([f.esinavYabanci, 'e-Sınavın yabancı dilini yazın ya da Türkçe seçin']);
         if (foto && [...f.querySelectorAll('[name=fk]')].some(c => !c.checked)) h.push([f.querySelector('[name=fk]'), 'Biyometrik kontrolün hepsini işaretleyin; uymayan fotoğraf MEB’den döner']);
         if (dfoto && !f.dkimlik.checked) h.push([f.dkimlik, 'Doğrulama fotoğrafı için kimlik kartıyla karşılaştırmayı işaretleyin']);
@@ -660,9 +661,9 @@ export function kursiyerFormu(on = {}) {
         if (f.aracKullanabiliyor.checked) yeni.aracKullanabiliyor = true;
         if (foto) { yeni.foto = foto; yeni.fotoTarih = gun(0); }
         if (dfoto) yeni.dogrulamaFoto = { veri: dfoto, tarih: gun(0), kim: oturum.kullanici ? oturum.kullanici.ad : '', kimlik: !!f.dkimlik.checked };
-        if (f.muaf.checked && f.muafTarih.value && GR.muafMi({ muaf: { esinavTarih: f.muafTarih.value } }, yeni.kayit)) {
+        if (f.muaf.checked && f.muafTarih.value && GR.muafMi({ muaf: { sonSinav: f.muafTarih.value } }, yeni.kayit)) {
           // son 3 yılda e-sınavı geçen (15/5): teorik eğitim ve sınavdan muaf, yalnız direksiyon sınavına girer
-          yeni.muaf = { esinavTarih: f.muafTarih.value, son: GR.muafSonGun(f.muafTarih.value) };
+          yeni.muaf = GR.muafKaydi(f.muafTarih.value);
           yeni.esinav = { sonuc: 'Geçti', puan: null, tarih: f.muafTarih.value, muaf: true }; yeni.teorik = SINIFLAR[s].teorik;
         }
         yeni.mebEvrak = ME.evrakOku(f);

@@ -518,7 +518,7 @@ function aktarimTaslak(x) {
   const sn = sinifCoz(x.sinif) || 'B', kt = tarihCoz(x.kayit) || gun(0), mv = mevcutCoz(x.mevcut) || '', bt = mv ? tarihCoz(x.belgeTarih) : '', mt = tarihCoz(x.muafTarih);
   const d = { sinif: sn, kayit: kt, mevcutEhliyet: mv };
   if (mv) { d.oncekiBelge = { sinif: mv, tarih: bt || '' }; if (evetMi(x.otomatik)) d.mevcutOtomatik = true; if (mv === 'E' || evetMi(x.eski) || eskiBelgeTarihi(bt)) d.mevcutEski = true; }
-  if (mt && muafMi({ muaf: { esinavTarih: mt } }, kt)) d.muaf = { esinavTarih: mt, son: muafSonGun(mt) };
+  if (mt && muafMi({ muaf: { sonSinav: mt } }, kt)) d.muaf = { dayanak: '15/5', sonSinav: mt, son: muafSonGun(mt), kaynak: 'aktarım', esinavTarih: mt };
   return d;
 }
 // CSV kodlaması: önce UTF-8; geçersizse Türkçe Windows (1254) — Türkçe Excel'in kaydettiği CSV'de ı, ş, ğ bozulmasın
@@ -559,7 +559,7 @@ function kontrolEt(r, i = 0) {
   if (String(x.sinif || '').trim() && !sinifCoz(x.sinif)) hata.push('Sınıf tanınmadı: “' + String(x.sinif).slice(0, 20) + '” (kursta açık sınıflardan biri olmalı)');
   else if (!String(x.sinif || '').trim()) uyari.push('Sınıf yok → B');
   if (String(x.mevcut || '').trim() && mevcutCoz(x.mevcut) === null) uyari.push('Mevcut belge okunamadı: “' + String(x.mevcut).slice(0, 12) + '” (belgesiz sayılacak)');
-  if (String(x.muafTarih || '').trim()) { const mt = tarihCoz(x.muafTarih); if (!mt) uyari.push('e-Sınav muaf tarihi okunamadı'); else if (!muafMi({ muaf: { esinavTarih: mt } }, tarihCoz(x.kayit) || gun(0))) uyari.push('e-Sınav muafiyeti süresi dolmuş (3 yıl)'); }
+  if (String(x.muafTarih || '').trim()) { const mt = tarihCoz(x.muafTarih); if (!mt) uyari.push('e-Sınav muaf tarihi okunamadı'); else if (mt > (tarihCoz(x.kayit) || gun(0))) uyari.push('Muafiyet için son sınav tarihi kayıttan sonra olamaz'); else if (!muafMi({ muaf: { sonSinav: mt } }, tarihCoz(x.kayit) || gun(0))) uyari.push('e-Sınav muafiyeti süresi dolmuş (son sınavdan 3 yıl, md.15/5)'); }
   // il taban listesi: ücret boşsa öğrencinin satır ücreti yazılır; tabanın altındaki ücret uyarılır (kayıt engellenmez, kural motoru da gösterir)
   if (!hata.length) { const tx = kursiyerTaban(aktarimTaslak(x)), u = tutarCoz(x.toplam);
     if (tx && tx.satir) { if (!u && tx.ucret) uyari.push('Ücret yok → ' + tl(tx.ucret) + ' (taban listesindeki satır)'); else if (u && tx.taban != null && u < tx.taban) uyari.push('Ücret il tabanının altında (' + tl(tx.taban) + ')'); }

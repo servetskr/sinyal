@@ -39,7 +39,11 @@ const kisiler = g => sb(S.kursiyerler).filter(k => !k.kapali && k.asama !== 'Ehl
 /* ---------- e-sınavdan muafiyet: son 3 yılda e-sınavı (yazılı sınavı) geçen, yalnız direksiyon sınavına girer (15/5) ---------- */
 // Sınır 3 yıl eksi 1 gün: 14.11.2023'te geçen 13.11.2026 dahil muaftır
 export const muafSonGun = t => { const d = new Date(t + 'T12:00:00'); d.setFullYear(d.getFullYear() + 3); d.setDate(d.getDate() - 1); return iso(d); };
-export const muafMi = (k, gunu) => !!(k && k.muaf && k.muaf.esinavTarih && (gunu || k.kayit || gun(0)) <= muafSonGun(k.muaf.esinavTarih));
+// TEO-001 (MTSK md.15/5, SOR-095): 3 yıl adayın SON GİRDİĞİ sınav tarihinden (e-sınav ya da uygulama, hangisi sonsa) sayılır; kayıt gününe göre bakılır.
+// Model: k.muaf = { dayanak: '15/5', sonSinav, son, kaynak: 'elle'|'MEBBİS', not }. Eski kayıtlarda yalnız esinavTarih var: o tarih son sınav sayılır.
+export const muafSonSinav = k => (k && k.muaf && (k.muaf.sonSinav || k.muaf.esinavTarih)) || '';
+export const muafMi = (k, gunu) => { const t = muafSonSinav(k), g = gunu || (k && k.kayit) || gun(0); return !!t && t <= g && g <= muafSonGun(t); };
+export const muafKaydi = (sonSinav, kaynak = 'elle', not = '') => ({ dayanak: '15/5', sonSinav, son: muafSonGun(sonSinav), kaynak, ...(not ? { not } : {}), esinavTarih: sonSinav });
 
 /* ---------- bekleyen / aktif ---------- */
 // Bekleyen: kaydı yapılmış ama bir dönem grubuna alınmamış ya da evrakı eksik kursiyer
