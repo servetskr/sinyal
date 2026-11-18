@@ -975,7 +975,7 @@ export function kursiyerler(filtre) {
     }).join('') + (kalanSay ? `<tr><td colspan="9" style="text-align:center"><button class="dg dg-cizgi dg-kucuk" data-daha>Daha fazla göster (${Math.min(sayfaBasi, kalanSay)} / ${kalanSay} kaldı)</button></td></tr>` : '');
   }
   return {
-    baslik: 'Kursiyerler', alt: sb(S.kursiyerler).length + ' kayıt · ' + aktifler().length + ' aktif',
+    baslik: 'Kursiyerler', alt: sb(S.kursiyerler).length + ' kayıt · ' + sb(S.kursiyerler).filter(k => anaKategori(k) === 'aktif').length + ' aktif',   // DENETİM K5 (KAY-118): başlık 'Aktif' sekmesiyle aynı sayar
     html: `${ekranNotu('Her kursiyerin nerede olduğu, ne kadar borcu kaldığı ve sınavda kalma riski tek satırda. Satıra dokunun, dosyası açılsın.')}
     <div class="bolum-bas"><div><h2>Kursiyer listesi</h2></div><div class="sag">${['mudur', 'sekreter'].includes(oturum.kullanici.rol) ? `<button class="dg dg-cizgi" data-toplu-hesap>${ik('tel')}Öğrenci hesapları</button>` : ''}<button class="dg dg-cizgi" data-disa>${ik('indir')}Excel’e aktar</button><button class="dg dg-cizgi" data-liste-yazdir>${ik('belge')}PDF / yazdır</button><button class="dg dg-cizgi" data-evrak-tablo>${ik('belge')}Evrak tablosu</button><button class="dg dg-cizgi" data-foto-karsilastir>${ik('kursiyer')}Fotoğraf karşılaştırma</button><button class="dg dg-cizgi" data-toplu-belge>${ik('belge')}Toplu belge</button><button class="dg dg-cizgi" data-sutunlar>${ik('menu')}Sütunlar</button><button class="dg dg-ana" data-yeni>${ik('arti')}Yeni kursiyer</button></div></div>
     <div data-yarim-kap>${yarimKayitlar()}</div>
