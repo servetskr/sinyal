@@ -277,9 +277,20 @@ function hazirlikHtml(k) {
     ${satirH('Soru bankası', h.kaps, `Hedef ${sayi(h.hedef)} soru: ${sayi(h.gor)} soru gördün`)}
     ${h.oneri.length ? `<div class="ox-snv-oneri"><b>Şimdi ne yapmalısın</b><ul>${h.oneri.map(o => `<li>${esc(o)}</li>`).join('')}</ul></div>` : ''}`, 'ox-snv-hz');
 }
+// UYG-004: en zayıf konu önerisi. Kaynak önce e-sınav ders puanı (k.esinav.dersPuan: { trafik, motor, ilkyardim, adab }; MEBBİS kurum hesabında
+// bugün görünmüyor, girilirse kullanılır), yoksa deneme ve testlerdeki konu başarısı (en az 10 soru çözülmüş ve geçme oranının altında).
+export function zayifKonu(k) {
+  if (k.esinav && k.esinav.sonuc === 'Geçti') return null;   // e-sınavı geçen öğrenciye öneri gösterilmez
+  const dp = (k.esinav && k.esinav.dersPuan) || null;
+  if (dp) { const l = Object.keys(KONULAR).filter(kn => dp[kn] != null && isFinite(+dp[kn])).sort((a, b) => +dp[a] - +dp[b]); if (l.length && +dp[l[0]] < GECME) return { kn: l[0], oran: Math.round(+dp[l[0]]), kaynak: 'esinav' }; }
+  const l = Object.keys(KONULAR).map(kn => { const a = (k.konuAnaliz || {})[kn]; return a && a[1] >= 10 ? { kn, oran: Math.round(a[0] / a[1] * 100) } : null; }).filter(Boolean).sort((a, b) => a.oran - b.oran);
+  return l.length && l[0].oran < GECME ? { ...l[0], kaynak: 'deneme' } : null;
+}
 function konuBasariHtml(k) {
   const oran = kn => { const a = (k.konuAnaliz || {})[kn]; return a && a[1] ? [Math.round(a[0] / a[1] * 100), a[1]] : [null, 0]; };
-  return bolum('Konu konu başarın', 'Dokun, 10 soru') + liste(Object.keys(KONULAR).map(kn => {
+  const z = zayifKonu(k), [zik, zton] = z ? UNITE_IK[z.kn] : [];
+  const oneri = z ? `<button type="button" class="ox-kart ox-snv-oneri" data-snv-basla="konu" data-unite="${z.kn}">${ikonKutu(zik, zton)}<span class="ox-satir-govde"><small>Önerilen çalışma</small><b>${esc(uniteAd(z.kn))}</b><small>${z.kaynak === 'esinav' ? `e-Sınavda bu dersten %${z.oran} aldın` : `Bu konuda başarın %${z.oran}`}; 10 soruluk test çöz.</small></span><span class="ox-chev">${oi('sag')}</span></button>` : '';
+  return bolum('Konu konu başarın', 'Dokun, 10 soru') + oneri + liste(Object.keys(KONULAR).map(kn => {
     const [o, t] = oran(kn), zayif = o != null && o < GECME, [ik, ton] = UNITE_IK[kn];
     return `<button type="button" class="ox-satir ox-snv-ks" data-snv-basla="konu" data-unite="${kn}">${ikonKutu(ik, ton)}<span class="ox-satir-govde"><b>${esc(uniteAd(kn))}</b>${serit(o || 0, zayif ? 'turuncu' : 'yesil', true)}<small class="${zayif ? 'kirmizi' : ''}">${o == null ? 'Henüz soru çözmedin' : `${sayi(t)} soru${zayif ? ' · çalışman gerek' : ''}`}</small></span><span class="ox-satir-sag ${zayif ? 'zayif' : ''}">${o == null ? '–' : '%' + o}</span><span class="ox-chev">${oi('sag')}</span></button>`;
   }));
@@ -540,6 +551,7 @@ function bagla(kap, ctx) {
 
 /* ---------- stiller (yalnız ui.js değişkenleri) ---------- */
 stilEkle('ox-sinav', `
+.ox-snv-oneri{display:flex!important;align-items:center;gap:12px;width:100%;text-align:left;padding:14px 16px;margin:0 0 12px;border-color:#f5d39a;background:var(--ox-turuncu-acik)}.ox-snv-oneri .ox-satir-govde{flex:1;min-width:0;display:grid;gap:2px}.ox-snv-oneri b{font-size:16px}.ox-snv-oneri small{color:var(--ox-ikincil);font-size:13px}
 .ox-snv-akis .ox-akis-ust{grid-template-columns:72px 1fr 72px}
 .ox-snv-akis .ox-akis-sag{font-size:14.5px;font-weight:600;color:var(--ox-bas);font-variant-numeric:tabular-nums;padding-right:8px}
 .ox-snv-akis .ox-akis-sag:has(.ox-snv-ust-bag){padding-right:0}
