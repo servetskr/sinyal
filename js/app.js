@@ -158,8 +158,9 @@ export function destekPenceresi(hazirMetin = '') {
       <div class="sh-durum-sec ds-tur" role="radiogroup">${DESTEK_TUR.map((t, i) => `<button type="button" role="radio" aria-checked="${!i}" class="${!i ? 'secili' : ''}" data-ds-tur="${t}">${t}</button>`).join('')}</div>
       <label class="og-alan" style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" name="acil" style="width:18px;height:18px"> Acil: işimi durduruyor</label>
       <label class="og-alan"><span class="og-alan-et">Ne oldu, ne istiyorsun?</span><span class="og-girdi yn-alan-uzun"><textarea name="metin" rows="4" required placeholder="Örn. Taksit ekranında ödeme kaydedilmiyor"></textarea></span></label></form>`
-      : `<p class="ekran-notu" style="margin:0 0 12px">${ik('uyari')}<span>Talebi kurs müdürü ya da ön büro açar. Acil bir durum için WhatsApp’tan yazabilirsin.</span></p>`}
-    <a class="ds-wa" target="_blank" rel="noopener" href="${wa}">${ik('wp')}<span>Acil mi? mdSinyal’e WhatsApp’tan yaz<small>${DESTEK.telGoster}</small></span></a>
+      : `<p class="ekran-notu" style="margin:0 0 12px">${ik('uyari')}<span>Talebi kurs müdürü ya da ön büro açar. Acil bir durum için destek hattına WhatsApp’tan yazabilirsin.</span></p>`}
+    <a class="ds-wa" target="_blank" rel="noopener" href="${wa}">${ik('wp')}<span>WhatsApp destek hattı<small>${DESTEK.telGoster} · ${DESTEK.saat.toLocaleLowerCase('tr')}</small></span></a>
+    <p class="ds-saat">Talepler ve WhatsApp mesajları ${DESTEK.saat.toLocaleLowerCase('tr')} arası cevaplanır. E-posta: <a href="mailto:${DESTEK.eposta}">${DESTEK.eposta}</a></p>
     ${l.length ? `<h3 class="krsd-bas">Talepleriniz</h3><div class="ds-liste">${l.map(t => { const x = c[t.id] || {}, d = x.durum || 'Açık';
       return `<div class="ds-talep"><div><b>${t.oncelik === 'Acil' ? '<span style="color:var(--kirmizi)">Acil · </span>' : ''}${e(t.tur)} · ${e(String(t.metin).slice(0, 80))}</b><small>${e(t.kim || '')} · ${e(new Date(t.zaman).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }))}</small>${x.cevap ? `<p class="ds-cevap">${ik('mesaj')}<span><b>mdSinyal:</b> ${e(x.cevap)}</span></p>` : ''}</div><em class="ds-durum ${d === 'Çözüldü' ? 'ok' : d === 'İnceleniyor' ? 'bak' : ''}">${e(d)}</em></div>`; }).join('')}</div>` : ''}`,
     altlik: yazar ? `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-destek">Gönder</button>` : '<button class="dg dg-ana" data-kapat>Tamam</button>',
@@ -169,7 +170,7 @@ export function destekPenceresi(hazirMetin = '') {
       p.querySelectorAll('[data-ds-tur]').forEach(b => b.addEventListener('click', () => { tur = b.dataset.dsTur; p.querySelectorAll('[data-ds-tur]').forEach(x => { x.classList.toggle('secili', x === b); x.setAttribute('aria-checked', x === b); }); }));
       p.querySelector('form').addEventListener('submit', ev => { ev.preventDefault(); const m = ev.target.metin.value.trim(); if (m.length < 3) return bildir('Kısaca ne olduğunu yaz', 'uyari');
         (S.destek = S.destek || []).push({ id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), zaman: new Date().toISOString(), kim: u.ad, rol: u.rol, tur, oncelik: ev.target.acil.checked ? 'Acil' : 'Normal', metin: m.slice(0, 2000) });
-        islem('mdSinyal Destek talebi açtı', tur); kaydet(); kapatPencere(); bildir('Talebin mdSinyal’e iletildi; cevap buraya gelecek'); });
+        islem('mdSinyal Destek talebi açtı', tur); kaydet(); kapatPencere(); bildir('Talebin mdSinyal’e iletildi; cevap buraya gelecek (' + DESTEK.saat.toLocaleLowerCase('tr') + ')'); });
     } });
 }
 // YON-018: ön büro yetkisi başka cihazdan değişince menü yeniden çizilsin
@@ -675,7 +676,7 @@ function girisEkrani(mod = 'tanitim') {
   const kok = document.getElementById('uyg');
   const dm = kok.querySelector('[data-demo]'); if (dm) dm.addEventListener('click', demoyaGir);
   kok.querySelector('[data-tanitim]').addEventListener('click', () => { girisEkrani('tanitim'); window.scrollTo(0, 0); });
-  const ka = kok.querySelector('[data-kurs-ac]'); if (ka) ka.addEventListener('click', () => pencere({ baslik: 'Kurs hesabı nasıl açılır?', icerik: '<p style="font-size:14.5px">Kurs hesabını mdSinyal ekibi açar; kurulum günü kayıtlarınızı taşırız, ekibinize kısa bir eğitim veririz. Başvuru formunu doldurun, en geç bir iş günü içinde sizi arayalım. Ya da <b>${DESTEK.ad} · ${DESTEK.telGoster}</b> (telefon ve WhatsApp).</p>', altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button><a class="dg dg-ana" href="basla/">Başvuru formu</a>' }));
+  const ka = kok.querySelector('[data-kurs-ac]'); if (ka) ka.addEventListener('click', () => pencere({ baslik: 'Kurs hesabı nasıl açılır?', icerik: '<p style="font-size:14.5px">Kurs hesabını mdSinyal ekibi açar; kurulum günü kayıtlarınızı taşırız, ekibinize kısa bir eğitim veririz. Başvuru formunu doldurun, en geç bir iş günü içinde sizi arayalım. Ya da <b>' + DESTEK.ad + ' · ' + DESTEK.telGoster + '</b> (telefon ve WhatsApp, ' + DESTEK.saat.toLocaleLowerCase('tr') + ').</p>', altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button><a class="dg dg-ana" href="basla/">Başvuru formu</a>' }));
   const gp = kok.querySelector('[data-giris-pin]'); if (gp) gp.addEventListener('click', () => { girisEkrani('pin'); window.scrollTo(0, 0); });
   kok.querySelector('[data-ogrenci-giris]').addEventListener('click', () => { if (location.hash === '#/ogrenci-giris') ogrenciGirisEkrani(); else location.hash = '#/ogrenci-giris'; });  // ekranı hashchange çizer (iki kez çizilirse şifre göster düğmesi bozuluyordu)
   kok.querySelector('[data-sifre-unut]').addEventListener('click', () => {

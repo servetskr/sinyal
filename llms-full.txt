@@ -138,7 +138,10 @@ Eski programınızdaki kursiyer, taksit ve ödeme, araç ve öğretmen listeleri
 Çoğu kursta bir gün: sabah kayıt aktarımı ve kurulum, öğleden sonra ekip eğitimi. Ertesi gün mdSinyal’le çalışmaya başlarsınız.
 
 **Ekibe eğitim veriyor musunuz?**
-Evet. Kurulum günü müdür, ön büro ve öğretmenlere kendi ekranlarını gösteririz. Sonrasında takıldığınız her şeyi WhatsApp’tan sorabilirsiniz.
+Evet. Kurulum günü müdür, ön büro ve öğretmenlere kendi ekranlarını gösteririz. Sonrasında takıldığınız her şeyi uygulamadaki destek talebinden ya da WhatsApp destek hattından sorabilirsiniz.
+
+**Destek nasıl alınır?**
+Uygulamada Hesabım › mdSinyal Destek’ten talep açarsınız; cevap aynı ekrana gelir. Acil işler için WhatsApp destek hattı 0501 363 65 36. Talepler ve mesajlar hafta içi 09:00–18:00 arası cevaplanır. E-posta: destek@mdsinyal.com.
 
 **Kaç kullanıcı ve şube açabiliriz?**
 Kullanıcı sayısında sınır yoktur: müdür, ön büro, bütün öğretmenler ve öğrenciler kendi hesabıyla girer. Birden fazla şube tek hesapta yönetilir; ekranlar şubeye göre süzülür. Personel rolüne göre yetkilendirilir.

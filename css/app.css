@@ -3909,3 +3909,6 @@ tr.secili-satir td { background: rgba(10, 77, 162, .06); }
 .meb-gecmis-kart > summary::-webkit-details-marker { display: none; }
 .meb-gecmis-kart > summary::after { content: '›'; margin-left: auto; font-size: 20px; color: var(--soluk); transform: rotate(90deg); transition: transform .15s; }
 .meb-gecmis-kart[open] > summary::after { transform: rotate(-90deg); }
+/* DIG-032: destek penceresinde çalışma saati ve e-posta */
+.ds-saat{margin:8px 2px 0;font-size:13px;color:var(--soluk,#5b6474);line-height:1.45}
+.ds-saat a{color:inherit;text-decoration:underline}
