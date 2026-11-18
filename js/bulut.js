@@ -1528,7 +1528,8 @@ export async function hesapTalebiOnayla(t, k) {
   b.set(F.doc(db, 'kullanicilar', t.uid), { kurs: bulut.kurs, rol: 'ogrenci', kod, kursiyer: k.id, ilkGiris: false });
   b.delete(F.doc(db, 'kurslar', bulut.kurs, 'hesapTalepleri', t.uid));
   try { await b.commit(); } catch (x) { k.panelKod = eski.panelKod; k.hesap = eski.hesap; throw x; }
-  projeSon.set(kod, v); kaydet();
+  // hesap bilgisi kurs verisine hemen yazılır: gecikmeli yazımı beklerken gelen eski anlık görüntü yerel değişikliği ezmesin (senkron 21)
+  projeSon.set(kod, v); kaydet(); await akit().catch(() => { });
 }
 // Giriş ekranı açılınca Firebase arka planda hazırlanır; öğrenci yazarken iner
 export const sdkHazirla = () => { sdk().catch(() => { }); };
