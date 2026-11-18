@@ -2,7 +2,7 @@
 // kurslar/{kurs}/v altında parça parça durur. Her kayıt ayrı alan olarak yazılır: iki kişi aynı anda
 // farklı kayıtları değiştirirse ikisi de korunur. Fotoğraf ve imzalar kurslar/{kurs}/dosyalar'da ayrı belge.
 import { FIREBASE, EMU, emuBagla } from './firebase-ayar.js?v=234';
-import { SINIFLAR, kuralAyar, S, bulutVeri, bosVeri, kaydetDinle, kaydet, oturum, bulutKanca, makbuzSira, islem, iso, EVRAKLAR, gun, fark, tamAd, iptalEdilebilir, dersIptalIz, geceKisitli, geceDersMi, gerekliDireksiyon } from './veri.js?v=234';
+import { dersDiziniBoz, SINIFLAR, kuralAyar, S, bulutVeri, bosVeri, kaydetDinle, kaydet, oturum, bulutKanca, makbuzSira, islem, iso, EVRAKLAR, gun, fark, tamAd, iptalEdilebilir, dersIptalIz, geceKisitli, geceDersMi, gerekliDireksiyon } from './veri.js?v=234';
 
 const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
 const YEREL = 'sinyal-bulut';
@@ -385,6 +385,7 @@ function gelenBirlestir(a, k, v) {
 // yeniden yazar: iki ofis cihazı açıkken, değişikliği henüz almamış cihaz eski özetini sonradan yazıp yeniyi eziyordu ve değişikliği alınca
 // bir daha yazmıyordu (senkron testi 17 Kas 2026: öğrencinin iptal ettiği ders öğretmen ekranında kaldı). Aynı içerik yeniden yazılmaz (projeSon/ustaSon).
 function uygula(degisen, uzak) {
+  dersDiziniBoz();   // DIG-027: öğrenci başına ders dizini sunucu değişikliğinden sonra yeniden kurulsun
   const ofis = uzak && ['mudur', 'sekreter'].includes(bulut.rol);
   let oldu = false;
   const diziler = new Map();
@@ -905,6 +906,7 @@ function ogrenciKur(veri) {
   taban.kullanicilar = []; taban.gonderimler = [];
   bulutVeri(taban, 'ogr-' + ogr.kod);
   // henüz kurs tarafından işlenmemiş kendi değişikliklerini üstüne koy
+  dersDiziniBoz();
   ogr.bekleyen.forEach(p => p.d.forEach(x => { const l = S[x.a]; if (!Array.isArray(l)) return; const i = kimlikler(l).indexOf(x.id); if (x.v === null) { if (i >= 0) l.splice(i, 1); } else { const y = JSON.parse(x.v); if (x.a === 'dersler' && i < 0) y.onayBekliyor = true; if (i >= 0) l[i] = y; else l.push(y); } }));
   tabanAl();
 }
@@ -1080,6 +1082,7 @@ function ustaKur(veri, u) {
   bulutVeri(taban, 'usta-' + u.usta);
   S.kullanicilar = [{ id: u.uid, ad: u.ad, rol: 'usta', usta: u.usta }];
   // ofisin henüz işlemediği kendi değişikliklerini üstüne koy
+  dersDiziniBoz();
   ust.bekleyen.forEach(p => p.d.forEach(x => { const l = S[x.a]; if (!Array.isArray(l) || ['gonderimler', 'islemler', 'dersIptaller'].includes(x.a)) return; const i = kimlikler(l).indexOf(x.id); if (x.v === null) { if (i >= 0) l.splice(i, 1); } else { let y; try { y = JSON.parse(x.v); } catch (e) { return; } if (i >= 0) l[i] = y; else l.push(y); } }));
   if (onceki) ['dersler', 'kursiyerler'].forEach(a => { const m = onceki.get(a); S[a] = (S[a] || []).map(o => { const e = m.get(o.id); if (!e || e === o) return o; Object.keys(e).forEach(k => delete e[k]); Object.assign(e, o); return e; }); });
   ust.kurulu = true;

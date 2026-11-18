@@ -236,6 +236,7 @@ export const hazirYazisiVar = k => !!((k.meb && /^\d{4}-\d{2}-\d{2}$/.test(k.meb
 // DIG-027: öğrenci başına ders dizini (500 öğrenci × 9.000 derste her hesapta bütün listeyi taramamak için). Dizi değişince (başka dizi, uzunluk,
 // ilk/son kayıt) yeniden kurulur; ders nesneleri aynı olduğu için durum ve tarih değişiklikleri kendiliğinden görünür.
 let dIdx = null, dIdxAnahtar = null;
+export const dersDiziniBoz = () => { dIdx = null; };   // sunucudan gelen değişiklikler (bulut.js uygula) ders dizisini yerinde yenilediği için
 export function kursiyerDersleri(kid) {
   const l = (S && S.dersler) || [], a = l.length + '|' + (l[0] && l[0].id) + '|' + (l[l.length - 1] && l[l.length - 1].id);
   if (!dIdx || dIdx.l !== l || dIdxAnahtar !== a) { dIdx = { l, m: new Map() }; dIdxAnahtar = a; l.forEach(d => { if (!d) return; let x = dIdx.m.get(d.kursiyer); if (!x) dIdx.m.set(d.kursiyer, x = []); x.push(d); }); }
