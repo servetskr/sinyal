@@ -1,3 +1,4 @@
+import { DESTEK } from './iletisim.js?v=234';
 import { kullaniciSubesi, S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec, sinifEtiket } from './veri.js?v=234';
 import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=234';
 import * as Y1 from './sayfalar1.js?v=234';
@@ -139,7 +140,7 @@ export function destekPenceresi(hazirMetin = '') {
       <label class="og-alan" style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" name="acil" style="width:18px;height:18px"> Acil: işimi durduruyor</label>
       <label class="og-alan"><span class="og-alan-et">Ne oldu, ne istiyorsun?</span><span class="og-girdi yn-alan-uzun"><textarea name="metin" rows="4" required placeholder="Örn. Taksit ekranında ödeme kaydedilmiyor"></textarea></span></label></form>`
       : `<p class="ekran-notu" style="margin:0 0 12px">${ik('uyari')}<span>Talebi kurs müdürü ya da ön büro açar. Acil bir durum için WhatsApp’tan yazabilirsin.</span></p>`}
-    <a class="ds-wa" target="_blank" rel="noopener" href="${wa}">${ik('wp')}<span>Acil mi? mdSinyal’e WhatsApp’tan yaz<small>0501 363 65 36</small></span></a>
+    <a class="ds-wa" target="_blank" rel="noopener" href="${wa}">${ik('wp')}<span>Acil mi? mdSinyal’e WhatsApp’tan yaz<small>${DESTEK.telGoster}</small></span></a>
     ${l.length ? `<h3 class="krsd-bas">Talepleriniz</h3><div class="ds-liste">${l.map(t => { const x = c[t.id] || {}, d = x.durum || 'Açık';
       return `<div class="ds-talep"><div><b>${t.oncelik === 'Acil' ? '<span style="color:var(--kirmizi)">Acil · </span>' : ''}${e(t.tur)} · ${e(String(t.metin).slice(0, 80))}</b><small>${e(t.kim || '')} · ${e(new Date(t.zaman).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }))}</small>${x.cevap ? `<p class="ds-cevap">${ik('mesaj')}<span><b>mdSinyal:</b> ${e(x.cevap)}</span></p>` : ''}</div><em class="ds-durum ${d === 'Çözüldü' ? 'ok' : d === 'İnceleniyor' ? 'bak' : ''}">${e(d)}</em></div>`; }).join('')}</div>` : ''}`,
     altlik: yazar ? `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-destek">Gönder</button>` : '<button class="dg dg-ana" data-kapat>Tamam</button>',
@@ -602,7 +603,7 @@ function girisEkrani(mod = 'tanitim') {
   const kok = document.getElementById('uyg');
   const dm = kok.querySelector('[data-demo]'); if (dm) dm.addEventListener('click', demoyaGir);
   kok.querySelector('[data-tanitim]').addEventListener('click', () => { girisEkrani('tanitim'); window.scrollTo(0, 0); });
-  const ka = kok.querySelector('[data-kurs-ac]'); if (ka) ka.addEventListener('click', () => pencere({ baslik: 'Kurs hesabı nasıl açılır?', icerik: '<p style="font-size:14.5px">Kurs hesabını mdSinyal ekibi açar; kurulum günü kayıtlarınızı taşırız, ekibinize kısa bir eğitim veririz. Başvuru formunu doldurun, en geç bir iş günü içinde sizi arayalım. Ya da <b>Servet Sakar · 0501 363 65 36</b> (telefon ve WhatsApp).</p>', altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button><a class="dg dg-ana" href="basla/">Başvuru formu</a>' }));
+  const ka = kok.querySelector('[data-kurs-ac]'); if (ka) ka.addEventListener('click', () => pencere({ baslik: 'Kurs hesabı nasıl açılır?', icerik: '<p style="font-size:14.5px">Kurs hesabını mdSinyal ekibi açar; kurulum günü kayıtlarınızı taşırız, ekibinize kısa bir eğitim veririz. Başvuru formunu doldurun, en geç bir iş günü içinde sizi arayalım. Ya da <b>${DESTEK.ad} · ${DESTEK.telGoster}</b> (telefon ve WhatsApp).</p>', altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button><a class="dg dg-ana" href="basla/">Başvuru formu</a>' }));
   const gp = kok.querySelector('[data-giris-pin]'); if (gp) gp.addEventListener('click', () => { girisEkrani('pin'); window.scrollTo(0, 0); });
   kok.querySelector('[data-ogrenci-giris]').addEventListener('click', () => { if (location.hash === '#/ogrenci-giris') ogrenciGirisEkrani(); else location.hash = '#/ogrenci-giris'; });  // ekranı hashchange çizer (iki kez çizilirse şifre göster düğmesi bozuluyordu)
   kok.querySelector('[data-sifre-unut]').addEventListener('click', () => {
@@ -683,7 +684,7 @@ const kursDavetYolu = () => { const m = location.hash.match(/^#\/yeni-kurs\/([a-
 async function kursDavetEkrani() {
   const kod = kursDavetYolu(); bekleEkrani('Hesap açma linki kontrol ediliyor…');
   let dv = null; try { dv = await B.kursDavetGetir(kod); } catch (x) { }
-  if (!dv) { document.getElementById('uyg').innerHTML = `<div class="giris"><div class="giris-levha">${LOGO}<h1>Bu link geçersiz</h1><p>Hesap açma linkinin süresi dolmuş ya da daha önce kullanılmış. Yeni link için Servet Sakar · 0501 363 65 36.</p></div></div>`; return; }
+  if (!dv) { document.getElementById('uyg').innerHTML = `<div class="giris"><div class="giris-levha">${LOGO}<h1>Bu link geçersiz</h1><p>Hesap açma linkinin süresi dolmuş ya da daha önce kullanılmış. Yeni link için ${DESTEK.ad} · ${DESTEK.telGoster}.</p></div></div>`; return; }
   kursAcEkrani(kod);
 }
 function kursAcEkrani(davetKod) {

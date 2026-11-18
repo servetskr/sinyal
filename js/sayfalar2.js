@@ -17,6 +17,7 @@ import * as MM from './mesaj.js?v=234';
 import * as BL from './bulut.js?v=234';
 import * as KR from './kurallar.js?v=234';
 import * as CR from './cari.js?v=234';
+import { destekWa } from './iletisim.js?v=234';
 import * as S5L from './sayfalar5.js?v=234';
 import { SINIF_VARSAYILAN, gecisSatirlari, DERS_SAAT_VARSAYILAN, planAyar, gerekliDireksiyon, geceGerekli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, sinavHakSiniri, DERS_KURAL_TARIH, kuralAyar, mebKurum, programAcik, varsayilanYontem } from './veri.js?v=234';
 import { listeAdi, gecerlilikMetni, satirAdi as satirAdiT } from './taban.js?v=234';
@@ -1383,7 +1384,7 @@ function tabanKarti(L) {
   // PAR-069: ilin listesi mdSinyal'de hiç yoksa: valilik listesini iletme yolu (Destek talebi ya da WhatsApp'tan dosya); ekip işleyip il kütüphanesine (taban.js LISTELER) ekler
   if (!L && tabanDurumu().durum === 'yok') { const il = S.kurs.il || S.kurs.sehir || 'iliniz', yil = gun(0).slice(0, 4), m = `İl taban fiyat listesi: ${il} ${yil}. Valiliğin “Sürücü Eğitimi Maliyetlerini Belirleme Komisyonu” kararını (PDF/Excel) iletiyorum; ücretlerim bununla denetlensin.`;
     return `<div class="ara-bosluk"></div><div class="ipucu">${isaret('bilgi', 20)}<span><b>${e(il)} için il taban fiyat listesi mdSinyal’de yok.</b> Valiliğin bu yılki listesini (PDF ya da Excel) bize iletin; ekibimiz işler, ücretleriniz Sınıf ve ücretler’de tabanla hazır gelir ve her yıl 1 Şubat yenilemesi hatırlatılır. Liste gelene kadar taban ücret denetimi yapılmaz.
-      <span style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" class="dg dg-cizgi dg-kucuk" data-taban-destek="${e(m)}">${ik('mesaj')}Destek talebi aç</button><a class="dg dg-wp dg-kucuk" target="_blank" rel="noopener" href="https://wa.me/905013636536?text=${encodeURIComponent(m + ' (dosyayı bu mesaja ekliyorum)')}">${ik('wp')}Listeyi WhatsApp’tan gönder</a></span></span></div>`; }
+      <span style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" class="dg dg-cizgi dg-kucuk" data-taban-destek="${e(m)}">${ik('mesaj')}Destek talebi aç</button><a class="dg dg-wp dg-kucuk" target="_blank" rel="noopener" href="${destekWa(m + ' (dosyayı bu mesaja ekliyorum)')}">${ik('wp')}Listeyi WhatsApp’tan gönder</a></span></span></div>`; }
   if (!L) { const d = tabanDurumu(); return d.durum === 'bitti' || d.durum === 'baslamadi' ? `<div class="ara-bosluk"></div><p class="ipucu uyari">${isaret('uyari', 20)}<span>${e(listeAdi(d.son))} ${e(gecerlilikMetni(d.son))} geçerliydi. Yeni dönemin listesi mdSinyal’e girilmedi; valilikten gelen yeni listeyi bize iletin. O zamana kadar taban ücret denetimi yapılmaz.</span></p>` : ''; }
   const SINIF_AD = { 'B-O': 'B otomatik', 'B-EN': 'B Engelli', CEZA: '100 ceza puanı' };
   const ders = r => [r.teorik ? r.teorik.saat + ' saat teorik' : '', r.direksiyon && r.tur !== 'ilave' && r.tur !== 'ozel' ? r.direksiyon.saat + ' ders direksiyon' : r.direksiyon ? '1 ders' : ''].filter(Boolean).join(' + ');

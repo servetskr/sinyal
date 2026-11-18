@@ -63,7 +63,7 @@
         v('sube') ? `Şube sayısı: ${v('sube')}` : '', v('ogrenci') ? `Yıllık öğrenci: ${v('ogrenci')}` : '', v('program') ? `Kullandığımız program: ${v('program')}` : '', v('gun') ? `Uygun gün: ${v('gun')}` : ''].filter(Boolean);
       return [`Merhaba, ${v('konu') || (f.dataset.tur === 'basvuru' ? 'kursumuzu mdSinyal’e geçirmek' : 'mdSinyal hakkında bilgi almak')} istiyorum.`, bilgi.join('\n'), v('not')].filter(Boolean).join('\n\n');
     };
-    const waAc = () => window.open('https://wa.me/905013636536?text=' + encodeURIComponent(waMetni()), '_blank', 'noopener');
+    const waAc = () => window.open('https://wa.me/905013636536?text=' + encodeURIComponent(waMetni()), '_blank', 'noopener');  // YON-067: modül olmayan site betiği; değer js/iletisim.js DESTEK.tel ile aynı tutulur
     const wa = f.querySelector('[data-st-wa]'); if (wa) wa.addEventListener('click', () => { if (!v('ad') || !v('kurs')) { yaz('WhatsApp mesajı için ad soyad ve kurs adını yazın.'); (v('ad') ? f.elements.kurs : f.elements.ad).focus(); return; } waAc(); });
     f.addEventListener('submit', async ev => {
       ev.preventDefault();
