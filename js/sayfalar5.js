@@ -222,10 +222,20 @@ function yedekListesi(k) {
   }).catch(x => { yer.innerHTML = `<p class="kart-govde" style="color:var(--kirmizi);font-size:14px">${e(B.hataMetni(x))}</p>`; });
 }
 let yedekCache = [];
-function sunucuKaydi(k) {
+// YON-024: işlem günlüğü süzgeci (yerel ve sunucu listesi): metin arama, kategori, tarih aralığı; CSV
+export const logSuz = { ara: '', kat: '', bas: '', bit: '', kim: '' };
+export const LOG_KAT = [['', 'Bütün işlemler'], ['para', 'Para (tahsilat, iade, kasa, fatura)'], ['meb', 'MEBBİS'], ['kayit', 'Öğrenci kaydı ve dosya'], ['ders', 'Ders ve sınav'], ['ayar', 'Ayar ve ücret'], ['giris', 'Giriş ve güvenlik']];
+const LOG_RE = { para: /tahsil|ödeme|öde|iade|indirim|fatura|kasa|hareket|taksit|makbuz|senet|gün|devir|tedarik|transfer|avukat/i, meb: /mebbis|meb /i, kayit: /kursiyer|kayıt|öğrenci|evrak|belge|sözleşme/i, ders: /ders|sınav|plan/i, ayar: /ayar|ücret|kural|tarife|kategori|şube|hesab/i, giris: /giriş|çıkış|pin|şifre|kilit|yetki|kullanıcı/i };
+export const logUyar = (x, zamanIso) => { const f = logSuz, m = (x.ne + ' ' + (x.ayrinti || '') + ' ' + (x.kim || x.ad || '')).toLocaleLowerCase('tr'), t = String(zamanIso || '').slice(0, 10);
+  return (!f.ara || m.includes(f.ara.toLocaleLowerCase('tr'))) && (!f.kat || LOG_RE[f.kat].test(x.ne || '')) && (!f.bas || t >= f.bas) && (!f.bit || t <= f.bit) && (!f.kim || (x.kim || x.ad) === f.kim); };
+export const logSuzgecHtml = kisiler => `<div class="vr-suzgec" style="padding:0 20px"><label class="vr-alan"><span>Ara</span><input class="girdi" type="search" data-log="ara" value="${e(logSuz.ara)}" placeholder="Ad, işlem, ayrıntı"></label><label class="vr-alan"><span>Tür</span><select class="girdi" data-log="kat">${LOG_KAT.map(([v, t]) => `<option value="${v}" ${logSuz.kat === v ? 'selected' : ''}>${t}</option>`).join('')}</select></label><label class="vr-alan"><span>Kullanıcı</span><select class="girdi" data-log="kim"><option value="">Herkes</option>${kisiler.map(x => `<option ${x === logSuz.kim ? 'selected' : ''}>${e(x)}</option>`).join('')}</select></label><label class="vr-alan"><span>Başlangıç</span><input class="girdi" type="date" data-log="bas" value="${e(logSuz.bas)}"></label><label class="vr-alan"><span>Bitiş</span><input class="girdi" type="date" data-log="bit" value="${e(logSuz.bit)}"></label><button type="button" class="dg dg-cizgi dg-kucuk" data-log-csv>${ik('indir')}CSV</button></div>`;
+let sunucuLog = [];
+export const logCsv = (l, zaman) => csvIndir('islem-gecmisi.csv', [['Zaman', 'Kullanıcı', 'İşlem', 'Ayrıntı'], ...l.map(x => [zaman(x), x.kim || x.ad || '', x.ne || '', x.ayrinti || ''])]);
+export const sunucuLogSuzulmus = () => sunucuLog.filter(x => logUyar(x, x.zaman ? new Date(x.zaman.getTime() - x.zaman.getTimezoneOffset() * 6e4).toISOString() : ''));
+export function sunucuKaydi(k, onbellek = false) {
   const yer = k.querySelector('[data-sunucu-kayit]'); if (!yer) return;
-  B.kayitlar(300).then(l => {
-    yer.innerHTML = `<div class="tablo-kap" style="margin-top:10px"><table class="tablo tablo-mobil"><thead><tr><th>Zaman</th><th>Kullanıcı</th><th>İşlem</th><th>Ayrıntı</th></tr></thead><tbody>${l.map(x => `<tr><td class="mono m-gizle">${x.zaman ? x.zaman.toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '…'}</td><td><b style="color:var(--murekkep)">${e(x.ad)}</b></td><td>${e(x.ne)}</td><td class="m-tam" style="color:var(--metin)">${e(x.ayrinti)}</td></tr>`).join('') || '<tr><td colspan="4">Henüz kayıt yok</td></tr>'}</tbody></table></div>`;
+  (onbellek && sunucuLog.length ? Promise.resolve(sunucuLog) : B.kayitlar(300)).then(l0 => { sunucuLog = l0; const l = l0.filter(x => logUyar(x, x.zaman ? new Date(x.zaman.getTime() - x.zaman.getTimezoneOffset() * 6e4).toISOString() : ''));
+    yer.innerHTML = `${logSuzgecHtml([...new Set(l0.map(x => x.ad))])}<div class="tablo-kap" style="margin-top:10px"><table class="tablo tablo-mobil"><thead><tr><th>Zaman</th><th>Kullanıcı</th><th>İşlem</th><th>Ayrıntı</th></tr></thead><tbody>${l.map(x => `<tr><td class="mono m-gizle">${x.zaman ? x.zaman.toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '…'}</td><td><b style="color:var(--murekkep)">${e(x.ad)}</b></td><td>${e(x.ne)}</td><td class="m-tam" style="color:var(--metin)">${e(x.ayrinti)}</td></tr>`).join('') || '<tr><td colspan="4">Henüz kayıt yok</td></tr>'}</tbody></table></div>`;
   }).catch(x => { yer.innerHTML = `<p class="kart-govde" style="color:var(--soluk);font-size:14px">${oturum.kullanici.rol === 'mudur' ? e(B.hataMetni(x)) : 'Sunucu kaydını kurs müdürü görür.'}</p>`; });
 }
 
