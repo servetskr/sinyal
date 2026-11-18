@@ -11,6 +11,8 @@ const AD = { tc: 'T.C. kimlik no', soyad: 'Soyad', ad: 'Ad', dogumTarihi: 'Doğu
 const HEDEF = { tc: 'tc', soyad: 'soyad', ad: 'ad', dogumTarihi: 'dogumTarihi', cinsiyet: 'cinsiyet', belgeNo: 'kimlikSeri' };
 const ADLAR = new Set(['ad', 'soyad']);   // MRZ'de Türkçe harf yok: kullanıcı karşılaştırıp kendisi seçer
 
+const hataTr = m => Object.assign(new Error(m), { tr: true });   // kullanıcıya olduğu gibi gösterilen Türkçe hata
+
 // --- yerel OCR (tesseract.js, js/tesseract/) ---
 const KOK = new URL('./tesseract/', import.meta.url).href;
 const simdVar = () => { try { return WebAssembly.validate(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 98, 11])); } catch (x) { return false; } };
@@ -18,7 +20,7 @@ let hazirlik = null, durumBildir = null;
 function okuyucu() {
   if (hazirlik) return hazirlik;
   hazirlik = (async () => {
-    if (typeof WebAssembly !== 'object' || typeof Worker !== 'function') throw new Error('Bu tarayıcı cihazda okumayı desteklemiyor. Bilgileri elle girin.');
+    if (typeof WebAssembly !== 'object' || typeof Worker !== 'function') throw hataTr('Bu tarayıcı cihazda okumayı desteklemiyor. Bilgileri elle girin.');
     const T = (await import('./tesseract/tesseract.esm.min.js?v=234')).default;
     const w = await T.createWorker('ocrb_int', 1, {
       workerPath: KOK + 'worker.min.js', corePath: KOK + (simdVar() ? 'tesseract-core-simd-lstm.js' : 'tesseract-core-lstm.js'), langPath: KOK,
@@ -36,10 +38,10 @@ function okuyucuKapat() { const h = hazirlik; hazirlik = null; durumBildir = nul
 // Dosya → <img> (EXIF yönü tarayıcıca uygulanır). Nesne adresi hemen bırakılır.
 function gorselAc(dosya) {
   return new Promise((ok, red) => {
-    if (!/^image\//.test(dosya.type || '') && !/\.(jpe?g|png|webp|heic|heif|gif|bmp)$/i.test(dosya.name || '')) return red(new Error('Fotoğraf seçin (JPEG, PNG)'));
+    if (!/^image\//.test(dosya.type || '') && !/\.(jpe?g|png|webp|heic|heif|gif|bmp)$/i.test(dosya.name || '')) return red(hataTr('Fotoğraf seçin (JPEG, PNG).'));
     const u = URL.createObjectURL(dosya), img = new Image();
     img.onload = () => { URL.revokeObjectURL(u); ok(img); };
-    img.onerror = () => { URL.revokeObjectURL(u); red(new Error('Fotoğraf açılamadı. Başka bir fotoğraf deneyin.')); };
+    img.onerror = () => { URL.revokeObjectURL(u); red(hataTr('Fotoğraf açılamadı. Başka bir fotoğraf deneyin.')); };
     img.src = u;
   });
 }
@@ -180,8 +182,9 @@ export function belgeOkuAc(kap) {
             return `<li><label style="display:flex;gap:10px;align-items:flex-start;width:100%">${var_ ? `<input type="checkbox" data-bo-al="${e(k)}" ${dolu || adMi ? '' : 'checked'}>` : '<span style="width:18px"></span>'}<span style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(AD[k] || k)}</b> <span>${e(tarihTr(v))}</span><small style="display:block;color:var(--soluk)">${not}</small></span></label></li>`;
           }).join('')}</ul>${eksik.length ? `<p style="font-size:13px;color:var(--soluk);margin:8px 0 0">Doğrulanamadığı için gösterilmeyen: ${e(eksik.join(', '))}. Daha net bir fotoğrafla yeniden deneyebilir ya da elle girebilirsiniz.</p>` : ''}`);
           yazB.disabled = !p.querySelector('[data-bo-al]');
-        } catch (x) {
-          yaz(`<p style="font-size:14px;color:var(--kirmizi);margin:0">${e(x.message || 'Okunamadı')}</p>${x.message && /Fotoğraf/.test(x.message) ? '' : IPUCU}`);
+        } catch (x) {   // kitaplığın İngilizce hataları gösterilmez
+          const m = x.tr ? x.message : 'Okuyucu çalışmadı. Bağlantınızı kontrol edip yeniden deneyin ya da bilgileri elle girin.';
+          yaz(`<p style="font-size:14px;color:var(--kirmizi);margin:0">${e(m)}</p>${x.tr ? '' : IPUCU}`);
         } finally { if (img) img.src = ''; img = null; dosya = null; calisiyor = false; }
       });
       yazB.addEventListener('click', () => {
