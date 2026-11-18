@@ -297,6 +297,8 @@ export const mebIsGunuMu = t => { const g = tarihOku(t).getDay(); if (g === 0 ||
 // bas hariç, bit dahil iş günü sayısı
 export const mebIsGunuSay = (bas, bit) => { let n = 0; const d = tarihOku(bas), b = tarihOku(bit); while (d < b) { d.setDate(d.getDate() + 1); if (mebIsGunuMu(iso(d))) n++; } return n; };
 // t'den n iş günü önceki gün
+// t'den sonraki n'inci MEB iş günü (ayrılış bildirimi gibi ileri süreler)
+export const mebIsGunuIleri = (t, n) => { const d = tarihOku(t); let i = 0; while (i < n) { d.setDate(d.getDate() + 1); if (mebIsGunuMu(iso(d))) i++; } return iso(d); };
 export const mebIsGunuGeri = (t, n) => { const d = tarihOku(t); let i = 0; while (i < n) { d.setDate(d.getDate() - 1); if (mebIsGunuMu(iso(d))) i++; } return iso(d); };
 // Sınav hakları (MTSK md.15): e-sınav 4; uygulama ilk 4, 60 gün içinde başvurana 4 daha (md.15/4). Kurs ayarı sinavHak ilk dört hakkın sayısıdır.
 export const sinavHakSiniri = (k, tur) => { const n = (S && S.kurs && S.kurs.sinavHak) || 4; return tur === 'e-Sınav' ? n : n * (k && k.ikinciHak ? 2 : 1); };

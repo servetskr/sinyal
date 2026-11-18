@@ -5,7 +5,7 @@
 // 'uyari', 'bilgi'. Dizinin üstünde ek alanlar: kural (kimlik), kursiyer (id), kursiyerler (birden çok kişiye ait oturum bulgusunda kimlik listesi, ör. Y04), kisa (öğrenci dosyasında ad olmadan başlık), yalnizDosya, eylem.
 // DOM yok; yalnız veri.js'e bağlı (Node'da denenebilir). Bugün: veri.js BUGUN / gun().
 // Yeni kurallar ilk sürümde yalnız "uyarı"dır; Eyüp Bey teyit edince engele çevrilebilir (belgeler/eksikler/eyup-sorular.md).
-import { S, gun, fark, aracUygun, izinDurumu, haftalikSinir, haftaDers, ustaYetkili, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
+import { S, gun, fark, aracUygun, izinDurumu, mebIsGunuIleri, haftalikSinir, haftaDers, ustaYetkili, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
 
 /* ---------- yardımcılar (ui.js'teki biçimlerle aynı; ui.js DOM'a bağlı olduğu için burada kopyası) ---------- */
 const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
@@ -198,6 +198,15 @@ const KURALLAR = [
     kontrol(l) {
       (S.egitmenler || []).filter(x => x && !x.pasif && !x.ayrildi && !(x.evraklar || []).some(v => v.tur === 'ek21')).forEach(x => { const d = izinDurumu(x), yakin = d.kalan != null && d.kalan <= 60;
         l.push(bul('uyari', `${x.ad} · EK-21 hizmet içi eğitim belgesi kayıtlı değil${yakin ? ` (çalışma izni ${d.kalan < 0 ? 'bitti' : d.kalan + ' gün sonra bitiyor'})` : ''}`, `Direksiyon usta öğreticileri hizmet içi eğitimi 9 Temmuz 2026’ya kadar tamamlamalıydı; belgesi olmayanın çalışma izni uzatılmaz (MTSK Yön. md.31/A-5, Geçici md.16/2). Belgesi varsa personel kartı › Evraklar’a ekleyin.`, '#/filo/egitmen', { personel: [x.id] })); });
+    } },
+  // PER-026: ayrılan eğitim personeli — kurum yetkilisi ayrılışı en geç 5 iş günü içinde MEM'e bildirir (ÖÖKY md.44/4); dönem içinde ayrılanın yerine
+  // 10 gün içinde teklif yapılır (44/2). Ekipten çıkarılan (S.cikanlar) ve 'MEM'e bildirildi' işaretlenmemiş kişi için, çıkıştan sonraki 30 gün.
+  { id: 'P06', sira: 257, ad: 'Ayrılan personelin MEM’e bildirimi', dayanak: 'ÖÖKY md.44/2, 44/4', kapsam: 'personel', ciddiyet: 'uyari', bugun: true, bugunAd: n => `${n} ayrılan personelin MEM’e bildirimi bekliyor`,
+    kontrol(l) {
+      const c = S.cikanlar || {}, egitim = x => (x.gorevler || [x.gorev || '']).some(g => /müdür|öğretici|öğretmen/i.test(g));
+      [...(c.egitmen || []), ...(c.ogretmen || []), ...(c.personel || []).filter(egitim)].filter(x => x && x.cikis && !x.memBildirim && fark(x.cikis) >= -30).forEach(x => {
+        const son = mebIsGunuIleri(String(x.ayrildi || x.cikis).slice(0, 10), 5), g = fark(son);
+        l.push(bul(g < 0 ? 'dur' : 'uyari', `${x.ad} ayrıldı · MEM’e bildirim ${g < 0 ? 'süresi geçti (' + tarih(son) + ')' : g === 0 ? 'bugün son gün' : 'son gün ' + tarih(son)}`, 'Ayrılış en geç 5 iş günü içinde il/ilçe MEM’e bildirilir; valilik 7 iş günü içinde ayrılış onayı verir; dönem içinde ayrılanın yerine 10 gün içinde yeni personel teklif edilir (ÖÖKY md.44). Bildirdiyseniz Ekip ve araçlar › Usta öğreticiler’de “MEM’e bildirildi” deyin.', '#/filo/egitmen', { personel: [x.id] })); });
     } },
   // PER-019, PER-021: personel evrakı bitişi (kişi kartındaki evraklar; usta öğreticinin sertifika/sağlık/adli tarihleri M13'te) ve teslim günü geçmiş zimmet
   { id: 'P04', sira: 258, ad: 'Personel evrakı ve zimmet', dayanak: 'Kurum içi takip (MTSK Yön. md.46: personel dosyası)', kapsam: 'personel', ciddiyet: 'uyari', bugun: true, bugunAd: n => `${n} personel evrakı ya da zimmeti takipte`,

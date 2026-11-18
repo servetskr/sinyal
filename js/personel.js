@@ -141,7 +141,7 @@ export function personelKarti(tur, id, sekme) {
         if (ev.target.closest('[data-pk-sil]')) { const izinde = (S.izinler || []).some(i => i.kim === x.id && fark(i.bit || i.bas) >= 0), acikZ = (x.zimmet || []).filter(z => !z.iade).length;
           if (acikZ) return bildir(`${x.ad} üzerinde ${acikZ} iade edilmemiş zimmet var; önce iadeyi kaydedin`, 'uyari');
           S.cikanlar = S.cikanlar || { egitmen: [], arac: [] }; S.cikanlar.personel = S.cikanlar.personel || []; S.cikanlar.personel.push({ ...x, cikis: gun(0) });
-          S.personel = S.personel.filter(y => y !== x); islem('Personeli çıkardı', x.ad + (izinde ? ' (ileri tarihli izni vardı)' : '')); kaydet(); kapatPencere(); bildir(x.ad + ' personel listesinden çıkarıldı; kayıtları arşivde'); import('./app.js?v=234').then(a => a.yenile()); }
+          S.personel = S.personel.filter(y => y !== x); islem('Personeli çıkardı', x.ad + (izinde ? ' (ileri tarihli izni vardı)' : '')); kaydet(); kapatPencere(); bildir(gorevleri(x, tur).some(g => /müdür|öğretici/i.test(g)) ? x.ad + ' çıkarıldı. Eğitim personeli ayrılışı 5 iş günü içinde MEM’e bildirilir (ÖÖKY md.44/4)' : x.ad + ' personel listesinden çıkarıldı; kayıtları arşivde', 'uyari'); import('./app.js?v=234').then(a => a.yenile()); }
       });
       const z = d.querySelector('#f-pk-zimmet'); if (z) { const tg = () => { const a = z.tur.value === 'Araç'; d.querySelector('[data-z-arac]').hidden = !a; d.querySelector('[data-z-ne]').hidden = a; }; z.tur.addEventListener('change', tg); tg(); }
       d.addEventListener('submit', async ev => {
