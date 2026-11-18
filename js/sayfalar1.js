@@ -1459,6 +1459,8 @@ export function odemeAl(k, sonra) {
 export const hesapSecici = (y, secili) => { const l = bankaHesaplari(); if (l.length < 2) return ''; const v = secili || varsayilanHesap('Havale'); return `<div class="alan hs-sec" data-hesap-alan ${y === 'Havale' ? '' : 'hidden'}><label>Hangi banka hesabına?</label><select name="hesap" class="girdi">${l.map(h => `<option value="${e(h.id)}" ${h.id === v ? 'selected' : ''}>${e(h.ad)}</option>`).join('')}</select></div>`; };
 export const hesapOku = (kap, y) => { const s = kap && kap.querySelector('[name=hesap]'); return y === 'Havale' && s && s.value ? { hesap: s.value } : {}; };
 document.addEventListener('change', ev => { const t = ev.target; if (!t || !['y', 'yontem'].includes(t.name)) return; const kap = t.closest('form, .perde'); if (kap) kap.querySelectorAll('[data-hesap-alan]').forEach(a => { a.hidden = t.value !== 'Havale'; }); });
+// PAR-033: tahsilatta makbuz sorusu (yazdır / WhatsApp); son seçim bu cihazda hatırlanır
+function makbuzTercih(yeni) { const A = 'sinyal-makbuz-tercih'; if (yeni) { try { localStorage.setItem(A, JSON.stringify(yeni)); } catch (x) { } return yeni; } try { const v = JSON.parse(localStorage.getItem(A) || 'null'); if (v) return v; } catch (x) { } return { yaz: false, wp: true }; }
 export function tahsilAl(k, i, sonra) {
   const t = k.odeme.taksitler[i]; if (!t || t.odendi || t.iptal) return odemeAl(k, sonra);
   const kalan = taksitKalan(t), sira = [{ t, i }, ...acikTaksitler(k).filter(x => x.i !== i)], azami = sira.reduce((a, x) => a + taksitKalan(x.t), 0), gec = fark(t.vade) < 0;
@@ -1470,7 +1472,7 @@ export function tahsilAl(k, i, sonra) {
       <p class="ipucu uyari" data-nakit hidden style="margin-top:10px">${isaret('uyari', 18)}<span>Eğitim ücreti kurumun MEB’e bildirilmiş banka hesabına yatırılarak tahsil edilir (Özel Öğretim Kurumları Yönetmeliği m.55/3, 5 Eylül 2025). Nakit aldıysanız bankaya yatırın.</span></p>
       <div class="tahsil-alt"><div class="alan"><label for="t-tarih">Tarih</label><input id="t-tarih" name="tarih" type="date" value="${gun(0)}" max="${gun(0)}"></div>
       <div class="alan"><label for="t-not">Not <small style="color:var(--soluk);font-weight:400">(isteğe bağlı)</small></label><input id="t-not" name="not" maxlength="200" placeholder="Örn. annesi getirdi"></div></div>
-      <label style="display:flex;gap:10px;align-items:center;font-size:14px;margin-top:12px"><input type="checkbox" name="mak" checked style="width:18px;height:18px"> Makbuz bilgisini öğrenciye WhatsApp’tan gönder</label></form>`,
+      <div class="tahsil-mak"><span class="et">Makbuz</span><label><input type="checkbox" name="yaz" ${makbuzTercih().yaz ? 'checked' : ''}> Makbuzu yazdır / PDF</label><label><input type="checkbox" name="mak" ${makbuzTercih().wp ? 'checked' : ''}> Öğrenciye WhatsApp’tan gönder</label></div></form>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-tahsil">Ödemeyi kaydet</button>`,
     onAc(d) {
       const f = d.querySelector('form'), not = d.querySelector('[data-tutar-not]');
@@ -1495,8 +1497,10 @@ export function tahsilAl(k, i, sonra) {
         }
         islem('Tahsilat aldı', tamAd(k) + ' · ' + parca.join(', ') + ' · ' + tl(v) + (aciklamaNot ? ' · ' + aciklamaNot : ''));
         const hid = 'h' + Date.now(); S.hareket.unshift({ id: hid, tarih: tarihSec, tur: 'Gelir', kategori: 'Taksit', aciklama: tamAd(k) + ' · ' + parca.join(', '), tutar: v, yontem: y, ...hesapOku(d, y), kursiyer: k.id, dagilim, ...(aciklamaNot ? { not: aciklamaNot } : {}) });
-        const makGit = d.querySelector('[name=mak]') && d.querySelector('[name=mak]').checked;
+        const makGit = d.querySelector('[name=mak]') && d.querySelector('[name=mak]').checked, makYaz = d.querySelector('[name=yaz]') && d.querySelector('[name=yaz]').checked;
+        makbuzTercih({ yaz: makYaz, wp: makGit });
         kaydet(); kapatPencere();
+        if (makYaz) import('./sayfalar3.js?v=234').then(m => m.belgeAc('makbuz', hid));
         if (makGit) wpGonder(k, `${selam(k)} ${tl(v)} ödemeniz alındı, teşekkür ederiz. Kalan borcunuz ${tl(kalanBorc(k))}. ${S.kurs.ad}`, 'Makbuz');
         // MSJ-026: yöneticiye anlık 'ödeme alındı' (o20; hat bağlıysa)
         import('./zamanlayici.js?v=234').then(m => m.anlikBildirim('o20', { ad: tamAd(k), tutar: tl(v), yontem: y, kaydeden: (oturum.kullanici || {}).ad || '', kalan: tl(kalanBorc(k)) })).catch(() => { });

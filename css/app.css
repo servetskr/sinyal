@@ -3509,3 +3509,8 @@ button.rozet:focus-visible { outline: 2px solid var(--levha); outline-offset: 2p
 /* PAR-070: makbuz numarası ayarı */
 .mk-ayar { border: 1px solid var(--cizgi); border-radius: 8px; padding: 10px 14px 12px; }
 .mk-ayar legend { font-weight: 700; font-size: 14px; color: var(--murekkep); padding: 0 4px; }
+/* PAR-033: tahsilatta makbuz sorusu */
+.tahsil-mak { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; margin-top: 12px; font-size: 14px; }
+.tahsil-mak .et { width: 100%; }
+.tahsil-mak label { display: flex; gap: 8px; align-items: center; min-height: 32px; }
+.tahsil-mak input { width: 18px; height: 18px; }
