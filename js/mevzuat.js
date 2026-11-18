@@ -212,3 +212,25 @@ kuralEkle({ id: 'T07', sira: 866, ad: 'MEBBİS’teki kayıt ücreti taban ve s�
 // KDV oranı: 5580 kapsamındaki eğitim hizmeti %10 (KDV kararı II sayılı liste B-15; 10/7/2023'ten beri). İl taban listesindeki tutarlar KDV dahildir (not 1).
 kuralEkle({ id: 'T08', sira: 867, ad: 'Kurs ücretinde KDV oranı %10', dayanak: 'KDV Kanunu md.28; Cumhurbaşkanı kararı II sayılı liste B-15 (5580 kapsamındaki eğitim)', kapsam: 'kurs', ciddiyet: 'uyari',
   kontrol(l) { const k = (S.entegrasyon || {}).kdv; if (k != null && +k !== 10) l.push(['uyari', `Fatura ve müşavir ayarında KDV oranı %${k}`, 'Sürücü kursunun eğitim hizmeti %10 KDV’ye tabidir (II sayılı liste B-15). İl taban fiyat listesindeki tutarlar KDV dahildir. Oranı müşavirinizle teyit edip Ayarlar › Entegrasyon’dan düzeltin.', '#/ayarlar/entegrasyon']); } });
+/* ---------- MEB onaylı ücret ilanı (SIT-006; MEBBİS OOK01002 dgUcret, Yardımcı 1.15 ile çekilir → S.kurs.mebUcretIlani) ---------- */
+// İlandaki "Sınıfı" metni: 'Sertifika Yok, İstenen "B Otomatik"' ya da '"A1-A2-A" Mevcut, İstenen "B"'. Kurs sınıf koduna çevrilir.
+const ILAN_DAYANAK = 'ÖÖKY md.54/1-d (ilan edilen ücretin üzerinde ücret istenemez), md.54/1-a (MTSK öğrenim ücreti ocak sonuna kadar MEBBİS’e ilan edilir)';
+const ilanKod = t => { const u = String(t || '').toLocaleUpperCase('tr').replace(/İ/g, 'I').replace(/\s+/g, ' ').trim(); if (/CEZA/.test(u)) return 'CEZA'; if (/^B\s*-?\s*OTOMAT/.test(u)) return 'B-O'; if (/^B\s*-?\s*ENGEL/.test(u)) return 'B-EN'; if (/^B\s*-?\s*MANU/.test(u)) return 'B'; const m = u.match(/^(A1|A2|B1|BE|C1E|C1|CE|D1E|D1|DE|[ABCDFGM])\b/); return m ? m[1] : ''; };
+export function ilanSatirlari(I = S.kurs.mebUcretIlani) {
+  return ((I && I.satirlar) || []).map(r => { const t = String(r.sinif || ''), ist = (t.match(/İstenen\s*"([^"]+)"/i) || t.match(/Istenen\s*"([^"]+)"/i) || [])[1] || t, mev = /Sertifika\s*Yok/i.test(t) ? '' : ((t.match(/"([^"]+)"\s*Mevcut/i) || [])[1] || '');
+    return { ...r, istenen: ilanKod(ist), mevcut: mev ? mev.split(/\s*-\s*(?=[A-Z])/).map(ilanKod).filter(Boolean) : [], mevcutOtomatik: /OTOMAT/i.test(mev) }; }).filter(r => r.istenen && r.toplam > 0);
+}
+// kursiyerin sınıfı ve mevcut belgesine uyan ilan satırı (belgesiz: "Sertifika Yok"; belgeli: mevcut grubunda belgesi olan satır)
+export function ilanSatiri(sinif, mevcut, I) {
+  const l = ilanSatirlari(I), m = mevcut && mevcut !== 'Yok' ? String(mevcut).replace(/\s*\(.*$/, '').trim() : '';
+  return m ? l.find(r => r.istenen === sinif && r.mevcut.includes(ilanKod(m))) || null : l.find(r => r.istenen === sinif && !r.mevcut.length) || null;
+}
+kuralEkle({ id: 'T09', sira: 868, ad: 'Kurs ücretleri MEB’e bildirilen ücret ilanıyla uyumlu', dayanak: ILAN_DAYANAK + '; MTSK Yön. md.43/4', kapsam: 'kurs', ciddiyet: 'engel',
+  kontrol(l) { const I = S.kurs.mebUcretIlani; if (!I || !(I.satirlar || []).length) return; const L = tabanListesi(), yil = I.yil ? I.yil + ' ilanı' : 'ücret ilanı';
+    Object.entries(SINIFLAR).filter(([, v]) => v.aktif && v.ucret).forEach(([k, v]) => { const r = ilanSatiri(k, '', I); if (!r) return;
+      if (v.ucret > r.toplam) l.push(['yasak', `${v.ad} ücreti MEB’e bildirilen ilanın üzerinde`, `Kurs ücreti ${tl(v.ucret)}, MEBBİS’teki ${yil} ${tl(r.toplam)}${r.saatUcret ? ` (${tl(r.saatUcret)} × ${r.dersSayisi || '?'} ders)` : ''}. İlan edilen ücretin üzerinde ücret istenemez (ÖÖKY md.54/1-d): ilanı MEBBİS’te güncelleyin ya da ücreti düşürün.`, '#/ayarlar/sinif']);
+      const t = L ? sinifTabani(k, L) : null; if (t != null && r.toplam < t) l.push(['uyari', `${v.ad}: MEB’e bildirilen ilan il taban fiyatının altında`, `MEBBİS’teki ${yil} ${tl(r.toplam)}, ${listeAdi(L)} ${tl(t)}. Taban altında ücret alınamaz, ilanın üzerinde de ücret istenemez; ücret ilanını MEBBİS’te en az taban ücrete güncelleyin (Özel Öğretim Kurumları › ücret ilanı).`, '#/ayarlar/sinif']); }); } });
+kuralEkle({ id: 'T10', sira: 869, ad: 'Kursiyerin sözleşme ücreti ücret ilanının üzerinde değil', dayanak: ILAN_DAYANAK, kapsam: 'kursiyer', ciddiyet: 'uyari', bugun: true, bugunAd: n => `${n} öğrencinin ücreti MEB ücret ilanının üzerinde`,
+  kontrol(l) { const I = S.kurs.mebUcretIlani; if (!I || !(I.satirlar || []).length) return;
+    aktifKursiyerler().filter(k => k.odeme && String(k.kayit || '') >= (I.gecerliBas || '')).forEach(k => { const r = ilanSatiri(k.sinif, k.mevcutEhliyet, I); if (!r) return; const u = sozlesmeUcreti(k); if (!(u > r.toplam)) return;
+      l.push(bul('uyari', `${tamAd(k)} · ücret ${tl(u)}, ilan ${tl(r.toplam)}`, `MEBBİS’teki ${I.yil || ''} ücret ilanında “${r.sinif}” satırı ${tl(r.toplam)}. İlan edilen ücretin üzerinde ücret istenemez (ÖÖKY md.54/1-d).`, '#/kursiyer/' + k.id, { kursiyer: k.id, kisa: `Ücret ${tl(u)}: MEB ilanı ${tl(r.toplam)} (ÖÖKY 54/1-d)`, eylem: 'odeme' })); }); } });

@@ -392,7 +392,18 @@
       return { binaKontenjan: bina, programlar: programlar || { baslik: [], satirlar: [], stil: [] }, derslikler: tabloId(d, 'dgDerslikBilgileri') || { baslik: [], satirlar: [], stil: [] }, araclar: tabloId(d, 'dgAracBilgileri') || { baslik: [], satirlar: [], stil: [] } };
     },
   });
-  const CEKME_EKRAN = { kurum: ['skt01001'], gruplar: ['skt03002', 'skt03001'], kursiyerler: ['skt02006'], personel: [], araclar: ['skt01002'], sinavlar: ['skt04003'], dosya: ['skt02009'], randevular: ['skt01005'], ucretler: ['skt02007'], teorik: ['skt04001'] };
+  // 1.15.0 (SIT-006): OOK01002 kurum künyesindeki dgUcret (MEB onaylı ücret ilanı). Yalnız GET: bu sayfada künye düzenlenebilir,
+  //  Kaydet'e (hiddenKaydet) ve hiçbir düğmeye basılmaz. OOK modülüne ilk girişte sayfa ana sayfaya dönerse önce modül sayfası açılır.
+  Object.assign(CEKME, {
+    async ucretIlani() {
+      const oku = d => tabloId(d, 'dgUcret') || tabloBaslikla(d, /sinifi/, /toplam/);
+      let t = await getir('/Ookgm/ook01002.aspx'), tb = oku(t.doc);
+      if (!tb) { await getir('/Ookgm/ook00001.aspx'); t = await getir('/Ookgm/ook01002.aspx'); tb = oku(t.doc); }
+      if (!tb) throw ekranHata(t.doc, 'dgUcret', 'tablosu');
+      return tb;
+    },
+  });
+  const CEKME_EKRAN = { kurum: ['skt01001'], gruplar: ['skt03002', 'skt03001'], kursiyerler: ['skt02006'], personel: [], araclar: ['skt01002'], sinavlar: ['skt04003'], dosya: ['skt02009'], randevular: ['skt01005'], ucretler: ['skt02007'], teorik: ['skt04001'], ucretIlani: [] };
   // Aday Durum Görüntüleme: tek adayın bütün dosyası
   async function adayDosyasi(taban, tc) {
     const r = await postla(taban, { txtTcKimlikNo: tc }, { dugme: 'ImageButton1' });
