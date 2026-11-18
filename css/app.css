@@ -3607,3 +3607,8 @@ body.suzgec-yapiskan .sayfa-kursiyerler .filtre{position:sticky;top:0;z-index:6;
 .hak-eksik p { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; margin: 0 0 8px; }
 .hak-eksik-alan { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
 .hak-eksik-alan label { display: flex; flex-direction: column; font-size: 12.5px; color: var(--soluk); gap: 2px; }
+/* SNV-004: sınava uygun olmayan aday */
+.sinav-uygun-degil { opacity: .78; }
+.sinav-uygun-degil input { cursor: not-allowed; }
+.uygunluk-cumle .kart-govde { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; color: var(--metin); }
+.uygunluk-cumle .kart-govde a { margin-left: 6px; }

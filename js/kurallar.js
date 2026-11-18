@@ -5,7 +5,7 @@
 // 'uyari', 'bilgi'. Dizinin üstünde ek alanlar: kural (kimlik), kursiyer (id), kursiyerler (birden çok kişiye ait oturum bulgusunda kimlik listesi, ör. Y04), kisa (öğrenci dosyasında ad olmadan başlık), yalnizDosya, eylem.
 // DOM yok; yalnız veri.js'e bağlı (Node'da denenebilir). Bugün: veri.js BUGUN / gun().
 // Yeni kurallar ilk sürümde yalnız "uyarı"dır; Eyüp Bey teyit edince engele çevrilebilir (belgeler/eksikler/eyup-sorular.md).
-import { hakDurumu, oturum, kursiyerDersleri, S, gun, fark, aracUygun, belgeliMi, dersSayaci, kayitDondurmaMi, izinDurumu, mebIsGunuIleri, haftalikSinir, haftaDers, ustaYetkili, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
+import { dersBitisi, hakDurumu, oturum, kursiyerDersleri, S, gun, fark, aracUygun, belgeliMi, dersSayaci, kayitDondurmaMi, izinDurumu, mebIsGunuIleri, haftalikSinir, haftaDers, ustaYetkili, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
 
 /* ---------- yardımcılar (ui.js'teki biçimlerle aynı; ui.js DOM'a bağlı olduğu için burada kopyası) ---------- */
 const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
@@ -217,6 +217,13 @@ const KURALLAR = [
       l.push(bul('uyari', `${tamAd(k)} · ${kisa}`, h.fark === 'MEBBİS fazla' ? 'Başka kursta ya da mdSinyal’den önce girdiği, ya da 7/7 ile yanan sınav kayıtlı değil. Öğrenci dosyası › Sınavlar’daki eksik hak kutusundan kaydı ekleyin; aday son hakkını bilmeden kullanmasın.' : 'mdSinyal’de MEBBİS’in saymadığı sınav kaydı var; sonucu MEBBİS’te kontrol edin, gerekirse kaydı düzeltin.', '#/kursiyer/' + k.id, { kural: 'Y06', kursiyer: k.id, kisa, eylem: 'hak-eksik' }));
     })); },
   },
+  // SNV-027: sınava yazılı aday uygun değilse (sinavaUygunluk engelleri; ilk sürümde uyarı)
+  { id: 'Y08', sira: 243, ad: 'Sınava yazılı aday uygun değil', dayanak: 'MTSK Yön. md.7/1, md.15; MEBBİS son giriş (sınavdan 4 iş günü önce)', kapsam: 'sinav', ciddiyet: 'uyari', bugun: true, teyit: 'Derslerin MEBBİS’e son giriş gününe kadar bitmesi Haller kursunun düzeni; yönetmelikte açıkça yazmıyor.',
+    kontrol(l) { sbSinav(S.sinavlar).filter(s => s.tur === 'Direksiyon' && fark(s.tarih) >= 0).forEach(s => (s.kursiyerler || []).map(kursiyer).filter(Boolean).forEach(k => { if ((s.sonuc || {})[k.id]) return;
+      const u = sinavaUygunluk(k, s); if (u.uygun) return;
+      l.push(bul('uyari', `${tamAd(k)} · ${tarih(s.tarih)} sınavına uygun değil`, u.engel.join(' · '), '#/kursiyer/' + k.id, { kural: 'Y08', kursiyer: k.id, kisa: `${tarih(s.tarih)} sınavına uygun değil: ${u.engel[0]}` }));
+    })); },
+  },
   { id: 'Y07', sira: 245, ad: 'Sınav günü öğretmenin çalışma izni ve izin günü', dayanak: 'MTSK Yön. md.28/A; usta öğretici çalışma izni (OOK)', kapsam: 'sinav', ciddiyet: 'engel', bugun: true, bugunAd: n => `${n} sınavda öğretmenin izni sorunlu`,
     kontrol(l) {
       (S.sinavlar || []).filter(s => s && s.tur === 'Direksiyon' && s.tarih && fark(s.tarih) >= 0 && (s.kursiyerler || []).length).forEach(s => {
@@ -309,6 +316,41 @@ export function ilceTakvimi() {
     const l = [...kodlar.values()].sort((a, b) => a.tarih.localeCompare(b.tarih)); l.forEach(x => { x.kursiyerler = kursOt.filter(s => x.gunler.includes(s.tarih)).flatMap(s => s.kursiyerler || []); delete x.gunler; }); return l; }
   const gunler = new Map(); kursOt.forEach(s => { const g = gunler.get(s.tarih) || { kod: s.tarih, tarih: s.tarih, kursiyerler: [] }; g.kursiyerler.push(...(s.kursiyerler || [])); gunler.set(s.tarih, g); });
   return Object.assign([...gunler.values()].sort((a, b) => a.tarih.localeCompare(b.tarih)), { kurs: true });
+}
+// SNV-027: sınava uygunluk (tek çekirdek; sınava yazan her yol bunu kullanır). Engeller sırayla: e-sınav, hak, program, MEBBİS son giriş, telafi, başka oturum.
+// Teyit: derslerin son giriş gününe (sınavdan sinavBildirimIsGunu iş günü önce) kadar bitmesi Haller kursunun düzeni; yönetmelikte açıkça yazmıyor.
+const gunUzun = t => { const d = tarihOku(t); return d.getDate() + ' ' + AY[d.getMonth()] + ' ' + ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'][d.getDay()]; };
+export const SINAV_UYGUNLUK_TEYIT = 'Derslerin MEBBİS’e son giriş gününe kadar bitmesi Haller kursunun düzeni; yönetmelikte açıkça yazmıyor.';
+// dersleri db tarihinde biten aday için kural gereği en erken sınav günü (takvimde oturum yoksa varsayım: Cumartesi)
+export function enErkenSinavGunu(db, N = kuralAyar('sinavBildirimIsGunu')) {
+  let d = gun(1); for (let i = 0; i < 120; i++) { const t = gunEkle(d, i); if (tarihOku(t).getDay() === 6 && mebIsGunuGeri(t, N) >= db) return t; } return null;
+}
+export function sinavaUygunluk(k, s) {
+  const engel = [], uyari = [], N = kuralAyar('sinavBildirimIsGunu'), es = hakDurumu(k, 'e-Sınav'), D = hakDurumu(k, 'Direksiyon'), db = dersBitisi(k);
+  if (!(es.gecti || es.cumle === 'Muaf' || (k.esinav && k.esinav.muaf))) engel.push('e-Sınavı geçmedi');
+  if (D.gecti) engel.push('Uygulama sınavını geçti');
+  else if (D.kalan === 0) engel.push('Sınav hakkı doldu');
+  if (!db.tarih && !db.yok) engel.push(/^Kaldıktan/.test(db.gerekce || '') ? 'Başarısız aday eğitimi ' + ((db.gerekce.match(/(\d+\/\d+)/) || [])[1] || '') + ' saat' : db.gerekce || 'Program tamamlanmadı');
+  const son = s && s.tarih ? mebIsGunuGeri(s.tarih, N) : null;
+  if (s && db.tarih && son && db.tarih > son) { const ee = ilkUygunSinav(k, { db: db.tarih, haric: s.id }); engel.push(`Dersleri ${tarih(db.tarih)} tarihinde ${db.tarih <= gun(0) ? 'bitti' : 'bitiyor'}; bu sınav için MEBBİS’e son giriş ${tarih(son)}.${ee && ee.tarih ? ` En erken ${tarih(ee.tarih)} sınavına girebilir.` : ''}`); }
+  const baska = s ? (S.sinavlar || []).find(x => x.tur === 'Direksiyon' && x.id !== s.id && x.tarih >= gun(0) && (x.kursiyerler || []).includes(k.id) && !(x.sonuc || {})[k.id]) : null;
+  if (baska) engel.push(`${tarih(baska.tarih)} sınavına zaten yazılı`);
+  if (s && son && son < gun(0) && !(s.kursiyerler || []).includes(k.id)) uyari.push(`MEBBİS’e son giriş ${tarih(son)} idi; randevu verilemeyebilir`);
+  if (s && k.meb && /^\d{4}-\d{2}-\d{2}$/.test(k.meb.uygunluk || '') && k.meb.uygunluk > s.tarih) uyari.push(`MEBBİS uygunluk tarihi ${tarih(k.meb.uygunluk)}, sınav gününden sonra`);
+  if (k.meb && k.meb.dosyaOkuma && fark(k.meb.dosyaOkuma) < -30) uyari.push(`MEBBİS bilgisi ${-fark(k.meb.dosyaOkuma)} günlük`);
+  if (s && k.dsinav && k.dsinav.sonuc === 'Kaldı' && !k.dsinav.girmedi && K_TB() && (tarihOku(s.tarih) - tarihOku(k.dsinav.tarih)) / 864e5 < K_TB()) uyari.push(`Tekrar sınavı bekleme süresinden (${K_TB()} gün) önce`);
+  return { uygun: !engel.length, engel, uyari, dersBitisi: db, sonGiris: son };
+}
+const K_TB = () => { const v = +((S.kurs || {}).tekrarBekleme); return v > 0 ? v : 0; };
+// SNV-028: takvimdeki ilk uygun Direksiyon oturumu; yoksa kural gereği en erken gün (varsayım)
+export function ilkUygunSinav(k, o = {}) {
+  const db = o.db || dersBitisi(k).tarih, bugun = gun(0), N = kuralAyar('sinavBildirimIsGunu');
+  const yazili = (S.sinavlar || []).filter(x => x.tur === 'Direksiyon' && x.tarih >= bugun && (x.kursiyerler || []).includes(k.id) && !(x.sonuc || {})[k.id]).sort((a, b) => a.tarih.localeCompare(b.tarih))[0];
+  if (yazili && !o.haric) return { s: yazili, tarih: yazili.tarih, yazili: true };
+  if (!db) return null;
+  const ot = sbSinav(S.sinavlar || []).filter(x => x.tur === 'Direksiyon' && x.tarih >= bugun && x.id !== o.haric && mebIsGunuGeri(x.tarih, N) >= db).sort((a, b) => a.tarih.localeCompare(b.tarih))[0];
+  if (ot) return { s: ot, tarih: ot.tarih };
+  const t = enErkenSinavGunu(db, N); return t ? { s: null, tarih: t, varsayim: true, metin: `Takvimde uygun oturum yok; kural gereği en erken ${gunUzun(t)}.` } : null;
 }
 // Süre son uygulama sınavının tarihinden sayılır (sonuç aynı gün açıklanır varsayımı); eski kayıtta hakBitti.tarih yoksa k.dsinav.tarih, o da yoksa null
 export const ikinciHakSonGun = k => { const t = String((k.hakBitti && k.hakBitti.tarih) || (k.dsinav && k.dsinav.tarih) || '').slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(t) ? gunEkle(t, IKINCI_HAK_GUN) : null; };
