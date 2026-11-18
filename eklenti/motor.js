@@ -996,8 +996,13 @@
       const belirsiz = new Set(sonuc.suruyor && !yazildi.has(sonuc.suruyor) ? [sonuc.suruyor] : []); sonuc.suruyor = null;
       const on = yazilacak.length ? await onUcus(yazilacak.flatMap(ekranlariOf), ilerle) : {};
       const ekranHatalari = new Set();
+      // MEB-106 (B12): önündeki iş yazılamadıysa bağlı iş denenmez — grubu açılamayan şubenin kayıtları, kaydı yapılamayan adayın evrakı ve e-sınavı
+      const grupAnahtar = x => [x.donem, x.grupNo, x.subeNo].join('|'), olmayanGrup = new Set(), olmayanTc = new Set();
+      const sonucBak = x => { const r = sonuc.yazilan.filter(y => idlerOf(x).includes(y.id)); if (!r.length || r.every(y => y.ok)) return; if (x.tur === 'grup') olmayanGrup.add(grupAnahtar(x)); if (x.tur === 'kayit' && x.tc) olmayanTc.add(x.tc); };
       for (const [i, x] of yazilacak.entries()) {
         await denetimle();
+        { const bagli = x.tur === 'kayit' && olmayanGrup.has(grupAnahtar(x)) ? `Bekliyor: önce ${x.donemAd || x.donem} grup/şube MEBBİS’te açılmalı (grup işi bu turda yazılamadı)` : ['evrak', 'esinav'].includes(x.tur) && x.tc && olmayanTc.has(x.tc) ? 'Bekliyor: önce aday kaydı MEBBİS’e girilmeli (kayıt işi bu turda yazılamadı)' : '';
+          if (bagli) { idlerOf(x).forEach(id => sonuc.yazilan.push({ id, ok: false, not: bagli, hataTur: 'bagimli' })); if (x.tur === 'kayit' && x.tc) olmayanTc.add(x.tc); await kaydet('calisiyor'); continue; } }
         ilerle(`MEBBİS’e yazılıyor ${i + 1}/${yazilacak.length}: ${x.baslik || x.tur}`, (i + 1) / yazilacak.length);
         const ids = idlerOf(x), ekr = ekranlariOf(x);
         const engel = ekr.map(k => on[k]).find(o => o && !o.ok);
@@ -1019,7 +1024,7 @@
           ids.forEach(id => sonuc.yazilan.push({ id, ok: false, not: h.message, hataTur: h.tur, ...ek(), ...(h.tur === 'ekran' ? { ekran: h.ekran || ekr[0] || '', eksik: h.eksik || [] } : {}) }));
           if (ekranHatalari.size >= 2) { sonuc.suruyor = null; throw new MebHata(`MEBBİS’te birden çok ekran değişmiş görünüyor (${[...ekranHatalari].map(ekranAd).join(', ')}). İş durduruldu ve mdSinyal’e bildirildi; ekran haritası güncellenince “Yeniden dene” ile sürer.`, 'ekran-dur'); }
         }
-        sonuc.suruyor = null; await kaydet('calisiyor');
+        sonucBak(x); sonuc.suruyor = null; await kaydet('calisiyor');
       }
       olc.bitis = Date.now();
       await kaydet('bitti', true);
