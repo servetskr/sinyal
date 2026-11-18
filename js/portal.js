@@ -63,11 +63,16 @@ export const imzaUzaktan = ustaImza => ({ zaman: yerelZaman(), kursiyer: null, k
 // Dersi "yapıldı" kaydeder: konu, beceri, not (öğrenci notlarına da), süre ve konum bitişi; ders sayısı bir artar.
 // Geçmiş günden ya da başlatılmadan kapatılan derste süre boş kalır, "sonradan kapatıldı" işaretlenir. Kısa ders (<40 dk) uyarılır.
 // Öğrenci imzası bekleniyorsa imza linki WhatsApp'tan istenir. kapat: kayıttan hemen sonra (bildirim ve yenilemeden önce) çağrılır.
-export async function dersKaydet(d, { konular = [], beceri = null, not = '', imza = null } = {}, { kapat = null, sessiz = false } = {}) {
+// MEV-010 hazırlık: dersin araç kamerası kaydı (isteğe bağlı: 'var' | 'yok'; boş = belirtilmedi). MEB'in ders kamerası düzeni netleşince
+// bu alan o sisteme bağlanır; şimdilik yalnız kayıt ve hatırlatma, dış bağlantı yok.
+export const DERS_KAMERA = { var: 'Var', yok: 'Yok' };
+export const KAMERA_HATIRLAT = 'Araçta ders kamerası varsa kaydın açık olduğunu kontrol edin.';
+export const dersKameraYaz = (d, v) => { if (DERS_KAMERA[v]) d.kamera = v; else delete d.kamera; };
+export async function dersKaydet(d, { konular = [], beceri = null, not = '', imza = null, kamera } = {}, { kapat = null, sessiz = false } = {}) {
   const ks = kursiyer(d.kursiyer), gecmis = d.tarih < gun(0), once = risk(ks), uzak = !!(imza && imza.kursiyerBekliyor);
   d.beceri = beceri && Object.keys(beceri).length ? beceri : null; d.konular = konuListesi(ks.sinif).map(x => x[0]).filter(id => konular.includes(id)).concat(konular.filter(id => !konuListesi(ks.sinif).some(x => x[0] === id)));
   const n = String(not || '').trim().slice(0, 300); if (n) { d.not = n; ks.notlar.unshift({ tarih: gun(0), metin: n }); }
-  d.durum = 'Yapıldı'; d.imza = imza;
+  d.durum = 'Yapıldı'; d.imza = imza; if (kamera !== undefined) dersKameraYaz(d, kamera);
   if (gecmis || !d.bas) { d.sonradan = gun(0); } else { d.bit = new Date().toTimeString().slice(0, 5); izBitir(d); d.sure = d.basZaman ? Math.round((Date.now() - d.basZaman) / 60e3) : null; }
   ks.direksiyon = (ks.direksiyon || 0) + 1;  // ek dersler de sayılır (zorunlu sayıda donarsa ödenen ek ders bitince yeniden ücretsiz ders planlanabiliyordu)
   if (uzak) {

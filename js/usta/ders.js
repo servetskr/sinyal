@@ -59,7 +59,11 @@ function degerHtml(d, k) {
     + `<div class="ox-kart ox-udr-beceri">${BECERI.map(([id, ad]) => `<div class="ox-udr-b"><span class="ox-udr-b-ad" id="ox-udr-b-${id}">${esc(ad)}</span>
       <span class="ox-udr-b-sec" role="radiogroup" aria-labelledby="ox-udr-b-${id}">${[1, 2, 3, 4, 5].map(n => `<button type="button" role="radio" aria-checked="${b[id] === n}" class="${b[id] === n ? 'secili' : ''}" data-udr-beceri="${id}" data-n="${n}" aria-label="${n}">${n}</button>`).join('')}</span></div>`).join('')}</div>`
     + alan('Not', 'isteğe bağlı', `<textarea data-udr-not rows="3" maxlength="300" placeholder="Kısa not ekleyin…">${esc(A.not || '')}</textarea>`)
-    + `<p class="ox-udr-ipucu-y">Öğrenci notu kendi ekranında görür.</p>`;
+    + `<p class="ox-udr-ipucu-y">Öğrenci notu kendi ekranında görür.</p>`
+    // MEV-010: ders kamerası kaydı (isteğe bağlı; seçili olana yeniden dokununca kalkar)
+    + `<div class="ox-udr-alan ox-udr-kamera"><span class="ox-udr-et" id="ox-udr-kam">Ders kamerası kaydı <small>isteğe bağlı</small></span>
+      <span class="ox-udr-b-sec ox-udr-kam-sec" role="radiogroup" aria-labelledby="ox-udr-kam">${Object.entries(P.DERS_KAMERA).map(([id, ad]) => `<button type="button" role="radio" aria-checked="${A.kamera === id}" class="${A.kamera === id ? 'secili' : ''}" data-udr-kamera="${id}">${ad}</button>`).join('')}</span>
+      <span class="ox-udr-ipucu-y">${P.KAMERA_HATIRLAT}</span></div>`;
 }
 const tuvalHtml = (kim, baslik, ek = '') => `<div class="ox-udr-imza"><div class="ox-udr-imza-bas"><span><b>${baslik}</b>${ek ? `<small>· ${ek}</small>` : ''}</span><button type="button" class="ox-udr-temizle" data-udr-temizle="${kim}" hidden>${oi('sifirla')}<span>Temizle</span></button></div>
   <div class="ox-udr-tuval"><canvas data-udr-imza="${kim}" aria-label="${baslik}: parmağınızla imza atın"></canvas><span class="ox-udr-tuval-ip" aria-hidden="true">${oi('kalem')}<span>İmza atın</span></span></div><p class="ox-udr-imza-uyari" data-udr-uyari="${kim}" role="status" hidden></p></div>`;
@@ -207,6 +211,12 @@ function bagla(kok, d, k, ctx) {
       bc.parentElement.querySelectorAll('button').forEach(b => { const s = A.beceri[id] === +b.dataset.n; b.classList.toggle('secili', s); b.setAttribute('aria-checked', String(s)); });
       return;
     }
+    const km = t.closest('[data-udr-kamera]');
+    if (km) {
+      A.kamera = A.kamera === km.dataset.udrKamera ? '' : km.dataset.udrKamera; sakla();
+      kok.querySelectorAll('[data-udr-kamera]').forEach(b => { const s = A.kamera === b.dataset.udrKamera; b.classList.toggle('secili', s); b.setAttribute('aria-checked', String(s)); });
+      return;
+    }
     if (t.closest('[data-udr-ileri]')) {
       if (A.adim === 1 && !A.konular.length) return bildir('Takip formu için dersin konusunu seç', 'uyari');
       return adimGit(A.adim + 1);
@@ -285,7 +295,7 @@ function kaydet(kok, d, ctx, uzak) {
   else if (ik.api.bos() || iu.api.bos()) { tuvalDurum(kok); return bildir(imzaEksik(ik, 'Öğrenci imzası') || imzaEksik(iu, 'Öğretmen imzası') || 'İki imza da gerekli. Öğrenci yanında değilse “WhatsApp’tan imzalat”', 'uyari'); }
   kok.querySelectorAll('[data-udr-tamam],[data-udr-uzak]').forEach(b => { b.disabled = true; });
   const imza = uzak ? P.imzaUzaktan(iu.api.url()) : P.imzaYerinde(ik.api.url(), iu.api.url());
-  const secim = { konular: A.konular.slice(), beceri: A.beceri && Object.keys(A.beceri).length ? { ...A.beceri } : null, not: A.not || '', imza };
+  const secim = { konular: A.konular.slice(), beceri: A.beceri && Object.keys(A.beceri).length ? { ...A.beceri } : null, not: A.not || '', imza, kamera: A.kamera || '' };
   // kayıttan hemen sonra sonuç ekranı; uzaktan imzada link hazırlanırken (kısa link, WhatsApp) sonuç ekranı açık durur
   // kayıt başarılı: bekleyen bütün bildirimler kapanır (kısa ders uyarısı sonuç ekranında zaten yazıyor)
   P.dersKaydet(d, secim, { sessiz: true, kapat: () => { bildirimKapat(); A = { ekran: 'sonuc', id: d.id }; tuval = null; sakla(); if (uzak) ctx.yenile(true); } })
@@ -422,6 +432,8 @@ stilEkle('ox-uders', `
 .ox-udr-b-sec button::after{content:"";position:absolute;inset:-5px 0}
 .ox-udr-b-sec button.secili{background:var(--ox-mavi);color:#fff;box-shadow:0 1px 2px rgba(10,102,242,.25)}
 .ox-udr-b-sec button:active{transform:scale(.95)}
+.ox-udr-kam-sec{grid-template-columns:repeat(2,minmax(0,1fr))}
+.ox-udr-kamera .ox-udr-ipucu-y{margin-top:0}
 
 /* 3 · imzalar */
 .ox-udr-imza+.ox-udr-imza{margin-top:18px}
