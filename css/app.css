@@ -3612,3 +3612,21 @@ body.suzgec-yapiskan .sayfa-kursiyerler .filtre{position:sticky;top:0;z-index:6;
 .sinav-uygun-degil input { cursor: not-allowed; }
 .uygunluk-cumle .kart-govde { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; color: var(--metin); }
 .uygunluk-cumle .kart-govde a { margin-left: 6px; }
+/* SNV-031..036: Sınava girecekler */
+.hv-suzgec { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 12px; align-items: center; }
+.hv-suzgec .girdi { width: auto; height: 38px; flex-shrink: 0; }
+.hv-suzgec .cip { flex-shrink: 0; }
+.hv-bolum { margin-bottom: 14px; scroll-margin-top: 80px; }
+.hv-satir { align-items: flex-start; gap: 10px; }
+.hv-satir .kisi small { display: block; color: var(--soluk); font-size: 13px; }
+.hv-sec { display: flex; align-items: center; padding-top: 10px; }
+.hv-sec input { width: 20px; height: 20px; accent-color: var(--levha); }
+.hv-rozet { flex-wrap: wrap; justify-content: flex-end; gap: 4px; max-width: 50%; }
+.hv-cubuk { position: sticky; bottom: 12px; z-index: 20; display: flex; gap: 10px; align-items: center; justify-content: space-between; background: var(--levha); color: #fff; border-radius: 12px; padding: 10px 14px; box-shadow: 0 10px 30px -10px rgba(0,0,0,.5); }
+.hv-cubuk b { font-size: 15px; }
+.hv-oturumlar { display: grid; gap: 8px; }
+.hv-oturum { text-align: left; border: 1.5px solid var(--cizgi); border-radius: 10px; padding: 10px 12px; background: var(--panel, #fff); display: grid; gap: 2px; cursor: pointer; }
+.hv-oturum small { color: var(--soluk); font-size: 13px; }
+.hv-oturum span { font-weight: 700; color: var(--murekkep); font-size: 13.5px; }
+.hv-oturum.secili { border-color: var(--levha); box-shadow: inset 0 0 0 1px var(--levha); }
+a.kart.gosterge { text-decoration: none; color: inherit; display: block; }
