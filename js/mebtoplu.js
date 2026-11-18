@@ -357,6 +357,9 @@ export function kuralDenetimi(l) {
     if (x.tur === 'onay') return x.adaylar.forEach(a => bak(a.id, 'onay', { k: kursiyer(String(a.id).replace(/^onay-/, '')) }));
     if (['kayit', 'evrak', 'esinav'].includes(x.tur)) bak(x.id, x.tur, { k: kursiyer(String(x.id).slice(x.tur.length + 1)) });
   });
+  // MEB-154: aynı adayın birden çok faturası seçiliyse uyarı (MEBBİS'e hangisinin gideceği onay penceresinde seçilir; istenmeyen bırakılır)
+  { const ft = {}; l.filter(x => x.tur === 'fatura').forEach(x => (ft[x.tc] = ft[x.tc] || []).push(x));
+    Object.values(ft).filter(y => y.length > 1).forEach(y => y.forEach(x => ekle(x.id, 'uyari', 'F01', `Bu adayın ${y.length} faturası seçili (${y.map(z => `${z.no} · ${z.tarih} · ${z.tutar} ₺`).join('; ')}). MEBBİS’e gidecek olanı bırakın, ötekilerin işaretini kaldırın.`))); }
   return o;
 }
 
@@ -420,7 +423,9 @@ export async function yaz(ids) {
   // onayda bırakılan aday çıkınca kalan adayların saatleri sırayla yeniden verilir (pencere önizler, gönderilen de budur)
   // hazırlanan: hazirla'nın kendi eski saatini dolu saymadığı kimlikler (bitmiş iş ids'te olsa bile onun saati dolu kalır)
   const hazirlanan = new Set([...l.flatMap(MK.isKimlikleri), ...hata.map(([id]) => id)]), sikistir = h => randevuSaatleri(MK.engelliCikar(l, h), hazirlanan).l;
-  const r = await MK.isOnayPenceresi({ l, hata, basliklar, kural, sikistir });
+  // MEB-152: özet 'N hazır · M eksik · K zaten MEBBİS'te'; zaten girilmişler yeniden gönderilmez (seçim listesinde de kapalı)
+  const turlar = new Set(l.map(x => x.tur === 'randevu' ? 'sinav' : x.tur)), zaten = [...EK.mebIsleri(true), ...ekIsler(true)].filter(x => x.bitti && turlar.has(x.tur)).length;
+  const r = await MK.isOnayPenceresi({ l, hata, basliklar, kural, sikistir, zaten });
   if (!r) { if (hata.length) kaydet(); return bildir('MEBBİS’e yazma iptal edildi; hiçbir şey gönderilmedi'); }
   const haric = r.haric || [], bilerek = r.bilerek || [];
   const gid = sikistir(haric).filter(x => !x.adaylar || x.adaylar.length);

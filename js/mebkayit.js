@@ -193,7 +193,7 @@ export function engelliCikar(l, haric = []) {
 // kural: kural motoru bulguları (mebtoplu.js kuralDenetimi). haric: engelli olup işaretlenmeyen kimlikler (gönderilmez);
 // bilerek: [{ id, kurallar }] kural engeline rağmen işaretlenenler (işlem kaydına yazılır)
 // sikistir(haric): gönderilecek liste (bırakılanlar çıkmış, randevu saatleri yeniden verilmiş; mebtoplu.js). Süre, parça, "N iş" rozeti ve saatler bundan.
-export function isOnayPenceresi({ l, hata = [], basliklar = {}, kural = {}, sikistir }) {
+export function isOnayPenceresi({ l, hata = [], basliklar = {}, kural = {}, sikistir, zaten = 0 }) {
   return new Promise(ok => {
     let sonuc = null;
     const kimlikler = l.flatMap(isKimlikleri), engelIds = kimlikler.filter(id => engelli(kural, id)), uyariIds = kimlikler.filter(id => !engelli(kural, id) && kural[id] && (kural[id].uyari || []).length);
@@ -215,6 +215,7 @@ export function isOnayPenceresi({ l, hata = [], basliklar = {}, kural = {}, siki
     pencere({
       baslik: `MEBBİS’e yazılacaklar · ${sayi} iş`, genis: true, korumali: true,
       icerik: `<div style="display:grid;gap:12px">
+        <p style="font-size:14px;margin:0"><b style="color:var(--murekkep)">${sayi} hazır</b>${hata.length ? ` · <span style="color:var(--kirmizi)">${hata.length} eksik (gönderilmez)</span>` : ''}${engelIds.length ? ` · ${engelIds.length} kural engelli` : ''}${zaten ? ` · ${zaten} zaten MEBBİS’te (listeye alınmadı)` : ''}</p>
         <div class="kart" style="box-shadow:none;margin:0"><div class="kart-govde" style="display:grid;gap:4px;font-size:14px">
           <span><b style="color:var(--murekkep)">Kimin adına:</b> ${e(kr.kurs)}${kr.sube ? ' · ' + e(kr.sube) + ' şubesi' : ''}${kr.kod ? ` · kurum kodu <span class="mono">${e(kr.kod)}</span>` : ''}${kr.mudur ? ' · müdür ' + e(kr.mudur) : ''}</span>
           <span><b style="color:var(--murekkep)">MEBBİS kullanıcısı:</b> şu an MEBBİS’e giriş yapmış hesap${kr.hesap ? ' (' + e(kr.hesap) + ')' : ''}. Kayıtlar MEBBİS’te bu hesabın adıyla görünür; Yardımcı şifreyi görmez.</span>
