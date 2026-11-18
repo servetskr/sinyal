@@ -956,7 +956,7 @@
     const kaydet = (durum, bitti) => { olaylariEkle(); return gonder({ tur: 'toplu-durum', id: is.id, sonuc, bitti: !!bitti, durum, sahip: SAHIP }); };
     // her işten önce depoya bakılır (B7): mdSinyal'den iptal ya da başka yerden durdurma hemen görülür
     const denetimle = async () => { const t = await gonder({ tur: 'toplu-al' }); if (!t || t.id !== is.id || t.iptal) iptal = true; else if (t.durum === 'durduruldu') durdur = true; kontrol(); };
-    const ilerle = (adim, oran) => { kontrol(); goster(adim, oran, 'Bu sekmeyi kapatmayın; MEBBİS’te başka işlem yapabilirsiniz.', 'mdSinyal · MEBBİS’te çalışıyor'); sonuc.adim = adim; q('[data-olcum]').textContent = olcumYazi(olc, sonuc); };
+    const ilerle = (adim, oran) => { kontrol(); goster(adim, oran, 'Bu sekmeyi kapatmayın; MEBBİS’te başka işlem yapabilirsiniz.', 'mdSinyal · MEBBİS’te çalışıyor'); sonuc.adim = adim; if (typeof oran === 'number') sonuc.oran = oran; q('[data-olcum]').textContent = olcumYazi(olc, sonuc); };
     // çalışırken depoya bakar: mdSinyal'den iptal, başka sekmeden durdur; kilidi tazeler
     const izle = setInterval(async () => {
       const t = await gonder({ tur: 'toplu-al' });

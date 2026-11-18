@@ -76,8 +76,10 @@ function teslimEt(x) {
 }
 // "ekran değişti" ayrı ileti olarak da verilir (değer yok, yalnız ekran ve alan adları); formun bütün alan listesi taşınmaz
 const ekranOzeti = (x, s) => ({ ekran: String(x.ekran || '').toUpperCase(), ad: x.ad || '', eksik: (x.eksik || []).slice(0, 12), iz: x.iz || '', kaynak: x.kaynak || '', yardimci: s.yardimci || SURUM, harita: s.harita || '' });
+let canliSon = null;
 // MEBBİS’ten gelen tablo ve biten işler: sayfa görünür olunca ve aralıklarla sorulur
 async function yokla() {
+  { const c = await gonder({ tur: 'canli-al' }), d = c ? JSON.stringify(c) : ''; if (d !== canliSon) { canliSon = d; sayfaya('mebbis-oturum', c || { acik: null }); } }   // MEB-187
   const t = await gonder({ tur: 'tablo-al' }); if (t) sayfaya('tablo', t);
   const b = await gonder({ tur: 'bitenler-al' }); if (b && b.length) sayfaya('bitenler', b);
   const h = await gonder({ tur: 'hatalar-al' }); if (h && h.length) sayfaya('hatalar', h);

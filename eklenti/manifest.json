@@ -47,7 +47,8 @@
     "default_icon": {
       "16": "simge-16.png",
       "48": "simge-48.png"
-    }
+    },
+    "default_popup": "popup.html"
   },
   "homepage_url": "https://mdsinyal.com/"
 }

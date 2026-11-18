@@ -3798,3 +3798,48 @@ tr.secili-satir td { background: rgba(10, 77, 162, .06); }
 .adim-kontrol li.yok span { color: var(--murekkep); font-weight: 700; }
 .adim-kontrol li.yok small { color: var(--kirmizi); }
 .adim-kontrol .adim-not { display: block; padding: 0 12px 10px 36px; color: var(--soluk); font-size: 12.5px; }
+/* MEB-187: MEBBİS aktarımı — üst şerit, açık pencereler, görünüm seçimi, öğrenci × adım matrisi */
+.mx-ust{margin-bottom:14px}
+.mx-durum{display:flex;gap:6px 18px;flex-wrap:wrap;font-size:13.5px;color:var(--metin)}
+.mx-durum span{display:inline-flex;gap:6px;align-items:center}
+.mx-nokta{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
+.mx-soluk{color:var(--soluk)}
+.mx-menu{position:relative}
+.mx-menu summary{list-style:none;cursor:pointer;height:46px;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:15px}
+.mx-menu summary::-webkit-details-marker{display:none}
+.mx-menu>div{position:absolute;right:0;top:calc(100% + 6px);z-index:30;background:var(--panel);border:1.5px solid var(--cizgi);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);padding:6px;min-width:280px;display:grid}
+.mx-menu>div button,.mx-menu>div a{display:flex;gap:8px;align-items:center;flex-wrap:wrap;text-align:left;background:none;border:0;border-radius:8px;padding:9px 10px;font:inherit;font-weight:700;color:var(--murekkep);cursor:pointer;text-decoration:none}
+.mx-menu>div button:hover,.mx-menu>div a:hover{background:var(--panel-2)}
+.mx-menu>div small{flex-basis:100%;font-weight:400;color:var(--soluk);padding-left:26px;font-size:12.5px}
+.mx-baslik{font-family:var(--baslik);font-weight:700;color:var(--murekkep);font-size:15px;margin:4px 0 8px}
+.mx-pencereler{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-bottom:16px}
+.mx-pk{background:var(--panel);border-radius:12px;padding:14px;border-left:5px solid var(--levha);box-shadow:0 1px 0 var(--cizgi);display:flex;flex-direction:column;gap:2px;align-items:flex-start}
+.mx-pk b{color:var(--murekkep);font-size:15.5px}
+.mx-pk.mx-acil{border-left-color:var(--kirmizi)}
+.mx-pk.mx-sakin{border-left-color:var(--cizgi)}
+.mx-sure{font-size:13px;color:var(--soluk)}
+.mx-sayi{font-size:14px;margin:4px 0 10px;color:var(--metin)}
+.mx-pk .dg{margin-top:auto}
+.mx-gorunum{display:inline-flex;gap:4px;background:var(--panel-2);border-radius:10px;padding:4px;margin:0 0 10px}
+.mx-gorunum button{border:0;background:none;border-radius:8px;padding:7px 14px;font:inherit;font-weight:700;color:var(--soluk);cursor:pointer}
+.mx-gorunum button.secili{background:var(--panel);color:var(--murekkep);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.kb-arac{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 16px;border-bottom:1.5px solid var(--cizgi-2)}
+.mx-matris th,.mx-matris td{text-align:center;white-space:nowrap;padding:8px 6px}
+.mx-matris th small{display:block;font-weight:400;color:var(--levha);font-size:11.5px}
+.mx-matris td:first-child,.mx-matris th:first-child{text-align:left;position:sticky;left:0;background:var(--panel);z-index:1}
+.mx-matris td:first-child small{display:block;color:var(--soluk);font-size:12px}
+.mx-matris td:first-child a{color:var(--murekkep);text-decoration:none}
+.mx-h{display:inline-flex;width:26px;height:26px;border-radius:7px;align-items:center;justify-content:center;font-weight:800;font-size:13px;cursor:default}
+.mx-ok{background:var(--yesil-acik);color:var(--yesil)}
+.mx-hazir{background:var(--levha-acik);color:var(--levha)}
+.mx-eksik{background:var(--sari-acik);color:#7a5200}
+.mx-hata{background:var(--kirmizi-acik);color:var(--kirmizi)}
+.mx-elle{background:var(--panel-2);color:var(--metin)}
+.mx-bos{color:var(--soluk)}
+.mx-lejant{display:flex;gap:6px 16px;flex-wrap:wrap;font-size:13px;color:var(--soluk);padding:10px 16px 14px}
+.mx-lejant>span{display:inline-flex;gap:6px;align-items:center}
+@media (max-width:600px){.mx-ust .dg-ana{width:100%}.mx-pencereler{grid-template-columns:1fr}}
+.mx-dugmeler{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+@media (max-width:600px){.mx-dugmeler{width:100%;justify-content:stretch}.mx-dugmeler>.dg{flex:1}}
+.kb-arac label{display:inline;margin:0}
+.kb-arac .girdi{width:auto;min-width:180px;flex:none}

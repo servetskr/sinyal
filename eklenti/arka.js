@@ -202,6 +202,9 @@ async function isle(m, kimden) {
     if (!t || t.id !== m.id || t.bitti) await ilerlemeYaz(m.id, r => r && !(t && t.id === m.id) && !['bitti', 'iptal'].includes(r.durum) && (r.kimlikler || []).length > (r.yazilan || []).filter(y => y.ok).length ? { ...r, teslim: true } : null);
     return { ok: true };
   }
+  // MEB-187: MEBBİS oturumu açık mı (mebbis.js yoklar); açılır pencere ve mdSinyal üst şeridi
+  if (m.tur === 'canli-koy') { await koy('canli', { acik: !!(m.durum && m.durum.acik), zaman: (m.durum && m.durum.zaman) || Date.now() }); return { ok: true }; }
+  if (m.tur === 'canli-al') return (await al('canli')) || null;
   if (m.tur === 'ilerleme-al') { const il = (await yerel('ilerleme')) || {}, t = await al('toplu'); return Object.values(il).map(r => ({ ...r, oturumda: !!(t && t.id === r.id) })); }
   if (m.tur === 'harita-koy') return haritaKoy(m.harita, kimden);
   if (m.tur === 'harita-al') { const h = await yerel('harita'); return h && !haritaDenetle(h) ? { harita: h } : null; }
