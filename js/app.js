@@ -204,7 +204,7 @@ function iskelet() {
         ${!['usta', 'teorik', 'muhasebe'].includes(oturum.kullanici.rol) ? `<button class="yeni-dugme" data-yeni-menu aria-label="Yeni ekle">${ik('arti')}<span>Yeni</span></button>` : ''}
         <button class="kullanici-cip" data-hesap title="Hesabım: ekranlar ve çıkış" aria-label="${e(oturum.kullanici.ad)} · ${ROL_AD[oturum.kullanici.rol]} · hesap menüsü"><i class="kc-bas" aria-hidden="true">${basHarf(oturum.kullanici.ad)}</i><b>${e(oturum.kullanici.ad)}</b><small>${ROL_AD[oturum.kullanici.rol]}</small></button>
       </header>`}
-      ${oturum.kullanici.ziyaretci ? `<div class="ziyaretci-serit"><span><b>Demo görünümü</b> · örnek verilerle. Mesajlar kimseye gitmez, ekranda gösterilir.</span><button data-cikis>Çık</button></div>` : ''}
+      ${oturum.kullanici.ziyaretci ? `<div class="ziyaretci-serit"><span><b>Demo görünümü</b> · örnek verilerle. Mesajlar kimseye gitmez, ekranda gösterilir.</span><span class="zs-dugmeler"><button data-soru-ornek title="DIG-029: onay bekleyen yeni soru bankası örneği">Yeni soru örneği (100)</button><button data-cikis>Çık</button></span></div>` : ''}
       <main class="icerik" id="icerik"></main>
     </div>
   </div>
@@ -1204,6 +1204,8 @@ document.addEventListener('click', ev => {
   if (ev.target.closest('[data-cikis]')) kapatPencere();
   if (ev.target.closest('[data-hesap]')) { if (oturum.kullanici && oturum.kullanici.rol === 'usta' && document.body.classList.contains('ox-modu')) return import('./usta/ekran.js?v=234').then(m => { m.hesapAc(); yenile(true); }); return hesapSayfasi(); }
   if (ev.target.closest('[data-destek]')) return destekPenceresi();
+  // DIG-029: yeni soru bankası örneği yalnız demo şeridinden açılır (js/soru-ornek.js)
+  if (ev.target.closest('[data-soru-ornek]') && ziyaretci()) return import('./soru-ornek.js?v=234').then(m => m.soruOrnekAc()).catch(() => bildir('Soru örneği yüklenemedi; bağlantınızı kontrol edip tekrar deneyin', 'uyari'));
   // Yönetim: Hesaplar telefonda profil menüsünden açılır (alt çubuk 6 sekme kalır)
   if (ev.target.closest('[data-yn-hesaplar]')) { kapatPencere(); ORT.sekmeSec('hesaplar'); yonetimCiz(true); SH.otoBaglan(); return; }
   if (ev.target.closest('[data-ogr-cikis]')) return B.ogrenciCikis().then(() => location.replace(new URL('giris/?cikis=1', location.href.split('#')[0].replace(/[^/]*$/, '')).href));

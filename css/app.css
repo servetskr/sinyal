@@ -710,7 +710,8 @@ body.portal-modu .sube-sec,body.portal-modu .sube-yan{display:none!important}
 .giris-demo:focus-visible{outline:3px solid #fff;outline-offset:3px}
 .ziyaretci-serit{display:flex;align-items:center;gap:12px;justify-content:space-between;margin:0 24px 12px;padding:10px 14px;border-radius:10px;background:#fff4cf;border:1px solid #f2b705;color:#3a3200;font-size:14px}
 .ziyaretci-serit button{flex:none;border:1.5px solid #111417;background:#fff;border-radius:7px;padding:5px 12px;font:700 13px var(--baslik);cursor:pointer}
-@media (max-width:760px){.ziyaretci-serit{margin:0 12px 10px;font-size:13px}}
+.ziyaretci-serit .zs-dugmeler{display:flex;gap:8px;flex:none;flex-wrap:wrap;justify-content:flex-end}
+@media (max-width:760px){.ziyaretci-serit{margin:0 12px 10px;font-size:13px;flex-wrap:wrap}.ziyaretci-serit .zs-dugmeler{flex:1 1 100%;justify-content:flex-start}}
 @media (max-width:480px){
   .kullanici-cip{padding:4px 8px;max-width:96px}
   .kullanici-cip b{display:block;max-width:100%;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
