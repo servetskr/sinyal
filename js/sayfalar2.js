@@ -435,8 +435,11 @@ function aracMebNotu(a) {
   if (m.muayeneFark && m.muayene) l.push(`Muayene mdSinyal’de ${tarih(a.muayene)}, MEBBİS’te ${tarih(m.muayene)}. Yeni muayene MEBBİS’e işlenmediyse il/ilçe MEM’e bildirin.`);
   if (m.sanzimanFark) l.push(`MEBBİS’te ${m.sanzimanFark} görünüyor, mdSinyal’de ${a.vites}. Şanzıman MEBBİS’e buradan yazılamaz; düzeltme MEM’e yazıyla (ruhsat ekli) yapılır.`);
   const hd = /hizmet\s*d[ıi]ş/i.test(a.mebDurum || '');
-  if (!l.length && !hd) return '';
-  return `<div style="padding:0 6px;display:grid;gap:6px">${l.map(x => `<p class="ipucu uyari" style="font-size:12.5px;margin:0">${isaret('uyari', 16)}<span>${e(x)}</span></p>`).join('')}${hd ? `<p class="ipucu uyari" style="font-size:12.5px;margin:0;flex-wrap:wrap">${isaret('uyari', 16)}<span style="flex:1">MEBBİS’te hizmet dışı.</span><button class="dg dg-cizgi dg-kucuk" data-arac-cikar="${e(a.id)}">Filodan çıkar</button></p>` : ''}</div>`;
+  // ARC-010: trafik sigortası başlangıcı (MEBBİS detayı ya da kart) biliniyorsa bitiş başlangıç + 1 yıl olmalı
+  const sb_ = m.sigortaBas || a.sigortaBas, olmali = sb_ ? (Number(sb_.slice(0, 4)) + 1) + sb_.slice(4) : '';
+  const sg = olmali && a.sigorta !== olmali ? `<p class="ipucu tam" style="font-size:12.5px;margin:0;flex-wrap:wrap">${isaret('bilgi', 16)}<span style="flex:1">${m.sigortaBas ? 'MEBBİS’e' : 'Başlangıca'} göre trafik sigortası bitişi ${tarih(olmali)} olmalı${a.sigorta ? ` (kartta ${tarih(a.sigorta)})` : ''}.</span><button class="dg dg-cizgi dg-kucuk" data-arac-sigorta="${e(a.id)}" data-tarih="${olmali}">Al</button></p>` : '';
+  if (!l.length && !hd && !sg) return '';
+  return `<div style="padding:0 6px;display:grid;gap:6px">${l.map(x => `<p class="ipucu uyari" style="font-size:12.5px;margin:0">${isaret('uyari', 16)}<span>${e(x)}</span></p>`).join('')}${hd ? `<p class="ipucu uyari" style="font-size:12.5px;margin:0;flex-wrap:wrap">${isaret('uyari', 16)}<span style="flex:1">MEBBİS’te hizmet dışı.</span><button class="dg dg-cizgi dg-kucuk" data-arac-cikar="${e(a.id)}">Filodan çıkar</button></p>` : ''}${sg}</div>`;
 }
 export function aracDuzenle(id, on = null) {
   const a = id ? arac(id) : { plaka: '', model: '', yil: new Date().getFullYear(), sinif: 'B', vites: 'Manuel', km: 0, bakimKm: 15000, muayene: '', sigorta: '', kasko: '', egitmen: '', ...(on || {}) };
@@ -457,15 +460,45 @@ export function aracDuzenle(id, on = null) {
       <div class="alan"><label>Trafik sigortası bitişi</label><input name="sigorta" type="date" value="${tarihGir(a.sigorta)}" required></div>
       <div class="alan"><label>Kasko bitişi</label><input name="kasko" type="date" value="${tarihGir(a.kasko)}"></div>
       <div class="alan"><label>MEB araç izin no (EK-8 onayı)</label><input name="mebIzinNo" value="${e(a.mebIzinNo || '')}" placeholder="İl/ilçe MEM onay sayısı"></div>
-      <div class="alan"><label>İzin onay tarihi</label><input name="izinTarih" type="date" value="${tarihGir(a.izinTarih)}"></div></form>`,
+      <div class="alan"><label>İzin onay tarihi</label><input name="izinTarih" type="date" value="${tarihGir(a.izinTarih)}"></div>
+      <details class="daha tam" ${a.sasiNo || a.motorNo || a.sahiplik === 'Kiralık' ? 'open' : ''}><summary>Ruhsat, sahiplik ve sigorta ayrıntıları <small style="color:var(--soluk);font-weight:400">EK-8 ve MEBBİS araç kaydı bunları kullanır</small></summary><div class="form-izgara" style="margin-top:10px">
+        <div class="alan"><label>Markası</label><input name="marka" maxlength="100" value="${e(a.marka || (a.meb || {}).marka || '')}" placeholder="Renault"></div>
+        <div class="alan"><label>Şase (şasi) no</label><input name="sasiNo" maxlength="17" value="${e(a.sasiNo || '')}" placeholder="17 karakter" style="text-transform:uppercase"></div>
+        <div class="alan"><label>Motor no</label><input name="motorNo" maxlength="20" value="${e(a.motorNo || '')}" style="text-transform:uppercase"></div>
+        <div class="alan"><label>Tescil (imal) tarihi</label><input name="tescil" type="date" value="${tarihGir(a.tescil || (a.meb || {}).tescil)}"></div>
+        <div class="alan"><label>Hizmete başlama</label><input name="hizmetGiris" type="date" value="${tarihGir(a.hizmetGiris || (a.meb || {}).hizmetGiris)}"></div>
+        <div class="alan"><label>Ruhsat belge seri no</label><input name="ruhsatSeri" maxlength="20" value="${e(a.ruhsatSeri || '')}"></div>
+        <div class="alan"><label>Ruhsat sahibi (ad / unvan)</label><input name="ruhsatSahibi" maxlength="120" value="${e(a.ruhsatSahibi || '')}"></div>
+        <div class="alan"><label>Ruhsat sahibi TC / vergi no</label><input name="ruhsatVkn" inputmode="numeric" maxlength="11" value="${e(a.ruhsatVkn || '')}"></div>
+        <div class="alan tam"><label>Ruhsat sahibi adresi</label><input name="ruhsatAdres" maxlength="250" value="${e(a.ruhsatAdres || '')}"></div>
+        <div class="alan"><label>Sahiplik</label><select name="sahiplik">${['Kuruma Ait', 'Kiralık'].map(x => `<option ${x === (a.sahiplik || 'Kuruma Ait') ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
+        <div class="alan" data-kira><label>Kiralayan şirket</label><input name="kiraSirket" maxlength="120" value="${e(a.kiraSirket || '')}"></div>
+        <div class="alan" data-kira><label>Şirket iletişim</label><input name="kiraIletisim" maxlength="120" value="${e(a.kiraIletisim || '')}"></div>
+        <div class="alan" data-kira><label>Kira başlangıcı</label><input name="kiraBas" type="date" value="${tarihGir(a.kiraBas)}"></div>
+        <div class="alan" data-kira><label>Kira bitişi</label><input name="kiraBit" type="date" value="${tarihGir(a.kiraBit)}"></div>
+        <div class="alan"><label>Trafik sigortası başlangıcı</label><input name="sigortaBas" type="date" value="${tarihGir(a.sigortaBas)}"></div>
+        <div class="alan"><label>Sigorta poliçe (belge) no</label><input name="sigortaBelgeNo" maxlength="12" value="${e(a.sigortaBelgeNo || '')}"></div>
+      </div></details></form>`,
     altlik: `${id ? '<button class="dg dg-hafif" data-sil style="margin-right:auto">Aracı çıkar</button>' : ''}<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-arac">${id ? 'Kaydet' : 'Aracı ekle'}</button>`,
     onAc(d) {
       d.querySelector('[name=sinif]').addEventListener('change', ev => { d.querySelector('[data-ce-not]').hidden = ev.target.value !== 'CE'; });
+      const kiraGoster = () => d.querySelectorAll('[data-kira]').forEach(x => { x.hidden = d.querySelector('[name=sahiplik]').value !== 'Kiralık'; }); d.querySelector('[name=sahiplik]').addEventListener('change', kiraGoster); kiraGoster();
       d.querySelector('form').addEventListener('submit', ev => {
         ev.preventDefault(); const f = ev.target, pl = f.plaka.value.toLocaleUpperCase('tr').replace(/\s+/g, ' ').trim();
         if (!/^\d{2} ?[A-ZÇĞİÖŞÜ]{1,3} ?\d{2,4}$/.test(pl)) return bildir('Plaka biçimi hatalı (ör. 26 AB 123)', 'uyari');
         if (S.araclar.some(x => x !== a && x.plaka.replace(/\s/g, '') === pl.replace(/\s/g, ''))) return bildir('Bu plaka zaten kayıtlı', 'uyari');
-        const yeni = { plaka: pl, model: f.model.value.trim(), yil: +f.yil.value || a.yil, sinif: f.sinif.value, vites: f.vites.value, ekSiniflar: [...f.querySelectorAll('[name=ekSinif]:checked')].map(x => x.value).filter(x => x !== f.sinif.value), egitmen: f.egitmen.value || null, km: +String(f.km.value).replace(/\D/g, '') || 0, bakimKm: +String(f.bakimKm.value).replace(/\D/g, '') || 0, muayene: f.muayene.value, sigorta: f.sigorta.value, kasko: f.kasko.value || null, mebIzinNo: f.mebIzinNo.value.trim() || null, izinTarih: f.izinTarih.value || null };
+        // ARC-017: MEBBİS araç kaydı kuralları (SKT01002)
+        { const il = +pl.slice(0, 2), govde = pl.slice(2).replace(/\s/g, ''), yil = +f.yil.value, ys = new Date().getFullYear(), sase = f.sasiNo.value.trim(), mot = f.motorNo.value.trim(), kira = f.sahiplik.value === 'Kiralık', hata = [];
+          if (!(il >= 1 && il <= 81)) hata.push('Plakanın il kodu 01–81 arasında olmalı'); if (govde.length > 7) hata.push('Plakanın il kodundan sonraki kısmı en çok 7 karakter');
+          if (f.model.value.trim().length > 100 || f.marka.value.trim().length > 100) hata.push('Marka ve model en çok 100 karakter');
+          if (!(yil >= 1960 && yil <= ys + 1)) hata.push(`Model yılı 1960–${ys + 1} arasında olmalı`);
+          if (sase && !/^[A-HJ-NPR-Z0-9]{17}$/i.test(sase)) hata.push('Şase no 17 karakter olmalı (I, O, Q harfleri kullanılmaz)');
+          if (mot.length > 20) hata.push('Motor no en çok 20 karakter'); if (f.sigortaBelgeNo.value.trim().length > 12) hata.push('Sigorta belge no en çok 12 karakter');
+          if (kira && (!f.kiraBas.value || !f.kiraBit.value)) hata.push('Kiralık araçta kira başlangıç ve bitiş tarihi zorunlu'); if (kira && f.kiraBas.value && f.kiraBit.value && f.kiraBit.value < f.kiraBas.value) hata.push('Kira bitişi başlangıçtan önce olamaz');
+          if (hata.length) return bildir(hata.join(' · '), 'uyari'); }
+        const kiralik = f.sahiplik.value === 'Kiralık';
+        const yeni = { marka: f.marka.value.trim() || undefined, sasiNo: f.sasiNo.value.trim().toUpperCase() || undefined, motorNo: f.motorNo.value.trim().toUpperCase() || undefined, tescil: f.tescil.value || undefined, hizmetGiris: f.hizmetGiris.value || undefined, ruhsatSeri: f.ruhsatSeri.value.trim() || undefined, ruhsatSahibi: f.ruhsatSahibi.value.trim() || undefined, ruhsatVkn: f.ruhsatVkn.value.replace(/\D/g, '') || undefined, ruhsatAdres: f.ruhsatAdres.value.trim() || undefined, sahiplik: f.sahiplik.value, kiraSirket: kiralik ? f.kiraSirket.value.trim() || undefined : undefined, kiraIletisim: kiralik ? f.kiraIletisim.value.trim() || undefined : undefined, kiraBas: kiralik ? f.kiraBas.value : undefined, kiraBit: kiralik ? f.kiraBit.value : undefined, sigortaBas: f.sigortaBas.value || undefined, sigortaBelgeNo: f.sigortaBelgeNo.value.trim() || undefined,
+          plaka: pl, model: f.model.value.trim(), yil: +f.yil.value || a.yil, sinif: f.sinif.value, vites: f.vites.value, ekSiniflar: [...f.querySelectorAll('[name=ekSinif]:checked')].map(x => x.value).filter(x => x !== f.sinif.value), egitmen: f.egitmen.value || null, km: +String(f.km.value).replace(/\D/g, '') || 0, bakimKm: +String(f.bakimKm.value).replace(/\D/g, '') || 0, muayene: f.muayene.value, sigorta: f.sigorta.value, kasko: f.kasko.value || null, mebIzinNo: f.mebIzinNo.value.trim() || null, izinTarih: f.izinTarih.value || null };
         if (id) { Object.assign(a, yeni); islem('Araç bilgisini düzenledi', pl); } else { S.araclar.push({ id: 'a' + Date.now(), ...(a.meb ? { meb: a.meb, mebDurum: a.meb.durum || undefined } : {}), ...yeni, sube: seciliSube() ? seciliSube().id : (S.subeler || [{}])[0].id }); islem('Araç ekledi', pl + ' · ' + yeni.model); }
         kaydet(); kapatPencere(); bildir(id ? 'Araç bilgisi kaydedildi' : pl + ' eklendi'); yenile();
       });
@@ -571,6 +604,7 @@ export function filo(alt) {
         const me = t.closest('[data-meb-arac-ekle]'); if (me) { const y = (S.mebAracYeni || []).filter(z => !S.araclar.some(a => a.plaka.replace(/\s/g, '') === z.plaka.replace(/\s/g, '')))[+me.dataset.mebAracEkle]; if (!y) return;
           const sn = Object.keys(SINIFLAR).find(x => x === String(y.sinif || '').replace(/\s*SINIFI.*$/i, '').trim()) || 'B';
           return aracDuzenle(null, { plaka: y.plaka, model: [y.marka, y.model].filter(Boolean).join(' '), yil: +y.yil || new Date().getFullYear(), sinif: sn, vites: /otomatik/i.test(y.sanziman || '') ? 'Otomatik' : 'Manuel', muayene: y.muayene || '', meb: { ...y } }); }
+        const sgA = t.closest('[data-arac-sigorta]'); if (sgA) { const a = arac(sgA.dataset.aracSigorta); if (!a) return; const eski = a.sigorta; a.sigorta = sgA.dataset.tarih; islem('Araç sigorta bitişini güncelledi', `${a.plaka} · ${eski ? tarih(eski) + ' → ' : ''}${tarih(a.sigorta)}`); kaydet(); bildir('Sigorta bitişi güncellendi'); return yenile(); }
         // ARC-011: MEBBİS'te hizmet dışı araç — öneri, kendiliğinden silinmez; planlı dersi varsa engel
         const ac_ = t.closest('[data-arac-cikar]'); if (ac_) { const a = arac(ac_.dataset.aracCikar); if (!a) return; const ileri = S.dersler.filter(x => x.arac === a.id && x.durum === 'Planlandı' && fark(x.tarih) >= 0).length;
           if (ileri) return bildir(`Bu araçla ${ileri} planlı ders var; önce dersleri başka araca taşıyın`, 'uyari');
