@@ -5,7 +5,7 @@
 // 'uyari', 'bilgi'. Dizinin üstünde ek alanlar: kural (kimlik), kursiyer (id), kursiyerler (birden çok kişiye ait oturum bulgusunda kimlik listesi, ör. Y04), kisa (öğrenci dosyasında ad olmadan başlık), yalnizDosya, eylem.
 // DOM yok; yalnız veri.js'e bağlı (Node'da denenebilir). Bugün: veri.js BUGUN / gun().
 // Yeni kurallar ilk sürümde yalnız "uyarı"dır; Eyüp Bey teyit edince engele çevrilebilir (belgeler/eksikler/eyup-sorular.md).
-import { S, gun, fark, aracUygun, belgeliMi, izinDurumu, mebIsGunuIleri, haftalikSinir, haftaDers, ustaYetkili, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
+import { S, gun, fark, aracUygun, belgeliMi, dersSayaci, izinDurumu, mebIsGunuIleri, haftalikSinir, haftaDers, ustaYetkili, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
 
 /* ---------- yardımcılar (ui.js'teki biçimlerle aynı; ui.js DOM'a bağlı olduğu için burada kopyası) ---------- */
 const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
@@ -41,7 +41,9 @@ const KURALLAR = [
     kontrol(l, K, c) { const gr = {}, sinir = gunlukSinir(); c.yakin.forEach(d => { const a = d.kursiyer + '|' + d.tarih; gr[a] = (gr[a] || 0) + 1; });
       Object.entries(gr).filter(([, n]) => n > sinir).forEach(([a, n]) => { const k = kursiyer(a.split('|')[0]); if (k) l.push(['yasak', `${tamAd(k)} için ${tarih(a.split('|')[1])} günü ${n} saat direksiyon var`, `Günde en fazla ${sinir} saat (MTSK Yön. md.16/4).`, '#/plan']); }); } },
   { id: 'M03', sira: 30, ad: 'Asgari direksiyon saati tamamlanmadan sınav yok', dayanak: 'MTSK Yön. md.7/1, md.39', kapsam: 'kursiyer', ciddiyet: 'engel',
-    kontrol(l) { sb(S.kursiyerler).filter(k => k.asama === 'Sınav' && !k.dsinav && k.direksiyon < gerekliDireksiyon(k)).forEach(k => l.push(['yasak', `${tamAd(k)} sınava hazır görünüyor ama ${k.direksiyon}/${gerekliDireksiyon(k)} ders`, 'Asgari direksiyon saati tamamlanmadan sınava giremez (MTSK md.7/1, farklı sınıfta md.39).', '#/kursiyer/' + k.id])); } },
+    // DIR-012: toplam ve dağılım birlikte (dersSayaci): yapılan ders mdSinyal kayıtları + eski programdan aktarılan; dağılım alan/simülatör ve trafik
+    kontrol(l) { sb(S.kursiyerler).filter(k => k.asama === 'Sınav' && !k.dsinav).forEach(k => { const ds = dersSayaci(k); if (ds.yapildi >= ds.gerekli) return;
+      l.push(['yasak', `${tamAd(k)} sınava hazır görünüyor ama ${ds.yapildi}/${ds.gerekli} ders`, `Asgari direksiyon saati tamamlanmadan sınava giremez (MTSK md.7/1, farklı sınıfta md.39). Dağılım: alan/simülatör ${ds.alanSim.yapildi}${ds.alanSim.gerek ? '/' + ds.alanSim.gerek : ''}, trafik ${ds.trafik.yapildi}${ds.aktarim ? ', eski programdan ' + ds.aktarim : ''}${ds.planli ? ' · ' + ds.planli + ' ders planlı' : ''}.`, '#/kursiyer/' + k.id]); }); } },
   // gece dersi: gün batımından sonra başlayan ders (md.20/1; başlangıç kurs ayarı: il MEM saati ya da gün batımı hesabı, madde 6), en az 2 saat (md.7/3).
   // CE ve G md.7/3 listesinde yok: zorunlu değil (madde 5; CE'de kurs ayarı geceCE ile açılabilir). Sağlık raporunda gece kısıtı olana gece dersi planlanmaz (md.7/3 son cümle).
   { id: 'M04', sira: 40, ad: 'Gece direksiyon dersi', dayanak: 'MTSK Yön. md.7/3, md.20/1 (CE ve G’de zorunlu değil)', kapsam: 'kursiyer', ciddiyet: 'bilgi', ayar: 'geceDersi',
@@ -208,6 +210,13 @@ const KURALLAR = [
         const son = mebIsGunuIleri(String(x.ayrildi || x.cikis).slice(0, 10), 5), g = fark(son);
         l.push(bul(g < 0 ? 'dur' : 'uyari', `${x.ad} ayrıldı · MEM’e bildirim ${g < 0 ? 'süresi geçti (' + tarih(son) + ')' : g === 0 ? 'bugün son gün' : 'son gün ' + tarih(son)}`, 'Ayrılış en geç 5 iş günü içinde il/ilçe MEM’e bildirilir; valilik 7 iş günü içinde ayrılış onayı verir; dönem içinde ayrılanın yerine 10 gün içinde yeni personel teklif edilir (ÖÖKY md.44). Bildirdiyseniz Ekip ve araçlar › Usta öğreticiler’de “MEM’e bildirildi” deyin.', '#/filo/egitmen', { personel: [x.id] })); });
     } },
+  // DIR-011: alan ya da simülatörde en az 2 saat (md.7/1) — ilk belge adayı sınava yazılırken engel (dağılım mdSinyal kayıtlarından; eski programdan
+  // aktarılan ders varsa dağılım bilinmediği için bulgu üretilmez). Fark sınıfında zorunlu değil.
+  { id: 'M14', sira: 31, ad: 'Alan ya da simülatörde en az 2 saat', dayanak: 'MTSK Yön. md.7/1', kapsam: 'kursiyer', ciddiyet: 'engel', bugun: true, bugunAd: n => `${n} öğrencinin alan/simülatör dersi eksik`,
+    kontrol(l) { sb(S.kursiyerler).filter(k => !k.kapali && ['Direksiyon', 'Sınav'].includes(k.asama) && !(k.dsinav && k.dsinav.sonuc === 'Geçti')).forEach(k => { const ds = dersSayaci(k), as = ds.alanSim; if (!as.gerek || ds.aktarim || as.yapildi >= as.gerek) return;
+      const sinavda = k.asama === 'Sınav' || (S.sinavlar || []).some(s => s.tur === 'Direksiyon' && fark(s.tarih) >= 0 && (s.kursiyerler || []).includes(k.id));
+      if (sinavda) l.push(bul('dur', `${tamAd(k)} · alan/simülatör dersi ${as.yapildi}/${as.gerek}`, `Sınava yazılmadan önce en az ${as.gerek} saat eğitim alanında ya da simülatörde ders yapılmış olmalı (MTSK Yön. md.7/1).${as.planli ? ' ' + as.planli + ' ders planlı.' : ''}`, '#/kursiyer/' + k.id, { kursiyer: k.id }));
+      else if (ds.trafik.yapildi + ds.trafik.planli > 0 && as.yapildi + as.planli < as.gerek) l.push(bul('uyari', `${tamAd(k)} · trafik dersleri başladı, alan/simülatör ${as.yapildi + as.planli}/${as.gerek}`, `İlk ${as.gerek} ders alan ya da simülatörde olmalı (md.7/1); eksik olanı planlayın.`, '#/kursiyer/' + k.id, { kursiyer: k.id })); }); } },
   // DIR-023: direksiyon devamsızlığı (MTSK Yön. md.14/2-3) — 'Gelmedi' dersleri gerekli direksiyon saatinin 1/5'i ya da daha azıysa bir defaya mahsus,
   // ücreti alınarak telafi programı uygulanır; 1/5'i aşan ya da telafiye de gelmeyen için kaydın silinmesi gündeme gelir (kurs müdürü değerlendirir)
   { id: 'M18', sira: 136, ad: 'Direksiyon devamsızlığı (1/5)', dayanak: 'MTSK Yön. md.14/2-3', kapsam: 'kursiyer', ciddiyet: 'uyari', bugun: true, bugunAd: n => `${n} öğrencinin direksiyon devamsızlığı var`,
@@ -310,6 +319,8 @@ export function dersKontrol(o) {
   Object.entries(eg.belgeler || {}).filter(([, t]) => t < planGun).forEach(([b]) => sorun.push(eg.ad + ' · ' + ({ sertifika: 'usta öğretici sertifikası', saglik: 'sağlık raporu', adli: 'adli sicil kaydı' }[b]) + ' süresi dolmuş; bu tarihte ders planlanamaz.'));
   const ayni = DL.filter(x => x.kursiyer === k.id && x.tarih === planGun && x.durum !== 'İptal'), cak = ayni.find(x => x.saat === saat);  // iptal edilen ders saati boş sayılır (otomatik dağıtımla aynı)
   if (cak) sorun.push(`Bu kursiyerin aynı saatte ${(egitmen(cak.egitmen) || { ad: 'başka bir usta öğretici' }).ad} ile dersi var.`);
+  // DIR-011/013/046: ilk belgede ilk iki ders alan ya da simülatörde (md.7/1); trafik dersi bundan önce planlanıyorsa not (fark sınıfında zorunlu değil)
+  if (tur !== 'alan' && tur !== 'simulator') { const ds = dersSayaci(k, planGun), as = ds.alanSim; if (as.gerek && as.yapildi + as.planli < as.gerek && !ds.aktarim) not.push(`İlk ${as.gerek} ders simülatör ya da eğitim alanında olmalı (MTSK Yön. md.7/1); bu aday için alan/simülatör ${as.yapildi + as.planli}/${as.gerek}. Ders türünü “Eğitim alanı” ya da “Simülatör” seçin.`); }
   // DIR-050: simülatör dersi yalnız ilk kez sürücü belgesi alacak adaya (belgesi olan, başka sınıf alan adaya alan dersi verilir)
   if (tur === 'simulator' && belgeliMi(k)) sorun.push(`Simülatör dersi yalnız ilk kez sürücü belgesi alacak adaya verilir; ${tamAd(k)} adayının ${k.mevcutEhliyet} belgesi var (alan dersi verin).`);
   // DIR-047: aynı araç ya da aynı simülatör aynı saatte iki derste olamaz (kimin dersi olduğu yazılır)

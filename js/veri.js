@@ -840,6 +840,8 @@ function goc(o) {
     if (uc) { uc.odeme.sozlesme = uc.odeme.toplam; const acik = uc.odeme.taksitler.filter(t => !t.odendi); acik.forEach(t => { t.iptal = gun(-20); }); uc.odeme.toplam -= acik.reduce((a, t) => a + t.tutar, 0); uc.ucretsiz = { tarih: gun(-20), neden: 'Şehit / gazi yakını', no: '', kim: 'Demo' }; }
   }
   // PER-003/007 demo: MEBBİS personelinden okunmuş gibi çalışma izni bitişleri ve haftalık saat (biri 24 gün sonra bitiyor: Bugün'de uyarı)
+  // DIR-011 demo: belgesiz adayların ilk iki dersi eğitim alanında (biri eksik bırakılır: kural örneği)
+  if (demo && !o._alanSim) { o._alanSim = true; (o.kursiyerler || []).filter(k => !(k.mevcutEhliyet && k.mevcutEhliyet !== 'Yok')).forEach((k, i) => { if (i === 2) return; (o.dersler || []).filter(d => d.kursiyer === k.id && d.durum !== 'İptal').sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat)).slice(0, 2).forEach(d => { if (!d.tur) d.tur = 'alan'; }); }); }
   // PER-023 demo: EK-21 hizmet içi eğitim belgesi (biri eksik: Bugün'de uyarı)
   if (demo && !o._ek21) { o._ek21 = true; (o.egitmenler || []).forEach((x, i) => { if (i === 3 || (x.evraklar || []).some(v => v.tur === 'ek21')) return; const t = gun(-260 - i * 25), d = new Date(t + 'T12:00:00'); d.setFullYear(d.getFullYear() + 10);
     x.evraklar = [...(x.evraklar || []), { id: 'pe-ek21-' + x.id, tur: 'ek21', not: '', tarih: t, bitis: iso(d) }]; }); }
@@ -1027,6 +1029,20 @@ export function teorikSaat(k) {
 // Belgeli aday (TEO-003): mevcut sürücü belgesiyle farklı sınıf istiyor (md.39). Muafiyet değildir (muaf: son 3 yılda e-sınavı geçen, md.15/5).
 // Teorik dersi ve e-sınavı olmayan belgeli adayda MEBBİS durumu "Uygulama Sınav Aşamasında"dır: aşaması Direksiyon, e-sınav işi ve 90 gün kuralı yok.
 export const belgeliMi = k => !!(k && k.mevcutEhliyet && k.mevcutEhliyet !== 'Yok');
+// DIR-011/012: ders sayacı — toplam ve dağılım. Alan ya da simülatör en az 2 saat, akan trafikten önce (MTSK Yön. md.7/1); farklı sınıf alan
+// (belgeli) bu eğitimi akan trafikte de alabilir → zorunlu değil. 'yapildi' sayısı mdSinyal'deki ders kayıtlarından; eski programdan aktarılan
+// ders sayısı (k.direksiyon kayıtlardan fazlaysa) dağılımı bilinmediği için 'aktarim' olarak ayrı yazılır.
+export const ALAN_SIM_SAAT = 2;
+// Ders türü (alan/simülatör) seçimi bu tarihten önce zorunlu değildi: eski kayıtlarda bütün dersler 'trafik' görünür. Kural yalnız bu tarihten sonra
+// kaydolan ya da en az bir dersine tür girilmiş kursiyerde uygulanır (eski verinin yanlış alarmı olmasın).
+export const ALAN_SIM_KURAL_TARIH = '2026-11-19';
+export function dersSayaci(k, bas) {
+  const l = (S.dersler || []).filter(d => d.kursiyer === (k && k.id) && d.durum !== 'İptal' && d.durum !== 'Gelmedi' && (!bas || d.tarih < bas));
+  const as = d => d.tur === 'alan' || d.tur === 'simulator', yap = l.filter(d => d.durum === 'Yapıldı'), pl = l.filter(d => d.durum === 'Planlandı');
+  const gerekli = gerekliDireksiyon(k), aktarim = Math.max(0, (+(k && k.direksiyon) || 0) - yap.length);
+  const turlu = String((k && k.kayit) || '') >= ALAN_SIM_KURAL_TARIH || (S.dersler || []).some(d => d.kursiyer === (k && k.id) && d.tur);
+  return { gerekli, yapildi: yap.length + aktarim, planli: pl.length, aktarim, alanSim: { gerek: belgeliMi(k) || !gerekli || !turlu ? 0 : Math.min(ALAN_SIM_SAAT, gerekli), yapildi: yap.filter(as).length, planli: pl.filter(as).length }, trafik: { yapildi: yap.filter(d => !as(d)).length, planli: pl.filter(d => !as(d)).length } };
+}
 export const esinavsizBelgeli = k => belgeliMi(k) && !teorikVar(k);
 export function teorikVar(k) {
   if (!k) return false; if (k.sinif === 'G' || egitimSinifi(k.sinif)) return true;
