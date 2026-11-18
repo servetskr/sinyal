@@ -1,8 +1,8 @@
 // YON-021: IP yetkilendirme — ön büroyu kurs bilgisayarına bağlama. S.kurs.ipListe = { acik, kayitlar: [{ id, ip, kim: 'hepsi' | kullanıcı kimliği, not, aktif }] }.
-// Kurs müdürü her IP'den girer. Ön büro girişte denetlenir: liste açık ve kişiye (ya da 'tüm ön büro'ya) ait etkin kayıt varsa IP bunlardan biri olmalı.
+// DENETİM K6: güvenlik önlemi değil, hatırlatma (ekranda yazar). Kurs müdürü her IP'den girer. Ön büro girişte denetlenir: liste açık ve kişiye (ya da 'tüm ön büro'ya) ait etkin kayıt varsa IP bunlardan biri olmalı.
 // IP'yi worker'ın /ip ucu verir (CF-Connecting-IP; kayıt tutulmaz). Worker'a ulaşılamazsa giriş engellenmez, işlem kaydına yazılır (kurs dışarıda kilitli kalmasın).
 import { S, kaydet, islem, oturum } from './veri.js?v=234';
-import { e, bildir, ik, onaySor } from './ui.js?v=234';
+import { e, bildir, ik, isaret, onaySor } from './ui.js?v=234';
 import { WORKER } from './bulut.js?v=234';
 
 const liste = () => (S.kurs && S.kurs.ipListe) || { acik: false, kayitlar: [] };
@@ -21,6 +21,7 @@ export function ipKarti() {
       <label class="vr-alan"><span>Kullanıcı</span><select class="girdi" name="kim"><option value="hepsi">Bütün ön büro</option>${onb.map(x => `<option value="${e(String(x.id || x.uid))}">${e(x.ad)}</option>`).join('')}</select></label>
       <label class="vr-alan" style="flex:1;min-width:140px"><span>Not</span><input class="girdi" name="not" maxlength="60" placeholder="Ör. ön büro bilgisayarı"></label>
       <button class="dg dg-cizgi" type="submit">${ik('arti')}Ekle</button></form>
+    <p class="ipucu" style="margin:0 20px 10px">${isaret('bilgi', 18)}<span><b>Bu bir hatırlatmadır, güvenlik önlemi değildir.</b> Denetim tarayıcıda yapılır; IP adresi öğrenilemezse (internet kesintisi gibi) giriş engellenmez, işlem kaydına yazılır. Ön büroyu gerçekten sınırlamak için kullanıcının şifresini ve hesabını yönetin.</span></p>
     <p style="font-size:12.5px;color:var(--soluk);padding:0 20px 14px">Yeni kayıtta bu bilgisayarın şu anki IP adresi dolu gelir. Kurs internetinin IP’si sağlayıcıya göre zamanla değişebilir; değişirse ön büro girişte uyarı görür, buradan güncellersiniz.</p></div>`;
 }
 export function ipBagla(k) {
