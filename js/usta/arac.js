@@ -4,9 +4,11 @@
 // data-destek, Çıkış yap / Kullanıcı değiştir: data-cikis; ikisi de app.js'teki belge dinleyicisinde çalışır) buraya taşındı.
 import { S, SINIFLAR, oturum, tarihOku, sinifEtiket, anaSinif, fark, kaydet } from '../veri.js?v=234';
 import { haftaYuku, izinKarti } from './bugun.js?v=234';
-import { ayAdi, tarih } from '../ui.js?v=234';
+import { ayAdi, tarih, bildir } from '../ui.js?v=234';
 import { guzergahlar } from '../guzergah.js?v=234';
 import { kisaMetin } from '../guncelleme.js?v=234';
+import * as ARC from '../ogr/araclar.js?v=234';
+import * as B from '../bulut.js?v=234';
 import { esc, oi, sayfaBas, geri, bolum, kart, gorsel, dugme, satir, liste, radyo, ikonKutu, bos, not, stilEkle } from '../ogr/ui.js?v=234';
 
 const geriBugun = () => geri('Bugün', { 'data-ux-alt': '' });
@@ -102,6 +104,7 @@ function hesapHtml(ctx) {
   const kim = `<div class="ox-kart ox-uar-kim"><span class="ox-uar-av" aria-hidden="true">${foto}</span><div><h2>${esc(eg.ad || u.ad || '')}</h2><p>${esc(S.kurs.ad || '')}</p><p>Öğretmen</p></div></div>`;
   const satirlar = [
     tel ? satir({ ikon: 'tel', baslik: 'Kursu ara', alt: esc(S.kurs.tel), etiket: 'a', attrs: { href: 'tel:' + tel } }) : '',
+    satir({ ikon: 'oynat', baslik: 'Animasyonlar · görüşün', alt: 'Öğrencilerin izlediği animasyonları gözden geçir', attrs: { 'data-ux-alt': 'anim' } }),
     satir({ ikon: 'takvim', baslik: 'Müsait olmadığım gün', alt: 'İzin ya da mazeret bildir; kurs onaylayınca o gün ders verilmez', attrs: { 'data-ux-alt': 'izin' } }),
     satir({ ikon: 'mesaj', baslik: 'mdSinyal Destek', alt: 'Sorun, soru ya da istek bildir', attrs: { 'data-destek': true } }),
     // kurulu sürüm ve güncelleme denetimi (tıklama js/guncelleme.js'te)
@@ -123,6 +126,8 @@ export function altEkran(ad, ctx) {
   if (a === 'guzergah') return { html: gzHtml(), baglan: gzBagla };
   if (a === 'hesap') return { html: hesapHtml(ctx) };
   if (a === 'izin') return { html: izinHtml(ctx), baglan: kap => izinBagla(kap, ctx) };
+  if (a === 'anim') return { html: animListeHtml() };
+  if (a === 'onizle') return animOnizle(String(ad).slice(7), ctx);
   return null;
 }
 
@@ -195,5 +200,41 @@ function izinBagla(kap, ctx) {
     if (!bas || bit < bas) { h.hidden = false; h.textContent = 'Son gün ilk günden önce olamaz.'; return; }
     S.izinTalepleri = [{ id: 'it' + Date.now().toString(36), kim: ctx.eg.id, bas, bit, neden: f.neden.value.trim().slice(0, 200), tarih: new Date().toISOString().slice(0, 10), durum: 'bekliyor' }, ...(S.izinTalepleri || [])];
     kaydet(); ctx.altAc('izin');
+  });
+}
+
+/* UYG-020 (SOR-098): öğrencinin izlediği animasyonları usta öğretici gözden geçirir; her birinin altında "Doğru mu?" görüşü mdSinyal'e gider
+   (worker /soru-bildir, anim). Animasyon öğrenci uygulamasının kendi ekranıyla (ogr/araclar.js) örnek bir B sınıfı öğrenciyle çizilir. */
+const ANIM = [['etkilesim:motor', 'Motorun çalışması'], ['etkilesim:ikaz', 'Gösterge paneli ve ikaz lambaları'], ['etkilesim:kalkis', 'Debriyajla kalkış'], ['tehlike', 'Tehlike algısı sahneleri'], ['direksiyon', 'Uygulama sınavı şemaları']];
+const GORUS = 'sinyal-anim-gorus';
+const gorusOku = () => { try { return JSON.parse(localStorage.getItem(GORUS) || '{}'); } catch (x) { return {}; } };
+function animListeHtml() {
+  const g = gorusOku();
+  return geri('Hesabım', { 'data-ux-alt': 'hesap' }) + sayfaBas('Animasyonlar', 'Öğrenciler bunları izleyip çalışıyor. Bir usta öğretici olarak doğru olup olmadığını söyle.')
+    + liste(ANIM.map(([id, ad]) => satir({ ikon: 'oynat', ton: g[id] === 'dogru' ? 'yesil' : g[id] ? 'turuncu' : 'mavi', baslik: esc(ad), alt: g[id] === 'dogru' ? 'Doğru dedin' : g[id] ? 'Düzeltilmeli dedin' : 'Henüz bakmadın', attrs: { 'data-ux-alt': 'onizle:' + id } })))
+    + not('Görüşün mdSinyal ekibine gider; düzeltilmesi gereken yerleri yazarsan içerik buna göre düzeltilir.');
+}
+function animOnizle(id, ctx) {
+  const x = ANIM.find(y => y[0] === id.split('|')[0]) || ANIM.find(y => id.startsWith(y[0]));
+  let y = null;
+  const ogrCtx = { k: { id: 'onizleme', ad: 'Örnek', soyad: 'Öğrenci', sinif: 'B', direksiyon: 0, tehlike: [] }, yenile: ctx.yenile, git: () => { }, S0: SINIFLAR.B };
+  try { y = ARC.altEkran(id, ogrCtx); } catch (e) { y = null; }
+  if (!y) return { html: geri('Animasyonlar', { 'data-ux-alt': 'anim' }) + kart(bos('uyari', 'Açılamadı', 'Bu animasyon şu an gösterilemiyor.')) };
+  // öğrenci ekranının iç gezinmesi öğretmen ekranında da çalışsın: data-ox-alt → data-ux-alt="onizle:…", Öğren'e dönüş → animasyon listesi
+  const html = y.html.replace(/data-ox-alt="([^"]*)"/g, (_, a) => a ? `data-ux-alt="onizle:${esc(a)}"` : 'data-ux-alt="anim"').replace(/data-ox-arc-sekme="([^"]*)"/g, (m, a) => `${m} data-ux-alt="onizle:etkilesim:${esc(a)}"`).replace(/(<button type="button" class="ox-geri" data-ux-alt="anim">[\s\S]*?<span>)[^<]*(<\/span>)/, '$1Animasyonlar$2');
+  const ad = x ? x[1] : id, g = gorusOku()[x ? x[0] : id];
+  const gorus = `<div class="ox-kart ox-uan-gorus" data-uan="${esc(x ? x[0] : id)}" data-uan-ad="${esc(ad)}"><b>Bu animasyon doğru mu?</b>${g ? `<small>${g === 'dogru' ? 'Doğru dedin; teşekkürler.' : 'Düzeltilmeli dedin; teşekkürler.'} İstersen yeniden gönderebilirsin.</small>` : ''}<textarea data-uan-not maxlength="300" placeholder="Düzeltilmesi gereken yer (isteğe bağlı)"></textarea><div class="ox-uan-dg"><button type="button" class="ox-dg ox-dg-ikincil" data-uan-karar="duzelt"><span>Düzeltilmeli</span></button><button type="button" class="ox-dg ox-dg-ana" data-uan-karar="dogru"><span>Doğru</span></button></div></div>`;
+  return { html: `<div class="ox-uan">${html}</div>` + gorus, baglan: kap => { if (y.baglan) { try { y.baglan(kap); } catch (e) { console.error(e); } } animGorusBagla(kap); } };
+}
+function animGorusBagla(kap) {
+  stilEkle('ox-uan', '.ox-uan-gorus{display:grid;gap:10px;padding:16px;margin-top:16px}.ox-uan-gorus small{color:var(--ox-ikincil)}.ox-uan-gorus textarea{min-height:70px;border:1.5px solid var(--ox-cizgi);border-radius:12px;padding:10px 12px;font:inherit;font-size:15px;resize:vertical}.ox-uan-dg{display:grid;grid-template-columns:1fr 1fr;gap:10px}');
+  const k = kap.querySelector('[data-uan]'); if (!k) return;
+  k.addEventListener('click', async ev => {
+    const b = ev.target.closest('[data-uan-karar]'); if (!b) return;
+    const karar = b.dataset.uanKarar, notu = k.querySelector('[data-uan-not]').value.trim();
+    if (karar === 'duzelt' && !notu) { k.querySelector('[data-uan-not]').focus(); return bildir('Neyin düzeltilmesi gerektiğini kısaca yaz', 'uyari'); }
+    const o = gorusOku(); o[k.dataset.uan] = karar; try { localStorage.setItem(GORUS, JSON.stringify(o)); } catch (x) { }
+    if (B.bulut && B.bulut.kurs) { try { await fetch(B.WORKER + '/soru-bildir', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ anim: k.dataset.uan, ad: k.dataset.uanAd, karar, not: notu }), mode: 'cors', credentials: 'omit' }); } catch (x) { } }
+    bildir('Görüşün iletildi, teşekkürler'); k.querySelector('small') ? k.querySelector('small').textContent = (karar === 'dogru' ? 'Doğru dedin; teşekkürler.' : 'Düzeltilmeli dedin; teşekkürler.') : k.querySelector('b').insertAdjacentHTML('afterend', `<small>${karar === 'dogru' ? 'Doğru dedin; teşekkürler.' : 'Düzeltilmeli dedin; teşekkürler.'}</small>`);
   });
 }

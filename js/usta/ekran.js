@@ -35,7 +35,7 @@ export const hesapAc = () => { sekme = 'bugun'; yaz('sinyal-eg-sekme', 'bugun');
 export const sekmeAc = s => { sekme = s; yaz('sinyal-eg-sekme', s); };
 export const sekmeSimdi = () => sekme;
 const MODUL = { bugun: BGN, hafta: PRG, kursiyer: OGR, kazanc: KZN };
-const ARAC_ALT = /^(arac|guzergah|hesap|izin)(:|$)/;
+const ARAC_ALT = /^(arac|guzergah|hesap|izin|anim|onizle)(:|$)/;
 
 function veri(eg) {
   const benim = S.dersler.filter(d => d.egitmen === eg.id);

@@ -283,6 +283,15 @@ async function soruBildirAl(req, env, cevap) {
   if (sy && sy.on === on && sy.n >= 10) return cevap({ ok: false, hata: 'sinir' }, 429);
   soruIp.set(ip, sy && sy.on === on ? { on, n: sy.n + 1 } : { on, n: 1 }); if (soruIp.size > 5000) soruIp.clear();
   let b; try { const h = await req.text(); if (h.length > 3000) return cevap({ ok: false }, 400); b = JSON.parse(h); } catch (x) { return cevap({ ok: false }, 400); }
+  // UYG-020: usta öğreticinin animasyon görüşü (doğru / düzeltilmeli) aynı kuyruğa, animasyon başına tek kayıt
+  if (typeof b.anim === 'string') {
+    if (!/^[a-z0-9:-]{2,40}$/.test(b.anim)) return cevap({ ok: false }, 400);
+    const an = 'anim:' + b.anim, eski = await env.LINK.get(an, { type: 'json' }).catch(() => null), dogru = b.karar === 'dogru';
+    const g = { karar: dogru ? 'dogru' : 'duzelt', not: hataTemiz(b.not, 300), ks: /^[0-9a-f]{8}$|^demo$/.test(b.ks || '') ? b.ks : '', z: new Date().toISOString() };
+    const k = { anim: b.anim, ad: talepMetin(b.ad, 80) || (eski && eski.ad) || b.anim, ilk: eski ? eski.ilk : g.z, son: g.z, dogru: (eski ? eski.dogru : 0) + (dogru ? 1 : 0), duzelt: (eski ? eski.duzelt : 0) + (dogru ? 0 : 1), durum: !dogru ? 'yeni' : (eski && eski.durum) || 'onayli', bildirimler: [...((eski && eski.bildirimler) || []), g].slice(-10) };
+    await env.LINK.put(an, JSON.stringify(k), { expirationTtl: SORU_GUN, metadata: { son: k.son, durum: k.durum } });
+    return cevap({ ok: true });
+  }
   const qi = +b.qi; if (!Number.isInteger(qi) || qi < 0 || qi > 99999) return cevap({ ok: false }, 400);
   const yeni = { neden: talepMetin(b.neden, 60), aciklama: hataTemiz(b.aciklama, 300), surum: String(b.surum || '').replace(/\D/g, '').slice(0, 6), ks: /^[0-9a-f]{8}$|^demo$/.test(b.ks || '') ? b.ks : '', z: new Date().toISOString() };
   const eski = await env.LINK.get('soru:' + qi, { type: 'json' }).catch(() => null);
@@ -301,11 +310,15 @@ async function soruBildirYonet(req, env, url, cevap) {
   if (!(await sahipMi(req, env))) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
   if (req.method === 'POST') {
     let b; try { b = await req.json(); } catch (x) { return cevap({ ok: false }, 400); }
-    const qi = +b.qi, v = Number.isInteger(qi) ? await env.LINK.get('soru:' + qi, { type: 'json' }) : null; if (!v) return cevap({ ok: false }, 404);
-    if (b.sil) { await env.LINK.delete('soru:' + qi); return cevap({ ok: true }); }
-    const y = { ...v, durum: ['yeni', 'duzeltildi', 'reddedildi'].includes(b.durum) ? b.durum : v.durum, sahipNot: talepMetin(b.not ?? v.sahipNot, 300), karar: new Date().toISOString() };
-    await env.LINK.put('soru:' + qi, JSON.stringify(y), { expirationTtl: SORU_GUN, metadata: { sayi: y.sayi, son: y.son, durum: y.durum } });
+    const qi = +b.qi, an = typeof b.anim === 'string' && /^[a-z0-9:-]{2,40}$/.test(b.anim) ? 'anim:' + b.anim : Number.isInteger(qi) ? 'soru:' + qi : null, v = an ? await env.LINK.get(an, { type: 'json' }) : null; if (!v) return cevap({ ok: false }, 404);
+    if (b.sil) { await env.LINK.delete(an); return cevap({ ok: true }); }
+    const y = { ...v, durum: ['yeni', 'duzeltildi', 'reddedildi', 'onayli'].includes(b.durum) ? b.durum : v.durum, sahipNot: talepMetin(b.not ?? v.sahipNot, 300), karar: new Date().toISOString() };
+    await env.LINK.put(an, JSON.stringify(y), { expirationTtl: SORU_GUN, metadata: { sayi: y.sayi, son: y.son, durum: y.durum } });
     return cevap({ ok: true, kayit: y });
+  }
+  if (url.searchParams.get('tur') === 'anim') {
+    const la = await env.LINK.list({ prefix: 'anim:', limit: 200 });
+    return cevap({ ok: true, liste: (await Promise.all(la.keys.map(x => env.LINK.get(x.name, { type: 'json' }).catch(() => null)))).filter(Boolean) });
   }
   const l = await env.LINK.list({ prefix: 'soru:', limit: 1000 });
   const kayitlar = (await Promise.all(l.keys.sort((a, b) => String((b.metadata || {}).son).localeCompare(String((a.metadata || {}).son))).slice(0, 150).map(x => env.LINK.get(x.name, { type: 'json' }).catch(() => null)))).filter(Boolean);

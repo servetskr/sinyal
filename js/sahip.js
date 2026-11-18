@@ -345,6 +345,8 @@ async function yenile() {
 }
 
 function yaz(ev) {
+  const and = ev.target.closest('[data-sh-an-durum]');
+  if (and) { const anim = and.dataset.shAnDurum, durum = and.value; moIstek('/soru-bildir/yonet', { yontem: 'POST', govde: { anim, durum } }).then(j => { sq.anim = (sq.anim || []).map(x => x.anim === anim ? j.kayit : x); bildir('Animasyon durumu güncellendi'); ciz(); }).catch(x => { bildir(turkceHata(x), 'uyari'); ciz(); }); return; }
   const sqd = ev.target.closest('[data-sh-sq-durum]');
   if (sqd) { const qi = +sqd.dataset.shSqDurum, durum = sqd.value; moIstek('/soru-bildir/yonet', { yontem: 'POST', govde: { qi, durum } }).then(j => { sq.liste = sq.liste.map(x => x.qi === qi ? j.kayit : x); bildir('Soru #' + (qi + 1) + ': ' + (durum === 'duzeltildi' ? 'düzeltildi' : durum === 'reddedildi' ? 'hata yok' : 'yeni')); ciz(); }).catch(x => { bildir(turkceHata(x), 'uyari'); ciz(); }); return; }
   // site formu durumu (select'in input olayı)
@@ -856,7 +858,7 @@ function destekHtml() {
 const sq = { liste: null, yukleniyor: false, hata: '', yetkisiz: false, suz: 'yeni' };
 async function soruBildirYukle() {
   if (sq.yukleniyor) return; sq.yukleniyor = true; sq.hata = ''; ciz();
-  try { const j = await moIstek('/soru-bildir/yonet'); sq.liste = j.liste || []; sq.yetkisiz = false; } catch (x) { if (x.yetkisiz) sq.yetkisiz = true; else sq.hata = turkceHata(x); }
+  try { const [j, a] = await Promise.all([moIstek('/soru-bildir/yonet'), moIstek('/soru-bildir/yonet?tur=anim').catch(() => ({ liste: [] }))]); sq.liste = j.liste || []; sq.anim = a.liste || []; sq.yetkisiz = false; } catch (x) { if (x.yetkisiz) sq.yetkisiz = true; else sq.hata = turkceHata(x); }
   sq.yukleniyor = false; ciz();
 }
 function soruBildirHtml() {
@@ -870,7 +872,12 @@ function soruBildirHtml() {
   return ust + `<div class="sh-liste">${l.map(x => `<div class="sh-satir" style="cursor:default;align-items:flex-start"><span class="sh-av ${x.durum === 'yeni' ? 'sh-av-yok' : 'sh-av-hizmet'}">${ik(x.durum === 'yeni' ? 'uyari' : 'tik')}</span>
     <span class="sh-satir-ic"><b>Soru #${x.qi + 1}${x.metin ? ' · ' + e(x.metin) : ''}</b><small>${x.sayi} bildirim · son ${e(new Date(x.son).toLocaleDateString('tr-TR'))}</small>${(x.bildirimler || []).slice(-3).reverse().map(b => `<small style="white-space:normal">${e([b.neden, b.aciklama, b.surum ? 'v' + b.surum : ''].filter(Boolean).join(' · '))}</small>`).join('')}</span>
     <span style="display:flex;gap:6px;flex:none"><select class="dg dg-hafif dg-kucuk" data-sh-sq-durum="${x.qi}" aria-label="Durum">${D.map(([k, a]) => `<option value="${k}"${x.durum === k ? ' selected' : ''}>${a}</option>`).join('')}</select></span></div>`).join('')}</div>
-    <p class="sh-dip">Soru metni sinyal-kaynak’taki soru bankasından düzeltilir; sürüm yayınlanınca “Düzeltildi” seçin. Kayıtlar 1 yıl durur.</p>`;
+    <p class="sh-dip">Soru metni sinyal-kaynak’taki soru bankasından düzeltilir; sürüm yayınlanınca “Düzeltildi” seçin. Kayıtlar 1 yıl durur.</p>${animGorusHtml()}`;
+}
+// UYG-020: usta öğreticilerin animasyon görüşleri (öğretmen uygulaması › Hesabım › Animasyonlar)
+function animGorusHtml() {
+  const l = sq.anim || []; if (!l.length) return `<p class="sh-dip">Henüz animasyon görüşü yok. Usta öğreticiler öğretmen uygulamasında Hesabım › Animasyonlar’dan görüş bildirir.</p>`;
+  return `<h3 style="margin:22px 0 10px;font-size:16px;color:var(--murekkep)">Animasyon görüşleri</h3><div class="sh-liste">${l.map(x => `<div class="sh-satir" style="cursor:default;align-items:flex-start"><span class="sh-av ${x.duzelt && x.durum !== 'duzeltildi' ? 'sh-av-yok' : 'sh-av-hizmet'}">${ik(x.duzelt && x.durum !== 'duzeltildi' ? 'uyari' : 'tik')}</span><span class="sh-satir-ic"><b>${e(x.ad || x.anim)}</b><small>${x.dogru || 0} öğretmen doğru · ${x.duzelt || 0} öğretmen düzeltilmeli · son ${e(new Date(x.son).toLocaleDateString('tr-TR'))}</small>${(x.bildirimler || []).filter(b => b.not).slice(-3).reverse().map(b => `<small style="white-space:normal">${e(b.not)}</small>`).join('')}</span><span style="flex:none"><select class="dg dg-hafif dg-kucuk" data-sh-an-durum="${e(x.anim)}" aria-label="Durum">${[['yeni', 'Bakılacak'], ['duzeltildi', 'Düzeltildi'], ['onayli', 'Onaylı']].map(([k, a]) => `<option value="${k}"${x.durum === k ? ' selected' : ''}>${a}</option>`).join('')}</select></span></div>`).join('')}</div>`;
 }
 // ---- Site formları (SIT-009 iletişim, SIT-020 başvuru): worker /talep/yonet; kayıtlar 180 gün durur ----
 const sf = { liste: null, yukleniyor: false, hata: '', yetkisiz: false, suz: 'yeni' };
