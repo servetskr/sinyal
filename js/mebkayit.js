@@ -6,6 +6,7 @@
 import { islemYetkili, S, kaydet, islem, oturum, tamAd, kursiyer, tcMaskele, seciliSube, cokSube, kuralAyar, bulutKanca } from './veri.js?v=234';
 import { pencere, kapatPencere, bildir, e, ik, isaret, rozet } from './ui.js?v=234';
 import * as GR from './gruplar.js?v=234';
+import * as EK from './eklenti.js?v=234';   // MEB-089: Kur bağlantısı (mağaza onaylıysa mağaza, değilse zip); döngü yalnız çizim anında kullanılır
 
 /* ---------- sabitler ---------- */
 export const MEB_KABUL_SURUM = 'mk-2026-11-2';   // K9: doğrulama cümlesi koddaki gerçeğe uyduruldu   // metin değişince artırılır; kurs yeniden onaylar
@@ -331,7 +332,7 @@ export function ekranDegisti(l, isId) {
 }
 const haritaKarti = h => `<div class="kart" style="margin-bottom:14px;border:2px solid var(--kirmizi);background:var(--kirmizi-acik)" role="alert"><div class="kart-govde" style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">${isaret('dur', 26)}<div style="flex:1;min-width:240px"><b style="font-family:var(--baslik);font-size:17px;color:#8a1d14;display:block">${h.guncelle ? 'MEBBİS Yardımcısı’nı güncelleyin' : 'Yardımcı ekran haritasını kabul etmedi'}</b>
     <p style="font-size:14px;color:#8a1d14;margin-top:2px">${h.guncelle ? 'mdSinyal’in yeni MEBBİS ekran haritası daha yeni bir Yardımcı sürümü istiyor. Yardımcı şimdilik kendi gömülü haritasıyla çalışıyor; MEBBİS ekranları değiştiyse bazı işler “ekran değişti” diye durabilir.' : 'Yardımcı, mdSinyal’den gelen MEBBİS ekran haritasını denetimden geçiremedi ve kullanmadı; kendi gömülü haritasıyla çalışıyor.'} <span class="mono" style="font-size:12.5px">${e(h.neden)}</span></p>
-    <p style="font-size:13.5px;color:#8a1d14;margin-top:4px">${h.guncelle ? `<a href="eklenti/mdsinyal-mebbis.zip" download style="color:inherit;font-weight:700">Yeni sürümü indirin</a> ya da Chrome Web Mağazası güncellemesini bekleyin. ` : 'Durumu mdSinyal’e bildirin (Hesabım › Destek). '}Kayıt işlem geçmişine düştü · ${saatMetni(h.zaman)}</p></div>
+    <p style="font-size:13.5px;color:#8a1d14;margin-top:4px">${h.guncelle ? `${EK.kurBaglantisi('Yeni sürümü indirin', 'color:inherit;font-weight:700')} ya da Chrome Web Mağazası güncellemesini bekleyin. ` : 'Durumu mdSinyal’e bildirin (Hesabım › Destek). '}Kayıt işlem geçmişine düştü · ${saatMetni(h.zaman)}</p></div>
     <button class="dg dg-cizgi dg-kucuk" data-mk-alarm-gizle>Gördüm, gizle</button></div></div>`;
 export function alarmKarti() {
   const a = S.mebEkranAlarm, h = a && a.harita && !a.harita.goruldu && !a.harita.cozuldu ? haritaKarti(a.harita) : '';

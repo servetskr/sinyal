@@ -1107,7 +1107,7 @@ function dosyalariIsle(l) {
     if (gm && !kg) {
       let g = (S.gruplar || []).find(y => GR.mebGrubuMu(y) && y.donem === donem && +y.grupNo === grupNo && y.sube === sube);
       if (!g && basl) { g = { id: 'g' + donem + '-' + grupNo + sube, donem, grupNo, sube, baslangic: basl, ad: GR.grupAdi(donem, grupNo, sube), sinif: '', derslik: '', kontenjan: null, meb: true, kaynak: 'MEBBİS' }; S.gruplar = [...(S.gruplar || []), g]; }
-      if (g) { GR.grupAta(k, g); atanan++; islem('MEBBİS’ten aldı', `${tamAd(k)} · Dönem grubu: boş → ${g.ad} · SKT02009`); }  // YON-025
+      if (g) { GR.grupAta(k, g); atanan++; islem('MEBBİS’ten aldı', `${tamAd(k)} · Dönem grubu: boş → ${g.ad} · SKT02009`, { meb: { hedef: { kursiyer: k.id } } }); }  // YON-025
     }
     if (!tekil && !kg && aday.length > 1) belirsiz++;
     const fk = gm && kg && GR.mebGrubuMu(kg) && !(kg.donem === donem && +kg.grupNo === grupNo && kg.sube === sube) ? gm : null;
@@ -1127,7 +1127,7 @@ function dosyalariIsle(l) {
     const resmi = tekil ? { donem: donem || MN.donemKodu(M0.donem) || M0.donem, donemMetin: MN.donemMetni(donem) || ds || M0.donemMetin, durum: dolu(r[i.durum], M0.durum), durumKod: parseInt((String(r[i.durum] || '').match(/^\s*(\d+)/) || [])[1], 10) || M0.durumKod, durumKaynak: r[i.durum] ? 'skt02009' : M0.durumKaynak, uygulamaHak: dolu(r[i.uh], M0.uygulamaHak), esinavHak: dolu(r[i.eh], M0.esinavHak), kayitUcreti: dolu(r[i.ucret], M0.kayitUcreti), uygulamaSorumlu: dolu(r[i.uyg], M0.uygulamaSorumlu), kayitUcretiTL: tutarOku(r[i.ucret]) || M0.kayitUcretiTL || null } : {};
     const sertifikalar = x.sertifika ? x.sertifika.satirlar.map(y => { const bb = x.sertifika.baslik, a = j => j >= 0 ? String(y[j] || '').trim() : ''; return { mevcut: a(sutun(bb, 'mevcut')), istenen: a(sutun(bb, 'istenen')), tarih: tarihIso(y[sutun(bb, 'tarih')]), kurum: MN.kurumKodu(a(sutun(bb, 'kurum'))) || a(sutun(bb, 'kurum')) }; }) : M0.sertifikalar;
     if (tekil) Object.assign(resmi, { grup: grupNo || M0.grup, sube: sube || M0.sube, grupBaslangic: basl || M0.grupBaslangic, kurumKodu: (ik >= 0 && MN.kurumKodu(r[ik])) || kodum || M0.kurumKodu, kurumOnay: dolu(r[sutun(b, 'kurumonay')], M0.kurumOnay), ilceOnay: dolu(r[sutun(b, 'ilceonay', 'memonay')], M0.ilceOnay) });
-    { const iNo = sutun(b, 'kayitno', 'adayno', /^no$/), no = tekil && iNo >= 0 ? String(r[iNo] || '').replace(/\D/g, '') : ''; if (no && !k.mebNo) { k.mebNo = no; islem('MEBBİS’ten aldı', `${tamAd(k)} · MEBBİS kayıt no: boş → ${no} · SKT02009`); } }   // MEB-014: boşsa doldurulur, doluysa ezilmez
+    { const iNo = sutun(b, 'kayitno', 'adayno', /^no$/), no = tekil && iNo >= 0 ? String(r[iNo] || '').replace(/\D/g, '') : ''; if (no && !k.mebNo) { k.mebNo = no; islem('MEBBİS’ten aldı', `${tamAd(k)} · MEBBİS kayıt no: boş → ${no} · SKT02009`, { meb: { hedef: { kursiyer: k.id } } }); } }   // MEB-014: boşsa doldurulur, doluysa ezilmez
     k.meb = { ...M0, ...resmi, tekil: !!tekil, kayitlar, sertifikalar, ...(raporlar ? { raporlar } : {}), grupFark: fk || undefined, haklarSonGun: esSon || M0.haklarSonGun, ikinciDireksiyon: tarihIso(x.ikinciDireksiyon), uygunluk: tarihIso(x.uygunluk), kayitUcretiTL: tutarOku(r[i.ucret]) || null, uygulamaSinavlari: uyg, esinavlar: esl, hakKayit, sertifikaTarihi: x.sertifika && x.sertifika.satirlar.length ? tarihIso(x.sertifika.satirlar[x.sertifika.satirlar.length - 1][sutun(x.sertifika.baslik, 'tarih')]) : '', dosyaOkuma: gun(0) };
     { const u = mebUcretDurumu(k); if (u) k.meb.ucretKontrol = { ...u, tarih: gun(0) }; else delete k.meb.ucretKontrol; }
   });
@@ -1224,7 +1224,7 @@ export function sonuclarIsle(v) {
     const sonraOkundu = (M0.durumKaynak === 'skt02009' && String(M0.dosyaOkuma || '') > x.tarih) || (M0.durumKaynak === 'skt02006' && String((M0.liste || {}).okuma || M0.okuma || '') > x.tarih) || (M0.durumKaynak === 'skt02008' && String(M0.durumTarih || '') > x.tarih);
     if (sonraOkundu) { k.meb = { ...M0, sonuc02008: iz }; eski++; return; }
     const kod = durumKodu(x.durum);
-    if (M0.durum !== x.durum) islem('MEBBİS’ten aldı', `${tamAd(k)} · Resmî durum: ${M0.durum || 'boş'} → ${x.durum} · SKT02008`);
+    if (M0.durum !== x.durum) islem('MEBBİS’ten aldı', `${tamAd(k)} · Resmî durum: ${M0.durum || 'boş'} → ${x.durum} · SKT02008`, { meb: { hedef: { kursiyer: k.id } } });
     k.meb = { ...M0, durum: x.durum, ...(kod != null ? { durumKod: kod } : {}), durumKaynak: 'skt02008', durumTarih: x.tarih, sonuc02008: iz }; yeni++;
   });
   return { tablo, satir, yeni, eski, yok, ayniTc, bos: (v.bos || []).length, bas: v.bas, bit: v.bit };

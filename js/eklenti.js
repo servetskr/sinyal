@@ -316,7 +316,7 @@ export function sonucAkisi(acilacak) {
         if (!s) { const tur = x.d.puan != null ? 'e-Sınav' : 'Direksiyon'; s = { id: 's' + Date.now(), tur, tarih: x.t, saat: tur === 'Direksiyon' ? '08:30' : '', yer: '', kursiyerler: [], sonuc: {} }; S.sinavlar.push(s); islem('Sınav oturumu açtı', tur + ' · ' + tarihKisa(x.t) + ' · MEBBİS sonucundan'); }
         if (!s.kursiyerler.includes(k.id)) s.kursiyerler.push(k.id);
         A.oturum[s.id] = { ...(A.oturum[s.id] || {}), [k.id]: x.d }; A.girilen.delete(s.id); A.disarida = A.disarida.filter(y => y !== x);
-        islem('MEBBİS sonucundaki kursiyeri oturuma ekledi', tamAd(k) + ' · ' + s.tur + ' ' + tarihKisa(s.tarih)); kaydet(); bildir(`${tamAd(k)} ${tarihKisa(s.tarih)} oturumuna eklendi`); kapatPencere(); setTimeout(() => sonucAkisi(), 200); });
+        islem('MEBBİS sonucundaki kursiyeri oturuma ekledi', tamAd(k) + ' · ' + s.tur + ' ' + tarihKisa(s.tarih), { meb: { hedef: { kursiyer: k.id } } }); kaydet(); bildir(`${tamAd(k)} ${tarihKisa(s.tarih)} oturumuna eklendi`); kapatPencere(); setTimeout(() => sonucAkisi(), 200); });
     } });
 }
 // SNV-086: MEBBİS'teki sonuç mdSinyal'dekinden farklı: her satırda 'Düzelt' sonucDuzelt'i MEBBİS sonucuyla açar (aşama, mezuniyet ve belge adımları geri alınır)

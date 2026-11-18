@@ -494,7 +494,7 @@ export function mebbisAsistani(id) {
         if (c) { const al = tum.find(x => x[0] === c.dataset.kopyala); kopyala(al[2]).then(ok => { k.mebGirildi[al[0]] = true; kaydet(); bildir(ok === false ? 'Kopyalanamadı; değeri elle seçin' : al[1] + ' kopyalandı'); yenile(); }); }
         if (ev.target.closest('[data-tamam]')) {
           if (bosAlan.length) return bildir('Önce eksik bilgileri tamamlayın: ' + bosAlan.join(', '), 'uyari');
-          k.mebIslendi = true; islem('MEBBİS’e girildi işaretledi', tamAd(k)); kaydet(); bildir(tamAd(k) + ' MEBBİS’e girildi olarak işaretlendi');
+          k.mebIslendi = true; islem('MEBBİS’e girildi işaretledi', tamAd(k), { meb: { hedef: { kursiyer: k.id } } }); kaydet(); bildir(tamAd(k) + ' MEBBİS’e girildi olarak işaretlendi');
           if (mebSira.kid === k.id) { mebSira.sureler.push(Date.now() - mebSira.basla); const n = bekleyenMeb()[0]; if (mebSira.zincir && n) { Object.assign(mebSira, { kid: n.id, i: 0, basla: Date.now() }); location.hash = '#/mebbis/' + n.id; return; } mebSira.kid = null; }
           location.hash = '#/meb';
         }
