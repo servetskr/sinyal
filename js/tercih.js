@@ -4,7 +4,7 @@ import { S, kaydet, oturum } from './veri.js?v=234';
 import { e } from './ui.js?v=234';
 
 const YEREL = 'sinyal-gorunum';
-export const TERCIH_VARSAYILAN = { tema: 'levha', yazi: 'normal', sayfaBasi: 0, yapiskan: false, sekmeHatirla: false, dugme: 'sag', kayitOtoIleri: true };
+export const TERCIH_VARSAYILAN = { tema: 'levha', yazi: 'normal', sayfaBasi: 0, yapiskan: false, sekmeHatirla: false, dugme: 'sag', kayitOtoIleri: true, gizliSutun: [] };
 const kimlik = () => { try { const u = oturum.kullanici || {}; return String(u.uid || u.id || ''); } catch (x) { return ''; } };
 const yerelOku = (a, v = {}) => { try { return JSON.parse(localStorage.getItem(a) || 'null') || v; } catch (x) { return v; } };
 const yerelYaz = (a, v) => { try { localStorage.setItem(a, JSON.stringify(v)); } catch (x) { } };
