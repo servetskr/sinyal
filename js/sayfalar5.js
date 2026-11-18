@@ -25,6 +25,7 @@ export const KURAL_KAYNAK = {
   // Asgari yaş burada yok: tek kaynak sınıf tablosu (Ayarlar › Sınıf ve ücretler › Asgari yaş; KTY md.76, istisna md.76/3 veri.js)
   telafiSaat: { ad: 'Kaldıktan sonra tekrar sınavdan önce en az ek direksiyon', birim: 'saat', tur: 'mevzuat', varsayilan: 2, min: 2, max: 10, kaynak: MTSK + ', md.15 (başarısız aday eğitimi, en az 2 saat)', url: MTSK_URL },
   tekrarBekleme: { ad: 'Kaldıktan sonra tekrar sınava bekleme', birim: 'gün', tur: 'kurs', varsayilan: 15, min: 0, max: 120, kaynak: 'Kurs uygulaması: mevzuatta sabit bir gün sayısı yok, kurs belirler' },
+  bildirimTekrarSaat: { ad: 'Kapatılan iş bildirimi, iş yapılmadıysa kaç saat sonra yeniden gelsin', birim: 'saat', tur: 'kurs', varsayilan: 6, min: 1, max: 72, kaynak: 'Kurs kararı (Genel bakış › Bugün yapılacaklar; iş yapılınca bildirim kendiliğinden kalkar)' },
   devamsizlikSiniri: { ad: 'Teorik devamsızlık uyarı sınırı', birim: 'ders', tur: 'kurs', varsayilan: 4, min: 1, max: 34, kaynak: 'Kurs uygulaması: uyarı eşiği, mevzuattaki devam şartını kurs müdürü kontrol eder' },
   ekDersUcreti: { ad: 'Ek direksiyon dersi ücreti', birim: '₺', tur: 'kurs', min: 0, max: 100000, kaynak: 'Kurs kararı (il taban ücretinin altında olamaz)' },
   // Kayıt kalitesi: uyarı üretir, kaydı engellemez. Varsayılanı olan ve dayanağı kesin olmayan değerler "Teyit bekliyor" görünür; kurs kendi değerini girince kalkar. 0 = denetim kapalı.
