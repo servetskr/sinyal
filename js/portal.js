@@ -264,6 +264,15 @@ const heroSahne = () => gunduzMu() ? GUNDUZ_SVG : GECE_SVG;
 const AV_RENK = ['#2f6fde', '#c2410c', '#0f8a5f', '#7a5cd6', '#b4233a', '#0e7490', '#a16207'];
 const avDaire = (k, cls = '') => k.foto ? `<img class="u-av ${cls}" src="${e(k.foto)}" alt="">` : `<span class="u-av ${cls}" style="--r:${AV_RENK[[...((k.ad || '') + (k.soyad || ''))].reduce((a, c) => a + c.charCodeAt(0), 0) % AV_RENK.length]}" aria-hidden="true">${e(((k.ad || '?')[0] + ((k.soyad || '')[0] || '')).toLocaleUpperCase('tr'))}</span>`;
 // sayfa üstü rengi: üst bölüm varsa telefonun durum çubuğu da lacivert olur
+// DENETİM K10 (UYG-007/009, MEV-009): ofisteki önizleme öğretmenin / öğrencinin gördüğü yeni tasarımı telefon çerçevesinde gösterir.
+// Çerçeve transform'lu: alttaki sekme çubuğu ve tam ekran katmanlar (position:fixed) çerçevenin içinde kalır, ofis menüsünü örtmez.
+function telOnizleme(y, baslik, secim, degisti) {
+  return {
+    baslik, alt: 'Personel önizlemesi · telefonda görünen ekran',
+    html: `<div class="og-onizleme u-onizleme">${isaret('bilgi', 16)}<span>Personel önizlemesi</span>${secim}</div><div class="tel-onizleme"><div class="tel-kaydir">${y.html}</div></div>`,
+    baglan(kap) { if (y.baglan) y.baglan(kap); kap.addEventListener('change', degisti); },
+  };
+}
 const temaUst = koyu => { if (koyu) heroBoyutla(); if (koyu && window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) document.querySelectorAll('svg.u-gece').forEach(g => { try { g.pauseAnimations(); } catch (x) { } }); document.body.classList.toggle('hero-acik', koyu); document.body.classList.toggle('hero-gunduz', koyu && gunduzMu()); const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = koyu ? (gunduzMu() ? '#174f99' : '#0b1830') : '#f2f2f7'; };
 export const dersNo = (d, k) => dersSirasi(d, k) || k.direksiyon;
 // Öğretmen ekranında ders sırası: zorunlu sayının üstü "Ek ders 1/2" olarak yazılır ("17. ders / 16" yerine)
@@ -352,6 +361,8 @@ export function egitmenPortal() {
   egId = eg.id;
   if (!EG_SEKME.some(x => x[0] === egSekme)) egSekme = 'bugun';
   if (usta) { const y = UX.ciz(eg, { yenile, temaUst }); if (y) return y; const us = UX.sekmeSimdi(); if (EG_SEKME.some(x => x[0] === us)) egSekme = us; }
+  else { const y = UX.ciz(eg, { yenile, temaUst: () => { } });   // DENETİM K10: personel önizlemesi de yeni tasarım
+    if (y) return telOnizleme(y, 'Öğretmen ekranı', `<select class="girdi" data-eg aria-label="Öğretmen seç">${S.egitmenler.map(x => `<option value="${x.id}" ${x.id === eg.id ? 'selected' : ''}>${e(x.ad)}</option>`).join('')}</select>`, ev => { if (ev.target.matches('[data-eg]')) { egId = ev.target.value; yenile(); } }); }
   const benim = S.dersler.filter(d => d.egitmen === eg.id);
   const bugun = benim.filter(d => d.tarih === gun(0)).sort((a, b) => a.saat.localeCompare(b.saat));
   const kapanmamis = benim.filter(d => d.durum === 'Planlandı' && d.tarih < gun(0) && d.tarih >= gun(-60)).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat));
@@ -568,10 +579,11 @@ export function ogrenciPortal() {
   ogrAktif(k);   // Plus paket denetimi bu öğrenciye göre (UYG-019)
   const sd = sonrakiDers(k);
   const sinav = S.sinavlar.filter(s => s.kursiyerler.includes(k.id) && fark(s.tarih) >= 0 && !(s.sonuc || {})[k.id]).sort((a, b) => a.tarih.localeCompare(b.tarih))[0];
-  // Yeni öğrenci tasarımı (js/ogr/): öğrencinin kendi telefonunda. Personel önizlemesi eski düzende kalır.
-  if (oturum.kullanici && oturum.kullanici.rol === 'ogrenci') {
-    const y = OX.ciz(ogSekme, { k, S0, sd, sinav, yenile, git: (sk, alt) => { ogSekme = sk; sekmeSakla(); if (alt !== undefined) OX.altAc(alt); yenile(true); }, genelTik: t => ogGenelTik(t, k), odemeYap: i => odemeYap(k, i), temaUst });
-    if (y) return y;
+  // Yeni öğrenci tasarımı (js/ogr/): öğrencinin kendi telefonunda; personel önizlemesinde telefon çerçevesi içinde (DENETİM K10)
+  { const kendi = !!(oturum.kullanici && oturum.kullanici.rol === 'ogrenci');
+    const y = OX.ciz(ogSekme, { k, S0, sd, sinav, yenile, git: (sk, alt) => { ogSekme = sk; sekmeSakla(); if (alt !== undefined) OX.altAc(alt); yenile(true); }, genelTik: t => ogGenelTik(t, k), odemeYap: i => odemeYap(k, i), temaUst: kendi ? temaUst : () => { } });
+    if (y && kendi) return y;
+    if (y) return telOnizleme(y, 'Öğrenci ekranı', `<select class="girdi" data-og aria-label="Öğrenci seç">${S.kursiyerler.slice(0, 40).map(x => `<option value="${x.id}" ${x.id === k.id ? 'selected' : ''}>${e(tamAd(x))}</option>`).join('')}</select>`, ev => { if (ev.target.matches('[data-og]')) { ogId = ev.target.value; test = { mod: null }; OG.modulSifirla(); yenile(); } });
   }
   let govde = '';
   // eski düzen Öğren modülü: alt ekran değeri yeni tasarımla ortak (sessionStorage 'sinyal-og-alt'); eski düzen yalnız bildiği değerleri açar

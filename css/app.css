@@ -3861,3 +3861,10 @@ tr.secili-satir td { background: rgba(10, 77, 162, .06); }
 .mx-bag{background:none;border:0;padding:0;color:var(--levha);font-weight:700;cursor:pointer;font:inherit}
 .mx-pk.mx-acil{border-color:var(--kirmizi)}
 .mx-pk.mx-acil .mx-sure{color:var(--kirmizi);font-weight:700}
+
+/* DENETİM K10: personel önizlemesi telefon çerçevesinde (yeni öğretmen / öğrenci tasarımı). transform, position:fixed çocukları çerçeveye bağlar. */
+.tel-onizleme { position: relative; transform: translateZ(0); width: min(390px, 100%); height: max(560px, calc(100vh - 210px)); margin: 12px auto 24px; border: 10px solid #0f1d40; border-radius: 36px; overflow: hidden; background: var(--ox-zemin, #f7f8fa); box-shadow: 0 24px 60px -24px rgba(15, 29, 64, .45); }
+.tel-onizleme > .tel-kaydir { position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; }
+@media (max-width: 760px) { .tel-onizleme { border-width: 6px; border-radius: 24px; height: calc(100dvh - 190px); min-height: 480px; } }
+/* çerçeve telefon genişliğinde: masaüstü için yüzen 500 px sekme çubuğu yerine telefondaki tam genişlik çubuk */
+.tel-onizleme .ox-sekme { left: 0; right: 0; bottom: 0; width: auto; transform: none; border-width: .5px 0 0; border-radius: 0; box-shadow: none; }
