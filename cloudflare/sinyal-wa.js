@@ -475,7 +475,7 @@ const epGecerli = a => /^[^\s@<>,;"]{1,64}@[A-Za-z0-9.-]{1,180}\.[A-Za-z]{2,24}$
 // isteği yapanın doğrulanmış hesap e-postası (belirteç uyeRol'de Firestore'a gösterilerek doğrulanır; öğrenci giriş adresleri hariç)
 function belirtecEposta(req) {
   try { const p = JSON.parse(atob((req.headers.get('Authorization') || '').replace(/^Bearer /, '').split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))), a = String(p.email || '').trim().toLowerCase();
-    return p.email_verified === true && epGecerli(a) && !/@ogrenci\.sinyal\.app$/.test(a) ? a : ''; } catch (x) { return ''; }
+    return p.email_verified === true && epGecerli(a) && !/@ogrenci\.(mdsinyal\.com|sinyal\.app)$/i.test(a) ? a : ''; } catch (x) { return ''; }
 }
 const epGun = () => new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10);
 const b64 = s => { const b = new TextEncoder().encode(s); let x = ''; for (let i = 0; i < b.length; i += 0x8000) x += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(x); };
@@ -699,7 +699,7 @@ async function epOgrenci(req, env, cevap, S, kurs, rol) {
   let b; try { b = JSON.parse(ham); } catch (x) { return cevap({ ok: false, hata: 'gecersiz' }, 400); }
   const T = EP_OGR_TUR[b.tur], adres = String(b.adres || '').trim().toLowerCase();
   if (!T) return cevap({ ok: false, hata: 'gecersiz' }, 400);
-  if (!epGecerli(adres) || /@ogrenci\.sinyal\.app$/.test(adres)) return cevap({ ok: false, hata: 'Öğrencinin e-posta adresi geçersiz' }, 400);
+  if (!epGecerli(adres) || /@ogrenci\.(mdsinyal\.com|sinyal\.app)$/i.test(adres)) return cevap({ ok: false, hata: 'Öğrencinin e-posta adresi geçersiz' }, 400);
   const satir = (Array.isArray(b.satirlar) ? b.satirlar : []).slice(0, 12).map(x => Array.isArray(x) ? [epDuz(x[0], 60), epDuz(x[1], 160)] : null).filter(x => x && x[0]);
   const not = epDuz(b.not, 1000), ad = epDuz(b.ad, 80).replace(/[\r\n]/g, ' ');
   if (!satir.length && !not) return cevap({ ok: false, hata: 'E-posta boş' }, 400);
