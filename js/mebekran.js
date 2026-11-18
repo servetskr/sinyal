@@ -14,7 +14,7 @@ const AY = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'A
 export function durumSeridi() {
   const E = EK.eklenti, o = E.oturum, yas = o ? Date.now() - o.zaman : Infinity, calisiyor = MT.suruyor();
   const nokta = r => `<i class="mx-nokta" style="background:${r}"></i>`;
-  const kurulu = E.var ? `${nokta('var(--yesil)')}Yardımcı kurulu${E.surum ? ' · ' + e(E.surum) : ''}` : `${nokta('var(--kirmizi)')}Yardımcı bu tarayıcıda kurulu değil · <button type="button" class="mx-bag" data-meb-arac-kur>Nasıl kurulur?</button> <span class="mx-soluk">(kurulana kadar Elle giriş)</span>`;
+  const kurulu = E.var ? (MT.surumEnAz(MT.ONERILEN_SURUM, E.surum) ? `${nokta('var(--yesil)')}Yardımcı kurulu${E.surum ? ' · ' + e(E.surum) : ''}` : `${nokta('var(--sari)')}Yardımcı ${e(E.surum || 'eski sürüm')} · ${MT.surumEnAz(MT.GEREKEN_SURUM, E.surum) ? 'yeni okumalar için' : 'MEBBİS işleri için'} ${MT.ONERILEN_SURUM} gerekli · <button type="button" class="mx-bag" data-meb-arac-kur>Güncelle</button>`) : `${nokta('var(--kirmizi)')}Yardımcı bu tarayıcıda kurulu değil · <button type="button" class="mx-bag" data-meb-arac-kur>Nasıl kurulur?</button> <span class="mx-soluk">(kurulana kadar Elle giriş)</span>`;
   const sb_ = cokSube() && seciliSube(), kurum = sb_ ? `<span>${nokta('var(--levha)')}MEBBİS kurumu: <b>${e(sb_.ad)}</b>${sb_.kurumKodu ? ` · <span class="mono">${e(sb_.kurumKodu)}</span>` : ''}</span>` : '';
   const oturum = !E.var ? `${nokta('var(--cizgi)')}MEBBİS oturumu bilinmiyor`
     : !o ? `${nokta('var(--cizgi)')}MEBBİS oturumu: MEBBİS’e girin`

@@ -55,6 +55,10 @@ export const durum = { calisiyor: false, id: null, adim: '', baslama: 0, son: nu
 export const suruyor = () => durum.calisiyor && Date.now() - (durum.sonIlerleme || durum.baslama) < 5 * 60e3;
 // Toplu iş, Durdur/Devam, onaylı teslim, kurum denetimi ve "Ekranları denetle" Yardımcı 1.12.0 ile geldi
 export const GEREKEN_SURUM = '1.12.0';
+// DENETİM Ö6: bu yayının Yardımcı'sı 1.16.0. 1.12–1.15 çalışır ama yeni okumaları tanımaz: o okumalar işe konmaz, kullanıcıya hangi sürümün gerektiği söylenir.
+export const ONERILEN_SURUM = '1.16.0';
+export const CEK_SURUM = { teorik: '1.13.0', ucretler: '1.13.0', randevular: '1.13.0', kurum: '1.14.0', ucretIlani: '1.15.0', yetki: '1.16.0', direksiyonProgrami: '1.16.0' };
+export const surumEnAz = (gerek, var_ = EK.eklenti.surum) => { const sv = String(var_ || '0').split('.').map(Number), g = String(gerek).split('.').map(Number); for (let i = 0; i < 3; i++) if ((sv[i] || 0) !== (g[i] || 0)) return (sv[i] || 0) > (g[i] || 0); return true; };
 const surumUygun = () => { const sv = String(EK.eklenti.surum || '0').split('.').map(Number), g = GEREKEN_SURUM.split('.').map(Number); for (let i = 0; i < 3; i++) if ((sv[i] || 0) !== g[i]) return (sv[i] || 0) > g[i]; return true; };
 const yeniSurum = surumUygun;
 const nrm = x => String(x || '').toLocaleLowerCase('tr').replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/[^a-z0-9]/g, '');
@@ -94,12 +98,15 @@ export function dosyaKuyrugu() {
 // MEB-021: ops.tc verilirse yalnız o kursiyerin aday dosyası okunur (öğrenci dosyasındaki "MEBBİS'ten güncelle")
 export function topluCek(neler, ops = {}) {
   if (!hazirMi(() => topluCek(neler, ops))) return;   // çekme MEBBİS'e yazmaz: yalnız kurum bilgilendirmesi gerekir, iş onayı gerekmez
-  const cek = neler.filter(x => x !== 'dosya');
+  const tanimaz = neler.filter(x => CEK_SURUM[x] && !surumEnAz(CEK_SURUM[x])), cek = neler.filter(x => x !== 'dosya' && !tanimaz.includes(x));
+  if (tanimaz.length) { const ad = x => ((CEKILECEK.find(y => y[0] === x) || [])[1] || x).replace(/^([A-ZÇĞİÖŞÜ])(?=[a-zçğıöşü])/, c => c.toLocaleLowerCase('tr'));
+    if (!cek.length && !neler.includes('dosya')) return pencere({ baslik: 'MEBBİS Yardımcısı’nı güncelleyin', icerik: `<p>${tanimaz.map(ad).join(', ')} okuması için Yardımcı <b>${tanimaz.map(x => CEK_SURUM[x]).sort((p, q) => (surumEnAz(q, p) ? 1 : 0) - (surumEnAz(p, q) ? 1 : 0)).pop()}</b> ya da yenisi gerekir; bu tarayıcıda <b>${e(EK.eklenti.surum || 'eski sürüm')}</b> kurulu. Öteki MEBBİS işleri bu sürümle sürer.</p><p style="margin-top:8px"><a href="${EK.EKLENTI_ZIP}" download style="font-weight:700">Yardımcı ${ONERILEN_SURUM} paketini indir</a></p>`, altlik: '<button class="dg dg-ana" data-kapat>Tamam</button>' });
+    bildir(`Yardımcı ${e(EK.eklenti.surum || '')} şunları tanımıyor, bu sefer okunmayacak: ${tanimaz.map(ad).join(', ')}. ${ONERILEN_SURUM}’a güncelleyin.`, 'uyari'); }
   const tum = !neler.includes('dosya') ? [] : ops.tc ? [ops.tc] : dosyaKuyrugu(), dosya = tum.slice(0, DOSYA_EN_COK);
   S.mebDosyaKalan = tum.length - dosya.length; kaydet();
   // kurum: Yardımcı açık MEBBİS hesabının seçili şubeye ait olduğunu denetler (yanlış şubenin verisi gelmesin)
   const tek = ops.tc && S.kursiyerler.find(k => k.tc === ops.tc);
-  baslat({ id: 't' + Date.now(), kurum: MK.kurumBilgi().kod || '', cek, dosya, yaz: [] }, tek ? `MEBBİS’ten ${tamAd(tek)} için aday dosyası okunuyor` : `MEBBİS’ten çekiliyor: ${CEKILECEK.filter(x => neler.includes(x[0])).map(x => x[1].toLocaleLowerCase('tr')).join(', ')}${dosya.length ? ` (${dosya.length} aday dosyası)` : ''}`);
+  baslat({ id: 't' + Date.now(), kurum: MK.kurumBilgi().kod || '', cek, dosya, yaz: [] }, tek ? `MEBBİS’ten ${tamAd(tek)} için aday dosyası okunuyor` : `MEBBİS’ten çekiliyor: ${CEKILECEK.filter(x => cek.includes(x[0]) || (x[0] === 'dosya' && dosya.length)).map(x => x[1].replace(/^([A-ZÇĞİÖŞÜ])(?=[a-zçğıöşü])/, c => c.toLocaleLowerCase('tr'))).join(', ')}${dosya.length ? ` (${dosya.length} aday dosyası)` : ''}`);
 }
 /* ---------- "Ekranları denetle": Yardımcı her MEBBİS ekranını yalnız açar (GET), beklediği alanları arar; hiçbir şey yazılmaz ---------- */
 export function ekranDenetle() {
