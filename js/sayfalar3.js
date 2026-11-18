@@ -1,4 +1,4 @@
-import { S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas, sb, sbDers, sbSinav, gorunum, subede, SOZLESME_VARSAYILAN, satistaSiniflar, ayEkle, YONTEMLER, yontemAd, selam, kursAdi, dersKonulari, evrakKaynak, ayniTcKayit, taksitBol, aydinlatmaMetni, gerekliDireksiyon, cokSube, varsayilanSube, kuralAyar, MEVCUT_BELGELER, eskiBelgeTarihi, deneyimEksik, aracSiniflari, tabanListesi, teorikVar, ekDersFiyat, kursiyerTaban } from './veri.js?v=234';
+import { taksitVade, S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas, sb, sbDers, sbSinav, gorunum, subede, SOZLESME_VARSAYILAN, satistaSiniflar, ayEkle, YONTEMLER, yontemAd, selam, kursAdi, dersKonulari, evrakKaynak, ayniTcKayit, taksitBol, aydinlatmaMetni, gerekliDireksiyon, cokSube, varsayilanSube, kuralAyar, MEVCUT_BELGELER, eskiBelgeTarihi, deneyimEksik, aracSiniflari, tabanListesi, teorikVar, ekDersFiyat, kursiyerTaban } from './veri.js?v=234';
 import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler, imzaAlani, tamTarih, yaziyla, belgeYazdir, waAc, apiAcik, belgeWhatsApp, waSirali } from './ui.js?v=234';
 import { yenile } from './app.js?v=234';
 import { siraliPencere } from './sayfalar5.js?v=234';
@@ -333,7 +333,7 @@ export function kayitSayfasi(subeId) {
             const imzaUrl = ia.url(), imzaOlcu = ia.olcu();
             const v = SINIFLAR[kayit.sinif], u0 = kayitUcret(), tx = kursiyerTaban(kayitTaslak()), p0 = Math.min(8000, Math.round(u0 * 0.3 / 500) * 500), n = 4, taksitler = [];
             taksitler.push({ vade: ayEkle(gun(0), 0), tutar: p0, odendi: null, yontem: null, aciklama: 'Peşinat' });
-            taksitBol(u0 - p0, n).forEach((t, i) => taksitler.push({ vade: ayEkle(gun(0), i + 1), tutar: t, odendi: null, yontem: null }));
+            taksitBol(u0 - p0, n).forEach((t, i) => taksitler.push({ vade: taksitVade(gun(0), i), tutar: t, odendi: null, yontem: null }));
             const ev2 = {}; EVRAKLAR.forEach(([x]) => ev2[x] = x === 'sozlesme' ? true : !!kayit.evrak[x] && !kayitBulanik(x));
             const netFoto = Object.fromEntries(Object.entries(kayit.evrak).filter(([x]) => !kayitBulanik(x))), bulanikYuk = Object.fromEntries(Object.entries(kayit.evrak).filter(([x]) => kayitBulanik(x)).map(([x, u]) => [x, { tarih: gun(0), dosya: 'kayit-formu.jpg', boyut: u.length, tur: 'resim', veri: u, kanal: 'Kayıt formu', net: kayit.net[x].net, bulanik: true }]));
             // çok şubeli kursta yeni kursiyer bir şubeye yazılır: kayıt sayfasının şubesi, yoksa varsayılan şube (seçili şube ya da ilk şube).

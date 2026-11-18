@@ -56,8 +56,13 @@ export function tutarOku(v) {
   else if (sonN >= 0) t = /^\d{1,3}(\.\d{3})+$/.test(t) ? t.replace(/\./g, '') : t.replace(/\.(?=.*\.)/g, '');
   const n = Math.round(parseFloat(t) * 100) / 100; return isFinite(n) && n > 0 ? n : 0;
 }
-// Taksit bölme: 50 TL'ye yuvarlanır, kalan son taksite eklenir; sıfır liralık taksit oluşmaz (gerekirse taksit sayısı azalır)
-export function taksitBol(top, n) { top = Math.round(top); if (top <= 0) return []; n = Math.max(1, Math.min(n || 1, Math.floor(top / 50) || 1)); const p = Math.floor(top / n / 50) * 50; return Array.from({ length: n }, (_, i) => i === n - 1 ? top - p * (n - 1) : p); }
+// PAR-034: taksit planı kurs ayarları — yuvarlama (₺; varsayılan 50), küsurat ilk ya da son taksite (varsayılan son), taksitler arası ay (varsayılan 1),
+// en çok taksit: ön büro S.kurs.taksitEnCok (varsayılan 5), müdür en az 12 (SOR-079). Plan tek borçtur; tahsilat sıradaki açık taksiti kapatır.
+export const taksitAyar = () => { const K = S.kurs || {}; return { yuvarla: [1, 10, 50, 100].includes(+K.taksitYuvarla) ? +K.taksitYuvarla : 50, kusurat: K.taksitKusurat === 'ilk' ? 'ilk' : 'son', aralik: Math.max(1, Math.min(6, Math.floor(+K.taksitAralik) || 1)), enCok: Math.max(1, Math.min(24, Math.floor(+K.taksitEnCok) || 5)) }; };
+export const taksitSiniri = () => { const a = taksitAyar(); let m = false; try { m = !!(oturum.kullanici && oturum.kullanici.rol === 'mudur'); } catch (x) { } return m ? Math.max(12, a.enCok) : a.enCok; };
+export const taksitVade = (bas, i, a = taksitAyar()) => ayEkle(bas, (i + 1) * a.aralik);
+// Taksit bölme: yuvarlama birimine yuvarlanır, küsurat seçilen taksite eklenir; sıfır liralık taksit oluşmaz (gerekirse taksit sayısı azalır)
+export function taksitBol(top, n, a = taksitAyar()) { top = Math.round(top); if (top <= 0) return []; const y = a.yuvarla || 50; n = Math.max(1, Math.min(n || 1, Math.floor(top / y) || 1)); const p = Math.floor(top / n / y) * y, k = top - p * n, j = a.kusurat === 'ilk' ? 0 : n - 1; return Array.from({ length: n }, (_, i) => i === j ? p + k : p); }
 export const iptalEdilebilir = d => !!d && d.durum === 'Planlandı' && dersKalanSaat(d) >= 24;
 // Kurs kapalı günleri: Pazar, sabit resmî tatiller ve dini bayramlar (kurs Ayarlar'dan ek kapalı gün girer).
 export const TATILLER = ['01-01', '04-23', '05-01', '05-19', '07-15', '08-30', '10-29'];
