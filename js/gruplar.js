@@ -5,6 +5,7 @@ import { S, kaydet, gun, fark, iso, SINIFLAR, tamAd, tcGecerli, islem, eksikEvra
 import { e, pencere, kapatPencere, bildir, rozet, tarih, isaret, ik, pencereSor, bos, onaySor } from './ui.js?v=234';
 import * as KR from './kurallar.js?v=234';
 import * as MN from './mebnorm.js?v=234';
+import * as SRCE from './src-ekran.js?v=234';   // DIR-044: SRC grupları resmî SRC programıyla planlanır
 const { AYLAR } = MN;
 
 export { AYLAR };   // MEB-039: ay adları ve dönem biçimi mebnorm.js'te tek yerde
@@ -275,8 +276,8 @@ export function gruplarKarti() {
   const l = (S.gruplar || []).filter(g => !g.baslangic || fark(g.baslangic) >= -120).sort((a, b) => String(b.baslangic).localeCompare(String(a.baslangic)) || String(a.ad).localeCompare(String(b.ad), 'tr'));
   const bek = sb(S.kursiyerler).filter(bekleyenMi);
   return `<div class="kart"><div class="kart-bas"><h3>Dönem grupları</h3><small>MEBBİS’teki dönem, grup ve şubelerle aynı</small><div class="sag"><button class="dg dg-ana dg-kucuk" data-grup-yeni>${ik('arti')}Yeni grup</button></div></div>
-    ${l.length ? `<ul class="liste grup-liste" style="margin-top:8px">${l.map(g => { const n = kisiler(g).length, bas = fark(g.baslangic); return `<li><div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(g.ad)}</b>${mebGrubuMu(g) ? '' : ' ' + rozet('MEBBİS dışı', 'notr')}<small style="display:block;color:var(--soluk)">${mebGrubuMu(g) ? e(donemAdi(g.donem)) + ' · Grup ' + g.grupNo + ' · ' + g.sube + ' Şubesi · ' : ''}${bas > 0 ? tarih(g.baslangic) + ' başlıyor' : bas === 0 ? 'bugün başlıyor' : tarih(g.baslangic) + ' başladı'}${g.sinif ? ' · ' + e(((SINIFLAR[g.sinif] || {}).ad || g.sinif).split(' ·')[0]) : ''}${g.derslik ? ' · ' + e(g.derslik) : ''}</small>${belgeliSubesi(g) || g.teoriksiz ? '' : teorikSayac(g)}</div>
-      <span class="sag"><span class="sayi" style="font-size:13px">${n}${g.kontenjan ? '/' + g.kontenjan : ''} kişi · ${belgeliSubesi(g) ? 'belgeliler · teorik yok' : `teorik ${teorikDurum(g).toplam}/34 saat`}</span><button class="dg dg-cizgi dg-kucuk" data-teorik-ekle="${e(g.id)}">Ders ekle</button><button class="dg dg-cizgi dg-kucuk" data-grup-ata="${e(g.id)}">Kursiyer ata</button>${mebGrubuMu(g) ? `<button class="dg dg-hafif dg-kucuk" data-grup-duzenle="${e(g.id)}" aria-label="Düzenle">${ik('kalem')}</button>` : ''}</span></li>`; }).join('')}</ul>`
+    ${l.length ? `<ul class="liste grup-liste" style="margin-top:8px">${l.map(g => { const n = kisiler(g).length, bas = fark(g.baslangic); return `<li><div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(g.ad)}</b>${mebGrubuMu(g) ? '' : ' ' + rozet('MEBBİS dışı', 'notr')}<small style="display:block;color:var(--soluk)">${mebGrubuMu(g) ? e(donemAdi(g.donem)) + ' · Grup ' + g.grupNo + ' · ' + g.sube + ' Şubesi · ' : ''}${bas > 0 ? tarih(g.baslangic) + ' başlıyor' : bas === 0 ? 'bugün başlıyor' : tarih(g.baslangic) + ' başladı'}${g.sinif ? ' · ' + e(((SINIFLAR[g.sinif] || {}).ad || g.sinif).split(' ·')[0]) : ''}${g.derslik ? ' · ' + e(g.derslik) : ''}</small>${belgeliSubesi(g) || g.teoriksiz || grupTipi(g) === 'SRC' ? '' : teorikSayac(g)}</div>
+      <span class="sag"><span class="sayi" style="font-size:13px">${n}${g.kontenjan ? '/' + g.kontenjan : ''} kişi · ${belgeliSubesi(g) ? 'belgeliler · teorik yok' : grupTipi(g) === 'SRC' ? e(SRCE.srcKartMetni(g)) : `teorik ${teorikDurum(g).toplam}/34 saat`}</span>${grupTipi(g) === 'SRC' ? `<button class="dg dg-cizgi dg-kucuk" data-src-program="${e(g.id)}">SRC programı</button>` : `<button class="dg dg-cizgi dg-kucuk" data-teorik-ekle="${e(g.id)}">Ders ekle</button>`}<button class="dg dg-cizgi dg-kucuk" data-grup-ata="${e(g.id)}">Kursiyer ata</button>${mebGrubuMu(g) ? `<button class="dg dg-hafif dg-kucuk" data-grup-duzenle="${e(g.id)}" aria-label="Düzenle">${ik('kalem')}</button>` : ''}</span></li>`; }).join('')}</ul>`
       : `<div class="kart-govde"><p style="color:var(--metin)">Henüz dönem grubu yok. MEBBİS’te açtığınız grubu burada da açın (ör. <b>Kasım 1A</b>); kayıtta grup seçimi zorunlu. MEBBİS Yardımcısı kuruluysa <b>MEB işlemleri › MEBBİS’ten al › Dönem grupları</b> ile MEBBİS’teki grupları da çekebilirsiniz.</p></div>`}
     ${bek.length ? `<div class="kart-bas" style="padding-top:18px"><h3>Bekleyen kursiyerler</h3><small>Kaydı yapıldı; gruba atanmadı ya da evrakı eksik · ${bek.length}</small></div>
       <ul class="liste" style="margin-top:6px">${bek.slice(0, 30).map(k => `<li><a class="kisi" href="#/kursiyer/${k.id}" style="flex:1;min-width:0"><div><b>${e(tamAd(k))}</b><small>${e(SINIFLAR[k.sinif].ad.split(' ·')[0])} · ${e(bekleyenNedeni(k).join(' · '))}</small></div></a>${kursiyerGrubu(k) ? '' : `<button class="dg dg-cizgi dg-kucuk" data-kursiyer-grup="${k.id}">Gruba ata</button>`}</li>`).join('')}</ul>` : ''}
@@ -292,6 +293,7 @@ export function gruplarBaglan(k, yenile) {
     if (ev.target.closest('[data-derslik-ekle]')) return derslikFormu(null, yenile);
     const dd = ev.target.closest('[data-derslik-duz]'); if (dd) return derslikFormu(dd.dataset.derslikDuz, yenile);
     const te = ev.target.closest('[data-teorik-ekle]'); if (te) { const g = grupBul(te.dataset.teorikEkle); return g && teorikDersPencere(g, yenile); }
+    const sp = ev.target.closest('[data-src-program]'); if (sp) { const g = grupBul(sp.dataset.srcProgram); return g && SRCE.srcProgramPencere(g, yenile); }
     if (ev.target.closest('[data-ogretmen-ekle]')) return ogretmenPencere(null, yenile);
     const od = ev.target.closest('[data-ogretmen-duzenle]'); if (od) { const o = (S.ogretmenler || []).find(x => x.id === od.dataset.ogretmenDuzenle); return o && ogretmenPencere(o, yenile); }
     const kg = ev.target.closest('[data-kursiyer-grup]'); if (kg) { const x = S.kursiyerler.find(y => y.id === kg.dataset.kursiyerGrup); return x && grupAtaPencere(x, yenile); }
@@ -347,10 +349,11 @@ export function teorikBitis(k) {
   const g = kursiyerGrubu(k); if (!g || g.teoriksiz) return null;
   if (g.mebTeorik && g.mebTeorik.son) return { tarih: g.mebTeorik.son, kaynak: 'MEBBİS', saat: g.mebTeorik.saat };
   const l = (S.teorik || []).filter(t => t.grup === g.id), saat = l.reduce((a, t) => a + (+t.sure || 1), 0);
-  return saat >= 34 ? { tarih: l.map(t => t.tarih).sort().pop(), kaynak: 'plan', saat } : null;
+  return saat >= (grupTipi(g) === 'SRC' ? SRCE.srcToplam(g) || 34 : 34) ? { tarih: l.map(t => t.tarih).sort().pop(), kaynak: 'plan', saat } : null;
 }
 export const teorikBitisMetni = k => { const b = teorikBitis(k); if (!b) return ''; const t = tarih(b.tarih) + ' ' + b.tarih.slice(0, 4); return `${b.kaynak === 'MEBBİS' ? 'MEBBİS’e göre' : 'Plana göre'} teorik dersler ${t}${fark(b.tarih) < 0 ? '’te bitti' : ' bitiyor'}`; };
 export function teorikDersPencere(g, sonra) {
+  if (grupTipi(g) === 'SRC') return SRCE.srcDersPencere(g, sonra);   // DIR-044: SRC grubunda ders grupları resmî SRC programından
   if (belgeliSubesi(g)) return pencere({ baslik: g.ad + ' · teorik ders', icerik: `<p>${e(g.ad)} belgeliler şubesi: teorik programı yok, MEBBİS’e bu şubeye teorik ders girilmez. Teorik ders eklemek için önce grup kartında “Belgeliler şubesi” işaretini kaldırın.</p>`, altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button>' });
   const og = S.ogretmenler || [], d = teorikDurum(g);
   pencere({

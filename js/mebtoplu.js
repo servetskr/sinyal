@@ -217,7 +217,8 @@ export function ekIsler(hepsi) {
     const { eksik } = ME.evrakPaketi(k);
     l.push({ ...is_('evrak', 'evrak-' + k.id, `${tamAd(k)} · ${mebGrup(k).ad}`, { ad: tamAd(k), sinif: k.sinif, egitmen: k.egitmen, tarih: k.kayit, detay: eksik.length ? 'Eksik: ' + eksik.join(', ') : 'Öğrenim, sağlık, adli sicil, parmak izi' }, mebGrup(k).baslangic, 'Kurum onayından önce (onaydan sonra değişmez)', { kursiyer: k.id }), bitti: !!k.mebEvrakGirildi });
   });
-  (S.teorik || []).filter(t => { const g = GR.grupBul(t.grup); return g && GR.mebGrubuMu(g) && (hepsi ? fark(t.tarih) >= -14 : !t.meb && fark(t.tarih) >= 0); }).forEach(t => {
+  // DIR-044: SRC dersleri (srcModul) MTSK teorik programına (SKT03003) yazılmaz; SRC grubunun 'MEBBİS listesi' ayrı
+  (S.teorik || []).filter(t => { const g = GR.grupBul(t.grup); return g && !t.srcModul && GR.mebGrubuMu(g) && (hepsi ? fark(t.tarih) >= -14 : !t.meb && fark(t.tarih) >= 0); }).forEach(t => {
     const g = GR.grupBul(t.grup), o = ogretmenOf(t.ogretmen);
     l.push({ ...is_('teorik', 'teorik-' + t.id, `${g.ad} · ${t.tarih.split('-').reverse().join('.')} ${t.saat} · ${dersTuru(t.konu)}`, { ad: g.ad, tarih: t.tarih, detay: `${t.sure || 1} saat · ${o.ad || ''}` }, t.tarih, 'Ders gününden önce', { teorik: t.id }), bitti: !!t.meb });
   });
