@@ -1,7 +1,7 @@
 // MEBBİS dönem grupları. MEBBİS'teki "Dönem Grup Açılış Tarihi" ve "Grup Şube Tanımlama" ekranlarıyla birebir:
 // dönem YYYYAA, grup 1–3 (her grubun tek başlangıç tarihi, ayın 1'i ile 10'u arası), şube A–H. Ad: "Kasım 1A".
 // Kursiyer kaydı grubun başlangıcından önce yapılır (MTSK Yönetmeliği 12/2); evrakı tamam ve gruba atanmış kursiyer aktiftir.
-import { S, kaydet, gun, fark, iso, SINIFLAR, tamAd, islem, eksikEvrak, sb, anaSinif, mebKurum, teorikVar } from './veri.js?v=234';
+import { S, kaydet, gun, fark, iso, SINIFLAR, tamAd, islem, eksikEvrak, sb, anaSinif, mebKurum, teorikVar, esinavsizBelgeli } from './veri.js?v=234';
 import { e, pencere, kapatPencere, bildir, rozet, tarih, isaret, ik, pencereSor, bos } from './ui.js?v=234';
 import * as KR from './kurallar.js?v=234';
 
@@ -57,7 +57,7 @@ export function bekleyenNedeni(k) {
 // Evrakı tamam ve gruba atanmış kursiyer aktif olur: teorik aşamaya (muafsa doğrudan direksiyona) geçer
 export function aktifEt(k) {
   if (!k || k.kapali || !['Kayıt', 'Evrak'].includes(k.asama) || eksikEvrak(k).length || !kursiyerGrubu(k)) return false;
-  k.asama = muafMi(k) ? 'Direksiyon' : 'Teorik';
+  k.asama = muafMi(k) || esinavsizBelgeli(k) ? 'Direksiyon' : 'Teorik';   // belgeli aday teorik almaz (TEO-004)
   return true;
 }
 

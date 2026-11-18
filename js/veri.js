@@ -919,6 +919,10 @@ export function sinifEtiket(sinif, k) {
 }
 // Kursiyer teorik eğitim alıyor mu: listede satırı varsa satırın türü (ilk belge, G, 100 ceza: evet; e-sınav muaf, fark, otomatikten manuele, römork: hayır);
 // liste yoksa e-sınav muafı ve mevcut belgeli (G ve eğitim türü hariç) teorik almaz
+// Belgeli aday (TEO-003): mevcut sürücü belgesiyle farklı sınıf istiyor (md.39). Muafiyet değildir (muaf: son 3 yılda e-sınavı geçen, md.15/5).
+// Teorik dersi ve e-sınavı olmayan belgeli adayda MEBBİS durumu "Uygulama Sınav Aşamasında"dır: aşaması Direksiyon, e-sınav işi ve 90 gün kuralı yok.
+export const belgeliMi = k => !!(k && k.mevcutEhliyet && k.mevcutEhliyet !== 'Yok');
+export const esinavsizBelgeli = k => belgeliMi(k) && !teorikVar(k);
 export function teorikVar(k) {
   if (!k) return false; if (k.sinif === 'G' || egitimSinifi(k.sinif)) return true;
   const x = kursiyerTaban(k); if (x && x.satir) return ['ilk', 'teorik', 'ceza'].includes(x.satir.tur);
