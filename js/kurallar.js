@@ -240,6 +240,16 @@ const KURALLAR = [
       l.push(bul('uyari', `${tamAd(k)} · ${tarih(s.tarih)} sınavına uygun değil`, u.engel.join(' · '), '#/kursiyer/' + k.id, { kural: 'Y08', kursiyer: k.id, kisa: `${tarih(s.tarih)} sınavına uygun değil: ${u.engel[0]}` }));
     })); },
   },
+  // SNV-072/073, MEB-062: MEBBİS randevusu sertifika sınıfı başına en az randevuEnAz (12) adayla verilir (SKT01005 ekran notu); listede araç başına en çok 10 (md.30/2).
+  // Sayım oturumdaki bütün adaylarla (MEBBİS'e yazılmış olanlar dahil): parça parça yazımda grup küçük görünmez. Bugün'e son girişe 3 iş günü kala düşer.
+  { id: 'Y09', sira: 244, ad: 'Randevu grubu: sınıfta en az 12 aday, araçta en çok 10', dayanak: 'MEBBİS SKT01005 ekran notu (sertifika sınıfı başına en az 12 aday); MTSK Yön. md.30/2 (araç başına en çok 10)', kapsam: 'sinav', ciddiyet: 'uyari', ayar: 'randevuEnAz', bugun: true, teyit: 'İlçe MEM kontenjanı ve 12’den az listelerin MEM’ce tamamlanması uygulamaya göre değişebilir.',
+    bugunAd: n => `${n} sınavda randevu grubu eksik ya da araç dolu`,
+    kontrol(l, K) { sbSinav(S.sinavlar).filter(s => s.tur === 'Direksiyon' && fark(s.tarih) >= 0 && (s.kursiyerler || []).length).forEach(s => {
+      const son = mebIsGunuGeri(s.tarih, K.sinavBildirimIsGunu), yakin = mebIsGunuGeri(son, 3) <= gun(0);
+      randevuGrubu(s).forEach(g => { if (g.n >= K.randevuEnAz) return;
+        l.push(bul('uyari', `${tarih(s.tarih)} · ${g.sinif} sınıfı ${g.n} aday`, `MEBBİS randevu ekranı sertifika sınıfı başına en az ${K.randevuEnAz} aday istiyor; ${K.randevuEnAz - g.n} aday daha yazın ya da bu adayları başka güne alın. MEBBİS’e son giriş ${tarih(son)}.`, '#/sinav/' + s.id, { sinav: s.id, kursiyerler: g.ids, sinifGrup: g.sinif, bugun: yakin })); });
+      aracYuku(s).filter(a => a.n > 10).forEach(a => l.push(bul('uyari', `${tarih(s.tarih)} · ${a.plaka} aracında ${a.n} aday`, `Sınav listesinde araç başına en çok 10 aday olur (MTSK Yön. md.30/2); ${a.n - 10} adayı başka araçla yazın.`, '#/sinav/' + s.id, { sinav: s.id, kursiyerler: a.ids, bugun: yakin })));
+    }); } },
   { id: 'Y07', sira: 245, ad: 'Sınav günü öğretmenin çalışma izni ve izin günü', dayanak: 'MTSK Yön. md.28/A; usta öğretici çalışma izni (OOK)', kapsam: 'sinav', ciddiyet: 'engel', bugun: true, bugunAd: n => `${n} sınavda öğretmenin izni sorunlu`,
     kontrol(l) {
       (S.sinavlar || []).filter(s => s && s.tur === 'Direksiyon' && s.tarih && fark(s.tarih) >= 0 && (s.kursiyerler || []).length).forEach(s => {
@@ -348,6 +358,18 @@ export function telafiDurumu(k, sinavTarihi) {
 // SNV-027: sınava uygunluk (tek çekirdek; sınava yazan her yol bunu kullanır). Engeller sırayla: e-sınav, hak, program, MEBBİS son giriş, telafi, başka oturum.
 // Teyit: derslerin son giriş gününe (sınavdan sinavBildirimIsGunu iş günü önce) kadar bitmesi Haller kursunun düzeni; yönetmelikte açıkça yazmıyor.
 const gunUzun = t => { const d = tarihOku(t); return d.getDate() + ' ' + AY[d.getMonth()] + ' ' + ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'][d.getDay()]; };
+// SNV-073: MEBBİS sertifika sınıfı (B manuel ve otomatik aynı "B"); oturumdaki sonucu girilmemiş adaylar
+export const sertifikaSinifi = sinif => String(sinif || '').replace(/-.*$/, '');
+export function randevuGrubu(s, ekIds = []) {
+  const m = new Map(); [...new Set([...(s.kursiyerler || []), ...ekIds])].forEach(id => { const k = kursiyer(id); if (!k || (s.sonuc || {})[id]) return; const c = sertifikaSinifi(k.sinif); if (!m.has(c)) m.set(c, []); m.get(c).push(id); });
+  return [...m.entries()].map(([sinif, ids]) => ({ sinif, n: ids.length, ids })).sort((a, b) => b.n - a.n);
+}
+// sınav aracı: sınav günü ataması (s.atama[k].plaka), yoksa son direksiyon dersinin aracı
+export function aracYuku(s) {
+  const m = new Map(); (s.kursiyerler || []).forEach(id => { const k = kursiyer(id); if (!k || (s.sonuc || {})[id]) return; const a = ((s.atama || {})[id] || {}).plaka || (() => { const d = (S.dersler || []).filter(x => x.kursiyer === id && x.arac).sort((x, y) => y.tarih.localeCompare(x.tarih))[0]; const ar = d && (S.araclar || []).find(x => x.id === d.arac); return ar ? ar.plaka : ''; })();
+    if (!a) return; if (!m.has(a)) m.set(a, []); m.get(a).push(id); });
+  return [...m.entries()].map(([plaka, ids]) => ({ plaka, n: ids.length, ids }));
+}
 export const SINAV_UYGUNLUK_TEYIT = 'Derslerin MEBBİS’e son giriş gününe kadar bitmesi Haller kursunun düzeni; yönetmelikte açıkça yazmıyor.';
 // dersleri db tarihinde biten aday için kural gereği en erken sınav günü (takvimde oturum yoksa varsayım: Cumartesi)
 export function enErkenSinavGunu(db, N = kuralAyar('sinavBildirimIsGunu')) {

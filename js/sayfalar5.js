@@ -31,6 +31,7 @@ export const KURAL_KAYNAK = {
   // Asgari yaş burada yok: tek kaynak sınıf tablosu (Ayarlar › Sınıf ve ücretler › Asgari yaş; KTY md.76, istisna md.76/3 veri.js)
   telafiSaat: { ad: 'Kaldıktan sonra tekrar sınavdan önce en az ek direksiyon', birim: 'saat', tur: 'mevzuat', varsayilan: 2, min: 2, max: 10, kaynak: MTSK + ', md.15 (başarısız aday eğitimi, en az 2 saat)', url: MTSK_URL },
   ikinciAramaGun: { ad: 'Hakkı dolan adayı aramak için, son sınavdan sonra kaç gün geçince Bugün’e düşsün', birim: 'gün', tur: 'kurs', varsayilan: 30, min: 0, max: 59, kaynak: 'Kurs kararı: ikinci dört hak başvurusu 60 gün içinde (MTSK md.15/4); arama günü kursun düzeni' },
+  randevuEnAz: { ad: 'MEBBİS randevusu için sertifika sınıfında en az aday', birim: 'aday', tur: 'mevzuat', varsayilan: 12, min: 1, max: 30, teyit: true, kaynak: 'MEBBİS SKT01005 ekran notu (sistem kuralı); yönetmelikte alt sınır yok' },
   komisyonBoy: { ad: 'Sınav gününde komisyon başına aday', birim: 'aday', tur: 'mevzuat', varsayilan: 10, min: 5, max: 12, kaynak: MTSK + ', md.30/2 (araç başına en çok 10 kursiyer)', url: MTSK_URL },
   memOnayIsGunu: { ad: 'Uygulama sınavı listesinin ilçe MEM onayı, sınavdan en geç', birim: 'iş günü önce', tur: 'mevzuat', varsayilan: 3, min: 1, max: 10, kaynak: MTSK + ', md.28/A-1-b', url: MTSK_URL },
   tekrarBekleme: { ad: 'Kaldıktan sonra tekrar sınava bekleme', birim: 'gün', tur: 'kurs', varsayilan: 15, min: 0, max: 120, kaynak: 'Kurs uygulaması: mevzuatta sabit bir gün sayısı yok, kurs belirler' },

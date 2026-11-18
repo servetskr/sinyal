@@ -70,18 +70,24 @@ export function havuzBaglan(kap, yenile) {
     const ar = t.closest('[data-hv-aradi]'); if (ar) return aramaSayfasi(kursiyer(ar.dataset.hvAradi), yenile); });
 }
 // SNV-036: "Sınava yaz" alt sayfası — gelecekteki Direksiyon oturumları, her birinde "N adaydan M'si uygun"; oturum seçilince aday aday uygunluk
+const grupMetni = (s, ekIds) => { const once = KR.randevuGrubu(s), sonra = KR.randevuGrubu(s, ekIds), az = kuralAyar('randevuEnAz');
+  const l = sonra.filter(g => ekIds.some(id => g.ids.includes(id))).map(g => { const o = (once.find(x => x.sinif === g.sinif) || { n: 0 }).n; return `<i class="${g.n >= az ? 'tamam' : 'eksik'}">${e(g.sinif)} sınıfı ${o} → ${g.n} olur${g.n < az ? ' · en az ' + az : ''}</i>`; });
+  return l.length ? `<em class="hv-grup">${l.join('')}</em>` : ''; };
 export function sinavaYazSayfasi(ks, yenile, onSecili) {
   const ot = (S.sinavlar || []).filter(s => s.tur === 'Direksiyon' && s.tarih >= gun(0)).sort((a, b) => a.tarih.localeCompare(b.tarih));
   if (!ot.length) return bildir('Gelecekte Direksiyon sınav oturumu yok; önce Sınavlar’dan oturum açın', 'uyari');
   const uy = s => ks.map(k => ({ k, u: KR.sinavaUygunluk(k, s) }));
   pencere({ baslik: 'Sınava yaz · ' + ks.length + ' aday', genis: true,
-    icerik: `<div class="hv-oturumlar">${ot.map(s => { const l = uy(s), n = l.filter(x => x.u.uygun).length; return `<button type="button" class="hv-oturum ${onSecili === s.id ? 'secili' : ''}" data-hv-ot="${s.id}"><b>${tarihUzun(s.tarih)}</b><small>${e(s.saat || '')} · ${e(s.yer || '')} · ${(s.kursiyerler || []).length} yazılı</small><span>Uygun: ${n} / ${ks.length} aday</span></button>`; }).join('')}</div><div data-hv-adaylar></div>`,
+    icerik: `<div class="hv-oturumlar">${ot.map(s => { const l = uy(s), n = l.filter(x => x.u.uygun).length; return `<button type="button" class="hv-oturum ${onSecili === s.id ? 'secili' : ''}" data-hv-ot="${s.id}"><b>${tarihUzun(s.tarih)}</b><small>${e(s.saat || '')} · ${e(s.yer || '')} · ${(s.kursiyerler || []).length} yazılı</small><span>Uygun: ${n} / ${ks.length} aday</span>${grupMetni(s, l.filter(x => x.u.uygun).map(x => x.k.id))}</button>`; }).join('')}</div><div data-hv-adaylar></div>`,
     altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-hv-onay disabled>Sınava yaz</button>',
     onAc(p) {
       let secS = null;
       const goster = id => { secS = ot.find(x => x.id === id); p.querySelectorAll('[data-hv-ot]').forEach(b => b.classList.toggle('secili', b.dataset.hvOt === id));
         const l = uy(secS); p.querySelector('[data-hv-adaylar]').innerHTML = `<p style="font-size:13.5px;color:var(--soluk);margin:10px 0 6px">${tarihUzun(secS.tarih)} için uygunluk</p><ul class="liste">${l.map(({ k, u }) => `<li class="${u.uygun ? '' : 'sinav-uygun-degil'}"><label style="display:flex;gap:10px;align-items:flex-start;flex:1;min-width:0"><input type="checkbox" data-hv-aday="${k.id}" ${u.uygun ? 'checked' : 'disabled'}><span style="min-width:0"><b>${e(tamAd(k))}</b><small style="display:block;color:${u.uygun ? 'var(--soluk)' : 'var(--kirmizi)'}">${u.uygun ? e(hakDurumu(k, 'Direksiyon').cumle) : e(u.engel.join(' · '))}</small>${u.uyari.length ? `<small style="display:block;color:var(--sari-koyu,#a15c00)">${e(u.uyari.join(' · '))}</small>` : ''}</span></label></li>`).join('')}</ul>`;
-        p.querySelector('[data-hv-onay]').disabled = !l.some(x => x.u.uygun); };
+        p.querySelector('[data-hv-onay]').disabled = !l.some(x => x.u.uygun); grupYenile(); };
+      // SNV-075: işaretli adaylarla sınıf grubu kaç olur ("B sınıfı 7 → 10 olur · en az 12")
+      const grupYenile = () => { if (!secS) return; const ids = [...p.querySelectorAll('[data-hv-aday]:checked:not(:disabled)')].map(x => x.dataset.hvAday), b = p.querySelector(`[data-hv-ot="${secS.id}"]`), y = b && b.querySelector('.hv-grup'); if (y) y.outerHTML = grupMetni(secS, ids); else if (b) b.insertAdjacentHTML('beforeend', grupMetni(secS, ids)); };
+      p.addEventListener('change', ev => { if (ev.target.closest('[data-hv-aday]')) grupYenile(); });
       p.querySelectorAll('[data-hv-ot]').forEach(b => b.addEventListener('click', () => goster(b.dataset.hvOt)));
       if (onSecili) goster(onSecili);
       p.querySelector('[data-hv-onay]').addEventListener('click', async () => {

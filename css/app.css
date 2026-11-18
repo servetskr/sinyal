@@ -3667,3 +3667,13 @@ a.kart.gosterge { text-decoration: none; color: inherit; display: block; }
 .km-tablo th { color: var(--soluk); font-weight: 600; font-size: 12px; }
 .km-blok { overflow-x: auto; }
 .km-eksik td { background: rgba(213, 43, 30, .08); }
+
+/* SNV-074/075: randevu grubu çipleri */
+.rg-cipler { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.rg-cip { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--cizgi); color: var(--murekkep); }
+.rg-cip.eksik { border-color: #e0a100; background: #fff6d6; color: #6b4a00; }
+.rg-cip.tamam { border-color: #2e7d32; color: #1b5e20; }
+.hv-grup { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; font-style: normal; font-size: 12.5px; }
+.hv-grup i { font-style: normal; }
+.hv-grup i.eksik { color: #8a5a00; }
+.hv-grup i.tamam { color: #1b5e20; }
