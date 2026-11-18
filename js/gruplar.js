@@ -2,7 +2,7 @@
 // dönem YYYYAA, grup 1–3 (her grubun tek başlangıç tarihi, ayın 1'i ile 10'u arası), şube A–H. Ad: "Kasım 1A".
 // Kursiyer kaydı grubun başlangıcından önce yapılır (MTSK Yönetmeliği 12/2); evrakı tamam ve gruba atanmış kursiyer aktiftir.
 import { S, kaydet, gun, fark, iso, SINIFLAR, tamAd, islem, eksikEvrak, sb, anaSinif, mebKurum } from './veri.js?v=234';
-import { e, pencere, kapatPencere, bildir, rozet, tarih, isaret, ik, pencereSor } from './ui.js?v=234';
+import { e, pencere, kapatPencere, bildir, rozet, tarih, isaret, ik, pencereSor, bos } from './ui.js?v=234';
 import * as KR from './kurallar.js?v=234';
 
 export const AYLAR = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -356,4 +356,34 @@ export function ogretmenPencere(o, sonra) {
       });
     },
   });
+}
+
+/* ---------- Ayarlar › Dönem ve gruplar (DON-004, not 38) ----------
+   Bütün dönem gruplarının tek yeri: dönem dönem grup/şube, başlangıç, sınıf, derslik, doluluk, MEBBİS durumu ve tutarlılık uyarıları. */
+// Var olan grubun tutarsızlıkları: başlangıç dönemin ayında 1–10 değil, aynı grubun şubeleri farklı gün, MEBBİS'teki başlangıçla fark (DON-007)
+export function grupTutarsizliklari(g) {
+  if (!mebGrubuMu(g)) return [];
+  const l = [];
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(g.baslangic || '')) l.push('başlangıç tarihi yok');
+  else if (g.baslangic.slice(0, 7) !== ayBasi(g.donem) || +g.baslangic.slice(8, 10) > 10) l.push(`başlangıç ${tarih(g.baslangic)} ${donemAdi(g.donem)} döneminin 1–10’u arasında değil`);
+  const kardes = (S.gruplar || []).find(x => x.id !== g.id && mebGrubuMu(x) && x.donem === g.donem && +x.grupNo === +g.grupNo && x.baslangic && g.baslangic && x.baslangic !== g.baslangic);
+  if (kardes) l.push(`aynı grubun ${kardes.ad} şubesi ${tarih(kardes.baslangic)} başlıyor`);
+  if (g.mebBaslangic && g.baslangic && g.mebBaslangic !== g.baslangic) l.push(`MEBBİS’te başlangıç ${tarih(g.mebBaslangic)}`);
+  if ((S.gruplar || []).filter(x => mebGrubuMu(x) && x.donem === g.donem).map(x => +x.grupNo).filter((v, i, a) => a.indexOf(v) === i).length > 3) l.push('dönemde 3’ten fazla grup');
+  return l;
+}
+export function donemSekmesiHtml() {
+  const l = (S.gruplar || []), meb = l.filter(mebGrubuMu), dis = l.filter(g => !mebGrubuMu(g)), ac = acilabilirDonem();
+  const donemler = [...new Set(meb.map(g => g.donem))].sort().reverse();
+  const tut = meb.filter(g => grupTutarsizliklari(g).length);
+  const satir = g => { const d = grupDoluluk(g), t = grupTutarsizliklari(g);
+    return `<tr><td><b style="color:var(--murekkep)">${e(g.ad)}</b>${t.length ? `<small style="display:block;color:var(--kirmizi);font-weight:700">${isaret('uyari', 14)} ${e(t.join(' · '))}</small>` : ''}</td><td class="rf-nw">${g.baslangic ? tarih(g.baslangic) + ' ' + g.baslangic.slice(0, 4) : '—'}</td><td class="m-gizle">${g.sinif ? e(((SINIFLAR[g.sinif] || {}).ad || g.sinif).split(' ·')[0]) : 'Bütün sınıflar'}</td><td class="m-gizle">${e(g.derslik || '—')}</td><td class="rf-nw"><span class="sayi">${d.n}${d.k ? '/' + d.k : ''}</span>${d.dolu ? ' ' + rozet('dolu', 'kirmizi') : ''}</td><td>${g.meb ? rozet(g.kaynak === 'MEBBİS' ? 'MEBBİS’ten' : 'MEBBİS’te', 'yesil') : rozet('MEBBİS’e girilecek', 'uyari')}</td><td><button type="button" class="dg dg-hafif dg-kucuk" data-grup-duzenle="${e(g.id)}">Düzenle</button></td></tr>`; };
+  return `<div class="kart"><div class="kart-bas"><h3>Dönem ve gruplar</h3><small>MEBBİS’teki dönem, grup ve şubelerle birebir</small><div class="sag"><button type="button" class="dg dg-ana dg-kucuk" data-grup-yeni>${ik('arti')}Yeni grup</button></div></div>
+    <div class="kart-govde" style="padding-bottom:0"><p class="ipucu">${isaret('bilgi', 18)}<span>Dönem <b>YYYY-Ay</b>; bir dönemde en çok 3 grup (Grup 1–3), her grubun tek başlangıç günü ayın <b>1–10’u</b> arasında, şubeler (A–H) grubun gününü alır. Başlangıç MEBBİS’te sonradan değişmez. Şu an MEBBİS’te yeni grup açılabilen dönem: <b>${e(donemAdi(ac))}</b>.</span></p>
+      ${tut.length ? `<p class="ipucu uyari" style="margin-top:10px">${isaret('uyari', 18)}<span><b>${tut.length} grupta tarih tutarsızlığı var.</b> Grubu düzenleyip MEBBİS’teki tarihle aynı yapın; kursiyerlerin 90 gün ve sınav hakkı süreleri grup başlangıcından hesaplanır.</span></p>` : ''}</div>
+    ${donemler.length ? donemler.map(dn => `<div class="kart-bas" style="padding-top:16px"><h3 style="font-size:15px">${e(donemAdi(dn))}</h3><small>${meb.filter(g => g.donem === dn).length} şube${dn === ac ? ' · MEBBİS’te yeni grup açılabilir' : ''}</small></div>
+      <div class="tablo-kap"><table class="tablo tablo-mobil"><thead><tr><th>Grup / şube</th><th>Başlangıç</th><th class="m-gizle">Sınıf</th><th class="m-gizle">Derslik</th><th>Kayıtlı</th><th>MEBBİS</th><th></th></tr></thead><tbody>${meb.filter(g => g.donem === dn).sort((a, b) => +a.grupNo - +b.grupNo || a.sube.localeCompare(b.sube)).map(satir).join('')}</tbody></table></div>`).join('')
+      : `<div class="kart-govde">${bos('Henüz dönem grubu yok', 'MEBBİS’te açtığınız grubu “Yeni grup”la girin ya da MEB işlemleri › MEBBİS’ten al › Dönem gruplarıyla alın.')}</div>`}
+    ${dis.length ? `<div class="kart-bas" style="padding-top:16px"><h3 style="font-size:15px">MEBBİS dışı gruplar</h3><small>Dönem, grup ve şubesi olmayan eski gruplar; MEBBİS kaydında kullanılamaz</small></div><div class="tablo-kap"><table class="tablo tablo-mobil"><tbody>${dis.map(g => `<tr><td><b>${e(g.ad || g.id)}</b></td><td>${g.baslangic ? tarih(g.baslangic) : '—'}</td><td>${grupDoluluk(g).n} kişi</td><td><button type="button" class="dg dg-hafif dg-kucuk" data-grup-duzenle="${e(g.id)}">Düzenle</button></td></tr>`).join('')}</tbody></table></div>` : ''}
+    <div style="height:14px"></div></div>`;
 }

@@ -19,6 +19,7 @@ import * as KR from './kurallar.js?v=234';
 import { SINIF_VARSAYILAN, gerekliDireksiyon, geceGerekli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, sinavHakSiniri, DERS_KURAL_TARIH, kuralAyar, mebKurum, programAcik, varsayilanYontem } from './veri.js?v=234';
 import { listeAdi, gecerlilikMetni } from './taban.js?v=234';
 import * as RK from './rapor-kasa.js?v=234';
+import * as GR from './gruplar.js?v=234';
 
 const durum = { sinav: 'yaklasan', kasa: 'hareket', filo: 'arac', mesaj: 'gelen', meb: 'aktarim', ayar: 'kurs' };
 let secSohbet = null, gecmisKim = '', sohbetAcik = false;
@@ -911,13 +912,15 @@ export function ayarlar(alt) {
       <div class="ara-bosluk"></div><div class="kart"><div class="kart-bas"><h3>Saklama ve imha</h3></div><div class="kart-govde"><p style="font-size:14px">Saklama süresi: <b>${S.kurs.saklamaYil} yıl</b> (kurs ayarı; mevzuata göre belirleyin). Süresi dolan ${imha.length} kayıt var.</p>${imha.length ? `<button class="dg dg-cizgi dg-kucuk" style="margin-top:10px" data-anonim>Süresi dolanları anonimleştir</button>` : ''}<p style="font-size:14px;margin-top:10px">Kim hangi kişisel veriye baktı: <a href="#/ayarlar/gecmis" style="color:var(--levha);font-weight:700">İşlem geçmişi</a></p></div></div></div></div>`; }
   if (AYAR_SEKMELERI[durum.ayar]) govde = AYAR_SEKMELERI[durum.ayar]();
   if (durum.ayar === 'veri') govde = EP.veriSekmesiHtml();
+  if (durum.ayar === 'donem') govde = GR.donemSekmesiHtml();
   if (durum.ayar === 'kursdavet' && BL.bulut.yonetici) govde = `<div class="kart"><div class="kart-bas"><h3>Yeni kurs hesabı linki</h3><small>Tek kullanımlık · 30 gün geçerli · yalnız mdSinyal ekibi görür</small></div><div class="kart-govde"><p style="font-size:14px;margin-bottom:10px">Satış sonrası kurs müdürüne bu linki gönderin; kurs kendi e-postası ve şifresiyle hesabını açar. Link kullanılınca geçersiz olur.</p><div class="alan"><label>Not (hangi kurs için)</label><input data-kd-not placeholder="Örn. Adalar Sürücü Kursu"></div><button class="dg dg-ana" style="margin-top:12px" data-kd-olustur>Link oluştur</button><div data-kd-sonuc style="margin-top:12px"></div></div></div>`;
   return {
     baslik: 'Ayarlar', alt: S.kurs.ad,
-    html: `<div id="sek" class="ayar-gruplar">${[['Kurs', [['kurs', 'Kurs bilgileri'], ['subeler', 'Şubeler'], ['sinif', 'Sınıf ve ücretler'], ['kurallar', 'MEB kuralları'], ['sozlesme', 'Sözleşme metni'], ['ogrenciapp', 'Öğrenci uygulaması']]], ['Kişiler ve güvenlik', [['kullanici', 'Kullanıcılar'], ['guvenlik', 'Güvenlik'], ['kvkk', 'KVKK'], ['gecmis', 'İşlem geçmişi']]], ['Bağlantılar', [['veri', 'Veri ve e-posta'], ['entegrasyon', 'Muhasebe ve fatura'], ['aktarim', 'Veri aktarımı']]], ['Diğer', [['gorunum', 'Görünüm'], ...(BL.bulut.yonetici ? [['kursdavet', 'Kurs hesabı linkleri']] : [])]]].map(([g, l]) => `<div class="ayar-grup"><small>${g}</small>${sekmeler(l, durum.ayar)}</div>`).join('')}</div>${durum.ayar === 'kvkk' ? `<p class="ekran-notu">${isaret('bilgi', 20)}<span>Mesajlaşma asistanının KVKK ayarları (gizleme, aydınlatma bağlantısı, saklama süresi) <a href="#/sosyal/kural" style="color:var(--levha);font-weight:700">Sosyal medya asistanı › Kurallar</a> sayfasında.</span></p>` : ''}${govde}`,
+    html: `<div id="sek" class="ayar-gruplar">${[['Kurs', [['kurs', 'Kurs bilgileri'], ['subeler', 'Şubeler'], ['donem', 'Dönem ve gruplar'], ['sinif', 'Sınıf ve ücretler'], ['kurallar', 'MEB kuralları'], ['sozlesme', 'Sözleşme metni'], ['ogrenciapp', 'Öğrenci uygulaması']]], ['Kişiler ve güvenlik', [['kullanici', 'Kullanıcılar'], ['guvenlik', 'Güvenlik'], ['kvkk', 'KVKK'], ['gecmis', 'İşlem geçmişi']]], ['Bağlantılar', [['veri', 'Veri ve e-posta'], ['entegrasyon', 'Muhasebe ve fatura'], ['aktarim', 'Veri aktarımı']]], ['Diğer', [['gorunum', 'Görünüm'], ...(BL.bulut.yonetici ? [['kursdavet', 'Kurs hesabı linkleri']] : [])]]].map(([g, l]) => `<div class="ayar-grup"><small>${g}</small>${sekmeler(l, durum.ayar)}</div>`).join('')}</div>${durum.ayar === 'kvkk' ? `<p class="ekran-notu">${isaret('bilgi', 20)}<span>Mesajlaşma asistanının KVKK ayarları (gizleme, aydınlatma bağlantısı, saklama süresi) <a href="#/sosyal/kural" style="color:var(--levha);font-weight:700">Sosyal medya asistanı › Kurallar</a> sayfasında.</span></p>` : ''}${govde}`,
     baglan(k) {
       ayarBaglan(k);
       if (durum.ayar === 'veri') EP.veriSekmesiBagla(k);
+      if (durum.ayar === 'donem') GR.gruplarBaglan(k, yenile);
       k.addEventListener('change', ev => {
         const t = ev.target;
         { const g = t.closest('[data-gecis],[data-taban-ek]'); if (g) { if (!mudurMu()) return bildir('Ücretleri yalnız müdür değiştirir', 'uyari'); const v = tutarOku(t.value);
