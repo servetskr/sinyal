@@ -3,9 +3,11 @@
 // Alış faturası: S.alisFaturalari [{ id, tedarikci, belgeNo, tarih, tutar (KDV dahil), kdv (%), kategori, aciklama, vade, odemeler: [hareket id], kim }].
 // Ödenmiş gider: kasa hareketi (S.hareket, tür Gider) faturaya bağlanır (h.alis); vadeli gider kasaya girmez, tedarikçiye borç olur, "Öde" ile kasadan çıkar.
 // Tedarikçi bakiyesi = faturalar − ödemeler. Müşavir paketine "Alış faturaları" sayfası (sayfalar5.js).
-// Belge görseli: dosya deposu (Firebase Storage kuralı) gelince eklenecek; şimdilik belge no ve tedarikçi VKN'si tutulur.
+// Belge görseli (a.gorsel = { veri: data URL, tur: 'resim'|'pdf', ad, tarih }): fotoğraf ve imzalar gibi kurs verisinde durur; büyük metin
+// bulut.js'te kurslar/{k}/dosyalar'a ayrı belge olarak gider (Firebase Storage gerekmez). Fotoğraf 1400 px JPEG'e küçültülür, PDF en çok 700 KB.
 import { S, kaydet, gun, fark, islem, oturum, sb, tutarOku, YONTEMLER, yontemAd, geriAlNoktasi } from './veri.js?v=234';
 import { e, tl, ik, rozet, tarih, pencere, kapatPencere, bildir, bos } from './ui.js?v=234';
+import { fotoAl } from './sayfalar1.js?v=234';
 
 // KAY-022 (SOR-060/061): firma carisi — kurumsal eğitimde ücreti firma öder; öğrenci k.firma ile bağlanır. S.firmalar [{ id, ad, vkn, vergiDairesi, tel, yetkili }]
 export const firmalar = () => (S.firmalar = S.firmalar || []);
@@ -18,6 +20,25 @@ export const tedarikci = id => tedarikciler().find(x => x.id === id);
 const odenen = a => (a.odemeler || []).map(id => S.hareket.find(h => h.id === id)).filter(h => h && !h.iptal).reduce((t, h) => t + (+h.tutar || 0), 0);
 export const alisKalan = a => Math.max(0, (+a.tutar || 0) - odenen(a));
 export const tedarikciBakiye = id => alislar().filter(a => a.tedarikci === id && !a.iptal).reduce((t, a) => t + alisKalan(a), 0);
+// PAR-056: belge görseli okuma (fotoğraf ya da PDF). Hata iletisi x.message'da (HEIC ve bozuk dosya için KAY-115 iletisi).
+const PDF_SINIR = 700 * 1024;
+export async function belgeGorseliOku(fl) {
+  if (!fl) throw new Error('Dosya seçin');
+  if (/pdf/i.test(fl.type || '') || /\.pdf$/i.test(fl.name || '')) {
+    if (fl.size > PDF_SINIR) throw new Error('PDF en çok 700 KB olabilir; faturanın fotoğrafını çekip yükleyin');
+    const veri = await new Promise((ok, red) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = red; r.readAsDataURL(fl); });
+    if (!/^data:application\/pdf;base64,/.test(veri)) throw new Error('PDF okunamadı');
+    return { veri, tur: 'pdf', ad: String(fl.name || '').slice(0, 80), tarih: gun(0) };
+  }
+  return { veri: await fotoAl(fl, 1400), tur: 'resim', ad: String(fl.name || '').slice(0, 80), tarih: gun(0) };
+}
+export function gorselGoster(a) {
+  const g = a && a.gorsel; if (!g || !g.veri) return;
+  const t = tedarikci(a.tedarikci) || {};
+  pencere({ baslik: 'Fatura · ' + (t.ad || '') + (a.belgeNo ? ' · ' + a.belgeNo : ''), genis: g.tur === 'pdf', taslak: false,
+    icerik: g.tur === 'pdf' ? `<iframe src="${g.veri}" style="width:100%;height:60vh;border:0" title="Fatura"></iframe>` : `<img src="${g.veri}" alt="Fatura görseli" style="max-width:100%;border-radius:8px">`,
+    altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button>' });
+}
 const kdvAyir = (tutar, oran) => { const m = Math.round(tutar / (1 + oran / 100) * 100) / 100; return [m, Math.round((tutar - m) * 100) / 100]; };
 
 // Gelir/gider ekle penceresindeki fatura bölümü (yalnız giderde görünür)
@@ -29,26 +50,34 @@ export function faturaAlaniHtml() {
     <div class="alan"><label for="al-n">Belge no</label><input id="al-n" name="alNo" maxlength="30" autocomplete="off"></div>
     <div class="alan"><label for="al-k">KDV</label><select id="al-k" name="alKdv">${[20, 10, 1, 0].map(n => `<option value="${n}">%${n}</option>`).join('')}</select></div>
     <div class="alan tam"><span class="et">Ödeme</span><div class="secim"><label><input type="radio" name="alOdeme" value="simdi" checked><span>Şimdi ödendi</span></label><label><input type="radio" name="alOdeme" value="vadeli"><span>Vadeli (tedarikçiye borç)</span></label></div></div>
-    <div class="alan" data-al-vade hidden><label for="al-vd">Vade</label><input id="al-vd" name="alVade" type="date" value="${gun(30)}"></div></div></fieldset>`;
+    <div class="alan" data-al-vade hidden><label for="al-vd">Vade</label><input id="al-vd" name="alVade" type="date" value="${gun(30)}"></div>
+    <div class="alan tam"><label for="al-g">Belge görseli <small style="color:var(--soluk);font-weight:400">fotoğraf ya da PDF · isteğe bağlı</small></label><input id="al-g" name="alGorsel" type="file" accept="image/*,application/pdf"><small data-al-g-durum style="color:var(--soluk)"></small></div></div></fieldset>`;
 }
 export function faturaAlaniBagla(f) {
   const a = f.querySelector('[data-alis]'); if (!a) return;
   const g = () => { const gider = (f.querySelector('[name=tur]:checked') || {}).value !== 'Gelir', vadeli = (f.querySelector('[name=alOdeme]:checked') || {}).value === 'vadeli'; a.hidden = !gider; f.querySelector('[data-al-vade]').hidden = !vadeli;
     ['y', 'hesap'].forEach(n => { const x = f.querySelector(`[name=${n}]`); if (x) x.closest('.alan').style.opacity = vadeli ? '.45' : ''; }); };
   f.addEventListener('change', g); g();
+  // belge görseli seçilince hemen okunur (küçültme zaman alır); kaydette f._alGorsel kullanılır
+  f.alGorsel.addEventListener('change', () => { const fl = f.alGorsel.files[0], dm = f.querySelector('[data-al-g-durum]'); f._alGorsel = null; if (!fl) { dm.textContent = ''; return; }
+    f.dataset.alOkunuyor = '1'; dm.textContent = 'Hazırlanıyor…';
+    belgeGorseliOku(fl).then(g => { f._alGorsel = g; dm.textContent = (g.tur === 'pdf' ? 'PDF' : 'Fotoğraf') + ' hazır · ' + Math.round(g.veri.length * 0.75 / 1024) + ' KB'; })
+      .catch(x => { f.alGorsel.value = ''; dm.textContent = ''; bildir(x.message || 'Dosya okunamadı', 'uyari'); }).finally(() => { delete f.dataset.alOkunuyor; }); });
   f.alTed.addEventListener('change', () => { const t = tedarikciler().find(x => x.ad.toLocaleLowerCase('tr') === f.alTed.value.trim().toLocaleLowerCase('tr')); if (t && t.vkn) f.alVkn.value = t.vkn; });
 }
 // Formdan alış faturası: { vadeli } döner; vadeliyse kasa hareketi yazılmaz. Fatura alanı boşsa null (yalnız kasa hareketi).
 export function faturaOku(f, { tutar, tarih: t, kategori, aciklama }) {
   if (!f.querySelector('[data-alis]') || (f.querySelector('[name=tur]:checked') || {}).value === 'Gelir') return null;
   const ad = f.alTed.value.trim().replace(/\s+/g, ' '), no = f.alNo.value.trim(), vadeli = (f.querySelector('[name=alOdeme]:checked') || {}).value === 'vadeli';
-  if (!ad && !no && !vadeli) return null;
+  if (f.dataset.alOkunuyor) return { hata: 'Belge görseli hazırlanıyor; biraz sonra yeniden Kaydet’e basın' };
+  const gorsel = f._alGorsel || null;
+  if (!ad && !no && !vadeli && !gorsel) return null;
   if (!ad) return { hata: 'Tedarikçinin adını yazın' };
   if (vadeli && !f.alVade.value) return { hata: 'Vade tarihini girin' };
   let td = tedarikciler().find(x => x.ad.toLocaleLowerCase('tr') === ad.toLocaleLowerCase('tr'));
   if (!td) { td = { id: 'td' + Date.now().toString(36), ad, ...(f.alVkn.value.trim() ? { vkn: f.alVkn.value.replace(/\D/g, '') } : {}) }; tedarikciler().push(td); islem('Tedarikçi ekledi', ad); }
   else if (!td.vkn && f.alVkn.value.trim()) td.vkn = f.alVkn.value.replace(/\D/g, '');
-  const a = { id: 'al' + Date.now().toString(36), tedarikci: td.id, belgeNo: no, tarih: t, tutar, kdv: +f.alKdv.value, kategori, aciklama, vade: vadeli ? f.alVade.value : t, odemeler: [], kim: oturum.kullanici ? oturum.kullanici.ad : '' };
+  const a = { id: 'al' + Date.now().toString(36), tedarikci: td.id, belgeNo: no, tarih: t, tutar, kdv: +f.alKdv.value, kategori, aciklama, vade: vadeli ? f.alVade.value : t, odemeler: [], kim: oturum.kullanici ? oturum.kullanici.ad : '', ...(gorsel ? { gorsel } : {}) };
   alislar().push(a); islem(vadeli ? 'Vadeli gider faturası girdi' : 'Gider faturası girdi', `${ad}${no ? ' · ' + no : ''} · ${tl(tutar)}`);
   return { a, vadeli };
 }
@@ -66,8 +95,23 @@ function tedarikciHtml() {
   const l = tedarikciler().slice().sort((x, y) => tedarikciBakiye(y.id) - tedarikciBakiye(x.id) || x.ad.localeCompare(y.ad, 'tr')), acik = alislar().filter(a => !a.iptal && alisKalan(a) > 0).sort((x, y) => String(x.vade).localeCompare(y.vade));
   const top = acik.reduce((t, a) => t + alisKalan(a), 0), gec = acik.filter(a => fark(a.vade) < 0);
   return `<div class="kart"><div class="kart-bas"><h3>Tedarikçiler</h3><small>${l.length} tedarikçi · borç <b>${tl(top)}</b>${gec.length ? ` · ${gec.length} faturanın vadesi geçti` : ''}</small><div class="sag"><button class="dg dg-cizgi dg-kucuk" data-td-ekle>${ik('arti')}Tedarikçi ekle</button></div></div>
-    ${acik.length ? `<div class="tablo-kap"><table class="tablo tablo-mobil"><thead><tr><th>Tedarikçi</th><th>Belge</th><th>Vade</th><th class="sag">Kalan</th><th></th></tr></thead><tbody>${acik.map(a => { const t = tedarikci(a.tedarikci) || {}; return `<tr><td class="m-tam"><b>${e(t.ad || '—')}</b><small style="display:block;color:var(--soluk)">${e(a.kategori || '')}${a.aciklama ? ' · ' + e(a.aciklama) : ''}</small></td><td class="mono">${e(a.belgeNo || '—')}</td><td>${fark(a.vade) < 0 ? rozet(tarih(a.vade) + ' geçti', 'kirmizi') : tarih(a.vade)}</td><td class="sag sayi">${tl(alisKalan(a))}</td><td class="sag"><button class="dg dg-ana dg-kucuk" data-al-ode="${e(a.id)}">Öde</button></td></tr>`; }).join('')}</tbody></table></div>` : '<p class="ipucu" style="margin:0 20px 12px">Ödenmemiş gider faturası yok.</p>'}
-    <ul class="liste">${l.map(t => { const n = alislar().filter(a => a.tedarikci === t.id && !a.iptal); return `<li><div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(t.ad)}</b><small style="display:block;color:var(--soluk)">${t.vkn ? 'VKN ' + e(t.vkn) + ' · ' : ''}${n.length} fatura · toplam ${tl(n.reduce((s, a) => s + (+a.tutar || 0), 0))}</small></div><span class="sag">${tedarikciBakiye(t.id) ? rozet('Borç ' + tl(tedarikciBakiye(t.id)), 'uyari') : rozet('Borç yok', 'yesil')} <button class="dg dg-hafif dg-kucuk" data-td-duz="${e(t.id)}">Düzenle</button></span></li>`; }).join('') || `<li>${bos('Tedarikçi yok', 'Gider eklerken fatura bölümüne tedarikçiyi yazın ya da buradan ekleyin.')}</li>`}</ul></div>`;
+    ${acik.length ? `<div class="tablo-kap"><table class="tablo tablo-mobil"><thead><tr><th>Tedarikçi</th><th>Belge</th><th>Vade</th><th class="sag">Kalan</th><th>Belge</th><th></th></tr></thead><tbody>${acik.map(a => { const t = tedarikci(a.tedarikci) || {}; return `<tr><td class="m-tam"><b>${e(t.ad || '—')}</b><small style="display:block;color:var(--soluk)">${e(a.kategori || '')}${a.aciklama ? ' · ' + e(a.aciklama) : ''}</small></td><td class="mono">${e(a.belgeNo || '—')}</td><td>${fark(a.vade) < 0 ? rozet(tarih(a.vade) + ' geçti', 'kirmizi') : tarih(a.vade)}</td><td class="sag sayi">${tl(alisKalan(a))}</td><td>${gorselDugme(a)}</td><td class="sag"><button class="dg dg-ana dg-kucuk" data-al-ode="${e(a.id)}">Öde</button></td></tr>`; }).join('')}</tbody></table></div>` : '<p class="ipucu" style="margin:0 20px 12px">Ödenmemiş gider faturası yok.</p>'}
+    <ul class="liste cari-td">${l.map(t => { const n = alislar().filter(a => a.tedarikci === t.id && !a.iptal); return `<li><div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(t.ad)}</b><small style="display:block;color:var(--soluk)">${t.vkn ? 'VKN ' + e(t.vkn) + ' · ' : ''}${n.length} fatura · toplam ${tl(n.reduce((s, a) => s + (+a.tutar || 0), 0))}</small></div><span class="sag">${tedarikciBakiye(t.id) ? rozet('Borç ' + tl(tedarikciBakiye(t.id)), 'uyari') : rozet('Borç yok', 'yesil')}${n.length ? ` <button class="dg dg-hafif dg-kucuk" data-td-fat="${e(t.id)}">Faturalar</button>` : ''} <button class="dg dg-hafif dg-kucuk" data-td-duz="${e(t.id)}">Düzenle</button></span></li>`; }).join('') || `<li>${bos('Tedarikçi yok', 'Gider eklerken fatura bölümüne tedarikçiyi yazın ya da buradan ekleyin.')}</li>`}</ul></div>`;
+}
+// PAR-056: faturada görsel varsa "Gör", yoksa "Ekle" (sonradan eklenebilir; değiştirilemez, dosya içeriği kanıttır)
+const gorselDugme = a => a.gorsel && a.gorsel.veri ? `<button class="dg dg-hafif dg-kucuk" data-al-gor="${e(a.id)}">${ik('goz')}Gör</button>` : `<label class="dg dg-hafif dg-kucuk" style="cursor:pointer">${ik('arti')}Ekle<input type="file" accept="image/*,application/pdf" data-al-gorsel="${e(a.id)}" hidden></label>`;
+function faturalarPenceresi(id) {
+  const t = tedarikci(id); if (!t) return;
+  const l = alislar().filter(a => a.tedarikci === id && !a.iptal).sort((x, y) => String(y.tarih).localeCompare(String(x.tarih)));
+  pencere({ baslik: 'Faturalar · ' + t.ad, taslak: false, icerik: `<ul class="liste" data-td-fat-l>${l.map(a => `<li><div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(a.belgeNo || 'Belgesiz')} · ${tl(+a.tutar || 0)}</b><small style="display:block;color:var(--soluk)">${tarih(a.tarih)}${a.kategori ? ' · ' + e(a.kategori) : ''}${alisKalan(a) ? ' · kalan ' + tl(alisKalan(a)) : ' · ödendi'}${a.gorsel ? ' · ' + (a.gorsel.tur === 'pdf' ? 'PDF' : 'fotoğraf') + ' ' + tarih(a.gorsel.tarih) : ''}</small></div><span class="sag">${gorselDugme(a)}</span></li>`).join('') || `<li>${bos('Fatura yok', '')}</li>`}</ul>`,
+    altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button>',
+    onAc(p) { gorselBagla(p, () => { kapatPencere(); faturalarPenceresi(id); }); } });
+}
+function gorselBagla(k, sonra) {
+  k.addEventListener('click', ev => { const g = ev.target.closest('[data-al-gor]'); if (g) gorselGoster(alislar().find(x => x.id === g.dataset.alGor)); });
+  k.addEventListener('change', ev => { const i = ev.target.closest('[data-al-gorsel]'); if (!i || !i.files[0]) return; const a = alislar().find(x => x.id === i.dataset.alGorsel); if (!a || a.gorsel) return;
+    belgeGorseliOku(i.files[0]).then(g => { a.gorsel = g; const t = tedarikci(a.tedarikci) || {}; islem('Fatura görseli ekledi', (t.ad || '') + (a.belgeNo ? ' · ' + a.belgeNo : '')); kaydet(); bildir('Fatura görseli eklendi', 'tamam'); sonra && sonra(); })
+      .catch(x => { i.value = ''; bildir(x.message || 'Dosya okunamadı', 'uyari'); }); });
 }
 function tedarikciPenceresi(id, sonra) {
   const t = id ? tedarikci(id) : null, x = t || { ad: '', vkn: '', vergiDairesi: '', tel: '', not: '' };
@@ -96,10 +140,12 @@ export function cariBagla(k, yenile) {
     if (ev.target.closest('[data-td-ekle]')) return tedarikciPenceresi(null, yenile);
     const d = ev.target.closest('[data-td-duz]'); if (d) return tedarikciPenceresi(d.dataset.tdDuz, yenile);
     const o = ev.target.closest('[data-al-ode]'); if (o) return odePenceresi(o.dataset.alOde, yenile);
+    const ft = ev.target.closest('[data-td-fat]'); if (ft) return faturalarPenceresi(ft.dataset.tdFat);
   });
+  gorselBagla(k, yenile);
 }
 // Müşavir paketi: ayın alış faturaları (tedarikçi, VKN, belge no, matrah, KDV, toplam, ödeme)
 export function alisSatirlari(buAy) {
-  return [['Tarih', 'Tedarikçi', 'VKN / TC', 'Belge no', 'Kategori', 'Matrah', 'KDV oranı (%)', 'KDV', 'Toplam', 'Ödenen', 'Kalan', 'Vade'],
-    ...alislar().filter(a => !a.iptal && buAy(a.tarih)).sort((x, y) => x.tarih.localeCompare(y.tarih)).map(a => { const t = tedarikci(a.tedarikci) || {}, [m, k] = kdvAyir(+a.tutar || 0, +a.kdv || 0); return [a.tarih.split('-').reverse().join('.'), t.ad || '', t.vkn || '', a.belgeNo || '', a.kategori || '', m, a.kdv, k, a.tutar, odenen(a), alisKalan(a), a.vade ? a.vade.split('-').reverse().join('.') : '']; })];
+  return [['Tarih', 'Tedarikçi', 'VKN / TC', 'Belge no', 'Kategori', 'Matrah', 'KDV oranı (%)', 'KDV', 'Toplam', 'Ödenen', 'Kalan', 'Vade', 'Belge görseli'],
+    ...alislar().filter(a => !a.iptal && buAy(a.tarih)).sort((x, y) => x.tarih.localeCompare(y.tarih)).map(a => { const t = tedarikci(a.tedarikci) || {}, [m, k] = kdvAyir(+a.tutar || 0, +a.kdv || 0); return [a.tarih.split('-').reverse().join('.'), t.ad || '', t.vkn || '', a.belgeNo || '', a.kategori || '', m, a.kdv, k, a.tutar, odenen(a), alisKalan(a), a.vade ? a.vade.split('-').reverse().join('.') : '', a.gorsel ? (a.gorsel.tur === 'pdf' ? 'PDF' : 'Fotoğraf') : '']; })];
 }

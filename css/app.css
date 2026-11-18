@@ -3880,3 +3880,5 @@ tr.secili-satir td { background: rgba(10, 77, 162, .06); }
 @media (max-width: 760px) { .tel-onizleme { border-width: 6px; border-radius: 24px; height: calc(100dvh - 190px); min-height: 480px; } }
 /* çerçeve telefon genişliğinde: masaüstü için yüzen 500 px sekme çubuğu yerine telefondaki tam genişlik çubuk */
 .tel-onizleme .ox-sekme { left: 0; right: 0; bottom: 0; width: auto; transform: none; border-width: .5px 0 0; border-radius: 0; box-shadow: none; }
+/* PAR-056: tedarikçi satırında rozet ve düğmeler dar ekranda alt satıra iner */
+@media (max-width: 640px) { .cari-td li { flex-wrap: wrap; } .cari-td li > div[style*="flex:1"] { flex: 1 1 100% !important; } .cari-td li > .sag { margin-left: 0; flex-wrap: wrap; flex: 1 1 auto; } }
