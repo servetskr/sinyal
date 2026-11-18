@@ -14,6 +14,7 @@
 // /hata: uygulama hatalarının kişisel veri içermeyen kısa kaydı (POST, sitenin kendi adresinden); KV 'hata:<gün>:<iz>' 7 gün.
 //   GET /hata yalnız platform sahibine: Firebase oturum belirteci (sahip uid) ya da SAHIP_ANAHTAR (gizli) ile.
 // /eposta: kursun rapor ve yedek e-postaları (onaylı adreslere); /eposta/sahip platform sahibinin analiz e-postası. Ayrıntı eposta() üstünde.
+//   /eposta/ogrenci (PAR-058): öğrenciye tek alıcılı makbuz / ödeme hatırlatması; ayrıntı epOgrenci() üstünde.
 // /mevzuat/*: mevzuat arama (sorgu gömme), kursa gelen MEB yazılarını yükleme/listeleme/silme, özet ve kaynaklı cevap. Ayrıntı mevzuatUc() üstünde.
 const IZINLI = ['https://mdsinyal.com', 'http://localhost:4481', 'http://127.0.0.1:4481'];
 const HEDEF = /^(https:\/\/mdsinyal\.com\/|https:\/\/servetskr\.github\.io\/sinyal\/|http:\/\/localhost:4481\/)/;
@@ -627,6 +628,43 @@ async function sms(req, env, url, yol, cevap) {
   }
   return cevap({ ok: false }, 404);
 }
+// ---- PAR-058: öğrenciye tek alıcılı e-posta (makbuz, ödeme hatırlatması) ----
+// Alıcı istekteki tek adres (öğrencinin kayıttaki e-postası); kursun onaylı adres listesi aranmaz. Kötüye kullanım engeli: yalnız ofis rolleri
+// (müdür, ön büro, şube müdürü); gövde istemciden HTML olarak alınmaz, worker kalıptan kurar (satırlar ve not düz metin, kaçışlı), konu
+// kurs adı + türden oluşur; kurs başına günde EPOSTA_OGRENCI_SINIR (varsayılan 40), aynı adrese günde 3. İsteğe bağlı tek PDF eki (makbuz).
+// KV 'epogr:<kurs>:<gün>' {n, a:{<adresin SHA-256 ilk 16 hanesi>: sayı}} 2 gün (adres açık yazılmaz). Sayaç oku-yaz: yaklaşık sınırdır.
+const EP_OGR_TUR = { makbuz: ['Ödeme makbuzu', 'Ödemeniz alındı'], hatirlatma: ['Ödeme hatırlatması', 'Ödeme hatırlatması'] };
+const EP_OGR_ROL = ['mudur', 'sekreter', 'subemudur'], EP_OGR_KISI = 3;
+const sha256Hex = async s => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(s))))].map(x => x.toString(16).padStart(2, '0')).join('');
+const epDuz = (s, n) => String(s == null ? '' : s).replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '').trim().slice(0, n);
+async function epOgrenci(req, env, cevap, S, kurs, rol) {
+  if (!rol || !EP_OGR_ROL.includes(rol)) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
+  if (!S) return cevap({ ok: false, kurulu: false, hata: 'E-posta servisi henüz kurulmadı' }, 503);
+  const ham = await req.text(); if (ham.length > 1.4e6) return cevap({ ok: false, hata: 'Dosya çok büyük' }, 413);
+  let b; try { b = JSON.parse(ham); } catch (x) { return cevap({ ok: false, hata: 'gecersiz' }, 400); }
+  const T = EP_OGR_TUR[b.tur], adres = String(b.adres || '').trim().toLowerCase();
+  if (!T) return cevap({ ok: false, hata: 'gecersiz' }, 400);
+  if (!epGecerli(adres) || /@ogrenci\.sinyal\.app$/.test(adres)) return cevap({ ok: false, hata: 'Öğrencinin e-posta adresi geçersiz' }, 400);
+  const satir = (Array.isArray(b.satirlar) ? b.satirlar : []).slice(0, 12).map(x => Array.isArray(x) ? [epDuz(x[0], 60), epDuz(x[1], 160)] : null).filter(x => x && x[0]);
+  const not = epDuz(b.not, 1000), ad = epDuz(b.ad, 80).replace(/[\r\n]/g, ' ');
+  if (!satir.length && !not) return cevap({ ok: false, hata: 'E-posta boş' }, 400);
+  let ek = null; if (b.ek) { const ead = String(b.ek.ad || '').replace(/[^\w.-]/g, '').slice(0, 80), v = b.ek.b64;
+    if (!/\.pdf$/i.test(ead) || typeof v !== 'string' || v.length > 1.2e6 || v.length % 4 || !/^[A-Za-z0-9+/]{1,64}$/.test(v.slice(0, 64)) || !/^[A-Za-z0-9+/=]{1,64}$/.test(v.slice(-64))) return cevap({ ok: false, hata: 'ek geçersiz' }, 400); ek = { ad: ead, b64: v }; }
+  const an = 'epogr:' + kurs + ':' + epGun(), h = (await sha256Hex(adres)).slice(0, 16);
+  let say; try { say = JSON.parse((await env.LINK.get(an)) || 'null'); } catch (x) { say = null; } say = say && typeof say === 'object' ? say : { n: 0, a: {} }; say.a = say.a || {};
+  const sinir = +env.EPOSTA_OGRENCI_SINIR || 40;
+  if (say.n >= sinir) return cevap({ ok: false, hata: 'Bugünlük öğrenci e-postası sınırı doldu (' + sinir + '); yarın tekrar deneyin' }, 429);
+  if ((say.a[h] || 0) >= EP_OGR_KISI) return cevap({ ok: false, hata: 'Bu adrese bugün ' + EP_OGR_KISI + ' e-posta gitti; yarın tekrar deneyin' }, 429);
+  // kurs adı istemciden alınmaz (konuya istenen metin yazılamasın): isteği yapanın kimliğiyle kurs belgesinden okunur
+  const kursAd = (await kursAdiOku(req, kurs)) || 'Sürücü kursunuz';
+  const tablo = satir.length ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:4px 0 16px;border-collapse:collapse">${satir.map(([k, v]) => `<tr><td style="padding:9px 0;border-bottom:1px solid #e8ebf1;font-size:14.5px;color:#6b7280">${epKacis(k)}</td><td align="right" style="padding:9px 0;border-bottom:1px solid #e8ebf1;font-size:14.5px;font-weight:700;color:#0f1729">${epKacis(v)}</td></tr>`).join('')}</table>` : '';
+  const govde = `${ad ? `<p style="margin:0 0 12px;font-size:15px;line-height:1.55">Sayın ${epKacis(ad)},</p>` : ''}${tablo}${not ? `<p style="margin:0;font-size:15px;line-height:1.55">${epKacis(not).replace(/\n/g, '<br>')}</p>` : ''}${ek ? '<p style="margin:14px 0 0;font-size:13px;color:#6b7280">Makbuz PDF olarak ektedir.</p>' : ''}`;
+  const metin = [ad ? 'Sayın ' + ad + ',' : null, ...satir.map(([k, v]) => k + ': ' + v), not || null, '', kursAd].filter(x => x !== null).join('\n');
+  try { await S.gonder({ kime: [adres], konu: kursAd + ' · ' + T[0], metin, html: epKabuk(T[1], govde, 'Bu e-posta ' + kursAd + ' tarafından mdSinyal üzerinden gönderildi. Sorunuz için kursunuzla görüşün.', kursAd + ' · ' + T[0]), ek }); }
+  catch (x) { console.error(x); return cevap({ ok: false, hata: 'Gönderilemedi' }, 502); }
+  say.n++; say.a[h] = (say.a[h] || 0) + 1; await env.LINK.put(an, JSON.stringify(say), { expirationTtl: 2 * 86400 });
+  return cevap({ ok: true, kalan: Math.max(0, sinir - say.n) });
+}
 async function eposta(req, env, url, yol, cevap) {
   if (!env.LINK) return cevap({ ok: false, hata: 'Depo yok' }, 500);
   const S = epSaglayici(env);
@@ -666,6 +704,7 @@ async function eposta(req, env, url, yol, cevap) {
     await epSayYaz(env, s); if (tek) await env.LINK.put(tek, '1', { expirationTtl: 40 * 86400 }); return cevap({ ok: true });
   }
   const kurs = req.headers.get('X-Kurs') || url.searchParams.get('kurs') || '', rol = await uyeRol(req, kurs);
+  if (yol === 'eposta/ogrenci' && req.method === 'POST') return epOgrenci(req, env, cevap, S, kurs, rol);   // PAR-058
   if (!rol || !['mudur', 'sekreter'].includes(rol)) return cevap({ ok: false, hata: 'Yetki yok' }, 403);  // öğretmen adresleri görmez
   const l = await epAdresler(env, kurs);
   if (yol === 'eposta' && req.method === 'GET') return cevap({ ok: true, kurulu: !!S, adresler: l.map(x => ({ a: x.a, onay: !!x.onay, tur: x.tur === 'kullanici' ? 'kullanici' : 'yonetici' })), enFazla: EP_EN_FAZLA_ADRES });
@@ -1673,7 +1712,7 @@ export default {
     if (req.method === 'GET') {
       if (!yol) return cevap({ ok: true, hazir: !!(env.WA_TOKEN && env.PHONE_ID && env.ALICI), belge: true, kisa: !!env.LINK, kursHatti: true, sablon: !!env.SABLON_AD, demoHatlari: { usta: !!env.PHONE_ID_USTA, mudur: !!env.PHONE_ID_MUDUR } });
       const anahtar = yol.startsWith('k/') ? yol.slice(2) : yol;
-      if (/^(gelen$|(hat|hatno|gelen|medya|durum|yedek|kisaad|kursad|hata|sohbet|epadres|eponay|epsay|epgitti|mbelge)[:-])/.test(anahtar)) return cevap({ ok: false }, 404);  // iç kayıtlar (e-posta adresleri ve onay belirteçleri dahil) kısa link gibi okunamaz
+      if (/^(gelen$|(hat|hatno|gelen|medya|durum|yedek|kisaad|kursad|hata|sohbet|epadres|eponay|epsay|epgitti|epogr|mbelge)[:-])/.test(anahtar)) return cevap({ ok: false }, 404);  // iç kayıtlar (e-posta adresleri ve onay belirteçleri dahil) kısa link gibi okunamaz
       // imza dönüşü: sunucu kaydı (zaman, IP, ülke, tarayıcı) yalnız imza isteğinin mührünü bilen kursa verilir (?ka=)
       if (yol.startsWith('k/takip-') && env.LINK) {
         const g = await env.LINK.getWithMetadata(anahtar), md = g.metadata || null;
