@@ -429,6 +429,46 @@ function faturaKes() {
 
 /* ================= EKİP VE ARAÇLAR ================= */
 const tarihGir = t => t || '';
+// ARC-019, ARC-020, ARC-021: araç defteri — poliçe (sigorta, kasko, tehlikeli madde, yük kaskosu), periyodik bakım, lastik, muayene ve egzoz,
+// noter (satış), zimmet ve km (aracın hangi öğretmende olduğu, çıkış-giriş km, akaryakıt). Kayıtlar a.kayitlar; poliçe bitişi ve km kartı da günceller.
+const DEFTER_TUR = [['police', 'Poliçe'], ['bakim', 'Periyodik bakım'], ['lastik', 'Lastik'], ['muayene', 'Muayene / egzoz'], ['zimmet', 'Zimmet ve km'], ['noter', 'Noter / satış']];
+function aracDefteri(a) {
+  const l = (a.kayitlar || []).slice().sort((x, y) => String(y.tarih).localeCompare(String(x.tarih)));
+  const ozet = x => x.tur === 'police' ? `${x.policeTur || 'Poliçe'} · ${e(x.acenta || '')}${x.policeNo ? ' · no ' + e(x.policeNo) : ''} · bitiş ${tarih(x.bitis)}${x.bitis && fark(x.bitis) >= 0 ? ` (${fark(x.bitis)} gün)` : ' (geçmiş)'}`
+    : x.tur === 'zimmet' ? `${e((egitmen(x.egitmen) || {}).ad || '')} · çıkış ${sayi(+x.kmCikis || 0)} km${x.kmGiris ? ` · giriş ${sayi(+x.kmGiris)} km (${sayi(+x.kmGiris - (+x.kmCikis || 0))} km)` : ' · araç öğretmende'}${x.yakitL ? ` · ${String(x.yakitL).replace('.', ',')} L yakıt` : ''}`
+    : x.tur === 'noter' ? `${e(x.noter || '')}${x.satisTarih ? ' · satış ' + tarih(x.satisTarih) : ''}` : `${x.km ? sayi(+x.km) + ' km' : ''}${x.sonrakiKm ? ' · sonraki ' + sayi(+x.sonrakiKm) + ' km' : ''}${x.bitis ? ' · geçerlilik ' + tarih(x.bitis) : ''}${x.tutar ? ' · ' + tl(+x.tutar) : ''}`;
+  pencere({ baslik: a.plaka + ' · araç defteri', genis: true, icerik: `<form class="form-izgara" id="f-df">
+      <div class="alan"><label>Kayıt türü</label><select name="tur">${DEFTER_TUR.map(([k, ad]) => `<option value="${k}">${ad}</option>`).join('')}</select></div>
+      <div class="alan"><label>Tarih</label><input name="tarih" type="date" value="${gun(0)}" required></div>
+      <div class="alan" data-df="police"><label>Poliçe türü</label><select name="policeTur">${['Trafik sigortası', 'Kasko', 'Tehlikeli madde', 'Yük kaskosu'].map(x => `<option>${x}</option>`).join('')}</select></div>
+      <div class="alan" data-df="police"><label>Acenta</label><input name="acenta" maxlength="80"></div>
+      <div class="alan" data-df="police"><label>Poliçe no</label><input name="policeNo" maxlength="20"></div>
+      <div class="alan" data-df="police muayene"><label>Bitiş / geçerlilik</label><input name="bitis" type="date"></div>
+      <div class="alan" data-df="bakim lastik muayene"><label>Km</label><input name="km" inputmode="numeric" placeholder="${sayi(a.km || 0)}"></div>
+      <div class="alan" data-df="bakim"><label>Sonraki bakım km</label><input name="sonrakiKm" inputmode="numeric"></div>
+      <div class="alan" data-df="bakim lastik muayene police"><label>Tutar (₺)</label><input name="tutar" inputmode="numeric"></div>
+      <div class="alan" data-df="zimmet"><label>Öğretmen</label><select name="egitmen">${S.egitmenler.map(h => `<option value="${h.id}" ${h.id === a.egitmen ? 'selected' : ''}>${e(h.ad)}</option>`).join('')}</select></div>
+      <div class="alan" data-df="zimmet"><label>Çıkış km</label><input name="kmCikis" inputmode="numeric" value="${a.km || ''}"></div>
+      <div class="alan" data-df="zimmet"><label>Giriş km <small>dönünce</small></label><input name="kmGiris" inputmode="numeric"></div>
+      <div class="alan" data-df="zimmet"><label>Akaryakıt (L)</label><input name="yakitL" inputmode="decimal"></div>
+      <div class="alan" data-df="noter"><label>Noter</label><input name="noter" maxlength="80"></div>
+      <div class="alan" data-df="noter"><label>Satış tarihi</label><input name="satisTarih" type="date"></div>
+      <div class="alan tam"><label>Not</label><input name="not" maxlength="200"></div>
+      <div class="tam"><button class="dg dg-ana dg-kucuk" type="submit">Kaydı ekle</button></div></form>
+      <div class="ara-bosluk"></div>${l.length ? `<ul class="liste">${l.map(x => `<li><div style="flex:1"><b style="color:var(--murekkep);display:block">${(DEFTER_TUR.find(t => t[0] === x.tur) || [, x.tur])[1]} · ${tarih(x.tarih)}</b><small style="color:var(--soluk)">${ozet(x)}${x.not ? ' · ' + e(x.not) : ''}</small></div><button class="dg dg-hafif dg-kucuk" data-df-sil="${e(x.id)}">Sil</button></li>`).join('')}</ul>` : `<p style="color:var(--soluk);font-size:14px">Henüz kayıt yok.</p>`}`,
+    altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button>',
+    onAc(d) {
+      const f = d.querySelector('form'), goster = () => d.querySelectorAll('[data-df]').forEach(x => { x.hidden = !x.dataset.df.split(' ').includes(f.tur.value); }); f.tur.addEventListener('change', goster); goster();
+      const say = v => +String(v || '').replace(/\D/g, '') || 0;
+      f.addEventListener('submit', ev => { ev.preventDefault(); const tur = f.tur.value, x = { id: 'ak' + Date.now().toString(36), tur, tarih: f.tarih.value, not: f.not.value.trim() || undefined };
+        if (tur === 'police') { if (!f.bitis.value) return bildir('Poliçe bitiş tarihini yazın', 'uyari'); Object.assign(x, { policeTur: f.policeTur.value, acenta: f.acenta.value.trim(), policeNo: f.policeNo.value.trim(), bitis: f.bitis.value, tutar: say(f.tutar.value) || undefined }); const alan = f.policeTur.value === 'Trafik sigortası' ? 'sigorta' : f.policeTur.value === 'Kasko' ? 'kasko' : null; if (alan && (!a[alan] || a[alan] < x.bitis)) a[alan] = x.bitis; if (alan === 'sigorta') a.sigortaBelgeNo = x.policeNo || a.sigortaBelgeNo; }
+        else if (tur === 'zimmet') { const c = say(f.kmCikis.value), g = say(f.kmGiris.value); if (g && g < c) return bildir('Giriş km çıkıştan küçük olamaz', 'uyari'); Object.assign(x, { egitmen: f.egitmen.value, kmCikis: c || undefined, kmGiris: g || undefined, yakitL: String(f.yakitL.value).replace(',', '.') || undefined }); if ((g || c) > (+a.km || 0)) a.km = g || c; }
+        else if (tur === 'noter') Object.assign(x, { noter: f.noter.value.trim(), satisTarih: f.satisTarih.value || undefined });
+        else { Object.assign(x, { km: say(f.km.value) || undefined, sonrakiKm: say(f.sonrakiKm.value) || undefined, bitis: f.bitis.value || undefined, tutar: say(f.tutar.value) || undefined }); if (tur === 'bakim' && x.sonrakiKm) a.bakimKm = x.sonrakiKm; if (tur === 'muayene' && x.bitis && (!a.muayene || a.muayene < x.bitis)) a.muayene = x.bitis; if (x.km > (+a.km || 0)) a.km = x.km; }
+        a.kayitlar = [...(a.kayitlar || []), x]; islem('Araç defterine kayıt ekledi', `${a.plaka} · ${(DEFTER_TUR.find(t => t[0] === tur) || [, tur])[1]}`); kaydet(); kapatPencere(); bildir('Kayıt eklendi'); yenile(); aracDefteri(a); });
+      d.addEventListener('click', ev => { const sl = ev.target.closest('[data-df-sil]'); if (!sl) return; a.kayitlar = (a.kayitlar || []).filter(x => x.id !== sl.dataset.dfSil); islem('Araç defterinden kayıt sildi', a.plaka); kaydet(); kapatPencere(); yenile(); aracDefteri(a); });
+    } });
+}
 // ARC-015: simülatörler (MEBBİS SKT01002 tür 2 listesinden ya da elle). Sicil no, MEBBİS direksiyon programında simülatör dersinin seçeneğidir.
 function simulatorBolumu() {
   const l = S.simulatorler || [];
@@ -591,7 +631,7 @@ export function filo(alt) {
       <div style="padding:0 6px"><div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:5px"><span>Bakıma kalan</span><b class="sayi" style="color:var(--murekkep)">${sayi(Math.max(0, a.bakimKm - a.km))} km</b></div>${ilerleme(10000 - Math.max(0, a.bakimKm - a.km), 10000, a.bakimKm - a.km < 2000 ? 'sari' : '')}</div>
       ${tarihSatir(a.muayene, 'Muayene')}${tarihSatir(a.sigorta, 'Sigorta')}${tarihSatir(a.kasko, 'Kasko')}
       <div class="belge-satir"><span>Bugün</span><b>${b.length} ders</b></div><div class="belge-satir"><span>Bu ay</span><b>${tl(masraf(a))} masraf · ${sayi(aylikKm(a))} km</b></div>${(() => { const t = tuketim(a); return t ? `<div class="belge-satir"><span>Yakıt</span><b style="${t.yuksek ? 'color:var(--kirmizi)' : ''}">${String(t.ort).replace('.', ',')} L/100 km${t.yuksek ? ' · son dolum ' + String(t.son).replace('.', ',') : ''}</b></div>` : ''; })()}${a.mebIzinNo ? `<div class="belge-satir"><span>MEB izni</span><b>${e(a.mebIzinNo)}</b></div>` : ''}${aracMebNotu(a)}
-      <div style="display:flex;gap:6px;flex-wrap:wrap;padding:0 6px 4px"><button class="dg dg-cizgi dg-kucuk" data-km="${a.id}">${ik('kalem')}Km gir</button><button class="dg dg-cizgi dg-kucuk" data-masraf="${a.id}">${ik('arti')}Masraf ekle</button><button class="dg dg-cizgi dg-kucuk" data-ceza-ekle="${a.id}">${ik('uyari')}Ceza</button>${mudurMu() ? `<button class="dg dg-hafif dg-kucuk" data-arac-duzenle="${a.id}">Düzenle</button>` : ''}</div></div>`; }).join('')}${mudurMu() ? `<button class="kart ekle-kart" data-arac-duzenle="">${ik('arti')}<b>Araç ekle</b><small>Plaka, sınıf, muayene ve sigorta tarihleri</small></button>` : ''}</div>${simulatorBolumu()}`;
+      <div style="display:flex;gap:6px;flex-wrap:wrap;padding:0 6px 4px"><button class="dg dg-cizgi dg-kucuk" data-km="${a.id}">${ik('kalem')}Km gir</button><button class="dg dg-cizgi dg-kucuk" data-masraf="${a.id}">${ik('arti')}Masraf ekle</button><button class="dg dg-cizgi dg-kucuk" data-ceza-ekle="${a.id}">${ik('uyari')}Ceza</button><button class="dg dg-cizgi dg-kucuk" data-arac-defter="${a.id}">${ik('belge')}Defter${(a.kayitlar || []).length ? ` · ${(a.kayitlar || []).length}` : ''}</button>${mudurMu() ? `<button class="dg dg-hafif dg-kucuk" data-arac-duzenle="${a.id}">Düzenle</button>` : ''}</div></div>`; }).join('')}${mudurMu() ? `<button class="kart ekle-kart" data-arac-duzenle="">${ik('arti')}<b>Araç ekle</b><small>Plaka, sınıf, muayene ve sigorta tarihleri</small></button>` : ''}</div>${simulatorBolumu()}`;
   if (durum.filo === 'egitmen') govde = `<div class="izgara iz-3">${sb(S.egitmenler).map(x => {
       const bugun = sbDers(S.dersler).filter(d => d.egitmen === x.id && d.tarih === gun(0)), ks = sb(S.kursiyerler).filter(k => k.egitmen === x.id && k.asama !== 'Ehliyet');
       const sin = S.sinavlar.filter(s => s.tur === 'Direksiyon').flatMap(s => Object.entries(s.sonuc || {})).filter(([id]) => kursiyer(id) && kursiyer(id).egitmen === x.id);
@@ -624,6 +664,7 @@ export function filo(alt) {
         const me = t.closest('[data-meb-arac-ekle]'); if (me) { const y = (S.mebAracYeni || []).filter(z => !S.araclar.some(a => a.plaka.replace(/\s/g, '') === z.plaka.replace(/\s/g, '')))[+me.dataset.mebAracEkle]; if (!y) return;
           const sn = Object.keys(SINIFLAR).find(x => x === String(y.sinif || '').replace(/\s*SINIFI.*$/i, '').trim()) || 'B';
           return aracDuzenle(null, { plaka: y.plaka, model: [y.marka, y.model].filter(Boolean).join(' '), yil: +y.yil || new Date().getFullYear(), sinif: sn, vites: /otomatik/i.test(y.sanziman || '') ? 'Otomatik' : 'Manuel', muayene: y.muayene || '', meb: { ...y } }); }
+        { const df = t.closest('[data-arac-defter]'); if (df) { const a = arac(df.dataset.aracDefter); if (a) return aracDefteri(a); } }
         if (t.closest('[data-sim-ekle]')) return simulatorPenceresi(null); const smd = t.closest('[data-sim-duzenle]'); if (smd) return simulatorPenceresi(smd.dataset.simDuzenle);
         const sgA = t.closest('[data-arac-sigorta]'); if (sgA) { const a = arac(sgA.dataset.aracSigorta); if (!a) return; const eski = a.sigorta; a.sigorta = sgA.dataset.tarih; islem('Araç sigorta bitişini güncelledi', `${a.plaka} · ${eski ? tarih(eski) + ' → ' : ''}${tarih(a.sigorta)}`); kaydet(); bildir('Sigorta bitişi güncellendi'); return yenile(); }
         // ARC-011: MEBBİS'te hizmet dışı araç — öneri, kendiliğinden silinmez; planlı dersi varsa engel
