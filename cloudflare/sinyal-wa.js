@@ -507,7 +507,8 @@ const MV_OZET_ISTEM = 'Sürücü kursu müdürüne MEB\'den (il/ilçe millî eğ
   'Yazıda kursa düşen bir iş yoksa ikinci başlığın altına "- Kursa düşen bir iş yok." yaz.';
 const MV_CEVAP_ISTEM = 'Sürücü kursu personelinin (kurs müdürü, ön büro, usta öğretici) mevzuat sorusunu YALNIZ aşağıda numaralanmış kaynaklara dayanarak cevaplıyorsun. Kurallar:\n' +
   '- Kaynaklarda olmayan bilgi ekleme, genel bilgini kullanma. Emin olmadığın şeyi yazma.\n' +
-  '- Sayı, süre, tutar, yaş, saat, tarih ve oranları kaynaktaki gibi birebir yaz; yuvarlama, toplama, hesaplama yapma.\n' +
+  '- Sayı, süre, tutar, yaş, saat, tarih ve oranları kaynaktaki gibi birebir yaz; yuvarlama yapma.\n' +
+  '- Soru kaynaktaki rakamlardan bir hesap gerektiriyorsa (ör. 50 sorunun %70\'i, ders saatlerinin toplamı, ücretin yarısı) hesabı yap ve işlemi metinde açıkça göster: "50 × %70 = 35", "16 + 2 = 18 saat". İşlemdeki her rakam kaynakta geçmeli; sonucu kaynakta yazıyormuş gibi sunma, kaynağın numarasını yine yaz.\n' +
   '- Her ayrıntı ve adımda dayandığın kaynağın numarasını "kaynak" dizisine yaz (ör. [1] ya da [2,3]). Yalnız verilen numaraları kullan; kaynağı olmayan cümle yazma.\n' +
   '- Soru birden çok şey soruyorsa (ör. kaç saat ders, sınava girer mi, yaş şartı) her birini ayrı ayrıntı olarak cevapla.\n' +
   '- Bir şeyin kaynaklarda olmadığını söylemeden önce bütün kaynakları baştan sona oku; sorulan süre, gün, saat, yaş, tutar, belge ya da şart herhangi bir kaynakta geçiyorsa mutlaka yaz.\n' +
@@ -527,7 +528,7 @@ const MV_CEVAP_ISTEM_2 = 'Sürücü kursu personelinin (kurs müdürü, ön bür
   'Önce soruyu oku ve içindeki ayrı soruları belirle (ör. "kaç saat ders alır", "e-Sınava girer mi", "kayıtta ne getirir"). Tek soru varsa tek alt soru yaz.\n' +
   'Kurallar:\n' +
   '- Her alt soru için "sorular" dizisine kısa bir soru başlığı ve cevabını yaz; cevapta kaynaklardaki ilgili bütün sayı, süre, yaş, saat, gün, tutar, belge ve şartları birebir yaz. Kısaltmak için bilgi atlama.\n' +
-  '- Sayıları kaynaktaki gibi yaz; yuvarlama, toplama, yüzde hesabı yapma.\n' +
+  '- Sayıları kaynaktaki gibi yaz; yuvarlama yapma. Soru kaynaktaki rakamlardan bir hesap gerektiriyorsa (ör. 50 sorunun %70\'i, saatlerin toplamı) hesabı yap ve işlemi cevapta açıkça göster: "50 × %70 = 35". İşlemdeki her rakam kaynakta geçmeli.\n' +
   '- Metne "kaynak 3" ya da "(kaynak 2 ve 5)" yazma; numaraları yalnız "kaynak" dizisine koy.\n' +
   '- Her cevabın "kaynak" dizisine dayandığın kaynak numaralarını yaz (yalnız verilen numaralar). Kaynağı olmayan cümle yazma; kaynaklarda olmayan bilgi ekleme, genel bilgini kullanma.\n' +
   '- Bir alt sorunun cevabı kaynaklarda yoksa o alt soruyu "yok": true ile işaretle ve "eksik" alanına neyin bulunamadığını ve bakılacak resmî yeri (il/ilçe millî eğitim müdürlüğü, ÖÖKGM, nüfus müdürlüğü, Resmî Gazete gibi) yaz. "Yok" demeden önce bütün kaynakları baştan sona oku.\n' +

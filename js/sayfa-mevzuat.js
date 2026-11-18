@@ -6,7 +6,7 @@ import { S, oturum, bulutKanca } from './veri.js?v=234';
 import { e, ik, rozet, bos, pencere, kapatPencere, bildir, ekranNotu, isaret, tamTarih, ilerleme } from './ui.js?v=234';
 import { WORKER } from './bulut.js?v=234';
 import { motor, yukle, yuklendi, base64Int8, kokler, alinti, FILTRELER, ETIKET_RE, etiketCoz, etiketBul, resmiDegil, kisaCevapSec, cevapNormalle, cevapDuzMetin } from './mevzuat-ara.js?v=234';
-import { kavramYukle, asistanAra, asistanKaynak, asistanSoru, kanitDenetle, sayilarBul } from './mevzuat-anla.js?v=234';
+import { kavramYukle, asistanAra, asistanKaynak, asistanSoru, kanitDenetle, sayilarBul, kaynaktaOlmayan } from './mevzuat-anla.js?v=234';
 
 const TUR_AD = { yonetmelik: 'Yönetmelik', kanun: 'Kanun', yonerge: 'Yönerge', teblig: 'Tebliğ', kilavuz: 'Kılavuz', program: 'Ders programı', yazi: 'MEB yazısı', form: 'Form',
   'rehber-resmi': 'Denetim rehberi', bilgilendirme: 'Resmî bilgilendirme', rehber: 'mdSinyal rehberi (resmî metin değil)', sss: 'mdSinyal sık sorulanlar (resmî metin değil)' };
@@ -388,7 +388,9 @@ const atifliHtml = (t, c) => e(t).replace(/\s*\[(\d{1,2})\]/g, (x, n) => atifDug
 function kanitHtml(c, x) {
   if (!c.kaynakMetin || !x.kaynak || !x.kaynak.length) return '';
   const k = kanitDenetle(x.metin, x.kaynak.map(n => ({ no: n, t: c.kaynakMetin[n - 1] || '' })));
-  const isaretH = k.eksik.length ? `<span class="mz-kanit-uyari">${ik('uyari')}${e(k.eksik.join(', '))} kaynakta geçmiyor; maddeyi okuyun</span>` : k.sayi ? `<span class="mz-kanit-ok">${ik('tik')}Rakam kaynakta</span>` : '';
+  // hesap (MEV-021): kaynaktaki rakamlardan yapılan işlem doğrulanır; tutmayan işlem uyarılır
+  const yanlisH = (k.hesap || []).filter(h => !h.dogru), dogruH = (k.hesap || []).filter(h => h.dogru);
+  const isaretH = yanlisH.length ? `<span class="mz-kanit-uyari">${ik('uyari')}Hesap tutmuyor: ${e(yanlisH.map(h => h.ifade).join('; '))}</span>` : k.eksik.length ? `<span class="mz-kanit-uyari">${ik('uyari')}${e(k.eksik.join(', '))} kaynakta geçmiyor; maddeyi okuyun</span>` : k.sayi ? `<span class="mz-kanit-ok">${ik('tik')}${dogruH.length ? 'Rakamlar kaynakta, hesap doğru' : 'Rakam kaynakta'}</span>` : '';
   return `<div class="mz-kanit">${isaretH}${k.cumle ? `<details><summary>Kaynakta gör</summary><blockquote>${e(k.cumle)}</blockquote><small>[${k.no}] ${e((c.etiketler || [])[k.no - 1] || '')}</small></details>` : ''}</div>`;
 }
 const cipler = (c, l) => { const h = (l || []).map(n => atifDugme(c, n)).join(''); return h ? `<span class="mz-atiflar">${h}</span>` : ''; };
@@ -397,7 +399,7 @@ function cevapGovde(c) {
   if (y.duz) return `<div class="mz-cevap-metin">${paragraf(y.kisa).replace(/\[(\d{1,2})\]/g, (x, n) => atifDugme(c, +n) || x)}</div>`;
   return `<div class="mz-cevap-yap">
     <p class="mz-cevap-kisa${y.bulunamadi ? ' yok' : ''}">${atifliHtml(y.kisa, c)}</p>
-    ${(() => { if (!c.kaynakMetin || y.bulunamadi) return ''; const tum = new Set(c.kaynakMetin.flatMap(t => sayilarBul(t, true)).concat(sayilarBul(c.q, true))), eksik = [...new Set(sayilarBul(y.kisa))].filter(n => !tum.has(n)); return eksik.length ? `<p class="mz-kanit-uyari">${ik('uyari')}${e(eksik.join(', '))} gönderilen maddelerde geçmiyor; dayanağı okuyarak kontrol edin.</p>` : ''; })()}
+    ${(() => { if (!c.kaynakMetin || y.bulunamadi) return ''; const tum = new Set(c.kaynakMetin.flatMap(t => sayilarBul(t, true)).concat(sayilarBul(c.q, true))), eksik = kaynaktaOlmayan(y.kisa, tum).eksik; return eksik.length ? `<p class="mz-kanit-uyari">${ik('uyari')}${e(eksik.join(', '))} gönderilen maddelerde geçmiyor; dayanağı okuyarak kontrol edin.</p>` : ''; })()}
     ${y.ayrinti.length ? (y.ayrinti.some(x => x.soru)
       ? `<dl class="mz-cevap-sorular">${y.ayrinti.map(x => `<div>${x.soru ? `<dt>${e(x.soru)}</dt>` : ''}<dd><span>${atifliHtml(x.metin, c)}</span>${cipler(c, x.kaynak)}${kanitHtml(c, x)}</dd></div>`).join('')}</dl>`
       : `<h4 class="mz-ara-baslik">Ayrıntılar</h4><ul class="mz-cevap-ayrinti">${y.ayrinti.map(x => `<li><span>${atifliHtml(x.metin, c)}</span>${cipler(c, x.kaynak)}${kanitHtml(c, x)}</li>`).join('')}</ul>`) : ''}
