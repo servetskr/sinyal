@@ -87,6 +87,9 @@ export async function ikiAdimBaslat() {
   return { anahtar: gizli.secretKey, url: gizli.generateQrCodeUrl(auth.currentUser.email, 'mdSinyal'), bitir: kod => A.multiFactor(auth.currentUser).enroll(A.TotpMultiFactorGenerator.assertionForEnrollment(gizli, kod), 'Doğrulama uygulaması') };
 }
 export async function epostaDogrula() { const { auth, A } = await sdk(); await A.sendEmailVerification(auth.currentUser); }
+// YON-068: hesabın e-postası doğrulandı mı (Firebase). Bağlantı açılmadıysa null; doğrulama bağlantısına tıklandıktan sonra yenile ile güncellenir
+export const hesapEposta = () => { const u = fb && fb.auth && fb.auth.currentUser; return u && u.email && !/@ogrenci\.sinyal\.app$/.test(u.email) ? { eposta: u.email, dogrulandi: !!u.emailVerified } : null; };
+export async function hesapEpostaYenile() { const { auth } = await sdk(); if (auth.currentUser) { await auth.currentUser.reload(); try { await auth.currentUser.getIdToken(true); } catch (x) { } } return hesapEposta(); }
 export async function ikiAdimKapat() { const { auth, A } = await sdk(); const m = A.multiFactor(auth.currentUser), f = m.enrolledFactors.find(x => x.factorId === A.TotpMultiFactorGenerator.FACTOR_ID); if (f) await m.unenroll(f); }
 export async function sifreSifirla(eposta) { const { auth, A } = await sdk(); await A.sendPasswordResetEmail(auth, eposta.trim()); }
 export async function sifreDogrula(sifre) {
@@ -109,7 +112,7 @@ async function hesapAc(eposta, sifre, ad) {
   const { auth, A } = await sdk();
   if (sifre.length < 8) throw hata('Şifre en az 8 karakter olmalı');
   let user;
-  try { user = (await A.createUserWithEmailAndPassword(auth, eposta.trim(), sifre)).user; }
+  try { user = (await A.createUserWithEmailAndPassword(auth, eposta.trim(), sifre)).user; try { await A.sendEmailVerification(user); } catch (z) { } }  // YON-068: açılışta doğrulama e-postası
   catch (x) {
     if (x.code !== 'auth/email-already-in-use') throw x;
     user = (await A.signInWithEmailAndPassword(auth, eposta.trim(), sifre)).user;

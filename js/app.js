@@ -250,7 +250,7 @@ export function yenile(kaydirma = false) {
   kap.innerHTML = s.html;
   yer.replaceChildren(kap);
   if (ekranDuzey(r.ad === 'kursiyer' ? 'kursiyerler' : r.ad) === 'gor') saltOkunur(kap);
-  kurulumSeridi(kap);
+  kurulumSeridi(kap); epostaSeridi(kap);
   // YON-028: açık onaylı bilgilendirmeler; oturum başına bir kez, sayfa oturduktan sonra (başka pencere açıksa sonraki girişe)
   if (!bilgiSoruldu && ['mudur', 'sekreter'].includes(oturum.kullanici.rol)) { bilgiSoruldu = true; const dene = n => { if (document.querySelector('.perde')) { if (n < 40) setTimeout(() => dene(n + 1), 3000); return; } import('./onay.js?v=234').then(m => m.bilgiGoster()); }; setTimeout(() => dene(0), 1500); }  // başka pencere açıksa kapanınca (en çok 2 dk)
   if (s.baglan) { try { s.baglan(kap); } catch (x) { console.error(x); } }
@@ -348,6 +348,16 @@ document.addEventListener('click', ev => {
   const d = ev.target.closest('[data-kur-devam]'); if (d) return Y5.kurulumBaslat(+d.dataset.kurDevam);
   const at = ev.target.closest('[data-kur-serit-atla]'); if (at) { Y5.kurulumAtla(at.dataset.kurSeritAtla); return kurulumAkisi(true); }
   if (ev.target.closest('[data-kur-serit-cik]')) { try { sessionStorage.removeItem(AKIS); } catch (x) { } ev.target.closest('.kur-serit').remove(); }
+});
+// YON-068: hesabın e-postası doğrulanmadıysa ofis ekranlarının üstünde şerit (yeniden gönder · doğruladım)
+function epostaSeridi(kap) {
+  const u = oturum.kullanici; if (!u || !u.bulut || !['mudur', 'sekreter'].includes(u.rol)) return;
+  const h = B.hesapEposta(); if (!h || h.dogrulandi) return;
+  kap.insertAdjacentHTML('afterbegin', `<div class="ipucu uyari eposta-serit" role="status"><span style="flex:1;min-width:0"><b>E-postanızı doğrulayın.</b> ${e(h.eposta)} adresine bir bağlantı gönderdik; bağlantıya dokununca doğrulanır. Doğrulanana kadar rapor ve yedek e-postası gitmez, Drive yedeği alınmaz. Adres yanlışsa kurs müdürüne ya da mdSinyal’e yazın.</span><span class="eposta-serit-dug"><button type="button" class="dg dg-cizgi dg-kucuk" data-ep-dog-gonder>Yeniden gönder</button><button type="button" class="dg dg-ana dg-kucuk" data-ep-dog-yenile>Doğruladım</button></span></div>`);
+}
+document.addEventListener('click', ev => {
+  if (ev.target.closest('[data-ep-dog-gonder]')) { const b = ev.target.closest('[data-ep-dog-gonder]'); b.disabled = true; return B.epostaDogrula().then(() => bildir('Doğrulama bağlantısı yeniden gönderildi; gelen kutusuna ve istenmeyen klasörüne bakın')).catch(x => { b.disabled = false; bildir(B.hataMetni(x), 'uyari'); }); }
+  if (ev.target.closest('[data-ep-dog-yenile]')) return B.hesapEpostaYenile().then(h => { if (h && h.dogrulandi) { islem('Hesap e-postasını doğruladı', h.eposta); kaydet(); bildir('E-posta doğrulandı'); yenile(); } else bildir('Henüz doğrulanmadı; e-postadaki bağlantıya dokunun, sonra yeniden deneyin', 'uyari'); }).catch(x => bildir(B.hataMetni(x), 'uyari'));
 });
 function kurulumSeridi(kap) {
   let i = null; try { i = sessionStorage.getItem(AKIS); } catch (x) { }

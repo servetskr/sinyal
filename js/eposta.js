@@ -6,7 +6,9 @@
 // sonraki dilimde başka cihaz dener) ve worker'da dönem başına bir kez. Açık kalan sekmede saatte bir yeniden bakılır.
 import { S, kaydet, gun, islem, oturum, bulutKanca, tamAd, gecikenler } from './veri.js?v=234';
 import { e, tl, ik, bildir, rozet, tamTarih } from './ui.js?v=234';
-import { WORKER, bulut, bulutta } from './bulut.js?v=234';
+import { WORKER, bulut, bulutta, hesapEposta } from './bulut.js?v=234';
+// YON-068: hesabın e-postası doğrulanana kadar rapor / yedek e-postası ve Drive yedeği çalışmaz (yanlış yazılan adrese gitmesin)
+const dogrulanmadi = () => { const h = hesapEposta(); return !!(h && !h.dogrulandi); };
 import { kabuk, kutular, bolum, satirlar, bos, devam, not, nokta, dugme, R, SITE } from './eposta-kabuk.js?v=234';
 import { tumExcelIndir, tumExcelB64, tumExcelBlob, tamYedekIndir, tamYedekMetni, dosyaAdi } from './excel-tum.js?v=234';
 
@@ -122,7 +124,7 @@ export const KAPSAM_NOTU = 'Belgelerin taranmış hâlleri, fotoğraflar ve imza
 async function aylikEk() { try { const b = await tumExcelB64(); return b.length <= EK_EN_FAZLA ? { ad: dosyaAdi('butun-veriler', 'xlsx'), b64: b } : null; } catch (x) { return null; } }
 // Ön koşul: bulut hesabı, servis kurulu, en az bir onaylı adres
 // (önbellek "onaylı adres yok" diyorsa sunucuya yeniden sorulur: adres az önce onaylanmış olabilir)
-async function hazirMi() { if (!bulutta() || !buro()) return false; const tamam = d => d.kurulu && d.adresler.some(a => a.onay); try { const d = await epostaDurum(); return tamam(d) || tamam(await epostaDurum(true)); } catch (x) { return false; } }
+async function hazirMi() { if (!bulutta() || !buro() || dogrulanmadi()) return false; const tamam = d => d.kurulu && d.adresler.some(a => a.onay); try { const d = await epostaDurum(); return tamam(d) || tamam(await epostaDurum(true)); } catch (x) { return false; } }
 // Tek cihaz kilidi 3 saatlik dilime bağlı: kilidi alan cihaz gönderemezse (bağlantı, sunucu hatası, cihaz kapandı) sonraki dilimde
 // başka cihaz dener. İki kez gitmeyi epostaSon (senkron) ve worker'daki dönem kaydı engeller.
 const kilit = anahtar => !bulutKanca.sahiplen ? Promise.resolve(true) : bulutKanca.sahiplen(anahtar + '|' + Math.floor(Date.now() / (3 * 3600e3)));
@@ -186,6 +188,7 @@ async function driveYukle(tok, ad, blob, ust) {
   const j = await r.json().catch(() => ({})); if (!r.ok) throw driveHata(r); return j.id;
 }
 export async function driveKaydet() {
+  if (dogrulanmadi()) throw hata('Önce hesabınızın e-postasını doğrulayın (ekranın üstündeki şerit); doğrulanınca Drive yedeği açılır');
   if (!bulutta()) throw hata('Google Drive’a kaydetme kursunuzun bulut hesabında açılır');
   const tok = await driveBelirtec(), ad = 'mdSinyal yedekleri · ' + (S.kurs.ad || 'Kurs'), H = { Authorization: 'Bearer ' + tok };
   let klasor = null; try { klasor = localStorage.getItem(KLASOR()); } catch (x) { }
@@ -208,7 +211,7 @@ export function veriSekmesiHtml() {
   const A = raporAyar(), m = mudur(), son = S.kurs.epostaSon || {};
   const satir = 'display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--cizgi-2);cursor:pointer';
   const anahtar = (ad, acik, kapali) => `<span class="anahtar"><input type="checkbox" data-ep-ayar="${ad}" ${acik ? 'checked' : ''} ${kapali ? 'disabled' : ''}><i></i></span>`;
-  return `<div class="izgara iz-2">
+  return `${dogrulanmadi() ? `<p class="ipucu uyari" style="margin-bottom:14px"><span><b>Hesabınızın e-postası doğrulanmadı.</b> Doğrulanana kadar rapor ve yedek e-postası gitmez, Google Drive’a yedek alınmaz. Ekranın üstündeki şeritten bağlantıyı yeniden isteyin.</span></p>` : ''}<div class="izgara iz-2">
     <div>
       <div class="kart"><div class="kart-bas"><h3>Kursun e-posta adresleri</h3><small>Raporlar ve yedekler buraya gelir · en fazla 3 adres</small></div><div class="kart-govde" data-ep-adresler>
         ${bulutta() ? `<p style="font-size:14px;color:var(--soluk)">Yükleniyor…</p>` : `<p style="font-size:14px">Demo hesabında e-posta gönderilmez. Kursunuzun hesabında adres ekleyince raporlar bu adrese gelir.</p>`}
