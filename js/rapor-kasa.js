@@ -156,3 +156,45 @@ export function analizBaglan(k, yenile) {
   k.addEventListener('change', ev => { const x = ev.target.closest('[data-ga]'); if (!x) return; analizSuzgec[x.dataset.ga] = x.type === 'checkbox' ? x.checked : x.value; if (x.dataset.ga === 'aralik' && x.checked && !analizSuzgec.bas) { analizSuzgec.bas = gun(0).slice(0, 8) + '01'; analizSuzgec.bit = gun(0); } yenile(); });
   k.addEventListener('click', ev => { if (ev.target.closest('[data-ga-excel]')) analizExcel(); });
 }
+
+/* ---------- Detaylı bakiye raporu (PAR-029) ----------
+   Ücret kalemleri ayrı: Eğitim ücreti (kurs: sözleşme; ödenen = peşinat + taksitler), Eğitim ücreti (MEBBİS'e bildirilen kayıt ücreti, bilgi),
+   Teorik (e-)sınav ücreti, 1. uygulama sınavı ücreti, 2–4. uygulama sınavı ücreti, ek ders (ilave direksiyon, ikinci dört hak), özel ders, diğer.
+   Her kalemin borcu, ödeneni ve kalanı; tablo kalan sütunlarını gösterir, Excel'de hepsi. Kalem ek kalemin adından ve türünden çıkarılır. */
+export const KALEMLER = [['egitim', 'Eğitim ücreti'], ['esinav', 'Teorik sınav'], ['uyg1', '1. uygulama sınavı'], ['uyg2', '2–4. uygulama sınavı'], ['ekders', 'Ek ders'], ['ozel', 'Özel ders'], ['diger', 'Diğer']];
+export function ekKalemi(x) {
+  const a = String(x.ad || '').toLocaleLowerCase('tr');
+  if (/e-?sınav/.test(a)) return 'esinav';
+  if (/uygulama sınav|sınav tekrar|direksiyon sınav/.test(a)) return /\b1\.\s*(sınav|uygulama)|\(1\./.test(a) ? 'uyg1' : 'uyg2';
+  if (/özel ders/.test(a)) return 'ozel';
+  if (/ek direksiyon|ek ders|ilave|ikinci dört hak/.test(a)) return 'ekders';
+  return 'diger';
+}
+export function kalemBakiye(k) {
+  const o = k.odeme || {}, r = {}; KALEMLER.forEach(([id]) => { r[id] = { borc: 0, odenen: 0 }; });
+  const tk = (o.taksitler || []).filter(t => !t.iptal);
+  r.egitim.borc = +o.toplam || 0; r.egitim.odenen = Math.max(0, (+o.pesin || 0) + tk.reduce((a, t) => a + (t.odendi ? +t.tutar || 0 : +t.kismi || 0), 0) - (+o.iade || 0));
+  (o.ekler || []).filter(x => !x.kursOdedi).forEach(x => { const g = r[ekKalemi(x)]; g.borc += +x.tutar || 0; if (x.odendi) g.odenen += +x.tutar || 0; });
+  KALEMLER.forEach(([id]) => { r[id].kalan = Math.max(0, Math.round((r[id].borc - r[id].odenen) * 100) / 100); });
+  r.meb = k.meb && (+k.meb.kayitUcretiTL || 0) || null;
+  return r;
+}
+export const bakiyeSuzgec = { kayit: 'suruyor', yalnizBorclu: true };
+const bakiyeSatirlari = (f = bakiyeSuzgec) => sb(S.kursiyerler).filter(k => (f.kayit === 'hepsi' || kayitDurumu(k) === f.kayit)).map(k => ({ k, b: kalemBakiye(k) })).filter(x => !f.yalnizBorclu || KALEMLER.some(([id]) => x.b[id].kalan > 0)).sort((a, b) => tamAd(a.k).localeCompare(tamAd(b.k), 'tr'));
+export function bakiyeHtml() {
+  const f = bakiyeSuzgec, l = bakiyeSatirlari(f), top = {}; KALEMLER.forEach(([id]) => { top[id] = l.reduce((a, x) => a + x.b[id].kalan, 0); });
+  const genel = KALEMLER.reduce((a, [id]) => a + top[id], 0), gor = KALEMLER.filter(([id]) => top[id] > 0 || id === 'egitim');
+  return `<div class="kart"><div class="kart-bas"><h3>Detaylı bakiye</h3><small>${l.length} öğrenci · kalan <b>${tl(genel)}</b></small><div class="sag"><button class="dg dg-cizgi dg-kucuk" data-bk-excel>${ik('indir')}Excel</button></div></div>
+    <div class="vr-suzgec"><label class="vr-alan"><span>Kayıt</span><select class="girdi" data-bk="kayit">${KAYIT_DURUM.map(([k, t]) => `<option value="${k}" ${k === f.kayit ? 'selected' : ''}>${e(t)}</option>`).join('')}</select></label><label class="vr-tik"><input type="checkbox" data-bk="yalnizBorclu" ${f.yalnizBorclu ? 'checked' : ''}> Yalnız borcu olanlar</label></div>
+    <div class="ipucu" style="margin:0 20px 10px;flex-wrap:wrap;gap:6px 14px">${gor.map(([id, ad]) => `<span><small style="color:var(--soluk)">${e(ad)}</small> <b>${tl(top[id])}</b></span>`).join('')}</div>
+    ${l.length ? `<div class="tablo-kap"><table class="tablo tablo-mobil"><thead><tr><th>Öğrenci</th>${gor.map(([, ad]) => `<th class="sag">${e(ad)}</th>`).join('')}<th class="sag">Toplam kalan</th></tr></thead><tbody>${l.slice(0, SINIR).map(({ k, b }) => `<tr><td class="m-tam"><a class="kisi" href="#/kursiyer/${k.id}"><div><b>${e(tamAd(k))}</b><small>${b.meb ? 'MEBBİS’e bildirilen ' + tl(b.meb) : e(sinifEtiket(k.sinif, k))}</small></div></a></td>${gor.map(([id]) => `<td class="sag sayi">${b[id].kalan ? tl(b[id].kalan) : '<span style="color:var(--soluk)">—</span>'}</td>`).join('')}<td class="sag sayi"><b>${tl(KALEMLER.reduce((a, [id]) => a + b[id].kalan, 0))}</b></td></tr>`).join('')}</tbody></table></div>` : '<p class="ipucu" style="margin:14px 20px">Bu süzgeçte borcu olan öğrenci yok.</p>'}</div>`;
+}
+export function bakiyeExcel() {
+  const l = bakiyeSatirlari({ ...bakiyeSuzgec, yalnizBorclu: false });
+  csvIndir('detayli-bakiye.csv', [['Öğrenci', 'TC', 'Sınıf', 'MEBBİS’e bildirilen eğitim ücreti', ...KALEMLER.flatMap(([, ad]) => [ad + ' borç', ad + ' ödenen', ad + ' kalan']), 'Toplam kalan'],
+    ...l.map(({ k, b }) => [tamAd(k), k.tc || '', sinifEtiket(k.sinif, k), b.meb || '', ...KALEMLER.flatMap(([id]) => [b[id].borc, b[id].odenen, b[id].kalan]), KALEMLER.reduce((a, [id]) => a + b[id].kalan, 0)])]);
+}
+export function bakiyeBaglan(k, yenile) {
+  k.addEventListener('change', ev => { const x = ev.target.closest('[data-bk]'); if (!x) return; bakiyeSuzgec[x.dataset.bk] = x.type === 'checkbox' ? x.checked : x.value; yenile(); });
+  k.addEventListener('click', ev => { if (ev.target.closest('[data-bk-excel]')) bakiyeExcel(); });
+}
