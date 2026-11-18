@@ -1,4 +1,4 @@
-import { mebIsGunuIleri, mebIsGunuGeri as KR_SON, dersBitisi, sinavGecmisi, hakDurumu, islemYetkili, gordu, satirUcretKaynagi, makbuzNoVer, taksitAyar, taksitSiniri, taksitVade, bankaHesaplari, varsayilanHesap, kursiyerDersleri, kayitDondurmaMi, planAyar, dersSaatleri, EGITIM_TURU, egitimTuruOf, mebEtiketleri, dersSayaci, arifeMi, ustaRengi, haftalikSinir, haftaDers, ekDersFiyat, ozelDersFiyat, uygulamaSinavUcreti, esinavUcreti, digerUcretler, odemeKodu, ibanMetni, dersSirasi, S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, risk, BECERI, islem, geriAlNoktasi, oturum, tcGecerli, tcMaskele, DERS_TUR_AD, ek3Sinif, ogretmen, yas, mebOnKontrol, sb, sbDers, sbSinav, kapaliGun, ustaAraci, dersAraci, yerelZaman, aktifSiniflar, satistaSiniflar, YONTEMLER, yontemAd, ayEkle, gecikenTutar, selam, kursAdi, tuketim, beklenenTuketim, mudurTel, evrakKaynak, tutarOku, taksitBol, ayniTcKayit, dersIptalIz, egitimSinifi, ekTur, aracSiniflari, kursiyerTaban, tabanListesi, ekDersTabani, ozelDersTabani, programUyarisi, varsayilanYontem, teorikVar, belgeliMi, esinavsizBelgeli, teorikSaat, TEORIK_MUAF_DERS, dersKonulariResmi } from './veri.js?v=234';
+import { izinDurumu, mebIsGunuIleri, mebIsGunuGeri as KR_SON, dersBitisi, sinavGecmisi, hakDurumu, islemYetkili, gordu, satirUcretKaynagi, makbuzNoVer, taksitAyar, taksitSiniri, taksitVade, bankaHesaplari, varsayilanHesap, kursiyerDersleri, kayitDondurmaMi, planAyar, dersSaatleri, EGITIM_TURU, egitimTuruOf, mebEtiketleri, dersSayaci, arifeMi, ustaRengi, haftalikSinir, haftaDers, ekDersFiyat, ozelDersFiyat, uygulamaSinavUcreti, esinavUcreti, digerUcretler, odemeKodu, ibanMetni, dersSirasi, S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, risk, BECERI, islem, geriAlNoktasi, oturum, tcGecerli, tcMaskele, DERS_TUR_AD, ek3Sinif, ogretmen, yas, mebOnKontrol, sb, sbDers, sbSinav, kapaliGun, ustaAraci, dersAraci, yerelZaman, aktifSiniflar, satistaSiniflar, YONTEMLER, yontemAd, ayEkle, gecikenTutar, selam, kursAdi, tuketim, beklenenTuketim, mudurTel, evrakKaynak, tutarOku, taksitBol, ayniTcKayit, dersIptalIz, egitimSinifi, ekTur, aracSiniflari, kursiyerTaban, tabanListesi, ekDersTabani, ozelDersTabani, programUyarisi, varsayilanYontem, teorikVar, belgeliMi, esinavsizBelgeli, teorikSaat, TEORIK_MUAF_DERS, dersKonulariResmi } from './veri.js?v=234';
 import * as CR from './cari.js?v=234';
 import * as SG from './sinavgunu.js?v=234';
 import { ziyaretci, alanHatalari, e, saatDe, saatE, tl, sayi, ik, rozet, asamaRozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, sekmeler, tarih, tarihUzun, goreli, gunKisa, cubukGrafik, halka, ayAdi, isaret, yonLevhasi, olcumler, aracGorsel, ekranNotu, bugunMetni, fotoKucult, waAc, waSirali, tamTarih, pinSor, taslaklar, taslakBul, taslakSil, taslakSakla, alanlariOku, alanlariYaz, taslakZamani, pencereSor } from './ui.js?v=234';
@@ -446,6 +446,16 @@ const BAKIM = [
   ['bekleyen', 'Bekleyen (grup/evrak)', k => !k.kapali && GR.bekleyenMi(k), 'notr'],
   ['evraksure', 'Evrak süresi doluyor', k => !k.kapali && !k.mebIslendi && ME.tarihUyarilari(k).length > 0, 'sari'],
 ];
+// KAY-054: yalnız varsa, en çok 3 uyarı şeridi, eylem düğmeli
+function uyariSeritleri() {
+  const l = [];
+  const iz = (S.egitmenler || []).filter(x => !x.ayrildi && !x.pasif).map(x => ({ x, d: izinDurumu(x) })).filter(y => y.d.kalan != null && y.d.kalan <= 15);
+  if (iz.length) l.push([iz.some(y => y.d.tur === 'bitti') ? 'kirmizi' : 'sari', `${iz.length} öğretmenin çalışma izni ${iz.some(y => y.d.tur === 'bitti') ? 'bitti ya da ' : ''}15 gün içinde bitiyor: ${iz.slice(0, 3).map(y => e(y.x.ad)).join(', ')}`, '#/filo/egitmen', 'Personel']);
+  let ucret = []; try { ucret = KR.calistir(r => r.id === 'Y04').filter(x => ['uyari', 'yasak', 'dur'].includes(x[0])); } catch (x) { }
+  if (ucret.length) l.push(['sari', `Sınav ücreti eksik: ${e(ucret[0][1])}${ucret.length > 1 ? ` (+${ucret.length - 1})` : ''}`, ucret[0][3] || '#/sinavlar', 'Sınava git']);
+  const my = S.mebYokSayi; if (my && my.n) l.push(['notr', `${my.n} kişi MEBBİS’te var, mdSinyal’de yok (${tarih(my.tarih)} okuması)`, '#/meb', 'MEB işlemleri']);
+  return l.slice(0, 3).map(([ton, m, h, d]) => `<div class="uyari-serit ${ton}"><span>${m}</span><a class="dg dg-cizgi dg-kucuk" href="${h}">${d}</a></div>`).join('');
+}
 function bakimSeridi() { const l = sb(S.kursiyerler), c = BAKIM.map(([id, ad, f, ton]) => [id, ad, l.filter(f).length, ton]).filter(x => x[2]);
   return c.length ? `<div class="bakim-serit" role="list" aria-label="Bugün bakılacaklar">${c.map(([id, ad, n, ton]) => `<button type="button" class="bakim-kart ${ton}" data-bakim="${id}" role="listitem"><b>${n}</b><span>${ad}</span></button>`).join('')}</div>` : ''; }
 // KAY-055: 'şu sınava girebilir' süzgeci (sinavaUygunluk); '_yok' = yaklaşan hiçbir sınava uygun değil
@@ -861,6 +871,7 @@ export function kursiyerler(filtre) {
     html: `${ekranNotu('Her kursiyerin nerede olduğu, ne kadar borcu kaldığı ve sınavda kalma riski tek satırda. Satıra dokunun, dosyası açılsın.')}
     <div class="bolum-bas"><div><h2>Kursiyer listesi</h2></div><div class="sag">${['mudur', 'sekreter'].includes(oturum.kullanici.rol) ? `<button class="dg dg-cizgi" data-toplu-hesap>${ik('tel')}Öğrenci hesapları</button>` : ''}<button class="dg dg-cizgi" data-disa>${ik('indir')}Excel’e aktar</button><button class="dg dg-cizgi" data-liste-yazdir>${ik('belge')}PDF / yazdır</button><button class="dg dg-cizgi" data-evrak-tablo>${ik('belge')}Evrak tablosu</button><button class="dg dg-ana" data-yeni>${ik('arti')}Yeni kursiyer</button></div></div>
     <div data-yarim-kap>${yarimKayitlar()}</div>
+    ${uyariSeritleri()}
     ${bakimSeridi()}
     <div id="sek">${sekmeler([['Tümü', 'Tümü', say('Tümü')], ...ASAMALAR.map(a => [a, a, say(a)])], sekme)}</div>
     <div class="kart">

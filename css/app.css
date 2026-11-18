@@ -3737,3 +3737,6 @@ a.kart.gosterge { text-decoration: none; color: inherit; display: block; }
 .bakim-kart.yesil b { color: #1b5e20; }
 .bakim-kart.secili { border-color: var(--murekkep); box-shadow: 0 0 0 2px var(--murekkep) inset; }
 .gizlenen { color: #8a5a00; }
+.uyari-serit { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; border-radius: 10px; margin-bottom: 8px; font-size: 13.5px; border: 1px solid var(--cizgi); }
+.uyari-serit.sari { background: #fff8e6; border-color: #f0c36d; }
+.uyari-serit.kirmizi { background: #fdecea; border-color: #f2a59d; }

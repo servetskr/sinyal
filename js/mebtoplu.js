@@ -743,6 +743,7 @@ function kursiyerleriIsle(liste) {
     k.meb = { ...(k.meb || {}), ...(son || {}), etiketler: x.etiketler, kayitSayisi: x.kayitlar.length, okuma: gun(0) };
     k.mebIslendi = true;
   });
+  S.mebYokSayi = { n: yok.length, tarih: gun(0) };  // KAY-054: yalnız sayı (kişisel veri tutulmaz)
   return { toplam: kisi.size, eslesen, yok, farklar };
 }
 // PER-001, 002, 005, 006, 027: MEBBİS personel listesi (OOK12001 dgPersonelArama; yedek OOK54001).
