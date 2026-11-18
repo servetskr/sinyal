@@ -80,7 +80,8 @@ export function raporHtml(tur, v, notlar = []) {
     ...(v.geciken ? [not(`<b>Gecikmiş taksit:</b> ${v.geciken} kursiyer, toplam ${e(tl(v.gecikenTutar))}.`, 'amber')] : [])];
   const kasaS = [[ 'Tahsilat ' + ac(`· ${v.gelirN} işlem`), e(tl(v.gelir)) ], ...Object.entries(v.yontem).sort((a, b) => b[1] - a[1]).map(([y, t]) => [e(y), e(tl(t)), { soluk: true, girinti: true }]),
     [ 'Gider ' + ac(`· ${v.giderN || 0} işlem`), e(tl(v.gider)) ], [ '<b>Net</b>', e(tl(net)), { renk: net < 0 ? R.kirmizi : R.yesil } ],
-    ...(v.kasa ? [[ 'Kasa sayımı', e(tl(v.kasa.say)) + (v.kasa.fark ? ` <span style="color:${R.kirmizi}">· fark ${e(tl(v.kasa.fark))}</span>` : ` <span style="color:${R.yesil};font-weight:600">· fark yok</span>`) ]] : []),
+    ...(v.kasa && v.kasa.ciro != null ? [[ 'Ciro ' + ac('· tahsilat − iptal − iade'), e(tl(v.kasa.ciro)) ], [ 'Masraf', e(tl(v.kasa.masraf)) ], [ 'Günlük kasa ' + ac('· giren − çıkan nakit'), e(tl(v.kasa.gunluk)) ]] : []),
+    ...(v.kasa ? [[ 'Kasa sayımı', e(tl(v.kasa.say)) + (v.kasa.fark ? ` <span style="color:${R.kirmizi}">· fark ${e(tl(v.kasa.fark))}</span>` : ` <span style="color:${R.yesil};font-weight:600">· fark yok</span>`) ], [ 'Devreden kasa', e(tl(v.kasa.say)) ]] : []),
     ...(!tek ? [[ 'Kapatılan gün', String(v.kapatilan) ]] : [])];
   const dersS = Object.entries(v.dersDurum).sort((a, b) => b[1] - a[1]).map(([d, n]) => [e(d), String(n)]).concat(tek ? [[ 'Yarın planlı ders', String(v.yarinDers), { soluk: true } ]] : []);
   const sinavS = v.sinav.map(s => [`${e(s.tur)} ${ac('· ' + e(tamTarih(s.tarih)))}`, s.gecti + s.kaldi ? `<span style="color:${R.yesil}">${s.gecti} geçti</span> · <span style="color:${R.kirmizi}">${s.kaldi} kaldı</span>` : `${s.kisi} kişi`, { alt: s.gecti + s.kaldi ? `${s.kisi} kişi girdi` : 'Sonuç girilmedi' }]);
@@ -101,7 +102,7 @@ export function raporHtml(tur, v, notlar = []) {
     alt: 'Bu e-posta kursunuzun mdSinyal hesabından, kursun onayladığı adrese gönderildi. Hangi raporların geleceğini mdSinyal › Ayarlar › Veri ve e-posta bölümünden değiştirebilirsiniz.' });
 }
 export function raporMetni(tur, v) {
-  return [`${S.kurs.ad || ''} · ${BASLIK[tur] || 'Rapor'} · ${donemMetni(v)}`, '', `Tahsilat: ${tl(v.gelir)} (${v.gelirN} işlem)`, `Gider: ${tl(v.gider)}`, `Net: ${tl(v.gelir - v.gider)}`, ...(v.kasa ? [`Kasa sayımı: ${tl(v.kasa.say)}${v.kasa.fark ? ' · fark ' + tl(v.kasa.fark) : ' · fark yok'}`] : []),
+  return [`${S.kurs.ad || ''} · ${BASLIK[tur] || 'Rapor'} · ${donemMetni(v)}`, '', `Tahsilat: ${tl(v.gelir)} (${v.gelirN} işlem)`, `Gider: ${tl(v.gider)}`, `Net: ${tl(v.gelir - v.gider)}`, ...(v.kasa && v.kasa.ciro != null ? [`Ciro: ${tl(v.kasa.ciro)} · Masraf: ${tl(v.kasa.masraf)} · Günlük kasa: ${tl(v.kasa.gunluk)}`] : []), ...(v.kasa ? [`Kasa sayımı: ${tl(v.kasa.say)}${v.kasa.fark ? ' · fark ' + tl(v.kasa.fark) : ' · fark yok'}`, `Devreden kasa: ${tl(v.kasa.say)}`] : []),
     `Ders: ${v.dersN}`, `Sınav oturumu: ${v.sinav.length}`, `Yeni kayıt: ${v.yeni.length}`, `Kursiyer ödemesi: ${v.odeme.length}`, `Uyarı: ${v.uyari.length}`, '', 'Ayrıntılar HTML görünümde. Ayarlar: mdSinyal › Ayarlar › Veri ve e-posta'].join('\n');
 }
 
