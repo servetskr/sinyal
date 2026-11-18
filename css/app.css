@@ -3358,3 +3358,55 @@ p.mz-kanit-uyari{margin:-4px 0 10px;font-size:13px}
 .sayac-kutu span { display: block; font-size: 12px; color: var(--soluk); }
 .sayac-kutu.yesil { border-color: #9bd3a8; background: #f1faf3; }
 .sayac-kutu.uyari { border-color: #e8c45a; background: var(--sari-acik); }
+
+/* DIR-039: otomatik plan penceresi */
+.oto-ust { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px 12px; align-items: end; }
+.oto-ust .alan label { font-size: 12.5px; color: var(--soluk); }
+.oto-anahtar { display: flex; gap: 8px; align-items: center; font-size: 14px; min-height: 40px; }
+.oto-anahtar input { width: 18px; height: 18px; accent-color: var(--levha); }
+.oto-adaylar { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px 14px; max-height: 120px; overflow: auto; padding: 8px 10px; border: 1px solid var(--cizgi); border-radius: 8px; font-size: 14px; }
+.oto-adaylar label { display: flex; gap: 6px; align-items: center; }
+.oto-adaylar small { color: var(--soluk); }
+.oto-yuk { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 12px; }
+.oto-yuk-k { font-size: 13px; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--cizgi); background: var(--panel); font-variant-numeric: tabular-nums; }
+.oto-yuk-k.sari { background: var(--sari-acik); border-color: #e8c45a; }
+.oto-yuk-k.kirmizi { background: #fde8e8; border-color: #e7a3a3; color: #8a1c1c; }
+.oto-yuk small { color: var(--soluk); font-size: 12px; }
+.oto-liste { margin-top: 6px; }
+.oto-satir .rozet { vertical-align: 1px; }
+.oto-yer { margin-top: 12px; border: 1px solid var(--cizgi); border-radius: 10px; padding: 8px 12px; }
+.oto-yer summary { cursor: pointer; font-weight: 600; color: var(--murekkep); }
+.oto-yer ul { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 8px; }
+.oto-yer li { font-size: 14px; }
+.oto-yer li small { display: block; color: var(--metin); font-size: 13px; margin-top: 2px; }
+
+/* DIR-040: Plan › Hafta öğretmen yükü */
+.uy-kap { margin-bottom: 12px; padding: 4px 0 8px; }
+.uy-bas { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; padding: 10px 16px 6px; cursor: pointer; }
+.uy-bas b { color: var(--murekkep); font-size: 14px; }
+.uy-bas small { color: var(--soluk); font-size: 12.5px; }
+.uy-satir { display: grid; grid-template-columns: minmax(120px, 170px) minmax(80px, 1fr) 76px auto; gap: 10px; align-items: center; padding: 6px 16px; border-top: 1px solid var(--cizgi-2); }
+.uy-ad { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--murekkep); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.uy-ad i { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.uy-cubuk { height: 8px; border-radius: 99px; background: var(--panel-2); overflow: hidden; }
+.uy-cubuk b { display: block; height: 100%; background: var(--levha); border-radius: 99px; }
+.uy-cubuk.sari b { background: #d9a400; } .uy-cubuk.kirmizi b { background: var(--kirmizi); }
+.uy-sayi { font-size: 13.5px; font-variant-numeric: tabular-nums; color: var(--murekkep); line-height: 1.2; }
+.uy-sayi small { display: block; font-size: 11px; color: var(--soluk); }
+.uy-sayi.sari { color: #8a5a00; } .uy-sayi.kirmizi { color: var(--kirmizi); font-weight: 600; }
+.uy-gunler { display: flex; gap: 4px; }
+.uy-gun { width: 34px; min-height: 36px; border: 1px solid var(--cizgi); border-radius: 7px; background: var(--panel); font: 600 13px/1.1 var(--govde); color: var(--murekkep); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px 0; }
+.uy-gun small { font-size: 10px; font-weight: 500; color: var(--soluk); }
+.uy-gun.var { background: #eef3ff; border-color: #b9c8ef; }
+.uy-gun.sari { background: var(--sari-acik); border-color: #e8c45a; } .uy-gun.kirmizi { background: #fde8e8; border-color: #e7a3a3; color: #8a1c1c; }
+.uy-gun:focus-visible { outline: 2px solid var(--levha); outline-offset: 1px; }
+@media (max-width: 760px) { .uy-satir { grid-template-columns: 1fr 70px; } .uy-cubuk { grid-column: 1 / -1; grid-row: 2; } .uy-gunler { grid-column: 1 / -1; } .uy-gun { flex: 1; width: auto; } }
+.tk-sutun-vurgu { box-shadow: inset 0 0 0 2px var(--levha); border-radius: 8px; }
+
+/* DIR-042: planlı dersi olmayan öğrenciler */
+.pp-kap { margin-bottom: 12px; }
+.pp-bas { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 10px 16px; cursor: pointer; }
+.pp-bas b { color: var(--murekkep); font-size: 14px; }
+.pp-liste { list-style: none; margin: 0; padding: 0 0 6px; }
+.pp-liste li { display: flex; gap: 10px; align-items: center; padding: 8px 16px; border-top: 1px solid var(--cizgi-2); }
+.pp-liste small { display: block; color: var(--soluk); font-size: 12.5px; }

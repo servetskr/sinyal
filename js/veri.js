@@ -229,7 +229,7 @@ export function gecisSatirlari() {
 // 2) son uygulama sınavı Kaldı ya da Girmedi ve ders sınavdan sonra: 'basarisiz' (md.15)
 // 3) hiç uygulama sınavına girmemiş, sınava hazır yazısı yok ve bu dersten önce gereken ders sayısı tamamlanmış: 'onSinav' (Telafi Eğitim, md.7/7)
 // 4) öteki: 'normal'
-const hazirYazisiVar = k => !!((k.meb && /^\d{4}-\d{2}-\d{2}$/.test(k.meb.uygunluk || '')) || (k.hazirYazi && k.hazirYazi.yuklendi));
+export const hazirYazisiVar = k => !!((k.meb && /^\d{4}-\d{2}-\d{2}$/.test(k.meb.uygunluk || '')) || (k.hazirYazi && k.hazirYazi.yuklendi));
 export function egitimTuruOf(k, d) {
   if (!k || !d) return 'normal';
   if (EGITIM_TURU[d.egitimTuru]) return d.egitimTuru;
@@ -304,6 +304,16 @@ export function yasDenetim(k) {
 // Eskiden kaydedilmiş geçersiz değer (boş, 0, eksi, aralık dışı) varsayılanla okunur: ekranda görünen değer ile kodun kullandığı değer aynı olur.
 // programOnGun alt sınırı 5: MTSK Yön. md.23/1 direksiyon programını en az 5 gün önce ister; eskiden kaydedilmiş 1–4 değeri 5 okunur.
 export const KURAL_ARALIK = { programOnGun: [5, 30, 5], gunlukDersSiniri: [1, 2, 2], geceDersi: [1, 10, 2], sinavBildirimIsGunu: [1, 20, 4], direksiyonSure: [1, 365, 90], sinavUcretIsGunu: [1, 30, 6], tekrarBekleme: [0, 120, 15], telafiSaat: [2, 10, 2], bildirimTekrarSaat: [1, 72, 6], devamsizlikSiniri: [1, 34, 4], aracKursiyer: [1, 50, 12] };
+// DIR-035/037: direksiyon ders saatleri ve otomatik plan ayarları (Ayarlar › Kurs bilgileri). MTSK md.20/1: dersler 07:00–23:00 arası; son ders 22:00'de başlar.
+// S.kurs.dersSaat = { bas: '09:00', bit: '19:00' (son dersin başlangıcı), ogle: '13:00' | '' }
+export const DERS_SAAT_VARSAYILAN = { bas: '09:00', bit: '19:00', ogle: '13:00' };
+export function dersSaatleri({ ogleDahil = false } = {}) {
+  const o = { ...DERS_SAAT_VARSAYILAN, ...((S && S.kurs && S.kurs.dersSaat) || {}) }, b = Math.max(7, +String(o.bas).slice(0, 2) || 9), e = Math.min(22, +String(o.bit).slice(0, 2) || 19), l = [];
+  for (let h = b; h <= e; h++) { const s = String(h).padStart(2, '0') + ':00'; if (ogleDahil || s !== o.ogle) l.push(s); }
+  return l;
+}
+// S.kurs.plan = { cumartesi (ders yazılsın, varsayılan açık), tekUsta (aynı aday bir günde tek usta, varsayılan evet), dagit (başka yetkili ustaya dağıtım, varsayılan kapalı), haftalik (aday başına haftada en çok, 3) }
+export const planAyar = () => { const p = (S && S.kurs && S.kurs.plan) || {}; return { cumartesi: p.cumartesi !== false, tekUsta: p.tekUsta !== false, dagit: !!p.dagit, haftalik: Math.max(1, Math.min(14, +p.haftalik || +(S && S.kurs && S.kurs.planHaftalik) || 3)) }; };
 export const kuralAyar = a => { const [en, ust, v] = KURAL_ARALIK[a], x = S && S.kurs ? S.kurs[a] : undefined; return x !== '' && x != null && isFinite(+x) && +x >= en && +x <= ust ? +x : v; };
 export const geceKisitli = k => !!(k && k.saglikRapor && k.saglikRapor.geceKisit);
 export const geceGerekli = k => { if (!k || !gerekliDireksiyon(k) || geceKisitli(k) || k.sinif === 'G' || (k.sinif === 'CE' && !(S && S.kurs && S.kurs.geceCE))) return 0; return kuralAyar('geceDersi'); };
@@ -1105,7 +1115,8 @@ export function dersSayaci(k, bas) {
   const ih = k && k.ikinciHak, ikinci = ih ? { ...egitim.ikinci, gerek: Math.max(0, (+ih.hedef || 0) - (+ih.onceki || 0)), onceki: +ih.onceki || 0 } : null;
   const basarisiz = { ...egitim.basarisiz, gerek: kaldi && !ih ? kuralAyar('telafiSaat') : 0, sonSinav: kaldi ? ds.tarih : '', sonra: kaldi ? yap.filter(d => d.tarih > ds.tarih && egitimTuruOf(k, d) === 'basarisiz').length : 0 };
   const gece = { yapildi: yap.filter(geceDersMi).length, planli: pl.filter(geceDersMi).length, gerek: geceGerekli(k) };
-  const zorunlu = ih ? { yapildi: ikinci.onceki + egitim.ikinci.yapildi, planli: egitim.ikinci.planli } : { yapildi: egitim.normal.yapildi + aktarim, planli: egitim.normal.planli };
+  // uygulama sınavına girmiş aday zorunlu dersleri tamamlamış sayılır (sınava ancak öyle girilir); sonraki dersler başarısız aday dersidir (md.15)
+  const zorunlu = ih ? { yapildi: ikinci.onceki + egitim.ikinci.yapildi, planli: egitim.ikinci.planli } : ds.tarih ? { yapildi: Math.max(gerekli, egitim.normal.yapildi + aktarim), planli: 0 } : { yapildi: egitim.normal.yapildi + aktarim, planli: egitim.normal.planli };
   return { gerekli, yapildi: yap.length + aktarim, planli: pl.length, aktarim, egitim, zorunlu, ikinci, basarisiz, telafi: egitim.onSinav, gece, alanSim: { gerek: belgeliMi(k) || !gerekli || !turlu ? 0 : Math.min(ALAN_SIM_SAAT, gerekli), yapildi: yap.filter(as).length, planli: pl.filter(as).length }, trafik: { yapildi: yap.filter(d => !as(d)).length, planli: pl.filter(d => !as(d)).length } };
 }
 export const esinavsizBelgeli = k => belgeliMi(k) && !teorikVar(k);

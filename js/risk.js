@@ -1,5 +1,5 @@
 import { kayitDondurmaMi, arifeMi, izinDurumu, haftalikSinir, haftaDers, ustaYetkili, S, gun, fark, SINIFLAR, egitmen, kapaliGun, dersAraci, risk, kursAdi } from './veri.js?v=234';
-import { gerekliDireksiyon, kuralAyar, geceKisitli, geceDersMi } from './veri.js?v=234';
+import { gerekliDireksiyon, kuralAyar, geceKisitli, geceDersMi, dersSaatleri } from './veri.js?v=234';
 
 // B Engelli adayı kendi (raporuna uygun) aracıyla eğitim alıyorsa (MTSK Yön. md.7/5) ders kurs aracı olmadan planlanır (arac: null, "kendi aracı")
 export const kendiAracli = k => !!k && k.sinif === 'B-EN' && !!k.kendiArac;
@@ -64,43 +64,8 @@ export function randevuEngeli(k) {
   if (gec.length && S.kurs.borcluDers === 'engelle') return 'Gecikmiş taksidin var; ödeme yapınca yeni ders alabilirsin.';
   return null;
 }
-// Otomatik ders planı (öneri): ders hakkı kalan kursiyerlere önümüzdeki günlerin boş usta/araç saatlerini dağıtır.
-// Kurallar: kursiyer başı günlük sınır, usta başı günlük sınır, araç muayene/sigorta, usta izni, kapalı gün, borçlu kursiyer ayarı.
-// Öncelik: sınavı yakın olan, sonra en uzun süredir dersi olmayan. Müdür onaylamadan hiçbir ders eklenmez.
-export function otomatikPlan({ gunSay = 7, haftalik = 3 } = {}) {
-  const kSinir = kuralAyar('gunlukDersSiniri'), uSinir = S.kurs.egitmenGunlukSinir || S.kurs.ustaGunlukSinir || 8;
-  const dolu = new Set(), kGun = {}, uGun = {}, kHafta = {};
-  const ekle = d => { dolu.add('u' + d.tarih + d.saat + d.egitmen); dolu.add('k' + d.tarih + d.saat + d.kursiyer); if (d.arac) dolu.add('a' + d.tarih + d.saat + d.arac); kGun[d.kursiyer + d.tarih] = (kGun[d.kursiyer + d.tarih] || 0) + 1; uGun[d.egitmen + d.tarih] = (uGun[d.egitmen + d.tarih] || 0) + 1; kHafta[d.kursiyer] = (kHafta[d.kursiyer] || 0) + 1; };
-  S.dersler.filter(d => d.durum !== 'İptal' && fark(d.tarih) >= 0).forEach(d => { ekle(d); if (fark(d.tarih) < 1 || fark(d.tarih) > gunSay) kHafta[d.kursiyer]--; });
-  const sonDers = k => S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Yapıldı').reduce((a, d) => d.tarih > a ? d.tarih : a, '');
-  // DIR-014: MEBBİS'te 'Kayıt Dondurma' etiketli aday planlanmaz
-  const adaylar = S.kursiyerler.filter(k => !k.kapali && !kayitDondurmaMi(k) && ['Direksiyon', 'Sınav'].includes(k.asama) && gerekliDireksiyon(k) && egitmen(k.egitmen))
-    .map(k => ({ k, kalan: gerekliDireksiyon(k) + (k.ekDersHakki || 0) - k.direksiyon - S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Planlandı').length }))
-    .filter(x => x.kalan > 0 && !(S.kurs.borcluDers === 'engelle' && x.k.odeme.taksitler.some(t => !t.odendi && !t.iptal && fark(t.vade) < 0)))
-    .sort((a, b) => (a.k.dsinavPlan || '9999').localeCompare(b.k.dsinavPlan || '9999') || sonDers(a.k).localeCompare(sonDers(b.k)));
-  const oneri = [];
-  for (let n = 1; n <= gunSay; n++) {
-    const g = gun(n); if (kapaliGun(g)) continue;
-    for (const x of adaylar) {
-      if (x.kalan <= 0 || (kHafta[x.k.id] || 0) >= haftalik || (kGun[x.k.id + g] || 0) >= kSinir) continue;
-      const h = egitmen(x.k.egitmen);
-      if ((S.izinler || []).some(i => i.kim === h.id && g >= i.bas && g <= i.bit) || (uGun[h.id + g] || 0) >= uSinir) continue;
-      // PER-003/011: çalışma izni o gün bitmiş öğretmene ve haftalık ders sınırı dolmuş öğretmene öneri yok (elle eklemede de engelli)
-      if (!ustaYetkili(h, x.k.sinif) || izinDurumu(h, g).tur === 'bitti' || haftaDers(h.id, g, oneri.length ? S.dersler.concat(oneri) : S.dersler) >= haftalikSinir(h).n) continue;
-      if (Object.values(h.belgeler || {}).some(t => t && t < g)) continue;  // sertifika, sağlık raporu ya da adli sicil süresi dolmuş usta öğreticiye ders önerilmez (elle eklemede de engelli)
-      for (const sa of KAPASITE_SAAT) {
-        if (dolu.has('u' + g + sa + h.id) || dolu.has('k' + g + sa + x.k.id)) continue;
-        if (arifeMi(g) && sa >= '13:00') continue;   // DIR-051: arife öğleden sonrası önerilmez (resmî tatil günleri zaten atlanır)
-        // araç: B Engelli için önce aparatlı (B-EN), sonra otomatik B aracı (aracSiniflari); kendi aracıyla gelende kurs aracı aranmaz
-        const kendi = kendiAracli(x.k), ar = kendi ? null : dersAraci(h.id, x.k.sinif, g, sa);
-        if (!kendi && (!ar || dolu.has('a' + g + sa + ar.id) || [ar.muayene, ar.sigorta].some(t => t && t < g))) continue;
-        const d = { kursiyer: x.k.id, egitmen: h.id, arac: ar ? ar.id : null, tarih: g, saat: sa, ...(kendi ? { kendiArac: true } : {}) };
-        ekle(d); oneri.push(d); x.kalan--; break;
-      }
-    }
-  }
-  return oneri;
-}
+// Otomatik ders planı (öneri): planlayici.js planOner (DIR-031). Bu sarmal eski çağrılar için: yalnız öneri listesini döndürür.
+export async function otomatikPlan({ gunSay = 7 } = {}) { const P = await import('./planlayici.js?v=234'); return P.planOner({ gunSay }).oneriler; }
 // Kursiyerin alabileceği boş saatler (kendi dersini alma, iptal sonrası teklif, ders taşıma). Sağlık raporunda gece kısıtı olana gün batımından
 // sonraki saatler sunulmaz (MTSK Yön. md.7/3 son cümle; eyup-sorular-cevaplar.md madde 5).
 export function bosSlotlar(k, gunSay = 7) {
@@ -111,7 +76,7 @@ export function bosSlotlar(k, gunSay = 7) {
     if ((S.izinler || []).some(i => i.kim === h.id && g >= i.bas && g <= i.bit)) continue;
     const oGun = S.dersler.filter(d => d.kursiyer === k.id && d.tarih === g).length;
     if (oGun >= kuralAyar('gunlukDersSiniri')) continue;
-    KAPASITE_SAAT.forEach(sa => {
+    dersSaatleri().forEach(sa => {
       if (geceYok && geceDersMi({ tarih: g, saat: sa })) return;
       if (S.dersler.some(d => d.tarih === g && d.saat === sa && (d.egitmen === h.id || d.kursiyer === k.id) && d.durum !== 'İptal')) return;
       if (kendi) return l.push({ tarih: g, saat: sa, egitmen: h.id, arac: null, kendiArac: true, aracAd: 'kendi aracı' });

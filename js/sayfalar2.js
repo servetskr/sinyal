@@ -16,7 +16,7 @@ import { kurallariHazirla, zamanliKural, kuralSaati, ornekGonder, zamanlayiciCal
 import * as MM from './mesaj.js?v=234';
 import * as BL from './bulut.js?v=234';
 import * as KR from './kurallar.js?v=234';
-import { SINIF_VARSAYILAN, gecisSatirlari, gerekliDireksiyon, geceGerekli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, sinavHakSiniri, DERS_KURAL_TARIH, kuralAyar, mebKurum, programAcik, varsayilanYontem } from './veri.js?v=234';
+import { SINIF_VARSAYILAN, gecisSatirlari, DERS_SAAT_VARSAYILAN, planAyar, gerekliDireksiyon, geceGerekli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, sinavHakSiniri, DERS_KURAL_TARIH, kuralAyar, mebKurum, programAcik, varsayilanYontem } from './veri.js?v=234';
 import { listeAdi, gecerlilikMetni } from './taban.js?v=234';
 import * as RK from './rapor-kasa.js?v=234';
 import * as GR from './gruplar.js?v=234';
@@ -1093,6 +1093,19 @@ async function anonimlestir(k) {
     S.devredilen = (S.devredilen || []).filter(m => m.ad !== ad);
   }
 }
+// DIR-035/037: direksiyon ders saatleri (plan ızgarası, otomatik plan, öğrencinin kendi dersini alması) ve otomatik plan ayarları; değişince hemen kaydedilir
+function dersSaatKarti() {
+  const o = { ...DERS_SAAT_VARSAYILAN, ...(S.kurs.dersSaat || {}) }, A = planAyar(), mud = mudurMu(), dis = mud ? '' : ' disabled';
+  const sec = (ad, l, v) => `<select class="girdi" data-ds="${ad}"${dis}>${l.map(([x, y]) => `<option value="${x}" ${x === v ? 'selected' : ''}>${y}</option>`).join('')}</select>`;
+  const saat = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => { const x = String(a + i).padStart(2, '0') + ':00'; return [x, x]; });
+  const kutu = (ad, v, metin) => `<label style="display:flex;gap:10px;align-items:center;font-size:14px"><span class="anahtar"><input type="checkbox" data-ds="${ad}" ${v ? 'checked' : ''}${dis} aria-label="${e(metin)}"><i></i></span>${metin}</label>`;
+  return `<div class="kart" style="margin-top:16px"><div class="kart-bas"><h3>Direksiyon ders saatleri ve otomatik plan</h3><small>Plan ekranı, otomatik plan ve öğrencinin kendi ders alması bu saatleri kullanır</small></div><div class="kart-govde" style="display:grid;gap:14px">
+    <div class="form-izgara"><div class="alan"><label>İlk ders</label>${sec('bas', saat(7, 12), o.bas)}</div><div class="alan"><label>Son dersin başlangıcı</label>${sec('bit', saat(15, 22), o.bit)}<small style="color:var(--soluk)">Dersler 07:00–23:00 arasında yapılır (MTSK md.20/1)</small></div><div class="alan"><label>Öğle arası</label>${sec('ogle', [['', 'Yok'], ['12:00', '12:00'], ['13:00', '13:00']], o.ogle || '')}</div></div>
+    <p class="ipucu" style="margin:0">${isaret('bilgi', 18)}<span>Gece dersi, gün batımına göre bugün saat ${geceBaslangic(gun(0))} ve sonrasında başlayan derstir; haziran sonunda bu saat 21:00’e yaklaşır. Gece dersi önerilebilmesi için son ders saatini buna göre seçin.</span></p>
+    <div style="display:grid;gap:10px">${kutu('cumartesi', A.cumartesi, 'Cumartesi ders yazılsın')}${kutu('tekUsta', A.tekUsta, 'Aynı öğrenci bir günde tek öğretmenle')}${kutu('dagit', A.dagit, 'Otomatik planda başka yetkili öğretmenlere de dağıt')}</div>
+    <div class="alan" style="max-width:320px"><label>Otomatik planda öğrenci başına haftada en çok</label>${sec('haftalik', Array.from({ length: 14 }, (_, i) => [String(i + 1), (i + 1) + ' ders']), String(A.haftalik))}</div>
+  </div></div>`;
+}
 // DIR-002: farklı sınıf geçiş saatleri (MTSK md.39 Tablo 1-2, otomatikten manuele md.39/2). Boş hücre mevzuat hesabını kullanır; kursun girdiği değer
 // yeni kayıtlarda ve kurala tabi kursiyerlerde ders sayısı olur. Yönetmelik alt sınırının altındaki değer kırmızı görünür. Kursiyer dosyasındaki elle değer önceliklidir.
 function gecisSaatKarti() {
@@ -1151,6 +1164,7 @@ export function ayarlar(alt) {
       <p class="alan tam" style="font-size:13.5px;color:var(--metin)">Ek ders, özel ders, sınav ve diğer ücretler <a href="#/ayarlar/sinif" style="color:var(--levha);font-weight:700">Sınıf ve ücretler</a> sekmesinde.</p>
       <div class="alan"><label>Öğrenci indirimi (₺)</label><input name="oin" inputmode="numeric" value="${((S.kurs.indirimler || [])[0] || {}).tutar || 0}"${tabanL ? ' disabled title="İl taban fiyat listesi notu 6"' : ''}>${tabanL ? `<small style="color:var(--kirmizi)">${e(listeAdi(tabanL))}, not 6–7: hiçbir ad altında indirim kampanyası düzenlenemez; ücret taban ücretin altına indirilemez.</small>` : ''}</div>
       <div class="tam"><button class="dg dg-ana" type="submit">Değişiklikleri kaydet</button></div></form></div></div>
+    ${dersSaatKarti()}
     ${mudurMu() && (!S._bulut || S.kurs.sunumAcik) ? `<div class="kart" style="margin-top:16px"><div class="kart-govde" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">${isaret('bilgi', 26)}<div style="flex:1;min-width:240px"><b style="color:var(--murekkep)">Sunum verisi</b><p style="font-size:14px;margin-top:2px">Öğrencinize (Servet Sakar) öğretmenini (Ahmet) atar; geçmiş puanlı dersler, bugün ve sonraki günlerde planlı dersler, ödeme planı ve uygulama sınavı tarihi ekler. Öğretmen, öğrenci ve müdür ekranları dolu görünür. Mesaj gönderilmez; tek dokunuşla kaldırılır.</p></div>${S.dersler.some(d => d.sunum) ? '<button type="button" class="dg dg-cizgi" data-sunum-kaldir>Sunum verisini kaldır</button>' : '<button type="button" class="dg dg-ana" data-sunum-ekle>Sunum verisi ekle</button>'}</div></div>` : ''}`;
   if (durum.ayar === 'ogrenciapp') govde = `<p class="ekran-notu">${isaret('bilgi', 20)}<span>Öğrencilerin telefonundaki uygulamada hangi çalışma araçlarının görüneceğini seçin. Ders programı, dersler, ödemeler, belgeler, soru bankası ve deneme sınavı her zaman açıktır.</span></p>
     <div class="kart"><ul class="liste">${OGR_OZELLIK.map(([k, ad]) => `<li><label style="display:flex;gap:12px;align-items:center;width:100%;cursor:pointer"><span class="anahtar"><input type="checkbox" data-ogr-oz="${k}" ${((S.kurs.ogrOzellik || {})[k] ?? (k !== 'dersOnay')) ? 'checked' : ''} aria-label="${e(ad)}"><i></i></span><span style="flex:1;color:var(--murekkep)">${e(ad)}</span></label>${(S.kurs.plus || {}).acik ? `<label style="display:flex;gap:6px;align-items:center;font-size:13px;color:var(--soluk);flex:none"><input type="checkbox" data-plus-oz="${k}" ${((S.kurs.plus || {}).ozellikler || []).includes(k) ? 'checked' : ''}>Plus’ta</label>` : ''}</li>`).join('')}</ul></div>
@@ -1281,6 +1295,10 @@ export function ayarlar(alt) {
         if (ev.target.closest('[data-ogr-oz]')) { if (!mudurMu()) return bildir('Yalnız müdür değiştirir', 'uyari'); S.kurs.ogrOzellik = { ...(S.kurs.ogrOzellik || {}), [ev.target.dataset.ogrOz]: ev.target.checked }; islem('Öğrenci uygulaması ayarını değiştirdi', ev.target.dataset.ogrOz + ': ' + (ev.target.checked ? 'açık' : 'kapalı')); kaydet(); return bildir('Kaydedildi'); }
         if (ev.target.closest('[data-tarife-ilan]')) { if (!mudurMu()) return bildir('Yalnız müdür değiştirir', 'uyari'); S.kurs.tarifeIlan = ev.target.checked ? gun(0).slice(0, 4) : null; islem('Ücret ilanını işaretledi', ev.target.checked ? gun(0).slice(0, 4) + ' ilan edildi' : 'kaldırıldı'); kaydet(); return bildir('Kaydedildi'); }
         if (ev.target.closest('[data-teorik-pay]')) { const v = Math.max(0, Math.min(100, +ev.target.value.replace(/\D/g, '') || 0)); S.kurs.teorikPay = v; ev.target.value = v; islem('İade hesabında teorik payını değiştirdi', '%' + v); kaydet(); return bildir('Kaydedildi'); }
+        { const ds = ev.target.closest('[data-ds]'); if (ds) { if (!mudurMu()) return bildir('Yalnız kurs müdürü', 'uyari'); const a = ds.dataset.ds;
+          if (['bas', 'bit', 'ogle'].includes(a)) { const o = { ...DERS_SAAT_VARSAYILAN, ...(S.kurs.dersSaat || {}), [a]: ds.value }; if (o.bas > o.bit) return bildir('İlk ders son dersten sonra olamaz', 'uyari'); S.kurs.dersSaat = o; islem('Direksiyon ders saatlerini değiştirdi', `${o.bas}–${o.bit}${o.ogle ? ', öğle ' + o.ogle : ''}`); }
+          else { const p = { ...(S.kurs.plan || {}) }; p[a] = a === 'haftalik' ? +ds.value : ds.checked; S.kurs.plan = p; islem('Otomatik plan ayarını değiştirdi', a + ': ' + p[a]); }
+          kaydet(); return bildir('Kaydedildi'); } }
         { const gs = ev.target.closest('[data-gecis-saat]'); if (gs) { if (!mudurMu()) return bildir('Yalnız kurs müdürü', 'uyari'); const a = gs.dataset.gecisSaat, eski = (S.kurs.gecisSaat || {})[a], ham = gs.value.replace(/\D/g, ''), v = ham === '' ? null : Math.min(60, +ham);
           const G = { ...(S.kurs.gecisSaat || {}) }; if (v == null) delete G[a]; else G[a] = v; S.kurs.gecisSaat = G; islem('Geçiş saatini değiştirdi', a + ': ' + (eski ?? 'mevzuat') + ' → ' + (v ?? 'mevzuat')); kaydet();
           const x = gecisSatirlari().find(y => y.anahtar === a); bildir(v == null ? 'Mevzuat hesabına döndü' : x && x.alt && v < x.alt ? `Kaydedildi; yönetmelik alt sınırı ${String(x.alt).replace('.', ',')} saat` : 'Kaydedildi', v != null && x && x.alt && v < x.alt ? 'uyari' : undefined); return yenile(); } }
