@@ -247,6 +247,7 @@ kuralEkle({ id: 'T10', sira: 869, ad: 'Kursiyerin sözleşme ücreti ücret ilan
       l.push(bul('uyari', `${tamAd(k)} · ücret ${tl(u)}, ilan ${tl(r.toplam)}`, `MEBBİS’teki ${I.yil || ''} ücret ilanında “${r.sinif}” satırı ${tl(r.toplam)}. İlan edilen ücretin üzerinde ücret istenemez (ÖÖKY md.54/1-d).`, '#/kursiyer/' + k.id, { kursiyer: k.id, kisa: `Ücret ${tl(u)}: MEB ilanı ${tl(r.toplam)} (ÖÖKY 54/1-d)`, eylem: 'odeme' })); }); } });
 // PAR-009: "MEB ücreti kadar fatura kesildi mi" — hesaplanan fatura (MEBBİS'e bildirilen kayıt ücreti; okunmadıysa sözleşme ücreti), kesilen (iptal hariç kurs faturaları), eksik kalan
 export function faturaDenetimi(k) {
+  if (k.ucretsiz) return { hesap: 0, kaynak: 'ücretsiz', kesilen: 0, eksik: 0, ucretsiz: true };  // PAR-021: %3 ücretsiz kursiyerde fatura beklenmez (KDVK 17/2-b)
   const mebU = k.meb && (k.meb.kayitUcretiTL || tutarOku(k.meb.kayitUcreti)), hesap = +(mebU || sozlesmeUcreti(k) || 0), resmiF = f => { const h = f.hareket && S.hareket.find(x => x.id === f.hareket); return !!h && ekTur({ ad: h.kategori }) === 'resmi'; };
   const kesilen = (S.faturalar || []).filter(f => f.kursiyer === k.id && f.durum !== 'iptal' && !resmiF(f)).reduce((a, f) => a + (+f.tutar || 0), 0);
   return { hesap, kaynak: mebU ? 'MEBBİS' : 'sözleşme', kesilen, eksik: Math.max(0, Math.round((hesap - kesilen) * 100) / 100) };

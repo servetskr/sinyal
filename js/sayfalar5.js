@@ -276,6 +276,8 @@ export function hareketTur(h) {
   return ekTur(x || { ad: h.kategori || String(h.aciklama || '').split(' · ').slice(-1)[0] });
 }
 export const resmiTahsilat = h => hareketTur(h) === 'resmi';
+// PAR-021: faturası beklenen tahsilat: resmî masraf (emanet) değil, ücretsiz (%3) kursiyerin kurs ücreti değil
+export const faturaBeklenir = h => !resmiTahsilat(h) && !(hareketTur(h) === 'kurs' && (k => k && k.ucretsiz)(h.kursiyer && kursiyer(h.kursiyer)));
 // Tahakkuk esaslı fiş. fatura='kayit': kurs ücretinin tamamı kayıtta faturalanır (120 alacak açılır, yalnız kurs ücreti ve taksit tahsilatı 120'yi kapatır;
 // ek ders gibi ek kalemler tahsilatta faturalanır: 600 + 391). fatura='tahsilat': her tahsilatta e-Arşiv kesilir (satış ve KDV tahsilat anında).
 // Sınav ücreti gibi resmî kalemler iki modda da 336 emanete yazılır (KDV'siz). Tahsilat iptali asıl tahsilatın fişini ters çevirir.
@@ -293,7 +295,8 @@ export function muhasebeFisi(ay = 0) {
     if (kayitta && h.kursiyer && tur === 'kurs') { const k = hareketKisi(h), hs = k && k.odeme && k.odeme.senetli && h.kategori === 'Taksit' ? HESAP.senet : HESAP.alici; return [' · tahsilat', [[para, h.tutar], [hs, 0, h.tutar]]]; }  // PAR-038: senetli taksit 121'i kapatır
     const [n, v] = ayir(h.tutar, oranK(hareketKisi(h))); return [' · e-Arşiv', [[para, h.tutar], [HESAP.gelir, 0, n], [HESAP.kdvOut, 0, v]]]; };
   // PAR-038: bonoya (senede) bağlanan taksit alacağı 121 Alacak senetleri'nde izlenir (Tekdüzen Hesap Planı); peşinat 120'de kalır
-  if (kayitta) S.kursiyerler.filter(k => buAy(k.kayit)).forEach(k => { const T = k.odeme.toplam, sn = k.odeme.senetli ? Math.max(0, T - (+k.odeme.pesin || 0)) : 0, [n, v] = ayir(T, oranK(k));
+  // PAR-021: ücretsiz (%3) kursiyer: bedelsiz eğitim KDV'den istisna (KDVK 17/2-b), hasılat ve KDV yazılmaz (VUK 3/B)
+  if (kayitta) S.kursiyerler.filter(k => buAy(k.kayit) && !k.ucretsiz && !k.prova).forEach(k => { const T = k.odeme.toplam, sn = k.odeme.senetli ? Math.max(0, T - (+k.odeme.pesin || 0)) : 0, [n, v] = ayir(T, oranK(k));
     fis(k.kayit, tamAd(k) + ' · kurs ücreti faturası', [...(T - sn ? [[HESAP.alici, T - sn]] : []), ...(sn ? [[HESAP.senet, sn, 0, 'senetli taksitler']] : []), [HESAP.gelir, 0, n], [HESAP.kdvOut, 0, v]]); });
   S.hareket.filter(h => buAy(h.tarih)).sort((a, b) => a.tarih.localeCompare(b.tarih)).forEach(h => {
     const para = HESAP[h.yontem] || HESAP.Nakit; ev = h.fatura || h.no || '';  // evrak: fatura varsa fatura, yoksa makbuz
@@ -374,6 +377,7 @@ export function faturaListesi(ay = 0) {
   const sat = [bas, ...fl.map(satir), toplam(fl)];
   if (v.iade.length) sat.push([], ['İadeler (iade faturası ya da gider pusulası için; tutarlar eksi)'], bas, ...v.iade.map(satir), toplam(v.iade));
   if (v.emanet.length) sat.push([], [`Not: ${v.emanet.length} tahsilat (${kurus(v.emanet.reduce((a, h) => a + h.tutar, 0))} ₺) sınav ücreti, harç ya da kart ücretidir; kursiyerin kendi masrafı olarak emanet (336) alındı, döner sermayeye aktarılır. Kurs geliri değildir, fatura kesilmez.`]);
+  { const uc = S.kursiyerler.filter(k => k.ucretsiz && v.buAy(k.ucretsiz.tarih)); if (uc.length) sat.push([], [`Not: Bu ay ${uc.length} öğrenci ücretsiz (%3) kursiyer olarak işaretlendi (${uc.map(tamAd).join(', ')}). Kanun gereği bedelsiz verilen eğitim KDV’den istisnadır (KDVK m.17/2-b); hasılat kaydı yapılmaz, fatura zorunlu değildir. Modül illa fatura isterse “KDVK 17/2-b bedelsiz” ibareli sıfır tutarlı e-Arşiv kesilebilir.`]); }
   if (S.entegrasyon.fatura === 'kayit') sat.push([], ['Not: Ayarlarda “kayıtta tamamı” seçili. Kurs ücretinin faturası kayıtta kesildiyse taksit tahsilatları için ayrıca fatura gerekmez; Muhasebe fişleri sayfasına bakın.']);
   return sat;
 }
@@ -406,7 +410,7 @@ function aylikOzet(ay = 0) {
   const dt = {}; v.ders.forEach(d => { const a = DERS_TUR_AD[d.tur] || 'Direksiyon (trafikte)'; dt[a] = (dt[a] || 0) + 1; });
   const per = personelOzeti(ay).slice(2);
   return { ...v, gelirT: top(v.gelir), iadeT: top(v.iade), giderT: top(v.gider), yontem: ['Nakit', 'Havale', 'Kart'].map(y => [y, top(v.gelir.filter(h => h.yontem === y))]),
-    kat: Object.entries(kat).sort((a, b) => b[1] - a[1]), kdvH: kurus(hs('391', 6) - hs('391', 5)), kdvI: hs('191', 5), kisi: per.length, brut: per.reduce((a, r) => a + (+r[7] || 0), 0), dersT: Object.entries(dt), faturasiz: v.gelir.filter(h => !h.fatura && !resmiTahsilat(h)).length, emanetT: top(v.emanet) };
+    kat: Object.entries(kat).sort((a, b) => b[1] - a[1]), kdvH: kurus(hs('391', 6) - hs('391', 5)), kdvI: hs('191', 5), kisi: per.length, brut: per.reduce((a, r) => a + (+r[7] || 0), 0), dersT: Object.entries(dt), faturasiz: v.gelir.filter(h => !h.fatura && faturaBeklenir(h)).length, emanetT: top(v.emanet) };
 }
 const YONTEM_AD = { Nakit: 'Nakit', Havale: 'Havale/EFT', Kart: 'Kart (POS)' };
 // Mali müşavir paketi: özet, fatura listesi, banka/POS mutabakatı, giderler, muhasebe ve Luca fişleri, personel özeti ve puantaj tek Excel dosyasında

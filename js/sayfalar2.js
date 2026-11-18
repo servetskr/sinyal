@@ -689,7 +689,7 @@ function faturaIptal(no) {
       islem('Faturayı iptal etti', no + ' · ' + neden); kaydet(); kapatPencere(); bildir('Fatura iptal edildi; tahsilat yeniden faturalanabilir'); yenile(); }); } });
 }
 function faturaKes() {
-  const g = S.entegrasyon, son = sb(S.hareket).filter(h => h.tur === 'Gelir' && h.kursiyer && kursiyer(h.kursiyer) && !kursiyer(h.kursiyer).prova && ekTur({ ad: h.kategori }) !== 'resmi') /* sınav ücreti emanettir, kurs faturasına girmez (not 5) */.sort((a, b) => (b.tarih + b.id).localeCompare(a.tarih + a.id)).slice(0, 12);
+  const g = S.entegrasyon, son = sb(S.hareket).filter(h => h.tur === 'Gelir' && h.kursiyer && kursiyer(h.kursiyer) && !kursiyer(h.kursiyer).prova && ekTur({ ad: h.kategori }) !== 'resmi' && !(kursiyer(h.kursiyer).ucretsiz && ['Kurs ücreti', 'Taksit', 'Peşinat'].includes(h.kategori))) /* sınav ücreti emanettir, kurs faturasına girmez (not 5) */.sort((a, b) => (b.tarih + b.id).localeCompare(a.tarih + a.id)).slice(0, 12);
   const taslak = !g.earsiv.bagli;
   pencere({
     baslik: taslak ? 'Fatura taslağı' : 'e-Arşiv fatura kes',
