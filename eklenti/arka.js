@@ -207,6 +207,8 @@ async function isle(m, kimden) {
   if (m.tur === 'canli-al') return (await al('canli')) || null;
   if (m.tur === 'ilerleme-al') { const il = (await yerel('ilerleme')) || {}, t = await al('toplu'); return Object.values(il).map(r => ({ ...r, oturumda: !!(t && t.id === r.id) })); }
   if (m.tur === 'harita-koy') return haritaKoy(m.harita, kimden);
+  // MEB-173: İzle kipi açılınca işin yürüdüğü MEBBİS sekmesi öne gelir (yalnız MEBBİS sekmesinden gelen istek)
+  if (m.tur === 'izle-sekme') { const t = kimden && kimden.tab; if (!t || !/^https:\/\/mebbis\.meb\.gov\.tr\//.test(t.url || '')) return { ok: false }; try { await chrome.tabs.update(t.id, { active: true }); await chrome.windows.update(t.windowId, { focused: true }); } catch (x) { } return { ok: true }; }
   if (m.tur === 'harita-al') { const h = await yerel('harita'); return h && !haritaDenetle(h) ? { harita: h } : null; }
   if (m.tur === 'hedef-koy') { await koy('hedef', m.hedef); return { ok: true }; }
   if (m.tur === 'hedef-al') return (await al('hedef')) || null;

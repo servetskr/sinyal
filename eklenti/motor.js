@@ -204,14 +204,14 @@
   async function postla({ doc, yol }, degis = {}, { tetik = null, dugme = null, arguman = '' } = {}) {
     const f = anaForm(doc); if (!f) throw ekranHata(doc, 'form', 'formu');
     const hedef = new URL(f.getAttribute('action') || yolOf(yol), doc.__url || new URL(yolOf(yol), KOK).href).href;
-    const m = new Map(alanlar(doc));
+    const m = new Map(alanlar(doc)), degisen = new Set();
     Object.entries(degis).forEach(([k, v]) => {
       const el = elBul(doc, k);
       if (el && aslaMi(el)) throw yasak(doc, el, 'asla listesinde');
       const eylem = el ? Object.keys(EYLEM_ALAN).find(a => adEsit(el, a)) : null;
       if (eylem && EYLEM_ALAN[eylem] === 'yazma' && !yazmaIzni) throw yasak(doc, el, 'Kaydet yalnız onaylanmış yazma işinde');
-      if (SERBEST.has(k)) { m.set(el ? el.name || el.id : k, v); return; }
-      const ad = adOf(doc, k); secimDenetle(doc, el, v); m.set(ad, v);
+      if (SERBEST.has(k)) { m.set(el ? el.name || el.id : k, v); degisen.add(el ? el.name || el.id : k); return; }
+      const ad = adOf(doc, k); secimDenetle(doc, el, v); m.set(ad, v); degisen.add(ad);
     });
     if (tetik) { const t = elBul(doc, tetik); if (!t) throw ekranHata(doc, tetik); if (arguman) { if (!(t.tagName === 'TABLE' && /^Select\$\d{1,3}$/.test(arguman)) || aslaMi(t)) throw yasak(doc, t, 'yalnız liste satırı seçilebilir'); } else tetikDenetle(doc, t); }
     // satır seçiminde hedef, satırdaki bağlantının __doPostBack('hedef','Select$N') çağrısından okunur (UniqueID; id'deki '_' ile tahmin edilmez)
@@ -219,9 +219,12 @@
     m.set('__EVENTTARGET', tetik ? (arguman ? satirHedef() : adOf(doc, tetik)) : ''); m.set('__EVENTARGUMENT', arguman || '');
     const govde = [...m].map(([k, v]) => kodla(k) + '=' + kodla(v));
     if (dugme) { const d = elBul(doc, dugme); if (!d) throw ekranHata(doc, dugme, 'düğmesi'); dugmeDenetle(doc, d); const ad = d.name || d.id; if ((d.type || '').toLowerCase() === 'image') govde.push(kodla(ad + '.x') + '=7', kodla(ad + '.y') + '=7'); else govde.push(kodla(ad) + '=' + kodla(d.value || '')); }
+    if (izle) { izleGoster(doc, m, degisen, dugme && elBul(doc, dugme), m.get('hiddenKaydet') === 'Kaydet' || [...m.keys()].some(k => sonAd(k) === 'hiddenKaydet' && m.get(k) === 'Kaydet') ? 'kaydediliyor' : 'gönderiliyor'); await uyku(IZLE_BEKLE); }
     await bekle();
     const r = await fetch(hedef, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: govde.join('&') });
-    return { doc: denetle(await coz(r), yol), yol };
+    const yd = denetle(await coz(r), yol);
+    if (izle) izleGoster(yd, null, null, null, 'MEBBİS yanıtı');
+    return { doc: yd, yol };
   }
   // Seçim kutusunda değeri bul: önce değer, sonra metin (tam, baş, içerir); yoksa açık hata (MEBBİS'e geçersiz değer gitmez)
   // sinif: sertifika sınıfı listesi. Önce Program ID değeriyle seçilir (2504 B, 2502 A1, 2503 A2, 2514 A; 01005 ve 02007'de canlı doğrulandı);
@@ -956,6 +959,42 @@
     sonuc.kurum = { ...(k || { kod: '', ad: '' }), eslesme: 'yetkili' };
   }
 
+  /* ---------- MEB-173 (1.17.0): İzle kipi ---------- */
+  // İş arka planda (fetch) sürer; İzle açıkken her gönderimden önce formun doldurulmuş hâli, sonra MEBBİS'in yanıtı bu sekmede görünür bir panelde
+  // gösterilir (değişen alanlar sarı). Panel yalnız görüntüdür: betik, form, bağlantı, dış resim ve stil atılır; iframe sandbox'lı (betik ve form yok),
+  // içerik güvenlik politikası yalnız gömülü (data:) resme izin verir → panel MEBBİS'e hiçbir istek göndermez (güvenlik kodu resmi de yenilenmez).
+  // Açma: iş yükünde izle:true (mdSinyal'de "İzle" kutusu) ya da karttaki İzle düğmesi (bu tarayıcıda hatırlanır). Açıkken MEBBİS sekmesi öne gelir.
+  let izle = false; const IZLE_BEKLE = 500;
+  const CSP = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'">`;
+  function izleHtml(doc, m, degisen, dugmeEl) {
+    const c = doc.documentElement.cloneNode(true);
+    if (dugmeEl && dugmeEl.name) { const d = c.querySelector(`[name="${CSS.escape(dugmeEl.name)}"]`); if (d) d.setAttribute('data-izle', '1'); }
+    c.querySelectorAll('script, iframe, frame, frameset, object, embed, link, meta, base, noscript, audio, video, source, svg image').forEach(x => x.remove());
+    c.querySelectorAll('*').forEach(x => [...x.attributes].forEach(a => {
+      const n = a.name.toLowerCase();
+      if (n.startsWith('on') || ['href', 'action', 'formaction', 'background', 'poster', 'srcset', 'xlink:href', 'ping'].includes(n) || (n === 'src' && !/^data:image\//i.test(a.value)) || (n === 'style' && /url\s*\(|expression/i.test(a.value))) x.removeAttribute(a.name);
+    }));
+    c.querySelectorAll('style').forEach(x => { x.textContent = x.textContent.replace(/@import[^;]*;?/gi, '').replace(/url\s*\([^)]*\)/gi, 'none'); });
+    if (m) c.querySelectorAll('input[name], select[name], textarea[name]').forEach(el => {
+      if (!m.has(el.name)) return; const v = String(m.get(el.name)), t = (el.type || '').toLowerCase();
+      if (el.tagName === 'SELECT') el.querySelectorAll('option').forEach(o => { if (o.getAttribute('value') === v) o.setAttribute('selected', 'selected'); else o.removeAttribute('selected'); });
+      else if (t === 'checkbox' || t === 'radio') { if ((el.getAttribute('value') || 'on') === v) el.setAttribute('checked', 'checked'); }
+      else if (el.tagName === 'TEXTAREA') el.textContent = v; else if (t !== 'file') el.setAttribute('value', v.length > 200 ? v.slice(0, 40) + '…' : v);
+      if (degisen && degisen.has(el.name)) el.setAttribute('data-izle', '1');
+    });
+    c.querySelectorAll('input, select, textarea, button').forEach(el => el.setAttribute('disabled', ''));
+    const b = c.querySelector('body');
+    return `<!doctype html><html><head><meta charset="utf-8">${CSP}<style>body{font:13px system-ui,sans-serif;margin:8px;color:#111}[data-izle]{outline:3px solid #ffc21a!important;background:#fff6cc!important}</style></head>${b ? b.outerHTML : '<body></body>'}</html>`;
+  }
+  function izleGoster(doc, m, degisen, dugmeEl, durumYazi) {
+    try {
+      const p = g.querySelector('.izle'); p.classList.remove('gizli');
+      p.querySelector('[data-izb]').textContent = `İzle · ${ekranAd(doc.__ekran)} · ${durumYazi}`;
+      p.querySelector('iframe').srcdoc = izleHtml(doc, m, degisen, dugmeEl);
+    } catch (x) { }
+  }
+  const izleKoy = v => { izle = !!v; if (!izle) { const p = g.querySelector('.izle'); if (p) p.classList.add('gizli'); } else gonder({ tur: 'izle-sekme' }); };
+
   /* ---------- durum kartı (sayfanın sol altında) ---------- */
   const kok = document.createElement('div'); kok.id = 'sinyal-motor';
   const g = kok.attachShadow({ mode: 'open' });
@@ -968,10 +1007,15 @@
     small{color:#b9c3d6;display:block}.olc{margin-top:4px;font-variant-numeric:tabular-nums}.kod{margin-top:10px;background:#fff;color:#14284b;border-radius:10px;padding:10px}.kod p{margin:4px 0 0;font-size:13px}.kod img{display:block;max-width:100%;margin:6px 0;border:1px solid #ddd;border-radius:6px}
     input{width:100%;height:38px;border:1.5px solid #c8d0de;border-radius:8px;padding:0 10px;font-size:16px;letter-spacing:2px}
     button{cursor:pointer;border:0;border-radius:8px;height:34px;padding:0 12px;font-weight:700;font-size:13px}.ana{background:#ffc21a;color:#14284b}.cz{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.35)}.kod .cz{color:#14284b;border-color:#c8d0de}
-    .alt{display:flex;gap:8px;margin-top:10px;justify-content:flex-end;flex-wrap:wrap}.alt:empty{display:none}</style>
+    .alt{display:flex;gap:8px;margin-top:10px;justify-content:flex-end;flex-wrap:wrap}.alt:empty{display:none}
+    .izle{position:fixed;right:16px;top:16px;bottom:16px;z-index:2147483646;width:min(46vw,640px);background:#fff;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.35);display:flex;flex-direction:column;overflow:hidden}.izle.gizli{display:none}
+    .izle .iu{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#0f1d33;color:#fff;font-size:13px}.izle .iu b{flex:1;font-weight:700}.izle iframe{flex:1;border:0;width:100%;background:#fff}
+    @media (max-width:700px){.izle{left:16px;width:auto;top:auto;height:45vh}}</style>
+    <div class="izle gizli" role="region" aria-label="İzle: Yardımcı'nın işlediği MEBBİS sayfası"><div class="iu"><b data-izb>İzle</b><button class="cz" data-izk>Kapat</button></div><iframe sandbox="" title="MEBBİS sayfası (yalnız görüntü)"></iframe></div>
     <div class="k gizli"><div class="ust" title="Sürükleyerek taşıyın · çift tıklayınca köşesine döner"><i></i><b data-baslik>mdSinyal · MEBBİS’te çalışıyor</b><span class="yz" data-yz></span><button class="kc" data-kucult aria-label="Küçült ya da büyüt">▾</button></div><div class="gv"><div data-adim></div><div class="bar"><i style="width:0"></i></div><small data-alt></small><small class="olc" data-olcum></small><div data-kod></div><div class="alt" data-dugmeler></div></div></div>`;
   const kart = g.querySelector('.k'), q = s => g.querySelector(s);
   if (window.__sinyalTasi) window.__sinyalTasi(kart, g.querySelector('.ust'), 'is');   // tasi.js
+  g.querySelector('[data-izk]').addEventListener('click', () => { izleKoy(false); gonder({ tur: 'ayar-koy', ad: 'izle', deger: false }); calisanDugmeler(); });
   q('[data-kucult]').addEventListener('click', () => { kart.classList.toggle('kucuk'); gonder({ tur: 'ayar-koy', ad: 'is-kucuk', deger: kart.classList.contains('kucuk') }); });
   gonder({ tur: 'ayar-al', ad: 'is-kucuk' }).then(v => { if (v) kart.classList.add('kucuk'); });
   const goster = (adim, oran, alt, baslik) => {
@@ -1049,8 +1093,13 @@
     goster('Yarım kalan MEBBİS işi', null, `Tarayıcı kapandığı için iş bilgileri silindi. ${ok} iş yazılmıştı${kalan > 0 ? `, ${kalan} iş gönderilmedi` : ''}. mdSinyal sekmesini açın: yazılanlar oraya işlenir, kalanları yeniden gönderin.`, 'mdSinyal · MEBBİS');
     durumSinif('dur'); dugmeler([['kapat', 'Kapat', 'cz', () => kart.classList.add('gizli')], ['ac', 'mdSinyal’i aç', 'ana', () => gonder({ tur: 'sinyal-ac' })]]);
   }
+  // çalışırken kart düğmeleri: Durdur ve İzle (aç/kapat)
+  function calisanDugmeler() {
+    if (!calisiyor) return;
+    dugmeler([['izle', izle ? 'İzlemeyi kapat' : 'İzle', 'cz', () => { izleKoy(!izle); gonder({ tur: 'ayar-koy', ad: 'izle', deger: izle }); calisanDugmeler(); }], ['dur', 'Durdur', 'cz', () => durdurBas(aktifId)]]);
+  }
   async function geriSay(saniye) {
-    dugmeler([['dur', 'Durdur', 'cz', () => durdurBas(aktifId)]]);
+    calisanDugmeler();
     for (let i = saniye; i > 0; i--) { goster('Kaldığı yerden sürüyor', null, `${i} sn içinde başlıyor. Yazılmış kayıtlar yeniden yazılmaz.`); await uyku(1000); kontrol(); }
   }
   async function yurut({ devam = false } = {}) {
@@ -1067,6 +1116,7 @@
     }
     calisiyor = true; durdur = false; iptal = false; aktifId = is.id; ekranOlaylari = [];
     await haritaYukle();
+    izleKoy(!!is.izle || (await gonder({ tur: 'ayar-al', ad: 'izle' })) === true);   // MEB-173
     const sonuc = is.sonuc || { veri: {}, yazilan: [], hata: null };
     const oncekiTur = sonuc.hataTur; sonuc.hata = null; sonuc.hataTur = null; sonuc.mebKurum = null; sonuc.yardimci = SURUM; sonuc.harita = H.surum + (haritaKaynak === 'web' ? ' (web)' : '');
     olc = sonuc.olcum = sonuc.olcum || { basla: Date.now(), bitis: null, istek: 0, kod: { istenen: 0, girilen: 0, atlanan: 0, bekleme_ms: 0 }, tur: {}, oturumDusme: [] }; olc.bitis = null;
@@ -1082,7 +1132,7 @@
       if ((iptal || durdur) && soruKapat) soruKapat();
       if (!iptal) gonder({ tur: 'toplu-kilit', id: is.id, sahip: SAHIP });
     }, 2500);
-    durumSinif(''); dugmeler([['dur', 'Durdur', 'cz', () => durdurBas(is.id)]]);
+    durumSinif(''); calisanDugmeler();
     try {
       if (oncekiTur === 'oturum' && (sonuc.yazilan.length || Object.keys(sonuc.veri).length || sonuc.suruyor)) await geriSay(5);
       await kaydet('calisiyor');
@@ -1179,7 +1229,7 @@
     } finally { clearInterval(izle); calisiyor = false; aktifId = null; gonder({ tur: 'toplu-kilit-birak', id: is.id, sahip: SAHIP }); }
   }
   // yerel test (sinyal-kaynak/arac/mebbis-test): yalnız test sayfası bu kancayı tanımlarsa iç işlevler verilir; eklentide tanımsız (içerik betiği yalıtılmış dünyada)
-  if (typeof globalThis.__sinyalMotorTest === 'function') globalThis.__sinyalMotorTest({ CEKME, YAZMA, postla, getir, secenek, kayitliMi, adayDosyasi, dugmeDenetle, yazmaAc: async f => { yazmaIzni = true; try { return await f(); } finally { yazmaIzni = false; } } });
+  if (typeof globalThis.__sinyalMotorTest === 'function') globalThis.__sinyalMotorTest({ CEKME, YAZMA, postla, getir, secenek, kayitliMi, adayDosyasi, dugmeDenetle, izleAc: v => izleKoy(v), izlePanel: () => { const p = g.querySelector('.izle'), f = p.querySelector('iframe'); return { acik: !p.classList.contains('gizli'), baslik: p.querySelector('[data-izb]').textContent, srcdoc: f.srcdoc, sandbox: f.getAttribute('sandbox') }; }, yazmaAc: async f => { yazmaIzni = true; try { return await f(); } finally { yazmaIzni = false; } } });
   const ekle = () => { if (!document.body) return setTimeout(ekle, 300); document.body.appendChild(kok); yurut(); };
   // sayfa değişirken kilit bırakılır; yeni sayfadaki motor beklemeden sürdürebilsin
   addEventListener('pagehide', () => { if (aktifId) gonder({ tur: 'toplu-kilit-birak', id: aktifId, sahip: SAHIP }); });

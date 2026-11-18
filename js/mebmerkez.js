@@ -94,6 +94,7 @@ export function merkezSekme() {
           <button type="button" data-mm-tur="al">${ik('indir')}Tek liste al <small>açık MEBBİS ekranından</small></button>
           <a href="#/meb/asistan">${ik('belge')}Elle giriş <small>Yardımcı’sız sıralı giriş</small></a></div></details></div></div>
 
+      ${EK.eklenti.var ? `<label style="display:flex;gap:8px;align-items:center;font-size:13.5px;color:var(--metin);cursor:pointer"><input type="checkbox" data-mm-izle ${MT.izleAcik() ? 'checked' : ''}><span><b style="color:var(--murekkep)">İzle</b> · Yardımcı çalışırken MEBBİS sekmesi öne gelir; doldurduğu her formu ve MEBBİS’in yanıtını orada görürsünüz (Yardımcı 1.17)</span></label>` : ''}
       ${S.mebDenetim ? `<small style="color:var(--soluk)">${MK.denetimOzeti()} · <button type="button" data-mt-denetim-goster style="background:none;border:0;padding:0;color:var(--levha);font-weight:700;cursor:pointer;font:inherit">Ayrıntı</button></small>` : ''}</div></div>`;
     h += `<p class="mx-baslik">Şimdi açık olan MEBBİS işleri</p>${MX.pencerelerHtml(hepsi)}`; }
   // DENETİM Ö3: görünüm seçimi ayrı bir sekme katı değil, iş kartının başlığında sağda
@@ -190,6 +191,7 @@ export function merkezBaglan(k, yenile) {
     { const d = ev.target.closest('[data-mx-donem]'); if (d) { m.donem = d.value; return yenile(); } }   // MEB-187
     const t = ev.target;
     if (t.matches('[data-mm-durum]')) { m.durum = t.value; return yenile(); }
+    if (t.matches('[data-mm-izle]')) { MT.izleKoy(t.checked); return; }   // MEB-173
     if (t.matches('[data-mm-esgun]')) { S.kurs.esinavGun = t.value; kaydet(); return; }
     if (t.matches('[data-mm-tarih]')) { m.tarih = t.value; return yenile(); }
     if (t.matches('[data-mm-sinif]')) { m.sinif = t.value; return yenile(); }

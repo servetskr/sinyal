@@ -109,7 +109,11 @@ function hazirMi(sonra, elleSonra) {
 }
 // Yardımcı'daki süren iş bu yazma işinin bir parçası mı (çekme işi ya da eski iş değil)
 const buIsSuruyor = m => !!m && suruyor() && String(durum.id || '').startsWith(m.id);
+// MEB-173: İzle kipi (Yardımcı 1.17): iş sürerken MEBBİS sekmesi öne gelir, her gönderilen form ve yanıt orada görünür. Bu tarayıcıda hatırlanır.
+export const izleAcik = () => { try { return localStorage.getItem('mebIzle') === '1'; } catch (x) { return false; } };
+export const izleKoy = v => { try { localStorage.setItem('mebIzle', v ? '1' : '0'); } catch (x) { } };
 function baslat(is, mesaj, kayitla = true) {
+  if (izleAcik()) is = { ...is, izle: true };
   durum.calisiyor = true; durum.id = is.id; durum.gonderilen = is.id; durum.olcum = ''; durum.adim = 'MEBBİS sekmesi açılıyor'; durum.baslama = Date.now(); durum.sonIlerleme = Date.now(); durum.hata = ''; durum.mesgul = null;
   gonder('toplu', is); if (kayitla) islem('MEBBİS toplu işi başlattı', mesaj); bildir(mesaj + '. MEBBİS sekmesi açılıyor; girmediyseniz kendi şifrenizle girin, iş kendiliğinden başlar.');
   yenile();
