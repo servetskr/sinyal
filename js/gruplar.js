@@ -57,7 +57,11 @@ function atanabilirGruplar(sinif) {
   return (S.gruplar || []).filter(g => !g.baslangic || g.baslangic >= sinir).filter(g => !g.sinif || !sinif || g.sinif === sinif || g.sinif === anaSinif(String(sinif)))
     .sort((a, b) => String(b.baslangic).localeCompare(String(a.baslangic)));
 }
-export const grupSecenekleri = (l, secili) => l.map(g => `<option value="${e(g.id)}" ${g.id === secili ? 'selected' : ''}>${e(grupMetni(g))}</option>`).join('');
+// Doluluk (DON-008): gruptaki aktif kursiyer / kapasite. Kapasite grup kartındaki kontenjan.
+export const grupKapasite = g => (g && +g.kontenjan) || null;
+export const grupDoluluk = g => { const n = g ? kisiler(g).length : 0, k = grupKapasite(g); return { n, k, dolu: !!k && n >= k }; };
+export const dolulukMetni = g => { const d = grupDoluluk(g); return `${d.n}${d.k ? '/' + d.k : ''} kişi${d.dolu ? ' · dolu' : ''}`; };
+export const grupSecenekleri = (l, secili) => l.map(g => `<option value="${e(g.id)}" ${g.id === secili ? 'selected' : ''}>${e(grupMetni(g))} · ${dolulukMetni(g)}</option>`).join('');
 
 /* ---------- grup kartı oluşturma / düzenleme ---------- */
 function donemSecenekleri(secili) {
