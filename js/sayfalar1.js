@@ -6,6 +6,7 @@ import { belgeYazdir, ziyaretci, alanHatalari, e, saatDe, saatE, tl, sayi, ik, r
 import { yenile } from './app.js?v=234';
 import { DERS_KAMERA, KAMERA_HATIRLAT, dersKameraYaz } from './portal.js?v=234';
 import { ilceler } from './ilce.js?v=234';
+import * as BP from './birlestir-pencere.js?v=234';
 import { ILLER as IL_ADLARI, kursIli } from './veri.js?v=234';
 import * as TC from './tercih.js?v=234';
 import { denetimEksikleri, sozlesmeImzalat, sozlesmeDondur } from './sayfalar3.js?v=234';
@@ -1037,6 +1038,7 @@ export function kursiyerler(filtre) {
     html: `${ekranNotu('Her kursiyerin nerede olduğu, ne kadar borcu kaldığı ve sınavda kalma riski tek satırda. Satıra dokunun, dosyası açılsın.')}
     <div class="bolum-bas"><div><h2>Kursiyer listesi</h2></div><div class="sag">${['mudur', 'sekreter'].includes(oturum.kullanici.rol) ? `<button class="dg dg-cizgi" data-toplu-hesap>${ik('tel')}Öğrenci hesapları</button>` : ''}<button class="dg dg-cizgi" data-disa>${ik('indir')}Excel’e aktar</button><button class="dg dg-cizgi" data-liste-yazdir>${ik('belge')}PDF / yazdır</button><button class="dg dg-cizgi" data-evrak-tablo>${ik('belge')}Evrak tablosu</button><button class="dg dg-cizgi" data-foto-karsilastir>${ik('kursiyer')}Fotoğraf karşılaştırma</button><button class="dg dg-cizgi" data-toplu-belge>${ik('belge')}Toplu belge</button><button class="dg dg-cizgi" data-sutunlar>${ik('menu')}Sütunlar</button><button class="dg dg-ana" data-yeni>${ik('arti')}Yeni kursiyer</button></div></div>
     <div data-yarim-kap>${yarimKayitlar()}</div>
+    ${BP.mukerrerSeridi()}
     ${uyariSeritleri()}
     <div class="kat-serit" role="tablist" aria-label="Öğrenci kategorileri" data-kat-serit>${katSeridi(kat)}</div>
     ${bakimSeridi()}
@@ -1090,6 +1092,7 @@ export function kursiyerler(filtre) {
         if (ev.target.closest('[data-toplu-odeme]')) return topluOdeme(suzulen(), ciz);
         if (ev.target.closest('[data-evrak-tablo]')) return evrakTablosu(suzulen());  // KAY-068
         if (ev.target.closest('[data-foto-karsilastir]')) return fotoKarsilastir(suzulen());  // KAY-043
+        if (ev.target.closest('[data-mukerrer]')) return BP.mukerrerPenceresi(yenile);  // KAY-086
         if (ev.target.closest('[data-toplu-belge]')) return topluBelge(suzulen());  // KAY-092
         if (ev.target.closest('[data-sutunlar]')) return sutunPenceresi(() => { const tbl = k.querySelector('.kursiyer-tablo'); if (tbl) tbl.dataset.gizli = (TC.tercihler().gizliSutun || []).join(' '); });  // KAY-059
         { const bk0 = ev.target.closest('[data-bakim]'); if (bk0) { bakim = bakim === bk0.dataset.bakim ? '' : bk0.dataset.bakim; k.querySelectorAll('[data-bakim]').forEach(x => x.classList.toggle('secili', x.dataset.bakim === bakim)); if (bakim && sekme !== 'Tümü') { sekme = 'Tümü'; k.querySelector('#sek').innerHTML = sekmeler([['Tümü', 'Tümü', say('Tümü')], ...ASAMALAR.map(a => [a, a, say(a)])], sekme); } return ciz(); } }
@@ -2046,7 +2049,7 @@ ${mesajlar.length ? '' : '<li style="color:var(--soluk)">Bu kursiyere henüz mes
   };
   return {
     baslik: tamAd(k), alt: 'Kursiyer dosyası',
-    html: `<a class="dg dg-hafif" href="#/kursiyerler" style="margin:-6px 0 10px -8px">${ik('sol')}Kursiyerler</a>
+    html: `<a class="dg dg-hafif" href="#/kursiyerler" style="margin:-6px 0 10px -8px">${ik('sol')}Kursiyerler</a>${BP.birlestirmeNotu(k)}
     <div class="kart">
       <div class="profil-bas"><button type="button" class="profil-foto ${k.foto ? 'var' : ''}" data-profil-foto title="${k.foto ? 'Fotoğrafı değiştir' : 'Fotoğraf çek ya da yükle'}">${k.foto ? `<img src="${k.foto}" alt="${e(tamAd(k))} fotoğrafı">` : `${ik('kursiyer')}<small>Biyometrik</small>`}</button>${k.dogrulamaFoto && k.dogrulamaFoto.veri ? `<button type="button" class="profil-foto ikinci var" data-profil-foto title="Kurumda çekilen fotoğraf (kimlik doğrulama) · ${tarih(k.dogrulamaFoto.tarih)}"><img src="${k.dogrulamaFoto.veri}" alt="${e(tamAd(k))} kurumda çekilen fotoğraf"><small class="foto-etiket">Kurum</small></button>` : `<button type="button" class="profil-foto ikinci bos" data-profil-foto title="Kurumda çekilen fotoğraf yok · çek ya da yükle (kimlik doğrulama)">${ik('kursiyer')}<small>Kurum</small></button>`}<div><span class="profil-no">No ${e(String(k.no || '—'))}</span><h2 style="margin-top:6px">${e(tamAd(k))}</h2><div class="meta"><span>${asamaRozet(k.asama)}</span>${mebEtiketleri(k).map(x => `<span title="MEBBİS etiketi">${rozet(x, /ceza|dışı|dondur/i.test(x) ? 'kirmizi' : /ücretsiz/i.test(x) ? 'yesil' : 'mor')}</span>`).join('')}<span>${ik('direksiyon')}${S0.ad}</span><span>${ik('tel')}<span class="num">${e(k.tel)}</span></span><span>${ik('kursiyer')}${e(eg.ad)}</span></div>${eksenHtml(k)}</div>
         <div class="sag"><button class="dg dg-wp" data-wp>${ik('wp')}WhatsApp</button>${kalanBorc(k) > 0 && !k.kapali ? `<button class="dg dg-ana" data-odeme-al>${ik('kart')}Ödeme al</button>` : ''}<button class="dg dg-cizgi" data-ileri ${k.asama === 'Ehliyet' || k.kapali ? 'disabled' : ''}>${ik('ok')}Sonraki aşamaya geçir</button>${ozelNotDugme(k)}${mudurMu() ? `<details class="kayit-diger"><summary class="dg dg-hafif" aria-label="Diğer işlemler">⋯</summary><div class="kayit-diger-menu">${!k.kapali && k.asama !== 'Ehliyet' ? '<button class="dg dg-hafif" data-kapat-kayit>Kaydı kapat (ayrıldı / dondur)</button>' : ''}${k.kapali || k.asama === 'Ehliyet' ? '<button class="dg dg-hafif" data-kayit-sil style="color:var(--kirmizi)">Kaydı sil</button>' : ''}</div></details>` : ''}</div></div>
@@ -2061,6 +2064,7 @@ ${mesajlar.length ? '' : '<li style="color:var(--soluk)">Bu kursiyere henüz mes
     baglan(kap) {
       const ciz = () => { kap.querySelector('#ps').innerHTML = sekmeHtml(); kap.querySelector('#pg').innerHTML = govde(); };
       kap.addEventListener('click', async ev => {
+        { const mg = ev.target.closest('[data-mk-geri]'); if (mg) return BP.geriAlAkis(mg.dataset.mkGeri, yenile); }  // KAY-086
         const s = ev.target.closest('[data-psekme]'); if (s) { profilSekme = s.dataset.psekme; ciz(); }
         if (ev.target.closest('[data-wp]')) { profilSekme = 'mesaj'; ciz(); kap.querySelector('[data-mesaj] input').focus(); }
         if (ev.target.closest('[data-ileri]')) asamaIlerlet(k);

@@ -3939,3 +3939,37 @@ tr.secili-satir td { background: rgba(10, 77, 162, .06); }
 .uavt-izgara{margin-top:4px}
 .uavt-onizle{font-size:13.5px;color:var(--soluk);margin:0}
 .uavt-onizle b{color:var(--murekkep);font-weight:600}
+/* KAY-086: mükerrer kayıt birleştirme */
+.mk-serit{align-items:center}
+.mk-serit>span{flex:1}
+.mk-not{font-size:13.5px;color:var(--soluk);margin:0 0 12px;line-height:1.5}
+.mk-bos{padding:18px 0;color:var(--soluk)}
+.mk-liste{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.mk-cift{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--cizgi);border-radius:10px;background:var(--panel)}
+.mk-cift>div{flex:1;min-width:0;display:grid;gap:2px}
+.mk-cift b{font-weight:600;color:var(--murekkep)}
+.mk-cift b small,.mk-tablo th small{font-weight:400;color:var(--soluk)}
+.mk-cift span{font-size:13px;color:var(--soluk)}
+.mk-et{font-style:normal;font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:999px;background:var(--panel-2);color:var(--metin);margin-right:4px}
+.mk-et.kesin{background:color-mix(in srgb,var(--kirmizi) 12%,var(--panel));color:var(--kirmizi)}
+.mk-bas{font-size:15px;margin:20px 0 8px;color:var(--murekkep)}
+.mk-bas small{font-weight:400;color:var(--soluk)}
+.mk-tablo{width:100%;border-collapse:collapse;font-size:14px;margin-top:4px}
+.mk-tablo th,.mk-tablo td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--cizgi-2);vertical-align:top;overflow-wrap:anywhere}
+.mk-tablo thead th{font-size:13px;color:var(--murekkep);background:var(--panel-2)}
+.mk-tablo thead th .dg{display:flex;margin-top:6px}
+.mk-tablo tbody th{width:28%;font-weight:500;color:var(--soluk)}
+.mk-tablo tr.mk-farkli td{background:color-mix(in srgb,var(--sari,#f2b705) 10%,var(--panel))}
+.mk-tablo label{display:flex;gap:8px;align-items:flex-start;cursor:pointer}
+.mk-tablo input[type=radio]{margin-top:3px;flex:none}
+.mk-ozet{margin-top:16px;padding:14px 16px;border-radius:10px;background:var(--panel-2)}
+.mk-ozet h3{font-size:15px;margin:0 0 8px;color:var(--murekkep)}
+.mk-ozet ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.mk-ozet li{display:flex;gap:8px;font-size:14px;line-height:1.5;color:var(--metin)}
+.mk-ozet li>svg,.mk-ozet li>.isaret{flex:none;margin-top:2px}
+.mk-kirmizi{color:var(--kirmizi)}
+@media (max-width:600px){.mk-cift{flex-direction:column;align-items:stretch}.mk-tablo{font-size:13px}.mk-tablo th,.mk-tablo td{padding:6px}}
+.mk-gelir{color:var(--yesil,#1e8e4e);font-weight:600}
+/* KAY-086: kırmızı (geri dönüşü zor) işlem düğmesi; onaySor({ tehlike: true }) de bunu kullanır */
+.dg-tehlike{background:var(--kirmizi);color:#fff;border-color:var(--kirmizi)}
+.dg-tehlike:hover{filter:brightness(.94)}
