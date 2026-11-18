@@ -1,4 +1,5 @@
 import { asamaFarki, memVermeSuresi, cokSube, izinDurumu, mebIsGunuIleri, mebIsGunuGeri as KR_SON, dersBitisi, sinavGecmisi, hakDurumu, islemYetkili, gordu, satirUcretKaynagi, makbuzNoVer, taksitAyar, taksitSiniri, taksitVade, bankaHesaplari, varsayilanHesap, kursiyerDersleri, kayitDondurmaMi, planAyar, dersSaatleri, EGITIM_TURU, egitimTuruOf, mebEtiketleri, dersSayaci, arifeMi, ustaRengi, haftalikSinir, haftaDers, ekDersFiyat, ozelDersFiyat, uygulamaSinavUcreti, esinavUcreti, digerUcretler, odemeKodu, ibanMetni, dersSirasi, S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, risk, BECERI, islem, geriAlNoktasi, oturum, tcGecerli, tcMaskele, DERS_TUR_AD, ek3Sinif, ogretmen, yas, mebOnKontrol, sb, sbDers, sbSinav, kapaliGun, ustaAraci, dersAraci, yerelZaman, aktifSiniflar, satistaSiniflar, YONTEMLER, yontemAd, ayEkle, gecikenTutar, selam, kursAdi, tuketim, beklenenTuketim, mudurTel, evrakKaynak, tutarOku, taksitBol, ayniTcKayit, dersIptalIz, egitimSinifi, ekTur, aracSiniflari, kursiyerTaban, tabanListesi, ekDersTabani, ozelDersTabani, programUyarisi, varsayilanYontem, teorikVar, belgeliMi, esinavsizBelgeli, teorikSaat, TEORIK_MUAF_DERS, dersKonulariResmi } from './veri.js?v=234';
+import { saklamaYili, faizAyar, gecikmeFaizi, FAIZ_UYARI, FAIZ_YONTEM } from './veri.js?v=234';
 import * as MN from './mebnorm.js?v=234';
 import * as CR from './cari.js?v=234';
 import * as SG from './sinavgunu.js?v=234';
@@ -660,7 +661,7 @@ export function kursiyerFormu(on = {}) {
         <div class="form-izgara" style="margin-top:12px"><div class="alan" data-ks-taksitli><label for="k-pesin">Peşinat</label><input id="k-pesin" name="pesin" inputmode="numeric" value="8000"></div>
         <div class="alan" data-ks-taksitli><span class="et">Taksit sayısı</span>${sec('taksit', Array.from({ length: taksitEnCok() }, (_, i) => [String(i + 1), String(i + 1)]), String(taksitVarsayilan()))}</div>
         <div class="alan" data-ks-taksitli><label for="k-pvade">Peşinat ne zaman?</label><input id="k-pvade" name="pesinVade" type="date" value="${gun(0)}" min="${gun(0)}"><small style="color:var(--soluk)">Bugün değilse peşinat vadeli borç olur</small></div>
-        <div class="alan tam" data-ks-yontem-alan><span class="et" data-ks-yontem-et>Peşinat nasıl alındı?</span>${sec('yontem', YONTEMLER.map(y => [y, yontemAd(y)]), '')}</div>${hesapSecici('')}</div>
+        <div class="alan tam" data-ks-yontem-alan><span class="et" data-ks-yontem-et>Peşinat nasıl alındı?</span>${sec('yontem', YONTEMLER.map(y => [y, yontemAd(y)]), '')}</div>${hesapSecici('')}${nakitDekontHtml()}</div>
         <ul class="ks-plan" id="k-plan"></ul>
         <div class="ks-banka" data-ks-banka hidden>${ik('kart')}<span></span></div></div>
       <div class="ks-not" data-ks-sonra hidden>${isaret('bilgi', 18)}<span><b>Ödeme sonra girilecek.</b> Kurs ücreti borç olarak yazılır, vadesi bir hafta sonra. Plan öğrenci dosyasında Ödeme › “Taksit planını yeniden böl”den yapılır. <button type="button" class="dg dg-hafif dg-kucuk" data-ks-odeme-geri>Şimdi gir</button></span></div>`)}
@@ -684,6 +685,7 @@ export function kursiyerFormu(on = {}) {
     taslakOzet: d => { const f = d.querySelector('form'); const a = [f.ad.value.trim(), f.soyad.value.trim()].filter(Boolean).join(' '); const s = f.sinif.value && SINIFLAR[f.sinif.value]; return (a || 'Adsız kayıt') + (s ? ' · ' + s.ad : ''); },
     onAc(d) {
       const f = d.querySelector('form'), paneller = [...d.querySelectorAll('.ks-panel')];
+      nakitDekontBagla(f);  // PAR-004: nakit peşinatta dekont
       d.addEventListener('click', ev => { if (ev.target.closest('[data-belge-oku]')) import('./belgeoku.js?v=234').then(m => m.belgeOkuAc(d)); });   // KAY-033
       const deger = n => (f.querySelector(`[name="${n}"]:checked`) || {}).value || '';
       const taksitN = () => deger('odemeSekli') === 'pesin' ? 0 : +deger('taksit') || 1;
@@ -735,6 +737,7 @@ export function kursiyerFormu(on = {}) {
         d.querySelector('[data-ks-yontem-et]').textContent = n ? 'Peşinat nasıl alındı?' : 'Ödeme nasıl alındı?';
         const pv = n && f.pesinVade.value > gun(0) ? f.pesinVade.value : ''; d.querySelector('[data-ks-yontem-alan]').hidden = !!(n && (pv || !p));
         d.querySelector('#k-plan').innerHTML = n ? (p ? `<li><span>P</span>Peşinat · ${pv ? tarihUzun(pv).split(' ').slice(0, 2).join(' ') + ' (vadeli)' : 'bugün'}<b>${tl(p)}</b></li>` : '') + taksitBol(u - p, n).map((t, i) => `<li><span>${i + 1}</span>${tarihUzun(taksitVade(gun(0), i)).split(' ').slice(0, 2).join(' ')} ${taksitVade(gun(0), i).slice(0, 4)}<b>${tl(t)}</b></li>`).join('') : `<li><span>₺</span>Tek seferde · bugün<b>${tl(u)}</b></li>`;
+        { const nd = d.querySelector('[data-nakit]'); if (nd) nd.hidden = !(deger('yontem') === 'Nakit' && !odemeSonra && p > 0 && !pv); }  // PAR-004
         { const bk = d.querySelector('[data-ks-banka]'), ib = ibanMetni(); bk.hidden = deger('yontem') !== 'Havale'; bk.querySelector('span').innerHTML = ib ? `Havale: <code>${e(ib)}</code> · açıklamaya <b class="mono">${e(odemeKodu({ id: yeniId }))}</b> kodu yazılırsa ödeme bu öğrenciye kendiliğinden işlenir.` : 'Kursun IBAN’ı girilmemiş: Ayarlar › Kurs bilgileri. Açıklama kodu: <b class="mono">' + e(odemeKodu({ id: yeniId })) + '</b>'; }
         d.querySelector('[data-ks-sonra]').hidden = !odemeSonra; d.querySelectorAll('[data-adim="3"] .ks-blok').forEach(x => { x.style.opacity = odemeSonra ? '.45' : ''; });
         // evrak satırları: anahtar açıkken belge bilgileri görünür
@@ -774,7 +777,8 @@ export function kursiyerFormu(on = {}) {
         if (dfoto && !f.dkimlik.checked) h.push([f.dkimlik, 'Doğrulama fotoğrafı için kimlik kartıyla karşılaştırmayı işaretleyin']);
         if (!odemeSonra) { const n = taksitN(), p = tutarOku(f.pesin.value) || 0, u = SINIFLAR[f.sinif.value].ucret;
           if (n && p >= u) h.push([f.pesin, 'Taksitliyse peşinat kurs ücretinden küçük olmalı']);
-          if ((!n || (p > 0 && !(f.pesinVade.value > gun(0)))) && !deger('yontem')) h.push([f.querySelector('[name=yontem]'), n ? 'Peşinatın nasıl alındığını seçin' : 'Ödemenin nasıl alındığını seçin']); }
+          if ((!n || (p > 0 && !(f.pesinVade.value > gun(0)))) && !deger('yontem')) h.push([f.querySelector('[name=yontem]'), n ? 'Peşinatın nasıl alındığını seçin' : 'Ödemenin nasıl alındığını seçin']);
+          if (deger('yontem') === 'Nakit' && (!n || (p > 0 && !(f.pesinVade.value > gun(0))))) { const dk = nakitDekontOku(f, gun(0)); if (dk.hata) h.push([f.querySelector('[name=dkVar]'), dk.hata]); } }  // PAR-004
         if (!f.kvkk.checked) h.push([f.kvkk, 'KVKK aydınlatma metni verilmeden kayıt yapılamaz']);
         if (son && !f.kimlikKontrol.checked) h.push([f.kimlikKontrol, 'Bilgileri kimlik kartıyla karşılaştırıp işaretleyin']);
         return h;
@@ -919,7 +923,7 @@ export function kursiyerFormu(on = {}) {
         import('./zamanlayici.js?v=234').then(m => m.anlikBildirim('o21', { ad: tamAd(yeni), sinif: (SINIFLAR[yeni.sinif] || {}).ad || yeni.sinif, kaydeden: (oturum.kullanici || {}).ad || '' })).catch(() => { });   // MSJ-026
         if (f.dataset.tabanGerekce) { const x0 = tabanX(); yeni.tabanAlti = { gerekce: f.dataset.tabanGerekce, taban: x0 && x0.taban, ucret: u, tarih: gun(0), kim: (oturum.kullanici || {}).ad || '' }; islem('Taban altı ücretle kaydetti', tamAd(yeni) + ' · ' + tl(u) + ' · ' + f.dataset.tabanGerekce); }
         MZ.sozlesmeSaatDondur(yeni); S.kursiyerler.unshift(yeni); islem('Kursiyer kaydetti', tamAd(yeni) + ' · ' + SINIFLAR[s].ad + (GR.grupBul(yeni.teorikGrup) ? ' · ' + GR.grupBul(yeni.teorikGrup).ad : ' · bekleyen dönem') + (odemeSonra ? ' · ödeme planı sonra' : '') + (yeni.yasIstisna ? ` · yaş istisnası (KTY md.76/3): ${yeni.yasIstisna.tur} · ${yeni.yasIstisna.not}` : ''));
-        if (p) S.hareket.unshift({ id: 'h' + Date.now(), tarih: gun(0), tur: 'Gelir', kategori: 'Kurs ücreti', aciklama: tamAd(yeni) + (n ? ' · peşinat' : ' · peşin ödeme'), tutar: p, yontem, ...hesapOku(f, yontem), kursiyer: yeni.id });
+        if (p) S.hareket.unshift({ id: 'h' + Date.now(), tarih: gun(0), tur: 'Gelir', kategori: 'Kurs ücreti', aciklama: tamAd(yeni) + (n ? ' · peşinat' : ' · peşin ödeme'), tutar: p, yontem, ...hesapOku(f, yontem), ...(yontem === 'Nakit' ? (dk0 => dk0.hata ? {} : dk0)(nakitDekontOku(f, gun(0))) : {}), kursiyer: yeni.id });
         if (on.adayId) { const a = S.adaylar.find(x => x.id === on.adayId); if (a) a.asama = 'Kayıt'; }
         if (on.rezervasyon) { const [kid, rid] = on.rezervasyon.split('|'), ok = kursiyer(kid), r = ok && (ok.rezervasyonlar || []).find(x => x.id === rid); if (r) { r.durum = 'Kaydı yapıldı'; r.yeniKayit = yeniId; r.kayitTarih = gun(0); } }  // KAY-020
         removeEventListener('resize', isikKonum);
@@ -1091,7 +1095,7 @@ function kapanisKart(k) {
     ${kp.sertifika ? adim(!!kp.teslim, 'Belge teslim edildi', kp.teslim ? `${tarih(kp.teslim.tarih)}${kp.teslim.saat ? ' ' + e(kp.teslim.saat) : ''} · ${e(kp.teslim.sekil || 'Elden teslim')}${kp.teslim.alan ? ' · ' + e(kp.teslim.alan) : ''}` : 'Belge teslim edilince kaydedin; tutanak çıktısı alınır.', kp.teslim ? '<button class="dg dg-cizgi dg-kucuk" data-kapanis="tutanak">Tutanak</button>' : '<button class="dg dg-ana dg-kucuk" data-kapanis="teslim">Teslim et</button>') : ''}
     ${adim(!borc, 'Ödeme kapandı', borc ? tl(borc) + ' borç kaldı; arşivden önce tahsil edin.' : 'Borç yok', borc ? '<button class="dg dg-cizgi dg-kucuk" data-psekme="odeme">Ödemeler</button>' : '')}
     ${adim(k.yorum === 'yapti', 'Google yorumu', k.yorum === 'yapti' ? 'Yorum yaptı' : 'Yorum isteği gönderildi; zorunlu değil.')}
-    ${adim(!!kp.arsiv, 'Dosya arşivlendi', kp.arsiv ? `${tarih(kp.arsiv)} · ${S.kurs.saklamaYil} yıl saklanır` : 'Evrak ve takip formları arşive kaldırılır, kursiyer aktif listeden çıkar.', kp.arsiv ? '' : `<button class="dg ${kp.sertifika && !borc ? 'dg-ana' : 'dg-cizgi'} dg-kucuk" data-kapanis="arsiv">Arşivle</button>`)}
+    ${adim(!!kp.arsiv, 'Dosya arşivlendi', kp.arsiv ? `${tarih(kp.arsiv)} · ${saklamaYili()} yıl saklanır (TTK m.82)` : 'Evrak ve takip formları arşive kaldırılır, kursiyer aktif listeden çıkar.', kp.arsiv ? '' : `<button class="dg ${kp.sertifika && !borc ? 'dg-ana' : 'dg-cizgi'} dg-kucuk" data-kapanis="arsiv">Arşivle</button>`)}
   </ul></div></div>`;
 }
 function kapanisAdim(k, adim) {
@@ -1831,7 +1835,7 @@ function odemeSekmesi(k) {
   ].filter(Boolean);
   return `<div class="kart odeme-ozet">
     <div class="oo-ust">
-      <div class="oo-kalan${kalan ? '' : ' tamam'}"><small>Kalan borç</small><b class="sayi">${kalan ? tl(kalan) : 'Borcu yok'}</b>${(fd => fd.hesap && (fd.kesilen || (S.faturalar || []).length) ? `<small style="display:block;color:${fd.eksik ? 'var(--kirmizi)' : 'var(--soluk)'}">Fatura: kesilen ${tl(fd.kesilen)} / ${tl(fd.hesap)} (${fd.kaynak})${fd.eksik ? ' · eksik ' + tl(fd.eksik) : ''}</small>` : '')(MZ.faturaDenetimi(k))}${k.odeme.senetli || k.ucretsiz || k.odeme.iade || avukattaMi(k) || k.odeme.devirAktarim || k.odeme.devirAlacak ? `<span>${[k.odeme.devirAktarim && k.odeme.devirAktarim.tutar ? 'Devir: önceki programda ödenen ' + tl(k.odeme.devirAktarim.tutar) : '', k.odeme.devirAlacak ? rozet('Devir alacak ' + tl(k.odeme.devirAlacak), 'mavi') : '', avukattaMi(k) ? rozet('Avukata verildi', 'kirmizi') + ' ' + e(k.avukat.avukat || '') + ' · ' + tarih(k.avukat.tarih) : '', k.odeme.senetli ? rozet('Senetli', 'mor') : '', k.ucretsiz ? 'Ücretsiz kursiyer (' + e(k.ucretsiz.neden) + ')' : '', k.odeme.iade ? 'İade ' + tl(k.odeme.iade) : ''].filter(Boolean).join(' · ')}</span>` : ''}</div>
+      <div class="oo-kalan${kalan ? '' : ' tamam'}"><small>Kalan borç</small><b class="sayi">${kalan ? tl(kalan) : 'Borcu yok'}</b>${(fd => fd.hesap && (fd.kesilen || (S.faturalar || []).length) ? `<small style="display:block;color:${fd.eksik ? 'var(--kirmizi)' : 'var(--soluk)'}">Fatura: kesilen ${tl(fd.kesilen)} / ${tl(fd.hesap)} (${fd.kaynak})${fd.eksik ? ' · eksik ' + tl(fd.eksik) : ''}</small>` : '')(MZ.faturaDenetimi(k))}${(fd => fd.mebFark ? `<small style="display:block;color:var(--kirmizi)">MEBBİS’teki ücret ${tl(fd.mebU)}, sözleşme ${tl(fd.hesap)}: MEBBİS kaydını düzeltin</small>` : '')(MZ.faturaDenetimi(k))}${k.odeme.senetli || k.ucretsiz || k.odeme.iade || (k.kapali && k.kapali.iadeSon && !k.kapali.iadeYapildi) || avukattaMi(k) || k.odeme.devirAktarim || k.odeme.devirAlacak ? `<span>${[k.odeme.devirAktarim && k.odeme.devirAktarim.tutar ? 'Devir: önceki programda ödenen ' + tl(k.odeme.devirAktarim.tutar) : '', k.odeme.devirAlacak ? rozet('Devir alacak ' + tl(k.odeme.devirAlacak), 'mavi') : '', avukattaMi(k) ? rozet('Avukata verildi', 'kirmizi') + ' ' + e(k.avukat.avukat || '') + ' · ' + tarih(k.avukat.tarih) : '', k.odeme.senetli ? rozet('Senetli', 'mor') : '', k.ucretsiz ? 'Ücretsiz kursiyer (' + e(k.ucretsiz.neden) + ') · fatura beklenmez, KDV’den istisna (KDVK 17/2-b)' : '', k.odeme.iade ? 'İade ' + tl(k.odeme.iade) : '', k.kapali && k.kapali.iadeSon && !k.kapali.iadeYapildi ? rozet((g => g < 0 ? 'Yasal iade ' + -g + ' gün gecikti' : 'Yasal iade son gün ' + tarih(k.kapali.iadeSon) + ' (' + g + ' gün)')(fark(k.kapali.iadeSon)), fark(k.kapali.iadeSon) <= 7 ? 'kirmizi' : 'sari') : ''].filter(Boolean).join(' · ')}</span>` : ''}</div>
       ${sonraki}
     </div>
     <div class="oo-ilerleme"><div class="oo-ilerleme-yazi"><span>Ödenen <b class="sayi">${tl(od)}</b></span><span>Toplam <b class="sayi">${tl(toplam)}</b></span></div>${ilerleme(od, toplam, 'yesil')}</div>
@@ -1845,6 +1849,10 @@ function odemeSekmesi(k) {
     ${k.odeme.taksitler.map((t, i) => `<div class="taksit-sira"><span class="no">${i + 1}</span><div><b style="color:var(--murekkep)">${t.pesinat ? 'Peşinat (vadeli)' : (i + 1) + '. taksit'}</b><small style="display:block;color:${!t.odendi && !t.iptal && fark(t.vade) < 0 ? 'var(--kirmizi)' : 'var(--soluk)'}">Vade ${tarih(t.vade)}${t.odendi ? ' · ödendi ' + tarih(t.odendi) + ' · ' + yontemAd(t.yontem) : t.kismi ? ' · ' + tl(t.kismi) + ' ödendi' : ''}</small></div><span class="sayi">${tl(t.tutar)}</span>${t.odendi ? rozet('Ödendi', 'yesil') : t.iptal ? rozet('İptal', 'notr') : `<button class="dg ${fark(t.vade) < 0 ? 'dg-ana' : 'dg-cizgi'} dg-kucuk" data-tahsil="${i}">${t.kismi ? tl(taksitKalan(t)) + ' kaldı · ' : ''}${fark(t.vade) < 0 ? 'Gecikti · tahsil et' : 'Tahsil et'}</button>${['mudur', 'sekreter'].includes((oturum.kullanici || {}).rol) ? ` <button class="dg-ikon" data-tk-duz="${i}" aria-label="${i + 1}. taksiti düzenle" title="Vade ve tutarı değiştir">${ik('kalem')}</button>` : ''}`}</div>`).join('')}
     ${(k.odeme.ekler || []).map((x, j) => `<div class="taksit-sira"><span class="no">+</span><div><b style="color:var(--murekkep)">${e(x.ad)}</b><small style="display:block;color:var(--soluk)">Ek kalem${x.ders ? ` · ${x.ders} ders · MEBBİS’e resmî ${tl(x.resmiTutar)}` : ''}${x.odendi ? ' · ödendi ' + tarih(x.odendi) : ''}</small></div><span class="sayi">${tl(x.tutar)}</span>${x.odendi ? rozet('Ödendi', 'yesil') : `<button class="dg dg-cizgi dg-kucuk" data-ek-tahsil="${j}">Tahsil et</button>`}</div>`).join('')}
   </div></details>
+  ${(fz => fz.acik && fz.l.length ? `<details class="kart oo-blok"><summary><b>Gecikme faizi hesabı</b><small>yalnız bilgi · ${tl(fz.toplam)}</small></summary><div class="kart-govde">
+    <p class="ipucu uyari" style="margin-bottom:10px">${isaret('uyari', 18)}<span>${FAIZ_UYARI}</span></p>
+    <div class="tablo-kap"><table class="tablo"><thead><tr><th>Taksit</th><th>Vade</th><th class="sag">Kalan</th><th class="sag">Gün</th><th class="sag">Faiz</th></tr></thead><tbody>${fz.l.map(x => `<tr><td>${x.i + 1}. taksit</td><td>${tarih(x.vade)}</td><td class="sag sayi">${tl(x.kalan)}</td><td class="sag sayi">${x.gun}</td><td class="sag sayi">${tl(x.faiz)}</td></tr>`).join('')}<tr><td colspan="4"><b>Toplam</b></td><td class="sag sayi"><b>${tl(fz.toplam)}</b></td></tr></tbody></table></div>
+    <p style="font-size:12.5px;color:var(--soluk);margin-top:8px">${e(FAIZ_YONTEM[fz.yontem])} · yıllık %${String(fz.oran).replace('.', ',')} · kalan × oran × gün / 365. Bu tutar borca eklenmez, öğrenciye gönderilmez.</p></div></details>` : '')(gecikmeFaizi(k))}
   <details class="kart oo-blok"><summary><b>Hesap dökümü</b><small>Kalem kalem borç, ödeme ve iade</small></summary><div class="kart-govde">${OG.dokumTablo(k, false)}</div></details>`;
 }
 // Sağlık raporu ayrıntıları: raporu kim verdi, "sürücü olur" işareti, uzman hekim işaretleri ve sevk.
@@ -2123,6 +2131,36 @@ export function odemeAl(k, sonra) {
 // Tahsilat penceresi: tutar (sıradaki taksitle dolu, değiştirilebilir), yöntem, tarih, isteğe bağlı not.
 // Taksitten az alınırsa kalan aynı taksitte açık kalır (kısmi); fazlası sıradaki açık taksitlere geçer. Tek tahsilat = tek kasa hareketi = tek makbuz.
 // PAR-050: havale/EFT'de hangi banka hesabına (iki ve daha çok banka hesabı varsa); yöntem değişince görünür/gizlenir
+// PAR-004/042: nakit eğitim ücreti. ÖÖKY m.55/3 (RG 5/9/2025): eğitim ücreti kurum adına açılmış, MEB'e bildirilen banka hesabına yatırılarak tahsil edilir.
+// Nakit eğitim ücreti ancak "aynı gün MEB'e bildirilen hesaba yatırıldı" işaretlenip dekont no ve tarihi girilirse kaydedilir (dekont görseli isteğe bağlı).
+// Harekete yazılan: bankaya (dekont tarihi; nakit kasadan bankaya geçer), bankayaHesap, dekont { no, tarih, gorsel? }. Banka/POS hesabında h.meb = MEB'e bildirilen hesap.
+export const NAKIT_DAYANAK = 'Özel Öğretim Kurumları Yönetmeliği m.55/3, RG 5/9/2025';
+export function nakitDekontHtml() {
+  const l = bankaHesaplari().slice().sort((a, b) => (b.meb ? 1 : 0) - (a.meb ? 1 : 0)), vs = (l.find(h => h.meb) || {}).id || varsayilanHesap('Havale');
+  return `<div class="nakit-dekont tam" data-nakit hidden style="margin-top:10px"><p class="ipucu uyari">${isaret('uyari', 18)}<span><b>Eğitim ücreti nakit kaydedilmez.</b> ${NAKIT_DAYANAK}: eğitim ücreti kurum adına açılmış, MEB’e bildirilmiş banka hesabına yatırılarak tahsil edilir. Nakit aldıysanız aynı gün bu hesaba öğrencinin adı ve TC’siyle yatırın, dekontu girin. Yoksa yöntemi Havale ya da Kart seçin.</span></p>
+    <label class="ind-tik" style="margin-top:6px"><input type="checkbox" name="dkVar"> Aynı gün MEB’e bildirilen banka hesabına yatırıldı</label>
+    <div class="form-izgara" data-dk-alan hidden style="margin-top:6px"><div class="alan"><label for="dk-no">Dekont no</label><input id="dk-no" name="dkNo" maxlength="40" autocomplete="off"></div><div class="alan"><label for="dk-t">Dekont tarihi</label><input id="dk-t" name="dkTarih" type="date" value="${gun(0)}" max="${gun(0)}"></div>
+      ${l.length ? `<div class="alan"><label for="dk-h">Yatırılan hesap</label><select id="dk-h" name="dkHesap" class="girdi">${l.map(h => `<option value="${e(h.id)}" ${h.id === vs ? 'selected' : ''}>${e(h.ad)}${h.meb ? ' · MEB’e bildirilen' : ''}</option>`).join('')}</select></div>` : ''}
+      <div class="alan tam"><label for="dk-g">Dekont görseli <small style="color:var(--soluk);font-weight:400">fotoğraf ya da PDF · isteğe bağlı</small></label><input id="dk-g" name="dkGorsel" type="file" accept="image/*,application/pdf"><small data-dk-durum style="color:var(--soluk)"></small></div>
+      ${!l.some(h => h.meb) ? `<p class="tam" style="font-size:12.5px;color:var(--soluk)">Hiçbir banka hesabı “MEB’e bildirilen hesap” olarak işaretli değil: Kasa › Kasa ve banka’da hesabı düzenleyin.</p>` : ''}</div></div>`;
+}
+export function nakitDekontBagla(kap) {
+  const q = n => kap.querySelector(`[name=${n}]`), v = q('dkVar'); if (!v) return;
+  v.addEventListener('change', () => { kap.querySelector('[data-dk-alan]').hidden = !v.checked; if (v.checked) q('dkNo').focus(); });
+  q('dkGorsel').addEventListener('change', () => { const fl = q('dkGorsel').files[0], dm = kap.querySelector('[data-dk-durum]'); kap._dkGorsel = null; if (!fl) { dm.textContent = ''; return; }
+    kap.dataset.dkOkunuyor = '1'; dm.textContent = 'Hazırlanıyor…';
+    CR.belgeGorseliOku(fl).then(g => { kap._dkGorsel = g; dm.textContent = (g.tur === 'pdf' ? 'PDF' : 'Fotoğraf') + ' hazır'; }).catch(x => { q('dkGorsel').value = ''; dm.textContent = ''; bildir(x.message || 'Dosya okunamadı', 'uyari'); }).finally(() => { delete kap.dataset.dkOkunuyor; }); });
+}
+// { hata } ya da harekete eklenecek alanlar
+export function nakitDekontOku(kap, tahsilTarih) {
+  const q = n => kap.querySelector(`[name=${n}]`);
+  if (!q('dkVar') || !q('dkVar').checked) return { hata: `Eğitim ücreti nakit kaydedilemez (${NAKIT_DAYANAK}). Aynı gün MEB’e bildirilen banka hesabına yatırıldığını işaretleyip dekont no girin ya da yöntemi Havale veya Kart seçin.` };
+  const no = q('dkNo').value.trim(), t = q('dkTarih').value;
+  if (!no) return { hata: 'Banka dekontunun numarasını girin' };
+  if (kap.dataset.dkOkunuyor) return { hata: 'Dekont görseli hazırlanıyor; biraz sonra yeniden kaydedin' };
+  if (t !== tahsilTarih) return { hata: `Dekont tarihi tahsilat günüyle (${tarih(tahsilTarih)}) aynı olmalı: nakit aynı gün bankaya yatırılır (${NAKIT_DAYANAK}).` };
+  return { bankaya: t, ...(q('dkHesap') && q('dkHesap').value ? { bankayaHesap: q('dkHesap').value } : {}), dekont: { no, tarih: t, ...(kap._dkGorsel ? { gorsel: kap._dkGorsel } : {}) } };
+}
 export const hesapSecici = (y, secili) => { const l = bankaHesaplari(); if (l.length < 2) return ''; const v = secili || varsayilanHesap('Havale'); return `<div class="alan hs-sec" data-hesap-alan ${y === 'Havale' ? '' : 'hidden'}><label>Hangi banka hesabına?</label><select name="hesap" class="girdi">${l.map(h => `<option value="${e(h.id)}" ${h.id === v ? 'selected' : ''}>${e(h.ad)}</option>`).join('')}</select></div>`; };
 export const hesapOku = (kap, y) => { const s = kap && kap.querySelector('[name=hesap]'); return y === 'Havale' && s && s.value ? { hesap: s.value } : {}; };
 document.addEventListener('change', ev => { const t = ev.target; if (!t || !['y', 'yontem'].includes(t.name)) return; const kap = t.closest('form, .perde'); if (kap) kap.querySelectorAll('[data-hesap-alan]').forEach(a => { a.hidden = t.value !== 'Havale'; }); });
@@ -2138,14 +2176,13 @@ export function tahsilAl(k, i, sonra) {
       <span class="et" style="display:block;margin-top:14px">Ödeme yöntemi</span><div class="secim tahsil-yontem" style="margin-top:6px">${YONTEMLER.map((y, j) => `<label><input type="radio" name="y" value="${y}" ${y === varsayilanYontem() ? 'checked' : ''}><span>${yontemAd(y)}</span></label>`).join('')}</div>${hesapSecici(varsayilanYontem())}
       <button type="button" class="dg dg-hafif dg-kucuk" data-parcali style="margin-top:6px">Birden çok yöntemle ödeniyor</button>
       <div class="parca-alan" data-parca hidden>${YONTEMLER.map(y => `<div class="alan"><label for="pr-${y}">${yontemAd(y)} (₺)</label><input id="pr-${y}" name="pr-${y}" inputmode="numeric" autocomplete="off" placeholder="0"></div>`).join('')}${(() => { const l = bankaHesaplari(); return l.length > 1 ? `<div class="alan"><label for="pr-hs">Havale hangi hesaba?</label><select id="pr-hs" name="prHesap" class="girdi">${l.map(h => `<option value="${e(h.id)}" ${h.id === varsayilanHesap('Havale') ? 'selected' : ''}>${e(h.ad)}</option>`).join('')}</select></div>` : ''; })()}<small data-parca-not class="tam" style="color:var(--soluk)"></small></div>
-      <p class="ipucu uyari" data-nakit hidden style="margin-top:10px">${isaret('uyari', 18)}<span>Eğitim ücreti kurumun MEB’e bildirilmiş banka hesabına yatırılarak tahsil edilir (Özel Öğretim Kurumları Yönetmeliği m.55/3, 5 Eylül 2025). Nakit aldıysanız bankaya yatırın.</span></p>
+      ${nakitDekontHtml()}
       <div class="tahsil-alt"><div class="alan"><label for="t-tarih">Tarih</label><input id="t-tarih" name="tarih" type="date" value="${gun(0)}" max="${gun(0)}"></div>
       <div class="alan"><label for="t-not">Not <small style="color:var(--soluk);font-weight:400">(isteğe bağlı)</small></label><input id="t-not" name="not" maxlength="200" placeholder="Örn. annesi getirdi"></div></div>
       <div class="tahsil-mak"><span class="et">Makbuz</span><label><input type="checkbox" name="yaz" ${makbuzTercih().yaz ? 'checked' : ''}> Makbuzu yazdır / PDF</label><label><input type="checkbox" name="mak" ${makbuzTercih().wp ? 'checked' : ''}> Öğrenciye WhatsApp’tan gönder</label></div></form>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-tahsil">Ödemeyi kaydet</button>`,
     onAc(d) {
       const f = d.querySelector('form'), not = d.querySelector('[data-tutar-not]');
-      const nk = () => { d.querySelector('[data-nakit]').hidden = f.y.value !== 'Nakit'; }; d.querySelectorAll('[name=y]').forEach(r => r.addEventListener('change', nk)); nk();
       const tutarNot = () => { const v = tutarOku(f.tutar.value) || 0; not.style.color = v > azami ? 'var(--kirmizi)' : 'var(--soluk)'; not.textContent = !v ? '' : v < kalan ? `Taksitin ${tl(kalan - v)}’si aynı taksitte açık kalır.` : v > azami ? `En fazla ${tl(azami)} alınabilir (açık taksitlerin toplamı).` : v > kalan ? `${tl(v - kalan)} sıradaki taksit${v - kalan > taksitKalan(sira[1].t) ? 'lere' : 'e'} sayılır.` : 'Taksitin tamamı.'; };
       f.tutar.addEventListener('input', tutarNot); tutarNot(); setTimeout(() => f.tutar.select(), 80);
       // PAR-061: parçalı ödeme (nakit + kart + havale); her parça kendi kasa/banka hesabına ayrı hareket, aynı makbuz numarası
@@ -2153,6 +2190,9 @@ export function tahsilAl(k, i, sonra) {
       const pGuncelle = () => { const t = parcalar().reduce((a, [, v]) => a + v, 0), v = tutarOku(f.tutar.value) || 0; pnot.textContent = `Parçaların toplamı ${tl(t)}${t !== v ? ' · tutar ' + tl(v) + (t < v ? ', ' + tl(v - t) + ' eksik' : ', ' + tl(t - v) + ' fazla') : ' · tutar tuttu'}`; pnot.style.color = t === v ? 'var(--yesil)' : 'var(--kirmizi)'; };
       d.querySelector('[data-parcali]').addEventListener('click', ev => { parcali = !parcali; pa.hidden = !parcali; d.querySelector('.tahsil-yontem').hidden = parcali; const ha = d.querySelector('.tahsil-yontem ~ [data-hesap-alan]'); if (ha) ha.hidden = parcali || f.y.value !== 'Havale'; ev.target.textContent = parcali ? 'Tek yöntemle ödeniyor' : 'Birden çok yöntemle ödeniyor'; if (parcali && !parcalar().length) f['pr-' + f.y.value].value = f.tutar.value; pGuncelle(); });
       pa.addEventListener('input', pGuncelle); f.tutar.addEventListener('input', () => { if (parcali) pGuncelle(); });
+      // PAR-004: nakit (ya da parçalı ödemenin nakit parçası) varsa dekont alanı
+      const nk = () => { d.querySelector('[data-nakit]').hidden = !(parcali ? (tutarOku(f['pr-Nakit'].value) || 0) > 0 : f.y.value === 'Nakit'); };
+      d.querySelectorAll('[name=y]').forEach(r => r.addEventListener('change', nk)); pa.addEventListener('input', nk); d.querySelector('[data-parcali]').addEventListener('click', nk); nk(); nakitDekontBagla(f);
       f.addEventListener('submit', ev => {
         ev.preventDefault();
         const v = tutarOku(f.tutar.value) || 0, tarihSec = f.tarih.value || gun(0), aciklamaNot = f.not.value.trim(), pl = parcali ? parcalar() : null, y = pl ? (pl.length === 1 ? pl[0][0] : 'Parçalı') : f.y.value;
@@ -2161,6 +2201,8 @@ export function tahsilAl(k, i, sonra) {
         if (v > azami) { f.tutar.value = azami; tutarNot(); return bildir('Açık taksitlerin toplamı ' + tl(azami) + '; fazlası alınamaz', 'uyari'); }
         if (tarihSec > gun(0)) return bildir('İleri tarihli ödeme kaydedilemez', 'uyari');
         if ((S.gunSonu || []).includes(tarihSec)) return bildir(tamTarih(tarihSec) + ' günü kapatıldı; bu tarihe kayıt eklenemez', 'uyari');
+        const nakitV = pl ? ((pl.find(([py]) => py === 'Nakit') || [])[1] || 0) : y === 'Nakit' ? v : 0, dk = nakitV ? nakitDekontOku(f, tarihSec) : {};
+        if (dk.hata) return bildir(dk.hata, 'uyari');
         geriAlNoktasi();
         let kalanV = v; const parca = [], dagilim = [];
         for (const x of sira) {
@@ -2170,12 +2212,12 @@ export function tahsilAl(k, i, sonra) {
           if (x.t.kismi >= x.t.tutar) { x.t.odendi = tarihSec; x.t.yontem = y; delete x.t.kismi; }
           parca.push((x.i + 1) + '. taksit' + (x.t.odendi ? '' : ' (kısmi)'));
         }
-        islem('Tahsilat aldı', tamAd(k) + ' · ' + parca.join(', ') + ' · ' + tl(v) + (aciklamaNot ? ' · ' + aciklamaNot : ''));
+        islem('Tahsilat aldı', tamAd(k) + ' · ' + parca.join(', ') + ' · ' + tl(v) + (aciklamaNot ? ' · ' + aciklamaNot : '') + (dk.dekont ? ' · nakit bankaya yatırıldı, dekont ' + dk.dekont.no : ''));
         const hid = 'h' + Date.now();
         if (pl && pl.length > 1) { const ust = { tarih: tarihSec, tur: 'Gelir', kategori: 'Taksit', aciklama: tamAd(k) + ' · ' + parca.join(', '), kursiyer: k.id, grup: hid, ...(aciklamaNot ? { not: aciklamaNot } : {}) };
-          const l = pl.map(([py, pv], j) => ({ ...ust, id: j ? hid + '-' + j : hid, tutar: pv, yontem: py, ...(py === 'Havale' && f.prHesap ? { hesap: f.prHesap.value } : {}), ...(j ? {} : { dagilim }) }));
+          const l = pl.map(([py, pv], j) => ({ ...ust, id: j ? hid + '-' + j : hid, tutar: pv, yontem: py, ...(py === 'Havale' && f.prHesap ? { hesap: f.prHesap.value } : {}), ...(py === 'Nakit' ? dk : {}), ...(j ? {} : { dagilim }) }));
           makbuzNoVer(l[0]); l.slice(1).forEach(x => { x.no = l[0].no; }); S.hareket.unshift(...l); }
-        else S.hareket.unshift({ id: hid, tarih: tarihSec, tur: 'Gelir', kategori: 'Taksit', aciklama: tamAd(k) + ' · ' + parca.join(', '), tutar: v, yontem: y, ...(pl ? {} : hesapOku(d, y)), kursiyer: k.id, dagilim, ...(aciklamaNot ? { not: aciklamaNot } : {}) });
+        else S.hareket.unshift({ id: hid, tarih: tarihSec, tur: 'Gelir', kategori: 'Taksit', aciklama: tamAd(k) + ' · ' + parca.join(', '), tutar: v, yontem: y, ...(pl ? {} : hesapOku(d, y)), ...(y === 'Nakit' ? dk : {}), kursiyer: k.id, dagilim, ...(aciklamaNot ? { not: aciklamaNot } : {}) });
         const makGit = d.querySelector('[name=mak]') && d.querySelector('[name=mak]').checked, makYaz = d.querySelector('[name=yaz]') && d.querySelector('[name=yaz]').checked;
         makbuzTercih({ yaz: makYaz, wp: makGit });
         kaydet(); kapatPencere();
@@ -2210,16 +2252,19 @@ export function ekKalemTahsil(k, j) {
   const x = k.odeme.ekler[j];
   pencere({
     baslik: x.ad + ' · ' + tl(x.tutar),
-    icerik: `<div class="alan"><span class="et">Ödeme yöntemi</span><div class="secim">${YONTEMLER.map(y => `<label><input type="radio" name="y" value="${y}" ${y === varsayilanYontem() ? 'checked' : ''}><span>${y}</span></label>`).join('')}</div></div>${hesapSecici(varsayilanYontem())}<div class="alan" style="margin-top:10px;max-width:220px"><label for="ek-tarih">Tarih</label><input id="ek-tarih" class="girdi" name="tarih" type="date" value="${gun(0)}" max="${gun(0)}"></div><label style="display:flex;gap:8px;align-items:center;margin-top:14px;font-size:14px"><input type="checkbox" name="mak"> Makbuzu yazdır</label>`,
+    icerik: `<div class="alan"><span class="et">Ödeme yöntemi</span><div class="secim">${YONTEMLER.map(y => `<label><input type="radio" name="y" value="${y}" ${y === varsayilanYontem() ? 'checked' : ''}><span>${y}</span></label>`).join('')}</div></div>${hesapSecici(varsayilanYontem())}${ekTur(x) === 'ders' ? nakitDekontHtml() : ''}<div class="alan" style="margin-top:10px;max-width:220px"><label for="ek-tarih">Tarih</label><input id="ek-tarih" class="girdi" name="tarih" type="date" value="${gun(0)}" max="${gun(0)}"></div><label style="display:flex;gap:8px;align-items:center;margin-top:14px;font-size:14px"><input type="checkbox" name="mak"> Makbuzu yazdır</label>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Tahsil et</button>`,
     onAc(d) {
+      // PAR-004: ek ders gibi eğitim ücreti kalemi nakitse dekont istenir (ÖÖKY m.55/3)
+      const nd = d.querySelector('[data-nakit]'); if (nd) { const nk = () => { nd.hidden = d.querySelector('[name=y]:checked').value !== 'Nakit'; }; d.querySelectorAll('[name=y]').forEach(r => r.addEventListener('change', nk)); nk(); nakitDekontBagla(d); }
       d.querySelector('[data-k]').addEventListener('click', () => {
         // PAR-051: tahsilAl ile aynı tarih seçimi ve gün sonu kuralı (kapatılmış güne kayıt yok, ileri tarih yok)
-        const tarihSec = (d.querySelector('[name=tarih]') || {}).value || gun(0);
+        const tarihSec = (d.querySelector('[name=tarih]') || {}).value || gun(0), y = d.querySelector('[name=y]:checked').value;
         if (tarihSec > gun(0)) return bildir('İleri tarihli ödeme kaydedilemez', 'uyari');
         if ((S.gunSonu || []).includes(tarihSec)) return bildir(tamTarih(tarihSec) + ' günü kapatıldı; bu tarihe kayıt eklenemez', 'uyari');
+        const dk = nd && y === 'Nakit' ? nakitDekontOku(d, tarihSec) : {}; if (dk.hata) return bildir(dk.hata, 'uyari');
         geriAlNoktasi(); x.odendi = tarihSec; const hid = 'h' + Date.now();
-        S.hareket.unshift({ id: hid, tarih: tarihSec, tur: 'Gelir', kategori: x.ad, aciklama: tamAd(k) + ' · ' + x.ad, tutar: x.tutar, yontem: d.querySelector('[name=y]:checked').value, ...hesapOku(d, d.querySelector('[name=y]:checked').value), kursiyer: k.id });
+        S.hareket.unshift({ id: hid, tarih: tarihSec, tur: 'Gelir', kategori: x.ad, aciklama: tamAd(k) + ' · ' + x.ad, tutar: x.tutar, yontem: y, ...hesapOku(d, y), ...dk, kursiyer: k.id });
         islem('Tahsilat aldı', tamAd(k) + ' · ' + x.ad + ' · ' + tl(x.tutar)); kaydet(); kapatPencere(); bildir(x.ad + ' tahsil edildi', 'tamam', true); yenile();
         if (d.querySelector('[name=mak]').checked) import('./sayfalar3.js?v=234').then(m => m.belgeAc('makbuz', hid));
       });
@@ -2321,7 +2366,8 @@ function topluOdeme(l, sonra) {
         geriAlNoktasi();
         if (f.m.value === 'borc') { const v = tutarOku(f.t.value) || 0, ad = f.k.value; if (!v) return bildir('Tutar girin', 'uyari'); if (tabanL && digerUcretler().some(x => x.ad === ad)) return bildir(`“${ad}”: ${listeAdi(tabanL)} gereği kurs ücreti dışı kalem toplu eklenmez (not 4); gerekirse öğrenci dosyasından tek tek`, 'uyari');
           h.forEach(k => { k.odeme.ekler = k.odeme.ekler || []; k.odeme.ekler.push({ ad, tutar: v, odendi: null, tur: ekTur({ ad }) }); }); islem('Toplu borçlandırdı', `${ad} · ${tl(v)} · ${h.length} öğrenci`); }
-        else { const ad = f.a.value, y = f.y.value; let n = 0, top = 0; h.forEach((k, j) => { const x = k.odeme.ekler.find(z => z.ad === ad && !z.odendi && !z.kursOdedi); if (!x) return; x.odendi = gun(0); S.hareket.unshift({ id: 'h' + (Date.now() + j), tarih: gun(0), tur: 'Gelir', kategori: x.ad, aciklama: tamAd(k) + ' · ' + x.ad, tutar: x.tutar, yontem: y, kursiyer: k.id }); n++; top += x.tutar; });
+        else { const ad = f.a.value, y = f.y.value; if (y === 'Nakit' && h.some(k => ekTur(k.odeme.ekler.find(z => z.ad === ad && !z.odendi && !z.kursOdedi) || { ad }) === 'ders')) return bildir(`“${ad}” eğitim ücretidir; nakit toplu tahsil edilmez (${NAKIT_DAYANAK}). Havale ya da Kart seçin, nakitse öğrenci dosyasından dekontla tek tek alın.`, 'uyari');
+          let n = 0, top = 0; h.forEach((k, j) => { const x = k.odeme.ekler.find(z => z.ad === ad && !z.odendi && !z.kursOdedi); if (!x) return; x.odendi = gun(0); S.hareket.unshift({ id: 'h' + (Date.now() + j), tarih: gun(0), tur: 'Gelir', kategori: x.ad, aciklama: tamAd(k) + ' · ' + x.ad, tutar: x.tutar, yontem: y, kursiyer: k.id }); n++; top += x.tutar; });
           islem('Toplu tahsilat aldı', `${ad} · ${n} öğrenci · ${tl(top)}`); }
         kaydet(); kapatPencere(); bildir(f.m.value === 'borc' ? `${h.length} öğrenciye eklendi` : `${h.length} öğrenciden tahsil edildi`, 'tamam', true); sonra && sonra(); }); } });
 }
@@ -2355,7 +2401,14 @@ export function odemeIslem(k, tur, oneri) {
       f.addEventListener('submit', async ev => {
         ev.preventDefault(); const v = tutarOku(f.v.value) || 0; geriAlNoktasi();
         if (tur === 'indirim') { if (!v) return bildir('Tutar girin', 'uyari'); if (!islemYetkili('indirim')) return bildir('İndirim yetkiniz yok (Ayarlar › Kullanıcılar › Ön büro yetkileri)', 'uyari'); if (tx && tx.taban != null && !k.ucretsiz && MZ.sozlesmeUcreti(k) - v < tx.taban) return bildir(`İndirimden sonra ücret ${tl(MZ.sozlesmeUcreti(k) - v)} olur; ${listeAdi(tx.liste)} taban ücretinin (${tl(tx.taban)}) altına indirim yapılamaz (MTSK Yön. md.43/2). En çok ${tl(Math.max(0, MZ.sozlesmeUcreti(k) - tx.taban))}.`, 'uyari'); const acikTop = acik.reduce((a2, t) => a2 + t.tutar - (t.kismi || 0), 0); if (v > acikTop) return bildir('İndirim açık borçtan (' + tl(acikTop) + ') büyük olamaz', 'uyari'); if (v > k.odeme.toplam * 0.5 && !(await onaySor('İndirim kurs ücretinin yarısından fazla (' + tl(v) + ').', { baslik: 'Büyük indirim', evet: 'Yine de uygula' }))) return; let kalan = v; for (const t of acik.slice().reverse()) { const d2 = Math.min(kalan, t.tutar - (t.kismi || 0)); t.tutar -= d2; kalan -= d2; if (!kalan) break; } k.odeme.taksitler = k.odeme.taksitler.filter(t => t.odendi || t.tutar > 0); k.odeme.toplam -= v - kalan; (k.odeme.indirimler = k.odeme.indirimler || []).push({ tarih: gun(0), tutar: v - kalan, neden: f.n.value }); islem('İndirim uyguladı', tamAd(k) + ' · ' + tl(v - kalan) + ' · ' + f.n.value); }
-        if (tur === 'iade') { if (!v) return bildir('Tutar girin', 'uyari'); if (!islemYetkili('iade')) return bildir('İade yetkiniz yok (Ayarlar › Kullanıcılar › Ön büro yetkileri)', 'uyari'); if (v > odenen(k)) return bildir('İade, kursiyerin ödediği ' + tl(odenen(k)) + '’yi aşamaz', 'uyari'); const neden = f.n.value; return pinSor(tl(v) + ' iade').then(onay => { if (!onay) return; k.odeme.iade = (k.odeme.iade || 0) + v; k.odeme.toplam -= v; if (k.kapali && k.kapali.iadeSon && !k.kapali.iadeYapildi) k.kapali.iadeYapildi = gun(0); S.hareket.unshift({ id: 'h' + Date.now(), tarih: gun(0), tur: 'Gider', kategori: 'İade', aciklama: tamAd(k) + ' · iade · ' + neden, tutar: v, yontem: 'Havale', kursiyer: k.id }); islem('İade yaptı', tamAd(k) + ' · ' + tl(v)); kaydet(); bildir('İade kaydedildi: ' + tl(v)); yenile(); }); }
+        if (tur === 'iade') { if (!v) return bildir('Tutar girin', 'uyari'); if (!islemYetkili('iade')) return bildir('İade yetkiniz yok (Ayarlar › Kullanıcılar › Ön büro yetkileri)', 'uyari'); if (v > odenen(k)) return bildir('İade, kursiyerin ödediği ' + tl(odenen(k)) + '’yi aşamaz', 'uyari'); const neden = f.n.value; return pinSor(tl(v) + ' iade').then(onay => { if (!onay) return;
+          // PAR-049: ayrılışta alıkonan %10 (ÖÖKY m.56/3-b) hizmet karşılığı değil, KDV'siz gelir olarak ayrılır (müşavir paketi, muhasebe fişi 649)
+          const kes = neden === 'Kurstan ayrıldı' && yi && !S.hareket.some(x => x.kursiyer === k.id && +x.kesinti > 0 && !x.iptal) ? Math.max(0, Math.min(yi.kesinti, yi.odenen)) : 0, hid = 'h' + Date.now();
+          k.odeme.iade = (k.odeme.iade || 0) + v; k.odeme.toplam -= v; if (k.kapali && k.kapali.iadeSon && !k.kapali.iadeYapildi) k.kapali.iadeYapildi = gun(0); S.hareket.unshift({ id: hid, tarih: gun(0), tur: 'Gider', kategori: 'İade', aciklama: tamAd(k) + ' · iade · ' + neden, tutar: v, yontem: 'Havale', kursiyer: k.id, ...(kes ? { kesinti: kes } : {}) }); islem('İade yaptı', tamAd(k) + ' · ' + tl(v) + (kes ? ' · alıkonan %10 ' + tl(kes) : '')); kaydet(); yenile();
+          // gider pusulası: kesilmiş e-Arşiv fatura iptal edilmez, iade gider pusulasıyla belgelenir (VUK m.234; GİB özelgesi 06/01/2020)
+          import('./sayfalar2.js?v=234').then(m => { const gp = m.giderPusulasiOlustur({ k, tutar: v, aciklama: 'Sürücü kursu eğitim ücreti iadesi · ' + neden, hareket: hid }); kaydet();
+            pencere({ baslik: 'İade kaydedildi · ' + tl(v), taslak: false, icerik: `<p style="font-size:14.5px">${e(tamAd(k))} · ${tl(v)} · gider pusulası <b class="mono">${e(gp.no)}</b></p><p class="ipucu" style="margin-top:10px">${isaret('bilgi', 18)}<span>Kesilmiş e-Arşiv fatura iptal edilmez; iade gider pusulasıyla belgelenir. Pusulayı yazdırıp öğrenciye imzalatın. Öğrenci şirketse ya da mükellefse iade faturasını o keser.${kes ? ` Alıkonan %10 kesinti (${tl(kes)}) müşavir paketinde KDV’siz gelir olarak ayrı satırda.` : ''}</span></p>`,
+              altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-gp>${ik('belge')}Gider pusulası (yazdır / PDF)</button>`, onAc(p) { p.querySelector('[data-gp]').addEventListener('click', () => { kapatPencere(); m.giderPusulasiYazdir(gp.no); }); } }); }); }); }
         if (tur === 'plan') { const top = acik.reduce((a, t) => a + t.tutar - (t.kismi || 0), 0), n = +f.v.value || 1; k.odeme.taksitler = k.odeme.taksitler.filter(t => t.odendi); acik.forEach(t => { if (t.kismi) k.odeme.taksitler.push({ vade: t.vade, tutar: t.kismi, odendi: gun(0), yontem: 'Kısmi' }); }); taksitBol(top, n).forEach((t, i) => k.odeme.taksitler.push({ vade: taksitVade(gun(0), i), tutar: t, odendi: null, yontem: null })); islem('Ödeme planını değiştirdi', tamAd(k) + ' · ' + n + ' taksit'); }
         if (tur === 'ek') { if (!v) return bildir('Tutar girin', 'uyari');
           // il taban listesi (not 4): kitap, evrak gibi kurs ücreti dışı kalemler; ek ve özel ders tabanın altında olamaz

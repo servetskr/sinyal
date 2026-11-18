@@ -41,6 +41,27 @@ export function gorselGoster(a) {
 }
 const kdvAyir = (tutar, oran) => { const m = Math.round(tutar / (1 + oran / 100) * 100) / 100; return [m, Math.round((tutar - m) * 100) / 100]; };
 
+// PAR-056 (mali cevaplar 9, 19): KDV indirimi kategoriye göre değil belgeye göre. Her gider faturasında KDV oranı girilir; KDV'li faturası olan her
+// işletme gideri indirilir (KDVK m.29/1-a). Sürücü kursu eğitim araçlarını işletir: eğitim aracının alış, yakıt ve bakım KDV'si indirilir; yöneticinin
+// binek aracında KDV indirilmez (KDVK m.30/b; GİB özelgesi 82476449-010-4502, 29/03/2023). Hareket/alış faturası: kdv (%), kdvIndirim: false (binek).
+export const ARAC_KAT_RE = /yakıt|akaryakıt|bakım|lastik|araç|arac|muayene|kasko|tamir|servis/i;
+export const KDV_SECENEK = [['', 'Faturasız / KDV yok'], ['20', '%20'], ['10', '%10'], ['1', '%1'], ['0', '%0 (istisna)']];
+export function giderKdvHtml(h = {}) {
+  const v = h.kdv == null ? '' : String(h.kdv);
+  return `<div class="alan" data-gider-kdv><label for="gk-kdv">Faturadaki KDV</label><select id="gk-kdv" name="kdv">${KDV_SECENEK.map(([d, t]) => `<option value="${d}" ${d === v ? 'selected' : ''}>${t}</option>`).join('')}</select><small style="color:var(--soluk)">KDV’li faturası olan her gider indirilir</small></div>
+    <div class="alan tam" data-arac-soru hidden><span class="et">Eğitim aracı mı?</span><div class="secim"><label><input type="radio" name="egitimArac" value="evet" ${h.kdvIndirim === false ? '' : 'checked'}><span>Evet, eğitim aracı (KDV indirilir)</span></label><label><input type="radio" name="egitimArac" value="hayir" ${h.kdvIndirim === false ? 'checked' : ''}><span>Hayır, yönetici aracı (KDV indirilmez)</span></label></div></div>`;
+}
+// form: tur (Gider/Gelir), kat (kategori), kdv, egitimArac; araç sorusu araç giderinde ve KDV'li faturada görünür
+export function giderKdvBagla(f) {
+  const g = () => { const gider = (f.querySelector('[name=tur]:checked') || { value: 'Gider' }).value !== 'Gelir', kat = (f.kat || {}).value || '', a = f.querySelector('[data-arac-soru]'), k = f.querySelector('[data-gider-kdv]');
+    if (k) k.hidden = !gider; if (a) a.hidden = !(gider && ARAC_KAT_RE.test(kat) && f.kdv && +f.kdv.value > 0); };
+  f.addEventListener('change', g); g();
+}
+export function giderKdvOku(f) {
+  if (!f.kdv || f.kdv.value === '' || (f.querySelector('[name=tur]:checked') || {}).value === 'Gelir') return {};
+  const arac = ARAC_KAT_RE.test((f.kat || {}).value || '') && +f.kdv.value > 0 && (f.querySelector('[name=egitimArac]:checked') || {}).value === 'hayir';
+  return { kdv: +f.kdv.value, ...(arac ? { kdvIndirim: false } : {}) };
+}
 // Gelir/gider ekle penceresindeki fatura bölümü (yalnız giderde görünür)
 export function faturaAlaniHtml() {
   const l = tedarikciler();
@@ -48,7 +69,6 @@ export function faturaAlaniHtml() {
     <div class="alan"><label for="al-t">Tedarikçi</label><input id="al-t" name="alTed" list="al-ted-l" maxlength="80" placeholder="Örn. Petrol Ofisi · Bayi"><datalist id="al-ted-l">${l.map(x => `<option value="${e(x.ad)}">`).join('')}</datalist></div>
     <div class="alan"><label for="al-v">Tedarikçi VKN / TC</label><input id="al-v" name="alVkn" inputmode="numeric" maxlength="11" placeholder="yeni tedarikçide"></div>
     <div class="alan"><label for="al-n">Belge no</label><input id="al-n" name="alNo" maxlength="30" autocomplete="off"></div>
-    <div class="alan"><label for="al-k">KDV</label><select id="al-k" name="alKdv">${[20, 10, 1, 0].map(n => `<option value="${n}">%${n}</option>`).join('')}</select></div>
     <div class="alan tam"><span class="et">Ödeme</span><div class="secim"><label><input type="radio" name="alOdeme" value="simdi" checked><span>Şimdi ödendi</span></label><label><input type="radio" name="alOdeme" value="vadeli"><span>Vadeli (tedarikçiye borç)</span></label></div></div>
     <div class="alan" data-al-vade hidden><label for="al-vd">Vade</label><input id="al-vd" name="alVade" type="date" value="${gun(30)}"></div>
     <div class="alan tam"><label for="al-g">Belge görseli <small style="color:var(--soluk);font-weight:400">fotoğraf ya da PDF · isteğe bağlı</small></label><input id="al-g" name="alGorsel" type="file" accept="image/*,application/pdf"><small data-al-g-durum style="color:var(--soluk)"></small></div></div></fieldset>`;
@@ -77,7 +97,7 @@ export function faturaOku(f, { tutar, tarih: t, kategori, aciklama }) {
   let td = tedarikciler().find(x => x.ad.toLocaleLowerCase('tr') === ad.toLocaleLowerCase('tr'));
   if (!td) { td = { id: 'td' + Date.now().toString(36), ad, ...(f.alVkn.value.trim() ? { vkn: f.alVkn.value.replace(/\D/g, '') } : {}) }; tedarikciler().push(td); islem('Tedarikçi ekledi', ad); }
   else if (!td.vkn && f.alVkn.value.trim()) td.vkn = f.alVkn.value.replace(/\D/g, '');
-  const a = { id: 'al' + Date.now().toString(36), tedarikci: td.id, belgeNo: no, tarih: t, tutar, kdv: +f.alKdv.value, kategori, aciklama, vade: vadeli ? f.alVade.value : t, odemeler: [], kim: oturum.kullanici ? oturum.kullanici.ad : '', ...(gorsel ? { gorsel } : {}) };
+  const kd = giderKdvOku(f), a = { id: 'al' + Date.now().toString(36), tedarikci: td.id, belgeNo: no, tarih: t, tutar, kdv: kd.kdv || 0, ...(kd.kdvIndirim === false ? { kdvIndirim: false } : {}), kategori, aciklama, vade: vadeli ? f.alVade.value : t, odemeler: [], kim: oturum.kullanici ? oturum.kullanici.ad : '', ...(gorsel ? { gorsel } : {}) };
   alislar().push(a); islem(vadeli ? 'Vadeli gider faturası girdi' : 'Gider faturası girdi', `${ad}${no ? ' · ' + no : ''} · ${tl(tutar)}`);
   return { a, vadeli };
 }
@@ -132,7 +152,7 @@ function odePenceresi(id, sonra) {
     altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-alo">Ödendi</button>',
     onAc(p) { p.querySelector('form').addEventListener('submit', ev => { ev.preventDefault(); const f = ev.target, v = tutarOku(f.tutar.value); if (!v || v <= 0) return bildir('Tutarı girin', 'uyari'); if (v > kal + 0.001) return bildir('Kalan borçtan (' + tl(kal) + ') fazla ödenemez', 'uyari');
       if ((S.gunSonu || []).includes(f.tarih.value)) return bildir('Bu gün kapatıldı; kayıt eklenemez', 'uyari'); geriAlNoktasi();
-      const hid = 'h' + Date.now(); S.hareket.unshift({ id: hid, tarih: f.tarih.value || gun(0), tur: 'Gider', kategori: a.kategori || 'Diğer', aciklama: (t.ad || 'Tedarikçi') + (a.belgeNo ? ' · ' + a.belgeNo : '') + ' ödemesi', tutar: v, yontem: f.y.value, alis: a.id, tedarikci: a.tedarikci });
+      const hid = 'h' + Date.now(); S.hareket.unshift({ id: hid, tarih: f.tarih.value || gun(0), tur: 'Gider', kategori: a.kategori || 'Diğer', aciklama: (t.ad || 'Tedarikçi') + (a.belgeNo ? ' · ' + a.belgeNo : '') + ' ödemesi', tutar: v, yontem: f.y.value, alis: a.id, tedarikci: a.tedarikci, ...(a.kdv != null ? { kdv: +a.kdv || 0 } : {}), ...(a.kdvIndirim === false ? { kdvIndirim: false } : {}) });
       a.odemeler = [...(a.odemeler || []), hid]; islem('Tedarikçiye ödedi', (t.ad || '') + ' · ' + tl(v)); kaydet(); kapatPencere(); bildir(tl(v) + ' ödendi; kalan ' + tl(alisKalan(a))); sonra && sonra(); }); } });
 }
 export function cariBagla(k, yenile) {
@@ -146,6 +166,6 @@ export function cariBagla(k, yenile) {
 }
 // Müşavir paketi: ayın alış faturaları (tedarikçi, VKN, belge no, matrah, KDV, toplam, ödeme)
 export function alisSatirlari(buAy) {
-  return [['Tarih', 'Tedarikçi', 'VKN / TC', 'Belge no', 'Kategori', 'Matrah', 'KDV oranı (%)', 'KDV', 'Toplam', 'Ödenen', 'Kalan', 'Vade', 'Belge görseli'],
-    ...alislar().filter(a => !a.iptal && buAy(a.tarih)).sort((x, y) => x.tarih.localeCompare(y.tarih)).map(a => { const t = tedarikci(a.tedarikci) || {}, [m, k] = kdvAyir(+a.tutar || 0, +a.kdv || 0); return [a.tarih.split('-').reverse().join('.'), t.ad || '', t.vkn || '', a.belgeNo || '', a.kategori || '', m, a.kdv, k, a.tutar, odenen(a), alisKalan(a), a.vade ? a.vade.split('-').reverse().join('.') : '', a.gorsel ? (a.gorsel.tur === 'pdf' ? 'PDF' : 'Fotoğraf') : '']; })];
+  return [['Tarih', 'Tedarikçi', 'VKN / TC', 'Belge no', 'Kategori', 'Matrah', 'KDV oranı (%)', 'KDV', 'KDV indirilir mi', 'Toplam', 'Ödenen', 'Kalan', 'Vade', 'Belge görseli'],
+    ...alislar().filter(a => !a.iptal && buAy(a.tarih)).sort((x, y) => x.tarih.localeCompare(y.tarih)).map(a => { const t = tedarikci(a.tedarikci) || {}, [m, k] = kdvAyir(+a.tutar || 0, +a.kdv || 0); return [a.tarih.split('-').reverse().join('.'), t.ad || '', t.vkn || '', a.belgeNo || '', a.kategori || '', m, a.kdv, k, !(+a.kdv > 0) ? '' : a.kdvIndirim === false ? 'Hayır (binek, KDVK 30/b)' : 'Evet', a.tutar, odenen(a), alisKalan(a), a.vade ? a.vade.split('-').reverse().join('.') : '', a.gorsel ? (a.gorsel.tur === 'pdf' ? 'PDF' : 'Fotoğraf') : '']; })];
 }
