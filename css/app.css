@@ -112,6 +112,7 @@ h1,h2,h3,h4{color:var(--murekkep);font-family:var(--baslik);font-weight:800;line
 .iz-2{grid-template-columns:1fr 1fr}
 .iz-3{grid-template-columns:repeat(3,1fr)}
 .iz-4{grid-template-columns:repeat(4,1fr)}
+.iz-5{grid-template-columns:repeat(5,1fr)}
 .iz-21{grid-template-columns:2fr 1fr}
 .iz-12{grid-template-columns:1fr 2fr}
 .bolum-bas{display:flex;align-items:flex-end;gap:12px;margin:0 0 14px;flex-wrap:wrap}
@@ -468,6 +469,7 @@ body.portal-modu .icerik{max-width:none}
 
 @media (max-width:1180px){
   .iz-4{grid-template-columns:repeat(2,1fr)}
+  .iz-5{grid-template-columns:repeat(3,1fr)}
   .iz-21,.iz-12{grid-template-columns:1fr}
   .arama{width:auto}
   .arama span,.arama kbd{display:none}
@@ -486,6 +488,7 @@ body.portal-modu .icerik{max-width:none}
   .mobil-ust-sol{display:grid}
   .icerik{padding:2px 16px 100px}
   .iz-2,.iz-3{grid-template-columns:1fr}
+  .iz-5{grid-template-columns:1fr 1fr}
   .olcum,.izgara:has(>.gosterge){grid-template-columns:1fr 1fr}
   .olcum-h,.izgara>.gosterge{padding:12px 14px}
   .olcum-h:nth-child(odd),.izgara>.gosterge:nth-child(odd){box-shadow:none}
