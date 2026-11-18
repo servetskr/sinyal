@@ -51,7 +51,21 @@ function ust(ctx, iptalsiz, yapilan) {
   if (!iptalsiz.length) ozet = 'Bugün dersin yok';
   else if (!ctx.siradaki) { const y = iptalsiz.filter(d => d.durum === 'Yapıldı').length; ozet = y ? `Bugün ${y} ders yaptın` : 'Bugünkü derslerin kapandı'; }
   else ozet = `Bugün ${iptalsiz.length} dersin var${yapilan ? `, ${yapilan} tanesi bitti` : ''}`;
-  return `<header class="ox-sayfa-bas ox-ubg-bas"><div><p class="ox-ubg-tarih">${esc(tarihUzun(gun(0)))}</p><h1>${ctx.P.selamla()}, ${ad1} Hoca</h1><p>${ozet}</p></div></header>`;
+  const h = haftaYuku(ctx.eg);
+  return `<header class="ox-sayfa-bas ox-ubg-bas"><div><p class="ox-ubg-tarih">${esc(tarihUzun(gun(0)))}</p><h1>${ctx.P.selamla()}, ${ad1} Hoca</h1><p>${ozet}</p>${h.n || h.sinir ? `<p class="ox-ubg-hafta${h.sinir && h.n > h.sinir ? ' asti' : h.sinir && h.n >= h.sinir * 0.9 ? ' yakin' : ''}">Bu hafta ${h.n}${h.sinir ? '/' + h.sinir : ''} ders</p>` : ''}</div></header>`;
+}
+// UYG-009: bu haftaki (pazartesi–pazar) iptal ve gelmedi dışındaki direksiyon dersleri; sınır çalışma iznindeki haftalık ders saati (Filo › öğretmen)
+export function haftaYuku(eg) {
+  const off = (new Date().getDay() + 6) % 7, bas = gun(-off), son = gun(6 - off);
+  const n = S.dersler.filter(d => d.egitmen === eg.id && d.tarih >= bas && d.tarih <= son && d.durum !== 'İptal' && d.durum !== 'Gelmedi').length;
+  return { n, sinir: +eg.haftalikSinir || 0 };
+}
+// UYG-009: çalışma izni bitişine 30 gün ya da daha az kaldıysa (ya da bittiyse) öğretmene kart
+export function izinKarti(eg) {
+  if (!eg || !eg.mebIzinBitis) return '';
+  const g = fark(eg.mebIzinBitis); if (g > 30) return '';
+  const metin = g < 0 ? `Çalışma iznin ${esc(tarihUzun(eg.mebIzinBitis))} tarihinde bitti. Yenilenmeden ders ve sınava giremezsin; kursa haber ver.` : g === 0 ? 'Çalışma iznin bugün bitiyor. Yenilenmezse ders ve sınava giremezsin; kursa haber ver.' : `Çalışma iznin ${g} gün sonra (${esc(tarihUzun(eg.mebIzinBitis))}) bitiyor. Yenilenmesi için kursa haber ver.`;
+  return `<div class="ox-kart ox-ubg-izin ${g <= 7 ? 'kirmizi' : 'turuncu'}" role="note">${oi('uyari')}<p>${metin}</p></div>`;
 }
 
 /* ---------- sıradaki ders kartı ---------- */
@@ -196,7 +210,7 @@ export function ekran(ctx) {
   const k2 = kutular(ctx);
   const kural = liste([satir({ ikon: 'kalkan', baslik: 'Kurallar ve sık sorulanlar', alt: 'Ders, sınav ve görevle ilgili mevzuat', attrs: { 'data-ux-alt': 'kurallar' } })]);
   return {
-    html: ust(ctx, iptalsiz, yapilan) + govde + `<div class="ox-ubg-alt">${k2}${kural}</div>`,
+    html: ust(ctx, iptalsiz, yapilan) + izinKarti(ctx.eg) + govde + `<div class="ox-ubg-alt">${k2}${kural}</div>`,
     baglan(kap) {
       clearInterval(sayac); sayac = null;
       const el = kap.querySelector('[data-ubg-sure]');
@@ -286,7 +300,7 @@ stilEkle('ox-ubg', `
 .ox-ubg-daha[aria-expanded=true] .ox-i{transform:rotate(180deg)}
 .ox-ubg-bek{color:#c26a00;font-weight:600}
 /* kutular */
-.ox-ubg-alt{margin-top:24px}.ox-ubg-turler{display:block;margin-top:4px;color:var(--ox-ikincil);font-size:12.5px}.ox-ubg-kutular+.ox-liste{margin-top:12px}
+.ox-ubg-alt{margin-top:24px}.ox-ubg-hafta{margin-top:4px;font-size:13.5px;font-weight:600;color:var(--ox-ikincil)}.ox-ubg-hafta.yakin{color:#c26a00}.ox-ubg-hafta.asti{color:var(--ox-kirmizi)}.ox-ubg-izin{display:flex;gap:10px;align-items:flex-start;padding:14px 16px;margin:0 0 16px;font-size:14.5px;line-height:1.45}.ox-ubg-izin.turuncu{background:var(--ox-turuncu-acik);border-color:#f5d39a}.ox-ubg-izin.kirmizi{background:var(--ox-kirmizi-acik);border-color:#f3b8ba}.ox-ubg-izin .ox-i{flex:none;margin-top:1px}.ox-ubg-izin p{margin:0}.ox-ubg-turler{display:block;margin-top:4px;color:var(--ox-ikincil);font-size:12.5px}.ox-ubg-kutular+.ox-liste{margin-top:12px}
 .ox-ubg-kutular{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .ox-ubg-kutu{position:relative;display:flex!important;flex-direction:column;min-width:0;padding:12px 12px 14px 14px;text-align:left}
 .ox-ubg-kutu .ox-ubg-kutu-yazi{margin-top:auto}

@@ -475,6 +475,8 @@ export function ustaDuzenle(id) {
       <div class="alan"><label>Ders başı prim (₺)</label><input name="prim" inputmode="numeric" value="${x.prim}"></div>
       <div class="alan"><label>Usta öğretici sertifikası bitişi</label><input name="sertifika" type="date" value="${tarihGir(x.belgeler.sertifika)}"></div>
       <div class="alan"><label>MEBBİS izin no</label><input name="calismaIzinNo" value="${e(x.calismaIzinNo || '')}" inputmode="numeric" placeholder="ör. 5048176"><small style="color:var(--soluk)">MEBBİS’in ders ve sınav ekranlarında “İzin No:5048176 AD SOYAD” diye görünen numara. Direksiyon programı ve sınav aktarımında öğretmen bununla seçilir.</small></div>
+      <div class="alan"><label>Çalışma izni bitişi</label><input name="mebIzinBitis" type="date" value="${tarihGir(x.mebIzinBitis)}"><small style="color:var(--soluk)">MEBBİS’ten personel çekilince kendiliğinden dolar; 30 gün kala öğretmene ve size hatırlatılır.</small></div>
+      <div class="alan"><label>Haftalık ders sınırı</label><input name="haftalikSinir" inputmode="numeric" value="${e(x.haftalikSinir || '')}" placeholder="ör. 40"><small style="color:var(--soluk)">Çalışma iznindeki haftalık ders saati; öğretmen uygulamasında “Bu hafta 31/40 ders” diye görünür.</small></div>
       <div class="alan"><label>Sağlık raporu bitişi</label><input name="saglik" type="date" value="${tarihGir(x.belgeler.saglik)}"></div>
       <div class="alan"><label>Adli sicil kaydı geçerliliği</label><input name="adli" type="date" value="${tarihGir(x.belgeler.adli)}"></div>
       <div class="alan"><label>Kursta başlama yılı</label><input name="baslama" inputmode="numeric" value="${e(x.baslama)}"></div></form>
@@ -486,7 +488,7 @@ export function ustaDuzenle(id) {
         if (!f.ad.value.trim()) return bildir('Ad soyad gerekli', 'uyari');
         if (f.tel.value.replace(/\D/g, '').length < 10) return bildir('Geçerli bir telefon girin', 'uyari');
         if (!sin.length) return bildir('En az bir sınıf seçin', 'uyari');
-        const yeni = { ad: f.ad.value.trim(), tel: f.tel.value.trim(), siniflar: sin, maas: tutarOku(f.maas.value) || 0, prim: tutarOku(f.prim.value) || 0, baslama: f.baslama.value.trim(), calismaIzinNo: f.calismaIzinNo.value.trim() || null, belgeler: { sertifika: f.sertifika.value || null, saglik: f.saglik.value || null, adli: f.adli.value || null } };
+        const yeni = { ad: f.ad.value.trim(), tel: f.tel.value.trim(), siniflar: sin, maas: tutarOku(f.maas.value) || 0, prim: tutarOku(f.prim.value) || 0, baslama: f.baslama.value.trim(), calismaIzinNo: f.calismaIzinNo.value.trim() || null, mebIzinBitis: f.mebIzinBitis.value || null, haftalikSinir: Math.min(80, Math.max(0, parseInt(f.haftalikSinir.value, 10) || 0)) || null, belgeler: { sertifika: f.sertifika.value || null, saglik: f.saglik.value || null, adli: f.adli.value || null } };
         Object.keys(yeni.belgeler).forEach(b => { if (!yeni.belgeler[b]) delete yeni.belgeler[b]; });
         if (id) { Object.assign(x, yeni); islem('Usta öğretici bilgisini düzenledi', yeni.ad); } else { S.egitmenler.push({ id: 'e' + Date.now(), renk: ['#2f6fde', '#0f8a5f', '#b45309', '#7c3aed', '#be123c'][S.egitmenler.length % 5], ...yeni, sube: seciliSube() ? seciliSube().id : (S.subeler || [{}])[0].id }); islem('Usta öğretici ekledi', yeni.ad); }
         kaydet(); kapatPencere(); bildir(id ? 'Bilgiler kaydedildi' : yeni.ad + ' ekibe eklendi'); yenile();

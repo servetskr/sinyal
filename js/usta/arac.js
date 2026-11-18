@@ -2,7 +2,8 @@
 // Eski portal.js "Aracın" bölümü (model, plaka, bakıma kalan km), guzergah.js ustaHtml (güzergâhlar, püf noktaları, kursa iletilen notlar,
 // "Püf noktası ekle" formu: data-gz-usta, guzergah.js'teki ortak submit dinleyicisi işler) ve app.js hesap penceresi (Kursu ara, mdSinyal Destek:
 // data-destek, Çıkış yap / Kullanıcı değiştir: data-cikis; ikisi de app.js'teki belge dinleyicisinde çalışır) buraya taşındı.
-import { S, SINIFLAR, oturum, tarihOku, sinifEtiket, anaSinif } from '../veri.js?v=234';
+import { S, SINIFLAR, oturum, tarihOku, sinifEtiket, anaSinif, fark } from '../veri.js?v=234';
+import { haftaYuku, izinKarti } from './bugun.js?v=234';
 import { ayAdi, tarih } from '../ui.js?v=234';
 import { guzergahlar } from '../guzergah.js?v=234';
 import { kisaMetin } from '../guncelleme.js?v=234';
@@ -105,7 +106,11 @@ function hesapHtml(ctx) {
     // kurulu sürüm ve güncelleme denetimi (tıklama js/guncelleme.js'te)
     satir({ ikon: 'sifirla', ton: 'gri', baslik: 'Uygulama sürümü', alt: `<span data-sg-metin>${esc(kisaMetin())}</span>`, attrs: { 'data-sg-denetle': true } }),
   ].filter(Boolean);
-  return geriBugun() + sayfaBas('Hesabım') + kim
+  // UYG-009: çalışma izni ve haftalık ders yükü
+  const iz = eg.mebIzinBitis ? satir({ ikon: 'kimlik', ton: fark(eg.mebIzinBitis) <= 30 ? 'turuncu' : 'gri', baslik: 'Çalışma izni', alt: esc(`${tarih(eg.mebIzinBitis)} tarihine kadar${fark(eg.mebIzinBitis) < 0 ? ' · bitti' : fark(eg.mebIzinBitis) <= 30 ? ` · ${fark(eg.mebIzinBitis)} gün kaldı` : ''}`), ok: false }) : '';
+  const hy = haftaYuku(eg), hs = hy.n || hy.sinir ? satir({ ikon: 'takvim', ton: 'gri', baslik: 'Bu hafta', alt: `${hy.n}${hy.sinir ? ' / ' + hy.sinir : ''} ders`, ok: false }) : '';
+  return geriBugun() + sayfaBas('Hesabım') + kim + izinKarti(eg)
+    + (iz || hs ? `<div class="ox-uar-ara">${liste([iz, hs].filter(Boolean))}</div>` : '')
     + `<div class="ox-uar-ara">${liste(satirlar)}</div>`
     + `<div class="ox-uar-ara">${liste([satir({ ikon: 'cikis', ton: 'kirmizi', baslik: u.bulut ? 'Çıkış yap' : 'Kullanıcı değiştir', attrs: { 'data-cikis': true }, ok: false, cls: 'ox-uar-cikis' })])}</div>`
     + not('Bilgilerin yanlışsa kurs müdürüne söyle; adını ve telefonunu kurs günceller.');
