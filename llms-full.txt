@@ -198,6 +198,7 @@ MEB’in hazırladığı taslak (direksiyon sınavının serbest güzergâhta ya
 - [Ana sayfa](https://mdsinyal.com/): genel tanıtım, modüller, kullanıcı rolleri, geçiş adımları
 - [Özellikler](https://mdsinyal.com/ozellikler/): her özelliğin açıklaması ve ekranı
 - [Sık sorulan sorular](https://mdsinyal.com/sss/): kurulum ve geçiş, güvenlik ve KVKK, WhatsApp, MEBBİS
+- [Başlayın](https://mdsinyal.com/basla/): geçiş adımları, kurulum günü, önceden hazırlanacaklar ve başvuru formu
 - [İletişim](https://mdsinyal.com/iletisim/): tanıtım görüşmesi isteği
 - [Gizlilik ve KVKK](https://mdsinyal.com/gizlilik.html): işlenen veriler, hukuki sebepler, saklama süreleri
 

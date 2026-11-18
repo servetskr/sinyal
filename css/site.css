@@ -204,6 +204,8 @@ a.st-mod:hover h3{text-decoration:underline;text-decoration-thickness:2px;text-u
 .il-izgara{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:56px;align-items:start}
 .il-sol h1{font-size:40px;line-height:1.12;color:var(--k-lac);margin:14px 0}
 .il-on{color:var(--k-metin);font-size:17px}
+.bs-h2{font-size:32px;line-height:1.15;color:var(--k-lac);margin:14px 0 10px}
+.bs-liste{gap:12px;font-size:15.5px;line-height:1.5}
 .il-wa,.st a.il-wa{display:flex;align-items:center;gap:16px;margin:28px 0 20px;padding:18px 20px;border-radius:12px;background:var(--k-lac);color:#fff}
 .il-wa:hover,.st a.il-wa:hover{background:var(--k-lac-2)}
 .il-wa-ik{display:grid;place-items:center;width:44px;height:44px;border-radius:10px;background:#128c4b;flex:none}

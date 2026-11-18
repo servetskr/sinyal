@@ -81,7 +81,7 @@
         const j = await r.json().catch(() => ({}));
         if (!r.ok || !j.ok) throw Object.assign(new Error(j.hata || 'gönderilemedi'), { kullanici: r.status === 400 || r.status === 429 ? j.hata : '' });
         const kart = f.closest('[data-st-form-kart]') || f;
-        kart.innerHTML = `<div class="st-form-tamam" role="status" tabindex="-1"><b>Mesajınız bize ulaştı.</b><span>En geç bir iş günü içinde ${telOk ? 'sizi arıyoruz' : 'e-postanıza yazıyoruz'}. Acele ederseniz WhatsApp’tan da yazabilirsiniz: 0501 363 65 36.</span></div>`;
+        kart.innerHTML = `<div class="st-form-tamam" role="status" tabindex="-1"><b>${govde.tur === 'basvuru' ? 'Başvurunuz' : 'Mesajınız'} bize ulaştı.</b><span>En geç bir iş günü içinde ${telOk ? 'sizi arıyoruz' : 'e-postanıza yazıyoruz'}${govde.tur === 'basvuru' ? '; kurulum gününü birlikte belirleriz' : ''}. Acele ederseniz WhatsApp’tan da yazabilirsiniz: 0501 363 65 36.</span></div>`;
         kart.querySelector('.st-form-tamam').focus();
       } catch (x) {
         dg.disabled = false; dg.textContent = eski;
