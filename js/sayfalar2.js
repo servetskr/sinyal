@@ -1347,6 +1347,10 @@ function gecisSaatKarti() {
 // Ayarlar › Sınıf ve ücretler: ilin taban fiyat listesi, belgedeki sırayla. Taban salt okunur; kursun ücreti yanında:
 // ilk kez belge satırları sınıf ücretine (data-sinif-alan), geçiş satırları S.kurs.gecisUcret'e (data-gecis), ilave ve özel ders kurs ücretine (data-taban-ek) yazılır.
 function tabanKarti(L) {
+  // PAR-069: ilin listesi mdSinyal'de hiç yoksa: valilik listesini iletme yolu (Destek talebi ya da WhatsApp'tan dosya); ekip işleyip il kütüphanesine (taban.js LISTELER) ekler
+  if (!L && tabanDurumu().durum === 'yok') { const il = S.kurs.il || S.kurs.sehir || 'iliniz', yil = gun(0).slice(0, 4), m = `İl taban fiyat listesi: ${il} ${yil}. Valiliğin “Sürücü Eğitimi Maliyetlerini Belirleme Komisyonu” kararını (PDF/Excel) iletiyorum; ücretlerim bununla denetlensin.`;
+    return `<div class="ara-bosluk"></div><div class="ipucu">${isaret('bilgi', 20)}<span><b>${e(il)} için il taban fiyat listesi mdSinyal’de yok.</b> Valiliğin bu yılki listesini (PDF ya da Excel) bize iletin; ekibimiz işler, ücretleriniz Sınıf ve ücretler’de tabanla hazır gelir ve her yıl 1 Şubat yenilemesi hatırlatılır. Liste gelene kadar taban ücret denetimi yapılmaz.
+      <span style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" class="dg dg-cizgi dg-kucuk" data-taban-destek="${e(m)}">${ik('mesaj')}Destek talebi aç</button><a class="dg dg-wp dg-kucuk" target="_blank" rel="noopener" href="https://wa.me/905013636536?text=${encodeURIComponent(m + ' (dosyayı bu mesaja ekliyorum)')}">${ik('wp')}Listeyi WhatsApp’tan gönder</a></span></span></div>`; }
   if (!L) { const d = tabanDurumu(); return d.durum === 'bitti' || d.durum === 'baslamadi' ? `<div class="ara-bosluk"></div><p class="ipucu uyari">${isaret('uyari', 20)}<span>${e(listeAdi(d.son))} ${e(gecerlilikMetni(d.son))} geçerliydi. Yeni dönemin listesi mdSinyal’e girilmedi; valilikten gelen yeni listeyi bize iletin. O zamana kadar taban ücret denetimi yapılmaz.</span></p>` : ''; }
   const SINIF_AD = { 'B-O': 'B otomatik', 'B-EN': 'B Engelli', CEZA: '100 ceza puanı' };
   const ders = r => [r.teorik ? r.teorik.saat + ' saat teorik' : '', r.direksiyon && r.tur !== 'ilave' && r.tur !== 'ozel' ? r.direksiyon.saat + ' ders direksiyon' : r.direksiyon ? '1 ders' : ''].filter(Boolean).join(' + ');
@@ -1497,6 +1501,7 @@ export function ayarlar(alt) {
         islem('Ücret kalemini değiştirdi'); kaydet(); bildir('Kaydedildi');
       });
       k.addEventListener('click', ev => {
+        { const td = ev.target.closest('[data-taban-destek]'); if (td) return import('./app.js?v=234').then(m => m.destekPenceresi(td.dataset.tabanDestek)); }  // PAR-069
         { const sm = ev.target.closest('[data-sinif-mevzuat]'), so = ev.target.closest('[data-sinif-onay]'); if (sm || so) { if (!mudurMu()) return bildir('Yalnız kurs müdürü', 'uyari'); const k = (sm || so).dataset[sm ? 'sinifMevzuat' : 'sinifOnay'];
           if (sm) { const v = +SINIF_VARSAYILAN[k].direksiyon; S.kurs.siniflar = S.kurs.siniflar || {}; sinifKaydet(k, { direksiyon: v }); islem('Sınıf direksiyon saatini mevzuat değerine döndürdü', k + ' · ' + v); bildir(`${k} sınıfı ${v} saat (mevzuat)`); }
           else { S.kurs.sinifFarkOnay = { ...(S.kurs.sinifFarkOnay || {}), [k]: SINIFLAR[k].direksiyon + '/' + SINIF_VARSAYILAN[k].direksiyon }; islem('Sınıf direksiyon saatini onayladı (mevzuattan farklı)', k + ' · ' + SINIFLAR[k].direksiyon); bildir('Onaylandı; sizin ya da mevzuatın değeri değişirse yeniden sorulur'); }

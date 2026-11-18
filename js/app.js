@@ -130,7 +130,7 @@ function hesapSayfasi() {
 }
 // Kurs personeli mdSinyal'e destek talebi açar: talep kursun verisine yazılır, Servet mdSinyal Yönetim › Destek'te görür ve cevaplar
 const DESTEK_TUR = ['Hata', 'Öneri', 'Soru', 'İstek', 'Eğitim'];   // DIG-030: öneri ayrı tür; öncelik (Normal / Acil) talepte
-function destekPenceresi() {
+export function destekPenceresi(hazirMetin = '') {
   const u = oturum.kullanici, yazar = !!u.bulut && ['mudur', 'sekreter'].includes(u.rol), c = S.destekCevap || {};
   const l = (S.destek || []).slice().sort((a, b) => String(b.zaman).localeCompare(String(a.zaman)));
   const wa = 'https://wa.me/' + SH.DESTEK_TEL + '?text=' + encodeURIComponent('Merhaba, ' + (S.kurs.ad || 'kursumuz') + ' için mdSinyal desteği rica ediyorum.');
@@ -143,7 +143,7 @@ function destekPenceresi() {
     ${l.length ? `<h3 class="krsd-bas">Talepleriniz</h3><div class="ds-liste">${l.map(t => { const x = c[t.id] || {}, d = x.durum || 'Açık';
       return `<div class="ds-talep"><div><b>${t.oncelik === 'Acil' ? '<span style="color:var(--kirmizi)">Acil · </span>' : ''}${e(t.tur)} · ${e(String(t.metin).slice(0, 80))}</b><small>${e(t.kim || '')} · ${e(new Date(t.zaman).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }))}</small>${x.cevap ? `<p class="ds-cevap">${ik('mesaj')}<span><b>mdSinyal:</b> ${e(x.cevap)}</span></p>` : ''}</div><em class="ds-durum ${d === 'Çözüldü' ? 'ok' : d === 'İnceleniyor' ? 'bak' : ''}">${e(d)}</em></div>`; }).join('')}</div>` : ''}`,
     altlik: yazar ? `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-destek">Gönder</button>` : '<button class="dg dg-ana" data-kapat>Tamam</button>',
-    onAc: p => {
+    onAc: p => { if (hazirMetin) { const ta = p.querySelector('textarea[name=metin]'); if (ta) ta.value = hazirMetin; }
       if (!yazar) return;
       let tur = DESTEK_TUR[0];
       p.querySelectorAll('[data-ds-tur]').forEach(b => b.addEventListener('click', () => { tur = b.dataset.dsTur; p.querySelectorAll('[data-ds-tur]').forEach(x => { x.classList.toggle('secili', x === b); x.setAttribute('aria-checked', x === b); }); }));
