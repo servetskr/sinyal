@@ -61,6 +61,9 @@ function kuralGirdi(k) {
   return `<input class="girdi" data-kural="${k}" type="number" min="${r.min ?? 0}"${r.max != null ? ` max="${r.max}"` : ''} step="1" value="${e(kuralDeger(k) ?? '')}" aria-label="${e(r.ad)}" style="width:86px;height:34px;display:inline-block"> <span style="color:var(--soluk);font-size:13px">${e(r.birim)}</span>`;
 }
 const kaynakHtml = r => r.url ? `<a href="${r.url}" target="_blank" rel="noopener" style="color:var(--levha);font-weight:700">${e(r.kaynak)}</a>` : e(r.kaynak);
+// KAY-041: bulanıklık eşiği kursun kendi kararlarıyla (onaylanan/yeniden istenen evrakın netlik sayıları) önerilir
+let EVM = null; import('./evrak.js?v=234').then(m => { EVM = m; }).catch(() => { });
+const netlikNotu = () => { if (!EVM) return ''; const o = EVM.netlikOnerisi(); return `<small style="display:block;color:var(--soluk);font-size:12.5px;margin-top:2px">${o.n ? `${o.on} onay, ${o.red} yeniden isteme kaydedildi` : 'Öğrenci evrakını onayladıkça ya da yeniden istedikçe sayılar toplanır'}${o.oneri ? ` · önerilen eşik <b>${o.oneri}</b> (onaylanan alt %10: ${o.alt}, reddedilen üst %75: ${o.ust}) <button type="button" class="dg dg-hafif dg-kucuk" data-netlik-oneri="${o.oneri}">Uygula</button>` : o.n ? ' · öneri için en az 10 onay ve 3 yeniden isteme gerekir' : ''}</small>`; };
 function degerDurum(k) {
   const K = S.kurs, r = KURAL_KAYNAK[k];
   return `${r.tur === 'mevzuat' ? rozet('Mevzuat', 'mavi') : rozet('Kurs kararı', 'notr')}${(K.kuralDegisen || {})[k] && kuralGecerli(k, K[k]) && +K[k] !== r.varsayilan ? ' ' + rozet('Kurs değiştirdi', 'sari') : ''}${r.teyit && K[k] === undefined ? ' ' + rozet('Teyit bekliyor', 'sari') : ''}`;
@@ -83,7 +86,7 @@ function kurallarSekme() {
   </div></div>
   <div class="ara-bosluk"></div>
   <div class="kart"><div class="kart-bas"><h3>Kayıt ve belge değerleri</h3><small>Belge geçerlilik süreleri, ücret ve kayıt kalitesi eşikleri · asgari yaş her sınıf için <a href="#/ayarlar/sinif" style="color:var(--levha);font-weight:700">Sınıf ve ücretler</a>’de</small></div><div class="tablo-kap"><table class="tablo tablo-mobil"><thead><tr><th>Ayar</th><th>Değer</th><th>Kaynak</th><th>Durum</th></tr></thead><tbody>
-    ${digerAyar.map(k => `<tr><td><b style="color:var(--murekkep)">${e(KURAL_KAYNAK[k].ad)}</b></td><td style="white-space:nowrap">${kuralGirdi(k)}</td><td class="m-tam" style="font-size:13.5px">${kaynakHtml(KURAL_KAYNAK[k])}</td><td>${degerDurum(k)}</td></tr>`).join('')}
+    ${digerAyar.map(k => `<tr><td><b style="color:var(--murekkep)">${e(KURAL_KAYNAK[k].ad)}</b>${k === 'bulanikSinir' ? netlikNotu() : ''}</td><td style="white-space:nowrap">${kuralGirdi(k)}</td><td class="m-tam" style="font-size:13.5px">${kaynakHtml(KURAL_KAYNAK[k])}</td><td>${degerDurum(k)}</td></tr>`).join('')}
   </tbody></table></div></div>
   <div class="ara-bosluk"></div>
   <div class="kart"><div class="kart-bas"><h3>Gece dersi başlangıcı</h3><small>MTSK Yön. md.7/3, md.20/1 · gün batımından sonra başlayan ders gece dersi sayılır</small></div><div class="kart-govde">
@@ -1012,6 +1015,7 @@ export function ayarBaglan(k) {
     if (t.closest('[data-sozlesme-varsayilan]')) { S.kurs.sozlesme = null; islem('Sözleşmeyi varsayılana döndürdü'); kaydet(); bildir('Varsayılan metne dönüldü'); return yenile(); }
     const kl = t.closest('[data-kayit-link]'); if (kl) { const id = kl.dataset.kayitLink, l = kayitLinki(id), ad = id ? ((S.subeler.find(x => x.id === id) || {}).ad || 'şube') : ''; panoya(l).then(ok => ok === false ? bildir('Kopyalanamadı. Link: ' + l, 'uyari') : bildir((ad ? ad + ' kayıt formu linki' : 'Genel kayıt formu linki') + ' kopyalandı. Kurs hesabıyla açılmış cihazda açılır.')); return; }
     if (t.closest('[data-sube-ekle]')) { const n = S.subeler.length + 1; S.subeler.push({ id: 's' + Date.now(), ad: 'Yeni şube ' + n, semt: '', kurumKodu: '', mudur: '', mebbis: '' }); islem('Şube ekledi'); kaydet(); bildir('Şube eklendi; kurum kodunu ve müdürünü yazın'); yenile(); }
+    { const no = t.closest('[data-netlik-oneri]'); if (no) { S.kurs.bulanikSinir = +no.dataset.netlikOneri; S.kurs.kuralDegisen = { ...(S.kurs.kuralDegisen || {}), bulanikSinir: gun(0) }; islem('Bulanıklık eşiğini önerilen değere çekti', String(S.kurs.bulanikSinir)); kaydet(); bildir('Eşik ' + S.kurs.bulanikSinir + ' oldu'); return yenile(); } }  // KAY-041
     if (t.closest('[data-kural-onay]')) { S.kurs.kuralOnay = { kim: oturum.kullanici ? oturum.kullanici.ad : '', tarih: gun(0) }; islem('Kural değerlerini onayladı'); kaydet(); bildir('Kural değerleri onaylandı'); yenile(); }
     const bo = t.closest('[data-belge-ac]'); if (bo) import('./sayfalar3.js?v=234').then(m => m.belgeAc(bo.dataset.belgeAc));
     const ok = t.closest('[data-oturum-kapat]'); if (ok) { const o = S.guvenlik.oturumlar.splice(+ok.dataset.oturumKapat, 1)[0]; islem('Oturumu kapattırdı', o.kim + ' · ' + o.cihaz); kaydet(); bildir(o.kim + ' · ' + o.cihaz + ' oturumu kapatıldı'); yenile(); }

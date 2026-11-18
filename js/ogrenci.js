@@ -387,8 +387,10 @@ export function ogBagla(kap, k, yenile) {
     bildir('Belge hazırlanıyor…');
     // fotoğraf okunaklı kalacak boyuta küçültülür (~200 KB); PDF olduğu gibi saklanır
     const oku = resim ? fotoKucult(f, 1600) : new Promise((coz, red) => { const r = new FileReader(); r.onload = () => coz(r.result); r.onerror = red; r.readAsDataURL(f); });
-    oku.then(veri => {
-      k.evrakYuklenen = k.evrakYuklenen || {}; k.evrakYuklenen[key] = { tarih: gun(0), dosya: f.name, boyut: veri.length, tur: pdf ? 'pdf' : 'resim', veri };
+    oku.then(async veri => {
+      // KAY-040: yazılı belge fotoğrafında netlik ölçülür (vesikalık fotoğrafa uygulanmaz); ofis kararıyla birlikte eşik ayarına örnek olur
+      let nt = null; if (!pdf && key !== 'foto') { try { nt = await (await import('./evrak.js?v=234')).netlikOlc(veri); } catch (x) { } }
+      k.evrakYuklenen = k.evrakYuklenen || {}; k.evrakYuklenen[key] = { tarih: gun(0), dosya: f.name, boyut: veri.length, tur: pdf ? 'pdf' : 'resim', veri, ...(nt ? { net: nt.net, bulanik: nt.bulanik } : {}) };
       islem('Öğrenci evrak yükledi', tamAd(k) + ' · ' + ad); kaydet(); bildirimler([{ kim: 'mudur', metin: `${tamAd(k)} öğrenci panelinden “${ad}” belgesini yükledi; öğrenci dosyasından kontrol edin.`, tur: 'Öğrenci evrakı' }], 'Belge yüklendi');
       bildir('Belgen kursa gönderildi; kontrol edilince tamamlanır'); yenile();
     }).catch(() => bildir('Dosya okunamadı; tekrar dene', 'uyari'));
