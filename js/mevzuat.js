@@ -1,7 +1,7 @@
 // Mevzuat uyum kuralları: ücret, tahsilat, iade, ücretsiz kontenjan, sınava hazır yazısı, planlama ve personel denetimleri.
 // Dayanak: Özel Öğretim Kurumları Yönetmeliği (RG 5/9/2025-33008 değişikliği: m.54, m.55/3, m.56/3-b, m.56/4), MTSK Yönetmeliği
 // (m.7/7 ve Danıştay 8. D. 8/10/2025 YD kararı, m.15, m.16/8, m.20, m.43), 5580 sayılı Kanun m.13 (%3 ücretsiz).
-import { S, gun, fark, SINIFLAR, SINIF_VARSAYILAN, tamAd, islem, kaydet, oturum, egitmen, sb, sbDers, gerekliDireksiyon, direksiyonAyrinti, ustaAraci, iso, kursiyerDonemi, ekTur, teorikVar, tabanListesi, tabanDurumu, kursiyerTaban, sinifTabani, satirUcreti, ekDersTabani, ozelDersTabani, ekDersFiyat, ozelDersFiyat, digerUcretler } from './veri.js?v=234';
+import { S, gun, fark, kuralAyar, SINIFLAR, SINIF_VARSAYILAN, tamAd, islem, kaydet, oturum, egitmen, sb, sbDers, gerekliDireksiyon, direksiyonAyrinti, ustaAraci, iso, kursiyerDonemi, ekTur, teorikVar, tabanListesi, tabanDurumu, kursiyerTaban, sinifTabani, satirUcreti, ekDersTabani, ozelDersTabani, ekDersFiyat, ozelDersFiyat, digerUcretler } from './veri.js?v=234';
 import { e, tl, tarih, pencere, kapatPencere, bildir, belgeYazdir, isaret } from './ui.js?v=234';
 import { denetimUyarilari } from './denetim.js?v=234';
 import { kuralEkle } from './kurallar.js?v=234';
@@ -136,18 +136,6 @@ export function mevzuatKurallari() {
   ks.filter(k => k.dsinav && k.dsinav.sonuc === 'Kaldı' && !k.dsinav.girmedi && k.dsinavPlan && !(k.hakBitti && !k.hakBitti.cozuldu)).forEach(k => { const n = S.dersler.filter(d => d.kursiyer === k.id && d.tarih > k.dsinav.tarih && d.tarih < k.dsinavPlan && d.durum !== 'Gelmedi').length; if (n < 2) l.push(['yasak', `${tamAd(k)} · tekrar sınavdan önce ${n}/2 saat ek ders`, 'Direksiyon sınavında başarısız olan, ilan edilen ücretle en az 2 saat ek ders almadan sınava giremez (MTSK Yönetmeliği m.15).', '#/plan']); });
   // Ders saatleri 07:00–23:00 (m.20)
   sbDers(S.dersler).filter(d => d.durum === 'Planlandı' && fark(d.tarih) >= 0 && d.saat && (d.saat < '07:00' || d.saat >= '23:00')).slice(0, 3).forEach(d => l.push(['yasak', `${tarih(d.tarih)} ${d.saat} dersi izin verilen saatlerin dışında`, 'Dersler 07:00–23:00 arasında yapılır (MTSK Yönetmeliği m.20).', '#/plan']));
-  // Araç başına bir eğitim döneminde en fazla 12 kursiyer kaydı (m.16/8). Dönem: kursiyerin MEB grubu (yoksa kayıt ayı); araç: usta öğreticisinin o sınıftaki aracı,
-  // yoksa son dersindeki araç. Kontenjan dışı (m.6/4: belgeli, özel ders alan) sayılmaz; nakil gelen (m.13/2) ve B belgesiyle A1 alan (m.39/5) sayılır,
-  // B belgeliye A1 eğitimi veren araçta sınır 24 (eyup-sorular-cevaplar.md madde 15). Direksiyon dersi olmayan (G, yalnız teorik) sayıma girmez.
-  // KTK md.118 ile belgesi geri alınıp teorik derse gelen sürücü (k.ktk118, MEB istisnaları penceresinden işaretlenir) cevap gelene kadar sayıma alınmaz (madde 15, teyit bekliyor).
-  // Sınav aracı başına 10 aday (m.30/2) sınav randevusunda ayrıca denetlenir.
-  { const bu = gun(0).slice(0, 7), ilk = (() => { const d = new Date(gun(0) + 'T12:00'); d.setMonth(d.getMonth() - 2); return d.toISOString().slice(0, 7); })(), ak = {};
-    ks.filter(k => !k.kontenjanDisi && !k.ktk118 && gerekliDireksiyon(k) > 0).forEach(k => {
-      const g = (S.gruplar || []).find(x => x.id === k.teorikGrup), gd = g && g.donem ? String(g.donem).replace(/^(\d{4})-?(\d{2}).*$/, '$1-$2') : '', donem = (/^\d{4}-\d{2}$/.test(gd) ? gd : '') || String(k.kayit || '').slice(0, 7); if (!/^\d{4}-\d{2}$/.test(donem) || donem < ilk) return;  // grup dönemi MEBBİS biçiminde (202611)
-      const a = ustaAraci(k.egitmen, k.sinif) || (S.araclar || []).find(x => x.id === ((S.dersler.filter(d => d.kursiyer === k.id && d.arac).sort((x, y) => (y.tarih + y.saat).localeCompare(x.tarih + x.saat))[0]) || {}).arac);
-      if (!a) return; const key = a.id + '|' + donem; (ak[key] = ak[key] || []).push(k); });
-    Object.entries(ak).forEach(([key, l2]) => { const [id, donem] = key.split('|'), a = S.araclar.find(x => x.id === id), a1b = l2.every(k => k.sinif === 'A1' && k.mevcutEhliyet === 'B'), sinir = a1b ? 24 : 12;
-      if (a && l2.length > sinir) l.push([donem >= bu ? 'uyari' : 'bilgi', `${a.plaka} · ${donem.split('-').reverse().join('.')} döneminde ${l2.length} kursiyer`, `Bir eğitim döneminde bir direksiyon eğitim ve sınav aracı için en çok ${sinir} kursiyer kaydı yapılır (MTSK Yönetmeliği m.16/8${a1b ? ', m.39/5' : ''}). Kursiyerleri başka usta öğretici ve araçlara dağıtın.`, '#/filo']); }); }
   // Kursun sınıf ayarındaki direksiyon saati yönetmelik asgarisinin altında (md.7/1)
   Object.entries(SINIFLAR).filter(([key, v]) => v.aktif && SINIF_VARSAYILAN[key] && v.direksiyon < SINIF_VARSAYILAN[key].direksiyon).forEach(([key, v]) => l.push(['yasak', `${v.ad} · direksiyon ${v.direksiyon} ders, yönetmelik asgarisi ${SINIF_VARSAYILAN[key].direksiyon}`, 'İlk kez belge alan için alanda ya da simülatörde en az 2 saat ve akan trafikte asgari saat verilir (MTSK md.7/1). Ayarlar › Sınıf ve ücretler’den düzeltin; kural tarihinden önce kaydolan öğrencilerin sayısı değişmez.', '#/ayarlar/sinif']));
   // Elle girilen (il tablosu) direksiyon saati md.39 alt sınırının altında: M→B1 12 saat (madde 1), B→A1 2 yıllık B'de yarı süre (md.39/5), otomatikten manuele
@@ -163,6 +151,24 @@ export function mevzuatKurallari() {
   return l;
 }
 // Kural motoruna kayıt: MEB işlemleri › Kurallar listesinde MEB kurallarından sonra gelir (kurallar.js)
+
+// ARC-001: araç başına kursiyer sayımı ayrı kural (sınır Ayarlar › MEB kuralları'nda; varsayılan 12, md.16/8; B belgeliye A1'de iki katı, md.39/5)
+function aracKursiyerSayimi(l, ks) {
+  // Araç başına bir eğitim döneminde en fazla 12 kursiyer kaydı (m.16/8). Dönem: kursiyerin MEB grubu (yoksa kayıt ayı); araç: usta öğreticisinin o sınıftaki aracı,
+  // yoksa son dersindeki araç. Kontenjan dışı (m.6/4: belgeli, özel ders alan) sayılmaz; nakil gelen (m.13/2) ve B belgesiyle A1 alan (m.39/5) sayılır,
+  // B belgeliye A1 eğitimi veren araçta sınır 24 (eyup-sorular-cevaplar.md madde 15). Direksiyon dersi olmayan (G, yalnız teorik) sayıma girmez.
+  // KTK md.118 ile belgesi geri alınıp teorik derse gelen sürücü (k.ktk118, MEB istisnaları penceresinden işaretlenir) cevap gelene kadar sayıma alınmaz (madde 15, teyit bekliyor).
+  // Sınav aracı başına 10 aday (m.30/2) sınav randevusunda ayrıca denetlenir.
+  { const bu = gun(0).slice(0, 7), ilk = (() => { const d = new Date(gun(0) + 'T12:00'); d.setMonth(d.getMonth() - 2); return d.toISOString().slice(0, 7); })(), ak = {};
+    ks.filter(k => !k.kontenjanDisi && !k.ktk118 && gerekliDireksiyon(k) > 0).forEach(k => {
+      const g = (S.gruplar || []).find(x => x.id === k.teorikGrup), gd = g && g.donem ? String(g.donem).replace(/^(\d{4})-?(\d{2}).*$/, '$1-$2') : '', donem = (/^\d{4}-\d{2}$/.test(gd) ? gd : '') || String(k.kayit || '').slice(0, 7); if (!/^\d{4}-\d{2}$/.test(donem) || donem < ilk) return;  // grup dönemi MEBBİS biçiminde (202611)
+      const a = ustaAraci(k.egitmen, k.sinif) || (S.araclar || []).find(x => x.id === ((S.dersler.filter(d => d.kursiyer === k.id && d.arac).sort((x, y) => (y.tarih + y.saat).localeCompare(x.tarih + x.saat))[0]) || {}).arac);
+      if (!a) return; const key = a.id + '|' + donem; (ak[key] = ak[key] || []).push(k); });
+    Object.entries(ak).forEach(([key, l2]) => { const [id, donem] = key.split('|'), a = S.araclar.find(x => x.id === id), a1b = l2.every(k => k.sinif === 'A1' && k.mevcutEhliyet === 'B'), sinir = (a1b ? 2 : 1) * kuralAyar('aracKursiyer');
+      if (a && l2.length > sinir) l.push([donem >= bu ? 'uyari' : 'bilgi', `${a.plaka} · ${donem.split('-').reverse().join('.')} döneminde ${l2.length} kursiyer`, `Bir eğitim döneminde bir direksiyon eğitim ve sınav aracı için en çok ${sinir} kursiyer kaydı yapılır (MTSK Yönetmeliği m.16/8${a1b ? ', m.39/5' : ''}). Kursiyerleri başka usta öğretici ve araçlara dağıtın.`, '#/filo']); }); }
+}
+kuralEkle({ id: 'M16', sira: 165, ad: 'Araç başına eğitim döneminde kursiyer sınırı', dayanak: 'MTSK Yön. md.16/8 (araç başına en çok 12 kayıt), md.39/5 (B belgeliye A1’de 24), md.6/4 (kontenjan dışı sayılmaz)', kapsam: 'arac', ciddiyet: 'uyari', ayar: 'aracKursiyer',
+  kontrol(l) { aracKursiyerSayimi(l, sb(S.kursiyerler)); } });
 kuralEkle({ id: 'MZ', sira: 900, ad: 'Mevzuat uyumu: ücret, tahsilat, iade, ücretsiz kontenjan, hazır yazısı, ders saatleri, araç başına kursiyer, personel izni, denetim', dayanak: 'ÖÖKY m.54, 55/3, 56/3-b, 56/4; MTSK Yön. md.7/1, 7/7, 15, 16/8, 20, 43; 5580 m.7/2-e, m.13', kapsam: 'kurs', ciddiyet: 'uyari', kontrol(l) { l.push(...mevzuatKurallari()); } });
 
 /* ---------- il taban fiyat listesi (valilik maliyet tablosu; veri js/taban.js) ---------- */

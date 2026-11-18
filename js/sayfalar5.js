@@ -20,6 +20,7 @@ export const KURAL_KAYNAK = {
   geceDersi: { ad: 'En az gece dersi', birim: 'saat', tur: 'mevzuat', varsayilan: 2, min: 1, max: 10, kaynak: MTSK + ', md.7/3', url: MTSK_URL },
   sinavBildirimIsGunu: { ad: 'Uygulama sınavı bildirimi, sınavdan en geç', birim: 'iş günü önce', tur: 'mevzuat', varsayilan: 4, min: 1, max: 20, kaynak: MTSK + ', md.15/1, md.30/2', url: MTSK_URL },
   direksiyonSure: { ad: 'e-Sınavı geçtikten sonra direksiyon derslerinin tamamlanma süresi', birim: 'gün', tur: 'mevzuat', varsayilan: 90, min: 1, max: 365, kaynak: MTSK + ', md.15/1-b', url: MTSK_URL },
+  aracKursiyer: { ad: 'Bir eğitim döneminde araç başına en çok kursiyer kaydı', birim: 'kursiyer', tur: 'mevzuat', varsayilan: 12, min: 1, max: 50, kaynak: MTSK + ', md.16/8 (B belgeliye A1’de iki katı, md.39/5; kontenjan dışı md.6/4 sayılmaz)', url: MTSK_URL },
   sinavUcretIsGunu: { ad: 'Uygulama sınavı ücreti döner sermayeye, sınavdan en geç', birim: 'iş günü önce', tur: 'mevzuat', varsayilan: 6, min: 1, max: 30, kaynak: MTSK + ', md.43/5', url: MTSK_URL },
   // Asgari yaş burada yok: tek kaynak sınıf tablosu (Ayarlar › Sınıf ve ücretler › Asgari yaş; KTY md.76, istisna md.76/3 veri.js)
   tekrarBekleme: { ad: 'Kaldıktan sonra tekrar sınava bekleme', birim: 'gün', tur: 'kurs', varsayilan: 15, min: 0, max: 120, kaynak: 'Kurs uygulaması: mevzuatta sabit bir gün sayısı yok, kurs belirler' },
