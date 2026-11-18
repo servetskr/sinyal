@@ -1258,6 +1258,8 @@ export async function ogrenciGiris(telGiris, sifre) {
     try { const u = await ogrenciUyelik((await A.signInWithEmailAndPassword(auth, a, sifre)).user); try { localStorage.removeItem(YEREL); } catch (z) { } return u; }
     catch (x) { if (x.kullanici || x.code === 'auth/too-many-requests' || x.code === 'auth/network-request-failed') throw x; son = x; }
   }
+  // yalnız şifre / hesap hatası "hatalı" diye gösterilir; başka bir hata (bağlantı, izin) kendi adıyla görünsün ki gizlenmesin
+  if (son && son.code && !/wrong-password|invalid-credential|invalid-login|user-not-found|invalid-email|user-disabled/.test(son.code)) { console.warn('öğrenci girişi', son.code, son.message); throw hata('Giriş yapılamadı (' + son.code.replace(/^auth\//, '') + '). Biraz sonra tekrar deneyin; sürerse kursunuza haber verin'); }
   throw hata('Telefon numarası ya da şifre hatalı');
 }
 // Giriş ekranı açılınca Firebase arka planda hazırlanır; öğrenci yazarken iner
