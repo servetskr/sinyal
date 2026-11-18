@@ -134,7 +134,9 @@ export const DERS_KURAL_TARIH = '2026-11-17';
 // (RG 17/4/2015-29329 md.37/a; eyup-sorular-cevaplar.md madde 3). E sınıfında ayrıca 28/4/1997 ayrımı var; o ayrım kodda tutulmuyor.
 export const ESKI_BELGE_TARIH = '2016-01-01';
 export const eskiBelgeTarihi = t => /^\d{4}-\d{2}-\d{2}/.test(String(t || '')) && String(t).slice(0, 10) < ESKI_BELGE_TARIH;
-export const MEVCUT_BELGELER = ['M', 'A1', 'A2', 'A', 'B1', 'B', 'BE', 'C1', 'C1E', 'C', 'CE', 'D1', 'D1E', 'D', 'DE', 'F', 'G', 'E'];
+// KAY-005: MEBBİS cmbMevcutEhliyetSinifi seçenekleri (2016 sonrası 17 sınıf + eski tip E ve RÖMORK); program kimlikleri ileride değerle seçmek için
+export const MEVCUT_BELGELER = ['M', 'A1', 'A2', 'A', 'B1', 'B', 'BE', 'C1', 'C1E', 'C', 'CE', 'D1', 'D1E', 'D', 'DE', 'F', 'G', 'E', 'RÖMORK'];
+export const MEB_PROGRAM_ID = { A: 2514, A1: 2502, A2: 2503, B: 2504, BE: 2518, B1: 2515, C: 2505, CE: 2520, C1: 2516, C1E: 2519, D: 2506, DE: 2522, D1: 2517, D1E: 2521, E: 2507, F: 2508, G: 2509, M: 2513, 'RÖMORK': 2512 };
 // MTSK Yön. md.39/1 Tablo 1 (mevcut belge → istenen sınıf): akan trafik saati. Boş hücre: tabloda değer yok.
 const TABLO1 = {
   M: { A1: 12, A2: 12, A: 12, B1: 12, B: 14, F: 12 }, A1: { A2: 6, A: 6, B1: 6, B: 14, F: 12 }, A2: { A: 6, B1: 6, B: 14, F: 12 }, A: { B1: 6, B: 14, F: 12 },
