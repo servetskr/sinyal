@@ -535,10 +535,12 @@ function favoriNot(k, anahtar) {
     onAc: d => d.querySelector('[data-mz-not-kaydet]').addEventListener('click', async () => { const not = d.querySelector('textarea').value.trim(); if (await favoriYaz(k, { b: x.b, m: x.m, ad: x.ad, not })) { kapatPencere(); bildir('Not kaydedildi'); } }) });
 }
 function favoriAc(anahtar) {
-  const [b, ...mm] = anahtar.split('|'), m = mm.join('|'), kume = motor.kume.ortak;
-  const bi = kume ? kume.belgeler.findIndex(x => x.id === b) : -1;
-  const i = bi >= 0 ? kume.parcalar.findIndex(p => p.b === bi && (p.m || '') === m) : -1;
-  if (i >= 0) return maddeAc(i);
+  const [b, ...mm] = anahtar.split('|'), m = mm.join('|');
+  for (const ad of ['ortak', 'taban']) {
+    const kume = motor.kume[ad], bi = kume ? kume.belgeler.findIndex(x => x.id === b) : -1;
+    const i = bi >= 0 ? kume.parcalar.findIndex(p => p.b === bi && (p.m || '') === m) : -1;
+    if (i >= 0) return maddeAc(i, new Set(), ad);
+  }
   if (motor.kume.ek && motor.kume.ek.belgeler.some(x => x.id === b)) return ekBelgeAc(b);
   bildir('Bu madde derlemde artık yok', 'uyari');
 }
@@ -585,10 +587,11 @@ function sonucAc(s) {
   if (s.kaynak === 'kurs') return kursBelgesiAc(s.belge.id);
   if (s.kaynak === 'ek' && s.parca.sss) return pencere({ baslik: 'Sık sorulan', genis: true, icerik: `<div class="mz-madde" data-resmi><p class="mz-uyari-not">mdSinyal'in hazırladığı cevaptır, resmî metin değildir. Dayanağa dokunarak resmî maddeyi açın.</p>${kisaCevapHtml(s.parca)}</div>`, onAc: d => d.addEventListener('click', ev => { const y = ev.target.closest('[data-mz-etiket]'); if (y) maddeAc(+y.dataset.mzEtiket); }) });
   if (s.kaynak === 'ek') return ekBelgeAc(s.belge.id);
-  maddeAc(s.sira, new Set(durum.son ? durum.son.r.vurguKok || durum.son.r.kokler : []));
+  maddeAc(s.sira, new Set(durum.son ? durum.son.r.vurguKok || durum.son.r.kokler : []), s.kaynak === 'taban' ? 'taban' : 'ortak');
 }
-function maddeAc(i, kokSet = new Set()) {
-  const md = motor.madde('ortak', i); if (!md) return;
+// kume: 'ortak' (statik derlem) ya da 'taban' (il taban fiyat listesi); dayanak etiketleri her zaman ortak derleme bağlanır
+function maddeAc(i, kokSet = new Set(), kume = 'ortak') {
+  const md = motor.madde(kume, i); if (!md) return;
   const b = md.belge;
   const rd = resmiDegil(b);
   // rehber bölümleri alt başlıklarıyla (her parçanın başlığı değiştikçe) yazılır
@@ -601,21 +604,22 @@ function maddeAc(i, kokSet = new Set()) {
   pencere({
     baslik: `${b.kisa || b.ad}${md.m ? ' · ' + md.m : ''}`, genis: true,
     icerik: `<div class="mz-madde" data-resmi>
-      ${!rd ? `<div class="mz-madde-arac"><button type="button" class="dg dg-cizgi dg-kucuk mz-fav-dg${favVar() ? ' secili' : ''}" data-mz-fav-kaydet aria-pressed="${favVar()}">${favDg()}</button>${motor.durum[b.id] ? `<span class="mz-uyari-not">${e(durumNotu(motor.durum[b.id]))}</span>` : ''}</div>` : ''}
+      ${!rd ? `<div class="mz-madde-arac"><button type="button" class="dg dg-cizgi dg-kucuk mz-fav-dg${favVar() ? ' secili' : ''}" data-mz-fav-kaydet aria-pressed="${favVar()}">${favDg()}</button>${motor.belgeDurumu(b) ? `<span class="mz-uyari-not">${e(durumNotu(motor.belgeDurumu(b)))}</span>` : ''}</div>` : ''}
+      ${b.taban ? `<p class="mz-uyari-not">${e(b.ozet)}</p>` : ''}
       ${rd ? `<p class="mz-uyari-not">mdSinyal'in açıklama metnidir, resmî metin değildir. Köşeli parantezdeki dayanağa dokunarak resmî maddeyi açın.</p>` : ''}
       ${md.baslik && !rd ? `<h3>${e(md.baslik)}</h3>` : ''}
       <div class="mz-madde-metin">${metin}</div>
       ${!rd ? gecmisHtml(degisiklikGecmisi(md.parcalar.map(p => p.t).join('\n'))) : ''}
       ${kuralBag(kurallar)}
       <div class="mz-komsu">${md.onceki != null ? `<button type="button" class="dg dg-cizgi dg-kucuk" data-mz-komsu="${md.onceki}">${ik('sol')}${e(md.oncekiAd || 'Önceki')}</button>` : '<span></span>'}${md.sonraki != null ? `<button type="button" class="dg dg-cizgi dg-kucuk" data-mz-komsu="${md.sonraki}">${e(md.sonrakiAd || 'Sonraki')}${ik('sag')}</button>` : ''}</div>
-      <div class="mz-kaynak"><b>${e(b.ad || b.kisa)}</b><small>${[TUR_AD[b.tur], b.tarih ? 'Yayım ' + tarihYaz(b.tarih) : '', b.guncel ? 'son değişiklik ' + tarihYaz(b.guncel) : ''].filter(Boolean).map(e).join(' · ')}</small>
+      <div class="mz-kaynak"><b>${e(b.ad || b.kisa)}</b><small>${[TUR_AD[b.tur], b.kaynakAd || '', b.tarih ? 'Yayım ' + tarihYaz(b.tarih) : '', b.guncel ? 'son değişiklik ' + tarihYaz(b.guncel) : ''].filter(Boolean).map(e).join(' · ')}</small>
         ${b.notlar ? `<p class="mz-uyari-not">${e(b.notlar)}</p>` : ''}
         ${b.kaynak && /^https:\/\//.test(b.kaynak) ? `<a class="dg-baglanti" href="${e(b.kaynak)}" target="_blank" rel="noopener">Resmî metni aç</a>` : ''}</div>
     </div>`,
     onAc: d => d.addEventListener('click', async ev => {
       const f = ev.target.closest('[data-mz-fav-kaydet]');
       if (f) { const k = document.querySelector('.mz'), ok = await favoriYaz(k && k.closest('#icerik') ? k.parentElement : null, favVar() ? { k: favK, sil: true } : { b: b.id, m: md.m || '', ad: (b.kisa || b.ad) + (md.m ? ' ' + md.m : '') + (md.baslik ? ' · ' + md.baslik : '') }); if (ok) { f.innerHTML = favDg(); f.classList.toggle('secili', favVar()); f.setAttribute('aria-pressed', favVar()); bildir(favVar() ? 'Kaydedildi: Kaydettiklerim sekmesinde' : 'Kayıttan çıkarıldı'); const kk = document.querySelector('[data-mz-sekmeler]'); if (kk) kk.innerHTML = sekmelerHtml(); } return; }
-      const x = ev.target.closest('[data-mz-komsu]'); if (x) return maddeAc(+x.dataset.mzKomsu, kokSet); const y = ev.target.closest('[data-mz-etiket]'); if (y) maddeAc(+y.dataset.mzEtiket, kokSet);
+      const x = ev.target.closest('[data-mz-komsu]'); if (x) return maddeAc(+x.dataset.mzKomsu, kokSet, kume); const y = ev.target.closest('[data-mz-etiket]'); if (y) maddeAc(+y.dataset.mzEtiket, kokSet);
     }),
   });
 }
@@ -641,7 +645,7 @@ async function ekBelgeAc(id) {
 /* ---------- ortak belgeler ---------- */
 function ortakBolumu(k) {
   const yer = k.querySelector('[data-mz-ortak]'); if (!yer || !motor.kume.ortak) return;
-  const ek = (motor.kume.ek && motor.kume.ek.belgeler) || [], l = [...ek, ...motor.kume.ortak.belgeler];
+  const ek = (motor.kume.ek && motor.kume.ek.belgeler) || [], l = [...ek, ...motor.kume.ortak.belgeler, ...((motor.kume.taban && motor.kume.taban.belgeler) || [])];
   yer.innerHTML = `<div class="bolum-bas mz-bolum"><div><h2>Aranan belgeler</h2></div></div>
     <div class="kart"><details class="daha mz-ortak"><summary>${l.length} belge: yönetmelikler, kanunlar, kılavuzlar, programlar ve mdSinyal rehberi${ek.length ? ` · ${ek.length} yeni eklenen` : ''}</summary><ul class="liste">${l.map(b => `<li><div class="mz-ortak-satir"><b>${e(b.ad)}${b.ek && yeniMi(b) ? ' ' + rozet('Yeni eklendi', 'yesil') : ''}${motor.durum[b.id] ? ' ' + rozet(DURUM_AD[motor.durum[b.id].durum], 'kirmizi') : ''}</b>${motor.durum[b.id] ? `<p class="mz-uyari-not">${e(durumNotu(motor.durum[b.id]))}</p>` : ''}<small>${[TUR_AD[b.tur] || '', b.tarih ? tarihYaz(b.tarih) : '', b.guncel && b.guncel !== b.tarih ? 'değişiklik ' + tarihYaz(b.guncel) : ''].filter(Boolean).map(e).join(' · ')}</small>${resmiDegil(b) && b.notlar ? `<p class="mz-uyari-not">${e(b.notlar)}</p>` : ''}${b.ozet ? `<p>${e(b.ozet)}</p>` : ''}${b.kaynak && /^https:\/\//.test(b.kaynak) ? `<a class="dg-baglanti" href="${e(b.kaynak)}" target="_blank" rel="noopener">Resmî kaynak</a>` : ''}</div></li>`).join('')}</ul></details></div>`;
 }
