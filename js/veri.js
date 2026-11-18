@@ -985,8 +985,11 @@ export function tuketim(a, gunSay = 120) {
   const yuksek = (son && l.length >= 4 && son > ort * 1.25) || ort > beklenenTuketim(a) * 1.35;
   return { ort, son, km, dolum: l.length, yuksek };
 }
+// YON-080: prova (kurulum provası) öğrencisi — gerçek makbuz serisine, MEBBİS işlerine ve faturaya girmez; prova bitince tek dokunuşla silinir
+export const provaMi = k => !!(k && k.prova);
 export function makbuzNoVer(h) {
   if (h.no || h.tur !== 'Gelir') return h.no;
+  if (provaMi((S.kursiyerler || []).find(x => x.id === h.kursiyer))) { h.no = 'PROVA-' + ((S.hareket || []).filter(x => /^PROVA-/.test(x.no || '')).length + 1); return h.no; }
   const yil = makbuzSeri(h.tarih, h.sube || ((S.kursiyerler || []).find(x => x.id === h.kursiyer) || {}).sube);
   // gerçek kurs: numara sunucudaki sayaçtan ayrılır, iki cihaz aynı numarayı veremez
   const n = bulutKanca.makbuzNo && bulutKanca.makbuzNo(yil);

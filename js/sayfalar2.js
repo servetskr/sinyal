@@ -595,7 +595,7 @@ function eksikFaturaHtml() {
     <p style="font-size:13px;color:var(--soluk);padding:0 20px 16px">Hesaplanan: MEBBİS’e bildirilen kayıt ücreti (MEBBİS’ten güncelle okur); okunmadıysa sözleşme ücreti. Kesilen: iptal edilmemiş kurs faturaları (müşavirin kestikleri ve henüz GİB’e iletilmemiş taslaklar dahil; sınav ücreti faturaları hariç). Taslaklar Faturalar listesinde “Taslak” görünür.</p></div>`;
 }
 function eksikFaturala() {
-  if (!mudurMu()) return; const l = sb(S.kursiyerler).map(k => ({ k, d: MZ.faturaDenetimi(k) })).filter(x => !x.k.kapali && !x.k.ucretsiz && x.d.hesap > 0 && x.d.eksik > 0);
+  if (!mudurMu()) return; const l = sb(S.kursiyerler).map(k => ({ k, d: MZ.faturaDenetimi(k) })).filter(x => !x.k.kapali && !x.k.ucretsiz && !x.k.prova && x.d.hesap > 0 && x.d.eksik > 0);
   if (!l.length) return bildir('Eksik fatura yok');
   pencere({ baslik: 'Eksik tutarları faturala', taslak: false, icerik: `<p style="font-size:14.5px">${l.length} öğrenci için toplam <b>${tl(l.reduce((a, x) => a + x.d.eksik, 0))}</b> taslak fatura hazırlanır (her öğrenciye bir fatura, eksik tutar kadar).</p><p class="ipucu" style="margin-top:8px">${isaret('bilgi', 18)}<span>Taslak GİB’e iletilmez; e-Arşiv entegratörü bağlanınca ya da müşavir kesince resmîleşir. Yanlışsa Faturalar’dan iptal edilir (numara seride kalır).</span></p>`,
     altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-ef-onay>Taslakları hazırla</button>',
@@ -623,7 +623,7 @@ function faturaIptal(no) {
       islem('Faturayı iptal etti', no + ' · ' + neden); kaydet(); kapatPencere(); bildir('Fatura iptal edildi; tahsilat yeniden faturalanabilir'); yenile(); }); } });
 }
 function faturaKes() {
-  const g = S.entegrasyon, son = sb(S.hareket).filter(h => h.tur === 'Gelir' && h.kursiyer && kursiyer(h.kursiyer) && ekTur({ ad: h.kategori }) !== 'resmi') /* sınav ücreti emanettir, kurs faturasına girmez (not 5) */.sort((a, b) => (b.tarih + b.id).localeCompare(a.tarih + a.id)).slice(0, 12);
+  const g = S.entegrasyon, son = sb(S.hareket).filter(h => h.tur === 'Gelir' && h.kursiyer && kursiyer(h.kursiyer) && !kursiyer(h.kursiyer).prova && ekTur({ ad: h.kategori }) !== 'resmi') /* sınav ücreti emanettir, kurs faturasına girmez (not 5) */.sort((a, b) => (b.tarih + b.id).localeCompare(a.tarih + a.id)).slice(0, 12);
   const taslak = !g.earsiv.bagli;
   pencere({
     baslik: taslak ? 'Fatura taslağı' : 'e-Arşiv fatura kes',

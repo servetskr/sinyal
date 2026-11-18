@@ -75,7 +75,7 @@ const sinavIsGunu = () => kuralAyar('sinavBildirimIsGunu');
 // meta: aktarım merkezinde filtre ve tablo için (ad, sınıf, öğretmen, tarih, detay)
 export function mebIsleri(hepsi) {
   const isler = [];
-  sb(S.kursiyerler).filter(k => !k.kapali && !eksikEvrak(k).length && GR.kursiyerGrubu(k) && (!k.mebIslendi || (hepsi && fark(k.kayit) >= -90))).forEach(k => {
+  sb(S.kursiyerler).filter(k => !k.kapali && !k.prova && !eksikEvrak(k).length && GR.kursiyerGrubu(k) && (!k.mebIslendi || (hepsi && fark(k.kayit) >= -90))).forEach(k => {
     const n = k.nufus || {}, S0 = SINIFLAR[k.sinif] || {};
     const ilk = S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Planlandı').map(d => d.tarih).sort()[0];
     isler.push({ id: 'kayit-' + k.id, tur: 'kayit', ref: { kursiyer: k.id }, bitti: !!k.mebIslendi, meta: { ad: tamAd(k), sinif: k.sinif, egitmen: k.egitmen, tarih: k.kayit, detay: (SINIFLAR[k.sinif] || {}).ad || k.sinif }, son: ilk ? gunEkle(ilk, -kuralAyar('programOnGun')) : gun(3), neden: ilk ? 'İlk dersinden önce' : 'Kayıttan sonra', baslik: tamAd(k), alanlar: [
@@ -87,7 +87,7 @@ export function mebIsleri(hepsi) {
     ].filter(Boolean) });
   });
   // DIR-048: gönderilecek ders yarından itibaren (aktarılanlar listesi geçmişi de gösterir)
-  sbDers(S.dersler).filter(d => d.durum === 'Planlandı' && ((fark(d.tarih) > 0 && !d.meb) || (hepsi && d.meb && fark(d.tarih) >= -14))).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat)).forEach(d => {
+  sbDers(S.dersler).filter(d => d.durum === 'Planlandı' && !(kursiyer(d.kursiyer) || {}).prova && ((fark(d.tarih) > 0 && !d.meb) || (hepsi && d.meb && fark(d.tarih) >= -14))).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat)).forEach(d => {
     const k = kursiyer(d.kursiyer); if (!k) return; const eg = egitmen(d.egitmen) || {}, ar = arac(d.arac) || {};
     isler.push({ id: 'ders-' + d.id, tur: 'program', ref: { ders: d.id }, bitti: !!d.meb, meta: { ad: tamAd(k), sinif: k.sinif, egitmen: d.egitmen, tarih: d.tarih, detay: `${d.mebDegisti ? 'DEĞİŞTİ (MEBBİS’teki eski kayıt: ' + d.mebDegisti.eski + ') · ' : ''}${tr(d.tarih)} ${d.saat} · ${eg.ad || ''} · ${ar.plaka || ''}` }, son: gunEkle(d.tarih, -kuralAyar('programOnGun')), neden: `Dersten ${kuralAyar('programOnGun')} gün önce`, baslik: `${tamAd(k)} · ${tr(d.tarih)} ${d.saat}`, alanlar: [
       alan('Tarih', tr(d.tarih), ['derstarihi', 'tarih', 'egitimtarihi']), alan('Saat', d.saat, ['dersaati', 'baslangicsaati', 'saat']), alan(TC[0], k.tc, TC[1]), alan('Kursiyer', tamAd(k), ['kursiyer', 'kursiyeradi', 'adisoyadi']),
@@ -95,7 +95,7 @@ export function mebIsleri(hepsi) {
       ...grupAlanlari(k),
     ].filter(Boolean) });
   });
-  sbSinav(S.sinavlar).filter(s => s.tur === 'Direksiyon' && fark(s.tarih) >= (hepsi ? -14 : 0)).forEach(s => (s.kursiyerler || []).map(kursiyer).filter(Boolean).filter(k => !egitimSinifi(k.sinif)).filter(k => (s.mebKisi || []).includes(k.id) ? hepsi : (!s.mebBildirim && fark(s.tarih) >= 0)).forEach(k => {
+  sbSinav(S.sinavlar).filter(s => s.tur === 'Direksiyon' && fark(s.tarih) >= (hepsi ? -14 : 0)).forEach(s => (s.kursiyerler || []).map(kursiyer).filter(Boolean).filter(k => !k.prova && !egitimSinifi(k.sinif)).filter(k => (s.mebKisi || []).includes(k.id) ? hepsi : (!s.mebBildirim && fark(s.tarih) >= 0)).forEach(k => {
     const d = S.dersler.filter(x => x.kursiyer === k.id && x.arac).sort((a, b) => b.tarih.localeCompare(a.tarih))[0], ar = arac(d && d.arac) || {}, eg = egitmen(k.egitmen) || {};
     isler.push({ id: 'sinav-' + s.id + '-' + k.id, tur: 'sinav', ref: { sinav: s.id, kursiyer: k.id }, bitti: (s.mebKisi || []).includes(k.id), meta: { ad: tamAd(k), sinif: k.sinif, egitmen: k.egitmen, tarih: s.tarih, detay: `${tr(s.tarih)} ${s.saat || ''} · ${s.yer || ''}` + (k.sinif === 'B-EN' ? ' · B Engelli: MEBBİS’te B olarak; rapor kodu ve kendi aracı modüle ayrıca tanımlanır' : '') }, son: isGunuGeri(s.tarih, sinavIsGunu()), neden: `Sınavdan ${sinavIsGunu()} iş günü önce`, baslik: `${tamAd(k)} · ${tr(s.tarih)} sınavı`, alanlar: [
       alan('Sınav Tarihi', tr(s.tarih), ['sinavtarihi', 'tarih']), alan(TC[0], k.tc, TC[1]), alan('Kursiyer', tamAd(k), ['kursiyer', 'adisoyadi']), alan('Araç Plakası', ar.plaka, ['plaka', 'aracplakasi', 'sinavaraci']), alan('Usta Öğretici', personel(eg), ['ustaogretici', 'ogretici']),

@@ -1059,6 +1059,8 @@ export function kurulumAdimlari() {
     // MSJ-028: öğrencileri uygulamaya davet (durum Mesajlar'daki 'Öğrenci uygulaması' şeridiyle aynı: kullanıyor / hesap açık girmedi / hesap yok)
     ['davet', 'Öğrencileri uygulamaya davet et', (() => { const l = sb(S.kursiyerler).filter(k => !k.kapali && k.asama !== 'Ehliyet'); return !l.length || l.filter(k => k.hesap).length >= l.length / 2; })(), 'Siz · 10 dk', '#/mesajlar', 'Mesajlar › Öğrenci uygulaması › Davet gönder: hesaplar toplu açılır, giriş bilgisi WhatsApp’tan ya da yazdırılan giriş kartıyla verilir. Yarısının hesabı açılınca tamam sayılır.'],
     ['kullanici', 'Kullanıcılar ve güvenlik', (S.kullanicilar || []).length >= 2, 'Siz · 5 dk', '#/ayarlar/kullanici', 'Ön büro ve usta öğretici davetleri; hareketsiz kalınca oturumun kapanma süresi.'],
+    // YON-080: kurulumun son adımı — prova günü (test öğrencisiyle bir tur, sonra tek dokunuşla silinir)
+    ['prova', 'Prova günü', !!(kk.prova && kk.prova.onay), 'Siz · 1 saat', '', 'Kendi telefonunuzla bir prova öğrencisi açın: ders planlayın, tahsilat alıp makbuz yazdırın, WhatsApp mesajı gönderin, öğrenci ve öğretmen uygulamasına girin. Bitince prova verisi tek dokunuşla silinir; işlem kaydında kalır.'],
     // e-Arşiv entegratör bağlantısı henüz yok: bağlanana kadar isteğe bağlı, sayaca girmez
     ['earsiv', 'e-Arşiv fatura', !!en.earsiv.bagli, 'Biz · 1 gün', '#/ayarlar/entegrasyon', 'e-Arşiv entegratörü bilgileri (kursun kendi sözleşmesiyle). Entegratör bağlantısı hazırlanıyor; o zamana kadar faturalar mdSinyal’de hazırlanıp müşavirle kesilir.', !en.earsiv.bagli],
     // Yardımcı kurulumu kurs verisine yazılır (sürüm, tarih, bilgisayar); telefondan bakınca da tamam görünür
@@ -1081,7 +1083,7 @@ export function kurulum() {
   const durum = (x) => { const m = x[5]; return m.ok ? rozet('Tamam', 'yesil') : m.atlandi ? rozet('Atlandı', 'notr') : m.istege ? rozet(m.id === 'earsiv' ? 'İsteğe bağlı · yakında' : 'İsteğe bağlı', 'notr') : rozet(m.duzey === 'zorunlu' ? 'Zorunlu' : 'Önerilen', m.duzey === 'zorunlu' ? 'kirmizi' : 'uyari'); };
   const iz = (x) => { const k = x[5].kayit; if (!k || !(x[5].ok || x[5].atlandi)) return ''; return `<small style="display:block;color:var(--soluk);font-size:12.5px">${x[5].atlandi ? 'Atlayan' : k.onay ? 'İşaretleyen' : k.gordu ? 'Tamam görüldü' : 'Yapan'}: ${e(k.kim || '—')} · ${tarih(k.tarih)}</small>`; };
   const dugme = (x, i) => { const m = x[5]; if (m.ok) return ''; if (m.atlandi) return `<button class="dg dg-hafif dg-kucuk" data-kur-geri="${m.id}">Geri al</button>`;
-    const yap = m.id === 'yardimci' ? `<button class="dg dg-ana dg-kucuk" data-kur-yardimci>Kur</button>` : m.istege ? `<a class="dg dg-cizgi dg-kucuk" href="${x[3]}">Ayarlara bak</a>` : `<a class="dg dg-ana dg-kucuk" href="${x[3]}" data-kurulum-adim="${i}">Yap</a>`;
+    const yap = m.id === 'prova' ? `<button class="dg dg-ana dg-kucuk" data-kur-prova>Başla</button>` : m.id === 'yardimci' ? `<button class="dg dg-ana dg-kucuk" data-kur-yardimci>Kur</button>` : m.istege ? `<a class="dg dg-cizgi dg-kucuk" href="${x[3]}">Ayarlara bak</a>` : `<a class="dg dg-ana dg-kucuk" href="${x[3]}" data-kurulum-adim="${i}">Yap</a>`;
     return (m.id === 'aktarim' ? `<button class="dg dg-cizgi dg-kucuk" data-kur-onay="aktarim">Aktarım tamam</button>` : m.onayla ? `<button class="dg dg-cizgi dg-kucuk" data-kur-onay="${m.id}">Tamam</button>` : '') + yap + (m.istege ? '' : `<button class="dg dg-hafif dg-kucuk" data-kur-atla="${m.id}" title="Bu adım bu kurs için gerekmiyor; sayaçtan düşer, sonra geri alınabilir">Atla</button>`); };
   return {
     baslik: 'Kurulum', alt: `${biten}/${top} adım tamam${atlanan ? ` · ${atlanan} atlandı` : ''}`,
@@ -1093,6 +1095,7 @@ export function kurulum() {
       kap.addEventListener('click', ev => {
         const t = ev.target; if (!(t instanceof Element)) return;
         if (t.closest('[data-kur-yardimci]')) return EK.kurulumPenceresi();
+        if (t.closest('[data-kur-prova]')) return provaPenceresi();
         if (t.closest('[data-kur-rapor]')) return kurulumRaporu();
         const b = t.closest('[data-kur-atla],[data-kur-geri],[data-kur-onay]'); if (!b) return;
         const id = b.dataset.kurAtla || b.dataset.kurGeri || b.dataset.kurOnay, ad = l.find(x => x[5].id === id); if (!ad) return;
@@ -1115,7 +1118,7 @@ export function kurulumDurumu() {
 // adımı başlat: adım ekranına gider (akış açık kalır); adresi olmayan adım (Yardımcı) kendi penceresini açar
 export function kurulumBaslat(i) {
   const l = kurulumAdimlari(), x = l[i]; if (!x) return;
-  if (!x[3]) return EK.kurulumPenceresi();
+  if (!x[3]) return x[5].id === 'prova' ? provaPenceresi() : EK.kurulumPenceresi();
   try { sessionStorage.setItem(KUR_AKIS, String(i)); } catch (z) { }
   if (location.hash === x[3]) yenile(true); else location.hash = x[3];
 }
@@ -1137,6 +1140,52 @@ export function kurulumKarsila() {
     altlik: `<button class="dg dg-cizgi" data-kapat>Sonra</button><button class="dg dg-ana" data-kur-basla>Kuruluma başla</button>`,
     onAc(p) { p.querySelector('[data-kur-basla]').addEventListener('click', () => { kapatPencere(); const n = kurulumDurumu().sonraki; if (n >= 0) kurulumBaslat(n); }); } });
 }
+// YON-080: prova günü — prova öğrencisi (k.prova) gerçek makbuz serisine, MEBBİS işlerine ve faturaya girmez (veri.js provaMi, eklenti mebIsleri)
+const provaOgr = () => (S.kursiyerler || []).find(k => k.prova);
+function provaAc() {
+  if (provaOgr()) return provaOgr(); const tel = S.kurs.mudurTel; if (!tel) { bildir('Önce Ayarlar › Kurs bilgileri › Numaralar’a müdürün cep telefonunu yazın; prova mesajları oraya gider', 'uyari'); return null; }
+  const eg = (S.egitmenler || []).find(x => !x.ayrildi && !x.pasif), sn = SINIFLAR.B ? 'B' : Object.keys(SINIFLAR)[0], t = gun(0);
+  const k = { id: 'kprova' + Date.now(), prova: true, ad: 'Prova', soyad: 'Öğrenci', tel, tc: '', dogumTarihi: '', dogum: '', adres: '', ogrenim: '', sinif: sn, kayit: t, egitmen: eg ? eg.id : null, sube: varsayilanSube(), asama: 'Direksiyon', teorik: 0, direksiyon: 0,
+    evrak: Object.fromEntries(EVRAKLAR.map(([z]) => [z, true])), mebIslendi: true, esinav: null, dsinav: null, odeme: { toplam: 1000, sozlesme: 1000, pesin: 0, pesinTarih: t, taksitler: [{ tutar: 1000, vade: t }], senetli: false },
+    kaynak: 'Prova', yorum: null, notlar: [{ tarih: t, metin: 'Kurulum provası için açıldı; prova bitince silinir. MEBBİS’e, makbuz serisine ve faturaya girmez.' }], deneme: [], acil: null, kvkk: { aydinlatma: true, tarih: t } };
+  S.kursiyerler.push(k); islem('Prova öğrencisi açtı', 'kurulum provası'); kaydet(); return k;
+}
+const provaAdimlari = k => [
+  ['Direksiyon dersi planla', S.dersler.some(d => d.kursiyer === k.id), '#/plan', 'Planda prova öğrencisine bir ders koyun.'],
+  ['Tahsilat al, makbuz yazdır', S.hareket.some(h => h.kursiyer === k.id && h.tur === 'Gelir'), '#/kursiyer/' + k.id, 'Öğrenci dosyası › Ödeme al; makbuz PROVA numarasıyla çıkar, gerçek seriyi bozmaz.'],
+  ['WhatsApp mesajı gönder', (S.gonderimler || []).some(g => g.kid === k.id), '#/kursiyer/' + k.id, 'Dosyadaki WhatsApp düğmesiyle; mesaj sizin telefonunuza gelir.'],
+  ['Öğrenci uygulamasına gir', !!k.hesapAktif, '#/kursiyer/' + k.id, 'Dosyada “Hesap aç”; gelen giriş bilgisiyle telefonunuzdan öğrenci uygulamasına girin.'],
+  ['Öğretmen uygulamasında dersi başlat', S.dersler.some(d => d.kursiyer === k.id && (d.bas || d.durum === 'Yapıldı')), '#/plan', 'Öğretmen kendi telefonundan dersi başlatıp bitirir (ya da siz plandan).'],
+];
+export function provaPenceresi() {
+  if (!oturum.kullanici || oturum.kullanici.rol !== 'mudur') return bildir('Provayı kurs müdürü yapar', 'uyari');
+  const k = provaOgr();
+  if (!k) return pencere({ baslik: 'Prova günü', icerik: `<p style="font-size:14.5px">Gerçek öğrenciler gelmeden önce her şeyi bir kez kendiniz deneyin. “Prova Öğrenci” adında bir test kaydı açılır; telefonu sizin cebiniz (${e(S.kurs.mudurTel || 'Ayarlar’da yazılı değil')}).</p>
+      <ul class="liste" style="margin-top:8px">${provaAdimlari({ id: '-' }).map(x => `<li>${isaret('bilgi', 18)}<span>${e(x[0])}</span></li>`).join('')}</ul>
+      <p class="ipucu" style="margin-top:10px">${isaret('bilgi', 18)}<span>Prova kaydı MEBBİS’e gitmez, gerçek makbuz numarası almaz, faturaya girmez. Bitince “Prova verisini sil” bütün prova kayıtlarını siler; silindiği işlem kaydında kalır.</span></p>`,
+    altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-prova-ac>Prova öğrencisini aç</button>',
+    onAc(p) { p.querySelector('[data-prova-ac]').addEventListener('click', () => { if (provaAc()) { kapatPencere(); yenile(); setTimeout(provaPenceresi, 300); } }); } });
+  const l = provaAdimlari(k), n = l.filter(x => x[1]).length;
+  pencere({ baslik: 'Prova günü · ' + n + ' / ' + l.length, genis: true, icerik: `${ilerleme(n, l.length, 'yesil')}
+      <ul class="liste" style="margin-top:8px">${l.map(x => `<li style="align-items:flex-start">${isaret(x[1] ? 'tamam' : 'zorunlu', 22)}<div style="flex:1;min-width:0"><b>${e(x[0])}</b><small style="display:block;color:var(--soluk)">${e(x[3])}</small></div>${x[1] ? rozet('Tamam', 'yesil') : `<a class="dg dg-cizgi dg-kucuk" href="${x[2]}" data-kapat>Git</a>`}</li>`).join('')}</ul>
+      <p class="ipucu uyari" style="margin-top:10px">${isaret('uyari', 18)}<span>Prova verisi silinince prova öğrencisi, dersleri, tahsilatı, mesajları ve öğrenci hesabı gider; gerçek kayıtlara dokunulmaz.</span></p>`,
+    altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-prova-sil style="background:var(--kirmizi);border-color:var(--kirmizi)">Prova verisini sil${n === l.length ? ' ve bitir' : ''}</button>`,
+    onAc(p) { p.querySelector('[data-prova-sil]').addEventListener('click', async () => { if (!confirm('Prova öğrencisi ve bütün prova kayıtları silinsin mi? Gerçek kayıtlara dokunulmaz.')) return; const b = p.querySelector('[data-prova-sil]'); b.disabled = true; await provaSil(n, l.length); kapatPencere(); yenile(); }); } });
+}
+// prova öğrencisine bağlı her kayıt silinir (kursiyer / kid alanı, sınav listeleri); öğrenci hesabı varsa kapatılır, numara serbest kalır
+export async function provaSil(yapilan, toplam) {
+  const k = provaOgr(); if (!k) return;
+  if (k.hesap && B.bulutta()) { try { await B.ogrenciHesapKapat(k); } catch (x) { } }
+  const say = {};
+  Object.keys(S).forEach(a => { const v = S[a]; if (!Array.isArray(v) || a === 'kursiyerler' || a === 'islemler') return; const once = v.length; S[a] = v.filter(x => !(x && typeof x === 'object' && (x.kursiyer === k.id || x.kid === k.id))); if (S[a].length !== once) say[a] = once - S[a].length; });
+  (S.sinavlar || []).forEach(x => { if (Array.isArray(x.kursiyerler) && x.kursiyerler.includes(k.id)) x.kursiyerler = x.kursiyerler.filter(i => i !== k.id); });
+  S.kursiyerler = S.kursiyerler.filter(x => x.id !== k.id);
+  const AD = { dersler: 'ders', hareket: 'kasa hareketi', gonderimler: 'mesaj', faturalar: 'fatura', sinavlar: 'sınav kaydı', gorusmeler: 'görüşme', talepler: 'talep' };
+  const ozet = Object.entries(say).map(([a, n]) => n + ' ' + (AD[a] || a)).join(', ');
+  kurIz('prova', { onay: true, yapilan, toplam, ozet });
+  islem('Prova verisini sildi', `${yapilan}/${toplam} adım denendi${ozet ? ' · ' + ozet : ''}`); kaydet();
+  bildir('Prova verisi silindi; kurulumun prova adımı tamam', 'tamam', true);
+}
 // bitince (ya da Kurulum sayfasından): yapılanlar ve atlananlar; müdür WhatsApp'tan mdSinyal'e gönderir
 export function kurulumRaporu(ilk) {
   const d = kurulumDurumu(), yap = d.l.filter(x => x[5].ok), atl = d.l.filter(x => x[5].atlandi), kal = d.l.filter(x => !x[1]);
@@ -1156,8 +1205,8 @@ export function kurulumRaporu(ilk) {
    Güvenlik kodu ve geri alınamaz işler yetkilide kalır; iş istenildiği an durdurulur, her kaydın sonucu işlem kaydına yazılır. */
 export const MEB_BILGI = 'MEBBİS Yardımcısı kursun kendi MEBBİS oturumunda çalışır: MEBBİS’e kurs yetkilisi kendi şifresiyle girer, Yardımcı şifreyi görmez ve saklamaz. Yetkili yazılacak kayıtları kontrol edip “MEBBİS’e yaz” ile tek seferde onaylar; güvenlik kodu ve geri alınamaz işler yetkilide kalır. İş istenildiği an durdurulabilir; her kaydın sonucu işlem kaydına yazılır.';
 export function mebKuyruk() {
-  const kayit = sb(S.kursiyerler).filter(k => !k.mebIslendi && !eksikEvrak(k).length);
-  const ders = sbDers(S.dersler).filter(d => d.durum === 'Planlandı' && fark(d.tarih) >= 0 && !d.meb);
+  const kayit = sb(S.kursiyerler).filter(k => !k.mebIslendi && !k.prova && !eksikEvrak(k).length);
+  const ders = sbDers(S.dersler).filter(d => d.durum === 'Planlandı' && fark(d.tarih) >= 0 && !d.meb && !(S.kursiyerler.find(k => k.id === d.kursiyer) || {}).prova);
   const gunler = [...new Set(ders.map(d => d.tarih))].sort();
   const sinav = sbSinav(S.sinavlar).filter(s => s.tur === 'Direksiyon' && fark(s.tarih) >= 0 && !s.mebBildirim);
   return { kayit, ders, gunler, sinav, toplam: kayit.length + gunler.length + sinav.length };
