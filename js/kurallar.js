@@ -9,6 +9,10 @@ import { S, gun, fark, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sb
 
 /* ---------- yardımcılar (ui.js'teki biçimlerle aynı; ui.js DOM'a bağlı olduğu için burada kopyası) ---------- */
 const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+// MTSK md.17/2-d: araç yaşı = yıl − imal (model) yılı; sınır sınıfa göre
+const HAFIF_ARAC = ['M', 'A1', 'A2', 'A', 'B1', 'B', 'B-O', 'B-EN', 'BE'];
+export const aracYasi = (a, yil = new Date().getFullYear()) => { const m = +((a && (a.yil || (a.meb || {}).yil)) || 0); return m > 1900 ? yil - m : null; };
+export const aracYasSiniri = a => a && a.sinif ? (HAFIF_ARAC.includes(a.sinif) ? 12 : 22) : null;
 const tarih = s => { if (!s) return '—'; const d = tarihOku(s); return d.getDate() + ' ' + AY[d.getMonth()]; };
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
 const tl = n => TL.format(Math.round(n)) + ' ₺';
@@ -66,7 +70,14 @@ const KURALLAR = [
     kontrol(l, K) { const SURE = K.direksiyonSure || 90;
       sb(S.kursiyerler).filter(k => !k.kapali && ['Direksiyon', 'Sınav'].includes(k.asama) && !(k.dsinav && k.dsinav.sonuc === 'Geçti')).forEach(k => { const es = S.sinavlar.filter(s => s.tur === 'e-Sınav' && (s.sonuc || {})[k.id] === 'Geçti').sort((a, b) => b.tarih.localeCompare(a.tarih))[0]; if (!es) return; const gecen = -fark(es.tarih), kalan = SURE - gecen; if (kalan <= 20) l.push([kalan < 0 ? 'dur' : kalan <= 7 ? 'yasak' : 'uyari', `${tamAd(k)} · e-sınavdan bu yana ${gecen} gün`, (kalan < 0 ? `${SURE} günlük süre ${-kalan} gün önce doldu; durumu MEBBİS’ten kontrol edin.` : `Direksiyon derslerinin tamamlanması için ${kalan} gün kaldı (MTSK md.15/1-b, ${SURE} gün).`) + mebSinir(k), '#/kursiyer/' + k.id]); }); } },
   { id: 'M12', sira: 120, ad: 'Araç muayene ve sigortası', dayanak: 'MTSK Yön. (eğitim aracı belgeleri)', kapsam: 'arac', ciddiyet: 'engel',
-    kontrol(l) { S.araclar.filter(a => [a.muayene, a.sigorta].some(t => t && fark(t) < 0)).forEach(a => l.push(['dur', `${a.plaka} belgesi süresi dolmuş`, 'Bu araçla ders ve sınav yapılamaz.', '#/filo'])); } },
+    kontrol(l) { S.araclar.filter(a => [a.muayene, a.sigorta].some(t => t && fark(t) < 0)).forEach(a => l.push(['dur', `${a.plaka} belgesi süresi dolmuş`, 'Bu araçla ders ve sınav yapılamaz.', '#/filo']));
+      // ARC-002 (SOR-048): 30 gün kala uyarı; MEBBİS'te muayene doldu ya da hizmet dışı görünen araç planlamadan çıkar
+      S.araclar.filter(a => !a.kapali && /muayene\s*tarihi\s*doldu|hizmet\s*d[ıi]ş/i.test(a.mebDurum || '')).forEach(a => l.push(['dur', `${a.plaka} MEBBİS’te “${a.mebDurum}”`, 'Bu araçla ders ve sınav planlanamaz. MEBBİS’te durumu düzeltilince araç listesi yeniden çekilmeli.', '#/filo']));
+      // ARC-006: araç yaşı (MTSK md.17/2-d): M, A1, A2, A, B1, B, BE 12; ağır sınıflar ve F 22. İmal yılından sonraki ilk takvim yılında 1 yaş.
+      S.araclar.forEach(a => { const y = aracYasi(a), s = aracYasSiniri(a); if (y == null || !s) return; if (y > s) l.push(['dur', `${a.plaka} ${y} yaşında (sınır ${s})`, `MTSK Yön. md.17/2-d: bu sınıfın eğitim ve sınav aracı ${s} yaşından büyük olamaz. Bu araçla ders ve sınav yapılamaz.`, '#/filo']); else if (y === s) l.push(['uyari', `${a.plaka} bu yıl yaş sınırında (${s})`, `1 Ocak’tan sonra bu araçla ders ve sınav yapılamaz (MTSK Yön. md.17/2-d). Yerine araç planlayın.`, '#/filo']); });
+      // ARC-003: bakım km (sonraki bakım km'ye 500 km ya da daha az)
+      S.araclar.forEach(a => { if (!(+a.bakimKm > 0) || !(+a.km > 0)) return; const k = +a.bakimKm - +a.km; if (k <= 500) l.push(['uyari', `${a.plaka} · bakım ${k <= 0 ? 'zamanı geçti' : k + ' km sonra'}`, `Sonraki bakım ${a.bakimKm.toLocaleString('tr-TR')} km, araç ${(+a.km).toLocaleString('tr-TR')} km’de.`, '#/filo']); });
+      S.araclar.forEach(a => [['muayene', 'Muayene'], ['sigorta', 'Trafik sigortası'], ['kasko', 'Kasko']].forEach(([f, ad]) => { const g = a[f] ? fark(a[f]) : null; if (g != null && g >= 0 && g <= 30) l.push(['uyari', `${a.plaka} · ${ad} ${g ? g + ' gün sonra' : 'bugün'} bitiyor`, `${ad} bitişi ${tarih(a[f])}. Yenilenmezse bu araçla ders ve sınav yapılamaz.`, '#/filo']); })); } },
   { id: 'M13', sira: 130, ad: 'Usta öğretici belgeleri', dayanak: 'MTSK Yön. (personel belgeleri)', kapsam: 'personel', ciddiyet: 'engel',
     kontrol(l) { S.egitmenler.forEach(x => Object.entries(x.belgeler || {}).filter(([, t]) => fark(t) < 0).forEach(([b]) => l.push(['dur', `${x.ad} · ${{ sertifika: 'sertifika', saglik: 'sağlık raporu', adli: 'adli sicil' }[b]} süresi dolmuş`, 'Yenilenene kadar ders ve sınav planlanamaz.', '#/filo']))); } },
 
@@ -210,6 +221,10 @@ export function dersKontrol(o) {
   // md.23/1: direksiyon programı MEBBİS’e dersten en az N gün önce girilir (M01 ile aynı ölçü: ders tarihi − ekleme günü)
   { const n = kuralAyar('programOnGun'), g = (tarihOku(planGun) - tarihOku(gun(0))) / 864e5; if (g >= 0 && g < n) not.push(`MEBBİS’e en az ${n} gün önce girilmeli; geç girilen program md.23/1’e aykırı.`); }
   if (ar && [ar.muayene, ar.sigorta].some(t => t && t < planGun)) sorun.push(ar.plaka + ' muayene/sigorta süresi dolmuş; bu tarihte ders planlanamaz.');
+  // ARC-006: yaş sınırını aşmış araçla ders planlanmaz (yaş planlanan tarihin yılına göre)
+  if (ar && aracYasSiniri(ar) && aracYasi(ar, +planGun.slice(0, 4)) > aracYasSiniri(ar)) sorun.push(`${ar.plaka} ${aracYasi(ar, +planGun.slice(0, 4))} yaşında; bu sınıfta eğitim aracı ${aracYasSiniri(ar)} yaşından büyük olamaz (MTSK md.17/2-d).`);
+  // ARC-002: MEBBİS'te 'Muayene Tarihi Doldu' ya da 'Hizmet Dışı' görünen araçla ders planlanmaz
+  if (ar && /muayene\s*tarihi\s*doldu|hizmet\s*d[ıi]ş/i.test(ar.mebDurum || '')) sorun.push(`${ar.plaka} MEBBİS’te “${ar.mebDurum}” görünüyor; bu araçla ders planlanamaz.`);
   Object.entries(eg.belgeler || {}).filter(([, t]) => t < planGun).forEach(([b]) => sorun.push(eg.ad + ' · ' + ({ sertifika: 'usta öğretici sertifikası', saglik: 'sağlık raporu', adli: 'adli sicil kaydı' }[b]) + ' süresi dolmuş; bu tarihte ders planlanamaz.'));
   const ayni = DL.filter(x => x.kursiyer === k.id && x.tarih === planGun && x.durum !== 'İptal'), cak = ayni.find(x => x.saat === saat);  // iptal edilen ders saati boş sayılır (otomatik dağıtımla aynı)
   if (cak) sorun.push(`Bu kursiyerin aynı saatte ${(egitmen(cak.egitmen) || { ad: 'başka bir usta öğretici' }).ad} ile dersi var.`);

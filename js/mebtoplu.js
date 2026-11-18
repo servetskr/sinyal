@@ -699,16 +699,25 @@ function personeliIsle(t) {
   return { guncel, yeni };
 }
 function araclariIsle(v) {
-  const t = v.arac; let guncel = 0; const yeni = [];
+  const t = v.arac; let guncel = 0; const yeni = [], yeniKart = [], farklar = [];
   if (t) {
-    const b = t.baslik, i = { plaka: sutun(b, 'plaka'), muayene: sutun(b, 'muayene'), sanziman: sutun(b, 'sanziman'), durum: sutun(b, 'aracindurumu', /^durumu?$/), sinif: sutun(b, 'sinif') };
+    const b = t.baslik, i = { plaka: sutun(b, 'plaka'), muayene: sutun(b, 'muayene'), sanziman: sutun(b, 'sanziman'), durum: sutun(b, 'aracindurumu', /^durumu?$/), sinif: sutun(b, 'ehliyetsinif', 'sinif'), marka: sutun(b, 'marka'), model: sutun(b, /^model(i)?$/), yil: sutun(b, 'modelyili', /yil/), tescil: sutun(b, 'tescil'), giris: sutun(b, 'hizmetegiris'), cikis: sutun(b, 'hizmettencikis'), mem: sutun(b, 'memonay') };
+    const al = (r, k) => i[k] >= 0 ? String(r[i[k]] == null ? '' : r[i[k]]).trim() : '';
     t.satirlar.forEach(r => {
       const p = nrm(r[i.plaka]); if (!p) return;
       const a = S.araclar.find(x => nrm(x.plaka) === p);
-      if (!a) { yeni.push(r[i.plaka]); return; }
-      const m = tarihIso(r[i.muayene]); if (m && a.muayene !== m) { a.muayene = m; guncel++; }
-      if (i.sanziman >= 0 && r[i.sanziman] && !a.vites) a.vites = /otomatik/i.test(r[i.sanziman]) ? 'Otomatik' : 'Manuel';
-      if (i.durum >= 0) a.mebDurum = r[i.durum];
+      // ARC-009: MEBBİS listesindeki her şey a.meb'de (boş alan ezilmez); ARC-012: mdSinyal'de olmayan araç için kart taslağı
+      const meb = { marka: al(r, 'marka'), model: al(r, 'model'), yil: al(r, 'yil'), sinif: al(r, 'sinif'), tescil: tarihIso(al(r, 'tescil')), hizmetGiris: tarihIso(al(r, 'giris')), hizmetCikis: tarihIso(al(r, 'cikis')), muayene: tarihIso(al(r, 'muayene')), sanziman: al(r, 'sanziman'), durum: al(r, 'durum'), memOnay: al(r, 'mem'), okuma: gun(0) };
+      if (!a) { yeni.push(r[i.plaka]); yeniKart.push({ plaka: String(r[i.plaka]).toLocaleUpperCase('tr').replace(/\s+/g, ' ').trim(), ...meb }); return; }
+      a.meb = { ...(a.meb || {}), ...Object.fromEntries(Object.entries(meb).filter(([, x]) => x)) };
+      // ARC-007: muayene — mdSinyal boşsa ya da daha eskiyse MEBBİS'teki alınır (işlem kaydına düşer); mdSinyal daha yeniyse fark gösterilir
+      const m = meb.muayene;
+      if (m && (!a.muayene || a.muayene < m)) { const eski = a.muayene; a.muayene = m; guncel++; islem('Araç muayenesini MEBBİS’ten aldı', `${a.plaka} · ${eski ? tarih(eski) + ' → ' : ''}${tarih(m)}`); delete a.meb.muayeneFark; }
+      else if (m && a.muayene > m) { a.meb.muayeneFark = true; farklar.push(`${a.plaka}: muayene mdSinyal’de ${tarih(a.muayene)}, MEBBİS’te ${tarih(m)}`); }
+      else delete a.meb.muayeneFark;
+      // ARC-024: şanzıman — boşsa MEBBİS'tekinden; farklıysa uyarı (MEBBİS'e yazılamaz, düzeltme MEM'e yazıyla)
+      if (meb.sanziman) { const mv = /otomatik/i.test(meb.sanziman) ? 'Otomatik' : 'Manuel'; if (!a.vites) a.vites = mv; else if (a.vites !== mv) { a.meb.sanzimanFark = mv; farklar.push(`${a.plaka}: vites mdSinyal’de ${a.vites}, MEBBİS’te ${mv}`); } else delete a.meb.sanzimanFark; }
+      if (i.durum >= 0) a.mebDurum = meb.durum;
     });
   }
   // Simülatörler (dgSimulatorBilgileri: Seri Numarası · Alınma Tarihi · Cihaz Durumu · Kurum Onay · MEM Onay). "Seri Numarası" = MEBBİS sicil no;
@@ -725,7 +734,8 @@ function araclariIsle(v) {
     if (yeniL.length || !eski.length) S.simulatorler = yeniL;
     simulator = yeniL.length;
   }
-  return { guncel, yeni, simulator };
+  S.mebAracYeni = yeniKart;   // ARC-012: Ekip ve araçlar'da 'mdSinyal'e ekle' önerisi
+  return { guncel, yeni, yeniKart, farklar, simulator };
 }
 // Aday dosyası: grup/şube eşleşir (grup kartı yoksa açılır), haklar ve son tarihler kursiyere yazılır
 // MEBBİS'teki kayıt ücreti (aday dosyası "Kayıt ücreti" sütunu, k.meb.kayitUcretiTL) il tabanı ve sözleşme ücretiyle karşılaştırılır.
@@ -800,7 +810,7 @@ function ozetGoster(o, yazilan) {
   if (o.kurum) l.push(satir(`Kurum bilgileri: bina kontenjanı ${o.kurum.binaKontenjan || '—'}, ${o.kurum.programlar.filter(p => programAcik(o.kurum, p.kod)).length} açık program (${o.kurum.programlar.filter(p => programAcik(o.kurum, p.kod)).map(p => p.kod).join(', ') || '—'}), ${o.kurum.derslikler.length} derslik`, o.kurum.programlar.some(p => !programAcik(o.kurum, p.kod)) ? 'Kapalı program: ' + o.kurum.programlar.filter(p => !programAcik(o.kurum, p.kod)).map(p => e(p.kod || p.ad) + (p.kapanma ? ' (' + p.kapanma.split('-').reverse().join('.') + ')' : '')).join(', ') : ''));
   if (o.dosya) l.push(satir(`Aday dosyaları: ${o.dosya.okunan} okundu, ${o.dosya.atanan} kursiyer dönem grubuna atandı${o.dosya.farkli ? `, <span style="color:var(--kirmizi)">${o.dosya.farkli} kursiyerin grubu MEBBİS’tekinden farklı</span>` : ''}`, [o.dosya.farkli ? 'Öğrenci dosyasında Dönem grubu satırındaki “MEBBİS’teki gruba taşı” ile düzeltin.' : '', o.dosya.belirsiz ? `${o.dosya.belirsiz} kursiyerde MEBBİS’te birden çok açık dönem satırı var; grup kendiliğinden atanmadı.` : ''].filter(Boolean).join(' ')));
   if (o.personel) l.push(satir(`Personel: ${o.personel.guncel} kişinin izin no’su güncellendi`, o.personel.yeni.length ? `mdSinyal’de olmayan: ${o.personel.yeni.map(e).join(', ')}` : ''));
-  if (o.araclar) l.push(satir(`Araçlar: ${o.araclar.guncel} aracın muayene tarihi güncellendi`, o.araclar.yeni.length ? `mdSinyal’de olmayan: ${o.araclar.yeni.map(e).join(', ')}` : ''));
+  if (o.araclar) l.push(satir(`Araçlar: ${o.araclar.guncel} aracın muayene tarihi MEBBİS’ten alındı`, [o.araclar.yeni.length ? `mdSinyal’de olmayan: ${o.araclar.yeni.map(e).join(', ')} (Ekip ve araçlar’da “mdSinyal’e ekle”)` : '', ...(o.araclar.farklar || []).map(e)].filter(Boolean).join(' · ')));
   if (o.sinavlar) l.push(satir(`Sınav sonuçları okundu`, 'Sonuçları sınav oturumlarına doldurmak için aşağıdaki düğmeye basın'));
   if (o.ucretIlani) { const I = o.ucretIlani, b = I.satirlar.find(x => /Sertifika\s*Yok/i.test(x.sinif) && /"B"/.test(x.sinif));
     l.push(satir(`MEB ücret ilanı: ${I.yil || '—'} yılı, ${I.satirlar.length} satır${b ? ` (belgesiz B ${tl(b.toplam)})` : ''}`, 'Kurs ücretleri ve sözleşmeler bu ilanla ve il taban fiyatıyla karşılaştırılır; uyuşmazlık MEB kurallarında ve Bugün listesinde görünür.')); }
