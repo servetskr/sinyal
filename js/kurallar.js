@@ -5,7 +5,7 @@
 // 'uyari', 'bilgi'. Dizinin üstünde ek alanlar: kural (kimlik), kursiyer (id), kursiyerler (birden çok kişiye ait oturum bulgusunda kimlik listesi, ör. Y04), kisa (öğrenci dosyasında ad olmadan başlık), yalnizDosya, eylem.
 // DOM yok; yalnız veri.js'e bağlı (Node'da denenebilir). Bugün: veri.js BUGUN / gun().
 // Yeni kurallar ilk sürümde yalnız "uyarı"dır; Eyüp Bey teyit edince engele çevrilebilir (belgeler/eksikler/eyup-sorular.md).
-import { sinavGecmisi, dersBitisi, hakDurumu, oturum, kursiyerDersleri, S, gun, fark, aracUygun, belgeliMi, dersSayaci, kayitDondurmaMi, izinDurumu, mebIsGunuIleri, haftalikSinir, haftaDers, ustaYetkili, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
+import { ulusalSinav, ULUSAL_TEYIT, sinavGecmisi, dersBitisi, hakDurumu, oturum, kursiyerDersleri, S, gun, fark, aracUygun, belgeliMi, dersSayaci, kayitDondurmaMi, izinDurumu, mebIsGunuIleri, haftalikSinir, haftaDers, ustaYetkili, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
 
 /* ---------- yardımcılar (ui.js'teki biçimlerle aynı; ui.js DOM'a bağlı olduğu için burada kopyası) ---------- */
 const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
@@ -254,6 +254,9 @@ const KURALLAR = [
   { id: 'Y10', sira: 244.5, ad: 'Mazeret belgesi MEM’e iletilmedi', dayanak: 'MTSK Yön. md.15/3', kapsam: 'kursiyer', ciddiyet: 'uyari', bugun: true, bugunAd: n => `${n} öğrencinin mazeret belgesi MEM’e iletilmedi`,
     kontrol(l) { sb(S.kursiyerler).filter(k => !k.kapali && (k.mazeretler || []).length).forEach(k => k.mazeretler.filter(m => !m.memIletildi && m.teslim && m.kaynak !== 'meb').forEach(m => { const son = mebIsGunuIleri(m.teslim, 5);
       l.push(bul(fark(son) < 0 ? 'uyari' : 'bilgi', `${tamAd(k)} · ${tarih(m.sinavTarihi)} mazeret belgesi MEM’e iletilmedi`, `${m.neden}; kursa ${tarih(m.teslim)} tarihinde teslim edildi. Belgeyi ilçe MEM’e iletin; MEM ${tarih(son)} tarihine kadar Özel MTSK Modülüne işler. İşlenmezse sınav dönemi mazeretsiz sayılır.`, '#/kursiyer/' + k.id, { kursiyer: k.id, kisa: `${tarih(m.sinavTarihi)} mazeret belgesi MEM’e iletilmedi (MEM ${tarih(son)} tarihine kadar işler)` })); })); } },
+  // SNV-095: ulusal merkezî sınav günü (LGS, YKS, KPSS…) MTSK sınavı planlanmaz (02.06.2020 duyurusu)
+  { id: 'Y11', sira: 244.7, ad: 'Ulusal sınav gününde MTSK sınavı', dayanak: 'MEB duyurusu 02.06.2020 (ulusal merkezî sınav günlerinde MTSK sınavı yapılmaz)', kapsam: 'sinav', ciddiyet: 'uyari', bugun: true, teyit: ULUSAL_TEYIT,
+    kontrol(l) { sbSinav(S.sinavlar).filter(s => fark(s.tarih) >= 0 && ulusalSinav(s.tarih)).forEach(s => l.push(bul('uyari', `${tarih(s.tarih)} ${s.tur} sınavı · aynı gün ${ulusalSinav(s.tarih)}`, `Ulusal merkezî sınav günlerinde MTSK sınavı planlanmaz (MEB duyurusu, 02.06.2020). Tarihi ilçe MEM ile doğrulayın; gerekiyorsa oturumu başka güne alın.`, '#/sinav/' + s.id, { sinav: s.id, kursiyerler: s.kursiyerler || [] }))); } },
   { id: 'Y07', sira: 245, ad: 'Sınav günü öğretmenin çalışma izni ve izin günü', dayanak: 'MTSK Yön. md.28/A; usta öğretici çalışma izni (OOK)', kapsam: 'sinav', ciddiyet: 'engel', bugun: true, bugunAd: n => `${n} sınavda öğretmenin izni sorunlu`,
     kontrol(l) {
       (S.sinavlar || []).filter(s => s && s.tur === 'Direksiyon' && s.tarih && fark(s.tarih) >= 0 && (s.kursiyerler || []).length).forEach(s => {
@@ -379,8 +382,8 @@ export const SINAV_UYGUNLUK_TEYIT = 'Derslerin MEBBİS’e son giriş gününe k
 export function enErkenSinavGunu(db, N = kuralAyar('sinavBildirimIsGunu')) {
   // SNV-041: kurs uygulama sınavı günlerini tanımladıysa yalnız onlar; yoksa Cumartesi
   const tanimli = ((S.kurs && S.kurs.sinavGunleri) || []).filter(t => t >= gun(1)).sort();
-  if (tanimli.length) return tanimli.find(t => mebIsGunuGeri(t, N) >= db) || null;
-  let d = gun(1); for (let i = 0; i < 120; i++) { const t = gunEkle(d, i); if (tarihOku(t).getDay() === 6 && mebIsGunuGeri(t, N) >= db) return t; } return null;
+  if (tanimli.length) return tanimli.find(t => mebIsGunuGeri(t, N) >= db && !ulusalSinav(t)) || null;
+  let d = gun(1); for (let i = 0; i < 120; i++) { const t = gunEkle(d, i); if (tarihOku(t).getDay() === 6 && mebIsGunuGeri(t, N) >= db && !ulusalSinav(t)) return t; } return null;
 }
 export function sinavaUygunluk(k, s) {
   const engel = [], uyari = [], N = kuralAyar('sinavBildirimIsGunu'), es = hakDurumu(k, 'e-Sınav'), D = hakDurumu(k, 'Direksiyon'), db = dersBitisi(k);

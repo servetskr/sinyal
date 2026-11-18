@@ -380,6 +380,14 @@ export function dersTurleri(k) {
 // MEB iş günü: programdaki tek iş günü tanımı (MTSK sürelerinde: sınav onayı 4 iş günü, randevu 4 iş günü, sınav ücreti 6 iş günü, mazeret 5 iş günü).
 // Pazartesi–Cuma; resmî tatil ve bayramlar hariç. Cumartesi iş günü değildir (657 md.99, MTSK md.16/7; eyup-sorular-cevaplar.md madde 11), eski
 // mebCumartesi ayarı artık okunmaz. Arife ve kursun girdiği idari izin günleri de sayılmaz: teyit bekliyor (madde 11), son tarih erkene çekilir.
+// SNV-095: ulusal merkezî sınav günleri (02.06.2020 duyurusu: bu günlerde MTSK sınavı planlanmaz). Liste yıllık güncellenir;
+// 2027 tarihleri ÖSYM (28.10.2026) ve MEB ÖDSGM (30.10.2026) takvimlerini aktaran haberlerden, resmî takvimden teyit bekliyor. Kurs ekleyebilir: S.kurs.ulusalSinavlar
+export const ULUSAL_SINAVLAR = [
+  ['2027-03-20', 'MSÜ'], ['2027-04-18', 'ALES/1'], ['2027-05-08', 'MEB-AGS'], ['2027-06-13', 'LGS'], ['2027-06-19', 'YKS (TYT)'], ['2027-06-20', 'YKS (AYT, YDT)'],
+  ['2027-07-11', 'ALES/2'], ['2027-07-18', 'DGS'], ['2027-09-12', 'KPSS (GY-GK)'], ['2027-09-18', 'KPSS (Alan Bilgisi)'], ['2027-09-19', 'KPSS (Alan Bilgisi)'], ['2027-11-28', 'ALES/3'],
+];
+export const ULUSAL_TEYIT = '2027 tarihleri ÖSYM ve MEB takvimlerini aktaran haberlerden alındı; resmî takvimden teyit bekliyor.';
+export const ulusalSinav = t => { const l = [...ULUSAL_SINAVLAR, ...(((S && S.kurs) || {}).ulusalSinavlar || []).map(x => [x.tarih, x.ad])]; const x = l.filter(y => y[0] === t).map(y => y[1]); return x.length ? x.join(', ') : ''; };
 export const mebIsGunuMu = t => { const g = tarihOku(t).getDay(); if (g === 0 || g === 6) return false; return !(TATILLER.includes(t.slice(5)) || BAYRAMLAR.includes(t) || arifeMi(t) || idariIzinMi(t)); };
 // bas hariç, bit dahil iş günü sayısı
 export const mebIsGunuSay = (bas, bit) => { let n = 0; const d = tarihOku(bas), b = tarihOku(bit); while (d < b) { d.setDate(d.getDate() + 1); if (mebIsGunuMu(iso(d))) n++; } return n; };

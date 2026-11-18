@@ -275,7 +275,7 @@ export async function hazirla(ids, { foto = true, koru = null } = {}) {
 // M05 sınavın MEBBİS'e bildirilmediğini söyler: randevuyu yazmak çaresidir, engel sayılmaz. P01 (personel fotoğrafı) yazmayı ilgilendirmez.
 // Y05 (teorik günde 2–6 saat) motordan değil, kayıt başına teorikKontrol'den gelir.
 // MZ (mevzuat.js: indirim, ilan üstü ücret, hazır yazısı…) yalnız kayıt ve sınav randevusunda gösterilir; direksiyon ve teorik programında gürültü olur.
-const KURAL_TUR = { M01: ['program'], M02: ['program'], M03: ['randevu'], M05: [], M07: ['esinav'], M08: ['randevu'], M09: ['randevu'], M10: ['esinav'], M11: ['program'], M12: ['program', 'randevu'], M13: ['program', 'randevu'], Y01: ['randevu'], Y02: ['randevu'], Y03: ['esinav'], Y04: ['randevu'], Y05: [], Y06: ['randevu'], Y08: ['randevu'], Y07: ['randevu'], Y09: ['randevu'], M14: ['randevu'], M17: [], M18: [], P01: [], P02: [], MZ: ['kayit', 'randevu'] };
+const KURAL_TUR = { M01: ['program'], M02: ['program'], M03: ['randevu'], M05: [], M07: ['esinav'], M08: ['randevu'], M09: ['randevu'], M10: ['esinav'], M11: ['program'], M12: ['program', 'randevu'], M13: ['program', 'randevu'], Y01: ['randevu'], Y02: ['randevu'], Y03: ['esinav'], Y04: ['randevu'], Y05: [], Y06: ['randevu'], Y08: ['randevu'], Y07: ['randevu'], Y09: ['randevu'], Y11: ['randevu'], M14: ['randevu'], M17: [], M18: [], P01: [], P02: [], MZ: ['kayit', 'randevu'] };
 const KURSIYER_TURLERI = ['kayit', 'evrak', 'onay', 'program', 'esinav', 'randevu'];
 const plakaNrm = p => String(p || '').replace(/\s/g, '').toLocaleUpperCase('tr');
 // Döner: { kimlik: { engel: [{kural, metin}], uyari: [{kural, metin}] } } (randevu ve kurum onayında aday kimliğiyle)
@@ -295,7 +295,7 @@ export function kuralDenetimi(l) {
       else if (kural === 'M12') uyar = !!(c.plaka && bas.includes(' belgesi') && plakaNrm(bas.split(' belgesi')[0]) === plakaNrm(c.plaka));
       else if (kural === 'M13') uyar = !!(c.usta && bas.startsWith(c.usta + ' · '));
       // Y04: yalnız o oturumda sınav ücreti ödenmemiş kursiyer (bulgunun kursiyerler listesi; ödeyen ve hatırlatma bulgusu eşleşmez)
-      else if (kural === 'Y04' || kural === 'Y07' || kural === 'Y09') uyar = !!(k && c.sinav && b.sinav === c.sinav && (b.kursiyerler || []).includes(k.id));
+      else if (kural === 'Y04' || kural === 'Y07' || kural === 'Y09' || kural === 'Y11') uyar = !!(k && c.sinav && b.sinav === c.sinav && (b.kursiyerler || []).includes(k.id));
       else uyar = !!(k && (b.kursiyer === k.id || String(b[3] || '').endsWith('/' + k.id)));
       if (!uyar) return;
       ekle(id, cid[kural] === 'engel' && ['dur', 'yasak'].includes(bt) ? 'engel' : 'uyari', kural || 'Kural', bas + (b[2] ? '. ' + String(b[2]).replace(/\.$/, '') : ''));
