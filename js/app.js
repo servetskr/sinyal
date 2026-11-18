@@ -1,5 +1,5 @@
 import { DESTEK } from './iletisim.js?v=234';
-import { kullaniciSubesi, S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec, sinifEtiket } from './veri.js?v=234';
+import { ekranYetkili, kullaniciSubesi, S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec, sinifEtiket } from './veri.js?v=234';
 import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=234';
 import * as Y1 from './sayfalar1.js?v=234';
 import * as Y2 from './sayfalar2.js?v=234';
@@ -78,7 +78,7 @@ const SAYFALAR = {
 };
 const ROL_AD = { mudur: 'Kurs müdürü', sekreter: 'Ön büro', usta: 'Usta öğretici', ortak: 'Ortak' };
 const YASAK = { mudur: [], sekreter: ['raporlar', 'ayarlar', 'guven', 'kurulum', 'senaryo', 'karlilik', 'analiz'], usta: Object.keys(SAYFALAR).filter(k => !['egitmen', 'imza-geldi'].includes(k)), ortak: Object.keys(SAYFALAR) };
-const izinli = ad => { const u = oturum.kullanici; return u && !(YASAK[u.rol] || Object.keys(SAYFALAR)).includes(ad) && !((u.ziyaretci || u.bulut) && ad === 'senaryo'); };
+const izinli = ad => { const u = oturum.kullanici; return u && !(YASAK[u.rol] || Object.keys(SAYFALAR)).includes(ad) && !((u.ziyaretci || u.bulut) && ad === 'senaryo') && ekranYetkili(ad); };  // YON-018: müdürün kapattığı ekran ön büroya görünmez
 
 // Menü günlük işe göre: önce bugün, sonra öğrenci işleri, para, kurum işleri, analiz; az kullanılanlar en altta
 const MENU = [

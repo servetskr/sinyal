@@ -1017,6 +1017,12 @@ function mebDegisimIzle() {
 }
 // Taban yüklemede kurulur: sayfa açıldıktan sonraki ilk değişiklik de (saat, öğretmen, araç, eğitim türü) MEBBİS kaydını eskitir.
 mebDegisimIzle();
+// YON-018 (SOR-147): ön büroya ekran ve işlem yetkisi — müdür verir (yetkili yalnız kendinde olanı verir: müdür her şeye sahip).
+// Ekran: varsayılan açık olanlar kapatılabilir; işlem: varsayılan kapalı hassas işlemler açılabilir. S.kurs.yetki = { ekran: { kasa: false… }, islem: { iptal: true… } }
+export const YETKI_EKRAN = [['mesajlar', 'Mesajlar'], ['adaylar', 'Yeni öğrenciler'], ['kursiyerler', 'Kursiyerler'], ['plan', 'Direksiyon planı'], ['teorik', 'Teorik dersler'], ['sinavlar', 'Sınavlar'], ['kasa', 'Kasa ve ödemeler'], ['meb', 'MEB işlemleri'], ['belgeler', 'Belgeler ve çıktılar'], ['filo', 'Ekip ve araçlar']];
+export const YETKI_ISLEM = [['iptal', 'Tahsilat iptali'], ['duzelt', 'Kasa hareketini düzeltme ve silme'], ['indirim', 'İndirim uygulama'], ['iade', 'İade yapma'], ['senet', 'Senetli satış ve avukata verme'], ['fatura', 'Fatura iptali'], ['devir', 'Devir bakiyesi girme']];
+export const ekranYetkili = ad => { let u; try { u = oturum.kullanici; } catch (x) { return true; } if (!u || u.rol !== 'sekreter') return true; const y = ((S.kurs || {}).yetki || {}).ekran || {}; return y[ad] !== false; };
+export const islemYetkili = ad => { let u; try { u = oturum.kullanici; } catch (x) { return false; } if (!u) return false; if (u.rol === 'mudur') return true; if (u.rol !== 'sekreter') return false; return !!((((S.kurs || {}).yetki || {}).islem || {})[ad]); };
 // YON-023: kaydeden izi bütün ana kayıt türlerinde — yüklemede var olan kimlikler taban sayılır; sonra eklenen kayıt ilk kaydette kaydedeni ve zamanını alır
 // (sunucudan gelen kayıtlar tabana eklenir, başkasının kaydı bu cihazın kullanıcısıyla işaretlenmez). Değiştiren izi düzenleme pencerelerinde yazılır.
 const IZ_KOL = ['kursiyerler', 'dersler', 'adaylar', 'sinavlar', 'gruplar', 'egitmenler', 'araclar', 'teorik'];
