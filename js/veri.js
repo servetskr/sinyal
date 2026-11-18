@@ -1276,6 +1276,11 @@ export function programUyarisi(sinif) {
 export const egitimSinifi = sinif => ((SINIFLAR[sinif] || {}).tur || 'ehliyet') === 'egitim';
 // PAR-005/068: KDV oranı sınıfa (fatura kalemine) göre. 5580 sayılı Kanun kapsamındaki sürücü kursu eğitimi %10 (2007/13033 BKK II sayılı liste B/15,
 // 7346 s. CBK, 10/07/2023'ten beri); kurs ayarı S.entegrasyon.kdv bu oranı tutar. 5580 dışındaki eğitimler (SRC, psikoteknik, MYK) genel oran %20.
+// PAR-048: saklama süresi. Tacir defter ve dayanağı belgeleri 10 yıl saklar (TTK m.82/1-d, 82/5); süre belgenin ait olduğu takvim yılının sonundan başlar.
+// VUK m.253'teki 5 yıl yetmez. Kurs ayarı (S.kurs.saklamaYil) daha uzun olabilir, 10'dan kısa olamaz.
+export const SAKLAMA_YIL = 10;
+export const saklamaYili = () => Math.max(SAKLAMA_YIL, +((S.kurs || {}).saklamaYil) || 0);
+export const saklamaBitti = t => !!t && gun(0) > (+String(t).slice(0, 4) + saklamaYili()) + '-12-31';
 export const KDV_EGITIM = 10, KDV_GENEL = 20, KDV_GENEL_TURLER = ['src', 'psikoteknik', 'myk'];
 export const kdvOrani = sinif => KDV_GENEL_TURLER.includes((SINIFLAR[sinif] || {}).tur) ? KDV_GENEL : (((S.entegrasyon || {}).kdv) ?? KDV_EGITIM);
 // Ekranda sınıf adı: "B sınıfı · Manuel/Otomatik/Engelli", ehliyet dışı türlerde kendi adı ("100 ceza puanı eğitimi", "SRC1 · …")

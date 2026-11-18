@@ -20,7 +20,7 @@ import * as KR from './kurallar.js?v=234';
 import * as CR from './cari.js?v=234';
 import { destekWa } from './iletisim.js?v=234';
 import * as S5L from './sayfalar5.js?v=234';
-import { SINIF_VARSAYILAN, gecisSatirlari, DERS_SAAT_VARSAYILAN, planAyar, gerekliDireksiyon, geceGerekli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, sinavHakSiniri, DERS_KURAL_TARIH, kuralAyar, mebKurum, programAcik, varsayilanYontem, kdvOrani, KDV_EGITIM, KDV_GENEL } from './veri.js?v=234';
+import { SINIF_VARSAYILAN, gecisSatirlari, DERS_SAAT_VARSAYILAN, planAyar, gerekliDireksiyon, geceGerekli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, sinavHakSiniri, DERS_KURAL_TARIH, kuralAyar, mebKurum, programAcik, varsayilanYontem, kdvOrani, KDV_EGITIM, KDV_GENEL, saklamaYili, saklamaBitti } from './veri.js?v=234';
 import { listeAdi, gecerlilikMetni, satirAdi as satirAdiT } from './taban.js?v=234';
 import * as RK from './rapor-kasa.js?v=234';
 import * as GR from './gruplar.js?v=234';
@@ -1434,7 +1434,7 @@ function hatSonucPenceresi(j) {
   });
 }
 // KVKK saklama süresi dolan (ehliyeti alalı saklama yılı geçen) kursiyerler; anonimleştirilenler hariç
-const imhaListesi = () => S.kursiyerler.filter(k => !k.anonim && k.dsinav && k.dsinav.sonuc === 'Geçti' && fark(k.dsinav.tarih) < -365 * S.kurs.saklamaYil);
+const imhaListesi = () => S.kursiyerler.filter(k => !k.anonim && k.dsinav && k.dsinav.sonuc === 'Geçti' && saklamaBitti(k.dsinav.tarih));  // PAR-048: TTK m.82, takvim yılı sonundan 10 yıl
 // Kimlik bilgileri silinir; ödeme ve ders kayıtları (muhasebe ve MEB için) sayılarla kalır
 // Saklama süresi dolan kayıt: kişisel veriler silinir; ödeme ve ders kayıtları isimsiz kalır (muhasebe ve MEB istatistiği için).
 // Öğrenci uygulaması hesabı ve kişisel linki kapatılır; ders imzaları, konumlar, notlar, yüklenen belgeler; kasa ve mesaj kayıtlarındaki ad da silinir.
@@ -1647,7 +1647,7 @@ export function ayarlar(alt) {
         <div class="alan"><label for="iys-kod">İYS marka kodu</label><input id="iys-kod" class="girdi" data-iys-kod inputmode="numeric" value="${e((S.kurs.iys || {}).kod || '')}" placeholder="İYS’nin verdiği marka kodu"></div>
         <p style="font-size:13.5px;color:var(--soluk)">${pazarlamaIzin} kursiyerin kampanya izni var. Liste İYS’nin toplu yükleme sütunlarıyla iner (alıcı +90…, MESAJ, kaynak, ONAY/RET, izin tarihi, BIREYSEL); İYS panelindeki toplu izin yükleme şablonuna aktarın.${(S.kurs.iys || {}).yukleme ? ' Son liste: ' + tarih(S.kurs.iys.yukleme) + '.' : ''}</p>
         <div><button class="dg dg-cizgi dg-kucuk" data-iys-indir>${ik('indir')}İzin listesini indir (İYS, CSV)</button></div></div></div>
-      <div class="ara-bosluk"></div><div class="kart"><div class="kart-bas"><h3>Saklama ve imha</h3></div><div class="kart-govde"><p style="font-size:14px">Saklama süresi: <b>${S.kurs.saklamaYil} yıl</b> (kurs ayarı; mevzuata göre belirleyin). Süresi dolan ${imha.length} kayıt var.</p>${imha.length ? `<button class="dg dg-cizgi dg-kucuk" style="margin-top:10px" data-anonim>Süresi dolanları anonimleştir</button>` : ''}<p style="font-size:14px;margin-top:10px">Kim hangi kişisel veriye baktı: <a href="#/ayarlar/gecmis" style="color:var(--levha);font-weight:700">İşlem geçmişi</a></p></div></div></div></div>`; }
+      <div class="ara-bosluk"></div><div class="kart"><div class="kart-bas"><h3>Saklama ve imha</h3></div><div class="kart-govde"><p style="font-size:14px">Saklama süresi: <b>${saklamaYili()} yıl</b>, belgenin ait olduğu takvim yılının sonundan başlar (TTK m.82/5: tacir defter ve dayanağı belgeleri 10 yıl saklar; VUK m.253’teki 5 yıl yetmez). Süresi dolan ${imha.length} kayıt var.</p>${imha.length ? `<button class="dg dg-cizgi dg-kucuk" style="margin-top:10px" data-anonim>Süresi dolanları anonimleştir</button>` : ''}<p style="font-size:14px;margin-top:10px">Kim hangi kişisel veriye baktı: <a href="#/ayarlar/gecmis" style="color:var(--levha);font-weight:700">İşlem geçmişi</a></p></div></div></div></div>`; }
   if (AYAR_SEKMELERI[durum.ayar]) govde = AYAR_SEKMELERI[durum.ayar]();
   if (durum.ayar === 'veri') govde = EP.veriSekmesiHtml();
   if (durum.ayar === 'donem') govde = GR.donemSekmesiHtml();
