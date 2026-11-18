@@ -499,7 +499,7 @@ const aktarim = { tur: 'kursiyer', satirlar: null, baslik: [], esles: {}, sonuc:
 // Excel (.xlsx/.xls): okuyucu yalnız gerektiğinde yüklenir
 let xlsxYuk = null;
 export const xlsxYukle = () => xlsxYuk || (xlsxYuk = new Promise((ok, red) => { if (window.XLSX) return ok(); const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; sc.onload = ok; sc.onerror = () => { xlsxYuk = null; red(new Error('Excel okuyucu yüklenemedi')); }; document.head.appendChild(sc); }));
-async function excelOku(dosya) {
+export async function excelOku(dosya) {
   await xlsxYukle();
   const wb = window.XLSX.read(await dosya.arrayBuffer(), { type: 'array', cellDates: true });
   const sh = wb.Sheets[wb.SheetNames[0]];
@@ -517,7 +517,7 @@ export function aktarimYukle(sat, tur, kaynak) {
   TUR_ALAN().forEach(([k, , es]) => { if (aktarim.esles[k] != null) return; const i = nb.findIndex((h, j) => !kullanilan.has(j) && h.length > 2 && es.some(x => x.length > 2 && (h.includes(x) || x.includes(h)))); if (i >= 0) { aktarim.esles[k] = String(i); kullanilan.add(i); } });
   yenile();
 }
-function csvOku(metin) {
+export function csvOku(metin) {
   const ilk = metin.split(/\r?\n/)[0] || ''; const ayr = (ilk.match(/;/g) || []).length >= (ilk.match(/,/g) || []).length ? ';' : ',';
   const sat = []; let alan = '', satir = [], tirnak = false;
   for (let i = 0; i < metin.length; i++) {
@@ -529,7 +529,7 @@ function csvOku(metin) {
   return sat;
 }
 // Tarih: gg.aa.yyyy, gg/aa/yy, yyyy-aa-gg; iki haneli yıl (24 → 2024, 85 → 1985); ikinci sayı 12'den büyükse ABD biçimi (aa/gg) sayılır
-const tarihCoz = v => {
+export const tarihCoz = v => {
   const t = String(v || '').trim(), m2 = t.match(/(\d{4})-(\d{2})-(\d{2})/); if (m2) return m2[0];
   const m = t.match(/(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})\b/); if (!m) return '';
   let g = +m[1], a = +m[2], y = +m[3]; if (a > 12 && g <= 12) [g, a] = [a, g]; if (a < 1 || a > 12 || g < 1 || g > 31) return '';
@@ -558,7 +558,7 @@ function aktarimTaslak(x) {
   return d;
 }
 // CSV kodlaması: önce UTF-8; geçersizse Türkçe Windows (1254) — Türkçe Excel'in kaydettiği CSV'de ı, ş, ğ bozulmasın
-async function csvMetin(dosya) { const b = await dosya.arrayBuffer(); let t; try { t = new TextDecoder('utf-8', { fatal: true }).decode(b); } catch (x) { t = new TextDecoder('windows-1254').decode(b); } return t.replace(/^\ufeff/, ''); }
+export async function csvMetin(dosya) { const b = await dosya.arrayBuffer(); let t; try { t = new TextDecoder('utf-8', { fatal: true }).decode(b); } catch (x) { t = new TextDecoder('windows-1254').decode(b); } return t.replace(/^\ufeff/, ''); }
 function kontrolEt(r, i = 0) {
   const get = k => aktarim.esles[k] != null && aktarim.esles[k] !== '' ? r[aktarim.esles[k]] : '';
   const x = Object.fromEntries(TUR_ALAN().map(([k]) => [k, get(k)]));
