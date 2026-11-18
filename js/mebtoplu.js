@@ -727,7 +727,8 @@ function personeliIsle(t) {
     // durum sütunu yoksa (OOK54001 yalnız görevdekileri listeler) satır görevde sayılır
     const gorevde = (i.durum < 0 || nrm(al(r, 'durum')) === 'gorevde') && !(t.gecmis && t.gecmis[j]) && !ayrilma;
     const maas = +al(r, 'maas').replace(/\D/g, '') || 0, ucret = +al(r, 'ucret').replace(/\D/g, '') || 0;
-    const satir = { izinNo: izin, tc: /^\d{11}$/.test(tc) ? tc : '', ad: adSoyad, gorev: al(r, 'gorev'), brans: al(r, 'brans'), statu: al(r, 'statu'), izinBas: tarihIso(al(r, 'bas')), izinBit: tarihIso(al(r, 'bitis')), ayrilma, ayrilmaNedeni: al(r, 'neden'), durum: al(r, 'durum'), maasKds: maas, ucretKds: ucret, haftaSaat: Math.max(maas, ucret) || null, fotoVar: i.foto >= 0 ? /var|evet|✓/i.test(al(r, 'foto')) : null, gorevde, okuma: gun(0) };
+    // fotoVar: fotoğraf hücresi açık 'Var/Yok' metni değilse (resim ya da boş) bilinmiyor sayılır; yanlışlıkla 'yok' denmez (PER-016)
+    const satir = { izinNo: izin, tc: /^\d{11}$/.test(tc) ? tc : '', ad: adSoyad, gorev: al(r, 'gorev'), brans: al(r, 'brans'), statu: al(r, 'statu'), izinBas: tarihIso(al(r, 'bas')), izinBit: tarihIso(al(r, 'bitis')), ayrilma, ayrilmaNedeni: al(r, 'neden'), durum: al(r, 'durum'), maasKds: maas, ucretKds: ucret, haftaSaat: Math.max(maas, ucret) || null, fotoVar: i.foto >= 0 ? (/^(var|evet|✓|✔)$/i.test(al(r, 'foto')) ? true : /^(yok|hay[ıi]r|—|-)$/i.test(al(r, 'foto')) ? false : null) : null, gorevde, okuma: gun(0) };
     const anahtar = satir.tc || izin || nrm(adSoyad); if (!anahtar) return;
     (kisiler.get(anahtar) || kisiler.set(anahtar, []).get(anahtar)).push(satir);
   });
