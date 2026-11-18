@@ -38,6 +38,16 @@
     }
   ],
   "icons": {
+    "16": "simge-16.png",
+    "48": "simge-48.png",
     "128": "simge.png"
-  }
+  },
+  "action": {
+    "default_title": "mdSinyal MEBBİS Yardımcısı",
+    "default_icon": {
+      "16": "simge-16.png",
+      "48": "simge-48.png"
+    }
+  },
+  "homepage_url": "https://mdsinyal.com/"
 }
