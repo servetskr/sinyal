@@ -4,7 +4,6 @@
 // Eski portal.js'ten taşınanlar: kursiyer listesi ve araSuz (yeniden çizmeden arama), egOgrAc (ayrıntı penceresi), deneme.js denemeAc (pencere).
 // Deneme mantığı (form, 5 mavi / 2 sarı / 1 kırmızı kuralı, kayıt) deneme.js'teki dışa aktarımlardan gelir; burada kopyası yok.
 import { S, SINIFLAR, kursiyer, tamAd, sonrakiDers, risk, fark, tarihOku, dersSirasi, gerekliDireksiyon, sinifEtiket } from '../veri.js?v=234';
-import { gerekliDireksiyon } from '../veri.js?v=234';
 import { gunAdi, ayAdi } from '../ui.js?v=234';
 import { sonucHesap, denemeFormu, denemeKaydet, denemeAraci, denemeBolumAd, denemeFormAd, sonDeneme } from '../deneme.js?v=234';
 import { geceSayim } from './bugun.js?v=234';

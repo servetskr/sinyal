@@ -1,6 +1,5 @@
 import { cevapIsle } from './mesaj.js?v=234';
 import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli, sonrakiDers, selam, bulutKanca, iptalEdilebilir, oturum, dersIptalIz, gonderimEkle, gerekliDireksiyon, ekDersFiyat, ekDersTabani } from './veri.js?v=234';
-import { gerekliDireksiyon } from './veri.js?v=234';
 import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos, waIstek, ziyaretci, apiGonder, waAc, waNumara } from './ui.js?v=234';
 import { yenile } from './app.js?v=234';
 import { bildirimler } from './sayfalar1.js?v=234';

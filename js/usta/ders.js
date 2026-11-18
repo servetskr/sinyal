@@ -3,7 +3,6 @@
 // "Öğrenci gelmedi mi?" onayı (pencere). Kayıt kuralları portal.js'te: dersKaydet, dersIptalEt, gelmediYap, notEkle (eski pencereler de onları çağırır).
 // Akış durumu sessionStorage'da tutulur (adım, seçilen konular, puanlar, not); sayfa yenilenirse aynı adımdan sürer, imzalar yeniden atılır.
 import { S, BECERI, SINIFLAR, kursiyer, egitmen, tamAd, gun, fark, tarihOku, konuListesi, konuOner, geceDersMi, gerekliDireksiyon, sinifEtiket } from '../veri.js?v=234';
-import { gerekliDireksiyon } from '../veri.js?v=234';
 import { bildir, bildirimKapat, imzaAlani, tarihUzun, ayAdi } from '../ui.js?v=234';
 import * as P from '../portal.js?v=234';
 import { esc, oi, dugme, satir, liste, kutucuk, radyo, not, stilEkle, odakTuzagi } from '../ogr/ui.js?v=234';

@@ -1,7 +1,6 @@
 // Ana sayfa sekmesi (yeni tasarım): selam, ehliyet yolculuğu (Teorik · Direksiyon · Sınav), yapılacaklar (teklif, onay, uyarı),
 // sıradaki ders (takvim yaprağı) ve son dersin değerlendirmesi, sınava hazırlık kartı, kurs işlemleri (ödeme, belgeler), ana ekrana ekle.
 import { S, ASAMALAR, EVRAKLAR, egitmen, arac, ogretmen, fark, tarihOku, kalanBorc, ogrOzellik, gerekliDireksiyon, sinifEtiket, egitimSinifi, teorikVar } from '../veri.js?v=234';
-import { gerekliDireksiyon } from '../veri.js?v=234';
 import { gunKisa, gunAdi, ayAdi, tarih } from '../ui.js?v=234';
 import * as OG from '../ogrenci.js?v=234';
 import * as HZ from '../hazirlik.js?v=234';

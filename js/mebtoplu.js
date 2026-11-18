@@ -1,7 +1,7 @@
 // MEBBİS toplu çekme ve toplu yazma (mdSinyal tarafı). İşi MEBBİS Yardımcısı'nın arka plan motoru (eklenti/motor.js)
 // kursun kendi MEBBİS oturumunda, ekran açmadan yürütür; sonuç buraya gelir ve kayıtlarla eşlenir.
 // Gönderilen ve gelen iletilerin adları ve alanları: js/eklenti.js başındaki ileti sözleşmesi tablosu (eklenti/sinyal.js'te de aynısı).
-import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, sb, sbDers, cokSube, seciliSube, eksikEvrak, anaSinif, egitimSinifi, ekTur, kursiyerTaban, tutarOku } from './veri.js?v=234';
+import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, sb, sbDers, cokSube, seciliSube, eksikEvrak, anaSinif, egitimSinifi, ekTur, kursiyerTaban, tutarOku, MEB_CEZA_SERTIFIKA } from './veri.js?v=234';
 import { bildir, pencere, kapatPencere, e, ik, isaret, rozet, tarih } from './ui.js?v=234';
 import * as GR from './gruplar.js?v=234';
 import * as EK from './eklenti.js?v=234';
@@ -74,8 +74,9 @@ const izin = o => String((o && o.calismaIzinNo) || '').replace(/\D/g, '');
 const tabanSinif = s => anaSinif(String(s || ''));
 const B_EN_NOT = 'B Engelli: MEBBİS’te B olarak; rapor kodu ve kendi aracı modüle ayrıca tanımlanır';
 const CEZA_NOT = '100 ceza puanı eğitimi: e-sınav ve uygulama sınavı yok';
-// Kayıttaki istenen sertifika: B Engelli ve 100 ceza eğitiminin MEBBİS adı doğrulanmadı (eklenti.js sertifikaMetni ile aynı: null, kayıt elle girilir)
-const sertifikaMetni = k => { if (['B-EN', 'CEZA'].includes(k.sinif)) return null; const b = tabanSinif(k.sinif), oto = /-O$/.test(k.sinif || ''); return b === 'B' ? `B SINIFI SERTİFİKA (${oto ? 'Otomatik' : 'Manuel'})` : `${b} SINIFI SERTİFİKA`; };
+// Kayıttaki istenen sertifika (eklenti.js sertifikaMetni ile aynı): 100 ceza eğitimi MEBBİS'te normal aday kaydı, "100 Ceza Puanı (Manuel)" (MEB-185).
+// B Engelli'nin MEBBİS adı doğrulanmadı: null, kayıt elle girilir.
+const sertifikaMetni = k => { if (k.sinif === 'CEZA') return MEB_CEZA_SERTIFIKA; if (k.sinif === 'B-EN') return null; const b = tabanSinif(k.sinif), oto = /-O$/.test(k.sinif || ''); return b === 'B' ? `B SINIFI SERTİFİKA (${oto ? 'Otomatik' : 'Manuel'})` : `${b} SINIFI SERTİFİKA`; };
 const mebGrup = k => { const g = GR.kursiyerGrubu(k); return g && GR.mebGrubuMu(g) ? g : null; };
 const subeNo = g => GR.SUBELER.indexOf(g.sube) + 1;
 const SINAV_SAATLERI = ['08:30', '09:15', '10:00', '10:45', '11:30', '13:00', '13:45', '14:30', '15:15', '16:00'];   // 40 dk + 5 dk, öğle arası 12:15
@@ -198,8 +199,9 @@ export async function hazirla(ids, { foto = true, koru = null } = {}) {
       const k = kursiyer(r.kursiyer), g = k && mebGrup(k); if (!g) { ekle(x, 'Dönem grubuna atanmamış'); continue; }
       if (!/^\d{11}$/.test(k.tc || '')) { ekle(x, 'TC kimlik no eksik'); continue; }
       if (!cep10(k.tel)) { ekle(x, 'Cep telefonu 10 hane değil'); continue; }
-      // MEBBİS'teki sertifika adı doğrulanmadı: yanlış sınıfla kayıt açılmasın diye toplu yazmaya alınmaz
-      if (['B-EN', 'CEZA'].includes(k.sinif)) { ekle(x, (SINIFLAR[k.sinif] || {}).ad + ': MEBBİS’teki sertifika adı doğrulanmadı, kaydı MEBBİS’e elle girin'); continue; }
+      // B Engelli'nin MEBBİS'teki sertifika adı doğrulanmadı: yanlış sınıfla kayıt açılmasın diye toplu yazmaya alınmaz.
+      // 100 ceza eğitimi durdurulmaz: MEBBİS'te normal aday kaydı (MEB-185); e-sınav ve randevu işlerine girmez (CEZA_NOT)
+      if (k.sinif === 'B-EN') { ekle(x, (SINIFLAR[k.sinif] || {}).ad + ': MEBBİS’teki sertifika adı doğrulanmadı, kaydı MEBBİS’e elle girin'); continue; }
       const mevcut = k.mevcutEhliyet && k.mevcutEhliyet !== 'Yok' ? k.mevcutEhliyet + ' SINIFI' : '';
       l.push({ id: x.id, tur: 'kayit', baslik: tamAd(k), donem: g.donem, grupNo: g.grupNo, subeNo: subeNo(g), tc: k.tc, istenen: sertifikaMetni(k), mevcut, belgeNo: mevcut ? String((k.oncekiBelge || {}).sayi || '') : '', cep: cep10(k.tel), foto: foto ? await fotoHazirla(k.foto) : '', sozlesme: k.sozlesmeImza && k.sozlesmeImza.tarih ? trT(k.sozlesmeImza.tarih) : '', adSoyad: tamAd(k), evrak: k.mebEvrak ? ME.evrakPaketi(k).l : null });
     }

@@ -893,6 +893,10 @@ export const digerUcretler = () => S.kurs.digerUcretler || [];
 // Eski tip belgelerin kapsadığı sınıflar (KTY geçici md.10/1; E için 28/4/1997 sonrası alınan, dar olan liste)
 const ESKI_KAPSAM = { A1: ['M', 'A1'], A2: ['M', 'A1', 'A2', 'A', 'B1'], B: ['M', 'B1', 'B', 'D1', 'F'], C: ['M', 'B1', 'B', 'D1', 'C1', 'C', 'F'], D: ['M', 'B1', 'B', 'BE', 'C1', 'C1E', 'C', 'CE', 'D1', 'D1E', 'F'], E: ['M', 'B1', 'B', 'C1', 'C', 'D1', 'D', 'F'], F: ['M', 'F'], G: ['M', 'G'] };
 // Eğitim türü sınıf (sertifika vermeyen: 100 ceza puanı eğitimi): e-sınav, sertifika ve ehliyet adımları yok, kurs eğitim belgesi verir (MTSK md.16/3)
+// 100 ceza puanı eğitimi MEBBİS'te ayrı ekranda değil, MTSK modülünde normal aday kaydıdır; Aday Dönem Kayıt'ta (skt02001)
+// istenen sertifika bu seçenektir (Aday Durum skt02009'da görüldü, 18 Kas; SOR-020). Seçenek metni kayıt ekranında farklı çıkarsa
+// eklenti seçeneği bulamaz ve işi "seçeneklerde yok" diye durdurur; MEBBİS'e yanlış sınıf gitmez.
+export const MEB_CEZA_SERTIFIKA = '100 Ceza Puanı (Manuel)';
 export const egitimSinifi = sinif => ((SINIFLAR[sinif] || {}).tur || 'ehliyet') === 'egitim';
 // Ekranda sınıf adı: "B sınıfı · Manuel/Otomatik/Engelli", ehliyet dışı türlerde kendi adı ("100 ceza puanı eğitimi", "SRC1 · …")
 export function sinifEtiket(sinif, k) {

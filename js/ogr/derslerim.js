@@ -3,7 +3,6 @@
 // Eski ogrenci.js derslerHtml / programHtml / yaklasanHtml / degerlendirKart / ders defteri işlevleri buraya taşındı;
 // onay, itiraz, yıldız, takvim dosyası (data-og-*) ogrenci.js ogBagla'da; ders al, kursa yaz, saat değiştir, iptal portal.js ogGenelTik'te çalışır.
 import { S, BECERI, DERS_TUR_AD, egitmen, arac, ogretmen, fark, gun, tarihOku, iso, iptalEdilebilir, dersSirasi, kapaliGun, ogrOzellik, tamAd, gerekliDireksiyon, teorikVar, egitimSinifi } from '../veri.js?v=234';
-import { gerekliDireksiyon } from '../veri.js?v=234';
 import { tarihUzun, gunAdi, gunKisa, ayAdi } from '../ui.js?v=234';
 import * as TK from '../takvim.js?v=234';
 import { onayBekleyen, MUFREDAT, sinavAdi, hakDurum, dirSayac, TEORIKSIZ_METIN } from '../ogrenci.js?v=234';

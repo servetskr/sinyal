@@ -6,7 +6,6 @@ import * as B from './bulut.js?v=234';
 import { wpGonder } from './sayfalar1.js?v=234';
 import * as ME from './mebevrak.js?v=234';
 import * as KR from './kurallar.js?v=234';
-import { gunBatimi, kursIli } from './veri.js?v=234';
 import { listeAdi } from './taban.js?v=234';
 import { muafMi, muafSonGun } from './gruplar.js?v=234';
 
