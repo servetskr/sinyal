@@ -759,14 +759,13 @@ export function kursiyerFormu(on = {}) {
       alanHatalari(f, []);  // satır içi hata temizleyicisini bağlar
       guncelle(); ciz();
       f.addEventListener('input', guncelle); f.addEventListener('change', guncelle);
-      // KAY-109: adım tamamlanınca 'Devam' hazır görünür, Enter sonraki adıma geçer; tek seçimlik alan (radyo, liste) adımın son eksiğini kapatırsa kısa bir beklemeyle kendiliğinden geçilir (Ayarlar › Görünüm › 'Kayıtta adım bitince ilerle', varsayılan açık)
+      // KAY-109: adım tamamlanınca 'Devam' hazır görünür (Enter zaten alan alan ilerletir, son alanda İleri); tek seçimlik alan (radyo, liste) adımın son eksiğini kapatırsa kısa bir beklemeyle kendiliğinden geçilir (Ayarlar › Görünüm › 'Kayıtta adım bitince ilerle', varsayılan açık)
       const adimTamamMi = i => !hatalar().some(([el]) => adimOf(el) === i);
       let otoZaman = null;
       const hazirGoster = () => { const b = d.querySelector('[data-ks="ileri"]'); if (b) b.classList.toggle('ks-hazir', adim < KS_ADIM.length - 1 && adimTamamMi(adim)); };
       f.addEventListener('input', hazirGoster);
       f.addEventListener('change', ev => { hazirGoster(); const t = ev.target; if (!(t.type === 'radio' || t.tagName === 'SELECT') || adimOf(t) !== adim || adim >= KS_ADIM.length - 2) return;
         if (TC.tercihler().kayitOtoIleri === false || !adimTamamMi(adim)) return; clearTimeout(otoZaman); const a0 = adim; otoZaman = setTimeout(() => { if (adim === a0 && adimTamamMi(adim)) { ileri(); bildir('Adım tamam; sonraki adıma geçildi (Geri ile dönebilirsiniz)'); } }, 700); });
-      f.addEventListener('keydown', ev => { if (ev.key !== 'Enter' || ev.target.tagName === 'TEXTAREA' || ev.target.type === 'submit' || ev.target.closest('button')) return; if (adim < KS_ADIM.length - 1) { ev.preventDefault(); ileri(); } });
       // TC alanından çıkınca: aynı TC'li kayıtlar ve eski kayıttan bilgi aktarma (KAY-103)
       const tcBak = () => {
         const tc = f.tc.value.trim(), kutu = d.querySelector('[data-ks-tc]');
