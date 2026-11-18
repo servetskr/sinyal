@@ -45,7 +45,10 @@ function yereldenTeslim(r) {
 
 /* ---------- ekran haritası: mdSinyal sayfasından gelir, yalnız veri; denetlenmeden kullanılmaz ---------- */
 const SINYAL_KOKLER = ['https://mdsinyal.com', 'https://www.mdsinyal.com', 'https://servetskr.github.io'];
-const ACIK_ANAHTAR = null;   // imza istenirse: ECDSA P-256 açık anahtarı (JWK). null iken kaynak, sürüm ve şema denetlenir.
+// imza istenirse: ECDSA P-256 açık anahtarı (JWK). null iken kaynak, sürüm ve şema denetlenir.
+// MEB-110: anahtar ve imza sinyal-kaynak/arac/harita_imzala.mjs ile (anahtar → bu satıra yapıştırılacak JWK; imzala → harita.json'a "imza").
+// Özel anahtar yalnız yetkilinin bilgisayarında (depo dışında). Sınama: arac/mebbis-test/harita-imza-test.mjs (imzalı kabul, imzasız/bozuk ret).
+const ACIK_ANAHTAR = null;
 const KIMLIK = /^[A-Za-z0-9_$İıŞşĞğÜüÖöÇç]{1,64}$/, YOL = /^\/(SKT|Ookgm)\/[A-Za-z0-9]{3,20}\.aspx$/, DEGER = /^-?\d{1,4}(,-?\d{1,4}){0,15}$/;
 const YASAK = /sil|delete|iptal|kald[ıi]r|[çc][ıi]k[ıi][şs]|exit|logout/i, SURUM_D = /^\d{4}\.\d{2}\.\d{2}-\d{1,3}$/;
 const metinUygun = (v, n) => typeof v === 'string' && v.length <= n && !/[<>"'`\\{}]/.test(v);
