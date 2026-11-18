@@ -2,7 +2,7 @@ import { ekDersFiyat, uygulamaSinavUcreti, esinavUcreti, digerUcretler, ibanlar,
 import * as HS from './hesap.js?v=234';
 import * as MZ from './mevzuat.js?v=234';
 import * as DN from './denetim.js?v=234';
-import { alanHatalari, e, saatDe, saatE, tl, sayi, ik, rozet, asamaRozet, avatar, plaka, ilerleme, bos, pencere, kapatPencere, bildir, sekmeler, tarih, tarihUzun, goreli, cubukGrafik, halka, ayAdi, csvIndir, waAc, waSirali, tamTarih, apiAcik, isaret, ekranNotu, aracGorsel, olcumler, yonLevhasi } from './ui.js?v=234';
+import { apiGonder, alanHatalari, e, saatDe, saatE, tl, sayi, ik, rozet, asamaRozet, avatar, plaka, ilerleme, bos, pencere, kapatPencere, bildir, sekmeler, tarih, tarihUzun, goreli, cubukGrafik, halka, ayAdi, csvIndir, waAc, waSirali, tamTarih, apiAcik, isaret, ekranNotu, aracGorsel, olcumler, yonLevhasi } from './ui.js?v=234';
 import { yenile } from './app.js?v=234';
 import { AYAR_SEKMELERI, ayarBaglan, ustaDavet, kimlikKartlari, personelFotoKirp, personelOzeti, mebAracKur, mebAktar, mebCek, MEB_BILGI } from './sayfalar5.js?v=234';
 import * as MB from './mebmerkez.js?v=234';
@@ -1064,8 +1064,10 @@ function hatSonucPenceresi(j) {
       ${u.length ? `<div class="ipucu" style="margin-top:10px;display:block"><b>Kontrol edilecekler</b><ul style="margin:6px 0 0 18px;font-size:13.5px">${u.map(x => `<li>${e(x)}</li>`).join('')}</ul></div>` : ''}
       ${w.adres ? `<p style="font-size:14px;margin-top:12px"><b>Gelen mesajlar için</b> Meta › uygulamanız › WhatsApp › Yapılandırma › Webhook ekranına şunları girin, sonra <b>messages</b> alanına abone olun:</p>
       <div class="form-izgara" style="margin-top:8px"><div class="alan tam"><label>Geri arama adresi (Callback URL)</label><input readonly value="${e(w.adres)}" data-kopyala></div><div class="alan tam"><label>Doğrulama belirteci (Verify token)</label><input readonly value="${e(w.belirtec)}" data-kopyala></div></div>` : ''}`,
-    altlik: '<button class="dg dg-ana" data-kapat>Tamam</button>',
-    onAc(d) { d.querySelectorAll('[data-kopyala]').forEach(i => i.addEventListener('click', () => { i.select(); try { navigator.clipboard.writeText(i.value).then(() => bildir('Kopyalandı')); } catch (x) { } })); },
+    // MSJ-036 (kurulum notu): bağlantı sonunda müdürün cebine deneme mesajı; gidince kurulum adımı 'WhatsApp hattını bağla' tamamlanmış sayılır
+    altlik: '<button class="dg dg-cizgi" data-hat-deneme>Müdüre deneme mesajı gönder</button><button class="dg dg-ana" data-kapat>Tamam</button>',
+
+    onAc(d) { { const b = d.querySelector('[data-hat-deneme]'); if (b) b.addEventListener('click', async () => { b.disabled = true; b.textContent = 'Gönderiliyor…'; const s2 = await apiGonder(`${S.kurs.ad} · mdSinyal WhatsApp hattı bağlandı. Bu bir deneme mesajıdır; hatırlatmalar artık bu numaradan otomatik gidecek.`, undefined, undefined, { ad: S.kurs.yetkili || 'Kurs müdürü', rol: 'MÜDÜR', tel: mudurTel() }); if (s2.ok) { S.kurs.waDeneme = gun(0); islem('WhatsApp hattı deneme mesajı gönderdi', 'müdüre'); kaydet(); b.textContent = 'Deneme mesajı gitti ✓'; bildir('Deneme mesajı müdürün telefonuna gönderildi', 'wp'); } else { b.disabled = false; b.textContent = 'Müdüre deneme mesajı gönder'; bildir(s2.hata || 'Gönderilemedi', 'uyari'); } }); } d.querySelectorAll('[data-kopyala]').forEach(i => i.addEventListener('click', () => { i.select(); try { navigator.clipboard.writeText(i.value).then(() => bildir('Kopyalandı')); } catch (x) { } })); },
   });
 }
 // KVKK saklama süresi dolan (ehliyeti alalı saklama yılı geçen) kursiyerler; anonimleştirilenler hariç
