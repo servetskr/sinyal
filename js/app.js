@@ -252,7 +252,7 @@ export function yenile(kaydirma = false) {
   if (ekranDuzey(r.ad === 'kursiyer' ? 'kursiyerler' : r.ad) === 'gor') saltOkunur(kap);
   kurulumSeridi(kap); epostaSeridi(kap);
   // YON-028: açık onaylı bilgilendirmeler; oturum başına bir kez, sayfa oturduktan sonra (başka pencere açıksa sonraki girişe)
-  if (!bilgiSoruldu && ['mudur', 'sekreter'].includes(oturum.kullanici.rol)) { bilgiSoruldu = true; const dene = n => { if (document.querySelector('.perde')) { if (n < 40) setTimeout(() => dene(n + 1), 3000); return; } import('./onay.js?v=234').then(m => m.bilgiGoster()); }; setTimeout(() => dene(0), 1500); }  // başka pencere açıksa kapanınca (en çok 2 dk)
+  if (!bilgiSoruldu && oturum.kullanici.bulut && ['mudur', 'sekreter'].includes(oturum.kullanici.rol)) { bilgiSoruldu = true; const dene = n => { if (document.querySelector('.perde')) { if (n < 40) setTimeout(() => dene(n + 1), 3000); return; } import('./onay.js?v=234').then(m => m.bilgiGoster()); }; setTimeout(() => dene(0), 1500); }  // başka pencere açıksa kapanınca (en çok 2 dk)
   if (s.baglan) { try { s.baglan(kap); } catch (x) { console.error(x); } }
   if (r.ad === 'genel' || r.ad === 'adaylar') B.onKayitlariAl().then(n => { if (n) { bildir(`Web sitesinden ${n} ön kayıt geldi; Yeni öğrenciler’de`); if (location.hash.startsWith('#/adaylar')) yenile(); } });   // DIG-035
   if (r.ad === 'genel') { GU.anaEkranaEkle(kap); duyuruAlani(kap); }  // kurulu sürüm, “Güncellemeleri denetle”, yeni sürüm kartı; DIG-040 duyurular
@@ -770,7 +770,7 @@ function kursAcEkrani(davetKod) {
     if (f.sifre.value !== f.sifre2.value) { bildir('İki şifre aynı değil; şifreyi tekrar yazın', 'uyari'); return f.sifre2.focus(); }
     if (!f.onay.checked) return bildir('Verilerin nerede saklanacağını okuduğunuzu işaretleyin', 'uyari');
     btn.disabled = true; btn.textContent = 'Hesap açılıyor…';
-    B.kursAc({ kursAd: f.kurs.value.trim(), yetkili: f.ad.value.trim(), sehir: f.sehir.value.trim(), eposta: f.eposta.value.trim(), sifre: f.sifre.value, mudurTel: f.tel.value.trim(), davetKod })
+    B.kursAc({ onayMetni: (f.querySelector('.giris-onay span') || {}).textContent || '', kursAd: f.kurs.value.trim(), yetkili: f.ad.value.trim(), sehir: f.sehir.value.trim(), eposta: f.eposta.value.trim(), sifre: f.sifre.value, mudurTel: f.tel.value.trim(), davetKod })
       .then(u => { history.replaceState(null, '', '#/genel'); bulutOturumu(u, true); bildir('Kurs hesabı açıldı. Kurulum adımları ana sayfada; “Kuruluma başla” ile sırayla açılır'); })
       .catch(x => { btn.disabled = false; btn.textContent = 'Kurs hesabını aç'; bildir(B.hataMetni(x), 'uyari'); });
   });

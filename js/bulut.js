@@ -142,7 +142,7 @@ export async function kursDavetOlustur(not) {
   await F.setDoc(F.doc(db, 'kursDavetleri', kod), { olusturan: auth.currentUser.uid, not: String(not || '').slice(0, 120), tarih: F.serverTimestamp(), son: F.Timestamp.fromDate(son) });
   return { kod, link: kursDavetLinki(kod), son };
 }
-export async function kursAc({ kursAd, yetkili, sehir, eposta, sifre, mudurTel, davetKod }) {
+export async function kursAc({ kursAd, yetkili, sehir, eposta, sifre, mudurTel, davetKod, onayMetni }) {
   if (!davetKod || !(await kursDavetGetir(davetKod))) throw hata('Bu hesap açma linki geçersiz ya da süresi dolmuş; mdSinyal ekibinden yeni link isteyin');
   const user = await hesapAc(eposta, sifre, yetkili);
   const { db, F } = fb;
@@ -153,7 +153,10 @@ export async function kursAc({ kursAd, yetkili, sehir, eposta, sifre, mudurTel, 
   b.set(F.doc(db, 'kurslar', kRef.id, 'uyeler', user.uid), { ad: yetkili, rol: 'mudur', eposta: user.email, katilma: F.serverTimestamp() });
   b.set(F.doc(db, 'kullanicilar', user.uid), { kurs: kRef.id });
   await b.commit();
-  return baglan({ kurs: kRef.id, uid: user.uid, ad: yetkili, rol: 'mudur', usta: null, eposta: user.email }, bosVeri({ kursAd, yetkili, sehir, mudurTel }));
+  // YON-069: hesap açılışındaki onay (kutudaki metin, sürüm, SHA-256 özeti, kim, ne zaman) kurs verisine yazılır
+  const veri = bosVeri({ kursAd, yetkili, sehir, mudurTel }), metin = String(onayMetni || '').replace(/\s+/g, ' ').trim();
+  if (metin) { let oz = ''; try { const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(metin)); oz = [...new Uint8Array(h)].map(x => x.toString(16).padStart(2, '0')).join(''); } catch (x) { } veri.kurs.acilisOnay = { kim: yetkili, uid: user.uid, eposta: user.email, zaman: new Date().toISOString(), surum: 1, metin, ozet: oz }; }
+  return baglan({ kurs: kRef.id, uid: user.uid, ad: yetkili, rol: 'mudur', usta: null, eposta: user.email }, veri);
 }
 
 // ---- davet ----
