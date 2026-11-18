@@ -1,4 +1,4 @@
-import { izinDurumu, haftalikSinir, haftaDers, ustaYetkili, S, gun, fark, SINIFLAR, egitmen, kapaliGun, dersAraci, risk, kursAdi } from './veri.js?v=234';
+import { arifeMi, izinDurumu, haftalikSinir, haftaDers, ustaYetkili, S, gun, fark, SINIFLAR, egitmen, kapaliGun, dersAraci, risk, kursAdi } from './veri.js?v=234';
 import { gerekliDireksiyon, kuralAyar, geceKisitli, geceDersMi } from './veri.js?v=234';
 
 // B Engelli adayı kendi (raporuna uygun) aracıyla eğitim alıyorsa (MTSK Yön. md.7/5) ders kurs aracı olmadan planlanır (arac: null, "kendi aracı")
@@ -89,6 +89,7 @@ export function otomatikPlan({ gunSay = 7, haftalik = 3 } = {}) {
       if (Object.values(h.belgeler || {}).some(t => t && t < g)) continue;  // sertifika, sağlık raporu ya da adli sicil süresi dolmuş usta öğreticiye ders önerilmez (elle eklemede de engelli)
       for (const sa of KAPASITE_SAAT) {
         if (dolu.has('u' + g + sa + h.id) || dolu.has('k' + g + sa + x.k.id)) continue;
+        if (arifeMi(g) && sa >= '13:00') continue;   // DIR-051: arife öğleden sonrası önerilmez (resmî tatil günleri zaten atlanır)
         // araç: B Engelli için önce aparatlı (B-EN), sonra otomatik B aracı (aracSiniflari); kendi aracıyla gelende kurs aracı aranmaz
         const kendi = kendiAracli(x.k), ar = kendi ? null : dersAraci(h.id, x.k.sinif, g, sa);
         if (!kendi && (!ar || dolu.has('a' + g + sa + ar.id) || [ar.muayene, ar.sigorta].some(t => t && t < g))) continue;
