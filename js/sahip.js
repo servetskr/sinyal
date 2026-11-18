@@ -177,6 +177,8 @@ async function kursIstatistik(k, ad, sehir) {
     dersAy: (V.dersler || []).filter(x => String(x.tarih || '').startsWith(ay)).length,
     tahsilAy: (V.hareket || []).filter(x => x.tur === 'Gelir' && String(x.tarih || '').startsWith(ay)).reduce((t, x) => t + (+x.tutar || 0), 0),
     gonderimAy: (V.gonderimler || []).filter(x => String(x.zaman || '').startsWith(ay)).length,
+    otoAy: (V.gonderimler || []).filter(x => x.oto && String(x.zaman || '').startsWith(ay)).length,
+    waBagli: !!((V.kurs || {}).waHat || (V.kurs || {}).waApi),
     adaylar: (V.adaylar || []).length,
     oturum: kayit.filter(x => x.ne === 'Giriş yaptı').length, islem: kayit.length,
     aktifKisi: new Set(kayit.map(x => x.uid).filter(Boolean)).size,
@@ -302,10 +304,16 @@ function kursIstHtml() {
       ${x.hata ? `<p class="sh-hata">${ik('uyari')}<span>Veri okunamadı: ${e(x.hata)}</span></p>` : `<div class="sh-ist-kutular">
         ${kutu('Kursiyer', x.aktif, x.kursiyer + ' kayıtlı')}${kutu('Bu ay ders', x.dersAy, '')}${kutu('Bu ay tahsilat', tl(x.tahsilAy), '')}
         ${kutu('Oturum', x.oturum, 'son 30 gün')}${kutu('Aktif kişi', x.aktifKisi, per + ' personel hesabı')}${kutu('Öğrenci girişi', ogrAktif, ogr + ' öğrenci hesabı')}</div>
-      <footer><span>${ik('mesaj')}${x.gonderimAy} mesaj bu ay</span><span>${ik('aday')}${x.adaylar} aday</span>${acik ? `<span class="uyar">${ik('uyari')}${acik} açık destek</span>` : ''}</footer>`}
+      <footer><span>${ik('mesaj')}${x.gonderimAy} mesaj bu ay${x.otoAy ? ' (' + x.otoAy + ' otomatik)' : ''}${(() => { const u = mesajUcret(), m = x.waBagli ? x.gonderimAy : 0; return m ? ` · tahmini ${tl(m * u.hizmet)}${m > u.kota ? ` · <b style="color:var(--kirmizi)">kota ${u.kota} aşıldı (+${m - u.kota})</b>` : ''}` : ''; })()}</span><span>${ik('aday')}${x.adaylar} aday</span>${acik ? `<span class="uyar">${ik('uyari')}${acik} açık destek</span>` : ''}</footer>`}
     </article>`;
-  }).join('')}</div><p class="sh-dip">Oturum ve aktif kişi son 30 günün işlem kaydından sayılır. Kutuya dokununca kursun hesapları, hesap oluşturma ve kursu silme açılır.</p>`;
+  }).join('')}</div><p class="sh-dip">Oturum ve aktif kişi son 30 günün işlem kaydından sayılır. Kutuya dokununca kursun hesapları, hesap oluşturma ve kursu silme açılır.</p>
+    <details class="sh-dip"><summary>WhatsApp mesaj ücreti ve kota (tahmin için)</summary><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">${[['hizmet', 'Hizmet mesajı (₺)'], ['pazarlama', 'Pazarlama mesajı (₺)'], ['kota', 'Fiyata dahil aylık kota']].map(([a, et]) => `<label style="display:grid;gap:4px;font-size:13px">${et}<input data-mesaj-ucret="${a}" inputmode="decimal" value="${String(mesajUcret()[a]).replace('.', ',')}" style="width:130px"></label>`).join('')}</div><small>Bu cihazda saklanır. Tahmin bütün mesajları hizmet sayar; 24 saat penceresindeki cevaplar ücretsizdir, gerçek tutar Meta faturasındadır.</small></details>`;
 }
+// MSJ-038: WhatsApp mesaj sayacı ve tahmini maliyet — Meta şablon (hizmet) mesajı başına ücret ve fiyata dahil aylık kota Yönetim'de bu cihazda
+// ayarlanır (varsayılan: hizmet 0,25 ₺, pazarlama 0,50 ₺, kota 1.000). Tahmin yalnız WhatsApp hattı bağlı kursta, bütün mesajlar hizmet sayılarak;
+// 24 saat penceresindeki cevaplar ücretsizdir, gerçek tutar Meta faturasındadır.
+const MESAJ_UCRET = 'sinyal-yonetim-mesaj-ucret';
+function mesajUcret() { try { return { hizmet: 0.25, pazarlama: 0.5, kota: 1000, ...JSON.parse(localStorage.getItem(MESAJ_UCRET) || '{}') }; } catch (x) { return { hizmet: 0.25, pazarlama: 0.5, kota: 1000 }; } }
 function silinenHtml() {
   if (!silinecekler.length) return `<div class="sh-bos">${ik('tik')}<b>Silinen hesap yok</b><small>Sildiğin hesaplar ${SIL_GUN} gün burada durur; bu sürede geri alabilirsin.</small></div>`;
   return `<div class="sh-liste">${silinecekler.slice().sort((a, b) => b.zaman.localeCompare(a.zaman)).map(x => `<div class="sh-satir sh-silinen">
@@ -345,6 +353,8 @@ async function yenile() {
 }
 
 function yaz(ev) {
+  // MSJ-038: mesaj ücreti/kota (bu cihazda); geçersiz sayı yazılmaz
+  { const mu = ev.target.closest && ev.target.closest('[data-mesaj-ucret]'); if (mu) { const v = parseFloat(String(mu.value).replace(',', '.')); if (isFinite(v) && v >= 0) { const o = mesajUcret(); o[mu.dataset.mesajUcret] = mu.dataset.mesajUcret === 'kota' ? Math.round(v) : v; try { localStorage.setItem(MESAJ_UCRET, JSON.stringify(o)); } catch (x) { } } return; } }
   const and = ev.target.closest('[data-sh-an-durum]');
   if (and) { const anim = and.dataset.shAnDurum, durum = and.value; moIstek('/soru-bildir/yonet', { yontem: 'POST', govde: { anim, durum } }).then(j => { sq.anim = (sq.anim || []).map(x => x.anim === anim ? j.kayit : x); bildir('Animasyon durumu güncellendi'); ciz(); }).catch(x => { bildir(turkceHata(x), 'uyari'); ciz(); }); return; }
   const sqd = ev.target.closest('[data-sh-sq-durum]');
