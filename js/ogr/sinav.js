@@ -101,6 +101,8 @@ function bitir(k) {
   k.yanlislar = [...new Set([...(k.yanlislar || []).filter(x => !dogruQ.includes(x)), ...yanlis])];
   test.eksik = test.liste.length - test.cevaplar.length;
   if (test.mod === 'deneme' && !test.eksik) { k.deneme = k.deneme || []; k.deneme.push(test.dogru * 2); }
+  // UYG-005: deneme ve testlerin ayrıntısı kurs panelinde listelenir (son 60 kayıt)
+  { const n = test.liste.length, d = test.dogru, cv = test.cevaplar.length; k.denemeDetay = [...(k.denemeDetay || []), { tur: test.mod, bas: new Date(test.basla || Date.now()).toISOString(), bit: new Date().toISOString(), sure: Math.round((test.harcanan || 0) / 1000), soru: n, dogru: d, yanlis: cv - d, bos: n - cv, puan: test.mod === 'deneme' ? d * 2 : Math.round(d / Math.max(1, n) * 100), tamam: !test.eksik }].slice(-60); }
   HZ.gorulenEkle(k, test.cevaplar.map(([qi]) => qi));
   HZ.tekrarGuncelle(k, test.cevaplar.map(([qi, c]) => [qi, c === SR[qi][3]]));
   // sonuç tablosu: her konuda kaç soru vardı (boşlar dahil), kaçı doğru
