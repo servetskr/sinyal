@@ -192,7 +192,7 @@ function gelisimHtml(k, ctx) {
   // teorik eğitimi olmayan öğrencide (fark, muaf, otomatikten manuele, römork) teorik ilerlemesi yerine kısa açıklama; ek dersler ayrı sayılır
   let h = `<div class="ox-drs-ilerlemeler ${dir && tv ? '' : 'tek'}">${dir ? kutu(ds.ek ? `Direksiyon · ${ds.ek} ek ders` : 'Direksiyon', ds.n, ds.g, 'ders') : ''}${tv ? kutu('Teorik', k.teorik, teorikSaat(k), 'saat') : ''}</div>${tv ? '' : not(TEORIKSIZ_METIN)}`;
   // ders türleri (UYG-006): alan/simülatör, akan trafik, gece — her biri yapılan / gereken
-  { const dt = dir ? dersTurleri(k) : null; if (dt && dt.length > 1) h += `<div class="ox-drs-turler" aria-label="Ders türlerine göre">${dt.map(x => cip(`${esc(x.ad)} ${x.n}/${x.g}`, x.n >= x.g ? 'yesil' : 'gri')).join('')}</div>`; }
+  { const dt = dir ? dersTurleri(k) : null; if (dt && dt.length > 1) h += `<div class="ox-drs-turler" aria-label="Ders türlerine göre">${dt.map(x => cip(esc(x.etiket), x.n >= x.g ? 'yesil' : 'gri')).join('')}</div>`; }
   if (dir) {
     const { l, son, once } = beceriOzet(k), sayi = Math.min(3, l.length);
     if (l.length) {

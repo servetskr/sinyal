@@ -377,8 +377,9 @@ export function dersTurleri(k) {
   const altG = !mevcutKod(k.mevcutEhliyet) && !egitimSinifi(k.sinif) ? Math.min(2, g) : 0;
   const yd = sbDers(S.dersler).filter(d => d.kursiyer === k.id && d.durum === 'Yapıldı'), alt = yd.filter(d => d.tur === 'alan' || d.tur === 'simulator').length;
   const gg = geceGerekli(k), gece = gg ? sbDers(S.dersler).filter(d => d.kursiyer === k.id && d.durum !== 'Gelmedi' && d.durum !== 'İptal' && geceDersMi(d)).length : 0;
-  return [altG ? { tur: 'alan', ad: 'Alan / simülatör', n: Math.min(alt, altG), g: altG } : null, { tur: 'trafik', ad: 'Akan trafik', n: Math.min(yd.length - Math.min(alt, altG), g - altG), g: g - altG }, gg ? { tur: 'gece', ad: 'Gece', n: Math.min(gece, gg), g: gg } : null].filter(Boolean);
+  return [altG ? { tur: 'alan', ad: 'Alan / simülatör', n: Math.min(alt, altG), g: altG } : null, { tur: 'trafik', ad: 'Akan trafik', n: Math.min(yd.length - Math.min(alt, altG), g - altG), g: g - altG }, gg ? { tur: 'gece', ad: 'Gece', n: Math.min(gece, gg), g: gg, dahil: true } : null].filter(Boolean).map(x => ({ ...x, etiket: `${x.ad} ${x.n}/${x.g}${x.dahil ? ' (trafiğe dahil)' : ''}` }));
 }
+// DENETİM K11: gece dersleri akan trafik derslerinin içinde sayılır (toplama eklenmez); etiket bunu yazar: "Gece 2/2 (trafiğe dahil)"
 // MEB iş günü: programdaki tek iş günü tanımı (MTSK sürelerinde: sınav onayı 4 iş günü, randevu 4 iş günü, sınav ücreti 6 iş günü, mazeret 5 iş günü).
 // Pazartesi–Cuma; resmî tatil ve bayramlar hariç. Cumartesi iş günü değildir (657 md.99, MTSK md.16/7; eyup-sorular-cevaplar.md madde 11), eski
 // mebCumartesi ayarı artık okunmaz. Arife ve kursun girdiği idari izin günleri de sayılmaz: teyit bekliyor (madde 11), son tarih erkene çekilir.

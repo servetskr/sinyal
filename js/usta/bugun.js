@@ -35,8 +35,8 @@ const AY_IK = '<svg class="ox-i" viewBox="0 0 24 24" aria-hidden="true" fill="no
 export const geceCip = d => geceDersMi(d) ? `<span class="ox-ugc">${AY_IK}Gece dersi</span>` : '';
 // ders türü (UYG-007): alan ya da simülatör dersi ayrıca işaretlenir; akan trafik varsayılan, çipsiz
 export const turCip = d => d && (d.tur === 'alan' || d.tur === 'simulator') ? `<span class="ox-ugc">${DERS_TUR_AD[d.tur]}</span>` : '';
-// öğrencinin ders türlerine göre ilerlemesi tek satırda: "Alan / simülatör 1/2 · Akan trafik 8/14 · Gece 0/2"
-export const turOzet = k => { const dt = dersTurleri(k); return dt && dt.length > 1 ? `<small class="ox-ubg-turler">${dt.map(x => `${esc(x.ad)} ${x.n}/${x.g}`).join(' · ')}</small>` : ''; };
+// öğrencinin ders türlerine göre ilerlemesi tek satırda: "Alan / simülatör 1/2 · Akan trafik 8/14 · Gece 0/2 (trafiğe dahil)"
+export const turOzet = k => { const dt = dersTurleri(k); return dt && dt.length > 1 ? `<small class="ox-ubg-turler">${dt.map(x => esc(x.etiket)).join(' · ')}</small>` : ''; };
 // Öğrencinin gece dersi sayısı: kurallar.js (M04 ve ders ekleme notu) ile aynı sayım; gelmediği ve iptal dersler sayılmaz. Gerekmiyorsa null.
 export function geceSayim(k) {
   const g = geceGerekli(k); if (!g) return null;
