@@ -1,4 +1,4 @@
-import { arifeMi, izinDurumu, haftalikSinir, haftaDers, ustaYetkili, S, gun, fark, SINIFLAR, egitmen, kapaliGun, dersAraci, risk, kursAdi } from './veri.js?v=234';
+import { kayitDondurmaMi, arifeMi, izinDurumu, haftalikSinir, haftaDers, ustaYetkili, S, gun, fark, SINIFLAR, egitmen, kapaliGun, dersAraci, risk, kursAdi } from './veri.js?v=234';
 import { gerekliDireksiyon, kuralAyar, geceKisitli, geceDersMi } from './veri.js?v=234';
 
 // B Engelli adayı kendi (raporuna uygun) aracıyla eğitim alıyorsa (MTSK Yön. md.7/5) ders kurs aracı olmadan planlanır (arac: null, "kendi aracı")
@@ -73,7 +73,8 @@ export function otomatikPlan({ gunSay = 7, haftalik = 3 } = {}) {
   const ekle = d => { dolu.add('u' + d.tarih + d.saat + d.egitmen); dolu.add('k' + d.tarih + d.saat + d.kursiyer); if (d.arac) dolu.add('a' + d.tarih + d.saat + d.arac); kGun[d.kursiyer + d.tarih] = (kGun[d.kursiyer + d.tarih] || 0) + 1; uGun[d.egitmen + d.tarih] = (uGun[d.egitmen + d.tarih] || 0) + 1; kHafta[d.kursiyer] = (kHafta[d.kursiyer] || 0) + 1; };
   S.dersler.filter(d => d.durum !== 'İptal' && fark(d.tarih) >= 0).forEach(d => { ekle(d); if (fark(d.tarih) < 1 || fark(d.tarih) > gunSay) kHafta[d.kursiyer]--; });
   const sonDers = k => S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Yapıldı').reduce((a, d) => d.tarih > a ? d.tarih : a, '');
-  const adaylar = S.kursiyerler.filter(k => !k.kapali && ['Direksiyon', 'Sınav'].includes(k.asama) && gerekliDireksiyon(k) && egitmen(k.egitmen))
+  // DIR-014: MEBBİS'te 'Kayıt Dondurma' etiketli aday planlanmaz
+  const adaylar = S.kursiyerler.filter(k => !k.kapali && !kayitDondurmaMi(k) && ['Direksiyon', 'Sınav'].includes(k.asama) && gerekliDireksiyon(k) && egitmen(k.egitmen))
     .map(k => ({ k, kalan: gerekliDireksiyon(k) + (k.ekDersHakki || 0) - k.direksiyon - S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Planlandı').length }))
     .filter(x => x.kalan > 0 && !(S.kurs.borcluDers === 'engelle' && x.k.odeme.taksitler.some(t => !t.odendi && !t.iptal && fark(t.vade) < 0)))
     .sort((a, b) => (a.k.dsinavPlan || '9999').localeCompare(b.k.dsinavPlan || '9999') || sonDers(a.k).localeCompare(sonDers(b.k)));

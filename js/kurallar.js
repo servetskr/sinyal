@@ -5,7 +5,7 @@
 // 'uyari', 'bilgi'. Dizinin üstünde ek alanlar: kural (kimlik), kursiyer (id), kursiyerler (birden çok kişiye ait oturum bulgusunda kimlik listesi, ör. Y04), kisa (öğrenci dosyasında ad olmadan başlık), yalnizDosya, eylem.
 // DOM yok; yalnız veri.js'e bağlı (Node'da denenebilir). Bugün: veri.js BUGUN / gun().
 // Yeni kurallar ilk sürümde yalnız "uyarı"dır; Eyüp Bey teyit edince engele çevrilebilir (belgeler/eksikler/eyup-sorular.md).
-import { S, gun, fark, aracUygun, belgeliMi, dersSayaci, izinDurumu, mebIsGunuIleri, haftalikSinir, haftaDers, ustaYetkili, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
+import { S, gun, fark, aracUygun, belgeliMi, dersSayaci, kayitDondurmaMi, izinDurumu, mebIsGunuIleri, haftalikSinir, haftaDers, ustaYetkili, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
 
 /* ---------- yardımcılar (ui.js'teki biçimlerle aynı; ui.js DOM'a bağlı olduğu için burada kopyası) ---------- */
 const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
@@ -331,6 +331,8 @@ export function dersKontrol(o) {
   if (cak) sorun.push(`Bu kursiyerin aynı saatte ${(egitmen(cak.egitmen) || { ad: 'başka bir usta öğretici' }).ad} ile dersi var.`);
   // DIR-011/013/046: ilk belgede ilk iki ders alan ya da simülatörde (md.7/1); trafik dersi bundan önce planlanıyorsa not (fark sınıfında zorunlu değil)
   if (tur !== 'alan' && tur !== 'simulator') { const ds = dersSayaci(k, planGun), as = ds.alanSim; if (as.gerek && as.yapildi + as.planli < as.gerek && !ds.aktarim) not.push(`İlk ${as.gerek} ders simülatör ya da eğitim alanında olmalı (MTSK Yön. md.7/1); bu aday için alan/simülatör ${as.yapildi + as.planli}/${as.gerek}. Ders türünü “Eğitim alanı” ya da “Simülatör” seçin.`); }
+  // DIR-014: MEBBİS'te kaydı dondurulmuş adaya ders planlanmaz
+  if (kayitDondurmaMi(k)) sorun.push(`${tamAd(k)} adayının kaydı dondurulmuş (MEBBİS ‘Kayıt Dondurma’); dondurma kalkmadan ders planlanamaz.`);
   // DIR-050: simülatör dersi yalnız ilk kez sürücü belgesi alacak adaya (belgesi olan, başka sınıf alan adaya alan dersi verilir)
   if (tur === 'simulator' && belgeliMi(k)) sorun.push(`Simülatör dersi yalnız ilk kez sürücü belgesi alacak adaya verilir; ${tamAd(k)} adayının ${k.mevcutEhliyet} belgesi var (alan dersi verin).`);
   // DIR-047: aynı araç ya da aynı simülatör aynı saatte iki derste olamaz (kimin dersi olduğu yazılır)

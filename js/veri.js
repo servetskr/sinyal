@@ -1028,6 +1028,9 @@ export function teorikSaat(k) {
 }
 // Belgeli aday (TEO-003): mevcut sürücü belgesiyle farklı sınıf istiyor (md.39). Muafiyet değildir (muaf: son 3 yılda e-sınavı geçen, md.15/5).
 // Teorik dersi ve e-sınavı olmayan belgeli adayda MEBBİS durumu "Uygulama Sınav Aşamasında"dır: aşaması Direksiyon, e-sınav işi ve 90 gün kuralı yok.
+// DIR-014: MEBBİS'teki aday etiketleri (SKT02006 durum 12 Ceza Kaydı, 13 Kayıt Dondurma, 14 Kayıt Dışı, 15 Ücretsiz, 24 A1/125 CC; k.meb.etiketler)
+export const mebEtiketleri = k => ((k && k.meb && k.meb.etiketler) || []).map(x => String(x || '').trim()).filter(Boolean);
+export const kayitDondurmaMi = k => mebEtiketleri(k).some(x => /dondur/i.test(x)) || !!(k && k.kapali && k.kapali.tur === 'dondur');
 export const belgeliMi = k => !!(k && k.mevcutEhliyet && k.mevcutEhliyet !== 'Yok');
 // DIR-011/012: ders sayacı — toplam ve dağılım. Alan ya da simülatör en az 2 saat, akan trafikten önce (MTSK Yön. md.7/1); farklı sınıf alan
 // (belgeli) bu eğitimi akan trafikte de alabilir → zorunlu değil. 'yapildi' sayısı mdSinyal'deki ders kayıtlarından; eski programdan aktarılan
