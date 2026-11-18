@@ -1,21 +1,22 @@
 // e-Sınav yolu (TEO-007, TEO-008): teorikteki her aday tek bir bölümde. esinavAsamasi DOM'suzdur; ekran Sınavlar › "e-Sınav yolu" sekmesi.
 // Bölüm sırası (ilk tutan bölüm): muaf → doldu → geçti → bekleyen → sonuç → randevu → derste → ücret → tekrar → başvuru.
-import { S, gun, fark, SINIFLAR, tamAd, sb, sbSinav, egitimSinifi, esinavsizBelgeli, esinavHakDurum, esinavUcretiVar, esinavUcretiIsle, teorikSaat, islem, kaydet, sinifEtiket } from './veri.js?v=234';
+import { esinavUcreti, S, gun, fark, SINIFLAR, tamAd, sb, sbSinav, egitimSinifi, esinavsizBelgeli, esinavHakDurum, esinavUcretiVar, esinavUcretiIsle, teorikSaat, islem, kaydet, sinifEtiket } from './veri.js?v=234';
 import { e, rozet, tarih, ik, avatar, bildir, pencere, kapatPencere, bos } from './ui.js?v=234';
 import * as GR from './gruplar.js?v=234';
 
 export const YOL_BOLUM = [
   ['bekleyen', 'Kayıt bekliyor', 'Grup ya da evrak eksik'],
-  ['derste', 'Teorik derste', 'Teorik dersleri sürüyor'],
+  ['derste', 'Teorik derste', 'Teorik dersleri bitmeden MEBBİS başvuru almaz'],
   ['ucret', 'Ücreti bekleniyor', 'Sıradaki hakkın e-sınav ücreti yatmadı'],
   ['basvuru', 'Başvurusu yapılacak', 'Ücret yattı; MEBBİS’te e-sınav başvurusu'],
   ['tekrar', 'Tekrar girecek', 'Kaldı ya da girmedi; ücret yattı, yeni başvuru'],
   ['randevu', 'Randevusu var', 'Yaklaşan e-sınav oturumunda ya da MEBBİS’e başvurulmuş'],
   ['sonuc', 'Sonuç girilecek', 'Oturum geçti, sonuç girilmedi'],
-  ['doldu', 'Hakkı doldu', 'e-Sınav hakkı bitti; dosya kapanır'],
-  ['gecti', 'Geçti · direksiyona geçecek', 'Direksiyon dersi henüz planlanmadı'],
-  ['muaf', 'Muaf · belgeli', 'e-Sınava girmez; yalnız direksiyon'],
+  ['doldu', 'Hakkı doldu', 'e-Sınav hakkı bitti; MEBBİS başvuruyu reddeder (“e-Sınava girebilecek aday bulunamadı”)'],
+  ['gecti', 'Geçti · direksiyona geçecek', 'e-Sınavı geçti, başvuru gerekmez; direksiyon dersi henüz planlanmadı'],
+  ['muaf', 'Muaf · belgeli', 'Belgeli, e-sınavdan muaf; MEBBİS başvuruyu kabul etmez, yalnız direksiyon'],
 ];
+const tlK = n => (+n || 0).toLocaleString('tr-TR') + ' ₺';
 const dersVar = k => (S.dersler || []).some(d => d.kursiyer === k.id && ['Planlandı', 'Yapıldı'].includes(d.durum));
 const esOturumlari = k => sbSinav(S.sinavlar).filter(s => s.tur === 'e-Sınav' && (s.kursiyerler || []).includes(k.id));
 // e-sınav yolundaki adaylar: kapanmamış, eğitim sınıfı (100 ceza) olmayan; teorikte ya da e-sınavı geçip henüz direksiyon dersi olmayan
@@ -47,7 +48,9 @@ const sonRandevu = k => { const g = GR.kursiyerGrubu(k); if (!g || !/^\d{4}-\d{2
 function kart(k, b) {
   const h = esinavHakDurum(k), sr = sonRandevu(k), ms = k.meb && k.meb.haklarSonGun, ot = esOturumlari(k).filter(s => fark(s.tarih) > 0).sort((a, c) => a.tarih.localeCompare(c.tarih))[0];
   const alt = [sinifEtiket(k.sinif, k), b === 'muaf' ? (k.muaf ? 'muaf (md.15/5)' : 'belgeli') : b === 'derste' ? `teorik ${k.teorik || 0}/${teorikSaat(k)} saat${(t => t ? ' · ' + (fark(t.tarih) < 0 ? 'bitti ' : 'bitiş ') + tarih(t.tarih) + (t.kaynak === 'MEBBİS' ? ' (MEBBİS)' : '') : '')(GR.teorikBitis(k))}` : `${h.sira}. hak / ${h.sinir}`, ot ? 'oturum ' + tarih(ot.tarih) : '', sr && !['muaf', 'gecti', 'doldu'].includes(b) ? `son randevu ${tarih(sr)}${ms ? ' · MEBBİS ' + tarih(ms) : ''}` : ''].filter(Boolean);
-  const rz = [h.meb.anlam ? rozet('MEBBİS: ' + h.meb.anlam, h.meb.ham === 0 || h.meb.ham === 5 ? 'kirmizi' : 'mavi') : '', h.fark ? rozet('Kayıt farkı', 'sari') : '', sr && fark(sr) <= 20 && fark(sr) >= 0 && !['muaf', 'gecti', 'doldu'].includes(b) ? rozet(fark(sr) + ' gün kaldı', fark(sr) <= 7 ? 'kirmizi' : 'sari') : ''].filter(Boolean).join(' ');
+  // SNV-093 (d): başvuru öncesi onay durumu — MEBBİS Getir'i engellemiyor, Kaydet'in tutup tutmadığı bilinmiyor; uyarı
+  const M = k.meb || {}, onayRz = ['basvuru', 'tekrar'].includes(b) ? (!k.mebOnay && !/onaylan/i.test(M.kurumOnay || '') ? rozet('Kurum onayı yapılmadı', 'sari') : /il[çc]e/i.test(M.durum || '') && /onay/i.test(M.durum || '') && /bekl/i.test(M.durum || '') ? rozet('İlçe onayı bekliyor', 'sari') : '') : '';
+  const rz = [onayRz, b === 'ucret' ? rozet(`önce ${tlK(esinavUcreti(h.sira))} e-sınav ücreti`, 'sari') : '', h.meb.anlam ? rozet('MEBBİS: ' + h.meb.anlam, h.meb.ham === 0 || h.meb.ham === 5 ? 'kirmizi' : 'mavi') : '', h.fark ? rozet('Kayıt farkı', 'sari') : '', sr && fark(sr) <= 20 && fark(sr) >= 0 && !['muaf', 'gecti', 'doldu'].includes(b) ? rozet(fark(sr) + ' gün kaldı', fark(sr) <= 7 ? 'kirmizi' : 'sari') : ''].filter(Boolean).join(' ');
   const eylem = { ucret: `<button class="dg dg-cizgi dg-kucuk" data-ey-ucret="${k.id}">${ik('tik')}${h.sira}. hak ücreti yattı</button>`, basvuru: `<button class="dg dg-ana dg-kucuk" data-ey-ekle="${k.id}">${ik('arti')}Oturuma ekle</button>`, tekrar: `<button class="dg dg-ana dg-kucuk" data-ey-ekle="${k.id}">${ik('arti')}Oturuma ekle</button>`, sonuc: `<button class="dg dg-ana dg-kucuk" data-ey-sonuc="${k.id}">Sonucu gir</button>`, gecti: `<button type="button" class="dg dg-ana dg-kucuk" data-ey-plan="${k.id}">${ik('direksiyon')}Ders planı öner</button>`, bekleyen: `<a class="dg dg-cizgi dg-kucuk" href="#/kursiyer/${k.id}">Dosyayı aç</a>` }[b] || '';
   return `<li class="ey-kart"><a class="kisi" href="#/kursiyer/${k.id}">${avatar(k.ad, k.soyad, k.foto)}<div><b>${e(tamAd(k))}</b><small>${e(alt.join(' · '))}</small>${rz ? `<span class="ey-rozet">${rz}</span>` : ''}</div></a>${eylem ? `<span class="ey-eylem">${eylem}</span>` : ''}</li>`;
 }
