@@ -1238,7 +1238,7 @@ export async function ogrenciHesapAc(k) {
   const tel = telNorm(k.tel); if (!tel) throw hata('Öğrencinin cep telefonu numarası geçersiz; önce bilgilerini düzeltin');
   const { db, F, A } = await sdk();
   const tref = F.doc(db, 'telefonlar', tel), t = await F.getDoc(tref);
-  if (t.exists() && t.data().k !== bulut.kurs) throw hata('Bu telefon numarasıyla başka bir kursta öğrenci hesabı var. Öğrencinin başka bir numarasını girin');
+  if (t.exists() && t.data().k !== bulut.kurs) throw Object.assign(hata('Bu telefon numarasıyla başka bir kursta öğrenci hesabı var. Öğrencinin onayıyla numarayı bu kursa alabilirsiniz (Numara devri) ya da başka bir numara girin'), { baskaKurs: true, tel });
   // YON-082: öğrencinin kayıtta e-postası varsa hesap gerçek e-postayla açılır (doğrulama e-postası gider); yoksa ya da başka hesapta kullanılıyorsa iç adres
   const sifre = geciciSifre(), gercek = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(k.eposta || '').trim()) ? String(k.eposta).trim().toLowerCase() : '';
   let eposta = gercek || (tel + '.' + rastgele(6) + '@ogrenci.sinyal.app');
@@ -1302,6 +1302,42 @@ export async function ogrenciGiris(telGiris, sifre) {
   // yalnız şifre / hesap hatası "hatalı" diye gösterilir; başka bir hata (bağlantı, izin) kendi adıyla görünsün ki gizlenmesin
   if (son && son.code && !/wrong-password|invalid-credential|invalid-login|user-not-found|invalid-email|user-disabled/.test(son.code)) { console.warn('öğrenci girişi', son.code, son.message); throw hata('Giriş yapılamadı (' + son.code.replace(/^auth\//, '') + '). Biraz sonra tekrar deneyin; sürerse kursunuza haber verin'); }
   throw hata('Telefon numarası ya da şifre hatalı');
+}
+// YON-074: telefon numarasının kurslar arası devri öğrenci onayıyla (sunucusuz; kurallar devirler/{tel} belgesini korur)
+// yeni kurs ister → öğrenci bağlantıda eski hesabıyla girip onaylar → eski kursun ofis cihazı eski hesabı kapatır (numara serbest) → yeni kurs hesabı açar
+export async function devirIste(k) {
+  const { db, F } = await sdk(), tel = telNorm(k.tel); if (!tel) throw hata('Telefon numarası geçersiz');
+  const t = await F.getDoc(F.doc(db, 'telefonlar', tel)); if (!t.exists() || t.data().k === bulut.kurs) throw hata('Numara serbest; hesabı doğrudan açabilirsiniz');
+  const kod = rastgele(12);
+  await F.setDoc(F.doc(db, 'devirler', tel), { yeniKurs: bulut.kurs, yeniKursAd: S.kurs.ad || '', yeniKid: k.id, eskiKurs: t.data().k, kod, durum: 'bekliyor', tarih: F.serverTimestamp() });
+  k.devir = { tel, tarih: gun(0), durum: 'bekliyor' }; kaydet();
+  return { tel, kod, link: location.origin + location.pathname.replace(/[^/]*$/, '') + '#/devir/' + tel + '/' + kod };
+}
+export async function devirDurum(tel) { const { db, F } = await sdk(); const d = await F.getDoc(F.doc(db, 'devirler', tel)); return d.exists() ? d.data() : null; }
+// öğrenci (eski hesabıyla, telefon ya da e-posta + şifre) onaylar; oturum hemen kapanır
+export async function devirOnayla(tel, kod, giris, sifre) {
+  const { auth, db, F, A } = await sdk();
+  const d = await F.getDoc(F.doc(db, 'devirler', tel)).catch(() => null);
+  let user;
+  if (String(giris).includes('@')) user = (await A.signInWithEmailAndPassword(auth, String(giris).trim(), sifre)).user;
+  else { const t = await belgeOkuDene(F, F.doc(db, 'telefonlar', telNorm(giris) || tel)), l = t.exists() ? Object.values(t.data().h || {}) : []; let son = null; for (const a of l) { try { user = (await A.signInWithEmailAndPassword(auth, a, sifre)).user; break; } catch (x) { son = x; } } if (!user) throw hata('Telefon numarası ya da şifre hatalı'); }
+  try {
+    const dd = d && d.exists() ? d.data() : (await F.getDoc(F.doc(db, 'devirler', tel))).data();
+    if (!dd || dd.kod !== kod) throw hata('Bu devir bağlantısı geçersiz ya da kullanılmış');
+    if (dd.durum !== 'bekliyor') throw hata(dd.durum === 'onay' ? 'Devri zaten onayladın; eski kursun hesabı kapatınca yeni kursun hesabın açılır' : 'Bu devir tamamlanmış');
+    await F.updateDoc(F.doc(db, 'devirler', tel), { durum: 'onay', onaylayan: user.uid, onayZaman: F.serverTimestamp() });
+    return { yeniKursAd: dd.yeniKursAd };
+  } finally { try { await A.signOut(auth); } catch (x) { } }
+}
+// eski kursun ofis cihazı: onaylanmış devirlerde eski hesabı kapatır (numara serbest kalır), kursiyer notuna ve işlem kaydına yazar
+export async function devirleriIsle() {
+  if (!bulut.kurs || !fb || !['mudur', 'sekreter'].includes(bulut.rol)) return 0;
+  const { db, F } = fb; let n = 0;
+  const q = await F.getDocs(F.query(F.collection(db, 'devirler'), F.where('eskiKurs', '==', bulut.kurs), F.where('durum', '==', 'onay'))).catch(() => null); if (!q) return 0;
+  for (const d of q.docs) { const tel = d.id, v = d.data(), k = (S.kursiyerler || []).find(x => x.hesap && x.hesap.tel === tel);
+    try { if (k) { await ogrenciHesapKapat(k); (k.notlar = k.notlar || []).unshift({ tarih: gun(0), metin: 'Telefon numarası öğrencinin onayıyla ' + (v.yeniKursAd || 'başka bir kursa') + ' devredildi; bu kurstaki öğrenci hesabı kapandı.' }); islem('Numara devrini tamamladı', (k.ad || '') + ' · ' + (v.yeniKursAd || '')); }
+      await F.updateDoc(F.doc(db, 'devirler', tel), { durum: 'kapandi', kapanis: F.serverTimestamp() }); n++; } catch (x) { console.warn('devir', x); } }
+  if (n) kaydet(); return n;
 }
 // YON-082: öğrenci uygulamasından e-posta ekleme / değiştirme — doğrulama bağlantısına tıklanınca hesabın e-postası değişir
 export async function ogrenciEpostaEkle(eposta) { const { auth, A } = await sdk(); if (!auth.currentUser) throw hata('Önce giriş yapın'); await A.verifyBeforeUpdateEmail(auth.currentUser, String(eposta).trim()); }

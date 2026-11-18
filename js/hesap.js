@@ -19,12 +19,26 @@ async function ac(k) {
 }
 async function kapat(k) { if (B.bulutta()) return B.ogrenciHesapKapat(k); k.hesap = null; delete k.hesapAktif; }
 
+// YON-074: numara devri — öğrenciye WhatsApp'tan onay bağlantısı; onaylanıp eski kurs kapatınca hesap buradan açılır
+export function devirPenceresi(k, yenile) {
+  pencere({ baslik: 'Numara başka kursta kayıtlı', icerik: `<p style="font-size:14.5px">${e(B.telGoster(B.telNorm(k.tel)))} numarasıyla başka bir kursta öğrenci hesabı var (nakil gelen ya da başka kursu bitirmiş öğrenci).</p>
+      <ol class="liste" style="margin-top:8px"><li>Öğrenciye WhatsApp’tan onay bağlantısı gider.</li><li>Öğrenci eski hesabıyla girip devri onaylar.</li><li>Eski kurs hesabı kapatır (onların mdSinyal’i açılınca kendiliğinden); numara bu kursa geçer.</li><li>“Durumu yenile” ile hesabı buradan açarsınız.</li></ol>`,
+    altlik: '<button class="dg dg-cizgi" data-devir-duzelt>Numarayı düzelt</button><button class="dg dg-ana" data-devir-gonder>Numara devri iste</button>',
+    onAc(p) { p.querySelector('[data-devir-duzelt]').addEventListener('click', () => { kapatPencere(); bilgiDuzenle(k); });
+      p.querySelector('[data-devir-gonder]').addEventListener('click', () => devirGonder(k, yenile)); } });
+}
+function devirGonder(k, yenile) {
+  B.devirIste(k).then(d => { kapatPencere(); islem('Numara devri istedi', tamAd(k)); kaydet();
+    wpGonder(k, `${selam(k)}\n\n*${S.kurs.ad}* öğrenci uygulamasında hesabınızı açmak istiyoruz; numaranız başka bir kursun uygulamasında kayıtlı. Onaylarsanız eski kurstaki öğrenci hesabınız kapanır, numaranız bu kursa geçer:\n${d.link}\n\nOnaylamak için eski hesabınızın şifresiyle girin. Bu isteği siz istemediyseniz bağlantıyı açmayın.`, 'Numara devri');
+    bildir('Onay bağlantısı WhatsApp’tan gönderildi'); yenile && yenile(); }).catch(x => bildir(B.hataMetni(x), 'uyari'));
+}
 export function hesapSeridi(k) {
   if (!yetkili() || k.kapali) return '';
   const h = k.hesap;
   const durum = h ? [B.telGoster(h.tel), 'açıldı ' + tarih(h.acildi), h.sifirlandi ? 'şifre yenilendi ' + tarih(h.sifirlandi) : '', k.hesapAktif ? 'kullanıyor' + (k.sonGiris ? ' · son giriş ' + tarih(k.sonGiris) : '') : 'ilk giriş bekleniyor'].filter(Boolean).join(' · ') : 'Öğrenci kendi telefonundan program, ders, ödeme, sınav ve evraklarını görsün; ders alsın, evrak yüklesin, deneme sınavı çözsün';
   return `<div class="panel-serit"><span>${ik('tel')}<b>Öğrenci hesabı</b><small>${e(durum)}</small></span><span class="sag" style="gap:6px">${h
     ? `<button type="button" class="dg dg-hafif dg-kucuk" data-hesap-sifre>Yeni geçici şifre gönder</button><button type="button" class="dg dg-hafif dg-kucuk" data-hesap-kapat>Hesabı kapat</button>`
+    : k.devir && k.devir.durum !== 'kapandi' ? `<small style="color:var(--sari-koyu,#a15c00)">Numara devri bekleniyor (${tarih(k.devir.tarih)})</small><button type="button" class="dg dg-cizgi dg-kucuk" data-devir-durum>Durumu yenile</button><button type="button" class="dg dg-hafif dg-kucuk" data-devir-iste>Bağlantıyı yeniden gönder</button>`
     : `<button type="button" class="dg dg-ana dg-kucuk" data-hesap-ac>Hesap aç ve WhatsApp’tan gönder</button>`}${(S.kurs.plus || {}).acik ? `<label style="display:flex;gap:6px;align-items:center;font-size:13.5px;color:var(--murekkep)"><input type="checkbox" data-hesap-plus ${k.plus ? 'checked' : ''}>Plus paket</label>` : ''}</span></div>`;
 }
 // kayıt sırasında: hesap arka planda açılır, giriş bilgileri gönderilir
@@ -65,6 +79,10 @@ export function hesapAcSessiz(k) {
 }
 // öğrenci dosyasındaki tıklamalar; işlendiyse true
 export function hesapTikla(ev, k, yenile) {
+  if (ev.target.closest('[data-devir-iste]')) { devirGonder(k, yenile); return true; }
+  const dd = ev.target.closest('[data-devir-durum]'); if (dd) { dd.disabled = true; B.devirDurum(B.telNorm(k.tel)).then(d => { dd.disabled = false;
+    if (!d || d.durum === 'kapandi') { k.devir = { ...(k.devir || {}), durum: 'kapandi' }; kaydet(); bildir('Numara serbest; hesap açılıyor'); const b = document.createElement('button'); b.dataset.hesapAc = ''; hesapTikla({ target: b }, k, yenile); }
+    else bildir(d.durum === 'onay' ? 'Öğrenci onayladı; eski kursun hesabı kapatması bekleniyor' : 'Öğrenci henüz onaylamadı', 'uyari'); }).catch(x => { dd.disabled = false; bildir(B.hataMetni(x), 'uyari'); }); return true; }
   const b = ev.target.closest('[data-hesap-ac], [data-hesap-sifre]');
   if (b) {
     b.disabled = true;
@@ -75,6 +93,8 @@ export function hesapTikla(ev, k, yenile) {
       yenile();
     }).catch(x => {
       b.disabled = false; const m = B.hataMetni(x); bildir(m, 'uyari');
+      // YON-074: numara başka kursta → öğrenci onayıyla devir önerilir
+      if (x.baskaKurs) return devirPenceresi(k, yenile);
       // numara başka kursta kayıtlı ya da geçersizse numara düzenleme ekranı hemen açılır (not 16)
       if (/numara/i.test(m) && /başka bir kursta|geçersiz/i.test(m)) { bilgiDuzenle(k); setTimeout(() => { const t = document.querySelector('.pencere [name=tel]'); if (t) { t.focus(); t.select(); } }, 120); }
     });

@@ -171,7 +171,7 @@ export function destekPenceresi(hazirMetin = '') {
     } });
 }
 // YON-018: ön büro yetkisi başka cihazdan değişince menü yeniden çizilsin
-let bilgiSoruldu = false, ipDenetlendi = false;
+let bilgiSoruldu = false, ipDenetlendi = false, devirBakildi = false;
 const yetkiImza = () => JSON.stringify((S.kurs || {}).yetki || null) + '|' + ((oturum.kullanici || {}).rol || '');
 let sonYetki = '';
 function iskelet() {
@@ -264,6 +264,8 @@ export function yenile(kaydirma = false) {
   yer.replaceChildren(kap);
   if (ekranDuzey(r.ad === 'kursiyer' ? 'kursiyerler' : r.ad) === 'gor') saltOkunur(kap);
   kurulumSeridi(kap); epostaSeridi(kap);
+  // YON-074: onaylanmış numara devirleri (bu kurs eski kurssa) ofis cihazında işlenir; oturum başına ve 10 dakikada bir
+  if (!devirBakildi && oturum.kullanici.bulut && ['mudur', 'sekreter'].includes(oturum.kullanici.rol)) { devirBakildi = true; const bak = () => B.devirleriIsle().then(n => { if (n) { bildir(n + ' öğrencinin numarası onayıyla başka kursa devredildi; hesapları kapandı'); yenile(); } }).catch(() => { }); setTimeout(bak, 6000); setInterval(bak, 600000); }
   // YON-021: ön büro IP yetkilendirmesi (oturum başına bir kez); izin yoksa içerik kapanır, yalnız çıkış
   if (!ipDenetlendi && oturum.kullanici.bulut && oturum.kullanici.rol === 'sekreter') { ipDenetlendi = true; import('./ipliste.js?v=234').then(m => m.ipDenetle()).then(d => { if (d.izin) return; islem('İzinsiz IP’den giriş denedi', d.ip); kaydet(); document.getElementById('icerik') && document.getElementById('icerik').replaceChildren();
     const girise = () => B.cikisYap().then(() => { try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } location.hash = '#/giris'; location.reload(); });
@@ -1094,6 +1096,18 @@ function kapiEkrani() {
     </div></div></div>`;
 }
 // Davet linki: #/davet/<kurs>/<kod>
+// YON-074: numara devri onay sayfası (öğrenci eski hesabıyla girip onaylar; oturum hemen kapanır)
+const devirYolu = () => { const m = location.hash.match(/^#\/devir\/(905\d{9})\/([a-z0-9]{8,})$/); return m ? [m[1], m[2]] : null; };
+function devirEkrani() {
+  const [tel, kod] = devirYolu(), kok = document.getElementById('uyg'); document.title = 'Numara devri · mdSinyal';
+  kok.innerHTML = `<div class="giris"><div class="giris-levha">${LOGO}<h1>Numara devri</h1><p>Yeni kursun öğrenci uygulamasında hesabının açılabilmesi için numaranı (${e(B.telGoster(tel))}) eski kursundaki hesaptan almak istiyor. Onaylarsan eski kurstaki öğrenci hesabın kapanır.</p>
+    <form class="giris-eposta" novalidate data-devir-form><label>Cep telefonun ya da e-postan<input name="g" autocomplete="username" value="${e(B.telGoster(tel))}"></label><label>Eski hesabının şifresi<input name="s" type="password" autocomplete="current-password" required></label>
+    <button class="dg dg-ana" type="submit">Devri onayla</button></form><p class="giris-baglar" style="font-size:13px">Bu isteği sen istemediysen sayfayı kapat; hiçbir şey değişmez.</p></div></div>`;
+  const f = kok.querySelector('[data-devir-form]');
+  f.addEventListener('submit', ev => { ev.preventDefault(); const btn = f.querySelector('button'); btn.disabled = true; btn.textContent = 'Onaylanıyor…';
+    B.devirOnayla(tel, kod, f.g.value, f.s.value).then(r => { kok.querySelector('.giris-levha').innerHTML = `${LOGO}<h1>Onaylandı</h1><p>${e(r.yeniKursAd || 'Yeni kursun')} hesabını açınca giriş bilgilerin WhatsApp’tan gelir. Eski kurstaki hesabın kapanıyor.</p>`; })
+      .catch(x => { btn.disabled = false; btn.textContent = 'Devri onayla'; bildir(B.hataMetni(x), 'uyari'); }); });
+}
 const davetYolu = () => { const m = location.hash.match(/^#\/davet\/([^/]+)\/([^/]+)$/); return m ? [m[1], m[2]] : null; };
 async function davetEkrani() {
   const [kurs, kod] = davetYolu();
@@ -1198,6 +1212,7 @@ if (location.hash.startsWith('#/kapi')) kapiEkrani();
 else if (imzaLinki()) imzaSayfasiAc();
 else if (ogrYolu()) eskiLink();
 else if (location.hash === '#/ogrenci-giris') ogrenciGirisEkrani(B.bulutKayitli() ? 'Bu cihazda bir personel hesabı açık. Öğrenci olarak girersen o oturum kapanır.' : undefined);
+else if (devirYolu()) devirEkrani();
 else if (davetYolu()) davetEkrani();
 else if (kursDavetYolu()) kursDavetEkrani();
 else if (yonetimKurYolu() && !B.bulutKayitli()) yonetimHesapEkrani(yonetimKurYolu());
