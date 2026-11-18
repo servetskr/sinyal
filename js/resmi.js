@@ -12,8 +12,9 @@ const al = (o, yol) => yol.split('.').reduce((x, k) => (x == null ? x : x[k]), o
 function koy(o, yol, v) { const p = yol.split('.'); let x = o; p.slice(0, -1).forEach(k => { if (!x[k] || typeof x[k] !== 'object') x[k] = {}; x = x[k]; }); x[p[p.length - 1]] = v; }
 const subeOf = k => (S.subeler || []).find(x => x.id === ((k && k.sube) || gorunum.sube || 's1')) || (S.subeler || [])[0] || {};
 // Resmî ad kalıbı: “Özel … Motorlu Taşıt Sürücüleri Kursu”; kursun kısa adı ayıklanır
-const kisaAd = () => String(S.kurs.resmiAd || S.kurs.ad || '').replace(/^özel\s+/i, '').replace(/\s*(motorlu\s+taşıt\s+)?sürücü(leri)?\s+kursu\s*$/i, '').trim();
-const kurum = k => { const s = subeOf(k), kisa = kisaAd(); return { kisa, ad: 'Özel ' + kisa + ' Motorlu Taşıt Sürücüleri Kursu', il: S.kurs.sehir || '', ilce: s.semt || '', mudur: s.mudur || S.kurs.yetkili || '', adres: S.kurs.adres || '', kurucu: S.kurs.kurucu || '', kod: s.kurumKodu || '' }; };
+const kisaAd = (kaynak) => String(kaynak || S.kurs.resmiAd || S.kurs.ad || '').replace(/^özel\s+/i, '').replace(/\s*(motorlu\s+taşıt\s+)?sürücü(leri)?\s+kursu\s*$/i, '').trim();
+// YON-064: şubenin MEB'deki kurum adı ve adresi varsa onlar kullanılır
+const kurum = k => { const s = subeOf(k), kisa = kisaAd(s.mebAd); return { kisa, ad: 'Özel ' + kisa + ' Motorlu Taşıt Sürücüleri Kursu', il: S.kurs.sehir || '', ilce: s.semt || '', mudur: s.mudur || S.kurs.yetkili || '', adres: s.adres || S.kurs.adres || '', kurucu: S.kurs.kurucu || '', kod: s.kurumKodu || '' }; };
 const adSoyad = ad => { const p = String(ad || '').trim().split(/\s+/); return [p.slice(0, -1).join(' ') || p[0] || '', p.length > 1 ? p[p.length - 1] : '']; };
 const aracSinifi = a => a ? (SINIFLAR[a.sinif] ? SINIFLAR[a.sinif].ad : a.sinif) : '';
 const ogrenciAraci = k => { const d = S.dersler.filter(x => x.kursiyer === k.id && x.arac).sort((a, b) => b.tarih.localeCompare(a.tarih))[0]; return arac(d && d.arac) || S.araclar.find(a => a.egitmen === k.egitmen && aracSiniflari(k.sinif).includes(a.sinif)) || S.araclar.find(a => a.egitmen === k.egitmen) || null; };

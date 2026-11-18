@@ -1570,6 +1570,14 @@ export const sbDers = l => (gorunum.sube ? l.filter(d => subede(S.kursiyerler.fi
 export const varsayilanSube = () => gorunum.sube || 's1';
 export const sbSinav = l => (gorunum.sube ? l.filter(s => (s.kursiyerler || []).some(id => subede(S.kursiyerler.find(k => k.id === id)))) : l);
 export const seciliSube = () => (S.subeler || []).find(x => x.id === gorunum.sube) || null;
+// YON-064 (SOR-148): kurum kimliğindeki kişiler — belgelerin imza bloklarında kullanılır. Kurs düzeyi: ticari unvan, kurucu (türü), mükellef kodu,
+// MEB yetkilisi 1-2 (ad + unvan), şef; şube düzeyi: MEB'deki kurum adı, kurum müdürü, adres. subeId verilmezse kursiyerin / seçili / ilk şube.
+export function kurumKisileri(subeId) {
+  const l = S.subeler || [], s = l.find(x => x.id === subeId) || l.find(x => x.id === gorunum.sube) || l[0] || {}, K = S.kurs || {};
+  const kisi = x => x && String(x.ad || '').trim() ? { ad: String(x.ad).trim(), unvan: String(x.unvan || '').trim() } : null;
+  return { unvan: K.unvan || '', mebAd: s.mebAd || K.resmiAd || '', mudur: s.mudur || K.yetkili || '', kurucu: K.kurucu || '', kurucuTur: K.kurucuTur || '', mukellef: K.mukellefKodu || '',
+    yetkililer: (K.mebYetkili || []).map(kisi).filter(Boolean), sef: kisi(K.sef), adres: s.adres || K.adres || '' };
+}
 export const cokSube = () => (S.subeler || []).length > 1;
 // PAR-040: kullanıcıya şube (kasa) kısıtı — müdür dışındaki kullanıcının kaydında şube varsa yalnız o şubeyi ve kasasını görür
 export const kullaniciSubesi = () => { const o = oturum.kullanici; if (!o || o.rol === 'mudur' || !cokSube()) return ''; const u = (S.kullanicilar || []).find(x => x.id === o.id || (o.uid && x.uid === o.uid)); return u && u.sube && (S.subeler || []).some(x => x.id === u.sube) ? u.sube : ''; };

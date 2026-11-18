@@ -724,6 +724,36 @@ function gorunumSekme() {
 // kısa adres: mdsinyal.com/kayit ve /kayit/<şube> (404.html ve kayit/index.html uygulamanın #/kayit ekranını açar; belgeler/link-standardi.md)
 const kayitLinki = id => siteLink('kayit' + (id ? '/' + encodeURIComponent(id) : ''));
 const subeSeriKilitli = sid => (S.hareket || []).some(h => { const m = h.no && makbuzSira(h.no); return m && String(m[0]).startsWith(sid + '_'); });
+// YON-064 (SOR-148): kurum kimliği — firma bilgileri, MEB'e karşı yetkililer ve şube başına MEB adı, müdür, adres. Alan değişince kaydedilir.
+function kimlikSekme() {
+  const K = S.kurs, y = K.mebYetkili || [], sef = K.sef || {}, vkn = (S.entegrasyon || {}).vkn || '';
+  const alan = (ad, etiket, deger, ek = '') => `<div class="alan"><label for="ki-${ad}">${etiket}</label><input id="ki-${ad}" class="girdi" data-kimlik="${ad}" value="${e(deger || '')}" ${ek}></div>`;
+  return `${ekranNotu('Bu bilgiler sözleşme, makbuz, MEB formları, denetim dosyası ve hizmet sözleşmesinin imza bloklarına kendiliğinden yazılır. Alanı değiştirip çıkınca kaydedilir.')}
+  <div class="kart"><div class="kart-bas"><h3>Firma</h3><small>Kursu işleten kişi ya da şirket</small></div><div class="kart-govde form-izgara">
+    ${alan('unvan', 'Ticari unvan', K.unvan, `maxlength="120" placeholder="${e(K.ad || 'Ör. … Eğitim Hizmetleri Ltd. Şti.')}"`)}
+    <div class="alan"><label for="ki-kurucuTur">Kurucu türü</label><select id="ki-kurucuTur" class="girdi" data-kimlik="kurucuTur"><option value="">Seçin</option><option value="sahis" ${K.kurucuTur === 'sahis' ? 'selected' : ''}>Şahıs</option><option value="sirket" ${K.kurucuTur === 'sirket' ? 'selected' : ''}>Şirket</option></select></div>
+    ${alan('kurucu', K.kurucuTur === 'sirket' ? 'Kurucu temsilcisi (ad soyad)' : 'Kurucu (ad soyad)', K.kurucu, 'maxlength="80" autocomplete="off"')}
+    ${alan('vkn', 'VKN / TCKN', vkn, 'inputmode="numeric" maxlength="11" autocomplete="off"')}
+    ${alan('vergiDairesi', 'Vergi dairesi', K.vergiDairesi, 'maxlength="60"')}
+    ${alan('mukellefKodu', 'Mükellef kodu', K.mukellefKodu, 'maxlength="30" autocomplete="off"')}
+    ${alan('eposta', 'Kurum e-postası', K.eposta, 'type="email" maxlength="120" autocomplete="off"')}
+  </div></div>
+  <div class="kart" style="margin-top:16px"><div class="kart-bas"><h3>Yetkililer</h3><small>İmza bloklarında görev ve unvanla yazılır</small></div><div class="kart-govde form-izgara">
+    ${alan('y1ad', 'MEB yetkilisi 1 · ad soyad', (y[0] || {}).ad, 'maxlength="80" autocomplete="off"')}${alan('y1unvan', 'MEB yetkilisi 1 · unvan', (y[0] || {}).unvan, 'maxlength="60" placeholder="Ör. Müdür yardımcısı"')}
+    ${alan('y2ad', 'MEB yetkilisi 2 · ad soyad', (y[1] || {}).ad, 'maxlength="80" autocomplete="off"')}${alan('y2unvan', 'MEB yetkilisi 2 · unvan', (y[1] || {}).unvan, 'maxlength="60"')}
+    ${alan('sefAd', 'Şef · ad soyad', sef.ad, 'maxlength="80" autocomplete="off"')}${alan('sefUnvan', 'Şef · unvan', sef.unvan, 'maxlength="60" placeholder="Ör. Büro şefi"')}
+    <p class="alan tam" style="font-size:13px;color:var(--soluk)">MEB yetkilisi 1, denetim dosyası ve MEB’e giden listelerde “Hazırlayan” olarak yazılır (boşsa belgeyi hazırlayan kullanıcı); şef “Kontrol eden” olarak. Kurum müdürü aşağıda, şube başına.</p>
+  </div></div>
+  <div class="kart" style="margin-top:16px"><div class="kart-bas"><h3>${cokSube() ? 'Şubeler' : 'Kurum'}</h3><small>MEB’e göre her şube ayrı kurumdur</small></div><div class="kart-govde" style="display:grid;gap:14px">
+    ${(S.subeler || []).map((x, i) => `<fieldset class="ki-sube"><legend>${e(x.ad || 'Şube ' + (i + 1))}</legend><div class="form-izgara">
+      <div class="alan tam"><label for="ki-ma${i}">MEB’deki kurum adı</label><input id="ki-ma${i}" class="girdi" data-sube-alan="${i}:mebAd" maxlength="120" value="${e(x.mebAd || (i === 0 ? K.resmiAd || '' : ''))}" placeholder="Özel … Motorlu Taşıt Sürücüleri Kursu"></div>
+      <div class="alan"><label for="ki-kk${i}">MEB kurum kodu</label><input id="ki-kk${i}" class="girdi mono" inputmode="numeric" data-sube-alan="${i}:kurumKodu" value="${e(x.kurumKodu || '')}"></div>
+      <div class="alan"><label for="ki-mu${i}">Kurum müdürü</label><input id="ki-mu${i}" class="girdi" data-sube-alan="${i}:mudur" maxlength="80" value="${e(x.mudur || '')}" placeholder="${e(K.yetkili || '')}"></div>
+      <div class="alan"><label for="ki-il${i}">İlçe</label><input id="ki-il${i}" class="girdi" data-sube-alan="${i}:semt" maxlength="40" value="${e(x.semt || '')}"></div>
+      <div class="alan tam"><label for="ki-ad${i}">Açık adres</label><input id="ki-ad${i}" class="girdi" data-sube-alan="${i}:adres" maxlength="200" value="${e(x.adres || '')}" placeholder="${e(K.adres || 'Mahalle, cadde, no, ilçe / il')}"></div>
+    </div></fieldset>`).join('') || `<p class="ipucu">${isaret('bilgi', 18)}<span>Şube kaydı yok; Ayarlar › Şubeler’den ekleyin.</span></p>`}
+  </div></div>`;
+}
 function subelerSekme() {
   return `${ekranNotu('Her şube MEB’e göre ayrı izinli bir kurumdur: kendi kurum kodu, müdürü ve MEBBİS hesabı vardır. MEB işlemleri, sınavlar ve denetim dosyası şube seçilerek yapılır; kasa, kursiyer ve araçlar şubeye göre ayrılır.')}
   <div class="kart"><div class="tablo-kap"><table class="tablo tablo-mobil"><thead><tr><th>Şube</th><th>MEB kurum kodu</th><th>Kurs müdürü</th><th>MEBBİS hesabı</th><th title="Boşsa kursun ortak makbuz serisi">Makbuz öneki</th><th>Kursiyer</th><th>Kayıt formu</th></tr></thead><tbody>${S.subeler.map((x, i) => `<tr><td><input class="girdi" style="height:34px" data-sube-alan="${i}:ad" value="${e(x.ad)}"></td><td><input class="girdi mono" style="height:34px;width:110px" inputmode="numeric" data-sube-alan="${i}:kurumKodu" value="${e(x.kurumKodu || '')}"></td><td><input class="girdi" style="height:34px" data-sube-alan="${i}:mudur" value="${e(x.mudur || '')}"></td><td><input class="girdi" style="height:34px" data-sube-alan="${i}:mebbis" value="${e(x.mebbis || '')}"></td><td><input class="girdi mono" style="height:34px;width:90px" maxlength="6" data-sube-alan="${i}:makbuzOnek" value="${e(x.makbuzOnek || '')}" placeholder="ortak" ${subeSeriKilitli(x.id) ? 'disabled title="Bu seride makbuz verildi; önek değişmez"' : ''} aria-label="${e(x.ad)} makbuz öneki"></td><td class="mono">${S.kursiyerler.filter(k => k.sube === x.id && k.asama !== 'Ehliyet').length}</td><td><button type="button" class="dg dg-hafif dg-kucuk" data-kayit-link="${e(x.id)}" title="${e(kayitLinki(x.id))}">${ik('belge')}Kayıt formu linki</button></td></tr>`).join('')}</tbody></table></div>
@@ -843,7 +873,7 @@ function sozlesmeSekme() {
       <p>Şu alanlar her kursiyer için otomatik dolar:</p><ul style="margin-left:18px">${[['{kurs}', 'kurs adı'], ['{sinif}', 'sertifika sınıfı'], ['{teorik}', 'teorik saat'], ['{direksiyon}', 'direksiyon ders sayısı'], ['{hak}', 'sınav hakkı'], ['{tekrarE}', 'e-sınav ücreti'], ['{tekrarD}', 'direksiyon tekrar ücreti'], ['{ekDers}', 'ek ders ücreti'], ['{teorikSaatUcreti}', 'teorik ders saati ücreti'], ['{direksiyonSaatUcreti}', 'direksiyon ders saati ücreti'], ['{kdv}', 'KDV oranı']].map(([a, b]) => `<li><code>${a}</code> ${b}</li>`).join('')}</ul>
       <p style="color:var(--soluk)">Taraf bilgileri, ücret, indirim ve ödeme planı tablosu sözleşmenin başına kendiliğinden eklenir. Metni avukatınıza ya da mali müşavirinize okutun.</p></div></div></div>`;
 }
-export const AYAR_SEKMELERI = { kullanici: kullaniciSekme, sozlesme: sozlesmeSekme, subeler: subelerSekme, kurallar: kurallarSekme, guvenlik: guvenlikSekme, entegrasyon: entegrasyonSekme, aktarim: aktarimSekme, gorunum: gorunumSekme };
+export const AYAR_SEKMELERI = { kimlik: kimlikSekme, kullanici: kullaniciSekme, sozlesme: sozlesmeSekme, subeler: subelerSekme, kurallar: kurallarSekme, guvenlik: guvenlikSekme, entegrasyon: entegrasyonSekme, aktarim: aktarimSekme, gorunum: gorunumSekme };
 export function ayarBaglan(k) {
   k.addEventListener('click', ev => { if (!ev.target.closest('[data-aktarim-hata]') || !aktarim.satirlar) return;
     const l = aktarim.satirlar.map((r, i) => ({ r, i, s: kontrolEt(r, i) })).filter(x => x.s.hata.length || x.s.uyari.length);
@@ -902,6 +932,14 @@ export function ayarBaglan(k) {
       ham.forEach(x => { const m = x.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})$/), v = m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : /^\d{4}-\d{2}-\d{2}$/.test(x) ? x : ''; const d = v && new Date(v + 'T00:00:00Z'); if (d && !isNaN(d) && d.toISOString().slice(0, 10) === v) { if (!l.includes(v)) l.push(v); } else hatali.push(x); });
       if (hatali.length) return bildir('Tarihi gg.aa.yyyy biçiminde girin: ' + hatali.slice(0, 3).join(', '), 'uyari');
       l.sort(); if (l.length) S.kurs.idariIzin = l; else delete S.kurs.idariIzin; islem('İdari izin günlerini değiştirdi', l.length ? l.map(x => x.split('-').reverse().join('.')).join(', ') : 'yok'); kaydet(); bildir(l.length ? `${l.length} idari izin günü MEB sürelerinde sayılmayacak` : 'İdari izin günü yok'); yenile(); }
+    { const ki = t.closest('[data-kimlik]'); if (ki) { const a = ki.dataset.kimlik, v = ki.value.trim(), K = S.kurs, et = ((ki.labels || [])[0] || {}).textContent || a;  // YON-064
+      if (a === 'vkn') { const d = v.replace(/\D/g, ''); if (d && !/^\d{10,11}$/.test(d)) return bildir('VKN 10, TCKN 11 hanedir', 'uyari'); S.entegrasyon = S.entegrasyon || {}; S.entegrasyon.vkn = d; ki.value = d; }
+      else if (a === 'eposta') { if (v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return bildir('E-posta adresini kontrol edin', 'uyari'); K.eposta = v; }
+      else if (/^y[12](ad|unvan)$/.test(a)) { const i = +a[1] - 1, l = [...(K.mebYetkili || [])]; while (l.length <= i) l.push({}); l[i] = { ...l[i], [a.slice(2)]: v }; K.mebYetkili = l; }
+      else if (a === 'sefAd' || a === 'sefUnvan') K.sef = { ...(K.sef || {}), [a === 'sefAd' ? 'ad' : 'unvan']: v };
+      else if (['unvan', 'kurucuTur', 'kurucu', 'vergiDairesi', 'mukellefKodu'].includes(a)) { if (v) K[a] = v; else delete K[a]; }
+      else return;
+      islem('Kurum kimliğini güncelledi', et.trim()); kaydet(); if (a === 'kurucuTur') yenile(); return bildir('Kaydedildi'); } }
     { const ye = t.closest('[data-yetki-ekran],[data-yetki-islem]'); if (ye) { if (!oturum.kullanici || oturum.kullanici.rol !== 'mudur') return; const tur = ye.dataset.yetkiEkran ? 'ekran' : 'islem', ad = ye.dataset.yetkiEkran || ye.dataset.yetkiIslem, y = { ...(S.kurs.yetki || {}) }; const deger = tur === 'ekran' ? (ye.value === 'kapali' ? false : ye.value === 'gor' ? 'gor' : true) : ye.checked; y[tur] = { ...(y[tur] || {}), [ad]: deger }; S.kurs.yetki = y; const yazi = tur === 'ekran' ? (EKRAN_DUZEY.find(x => x[0] === ye.value) || [])[1] || '' : ye.checked ? 'açık' : 'kapalı';
       const etiket = ((tur === 'ekran' ? YETKI_EKRAN : YETKI_ISLEM).find(x => x[0] === ad) || [])[1] || ad; islem('Ön büro yetkisini değiştirdi', `${etiket}: ${yazi.toLocaleLowerCase('tr')}`); kaydet(); return bildir(`Ön büro · ${etiket}: ${yazi.toLocaleLowerCase('tr')}`); } }
     { const ku = t.closest('[data-kul-sube]'); if (ku) { const u = S.kullanicilar.find(x => (x.id || x.uid) === ku.dataset.kulSube); if (!u) return; if (ku.value) u.sube = ku.value; else delete u.sube; islem('Kullanıcının şube kısıtını değiştirdi', u.ad + ' · ' + (ku.value ? S.subeler.find(x => x.id === ku.value).ad : 'bütün şubeler')); kaydet(); return bildir(ku.value ? u.ad + ' yalnız bu şubeyi ve kasasını görür' : u.ad + ' bütün şubeleri görür'); } }
