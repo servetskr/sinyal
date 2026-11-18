@@ -861,6 +861,14 @@ function hakBittiKart(k) {
     <p style="font-size:14px;margin-bottom:12px">${ilk ? (bilinmiyor ? `Son uygulama sınavının tarihi kayıtlı değil; ikinci dört hak için ${IKINCI_HAK_GUN} günlük başvuru süresi hesaplanamadı. Süre son sınav sonucundan sayılır (MTSK md.15/4); tarihi MEBBİS’ten kontrol edin. Süre içindeyse kursiyer başvurup sınıfın direksiyon saati kadar ders alırsa <b>dört sınav hakkı daha</b> kazanır.` : gecti ? `İkinci dört hak için başvuru süresi ${tarih(son)} tarihinde doldu (son sonuçtan itibaren ${IKINCI_HAK_GUN} gün, MTSK md.15/4). Kursiyer yeni dönem kaydı yaptırmalı; 3 yıl içinde kaydolursa teorik eğitim ve sınavdan muaftır (md.15/5).` : `Kursiyer <b>${tarih(son)}</b> tarihine kadar (${fark(son)} gün) başvurup sınıfın direksiyon saati kadar ders alırsa <b>dört sınav hakkı daha</b> kazanır (MTSK md.15/4). İsterse kalan haklarından vazgeçip başka kursa nakil olabilir (md.13/2) ya da ikinci dört hakta diğer şanzımanla (manuelden otomatiğe ya da tersi) devam edebilir; şanzıman değişikliği Özel MTSK Modülü’ne işlenir (md.15/6).`) : k.hakBitti.tur === 'Direksiyon' ? 'Sekiz uygulama sınavı hakkı bitti. Kursiyer yeni dönem kaydı yaptırmalı; 3 yıl içinde kaydolursa teorik eğitim ve sınavdan muaftır (md.15/5).' : 'Dört e-sınav hakkı bitti. Kursiyer bu sınava yeniden girebilmek için yeni dönem kaydı yaptırmalı (md.15/1).'} Kararı verin; kursiyere WhatsApp’tan bilgi gider.</p>
     ${(k.hakBitti.aramalar || []).length ? `<ul class="zaman-cizgisi" style="margin-bottom:10px">${k.hakBitti.aramalar.slice(-5).reverse().map(a => `<li>${e(a.sonuc)}${a.not ? ' · ' + e(a.not) : ''}<small>${tarih(a.tarih)}${a.kim ? ' · ' + e(a.kim) : ''}</small></li>`).join('')}</ul>` : ''}<div style="display:flex;gap:8px;flex-wrap:wrap">${ilk ? '<button class="dg dg-cizgi dg-kucuk" data-hak-aradi>Arandı</button>' : ''}${ilk && !gecti ? '<button class="dg dg-ana dg-kucuk" data-hak-karar="ikinci">İkinci dört hakkı başlat</button>' : ''}<button class="dg ${ilk && !gecti ? 'dg-cizgi' : 'dg-ana'} dg-kucuk" data-hak-karar="yeniden">Yeniden kayıt aç</button>${ilk && !gecti ? '<button class="dg dg-cizgi dg-kucuk" data-hak-karar="nakil">Başka kursa nakil</button>' : ''}<button class="dg dg-cizgi dg-kucuk" data-hak-karar="kapat">Kaydı kapat</button>${ilk && !gecti ? (k.hakBitti.istemiyor ? `<small style="align-self:center;color:var(--soluk)">İkinci hakkı istemiyor (${tarih(k.hakBitti.istemiyor)}); hatırlatma gitmez</small>` : '<button class="dg dg-hafif dg-kucuk" data-hak-karar="istemiyor" title="Öğrenci ikinci dört hakkı istemediğini söyledi: otomatik hatırlatma (o17) gitmez">İstemiyor</button>') : ''}</div></div></div>`;
 }
+// SNV-011: md.15/5 — e-sınavı geçtiği tarihten 3 yıl içinde yeniden kayıtta teorik eğitim ve e-sınav muafiyeti (son gün: geçtiği gün + 3 yıl − 1 gün)
+const tamGun = t => t ? `${+t.slice(8, 10)}.${t.slice(5, 7)}.${t.slice(0, 4)}` : '';
+export function yenidenMuafiyet(k, elle = '') {
+  const g = (/^\d{4}-\d{2}-\d{2}$/.test(elle || '') && elle) || sinavGecmisi(k, 'e-Sınav').filter(x => x.sonuc === 'Geçti').map(x => x.tarih).filter(Boolean).sort().pop() || (k.esinav && k.esinav.sonuc === 'Geçti' && k.esinav.tarih) || '';
+  if (!g) return { muaf: false, tarih: '', son: '' };
+  const d = tarihOku(g); d.setFullYear(d.getFullYear() + 3); d.setDate(d.getDate() - 1); const son = iso(d);
+  return { muaf: son >= gun(0), tarih: g, son };
+}
 // SNV-057: ikinci dört hak yanlışlıkla başlatıldıysa (dilimde sınav kaydı yokken) geri alınır; MEBBİS'ten gelen alanlara (k.meb) dokunulmaz
 export const ikinciGeriAlinir = k => !!(k.ikinciHak && k.ikinciHak.tarih) && !sinavGecmisi(k, 'Direksiyon').some(x => x.tarih >= k.ikinciHak.tarih) && !(S.sinavlar || []).some(s => s.tur === 'Direksiyon' && s.tarih >= k.ikinciHak.tarih && (s.kursiyerler || []).includes(k.id));
 function ikinciHakGeriAl(k) {
@@ -891,19 +899,29 @@ export function hakKarar(k, karar, ucret, ops = {}) {
       wpGonder(k, `${selam(k)} ikinci dört uygulama sınavı hakkı başvurunuzu aldık. Sınıfınızın direksiyon saati kadar (${taban} ders) yeniden ders alacaksınız${u ? '; ders ücreti ' + tl(u) : ''}. Ders saatlerinizi birlikte planlayalım.`, 'İkinci dört hak');
       yenile(); }); },
   }); }
-  if (karar === 'yeniden') return pencere({
+  if (karar === 'yeniden') { const dir = k.hakBitti.tur === 'Direksiyon', esG = yenidenMuafiyet(k), gd = (() => { const x = { ...k }; delete x.ikinciHak; return gerekliDireksiyon(x); })();
+    return pencere({
     baslik: 'Yeniden kayıt · ' + tamAd(k),
-    icerik: `<p style="font-size:14px;margin-bottom:12px">Yeni dönem kaydı ödeme planına ek kalem olarak eklenir; MEBBİS kaydı yenilenmek üzere kuyruğa düşer.</p><div class="alan"><label>Yeniden kayıt ücreti (₺)</label><input name="u" inputmode="numeric" placeholder="Kursun yeniden kayıt ücreti"></div>`,
+    icerik: `<p style="font-size:14px;margin-bottom:12px">Yeni dönem kaydı ödeme planına ek kalem olarak eklenir; MEBBİS kaydı yenilenmek üzere kuyruğa düşer. Sınav hakları yeni kayıttan sayılır.</p><div class="alan"><label>Yeniden kayıt ücreti (₺)</label><input name="u" class="girdi" inputmode="numeric" placeholder="Kursun yeniden kayıt ücreti"></div>
+      ${dir ? `<p class="ipucu" style="margin-top:12px">${isaret('bilgi', 18)}<span>Direksiyon ders sayacı sıfırlanır: sınıfın direksiyon saati kadar (<b>${gd} ders</b>) yeniden ders alır (MTSK Yön. md.15/4-5). Önceki ${k.direksiyon || 0} ders dosyada kalır.</span></p>
+      <label class="ind-tik" style="margin-top:12px"><input type="checkbox" name="muaf" ${esG.muaf ? 'checked' : ''} ${esG.tarih ? '' : 'disabled'}> Teorik eğitim ve e-sınavdan muaf (md.15/5: 3 yıl içinde yeniden kayıt)<small style="display:block;color:var(--soluk);margin-left:26px" data-muaf-not>${esG.tarih ? `e-Sınavı ${tamGun(esG.tarih)} tarihinde geçti; muafiyet ${tamGun(esG.son)} tarihine kadar${esG.muaf ? '' : ' (süre geçti)'}.` : k.esinav && k.esinav.sonuc === 'Geçti' ? 'e-Sınavı geçtiği tarih kayıtlı değil; tarihi yazın.' : 'e-Sınavı geçtiği kayıtlı değil; muafiyet uygulanamaz.'}</small></label>
+      ${!esG.tarih && k.esinav && k.esinav.sonuc === 'Geçti' ? `<div class="alan" style="margin-top:8px;max-width:220px"><label>e-Sınavı geçtiği tarih</label><input class="girdi" type="date" name="est" max="${gun(0)}"></div>` : ''}` : ''}`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Kaydı aç</button>`,
-    onAc(d) { d.querySelector('[data-k]').addEventListener('click', () => { const u = tutarOku(d.querySelector('[name=u]').value); if (!u) return bildir('Ücreti girin', 'uyari'); kapatPencere(); hakKarar(k, 'yeniden-onay', u); }); },
-  });
+    onAc(d) { const est = d.querySelector('[name=est]'), m = d.querySelector('[name=muaf]');
+      if (est) est.addEventListener('change', () => { const x = yenidenMuafiyet(k, est.value); m.disabled = !x.tarih; m.checked = x.muaf; d.querySelector('[data-muaf-not]').textContent = x.tarih ? `Muafiyet ${tamGun(x.son)} tarihine kadar${x.muaf ? '' : ' (süre geçti)'}.` : 'e-Sınavı geçtiği tarih kayıtlı değil; tarihi yazın.'; });
+      d.querySelector('[data-k]').addEventListener('click', () => { const u = tutarOku(d.querySelector('[name=u]').value); if (!u) return bildir('Ücreti girin', 'uyari'); kapatPencere(); hakKarar(k, 'yeniden-onay', u, { muaf: !!(m && m.checked && !m.disabled), esTarih: est ? est.value : '' }); }); },
+  }); }
   geriAlNoktasi();
   if (karar === 'yeniden-onay') {
     k.odeme.ekler = k.odeme.ekler || []; k.odeme.ekler.push({ ad: 'Yeniden kayıt (' + k.hakBitti.tur + ')', tutar: ucret, odendi: null, tur: 'ders' });
-    if (k.hakBitti.tur === 'e-Sınav') { k.esinav = null; k.asama = 'Teorik'; } else { k.dsinav = null; k.asama = 'Direksiyon'; delete k.ikinciHak; }
+    // SNV-011: hak sayımı yeni kayıttan; direksiyonda ders sayacı sıfırlanır (önceki sayı saklanır); 3 yıl içinde ise teorik ve e-sınav muafiyeti (md.15/5)
+    const esG = yenidenMuafiyet(k, ops.esTarih), muaf = k.hakBitti.tur === 'Direksiyon' && !!ops.muaf && esG.muaf;
+    if (ops.esTarih && k.esinav && !k.esinav.tarih) k.esinav.tarih = ops.esTarih;
+    k.yenidenKayit = { tarih: gun(0), tur: k.hakBitti.tur, oncekiDireksiyon: k.direksiyon || 0, oncekiTeorik: k.teorik || 0, ...(muaf ? { muaf: true, esinavGecti: esG.tarih } : {}) };
+    if (k.hakBitti.tur === 'e-Sınav') { k.esinav = null; k.asama = 'Teorik'; } else { k.dsinav = null; delete k.ikinciHak; k.direksiyon = 0; if (muaf) k.asama = 'Direksiyon'; else { k.esinav = null; k.teorik = 0; k.asama = 'Teorik'; } }
     k.hakBitti.cozuldu = 'yeniden'; k.mebIslendi = false;
     islem('Yeniden kayıt açtı', tamAd(k) + ' · ' + tl(ucret)); kaydet();
-    wpGonder(k, `${selam(k)} ${k.hakBitti.tur.toLowerCase()} için yeni dönem kaydınızı açtık. Yeniden kayıt ücreti ${tl(ucret)}; MEBBİS kaydınız yenilenecek.`, 'Yeniden kayıt');
+    wpGonder(k, `${selam(k)} ${k.hakBitti.tur === 'e-Sınav' ? 'e-sınav' : 'uygulama sınavı'} için yeni dönem kaydınızı açtık. Yeniden kayıt ücreti ${tl(ucret)}; MEBBİS kaydınız yenilenecek.${muaf ? ' Teorik eğitim ve e-sınavdan muafsınız; direksiyon derslerinizi birlikte planlayalım.' : ''}`, 'Yeniden kayıt');
   } else { k.hakBitti.cozuldu = 'kapandı'; k.kapanis = { arsiv: gun(0), neden: k.hakBitti.tur + ' hakkı doldu' }; k.kapali = { tur: 'hak', tarih: gun(0), neden: k.hakBitti.tur + ' sınav hakkı doldu', kim: oturum.kullanici ? oturum.kullanici.ad : '', iptalTutar: 0 }; /* ehliyet almış sayılmaz; kayıt kapalı, açık taksitler müdürün kararına kalır */ islem('Kaydı kapattı', tamAd(k) + ' · hak doldu'); kaydet(); bildir('Kayıt kapatıldı ve arşive alındı'); }
   yenile();
 }

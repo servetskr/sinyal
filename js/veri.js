@@ -443,7 +443,9 @@ export function sinavGecmisi(k, tur = 'Direksiyon') {
 // SNV-014: hak durumu — yerel geçmiş ile MEBBİS'in son okuması birlikte; "önce durum, sonra sayı"
 export function hakDurumu(k, tur = 'Direksiyon') {
   const es = tur === 'e-Sınav', n = (S && S.kurs && S.kurs.sinavHak) || 4, M = (k && k.meb) || {};
-  const dilim = !es && k && k.ikinciHak ? 2 : 1, bas = es ? '' : ikinciDilimBas(k);
+  // SNV-011: yeniden kayıtta sayım yeni kayıttan başlar (md.15/5; eski sınavlar geçmişte görünür, hak yakmaz)
+  const YK = k && k.yenidenKayit, yb = YK && (YK.tur === tur || (es && YK.tur === 'Direksiyon' && !YK.muaf)) ? YK.tarih || '' : '';  // muaf değilse e-sınav da yeniden
+  const dilim = !es && k && k.ikinciHak ? 2 : 1, bas = [es ? '' : ikinciDilimBas(k), yb].filter(Boolean).sort().pop() || '';
   const gecmis = sinavGecmisi(k, tur), dilimde = gecmis.filter(x => !bas || x.tarih > bas), yanan = dilimde.filter(x => HAK_YAKAR.includes(x.sonuc));
   let meb = null;
   const okuma = M.dosyaOkuma || '';
@@ -457,11 +459,12 @@ export function hakDurumu(k, tur = 'Direksiyon') {
   // özetteki hak numarası (eski kayıtlarda birikimli: ikinci dilimde n çıkarılır) daha büyükse esas alınır: kaydı olmayan eski haklar
   const oz = es ? k && k.esinav : k && k.dsinav; let ozHak = oz && !oz.muaf && +oz.hak ? +oz.hak : 0;
   if (ozHak && dilim === 2 && !oz.dilim) ozHak = oz.tarih && bas && oz.tarih <= bas ? 0 : ozHak > n ? ozHak - n : ozHak;
+  if (ozHak && yb && (!oz.tarih || oz.tarih <= yb)) ozHak = 0;
   const yerel = Math.max(yanan.length, ozHak), onceki = meb ? yanan.filter(x => x.tarih <= meb.tarih).length : 0, sonra = meb ? yanan.filter(x => x.tarih > meb.tarih).length : 0;
   const kullanilan = Math.min(n, meb ? Math.max(meb.kullanilan + sonra, yerel) : yerel);
   const bilinmeyen = meb ? Math.max(0, meb.kullanilan - onceki) : 0;
   const fark = !meb ? '' : meb.kullanilan > onceki ? 'MEBBİS fazla' : onceki > meb.kullanilan ? 'mdSinyal fazla' : '';
-  const kalan = Math.max(0, n - kullanilan), gecti = gecmis.some(x => x.sonuc === 'Geçti') || !!(oz && oz.sonuc === 'Geçti'), bugun = iso(new Date());
+  const kalan = Math.max(0, n - kullanilan), gecti = gecmis.some(x => x.sonuc === 'Geçti' && (!yb || x.tarih > yb)) || !!(oz && oz.sonuc === 'Geçti' && (!yb || (oz.tarih || '') > yb)), bugun = iso(new Date());
   const listede = gecmis.find(x => x.sonuc === 'Listede' && x.tarih >= bugun) || null;
   const siradaki = kalan ? kullanilan + 1 : null, gun2 = t => { const d = tarihOku(t); return d.getDate() + ' ' + AYLAR_KISA[d.getMonth()]; };
   const cumle = oz && oz.muaf ? 'Muaf' : gecti ? 'Sınavı geçti' : meb && meb.sureDoldu ? 'e-Sınav süresi doldu' : !kalan ? `Hakkı doldu (${kullanilan}/${n})` + (dilim === 2 ? ' · ikinci dört hak' : '')
