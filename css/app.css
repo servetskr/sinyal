@@ -3677,3 +3677,9 @@ a.kart.gosterge { text-decoration: none; color: inherit; display: block; }
 .hv-grup i { font-style: normal; }
 .hv-grup i.eksik { color: #8a5a00; }
 .hv-grup i.tamam { color: #1b5e20; }
+
+/* SNV-024: mazeret belgeleri */
+.hak-mazeret { border-top: 1px solid var(--cizgi-2); padding: 10px 20px 14px; }
+.hak-mazeret-bas { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.hak-mazeret-bas b { color: var(--murekkep); font-size: 14px; }
+.hak-mazeret .liste li { padding-left: 0; padding-right: 0; }

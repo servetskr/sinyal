@@ -240,7 +240,7 @@ export function esinavTercihPenceresi(k, sonra) {
 export function sonucGir(s, hazir) {
   const ks = s.kursiyerler.map(kursiyer).filter(Boolean), es = s.tur === 'e-Sınav', ESIK = 70;
   // SNV-001/017: hak numarası ve sınır çekirdekten (hakDurumu); ikinci dört hakta numara dilimden başlar
-  const hakBilgi = k => { const h = hakDurumu(k, s.tur); return { hak: h.kullanilan + 1, sinir: h.sinir, dilim: h.dilim }; };
+  const hakBilgi = k => { const h = hakDurumu(k, s.tur); return { hak: h.kullanilan + 1, sinir: h.sinir + (h.mazeretHak || 0), dilim: h.dilim, mazeret: h.mazeretSinavi }; };  // SNV-025: mazeret sınavı hakkı sınıra eklenir
   pencere({
     baslik: s.tur + ' sonuçları', genis: false,
     icerik: `<p style="color:var(--soluk);margin-bottom:10px">${tarihUzun(s.tarih)} · ${ks.length} kursiyer · ${es ? `sonuç belgesindeki puanı girin, ${ESIK} ve üstü geçer` : 'sınav komisyonunun sonucunu işaretleyin'}</p>${ks.map(k => `<div class="evrak" style="flex-wrap:wrap" data-satir="${k.id}">${avatar(k.ad, k.soyad, k.foto)}<span style="flex:1;color:var(--murekkep);min-width:140px">${e(tamAd(k))}<small style="display:block;color:${(hb => hb.hak >= hb.sinir ? 'var(--kirmizi);font-weight:700' : 'var(--soluk)')(hakBilgi(k))}">${(hb => hb.hak > hb.sinir ? 'hakkı dolu · sonuç girilmez' : `${hb.dilim === 2 ? 'İkinci dört hak · ' : ''}${hb.hak}. hak${hb.hak >= hb.sinir ? (!es && !k.ikinciHak ? ' · ilk dört hakkın sonuncusu' : ' · son hak') : ''}`)(hakBilgi(k))}</small></span>

@@ -435,6 +435,8 @@ export function sinavGecmisi(k, tur = 'Direksiyon') {
   if (es) ((k.meb || {}).esinavlar || []).forEach(y => { if (y.tarih) ekle({ tarih: y.tarih, kod: '', sonuc: y.puan == null ? 'Listede' : +y.puan >= 70 ? 'Geçti' : 'Kaldı', puan: y.puan, kaynak: 'meb' }); });
   else ((k.meb || {}).uygulamaSinavlari || []).forEach(y => { if (y.tarih || y.kod) ekle({ tarih: y.tarih || '', kod: String(y.kod || ''), sonuc: sonucNorm((y.durum || '') + ' ' + (y.sonuc || '')), kaynak: 'meb' }); });
   (k.hakKayitlari || []).filter(x => x.tur === tur).forEach(x => ekle({ tarih: x.tarih, kod: x.kod || '', sonuc: x.sonuc, kaynak: x.kaynak === '7-7' ? '7-7' : x.kaynak || 'elle', gerekce: x.not || '' }));
+  // SNV-024: mazeret belgesi kayıtlı sınav (girmedi) geçmişte "raporlu" işaretlenir; dönem yine de tamamlanmış sayılır (md.15/3-a)
+  (k.mazeretler || []).filter(m => m.tur === tur && m.sinavTarihi).forEach(m => { const x = l.find(y => y.tarih === m.sinavTarihi); if (x) { x.mazeret = m.id; if (x.sonuc === 'Listede' && m.sinavTarihi < iso(new Date())) x.sonuc = 'Girmedi'; } else ekle({ tarih: m.sinavTarihi, kod: '', sonuc: 'Girmedi', kaynak: 'mazeret', mazeret: m.id }); });
   // son sınavın özeti yalnız sonuçlu başka kayıt yoksa (aktarım) geçmişe katılır; sayıda özetin hak numarası hakDurumu'nda yedektir
   const oz = es ? k.esinav : k.dsinav; if (oz && !oz.muaf && oz.tarih && oz.sonuc && !l.some(x => HAK_YAKAR.includes(x.sonuc))) ekle({ tarih: oz.tarih, kod: '', sonuc: oz.girmedi ? 'Girmedi' : oz.sonuc, puan: oz.puan, kaynak: 'ozet' });
   const bas = es ? '' : ikinciDilimBas(k);
@@ -461,15 +463,18 @@ export function hakDurumu(k, tur = 'Direksiyon') {
   if (ozHak && dilim === 2 && !oz.dilim) ozHak = oz.tarih && bas && oz.tarih <= bas ? 0 : ozHak > n ? ozHak - n : ozHak;
   if (ozHak && yb && (!oz.tarih || oz.tarih <= yb)) ozHak = 0;
   const yerel = Math.max(yanan.length, ozHak), onceki = meb ? yanan.filter(x => x.tarih <= meb.tarih).length : 0, sonra = meb ? yanan.filter(x => x.tarih > meb.tarih).length : 0;
-  const kullanilan = Math.min(n, meb ? Math.max(meb.kullanilan + sonra, yerel) : yerel);
+  // SNV-025: mazereti kabul edilen kursiyer dört dönemi tamamlayıp başarısız olursa bir defaya mahsus mazeret sınavı (md.15/3-a): sınır n + 1
+  const mz = (k && k.mazeretler || []).filter(m => m.tur === tur && m.kabul !== false && (!bas || (m.sinavTarihi || '') > bas)), mazeretHak = mz.length ? 1 : 0;
+  const kullanilanHam = meb ? Math.max(meb.kullanilan + sonra, yerel) : yerel, kullanilan = Math.min(n + mazeretHak, kullanilanHam);
   const bilinmeyen = meb ? Math.max(0, meb.kullanilan - onceki) : 0;
   const fark = !meb ? '' : meb.kullanilan > onceki ? 'MEBBİS fazla' : onceki > meb.kullanilan ? 'mdSinyal fazla' : '';
-  const kalan = Math.max(0, n - kullanilan), gecti = gecmis.some(x => x.sonuc === 'Geçti' && (!yb || x.tarih > yb)) || !!(oz && oz.sonuc === 'Geçti' && (!yb || (oz.tarih || '') > yb)), bugun = iso(new Date());
+  const kalan = Math.max(0, n + mazeretHak - kullanilan), mazeretSinavi = mazeretHak && kullanilan >= n, gecti = gecmis.some(x => x.sonuc === 'Geçti' && (!yb || x.tarih > yb)) || !!(oz && oz.sonuc === 'Geçti' && (!yb || (oz.tarih || '') > yb)), bugun = iso(new Date());
   const listede = gecmis.find(x => x.sonuc === 'Listede' && x.tarih >= bugun) || null;
   const siradaki = kalan ? kullanilan + 1 : null, gun2 = t => { const d = tarihOku(t); return d.getDate() + ' ' + AYLAR_KISA[d.getMonth()]; };
-  const cumle = oz && oz.muaf ? 'Muaf' : gecti ? 'Sınavı geçti' : meb && meb.sureDoldu ? 'e-Sınav süresi doldu' : !kalan ? `Hakkı doldu (${kullanilan}/${n})` + (dilim === 2 ? ' · ikinci dört hak' : '')
+  const cumle = oz && oz.muaf ? 'Muaf' : gecti ? 'Sınavı geçti' : meb && meb.sureDoldu ? 'e-Sınav süresi doldu' : !kalan ? `Hakkı doldu (${kullanilan}/${n}${mazeretHak ? ' + mazeret' : ''})` + (dilim === 2 ? ' · ikinci dört hak' : '')
+    : mazeretSinavi ? 'Mazeret sınavı hakkı (md.15/3-a, bir defa)' + (listede ? ` · ${gun2(listede.tarih)} sınavına yazılı` : '')
     : (dilim === 2 ? 'İkinci dört hak · ' : '') + (kullanilan ? `${kullanilan} hak kullanıldı · sıradaki ${siradaki}. hak` : `${siradaki}. hak`) + (listede ? ` · ${gun2(listede.tarih)} sınavına yazılı` : '');
-  return { kullanilan, sinir: n, kalan, dilim, siradaki, meb, fark, bilinmeyen, cumle, gecti, listede, yerel, gecmis };
+  return { kullanilan, sinir: n, kalan, dilim, siradaki, meb, fark, bilinmeyen, cumle, gecti, listede, yerel, gecmis, mazeretHak, mazeretSinavi };
 }
 // SNV-016: zorunlu direksiyon dersinin tamamlandığı (ya da planla tamamlanacağı) gün; yetmiyorsa null ve gerekçe.
 // İkinci dört hakta hedef k.ikinciHak.hedef; kaldıktan sonra son başarısız sınavdan sonraki telafi dersinin (kuralAyar telafiSaat) günü.
