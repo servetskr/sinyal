@@ -10,6 +10,7 @@ import * as ME from './mebevrak.js?v=234';
 import * as MK from './mebkayit.js?v=234';
 import * as KR from './kurallar.js?v=234';
 import { sozlesmeUcreti } from './mevzuat.js?v=234';
+import * as UY from './mebuyum.js?v=234';
 
 export const CEKILECEK = [
   ['kurum', 'Kurum bilgileri', 'Bina kontenjanı, açık sertifika programları ve ruhsat tarihleri, derslikler (Yardımcı 1.14)'],
@@ -22,6 +23,7 @@ export const CEKILECEK = [
   ['teorik', 'Teorik program', 'Son 4 dönemin MEBBİS’teki teorik ders programı (SKT04001); şube başına 34 saat denetimi ve teorik bitiş tarihi (Yardımcı 1.13)'],
   ['ucretler', 'e-Sınav ücretleri', 'Ücret yatıran adaylar (SKT02007); sıradaki hakkın ücreti işaretlenir (Yardımcı 1.13)'],
   ['yetki', 'Öğretmen yetkileri', 'Derse gireceği programlar: sınıf × teorik/uygulama (OOK15003/15004; yalnız toplu onayla izni alınmış personel). Ders planı ve sınav randevusu yetkisiz öğretmene yazılmaz (Yardımcı 1.16)'],
+  ['direksiyonProgrami', 'Direksiyon programı', 'Kurumun MEBBİS’teki direksiyon dersleri, son 6 hafta ve önümüzdeki 5 hafta (SKT04002, 7 günlük aralıklarla); mdSinyal dersleriyle karşılaştırılır, uyumsuzluklar listelenir (Yardımcı 1.16)'],
   ['ucretIlani', 'MEB ücret ilanı', 'MEBBİS’e bildirilmiş ücret ilanı (OOK01002); kurs ücretleri ve sözleşmeler ilanla ve il tabanıyla karşılaştırılır (Yardımcı 1.15)'],
 ];
 // durum: bu sekmedeki bellek; süren iş ayrıca S.mebIs'te kalıcı (sayfa yenilense de parça ve onay bilgisi kalır)
@@ -595,6 +597,7 @@ function uygula(v, tekrar = false) {
   if (v.sinavlar && (v.sinavlar.uygulama || v.sinavlar.esinav)) o.sinavlar = v.sinavlar;
   if (Array.isArray(v.dosya)) o.dosya = dosyalariIsle(v.dosya);
   if (Array.isArray(v.teorik)) o.teorik = teorikProgramIsle(v.teorik); else if (v.teorik && v.teorik.hata) o.teorikHata = v.teorik.hata;
+  if (v.direksiyonProgrami && Array.isArray(v.direksiyonProgrami.satirlar)) o.direksiyonProgrami = UY.programIsle(v.direksiyonProgrami); else if (v.direksiyonProgrami && v.direksiyonProgrami.hata) o.direksiyonProgramiHata = v.direksiyonProgrami.hata;   // DIR-026
   if (v.ucretler && Array.isArray(v.ucretler.satirlar)) o.ucretler = ucretleriIsle(v.ucretler); else if (v.ucretler && v.ucretler.hata) o.ucretHata = v.ucretler.hata;
   if (v.kurum && !v.kurum.hata) o.kurum = kurumIsle(v.kurum); else if (v.kurum && v.kurum.hata) o.kurumHata = v.kurum.hata;
   if (v.yetki && Array.isArray(v.yetki.kisiler)) o.yetki = yetkiIsle(v.yetki); else if (v.yetki && v.yetki.hata) o.yetkiHata = v.yetki.hata;
@@ -828,6 +831,7 @@ function dosyalariIsle(l) {
     const ds = r[i.donem] || '', m = ds.match(/(\d{4})\s*-?\s*([^\s\d-]+)/), ay = m ? GR.AYLAR.findIndex(a => nrm(a) === nrm(m[2])) + 1 : 0;
     const donem = m && ay ? m[1] + String(ay).padStart(2, '0') : '', grupNo = +((String(r[i.grup] || '').match(/[123]/) || [])[0] || 0), sube = ((String(r[i.sube] || '').toLocaleUpperCase('tr').match(/[A-H]/) || [])[0]) || '';
     const basl = x.dersler && x.dersler.satirlar.length ? tarihIso(x.dersler.satirlar[0][sutun(x.dersler.baslik, 'baslang', 'baslama')]) : '';
+    if (x.dersler) try { UY.dosyaDersleri(k, x.dersler); } catch (hata) { console.warn('Aday ders listesi', hata); }   // DIR-027: MEBBİS'teki ders sayısı ve uyumsuzluklar
     const esSon = x.esinav && x.esinav.satirlar.length ? tarihIso(x.esinav.satirlar[0][sutun(x.esinav.baslik, 'tamamlan')]) : '';
     const kg = GR.kursiyerGrubu(k), gm = tekil && donem && grupNo && sube ? { donem, grupNo, sube, ad: GR.grupAdi(donem, grupNo, sube), baslangic: basl } : null;
     if (gm && !kg) {
@@ -868,6 +872,8 @@ function ozetGoster(o, yazilan) {
   }
   if (o.teorik) l.push(satir(`Teorik program: ${o.teorik.donem} dönem, ${o.teorik.guncel} şube okundu${o.teorik.eksik.length ? `, <span style="color:var(--kirmizi)">${o.teorik.eksik.length} şubede 34 saat tamam değil</span>` : ''}`, o.teorik.eksik.length ? e(o.teorik.eksik.join(', ')) + ' (belgeliler şubesi sayılmaz)' : ''));
   if (o.teorikHata) l.push(`<li class="ipucu uyari">${isaret('uyari', 18)}<span>Teorik program: ${e(o.teorikHata)}</span></li>`);
+  if (o.direksiyonProgrami) { const x = o.direksiyonProgrami; l.push(satir(`Direksiyon programı: ${x.satir} ders (${x.bas.split('-').reverse().join('.')}–${x.son.split('-').reverse().join('.')})${x.uyumsuz ? `, <span style="color:var(--kirmizi)">${x.uyumsuz} uyumsuzluk</span> (MEB işlemleri › MEBBİS ile uyumsuzluklar)` : ', mdSinyal ile uyumlu'}${x.eslesmeyen || x.belirsiz ? ` · ${x.eslesmeyen + x.belirsiz} satırın adayı mdSinyal’de bulunamadı ya da adı birden çok öğrencide var` : ''}`)); }
+  if (o.direksiyonProgramiHata) l.push(`<li class="ipucu uyari">${isaret('uyari', 18)}<span>Direksiyon programı: ${e(o.direksiyonProgramiHata)}</span></li>`);
   if (o.ucretler) l.push(satir(`e-Sınav ücretleri: MEBBİS listesinde ${o.ucretler.toplam} aday, ${o.ucretler.yeni} adayın sıradaki hakkı “ücret yattı” oldu${o.ucretler.ayni ? `, ${o.ucretler.ayni} zaten işaretliydi` : ''}`, o.ucretler.yok ? `${o.ucretler.yok} aday mdSinyal’de açık kayıt olarak yok` : ''));
   if (o.ucretHata) l.push(`<li class="ipucu uyari">${isaret('uyari', 18)}<span>e-Sınav ücretleri: ${e(o.ucretHata)}</span></li>`);
   if (o.kurum) l.push(satir(`Kurum bilgileri: bina kontenjanı ${o.kurum.binaKontenjan || '—'}, ${o.kurum.programlar.filter(p => programAcik(o.kurum, p.kod)).length} açık program (${o.kurum.programlar.filter(p => programAcik(o.kurum, p.kod)).map(p => p.kod).join(', ') || '—'}), ${o.kurum.derslikler.length} derslik`, o.kurum.programlar.some(p => !programAcik(o.kurum, p.kod)) ? 'Kapalı program: ' + o.kurum.programlar.filter(p => !programAcik(o.kurum, p.kod)).map(p => e(p.kod || p.ad) + (p.kapanma ? ' (' + p.kapanma.split('-').reverse().join('.') + ')' : '')).join(', ') : ''));
@@ -895,7 +901,7 @@ function ozetGoster(o, yazilan) {
 }
 
 /* ---------- MEBBİS aktarım merkezindeki kartlar ---------- */
-const secim = new Set(['kurum', 'gruplar', 'teorik', 'kursiyerler', 'dosya', 'personel', 'yetki', 'araclar', 'sinavlar', 'ucretler', 'ucretIlani']);
+const secim = new Set(['kurum', 'gruplar', 'teorik', 'kursiyerler', 'dosya', 'personel', 'yetki', 'araclar', 'sinavlar', 'ucretler', 'ucretIlani', 'direksiyonProgrami']);
 // Süren, durmuş ya da parçası bitmiş yazma işi: onaylayan, parça, kalan iş; durdur, devam, iptal
 // cekGizle: "MEBBİS'ten al" sekmesinde çekme işinin durumu topluKart'ta zaten görünür
 export function isKarti(cekGizle) {

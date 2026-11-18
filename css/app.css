@@ -3410,3 +3410,12 @@ p.mz-kanit-uyari{margin:-4px 0 10px;font-size:13px}
 .pp-liste { list-style: none; margin: 0; padding: 0 0 6px; }
 .pp-liste li { display: flex; gap: 10px; align-items: center; padding: 8px 16px; border-top: 1px solid var(--cizgi-2); }
 .pp-liste small { display: block; color: var(--soluk); font-size: 12.5px; }
+
+/* DIR-054: MEBBİS ile uyumsuzluklar */
+.uy-liste { list-style: none; margin: 8px 0 0; padding: 0; }
+.uy-l { display: flex; gap: 12px; align-items: flex-start; padding: 10px 16px; border-top: 1px solid var(--cizgi-2); flex-wrap: wrap; }
+.uy-l b { color: var(--murekkep); font-size: 14.5px; }
+.uy-l small { display: block; font-size: 13px; color: var(--metin); margin-top: 3px; }
+.uy-et { display: inline-block; min-width: 64px; font-size: 11px; font-weight: 700; color: var(--soluk); text-transform: uppercase; letter-spacing: .04em; }
+.uy-d { display: flex; gap: 6px; flex-wrap: wrap; }
+.uy-ac { background: none; border: 0; padding: 10px 16px 0; color: var(--levha); font: 600 14px var(--govde); cursor: pointer; }

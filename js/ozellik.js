@@ -116,7 +116,9 @@ export function mutabakatHesapla(metin) {
     const x = tcMeb.get(k.tc); if (!x) return sonuc.yalnizSinyal.push(k.id);
     sonuc.eslesen++;
     if (x.sinif && x.sinif.split('-')[0] !== k.sinif.toUpperCase().split('-')[0]) sonuc.sinif.push({ id: k.id, meb: x.sinif });
-    if (x.ders != null && !isNaN(x.ders) && x.ders !== yapilanDers(k)) sonuc.ders.push({ id: k.id, meb: x.ders, sinyal: yapilanDers(k) });
+    // DIR-027: dosyada ders sütunu yoksa MEBBİS'ten okunan aday dosyasındaki ders sayısı (k.meb.dersOzet) kullanılır
+    const md = x.ders != null && !isNaN(x.ders) ? x.ders : (k.meb && k.meb.dersOzet ? k.meb.dersOzet.yapilmis : null);
+    if (md != null && md !== yapilanDers(k)) sonuc.ders.push({ id: k.id, meb: md, sinyal: yapilanDers(k), kaynak: x.ders != null && !isNaN(x.ders) ? 'dosya' : 'MEBBİS okuması' });
   });
   meb.forEach(x => { if (!tcGecerli(x.tc)) sonuc.gecersiz.push(x); else if (!tcSinyal.has(x.tc) || tcSinyal.get(x.tc).kapali) sonuc.yalnizMeb.push(x); });
   return { satir: meb.length, sonuc };

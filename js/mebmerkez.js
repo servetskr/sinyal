@@ -1,10 +1,12 @@
 // MEBBİS aktarım merkezi: MEBBİS'e gidecek işler türlerine göre sekmelerde, filtrelenir, seçilir, toplu aktarılır.
 // Aktarımı MEBBİS Yardımcısı (Chrome eklentisi) kursun kendi MEBBİS oturumunda yürütür; MEBBİS'ten veri çekme de buradan başlar.
-import { S, fark, SINIFLAR, egitmen, sb, seciliSube, cokSube, kursiyer, tamAd, islem, kaydet } from './veri.js?v=234';
+import { S, oturum, fark, SINIFLAR, egitmen, sb, seciliSube, cokSube, kursiyer, tamAd, islem, kaydet } from './veri.js?v=234';
 import { e, tarih, rozet, isaret, ik, sekmeler, bos } from './ui.js?v=234';
 import * as EK from './eklenti.js?v=234';
 import * as MT from './mebtoplu.js?v=234';
 import * as MK from './mebkayit.js?v=234';
+import * as UY from './mebuyum.js?v=234';
+import { pencere, kapatPencere, bildir } from './ui.js?v=234';
 
 const TURLER = [['kayit', 'Kayıt'], ['evrak', 'Evrak'], ['grup', 'Dönem grubu'], ['onay', 'Kurum onayı'], ['teorik', 'Teorik program'], ['program', 'Direksiyon programı'], ['esinav', 'e-Sınav başvurusu'], ['sinav', 'Sınav randevusu'], ['fatura', 'Fatura'], ['al', 'MEBBİS’ten al']];
 const butunIsler = hepsi => [...EK.mebIsleri(hepsi), ...MT.ekIsler(hepsi)];
@@ -45,6 +47,22 @@ function suzulmus(hepsi) {
 
 export function merkezSayisi() { return butunIsler().length; }
 
+// DIR-054: MEBBİS ile uyumsuzluklar — geri okumada (SKT04002, aday dosyası) bulunan farklar; açık olanlar üstte, bilerek bırakılanlar katlanır
+let uyKapaliGoster = false;
+function uyumsuzKarti() {
+  const hepsi = (S.mebUyumsuz || []).filter(x => !x.kursiyer || kursiyer(x.kursiyer)), acik = hepsi.filter(x => !x.kapandi), kapali = hepsi.filter(x => x.kapandi);
+  const ok = (S.mebAnaliz || {}).program; if (!hepsi.length && !ok) return '';
+  const satir = x => { const m = UY.metin(x); return `<li class="uy-l"><div style="flex:1;min-width:0"><b>${e(m.baslik)}</b> ${m.etiket.map(t => rozet(t, /yok|Yalnız/.test(t) ? 'kirmizi' : 'sari')).join(' ')}
+      ${m.gercek ? `<small><span class="uy-et">mdSinyal</span>${e(m.gercek)}</small>` : ''}${m.meb ? `<small><span class="uy-et">MEBBİS</span>${e(m.meb)}</small>` : ''}
+      ${x.kapandi ? `<small style="color:var(--metin)">Bilerek bırakıldı (${tarih(x.kapandi.tarih)}${x.kapandi.kim ? ', ' + e(x.kapandi.kim) : ''}): “${e(x.kapandi.not)}”</small>` : `<small style="color:var(--metin)">${e(m.ne)}</small>`}
+      <small style="color:var(--soluk)">İlk görüldüğü: ${e(String(x.ilk || '').replace(/^(\d{4})-(\d{2})-(\d{2})/, '$3.$2.$1'))}</small></div>
+    <span class="uy-d">${x.kursiyer ? `<a class="dg dg-cizgi dg-kucuk" href="#/kursiyer/${e(x.kursiyer)}">Dosya</a>` : ''}${x.kapandi ? `<button class="dg dg-hafif dg-kucuk" data-uy-ac="${e(x.anahtar)}">Yeniden aç</button>` : `<button class="dg dg-cizgi dg-kucuk" data-uy-kapat="${e(x.anahtar)}">Bilerek bırak</button>`}</span></li>`; };
+  return `<div class="kart" style="margin-bottom:14px${acik.length ? ';border-color:var(--kirmizi)' : ''}"><div class="kart-bas"><h3>MEBBİS ile uyumsuzluklar</h3><small>${acik.length ? acik.length + ' açık' : 'açık uyumsuzluk yok'}${ok ? ` · son okuma ${tarih(ok.okuma)}, ${ok.satir} ders (${tarih(ok.bas)}–${tarih(ok.son)})` : ''}</small></div>
+    <p class="ipucu" style="margin:10px 16px 0">${isaret('bilgi', 18)}<span>mdSinyal dersi gerçekte yapıldığı gün ve saatle tutar; Yardımcı MEBBİS’e yalnız bunu yazar. MEBBİS’teki kayıt farklıysa burada görünür. Denetimde eğitimin Modül’e girilen gün ve saatte yapılıp yapılmadığına bakılır (MTSK md.46/A).</span></p>
+    ${acik.length ? `<ul class="uy-liste">${acik.slice(0, 60).map(satir).join('')}</ul>${acik.length > 60 ? `<p style="padding:6px 16px;color:var(--soluk);font-size:13px">ve ${acik.length - 60} uyumsuzluk daha</p>` : ''}` : ''}
+    ${kapali.length ? `<button type="button" class="uy-ac" data-uy-kapali>${uyKapaliGoster ? '▾' : '▸'} Bilerek bırakılanlar (${kapali.length})</button>${uyKapaliGoster ? `<ul class="uy-liste">${kapali.map(satir).join('')}</ul>` : ''}` : ''}
+    <div style="height:8px"></div></div>`;
+}
 export function merkezSekme() {
   const hepsi = butunIsler(true), sayi = t => hepsi.filter(x => x.tur === t && !x.bitti).length;
   const subeSorun = cokSube() && !seciliSube();
@@ -55,6 +73,7 @@ export function merkezSekme() {
   // MEBBİS'e girildikten sonra iptal edilen ya da silinen dersler: MEBBİS'teki programdan elle silinmeli (denetimde program ile fiili ders uyuşsun)
   const silinecek = [...new Map((S.mebSilinecek || []).map(x => [x.id, x])).values()];
   if (silinecek.length) h += `<div class="kart" style="margin-bottom:14px;border-color:var(--sari)"><div class="kart-bas"><h3>MEBBİS’ten silinecek dersler</h3><small>MEBBİS’e girildikten sonra iptal edildi ya da silindi · ${silinecek.length}</small></div><ul class="liste" style="margin-top:6px">${silinecek.map(x => { const kk = kursiyer(x.kursiyer); return `<li><span style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(kk ? tamAd(kk) : 'Silinmiş kursiyer')}</b><small style="display:block;color:var(--soluk)">${tarih(x.tarih)} ${e(x.saat)} · ${e((egitmen(x.egitmen) || {}).ad || '')}</small></span><button class="dg dg-cizgi dg-kucuk" data-meb-sildim="${e(x.id)}">MEBBİS’ten sildim</button></li>`; }).join('')}</ul><p class="og-not" style="margin:0 16px 14px">Taşınan dersler ise “Direksiyon programı” listesine “DEĞİŞTİ” notuyla yeniden düştü; MEBBİS’te eski kaydı düzeltin.</p></div>`;
+  h += uyumsuzKarti();   // DIR-054
   // Günlük akış: önce MEBBİS'ten güncelle, sonra hepsini tek onayla MEBBİS'e yaz (kurum onayı hariç: geri alınamaz, ayrıca bakılır)
   { const bekleyen = hepsi.filter(x => !x.bitti && x.tur !== 'onay'), z = (S.mebCekim || {}).toplu;
     const ozet = TURLER.filter(([k]) => k !== 'al' && k !== 'onay').map(([k, ad]) => [ad, sayi(k)]).filter(x => x[1]);
@@ -104,6 +123,13 @@ function elleGir(ids) {
   if (t === 'sinav') { const x0 = butunIsler(true).find(y => y.id === ids[0]); return MT.kuralBilgi(ids, () => import('./sayfalar3.js?v=234').then(x => x.sinavBildirimPenceresi(x0 && x0.ref.sinav)), { dugme: 'Elle girişe geç' }); }
   MT.elleGir(ids);
 }
+export function uyKapatPenceresi(anahtar, sonra) {
+  const x = (S.mebUyumsuz || []).find(y => y.anahtar === anahtar); if (!x) return; const m = UY.metin(x);
+  pencere({ baslik: 'Uyumsuzluğu bilerek bırak', icerik: `<p style="font-size:14px"><b>${e(m.baslik)}</b> · ${m.etiket.map(e).join(', ')}</p>${m.gercek ? `<p style="font-size:13.5px;margin-top:6px">mdSinyal: ${e(m.gercek)}</p>` : ''}${m.meb ? `<p style="font-size:13.5px">MEBBİS: ${e(m.meb)}</p>` : ''}
+      <div class="alan" style="margin-top:12px"><label for="uy-not">Neden bırakıyorsunuz?</label><textarea id="uy-not" class="girdi" rows="3" maxlength="300" placeholder="Ör. Pazar yapılan ders, il MEM uygulaması gereği Cumartesi girildi"></textarea><small style="color:var(--soluk)">İşlem kaydına yazılır. Denetimde bu fark sizin sorumluluğunuzdadır (MTSK md.46/A).</small></div>`,
+    altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-uy-onay>Bilerek bırak</button>',
+    onAc(p) { p.querySelector('[data-uy-onay]').addEventListener('click', () => { const n = p.querySelector('#uy-not').value.trim(); if (n.length < 5) return bildir('Kısa bir açıklama yazın', 'uyari'); UY.kapat(anahtar, n, (oturum.kullanici && oturum.kullanici.ad) || ''); kapatPencere(); bildir('Uyumsuzluk kapatıldı; işlem kaydına yazıldı'); sonra && sonra(); }); } });
+}
 export function merkezBaglan(k, yenile) {
   MT.topluBaglan(k, yenile);
   const odakla = sec => setTimeout(() => { const el = k.querySelector(sec); if (el) { el.focus(); if (el.setSelectionRange) el.setSelectionRange(el.value.length, el.value.length); } }, 0);
@@ -117,7 +143,10 @@ export function merkezBaglan(k, yenile) {
     // Ekranda doldur: seçim yalnız iş Yardımcı'ya gerçekten gidince temizlenir (bilgi penceresinde Vazgeç denirse kalır)
     if (t.closest('[data-mm-aktar]')) { const ids = [...m.secili]; EK.yardimciyaGonder(ids, () => ids.forEach(id => m.secili.delete(id))); return yenile(); }
     if (t.closest('[data-mm-elle]')) { const ids = [...m.secili]; elleGir(ids); return; }
-    if (t.closest('[data-mm-guncelle]')) return MT.topluCek(['gruplar', 'kursiyerler', 'dosya', 'personel', 'araclar', 'sinavlar']);
+    if (t.closest('[data-uy-kapali]')) { uyKapaliGoster = !uyKapaliGoster; return yenile(); }
+    { const ua = t.closest('[data-uy-ac]'); if (ua) { UY.ac(ua.dataset.uyAc); return yenile(); } }
+    { const uk = t.closest('[data-uy-kapat]'); if (uk) return uyKapatPenceresi(uk.dataset.uyKapat, yenile); }
+    if (t.closest('[data-mm-guncelle]')) return MT.topluCek(['gruplar', 'kursiyerler', 'dosya', 'personel', 'araclar', 'sinavlar', 'direksiyonProgrami']);
     if (t.closest('[data-mm-hepsini]')) { const ids = butunIsler(true).filter(x => !x.bitti && x.tur !== 'onay').map(x => x.id); MT.yaz(ids).then(r => { if (r) m.secili.clear(); yenile(); }); return; }
     // seçim yalnız iş Yardımcı'ya gidince temizlenir; onay penceresinde vazgeçilirse seçim kalır
     if (t.closest('[data-mm-yaz]')) { const ids = [...m.secili]; MT.yaz(ids).then(r => { if (r) ids.forEach(id => m.secili.delete(id)); yenile(); }); return; }

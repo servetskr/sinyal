@@ -47,6 +47,7 @@
       skt03004: { ad: 'SKT03004 Direksiyon Ders Programı Giriş', yol: '/SKT/skt03004.aspx', zorunlu: ['cmbDonem', 'cmbGrup', 'cmbSube', 'btnAdayGetir', 'hiddenKaydet'] },
       skt04003: { ad: 'SKT04003 Sınav Bilgileri Görüntüleme', yol: '/SKT/skt04003.aspx', zorunlu: ['cmbSinavTuru'] },
       skt04001: { ad: 'SKT04001 Teorik Ders Programı Görüntüleme', yol: '/SKT/skt04001.aspx', zorunlu: ['cmbDonemi', 'btnListeleGrid'] },
+      skt04002: { ad: 'SKT04002 Direksiyon Ders Programı Görüntüleme', yol: '/SKT/skt04002.aspx', zorunlu: ['cmbKurum'] },
       ook00001: { ad: 'OOK00001', yol: '/Ookgm/ook00001.aspx', zorunlu: [] },
       ook12001: { ad: 'OOK12001 Personel Arama', yol: '/Ookgm/ook12001.aspx', zorunlu: [] },
       ook54001: { ad: 'OOK54001 Personel', yol: '/Ookgm/ook54001.aspx', zorunlu: [] },
@@ -383,6 +384,36 @@
       return o;
     },
   });
+  // 1.16.0 (DIR-026): SKT04002 Direksiyon Ders Programı Görüntüleme — kurumun bütün direksiyon dersleri, dönemden bağımsız 7 günlük tarih aralıklarıyla
+  //  (tarih verilince dönem süzgeci kalkar; ~400 satırda "Kayıt Sayısı Fazla…" → aralık ikiye bölünür). Yalnız Listele (okuma) basılır.
+  //  Varsayılan aralık: 6 hafta geri, 5 hafta ileri. TC sütunu yok; aday adıyla eşleşir (mdSinyal tarafı).
+  const isoGun = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const isoTr = t => t.split('-').reverse().join('/');
+  const gunKaydir = (t, n) => { const d = new Date(+t.slice(0, 4), +t.slice(5, 7) - 1, +t.slice(8, 10)); d.setDate(d.getDate() + n); return isoGun(d); };
+  const gunFark = (a, b) => Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 864e5);
+  Object.assign(CEKME, {
+    async direksiyonProgrami(ilerle, { geri = 42, ileri = 35 } = {}) {
+      let t = await getir('/SKT/skt04002.aspx');
+      const kr = elBul(t.doc, 'cmbKurum'); if (!kr) throw ekranHata(t.doc, 'cmbKurum');
+      const kv = [...kr.options].map(o => o.value).find(v => v && v !== '-1'); if (!kv) throw new MebHata('Direksiyon programı ekranında kurum seçeneği yok', 'ekran', { ekran: 'skt04002', eksik: ['cmbKurum'] });
+      if (kr.value !== kv) t = await postla(t, { cmbKurum: kv }, { tetik: 'cmbKurum' });
+      const dEl = elBul(t.doc, 'cmbDonemi'); if (!dEl) throw ekranHata(t.doc, 'cmbDonemi');
+      const donem = [...dEl.options].map(o => o.value).find(v => /^\d{6}$/.test(v)) || dEl.value; if (!donem) throw ekranHata(t.doc, 'cmbDonemi', 'seçenekleri');
+      const a1 = adOf(t.doc, 'Us_tarih1_txtTarihGiris'), a2 = adOf(t.doc, 'Us_tarih2_txtTarihGiris');
+      const bugun = isoGun(new Date()), bas = gunKaydir(bugun, -geri), son = gunKaydir(bugun, ileri);
+      const out = { bas, son, baslik: null, satirlar: [], parca: 0, bolunen: 0 };
+      const oku = async (a, b) => {
+        const r = await postla(t, { cmbDonemi: donem, [a1]: isoTr(a), [a2]: isoTr(b) }, { dugme: 'btnListele' }); out.parca++;
+        const gv = norm(metin(r.doc.body));
+        if (/kayitsayisifazla/.test(gv)) { if (a === b) throw new MebHata(`${isoTr(a)} günü için MEBBİS “Kayıt sayısı fazla” diyor; bu gün okunamadı`, 'veri'); out.bolunen++; const m = gunKaydir(a, Math.floor(gunFark(a, b) / 2)); await oku(a, m); await oku(gunKaydir(m, 1), b); return; }
+        const tb = tabloBaslikla(r.doc, /aday/, /plaka/, /tarih/); if (!tb) return;   // "Kurumunuz Tarafından Girilmiş Ders Kaydı Bulunamadı."
+        out.baslik = out.baslik || tb.baslik; out.satirlar.push(...tb.satirlar);
+      };
+      for (let a = bas, i = 0; a <= son; a = gunKaydir(a, 7), i++) { const b = gunKaydir(a, 6) > son ? son : gunKaydir(a, 6); ilerle(`Direksiyon programı ${isoTr(a)}–${isoTr(b)}`, Math.min(.95, i / Math.ceil((geri + ileri + 1) / 7))); await oku(a, b); }
+      out.baslik = out.baslik || [];
+      return out;
+    },
+  });
   // 1.14.0 (RAP-006): SKT01001 Kurum Bilgileri salt okunur ekran; yalnız GET, hiçbir düğmeye basılmaz.
   //  Bina kontenjanı (etiket hücresinin yanındaki sayı), kurum alt programları (sertifika sınıfı, ruhsat alma, kapanma, durum), derslikler, araçlar.
   Object.assign(CEKME, {
@@ -427,7 +458,7 @@
       return tb;
     },
   });
-  const CEKME_EKRAN = { kurum: ['skt01001'], gruplar: ['skt03002', 'skt03001'], kursiyerler: ['skt02006'], personel: [], araclar: ['skt01002'], sinavlar: ['skt04003'], dosya: ['skt02009'], randevular: ['skt01005'], ucretler: ['skt02007'], teorik: ['skt04001'], ucretIlani: [], yetki: ['ook15003', 'ook15004'] };
+  const CEKME_EKRAN = { kurum: ['skt01001'], gruplar: ['skt03002', 'skt03001'], kursiyerler: ['skt02006'], personel: [], araclar: ['skt01002'], sinavlar: ['skt04003'], dosya: ['skt02009'], randevular: ['skt01005'], ucretler: ['skt02007'], teorik: ['skt04001'], ucretIlani: [], yetki: ['ook15003', 'ook15004'], direksiyonProgrami: ['skt04002'] };
   // Aday Durum Görüntüleme: tek adayın bütün dosyası
   async function adayDosyasi(taban, tc) {
     const r = await postla(taban, { txtTcKimlikNo: tc }, { dugme: 'ImageButton1' });
