@@ -381,6 +381,9 @@ export function teorikDersPencere(g, sonra) {
         if (!f.tarih.value || !l.length) return bildir('İlk ders gününü seçin', 'uyari');
         if (bas + sure > 23) return bildir('Dersler 23:00’e kadar bitmeli (MTSK Yönetmeliği 20/1)', 'uyari');
         if (l[0] < g.baslangic) return bildir(`Teorik dersler grubun başlangıcından (${tarih(g.baslangic)}) önce olamaz`, 'uyari');
+        // PER-028: öğretmenin çalışma izni ders gününden önce bitiyorsa o günler eklenmez (MEBBİS o tarihte öğretmeni listelemez)
+        { const o = (S.ogretmenler || []).find(x => x.id === f.ogretmen.value), bit = o && (o.mebIzinBitis || (o.meb || {}).izinBit); const sonra_ = bit ? l.filter(t => t > bit) : [];
+          if (sonra_.length) return bildir(`${o.ad}: çalışma izninin bitişi ${tarih(bit)}; ${sonra_.length} ders günü (${tarih(sonra_[0])}${sonra_.length > 1 ? '…' : ''}) bu tarihten sonra. İzin yenilendiyse MEBBİS’ten güncelleyin; değilse başka öğretmen seçin.`, 'uyari'); }
         const dn = denetle(l, bas, sure);
         if (dn.cakisma.length) { uyariYaz(dn, true); return bildir(`${dn.cakisma.length} günde bu saatlerde grubun zaten dersi var`, 'uyari'); }
         if (dn.uyari.length && f.dataset.onay !== dn.uyari.join('|')) { f.dataset.onay = dn.uyari.join('|'); uyariYaz(dn, true); return bildir('Günlük teorik saat uyarısını okuyun; eklemek için “Yine de ekle”ye basın', 'uyari'); }

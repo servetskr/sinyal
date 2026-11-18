@@ -18,6 +18,7 @@ import * as GR from './gruplar.js?v=234';
 import * as TY from './teorikyol.js?v=234';
 import * as ME from './mebevrak.js?v=234';
 import * as KR from './kurallar.js?v=234';
+import * as PK from './personel.js?v=234';
 import { listeAdi, satirAdi } from './taban.js?v=234';
 
 const aktifler = () => sb(S.kursiyerler).filter(k => k.asama !== 'Ehliyet' && !k.kapali);
@@ -163,6 +164,11 @@ export function genel(alt) {
       <ul class="liste" style="margin-top:8px">${bugunDers.length ? bugunDers.slice(0, 6).map(dersSatir).join('') : '<li>' + bos('Bugün direksiyon dersi yok', kapaliGun(gun(0)) ? (kapaliGun(gun(0)) === 'Pazar' ? 'Pazar günü kurs kapalı.' : 'Bugün resmî tatil; kurs kapalı.') : 'Plandan boş saatlere ders ekleyebilirsiniz.') + '</li>'}</ul>
       ${bugunDers.length > 6 ? `<div style="padding:8px 20px 16px"><a class="dg dg-hafif" href="#/plan">+${bugunDers.length - 6} ders daha → plan</a></div>` : ''}
     </div>
+    ${(() => { if (!oturum.kullanici || !['mudur', 'sekreter'].includes(oturum.kullanici.rol)) return ''; const pt = PK.personelTarihleri(KR.sinavUstasi); if (!pt.yakin.length && !pt.denk.length) return '';
+      // PER-028: personel çalışma izni ve sözleşme tarihleri; izin bitişine denk gelen ders, sınav ve teorik dersler
+      return `<div class="ara-bosluk"></div><div class="kart"><div class="kart-bas"><h3>Personel tarihleri</h3><small>Çalışma izni ve sözleşme bitişleri · 60 gün</small><div class="sag"><a class="dg dg-cizgi dg-kucuk" href="#/filo/egitmen">Ekip</a></div></div>
+        <ul class="liste" style="margin-top:8px">${pt.yakin.slice(0, 6).map(y => `<li>${isaret(y.g < 0 ? 'yasak' : y.g <= 15 ? 'uyari' : 'bilgi', 24)}<div style="flex:1;min-width:0"><b style="color:var(--murekkep);display:block">${e(y.x.ad)} · ${y.ne} ${y.g < 0 ? 'bitti' : y.g === 0 ? 'bugün bitiyor' : y.g + ' gün sonra bitiyor'}</b><small style="color:var(--soluk)">${tarihUzun(y.t)}${y.ne === 'çalışma izni' ? ' · uzatma sözleşmesi bitişten en geç 30 gün önce MEM’e verilir' : ''}</small></div><span class="sag"><button class="dg dg-hafif dg-kucuk" data-per-kart-ana="${y.tur}:${e(y.x.id)}">Kart</button></span></li>`).join('')}
+        ${pt.denk.length ? `<li style="display:block;border-top:1px solid var(--cizgi-2);padding-top:10px"><b style="color:var(--murekkep)">Denk gelenler</b><small style="display:block;color:var(--soluk)">İzin yenilendiyse MEBBİS’ten güncelleyin; yenilenmediyse başka öğretmene alın.</small></li>${pt.denk.map(d => `<li>${isaret(d.ciddi ? 'yasak' : 'uyari', 22)}<div style="flex:1;min-width:0"><b style="color:var(--murekkep);display:block">${e(d.x.ad)}</b><small style="color:var(--metin)">${e(d.metin)}</small></div><span class="sag"><a class="dg dg-hafif dg-kucuk" href="${d.link}">Aç</a></span></li>`).join('')}` : ''}</ul></div>`; })()}
     <div class="ara-bosluk"></div>
     <!-- önem sırası: önce bugünün işleri ve dersleri; "mdSinyal sizin için" özeti onlardan sonra -->
     ${oturum.kullanici && ['mudur', 'sekreter'].includes(oturum.kullanici.rol) ? (() => { const r = sinyalBuAy(), ay = BUGUN.toLocaleDateString('tr-TR', { month: 'long' }), bos = !r.mesaj && !r.ders && !r.evrak;
@@ -187,6 +193,7 @@ export function genel(alt) {
     </details>`,
     baglan(k) {
       if (alt === 'evrak') { history.replaceState(null, '', '#/genel'); import('./evrak.js?v=234').then(m => m.sahipsizPencere(yenile)); }
+      k.addEventListener('click', ev => { const pk = ev.target.closest('[data-per-kart-ana]'); if (pk) { const [tur, id] = pk.dataset.perKartAna.split(':'); PK.personelKarti(tur, id, 'genel'); } });
       const onburo = () => ((S.kullanicilar || []).find(u => u.rol === 'sekreter') || {}).ad || 'Ön büro';
       const isIsle = b => { const key = b.dataset.key, ad = { tamam: 'Tamamlandı', ertele: 'Yarına ertelendi', ata: 'Ön büroya verildi' }[b.dataset.is]; S.isDurum[key] = b.dataset.is === 'tamam' ? { durum: 'tamam', tarih: gun(0) } : b.dataset.is === 'ertele' ? { durum: 'ertele', tarih: gun(1) } : { durum: 'atandi', tarih: gun(0), kim: onburo() }; islem('Görev: ' + ad, key.split('|')[1]); kaydet(); bildir(ad); yenile(); };
       k.addEventListener('click', ev => {

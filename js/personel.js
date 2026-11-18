@@ -54,6 +54,25 @@ const ayKay = (ay, n) => { const d = new Date(+ay.slice(0, 4), +ay.slice(5, 7) -
 const TL = n => new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 }).format(Math.round(n)) + ' ₺';
 export const evrakDurumu = v => !v.bitis ? null : fark(v.bitis) < 0 ? 'bitti' : fark(v.bitis) <= 30 ? 'yakin' : null;
 
+// PER-028: ana sayfadaki 'Personel tarihleri': 60 gün içinde biten (ya da bitmiş) çalışma izni ve sözleşmeler; 'denk gelenler': izin bitişinden sonraya
+// (ya da tam bitiş gününe) düşen planlı direksiyon dersi, sınav randevusu (adayı götüren öğretmen) ve teorik ders. Bitiş günü sınavı il MEM'e soruldu (SOR-037): sarı.
+export function personelTarihleri(sinavUstasi) {
+  const kisiler = [...S.egitmenler.map(x => ({ x, tur: 'usta' })), ...(S.ogretmenler || []).map(x => ({ x, tur: 'ogretmen' })), ...(S.personel || []).map(x => ({ x, tur: 'personel' }))].filter(({ x }) => x && !x.pasif && !x.ayrildi);
+  const yakin = [], denk = [];
+  kisiler.forEach(({ x, tur }) => {
+    const izin = x.mebIzinBitis || (x.meb || {}).izinBit, soz = ((x.evraklar || []).filter(v => v.tur === 'sozlesme' && v.bitis).sort((a, b) => b.bitis.localeCompare(a.bitis))[0] || {}).bitis;
+    [['çalışma izni', izin], ['sözleşme', soz]].forEach(([ne, t]) => { if (t && fark(t) <= 60) yakin.push({ x, tur, ne, t, g: fark(t) }); });
+    if (!izin) return;
+    const d = S.dersler.filter(y => y.egitmen === x.id && y.durum === 'Planlandı' && y.tarih >= izin && fark(y.tarih) >= 0).sort((a, b) => a.tarih.localeCompare(b.tarih));
+    const sonra = d.filter(y => y.tarih > izin), ayni = d.filter(y => y.tarih === izin);
+    if (sonra.length) denk.push({ x, tur, ciddi: true, metin: `${sonra.length} direksiyon dersi izin bitişinden sonra (ilki ${tarih(sonra[0].tarih)})`, link: '#/plan' });
+    if (ayni.length) denk.push({ x, tur, ciddi: false, metin: `${ayni.length} direksiyon dersi tam izin bitiş gününde (${tarih(izin)})`, link: '#/plan' });
+    if (tur === 'usta' && sinavUstasi) (S.sinavlar || []).filter(sn => sn.tur === 'Direksiyon' && fark(sn.tarih) >= 0 && sn.tarih >= izin).forEach(sn => { const n = (sn.kursiyerler || []).filter(id => { const k = S.kursiyerler.find(z => z.id === id); return k && sinavUstasi(k) === x; }).length; if (n) denk.push({ x, tur, ciddi: sn.tarih > izin, metin: `${tarih(sn.tarih)} uygulama sınavına ${n} adayı götürecek${sn.tarih === izin ? ' (izin o gün bitiyor; il MEM’e soruldu)' : ''}`, link: '#/sinavlar' }); });
+    const te = (S.teorik || []).filter(t => t.ogretmen === x.id && t.tarih >= izin && fark(t.tarih) >= 0);
+    if (te.length) denk.push({ x, tur, ciddi: te.some(t => t.tarih > izin), metin: `${te.length} teorik ders izin bitişinde ya da sonrasında (ilki ${tarih(te.map(t => t.tarih).sort()[0])})`, link: '#/teorik' });
+  });
+  return { yakin: yakin.sort((a, b) => a.g - b.g), denk: denk.sort((a, b) => (b.ciddi ? 1 : 0) - (a.ciddi ? 1 : 0)) };
+}
 const durum = { sekme: 'genel', ay: gun(0).slice(0, 7) };
 export function personelKarti(tur, id, sekme) {
   const x = personelBul(tur, id); if (!x) return bildir('Kişi bulunamadı', 'uyari');
