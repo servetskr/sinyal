@@ -267,7 +267,7 @@ export async function hazirla(ids, { foto = true, koru = null } = {}) {
 // M05 sınavın MEBBİS'e bildirilmediğini söyler: randevuyu yazmak çaresidir, engel sayılmaz. P01 (personel fotoğrafı) yazmayı ilgilendirmez.
 // Y05 (teorik günde 2–6 saat) motordan değil, kayıt başına teorikKontrol'den gelir.
 // MZ (mevzuat.js: indirim, ilan üstü ücret, hazır yazısı…) yalnız kayıt ve sınav randevusunda gösterilir; direksiyon ve teorik programında gürültü olur.
-const KURAL_TUR = { M01: ['program'], M02: ['program'], M03: ['randevu'], M05: [], M07: ['esinav'], M08: ['randevu'], M09: ['randevu'], M10: ['esinav'], M11: ['program'], M12: ['program', 'randevu'], M13: ['program', 'randevu'], Y01: ['randevu'], Y02: ['randevu'], Y03: ['esinav'], Y04: ['randevu'], Y05: [], P01: [], P02: [], MZ: ['kayit', 'randevu'] };
+const KURAL_TUR = { M01: ['program'], M02: ['program'], M03: ['randevu'], M05: [], M07: ['esinav'], M08: ['randevu'], M09: ['randevu'], M10: ['esinav'], M11: ['program'], M12: ['program', 'randevu'], M13: ['program', 'randevu'], Y01: ['randevu'], Y02: ['randevu'], Y03: ['esinav'], Y04: ['randevu'], Y05: [], Y07: ['randevu'], P01: [], P02: [], MZ: ['kayit', 'randevu'] };
 const KURSIYER_TURLERI = ['kayit', 'evrak', 'onay', 'program', 'esinav', 'randevu'];
 const plakaNrm = p => String(p || '').replace(/\s/g, '').toLocaleUpperCase('tr');
 // Döner: { kimlik: { engel: [{kural, metin}], uyari: [{kural, metin}] } } (randevu ve kurum onayında aday kimliğiyle)
@@ -287,7 +287,7 @@ export function kuralDenetimi(l) {
       else if (kural === 'M12') uyar = !!(c.plaka && bas.includes(' belgesi') && plakaNrm(bas.split(' belgesi')[0]) === plakaNrm(c.plaka));
       else if (kural === 'M13') uyar = !!(c.usta && bas.startsWith(c.usta + ' · '));
       // Y04: yalnız o oturumda sınav ücreti ödenmemiş kursiyer (bulgunun kursiyerler listesi; ödeyen ve hatırlatma bulgusu eşleşmez)
-      else if (kural === 'Y04') uyar = !!(k && c.sinav && b.sinav === c.sinav && (b.kursiyerler || []).includes(k.id));
+      else if (kural === 'Y04' || kural === 'Y07') uyar = !!(k && c.sinav && b.sinav === c.sinav && (b.kursiyerler || []).includes(k.id));
       else uyar = !!(k && (b.kursiyer === k.id || String(b[3] || '').endsWith('/' + k.id)));
       if (!uyar) return;
       ekle(id, cid[kural] === 'engel' && ['dur', 'yasak'].includes(bt) ? 'engel' : 'uyari', kural || 'Kural', bas + (b[2] ? '. ' + String(b[2]).replace(/\.$/, '') : ''));
@@ -307,7 +307,9 @@ export function kuralDenetimi(l) {
       izinBak(x.id, egitmen(d.egitmen), d.tarih, 'ders');
       return bak(x.id, 'program', { k: kursiyer(d.kursiyer), d, plaka: (arac(d.arac) || {}).plaka || '', usta: (egitmen(d.egitmen) || {}).ad || '' });
     }
-    if (x.tur === 'randevu') return x.adaylar.forEach(a => { const p = String(a.id).split('-'), sn = (S.sinavlar || []).find(s => s.id === p.slice(1, -1).join('-')); if (sn) izinBak(a.id, S.egitmenler.find(e => e.ad === a.personelAd), sn.tarih, 'sınav'); bak(a.id, 'randevu', { k: kursiyer(p[p.length - 1]), sinav: p.slice(1, -1).join('-'), plaka: a.plaka, usta: a.personelAd }); });
+    // sınav randevusu: öğretmenin izni Y07 bulgusuyla (oturum + aday); Y07 bulgusu yalnız mdSinyal'deki oturum adaylarına bakar, bu yüzden
+    // oturumda kaydı olmayan aday için aynı ölçü burada da uygulanır (izinBak, P02)
+    if (x.tur === 'randevu') return x.adaylar.forEach(a => { const p = String(a.id).split('-'), sid = p.slice(1, -1).join('-'), sn = (S.sinavlar || []).find(s => s.id === sid), k = kursiyer(p[p.length - 1]); if (sn && !(sn.kursiyerler || []).includes(k && k.id)) izinBak(a.id, S.egitmenler.find(e => e.ad === a.personelAd), sn.tarih, 'sınav'); bak(a.id, 'randevu', { k: kursiyer(p[p.length - 1]), sinav: p.slice(1, -1).join('-'), plaka: a.plaka, usta: a.personelAd }); });
     if (x.tur === 'onay') return x.adaylar.forEach(a => bak(a.id, 'onay', { k: kursiyer(String(a.id).replace(/^onay-/, '')) }));
     if (['kayit', 'evrak', 'esinav'].includes(x.tur)) bak(x.id, x.tur, { k: kursiyer(String(x.id).slice(x.tur.length + 1)) });
   });

@@ -171,6 +171,22 @@ const KURALLAR = [
   // Ayarlar › MEB kuralları › Personel fotoğrafları kartı (sayfalar5.js) ve personelFotoUyarilari aynı listeyi buradan alır (personelKisileri).
   { id: 'P01', sira: 250, ad: 'Personel fotoğrafı', dayanak: 'MEBBİS personel fotoğraf ekranı (RSI01001); MTSK Yön. md.46/A-7', kapsam: 'personel', ciddiyet: 'uyari',
     kontrol(l) { const p = personelKisileri().filter(x => !x.x.foto).map(x => x.x); if (p.length) l.push(bul('uyari', `${p.length} personelin fotoğrafı yok`, `${p.slice(0, 5).map(x => x.ad).join(', ')}${p.length > 5 ? ` ve ${p.length - 5} kişi daha` : ''}. Fotoğrafı olmayan personel MEBBİS’in fotoğraf ekranında eksik listesine düşer; denetimde fotoğraflı kurum kimlik kartı aranır. Ders ve kayıt engellenmez.`, '#/ayarlar/kurallar', { personel: p.map(x => x.id) })); } },
+  // PER-004: sınav günü öğretmenin (adayı sınava götüren usta: son dersindeki aracın öğretmeni, yoksa kendi öğretmeni) çalışma izni ve izin günü.
+  // İzin sınavdan önce bitmişse aday bu öğretmenle sınava giremez (MEBBİS izni bitmiş personeli listelemez; aday alınmaz, hak yanabilir) → engel.
+  // Sınav günü biterse ya da sınavdan sonraki 15 gün içinde bitiyorsa, ya da öğretmen o gün izinliyse → uyarı (bitiş günü sınavı il MEM'e soruldu, SOR-037).
+  { id: 'Y07', sira: 245, ad: 'Sınav günü öğretmenin çalışma izni ve izin günü', dayanak: 'MTSK Yön. md.28/A; usta öğretici çalışma izni (OOK)', kapsam: 'sinav', ciddiyet: 'engel', bugun: true, bugunAd: n => `${n} sınavda öğretmenin izni sorunlu`,
+    kontrol(l) {
+      (S.sinavlar || []).filter(s => s && s.tur === 'Direksiyon' && s.tarih && fark(s.tarih) >= 0 && (s.kursiyerler || []).length).forEach(s => {
+        const gr = new Map(); (s.kursiyerler || []).forEach(id => { const k = kursiyer(id); if (!k || k.kapali) return; const eg = sinavUstasi(k); if (!eg) return; if (!gr.has(eg)) gr.set(eg, []); gr.get(eg).push(k.id); });
+        gr.forEach((ks, eg) => {
+          const d = izinDurumu(eg, s.tarih), izin = (S.izinler || []).find(i => i.kim === eg.id && i.bas <= s.tarih && (i.bit || i.bas) >= s.tarih), n = ks.length, bas = `${tarih(s.tarih)} sınavı · ${eg.ad}`;
+          if (d.tur === 'bitti') l.push(bul('dur', `${bas}: çalışma izni ${tarih(d.bit)} tarihinde bitiyor; ${n} aday bu öğretmenle sınava giremez`, 'MEBBİS izni bitmiş personeli listelemez; aday sınava alınmaz, hakkı yanabilir. İzin yenilendiyse MEBBİS’ten güncelleyin; yoksa adayları başka öğretmenle sınava yazın.', '#/sinavlar', { sinav: s.id, kursiyerler: ks, usta: eg.ad }));
+          else if (d.tur === 'bugun') l.push(bul('uyari', `${bas}: çalışma izni sınav günü bitiyor (${n} aday)`, 'Bitiş günü sınava girilip girilemeyeceği il MEM’e soruldu; yanıt gelene kadar izni uzatın ya da adayları başka öğretmenle yazın.', '#/sinavlar', { sinav: s.id, kursiyerler: ks, usta: eg.ad }));
+          else if (d.kalan != null && d.kalan <= 15) l.push(bul('uyari', `${bas}: çalışma izni sınavdan ${d.kalan} gün sonra bitiyor (${tarih(d.bit)})`, 'İzin süresi dolmadan uzatılmazsa sonraki sınav ve dersler MEBBİS’e yazılamaz.', '#/filo/egitmen', { sinav: s.id, kursiyerler: ks, usta: eg.ad }));
+          if (izin) l.push(bul('uyari', `${bas}: öğretmen o gün izinli (${izin.tur})`, `${n} adayı sınava başka öğretmen götürmeli ya da izin değişmeli.`, '#/filo/izin', { sinav: s.id, kursiyerler: ks, usta: eg.ad }));
+        });
+      });
+    } },
   // PER-003: çalışma izni bitişi (MEBBİS OOK12001'den; kartta elle de girilir). Bitti ya da bugün → engel; 30 gün ve daha az → uyarı (uzatma sözleşmesi
   // bitişten en geç 30 gün önce MEM'e verilir, ÖÖKY 27/1; süresi dolan personel MEBBİS'te her gün kendiliğinden pasife çekilir, ders/randevu listesinden düşer).
   // Ders ve sınav randevusu MEBBİS'e yazılırken (mebtoplu kuralDenetimi) ve ders planlanırken (dersKontrol) aynı izinDurumu o günün tarihiyle bakılır.
@@ -183,6 +199,8 @@ const KURALLAR = [
 ];
 
 /* ---------- yeni kuralların veri yardımcıları ---------- */
+// Adayı uygulama sınavına götüren öğretmen: son dersindeki aracın öğretmeni, yoksa kursiyerin öğretmeni (mebtoplu sinavAraci ile aynı ölçü)
+export const sinavUstasi = k => { const d = k && S.dersler.filter(y => y.kursiyer === k.id && y.arac).sort((a, b) => b.tarih.localeCompare(a.tarih))[0], ar = d && (S.araclar || []).find(a => a.id === d.arac); return egitmen(ar && ar.egitmen) || egitmen(k && k.egitmen) || null; };
 // Görevdeki personel (usta öğretici + teorik öğretmen; pasif ve ayrılanlar hariç): [{ x, tur: 'usta'|'ogretmen', gorev }]
 export const personelKisileri = () => [...(S.egitmenler || []).map(x => ({ x, tur: 'usta', gorev: 'Usta öğretici' })), ...(S.ogretmenler || []).map(x => ({ x, tur: 'ogretmen', gorev: 'Teorik öğretmen' }))].filter(p => p.x && !p.x.pasif && !p.x.ayrildi);
 // Hazır onayı: MEBBİS'ten çekilen "Uygulama Sınavına Uygunluk Tarihi", yoksa usta öğretici yazısının MEBBİS'e yüklendiği gün
