@@ -615,6 +615,7 @@ export async function elleGir(ids) {
 // tekrar: aynı sonuç yenilemeden sonra yeniden geldi (durumGeldi); veri uygulanır, "toplu veri aldı" kaydı ikinci kez yazılmaz
 function uygula(v, tekrar = false) {
   const o = {};
+  if (v.gruplar && v.gruplar.acilis) o.grupSayim = grupSayimIsle(v.gruplar.acilis);   // MEB-033
   if (v.gruplar && v.gruplar.sube) { const t = v.gruplar.sube; o.gruplar = GR.mebbisGruplariAl([t.baslik, ...t.satirlar], true); }
   else if (v.gruplar && v.gruplar.hata) o.gruplarHata = v.gruplar.hata;
   if (Array.isArray(v.kursiyerler)) o.kursiyerler = kursiyerleriIsle(v.kursiyerler); else if (v.kursiyerler && v.kursiyerler.hata) o.kursiyerHata = v.kursiyerler.hata;
@@ -656,6 +657,22 @@ export function teorikProgramIsle(liste) {
   (S.gruplar || []).filter(g => GR.mebGrubuMu(g) && donemler.has(g.donem) && !g.teoriksiz && ![...ozet.values()].some(o => o.donem === g.donem && o.grupNo === +g.grupNo && o.sube === g.sube)).forEach(g => { g.mebTeorik = { saat: 0, son: '', ilk: '', ders: {}, okuma: gun(0) }; eksik.push(g.ad + ' 0/34'); });
   if (guncel) islem('MEBBİS’ten teorik programı aldı', guncel + ' şube');
   return { guncel, eksik, donem: donemler.size };
+}
+// MEB-033: SKT03001 açılış tablosu (bu yılın bütün grupları): aday, girilen teorik ve direksiyon ders sayısı. mdSinyal'deki sayılarla yan yana konur:
+// aday = gruba kayıtlı kursiyer; teorik olması gereken = 34 × teorikli şube; direksiyon = gruptaki kursiyerlerin iptal edilmemiş dersleri (grup başlangıcından sonra).
+export function grupSayimIsle(t) {
+  const b = (t && t.baslik) || [], i = { d: sutun(b, /^donemi?$/, 'donem'), g: sutun(b, 'grupadi', /^grubu?$/, 'grup'), a: sutun(b, 'aday'), te: sutun(b, 'teorik'), di: sutun(b, 'direksiyon') };
+  const sayi = v => { const n = parseInt(String(v == null ? '' : v).replace(/\D/g, ''), 10); return isFinite(n) ? n : null; };
+  const satirlar = ((t && t.satirlar) || []).map(r => {
+    const donem = MN.donemKodu(r[i.d]), grupNo = +((String(r[i.g] || '').match(/[123]/) || [])[0] || 0); if (!donem || !grupNo) return null;
+    const gl = (S.gruplar || []).filter(g => GR.mebGrubuMu(g) && g.donem === donem && +g.grupNo === grupNo), ids = new Set(gl.map(g => g.id));
+    const kl = (S.kursiyerler || []).filter(k => ids.has(k.teorikGrup)), kid = new Set(kl.map(k => k.id)), bas = gl.map(g => g.baslangic).filter(Boolean).sort()[0] || '';
+    const dir = (S.dersler || []).filter(d => kid.has(d.kursiyer) && d.durum !== 'İptal' && (!bas || String(d.tarih || '') >= bas)).length;
+    return { donem, grupNo, ad: GR.donemAdi(donem) + ', Grup ' + grupNo, meb: { aday: sayi(r[i.a]), teorik: sayi(r[i.te]), direksiyon: sayi(r[i.di]) }, sinyal: { aday: kl.length, teorik: 34 * gl.filter(g => !g.teoriksiz).length, direksiyon: dir }, sube: gl.length };
+  }).filter(Boolean);
+  const farklar = satirlar.filter(x => x.sube && ['aday', 'teorik', 'direksiyon'].some(a => x.meb[a] != null && x.meb[a] !== x.sinyal[a]));
+  S.mebGrupSayim = { okuma: gun(0), satirlar };
+  return { satirlar, farklar };
 }
 export function ucretleriIsle(t) {
   const i = sutun(t.baslik || [], 'kimlik', /^tc/); let yeni = 0, ayni = 0, yok = 0;
@@ -936,6 +953,9 @@ function ozetGoster(o, yazilan) {
   const l = [];
   if (yazilan.length) l.push(satir(`${ok} iş MEBBİS’e girildi${kontrol ? `; ${kontrol} tanesini MEBBİS’te kontrol edin (yalnız MEBBİS mesajı görüldü)` : ' ve doğrulandı'}`, hata.length ? `<span style="color:var(--kirmizi);font-weight:700">${hata.length} iş girilemedi</span>: ${hata.slice(0, 4).map(x => e(MK.maskele(x.not))).join(' · ')}` : ''));
   if (yazilan.length) l.push(`<li style="font-size:13px;color:var(--soluk)">Her kaydın sonucu işlem kaydına yazıldı (Ayarlar › Güvenlik › İşlem geçmişi).</li>`);
+  if (o.grupSayim && o.grupSayim.satirlar.length) { const f = o.grupSayim.farklar, ad = { aday: 'aday', teorik: 'teorik ders', direksiyon: 'direksiyon dersi' };
+    const fm = x => ['aday', 'teorik', 'direksiyon'].filter(a => x.meb[a] != null && x.meb[a] !== x.sinyal[a]).map(a => a === 'teorik' ? `MEBBİS’te ${x.meb[a]} saat teorik ders, olması gereken ${x.sinyal[a]} (34 × ${x.sinyal[a] / 34} şube)${x.meb[a] < x.sinyal[a] ? ` → ${x.sinyal[a] - x.meb[a]} saat eksik` : ''}` : `MEBBİS’te ${x.meb[a]} ${ad[a]}, mdSinyal’de ${x.sinyal[a]}${a === 'direksiyon' && x.sinyal[a] > x.meb[a] ? ` → ${x.sinyal[a] - x.meb[a]} ders MEBBİS’e yazılmamış` : ''}`).join('; ');
+    l.push(satir(`Grup sayıları (SKT03001): ${o.grupSayim.satirlar.length} grup${f.length ? `, <span style="color:var(--kirmizi)">${f.length} grupta fark</span>` : ', mdSinyal’le aynı'}`, f.slice(0, 6).map(x => `<b>${e(x.ad)}</b>: ${e(fm(x))}`).join('<br>'))); }
   if (o.gruplar) l.push(satir(`Dönem grupları: ${o.gruplar.yeni} yeni${o.gruplar.var_ ? `, ${o.gruplar.var_} zaten vardı` : ''}${o.gruplar.farkli ? `, <span style="color:var(--kirmizi)">${o.gruplar.farkli} grupta başlangıç farkı</span>` : ''}`, o.gruplar.farkli ? 'MEBBİS’teki tarih esastır: Ayarlar › Dönem ve gruplar’da “MEBBİS tarihini al” ile düzeltin.' : ''));
   if (o.kursiyerler) {
     const kr = o.kursiyerler, fr = kr.farklar || [];
