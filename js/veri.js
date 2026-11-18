@@ -324,11 +324,18 @@ export const geceGerekli = k => { if (!k || !gerekliDireksiyon(k) || geceKisitli
 const IL_KOORD = { adana: [37.0, 35.32], adıyaman: [37.76, 38.28], afyonkarahisar: [38.76, 30.54], ağrı: [39.72, 43.05], amasya: [40.65, 35.83], ankara: [39.93, 32.86], antalya: [36.89, 30.71], artvin: [41.18, 41.82], aydın: [37.85, 27.84], balıkesir: [39.65, 27.88], bilecik: [40.14, 29.98], bingöl: [38.88, 40.5], bitlis: [38.4, 42.11], bolu: [40.74, 31.61], burdur: [37.72, 30.29], bursa: [40.19, 29.06], çanakkale: [40.15, 26.41], çankırı: [40.6, 33.62], çorum: [40.55, 34.95], denizli: [37.78, 29.09], diyarbakır: [37.91, 40.24], edirne: [41.68, 26.56], elazığ: [38.68, 39.22], erzincan: [39.75, 39.49], erzurum: [39.9, 41.27], eskişehir: [39.78, 30.52], gaziantep: [37.07, 37.38], giresun: [40.91, 38.39], gümüşhane: [40.46, 39.48], hakkari: [37.58, 43.74], hatay: [36.2, 36.16], ısparta: [37.76, 30.55], mersin: [36.8, 34.64], istanbul: [41.01, 28.98], izmir: [38.42, 27.14], kars: [40.6, 43.1], kastamonu: [41.39, 33.78], kayseri: [38.72, 35.49], kırklareli: [41.73, 27.22], kırşehir: [39.15, 34.16], kocaeli: [40.77, 29.92], konya: [37.87, 32.48], kütahya: [39.42, 29.98], malatya: [38.35, 38.31], manisa: [38.61, 27.43], kahramanmaraş: [37.58, 36.94], mardin: [37.31, 40.74], muğla: [37.22, 28.36], muş: [38.74, 41.49], nevşehir: [38.62, 34.71], niğde: [37.97, 34.68], ordu: [40.98, 37.88], rize: [41.03, 40.52], sakarya: [40.78, 30.4], samsun: [41.29, 36.33], siirt: [37.93, 41.94], sinop: [42.03, 35.15], sivas: [39.75, 37.02], tekirdağ: [40.98, 27.51], tokat: [40.31, 36.55], trabzon: [41.0, 39.72], tunceli: [39.11, 39.55], şanlıurfa: [37.16, 38.79], uşak: [38.68, 29.41], van: [38.5, 43.38], yozgat: [39.82, 34.81], zonguldak: [41.45, 31.79], aksaray: [38.37, 34.03], bayburt: [40.26, 40.23], karaman: [37.18, 33.22], kırıkkale: [39.85, 33.51], batman: [37.88, 41.13], şırnak: [37.52, 42.46], bartın: [41.63, 32.34], ardahan: [41.11, 42.7], ığdır: [39.92, 44.04], yalova: [40.65, 29.27], karabük: [41.2, 32.62], kilis: [36.72, 37.12], osmaniye: [37.07, 36.25], düzce: [40.84, 31.16], afyon: [38.76, 30.54], antep: [37.07, 37.38], urfa: [37.16, 38.79], maraş: [37.58, 36.94] };
 // Türkçe harfler sadeleştirilerek eşlenir ("Eskisehir", "ESKİŞEHİR", "Odunpazarı / Eskişehir" aynı ili verir); bulunamazsa Ankara
 const ilSade = x => String(x || '').toLocaleLowerCase('tr').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ı/g, 'i').replace(/ç/g, 'c').replace(/ğ/g, 'g').replace(/ö/g, 'o').replace(/ş/g, 's').replace(/ü/g, 'u');
+// DIG-005: planlayıcı binlerce kez sorar; il adı sadeleştirmesi metin başına bir kez yapılır (önbellek)
+const IL_SADE = Object.keys(IL_KOORD).sort((a, b) => b.length - a.length).map(a => [a, ilSade(a)]), ilOnbellek = new Map();
 export function kursIli(K = (S && S.kurs) || {}) {
-  const t = ilSade(K.il || K.sehir || K.adres), adlar = Object.keys(IL_KOORD).sort((a, b) => b.length - a.length);
-  return adlar.find(a => t.includes(ilSade(a))) || 'ankara';
+  const ham = String(K.il || K.sehir || K.adres || ''); if (ilOnbellek.has(ham)) return ilOnbellek.get(ham);
+  const t = ilSade(ham), il = (IL_SADE.find(([, a]) => t.includes(a)) || ['ankara'])[0]; if (ilOnbellek.size > 50) ilOnbellek.clear(); ilOnbellek.set(ham, il); return il;
 }
+const batimOnbellek = new Map();
 export function gunBatimi(t, il) {
+  const anahtar = String(t).slice(0, 10) + '|' + (il || kursIli()); if (batimOnbellek.has(anahtar)) return batimOnbellek.get(anahtar);
+  const v = gunBatimiHesap(t, il); if (batimOnbellek.size > 2000) batimOnbellek.clear(); batimOnbellek.set(anahtar, v); return v;
+}
+function gunBatimiHesap(t, il) {
   const [lat, lon] = IL_KOORD[il || kursIli()] || IL_KOORD.ankara, [y, m, d] = String(t).slice(0, 10).split('-').map(Number), r = Math.PI / 180;
   const N = Math.round((Date.UTC(y, m - 1, d) - Date.UTC(y, 0, 0)) / 864e5), g = 2 * Math.PI / 365 * (N - 1 + 0.25);
   const eqt = 229.18 * (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g) - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));
