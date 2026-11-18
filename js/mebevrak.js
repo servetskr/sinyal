@@ -22,7 +22,7 @@ const tarihYaz = v => v ? v.split('-').reverse().join('.') : '';
    Süreler Ayarlar › MEB kuralları'ndan değişir; 0 yazılırsa o denetim kapanır. MEBBİS'e işlenmiş kayıtta süre uyarısı çıkmaz (belge kabul edilmiş). */
 // Yeni Sağlık Raporları Yönetmeliği yürürlüğü (RG 19/5/2026); öncesinde verilen raporlar kendi süreleri bitene kadar geçerli (geçici md.1/2)
 const SAGLIK_YON_TARIH = '2026-05-19';
-export const BELGE_SURE = { saglikGecerlilikAy: 12, adliGecerlilikAy: 6, fotoGecerlilikAy: 6 };
+export const BELGE_SURE = { saglikGecerlilikAy: 12, adliGecerlilikAy: 6, fotoGecerlilikAy: 6, evrakAlinmaAy: 1 };  // KAY-119: evrakAlinmaAy kurs kararı (son N ayda alınmış)
 export const belgeSure = key => { const v = S && S.kurs ? S.kurs[key] : undefined; return v === 0 ? 0 : +v > 0 ? +v : BELGE_SURE[key]; };
 // Kurs Ayarlar'da kendi değerini girmediyse sağlık raporu süresi "teyit bekliyor" sayılır (fotoğrafın 6 ayı yönetmelikte yazılı; adli sicilin 6 ayı kurs kararı)
 export const sureTeyitli = key => key === 'fotoGecerlilikAy' || key === 'adliGecerlilikAy' || !!(S && S.kurs && S.kurs[key] !== undefined);
@@ -52,6 +52,8 @@ export function tarihUyarilari(k, ham = {}) {
     const gecis = alan === 'saglik' && t < SAGLIK_YON_TARIH ? ` Rapor ${tYaz(SAGLIK_YON_TARIH)} öncesi: yeni Sağlık Raporları Yönetmeliği’ne göre kendi süresi bitene kadar geçerli; raporda yazan süreye bakın.` : '';
     if (ay && !k.mebIslendi && ayEkleIso(t, ay) < ref) l.push({ alan, metin: `${ad} ${k.kayit ? 'kayıt tarihinde' : 'bugün'} ${ayFarki(t, ref)} aylık; kurs ayarı en fazla ${ay} ay. ${gecis ? gecis.trim() : 'Yeni belge istenebilir.'}`, dayanak: dayanak + (gecis ? '; Sağlık Raporları Yön. geçici md.1/2' : '') + '; Ayarlar › MEB kuralları', teyit: !sureTeyitli(sure) });
   });
+  // KAY-119: belgenin kendi geçerliliğinden ayrı, kursun 'son N ay içinde alınmış olsun' kuralı (kayıt günü ya da bugün); MEBBİS'e işlenmiş kayıtta sorulmaz
+  { const ay = belgeSure('evrakAlinmaAy'); if (ay && !k.mebIslendi) belgeler.forEach(([alan, ad, t]) => { if (!t || t > bugun || l.some(x => x.alan === alan)) return; if (ayEkleIso(t, ay) < ref) { const af = ayFarki(t, ref); l.push({ alan, metin: `Bu ${ad.toLocaleLowerCase('tr')} ${af ? af + ' ay' : 'bir aydan fazla'} önce alınmış; kursunuz son ${ay} ayda alınmışını istiyor.`, dayanak: 'Kurs kararı (Ayarlar › MEB kuralları › evrak alınma süresi)' }); } }); }
   const dg = k.dogrulama || {};
   [['saglik', 'Sağlık raporu'], ['adli', 'Adli sicil belgesi']].forEach(([x, ad]) => { const gs = dg[x] && isoYap(dg[x].gecerlilik); if (gs && gs < bugun) l.push({ alan: x, metin: `${ad} üzerindeki geçerlilik tarihi (${tYaz(gs)}) geçmiş.`, dayanak: 'Belgenin kendi geçerlilik tarihi (doğrulamada girildi)' }); });
   const ft = isoYap(k.fotoTarih), fa = belgeSure('fotoGecerlilikAy');
