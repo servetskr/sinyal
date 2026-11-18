@@ -500,9 +500,10 @@ const MV_CEVAP_ISTEM = 'Sürücü kursu personelinin (kurs müdürü, ön büro,
   '- Soru bir işin nasıl yapılacağını soruyorsa "adimlar" alanına sırasıyla yaz (kim, ne zaman, hangi süre içinde). Değilse "adimlar" boş kalır.\n' +
   '- Cevabın bir kısmı kaynaklarda yoksa o kısmı uydurma: "eksik" alanına neyin bulunamadığını ve bakılacak resmî yeri yaz (il/ilçe millî eğitim müdürlüğü, ÖÖKGM, nüfus müdürlüğü, Resmî Gazete gibi).\n' +
   '- Kaynaklarda cevap hiç yoksa "bulunamadi": true ver, "kisa" alanına "Verilen kaynaklarda bu sorunun cevabı yok." yaz, "eksik" alanına bakılacak resmî yeri yaz; diğer alanlar boş kalır.\n' +
-  '- Hukuki görüş ya da tavsiye verme; kaynağın ne dediğini aktar. Kaynaklar çelişiyorsa ikisini de "dikkat" alanında numarasıyla belirt.\n' +
+  '- Hukuki görüş ya da tavsiye verme; kaynağın ne dediğini aktar. Kaynaklar çelişiyorsa ikisini de "dikkat" alanında belgenin adıyla belirt (ör. "MTSK Yönetmeliği md.39 … der, MEB yazısı … der").\n' +
   '- Etiketi "mdSinyal Rehberi" ile başlayan kaynaklar açıklamadır; çelişkide resmî madde esastır. "(atıf)" etiketli kaynak, başka bir maddenin gönderme yaptığı maddedir.\n' +
   '- İstisna, ilden ile uygulama farkı ya da yürürlüğe girmemiş (taslak) hüküm varsa "dikkat" alanına yaz; yoksa boş dize bırak.\n' +
+  '- "dikkat", "eksik" ve bütün metinler kurs müdürüne yazılır: "kaynak 2", "[2]’de", "verilen kaynaklar", "derlem", "araştırmamıza göre", "mdSinyal Rehberi" gibi iç ifadeler yazma; bir belgeden söz edeceksen adını yaz (ör. "Karayolları Trafik Yönetmeliği geçici madde 10").\n' +
   '- Sade, kısa Türkçe yaz; kurs müdürüne konuşur gibi. "kisa" 1–3 cümle ve sorunun doğrudan cevabı olsun (rakam varsa rakamla). En çok 6 ayrıntı, en çok 7 adım.\n' +
   'Cevabı YALNIZ şu biçimde, geçerli bir JSON nesnesi olarak ver (önce ya da sonra başka metin, kod bloğu yazma):\n' +
   '{"kisa":"doğrudan cevap","ayrinti":[{"metin":"sayı, süre ya da şart","kaynak":[1]}],"adimlar":[{"metin":"yapılacak iş","kaynak":[2]}],"dikkat":"","eksik":"","bulunamadi":false}';
@@ -518,7 +519,8 @@ const MV_CEVAP_ISTEM_2 = 'Sürücü kursu personelinin (kurs müdürü, ön bür
   '- Soru bir işin nasıl yapılacağını soruyorsa "adimlar" alanına sırasıyla yaz (kim, ne zaman, hangi süre içinde); değilse boş bırak.\n' +
   '- "kisa": sorunun 1–2 cümlelik doğrudan cevabı (rakam varsa rakamla).\n' +
   '- Etiketi "mdSinyal Rehberi" ile başlayan kaynaklar açıklamadır; çelişkide resmî madde esastır. "(atıf)" etiketli kaynak, başka maddenin gönderme yaptığı maddedir. Soruda "(Not: …)" varsa soruyu o açıklamaya göre anla.\n' +
-  '- Kaynaklar çelişiyorsa, istisna, ilden ile uygulama farkı ya da yürürlüğe girmemiş hüküm varsa "dikkat" alanına numarasıyla yaz; yoksa boş bırak.\n' +
+  '- Kaynaklar çelişiyorsa, istisna, ilden ile uygulama farkı ya da yürürlüğe girmemiş hüküm varsa "dikkat" alanına kısaca, belgenin adıyla yaz (numara yazma); yoksa boş bırak.\n' +
+  '- "dikkat", "eksik" ve bütün metinler kurs müdürüne yazılır: "kaynak 2", "[2]’de", "verilen kaynaklar", "derlem", "araştırmamıza göre", "mdSinyal Rehberi" gibi iç ifadeler yazma; bir belgeden söz edeceksen adını yaz (ör. "Karayolları Trafik Yönetmeliği geçici madde 10").\n' +
   '- Hiçbir alt sorunun cevabı yoksa "bulunamadi": true ver, "kisa" alanına "Verilen kaynaklarda bu sorunun cevabı yok." yaz.\n' +
   '- Sade Türkçe, kurs müdürüne konuşur gibi. En çok 6 alt soru, en çok 7 adım.\n' +
   'YALNIZ şu JSON nesnesini ver:\n' +
@@ -533,6 +535,14 @@ const mvKes = (s, n) => { s = String(s || '').replace(/[\u0000-\u0008\u000b-\u00
 const mvAtifSuz = (s, n) => s.replace(/\s*\[(\d{1,3})\]/g, (x, k) => (+k >= 1 && +k <= n ? x : '')).trim();
 // metne yazıyla sızan kaynak anışları ("(kaynak 8 ve 10)", "kaynak 3'e göre") silinir; numaralar zaten kaynak dizisinde
 const mvKaynakAnisSil = t => String(t || '').replace(/\s*\(\s*kaynak(?:lar)?\s*\d{1,2}(?:\s*(?:,|ve|-)\s*\d{1,2})*\s*\)/gi, '').replace(/\s*\bkaynak(?:lar)?\s*\d{1,2}(?:\s*(?:,|ve)\s*\d{1,2})*(?:['’]?(?:e|a|ye|ya|de|da|te|ta)\s+göre)?/gi, '');
+// "dikkat"/"eksik" kursa gider: kaynak numarasıyla anış ("Kaynak [2]'de", "kaynak 5'te") silinir, iç not cümleleri ("derlemde yok", "araştırmamıza göre") atılır
+const MV_IC_NOT = /derlem|araştırmamız|mdsinyal rehber|verilen kaynak|kaynak listesi|veri ?set/i;
+const mvIcNotSil = t => {
+  const s = String(t || '').replace(/\s*\(\s*(?:bkz\.?\s*)?\[\d{1,3}\](?:\s*(?:,|ve)\s*\[\d{1,3}\])*\s*\)/g, '')
+    .replace(/\b[Kk]aynak(?:lar)?\s*\[?\d{1,2}\]?(?:\s*(?:,|ve|-)\s*\[?\d{1,2}\]?)*(?:['’]?(?:deki|daki|teki|taki|nde|nda|de|da|te|ta|ye|ya|e|a)\b)?(?:\s+göre)?\s*,?\s*/g, '')
+    .replace(/\s*\[\d{1,3}\](?:['’]\p{L}+)?/gu, '');
+  return s.split(/(?<=[^\d\s][.!?])\s+(?=[\p{Lu}"'“‘])/u).filter(c => c.trim() && !MV_IC_NOT.test(c)).map(c => c.trim().replace(/^\p{Ll}/u, h => h.toLocaleUpperCase('tr'))).join(' ').replace(/\s{2,}/g, ' ').trim();
+};
 function mvCevapCoz(ham, n) {
   const duz = () => { const t = mvKes(mvAtifSuz(String(ham || '').replace(/^```(?:json)?\s*|\s*```$/g, ''), n), MV_CB.duz) || MV_YOK; return { kisa: t, ayrinti: [], adimlar: [], dikkat: '', eksik: '', bulunamadi: false, duz: true, cevap: t }; };
   let j = null; const s = String(ham || ''), a = s.indexOf('{'), z = s.lastIndexOf('}');
@@ -550,7 +560,7 @@ function mvCevapCoz(ham, n) {
   // istem 2: "sorular" [{ soru, cevap, kaynak, yok }] → ayrıntı { soru, metin, kaynak } (cevabı olmayan alt soru ayrıntıya girmez; eksik alanında anlatılır)
   if (Array.isArray(j.sorular) && j.sorular.length) j.ayrinti = j.sorular.filter(x => x && !x.yok && typeof x.cevap === 'string').map(x => ({ metin: x.cevap, kaynak: x.kaynak, soru: typeof x.soru === 'string' ? x.soru : '' }));
   const bulunamadi = j.bulunamadi === true;
-  const o = { kisa: mvKes(mvAtifSuz(mvKaynakAnisSil(typeof j.kisa === 'string' ? j.kisa : ''), n), MV_CB.kisa), ayrinti: bulunamadi ? [] : liste(j.ayrinti), adimlar: bulunamadi ? [] : liste(j.adimlar), dikkat: bulunamadi ? '' : mvKes(mvAtifSuz(typeof j.dikkat === 'string' ? j.dikkat : '', n), MV_CB.dikkat), eksik: mvKes(mvAtifSuz(typeof j.eksik === 'string' ? j.eksik : '', n), MV_CB.eksik), bulunamadi };
+  const o = { kisa: mvKes(mvAtifSuz(mvKaynakAnisSil(typeof j.kisa === 'string' ? j.kisa : ''), n), MV_CB.kisa), ayrinti: bulunamadi ? [] : liste(j.ayrinti), adimlar: bulunamadi ? [] : liste(j.adimlar), dikkat: bulunamadi ? '' : mvKes(mvIcNotSil(typeof j.dikkat === 'string' ? j.dikkat : ''), MV_CB.dikkat), eksik: mvKes(mvIcNotSil(typeof j.eksik === 'string' ? j.eksik : ''), MV_CB.eksik), bulunamadi };
   if (!o.kisa) { if (!bulunamadi && !o.ayrinti.length) return duz(); o.kisa = bulunamadi ? MV_YOK : ''; }
   const at = l => l.map(k => '[' + k + ']').join('');
   o.cevap = [o.kisa, o.ayrinti.map(x => '- ' + (x.soru ? x.soru + ': ' : '') + x.metin + ' ' + at(x.kaynak)).join('\n'), o.adimlar.length ? 'Yapılacaklar:\n' + o.adimlar.map((x, i) => (i + 1) + '. ' + x.metin + ' ' + at(x.kaynak)).join('\n') : '', o.dikkat ? 'Dikkat: ' + o.dikkat : '', o.eksik ? 'Kaynaklarda yok: ' + o.eksik : ''].filter(Boolean).join('\n\n');
@@ -667,7 +677,7 @@ async function mvCevapHazirla(b, istem = 0) {
   const surum = istem === 1 || istem === 2 ? istem : MV_ISTEM_SURUM;
   const h = { n: k.length, surum, mesajlar: [{ role: 'system', content: surum === 2 ? MV_CEVAP_ISTEM_2 : MV_CEVAP_ISTEM }, { role: 'user', content: govde }], enCok: surum === 2 ? 1800 : 1400, anahtar: null, hazir: null };
   // önbellek (Cache API, 7 gün): aynı istem + soru + kaynaklar → aynı cevap; ücretsiz, KV yazması yok, veri merkezi başına
-  try { const d = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(surum + '\n' + govde))); h.anahtar = new Request('https://onbellek.mdsinyal.invalid/mv/cevap/' + [...d].map(x => x.toString(16).padStart(2, '0')).join('')); const r = await caches.default.match(h.anahtar); if (r) h.hazir = { ...(await r.json()), onbellek: true }; } catch (x) { h.anahtar = null; }
+  try { const d = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('d2\n' + surum + '\n' + govde))); h.anahtar = new Request('https://onbellek.mdsinyal.invalid/mv/cevap/' + [...d].map(x => x.toString(16).padStart(2, '0')).join('')); const r = await caches.default.match(h.anahtar); if (r) h.hazir = { ...(await r.json()), onbellek: true }; } catch (x) { h.anahtar = null; }
   return h;
 }
 const mvCevapSakla = async (h, o) => { if (h.anahtar && !o.duz) { try { await caches.default.put(h.anahtar, new Response(JSON.stringify(o), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=604800' } })); } catch (x) { } } };
