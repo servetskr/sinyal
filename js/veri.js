@@ -822,6 +822,9 @@ function goc(o) {
     const uc = (o.kursiyerler || []).find(k => k.asama === 'Teorik' && !k.ucretsiz);
     if (uc) { uc.odeme.sozlesme = uc.odeme.toplam; const acik = uc.odeme.taksitler.filter(t => !t.odendi); acik.forEach(t => { t.iptal = gun(-20); }); uc.odeme.toplam -= acik.reduce((a, t) => a + t.tutar, 0); uc.ucretsiz = { tarih: gun(-20), neden: 'Şehit / gazi yakını', no: '', kim: 'Demo' }; }
   }
+  // PER-003/007 demo: MEBBİS personelinden okunmuş gibi çalışma izni bitişleri ve haftalık saat (biri 24 gün sonra bitiyor: Bugün'de uyarı)
+  if (demo && !o._per) { o._per = true; (o.egitmenler || []).forEach((x, i) => { if (!x.calismaIzinNo || x.mebIzinBitis) return; const bit = gun(i === 1 ? 24 : 150 + i * 70), kds = i === 2 ? 30 : 40;
+    x.mebIzinBitis = bit; x.meb = { izinNo: x.calismaIzinNo, gorev: 'Usta Öğretici', brans: 'Direksiyon Eğitimi', statu: i === 2 ? 'Ücretli' : 'Sözleşmeli', izinBas: gun(i === 1 ? -341 : -215 + i * 70), izinBit: bit, maasKds: i === 2 ? 0 : kds, ucretKds: i === 2 ? kds : 0, haftaSaat: kds, okuma: gun(-1), ...(x.meb || {}) }; }); }
   if (o.kurs.kendiRandevu === undefined) o.kurs.kendiRandevu = true;
   noTamamla(o.kursiyerler || []);
   // gönderim geçmişi sınırsız büyümesin (eşitleme kovaları 1 MB sınırına yaklaşmasın): son 5000 mesaj

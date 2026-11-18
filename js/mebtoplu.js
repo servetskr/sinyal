@@ -1,7 +1,7 @@
 // MEBBİS toplu çekme ve toplu yazma (mdSinyal tarafı). İşi MEBBİS Yardımcısı'nın arka plan motoru (eklenti/motor.js)
 // kursun kendi MEBBİS oturumunda, ekran açmadan yürütür; sonuç buraya gelir ve kayıtlarla eşlenir.
 // Gönderilen ve gelen iletilerin adları ve alanları: js/eklenti.js başındaki ileti sözleşmesi tablosu (eklenti/sinyal.js'te de aynısı).
-import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, sb, sbDers, cokSube, seciliSube, eksikEvrak, anaSinif, egitimSinifi, ekTur, kursiyerTaban, tutarOku, MEB_CEZA_SERTIFIKA, programAcik, esinavUcretiIsle, esinavUcretiVar, esinavHakDurum, teorikSaat } from './veri.js?v=234';
+import { S, kaydet, gun, iso, fark, izinDurumu, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, sb, sbDers, cokSube, seciliSube, eksikEvrak, anaSinif, egitimSinifi, ekTur, kursiyerTaban, tutarOku, MEB_CEZA_SERTIFIKA, programAcik, esinavUcretiIsle, esinavUcretiVar, esinavHakDurum, teorikSaat } from './veri.js?v=234';
 import { bildir, pencere, kapatPencere, e, ik, isaret, rozet, tarih, tl } from './ui.js?v=234';
 import * as GR from './gruplar.js?v=234';
 import * as EK from './eklenti.js?v=234';
@@ -267,7 +267,7 @@ export async function hazirla(ids, { foto = true, koru = null } = {}) {
 // M05 sınavın MEBBİS'e bildirilmediğini söyler: randevuyu yazmak çaresidir, engel sayılmaz. P01 (personel fotoğrafı) yazmayı ilgilendirmez.
 // Y05 (teorik günde 2–6 saat) motordan değil, kayıt başına teorikKontrol'den gelir.
 // MZ (mevzuat.js: indirim, ilan üstü ücret, hazır yazısı…) yalnız kayıt ve sınav randevusunda gösterilir; direksiyon ve teorik programında gürültü olur.
-const KURAL_TUR = { M01: ['program'], M02: ['program'], M03: ['randevu'], M05: [], M07: ['esinav'], M08: ['randevu'], M09: ['randevu'], M10: ['esinav'], M11: ['program'], M12: ['program', 'randevu'], M13: ['program', 'randevu'], Y01: ['randevu'], Y02: ['randevu'], Y03: ['esinav'], Y04: ['randevu'], Y05: [], P01: [], MZ: ['kayit', 'randevu'] };
+const KURAL_TUR = { M01: ['program'], M02: ['program'], M03: ['randevu'], M05: [], M07: ['esinav'], M08: ['randevu'], M09: ['randevu'], M10: ['esinav'], M11: ['program'], M12: ['program', 'randevu'], M13: ['program', 'randevu'], Y01: ['randevu'], Y02: ['randevu'], Y03: ['esinav'], Y04: ['randevu'], Y05: [], P01: [], P02: [], MZ: ['kayit', 'randevu'] };
 const KURSIYER_TURLERI = ['kayit', 'evrak', 'onay', 'program', 'esinav', 'randevu'];
 const plakaNrm = p => String(p || '').replace(/\s/g, '').toLocaleUpperCase('tr');
 // Döner: { kimlik: { engel: [{kural, metin}], uyari: [{kural, metin}] } } (randevu ve kurum onayında aday kimliğiyle)
@@ -293,6 +293,9 @@ export function kuralDenetimi(l) {
       ekle(id, cid[kural] === 'engel' && ['dur', 'yasak'].includes(bt) ? 'engel' : 'uyari', kural || 'Kural', bas + (b[2] ? '. ' + String(b[2]).replace(/\.$/, '') : ''));
     });
   };
+  // PER-003: öğretmenin çalışma izni ders/sınav gününden önce bittiyse engel (MEBBİS o tarihte personeli listelemez); aynı gün bitiyorsa uyarı
+  // (bitiş günü sınavına girilip girilemeyeceği il MEM'e soruldu, SOR-037)
+  const izinBak = (id, eg, t, ne) => { if (!eg || !t) return; const d = izinDurumu(eg, t), iy = ne === 'ders' ? 'dersi' : 'sınavı'; if (d.tur === 'bitti') ekle(id, 'engel', 'P02', `${eg.ad}: çalışma izninin bitişi ${tarih(d.bit)}; ${tarih(t)} ${iy} MEBBİS’e yazılamaz. İzin yenilendiyse MEBBİS’ten güncelleyin`); else if (d.tur === 'bugun') ekle(id, 'uyari', 'P02', `${eg.ad}: çalışma izni ${ne} günü (${tarih(t)}) bitiyor`); };
   l.forEach(x => {
     if (x.tur === 'teorik') {   // Y05: grup ve gün toplamı (bu ders dahil) 2–6 saat dışındaysa uyarı
       const t = (S.teorik || []).find(y => 'teorik-' + y.id === x.id); if (!t) return;
@@ -301,9 +304,10 @@ export function kuralDenetimi(l) {
     }
     if (x.tur === 'program') {
       const d = S.dersler.find(y => 'ders-' + y.id === x.id); if (!d) return;
+      izinBak(x.id, egitmen(d.egitmen), d.tarih, 'ders');
       return bak(x.id, 'program', { k: kursiyer(d.kursiyer), d, plaka: (arac(d.arac) || {}).plaka || '', usta: (egitmen(d.egitmen) || {}).ad || '' });
     }
-    if (x.tur === 'randevu') return x.adaylar.forEach(a => { const p = String(a.id).split('-'); bak(a.id, 'randevu', { k: kursiyer(p[p.length - 1]), sinav: p.slice(1, -1).join('-'), plaka: a.plaka, usta: a.personelAd }); });
+    if (x.tur === 'randevu') return x.adaylar.forEach(a => { const p = String(a.id).split('-'), sn = (S.sinavlar || []).find(s => s.id === p.slice(1, -1).join('-')); if (sn) izinBak(a.id, S.egitmenler.find(e => e.ad === a.personelAd), sn.tarih, 'sınav'); bak(a.id, 'randevu', { k: kursiyer(p[p.length - 1]), sinav: p.slice(1, -1).join('-'), plaka: a.plaka, usta: a.personelAd }); });
     if (x.tur === 'onay') return x.adaylar.forEach(a => bak(a.id, 'onay', { k: kursiyer(String(a.id).replace(/^onay-/, '')) }));
     if (['kayit', 'evrak', 'esinav'].includes(x.tur)) bak(x.id, x.tur, { k: kursiyer(String(x.id).slice(x.tur.length + 1)) });
   });

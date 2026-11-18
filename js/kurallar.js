@@ -5,7 +5,7 @@
 // 'uyari', 'bilgi'. Dizinin üstünde ek alanlar: kural (kimlik), kursiyer (id), kursiyerler (birden çok kişiye ait oturum bulgusunda kimlik listesi, ör. Y04), kisa (öğrenci dosyasında ad olmadan başlık), yalnizDosya, eylem.
 // DOM yok; yalnız veri.js'e bağlı (Node'da denenebilir). Bugün: veri.js BUGUN / gun().
 // Yeni kurallar ilk sürümde yalnız "uyarı"dır; Eyüp Bey teyit edince engele çevrilebilir (belgeler/eksikler/eyup-sorular.md).
-import { S, gun, fark, aracUygun, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
+import { S, gun, fark, aracUygun, izinDurumu, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
 
 /* ---------- yardımcılar (ui.js'teki biçimlerle aynı; ui.js DOM'a bağlı olduğu için burada kopyası) ---------- */
 const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
@@ -171,6 +171,15 @@ const KURALLAR = [
   // Ayarlar › MEB kuralları › Personel fotoğrafları kartı (sayfalar5.js) ve personelFotoUyarilari aynı listeyi buradan alır (personelKisileri).
   { id: 'P01', sira: 250, ad: 'Personel fotoğrafı', dayanak: 'MEBBİS personel fotoğraf ekranı (RSI01001); MTSK Yön. md.46/A-7', kapsam: 'personel', ciddiyet: 'uyari',
     kontrol(l) { const p = personelKisileri().filter(x => !x.x.foto).map(x => x.x); if (p.length) l.push(bul('uyari', `${p.length} personelin fotoğrafı yok`, `${p.slice(0, 5).map(x => x.ad).join(', ')}${p.length > 5 ? ` ve ${p.length - 5} kişi daha` : ''}. Fotoğrafı olmayan personel MEBBİS’in fotoğraf ekranında eksik listesine düşer; denetimde fotoğraflı kurum kimlik kartı aranır. Ders ve kayıt engellenmez.`, '#/ayarlar/kurallar', { personel: p.map(x => x.id) })); } },
+  // PER-003: çalışma izni bitişi (MEBBİS OOK12001'den; kartta elle de girilir). Bitti ya da bugün → engel; 30 gün ve daha az → uyarı (uzatma sözleşmesi
+  // bitişten en geç 30 gün önce MEM'e verilir, ÖÖKY 27/1; süresi dolan personel MEBBİS'te her gün kendiliğinden pasife çekilir, ders/randevu listesinden düşer).
+  // Ders ve sınav randevusu MEBBİS'e yazılırken (mebtoplu kuralDenetimi) ve ders planlanırken (dersKontrol) aynı izinDurumu o günün tarihiyle bakılır.
+  { id: 'P02', sira: 255, ad: 'Usta öğretici çalışma izni (bitiyor)', dayanak: 'ÖÖKY md.27/1; MEBBİS OOK çalışma izni', kapsam: 'personel', ciddiyet: 'engel', bugun: true, bugunAd: n => `${n} öğretmenin çalışma izni bitti ya da bitiyor`,
+    kontrol(l) { personelKisileri().forEach(({ x, gorev }) => { const d = izinDurumu(x); if (d.tur === 'yok' || d.tur === 'ok') return;
+      const ileri = sbDers(S.dersler).filter(y => y.egitmen === x.id && y.durum === 'Planlandı' && y.tarih > d.bit).length;
+      const dersNot = ileri ? ` İzin bitişinden sonraya ${ileri} planlı dersi var; izin yenilenmezse bu dersler MEBBİS’e yazılmaz.` : '';
+      if (d.tur === 'bitti' || d.tur === 'bugun') l.push(bul('dur', `${x.ad} · çalışma izni ${d.tur === 'bugun' ? 'bugün bitiyor' : tarih(d.bit) + ' tarihinde bitti'}`, `${gorev}; yenilenmeden ders ve sınav randevusu MEBBİS’e girilemez (MEBBİS süresi dolan personeli kendiliğinden pasife çeker).${dersNot} İzin yenilendiyse MEB işlemleri’nden “MEBBİS’ten güncelle” ile yeni bitişi alın.`, '#/filo/egitmen', { personel: [x.id], usta: x.ad }));
+      else l.push(bul('uyari', `${x.ad} · çalışma izni ${d.kalan} gün sonra bitiyor (${tarih(d.bit)})`, `Uzatma için yeni sözleşme bitişten en geç 30 gün önce il/ilçe MEM’e verilir (ÖÖKY md.27/1); toplu onay süre dolmadan istenmeli.${dersNot}`, '#/filo/egitmen', { personel: [x.id], usta: x.ad })); }); } },
 ];
 
 /* ---------- yeni kuralların veri yardımcıları ---------- */
@@ -232,6 +241,8 @@ export function dersKontrol(o) {
   if (ar && aracYasSiniri(ar) && aracYasi(ar, +planGun.slice(0, 4)) > aracYasSiniri(ar)) sorun.push(`${ar.plaka} ${aracYasi(ar, +planGun.slice(0, 4))} yaşında; bu sınıfta eğitim aracı ${aracYasSiniri(ar)} yaşından büyük olamaz (MTSK md.17/2-d).`);
   // ARC-002: MEBBİS'te 'Muayene Tarihi Doldu' ya da 'Hizmet Dışı' görünen araçla ders planlanmaz
   if (ar && /muayene\s*tarihi\s*doldu|hizmet\s*d[ıi]ş/i.test(ar.mebDurum || '')) sorun.push(`${ar.plaka} MEBBİS’te “${ar.mebDurum}” görünüyor; bu araçla ders planlanamaz.`);
+  // PER-003/028: öğretmenin çalışma izni ders gününden önce bittiyse planlanmaz (MEBBİS bu tarihte personeli listelemez)
+  { const iz = izinDurumu(eg, planGun); if (iz.tur === 'bitti') sorun.push(`${eg.ad}: çalışma izninin bitişi ${tarih(iz.bit)}; ${tarih(planGun)} dersine atanamaz. İzin yenilendiyse MEBBİS’ten güncelleyin.`); else if (iz.tur === 'bugun') not.push(`${eg.ad}: çalışma izni bu ders günü bitiyor.`); }
   Object.entries(eg.belgeler || {}).filter(([, t]) => t < planGun).forEach(([b]) => sorun.push(eg.ad + ' · ' + ({ sertifika: 'usta öğretici sertifikası', saglik: 'sağlık raporu', adli: 'adli sicil kaydı' }[b]) + ' süresi dolmuş; bu tarihte ders planlanamaz.'));
   const ayni = DL.filter(x => x.kursiyer === k.id && x.tarih === planGun && x.durum !== 'İptal'), cak = ayni.find(x => x.saat === saat);  // iptal edilen ders saati boş sayılır (otomatik dağıtımla aynı)
   if (cak) sorun.push(`Bu kursiyerin aynı saatte ${(egitmen(cak.egitmen) || { ad: 'başka bir usta öğretici' }).ad} ile dersi var.`);
