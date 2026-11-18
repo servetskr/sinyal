@@ -135,6 +135,8 @@ export function mevzuatKurallari() {
   S.kursiyerler.filter(k => k.kapali && k.kapali.iadeSon && !k.kapali.iadeYapildi).forEach(k => { const kalan = fark(k.kapali.iadeSon); l.push([kalan < 0 ? 'dur' : kalan <= 7 ? 'yasak' : 'uyari', `${tamAd(k)} · ${tl(k.kapali.iadeTutar || 0)} iade ${kalan < 0 ? -kalan + ' gün gecikti' : kalan + ' gün içinde yapılmalı'}`, `Ayrılan kursiyere iade, ayrılıştan itibaren en geç 1 ay içinde yapılır (${OOKY} m.56/4).`, '#/kursiyer/' + k.id]); });
   // PAR-009: MEBBİS'teki kayıt ücreti sözleşme ücretinden farklı (fatura sözleşmedeki gerçek ücretle kesilir; düzeltilecek olan MEBBİS kaydı)
   ks.filter(k => !k.kapali && !k.ucretsiz && !k.prova).forEach(k => { const d = faturaDenetimi(k); if (d.mebFark) l.push(['uyari', `${tamAd(k)} · MEBBİS’teki ücret sözleşmeden farklı`, `MEBBİS’te ${tl(d.mebU)}, sözleşmede ${tl(d.hesap)}. MEBBİS’e alınan gerçek ücret işlenir (MTSK Yön. m.43/2); fatura sözleşme ücretiyle kesilir. MEBBİS kaydını düzeltin.`, '#/kursiyer/' + k.id]); });
+  // PAR-054: hizmet tamamlandı (son sınav), 7 gün geçti, fatura eksik (VUK m.231/5)
+  faturasizBitenler().forEach(x => l.push(['uyari', `${tamAd(x.k)} · son sınavdan ${x.gun} gün geçti, ${tl(x.eksik)} faturasız`, `Hizmet son sınavla tamamlanır; fatura en geç 7 gün içinde kesilir (VUK m.231/5). Kalan tutarı faturalayın (Kasa › Faturalar).`, '#/kasa']));
   // Sınava hazır yazısı
   ks.filter(k => hazirGerekli(k) && (!k.hazirYazi || !k.hazirYazi.yuklendi)).forEach(k => l.push([k.hazirYazi ? 'uyari' : 'yasak', `${tamAd(k)} · sınava hazır yazısı ${k.hazirYazi ? 'MEBBİS’e yüklenmedi' : 'yok'}`, 'Usta öğretici kararını yazıyla bildirir; kurs yazıyı tarayıp modüle yükler (md.7/7, Danıştay 8. D. 8/10/2025 YD).', '#/kursiyer/' + k.id]));
   // Direksiyonda kalan: tekrar sınavdan önce en az 2 saat ders (m.15)
@@ -255,4 +257,11 @@ export function faturaDenetimi(k) {
   const mebU = +(k.meb && (k.meb.kayitUcretiTL || tutarOku(k.meb.kayitUcreti))) || 0, hesap = +(sozlesmeUcreti(k) || 0), disi = f => { const h = f.hareket && S.hareket.find(x => x.id === f.hareket); return !!h && ['resmi', 'ders'].includes(ekTur({ ad: h.kategori })); };
   const kesilen = (S.faturalar || []).filter(f => f.kursiyer === k.id && f.durum !== 'iptal' && !disi(f)).reduce((a, f) => a + (+f.tutar || 0), 0);
   return { hesap, kaynak: 'sözleşme', kesilen, eksik: Math.max(0, Math.round((hesap - kesilen) * 100) / 100), mebU, mebFark: mebU && Math.abs(mebU - hesap) >= 1 ? Math.round((mebU - hesap) * 100) / 100 : 0 };
+}
+// PAR-054 (mali cevaplar 3): hizmet son sınavla tamamlanır; fatura en geç 7 gün içinde kesilir (VUK m.231/5). Son sınavdan 7 günü geçmiş ve faturası eksik
+// kalan öğrenci: { k, sinav, gun (geçen gün), eksik }. Kurs mdSinyal'de hiç fatura tutmuyorsa (S.faturalar boş) liste boştur.
+export function faturasizBitenler() {
+  if (!(S.faturalar || []).length) return [];
+  return sb(S.kursiyerler).filter(k => !k.ucretsiz && !k.prova && k.dsinav && k.dsinav.sonuc === 'Geçti' && k.dsinav.tarih && fark(k.dsinav.tarih) < -7 && fark(k.dsinav.tarih) > -400)
+    .map(k => ({ k, sinav: k.dsinav.tarih, gun: -fark(k.dsinav.tarih), eksik: faturaDenetimi(k).eksik })).filter(x => x.eksik > 0).sort((a, b) => b.gun - a.gun);
 }
