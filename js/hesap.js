@@ -128,10 +128,11 @@ export function uygulamaPenceresi(yenile) {
   };
   const d = pencere({
     baslik: 'Öğrenci uygulaması daveti', genis: true, icerik: '',
-    altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-u-toplu>Hesabı olmayanların hepsine</button>`,
+    altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button>${B.bulutta() ? '<button class="dg dg-cizgi" data-u-istek>Kurs koduyla gelen istekler</button>' : ''}<button class="dg dg-ana" data-u-toplu>Hesabı olmayanların hepsine</button>`,
     onAc(d) {
       d.addEventListener('click', ev => {
         if (ev.target.closest('[data-u-toplu]')) { kapatPencere(); return topluHesap(yenile); }
+        if (ev.target.closest('[data-u-istek]')) { kapatPencere(); return import('./hesaptalep.js?v=234').then(HT => HT.talepPenceresi(yenile)); }   // UYG-021
         const b = ev.target.closest('[data-u-ac]'); if (!b) return;
         const k = S.kursiyerler.find(x => String(x.id) === b.dataset.uAc); if (!k) return;
         b.disabled = true;
@@ -180,8 +181,13 @@ export async function girisKartlari(l) {
   const { belgeYazdir } = await import('./ui.js?v=234');
   return belgeYazdir(sayfalar.join(''), 'Öğrenci giriş kartları');
 }
+// UYG-021: kurs kodu varsa (müdür bir kez oluşturur) QR kayıt linkini açar: hesabı olmayan öğrenci kodla kendi hesabını açar, hesabı olan girer
 export async function qrAfis() {
-  const link = B.ogrenciGirisLinki(), qr = await qrResim(link, 420), kurs = kursAdi();
+  let kod = ''; try { kod = await B.kursKoduAl(); } catch (x) { }
+  const link = kod ? B.ogrenciKayitLinki(kod) : B.ogrenciGirisLinki(), giris = B.ogrenciGirisLinki(), qr = await qrResim(link, 420), kurs = kursAdi();
   const { belgeYazdir } = await import('./ui.js?v=234');
-  return belgeYazdir(`<div style="text-align:center;padding:20mm 10mm;font-family:sans-serif"><p style="font-size:16pt;margin:0 0 6mm">${e(kurs)}</p><h1 style="font-size:30pt;margin:0 0 8mm">Öğrenci uygulamasına gir</h1>${qr ? `<img src="${qr}" alt="" style="width:110mm;height:110mm">` : ''}<p style="font-size:20pt;margin:8mm 0 4mm"><b>${e(link.replace(/^https?:\/\//, ''))}</b></p><p style="font-size:14pt;line-height:1.5;margin:0">Telefonunla kodu okut. Cep telefonun ve kursundan aldığın geçici şifreyle gir,<br>ilk girişte kendi şifreni belirle. Şifren yoksa ön büroya sor.</p></div>`, 'Öğrenci uygulaması afişi');
+  const alt = kod
+    ? `<p style="font-size:22pt;margin:8mm 0 4mm">Kurs kodu: <b style="font-family:monospace;letter-spacing:.12em">${e(kod)}</b></p><p style="font-size:14pt;line-height:1.5;margin:0">Telefonunla kodu okut. Hesabın yoksa adını, e-postanı yaz ve kendi şifreni belirle;<br>kursun onaylayınca girersin. Hesabın varsa: <b>${e(giris.replace(/^https?:\/\//, ''))}</b></p>`
+    : `<p style="font-size:20pt;margin:8mm 0 4mm"><b>${e(link.replace(/^https?:\/\//, ''))}</b></p><p style="font-size:14pt;line-height:1.5;margin:0">Telefonunla kodu okut. E-postan (ya da cep telefonun) ve kursundan aldığın geçici şifreyle gir,<br>ilk girişte kendi şifreni belirle. Şifren yoksa ön büroya sor.</p>`;
+  return belgeYazdir(`<div style="text-align:center;padding:20mm 10mm;font-family:sans-serif"><p style="font-size:16pt;margin:0 0 6mm">${e(kurs)}</p><h1 style="font-size:30pt;margin:0 0 8mm">Öğrenci uygulamasına gir</h1>${qr ? `<img src="${qr}" alt="" style="width:110mm;height:110mm">` : ''}${alt}</div>`, 'Öğrenci uygulaması afişi');
 }

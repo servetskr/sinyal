@@ -173,7 +173,7 @@ export function destekPenceresi(hazirMetin = '') {
     } });
 }
 // YON-018: ön büro yetkisi başka cihazdan değişince menü yeniden çizilsin
-let bilgiSoruldu = false, ipDenetlendi = false, devirBakildi = false, epostaTemizlendi = false;
+let bilgiSoruldu = false, ipDenetlendi = false, devirBakildi = false, epostaTemizlendi = false, talepBakildi = false, talepSayi = 0;
 const yetkiImza = () => JSON.stringify((S.kurs || {}).yetki || null) + '|' + ((oturum.kullanici || {}).rol || '');
 let sonYetki = '';
 function iskelet() {
@@ -265,9 +265,11 @@ export function yenile(kaydirma = false) {
   kap.innerHTML = s.html;
   yer.replaceChildren(kap);
   if (ekranDuzey(ustEkran(r.ad)) === 'gor') saltOkunur(kap);
-  kurulumSeridi(kap); epostaSeridi(kap);
+  kurulumSeridi(kap); epostaSeridi(kap); talepSeridi(kap, r.ad);
   // YON-074: onaylanmış numara devirleri (bu kurs eski kurssa) ofis cihazında işlenir; oturum başına ve 10 dakikada bir
   if (!devirBakildi && oturum.kullanici.bulut && ['mudur', 'sekreter'].includes(oturum.kullanici.rol)) { devirBakildi = true; const bak = () => B.devirleriIsle().then(n => { if (n) { bildir(n + ' öğrencinin numarası onayıyla başka kursa devredildi; hesapları kapandı'); yenile(); } }).catch(() => { }); setTimeout(bak, 6000); setInterval(bak, 600000); }
+  // UYG-021: kurs koduyla açılan öğrenci hesapları onay bekliyorsa ofis görür (oturum başına ve 5 dakikada bir sayılır)
+  if (!talepBakildi && oturum.kullanici.bulut && ['mudur', 'sekreter', 'subemudur'].includes(oturum.kullanici.rol)) { talepBakildi = true; const say = () => import('./hesaptalep.js?v=234').then(HT => HT.talepSay()).then(n => { if (n !== talepSayi) { talepSayi = n; if (['genel', 'kursiyerler'].includes(rota().ad) && !document.querySelector('.perde')) yenile(); } }).catch(() => { }); setTimeout(say, 4000); setInterval(say, 300000); }
   // YON-002 göçü: eski sürümün telefon eşlemesine yazdığı gerçek e-postalar bir kez silinir (cihaz ve kurs başına; tekrar zararsız)
   if (!epostaTemizlendi && oturum.kullanici.bulut && ['mudur', 'sekreter', 'subemudur'].includes(oturum.kullanici.rol)) { epostaTemizlendi = true; setTimeout(() => B.telEslemeleriTemizle().catch(() => { }), 9000); }
   // YON-021: ön büro IP yetkilendirmesi (oturum başına bir kez); izin yoksa içerik kapanır, yalnız çıkış
@@ -383,6 +385,12 @@ document.addEventListener('click', ev => {
   if (ev.target.closest('[data-ep-dog-gonder]')) { const b = ev.target.closest('[data-ep-dog-gonder]'); b.disabled = true; return B.epostaDogrula().then(() => bildir('Doğrulama bağlantısı yeniden gönderildi; gelen kutusuna ve istenmeyen klasörüne bakın')).catch(x => { b.disabled = false; bildir(B.hataMetni(x), 'uyari'); }); }
   if (ev.target.closest('[data-ep-dog-yenile]')) return B.hesapEpostaYenile().then(h => { if (h && h.dogrulandi) { islem('Hesap e-postasını doğruladı', h.eposta); kaydet(); bildir('E-posta doğrulandı'); yenile(); } else bildir('Henüz doğrulanmadı; e-postadaki bağlantıya dokunun, sonra yeniden deneyin', 'uyari'); }).catch(x => bildir(B.hataMetni(x), 'uyari'));
 });
+// UYG-021: bekleyen öğrenci hesap istekleri (ana ekran ve öğrenciler listesi)
+function talepSeridi(kap, ad) {
+  const u = oturum.kullanici; if (!talepSayi || !u || !u.bulut || !['mudur', 'sekreter', 'subemudur'].includes(u.rol) || !['genel', 'kursiyerler'].includes(ad)) return;
+  kap.insertAdjacentHTML('afterbegin', `<div class="ipucu talep-serit" role="status" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1;min-width:0"><b>${talepSayi} öğrenci uygulama hesabı için onay bekliyor.</b> Kurs koduyla hesap açtılar; kendi kayıtlarıyla eşleştirip onaylayın.</span><button type="button" class="dg dg-ana dg-kucuk" data-talep-ac>İstekleri gör</button></div>`);
+}
+document.addEventListener('click', ev => { if (!ev.target.closest('[data-talep-ac]')) return; import('./hesaptalep.js?v=234').then(HT => HT.talepPenceresi(() => { talepSayi = HT.bekleyenSayi; yenile(); })); });
 function kurulumSeridi(kap) {
   let i = null; try { i = sessionStorage.getItem(AKIS); } catch (x) { }
   if (i == null || !oturum.kullanici || oturum.kullanici.rol !== 'mudur') return;
@@ -426,7 +434,7 @@ window.addEventListener('hashchange', ev => {
     altlik: '<button class="dg dg-cizgi" data-kc-cik>Kaydetmeden çık</button><button class="dg dg-ana" data-kapat>Geri dön</button>',
     onAc(p) { p.querySelector('[data-kc-cik]').addEventListener('click', () => { sayfaKirli = null; kapatPencere(); location.hash = yeni; }); } });
 });
-window.addEventListener('hashchange', () => { if (location.hash.startsWith('#/kapi')) return kapiEkrani(); if (demoSoru() != null && oturum.kullanici && oturum.kullanici.ziyaretci) { location.hash = '#/mevzuat?q=' + demoSoru(); return; } if (GIRIS_YOL[location.hash] && oturum.kullanici && oturum.kullanici.ziyaretci) { oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } } if (GIRIS_YOL[location.hash] && oturum.kullanici && oturum.kullanici.bulut) { const u0 = oturum.kullanici; history.replaceState(null, '', anaSayfa(u0)); yenile(); return setTimeout(() => acikOturumSor(u0), 400); } if (!oturum.kullanici && !B.bulutKayitli()) { if (location.hash === '#/demo' || demoSoru() != null) return demoyaGir(); if (GIRIS_YOL[location.hash]) { girisEkrani(GIRIS_YOL[location.hash]); return window.scrollTo(0, 0); } } if (location.hash === '#/sahip') { ORT.sekmeSec('hesaplar'); location.hash = '#/yonetim'; return; } if (imzaLinki()) return imzaSayfasiAc(); if (!(oturum.kullanici && oturum.kullanici.bulut)) { if (yonetimKurYolu()) return yonetimHesapEkrani(yonetimKurYolu()); if (yonetimGirisYolu()) return yonetimGirisEkrani(); } if (kursDavetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return kursDavetEkrani(); if (oturum.kullanici && oturum.kullanici.rol === 'ogrenci') return; if (ogrYolu()) return eskiLink(); if (location.hash === '#/ogrenci-giris') return ogrenciGirisEkrani((oturum.kullanici && oturum.kullanici.bulut) || B.bulutKayitli() ? 'Bu cihazda bir personel hesabı açık. Öğrenci olarak girersen o oturum kapanır.' : undefined); if (davetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return davetEkrani(); const r = rota(); yenile(r.ad !== sonAd); sonAd = r.ad; });
+window.addEventListener('hashchange', () => { if (location.hash.startsWith('#/kapi')) return kapiEkrani(); if (demoSoru() != null && oturum.kullanici && oturum.kullanici.ziyaretci) { location.hash = '#/mevzuat?q=' + demoSoru(); return; } if (GIRIS_YOL[location.hash] && oturum.kullanici && oturum.kullanici.ziyaretci) { oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } } if (GIRIS_YOL[location.hash] && oturum.kullanici && oturum.kullanici.bulut) { const u0 = oturum.kullanici; history.replaceState(null, '', anaSayfa(u0)); yenile(); return setTimeout(() => acikOturumSor(u0), 400); } if (!oturum.kullanici && !B.bulutKayitli()) { if (location.hash === '#/demo' || demoSoru() != null) return demoyaGir(); if (GIRIS_YOL[location.hash]) { girisEkrani(GIRIS_YOL[location.hash]); return window.scrollTo(0, 0); } } if (location.hash === '#/sahip') { ORT.sekmeSec('hesaplar'); location.hash = '#/yonetim'; return; } if (imzaLinki()) return imzaSayfasiAc(); if (!(oturum.kullanici && oturum.kullanici.bulut)) { if (yonetimKurYolu()) return yonetimHesapEkrani(yonetimKurYolu()); if (yonetimGirisYolu()) return yonetimGirisEkrani(); } if (kursDavetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return kursDavetEkrani(); if (oturum.kullanici && oturum.kullanici.rol === 'ogrenci') return; if (ogrYolu()) return eskiLink(); if (ogrKayitYolu() != null) return ogrenciKayitEkrani(ogrKayitYolu()); if (location.hash === '#/ogrenci-giris') return ogrenciGirisEkrani((oturum.kullanici && oturum.kullanici.bulut) || B.bulutKayitli() ? 'Bu cihazda bir personel hesabı açık. Öğrenci olarak girersen o oturum kapanır.' : undefined); if (davetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return davetEkrani(); const r = rota(); yenile(r.ad !== sonAd); sonAd = r.ad; });
 
 // QR’dan gelen ilk sayfa index.html’de hazır durur (beklemeden görünsün); sonradan dönmek için saklanır
 const TANITIM = (() => { const t = document.getElementById('tanitim'); return t ? t.outerHTML : ''; })();
@@ -942,7 +950,7 @@ function ogrenciGirisEkrani(not) {
   const { govde, alan, alanHata, temizle, uyari, yukle, birak, ac } = ugrKabuk('Öğrenci uygulaması');
   let tel = '';
   // YON-002: e-posta (e-postası olmayan eski öğrenci telefonla girer)
-  const telAlan = () => alan('tel', 'text', oi('mesaj'), 'E-postan', `inputmode="email" autocomplete="username" autocapitalize="off" spellcheck="false" required value="${esc(tel)}"`, false, 'ornek@eposta.com · e-postan yoksa cep telefonun');
+  const telAlan = () => alan('tel', 'text', oi('mesaj'), 'E-postan', `inputmode="email" autocomplete="username" autocapitalize="off" spellcheck="false" required value="${esc(tel)}"`, false, 'E-postan (yoksa cep telefonun)');
   const ortak = f => ugrGirdiTemizle(f, t => { if (t.name === 'tel') tel = t.value; });
 
   function girisGoster(odak, anim = true) {
@@ -956,7 +964,7 @@ function ogrenciGirisEkrani(not) {
       </form>
       <div class="ox-ugr-unut"><button type="button" class="ox-bag" data-sifre-unut>Şifremi unuttum</button></div>
       <div data-yardim></div>
-      ${OXU.not('İlk şifren kaydından sonra kursunun WhatsApp’ından gelir.', 'wp')}
+      ${OXU.liste([OXU.satir({ baslik: 'Hesabım yok', alt: 'Kursunun verdiği kurs koduyla kendin aç', attrs: { 'data-ogr-kayit': true } })])}
       <p class="ox-ugr-ara">Öğrenci değil misiniz?</p>
       ${OXU.liste([
         OXU.satir({ baslik: 'Öğretmenim', alt: 'Davetle açtığınız <span class="ox-ugr-nb">e-posta</span> ve şifreyle girin', attrs: { 'data-ogretmen-giris': true } }),
@@ -965,6 +973,7 @@ function ogrenciGirisEkrani(not) {
     const f = govde.querySelector('form');
     ortak(f); ugrGozler(f);
     govde.querySelector('[data-sifre-unut]').addEventListener('click', () => { tel = f.tel.value; unuttumGoster(); });
+    govde.querySelector('[data-ogr-kayit]').addEventListener('click', () => { location.hash = '#/ogrenci-kayit'; });
     // öğretmen girişi adres çubuğunda da görünsün; personel oturumu kayıtlıyken hashchange onu çizmez, bu yüzden doğrudan çizilir
     govde.querySelector('[data-ogretmen-giris]').addEventListener('click', () => { history.pushState(null, '', '#/ogretmen-giris'); girisEkrani('ogretmen'); window.scrollTo(0, 0); });
     govde.querySelector('[data-giris-pin]').addEventListener('click', () => { location.hash = ''; girisEkrani('pin'); window.scrollTo(0, 0); });
@@ -997,6 +1006,50 @@ function ogrenciGirisEkrani(not) {
   }
 
   girisGoster(null, false);
+}
+// UYG-021: öğrenci kurs koduyla kendi hesabını açar (#/ogrenci-kayit/<KOD>: QR afiş ve kayıt linki). Hesap e-posta + şifreyle açılır,
+// istek kursa düşer; kurs kendi kaydıyla eşleştirip onaylayınca öğrenci aynı e-posta ve şifreyle girer. WhatsApp gerekmez.
+const ogrKayitYolu = () => { const m = location.hash.match(/^#\/ogrenci-kayit(?:\/([A-Za-z0-9]{0,10}))?$/); return m ? (m[1] || '') : null; };
+function ogrenciKayitEkrani(kod0) {
+  B.sdkHazirla();
+  document.body.classList.remove('portal-modu', 'ox-modu', 'ox-tam-acik', 'ox-akis-acik'); document.title = 'Öğrenci hesabı aç · mdSinyal';
+  ugrOgrStil();
+  const { oi, esc } = OXU;
+  const { govde, alan, alanHata, temizle, uyari, yukle, birak, ac } = ugrKabuk('Öğrenci uygulaması');
+  const kod = B.kursKoduNorm(kod0);
+  ac(`${OXU.geri('Giriş', { 'data-ugr-geri': true })}
+    ${OXU.sayfaBas('Hesabını aç', 'Kursunun verdiği kurs kodunu, adını ve e-postanı yaz, kendi şifreni belirle. Kursun onaylayınca bu e-posta ve şifreyle girersin.')}
+    <form class="ox-ugr-form" novalidate>
+      ${alan('kod', 'text', oi('kalkan'), 'Kurs kodu', `autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="10" required value="${esc(kod)}"`, false, 'Kurs kodu (ör. ABC234)')}
+      ${alan('ad', 'text', oi('kisi'), 'Adın', 'autocomplete="given-name" required maxlength="60"')}
+      ${alan('soyad', 'text', oi('kisi'), 'Soyadın', 'autocomplete="family-name" required maxlength="60"')}
+      ${alan('tel', 'tel', oi('tel'), 'Cep telefonun', 'autocomplete="tel" inputmode="tel" required', false, 'Cep telefonun (05xx xxx xx xx)')}
+      ${alan('eposta', 'email', oi('mesaj'), 'E-postan', 'autocomplete="email" autocapitalize="off" spellcheck="false" required')}
+      ${alan('s1', 'password', oi('kilit'), 'Şifre', 'autocomplete="new-password" required minlength="8"', true, 'Şifre (en az 8 karakter)')}
+      ${alan('s2', 'password', oi('kilit'), 'Şifre (tekrar)', 'autocomplete="new-password" required', true)}
+      <div class="ox-ugr-uyari" role="alert" hidden></div>
+      <button type="submit" class="ox-dg ox-dg-ana genis ox-ugr-dg"><span>Hesabımı aç</span></button>
+    </form>
+    ${OXU.not('Kurs kodunu kursundan, afişten ya da kursun gönderdiği linkten alırsın. Adın ve telefonun kurstaki kaydınla eşleştirilir.', 'bilgi')}`, kod ? '#ugr-ad' : '#ugr-kod');
+  const f = govde.querySelector('form'), btn = f.querySelector('[type=submit]'); ugrGozler(f); ugrGirdiTemizle(f);
+  govde.querySelector('[data-ugr-geri]').addEventListener('click', () => { location.hash = '#/ogrenci-giris'; });
+  f.addEventListener('submit', ev => {
+    ev.preventDefault(); if (btn.disabled) return; temizle(f);
+    if (B.kursKoduNorm(f.kod.value).length < 6) return alanHata(f, 'kod', 'Kurs kodunu yaz (6 harf ya da rakam)');
+    if (f.ad.value.trim().length < 2) return alanHata(f, 'ad', 'Adını yaz');
+    if (!f.soyad.value.trim()) return alanHata(f, 'soyad', 'Soyadını yaz');
+    if (!B.telNorm(f.tel.value)) return alanHata(f, 'tel', 'Cep telefonunu yaz (05xx xxx xx xx)');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.eposta.value.trim())) return alanHata(f, 'eposta', 'E-postanı doğru yaz');
+    if (f.s1.value.length < 8) return alanHata(f, 's1', 'Şifre en az 8 karakter olmalı');
+    if (f.s1.value !== f.s2.value) return alanHata(f, 's2', 'İki şifre aynı değil');
+    yukle(btn, 'Gönderiliyor…');
+    B.ogrenciKayitOl({ kod: f.kod.value, ad: f.ad.value, soyad: f.soyad.value, tel: f.tel.value, eposta: f.eposta.value, sifre: f.s1.value }).then(r => {
+      ac(`${OXU.sayfaBas('İsteğin kursa gitti', `${esc(r.kursAd || 'Kursun')} isteğini kendi kaydınla eşleştirip onaylayınca ${esc(r.eposta)} ve şifrenle girersin.`)}
+        ${OXU.not(r.onceden ? 'Bu e-postayla bekleyen isteğin zaten vardı; yeniden gönderilmedi.' : 'E-postana bir doğrulama bağlantısı da gönderdik; dokunman yeterli.', 'bilgi')}
+        <button type="button" class="ox-dg ox-dg-ana genis ox-ugr-dg" data-ugr-giris><span>Giriş ekranına git</span></button>`);
+      govde.querySelector('[data-ugr-giris]').addEventListener('click', () => { location.hash = '#/ogrenci-giris'; });
+    }).catch(x => { birak(btn, 'Hesabımı aç'); uyari(f, B.hataMetni(x)); });
+  });
 }
 function sifreBelirleEkrani(u) {
   document.body.classList.remove('portal-modu', 'ox-modu', 'ox-tam-acik', 'ox-akis-acik'); document.title = 'Şifreni belirle · mdSinyal';
@@ -1216,6 +1269,7 @@ if (location.hash.startsWith('#/kapi')) kapiEkrani();
 else if (imzaLinki()) imzaSayfasiAc();
 else if (ogrYolu()) eskiLink();
 else if (location.hash === '#/ogrenci-giris') ogrenciGirisEkrani(B.bulutKayitli() ? 'Bu cihazda bir personel hesabı açık. Öğrenci olarak girersen o oturum kapanır.' : undefined);
+else if (ogrKayitYolu() != null) ogrenciKayitEkrani(ogrKayitYolu());
 else if (devirYolu()) devirEkrani();
 else if (davetYolu()) davetEkrani();
 else if (kursDavetYolu()) kursDavetEkrani();

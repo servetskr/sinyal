@@ -1377,6 +1377,9 @@ export async function ogrenciHesapKapat(k) {
 async function ogrenciUyelik(user) {
   const { db, F, auth, A } = await sdk();
   const p = await belgeOkuDene(F, F.doc(db, 'kullanicilar', user.uid)), d = p.exists() ? p.data() : null;
+  // UYG-021: kurs koduyla açılan hesap, kurs onaylayana kadar bekler (istek silindiyse yeniden istek gönderilebilir)
+  if (d && d.rol === 'aday') { let var_ = false; try { var_ = (await F.getDoc(F.doc(db, 'kurslar', d.kurs, 'hesapTalepleri', user.uid))).exists(); } catch (x) { }
+    await A.signOut(auth); throw Object.assign(hata(var_ ? 'Hesabın henüz onaylanmadı. ' + (d.kursAd || 'Kursun') + ' onaylayınca bu e-posta ve şifreyle girersin' : 'Kursun hesap isteğini onaylamadı ya da istek silindi. Kursunla görüş ya da kurs koduyla yeniden istek gönder'), { bekliyor: var_ }); }
   if (!d || d.rol !== 'ogrenci') { await A.signOut(auth); throw hata('Bu hesap bir öğrenci hesabı değil'); }
   try { localStorage.setItem('sinyal-ogrenci', JSON.stringify({ kurs: d.kurs, kod: d.kod, hesap: true })); } catch (x) { }
   return { ...d, uid: user.uid };
@@ -1450,6 +1453,82 @@ export async function ogrenciEslemeTemizle(k) {
     if (!(k.id in h)) return;
     if (Object.keys(h).length === 1) await F.deleteDoc(tref); else await F.updateDoc(tref, { ['h.' + k.id]: F.deleteField() });
   } catch (x) { console.warn('telefon eşlemesi', x && x.code); }
+}
+// ---- UYG-021: öğrenci kurs koduyla kendi hesabını açar (e-posta + şifre); kurs onaylayınca kendi kaydına bağlanır ----
+// kursKodlari/{KOD} = { k, ad }: girişsiz okunur, yalnız o kursun müdürü oluşturur. İstek: kurslar/{k}/hesapTalepleri/{uid} (öğrenci yalnız
+// kendisi için). Onay: ofis aynı pakette panel belgesini (uid'li) ve öğrencinin kullanicilar belgesini yazar, isteği siler (kural: talepBag).
+const KOD_HARF = 'ABCDEFGHJKLMNPRSTUVYZ23456789';
+export const kursKoduNorm = x => String(x || '').toLocaleUpperCase('tr').replace(/İ/g, 'I').replace(/[^A-Z0-9]/g, '').slice(0, 10);
+export const ogrenciKayitLinki = kod => siteLink('#/ogrenci-kayit/' + kod);
+export async function kursKoduAl() {
+  if (!bulut.kurs) throw hata('Önce kurs hesabıyla girin');
+  const { db, F } = await sdk(), eski = (S.kurs || {}).ogrKod;
+  if (eski) { const d = await F.getDoc(F.doc(db, 'kursKodlari', eski)).catch(() => null); if (d && d.exists() && d.data().k === bulut.kurs) return eski; }
+  if (bulut.rol !== 'mudur') throw hata('Kurs kodunu kurs müdürü oluşturur; bir kez oluşturması yeter');
+  for (let i = 0; i < 5; i++) {
+    const a = new Uint8Array(6); crypto.getRandomValues(a); const kod = [...a].map(x => KOD_HARF[x % KOD_HARF.length]).join('');
+    try { await F.setDoc(F.doc(db, 'kursKodlari', kod), { k: bulut.kurs, ad: String(S.kurs.ad || '').slice(0, 120) }); S.kurs.ogrKod = kod; islem('Öğrenci kurs kodunu oluşturdu', kod); kaydet(); return kod; }
+    catch (x) { if (x.code !== 'permission-denied') throw x; }   // kod başka kursta kullanılıyor (değiştirilemez): yeni kod denenir
+  }
+  throw hata('Kurs kodu oluşturulamadı; biraz sonra tekrar deneyin');
+}
+export async function kursKoduBul(kod) {
+  kod = kursKoduNorm(kod); if (kod.length < 6) throw hata('Kurs kodunu yaz (6 harf ya da rakam)');
+  const { db, F } = await sdk(); let d;
+  try { d = await belgeOkuDene(F, F.doc(db, 'kursKodlari', kod)); } catch (x) { if (x.code === 'permission-denied') throw hata('Bu kurs kodu bulunamadı'); throw x; }
+  if (!d.exists()) throw hata('Bu kurs kodu bulunamadı. Kodu kursundan yeniden iste');
+  return { kod, kurs: d.data().k, ad: d.data().ad || '' };
+}
+// Hesap ayrı bir Firebase bağlantısında açılır: bu cihazdaki personel ya da öğrenci oturumu kapanmaz
+export async function ogrenciKayitOl({ kod, ad, soyad, tel, eposta, sifre }) {
+  ad = String(ad || '').trim(); soyad = String(soyad || '').trim(); eposta = String(eposta || '').trim().toLowerCase(); const t = telNorm(tel);
+  if (ad.length < 2) throw hata('Adını yaz'); if (!soyad) throw hata('Soyadını yaz'); if (!t) throw hata('Cep telefonunu yaz (05xx xxx xx xx)');
+  if (!EPOSTA_BICIM.test(eposta)) throw hata('E-postanı doğru yaz (ornek@alan.com)'); if (String(sifre || '').length < 8) throw hata('Şifre en az 8 karakter olmalı');
+  const kk = await kursKoduBul(kod);
+  const { F, A } = await sdk(), { initializeApp, deleteApp } = await import(SDK + 'firebase-app.js');
+  const app2 = initializeApp(FIREBASE, 'kayit-' + Date.now());
+  try {
+    const a2 = A.initializeAuth(app2, { persistence: A.inMemoryPersistence }), db2 = F.getFirestore(app2);
+    emuBagla(A, F, a2, db2);
+    let user, yeni = false;
+    try { user = (await A.createUserWithEmailAndPassword(a2, eposta, sifre)).user; yeni = true; }
+    catch (x) { if (x.code !== 'auth/email-already-in-use') throw x;
+      // aynı e-postayla daha önce istek gönderdiyse (istek silindi ya da yeniden deneme) aynı şifreyle istek yenilenir
+      try { user = (await A.signInWithEmailAndPassword(a2, eposta, sifre)).user; } catch (y) { throw hata('Bu e-postayla zaten hesap var. Giriş ekranından gir; şifreni unuttuysan “Şifremi unuttum”a dokun'); } }
+    const kref = F.doc(db2, 'kullanicilar', user.uid), kd = await F.getDoc(kref), v = kd.exists() ? kd.data() : null;
+    if (v && v.rol === 'ogrenci') throw hata('Bu e-postanın öğrenci hesabı zaten açık. Giriş ekranından gir');
+    if (v && v.rol !== 'aday') throw hata('Bu e-posta bir kurs personeli hesabına ait; kayıt için başka bir e-posta kullan');
+    // başka kursa bekleyen isteği varsa geri çekilir (öğrenci tek kursa istek bırakır)
+    if (v && v.kurs && v.kurs !== kk.kurs) await F.deleteDoc(F.doc(db2, 'kurslar', v.kurs, 'hesapTalepleri', user.uid)).catch(() => { });
+    await F.setDoc(kref, { rol: 'aday', kurs: kk.kurs, kursAd: kk.ad });
+    const tref = F.doc(db2, 'kurslar', kk.kurs, 'hesapTalepleri', user.uid), te = await F.getDoc(tref);
+    if (!te.exists()) await F.setDoc(tref, { ad: ad.slice(0, 60), soyad: soyad.slice(0, 60), tel: t, eposta: user.email, kod: kk.kod, zaman: F.serverTimestamp() });
+    if (yeni) { try { await A.sendEmailVerification(user); } catch (x) { } }
+    await A.signOut(a2);
+    return { kursAd: kk.ad, eposta: user.email, onceden: te.exists() };
+  } finally { deleteApp(app2).catch(() => { }); }
+}
+// ofis: bekleyen istekler (kurs başına az sayıda; liste kuralı yalnız ön büro rollerine açık)
+export async function hesapTalepleri() {
+  if (!bulut.kurs || !fb) return [];
+  const { db, F } = fb, q = await F.getDocs(F.collection(db, 'kurslar', bulut.kurs, 'hesapTalepleri'));
+  return q.docs.map(d => { const v = d.data(); return { uid: d.id, ad: String(v.ad || ''), soyad: String(v.soyad || ''), tel: String(v.tel || ''), eposta: String(v.eposta || ''), zaman: v.zaman && v.zaman.toDate ? v.zaman.toDate() : null }; })
+    .sort((a, b) => (a.zaman || 0) - (b.zaman || 0));
+}
+export async function hesapTalebiSil(uid) { const { db, F } = await sdk(); await F.deleteDoc(F.doc(db, 'kurslar', bulut.kurs, 'hesapTalepleri', uid)); }
+// ofis onaylar: öğrencinin hesabı seçilen kayda bağlanır (önceki hesabı varsa kapanır); öğrenci kendi şifresini belirlediği için ilk giriş adımı yok
+export async function hesapTalebiOnayla(t, k) {
+  const { db, F } = await sdk();
+  if (k.hesap && k.hesap.uid && k.hesap.uid !== t.uid) await ogrenciHesapKapat(k);
+  const eski = { panelKod: k.panelKod, hesap: k.hesap }, kod = rastgele(24);
+  k.panelKod = kod; k.hesap = { tel: telNorm(k.tel) || null, uid: t.uid, acildi: gun(0), kim: bulut.ad, sifirlandi: null, eposta: t.eposta, kurskodu: true };
+  delete k.hesapAktif;
+  const v = JSON.stringify(ogrenciVerisi(k), veriAt), b = F.writeBatch(db);
+  b.set(F.doc(db, 'kurslar', bulut.kurs, 'ogrenciler', kod), { kursiyer: k.id, uid: t.uid, v, islenen: [], guncel: F.serverTimestamp() });
+  b.set(F.doc(db, 'kullanicilar', t.uid), { kurs: bulut.kurs, rol: 'ogrenci', kod, kursiyer: k.id, ilkGiris: false });
+  b.delete(F.doc(db, 'kurslar', bulut.kurs, 'hesapTalepleri', t.uid));
+  try { await b.commit(); } catch (x) { k.panelKod = eski.panelKod; k.hesap = eski.hesap; throw x; }
+  projeSon.set(kod, v); kaydet();
 }
 // Giriş ekranı açılınca Firebase arka planda hazırlanır; öğrenci yazarken iner
 export const sdkHazirla = () => { sdk().catch(() => { }); };
