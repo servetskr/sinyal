@@ -182,7 +182,7 @@ export function pencereSor(d, { baslik, metin, secenekler, girdi }, sec) {
   o.innerHTML = `<div class="pencere-sor-ic"><h3>${e(baslik)}</h3>${metin ? `<p>${metin}</p>` : ''}${girdi ? `<label style="display:block;text-align:left;font-size:13.5px;margin:6px 0 10px">${e(girdi.etiket)}<input class="girdi" data-sor-girdi maxlength="200" style="margin-top:4px"></label>` : ''}${secenekler.map(([v, t, c]) => `<button type="button" class="dg ${c || 'dg-cizgi'}" data-sor="${e(v)}">${t}</button>`).join('')}</div>`;
   p.appendChild(o); requestAnimationFrame(() => o.classList.add('acik'));
   o.addEventListener('click', ev => { ev.stopPropagation(); const b = ev.target.closest('[data-sor]'); if (!b) return; const gi = o.querySelector('[data-sor-girdi]'), gv = gi ? gi.value.trim() : '';
-    if (gi && b.dataset.sor !== 'vazgec' && gv.length < (girdi.enAz || 1)) { gi.focus(); gi.setAttribute('aria-invalid', 'true'); return; } o.remove(); sec(b.dataset.sor, gv); });
+    if (gi && (girdi.icin ? girdi.icin.includes(b.dataset.sor) : b.dataset.sor !== 'vazgec') && gv.length < (girdi.enAz || 1)) { gi.focus(); gi.setAttribute('aria-invalid', 'true'); return; } o.remove(); sec(b.dataset.sor, gv); });
   o.addEventListener('keydown', ev => { if (ev.key === 'Escape') { ev.stopPropagation(); o.remove(); sec('vazgec'); } });
   setTimeout(() => { const b = o.querySelector('[data-sor]'); if (b) b.focus(); }, 30);
 }
