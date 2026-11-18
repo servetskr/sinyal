@@ -34,5 +34,10 @@ a{color:var(--s)}.alt{margin-top:28px;font-size:14px;text-align:center}
 <ul><li>Bu sayfadan yeni zip’i indirip aynı klasörün içine açın (eski dosyaların yerine geçsin).</li><li><code>chrome://extensions</code> sayfasında Yardımcı’nın kartındaki yenile (↻) düğmesine basın.</li></ul>
 <h2>Bilmeniz gerekenler</h2>
 <ul><li>Chrome açılışta “Geliştirici modu uzantılarını devre dışı bırak” diye sorabilir; “Vazgeç” deyin.</li><li>Yardımcı yalnız MEBBİS ve mdsinyal.com sayfalarında çalışır. Güvenlik kodunu ve geri alınamaz adımları siz yaparsınız.</li><li>Chrome Web Mağazası sürümü onaylanınca tek tıkla kurulabilecek.</li></ul>
+<script>
+// MEB-089: Chrome Web Mağazası onayı gelince true yapılır (js/eklenti.js MAGAZA_ONAYLI ile birlikte): indirme düğmesi mağaza sayfasına gider.
+var MAGAZA_ONAYLI = false, MAGAZA = 'https://chromewebstore.google.com/detail/pjkbnaeplndpleajpfgmoepibihkogm';
+if (MAGAZA_ONAYLI) { var a = document.querySelector('.indir'); a.href = MAGAZA; a.removeAttribute('download'); a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Chrome Web Mağazası’ndan kur'; document.querySelector('.not').textContent = 'Chrome’da “Chrome’a ekle”ye basın; güncellemeler kendiliğinden gelir. Aşağıdaki adımlar yalnız zip ile kurulum içindir.'; }
+</script>
 <p class="alt"><a href="../#/giris">mdSinyal’e giriş</a> · <a href="../">Ana sayfa</a></p>
 </main></body></html>
