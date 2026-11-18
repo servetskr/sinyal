@@ -426,7 +426,16 @@
       if (!bina) { const m = metin(d.body).match(/Bina\s*Kontenjan[ıi]?\s*:?\s*(\d{1,4})/i); if (m) bina = m[1]; }
       const programlar = tabloId(d, 'dgProgramlar') || tabloBaslikla(d, /sinifi/, /ruhsat/);
       if (!programlar && !bina) throw ekranHata(d, 'dgProgramlar', 'tablosu');
-      return { binaKontenjan: bina, programlar: programlar || { baslik: [], satirlar: [], stil: [] }, derslikler: tabloId(d, 'dgDerslikBilgileri') || { baslik: [], satirlar: [], stil: [] }, araclar: tabloId(d, 'dgAracBilgileri') || { baslik: [], satirlar: [], stil: [] } };
+      // 1.16.0 (YON-071): kurum künyesi — etiket hücresinin yanındaki değer (kurum kodu, adı, il, ilçe, adres, müdür); yalnız okunur
+      const KUNYE = [['kod', /^kurumkodu$/], ['ad', /^kurum(un)?adi$/], ['il', /^il(adi)?$/], ['ilce', /^ilce(adi)?$/], ['adres', /^(kurum)?(acik)?adres(i)?$/], ['mudur', /^(kurum)?mudur(u)?(adi)?(soyadi)?$/]];
+      const kunye = {};
+      for (const c of d.querySelectorAll('td, th, span, label')) {
+        const k = KUNYE.find(([, re]) => re.test(norm(metin(c)))); if (!k || kunye[k[0]] || c.children.length > 1) continue;
+        const yan = c.nextElementSibling, alan = yan && yan.querySelector('input:not([type=hidden]), textarea, select');
+        const v = String(alan ? (alan.tagName === 'SELECT' ? metin(alan.options[alan.selectedIndex]) : alan.value) : metin(yan)).trim();
+        if (v && v.length <= 200 && !KUNYE.some(([, re]) => re.test(norm(v)))) kunye[k[0]] = v;
+      }
+      return { kunye, binaKontenjan: bina, programlar: programlar || { baslik: [], satirlar: [], stil: [] }, derslikler: tabloId(d, 'dgDerslikBilgileri') || { baslik: [], satirlar: [], stil: [] }, araclar: tabloId(d, 'dgAracBilgileri') || { baslik: [], satirlar: [], stil: [] } };
     },
   });
   // 1.15.0 (SIT-006): OOK01002 kurum künyesindeki dgUcret (MEB onaylı ücret ilanı). Yalnız GET: bu sayfada künye düzenlenebilir,

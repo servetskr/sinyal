@@ -1,7 +1,7 @@
 // MEBBİS toplu çekme ve toplu yazma (mdSinyal tarafı). İşi MEBBİS Yardımcısı'nın arka plan motoru (eklenti/motor.js)
 // kursun kendi MEBBİS oturumunda, ekran açmadan yürütür; sonuç buraya gelir ve kayıtlarla eşlenir.
 // Gönderilen ve gelen iletilerin adları ve alanları: js/eklenti.js başındaki ileti sözleşmesi tablosu (eklenti/sinyal.js'te de aynısı).
-import { S, kaydet, EGITIM_TURU, TEORIK_EGITIM_TURU, egitimTuruOf, teorikEgitimTuru, gun, iso, fark, izinDurumu, ustaYetkili, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, sb, sbDers, cokSube, seciliSube, eksikEvrak, anaSinif, egitimSinifi, ekTur, kursiyerTaban, tutarOku, MEB_CEZA_SERTIFIKA, programAcik, esinavUcretiIsle, esinavUcretiVar, esinavHakDurum, teorikSaat } from './veri.js?v=234';
+import { ILLER, S, kaydet, EGITIM_TURU, TEORIK_EGITIM_TURU, egitimTuruOf, teorikEgitimTuru, gun, iso, fark, izinDurumu, ustaYetkili, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, sb, sbDers, cokSube, seciliSube, eksikEvrak, anaSinif, egitimSinifi, ekTur, kursiyerTaban, tutarOku, MEB_CEZA_SERTIFIKA, programAcik, esinavUcretiIsle, esinavUcretiVar, esinavHakDurum, teorikSaat } from './veri.js?v=234';
 import { bildir, pencere, kapatPencere, e, ik, isaret, rozet, tarih, tl } from './ui.js?v=234';
 import * as GR from './gruplar.js?v=234';
 import * as EK from './eklenti.js?v=234';
@@ -678,9 +678,20 @@ export function kurumIsle(v) {
   const programlar = (p.satirlar || []).map(r => ({ ad: r[i.s >= 0 ? i.s : 0] || '', kod: programKodu(r[i.s >= 0 ? i.s : 0]), ruhsat: tarihIso(r[i.r]), kapanma: tarihIso(r[i.k]), durum: String(r[i.d] || '').trim() })).filter(x => x.ad);
   const dl = v.derslikler || { baslik: [], satirlar: [] }, db = dl.baslik || [], j = { t: sutun(db, 'dersliktur'), a: sutun(db, 'derslikadi'), k: sutun(db, 'kontenjan'), d: sutun(db, 'odanindurumu', /^durumu?$/) };
   const derslikler = (dl.satirlar || []).map(r => ({ tur: r[j.t] || '', ad: r[j.a] || '', kontenjan: +String(r[j.k] || '').replace(/\D/g, '') || null, durum: String(r[j.d] || '').trim() })).filter(x => x.ad || x.tur);
-  const o = { binaKontenjan: +v.binaKontenjan || null, programlar, derslikler, okundu: gun(0) };
+  const o = { binaKontenjan: +v.binaKontenjan || null, programlar, derslikler, okundu: gun(0), ...(v.kunye && Object.keys(v.kunye).length ? { kunye: v.kunye } : {}) };
   const s = seciliSube() || (S.subeler || [])[0]; if (s) s.mebKurum = o; else S.kurs.mebKurum = o;
+  if (s && o.kunye) kunyeyiYaz(s, o.kunye);
   return o;
+}
+// YON-071: MEBBİS kurum künyesi Kurum kimliği'ndeki BOŞ alanlara yazılır (dolu alan değişmez; kurum kodu farklıysa uyarılır)
+const KUNYE_ALAN = [['ad', 'mebAd', 'MEB’deki kurum adı'], ['kod', 'kurumKodu', 'kurum kodu'], ['mudur', 'mudur', 'kurum müdürü'], ['ilce', 'semt', 'ilçe'], ['adres', 'adres', 'açık adres']];
+export function kunyeyiYaz(s, ku) {
+  const yazilan = [];
+  KUNYE_ALAN.forEach(([k, alan, ad]) => { const v = String(ku[k] || '').trim(); if (v && !String(s[alan] || '').trim()) { s[alan] = alan === 'kurumKodu' ? v.replace(/\D/g, '') : v; yazilan.push(ad); } });
+  if (ku.il && !s.il) { const il = ILLER.find(x => x.toLocaleLowerCase('tr') === String(ku.il).trim().toLocaleLowerCase('tr')); if (il) { s.il = il; if (s === (S.subeler || [])[0] && !S.kurs.sehir) S.kurs.sehir = il; yazilan.push('il'); } }
+  const kod = String(ku.kod || '').replace(/\D/g, ''); if (kod && s.kurumKodu && kod !== String(s.kurumKodu).replace(/\D/g, '')) bildir(`MEBBİS’teki kurum kodu (${kod}) ${s.ad || 'şube'} kaydındakinden (${s.kurumKodu}) farklı; Ayarlar › Kurum kimliği’nde kontrol edin`, 'uyari', true);
+  if (yazilan.length) islem('MEBBİS’ten kurum kimliği okundu', (s.ad || '') + ' · ' + yazilan.join(', '));
+  return yazilan;
 }
 
 // Kursiyerler: aynı TC birden çok durumda (etiket durumları) ve dönemde görünebilir; TC ile tekilleştirilir

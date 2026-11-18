@@ -1,6 +1,6 @@
 import * as EK from './eklenti.js?v=234';
 import * as CR from './cari.js?v=234';
-import { EKRAN_DUZEY, YETKI_EKRAN, YETKI_ISLEM, makbuzAyar, makbuzBicim, makbuzSeri, makbuzSira, ekDersFiyat, ekToplam, kalanBorc, S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, kursiyer, DERS_TUR_AD, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube, tutarOku, gunBatimi, kursIli, sinifEtiket, ekTur, kursiyerTaban, gerekliDireksiyon, tabanListesi, ekDersTabani, eskiBelgeTarihi, MEVCUT_BELGELER } from './veri.js?v=234';
+import { ilSecenekleri, kimlikEksikleri, EKRAN_DUZEY, YETKI_EKRAN, YETKI_ISLEM, makbuzAyar, makbuzBicim, makbuzSeri, makbuzSira, ekDersFiyat, ekToplam, kalanBorc, S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, kursiyer, DERS_TUR_AD, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube, tutarOku, gunBatimi, kursIli, sinifEtiket, ekTur, kursiyerTaban, gerekliDireksiyon, tabanListesi, ekDersTabani, eskiBelgeTarihi, MEVCUT_BELGELER } from './veri.js?v=234';
 import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor, belgeYazdir, kisaLink, siteLink } from './ui.js?v=234';
 import { yenile } from './app.js?v=234';
 import * as B from './bulut.js?v=234';
@@ -728,7 +728,9 @@ const subeSeriKilitli = sid => (S.hareket || []).some(h => { const m = h.no && m
 function kimlikSekme() {
   const K = S.kurs, y = K.mebYetkili || [], sef = K.sef || {}, vkn = (S.entegrasyon || {}).vkn || '';
   const alan = (ad, etiket, deger, ek = '') => `<div class="alan"><label for="ki-${ad}">${etiket}</label><input id="ki-${ad}" class="girdi" data-kimlik="${ad}" value="${e(deger || '')}" ${ek}></div>`;
-  return `${ekranNotu('Bu bilgiler sözleşme, makbuz, MEB formları, denetim dosyası ve hizmet sözleşmesinin imza bloklarına kendiliğinden yazılır. Alanı değiştirip çıkınca kaydedilir.')}
+  const eks = kimlikEksikleri();
+  return `${ekranNotu('Bu bilgiler sözleşme, makbuz, MEB formları, e-Arşiv, taban fiyat, MEBBİS iş onayı ve imza bloklarına buradan gider. Alanı değiştirip çıkınca kaydedilir.')}
+  ${eks.length ? `<p class="ipucu uyari" style="margin-bottom:14px">${isaret('uyari', 20)}<span><b>Eksik ${eks.length} bilgi:</b> ${eks.map(e).join(', ')}. Kurulumdaki “Kurum kimliği” adımı bunlar dolunca biter.</span></p>` : `<p class="ipucu" style="margin-bottom:14px">${isaret('tamam', 20)}<span>Kurum kimliği tamam.</span></p>`}
   <div class="kart"><div class="kart-bas"><h3>Firma</h3><small>Kursu işleten kişi ya da şirket</small></div><div class="kart-govde form-izgara">
     ${alan('unvan', 'Ticari unvan', K.unvan, `maxlength="120" placeholder="${e(K.ad || 'Ör. … Eğitim Hizmetleri Ltd. Şti.')}"`)}
     <div class="alan"><label for="ki-kurucuTur">Kurucu türü</label><select id="ki-kurucuTur" class="girdi" data-kimlik="kurucuTur"><option value="">Seçin</option><option value="sahis" ${K.kurucuTur === 'sahis' ? 'selected' : ''}>Şahıs</option><option value="sirket" ${K.kurucuTur === 'sirket' ? 'selected' : ''}>Şirket</option></select></div>
@@ -737,6 +739,8 @@ function kimlikSekme() {
     ${alan('vergiDairesi', 'Vergi dairesi', K.vergiDairesi, 'maxlength="60"')}
     ${alan('mukellefKodu', 'Mükellef kodu', K.mukellefKodu, 'maxlength="30" autocomplete="off"')}
     ${alan('eposta', 'Kurum e-postası', K.eposta, 'type="email" maxlength="120" autocomplete="off"')}
+    <div class="alan"><span class="et">Logo</span><div class="ki-gorsel">${K.logo ? `<img src="${K.logo}" alt="Kurs logosu">` : ''}<label class="dg dg-cizgi dg-kucuk">${K.logo ? 'Değiştir' : 'Logo yükle'}<input type="file" accept="image/*" data-mk-logo hidden></label>${K.logo ? '<button type="button" class="dg dg-hafif dg-kucuk" data-mk-logo-sil>Kaldır</button>' : ''}</div><small style="color:var(--soluk)">Makbuz ve belgelerin başında</small></div>
+    <div class="alan"><span class="et">Kaşe / imza görseli</span><div class="ki-gorsel">${K.kase ? `<img src="${K.kase}" alt="Kaşe ve imza">` : ''}<label class="dg dg-cizgi dg-kucuk">${K.kase ? 'Değiştir' : 'Görsel yükle'}<input type="file" accept="image/png,image/jpeg" data-ki-kase hidden></label>${K.kase ? '<button type="button" class="dg dg-hafif dg-kucuk" data-ki-kase-sil>Kaldır</button>' : ''}</div><small style="color:var(--soluk)">Beyaz zeminli taranmış kaşe; makbuzda kurs imzasının üstünde</small></div>
   </div></div>
   <div class="kart" style="margin-top:16px"><div class="kart-bas"><h3>Yetkililer</h3><small>İmza bloklarında görev ve unvanla yazılır</small></div><div class="kart-govde form-izgara">
     ${alan('y1ad', 'MEB yetkilisi 1 · ad soyad', (y[0] || {}).ad, 'maxlength="80" autocomplete="off"')}${alan('y1unvan', 'MEB yetkilisi 1 · unvan', (y[0] || {}).unvan, 'maxlength="60" placeholder="Ör. Müdür yardımcısı"')}
@@ -744,11 +748,12 @@ function kimlikSekme() {
     ${alan('sefAd', 'Şef · ad soyad', sef.ad, 'maxlength="80" autocomplete="off"')}${alan('sefUnvan', 'Şef · unvan', sef.unvan, 'maxlength="60" placeholder="Ör. Büro şefi"')}
     <p class="alan tam" style="font-size:13px;color:var(--soluk)">MEB yetkilisi 1, denetim dosyası ve MEB’e giden listelerde “Hazırlayan” olarak yazılır (boşsa belgeyi hazırlayan kullanıcı); şef “Kontrol eden” olarak. Kurum müdürü aşağıda, şube başına.</p>
   </div></div>
-  <div class="kart" style="margin-top:16px"><div class="kart-bas"><h3>${cokSube() ? 'Şubeler' : 'Kurum'}</h3><small>MEB’e göre her şube ayrı kurumdur</small></div><div class="kart-govde" style="display:grid;gap:14px">
+  <div class="kart" style="margin-top:16px"><div class="kart-bas"><h3>${cokSube() ? 'Şubeler' : 'Kurum'}</h3><small>MEB’e göre her şube ayrı kurumdur · MEBBİS’ten okununca yalnız boş alanlar dolar</small><div class="sag"><button type="button" class="dg dg-cizgi dg-kucuk" data-ki-meb title="MEBBİS Yardımcısı kurum bilgileri ekranını (SKT01001) yalnız okur">${ik('indir')}MEBBİS’ten oku</button></div></div><div class="kart-govde" style="display:grid;gap:14px">
     ${(S.subeler || []).map((x, i) => `<fieldset class="ki-sube"><legend>${e(x.ad || 'Şube ' + (i + 1))}</legend><div class="form-izgara">
       <div class="alan tam"><label for="ki-ma${i}">MEB’deki kurum adı</label><input id="ki-ma${i}" class="girdi" data-sube-alan="${i}:mebAd" maxlength="120" value="${e(x.mebAd || (i === 0 ? K.resmiAd || '' : ''))}" placeholder="Özel … Motorlu Taşıt Sürücüleri Kursu"></div>
       <div class="alan"><label for="ki-kk${i}">MEB kurum kodu</label><input id="ki-kk${i}" class="girdi mono" inputmode="numeric" data-sube-alan="${i}:kurumKodu" value="${e(x.kurumKodu || '')}"></div>
       <div class="alan"><label for="ki-mu${i}">Kurum müdürü</label><input id="ki-mu${i}" class="girdi" data-sube-alan="${i}:mudur" maxlength="80" value="${e(x.mudur || '')}" placeholder="${e(K.yetkili || '')}"></div>
+      <div class="alan"><label for="ki-iI${i}">İl</label><select id="ki-iI${i}" class="girdi" data-sube-alan="${i}:il">${ilSecenekleri(x.il || (i === 0 ? K.sehir : ''))}</select></div>
       <div class="alan"><label for="ki-il${i}">İlçe</label><input id="ki-il${i}" class="girdi" data-sube-alan="${i}:semt" maxlength="40" value="${e(x.semt || '')}"></div>
       <div class="alan tam"><label for="ki-ad${i}">Açık adres</label><input id="ki-ad${i}" class="girdi" data-sube-alan="${i}:adres" maxlength="200" value="${e(x.adres || '')}" placeholder="${e(K.adres || 'Mahalle, cadde, no, ilçe / il')}"></div>
     </div></fieldset>`).join('') || `<p class="ipucu">${isaret('bilgi', 18)}<span>Şube kaydı yok; Ayarlar › Şubeler’den ekleyin.</span></p>`}
@@ -893,6 +898,7 @@ export function ayarBaglan(k) {
     if (ev.target.closest('[data-kurtarma-indir]')) { const a2 = document.createElement('a'); a2.href = URL.createObjectURL(new Blob([localStorage.getItem('sinyal-kurtarma') || '[]'], { type: 'application/json' })); a2.download = 'mdsinyal-kaydedilemeyenler.json'; a2.click(); setTimeout(() => URL.revokeObjectURL(a2.href), 3000); }
     if (ev.target.closest('[data-kurtarma-sil]') && confirm('Kaydedilemeyen değişiklikler bu cihazdan silinsin mi? Önce indirdiğinizden emin olun.')) { try { localStorage.removeItem('sinyal-kurtarma'); } catch (x) { } import('./bulut.js?v=234').then(B => { B.bulut.kalici = ''; B.durumYaz(); }); yenile(); }
   });
+  k.addEventListener('click', ev => { if (ev.target.closest('[data-ki-meb]')) { if (cokSube() && !seciliSube()) return bildir('Önce üstten şube seçin; her şubenin bilgisi kendi MEBBİS hesabından okunur', 'uyari'); return import('./mebtoplu.js?v=234').then(m => m.topluCek(['kurum'])); } if (!ev.target.closest('[data-ki-kase-sil]')) return; delete S.kurs.kase; islem('Kaşe / imza görselini kaldırdı'); kaydet(); yenile(); });  // YON-071
   davetListesi(k); yedekListesi(k); sunucuKaydi(k); if (B.bulutta()) ikiAdimSatiri(k);
   k.addEventListener('change', ev => {
     const t = ev.target;
@@ -932,6 +938,8 @@ export function ayarBaglan(k) {
       ham.forEach(x => { const m = x.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})$/), v = m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : /^\d{4}-\d{2}-\d{2}$/.test(x) ? x : ''; const d = v && new Date(v + 'T00:00:00Z'); if (d && !isNaN(d) && d.toISOString().slice(0, 10) === v) { if (!l.includes(v)) l.push(v); } else hatali.push(x); });
       if (hatali.length) return bildir('Tarihi gg.aa.yyyy biçiminde girin: ' + hatali.slice(0, 3).join(', '), 'uyari');
       l.sort(); if (l.length) S.kurs.idariIzin = l; else delete S.kurs.idariIzin; islem('İdari izin günlerini değiştirdi', l.length ? l.map(x => x.split('-').reverse().join('.')).join(', ') : 'yok'); kaydet(); bildir(l.length ? `${l.length} idari izin günü MEB sürelerinde sayılmayacak` : 'İdari izin günü yok'); yenile(); }
+    { const ks = t.closest('[data-ki-kase]'); if (ks && ks.files && ks.files[0]) { const fr = new FileReader();  // YON-071: kaşe / imza görseli, 360 px PNG
+      fr.onload = () => { const im = new Image(); im.onload = () => { const o = Math.min(1, 360 / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width * o); c.height = Math.round(im.height * o); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); S.kurs.kase = c.toDataURL('image/png'); islem('Kaşe / imza görselini değiştirdi'); kaydet(); bildir('Kaşe görseli kaydedildi'); yenile(); }; im.onerror = () => bildir('Resim okunamadı', 'uyari'); im.src = fr.result; }; fr.readAsDataURL(ks.files[0]); return; } }
     { const ki = t.closest('[data-kimlik]'); if (ki) { const a = ki.dataset.kimlik, v = ki.value.trim(), K = S.kurs, et = ((ki.labels || [])[0] || {}).textContent || a;  // YON-064
       if (a === 'vkn') { const d = v.replace(/\D/g, ''); if (d && !/^\d{10,11}$/.test(d)) return bildir('VKN 10, TCKN 11 hanedir', 'uyari'); S.entegrasyon = S.entegrasyon || {}; S.entegrasyon.vkn = d; ki.value = d; }
       else if (a === 'eposta') { if (v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return bildir('E-posta adresini kontrol edin', 'uyari'); K.eposta = v; }
@@ -948,6 +956,8 @@ export function ayarBaglan(k) {
       if (v && !/^[A-ZÇĞİÖŞÜ0-9-]{1,6}$/.test(v)) { t.value = x.makbuzOnek || ''; return bildir('Harf, rakam ya da tire; en çok 6', 'uyari'); }
       if (v && (v === makbuzAyar().onek || S.subeler.some((y, j) => j !== i && y.makbuzOnek === v))) { t.value = x.makbuzOnek || ''; return bildir('Bu önek kursun ya da başka şubenin serisinde kullanılıyor', 'uyari'); }
       if (v) x.makbuzOnek = v; else delete x.makbuzOnek; t.value = v; islem('Şube makbuz önekini değiştirdi', x.ad + ' · ' + (v || 'ortak seri')); kaydet(); return bildir(v ? `${x.ad}: makbuzlar ${makbuzBicim(makbuzSeri(gun(0), x.id), 1)} biçiminde` : `${x.ad}: kursun ortak serisi`); }
+    if (t.matches('[data-sube-alan$=":il"]')) { const i = +t.dataset.subeAlan.split(':')[0], x = S.subeler[i]; if (t.value) x.il = t.value; else delete x.il; if (i === 0 && t.value) S.kurs.sehir = t.value;  // YON-071: ilk şubenin ili kursun ili (taban listesi, güneş saati)
+      islem('Şube ilini değiştirdi', x.ad + ' · ' + (t.value || '—')); kaydet(); return bildir('İl kaydedildi'); }
     if (t.matches('[data-sube-alan]')) { const [i, alan] = t.dataset.subeAlan.split(':'); S.subeler[+i][alan] = t.value.trim(); islem('Şube bilgisini güncelledi', S.subeler[+i].ad); kaydet(); bildir('Şube bilgisi kaydedildi'); }
     if (t.matches('[data-meb-yontem]')) { if (t.value === 'arac' && !mebAracHazir()) mebAracKur(); S.kurs.mebYontem = t.value; islem('MEBBİS giriş yöntemini değiştirdi', t.value === 'arac' ? 'MEBBİS Yardımcısı' : 'Sıralı giriş'); kaydet(); bildir(t.value === 'arac' ? 'MEBBİS Yardımcısı seçildi' : 'Sıralı girişe dönüldü'); yenile(); }
     if (t.matches('[data-imza]')) { S.kurs.imzaYontemi = t.value; islem('İmza yöntemini değiştirdi', t.value); kaydet(); bildir('İmza yöntemi kaydedildi'); yenile(); }
@@ -1027,16 +1037,16 @@ export function evrakDogrula(k, tur) {
 /* ================= KURULUM ================= */
 // YON-076: her adımın kimliği var; S.kurs.kurulum[id] = { kim, tarih, atlandi?, onay? } (kim yaptı, atlandı mı). Atlanan ve isteğe bağlı adım
 // sayaca girmez (menü rozeti ve ilerleme). x[1] = sayılmaz (bitti, atlandı ya da isteğe bağlı); x[5] = { id, ok, atlandi, istege, kayit }.
-const sadeYer = v => String(v || '').toLocaleLowerCase('tr').replace(/[^a-zçğıöşü0-9]/g, '');
 const kurKayit = () => (S.kurs && S.kurs.kurulum) || {};
 export function kurulumAdimlari() {
   const sos = S.sosyal || { kanallar: [] }, en = S.entegrasyon || { earsiv: {} }, kk = kurKayit();
-  // adres yalnız şehir adıyla (yeni kurs açılışındaki eski varsayılan) dolu sayılmaz
-  const adresVar = !!S.kurs.adres && sadeYer(S.kurs.adres) !== sadeYer(S.kurs.sehir) && sadeYer(S.kurs.adres).length > 6;
+  // kurum kimliği: açık adres yalnız il adıyla dolu sayılmaz (yeni kurs açılışındaki eski varsayılan); eksikler kimlikEksikleri'nde
+  const kimEks = kimlikEksikleri();
   const waBagli = !!S.kurs.waApi || sos.kanallar.some(c => c.id === 'wp' && c.bagli);
   const aktarildi = !!(kk.aktarim && kk.aktarim.onay) || (S.islemler || []).some(x => x.ne === 'Kursiyer aktardı');
   const l = [
-    ['kurs', 'Kurs bilgileri ve şubeler', !!(S.kurs.tel && adresVar), 'Siz · 3 dk', '#/ayarlar/kurs', 'Ad, açık adres, telefon; birden fazla şube varsa şubeler.'],
+    // YON-071: kurum kimliği zorunlu (unvan, kurucu, VKN, vergi dairesi, telefon; şube başına kurum kodu, MEB adı, müdür, il, açık adres)
+    ['kurs', 'Kurum kimliği', !kimEks.length, 'Siz · 5 dk', '#/ayarlar/kimlik', 'Ticari unvan, kurucu, VKN, vergi dairesi; şube başına MEB kurum kodu, MEB’deki adı, kurum müdürü, il ve açık adres. Sözleşme, makbuz, MEB formları ve MEBBİS işleri buradan beslenir.' + (kimEks.length ? ` Eksik: ${kimEks.slice(0, 4).join(', ')}${kimEks.length > 4 ? ` ve ${kimEks.length - 4} bilgi daha` : ''}.` : '')],
     ['banka', 'Banka hesapları', !!S.kurs.iban, 'Siz · 2 dk', '#/ayarlar/kurs', 'Havale/EFT için IBAN’lar; her birine ad verin (ör. “Taksit ödemeleri”). Öğrenci uygulamasında ve hatırlatmalarda görünür.'],
     ['sinif', 'Sınıflar ve ücretler', !S._bulut || S.kurs.ucretOnay !== null, 'Siz · 5 dk', '#/ayarlar/sinif', 'İlinizin valilik taban fiyat listesi mdSinyal’de varsa ücretler taban fiyatla hazır gelir. Kurs ücreti, geçiş (fark) ücretleri, ek ve özel ders ücreti; e-Sınav ve uygulama sınavı ücretleri hakka göre; ' + (tabanListesi() ? 'kurs ücreti dışında kalem alınamaz (il taban listesi not 4).' : 'kitap, evrak gibi diğer kalemler.') + ' Kontrol edip onaylayın.'],
     ['ekip', 'Ekip ve araçlar', S.egitmenler.length > 0 && S.araclar.length > 0, 'Biz · aktarımla', '#/filo', 'Usta öğreticiler, belgeleri ve araçlar.'],

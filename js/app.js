@@ -1,5 +1,5 @@
 import { DESTEK } from './iletisim.js?v=234';
-import { ekranDuzey, ekranYetkili, kullaniciSubesi, S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec, sinifEtiket } from './veri.js?v=234';
+import { ilSecenekleri, ekranDuzey, ekranYetkili, kullaniciSubesi, S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec, sinifEtiket } from './veri.js?v=234';
 import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=234';
 import * as Y1 from './sayfalar1.js?v=234';
 import * as Y2 from './sayfalar2.js?v=234';
@@ -716,7 +716,7 @@ function kursAcEkrani(davetKod) {
     <h1>Yeni kurs hesabı</h1><p>Kursunuzun verileri boş bir hesapla başlar. Öğrenci listenizi sonra Excel’den aktarabilirsiniz.</p>
     <form class="giris-eposta" novalidate>
       <label>Kursun adı<input name="kurs" required placeholder="Örn. Örnek Sürücü Kursu" autocomplete="organization"></label>
-      <label>Şehir<input name="sehir" autocomplete="address-level1"></label>
+      <label>İl<select name="sehir" required>${ilSecenekleri("")}</select></label>
       <label>Adınız soyadınız<input name="ad" required autocomplete="name"></label>
       <label>Cep telefonunuz <small style="font-weight:400;opacity:.85">yeni kayıt, iptal ve günlük özet WhatsApp’tan buraya gelir</small><input name="tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="05xx xxx xx xx"></label>
       <label>E-posta<input name="eposta" type="email" inputmode="email" autocomplete="username" required></label>

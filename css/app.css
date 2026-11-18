@@ -3551,3 +3551,6 @@ button.rozet:focus-visible { outline: 2px solid var(--levha); outline-offset: 2p
 .salt-okunur-serit { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
 .ki-sube { border: 1px solid var(--cizgi); border-radius: 8px; padding: 8px 12px 12px; }
 .ki-sube legend { font-weight: 700; font-size: 14px; color: var(--murekkep); padding: 0 4px; }
+.ki-gorsel { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.ki-gorsel img { width: 56px; height: 56px; object-fit: contain; border: 1px solid var(--cizgi); border-radius: 6px; background: #fff; }
+.ki-gorsel label { cursor: pointer; }

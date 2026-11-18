@@ -344,6 +344,9 @@ export function kursIli(K = (S && S.kurs) || {}) {
   const ham = String(K.il || K.sehir || K.adres || ''); if (ilOnbellek.has(ham)) return ilOnbellek.get(ham);
   const t = ilSade(ham), il = (IL_SADE.find(([, a]) => t.includes(a)) || ['ankara'])[0]; if (ilOnbellek.size > 50) ilOnbellek.clear(); ilOnbellek.set(ham, il); return il;
 }
+// YON-071: 81 il (seçim listeleri için; kısaltma eş adları hariç)
+export const ILLER = Object.keys(IL_KOORD).slice(0, 81).map(x => x[0].toLocaleUpperCase('tr') + x.slice(1)).sort((a, b) => a.localeCompare(b, 'tr'));
+export const ilSecenekleri = sec => { const v = String(sec || '').trim(), var_ = ILLER.includes(v); return `<option value="">İl seçin</option>${!var_ && v ? `<option value="${v.replace(/"/g, '&quot;')}" selected>${v.replace(/</g, '&lt;')} (listede yok)</option>` : ''}${ILLER.map(x => `<option ${x === v ? 'selected' : ''}>${x}</option>`).join('')}`; };
 const batimOnbellek = new Map();
 export function gunBatimi(t, il) {
   const anahtar = String(t).slice(0, 10) + '|' + (il || kursIli()); if (batimOnbellek.has(anahtar)) return batimOnbellek.get(anahtar);
@@ -1572,6 +1575,16 @@ export const sbSinav = l => (gorunum.sube ? l.filter(s => (s.kursiyerler || []).
 export const seciliSube = () => (S.subeler || []).find(x => x.id === gorunum.sube) || null;
 // YON-064 (SOR-148): kurum kimliğindeki kişiler — belgelerin imza bloklarında kullanılır. Kurs düzeyi: ticari unvan, kurucu (türü), mükellef kodu,
 // MEB yetkilisi 1-2 (ad + unvan), şef; şube düzeyi: MEB'deki kurum adı, kurum müdürü, adres. subeId verilmezse kursiyerin / seçili / ilk şube.
+// YON-071: kurum kimliğinde eksik zorunlu alanlar (kurulum adımı ve Kurum kimliği sekmesindeki uyarı)
+export function kimlikEksikleri() {
+  const K = S.kurs || {}, l = [], sl = S.subeler || [], vkn = (S.entegrasyon || {}).vkn;
+  if (!K.unvan) l.push('ticari unvan'); if (!K.kurucuTur) l.push('kurucu türü'); if (!K.kurucu) l.push('kurucu'); if (!vkn) l.push('VKN / TCKN'); if (!K.vergiDairesi) l.push('vergi dairesi'); if (!K.tel) l.push('telefon');
+  const ad = s => s.adres || (sl.length < 2 ? K.adres : '');
+  (sl.length ? sl : [{}]).forEach(s => { const on = sl.length > 1 ? s.ad + ': ' : '';
+    if (!s.kurumKodu) l.push(on + 'MEB kurum kodu'); if (!(s.mebAd || (sl.length < 2 && K.resmiAd))) l.push(on + 'MEB’deki kurum adı'); if (!(s.mudur || K.yetkili)) l.push(on + 'kurum müdürü');
+    if (!ILLER.includes(s.il || K.sehir)) l.push(on + 'il'); const a = String(ad(s) || '').trim(); if (a.length < 12 || ilSade(a) === ilSade(s.il || K.sehir)) l.push(on + 'açık adres'); });
+  return l;
+}
 export function kurumKisileri(subeId) {
   const l = S.subeler || [], s = l.find(x => x.id === subeId) || l.find(x => x.id === gorunum.sube) || l[0] || {}, K = S.kurs || {};
   const kisi = x => x && String(x.ad || '').trim() ? { ad: String(x.ad).trim(), unvan: String(x.unvan || '').trim() } : null;
