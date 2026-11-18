@@ -11,6 +11,7 @@ import * as MK from './mebkayit.js?v=234';
 import * as KR from './kurallar.js?v=234';
 import { sozlesmeUcreti } from './mevzuat.js?v=234';
 import * as UY from './mebuyum.js?v=234';
+import { onkosulEngel } from './onkosul.js?v=234';
 
 export const CEKILECEK = [
   ['kurum', 'Kurum bilgileri', 'Bina kontenjanı, açık sertifika programları ve ruhsat tarihleri, derslikler (Yardımcı 1.14)'],
@@ -347,6 +348,7 @@ export function kuralBilgi(ids, devam, { dugme } = {}) {
 // Döner: true (iş Yardımcı'ya gönderildi) ya da undefined (vazgeçildi, engel var)
 export async function yaz(ids) {
   if (!MK.yazabilir()) return bildir(MK.YETKI_YOK_YAZ, 'uyari');
+  if (onkosulEngel('MEBBİS’e yazma')) return;  // YON-077: kurum kodu yoksa yanlış kurum koruması çalışmaz
   // kurum "Yardımcı'yı kullanmayacağım" derse aynı işler elle giriş penceresinde açılır
   // (kayıt, direksiyon programı ve sınav randevusu mevcut "Elle giriş" ekranlarındadır; pencere yalnız öteki altı tür için açılır)
   if (!hazirMi(() => yaz(ids), () => { const el = ids.filter(id => MK.ELLE_TURLER.includes(String(id).split('-')[0])); if (el.length) elleGir(el); })) return;

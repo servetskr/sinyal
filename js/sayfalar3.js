@@ -1,3 +1,4 @@
+import { onkosulSeridi } from './onkosul.js?v=234';
 import { kurumKisileri, gordu, taksitVade, S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas, sb, sbDers, sbSinav, gorunum, subede, SOZLESME_VARSAYILAN, satistaSiniflar, ayEkle, YONTEMLER, yontemAd, selam, kursAdi, dersKonulari, evrakKaynak, ayniTcKayit, taksitBol, aydinlatmaMetni, gerekliDireksiyon, cokSube, varsayilanSube, kuralAyar, MEVCUT_BELGELER, eskiBelgeTarihi, deneyimEksik, aracSiniflari, tabanListesi, teorikVar, ekDersFiyat, kursiyerTaban } from './veri.js?v=234';
 import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler, imzaAlani, tamTarih, yaziyla, belgeYazdir, waAc, apiAcik, belgeWhatsApp, waSirali } from './ui.js?v=234';
 import { yenile } from './app.js?v=234';
@@ -291,7 +292,7 @@ export function belgeAc(tur, id) {
 export function belgeler() {
   return {
     baslik: 'Belgeler ve çıktılar', alt: 'Kayıtlardan otomatik dolan, yazdırmaya hazır formlar',
-    html: `${ekranNotu('Formu seçin, kişiyi seçin; bilgiler kayıttan dolar. Yazdırın ya da WhatsApp’tan PDF olarak gönderin.')}
+    html: `${ekranNotu('Formu seçin, kişiyi seçin; bilgiler kayıttan dolar. Yazdırın ya da WhatsApp’tan PDF olarak gönderin.')}${onkosulSeridi('Sözleşme', 'Makbuz', 'MEB formları')}
     ${['Kursiyer', 'MEB resmî formları', 'MEB ve denetim', 'Defterler (md.42)', 'Sözleşme ve KVKK'].map(g => `<div class="bolum-bas" style="margin-top:6px"><div><h2>${g}</h2></div></div><div class="belge-liste" style="margin-bottom:18px">${SABLONLAR.filter(x => BELGE_GRUP[x[0]] === g).map(([k, t, a]) => `<button class="belge-kart" data-belge="${k}"><span class="kagit"><i></i><i></i><i style="width:80%"></i><i></i><i style="width:65%"></i><i style="width:90%"></i></span><b>${t}</b><small>${a}</small></button>`).join('')}</div>`).join('')}`,
     baglan(k) { k.addEventListener('click', ev => { const b = ev.target.closest('[data-belge]'); if (b) belgeAc(b.dataset.belge); }); },
   };

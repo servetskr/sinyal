@@ -29,6 +29,7 @@ import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursi
 import { bildir, pencere, e, ik, isaret } from './ui.js?v=234';
 import * as GR from './gruplar.js?v=234';
 import * as MK from './mebkayit.js?v=234';
+import { onkosulEngel } from './onkosul.js?v=234';
 
 export const eklenti = { var: false, surum: null, ozellik: [], harita: null };
 const sayfadan = (tur, veri) => window.postMessage({ kaynak: 'sinyal-sayfa', tur, veri }, location.origin);
@@ -110,6 +111,7 @@ export function mebIsleri(hepsi) {
 export function yardimciyaGonder(idler, gidince) {
   if (!eklenti.var) return kurulumPenceresi();
   if (!MK.yazabilir()) return bildir(MK.YETKI_YOK_YAZ, 'uyari');
+  if (onkosulEngel('MEBBİS’e yazma')) return;  // YON-077
   if (!MK.kabulDenetle(() => yardimciyaGonder(idler, gidince))) return;
   // birden çok şubede her şubenin MEBBİS hesabı ayrıdır: şube seçilmeden işler tek hesaba gönderilmez
   if (cokSube() && !seciliSube()) return bildir('Önce üstten şube seçin; her şubenin işleri kendi MEBBİS hesabına girilir', 'uyari');

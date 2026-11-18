@@ -4,6 +4,7 @@ import { ilSecenekleri, kimlikEksikleri, EKRAN_DUZEY, YETKI_EKRAN, YETKI_ISLEM, 
 import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor, belgeYazdir, kisaLink, siteLink } from './ui.js?v=234';
 import { yenile } from './app.js?v=234';
 import { destekWa } from './iletisim.js?v=234';
+import { ONKOSUL, onkosulTamam, onkosulHaritasi } from './onkosul.js?v=234';
 import * as B from './bulut.js?v=234';
 import { wpGonder } from './sayfalar1.js?v=234';
 import * as ME from './mebevrak.js?v=234';
@@ -1064,7 +1065,11 @@ export function kurulumAdimlari() {
     ['yardimci', 'MEBBİS Yardımcısı', !!S.kurs.yardimci || mebAracHazir(), 'Biz + siz · 5 dk', '', 'MEBBİS’e girilen bilgisayarda Chrome eklentisini kurun; kayıtları kontrol edip “MEBBİS’e yaz” ile tek seferde onaylarsınız, Yardımcı kursun MEBBİS oturumunda yazar.' + (S.kurs.yardimci ? ` Kurulu: ${S.kurs.yardimci.cihaz || 'bilgisayar'} · sürüm ${S.kurs.yardimci.surum || '?'} · ${tarih(S.kurs.yardimci.tarih)}.` : '')],
     ['link', 'Kursa özel link', !S._bulut || !!S.kurs.kisaAd, 'Siz · 1 dk', '#/ayarlar/kurs/iletisim', 'mdsinyal.com/kursunuz gibi kısa bir link seçin; öğrenciler ve öğretmenler giriş sayfasına buradan ulaşır.'],
   ];
-  return l.map(([id, b, ok, kim, h, a, istege]) => { const kayit = kk[id] || null, atlandi = !ok && !!(kayit && kayit.atlandi); return [b, ok || atlandi || !!istege, kim, h, a, { id, ok, atlandi, istege: !!istege && !ok, kayit }]; });
+  // YON-077: önkoşul haritasındaki, yukarıdaki adımlarda olmayan bilgiler (kurum kimliği satırları 'Kurum kimliği' adımında)
+  const DUZEY = { kurs: 'zorunlu', sinif: 'zorunlu', ekip: 'zorunlu', kural: 'zorunlu' };
+  const ek = ONKOSUL.filter(x => !['kurumKodu', 'unvanVkn', 'adres'].includes(x.id)).map(x => [x.id, x.ad, onkosulTamam(x), x.duzey === 'istege' ? 'İsteğe bağlı' : 'Siz', x.yer, (x.not ? x.not + ' ' : '') + 'Dayanan: ' + x.ozellik.join(', ') + '.', x.duzey === 'istege', x.duzey, x.onayla]);
+  const sira = [...l.filter(x => !x[6]), ...ek.filter(x => !x[6]), ...l.filter(x => x[6]), ...ek.filter(x => x[6])];
+  return sira.map(([id, b, ok, kim, h, a, istege, duzey, onayla]) => { const kayit = kk[id] || null, atlandi = !ok && !!(kayit && kayit.atlandi); return [b, ok || atlandi || !!istege, kim, h, a, { id, ok, atlandi, istege: !!istege && !ok, kayit, duzey: istege ? 'istege' : duzey || DUZEY[id] || 'onerilen', onayla: !!onayla }]; });
 }
 // sayaca giren (isteğe bağlı olmayan) adımlar ve bitenler
 const kurSayim = l => { const say = l.filter(x => !x[5].istege); return { top: say.length, biten: say.filter(x => x[5].ok).length, atlanan: say.filter(x => x[5].atlandi).length }; };
@@ -1073,16 +1078,17 @@ export function kurulum() {
   const l = kurulumAdimlari(), { top, biten, atlanan } = kurSayim(l);
   // biten adımın ilk görüldüğü gün ve görenin adı (elle işaretlenmemişse) iz olarak yazılır
   const yeniIz = l.filter(x => x[5].ok && !x[5].kayit); if (yeniIz.length && oturum.kullanici && oturum.kullanici.rol === 'mudur') setTimeout(() => { yeniIz.forEach(x => kurIz(x[5].id, { gordu: true })); kaydet(); }, 0);
-  const durum = (x) => { const m = x[5]; return m.ok ? rozet('Tamam', 'yesil') : m.atlandi ? rozet('Atlandı', 'notr') : m.istege ? rozet('İsteğe bağlı · yakında', 'notr') : ''; };
+  const durum = (x) => { const m = x[5]; return m.ok ? rozet('Tamam', 'yesil') : m.atlandi ? rozet('Atlandı', 'notr') : m.istege ? rozet(m.id === 'earsiv' ? 'İsteğe bağlı · yakında' : 'İsteğe bağlı', 'notr') : rozet(m.duzey === 'zorunlu' ? 'Zorunlu' : 'Önerilen', m.duzey === 'zorunlu' ? 'kirmizi' : 'uyari'); };
   const iz = (x) => { const k = x[5].kayit; if (!k || !(x[5].ok || x[5].atlandi)) return ''; return `<small style="display:block;color:var(--soluk);font-size:12.5px">${x[5].atlandi ? 'Atlayan' : k.onay ? 'İşaretleyen' : k.gordu ? 'Tamam görüldü' : 'Yapan'}: ${e(k.kim || '—')} · ${tarih(k.tarih)}</small>`; };
   const dugme = (x, i) => { const m = x[5]; if (m.ok) return ''; if (m.atlandi) return `<button class="dg dg-hafif dg-kucuk" data-kur-geri="${m.id}">Geri al</button>`;
     const yap = m.id === 'yardimci' ? `<button class="dg dg-ana dg-kucuk" data-kur-yardimci>Kur</button>` : m.istege ? `<a class="dg dg-cizgi dg-kucuk" href="${x[3]}">Ayarlara bak</a>` : `<a class="dg dg-ana dg-kucuk" href="${x[3]}" data-kurulum-adim="${i}">Yap</a>`;
-    return (m.id === 'aktarim' ? `<button class="dg dg-cizgi dg-kucuk" data-kur-onay="aktarim">Aktarım tamam</button>` : '') + yap + (m.istege ? '' : `<button class="dg dg-hafif dg-kucuk" data-kur-atla="${m.id}" title="Bu adım bu kurs için gerekmiyor; sayaçtan düşer, sonra geri alınabilir">Atla</button>`); };
+    return (m.id === 'aktarim' ? `<button class="dg dg-cizgi dg-kucuk" data-kur-onay="aktarim">Aktarım tamam</button>` : m.onayla ? `<button class="dg dg-cizgi dg-kucuk" data-kur-onay="${m.id}">Tamam</button>` : '') + yap + (m.istege ? '' : `<button class="dg dg-hafif dg-kucuk" data-kur-atla="${m.id}" title="Bu adım bu kurs için gerekmiyor; sayaçtan düşer, sonra geri alınabilir">Atla</button>`); };
   return {
     baslik: 'Kurulum', alt: `${biten}/${top} adım tamam${atlanan ? ` · ${atlanan} atlandı` : ''}`,
     html: `${ekranNotu('Kurulumun çoğunu biz yaparız. Sizden istenenler kısa ve her birinin yanında yazar. Toplam süre: kurs tarafında yaklaşık 45 dakika.')}
     <div class="kart"><div class="kart-govde">${ilerleme(biten + atlanan, top, 'yesil')}<p style="margin-top:8px;font-size:14px"><b>${biten}</b> / ${top} adım tamamlandı${atlanan ? ` · ${atlanan} adım atlandı` : ''}</p><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">${l.some(x => !x[1]) ? `<button class="dg dg-ana dg-kucuk" data-kur-devam="${l.findIndex(x => !x[1])}">Sıradaki adıma geç</button>` : ''}<button class="dg dg-cizgi dg-kucuk" data-kur-rapor>Kurulum raporu</button></div></div>
-    <ul class="liste">${l.map((x, i) => `<li style="align-items:flex-start">${isaret(x[5].ok ? 'tamam' : x[5].atlandi || x[5].istege ? 'bilgi' : 'zorunlu', 26)}<div style="flex:1;min-width:0"><b style="color:var(--murekkep);display:block">${i + 1}. ${x[0]}</b><small style="color:var(--metin);font-size:13.5px">${x[4]}</small>${iz(x)}</div><span class="sag" style="flex-wrap:wrap;justify-content:flex-end;gap:6px">${rozet(x[2], x[2].startsWith('Biz') ? 'mavi' : 'notr')}${durum(x)}${dugme(x, i)}</span></li>`).join('')}</ul></div>`,
+    <ul class="liste">${l.map((x, i) => `<li style="align-items:flex-start">${isaret(x[5].ok ? 'tamam' : x[5].atlandi || x[5].istege ? 'bilgi' : 'zorunlu', 26)}<div style="flex:1;min-width:0"><b style="color:var(--murekkep);display:block">${i + 1}. ${x[0]}</b><small style="color:var(--metin);font-size:13.5px">${x[4]}</small>${iz(x)}</div><span class="sag" style="flex-wrap:wrap;justify-content:flex-end;gap:6px">${rozet(x[2], x[2].startsWith('Biz') ? 'mavi' : 'notr')}${durum(x)}${dugme(x, i)}</span></li>`).join('')}</ul></div>
+    <details class="kart" style="margin-top:16px"><summary class="kart-bas" style="cursor:pointer"><h3>Önkoşul haritası</h3><small>Hangi özellik hangi bilgiye dayanır</small></summary><div class="tablo-kap"><table class="tablo"><thead><tr><th>Özellik</th><th>Dayandığı bilgiler</th></tr></thead><tbody>${onkosulHaritasi().map(h => `<tr><td><b>${e(h.ozellik)}</b></td><td>${h.l.map(x => `<a href="${x.yer}" class="onk-bag ${x.tamam ? 'tamam' : ''}">${isaret(x.tamam ? 'tamam' : x.duzey === 'zorunlu' ? 'zorunlu' : 'bilgi', 16)}${e(x.ad)}</a>`).join('')}</td></tr>`).join('')}</tbody></table></div></details>`,
     baglan(kap) {
       kap.addEventListener('click', ev => {
         const t = ev.target; if (!(t instanceof Element)) return;

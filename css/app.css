@@ -3580,3 +3580,7 @@ button.rozet:focus-visible { outline: 2px solid var(--levha); outline-offset: 2p
 .kur-liste li small { color: var(--soluk); margin-left: 6px; }
 .kur-liste li.tamam b { text-decoration: line-through; color: var(--soluk); }
 .kur-liste li.atlandi b { color: var(--soluk); }
+/* YON-077: önkoşul haritası ve şeridi */
+.onk-bag { display: inline-flex; align-items: center; gap: 4px; margin: 2px 10px 2px 0; font-size: 13.5px; color: var(--murekkep); }
+.onk-bag.tamam { color: var(--soluk); }
+.onkosul-serit a { color: var(--levha); font-weight: 700; white-space: nowrap; }
