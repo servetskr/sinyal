@@ -3716,6 +3716,18 @@ a.kart.gosterge { text-decoration: none; color: inherit; }   /* DENETİM Ö2: di
 .meb-gecmis summary { cursor: pointer; color: var(--murekkep); font-weight: 600; }
 .meb-gecmis ul { list-style: none; display: grid; gap: 4px; margin-top: 6px; }
 .meb-gecmis small { color: var(--soluk); }
+.meb-acilir summary { min-height: 40px; display: flex; align-items: center; padding: 6px 0; border-top: 1px solid var(--cizgi-2); }
+.meb-acilir ul { gap: 0; }
+.meb-acilir li { padding: 8px 0; border-bottom: 1px solid var(--cizgi-2); }
+.meb-acilir li:last-child { border-bottom: 0; }
+.meb-ac-ust { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.meb-ac-ust > .meb-ac-m { color: var(--metin); flex: 1 1 160px; min-width: 0; }
+.meb-ac-ust > b:first-child { color: var(--murekkep); min-width: 84px; }
+.meb-acilir li > small { display: block; margin-top: 2px; overflow-wrap: anywhere; }
+.meb-gerekce { margin: 4px 0 0; font-size: 13px; line-height: 1.45; color: var(--metin); white-space: pre-line; overflow-wrap: anywhere; }
+.meb-gerekce span { display: inline-block; min-width: 52px; margin-right: 6px; font-weight: 700; color: var(--soluk); }
+.meb-ac-bas { display: block; margin: 8px 0 0; font-size: 12.5px; color: var(--soluk); text-transform: none; }
+.meb-ac-dip { display: block; margin: 4px 0 2px; }
 .rz-cip { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-right: 6px; }
 /* KAY-068 */
 .ev-tablo th { font-size: 12px; white-space: nowrap; }
@@ -3871,3 +3883,29 @@ tr.secili-satir td { background: rgba(10, 77, 162, .06); }
 
 /* KAY-033: belgeden okumayla doldurulan alan (kullanıcı belgeyle karşılaştırsın) */
 .oku-dolu { background: #fff8db !important; border-color: #e0b400 !important; }
+/* PAR-056: tedarikçi satırında rozet ve düğmeler dar ekranda alt satıra iner */
+@media (max-width: 640px) { .cari-td li { flex-wrap: wrap; } .cari-td li > div[style*="flex:1"] { flex: 1 1 100% !important; } .cari-td li > .sag { margin-left: 0; flex-wrap: wrap; flex: 1 1 auto; } }
+/* UYG-010: müsait zamanlar ızgarası (öğrenci dosyası) */
+.musait-izgara { display: grid; grid-template-columns: 44px repeat(3, minmax(52px, 84px)); gap: 4px 6px; align-items: center; font-size: 13.5px; }
+.musait-izgara > small { text-align: center; color: var(--soluk); font-weight: 600; line-height: 1.25; }
+.musait-izgara > b { color: var(--murekkep); }
+.musait-izgara > span[role=cell] { display: grid; place-items: center; height: 30px; border-radius: 8px; background: var(--cizgi-2); color: #fff; }
+.musait-izgara > span[role=cell].on { background: var(--yesil); }
+.musait-izgara > span[role=cell] svg { width: 16px; height: 16px; }
+.musait-sec label { display: grid; place-items: center; height: 40px; border: 1px solid var(--cizgi); border-radius: 8px; cursor: pointer; }
+.musait-sec input { width: 20px; height: 20px; }
+/* YON-037: sahip paneli · MEBBİS ekran alarmları */
+.sh-ea { margin-bottom: 14px; }
+.sh-ea h2 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: 16px; margin: 0 0 8px; }
+.sh-ea h2 span { font-size: 13px; font-weight: 500; color: var(--soluk); }
+.sh-ea-ekran summary { display: flex; gap: 10px; align-items: center; padding: 10px 12px; cursor: pointer; list-style: none; min-height: 44px; }
+.sh-ea-ekran summary::-webkit-details-marker { display: none; }
+.sh-ea-ekran ul { list-style: none; margin: 0; padding: 0 12px 10px 54px; display: grid; gap: 6px; }
+.sh-ea-ekran li b { display: block; font-size: 14px; color: var(--murekkep); }
+.sh-ea-ekran li small { color: var(--soluk); overflow-wrap: anywhere; }
+.sh-ea-yok { margin: 0 0 12px; }
+/* MEB-093: öğrenci dosyası · MEBBİS geçmişi (açılır kart) */
+.meb-gecmis-kart > summary { cursor: pointer; list-style: none; }
+.meb-gecmis-kart > summary::-webkit-details-marker { display: none; }
+.meb-gecmis-kart > summary::after { content: '›'; margin-left: auto; font-size: 20px; color: var(--soluk); transform: rotate(90deg); transition: transform .15s; }
+.meb-gecmis-kart[open] > summary::after { transform: rotate(-90deg); }

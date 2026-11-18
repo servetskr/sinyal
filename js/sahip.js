@@ -23,6 +23,7 @@ const ROL = { mudur: 'Kurs müdürü', sekreter: 'Ön büro', usta: 'Öğretmen'
 const SUZGEC = [['hepsi', 'Hepsi'], ['personel', 'Kurs personeli'], ['ogrenci', 'Öğrenciler'], ['yonetim', 'Yönetim']];
 
 const SIL_GUN = 7;  // silinen hesap bu kadar gün geri alınabilir, sonra kalıcı silinir
+let ekranAlarm = { l: [], durum: '' };   // YON-037
 let silinecekler = [], kursIst = {}, destekler = [], gorunum = 'hesaplar', alt = 'kurslar', destekAlt = 'talepler';
 let belirtec = null, bitis = 0, hesaplar = null, suzgec = 'hepsi', arama = '', kok = null, yukleniyor = false, hataMetni = '', gomulu = false, ipucu = '';
 
@@ -145,6 +146,47 @@ async function yukle() {
     if (!kurslar['kurslar/' + k]) kursIst[k].belgeYok = true;
     else { const kb = kurslar['kurslar/' + k]; Object.assign(kursIst[k], { durum: kb.durum || 'etkin', tur: kb.tur || '', acan: kb.acan || '' }); }  // YON-081  // kurs kaydı silinmiş, alt verisi kalmış: yalnız silinebilir, hesap açılmaz
   }
+  await ekranAlarmYukle();
+}
+// YON-037: MEBBİS ekran alarmları — Yardımcı bir MEBBİS ekranında beklediği alanı bulamayınca kurs cihazı işlem kaydına (kurslar/{k}/kayit)
+// ne: 'MEBBİS ekranı değişti', ayrinti: 'SKT03004 · eksik: cmbDersSaati · Yardımcı 1.16 · harita 3 · iş …' yazar (mebkayit.js ekranDegisti).
+// Bütün kurslar tek sorguda: collectionGroup('kayit') where ne == … (tek alan dizini, collection group kapsamı; konsoldan açılır, YON-038).
+// Dizin yoksa Firestore FAILED_PRECONDITION döner: liste kursların kendi verisindeki son uyarılardan (S.mebEkranAlarm, 30 gün) kurulur ve
+// dizinin açılması gerektiği yazılır. Sahip okuması güvenlik kuralının ilk bloğuyla (match /{yol=**}) yapılır; yeni kural gerekmez.
+export const EKRAN_ALARM_NE = 'MEBBİS ekranı değişti';
+const ALARM_GUN = 60;
+export function ekranAlarmCoz(j, adOf = () => '') {
+  return (Array.isArray(j) ? j : []).filter(x => x && x.document).map(x => {
+    const d = x.document, f = alanlar(d.fields), m = String(d.name || '').match(/\/documents\/kurslar\/([^/]+)\/kayit\/([^/]+)$/), a = String(f.ayrinti || '');
+    const kod = (a.split(' · ')[0] || '').trim(), eksik = ((a.match(/eksik: ([^·]*)/) || [])[1] || '').trim(), yrd = ((a.match(/Yardımcı ([^\s·]+)/) || [])[1] || ''), is = ((a.match(/· iş ([^\s·]+)/) || [])[1] || '');
+    const kurs = m ? m[1] : '';
+    return { kurs, kursAd: adOf(kurs) || '', ekran: kod || 'bilinmeyen ekran', eksik: eksik && eksik !== '—' ? eksik : '', yardimci: yrd, is, kim: f.ad || '', zaman: f.zaman || f.yerel || '' };
+  }).filter(x => x.kurs && (!x.zaman || Date.now() - Date.parse(x.zaman) < ALARM_GUN * 864e5)).sort((a, b) => String(b.zaman).localeCompare(String(a.zaman)));
+}
+// dizin yokken: kursların verisindeki S.mebEkranAlarm.ekranlar { [kod]: { eksik[], zaman (ms), is } }
+function yedekAlarmlar() {
+  return Object.entries(kursIst).flatMap(([k, x]) => Object.entries(((x && x.ekranAlarm) || {}).ekranlar || {}).filter(([, v]) => v && v.zaman).map(([kod, v]) => ({ kurs: k, kursAd: x.ad || '', ekran: kod, eksik: (v.eksik || []).join(', '), yardimci: '', is: v.is || '', kim: '', zaman: new Date(v.zaman).toISOString(), goruldu: !!v.goruldu })))
+    .filter(x => Date.now() - Date.parse(x.zaman) < ALARM_GUN * 864e5).sort((a, b) => b.zaman.localeCompare(a.zaman));
+}
+async function ekranAlarmYukle() {
+  try {
+    const j = await api(FS + ':runQuery', { structuredQuery: { from: [{ collectionId: 'kayit', allDescendants: true }], where: { fieldFilter: { field: { fieldPath: 'ne' }, op: 'EQUAL', value: { stringValue: EKRAN_ALARM_NE } } }, limit: 500 } });
+    ekranAlarm = { l: ekranAlarmCoz(j, k => (kursIst[k] || {}).ad), durum: 'tamam' };
+  } catch (x) {
+    const dizin = x.durum === 'FAILED_PRECONDITION' || /index/i.test(x.message || '');
+    ekranAlarm = { l: yedekAlarmlar(), durum: dizin ? 'dizin' : 'hata', hata: dizin ? '' : turkceHata(x) };
+  }
+}
+export function ekranAlarmHtml(ea = ekranAlarm) {
+  const l = ea.l || [], gec = t => t ? new Date(t).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+  const uyari = ea.durum === 'dizin' ? `<p class="sh-hata">${ik('uyari')}<span>Bütün kursları tek sorguda okumak için Firestore dizini gerekiyor (kayit · ne, collection group). Firebase konsolu › Firestore › Dizinler’den açın (YON-038). Şimdilik kursların kendi verisindeki son ${30} günün uyarıları gösteriliyor.</span></p>`
+    : ea.durum === 'hata' ? `<p class="sh-hata">${ik('uyari')}<span>Ekran alarmları okunamadı: ${e(ea.hata || '')}</span></p>` : '';
+  if (!l.length) return ea.durum === 'tamam' ? `<p class="sh-dip sh-ea-yok">${ik('tik')} MEBBİS ekran alarmı yok (son ${ALARM_GUN} gün).</p>` : uyari ? `<section class="sh-ea">${uyari}</section>` : '';
+  const ekranlar = new Map(); l.forEach(x => { const g = ekranlar.get(x.ekran) || { ekran: x.ekran, l: [], kurslar: new Set() }; g.l.push(x); g.kurslar.add(x.kurs); ekranlar.set(x.ekran, g); });
+  return `<section class="sh-ea"><h2>MEBBİS ekran alarmları<span>${ekranlar.size} ekran · ${new Set(l.map(x => x.kurs)).size} kurs · son ${ALARM_GUN} gün</span></h2>${uyari}
+    <div class="sh-liste">${[...ekranlar.values()].map(g => { const son = g.l[0]; return `<details class="sh-ea-ekran"><summary><span class="sh-av sh-av-yok">${ik('uyari')}</span><span class="sh-satir-ic"><b class="mono">${e(g.ekran)}</b><small>${g.kurslar.size} kurs · ${g.l.length} alarm · son ${e(gec(son.zaman))}${son.eksik ? ' · eksik: ' + e(son.eksik) : ''}</small></span></summary>
+      <ul>${g.l.map(x => `<li><b>${e(x.kursAd || x.kurs)}</b><small>${[gec(x.zaman), x.eksik ? 'eksik: ' + x.eksik : '', x.yardimci ? 'Yardımcı ' + x.yardimci : '', x.kim, x.is ? 'iş ' + x.is : '', x.goruldu ? 'kursta görüldü' : ''].filter(Boolean).map(e).join(' · ')}</small></li>`).join('')}</ul></details>`; }).join('')}</div>
+    <p class="sh-dip">Yardımcı bu ekranlarda beklediği alanı bulamadı ve o ekrana yazmadı. Ekran haritasını güncelleyin; kurslar bu sırada “Elle gir” ile çalışır.</p></section>`;
 }
 const kalanGun = x => SIL_GUN - Math.floor((Date.now() - Date.parse(x.zaman)) / 864e5);
 // kursun mdSinyal verisi (kurslar/{kurs}/v): diziler parça parça, diğerleri tek belge
@@ -176,6 +218,7 @@ async function kursIstatistik(k, ad, sehir) {
   (V.destek || []).forEach(t => destekler.push({ ...t, kurs: k, kursAd: ad, kanal: 'mdSinyal', ...(cevap[t.id] || {}) }));
   return {
     depolama: (V.kurs && V.kurs.depolama) || null,  // YON-079
+    ekranAlarm: V.mebEkranAlarm || null,  // YON-037: dizin yokken yedek kaynak
     ad, sehir, kursiyer: ks.length, aktif: ks.filter(x => x.asama !== 'Ehliyet' && !x.pasif && !x.silindi).length,
     dersAy: (V.dersler || []).filter(x => String(x.tarih || '').startsWith(ay)).length,
     tahsilAy: (V.hareket || []).filter(x => x.tur === 'Gelir' && String(x.tarih || '').startsWith(ay)).reduce((t, x) => t + (+x.tutar || 0), 0),
@@ -302,7 +345,7 @@ function kursIstHtml() {
   // YON-034, YON-079: depolama — ücretsiz Firebase planında 1 GiB bütün proje için; kursların son ölçümü toplanır, %70 / %85 eşikte uyarı, "kaç kursa yeter"
   const GiB = 1073741824, ol = l.filter(([, x]) => x.depolama && x.depolama.toplam), top = ol.reduce((a, [, x]) => a + x.depolama.toplam, 0), ort = ol.length ? top / ol.length : 0, oran = top / GiB, mbT = n => (n / 1048576).toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + ' MB';
   const depo = `<div class="sh-depo ${oran >= 0.85 ? 'kirmizi' : oran >= 0.7 ? 'sari' : ''}"><b>Depolama ${mbT(top)} / 1.024 MB (%${Math.round(oran * 100)})</b><small>${ol.length}/${l.length} kurs ölçüldü${ort ? ` · kurs başına ortalama ${mbT(ort)} · bu ortalamayla yaklaşık ${Math.floor(GiB * 0.85 / ort)} kursa yeter (%85 sınırı)` : ''}${oran >= 0.85 ? ' · %85 aşıldı: fotoğraf sıkıştırma ve yedek saklama süresini gözden geçirin' : oran >= 0.7 ? ' · %70 aşıldı' : ''}</small></div>`;
-  return `<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="dg dg-ana dg-kucuk" data-sh-kurs-ac>${ik('arti')}Kurs aç</button></div>` + depo + `<div class="sh-ist-izgara">${l.map(([k, x]) => {
+  return `<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="dg dg-ana dg-kucuk" data-sh-kurs-ac>${ik('arti')}Kurs aç</button></div>` + depo + ekranAlarmHtml() + `<div class="sh-ist-izgara">${l.map(([k, x]) => {
     const hs = hesaplar.filter(h => h.kurs === k && !h.silinecek), per = hs.filter(h => h.rol && h.rol !== 'ogrenci').length, ogr = hs.filter(h => h.rol === 'ogrenci').length;
     const ogrAktif = hs.filter(h => h.rol === 'ogrenci' && h.sonGiris > Date.now() - 30 * 864e5).length, acik = destekler.filter(t => t.kurs === k && (t.durum || 'Açık') !== 'Çözüldü').length;
     return `<article class="sh-ist" data-sh-kurs="${e(k)}" role="button" tabindex="0">

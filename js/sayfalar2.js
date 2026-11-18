@@ -9,7 +9,7 @@ import { AYAR_SEKMELERI, ayarBaglan, ustaDavet, kimlikKartlari, personelFotoKirp
 import * as MB from './mebmerkez.js?v=234';
 import { kisaArama as mzKisaArama, kisaAramaBaglan as mzKisaBaglan } from './sayfa-mevzuat.js?v=234';
 import * as EKL from './eklenti.js?v=234';
-import { hesapSecici, hesapOku, wpGonder, tahsilAl, ekDersOner, kisiListe, odemeBilgisi, yorumMetni, alici, mudurMu, bildirimler } from './sayfalar1.js?v=234';
+import { fotoAl, hesapSecici, hesapOku, wpGonder, tahsilAl, ekDersOner, kisiListe, odemeBilgisi, yorumMetni, alici, mudurMu, bildirimler } from './sayfalar1.js?v=234';
 import { denetimEksikleri, mebSiraBaslat } from './sayfalar3.js?v=234';
 import * as OZ from './ozellik.js?v=234';
 import * as EP from './eposta.js?v=234';
@@ -67,9 +67,10 @@ export function sinavlar(alt) {
       <a class="kart gosterge" href="#/sinavlar/girecek" data-hv-git="tekrar"><small>Tekrar sınava girecek</small><b>${hs.tekrar}</b><span>${(() => { const t = kalanlar.filter(k => k.ekDersTeklif).length, y = kalanlar.filter(k => S.sinavlar.some(s => s.tur === 'Direksiyon' && fark(s.tarih) >= 0 && s.kursiyerler.includes(k.id))).length; return !kalanlar.length ? 'Kalan kursiyer yok' : hs.tekrar ? `Oturuma yazılmadı${y ? ` · ${y} kişi zaten yeni oturumda` : ''}${t ? ` · ${t} kişiye ek ders teklif edildi` : ''}` : `Kalanların hepsi yeni oturumda (${y})${t ? ` · ${t} kişiye ek ders teklif edildi` : ''}`; })()}</span></a>
     </div><div class="ara-bosluk"></div>
     <div class="bolum-bas"><div id="sek">${sekmeler([['girecek', 'Sınava girecekler', hs.ilk + hs.tekrar], ['yaklasan', 'Yaklaşan', sbSinav(S.sinavlar).filter(s => fark(s.tarih) >= 0).length], ['gecmis', 'Geçmiş', sbSinav(S.sinavlar).filter(s => fark(s.tarih) < 0).length], ['yol', 'e-Sınav yolu', TY.yolAdaylari().filter(k => !['muaf', 'gecti'].includes(TY.esinavAsamasi(k))).length], ['risk', 'Kalma riski', riskli.length], ['deneme', 'Deneme başarısı', denemeOzet().filter(x => x.n && x.oran < 70).length], ['psiko', 'Psikoteknik', (S.psikoteknik || []).filter(x => x.durum === 'Planlandı' && x.tarih >= gun(0)).length]], durum.sinav)}</div>${durum.sinav === 'psiko' ? '' : `<div class="sag"><button class="dg dg-ana" data-yeni>${ik('arti')}Sınav oturumu ekle</button></div>`}</div>
-    ${durum.sinav === 'girecek' ? HV.havuzHtml() : durum.sinav === 'psiko' ? PS.psikoHtml() : durum.sinav === 'yol' ? TY.yolHtml() : durum.sinav === 'deneme' ? denemeHtml() : durum.sinav === 'risk' ? `<div class="kart"><div class="kart-bas"><h3>Sınavda kalabilecek kursiyerler</h3><small>Usta öğreticinin ders sonu beceri puanları, deneme sınavları, devamsızlık ve önceki sonuçlardan hesaplanır</small>${riskli.some(x => x.r.puan >= 50 && x.r.oneri && !x.k.ekDersTeklif) ? `<div class="sag"><button class="dg dg-wp dg-kucuk" data-toplu-ekders>${ik('wp')}Yüksek risklilere ek ders teklif et</button></div>` : ''}</div><ul class="liste" style="margin-top:8px">${riskli.map(({ k, r }) => `<li>${isaret(r.puan >= 50 ? 'uyari' : 'bilgi', 28)}<a class="kisi" href="#/kursiyer/${k.id}" style="flex:1"><div><b>${e(tamAd(k))} · ${r.seviye} risk · ${r.puan}/100</b><small>${r.tur} · ${e(r.nedenler.join(' · '))}</small></div></a><span class="sag">${k.ekDersTeklif ? rozet(k.ekDersTeklif.n + ' ders teklif edildi', 'mavi') : `<button class="dg dg-ana dg-kucuk" data-ekders="${k.id}">Ek ders öner</button>`}</span></li>`).join('') || '<li>' + bos('Riskli kursiyer yok', 'Herkes sınava hazır görünüyor.') + '</li>'}</ul></div>` : `${durum.sinav === 'yaklasan' ? SG.gunlerKarti() : ''}<div class="izgara iz-2">${liste.map(kartSinav).join('') || `<div class="kart">${bos('Oturum yok', 'Yeni bir sınav oturumu ekleyin.')}</div>`}</div>`}`,
+    ${durum.sinav === 'girecek' ? HV.havuzHtml() : durum.sinav === 'psiko' ? PS.psikoHtml() : durum.sinav === 'yol' ? TY.yolHtml() : durum.sinav === 'deneme' ? denemeHtml() : durum.sinav === 'risk' ? `<div class="kart"><div class="kart-bas"><h3>Sınavda kalabilecek kursiyerler</h3><small>Usta öğreticinin ders sonu beceri puanları, deneme sınavları, devamsızlık ve önceki sonuçlardan hesaplanır</small>${riskli.some(x => x.r.puan >= 50 && x.r.oneri && !x.k.ekDersTeklif) ? `<div class="sag"><button class="dg dg-wp dg-kucuk" data-toplu-ekders>${ik('wp')}Yüksek risklilere ek ders teklif et</button></div>` : ''}</div><ul class="liste" style="margin-top:8px">${riskli.map(({ k, r }) => `<li>${isaret(r.puan >= 50 ? 'uyari' : 'bilgi', 28)}<a class="kisi" href="#/kursiyer/${k.id}" style="flex:1"><div><b>${e(tamAd(k))} · ${r.seviye} risk · ${r.puan}/100</b><small>${r.tur} · ${e(r.nedenler.join(' · '))}</small></div></a><span class="sag">${k.ekDersTeklif ? rozet(k.ekDersTeklif.n + ' ders teklif edildi', 'mavi') : `<button class="dg dg-ana dg-kucuk" data-ekders="${k.id}">Ek ders öner</button>`}</span></li>`).join('') || '<li>' + bos('Riskli kursiyer yok', 'Herkes sınava hazır görünüyor.') + '</li>'}</ul></div>` : `${durum.sinav === 'yaklasan' ? ilceOneriKarti() + SG.gunlerKarti() : ''}<div class="izgara iz-2">${liste.map(kartSinav).join('') || `<div class="kart">${bos('Oturum yok', 'Yeni bir sınav oturumu ekleyin.')}</div>`}</div>`}`,
     baglan(k) {
       if (durum.sinav === 'yaklasan') SG.gunlerBagla(k);
+      if (durum.sinav === 'yaklasan') k.addEventListener('click', ev => { const b = ev.target.closest('[data-ilce-ac]'); if (b) ilceOturumAc(b.dataset.ilceAc === '*' ? null : [b.dataset.ilceAc]); });   // SNV-049
       if (durum.sinav === 'yol') TY.yolBaglan(k, yenile, { oturumaEkle: tekOturumaEkle, sonucGir });
       if (durum.sinav === 'psiko') PS.psikoBaglan(k, yenile);   // DIR-043
       if (durum.sinav === 'girecek') { HV.havuzBaglan(k, yenile); const b = sessionStorage.getItem('sinyal-hv-git'); if (b) { sessionStorage.removeItem('sinyal-hv-git'); setTimeout(() => k.querySelector('#hv-' + b)?.scrollIntoView({ block: 'start' }), 60); } }
@@ -108,6 +109,30 @@ export function sinavlar(alt) {
       });
     },
   };
+}
+// SNV-049: MEBBİS ilçe sınav takviminden (S.mebIlceSinavlari [{kod, tarih}], aday dosyası okunurken gelir) oturum önerisi.
+// Gelecekteki her gün için tek öneri; o gün uygulama sınavı oturumu varsa (hangi şubede olursa olsun) önerilmez. Tek dokunuşla açılır, gün
+// kursun uygulama sınavı günlerine de eklenir (SNV-041). Kodlar oturuma yazılır (s.mebKod).
+function ilceOnerileri() {
+  const g = new Map();
+  (S.mebIlceSinavlari || []).filter(x => x && /^\d{4}-\d{2}-\d{2}$/.test(String(x.tarih || '').slice(0, 10)) && fark(x.tarih.slice(0, 10)) >= 0).forEach(x => { const t = x.tarih.slice(0, 10), o = g.get(t) || { tarih: t, kodlar: [] }; if (x.kod && !o.kodlar.includes(String(x.kod))) o.kodlar.push(String(x.kod)); g.set(t, o); });
+  return [...g.values()].filter(o => !(S.sinavlar || []).some(s => s.tur === 'Direksiyon' && s.tarih === o.tarih)).sort((a, b) => a.tarih.localeCompare(b.tarih));
+}
+function ilceOneriKarti() {
+  const l = ilceOnerileri(); if (!l.length) return '';
+  const g = l.slice(0, 8);
+  return `<div class="kart ilce-oneri" style="margin-bottom:16px"><div class="kart-bas"><h3>MEBBİS ilçe sınav takvimi</h3><small>${l.length} sınav gününde oturum yok · tek dokunuşla açılır</small>${l.length > 1 ? `<div class="sag"><button class="dg dg-ana dg-kucuk" data-ilce-ac="*">${ik('arti')}Hepsine oturum aç (${l.length})</button></div>` : ''}</div>
+    <ul class="liste">${g.map(o => `<li><div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(tarihUzun(o.tarih))}</b><small style="display:block;color:var(--soluk)">${o.kodlar.length ? 'Sınav kodu ' + o.kodlar.map(e).join(', ') : 'Kod okunmadı'}${ulusalSinav(o.tarih) ? ` · <b style="color:var(--kirmizi)">ulusal sınav günü (${e(ulusalSinav(o.tarih))})</b>` : ''}</small></div><span class="sag"><button class="dg dg-cizgi dg-kucuk" data-ilce-ac="${e(o.tarih)}">Oturum aç</button></span></li>`).join('')}${l.length > g.length ? `<li style="color:var(--soluk);font-size:13px">+${l.length - g.length} gün daha</li>` : ''}</ul>
+    <p class="ipucu" style="margin:0 20px 14px">${isaret('bilgi', 18)}<span>Günler MEBBİS’teki ilçe sınav takviminden okundu. Açılan oturuma kursiyerleri sonra eklersiniz.</span></p></div>`;
+}
+function ilceOturumAc(tarihler) {
+  const l = ilceOnerileri().filter(o => !tarihler || tarihler.includes(o.tarih)); if (!l.length) { bildir('Bu güne oturum zaten açılmış', 'uyari'); return yenile(); }
+  const son = (S.sinavlar || []).filter(x => x.tur === 'Direksiyon' && x.yer).sort((a, b) => b.tarih.localeCompare(a.tarih))[0], gunler = SG.sinavGunleri(true);
+  l.forEach((o, i) => { S.sinavlar.push({ id: 's' + Date.now() + (i ? '-' + i : ''), tur: 'Direksiyon', tarih: o.tarih, saat: '08:30', yer: son ? son.yer : 'Uygulama sınav alanı', kursiyerler: [], sonuc: {}, ...(o.kodlar.length ? { mebKod: o.kodlar } : {}), kaynak: 'MEBBİS ilçe takvimi' });
+    if (!gunler.includes(o.tarih)) gunler.push(o.tarih); });
+  S.kurs.sinavGunleri = gunler.sort();
+  islem('Sınav oturumu açtı', 'Direksiyon · ' + l.map(o => tarih(o.tarih)).join(', ') + ' · MEBBİS ilçe takvimi'); kaydet();
+  bildir(l.length > 1 ? `${l.length} uygulama sınavı oturumu açıldı` : tarihUzun(l[0].tarih) + ' uygulama sınavı oturumu açıldı', 'tamam'); yenile();
 }
 export function oturumEkle() {
   pencere({
@@ -723,7 +748,7 @@ function aracDefteri(a) {
         if (tur === 'police') { if (!f.bitis.value) return bildir('Poliçe bitiş tarihini yazın', 'uyari'); Object.assign(x, { policeTur: f.policeTur.value, acenta: f.acenta.value.trim(), policeNo: f.policeNo.value.trim(), bitis: f.bitis.value, tutar: say(f.tutar.value) || undefined }); const alan = f.policeTur.value === 'Trafik sigortası' ? 'sigorta' : f.policeTur.value === 'Kasko' ? 'kasko' : null; if (alan && (!a[alan] || a[alan] < x.bitis)) a[alan] = x.bitis; if (alan === 'sigorta') a.sigortaBelgeNo = x.policeNo || a.sigortaBelgeNo; }
         else if (tur === 'zimmet') { const c = say(f.kmCikis.value), g = say(f.kmGiris.value); if (g && g < c) return bildir('Giriş km çıkıştan küçük olamaz', 'uyari'); Object.assign(x, { egitmen: f.egitmen.value, kmCikis: c || undefined, kmGiris: g || undefined, yakitL: String(f.yakitL.value).replace(',', '.') || undefined }); if ((g || c) > (+a.km || 0)) a.km = g || c; }
         else if (tur === 'noter') Object.assign(x, { noter: f.noter.value.trim(), satisTarih: f.satisTarih.value || undefined });
-        else if (tur === 'galeri') { const dosya = f.resim.files[0]; if (!dosya) return bildir('Fotoğraf seçin', 'uyari'); return fotoKucult(dosya, 900).then(u => { x.resim = u; a.kayitlar = [...(a.kayitlar || []), x]; islem('Araç defterine fotoğraf ekledi', a.plaka); kaydet(); kapatPencere(); bildir('Fotoğraf eklendi'); yenile(); aracDefteri(a); }); }
+        else if (tur === 'galeri') { const dosya = f.resim.files[0]; if (!dosya) return bildir('Fotoğraf seçin', 'uyari'); return fotoAl(dosya, 900).then(u => { x.resim = u; a.kayitlar = [...(a.kayitlar || []), x]; islem('Araç defterine fotoğraf ekledi', a.plaka); kaydet(); kapatPencere(); bildir('Fotoğraf eklendi'); yenile(); aracDefteri(a); }).catch(x => bildir(x.message, 'uyari')); }
         else if (tur === 'bagli') { const eski = a.bagliArac, yeni = f.bagliArac.value || ''; if (eski) { const o = S.araclar.find(y => y.id === eski); if (o && o.bagliArac === a.id) delete o.bagliArac; } if (yeni) { a.bagliArac = yeni; const o = S.araclar.find(y => y.id === yeni); if (o) o.bagliArac = a.id; } else delete a.bagliArac; x.bagliArac = yeni || undefined; }
         else { Object.assign(x, { km: say(f.km.value) || undefined, sonrakiKm: say(f.sonrakiKm.value) || undefined, bitis: f.bitis.value || undefined, tutar: say(f.tutar.value) || undefined }); if (tur === 'bakim' && x.sonrakiKm) a.bakimKm = x.sonrakiKm; if (tur === 'muayene' && x.bitis && (!a.muayene || a.muayene < x.bitis)) a.muayene = x.bitis; if (x.km > (+a.km || 0)) a.km = x.km; }
         a.kayitlar = [...(a.kayitlar || []), x]; islem('Araç defterine kayıt ekledi', `${a.plaka} · ${(DEFTER_TUR.find(t => t[0] === tur) || [, tur])[1]}`); kaydet(); kapatPencere(); bildir('Kayıt eklendi'); yenile(); aracDefteri(a); });

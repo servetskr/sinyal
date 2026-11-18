@@ -2,6 +2,7 @@ import { onkosulSeridi } from './onkosul.js?v=234';
 import { sinavGecmisi, ekToplam, kurumKisileri, gordu, taksitVade, S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas, sb, sbDers, sbSinav, gorunum, subede, SOZLESME_VARSAYILAN, satistaSiniflar, ayEkle, YONTEMLER, yontemAd, selam, kursAdi, dersKonulari, evrakKaynak, ayniTcKayit, taksitBol, aydinlatmaMetni, gerekliDireksiyon, cokSube, varsayilanSube, kuralAyar, MEVCUT_BELGELER, eskiBelgeTarihi, deneyimEksik, aracSiniflari, tabanListesi, teorikVar, ekDersFiyat, kursiyerTaban } from './veri.js?v=234';
 import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler, imzaAlani, tamTarih, yaziyla, belgeYazdir, waAc, apiAcik, belgeWhatsApp, waSirali } from './ui.js?v=234';
 import { yenile } from './app.js?v=234';
+import { fotoAl } from './sayfalar1.js?v=234';   // KAY-115
 import { siraliPencere } from './sayfalar5.js?v=234';
 import * as GR from './gruplar.js?v=234';
 import { saatUcretleri, sozlesmeUcreti, sozlesmeSaatDondur } from './mevzuat.js?v=234';
@@ -382,7 +383,7 @@ export function kayitSayfasi(subeId) {
         { const kf = ev.target.dataset && ev.target.dataset.kf; if (kf) { kayit[kf] = ev.target.type === 'checkbox' ? ev.target.checked : ev.target.value; if (kf === 'mevcut') { kayit.meski = kayit.mevcut === 'E'; if (!kayit.mevcut) { kayit.mtarih = ''; kayit.moto = false; } } if (kf === 'mtarih') kayit.meski = kayit.mevcut === 'E' || eskiBelgeTarihi(kayit.mtarih); yenile(); } }
         if (ev.target.matches && ev.target.matches('[data-gozetim]')) kayit.gozetim = ev.target.checked;
         const f = ev.target.closest('[data-evrak]');
-        if (f && f.files[0]) { const key = f.dataset.evrak; fotoKucult(f.files[0]).then(async u => { kayit.evrak[key] = u; const EV = await import('./evrak.js?v=234'); kayit.net[key] = key === 'foto' ? null : await EV.netlikOlc(u).catch(() => null); if (kayitBulanik(key)) bildir('Fotoğraf bulanık görünüyor; yazılar okunacak şekilde yeniden çekin', 'uyari'); yenile(); }).catch(() => bildir('Fotoğraf okunamadı', 'uyari')); }
+        if (f && f.files[0]) { const key = f.dataset.evrak; fotoAl(f.files[0]).then(async u => { kayit.evrak[key] = u; const EV = await import('./evrak.js?v=234'); kayit.net[key] = key === 'foto' ? null : await EV.netlikOlc(u).catch(() => null); if (kayitBulanik(key)) bildir('Fotoğraf bulanık görünüyor; yazılar okunacak şekilde yeniden çekin', 'uyari'); yenile(); }).catch(x => bildir(x.message, 'uyari')); }
       });
       const cv = k.querySelector('canvas.imza-alan'), ia = cv ? imzaAlani(cv) : null;
       k.addEventListener('click', ev => {

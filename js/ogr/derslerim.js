@@ -2,8 +2,9 @@
 // öğretmen notları) ve Geçmiş (yapılan dersler, öğrenci onayı, değerlendirme).
 // Eski ogrenci.js derslerHtml / programHtml / yaklasanHtml / degerlendirKart / ders defteri işlevleri buraya taşındı;
 // onay, itiraz, yıldız, takvim dosyası (data-og-*) ogrenci.js ogBagla'da; ders al, kursa yaz, saat değiştir, iptal portal.js ogGenelTik'te çalışır.
-import { S, BECERI, DERS_TUR_AD, egitmen, arac, ogretmen, fark, gun, tarihOku, iso, iptalEdilebilir, dersSirasi, kapaliGun, ogrOzellik, tamAd, gerekliDireksiyon, teorikVar, egitimSinifi, teorikSaat, dersTurleri } from '../veri.js?v=234';
-import { tarihUzun, gunAdi, gunKisa, ayAdi } from '../ui.js?v=234';
+import { kaydet, S, BECERI, DERS_TUR_AD, egitmen, arac, ogretmen, fark, gun, tarihOku, iso, iptalEdilebilir, dersSirasi, kapaliGun, ogrOzellik, tamAd, gerekliDireksiyon, teorikVar, egitimSinifi, teorikSaat, dersTurleri } from '../veri.js?v=234';
+import { tarihUzun, gunAdi, gunKisa, ayAdi, bildir } from '../ui.js?v=234';
+import * as PL from '../planlayici.js?v=234';
 import * as TK from '../takvim.js?v=234';
 import { onayBekleyen, MUFREDAT, sinavAdi, hakDurum, dirSayac, TEORIKSIZ_METIN } from '../ogrenci.js?v=234';
 import { randevuEngeli, engelYazilir } from '../risk.js?v=234';
@@ -16,6 +17,7 @@ let secili = null;       // seçili gün (YYYY-AA-GG); null → varsayılan gün
 let ayAcik = false;      // ay görünümü (başlıktaki "Kasım 2026 ⌄")
 let acik = null;         // ayrıntısı açık dersin kimliği
 let onayHepsi = false;   // Geçmiş: onay bekleyen derslerin hepsi görünsün mü
+let musait = null;       // UYG-010: müsaitlik düzenleniyorsa taslak { gun: { '1': [...] }, not }
 
 const ekleGun = (t, n) => { const d = tarihOku(t); d.setDate(d.getDate() + n); return iso(d); };
 const ayKaydir = (t, n) => { const d = tarihOku(t); d.setDate(1); d.setMonth(d.getMonth() + n); return iso(d); };
@@ -134,9 +136,22 @@ function programHtml(k, ctx, l) {
   const ileri = l.some(o => o.tarih >= gun(0) && !(o.tur === 'direksiyon' && o.d.durum !== 'Planlandı'));
   return ay + takvim
     + `<div class="ox-bolum ox-drs-gun-bas"><h2>${esc(gunBaslik(secili))}</h2>${sayi ? `<span class="ox-bolum-sag">${sayi}</span>` : ''}</div>`
-    + `<div class="ox-drs-kartlar">${govde}</div>` + al
+    + `<div class="ox-drs-kartlar">${govde}</div>` + al + (dir && !bitti ? musaitHtml(k) : '')
     + (ileri ? `<button type="button" class="ox-drs-tel" data-og-takvim>${oi('takvim')}<span>Telefon takvimine ekle</span></button>` : '')
     + (bitti ? '' : `<p class="ox-drs-dip">Program değişirse WhatsApp’tan haber verilir.</p>`);
+}
+
+/* ---------- UYG-010: müsait olduğum zamanlar ---------- */
+// Öğrenci gün × dilim işaretler; kaydedince k.musaitlik kurs verisine gider (öğrenci → kurs yolu, ogrenciGelen). Hepsi boşsa null: kısıt yok.
+function musaitHtml(k) {
+  const m = k.musaitlik;
+  if (!musait) return liste([satir({ ikon: 'saat', ton: m ? 'yesil' : 'mavi', baslik: 'Müsait olduğum zamanlar', alt: m && m.gun ? esc(PL.musaitlikOzet(m)) : 'Bildirmedin. İşaretlersen dersler bu zamanlara planlanır.', attrs: { 'data-ox-mst-ac': true } })], 'ox-mst');
+  const g = musait.gun;
+  return kart(`<h3 class="ox-mst-bas">Hangi zamanlarda derse gelebilirsin?</h3><p class="ox-mst-alt">Uygun olanlara dokun. Kurs dersleri yalnız bu zamanlara planlar.</p>
+    <div class="ox-mst-izgara" role="group" aria-label="Müsait zamanlar"><span></span>${PL.MUSAIT_DILIM.map(([, ad, ara]) => `<small><b>${ad}</b>${ara}</small>`).join('')}
+    ${PL.MUSAIT_GUN.map(([gn, , uzun]) => `<b class="ox-mst-gun">${uzun}</b>${PL.MUSAIT_DILIM.map(([d, ad]) => { const on = (g[gn] || []).includes(d); return `<button type="button" class="ox-mst-h${on ? ' secili' : ''}" role="checkbox" aria-checked="${on}" aria-label="${uzun} ${ad.toLocaleLowerCase('tr')}" data-ox-mst-h="${gn}|${d}">${on ? oi('tik') : ''}</button>`; }).join('')}`).join('')}</div>
+    <label class="ox-mst-not"><span>Not (isteğe bağlı)</span><input type="text" maxlength="200" data-ox-mst-not value="${esc(musait.not || '')}" placeholder="Örn. Cuma 18:00’den sonra gelebilirim"></label>
+    <div class="ox-mst-dg">${dugme('Vazgeç', { 'data-ox-mst-vazgec': true }, { tur: 'cizgi', kucuk: true })}${dugme('Kursa gönder', { 'data-ox-mst-kaydet': true }, { kucuk: true })}</div>`, 'ox-mst-kart');
 }
 
 /* ---------- ders ayrıntısı ---------- */
@@ -276,6 +291,12 @@ export function ekran(ctx) {
         if (t.closest('[data-ox-drs-ay]')) { ayAcik = !ayAcik; ctx.yenile(); return; }
         const a = t.closest('[data-ox-drs-ac]'); if (a) { acik = a.dataset.oxDrsAc; ctx.yenile(true); return; }
         if (t.closest('[data-ox-drs-onay-hepsi]')) { onayHepsi = !onayHepsi; ctx.yenile(); return; }
+        // UYG-010: müsaitlik düzenleme
+        if (t.closest('[data-ox-mst-ac]')) { const m = k.musaitlik || {}; musait = { gun: JSON.parse(JSON.stringify(m.gun || {})), not: m.not || '' }; ctx.yenile(); return; }
+        const mh = t.closest('[data-ox-mst-h]'); if (mh && musait) { const [gn, d] = mh.dataset.oxMstH.split('|'), l = musait.gun[gn] || []; musait.gun[gn] = l.includes(d) ? l.filter(x => x !== d) : [...l, d]; const on = musait.gun[gn].includes(d); mh.classList.toggle('secili', on); mh.setAttribute('aria-checked', String(on)); mh.innerHTML = on ? oi('tik') : ''; return; }
+        if (t.closest('[data-ox-mst-vazgec]')) { musait = null; ctx.yenile(); return; }
+        if (t.closest('[data-ox-mst-kaydet]') && musait) { const n = kap.querySelector('[data-ox-mst-not]'); const m = PL.musaitlikTemizle({ gun: musait.gun, not: n ? n.value : '', tarih: gun(0) });
+          k.musaitlik = m; musait = null; kaydet(); bildir(m ? 'Müsait zamanların kursa gönderildi' : 'Müsaitlik bildirimin kaldırıldı; kurs her saate planlayabilir', 'tamam'); ctx.yenile(); return; }
         if (t.closest('[data-ox-drs-geri]')) { acik = null; ctx.yenile(true); return; }
         const dg = t.closest('[data-ox-drs-degis]'); if (dg) { const d = S.dersler.find(x => x.id === dg.dataset.oxDrsDegis); if (d) kursaYaz(k, 'ders', `Merhaba, ben ${tamAd(k)}. ${tarihUzun(d.tarih)} ${d.saat} direksiyon dersimin saatini değiştirmek istiyorum.`); return; }
         const yz = t.closest('[data-ox-drs-yaz]'); if (yz) { const d = S.dersler.find(x => x.id === yz.dataset.oxDrsYaz); if (d) kursaYaz(k, 'ders', `Merhaba, ben ${tamAd(k)}. ${tarihUzun(d.tarih)} ${d.saat} direksiyon dersimle ilgili yazıyorum.`); }
@@ -285,6 +306,23 @@ export function ekran(ctx) {
 }
 
 /* ---------- stiller ---------- */
+stilEkle('ox-musait', `
+.ox-mst{margin-top:12px}
+.ox-mst-kart{margin-top:12px;padding:16px}
+.ox-mst-bas{font-size:17px;font-weight:700;color:var(--ox-bas);margin:0}
+.ox-mst-alt{margin:4px 0 12px;font-size:14px;color:var(--ox-ikincil)}
+.ox-mst-izgara{display:grid;grid-template-columns:minmax(80px,1fr) repeat(3,minmax(56px,72px));gap:6px 8px;align-items:center}
+.ox-mst-izgara>small{display:grid;text-align:center;font-size:11.5px;line-height:1.25;color:var(--ox-ikincil)}
+.ox-mst-izgara>small b{font-size:13px;color:var(--ox-bas)}
+.ox-mst-gun{font-size:15px;font-weight:600;color:var(--ox-bas)}
+.ox-mst-h{display:grid;place-items:center;height:44px;border:1.5px solid #c9d6ea;border-radius:10px;background:var(--ox-kart);color:#fff}
+.ox-mst-h.secili{background:var(--ox-mavi);border-color:var(--ox-mavi)}
+.ox-mst-h .ox-i{width:20px;height:20px;stroke-width:2.6}
+.ox-mst-not{display:grid;gap:6px;margin-top:14px;font-size:14px;color:var(--ox-ikincil)}
+.ox-mst-not input{min-height:44px;padding:0 12px;border:1.5px solid #c9d6ea;border-radius:10px;font-size:16px;background:var(--ox-kart);color:var(--ox-bas)}
+.ox-mst-dg{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+`);
+
 stilEkle('ox-derslerim', `
 /* sekmeler: referanstaki 36px çubuk; dokunma alanı 44px (düğmeler çubuğun üstüne/altına 4px taşar) */
 .ox-drs-sayfa>.ox-sekmeler.cizgi{margin:-6px 0 14px}

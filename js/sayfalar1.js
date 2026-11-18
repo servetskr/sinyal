@@ -16,6 +16,7 @@ import * as HZ from './hazirlik.js?v=234';
 import { aksamOzeti } from './zamanlayici.js?v=234';
 import * as B from './bulut.js?v=234';
 import * as EKL from './eklenti.js?v=234';
+import * as MK from './mebkayit.js?v=234';
 import { gerekliDireksiyon, esinavHakDurum, esinavUcretiIsle, direksiyonAyrinti, direksiyonHesap, asgariYasHesap, deneyimEksik, yasDenetim, yasIstisnaKapsar, YAS_ISTISNA_OKUL, YAS_ISTISNA_DURUM, yasIstisnaGecerli, yasIstisnaMetin, MEVCUT_BELGELER, eskiBelgeTarihi, DERS_KURAL_TARIH, eskiDersKurali, geceDersMi, geceKisitli, geceGerekli, geceBaslangic, sinavHakSiniri, IKINCI_HAK_GUN, kuralAyar } from './veri.js?v=234';
 import * as TK from './takvim.js?v=234';
 import * as GR from './gruplar.js?v=234';
@@ -30,6 +31,15 @@ import * as GO from './gorusme.js?v=234';
 import * as PK from './personel.js?v=234';
 import { listeAdi, satirAdi } from './taban.js?v=234';
 
+// KAY-115: fotoğraf yükleme (JPEG, PNG; tarayıcı açabiliyorsa HEIC de). Tarayıcı dosyayı açamazsa sessiz kalmaz, nedenini söyler:
+// iPhone'un HEIC fotoğrafını çoğu Chrome ve Android açamaz (Safari açar). Hata iletisi x.message'da; çağıran bildir(x.message) der.
+export const heicMi = f => !!f && (/image\/hei[cf]/i.test(f.type || '') || /\.hei[cf]$/i.test(f.name || ''));
+export function fotoHataMetni(f) {
+  if (heicMi(f)) return 'Bu fotoğraf iPhone’un HEIC biçiminde ve bu tarayıcı açamıyor. iPhone’da Ayarlar › Kamera › Biçimler › “En Uyumlu”yu seçip yeniden çekin ya da fotoğrafı JPEG olarak gönderin.';
+  if (f && f.type && !/^image\//.test(f.type)) return 'Bu dosya fotoğraf değil. JPEG ya da PNG bir fotoğraf seçin.';
+  return 'Fotoğraf açılamadı. JPEG ya da PNG bir fotoğraf seçin.';
+}
+export const fotoAl = (f, max) => fotoKucult(f, max).catch(() => { throw Object.assign(new Error(fotoHataMetni(f)), { foto: true }); });
 const aktifler = () => sb(S.kursiyerler).filter(k => k.asama !== 'Ehliyet' && !k.kapali);
 // KTY md.76/3 yaş istisnası (k.yasIstisna) veri.js'te uygulanır: mebOnKontrol, yasDenetim, asgariYasHesap ve deneyimEksik istisnayı bilir.
 // Kayıt formu, dosya şeridi ve MEBBİS ön kontrol kartı aynı işlevi çağırır.
@@ -867,8 +877,8 @@ export function kursiyerFormu(on = {}) {
       // seçili grup doluysa yeni grup formu aynı dönem ve grubun sıradaki şubesiyle açılır (DON-010)
       d.querySelector('[data-k-grup-yeni]').addEventListener('click', () => { const g0 = GR.grupBul(f.grup.value), dl = g0 && GR.grupDoluluk(g0).dolu, ss = dl && GR.sonrakiSube(g0); GR.grupFormu({ sinif: f.sinif.value || '', ust: true, ...(ss ? { donem: g0.donem, grupNo: g0.grupNo, sube: ss, sinif: g0.sinif || f.sinif.value || '', derslik: '' } : {}) }, g => { if (g) { on.grup = g.id; guncelle(); if ([...f.grup.options].some(o => o.value === g.id)) f.grup.value = g.id; guncelle(); } }); });
       // fotoğraflar (taslağa girmez)
-      d.querySelector('[data-ks-foto-sec]').addEventListener('change', ev => { const x = ev.target.files[0]; if (!x) return; fotoKucult(x, 480).then(u => { foto = u; d.querySelector('[data-foto-onizle]').innerHTML = `<img src="${u}" alt="">`; f.querySelectorAll('[name=fk]').forEach(c => { c.checked = false; }); f['ev-foto'].checked = true; guncelle(); }).catch(() => bildir('Fotoğraf okunamadı', 'uyari')); });
-      d.querySelector('[data-ks-dfoto-sec]').addEventListener('change', ev => { const x = ev.target.files[0]; if (!x) return; fotoKucult(x, 480).then(u => { dfoto = u; d.querySelector('[data-dfoto-onizle]').innerHTML = `<img src="${u}" alt="" style="width:100%;height:100%;object-fit:cover">`; d.querySelector('[data-dfoto-alt]').hidden = false; f.dkimlik.checked = false; d.querySelector('[data-dfoto-durum]').textContent = 'Çekildi · kimlikle karşılaştırın'; }).catch(() => bildir('Fotoğraf okunamadı', 'uyari')); });
+      d.querySelector('[data-ks-foto-sec]').addEventListener('change', ev => { const x = ev.target.files[0]; if (!x) return; fotoAl(x, 480).then(u => { foto = u; d.querySelector('[data-foto-onizle]').innerHTML = `<img src="${u}" alt="">`; f.querySelectorAll('[name=fk]').forEach(c => { c.checked = false; }); f['ev-foto'].checked = true; guncelle(); }).catch(x => bildir(x.message, 'uyari')); });
+      d.querySelector('[data-ks-dfoto-sec]').addEventListener('change', ev => { const x = ev.target.files[0]; if (!x) return; fotoAl(x, 480).then(u => { dfoto = u; d.querySelector('[data-dfoto-onizle]').innerHTML = `<img src="${u}" alt="" style="width:100%;height:100%;object-fit:cover">`; d.querySelector('[data-dfoto-alt]').hidden = false; f.dkimlik.checked = false; d.querySelector('[data-dfoto-durum]').textContent = 'Çekildi · kimlikle karşılaştırın'; }).catch(x => bildir(x.message, 'uyari')); });
       addEventListener('resize', isikKonum, { passive: true });
       f.addEventListener('submit', ev => {
         ev.preventDefault();
@@ -1143,8 +1153,77 @@ function mebteKarti(k) {
       ${satir('MEBBİS’in gösterdiği son tarih', M.haklarSonGun ? tY(M.haklarSonGun) + ' <small style="font-weight:400;color:var(--soluk)">(sistem sınırı, yönetmelikte yok)</small>' : '')}
       ${satir('Sertifika tarihi', M.sertifikaTarihi ? tY(M.sertifikaTarihi) : '')}${satir('Kayıt ücreti (MEBBİS)', M.kayitUcretiTL ? tl(M.kayitUcretiTL) : '')}</ul>
     ${mebFarkHtml(k)}
+    ${mebSinavGecmisiHtml(k, tY)}${mebAdayGecmisiHtml(k, tY)}
     ${(k.mebAlinan || []).length ? `<details class="meb-gecmis"><summary>Değişiklik geçmişi (${k.mebAlinan.length})</summary><ul>${k.mebAlinan.slice().reverse().map(x => `<li><b>${e(x.alan)}</b>: ${e(x.eski || '—')} → ${e(x.yeni || '—')} <small>${e(x.ekran || 'MEBBİS')} · ${tarih(x.zaman.slice(0, 10))} · ${e(x.kim || '')}</small></li>`).join('')}</ul></details>` : ''}
     <p style="font-size:13px;color:var(--soluk);margin-top:8px">${isaret('tamam', 16)} Ön kontrol: kayıt tamam</p></div></div>`;
+}
+// KAY-078: 'MEBBİS’te' kartında açılır iki satır. Sınav geçmişi: SKT02009 uygulama sınavı satırları (k.meb.uygulamaSinavlari: kod, tarih, katılım,
+// sonuç; Başkan ve Üye gerekçesi tam metin) ve e-Sınav seansları (k.meb.esinavlar). Aday geçmişi: önceki dönem satırları (k.meb.kayitlar) ve
+// sertifikalar (k.meb.sertifikalar, dgSertifika; madde 34 'Aday Geçmiş'). Veri mebtoplu.js dosyalariIsle'de okunur; burada yalnız gösterilir.
+const SONUC_YAZ = { gecti: 'Geçti', kaldi: 'Kaldı', girmedi: 'Girmedi' };
+function mebSinavGecmisiHtml(k, tY) {
+  const M = k.meb || {};
+  const uy = (M.uygulamaSinavlari || []).filter(y => y && (y.tarih || y.kod)).map(y => {
+    const kat = y.katilim || MN.katilim(y.durum), son = y.sonucKod || MN.sonucKodu(y.sonuc), g = y.baskan || y.uye ? { baskan: y.baskan || '', uye: y.uye || '' } : MN.gerekceAyir(y.sonuc);
+    return { tur: 'Uygulama', tarih: y.tarih || '', kod: String(y.kod || ''), kat: kat === 'girmedi' || son === 'girmedi' ? 'Girmedi' : kat === 'girdi' || son === 'gecti' || son === 'kaldi' ? 'Girdi' : '', son: son && son !== 'girmedi' ? SONUC_YAZ[son] : '', baskan: g.baskan, uye: g.uye, ek: [y.plaka ? '<span class="mono">' + e(y.plaka) + '</span>' : '', y.usta ? e(y.usta) : '', y.buKayit === false && y.donem ? 'önceki dönem ' + e(MN.donemMetni(y.donem) || y.donem) : ''].filter(Boolean) };
+  });
+  const es = (M.esinavlar || []).filter(y => y && y.tarih).map(y => ({ tur: 'e-Sınav', tarih: y.tarih, kod: '', kat: y.sonuc === 'girmedi' ? 'Girmedi' : y.sonuc || y.puan != null ? 'Girdi' : '', son: y.sonuc && y.sonuc !== 'girmedi' ? SONUC_YAZ[y.sonuc] + (y.puan != null ? ' · ' + y.puan + ' puan' : '') : '', ek: [y.saat ? e(y.saat) : ''].filter(Boolean) }));
+  const l = [...uy, ...es].sort((a, b) => String(b.tarih).localeCompare(String(a.tarih))); if (!l.length) return '';
+  const renk = s => s === 'Geçti' || /^Geçti/.test(s) ? 'var(--yesil)' : /^Kaldı/.test(s) ? 'var(--kirmizi)' : 'var(--soluk)';
+  return `<details class="meb-gecmis meb-acilir"><summary>Sınav geçmişi (${l.length})</summary><ul>${l.map(x => `<li><div class="meb-ac-ust"><b>${x.tarih ? tY(x.tarih) : 'tarih yok'}</b><span class="meb-ac-m">${e(x.tur)}${x.kod ? ' · kod <span class="mono">' + e(x.kod) + '</span>' : ''}${x.kat ? ' · ' + x.kat : ''}</span>${x.son ? `<b style="color:${renk(x.son)}">${e(x.son)}</b>` : ''}</div>${x.ek.length ? `<small>${x.ek.join(' · ')}</small>` : ''}${x.baskan ? `<p class="meb-gerekce"><span>Başkan</span>${e(x.baskan)}</p>` : ''}${x.uye ? `<p class="meb-gerekce"><span>Üye</span>${e(x.uye)}</p>` : ''}</li>`).join('')}</ul><small class="meb-ac-dip">MEBBİS aday dosyasından (SKT02009) okundu; gerekçeler MEBBİS’teki gibi yazılır.</small></details>`;
+}
+function mebAdayGecmisiHtml(k, tY) {
+  const M = k.meb || {}, kd = M.kurumKodu || '';
+  const ky = (M.kayitlar || []).filter(y => y && (y.donem || y.durum)), sr = (M.sertifikalar || []).filter(y => y && (y.tarih || y.istenen || y.mevcut));
+  if (!ky.length && !sr.length) return '';
+  const bu = y => !!M.donem && MN.donemKodu(y.donem) === MN.donemKodu(M.donem) && (!y.kurum || !kd || y.kurum === kd);
+  const kurumYaz = v => v ? (v === kd ? 'bu kurs' : 'kurum ' + e(v)) : '';
+  return `<details class="meb-gecmis meb-acilir"><summary>Aday geçmişi (${ky.length + sr.length})</summary>
+    ${ky.length ? `<b class="meb-ac-bas">Dönem kayıtları</b><ul>${ky.slice().sort((a, b) => String(MN.donemKodu(b.donem) || b.donem).localeCompare(String(MN.donemKodu(a.donem) || a.donem))).map(y => `<li><div class="meb-ac-ust"><b>${e(MN.donemMetni(MN.donemKodu(y.donem)) || y.donem || 'dönem yok')}</b><span class="meb-ac-m">${[y.istenen ? 'istenen ' + e(y.istenen) : '', kurumYaz(y.kurum)].filter(Boolean).join(' · ')}</span>${bu(y) ? rozet('Bu kayıt', 'mavi') : ''}</div>${y.durum ? `<small>${e(y.durum)}</small>` : ''}</li>`).join('')}</ul>` : ''}
+    ${sr.length ? `<b class="meb-ac-bas">Sertifikalar</b><ul>${sr.map(y => `<li><div class="meb-ac-ust"><b>${y.tarih ? tY(y.tarih) : 'tarih yok'}</b><span class="meb-ac-m">${[y.mevcut ? 'mevcut ' + e(y.mevcut) : '', y.istenen ? 'alınan ' + e(y.istenen) : '', kurumYaz(y.kurum)].filter(Boolean).join(' · ')}</span></div></li>`).join('')}</ul>` : ''}
+    <small class="meb-ac-dip">Başka kurslardaki kayıtlar ve eski sertifikalar da görünür (MEBBİS ‘Aday Geçmiş’).</small></details>`;
+}
+// MEB-093: öğrenci dosyasında 'MEBBİS geçmişi'. Yerel kaynaklar her zaman okunur: aktarım izleri (S.mebDurum: bu öğrencinin kimliğiyle biten
+// iş kimlikleri ve derslerinin 'ders-<id>' işleri), işlem kaydı (S.islemler: MEBBİS satırları, ayrıntıda öğrencinin adı), aday dosyası okuması.
+// Müdür bulutta 'Sunucu kaydında ara' der: kayit koleksiyonunda meb.hedef.kursiyer == k.id sorgusu (B.mebGecmisi; bileşik dizin YON-038) varsa o,
+// yoksa ya da dizin hatası dönerse son 500 işlem kaydında adla arama. Veri yoksa ne yapılacağı yazılır.
+const MEB_NE = /MEBBİS|MEB işi|SKT\d{5}/;
+const zamanYaz = z => { const d = typeof z === 'number' ? new Date(z) : z instanceof Date ? z : new Date(String(z || '').length === 16 ? z + ':00' : z); return isNaN(d) ? '' : d.toLocaleString('tr-TR', { day: 'numeric', month: 'short', year: d.getFullYear() === new Date().getFullYear() ? undefined : 'numeric', hour: '2-digit', minute: '2-digit' }); };
+function mebIzleri(k) {
+  const dersIds = new Set((S.dersler || []).filter(d => d.kursiyer === k.id).map(d => d.id));
+  return Object.entries(S.mebDurum || {}).filter(([id, v]) => v && (id.endsWith('-' + k.id) || (id.startsWith('ders-') && dersIds.has(id.slice(5)))))
+    .map(([id, v]) => ({ id, ...v, turAd: MK.TUR_AD[v.tur || id.split('-')[0]] || MK.TUR_AD[id.split('-')[0] === 'ders' ? 'program' : id.split('-')[0]] || id.split('-')[0] })).sort((a, b) => (b.zaman || 0) - (a.zaman || 0));
+}
+function mebIslemleri(k) {
+  const ad = tamAd(k).toLocaleLowerCase('tr'); if (!ad.trim()) return [];
+  return (S.islemler || []).filter(x => x && MEB_NE.test(String(x.ne || '') + ' ' + String(x.ayrinti || '')) && String(x.ayrinti || '').toLocaleLowerCase('tr').includes(ad)).slice(0, 40);
+}
+const mebSunucu = {};   // kursiyer kimliği → { durum: 'yukleniyor'|'tamam'|'hata', l, yol, hata }
+function mebGecmisiKarti(k) {
+  const iz = mebIzleri(k), isl = mebIslemleri(k), M = k.meb || {}, sv = mebSunucu[k.id], bulutMu = B.bulutta();
+  const n = iz.length + isl.length + (M.dosyaOkuma ? 1 : 0);
+  const izSatir = x => `<li><div class="meb-ac-ust"><b>${e(x.turAd)}</b><span class="meb-ac-m">${x.durum === 'tamam' ? e(MK.izMetni(x)) : x.durum === 'hata' ? 'gönderilemedi' + (x.zaman ? ' · ' + e(zamanYaz(x.zaman)) : '') : 'gönderildi, sonuç bekleniyor' + (x.zaman ? ' · ' + e(zamanYaz(x.zaman)) : '')}</span>${rozet(x.durum === 'tamam' ? 'Aktarıldı' : x.durum === 'hata' ? (x.hataTur === 'ekran' ? 'Ekran değişti' : 'Hata') : 'Bekliyor', x.durum === 'tamam' ? 'yesil' : x.durum === 'hata' ? 'kirmizi' : 'uyari')}</div>${x.durum === 'hata' && x.not ? `<small>${e(x.not)}</small>` : ''}</li>`;
+  const islSatir = x => `<li><div class="meb-ac-ust"><b>${e(zamanYaz(x.zaman))}</b><span class="meb-ac-m">${e(x.ne)}${x.kim ? ' · ' + e(x.kim) : ''}</span></div><small>${e(x.ayrinti || '')}</small></li>`;
+  const sunucu = !bulutMu ? '' : !mudurMu() ? '' : !sv ? `<button type="button" class="dg dg-hafif dg-kucuk" data-meb-gecmis-sunucu style="margin-top:8px">${ik('ara')}Sunucu kaydında ara</button>`
+    : sv.durum === 'yukleniyor' ? `<p class="meb-ac-dip">Sunucu kaydı okunuyor…</p>`
+    : sv.durum === 'hata' ? `<p class="ipucu uyari" style="margin-top:8px">${isaret('uyari', 18)}<span>Sunucu kaydı okunamadı: ${e(sv.hata || '')}</span></p>`
+    : `<b class="meb-ac-bas">Sunucu kaydı (${sv.l.length})${sv.yol === 'ad' ? ' · son 500 kayıtta adla arandı' : ''}</b>${sv.l.length ? `<ul>${sv.l.slice(0, 50).map(islSatir).join('')}</ul>` : '<p class="meb-ac-dip">Sunucu kaydında bu öğrenciye ait MEBBİS satırı yok.</p>'}${sv.yol === 'ad' ? `<small class="meb-ac-dip">Öğrenci kimliğiyle aramak için Firestore’da kayit dizini gerekir (YON-038); açılınca bu arama kendiliğinden ona geçer.</small>` : ''}`;
+  return `<details class="kart meb-gecmis-kart" id="dosya-meb-gecmis"${sv ? ' open' : ''}><summary class="kart-bas"><h3>MEBBİS geçmişi</h3><small>${n ? n + ' kayıt' : 'kayıt yok'}</small></summary><div class="kart-govde meb-gecmis meb-acilir">
+    ${!n ? `<p class="ipucu">${isaret('bilgi', 18)}<span>Bu cihazda bu öğrenci için MEBBİS işlemi görünmüyor. MEBBİS’e gönderilen ya da MEBBİS’ten alınan her iş burada listelenir${bulutMu && mudurMu() ? '; eski kayıtlar için sunucu kaydında arayın' : ''}.</span></p>` : ''}
+    ${iz.length ? `<b class="meb-ac-bas">Aktarımlar</b><ul>${iz.slice(0, 30).map(izSatir).join('')}</ul>` : ''}
+    ${M.dosyaOkuma ? `<b class="meb-ac-bas">Aday dosyası</b><ul><li><div class="meb-ac-ust"><b>${tarih(M.dosyaOkuma)}</b><span class="meb-ac-m">MEBBİS aday dosyası (SKT02009) okundu${M.durum ? ' · ' + e(M.durum) : ''}</span></div></li></ul>` : ''}
+    ${isl.length ? `<b class="meb-ac-bas">İşlem kaydı</b><ul>${isl.map(islSatir).join('')}</ul>` : ''}
+    ${sunucu}</div></details>`;
+}
+async function mebGecmisiSunucu(k) {
+  mebSunucu[k.id] = { durum: 'yukleniyor' }; yenile();
+  try {
+    let l = null, yol = 'dizin';
+    if (typeof B.mebGecmisi === 'function') { try { l = await B.mebGecmisi(k.id); } catch (x) { if (!/index|precondition|dizin/i.test(String((x && (x.code || x.message)) || x))) throw x; } }
+    if (!l) { const ad = tamAd(k).toLocaleLowerCase('tr'); yol = 'ad'; l = (await B.kayitlar(500)).filter(x => MEB_NE.test(String(x.ne || '') + ' ' + String(x.ayrinti || '')) && String(x.ayrinti || '').toLocaleLowerCase('tr').includes(ad)); }
+    mebSunucu[k.id] = { durum: 'tamam', l, yol };
+  } catch (x) { mebSunucu[k.id] = { durum: 'hata', hata: B.hataMetni(x) }; }
+  yenile();
 }
 // KAY-080..083: MEBBİS'le farklı alanlar; ad soyad, cinsiyet ve mevcut belge tek dokunuşla alınır (sertifika sınıfı ücret ve sözleşmeye dokunduğu için ayrı pencerede, KAY-004)
 const MF_AL = ['Ad soyad', 'Cinsiyet', 'Mevcut belge'];
@@ -1596,6 +1675,25 @@ function kameraCek() {
         new MutationObserver((m, ob) => { if (!document.body.contains(p)) { ob.disconnect(); bitir(null); } }).observe(document.body, { childList: true, subtree: true }); } });
   });
 }
+// UYG-010: öğrencinin müsait zamanları (öğrenci uygulamasından gelir; ofis de girer). Otomatik ders planı bu zamanların dışına öneri yapmaz.
+function musaitlikKarti(k) {
+  if (!gerekliDireksiyon(k) || k.kapali || k.asama === 'Ehliyet') return '';
+  const m = k.musaitlik, var_ = PL.musaitlikVar(k);
+  return `<div class="kart musait-kart" style="margin-bottom:16px"><div class="kart-bas"><h3>Müsait olduğu zamanlar</h3><small>${var_ ? (m.kaynak === 'ofis' ? 'ofiste girildi' : 'öğrenci bildirdi') + (m.tarih ? ' · ' + tarih(m.tarih) : '') : 'bildirilmedi · ders planı her saate öneri yapar'}</small><div class="sag"><button class="dg dg-cizgi dg-kucuk" data-musait-duzen>${ik('kalem')}${var_ ? 'Değiştir' : 'Gir'}</button></div></div>
+    <div class="kart-govde">${var_ ? `<div class="musait-izgara" role="table" aria-label="Müsait zamanlar"><span role="columnheader"></span>${PL.MUSAIT_DILIM.map(([, ad]) => `<small role="columnheader">${ad}</small>`).join('')}${PL.MUSAIT_GUN.map(([g, kisa]) => `<b role="rowheader">${kisa}</b>${PL.MUSAIT_DILIM.map(([d, ad]) => { const on = (m.gun[g] || []).includes(d); return `<span role="cell" class="${on ? 'on' : ''}" aria-label="${kisa} ${ad.toLocaleLowerCase('tr')}: ${on ? 'müsait' : 'müsait değil'}">${on ? ik('tik') : ''}</span>`; }).join('')}`).join('')}</div>${m.not ? `<p style="font-size:13.5px;margin-top:8px">“${e(m.not)}”</p>` : ''}`
+      : `<p class="ipucu" style="margin:0">${isaret('bilgi', 18)}<span>Öğrenci, öğrenci uygulamasında Derslerim › Müsait olduğum zamanlar’dan bildirebilir.</span></p>`}</div></div>`;
+}
+function musaitlikPenceresi(k) {
+  const m = k.musaitlik || {}, g = m.gun || {};
+  pencere({ baslik: 'Müsait zamanlar · ' + tamAd(k), taslak: false, icerik: `<form id="f-musait"><p style="font-size:14px;margin-bottom:10px">Öğrencinin derse gelebildiği zamanları işaretleyin. Hiçbiri işaretli değilse kısıt yoktur.</p>
+      <div class="musait-izgara musait-sec"><span></span>${PL.MUSAIT_DILIM.map(([, ad, ara]) => `<small>${ad}<br><span style="font-weight:400">${ara}</span></small>`).join('')}${PL.MUSAIT_GUN.map(([gn, kisa, uzun]) => `<b>${kisa}</b>${PL.MUSAIT_DILIM.map(([d, ad]) => `<label><input type="checkbox" name="m" value="${gn}|${d}" ${(g[gn] || []).includes(d) ? 'checked' : ''} aria-label="${uzun} ${ad.toLocaleLowerCase('tr')}"></label>`).join('')}`).join('')}</div>
+      <div class="alan" style="margin-top:12px"><label for="mst-not">Not</label><input id="mst-not" name="not" maxlength="200" value="${e(m.not || '')}"></div></form>`,
+    altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-musait">Kaydet</button>',
+    onAc(p) { p.querySelector('form').addEventListener('submit', ev => { ev.preventDefault(); const f = ev.target, gun2 = {};
+      f.querySelectorAll('[name=m]:checked').forEach(c => { const [gn, d] = c.value.split('|'); (gun2[gn] = gun2[gn] || []).push(d); });
+      const y = PL.musaitlikTemizle({ gun: gun2, not: f.not.value, kaynak: 'ofis' }); k.musaitlik = y;
+      islem(y ? 'Müsait zamanları girdi' : 'Müsait zamanları kaldırdı', tamAd(k) + (y ? ' · ' + PL.musaitlikOzet(y) : '')); kaydet(); kapatPencere(); bildir('Kaydedildi'); yenile(); }); } });
+}
 function profilFoto(k) {
   const KURAL = ['Son 6 ay içinde çekilmiş', 'Beyaz ya da açık renk düz fon', 'Yüz tam karşıdan, gözler açık ve net', 'Şapka, gözlük yansıması ve gölge yok', 'Yüz kadrajı dolduruyor, kimlikteki kişiyle aynı'];
   let veri = k.foto || null, dveri = (k.dogrulamaFoto || {}).veri || null, veriKaynak = k.fotoKaynak || '';
@@ -1612,8 +1710,8 @@ function profilFoto(k) {
       ${k.dogrulamaFoto ? `<p style="font-size:12.5px;color:var(--soluk);margin-top:8px">${tarih(k.dogrulamaFoto.tarih)} · ${e(k.dogrulamaFoto.kim || '')}</p>` : ''}</div></div>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-foto-kaydet>Kaydet</button>`,
     onAc(d) {
-      d.querySelector('[data-foto-sec]').addEventListener('change', ev => { const f = ev.target.files[0]; if (!f) return; veriKaynak = 'yukleme'; fotoKucult(f, 480).then(u => { veri = u; d.querySelector('.foto-onizle').innerHTML = `<img src="${u}" alt="">`; d.querySelectorAll('[data-kural]').forEach(c => { c.checked = false; }); }).catch(() => bildir('Fotoğraf okunamadı', 'uyari')); });
-      d.querySelector('[data-dfoto-sec]').addEventListener('change', ev => { const f = ev.target.files[0]; if (!f) return; fotoKucult(f, 480).then(u => { dveri = u; d.querySelector('[data-donizle]').innerHTML = `<img src="${u}" alt="">`; d.querySelector('[data-dkimlik]').checked = false; }).catch(() => bildir('Fotoğraf okunamadı', 'uyari')); });
+      d.querySelector('[data-foto-sec]').addEventListener('change', ev => { const f = ev.target.files[0]; if (!f) return; veriKaynak = 'yukleme'; fotoAl(f, 480).then(u => { veri = u; d.querySelector('.foto-onizle').innerHTML = `<img src="${u}" alt="">`; d.querySelectorAll('[data-kural]').forEach(c => { c.checked = false; }); }).catch(x => bildir(x.message, 'uyari')); });
+      d.querySelector('[data-dfoto-sec]').addEventListener('change', ev => { const f = ev.target.files[0]; if (!f) return; fotoAl(f, 480).then(u => { dveri = u; d.querySelector('[data-donizle]').innerHTML = `<img src="${u}" alt="">`; d.querySelector('[data-dkimlik]').checked = false; }).catch(x => bildir(x.message, 'uyari')); });
       d.addEventListener('click', ev => { const kb = ev.target.closest('[data-kamera]'); if (!kb) return; kameraCek().then(u => { if (!u) return; if (kb.dataset.kamera === 'foto') { veri = u; veriKaynak = 'kamera'; d.querySelector('.foto-onizle').innerHTML = `<img src="${u}" alt="">`; d.querySelectorAll('[data-kural]').forEach(c => { c.checked = false; }); } else { dveri = u; d.querySelector('[data-donizle]').innerHTML = `<img src="${u}" alt="">`; d.querySelector('[data-dkimlik]').checked = false; } }); });  // KAY-047
       d.querySelector('[data-foto-kaydet]').addEventListener('click', () => {
         if (!veri && !dveri) return bildir('Önce fotoğraf çekin ya da yükleyin', 'uyari');
@@ -1874,11 +1972,12 @@ export function kursiyerDetay(id) {
 
       ${grupBas('Onaylar', 'onay', sat('KVKK aydınlatma', kv.aydinlatma || kv.riza ? 'Verildi' + (kv.tarih ? ' · ' + tarih(kv.tarih) : '') : rozet('Verilmedi', 'uyari')) + sat('WhatsApp bilgilendirme', kv.whatsapp ? 'Kabul etti' : kv.whatsapp === false ? 'Kabul etmedi' : 'Sorulmadı') + sat('Kampanya rızası', kv.pazarlama ? 'Var' : 'Yok') + sat('Sözleşme', k.evrak.sozlesme ? (k.sozlesmeImza ? (k.sozlesmeImza.yontem === 'Ekranda' ? 'Ekranda imzalandı' : /^Uzaktan/.test(k.sozlesmeImza.yontem || '') ? 'Uzaktan imzalandı' : 'Islak imza') + ' · ' + tarih(k.sozlesmeImza.tarih) : 'İmzalı') : `${rozet('İmzalanmadı', 'uyari')} <button class="dg dg-hafif dg-kucuk" data-sozlesme>İmzalat</button>`))}
       ${mebteKarti(k) || `<div class="kart" id="dosya-meb"><div class="kart-bas"><h3>MEBBİS ön kontrol</h3><small>${(() => { const l = mebOnKontrol(k); return l.filter(x => x[0]).length + '/' + l.length; })()}</small>${k.mebNo ? `<span class="rozet rozet-yesil" title="MEBBİS kayıt numarası">${e(k.mebNo)}</span>` : ''}<div class="sag" style="gap:6px">${k.mebIslendi ? rozet('Girildi', 'yesil') : `${!eksik.length ? `<button class="dg dg-ana dg-kucuk" data-meb-gonder="kayit-${k.id}">MEBBİS’e gönder</button>` : ''}<a class="dg dg-cizgi dg-kucuk" href="#/mebbis/${k.id}">Elle giriş</a>`}</div></div><div class="kart-govde"><ul style="list-style:none;display:grid;gap:6px;font-size:14px">${mebOnKontrol(k).map(([ok, t]) => `<li style="display:flex;gap:8px;align-items:center">${isaret(ok ? 'tamam' : 'uyari', 18)}<span style="${ok ? '' : 'font-weight:700;color:var(--murekkep)'}">${t}</span></li>`).join('')}</ul>${ME.mebAdimHtml(k)}</div></div>`}
+      ${mebGecmisiKarti(k)}
       </div>`; }
     if (profilSekme === 'cikti') return `<div class="kd-bolum">
       <div class="kart"><div class="kart-bas"><h3>Belgeler</h3></div><div class="kart-govde" style="display:grid;gap:8px">${[['sozlesme', 'Sözleşme'], ['bilgi', 'Bilgi formu'], ['ek1', 'Müracaat formu (EK-1)'], ['takip', 'Direksiyon takip formu'], ['makbuz', 'Son makbuz']].concat(gerekliDireksiyon(k) ? [['ek5', '“K” aday belgesi (EK-5)'], ['ek34', 'Sınav değerlendirme formu (' + (ek3Sinif(k.sinif) ? 'EK-3' : 'EK-4') + ')']] : []).concat(k.odeme.senetli ? [['senet', 'Senet']] : []).concat([['savcilik', 'Adli sicil durum beyanı'], ['imzabeyan', 'İmza beyannamesi']]).concat(yas(k.dogumTarihi) != null && yas(k.dogumTarihi) < 18 ? [['veli', 'Veli muvafakat belgesi']] : []).concat(k.sinif === 'CEZA' ? [['ceza100', '100 ceza puanı eğitim belgesi']] : []).concat(k.ucretsiz ? [['ucretsiz', 'Ücretsiz kursiyer formu (EK-7)']] : []).map(([t, a]) => `<button class="dg dg-cizgi dg-kucuk dg-sar" style="justify-content:flex-start" data-belge="${t}">${ik('belge')}${a}</button>`).join('')}</div></div>
       </div>`;
-    if (profilSekme === 'dersler') return `<div class="kart"><div class="kart-bas"><h3>Direksiyon dersleri</h3><small>${k.direksiyon} yapıldı · ${dersler.filter(d => d.durum === 'Planlandı').length} planlı${dersler.some(d => d.ogrenciOnay) ? ` · öğrenci onayı ${dersler.filter(d => d.ogrenciOnay && d.ogrenciOnay.durum === 'onay').length}${dersler.some(d => d.ogrenciOnay && d.ogrenciOnay.durum === 'itiraz') ? ', itiraz ' + dersler.filter(d => d.ogrenciOnay && d.ogrenciOnay.durum === 'itiraz').map(d => tarih(d.tarih) + (d.ogrenciOnay.not ? ' (“' + e(d.ogrenciOnay.not) + '”)' : '')).join(', ') : ''}` : ''}${imzasizDers(k).length ? ' · ' + imzasizDers(k).length + ' dersin kursiyer imzası eksik' : ''}</small><div class="sag" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">${imzasizDers(k).length ? `<button class="dg dg-wp dg-kucuk" data-ders-imza>${ik('wp')}İmzaya gönder</button>` : ''}${PL.ihtiyac(k).toplam > 0 && !k.kapali ? `<button class="dg dg-cizgi dg-kucuk" data-plan-oner="${e(k.id)}">${ik('robot')}Ders planı öner</button>` : ''}<a class="dg dg-ana dg-kucuk" href="#/plan">${ik('arti')}Ders planla</a></div></div>
+    if (profilSekme === 'dersler') return `${musaitlikKarti(k)}<div class="kart"><div class="kart-bas"><h3>Direksiyon dersleri</h3><small>${k.direksiyon} yapıldı · ${dersler.filter(d => d.durum === 'Planlandı').length} planlı${dersler.some(d => d.ogrenciOnay) ? ` · öğrenci onayı ${dersler.filter(d => d.ogrenciOnay && d.ogrenciOnay.durum === 'onay').length}${dersler.some(d => d.ogrenciOnay && d.ogrenciOnay.durum === 'itiraz') ? ', itiraz ' + dersler.filter(d => d.ogrenciOnay && d.ogrenciOnay.durum === 'itiraz').map(d => tarih(d.tarih) + (d.ogrenciOnay.not ? ' (“' + e(d.ogrenciOnay.not) + '”)' : '')).join(', ') : ''}` : ''}${imzasizDers(k).length ? ' · ' + imzasizDers(k).length + ' dersin kursiyer imzası eksik' : ''}</small><div class="sag" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">${imzasizDers(k).length ? `<button class="dg dg-wp dg-kucuk" data-ders-imza>${ik('wp')}İmzaya gönder</button>` : ''}${PL.ihtiyac(k).toplam > 0 && !k.kapali ? `<button class="dg dg-cizgi dg-kucuk" data-plan-oner="${e(k.id)}">${ik('robot')}Ders planı öner</button>` : ''}<a class="dg dg-ana dg-kucuk" href="#/plan">${ik('arti')}Ders planla</a></div></div>
       ${dersSayacSeridi(k)}
       <ul class="liste ders-liste" style="margin-top:8px">${dersler.map(d => { const et = d.durum === 'İptal' || d.durum === 'Gelmedi' ? 'normal' : egitimTuruOf(k, d); return `<li><span class="zaman">${d.saat}</span><div><b style="color:var(--murekkep)">${tarihUzun(d.tarih)}</b>${et !== 'normal' ? ' ' + rozet(EGITIM_TURU[et].kisa, et === 'onSinav' ? 'uyari' : 'mavi') : ''}${(u => u ? ' ' + rozet(UY.metin(u).kisa, 'kirmizi') : '')(UY.dersUyumsuz(d.id))}<small style="display:block;color:var(--soluk)">${e(egitmen(d.egitmen).ad)}${d.tur && d.tur !== 'trafik' ? ' · ' + DERS_TUR_AD[d.tur] : ''}${geceDersMi(d) ? ' · gece' : ''}</small></div><span class="sag">${d.arac ? plaka(arac(d.arac).plaka) : ''}${d.durum === 'Yapıldı' ? (imzasiz(d) ? rozet(d.imza && d.imza.kursiyerBekliyor ? 'İmza bekleniyor' : 'İmzasız', 'uyari') : rozet(d.imza && d.imza.kursiyerUzaktan ? 'Uzaktan imzalı' : 'İmzalı', 'yesil') + olcuAltiIsaret(d.imza && d.imza.kanit)) : ''}${rozet(d.durum, d.durum === 'Yapıldı' ? 'yesil' : d.durum === 'Gelmedi' ? 'kirmizi' : 'mavi')}</span></li>`; }).join('') || '<li>' + bos('Henüz direksiyon dersi yok', 'Teorik dersler ve e-sınav bittikten sonra planlanır.') + '</li>'}</ul></div>`;
     if (profilSekme === 'odeme') return odemeSekmesi(k);
@@ -1946,6 +2045,8 @@ ${mesajlar.length ? '' : '<li style="color:var(--soluk)">Bu kursiyere henüz mes
         const eo = ev.target.closest('[data-evrak-onay]'); if (eo) { ev.preventDefault(); const key = eo.dataset.evrakOnay, ad = EVRAKLAR.find(x => x[0] === key)[1]; k.evrak[key] = true; const yv = k.evrakYuklenen[key]; import('./evrak.js?v=234').then(m => m.netlikKarari(yv, 'onay', key)).catch(() => { }); if (yv && yv.veri) { if (yv.tur === 'pdf') { k.evrakPdf = k.evrakPdf || {}; k.evrakPdf[key] = yv.veri; } else { k.evrakFoto = k.evrakFoto || {}; k.evrakFoto[key] = yv.veri; } } delete k.evrakYuklenen[key]; islem('Öğrencinin yüklediği evrakı onayladı', tamAd(k) + ' · ' + ad); if (!eksikEvrak(k).length && ['Kayıt', 'Evrak'].includes(k.asama)) { k.asama = 'Teorik'; bildir('Evraklar tamam, öğrenci teorik aşamaya geçti'); } else bildir(ad + ' onaylandı'); kaydet(); return yenile(); }
         const eg2 = ev.target.closest('[data-evrak-geri]'); if (eg2) { ev.preventDefault(); const key = eg2.dataset.evrakGeri, ad = EVRAKLAR.find(x => x[0] === key)[1]; { const yv0 = (k.evrakYuklenen || {})[key]; import('./evrak.js?v=234').then(m => m.netlikKarari(yv0, 'red', key)).catch(() => { }); } delete k.evrakYuklenen[key]; islem('Evrakı yeniden istedi', tamAd(k) + ' · ' + ad); kaydet(); wpGonder(k, `${selam(k)} yüklediğiniz ${ad.toLocaleLowerCase('tr')} okunamadı. Lütfen belgenin net ve tamamı görünen bir fotoğrafını öğrenci ekranınızdan ya da bu mesaja yanıt olarak tekrar gönderin.`, 'Evrak geri istendi'); return yenile(); }
         if (ev.target.closest('[data-profil-foto]')) return profilFoto(k);
+        if (ev.target.closest('[data-musait-duzen]')) return musaitlikPenceresi(k);   // UYG-010
+        if (ev.target.closest('[data-meb-gecmis-sunucu]')) return mebGecmisiSunucu(k);   // MEB-093
         if (ev.target.closest('[data-deneme-yeni]')) return import('./deneme.js?v=234').then(m => m.denemeAc(k, yenile));
         const dy = ev.target.closest('[data-deneme-yazdir]'); if (dy) return import('./deneme.js?v=234').then(m => m.denemeYazdir(k, (k.dDeneme || []).find(x => x.id === dy.dataset.denemeYazdir)));
         if (HS.hesapTikla(ev, k, yenile)) return;
@@ -2001,7 +2102,7 @@ ${mesajlar.length ? '' : '<li style="color:var(--soluk)">Bu kursiyere henüz mes
       });
       kap.addEventListener('change', ev => {
         const fy = ev.target.closest('[data-foto-yukle]');
-        if (fy && fy.files[0]) { fotoKucult(fy.files[0]).then(u => { k.evrakFoto = k.evrakFoto || {}; k.evrakFoto[fy.dataset.fotoYukle] = u; k.evrak[fy.dataset.fotoYukle] = true; islem('Evrak fotoğrafı yükledi', tamAd(k)); kaydet(); bildir('Evrak fotoğrafı kaydedildi'); yenile(); }).catch(() => bildir('Fotoğraf okunamadı', 'uyari')); return; }
+        if (fy && fy.files[0]) { fotoAl(fy.files[0]).then(u => { k.evrakFoto = k.evrakFoto || {}; k.evrakFoto[fy.dataset.fotoYukle] = u; k.evrak[fy.dataset.fotoYukle] = true; islem('Evrak fotoğrafı yükledi', tamAd(k)); kaydet(); bildir('Evrak fotoğrafı kaydedildi'); yenile(); }).catch(x => bildir(x.message, 'uyari')); return; }
         const c = ev.target.closest('[data-evrak]'); if (!c) return;
         k.evrak[c.dataset.evrak] = c.checked; if (c.dataset.evrak === 'sozlesme') k.sozlesmeImza = c.checked ? (k.sozlesmeImza || { tarih: gun(0), yontem: 'Islak imza', metin: sozlesmeDondur(k) }) : null; islem(c.checked ? 'Evrak teslim aldı' : 'Evrakı eksik işaretledi', tamAd(k) + ' · ' + EVRAKLAR.find(x => x[0] === c.dataset.evrak)[1]);
         if (!eksikEvrak(k).length && ['Kayıt', 'Evrak'].includes(k.asama)) { if (GR.aktifEt(k)) bildir(k.asama === 'Direksiyon' ? (k.muaf ? 'Evraklar tamam; e-sınavdan muaf, kursiyer direksiyon aşamasına geçti' : 'Evraklar tamam; belgeli aday teorik almaz, direksiyon aşamasına geçti') : 'Evraklar tamam, kursiyer teorik aşamaya geçti'); else bildir('Evraklar tamam; kursiyer bir dönem grubuna atanınca aktif olur', 'uyari'); }
