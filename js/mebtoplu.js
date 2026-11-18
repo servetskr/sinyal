@@ -228,6 +228,10 @@ export async function hazirla(ids, { foto = true, koru = null } = {}) {
       if (!/^\d{2}:00/.test(t.saat || '')) { ekle(x, `Ders saati ${t.saat}: MEBBİS’te dersler tam saatte başlar (ör. 18:00 - 18:50); saati düzeltin`); continue; }
       const bas = +String(t.saat).slice(0, 2), saatler = Array.from({ length: Math.max(1, +t.sure || 1) }, (_, i) => String(bas + i).padStart(2, '0') + ':00');
       const dl = String(t.salon || g.derslik || '').match(/\d+/);
+      // DIR-015: göndermeden zorunlu alanlar — derslik (MEBBİS 'DERSLİK-n'), ders konusu, ileri tarih
+      if (!dl) { ekle(x, 'Derslik yok: teorik dersin dersliğini seçin (MEBBİS “DERSLİK-n” ister)'); continue; }
+      if (!t.konu) { ekle(x, 'Ders konusu (türü) yok'); continue; }
+      if (!(t.tarih > gun(0))) { ekle(x, 'Bugünün ya da geçmişin dersi MEBBİS’e yazılmaz'); continue; }
       l.push({ id: x.id, tur: 'teorik', baslik: x.baslik, donem: g.donem, grupNo: g.grupNo, subeNo: subeNo(g), tarih: trT(t.tarih), saatler, dersTuru: dersTuru(t.konu), derslik: dl ? 'DERSLİK-' + dl[0] : '', izinNo: izin(o), personelAd: o.ad || '', egitimTuru: 'Normal' });
     }
     if (x.tur === 'esinav') { const k = kursiyer(r.kursiyer), g = k && mebGrup(k); if (!g) { ekle(x, 'Dönem grubuna atanmamış'); continue; } { const tb = GR.teorikBitis(k); if (tb && tb.tarih >= gun(0)) { ekle(x, `Teorik dersler ${tarih(tb.tarih)} ${tb.tarih.slice(0, 4)} tarihinde bitiyor (${tb.kaynak === 'MEBBİS' ? 'MEBBİS programı' : 'mdSinyal planı'}); MEBBİS teorik dersler bitmeden e-sınav başvurusu almaz`); continue; } } if (egitimSinifi(k.sinif)) { ekle(x, CEZA_NOT); continue; } l.push({ id: x.id, tur: 'esinav', baslik: tamAd(k), tc: k.tc, donem: g.donem, istenen: tabanSinif(k.sinif) + ' SINIFI', gun: String(S.kurs.esinavGun || '0') }); }
