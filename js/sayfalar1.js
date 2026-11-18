@@ -710,10 +710,13 @@ export function kursiyerFormu(on = {}) {
 }
 
 export function kursiyerler(filtre) {
-  let sekme = filtre && ASAMALAR.includes(filtre) ? filtre : 'Tümü', q = '', sinif = '', grup = '', borclu = false, bekleyen = filtre === 'bekleyen';
+  let sekme = filtre && ASAMALAR.includes(filtre) ? filtre : 'Tümü', q = '', sinif = '', grup = '', hizmet = '', borclu = false, bekleyen = filtre === 'bekleyen';
+  // DIG-036: hizmet türü (sürücü kursu, 100 ceza puanı eğitimi, SRC, iş makinesi): kursta birden çok tür varsa süzgeç görünür
+  const HIZMET = { ehliyet: 'Sürücü kursu', egitim: '100 ceza puanı eğitimi', src: 'SRC', operator: 'İş makinesi' }, hizmetOf = k => (SINIFLAR[k.sinif] || {}).tur || 'ehliyet';
+  const hizmetler = [...new Set(sb(S.kursiyerler).map(hizmetOf))].filter(x => HIZMET[x]);
   const say = a => a === 'Tümü' ? sb(S.kursiyerler).length : sb(S.kursiyerler).filter(k => k.asama === a).length;
   function satirlar() {
-    let l = sb(S.kursiyerler).filter(k => (sekme === 'Tümü' || k.asama === sekme) && (!sinif || k.sinif === sinif) && (!grup || (grup === '_yok' ? !GR.kursiyerGrubu(k) : k.teorikGrup === grup)) && (!borclu || gecikenler(k).length) && (!bekleyen || GR.bekleyenMi(k)));
+    let l = sb(S.kursiyerler).filter(k => (sekme === 'Tümü' || k.asama === sekme) && (!sinif || k.sinif === sinif) && (!hizmet || hizmetOf(k) === hizmet) && (!grup || (grup === '_yok' ? !GR.kursiyerGrubu(k) : k.teorikGrup === grup)) && (!borclu || gecikenler(k).length) && (!bekleyen || GR.bekleyenMi(k)));
     if (q) { const s = q.toLocaleLowerCase('tr'); l = l.filter(k => (tamAd(k) + ' ' + k.tel + ' ' + odemeKodu(k)).toLocaleLowerCase('tr').includes(s)); }
     if (!l.length) return `<tr><td colspan="7">${bos('Bu filtreye uyan kursiyer yok', 'Filtreyi değiştirin ya da yeni kursiyer ekleyin.')}</td></tr>`;
     return l.map(k => {
@@ -722,7 +725,7 @@ export function kursiyerler(filtre) {
         <td class="m-tam"><div class="kisi">${avatar(k.ad, k.soyad, k.foto)}<div><b>${e(tamAd(k))}${mudurMu() && ozelNotlar(k).length ? `<span class="ozel-isaret" title="Özel not var">${ik('kilit')}</span>` : ''}</b><small><span class="num">${e(k.tel)}</span></small></div></div></td>
         <td class="m-gizle">${rozet(S0.ad.split(' ·')[0])} <small style="color:var(--soluk)">${S0.ad.split('· ')[1]}</small>${GR.kursiyerGrubu(k) ? `<small style="display:block;color:var(--soluk);font-size:12px">${e(GR.kursiyerGrubu(k).ad)}</small>` : ''}</td>
         <td style="min-width:150px">${yol(asamaNo(k))}<small style="color:var(--soluk);font-size:12px">${k.asama}${GR.bekleyenMi(k) ? ' · <b style="color:var(--sari-koyu,#a15c00)">bekleyen</b>' : ''}${k.muaf ? ' · muaf' : esinavsizBelgeli(k) ? ' · belgeli' : ''}${k.dsinav && k.dsinav.sonuc === 'Kaldı' ? ' · tekrar' : ''}${k.kapali ? ' · <b style="color:var(--kirmizi)">' + (k.kapali.tur === 'dondur' ? 'donduruldu' : 'kayıt kapalı') + '</b>' : ''}</small></td>
-        <td class="m-gizle" style="min-width:110px"><span class="sayi" style="font-size:12.5px">${k.direksiyon}/${gerekliDireksiyon(k)}</span>${ilerleme(k.direksiyon, gerekliDireksiyon(k), k.direksiyon >= gerekliDireksiyon(k) ? 'yesil' : '')}</td>
+        <td class="m-gizle" style="min-width:110px">${!gerekliDireksiyon(k) ? `<small style="color:var(--soluk)">${egitimSinifi(k.sinif) ? 'Eğitim · teorik ' + (k.teorik || 0) + '/' + ((SINIFLAR[k.sinif] || {}).teorik || 0) : 'direksiyon yok'}</small>` : `<span class="sayi" style="font-size:12.5px">${k.direksiyon}/${gerekliDireksiyon(k)}</span>${ilerleme(k.direksiyon, gerekliDireksiyon(k), k.direksiyon >= gerekliDireksiyon(k) ? 'yesil' : '')}`}</td>
         <td>${kalanBorc(k) ? `<span class="sayi">${tl(kalanBorc(k))}</span>${g.length ? '<br>' + rozet(g.length + ' taksit gecikti', 'kirmizi') : ''}` : rozet('Ödendi', 'yesil')}</td>
         <td class="m-gizle">${(() => { const r = risk(k); if (!r) return '<span style="color:var(--soluk)">—</span>'; const renk = r.puan >= 50 ? 'var(--kirmizi)' : r.puan >= 25 ? 'var(--sari)' : 'var(--yesil)'; return `<span class="risk-cubuk" title="${e(r.nedenler.join(', ') || 'Risk yok')}"><i style="width:${Math.max(6, r.puan)}%;background:${renk}"></i></span> <small style="color:var(--soluk)">${r.puan >= 50 ? 'Yüksek' : r.puan >= 25 ? 'Orta' : 'Düşük'}</small>`; })()}</td>
         <td class="m-gizle">${sd ? goreli(sd.tarih) + ' <span class="mono">' + sd.saat + '</span>' : '<span style="color:var(--soluk)">—</span>'}</td>
@@ -738,6 +741,7 @@ export function kursiyerler(filtre) {
     <div class="kart">
       <div class="filtre">
         <div class="ara-kutu">${ik('ara')}<input class="girdi" type="search" placeholder="Ad ya da telefon" data-q aria-label="Kursiyer ara"></div>
+        ${hizmetler.length > 1 ? `<select class="girdi" data-hizmet aria-label="Hizmet türü"><option value="">Bütün hizmetler</option>${hizmetler.map(x => `<option value="${x}">${HIZMET[x]} (${sb(S.kursiyerler).filter(k => hizmetOf(k) === x).length})</option>`).join('')}</select>` : ''}
         <select class="girdi" data-sinif aria-label="Sınıf"><option value="">Tüm sınıflar</option>${aktifSiniflar().map(([k, v]) => `<option value="${k}">${v.ad}</option>`).join('')}</select>
         ${(S.gruplar || []).length ? `<select class="girdi" data-grup aria-label="Dönem grubu"><option value="">Tüm gruplar</option><option value="_yok">Gruba atanmamış</option>${[...S.gruplar].sort((a, b) => String(b.baslangic || '').localeCompare(String(a.baslangic || ''))).map(g => `<option value="${e(g.id)}">${e(g.ad)}${g.sinif && SINIFLAR[g.sinif] ? ' · ' + e(SINIFLAR[g.sinif].ad.split(' ·')[0]) : ''} (${sb(S.kursiyerler).filter(x => x.teorikGrup === g.id).length})</option>`).join('')}</select>` : ''}
         <button class="cip" data-borclu>${ik('uyari')}&nbsp;Taksiti gecikenler</button>
@@ -760,6 +764,7 @@ export function kursiyerler(filtre) {
       k.addEventListener('keydown', ev => { const g = ev.target.closest('[data-git]'); if (g && ev.key === 'Enter') location.hash = '#/kursiyer/' + g.dataset.git; });
       k.querySelector('[data-q]').addEventListener('input', ev => { q = ev.target.value; ciz(); });
       k.querySelector('[data-sinif]').addEventListener('change', ev => { sinif = ev.target.value; ciz(); });
+      { const h = k.querySelector('[data-hizmet]'); if (h) h.addEventListener('change', ev => { hizmet = ev.target.value; ciz(); }); }
       const gs = k.querySelector('[data-grup]'); if (gs) gs.addEventListener('change', ev => { grup = ev.target.value; ciz(); });
     },
   };
