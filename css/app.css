@@ -3912,3 +3912,23 @@ tr.secili-satir td { background: rgba(10, 77, 162, .06); }
 /* DIG-032: destek penceresinde çalışma saati ve e-posta */
 .ds-saat{margin:8px 2px 0;font-size:13px;color:var(--soluk,#5b6474);line-height:1.45}
 .ds-saat a{color:inherit;text-decoration:underline}
+/* UYG-016: gökyüzü sahneleri kaldırıldı. Eski öğretmen/öğrenci üst bölümü (yalnız yeni tasarım açılamazsa görünür) de yeni tasarımın
+   sade, açık arka planını kullanır: koyu gece/gündüz geçişi, yıldız, bulut ve araba animasyonu yok. */
+.u-hero,.u-hero.kartli,.u-hero.gunduz,.u-hero.gunduz.kartli,.ogn-ust{background:var(--zemin);color:var(--murekkep)}
+.u-hero::after{display:none}
+.u-hero:not(.kartli){padding-bottom:24px}
+.u-hero.kartli{padding-bottom:88px}
+.u-gece{display:none}
+.u-hero-ic>small,.ogn-goz,.ogn-ilerle{color:var(--u-ikincil)}
+.u-hero h1,.ogn-h1,.ogn-ilerle b{color:var(--murekkep)}
+.u-hero p,.ogn-ust-alt{color:var(--metin)}
+.u-hero-ust{color:var(--u-vurgu)}
+.u-cam{background:var(--u-vurgu-acik);color:var(--u-vurgu);-webkit-backdrop-filter:none;backdrop-filter:none}
+.u-asama-cubuk i{background:rgba(11,24,48,.12)}
+.u-asama-cubuk i.dolu{background:var(--u-vurgu)}
+.u-asama span{color:var(--u-ikincil)}
+.u-asama span b{color:var(--murekkep)}
+.ogn-devam{background:#fff;box-shadow:0 1px 2px rgba(11,24,48,.08),inset 0 0 0 1px var(--cizgi);color:var(--murekkep)}
+.ogn-devam-yazi small{color:var(--u-vurgu)}
+.ogn-sure{color:var(--u-ikincil)}
+.ogn-cubuk{background:rgba(11,24,48,.1)}
