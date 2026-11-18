@@ -91,7 +91,7 @@ export function genel(alt) {
   const gecikenTutar = geciken.reduce((a, k) => a + gecikenler(k).reduce((x, t) => x + t.tutar, 0), 0);
   const yeniAday = S.adaylar.filter(a => a.asama === 'Yeni');
   const evrakEksik = sb(S.kursiyerler).filter(k => eksikEvrak(k).length && k.asama !== 'Ehliyet');
-  const belgeBiten = sb(S.araclar).filter(a => [a.sigorta, a.muayene].some(t => t && fark(t) <= 21));
+  const belgeBiten = sb(S.araclar).filter(a => !a.kapali && [a.sigorta, a.muayene].some(t => t && fark(t) < 0));   // süresi dolmuş; 30 gün içinde bitecekler kural A05'te (DIG-010)
   const haftaSinav = S.sinavlar.filter(s => fark(s.tarih) >= 0 && fark(s.tarih) <= 7);
   const asamaSay = ASAMALAR.map(a => sb(S.kursiyerler).filter(k => k.asama === a && (a !== 'Ehliyet' || (k.dsinav && fark(k.dsinav.tarih) > -30))).length);
   const ortDers = S.kurs.ekDersUcreti;
@@ -108,7 +108,7 @@ export function genel(alt) {
     onayBekleyen.length && ['bilgi', `${onayBekleyen.length} öğrencinin gönderdiği belge onay bekliyor`, 'Telefondan ya da WhatsApp’tan geldi; açıp kontrol edin, onaylayın.', '#/kursiyer/' + onayBekleyen[0].id, 'Aç'],
     ...denetimEksikleri().filter(x => x[0] === 'dur' && !x[1].includes('SN ')).slice(0, 2).map(x => [x[0], x[1], x[2], x[3], 'Düzelt']),
     ...sb(S.araclar).filter(a => { const t = tuketim(a); return t && t.yuksek; }).slice(0, 2).map(a => { const t = tuketim(a); return ['uyari', `${a.plaka} yakıt tüketimi yüksek`, `Son dolum ${String(t.son || t.ort).replace('.', ',')} L/100 km; aracın ortalaması ${String(t.ort).replace('.', ',')}, beklenen ~${String(beklenenTuketim(a)).replace('.', ',')}. Kaçak, lastik basıncı, sürüş ya da yanlış kayıt olabilir.`, '#/filo/masraf', 'Gör']; }),
-    ...belgeBiten.map(a => ['dur', `${a.plaka} · ${fark(a.sigorta) <= 21 ? 'sigorta' : 'muayene'} ${goreli(fark(a.sigorta) <= 21 ? a.sigorta : a.muayene)} bitiyor`, a.model, '#/filo', 'Gör']),
+    ...belgeBiten.map(a => ['dur', `${a.plaka} · ${a.sigorta && fark(a.sigorta) < 0 ? 'trafik sigortası' : 'muayene'} süresi doldu`, `${a.model || ''} · bu araçla ders ve sınav yapılamaz`, '#/filo', 'Gör']),
     devir && ['uyari', `${devir} kişi cevabınızı bekliyor`, 'Asistanın size devrettiği WhatsApp konuşmaları.', '#/sosyal/devir', 'Cevapla'],
     geciken.length && ['uyari', `${geciken.length} kursiyerin taksiti gecikti`, tl(gecikenTutar) + ' tahsil edilmedi.', '#/kasa/geciken', 'Hatırlat'],
     ...(() => { const l = sbDers(S.dersler).filter(d => d.ogrenciOnay && d.ogrenciOnay.durum === 'itiraz' && !d.ogrenciOnay.cozuldu && fark(d.tarih) >= -30); return l.length ? [['dur', `${l.length} derse öğrenci itiraz etti`, 'Öğrenci dersin yapılmadığını ya da eksik olduğunu söylüyor; usta öğreticiyle konuşun.', '#/kursiyer/' + l[0].kursiyer, 'Gör']] : []; })(),
