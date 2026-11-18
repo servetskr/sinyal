@@ -401,15 +401,18 @@ async function faturaNoAktar(dosya) {
   const anahtar = x => String(x ?? '').trim().toUpperCase(), harita = new Map(S.hareket.filter(h => h.no).map(h => [anahtar(h.no), h]));
   let n = 0, ayni = 0, yok = 0, dolu = 0, baslik = false;
   tablolar.forEach(sat => {
-    let mi = -1, fi = -1;
+    let mi = -1, fi = -1, ti = -1;
     sat.forEach(r => {
       const b = r.map(norm), m = b.findIndex(h => h.length < 25 && h.includes('makbuz') && !h.includes('fatura')), fl = b.map((h, i) => [h, i]).filter(([h]) => h.length < 25 && h.includes('fatura') && !/makbuz|tarih/.test(h));
-      if (m >= 0 && fl.length) { mi = m; fi = (fl.find(([h]) => /no|numara|seri/.test(h)) || fl[0])[1]; baslik = true; return; }  // başlık satırı (iade bölümünde tekrar edebilir)
+      if (m >= 0 && fl.length) { mi = m; fi = (fl.find(([h]) => /no|numara|seri/.test(h)) || fl[0])[1]; ti = b.findIndex(h => h.includes('fatura') && h.includes('tarih')); baslik = true; return; }  // başlık satırı (iade bölümünde tekrar edebilir)
       if (mi < 0) return;
       const mk = anahtar(r[mi]), fn = String(r[fi] ?? '').trim(); if (!mk || !fn) return; dolu++;
       const h = harita.get(mk); if (!h) return yok++;
-      if (h.fatura === fn) return ayni++;
-      h.fatura = fn; n++;
+      // PAR-008: müşavirin kestiği fatura S.faturalar'a da yazılır (MEB işlemleri › fatura bilgisi MEBBİS'e, SKT02013); aynı numara ikinci kez eklenmez
+      const fkayit = () => { if (!h.kursiyer) return; S.faturalar = S.faturalar || []; const ft = (ti >= 0 && tarihCoz(r[ti])) || h.tarih; const var_ = S.faturalar.find(f => String(f.no) === fn);
+        if (var_) { if (!var_.hareket) var_.hareket = h.id; return; } S.faturalar.push({ no: fn, tarih: ft, kursiyer: h.kursiyer, hareket: h.id, tutar: h.tutar, kdv: (S.entegrasyon || {}).kdv ?? 10, aciklama: h.kategori || 'Kurs ücreti', kaynak: 'müşavir' }); };
+      if (h.fatura === fn) { fkayit(); return ayni++; }
+      h.fatura = fn; fkayit(); n++;
     });
   });
   if (!baslik) return bildir('Dosyada “Makbuz no” ve “Fatura no” sütunları bulunamadı', 'uyari');
