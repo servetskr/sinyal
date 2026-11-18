@@ -442,7 +442,7 @@ export function sinavGecmisi(k, tur = 'Direksiyon') {
   };
   (S.sinavlar || []).filter(s => s.tur === tur && (s.kursiyerler || []).includes(k.id)).forEach(s => { const v = (s.sonuc || {})[k.id];
     ekle({ tarih: s.tarih, kod: s.kod || s.mebKod || '', sonuc: HAK_YAKAR.includes(v) ? v : 'Listede', kaynak: 'oturum', oturum: s.id }); });
-  if (es) ((k.meb || {}).esinavlar || []).forEach(y => { if (y.tarih) ekle({ tarih: y.tarih, kod: '', sonuc: y.puan == null ? 'Listede' : +y.puan >= 70 ? 'Geçti' : 'Kaldı', puan: y.puan, kaynak: 'meb' }); });
+  if (es) ((k.meb || {}).esinavlar || []).forEach(y => { if (y.tarih) ekle({ tarih: y.tarih, kod: '', sonuc: ({ gecti: 'Geçti', kaldi: 'Kaldı', girmedi: 'Girmedi' })[y.sonuc] || (y.puan == null ? 'Listede' : +y.puan >= (+((S.kurs || {}).esinavGecmePuani) || 70) ? 'Geçti' : 'Kaldı'), puan: y.puan, kaynak: 'meb' }); });
   else ((k.meb || {}).uygulamaSinavlari || []).forEach(y => { if (y.tarih || y.kod) ekle({ tarih: y.tarih || '', kod: String(y.kod || ''), sonuc: sonucNorm((y.durum || '') + ' ' + (y.sonuc || '')), kaynak: 'meb' }); });
   (k.hakKayitlari || []).filter(x => x.tur === tur).forEach(x => ekle({ tarih: x.tarih, kod: x.kod || '', sonuc: x.sonuc, kaynak: x.kaynak === '7-7' ? '7-7' : x.kaynak || 'elle', gerekce: x.not || '' }));
   // SNV-024: mazeret belgesi kayıtlı sınav (girmedi) geçmişte "raporlu" işaretlenir; dönem yine de tamamlanmış sayılır (md.15/3-a)

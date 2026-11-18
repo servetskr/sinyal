@@ -4,7 +4,7 @@
 // fark burada yakalanır: ders satırında rozet, MEB işlemleri'nde liste, Bugün'de hatırlatma. Kurs açıklama yazıp "bilerek bırakıldı" diye kapatabilir.
 // MTSK md.46/A: denetimde eğitimin Modül'e girilen gün ve saatte yapılıp yapılmadığına bakılır; uyumsuzluk denetim riskidir.
 import { donemKodu } from './mebnorm.js?v=234';
-import { S, gun, kursiyer, egitmen, arac, tamAd, islem, kaydet, EGITIM_TURU, egitimTuruOf } from './veri.js?v=234';
+import { S, geceDersMi, gun, kursiyer, egitmen, arac, tamAd, islem, kaydet, EGITIM_TURU, egitimTuruOf } from './veri.js?v=234';
 
 export const nrm = x => String(x || '').toLocaleLowerCase('tr').replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/[^a-z0-9]/g, '');
 const plakaN = p => String(p || '').toLocaleUpperCase('tr').replace(/\(.*?\)/g, '').replace(/[^A-Z0-9]/g, '');
@@ -112,8 +112,15 @@ export function programIsle(v) {
 export function dosyaDersleri(k, tablo) {
   if (!k || !tablo) return null;
   const l = satirlariOku(tablo).filter(x => !k.kayit || x.tarih >= String(k.kayit).slice(0, 10)); l.forEach(x => { x.kursiyer = k.id; });
-  const yap = l.filter(x => x.tarih <= gun(0)).length;
-  k.meb = { ...(k.meb || {}), dersOzet: { sayi: l.length, yapilmis: yap, ileri: l.length - yap, son: l.map(x => x.tarih).sort().pop() || '', okuma: gun(0) } };
+  const yap = l.filter(x => x.tarih <= gun(0)).length, tl = l.map(x => x.tarih).sort(), say = f => l.filter(f).length;
+  // MEB-017: MEBBİS'teki bu dönemin dersleri kompakt saklanır [tarih, saat, tür, yer, plaka/seri, personel]; tür N/B/2/T, yer S/A/(boş = akan trafik)
+  const TUR = { normal: 'N', basarisiz: 'B', ikinci: '2', onSinav: 'T' }, YER = { simulator: 'S', alan: 'A', trafik: '' };
+  const dersler = l.map(x => [x.tarih, x.saat, TUR[x.tur] || '', YER[x.yer] ?? '', String(x.plaka || '').replace(/\s/g, ''), x.personel || '']);
+  const dersOzet = { sayi: l.length, toplam: l.length, yapilmis: yap, ileri: l.length - yap, simulator: say(x => x.yer === 'simulator'), alan: say(x => x.yer === 'alan'), trafik: say(x => x.yer === 'trafik'),
+    gece: say(x => { try { return geceDersMi({ tarih: x.tarih, saat: x.saat }); } catch (h) { return false; } }), normal: say(x => x.tur === 'normal'), basarisiz: say(x => x.tur === 'basarisiz'), ikinciDir: say(x => x.tur === 'ikinci'), onSinav: say(x => x.tur === 'onSinav'),
+    ilk: tl[0] || '', son: tl[tl.length - 1] || '', okuma: gun(0), okundu: gun(0) };
+  const eski = k.meb || {}, ayni = JSON.stringify(eski.dersler || []) === JSON.stringify(dersler);   // veri değişmediyse dizi yeniden yazılmaz
+  k.meb = { ...eski, dersler: ayni ? eski.dersler : dersler, dersOzet };
   if (!l.length) return k.meb.dersOzet;
   const bas = String(k.kayit || l[0].tarih).slice(0, 10), son = l.map(x => x.tarih).sort().pop() > gun(60) ? l.map(x => x.tarih).sort().pop() : gun(60);
   guncelle(karsilastir(l, { bas, son, kursiyerler: new Set([k.id]) }), { bas, son, kursiyerler: new Set([k.id]), kaynak: 'skt02009' });
