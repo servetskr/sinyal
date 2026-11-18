@@ -1,6 +1,7 @@
 // Gerçek kurs hesabı: Google Firebase. Giriş e-posta + şifreyle; kurs verisi Firestore'da
 // kurslar/{kurs}/v altında parça parça durur. Her kayıt ayrı alan olarak yazılır: iki kişi aynı anda
 // farklı kayıtları değiştirirse ikisi de korunur. Fotoğraf ve imzalar kurslar/{kurs}/dosyalar'da ayrı belge.
+import { DESTEK } from './iletisim.js?v=234';
 import { FIREBASE, EMU, emuBagla } from './firebase-ayar.js?v=234';
 import { izTabaniYenile, makbuzBaslangic, makbuzBicim, dersDiziniBoz, SINIFLAR, kuralAyar, S, bulutVeri, bosVeri, kaydetDinle, kaydet, oturum, bulutKanca, makbuzSira, islem, iso, EVRAKLAR, gun, fark, tamAd, iptalEdilebilir, dersIptalIz, geceKisitli, geceDersMi, gerekliDireksiyon } from './veri.js?v=234';
 
@@ -55,7 +56,10 @@ async function uyelikBul(user) {
   const u = await F.getDoc(F.doc(db, 'kurslar', kurs, 'uyeler', user.uid));
   if (!u.exists()) return null;
   const d = u.data();
-  return { kurs, uid: user.uid, ad: d.ad || user.displayName || user.email, rol: d.rol, usta: d.usta || null, eposta: user.email };
+  // YON-081: kurs durumu (sahip Yönetim › Kurslar'dan değiştirir): askıda ya da kapalı kursa girilmez; sahibin açtığı kursta ilk veri kurs belgesinden
+  let kb = {}; try { const k0 = await F.getDoc(F.doc(db, 'kurslar', kurs)); kb = k0.exists() ? k0.data() : {}; } catch (x) { }
+  if (kb.durum === 'askida' || kb.durum === 'kapali') { try { await fb.A.signOut(fb.auth); } catch (x) { } throw hata(kb.durum === 'kapali' ? 'Bu kurs hesabı kapatıldı. Verileriniz için mdSinyal ile görüşün (WhatsApp ' + DESTEK.telGoster + ').' : 'Bu kurs hesabı şu an askıda. mdSinyal ile görüşün (WhatsApp ' + DESTEK.telGoster + ').'); }
+  return { kurs, uid: user.uid, ad: d.ad || user.displayName || user.email, rol: d.rol, usta: d.usta || null, eposta: user.email, ...(kb.ad ? { kursAd: kb.ad, kursSehir: kb.sehir || '', kursIlce: kb.ilce || '', mudurTel: kb.mudurTel || '', subeSayisi: +kb.subeSayisi || 1 } : {}) };
 }
 // kodSor: iki adımlı giriş açıksa doğrulama uygulamasındaki 6 haneli kodu isteyen fonksiyon (Promise<string|null>)
 export async function girisYap(eposta, sifre, kodSor) {
@@ -463,7 +467,9 @@ async function baglan(u, ilkVeri) {
         if (q.metadata.fromCache && q.empty) return;  // yeni cihaz: sunucuyu bekle
         ilk = false;
         if (!ilkVeri) {
-          const taban = bosVeri({}); delete taban._gun;
+          // sunucuda veri yok: sahibin açtığı yeni kurs (YON-081) — kurs adı, il ve müdür bilgisi kurs belgesinden
+          const taban = bosVeri(q.empty && u.kursAd ? { kursAd: u.kursAd, yetkili: u.rol === 'mudur' ? u.ad : '', sehir: u.kursSehir, mudurTel: u.mudurTel } : {}); delete taban._gun;
+          if (q.empty && u.kursAd) { const s0 = (taban.subeler || [])[0]; if (s0) { s0.semt = u.kursIlce || ''; s0.il = u.kursSehir || undefined; } for (let n = 2; n <= Math.min(9, u.subeSayisi || 1); n++) (taban.subeler = taban.subeler || []).push({ id: 's' + n, ad: n + '. şube', semt: '', kurumKodu: '', mudur: '', mebbis: '' }); }
           bulutVeri(taban, u.kurs); S.kullanicilar = [{ id: u.uid, ad: u.ad, rol: u.rol, usta: u.usta || undefined }];
           q.docs.forEach(d => { if (d.data().d && !son.has(d.data().a)) S[d.data().a] = []; });
           uygula(q.docs.map(d => [d.id, d.data()]));

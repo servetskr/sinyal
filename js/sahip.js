@@ -3,7 +3,7 @@
 // Yetki Firebase güvenlik kurallarından değil, Google hesabından gelir: Firebase projesinin sahibi olan Google hesabıyla
 // bağlanılır, Google IAM izin verirse işlem yapılır. Sunucu, gizli anahtar yok; erişim belirteci yalnız bellekte durur (1 saat).
 import { e, ik, pencere, kapatPencere, bildir, tl, siteLink } from './ui.js?v=234';
-import { S, kaydet, islem, bulutKanca } from './veri.js?v=234';
+import { S, kaydet, islem, bulutKanca, ilSecenekleri } from './veri.js?v=234';
 import { ogrenciPanelMetni, WORKER } from './bulut.js?v=234';
 import { EMU } from './firebase-ayar.js?v=234';
 import { ETIKET_RE, etiketCoz } from './mevzuat-ara.js?v=234';
@@ -142,7 +142,8 @@ async function yukle() {
     const ad = (kurslar['kurslar/' + k] || {}).ad || 'Adı bilinmeyen kurs';
     if (ad === YONETIM_KURS) continue;
     try { kursIst[k] = await kursIstatistik(k, ad, (kurslar['kurslar/' + k] || {}).sehir || ''); } catch (x) { kursIst[k] = { ad, hata: turkceHata(x) }; }
-    if (!kurslar['kurslar/' + k]) kursIst[k].belgeYok = true;  // kurs kaydı silinmiş, alt verisi kalmış: yalnız silinebilir, hesap açılmaz
+    if (!kurslar['kurslar/' + k]) kursIst[k].belgeYok = true;
+    else { const kb = kurslar['kurslar/' + k]; Object.assign(kursIst[k], { durum: kb.durum || 'etkin', tur: kb.tur || '', acan: kb.acan || '' }); }  // YON-081  // kurs kaydı silinmiş, alt verisi kalmış: yalnız silinebilir, hesap açılmaz
   }
 }
 const kalanGun = x => SIL_GUN - Math.floor((Date.now() - Date.parse(x.zaman)) / 864e5);
@@ -296,16 +297,16 @@ const gunOnce = iso => { if (!iso) return 'hiç'; const g = Math.floor((Date.now
 // her kurs için kısa istatistik kutusu
 function kursIstHtml() {
   const l = Object.entries(kursIst).sort((a, b) => (b[1].son || '').localeCompare(a[1].son || ''));
-  if (!l.length) return `<div class="sh-bos">${ik('kursiyer')}<b>Henüz kurs hesabı yok</b><small>“Kurs hesabı linki” ile ilk kursu aç.</small></div>`;
+  if (!l.length) return `<div class="sh-bos">${ik('kursiyer')}<b>Henüz kurs hesabı yok</b><small>“Kurs aç” ile ilk kursu açın.</small><button class="dg dg-ana dg-kucuk" data-sh-kurs-ac style="margin-top:10px">${ik('arti')}Kurs aç</button></div>`;
   const kutu = (et, d, alt2) => `<div><small>${et}</small><b>${d}</b>${alt2 ? `<span>${alt2}</span>` : ''}</div>`;
   // YON-034, YON-079: depolama — ücretsiz Firebase planında 1 GiB bütün proje için; kursların son ölçümü toplanır, %70 / %85 eşikte uyarı, "kaç kursa yeter"
   const GiB = 1073741824, ol = l.filter(([, x]) => x.depolama && x.depolama.toplam), top = ol.reduce((a, [, x]) => a + x.depolama.toplam, 0), ort = ol.length ? top / ol.length : 0, oran = top / GiB, mbT = n => (n / 1048576).toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + ' MB';
   const depo = `<div class="sh-depo ${oran >= 0.85 ? 'kirmizi' : oran >= 0.7 ? 'sari' : ''}"><b>Depolama ${mbT(top)} / 1.024 MB (%${Math.round(oran * 100)})</b><small>${ol.length}/${l.length} kurs ölçüldü${ort ? ` · kurs başına ortalama ${mbT(ort)} · bu ortalamayla yaklaşık ${Math.floor(GiB * 0.85 / ort)} kursa yeter (%85 sınırı)` : ''}${oran >= 0.85 ? ' · %85 aşıldı: fotoğraf sıkıştırma ve yedek saklama süresini gözden geçirin' : oran >= 0.7 ? ' · %70 aşıldı' : ''}</small></div>`;
-  return depo + `<div class="sh-ist-izgara">${l.map(([k, x]) => {
+  return `<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="dg dg-ana dg-kucuk" data-sh-kurs-ac>${ik('arti')}Kurs aç</button></div>` + depo + `<div class="sh-ist-izgara">${l.map(([k, x]) => {
     const hs = hesaplar.filter(h => h.kurs === k && !h.silinecek), per = hs.filter(h => h.rol && h.rol !== 'ogrenci').length, ogr = hs.filter(h => h.rol === 'ogrenci').length;
     const ogrAktif = hs.filter(h => h.rol === 'ogrenci' && h.sonGiris > Date.now() - 30 * 864e5).length, acik = destekler.filter(t => t.kurs === k && (t.durum || 'Açık') !== 'Çözüldü').length;
     return `<article class="sh-ist" data-sh-kurs="${e(k)}" role="button" tabindex="0">
-      <header><b>${e(x.ad)}</b><small>${e(x.belgeYok ? 'Kurs kaydı silinmiş, eski verisi kalmış · silmek için dokun' : [x.sehir, 'son hareket ' + gunOnce(x.son), per + ogr ? '' : 'hesabı yok'].filter(Boolean).join(' · '))}</small></header>
+      <header><b>${e(x.ad)}${x.durum && x.durum !== 'etkin' ? ` <span class="rozet ${x.durum === 'kapali' ? 'rozet-kirmizi' : 'rozet-uyari'}">${KURS_DURUM[x.durum] || x.durum}</span>` : ''}${x.tur && x.tur !== 'ucretli' ? ` <span class="rozet">${KURS_TUR[x.tur] || x.tur}</span>` : ''}</b><small>${e(x.belgeYok ? 'Kurs kaydı silinmiş, eski verisi kalmış · silmek için dokun' : [x.sehir, 'son hareket ' + gunOnce(x.son), per + ogr ? '' : 'hesabı yok'].filter(Boolean).join(' · '))}</small></header>
       ${x.hata ? `<p class="sh-hata">${ik('uyari')}<span>Veri okunamadı: ${e(x.hata)}</span></p>` : `<div class="sh-ist-kutular">
         ${kutu('Kursiyer', x.aktif, x.kursiyer + ' kayıtlı')}${kutu('Bu ay ders', x.dersAy, '')}${kutu('Bu ay tahsilat', tl(x.tahsilAy), '')}
         ${kutu('Oturum', x.oturum, 'son 30 gün')}${kutu('Aktif kişi', x.aktifKisi, per + ' personel hesabı')}${kutu('Öğrenci girişi', ogrAktif, ogr + ' öğrenci hesabı')}</div>
@@ -382,6 +383,7 @@ async function tikla(ev) {
   if (t.closest('[data-sh-yenile]')) return yenile();
   const al = t.closest('[data-sh-alt]'); if (al) { alt = al.dataset.shAlt; return ciz(); }
   if (alt === 'kullanim' && gorunum !== 'destek' && await kullanimTikla(t)) return;
+  if (t.closest('[data-sh-kurs-ac]')) return googleIste().then(kursAcPenceresi).catch(islemHata);
   const kr = t.closest('[data-sh-kurs]'); if (kr) return kursPenceresi(kr.dataset.shKurs);
   if (!bagli() && t.closest('[data-sh-davet],[data-sh-sifre],[data-sh-hesap],[data-sh-geri],[data-sh-hesap-ac],[data-sh-numara]')) { try { await baglan(); hataMetni = ''; } catch (x) { return bildir(turkceHata(x), 'uyari'); } }
   const gr = t.closest('[data-sh-geri]'); if (gr) { const x = silinecekler.find(y => y.uid === gr.dataset.shGeri); if (!x) return; gr.disabled = true; try { await silmeGeriAl(x); bildir(x.ad + ' geri alındı; yeniden girebilir'); ciz(); } catch (y) { gr.disabled = false; islemHata(y); } return; }
@@ -500,14 +502,67 @@ function kursPenceresi(k) {
       <div class="sh-islem">
         <button class="sh-islem-dg birincil" data-p-hesaplar>${ik('kursiyer')}<span><b>Hesaplarını göster</b><small>Bu kursun personel ve öğrenci hesapları</small></span></button>
         ${x.belgeYok ? '' : `<button class="sh-islem-dg" data-p-olustur>${ik('arti')}<span><b>Bu kursta hesap oluştur</b><small>Müdür, ön büro, öğretmen ya da öğrenci hesabı</small></span></button>`}
+        ${x.belgeYok ? '' : `<div class="sh-bilgi-satir"><span>Durum</span><select class="girdi" data-p-durum style="width:auto">${Object.entries(KURS_DURUM).map(([v, a]) => `<option value="${v}" ${(x.durum || 'etkin') === v ? 'selected' : ''}>${a}</option>`).join('')}</select></div>`}
         <button class="sh-islem-dg tehlike" data-p-kurs-sil>${ik('kapat')}<span><b>Kursu sil</b><small>Kursun bütün verisi ve hesapları kalıcı silinir; önce yedeği iner</small></span></button>
       </div>`,
     onAc: p => {
       p.querySelector('[data-p-hesaplar]').addEventListener('click', () => { kapatPencere(); alt = 'hesaplar'; suzgec = 'hepsi'; arama = x.ad; ciz(); });
       const ol = p.querySelector('[data-p-olustur]'); if (ol) ol.addEventListener('click', async () => { try { await googleIste(); } catch (y) { return islemHata(y); } hesapAcPenceresi({ kurs: k }); });
       p.querySelector('[data-p-kurs-sil]').addEventListener('click', () => kursSilPenceresi(k));
+      const du = p.querySelector('[data-p-durum]'); if (du) du.addEventListener('change', async () => { const v = du.value, eski = x.durum || 'etkin'; if (v !== 'etkin' && !confirm(`${x.ad} ${KURS_DURUM[v].toLocaleLowerCase('tr')} yapılsın mı? Kursun bütün kullanıcıları girişte durdurulur.`)) { du.value = eski; return; }
+        try { await googleIste(); await kursDurumYaz(k, v, eski); x.durum = v; bildir(`${x.ad}: ${KURS_DURUM[v]}`); kapatPencere(); ciz(); } catch (y) { du.value = eski; islemHata(y); } });
     },
   });
+}
+// YON-081: kurs durumu ve kullanım türü; durum değişikliği kursun işlem kaydına (kayit) yazılır
+const KURS_DURUM = { etkin: 'Etkin', askida: 'Askıda', kapali: 'Kapalı' }, KURS_TUR = { ucretli: 'Ücretli', ucretsiz: 'Ücretsiz kullanım', test: 'Test / demo' };
+const sahipKaydi = (k, ne, ayrinti, simdi) => ({ update: { name: tamYol('kurslar/' + k + '/kayit/' + rastgele(20)), fields: fsAlanlar({ uid: 'mdSinyal', ad: 'mdSinyal Yönetim', ne, ayrinti: String(ayrinti).slice(0, 300), yerel: simdi.toISOString(), cihaz: 'mdSinyal Yönetim › Kurslar', zaman: simdi }) }, currentDocument: { exists: false } });
+async function kursDurumYaz(k, v, eski) {
+  const simdi = new Date();
+  await commit([{ update: { name: tamYol('kurslar/' + k), fields: fsAlanlar({ durum: v, durumZaman: simdi }) }, updateMask: { fieldPaths: ['durum', 'durumZaman'] }, currentDocument: { exists: true } }, sahipKaydi(k, 'mdSinyal kurs durumunu değiştirdi', (KURS_DURUM[eski] || eski) + ' → ' + KURS_DURUM[v], simdi)]);
+}
+// YON-081: kursu sahip açar — müdür hesabı rastgele şifreyle açılır, müdüre şifresini kendisinin belirleyeceği ilk giriş bağlantısı e-postayla gider;
+// kurs verisi müdürün ilk girişinde kurs belgesindeki ad, il ve şube sayısıyla kurulur (bulut.js). Davet kodu yolu tek kullanımlık link olarak kalır.
+function kursAcPenceresi() {
+  pencere({ baslik: 'Kurs aç', alt: true, icerik: `<form id="f-ka" class="form-izgara" novalidate>
+      <div class="alan tam"><label for="ka-ad">Kursun adı</label><input id="ka-ad" name="ad" required maxlength="80" placeholder="Örn. Örnek Sürücü Kursu"></div>
+      <div class="alan"><label for="ka-il">İl</label><select id="ka-il" name="il" required>${ilSecenekleri('')}</select></div>
+      <div class="alan"><label for="ka-ilce">İlçe</label><input id="ka-ilce" name="ilce" maxlength="40"></div>
+      <div class="alan"><label for="ka-m">Müdürün adı soyadı</label><input id="ka-m" name="mudur" required maxlength="80" autocomplete="off"></div>
+      <div class="alan"><label for="ka-e">Müdürün e-postası</label><input id="ka-e" name="eposta" type="email" required maxlength="120" autocomplete="off"></div>
+      <div class="alan"><label for="ka-t">Müdürün cep telefonu</label><input id="ka-t" name="tel" inputmode="tel" maxlength="20" placeholder="05xx xxx xx xx"></div>
+      <div class="alan"><label for="ka-s">Şube sayısı</label><input id="ka-s" name="sube" type="number" min="1" max="9" value="1"></div>
+      <div class="alan"><label for="ka-tur">Kullanım türü</label><select id="ka-tur" name="tur">${Object.entries(KURS_TUR).map(([v, a]) => `<option value="${v}">${a}</option>`).join('')}</select></div>
+      <div class="alan tam"><label for="ka-not">Not <small style="font-weight:400">isteğe bağlı, yalnız Yönetim’de görünür</small></label><input id="ka-not" name="not" maxlength="200"></div>
+      <p class="alan tam" style="font-size:13px;color:var(--soluk)">Müdüre şifresini kendisinin belirleyeceği ilk giriş bağlantısı e-postayla gider; bağlantıyla şifre konunca e-posta da doğrulanmış olur.</p></form>`,
+    altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-ka-ac>Kursu aç</button>',
+    onAc(p) {
+      const f = p.querySelector('#f-ka'), b = p.querySelector('[data-ka-ac]');
+      b.addEventListener('click', async () => {
+        const ad = f.ad.value.trim(), il = f.il.value, mudur = f.mudur.value.trim(), eposta = f.eposta.value.trim().toLowerCase();
+        if (!ad || !il || !mudur || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(eposta)) return bildir('Kurs adı, il, müdürün adı ve geçerli e-postası gerekli', 'uyari');
+        b.disabled = true; b.textContent = 'Açılıyor…';
+        try { const x = await kursAc({ ad, il, ilce: f.ilce.value.trim(), mudur, eposta, tel: f.tel.value.trim(), sube: Math.min(9, Math.max(1, +f.sube.value || 1)), tur: f.tur.value, not: f.not.value.trim() });
+          kapatPencere(); pencere({ baslik: 'Kurs açıldı', icerik: `<p style="font-size:14.5px"><b>${e(ad)}</b> açıldı. ${x.eposta ? `<b>${e(eposta)}</b> adresine ilk giriş bağlantısı gönderildi; müdür bağlantıyla şifresini belirleyip <b>Kurs müdürü ya da ön büroyum</b> girişinden girer.` : `İlk giriş bağlantısı gönderilemedi (${e(x.hata || '')}); hesap listesinden müdüre “Yeni şifre ver” ile şifre verin.`}</p>`, altlik: '<button class="dg dg-ana" data-kapat>Tamam</button>' });
+          yenile(); }
+        catch (y) { b.disabled = false; b.textContent = 'Kursu aç'; islemHata(y); }
+      });
+    } });
+}
+async function kursAc(g) {
+  const simdi = new Date(), j = await api(IT + '/accounts', { email: g.eposta, password: geciciSifre() + geciciSifre(), displayName: g.mudur });
+  const uid = j.localId; if (!uid) throw new Error('Google hesap kimliği dönmedi');
+  const k = rastgele(20, 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789');
+  try {
+    await commit([
+      { update: { name: tamYol('kurslar/' + k), fields: fsAlanlar({ ad: g.ad, sahip: uid, sehir: g.il, ilce: g.ilce || '', olusturma: simdi, acan: 'mdSinyal', tur: g.tur, durum: 'etkin', subeSayisi: g.sube, mudurTel: g.tel || '', not: g.not || '' }) }, currentDocument: { exists: false } },
+      { update: { name: tamYol('kullanicilar/' + uid), fields: fsAlanlar({ kurs: k }) }, currentDocument: { exists: false } },
+      { update: { name: tamYol('kurslar/' + k + '/uyeler/' + uid), fields: fsAlanlar({ ad: g.mudur, rol: 'mudur', eposta: g.eposta, katilma: simdi, acan: 'mdSinyal' }) }, currentDocument: { exists: false } },
+      sahipKaydi(k, 'mdSinyal kursu açtı', `${g.ad} · ${g.il}${g.ilce ? ' / ' + g.ilce : ''} · müdür ${g.mudur} · ${KURS_TUR[g.tur] || g.tur}${g.sube > 1 ? ' · ' + g.sube + ' şube' : ''}`, simdi),
+    ]);
+  } catch (y) { await api(IT + '/accounts:delete', { localId: uid }).catch(() => { }); throw y; }
+  try { await api(IT + '/accounts:sendOobCode', { requestType: 'PASSWORD_RESET', email: g.eposta }); return { k, uid, eposta: true }; }
+  catch (y) { return { k, uid, eposta: false, hata: turkceHata(y) }; }
 }
 
 // Kursu silme: adını yazarak onaylanır; önce kursun BÜTÜN verisi (kurs belgesi ve bütün alt koleksiyonları ham alanlarıyla:
