@@ -1,7 +1,7 @@
 // MEBBİS dönem grupları. MEBBİS'teki "Dönem Grup Açılış Tarihi" ve "Grup Şube Tanımlama" ekranlarıyla birebir:
 // dönem YYYYAA, grup 1–3 (her grubun tek başlangıç tarihi, ayın 1'i ile 10'u arası), şube A–H. Ad: "Kasım 1A".
 // Kursiyer kaydı grubun başlangıcından önce yapılır (MTSK Yönetmeliği 12/2); evrakı tamam ve gruba atanmış kursiyer aktiftir.
-import { S, kaydet, gun, fark, iso, SINIFLAR, tamAd, islem, eksikEvrak, sb, anaSinif, mebKurum, teorikVar, esinavsizBelgeli, derslikListesi, derslikOner, DERSLIK_TURLERI } from './veri.js?v=234';
+import { S, kaydet, gun, fark, iso, SINIFLAR, tamAd, tcGecerli, islem, eksikEvrak, sb, anaSinif, mebKurum, teorikVar, esinavsizBelgeli, derslikListesi, derslikOner, DERSLIK_TURLERI } from './veri.js?v=234';
 import { e, pencere, kapatPencere, bildir, rozet, tarih, isaret, ik, pencereSor, bos } from './ui.js?v=234';
 import * as KR from './kurallar.js?v=234';
 
@@ -404,14 +404,19 @@ export function ogretmenPencere(o, sonra, on) {
       <div class="alan"><label for="og-ad">Ad soyad</label><input id="og-ad" name="ad" value="${e(v.ad || '')}" autocomplete="off"></div>
       <div class="alan"><label for="og-br">Branş</label><select id="og-br" name="brans">${BRANS.map(b => `<option ${v.brans && nrmBrans(v.brans) === nrmBrans(b) ? 'selected' : ''}>${b}</option>`).join('')}</select></div>
       <div class="alan"><label for="og-tel">Telefon</label><input id="og-tel" name="tel" inputmode="tel" value="${e(v.tel || '')}"></div>
-      <div class="alan"><label for="og-izin">MEBBİS izin no</label><input id="og-izin" name="izin" inputmode="numeric" value="${e(v.calismaIzinNo || '')}" placeholder="ör. 5048176"><small style="color:var(--soluk)">MEBBİS ders ekranlarında “İzin No:5048176 AD SOYAD” diye görünen numara; “MEBBİS’ten güncelle” personelden kendiliğinden doldurur.</small></div></form>`,
+      <div class="alan"><label for="og-izin">MEBBİS izin no</label><input id="og-izin" name="izin" inputmode="numeric" value="${e(v.calismaIzinNo || '')}" placeholder="ör. 5048176"><small style="color:var(--soluk)">MEBBİS ders ekranlarında “İzin No:5048176 AD SOYAD” diye görünen numara; “MEBBİS’ten güncelle” personelden kendiliğinden doldurur.</small></div>
+      <div class="alan"><label for="og-tc">T.C. kimlik no</label><input id="og-tc" name="tc" inputmode="numeric" maxlength="11" value="${e(v.tc || '')}" placeholder="isteğe bağlı" autocomplete="off"><small style="color:var(--soluk)">MEBBİS teorik programında öğretmen T.C. ve izin no ile seçilir; personel eşleşmesinde de kullanılır.</small></div></form>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-ogr">Kaydet</button>`,
     onAc(d) {
       d.querySelector('form').addEventListener('submit', ev => {
         ev.preventDefault(); const f = ev.target, ad = f.ad.value.trim().toLocaleUpperCase('tr');
         if (!ad) return bildir('Ad soyad yazın', 'uyari');
         const izin = f.izin.value.replace(/\D/g, ''); if (izin && izin.length !== 7) return bildir('MEBBİS izin numarası 7 hane olmalı', 'uyari');
-        const x = o || { id: 'o' + Date.now(), ...(on && on.tc ? { tc: on.tc } : {}), ...(on && on.meb ? { meb: on.meb } : {}), ...(on && on.mebIzinBitis ? { mebIzinBitis: on.mebIzinBitis } : {}) }; Object.assign(x, { ad, brans: f.brans.value, tel: f.tel.value.trim(), calismaIzinNo: izin });
+        // PER-014: teorik öğretmenin T.C.'si (MEBBİS 03003 personel seçeneğinin değeri T.C. + izin no)
+        const tc = f.tc.value.replace(/\D/g, ''); if (tc && !tcGecerli(tc)) return bildir('T.C. kimlik numarası geçersiz', 'uyari');
+        const ayni = [...S.egitmenler, ...(S.ogretmenler || [])].find(y => y !== o && ((izin && String(y.calismaIzinNo || '') === izin) || (tc && y.tc === tc)));
+        if (ayni) return bildir(`${ayni.ad} kartında aynı ${izin && String(ayni.calismaIzinNo || '') === izin ? 'izin no' : 'T.C.'} var`, 'uyari');
+        const x = o || { id: 'o' + Date.now(), ...(on && on.tc ? { tc: on.tc } : {}), ...(on && on.meb ? { meb: on.meb } : {}), ...(on && on.mebIzinBitis ? { mebIzinBitis: on.mebIzinBitis } : {}) }; Object.assign(x, { ad, brans: f.brans.value, tel: f.tel.value.trim(), calismaIzinNo: izin, tc: tc || null });
         if (!o) S.ogretmenler = [...(S.ogretmenler || []), x];
         islem(o ? 'Teorik öğretmeni düzenledi' : on && on.meb ? 'MEBBİS’teki personelden teorik öğretmen kartı açtı' : 'Teorik öğretmen ekledi', ad); kaydet(); kapatPencere(); bildir(ad + ' kaydedildi', 'tamam'); sonra && sonra();
       });
