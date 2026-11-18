@@ -684,6 +684,7 @@ export function kursiyerFormu(on = {}) {
         if (s === 'B-EN' && f.kendiArac.checked) yeni.kendiArac = { tarih: gun(0) };
         if (s === 'CEZA') yeni.ktk118 = { tarih: gun(0), kim: oturum.kullanici ? oturum.kullanici.ad : '' };  // 100 ceza puanı eğitimi: KTK md.118 sürücüsü
         GR.aktifEt(yeni);
+        import('./zamanlayici.js?v=234').then(m => m.anlikBildirim('o21', { ad: tamAd(yeni), sinif: (SINIFLAR[yeni.sinif] || {}).ad || yeni.sinif, kaydeden: (oturum.kullanici || {}).ad || '' })).catch(() => { });   // MSJ-026
         S.kursiyerler.unshift(yeni); islem('Kursiyer kaydetti', tamAd(yeni) + ' · ' + SINIFLAR[s].ad + (GR.grupBul(yeni.teorikGrup) ? ' · ' + GR.grupBul(yeni.teorikGrup).ad : ' · bekleyen dönem') + (odemeSonra ? ' · ödeme planı sonra' : '') + (yeni.yasIstisna ? ` · yaş istisnası (KTY md.76/3): ${yeni.yasIstisna.tur} · ${yeni.yasIstisna.not}` : ''));
         if (p) S.hareket.unshift({ id: 'h' + Date.now(), tarih: gun(0), tur: 'Gelir', kategori: 'Kurs ücreti', aciklama: tamAd(yeni) + (n ? ' · peşinat' : ' · peşin ödeme'), tutar: p, yontem, kursiyer: yeni.id });
         if (on.adayId) { const a = S.adaylar.find(x => x.id === on.adayId); if (a) a.asama = 'Kayıt'; }
@@ -1451,6 +1452,8 @@ export function tahsilAl(k, i, sonra) {
         const makGit = d.querySelector('[name=mak]') && d.querySelector('[name=mak]').checked;
         kaydet(); kapatPencere();
         if (makGit) wpGonder(k, `${selam(k)} ${tl(v)} ödemeniz alındı, teşekkür ederiz. Kalan borcunuz ${tl(kalanBorc(k))}. ${S.kurs.ad}`, 'Makbuz');
+        // MSJ-026: yöneticiye anlık 'ödeme alındı' (o20; hat bağlıysa)
+        import('./zamanlayici.js?v=234').then(m => m.anlikBildirim('o20', { ad: tamAd(k), tutar: tl(v), yontem: y, kaydeden: (oturum.kullanici || {}).ad || '', kalan: tl(kalanBorc(k)) })).catch(() => { });
         bildir(tl(v) + ' tahsil edildi' + (t.odendi ? '' : ', taksitte ' + tl(t.tutar - t.kismi) + ' kaldı'), 'tamam', true);
         sonra ? sonra() : yenile();
         makbuzPenceresi(k, hid);

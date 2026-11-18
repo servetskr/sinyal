@@ -21,6 +21,9 @@ const YENI_KURALLAR = [
   { id: 'o17', ad: 'İkinci dört hak hatırlatması', ne: 'Son sınavdan 30 gün sonra ve başvuru son gününden 10 gün önce 10:00’da', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: '{selam} uygulama sınavı haklarınız dolmuştu. {sonGun} tarihine kadar başvurursanız {hak} sınav hakkı daha kazanırsınız; derslerinizi birlikte planlayalım. {kurs}' },
   { id: 'o18', ad: 'Uygulama sınavı saati kesinleşti', ne: 'MEBBİS randevusu doğrulanınca (08:00–21:00)', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: '{selam} uygulama sınavı saatiniz kesinleşti: {tarih} {saatte}, araç {plaka}, usta öğretmeniniz {usta}. Kimliğinizi yanınıza alın. {kurs}' },
   { id: 'o19', ad: 'e-Sınav ücreti hatırlatması', ne: 'Teorik bitip sıradaki hakkın ücreti yatmadıysa haftada bir, 11:00’de', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: '{selam} e-sınava başvurabilmeniz için sıradaki sınav hakkınızın ücretini ({ucret}) kendi T.C. kimlik numaranızla yatırıp dekontu kursa iletin; öğrenci uygulamasından da yükleyebilirsiniz. {kurs}' },
+  // MSJ-026: yöneticiye anlık bildirim (olay anında, WhatsApp hattı bağlıysa sessizce); kime: kullanıcı kimlikleri (boşsa kurs müdürü)
+  { id: 'o20', ad: 'Ödeme alındı (yöneticiye)', ne: 'Tahsilat kaydedilince, anında', kanal: 'WhatsApp', acik: true, gonderim: 0, kime: [], sablon: 'Ödeme alındı: {ad} · {tutar} ({yontem}). Kaydeden: {kaydeden}. Kalan borcu {kalan}.' },
+  { id: 'o21', ad: 'Yeni kayıt (yöneticiye)', ne: 'Kursiyer kaydedilince, anında', kanal: 'WhatsApp', acik: true, gonderim: 0, kime: [], sablon: 'Yeni kayıt: {ad} · {sinif}. Kaydeden: {kaydeden}.' },
   { id: 'o14', ad: 'Teorik grup başlangıcı', ne: 'Gruptan iki gün önce 10:00’da', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: '{selam} teorik dersleriniz {tarih} {saatte} başlıyor ({grup}, {derslik}). Görüşmek üzere. {kurs}' },
 ];
 // Eski “sen” dilli şablonları “siz” diline ve hitaba ({selam}) çevir
@@ -96,6 +99,15 @@ URET.o16 = ornek => { const bg = gun(0).slice(5); const l = S.kursiyerler.filter
 // Ek ders teklifinin birim ücreti: sınıfa özel ek ders ücreti, yoksa kursun ek ders ücreti, o da yoksa il taban listesindeki ilave ders ücreti; taban altına inmez
 const ekDersBirim = sinif => { const f = ekDersFiyat(sinif) || ekDersTabani() || 0, t = ekDersTabani() || 0; return Math.max(f, t); };
 URET.o15 = ornek => S.kursiyerler.map(k => ({ k, r: risk(k) })).filter(({ k, r }) => r && r.oneri && (ornek ? r.puan >= 25 : r.puan >= 50) && !k.ekDersTeklif).sort((a, b) => b.r.puan - a.r.puan).map(({ k, r }) => ({ anahtar: 'o15|' + k.id, kim: ogr(k), etki: { tur: 'ekders', k: k.id, n: r.oneri, tutar: r.oneri * ekDersBirim(k.sinif) }, metin: doldur('o15', { kisi: k, ad: k.ad, n: r.oneri, tutar: tl(r.oneri * ekDersBirim(k.sinif)), odak: r.beceri && r.beceri.zayif.length ? '; özellikle ' + r.beceri.zayif.join(', ').toLocaleLowerCase('tr') + ' üzerinde çalışacağız' : '' }) }));
+// MSJ-026: anlık yönetici bildirimi — seçili kullanıcılara (yoksa kurs müdürüne), işlemi yapan kişinin kendisi hariç; yalnız WhatsApp hattı bağlıysa
+// arka planda gider (hat yokken ön büronun ekranında WhatsApp pencereleri açılmasın). alan: şablon alanları
+export function anlikBildirim(id, alan) {
+  kurallariHazirla(); const o = kural(id); if (!o || !o.acik || !apiAcik()) return 0;
+  const ben = oturum.kullanici && oturum.kullanici.id, l = (o.kime && o.kime.length ? (S.kullanicilar || []).filter(u => o.kime.includes(u.id)) : [{ id: 'mudur', ad: S.kurs.yetkili || 'Kurs müdürü', tel: mudurTel(), rol: 'mudur' }]).filter(u => u.id !== ben && !(u.rol === 'mudur' && oturum.kullanici && oturum.kullanici.rol === 'mudur' && !(o.kime || []).length));
+  const metin = doldur(id, alan), liste = l.map(u => ({ ad: u.ad, tel: u.tel || (u.rol === 'mudur' ? mudurTel() : ''), rol: u.rol === 'mudur' ? 'MÜDÜR' : 'ÖN BÜRO', metin, tur: o.ad })).filter(x => x.tel);
+  if (liste.length) { waSirali(liste, o.ad, { sessiz: true }); o.gonderim = (o.gonderim || 0) + liste.length; }
+  return liste.length;
+}
 // Mesaj gidince kayda işlenecek sonuç (ör. ek ders teklifi kursiyer ekranında görünür)
 function etkiUygula(x) {
   if (!x.etki || x.etki.tur !== 'ekders') return;
