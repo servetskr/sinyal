@@ -1,4 +1,4 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec, sinifEtiket } from './veri.js?v=234';
+import { kullaniciSubesi, S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec, sinifEtiket } from './veri.js?v=234';
 import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=234';
 import * as Y1 from './sayfalar1.js?v=234';
 import * as Y2 from './sayfalar2.js?v=234';
@@ -154,6 +154,7 @@ function destekPenceresi() {
 }
 function iskelet() {
   kurallariHazirla(); zamanlayiciBaslat();
+  { const ks = kullaniciSubesi(); if (ks && gorunum.sube !== ks) subeSec(ks); }  // PAR-040: şubeye kısıtlı kullanıcı
   const say = sayaclar();
   // az kullanılanlar ("Diğer") kapalı bir grupta durur; içindeki sayfa açıkken grup açık gelir
   const satir = ([k, t, i]) => `<a href="#/${k}" data-menu="${k}"><span class="ok" aria-hidden="true">${i}</span><span>${t}</span>${say[k] && say[k][0] ? `<b class="${say[k][1] ? '' : 'uyar'}">${say[k][0]}</b>` : ''}</a>`;
@@ -163,7 +164,7 @@ function iskelet() {
     <aside class="yan" id="yan" aria-label="Ana menü"><div class="yan-levha">
       <a class="logo" href="#/genel" aria-label="mdSinyal ana sayfa"><svg class="logo-isaret" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="#141e33"/><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="1.2"/><g fill="none" stroke="#ffc21a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20l12 12-12 12" stroke-opacity=".38"/><path d="M33 20l12 12-12 12"/></g></svg><span><b><span class="mk">md</span>Sinyal</b><small>${e(S.kurs.ad)}</small></span></a>
       <nav>${menu}</nav>
-      ${(S.subeler || []).length > 1 && oturum.kullanici.rol !== 'usta' ? `<label class="sube-yan"><span>Şube</span><select data-sube aria-label="Şube">${['', ...S.subeler.map(x => x.id)].map(id => `<option value="${id}" ${gorunum.sube === id ? 'selected' : ''}>${id ? e(S.subeler.find(x => x.id === id).ad) : 'Tüm şubeler'}</option>`).join('')}</select></label>` : ''}
+      ${(S.subeler || []).length > 1 && oturum.kullanici.rol !== 'usta' ? `<label class="sube-yan"><span>Şube</span><select data-sube aria-label="Şube" ${kullaniciSubesi() ? 'disabled title="Hesabınız bu şubeyle sınırlı"' : ''}>${['', ...S.subeler.map(x => x.id)].map(id => `<option value="${id}" ${gorunum.sube === id ? 'selected' : ''}>${id ? e(S.subeler.find(x => x.id === id).ad) : 'Tüm şubeler'}</option>`).join('')}</select></label>` : ''}
       <div class="yan-alt"><b>${e(oturum.kullanici.ad)}</b><span>${ROL_AD[oturum.kullanici.rol]}</span>${S.kurs.demoNumara ? `<span style="display:block;margin-top:4px;font-size:12px;opacity:.85">Mesajlar → ${e(S.kurs.demoNumara)}</span>` : ''}<button class="dg dg-cizgi dg-kucuk" style="margin-top:8px;width:100%;background:transparent;color:#fff;border-color:#fff" data-cikis>${oturum.kullanici.bulut ? 'Çıkış yap' : 'Kullanıcı değiştir'}</button></div>
     </div></aside>
     <div class="ana">
@@ -171,7 +172,7 @@ function iskelet() {
         <button class="dg-ikon mobil-ust-sol" data-yan aria-label="Menüyü aç">${ik('menu')}</button>
         <div class="ust-baslik"><small id="ust-alt">${bugunMetni()}</small>${oturum.kullanici.bulut ? '<span id="bulut-durum" class="bulut-durum" role="status"></span>' : ''}<h1 id="ust-baslik">Genel bakış</h1></div>
         <a class="dg dg-hafif portal-geri" href="#/genel">← Panele dön</a>
-        ${(S.subeler || []).length > 1 && oturum.kullanici.rol !== 'usta' ? `<label class="sube-sec"><span class="gizli-et">Şube</span><select data-sube aria-label="Şube">${['', ...S.subeler.map(x => x.id)].map(id => `<option value="${id}" ${gorunum.sube === id ? 'selected' : ''}>${id ? e(S.subeler.find(x => x.id === id).ad) : 'Tüm şubeler'}</option>`).join('')}</select></label>` : ''}
+        ${(S.subeler || []).length > 1 && oturum.kullanici.rol !== 'usta' ? `<label class="sube-sec"><span class="gizli-et">Şube</span><select data-sube aria-label="Şube" ${kullaniciSubesi() ? 'disabled title="Hesabınız bu şubeyle sınırlı"' : ''}>${['', ...S.subeler.map(x => x.id)].map(id => `<option value="${id}" ${gorunum.sube === id ? 'selected' : ''}>${id ? e(S.subeler.find(x => x.id === id).ad) : 'Tüm şubeler'}</option>`).join('')}</select></label>` : ''}
         <button class="arama" data-ara aria-label="Ara">${ik('ara')}<span>Kursiyer, aday, plaka ara</span><kbd>⌘K</kbd></button>
         ${oturum.kullanici.rol !== 'usta' && izinli('mevzuat') ? `<a class="asistan-dugme" href="#/mevzuat" title="Mevzuat asistanı: yönetmelik ve MEB yazılarından dayanaklı cevap" aria-label="Mevzuat asistanına sor">${ik('robot')}<span>Asistana sor</span></a>` : ''}
         ${oturum.kullanici.rol !== 'usta' ? `<button class="yeni-dugme" data-yeni-menu aria-label="Yeni ekle">${ik('arti')}<span>Yeni</span></button>` : ''}
@@ -210,6 +211,7 @@ export function yenile(kaydirma = false) {
   if (!oturum.kullanici) { if (location.hash.startsWith('#/imza-geldi/')) try { sessionStorage.setItem('sinyal-bekleyen', location.hash); } catch (x) { } if (document.querySelector('.giris')) return; return girisEkrani(location.hash.startsWith('#/imza-geldi/') ? 'pin' : 'tanitim'); }
   // mdSinyal Yönetim hesabı: kurs ekranları yok, yalnız gelir paylaşımı (yönetici girer, ortak görür)
   if (oturum.kullanici.bulut && (ORT.yonetimModu() || oturum.kullanici.rol === 'ortak')) return yonetimCiz(kaydirma);
+  { const ks = kullaniciSubesi(); if (ks && gorunum.sube !== ks) subeSec(ks); }  // PAR-040: şubeye kısıtlı kullanıcı her çizimde kendi şubesinde kalır
   if (location.hash === '#/yonetim-kur' && oturum.kullanici.bulut && oturum.kullanici.rol === 'mudur') return yonetimKurCiz();
   // başka cihazdan eksik alanla gelen sınav kaydı sayfaları çökertmesin
   (S.sinavlar || []).forEach(x => { if (!x.sonuc || typeof x.sonuc !== 'object') x.sonuc = {}; if (!Array.isArray(x.kursiyerler)) x.kursiyerler = []; });
@@ -329,7 +331,7 @@ function kurulumAkisi() {
   bildir(adim[0] + ' tamam · sıradaki: ' + l[sonraki][0]);
   setTimeout(() => { if (location.hash === l[sonraki][3]) yenile(true); else location.hash = l[sonraki][3]; }, 900);
 }
-document.addEventListener('change', ev => { const s = ev.target.closest('[data-sube]'); if (!s) return; subeSec(s.value); document.querySelectorAll('[data-sube]').forEach(x => { x.value = s.value; }); bildir(s.value ? S.subeler.find(x => x.id === s.value).ad + ' gösteriliyor' : 'Tüm şubeler gösteriliyor'); yenile(); });
+document.addEventListener('change', ev => { const s = ev.target.closest('[data-sube]'); if (!s) return; if (kullaniciSubesi()) { s.value = kullaniciSubesi(); return bildir('Hesabınız bu şubeyle sınırlı', 'uyari'); } subeSec(s.value); document.querySelectorAll('[data-sube]').forEach(x => { x.value = s.value; }); bildir(s.value ? S.subeler.find(x => x.id === s.value).ad + ' gösteriliyor' : 'Tüm şubeler gösteriliyor'); yenile(); });
 Y5.temaUygula();
 
 let sonAd = null;

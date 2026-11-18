@@ -1,6 +1,6 @@
 // Kasa raporları: vade raporu (RAP-002). Kasa › "Vade raporu" sekmesinde çizilir.
 // Bütün geçmiş: kursiyerlerin bütün taksitleri (kapanan kayıtlar dahil), vade aralığı, yalnız ödenmeyenler, avukatta olanlar, kayıt durumu ve sınıf süzgeci.
-import { S, gun, fark, SINIFLAR, tamAd, sb, tcMaskele, oturum, sinifEtiket, ekTur } from './veri.js?v=234';
+import { S, gun, fark, SINIFLAR, tamAd, sb, tcMaskele, oturum, sinifEtiket, ekTur, varsayilanHesap, hareketHesabi, gorunum } from './veri.js?v=234';
 import { e, tl, rozet, tarih, ik, csvIndir } from './ui.js?v=234';
 
 // süzgeç durumu sayfa yenilense de bu oturumda kalır
@@ -87,10 +87,12 @@ const BANKA = y => y && y !== 'Nakit';
 const topla = (l, f = () => true) => l.filter(f).reduce((a, h) => a + (+h.tutar || 0), 0);
 // resmî (emanet) tahsilat: sınav ücreti, harç, kart; ek kalemin türünden (veri.js ekTur)
 const resmiGelir = h => { if (h.tur !== 'Gelir' || ['Kurs ücreti', 'Taksit', 'Peşinat'].includes(h.kategori)) return false; const k = h.kursiyer && S.kursiyerler.find(x => x.id === h.kursiyer), x = k && ((k.odeme || {}).ekler || []).find(y => y.ad === h.kategori); return ekTur(x || { ad: h.kategori }) === 'resmi'; };
-const kasaHesabi = () => (S.hesaplar || []).find(h => h.id === 'kasa') || (S.hesaplar || [])[0] || { bakiye: 0 };
+// PAR-040: seçili şubenin kasası varsa o (veri.js varsayilanHesap)
+const kasaHesabi = () => (S.hesaplar || []).find(h => h.id === varsayilanHesap('Nakit', gorunum.sube)) || (S.hesaplar || []).find(h => h.id === 'kasa') || (S.hesaplar || [])[0] || { bakiye: 0 };
 // PAR-042: kasadan çıkan / kasaya giren hesaplar arası transfer de kasa nakdini değiştirir
 const transferNet = (bas, bit) => { const id = kasaHesabi().id; return (S.transferler || []).reduce((a, x) => x.tarih >= bas && x.tarih <= bit ? a + (x.hedef === id ? +x.tutar || 0 : 0) - (x.kaynak === id ? +x.tutar || 0 : 0) : a, 0); };
-const nakitNet = (l, bas, bit) => transferNet(bas, bit) + l.reduce((a, h) => { if (h.yontem === 'Nakit' && h.tarih >= bas && h.tarih <= bit) a += h.tur === 'Gelir' ? +h.tutar || 0 : -(+h.tutar || 0); if (h.bankaya && h.yontem === 'Nakit' && h.tur === 'Gelir' && h.bankaya >= bas && h.bankaya <= bit) a -= +h.tutar || 0; return a; }, 0);
+// PAR-040: kasanın nakdi, hareketin düştüğü hesaba göre (şube kasası varsa o şubenin nakdi ortak kasaya girmez)
+const nakitNet = (l, bas, bit) => { const kid = kasaHesabi().id, bu = h => h.yontem === 'Nakit' && (!kid || hareketHesabi(h) === kid); return transferNet(bas, bit) + l.reduce((a, h) => { if (bu(h) && h.tarih >= bas && h.tarih <= bit) a += h.tur === 'Gelir' ? +h.tutar || 0 : -(+h.tutar || 0); if (h.bankaya && bu(h) && h.tur === 'Gelir' && h.bankaya >= bas && h.bankaya <= bit) a -= +h.tutar || 0; return a; }, 0); };
 // t günü sonunda kasada olması gereken nakit. Açılış girilmişse açılıştan ileri, girilmemişse bugünkü bakiyeden geriye doğru hesaplanır.
 export function nakitBakiye(t) {
   const hs = kasaHesabi(), l = sb(S.hareket), bugun = gun(0);

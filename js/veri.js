@@ -434,9 +434,10 @@ export const yontemAd = y => y === 'Havale' ? 'Havale/EFT' : y;
 // (Nakit → kasa, Kart → POS, POS yoksa varsayılan banka, Havale → varsayılan banka). İki banka hesabı aynı havaleyi iki kez saymaz.
 const HESAP_TUR = { Nakit: 'Kasa', Kart: 'POS', Havale: 'Banka' };
 export const bankaHesaplari = () => (S.hesaplar || []).filter(h => h.tur === 'Banka');
-export function varsayilanHesap(y) { const l = S.hesaplar || [], bul = t => l.find(h => h.tur === t && h.varsayilan) || l.find(h => h.tur === t); return (bul(HESAP_TUR[y] || 'Banka') || (y === 'Kart' ? bul('Banka') : null) || {}).id || null; }
-export const hareketHesabi = h => h.hesap && (S.hesaplar || []).some(x => x.id === h.hesap) ? h.hesap : varsayilanHesap(h.tur === 'Gider' && h.yontem === 'Kart' ? 'Havale' : h.yontem);  // kartla gider bankadan çıkar, POS'tan değil
-export const bankayaHesabi = h => h.bankayaHesap && (S.hesaplar || []).some(x => x.id === h.bankayaHesap) ? h.bankayaHesap : varsayilanHesap('Havale');
+// PAR-040: şube kasası — hesabın şubesi (h.sube) varsa önce o şubenin hesabı, yoksa ortak (şubesiz) hesap
+export function varsayilanHesap(y, sube) { const l = S.hesaplar || [], uy = h => !sube || !h.sube || h.sube === sube, bul = t => l.find(h => h.tur === t && sube && h.sube === sube && h.varsayilan) || l.find(h => h.tur === t && sube && h.sube === sube) || l.find(h => h.tur === t && uy(h) && h.varsayilan) || l.find(h => h.tur === t && uy(h)) || l.find(h => h.tur === t); return (bul(HESAP_TUR[y] || 'Banka') || (y === 'Kart' ? bul('Banka') : null) || {}).id || null; }
+export const hareketHesabi = h => h.hesap && (S.hesaplar || []).some(x => x.id === h.hesap) ? h.hesap : varsayilanHesap(h.tur === 'Gider' && h.yontem === 'Kart' ? 'Havale' : h.yontem, h.sube);  // kartla gider bankadan çıkar, POS'tan değil
+export const bankayaHesabi = h => h.bankayaHesap && (S.hesaplar || []).some(x => x.id === h.bankayaHesap) ? h.bankayaHesap : varsayilanHesap('Havale', h.sube);
 // Ay ekleme: 31 Ocak + 1 ay = 28/29 Şubat (taşma yok)
 export const ayEkle = (t, n) => { const d = tarihOku(t), g = d.getDate(); d.setDate(1); d.setMonth(d.getMonth() + n); const son = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); d.setDate(Math.min(g, son)); return iso(d); };
 // İki tarih arasındaki iş günü (bas hariç, bit dahil). Eski ad: MEB iş günü sayımına bağlı (mebIsGunuMu); ayrı bir hesap tutulmaz
@@ -957,12 +958,15 @@ export const bulutKanca = { makbuzNo: null, kayit: null, sahiplen: null, cihaz: 
 // PAR-070: makbuz numarası biçimi kurulumda ayarlanır (S.kurs.makbuz { onek, yillik, basla, uzunluk }); varsayılan eskisi gibi M2026-00001.
 // Seri: yıllıksa yıl (yıl başında 1'den), değilse tek seri 'S'. İlk makbuzdan sonra önek, yıl ve uzunluk kilitlenir; başlangıç numarası yalnız yükseltilebilir.
 export const makbuzAyar = () => { const m = (S.kurs && S.kurs.makbuz) || {}; return { onek: String(m.onek ?? 'M'), yillik: m.yillik !== false, basla: Math.max(1, Math.floor(+m.basla) || 1), uzunluk: Math.min(8, Math.max(3, Math.floor(+m.uzunluk) || 5)) }; };
-export const makbuzSeri = t => makbuzAyar().yillik ? String(t).slice(0, 4) : 'S';
+// PAR-040: şubenin kendi makbuz öneki varsa (S.subeler[].makbuzOnek) o şubenin ayrı serisi: seri '<şube>_<yıl|S>'
+const subeOnek = sid => ((S.subeler || []).find(x => x.id === sid) || {}).makbuzOnek || '';
+export const makbuzSeri = (t, sube) => (sube && subeOnek(sube) ? sube + '_' : '') + (makbuzAyar().yillik ? String(t).slice(0, 4) : 'S');
 // başlangıç numarası girildiği serinin (yılın) içindir; sonraki yıl yine 1'den
-export const makbuzBaslangic = seri => { const m = (S.kurs && S.kurs.makbuz) || {}; return !makbuzAyar().yillik || !m.baslaSeri || m.baslaSeri === seri ? makbuzAyar().basla : 1; };
-export const makbuzBicim = (seri, n) => { const a = makbuzAyar(), s = String(n).padStart(a.uzunluk, '0'); return a.yillik ? a.onek + seri + '-' + s : a.onek + s; };
+export const makbuzBaslangic = seri => { if (String(seri).includes('_')) { const x = (S.subeler || []).find(y => y.id === String(seri).split('_')[0]); return Math.max(1, +(x && x.makbuzBasla) || 1); } const m = (S.kurs && S.kurs.makbuz) || {}; return !makbuzAyar().yillik || !m.baslaSeri || m.baslaSeri === seri ? makbuzAyar().basla : 1; };
+export const makbuzBicim = (seri, n) => { const a = makbuzAyar(), s = String(n).padStart(a.uzunluk, '0'), [sb_, y] = String(seri).includes('_') ? String(seri).split('_') : ['', seri], on = sb_ ? subeOnek(sb_) || a.onek : a.onek; return a.yillik ? on + y + '-' + s : on + s; };
 const reKac = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-export const makbuzSira = (no) => { const a = makbuzAyar(), m = new RegExp('^' + reKac(a.onek) + (a.yillik ? '(\\d{4})-(\\d+)$' : '(\\d+)$')).exec(no || ''); return m ? (a.yillik ? [m[1], +m[2]] : ['S', +m[1]]) : null; };
+export const makbuzSira = (no) => { const a = makbuzAyar(), dene = (on, sb_) => { const m = new RegExp('^' + reKac(on) + (a.yillik ? '(\\d{4})-(\\d+)$' : '(\\d+)$')).exec(no || ''); return m ? [(sb_ ? sb_ + '_' : '') + (a.yillik ? m[1] : 'S'), +(a.yillik ? m[2] : m[1])] : null; };
+  for (const x of (S.subeler || []).filter(x => x.makbuzOnek).sort((p, q) => q.makbuzOnek.length - p.makbuzOnek.length)) { const r = dene(x.makbuzOnek, x.id); if (r) return r; } return dene(a.onek, ''); };
 export const makbuzKilitli = () => (S.hareket || []).some(h => h.no);
 // Yakıt tüketimi (L/100 km): litre ve kilometre sayacı girilmiş dolumlardan, dolu depo yöntemiyle (iki dolum arası km'ye sonraki dolumun litresi)
 export const beklenenTuketim = a => BEKLENEN_TUKETIM[a.sinif] || (S.kurs.maliyet && S.kurs.maliyet.tuketim) || 6.5;
@@ -977,7 +981,7 @@ export function tuketim(a, gunSay = 120) {
 }
 export function makbuzNoVer(h) {
   if (h.no || h.tur !== 'Gelir') return h.no;
-  const yil = makbuzSeri(h.tarih);
+  const yil = makbuzSeri(h.tarih, h.sube || ((S.kursiyerler || []).find(x => x.id === h.kursiyer) || {}).sube);
   // gerçek kurs: numara sunucudaki sayaçtan ayrılır, iki cihaz aynı numarayı veremez
   const n = bulutKanca.makbuzNo && bulutKanca.makbuzNo(yil);
   if (n) { h.no = makbuzBicim(yil, n); return h.no; }
@@ -1534,3 +1538,5 @@ export const varsayilanSube = () => gorunum.sube || 's1';
 export const sbSinav = l => (gorunum.sube ? l.filter(s => (s.kursiyerler || []).some(id => subede(S.kursiyerler.find(k => k.id === id)))) : l);
 export const seciliSube = () => (S.subeler || []).find(x => x.id === gorunum.sube) || null;
 export const cokSube = () => (S.subeler || []).length > 1;
+// PAR-040: kullanıcıya şube (kasa) kısıtı — müdür dışındaki kullanıcının kaydında şube varsa yalnız o şubeyi ve kasasını görür
+export const kullaniciSubesi = () => { const o = oturum.kullanici; if (!o || o.rol === 'mudur' || !cokSube()) return ''; const u = (S.kullanicilar || []).find(x => x.id === o.id || (o.uid && x.uid === o.uid)); return u && u.sube && (S.subeler || []).some(x => x.id === u.sube) ? u.sube : ''; };
