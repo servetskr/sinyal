@@ -1,6 +1,6 @@
 // MEB resmî formları: MTSK Yönetmeliği eklerinin düzeninde, kayıtlardan dolan ya da boş (elle doldurmak için) çıktılar.
 // Kaynak: mevzuat.gov.tr 7.5.18408 ekleri (EK-1, EK-3, EK-4, EK-5, EK-8, EK-10, EK-12) ve md.17/3, md.42 içerik şartları.
-import { S, kaydet, gun, oturum, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, ek3Sinif, dersKonulari, gorunum, sb, sbSinav, gerekliDireksiyon, geceDersMi, aracSiniflari, egitimSinifi, sinifEtiket } from './veri.js?v=234';
+import { S, kaydet, gun, oturum, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, ek3Sinif, dersKonulari, gorunum, sb, sbSinav, gerekliDireksiyon, geceDersMi, aracSiniflari, egitimSinifi, sinifEtiket, dersKonulariResmi } from './veri.js?v=234';
 import { e, pencere, bildir, belgeYazdir, ik, csvIndir } from './ui.js?v=234';
 import * as GR from './gruplar.js?v=234';
 import { EK3, EK4, EK3_NOT, EK4_NOT, EK12 } from './formlar.js?v=234';
@@ -193,7 +193,7 @@ function dersDefteri(grupId, bos) {
   const satir = bos ? Array.from({ length: 22 }, () => null) : l;
   return sar(`<div class="rf-bas">DERS DEFTERİ<br><span style="font-weight:400;font-size:12px">${e(kurum().ad)} · ${e(g.ad)}${g.derslik ? ' · ' + e(g.derslik) : ''}</span></div>
     <table><tr><th style="width:24px">#</th><th>Tarih</th><th>Saat</th><th>Süre</th><th>Dersin adı / konusu</th><th>Öğretici</th><th>Katılan</th><th style="width:90px">Öğretici imzası</th></tr>
-      ${satir.map((t, i) => t ? `<tr><td>${i + 1}</td><td class="rf-nw">${trTarih(t.tarih)}</td><td>${e(t.saat)}</td><td>${t.sure || ''} saat</td><td>${e(t.konu)}</td><td>${e(ogr(t.ogretmen))}</td><td>${t.katilim != null ? t.katilim + (t.mevcut ? '/' + t.mevcut : '') : ''}</td><td></td></tr>` : `<tr><td>${i + 1}</td><td style="height:24px"></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`).join('') || '<tr><td colspan="8">Bu grupta ders kaydı yok.</td></tr>'}</table>
+      ${satir.map((t, i) => t ? `<tr><td>${i + 1}</td><td class="rf-nw">${trTarih(t.tarih)}</td><td>${e(t.saat)}</td><td>${t.sure || ''} saat</td><td>${e(t.konu)}${(r => r.no.length ? `<br><small>${r.no.join('–')}. ders: ${e(t.islenen || r.konular.join('; '))}</small>` : '')(dersKonulariResmi(t))}</td><td>${e(ogr(t.ogretmen))}</td><td>${t.katilim != null ? t.katilim + (t.mevcut ? '/' + t.mevcut : '') : ''}</td><td></td></tr>` : `<tr><td>${i + 1}</td><td style="height:24px"></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`).join('') || '<tr><td colspan="8">Bu grupta ders kaydı yok.</td></tr>'}</table>
     <p class="rf-not">MTSK Yönetmeliği md.42: defterin sayfaları numaralandırılır, kurs kaşesiyle tasdik edilir, son sayfaya sayfa adedi yazılarak kurs müdürünce onaylanır; silinti ve kazıntı yapılmaz. Bilgiler her dönem sonunda yedeklenmek koşuluyla elektronik ortamda da tutulabilir.</p>
     <div class="rf-imzalar"><div></div><div>Kurs müdürü<br>${e(kurum().mudur)}</div></div>`, true);
 }

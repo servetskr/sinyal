@@ -952,6 +952,29 @@ export function sinifEtiket(sinif, k) {
 // md.16/2 teorik ders muafiyeti (TEO-006): okul belgesiyle trafik ve çevre, ilk yardım, araç tekniği; geçerli ilk yardımcı sertifikasıyla ilk yardım.
 // Kursiyer istemesi hâlinde o derslerin eğitimine girmez, sınava girer. k.teorikDersMuaf = { dersler: ['trafik','ilkyardim','arac'], belge, tarih, kim }.
 // Ders saatleri MEB programındaki dağılım (34 saatte trafik ve çevre 16, ilk yardım 8, araç tekniği 6, trafik adabı 4); başka toplamlı sınıfta orantılı.
+// Teorik derslerin resmî konu dağılımı (TEO-012; MEB programları, ders defteri sırası): trafik ve çevre 16, ilk yardım 8, araç tekniği 6, trafik adabı 4 ders.
+export const RESMI_KONU = {
+  trafik: ['Trafik sistemi, sistem kuramı ve trafikle ilgili kurumlar', 'Sürücü psikolojisi ve sürücü davranışları', 'Alkol, uyuşturucu, yorgunluk ve risk alma davranışı', 'Trafikle ilgili temel tanımlar',
+    'Araç sürme yasağı ve karayolunun kullanılması', 'Hız ve takip mesafesi', 'Geçme kuralları', 'Dönüş, manevra ve kavşakta geçiş hakkı', 'Geçiş üstünlüğü ve karşılaşmada geçiş kolaylığı', 'Viraj, durma, duraklama ve park',
+    'Işıklar, araç boyutu, yük ve yolcu', 'Otoyol, koruyucu tertibat, bisiklet ve motosiklet', 'Kaza faktörleri, kusur ve kaza sonrası işlemler', 'Hukuki sorumluluk, sigorta, trafik suçları ve ceza puanları',
+    'Tescil, zorunlu gereçler ve sürücü belgeleri', 'Çevre ve trafik, hayvan hakları, kirlilik, gürültü ve harita okuma'],
+  ilkyardim: ['Temel ilk yardım uygulamaları ve olay yerinin değerlendirilmesi', 'Temel yaşam desteği: yetişkin, çocuk, bebek', 'Solunum yolu tıkanması', 'Kanamalar ve yaralar', 'Kırık, çıkık ve burkulmalar',
+    'Bilinç bozuklukları: koma, havale, sara, kan şekeri düşüklüğü', 'Göğüs ağrısı ve diğer acil durumlar', 'Hasta ve yaralı taşıma teknikleri'],
+  arac: ['Aracın kısımları ve motor', 'Sürüşe hazırlık: dış kontrol, koltuk, ayna ve emniyet kemeri', 'Göstergeler ve uyarı lambaları', 'Akaryakıt, yağ, radyatör, lastik, ışık ve akü kontrolleri', 'Lastik değişimi, kar zinciri, ampul ve antifriz', 'Arıza belirtileri, yakıt tüketimi ve ekonomik sürüş'],
+  adab: ['Adabımuaşeret ve trafik; temel değerler, empati ve doğru iletişim', 'Sorumluluk, yardımlaşma, hoşgörü, nezaket, saygı ve sabır', 'Empati, öfke yönetimi, beden dili ve trafik görevlileriyle iletişim', 'Birey, toplum, kamu, yaşam ve çevre hakkı; doğru davranışın yararları'],
+};
+const resmiTur = konu => { const n = String(konu || '').toLocaleLowerCase('tr'); return /ilk ?yard/.test(n) ? 'ilkyardim' : /araç|arac|motor|teknik/.test(n) ? 'arac' : /adab|adap/.test(n) ? 'adab' : 'trafik'; };
+// Bir teorik dersin (oturumun) grubundaki sırasına göre resmî ders numaraları ve konuları: aynı türdeki önceki oturumların saatleri sayılır
+export function dersKonulariResmi(t) {
+  if (!t) return { tur: 'trafik', no: [], konular: [] };
+  const tur = resmiTur(t.konu), l = (S.teorik || []).filter(x => x.grup === t.grup && resmiTur(x.konu) === tur).sort((a, b) => (a.tarih + (a.saat || '')).localeCompare(b.tarih + (b.saat || '')) || String(a.id).localeCompare(String(b.id)));
+  let bas = 0; for (const x of l) { if (x === t || x.id === t.id) break; bas += +x.sure || 1; }
+  const liste = RESMI_KONU[tur], no = Array.from({ length: +t.sure || 1 }, (_, i) => bas + i + 1).filter(n => n <= liste.length);
+  return { tur, no, konular: no.map(n => liste[n - 1]) };
+}
+// Soru bankası ve konu anlatımı (MUFREDAT konusu) → resmî ders numarası (soru etiketleri; öğrencinin konusu hangi MEB dersinde işlenir)
+const MUF_RESMI = { trafik: [4, 5, 5, 8, 6, 7, 10, 11, 12, 13, 14, 16, 10, 5, 6, 11, 3, 15, 1, 12], ilkyardim: [1, 1, 2, 4, 5, 7, 6, 8, 1, 3, 5, 4, 7, 7], motor: [1, 4, 1, 1, 1, 4, 3, 2, 6, 6, 5], adab: [1, 3, 4, 2, 2, 2, 4] };
+export const mufredatResmiDers = (key, no) => (MUF_RESMI[key] || [])[no - 1] || null;
 export const TEORIK_MUAF_DERS = [['trafik', 'Trafik ve çevre', 16], ['ilkyardim', 'İlk yardım', 8], ['arac', 'Araç tekniği', 6]];
 export function teorikSaat(k) {
   const top = +((SINIFLAR[k && k.sinif] || {}).teorik) || 0, l = (k && k.teorikDersMuaf && k.teorikDersMuaf.dersler) || [];
