@@ -3629,7 +3629,7 @@ body.suzgec-yapiskan .sayfa-kursiyerler .filtre{position:sticky;top:0;z-index:6;
 .hv-oturum small { color: var(--soluk); font-size: 13px; }
 .hv-oturum span { font-weight: 700; color: var(--murekkep); font-size: 13.5px; }
 .hv-oturum.secili { border-color: var(--levha); box-shadow: inset 0 0 0 1px var(--levha); }
-a.kart.gosterge { text-decoration: none; color: inherit; display: block; }
+a.kart.gosterge { text-decoration: none; color: inherit; }   /* DENETİM Ö2: display ızgaradaki flex sütun düzeninden gelir; burada ezilmez */
 
 /* SNV-037..046: Sınav günü */
 .sgn-ust .sgn-baslik { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
