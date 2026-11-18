@@ -99,7 +99,7 @@ export function mebIsleri(hepsi) {
 // gidince: iş gerçekten Yardımcı'ya gidince çağrılır (onay/kural penceresinde vazgeçilirse çağrılmaz)
 export function yardimciyaGonder(idler, gidince) {
   if (!eklenti.var) return kurulumPenceresi();
-  if (!MK.onaylayabilir()) return bildir('MEBBİS işini kurs müdürü ya da ön büro başlatır', 'uyari');
+  if (!MK.yazabilir()) return bildir(MK.YETKI_YOK_YAZ, 'uyari');
   if (!MK.kabulDenetle(() => yardimciyaGonder(idler, gidince))) return;
   // birden çok şubede her şubenin MEBBİS hesabı ayrıdır: şube seçilmeden işler tek hesaba gönderilmez
   if (cokSube() && !seciliSube()) return bildir('Önce üstten şube seçin; her şubenin işleri kendi MEBBİS hesabına girilir', 'uyari');

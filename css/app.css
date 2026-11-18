@@ -3543,6 +3543,9 @@ button.rozet:focus-visible { outline: 2px solid var(--levha); outline-offset: 2p
 .sh-depo.sari { border-color: #e8c45a; background: var(--sari-acik); }
 .sh-depo.kirmizi { border-color: var(--kirmizi); }
 /* YON-018: ön büro yetkileri */
-.yt-izgara { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.yt-izgara { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 12px; }
 .yt-izgara fieldset { border: 1px solid var(--cizgi); border-radius: 8px; padding: 8px 12px 10px; }
 .yt-izgara legend { font-weight: 700; font-size: 14px; color: var(--murekkep); padding: 0 4px; }
+.yt-satir { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 0; font-size: 14px; }
+.yt-satir select { width: auto; min-width: 178px; padding-block: 4px; flex-shrink: 0; }
+.salt-okunur-serit { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }

@@ -1,5 +1,5 @@
 import { DESTEK } from './iletisim.js?v=234';
-import { ekranYetkili, kullaniciSubesi, S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec, sinifEtiket } from './veri.js?v=234';
+import { ekranDuzey, ekranYetkili, kullaniciSubesi, S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec, sinifEtiket } from './veri.js?v=234';
 import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=234';
 import * as Y1 from './sayfalar1.js?v=234';
 import * as Y2 from './sayfalar2.js?v=234';
@@ -241,6 +241,7 @@ export function yenile(kaydirma = false) {
   kap.className = 'sayfa sayfa-' + r.ad;
   kap.innerHTML = s.html;
   yer.replaceChildren(kap);
+  if (ekranDuzey(r.ad === 'kursiyer' ? 'kursiyerler' : r.ad) === 'gor') saltOkunur(kap);
   if (s.baglan) { try { s.baglan(kap); } catch (x) { console.error(x); } }
   if (r.ad === 'genel' || r.ad === 'adaylar') B.onKayitlariAl().then(n => { if (n) { bildir(`Web sitesinden ${n} ön kayıt geldi; Yeni öğrenciler’de`); if (location.hash.startsWith('#/adaylar')) yenile(); } });   // DIG-035
   if (r.ad === 'genel') { GU.anaEkranaEkle(kap); duyuruAlani(kap); }  // kurulu sürüm, “Güncellemeleri denetle”, yeni sürüm kartı; DIG-040 duyurular
@@ -254,6 +255,17 @@ export function yenile(kaydirma = false) {
     else if (b) b.remove();
   });
   if (kaydirma) window.scrollTo(0, 0);
+}
+
+// YON-018: ön büroya “yalnız görür” verilen ekran: liste, sekme, süzgeç, dışa aktarma ve çıktı açık; ekleme, düzenleme, silme düğmeleri ve kaydeden alanlar çalışmaz
+const SALT_SERBEST = 'a[href], summary, [role=tab], .sekmeler button, .vr-suzgec *, [aria-pressed], [data-gun], [data-gorunum], [data-donem], [data-borclu], [data-bekleyen], [data-disa], [data-belge], [data-gr-suz], [data-liste], [data-sohbet-geri], [data-salt-serbest]';
+function saltOkunur(kap) {
+  kap.classList.add('salt-okunur');
+  kap.insertAdjacentHTML('afterbegin', `<p class="ipucu salt-okunur-serit" role="note">${ik('kilit')}<span>Bu ekranda <b>yalnız görme</b> yetkiniz var: kayıt ekleyemez, değiştiremez, silemezsiniz. Yetkiyi kurs müdürü verir.</span></p>`);
+  const dur = ev => { ev.preventDefault(); ev.stopImmediatePropagation(); bildir('Bu ekranda yalnız görme yetkiniz var', 'uyari'); };
+  kap.addEventListener('click', ev => { const t = ev.target; if (!(t instanceof Element) || t.closest(SALT_SERBEST)) return; if (t.closest('button, [role=button], input[type=checkbox], input[type=radio], input[type=file]')) dur(ev); }, true);
+  kap.addEventListener('change', ev => { const t = ev.target; if (t instanceof Element && (t.type === 'search' || t.closest(SALT_SERBEST))) return; dur(ev); }, true);
+  ['submit', 'dragstart', 'drop'].forEach(tur => kap.addEventListener(tur, dur, true));
 }
 
 function rolSec(r) {

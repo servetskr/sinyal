@@ -346,6 +346,7 @@ export function kuralBilgi(ids, devam, { dugme } = {}) {
 // MEBBİS'e yaz: hazırla → iş onayı penceresi (ne, kimin adına, kim onaylıyor, süre, parça) → iş fişi → ilk parça Yardımcı'ya
 // Döner: true (iş Yardımcı'ya gönderildi) ya da undefined (vazgeçildi, engel var)
 export async function yaz(ids) {
+  if (!MK.yazabilir()) return bildir(MK.YETKI_YOK_YAZ, 'uyari');
   // kurum "Yardımcı'yı kullanmayacağım" derse aynı işler elle giriş penceresinde açılır
   // (kayıt, direksiyon programı ve sınav randevusu mevcut "Elle giriş" ekranlarındadır; pencere yalnız öteki altı tür için açılır)
   if (!hazirMi(() => yaz(ids), () => { const el = ids.filter(id => MK.ELLE_TURLER.includes(String(id).split('-')[0])); if (el.length) elleGir(el); })) return;

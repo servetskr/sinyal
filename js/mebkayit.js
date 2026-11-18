@@ -3,7 +3,7 @@
 // ~30 dakikalık parçalara bölme ve süre tahmini, Yardımcı'nın "MEBBİS ekranı değişti" bildirimi, her iş türü için elle giriş.
 // İşlem kaydı mevcut islem() ile sunucudaki yalnız eklenebilir kayda (kurslar/{k}/kayit) gider; TC ve değerlerin açık hâli yazılmaz.
 // Yardımcı'dan gelen iletilerin alanları: js/eklenti.js başındaki ileti sözleşmesi tablosu (ekranDegisti, mebKurum, kurum, olcum, veri.denetim, harita-durum).
-import { S, kaydet, islem, oturum, tamAd, kursiyer, tcMaskele, seciliSube, cokSube, kuralAyar } from './veri.js?v=234';
+import { islemYetkili, S, kaydet, islem, oturum, tamAd, kursiyer, tcMaskele, seciliSube, cokSube, kuralAyar } from './veri.js?v=234';
 import { pencere, kapatPencere, bildir, e, ik, isaret, rozet } from './ui.js?v=234';
 import * as GR from './gruplar.js?v=234';
 
@@ -39,8 +39,13 @@ const adaySayisi = l => l.reduce((a, x) => a + (x.adaylar ? x.adaylar.length : 1
 export const isKimlikleri = x => x.adaylar ? x.adaylar.map(a => a.id) : [x.id];
 
 /* ---------- kim onaylayabilir ---------- */
-// Müdür ve ön büro onaylayabilir; onaylayanın rolü kayda yazılır (yalnız müdür mü sorusu açık: Eyüp Bey'e soruldu)
+// Müdür ve ön büro MEBBİS işini başlatabilir (çekme, hazırlama, elle giriş); onaylayanın rolü kayda yazılır.
+// SOR-065 / YON-018: “MEBBİS’e yaz” onayı ve kurum bilgilendirmesinin kabulü varsayılan olarak müdürde; müdür ön büroya Ayarlar › Kullanıcılar › Ön büro yetkileri’nden açabilir.
 export function onaylayabilir() { const u = oturum.kullanici; return !!u && ['mudur', 'sekreter'].includes(u.rol); }
+const yetkili = ad => { const u = oturum.kullanici; return !!u && (u.rol === 'mudur' || (u.rol === 'sekreter' && islemYetkili(ad))); };
+export const yazabilir = () => yetkili('mebYaz');
+export const kabulEdebilir = () => yetkili('mebKabul');
+export const YETKI_YOK_YAZ = 'MEBBİS’e yaz onayını kurs müdürü verir; ön büro işleri hazırlar ve çekme yapar. Müdür bu yetkiyi Ayarlar › Kullanıcılar › Ön büro yetkileri’nden açabilir.';
 export function kim() { const u = oturum.kullanici || {}; return { ad: u.ad || 'Bilinmiyor', rol: u.rol || '', rolAd: rolAdi(u.rol), uid: u.uid || u.id || '' }; }
 function kurum() {
   const s = seciliSube() || (!cokSube() && (S.subeler || [])[0]) || {};
@@ -62,7 +67,7 @@ const MADDELER = [
   'MEBBİS’e girilen bilgilerin doğruluğu, resmî süreler ve son karar kursun sorumluluğundadır.',
 ];
 export function kabulPenceresi(sonra, elleSonra) {
-  if (!onaylayabilir()) return bildir('MEBBİS Yardımcısı kullanım onayını kurs müdürü ya da ön büro verir', 'uyari');
+  if (!kabulEdebilir()) return bildir('MEBBİS Yardımcısı kurum bilgilendirmesini kurs müdürü kabul eder; bir kez kabul edilince ön büro da işleri başlatabilir. Müdür bu yetkiyi Ayarlar › Kullanıcılar › Ön büro yetkileri’nden ön büroya açabilir.', 'uyari');
   const k = kim();
   pencere({
     baslik: 'MEBBİS Yardımcısı nasıl çalışır, sorumluluk kimde', genis: true,
