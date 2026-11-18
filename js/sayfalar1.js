@@ -1565,6 +1565,27 @@ const kisaAd = k => k ? (k.ad + ' ' + (k.soyad || '').slice(0, 1) + '.').trim() 
 // DIR-040: Plan › Hafta üstünde öğretmen yükü — haftalık "N / sınır" çubuğu (KDS ya da elle; ≥%90 sarı, aşınca kırmızı) ve yedi gün kutusu
 // (günlük sınırda sarı, aşınca kırmızı). Kutuya dokununca o gün öğretmene göre açılır ve öğretmenin sütunu vurgulanır.
 let planUstaVurgu = null;
+// DIR-052: öğretmenin bir günündeki planlı derslerini toplu iptal (hastalık, araç arızası…): ders başına iptal izi, öğrenciye ve öğretmene tek bildirim, boş saat teklifi
+function topluIptalPenceresi(egId, t) {
+  const h = egitmen(egId), l = sbDers(S.dersler).filter(d => d.egitmen === egId && d.tarih === t && d.durum === 'Planlandı').sort((a, b) => a.saat.localeCompare(b.saat)); if (!h || !l.length) return;
+  pencere({ baslik: `${h.ad} · ${tarihUzun(t)}`, icerik: `<p style="font-size:14px;margin-bottom:10px">Bu gündeki ${l.length} planlı ders iptal edilecek. Öğrencilere yeni saat için yazmaları söylenir; MEBBİS’e yazılmış dersler “MEBBİS’ten silinecek” listesine düşer.</p>
+      <ul class="liste">${l.map(d => `<li><span class="mono" style="width:52px">${d.saat}</span><span style="flex:1">${e(tamAd(kursiyer(d.kursiyer)))}${d.meb ? ' ' + rozet('MEBBİS’te', 'mavi') : ''}</span></li>`).join('')}</ul>
+      <div class="alan" style="margin-top:12px"><label for="ti-neden">Neden (öğrenciye gider)</label><input id="ti-neden" class="girdi" maxlength="80" placeholder="Ör. öğretmenimiz rahatsız"></div>`,
+    altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-ti-onay style="background:var(--kirmizi);border-color:var(--kirmizi)">${l.length} dersi iptal et</button>`,
+    onAc(p) { p.querySelector('[data-ti-onay]').addEventListener('click', () => { const neden = p.querySelector('#ti-neden').value.trim(); geriAlNoktasi();
+      l.forEach(d => dersIptalIz(d, 'Kurs iptal etti', neden || 'toplu iptal')); const ids = new Set(l.map(d => d.id)); S.dersler = S.dersler.filter(x => !ids.has(x.id));
+      islem('Günün derslerini toplu iptal etti', `${h.ad} · ${tarih(t)} · ${l.length} ders${neden ? ' · ' + neden : ''}`); kaydet(); kapatPencere();
+      bildirimler([...l.map(d => { const k = kursiyer(d.kursiyer); return { kim: k, metin: `${selam(k)} ${tarihUzun(t)} ${d.saat} direksiyon dersiniz iptal edildi${neden ? ' (' + neden + ')' : ''}. Yeni saat için ${kursAdi('e')} yazabilirsiniz.`, tur: 'Ders iptali' }; }), { kim: h, metin: `${h.ad.split(' ')[0]} Hoca, ${tarihUzun(t)} günündeki ${l.length} dersiniz iptal edildi.`, tur: 'Ders iptali' }], 'Dersler iptal edildi');
+      yenile(); }); } });
+}
+// DIR-052: öğrenci başına ders durumu — gerekli, yapılan, atanan (planlı), kalan, son gün; varsayılan kapalı
+function ogrenciDersDurumu() {
+  const l = sb(S.kursiyerler).filter(k => !k.kapali && ['Direksiyon', 'Sınav'].includes(k.asama) && gerekliDireksiyon(k)).map(k => { const ds = dersSayaci(k), ih = PL.ihtiyac(k), st = PL.sonTarih(k); return { k, ds, ih, st }; }).sort((a, b) => b.ih.toplam - a.ih.toplam || tamAd(a.k).localeCompare(tamAd(b.k), 'tr'));
+  if (!l.length) return '';
+  return `<details class="kart pp-kap"><summary class="pp-bas"><b>Öğrenci başına ders durumu (${l.length})</b><small style="color:var(--soluk)">gerekli · yapılan · atanan · kalan</small></summary><div class="tablo-kap"><table class="tablo"><thead><tr><th>Öğrenci</th><th>Gerekli</th><th>Yapılan</th><th>Atanan</th><th>Kalan</th><th>Son gün</th></tr></thead><tbody>
+    ${l.map(({ k, ds, ih, st }) => `<tr><td><a href="#/kursiyer/${k.id}" style="color:var(--murekkep);font-weight:600">${e(tamAd(k))}</a><small style="display:block;color:var(--soluk)">${e((SINIFLAR[k.sinif] || {}).ad ? SINIFLAR[k.sinif].ad.split(' ·')[0] : k.sinif)} · ${e(k.asama)}</small></td><td class="sayi">${ds.gerekli}</td><td class="sayi">${ds.zorunlu.yapildi}</td><td class="sayi">${ds.zorunlu.planli + ds.basarisiz.planli + ds.telafi.planli}</td><td class="sayi" style="${ih.toplam ? 'color:var(--kirmizi);font-weight:700' : ''}">${ih.toplam}</td><td>${st ? tarih(st.t) : '—'}</td></tr>`).join('')}
+  </tbody></table></div></details>`;
+}
 // DIR-042: dersi eksik ama ileri tarihli planlı dersi olmayan öğrenciler; "Plan öner" (tek) ve "Hepsine plan öner" (birlikte, planOner tek seferde dağıtır).
 // Kaldıktan sonra başarısız aday dersi (md.15) eksik olana "2 ders planla". Liste boşsa kart görünmez.
 function planlanmamisKarti() {
@@ -1616,7 +1637,7 @@ function planGenis() {
       <div class="sag" style="width:auto;gap:8px">${planUstDugmeler()}${donemSecici()}</div>
     </div>
     <div class="plan-ozet"><span><b>${donemL.length}</b> ders</span><span><b style="color:var(--yesil)">${yapildi}</b> yapıldı</span><span><b style="color:var(--levha)">${planli}</b> planlı</span>${kapanmadi ? `<span><b style="color:var(--turuncu)">${kapanmadi}</b> kapanmadı</span>` : ''}${usta.map(([h, n]) => `<span class="plan-usta">${e(h.ad)}: <b>${n}</b></span>`).join('')}</div>
-    ${planlanmamisKarti()}
+    ${planlanmamisKarti()}${ogrenciDersDurumu()}
     ${hafta ? ustaYukSeridi(gl) : ''}
     ${ic}
     <p class="plan-lejant"><span class="hp-ders"></span>Planlı <span class="hp-ders yapildi"></span>Yapıldı <span class="hp-ders gelmedi"></span>Gelmedi <span class="hp-ders kapanmadi"></span>Kapanmadı</p>${ustaLejant()}`,
@@ -1629,6 +1650,7 @@ function planGenis() {
         const dt = t.closest('[data-donem-git]'); if (dt) { const n = +dt.dataset.donemGit; planGun = n === 0 ? gun(0) : hafta ? (() => { const x = tarihOku(planGun); x.setDate(x.getDate() + 7 * n); return iso(x); })() : ayEkle(planGun, n); return yenile(); }
         if (t.closest('[data-oto-plan]')) return otoPlanPenceresi();
         { const po = t.closest('[data-plan-oner]'); if (po) { ev.preventDefault(); return otoPlanPenceresi({ kursiyerler: po.dataset.planOner.split(',').filter(Boolean) }); } }
+        { const gi = t.closest('[data-gun-iptal]'); if (gi) return topluIptalPenceresi(gi.dataset.gunIptal, planGun); }   // DIR-052
         const d = t.closest('[data-ders]'); if (d) return dersAc(d.dataset.ders);
       });
       k.addEventListener('keydown', ev => { if (ev.key !== 'Enter') return; const d = ev.target.closest('[data-ders]'); if (d) dersAc(d.dataset.ders); });
@@ -1672,7 +1694,7 @@ export function plan() {
   };
   const doluluk = Math.round(gDers.length / (sutunlar.length * (dersSaatleri().length || 1)) * 100);
   const bas = s => planGorunum === 'egitmen'
-    ? (() => { const ar = sb(S.araclar).find(a => a.egitmen === s.id), plk = S.araclar.filter(a => a.egitmen === s.id).map(a => a.plaka).join(' · '), iz = izinli(s.id, planGun); return `<div class="tk-bas${planUstaVurgu === s.id ? ' tk-sutun-vurgu' : ''}"${planUstaVurgu === s.id ? ' data-vurgu' : ''}>${ar ? aracGorsel(ar, 'kucuk') : ''}<div><b>${e(s.ad)}</b><small>${iz ? '<span style="color:var(--kirmizi);font-weight:700">' + e(iz.tur) + '</span>' : gDers.filter(d => d.egitmen === s.id).length + ' ders · ' + plk}</small>${(() => { const hs = haftalikSinir(s), n = haftaDers(s.id, planGun), kal = hs.n - n; return `<small class="tk-hafta${kal < 0 ? ' asti' : kal <= 3 ? ' yakin' : ''}" title="Bu hafta (Pazartesi–Pazar) ${n} ders atandı, haftalık sınır ${hs.n} (${hs.kaynak === 'elle' ? 'kartta yazılı' : hs.kaynak === 'varsayılan' ? 'ÖÖKY md.26/5' : hs.kaynak === 'müdür' ? 'müdür' : 'MEBBİS ' + hs.kaynak}); ${kal >= 0 ? kal + ' ders kaldı' : -kal + ' ders fazla'}">Hafta ${n}/${hs.n}</small>`; })()}</div></div>`; })()
+    ? (() => { const ar = sb(S.araclar).find(a => a.egitmen === s.id), plk = S.araclar.filter(a => a.egitmen === s.id).map(a => a.plaka).join(' · '), iz = izinli(s.id, planGun); return `<div class="tk-bas${planUstaVurgu === s.id ? ' tk-sutun-vurgu' : ''}"${planUstaVurgu === s.id ? ' data-vurgu' : ''}>${ar ? aracGorsel(ar, 'kucuk') : ''}<div><b>${e(s.ad)}</b><small>${iz ? '<span style="color:var(--kirmizi);font-weight:700">' + e(iz.tur) + '</span>' : gDers.filter(d => d.egitmen === s.id).length + ' ders · ' + plk}</small>${(() => { const pl = gDers.filter(d => d.egitmen === s.id && d.durum === 'Planlandı').length; return pl && planGun >= gun(0) ? `<button type="button" class="tk-iptal" data-gun-iptal="${e(s.id)}" title="${e(s.ad)} · ${tarih(planGun)} günündeki ${pl} planlı dersi iptal et">Günü iptal (${pl})</button>` : ''; })()}${(() => { const hs = haftalikSinir(s), n = haftaDers(s.id, planGun), kal = hs.n - n; return `<small class="tk-hafta${kal < 0 ? ' asti' : kal <= 3 ? ' yakin' : ''}" title="Bu hafta (Pazartesi–Pazar) ${n} ders atandı, haftalık sınır ${hs.n} (${hs.kaynak === 'elle' ? 'kartta yazılı' : hs.kaynak === 'varsayılan' ? 'ÖÖKY md.26/5' : hs.kaynak === 'müdür' ? 'müdür' : 'MEBBİS ' + hs.kaynak}); ${kal >= 0 ? kal + ' ders kaldı' : -kal + ' ders fazla'}">Hafta ${n}/${hs.n}</small>`; })()}</div></div>`; })()
     : (() => { const iz = izinli(s.egitmen, planGun); return `<div class="tk-bas">${aracGorsel(s, 'kucuk')}<div><b>${e(s.plaka)}</b><small>${iz ? '<span style="color:var(--kirmizi);font-weight:700">' + e(egitmen(s.egitmen).ad.split(' ')[0]) + ' ' + e(iz.tur.toLowerCase()) + '</span>' : e(egitmen(s.egitmen).ad) + ' · ' + s.vites}</small></div></div>`; })();
   const bek = S.bekleme.map(b => ({ ...b, k: kursiyer(b.kursiyer) })).filter(b => b.k);
   return {
@@ -1682,7 +1704,7 @@ export function plan() {
       <div class="gun-sec" style="flex:1;min-width:0">${gunler.map(g => `<button data-gun="${g}" class="${g === planGun ? 'secili' : ''} ${fark(g) === 0 ? 'bugun' : ''}" aria-label="${tarihUzun(g)}"><small>${fark(g) === 0 ? 'Bugün' : gunKisa(g)}</small><b>${tarihOku(g).getDate()}</b></button>`).join('')}</div>
       <div class="sag" style="width:auto;gap:8px">${planUstDugmeler()}${donemSecici()}<div class="rol" style="display:flex"><button data-gorunum="arac" class="${planGorunum === 'arac' ? 'secili' : ''}">Araca göre</button><button data-gorunum="egitmen" class="${planGorunum === 'egitmen' ? 'secili' : ''}">Usta öğreticiye göre</button></div></div>
     </div>
-    ${planlanmamisKarti()}
+    ${planlanmamisKarti()}${ogrenciDersDurumu()}
     ${planGorunum === 'arac' ? ustaLejant() : ''}
     <div class="kart" style="overflow:hidden">
       ${kapali ? `<div class="ipucu uyari" style="margin:14px">${isaret('dur', 20)}Pazar günü kurs kapalı, ders planlanamaz.</div>` : tatilGun || arifeGun ? `<div class="ipucu uyari" style="margin:14px">${isaret('uyari', 20)}<span>${tatilGun ? 'Resmî tatil' : 'Arife: öğleden sonra (13:00 sonrası) resmî tatil'}. Ders yazılabilir; yazarken onay istenir. MEM bu saatlerdeki dersleri silebilir (28/07/2020 duyurusu).</span></div>` : ''}
@@ -1708,6 +1730,7 @@ export function plan() {
         const dv = t.closest('[data-donem]'); if (dv) { planDonem = dv.dataset.donem; donemSakla(); return yenile(); }
         if (t.closest('[data-oto-plan]')) return otoPlanPenceresi();
         { const po = t.closest('[data-plan-oner]'); if (po) { ev.preventDefault(); return otoPlanPenceresi({ kursiyerler: po.dataset.planOner.split(',').filter(Boolean) }); } }
+        { const gi = t.closest('[data-gun-iptal]'); if (gi) return topluIptalPenceresi(gi.dataset.gunIptal, planGun); }   // DIR-052
         const h = t.closest('[data-ekle]'); if (h) ekle(h.dataset.ekle);
         const pb = t.closest('[data-pl-bos]'); if (pb) return bosSec(pb.dataset.plBos);
         const d = t.closest('[data-ders]'); if (d) dersAc(d.dataset.ders);

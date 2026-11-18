@@ -3419,3 +3419,13 @@ p.mz-kanit-uyari{margin:-4px 0 10px;font-size:13px}
 .uy-et { display: inline-block; min-width: 64px; font-size: 11px; font-weight: 700; color: var(--soluk); text-transform: uppercase; letter-spacing: .04em; }
 .uy-d { display: flex; gap: 6px; flex-wrap: wrap; }
 .uy-ac { background: none; border: 0; padding: 10px 16px 0; color: var(--levha); font: 600 14px var(--govde); cursor: pointer; }
+
+/* DIR-052: teorik ders türü sayacı */
+.ts-sayac { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 4px; }
+.ts-k { font-size: 12px; padding: 1px 7px; border-radius: 6px; background: var(--panel-2); color: var(--metin); white-space: nowrap; }
+.ts-k b { font-variant-numeric: tabular-nums; color: var(--murekkep); }
+.ts-k i { font-style: normal; color: #8a5a00; } .ts-k i.fazla { color: var(--kirmizi); }
+.ts-k.tamam { background: #eaf6ee; } .ts-k.telafi { background: var(--sari-acik); }
+
+.tk-iptal { display: block; margin-top: 3px; background: none; border: 0; padding: 0; font: 600 11.5px var(--govde); color: var(--kirmizi); cursor: pointer; text-align: left; }
+.tk-iptal:hover { text-decoration: underline; }

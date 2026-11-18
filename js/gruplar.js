@@ -266,7 +266,7 @@ export function gruplarKarti() {
   const l = (S.gruplar || []).filter(g => !g.baslangic || fark(g.baslangic) >= -120).sort((a, b) => String(b.baslangic).localeCompare(String(a.baslangic)) || String(a.ad).localeCompare(String(b.ad), 'tr'));
   const bek = sb(S.kursiyerler).filter(bekleyenMi);
   return `<div class="kart"><div class="kart-bas"><h3>Dönem grupları</h3><small>MEBBİS’teki dönem, grup ve şubelerle aynı</small><div class="sag"><button class="dg dg-ana dg-kucuk" data-grup-yeni>${ik('arti')}Yeni grup</button></div></div>
-    ${l.length ? `<ul class="liste grup-liste" style="margin-top:8px">${l.map(g => { const n = kisiler(g).length, bas = fark(g.baslangic); return `<li><div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(g.ad)}</b>${mebGrubuMu(g) ? '' : ' ' + rozet('MEBBİS dışı', 'notr')}<small style="display:block;color:var(--soluk)">${mebGrubuMu(g) ? e(donemAdi(g.donem)) + ' · Grup ' + g.grupNo + ' · ' + g.sube + ' Şubesi · ' : ''}${bas > 0 ? tarih(g.baslangic) + ' başlıyor' : bas === 0 ? 'bugün başlıyor' : tarih(g.baslangic) + ' başladı'}${g.sinif ? ' · ' + e(((SINIFLAR[g.sinif] || {}).ad || g.sinif).split(' ·')[0]) : ''}${g.derslik ? ' · ' + e(g.derslik) : ''}</small></div>
+    ${l.length ? `<ul class="liste grup-liste" style="margin-top:8px">${l.map(g => { const n = kisiler(g).length, bas = fark(g.baslangic); return `<li><div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(g.ad)}</b>${mebGrubuMu(g) ? '' : ' ' + rozet('MEBBİS dışı', 'notr')}<small style="display:block;color:var(--soluk)">${mebGrubuMu(g) ? e(donemAdi(g.donem)) + ' · Grup ' + g.grupNo + ' · ' + g.sube + ' Şubesi · ' : ''}${bas > 0 ? tarih(g.baslangic) + ' başlıyor' : bas === 0 ? 'bugün başlıyor' : tarih(g.baslangic) + ' başladı'}${g.sinif ? ' · ' + e(((SINIFLAR[g.sinif] || {}).ad || g.sinif).split(' ·')[0]) : ''}${g.derslik ? ' · ' + e(g.derslik) : ''}</small>${belgeliSubesi(g) || g.teoriksiz ? '' : teorikSayac(g)}</div>
       <span class="sag"><span class="sayi" style="font-size:13px">${n}${g.kontenjan ? '/' + g.kontenjan : ''} kişi · ${belgeliSubesi(g) ? 'belgeliler · teorik yok' : `teorik ${teorikDurum(g).toplam}/34 saat`}</span><button class="dg dg-cizgi dg-kucuk" data-teorik-ekle="${e(g.id)}">Ders ekle</button><button class="dg dg-cizgi dg-kucuk" data-grup-ata="${e(g.id)}">Kursiyer ata</button>${mebGrubuMu(g) ? `<button class="dg dg-hafif dg-kucuk" data-grup-duzenle="${e(g.id)}" aria-label="Düzenle">${ik('kalem')}</button>` : ''}</span></li>`; }).join('')}</ul>`
       : `<div class="kart-govde"><p style="color:var(--metin)">Henüz dönem grubu yok. MEBBİS’te açtığınız grubu burada da açın (ör. <b>Kasım 1A</b>); kayıtta grup seçimi zorunlu. MEBBİS Yardımcısı kuruluysa <b>MEB işlemleri › MEBBİS’ten al › Dönem grupları</b> ile MEBBİS’teki grupları da çekebilirsiniz.</p></div>`}
     ${bek.length ? `<div class="kart-bas" style="padding-top:18px"><h3>Bekleyen kursiyerler</h3><small>Kaydı yapıldı; gruba atanmadı ya da evrakı eksik · ${bek.length}</small></div>
@@ -321,10 +321,16 @@ export function mebbisGruplariAl(sat, sessiz) {
 // 7/1: trafik ve çevre 16, ilk yardım 8, araç tekniği 6, trafik adabı 4 = 34 saat; günde 2–6 saat (16/4); 07:00–23:00 (20/1)
 export const TEORIK_DERSLER = [['Trafik ve Çevre', 16], ['İlk Yardım', 8], ['Araç Tekniği', 6], ['Trafik Adabı', 4]];
 const konuNo = k => { const n = String(k || '').toLocaleLowerCase('tr'); return /ilk ?yard/.test(n) ? 1 : /araç|arac|motor|teknik/.test(n) ? 2 : /adab|adap/.test(n) ? 3 : 0; };
+// DIR-010/052: zorunlu 34 saate yalnız Normal dersler sayılır; telafi dersleri ayrı (saat ve konu dağılımı)
 export function teorikDurum(g) {
-  const l = (S.teorik || []).filter(t => t.grup === g.id), saat = [0, 0, 0, 0];
-  l.forEach(t => { saat[konuNo(t.konu)] += +t.sure || 1; });
-  return { saat, toplam: saat.reduce((a, b) => a + b, 0) };
+  const l = (S.teorik || []).filter(t => t.grup === g.id), saat = [0, 0, 0, 0], telafi = [0, 0, 0, 0];
+  l.forEach(t => { (t.egitimTuru === 'telafi' ? telafi : saat)[konuNo(t.konu)] += +t.sure || 1; });
+  return { saat, toplam: saat.reduce((a, b) => a + b, 0), telafi, telafiToplam: telafi.reduce((a, b) => a + b, 0) };
+}
+// DIR-052: grubun teorik ders türü sayacı — her ders için toplam (yönetmelik), atanan (planlanan), kalan; telafi ayrı
+export function teorikSayac(g) {
+  const d = teorikDurum(g);
+  return `<span class="ts-sayac">${TEORIK_DERSLER.map(([ad, n], i) => { const a = d.saat[i], k = Math.max(0, n - a); return `<span class="ts-k ${k ? '' : 'tamam'}" title="${e(ad)}: toplam ${n}, atanan ${a}, kalan ${k}">${e(ad)} <b>${a}/${n}</b>${k ? ` <i>${k} kalan</i>` : a > n ? ` <i class="fazla">${a - n} fazla</i>` : ''}</span>`; }).join('')}${d.telafiToplam ? `<span class="ts-k telafi">Telafi <b>${d.telafiToplam}</b> saat</span>` : ''}</span>`;
 }
 // Adayın teorik derslerinin bitiş tarihi (TEO-017): MEBBİS'teki program okunduysa şubenin son teorik dersi (esas), yoksa mdSinyal'deki plan 34 saati tamamlıyorsa son planlı ders.
 // MEBBİS e-sınav başvurusunda "Adayın teorik dersleri bitmeden başvuru yapamazsınız" (skt02007, 18 Kas): başvuru bu tarihten sonra.
