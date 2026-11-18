@@ -5,7 +5,7 @@
 // 'uyari', 'bilgi'. Dizinin üstünde ek alanlar: kural (kimlik), kursiyer (id), kursiyerler (birden çok kişiye ait oturum bulgusunda kimlik listesi, ör. Y04), kisa (öğrenci dosyasında ad olmadan başlık), yalnizDosya, eylem.
 // DOM yok; yalnız veri.js'e bağlı (Node'da denenebilir). Bugün: veri.js BUGUN / gun().
 // Yeni kurallar ilk sürümde yalnız "uyarı"dır; Eyüp Bey teyit edince engele çevrilebilir (belgeler/eksikler/eyup-sorular.md).
-import { oturum, kursiyerDersleri, S, gun, fark, aracUygun, belgeliMi, dersSayaci, kayitDondurmaMi, izinDurumu, mebIsGunuIleri, haftalikSinir, haftaDers, ustaYetkili, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
+import { hakDurumu, oturum, kursiyerDersleri, S, gun, fark, aracUygun, belgeliMi, dersSayaci, kayitDondurmaMi, izinDurumu, mebIsGunuIleri, haftalikSinir, haftaDers, ustaYetkili, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
 
 /* ---------- yardımcılar (ui.js'teki biçimlerle aynı; ui.js DOM'a bağlı olduğu için burada kopyası) ---------- */
 const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
@@ -208,6 +208,15 @@ const KURALLAR = [
   // PER-004: sınav günü öğretmenin (adayı sınava götüren usta: son dersindeki aracın öğretmeni, yoksa kendi öğretmeni) çalışma izni ve izin günü.
   // İzin sınavdan önce bitmişse aday bu öğretmenle sınava giremez (MEBBİS izni bitmiş personeli listelemez; aday alınmaz, hak yanabilir) → engel.
   // Sınav günü biterse ya da sınavdan sonraki 15 gün içinde bitiyorsa, ya da öğretmen o gün izinliyse → uyarı (bitiş günü sınavı il MEM'e soruldu, SOR-037).
+  // SNV-018: sınav hakkı MEBBİS'le tutmuyor (hakDurumu.fark). Durum 4 (hak doldu) adayda çıkmaz; eylem 'hak-eksik' öğrenci dosyasındaki eksik hak kutusunu açar
+  { id: 'Y06', sira: 242, ad: 'Sınav hakkı MEBBİS’le tutmuyor', dayanak: 'MTSK Yön. md.15; MEBBİS SKT02009 Uygulama Hak / E-Sınav Hak', kapsam: 'kursiyer', ciddiyet: 'uyari', bugun: true,
+    kontrol(l) { sb(S.kursiyerler).filter(k => !k.kapali && k.asama !== 'Ehliyet' && k.meb && k.meb.dosyaOkuma).forEach(k => ['Direksiyon', 'e-Sınav'].forEach(tur => {
+      const h = hakDurumu(k, tur); if (!h.fark || !h.meb || h.meb.doldu || h.gecti) return;
+      const ad = tur === 'e-Sınav' ? 'e-sınav' : 'uygulama sınavı', yerelOnce = h.gecmis.filter(x => ['Kaldı', 'Girmedi', 'Geçti'].includes(x.sonuc) && x.tarih <= h.meb.tarih).length;
+      const kisa = `MEBBİS ${h.meb.kullanilan} ${ad} hakkı kullanıldı diyor (${tarih(h.meb.tarih)} okuması), mdSinyal’de ${yerelOnce} sınav kayıtlı`;
+      l.push(bul('uyari', `${tamAd(k)} · ${kisa}`, h.fark === 'MEBBİS fazla' ? 'Başka kursta ya da mdSinyal’den önce girdiği, ya da 7/7 ile yanan sınav kayıtlı değil. Öğrenci dosyası › Sınavlar’daki eksik hak kutusundan kaydı ekleyin; aday son hakkını bilmeden kullanmasın.' : 'mdSinyal’de MEBBİS’in saymadığı sınav kaydı var; sonucu MEBBİS’te kontrol edin, gerekirse kaydı düzeltin.', '#/kursiyer/' + k.id, { kural: 'Y06', kursiyer: k.id, kisa, eylem: 'hak-eksik' }));
+    })); },
+  },
   { id: 'Y07', sira: 245, ad: 'Sınav günü öğretmenin çalışma izni ve izin günü', dayanak: 'MTSK Yön. md.28/A; usta öğretici çalışma izni (OOK)', kapsam: 'sinav', ciddiyet: 'engel', bugun: true, bugunAd: n => `${n} sınavda öğretmenin izni sorunlu`,
     kontrol(l) {
       (S.sinavlar || []).filter(s => s && s.tur === 'Direksiyon' && s.tarih && fark(s.tarih) >= 0 && (s.kursiyerler || []).length).forEach(s => {

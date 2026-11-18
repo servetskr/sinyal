@@ -3593,3 +3593,17 @@ body.suzgec-yapiskan .sayfa-kursiyerler .filtre{position:sticky;top:0;z-index:6;
 /* YON-068: e-posta doğrulama şeridi */
 .eposta-serit { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
 .eposta-serit-dug { display: flex; gap: 6px; flex-wrap: wrap; }
+/* SNV-019/020: sınav hakları kartı ve eksik hak kutusu */
+.hak-izgara { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 14px; }
+.hak-sutun { display: flex; flex-direction: column; gap: 3px; }
+.hak-sutun > small:first-child { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--soluk); }
+.hak-sutun b { font-family: var(--baslik); font-size: 22px; color: var(--murekkep); }
+.hak-sutun span { font-size: 13.5px; color: var(--metin); }
+.hak-meb { font-size: 12.5px; color: var(--soluk); display: inline-flex; gap: 4px; align-items: center; }
+.hak-meb.uyari { color: var(--sari-koyu, #a15c00); font-weight: 700; }
+.hak-meb.tamam { color: var(--yesil); }
+.hak-meb svg { width: 14px; height: 14px; }
+.hak-eksik { border-top: 1px solid var(--cizgi); padding: 12px 20px 14px; }
+.hak-eksik p { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; margin: 0 0 8px; }
+.hak-eksik-alan { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+.hak-eksik-alan label { display: flex; flex-direction: column; font-size: 12.5px; color: var(--soluk); gap: 2px; }
