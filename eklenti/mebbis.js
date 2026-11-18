@@ -459,4 +459,39 @@
   chrome.runtime.onMessage.addListener(m => { if (m && m.tur === 'yeniden-bak') { durum.hedef = null; durum.ilerliyor = false; basla(); } });
   setInterval(() => { if (durum.hedef && ['ogren', 'giris', 'sorgu'].includes(durum.hedef.durum)) ilerle(); }, 2500);
   setInterval(() => { if (durum.ekran === 'ana' && !(g.activeElement && g.activeElement.matches && g.activeElement.matches('[data-ara]'))) yukle(); if (durum.ekran === 'al' && !durum.tablo) tara(); }, 5000);
+  canliTut();
 })();
+
+/* ---------- MEB-180: MEBBİS oturumunu açık tut ----------
+   Girişten sonra 2,5 dakikada bir main.aspx'e yalnız GET atılır (hiçbir düğmeye basılmaz, hiçbir şey kaydedilmez). Birden çok MEBBİS sekmesi
+   varsa yalnız biri yoklar (bu kökendeki localStorage zaman damgası). "Oturum Süreniz Dolmuştur" sayfası açılırsa sekme bir kez main.aspx'e
+   götürülür (çoğu zaman şifresiz geri gelir); yine düşükse yoklama durur, kullanıcı yeniden girer. Arka plandaki sekmeyi Chrome yavaşlatır:
+   sekme arkaya alınınca küçük şerit "önde tutun" der. */
+function canliTut() {
+  if (window !== window.top || window.__sinyalCanli) return; window.__sinyalCanli = true;
+  const DUSTU = /Oturum S[üu]reniz Dolmu/i, GIRIS = /oturumsonu|giris\.aspx|login/i, ANAHTAR = 'sinyal-canli-tut', ARALIK = 150e3, DENE = 'sinyal-oturum-dene';
+  const ss = (k, v) => { try { if (v === undefined) return sessionStorage.getItem(k); if (v === null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, v); } catch (x) { return null; } };
+  const sayfaDustu = () => GIRIS.test(location.href) || !!document.querySelector('input[type=password]') || DUSTU.test((document.body && document.body.innerText) || '');
+  if (sayfaDustu()) {
+    // oturum sonu sayfası: bir kez main.aspx denenir (aynı sekmede); döngüye girmesin diye sekme başına bir deneme
+    if (DUSTU.test((document.body && document.body.innerText) || '') && !ss(DENE)) { ss(DENE, String(Date.now())); location.replace('/main.aspx'); }
+    return;
+  }
+  ss(DENE, null);
+  let dustu = false, son = 0;
+  const serit = document.createElement('div');
+  serit.setAttribute('style', 'position:fixed;left:12px;bottom:12px;z-index:2147483000;background:#1d3557;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:6px 10px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.25);max-width:320px;opacity:.92;display:none');
+  const goster = (t, renk) => { serit.textContent = t; serit.style.background = renk || '#1d3557'; serit.style.display = 'block'; if (!serit.isConnected && document.body) document.body.appendChild(serit); };
+  const saat = t => new Date(t).toTimeString().slice(0, 5);
+  const yokla = async () => {
+    if (dustu) return; let o = 0; try { o = +localStorage.getItem(ANAHTAR) || 0; } catch (x) {}
+    if (Date.now() - o < ARALIK - 5e3) return; try { localStorage.setItem(ANAHTAR, String(Date.now())); } catch (x) {}
+    try {
+      const r = await fetch('/main.aspx', { credentials: 'same-origin', cache: 'no-store', redirect: 'follow' }), t = await r.text();
+      if (GIRIS.test(r.url) || DUSTU.test(t) || /type=["']?password/i.test(t)) { dustu = true; goster('MEBBİS oturumu kapandı. Sayfayı yenileyip yeniden girin; Yardımcı kaldığı yerden sürer.', '#9b2226'); return; }
+      son = Date.now(); if (serit.style.display === 'block' && !dustu) goster(`Oturum açık tutuluyor · son yoklama ${saat(son)} · bu sekmeyi kapatmayın`);
+    } catch (x) { /* ağ hatası: bir sonraki yoklamada yeniden denenir */ }
+  };
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { yokla(); } else if (!dustu) goster(`Oturum açık tutuluyor${son ? ' · son yoklama ' + saat(son) : ''}. Yardımcı çalışırken bu sekmeyi önde tutun: arka sekmeyi Chrome yavaşlatır, oturum düşebilir.`); });
+  setInterval(yokla, 30e3); setTimeout(yokla, 20e3);
+}
