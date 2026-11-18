@@ -236,10 +236,13 @@
   }
   // DIR-009: eğitim türü değerle (1 Normal, 2 Telafi, 3 2.Direksiyon, 4 Başarısız Aday) seçilir; seçeneğin metni de aynı türü söylemiyorsa metinle
   function egitimSecenegi(o, kod, metin) { const k = norm(metin).slice(0, 6); if (!kod || !k) return null; const l = o.filter(y => y.value === String(kod) && norm(y.textContent).startsWith(k)); return l.length === 1 ? l[0] : null; }
-  function secenek(doc, ad, aranan, { metinle = false, sinif = false, egitim = null } = {}) {
+  // MEB-055: ders saati değerle (indeks = saat − 7: 0 "07:00 - 07:50" … 15 "22:00 - 22:50"), derslik değerle (1 = "DERSLİK-1"); seçeneğin metni de aynı saati/dersliği söylemiyorsa metinle
+  function saatSecenegi(o, saat) { const m = String(saat || '').match(/^(\d{1,2})[:.]/); if (!m) return null; const hh = m[1].padStart(2, '0'), l = o.filter(y => y.value === String(+hh - 7) && norm(y.textContent).startsWith(hh + '00')); return l.length === 1 ? l[0] : null; }
+  function derslikSecenegi(o, d) { const m = String(d || '').match(/(\d+)\s*$/); if (!m) return null; const l = o.filter(y => y.value === m[1] && norm(y.textContent) === 'derslik' + m[1]); return l.length === 1 ? l[0] : null; }
+  function secenek(doc, ad, aranan, { metinle = false, sinif = false, egitim = null, saat = false, derslik = false } = {}) {
     const el = elBul(doc, ad); if (!el || el.tagName !== 'SELECT') throw ekranHata(doc, ad);
     const o = [...el.options], a = String(egitim ? egitim.metin : aranan), n = norm(a);
-    const x = (egitim && egitimSecenegi(o, egitim.kod, egitim.metin)) || (sinif && sinifSecenegi(o, a)) || (!metinle && o.find(y => y.value === a)) || o.find(y => norm(y.textContent) === n) || o.find(y => n && norm(y.textContent).startsWith(n)) || o.find(y => n && norm(y.textContent).includes(n));
+    const x = (egitim && egitimSecenegi(o, egitim.kod, egitim.metin)) || (saat && saatSecenegi(o, a)) || (derslik && derslikSecenegi(o, a)) || (sinif && sinifSecenegi(o, a)) || (!metinle && o.find(y => y.value === a)) || o.find(y => norm(y.textContent) === n) || o.find(y => n && norm(y.textContent).startsWith(n)) || o.find(y => n && norm(y.textContent).includes(n));
     if (!x || x.value === '-1' || x.value === '') throw new MebHata(`“${a}” MEBBİS’te seçeneklerde yok (${ad})`, 'veri');
     return x.value;
   }
@@ -537,7 +540,7 @@
     }
     else s = await sec(s, b, 'cmbAracBilgileri', is.plaka, { metinle: true });
     b[adOf(s.doc, 'Ustarih1_txtTarihGiris')] = is.tarih;
-    s = await sec(s, b, 'cmbDersSaati', is.saat, { metinle: true });
+    s = await sec(s, b, 'cmbDersSaati', is.saat, { metinle: true, saat: true });
     s = await sec(s, b, 'cmbDersiVerenPersonel', personelMetni(is), { metinle: true });
     s = await sec(s, b, 'cmbEgitimTuru', is.egitimTuru || M('normal'), { metinle: true, egitim: { kod: is.egitimTuruKod || '', metin: is.egitimTuru || M('normal') } });
     return kaydetDogrula(s, b, varMi, kodIste);
@@ -551,9 +554,9 @@
       let { s, b } = await zincir('/SKT/skt03003.aspx', [['cmbDonemi', is.donem], ['cmbGrupAdi', String(is.grupNo)], ['cmbSubesi', String(is.subeNo)]], 'btnListeleGrid');
       if (satirVar(s.doc, 'dgDonemler', is.tarih, saat) || satirVar(s.doc, null, is.tarih, saat + ' -')) { notlar.push(saat + ' zaten vardı'); continue; }
       s = await sec(s, b, 'cmbDersTuru', is.dersTuru, { metinle: true });
-      if (is.derslik) s = await sec(s, b, 'cmbDerslikAdi', is.derslik, { metinle: true });
+      if (is.derslik) s = await sec(s, b, 'cmbDerslikAdi', is.derslik, { metinle: true, derslik: true });
       b[adOf(s.doc, 'Us_tarih1_txtTarihGiris')] = is.tarih;
-      s = await sec(s, b, 'cmbDersSaati', saat, { metinle: true });
+      s = await sec(s, b, 'cmbDersSaati', saat, { metinle: true, saat: true });
       s = await sec(s, b, 'cmbDersiVerenPersonel', personelMetni(is), { metinle: true });
       s = await sec(s, b, 'cmbEgitimTuru', is.egitimTuru || M('normal'), { metinle: true, egitim: { kod: is.egitimTuruKod || '', metin: is.egitimTuru || M('normal') } });
       await kaydetDogrula(s, b, d => satirVar(d, null, is.tarih, saat + ' -'), kodIste); notlar.push(saat + ' girildi'); yeni++;

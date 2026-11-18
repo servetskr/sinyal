@@ -190,6 +190,21 @@ function doluSaatler(sid, haric) {
 // haric: hazırlanan bütün sınav kimlikleri (gönderilecek ve onayda bırakılanlar). Döner: { l (yeni kayıtlar), bos: saati kalmayan adaylar }
 // koru: süren işin kimliği (devam, sonraki parça, yük yeniden istendi). Bu işte gönderilmiş adayın saati boşsa aynen kalır:
 // Yardımcı durdurulan parçayı elindeki ilk yükle sürdürür; saat değişirse iz ile MEBBİS'teki saat ayrılır ve sonraki aday çakışabilir.
+const ALAN_UZUNLUK = { veren: 100, sayi: 10, belgeNo: 10, refNo: 20, no: 100, tutar: 10, personelAd: 100 };
+export const metinAlan = (v, n) => String(v == null ? '' : v).replace(/["<>'!&=]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n || 100);
+// yalnız ALAN_UZUNLUK'taki metin alanları temizlenir (fotoğraf, kimlik, tarih gibi alanlara dokunulmaz); iç içe evrak paketi de
+function alanTemizle(o) { if (!o || typeof o !== 'object') return; Object.keys(o).forEach(a => { const v = o[a]; if (typeof v === 'string' && ALAN_UZUNLUK[a]) o[a] = metinAlan(v, ALAN_UZUNLUK[a]); else if (v && typeof v === 'object' && a !== 'foto') alanTemizle(v); }); }
+const TARIH_TR = /^(0[1-9]|[12]\d|3[01])\/(0[1-9]|1[0-2])\/(1[89]\d{2}|20\d{2}|2100)$/;
+function isDenetle(x) {
+  if (x.tur === 'fatura') {
+    if (!x.no) return 'Fatura numarası boş'; if (x.no.length > 100) return 'Fatura numarası 100 karakteri geçiyor';
+    if (!x.tutar || !/^\d{1,7}(,\d{1,2})?$/.test(x.tutar) || x.tutar.length > 10 || !(parseFloat(x.tutar.replace(',', '.')) > 0)) return `Fatura tutarı MEBBİS biçiminde değil (${x.tutar || 'boş'}; en çok 10 karakter, ondalık virgül)`;
+    if (!TARIH_TR.test(x.tarih || '')) return `Fatura tarihi gg/aa/yyyy değil (${x.tarih || 'boş'})`;
+  }
+  if (x.tur === 'randevu' && !TARIH_TR.test(x.tarih || '')) return `Sınav tarihi gg/aa/yyyy değil (${x.tarih || 'boş'})`;
+  return '';
+}
+const randevuSatirDenetle = a => !a.plaka ? 'Randevu satırında araç boş' : !a.izinNo && !a.personelAd ? 'Randevu satırında usta öğretici boş' : !a.saat ? 'Randevu satırında saat boş' : '';
 export function randevuSaatleri(l, haric = new Set(), koru = null) {
   const bos = [], dolu = {}, md = S.mebDurum || {}, sidOf = j => String(j.id).replace(/^randevu-/, '').replace(/\|[^|]*$/, ''), kalsin = {};
   const doluAl = sid => dolu[sid] = dolu[sid] || doluSaatler(sid, haric);
@@ -283,7 +298,10 @@ export async function hazirla(ids, { foto = true, koru = null } = {}) {
   // MEBBİS'teki bağımlılık sırası: grup açılmadan kayıt, kayıt olmadan evrak ve onay, onaysız ders ve sınav olmaz
   const SIRA = ['grup', 'kayit', 'evrak', 'onay', 'teorik', 'program', 'esinav', 'randevu', 'fatura'];
   l.sort((a, b) => SIRA.indexOf(a.tur) - SIRA.indexOf(b.tur));
-  return { l, hata, basliklar };
+  // MEB-056: MEBBİS TextAlan kuralı (baş/son boşluk ve " < > ' ! & = yasak, alan uzunluğu); MEB-057: fatura ve randevuda MEBBİS istemci denetimi yok, burada yakalanır
+  l.forEach(alanTemizle);
+  const gecerli = l.filter(x => { const n = isDenetle(x); if (n) { ekle(x, n); return false; } if (x.tur === 'randevu') { x.adaylar = x.adaylar.filter(a => { const m = randevuSatirDenetle(a); if (m) ekle({ id: a.id }, m); return !m; }); return x.adaylar.length > 0; } return true; });
+  return { l: gecerli, hata, basliklar };
 }
 /* ---------- kural motoru (kurallar.js): MEBBİS'e yazmadan önce her kaydın engel ve uyarı bulguları ---------- */
 // engel: kuralın ciddiyeti 'engel' ve bulgu 'dur'/'yasak' (kurallar.js mebEngel ile aynı tanım); uyarı: öteki dur/yasak/uyari bulguları; bilgi gösterilmez.
