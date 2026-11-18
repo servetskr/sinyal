@@ -238,6 +238,7 @@ export function gruplarBaglan(k, yenile) {
     if (ev.target.closest('[data-grup-yeni]')) return grupFormu({}, () => yenile());
     const a = ev.target.closest('[data-grup-ata]'); if (a) { const g = grupBul(a.dataset.grupAta); return g && topluAtaPencere(g, yenile); }
     const d = ev.target.closest('[data-grup-duzenle]'); if (d) return grupFormu({ id: d.dataset.grupDuzenle }, () => yenile());
+    const mt = ev.target.closest('[data-grup-meb-tarih]'); if (mt) return mebTarihiniAl(mt.dataset.grupMebTarih, yenile);
     const te = ev.target.closest('[data-teorik-ekle]'); if (te) { const g = grupBul(te.dataset.teorikEkle); return g && teorikDersPencere(g, yenile); }
     if (ev.target.closest('[data-ogretmen-ekle]')) return ogretmenPencere(null, yenile);
     const od = ev.target.closest('[data-ogretmen-duzenle]'); if (od) { const o = (S.ogretmenler || []).find(x => x.id === od.dataset.ogretmenDuzenle); return o && ogretmenPencere(o, yenile); }
@@ -252,7 +253,7 @@ export function mebbisGruplariAl(sat, sessiz) {
   const bas = (sat[0] || []).map(nrm), bul = (...l) => bas.findIndex(h => l.some(x => h.includes(x)));
   const iD = bul('donem'), iG = bul('grup adi', 'grubu', 'grup'), iS = bul('sube'), iT = bul('baslama', 'baslangic', 'tarih');
   if (iD < 0 || iS < 0 || iT < 0) return sessiz ? { yeni: 0, var_: 0, atla: sat.length - 1 } : bildir('Listede dönem, şube ya da başlama tarihi sütunu bulunamadı. MEBBİS’te “Grup Şube Tanımlama” ekranından gönderin.', 'uyari');
-  const sinir = iso(new Date(Date.now() - 120 * 864e5)); let yeni = 0, var_ = 0, atla = 0;
+  const sinir = iso(new Date(Date.now() - 120 * 864e5)); let yeni = 0, var_ = 0, atla = 0, farkli = 0;
   sat.slice(1).forEach(r => {
     const dm = nrm(r[iD]), yil = (dm.match(/\d{4}/) || [])[0], ay = AYLAR.findIndex(a => dm.includes(nrm(a))) + 1;
     // "Grup 1" / "Grup-1" ve "A Şubesi" / "A ŞUBESİ" / "A" biçimleri
@@ -262,11 +263,13 @@ export function mebbisGruplariAl(sat, sessiz) {
     if (bt < sinir) return;
     const donem = yil + String(ay).padStart(2, '0'), id = 'g' + donem + '-' + no + sb_;
     const g = (S.gruplar || []).find(x => x.id === id || (mebGrubuMu(x) && x.donem === donem && +x.grupNo === no && x.sube === sb_));
-    if (g) { g.meb = true; if (!g.baslangic) g.baslangic = bt; var_++; return; }
+    // MEBBİS'teki başlangıç esastır (DON-006/007): mdSinyal'deki tarih farklıysa üzerine yazılmaz, fark olarak saklanır; Ayarlar › Dönem ve gruplar'da etkisiyle düzeltilir
+    if (g) { g.meb = true; if (!g.baslangic) g.baslangic = bt; else if (g.baslangic !== bt) { if (g.mebBaslangic !== bt) farkli++; g.mebBaslangic = bt; } else delete g.mebBaslangic; var_++; return; }
     S.gruplar = [...(S.gruplar || []), { id, donem, grupNo: no, sube: sb_, baslangic: bt, ad: grupAdi(donem, no, sb_), sinif: '', derslik: '', kontenjan: null, meb: true, kaynak: 'MEBBİS' }]; yeni++;
   });
-  if (yeni) { islem('MEBBİS’ten dönem grupları aldı', yeni + ' grup'); kaydet(); }
-  if (sessiz) return { yeni, var_, atla };
+  if (yeni || farkli) { islem('MEBBİS’ten dönem grupları aldı', yeni + ' yeni grup' + (farkli ? ' · ' + farkli + ' grupta başlangıç farkı' : '')); }
+  kaydet();
+  if (sessiz) return { yeni, var_, atla, farkli };
   location.hash = '#/teorik';
   bildir(yeni ? `MEBBİS’ten ${yeni} dönem grubu eklendi${var_ ? `; ${var_} grup zaten vardı` : ''}. Kursiyerleri gruplara atayabilirsiniz.` : var_ ? `MEBBİS’teki ${var_} grubun hepsi mdSinyal’de zaten var` : `Son 4 ayda açılmış grup bulunamadı${atla ? ` (${atla} satır okunamadı)` : ''}`, yeni || var_ ? 'tamam' : 'uyari');
 }
@@ -377,7 +380,7 @@ export function donemSekmesiHtml() {
   const donemler = [...new Set(meb.map(g => g.donem))].sort().reverse();
   const tut = meb.filter(g => grupTutarsizliklari(g).length);
   const satir = g => { const d = grupDoluluk(g), t = grupTutarsizliklari(g);
-    return `<tr><td><b style="color:var(--murekkep)">${e(g.ad)}</b>${t.length ? `<small style="display:block;color:var(--kirmizi);font-weight:700">${isaret('uyari', 14)} ${e(t.join(' · '))}</small>` : ''}</td><td class="rf-nw">${g.baslangic ? tarih(g.baslangic) + ' ' + g.baslangic.slice(0, 4) : '—'}</td><td class="m-gizle">${g.sinif ? e(((SINIFLAR[g.sinif] || {}).ad || g.sinif).split(' ·')[0]) : 'Bütün sınıflar'}</td><td class="m-gizle">${e(g.derslik || '—')}</td><td class="rf-nw"><span class="sayi">${d.n}${d.k ? '/' + d.k : ''}</span>${d.dolu ? ' ' + rozet('dolu', 'kirmizi') : ''}</td><td>${g.meb ? rozet(g.kaynak === 'MEBBİS' ? 'MEBBİS’ten' : 'MEBBİS’te', 'yesil') : rozet('MEBBİS’e girilecek', 'uyari')}</td><td><button type="button" class="dg dg-hafif dg-kucuk" data-grup-duzenle="${e(g.id)}">Düzenle</button></td></tr>`; };
+    return `<tr><td><b style="color:var(--murekkep)">${e(g.ad)}</b>${t.length ? `<small style="display:block;color:var(--kirmizi);font-weight:700">${isaret('uyari', 14)} ${e(t.join(' · '))}</small>` : ''}</td><td class="rf-nw">${g.baslangic ? tarih(g.baslangic) + ' ' + g.baslangic.slice(0, 4) : '—'}</td><td class="m-gizle">${g.sinif ? e(((SINIFLAR[g.sinif] || {}).ad || g.sinif).split(' ·')[0]) : 'Bütün sınıflar'}</td><td class="m-gizle">${e(g.derslik || '—')}</td><td class="rf-nw"><span class="sayi">${d.n}${d.k ? '/' + d.k : ''}</span>${d.dolu ? ' ' + rozet('dolu', 'kirmizi') : ''}</td><td>${g.meb ? rozet(g.kaynak === 'MEBBİS' ? 'MEBBİS’ten' : 'MEBBİS’te', 'yesil') : rozet('MEBBİS’e girilecek', 'uyari')}</td><td class="rf-nw">${g.mebBaslangic && g.mebBaslangic !== g.baslangic ? `<button type="button" class="dg dg-ana dg-kucuk" data-grup-meb-tarih="${e(g.id)}">MEBBİS tarihini al</button> ` : ''}<button type="button" class="dg dg-hafif dg-kucuk" data-grup-duzenle="${e(g.id)}">Düzenle</button></td></tr>`; };
   return `<div class="kart"><div class="kart-bas"><h3>Dönem ve gruplar</h3><small>MEBBİS’teki dönem, grup ve şubelerle birebir</small><div class="sag"><button type="button" class="dg dg-ana dg-kucuk" data-grup-yeni>${ik('arti')}Yeni grup</button></div></div>
     <div class="kart-govde" style="padding-bottom:0"><p class="ipucu">${isaret('bilgi', 18)}<span>Dönem <b>YYYY-Ay</b>; bir dönemde en çok 3 grup (Grup 1–3), her grubun tek başlangıç günü ayın <b>1–10’u</b> arasında, şubeler (A–H) grubun gününü alır. Başlangıç MEBBİS’te sonradan değişmez. Şu an MEBBİS’te yeni grup açılabilen dönem: <b>${e(donemAdi(ac))}</b>.</span></p>
       ${tut.length ? `<p class="ipucu uyari" style="margin-top:10px">${isaret('uyari', 18)}<span><b>${tut.length} grupta tarih tutarsızlığı var.</b> Grubu düzenleyip MEBBİS’teki tarihle aynı yapın; kursiyerlerin 90 gün ve sınav hakkı süreleri grup başlangıcından hesaplanır.</span></p>` : ''}</div>
@@ -386,4 +389,17 @@ export function donemSekmesiHtml() {
       : `<div class="kart-govde">${bos('Henüz dönem grubu yok', 'MEBBİS’te açtığınız grubu “Yeni grup”la girin ya da MEB işlemleri › MEBBİS’ten al › Dönem gruplarıyla alın.')}</div>`}
     ${dis.length ? `<div class="kart-bas" style="padding-top:16px"><h3 style="font-size:15px">MEBBİS dışı gruplar</h3><small>Dönem, grup ve şubesi olmayan eski gruplar; MEBBİS kaydında kullanılamaz</small></div><div class="tablo-kap"><table class="tablo tablo-mobil"><tbody>${dis.map(g => `<tr><td><b>${e(g.ad || g.id)}</b></td><td>${g.baslangic ? tarih(g.baslangic) : '—'}</td><td>${grupDoluluk(g).n} kişi</td><td><button type="button" class="dg dg-hafif dg-kucuk" data-grup-duzenle="${e(g.id)}">Düzenle</button></td></tr>`).join('')}</tbody></table></div>` : ''}
     <div style="height:14px"></div></div>`;
+}
+
+// MEBBİS'teki başlangıcı gruba ve aynı grubun bütün şubelerine uygular; etkisi önce gösterilir (DON-007)
+export function mebTarihiniAl(id, sonra) {
+  const g = grupBul(id); if (!g || !g.mebBaslangic) return;
+  const kardesler = (S.gruplar || []).filter(x => mebGrubuMu(x) && x.donem === g.donem && +x.grupNo === +g.grupNo), kisi = kardesler.reduce((a, x) => a + kisiler(x).length, 0), yeni = g.mebBaslangic, eski = g.baslangic;
+  pencere({
+    baslik: g.ad + ' · MEBBİS’teki başlangıç',
+    icerik: `<p style="font-size:14px">mdSinyal’de <b>${tarih(eski)} ${String(eski).slice(0, 4)}</b>, MEBBİS’te <b>${tarih(yeni)} ${yeni.slice(0, 4)}</b>. MEBBİS’teki tarih esastır.</p>
+      <ul style="margin:12px 0 0 18px;font-size:14px;display:grid;gap:6px"><li>Değişecek şubeler: <b>${e(kardesler.map(x => x.ad).join(', '))}</b> (aynı grubun şubeleri aynı gün başlar)</li><li>Bu şubelerdeki <b>${kisi} kursiyerin</b> 90 gün, teorik ders planı ve sınav hakkı süreleri yeni tarihten hesaplanır.</li>${kardesler.some(x => kisiler(x).some(k => k.kayit && k.kayit > yeni)) ? '<li style="color:var(--kirmizi)">Bazı kursiyerlerin kayıt tarihi yeni başlangıçtan sonra; dosyalarında uyarı çıkar (kayıt grubun başlangıcından önce olmalı, 12/2).</li>' : ''}</ul>`,
+    altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-uygula>MEBBİS tarihini al</button>`,
+    onAc(d) { d.querySelector('[data-uygula]').addEventListener('click', () => { kardesler.forEach(x => { x.baslangic = yeni; delete x.mebBaslangic; }); islem('Grup başlangıcını MEBBİS’e göre düzeltti', `${kardesler.map(x => x.ad).join(', ')} · ${eski} → ${yeni} · ${kisi} kursiyer`); kaydet(); kapatPencere(); bildir(`${kardesler.length} şubenin başlangıcı ${tarih(yeni)} oldu`, 'tamam'); sonra && sonra(); }); },
+  });
 }
