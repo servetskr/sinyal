@@ -5,6 +5,8 @@
 import { S, oturum, bulutKanca } from './veri.js?v=234';
 import { e, ik, rozet, bos, pencere, kapatPencere, bildir, ekranNotu, isaret, tamTarih, ilerleme } from './ui.js?v=234';
 import { WORKER } from './bulut.js?v=234';
+import * as KS from './kurssorgu.js?v=234';
+import { csvIndir } from './ui.js?v=234';
 import { motor, yukle, yuklendi, base64Int8, kokler, alinti, FILTRELER, ETIKET_RE, etiketCoz, etiketBul, resmiDegil, kisaCevapSec, cevapNormalle, cevapDuzMetin } from './mevzuat-ara.js?v=234';
 import { kavramYukle, asistanAra, asistanKaynak, asistanSoru, kanitDenetle, sayilarBul, kaynaktaOlmayan } from './mevzuat-anla.js?v=234';
 
@@ -196,6 +198,7 @@ export function mevzuat() {
       <nav class="mz-sekmeler" role="tablist" aria-label="Mevzuat bölümleri" data-mz-sekmeler>${sekmelerHtml()}</nav>
       <div class="mz-panel" data-mz-panel="sor" ${durum.sekme === 'sor' ? '' : 'hidden'}>
         <div class="mz-cipler" role="group" aria-label="Belge türü" data-mz-cipler ${durum.q ? '' : 'hidden'}>${FILTRELER.map(([k, t]) => `<button type="button" class="mz-cip ${k === durum.filtre ? 'secili' : ''}" aria-pressed="${k === durum.filtre}" data-mz-filtre="${k}">${e(t)}</button>`).join('')}</div>
+        <div data-mz-kurs aria-live="polite"></div>
         <div data-mz-sonuc aria-live="polite"></div>
       </div>
       <div class="mz-panel" data-mz-panel="konular" ${durum.sekme === 'konular' ? '' : 'hidden'}><div data-mz-harita></div></div>
@@ -233,6 +236,7 @@ function baglan(k) {
     const eb = t.closest('[data-mz-ekbelge]'); if (eb) return ekBelgeAc(eb.dataset.mzEkbelge);
     const a = t.closest('[data-mz-ac]'); if (a) { const s = durum.son && durum.son.r.sonuc[+a.dataset.mzAc]; if (s) sonucAc(s); return; }
     if (t.closest('[data-mz-daha]')) { durum.goster += 15; return sonucCiz(k); }
+    if (t.closest('[data-ks-csv]') && durum.kursSorgu) return csvIndir('ogrenci-listesi.csv', KS.csvSatirlari(durum.kursSorgu));   // DIG-048
     if (t.closest('[data-mz-sor]')) return asistanSor(k);
     if (t.closest('[data-mz-kopyala]')) return cevapKopyala();
     const gb = t.closest('[data-mz-geri]'); if (gb) { if (gb.dataset.mzGeri === 'evet') return geriGonder(k, true); durum.cevap.geri = 'hayir'; sonucCiz(k); const n = k.querySelector('#mz-geri-not'); if (n) n.focus(); return; }
@@ -277,12 +281,15 @@ let aramaNo = 0;
 const SON_ANAHTAR = 'sinyal-mevzuat-son';
 const sonSorular = () => { try { const l = JSON.parse(localStorage.getItem(SON_ANAHTAR) || '[]'); return Array.isArray(l) ? l.filter(x => typeof x === 'string').slice(0, 6) : []; } catch (x) { return []; } };
 const sonaEkle = q => { try { localStorage.setItem(SON_ANAHTAR, JSON.stringify([q, ...sonSorular().filter(x => x !== q)].slice(0, 6))); } catch (x) { } };
+function kursCiz(k) { const y = k.querySelector('[data-mz-kurs]'); if (y) y.innerHTML = durum.kursSorgu ? KS.sonucHtml(durum.kursSorgu) : ''; }
 async function aramaYap(k, q, anlam, sor = false) {
   q = String(q || '').trim().slice(0, 300);
   if (q !== durum.q) durum.cevap = null;
   durum.q = q; hashYaz(q); durum.goster = 15;
   if (!yuklendi()) return;
-  if (!q) { durum.son = null; return sonucCiz(k); }
+  if (!q) { durum.son = null; durum.kursSorgu = null; kursCiz(k); return sonucCiz(k); }
+  // DIG-048: "… olan öğrenciler / adaylar" sorusu kurs verisinden liste olarak cevaplanır (cihazda; yapay zekâya gitmez)
+  { const ks = KS.coz(q); durum.kursSorgu = ks ? KS.calistir(ks) : null; kursCiz(k); if (ks) { if (sor) sonaEkle(q); durum.son = null; durum.cevap = null; return sonucCiz(k); } }
   if (sor) sonaEkle(q);
   const no = ++aramaNo;
   // asistan araması: soru + kavramın resmî terimli araması + kavramın dayanak maddeleri + sınıf geçişi tablosu (js/mevzuat-anla.js)
@@ -317,6 +324,7 @@ function sonucCiz(k) {
     const yeni = sekmeSayi('guncel'), kh = durum.kh;
     yer.innerHTML = `${yeni ? `<button type="button" class="mz-tanitim" data-mz-sekme="guncel">${isaret('bilgi', 20)}<span><b>${yeni} yeni mevzuat değişikliği</b><small>${e(((durum.ortak.duyurular || [])[0] || {}).baslik || '')}</small></span>${ik('sag')}</button>` : ''}
       ${son.length ? `<div class="mz-ornekler"><span>Son sorularınız</span>${son.map(o => `<button type="button" class="mz-ornek mz-son" data-mz-ornek="${e(o)}">${e(o)}</button>`).join('')}</div>` : ''}
+      <div class="mz-ornekler"><span>Öğrenci listesi sor</span>${KS.ORNEKLER.slice(0, 3).map(o => `<button type="button" class="mz-ornek" data-mz-ornek="${e(o)}">${e(o)}</button>`).join('')}</div>
       <div class="mz-ornekler"><span>Örnek sorular</span>${ORNEKLER.map(o => `<button type="button" class="mz-ornek" data-mz-ornek="${e(o)}">${e(o)}</button>`).join('')}</div>
       ${kh ? `<div class="mz-ornekler"><span>Sık bakılan konular</span>${['r25', 'r22', 'r14', 'r26', 'r27', 'r13'].map(id => kh.harita.get(id)).filter(Boolean).map(x => `<button type="button" class="mz-ornek mz-konu-kisa" data-mz-kavram="${e(x.id)}">${e(x.ad)}</button>`).join('')}<button type="button" class="mz-tumu" data-mz-sekme="konular">Bütün konular ${ik('sag')}</button></div>` : ''}`;
     return;
