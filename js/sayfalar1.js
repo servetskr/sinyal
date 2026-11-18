@@ -732,7 +732,7 @@ export function kursiyerler(filtre) {
         <td class="m-gizle">${rozet(S0.ad.split(' ·')[0])} <small style="color:var(--soluk)">${S0.ad.split('· ')[1]}</small>${GR.kursiyerGrubu(k) ? `<small style="display:block;color:var(--soluk);font-size:12px">${e(GR.kursiyerGrubu(k).ad)}</small>` : ''}</td>
         <td style="min-width:150px">${yol(asamaNo(k))}<small style="color:var(--soluk);font-size:12px">${k.asama}${GR.bekleyenMi(k) ? ' · <b style="color:var(--sari-koyu,#a15c00)">bekleyen</b>' : ''}${k.muaf ? ' · muaf' : esinavsizBelgeli(k) ? ' · belgeli' : ''}${k.dsinav && k.dsinav.sonuc === 'Kaldı' ? ' · tekrar' : ''}${k.kapali ? ' · <b style="color:var(--kirmizi)">' + (k.kapali.tur === 'dondur' ? 'donduruldu' : 'kayıt kapalı') + '</b>' : ''}</small></td>
         <td class="m-gizle" style="min-width:110px">${!gerekliDireksiyon(k) ? `<small style="color:var(--soluk)">${egitimSinifi(k.sinif) ? 'Eğitim · teorik ' + (k.teorik || 0) + '/' + ((SINIFLAR[k.sinif] || {}).teorik || 0) : 'direksiyon yok'}</small>` : `<span class="sayi" style="font-size:12.5px">${k.direksiyon}/${gerekliDireksiyon(k)}</span>${ilerleme(k.direksiyon, gerekliDireksiyon(k), k.direksiyon >= gerekliDireksiyon(k) ? 'yesil' : '')}`}</td>
-        <td>${kalanBorc(k) ? `<span class="sayi">${tl(kalanBorc(k))}</span>${g.length ? '<br>' + rozet(g.length + ' taksit gecikti', 'kirmizi') : ''}` : rozet('Ödendi', 'yesil')}</td>
+        <td>${kalanBorc(k) ? `<span class="sayi">${tl(kalanBorc(k))}</span>${g.length ? '<br>' + rozet(g.length + ' taksit gecikti', 'kirmizi') : ''}${k.odeme.senetli ? ' <small style="color:var(--soluk)">senetli</small>' : ''}` : k.ucretsiz ? rozet('Ücretsiz', 'mavi') : rozet('Ödendi', 'yesil')}</td>
         <td class="m-gizle">${(() => { const r = risk(k); if (!r) return '<span style="color:var(--soluk)">—</span>'; const renk = r.puan >= 50 ? 'var(--kirmizi)' : r.puan >= 25 ? 'var(--sari)' : 'var(--yesil)'; return `<span class="risk-cubuk" title="${e(r.nedenler.join(', ') || 'Risk yok')}"><i style="width:${Math.max(6, r.puan)}%;background:${renk}"></i></span> <small style="color:var(--soluk)">${r.puan >= 50 ? 'Yüksek' : r.puan >= 25 ? 'Orta' : 'Düşük'}</small>`; })()}</td>
         <td class="m-gizle">${sd ? goreli(sd.tarih) + ' <span class="mono">' + sd.saat + '</span>' : '<span style="color:var(--soluk)">—</span>'}</td>
       </tr>`;
@@ -1092,7 +1092,7 @@ function dosyaSeridi(k, eksik) {
   const kalan = kalanBorc(k), snT = OG.sonrakiTaksit(k), topl = k.odeme.toplam + ekToplam(k);
   return `<div class="dosya-serit">
     ${kutu(eksik.length ? (yuk ? 'uyari' : 'kirmizi') : 'yesil', 'Evrak', `${EVRAKLAR.length - eksik.length}/${EVRAKLAR.length}`, eksik.length ? (yuk ? yuk + ' belge onay bekliyor' : eksik.map(x => x[1].split(' ')[0]).slice(0, 2).join(', ') + (eksik.length > 2 ? '…' : '') + ' eksik') : 'Tamam', 'dosya|dosya-evrak')}
-    ${kutu(gec.length ? 'kirmizi' : kalan ? 'notr' : 'yesil', 'Ödeme', kalan ? tl(kalan) : 'Tamam', gec.length ? tl(gecikenTutar(k)) + ' gecikti · ' + tarih(gec[0].vade) : snT ? 'Sıradaki ' + tarih(snT.t.vade) + ' · ' + tl(taksitKalan(snT.t)) : kalan ? 'kalan borç' : 'Borcu yok', 'odeme|', topl ? ilerleme(odenen(k), topl, 'yesil') : '')}
+    ${kutu(gec.length ? 'kirmizi' : kalan ? 'notr' : 'yesil', 'Ödeme', kalan ? tl(kalan) : k.ucretsiz ? 'Ücretsiz' : 'Tamam', gec.length ? tl(gecikenTutar(k)) + ' gecikti · ' + tarih(gec[0].vade) : snT ? 'Sıradaki ' + tarih(snT.t.vade) + ' · ' + tl(taksitKalan(snT.t)) : kalan ? 'kalan borç' : 'Borcu yok', 'odeme|', topl ? ilerleme(odenen(k), topl, 'yesil') : '')}
     ${kutu('notr', 'Sıradaki', sonraki ? e(sonraki[1]) : '—', sonraki ? e(sonraki[0]) : 'Planlı ders ya da sınav yok', sn && sonraki && sonraki[0] !== 'Direksiyon dersi' ? 'sinav|' : 'dersler|')}
     ${kutu(k.mebIslendi ? 'yesil' : mebTamam === meb.length ? 'mavi' : 'uyari', 'MEBBİS', k.mebIslendi ? 'Girildi' : `${mebTamam}/${meb.length}`, k.mebIslendi ? (k.mebNo ? e(k.mebNo) : 'kayıt tamam') : mebTamam === meb.length ? 'aktarıma hazır' : (meb.length - mebTamam) + ' eksik var', 'dosya|dosya-meb')}
   </div>`;
@@ -1194,7 +1194,7 @@ function odemeSekmesi(k) {
     kalan ? ['link', 'Ödeme bilgisini WhatsApp’tan gönder', 'wp'] : null,
     ['plan', 'Taksit planını yeniden böl', 'takvim'], ['ek', 'Ek kalem ekle (ek ders, özel ders, sınav, kitap…)', 'arti'],
     mudurMu() && kalan ? ['indirim', 'İndirim uygula', 'kalem'] : null, mudurMu() ? ['iade', 'İade yap', 'sifirla'] : null, mudurMu() && !k.ucretsiz ? ['ucretsiz', 'Ücretsiz kursiyer (%3)', 'kursiyer'] : null,
-    k.odeme.senetli ? ['senet', 'Senet (yazdır / PDF)', 'belge'] : null, S.hareket.some(h => h.kursiyer === k.id && h.tur === 'Gelir') ? ['makbuz', 'Makbuzlar (yazdır / PDF)', 'belge'] : null,
+    k.odeme.senetli ? ['senet', 'Senet (yazdır / PDF)', 'belge'] : null, mudurMu() && (k.odeme.taksitler || []).length ? ['senetli', k.odeme.senetli ? 'Senetli satışı kaldır' : 'Senetli satış (taksitlere senet)', 'belge'] : null, S.hareket.some(h => h.kursiyer === k.id && h.tur === 'Gelir') ? ['makbuz', 'Makbuzlar (yazdır / PDF)', 'belge'] : null,
   ].filter(Boolean);
   return `<div class="kart odeme-ozet">
     <div class="oo-ust">
@@ -1540,6 +1540,8 @@ export function ekKalemTahsil(k, j) {
 }
 export function odemeIslem(k, tur, oneri) {
   if (tur === 'ucretsiz') return MZ.ucretsizYap(k, yenile);
+  // PAR-021: "Senedi var" işareti; taksitler senetle takip edilir (Kasa › Senetler, senet PDF'i, hatırlatma / avukat takibi)
+  if (tur === 'senetli') { if (!mudurMu()) return bildir('Yalnız kurs müdürü', 'uyari'); geriAlNoktasi(); k.odeme.senetli = !k.odeme.senetli; islem(k.odeme.senetli ? 'Senetli satış yaptı' : 'Senetli satışı kaldırdı', tamAd(k)); kaydet(); bildir(k.odeme.senetli ? 'Senetli: taksitler Kasa › Senetler’de; senedi buradan yazdırın' : 'Senet işareti kaldırıldı', 'tamam', true); return yenile(); }
   const yi = tur === 'iade' ? MZ.yasalIade(k) : null;
   const acik = k.odeme.taksitler.filter(t => !t.odendi && !t.iptal);
   const tx = kursiyerTaban(k), tabanL = tx ? tx.liste : null;  // il taban listesi (not 4, 6, 7)
