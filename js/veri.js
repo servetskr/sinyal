@@ -919,6 +919,18 @@ const ESKI_KAPSAM = { A1: ['M', 'A1'], A2: ['M', 'A1', 'A2', 'A', 'B1'], B: ['M'
 export const MEB_CEZA_SERTIFIKA = '100 Ceza Puanı (Manuel)';
 // MEBBİS kurum bilgisi (SKT01001; mebtoplu.js kurumIsle yazar): seçili şubenin, okunmadıysa null. RAP-006
 export const mebKurum = () => { const s = seciliSube() || (S.subeler || [])[0]; return (s && s.mebKurum) || (S.kurs && S.kurs.mebKurum) || null; };
+// Derslikler (TEO-016): MEBBİS'ten okunan (SKT01001 dgDerslikBilgileri, mebKurum) ve elle girilen (S.derslikler) tek liste.
+// { ad: 'Derslik 1', no: 1 (MEBBİS cmbDerslikAdi 1..10; teorik programda 'DERSLİK-1'), tur, kontenjan (1–30), durum, acilis, kaynak: 'MEBBİS'|'elle' }
+export const DERSLIK_TURLERI = ['Trafik ve Çevre Bilgisi', 'İlk Yardım', 'Araç Tekniği'];
+const dlNo = ad => +((String(ad || '').match(/\d+/) || [])[0] || 0) || null;
+export function derslikListesi() {
+  const mk = mebKurum(), l = [];
+  ((mk && mk.derslikler) || []).forEach(x => l.push({ ad: x.ad || ('Derslik ' + (l.length + 1)), no: dlNo(x.ad), tur: x.tur || '', kontenjan: x.kontenjan || null, durum: x.durum || '', kaynak: 'MEBBİS' }));
+  (S.derslikler || []).forEach(x => { if (!l.some(y => y.no && y.no === dlNo(x.ad))) l.push({ ...x, no: dlNo(x.ad), kaynak: 'elle' }); });
+  return l.filter(x => !/kapal/i.test(x.durum || '')).sort((a, b) => (a.no || 99) - (b.no || 99));
+}
+// ders türüne uygun derslik (otomatik teorik planda ders başına derslik); yoksa ilk derslik
+export const derslikOner = konu => { const l = derslikListesi(), n = String(konu || '').toLocaleLowerCase('tr'), t = /ilk ?yard/.test(n) ? 'İlk Yardım' : /araç|arac|motor|teknik/.test(n) ? 'Araç Tekniği' : 'Trafik ve Çevre'; return (l.find(x => String(x.tur).startsWith(t)) || l[0] || {}).ad || ''; };
 // program: { kod: 'B', ruhsat, kapanma, durum: 'AÇIK' }; kapanma tarihi yoksa ve durum açıksa açık
 export const programAcik = (o, kod) => !!o && (o.programlar || []).some(p => p.kod === kod && !p.kapanma && /açık|acik/.test(String(p.durum || 'AÇIK').toLocaleLowerCase('tr')));
 // sınıfın MEBBİS programı kapalı ya da yoksa uyarı metni; kurum bilgisi okunmadıysa ya da program kodu çıkmayan sınıfta (100 ceza, SRC) boş

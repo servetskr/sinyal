@@ -1,7 +1,7 @@
 // MEBBİS dönem grupları. MEBBİS'teki "Dönem Grup Açılış Tarihi" ve "Grup Şube Tanımlama" ekranlarıyla birebir:
 // dönem YYYYAA, grup 1–3 (her grubun tek başlangıç tarihi, ayın 1'i ile 10'u arası), şube A–H. Ad: "Kasım 1A".
 // Kursiyer kaydı grubun başlangıcından önce yapılır (MTSK Yönetmeliği 12/2); evrakı tamam ve gruba atanmış kursiyer aktiftir.
-import { S, kaydet, gun, fark, iso, SINIFLAR, tamAd, islem, eksikEvrak, sb, anaSinif, mebKurum, teorikVar, esinavsizBelgeli } from './veri.js?v=234';
+import { S, kaydet, gun, fark, iso, SINIFLAR, tamAd, islem, eksikEvrak, sb, anaSinif, mebKurum, teorikVar, esinavsizBelgeli, derslikListesi, derslikOner, DERSLIK_TURLERI } from './veri.js?v=234';
 import { e, pencere, kapatPencere, bildir, rozet, tarih, isaret, ik, pencereSor, bos } from './ui.js?v=234';
 import * as KR from './kurallar.js?v=234';
 
@@ -157,7 +157,7 @@ export function grupFormu(on = {}, sonra) {
       <label class="alan tam" style="flex-direction:row;display:flex;gap:10px;align-items:flex-start;font-size:14px"><span class="anahtar"><input type="checkbox" name="teoriksiz" ${v.teoriksiz ? 'checked' : ''}><i></i></span><span><b>Belgeliler şubesi</b> · teorik programı yok<small style="display:block;color:var(--soluk)">Mevcut belgesi olan, teorik derse girmeyen adaylar için. MEBBİS’e bu şubeye teorik ders girilmez; teorik ders denetimi bu şubeyi saymaz.</small></span></label>
       <div class="alan"><label for="g-ozel">Özel kod <small style="color:var(--soluk);font-weight:400">isteğe bağlı</small></label><input id="g-ozel" name="ozelKod" maxlength="40" value="${e(v.ozelKod)}" placeholder="Ör. Hafta sonu, Belgeliler"></div>
       <div class="alan"><label for="g-sinif">Sınıf</label><select id="g-sinif" name="sinif">${sinifSecenek(v.tip)}</select><small style="color:var(--soluk)">İlk kez ehliyet alanlar genelde aynı gruptadır; ehliyet türüne göre ayrı grup gerekiyorsa sınıf seçin.</small></div>
-      <div class="alan"><label for="g-dl">Derslik</label><input id="g-dl" name="derslik" value="${e(v.derslik)}" placeholder="Derslik 1"></div>
+      <div class="alan"><label for="g-dl">Derslik</label><input id="g-dl" name="derslik" value="${e(v.derslik)}" placeholder="Derslik 1" list="g-dl-l"><datalist id="g-dl-l">${derslikListesi().map(x => `<option value="${e(x.ad)}">${e([x.tur, x.kontenjan ? x.kontenjan + ' kişi' : ''].filter(Boolean).join(' · '))}</option>`).join('')}</datalist></div>
       <div class="alan"><label for="g-kon">Kontenjan</label><input id="g-kon" name="kontenjan" inputmode="numeric" value="${e(v.kontenjan)}" placeholder="${derslikKontenjani(v.derslik) ? 'Derslikten: ' + derslikKontenjani(v.derslik) : 'Boş bırakılabilir'}"><small id="g-kon-not" style="color:var(--soluk)"></small></div>
       <div class="alan tam"><span class="et">MEBBİS’teki adı</span><b id="g-ad" style="font-size:18px;color:var(--murekkep)"></b> <small id="g-hata" style="display:block;color:var(--kirmizi);font-weight:700;margin-top:4px"></small><small id="g-donem-not" style="display:block;color:var(--turuncu);font-weight:600;margin-top:4px"></small></div>
       ${g0 ? '' : `<p class="ipucu tam">${isaret('uyari', 18)}<span>MEBBİS’te sıra: önce grup (Dönem Grup Açılış), sonra şube (Grup Şube Tanımlama), sonra kayıt. Bir dönemde en çok 3 grup açılır; <b>grup başlangıç tarihi sonradan değiştirilemez</b>.</span></p>`}
@@ -280,6 +280,8 @@ export function gruplarBaglan(k, yenile) {
     const a = ev.target.closest('[data-grup-ata]'); if (a) { const g = grupBul(a.dataset.grupAta); return g && topluAtaPencere(g, yenile); }
     const d = ev.target.closest('[data-grup-duzenle]'); if (d) return grupFormu({ id: d.dataset.grupDuzenle }, () => yenile());
     const mt = ev.target.closest('[data-grup-meb-tarih]'); if (mt) return mebTarihiniAl(mt.dataset.grupMebTarih, yenile);
+    if (ev.target.closest('[data-derslik-ekle]')) return derslikFormu(null, yenile);
+    const dd = ev.target.closest('[data-derslik-duz]'); if (dd) return derslikFormu(dd.dataset.derslikDuz, yenile);
     const te = ev.target.closest('[data-teorik-ekle]'); if (te) { const g = grupBul(te.dataset.teorikEkle); return g && teorikDersPencere(g, yenile); }
     if (ev.target.closest('[data-ogretmen-ekle]')) return ogretmenPencere(null, yenile);
     const od = ev.target.closest('[data-ogretmen-duzenle]'); if (od) { const o = (S.ogretmenler || []).find(x => x.id === od.dataset.ogretmenDuzenle); return o && ogretmenPencere(o, yenile); }
@@ -338,11 +340,13 @@ export function teorikDersPencere(g, sonra) {
       <div class="alan"><label for="td-sure">Kaç saat</label><select id="td-sure" name="sure">${[2, 3, 4, 5, 6].map(n => `<option value="${n}">${n} saat</option>`).join('')}</select></div>
       <div class="alan"><label for="td-tekrar">Kaç gün</label><select id="td-tekrar" name="tekrar">${Array.from({ length: 15 }, (_, i) => i + 1).map(n => `<option value="${n}">${n === 1 ? 'Yalnız bu gün' : n + ' gün art arda'}</option>`).join('')}</select></div>
       <label class="tam" style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" name="haftasonu" style="width:18px;height:18px"> Hafta sonu da ders yapılır</label>
-      <div class="alan"><label for="td-dl">Derslik</label><input id="td-dl" name="derslik" value="${e(g.derslik || 'Derslik 1')}"></div>
+      <div class="alan"><label for="td-dl">Derslik</label><input id="td-dl" name="derslik" value="${e(g.derslik || '')}" placeholder="Derslik 1" list="td-dl-l"><datalist id="td-dl-l">${derslikListesi().map(x => `<option value="${e(x.ad)}">${e([x.tur, x.kontenjan ? x.kontenjan + ' kişi' : ''].filter(Boolean).join(' · '))}</option>`).join('')}</datalist><small style="color:var(--soluk)">MEBBİS’e “DERSLİK-n” olarak gider</small></div>
       <small id="td-ozet" class="tam" style="color:var(--soluk)"></small><div id="td-uyari" class="tam" style="display:grid;gap:6px"></div></form>`
       : `<p>Teorik ders eklemek için önce bir teorik öğretmen ekleyin (MEBBİS izin numarasıyla).</p>`,
     altlik: og.length ? `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-teorik">Dersleri ekle</button>` : `<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-ogr-ekle>Öğretmen ekle</button>`,
     onAc(dl) {
+      // grubun sabit dersliği yoksa ders türüne uygun derslik önerilir (TEO-016: otomatik planda ders başına derslik)
+      { const fd = dl.querySelector('#f-teorik'); if (fd && fd.derslik && fd.tur) { const oner = () => { if (!g.derslik && !fd.derslik.dataset.elle) fd.derslik.value = derslikOner(fd.tur.value) || 'Derslik 1'; }; oner(); fd.tur.addEventListener('change', oner); fd.derslik.addEventListener('input', () => { fd.derslik.dataset.elle = '1'; }); } }
       const oe = dl.querySelector('[data-ogr-ekle]'); if (oe) oe.addEventListener('click', () => { kapatPencere(); ogretmenPencere(null, () => teorikDersPencere(g, sonra)); });
       const f = dl.querySelector('form'); if (!f) return;
       const gunler = () => { const l = [], d0 = new Date(f.tarih.value + 'T12:00:00'); let n = +f.tekrar.value; for (let i = 0; n > 0 && i < 60; i++) { const d = new Date(d0); d.setDate(d0.getDate() + i); if (!f.haftasonu.checked && (d.getDay() === 0 || d.getDay() === 6)) continue; l.push(iso(d)); n--; } return l; };
@@ -431,7 +435,35 @@ export function donemSekmesiHtml() {
       <div class="tablo-kap"><table class="tablo tablo-mobil"><thead><tr><th>Grup / şube</th><th>Başlangıç</th><th class="m-gizle">Sınıf</th><th class="m-gizle">Derslik</th><th>Kayıtlı</th><th>MEBBİS</th><th></th></tr></thead><tbody>${meb.filter(g => g.donem === dn).sort((a, b) => +a.grupNo - +b.grupNo || a.sube.localeCompare(b.sube)).map(satir).join('')}</tbody></table></div>`).join('')
       : `<div class="kart-govde">${bos('Henüz dönem grubu yok', 'MEBBİS’te açtığınız grubu “Yeni grup”la girin ya da MEB işlemleri › MEBBİS’ten al › Dönem gruplarıyla alın.')}</div>`}
     ${dis.length ? `<div class="kart-bas" style="padding-top:16px"><h3 style="font-size:15px">MEBBİS dışı gruplar</h3><small>Dönem, grup ve şubesi olmayan eski gruplar; MEBBİS kaydında kullanılamaz</small></div><div class="tablo-kap"><table class="tablo tablo-mobil"><tbody>${dis.map(g => `<tr><td><b>${e(g.ad || g.id)}</b></td><td>${g.baslangic ? tarih(g.baslangic) : '—'}</td><td>${grupDoluluk(g).n} kişi</td><td><button type="button" class="dg dg-hafif dg-kucuk" data-grup-duzenle="${e(g.id)}">Düzenle</button></td></tr>`).join('')}</tbody></table></div>` : ''}
-    <div style="height:14px"></div></div>`;
+    <div style="height:14px"></div></div><div class="ara-bosluk"></div>${derslikKarti()}`;
+}
+// Derslikler kartı (TEO-016): MEBBİS'ten okunanlar salt okunur; MEBBİS okunmadıysa ya da eksikse elle eklenir
+function derslikKarti() {
+  const l = derslikListesi();
+  return `<div class="kart"><div class="kart-bas"><h3>Derslikler</h3><small>Teorik derslerin yapıldığı odalar · MEBBİS’e “DERSLİK-n” olarak gider</small><div class="sag"><button type="button" class="dg dg-cizgi dg-kucuk" data-derslik-ekle>${ik('arti')}Derslik ekle</button></div></div>
+    ${l.length ? `<div class="tablo-kap"><table class="tablo tablo-mobil"><thead><tr><th>Derslik</th><th>Türü</th><th>Kontenjan</th><th>Kaynak</th><th></th></tr></thead><tbody>${l.map(x => `<tr><td><b>${e(x.ad)}</b>${x.no ? ` <small class="mono" style="color:var(--soluk)">DERSLİK-${x.no}</small>` : ''}</td><td>${e(x.tur || '—')}</td><td>${x.kontenjan ? x.kontenjan + ' kişi' : '—'}</td><td>${rozet(x.kaynak === 'MEBBİS' ? 'MEBBİS’ten' : 'Elle', x.kaynak === 'MEBBİS' ? 'yesil' : 'notr')}</td><td>${x.kaynak === 'elle' ? `<button type="button" class="dg dg-hafif dg-kucuk" data-derslik-duz="${e(x.ad)}">Düzenle</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`
+      : `<div class="kart-govde"><p class="ipucu">${isaret('bilgi', 18)}<span>Derslik yok. MEB işlemleri › MEBBİS’ten al › Kurum bilgileri ile MEBBİS’teki derslikler gelir ya da “Derslik ekle” ile girin. Bir dersliğe en çok 30 kursiyer.</span></p></div>`}</div>`;
+}
+function derslikFormu(ad, sonra) {
+  const l = S.derslikler = S.derslikler || [], x = l.find(y => y.ad === ad) || null;
+  pencere({
+    baslik: x ? x.ad + ' · düzenle' : 'Derslik ekle',
+    icerik: `<form id="f-derslik" class="form-izgara" novalidate>
+      <div class="alan"><label>Derslik</label><select name="no">${Array.from({ length: 10 }, (_, i) => `<option value="${i + 1}" ${x && +String(x.ad).replace(/\D/g, '') === i + 1 ? 'selected' : ''}>Derslik ${i + 1}</option>`).join('')}</select></div>
+      <div class="alan"><label>Türü</label><select name="tur">${DERSLIK_TURLERI.map(t => `<option ${x && x.tur === t ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+      <div class="alan"><label>Oda kontenjanı</label><input name="kontenjan" type="number" min="1" max="30" value="${e((x && x.kontenjan) || 20)}"><small style="color:var(--soluk)">MEBBİS’teki onaylı kontenjan (1–30)</small></div>
+      <div class="alan"><label>Açılma tarihi</label><input name="acilis" type="date" value="${e((x && x.acilis) || '')}"></div>
+    </form>`,
+    altlik: `${x ? '<button class="dg dg-cizgi" data-sil style="margin-right:auto;color:var(--kirmizi)">Sil</button>' : ''}<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-derslik">Kaydet</button>`,
+    onAc(d) {
+      const f = d.querySelector('form');
+      const sil = d.querySelector('[data-sil]'); if (sil) sil.addEventListener('click', () => { S.derslikler = l.filter(y => y !== x); islem('Dersliği sildi', x.ad); kaydet(); kapatPencere(); sonra && sonra(); });
+      f.addEventListener('submit', ev => { ev.preventDefault(); const k = +f.kontenjan.value; if (!(k >= 1 && k <= 30)) return bildir('Kontenjan 1 ile 30 arasında olmalı (bir dersliğe en çok 30 kursiyer)', 'uyari');
+        const yeni = { ad: 'Derslik ' + f.no.value, tur: f.tur.value, kontenjan: k, acilis: f.acilis.value || '' };
+        if (l.some(y => y !== x && y.ad === yeni.ad) || derslikListesi().some(y => y.kaynak === 'MEBBİS' && y.ad === yeni.ad)) return bildir(yeni.ad + ' zaten var', 'uyari');
+        if (x) Object.assign(x, yeni); else l.push(yeni); islem(x ? 'Dersliği düzenledi' : 'Derslik ekledi', `${yeni.ad} · ${yeni.tur} · ${k} kişi`); kaydet(); kapatPencere(); sonra && sonra(); });
+    },
+  });
 }
 
 // MEBBİS'teki başlangıcı gruba ve aynı grubun bütün şubelerine uygular; etkisi önce gösterilir (DON-007)
