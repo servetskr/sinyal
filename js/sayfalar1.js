@@ -453,7 +453,7 @@ export function kursiyerFormu(on = {}) {
       <div class="ks-blok"><h4>Mevcut ehliyet <small>sınıf geçişi, ders sayısı ve muafiyet</small></h4><div class="form-izgara">
         <div class="alan"><label for="k-mevcut">Mevcut belgesi</label><select id="k-mevcut" name="mevcut"><option value="">Yok</option>${MEVCUT_BELGELER.map(x => `<option value="${x}" ${x === on.mevcutEhliyet ? 'selected' : ''}>${x === 'E' ? 'E (eski tip)' : x}</option>`).join('')}</select></div>
         <div class="alan" data-mevcut-ek hidden><label for="k-mtarih">Belgenin veriliş tarihi</label><input id="k-mtarih" name="mevcutTarih" type="date"></div>
-        <div class="alan" data-mevcut-ek hidden><label for="k-mno">Belge no</label><input id="k-mno" name="mevcutNo" maxlength="20" autocomplete="off"></div>
+        <div class="alan" data-mevcut-ek hidden><label for="k-mno">Belge no</label><input id="k-mno" name="mevcutNo" maxlength="10" autocomplete="off"></div>
         <div class="alan tam" id="k-mevcut-ek" hidden><label style="display:flex;gap:8px;align-items:center;font-size:13.5px"><input type="checkbox" name="mevcutOtomatik" style="width:18px;height:18px"> Belgede “sadece otomatik” yazıyor</label><label style="display:flex;gap:8px;align-items:center;font-size:13.5px;margin-top:4px"><input type="checkbox" name="mevcutEski" style="width:18px;height:18px"> Belge 01.01.2016’dan önce alındı (eski tip, Tablo 2)</label></div>
       </div></div>
       <div class="ks-blok"><h4>Dönem grubu ve öğretmen</h4><div class="form-izgara">
@@ -575,6 +575,9 @@ export function kursiyerFormu(on = {}) {
         if (f.acilTel.value.trim() && f.acilTel.value.replace(/\D/g, '').length < 10) h.push([f.acilTel, 'Acil durum telefonu eksik']);
         if (!f.grup.value) h.push([f.grup, GR.kayitGruplari(f.sinif.value).length ? 'Dönem grubunu seçin ya da “Bekleyen dönem”i seçin' : 'Bu sınıf için grup yok; “Yeni grup” açın ya da “Bekleyen dönem”i seçin']);
         if (f.mevcut.value && f.mevcut.value === f.sinif.value) h.push([f.mevcut, 'Mevcut belge ile istenen sınıf aynı olamaz (MEBBİS)']);
+        // KAY-023: MEBBİS 02001 — mevcut sınıf seçiliyse belge no zorunlu, en çok 10 karakter
+        if (f.mevcut.value && !f.mevcutNo.value.trim()) h.push([f.mevcutNo, 'Mevcut sürücü belgesinin numarasını yazın (MEBBİS’te zorunlu)']);
+        else if (f.mevcut.value && f.mevcutNo.value.trim().length > 10) h.push([f.mevcutNo, 'Belge no en çok 10 karakter olur (MEBBİS)']);
         { const yd = yasDenetim({ sinif: f.sinif.value, dogumTarihi: f.dogumTarihi.value, mevcutEhliyet: f.mevcut.value, oncekiBelge: f.mevcut.value ? { tarih: f.mevcutTarih.value } : null, yasIstisna: f.yasIstisna.checked ? yasIstisnaOku(f, 'yasIstisna') : null }); if (!yd.tamam && f.dogumTarihi.value) h.push([f.dogumTarihi, yd.uyari]); }
         if (f.yasIstisna.checked && !f.yasIstisnaOkul.value) h.push([f.yasIstisnaOkul, 'Yaş istisnasının okul türünü seçin (KTY md.76/3)']);
         if (f.yasIstisna.checked && f.yasIstisnaNot.value.trim().length < 5) h.push([f.yasIstisnaNot, 'Yaş istisnasının dayanağını yazın (belge adı ve no)']);
