@@ -25,7 +25,7 @@
   /* ---------- alan haritası (gömülü). Yalnız ekran yolları, alan kimlikleri, seçenek değerleri ve kısa eşleme metinleri; kod yok ---------- */
   // zorunlu: ekran ilk açıldığında (GET) bulunması gereken alanlar; ön denetim bunlara bakar. alan: { kodda geçen ad: MEBBİS'teki gerçek ad }
   const HARITA_VARSAYILAN = {
-    surum: '2026.11.18-1', enAzYardimci: '1.12.0',
+    surum: '2026.11.18-2', enAzYardimci: '1.12.0',
     ekran: {
       skt01001: { ad: 'SKT01001 Kurum Bilgileri', yol: '/SKT/skt01001.aspx', zorunlu: [] },
       skt01002: { ad: 'SKT01002 Kurum Araç Giriş', yol: '/SKT/skt01002.aspx', zorunlu: ['dropTurSecim'] },
@@ -37,6 +37,7 @@
       skt02005: { ad: 'SKT02005 Adli Sicil', yol: '/SKT/skt02005.aspx', zorunlu: ['cmbEgitimDonemi', 'cmbAdayAdSoyad'] },
       skt02006: { ad: 'SKT02006 Dönem Adaylarını Onaylama', yol: '/SKT/skt02006.aspx', zorunlu: ['cmbEgitimDonemi', 'cmbDurumu', 'cmbOgrenciDurumu', 'btnListele'] },
       skt02007: { ad: 'SKT02007 e-Sınav Başvuru', yol: '/SKT/skt02007.aspx', zorunlu: ['btnUcretListe', 'txtTcKimlikNo', 'btnTCGetir', 'cmbEgitimDonemi', 'cmbIstenenEhliyetSinifi', 'hiddenKaydet'] },
+      skt02008: { ad: 'SKT02008 Sınav Sonuç Listeleme', yol: '/SKT/skt02008.aspx', zorunlu: ['cmbKurum', 'cmbSinavTipi', 'cmbSinavTarihi', 'btnListele'] },
       skt02009: { ad: 'SKT02009 Aday Durum Görüntüleme', yol: '/SKT/skt02009.aspx', zorunlu: ['txtTcKimlikNo', 'ImageButton1'] },
       skt02010: { ad: 'SKT02010 Parmak İzi', yol: '/SKT/SKT02010.aspx', zorunlu: ['cmbEgitimDonemi', 'cmbAdayAdSoyad'] },
       skt02011: { ad: 'SKT02011 Sözleşme', yol: '/SKT/skt02011.aspx', zorunlu: ['cmbEgitimDonemi', 'cmbAdayAdSoyad'] },
@@ -504,7 +505,47 @@
       return { tc, bulunamadi: true };
     },
   });
-  const CEKME_EKRAN = { fotograf: ['skt02006'], kurum: ['skt01001'], gruplar: ['skt03002', 'skt03001'], kursiyerler: ['skt02006'], personel: [], araclar: ['skt01002'], sinavlar: ['skt04003'], dosya: ['skt02009'], randevular: ['skt01005'], ucretler: ['skt02007'], teorik: ['skt04001'], ucretIlani: [], yetki: ['ook15003', 'ook15004'], direksiyonProgrami: ['skt04002'] };
+  // MEB-022 (1.17.0): SKT02008 Sınav Sonuç Listeleme — toplu sınav sonucu tarih aralığıyla. Kurum seçimi kilitli (kendi kurum); seçili kurum yoksa
+  //  ya da başka kurumsa sorgu gitmez. Her sınav tipi (2 uygulama, 3 e-sınav) için tip sayfası bir kez açılır (autopostback); tarih seçeneklerinin
+  //  metninden (yoksa değerinden) gün okunur, aralıkla süzülür, gönderilen değer hep sayfadaki seçenek değeridir. Her tarih aynı tip sayfasından
+  //  Listele ile sorgulanır (zincirleme postback yok). Tablo seçili tipe göre: 2 dgUygulama, 3 dgEsinav. Tablonun Sınav Tarihi sütunu istenen günü
+  //  söylemiyorsa (önceki sorgunun bayat tablosu) alınmaz, bos[]'a düşer. Varsayılan aralık son 60 gün (ayar.gun, en çok 366).
+  //  Çıktı { bas, bit, kurum, uygulama[{deger, tarih, secenek, baslik, satirlar}], esinav[…], bos[{tip, deger, tarih, neden}] }.
+  const tarihOf = s => { const m = String(s || '').match(/(\d{2})[./](\d{2})[./](\d{4})/); return m ? `${m[3]}-${m[2]}-${m[1]}` : ''; };
+  Object.assign(CEKME, {
+    async sonuclar(ilerle, ayar = {}) {
+      const gunSay = Math.min(366, Math.max(1, Math.round(+ayar.gun) || 60)), isoMu = x => /^\d{4}-\d{2}-\d{2}$/.test(String(x || ''));
+      const bit = isoMu(ayar.bit) ? ayar.bit : isoGun(new Date()); let bas = isoMu(ayar.bas) ? ayar.bas : gunKaydir(bit, -gunSay); if (gunFark(bas, bit) > 366) bas = gunKaydir(bit, -366);
+      const TIP = [D('sinavUygulama'), D('sinavEsinav')], tipler = (Array.isArray(ayar.tipler) ? ayar.tipler : TIP).map(String).filter(x => TIP.includes(x));
+      const t = await getir('/SKT/skt02008.aspx');
+      const kr = elBul(t.doc, 'cmbKurum'); if (!kr || kr.tagName !== 'SELECT') throw ekranHata(t.doc, 'cmbKurum');
+      const ks = kr.querySelector('option[selected]') || kr.options[kr.selectedIndex];
+      if (!ks || !ks.value || ks.value === '-1') throw new MebHata('Sınav sonuç ekranında kurum seçili değil; başka kursun verisi okunmasın diye sorgu gönderilmedi', 'veri');
+      const kk = String(ayar.kurum || '').replace(/\D/g, ''), kv = ks.value.replace(/\D/g, '');
+      if (kk && kv && kv.length === kk.length && kv !== kk && !metin(ks).includes(kk)) throw new MebHata(`Sınav sonuç ekranında seçili kurum (${kv}) açık hesabın kurumu (${kk}) değil; sorgu gönderilmedi`, 'veri');
+      const o = { bas, bit, kurum: ks.value, uygulama: [], esinav: [], bos: [] };
+      for (const tip of tipler) {
+        const uyg = tip === D('sinavUygulama'), ne = uyg ? 'uygulama' : 'esinav', tablo = uyg ? 'dgUygulama' : 'dgEsinav';
+        const ts = elBul(t.doc, 'cmbSinavTipi'); if (!ts || ts.tagName !== 'SELECT') throw ekranHata(t.doc, 'cmbSinavTipi');
+        const secili = (ts.querySelector('option[selected]') || ts.options[0] || {}).value;
+        const a = secili === tip ? t : await postla(t, { cmbSinavTipi: secenek(t.doc, 'cmbSinavTipi', tip) }, { tetik: 'cmbSinavTipi' });
+        const sel = elBul(a.doc, 'cmbSinavTarihi'); if (!sel || sel.tagName !== 'SELECT') throw ekranHata(a.doc, 'cmbSinavTarihi');
+        const gor = new Set(), l = [...sel.options].filter(x => x.value && !/^(0|-1)$/.test(x.value) && !gor.has(x.value) && gor.add(x.value))
+          .map(x => ({ v: x.value, m: metin(x), t: tarihOf(metin(x)) || tarihOf(x.value) })).filter(x => x.t && x.t >= bas && x.t <= bit).slice(0, 400);
+        for (const [j, x] of l.entries()) {
+          ilerle(`Toplu sınav sonuçları (${uyg ? 'uygulama' : 'e-sınav'} ${j + 1}/${l.length})`, (j + 1) / l.length);
+          const r = await postla(a, { cmbSinavTarihi: x.v }, { dugme: 'btnListele' });
+          const tb = tabloId(r.doc, tablo);
+          if (!tb) { o.bos.push({ tip, deger: x.v, tarih: x.t, neden: 'kayıt yok' }); continue; }
+          const ti = tb.baslik.map(norm).findIndex(h => /sinavtarihi/.test(h)), gunler = ti >= 0 ? [...new Set(tb.satirlar.map(y => tarihOf(y[ti])).filter(Boolean))] : [];
+          if (gunler.length && gunler.some(z => z !== x.t)) { o.bos.push({ tip, deger: x.v, tarih: x.t, neden: 'bayat tablo' }); continue; }
+          o[ne].push({ deger: x.v, tarih: x.t, secenek: x.m, ...tb });
+        }
+      }
+      return o;
+    },
+  });
+  const CEKME_EKRAN = { sonuclar: ['skt02008'], fotograf: ['skt02006'], kurum: ['skt01001'], gruplar: ['skt03002', 'skt03001'], kursiyerler: ['skt02006'], personel: [], araclar: ['skt01002'], sinavlar: ['skt04003'], dosya: ['skt02009'], randevular: ['skt01005'], ucretler: ['skt02007'], teorik: ['skt04001'], ucretIlani: [], yetki: ['ook15003', 'ook15004'], direksiyonProgrami: ['skt04002'] };
   // Aday Durum Görüntüleme: tek adayın bütün dosyası
   async function adayDosyasi(taban, tc) {
     const r = await postla(taban, { txtTcKimlikNo: tc }, { dugme: 'ImageButton1' });

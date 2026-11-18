@@ -176,7 +176,7 @@ export function merkezBaglan(k, yenile) {
     { const ua = t.closest('[data-uy-ac]'); if (ua) { UY.ac(ua.dataset.uyAc); return yenile(); } }
     { const uk = t.closest('[data-uy-kapat]'); if (uk) return uyKapatPenceresi(uk.dataset.uyKapat, yenile); }
     if (t.closest('[data-mm-kurulum]')) return MT.topluCek(MT.KURULUM_CEK);   // MEB-188
-    if (t.closest('[data-mm-guncelle]')) return MT.topluCek(['gruplar', 'kursiyerler', 'dosya', 'personel', 'araclar', 'sinavlar', 'direksiyonProgrami', 'randevular']);
+    if (t.closest('[data-mm-guncelle]')) return MT.topluCek(['gruplar', 'kursiyerler', 'dosya', 'personel', 'araclar', 'sinavlar', 'sonuclar', 'direksiyonProgrami', 'randevular']);
     if (t.closest('[data-mm-hepsini]')) { const ids = butunIsler(true).filter(x => !x.bitti && x.tur !== 'onay').map(x => x.id); MT.yaz(ids).then(r => { if (r) m.secili.clear(); yenile(); }); return; }
     // seçim yalnız iş Yardımcı'ya gidince temizlenir; onay penceresinde vazgeçilirse seçim kalır
     if (t.closest('[data-mm-yaz]')) { const ids = [...m.secili]; MT.yaz(ids).then(r => { if (r) ids.forEach(id => m.secili.delete(id)); yenile(); }); return; }
