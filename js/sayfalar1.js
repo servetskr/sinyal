@@ -903,7 +903,42 @@ function mebteKarti(k) {
       ${satir('Uygulama sınavına uygunluk', M.uygunluk ? tY(M.uygunluk) : '')}${satir('2. direksiyona geçiş', M.ikinciDireksiyon ? tY(M.ikinciDireksiyon) : '')}
       ${satir('MEBBİS’in gösterdiği son tarih', M.haklarSonGun ? tY(M.haklarSonGun) + ' <small style="font-weight:400;color:var(--soluk)">(sistem sınırı, yönetmelikte yok)</small>' : '')}
       ${satir('Sertifika tarihi', M.sertifikaTarihi ? tY(M.sertifikaTarihi) : '')}${satir('Kayıt ücreti (MEBBİS)', M.kayitUcretiTL ? tl(M.kayitUcretiTL) : '')}</ul>
+    ${mebFarkHtml(k)}
+    ${(k.mebAlinan || []).length ? `<details class="meb-gecmis"><summary>Değişiklik geçmişi (${k.mebAlinan.length})</summary><ul>${k.mebAlinan.slice().reverse().map(x => `<li><b>${e(x.alan)}</b>: ${e(x.eski || '—')} → ${e(x.yeni || '—')} <small>${e(x.ekran || 'MEBBİS')} · ${tarih(x.zaman.slice(0, 10))} · ${e(x.kim || '')}</small></li>`).join('')}</ul></details>` : ''}
     <p style="font-size:13px;color:var(--soluk);margin-top:8px">${isaret('tamam', 16)} Ön kontrol: kayıt tamam</p></div></div>`;
+}
+// KAY-080..083: MEBBİS'le farklı alanlar; ad soyad, cinsiyet ve mevcut belge tek dokunuşla alınır (sertifika sınıfı ücret ve sözleşmeye dokunduğu için ayrı pencerede, KAY-004)
+const MF_AL = ['Ad soyad', 'Cinsiyet', 'Mevcut belge'];
+function mebFarkHtml(k) {
+  const l = ((k.mebFark || {}).fk || []); if (!l.length) return '';
+  return `<div class="meb-fark"><b>MEBBİS’le farklı (${l.length})</b><ul>${l.map(([alan, meb, yerel], i) => `<li><div><span>${e(alan)}</span><small>MEBBİS: <b>${e(meb)}</b> · mdSinyal: ${e(yerel || '—')}</small></div>${MF_AL.includes(alan) ? `<button type="button" class="dg dg-cizgi dg-kucuk" data-mf-al="${i}">MEBBİS’tekini al</button>` : alan === 'Sertifika sınıfı' || alan === 'Şanzıman' ? `<button type="button" class="dg dg-cizgi dg-kucuk" data-mf-sinif="${e(alan === 'Şanzıman' ? (meb === 'Otomatik' ? 'B-O' : 'B') : meb)}">Sınıfı değiştir</button>` : ''}</li>`).join('')}</ul></div>`;
+}
+const buyukHarfDuzelt = t => String(t || '').toLocaleLowerCase('tr').replace(/(^|\s)(\S)/g, (m, a, b) => a + b.toLocaleUpperCase('tr'));
+function mebFarkAl(k, i) {
+  const fk = (k.mebFark || {}).fk || [], x = fk[i]; if (!x) return; const [alan, meb] = x; let eski = '', yeni = '';
+  if (alan === 'Ad soyad') { const p = buyukHarfDuzelt(meb).split(/\s+/).filter(Boolean); if (p.length < 2) return bildir('MEBBİS’teki ad soyad bölünemedi; elle düzeltin', 'uyari'); eski = tamAd(k); k.soyad = p.pop(); k.ad = p.join(' '); yeni = tamAd(k); }
+  else if (alan === 'Cinsiyet') { eski = k.cinsiyet || ''; k.cinsiyet = /^k/i.test(nrmTr(meb)) ? 'Kadın' : 'Erkek'; yeni = k.cinsiyet; }
+  else if (alan === 'Mevcut belge') { eski = k.mevcutEhliyet || 'yok'; k.mevcutEhliyet = meb === 'yok' ? '' : meb; yeni = k.mevcutEhliyet || 'yok'; }
+  else return;
+  geriAlNoktasi(); fk.splice(i, 1); if (!fk.length) k.mebFark = null;
+  k.mebAlinan = [...(k.mebAlinan || []), { alan, eski, yeni, ekran: 'SKT02006', okuma: (k.meb || {}).okuma || '', kim: (oturum.kullanici || {}).ad || '', zaman: new Date().toISOString() }].slice(-20);
+  islem('MEBBİS’teki bilgiyi aldı', `${tamAd(k)} · ${alan}: ${eski || '—'} → ${yeni || '—'}`); kaydet(); bildir(alan + ' MEBBİS’tekiyle güncellendi' + (alan === 'Mevcut belge' ? '; muafiyet ve deneyim şartı yeniden hesaplandı' : '')); yenile();
+}
+const nrmTr = t => String(t || '').toLocaleLowerCase('tr');
+// KAY-004: MEBBİS'teki sınıf (ya da şanzıman) farklı: değişince ücret ve sözleşme etkilenir; fiyat ayrıca seçilirse güncellenir
+function sinifFarkPenceresi(k, hedef) {
+  if (!SINIFLAR[hedef]) return bildir(`MEBBİS’teki sınıf (${hedef}) kursun sınıfları arasında yok; Ayarlar › Sınıf ve ücretler’den açın`, 'uyari');
+  const S0 = SINIFLAR[k.sinif] || {}, S1 = SINIFLAR[hedef], u0 = (k.odeme || {}).sozlesme || (k.odeme || {}).toplam || 0, u1 = S1.ucret || 0, imzali = !!k.sozlesmeImza;
+  pencere({ baslik: 'Sınıf değişikliği · ' + tamAd(k), icerik: `<p style="font-size:14px">MEBBİS’te <b>${e(S1.ad)}</b>, mdSinyal’de <b>${e(S0.ad || k.sinif)}</b>. Sınıf değişince şunlar etkilenir:</p>
+      <ul style="margin:10px 0 0 18px;font-size:14px;display:grid;gap:4px"><li>Ücret: ${u0 ? tl(u0) : '—'} → ${u1 ? tl(u1) : 'tanımsız'} (fiyatı ayrıca seçerseniz)</li><li>Gerekli direksiyon dersi ve sınav aracı (${e(S1.ad)})</li>${imzali ? '<li>Sözleşme imzalı: sözleşme yeniden imzalanmalı</li>' : ''}<li>MEBBİS işleri yeni sınıfla yazılır</li></ul>
+      ${u1 && u1 !== u0 ? `<label class="ind-tik" style="margin-top:12px"><input type="checkbox" name="fiyat"> Fiyatı da güncelle (${tl(u0)} → ${tl(u1)})</label>` : ''}`,
+    altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Sınıfı değiştir</button>',
+    onAc(p) { p.querySelector('[data-k]').addEventListener('click', () => { geriAlNoktasi(); const eski = k.sinif, fy = p.querySelector('[name=fiyat]'); k.sinif = hedef;
+      if (fy && fy.checked) { const fark0 = u1 - u0; k.odeme.toplam = (k.odeme.toplam || 0) + fark0; k.odeme.sozlesme = u1; }
+      if (imzali) k.sozlesmeYenile = { tarih: gun(0), neden: 'Sınıf değişti: ' + eski + ' → ' + hedef };
+      const fk = (k.mebFark || {}).fk || []; k.mebFark = fk.filter(x => !['Sertifika sınıfı', 'Şanzıman'].includes(x[0])).length ? { ...k.mebFark, fk: fk.filter(x => !['Sertifika sınıfı', 'Şanzıman'].includes(x[0])) } : null;
+      k.mebAlinan = [...(k.mebAlinan || []), { alan: 'Sınıf', eski, yeni: hedef, ekran: 'SKT02006', kim: (oturum.kullanici || {}).ad || '', zaman: new Date().toISOString() }].slice(-20);
+      islem('Sınıfı MEBBİS’e göre değiştirdi', `${tamAd(k)} · ${eski} → ${hedef}${fy && fy.checked ? ' · fiyat ' + tl(u0) + ' → ' + tl(u1) : ''}`); kaydet(); kapatPencere(); bildir('Sınıf değişti' + (imzali ? '; sözleşmeyi yeniden imzalatın' : '')); yenile(); }); } });
 }
 // SNV-058: kursta iken şanzıman değişikliği (B manuel ↔ B otomatik). md.12/5: e-sınavı geçmiş ve direksiyon planlaması yapılmamışken yazılı
 // başvuruyla MEM yapar. md.15/6: ilk dört haktan sonra kalan haklardan vazgeçip ikinci dört hakka diğer şanzımanla (Özel MTSK Modülüne işlenir).
@@ -1646,6 +1681,8 @@ ${mesajlar.length ? '' : '<li style="color:var(--soluk)">Bu kursiyere henüz mes
         if (ev.target.closest('[data-ikinci-geri]')) return ikinciHakGeriAl(k);  // SNV-057
         if (ev.target.closest('[data-mazeret-ekle]')) return mazeretPenceresi(k);  // SNV-024
         if (ev.target.closest('[data-sanziman]')) return sanzimanPenceresi(k);  // SNV-058
+        { const ma = ev.target.closest('[data-mf-al]'); if (ma) return mebFarkAl(k, +ma.dataset.mfAl); }  // KAY-080..083
+        { const ms = ev.target.closest('[data-mf-sinif]'); if (ms) return sinifFarkPenceresi(k, ms.dataset.mfSinif); }  // KAY-004
         { const gb = ev.target.closest('[data-giris-belgesi]'); if (gb) { const s = S.sinavlar.find(x => x.id === gb.dataset.girisBelgesi); if (!s) return; s.girisBelgesi = { ...(s.girisBelgesi || {}) }; if (s.girisBelgesi[k.id]) delete s.girisBelgesi[k.id]; else s.girisBelgesi[k.id] = gun(0); islem(s.girisBelgesi[k.id] ? 'Sınav giriş belgesi alındı işaretledi' : 'Sınav giriş belgesi işaretini kaldırdı', tamAd(k) + ' · ' + s.tur + ' ' + tarih(s.tarih)); kaydet(); return yenile(); } }  // SNV-082/083
         { const mm = ev.target.closest('[data-mazeret-mem]'); if (mm) { const m = (k.mazeretler || []).find(x => x.id === mm.dataset.mazeretMem); if (m) { m.memIletildi = gun(0); islem('Mazeret belgesini MEM’e iletti', tamAd(k) + ' · ' + tarih(m.sinavTarihi)); kaydet(); yenile(); } return; } }
         { const ms = ev.target.closest('[data-mazeret-sil]'); if (ms) { const m = (k.mazeretler || []).find(x => x.id === ms.dataset.mazeretSil); if (m && confirm('Bu mazeret kaydı silinsin mi?')) { geriAlNoktasi(); k.mazeretler = k.mazeretler.filter(x => x !== m); islem('Mazeret kaydını sildi', tamAd(k) + ' · ' + tarih(m.sinavTarihi)); kaydet(); yenile(); } return; } }

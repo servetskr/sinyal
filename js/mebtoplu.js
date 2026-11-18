@@ -732,6 +732,8 @@ function kursiyerleriIsle(liste) {
     eslesen++;
     const fk = [];
     if (son && kod(son.istenen) && sinifKod(k) && kod(son.istenen) !== sinifKod(k)) fk.push(['Sertifika sınıfı', kod(son.istenen), sinifKod(k)]);
+    // KAY-004: B manuel/otomatik farkı (SKT02006 'İstenen … (Manuel/Otomatik)')
+    if (son && kod(son.istenen) === 'B' && ['B', 'B-O'].includes(k.sinif)) { const ot = /otomatik/i.test(son.istenen), mn = /manuel/i.test(son.istenen); if ((ot && k.sinif === 'B') || (mn && k.sinif === 'B-O')) fk.push(['Şanzıman', ot ? 'Otomatik' : 'Manuel', k.sinif === 'B-O' ? 'Otomatik' : 'Manuel']); }
     if (son && son.mevcut != null && kod(son.mevcut) !== kod(k.mevcutEhliyet)) fk.push(['Mevcut belge', kod(son.mevcut) || 'yok', kod(k.mevcutEhliyet) || 'yok']);
     if (x.ad && nrm(x.ad) !== nrm(tamAd(k))) fk.push(['Ad soyad', x.ad, tamAd(k)]);
     if (x.cins && k.cinsiyet && nrm(x.cins).slice(0, 1) !== nrm(k.cinsiyet).slice(0, 1)) fk.push(['Cinsiyet', x.cins, k.cinsiyet]);

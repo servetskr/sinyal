@@ -3706,3 +3706,13 @@ a.kart.gosterge { text-decoration: none; color: inherit; display: block; }
 .meb-te li { display: flex; gap: 12px; justify-content: space-between; border-bottom: 1px solid var(--cizgi-2); padding-bottom: 5px; }
 .meb-te li span { color: var(--soluk); flex: none; }
 .meb-te li b { color: var(--murekkep); text-align: right; font-weight: 600; }
+.meb-fark { margin-top: 12px; border: 1px solid #f0c36d; background: #fff8e6; border-radius: 10px; padding: 10px 12px; }
+.meb-fark > b { color: #6b4a00; font-size: 14px; }
+.meb-fark ul { list-style: none; display: grid; gap: 8px; margin-top: 8px; }
+.meb-fark li { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+.meb-fark li span { display: block; font-weight: 700; color: var(--murekkep); font-size: 13.5px; }
+.meb-fark li small { color: var(--soluk); }
+.meb-gecmis { margin-top: 10px; font-size: 13px; }
+.meb-gecmis summary { cursor: pointer; color: var(--murekkep); font-weight: 600; }
+.meb-gecmis ul { list-style: none; display: grid; gap: 4px; margin-top: 6px; }
+.meb-gecmis small { color: var(--soluk); }
