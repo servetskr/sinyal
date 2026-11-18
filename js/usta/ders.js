@@ -233,7 +233,8 @@ function bagla(kok, d, k, ctx) {
   });
   kok.addEventListener('keydown', ev => {
     if (ev.key !== 'Escape' || katman) return;
-    if (A.ekran === 'bitir' && A.adim > 1) adimGit(A.adim - 1); else kapat(ctx);
+    // DENETİM K1 (DIG-059): Esc pencereyi kapatmaz; ders bitirme adımlarında yalnız bir adım geri
+    if (A.ekran === 'bitir' && A.adim > 1) adimGit(A.adim - 1);
   });
 }
 
@@ -301,7 +302,7 @@ function katmanAc(html, alttan, kur) {
   document.body.appendChild(el);
   katman = { el, serbest: odakTuzagi(el) };
   requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('acik')));
-  el.addEventListener('click', ev => { if (ev.target === el || ev.target.closest('[data-udr-k-kapat]')) katmanKapat(); });
+  el.addEventListener('click', ev => { if (ev.target.closest('[data-udr-k-kapat]')) katmanKapat(); });   // DENETİM K1: dışa tıklama kapatmaz
   el.addEventListener('keydown', ev => { if (ev.key === 'Escape') { ev.stopPropagation(); katmanKapat(); } });
   kur(el);
   const ilk = el.querySelector('[data-udr-k-odak]') || el.querySelector('.ox-satir[href], button.ox-satir'); if (ilk) try { ilk.focus({ preventScroll: true }); } catch (x) { }

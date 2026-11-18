@@ -455,11 +455,11 @@ function degisOnay(ctx, yeni) {
     <div class="ox-snv-modal-dg sar">${dugme(dn ? 'Denemeye dön' : 'Teste dön', { 'data-snv-d': 'devam' }, { tur: 'ikincil' })}${dugme('Yeni test başlat', { 'data-snv-d': 'yeni' })}</div></div></div>`);
   const perde = kok.lastElementChild, cik = odakTuzagi(perde);
   degis = { perde, birak: cik };
-  perde.addEventListener('keydown', ev => { if (ev.key === 'Escape') { ev.stopPropagation(); degisKapat(); } });
+  perde.addEventListener('keydown', ev => { if (ev.key === 'Escape') ev.stopPropagation(); });   // DENETİM K1: Esc kapatmaz
   perde.addEventListener('click', ev => {
     ev.stopPropagation();
     const b = ev.target.closest('[data-snv-d]');
-    if (!b) { if (!ev.target.closest('.ox-snv-modal')) degisKapat(); return; }
+    if (!b) return;   // DENETİM K1: dışa tıklama kapatmaz
     const is = b.dataset.snvD;
     degisKapat();
     if (is === 'devam') devamEt(ctx);
@@ -469,7 +469,6 @@ function degisOnay(ctx, yeni) {
 }
 
 /* ---------- olaylar ---------- */
-let tusBagli = false;
 // pencere açıkken odak içeride kalır, arkadaki sayfa etkisizdir (odakTuzagi); kapanınca ya da ekran yeniden çizilince bırakılır
 let serbest = null;
 const tuzakBirak = () => { if (serbest) { const f = serbest; serbest = null; f(); } };
@@ -492,7 +491,7 @@ function yerinde(ctx, sonra) {
 function bagla(kap, ctx) {
   const { k } = ctx;
   tuzakBirak(); degisKapat();
-  if (!tusBagli) { tusBagli = true; document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && modal && document.querySelector('[data-snv-perde]')) modalKapat(); }); }
+  // DENETİM K1: Esc modalı kapatmaz (kapatma düğmesiyle)
   if (kap.querySelector('[data-snv-ekran="deneme"]')) sayacKur(ctx);
   { const p = kap.querySelector('[data-snv-perde]'); if (p) tuzakKur(p); }
   // sekme değişirken: gösterilen sonuç kapanır, süren test duraklar (ekran.js'in dinleyicisinden önce çalışır)
@@ -506,7 +505,7 @@ function bagla(kap, ctx) {
   });
   kap.addEventListener('click', ev => {
     const t = ev.target;
-    if (t.closest('[data-snv-perde]') && !t.closest('.ox-snv-modal')) return modalKapat();
+    if (t.closest('[data-snv-perde]') && !t.closest('.ox-snv-modal')) return;   // DENETİM K1: dışa tıklama kapatmaz
     const nd = t.closest('[data-snv-neden]');
     if (nd) { kap.querySelectorAll('[data-snv-neden]').forEach(b => { const s = b === nd; b.classList.toggle('secili', s); b.setAttribute('aria-checked', String(s)); }); return; }
     const sk = t.closest('[data-snv-sik]');

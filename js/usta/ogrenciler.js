@@ -174,7 +174,7 @@ function denemeBagla(ctx, k, kap) {
     kok.querySelector('[data-uog-durum-cip]').innerHTML = durumCip(r);
     const bt = kok.querySelector('[data-uog-biter]'); bt.hidden = !r.bitti; if (r.bitti) bt.querySelector('span').textContent = 'Gerçek sınavda burada biterdi: ' + r.neden;
   };
-  kok.addEventListener('keydown', ev => { if (ev.key === 'Escape') { ev.stopPropagation(); kapat(); } });
+  kok.addEventListener('keydown', ev => { if (ev.key === 'Escape') ev.stopPropagation(); });   // DENETİM K1: Esc kapatmaz (Kapat düğmesiyle)
   kok.addEventListener('input', ev => { if (ev.target.matches('[data-uog-not]')) { t.not = ev.target.value; taslakYaz(); } });
   kok.addEventListener('click', ev => {
     ev.stopPropagation();

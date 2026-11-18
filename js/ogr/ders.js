@@ -138,7 +138,7 @@ async function dersAc(k, id, yenile, { gecmisVar = false, odak = null } = {}) {
   const odaklar = () => [...kok.querySelectorAll('button:not([disabled]),a[href],iframe,[tabindex]:not([tabindex="-1"])')]
     .filter(el => el.checkVisibility ? el.checkVisibility({ visibilityProperty: true }) : el.offsetParent !== null);
   const tus = ev => {
-    if (ev.key === 'Escape') { ev.preventDefault(); kapat(); return; }
+    if (ev.key === 'Escape') { ev.preventDefault(); return; }   // DENETİM K1: Esc kapatmaz
     if (ev.key !== 'Tab' || acik !== kok) return;
     const l = odaklar(); if (!l.length) return;
     const a = document.activeElement, ilk = l[0], son = l[l.length - 1];
