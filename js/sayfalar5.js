@@ -60,7 +60,7 @@ function kurallarSekme() {
   <div class="kart"><div class="kart-bas"><h3>Denetlenen kurallar</h3><small>${kl.length} kural · engel işlemi durdurur, uyarı yalnız bildirir</small></div><div class="tablo-kap"><table class="tablo tablo-mobil"><thead><tr><th>Kural ve dayanağı</th><th>Değer</th><th>Tür</th><th>Durum</th></tr></thead><tbody>
     ${kl.map(r => { const a = r.ayar && KURAL_KAYNAK[r.ayar], c = CIDDIYET_AD[r.ciddiyet] || CIDDIYET_AD.uyari; return `<tr><td><b style="color:var(--murekkep)">${e(r.ad)}</b><small style="display:block;color:var(--soluk);font-size:12.5px;margin-top:2px">${e(r.dayanak || '')}${a ? ' · ' + e(a.ad) : ''}</small></td>
       <td style="white-space:nowrap">${a ? kuralGirdi(r.ayar) : '<span style="color:var(--soluk)">—</span>'}</td>
-      <td>${rozet(c[0], c[1])}</td>
+      <td>${r.ciddiyet === 'engel' ? `${rozet(c[0], c[1])}<small style="display:block;color:var(--soluk);font-size:12px">mevzuat sınırı · değiştirilemez</small>` : `<select class="girdi" style="height:34px;width:auto" data-kural-seviye="${e(r.id)}" aria-label="${e(r.ad)} seviyesi">${[['', 'Varsayılan (' + c[0].toLocaleLowerCase('tr') + ')'], ['uyari', 'Uyarı'], ['yasak', 'Yasak'], ['kapali', 'Kapalı']].map(([v, t]) => `<option value="${v}" ${KR.kuralSeviye(r) === v ? 'selected' : ''}>${t}</option>`).join('')}</select>`}</td>
       <td>${a ? degerDurum(r.ayar) : ''}${r.teyit ? ` <span title="${e(r.teyit)}">${rozet('Teyit bekliyor', 'sari')}</span>` : ''}${!a && !r.teyit ? '<span style="color:var(--soluk)">Mevzuattan</span>' : ''}</td></tr>`; }).join('')}
   </tbody></table></div>
   <div class="kart-govde" style="border-top:1px solid var(--cizgi-2);display:grid;gap:12px">
@@ -854,6 +854,10 @@ export function ayarBaglan(k) {
       if (!PARCA_GECERLI(ham)) { t.value = eski; return bildir('Parça süresi 10 ile 40 dakika arasında bir tam sayı olmalı. Değer değişmedi.', 'uyari'); }
       S.kurs.mebParcaDk = +ham; islem('MEBBİS parça süresini değiştirdi', eski + ' → ' + ham + ' dk'); kaydet(); bildir(`Yardımcı işleri ${ham} dakikalık parçalara bölecek`); return; }
     if (t.matches('[data-gece-ce]')) { S.kurs.geceCE = t.checked; islem('Gece dersi ayarını değiştirdi', 'CE adayında gece dersi ' + (t.checked ? 'aranır' : 'aranmaz')); kaydet(); bildir(t.checked ? 'CE adayında da gece dersi aranacak' : 'CE adayında gece dersi aranmayacak'); yenile(); }
+    if (t.matches('[data-kural-seviye]')) { if (!(oturum.kullanici && oturum.kullanici.rol === 'mudur')) return bildir('Kural seviyesini yalnız kurs müdürü değiştirir', 'uyari');   // DIG-054
+      const id = t.dataset.kuralSeviye, r = KR.kurallar().find(x => x.id === id); if (!r || r.ciddiyet === 'engel') return;
+      const o = { ...(S.kurs.kuralSeviye || {}) }; if (t.value) o[id] = t.value; else delete o[id]; S.kurs.kuralSeviye = o;
+      islem('Kural seviyesini değiştirdi', `${r.ad}: ${t.value ? { uyari: 'uyarı', yasak: 'yasak', kapali: 'kapalı' }[t.value] : 'varsayılan'}`); kaydet(); bildir(t.value === 'kapali' ? 'Kural kapatıldı; bulguları artık görünmez' : 'Kaydedildi'); return; }
     if (t.matches('[data-kurs-kapali]')) { const ham = t.value.split(/[,;\s]+/).map(x => x.trim()).filter(Boolean), l = [], hatali = [];   // DIG-002
       ham.forEach(x => { const m = x.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})$/), v = m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : /^\d{4}-\d{2}-\d{2}$/.test(x) ? x : ''; const d = v && new Date(v + 'T00:00:00Z'); if (d && !isNaN(d) && d.toISOString().slice(0, 10) === v) { if (!l.includes(v)) l.push(v); } else hatali.push(x); });
       if (hatali.length) return bildir('Tarihi gg.aa.yyyy biçiminde girin: ' + hatali.slice(0, 3).join(', '), 'uyari');

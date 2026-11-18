@@ -371,11 +371,15 @@ export function kuralEkle(r) { const i = KURALLAR.findIndex(x => x.id === r.id);
 // Kural tanımları (ekranda liste için; kontrol işlevi olmadan)
 export const kurallar = () => KURALLAR.map(({ kontrol, bugunAd, ...r }) => ({ ...r, tur: CIDDIYET_TUR[r.ciddiyet] || 'uyari' }));
 // Kuralları çalıştırır; bir kural hata verirse diğerleri sürer (hata konsola yazılır)
+// DIG-054 (SOR-029): kurs başına kural seviyesi (S.kurs.kuralSeviye[id] = 'uyari' | 'yasak' | 'kapali'). Mevzuatta kesin sınırı olan kurallar
+// (ciddiyet 'engel') değiştirilemez: kapatılamaz, uyarıya indirilemez. 'yasak' uyarı ve bilgiyi yasağa yükseltir; 'uyari' bilgiyi uyarıya; 'kapali' kuralı çalıştırmaz.
+export const kuralSeviye = r => { if (!r || r.ciddiyet === 'engel') return 'engel'; const v = ((S && S.kurs && S.kurs.kuralSeviye) || {})[r.id]; return ['uyari', 'yasak', 'kapali'].includes(v) ? v : ''; };
+const seviyeUygula = (x, sv) => { if (sv === 'yasak' && ['uyari', 'bilgi'].includes(x[0])) x[0] = 'yasak'; else if (sv === 'uyari' && x[0] === 'bilgi') x[0] = 'uyari'; return x; };
 export function calistir(secim = () => true) {
   // K: kurs ayarları; sayı ayarları geçerli aralıkta okunur (veri.js kuralAyar): eskiden kaydedilmiş 0 ya da eksi değer kuralı sessizce kapatmaz
   const K = { ...S.kurs }, l = [], c = {}; Object.keys(KURAL_ARALIK).forEach(a => { K[a] = kuralAyar(a); });
   Object.defineProperty(c, 'yakin', { get() { return this._y || (this._y = sbDers(S.dersler).filter(d => d.durum === 'Planlandı' && fark(d.tarih) >= 0)); } });
-  KURALLAR.filter(secim).forEach(r => { const b = []; try { r.kontrol(b, K, c); } catch (x) { console.error('Kural ' + r.id, x); } b.forEach(x => { if (!x.kural) x.kural = r.id; if (!x.dayanak) x.dayanak = r.dayanak; if (x.bugun === undefined && r.bugun) x.bugun = true; l.push(x); }); });
+  KURALLAR.filter(secim).forEach(r => { const sv = kuralSeviye(r); if (sv === 'kapali') return; const b = []; try { r.kontrol(b, K, c); } catch (x) { console.error('Kural ' + r.id, x); } b.forEach(x => { seviyeUygula(x, sv); if (!x.kural) x.kural = r.id; if (!x.dayanak) x.dayanak = r.dayanak; if (x.bugun === undefined && r.bugun) x.bugun = true; l.push(x); }); });
   return l;
 }
 // MEB işlemleri › Kurallar ve takvim: bütün bulgular (yalnız öğrenci dosyasına ait hatırlatmalar hariç)
