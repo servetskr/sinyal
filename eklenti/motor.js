@@ -481,7 +481,7 @@
     const uyari = !dt ? ((govde.match(/[^.!\n]*(bulunamad|kay[ıi]t yok|kay[ıi]tl[ıi] de[ğg]il)[^.!\n]*/i) || [])[0] || '').trim().slice(0, 160) : '';
     return {
       tc, sorgulanan, bulunamadi: !dt, uyari, donem: tabloId(d, 'dgDonemBilgileri'), esinav: tabloId(d, 'dgTeorikSinavlar'), uygulama: tabloId(d, 'dgUygulamaNot'),
-      dersler: tabloId(d, 'dgDersProgrami'), sertifika: tabloId(d, 'dgSertifika'), rapor: tabloId(d, 'dgRaporBilgileri'),   // MEB-015: mazeret raporu tablosu
+      dersler: tabloId(d, 'dgDersProgrami'), sertifika: tabloId(d, 'dgSertifika'), rapor: tabloId(d, 'dgRaporBilgileri'), ilceSinav: tabloId(d, 'dgIlUygSnv'),   // MEB-015 mazeret raporu · MEB-024 ilçe uygulama sınavı takvimi (kod ↔ tarih)
       ikinciDireksiyon: tarihSonra('İkinci Direksiyon Aşamasına Geçtiği Tarih'), uygunluk: tarihSonra('Uygulama Sınavına Uygunluk Tarihi'),
     };
   }

@@ -3,7 +3,7 @@ import { ulusalSinav, hakDurumu, ilSecenekleri, islemYetkili, ekranYetkili, YETK
 import * as HS from './hesap.js?v=234';
 import * as MZ from './mevzuat.js?v=234';
 import * as DN from './denetim.js?v=234';
-import { pencereSor, pinSor, apiGonder, alanHatalari, e, saatDe, saatE, tl, sayi, ik, rozet, asamaRozet, avatar, plaka, ilerleme, bos, pencere, kapatPencere, bildir, sekmeler, tarih, tarihUzun, goreli, cubukGrafik, halka, ayAdi, csvIndir, waAc, waSirali, tamTarih, apiAcik, isaret, ekranNotu, aracGorsel, olcumler, yonLevhasi } from './ui.js?v=234';
+import { pencereSor, pinSor, apiGonder, alanHatalari, e, saatDe, saatE, tl, sayi, ik, rozet, asamaRozet, avatar, plaka, ilerleme, bos, pencere, kapatPencere, bildir, sekmeler, tarih, tarihUzun, goreli, cubukGrafik, halka, ayAdi, csvIndir, waAc, waSirali, tamTarih, apiAcik, isaret, ekranNotu, aracGorsel, olcumler, yonLevhasi, fotoKucult } from './ui.js?v=234';
 import { yenile } from './app.js?v=234';
 import { AYAR_SEKMELERI, ayarBaglan, ustaDavet, kimlikKartlari, personelFotoKirp, personelOzeti, mebAracKur, mebAktar, mebCek, MEB_BILGI } from './sayfalar5.js?v=234';
 import * as MB from './mebmerkez.js?v=234';
@@ -686,12 +686,14 @@ function faturaKes() {
 const tarihGir = t => t || '';
 // ARC-019, ARC-020, ARC-021: araç defteri — poliçe (sigorta, kasko, tehlikeli madde, yük kaskosu), periyodik bakım, lastik, muayene ve egzoz,
 // noter (satış), zimmet ve km (aracın hangi öğretmende olduğu, çıkış-giriş km, akaryakıt). Kayıtlar a.kayitlar; poliçe bitişi ve km kartı da günceller.
-const DEFTER_TUR = [['police', 'Poliçe'], ['bakim', 'Periyodik bakım'], ['lastik', 'Lastik'], ['muayene', 'Muayene / egzoz'], ['zimmet', 'Zimmet ve km'], ['noter', 'Noter / satış']];
+const DEFTER_TUR = [['police', 'Poliçe'], ['bakim', 'Periyodik bakım'], ['lastik', 'Lastik'], ['muayene', 'Muayene / egzoz'], ['zimmet', 'Zimmet ve km'], ['noter', 'Noter / satış'], ['galeri', 'Fotoğraf'], ['bagli', 'Bağlı araç (römork)']];   // ARC-019: galeri ve bağlı araç
 function aracDefteri(a) {
   const l = (a.kayitlar || []).slice().sort((x, y) => String(y.tarih).localeCompare(String(x.tarih)));
   const ozet = x => x.tur === 'police' ? `${x.policeTur || 'Poliçe'} · ${e(x.acenta || '')}${x.policeNo ? ' · no ' + e(x.policeNo) : ''} · bitiş ${tarih(x.bitis)}${x.bitis && fark(x.bitis) >= 0 ? ` (${fark(x.bitis)} gün)` : ' (geçmiş)'}`
     : x.tur === 'zimmet' ? `${e((egitmen(x.egitmen) || {}).ad || '')} · çıkış ${sayi(+x.kmCikis || 0)} km${x.kmGiris ? ` · giriş ${sayi(+x.kmGiris)} km (${sayi(+x.kmGiris - (+x.kmCikis || 0))} km)` : ' · araç öğretmende'}${x.yakitL ? ` · ${String(x.yakitL).replace('.', ',')} L yakıt` : ''}`
-    : x.tur === 'noter' ? `${e(x.noter || '')}${x.satisTarih ? ' · satış ' + tarih(x.satisTarih) : ''}` : `${x.km ? sayi(+x.km) + ' km' : ''}${x.sonrakiKm ? ' · sonraki ' + sayi(+x.sonrakiKm) + ' km' : ''}${x.bitis ? ' · geçerlilik ' + tarih(x.bitis) : ''}${x.tutar ? ' · ' + tl(+x.tutar) : ''}`;
+    : x.tur === 'noter' ? `${e(x.noter || '')}${x.satisTarih ? ' · satış ' + tarih(x.satisTarih) : ''}`
+    : x.tur === 'galeri' ? (x.resim ? `<img src="${x.resim}" alt="Araç fotoğrafı" style="display:block;max-width:220px;max-height:140px;border-radius:8px;margin-top:4px">` : '')
+    : x.tur === 'bagli' ? (x.bagliArac ? `bağlı: ${e((S.araclar.find(y => y.id === x.bagliArac) || {}).plaka || 'silinmiş araç')}` : 'bağlantı kaldırıldı') : `${x.km ? sayi(+x.km) + ' km' : ''}${x.sonrakiKm ? ' · sonraki ' + sayi(+x.sonrakiKm) + ' km' : ''}${x.bitis ? ' · geçerlilik ' + tarih(x.bitis) : ''}${x.tutar ? ' · ' + tl(+x.tutar) : ''}`;
   pencere({ baslik: a.plaka + ' · araç defteri', genis: true, icerik: `<form class="form-izgara" id="f-df">
       <div class="alan"><label>Kayıt türü</label><select name="tur">${DEFTER_TUR.map(([k, ad]) => `<option value="${k}">${ad}</option>`).join('')}</select></div>
       <div class="alan"><label>Tarih</label><input name="tarih" type="date" value="${gun(0)}" required></div>
@@ -708,6 +710,8 @@ function aracDefteri(a) {
       <div class="alan" data-df="zimmet"><label>Akaryakıt (L)</label><input name="yakitL" inputmode="decimal"></div>
       <div class="alan" data-df="noter"><label>Noter</label><input name="noter" maxlength="80"></div>
       <div class="alan" data-df="noter"><label>Satış tarihi</label><input name="satisTarih" type="date"></div>
+      <div class="alan tam" data-df="galeri"><label>Fotoğraf</label><input name="resim" type="file" accept="image/*"></div>
+      <div class="alan" data-df="bagli"><label>Bağlı araç</label><select name="bagliArac"><option value="">Bağlantıyı kaldır</option>${S.araclar.filter(y => y.id !== a.id).map(y => `<option value="${y.id}" ${y.id === a.bagliArac ? 'selected' : ''}>${e(y.plaka)}${y.sinif ? ' · ' + e(y.sinif) : ''}</option>`).join('')}</select></div>
       <div class="alan tam"><label>Not</label><input name="not" maxlength="200"></div>
       <div class="tam"><button class="dg dg-ana dg-kucuk" type="submit">Kaydı ekle</button></div></form>
       <div class="ara-bosluk"></div>${l.length ? `<ul class="liste">${l.map(x => `<li><div style="flex:1"><b style="color:var(--murekkep);display:block">${(DEFTER_TUR.find(t => t[0] === x.tur) || [, x.tur])[1]} · ${tarih(x.tarih)}</b><small style="color:var(--soluk)">${ozet(x)}${x.not ? ' · ' + e(x.not) : ''}</small></div><button class="dg dg-hafif dg-kucuk" data-df-sil="${e(x.id)}">Sil</button></li>`).join('')}</ul>` : `<p style="color:var(--soluk);font-size:14px">Henüz kayıt yok.</p>`}`,
@@ -719,6 +723,8 @@ function aracDefteri(a) {
         if (tur === 'police') { if (!f.bitis.value) return bildir('Poliçe bitiş tarihini yazın', 'uyari'); Object.assign(x, { policeTur: f.policeTur.value, acenta: f.acenta.value.trim(), policeNo: f.policeNo.value.trim(), bitis: f.bitis.value, tutar: say(f.tutar.value) || undefined }); const alan = f.policeTur.value === 'Trafik sigortası' ? 'sigorta' : f.policeTur.value === 'Kasko' ? 'kasko' : null; if (alan && (!a[alan] || a[alan] < x.bitis)) a[alan] = x.bitis; if (alan === 'sigorta') a.sigortaBelgeNo = x.policeNo || a.sigortaBelgeNo; }
         else if (tur === 'zimmet') { const c = say(f.kmCikis.value), g = say(f.kmGiris.value); if (g && g < c) return bildir('Giriş km çıkıştan küçük olamaz', 'uyari'); Object.assign(x, { egitmen: f.egitmen.value, kmCikis: c || undefined, kmGiris: g || undefined, yakitL: String(f.yakitL.value).replace(',', '.') || undefined }); if ((g || c) > (+a.km || 0)) a.km = g || c; }
         else if (tur === 'noter') Object.assign(x, { noter: f.noter.value.trim(), satisTarih: f.satisTarih.value || undefined });
+        else if (tur === 'galeri') { const dosya = f.resim.files[0]; if (!dosya) return bildir('Fotoğraf seçin', 'uyari'); return fotoKucult(dosya, 900).then(u => { x.resim = u; a.kayitlar = [...(a.kayitlar || []), x]; islem('Araç defterine fotoğraf ekledi', a.plaka); kaydet(); kapatPencere(); bildir('Fotoğraf eklendi'); yenile(); aracDefteri(a); }); }
+        else if (tur === 'bagli') { const eski = a.bagliArac, yeni = f.bagliArac.value || ''; if (eski) { const o = S.araclar.find(y => y.id === eski); if (o && o.bagliArac === a.id) delete o.bagliArac; } if (yeni) { a.bagliArac = yeni; const o = S.araclar.find(y => y.id === yeni); if (o) o.bagliArac = a.id; } else delete a.bagliArac; x.bagliArac = yeni || undefined; }
         else { Object.assign(x, { km: say(f.km.value) || undefined, sonrakiKm: say(f.sonrakiKm.value) || undefined, bitis: f.bitis.value || undefined, tutar: say(f.tutar.value) || undefined }); if (tur === 'bakim' && x.sonrakiKm) a.bakimKm = x.sonrakiKm; if (tur === 'muayene' && x.bitis && (!a.muayene || a.muayene < x.bitis)) a.muayene = x.bitis; if (x.km > (+a.km || 0)) a.km = x.km; }
         a.kayitlar = [...(a.kayitlar || []), x]; islem('Araç defterine kayıt ekledi', `${a.plaka} · ${(DEFTER_TUR.find(t => t[0] === tur) || [, tur])[1]}`); kaydet(); kapatPencere(); bildir('Kayıt eklendi'); yenile(); aracDefteri(a); });
       d.addEventListener('click', ev => { const sl = ev.target.closest('[data-df-sil]'); if (!sl) return; a.kayitlar = (a.kayitlar || []).filter(x => x.id !== sl.dataset.dfSil); islem('Araç defterinden kayıt sildi', a.plaka); kaydet(); kapatPencere(); yenile(); aracDefteri(a); });
