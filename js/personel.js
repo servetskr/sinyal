@@ -10,7 +10,7 @@ export const GOREVLER = ['Kurucu', 'Kurs Müdürü', 'Müdür Yardımcısı', 'U
 export const BRANSLAR = ['Trafik ve Çevre', 'İlk Yardım', 'Araç Tekniği', 'Trafik Adabı', 'Direksiyon Eğitimi'];
 export const STATULER = [['1', 'Kadrolu (aylık ücretli)'], ['0', 'Ders ücretli'], ['2', 'Diğer']];
 // evrak türü → usta kartındaki tarih alanı (M13 kuralı bunu denetler)
-export const EVRAK_TURLERI = [['saglik', 'Sağlık raporu'], ['adli', 'Adli sicil kaydı'], ['sertifika', 'Usta öğretici sertifikası'], ['ogrenim', 'Diploma / öğrenim belgesi'], ['ehliyet', 'Sürücü belgesi'], ['sozlesme', 'İş sözleşmesi'], ['sgk', 'SGK işe giriş bildirgesi'], ['kimlik', 'Nüfus cüzdanı sureti'], ['ikamet', 'Yerleşim yeri belgesi'], ['askerlik', 'Askerlik durum belgesi'], ['ilkyardim', 'İlk yardım sertifikası'], ['diger', 'Diğer']];
+export const EVRAK_TURLERI = [['saglik', 'Sağlık raporu'], ['adli', 'Adli sicil kaydı'], ['sertifika', 'Usta öğretici sertifikası'], ['ek21', 'Hizmet içi eğitim tamamlama belgesi (EK-21)'], ['ogrenim', 'Diploma / öğrenim belgesi'], ['ehliyet', 'Sürücü belgesi'], ['sozlesme', 'İş sözleşmesi'], ['sgk', 'SGK işe giriş bildirgesi'], ['kimlik', 'Nüfus cüzdanı sureti'], ['ikamet', 'Yerleşim yeri belgesi'], ['askerlik', 'Askerlik durum belgesi'], ['ilkyardim', 'İlk yardım sertifikası'], ['diger', 'Diğer']];
 const evrakAd = t => (EVRAK_TURLERI.find(x => x[0] === t) || [0, t])[1];
 const ZIMMET_TUR = ['Araç', 'Anahtar', 'Bilgisayar / tablet', 'Telefon', 'Diğer'];
 
@@ -28,6 +28,10 @@ export function yillikIzin(x) {
   const kullanilan = (S.izinler || []).filter(i => i.kim === x.id && /yıllık/i.test(i.tur || '') && String(i.bas).slice(0, 4) === String(yil)).reduce((a, i) => a + izinGunu(i.bas, i.bit), 0);
   return { hak, kullanilan, kalan: hak - kullanilan, kidem, elle: +x.yillikIzinGun > 0 };
 }
+// PER-023: EK-21 (MTSK Direksiyon Usta Öğreticileri Hizmet İçi Eğitim Tamamlama Belgesi, md.31/A-5). Geçici md.16/2: 9/7/2024'ten
+// itibaren 2 yıl içinde tamamlanır (9 Temmuz 2026); belgesi olmayanın çalışma izni uzatılmaz. Belge 10 yılda bir yenilenir.
+export const EK21_SON = '2026-07-09';
+export const ek21 = x => (x.evraklar || []).filter(v => v.tur === 'ek21').sort((a, b) => String(b.tarih || '').localeCompare(String(a.tarih || '')))[0] || null;
 // P04 ve kart için: bitişi geçmiş ya da 30 gün içinde biten evraklar
 // PER-022: aylık hakediş. Ders ücretli (statü '0'): yapılan ders saati × ders ücreti (usta: direksiyon dersi; teorik öğretmen: teorik ders saati).
 // Aylık ücretli: maaş + (ustada) ders primi. Avans ve hakediş ödemeleri düşülür → bakiye. ay: 'YYYY-MM'
@@ -152,7 +156,10 @@ export function personelKarti(tur, id, sekme) {
           let dosya = null; const fl = f.dosya.files[0];
           if (fl) { const pdf = fl.type === 'application/pdf'; if (pdf && fl.size > 1.5e6) return bildir('PDF 1,5 MB’tan büyük; küçültüp yeniden seçin', 'uyari');
             try { const veri = pdf ? await new Promise((ok, red) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = red; r.readAsDataURL(fl); }) : await fotoKucult(fl, 1600); dosya = { ad: fl.name.slice(0, 80), tur: pdf ? 'pdf' : 'resim', veri }; } catch (x2) { return bildir('Dosya okunamadı', 'uyari'); } }
-          const v = { id: 'pe' + Date.now().toString(36), tur: f.tur.value, not: f.not.value.trim(), tarih: f.tarih.value || null, bitis: f.bitis.value || null, ...(dosya ? { dosya } : {}) };
+          // EK-21 on yıl geçerli (md.31/A-5): bitiş yazılmadıysa alınma + 10 yıl
+          const on = t => { const d = tarihOku(t); d.setFullYear(d.getFullYear() + 10); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+          if (f.tur.value === 'ek21' && !f.tarih.value) return bildir('EK-21 belgesinin tarihini yazın', 'uyari');
+          const v = { id: 'pe' + Date.now().toString(36), tur: f.tur.value, not: f.not.value.trim(), tarih: f.tarih.value || null, bitis: f.bitis.value || (f.tur.value === 'ek21' ? on(f.tarih.value) : null), ...(dosya ? { dosya } : {}) };
           x.evraklar = [...(x.evraklar || []), v];
           // usta öğreticinin kart tarihleri (M13 kuralı): sağlık, adli sicil, sertifika bitişi
           if (tur === 'usta' && ['saglik', 'adli', 'sertifika'].includes(v.tur) && v.bitis) { x.belgeler = { ...(x.belgeler || {}), [v.tur]: v.bitis }; }

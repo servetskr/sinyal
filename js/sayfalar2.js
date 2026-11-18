@@ -581,6 +581,7 @@ export function ustaMebRozet(x) {
   const kaynak = { elle: 'kartta yazılı', 'Maaş KDS': 'MEBBİS Maaş KDS', 'Ücret KDS': 'MEBBİS Ücret KDS', varsayılan: 'ÖÖKY md.26/5', müdür: 'müdür, ÖÖKY md.26/6' }[hs.kaynak];
   const satir = `<div class="belge-satir"><span>İzin no</span><b${x.calismaIzinNo ? ' class="mono"' : ' style="color:var(--kirmizi)"'}>${x.calismaIzinNo ? e(x.calismaIzinNo) : 'Yok'}</b>${m.izinFark ? rozet('MEBBİS’te farklı: ' + m.izinFark, 'kirmizi') : ''}</div>
     ${x.mebYetki && (x.mebYetki.uygulama.length || x.mebYetki.teorik.length) ? `<div class="belge-satir"><span>MEBBİS yetkisi</span><b>${e([x.mebYetki.uygulama.length ? 'uygulama ' + x.mebYetki.uygulama.join(', ') : '', x.mebYetki.teorik.length ? 'teorik ' + x.mebYetki.teorik.join(', ') : ''].filter(Boolean).join(' · '))}</b></div>` : ''}
+    ${(() => { const k = PK.ek21(x); return `<div class="belge-satir"><span>EK-21</span>${k ? `<b>${tamTarih(k.tarih)}</b>${PK.evrakDurumu(k) ? rozet(PK.evrakDurumu(k) === 'bitti' ? 'Yenilenmeli' : 'Yenileme yakın', 'uyari') : ''}` : `<b style="color:var(--kirmizi)">Kayıtlı değil</b>`}</div>`; })()}
     <div class="belge-satir"><span>Bu hafta</span><b style="${n > hs.n ? 'color:var(--kirmizi)' : ''}">${n}/${hs.n} ders saati</b><small style="color:var(--soluk);margin-left:6px">${kaynak}</small></div>`;
   let not = '';
   if (m.ayrildi) { const ileri = S.dersler.filter(y => y.egitmen === x.id && y.durum === 'Planlandı' && fark(y.tarih) >= 0).length;

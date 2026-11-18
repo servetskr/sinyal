@@ -192,6 +192,13 @@ const KURALLAR = [
         });
       });
     } },
+  // PER-023: EK-21 hizmet içi eğitim tamamlama belgesi (MTSK Yön. md.31/A-5, Geçici md.16/2: son gün 9 Temmuz 2026). Belgesi kayıtlı olmayan usta
+  // öğretici için uyarı; çalışma izni 60 gün içinde bitiyorsa 'izni uzatılmaz' diye yazılır. Belge personel kartı › Evraklar'a eklenir.
+  { id: 'P05', sira: 256, ad: 'Usta öğretici EK-21 hizmet içi eğitim belgesi', dayanak: 'MTSK Yön. md.31/A-5; Geçici md.16/2', kapsam: 'personel', ciddiyet: 'uyari', bugun: true, bugunAd: n => `${n} öğretmenin EK-21 hizmet içi eğitim belgesi kayıtlı değil`,
+    kontrol(l) {
+      (S.egitmenler || []).filter(x => x && !x.pasif && !x.ayrildi && !(x.evraklar || []).some(v => v.tur === 'ek21')).forEach(x => { const d = izinDurumu(x), yakin = d.kalan != null && d.kalan <= 60;
+        l.push(bul('uyari', `${x.ad} · EK-21 hizmet içi eğitim belgesi kayıtlı değil${yakin ? ` (çalışma izni ${d.kalan < 0 ? 'bitti' : d.kalan + ' gün sonra bitiyor'})` : ''}`, `Direksiyon usta öğreticileri hizmet içi eğitimi 9 Temmuz 2026’ya kadar tamamlamalıydı; belgesi olmayanın çalışma izni uzatılmaz (MTSK Yön. md.31/A-5, Geçici md.16/2). Belgesi varsa personel kartı › Evraklar’a ekleyin.`, '#/filo/egitmen', { personel: [x.id] })); });
+    } },
   // PER-019, PER-021: personel evrakı bitişi (kişi kartındaki evraklar; usta öğreticinin sertifika/sağlık/adli tarihleri M13'te) ve teslim günü geçmiş zimmet
   { id: 'P04', sira: 258, ad: 'Personel evrakı ve zimmet', dayanak: 'Kurum içi takip (MTSK Yön. md.46: personel dosyası)', kapsam: 'personel', ciddiyet: 'uyari', bugun: true, bugunAd: n => `${n} personel evrakı ya da zimmeti takipte`,
     kontrol(l) {
