@@ -52,6 +52,7 @@
       ook00001: { ad: 'OOK00001', yol: '/Ookgm/ook00001.aspx', zorunlu: [] },
       ook12001: { ad: 'OOK12001 Personel Arama', yol: '/Ookgm/ook12001.aspx', zorunlu: [] },
       ook54001: { ad: 'OOK54001 Personel', yol: '/Ookgm/ook54001.aspx', zorunlu: [] },
+      ook36002: { ad: 'OOK36002 Banka Bilgileri', yol: '/Ookgm/ook36002.aspx', zorunlu: [] },
     },
     // cmbDurumu: 0 kurum onay bekliyor, 1 kurum onaylandı, 4 döneme kayıtlı tüm adaylar · cmbOgrenciDurumu 0 = "Kursa Başvuru Aşamasında" ("tümü" seçeneği YOK; 17 Kas canlı)
     // cmbEgitimDonemi 1 = "-Tüm Dönemler-" · dropTurSecim 1 araç, 2 simülatör · cmbSinavTuru 2 uygulama, 3 e-sınav · OOK12001 cmbPersonelDurum 1 Görevde
@@ -591,7 +592,30 @@
       return o;
     },
   });
-  const CEKME_EKRAN = { kimlikler: ['skt02013'], merkezler: ['skt02007'], sonuclar: ['skt02008'], fotograf: ['skt02006'], kurum: ['skt01001'], gruplar: ['skt03002', 'skt03001'], kursiyerler: ['skt02006'], personel: [], araclar: ['skt01002'], sinavlar: ['skt04003'], dosya: ['skt02009'], randevular: ['skt01005'], ucretler: ['skt02007'], teorik: ['skt04001'], ucretIlani: [], yetki: ['ook15003', 'ook15004'], direksiyonProgrami: ['skt04002'] };
+  // PAR-028 (1.18.0): OOK36002 Banka Bilgileri Giriş — kurumun MEBBİS'e bildirdiği banka hesabı (IBAN; ÖÖKY 55/3). Yalnız GET: grdBankaIbanBilgileri
+  //  tablosu okunur; satırdaki "Seç"e (sec$N), Kaydet'e ve il seçimine (autopostback) dokunulmaz. Tablo id'yle, yoksa başlıktan (IBAN + Banka) bulunur;
+  //  ikisi de yoksa "ekran değişti". OOK modülüne ilk girişte sayfa ana sayfaya dönerse önce modül sayfası açılır (ucretIlani gibi).
+  //  IBAN TR + 24 hane ve mod-97 denetiminden geçmezse alınmaz (gecersiz sayılır). Çıktı { hesaplar[{iban, banka, sube, il, ilce}], gecersiz }.
+  const ibanGecerli = v => { if (!/^TR\d{24}$/.test(v)) return false; const d = (v.slice(4) + v.slice(0, 4)).replace(/[A-Z]/g, c => String(c.charCodeAt(0) - 55)); let k = 0; for (const c of d) k = (k * 10 + +c) % 97; return k === 1; };
+  Object.assign(CEKME, {
+    async iban() {
+      const oku = d => tabloId(d, 'grdBankaIbanBilgileri') || tabloBaslikla(d, /iban/, /banka/);
+      let t = await getir('/Ookgm/ook36002.aspx'), tb = oku(t.doc);
+      if (!tb && !elBul(t.doc, 'txtIban')) { await getir('/Ookgm/ook00001.aspx'); t = await getir('/Ookgm/ook36002.aspx'); tb = oku(t.doc); }
+      if (!tb) { if (elBul(t.doc, 'txtIban')) return { hesaplar: [], gecersiz: 0 }; throw ekranHata(t.doc, 'grdBankaIbanBilgileri', 'tablosu'); }   // form var, kayıtlı hesap yok
+      const b = tb.baslik.map(norm), i = { iban: b.findIndex(h => /iban/.test(h)), banka: b.findIndex(h => /bankaadi|^banka$/.test(h)), sube: b.findIndex(h => /sube/.test(h)), il: b.findIndex(h => /ila?di?$|bankail(adi)?$/.test(h) && !/ilce/.test(h)), ilce: b.findIndex(h => /ilce/.test(h)) };
+      if (i.iban < 0) throw ekranHata(t.doc, 'grdBankaIbanBilgileri › IBAN', 'sütunu');
+      const hucre = (r, j) => j >= 0 ? String(r[j] || '').replace(/\s+/g, ' ').trim().slice(0, 120) : '';
+      let gecersiz = 0; const hesaplar = [];
+      for (const r of tb.satirlar) {
+        const iban = String(r[i.iban] || '').replace(/\s/g, '').toUpperCase(); if (!iban) continue;
+        if (!ibanGecerli(iban)) { gecersiz++; continue; }
+        if (!hesaplar.some(x => x.iban === iban)) hesaplar.push({ iban, banka: hucre(r, i.banka), sube: hucre(r, i.sube), il: hucre(r, i.il), ilce: hucre(r, i.ilce) });
+      }
+      return { hesaplar: hesaplar.slice(0, 5), gecersiz };
+    },
+  });
+  const CEKME_EKRAN = { iban: [], kimlikler: ['skt02013'], merkezler: ['skt02007'], sonuclar: ['skt02008'], fotograf: ['skt02006'], kurum: ['skt01001'], gruplar: ['skt03002', 'skt03001'], kursiyerler: ['skt02006'], personel: [], araclar: ['skt01002'], sinavlar: ['skt04003'], dosya: ['skt02009'], randevular: ['skt01005'], ucretler: ['skt02007'], teorik: ['skt04001'], ucretIlani: [], yetki: ['ook15003', 'ook15004'], direksiyonProgrami: ['skt04002'] };
   // Aday Durum Görüntüleme: tek adayın bütün dosyası
   async function adayDosyasi(taban, tc) {
     const r = await postla(taban, { txtTcKimlikNo: tc }, { dugme: 'ImageButton1' });
@@ -1146,7 +1170,7 @@
       const cekEngel = ekranlar => ekranlar.map(k => cekOn[k]).find(o => o && !o.ok);
       for (const ne of cekilecek) {
         await denetimle(); if (!CEKME[ne]) { sonuc.veri[ne] = { hata: 'Bu sürüm bu çekmeyi tanımıyor: ' + ne }; continue; }
-        ilerle({ gruplar: 'Dönem grupları okunuyor', kursiyerler: 'Kursiyerler okunuyor', personel: 'Personel okunuyor', araclar: 'Araçlar okunuyor', sinavlar: 'Sınav sonuçları okunuyor', sonuclar: 'Toplu sınav sonuçları okunuyor', merkezler: 'e-Sınav merkezleri okunuyor', kimlikler: 'Dönem aday listesi okunuyor', fotograf: 'Fotoğraf alınıyor' }[ne] || ne, 0);
+        ilerle({ gruplar: 'Dönem grupları okunuyor', kursiyerler: 'Kursiyerler okunuyor', personel: 'Personel okunuyor', araclar: 'Araçlar okunuyor', sinavlar: 'Sınav sonuçları okunuyor', sonuclar: 'Toplu sınav sonuçları okunuyor', merkezler: 'e-Sınav merkezleri okunuyor', kimlikler: 'Dönem aday listesi okunuyor', fotograf: 'Fotoğraf alınıyor', iban: 'Kurum banka hesabı okunuyor' }[ne] || ne, 0);
         const e = cekEngel(CEKME_EKRAN[ne] || []); if (e) { sonuc.veri[ne] = { hata: e.not, hataTur: e.tur }; await kaydet('calisiyor'); continue; }
         try { sonuc.veri[ne] = await CEKME[ne](ilerle, { ...(((is.ayar || {})[ne]) || {}), kurum: (sonuc.kurum && sonuc.kurum.kod) || '' }); } catch (x) { if (durduran(x)) throw x; ekranKaydet(x); sonuc.veri[ne] = { hata: x.message, hataTur: x.tur }; }
         await kaydet('calisiyor');
