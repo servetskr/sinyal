@@ -165,6 +165,7 @@ export async function zamanlayiciCalistir(elle = false) {
         if (bulutKanca.sahiplen && !(await bulutKanca.sahiplen('z|' + x.anahtar + '|' + bugun))) continue;  // öbür cihaz gönderdi; kaydı eşitlemeyle gelir
         const s = await apiGonder(etiket(x.kim.ad, x.kim.rol) + x.metin, undefined, undefined, x.kim);
         z.kayit.unshift({ zaman: yerelZaman(), kural: x.kural, kime: x.kim.ad, rol: x.kim.rol, metin: x.metin, id: s.id || null, durum: s.ok ? 'gönderildi' : 'hata: ' + s.hata });
+        if (s.ok) gonderimEkle(x.kim.ad, x.metin, kural(x.kural).ad, { oto: true });   // MSJ-027: otomatik mesaj da öğrencinin geçmişine
         // gönderilemeyen mesaj öbürlerini durdurmaz; aynı mesaj 3 kez denenince bugünlük bırakılır
         if (!s.ok) { z.hata = z.hata || {}; z.hata[x.anahtar] = (z.hata[x.anahtar] || 0) + 1; if (z.hata[x.anahtar] >= 3) { z.gonderilen[x.anahtar] = bugun; if (!z.kuyruk.some(y => y.anahtar === x.anahtar)) z.kuyruk.push({ ...x, eklendi: yerelZaman(), gun: bugun, hata: s.hata }); } continue; }  // 3 denemede gitmezse elle gönderilecekler listesine düşer
         z.gonderilen[x.anahtar] = bugun; z.gunluk = z.gunluk || {}; z.gunluk[bugun + x.kural] = (z.gunluk[bugun + x.kural] || 0) + 1;

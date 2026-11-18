@@ -1259,7 +1259,12 @@ export function evrakKaynak(k, key, kaynak) {
 }
 export const asamaNo = k => ASAMALAR.indexOf(k.asama);
 export function sonrakiDers(k) { return S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Planlandı' && fark(d.tarih) >= 0).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat))[0]; }
-export function gonderimEkle(kime, metin, tur) { S.gonderimler.unshift({ zaman: new Date().toISOString(), kime, metin, tur }); kaydet(); }
+// MSJ-027: gönderilen her mesaj kayda düşer; alıcı adı tek bir kursiyere uyuyorsa kimliği de yazılır (öğrencinin 'Notlar ve mesajlar' geçmişi
+// adla değil kimlikle bulur; aynı adlı iki öğrenci karışmaz). ek: { oto: true } zamanlanmış otomatik gönderim
+export function gonderimEkle(kime, metin, tur, ek = {}) {
+  const l = (S.kursiyerler || []).filter(k => k.ad + ' ' + k.soyad === kime), kid = ek.kid || (l.length === 1 ? l[0].id : undefined);
+  S.gonderimler.unshift({ zaman: new Date().toISOString(), kime, metin, tur, ...(kid ? { kid } : {}), ...(ek.oto ? { oto: true } : {}) }); kaydet();
+}
 
 // Sınav riski (0–100): usta öğreticinin ders sonu beceri puanları, deneme sınavları, devamsızlık, kısa dersler, önceki kalma.
 const ortala = l => l.length ? l.reduce((a, x) => a + x, 0) / l.length : null;

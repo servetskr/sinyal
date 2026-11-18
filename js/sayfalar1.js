@@ -1271,7 +1271,7 @@ export function kursiyerDetay(id) {
   const S0 = SINIFLAR[k.sinif], eg = egitmen(k.egitmen) || { id: null, ad: 'Öğretmen atanmadı', siniflar: [] };
   const dersler = S.dersler.filter(d => d.kursiyer === k.id).sort((a, b) => (b.tarih + b.saat).localeCompare(a.tarih + a.saat));
   const sinavlar = S.sinavlar.filter(s => s.kursiyerler.includes(k.id)).sort((a, b) => a.tarih.localeCompare(b.tarih));
-  const mesajlar = S.gonderimler.filter(g => g.kime === tamAd(k));
+  const mesajlar = S.kurs.mesajGecmise === false ? [] : S.gonderimler.filter(g => g.kid ? g.kid === k.id : g.kime === tamAd(k));   // MSJ-027
   const eksik = eksikEvrak(k);
   const mebEksik = (() => { const l = mebOnKontrol(k); return k.mebIslendi ? 0 : l.filter(x => !x[0]).length; })();
   const sekmeHtml = () => sekmeler([['ozet', 'Özet'], ['dosya', 'Dosya', eksik.length || mebEksik || null], ['odeme', 'Ödeme'], ['dersler', 'Dersler', dersler.length], ['sinav', 'Sınavlar', sinavlar.length], ['mesaj', 'Notlar ve mesajlar', k.notlar.length || null], ['cikti', 'Çıktılar']], profilSekme === 'genel' ? 'ozet' : profilSekme, 'psekme');
