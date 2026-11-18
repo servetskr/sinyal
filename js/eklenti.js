@@ -34,6 +34,16 @@ export const eklenti = { var: false, surum: null, ozellik: [], harita: null };
 const sayfadan = (tur, veri) => window.postMessage({ kaynak: 'sinyal-sayfa', tur, veri }, location.origin);
 let yenileFn = () => { };
 export const eklentiYenile = f => { yenileFn = f; };
+// YON-076: Yardımcı'nın kurulu olduğu kurs verisine yazılır (sürüm, tarih, bilgisayar); kurulum adımı telefondan bakınca da tamam görünür
+function yardimciIzi() {
+  try {
+    const u = oturum.kullanici; if (!u || !['mudur', 'sekreter'].includes(u.rol) || !S.kurs) return;
+    const ua = navigator.userAgent || '', os = /Windows/.test(ua) ? 'Windows' : /Mac OS X/.test(ua) ? 'Mac' : /CrOS/.test(ua) ? 'Chromebook' : /Linux/.test(ua) ? 'Linux' : 'bilgisayar';
+    const y = S.kurs.yardimci || {}, yeni = { surum: eklenti.surum || '', tarih: gun(0), cihaz: os + ' · Chrome', kim: u.ad || '' };
+    if (y.surum === yeni.surum && y.cihaz === yeni.cihaz && y.tarih && fark(y.tarih) > -7) return;  // haftada bir tazelenir, her açılışta yazılmaz
+    S.kurs.yardimci = yeni; kaydet();
+  } catch (x) { }
+}
 export const EKLENTI_ZIP = 'eklenti/mdsinyal-mebbis.zip';
 // 1.12.0'dan eski Yardımcı (mebtoplu.js GEREKEN_SURUM ile aynı)
 const eskiSurum = () => { const v = String(eklenti.surum || '0').split('.').map(Number); return v[0] < 1 || (v[0] === 1 && (v[1] || 0) < 12); };
@@ -276,7 +286,7 @@ export function eklentiBaslat() {
   window.addEventListener('message', ev => {
     if (ev.source !== window || ev.origin !== location.origin || !ev.data || ev.data.kaynak !== 'sinyal-eklenti') return;
     const { tur, veri } = ev.data;
-    if (tur === 'merhaba') { const ilk = !eklenti.var; Object.assign(eklenti, { var: true, surum: veri && veri.surum, ozellik: (veri && veri.ozellik) || [] }); if (ilk) yenileFn(); }
+    if (tur === 'merhaba') { const ilk = !eklenti.var; Object.assign(eklenti, { var: true, surum: veri && veri.surum, ozellik: (veri && veri.ozellik) || [] }); yardimciIzi(); if (ilk) yenileFn(); }
     if (tur === 'harita-durum' && veri) { eklenti.harita = veri; haritaBekleyen = veri; if (bekleyenleriIsle()) yenileFn(); }
     else if (haritaBekleyen && bekleyenleriIsle()) yenileFn();
     if (tur === 'tablo' && veri && veri.satirlar) tabloGeldi(veri);

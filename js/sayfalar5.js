@@ -694,6 +694,7 @@ function aktarimUygula() {
     n++;
   });
   aktarim.sonuc = { id, n, atla, tur: 'kursiyer' }; aktarim.satirlar = null;
+  if (n) kurIz('aktarim', { onay: true, n });  // YON-076: kurulumdaki 'Kursiyerleri aktar' adımı
   islem('Kursiyer aktardı', n + ' kayıt'); kaydet();
 }
 // DIG-057: aktarım sonunda bakiye özeti — eski programın bakiye raporuyla karşılaştırılacak toplamlar
@@ -986,32 +987,66 @@ export function evrakDogrula(k, tur) {
 }
 
 /* ================= KURULUM ================= */
+// YON-076: her adımın kimliği var; S.kurs.kurulum[id] = { kim, tarih, atlandi?, onay? } (kim yaptı, atlandı mı). Atlanan ve isteğe bağlı adım
+// sayaca girmez (menü rozeti ve ilerleme). x[1] = sayılmaz (bitti, atlandı ya da isteğe bağlı); x[5] = { id, ok, atlandi, istege, kayit }.
+const sadeYer = v => String(v || '').toLocaleLowerCase('tr').replace(/[^a-zçğıöşü0-9]/g, '');
+const kurKayit = () => (S.kurs && S.kurs.kurulum) || {};
 export function kurulumAdimlari() {
-  const sos = S.sosyal || { kanallar: [] }, en = S.entegrasyon || { earsiv: {} };
-  return [
-    ['Kurs bilgileri ve şubeler', !!(S.kurs.tel && S.kurs.adres), 'Siz · 3 dk', '#/ayarlar/kurs', 'Ad, adres, telefon; birden fazla şube varsa şubeler.'],
-    ['Banka hesapları', !!S.kurs.iban, 'Siz · 2 dk', '#/ayarlar/kurs', 'Havale/EFT için IBAN’lar; her birine ad verin (ör. “Taksit ödemeleri”). Öğrenci uygulamasında ve hatırlatmalarda görünür.'],
-    ['Sınıflar ve ücretler', !S._bulut || S.kurs.ucretOnay !== null, 'Siz · 5 dk', '#/ayarlar/sinif', 'İlinizin valilik taban fiyat listesi mdSinyal’de varsa ücretler taban fiyatla hazır gelir. Kurs ücreti, geçiş (fark) ücretleri, ek ve özel ders ücreti; e-Sınav ve uygulama sınavı ücretleri hakka göre; ' + (tabanListesi() ? 'kurs ücreti dışında kalem alınamaz (il taban listesi not 4).' : 'kitap, evrak gibi diğer kalemler.') + ' Kontrol edip onaylayın.'],
-    ['Ekip ve araçlar', S.egitmenler.length > 0 && S.araclar.length > 0, 'Biz · aktarımla', '#/filo', 'Usta öğreticiler, belgeleri ve araçlar.'],
-    ['Kursiyerleri aktar', S.kursiyerler.length > 0, 'Biz · 1 gün', '#/ayarlar/aktarim', 'Eski programdan kursiyer, taksit ve ödeme geçmişi.'],
-    ['MEB kural değerlerini onayla', !!S.kurs.kuralOnay, 'Siz · 2 dk', '#/ayarlar/kurallar', 'Değerler kaynağıyla gelir; kurs müdürü onaylar.'],
-    ['Asistanın bildikleri', S.asistanBilgi.length >= 5, 'Biz · şablondan', '#/mesajlar/bilgi', 'Fiyat, evrak, ders saatleri. Sürücü kursu şablonundan doldurulur, siz okursunuz.'],
-    ['WhatsApp hattını bağla', !!S.kurs.waApi || sos.kanallar.some(c => c.id === 'wp' && c.bagli), 'Biz + siz · 30 dk', '#/ayarlar/kurs', 'Mesajların kurs numarasından otomatik gitmesi için. Instagram ve Facebook, Meta onayından sonra eklenir.'],
+  const sos = S.sosyal || { kanallar: [] }, en = S.entegrasyon || { earsiv: {} }, kk = kurKayit();
+  // adres yalnız şehir adıyla (yeni kurs açılışındaki eski varsayılan) dolu sayılmaz
+  const adresVar = !!S.kurs.adres && sadeYer(S.kurs.adres) !== sadeYer(S.kurs.sehir) && sadeYer(S.kurs.adres).length > 6;
+  const waBagli = !!S.kurs.waApi || sos.kanallar.some(c => c.id === 'wp' && c.bagli);
+  const aktarildi = !!(kk.aktarim && kk.aktarim.onay) || (S.islemler || []).some(x => x.ne === 'Kursiyer aktardı');
+  const l = [
+    ['kurs', 'Kurs bilgileri ve şubeler', !!(S.kurs.tel && adresVar), 'Siz · 3 dk', '#/ayarlar/kurs', 'Ad, açık adres, telefon; birden fazla şube varsa şubeler.'],
+    ['banka', 'Banka hesapları', !!S.kurs.iban, 'Siz · 2 dk', '#/ayarlar/kurs', 'Havale/EFT için IBAN’lar; her birine ad verin (ör. “Taksit ödemeleri”). Öğrenci uygulamasında ve hatırlatmalarda görünür.'],
+    ['sinif', 'Sınıflar ve ücretler', !S._bulut || S.kurs.ucretOnay !== null, 'Siz · 5 dk', '#/ayarlar/sinif', 'İlinizin valilik taban fiyat listesi mdSinyal’de varsa ücretler taban fiyatla hazır gelir. Kurs ücreti, geçiş (fark) ücretleri, ek ve özel ders ücreti; e-Sınav ve uygulama sınavı ücretleri hakka göre; ' + (tabanListesi() ? 'kurs ücreti dışında kalem alınamaz (il taban listesi not 4).' : 'kitap, evrak gibi diğer kalemler.') + ' Kontrol edip onaylayın.'],
+    ['ekip', 'Ekip ve araçlar', S.egitmenler.length > 0 && S.araclar.length > 0, 'Biz · aktarımla', '#/filo', 'Usta öğreticiler, belgeleri ve araçlar.'],
+    ['aktarim', 'Kursiyerleri aktar', aktarildi, 'Biz · 1 gün', '#/ayarlar/aktarim', 'Eski programdan kursiyer, taksit ve ödeme geçmişi. Aktarım bitince ya da aktarılacak kayıt yoksa “Aktarım tamam” deyin; elle girilen birkaç kayıt adımı bitirmez.'],
+    ['kural', 'MEB kural değerlerini onayla', !!S.kurs.kuralOnay, 'Siz · 2 dk', '#/ayarlar/kurallar', 'Değerler kaynağıyla gelir; kurs müdürü onaylar.'],
+    ['asistan', 'Asistanın bildikleri', S.asistanBilgi.length >= 5, 'Biz · şablondan', '#/mesajlar/bilgi', 'Fiyat, evrak, ders saatleri. Sürücü kursu şablonundan doldurulur, siz okursunuz.'],
+    ['whatsapp', 'WhatsApp hattını bağla', waBagli && !!S.kurs.waDeneme, 'Biz + siz · 30 dk', '#/ayarlar/kurs', waBagli && !S.kurs.waDeneme ? 'Hat bağlı; bağlantı penceresinden müdürün telefonuna deneme mesajı gönderin. Mesaj gidince adım biter.' : 'Mesajların kurs numarasından otomatik gitmesi için. Bağlantıdan sonra müdüre deneme mesajı gider; gidince adım biter. Instagram ve Facebook, Meta onayından sonra eklenir.'],
     // MSJ-028: öğrencileri uygulamaya davet (durum Mesajlar'daki 'Öğrenci uygulaması' şeridiyle aynı: kullanıyor / hesap açık girmedi / hesap yok)
-    ['Öğrencileri uygulamaya davet et', (() => { const l = sb(S.kursiyerler).filter(k => !k.kapali && k.asama !== 'Ehliyet'); return !l.length || l.filter(k => k.hesap).length >= l.length / 2; })(), 'Siz · 10 dk', '#/mesajlar', 'Mesajlar › Öğrenci uygulaması › Davet gönder: hesaplar toplu açılır, giriş bilgisi WhatsApp’tan ya da yazdırılan giriş kartıyla verilir. Yarısının hesabı açılınca tamam sayılır.'],
-    ['Kullanıcılar ve güvenlik', (S.kullanicilar || []).length >= 2, 'Siz · 5 dk', '#/ayarlar/kullanici', 'Ön büro ve usta öğretici davetleri; hareketsiz kalınca oturumun kapanma süresi.'],
-    ['e-Arşiv fatura', !!en.earsiv.bagli, 'Biz · 1 gün', '#/ayarlar/entegrasyon', 'e-Arşiv entegratörü bilgileri (kursun kendi sözleşmesiyle).'],
-    ['MEBBİS Yardımcısı', mebAracHazir(), 'Biz + siz · 5 dk', '#/ayarlar/kurallar', 'MEBBİS’e girilen bilgisayarda Chrome eklentisini kurun; kayıtları kontrol edip “MEBBİS’e yaz” ile tek seferde onaylarsınız, Yardımcı kursun MEBBİS oturumunda yazar.'],
-    ['Kursa özel link', !S._bulut || !!S.kurs.kisaAd, 'Siz · 1 dk', '#/ayarlar/kurs', 'mdsinyal.com/kursunuz gibi kısa bir link seçin; öğrenciler ve öğretmenler giriş sayfasına buradan ulaşır.'],
+    ['davet', 'Öğrencileri uygulamaya davet et', (() => { const l = sb(S.kursiyerler).filter(k => !k.kapali && k.asama !== 'Ehliyet'); return !l.length || l.filter(k => k.hesap).length >= l.length / 2; })(), 'Siz · 10 dk', '#/mesajlar', 'Mesajlar › Öğrenci uygulaması › Davet gönder: hesaplar toplu açılır, giriş bilgisi WhatsApp’tan ya da yazdırılan giriş kartıyla verilir. Yarısının hesabı açılınca tamam sayılır.'],
+    ['kullanici', 'Kullanıcılar ve güvenlik', (S.kullanicilar || []).length >= 2, 'Siz · 5 dk', '#/ayarlar/kullanici', 'Ön büro ve usta öğretici davetleri; hareketsiz kalınca oturumun kapanma süresi.'],
+    // e-Arşiv entegratör bağlantısı henüz yok: bağlanana kadar isteğe bağlı, sayaca girmez
+    ['earsiv', 'e-Arşiv fatura', !!en.earsiv.bagli, 'Biz · 1 gün', '#/ayarlar/entegrasyon', 'e-Arşiv entegratörü bilgileri (kursun kendi sözleşmesiyle). Entegratör bağlantısı hazırlanıyor; o zamana kadar faturalar mdSinyal’de hazırlanıp müşavirle kesilir.', !en.earsiv.bagli],
+    // Yardımcı kurulumu kurs verisine yazılır (sürüm, tarih, bilgisayar); telefondan bakınca da tamam görünür
+    ['yardimci', 'MEBBİS Yardımcısı', !!S.kurs.yardimci || mebAracHazir(), 'Biz + siz · 5 dk', '', 'MEBBİS’e girilen bilgisayarda Chrome eklentisini kurun; kayıtları kontrol edip “MEBBİS’e yaz” ile tek seferde onaylarsınız, Yardımcı kursun MEBBİS oturumunda yazar.' + (S.kurs.yardimci ? ` Kurulu: ${S.kurs.yardimci.cihaz || 'bilgisayar'} · sürüm ${S.kurs.yardimci.surum || '?'} · ${tarih(S.kurs.yardimci.tarih)}.` : '')],
+    ['link', 'Kursa özel link', !S._bulut || !!S.kurs.kisaAd, 'Siz · 1 dk', '#/ayarlar/kurs', 'mdsinyal.com/kursunuz gibi kısa bir link seçin; öğrenciler ve öğretmenler giriş sayfasına buradan ulaşır.'],
   ];
+  return l.map(([id, b, ok, kim, h, a, istege]) => { const kayit = kk[id] || null, atlandi = !ok && !!(kayit && kayit.atlandi); return [b, ok || atlandi || !!istege, kim, h, a, { id, ok, atlandi, istege: !!istege && !ok, kayit }]; });
 }
+// sayaca giren (isteğe bağlı olmayan) adımlar ve bitenler
+const kurSayim = l => { const say = l.filter(x => !x[5].istege); return { top: say.length, biten: say.filter(x => x[5].ok).length, atlanan: say.filter(x => x[5].atlandi).length }; };
+const kurIz = (id, ek) => { const u = oturum.kullanici || {}; S.kurs.kurulum = { ...kurKayit(), [id]: { kim: u.ad || '', tarih: gun(0), ...ek } }; };
 export function kurulum() {
-  const l = kurulumAdimlari(), biten = l.filter(x => x[1]).length;
+  const l = kurulumAdimlari(), { top, biten, atlanan } = kurSayim(l);
+  // biten adımın ilk görüldüğü gün ve görenin adı (elle işaretlenmemişse) iz olarak yazılır
+  const yeniIz = l.filter(x => x[5].ok && !x[5].kayit); if (yeniIz.length && oturum.kullanici && oturum.kullanici.rol === 'mudur') setTimeout(() => { yeniIz.forEach(x => kurIz(x[5].id, { gordu: true })); kaydet(); }, 0);
+  const durum = (x) => { const m = x[5]; return m.ok ? rozet('Tamam', 'yesil') : m.atlandi ? rozet('Atlandı', 'notr') : m.istege ? rozet('İsteğe bağlı · yakında', 'notr') : ''; };
+  const iz = (x) => { const k = x[5].kayit; if (!k || !(x[5].ok || x[5].atlandi)) return ''; return `<small style="display:block;color:var(--soluk);font-size:12.5px">${x[5].atlandi ? 'Atlayan' : k.onay ? 'İşaretleyen' : k.gordu ? 'Tamam görüldü' : 'Yapan'}: ${e(k.kim || '—')} · ${tarih(k.tarih)}</small>`; };
+  const dugme = (x, i) => { const m = x[5]; if (m.ok) return ''; if (m.atlandi) return `<button class="dg dg-hafif dg-kucuk" data-kur-geri="${m.id}">Geri al</button>`;
+    const yap = m.id === 'yardimci' ? `<button class="dg dg-ana dg-kucuk" data-kur-yardimci>Kur</button>` : m.istege ? `<a class="dg dg-cizgi dg-kucuk" href="${x[3]}">Ayarlara bak</a>` : `<a class="dg dg-ana dg-kucuk" href="${x[3]}" data-kurulum-adim="${i}">Yap</a>`;
+    return (m.id === 'aktarim' ? `<button class="dg dg-cizgi dg-kucuk" data-kur-onay="aktarim">Aktarım tamam</button>` : '') + yap + (m.istege ? '' : `<button class="dg dg-hafif dg-kucuk" data-kur-atla="${m.id}" title="Bu adım bu kurs için gerekmiyor; sayaçtan düşer, sonra geri alınabilir">Atla</button>`); };
   return {
-    baslik: 'Kurulum', alt: `${biten}/${l.length} adım tamam`,
+    baslik: 'Kurulum', alt: `${biten}/${top} adım tamam${atlanan ? ` · ${atlanan} atlandı` : ''}`,
     html: `${ekranNotu('Kurulumun çoğunu biz yaparız. Sizden istenenler kısa ve her birinin yanında yazar. Toplam süre: kurs tarafında yaklaşık 45 dakika.')}
-    <div class="kart"><div class="kart-govde">${ilerleme(biten, l.length, 'yesil')}<p style="margin-top:8px;font-size:14px"><b>${biten}</b> / ${l.length} adım tamamlandı</p></div>
-    <ul class="liste">${l.map(([b, ok, kim, h, a], i) => `<li style="align-items:flex-start">${isaret(ok ? 'tamam' : 'zorunlu', 26)}<div style="flex:1;min-width:0"><b style="color:var(--murekkep);display:block">${i + 1}. ${b}</b><small style="color:var(--metin);font-size:13.5px">${a}</small></div><span class="sag" style="flex-wrap:wrap;justify-content:flex-end">${rozet(kim, kim.startsWith('Biz') ? 'mavi' : 'notr')}${ok ? rozet('Tamam', 'yesil') : `<a class="dg dg-ana dg-kucuk" href="${h}" data-kurulum-adim="${i}">Yap</a>`}</span></li>`).join('')}</ul></div>`,
+    <div class="kart"><div class="kart-govde">${ilerleme(biten + atlanan, top, 'yesil')}<p style="margin-top:8px;font-size:14px"><b>${biten}</b> / ${top} adım tamamlandı${atlanan ? ` · ${atlanan} adım atlandı` : ''}</p></div>
+    <ul class="liste">${l.map((x, i) => `<li style="align-items:flex-start">${isaret(x[5].ok ? 'tamam' : x[5].atlandi || x[5].istege ? 'bilgi' : 'zorunlu', 26)}<div style="flex:1;min-width:0"><b style="color:var(--murekkep);display:block">${i + 1}. ${x[0]}</b><small style="color:var(--metin);font-size:13.5px">${x[4]}</small>${iz(x)}</div><span class="sag" style="flex-wrap:wrap;justify-content:flex-end;gap:6px">${rozet(x[2], x[2].startsWith('Biz') ? 'mavi' : 'notr')}${durum(x)}${dugme(x, i)}</span></li>`).join('')}</ul></div>`,
+    baglan(kap) {
+      kap.addEventListener('click', ev => {
+        const t = ev.target; if (!(t instanceof Element)) return;
+        if (t.closest('[data-kur-yardimci]')) return EK.kurulumPenceresi();
+        const b = t.closest('[data-kur-atla],[data-kur-geri],[data-kur-onay]'); if (!b) return;
+        const id = b.dataset.kurAtla || b.dataset.kurGeri || b.dataset.kurOnay, ad = l.find(x => x[5].id === id); if (!ad) return;
+        if (!oturum.kullanici || oturum.kullanici.rol !== 'mudur') return bildir('Kurulum adımlarını kurs müdürü işaretler', 'uyari');
+        if (b.dataset.kurAtla) { kurIz(id, { atlandi: true }); islem('Kurulum adımını atladı', ad[0]); }
+        else if (b.dataset.kurGeri) { const k = { ...kurKayit() }; delete k[id]; S.kurs.kurulum = k; islem('Atlanan kurulum adımını geri aldı', ad[0]); }
+        else { kurIz(id, { onay: true }); islem('Kurulum adımını tamam işaretledi', ad[0]); }
+        kaydet(); yenile();
+      });
+    },
   };
 }
 

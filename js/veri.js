@@ -1304,7 +1304,7 @@ export function bosVeri({ kursAd, yetkili, sehir, mudurTel }) {
   const o = uret();
   ['kursiyerler', 'dersler', 'hareket', 'adaylar', 'sinavlar', 'teorik', 'gonderimler', 'islemler', 'kampanyalar', 'cezalar', 'avanslar', 'ustaOdemeleri', 'devredilen', 'imzaTalepleri', 'bosTeklif', 'faturalar', 'izinler', 'duyurular', 'bekleme', 'gelenAlinan', 'egitmenler', 'araclar', 'ogretmenler', 'personel', 'kullanicilar', 'arsiv', 'gunSonu', 'transferler', 'gunAcmalar'].forEach(k => { if (Array.isArray(o[k])) o[k] = []; });
   o.subeler = [{ id: 's1', ad: 'Merkez', semt: '', kurumKodu: '', mudur: yetkili || '', mebbis: '' }];
-  o.kurs = { ...o.kurs, ad: kursAd || 'Sürücü kursu', yetkili: yetkili || '', sehir: sehir || '', tel: '', adres: sehir || '', puan: null, yorumSayisi: 0, web: '', wp: '', mudurTel: mudurTel || '', iban: '', waApi: '', yorumLink: '' };
+  o.kurs = { ...o.kurs, ad: kursAd || 'Sürücü kursu', yetkili: yetkili || '', sehir: sehir || '', tel: '', adres: '', puan: null, yorumSayisi: 0, web: '', wp: '', mudurTel: mudurTel || '', iban: '', waApi: '', yorumLink: '' };
   o.zamanli = { gonderilen: {}, kayit: [], kuyruk: [], son: null, sinir: false };
   o.waDurum = {}; o.sayac = {}; o.kazanim = { gercek: true, doldurulan: 0, ekDers: 0, yorum: 0 };
   if (o.sosyal) { Object.assign(o.sosyal, { sohbetler: [], slotlar: [], bilinmeyen: [], gonderiler: [], yorumlar: [], ay: { mesaj: 0, kisi: 0, otomatik: 0, sure: 0, mesaiDisi: 0, aday: 0, gorusme: 0, kayit: 0, devir: 0 }, saatlik: Array(24).fill(0), kanalDagilim: { igm: 0, igy: 0, wp: 0, fb: 0 } }); (o.sosyal.kanallar || []).forEach(c => Object.assign(c, { hesap: '', bagli: false, cevap: false, son: null, izin: null, sonCevapDk: null })); }

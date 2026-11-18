@@ -341,8 +341,9 @@ function kurulumAkisi() {
   const kok = adim[3].split('/').slice(0, 2).join('/');
   if (!location.hash.startsWith(kok)) return bitir();  // adımın ekranından çıkıldı
   if (!adim[1]) return;  // adım henüz tamamlanmadı
-  const n = l.findIndex((x, j) => j > +i && !x[1]), sonraki = n >= 0 ? n : l.findIndex(x => !x[1]);
-  if (sonraki < 0) { bitir(); bildir('Kurulum tamamlandı'); setTimeout(() => { location.hash = '#/kurulum'; }, 900); return; }
+  const git = x => !x[1] && !!x[3];  // adresi olmayan adım (MEBBİS Yardımcısı: kurulum penceresi) akışta atlanır, Kurulum sayfasından yapılır
+  const n = l.findIndex((x, j) => j > +i && git(x)), sonraki = n >= 0 ? n : l.findIndex(git);
+  if (sonraki < 0) { bitir(); bildir(l.some(x => !x[1]) ? 'Adımlar bitti; MEBBİS Yardımcısı’nı Kurulum sayfasından kurun' : 'Kurulum tamamlandı'); setTimeout(() => { location.hash = '#/kurulum'; }, 900); return; }
   try { sessionStorage.setItem(AKIS, String(sonraki)); } catch (x) { }
   bildir(adim[0] + ' tamam · sıradaki: ' + l[sonraki][0]);
   setTimeout(() => { if (location.hash === l[sonraki][3]) yenile(true); else location.hash = l[sonraki][3]; }, 900);
