@@ -3717,3 +3717,8 @@ a.kart.gosterge { text-decoration: none; color: inherit; display: block; }
 .meb-gecmis ul { list-style: none; display: grid; gap: 4px; margin-top: 6px; }
 .meb-gecmis small { color: var(--soluk); }
 .rz-cip { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-right: 6px; }
+/* KAY-068 */
+.ev-tablo th { font-size: 12px; white-space: nowrap; }
+.ev-var { color: var(--yesil, #1b5e20); font-weight: 800; }
+.ev-yok { color: var(--kirmizi); font-weight: 800; }
+.ev-bek { color: #8a5a00; font-weight: 800; }

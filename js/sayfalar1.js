@@ -422,6 +422,16 @@ function rezervasyonPenceresi(k) {
     onAc(p) { p.querySelector('form').addEventListener('submit', ev => { ev.preventDefault(); const f = ev.target, r = { id: 'rz' + Date.now().toString(36), sinif: f.sinif.value, tarih: gun(0), durum: 'Beklemede', not: f.not.value.trim() };
       k.rezervasyonlar = [...(k.rezervasyonlar || []), r]; islem('Sonraki sınıf için sıraya yazdı', tamAd(k) + ' · ' + r.sinif); kaydet(); kapatPencere(); bildir('Sıraya yazıldı'); yenile(); }); } });
 }
+// KAY-068: süzülen öğrenciler × evrak (biyometrik, kurs fotoğrafı, öğrenim, sağlık, adli sicil, kimlik, imza, sözleşme); var/yok, onay bekleyen sarı
+function evrakTablosu(l) {
+  const S2 = [['foto', 'Biyometrik'], ['dfoto', 'Kurs fotoğrafı'], ['ogrenim', 'Öğrenim'], ['saglik', 'Sağlık'], ['adli', 'Adli sicil'], ['kimlik', 'Kimlik'], ['imza', 'İmza'], ['sozlesme', 'Sözleşme']];
+  const hal = (k, x) => x === 'dfoto' ? (k.dogrulamaFoto ? 'var' : 'yok') : x === 'imza' ? (k.imza || k.sozlesmeImza ? 'var' : 'yok') : (k.evrakYuklenen || {})[x] ? 'bekliyor' : (k.evrak || {})[x] ? 'var' : 'yok';
+  const isr = { var: '<span class="ev-var" title="Var">✓</span>', yok: '<span class="ev-yok" title="Yok">—</span>', bekliyor: '<span class="ev-bek" title="Yüklendi, onay bekliyor">?</span>' };
+  const eks = l.filter(k => S2.some(([x]) => hal(k, x) !== 'var')).length;
+  pencere({ baslik: 'Evrak tablosu', genis: true, icerik: `<p style="font-size:13.5px;color:var(--soluk);margin-bottom:8px">${l.length} öğrenci · ${eks} öğrencide eksik var · ✓ var, ? yüklendi onay bekliyor, — yok</p><div class="tablo-kap"><table class="tablo ev-tablo"><thead><tr><th>Öğrenci</th>${S2.map(([, a]) => `<th>${a}</th>`).join('')}</tr></thead><tbody>${l.map(k => `<tr><td><a href="#/kursiyer/${k.id}" data-kapat>${e(tamAd(k))}</a><small style="display:block;color:var(--soluk)">${e(k.asama)}</small></td>${S2.map(([x]) => `<td style="text-align:center">${isr[hal(k, x)]}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`,
+    altlik: `<button class="dg dg-cizgi" data-ev-csv>${ik('indir')}Excel</button><button class="dg dg-ana" data-kapat>Kapat</button>`,
+    onAc(p) { p.querySelector('[data-ev-csv]').addEventListener('click', () => import('./ui.js?v=234').then(u => u.csvIndir('evrak-tablosu.csv', [['Ad soyad', 'Aşama', ...S2.map(x => x[1])], ...l.map(k => [tamAd(k), k.asama, ...S2.map(([x]) => ({ var: 'Var', yok: 'Yok', bekliyor: 'Onay bekliyor' })[hal(k, x)])])]))); } });
+}
 let tcGoster = false;  // KAY-067: listede T.C. maskesi (oturum boyunca)
 const cepGecerli = t => { let n = String(t || '').replace(/\D/g, ''); if (n.startsWith('90')) n = n.slice(2); if (n.startsWith('0')) n = n.slice(1); return /^5\d{9}$/.test(n); };
 const taksitEnCok = () => taksitSiniri();  // PAR-034: ön büro kurs ayarı kadar, müdür en az 12
@@ -826,7 +836,7 @@ export function kursiyerler(filtre) {
   return {
     baslik: 'Kursiyerler', alt: sb(S.kursiyerler).length + ' kayıt · ' + aktifler().length + ' aktif',
     html: `${ekranNotu('Her kursiyerin nerede olduğu, ne kadar borcu kaldığı ve sınavda kalma riski tek satırda. Satıra dokunun, dosyası açılsın.')}
-    <div class="bolum-bas"><div><h2>Kursiyer listesi</h2></div><div class="sag">${['mudur', 'sekreter'].includes(oturum.kullanici.rol) ? `<button class="dg dg-cizgi" data-toplu-hesap>${ik('tel')}Öğrenci hesapları</button>` : ''}<button class="dg dg-cizgi" data-disa>${ik('indir')}Excel’e aktar</button><button class="dg dg-cizgi" data-liste-yazdir>${ik('belge')}PDF / yazdır</button><button class="dg dg-ana" data-yeni>${ik('arti')}Yeni kursiyer</button></div></div>
+    <div class="bolum-bas"><div><h2>Kursiyer listesi</h2></div><div class="sag">${['mudur', 'sekreter'].includes(oturum.kullanici.rol) ? `<button class="dg dg-cizgi" data-toplu-hesap>${ik('tel')}Öğrenci hesapları</button>` : ''}<button class="dg dg-cizgi" data-disa>${ik('indir')}Excel’e aktar</button><button class="dg dg-cizgi" data-liste-yazdir>${ik('belge')}PDF / yazdır</button><button class="dg dg-cizgi" data-evrak-tablo>${ik('belge')}Evrak tablosu</button><button class="dg dg-ana" data-yeni>${ik('arti')}Yeni kursiyer</button></div></div>
     <div data-yarim-kap>${yarimKayitlar()}</div>
     <div id="sek">${sekmeler([['Tümü', 'Tümü', say('Tümü')], ...ASAMALAR.map(a => [a, a, say(a)])], sekme)}</div>
     <div class="kart">
@@ -859,6 +869,7 @@ export function kursiyerler(filtre) {
         const bk = ev.target.closest('[data-bekleyen]'); if (bk) { bekleyen = !bekleyen; bk.classList.toggle('secili', bekleyen); ciz(); }
         if (ev.target.closest('[data-toplu-hesap]')) return HS.topluHesap(yenile);
         if (ev.target.closest('[data-toplu-odeme]')) return topluOdeme(suzulen(), ciz);
+        if (ev.target.closest('[data-evrak-tablo]')) return evrakTablosu(suzulen());  // KAY-068
         // KAY-102: süzülen öğrenci listesinin A4 çıktısı (yatay); T.C. maskeli
         if (ev.target.closest('[data-liste-yazdir]')) { const l = suzulen(); import('./ui.js?v=234').then(u => { islem('Kursiyer listesini yazdırdı', l.length + ' kişi'); kaydet();
           u.belgeYazdir(`<div data-yatay></div><h1>Öğrenci listesi</h1><p class="a4-alt">${e(S.kurs.ad || '')} · ${l.length} öğrenci · ${tarih(gun(0))}</p><table><tr><th>#</th><th>Ad soyad</th><th>T.C.</th><th>Telefon</th><th>Sınıf</th><th>Dönem grubu</th><th>Aşama</th><th>Direksiyon</th><th>Hak</th><th>Kalan</th></tr>${l.map((x, i) => { const h = hakDurumu(x, ['Direksiyon', 'Sınav', 'Ehliyet'].includes(x.asama) ? 'Direksiyon' : 'e-Sınav'); return `<tr><td>${i + 1}</td><td>${e(tamAd(x))}</td><td class="nw">${e(tcMaskele(x.tc || ''))}</td><td class="nw">${e(x.tel || '')}</td><td>${e((SINIFLAR[x.sinif] || {}).ad || x.sinif)}</td><td>${e((GR.kursiyerGrubu(x) || {}).ad || '')}</td><td>${e(x.asama)}</td><td>${gerekliDireksiyon(x) ? x.direksiyon + '/' + gerekliDireksiyon(x) : '—'}</td><td>${h.gecti ? 'geçti' : h.kullanilan + '/' + h.sinir}</td><td class="nw">${kalanBorc(x) ? tl(kalanBorc(x)) : '—'}</td></tr>`; }).join('')}</table>`, 'Öğrenci listesi'); }); return; }
