@@ -123,25 +123,26 @@ function hesapSayfasi() {
     <div class="hs-liste"><button type="button" class="hs-cikis" ${ogr ? 'data-ogr-cikis' : 'data-cikis'}>${satir('cikis', u.bulut || ogr ? 'Çıkış yap' : 'Kullanıcı değiştir', '', 'kirmizi')}</button></div>` });
 }
 // Kurs personeli mdSinyal'e destek talebi açar: talep kursun verisine yazılır, Servet mdSinyal Yönetim › Destek'te görür ve cevaplar
-const DESTEK_TUR = ['Hata', 'Soru', 'İstek', 'Eğitim'];
+const DESTEK_TUR = ['Hata', 'Öneri', 'Soru', 'İstek', 'Eğitim'];   // DIG-030: öneri ayrı tür; öncelik (Normal / Acil) talepte
 function destekPenceresi() {
   const u = oturum.kullanici, yazar = !!u.bulut && ['mudur', 'sekreter'].includes(u.rol), c = S.destekCevap || {};
   const l = (S.destek || []).slice().sort((a, b) => String(b.zaman).localeCompare(String(a.zaman)));
   const wa = 'https://wa.me/' + SH.DESTEK_TEL + '?text=' + encodeURIComponent('Merhaba, ' + (S.kurs.ad || 'kursumuz') + ' için mdSinyal desteği rica ediyorum.');
   pencere({ baslik: 'mdSinyal Destek', alt: true, icerik: `${yazar ? `<form id="f-destek" class="og-giris-form yn-form">
       <div class="sh-durum-sec ds-tur" role="radiogroup">${DESTEK_TUR.map((t, i) => `<button type="button" role="radio" aria-checked="${!i}" class="${!i ? 'secili' : ''}" data-ds-tur="${t}">${t}</button>`).join('')}</div>
+      <label class="og-alan" style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" name="acil" style="width:18px;height:18px"> Acil: işimi durduruyor</label>
       <label class="og-alan"><span class="og-alan-et">Ne oldu, ne istiyorsun?</span><span class="og-girdi yn-alan-uzun"><textarea name="metin" rows="4" required placeholder="Örn. Taksit ekranında ödeme kaydedilmiyor"></textarea></span></label></form>`
       : `<p class="ekran-notu" style="margin:0 0 12px">${ik('uyari')}<span>Talebi kurs müdürü ya da ön büro açar. Acil bir durum için WhatsApp’tan yazabilirsin.</span></p>`}
     <a class="ds-wa" target="_blank" rel="noopener" href="${wa}">${ik('wp')}<span>Acil mi? mdSinyal’e WhatsApp’tan yaz<small>0501 363 65 36</small></span></a>
     ${l.length ? `<h3 class="krsd-bas">Talepleriniz</h3><div class="ds-liste">${l.map(t => { const x = c[t.id] || {}, d = x.durum || 'Açık';
-      return `<div class="ds-talep"><div><b>${e(t.tur)} · ${e(String(t.metin).slice(0, 80))}</b><small>${e(t.kim || '')} · ${e(new Date(t.zaman).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }))}</small>${x.cevap ? `<p class="ds-cevap">${ik('mesaj')}<span><b>mdSinyal:</b> ${e(x.cevap)}</span></p>` : ''}</div><em class="ds-durum ${d === 'Çözüldü' ? 'ok' : d === 'İnceleniyor' ? 'bak' : ''}">${e(d)}</em></div>`; }).join('')}</div>` : ''}`,
+      return `<div class="ds-talep"><div><b>${t.oncelik === 'Acil' ? '<span style="color:var(--kirmizi)">Acil · </span>' : ''}${e(t.tur)} · ${e(String(t.metin).slice(0, 80))}</b><small>${e(t.kim || '')} · ${e(new Date(t.zaman).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }))}</small>${x.cevap ? `<p class="ds-cevap">${ik('mesaj')}<span><b>mdSinyal:</b> ${e(x.cevap)}</span></p>` : ''}</div><em class="ds-durum ${d === 'Çözüldü' ? 'ok' : d === 'İnceleniyor' ? 'bak' : ''}">${e(d)}</em></div>`; }).join('')}</div>` : ''}`,
     altlik: yazar ? `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-destek">Gönder</button>` : '<button class="dg dg-ana" data-kapat>Tamam</button>',
     onAc: p => {
       if (!yazar) return;
       let tur = DESTEK_TUR[0];
       p.querySelectorAll('[data-ds-tur]').forEach(b => b.addEventListener('click', () => { tur = b.dataset.dsTur; p.querySelectorAll('[data-ds-tur]').forEach(x => { x.classList.toggle('secili', x === b); x.setAttribute('aria-checked', x === b); }); }));
       p.querySelector('form').addEventListener('submit', ev => { ev.preventDefault(); const m = ev.target.metin.value.trim(); if (m.length < 3) return bildir('Kısaca ne olduğunu yaz', 'uyari');
-        (S.destek = S.destek || []).push({ id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), zaman: new Date().toISOString(), kim: u.ad, rol: u.rol, tur, metin: m.slice(0, 2000) });
+        (S.destek = S.destek || []).push({ id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), zaman: new Date().toISOString(), kim: u.ad, rol: u.rol, tur, oncelik: ev.target.acil.checked ? 'Acil' : 'Normal', metin: m.slice(0, 2000) });
         islem('mdSinyal Destek talebi açtı', tur); kaydet(); kapatPencere(); bildir('Talebin mdSinyal’e iletildi; cevap buraya gelecek'); });
     } });
 }

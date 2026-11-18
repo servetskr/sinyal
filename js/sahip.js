@@ -848,7 +848,7 @@ const isl = () => { const v = S.isletme || {}; v.destekElle = v.destekElle || []
 const tKey = t => (t.elle ? 'e:' : t.kurs + ':') + t.id;
 const tDurum = t => t.durum || 'Açık';
 const tumTalepler = () => destekler.concat(isl().destekElle.map(t => ({ ...t, elle: true })))
-  .sort((a, b) => (tDurum(a) === 'Çözüldü') - (tDurum(b) === 'Çözüldü') || String(b.zaman || '').localeCompare(String(a.zaman || '')));
+  .sort((a, b) => (tDurum(a) === 'Çözüldü') - (tDurum(b) === 'Çözüldü') || (b.oncelik === 'Acil') - (a.oncelik === 'Acil') || String(b.zaman || '').localeCompare(String(a.zaman || '')));   // DIG-030: açık acil talepler üstte
 const waTel = t => { let d = String(t || '').replace(/\D/g, ''); if (d.startsWith('0')) d = d.slice(1); if (d.length === 10) d = '90' + d; return /^90\d{10}$/.test(d) ? d : ''; };
 const gunTarih = d => d ? new Date(d).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }) : '';
 const ayBaslik = ym => new Date(ym + '-01T12:00').toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
@@ -1379,7 +1379,7 @@ function talepListeHtml(l) {
   if (!l.length) return `<div class="sh-bos">${ik('mesaj')}<b>Destek talebi yok</b><small>Kurslar mdSinyal’de Hesabım › mdSinyal Destek’ten talep açınca burada görünür. WhatsApp ya da telefonla gelenleri “Talep ekle” ile kaydet.</small></div>`;
   return `<div class="sh-liste">${l.map(t => `<button class="sh-satir sh-t-${TDURUM.find(d => d[0] === tDurum(t))[1]}" data-sh-talep="${e(tKey(t))}">
     <span class="sh-t-nokta" aria-hidden="true"></span>
-    <span class="sh-satir-ic"><b>${e(t.tur || 'Talep')} · ${e(String(t.metin || '').slice(0, 90))}</b><small>${e([t.kursAd, t.kim, gunOnce(t.zaman), t.kanal || 'mdSinyal'].filter(Boolean).join(' · '))}</small></span>
+    <span class="sh-satir-ic"><b>${t.oncelik === 'Acil' ? '<span style="color:#b42318">ACİL · </span>' : ''}${e(t.tur || 'Talep')} · ${e(String(t.metin || '').slice(0, 90))}</b><small>${e([t.kursAd, t.kim, gunOnce(t.zaman), t.kanal || 'mdSinyal'].filter(Boolean).join(' · '))}</small></span>
     <span class="sh-satir-sag"><em class="sh-durum-r">${e(tDurum(t))}</em>${ik('sag')}</span></button>`).join('')}</div>`;
 }
 function hizmetListeHtml(l) {
