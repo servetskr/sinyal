@@ -429,6 +429,26 @@ function faturaKes() {
 
 /* ================= EKİP VE ARAÇLAR ================= */
 const tarihGir = t => t || '';
+// ARC-015: simülatörler (MEBBİS SKT01002 tür 2 listesinden ya da elle). Sicil no, MEBBİS direksiyon programında simülatör dersinin seçeneğidir.
+function simulatorBolumu() {
+  const l = S.simulatorler || [];
+  return `<div class="ara-bosluk"></div><div class="kart"><div class="kart-bas"><h3>Simülatörler</h3><small>${l.length ? `${l.length} cihaz · simülatör dersinde MEBBİS’e sicil no ile girilir` : 'Simülatörünüz varsa ekleyin ya da MEB işlemleri › MEBBİS’ten çek › Araçlar ile alın'}</small><div class="sag"><button class="dg dg-cizgi dg-kucuk" data-sim-ekle>${ik('arti')}Simülatör ekle</button></div></div>
+    ${l.length ? `<ul class="liste">${l.map(x => `<li>${isaret(/hizmette/i.test(x.durum || '') ? 'tamam' : 'uyari', 24)}<div style="flex:1"><b style="color:var(--murekkep);display:block">Sicil no ${e(x.sicilNo)}</b><small style="color:var(--soluk)">${e([x.alinma ? 'alınma ' + tarih(x.alinma) : '', x.durum, x.kurumOnay ? 'kurum: ' + x.kurumOnay : '', x.memOnay ? 'MEM: ' + x.memOnay : '', x.kaynak === 'MEBBİS' ? 'MEBBİS’ten' : 'elle girildi'].filter(Boolean).join(' · '))}</small></div><span class="sag" style="gap:6px"><button class="dg dg-hafif dg-kucuk" data-sim-duzenle="${e(x.id)}">Düzenle</button></span></li>`).join('')}</ul>` : ''}</div>`;
+}
+function simulatorPenceresi(id) {
+  const x = id ? (S.simulatorler || []).find(y => y.id === id) : { sicilNo: '', alinma: '', durum: 'Hizmette' };
+  if (!x) return;
+  pencere({ baslik: id ? 'Simülatör · düzenle' : 'Simülatör ekle', icerik: `<form class="form-izgara" id="f-sim"><div class="alan"><label>Cihazın sicil numarası</label><input name="no" inputmode="numeric" maxlength="20" value="${e(x.sicilNo)}" placeholder="13 hane, ör. 2606102020001" required></div><div class="alan"><label>Alınma tarihi</label><input name="alinma" type="date" value="${tarihGir(x.alinma)}"></div><div class="alan"><label>Durumu</label><select name="durum">${['Hizmette', 'Hizmet Dışı'].map(d => `<option ${d === x.durum ? 'selected' : ''}>${d}</option>`).join('')}</select></div><p class="tam" style="font-size:12.5px;color:var(--soluk)">Sicil no MEBBİS’teki “Cihazın Sicil Numarası”dır (aracın şase no’su değil). MEBBİS’ten araçlar çekilince liste MEBBİS’tekiyle güncellenir.</p></form>`,
+    altlik: `${id ? '<button class="dg dg-hafif" data-sim-sil style="margin-right:auto">Sil</button>' : ''}<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-sim">Kaydet</button>`,
+    onAc(d) {
+      d.querySelector('form').addEventListener('submit', ev => { ev.preventDefault(); const f = ev.target, no = f.no.value.replace(/\s/g, '');
+        if (!/^\d{4,20}$/.test(no)) return bildir('Sicil numarası 4–20 rakam olmalı', 'uyari');
+        if ((S.simulatorler || []).some(y => y !== x && y.sicilNo === no)) return bildir('Bu sicil numarası kayıtlı', 'uyari');
+        if (id) Object.assign(x, { sicilNo: no, alinma: f.alinma.value, durum: f.durum.value }); else S.simulatorler = [...(S.simulatorler || []), { id: 'sim-' + no, sicilNo: no, alinma: f.alinma.value, durum: f.durum.value, kaynak: 'elle' }];
+        islem(id ? 'Simülatörü düzenledi' : 'Simülatör ekledi', no); kaydet(); kapatPencere(); bildir('Kaydedildi'); yenile(); });
+      const sl = d.querySelector('[data-sim-sil]'); if (sl) sl.addEventListener('click', () => { S.simulatorler = (S.simulatorler || []).filter(y => y !== x); islem('Simülatörü sildi', x.sicilNo); kaydet(); kapatPencere(); yenile(); });
+    } });
+}
 // ARC-007, ARC-011, ARC-024: araç kartında MEBBİS farkları (muayene, şanzıman) ve hizmet dışı önerisi
 function aracMebNotu(a) {
   const m = a.meb || {}, l = [];
@@ -571,7 +591,7 @@ export function filo(alt) {
       <div style="padding:0 6px"><div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:5px"><span>Bakıma kalan</span><b class="sayi" style="color:var(--murekkep)">${sayi(Math.max(0, a.bakimKm - a.km))} km</b></div>${ilerleme(10000 - Math.max(0, a.bakimKm - a.km), 10000, a.bakimKm - a.km < 2000 ? 'sari' : '')}</div>
       ${tarihSatir(a.muayene, 'Muayene')}${tarihSatir(a.sigorta, 'Sigorta')}${tarihSatir(a.kasko, 'Kasko')}
       <div class="belge-satir"><span>Bugün</span><b>${b.length} ders</b></div><div class="belge-satir"><span>Bu ay</span><b>${tl(masraf(a))} masraf · ${sayi(aylikKm(a))} km</b></div>${(() => { const t = tuketim(a); return t ? `<div class="belge-satir"><span>Yakıt</span><b style="${t.yuksek ? 'color:var(--kirmizi)' : ''}">${String(t.ort).replace('.', ',')} L/100 km${t.yuksek ? ' · son dolum ' + String(t.son).replace('.', ',') : ''}</b></div>` : ''; })()}${a.mebIzinNo ? `<div class="belge-satir"><span>MEB izni</span><b>${e(a.mebIzinNo)}</b></div>` : ''}${aracMebNotu(a)}
-      <div style="display:flex;gap:6px;flex-wrap:wrap;padding:0 6px 4px"><button class="dg dg-cizgi dg-kucuk" data-km="${a.id}">${ik('kalem')}Km gir</button><button class="dg dg-cizgi dg-kucuk" data-masraf="${a.id}">${ik('arti')}Masraf ekle</button><button class="dg dg-cizgi dg-kucuk" data-ceza-ekle="${a.id}">${ik('uyari')}Ceza</button>${mudurMu() ? `<button class="dg dg-hafif dg-kucuk" data-arac-duzenle="${a.id}">Düzenle</button>` : ''}</div></div>`; }).join('')}${mudurMu() ? `<button class="kart ekle-kart" data-arac-duzenle="">${ik('arti')}<b>Araç ekle</b><small>Plaka, sınıf, muayene ve sigorta tarihleri</small></button>` : ''}</div>`;
+      <div style="display:flex;gap:6px;flex-wrap:wrap;padding:0 6px 4px"><button class="dg dg-cizgi dg-kucuk" data-km="${a.id}">${ik('kalem')}Km gir</button><button class="dg dg-cizgi dg-kucuk" data-masraf="${a.id}">${ik('arti')}Masraf ekle</button><button class="dg dg-cizgi dg-kucuk" data-ceza-ekle="${a.id}">${ik('uyari')}Ceza</button>${mudurMu() ? `<button class="dg dg-hafif dg-kucuk" data-arac-duzenle="${a.id}">Düzenle</button>` : ''}</div></div>`; }).join('')}${mudurMu() ? `<button class="kart ekle-kart" data-arac-duzenle="">${ik('arti')}<b>Araç ekle</b><small>Plaka, sınıf, muayene ve sigorta tarihleri</small></button>` : ''}</div>${simulatorBolumu()}`;
   if (durum.filo === 'egitmen') govde = `<div class="izgara iz-3">${sb(S.egitmenler).map(x => {
       const bugun = sbDers(S.dersler).filter(d => d.egitmen === x.id && d.tarih === gun(0)), ks = sb(S.kursiyerler).filter(k => k.egitmen === x.id && k.asama !== 'Ehliyet');
       const sin = S.sinavlar.filter(s => s.tur === 'Direksiyon').flatMap(s => Object.entries(s.sonuc || {})).filter(([id]) => kursiyer(id) && kursiyer(id).egitmen === x.id);
@@ -604,6 +624,7 @@ export function filo(alt) {
         const me = t.closest('[data-meb-arac-ekle]'); if (me) { const y = (S.mebAracYeni || []).filter(z => !S.araclar.some(a => a.plaka.replace(/\s/g, '') === z.plaka.replace(/\s/g, '')))[+me.dataset.mebAracEkle]; if (!y) return;
           const sn = Object.keys(SINIFLAR).find(x => x === String(y.sinif || '').replace(/\s*SINIFI.*$/i, '').trim()) || 'B';
           return aracDuzenle(null, { plaka: y.plaka, model: [y.marka, y.model].filter(Boolean).join(' '), yil: +y.yil || new Date().getFullYear(), sinif: sn, vites: /otomatik/i.test(y.sanziman || '') ? 'Otomatik' : 'Manuel', muayene: y.muayene || '', meb: { ...y } }); }
+        if (t.closest('[data-sim-ekle]')) return simulatorPenceresi(null); const smd = t.closest('[data-sim-duzenle]'); if (smd) return simulatorPenceresi(smd.dataset.simDuzenle);
         const sgA = t.closest('[data-arac-sigorta]'); if (sgA) { const a = arac(sgA.dataset.aracSigorta); if (!a) return; const eski = a.sigorta; a.sigorta = sgA.dataset.tarih; islem('Araç sigorta bitişini güncelledi', `${a.plaka} · ${eski ? tarih(eski) + ' → ' : ''}${tarih(a.sigorta)}`); kaydet(); bildir('Sigorta bitişi güncellendi'); return yenile(); }
         // ARC-011: MEBBİS'te hizmet dışı araç — öneri, kendiliğinden silinmez; planlı dersi varsa engel
         const ac_ = t.closest('[data-arac-cikar]'); if (ac_) { const a = arac(ac_.dataset.aracCikar); if (!a) return; const ileri = S.dersler.filter(x => x.arac === a.id && x.durum === 'Planlandı' && fark(x.tarih) >= 0).length;
