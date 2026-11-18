@@ -545,7 +545,27 @@
       return o;
     },
   });
-  const CEKME_EKRAN = { sonuclar: ['skt02008'], fotograf: ['skt02006'], kurum: ['skt01001'], gruplar: ['skt03002', 'skt03001'], kursiyerler: ['skt02006'], personel: [], araclar: ['skt01002'], sinavlar: ['skt04003'], dosya: ['skt02009'], randevular: ['skt01005'], ucretler: ['skt02007'], teorik: ['skt04001'], ucretIlani: [], yetki: ['ook15003', 'ook15004'], direksiyonProgrami: ['skt04002'] };
+  // MEB-027 / SNV-079 / MEB-171 (30) (1.17.0): SKT02007 e-Sınav merkezleri. ddlTestMerkezi seçenekleri tek tek (autopostback, her biri GET sayfasından;
+  //  açılışta seçili merkez için ek istek yok); lblKontenjan (kalan kontenjan), lblTarih (en erken randevu, saatli), lblBekleyen (onay bekleyen).
+  //  Yanıtta seçili merkez istenen değilse değerler alınmaz (bayat). Hiçbir düğmeye basılmaz; MERNİS sorgusu yok.
+  Object.assign(CEKME, {
+    async merkezler(ilerle) {
+      const t = await getir('/SKT/skt02007.aspx'), el = elBul(t.doc, 'ddlTestMerkezi'); if (!el || el.tagName !== 'SELECT') throw ekranHata(t.doc, 'ddlTestMerkezi');
+      const secili = d => { const s = elBul(d, 'ddlTestMerkezi'); return s ? (s.querySelector('option[selected]') || s.options[s.selectedIndex] || {}).value || '' : ''; };
+      const etiket = (d, ad) => { const x = elBul(d, ad); return x ? metin(x) : null; };
+      const l = [...el.options].filter(o => o.value && o.value !== '-1').slice(0, 30), acik = secili(t.doc), o = [];
+      for (const [i, x] of l.entries()) {
+        ilerle(`e-Sınav merkezleri ${i + 1}/${l.length}: ${metin(x)}`, (i + 1) / l.length);
+        const d = x.value === acik ? t.doc : (await postla(t, { ddlTestMerkezi: x.value }, { tetik: 'ddlTestMerkezi' })).doc;
+        if (secili(d) !== x.value) { o.push({ kod: x.value, ad: metin(x), hata: 'bayat' }); continue; }
+        const k = etiket(d, 'lblKontenjan'), tr = etiket(d, 'lblTarih'), b = etiket(d, 'lblBekleyen');
+        if (k == null && tr == null && b == null) throw ekranHata(d, 'lblKontenjan');
+        o.push({ kod: x.value, ad: metin(x), kontenjan: k, tarih: tr, bekleyen: b });
+      }
+      return o;
+    },
+  });
+  const CEKME_EKRAN = { merkezler: ['skt02007'], sonuclar: ['skt02008'], fotograf: ['skt02006'], kurum: ['skt01001'], gruplar: ['skt03002', 'skt03001'], kursiyerler: ['skt02006'], personel: [], araclar: ['skt01002'], sinavlar: ['skt04003'], dosya: ['skt02009'], randevular: ['skt01005'], ucretler: ['skt02007'], teorik: ['skt04001'], ucretIlani: [], yetki: ['ook15003', 'ook15004'], direksiyonProgrami: ['skt04002'] };
   // Aday Durum Görüntüleme: tek adayın bütün dosyası
   async function adayDosyasi(taban, tc) {
     const r = await postla(taban, { txtTcKimlikNo: tc }, { dugme: 'ImageButton1' });

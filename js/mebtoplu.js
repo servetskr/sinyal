@@ -22,6 +22,7 @@ export const CEKILECEK = [
   ['personel', 'Personel', 'İzin no, branş, çalışma izni bitişi'],
   ['araclar', 'Araçlar', 'Muayene, şanzıman, MEBBİS durumu, simülatör'],
   ['sinavlar', 'Sınav sonuçları', 'Son 3 uygulama dönemi ve 2 aylık e-sınav'],
+  ['merkezler', 'e-Sınav merkezleri', 'Her e-sınav merkezinin kalan kontenjanı, en erken randevu tarihi ve onay bekleyen aday sayısı (SKT02007); e-Sınav başvurusu sekmesinde görünür (Yardımcı 1.17)'],
   ['sonuclar', 'Toplu sınav sonuçları', 'Son 60 günün uygulama ve e-sınav sonuçları ve adayların sınav sonrası yeni durumu (SKT02008); sonuçları oturumlara siz kaydedersiniz (Yardımcı 1.17)'],
   ['teorik', 'Teorik program', 'Son 4 dönemin MEBBİS’teki teorik ders programı (SKT04001); şube başına 34 saat denetimi ve teorik bitiş tarihi (Yardımcı 1.13)'],
   ['ucretler', 'e-Sınav ücretleri', 'Ücret yatıran adaylar (SKT02007); sıradaki hakkın ücreti işaretlenir (Yardımcı 1.13)'],
@@ -58,7 +59,7 @@ export const suruyor = () => durum.calisiyor && Date.now() - (durum.sonIlerleme 
 export const GEREKEN_SURUM = '1.12.0';
 // DENETİM Ö6: bu yayının Yardımcı'sı 1.17.0. 1.12–1.16 çalışır ama yeni okumaları tanımaz: o okumalar işe konmaz, kullanıcıya hangi sürümün gerektiği söylenir.
 export const ONERILEN_SURUM = '1.17.0';
-export const CEK_SURUM = { teorik: '1.13.0', ucretler: '1.13.0', randevular: '1.13.0', kurum: '1.14.0', ucretIlani: '1.15.0', yetki: '1.16.0', direksiyonProgrami: '1.16.0', fotograf: '1.17.0', sonuclar: '1.17.0' };
+export const CEK_SURUM = { teorik: '1.13.0', ucretler: '1.13.0', randevular: '1.13.0', kurum: '1.14.0', ucretIlani: '1.15.0', yetki: '1.16.0', direksiyonProgrami: '1.16.0', fotograf: '1.17.0', sonuclar: '1.17.0', merkezler: '1.17.0' };
 export const surumEnAz = (gerek, var_ = EK.eklenti.surum) => { const sv = String(var_ || '0').split('.').map(Number), g = String(gerek).split('.').map(Number); for (let i = 0; i < 3; i++) if ((sv[i] || 0) !== (g[i] || 0)) return (sv[i] || 0) > (g[i] || 0); return true; };
 const surumUygun = () => { const sv = String(EK.eklenti.surum || '0').split('.').map(Number), g = GEREKEN_SURUM.split('.').map(Number); for (let i = 0; i < 3; i++) if ((sv[i] || 0) !== g[i]) return (sv[i] || 0) > g[i]; return true; };
 const yeniSurum = surumUygun;
@@ -759,6 +760,7 @@ function uygula(v, tekrar = false) {
   if (v.personel && v.personel.satirlar) o.personel = personeliIsle(v.personel);
   if (v.araclar && (v.araclar.arac || v.araclar.simulator)) o.araclar = araclariIsle(v.araclar);
   if (v.sinavlar && (v.sinavlar.uygulama || v.sinavlar.esinav)) o.sinavlar = v.sinavlar;
+  if (Array.isArray(v.merkezler)) o.merkezler = merkezlerIsle(v.merkezler); else if (v.merkezler && v.merkezler.hata) o.merkezlerHata = v.merkezler.hata;   // MEB-027
   if (v.sonuclar && (v.sonuclar.uygulama || v.sonuclar.esinav)) o.sonuclar = sonuclarIsle(v.sonuclar); else if (v.sonuclar && v.sonuclar.hata) o.sonuclarHata = v.sonuclar.hata;   // MEB-022/023
   if (Array.isArray(v.dosya)) o.dosya = dosyalariIsle(v.dosya);
   if (['kurum', 'gruplar', 'personel', 'araclar'].every(x => v[x] && !v[x].hata)) S.mebCekim = { ...(S.mebCekim || {}), kurulum: gun(0) };   // MEB-188
@@ -1103,6 +1105,18 @@ function sinavTablosu(v) {
   (v.esinav || []).forEach(t => { const b = t.baslik, i = { tc: sutun(b, 'kimlik'), t: sutun(b, 'sinavtarihi'), d: sutun(b, 'esinavdurum', 'teksinavdurum'), g: sutun(b, /^sinavdurumu?$/), p: sutun(b, /^esinav$/, /^teksinav$/) }; t.satirlar.forEach(r => { const s = MN.katilim(r[i.g]) === 'girmedi' && !r[i.d] ? 'girmedi' : MN.esinavSonuc(r[i.p], r[i.d], esinavGecme()); sat.push([r[i.tc], r[i.t], SONUC_AD[s] || '', r[i.p]]); }); });
   return sat;
 }
+// MEB-027 / SNV-079 / MEB-171 (30): SKT02007 e-sınav merkezleri → S.mebEsinavMerkez [{kod, ad, kontenjan, enErken (iso), enErkenSaat, onayBekleyen, okuma}]
+// (kişisel veri yok). Bayat ya da okunamayan merkez listeye girmez; hiçbiri okunamadıysa eski liste korunur. Gösterim: MEB işlemleri › e-Sınav başvurusu.
+// enErkenMerkez(): kontenjanı olan, en erken randevulu merkez (öneri).
+export function merkezlerIsle(l) {
+  const sayi = v => { const m = String(v == null ? '' : v).replace(/[.\s]/g, '').match(/^-?\d+/); return m ? +m[0] : null; }, zaman = gun(0) + ' ' + new Date().toTimeString().slice(0, 5);
+  const liste = (l || []).filter(x => x && x.kod && !x.hata).map(x => ({ kod: String(x.kod), ad: String(x.ad || '').trim().slice(0, 80), kontenjan: sayi(x.kontenjan), enErken: tarihIso(x.tarih) || '', enErkenSaat: (String(x.tarih || '').match(/\d{2}:\d{2}/) || [])[0] || '', onayBekleyen: sayi(x.bekleyen), okuma: zaman }));
+  if (!liste.length) return { n: 0, bayat: (l || []).filter(x => x && x.hata).length };
+  S.mebEsinavMerkez = liste;
+  const en = enErkenMerkez();
+  return { n: liste.length, bayat: (l || []).filter(x => x && x.hata).length, enErken: en ? { ad: en.ad, tarih: en.enErken, saat: en.enErkenSaat } : null };
+}
+export const enErkenMerkez = () => [...(S.mebEsinavMerkez || [])].filter(x => x.enErken && (x.kontenjan == null || x.kontenjan > 0)).sort((a, b) => (a.enErken + a.enErkenSaat).localeCompare(b.enErken + b.enErkenSaat))[0] || null;
 // MEB-022 / MEB-023: SKT02008 toplu sınav sonuçları (Yardımcı 1.17.0, CEKME.sonuclar).
 // 1) Satırlar sınav oturumlarına "Sonuçları doldur" ile işlenir (EK.sinavSonucuAl: oturum oturum, kaydı kullanıcı yapar). Uygulamada sonuç
 //    'Uygulama Notu'ndan, yoksa yeni durumdan (Sertifika → geçti, hakkı doldu → kaldı); e-sınavda puandan (kurs geçme puanı), yoksa yeni durumdan.
@@ -1174,6 +1188,8 @@ function ozetGoster(o, yazilan) {
   if (o.personel) l.push(satir(`Personel: ${o.personel.guncel} kişinin izin no’su eklendi; izin bitişleri ve haftalık saatler alındı`, [o.personel.yeni.length ? `mdSinyal’de olmayan: ${o.personel.yeni.map(e).join(', ')} (Ekip ve araçlar › Usta öğreticiler’de “Kart aç”)` : '', (o.personel.oneri || []).length ? `${o.personel.oneri.length} kişi yalnız adla eşleşti; Usta öğreticiler’de “Evet, bağla” ile onaylayın` : '', (o.personel.ayrilan || []).length ? `MEBBİS’te görevden ayrılmış görünen: ${o.personel.ayrilan.map(e).join(', ')} (kartında “Ekipten çıkar”)` : '', (o.personel.gorunmeyen || []).length ? `MEBBİS’in görevdeki listesinde olmayan: ${o.personel.gorunmeyen.map(e).join(', ')}` : '', ...(o.personel.farklar || []).map(e)].filter(Boolean).join(' · ')));
   if (o.araclar) l.push(satir(`Araçlar: ${o.araclar.guncel} aracın muayene tarihi MEBBİS’ten alındı`, [o.araclar.yeni.length ? `mdSinyal’de olmayan: ${o.araclar.yeni.map(e).join(', ')} (Ekip ve araçlar’da “mdSinyal’e ekle”)` : '', ...(o.araclar.farklar || []).map(e)].filter(Boolean).join(' · ')));
   if (o.sinavlar) l.push(satir(`Sınav sonuçları okundu`, 'Sonuçları sınav oturumlarına doldurmak için aşağıdaki düğmeye basın'));
+  if (o.merkezler && o.merkezler.n) l.push(satir(`e-Sınav merkezleri: ${o.merkezler.n} merkez okundu`, [o.merkezler.enErken ? `En erken randevu: ${e(o.merkezler.enErken.ad)}, ${tarih(o.merkezler.enErken.tarih)} ${e(o.merkezler.enErken.saat)}` : '', o.merkezler.bayat ? `${o.merkezler.bayat} merkezin bilgisi gelmedi` : '', 'MEB işlemleri › e-Sınav başvurusu sekmesinde görünür'].filter(Boolean).join(' · ')));
+  if (o.merkezlerHata) l.push(`<li class="ipucu uyari">${isaret('uyari', 18)}<span>e-Sınav merkezleri: ${e(o.merkezlerHata)}${/tanımıyor/.test(o.merkezlerHata) ? ' Yardımcı’yı 1.17 sürümüne güncelleyin.' : ''}</span></li>`);
   if (o.sonuclar) { const x = o.sonuclar; l.push(satir(`Toplu sınav sonuçları (SKT02008, ${tarih(x.bas)}–${tarih(x.bit)}): ${x.satir} satır`, [x.yeni ? `${x.yeni} adayın MEBBİS durumu güncellendi` : '', x.eski ? `${x.eski} adayda MEBBİS’ten sonradan okunan durum daha yeni, korundu` : '', x.yok ? `${x.yok} aday mdSinyal’de yok` : '', x.ayniTc ? `${x.ayniTc} T.C. iki açık kayıtta, yazılmadı` : '', 'Sonuçları oturumlara doldurmak için aşağıdaki düğmeye basın'].filter(Boolean).join(' · '))); }
   if (o.sonuclarHata) l.push(`<li class="ipucu uyari">${isaret('uyari', 18)}<span>Toplu sınav sonuçları: ${e(o.sonuclarHata)}${/tanımıyor/.test(o.sonuclarHata) ? ' Yardımcı’yı 1.17 sürümüne güncelleyin.' : ''}</span></li>`);
   if (o.yetki) l.push(satir(`Öğretmen yetkileri: ${o.yetki.guncel} öğretmenin derse gireceği programlar alındı`, [o.yetki.bulunamayan.length ? `mdSinyal’de izin no ya da TC ile bulunamayan: ${o.yetki.bulunamayan.map(e).join(', ')} (önce Personel’i alın)` : '', o.yetki.hatali.length ? `${o.yetki.hatali.length} kişinin ekranı açılamadı` : ''].filter(Boolean).join(' · ')));
@@ -1196,7 +1212,7 @@ function ozetGoster(o, yazilan) {
 }
 
 /* ---------- MEBBİS aktarım merkezindeki kartlar ---------- */
-const secim = new Set(['kurum', 'gruplar', 'teorik', 'kursiyerler', 'dosya', 'personel', 'yetki', 'araclar', 'sinavlar', 'sonuclar', 'ucretler', 'ucretIlani', 'direksiyonProgrami']);
+const secim = new Set(['kurum', 'gruplar', 'teorik', 'kursiyerler', 'dosya', 'personel', 'yetki', 'araclar', 'sinavlar', 'sonuclar', 'merkezler', 'ucretler', 'ucretIlani', 'direksiyonProgrami']);
 // Süren, durmuş ya da parçası bitmiş yazma işi: onaylayan, parça, kalan iş; durdur, devam, iptal
 // cekGizle: "MEBBİS'ten al" sekmesinde çekme işinin durumu topluKart'ta zaten görünür
 export function isKarti(cekGizle) {

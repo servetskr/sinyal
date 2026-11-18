@@ -116,7 +116,10 @@ export function merkezSekme() {
   if (m.tur === 'esinav' && m.esOto) { l.filter(x => !x.bitti && !kilitli(x)).forEach(x => m.secili.add(x.id)); m.esOto = false; }
   if (m.tur === 'esinav') {
     const mz = [].concat(S.mebEsinavMerkez || (S.kurs.esinavMerkez ? [S.kurs.esinavMerkez] : [])).filter(Boolean), uy = S.mebUcretYok;
-    if (mz.length) h += `<div style="display:flex;gap:8px;overflow-x:auto;padding:12px 16px 0">${mz.map(z => `<div style="flex:0 0 auto;border:1.5px solid var(--cizgi);border-radius:10px;padding:8px 12px;font-size:13.5px"><b style="color:var(--murekkep)">${e(z.ad || 'e-Sınav merkezi')}</b>${z.kontenjan != null ? ` · kalan kontenjan <b>${e(String(z.kontenjan))}</b>` : ''}${z.enErken ? ` · en erken <b>${tarih(z.enErken)}</b>` : ''}${z.onayBekleyen != null ? ` · onay bekleyen ${e(String(z.onayBekleyen))}` : ''}${z.okuma ? `<small style="display:block;color:var(--soluk)">MEBBİS ${tarih(String(z.okuma).slice(0, 10))}</small>` : ''}</div>`).join('')}</div>`;
+    // MEB-027 / SNV-079: merkezler en erken randevuya göre; kontenjanı olan en erken merkez önerilir. Okuma Yardımcı 1.17 (MEBBİS'ten güncelle ya da bu düğme)
+    const onerilen = MT.enErkenMerkez(), mzs = [...mz].sort((a, b) => String((a.enErken || '9') + (a.enErkenSaat || '')).localeCompare(String((b.enErken || '9') + (b.enErkenSaat || ''))));
+    if (mz.length) h += `<div style="display:flex;gap:8px;overflow-x:auto;padding:12px 16px 0">${mzs.map(z => `<div style="flex:0 0 auto;border:1.5px solid ${onerilen && z.kod === onerilen.kod ? 'var(--levha)' : 'var(--cizgi)'};border-radius:10px;padding:8px 12px;font-size:13.5px"><b style="color:var(--murekkep)">${e(z.ad || 'e-Sınav merkezi')}</b>${onerilen && z.kod === onerilen.kod ? ' ' + rozet('En erken', 'mavi') : ''}${z.kontenjan != null ? ` · kalan kontenjan <b>${e(String(z.kontenjan))}</b>` : ''}${z.enErken ? ` · en erken <b>${tarih(z.enErken)}${z.enErkenSaat ? ' ' + e(z.enErkenSaat) : ''}</b>` : ''}${z.onayBekleyen != null ? ` · onay bekleyen ${e(String(z.onayBekleyen))}` : ''}${z.okuma ? `<small style="display:block;color:var(--soluk)">MEBBİS ${tarih(String(z.okuma).slice(0, 10))}${String(z.okuma).slice(11, 16) ? ' ' + e(String(z.okuma).slice(11, 16)) : ''}</small>` : ''}</div>`).join('')}</div>`;
+    if (EK.eklenti.var) h += `<p style="padding:8px 16px 0;font-size:13.5px;color:var(--soluk)">${mz.length ? 'Kontenjan ve en erken tarih MEBBİS’te sık değişir; başvurudan önce yeniden okuyun.' : 'Merkezlerin kalan kontenjanı ve en erken randevu tarihi henüz okunmadı.'} <button type="button" class="dg dg-hafif dg-kucuk" data-mm-merkez ${subeSorun ? 'disabled' : ''}>${ik('indir')}Merkezleri MEBBİS’ten oku</button></p>`;
     if (uy && uy.n) h += `<p style="padding:8px 16px 0;font-size:13.5px;color:var(--soluk)">MEBBİS’te ücret yatırmış, mdSinyal’de olmayan <b>${uy.n}</b> kişi (${tarih(uy.tarih)} okuması).</p>`;
   }
   const secilebilir = l.filter(x => !x.bitti && !kilitli(x)), hepsiSecili = secilebilir.length && secilebilir.every(x => m.secili.has(x.id));
@@ -176,7 +179,8 @@ export function merkezBaglan(k, yenile) {
     { const ua = t.closest('[data-uy-ac]'); if (ua) { UY.ac(ua.dataset.uyAc); return yenile(); } }
     { const uk = t.closest('[data-uy-kapat]'); if (uk) return uyKapatPenceresi(uk.dataset.uyKapat, yenile); }
     if (t.closest('[data-mm-kurulum]')) return MT.topluCek(MT.KURULUM_CEK);   // MEB-188
-    if (t.closest('[data-mm-guncelle]')) return MT.topluCek(['gruplar', 'kursiyerler', 'dosya', 'personel', 'araclar', 'sinavlar', 'sonuclar', 'direksiyonProgrami', 'randevular']);
+    if (t.closest('[data-mm-merkez]')) return MT.topluCek(['merkezler']);   // MEB-027
+    if (t.closest('[data-mm-guncelle]')) return MT.topluCek(['gruplar', 'kursiyerler', 'dosya', 'personel', 'araclar', 'sinavlar', 'sonuclar', 'merkezler', 'direksiyonProgrami', 'randevular']);
     if (t.closest('[data-mm-hepsini]')) { const ids = butunIsler(true).filter(x => !x.bitti && x.tur !== 'onay').map(x => x.id); MT.yaz(ids).then(r => { if (r) m.secili.clear(); yenile(); }); return; }
     // seçim yalnız iş Yardımcı'ya gidince temizlenir; onay penceresinde vazgeçilirse seçim kalır
     if (t.closest('[data-mm-yaz]')) { const ids = [...m.secili]; MT.yaz(ids).then(r => { if (r) ids.forEach(id => m.secili.delete(id)); yenile(); }); return; }
