@@ -752,6 +752,15 @@ export async function dosyadanGeriYukle(veri, ad) {
   kaydet(); await akit();
   return true;
 }
+// YON-041: yedekte fotoğraf, evrak ve imzalar ayrı belgede (kurslar/{k}/dosyalar, içerik değiştirilemez) başvuruyla durur; buluttan geri dönüşte
+// başvurular çözülür. Bilgisayara indirilen yedek dosyası tek başına yetsin diye indirmeden önce bütün başvurular gerçek içerikle doldurulur.
+export async function yedekDosyalariCoz(veri) {
+  const ids = new Set(); JSON.stringify(veri, (k, x) => { if (typeof x === 'string' && x.startsWith(DOSYA_ON)) ids.add(x.slice(DOSYA_ON.length)); return x; });
+  const { db, F } = await sdk(); let bulunamayan = 0;
+  await Promise.all([...ids].filter(id => !dosyaVeri.has(id)).map(async id => { try { const d = await F.getDoc(F.doc(db, 'kurslar', bulut.kurs, 'dosyalar', id)); if (d.exists()) { const v = d.data().v; dosyaVeri.set(id, v); dosyaId.set(v, id); } else bulunamayan++; } catch (x) { bulunamayan++; } }));
+  const cozulmus = JSON.parse(JSON.stringify(veri), (k, x) => typeof x === 'string' && x.startsWith(DOSYA_ON) && dosyaVeri.has(x.slice(DOSYA_ON.length)) ? dosyaVeri.get(x.slice(DOSYA_ON.length)) : x);
+  return { veri: cozulmus, dosya: ids.size, bulunamayan };
+}
 export function yedekIndir(veri, ad) {
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(veri)], { type: 'application/json' })); a.download = ad; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
