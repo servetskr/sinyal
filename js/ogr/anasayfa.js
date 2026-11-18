@@ -1,6 +1,6 @@
 // Ana sayfa sekmesi (yeni tasarım): selam, ehliyet yolculuğu (Teorik · Direksiyon · Sınav), yapılacaklar (teklif, onay, uyarı),
 // sıradaki ders (takvim yaprağı) ve son dersin değerlendirmesi, sınava hazırlık kartı, kurs işlemleri (ödeme, belgeler), ana ekrana ekle.
-import { S, ASAMALAR, EVRAKLAR, egitmen, arac, ogretmen, fark, tarihOku, kalanBorc, ogrOzellik, gerekliDireksiyon, sinifEtiket, egitimSinifi, teorikVar } from '../veri.js?v=234';
+import { S, ASAMALAR, EVRAKLAR, egitmen, arac, ogretmen, fark, tarihOku, kalanBorc, ogrOzellik, gerekliDireksiyon, sinifEtiket, egitimSinifi, teorikVar, teorikSaat } from '../veri.js?v=234';
 import { gunKisa, gunAdi, ayAdi, tarih } from '../ui.js?v=234';
 import * as OG from '../ogrenci.js?v=234';
 import * as HZ from '../hazirlik.js?v=234';
@@ -36,20 +36,20 @@ function yolculuk(k, S0, sinav) {
   const dir = gerekliDireksiyon(k) > 0, tv = teorikVar(k), egt = egitimSinifi(k.sinif);
   const adimlar = egt ? ['teorik', 'belge'] : [...(tv ? ['teorik'] : []), ...(dir ? ['direksiyon'] : []), 'sinav'];
   const n = ASAMALAR.indexOf(k.asama), esGecti = !!(k.esinav && k.esinav.sonuc === 'Geçti'), bitti = k.asama === 'Ehliyet';
-  const teorikBitti = !tv || (egt ? k.teorik >= S0.teorik : n >= 3 || esGecti);
+  const teorikBitti = !tv || (egt ? k.teorik >= teorikSaat(k) : n >= 3 || esGecti);
   const simdi = bitti ? adimlar.length : !teorikBitti ? 0 : egt ? 1 : adimlar.indexOf(dir && k.asama !== 'Sınav' ? 'direksiyon' : 'sinav');
   const ds = OG.dirSayac(k);
-  const sayac = teorikBitti && dir ? `${ds.n} / ${ds.g} ders${ds.ek ? ` · ${ds.ek} ek` : ''}` : tv ? `${k.teorik} / ${S0.teorik} saat` : '';
+  const sayac = teorikBitti && dir ? `${ds.n} / ${ds.g} ders${ds.ek ? ` · ${ds.ek} ek` : ''}` : tv ? `${k.teorik} / ${teorikSaat(k)} saat` : '';
   const adim = adimlar[Math.min(simdi, adimlar.length - 1)];
   const sinavMetni = s => `${esc(OG.sinavAdi(s.tur, 'in'))} ${zaman(s.tarih, s.saat).replace(', ', ' ')}.`;
   const hd = OG.hakDurum(k);
   let cumle;
   if (bitti) cumle = egt ? OG.EGITIM_BITTI_METIN : 'Tebrikler, ehliyetini aldın.';
-  else if (egt) cumle = k.teorik >= S0.teorik ? 'Teorik derslerin bitti; eğitim belgen kurstan verilir.' : 'Teorik derslerine devam ediyorsun; eğitim belgesi için derslerin tamamına katılman gerekir.';
+  else if (egt) cumle = k.teorik >= teorikSaat(k) ? 'Teorik derslerin bitti; eğitim belgen kurstan verilir.' : 'Teorik derslerine devam ediyorsun; eğitim belgesi için derslerin tamamına katılman gerekir.';
   else if (hd && !sinav) cumle = esc(hd.metin);  // sınav hakkı doldu: kursun kararını bekliyor
   else if (adim === 'teorik') cumle = sinav && sinav.tur === 'e-Sınav' ? sinavMetni(sinav)
     : k.esinav && k.esinav.sonuc && !esGecti ? 'e-Sınava yeniden hazırlanıyorsun.'
-      : k.teorik >= S0.teorik ? 'Teorik derslerin bitti; sıra e-Sınavda.' : 'Teorik derslerine devam ediyorsun.';
+      : k.teorik >= teorikSaat(k) ? 'Teorik derslerin bitti; sıra e-Sınavda.' : 'Teorik derslerine devam ediyorsun.';
   else if (adim === 'direksiyon') cumle = !k.direksiyon ? (tv ? 'Direksiyon eğitimin başlıyor.' : OG.TEORIKSIZ_METIN) : k.direksiyon >= gerekliDireksiyon(k) ? 'Direksiyon derslerin tamamlandı.' : 'Direksiyon eğitimine devam ediyorsun.';
   else cumle = sinav ? sinavMetni(sinav) : k.dsinav && k.dsinav.sonuc && k.dsinav.sonuc !== 'Geçti' ? 'Sınava yeniden gireceksin; tarihi kurs bildirecek.' : 'Sınav tarihin kurs tarafından bildirilecek.';
   const li = adimlar.map((a, i) => {

@@ -1,5 +1,5 @@
 // Öğrenci paneli sekmeleri: dersler (yaklaşan + defter + gelişim + teorik konular), sınavlar, ödemeler, belgeler; bölümler açılır kapanır modüller
-import { odemeKodu, ibanlar, ibanBicim, S, kaydet, gun, fark, tarihOku, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen, ogrOzellik, oturum, DERS_TUR_AD, iptalEdilebilir } from './veri.js?v=234';
+import { odemeKodu, ibanlar, ibanBicim, S, kaydet, gun, fark, tarihOku, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen, ogrOzellik, oturum, DERS_TUR_AD, iptalEdilebilir, teorikSaat } from './veri.js?v=234';
 import { gerekliDireksiyon, sinavHakSiniri } from './veri.js?v=234';
 import { sinifEtiket, egitimSinifi, teorikVar, ekTur, kursBorcu, resmiMasraflar, kursiyerTaban, tabanListesi, ekDersTabani, ekDersFiyat, uygulamaSinavUcreti, esinavUcreti, motorSinif } from './veri.js?v=234';
 import { satirAdi } from './taban.js?v=234';
@@ -19,7 +19,7 @@ export const MUFREDAT = [
 ];
 const MEB_TOPLAM = MUFREDAT.reduce((a, x) => a + x[2], 0);
 // Öğrencinin teorik saatleri konulara MEB saat oranında dağılır (yoklama konu bazında tutulmadığı için)
-const konuSaat = k => { const S0 = SINIFLAR[k.sinif], oran = Math.min(1, k.teorik / Math.max(1, S0.teorik)); return MUFREDAT.map(([key, , saat]) => [key, Math.round(saat * oran)]); };
+const konuSaat = k => { const S0 = SINIFLAR[k.sinif], oran = Math.min(1, k.teorik / Math.max(1, teorikSaat(k))); return MUFREDAT.map(([key, , saat]) => [key, Math.round(saat * oran)]); };
 
 /* ---------- öğrenci ekranlarında ortak: teorik/e-sınav var mı, ders sayacı, ücret metinleri (il taban listesi notları 1, 4, 5, 6) ---------- */
 // Fark, e-sınav muafı, otomatikten manuele ve römork öğrencisinde teorik eğitim ve e-sınav yok; 100 ceza puanı eğitiminde teorik var, sınav yok (MTSK md.16/3)
@@ -170,7 +170,7 @@ export function teorikModul(k, acik = false) {
   const S0 = SINIFLAR[k.sinif], ks = Object.fromEntries(konuSaat(k)), tv = teorikVar(k);
   const okn = key => MUFREDAT.find(x => x[0] === key)[3].filter((b, i) => (k.okunan || {})[key + '-' + (i + 1)]).length;
   const okunan = MUFREDAT.reduce((a, [key]) => a + okn(key), 0), konuTop = MUFREDAT.reduce((a, x) => a + x[3].length, 0);
-  return modul('teorik', { ikon: 'teorik', baslik: 'Teorik dersler ve konular', ozet: `${tv ? `${k.teorik}/${S0.teorik} saat · ` : ''}${okunan}/${konuTop} konu okundu`, sag: tv && k.teorik >= S0.teorik ? rozet('Bitti', 'yesil') : '', acik },
+  return modul('teorik', { ikon: 'teorik', baslik: 'Teorik dersler ve konular', ozet: `${tv ? `${k.teorik}/${teorikSaat(k)} saat · ` : ''}${okunan}/${konuTop} konu okundu`, sag: tv && k.teorik >= teorikSaat(k) ? rozet('Bitti', 'yesil') : '', acik },
     `${MUFREDAT.map(([key, ad, saat, basliklar]) => `<details class="og-konu"><summary><span><b>${e(ad)}</b><small>${tv ? `${ks[key]}/${saat} saat · ` : ''}${okn(key)}/${basliklar.length} konu okundu</small></span>${tv ? ilerleme(ks[key], saat, ks[key] >= saat ? 'yesil' : '') : ilerleme(okn(key), basliklar.length, okn(key) >= basliklar.length ? 'yesil' : '')}</summary>
       <ul class="og-basliklar">${basliklar.map((b, i) => { const id = key + '-' + (i + 1), ok = (k.okunan || {})[id]; return `<li><button type="button" data-og-ders="${id}" class="${ok ? 'okundu' : ''}"><span>${ok ? '✓' : i + 1}</span>${e(b)}</button></li>`; }).join('')}</ul>
       <div class="og-konu-dg">${key === 'trafik' && ogrOzellik('tehlike') ? `<button class="dg dg-cizgi dg-kucuk" data-tehlike>${ik('uyari')}Tehlike algısı</button>` : ''}${key === 'motor' ? `${ogrOzellik('ikaz') ? `<button class="dg dg-cizgi dg-kucuk" data-ikaz>${ik('uyari')}İkaz lambaları</button>` : ''}${ogrOzellik('motor') ? '<button class="dg dg-cizgi dg-kucuk" data-motor4>4 zamanlı motor</button>' + (debriyajVar(k) ? '<button class="dg dg-cizgi dg-kucuk" data-debriyaj>Debriyaj ve kalkış</button>' : '') : ''}` : ''}<button class="dg dg-ana dg-kucuk" data-test-basla="konu" data-konu="${key}" data-og-sinava>${ik('sinav')}Bu konudan test</button></div></details>`).join('')}
@@ -179,7 +179,7 @@ export function teorikModul(k, acik = false) {
 export function derslerHtml(k) {
   const S0 = SINIFLAR[k.sinif], dir = !!gerekliDireksiyon(k), ks = Object.fromEntries(konuSaat(k)), teorikOnce = ['Kayıt', 'Evrak', 'Teorik'].includes(k.asama);
   const okunan = Object.keys(k.okunan || {}).length, konuTop = MUFREDAT.reduce((a, x) => a + x[3].length, 0);
-  const tv = teorikVar(k), teorik = egitimSinifi(k.sinif) ? '' : `<section class="u-grup og-ogren-bag"><div class="u-liste"><button class="u-satir dokun" data-git="sinav"><span class="u-ik mor">${ik('teorik')}</span><span class="u-satir-govde"><b>Konu anlatımları ve testler</b><small>${okunan}/${konuTop} konu tamamlandı${tv ? ` · teorik ${k.teorik}/${S0.teorik} saat` : ''}</small></span>${ik('sag')}</button></div></section>`;
+  const tv = teorikVar(k), teorik = egitimSinifi(k.sinif) ? '' : `<section class="u-grup og-ogren-bag"><div class="u-liste"><button class="u-satir dokun" data-git="sinav"><span class="u-ik mor">${ik('teorik')}</span><span class="u-satir-govde"><b>Konu anlatımları ve testler</b><small>${okunan}/${konuTop} konu tamamlandı${tv ? ` · teorik ${k.teorik}/${teorikSaat(k)} saat` : ''}</small></span>${ik('sag')}</button></div></section>`;
   if (!dir) return programHtml(k) + teorik;
   const { yapilan, son, once } = beceriOzet(k), notlar = yapilan.filter(d => d.not).slice(-2).reverse();
   const zayif = son.filter(([, v]) => v != null).sort((a, b) => a[1] - b[1])[0];
@@ -195,7 +195,7 @@ export function derslerHtml(k) {
   const engel = k.asama !== 'Ehliyet' ? randevuEngeli(k) : null;
   const al = k.asama === 'Ehliyet' || hakDurum(k) ? '' : !engel ? `<button class="dg dg-ana og-genis" data-iste>${ik('arti')}Direksiyon dersi al</button>`
     : engelYazilir(engel) ? `<div class="og-ders-engel"><span>${e(engel)}</span><button class="dg dg-cizgi" data-kursa-yaz="${/hepsi planlandı/.test(engel) ? 'ek' : 'ders'}">${ik('wp')}Kursa yaz</button></div>` : '';
-  const ds = dirSayac(k), ilerl = `<div class="og-sayac"><div><small>Direksiyon${ds.ek ? ` · ${ds.ek} ek ders` : ''}</small><b>${ds.n}<span>/${ds.g}</span></b>${ilerleme(ds.n, ds.g, 'yesil')}</div>${tv ? `<div><small>Teorik</small><b>${k.teorik}<span>/${S0.teorik}</span></b>${ilerleme(k.teorik, S0.teorik, 'yesil')}</div>` : ''}</div>${tv ? '' : `<p class="og-not">${TEORIKSIZ_METIN}</p>`}`;
+  const ds = dirSayac(k), ilerl = `<div class="og-sayac"><div><small>Direksiyon${ds.ek ? ` · ${ds.ek} ek ders` : ''}</small><b>${ds.n}<span>/${ds.g}</span></b>${ilerleme(ds.n, ds.g, 'yesil')}</div>${tv ? `<div><small>Teorik</small><b>${k.teorik}<span>/${teorikSaat(k)}</span></b>${ilerleme(k.teorik, teorikSaat(k), 'yesil')}</div>` : ''}</div>${tv ? '' : `<p class="og-not">${TEORIKSIZ_METIN}</p>`}`;
   return ilerl + (teorikOnce ? programHtml(k) + teorik + (ogrOzellik('dersOnay') ? dersDefteri(k) : '') + gelisim + direksiyon
     : al + programHtml(k) + (ogrOzellik('dersOnay') ? dersDefteri(k) : '') + gelisim + direksiyon + teorik);
 }

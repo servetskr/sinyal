@@ -919,6 +919,16 @@ export function sinifEtiket(sinif, k) {
 }
 // Kursiyer teorik eğitim alıyor mu: listede satırı varsa satırın türü (ilk belge, G, 100 ceza: evet; e-sınav muaf, fark, otomatikten manuele, römork: hayır);
 // liste yoksa e-sınav muafı ve mevcut belgeli (G ve eğitim türü hariç) teorik almaz
+// md.16/2 teorik ders muafiyeti (TEO-006): okul belgesiyle trafik ve çevre, ilk yardım, araç tekniği; geçerli ilk yardımcı sertifikasıyla ilk yardım.
+// Kursiyer istemesi hâlinde o derslerin eğitimine girmez, sınava girer. k.teorikDersMuaf = { dersler: ['trafik','ilkyardim','arac'], belge, tarih, kim }.
+// Ders saatleri MEB programındaki dağılım (34 saatte trafik ve çevre 16, ilk yardım 8, araç tekniği 6, trafik adabı 4); başka toplamlı sınıfta orantılı.
+export const TEORIK_MUAF_DERS = [['trafik', 'Trafik ve çevre', 16], ['ilkyardim', 'İlk yardım', 8], ['arac', 'Araç tekniği', 6]];
+export function teorikSaat(k) {
+  const top = +((SINIFLAR[k && k.sinif] || {}).teorik) || 0, l = (k && k.teorikDersMuaf && k.teorikDersMuaf.dersler) || [];
+  if (!l.length || !top) return top;
+  const dus = TEORIK_MUAF_DERS.filter(([id]) => l.includes(id)).reduce((a, [, , sa]) => a + Math.round(sa * top / 34), 0);
+  return Math.max(0, top - dus);
+}
 // Belgeli aday (TEO-003): mevcut sürücü belgesiyle farklı sınıf istiyor (md.39). Muafiyet değildir (muaf: son 3 yılda e-sınavı geçen, md.15/5).
 // Teorik dersi ve e-sınavı olmayan belgeli adayda MEBBİS durumu "Uygulama Sınav Aşamasında"dır: aşaması Direksiyon, e-sınav işi ve 90 gün kuralı yok.
 export const belgeliMi = k => !!(k && k.mevcutEhliyet && k.mevcutEhliyet !== 'Yok');

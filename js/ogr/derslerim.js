@@ -2,7 +2,7 @@
 // öğretmen notları) ve Geçmiş (yapılan dersler, öğrenci onayı, değerlendirme).
 // Eski ogrenci.js derslerHtml / programHtml / yaklasanHtml / degerlendirKart / ders defteri işlevleri buraya taşındı;
 // onay, itiraz, yıldız, takvim dosyası (data-og-*) ogrenci.js ogBagla'da; ders al, kursa yaz, saat değiştir, iptal portal.js ogGenelTik'te çalışır.
-import { S, BECERI, DERS_TUR_AD, egitmen, arac, ogretmen, fark, gun, tarihOku, iso, iptalEdilebilir, dersSirasi, kapaliGun, ogrOzellik, tamAd, gerekliDireksiyon, teorikVar, egitimSinifi } from '../veri.js?v=234';
+import { S, BECERI, DERS_TUR_AD, egitmen, arac, ogretmen, fark, gun, tarihOku, iso, iptalEdilebilir, dersSirasi, kapaliGun, ogrOzellik, tamAd, gerekliDireksiyon, teorikVar, egitimSinifi, teorikSaat } from '../veri.js?v=234';
 import { tarihUzun, gunAdi, gunKisa, ayAdi } from '../ui.js?v=234';
 import * as TK from '../takvim.js?v=234';
 import { onayBekleyen, MUFREDAT, sinavAdi, hakDurum, dirSayac, TEORIKSIZ_METIN } from '../ogrenci.js?v=234';
@@ -190,7 +190,7 @@ function gelisimHtml(k, ctx) {
   const S0 = ctx.S0, dir = !!gerekliDireksiyon(k), tv = teorikVar(k), ds = dirSayac(k);
   const kutu = (ust, n, top, birim) => `<div class="ox-kart ox-drs-ilerleme"><small>${ust}</small><b>${n}<span>/${top} ${birim}</span></b>${serit(top ? Math.min(100, n / top * 100) : 0, n >= top ? 'yesil' : 'mavi')}</div>`;
   // teorik eğitimi olmayan öğrencide (fark, muaf, otomatikten manuele, römork) teorik ilerlemesi yerine kısa açıklama; ek dersler ayrı sayılır
-  let h = `<div class="ox-drs-ilerlemeler ${dir && tv ? '' : 'tek'}">${dir ? kutu(ds.ek ? `Direksiyon · ${ds.ek} ek ders` : 'Direksiyon', ds.n, ds.g, 'ders') : ''}${tv ? kutu('Teorik', k.teorik, S0.teorik, 'saat') : ''}</div>${tv ? '' : not(TEORIKSIZ_METIN)}`;
+  let h = `<div class="ox-drs-ilerlemeler ${dir && tv ? '' : 'tek'}">${dir ? kutu(ds.ek ? `Direksiyon · ${ds.ek} ek ders` : 'Direksiyon', ds.n, ds.g, 'ders') : ''}${tv ? kutu('Teorik', k.teorik, teorikSaat(k), 'saat') : ''}</div>${tv ? '' : not(TEORIKSIZ_METIN)}`;
   if (dir) {
     const { l, son, once } = beceriOzet(k), sayi = Math.min(3, l.length);
     if (l.length) {
