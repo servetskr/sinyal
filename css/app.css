@@ -1437,9 +1437,52 @@ button.oto-gidecek:hover{text-decoration:underline}
 .og-sekme button.secili{color:var(--levha)}
 .og-sekme button.secili .ik{stroke-width:2.2}
 
-/* Yeni sürüm şeridi (v106) */
-.surum-serit{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom));z-index:60;display:flex;align-items:center;gap:12px;padding:8px 8px 8px 16px;background:#111417;color:#fff;border-radius:999px;box-shadow:0 12px 30px -10px rgba(0,0,0,.5);font:600 14px/1.2 var(--govde);max-width:calc(100% - 24px)}
-.surum-serit button{background:var(--levha);color:#fff;border-radius:999px;padding:8px 14px;font:700 14px/1 var(--baslik)}
+/* Yeni sürüm bildirimi (v231, js/guncelleme.js): sinyal sarısı kart, alt menülerin üstünde; yalnız güncelleyince kalkar */
+.sg-serit{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:85;width:min(640px,calc(100% - 24px));display:flex;align-items:center;gap:12px;padding:12px 12px 12px 14px;background:#ffc21a;color:#111417;border-radius:16px;box-shadow:0 20px 44px -16px rgba(10,17,32,.6),0 0 0 1px rgba(17,20,23,.14);font:500 14px/1.35 var(--govde);animation:sg-gel .5s cubic-bezier(.2,.9,.3,1.15)}
+.sg-serit.sg-sakla{opacity:0;visibility:hidden;transform:translate(-50%,24px);transition:opacity .2s,transform .2s,visibility 0s .2s}
+.sg-serit{transition:opacity .2s,transform .2s}
+.sg-ik{flex:none;width:42px;height:42px;border-radius:12px;background:#111417;color:#ffc21a;display:grid;place-items:center}
+.sg-ik svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.sg-metin{flex:1;min-width:0}
+.sg-metin b{display:block;font:800 16.5px/1.2 var(--baslik);color:#111417}
+.sg-metin small{display:block;margin-top:3px;font-size:13.5px;color:#3d3300}
+.sg-bag{background:none;border:0;padding:0;color:inherit;font:inherit;font-weight:700;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.sg-dg{flex:none;min-height:46px;padding:0 18px;border-radius:12px;background:#111417;color:#fff;font:800 15px/1 var(--baslik);white-space:nowrap;cursor:pointer}
+.sg-dg:hover{background:#000}
+.sg-dg:disabled{opacity:.75;cursor:progress}
+.sg-dg:focus-visible,.sg-bag:focus-visible{outline:3px solid #111417;outline-offset:2px}
+/* 1 günden uzun bekleyen güncelleme: kart bir kez sallanır, düğme nabız atar (3 kez) */
+.sg-serit.sg-acil{animation:sg-gel .5s cubic-bezier(.2,.9,.3,1.15),sg-salla .6s .7s ease-in-out}
+.sg-acil .sg-dg{animation:sg-nabiz 1.6s 1.2s ease-out 3}
+.sg-acil .sg-metin small{color:#6b1d00;font-weight:700}
+@keyframes sg-gel{from{transform:translate(-50%,28px);opacity:0}}
+@keyframes sg-salla{25%{transform:translate(calc(-50% - 6px),0)}50%{transform:translate(calc(-50% + 6px),0)}75%{transform:translate(calc(-50% - 3px),0)}}
+@keyframes sg-nabiz{from{box-shadow:0 0 0 0 rgba(17,20,23,.55)}to{box-shadow:0 0 0 12px rgba(17,20,23,0)}}
+@media (max-width:520px){.sg-serit{gap:10px;padding:10px 10px 10px 12px;border-radius:14px}.sg-ik{width:36px;height:36px;border-radius:10px}.sg-ik svg{width:20px;height:20px}.sg-metin b{font-size:15.5px}.sg-metin small{font-size:13px}.sg-dg{min-height:44px;padding:0 13px;font-size:14px}}
+@media (max-width:420px){.sg-ik{display:none}.sg-serit{padding-left:14px}}
+/* şerit en alttaki içeriği örtmesin */
+body.sg-var::after{content:'';display:block;height:96px}
+@media (prefers-reduced-motion:reduce){.sg-serit,.sg-serit.sg-acil,.sg-acil .sg-dg{animation:none}}
+@media print{.sg-serit,[data-sg-alan]{display:none!important}}
+/* kurs ana ekranı: yeni sürüm kartı (üstte) ve sürüm satırı (en altta) */
+.sg-kart{display:flex;align-items:center;gap:14px;margin:0 0 16px;padding:16px 18px;background:#ffc21a;color:#111417;border-radius:14px;box-shadow:0 10px 26px -18px rgba(10,17,32,.7)}
+.sg-kart-metin{flex:1;min-width:0}
+.sg-kart-metin b{display:block;font:800 17px/1.2 var(--baslik);color:#111417}
+.sg-kart-metin span{display:block;margin-top:3px;font-size:14px;color:#3d3300}
+.sg-kart-dg{display:flex;gap:8px;flex-wrap:wrap;flex:none}
+.sg-kart .dg-cizgi{background:transparent;border-color:#111417}
+.sg-kart .dg-cizgi:hover{background:rgba(255,255,255,.35)}
+@media (max-width:640px){.sg-kart{flex-wrap:wrap}.sg-kart-dg{width:100%}.sg-kart-dg .dg{flex:1}}
+.sg-satir{display:flex;align-items:center;gap:12px;margin:22px 0 4px;padding:12px 14px;border-radius:12px;background:var(--panel-2);color:var(--metin)}
+.sg-satir-metin{flex:1;min-width:0}
+.sg-satir-metin b{display:block;font:800 14px/1.2 var(--baslik);color:var(--murekkep)}
+.sg-satir-metin small{display:block;margin-top:2px;font-size:13px;color:var(--soluk)}
+.sg-satir .sg-bag{color:var(--levha);font-weight:600}
+.sg-satir-yeni small{color:#7a4b00;font-weight:700}
+.sg-satir .dg{flex:none}
+.sg-not-bas{margin:4px 0 6px;font-size:15px}
+.sg-not{margin:0 0 14px;padding-left:20px;display:grid;gap:6px}
+.sg-not li{line-height:1.45}
 
 /* Ödemeler sekmesi: sade özet (kalan borç, sıradaki taksit, ilerleme, tek "Ödeme al") */
 .odeme-ozet{padding:18px 20px 16px;display:grid;gap:14px;min-width:0}
