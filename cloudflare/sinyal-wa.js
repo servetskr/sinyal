@@ -156,7 +156,9 @@ const kursHat = async (env, kurs) => { try { return JSON.parse((await env.LINK.g
 const SABLON_GOVDE_SINIR = 1024, SABLON_SABIT = 84, SABLON_DEGISKEN = SABLON_GOVDE_SINIR - SABLON_SABIT;
 // uzunluk UTF-16 birimiyle sayılır (emoji iki birim: hangi sayımla da sınır aşılmasın); yarım kalan emoji (vekil çift) atılır
 const sablonKes = t => t.length > SABLON_DEGISKEN ? t.slice(0, SABLON_DEGISKEN - 1).replace(/[\uD800-\uDBFF]$/, '').trimEnd() + '…' : t;
-const sablonParam = metin => sablonKes(String(metin).replace(/\s*\n+\s*/g, ' · ').replace(/[\t ]{4,}/g, '   '));
+// Meta kuralı: değişkende satır sonu, sekme ve art arda 4'ten fazla boşluk olamaz (132000 hatası). Satır sonu ' · ' olur; sekme ve öteki
+// boşluk karakterleri (dikey sekme, form besleme, bölünmez boşluk, Unicode satır/paragraf ayırıcı) tek boşluğa, 4 ve daha uzun boşluk dizisi 3 boşluğa iner.
+const sablonParam = metin => sablonKes(String(metin).replace(/\s*[\r\n\u2028\u2029]+\s*/g, ' · ').replace(/[\t\v\f\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]/g, ' ').replace(/ {4,}/g, '   ').trim());
 const sablonGovde = (to, ad, dil, metin) => ({ messaging_product: 'whatsapp', to, type: 'template', template: { name: ad, language: { code: dil || 'tr' }, components: [{ type: 'body', parameters: [{ type: 'text', text: sablonParam(metin) }] }] } });
 // Kişinin kursun hattına en son yazdığı an (webhook yazar, 25 saat tutulur). Pencere açık değilse serbest metin Meta'da sonradan
 // 131047 ile düşer ve bu hata isteğin cevabında değil webhook'ta gelir; bu yüzden şablon tanımlı kursta pencere kapalıysa doğrudan şablon gider.
