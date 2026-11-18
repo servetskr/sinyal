@@ -867,10 +867,16 @@ export function mebUcretDurumu(k) {
 const kurumSutun = b => sutun(b, 'kurumadi', /^kurum$/);
 function kendiKurum(l) { const n = new Map(); l.forEach(x => { if (!x.donem) return; const i = kurumSutun(x.donem.baslik); if (i < 0) return; x.donem.satirlar.forEach(r => { const v = nrm(r[i]); if (v) n.set(v, (n.get(v) || 0) + 1); }); }); return [...n.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || ''; }
 function dosyalariIsle(l) {
-  let atanan = 0, okunan = 0, farkli = 0, belirsiz = 0;
+  let atanan = 0, okunan = 0, farkli = 0, belirsiz = 0, baskaKisi = 0, bulunamadi = 0;
   const kurumAd = kendiKurum(l), kodum = (() => { try { return String(MK.kurumBilgi().kod || ''); } catch (h) { return ''; } })();
   l.forEach(x => {
-    if (x.hata || !x.donem) return; const k = S.kursiyerler.find(y => y.tc === x.tc); if (!k) return; okunan++;
+    if (x.hata) return;
+    // MEB-009: yanıt başka T.C.'nin dosyasıysa hiç işlenmez (Yardımcı 'sorgulanan'ı gönderir; eski sürümde dönem tablosunun T.C. sütunundan denetlenir)
+    const tcS = x.donem ? sutun(x.donem.baslik, 'kimlik') : -1, baska = (x.sorgulanan && x.sorgulanan !== x.tc) || (tcS >= 0 && (x.donem.satirlar || []).some(y => String(y[tcS] || '').replace(/\D/g, '') && String(y[tcS] || '').replace(/\D/g, '') !== x.tc));
+    if (baska) { baskaKisi++; return; }
+    const k = S.kursiyerler.find(y => y.tc === x.tc); if (!k) return;
+    if (!x.donem || x.bulunamadi) { bulunamadi++; k.meb = { ...(k.meb || {}), dosyaBulunamadi: gun(0), dosyaUyari: x.uyari || undefined }; return; }
+    okunan++; if (k.meb && k.meb.dosyaBulunamadi) delete k.meb.dosyaBulunamadi;
     const b = x.donem.baslik, i = { donem: sutun(b, /^donemi?$/), grup: sutun(b, /^grubu$/, 'grup'), sube: sutun(b, /^subesi$/, 'sube'), durum: sutun(b, /^durumu$/), ist: sutun(b, 'istenen'), uh: sutun(b, 'uygulamahak'), eh: sutun(b, 'esinavhak'), ucret: sutun(b, 'kayitucreti'), uyg: sutun(b, /^uygulama$/) };
     const sat = x.donem.satirlar; if (!sat.length) return;
     // MEB-003: satır T.C. + kurum (kurum kodu, yoksa en sık kurum adı) + dönem (kursiyerin grubu, yoksa k.meb.donem) + sertifika (B ile B-O eşit) ile süzülür.
@@ -903,7 +909,8 @@ function dosyalariIsle(l) {
     k.meb = { ...M0, ...resmi, tekil: !!tekil, kayitlar, sertifikalar, grupFark: fk || undefined, haklarSonGun: esSon, ikinciDireksiyon: tarihIso(x.ikinciDireksiyon), uygunluk: tarihIso(x.uygunluk), kayitUcretiTL: tutarOku(r[i.ucret]) || null, uygulamaSinavlari: uyg, esinavlar: x.esinav ? x.esinav.satirlar.map(y => { const bb = x.esinav.baslik, p = String(y[sutun(bb, 'tektest', 'puan')] || '').replace(/\D/g, ''); return { tarih: tarihIso(y[sutun(bb, 'sinavtarihi')]), puan: p === '' ? null : +p }; }).filter(y => y.tarih) : [], sertifikaTarihi: x.sertifika && x.sertifika.satirlar.length ? tarihIso(x.sertifika.satirlar[x.sertifika.satirlar.length - 1][sutun(x.sertifika.baslik, 'tarih')]) : '', dosyaOkuma: gun(0) };
     { const u = mebUcretDurumu(k); if (u) k.meb.ucretKontrol = { ...u, tarih: gun(0) }; else delete k.meb.ucretKontrol; }
   });
-  return { okunan, atanan, farkli, belirsiz };
+  if (baskaKisi) islem('MEBBİS aday dosyası alınmadı', baskaKisi + ' yanıt başka T.C.’ye aitti');
+  return { okunan, atanan, farkli, belirsiz, baskaKisi, bulunamadi };
 }
 
 const SONUC_AD = { gecti: 'Geçti', kaldi: 'Kaldı', girmedi: 'Girmedi' };
@@ -937,7 +944,7 @@ function ozetGoster(o, yazilan) {
   if (o.ucretHata) l.push(`<li class="ipucu uyari">${isaret('uyari', 18)}<span>e-Sınav ücretleri: ${e(o.ucretHata)}</span></li>`);
   if (o.kurum) l.push(satir(`Kurum bilgileri: bina kontenjanı ${o.kurum.binaKontenjan || '—'}, ${o.kurum.programlar.filter(p => programAcik(o.kurum, p.kod)).length} açık program (${o.kurum.programlar.filter(p => programAcik(o.kurum, p.kod)).map(p => p.kod).join(', ') || '—'}), ${o.kurum.derslikler.length} derslik`, o.kurum.programlar.some(p => !programAcik(o.kurum, p.kod)) ? 'Kapalı program: ' + o.kurum.programlar.filter(p => !programAcik(o.kurum, p.kod)).map(p => e(p.kod || p.ad) + (p.kapanma ? ' (' + p.kapanma.split('-').reverse().join('.') + ')' : '')).join(', ') : ''));
   if (o.dosya && S.mebDosyaKalan > 0) l.push(`<li style="font-size:13px;color:var(--soluk)">${S.mebDosyaKalan} kursiyerin aday dosyası bu sefer okunmadı (bir çekmede en çok ${DOSYA_EN_COK}); bir sonraki güncellemede ilk onlar okunur.</li>`);
-  if (o.dosya) l.push(satir(`Aday dosyaları: ${o.dosya.okunan} okundu, ${o.dosya.atanan} kursiyer dönem grubuna atandı${o.dosya.farkli ? `, <span style="color:var(--kirmizi)">${o.dosya.farkli} kursiyerin grubu MEBBİS’tekinden farklı</span>` : ''}`, [o.dosya.farkli ? 'Öğrenci dosyasında Dönem grubu satırındaki “MEBBİS’teki gruba taşı” ile düzeltin.' : '', o.dosya.belirsiz ? `${o.dosya.belirsiz} kursiyerde MEBBİS’te birden çok açık dönem satırı var; grup kendiliğinden atanmadı.` : ''].filter(Boolean).join(' ')));
+  if (o.dosya) l.push(satir(`Aday dosyaları: ${o.dosya.okunan} okundu, ${o.dosya.atanan} kursiyer dönem grubuna atandı${o.dosya.farkli ? `, <span style="color:var(--kirmizi)">${o.dosya.farkli} kursiyerin grubu MEBBİS’tekinden farklı</span>` : ''}`, [o.dosya.farkli ? 'Öğrenci dosyasında Dönem grubu satırındaki “MEBBİS’teki gruba taşı” ile düzeltin.' : '', o.dosya.belirsiz ? `${o.dosya.belirsiz} kursiyerde MEBBİS’te birden çok açık dönem satırı var; grup kendiliğinden atanmadı.` : '', o.dosya.bulunamadi ? `${o.dosya.bulunamadi} kursiyerin MEBBİS’te aday dosyası bulunamadı (T.C. ya da kayıt kontrol edilmeli).` : '', o.dosya.baskaKisi ? `<span style="color:var(--kirmizi)">${o.dosya.baskaKisi} yanıt başka T.C.’ye aitti; işlenmedi.</span>` : ''].filter(Boolean).join(' ')));
   if (o.personel) l.push(satir(`Personel: ${o.personel.guncel} kişinin izin no’su eklendi; izin bitişleri ve haftalık saatler alındı`, [o.personel.yeni.length ? `mdSinyal’de olmayan: ${o.personel.yeni.map(e).join(', ')} (Ekip ve araçlar › Usta öğreticiler’de “Kart aç”)` : '', (o.personel.oneri || []).length ? `${o.personel.oneri.length} kişi yalnız adla eşleşti; Usta öğreticiler’de “Evet, bağla” ile onaylayın` : '', (o.personel.ayrilan || []).length ? `MEBBİS’te görevden ayrılmış görünen: ${o.personel.ayrilan.map(e).join(', ')} (kartında “Ekipten çıkar”)` : '', (o.personel.gorunmeyen || []).length ? `MEBBİS’in görevdeki listesinde olmayan: ${o.personel.gorunmeyen.map(e).join(', ')}` : '', ...(o.personel.farklar || []).map(e)].filter(Boolean).join(' · ')));
   if (o.araclar) l.push(satir(`Araçlar: ${o.araclar.guncel} aracın muayene tarihi MEBBİS’ten alındı`, [o.araclar.yeni.length ? `mdSinyal’de olmayan: ${o.araclar.yeni.map(e).join(', ')} (Ekip ve araçlar’da “mdSinyal’e ekle”)` : '', ...(o.araclar.farklar || []).map(e)].filter(Boolean).join(' · ')));
   if (o.sinavlar) l.push(satir(`Sınav sonuçları okundu`, 'Sonuçları sınav oturumlarına doldurmak için aşağıdaki düğmeye basın'));

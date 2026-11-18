@@ -473,8 +473,11 @@
     const r = await postla(taban, { txtTcKimlikNo: tc }, { dugme: 'ImageButton1' });
     const d = r.doc, govde = metin(d.body);
     const tarihSonra = et => { const m = govde.match(new RegExp(et + '[^0-9]{0,40}(\\d{2}[./]\\d{2}[./]\\d{4})', 'i')); return m ? m[1] : ''; };
+    // MEB-008: yanıttaki T.C. kutusunun değeri (sorgulanan) ve dönem tablosu yoksa bulunamadı + sayfanın uyarı metni; mdSinyal başka kişinin dosyasını işlemez (MEB-009)
+    const tcEl = elBul(d, 'txtTcKimlikNo'), sorgulanan = String((tcEl && tcEl.value) || '').replace(/\D/g, ''), dt = tabloEl(d, 'dgDonemBilgileri');
+    const uyari = !dt ? ((govde.match(/[^.!\n]*(bulunamad|kay[ıi]t yok|kay[ıi]tl[ıi] de[ğg]il)[^.!\n]*/i) || [])[0] || '').trim().slice(0, 160) : '';
     return {
-      tc, donem: tabloId(d, 'dgDonemBilgileri'), esinav: tabloId(d, 'dgTeorikSinavlar'), uygulama: tabloId(d, 'dgUygulamaNot'),
+      tc, sorgulanan, bulunamadi: !dt, uyari, donem: tabloId(d, 'dgDonemBilgileri'), esinav: tabloId(d, 'dgTeorikSinavlar'), uygulama: tabloId(d, 'dgUygulamaNot'),
       dersler: tabloId(d, 'dgDersProgrami'), sertifika: tabloId(d, 'dgSertifika'),
       ikinciDireksiyon: tarihSonra('İkinci Direksiyon Aşamasına Geçtiği Tarih'), uygunluk: tarihSonra('Uygulama Sınavına Uygunluk Tarihi'),
     };

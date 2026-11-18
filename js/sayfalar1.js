@@ -1117,15 +1117,16 @@ export function hakAnlami(k) {
   return { uyg, es: esinavHakDurum(k).meb.anlam || '' };
 }
 function mebteKarti(k) {
-  const M = k.meb || {}, okuma = M.dosyaOkuma || M.okuma || ''; if (!k.mebIslendi && !okuma) return '';
+  const M = k.meb || {}, okuma = M.dosyaOkuma || M.okuma || ''; if (!k.mebIslendi && !okuma && !M.dosyaBulunamadi) return '';
   const gun0 = okuma ? -fark(okuma) : null, ha = hakAnlami(k), kod = parseInt((String(M.durum || '').match(/^\s*(\d+)/) || [])[1], 10);
   const tY = t => String(t || '').slice(0, 4) === gun(0).slice(0, 4) ? tarih(t) : tamGun(t);  // başka yılsa yıl da yazılır
   const satir = (a, b) => b ? `<li><span>${a}</span><b>${b}</b></li>` : '';
   const es = esinavHakDurum(k), uc = (k.esinavUcret || {})[es.sira], ucM = uc && uc.kaynak === 'mebbis';
   const muaf = k.muaf ? `e-Sınav: Muaf · md.15/5${(k.muaf || {}).sonSinav ? ' · son sınav ' + tY(k.muaf.sonSinav) : ''}` : '';
-  return `<div class="kart" id="dosya-meb"><div class="kart-bas"><h3>MEBBİS’te</h3><small>${okuma ? 'okundu ' + tarih(okuma) : 'kayıt girildi'}</small>${k.mebNo ? `<span class="rozet rozet-yesil" title="MEBBİS kayıt numarası">${e(k.mebNo)}</span>` : ''}<div class="sag"><button type="button" class="dg dg-cizgi dg-kucuk" data-meb-tek title="Yalnız bu kursiyerin MEBBİS aday dosyası okunur (SKT02009, yaklaşık 3 saniye); MEBBİS’e bir şey yazılmaz">MEBBİS’ten güncelle</button></div></div>
+  return `<div class="kart" id="dosya-meb"><div class="kart-bas"><h3>MEBBİS’te</h3><small>${okuma ? 'okundu ' + tarih(okuma) : M.dosyaBulunamadi ? 'dosya bulunamadı' : 'kayıt girildi'}</small>${k.mebNo ? `<span class="rozet rozet-yesil" title="MEBBİS kayıt numarası">${e(k.mebNo)}</span>` : ''}<div class="sag"><button type="button" class="dg dg-cizgi dg-kucuk" data-meb-tek title="Yalnız bu kursiyerin MEBBİS aday dosyası okunur (SKT02009, yaklaşık 3 saniye); MEBBİS’e bir şey yazılmaz">MEBBİS’ten güncelle</button></div></div>
     <div class="kart-govde">
-    ${!okuma ? `<p class="ipucu">${isaret('bilgi', 18)}<span>Bu kursiyerin MEBBİS dosyası henüz okunmadı. MEB işlemleri › MEBBİS’ten güncelle ile okuyun.</span></p>` : gun0 > 30 ? `<p class="ipucu uyari">${isaret('uyari', 18)}<span>Bilgi ${gun0} gün önce okundu; güncelleyin.</span></p>` : ''}
+    ${!okuma && !M.dosyaBulunamadi ? `<p class="ipucu">${isaret('bilgi', 18)}<span>Bu kursiyerin MEBBİS dosyası henüz okunmadı. MEB işlemleri › MEBBİS’ten güncelle ile okuyun.</span></p>` : gun0 > 30 ? `<p class="ipucu uyari">${isaret('uyari', 18)}<span>Bilgi ${gun0} gün önce okundu; güncelleyin.</span></p>` : ''}
+    ${M.dosyaBulunamadi ? `<p class="ipucu uyari">${isaret('uyari', 18)}<span>${tarih(M.dosyaBulunamadi)} okumasında MEBBİS’te bu T.C. ile aday dosyası bulunamadı${M.dosyaUyari ? ` (“${e(M.dosyaUyari)}”)` : ''}. T.C. kimlik no ve MEBBİS kaydını kontrol edin.</span></p>` : ''}
     ${(M.kayitSayisi || 0) > 1 || (M.tekil === false && (M.kayitlar || []).length > 1) ? `<p class="ipucu uyari">${isaret('uyari', 18)}<span>MEBBİS’te bu T.C. ile ${Math.max(M.kayitSayisi || 0, (M.kayitlar || []).length)} kayıt var (dönem, kurs); hangisinin bu kayıt olduğu belirlenemedi. MEBBİS’te dönem ve kurumu kontrol edin.</span></p>` : ''}
     <ul class="meb-te">${satir('Durum', e(M.durum || ''))}${satir('Uygulama hakkı', e(ha.uyg))}${satir('e-Sınav hakkı', e(ha.es))}
       ${muaf ? `<li><span>e-Sınav</span><b>${e(muaf.replace(/^e-Sınav: /, ''))}${okuma && kod !== 23 ? ` <span style="color:#8a5a00;font-weight:600">· MEBBİS’te muafiyet görünmüyor (durum: ${e(M.durum || '—')})</span>` : ''}</b></li>` : ''}
