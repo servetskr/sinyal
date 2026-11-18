@@ -345,6 +345,9 @@ async function yenile() {
 }
 
 function yaz(ev) {
+  // site formu durumu (select'in input olayı)
+  const sfd = ev.target.closest('[data-sh-sf-durum]');
+  if (sfd) { const id = sfd.dataset.shSfDurum, durum = sfd.value; moIstek('/talep/yonet', { yontem: 'POST', govde: { id, durum } }).then(j => { sf.liste = sf.liste.map(x => x.id === id ? j.kayit : x); bildir('Durum: ' + (SF_DURUM.find(x => x[0] === durum) || [, durum])[1]); ciz(); }).catch(x => { bildir(turkceHata(x), 'uyari'); ciz(); }); return; }
   const sa = ev.target.closest('[data-sh-sss-ara]');
   if (sa) { mo.hazirAra = sa.value; const l = kok.querySelector('[data-sh-sss-hazir-liste]'); if (l && mo.hazir) { const q = mo.hazirAra.toLocaleLowerCase('tr-TR'); l.innerHTML = hazirListeHtml(mo.hazir.filter(x => !q || (x.soru + ' ' + x.kisa).toLocaleLowerCase('tr-TR').includes(q)).slice(0, 40), (mo.veri && mo.veri.sss) || { gizli: [] }); } return; }
   const a = ev.target.closest('[data-sh-ara]'); if (!a) return;
@@ -841,11 +844,44 @@ const kimlikUret = () => 's' + Date.now().toString(36) + Math.random().toString(
 
 function destekHtml() {
   const v = isl(), l = tumTalepler(), acik = l.filter(t => tDurum(t) !== 'Çözüldü').length, ay = bugunIso().slice(0, 7), hAy = v.hizmetler.filter(h => String(h.tarih || '').startsWith(ay));
-  const sek = [['talepler', 'Talepler', acik], ['hizmetler', 'Hizmetler', v.hizmetler.length], ['hatalar', 'Son hatalar', hataRozet()], ['asistan', 'Asistan', ag.liste ? ag.liste.filter(x => !x.iyi).length : 0], ['mevzuat', 'Mevzuat', mo.takip ? (mo.takip.yeni || []).length : 0]];
+  const sek = [['talepler', 'Talepler', acik], ['hizmetler', 'Hizmetler', v.hizmetler.length], ['hatalar', 'Son hatalar', hataRozet()], ['asistan', 'Asistan', ag.liste ? ag.liste.filter(x => !x.iyi).length : 0], ['site', 'Site formları', sf.liste ? sf.liste.filter(x => (x.durum || 'yeni') === 'yeni').length : 0], ['mevzuat', 'Mevzuat', mo.takip ? (mo.takip.yeni || []).length : 0]];
   return `<div class="sh-bas"><div><h1>Destek</h1><p>${acik} açık talep · bu ay ${hAy.length} hizmet</p></div>
       <div class="sh-bas-dg"><button class="dg dg-cizgi dg-kucuk" data-sh-yenile ${yukleniyor ? 'disabled' : ''}>${ik('sifirla')}${yukleniyor ? 'Yükleniyor…' : 'Yenile'}</button><button class="dg dg-cizgi dg-kucuk" data-sh-talep-ekle>${ik('arti')}Talep ekle</button><button class="dg dg-ana dg-kucuk" data-sh-hizmet-ekle>${ik('arti')}Hizmet ekle</button></div></div>
     <div class="sh-suz sh-alt" role="tablist">${sek.map(([k, a, n]) => `<button role="tab" aria-selected="${destekAlt === k}" class="${destekAlt === k ? 'secili' : ''}" data-sh-dalt="${k}">${a}${n ? ` <em>${n}</em>` : ''}</button>`).join('')}</div>
-    ${destekAlt === 'talepler' ? talepListeHtml(l) : destekAlt === 'hatalar' ? hataListeHtml() : destekAlt === 'asistan' ? asistanGeriHtml() : destekAlt === 'mevzuat' ? mevzuatYonetHtml() : hizmetListeHtml(v.hizmetler)}`;
+    ${destekAlt === 'talepler' ? talepListeHtml(l) : destekAlt === 'hatalar' ? hataListeHtml() : destekAlt === 'asistan' ? asistanGeriHtml() : destekAlt === 'mevzuat' ? mevzuatYonetHtml() : destekAlt === 'site' ? siteFormHtml() : hizmetListeHtml(v.hizmetler)}`;
+}
+// ---- Site formları (SIT-009 iletişim, SIT-020 başvuru): worker /talep/yonet; kayıtlar 180 gün durur ----
+const sf = { liste: null, yukleniyor: false, hata: '', yetkisiz: false, suz: 'yeni' };
+const SF_DURUM = [['yeni', 'Yeni'], ['arandi', 'Arandı'], ['kapandi', 'Kapandı']];
+async function siteFormYukle() {
+  if (sf.yukleniyor) return; sf.yukleniyor = true; sf.hata = ''; ciz();
+  try { const j = await moIstek('/talep/yonet'); sf.liste = j.liste || []; sf.yetkisiz = false; }
+  catch (x) { if (x.yetkisiz) sf.yetkisiz = true; else sf.hata = turkceHata(x); }
+  sf.yukleniyor = false; ciz();
+}
+function siteFormHtml() {
+  if (sf.liste === null && !sf.yukleniyor && !sf.yetkisiz && !sf.hata) setTimeout(siteFormYukle, 0);
+  if (sf.yetkisiz) return `<div class="sh-bos">${ik('kilit')}<b>Site formlarını yalnız platform sahibi görür</b><small>mdSinyal Yönetim’e platform sahibinin hesabıyla gir.</small></div>`;
+  if (sf.hata && !sf.liste) return `<div class="sh-bos">${ik('uyari')}<b>Site formları okunamadı</b><small>${e(sf.hata)}</small><button class="dg dg-cizgi dg-kucuk" data-sh-sf-yenile>Yeniden dene</button></div>`;
+  if (!sf.liste) return `<div class="sh-bos">${ik('saat')}<b>Site formları yükleniyor…</b></div>`;
+  const say = d => sf.liste.filter(x => (x.durum || 'yeni') === d).length, l = sf.liste.filter(x => sf.suz === 'hepsi' || (x.durum || 'yeni') === sf.suz);
+  const ust = `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:4px 0 12px">
+    <div class="sh-suz" role="tablist">${[...SF_DURUM.map(([k, a]) => [k, a, say(k)]), ['hepsi', 'Hepsi', sf.liste.length]].map(([k, a, n]) => `<button role="tab" aria-selected="${sf.suz === k}" class="${sf.suz === k ? 'secili' : ''}" data-sh-sf-suz="${k}">${a} <em>${n}</em></button>`).join('')}</div>
+    <button class="dg dg-cizgi dg-kucuk" data-sh-sf-yenile ${sf.yukleniyor ? 'disabled' : ''}>${ik('sifirla')}Yenile</button></div>`;
+  if (!l.length) return ust + `<div class="sh-bos">${ik('tik')}<b>${sf.liste.length ? 'Bu süzgeçte kayıt yok' : 'Henüz form gelmedi'}</b><small>mdsinyal.com’daki iletişim ve başvuru formlarından gelenler burada görünür; 6 ay sonra kendiliğinden silinir.</small></div>`;
+  const zaman = z => new Date(z).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const tel = t => String(t || '').replace(/\D/g, '').replace(/^0/, '90');
+  return ust + `<div class="sh-liste">${l.map(x => `<div class="sh-satir" style="cursor:default;align-items:flex-start">
+    <span class="sh-av ${x.tur === 'basvuru' ? 'sh-av-hizmet' : ''}">${ik(x.tur === 'basvuru' ? 'arti' : 'mesaj')}</span>
+    <span class="sh-satir-ic"><b>${e(x.ad)} · ${e(x.kurs)}${x.sehir ? ' · ' + e(x.sehir) : ''}</b>
+      <small>${e([x.tur === 'basvuru' ? 'Başvuru' : 'İletişim', zaman(x.z), x.konu, x.tel, x.eposta].filter(Boolean).join(' · '))}</small>
+      ${[x.sube && 'Şube: ' + x.sube, x.ogrenci && 'Yıllık öğrenci: ' + x.ogrenci, x.program && 'Program: ' + x.program, x.gun && 'Uygun gün: ' + x.gun].filter(Boolean).length ? `<small style="white-space:normal">${e([x.sube && 'Şube: ' + x.sube, x.ogrenci && 'Yıllık öğrenci: ' + x.ogrenci, x.program && 'Program: ' + x.program, x.gun && 'Uygun gün: ' + x.gun].filter(Boolean).join(' · '))}</small>` : ''}
+      ${x.not ? `<small style="white-space:normal;color:var(--murekkep)">${e(x.not)}</small>` : ''}</span>
+    <span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;flex:none;max-width:260px">
+      ${x.tel ? `<a class="dg dg-cizgi dg-kucuk" href="tel:+${e(tel(x.tel))}">Ara</a><a class="dg dg-cizgi dg-kucuk" href="https://wa.me/${e(tel(x.tel))}" target="_blank" rel="noopener">WhatsApp</a>` : ''}${x.eposta ? `<a class="dg dg-cizgi dg-kucuk" href="mailto:${e(x.eposta)}">E-posta</a>` : ''}
+      <select class="dg dg-hafif dg-kucuk" data-sh-sf-durum="${e(x.id)}" aria-label="Durum">${SF_DURUM.map(([k, a]) => `<option value="${k}"${(x.durum || 'yeni') === k ? ' selected' : ''}>${a}</option>`).join('')}</select>
+      <button class="dg dg-hafif dg-kucuk" data-sh-sf-sil="${e(x.id)}">Sil</button></span></div>`).join('')}</div>
+    <p class="sh-dip">Son ${Math.min(100, sf.liste.length)} form. Kayıtlar 180 gün sonra kendiliğinden silinir.</p>`;
 }
 // ---- Kullanım (kullanim.js özetleri) ----
 // Her cihaz günde bir kez kurslar/{kurs}/kullanim/{gün}_{cihaz} belgesine { o: JSON metni, g: gün } yazar. Kişisel veri yok:
@@ -1389,6 +1425,9 @@ async function destekTikla(t) {
   const mu = t.closest('[data-sh-mo-duyuru-sil]'); if (mu) { await moIslem('/mevzuat/ortak/duyuru', { sil: mu.dataset.shMoDuyuruSil }, 'Duyuru silindi'); return true; }
   if (t.closest('[data-sh-sss-ekle]')) { if (!mo.toc) await mevzuatYonetYukle(); sssPenceresi(); return true; }
   if (t.closest('[data-sh-sss-hazir]')) { hazirCevaplarYukle(); return true; }
+  if (t.closest('[data-sh-sf-yenile]')) { siteFormYukle(); return true; }
+  const sfz = t.closest('[data-sh-sf-suz]'); if (sfz) { sf.suz = sfz.dataset.shSfSuz; ciz(); return true; }
+  const sfs = t.closest('[data-sh-sf-sil]'); if (sfs) { if (!sfs.dataset.onay) { sfs.dataset.onay = '1'; sfs.textContent = 'Silmeyi onayla'; return true; } try { await moIstek('/talep/yonet', { yontem: 'POST', govde: { sil: sfs.dataset.shSfSil } }); sf.liste = sf.liste.filter(x => x.id !== sfs.dataset.shSfSil); bildir('Form kaydı silindi'); } catch (x) { bildir(turkceHata(x), 'uyari'); } ciz(); return true; }
   const gz = t.closest('[data-sh-gozden]'); if (gz) { const o = gozdenOku(), l = new Set(o[gz.dataset.shGozden] || []); if (l.has(gz.dataset.k)) l.delete(gz.dataset.k); else l.add(gz.dataset.k); o[gz.dataset.shGozden] = [...l]; gozdenYaz(o); ciz(); return true; }
   const sd = t.closest('[data-sh-sss-duzen]'); if (sd) { const k = ((mo.veri && mo.veri.sss) || { kayitlar: [] }).kayitlar.find(x => x.id === sd.dataset.shSssDuzen); if (k) sssPenceresi(k); return true; }
   const sz = t.closest('[data-sh-sss-duzelt]'); if (sz) { const x = (mo.hazir || []).find(y => y.id === sz.dataset.shSssDuzelt); if (x) sssPenceresi(null, { ...x, yerine: x.id }); return true; }

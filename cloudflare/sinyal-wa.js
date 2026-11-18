@@ -229,6 +229,51 @@ async function hataAl(req, env, cevap) {
   await env.LINK.put(anahtar, JSON.stringify(kayit), { expirationTtl: HATA_GUN, metadata: { sayi: kayit.sayi, son: kayit.son, s: k.s, r: k.r, rol: k.rol, m: k.m.slice(0, 160) } });
   return new Response(null, { status: 204, headers: cevap.cors });
 }
+// ---- site formları (SIT-009 iletişim, SIT-020 başvuru): girişsiz POST yalnız sitenin kendi adresinden; liste ve silme yalnız platform sahibi ----
+// Kişi bilgisi (ad, telefon, e-posta) yalnız dönüş için tutulur; kayıt 180 gün sonra kendiliğinden silinir (gizlilik sayfası).
+const TALEP_GUN = 180 * 86400, talepIp = new Map();
+let talepYazim = { gun: '', n: 0 };
+const talepMetin = (x, n) => String(x == null ? '' : x).replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '').trim().slice(0, n);
+async function talepAl(req, env, cevap) {
+  if (!env.LINK) return cevap({ ok: false }, 500);
+  const ip = req.headers.get('CF-Connecting-IP') || '', on = Math.floor(Date.now() / 600e3), sayac = talepIp.get(ip);
+  if (sayac && sayac.on === on && sayac.n >= 5) return cevap({ ok: false, hata: 'Çok fazla deneme; birkaç dakika sonra yeniden deneyin' }, 429);
+  talepIp.set(ip, sayac && sayac.on === on ? { on, n: sayac.n + 1 } : { on, n: 1 }); if (talepIp.size > 5000) talepIp.clear();
+  const ham = await req.text(); if (!ham || ham.length > 6000) return cevap({ ok: false, hata: 'boyut' }, 400);
+  let b; try { b = JSON.parse(ham); } catch (x) { return cevap({ ok: false, hata: 'gecersiz' }, 400); }
+  if (b.web) return cevap({ ok: true });  // bal tuzağı: botun doldurduğu gizli alan; kayıt yazılmaz
+  const k = { tur: b.tur === 'basvuru' ? 'basvuru' : 'iletisim', ad: talepMetin(b.ad, 80), kurs: talepMetin(b.kurs, 120), sehir: talepMetin(b.sehir, 40), tel: String(b.tel || '').replace(/[^\d+]/g, '').slice(0, 16),
+    eposta: /^[^\s@]{1,64}@[^\s@]{1,100}\.[a-z]{2,}$/i.test(String(b.eposta || '').trim()) ? String(b.eposta).trim().slice(0, 120) : '', konu: talepMetin(b.konu, 80), not: talepMetin(b.not, 1500),
+    sube: talepMetin(b.sube, 20), program: talepMetin(b.program, 80), ogrenci: talepMetin(b.ogrenci, 20), gun: talepMetin(b.gun, 80) };
+  if (!k.ad || !k.kurs) return cevap({ ok: false, hata: 'Ad soyad ve kurs adı gerekli' }, 400);
+  if (k.tel.replace(/\D/g, '').length < 10 && !k.eposta) return cevap({ ok: false, hata: 'Size dönebilmemiz için telefon ya da e-posta gerekli' }, 400);
+  if (b.kvkk !== true) return cevap({ ok: false, hata: 'Aydınlatma metni onayı gerekli' }, 400);
+  const simdi = new Date(), gun = simdi.toISOString().slice(0, 10);
+  if (talepYazim.gun !== gun) talepYazim = { gun, n: 0 };
+  if (talepYazim.n >= (+env.TALEP_GUNLUK_SINIR || 200)) return cevap({ ok: false, hata: 'Şu an alınamıyor; WhatsApp’tan yazın' }, 503);
+  talepYazim.n++;
+  const id = simdi.toISOString().replace(/[-:.TZ]/g, '').slice(0, 14) + '-' + crypto.randomUUID().slice(0, 6);
+  await env.LINK.put('talep:' + id, JSON.stringify({ id, z: simdi.toISOString(), ...k }), { expirationTtl: TALEP_GUN, metadata: { z: simdi.toISOString(), tur: k.tur, ad: k.ad, kurs: k.kurs, sehir: k.sehir } });
+  console.log(JSON.stringify({ tur: 'site-formu', form: k.tur, sehir: k.sehir }));  // kişi bilgisi günlüğe yazılmaz
+  return cevap({ ok: true });
+}
+async function talepYonet(req, env, url, cevap) {
+  if (!(await sahipMi(req, env))) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
+  if (!env.LINK) return cevap({ ok: true, liste: [] });
+  if (req.method === 'POST') {  // { sil: id } ya da { id, durum: 'yeni'|'arandi'|'kapandi', not }
+    let b; try { b = await req.json(); } catch (x) { return cevap({ ok: false }, 400); }
+    const id = String(b.sil || b.id || ''); if (!/^\d{14}-[0-9a-f]{6}$/.test(id)) return cevap({ ok: false }, 400);
+    if (b.sil) { await env.LINK.delete('talep:' + id); return cevap({ ok: true }); }
+    const v = await env.LINK.get('talep:' + id, { type: 'json' }); if (!v) return cevap({ ok: false }, 404);
+    const y = { ...v, durum: ['yeni', 'arandi', 'kapandi'].includes(b.durum) ? b.durum : v.durum || 'yeni', sahipNot: talepMetin(b.not ?? v.sahipNot, 500) };
+    const kalan = Math.max(60, Math.floor((new Date(v.z).getTime() + TALEP_GUN * 1000 - Date.now()) / 1000));
+    await env.LINK.put('talep:' + id, JSON.stringify(y), { expirationTtl: kalan, metadata: { z: v.z, tur: v.tur, ad: v.ad, kurs: v.kurs, sehir: v.sehir, durum: y.durum } });
+    return cevap({ ok: true, kayit: y });
+  }
+  const l = await env.LINK.list({ prefix: 'talep:', limit: 1000 });
+  const kayitlar = (await Promise.all(l.keys.sort((a, b) => b.name.localeCompare(a.name)).slice(0, 100).map(x => env.LINK.get(x.name, { type: 'json' }).catch(() => null)))).filter(Boolean);
+  return cevap({ ok: true, liste: kayitlar, toplam: l.keys.length });
+}
 // platform sahibi mi: SAHIP_ANAHTAR (gizli) ya da Firebase kimliği (Google'ın Identity Toolkit'i belirteci doğrular)
 async function sahipMi(req, env) {
   const tok = (req.headers.get('Authorization') || '').replace(/^Bearer /, '').trim(); if (!tok) return false;
@@ -1156,6 +1201,9 @@ export default {
       if (req.method === 'GET') return hataListe(req, env, url, cevap);
       return cevap({ ok: false }, 405);
     }
+    // site formları: POST girişsiz (yalnız sitenin kendi adresinden); yönetim (liste, durum, silme) yalnız platform sahibi
+    if (yol === 'talep' && req.method === 'POST') return IZINLI.includes(origin) ? talepAl(req, env, cevap) : cevap({ ok: false, hata: 'Izin yok' }, 403);
+    if (yol === 'talep/yonet') return talepYonet(req, env, url, cevap);
     // kursun rapor ve yedek e-postaları (kimlik denetimi eposta() içinde)
     if (yol === 'eposta' || yol.startsWith('eposta/')) return eposta(req, env, url, yol, cevap);
     const G = 'https://graph.facebook.com/v25.0/' + env.PHONE_ID;

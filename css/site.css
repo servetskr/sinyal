@@ -227,6 +227,16 @@ a.st-mod:hover h3{text-decoration:underline;text-decoration-thickness:2px;text-u
 .st-form textarea{height:96px;padding:10px 12px;resize:vertical}
 .st-form input:focus,.st-form select:focus,.st-form textarea:focus{outline:0;border-color:var(--k-lac);box-shadow:0 0 0 3px rgba(13,26,45,.12)}
 .st-form .st-btn{margin-top:6px}
+.st-form label.onay{display:flex;gap:10px;align-items:flex-start;font-weight:400;font-size:13.5px;line-height:1.5;color:var(--k-soluk)}
+.st-form label.onay input{width:20px;height:20px;flex:none;margin-top:1px;accent-color:var(--k-lac)}
+.st-form label.onay a{color:var(--k-lac);text-decoration:underline}
+.st-form .bal{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.st-form-dg{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.st-form-dg .st-btn{margin-top:0}
+.st-bag-dg{background:none;border:0;padding:8px 2px;font:600 14px var(--k-govde);color:var(--k-lac);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.st-form-durum{font-size:14px;line-height:1.5;color:#b42318}
+.st-form-tamam{display:grid;gap:10px;padding:22px;border-radius:12px;background:#ecf7f0;border:1px solid #bfe3cc;color:var(--k-lac)}
+.st-form-tamam b{font-size:18px}
 
 /* ---------- Giriş ---------- */
 .st-girisler{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:-28px}

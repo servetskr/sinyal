@@ -50,13 +50,17 @@
 <div><span class="st-ik"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/></svg></span><span><b>Geçiş</b><small>Mevcut programınızdaki kayıtları biz aktarırız; geçiş genellikle bir gün sürer.</small></span></div>
 </div>
 </div>
-<div class="il-form-kart"><h2>Tanıtım görüşmesi isteyin</h2><p>Formu doldurduğunuzda bilgileriniz WhatsApp’ta hazır bir mesaj olarak açılır; göndermeniz yeterlidir.</p>
-<form class="st-form" data-st-form novalidate>
+<div class="il-form-kart" data-st-form-kart><h2>Tanıtım görüşmesi isteyin</h2><p>Formu gönderin; en geç bir iş günü içinde size dönüyoruz. İsterseniz WhatsApp’tan da yazabilirsiniz.</p>
+<form class="st-form" data-st-form data-tur="iletisim" novalidate>
 <label>Konu<select name="konu"><option value="kursumuza tanıtım görüşmesi">Kursumuza tanıtım görüşmesi</option><option value="kurulum ve geçiş hakkında bilgi">Kurulum ve geçiş</option><option value="mevcut programdan geçiş hakkında bilgi">Mevcut programdan geçiş</option><option value="mdSinyal hakkında bilgi almak">Diğer</option></select></label>
 <div class="iki"><label>Ad soyad<input name="ad" autocomplete="name" required placeholder="Örn. Pelin Yılmaz"></label><label>Kurs adı<input name="kurs" required placeholder="Örn. Kural Sürücü Kursu"></label></div>
-<div class="iki"><label>Şehir<input name="sehir" autocomplete="address-level2" placeholder="Örn. Eskişehir"></label><label>Telefon<input name="tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="05xx xxx xx xx"></label></div>
+<div class="iki"><label>Telefon<input name="tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="05xx xxx xx xx"></label><label>E-posta <small style="font-weight:400;opacity:.7">isteğe bağlı</small><input name="eposta" type="email" inputmode="email" autocomplete="email" placeholder="ornek@kurs.com"></label></div>
+<label>Şehir<input name="sehir" autocomplete="address-level2" placeholder="Örn. Eskişehir"></label>
 <label>Not <small style="font-weight:400;opacity:.7">isteğe bağlı</small><textarea name="not" placeholder="Şube sayısı, kullandığınız program, uygun gün…"></textarea></label>
-<button class="st-btn st-btn-wp st-btn-buyuk" type="submit"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.4-4A8 8 0 1 1 8 18.7z"/><path d="M9 9.5c.5 2.4 2.1 4 4.5 4.5l1.3-1.2 2 .9c-.3 1.3-1.4 2-2.8 1.8-3.4-.5-6-3.1-6.5-6.5-.2-1.4.5-2.5 1.8-2.8l.9 2z"/></svg>WhatsApp’ta mesajı hazırla</button>
+<label class="bal" aria-hidden="true">Web sitesi<input name="web" tabindex="-1" autocomplete="off"></label>
+<label class="onay"><input type="checkbox" name="kvkk"><span>Bilgilerimin yalnız bana dönüş yapmak için kullanılacağını okudum (<a href="../gizlilik.html#iletisim" target="_blank" rel="noopener">aydınlatma metni</a>). Kayıt 6 ay sonra silinir.</span></label>
+<p class="st-form-durum" data-st-form-durum role="status" aria-live="polite" hidden></p>
+<div class="st-form-dg"><button class="st-btn st-btn-ana st-btn-buyuk" type="submit">Gönder</button><button class="st-bag-dg" type="button" data-st-wa>WhatsApp’ta mesajı hazırla</button></div>
 </form></div>
 </div></section>
 </main>

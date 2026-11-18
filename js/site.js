@@ -53,14 +53,40 @@
     dgler.forEach(b => b.addEventListener('click', () => { konu = b.dataset.stKonu; dgler.forEach(x => x.setAttribute('aria-pressed', x === b)); suz(); }));
     if (ara) ara.addEventListener('input', suz);
   }
-  // İletişim: form, WhatsApp'ta hazır mesaj olarak açılır (sunucuya bir şey gönderilmez)
-  const f = d.querySelector('[data-st-form]');
-  if (f) f.addEventListener('submit', ev => {
-    ev.preventDefault();
-    const v = n => (f.elements[n] && f.elements[n].value || '').trim();
-    if (!v('ad') || !v('kurs')) { (v('ad') ? f.elements.kurs : f.elements.ad).focus(); return; }
-    const bilgi = [`Ad soyad: ${v('ad')}`, `Kurs: ${v('kurs')}`, v('sehir') ? `Şehir: ${v('sehir')}` : '', v('tel') ? `Telefon: ${v('tel')}` : ''].filter(Boolean);
-    const metin = [`Merhaba, ${v('konu') || 'mdSinyal hakkında bilgi almak'} istiyorum.`, bilgi.join('\n'), v('not')].filter(Boolean).join('\n\n');
-    window.open('https://wa.me/905013636536?text=' + encodeURIComponent(metin), '_blank', 'noopener');
+  // İletişim ve başvuru formu (SIT-009, SIT-020): önce mdSinyal'e gönderilir (api.mdsinyal.com/talep); gönderilemezse ya da
+  // kullanıcı isterse aynı bilgiler WhatsApp'ta hazır mesaj olarak açılır.
+  d.querySelectorAll('[data-st-form]').forEach(f => {
+    const v = n => (f.elements[n] && f.elements[n].value || '').trim(), durum = f.querySelector('[data-st-form-durum]');
+    const yaz = m => { if (durum) { durum.textContent = m; durum.hidden = !m; } };
+    const waMetni = () => {
+      const bilgi = [`Ad soyad: ${v('ad')}`, `Kurs: ${v('kurs')}`, v('sehir') ? `Şehir: ${v('sehir')}` : '', v('tel') ? `Telefon: ${v('tel')}` : '', v('eposta') ? `E-posta: ${v('eposta')}` : '',
+        v('sube') ? `Şube sayısı: ${v('sube')}` : '', v('ogrenci') ? `Yıllık öğrenci: ${v('ogrenci')}` : '', v('program') ? `Kullandığımız program: ${v('program')}` : '', v('gun') ? `Uygun gün: ${v('gun')}` : ''].filter(Boolean);
+      return [`Merhaba, ${v('konu') || (f.dataset.tur === 'basvuru' ? 'kursumuzu mdSinyal’e geçirmek' : 'mdSinyal hakkında bilgi almak')} istiyorum.`, bilgi.join('\n'), v('not')].filter(Boolean).join('\n\n');
+    };
+    const waAc = () => window.open('https://wa.me/905013636536?text=' + encodeURIComponent(waMetni()), '_blank', 'noopener');
+    const wa = f.querySelector('[data-st-wa]'); if (wa) wa.addEventListener('click', () => { if (!v('ad') || !v('kurs')) { yaz('WhatsApp mesajı için ad soyad ve kurs adını yazın.'); (v('ad') ? f.elements.kurs : f.elements.ad).focus(); return; } waAc(); });
+    f.addEventListener('submit', async ev => {
+      ev.preventDefault();
+      if (!v('ad') || !v('kurs')) { yaz('Ad soyad ve kurs adını yazın.'); (v('ad') ? f.elements.kurs : f.elements.ad).focus(); return; }
+      const telOk = v('tel').replace(/\D/g, '').length >= 10, epOk = /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(v('eposta'));
+      if (!telOk && !epOk) { yaz('Size dönebilmemiz için telefon ya da e-posta yazın.'); f.elements.tel.focus(); return; }
+      if (f.elements.kvkk && !f.elements.kvkk.checked) { yaz('Göndermek için aydınlatma metnini okuduğunuzu işaretleyin.'); f.elements.kvkk.focus(); return; }
+      const dg = f.querySelector('[type=submit]'); dg.disabled = true; const eski = dg.textContent; dg.textContent = 'Gönderiliyor…'; yaz('');
+      const govde = { tur: f.dataset.tur || 'iletisim', kvkk: true, web: v('web') };
+      ['ad', 'kurs', 'sehir', 'tel', 'eposta', 'konu', 'not', 'sube', 'ogrenci', 'program', 'gun'].forEach(n => { if (f.elements[n]) govde[n] = v(n); });
+      try {
+        const ac = new AbortController(), zt = setTimeout(() => ac.abort(), 12000);
+        const r = await fetch('https://api.mdsinyal.com/talep', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(govde), signal: ac.signal });
+        clearTimeout(zt);
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || !j.ok) throw Object.assign(new Error(j.hata || 'gönderilemedi'), { kullanici: r.status === 400 || r.status === 429 ? j.hata : '' });
+        const kart = f.closest('[data-st-form-kart]') || f;
+        kart.innerHTML = `<div class="st-form-tamam" role="status" tabindex="-1"><b>Mesajınız bize ulaştı.</b><span>En geç bir iş günü içinde ${telOk ? 'sizi arıyoruz' : 'e-postanıza yazıyoruz'}. Acele ederseniz WhatsApp’tan da yazabilirsiniz: 0501 363 65 36.</span></div>`;
+        kart.querySelector('.st-form-tamam').focus();
+      } catch (x) {
+        dg.disabled = false; dg.textContent = eski;
+        yaz(x.kullanici || 'Mesaj şu an gönderilemedi. “WhatsApp’ta mesajı hazırla” ile aynı bilgileri WhatsApp’tan iletebilirsiniz.');
+      }
+    });
   });
 })();
