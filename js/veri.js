@@ -110,10 +110,11 @@ export const SINIF_VARSAYILAN = {
   'DE': { ad: 'DE · Römorklu otobüs', ucret: null, teorik: 34, direksiyon: 8, yas: 24, tur: 'ehliyet', aktif: false, teyit: true },
   'F': { ad: 'F · Traktör', ucret: null, teorik: 34, direksiyon: 14, yas: 18, tur: 'ehliyet', aktif: false, teyit: true },
   'G': { ad: 'G · İş makinesi', ucret: null, teorik: 34, direksiyon: 0, yas: 18, tur: 'ehliyet', aktif: false, teyit: true },
-  'SRC1': { ad: 'SRC1 · Uluslararası yolcu taşımacılığı', ucret: null, teorik: 40, direksiyon: 0, yas: 21, tur: 'src', aktif: false, teyit: true },
-  'SRC2': { ad: 'SRC2 · Yurt içi yolcu taşımacılığı', ucret: null, teorik: 40, direksiyon: 0, yas: 21, tur: 'src', aktif: false, teyit: true },
-  'SRC3': { ad: 'SRC3 · Uluslararası eşya taşımacılığı', ucret: null, teorik: 40, direksiyon: 0, yas: 21, tur: 'src', aktif: false, teyit: true },
-  'SRC4': { ad: 'SRC4 · Yurt içi eşya taşımacılığı', ucret: null, teorik: 40, direksiyon: 0, yas: 21, tur: 'src', aktif: false, teyit: true },
+  // DIR-044: SRC1–4 teorik saatleri TTK 08.07.2022 / 50–53 kurs programlarından (ünite dağılımı src.js)
+  'SRC1': { ad: 'SRC1 · Uluslararası yolcu taşımacılığı', ucret: null, teorik: 40, direksiyon: 0, yas: 21, tur: 'src', aktif: false },
+  'SRC2': { ad: 'SRC2 · Yurt içi yolcu taşımacılığı', ucret: null, teorik: 36, direksiyon: 0, yas: 21, tur: 'src', aktif: false },
+  'SRC3': { ad: 'SRC3 · Ulusal ve uluslararası eşya taşımacılığı', ucret: null, teorik: 41, direksiyon: 0, yas: 21, tur: 'src', aktif: false },
+  'SRC4': { ad: 'SRC4 · Yurt içi eşya taşımacılığı', ucret: null, teorik: 36, direksiyon: 0, yas: 21, tur: 'src', aktif: false },
   'SRC5': { ad: 'SRC5 · Tehlikeli madde taşımacılığı', ucret: null, teorik: 24, direksiyon: 0, yas: 21, tur: 'src', aktif: false, teyit: true },
   'OP': { ad: 'İş makinesi operatörlüğü', ucret: null, teorik: 40, direksiyon: 16, yas: 18, tur: 'operator', aktif: false, teyit: true },
   // 100 ceza puanı eğitimi (KTK md.118): belgesi geri alınan sürücünün teorik eğitimi; direksiyon yok. 34 saat il taban listesinden (Eskişehir 2026 F11).
@@ -1300,7 +1301,7 @@ export const RESMI_KONU = {
 const resmiTur = konu => { const n = String(konu || '').toLocaleLowerCase('tr'); return /ilk ?yard/.test(n) ? 'ilkyardim' : /araç|arac|motor|teknik/.test(n) ? 'arac' : /adab|adap/.test(n) ? 'adab' : 'trafik'; };
 // Bir teorik dersin (oturumun) grubundaki sırasına göre resmî ders numaraları ve konuları: aynı türdeki önceki oturumların saatleri sayılır
 export function dersKonulariResmi(t) {
-  if (!t) return { tur: 'trafik', no: [], konular: [] };
+  if (!t || t.srcModul) return { tur: 'trafik', no: [], konular: [] };
   const tur = resmiTur(t.konu), l = (S.teorik || []).filter(x => x.grup === t.grup && resmiTur(x.konu) === tur).sort((a, b) => (a.tarih + (a.saat || '')).localeCompare(b.tarih + (b.saat || '')) || String(a.id).localeCompare(String(b.id)));
   let bas = 0; for (const x of l) { if (x === t || x.id === t.id) break; bas += +x.sure || 1; }
   const liste = RESMI_KONU[tur], no = Array.from({ length: +t.sure || 1 }, (_, i) => bas + i + 1).filter(n => n <= liste.length);
