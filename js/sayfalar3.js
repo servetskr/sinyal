@@ -3,7 +3,7 @@ import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel
 import { yenile } from './app.js?v=234';
 import { siraliPencere } from './sayfalar5.js?v=234';
 import * as GR from './gruplar.js?v=234';
-import { saatUcretleri } from './mevzuat.js?v=234';
+import { saatUcretleri, sozlesmeUcreti } from './mevzuat.js?v=234';
 import { satirAdi, listeAdi } from './taban.js?v=234';
 
 /* ================= BELGELER VE ÇIKTILAR ================= */
@@ -53,8 +53,24 @@ function sozlesmeGovde(k) {
     <tr><th colspan="4">Kurs</th></tr><tr><th>Unvan</th><td>${e(K.ad)}</td><th>Telefon</th><td>${e(K.tel)}</td></tr><tr><th>Adres</th><td colspan="3">${e(K.adres)}</td></tr></table>
     <table><tr><th>Sertifika sınıfı</th><td>${S0.ad}${k.mevcutEhliyet && k.mevcutEhliyet !== 'Yok' ? `<br><small>Mevcut belge: ${e(k.mevcutEhliyet)}${k.mevcutEski ? ' (01.01.2016 öncesi)' : ''}${k.mevcutOtomatik ? ' (sadece otomatik)' : ''}</small>` : ''}</td><th>Kayıt tarihi</th><td>${tamTarih(k.kayit)}</td></tr><tr><th>Kurs ücreti</th><td>${tl(k.odeme.toplam)}${k.odeme.indirim ? `<br><small>${e(k.odeme.indirim.ad)} indirimi −${tl(k.odeme.indirim.tutar)} uygulandı</small>` : ''}</td><th>Peşinat</th><td>${tl(k.odeme.pesin)} · ${tamTarih(k.odeme.pesinTarih)}</td></tr></table>
     ${(x => x && x.satir ? `<p style="font-size:11px">${k.odeme.toplam >= x.taban ? `Ücret, ${e(x.liste.kurum)} ${e(x.liste.belge)}nda bu eğitim için belirlenen taban ücretin (${e(x.satir.mevcut ? x.satir.mevcut + ' → ' + x.satir.istenen : x.satir.istenen)}: ${tl(x.taban)}, KDV dahil) altında değildir. ` : ''}Eğitim materyalleri dahil kurs ücreti dışında hiçbir ad altında ücret alınmaz; sınav ücretleri, kayıt belgelerinin masrafları, sürücü belgesi harcı ve kart ücreti kursiyere aittir.</p>` : '')(kursiyerTaban(k))}
+    ${ucretDokumu(k)}
     <p><b>Ödeme planı</b></p><table><tr><th>#</th><th>Vade</th><th>Tutar</th></tr>${k.odeme.taksitler.map((t, i) => `<tr><td>${i + 1}</td><td>${tamTarih(t.vade)}</td><td>${tl(t.tutar)}</td></tr>`).join('') || '<tr><td colspan="3">Peşin ödendi</td></tr>'}</table>
     ${maddeler.map((m, i) => { const n = m.indexOf('. '); return `<p><b>${i + 1}. ${e(n > 0 && n < 40 ? m.slice(0, n) : '')}${n > 0 && n < 40 ? '.' : ''}</b> ${e(n > 0 && n < 40 ? m.slice(n + 2) : m)}</p>`; }).join('')}`;
+}
+// Sözleşme ücretinin dökümü (SIT-004; il taban listesi ve Çizgi'deki sözleşme ücreti yapısı): ders · saat · saat ücreti (KDV dahil ve hariç) · toplam.
+// Saat ücreti kursun tarifesinden (Ayarlar › Sınıflar), yoksa il taban listesindeki teorik/direksiyon oranından ya da teorik payından gelir (mevzuat.js saatUcretleri).
+// Tarife yoksa direksiyon satırının toplamı, ücretin teorik dışında kalan kısmıdır; böylece satırlar sözleşme ücretine eşit olur.
+function ucretDokumu(k) {
+  if (!k.odeme || !(sozlesmeUcreti(k) > 0)) return '';
+  const su = saatUcretleri(k), u = sozlesmeUcreti(k), kdv = ((S.entegrasyon || {}).kdv ?? 10), ts = su.teorik ? su.teorikSaat : 0, ds = su.direksiyon ? su.dirSaat : 0;
+  if (!ts && !ds) return '';
+  const tT = ts * su.teorik, dT = su.kaynak === 'tarife' ? ds * su.direksiyon : Math.max(0, u - tT), dU = ds ? dT / ds : 0;
+  const para = n => n.toLocaleString('tr-TR', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }) + ' ₺', haric = n => para(Math.round(n / (1 + kdv / 100) * 100) / 100);
+  const sat = (ad, saat, birim, top) => `<tr><td>${ad}</td><td>${saat}</td><td>${para(birim)}</td><td>${haric(birim)}</td><td>${para(top)}</td></tr>`;
+  return `<p><b>Ücretin dökümü</b></p><table><tr><th>Ders</th><th>Saat</th><th>Saat ücreti (KDV dahil)</th><th>Saat ücreti (KDV hariç)</th><th>Toplam</th></tr>
+    ${ts ? sat('Teorik', ts, su.teorik, tT) : ''}${ds ? sat('Direksiyon', ds, dU, dT) : ''}
+    <tr><th colspan="4">Toplam (KDV %${kdv} dahil)</th><td>${para(tT + dT)}</td></tr></table>
+    <p style="font-size:11px">Ücret, ders saati ile saat ücretinin çarpımıdır${dU % 1 ? ' (saat ücreti kuruşa yuvarlanmıştır)' : ''}. ${su.kaynak === 'tarife' ? 'Saat ücretleri kursun ücret tarifesindendir.' : !ts ? 'Bu eğitimde teorik ders yoktur; ücretin tamamı direksiyon eğitimidir.' : !ds ? 'Bu eğitimde direksiyon dersi yoktur; ücretin tamamı teorik derstir.' : su.kaynak === 'taban' ? 'Teorik ve direksiyon payı il taban fiyat listesindeki orana göre ayrılmıştır.' : 'Teorik ve direksiyon payı kursun belirlediği orana göre ayrılmıştır.'}</p>`;
 }
 export const sozlesmeDondur = k => metinKodla(sozlesmeGovde(k));
 // {direksiyon}: öğrencinin asgari ders sayısı (veri.js gerekliDireksiyon: sınıf + mevcut ehliyet, elle girilen, eski kayıtta dondurulmuş değer).

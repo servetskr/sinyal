@@ -30,7 +30,7 @@ export function saatUcretleri(k) {
   else if (r && r.teorik) { const tT = r.teorik.toplam, dT = r.direksiyon ? r.direksiyon.toplam * (k.kendiArac ? 0.5 : 1) : 0; pay = tT / (tT + dT); kaynak = 'taban'; }
   else { pay = dir ? (S.kurs.teorikPay ?? 35) / 100 : 1; kaynak = 'pay'; }
   const teorikSaat = tv ? Math.max(1, S0.teorik) : 0;
-  return { teorik: su.teorik || (teorikSaat ? Math.round(u * pay / teorikSaat) : 0), direksiyon: dir ? (su.direksiyon || Math.round(u * (1 - (pay ?? 0)) / dir)) : 0, kaynak, pay, satir: r || null };
+  return { teorik: su.teorik || (teorikSaat ? Math.round(u * pay / teorikSaat) : 0), direksiyon: dir ? (su.direksiyon || Math.round(u * (1 - (pay ?? 0)) / dir)) : 0, kaynak, pay, satir: r || null, teorikSaat, dirSaat: dir || 0 };
 }
 // ÖÖKY m.56/3-b: dönem başlamadan ayrılana ücretin %10'u dışındaki kısım; başladıktan sonra %10 + aldığı ders saatleri düşülür.
 export function yasalIade(k) {
