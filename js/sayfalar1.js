@@ -388,6 +388,7 @@ const FOTO_KURAL = ['Son 6 ay içinde çekilmiş', 'Beyaz ya da açık renk düz
 const KAN_GRUPLARI = ['A Rh+', 'A Rh−', 'B Rh+', 'B Rh−', 'AB Rh+', 'AB Rh−', '0 Rh+', '0 Rh−'];
 // MEB dönem (MEİS) istatistiği kümeleri: İlkokul · İlköğretim+Ortaokul · Genel lise · Meslek ve teknik lise · Fakülte ve YO (resmi.js meisOgrenim)
 const OGRENIM_DURUM = ['İlkokul', 'İlköğretim', 'Ortaokul', 'Lise', 'Meslek ve teknik lise', 'Önlisans', 'Lisans', 'Yüksek lisans', 'Doktora'];
+let tcGoster = false;  // KAY-067: listede T.C. maskesi (oturum boyunca)
 const cepGecerli = t => { let n = String(t || '').replace(/\D/g, ''); if (n.startsWith('90')) n = n.slice(2); if (n.startsWith('0')) n = n.slice(1); return /^5\d{9}$/.test(n); };
 const taksitEnCok = () => taksitSiniri();  // PAR-034: ön büro kurs ayarı kadar, müdür en az 12
 const taksitVarsayilan = () => Math.min(5, taksitEnCok());
@@ -751,22 +752,31 @@ export function kursiyerler(filtre) {
   // PAR-036: süzülen kayıtların istatistiği
   const istatistik = () => { const l = suzulen(), top = l.reduce((a, k) => a + (k.odeme.toplam || 0) + ekToplam(k), 0), od = l.reduce((a, k) => a + odenen(k), 0), kal = l.reduce((a, k) => a + kalanBorc(k), 0), gec = l.filter(k => gecikenler(k).length).length;
     return `<b>${l.length}</b> öğrenci · ücret ${tl(top)} · ödenen ${tl(od)} · kalan <b>${tl(kal)}</b>${gec ? ` · ${gec} öğrencinin taksiti gecikti` : ''}`; };
+  const fark0 = fark;
+  // KAY-060: MEBBİS resmî durumunun kısa adı (fark varsa turuncu nokta, bilgi 30 günden eskiyse gri saat); KAY-061: hak sütunu; KAY-067: T.C. maskesi
+  const mebRozet = k => { const M = k.meb || {}; if (!M.durum && !M.dosyaOkuma) return '';
+    const kisa = String(M.durum || '').replace(/^\s*\d+\s*[-–.]\s*/, '').replace(/\s*Aşamasında\s*$/i, '').trim() || 'okundu', h = hakDurumu(k, 'Direksiyon'), fark = !!(h.fark || M.grupFark), eski = M.dosyaOkuma && fark0(M.dosyaOkuma) < -30;
+    return `<span class="meb-rozet ${fark ? 'fark' : ''} ${eski ? 'eski' : ''}" title="MEBBİS: ${e(M.durum || '')}${M.dosyaOkuma ? ' · ' + tarih(M.dosyaOkuma) : ''}${fark ? ' · mdSinyal ile farklı' : ''}${eski ? ' · bilgi ' + (-fark0(M.dosyaOkuma)) + ' günlük' : ''}">${fark ? '<i class="meb-nokta"></i>' : ''}${eski ? ik('saat') : ''}MEBBİS: ${e(kisa.length > 26 ? kisa.slice(0, 25) + '…' : kisa)}</span>`; };
+  const hakHucre = k => { const dir = !!(SINIFLAR[k.sinif] || {}).direksiyon && ['Direksiyon', 'Sınav', 'Ehliyet'].includes(k.asama), h = hakDurumu(k, dir ? 'Direksiyon' : 'e-Sınav');
+    if (h.cumle === 'Muaf') return '<small style="color:var(--soluk)">muaf</small>'; if (h.gecti) return `<small style="color:var(--yesil)">${dir ? 'uyg.' : 'e-sınav'} geçti</small>`;
+    return `<span class="sayi ${h.fark ? 'hak-fark' : ''}" title="${dir ? 'Uygulama' : 'e-Sınav'} · ${e(h.cumle)}${h.fark ? ' · MEBBİS ' + h.meb.kullanilan + ' diyor' : ''}">${h.kullanilan}/${h.sinir}${h.dilim === 2 ? '<small> ·2.</small>' : ''}</span><small style="display:block;color:var(--soluk);font-size:11.5px">${dir ? 'uygulama' : 'e-sınav'}</small>`; };
   function satirlar() {
     const l = suzulen();
-    if (!l.length) return `<tr><td colspan="7">${bos('Bu filtreye uyan kursiyer yok', 'Filtreyi değiştirin ya da yeni kursiyer ekleyin.')}</td></tr>`;
+    if (!l.length) return `<tr><td colspan="8">${bos('Bu filtreye uyan kursiyer yok', 'Filtreyi değiştirin ya da yeni kursiyer ekleyin.')}</td></tr>`;
     const kalanSay = sayfaBasi && l.length > gosterilen ? l.length - gosterilen : 0;
     return (kalanSay ? l.slice(0, gosterilen) : l).map(k => {
       const g = gecikenler(k), sd = sonrakiDers(k), S0 = SINIFLAR[k.sinif];
       return `<tr class="tik" data-git="${k.id}" tabindex="0">
-        <td class="m-tam"><div class="kisi">${avatar(k.ad, k.soyad, k.foto)}<div><b>${e(tamAd(k))}${mudurMu() && ozelNotlar(k).length ? `<span class="ozel-isaret" title="Özel not var">${ik('kilit')}</span>` : ''}</b><small><span class="num">${e(k.tel)}</span></small></div></div></td>
+        <td class="m-tam"><div class="kisi">${avatar(k.ad, k.soyad, k.foto)}<div><b>${e(tamAd(k))}${mudurMu() && ozelNotlar(k).length ? `<span class="ozel-isaret" title="Özel not var">${ik('kilit')}</span>` : ''}</b><small><span class="num">${e(k.tel)}</span>${k.tc ? ` · <span class="num ${tcGecerli(k.tc) ? '' : 'tc-hata'}" data-tc="${e(k.tc)}" title="${tcGecerli(k.tc) ? 'T.C. kimlik no' : 'T.C. doğrulama hanesi tutmuyor'}">${e(tcGoster ? k.tc : tcMaskele(k.tc))}</span>` : ''}</small>${mebRozet(k)}</div></div></td>
         <td class="m-gizle">${rozet(S0.ad.split(' ·')[0])} <small style="color:var(--soluk)">${S0.ad.split('· ')[1]}</small>${GR.kursiyerGrubu(k) ? `<small style="display:block;color:var(--soluk);font-size:12px">${e(GR.kursiyerGrubu(k).ad)}</small>` : ''}</td>
         <td style="min-width:150px">${yol(asamaNo(k))}<small style="color:var(--soluk);font-size:12px">${k.asama}${GR.bekleyenMi(k) ? ' · <b style="color:var(--sari-koyu,#a15c00)">bekleyen</b>' : ''}${k.muaf ? ' · muaf' : esinavsizBelgeli(k) ? ' · belgeli' : ''}${k.dsinav && k.dsinav.sonuc === 'Kaldı' ? ' · tekrar' : ''}${k.kapali ? ' · <b style="color:var(--kirmizi)">' + (k.kapali.tur === 'dondur' ? 'donduruldu' : 'kayıt kapalı') + '</b>' : ''}</small></td>
         <td class="m-gizle" style="min-width:110px">${!gerekliDireksiyon(k) ? `<small style="color:var(--soluk)">${egitimSinifi(k.sinif) ? 'Eğitim · teorik ' + (k.teorik || 0) + '/' + ((SINIFLAR[k.sinif] || {}).teorik || 0) : 'direksiyon yok'}</small>` : `<span class="sayi" style="font-size:12.5px">${k.direksiyon}/${gerekliDireksiyon(k)}</span>${ilerleme(k.direksiyon, gerekliDireksiyon(k), k.direksiyon >= gerekliDireksiyon(k) ? 'yesil' : '')}`}</td>
+        <td class="m-gizle">${hakHucre(k)}</td>
         <td>${kalanBorc(k) ? `<span class="sayi">${tl(kalanBorc(k))}</span>${g.length ? '<br>' + rozet(g.length + ' taksit gecikti', 'kirmizi') : ''}${k.odeme.senetli ? ' <small style="color:var(--soluk)">senetli</small>' : ''}${avukattaMi(k) ? '<br>' + rozet('Avukatta', 'kirmizi') : ''}` : k.ucretsiz ? rozet('Ücretsiz', 'mavi') : rozet('Ödendi', 'yesil')}</td>
         <td class="m-gizle">${(() => { const r = risk(k); if (!r) return '<span style="color:var(--soluk)">—</span>'; const renk = r.puan >= 50 ? 'var(--kirmizi)' : r.puan >= 25 ? 'var(--sari)' : 'var(--yesil)'; return `<span class="risk-cubuk" title="${e(r.nedenler.join(', ') || 'Risk yok')}"><i style="width:${Math.max(6, r.puan)}%;background:${renk}"></i></span> <small style="color:var(--soluk)">${r.puan >= 50 ? 'Yüksek' : r.puan >= 25 ? 'Orta' : 'Düşük'}</small>`; })()}</td>
         <td class="m-gizle">${sd ? goreli(sd.tarih) + ' <span class="mono">' + sd.saat + '</span>' : '<span style="color:var(--soluk)">—</span>'}</td>
       </tr>`;
-    }).join('') + (kalanSay ? `<tr><td colspan="7" style="text-align:center"><button class="dg dg-cizgi dg-kucuk" data-daha>Daha fazla göster (${Math.min(sayfaBasi, kalanSay)} / ${kalanSay} kaldı)</button></td></tr>` : '');
+    }).join('') + (kalanSay ? `<tr><td colspan="8" style="text-align:center"><button class="dg dg-cizgi dg-kucuk" data-daha>Daha fazla göster (${Math.min(sayfaBasi, kalanSay)} / ${kalanSay} kaldı)</button></td></tr>` : '');
   }
   return {
     baslik: 'Kursiyerler', alt: sb(S.kursiyerler).length + ' kayıt · ' + aktifler().length + ' aktif',
@@ -784,7 +794,7 @@ export function kursiyerler(filtre) {
         <button class="cip" data-bekleyen title="Kaydı yapıldı; dönem grubuna atanmadı ya da evrakı eksik">${ik('saat')}&nbsp;Bekleyenler (${sb(S.kursiyerler).filter(GR.bekleyenMi).length})</button>
       </div>
       <div class="suz-ist"><span id="ist">${istatistik()}</span>${['mudur', 'sekreter'].includes(oturum.kullanici.rol) ? `<button class="dg dg-hafif dg-kucuk" data-toplu-odeme>${ik('kalem')}Süzülenlere toplu işlem</button>` : ''}</div>
-      <div class="tablo-kap"><table class="tablo tablo-mobil"><thead><tr><th>Kursiyer</th><th>Sınıf</th><th>Aşama</th><th>Direksiyon</th><th>Kalan ödeme</th><th>Sınav riski</th><th>Sonraki ders</th></tr></thead><tbody id="tb">${satirlar()}</tbody></table></div>
+      <div class="tablo-kap"><table class="tablo tablo-mobil"><thead><tr><th>Kursiyer</th><th>Sınıf</th><th>Aşama</th><th>Direksiyon</th><th title="Kullanılan sınav hakkı / sınır">Hak</th><th>Kalan ödeme</th><th>Sınav riski</th><th>Sonraki ders</th></tr></thead><tbody id="tb">${satirlar()}</tbody></table></div>
     </div>`,
     baglan(k) {
       const tb = k.querySelector('#tb'), ciz = (daha) => { if (!daha) gosterilen = sayfaBasi; tb.innerHTML = satirlar(); k.querySelector('#ist').innerHTML = istatistik(); TC.suzgecYaz('kursiyerler', { sekme, q, sinif, grup, hizmet, borclu, avukatta, bekleyen }); };
@@ -794,6 +804,7 @@ export function kursiyerler(filtre) {
       k.addEventListener('click', ev => {
         const s = ev.target.closest('[data-sekme]'); if (s) { sekme = s.dataset.sekme; k.querySelector('#sek').innerHTML = sekmeler([['Tümü', 'Tümü', say('Tümü')], ...ASAMALAR.map(a => [a, a, say(a)])], sekme); ciz(); }
         if (ev.target.closest('[data-daha]')) { gosterilen += sayfaBasi; return ciz(true); }
+        { const tcx = ev.target.closest('[data-tc]'); if (tcx) { ev.stopPropagation(); tcGoster = !tcGoster; const tb = k.querySelector('#tb'); if (tb) tb.innerHTML = satirlar(); return; } }  // KAY-067: dokununca T.C. göster/gizle
         const g = ev.target.closest('[data-git]'); if (g) location.hash = '#/kursiyer/' + g.dataset.git;
         if (ev.target.closest('[data-yeni]')) kursiyerFormu();
         if (yarimKayitTikla(ev)) return;
