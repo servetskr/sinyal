@@ -190,7 +190,8 @@ function kurs() {
   </div>`;
 }
 
-export function analiz(alt) {
+// gomulu: Raporlar merkezinin sekmesi olarak çizilir (kendi sekme çubuğu yok; RAP-009)
+export function analiz(alt, { gomulu = false } = {}) {
   if (alt && SEKMELER.some(([k]) => k === alt)) sekme = alt;
   if (!SEKMELER.some(([k]) => k === sekme)) sekme = 'ogrenci';
   const govde = { ogrenci: ogrenciler, usta: ustalar, kurs }[sekme]();
@@ -201,10 +202,10 @@ export function analiz(alt) {
   }[sekme];
   return {
     baslik: 'Analiz', alt: 'Öğrenci, usta öğretici ve kurs göstergeleri',
-    html: `${ekranNotu(not)}<div id="sek">${sekmeler(SEKMELER, sekme)}</div>${govde}`,
+    html: `${ekranNotu(not)}${gomulu ? '' : `<div id="sek">${sekmeler(SEKMELER, sekme)}</div>`}${govde}`,
     baglan(k) {
       k.addEventListener('click', ev => {
-        const s = ev.target.closest('[data-sekme]'); if (s) { location.hash = '#/analiz/' + s.dataset.sekme; }
+        const s = !gomulu && ev.target.closest('[data-sekme]'); if (s) { location.hash = '#/raporlar/' + s.dataset.sekme; }
       });
     },
   };

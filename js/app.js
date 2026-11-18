@@ -20,6 +20,7 @@ import * as GZ from './guzergah.js?v=234';
 import * as ORT from './ortak.js?v=234';
 import * as SH from './sahip.js?v=234';
 import * as MZ from './sayfa-mevzuat.js?v=234';
+import * as RM from './raporlar.js?v=234';
 import * as GU from './guncelleme.js?v=234';
 
 /* ---------- uygulama hatalarının otomatik bildirimi ----------
@@ -56,7 +57,7 @@ window.addEventListener('unhandledrejection', ev => { const r = ev && ev.reason;
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
   plan: Y1.plan, teorik: Y1.teorik, sinavlar: Y2.sinavlar, guzergah: GZ.sayfa, kasa: Y2.kasa, filo: Y2.filo,
-  mesajlar: Y2.mesajlar, meb: Y2.meb, raporlar: Y2.raporlar, ayarlar: Y2.ayarlar,
+  mesajlar: Y2.mesajlar, meb: Y2.meb, raporlar: RM.raporMerkezi, ayarlar: Y2.ayarlar,
   egitmen: P.egitmenPortal, ogrenci: P.ogrenciPortal,
   belgeler: Y3.belgeler, kayit: Y3.kayitSayfasi, guven: Y3.guven, mebbis: Y3.mebbisAsistani,
   sosyal: Y4.sosyal, kurulum: Y5.kurulum, 'imza-geldi': IM.imzaGeldi, senaryo: SN.senaryolar, karlilik: OZ.karlilik, analiz: AN.analiz,
@@ -72,7 +73,7 @@ const MENU = [
   ['Öğrenciler', [['kursiyerler', 'Kursiyerler', '→'], ['plan', 'Direksiyon planı', '→'], ['teorik', 'Teorik dersler', '→'], ['sinavlar', 'Sınavlar', '→'], ['guzergah', 'Sınav güzergâhları', '→']]],
   ['Para', [['kasa', 'Kasa ve ödemeler', '→']]],
   ['Kurum', [['meb', 'MEB işlemleri', '→'], ['mevzuat', 'Mevzuat asistanı', '→'], ['belgeler', 'Belgeler ve çıktılar', '→'], ['filo', 'Ekip ve araçlar', '→']]],
-  ['Analiz', [['analiz', 'Analiz', '→'], ['raporlar', 'Raporlar', '→'], ['karlilik', 'Kârlılık ve kapasite', '→']]],
+  ['Analiz', [['raporlar', 'Raporlar', '→']]],
   ['Diğer', [['sosyal', 'Sosyal medya asistanı', '↗'], ['kayit', 'Kayıt formu', '↗'], ['ogrenci', 'Kursiyer ekranı', '↗'], ['senaryo', 'Demo senaryoları', '↗'], ['kurulum', 'Kurulum', '→'], ['guven', 'Verileriniz ve güvenlik', '→'], ['ayarlar', 'Ayarlar', '→']]],
 ];
 // Aramada sayfaların yanında özellikler de çıkar (ör. "müşavir" yazınca müşavir paketi)
@@ -183,6 +184,8 @@ function imzaSayfasiAc() { IM.imzaSayfasi(document.getElementById('uyg'), imzaLi
 function rota() {
   const h = (location.hash || '#/genel').slice(2).split('/');
   h[0] = h[0].split('?')[0];  // #/mevzuat?q=… gibi sorgu ekli rotalar
+  // eski adresler Raporlar merkezine (RAP-009): #/analiz/<alt> → #/raporlar/<alt>, #/karlilik → #/raporlar/karlilik
+  if (h[0] === 'analiz' || h[0] === 'karlilik') { const y = h[0] === 'karlilik' ? 'karlilik' : (h[1] || 'ogrenci'); history.replaceState(null, '', '#/raporlar/' + y); return { ad: 'raporlar', id: y }; }
   return { ad: SAYFALAR[h[0]] ? h[0] : 'genel', id: h[1] ? decodeURIComponent(h[1]) : null };
 }
 

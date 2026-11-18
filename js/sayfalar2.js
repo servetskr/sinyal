@@ -16,7 +16,7 @@ import { kurallariHazirla, zamanliKural, kuralSaati, ornekGonder, zamanlayiciCal
 import * as MM from './mesaj.js?v=234';
 import * as BL from './bulut.js?v=234';
 import * as KR from './kurallar.js?v=234';
-import { SINIF_VARSAYILAN, gerekliDireksiyon, geceGerekli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, sinavHakSiniri, DERS_KURAL_TARIH, kuralAyar, mebKurum, programAcik } from './veri.js?v=234';
+import { SINIF_VARSAYILAN, gerekliDireksiyon, geceGerekli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, sinavHakSiniri, DERS_KURAL_TARIH, kuralAyar, mebKurum, programAcik, varsayilanYontem } from './veri.js?v=234';
 import { listeAdi, gecerlilikMetni } from './taban.js?v=234';
 import * as RK from './rapor-kasa.js?v=234';
 
@@ -874,6 +874,8 @@ export function ayarlar(alt) {
       <div class="alan"><label>Usta öğretici başı günlük ders sınırı</label><input name="egs" type="number" min="1" max="16" step="1" value="${S.kurs.egitmenGunlukSinir >= 1 ? S.kurs.egitmenGunlukSinir : 8}"></div>
       <div class="alan"><label>Sınav hakkı <small style="color:var(--soluk);font-weight:400">e-sınav 4; uygulama 4, başvuruyla 4 daha (md.15)</small></label><input name="hak" type="number" min="1" max="8" step="1" value="${S.kurs.sinavHak >= 1 ? S.kurs.sinavHak : 4}"></div>
       <p class="alan tam" style="font-size:13.5px;color:var(--metin)">MEB sürelerinde iş günü Pazartesi–Cuma’dır (Cumartesi, tatil, arife ve idari izin sayılmaz); idari izin günleri <a href="#/ayarlar/kurallar" style="color:var(--levha);font-weight:700">MEB kuralları</a> sekmesinde.</p>
+      <div class="alan"><label>Tahsilatta varsayılan ödeme yöntemi</label><select name="vyontem">${YONTEMLER.map(y => `<option value="${y}" ${varsayilanYontem() === y ? 'selected' : ''}>${yontemAd(y)}</option>`).join('')}</select><small style="color:var(--soluk)">Ödeme al penceresinde önce bu seçili gelir</small></div>
+      <div class="alan"><label>En çok taksit sayısı</label><input name="tmax" type="number" min="1" max="24" step="1" value="${Math.max(1, Math.min(24, +S.kurs.taksitEnCok || 6))}"><small style="color:var(--soluk)">Kayıtta seçilebilecek taksit sayısı</small></div>
       <div class="alan"><label>Taksiti geciken kursiyere ders</label><select name="borclu"><option value="uyar" ${S.kurs.borcluDers !== 'engelle' ? 'selected' : ''}>Planlanır, uyarı çıkar</option><option value="engelle" ${S.kurs.borcluDers === 'engelle' ? 'selected' : ''}>Planlanmaz</option></select></div>
       <p class="alan tam" style="font-size:13.5px;color:var(--metin)">Ek ders, özel ders, sınav ve diğer ücretler <a href="#/ayarlar/sinif" style="color:var(--levha);font-weight:700">Sınıf ve ücretler</a> sekmesinde.</p>
       <div class="alan"><label>Öğrenci indirimi (₺)</label><input name="oin" inputmode="numeric" value="${((S.kurs.indirimler || [])[0] || {}).tutar || 0}"${tabanL ? ' disabled title="İl taban fiyat listesi notu 6"' : ''}>${tabanL ? `<small style="color:var(--kirmizi)">${e(listeAdi(tabanL))}, not 6–7: hiçbir ad altında indirim kampanyası düzenlenemez; ücret taban ücretin altına indirilemez.</small>` : ''}</div>
@@ -976,8 +978,9 @@ export function ayarlar(alt) {
             if (!tam(f.gds, 1, 2)) h.push([f.gds, '1 ya da 2 yazın (yönetmelik: günde en fazla 2 saat)']);
             if (!tam(f.egs, 1, 16)) h.push([f.egs, '1 ile 16 arasında bir sayı yazın']);
             if (!tam(f.hak, 1, 8)) h.push([f.hak, '1 ile 8 arasında bir sayı yazın']);
+            if (!tam(f.tmax, 1, 24)) h.push([f.tmax, '1 ile 24 arasında bir sayı yazın']);
             if (alanHatalari(f, h)) return; }
-          Object.assign(S.kurs, { ad: f.ad.value, sehir: f.sehir.value, tel: f.tel.value, wp: f.wp.value.trim(), mudurTel: f.mudurTel.value.trim(), onburoTel: f.onburoTel.value.trim(), ...(f.waApi ? { waApi: f.waApi.value.trim(), waApiVarsayilan: false, demoNumara: f.demo.value.trim(), demoKime: f.demoKime.checked } : {}), yorumLink: f.yorum.value.trim(), adres: f.adres.value, gunlukDersSiniri: +f.gds.value || 2, egitmenGunlukSinir: +f.egs.value || 8, sinavHak: +f.hak.value || 4, borcluDers: f.borclu.value, indirimler: [{ ad: 'Öğrenci belgesi', tutar: +f.oin.value.replace(/\D/g, '') || 0 }].filter(x => x.tutar) });
+          Object.assign(S.kurs, { ad: f.ad.value, sehir: f.sehir.value, tel: f.tel.value, wp: f.wp.value.trim(), mudurTel: f.mudurTel.value.trim(), onburoTel: f.onburoTel.value.trim(), ...(f.waApi ? { waApi: f.waApi.value.trim(), waApiVarsayilan: false, demoNumara: f.demo.value.trim(), demoKime: f.demoKime.checked } : {}), yorumLink: f.yorum.value.trim(), adres: f.adres.value, gunlukDersSiniri: +f.gds.value || 2, egitmenGunlukSinir: +f.egs.value || 8, sinavHak: +f.hak.value || 4, varsayilanYontem: YONTEMLER.includes(f.vyontem.value) ? f.vyontem.value : 'Kart', taksitEnCok: +f.tmax.value || 6, borcluDers: f.borclu.value, indirimler: [{ ad: 'Öğrenci belgesi', tutar: +f.oin.value.replace(/\D/g, '') || 0 }].filter(x => x.tutar) });
           // kurulum (ücretler henüz onaylanmadı): ilin taban listesi varsa sınıf ve ek ders ücretleri tabanla hazır gelir
           { const L = tabanListesi(); if (L && S._bulut && S.kurs.ucretOnay === null && S.kurs.tabanKurulum !== L.id) { tabanUcretleriYaz(true, L); S.kurs.tabanKurulum = L.id; islem('Ücretleri il taban listesinden hazırladı', listeAdi(L)); setTimeout(() => bildir(listeAdi(L) + ' bulundu: ücretler taban fiyatla hazırlandı; Sınıf ve ücretler’den kontrol edip onaylayın'), 500); } }
           kaydet(); document.querySelector('.logo small').textContent = S.kurs.ad; if (S.kurs.mudurTel && !mudurTel()) setTimeout(() => bildir('Müdürün cep telefonu geçersiz ya da kursun WhatsApp hattıyla aynı; müdür bildirimleri gitmez', 'uyari'), 400); }

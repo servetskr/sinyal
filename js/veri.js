@@ -294,6 +294,8 @@ export const sinavHakSiniri = (k, tur) => { const n = (S && S.kurs && S.kurs.sin
 export const IKINCI_HAK_GUN = 60;
 // Ödeme yöntemleri tek listede (raporlar, kasa ve muhasebe aynı adları kullanır)
 export const YONTEMLER = ['Nakit', 'Kart', 'Havale'];
+// Tahsilatta önce seçili gelen yöntem: kurs ayarı (Ayarlar › Kurs; SOR-085, RAP-009); ayarlanmadıysa eskisi gibi Kart
+export const varsayilanYontem = () => YONTEMLER.includes((S.kurs || {}).varsayilanYontem) ? S.kurs.varsayilanYontem : 'Kart';
 export const yontemAd = y => y === 'Havale' ? 'Havale/EFT' : y;
 // Ay ekleme: 31 Ocak + 1 ay = 28/29 Şubat (taşma yok)
 export const ayEkle = (t, n) => { const d = tarihOku(t), g = d.getDate(); d.setDate(1); d.setMonth(d.getMonth() + n); const son = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); d.setDate(Math.min(g, son)); return iso(d); };
