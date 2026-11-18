@@ -4,14 +4,16 @@
 import { S, kaydet, gun, fark, iso, SINIFLAR, tamAd, tcGecerli, islem, eksikEvrak, sb, anaSinif, mebKurum, teorikVar, esinavsizBelgeli, derslikListesi, derslikOner, DERSLIK_TURLERI } from './veri.js?v=234';
 import { e, pencere, kapatPencere, bildir, rozet, tarih, isaret, ik, pencereSor, bos } from './ui.js?v=234';
 import * as KR from './kurallar.js?v=234';
+import * as MN from './mebnorm.js?v=234';
+const { AYLAR } = MN;
 
-export const AYLAR = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+export { AYLAR };   // MEB-039: ay adları ve dönem biçimi mebnorm.js'te tek yerde
 export const SUBELER = 'ABCDEFGH'.split('');   // MEBBİS'te şube seçenekleri A..H (8 şube)
 export const GRUP_NOLAR = [1, 2, 3];          // bir dönemde en çok 3 grup tarihi (16/7)
 
 const nrmAd = t => String(t || '').toLocaleLowerCase('tr').replace(/[^a-z0-9çğıöşü]/g, '');
-const ayAd = donem => AYLAR[+String(donem).slice(4, 6) - 1] || '';
-export const donemAdi = donem => `${String(donem).slice(0, 4)} - ${ayAd(donem)}`;          // MEBBİS biçimi: "2026 - Kasım"
+const ayAd = donem => (MN.donemMetni(MN.donemKodu(donem)).split(' - ')[1]) || '';
+export const donemAdi = donem => MN.donemMetni(MN.donemKodu(donem)) || `${String(donem).slice(0, 4)} - ${ayAd(donem)}`;          // MEBBİS biçimi: "2026 - Kasım"
 export const grupAdi = (donem, no, sube) => `${ayAd(donem)} ${no}${sube}`;               // "Kasım 1A"
 export const mebGrubuMu = g => !!(g && g.donem && g.grupNo && g.sube);
 // Kurs tipi (DON-009, SOR-056): MTSK (sürücü kursu: ehliyet sınıfları ve 100 ceza), SRC, İş makinesi. Eski gruplarda tip yok = MTSK.
@@ -298,10 +300,10 @@ export function mebbisGruplariAl(sat, sessiz) {
   if (iD < 0 || iS < 0 || iT < 0) return sessiz ? { yeni: 0, var_: 0, atla: sat.length - 1 } : bildir('Listede dönem, şube ya da başlama tarihi sütunu bulunamadı. MEBBİS’te “Grup Şube Tanımlama” ekranından gönderin.', 'uyari');
   const sinir = iso(new Date(Date.now() - 120 * 864e5)); let yeni = 0, var_ = 0, atla = 0, farkli = 0;
   sat.slice(1).forEach(r => {
-    const dm = nrm(r[iD]), yil = (dm.match(/\d{4}/) || [])[0], ay = AYLAR.findIndex(a => dm.includes(nrm(a))) + 1;
+    const dk = MN.donemKodu(r[iD]), yil = dk.slice(0, 4), ay = +dk.slice(4, 6);
     // "Grup 1" / "Grup-1" ve "A Şubesi" / "A ŞUBESİ" / "A" biçimleri
     const no = +((String(r[iG] || '').match(/[123]/) || [])[0] || 0), sb_ = ((String(r[iS] || '').trim().toLocaleUpperCase('tr').match(/(?:^|[^A-ZÇĞİÖŞÜ])([A-H])(?=$|[^A-ZÇĞİÖŞÜ0-9])/) || [])[1]) || '';
-    const t = String(r[iT] || '').match(/(\d{1,2})[./-](\d{1,2})[./-](\d{4})/), bt = t ? `${t[3]}-${t[2].padStart(2, '0')}-${t[1].padStart(2, '0')}` : '';
+    const bt = MN.tarihIso(r[iT]);
     if (!yil || !ay || !no || !SUBELER.includes(sb_) || !bt) { atla++; return; }
     if (bt < sinir) return;
     const donem = yil + String(ay).padStart(2, '0'), id = 'g' + donem + '-' + no + sb_;

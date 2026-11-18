@@ -28,6 +28,7 @@
 import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, eksikEvrak, sb, sbDers, sbSinav, oturum, cokSube, seciliSube, mebIsGunuGeri, kuralAyar, egitimSinifi, MEB_CEZA_SERTIFIKA } from './veri.js?v=234';
 import { bildir, pencere, kapatPencere, e, ik, isaret, tarihUzun } from './ui.js?v=234';
 import * as GR from './gruplar.js?v=234';
+import * as MN from './mebnorm.js?v=234';
 import * as MK from './mebkayit.js?v=234';
 import { onkosulEngel } from './onkosul.js?v=234';
 
@@ -251,18 +252,18 @@ export function sinavSonucuAl(sat) {
   const iTc = bul('tc', 'kimlik'), iSon = bul('sonuc', 'durum', 'basari', 'netice'), iPuan = bul('puan', 'notu'), iTar = bul('tarih');
   if (iTc < 0) return bildir('Listede TC kimlik numarası sütunu bulunamadı', 'uyari');
   if (iSon < 0 && iPuan < 0) return bildir('Listede sonuç ya da puan sütunu bulunamadı', 'uyari');
+  // MEB-045: sonuç metni mebnorm'dan geçer (BAŞARISIZ önce aranır); metin yoksa puan (geçme kurs ayarından, yoksa 70); ikisi de boşsa sonuç yok (SNV-089: girmedi sayılmaz)
+  const AD = { gecti: 'Geçti', kaldi: 'Kaldı', girmedi: 'Girmedi' }, gecme = +((S.kurs || {}).esinavGecmePuani) || 70;
   const deger = (r) => {
-    const v = nrm(iSon >= 0 ? r[iSon] : ''), p = iPuan >= 0 && String(r[iPuan]).trim() !== '' && !isNaN(+String(r[iPuan]).replace(',', '.')) ? Math.round(+String(r[iPuan]).replace(',', '.')) : null;
-    if (/girmedi|gelmedi|katilmadi|devamsiz/.test(v)) return { v: 'Girmedi' };
-    if (/basarisiz|kaldi|gecmedi|olumsuz/.test(v)) return { v: 'Kaldı', puan: p };
-    if (/basarili|gecti|olumlu|gecer/.test(v)) return { v: 'Geçti', puan: p };
-    return p != null ? { v: p >= 70 ? 'Geçti' : 'Kaldı', puan: p } : null;
+    const ham = iSon >= 0 ? r[iSon] : '', pm = iPuan >= 0 ? String(r[iPuan] == null ? '' : r[iPuan]).trim().replace(',', '.') : '', p = pm !== '' && isFinite(+pm) && +pm >= 0 ? Math.round(+pm) : null;
+    const s = MN.esinavSonuc(p, ham, gecme); if (!s) return null;
+    return s === 'girmedi' ? { v: 'Girmedi' } : { v: AD[s], puan: p };
   };
-  const tarihIso = v => { const m = String(v || '').match(/(\d{1,2})[./-](\d{1,2})[./-](\d{4})/); return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : ''; };
+  const tarihIso = MN.tarihIso;
   // SNV-006/087/088: sonuçlar oturum oturum; oturumda olmayan kursiyer ayrı satır (kendiliğinden eklenmez); mdSinyal'de hiç olmayan T.C. yalnız sayılır
   const oturum = {}, farklar = [], disarida = [], yok = new Set(); let bulunamayan = 0;
   sat.slice(1).forEach(r => {
-    const tc = String(r[iTc] || '').replace(/\D/g, ''), k = tc && S.kursiyerler.find(x => x.tc === tc), d = deger(r); if (!d) { bulunamayan++; return; } if (!k) { if (/^\d{11}$/.test(tc)) yok.add(tc); else bulunamayan++; return; }
+    const { tc, gecerli } = MN.tcTemiz(r[iTc]), k = gecerli && S.kursiyerler.find(x => x.tc === tc), d = deger(r); if (!d) { bulunamayan++; return; } if (!k) { if (gecerli) yok.add(tc); else bulunamayan++; return; }
     const t = iTar >= 0 ? tarihIso(r[iTar]) : '';
     const s = sbSinav(S.sinavlar).filter(x => (x.kursiyerler || []).includes(k.id) && !(x.sonuc || {})[k.id] && fark(x.tarih) <= 0 && (!t || x.tarih === t)).sort((a, b) => b.tarih.localeCompare(a.tarih))[0];
     if (!s) { // SNV-086: sonucu girilmiş oturumda MEBBİS farklı diyorsa (ör. Geçti → Kaldı) düzeltme önerilir

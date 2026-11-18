@@ -45,8 +45,8 @@ export const tcTemiz = v => { const tc = String(v == null ? '' : v).replace(/\D/
 export const tarihIso = v => { const s = String(v || ''); let m = s.match(/(\d{4})-(\d{2})-(\d{2})/); if (m) return `${m[1]}-${m[2]}-${m[3]}`; m = s.match(/(\d{1,2})[./-](\d{1,2})[./-](\d{4})/); return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : ''; };
 export const saatAraligi = v => { const l = [...String(v || '').matchAll(/(\d{1,2})[:.](\d{2})/g)].map(m => m[1].padStart(2, '0') + ':' + m[2]); return l.length >= 2 ? l[0] + '–' + l[1] : l[0] || ''; };
 // Sınav: katılım "Sınava Girdi"/"Girmedi"; sonuç BAŞARISIZ önce aranır (BAŞARILI'yı içerdiği için)
-export const katilim = v => { const s = sade(v); return /girmedi|katilmadi/.test(s) ? 'girmedi' : /girdi|katildi/.test(s) ? 'girdi' : ''; };
-export const sonucKodu = v => { const s = sade(v); return /basarisiz|kaldi/.test(s) ? 'kaldi' : /basarili|gecti/.test(s) ? 'gecti' : /girmedi/.test(s) ? 'girmedi' : ''; };
+export const katilim = v => { const s = sade(v); return /girmedi|katilmadi|gelmedi|devamsiz/.test(s) ? 'girmedi' : /girdi|katildi/.test(s) ? 'girdi' : ''; };
+export const sonucKodu = v => { const s = sade(v); return /girmedi|gelmedi|katilmadi|devamsiz/.test(s) && !/basari|gecti|kaldi/.test(s) ? 'girmedi' : /basarisiz|kaldi|gecmedi|olumsuz/.test(s) ? 'kaldi' : /basarili|gecti|olumlu|gecer(?!siz)/.test(s) ? 'gecti' : /girmedi/.test(s) ? 'girmedi' : ''; };
 export function gerekceAyir(v) {
   const ham = String(v || ''), sonuc = sonucKodu(ham), ic = (ham.match(/\(([\s\S]*)\)\s*$/) || [])[1];
   if (ic == null) return { sonuc, baskan: '', uye: '', ham };

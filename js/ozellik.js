@@ -2,6 +2,9 @@ import { cevapIsle } from './mesaj.js?v=234';
 import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli, sonrakiDers, selam, bulutKanca, iptalEdilebilir, oturum, dersIptalIz, gonderimEkle, gerekliDireksiyon, ekDersFiyat, ekDersTabani } from './veri.js?v=234';
 import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos, waIstek, ziyaretci, apiGonder, waAc, waNumara } from './ui.js?v=234';
 import { yenile } from './app.js?v=234';
+import { sinifEsit, sertifikaKodu, tcTemiz } from './mebnorm.js?v=234';
+// MEB-039: MEBBİS sertifika metni ('B SINIFI SERTİFİKA (Otomatik)') mebnorm'la; tanınmayan sınıfta (ör. OP) eski düz karşılaştırma
+const sinifAyni = (a, b) => sertifikaKodu(a) && sertifikaKodu(b) ? sinifEsit(a, b) : String(a).toUpperCase().replace(/\s/g, '').split('-')[0] === String(b || '').toUpperCase().split('-')[0];
 import { bildirimler } from './sayfalar1.js?v=234';
 import { denetimEksikleri } from './sayfalar3.js?v=234';
 import { sinifKari, dersMaliyeti, bosKapasite, hakedis, ustaAlacak, ayAnahtar, KAPASITE_SAAT, randevuEngeli, bosSlotlar, engelYazilir } from './risk.js?v=234';
@@ -109,13 +112,13 @@ export function mutabakatHesapla(metin) {
   const bul = (...l) => bas.findIndex(h => l.some(x => h.includes(x)));
   const iTc = bul('tc', 'kimlik'), iAd = bul('adı', 'ad'), iSoy = bul('soyad'), iSinif = bul('sınıf', 'sinif', 'sertifika'), iDers = bul('direksiyon', 'ders');
   if (iTc < 0) return { hata: 'TC kimlik numarası sütunu bulunamadı. İlk satırda “TC” başlığı olmalı.' };
-  const meb = rows.slice(1).map(r => ({ tc: (r[iTc] || '').replace(/\D/g, ''), ad: [r[iAd >= 0 && iAd !== iSoy ? iAd : -1], r[iSoy]].filter(Boolean).join(' '), sinif: iSinif >= 0 ? (r[iSinif] || '').toUpperCase().replace(/\s/g, '') : null, ders: iDers >= 0 && r[iDers] !== '' ? +r[iDers] : null })).filter(x => x.tc);
+  const meb = rows.slice(1).map(r => ({ tc: tcTemiz(r[iTc]).tc, ad: [r[iAd >= 0 && iAd !== iSoy ? iAd : -1], r[iSoy]].filter(Boolean).join(' '), sinif: iSinif >= 0 ? String(r[iSinif] || '').trim() : null, ders: iDers >= 0 && r[iDers] !== '' ? +r[iDers] : null })).filter(x => x.tc);
   const tcMeb = new Map(meb.map(x => [x.tc, x])), olmali = mebdeOlmali(), tcSinyal = new Map(S.kursiyerler.map(k => [k.tc, k]));
   const sonuc = { yalnizSinyal: [], yalnizMeb: [], sinif: [], ders: [], gecersiz: [], eslesen: 0 };
   olmali.forEach(k => {
     const x = tcMeb.get(k.tc); if (!x) return sonuc.yalnizSinyal.push(k.id);
     sonuc.eslesen++;
-    if (x.sinif && x.sinif.split('-')[0] !== k.sinif.toUpperCase().split('-')[0]) sonuc.sinif.push({ id: k.id, meb: x.sinif });
+    if (x.sinif && !sinifAyni(x.sinif, k.sinif)) sonuc.sinif.push({ id: k.id, meb: x.sinif });
     // DIR-027: dosyada ders sütunu yoksa MEBBİS'ten okunan aday dosyasındaki ders sayısı (k.meb.dersOzet) kullanılır
     const md = x.ders != null && !isNaN(x.ders) ? x.ders : (k.meb && k.meb.dersOzet ? k.meb.dersOzet.yapilmis : null);
     if (md != null && md !== yapilanDers(k)) sonuc.ders.push({ id: k.id, meb: md, sinyal: yapilanDers(k), kaynak: x.ders != null && !isNaN(x.ders) ? 'dosya' : 'MEBBİS okuması' });

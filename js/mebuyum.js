@@ -3,6 +3,7 @@
 // girdiyse (ör. Pazar yapılan ders Cumartesi girilmiş, son dakika saat değişikliği işlenmemiş) geri okumada (SKT04002 haftalık program, SKT02009 aday dosyası)
 // fark burada yakalanır: ders satırında rozet, MEB işlemleri'nde liste, Bugün'de hatırlatma. Kurs açıklama yazıp "bilerek bırakıldı" diye kapatabilir.
 // MTSK md.46/A: denetimde eğitimin Modül'e girilen gün ve saatte yapılıp yapılmadığına bakılır; uyumsuzluk denetim riskidir.
+import { donemKodu } from './mebnorm.js?v=234';
 import { S, gun, kursiyer, egitmen, arac, tamAd, islem, kaydet, EGITIM_TURU, egitimTuruOf } from './veri.js?v=234';
 
 export const nrm = x => String(x || '').toLocaleLowerCase('tr').replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/[^a-z0-9]/g, '');
@@ -23,13 +24,13 @@ export function satirlariOku(t) {
   const b = (t && t.baslik) || [], i = { d: sutun(b, /^donemi?$/), g: sutun(b, 'grupadi', /^grubu?$/), s: sutun(b, 'subesi', /^sube$/), a: sutun(b, 'adayadi', 'adisoyadi', /^adsoyad/), p: sutun(b, 'plaka'), y: sutun(b, 'dersyeri', 'egitimyeri', /yeri$/), t: sutun(b, 'derstarihi', /^tarih/), sa: sutun(b, 'derssaati', /saat/), pe: sutun(b, 'personel', 'ogretmen', 'usta'), et: sutun(b, 'egitimturu', /turu$/) };
   return ((t && t.satirlar) || []).map(r => ({ ad: r[i.a] || '', tarih: tarihIso(r[i.t]), saat: saatIlk(r[i.sa]), plaka: r[i.p] || '', izinNo: izinNo(r[i.pe]), personel: String(r[i.pe] || '').replace(/İzin\s*No\s*:?\s*\d*/i, '').replace(/\(.*?\)/g, '').trim(), yer: yerKod(r[i.y]), tur: turKod(r[i.et]), donem: r[i.d] || '', grup: r[i.g] || '', sube: r[i.s] || '' })).filter(x => x.tarih && x.saat);
 }
-// Aday adıyla öğrenci eşleşmesi (SKT04002'de TC yok). Aynı adda birden çok öğrenci varsa MEBBİS grubu/şubesiyle ayrılır; yine ayrılmıyorsa eşleşmez.
+// Aday adıyla öğrenci eşleşmesi (SKT04002'de TC yok; dönemler MEB-040 gereği donemKodu ile karşılaştırılır). Aynı adda birden çok öğrenci varsa MEBBİS grubu/şubesiyle ayrılır; yine ayrılmıyorsa eşleşmez.
 export function adEsle(satirlar) {
   const adlar = new Map(); (S.kursiyerler || []).forEach(k => { const a = nrm(tamAd(k)); if (!adlar.has(a)) adlar.set(a, []); adlar.get(a).push(k); });
   let belirsiz = 0, yok = 0;
   satirlar.forEach(x => { const l = adlar.get(nrm(x.ad)) || [];
     let k = l.length === 1 ? l[0] : null;
-    if (l.length > 1) { const g = l.filter(y => y.meb && y.meb.donem && nrm(y.meb.donem) === nrm(x.donem)); k = g.length === 1 ? g[0] : null; if (!k) belirsiz++; }
+    if (l.length > 1) { const g = l.filter(y => y.meb && y.meb.donem && donemKodu(y.meb.donem) && donemKodu(y.meb.donem) === donemKodu(x.donem)); k = g.length === 1 ? g[0] : null; if (!k) belirsiz++; }
     if (!l.length) yok++;
     x.kursiyer = k ? k.id : null; });
   return { belirsiz, yok };
