@@ -1761,14 +1761,14 @@ function dersEkle(sutunId, saat) {
         const k = kursiyer(sel.value), tur = d.querySelector('#d-tur').value, ar = tur === 'simulator' ? null : aracBul(k), sorun = [], not = [];
         d.querySelector('#d-bas').innerHTML = `${ar ? aracGorsel(ar, 'orta') : ''}<div><b style="display:block;font-family:var(--baslik);font-size:18px;color:var(--murekkep)">${tarihUzun(planGun)} · ${saat}</b><span>${e(eg.ad)} · ${ar ? plaka(ar.plaka) + ' · ' + e(ar.vites) + (ar.egitmen !== eg.id ? ' · havuz aracı' : '') : 'araç yok'}</span></div>`;
         // denetimler kural motorunda (kurallar.js dersKontrol): araç, 90 gün, gece, belgeler, çakışma, günlük sınırlar (kursiyerde md.16/4 engel), borç, ek ders
-        const kd = KR.dersKontrol({ k, eg, ar, tur, tarih: planGun, saat }), ek = kd.ek; sorun.push(...kd.sorun); not.push(...kd.not);
+        const kd = KR.dersKontrol({ k, eg, ar, tur, tarih: planGun, saat, simulator: tur === 'simulator' ? ((d.querySelector('#d-sim') || {}).value || ((S.simulatorler || []).find(x => x && x.sicilNo) || {}).id) : undefined }), ek = kd.ek; sorun.push(...kd.sorun); not.push(...kd.not);
         // DIR-025: simülatör dersi MEBBİS'e cihazın sicil numarasıyla gider — birden çok cihaz varsa seçilir, hiç kayıtlı yoksa uyarı
         { const sa = d.querySelector('#d-sim-alan'); if (sa) sa.hidden = tur !== 'simulator'; if (tur === 'simulator' && !(S.simulatorler || []).some(x => x && x.sicilNo)) not.push('Simülatör sicil numarası kayıtlı değil; MEBBİS’e yazmadan önce Ekip ve araçlar › Araçlar › Simülatörler’e ekleyin.'); }
         ekAlan.hidden = !ek;
         uy.innerHTML = sorun.map(x => `<div class="ipucu uyari">${isaret('dur', 20)}${e(x)}</div>`).join('') + not.map(x => `<div class="ipucu">${isaret('uyari', 20)}${e(x)}</div>`).join('');
         dg.disabled = !!sorun.length;
       };
-      sel.addEventListener('change', kontrol); d.querySelector('#d-tur').addEventListener('change', kontrol); kontrol();
+      sel.addEventListener('change', kontrol); d.querySelector('#d-tur').addEventListener('change', kontrol); { const ds = d.querySelector('#d-sim'); if (ds) ds.addEventListener('change', kontrol); } kontrol();
       dg.addEventListener('click', () => {
         const k = kursiyer(sel.value), n = +d.querySelector('#d-tekrar').value, tur = d.querySelector('#d-tur').value, atlanan = [];
         let eklenen = 0;
