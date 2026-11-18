@@ -3433,3 +3433,8 @@ p.mz-kanit-uyari{margin:-4px 0 10px;font-size:13px}
 /* DIR-043: öğrenci dosyası psikoteknik satırı */
 .ps-satir { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px 14px; margin-bottom: 14px; border: 1px solid var(--cizgi); border-radius: 10px; background: var(--panel); font-size: 14px; }
 .ps-satir b { color: var(--murekkep); }
+
+/* DIG-053: numara ve kod alanlarında 0 ile 8 karışmasın — Atkinson ve Overpass Mono'nun çizgili sıfırı küçük boyda 8'e benziyor; düz sıfırlı sistem yazı tipi, eşit genişlik */
+input[type="tel"], input[inputmode="tel"], input[inputmode="numeric"], input[name="tc"], input[name="iban"], .num, a[href^="tel:"] {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-variant-numeric: tabular-nums lining-nums; font-feature-settings: "zero" 0; letter-spacing: .02em;
+}
