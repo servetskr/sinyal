@@ -751,9 +751,10 @@ function personeliIsle(t) {
     }
     gorulen.add(eg.id);
     const { gorevde, ...meb } = r; eg.meb = { ...(eg.meb || {}), ...meb };
-    if (r.izinNo) { if (!eg.calismaIzinNo) { eg.calismaIzinNo = r.izinNo; guncel++; } else if (String(eg.calismaIzinNo) !== r.izinNo) { eg.meb.izinFark = r.izinNo; farklar.push(`${eg.ad}: izin no mdSinyal’de ${eg.calismaIzinNo}, MEBBİS’te ${r.izinNo}`); } else delete eg.meb.izinFark; }
-    if (r.tc) { if (!eg.tc) eg.tc = r.tc; else if (eg.tc !== r.tc) { eg.meb.tcFark = true; farklar.push(`${eg.ad}: TC mdSinyal’dekinden farklı`); } else delete eg.meb.tcFark; }
-    if (r.izinBit) eg.mebIzinBitis = r.izinBit;   // geriye uyum (UYG-009 izin kartı bunu okur)
+    // YON-025: MEBBİS'ten kendiliğinden doldurulan kullanıcı alanı iz kaydına düşer (kim, alan, eski → yeni, ekran)
+    if (r.izinNo) { if (!eg.calismaIzinNo) { eg.calismaIzinNo = r.izinNo; guncel++; islem('MEBBİS’ten aldı', `${eg.ad} · Çalışma izin no: boş → ${r.izinNo} · OOK12001`); } else if (String(eg.calismaIzinNo) !== r.izinNo) { eg.meb.izinFark = r.izinNo; farklar.push(`${eg.ad}: izin no mdSinyal’de ${eg.calismaIzinNo}, MEBBİS’te ${r.izinNo}`); } else delete eg.meb.izinFark; }
+    if (r.tc) { if (!eg.tc) { eg.tc = r.tc; islem('MEBBİS’ten aldı', `${eg.ad} · TC kimlik no: boş → (dolduruldu) · OOK12001`); } else if (eg.tc !== r.tc) { eg.meb.tcFark = true; farklar.push(`${eg.ad}: TC mdSinyal’dekinden farklı`); } else delete eg.meb.tcFark; }
+    if (r.izinBit) { if (eg.mebIzinBitis && eg.mebIzinBitis !== r.izinBit) islem('MEBBİS’ten aldı', `${eg.ad} · Çalışma izni bitişi: ${eg.mebIzinBitis} → ${r.izinBit} · OOK12001`); eg.mebIzinBitis = r.izinBit; }   // geriye uyum (UYG-009 izin kartı bunu okur)
     // PER-010: MEBBİS'te istenen çalışma izni onaylandı (yeni bitiş isteğin eskisinden ileri): istek izi kalkar
     if (eg.mebIzinIstek && gorevde && r.izinBit && r.izinBit > (eg.mebIzinIstek.eskiBit || '')) delete eg.mebIzinIstek;
     if (!gorevde && r.ayrilma) { eg.meb.ayrildi = r.ayrilma; if (S.egitmenler.includes(eg)) ayrilan.push(`${eg.ad} (${tarih(r.ayrilma)})`); } else delete eg.meb.ayrildi;
@@ -838,7 +839,7 @@ function dosyalariIsle(l) {
     if (gm && !kg) {
       let g = (S.gruplar || []).find(y => GR.mebGrubuMu(y) && y.donem === donem && +y.grupNo === grupNo && y.sube === sube);
       if (!g && basl) { g = { id: 'g' + donem + '-' + grupNo + sube, donem, grupNo, sube, baslangic: basl, ad: GR.grupAdi(donem, grupNo, sube), sinif: '', derslik: '', kontenjan: null, meb: true, kaynak: 'MEBBİS' }; S.gruplar = [...(S.gruplar || []), g]; }
-      if (g) { GR.grupAta(k, g); atanan++; }
+      if (g) { GR.grupAta(k, g); atanan++; islem('MEBBİS’ten aldı', `${tamAd(k)} · Dönem grubu: boş → ${g.ad} · SKT02009`); }  // YON-025
     }
     if (!tekil && !kg && aday.length > 1) belirsiz++;
     const fk = gm && kg && GR.mebGrubuMu(kg) && !(kg.donem === donem && +kg.grupNo === grupNo && kg.sube === sube) ? gm : null;
