@@ -58,7 +58,20 @@ function atanabilirGruplar(sinif) {
     .sort((a, b) => String(b.baslangic).localeCompare(String(a.baslangic)));
 }
 // Doluluk (DON-008): gruptaki aktif kursiyer / kapasite. Kapasite grup kartındaki kontenjan.
-export const grupKapasite = g => (g && +g.kontenjan) || null;
+// DON-010: kontenjan girilmediyse kapasite MEBBİS'teki derslik oda kontenjanından (SKT01001/01003 okunduysa): grubun dersliği, yoksa en büyük açık derslik.
+// Mevzuat sınırı derslik başına 30, kurum toplamı 90 (Standartlar Yönergesi md.35/1-ç; SOR-107).
+export const DERSLIK_EN_COK = 30, KURUM_EN_COK = 90;
+export function derslikKontenjani(derslikAd) {
+  const mk = mebKurum(); if (!mk) return null;
+  const dl = (mk.derslikler || []).filter(y => !/kapal/i.test(y.durum || '') && y.kontenjan), uyg = derslikAd && dl.find(y => nrmAd(y.ad) === nrmAd(derslikAd));
+  const v = (uyg && uyg.kontenjan) || Math.max(0, ...dl.map(y => y.kontenjan)); return v ? Math.min(v, DERSLIK_EN_COK) : null;
+}
+export const kurumKapasitesi = () => { const mk = mebKurum(); if (!mk) return null; const t = (mk.derslikler || []).filter(y => !/kapal/i.test(y.durum || '')).reduce((a, y) => a + Math.min(+y.kontenjan || 0, DERSLIK_EN_COK), 0); return t ? Math.min(t, KURUM_EN_COK) : null; };
+export const grupKapasite = g => (g && +g.kontenjan) || (g ? derslikKontenjani(g.derslik) : null);
+// Aynı dönem ve grubun ilk boş şube harfi (A–H); grup dolunca öneri
+export const sonrakiSube = g => { if (!mebGrubuMu(g)) return null; const dolu = new Set((S.gruplar || []).filter(x => mebGrubuMu(x) && x.donem === g.donem && +x.grupNo === +g.grupNo).map(x => x.sube)); return SUBELER.find(s => !dolu.has(s)) || null; };
+// Aynı dönem ve grubun şubelerinin toplam kapasitesi (aynı anda derste olurlar)
+export const grupToplamKapasite = (donem, grupNo, haric) => (S.gruplar || []).filter(x => mebGrubuMu(x) && x.donem === donem && +x.grupNo === +grupNo && x.id !== haric).reduce((a, x) => a + (grupKapasite(x) || 0), 0);
 export const grupDoluluk = g => { const n = g ? kisiler(g).length : 0, k = grupKapasite(g); return { n, k, dolu: !!k && n >= k }; };
 export const dolulukMetni = g => { const d = grupDoluluk(g); return `${d.n}${d.k ? '/' + d.k : ''} kişi${d.dolu ? ' · dolu' : ''}`; };
 export const grupSecenekleri = (l, secili) => l.map(g => `<option value="${e(g.id)}" ${g.id === secili ? 'selected' : ''}>${e(grupMetni(g))} · ${dolulukMetni(g)}</option>`).join('');
@@ -108,7 +121,7 @@ export function grupFormu(on = {}, sonra) {
       <div class="alan"><label for="g-bas">Başlangıç tarihi</label><input id="g-bas" name="baslangic" type="date" value="${e(v.baslangic)}" ${kilit ? 'disabled' : ''}></div>
       <div class="alan"><label for="g-sinif">Sınıf</label><select id="g-sinif" name="sinif"><option value="">Bütün sınıflar</option>${sinifler.map(([k, x]) => `<option value="${k}" ${v.sinif === k ? 'selected' : ''}>${e(x.ad.split(' ·')[0])}</option>`).join('')}</select><small style="color:var(--soluk)">İlk kez ehliyet alanlar genelde aynı gruptadır; ehliyet türüne göre ayrı grup gerekiyorsa sınıf seçin.</small></div>
       <div class="alan"><label for="g-dl">Derslik</label><input id="g-dl" name="derslik" value="${e(v.derslik)}" placeholder="Derslik 1"></div>
-      <div class="alan"><label for="g-kon">Kontenjan</label><input id="g-kon" name="kontenjan" inputmode="numeric" value="${e(v.kontenjan)}" placeholder="Boş bırakılabilir"><small id="g-kon-not" style="color:var(--soluk)"></small></div>
+      <div class="alan"><label for="g-kon">Kontenjan</label><input id="g-kon" name="kontenjan" inputmode="numeric" value="${e(v.kontenjan)}" placeholder="${derslikKontenjani(v.derslik) ? 'Derslikten: ' + derslikKontenjani(v.derslik) : 'Boş bırakılabilir'}"><small id="g-kon-not" style="color:var(--soluk)"></small></div>
       <div class="alan tam"><span class="et">MEBBİS’teki adı</span><b id="g-ad" style="font-size:18px;color:var(--murekkep)"></b> <small id="g-hata" style="display:block;color:var(--kirmizi);font-weight:700;margin-top:4px"></small><small id="g-donem-not" style="display:block;color:var(--turuncu);font-weight:600;margin-top:4px"></small></div>
       ${g0 ? '' : `<p class="ipucu tam">${isaret('uyari', 18)}<span>MEBBİS’te sıra: önce grup (Dönem Grup Açılış), sonra şube (Grup Şube Tanımlama), sonra kayıt. Bir dönemde en çok 3 grup açılır; <b>grup başlangıç tarihi sonradan değiştirilemez</b>.</span></p>`}
       ${kilit ? `<p class="ipucu uyari tam">${isaret('uyari', 18)}<span>Bu gruba ${kilit} kursiyer atanmış; dönem, grup, şube ve tarih değiştirilemez (MEBBİS’te de açılış tarihi sonradan değişmez).</span></p>` : ''}
@@ -128,6 +141,9 @@ export function grupFormu(on = {}, sonra) {
         { const mk = mebKurum(), n = d.querySelector('#g-kon-not'); if (n && mk) { const dl = (mk.derslikler || []).filter(y => !/kapal/i.test(y.durum || '')), en = Math.max(0, ...dl.map(y => y.kontenjan || 0)), uyg = dl.find(y => x.derslik && nrmAd(y.ad) === nrmAd(x.derslik));
           const sinir = (uyg && uyg.kontenjan) || en || null, asar = x.kontenjan && sinir && x.kontenjan > sinir;
           n.style.color = asar ? 'var(--kirmizi)' : 'var(--soluk)'; n.style.fontWeight = asar ? '700' : '';
+          f.kontenjan.placeholder = derslikKontenjani(x.derslik) ? 'Derslikten: ' + derslikKontenjani(x.derslik) : 'Boş bırakılabilir';
+          const kk = kurumKapasitesi(), top = grupToplamKapasite(x.donem, x.grupNo, g0 && g0.id) + (x.kontenjan || derslikKontenjani(x.derslik) || 0);
+          if (kk && top > kk && !asar) { n.style.color = 'var(--kirmizi)'; n.style.fontWeight = '700'; n.textContent = `Grup ${x.grupNo}’in şubeleri toplam ${top} kişi olur; kurumun derslik kapasitesi ${kk} (en çok ${KURUM_EN_COK}).`; } else
           n.textContent = asar ? `MEBBİS’te ${uyg ? uyg.ad + ' ' : 'en büyük derslik '}kontenjanı ${sinir}; grup kontenjanı bunu aşamaz` : sinir ? `MEBBİS’te ${uyg ? uyg.ad : 'derslik'} kontenjanı ${sinir}${mk.binaKontenjan ? ' · bina ' + mk.binaKontenjan : ''}` : mk.binaKontenjan ? 'MEBBİS’te bina kontenjanı ' + mk.binaKontenjan : ''; } }
         d.querySelector('#g-hata').textContent = f.baslangic.value ? grupHatasi(oku(), g0 && g0.id) : '';
         d.querySelector('#g-donem-not').textContent = g0 ? '' : donemUyarisi(x);
