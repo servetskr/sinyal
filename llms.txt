@@ -24,6 +24,7 @@
 - [Sık sorulan sorular](https://mdsinyal.com/sss/): kurulum ve geçiş, güvenlik ve KVKK, WhatsApp, MEBBİS
 - [Başlayın](https://mdsinyal.com/basla/): geçiş adımları, kurulum günü, önceden hazırlanacaklar ve başvuru formu
 - [İletişim](https://mdsinyal.com/iletisim/): tanıtım görüşmesi isteği
+- [Kullanım kılavuzu](https://mdsinyal.com/kilavuz/): kurulum adımları, günlük işler, öğretmen ve öğrenci uygulaması
 - [Güvenlik](https://mdsinyal.com/guvenlik/): belgelerin korunması, yedekler, silme, MEBBİS şifresi ve KVKK soruları
 - [Gizlilik ve KVKK](https://mdsinyal.com/gizlilik.html): işlenen veriler, hukuki sebepler, saklama süreleri
 

@@ -211,6 +211,11 @@ a.st-mod:hover h3{text-decoration:underline;text-decoration-thickness:2px;text-u
 .gv-kap .st-sss+.gv-h2{margin-top:44px}
 .gv-not{margin-top:32px;font-size:15px;color:var(--k-metin)}
 .gv-not a{color:var(--k-lac);text-decoration:underline}
+.kl-ic{display:flex;flex-wrap:wrap;gap:8px 18px;padding:14px 18px;border:1px solid var(--k-cizgi);border-radius:12px;margin-bottom:8px}
+.kl-ic p{margin:0}
+.kl-liste{display:grid;gap:14px}
+.kl-liste li{padding-left:4px}
+.kl-yol{display:inline-block;font-size:13px;font-weight:600;color:var(--k-lac);background:#f1f4f8;border-radius:6px;padding:1px 8px;margin-left:4px}
 .il-wa,.st a.il-wa{display:flex;align-items:center;gap:16px;margin:28px 0 20px;padding:18px 20px;border-radius:12px;background:var(--k-lac);color:#fff}
 .il-wa:hover,.st a.il-wa:hover{background:var(--k-lac-2)}
 .il-wa-ik{display:grid;place-items:center;width:44px;height:44px;border-radius:10px;background:#128c4b;flex:none}
