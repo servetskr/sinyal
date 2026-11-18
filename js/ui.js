@@ -384,8 +384,21 @@ export function metaHata(j) {
   if ([130429, 131048, 131056, 80007].includes(k) || /rate limit|spam/i.test(m)) return 'Kısa sürede çok mesaj gönderildi; birkaç dakika sonra tekrar deneyin';
   if (k === 132001 || /template.*(not exist|does not exist)/i.test(m)) return 'Mesaj şablonu Meta’da bulunamadı ya da henüz onaylanmadı';
   if (/Şablonla da gönderilemedi/.test(m)) return 'Mesaj gönderilemedi: 24 saat penceresi kapalı ve onaylı şablonla da gitmedi. Şablonun onayını kontrol edin';
+  // MSJ-024: ödeme, kayıt ve izin hataları (Meta Cloud API hata kodları)
+  if (k === 131042 || /payment|eligibility/i.test(m)) return 'Meta hesabında ödeme yöntemi eksik ya da sorunlu. Meta İşletme Yöneticisi › Faturalandırma’dan ödeme yöntemini ekleyin; düzelince mesajlar gider';
+  if (k === 133010 || /not registered/i.test(m)) return 'WhatsApp numarası Meta’da kayıtlı değil (hat bağlantısı tamamlanmamış). Ayarlar › Kurs bilgileri › WhatsApp hattını yeniden bağlayın';
+  if (k === 10 || /does not have permission/i.test(m)) return 'WhatsApp uygulamasının bu işlem için izni yok. Hattı yeniden bağlarken mesaj gönderme iznini onaylayın';
+  if (k === 200 || /permissions? error/i.test(m)) return 'WhatsApp hesabına erişim izni verilmemiş ya da geri alınmış. Meta İşletme ayarlarında mdSinyal’e izin verin ya da hattı yeniden bağlayın';
+  if (k === 368 || /temporarily blocked/i.test(m)) return 'WhatsApp hesabı kural ihlali nedeniyle geçici olarak engellenmiş; Meta İşletme Yöneticisi’ndeki bildirimi kontrol edin';
+  if (k === 131049) return 'Meta bu kişiye şu an pazarlama mesajı iletmedi (kişi başına sınır). Daha sonra tekrar deneyin';
+  if (k === 131021) return 'Mesaj kursun kendi numarasına gönderilemez; alıcı numarasını kontrol edin';
+  if ([132000, 132012].includes(k)) return 'Şablondaki alan sayısı ya da biçimi Meta’daki onaylı şablonla uyuşmuyor; şablonu kontrol edin';
+  if ([132015, 132016].includes(k)) return 'Mesaj şablonu Meta tarafından durduruldu ya da kapatıldı (düşük kalite puanı). Şablonu Meta’da yenileyin';
+  if ([131000, 131016, 133004].includes(k)) return 'WhatsApp servisi şu an cevap vermiyor; birkaç dakika sonra tekrar deneyin';
   // servisin kendi Türkçe uyarıları olduğu gibi; Meta'dan gelen İngilizce metin yerine genel Türkçe cümle
-  return m && !/\b(the|is|not|number|recipient|message|error|invalid|failed|parameter|permission|unsupported|request|account)\b/i.test(m) ? m : 'WhatsApp mesajı gönderilemedi' + (k ? ' (Meta kodu ' + k + ')' : '') + '. Biraz sonra tekrar deneyin';
+  if (k === 132007) return 'Şablon metni Meta’nın biçim kurallarına uymuyor; şablonu düzeltip yeniden onaya gönderin';
+  // Türkçe harf taşımayan (İngilizce) Meta metni gösterilmez
+  return m && /[çğıöşüÇĞİÖŞÜ]/.test(m) && !/\b(the|is|not|number|recipient|message|error|invalid|failed|parameter|permission|unsupported|request|account)\b/i.test(m) ? m : 'WhatsApp mesajı gönderilemedi' + (k ? ' (Meta kodu ' + k + ')' : '') + '. Biraz sonra tekrar deneyin';
 }
 export async function apiGonder(metin, belge, adres, kime, ek = {}) {
   if (oturum.kullanici && oturum.kullanici.ziyaretci) return { ok: false, hata: 'Demo görünümünde mesaj gönderilmez' };
