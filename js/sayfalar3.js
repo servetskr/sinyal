@@ -96,6 +96,27 @@ function faturaHtml(no) {
     <p>Yalnız: ${yaziyla(f.tutar)}</p><p style="font-size:11px;color:#555">Ödeme: ${e(f.yontem || '')} · ${tamTarih(f.odemeTarih)} tarihli tahsilat. ${f.durum === 'gib' ? 'GİB’e raporlandı.' : f.durum === 'taslak' ? 'Entegratör bağlanınca resmî fatura olarak kesilecek.' : 'e-Arşiv raporuna eklenmek üzere sırada.'}</p>`;
 }
 const kursBas = baslik => `<h1>${e(baslik)}</h1><p class="a4-alt">${e(S.kurs.ad)} · ${e(S.kurs.adres)} · ${e(S.kurs.tel)}</p>`;
+// PAR-039: kurumsal makbuz — kurum (logo, ad/ünvan, adres, telefon, e-posta, vergi dairesi ve no), öğrenci (ad, telefon, TC), makbuz no, işlem tarihi,
+// kapatılan taksitlerin vadesi, ödeme türü (parçalıysa kırılım), tutar ve yazıyla, kalan bakiye, işlemi yapan ve imzalayan; mahsup metni.
+// Ayarlar (S.kurs.makbuzYazdir): boyut 'A5' | 'A4', nüsha 1 | 2 (iki nüsha: kurs ve öğrenci nüshası, A4'te kesme çizgisiyle tek sayfada), imzalayan adı.
+export const makbuzYazdirAyar = () => { const m = S.kurs.makbuzYazdir || {}; return { boyut: m.boyut === 'A4' ? 'A4' : 'A5', nusha: +m.nusha === 2 ? 2 : 1, imzalayan: String(m.imzalayan || '').trim() }; };
+export function makbuzHtml(h, k) {
+  const K = S.kurs, A = makbuzYazdirAyar(), pr = h.grup ? S.hareket.filter(x => x.grup === h.grup && x.tur === 'Gelir') : [h], ptop = pr.reduce((a, x) => a + (+x.tutar || 0), 0);
+  const pyon = pr.length > 1 ? pr.map(x => `${yontemAd(x.yontem)} ${tl(x.tutar)}`).join(' + ') : yontemAd(h.yontem || '');
+  const vadeler = (pr.find(x => x.dagilim) || h).dagilim ? (pr.find(x => x.dagilim) || h).dagilim.map(d => `${d.i + 1}. taksit (vade ${tarih(d.vade)})`).join(', ') : '';
+  const kalem = h.kategori === 'Taksit' || h.kategori === 'Kurs ücreti' || h.kategori === 'Peşinat' ? 'kurs ücreti' : String(h.kategori || 'kurs ücreti').toLocaleLowerCase('tr');
+  const vkn = (S.entegrasyon && S.entegrasyon.vkn) || '', kurum = [K.unvan || K.ad, K.adres, K.tel, K.eposta, [K.vergiDairesi ? K.vergiDairesi + ' VD' : '', vkn ? 'VKN ' + vkn : ''].filter(Boolean).join(' · ')].filter(Boolean);
+  const nusha = ad => `<div class="mk"${A.boyut === 'A5' ? ' data-a5' : ''}>
+    <div class="mk-bas">${K.logo ? `<img src="${K.logo}" alt="" class="mk-logo">` : ''}<div><b style="font-size:14px">${e(K.unvan || K.ad || '')}</b>${kurum.slice(1).map(x => `<div style="color:#444">${e(x)}</div>`).join('')}</div><div style="margin-left:auto;text-align:right"><b style="font-size:15px;letter-spacing:.05em">TAHSİLAT MAKBUZU</b><div>No <b>${e(makbuzNo(h))}</b></div><div>${tamTarih(h.tarih)}</div>${ad ? `<small>${ad}</small>` : ''}</div></div>
+    ${h.iptal ? `<p style="border:2px solid #b00;color:#b00;font-weight:700;padding:6px 10px;text-align:center;letter-spacing:.1em">İPTAL EDİLDİ · ${tarih(h.iptal.tarih)} · ${e(h.iptal.neden)}</p>` : ''}
+    <table><tr><th>Ödeyen</th><td>${e(tamAd(k))}</td><th>TC kimlik no</th><td>${e(k.tc || '')}</td></tr><tr><th>Telefon</th><td>${e(k.tel || '')}</td><th>Ödeme türü</th><td>${e(pyon)}</td></tr>
+    <tr><th>Kalem</th><td colspan="3">${e(h.kategori || '')}${vadeler ? ' · ' + e(vadeler) : ''}</td></tr><tr><th>Tutar</th><td colspan="3"><b>${tl(ptop)}</b> · ${yaziyla(ptop)}</td></tr><tr><th>Kalan bakiye</th><td colspan="3">${tl(kalanBorc(k))}</td></tr></table>
+    <p>Sayın <b>${e(tamAd(k))}</b>’dan ${e(kalem)} borcuna mahsuben yukarıda yazılı yalnız <b>${yaziyla(ptop)}</b> tahsil edilmiştir.</p>
+    <p style="font-size:10.5px;color:#555">Bu makbuz tahsilatın alındığını gösterir; fatura yerine geçmez.${h.fatura ? ' Fatura no: ' + e(h.fatura) : ''}</p>
+    <div class="imza"><div>Ödeyen<small style="display:block">${e(tamAd(k))}</small></div><div>Tahsil eden${A.imzalayan || h.kaydeden || h.kim ? '<small style="display:block">' + e(A.imzalayan || h.kaydeden || h.kim) + '</small>' : ''}</div></div></div>`;
+  const css = `<style>.mk-bas{display:flex;gap:12px;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:8px;margin-bottom:8px}.mk-logo{width:64px;height:64px;object-fit:contain}.mk-kes{border-top:1px dashed #777;margin:18px 0;text-align:center;font-size:10px;color:#777}.mk .imza{margin-top:26px}</style>`;
+  return css + (A.nusha === 2 ? nusha('Kurs nüshası') + (A.boyut === 'A5' ? '<div class="sayfa-sonu"></div>' : '<div class="mk-kes">✂ kesiniz</div>') + nusha('Öğrenci nüshası') : nusha(''));
+}
 export function belgeHtml(tur, id, hid) {
   if (tur === 'denetim') {
     const eks = denetimEksikleri(), akt = S.kursiyerler.filter(k => k.asama !== 'Ehliyet');
@@ -180,10 +201,7 @@ export function belgeHtml(tur, id, hid) {
   if (tur === 'makbuz') {
     const h = (hid && S.hareket.find(x => x.id === hid)) || S.hareket.filter(x => x.kursiyer === k.id && x.tur === 'Gelir').sort((a, b) => b.tarih.localeCompare(a.tarih))[0];
     if (!h) return kursBas('Tahsilat makbuzu') + '<p>Bu kursiyerden henüz tahsilat yok.</p>';
-    // PAR-061: parçalı ödeme tek makbuzdur: tutar parçaların toplamı, yöntem kırılımıyla
-    const pr = h.grup ? S.hareket.filter(x => x.grup === h.grup && x.tur === 'Gelir') : [h], ptop = pr.reduce((a, x) => a + (+x.tutar || 0), 0), pyon = pr.length > 1 ? pr.map(x => `${x.yontem} ${tl(x.tutar)}`).join(' + ') : (h.yontem || '');
-    return kursBas('Tahsilat makbuzu') + (h.iptal ? `<p style="border:2px solid #b00;color:#b00;font-weight:700;padding:6px 10px;text-align:center;letter-spacing:.1em">İPTAL EDİLDİ · ${tarih(h.iptal.tarih)} · ${e(h.iptal.neden)}</p>` : '') + `<table><tr><th>Makbuz no</th><td>${makbuzNo(h)}</td><th>Tarih</th><td>${tamTarih(h.tarih)}</td></tr><tr><th>Ödeyen</th><td>${e(tamAd(k))}</td><th>TC kimlik no</th><td>${e(k.tc || '')}</td></tr><tr><th>Ödeme yöntemi</th><td>${e(pyon)}</td><th>Kategori</th><td>${e(h.kategori || '')}</td></tr><tr><th>Açıklama</th><td colspan="3">${e(h.aciklama)}</td></tr><tr><th>Tutar</th><td colspan="3"><b>${tl(ptop)}</b> · ${yaziyla(ptop)}</td></tr><tr><th>Kalan borç</th><td colspan="3">${tl(kalanBorc(k))}</td></tr></table>
-      <p style="font-size:11px;color:#555">Bu makbuz tahsilatın alındığını gösterir; fatura yerine geçmez.${h.fatura ? ' Fatura no: ' + e(h.fatura) : ''}</p><div class="imza"><div>Ödeyen</div><div>Tahsil eden${h.kim ? '<small style="display:block">' + e(h.kim) + '</small>' : ''}</div></div>`;
+    return makbuzHtml(h, k);
   }
   if (tur === 'senet') {
     const acik = k.odeme.taksitler.map((t, i) => ({ t, i })).filter(x => !x.t.odendi && !x.t.iptal);

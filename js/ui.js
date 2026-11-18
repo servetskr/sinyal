@@ -297,7 +297,7 @@ table{width:100%;border-collapse:collapse;margin:8px 0;page-break-inside:auto}tr
 export function belgeYazdir(html, baslik = 'Belge') {
   const f = document.createElement('iframe'); f.setAttribute('aria-hidden', 'true'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
   document.body.appendChild(f);
-  const d = f.contentDocument; d.open(); d.write(`<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>${e(baslik)}</title><style>${A4_CSS}${html.includes('data-yatay') ? '@page{size:A4 landscape}' : ''}</style></head><body>${html}</body></html>`); d.close();
+  const d = f.contentDocument; d.open(); d.write(`<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>${e(baslik)}</title><style>${A4_CSS}${html.includes('data-yatay') ? '@page{size:A4 landscape}' : html.includes('data-a5') ? '@page{size:A5;margin:9mm}' : ''}</style></head><body>${html}</body></html>`); d.close();
   const imgs = [...d.images].filter(i => !i.complete).map(i => new Promise(r => { i.onload = i.onerror = r; }));
   return Promise.all(imgs).then(() => { f.contentWindow.focus(); f.contentWindow.print(); setTimeout(() => f.remove(), 1000); });
 }
