@@ -126,3 +126,23 @@ export function evrakPaketi(k) {
   if (v.parmak) l.parmak = { veren: v.parmak.veren, tarih: trT(v.parmak.tarih), sayi: v.parmak.sayi }; else eksik.push('parmak izi');
   return { l, eksik };
 }
+
+// MEB-077: kayıt dosyasında adım adım MEBBİS ön kontrolü (MEBBİS'in giriş sırasıyla 6 grup, madde madde "seçilmemiş / girilmemiş / yüklenmemiş")
+export function mebAdimKontrol(k) {
+  const v = k.mebEvrak || {}, ev = k.evrak || {}, g = (S.gruplar || []).find(x => x.id === k.teorikGrup && x.donem && x.grupNo && x.sube);
+  const m = (ok, ad, eksik) => ({ ok: !!ok, ad, eksik: ok ? '' : eksik }), cep = String(k.tel || '').replace(/\D/g, '').replace(/^90/, '').replace(/^0/, '');
+  const blok = (b, tur) => [m(b && b.veren, 'Belgeyi veren kurum', 'girilmemiş'), ...(tur ? [m(b && b.tur && OGRENIM_BELGELERI.includes(b.tur), 'Belge türü', b && b.tur ? 'MEBBİS listesinden yeniden seçilmeli' : 'seçilmemiş')] : []), m(b && b.tarih, 'Belge tarihi', 'girilmemiş'), m(b && b.sayi, 'Belge sayısı', 'girilmemiş')];
+  return [
+    { ad: 'Dönem kaydı', l: [m(g, 'Dönem, grup ve şube', 'seçilmemiş'), m(k.sinif && k.sinif !== 'B-EN', 'İstenen sertifika', k.sinif === 'B-EN' ? 'B Engelli: MEBBİS’te elle seçilir' : 'seçilmemiş'), m(/^5\d{9}$/.test(cep), 'Cep telefonu', 'girilmemiş'), m(k.kimlikSeri, 'Kimlik kartı seri no', 'girilmemiş')] },
+    { ad: 'Evrak', l: [m(k.foto, 'Biyometrik fotoğraf', 'yüklenmemiş'), m(ev.ogrenim, 'Öğrenim belgesi', 'teslim alınmamış'), m(ev.saglik, 'Sağlık raporu', 'teslim alınmamış'), m(ev.adli, 'Adli sicil kaydı', 'teslim alınmamış'), m(v.parmak, 'Parmak izi / imza', 'girilmemiş'), m(k.sozlesmeImza || ev.sozlesme, 'Sözleşme', 'imzalanmamış'), m(ev.kimlik, 'Kimlik fotokopisi', 'teslim alınmamış'), m(k.adres, 'Adres beyanı', 'adres girilmemiş')] },
+    { ad: 'Öğrenim', l: blok(v.ogrenim, true) },
+    { ad: 'Sağlık', l: [m(true, `Özür durumu: ${(v.saglik && v.saglik.ozur) || ENGEL_VARSAYILAN(k.sinif)}`, ''), m(k.saglikRapor && k.saglikRapor.tarih, 'Rapor tarihi', 'girilmemiş'), m((v.saglik && v.saglik.refNo) || (k.saglikRapor && k.saglikRapor.no), 'Rapor no / e-Nabız referans no', 'girilmemiş')] },
+    { ad: 'Adli sicil', l: blok(v.adli) },
+    { ad: 'Adres', l: [m(k.adres, 'Açık adres', 'girilmemiş')], not: 'MEBBİS adres beyanında il › ilçe › mahalle › cadde › dış ve iç kapı UAVT listelerinden seçilir (MEB-066).' },
+  ];
+}
+export function mebAdimHtml(k) {
+  const gr = mebAdimKontrol(k);
+  return `<div class="adim-kontrol"><p class="et" style="margin:14px 0 6px">Adım adım (MEBBİS sırası)</p>${gr.map(x => { const n = x.l.filter(y => y.ok).length, tam = n === x.l.length;
+    return `<details ${tam ? '' : 'open'}><summary>${isaret(tam ? 'tamam' : 'uyari', 16)}<b>${e(x.ad)}</b><small>${n}/${x.l.length}</small></summary><ul>${x.l.map(y => `<li class="${y.ok ? 'ok' : 'yok'}"><span>${e(y.ad)}</span>${y.ok ? '' : `<small>${e(y.eksik)}</small>`}</li>`).join('')}</ul>${x.not ? `<small class="adim-not">${e(x.not)}</small>` : ''}</details>`; }).join('')}</div>`;
+}

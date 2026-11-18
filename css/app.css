@@ -3788,3 +3788,13 @@ tr.secili-satir td { background: rgba(10, 77, 162, .06); }
 /* MEB-028: e-sınav başvuru listesinde bölüm başlıkları */
 .tablo tr.mm-bolum td { background: var(--panel-2); color: var(--murekkep); font-size: 13.5px; padding: 8px 12px; border-top: 1.5px solid var(--cizgi); }
 .tablo tr.mm-bolum small { color: var(--soluk); font-weight: 400; }
+/* MEB-077: adım adım MEBBİS ön kontrolü */
+.adim-kontrol details { border: 1.5px solid var(--cizgi-2, var(--cizgi)); border-radius: 10px; margin-top: 6px; background: var(--panel); }
+.adim-kontrol summary { display: flex; gap: 8px; align-items: center; padding: 8px 12px; cursor: pointer; font-size: 14px; color: var(--murekkep); }
+.adim-kontrol summary small { margin-left: auto; color: var(--soluk); }
+.adim-kontrol ul { list-style: none; margin: 0; padding: 0 12px 10px 36px; display: grid; gap: 4px; font-size: 13.5px; }
+.adim-kontrol li { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.adim-kontrol li.ok span { color: var(--soluk); }
+.adim-kontrol li.yok span { color: var(--murekkep); font-weight: 700; }
+.adim-kontrol li.yok small { color: var(--kirmizi); }
+.adim-kontrol .adim-not { display: block; padding: 0 12px 10px 36px; color: var(--soluk); font-size: 12.5px; }
