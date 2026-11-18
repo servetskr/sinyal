@@ -924,6 +924,8 @@ export function kurulumAdimlari() {
     ['MEB kural değerlerini onayla', !!S.kurs.kuralOnay, 'Siz · 2 dk', '#/ayarlar/kurallar', 'Değerler kaynağıyla gelir; kurs müdürü onaylar.'],
     ['Asistanın bildikleri', S.asistanBilgi.length >= 5, 'Biz · şablondan', '#/mesajlar/bilgi', 'Fiyat, evrak, ders saatleri. Sürücü kursu şablonundan doldurulur, siz okursunuz.'],
     ['WhatsApp hattını bağla', !!S.kurs.waApi || sos.kanallar.some(c => c.id === 'wp' && c.bagli), 'Biz + siz · 30 dk', '#/ayarlar/kurs', 'Mesajların kurs numarasından otomatik gitmesi için. Instagram ve Facebook, Meta onayından sonra eklenir.'],
+    // MSJ-028: öğrencileri uygulamaya davet (durum Mesajlar'daki 'Öğrenci uygulaması' şeridiyle aynı: kullanıyor / hesap açık girmedi / hesap yok)
+    ['Öğrencileri uygulamaya davet et', (() => { const l = sb(S.kursiyerler).filter(k => !k.kapali && k.asama !== 'Ehliyet'); return !l.length || l.filter(k => k.hesap).length >= l.length / 2; })(), 'Siz · 10 dk', '#/mesajlar', 'Mesajlar › Öğrenci uygulaması › Davet gönder: hesaplar toplu açılır, giriş bilgisi WhatsApp’tan ya da yazdırılan giriş kartıyla verilir. Yarısının hesabı açılınca tamam sayılır.'],
     ['Kullanıcılar ve güvenlik', (S.kullanicilar || []).length >= 2, 'Siz · 5 dk', '#/ayarlar/kullanici', 'Ön büro ve usta öğretici davetleri; hareketsiz kalınca oturumun kapanma süresi.'],
     ['e-Arşiv fatura', !!en.earsiv.bagli, 'Biz · 1 gün', '#/ayarlar/entegrasyon', 'e-Arşiv entegratörü bilgileri (kursun kendi sözleşmesiyle).'],
     ['MEBBİS Yardımcısı', mebAracHazir(), 'Biz + siz · 5 dk', '#/ayarlar/kurallar', 'MEBBİS’e girilen bilgisayarda Chrome eklentisini kurun; kayıtları kontrol edip “MEBBİS’e yaz” ile tek seferde onaylarsınız, Yardımcı kursun MEBBİS oturumunda yazar.'],
