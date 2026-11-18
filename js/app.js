@@ -153,8 +153,11 @@ export function destekPenceresi(hazirMetin = '') {
         islem('mdSinyal Destek talebi açtı', tur); kaydet(); kapatPencere(); bildir('Talebin mdSinyal’e iletildi; cevap buraya gelecek'); });
     } });
 }
+// YON-018: ön büro yetkisi başka cihazdan değişince menü yeniden çizilsin
+const yetkiImza = () => JSON.stringify((S.kurs || {}).yetki || null) + '|' + ((oturum.kullanici || {}).rol || '');
+let sonYetki = '';
 function iskelet() {
-  kurallariHazirla(); zamanlayiciBaslat();
+  sonYetki = yetkiImza(); kurallariHazirla(); zamanlayiciBaslat();
   { const ks = kullaniciSubesi(); if (ks && gorunum.sube !== ks) subeSec(ks); }  // PAR-040: şubeye kısıtlı kullanıcı
   const say = sayaclar();
   // az kullanılanlar ("Diğer") kapalı bir grupta durur; içindeki sayfa açıkken grup açık gelir
@@ -185,10 +188,10 @@ function iskelet() {
   </div>
   <nav class="alt-menu" aria-label="Hızlı menü">
     <a href="#/genel" data-menu="genel">${ik('genel')}Bugün</a>
-    <a href="#/kursiyerler" data-menu="kursiyerler">${ik('kursiyer')}Kursiyer</a>
+    ${izinli('kursiyerler') ? `<a href="#/kursiyerler" data-menu="kursiyerler">${ik('kursiyer')}Kursiyer</a>` : ''}
     ${oturum.kullanici.rol !== 'usta' ? `<button class="alt-yeni" data-yeni-menu aria-label="Yeni ekle"><span>${ik('arti')}</span>Yeni</button>` : ''}
-    <a href="#/plan" data-menu="plan">${ik('direksiyon')}Plan</a>
-    <a href="#/kasa" data-menu="kasa">${ik('kasa')}Kasa</a>
+    ${izinli('plan') ? `<a href="#/plan" data-menu="plan">${ik('direksiyon')}Plan</a>` : ''}
+    ${izinli('kasa') ? `<a href="#/kasa" data-menu="kasa">${ik('kasa')}Kasa</a>` : ''}
   </nav>`;
 }
 
@@ -216,10 +219,10 @@ export function yenile(kaydirma = false) {
   if (location.hash === '#/yonetim-kur' && oturum.kullanici.bulut && oturum.kullanici.rol === 'mudur') return yonetimKurCiz();
   // başka cihazdan eksik alanla gelen sınav kaydı sayfaları çökertmesin
   (S.sinavlar || []).forEach(x => { if (!x.sonuc || typeof x.sonuc !== 'object') x.sonuc = {}; if (!Array.isArray(x.kursiyerler)) x.kursiyerler = []; });
-  if (!document.getElementById('icerik')) iskelet();
+  if (!document.getElementById('icerik') || yetkiImza() !== sonYetki) iskelet();
   let r = rota();
   kurulumAkisi();
-  if (!izinli(r.ad)) { if (oturum.kullanici.rol === 'sekreter' && SAYFALAR[r.ad]) bildir('Bu ekran yalnız kurs müdürüne açık', 'uyari'); location.hash = oturum.kullanici.rol === 'usta' ? '#/egitmen' : '#/genel'; return; }
+  if (!izinli(r.ad)) { if (oturum.kullanici.rol === 'sekreter' && SAYFALAR[r.ad]) bildir(ekranYetkili(r.ad) ? 'Bu ekran yalnız kurs müdürüne açık' : 'Bu ekran ön büroya kapalı; müdür Ayarlar › Kullanıcılar › Ön büro yetkileri’nden açabilir', 'uyari'); location.hash = oturum.kullanici.rol === 'usta' ? '#/egitmen' : '#/genel'; return; }
   const yer = document.getElementById('icerik');
   if (!yer) return;
   const portal = r.ad === 'egitmen' || r.ad === 'ogrenci' || r.ad === 'kayit';
