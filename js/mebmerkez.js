@@ -83,6 +83,7 @@ export function merkezSekme() {
         <div style="flex:1;min-width:240px"><b style="font-family:var(--baslik);font-size:20px;color:var(--murekkep);display:block">${bekleyen.length ? `MEBBİS’e girilecek ${bekleyen.length} iş` : 'MEBBİS’e girilecek iş yok'}</b>
           <small style="color:var(--soluk)">${ozet.length ? ozet.map(([ad, n]) => `${e(ad)} ${n}`).join(' · ') : 'Hepsi girildi'}${enYakin ? ` · en yakın son gün ${tarih(enYakin)}` : ''}</small></div>
         ${EK.eklenti.var ? `<button class="dg dg-cizgi" data-mt-denetle ${subeSorun ? 'disabled' : ''} title="Yardımcı her MEBBİS ekranını açıp beklediği alanları arar; hiçbir şey yazılmaz">${ik('goz')}Ekranları denetle</button>` : ''}
+        ${!(S.mebCekim && S.mebCekim.kurulum) ? `<button class="dg dg-cizgi" data-mm-kurulum ${subeSorun ? 'disabled' : ''} title="İlk kurulum: kurum bilgisi, dönem grupları, personel ve yetkileri, araçlar, ücret ilanı (yalnız okunur)">${ik('indir')}Kurulum bilgilerini al</button>` : ''}
         <button class="dg dg-cizgi" data-mm-guncelle ${subeSorun ? 'disabled' : ''} title="Gruplar, öğrenciler, öğrenci dosyaları, personel, araçlar ve sınav sonuçları">${ik('indir')}MEBBİS’ten güncelle</button>
         <button class="dg dg-ana" data-mm-hepsini ${bekleyen.length && !subeSorun ? '' : 'disabled'} style="height:46px;padding:0 20px;font-size:15.5px">${ik('ok')}Hepsini MEBBİS’e yaz${bekleyen.length ? ` (${bekleyen.length})` : ''}</button></div>
       <small style="color:var(--soluk)">Önerilen akış: MEBBİS’e girin, burada önce <b>MEBBİS’ten güncelle</b>, sonra <b>Hepsini MEBBİS’e yaz</b>. Yazılacakları tek pencerede görüp bir kez onaylarsınız; Yardımcı işleri MEBBİS’in istediği sırayla (grup, kayıt, evrak, teorik ve direksiyon programı, e-sınav, randevu, fatura) yazar, kaydeder ve MEBBİS’ten okuyarak doğrular. Güvenlik kodunu siz yazarsınız; istediğiniz an durdurabilirsiniz. Kurum onayı geri alınamadığı için ayrı sekmeden verilir. Yardımcı’sız her işi “Elle gir” ile girebilirsiniz.${z ? ` Son güncelleme ${tarih(z.slice(0, 10))} ${z.slice(11, 16)}.` : ''}</small>
@@ -160,6 +161,7 @@ export function merkezBaglan(k, yenile) {
     if (t.closest('[data-uy-kapali]')) { uyKapaliGoster = !uyKapaliGoster; return yenile(); }
     { const ua = t.closest('[data-uy-ac]'); if (ua) { UY.ac(ua.dataset.uyAc); return yenile(); } }
     { const uk = t.closest('[data-uy-kapat]'); if (uk) return uyKapatPenceresi(uk.dataset.uyKapat, yenile); }
+    if (t.closest('[data-mm-kurulum]')) return MT.topluCek(MT.KURULUM_CEK);   // MEB-188
     if (t.closest('[data-mm-guncelle]')) return MT.topluCek(['gruplar', 'kursiyerler', 'dosya', 'personel', 'araclar', 'sinavlar', 'direksiyonProgrami']);
     if (t.closest('[data-mm-hepsini]')) { const ids = butunIsler(true).filter(x => !x.bitti && x.tur !== 'onay').map(x => x.id); MT.yaz(ids).then(r => { if (r) m.secili.clear(); yenile(); }); return; }
     // seçim yalnız iş Yardımcı'ya gidince temizlenir; onay penceresinde vazgeçilirse seçim kalır

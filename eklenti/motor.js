@@ -573,6 +573,7 @@
     const b = {}, alt = [];
     for (const a of is.adaylar) {
       try {
+        if (!a.plaka || !a.saat || !(a.izinNo || a.personelAd)) throw new MebHata(`Randevu satırı eksik (${[!a.plaka && 'araç', !(a.izinNo || a.personelAd) && 'usta öğretici', !a.saat && 'saat'].filter(Boolean).join(', ')}); gönderilmedi`, 'veri');   // MEB-178
         const tr = satirBul(s.doc, 'dgListele', a.tc); if (!tr) throw new MebHata('Aday randevu listesinde yok (ilçe kontenjanı, sınıf ya da aday durumu)', 'veri');
         // B3: satırda beklenen alan yoksa boş değere erişilmez; "ekran değişti" olarak durur
         const alan = son => { const el = tr.querySelector(`[id$="${CSS.escape(A(s.doc, son))}"]`); if (!el || !el.name) throw ekranHata(s.doc, son); return el; };
@@ -594,6 +595,10 @@
   /* ---------- fatura (SKT02013) ---------- */
   // is: { donem, tc, no, tarih, tutar }
   async function faturaYaz(is, kodIste) {
+    // MEB-178: MEBBİS fatura formu girileni denetlemiyor; biçim burada denetlenir, hatalı iş gönderilmez
+    if (!String(is.no || '').trim() || String(is.no).length > 100) throw new MebHata('Fatura numarası boş ya da çok uzun; gönderilmedi', 'veri');
+    if (!/^\d{1,7}(,\d{1,2})?$/.test(String(is.tutar || '')) || !(parseFloat(String(is.tutar).replace(',', '.')) > 0)) throw new MebHata(`Fatura tutarı MEBBİS biçiminde değil (${is.tutar || 'boş'}); gönderilmedi`, 'veri');
+    if (!/^(0[1-9]|[12]\d|3[01])\/(0[1-9]|1[0-2])\/(19|20)\d{2}$/.test(String(is.tarih || ''))) throw new MebHata(`Fatura tarihi gg/aa/yyyy değil (${is.tarih || 'boş'}); gönderilmedi`, 'veri');
     let { s, b } = await zincir('/SKT/skt02013.aspx', [['cmbEgitimDonemi', is.donem]]);
     s = await postla(s, { ...b, txtTC: is.tc }, { dugme: 'btnTC' }); Object.keys(b).forEach(k => delete b[k]);
     if (!elBul(s.doc, 'txtSayi')) throw new MebHata('Fatura formu açılmadı (aday bu dönemde yok)', 'veri');

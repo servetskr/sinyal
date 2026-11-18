@@ -28,6 +28,8 @@ export const CEKILECEK = [
   ['direksiyonProgrami', 'Direksiyon programı', 'Kurumun MEBBİS’teki direksiyon dersleri, son 6 hafta ve önümüzdeki 5 hafta (SKT04002, 7 günlük aralıklarla); mdSinyal dersleriyle karşılaştırılır, uyumsuzluklar listelenir (Yardımcı 1.16)'],
   ['ucretIlani', 'MEB ücret ilanı', 'MEBBİS’e bildirilmiş ücret ilanı (OOK01002); kurs ücretleri ve sözleşmeler ilanla ve il tabanıyla karşılaştırılır (Yardımcı 1.15)'],
 ];
+// MEB-188: kurulumda sırayla okunanlar (kurum bilgisi kurum kodunu doğrular ve derslikleri getirir); hepsi bir çekmede gelince S.mebCekim.kurulum
+export const KURULUM_CEK = ['kurum', 'gruplar', 'personel', 'yetki', 'araclar', 'ucretIlani'];
 // durum: bu sekmedeki bellek; süren iş ayrıca S.mebIs'te kalıcı (sayfa yenilense de parça ve onay bilgisi kalır)
 export const durum = { calisiyor: false, id: null, adim: '', baslama: 0, son: null, sonIlerleme: 0, hata: '', mesgul: null, olcum: '' };
 // Yardımcı 5 dakikadır ilerleme bildirmediyse iş "çalışıyor" sayılmaz (Durdur, kapanan sekme ya da eski sonuç)
@@ -698,6 +700,7 @@ function uygula(v, tekrar = false) {
   if (v.araclar && (v.araclar.arac || v.araclar.simulator)) o.araclar = araclariIsle(v.araclar);
   if (v.sinavlar && (v.sinavlar.uygulama || v.sinavlar.esinav)) o.sinavlar = v.sinavlar;
   if (Array.isArray(v.dosya)) o.dosya = dosyalariIsle(v.dosya);
+  if (['kurum', 'gruplar', 'personel', 'araclar'].every(x => v[x] && !v[x].hata)) S.mebCekim = { ...(S.mebCekim || {}), kurulum: gun(0) };   // MEB-188
   if (o.kursiyerler || o.dosya) o.asamaFark = (S.kursiyerler || []).filter(k => k.mebIslendi || (k.meb && k.meb.dosyaOkuma)).filter(asamaFarkGuncelle).length;
   // MEB-053: bu okumada kendiliğinden doldurulan alan sayısı ('MEBBİS’ten aldı' işlem kayıtları)
   { const l = S.islemler || [], j = islemIlk ? l.indexOf(islemIlk) : l.length; o.otoDoldu = l.slice(0, j < 0 ? l.length : j).filter(x => x.ne === 'MEBBİS’ten aldı').length; }
@@ -1036,6 +1039,7 @@ function ozetGoster(o, yazilan) {
   const satir = (b, a) => `<li style="display:flex;gap:10px;align-items:flex-start">${isaret('tamam', 18)}<div><b style="color:var(--murekkep)">${b}</b>${a ? `<small style="display:block;color:var(--soluk)">${a}</small>` : ''}</div></li>`;
   const l = [];
   if (yazilan.length) l.push(satir(`${ok} iş MEBBİS’e girildi${kontrol ? `; ${kontrol} tanesini MEBBİS’te kontrol edin (yalnız MEBBİS mesajı görüldü)` : ' ve doğrulandı'}`, hata.length ? `<span style="color:var(--kirmizi);font-weight:700">${hata.length} iş girilemedi</span>: ${hata.slice(0, 4).map(x => e(MK.maskele(x.not))).join(' · ')}` : ''));
+  if (yazilan.some(x => x.ok && /^sinav-/.test(x.id))) l.push(`<li style="font-size:13px;color:var(--soluk)">Yanlış verilmiş bir randevu varsa MEBBİS’te SKT01005 › “Randevu Verilmiş Aday Listesi”nde o satırı Sil ile kaldırın; Yardımcı randevu silmez.</li>`);
   if (yazilan.length) l.push(`<li style="font-size:13px;color:var(--soluk)">Her kaydın sonucu işlem kaydına yazıldı (Ayarlar › Güvenlik › İşlem geçmişi).</li>`);
   if (o.grupSayim && o.grupSayim.satirlar.length) { const f = o.grupSayim.farklar, ad = { aday: 'aday', teorik: 'teorik ders', direksiyon: 'direksiyon dersi' };
     const fm = x => ['aday', 'teorik', 'direksiyon'].filter(a => x.meb[a] != null && x.meb[a] !== x.sinyal[a]).map(a => a === 'teorik' ? `MEBBİS’te ${x.meb[a]} saat teorik ders, olması gereken ${x.sinyal[a]} (34 × ${x.sinyal[a] / 34} şube)${x.meb[a] < x.sinyal[a] ? ` → ${x.sinyal[a] - x.meb[a]} saat eksik` : ''}` : `MEBBİS’te ${x.meb[a]} ${ad[a]}, mdSinyal’de ${x.sinyal[a]}${a === 'direksiyon' && x.sinyal[a] > x.meb[a] ? ` → ${x.sinyal[a] - x.meb[a]} ders MEBBİS’e yazılmamış` : ''}`).join('; ');
