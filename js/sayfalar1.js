@@ -20,6 +20,7 @@ import * as ME from './mebevrak.js?v=234';
 import * as KR from './kurallar.js?v=234';
 import * as PL from './planlayici.js?v=234';
 import * as UY from './mebuyum.js?v=234';
+import * as PS from './psikoteknik.js?v=234';
 import * as PK from './personel.js?v=234';
 import { listeAdi, satirAdi } from './taban.js?v=234';
 
@@ -1328,7 +1329,7 @@ export function kursiyerDetay(id) {
       ${dersSayacSeridi(k)}
       <ul class="liste ders-liste" style="margin-top:8px">${dersler.map(d => { const et = d.durum === 'İptal' || d.durum === 'Gelmedi' ? 'normal' : egitimTuruOf(k, d); return `<li><span class="zaman">${d.saat}</span><div><b style="color:var(--murekkep)">${tarihUzun(d.tarih)}</b>${et !== 'normal' ? ' ' + rozet(EGITIM_TURU[et].kisa, et === 'onSinav' ? 'uyari' : 'mavi') : ''}${(u => u ? ' ' + rozet(UY.metin(u).kisa, 'kirmizi') : '')(UY.dersUyumsuz(d.id))}<small style="display:block;color:var(--soluk)">${e(egitmen(d.egitmen).ad)}${d.tur && d.tur !== 'trafik' ? ' · ' + DERS_TUR_AD[d.tur] : ''}${geceDersMi(d) ? ' · gece' : ''}</small></div><span class="sag">${d.arac ? plaka(arac(d.arac).plaka) : ''}${d.durum === 'Yapıldı' ? (imzasiz(d) ? rozet(d.imza && d.imza.kursiyerBekliyor ? 'İmza bekleniyor' : 'İmzasız', 'uyari') : rozet(d.imza && d.imza.kursiyerUzaktan ? 'Uzaktan imzalı' : 'İmzalı', 'yesil') + olcuAltiIsaret(d.imza && d.imza.kanit)) : ''}${rozet(d.durum, d.durum === 'Yapıldı' ? 'yesil' : d.durum === 'Gelmedi' ? 'kirmizi' : 'mavi')}</span></li>`; }).join('') || '<li>' + bos('Henüz direksiyon dersi yok', 'Teorik dersler ve e-sınav bittikten sonra planlanır.') + '</li>'}</ul></div>`;
     if (profilSekme === 'odeme') return odemeSekmesi(k);
-    if (profilSekme === 'sinav') return (k.hakBitti && !k.hakBitti.cozuldu ? hakBittiKart(k) + '<div class="ara-bosluk"></div>' : '') + (!(k.esinav && k.esinav.sonuc === 'Geçti') ? HZ.hazirlikKarti(k, false) : '') + /* hak doldu kararı: Yapılacaklar › “Karar ver” bu sekmeyi açar */ MZ.hazirKarti(k) + denemeKarti(k) + `<div class="izgara iz-2">${[['e-Sınav', k.esinav], ['Uygulama sınavı', k.dsinav]].map(([t, s]) => `<div class="kart gosterge"><small>${t}</small><b>${s ? s.sonuc : '—'}</b><span>${s ? (s.puan ? s.puan + ' puan · ' : '') + s.hak + '. hak' + (s.sonuc === 'Kaldı' ? ' · ' + Math.max(0, (S.kurs.sinavHak || 4) - s.hak) + ' hak kaldı' : '') : (t === 'e-Sınav' ? (k.teorik >= teorikSaat(k) - 4 ? 'Sınava hazır' : 'Teorik dersler sürüyor') : k.dsinavPlan ? 'Sınav ' + goreli(k.dsinavPlan) : 'Direksiyon dersleri sürüyor')}</span></div>`).join('')}</div>
+    if (profilSekme === 'sinav') return psikoSatiri(k) + (k.hakBitti && !k.hakBitti.cozuldu ? hakBittiKart(k) + '<div class="ara-bosluk"></div>' : '') + (!(k.esinav && k.esinav.sonuc === 'Geçti') ? HZ.hazirlikKarti(k, false) : '') + /* hak doldu kararı: Yapılacaklar › “Karar ver” bu sekmeyi açar */ MZ.hazirKarti(k) + denemeKarti(k) + `<div class="izgara iz-2">${[['e-Sınav', k.esinav], ['Uygulama sınavı', k.dsinav]].map(([t, s]) => `<div class="kart gosterge"><small>${t}</small><b>${s ? s.sonuc : '—'}</b><span>${s ? (s.puan ? s.puan + ' puan · ' : '') + s.hak + '. hak' + (s.sonuc === 'Kaldı' ? ' · ' + Math.max(0, (S.kurs.sinavHak || 4) - s.hak) + ' hak kaldı' : '') : (t === 'e-Sınav' ? (k.teorik >= teorikSaat(k) - 4 ? 'Sınava hazır' : 'Teorik dersler sürüyor') : k.dsinavPlan ? 'Sınav ' + goreli(k.dsinavPlan) : 'Direksiyon dersleri sürüyor')}</span></div>`).join('')}</div>
       <div class="ara-bosluk"></div><div class="kart"><div class="kart-bas"><h3>Sınav oturumları</h3></div><ul class="liste" style="margin-top:8px">${sinavlar.map(s => `<li><span class="oto-ik">${ik(s.tur === 'e-Sınav' ? 'teorik' : 'direksiyon')}</span><div><b style="color:var(--murekkep)">${s.tur} · ${tarihUzun(s.tarih)} ${s.saat}</b><small style="display:block;color:var(--soluk)">${e(s.yer)}</small></div><span class="sag">${s.sonuc[k.id] ? rozet(s.sonuc[k.id], s.sonuc[k.id] === 'Geçti' ? 'yesil' : 'kirmizi') : rozet(goreli(s.tarih), 'mavi')}</span></li>`).join('') || '<li>' + bos('Henüz sınava atanmadı', 'Sınavlar sayfasından oturuma ekleyebilirsiniz.') + '</li>'}</ul></div>`;
     return `<div class="kd-bolum">
       <div class="kart"><div class="kart-bas"><h3>Notlar</h3></div><div class="kart-govde">
@@ -1407,6 +1408,7 @@ ${mesajlar.length ? '' : '<li style="color:var(--soluk)">Bu kursiyere henüz mes
         if (ev.target.closest('[data-ekders]')) ekDersOner(k);
         if (ev.target.closest('[data-sozlesme]')) sozlesmeImzalat(k);
         { const po = ev.target.closest('[data-plan-oner]'); if (po) return otoPlanPenceresi({ kursiyerler: [k.id] }); }   // DIR-041
+        if (ev.target.closest('[data-ps-ver]')) return PS.randevuPenceresi({ kursiyerId: k.id, sonra: yenile });   // DIR-043
         if (ev.target.closest('[data-ders-imza]')) import('./imza.js?v=234').then(m => m.imzayaGonderPenceresi(k, 'ders', imzasizDers(k).map(d => d.id)));
         { const bd = ev.target.closest('[data-bilgi-duzenle]'); if (bd) bilgiDuzenle(k, bd.dataset.bilgiDuzenle || 'kimlik'); }
         if (ev.target.closest('[data-gerekli-elle]')) gerekliElleDuzenle(k);
@@ -1944,6 +1946,11 @@ export function ekDersKabul(k) {
   bildirimler([{ kim: 'mudur', metin: `${tamAd(k)} ${t.n} ek direksiyon dersi teklifini kabul etti; ${tl(t.tutar)} ödeme planına eklendi. Dersleri planlayın.`, tur: 'Ek ders' }, h && { kim: h, metin: `${h.ad.split(' ')[0]} Hoca, ${tamAd(k)} ${t.n} ek direksiyon dersi aldı; dersler planlanınca programınıza eklenecek.`, tur: 'Ek ders' }], 'Ek ders kabul edildi');
 }
 // DIR-009: dersin MEBBİS eğitim türü. Kendiliğinden (egitimTuruOf) ya da müdürün seçtiği; seçim d.egitimTuru'na yazılır.
+// DIR-043: öğrenci dosyası › Sınavlar başında psikoteknik randevusu (varsa son randevu, yoksa yalnız kısayol)
+function psikoSatiri(k) {
+  const x = PS.kursiyerRandevusu(k);
+  return `<div class="ps-satir">${ik('takvim')}<span style="flex:1;min-width:0"><b>Psikoteknik</b> · ${x ? `${tarih(x.tarih)} ${x.saat} · ${e(x.kaynak)} · ${x.sonuc ? e(x.sonuc) : e(x.durum.toLocaleLowerCase('tr'))}` : 'randevu yok'}</span>${PS.engel({ kursiyer: k.id }) ? '' : `<button type="button" class="dg dg-cizgi dg-kucuk" data-ps-ver>Randevu ver</button>`}<a class="dg dg-hafif dg-kucuk" href="#/sinavlar/psiko">Randevular</a></div>`;
+}
 function dersUyumSatiri(d) { const u = UY.dersUyumsuz(d.id); if (!u) return ''; const m = UY.metin(u); return `<dt>MEBBİS</dt><dd><b style="color:var(--kirmizi)">${e(m.etiket.join(', '))}</b>${m.meb ? `<small style="display:block">${e(m.meb)}</small>` : ''}<small style="display:block;color:var(--metin)">${e(m.ne)} <a href="#/meb" style="color:var(--levha);font-weight:700">Uyumsuzluklar</a></small></dd>`; }
 function dersEgitimSatiri(d, k) {
   const oto = (() => { const x = { ...d }; delete x.egitimTuru; return egitimTuruOf(k, x); })(), sec = EGITIM_TURU[d.egitimTuru] ? d.egitimTuru : '';
