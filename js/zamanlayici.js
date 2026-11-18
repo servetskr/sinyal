@@ -45,7 +45,8 @@ export function kurallariHazirla() {
 const SAAT = { o1: '18:00', o10: '18:00', o11: '18:00', o12: '19:00', o13: '09:00', o2: '10:00', o3: '10:00', o14: '10:00', o4: '11:00', o7: '11:00', o15: '12:00', o16: '10:00' };
 export const kuralSaati = id => SAAT[id] || null;
 const kural = id => S.otomasyonlar.find(o => o.id === id);
-const doldur = (id, alan) => { alan = { kurs: S.kurs.ad, kursa: kursAdi('e'), kursta: kursAdi('de'), ...alan }; if (alan.kisi && !alan.selam) alan.selam = selam(alan.kisi); return (kural(id) ? kural(id).sablon : '').replace(/\{(\w+)\}/g, (x, a) => alan[a] != null ? alan[a] : ''); };
+// MSJ-031: T.C., şifre, PIN ve IBAN değişkeni şablonda doldurulmaz (KVKK)
+const doldur = (id, alan) => { alan = { kurs: S.kurs.ad, kursa: kursAdi('e'), kursta: kursAdi('de'), ...alan }; ['tc', 'tckn', 'tcno', 'kimlik', 'sifre', 'parola', 'pin', 'iban'].forEach(a => { delete alan[a]; }); if (alan.kisi && !alan.selam) alan.selam = selam(alan.kisi); return (kural(id) ? kural(id).sablon : '').replace(/\{(\w+)\}/g, (x, a) => alan[a] != null ? alan[a] : ''); };
 const ogr = k => ({ ad: tamAd(k), tel: k.tel, rol: 'ÖĞRENCİ' });
 const hoca = h => ({ ad: h.ad, tel: h.tel, rol: 'HOCA' });
 const mudur = () => ({ ad: S.kurs.yetkili || 'Kurs müdürü', tel: mudurTel(), rol: 'MÜDÜR' });

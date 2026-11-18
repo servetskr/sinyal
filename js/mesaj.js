@@ -59,7 +59,9 @@ function degerler(r) {
     evrak: k ? eksikEvrak(k).map(x => x[1].toLocaleLowerCase('tr')).join(', ') : '',
   };
 }
-export const kisiyeOzel = (metin, r) => { const v = degerler(r); return metin.replace(/\{(\w+)\}/g, (x, a) => v[a] != null ? v[a] : x).replace(/\s+([.,;])/g, '$1').trim(); };
+// MSJ-031: şablona kişinin T.C. kimlik numarası, şifresi ya da PIN'i hiçbir zaman konmaz (KVKK); bu adlarla değişken eklense de doldurulmaz
+export const YASAK_DEGISKEN = new Set(['tc', 'tckn', 'tcno', 'kimlik', 'sifre', 'şifre', 'parola', 'pin', 'iban']);
+export const kisiyeOzel = (metin, r) => { const v = degerler(r); return metin.replace(/\{(\w+)\}/g, (x, a) => !YASAK_DEGISKEN.has(a.toLocaleLowerCase('tr')) && v[a] != null ? v[a] : x).replace(/\s+([.,;])/g, '$1').trim(); };
 const bosKalan = (metin, r) => { const v = degerler(r); return [...new Set((metin.match(/\{(\w+)\}/g) || []).map(x => x.slice(1, -1)).filter(a => a in v && !v[a]))]; };
 
 // Seçili kişiler: grup değişince hepsi seçili başlar; kullanıcı tek tek çıkarıp ekleyebilir
