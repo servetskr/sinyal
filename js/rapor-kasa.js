@@ -4,10 +4,12 @@ import { S, gun, fark, SINIFLAR, tamAd, sb, tcMaskele, oturum, sinifEtiket, ekTu
 import { e, tl, rozet, tarih, ik, csvIndir } from './ui.js?v=234';
 
 // süzgeç durumu sayfa yenilense de bu oturumda kalır
-export const vadeSuzgec = { bas: '', bit: '', odenmemis: true, avukat: false, kayit: 'hepsi', sinif: '' };
+export const vadeSuzgec = { bas: '', bit: '', odenmemis: true, avukat: false, avBas: '', avBit: '', kayit: 'hepsi', sinif: '' };
 const ODENEN = t => t.odendi ? +t.tutar || 0 : Math.min(+t.tutar || 0, +t.kismi || 0);
 // Avukata verildi: senedin son takip adımı "Avukatta" ya da öğrenci dosyası avukata verilmiş (k.avukat)
 const avukattaMi = (k, t) => !!(k.avukat && !k.avukat.kapandi) || ((t.senetTakip || [])[0] || {}).durum === 'Avukatta';
+// PAR-037: avukata verilme tarihi (dosya ya da senet)
+const avukatTarihi = (k, t) => (k.avukat && !k.avukat.kapandi && k.avukat.tarih) || (((t.senetTakip || [])[0] || {}).durum === 'Avukatta' ? t.senetTakip[0].tarih : '') || '';
 const kayitDurumu = k => k.kapali ? 'kapali' : k.asama === 'Ehliyet' ? 'bitti' : 'suruyor';
 export const KAYIT_DURUM = [['hepsi', 'Bütün kayıtlar'], ['suruyor', 'Kursu sürenler'], ['bitti', 'Bitirenler'], ['kapali', 'Kaydı kapananlar']];
 
@@ -25,7 +27,7 @@ export function vadeSatirlari(f = vadeSuzgec) {
     .filter(({ k, t }) => !!t.vade
       && (!f.bas || t.vade >= f.bas) && (!f.bit || t.vade <= f.bit)
       && (!f.odenmemis || (!t.odendi && !t.iptal))
-      && (!f.avukat || avukattaMi(k, t))
+      && (!f.avukat || (avukattaMi(k, t) && (!f.avBas || avukatTarihi(k, t) >= f.avBas) && (!f.avBit || avukatTarihi(k, t) <= f.avBit)))
       && (f.kayit === 'hepsi' || kayitDurumu(k) === f.kayit)
       && (!f.sinif || k.sinif === f.sinif))
     .sort((a, b) => a.t.vade.localeCompare(b.t.vade) || tamAd(a.k).localeCompare(tamAd(b.k), 'tr'));
@@ -50,6 +52,7 @@ export function vadeHtml() {
       ${secim('sinif', [['', 'Bütün sınıflar'], ...siniflar.map(x => [x, sinifEtiket(x)])], f.sinif, 'Sınıf')}
       <label class="vr-tik"><input type="checkbox" data-vr="odenmemis" ${f.odenmemis ? 'checked' : ''}> Yalnız ödenmeyenler</label>
       <label class="vr-tik"><input type="checkbox" data-vr="avukat" ${f.avukat ? 'checked' : ''}> Avukata verilenler</label>
+      ${f.avukat ? `<label class="vr-alan"><span>Avukata veriliş başı</span><input class="girdi" type="date" data-vr="avBas" value="${e(f.avBas)}"></label><label class="vr-alan"><span>Avukata veriliş sonu</span><input class="girdi" type="date" data-vr="avBit" value="${e(f.avBit)}"></label>` : ''}
       ${f.bas || f.bit ? '<button class="dg dg-hafif dg-kucuk" data-vr-temizle>Tarihi temizle</button>' : ''}
     </div>
     ${l.length ? `<div class="tablo-kap"><table class="tablo tablo-mobil"><thead><tr><th>Kursiyer</th><th class="m-gizle">Taksit</th><th>Vade</th><th class="sag">Borç</th><th class="sag m-gizle">Ödenen</th><th class="sag">Kalan</th><th>Durum</th></tr></thead><tbody>${l.slice(0, SINIR).map(satir).join('')}</tbody></table></div>${l.length > SINIR ? `<p class="ipucu" style="margin-top:10px">İlk ${SINIR} satır gösteriliyor; ${l.length} satırın hepsi Excel’de.</p>` : ''}`

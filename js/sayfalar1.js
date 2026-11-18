@@ -718,13 +718,13 @@ export function kursiyerFormu(on = {}) {
 }
 
 export function kursiyerler(filtre) {
-  let sekme = filtre && ASAMALAR.includes(filtre) ? filtre : 'Tümü', q = '', sinif = '', grup = '', hizmet = '', borclu = false, bekleyen = filtre === 'bekleyen';
+  let sekme = filtre && ASAMALAR.includes(filtre) ? filtre : 'Tümü', q = '', sinif = '', grup = '', hizmet = '', borclu = false, avukatta = false, bekleyen = filtre === 'bekleyen';
   // DIG-036: hizmet türü (sürücü kursu, 100 ceza puanı eğitimi, SRC, iş makinesi): kursta birden çok tür varsa süzgeç görünür
   const HIZMET = { ehliyet: 'Sürücü kursu', egitim: '100 ceza puanı eğitimi', src: 'SRC', operator: 'İş makinesi' }, hizmetOf = k => (SINIFLAR[k.sinif] || {}).tur || 'ehliyet';
   const hizmetler = [...new Set(sb(S.kursiyerler).map(hizmetOf))].filter(x => HIZMET[x]);
   const say = a => a === 'Tümü' ? sb(S.kursiyerler).length : sb(S.kursiyerler).filter(k => k.asama === a).length;
   function satirlar() {
-    let l = sb(S.kursiyerler).filter(k => (sekme === 'Tümü' || k.asama === sekme) && (!sinif || k.sinif === sinif) && (!hizmet || hizmetOf(k) === hizmet) && (!grup || (grup === '_yok' ? !GR.kursiyerGrubu(k) : k.teorikGrup === grup)) && (!borclu || gecikenler(k).length) && (!bekleyen || GR.bekleyenMi(k)));
+    let l = sb(S.kursiyerler).filter(k => (sekme === 'Tümü' || k.asama === sekme) && (!sinif || k.sinif === sinif) && (!hizmet || hizmetOf(k) === hizmet) && (!grup || (grup === '_yok' ? !GR.kursiyerGrubu(k) : k.teorikGrup === grup)) && (!borclu || gecikenler(k).length) && (!avukatta || avukattaMi(k)) && (!bekleyen || GR.bekleyenMi(k)));
     if (q) { const s = q.toLocaleLowerCase('tr'); l = l.filter(k => (tamAd(k) + ' ' + k.tel + ' ' + odemeKodu(k)).toLocaleLowerCase('tr').includes(s)); }
     if (!l.length) return `<tr><td colspan="7">${bos('Bu filtreye uyan kursiyer yok', 'Filtreyi değiştirin ya da yeni kursiyer ekleyin.')}</td></tr>`;
     return l.map(k => {
@@ -734,7 +734,7 @@ export function kursiyerler(filtre) {
         <td class="m-gizle">${rozet(S0.ad.split(' ·')[0])} <small style="color:var(--soluk)">${S0.ad.split('· ')[1]}</small>${GR.kursiyerGrubu(k) ? `<small style="display:block;color:var(--soluk);font-size:12px">${e(GR.kursiyerGrubu(k).ad)}</small>` : ''}</td>
         <td style="min-width:150px">${yol(asamaNo(k))}<small style="color:var(--soluk);font-size:12px">${k.asama}${GR.bekleyenMi(k) ? ' · <b style="color:var(--sari-koyu,#a15c00)">bekleyen</b>' : ''}${k.muaf ? ' · muaf' : esinavsizBelgeli(k) ? ' · belgeli' : ''}${k.dsinav && k.dsinav.sonuc === 'Kaldı' ? ' · tekrar' : ''}${k.kapali ? ' · <b style="color:var(--kirmizi)">' + (k.kapali.tur === 'dondur' ? 'donduruldu' : 'kayıt kapalı') + '</b>' : ''}</small></td>
         <td class="m-gizle" style="min-width:110px">${!gerekliDireksiyon(k) ? `<small style="color:var(--soluk)">${egitimSinifi(k.sinif) ? 'Eğitim · teorik ' + (k.teorik || 0) + '/' + ((SINIFLAR[k.sinif] || {}).teorik || 0) : 'direksiyon yok'}</small>` : `<span class="sayi" style="font-size:12.5px">${k.direksiyon}/${gerekliDireksiyon(k)}</span>${ilerleme(k.direksiyon, gerekliDireksiyon(k), k.direksiyon >= gerekliDireksiyon(k) ? 'yesil' : '')}`}</td>
-        <td>${kalanBorc(k) ? `<span class="sayi">${tl(kalanBorc(k))}</span>${g.length ? '<br>' + rozet(g.length + ' taksit gecikti', 'kirmizi') : ''}${k.odeme.senetli ? ' <small style="color:var(--soluk)">senetli</small>' : ''}` : k.ucretsiz ? rozet('Ücretsiz', 'mavi') : rozet('Ödendi', 'yesil')}</td>
+        <td>${kalanBorc(k) ? `<span class="sayi">${tl(kalanBorc(k))}</span>${g.length ? '<br>' + rozet(g.length + ' taksit gecikti', 'kirmizi') : ''}${k.odeme.senetli ? ' <small style="color:var(--soluk)">senetli</small>' : ''}${avukattaMi(k) ? '<br>' + rozet('Avukatta', 'kirmizi') : ''}` : k.ucretsiz ? rozet('Ücretsiz', 'mavi') : rozet('Ödendi', 'yesil')}</td>
         <td class="m-gizle">${(() => { const r = risk(k); if (!r) return '<span style="color:var(--soluk)">—</span>'; const renk = r.puan >= 50 ? 'var(--kirmizi)' : r.puan >= 25 ? 'var(--sari)' : 'var(--yesil)'; return `<span class="risk-cubuk" title="${e(r.nedenler.join(', ') || 'Risk yok')}"><i style="width:${Math.max(6, r.puan)}%;background:${renk}"></i></span> <small style="color:var(--soluk)">${r.puan >= 50 ? 'Yüksek' : r.puan >= 25 ? 'Orta' : 'Düşük'}</small>`; })()}</td>
         <td class="m-gizle">${sd ? goreli(sd.tarih) + ' <span class="mono">' + sd.saat + '</span>' : '<span style="color:var(--soluk)">—</span>'}</td>
       </tr>`;
@@ -752,7 +752,7 @@ export function kursiyerler(filtre) {
         ${hizmetler.length > 1 ? `<select class="girdi" data-hizmet aria-label="Hizmet türü"><option value="">Bütün hizmetler</option>${hizmetler.map(x => `<option value="${x}">${HIZMET[x]} (${sb(S.kursiyerler).filter(k => hizmetOf(k) === x).length})</option>`).join('')}</select>` : ''}
         <select class="girdi" data-sinif aria-label="Sınıf"><option value="">Tüm sınıflar</option>${aktifSiniflar().map(([k, v]) => `<option value="${k}">${v.ad}</option>`).join('')}</select>
         ${(S.gruplar || []).length ? `<select class="girdi" data-grup aria-label="Dönem grubu"><option value="">Tüm gruplar</option><option value="_yok">Gruba atanmamış</option>${[...S.gruplar].sort((a, b) => String(b.baslangic || '').localeCompare(String(a.baslangic || ''))).map(g => `<option value="${e(g.id)}">${e(g.ad)}${g.sinif && SINIFLAR[g.sinif] ? ' · ' + e(SINIFLAR[g.sinif].ad.split(' ·')[0]) : ''} (${sb(S.kursiyerler).filter(x => x.teorikGrup === g.id).length})</option>`).join('')}</select>` : ''}
-        <button class="cip" data-borclu>${ik('uyari')}&nbsp;Taksiti gecikenler</button>
+        <button class="cip" data-borclu>${ik('uyari')}&nbsp;Taksiti gecikenler</button>${sb(S.kursiyerler).some(avukattaMi) ? `<button class="cip" data-avukatta>${ik('belge')}&nbsp;Avukatta (${sb(S.kursiyerler).filter(avukattaMi).length})</button>` : ''}
         <button class="cip" data-bekleyen title="Kaydı yapıldı; dönem grubuna atanmadı ya da evrakı eksik">${ik('saat')}&nbsp;Bekleyenler (${sb(S.kursiyerler).filter(GR.bekleyenMi).length})</button>
       </div>
       <div class="tablo-kap"><table class="tablo tablo-mobil"><thead><tr><th>Kursiyer</th><th>Sınıf</th><th>Aşama</th><th>Direksiyon</th><th>Kalan ödeme</th><th>Sınav riski</th><th>Sonraki ders</th></tr></thead><tbody id="tb">${satirlar()}</tbody></table></div>
@@ -765,6 +765,7 @@ export function kursiyerler(filtre) {
         if (ev.target.closest('[data-yeni]')) kursiyerFormu();
         if (yarimKayitTikla(ev)) return;
         const b = ev.target.closest('[data-borclu]'); if (b) { borclu = !borclu; b.classList.toggle('secili', borclu); ciz(); }
+        { const av = ev.target.closest('[data-avukatta]'); if (av) { avukatta = !avukatta; av.classList.toggle('secili', avukatta); ciz(); } }
         const bk = ev.target.closest('[data-bekleyen]'); if (bk) { bekleyen = !bekleyen; bk.classList.toggle('secili', bekleyen); ciz(); }
         if (ev.target.closest('[data-toplu-hesap]')) return HS.topluHesap(yenile);
         if (ev.target.closest('[data-disa]')) import('./ui.js?v=234').then(u => { u.csvIndir('kursiyerler.csv', [['Ad', 'Soyad', 'Telefon', 'Sınıf', 'Dönem grubu', 'Aşama', 'Kayıt', 'Direksiyon', 'Toplam', 'Ödenen', 'Kalan'], ...S.kursiyerler.map(x => [x.ad, x.soyad, x.tel, SINIFLAR[x.sinif].ad, (GR.kursiyerGrubu(x) || {}).ad || '', x.asama, x.kayit, x.direksiyon, x.odeme.toplam, odenen(x), kalanBorc(x)])]); bildir('Kursiyer listesi indirildi'); });
@@ -1196,11 +1197,11 @@ function odemeSekmesi(k) {
     kalan ? ['link', 'Ödeme bilgisini WhatsApp’tan gönder', 'wp'] : null,
     ['plan', 'Taksit planını yeniden böl', 'takvim'], ['ek', 'Ek kalem ekle (ek ders, özel ders, sınav, kitap…)', 'arti'],
     mudurMu() && kalan ? ['indirim', 'İndirim uygula', 'kalem'] : null, mudurMu() ? ['iade', 'İade yap', 'sifirla'] : null, mudurMu() && !k.ucretsiz ? ['ucretsiz', 'Ücretsiz kursiyer (%3)', 'kursiyer'] : null,
-    k.odeme.senetli ? ['senet', 'Senet (yazdır / PDF)', 'belge'] : null, mudurMu() && (k.odeme.taksitler || []).length ? ['senetli', k.odeme.senetli ? 'Senetli satışı kaldır' : 'Senetli satış (taksitlere senet)', 'belge'] : null, S.hareket.some(h => h.kursiyer === k.id && h.tur === 'Gelir') ? ['makbuz', 'Makbuzlar (yazdır / PDF)', 'belge'] : null,
+    k.odeme.senetli ? ['senet', 'Senet (yazdır / PDF)', 'belge'] : null, mudurMu() && (kalan || avukattaMi(k)) ? ['avukat', avukattaMi(k) ? 'Avukat takibini kapat' : 'Avukata ver', 'belge'] : null, mudurMu() && (k.odeme.taksitler || []).length ? ['senetli', k.odeme.senetli ? 'Senetli satışı kaldır' : 'Senetli satış (taksitlere senet)', 'belge'] : null, S.hareket.some(h => h.kursiyer === k.id && h.tur === 'Gelir') ? ['makbuz', 'Makbuzlar (yazdır / PDF)', 'belge'] : null,
   ].filter(Boolean);
   return `<div class="kart odeme-ozet">
     <div class="oo-ust">
-      <div class="oo-kalan${kalan ? '' : ' tamam'}"><small>Kalan borç</small><b class="sayi">${kalan ? tl(kalan) : 'Borcu yok'}</b>${k.odeme.senetli || k.ucretsiz || k.odeme.iade ? `<span>${[k.odeme.senetli ? rozet('Senetli', 'mor') : '', k.ucretsiz ? 'Ücretsiz kursiyer (' + e(k.ucretsiz.neden) + ')' : '', k.odeme.iade ? 'İade ' + tl(k.odeme.iade) : ''].filter(Boolean).join(' · ')}</span>` : ''}</div>
+      <div class="oo-kalan${kalan ? '' : ' tamam'}"><small>Kalan borç</small><b class="sayi">${kalan ? tl(kalan) : 'Borcu yok'}</b>${k.odeme.senetli || k.ucretsiz || k.odeme.iade || avukattaMi(k) ? `<span>${[avukattaMi(k) ? rozet('Avukata verildi', 'kirmizi') + ' ' + e(k.avukat.avukat || '') + ' · ' + tarih(k.avukat.tarih) : '', k.odeme.senetli ? rozet('Senetli', 'mor') : '', k.ucretsiz ? 'Ücretsiz kursiyer (' + e(k.ucretsiz.neden) + ')' : '', k.odeme.iade ? 'İade ' + tl(k.odeme.iade) : ''].filter(Boolean).join(' · ')}</span>` : ''}</div>
       ${sonraki}
     </div>
     <div class="oo-ilerleme"><div class="oo-ilerleme-yazi"><span>Ödenen <b class="sayi">${tl(od)}</b></span><span>Toplam <b class="sayi">${tl(toplam)}</b></span></div>${ilerleme(od, toplam, 'yesil')}</div>
@@ -1548,8 +1549,24 @@ export function ekKalemTahsil(k, j) {
     },
   });
 }
+// PAR-037: avukat takibi (k.avukat { tarih, avukat, aciklama, kim, kapandi? }); avukat adları kurs listesinde (S.kurs.avukatlar) birikir
+export const avukattaMi = k => !!(k && k.avukat && !k.avukat.kapandi);
+function avukatPenceresi(k) {
+  if (!mudurMu()) return bildir('Yalnız kurs müdürü', 'uyari');
+  const acik = avukattaMi(k), l = S.kurs.avukatlar || [];
+  pencere({ baslik: acik ? 'Avukat takibini kapat' : 'Avukata ver', taslak: false, icerik: acik ? `<form id="f-av" class="form-izgara"><p class="tam" style="font-size:14px">${e(tamAd(k))} · ${e(k.avukat.avukat || '')} · ${tarih(k.avukat.tarih)} tarihinde verildi.</p><div class="alan tam"><label for="av-n">Kapanış nedeni</label><select id="av-n" name="n"><option>Borç ödendi</option><option>Uzlaşıldı</option><option>Takipten vazgeçildi</option><option>Diğer</option></select></div><div class="alan tam"><label for="av-a">Açıklama</label><input id="av-a" name="a" maxlength="200"></div></form>`
+    : `<form id="f-av" class="form-izgara"><p class="tam" style="font-size:14px">${e(tamAd(k))} · kalan borç <b>${tl(kalanBorc(k))}</b></p><div class="alan"><label for="av-t">Verilme tarihi</label><input id="av-t" name="t" type="date" value="${gun(0)}" max="${gun(0)}"></div>
+      <div class="alan"><label for="av-v">Avukat</label><input id="av-v" name="v" list="av-liste" maxlength="80" required value="${e(l[0] || '')}" placeholder="Avukatın adı"><datalist id="av-liste">${l.map(x => `<option value="${e(x)}">`).join('')}</datalist></div>
+      <div class="alan tam"><label for="av-a">Açıklama</label><input id="av-a" name="a" maxlength="200" placeholder="Örn. icra takibi başlatılacak"></div></form>`,
+    altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-av">${acik ? 'Takibi kapat' : 'Avukata ver'}</button>`,
+    onAc(p) { p.querySelector('form').addEventListener('submit', ev => { ev.preventDefault(); const f = ev.target; geriAlNoktasi();
+      if (acik) { k.avukat.kapandi = { tarih: gun(0), neden: f.n.value, aciklama: f.a.value.trim(), kim: oturum.kullanici ? oturum.kullanici.ad : '' }; islem('Avukat takibini kapattı', tamAd(k) + ' · ' + f.n.value); }
+      else { const av = f.v.value.trim().replace(/\s+/g, ' '); if (!av) return bildir('Avukatın adını yazın', 'uyari'); k.avukat = { tarih: f.t.value || gun(0), avukat: av, aciklama: f.a.value.trim(), kim: oturum.kullanici ? oturum.kullanici.ad : '' }; if (!l.includes(av)) S.kurs.avukatlar = [av, ...l].slice(0, 20); islem('Avukata verdi', tamAd(k) + ' · ' + av + ' · kalan ' + tl(kalanBorc(k))); }
+      kaydet(); kapatPencere(); bildir(acik ? 'Avukat takibi kapatıldı' : 'Avukata verildi; ödeme durumu “Avukatta”'); yenile(); }); } });
+}
 export function odemeIslem(k, tur, oneri) {
   if (tur === 'ucretsiz') return MZ.ucretsizYap(k, yenile);
+  if (tur === 'avukat') return avukatPenceresi(k);
   // PAR-021: "Senedi var" işareti; taksitler senetle takip edilir (Kasa › Senetler, senet PDF'i, hatırlatma / avukat takibi)
   if (tur === 'senetli') { if (!mudurMu()) return bildir('Yalnız kurs müdürü', 'uyari'); geriAlNoktasi(); k.odeme.senetli = !k.odeme.senetli; islem(k.odeme.senetli ? 'Senetli satış yaptı' : 'Senetli satışı kaldırdı', tamAd(k)); kaydet(); bildir(k.odeme.senetli ? 'Senetli: taksitler Kasa › Senetler’de; senedi buradan yazdırın' : 'Senet işareti kaldırıldı', 'tamam', true); return yenile(); }
   const yi = tur === 'iade' ? MZ.yasalIade(k) : null;
