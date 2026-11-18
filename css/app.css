@@ -3656,3 +3656,14 @@ a.kart.gosterge { text-decoration: none; color: inherit; display: block; }
 .sgn-gun-ac { border: 0; background: none; color: var(--mavi, #0a4da2); font-size: 12.5px; cursor: pointer; padding: 2px 4px; }
 .sgn-gun-sil { border: 0; background: none; color: var(--soluk); font-size: 17px; line-height: 1; cursor: pointer; padding: 2px 6px; border-radius: 50%; min-width: 28px; min-height: 28px; }
 .sgn-gun-sil:hover { background: var(--cizgi-2); color: var(--kirmizi); }
+
+/* SNV-064: komisyon listesi penceresi */
+.km-bloklar { display: grid; gap: 14px; margin-top: 14px; }
+.km-blok { border: 1px solid var(--cizgi); border-radius: 10px; overflow: hidden; }
+.km-blok-bas { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 12px; background: var(--panel-2); }
+.km-blok-bas span { color: var(--soluk); font-size: 13px; flex: 1; }
+.km-tablo { width: 100%; border-collapse: collapse; font-size: 13px; }
+.km-tablo th, .km-tablo td { padding: 5px 8px; border-top: 1px solid var(--cizgi-2); text-align: left; white-space: nowrap; }
+.km-tablo th { color: var(--soluk); font-weight: 600; font-size: 12px; }
+.km-blok { overflow-x: auto; }
+.km-eksik td { background: rgba(213, 43, 30, .08); }

@@ -322,9 +322,11 @@ export const RESMI = {
   ek10: ['Sınav aracı değişiklik formu (EK-10)', 'Arızalanan sınav aracının yerine başka araç', 'ek10'],
   dersdefteri: ['Teorik ders defteri (md.42)', 'Gruba göre işlenen dersler, öğretici ve katılım', 'grup'],
   hazir: ['Sınava hazır yazısı (md.7/7)', 'Usta öğreticinin direksiyon sınavına hazır bildirimi; taranıp MEBBİS’e yüklenir', 'kursiyer'],
+  komisyon: ['Sınav komisyon listesi (Excel)', 'MEM’e dekontla verilir; komisyon ve aday satırları sınav gününden', 'sinav'],
   meis: ['Dönem (MEİS) istatistiği', 'Yaş × öğrenim × cinsiyet; genel ve sertifika başına tablo', 'donem'],
 };
 export function resmiAc(tur, id, takip) {
+  if (tur === 'komisyon') return import('./komisyon.js?v=234').then(m => m.komisyonSec());  // SNV-063
   if (takip) takipFormu = takip;
   const [baslik, , tip] = RESMI[tur];
   const dSinavlar = () => sbSinav(S.sinavlar).filter(s => /direksiyon/i.test(s.tur)).sort((a, b) => b.tarih.localeCompare(a.tarih));

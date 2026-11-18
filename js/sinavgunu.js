@@ -7,8 +7,9 @@ import * as MEB from './eklenti.js?v=234';
 
 // SNV-041: dilimler 40 dk + 5 dk ara, öğle arası 12:10–13:00 (mebtoplu.js'teki MEBBİS randevu dilimleriyle aynı)
 export const SINAV_SAATLERI = ['08:30', '09:15', '10:00', '10:45', '11:30', '13:00', '13:45', '14:30', '15:15', '16:00'];
-const MOTO = /^(M|A1|A2|A)$/;
-const grupOf = k => MOTO.test(k.sinif) ? 'moto' : 'oto';
+// sınıf grupları (MTSK Yön. md.31/1-d; SOR-042): B grubu araçta, C/D grubu takip aracına geçerek, motosiklet ve B1/F takip aracında yapılır; aynı komisyona girmez
+const GRUP = { moto: /^(M|A1|A2|A|B1|F)$/, agir: /^(C1?E?|D1?E?|CE|DE)$/ }, GRUP_AD = { oto: 'Otomobil', agir: 'Kamyon ve otobüs', moto: 'Motosiklet' };
+const grupOf = k => GRUP.moto.test(k.sinif) ? 'moto' : GRUP.agir.test(k.sinif) ? 'agir' : 'oto';
 const sinavAraci = k => { const d = (S.dersler || []).filter(x => x.kursiyer === k.id && x.arac).sort((a, b) => b.tarih.localeCompare(a.tarih))[0]; return arac(d && d.arac) || (S.araclar || []).find(a => a.egitmen === k.egitmen) || null; };
 // SNV-040: sınıf grubuna göre (motosiklet ayrı komisyonda), elle olanlar yerinde, sonra usta, sonra ad; komisyonBoy'luk komisyonlar; komisyon içinde dilim; aynı araç aynı saatte iki komisyonda olamaz
 export function sinavAtamasi(s) {
@@ -17,7 +18,7 @@ export function sinavAtamasi(s) {
   const elle = k => at[k.id] && at[k.id].elle && at[k.id].kom;
   ks.filter(elle).forEach(k => l.push({ k, kom: +at[k.id].kom, grup: grupOf(k) }));
   let kom = 0;
-  ['oto', 'moto'].forEach(g => {
+  ['oto', 'agir', 'moto'].forEach(g => {
     const grup = ks.filter(k => !elle(k) && grupOf(k) === g).sort((a, b) => String(a.egitmen || '').localeCompare(String(b.egitmen || '')) || tamAd(a).localeCompare(tamAd(b), 'tr'));
     for (let i = 0; i < grup.length; i += boy) { kom++; grup.slice(i, i + boy).forEach(k => l.push({ k, kom, grup: g })); }
   });
@@ -80,8 +81,8 @@ export function sinavGunu(id) {
     <div class="kart sgn-ust"><div class="kart-govde"><div class="sgn-baslik"><b>${tarihUzun(s.tarih)}</b><span>${e(s.saat || '')} · ${e(s.yer || '')}</span></div>
       <p class="sgn-ozet">${!l.length ? 'Henüz aday yok' : l.length + ' aday'}${!es && l.length ? ` · ${koms.length} komisyon (${koms.map(c => l.filter(x => x.kom === c).length).join(' + ')})` : ''}${bekleyen && fark(s.tarih) <= 0 ? ` · ${bekleyen} sonuç bekliyor` : ''}</p>
       ${dagilim ? `<p class="sgn-dagilim">${e(dagilim)}</p>` : ''}${!es && fark(s.tarih) >= 0 ? sureler(s) : ''}${fark(s.tarih) >= 0 ? otoSatiri(s) : ''}
-      <div class="sgn-dugmeler">${fark(s.tarih) <= 0 && bekleyen ? `<button class="dg dg-ana dg-kucuk" data-sg-sonuc>Sonuçları gir</button>` : ''}${fark(s.tarih) >= 0 ? `<button class="dg dg-cizgi dg-kucuk" data-sg-ekle>${ik('arti')}Kursiyer ekle</button>${l.length ? `<button class="dg dg-wp dg-kucuk" data-sg-hatir>${ik('wp')}Hepsine hatırlat</button>` : ''}` : ''}${l.length ? `<button class="dg dg-cizgi dg-kucuk" data-sg-yazdir>${ik('belge')}Yazdır</button>` : ''}${mebDugme(s)}</div></div></div>
-    ${l.length ? koms.map(c => { const x = l.filter(y => y.kom === c); return `<div class="kart sgn-kom"><div class="kart-bas"><h3>${es ? 'Adaylar' : c + '. komisyon'}</h3><small>${x.length} aday${!es ? ' · ' + (new Set(x.map(y => y.grup)).size > 1 ? 'Motosiklet ve otomobil karışık' : x[0].grup === 'moto' ? 'Motosiklet' : 'Otomobil') : ''}</small>${!es && new Set(x.map(y => y.grup)).size > 1 ? `<div class="sag">${rozet('Motosiklet ayrı komisyonda olmalı', 'kirmizi')}</div>` : ''}</div><ul class="liste">${x.sort((a, b) => String(a.saat).localeCompare(String(b.saat))).map(y => satir(s, y)).join('')}</ul></div>`; }).join('') : `<div class="kart">${bos('Bu oturumda aday yok', 'Kursiyer ekle ya da Sınava girecekler’den yazın.')}</div>`}
+      <div class="sgn-dugmeler">${fark(s.tarih) <= 0 && bekleyen ? `<button class="dg dg-ana dg-kucuk" data-sg-sonuc>Sonuçları gir</button>` : ''}${fark(s.tarih) >= 0 ? `<button class="dg dg-cizgi dg-kucuk" data-sg-ekle>${ik('arti')}Kursiyer ekle</button>${l.length ? `<button class="dg dg-wp dg-kucuk" data-sg-hatir>${ik('wp')}Hepsine hatırlat</button>` : ''}` : ''}${l.length ? `<button class="dg dg-cizgi dg-kucuk" data-sg-yazdir>${ik('belge')}Yazdır</button>` : ''}${!es && l.length ? `<button class="dg dg-cizgi dg-kucuk" data-sg-komisyon>${ik('indir')}Komisyon listesi</button>` : ''}${mebDugme(s)}</div></div></div>
+    ${l.length ? koms.map(c => { const x = l.filter(y => y.kom === c); return `<div class="kart sgn-kom"><div class="kart-bas"><h3>${es ? 'Adaylar' : c + '. komisyon'}</h3><small>${x.length} aday${!es ? ' · ' + (new Set(x.map(y => y.grup)).size > 1 ? 'karışık sınıf grubu' : GRUP_AD[x[0].grup]) : ''}</small>${!es && new Set(x.map(y => y.grup)).size > 1 ? `<div class="sag">${rozet('Sınıf grupları ayrı komisyonda olmalı', 'kirmizi')}</div>` : ''}</div><ul class="liste">${x.sort((a, b) => String(a.saat).localeCompare(String(b.saat))).map(y => satir(s, y)).join('')}</ul></div>`; }).join('') : `<div class="kart">${bos('Bu oturumda aday yok', 'Kursiyer ekle ya da Sınava girecekler’den yazın.')}</div>`}
     ${kalanlar.length ? kalanlarHtml(s, kalanlar) : ''}`,
     baglan(kap) { baglan(kap, s); } };
 }
@@ -128,6 +129,7 @@ function baglan(kap, s) {
   kap.addEventListener('click', async ev => { const t = ev.target;
     const sa = t.closest('[data-sg-aday]'); if (sa && !t.closest('a,button') && s.tur === 'Direksiyon') return satirSayfasi(s, kursiyer(sa.dataset.sgAday), yenile);
     if (t.closest('[data-sg-yazdir]')) return yazdir(s);
+    if (t.closest('[data-sg-komisyon]')) return (await import('./komisyon.js?v=234')).komisyonPenceresi(s);
     const ed = t.closest('[data-sg-ekders]'); if (ed) return (await import('./sayfalar1.js?v=234')).ekDersOner(kursiyer(ed.dataset.sgEkders), yenile);
     if (t.closest('[data-sg-sonuc]')) return (await import('./sayfalar2.js?v=234')).sonucGir(s);
     if (t.closest('[data-sg-ekle]')) return (await import('./sayfalar2.js?v=234')).sinavaEkle(s);

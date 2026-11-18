@@ -26,6 +26,7 @@ const SABLONLAR = [
   ['ek8', 'Eğitim ve sınav aracı izin formu (EK-8)', 'Her araç için; MEM onayına gider', 'resmi'],
   ['aracdosya', 'Araç evrak dosyası (md.17/3)', 'Araçta bulunacaklar, kursiyer ve saat listesi; istenirse EK-8, EK-5, takip formları', 'resmi'],
   ['ek12', 'Sınav aracı kontrol formu (EK-12)', 'Sınav günü her araç için', 'resmi'],
+  ['komisyon', 'Sınav komisyon listesi (Excel)', 'MEM’e dekontla verilir; komisyon ve aday satırları sınav gününden', 'resmi'],
   ['ek10', 'Sınav aracı değişiklik formu (EK-10)', 'Arızalanan sınav aracının yerine başka araç', 'resmi'],
   ['dersdefteri', 'Teorik ders defteri (md.42)', 'Gruba göre işlenen dersler, öğretici ve katılım', 'resmi'],
   ['hazir', 'Sınava hazır yazısı (md.7/7)', 'Usta öğreticinin uygulama sınavına hazır bildirimi; taranıp MEBBİS’e yüklenir', 'resmi'],
