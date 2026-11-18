@@ -73,7 +73,14 @@ export function personelKarti(tur, id, sekme) {
       <div class="alan tam"><span class="et">Branşları</span><div class="secim">${BRANSLAR.map(g => `<label><input type="checkbox" name="brans" value="${e(g)}" ${branslar.some(b => b.toLocaleLowerCase('tr') === g.toLocaleLowerCase('tr')) ? 'checked' : ''}><span>${e(g)}</span></label>`).join('')}</div></div>
       <div class="alan"><label>Statü</label><select name="statu"><option value="">Seçilmedi</option>${STATULER.map(([v, t]) => `<option value="${v}" ${String(x.mebStatu ?? '') === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
       <div class="alan"><label>Ders ücreti (₺/saat)</label><input name="dersUcreti" inputmode="numeric" value="${e(x.dersUcreti || '')}" placeholder="ders ücretli statüde"><small style="color:var(--soluk)">Ders ücretli personelin hakedişi yapılan ders saati × bu ücret.</small></div>
-      <div class="alan"><label>Yıllık izin hakkı (gün)</label><input name="yillik" inputmode="numeric" value="${e(x.yillikIzinGun || '')}" placeholder="kıdeme göre ${yillikIzin({ ...x, yillikIzinGun: 0 }).hak}"></div></form>`;
+      <div class="alan"><label>Yıllık izin hakkı (gün)</label><input name="yillik" inputmode="numeric" value="${e(x.yillikIzinGun || '')}" placeholder="kıdeme göre ${yillikIzin({ ...x, yillikIzinGun: 0 }).hak}"></div>
+      ${tur !== 'personel' ? (() => { const o = x.ogrenim || {}; return `<div class="alan tam" style="border-top:1px solid var(--cizgi-2);padding-top:10px"><b style="color:var(--murekkep)">Öğrenim bilgileri</b><small style="display:block;color:var(--soluk)">MEBBİS’te yeni çalışma izninin 2. aşaması (OOK13006) bu bilgilerle doldurulur.</small></div>
+      <div class="alan"><label>Mezuniyet okul cinsi</label><select name="o_okulCinsi"><option value="">Seçilmedi</option>${['Lise', 'Ön Lisans', 'Lisans', 'Yüksek Lisans', 'Doktora'].map(t => `<option ${o.okulCinsi === t ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+      <div class="alan"><label>Üniversite / okul</label><input name="o_okul" value="${e(o.okul || '')}"></div><div class="alan"><label>Fakülte</label><input name="o_fakulte" value="${e(o.fakulte || '')}"></div>
+      <div class="alan"><label>Yüksekokul</label><input name="o_yuksekokul" value="${e(o.yuksekokul || '')}"></div><div class="alan"><label>Ana bilim dalı</label><input name="o_anabilim" value="${e(o.anabilim || '')}"></div>
+      <div class="alan"><label>Bölüm</label><input name="o_bolum" value="${e(o.bolum || '')}"></div><div class="alan"><label>Mezuniyet tarihi</label><input name="o_mezuniyet" type="date" value="${e(o.mezuniyet || '')}"></div>
+      <div class="alan"><label>Belge cinsi</label><select name="o_belgeCinsi"><option value="">Seçilmedi</option>${['Diploma', 'Geçici Mezuniyet Belgesi', 'Çıkış Belgesi'].map(t => `<option ${o.belgeCinsi === t ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+      <div class="alan"><label>Belge sayısı</label><input name="o_belgeSayi" value="${e(o.belgeSayi || '')}"></div><div class="alan"><label>Belge tarihi</label><input name="o_belgeTarih" type="date" value="${e(o.belgeTarih || '')}"></div>`; })() : ''}</form>`;
     altlik = `${ozel ? '<button class="dg dg-hafif" data-pk-sil style="margin-right:auto">Personeli çıkar</button>' : ''}<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-pk">Kaydet</button>`;
   } else if (durum.sekme === 'evrak') {
     const l = (x.evraklar || []).slice().sort((a, b) => (a.bitis || '9999').localeCompare(b.bitis || '9999'));
@@ -148,6 +155,7 @@ export function personelKarti(tur, id, sekme) {
             Object.assign(x, { ad, tel: f.tel.value.trim(), tc: tc || null, maas: tutarOku(f.maas.value) || 0, baslama: f.baslama.value || x.baslama || '', gorev: gorevler.join(', ') });
           }
           Object.assign(x, { gorevler, branslar: br, dersUcreti: tutarOku(f.dersUcreti.value) || null, mebStatu: f.statu.value === '' ? null : f.statu.value, yillikIzinGun: Math.min(60, Math.max(0, parseInt(f.yillik.value, 10) || 0)) || null });
+          if (tur !== 'personel') { const o = {}; ['okulCinsi', 'okul', 'fakulte', 'yuksekokul', 'anabilim', 'bolum', 'mezuniyet', 'belgeCinsi', 'belgeSayi', 'belgeTarih'].forEach(k => { const v = (f['o_' + k].value || '').trim(); if (v) o[k] = v; }); x.ogrenim = Object.keys(o).length ? o : null; }
           if (tur === 'ogretmen' && br.length && !br.some(b => b.toLocaleLowerCase('tr') === String(x.brans || '').toLocaleLowerCase('tr'))) x.brans = br[0];
           islem('Personel kartını düzenledi', x.ad); kaydet(); bildir('Kaydedildi'); kapatPencere(); return import('./app.js?v=234').then(a => a.yenile());
         }

@@ -130,6 +130,27 @@ export function izinIsi(eg) {
     al('Branş 1', 'Direksiyon', ['cmbbrans1', 'brans1']),
   ].filter(Boolean) };
 }
+// PER-025: yeni çalışma izninin 2. aşaması OOK13006 'Personel Öğrenim Bilgileri Giriş' (OOK13001 listesinden 'Aç' ile girilir); ekranda doldurulur
+export function ogrenimIsi(eg) {
+  const o = eg.ogrenim || {}, al = (etiket, deger, es) => alan(etiket, deger, es);
+  return { id: 'ogrenim-' + eg.id, tur: 'ogrenim', ref: { egitmen: eg.id }, bitti: false, meta: { ad: eg.ad, egitmen: eg.id, tarih: gun(0), detay: 'Öğrenim bilgileri' }, son: gun(3), neden: 'Çalışma izni', baslik: eg.ad, alanlar: [
+    al('Mezuniyet Okul Cinsi', o.okulCinsi, ['mezuniyetokulcinsi', 'okulcinsi']), al('Üniversite', o.okul, ['universite', 'okul']), al('Fakülte', o.fakulte, ['fakulte']), al('Yüksekokul', o.yuksekokul, ['yuksekokul']),
+    al('Ana Bilim Dalı', o.anabilim, ['anabilimdali']), al('Bölüm', o.bolum, ['bolum', 'bolumu']), al('Mezuniyet Tarihi', tr(o.mezuniyet), ['mezuniyettarihi']),
+    al('Belge Cinsi', o.belgeCinsi, ['belgecinsi']), al('Belge Sayısı', o.belgeSayi, ['belgesayisi']), al('Belge Tarihi', tr(o.belgeTarih), ['belgetarihi']),
+  ].filter(Boolean) };
+}
+export function ogrenimGonder(eg) {
+  if (!eklenti.var) return kurulumPenceresi();
+  { const v = String(eklenti.surum || '0').split('.').map(Number); if (v[0] < 1 || (v[0] === 1 && (v[1] || 0) < 16)) return bildir('Öğrenim formunu doldurmak için Yardımcı 1.16.0 gerekir; MEB işlemleri › MEBBİS Yardımcısı’ndan güncelleyin', 'uyari'); }
+  if (!MK.onaylayabilir()) return bildir('MEBBİS işini kurs müdürü ya da ön büro başlatır', 'uyari');
+  if (!MK.kabulDenetle(() => ogrenimGonder(eg))) return;
+  if (cokSube() && !seciliSube()) return bildir('Önce üstten şube seçin; her şubenin işleri kendi MEBBİS hesabına girilir', 'uyari');
+  const is = ogrenimIsi(eg); if (!is.alanlar.length) return bildir('Kartta öğrenim bilgisi yok; personel kartı › Genel’de yazın', 'uyari');
+  sayfadan('kuyruk', { isler: [is], kurs: S.kurs.ad, oto: true });
+  S.mebDurum = S.mebDurum || {}; S.mebDurum[is.id] = { durum: 'gonderildi', zaman: Date.now(), is: 'ekranda', tur: 'ogrenim', baslik: MK.maskele(eg.ad).slice(0, 80) };
+  islem('MEBBİS’te öğrenim bilgisi girişini başlattı', eg.ad); kaydet(); yenileFn();
+  bildir('MEBBİS’te Eklenecek Çalışma İzin Listesi’nden (OOK13001) kişiyi “Aç”ın; öğrenim bilgileri ekranında Yardımcı formu doldurur, Kaydet’e siz basarsınız.');
+}
 export function izinIstegiGonder(eg) {
   if (!eklenti.var) return kurulumPenceresi();
   { const v = String(eklenti.surum || '0').split('.').map(Number); if (v[0] < 1 || (v[0] === 1 && (v[1] || 0) < 16)) return bildir('Çalışma izni formunu doldurmak için Yardımcı 1.16.0 gerekir; MEB işlemleri › MEBBİS Yardımcısı’ndan güncelleyin', 'uyari'); }
@@ -177,6 +198,7 @@ function bitenleriIsle(l) {
     if (b.tur === 'sinav') { const s = S.sinavlar.find(x => x.id === r.sinav); if (s) { s.mebKisi = [...new Set([...(s.mebKisi || []), r.kursiyer])]; if ((s.kursiyerler || []).every(x => s.mebKisi.includes(x))) s.mebBildirim = true; n++; } }
     if (b.tur === 'odeme') { const h = (S.hareket || []).find(x => x.id === r.hareket); if (h && !h.meb) { h.meb = gun(0); n++; } }
     if (b.tur === 'izin') { const eg = egitmen(r.egitmen); if (eg) { eg.mebIzinIstek = { ...(eg.mebIzinIstek || {}), girildi: gun(0) }; n++; } }
+    if (b.tur === 'ogrenim') { const eg = egitmen(r.egitmen); if (eg && eg.mebIzinIstek) { eg.mebIzinIstek = { ...eg.mebIzinIstek, ogrenim: gun(0) }; n++; } }
   });
   // Ekranda doldur yolunda Kaydet'e kullanıcı basar: iz ve işlem kaydı "elle girildi (Yardımcı formu doldurdu)" olarak düşer
   S.mebDurum = S.mebDurum || {};

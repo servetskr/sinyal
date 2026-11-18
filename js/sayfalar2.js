@@ -577,7 +577,7 @@ const IZIN_TON = { bitti: 'kirmizi', bugun: 'kirmizi', yakin: 'turuncu', uyari: 
 export function ustaMebRozet(x) {
   const d = izinDurumu(x), m = x.meb || {}, hs = haftalikSinir(x);
   const n = haftaDers(x.id);
-  const rz = d.tur === 'yok' ? '' : rozet(d.tur === 'bitti' ? `Çalışma izni bitti · ${tarih(d.bit)}` : d.tur === 'bugun' ? 'Çalışma izni bugün bitiyor' : `Çalışma izni ${tarih(d.bit)} · ${d.kalan} gün${d.tur === 'ok' ? '' : ' kaldı'}`, IZIN_TON[d.tur]);
+  const rz = d.tur === 'yok' ? '' : `<span title="Çalışma izni bitişi ${tamTarih(d.bit)}">${rozet(d.tur === 'bitti' ? 'Çalışma izni bitti' : d.tur === 'bugun' ? 'Çalışma izni bugün bitiyor' : d.tur === 'ok' ? `Çalışma izni ${tamTarih(d.bit)}` : `Çalışma izni ${d.kalan} gün kaldı`, IZIN_TON[d.tur])}</span>`;
   const kaynak = { elle: 'kartta yazılı', 'Maaş KDS': 'MEBBİS Maaş KDS', 'Ücret KDS': 'MEBBİS Ücret KDS', varsayılan: 'ÖÖKY md.26/5', müdür: 'müdür, ÖÖKY md.26/6' }[hs.kaynak];
   const satir = `<div class="belge-satir"><span>İzin no</span><b${x.calismaIzinNo ? ' class="mono"' : ' style="color:var(--kirmizi)"'}>${x.calismaIzinNo ? e(x.calismaIzinNo) : 'Yok'}</b>${m.izinFark ? rozet('MEBBİS’te farklı: ' + m.izinFark, 'kirmizi') : ''}</div>
     ${x.mebYetki && (x.mebYetki.uygulama.length || x.mebYetki.teorik.length) ? `<div class="belge-satir"><span>MEBBİS yetkisi</span><b>${e([x.mebYetki.uygulama.length ? 'uygulama ' + x.mebYetki.uygulama.join(', ') : '', x.mebYetki.teorik.length ? 'teorik ' + x.mebYetki.teorik.join(', ') : ''].filter(Boolean).join(' · '))}</b></div>` : ''}
@@ -586,7 +586,10 @@ export function ustaMebRozet(x) {
   let not = '';
   if (m.ayrildi) { const ileri = S.dersler.filter(y => y.egitmen === x.id && y.durum === 'Planlandı' && fark(y.tarih) >= 0).length;
     not = `<div class="ipucu uyari" style="margin:8px 0 0;flex-wrap:wrap;font-size:13px">${isaret('uyari', 18)}<span style="flex:1 1 180px">MEBBİS’te ${tarih(m.ayrildi)} tarihinde görevden ayrılmış görünüyor${m.ayrilmaNedeni ? ' (' + e(m.ayrilmaNedeni) + ')' : ''}.${ileri ? ` Önce ${ileri} planlı dersini başka ustaya taşıyın.` : ''}</span>${mudurMu() ? `<button class="dg dg-cizgi dg-kucuk" data-usta-cikar="${x.id}">Ekipten çıkar</button>` : ''}</div>`; }
-  if (x.mebIzinIstek) not += `<div class="ipucu" style="margin:8px 0 0;font-size:13px">${isaret('bilgi', 18)}<span>${x.mebIzinIstek.girildi ? `Çalışma izni isteği ${tarih(x.mebIzinIstek.girildi)} günü MEBBİS’e girildi; il/ilçe MEM onayı bekleniyor. Onaylanınca “MEBBİS’ten güncelle” yeni bitişi alır.` : `Çalışma izni isteği ${tarih(x.mebIzinIstek.tarih)} günü başlatıldı; MEBBİS’te Kaydet’e basılınca Yardımcı’da “Kaydettim” deyin.`}</span></div>`;
+  // PER-025: yeni çalışma izni üç aşama — (1) Çalışma İzni Ekle OOK13002, (2) Öğrenim Bilgileri OOK13006, (3) Çalışma İzni Onaylama OOK13007; sonra il/ilçe MEM onayı
+  if (x.mebIzinIstek) { const q = x.mebIzinIstek, ad = [['girildi', 'Çalışma izni eklendi (OOK13002)'], ['ogrenim', 'Öğrenim bilgileri girildi (OOK13006)'], ['onay', 'Kurum onayladı (OOK13007)']], sira = ad.findIndex(([k]) => !q[k]);
+    const dug = sira === 0 ? `<button class="dg dg-hafif dg-kucuk" data-usta-izin-iste="${x.id}">Formu yeniden doldur</button>` : sira === 1 ? `<button class="dg dg-hafif dg-kucuk" data-izin-ogrenim="${x.id}">Ekranda doldur</button><button class="dg dg-hafif dg-kucuk" data-izin-adim="ogrenim:${x.id}">Girildi</button>` : sira === 2 ? `<button class="dg dg-hafif dg-kucuk" data-izin-adim="onay:${x.id}">Onayladım</button>` : '';
+    not += `<div class="ipucu" style="margin:8px 0 0;font-size:13px;flex-direction:column;align-items:stretch;gap:4px"><b style="color:var(--murekkep)">Çalışma izni isteği · ${tarih(q.tarih)}</b><ol style="margin:0 0 0 18px;display:grid;gap:2px">${ad.map(([k, t], n) => `<li style="${q[k] ? 'color:var(--yesil)' : n === sira ? 'font-weight:700' : 'color:var(--soluk)'}">${t}${q[k] ? ' · ' + tarih(q[k]) : ''}</li>`).join('')}<li style="${sira < 0 ? 'font-weight:700' : 'color:var(--soluk)'}">İl/ilçe MEM onayı${sira < 0 ? ' bekleniyor; onaylanınca “MEBBİS’ten güncelle” yeni bitişi alır' : ''}</li></ol>${mudurMu() ? `<span style="display:flex;gap:6px;flex-wrap:wrap">${dug}<button class="dg dg-hafif dg-kucuk" data-izin-adim="iptal:${x.id}">İsteği kapat</button></span>` : ''}</div>`; }
   if (!m.ayrildi && x.mebGorevdeDegil) not += `<div class="ipucu uyari" style="margin:8px 0 0;font-size:13px">${isaret('uyari', 18)}<span>MEBBİS’in görevdeki personel listesinde yok (${tarih(x.mebGorevdeDegil)} okundu). Çalışma izni bitmiş ya da kayıt farklı olabilir; MEBBİS’te kontrol edin.</span></div>`;
   return { rozet: rz, satir, not };
 }
@@ -740,6 +743,10 @@ export function filo(alt) {
         if (t.closest('[data-kimlik-kartlari]')) return kimlikKartlari();
         { const pk = t.closest('[data-per-kart]'); if (pk) { const [tur, id] = pk.dataset.perKart.split(':'); return PK.personelKarti(tur, id, 'genel'); } }
         if (t.closest('[data-personel-ekle]')) return PK.personelEkle();
+        { const io = t.closest('[data-izin-ogrenim]'); if (io) { const x = egitmen(io.dataset.izinOgrenim); return x && EKL.ogrenimGonder(x); } }
+        { const ia = t.closest('[data-izin-adim]'); if (ia) { const [adim, id] = ia.dataset.izinAdim.split(':'), x = egitmen(id); if (!x || !x.mebIzinIstek) return;
+          if (adim === 'iptal') { delete x.mebIzinIstek; islem('Çalışma izni isteğini kapattı', x.ad); } else { x.mebIzinIstek[adim] = gun(0); islem(adim === 'onay' ? 'Çalışma izni isteğini kurum olarak onayladı (MEBBİS)' : 'Öğrenim bilgilerini MEBBİS’e girdi', x.ad); }
+          kaydet(); return yenile(); } }
         { const dv = t.closest('[data-usta-davet]'); if (dv) { const x = egitmen(dv.dataset.ustaDavet); return x && ustaDavet(x); } }
         // PER-027: MEBBİS'teki personelden kart — usta öğretici ise usta kartı, değilse teorik öğretmen kartı (bilgiler dolu açılır, kullanıcı kaydeder)
         { const pe = t.closest('[data-meb-per-ekle]'); if (pe) { const y = mebPersonelBekleyen().yeni[+pe.dataset.mebPerEkle]; if (!y) return;

@@ -139,6 +139,8 @@
     ['odeme', 'Fatura', 'fatura kayıt'],
     // PER-010: OOK13002 'Çalışma İzni Ekle' (iç başlık 'Personel İstekleri'); güvenlik kodu, Bilgileri Getir, fotoğraf ve Kaydet kullanıcıda
     ['izin', 'Çalışma izni', 'çalışma izni ekle'],
+    // PER-025: OOK13006 'Personel Öğrenim Bilgileri Giriş' (OOK13001 'Eklenecek Çalışma İzin Listesi'nden Aç); Kaydet kullanıcıda
+    ['ogrenim', 'Öğrenim bilgileri', 'personel öğrenim bilgileri giriş'],
   ];
   const AD = Object.fromEntries(TURLER.map(x => [x[0], x[1]])), FORM = Object.fromEntries(TURLER.map(x => [x[0], x[2]])), SIRA = Object.fromEntries(TURLER.map((x, i) => [x[0], i]));
   const AL = [
