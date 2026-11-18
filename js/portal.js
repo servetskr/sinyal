@@ -346,6 +346,7 @@ const EG_SEKME = [['bugun', 'Bugün', 'direksiyon'], ['hafta', 'Program', 'takvi
 export function egitmenPortal() {
   const usta = oturum.kullanici && oturum.kullanici.rol === 'usta';
   if (usta) egId = oturum.kullanici.usta;
+  else if (!egId && oturum.kullanici && oturum.kullanici.usta) egId = oturum.kullanici.usta;  // YON-057: müdür / ön büro aynı zamanda usta öğretici
   const eg = egitmen(egId) || (!usta && S.egitmenler[0]);
   if (!eg) return { baslik: 'Öğretmen ekranı', alt: 'Telefondan kullanılan ekran', html: `<div class="portal portal-og"><div class="u-bos">${ik('kursiyer')}<b>${usta ? 'Hesabın bir öğretmen kaydına bağlı değil' : 'Henüz öğretmen yok'}</b><p>${usta ? 'Kurs müdürü Ayarlar › Kullanıcılar’dan seni yeniden davet etmeli.' : 'Filo › Öğretmenler’den öğretmen ekleyince ders ekranı burada görünür.'}</p></div></div>` };
   egId = eg.id;
