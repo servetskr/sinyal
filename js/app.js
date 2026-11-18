@@ -84,8 +84,12 @@ const SAYFALAR = {
   mevzuat: MZ.mevzuat, ilanlar: IL.ilanlar,
 };
 const ROL_AD = { mudur: 'Kurs müdürü', sekreter: 'Ön büro', usta: 'Usta öğretici', ortak: 'Ortak' };
-const YASAK = { mudur: [], sekreter: ['raporlar', 'ayarlar', 'guven', 'kurulum', 'senaryo', 'karlilik', 'analiz'], usta: Object.keys(SAYFALAR).filter(k => !['egitmen', 'imza-geldi'].includes(k)), ortak: Object.keys(SAYFALAR) };
-const izinli = ad => { const u = oturum.kullanici; return u && !(YASAK[u.rol] || Object.keys(SAYFALAR)).includes(ad) && !((u.ziyaretci || u.bulut) && ad === 'senaryo') && ekranYetkili(ad); };  // YON-018: müdürün kapattığı ekran ön büroya görünmez
+const YASAK = { mudur: [], sekreter: ['raporlar', 'ayarlar', 'guven', 'kurulum', 'senaryo', 'karlilik', 'analiz'], usta: Object.keys(SAYFALAR).filter(k => !['egitmen', 'imza-geldi'].includes(k)), ortak: Object.keys(SAYFALAR),
+  // YON-073: teorik öğretmen yalnız teorik dersler ve yoklama; muhasebe / mali müşavir yalnız kasa (salt okunur); şube müdürü ön büro gibi, raporlar açık (kendi şubesi)
+  teorik: Object.keys(SAYFALAR).filter(k => !['teorik'].includes(k)), muhasebe: Object.keys(SAYFALAR).filter(k => !['kasa'].includes(k)), subemudur: ['ayarlar', 'guven', 'kurulum', 'senaryo'] };
+// rolün ana ekranı
+export const anaSayfa = (u = oturum.kullanici) => !u ? '#/genel' : u.rol === 'usta' ? '#/egitmen' : u.rol === 'teorik' ? '#/teorik' : u.rol === 'muhasebe' ? '#/kasa' : '#/genel';
+const izinli = ad => { const u = oturum.kullanici; return u && !(YASAK[u.gorev === 'subemudur' ? 'subemudur' : u.rol] || Object.keys(SAYFALAR)).includes(ad) && !((u.ziyaretci || u.bulut) && ad === 'senaryo') && ekranYetkili(ad); };  // YON-018: müdürün kapattığı ekran ön büroya görünmez
 
 // Menü günlük işe göre: önce bugün, sonra öğrenci işleri, para, kurum işleri, analiz; az kullanılanlar en altta
 const MENU = [
@@ -190,7 +194,7 @@ function iskelet() {
         ${(S.subeler || []).length > 1 && oturum.kullanici.rol !== 'usta' ? `<label class="sube-sec"><span class="gizli-et">Şube</span><select data-sube aria-label="Şube" ${kullaniciSubesi() ? 'disabled title="Hesabınız bu şubeyle sınırlı"' : ''}>${['', ...S.subeler.map(x => x.id)].map(id => `<option value="${id}" ${gorunum.sube === id ? 'selected' : ''}>${id ? e(S.subeler.find(x => x.id === id).ad) : 'Tüm şubeler'}</option>`).join('')}</select></label>` : ''}
         <button class="arama" data-ara aria-label="Ara">${ik('ara')}<span>Kursiyer, aday, plaka ara</span><kbd>⌘K</kbd></button>
         ${oturum.kullanici.rol !== 'usta' && izinli('mevzuat') ? `<a class="asistan-dugme" href="#/mevzuat" title="Mevzuat asistanı: yönetmelik ve MEB yazılarından dayanaklı cevap" aria-label="Mevzuat asistanına sor">${ik('robot')}<span>Asistana sor</span></a>` : ''}
-        ${oturum.kullanici.rol !== 'usta' ? `<button class="yeni-dugme" data-yeni-menu aria-label="Yeni ekle">${ik('arti')}<span>Yeni</span></button>` : ''}
+        ${!['usta', 'teorik', 'muhasebe'].includes(oturum.kullanici.rol) ? `<button class="yeni-dugme" data-yeni-menu aria-label="Yeni ekle">${ik('arti')}<span>Yeni</span></button>` : ''}
         <button class="kullanici-cip" data-hesap title="Hesabım: ekranlar ve çıkış" aria-label="${e(oturum.kullanici.ad)} · ${ROL_AD[oturum.kullanici.rol]} · hesap menüsü"><i class="kc-bas" aria-hidden="true">${basHarf(oturum.kullanici.ad)}</i><b>${e(oturum.kullanici.ad)}</b><small>${ROL_AD[oturum.kullanici.rol]}</small></button>
       </header>`}
       ${oturum.kullanici.ziyaretci ? `<div class="ziyaretci-serit"><span><b>Demo görünümü</b> · örnek verilerle. Mesajlar kimseye gitmez, ekranda gösterilir.</span><button data-cikis>Çık</button></div>` : ''}
@@ -200,7 +204,7 @@ function iskelet() {
   <nav class="alt-menu" aria-label="Hızlı menü">
     <a href="#/genel" data-menu="genel">${ik('genel')}Bugün</a>
     ${izinli('kursiyerler') ? `<a href="#/kursiyerler" data-menu="kursiyerler">${ik('kursiyer')}Kursiyer</a>` : ''}
-    ${oturum.kullanici.rol !== 'usta' ? `<button class="alt-yeni" data-yeni-menu aria-label="Yeni ekle"><span>${ik('arti')}</span>Yeni</button>` : ''}
+    ${!['usta', 'teorik', 'muhasebe'].includes(oturum.kullanici.rol) ? `<button class="alt-yeni" data-yeni-menu aria-label="Yeni ekle"><span>${ik('arti')}</span>Yeni</button>` : ''}
     ${izinli('plan') ? `<a href="#/plan" data-menu="plan">${ik('direksiyon')}Plan</a>` : ''}
     ${izinli('kasa') ? `<a href="#/kasa" data-menu="kasa">${ik('kasa')}Kasa</a>` : ''}
   </nav>`;
@@ -235,7 +239,7 @@ export function yenile(kaydirma = false) {
   // YON-063: sekme hatırlama — menüden sekmesiz gelince en son sekme
   if (TC.SEKMELI.includes(r.ad)) { if (r.id == null) { const son = TC.sekmeOku(r.ad); if (son && son.startsWith('#/' + r.ad + '/')) { history.replaceState(null, '', son); r = rota(); } } else TC.sekmeYaz(r.ad, location.hash); }
   kurulumAkisi();
-  if (!izinli(r.ad)) { if (oturum.kullanici.rol === 'sekreter' && SAYFALAR[r.ad]) bildir(ekranYetkili(r.ad) ? 'Bu ekran yalnız kurs müdürüne açık' : 'Bu ekran ön büroya kapalı; müdür Ayarlar › Kullanıcılar › Ön büro yetkileri’nden açabilir', 'uyari'); location.hash = oturum.kullanici.rol === 'usta' ? '#/egitmen' : '#/genel'; return; }
+  if (!izinli(r.ad)) { if (oturum.kullanici.rol === 'sekreter' && SAYFALAR[r.ad]) bildir(ekranYetkili(r.ad) ? 'Bu ekran yalnız kurs müdürüne açık' : 'Bu ekran ön büroya kapalı; müdür Ayarlar › Kullanıcılar › Ön büro yetkileri’nden açabilir', 'uyari'); location.hash = anaSayfa(); return; }
   const yer = document.getElementById('icerik');
   if (!yer) return;
   const portal = r.ad === 'egitmen' || r.ad === 'ogrenci' || r.ad === 'kayit';
@@ -412,7 +416,7 @@ window.addEventListener('hashchange', ev => {
     altlik: '<button class="dg dg-cizgi" data-kc-cik>Kaydetmeden çık</button><button class="dg dg-ana" data-kapat>Geri dön</button>',
     onAc(p) { p.querySelector('[data-kc-cik]').addEventListener('click', () => { sayfaKirli = null; kapatPencere(); location.hash = yeni; }); } });
 });
-window.addEventListener('hashchange', () => { if (location.hash.startsWith('#/kapi')) return kapiEkrani(); if (demoSoru() != null && oturum.kullanici && oturum.kullanici.ziyaretci) { location.hash = '#/mevzuat?q=' + demoSoru(); return; } if (GIRIS_YOL[location.hash] && oturum.kullanici && oturum.kullanici.ziyaretci) { oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } } if (GIRIS_YOL[location.hash] && oturum.kullanici && oturum.kullanici.bulut) { const u0 = oturum.kullanici; history.replaceState(null, '', u0.rol === 'usta' ? '#/egitmen' : '#/genel'); yenile(); return setTimeout(() => acikOturumSor(u0), 400); } if (!oturum.kullanici && !B.bulutKayitli()) { if (location.hash === '#/demo' || demoSoru() != null) return demoyaGir(); if (GIRIS_YOL[location.hash]) { girisEkrani(GIRIS_YOL[location.hash]); return window.scrollTo(0, 0); } } if (location.hash === '#/sahip') { ORT.sekmeSec('hesaplar'); location.hash = '#/yonetim'; return; } if (imzaLinki()) return imzaSayfasiAc(); if (!(oturum.kullanici && oturum.kullanici.bulut)) { if (yonetimKurYolu()) return yonetimHesapEkrani(yonetimKurYolu()); if (yonetimGirisYolu()) return yonetimGirisEkrani(); } if (kursDavetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return kursDavetEkrani(); if (oturum.kullanici && oturum.kullanici.rol === 'ogrenci') return; if (ogrYolu()) return eskiLink(); if (location.hash === '#/ogrenci-giris') return ogrenciGirisEkrani((oturum.kullanici && oturum.kullanici.bulut) || B.bulutKayitli() ? 'Bu cihazda bir personel hesabı açık. Öğrenci olarak girersen o oturum kapanır.' : undefined); if (davetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return davetEkrani(); const r = rota(); yenile(r.ad !== sonAd); sonAd = r.ad; });
+window.addEventListener('hashchange', () => { if (location.hash.startsWith('#/kapi')) return kapiEkrani(); if (demoSoru() != null && oturum.kullanici && oturum.kullanici.ziyaretci) { location.hash = '#/mevzuat?q=' + demoSoru(); return; } if (GIRIS_YOL[location.hash] && oturum.kullanici && oturum.kullanici.ziyaretci) { oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } } if (GIRIS_YOL[location.hash] && oturum.kullanici && oturum.kullanici.bulut) { const u0 = oturum.kullanici; history.replaceState(null, '', anaSayfa(u0)); yenile(); return setTimeout(() => acikOturumSor(u0), 400); } if (!oturum.kullanici && !B.bulutKayitli()) { if (location.hash === '#/demo' || demoSoru() != null) return demoyaGir(); if (GIRIS_YOL[location.hash]) { girisEkrani(GIRIS_YOL[location.hash]); return window.scrollTo(0, 0); } } if (location.hash === '#/sahip') { ORT.sekmeSec('hesaplar'); location.hash = '#/yonetim'; return; } if (imzaLinki()) return imzaSayfasiAc(); if (!(oturum.kullanici && oturum.kullanici.bulut)) { if (yonetimKurYolu()) return yonetimHesapEkrani(yonetimKurYolu()); if (yonetimGirisYolu()) return yonetimGirisEkrani(); } if (kursDavetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return kursDavetEkrani(); if (oturum.kullanici && oturum.kullanici.rol === 'ogrenci') return; if (ogrYolu()) return eskiLink(); if (location.hash === '#/ogrenci-giris') return ogrenciGirisEkrani((oturum.kullanici && oturum.kullanici.bulut) || B.bulutKayitli() ? 'Bu cihazda bir personel hesabı açık. Öğrenci olarak girersen o oturum kapanır.' : undefined); if (davetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return davetEkrani(); const r = rota(); yenile(r.ad !== sonAd); sonAd = r.ad; });
 
 // QR’dan gelen ilk sayfa index.html’de hazır durur (beklemeden görünsün); sonradan dönmek için saklanır
 const TANITIM = (() => { const t = document.getElementById('tanitim'); return t ? t.outerHTML : ''; })();
@@ -695,7 +699,7 @@ function girisEkrani(mod = 'tanitim') {
     sonHareket = Date.now(); hareketYaz(true);
     islem('Giriş yaptı'); kaydet();
     let bekleyen = null; try { bekleyen = sessionStorage.getItem('sinyal-bekleyen'); sessionStorage.removeItem('sinyal-bekleyen'); } catch (x) { }
-    iskelet(); location.hash = bekleyen || (secilen.rol === 'usta' ? '#/egitmen' : '#/genel'); sonAd = rota().ad; yenile(true);
+    iskelet(); location.hash = bekleyen || anaSayfa(secilen); sonAd = rota().ad; yenile(true);
   });
 }
 function sessionStorageAl(k) { try { return sessionStorage.getItem(k); } catch (x) { return null; } }
@@ -734,7 +738,7 @@ function bulutOturumu(u, yeniGiris) {
   // mdSinyal ekibi (yönetici) hesabı: Ayarlar › Diğer'de kurs hesabı açma linki oluşturur
   B.yoneticiMi().then(y => { if (y && !B.bulut.yonetici) { B.bulut.yonetici = true; yenile(); } }).catch(() => { });
   const h = location.hash.slice(2).split('/')[0];
-  if (bekleyen) location.hash = bekleyen; else if (!SAYFALAR[h] || h === 'davet' || yeniGiris) location.hash = u.rol === 'usta' ? '#/egitmen' : '#/genel';
+  if (bekleyen) location.hash = bekleyen; else if (!SAYFALAR[h] || h === 'davet' || yeniGiris) location.hash = anaSayfa(u);
   sonAd = rota().ad; yenile(true);
 }
 B.bulutYenileDinle(() => {
@@ -1216,7 +1220,7 @@ else if (oturum.kullanici && !oturum.kullanici.bulut && oturum.kullanici.rol !==
   girisEkrani(zy ? 'tanitim' : 'pin'); if (!zy) setTimeout(() => bildir('Uzun süre işlem yapılmadığı için oturum kapandı; tekrar giriş yapın', 'uyari'), 400);  // tanıtım ziyaretçisine uyarı gösterilmez
 }
 else if (oturum.kullanici && !oturum.kullanici.bulut && oturum.kullanici.rol === 'ogrenci') ogrenciCiz(true);
-else if (oturum.kullanici && !oturum.kullanici.bulut) { iskelet(); if (!location.hash) location.hash = oturum.kullanici.rol === 'usta' ? '#/egitmen' : '#/genel'; sonAd = rota().ad; yenile(); }
+else if (oturum.kullanici && !oturum.kullanici.bulut) { iskelet(); if (!location.hash) location.hash = anaSayfa(); sonAd = rota().ad; yenile(); }
 else girisEkrani(location.hash.startsWith('#/imza-geldi/') ? 'pin' : 'tanitim');
 
 // Yeni sürüm bildirimi: kalıcı şerit, ana ekranda sürüm alanı, temiz güncelleme (js/guncelleme.js)

@@ -1029,9 +1029,11 @@ export const YETKI_EKRAN = [['mesajlar', 'Mesajlar'], ['adaylar', 'Yeni öğrenc
 export const YETKI_ISLEM = [['iptal', 'Tahsilat iptali'], ['duzelt', 'Kasa hareketini düzeltme ve silme'], ['indirim', 'İndirim uygulama'], ['iade', 'İade yapma'], ['senet', 'Senetli satış ve avukata verme'], ['fatura', 'Fatura iptali'], ['devir', 'Devir bakiyesi girme'], ['mebYaz', 'MEBBİS’e yaz onayı'], ['mebKabul', 'MEBBİS Yardımcısı kurum bilgilendirmesini kabul']];
 // ekran düzeyi: true (ya da yok) = tam (görür, ekler, düzenler) · 'gor' = yalnız görür · false = kapalı
 export const EKRAN_DUZEY = [['tam', 'Görür ve değiştirir'], ['gor', 'Yalnız görür'], ['kapali', 'Kapalı']];
-export const ekranDuzey = ad => { let u; try { u = oturum.kullanici; } catch (x) { return 'tam'; } if (!u || u.rol !== 'sekreter') return 'tam'; const v = ((((S.kurs || {}).yetki || {}).ekran) || {})[ad]; return v === false ? 'kapali' : v === 'gor' ? 'gor' : 'tam'; };
+export const ekranDuzey = ad => { let u; try { u = oturum.kullanici; } catch (x) { return 'tam'; } if (u && u.rol === 'muhasebe') return 'gor';  // YON-073: muhasebe yalnız görür
+  if (!u || u.rol !== 'sekreter' || u.gorev === 'subemudur') return 'tam'; const v = ((((S.kurs || {}).yetki || {}).ekran) || {})[ad]; return v === false ? 'kapali' : v === 'gor' ? 'gor' : 'tam'; };
 export const ekranYetkili = ad => ekranDuzey(ad) !== 'kapali';
-export const islemYetkili = ad => { let u; try { u = oturum.kullanici; } catch (x) { return false; } if (!u) return false; if (u.rol === 'mudur') return true; if (u.rol !== 'sekreter') return false; return !!((((S.kurs || {}).yetki || {}).islem || {})[ad]); };
+// YON-073: şube müdürü (gorev) kendi şubesinde müdür yetkisinde; muhasebe ve teorik öğretmen hassas işlem yapamaz
+export const islemYetkili = ad => { let u; try { u = oturum.kullanici; } catch (x) { return false; } if (!u) return false; if (u.rol === 'mudur' || u.gorev === 'subemudur') return true; if (u.rol !== 'sekreter') return false; return !!((((S.kurs || {}).yetki || {}).islem || {})[ad]); };
 // YON-023: kaydeden izi bütün ana kayıt türlerinde — yüklemede var olan kimlikler taban sayılır; sonra eklenen kayıt ilk kaydette kaydedeni ve zamanını alır
 // (sunucudan gelen kayıtlar tabana eklenir, başkasının kaydı bu cihazın kullanıcısıyla işaretlenmez). Değiştiren izi düzenleme pencerelerinde yazılır.
 const IZ_KOL = ['kursiyerler', 'dersler', 'adaylar', 'sinavlar', 'gruplar', 'egitmenler', 'araclar', 'teorik'];

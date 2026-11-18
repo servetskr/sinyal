@@ -128,7 +128,7 @@ async function uyeRol(req, kurs) {
   const d = await r.json();
   return (d.fields && d.fields.rol && d.fields.rol.stringValue) || null;
 }
-const PERSONEL = ['mudur', 'sekreter', 'usta'];
+const PERSONEL = ['mudur', 'sekreter', 'usta', 'subemudur', 'teorik', 'muhasebe'];  // YON-073: ek roller
 // kursun adı: isteği yapanın kimliğiyle kurs belgesinden (Firestore REST, yalnız ad alanı); okunamazsa boş
 async function kursAdiOku(req, kurs) {
   try {

@@ -516,7 +516,8 @@ async function baglan(u, ilkVeri) {
   kancalariKur(u);
   addEventListener('pagehide', () => { akit(); });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') akit(); });
-  return { id: u.uid, ad: u.ad, rol: u.rol, ...(u.usta ? { usta: u.usta } : {}), ...(Array.isArray(u.kurslar) && u.kurslar.length > 1 ? { kurslar: u.kurslar } : {}), bulut: true };
+  // YON-073: şube müdürü uygulamada ön büro ekranlarıyla açılır (gorev ile müdür yetkisi ve kendi şubesi); öbür roller adıyla
+  return { id: u.uid, ad: u.ad, rol: u.rol === 'subemudur' ? 'sekreter' : u.rol, ...(u.rol === 'subemudur' ? { gorev: 'subemudur' } : {}), ...(u.usta ? { usta: u.usta } : {}), ...(Array.isArray(u.kurslar) && u.kurslar.length > 1 ? { kurslar: u.kurslar } : {}), bulut: true };
 }
 
 // Üst çubuktaki küçük durum yazısı
