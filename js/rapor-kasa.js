@@ -1,6 +1,6 @@
 // Kasa raporları: vade raporu (RAP-002). Kasa › "Vade raporu" sekmesinde çizilir.
 // Bütün geçmiş: kursiyerlerin bütün taksitleri (kapanan kayıtlar dahil), vade aralığı, yalnız ödenmeyenler, avukatta olanlar, kayıt durumu ve sınıf süzgeci.
-import { S, gun, fark, SINIFLAR, tamAd, sb, tcMaskele, oturum, sinifEtiket } from './veri.js?v=234';
+import { S, gun, fark, SINIFLAR, tamAd, sb, tcMaskele, oturum, sinifEtiket, ekTur } from './veri.js?v=234';
 import { e, tl, rozet, tarih, ik, csvIndir } from './ui.js?v=234';
 
 // süzgeç durumu sayfa yenilense de bu oturumda kalır
@@ -70,4 +70,82 @@ export function vadeBaglan(k, yenile) {
     if (ev.target.closest('[data-vr-excel]')) vadeExcel();
     if (ev.target.closest('[data-vr-temizle]')) { vadeSuzgec.bas = ''; vadeSuzgec.bit = ''; yenile(); }
   });
+}
+
+/* ---------- Gün sonu (RAP-001) ----------
+   Ciro = kurs tahsilatı − tahsilat iptali − iade (sınav ücreti, harç gibi resmî emanetler ciroya girmez; il taban listesi not 5).
+   Masraf = gider (iade, tahsilat iptali ve döner sermayeye ödenen harç hariç).
+   Günlük kasa = o gün kasaya giren nakit − kasadan çıkan nakit (gider, iade, iptal) − bankaya yatırılan nakit.
+   Devreden (genel) kasa = gün sonunda kasada olması gereken nakit (açılış bakiyesi + o güne kadarki bütün nakit hareketler). */
+const RESMI_GIDER = h => h.tur === 'Gider' && h.kategori === 'Sınav harcı';
+const IPTAL = h => h.tur === 'Gider' && h.kategori === 'Tahsilat iptali';
+const IADE = h => h.tur === 'Gider' && h.kategori === 'İade';
+const BANKA = y => y && y !== 'Nakit';
+const topla = (l, f = () => true) => l.filter(f).reduce((a, h) => a + (+h.tutar || 0), 0);
+// resmî (emanet) tahsilat: sınav ücreti, harç, kart; ek kalemin türünden (veri.js ekTur)
+const resmiGelir = h => { if (h.tur !== 'Gelir' || ['Kurs ücreti', 'Taksit', 'Peşinat'].includes(h.kategori)) return false; const k = h.kursiyer && S.kursiyerler.find(x => x.id === h.kursiyer), x = k && ((k.odeme || {}).ekler || []).find(y => y.ad === h.kategori); return ekTur(x || { ad: h.kategori }) === 'resmi'; };
+const kasaHesabi = () => (S.hesaplar || []).find(h => h.id === 'kasa') || (S.hesaplar || [])[0] || { bakiye: 0 };
+const nakitNet = (l, bas, bit) => l.reduce((a, h) => { if (h.yontem === 'Nakit' && h.tarih >= bas && h.tarih <= bit) a += h.tur === 'Gelir' ? +h.tutar || 0 : -(+h.tutar || 0); if (h.bankaya && h.yontem === 'Nakit' && h.tur === 'Gelir' && h.bankaya >= bas && h.bankaya <= bit) a -= +h.tutar || 0; return a; }, 0);
+// t günü sonunda kasada olması gereken nakit. Açılış girilmişse açılıştan ileri, girilmemişse bugünkü bakiyeden geriye doğru hesaplanır.
+export function nakitBakiye(t) {
+  const hs = kasaHesabi(), l = sb(S.hareket), bugun = gun(0);
+  if (hs.acilis) return t < hs.acilis ? null : (+hs.bakiye || 0) + nakitNet(l, hs.acilis, t);
+  const simdi = (+hs.bakiye || 0) + nakitNet(l, bugun, bugun);   // sayfalar2.js hesapBakiye ile aynı: sabit bakiye + bugünün neti
+  return t >= bugun ? simdi : simdi - nakitNet(l, gunSonra(t), bugun);
+}
+const gunSonra = t => { const d = new Date(t + 'T12:00'); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); };
+export function gunSonuHesap(t) {
+  const l = sb(S.hareket).filter(h => h.tarih === t), gel = l.filter(h => h.tur === 'Gelir'), gid = l.filter(h => h.tur === 'Gider');
+  const kursGel = gel.filter(h => !resmiGelir(h));
+  const satis = { fatura: topla(sb(S.faturalar || []).filter(f => f.tarih === t)), kasa: topla(gel, h => h.yontem === 'Nakit'), banka: topla(gel, h => BANKA(h.yontem)),
+    odemesiz: sb(S.kursiyerler).filter(k => k.kayit === t && k.odeme).reduce((a, k) => a + Math.max(0, (+k.odeme.sozlesme || +k.odeme.toplam || 0) - (+k.odeme.pesin || 0)), 0) };
+  const masrafL = gid.filter(h => !IPTAL(h) && !IADE(h) && !RESMI_GIDER(h));
+  const gider = { kasa: topla(gid, h => h.yontem === 'Nakit'), banka: topla(gid, h => BANKA(h.yontem)) };
+  const iptal = topla(gid, IPTAL), iade = topla(gid, IADE);
+  const ciro = topla(kursGel) - iptal - iade, masraf = topla(masrafL);
+  const bankaya = topla(sb(S.hareket).filter(h => h.bankaya === t && h.yontem === 'Nakit' && h.tur === 'Gelir'));
+  const gunluk = satis.kasa - gider.kasa - bankaya;
+  return { t, satis, gider, iptal, iade, ciro, masraf, bankaya, gunluk, devreden: nakitBakiye(t), islem: l.length, kapali: (S.gunSonu || []).includes(t) };
+}
+
+// Gün sonu analizi: ayın (ya da aralığın) her günü bir satır
+export const analizSuzgec = { ay: '', bas: '', bit: '', aralik: false };
+const ayGunleri = ay => { const [y, m] = ay.split('-').map(Number), n = new Date(y, m, 0).getDate(); return Array.from({ length: n }, (_, i) => `${ay}-${String(i + 1).padStart(2, '0')}`); };
+const aralikGunleri = (a, b) => { const l = []; let t = a; while (t <= b && l.length < 366) { l.push(t); t = gunSonra(t); } return l; };
+export function analizGunleri(f = analizSuzgec) {
+  const bugun = gun(0);
+  if (f.aralik && f.bas && f.bit) return aralikGunleri(f.bas <= f.bit ? f.bas : f.bit, f.bas <= f.bit ? f.bit : f.bas).filter(t => t <= bugun);
+  return ayGunleri(f.ay || bugun.slice(0, 7)).filter(t => t <= bugun);
+}
+const GUN_KISA = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+const haftaSonu = t => [0, 6].includes(new Date(t + 'T12:00').getDay());
+const SUTUN = [['satis.fatura', 'Fatura'], ['satis.kasa', 'Kasa'], ['satis.banka', 'Banka'], ['satis.odemesiz', 'Ödemesiz'], ['gider.kasa', 'Kasa'], ['gider.banka', 'Banka'], ['bankaya', 'Bankaya yatan'], ['ciro', 'Ciro'], ['masraf', 'Masraf'], ['gunluk', 'Günlük kasa'], ['devreden', 'Devreden kasa']];
+const deger = (r, yol) => yol.split('.').reduce((x, k) => x == null ? x : x[k], r);
+export function analizHtml() {
+  const f = analizSuzgec, gl = analizGunleri(f), satirlar = gl.map(gunSonuHesap);
+  const top = SUTUN.slice(0, -1).map(([y]) => satirlar.reduce((a, r) => a + (+deger(r, y) || 0), 0)), T = y => top[SUTUN.findIndex(x => x[0] === y)];
+  const son = satirlar.length ? satirlar[satirlar.length - 1].devreden : null;
+  const para = v => v ? tl(v) : '<span style="color:var(--soluk)">—</span>';
+  const ay = f.ay || gun(0).slice(0, 7);
+  return `<div class="kart"><div class="kart-bas"><h3>Gün sonu analizi</h3><small>${gl.length} gün · ciro ${tl(T('ciro'))} · masraf ${tl(T('masraf'))}${son != null ? ' · devreden kasa <b>' + tl(son) + '</b>' : ''}</small><div class="sag"><button class="dg dg-cizgi dg-kucuk" data-ga-excel>${ik('indir')}Excel</button></div></div>
+    <div class="vr-suzgec">
+      <label class="vr-tik"><input type="checkbox" data-ga="aralik" ${f.aralik ? 'checked' : ''}> Tarih aralığı</label>
+      ${f.aralik ? `<label class="vr-alan"><span>Başlangıç</span><input class="girdi" type="date" data-ga="bas" value="${e(f.bas)}" max="${gun(0)}"></label><label class="vr-alan"><span>Bitiş</span><input class="girdi" type="date" data-ga="bit" value="${e(f.bit)}" max="${gun(0)}"></label>`
+        : `<label class="vr-alan"><span>Ay</span><input class="girdi" type="month" data-ga="ay" value="${e(ay)}" max="${gun(0).slice(0, 7)}"></label>`}
+    </div>
+    <p class="ipucu" style="margin:0 0 10px;font-size:12.5px">Ciro = kurs tahsilatı − iptal − iade (sınav ücreti, harç gibi emanetler hariç) · Günlük kasa = giren nakit − çıkan nakit − bankaya yatırılan · Devreden kasa = gün sonunda kasada olması gereken. Hafta sonları renkli; ✓ gün kapatıldı.</p>
+    ${gl.length ? `<div class="tablo-kap"><table class="tablo ga-tablo"><thead><tr><th rowspan="2">Gün</th><th colspan="4" class="ga-grup">Satış ve gelir</th><th colspan="3" class="ga-grup">Gider ve nakit çıkışı</th><th colspan="4" class="ga-grup">Toplam</th></tr><tr>${SUTUN.map(([, a]) => `<th class="sag">${a}</th>`).join('')}</tr></thead>
+      <tbody>${satirlar.map(r => `<tr class="${haftaSonu(r.t) ? 'ga-hs' : ''}"><td class="rf-nw">${String(+r.t.slice(8))} ${GUN_KISA[new Date(r.t + 'T12:00').getDay()]}${r.kapali ? ' <span title="Gün kapatıldı" style="color:var(--yesil)">✓</span>' : ''}</td>${SUTUN.map(([y]) => `<td class="sag sayi">${y === 'devreden' ? (r.devreden == null ? '—' : tl(r.devreden)) : para(deger(r, y))}</td>`).join('')}</tr>`).join('')}</tbody>
+      <tfoot><tr><td><b>Toplam</b></td>${top.map(v => `<td class="sag sayi"><b>${tl(v)}</b></td>`).join('')}<td class="sag sayi"><b>${son == null ? '—' : tl(son)}</b></td></tr></tfoot></table></div>`
+      : '<p class="ipucu">Bu aralıkta gün yok.</p>'}
+  </div>`;
+}
+export function analizExcel() {
+  const satirlar = analizGunleri().map(gunSonuHesap);
+  csvIndir('gun-sonu-analizi-' + (analizSuzgec.aralik ? analizSuzgec.bas + '_' + analizSuzgec.bit : (analizSuzgec.ay || gun(0).slice(0, 7))) + '.csv', [['Tarih', 'Gelir · fatura', 'Gelir · kasa', 'Gelir · banka', 'Ödemesiz satış', 'Gider · kasa', 'Gider · banka', 'İptal', 'İade', 'Ciro', 'Masraf', 'Bankaya yatırılan', 'Günlük kasa', 'Devreden kasa', 'Gün kapatıldı'],
+    ...satirlar.map(r => [r.t, r.satis.fatura, r.satis.kasa, r.satis.banka, r.satis.odemesiz, r.gider.kasa, r.gider.banka, r.iptal, r.iade, r.ciro, r.masraf, r.bankaya, r.gunluk, r.devreden ?? '', r.kapali ? 'evet' : ''])]);
+}
+export function analizBaglan(k, yenile) {
+  k.addEventListener('change', ev => { const x = ev.target.closest('[data-ga]'); if (!x) return; analizSuzgec[x.dataset.ga] = x.type === 'checkbox' ? x.checked : x.value; if (x.dataset.ga === 'aralik' && x.checked && !analizSuzgec.bas) { analizSuzgec.bas = gun(0).slice(0, 8) + '01'; analizSuzgec.bit = gun(0); } yenile(); });
+  k.addEventListener('click', ev => { if (ev.target.closest('[data-ga-excel]')) analizExcel(); });
 }
