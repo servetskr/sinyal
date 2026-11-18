@@ -270,6 +270,14 @@ const KURALLAR = [
   // KAY-112 (SOR-068): MEBBİS'te kaydı silinmiş ya da sertifikası iptal edilmiş görünen açık kayıt → arşive alma önerisi (tek dokunuş, geri alınabilir)
   { id: 'Y13', sira: 244.9, ad: 'MEBBİS’te kaydı silinmiş aday hâlâ açık', dayanak: 'MEBBİS aday durumu (09)', kapsam: 'kursiyer', ciddiyet: 'uyari', bugun: true, bugunAd: n => `${n} öğrencinin kaydı MEBBİS’te silinmiş görünüyor; arşive alın`,
     kontrol(l) { sb(S.kursiyerler).filter(k => !k.kapali && /kayd[ıi]\s*silin|sertifikas[ıi]\s*iptal|iptal\s*edildi/i.test((k.meb || {}).durum || '')).forEach(k => l.push(bul('uyari', `${tamAd(k)} · MEBBİS’te “${k.meb.durum}”`, 'MEBBİS’te kaydı silinmiş ya da sertifikası iptal edilmiş görünüyor; mdSinyal’de kayıt açık. Doğruysa arşive alın (geri alınabilir).', '#/kursiyer/' + k.id, { kursiyer: k.id, kisa: `MEBBİS’te “${k.meb.durum}”; kayıt hâlâ açık`, eylem: 'arsiv' }))); } },
+  // KAY-111 (SOR-064): dersi ya da sınavı uzun süredir ilerlemeyen aday — MEBBİS'te pasife çekilebilir (25.12.2019 ve 04.08.2021 MEB duyuruları)
+  { id: 'Y14', sira: 246, ad: 'Uzun süredir ilerlemeyen aday', dayanak: 'MEB duyuruları 25.12.2019, 04.08.2021 (uzun süre işlem görmeyen aday pasife alınabilir)', kapsam: 'kursiyer', ciddiyet: 'uyari', ayar: 'uzunBeklemeGun', bugun: true, teyit: 'Süre duyurularda sabit değil; kurs ayarı.',
+    bugunAd: n => `${n} aday uzun süredir ilerlemiyor`,
+    kontrol(l, K) { sb(S.kursiyerler).filter(k => !k.kapali && k.asama !== 'Ehliyet').forEach(k => {
+      const t = [k.kayit, ...kursiyerDersleri(k.id).filter(d => d.durum === 'Yapıldı').map(d => d.tarih), ...sinavGecmisi(k, 'e-Sınav').map(x => x.tarih), ...sinavGecmisi(k, 'Direksiyon').map(x => x.tarih), ...((k.odeme || {}).taksitler || []).filter(x => x.odendi).map(x => x.odendi)].filter(x => /^\d{4}-\d{2}-\d{2}/.test(x || '')).map(x => x.slice(0, 10)).sort().pop();
+      const yakin = kursiyerDersleri(k.id).some(d => d.durum === 'Planlandı' && fark(d.tarih) >= 0) || (S.sinavlar || []).some(s => fark(s.tarih) >= 0 && (s.kursiyerler || []).includes(k.id));
+      if (!t || yakin) return; const g = -fark(t); if (g < K.uzunBeklemeGun) return;
+      l.push(bul('bilgi', `${tamAd(k)} · ${g} gündür ilerlemiyor (son işlem ${tarih(t)})`, `Ders, sınav ya da ödeme hareketi yok. Öğrenciyi arayın; kursa devam etmeyecekse kaydı kapatın. MEBBİS’te uzun süre işlem görmeyen aday pasife çekilebilir.`, '#/kursiyer/' + k.id, { kursiyer: k.id, kisa: `${g} gündür ilerlemiyor (son işlem ${tarih(t)}); arayın ya da kaydı kapatın` })); }); } },
   { id: 'Y07', sira: 245, ad: 'Sınav günü öğretmenin çalışma izni ve izin günü', dayanak: 'MTSK Yön. md.28/A; usta öğretici çalışma izni (OOK)', kapsam: 'sinav', ciddiyet: 'engel', bugun: true, bugunAd: n => `${n} sınavda öğretmenin izni sorunlu`,
     kontrol(l) {
       (S.sinavlar || []).filter(s => s && s.tur === 'Direksiyon' && s.tarih && fark(s.tarih) >= 0 && (s.kursiyerler || []).length).forEach(s => {
