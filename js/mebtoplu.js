@@ -848,7 +848,8 @@ function dosyalariIsle(l) {
     const donem = m && ay ? m[1] + String(ay).padStart(2, '0') : '', grupNo = +((String(r[i.grup] || '').match(/[123]/) || [])[0] || 0), sube = ((String(r[i.sube] || '').toLocaleUpperCase('tr').match(/[A-H]/) || [])[0]) || '';
     const basl = x.dersler && x.dersler.satirlar.length ? tarihIso(x.dersler.satirlar[0][sutun(x.dersler.baslik, 'baslang', 'baslama')]) : '';
     if (x.dersler) try { UY.dosyaDersleri(k, x.dersler); } catch (hata) { console.warn('Aday ders listesi', hata); }   // DIR-027: MEBBİS'teki ders sayısı ve uyumsuzluklar
-    const esSon = x.esinav && x.esinav.satirlar.length ? tarihIso(x.esinav.satirlar[0][sutun(x.esinav.baslik, 'tamamlan')]) : '';
+    // SNV-008: 'Haklarının Tamamlanacağı Tarih' seans başına; son seansın (tablonun son satırı) tarihi alınır, mdSinyal hesaplamaz (kural motoru 90 gün uyarır)
+    const esSon = x.esinav && x.esinav.satirlar.length ? tarihIso(x.esinav.satirlar[x.esinav.satirlar.length - 1][sutun(x.esinav.baslik, 'tamamlan')]) : '';
     const kg = GR.kursiyerGrubu(k), gm = tekil && donem && grupNo && sube ? { donem, grupNo, sube, ad: GR.grupAdi(donem, grupNo, sube), baslangic: basl } : null;
     if (gm && !kg) {
       let g = (S.gruplar || []).find(y => GR.mebGrubuMu(y) && y.donem === donem && +y.grupNo === grupNo && y.sube === sube);

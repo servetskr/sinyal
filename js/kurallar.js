@@ -315,7 +315,9 @@ export const sinavUstasi = k => { const d = k && kursiyerDersleri(k.id).filter(y
 // Görevdeki personel (usta öğretici + teorik öğretmen; pasif ve ayrılanlar hariç): [{ x, tur: 'usta'|'ogretmen', gorev }]
 export const personelKisileri = () => [...(S.egitmenler || []).map(x => ({ x, tur: 'usta', gorev: 'Usta öğretici' })), ...(S.ogretmenler || []).map(x => ({ x, tur: 'ogretmen', gorev: 'Teorik öğretmen' }))].filter(p => p.x && !p.x.pasif && !p.x.ayrildi);
 // Hazır onayı: MEBBİS'ten çekilen "Uygulama Sınavına Uygunluk Tarihi", yoksa usta öğretici yazısının MEBBİS'e yüklendiği gün
-export const hazirOnayi = k => (k.meb && /^\d{4}-\d{2}-\d{2}$/.test(k.meb.uygunluk || '') && k.meb.uygunluk) || (k.hazirYazi && k.hazirYazi.yuklendi) || null;
+// SNV-009/023: hazır onayı = taranmış sınava hazır yazısının yüklendiği gün. MEBBİS 'Uygulama Sınavına Uygunluk Tarihi' (kurum ön onayı, 16.01.2023'te
+// mevzuattan kalktı; yeni adaylarda boş) kurallara dayanak olmaz.
+export const hazirOnayi = k => (k.hazirYazi && k.hazirYazi.yuklendi) || null;
 // Sınav kodları: MEBBİS ilçe takvimi (S.mebIlceSinavlari [{kod, tarih}]) varsa o; yoksa kursun uygulama sınavı oturumları (gün başına bir kod)
 export function ilceTakvimi() {
   const il = (S.mebIlceSinavlari || []).filter(x => x && /^\d{4}-\d{2}-\d{2}/.test(x.tarih || ''));
