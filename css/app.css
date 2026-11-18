@@ -3554,3 +3554,12 @@ button.rozet:focus-visible { outline: 2px solid var(--levha); outline-offset: 2p
 .ki-gorsel { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .ki-gorsel img { width: 56px; height: 56px; object-fit: contain; border: 1px solid var(--cizgi); border-radius: 6px; background: #fff; }
 .ki-gorsel label { cursor: pointer; }
+/* YON-078: Kurs bilgileri bölümleri */
+.kb-git { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.kb-baslik { font-family: var(--baslik); font-size: 15px; color: var(--murekkep); margin: 18px 0 2px; padding-top: 12px; border-top: 1px solid var(--cizgi); scroll-margin-top: 80px; }
+.kb-baslik:first-child { border-top: 0; margin-top: 0; padding-top: 0; }
+.kb-baslik small { font-family: var(--govde, inherit); font-weight: 400; font-size: 13px; color: var(--soluk); margin-left: 6px; }
+.kb-baslik small a { color: var(--levha); font-weight: 700; }
+.kb-wa { border: 1px solid var(--cizgi); border-radius: 8px; padding: 10px 12px 12px; }
+.kb-wa legend { font-weight: 700; font-size: 14px; color: var(--murekkep); padding: 0 4px; }
+.kb-not { font-size: 13.5px; color: var(--metin); margin: 0 0 10px; }
