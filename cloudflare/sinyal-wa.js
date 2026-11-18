@@ -467,13 +467,15 @@ async function eposta(req, env, url, yol, cevap) {
   const kurs = req.headers.get('X-Kurs') || url.searchParams.get('kurs') || '', rol = await uyeRol(req, kurs);
   if (!rol || !['mudur', 'sekreter'].includes(rol)) return cevap({ ok: false, hata: 'Yetki yok' }, 403);  // öğretmen adresleri görmez
   const l = await epAdresler(env, kurs);
-  if (yol === 'eposta' && req.method === 'GET') return cevap({ ok: true, kurulu: !!S, adresler: l.map(x => ({ a: x.a, onay: !!x.onay })), enFazla: EP_EN_FAZLA_ADRES });
+  if (yol === 'eposta' && req.method === 'GET') return cevap({ ok: true, kurulu: !!S, adresler: l.map(x => ({ a: x.a, onay: !!x.onay, tur: x.tur === 'kullanici' ? 'kullanici' : 'yonetici' })), enFazla: EP_EN_FAZLA_ADRES });
   // adres ekle / çıkar: yalnız kurs müdürü; eklenen adrese onay linki gider
   if (yol === 'eposta/adres' && req.method === 'POST') {
     if (rol !== 'mudur') return cevap({ ok: false, hata: 'Adresleri yalnız kurs müdürü değiştirir' }, 403);
     const b = await req.json().catch(() => ({})), a = String(b.adres || '').trim().toLowerCase();
     if (!epGecerli(a)) return cevap({ ok: false, hata: 'E-posta adresi geçersiz' }, 400);
     if (b.sil) { await env.LINK.put('epadres:' + kurs, JSON.stringify(l.filter(x => x.a !== a))); return cevap({ ok: true }); }
+    // MSJ-037: adresin bildirim türü — yönetici (bütün raporlar ve yedek) ya da kullanıcı (yalnız günlük rapor); onay yeniden istenmez
+    if (b.turDegistir) { if (!l.some(x => x.a === a)) return cevap({ ok: false, hata: 'Adres yok' }, 404); const tur = b.tur === 'kullanici' ? 'kullanici' : 'yonetici'; await env.LINK.put('epadres:' + kurs, JSON.stringify(l.map(x => x.a === a ? { ...x, tur } : x))); return cevap({ ok: true, tur }); }
     if (!S) return cevap({ ok: false, kurulu: false, hata: 'E-posta servisi henüz kurulmadı' }, 503);
     const var_ = l.find(x => x.a === a); if (var_ && var_.onay) return cevap({ ok: true, onay: true });
     if (!var_ && l.length >= EP_EN_FAZLA_ADRES) return cevap({ ok: false, hata: 'En fazla ' + EP_EN_FAZLA_ADRES + ' adres eklenebilir' }, 400);
@@ -498,11 +500,12 @@ async function eposta(req, env, url, yol, cevap) {
   if (yol === 'eposta/gonder' && req.method === 'POST') {
     if (!['mudur', 'sekreter'].includes(rol)) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
     if (!S) return cevap({ ok: false, kurulu: false, hata: 'E-posta servisi henüz kurulmadı' }, 503);
-    const kime = l.filter(x => x.onay).map(x => x.a); if (!kime.length) return cevap({ ok: false, adresYok: true, hata: 'Onaylı e-posta adresi yok' }, 400);
     const ham = await req.text(); if (ham.length > 2e6) return cevap({ ok: false, hata: 'Dosya çok büyük' }, 413);  // istemci eki 1,2 milyon karakterle sınırlar
     let b; try { b = JSON.parse(ham); } catch (x) { return cevap({ ok: false, hata: 'gecersiz' }, 400); }
     const tur = EP_TUR.includes(b.tur) ? b.tur : null, donem = String(b.donem || '').replace(/[^\w-]/g, '').slice(0, 20);
     if (!tur || typeof b.html !== 'string' || b.html.length > 400e3) return cevap({ ok: false, hata: 'gecersiz' }, 400);
+    // kullanıcı türündeki adreslere yalnız günlük rapor gider (haftalık/aylık mali özet ve bütün veriler yöneticiye)
+    const kime = l.filter(x => x.onay && (x.tur !== 'kullanici' || tur === 'gunluk')).map(x => x.a); if (!kime.length) return cevap({ ok: false, adresYok: true, hata: 'Bu rapor için onaylı e-posta adresi yok' }, 400);
     let ek = null; if (b.ek) { const ad = String(b.ek.ad || '').replace(/[^\w.-]/g, '').slice(0, 80); const v = b.ek.b64;
       // eki baştan sona taramak işlemci süresini aşar: uzunluk ve uçlar denetlenir, geçersiz base64'ü sağlayıcı reddeder
       if (!/\.(xlsx|json|gz)$/.test(ad) || typeof v !== 'string' || v.length > 1.2e6 || v.length % 4 || !/^[A-Za-z0-9+/]{1,64}$/.test(v.slice(0, 64)) || !/^[A-Za-z0-9+/=]{1,64}$/.test(v.slice(-64))) return cevap({ ok: false, hata: 'ek geçersiz' }, 400); ek = { ad, b64: v }; }

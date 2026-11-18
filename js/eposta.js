@@ -31,6 +31,7 @@ let durumOnbellek = null;
 export async function epostaDurum(taze) { if (!taze && durumOnbellek && Date.now() - durumOnbellek.z < 60e3) return durumOnbellek.d; const d = await istek('eposta'); durumOnbellek = { z: Date.now(), d }; return d; }
 export async function adresEkle(adres) { durumOnbellek = null; return istek('eposta/adres', { adres }); }
 export async function adresSil(adres) { durumOnbellek = null; return istek('eposta/adres', { adres, sil: true }); }
+export async function adresTur(adres, tur) { durumOnbellek = null; return istek('eposta/adres', { adres, tur, turDegistir: true }); }
 
 // ---- dönemler ----
 const isoGun = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -243,7 +244,7 @@ function adresHtml(d) {
   return `${d.adresler.length ? adresListe(d, m) : `<p style="font-size:14px;margin-bottom:8px">Henüz adres yok. ${m ? 'Kursun e-posta adresini ekleyin; adrese gelen onay linkine dokununca raporlar başlar.' : 'Adresi kurs müdürü ekler.'}</p>`}
     ${m && d.adresler.length < (d.enFazla || 3) ? `<form data-ep-ekle style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><input class="girdi" name="adres" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="ornek@kursunuz.com" style="flex:1;min-width:0;width:auto" required><button class="dg dg-ana">Ekle</button></form>` : ''}`;
 }
-const adresListe = (d, m) => `<ul class="liste">${d.adresler.map(x => `<li style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1;min-width:0;overflow-wrap:anywhere;color:var(--murekkep);font-weight:600">${e(x.a)}</span>${x.onay ? rozet('Onaylı', 'yesil') : rozet('Onay bekliyor', 'sari')}${m ? `${x.onay ? '' : `<button class="dg dg-cizgi dg-kucuk" data-ep-tekrar="${e(x.a)}">Yeniden gönder</button>`}<button class="dg dg-cizgi dg-kucuk" data-ep-sil="${e(x.a)}">Çıkar</button>` : ''}</li>`).join('')}</ul>${d.adresler.some(x => !x.onay) ? '<p style="font-size:13px;color:var(--soluk);margin-top:8px">Onay bekleyen adrese giden e-postadaki “Adresimi onayla” düğmesine dokunun. Gelmediyse istenmeyen e-posta klasörüne bakın.</p>' : ''}`;
+const adresListe = (d, m) => `<ul class="liste">${d.adresler.map(x => `<li style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1;min-width:0;overflow-wrap:anywhere;color:var(--murekkep);font-weight:600">${e(x.a)}</span>${x.onay ? rozet('Onaylı', 'yesil') : rozet('Onay bekliyor', 'sari')}${m ? `<select class="girdi" style="height:34px;width:auto" data-ep-tur="${e(x.a)}" aria-label="Bildirim türü" title="Yönetici: bütün raporlar ve yedek · Kullanıcı: yalnız günlük rapor"><option value="yonetici" ${x.tur !== 'kullanici' ? 'selected' : ''}>Yönetici</option><option value="kullanici" ${x.tur === 'kullanici' ? 'selected' : ''}>Kullanıcı</option></select>` : x.tur === 'kullanici' ? rozet('Kullanıcı', 'notr') : ''}${m ? `${x.onay ? '' : `<button class="dg dg-cizgi dg-kucuk" data-ep-tekrar="${e(x.a)}">Yeniden gönder</button>`}<button class="dg dg-cizgi dg-kucuk" data-ep-sil="${e(x.a)}">Çıkar</button>` : ''}</li>`).join('')}</ul>${d.adresler.some(x => !x.onay) ? '<p style="font-size:13px;color:var(--soluk);margin-top:8px">Onay bekleyen adrese giden e-postadaki “Adresimi onayla” düğmesine dokunun. Gelmediyse istenmeyen e-posta klasörüne bakın.</p>' : ''}`;
 async function adresleriCiz(k, taze) {
   const yer = k.querySelector('[data-ep-adresler]'); if (!yer || !bulutta()) return;
   try { yer.innerHTML = adresHtml(await epostaDurum(taze)); }
@@ -267,6 +268,8 @@ export function veriSekmesiBagla(k) {
     try { const r = await adresEkle(adres); islem('Kursun e-posta adresini ekledi'); kaydet(); bildir(r.onay ? 'Adres zaten onaylı' : 'Onay e-postası gönderildi; adrese gelen linke dokunun'); await adresleriCiz(k, true); }
     catch (x) { b.disabled = false; mesajHata(x); }
   }, true);
+  // MSJ-037: adresin bildirim türü (yönetici / kullanıcı)
+  k.addEventListener('change', async ev => { const t = ev.target.closest('[data-ep-tur]'); if (!t) return; t.disabled = true; try { await adresTur(t.dataset.epTur, t.value); islem('E-posta adresinin bildirim türünü değiştirdi', t.value === 'kullanici' ? 'kullanıcı' : 'yönetici'); kaydet(); bildir(t.value === 'kullanici' ? 'Bu adrese yalnız günlük rapor gidecek' : 'Bu adrese bütün raporlar ve yedek gidecek'); } catch (x) { mesajHata(x); } t.disabled = false; });
   k.addEventListener('click', async ev => {
     const t = ev.target;
     if (t.closest('[data-ep-yeniden]')) return adresleriCiz(k, true);
