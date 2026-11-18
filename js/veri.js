@@ -1203,6 +1203,12 @@ export function haftalikSinir(eg) {
   if (eg && /m[uü]d[uü]r/i.test(String((m && m.gorev) || eg.gorev || ''))) return { n: 20, kaynak: 'müdür' };
   return { n: 40, kaynak: 'varsayılan' };
 }
+// PER-012: MEBBİS'teki 'Derse Gireceği Programlar' (OOK15004; eg.mebYetki = { uygulama: ['B','A2'], teorik: [...], okuma }). Okunmamışsa
+// ya da listesi boşsa engel yok (bilinmeyen yetki engel sayılmaz). Sınıf karşılaştırması ana sınıfla (B-O, B-EN → B; anaSinif).
+export function ustaYetkili(eg, sinif, tur = 'uygulama') {
+  const l = eg && eg.mebYetki && eg.mebYetki[tur]; if (!Array.isArray(l) || !l.length) return true;
+  return l.includes(anaSinif(sinif));
+}
 // Öğretmenin t gününün haftasındaki (Pazartesi–Pazar) direksiyon dersleri; iptal ve gelmedi sayılmaz. liste: taslaklı ders listesi (planlayıcı)
 export function haftaDers(egId, t = gun(0), liste = S.dersler) {
   const d = tarihOku(t), off = (d.getDay() + 6) % 7, b = new Date(d); b.setDate(d.getDate() - off); const s = new Date(b); s.setDate(b.getDate() + 6);

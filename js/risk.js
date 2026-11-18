@@ -1,4 +1,4 @@
-import { izinDurumu, haftalikSinir, haftaDers, S, gun, fark, SINIFLAR, egitmen, kapaliGun, dersAraci, risk, kursAdi } from './veri.js?v=234';
+import { izinDurumu, haftalikSinir, haftaDers, ustaYetkili, S, gun, fark, SINIFLAR, egitmen, kapaliGun, dersAraci, risk, kursAdi } from './veri.js?v=234';
 import { gerekliDireksiyon, kuralAyar, geceKisitli, geceDersMi } from './veri.js?v=234';
 
 // B Engelli adayı kendi (raporuna uygun) aracıyla eğitim alıyorsa (MTSK Yön. md.7/5) ders kurs aracı olmadan planlanır (arac: null, "kendi aracı")
@@ -84,7 +84,7 @@ export function otomatikPlan({ gunSay = 7, haftalik = 3 } = {}) {
       const h = egitmen(x.k.egitmen);
       if ((S.izinler || []).some(i => i.kim === h.id && g >= i.bas && g <= i.bit) || (uGun[h.id + g] || 0) >= uSinir) continue;
       // PER-003/011: çalışma izni o gün bitmiş öğretmene ve haftalık ders sınırı dolmuş öğretmene öneri yok (elle eklemede de engelli)
-      if (izinDurumu(h, g).tur === 'bitti' || haftaDers(h.id, g, oneri.length ? S.dersler.concat(oneri) : S.dersler) >= haftalikSinir(h).n) continue;
+      if (!ustaYetkili(h, x.k.sinif) || izinDurumu(h, g).tur === 'bitti' || haftaDers(h.id, g, oneri.length ? S.dersler.concat(oneri) : S.dersler) >= haftalikSinir(h).n) continue;
       if (Object.values(h.belgeler || {}).some(t => t && t < g)) continue;  // sertifika, sağlık raporu ya da adli sicil süresi dolmuş usta öğreticiye ders önerilmez (elle eklemede de engelli)
       for (const sa of KAPASITE_SAAT) {
         if (dolu.has('u' + g + sa + h.id) || dolu.has('k' + g + sa + x.k.id)) continue;

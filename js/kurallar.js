@@ -5,7 +5,7 @@
 // 'uyari', 'bilgi'. Dizinin üstünde ek alanlar: kural (kimlik), kursiyer (id), kursiyerler (birden çok kişiye ait oturum bulgusunda kimlik listesi, ör. Y04), kisa (öğrenci dosyasında ad olmadan başlık), yalnizDosya, eylem.
 // DOM yok; yalnız veri.js'e bağlı (Node'da denenebilir). Bugün: veri.js BUGUN / gun().
 // Yeni kurallar ilk sürümde yalnız "uyarı"dır; Eyüp Bey teyit edince engele çevrilebilir (belgeler/eksikler/eyup-sorular.md).
-import { S, gun, fark, aracUygun, izinDurumu, haftalikSinir, haftaDers, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
+import { S, gun, fark, aracUygun, izinDurumu, haftalikSinir, haftaDers, ustaYetkili, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
 
 /* ---------- yardımcılar (ui.js'teki biçimlerle aynı; ui.js DOM'a bağlı olduğu için burada kopyası) ---------- */
 const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
@@ -259,6 +259,8 @@ export function dersKontrol(o) {
   if (ar && aracYasSiniri(ar) && aracYasi(ar, +planGun.slice(0, 4)) > aracYasSiniri(ar)) sorun.push(`${ar.plaka} ${aracYasi(ar, +planGun.slice(0, 4))} yaşında; bu sınıfta eğitim aracı ${aracYasSiniri(ar)} yaşından büyük olamaz (MTSK md.17/2-d).`);
   // ARC-002: MEBBİS'te 'Muayene Tarihi Doldu' ya da 'Hizmet Dışı' görünen araçla ders planlanmaz
   if (ar && /muayene\s*tarihi\s*doldu|hizmet\s*d[ıi]ş/i.test(ar.mebDurum || '')) sorun.push(`${ar.plaka} MEBBİS’te “${ar.mebDurum}” görünüyor; bu araçla ders planlanamaz.`);
+  // PER-012: MEBBİS'te öğretmenin derse gireceği programlarında bu sınıfın uygulaması yoksa MEBBİS ders formunda öğretmen çıkmaz
+  if (tur !== 'simulator' && !ustaYetkili(eg, k.sinif)) sorun.push(`${eg.ad} MEBBİS’te ${sinifEtiket(k.sinif, k)} uygulama dersine yetkili görünmüyor (derse gireceği programlar: ${eg.mebYetki.uygulama.join(', ')}). Yetki MEM onayıyla eklenir; eklendiyse MEBBİS’ten güncelleyin.`);
   // PER-003/028: öğretmenin çalışma izni ders gününden önce bittiyse planlanmaz (MEBBİS bu tarihte personeli listelemez)
   { const iz = izinDurumu(eg, planGun); if (iz.tur === 'bitti') sorun.push(`${eg.ad}: çalışma izninin bitişi ${tarih(iz.bit)}; ${tarih(planGun)} dersine atanamaz. İzin yenilendiyse MEBBİS’ten güncelleyin.`); else if (iz.tur === 'bugun') not.push(`${eg.ad}: çalışma izni bu ders günü bitiyor.`); }
   Object.entries(eg.belgeler || {}).filter(([, t]) => t < planGun).forEach(([b]) => sorun.push(eg.ad + ' · ' + ({ sertifika: 'usta öğretici sertifikası', saglik: 'sağlık raporu', adli: 'adli sicil kaydı' }[b]) + ' süresi dolmuş; bu tarihte ders planlanamaz.'));

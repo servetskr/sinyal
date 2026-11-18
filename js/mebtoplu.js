@@ -1,7 +1,7 @@
 // MEBBİS toplu çekme ve toplu yazma (mdSinyal tarafı). İşi MEBBİS Yardımcısı'nın arka plan motoru (eklenti/motor.js)
 // kursun kendi MEBBİS oturumunda, ekran açmadan yürütür; sonuç buraya gelir ve kayıtlarla eşlenir.
 // Gönderilen ve gelen iletilerin adları ve alanları: js/eklenti.js başındaki ileti sözleşmesi tablosu (eklenti/sinyal.js'te de aynısı).
-import { S, kaydet, gun, iso, fark, izinDurumu, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, sb, sbDers, cokSube, seciliSube, eksikEvrak, anaSinif, egitimSinifi, ekTur, kursiyerTaban, tutarOku, MEB_CEZA_SERTIFIKA, programAcik, esinavUcretiIsle, esinavUcretiVar, esinavHakDurum, teorikSaat } from './veri.js?v=234';
+import { S, kaydet, gun, iso, fark, izinDurumu, ustaYetkili, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, sb, sbDers, cokSube, seciliSube, eksikEvrak, anaSinif, egitimSinifi, ekTur, kursiyerTaban, tutarOku, MEB_CEZA_SERTIFIKA, programAcik, esinavUcretiIsle, esinavUcretiVar, esinavHakDurum, teorikSaat } from './veri.js?v=234';
 import { bildir, pencere, kapatPencere, e, ik, isaret, rozet, tarih, tl } from './ui.js?v=234';
 import * as GR from './gruplar.js?v=234';
 import * as EK from './eklenti.js?v=234';
@@ -21,6 +21,7 @@ export const CEKILECEK = [
   ['sinavlar', 'Sınav sonuçları', 'Son 3 uygulama dönemi ve 2 aylık e-sınav'],
   ['teorik', 'Teorik program', 'Son 4 dönemin MEBBİS’teki teorik ders programı (SKT04001); şube başına 34 saat denetimi ve teorik bitiş tarihi (Yardımcı 1.13)'],
   ['ucretler', 'e-Sınav ücretleri', 'Ücret yatıran adaylar (SKT02007); sıradaki hakkın ücreti işaretlenir (Yardımcı 1.13)'],
+  ['yetki', 'Öğretmen yetkileri', 'Derse gireceği programlar: sınıf × teorik/uygulama (OOK15003/15004; yalnız toplu onayla izni alınmış personel). Ders planı ve sınav randevusu yetkisiz öğretmene yazılmaz (Yardımcı 1.16)'],
   ['ucretIlani', 'MEB ücret ilanı', 'MEBBİS’e bildirilmiş ücret ilanı (OOK01002); kurs ücretleri ve sözleşmeler ilanla ve il tabanıyla karşılaştırılır (Yardımcı 1.15)'],
 ];
 // durum: bu sekmedeki bellek; süren iş ayrıca S.mebIs'te kalıcı (sayfa yenilense de parça ve onay bilgisi kalır)
@@ -296,6 +297,8 @@ export function kuralDenetimi(l) {
   // PER-003: öğretmenin çalışma izni ders/sınav gününden önce bittiyse engel (MEBBİS o tarihte personeli listelemez); aynı gün bitiyorsa uyarı
   // (bitiş günü sınavına girilip girilemeyeceği il MEM'e soruldu, SOR-037)
   const izinBak = (id, eg, t, ne) => { if (!eg || !t) return; const d = izinDurumu(eg, t), iy = ne === 'ders' ? 'dersi' : 'sınavı'; if (d.tur === 'bitti') ekle(id, 'engel', 'P02', `${eg.ad}: çalışma izninin bitişi ${tarih(d.bit)}; ${tarih(t)} ${iy} MEBBİS’e yazılamaz. İzin yenilendiyse MEBBİS’ten güncelleyin`); else if (d.tur === 'bugun') ekle(id, 'uyari', 'P02', `${eg.ad}: çalışma izni ${ne} günü (${tarih(t)}) bitiyor`); };
+  // PER-012: MEBBİS'te öğretmenin derse gireceği programlarında adayın sınıfının uygulaması yoksa MEBBİS formunda öğretmen çıkmaz → engel
+  const yetkiBak = (id, eg, k, ne) => { if (eg && k && !ustaYetkili(eg, k.sinif)) ekle(id, 'engel', 'P03', `${eg.ad} MEBBİS’te ${k.sinif} uygulamasına yetkili görünmüyor (derse gireceği programlar: ${eg.mebYetki.uygulama.join(', ')}); ${ne === 'ders' ? 'ders' : 'sınav randevusu'} bu öğretmenle yazılamaz`); };
   l.forEach(x => {
     if (x.tur === 'teorik') {   // Y05: grup ve gün toplamı (bu ders dahil) 2–6 saat dışındaysa uyarı
       const t = (S.teorik || []).find(y => 'teorik-' + y.id === x.id); if (!t) return;
@@ -304,12 +307,12 @@ export function kuralDenetimi(l) {
     }
     if (x.tur === 'program') {
       const d = S.dersler.find(y => 'ders-' + y.id === x.id); if (!d) return;
-      izinBak(x.id, egitmen(d.egitmen), d.tarih, 'ders');
+      izinBak(x.id, egitmen(d.egitmen), d.tarih, 'ders'); yetkiBak(x.id, egitmen(d.egitmen), kursiyer(d.kursiyer), 'ders');
       return bak(x.id, 'program', { k: kursiyer(d.kursiyer), d, plaka: (arac(d.arac) || {}).plaka || '', usta: (egitmen(d.egitmen) || {}).ad || '' });
     }
     // sınav randevusu: öğretmenin izni Y07 bulgusuyla (oturum + aday); Y07 bulgusu yalnız mdSinyal'deki oturum adaylarına bakar, bu yüzden
     // oturumda kaydı olmayan aday için aynı ölçü burada da uygulanır (izinBak, P02)
-    if (x.tur === 'randevu') return x.adaylar.forEach(a => { const p = String(a.id).split('-'), sid = p.slice(1, -1).join('-'), sn = (S.sinavlar || []).find(s => s.id === sid), k = kursiyer(p[p.length - 1]); if (sn && !(sn.kursiyerler || []).includes(k && k.id)) izinBak(a.id, S.egitmenler.find(e => e.ad === a.personelAd), sn.tarih, 'sınav'); bak(a.id, 'randevu', { k: kursiyer(p[p.length - 1]), sinav: p.slice(1, -1).join('-'), plaka: a.plaka, usta: a.personelAd }); });
+    if (x.tur === 'randevu') return x.adaylar.forEach(a => { const p = String(a.id).split('-'), sid = p.slice(1, -1).join('-'), sn = (S.sinavlar || []).find(s => s.id === sid), k = kursiyer(p[p.length - 1]); if (sn && !(sn.kursiyerler || []).includes(k && k.id)) izinBak(a.id, S.egitmenler.find(e => e.ad === a.personelAd), sn.tarih, 'sınav'); yetkiBak(a.id, S.egitmenler.find(e => e.ad === a.personelAd), k, 'sınav'); bak(a.id, 'randevu', { k: kursiyer(p[p.length - 1]), sinav: p.slice(1, -1).join('-'), plaka: a.plaka, usta: a.personelAd }); });
     if (x.tur === 'onay') return x.adaylar.forEach(a => bak(a.id, 'onay', { k: kursiyer(String(a.id).replace(/^onay-/, '')) }));
     if (['kayit', 'evrak', 'esinav'].includes(x.tur)) bak(x.id, x.tur, { k: kursiyer(String(x.id).slice(x.tur.length + 1)) });
   });
@@ -592,6 +595,7 @@ function uygula(v, tekrar = false) {
   if (Array.isArray(v.teorik)) o.teorik = teorikProgramIsle(v.teorik); else if (v.teorik && v.teorik.hata) o.teorikHata = v.teorik.hata;
   if (v.ucretler && Array.isArray(v.ucretler.satirlar)) o.ucretler = ucretleriIsle(v.ucretler); else if (v.ucretler && v.ucretler.hata) o.ucretHata = v.ucretler.hata;
   if (v.kurum && !v.kurum.hata) o.kurum = kurumIsle(v.kurum); else if (v.kurum && v.kurum.hata) o.kurumHata = v.kurum.hata;
+  if (v.yetki && Array.isArray(v.yetki.kisiler)) o.yetki = yetkiIsle(v.yetki); else if (v.yetki && v.yetki.hata) o.yetkiHata = v.yetki.hata;
   if (v.ucretIlani && Array.isArray(v.ucretIlani.satirlar)) o.ucretIlani = ucretIlaniIsle(v.ucretIlani); else if (v.ucretIlani && v.ucretIlani.hata) o.ucretIlaniHata = v.ucretIlani.hata;
   // yalnız yazma yapılan işte "veri aldı" kaydı düşmez (B10)
   if (Object.keys(v).filter(k => k !== 'denetim').length) { S.mebCekim = { ...(S.mebCekim || {}), toplu: gun(0) + ' ' + new Date().toTimeString().slice(0, 5) }; if (!tekrar) islem('MEBBİS’ten toplu veri aldı', Object.keys(o).join(', ')); }
@@ -631,6 +635,25 @@ export function ucretleriIsle(t) {
 }
 // OOK01002 dgUcret (SIT-006): MEB onaylı ücret ilanı. Yalnız en son eğitim yılının satırları saklanır (S.kurs.mebUcretIlani);
 // mevzuat.js T09/T10 kurs ücretlerini ve sözleşmeleri bununla, ilanı da il taban fiyatıyla karşılaştırır.
+// PER-012: OOK15004 'Derse Gireceği Programlar' → eg.mebYetki. Eşleme izin no (Kayıt No) → TC; adla eşleme yok (yanlış kişiye yetki yazılmaz).
+// Program metni "B SINIFI SERTİFİKA ..." → 'B'; Teorik/Uygulama hücresi işaretli kutu ('1') ya da Evet/✓/X metni.
+const isaretli = v => /^(1|evet|var|✓|✔|x)$/i.test(String(v || '').trim());
+export function yetkiIsle(v) {
+  const b = v.baslik || [], i = { kayit: sutun(b, 'kayitno'), tc: sutun(b, 'kimlik') };
+  let guncel = 0; const bulunamayan = [], hatali = [];
+  (v.kisiler || []).forEach(x => {
+    const s = x.satir || [], izin = String(x.kayitNo || (i.kayit >= 0 ? s[i.kayit] : '') || '').replace(/\D/g, ''), tc = String(i.tc >= 0 ? s[i.tc] || '' : '').replace(/\D/g, '');
+    if (x.hata) { hatali.push(izin || tc); return; }
+    const eg = [...S.egitmenler, ...(S.ogretmenler || [])].find(z => (izin && String(z.calismaIzinNo || '') === izin) || (tc && z.tc === tc));
+    if (!eg) { bulunamayan.push(izin || '?'); return; }
+    const tb = x.secilen && x.secilen.satirlar && x.secilen.satirlar.length ? x.secilen : x.acik; if (!tb) return;
+    const tb0 = tb.baslik || [], ti = { p: sutun(tb0, 'program'), t: sutun(tb0, 'teorik'), u: sutun(tb0, 'uygulama') };
+    const uyg = new Set(), teo = new Set();
+    (tb.satirlar || []).forEach(r => { const k = programKodu(r[ti.p >= 0 ? ti.p : 0]); if (!k) return; if (ti.u >= 0 && isaretli(r[ti.u])) uyg.add(k); if (ti.t >= 0 && isaretli(r[ti.t])) teo.add(k); });
+    eg.mebYetki = { uygulama: [...uyg], teorik: [...teo], okuma: gun(0) }; guncel++;
+  });
+  return { guncel, bulunamayan, hatali };
+}
 export function ucretIlaniIsle(t) {
   const b = t.baslik || [], i = { p: sutun(b, 'altprogram'), s: sutun(b, /^sinif/), y: sutun(b, /^yil/), d: sutun(b, /^donem/), o: sutun(b, /ogrenimucret/), g: sutun(b, /grupucret/), n: sutun(b, /derssayi/), t: sutun(b, /toplam/) };
   const para = x => { const v = String(x == null ? '' : x).replace(/[^\d,.]/g, ''); return +(v.includes(',') ? v.replace(/\./g, '').replace(',', '.') : v.replace(/\.(?=\d{3}(\D|$))/g, '')) || 0; };
@@ -849,6 +872,8 @@ function ozetGoster(o, yazilan) {
   if (o.personel) l.push(satir(`Personel: ${o.personel.guncel} kişinin izin no’su eklendi; izin bitişleri ve haftalık saatler alındı`, [o.personel.yeni.length ? `mdSinyal’de olmayan: ${o.personel.yeni.map(e).join(', ')} (Ekip ve araçlar › Usta öğreticiler’de “Kart aç”)` : '', (o.personel.oneri || []).length ? `${o.personel.oneri.length} kişi yalnız adla eşleşti; Usta öğreticiler’de “Evet, bağla” ile onaylayın` : '', (o.personel.ayrilan || []).length ? `MEBBİS’te görevden ayrılmış görünen: ${o.personel.ayrilan.map(e).join(', ')} (kartında “Ekipten çıkar”)` : '', (o.personel.gorunmeyen || []).length ? `MEBBİS’in görevdeki listesinde olmayan: ${o.personel.gorunmeyen.map(e).join(', ')}` : '', ...(o.personel.farklar || []).map(e)].filter(Boolean).join(' · ')));
   if (o.araclar) l.push(satir(`Araçlar: ${o.araclar.guncel} aracın muayene tarihi MEBBİS’ten alındı`, [o.araclar.yeni.length ? `mdSinyal’de olmayan: ${o.araclar.yeni.map(e).join(', ')} (Ekip ve araçlar’da “mdSinyal’e ekle”)` : '', ...(o.araclar.farklar || []).map(e)].filter(Boolean).join(' · ')));
   if (o.sinavlar) l.push(satir(`Sınav sonuçları okundu`, 'Sonuçları sınav oturumlarına doldurmak için aşağıdaki düğmeye basın'));
+  if (o.yetki) l.push(satir(`Öğretmen yetkileri: ${o.yetki.guncel} öğretmenin derse gireceği programlar alındı`, [o.yetki.bulunamayan.length ? `mdSinyal’de izin no ya da TC ile bulunamayan: ${o.yetki.bulunamayan.map(e).join(', ')} (önce Personel’i alın)` : '', o.yetki.hatali.length ? `${o.yetki.hatali.length} kişinin ekranı açılamadı` : ''].filter(Boolean).join(' · ')));
+  if (o.yetkiHata) l.push(`<li class="ipucu uyari">${isaret('uyari', 18)}<span>Öğretmen yetkileri: ${e(o.yetkiHata)}${/tanımıyor/.test(o.yetkiHata) ? ' Yardımcı’yı 1.16 sürümüne güncelleyin.' : ''}</span></li>`);
   if (o.ucretIlani) { const I = o.ucretIlani, b = I.satirlar.find(x => /Sertifika\s*Yok/i.test(x.sinif) && /"B"/.test(x.sinif));
     l.push(satir(`MEB ücret ilanı: ${I.yil || '—'} yılı, ${I.satirlar.length} satır${b ? ` (belgesiz B ${tl(b.toplam)})` : ''}`, 'Kurs ücretleri ve sözleşmeler bu ilanla ve il taban fiyatıyla karşılaştırılır; uyuşmazlık MEB kurallarında ve Bugün listesinde görünür.')); }
   if (o.ucretIlaniHata) l.push(`<li class="ipucu uyari">${isaret('uyari', 18)}<span>MEB ücret ilanı: ${e(o.ucretIlaniHata)}${/tanımıyor/.test(o.ucretIlaniHata) ? ' Yardımcı’yı 1.15 sürümüne güncelleyin.' : ''}</span></li>`);
@@ -867,7 +892,7 @@ function ozetGoster(o, yazilan) {
 }
 
 /* ---------- MEBBİS aktarım merkezindeki kartlar ---------- */
-const secim = new Set(['kurum', 'gruplar', 'teorik', 'kursiyerler', 'dosya', 'personel', 'araclar', 'sinavlar', 'ucretler', 'ucretIlani']);
+const secim = new Set(['kurum', 'gruplar', 'teorik', 'kursiyerler', 'dosya', 'personel', 'yetki', 'araclar', 'sinavlar', 'ucretler', 'ucretIlani']);
 // Süren, durmuş ya da parçası bitmiş yazma işi: onaylayan, parça, kalan iş; durdur, devam, iptal
 // cekGizle: "MEBBİS'ten al" sekmesinde çekme işinin durumu topluKart'ta zaten görünür
 export function isKarti(cekGizle) {

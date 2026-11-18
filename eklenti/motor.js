@@ -198,7 +198,8 @@
     if (!o.some(x => x.value === String(v))) throw new MebHata(`“${v}” değeri ${ekranAd(doc.__ekran)} ekranındaki “${el.name || el.id}” listesinde yok; gönderilmedi`, 'veri');
   }
   // Formu gönderir. degis: { alanKimliğiYaAdı: değer }. tetik: autopostback yapan alan. dugme: basılan düğme (görselse .x/.y)
-  async function postla({ doc, yol }, degis = {}, { tetik = null, dugme = null } = {}) {
+  // arguman: yalnız liste tablosunun satır seçimi ('Select$N', ör. OOK15003 'Aç'); başka bağımsız değişkenle postback gitmez
+  async function postla({ doc, yol }, degis = {}, { tetik = null, dugme = null, arguman = '' } = {}) {
     const f = anaForm(doc); if (!f) throw ekranHata(doc, 'form', 'formu');
     const hedef = new URL(f.getAttribute('action') || yolOf(yol), doc.__url || new URL(yolOf(yol), KOK).href).href;
     const m = new Map(alanlar(doc));
@@ -210,8 +211,10 @@
       if (SERBEST.has(k)) { m.set(el ? el.name || el.id : k, v); return; }
       const ad = adOf(doc, k); secimDenetle(doc, el, v); m.set(ad, v);
     });
-    if (tetik) { const t = elBul(doc, tetik); if (!t) throw ekranHata(doc, tetik); tetikDenetle(doc, t); }
-    m.set('__EVENTTARGET', tetik ? adOf(doc, tetik) : ''); m.set('__EVENTARGUMENT', '');
+    if (tetik) { const t = elBul(doc, tetik); if (!t) throw ekranHata(doc, tetik); if (arguman) { if (!(t.tagName === 'TABLE' && /^Select\$\d{1,3}$/.test(arguman)) || aslaMi(t)) throw yasak(doc, t, 'yalnız liste satırı seçilebilir'); } else tetikDenetle(doc, t); }
+    // satır seçiminde hedef, satırdaki bağlantının __doPostBack('hedef','Select$N') çağrısından okunur (UniqueID; id'deki '_' ile tahmin edilmez)
+    const satirHedef = () => { const a = [...elBul(doc, tetik).querySelectorAll('a[href*="__doPostBack"]')].map(x => /__doPostBack\('([^']+)','([^']+)'\)/.exec(x.getAttribute('href') || '')).find(x => x && x[2] === arguman); if (!a) throw ekranHata(doc, tetik + ' ' + arguman, 'satırı'); return a[1]; };
+    m.set('__EVENTTARGET', tetik ? (arguman ? satirHedef() : adOf(doc, tetik)) : ''); m.set('__EVENTARGUMENT', arguman || '');
     const govde = [...m].map(([k, v]) => kodla(k) + '=' + kodla(v));
     if (dugme) { const d = elBul(doc, dugme); if (!d) throw ekranHata(doc, dugme, 'düğmesi'); dugmeDenetle(doc, d); const ad = d.name || d.id; if ((d.type || '').toLowerCase() === 'image') govde.push(kodla(ad + '.x') + '=7', kodla(ad + '.y') + '=7'); else govde.push(kodla(ad) + '=' + kodla(d.value || '')); }
     await bekle();
@@ -395,6 +398,24 @@
   // 1.15.0 (SIT-006): OOK01002 kurum künyesindeki dgUcret (MEB onaylı ücret ilanı). Yalnız GET: bu sayfada künye düzenlenebilir,
   //  Kaydet'e (hiddenKaydet) ve hiçbir düğmeye basılmaz. OOK modülüne ilk girişte sayfa ana sayfaya dönerse önce modül sayfası açılır.
   Object.assign(CEKME, {
+    // PER-012: öğretmenin derse gireceği programlar (sınıf × teorik/uygulama). OOK15003 'Toplu Onay İzin İstek Listesi' (yalnız toplu onayla izin
+    // alınmış personel) → satır 'Aç' (Select$N) → OOK15004 'Personel Bilgi Girişi' salt okunur okunur; Kaydet'e asla basılmaz.
+    async yetki(ilerle) {
+      const t = await getir('/Ookgm/ook15003.aspx'), el = tabloEl(t.doc, 'dgIstekOnaylanan');
+      if (!el) throw ekranHata(t.doc, 'dgIstekOnaylanan', 'tablosu');
+      const liste = tabloOku(el) || { baslik: [], satirlar: [] }, kisiler = [];
+      const hucre = c => { const k = c.querySelector('input[type=checkbox]'); return k ? (k.checked || k.hasAttribute('checked') ? '1' : '0') : metin(c); };
+      const izgara = (d, id) => { const tb = tabloEl(d, id); if (!tb) return null; const rows = [...tb.rows].filter(x => x.closest('table') === tb); return rows.length ? { baslik: [...rows[0].cells].map(c => metin(c)), satirlar: rows.slice(1).map(x => [...x.cells].map(hucre)).filter(x => x.some(Boolean)) } : null; };
+      for (let i = 0; i < liste.satirlar.length && i < 60; i++) {
+        ilerle && ilerle(`Öğretmen yetkileri: ${i + 1}/${liste.satirlar.length}`, (i + 1) / liste.satirlar.length);
+        try {
+          const r = await postla(t, {}, { tetik: 'dgIstekOnaylanan', arguman: 'Select$' + i }), d = r.doc;
+          const kayitNo = (metin(d.body).match(/Kay[ıi]t\s*No\s*:?\s*(\d{5,9})/i) || [])[1] || '';
+          kisiler.push({ satir: liste.satirlar[i], kayitNo, secilen: izgara(d, 'dgDerseGirecegiProgram'), acik: izgara(d, 'gvKurumdaAcikProgramlar') });
+        } catch (x) { if (durduran(x)) throw x; kisiler.push({ satir: liste.satirlar[i], hata: x.message || String(x) }); }
+      }
+      return { baslik: liste.baslik, kisiler };
+    },
     async ucretIlani() {
       const oku = d => tabloId(d, 'dgUcret') || tabloBaslikla(d, /sinifi/, /toplam/);
       let t = await getir('/Ookgm/ook01002.aspx'), tb = oku(t.doc);
@@ -403,7 +424,7 @@
       return tb;
     },
   });
-  const CEKME_EKRAN = { kurum: ['skt01001'], gruplar: ['skt03002', 'skt03001'], kursiyerler: ['skt02006'], personel: [], araclar: ['skt01002'], sinavlar: ['skt04003'], dosya: ['skt02009'], randevular: ['skt01005'], ucretler: ['skt02007'], teorik: ['skt04001'], ucretIlani: [] };
+  const CEKME_EKRAN = { kurum: ['skt01001'], gruplar: ['skt03002', 'skt03001'], kursiyerler: ['skt02006'], personel: [], araclar: ['skt01002'], sinavlar: ['skt04003'], dosya: ['skt02009'], randevular: ['skt01005'], ucretler: ['skt02007'], teorik: ['skt04001'], ucretIlani: [], yetki: ['ook15003', 'ook15004'] };
   // Aday Durum Görüntüleme: tek adayın bütün dosyası
   async function adayDosyasi(taban, tc) {
     const r = await postla(taban, { txtTcKimlikNo: tc }, { dugme: 'ImageButton1' });
