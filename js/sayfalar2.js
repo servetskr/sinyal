@@ -221,11 +221,13 @@ function sinavaEkleDireksiyon(s) {
 export function esinavTercihPenceresi(k, sonra) {
   const t = k.esinavTercih || {}, yd = !!(t.dil && t.dil !== 'Türkçe');
   pencere({
-    baslik: 'e-Sınav dili · ' + tamAd(k),
+    baslik: 'e-Sınav tercihleri · ' + tamAd(k),
     icerik: `<form id="f-esd" class="form-izgara" novalidate><div class="alan tam"><span class="et">Sınav dili</span><div class="secim"><label><input type="radio" name="dt" value="tr" ${yd ? '' : 'checked'}><span>Türkçe</span></label><label><input type="radio" name="dt" value="yd" ${yd ? 'checked' : ''}><span>Yabancı dil</span></label></div></div>
       <div class="alan tam" data-esd-yd ${yd ? '' : 'hidden'}><label for="esd-dil">Yabancı dil (ÖDSGM’nin belirlediği dillerden)</label><input id="esd-dil" name="dil" value="${e(yd ? t.dil : '')}" placeholder="Örn. İngilizce"></div>
       <div class="alan" data-esd-yd ${yd ? '' : 'hidden'}><label for="esd-tr">Tercümanın adı</label><input id="esd-tr" name="tercuman" value="${e((t.tercuman || {}).ad || '')}" placeholder="Teorik derslerdeki tercüman" autocomplete="off"></div>
       <div class="alan" data-esd-yd ${yd ? '' : 'hidden'}><label for="esd-iz">Valilik izni (tarih ve sayı)</label><input id="esd-iz" name="izin" value="${e((t.tercuman || {}).izin || '')}" placeholder="İsteğe bağlı" autocomplete="off"></div>
+      <div class="alan"><label for="esd-gun">Gün tercihi (bu öğrenci)</label><select id="esd-gun" name="gun" class="girdi"><option value="">Kurs ayarı (${['En erken tarih', 'Hafta içi', 'Hafta sonu'][+(S.kurs.esinavGun || 0)] || 'En erken tarih'})</option>${[['0', 'En erken tarih'], ['1', 'Hafta içi'], ['2', 'Hafta sonu']].map(([v, a]) => `<option value="${v}" ${t.gun === v ? 'selected' : ''}>${a}</option>`).join('')}</select></div>
+      <div class="alan"><label for="esd-mz">Test merkezi</label><input id="esd-mz" name="merkez" value="${e(t.merkez || '')}" list="esd-merkezler" placeholder="İsteğe bağlı" autocomplete="off"><datalist id="esd-merkezler">${[...new Set((S.sinavlar || []).filter(x => x.tur === 'e-Sınav' && x.yer).map(x => x.yer))].map(y => `<option value="${e(y)}">`).join('')}</datalist></div>
       <label class="tam" style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" name="isitme" ${t.isitme ? 'checked' : ''} style="width:18px;height:18px"> İşitme engelli: soruların işaret dili videosu gerekiyor</label>
       <label class="tam" style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" name="islendi" ${t.islendi ? 'checked' : ''} style="width:18px;height:18px"> Özel MTSK Modülü’ne işlendi</label>
       <p class="ipucu tam">${isaret('bilgi', 18)}<span>Randevu saatinden en az 48 saat önce işlenmezse sorular Türkçe ve işaret dili videosu olmadan gelir. Yabancı dilde sınava yalnız yabancı uyruklu ya da öğrenimini yurt dışında tamamlamış Türkçe bilmeyen aday girebilir; teorik eğitimi valilik izniyle görevlendirilen tercümanla almış olmalı. İşitme engelli aday 15 dakika ek süre alır.</span></p></form>`,
@@ -234,7 +236,7 @@ export function esinavTercihPenceresi(k, sonra) {
       f.addEventListener('submit', ev => { ev.preventDefault(); const ydil = f.dt.value === 'yd', dil = ydil ? f.dil.value.trim() : 'Türkçe';
       if (ydil && !dil) return bildir('Yabancı dili yazın', 'uyari');
       const tad = ydil ? f.tercuman.value.trim() : '', tiz = ydil ? f.izin.value.trim() : '';
-      k.esinavTercih = { dil, isitme: f.isitme.checked, islendi: f.islendi.checked ? (t.islendi || gun(0)) : null, tarih: gun(0), ...(tad ? { tercuman: { ad: tad, ...(tiz ? { izin: tiz } : {}) } } : {}) };
+      k.esinavTercih = { dil, isitme: f.isitme.checked, islendi: f.islendi.checked ? (t.islendi || gun(0)) : null, tarih: gun(0), ...(tad ? { tercuman: { ad: tad, ...(tiz ? { izin: tiz } : {}) } } : {}), ...(f.gun.value ? { gun: f.gun.value } : {}), ...(f.merkez.value.trim() ? { merkez: f.merkez.value.trim() } : {}) };  // SNV-080: aday başına gün ve merkez
       islem('e-Sınav dili kaydetti', tamAd(k) + ' · ' + dil + (tad ? ' · tercüman ' + tad : '') + (f.isitme.checked ? ' · işaret dili' : '') + (f.islendi.checked ? ' · MEBBİS’e işlendi' : '')); kaydet(); kapatPencere(); bildir('Kaydedildi'); sonra && sonra(); }); },
   });
 }
