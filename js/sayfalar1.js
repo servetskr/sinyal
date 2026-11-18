@@ -16,6 +16,7 @@ import * as HZ from './hazirlik.js?v=234';
 import { aksamOzeti } from './zamanlayici.js?v=234';
 import * as B from './bulut.js?v=234';
 import * as EKL from './eklenti.js?v=234';
+import * as MK from './mebkayit.js?v=234';
 import { gerekliDireksiyon, esinavHakDurum, esinavUcretiIsle, direksiyonAyrinti, direksiyonHesap, asgariYasHesap, deneyimEksik, yasDenetim, yasIstisnaKapsar, YAS_ISTISNA_OKUL, YAS_ISTISNA_DURUM, yasIstisnaGecerli, yasIstisnaMetin, MEVCUT_BELGELER, eskiBelgeTarihi, DERS_KURAL_TARIH, eskiDersKurali, geceDersMi, geceKisitli, geceGerekli, geceBaslangic, sinavHakSiniri, IKINCI_HAK_GUN, kuralAyar } from './veri.js?v=234';
 import * as TK from './takvim.js?v=234';
 import * as GR from './gruplar.js?v=234';
@@ -1180,6 +1181,48 @@ function mebAdayGecmisiHtml(k, tY) {
     ${sr.length ? `<b class="meb-ac-bas">Sertifikalar</b><ul>${sr.map(y => `<li><div class="meb-ac-ust"><b>${y.tarih ? tY(y.tarih) : 'tarih yok'}</b><span class="meb-ac-m">${[y.mevcut ? 'mevcut ' + e(y.mevcut) : '', y.istenen ? 'alınan ' + e(y.istenen) : '', kurumYaz(y.kurum)].filter(Boolean).join(' · ')}</span></div></li>`).join('')}</ul>` : ''}
     <small class="meb-ac-dip">Başka kurslardaki kayıtlar ve eski sertifikalar da görünür (MEBBİS ‘Aday Geçmiş’).</small></details>`;
 }
+// MEB-093: öğrenci dosyasında 'MEBBİS geçmişi'. Yerel kaynaklar her zaman okunur: aktarım izleri (S.mebDurum: bu öğrencinin kimliğiyle biten
+// iş kimlikleri ve derslerinin 'ders-<id>' işleri), işlem kaydı (S.islemler: MEBBİS satırları, ayrıntıda öğrencinin adı), aday dosyası okuması.
+// Müdür bulutta 'Sunucu kaydında ara' der: kayit koleksiyonunda meb.hedef.kursiyer == k.id sorgusu (B.mebGecmisi; bileşik dizin YON-038) varsa o,
+// yoksa ya da dizin hatası dönerse son 500 işlem kaydında adla arama. Veri yoksa ne yapılacağı yazılır.
+const MEB_NE = /MEBBİS|MEB işi|SKT\d{5}/;
+const zamanYaz = z => { const d = typeof z === 'number' ? new Date(z) : z instanceof Date ? z : new Date(String(z || '').length === 16 ? z + ':00' : z); return isNaN(d) ? '' : d.toLocaleString('tr-TR', { day: 'numeric', month: 'short', year: d.getFullYear() === new Date().getFullYear() ? undefined : 'numeric', hour: '2-digit', minute: '2-digit' }); };
+function mebIzleri(k) {
+  const dersIds = new Set((S.dersler || []).filter(d => d.kursiyer === k.id).map(d => d.id));
+  return Object.entries(S.mebDurum || {}).filter(([id, v]) => v && (id.endsWith('-' + k.id) || (id.startsWith('ders-') && dersIds.has(id.slice(5)))))
+    .map(([id, v]) => ({ id, ...v, turAd: MK.TUR_AD[v.tur || id.split('-')[0]] || MK.TUR_AD[id.split('-')[0] === 'ders' ? 'program' : id.split('-')[0]] || id.split('-')[0] })).sort((a, b) => (b.zaman || 0) - (a.zaman || 0));
+}
+function mebIslemleri(k) {
+  const ad = tamAd(k).toLocaleLowerCase('tr'); if (!ad.trim()) return [];
+  return (S.islemler || []).filter(x => x && MEB_NE.test(String(x.ne || '') + ' ' + String(x.ayrinti || '')) && String(x.ayrinti || '').toLocaleLowerCase('tr').includes(ad)).slice(0, 40);
+}
+const mebSunucu = {};   // kursiyer kimliği → { durum: 'yukleniyor'|'tamam'|'hata', l, yol, hata }
+function mebGecmisiKarti(k) {
+  const iz = mebIzleri(k), isl = mebIslemleri(k), M = k.meb || {}, sv = mebSunucu[k.id], bulutMu = B.bulutta();
+  const n = iz.length + isl.length + (M.dosyaOkuma ? 1 : 0);
+  const izSatir = x => `<li><div class="meb-ac-ust"><b>${e(x.turAd)}</b><span class="meb-ac-m">${x.durum === 'tamam' ? e(MK.izMetni(x)) : x.durum === 'hata' ? 'gönderilemedi' + (x.zaman ? ' · ' + e(zamanYaz(x.zaman)) : '') : 'gönderildi, sonuç bekleniyor' + (x.zaman ? ' · ' + e(zamanYaz(x.zaman)) : '')}</span>${rozet(x.durum === 'tamam' ? 'Aktarıldı' : x.durum === 'hata' ? (x.hataTur === 'ekran' ? 'Ekran değişti' : 'Hata') : 'Bekliyor', x.durum === 'tamam' ? 'yesil' : x.durum === 'hata' ? 'kirmizi' : 'uyari')}</div>${x.durum === 'hata' && x.not ? `<small>${e(x.not)}</small>` : ''}</li>`;
+  const islSatir = x => `<li><div class="meb-ac-ust"><b>${e(zamanYaz(x.zaman))}</b><span class="meb-ac-m">${e(x.ne)}${x.kim ? ' · ' + e(x.kim) : ''}</span></div><small>${e(x.ayrinti || '')}</small></li>`;
+  const sunucu = !bulutMu ? '' : !mudurMu() ? '' : !sv ? `<button type="button" class="dg dg-hafif dg-kucuk" data-meb-gecmis-sunucu style="margin-top:8px">${ik('ara')}Sunucu kaydında ara</button>`
+    : sv.durum === 'yukleniyor' ? `<p class="meb-ac-dip">Sunucu kaydı okunuyor…</p>`
+    : sv.durum === 'hata' ? `<p class="ipucu uyari" style="margin-top:8px">${isaret('uyari', 18)}<span>Sunucu kaydı okunamadı: ${e(sv.hata || '')}</span></p>`
+    : `<b class="meb-ac-bas">Sunucu kaydı (${sv.l.length})${sv.yol === 'ad' ? ' · son 500 kayıtta adla arandı' : ''}</b>${sv.l.length ? `<ul>${sv.l.slice(0, 50).map(islSatir).join('')}</ul>` : '<p class="meb-ac-dip">Sunucu kaydında bu öğrenciye ait MEBBİS satırı yok.</p>'}${sv.yol === 'ad' ? `<small class="meb-ac-dip">Öğrenci kimliğiyle aramak için Firestore’da kayit dizini gerekir (YON-038); açılınca bu arama kendiliğinden ona geçer.</small>` : ''}`;
+  return `<details class="kart meb-gecmis-kart" id="dosya-meb-gecmis"${sv ? ' open' : ''}><summary class="kart-bas"><h3>MEBBİS geçmişi</h3><small>${n ? n + ' kayıt' : 'kayıt yok'}</small></summary><div class="kart-govde meb-gecmis meb-acilir">
+    ${!n ? `<p class="ipucu">${isaret('bilgi', 18)}<span>Bu cihazda bu öğrenci için MEBBİS işlemi görünmüyor. MEBBİS’e gönderilen ya da MEBBİS’ten alınan her iş burada listelenir${bulutMu && mudurMu() ? '; eski kayıtlar için sunucu kaydında arayın' : ''}.</span></p>` : ''}
+    ${iz.length ? `<b class="meb-ac-bas">Aktarımlar</b><ul>${iz.slice(0, 30).map(izSatir).join('')}</ul>` : ''}
+    ${M.dosyaOkuma ? `<b class="meb-ac-bas">Aday dosyası</b><ul><li><div class="meb-ac-ust"><b>${tarih(M.dosyaOkuma)}</b><span class="meb-ac-m">MEBBİS aday dosyası (SKT02009) okundu${M.durum ? ' · ' + e(M.durum) : ''}</span></div></li></ul>` : ''}
+    ${isl.length ? `<b class="meb-ac-bas">İşlem kaydı</b><ul>${isl.map(islSatir).join('')}</ul>` : ''}
+    ${sunucu}</div></details>`;
+}
+async function mebGecmisiSunucu(k) {
+  mebSunucu[k.id] = { durum: 'yukleniyor' }; yenile();
+  try {
+    let l = null, yol = 'dizin';
+    if (typeof B.mebGecmisi === 'function') { try { l = await B.mebGecmisi(k.id); } catch (x) { if (!/index|precondition|dizin/i.test(String((x && (x.code || x.message)) || x))) throw x; } }
+    if (!l) { const ad = tamAd(k).toLocaleLowerCase('tr'); yol = 'ad'; l = (await B.kayitlar(500)).filter(x => MEB_NE.test(String(x.ne || '') + ' ' + String(x.ayrinti || '')) && String(x.ayrinti || '').toLocaleLowerCase('tr').includes(ad)); }
+    mebSunucu[k.id] = { durum: 'tamam', l, yol };
+  } catch (x) { mebSunucu[k.id] = { durum: 'hata', hata: B.hataMetni(x) }; }
+  yenile();
+}
 // KAY-080..083: MEBBİS'le farklı alanlar; ad soyad, cinsiyet ve mevcut belge tek dokunuşla alınır (sertifika sınıfı ücret ve sözleşmeye dokunduğu için ayrı pencerede, KAY-004)
 const MF_AL = ['Ad soyad', 'Cinsiyet', 'Mevcut belge'];
 // MEB-049: aşama farkında güvenli dört düzeltme (her biri onaylı); MEB-051: 'Böyle kalsın' (k.mebKabul, mebtoplu kabulAnahtar ile aynı biçim)
@@ -1927,6 +1970,7 @@ export function kursiyerDetay(id) {
 
       ${grupBas('Onaylar', 'onay', sat('KVKK aydınlatma', kv.aydinlatma || kv.riza ? 'Verildi' + (kv.tarih ? ' · ' + tarih(kv.tarih) : '') : rozet('Verilmedi', 'uyari')) + sat('WhatsApp bilgilendirme', kv.whatsapp ? 'Kabul etti' : kv.whatsapp === false ? 'Kabul etmedi' : 'Sorulmadı') + sat('Kampanya rızası', kv.pazarlama ? 'Var' : 'Yok') + sat('Sözleşme', k.evrak.sozlesme ? (k.sozlesmeImza ? (k.sozlesmeImza.yontem === 'Ekranda' ? 'Ekranda imzalandı' : /^Uzaktan/.test(k.sozlesmeImza.yontem || '') ? 'Uzaktan imzalandı' : 'Islak imza') + ' · ' + tarih(k.sozlesmeImza.tarih) : 'İmzalı') : `${rozet('İmzalanmadı', 'uyari')} <button class="dg dg-hafif dg-kucuk" data-sozlesme>İmzalat</button>`))}
       ${mebteKarti(k) || `<div class="kart" id="dosya-meb"><div class="kart-bas"><h3>MEBBİS ön kontrol</h3><small>${(() => { const l = mebOnKontrol(k); return l.filter(x => x[0]).length + '/' + l.length; })()}</small>${k.mebNo ? `<span class="rozet rozet-yesil" title="MEBBİS kayıt numarası">${e(k.mebNo)}</span>` : ''}<div class="sag" style="gap:6px">${k.mebIslendi ? rozet('Girildi', 'yesil') : `${!eksik.length ? `<button class="dg dg-ana dg-kucuk" data-meb-gonder="kayit-${k.id}">MEBBİS’e gönder</button>` : ''}<a class="dg dg-cizgi dg-kucuk" href="#/mebbis/${k.id}">Elle giriş</a>`}</div></div><div class="kart-govde"><ul style="list-style:none;display:grid;gap:6px;font-size:14px">${mebOnKontrol(k).map(([ok, t]) => `<li style="display:flex;gap:8px;align-items:center">${isaret(ok ? 'tamam' : 'uyari', 18)}<span style="${ok ? '' : 'font-weight:700;color:var(--murekkep)'}">${t}</span></li>`).join('')}</ul>${ME.mebAdimHtml(k)}</div></div>`}
+      ${mebGecmisiKarti(k)}
       </div>`; }
     if (profilSekme === 'cikti') return `<div class="kd-bolum">
       <div class="kart"><div class="kart-bas"><h3>Belgeler</h3></div><div class="kart-govde" style="display:grid;gap:8px">${[['sozlesme', 'Sözleşme'], ['bilgi', 'Bilgi formu'], ['ek1', 'Müracaat formu (EK-1)'], ['takip', 'Direksiyon takip formu'], ['makbuz', 'Son makbuz']].concat(gerekliDireksiyon(k) ? [['ek5', '“K” aday belgesi (EK-5)'], ['ek34', 'Sınav değerlendirme formu (' + (ek3Sinif(k.sinif) ? 'EK-3' : 'EK-4') + ')']] : []).concat(k.odeme.senetli ? [['senet', 'Senet']] : []).concat([['savcilik', 'Adli sicil durum beyanı'], ['imzabeyan', 'İmza beyannamesi']]).concat(yas(k.dogumTarihi) != null && yas(k.dogumTarihi) < 18 ? [['veli', 'Veli muvafakat belgesi']] : []).concat(k.sinif === 'CEZA' ? [['ceza100', '100 ceza puanı eğitim belgesi']] : []).concat(k.ucretsiz ? [['ucretsiz', 'Ücretsiz kursiyer formu (EK-7)']] : []).map(([t, a]) => `<button class="dg dg-cizgi dg-kucuk dg-sar" style="justify-content:flex-start" data-belge="${t}">${ik('belge')}${a}</button>`).join('')}</div></div>
@@ -2000,6 +2044,7 @@ ${mesajlar.length ? '' : '<li style="color:var(--soluk)">Bu kursiyere henüz mes
         const eg2 = ev.target.closest('[data-evrak-geri]'); if (eg2) { ev.preventDefault(); const key = eg2.dataset.evrakGeri, ad = EVRAKLAR.find(x => x[0] === key)[1]; { const yv0 = (k.evrakYuklenen || {})[key]; import('./evrak.js?v=234').then(m => m.netlikKarari(yv0, 'red', key)).catch(() => { }); } delete k.evrakYuklenen[key]; islem('Evrakı yeniden istedi', tamAd(k) + ' · ' + ad); kaydet(); wpGonder(k, `${selam(k)} yüklediğiniz ${ad.toLocaleLowerCase('tr')} okunamadı. Lütfen belgenin net ve tamamı görünen bir fotoğrafını öğrenci ekranınızdan ya da bu mesaja yanıt olarak tekrar gönderin.`, 'Evrak geri istendi'); return yenile(); }
         if (ev.target.closest('[data-profil-foto]')) return profilFoto(k);
         if (ev.target.closest('[data-musait-duzen]')) return musaitlikPenceresi(k);   // UYG-010
+        if (ev.target.closest('[data-meb-gecmis-sunucu]')) return mebGecmisiSunucu(k);   // MEB-093
         if (ev.target.closest('[data-deneme-yeni]')) return import('./deneme.js?v=234').then(m => m.denemeAc(k, yenile));
         const dy = ev.target.closest('[data-deneme-yazdir]'); if (dy) return import('./deneme.js?v=234').then(m => m.denemeYazdir(k, (k.dDeneme || []).find(x => x.id === dy.dataset.denemeYazdir)));
         if (HS.hesapTikla(ev, k, yenile)) return;

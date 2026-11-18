@@ -3901,3 +3901,8 @@ tr.secili-satir td { background: rgba(10, 77, 162, .06); }
 .sh-ea-ekran li b { display: block; font-size: 14px; color: var(--murekkep); }
 .sh-ea-ekran li small { color: var(--soluk); overflow-wrap: anywhere; }
 .sh-ea-yok { margin: 0 0 12px; }
+/* MEB-093: öğrenci dosyası · MEBBİS geçmişi (açılır kart) */
+.meb-gecmis-kart > summary { cursor: pointer; list-style: none; }
+.meb-gecmis-kart > summary::-webkit-details-marker { display: none; }
+.meb-gecmis-kart > summary::after { content: '›'; margin-left: auto; font-size: 20px; color: var(--soluk); transform: rotate(90deg); transition: transform .15s; }
+.meb-gecmis-kart[open] > summary::after { transform: rotate(-90deg); }
