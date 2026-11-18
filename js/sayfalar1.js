@@ -1,4 +1,4 @@
-import { kayitDondurmaMi, planAyar, dersSaatleri, EGITIM_TURU, egitimTuruOf, mebEtiketleri, dersSayaci, arifeMi, ustaRengi, haftalikSinir, haftaDers, ekDersFiyat, ozelDersFiyat, uygulamaSinavUcreti, esinavUcreti, digerUcretler, odemeKodu, ibanMetni, dersSirasi, S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, risk, BECERI, islem, geriAlNoktasi, oturum, tcGecerli, tcMaskele, DERS_TUR_AD, ek3Sinif, ogretmen, yas, mebOnKontrol, sb, sbDers, sbSinav, kapaliGun, ustaAraci, dersAraci, yerelZaman, aktifSiniflar, satistaSiniflar, YONTEMLER, yontemAd, ayEkle, gecikenTutar, selam, kursAdi, tuketim, beklenenTuketim, mudurTel, evrakKaynak, tutarOku, taksitBol, ayniTcKayit, dersIptalIz, egitimSinifi, ekTur, aracSiniflari, kursiyerTaban, tabanListesi, ekDersTabani, ozelDersTabani, programUyarisi, varsayilanYontem, teorikVar, belgeliMi, esinavsizBelgeli, teorikSaat, TEORIK_MUAF_DERS, dersKonulariResmi } from './veri.js?v=234';
+import { kursiyerDersleri, kayitDondurmaMi, planAyar, dersSaatleri, EGITIM_TURU, egitimTuruOf, mebEtiketleri, dersSayaci, arifeMi, ustaRengi, haftalikSinir, haftaDers, ekDersFiyat, ozelDersFiyat, uygulamaSinavUcreti, esinavUcreti, digerUcretler, odemeKodu, ibanMetni, dersSirasi, S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, risk, BECERI, islem, geriAlNoktasi, oturum, tcGecerli, tcMaskele, DERS_TUR_AD, ek3Sinif, ogretmen, yas, mebOnKontrol, sb, sbDers, sbSinav, kapaliGun, ustaAraci, dersAraci, yerelZaman, aktifSiniflar, satistaSiniflar, YONTEMLER, yontemAd, ayEkle, gecikenTutar, selam, kursAdi, tuketim, beklenenTuketim, mudurTel, evrakKaynak, tutarOku, taksitBol, ayniTcKayit, dersIptalIz, egitimSinifi, ekTur, aracSiniflari, kursiyerTaban, tabanListesi, ekDersTabani, ozelDersTabani, programUyarisi, varsayilanYontem, teorikVar, belgeliMi, esinavsizBelgeli, teorikSaat, TEORIK_MUAF_DERS, dersKonulariResmi } from './veri.js?v=234';
 import { alanHatalari, e, saatDe, saatE, tl, sayi, ik, rozet, asamaRozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, sekmeler, tarih, tarihUzun, goreli, gunKisa, cubukGrafik, halka, ayAdi, isaret, yonLevhasi, olcumler, aracGorsel, ekranNotu, bugunMetni, fotoKucult, waAc, waSirali, tamTarih, pinSor, taslaklar, taslakBul, taslakSil, taslakSakla, alanlariOku, alanlariYaz, taslakZamani, pencereSor } from './ui.js?v=234';
 import { yenile } from './app.js?v=234';
 import { denetimEksikleri, sozlesmeImzalat, sozlesmeDondur } from './sayfalar3.js?v=234';
@@ -884,9 +884,9 @@ function asamaIlerlet(k) {
 }
 // Kaydı kapatma (kurstan ayrıldı) ya da dondurma: planlı dersler ve sınav listeleri temizlenir. onNeden: neden kutusuna hazır yazılan metin (ör. nakil)
 function kayitKapat(k, onNeden = '') {
-  const planli = S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Planlandı' && fark(d.tarih) >= 0);
+  const planli = kursiyerDersleri(k.id).filter(d => d.durum === 'Planlandı' && fark(d.tarih) >= 0);
   const acik = k.odeme.taksitler.filter(t => !t.odendi && !t.iptal), acikTutar = acik.reduce((a, t) => a + t.tutar - (t.kismi || 0), 0);
-  const S0 = SINIFLAR[k.sinif], yapilan = S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Yapıldı').length;
+  const S0 = SINIFLAR[k.sinif], yapilan = kursiyerDersleri(k.id).filter(d => d.durum === 'Yapıldı').length;
   const yi = MZ.yasalIade(k), iadeOneri = k.ucretsiz ? 0 : yi.iade;
   pencere({
     baslik: 'Kaydı kapat · ' + tamAd(k),
@@ -1070,7 +1070,7 @@ export function bilgiDuzenle(k, bolum = 'kimlik') {
 const imzasiz = d => d.durum === 'Yapıldı' && (!d.imza || d.imza.kursiyerBekliyor);
 // Uzaktan imza ölçü altındaysa (imza.js kanit.olcuAlti) imza işlenir ama kurs kontrol etmeli: küçük turuncu işaret
 const olcuAltiIsaret = kn => kn && kn.olcuAlti ? ` <span class="rozet rozet-turuncu" title="${e(kn.olcuNot || 'İmza ölçü altında')}">İmza ölçü altında, kontrol edin</span>` : '';
-const imzasizDers = k => S.dersler.filter(d => d.kursiyer === k.id && imzasiz(d)).sort((a, b) => a.tarih.localeCompare(b.tarih));
+const imzasizDers = k => kursiyerDersleri(k.id).filter(d => imzasiz(d)).sort((a, b) => a.tarih.localeCompare(b.tarih));
 // Dosyanın en üstünde önem sırasıyla dört şey: evrak, ödeme, sıradaki, MEBBİS
 // DIR-010: dersler sekmesinde sayaçlar — zorunlu (normal; ikinci dört hakta önceki + 2. direksiyon), eğitim yeri, gece, telafi (ön sınav), başarısız aday, 2. direksiyon
 function dersSayacSeridi(k) {
@@ -1158,7 +1158,7 @@ function hakYandiIsle(k, t) {
 function profilEksikleri(k) {
   if (k.kapali || k.asama === 'Ehliyet') return '';
   const ev = eksikEvrak(k).filter(([x]) => x !== 'sozlesme'), gec = gecikenler(k).reduce((a, t) => a + t.tutar - (t.kismi || 0), 0);
-  const itiraz = S.dersler.filter(d => d.kursiyer === k.id && d.ogrenciOnay && d.ogrenciOnay.durum === 'itiraz').length;
+  const itiraz = kursiyerDersleri(k.id).filter(d => d.ogrenciOnay && d.ogrenciOnay.durum === 'itiraz').length;
   const l = [
     k.hakBitti && !k.hakBitti.cozuldu && ['yasak', 'Sınav hakkı doldu', '<button class="dg dg-cizgi dg-kucuk" data-psekme="sinav">Karar ver</button>'],
     itiraz && ['dur', `${itiraz} derse itiraz etti`, '<button class="dg dg-cizgi dg-kucuk" data-psekme="dersler">Gör</button>'],
@@ -1305,7 +1305,7 @@ export function kursiyerDetay(id) {
   const k = kursiyer(id);
   if (!k) return { baslik: 'Kursiyer bulunamadı', html: `<div class="kart">${bos('Bu kursiyer bulunamadı', 'Kayıt silinmiş ya da bağlantı hatalı olabilir.', '<a class="dg dg-koyu" href="#/kursiyerler">Kursiyerlere dön</a>')}</div>` };
   const S0 = SINIFLAR[k.sinif], eg = egitmen(k.egitmen) || { id: null, ad: 'Öğretmen atanmadı', siniflar: [] };
-  const dersler = S.dersler.filter(d => d.kursiyer === k.id).sort((a, b) => (b.tarih + b.saat).localeCompare(a.tarih + a.saat));
+  const dersler = kursiyerDersleri(k.id).slice().sort((a, b) => (b.tarih + b.saat).localeCompare(a.tarih + a.saat));
   const sinavlar = S.sinavlar.filter(s => s.kursiyerler.includes(k.id)).sort((a, b) => a.tarih.localeCompare(b.tarih));
   const mesajlar = S.kurs.mesajGecmise === false ? [] : S.gonderimler.filter(g => g.kid ? g.kid === k.id : g.kime === tamAd(k));   // MSJ-027
   const eksik = eksikEvrak(k);

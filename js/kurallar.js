@@ -5,7 +5,7 @@
 // 'uyari', 'bilgi'. Dizinin üstünde ek alanlar: kural (kimlik), kursiyer (id), kursiyerler (birden çok kişiye ait oturum bulgusunda kimlik listesi, ör. Y04), kisa (öğrenci dosyasında ad olmadan başlık), yalnizDosya, eylem.
 // DOM yok; yalnız veri.js'e bağlı (Node'da denenebilir). Bugün: veri.js BUGUN / gun().
 // Yeni kurallar ilk sürümde yalnız "uyarı"dır; Eyüp Bey teyit edince engele çevrilebilir (belgeler/eksikler/eyup-sorular.md).
-import { S, gun, fark, aracUygun, belgeliMi, dersSayaci, kayitDondurmaMi, izinDurumu, mebIsGunuIleri, haftalikSinir, haftaDers, ustaYetkili, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
+import { kursiyerDersleri, S, gun, fark, aracUygun, belgeliMi, dersSayaci, kayitDondurmaMi, izinDurumu, mebIsGunuIleri, haftalikSinir, haftaDers, ustaYetkili, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
 
 /* ---------- yardımcılar (ui.js'teki biçimlerle aynı; ui.js DOM'a bağlı olduğu için burada kopyası) ---------- */
 const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
@@ -65,7 +65,7 @@ const KURALLAR = [
     kontrol(l) { sbSinav(S.sinavlar).filter(s => s.tur === 'e-Sınav' && fark(s.tarih) >= 0).forEach(s => s.kursiyerler.map(kursiyer).filter(k => k && eksikEvrak(k).length).forEach(k => l.push(['yasak', `${tamAd(k)} e-sınava kayıtlı ama evrakı eksik`, eksikEvrak(k).map(x => x[1]).join(', '), '#/kursiyer/' + k.id]))); } },
   // uygulama sınavında kalan: tekrar sınavdan önce en az 2 ek direksiyon dersi (yapılmış) gerekir
   { id: 'M08', sira: 80, ad: 'Kaldıktan sonra ek ders (telafi) yapılmadan tekrar sınav yok', dayanak: 'MTSK Yön. md.15', kapsam: 'kursiyer', ciddiyet: 'uyari', ayar: 'telafiSaat',
-    kontrol(l) { sb(S.kursiyerler).filter(k => k.dsinav && k.dsinav.sonuc === 'Kaldı' && !k.dsinav.girmedi && k.dsinavPlan && S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Yapıldı' && d.tarih > k.dsinav.tarih).length < kuralAyar('telafiSaat')).forEach(k => l.push(['uyari', `${tamAd(k)} tekrar uygulama sınavına yazıldı ama kaldıktan sonra ${kuralAyar('telafiSaat')} ek ders tamamlanmadı`, `Sınavdan önce en az ${kuralAyar('telafiSaat')} saat ek direksiyon dersi yapılmalı.`, '#/kursiyer/' + k.id])); } },
+    kontrol(l) { sb(S.kursiyerler).filter(k => k.dsinav && k.dsinav.sonuc === 'Kaldı' && !k.dsinav.girmedi && k.dsinavPlan && kursiyerDersleri(k.id).filter(d => d.durum === 'Yapıldı' && d.tarih > k.dsinav.tarih).length < kuralAyar('telafiSaat')).forEach(k => l.push(['uyari', `${tamAd(k)} tekrar uygulama sınavına yazıldı ama kaldıktan sonra ${kuralAyar('telafiSaat')} ek ders tamamlanmadı`, `Sınavdan önce en az ${kuralAyar('telafiSaat')} saat ek direksiyon dersi yapılmalı.`, '#/kursiyer/' + k.id])); } },
   { id: 'M09', sira: 90, ad: 'Tekrar sınav öncesi bekleme', dayanak: 'Kurs ayarı (mevzuatta sabit gün yok)', kapsam: 'kursiyer', ciddiyet: 'uyari', ayar: 'tekrarBekleme',
     kontrol(l, K) { sb(S.kursiyerler).filter(k => k.dsinav && k.dsinav.sonuc === 'Kaldı' && !k.dsinav.girmedi && k.dsinavPlan && (tarihOku(k.dsinavPlan) - tarihOku(k.dsinav.tarih)) / 864e5 < K.tekrarBekleme).forEach(k => l.push(bul('uyari', `${tamAd(k)} tekrar sınavı bekleme süresinden önce`, `Kaldıktan sonra en az ${K.tekrarBekleme} gün (kurs ayarı).`, '#/sinavlar', { kursiyer: k.id }))); } },
   // Grup başlama tarihinden itibaren son e-sınav hakkı için randevu alma süresi 90 günü geçemez (MTSK md.15/1, ilk cümle): grup başlangıcı + 90 gün = son e-sınav randevusu.
@@ -243,14 +243,14 @@ const KURALLAR = [
   { id: 'M19', sira: 32, ad: 'e-Sınavdan sonra 5 iş günü içinde direksiyon programı', dayanak: 'MTSK Yön. md.12/4; MEB duyurusu 01/11/2022', kapsam: 'kursiyer', ciddiyet: 'uyari', bugun: true, bugunAd: n => `${n} öğrencinin direksiyon programı MEBBİS’e girilmeli (5 iş günü)`,
     kontrol(l) { sb(S.kursiyerler).filter(k => !k.kapali && k.esinav && k.esinav.sonuc === 'Geçti' && !k.esinav.muaf && /^\d{4}-\d{2}-\d{2}/.test(k.esinav.tarih || '') && fark(k.esinav.tarih) <= 0 && fark(k.esinav.tarih) >= -60 && gerekliDireksiyon(k) && !(k.dsinav && k.dsinav.sonuc === 'Geçti')).forEach(k => {
       const ud = String((k.meb || {}).uygulamaDers || ''), yapildi = (S.dersler || []).some(d => d.kursiyer === k.id && d.meb) || (/program/i.test(ud) && !/yap[ıi]lmam/i.test(ud)); if (yapildi) return;
-      const son = mebIsGunuIleri(k.esinav.tarih.slice(0, 10), 5), g = fark(son), planli = (S.dersler || []).filter(d => d.kursiyer === k.id && d.durum === 'Planlandı' && fark(d.tarih) > 0).length;
+      const son = mebIsGunuIleri(k.esinav.tarih.slice(0, 10), 5), g = fark(son), planli = kursiyerDersleri(k.id).filter(d => d.durum === 'Planlandı' && fark(d.tarih) > 0).length;
       l.push(bul(g < 0 ? 'dur' : 'uyari', `${tamAd(k)} · direksiyon programı MEBBİS’e ${g < 0 ? 'girilmedi, süre ' + tarih(son) + ' günü doldu' : g === 0 ? 'bugün girilmeli' : 'en geç ' + tarih(son) + ' günü girilmeli'}`, `e-Sınavı ${tarih(k.esinav.tarih)} tarihinde geçti; direksiyon programı 5 iş günü içinde MEBBİS’e işlenir (md.12/4).${planli ? ` mdSinyal’de ${planli} ders planlı: MEB işlemleri’nden MEBBİS’e yazın.` : ' Önce derslerini planlayın.'}`, '#/kursiyer/' + k.id, { kursiyer: k.id })); }); } },
   // DIR-023: direksiyon devamsızlığı (MTSK Yön. md.14/2-3) — 'Gelmedi' dersleri gerekli direksiyon saatinin 1/5'i ya da daha azıysa bir defaya mahsus,
   // ücreti alınarak telafi programı uygulanır; 1/5'i aşan ya da telafiye de gelmeyen için kaydın silinmesi gündeme gelir (kurs müdürü değerlendirir)
   { id: 'M18', sira: 136, ad: 'Direksiyon devamsızlığı (1/5)', dayanak: 'MTSK Yön. md.14/2-3', kapsam: 'kursiyer', ciddiyet: 'uyari', bugun: true, bugunAd: n => `${n} öğrencinin direksiyon devamsızlığı var`,
     kontrol(l) { sb(S.kursiyerler).filter(k => !k.kapali && ['Direksiyon', 'Sınav'].includes(k.asama) && gerekliDireksiyon(k)).forEach(k => {
-      const g = S.dersler.filter(d => d.kursiyer === k.id && d.durum === 'Gelmedi').length; if (!g) return;
-      const G = gerekliDireksiyon(k), sinir = G / 5, telafi = S.dersler.filter(d => d.kursiyer === k.id && d.tur === 'telafi').length;
+      const g = kursiyerDersleri(k.id).filter(d => d.durum === 'Gelmedi').length; if (!g) return;
+      const G = gerekliDireksiyon(k), sinir = G / 5, telafi = kursiyerDersleri(k.id).filter(d => d.tur === 'telafi').length;
       if (g > sinir) l.push(bul('uyari', `${tamAd(k)} · direksiyon devamsızlığı ${g} ders (1/5 sınırı ${Math.floor(sinir)})`, `Gerekli ${G} saatin 1/5’i aşıldı; telafi programı hakkı yok, kaydın silinmesi gündeme gelir (MTSK Yön. md.14/2). Kurs müdürü değerlendirsin.`, '#/kursiyer/' + k.id, { kursiyer: k.id }));
       else l.push(bul('bilgi', `${tamAd(k)} · ${g} direksiyon dersine gelmedi`, `1/5 sınırı içinde (${Math.floor(sinir)} ders): bir defaya mahsus, ücreti alınarak telafi programı uygulanabilir${telafi ? ' (telafi dersi planlı)' : ''}. Telafiye de gelmezse kaydı silinir (md.14/3).`, '#/kursiyer/' + k.id, { kursiyer: k.id })); }); } },
   // DIR-047: planlı derslerde aynı araç ya da aynı simülatör aynı saatte iki derste (sürükle-bırak, eski kayıt, aktarım sonrası) → engel; MEBBİS ikinciyi kabul etmez
@@ -281,7 +281,7 @@ const KURALLAR = [
 
 /* ---------- yeni kuralların veri yardımcıları ---------- */
 // Adayı uygulama sınavına götüren öğretmen: son dersindeki aracın öğretmeni, yoksa kursiyerin öğretmeni (mebtoplu sinavAraci ile aynı ölçü)
-export const sinavUstasi = k => { const d = k && S.dersler.filter(y => y.kursiyer === k.id && y.arac).sort((a, b) => b.tarih.localeCompare(a.tarih))[0], ar = d && (S.araclar || []).find(a => a.id === d.arac); return egitmen(ar && ar.egitmen) || egitmen(k && k.egitmen) || null; };
+export const sinavUstasi = k => { const d = k && kursiyerDersleri(k.id).filter(y => y.arac).sort((a, b) => b.tarih.localeCompare(a.tarih))[0], ar = d && (S.araclar || []).find(a => a.id === d.arac); return egitmen(ar && ar.egitmen) || egitmen(k && k.egitmen) || null; };
 // Görevdeki personel (usta öğretici + teorik öğretmen; pasif ve ayrılanlar hariç): [{ x, tur: 'usta'|'ogretmen', gorev }]
 export const personelKisileri = () => [...(S.egitmenler || []).map(x => ({ x, tur: 'usta', gorev: 'Usta öğretici' })), ...(S.ogretmenler || []).map(x => ({ x, tur: 'ogretmen', gorev: 'Teorik öğretmen' }))].filter(p => p.x && !p.x.pasif && !p.x.ayrildi);
 // Hazır onayı: MEBBİS'ten çekilen "Uygulama Sınavına Uygunluk Tarihi", yoksa usta öğretici yazısının MEBBİS'e yüklendiği gün
