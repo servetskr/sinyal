@@ -1,4 +1,4 @@
-import { haftalikSinir, haftaDers, ekDersFiyat, ozelDersFiyat, uygulamaSinavUcreti, esinavUcreti, digerUcretler, odemeKodu, ibanMetni, dersSirasi, S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, risk, BECERI, islem, geriAlNoktasi, oturum, tcGecerli, tcMaskele, DERS_TUR_AD, ek3Sinif, ogretmen, yas, mebOnKontrol, sb, sbDers, sbSinav, kapaliGun, ustaAraci, dersAraci, yerelZaman, aktifSiniflar, satistaSiniflar, YONTEMLER, yontemAd, ayEkle, gecikenTutar, selam, kursAdi, tuketim, beklenenTuketim, mudurTel, evrakKaynak, tutarOku, taksitBol, ayniTcKayit, dersIptalIz, egitimSinifi, ekTur, aracSiniflari, kursiyerTaban, tabanListesi, ekDersTabani, ozelDersTabani, programUyarisi, varsayilanYontem, teorikVar, belgeliMi, esinavsizBelgeli, teorikSaat, TEORIK_MUAF_DERS, dersKonulariResmi } from './veri.js?v=234';
+import { ustaRengi, haftalikSinir, haftaDers, ekDersFiyat, ozelDersFiyat, uygulamaSinavUcreti, esinavUcreti, digerUcretler, odemeKodu, ibanMetni, dersSirasi, S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, risk, BECERI, islem, geriAlNoktasi, oturum, tcGecerli, tcMaskele, DERS_TUR_AD, ek3Sinif, ogretmen, yas, mebOnKontrol, sb, sbDers, sbSinav, kapaliGun, ustaAraci, dersAraci, yerelZaman, aktifSiniflar, satistaSiniflar, YONTEMLER, yontemAd, ayEkle, gecikenTutar, selam, kursAdi, tuketim, beklenenTuketim, mudurTel, evrakKaynak, tutarOku, taksitBol, ayniTcKayit, dersIptalIz, egitimSinifi, ekTur, aracSiniflari, kursiyerTaban, tabanListesi, ekDersTabani, ozelDersTabani, programUyarisi, varsayilanYontem, teorikVar, belgeliMi, esinavsizBelgeli, teorikSaat, TEORIK_MUAF_DERS, dersKonulariResmi } from './veri.js?v=234';
 import { alanHatalari, e, saatDe, saatE, tl, sayi, ik, rozet, asamaRozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, sekmeler, tarih, tarihUzun, goreli, gunKisa, cubukGrafik, halka, ayAdi, isaret, yonLevhasi, olcumler, aracGorsel, ekranNotu, bugunMetni, fotoKucult, waAc, waSirali, tamTarih, pinSor, taslaklar, taslakBul, taslakSil, taslakSakla, alanlariOku, alanlariYaz, taslakZamani, pencereSor } from './ui.js?v=234';
 import { yenile } from './app.js?v=234';
 import { denetimEksikleri, sozlesmeImzalat, sozlesmeDondur } from './sayfalar3.js?v=234';
@@ -1541,6 +1541,8 @@ let planGun = null, planGorunum = 'arac';
 let planDonem = (() => { try { return localStorage.getItem('sinyal-plan-donem') || 'gun'; } catch (x) { return 'gun'; } })();
 const donemSakla = () => { try { localStorage.setItem('sinyal-plan-donem', planDonem); } catch (x) { } };
 const donemSecici = () => `<div class="rol" style="display:flex" role="tablist" aria-label="Görünüm">${[['gun', 'Gün'], ['hafta', 'Hafta'], ['ay', 'Ay']].map(([v, a]) => `<button role="tab" aria-selected="${v === planDonem}" data-donem="${v}" class="${v === planDonem ? 'secili' : ''}">${a}</button>`).join('')}</div>`;
+// DIR-055: öğretmen renkleri açıklaması (planın bütün görünümlerinde; renk kartta değiştirilir)
+const ustaLejant = () => `<p class="plan-lejant usta-lejant" aria-label="Öğretmen renkleri">${sb(S.egitmenler).map(h => `<span class="usta-cip"><i style="background:${ustaRengi(h)}"></i>${e(h.ad.split(' ')[0])}</span>`).join('')}</p>`;
 const planUstDugmeler = () => `<button class="dg dg-ana dg-kucuk" data-oto-plan>${ik('robot')}Otomatik planla</button>${(() => { const ids = EKL.mebIsleri().filter(x => x.tur === 'program').map(x => x.id); return ids.length ? `<button class="dg dg-cizgi dg-kucuk" data-meb-gonder="${ids.join(',')}" title="MEBBİS’e girilmemiş planlı dersleri Yardımcı ile aktarır">MEBBİS’e gönder (${ids.length})</button>` : ''; })()}`;
 const kisaAd = k => k ? (k.ad + ' ' + (k.soyad || '').slice(0, 1) + '.').trim() : '';
 // Haftalık ve aylık görünüm: tüm usta öğreticilerin dersleri tek çizelgede; derse dokununca ders penceresi, güne dokununca o günün çizelgesi açılır
@@ -1551,7 +1553,7 @@ function planGenis() {
   const donemL = hafta ? l : l.filter(d => d.tarih.slice(0, 7) === ay);
   const sinif = d => d.durum === 'Yapıldı' ? 'yapildi' : d.durum === 'Gelmedi' ? 'gelmedi' : (d.tarih < bugun ? 'kapanmadi' : '');
   const cip = d => { const k = kursiyer(d.kursiyer), h = egitmen(d.egitmen), ar = d.arac && arac(d.arac);
-    return `<div class="hp-ders ${sinif(d)}" data-ders="${e(d.id)}" tabindex="0" role="button" title="${e(tamAd(k))} · ${d.saat} · ${e(h ? h.ad : '')}${ar ? ' · ' + e(ar.plaka) : ''}"><b>${e(kisaAd(k))}</b><small>${e(h ? h.ad.split(' ')[0] : '')}${ar ? ' · ' + e(ar.plaka) : ''}${d.tur && d.tur !== 'trafik' ? ' · ' + e(DERS_TUR_AD[d.tur]) : ''}</small></div>`; };
+    return `<div class="hp-ders ${sinif(d)}" style="--ur:${ustaRengi(h)}" data-ders="${e(d.id)}" tabindex="0" role="button" title="${e(tamAd(k))} · ${d.saat} · ${e(h ? h.ad : '')}${ar ? ' · ' + e(ar.plaka) : ''}"><b>${e(kisaAd(k))}</b><small>${e(h ? h.ad.split(' ')[0] : '')}${ar ? ' · ' + e(ar.plaka) : ''}${d.tur && d.tur !== 'trafik' ? ' · ' + e(DERS_TUR_AD[d.tur]) : ''}</small></div>`; };
   let ic = '';
   if (hafta) {
     const saatler = [...new Set([...SAATLER, ...l.map(d => d.saat)])].sort();
@@ -1578,7 +1580,7 @@ function planGenis() {
     </div>
     <div class="plan-ozet"><span><b>${donemL.length}</b> ders</span><span><b style="color:var(--yesil)">${yapildi}</b> yapıldı</span><span><b style="color:var(--levha)">${planli}</b> planlı</span>${kapanmadi ? `<span><b style="color:var(--turuncu)">${kapanmadi}</b> kapanmadı</span>` : ''}${usta.map(([h, n]) => `<span class="plan-usta">${e(h.ad)}: <b>${n}</b></span>`).join('')}</div>
     ${ic}
-    <p class="plan-lejant"><span class="hp-ders"></span>Planlı <span class="hp-ders yapildi"></span>Yapıldı <span class="hp-ders gelmedi"></span>Gelmedi <span class="hp-ders kapanmadi"></span>Kapanmadı</p>`,
+    <p class="plan-lejant"><span class="hp-ders"></span>Planlı <span class="hp-ders yapildi"></span>Yapıldı <span class="hp-ders gelmedi"></span>Gelmedi <span class="hp-ders kapanmadi"></span>Kapanmadı</p>${ustaLejant()}`,
     baglan(k) {
       k.addEventListener('click', ev => {
         const t = ev.target;
@@ -1609,7 +1611,7 @@ export function plan() {
     const d = gDers.find(x => x.saat === s && (planGorunum === 'egitmen' ? x.egitmen === sut.id : x.arac === sut.id));
     if (!d) { if (iz || kapali) return `<div class="tk-hucre ${iz ? 'izinli' : ''}" title="${iz ? e(iz.tur) : e(kapali)}"></div>`; return `<div class="tk-hucre bos-hucre" data-ekle="${sut.id}|${s}" data-hucre="${sut.id}|${s}" tabindex="0" role="button" aria-label="${s} ders ekle"></div>`; }
     const k = kursiyer(d.kursiyer);
-    return `<div class="tk-hucre" data-hucre="${sut.id}|${s}"><div class="ders ${d.durum === 'Yapıldı' ? 'yapildi' : d.durum === 'Gelmedi' ? 'gelmedi' : ''} ${d.tekrar ? 'tekrar' : ''}" data-ders="${e(d.id)}" draggable="${d.durum === 'Planlandı'}" tabindex="0" role="button"><b>${e(tamAd(k))}</b><small>${d.tur ? DERS_TUR_AD[d.tur] + ' · ' : ''}${planGorunum === 'egitmen' ? (d.arac ? arac(d.arac).plaka : '') : egitmen(d.egitmen).ad} · ${dersSirasi(d, k) ? dersSirasi(d, k) + '. ders' : e(d.durum)}</small></div></div>`;
+    return `<div class="tk-hucre" data-hucre="${sut.id}|${s}"><div class="ders ${d.durum === 'Yapıldı' ? 'yapildi' : d.durum === 'Gelmedi' ? 'gelmedi' : ''} ${d.tekrar ? 'tekrar' : ''}" style="--ur:${ustaRengi(egitmen(d.egitmen))}" data-ders="${e(d.id)}" draggable="${d.durum === 'Planlandı'}" tabindex="0" role="button"><b>${e(tamAd(k))}</b><small>${d.tur ? DERS_TUR_AD[d.tur] + ' · ' : ''}${planGorunum === 'egitmen' ? (d.arac ? arac(d.arac).plaka : '') : egitmen(d.egitmen).ad} · ${dersSirasi(d, k) ? dersSirasi(d, k) + '. ders' : e(d.durum)}</small></div></div>`;
   };
   // Telefonda plan: saat sırasıyla liste (araç sütunları telefona sığmaz)
   const bosSutunlar = s => kapali || s === '13:00' ? [] : sutunlar.filter(su => !gDers.some(x => x.saat === s && (planGorunum === 'egitmen' ? x.egitmen === su.id : (x.arac === su.id || (su.egitmen && x.egitmen === su.egitmen)))) && !izinli(sutunEg(su), planGun));
@@ -1636,6 +1638,7 @@ export function plan() {
       <div class="gun-sec" style="flex:1;min-width:0">${gunler.map(g => `<button data-gun="${g}" class="${g === planGun ? 'secili' : ''} ${fark(g) === 0 ? 'bugun' : ''}" aria-label="${tarihUzun(g)}"><small>${fark(g) === 0 ? 'Bugün' : gunKisa(g)}</small><b>${tarihOku(g).getDate()}</b></button>`).join('')}</div>
       <div class="sag" style="width:auto;gap:8px">${planUstDugmeler()}${donemSecici()}<div class="rol" style="display:flex"><button data-gorunum="arac" class="${planGorunum === 'arac' ? 'secili' : ''}">Araca göre</button><button data-gorunum="egitmen" class="${planGorunum === 'egitmen' ? 'secili' : ''}">Usta öğreticiye göre</button></div></div>
     </div>
+    ${planGorunum === 'arac' ? ustaLejant() : ''}
     <div class="kart" style="overflow:hidden">
       ${kapali ? `<div class="ipucu uyari" style="margin:14px">${isaret('dur', 20)}${kapali === 'Pazar' ? 'Pazar günü' : 'Resmî tatil;'} kurs kapalı, ders planlanamaz.</div>` : ''}
       <div class="takvim" style="--sutun:${sutunlar.length}">

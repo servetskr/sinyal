@@ -1234,6 +1234,14 @@ export function ustaYetkili(eg, sinif, tur = 'uygulama') {
   const l = eg && eg.mebYetki && eg.mebYetki[tur]; if (!Array.isArray(l) || !l.length) return true;
   return l.includes(anaSinif(sinif));
 }
+// DIR-055: öğretmenin plan rengi — koyu, birbirinden ayrılan ve beyaz yazıyla yeterli kontrastlı tonlar (yeşil 'yapıldı'ya ayrılmış olduğu için yok);
+// kartta seçilen renk (palet içinden) önce, yoksa öğretmenin sırasına göre
+export const USTA_PALET = ['#1f4fbf', '#a3324a', '#6d3fc0', '#0e6f86', '#8a5a00', '#9c2c86', '#3d4f6b', '#2f3f9e'];
+export function ustaRengi(eg) {
+  if (!eg) return USTA_PALET[0];
+  if (USTA_PALET.includes(eg.renk)) return eg.renk;
+  const i = Math.max(0, (S.egitmenler || []).findIndex(x => x.id === eg.id)); return USTA_PALET[i % USTA_PALET.length];
+}
 // Öğretmenin t gününün haftasındaki (Pazartesi–Pazar) direksiyon dersleri; iptal ve gelmedi sayılmaz. liste: taslaklı ders listesi (planlayıcı)
 export function haftaDers(egId, t = gun(0), liste = S.dersler) {
   const d = tarihOku(t), off = (d.getDay() + 6) % 7, b = new Date(d); b.setDate(d.getDate() - off); const s = new Date(b); s.setDate(b.getDate() + 6);

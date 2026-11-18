@@ -3328,3 +3328,18 @@ p.mz-kanit-uyari{margin:-4px 0 10px;font-size:13px}
 .kart.es-satir b{flex:1 1 200px;font-size:14.5px;color:var(--murekkep)}
 .es-satir-ik{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;background:color-mix(in srgb,var(--mor,#6744b8) 14%,transparent);color:var(--mor,#6744b8)}
 .es-satir .es-dekont{display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap}
+/* DIR-055: öğretmen renk tonları — planlı ders öğretmenin renginde, her durumda solda öğretmen şeridi; yapıldı yeşil, gelmedi beyaz kalır */
+.ders,.hp-ders{box-shadow:inset 4px 0 0 var(--ur,transparent),inset 0 0 0 1.5px rgba(255,255,255,.5)}
+.ders:not(.yapildi):not(.gelmedi),.hp-ders:not(.yapildi):not(.gelmedi):not(.kapanmadi){background:var(--ur,var(--levha))}
+.ders.gelmedi,.hp-ders.gelmedi{box-shadow:inset 4px 0 0 var(--ur,transparent),inset 0 0 0 2px var(--kirmizi)}
+.hp-ders.kapanmadi{box-shadow:inset 4px 0 0 var(--ur,transparent),inset 0 0 0 2px var(--sari)}
+.plan-lejant .hp-ders{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.5)}
+.usta-lejant{display:flex;flex-wrap:wrap;gap:6px 12px;margin:6px 0 10px}
+.usta-cip{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--metin)}
+.usta-cip i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.renk-sec{display:flex;gap:8px;flex-wrap:wrap}
+.renk-sec label{position:relative;cursor:pointer}
+.renk-sec input{position:absolute;opacity:0;width:1px;height:1px}
+.renk-sec span{display:block;width:30px;height:30px;border-radius:8px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.6)}
+.renk-sec input:checked+span{outline:3px solid var(--murekkep);outline-offset:2px}
+.renk-sec input:focus-visible+span{outline:3px solid var(--levha);outline-offset:2px}
