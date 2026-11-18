@@ -912,7 +912,7 @@ export function ogrenciAyril() { try { localStorage.removeItem('sinyal-ogrenci')
 // Ofis cihazı (müdür / ön büro) her öğretmen için kurslar/{kurs}/ustalar/{öğretmen} belgesini hazırlar; öğretmenin telefonu
 // kurs verisinin tamamını değil yalnız bu belgeyi okur. Öğretmenin yaptıkları (ders başlat/bitir, imza, not, deneme) ustaGelen'e
 // yazılır, ofis cihazı denetleyip kayda işler. Kendi telefonunda değişiklik hemen görünür; ofiste mdSinyal açık değilse kayda sonra geçer.
-const DIZI_USTA = ['dersler', 'kursiyerler', 'gonderimler', 'imzaTalepleri', 'dersIptaller', 'islemler', 'pufGelen'];
+const DIZI_USTA = ['dersler', 'kursiyerler', 'gonderimler', 'imzaTalepleri', 'dersIptaller', 'islemler', 'pufGelen', 'izinTalepleri'];
 const KURSIYER_USTA = ['id', 'no', 'ad', 'soyad', 'tel', 'foto', 'sinif', 'asama', 'egitmen', 'sube', 'kapali', 'direksiyon', 'teorik', 'deneme', 'dDeneme', 'esinav', 'dsinav', 'kayit', 'teorikGrup', 'mevcutEhliyet', 'ekDersHakki', 'cinsiyet', 'muaf',
   // öğrenciye özgü direksiyon saati (veri.js direksiyonAyrinti): müdürün elle girdiği değer, ders kuralı, mevcut belge ayrıntısı, ikinci dört hak
   'dersKural', 'gerekliElle', 'gerekliElleNot', 'ikinciHak', 'mevcutOtomatik', 'mevcutEski', 'oncekiBelge'];
@@ -941,6 +941,8 @@ export function ustaVerisi(egId, gunSiniri = 180) {
     avanslar: (S.avanslar || []).filter(a => a.kim === (S.egitmenler.find(x => x.id === egId) || {}).ad),
     ustaOdemeleri: (S.ustaOdemeleri || []).filter(o => o.egitmen === egId),
     imzaTalepleri: (S.imzaTalepleri || []).filter(t => kIds.has(t.kursiyer)).map(t => { const x = { ...t }; delete x.metin; return x; }),
+    // UYG-010: öğretmenin kendi müsait değilim bildirimleri (durumunu görür)
+    izinTalepleri: (S.izinTalepleri || []).filter(t => t.kim === egId),
     entegrasyon: { kdv: (S.entegrasyon || {}).kdv, earsiv: { bagli: false }, muhasebe: {}, musavir: {} },
   };
 }
@@ -1000,6 +1002,11 @@ function ustaUygula(docId, g) {
       if (!benimMi(S.kursiyerler.find(z => z.id === y.kursiyer))) continue;
       const i = (S.imzaTalepleri = S.imzaTalepleri || []).findIndex(t => t.id === y.id);
       if (i < 0) S.imzaTalepleri.push(y); else if (S.imzaTalepleri[i].durum === 'bekliyor') S.imzaTalepleri[i] = { ...S.imzaTalepleri[i], ...y };
+    } else if (x.a === 'izinTalepleri' && y) {
+      // UYG-010: öğretmenin 'müsait değilim' bildirimi ofiste onay bekleyen izin talebi olur (yalnız kendi adına, yalnız yeni talep)
+      const T = /^\d{4}-\d{2}-\d{2}$/; if (y.kim !== egId || !T.test(y.bas) || !T.test(y.bit) || y.bit < y.bas || (S.izinTalepleri || []).some(t => t.id === y.id)) continue;
+      (S.izinTalepleri = S.izinTalepleri || []).unshift({ id: String(y.id).slice(0, 30), kim: egId, bas: y.bas, bit: y.bit, neden: String(y.neden || '').replace(/[<>"'`]/g, '').slice(0, 200), tarih: iso(new Date()), durum: 'bekliyor' });
+      try { import('./sayfalar1.js?v=234').then(m => m.bildirimler && m.bildirimler([{ kim: 'mudur', metin: `${(S.egitmenler.find(z => z.id === egId) || {}).ad || 'Öğretmen'} ${y.bas === y.bit ? y.bas : y.bas + ' – ' + y.bit} için müsait olmadığını bildirdi; Ekip ve araçlar › İzinler’den onaylayın.`, tur: 'İzin talebi' }], 'İzin talebi')).catch(() => { }); } catch (e) { }
     } else if (x.a === 'pufGelen' && y) {
       // öğretmenin püf noktası: güzergâh varsa eklenir, hemen görünür (müdür silebilir)
       const g = (S.kurs.guzergahlar || []).find(z => z.id === y.guzergah), eg = S.egitmenler.find(z => z.id === egId);

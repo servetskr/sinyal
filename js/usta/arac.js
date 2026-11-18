@@ -2,7 +2,7 @@
 // Eski portal.js "Aracın" bölümü (model, plaka, bakıma kalan km), guzergah.js ustaHtml (güzergâhlar, püf noktaları, kursa iletilen notlar,
 // "Püf noktası ekle" formu: data-gz-usta, guzergah.js'teki ortak submit dinleyicisi işler) ve app.js hesap penceresi (Kursu ara, mdSinyal Destek:
 // data-destek, Çıkış yap / Kullanıcı değiştir: data-cikis; ikisi de app.js'teki belge dinleyicisinde çalışır) buraya taşındı.
-import { S, SINIFLAR, oturum, tarihOku, sinifEtiket, anaSinif, fark } from '../veri.js?v=234';
+import { S, SINIFLAR, oturum, tarihOku, sinifEtiket, anaSinif, fark, kaydet } from '../veri.js?v=234';
 import { haftaYuku, izinKarti } from './bugun.js?v=234';
 import { ayAdi, tarih } from '../ui.js?v=234';
 import { guzergahlar } from '../guzergah.js?v=234';
@@ -102,6 +102,7 @@ function hesapHtml(ctx) {
   const kim = `<div class="ox-kart ox-uar-kim"><span class="ox-uar-av" aria-hidden="true">${foto}</span><div><h2>${esc(eg.ad || u.ad || '')}</h2><p>${esc(S.kurs.ad || '')}</p><p>Öğretmen</p></div></div>`;
   const satirlar = [
     tel ? satir({ ikon: 'tel', baslik: 'Kursu ara', alt: esc(S.kurs.tel), etiket: 'a', attrs: { href: 'tel:' + tel } }) : '',
+    satir({ ikon: 'takvim', baslik: 'Müsait olmadığım gün', alt: 'İzin ya da mazeret bildir; kurs onaylayınca o gün ders verilmez', attrs: { 'data-ux-alt': 'izin' } }),
     satir({ ikon: 'mesaj', baslik: 'mdSinyal Destek', alt: 'Sorun, soru ya da istek bildir', attrs: { 'data-destek': true } }),
     // kurulu sürüm ve güncelleme denetimi (tıklama js/guncelleme.js'te)
     satir({ ikon: 'sifirla', ton: 'gri', baslik: 'Uygulama sürümü', alt: `<span data-sg-metin>${esc(kisaMetin())}</span>`, attrs: { 'data-sg-denetle': true } }),
@@ -121,6 +122,7 @@ export function altEkran(ad, ctx) {
   if (a === 'arac') return { html: aracHtml(ctx) };
   if (a === 'guzergah') return { html: gzHtml(), baglan: gzBagla };
   if (a === 'hesap') return { html: hesapHtml(ctx) };
+  if (a === 'izin') return { html: izinHtml(ctx), baglan: kap => izinBagla(kap, ctx) };
   return null;
 }
 
@@ -176,3 +178,22 @@ stilEkle('ox-uar', `
 .ox-uar-cikis .ox-satir-govde b{color:var(--ox-kirmizi)}
 a.ox-satir{text-decoration:none;color:inherit}
 `);
+
+/* UYG-010: 'müsait değilim' bildirimi — öğretmen gün (ya da aralık) ve neden yazar; ofiste onay bekleyen izin talebi olur (bulut.js ustaUygula) */
+const IZ_DURUM = { bekliyor: ['Kursun onayında', 'turuncu'], onaylandi: ['Onaylandı', 'yesil'], reddedildi: ['Onaylanmadı', 'kirmizi'] };
+function izinHtml(ctx) {
+  const l = (S.izinTalepleri || []).filter(t => t.kim === ctx.eg.id).slice(0, 12), bugun = new Date().toISOString().slice(0, 10);
+  return geri('Hesabım', { 'data-ux-alt': 'hesap' }) + sayfaBas('Müsait olmadığım gün', 'Kurs onaylayınca o günlere ders planlanmaz.')
+    + kart(`<form class="ox-uiz-form" data-uiz-form novalidate><label>İlk gün<input type="date" name="bas" min="${bugun}" value="${bugun}" required></label><label>Son gün<input type="date" name="bit" min="${bugun}" value="${bugun}" required></label><label class="tam">Neden <small>isteğe bağlı</small><input name="neden" maxlength="200" placeholder="Ör. hastane randevusu"></label><p class="ox-uiz-hata" data-uiz-hata hidden></p><button type="submit" class="ox-dg ox-dg-ana genis"><span>Kursa bildir</span></button></form>`)
+    + (l.length ? bolum('Bildirimlerin') + liste(l.map(t => satir({ ikon: 'takvim', ton: IZ_DURUM[t.durum] ? IZ_DURUM[t.durum][1] : 'gri', baslik: esc(t.bas === t.bit ? tarih(t.bas) : tarih(t.bas) + ' – ' + tarih(t.bit)), alt: esc([IZ_DURUM[t.durum] ? IZ_DURUM[t.durum][0] : t.durum, t.neden].filter(Boolean).join(' · ')), ok: false }))) : '');
+}
+function izinBagla(kap, ctx) {
+  stilEkle('ox-uiz', '.ox-uiz-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px}.ox-uiz-form label{display:grid;gap:6px;font-size:14px;font-weight:600}.ox-uiz-form label.tam,.ox-uiz-form button,.ox-uiz-form p{grid-column:1/-1}.ox-uiz-form input{height:46px;border:1.5px solid var(--ox-cizgi);border-radius:12px;padding:0 12px;font:inherit;font-size:16px;background:var(--ox-kart);min-width:0}.ox-uiz-form small{font-weight:400;color:var(--ox-ikincil)}.ox-uiz-hata{color:var(--ox-kirmizi);font-size:14px;margin:0}');
+  const f = kap.querySelector('[data-uiz-form]'); if (!f) return;
+  f.addEventListener('submit', ev => {
+    ev.preventDefault(); const h = f.querySelector('[data-uiz-hata]'), bas = f.bas.value, bit = f.bit.value || bas;
+    if (!bas || bit < bas) { h.hidden = false; h.textContent = 'Son gün ilk günden önce olamaz.'; return; }
+    S.izinTalepleri = [{ id: 'it' + Date.now().toString(36), kim: ctx.eg.id, bas, bit, neden: f.neden.value.trim().slice(0, 200), tarih: new Date().toISOString().slice(0, 10), durum: 'bekliyor' }, ...(S.izinTalepleri || [])];
+    kaydet(); ctx.altAc('izin');
+  });
+}
