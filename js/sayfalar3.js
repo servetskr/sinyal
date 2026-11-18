@@ -3,7 +3,7 @@ import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel
 import { yenile } from './app.js?v=234';
 import { siraliPencere } from './sayfalar5.js?v=234';
 import * as GR from './gruplar.js?v=234';
-import { saatUcretleri, sozlesmeUcreti } from './mevzuat.js?v=234';
+import { saatUcretleri, sozlesmeUcreti, sozlesmeSaatDondur } from './mevzuat.js?v=234';
 import { satirAdi, listeAdi } from './taban.js?v=234';
 
 /* ================= BELGELER VE ÇIKTILAR ================= */
@@ -72,7 +72,7 @@ function ucretDokumu(k) {
     <tr><th colspan="4">Toplam (KDV %${kdv} dahil)</th><td>${para(tT + dT)}</td></tr></table>
     <p style="font-size:11px">Ücret, ders saati ile saat ücretinin çarpımıdır${dU % 1 ? ' (saat ücreti kuruşa yuvarlanmıştır)' : ''}. ${su.kaynak === 'tarife' ? 'Saat ücretleri kursun ücret tarifesindendir.' : !ts ? 'Bu eğitimde teorik ders yoktur; ücretin tamamı direksiyon eğitimidir.' : !ds ? 'Bu eğitimde direksiyon dersi yoktur; ücretin tamamı teorik derstir.' : su.kaynak === 'taban' ? 'Teorik ve direksiyon payı il taban fiyat listesindeki orana göre ayrılmıştır.' : 'Teorik ve direksiyon payı kursun belirlediği orana göre ayrılmıştır.'}</p>`;
 }
-export const sozlesmeDondur = k => metinKodla(sozlesmeGovde(k));
+export const sozlesmeDondur = k => { sozlesmeSaatDondur(k); return metinKodla(sozlesmeGovde(k)); };
 // {direksiyon}: öğrencinin asgari ders sayısı (veri.js gerekliDireksiyon: sınıf + mevcut ehliyet, elle girilen, eski kayıtta dondurulmuş değer).
 // İmzalı sözleşmede bu metin değil, imza anında dondurulan metin (k.sozlesmeImza.metin) gösterilir.
 export function sozlesmeMaddeleri(k) {
@@ -345,7 +345,7 @@ export function kayitSayfasi(subeId) {
             const eg = (sube && egUygun(S.egitmenler.filter(x => x.sube === sube))) || egUygun(S.egitmenler) || null;
             const grup = GR.kayitGruplari(kayit.sinif)[0];  // başlamamış, sınıfa uygun ilk dönem grubu; yoksa kursiyer bekleyen kalır
             const yeni = { id: 'k' + Date.now(), ad: kayit.bilgi.ad.trim(), soyad: kayit.bilgi.soyad.trim(), tel: kayit.bilgi.tel, tc: kayit.bilgi.tc.trim(), dogumTarihi: kayit.bilgi.dogumTarihi || '', adres: kayit.bilgi.adres || '', ogrenim: '', dogum: (kayit.bilgi.dogumTarihi || '').slice(0, 4), teorikGrup: grup ? grup.id : '', kvkk: { tarih: gun(0), kanal: 'Kayıt formu (kurs cihazı)', aydinlatma: true, pazarlama: !!kayit.pazarlama }, evrakFoto: netFoto, ...(Object.keys(bulanikYuk).length ? { evrakYuklenen: bulanikYuk } : {}), sinif: kayit.sinif, kayit: gun(0), egitmen: eg ? eg.id : null, asama: Object.values(ev2).every(Boolean) ? 'Teorik' : 'Evrak', teorik: 0, direksiyon: 0, evrak: ev2, mebIslendi: false, esinav: null, dsinav: null, odeme: { toplam: u0, sozlesme: u0, pesin: 0, pesinTarih: gun(0), taksitler, ekler: [], senetli: false }, kaynak: 'Web sitesi', yorum: null, notlar: [{ tarih: gun(0), metin: 'Kayıt formundan kaydoldu, sözleşmeyi formda imzaladı.' }], deneme: [], acil: { ad: kayit.bilgi.acil || '', yakinlik: '', tel: kayit.bilgi.acilTel || '' } };
-            S.kursiyerler.unshift(yeni);
+            sozlesmeSaatDondur(yeni); S.kursiyerler.unshift(yeni);
             import('./zamanlayici.js?v=234').then(m => m.anlikBildirim('o21', { ad: yeni.ad + ' ' + yeni.soyad, sinif: (SINIFLAR[kayit.sinif] || {}).ad || kayit.sinif, kaydeden: 'kayıt formu' })).catch(() => { });   // MSJ-026
             if (sube) yeni.sube = sube;
             Object.assign(yeni, { cinsiyet: kayit.bilgi.cinsiyet, ogrenim: kayit.bilgi.ogrenim || '', sozlesmeImza: { tarih: gun(0), yontem: 'Ekranda', url: imzaUrl, olcu: imzaOlcu, kanal: 'Kayıt formu (kurs cihazı)' }, mudurGozetim: { tarih: gun(0), kim: oturum.kullanici ? oturum.kullanici.ad : '', kanal: 'Kayıt formu (kurs cihazı)' } });

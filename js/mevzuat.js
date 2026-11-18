@@ -21,21 +21,24 @@ export const odenenEgitim = k => k.odeme.pesin + k.odeme.taksitler.reduce((a, t)
 // Teorik payı: kursun saat tarifesi yoksa il taban listesindeki satırın oranı (B ilk belge 6.630/23.510 = %28; e-sınav muaf, fark ve
 // otomatikten manuele satırlarında teorik yok: %0); liste yoksa kursun Ayarlar'daki payı (varsayılan %35).
 // Bölünen direksiyon saati ikinci dört hak derslerini içermez (o dersler ayrıca ücretlendirilir, md.15/4).
+// PAR-007: sözleşmenin saatleri kayıtta (ve imzada) dondurulur (k.sozlesmeSaat { teorik, direksiyon, tarih }); kurs sonradan sınıf saatini değiştirse de
+// bu öğrencinin saat başı ücreti ve iade hesabı imzaladığı sözleşmeye göre kalır. Dondurulmamış eski kayıtta güncel değer kullanılır.
+export function sozlesmeSaatDondur(k) { if (!k || k.sozlesmeSaat) return; const S0 = SINIFLAR[k.sinif] || {}, g = direksiyonAyrinti(k); k.sozlesmeSaat = { teorik: +S0.teorik || 0, direksiyon: g.ilk ?? g.saat, tarih: gun(0) }; }
 export function saatUcretleri(k) {
-  const S0 = SINIFLAR[k.sinif] || { teorik: 34, direksiyon: 14 }, u = sozlesmeUcreti(k), su = (S0.saatUcret || {}), g = direksiyonAyrinti(k), dir = g.ilk ?? g.saat, tv = teorikVar(k);
+  const fz = k.sozlesmeSaat, S0 = SINIFLAR[k.sinif] || { teorik: 34, direksiyon: 14 }, u = sozlesmeUcreti(k), su = (S0.saatUcret || {}), g = direksiyonAyrinti(k), dir = fz ? fz.direksiyon : g.ilk ?? g.saat, tv = teorikVar(k);
   const x = kursiyerTaban(k), r = x && x.satir;
   let pay, kaynak;
   if (su.teorik) { pay = null; kaynak = 'tarife'; }
   else if (!tv) { pay = 0; kaynak = 'teoriksiz'; }
   else if (r && r.teorik) { const tT = r.teorik.toplam, dT = r.direksiyon ? r.direksiyon.toplam * (k.kendiArac ? 0.5 : 1) : 0; pay = tT / (tT + dT); kaynak = 'taban'; }
   else { pay = dir ? (S.kurs.teorikPay ?? 35) / 100 : 1; kaynak = 'pay'; }
-  const teorikSaat = tv ? Math.max(1, S0.teorik) : 0;
+  const teorikSaat = tv ? Math.max(1, fz ? fz.teorik : S0.teorik) : 0;
   return { teorik: su.teorik || (teorikSaat ? Math.round(u * pay / teorikSaat) : 0), direksiyon: dir ? (su.direksiyon || Math.round(u * (1 - (pay ?? 0)) / dir)) : 0, kaynak, pay, satir: r || null, teorikSaat, dirSaat: dir || 0 };
 }
 // ÖÖKY m.56/3-b: dönem başlamadan ayrılana ücretin %10'u dışındaki kısım; başladıktan sonra %10 + aldığı ders saatleri düşülür.
 export function yasalIade(k) {
   const u = sozlesmeUcreti(k), su = saatUcretleri(k), S0 = SINIFLAR[k.sinif] || {};
-  const g = direksiyonAyrinti(k), ts = teorikVar(k) ? Math.min(k.teorik || 0, S0.teorik || 0) : 0, ds = Math.min(k.direksiyon || 0, g.ilk ?? g.saat), basladi = ts > 0 || ds > 0;  // teoriksiz satırda (muaf, fark) alınmamış teorik düşülmez
+  const g = direksiyonAyrinti(k), fz = k.sozlesmeSaat, ts = teorikVar(k) ? Math.min(k.teorik || 0, fz ? fz.teorik : S0.teorik || 0) : 0, ds = Math.min(k.direksiyon || 0, fz ? fz.direksiyon : g.ilk ?? g.saat), basladi = ts > 0 || ds > 0;  // teoriksiz satırda (muaf, fark) alınmamış teorik düşülmez
   const kesinti = Math.round(u * 0.1), teorikT = basladi ? ts * su.teorik : 0, direksiyonT = basladi ? ds * su.direksiyon : 0;
   const hak = Math.min(u, kesinti + teorikT + direksiyonT), od = odenenEgitim(k);
   return { ucret: u, kesinti, ts, ds, su, teorikT, direksiyonT, hak, odenen: od, iade: Math.max(0, od - hak), alacak: Math.max(0, hak - od), basladi };

@@ -989,7 +989,9 @@ export function makbuzNoVer(h) {
 }
 // Sınıf ayarlarını kalıcı yaz
 // Saat değişince eski kayıtların dondurulmuş değeri (kural tarihinden önceki kurs ayarı ya da v208 varsayılanı) bir kez saklanır
-export function sinifKaydet(k, alan) { if (alan && 'ucret' in alan) S.kurs.ucretOnay = gun(0); if (alan && 'direksiyon' in alan && ESKI_DIREKSIYON[k] !== undefined && ((S.kurs.siniflar || {})[k] || {}).donukDireksiyon === undefined) { const o = (S.kurs.siniflar || {})[k] || {}; alan = { ...alan, donukDireksiyon: o.direksiyon != null ? o.direksiyon : ESKI_DIREKSIYON[k] }; } Object.assign(SINIFLAR[k], alan); S.kurs.siniflar[k] = { ...(S.kurs.siniflar[k] || {}), ...alan }; }
+export function sinifKaydet(k, alan) { if (alan && 'ucret' in alan) S.kurs.ucretOnay = gun(0);
+  // PAR-007: saat değişmeden önce o sınıftaki öğrencilerin sözleşme saatleri dondurulur (iade ve saat başı ücret eski sözleşmeyle kalır; mevzuat.js saatUcretleri)
+  if (alan && ('direksiyon' in alan || 'teorik' in alan)) (S.kursiyerler || []).forEach(x => { if (x.sinif !== k || x.sozlesmeSaat || x.kapali) return; const g = direksiyonAyrinti(x); x.sozlesmeSaat = { teorik: +((SINIFLAR[k] || {}).teorik) || 0, direksiyon: g.ilk ?? g.saat, tarih: gun(0) }; }); if (alan && 'direksiyon' in alan && ESKI_DIREKSIYON[k] !== undefined && ((S.kurs.siniflar || {})[k] || {}).donukDireksiyon === undefined) { const o = (S.kurs.siniflar || {})[k] || {}; alan = { ...alan, donukDireksiyon: o.direksiyon != null ? o.direksiyon : ESKI_DIREKSIYON[k] }; } Object.assign(SINIFLAR[k], alan); S.kurs.siniflar[k] = { ...(S.kurs.siniflar[k] || {}), ...alan }; }
 // MEBBİS'e girilmiş dersin değişmesi: hangi yoldan olursa olsun (sürükle, taşı, iptal, öğrenci/öğretmen telefonu, WhatsApp) kaydette fark edilir.
 // Saati/öğretmeni/aracı değişen ders yeniden "MEBBİS'e girilecek" olur; silinen ders "MEBBİS'ten silinecek" listesine yazılır.
 let mebIz = null;
