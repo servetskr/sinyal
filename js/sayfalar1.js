@@ -30,6 +30,15 @@ import * as GO from './gorusme.js?v=234';
 import * as PK from './personel.js?v=234';
 import { listeAdi, satirAdi } from './taban.js?v=234';
 
+// KAY-115: fotoğraf yükleme (JPEG, PNG; tarayıcı açabiliyorsa HEIC de). Tarayıcı dosyayı açamazsa sessiz kalmaz, nedenini söyler:
+// iPhone'un HEIC fotoğrafını çoğu Chrome ve Android açamaz (Safari açar). Hata iletisi x.message'da; çağıran bildir(x.message) der.
+export const heicMi = f => !!f && (/image\/hei[cf]/i.test(f.type || '') || /\.hei[cf]$/i.test(f.name || ''));
+export function fotoHataMetni(f) {
+  if (heicMi(f)) return 'Bu fotoğraf iPhone’un HEIC biçiminde ve bu tarayıcı açamıyor. iPhone’da Ayarlar › Kamera › Biçimler › “En Uyumlu”yu seçip yeniden çekin ya da fotoğrafı JPEG olarak gönderin.';
+  if (f && f.type && !/^image\//.test(f.type)) return 'Bu dosya fotoğraf değil. JPEG ya da PNG bir fotoğraf seçin.';
+  return 'Fotoğraf açılamadı. JPEG ya da PNG bir fotoğraf seçin.';
+}
+export const fotoAl = (f, max) => fotoKucult(f, max).catch(() => { throw Object.assign(new Error(fotoHataMetni(f)), { foto: true }); });
 const aktifler = () => sb(S.kursiyerler).filter(k => k.asama !== 'Ehliyet' && !k.kapali);
 // KTY md.76/3 yaş istisnası (k.yasIstisna) veri.js'te uygulanır: mebOnKontrol, yasDenetim, asgariYasHesap ve deneyimEksik istisnayı bilir.
 // Kayıt formu, dosya şeridi ve MEBBİS ön kontrol kartı aynı işlevi çağırır.
@@ -865,8 +874,8 @@ export function kursiyerFormu(on = {}) {
       // seçili grup doluysa yeni grup formu aynı dönem ve grubun sıradaki şubesiyle açılır (DON-010)
       d.querySelector('[data-k-grup-yeni]').addEventListener('click', () => { const g0 = GR.grupBul(f.grup.value), dl = g0 && GR.grupDoluluk(g0).dolu, ss = dl && GR.sonrakiSube(g0); GR.grupFormu({ sinif: f.sinif.value || '', ust: true, ...(ss ? { donem: g0.donem, grupNo: g0.grupNo, sube: ss, sinif: g0.sinif || f.sinif.value || '', derslik: '' } : {}) }, g => { if (g) { on.grup = g.id; guncelle(); if ([...f.grup.options].some(o => o.value === g.id)) f.grup.value = g.id; guncelle(); } }); });
       // fotoğraflar (taslağa girmez)
-      d.querySelector('[data-ks-foto-sec]').addEventListener('change', ev => { const x = ev.target.files[0]; if (!x) return; fotoKucult(x, 480).then(u => { foto = u; d.querySelector('[data-foto-onizle]').innerHTML = `<img src="${u}" alt="">`; f.querySelectorAll('[name=fk]').forEach(c => { c.checked = false; }); f['ev-foto'].checked = true; guncelle(); }).catch(() => bildir('Fotoğraf okunamadı', 'uyari')); });
-      d.querySelector('[data-ks-dfoto-sec]').addEventListener('change', ev => { const x = ev.target.files[0]; if (!x) return; fotoKucult(x, 480).then(u => { dfoto = u; d.querySelector('[data-dfoto-onizle]').innerHTML = `<img src="${u}" alt="" style="width:100%;height:100%;object-fit:cover">`; d.querySelector('[data-dfoto-alt]').hidden = false; f.dkimlik.checked = false; d.querySelector('[data-dfoto-durum]').textContent = 'Çekildi · kimlikle karşılaştırın'; }).catch(() => bildir('Fotoğraf okunamadı', 'uyari')); });
+      d.querySelector('[data-ks-foto-sec]').addEventListener('change', ev => { const x = ev.target.files[0]; if (!x) return; fotoAl(x, 480).then(u => { foto = u; d.querySelector('[data-foto-onizle]').innerHTML = `<img src="${u}" alt="">`; f.querySelectorAll('[name=fk]').forEach(c => { c.checked = false; }); f['ev-foto'].checked = true; guncelle(); }).catch(x => bildir(x.message, 'uyari')); });
+      d.querySelector('[data-ks-dfoto-sec]').addEventListener('change', ev => { const x = ev.target.files[0]; if (!x) return; fotoAl(x, 480).then(u => { dfoto = u; d.querySelector('[data-dfoto-onizle]').innerHTML = `<img src="${u}" alt="" style="width:100%;height:100%;object-fit:cover">`; d.querySelector('[data-dfoto-alt]').hidden = false; f.dkimlik.checked = false; d.querySelector('[data-dfoto-durum]').textContent = 'Çekildi · kimlikle karşılaştırın'; }).catch(x => bildir(x.message, 'uyari')); });
       addEventListener('resize', isikKonum, { passive: true });
       f.addEventListener('submit', ev => {
         ev.preventDefault();
@@ -1637,8 +1646,8 @@ function profilFoto(k) {
       ${k.dogrulamaFoto ? `<p style="font-size:12.5px;color:var(--soluk);margin-top:8px">${tarih(k.dogrulamaFoto.tarih)} · ${e(k.dogrulamaFoto.kim || '')}</p>` : ''}</div></div>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-foto-kaydet>Kaydet</button>`,
     onAc(d) {
-      d.querySelector('[data-foto-sec]').addEventListener('change', ev => { const f = ev.target.files[0]; if (!f) return; veriKaynak = 'yukleme'; fotoKucult(f, 480).then(u => { veri = u; d.querySelector('.foto-onizle').innerHTML = `<img src="${u}" alt="">`; d.querySelectorAll('[data-kural]').forEach(c => { c.checked = false; }); }).catch(() => bildir('Fotoğraf okunamadı', 'uyari')); });
-      d.querySelector('[data-dfoto-sec]').addEventListener('change', ev => { const f = ev.target.files[0]; if (!f) return; fotoKucult(f, 480).then(u => { dveri = u; d.querySelector('[data-donizle]').innerHTML = `<img src="${u}" alt="">`; d.querySelector('[data-dkimlik]').checked = false; }).catch(() => bildir('Fotoğraf okunamadı', 'uyari')); });
+      d.querySelector('[data-foto-sec]').addEventListener('change', ev => { const f = ev.target.files[0]; if (!f) return; veriKaynak = 'yukleme'; fotoAl(f, 480).then(u => { veri = u; d.querySelector('.foto-onizle').innerHTML = `<img src="${u}" alt="">`; d.querySelectorAll('[data-kural]').forEach(c => { c.checked = false; }); }).catch(x => bildir(x.message, 'uyari')); });
+      d.querySelector('[data-dfoto-sec]').addEventListener('change', ev => { const f = ev.target.files[0]; if (!f) return; fotoAl(f, 480).then(u => { dveri = u; d.querySelector('[data-donizle]').innerHTML = `<img src="${u}" alt="">`; d.querySelector('[data-dkimlik]').checked = false; }).catch(x => bildir(x.message, 'uyari')); });
       d.addEventListener('click', ev => { const kb = ev.target.closest('[data-kamera]'); if (!kb) return; kameraCek().then(u => { if (!u) return; if (kb.dataset.kamera === 'foto') { veri = u; veriKaynak = 'kamera'; d.querySelector('.foto-onizle').innerHTML = `<img src="${u}" alt="">`; d.querySelectorAll('[data-kural]').forEach(c => { c.checked = false; }); } else { dveri = u; d.querySelector('[data-donizle]').innerHTML = `<img src="${u}" alt="">`; d.querySelector('[data-dkimlik]').checked = false; } }); });  // KAY-047
       d.querySelector('[data-foto-kaydet]').addEventListener('click', () => {
         if (!veri && !dveri) return bildir('Önce fotoğraf çekin ya da yükleyin', 'uyari');
@@ -2026,7 +2035,7 @@ ${mesajlar.length ? '' : '<li style="color:var(--soluk)">Bu kursiyere henüz mes
       });
       kap.addEventListener('change', ev => {
         const fy = ev.target.closest('[data-foto-yukle]');
-        if (fy && fy.files[0]) { fotoKucult(fy.files[0]).then(u => { k.evrakFoto = k.evrakFoto || {}; k.evrakFoto[fy.dataset.fotoYukle] = u; k.evrak[fy.dataset.fotoYukle] = true; islem('Evrak fotoğrafı yükledi', tamAd(k)); kaydet(); bildir('Evrak fotoğrafı kaydedildi'); yenile(); }).catch(() => bildir('Fotoğraf okunamadı', 'uyari')); return; }
+        if (fy && fy.files[0]) { fotoAl(fy.files[0]).then(u => { k.evrakFoto = k.evrakFoto || {}; k.evrakFoto[fy.dataset.fotoYukle] = u; k.evrak[fy.dataset.fotoYukle] = true; islem('Evrak fotoğrafı yükledi', tamAd(k)); kaydet(); bildir('Evrak fotoğrafı kaydedildi'); yenile(); }).catch(x => bildir(x.message, 'uyari')); return; }
         const c = ev.target.closest('[data-evrak]'); if (!c) return;
         k.evrak[c.dataset.evrak] = c.checked; if (c.dataset.evrak === 'sozlesme') k.sozlesmeImza = c.checked ? (k.sozlesmeImza || { tarih: gun(0), yontem: 'Islak imza', metin: sozlesmeDondur(k) }) : null; islem(c.checked ? 'Evrak teslim aldı' : 'Evrakı eksik işaretledi', tamAd(k) + ' · ' + EVRAKLAR.find(x => x[0] === c.dataset.evrak)[1]);
         if (!eksikEvrak(k).length && ['Kayıt', 'Evrak'].includes(k.asama)) { if (GR.aktifEt(k)) bildir(k.asama === 'Direksiyon' ? (k.muaf ? 'Evraklar tamam; e-sınavdan muaf, kursiyer direksiyon aşamasına geçti' : 'Evraklar tamam; belgeli aday teorik almaz, direksiyon aşamasına geçti') : 'Evraklar tamam, kursiyer teorik aşamaya geçti'); else bildir('Evraklar tamam; kursiyer bir dönem grubuna atanınca aktif olur', 'uyari'); }
