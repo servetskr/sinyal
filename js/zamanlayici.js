@@ -60,7 +60,9 @@ const doldur = (id, alan) => { alan = { kurs: S.kurs.ad, kursa: kursAdi('e'), ku
 // KAY-106 (SOR-057): WhatsApp bilgilendirme onayını açıkça vermeyen (k.kvkk.whatsapp === false) öğrenciye WhatsApp gitmez; e-postası varsa e-postayla gider, yoksa gönderilmez (kim: null).
 // Onay alanı olmayan eski kayıtlar eskisi gibi WhatsApp'tan alır.
 const waRed = k => !!(k && k.kvkk && k.kvkk.whatsapp === false);
-const ogr = k => waRed(k) ? (k.eposta ? { ad: tamAd(k), tel: k.tel, rol: 'ÖĞRENCİ', kanal: 'E-posta', eposta: k.eposta, not: 'WhatsApp onayı yok' } : null) : ({ ad: tamAd(k), tel: k.tel, rol: 'ÖĞRENCİ', ...(k.mesajKanal && k.mesajKanal !== 'WhatsApp' ? { kanal: k.mesajKanal, eposta: k.eposta || '' } : {}) });
+// DIG-051: eski programdan arşiv olarak aktarılan öğrenciye (k.kapali.tur === 'arsiv') hiçbir otomatik mesaj gitmez; arşivden tek tek, onayla çıkarılır
+const arsivde = k => !!(k && k.kapali && k.kapali.tur === 'arsiv');
+const ogr = k => arsivde(k) ? null : waRed(k) ? (k.eposta ? { ad: tamAd(k), tel: k.tel, rol: 'ÖĞRENCİ', kanal: 'E-posta', eposta: k.eposta, not: 'WhatsApp onayı yok' } : null) : ({ ad: tamAd(k), tel: k.tel, rol: 'ÖĞRENCİ', ...(k.mesajKanal && k.mesajKanal !== 'WhatsApp' ? { kanal: k.mesajKanal, eposta: k.eposta || '' } : {}) });
 const hoca = h => ({ ad: h.ad, tel: h.tel, rol: 'HOCA' });
 const mudur = () => ({ ad: S.kurs.yetkili || 'Kurs müdürü', tel: mudurTel(), rol: 'MÜDÜR' });
 const odeme = k => S.kurs.iban ? `Havale/EFT için IBAN: ${ibanMetni()}; açıklamaya ${k ? 'ödeme kodunuzu (' + odemeKodu(k) + ') ve ' : ''}adınızı soyadınızı yazın; ${kursAdi('de')} nakit ya da kartla da ödeyebilirsiniz.` : `${kursAdi('e')} uğrayıp nakit ya da kartla ödeyebilirsiniz.`;

@@ -483,12 +483,12 @@ const sinavaGirUyar = (k, sid) => { if (!(SINIFLAR[k.sinif] || {}).direksiyon ||
 // KAY-062: dört eksenli durum (Teorik / Uygulama / Belge / Ödeme) ve genel durum, kayıtlardan kendiliğinden
 export function durumEksen(k) {
   const dir = !!(SINIFLAR[k.sinif] || {}).direksiyon, es = hakDurumu(k, 'e-Sınav'), D = hakDurumu(k, 'Direksiyon'), kp = k.kapanis || {}, hb = k.hakBitti && !k.hakBitti.cozuldu ? k.hakBitti.tur : '';
-  const durdu = k.kapali && k.kapali.tur !== 'dondur' ? 'İşlem durdu' : k.kapali ? 'Donduruldu' : '';
+  const durdu = k.kapali && k.kapali.tur === 'arsiv' ? '' : k.kapali && k.kapali.tur !== 'dondur' ? 'İşlem durdu' : k.kapali ? 'Donduruldu' : '';  // DIG-051: arşivdeki eski öğrencinin eksenleri gerçek durumunu gösterir
   const teorik = durdu || (k.muaf ? 'Muaf' : es.gecti || es.cumle === 'Muaf' ? 'Başarılı' : hb === 'e-Sınav' ? 'Dosya yaktı' : (k.teorik || 0) >= teorikSaat(k) ? 'Sınav aşamasında' : 'Eğitimde');
   const uygulama = !dir ? '—' : durdu || (D.gecti ? 'Başarılı' : !(es.gecti || k.muaf) ? 'Teorik bekleniyor' : hb === 'Direksiyon' ? 'Dosya yaktı' : k.ikinciHak ? '2. direksiyon' : (db0 => db0.tamam || (db0.tarih && db0.tarih <= gun(0)))(dersBitisi(k)) ? 'Sınav aşamasında' : 'Eğitimde');
   const belge = kp.teslim ? 'Teslim aldı' : kp.sertifika ? 'Sertifika düzenlendi' : (dir ? D.gecti : es.gecti) ? 'Hak kazandı' : 'Bekliyor';
   const odeme = k.ucretsiz ? 'Ücretsiz' : !kalanBorc(k) ? 'Ödendi' : gecikenler(k).length ? 'Gecikmede' : 'Devam ediyor';
-  const genel = k.kapali ? (k.kapali.tur === 'dondur' ? 'Donduruldu' : 'Kapandı') : kp.arsiv ? 'Tamamlandı' : 'İşlem devam ediyor';
+  const genel = k.kapali ? (k.kapali.tur === 'dondur' ? 'Donduruldu' : k.kapali.tur === 'arsiv' ? 'Arşivde' : 'Kapandı') : kp.arsiv ? 'Tamamlandı' : 'İşlem devam ediyor';
   return { teorik, uygulama, belge, odeme, genel };
 }
 const EKSEN_TON = { 'Başarılı': 'yesil', 'Muaf': 'yesil', 'Ödendi': 'yesil', 'Teslim aldı': 'yesil', 'Hak kazandı': 'yesil', 'Ücretsiz': 'yesil', 'Sertifika düzenlendi': 'yesil', 'Dosya yaktı': 'kirmizi', 'Gecikmede': 'kirmizi', 'İşlem durdu': 'kirmizi', 'Sınav aşamasında': 'mavi', '2. direksiyon': 'sari' };
@@ -498,9 +498,10 @@ const KATEGORI = [['aktif', 'Aktif'], ['belgeli', 'Belgeli'], ['muaf', 'Muaf'], 
 export function anaKategori(k) {
   const kod = parseInt((String((k.meb || {}).durum || '').match(/^\s*(\d+)/) || [])[1], 10);
   if (k.kayitSilindi || kod === 11) return 'silindi'; if (kod === 6) return 'iptal';
-  if ((k.kapali && k.kapali.tur === 'dondur') || kod === 13) return 'dondur'; if (k.kapali) return 'kapali';
+  if ((k.kapali && k.kapali.tur === 'dondur') || kod === 13) return 'dondur'; if (k.kapali && k.kapali.tur !== 'arsiv') return 'kapali';
   if (k.asama === 'Ehliyet' || (k.kapanis || {}).sertifika || kod === 5) return 'mezun';
   if ((k.hakBitti && !k.hakBitti.cozuldu) || [3, 4, 10].includes(kod)) return 'doldu';
+  if (k.kapali) return 'kapali';  // DIG-051: arşivden gelen eski öğrenci yalnız bitmiş kategorilere (silinmiş, mezun, hakkı dolmuş…) girer; süren kategorilere girmez
   if (k.ikinciHak || kod === 22) return 'ikinci'; if (k.muaf || kod === 23) return 'muaf';
   if (esinavsizBelgeli(k)) return 'belgeli'; if (k.ucretsiz || kod === 15) return 'ucretsiz';
   return 'aktif';
@@ -1900,7 +1901,7 @@ ${mesajlar.length ? '' : '<li style="color:var(--soluk)">Bu kursiyere henüz mes
     <div class="kart">
       <div class="profil-bas"><button type="button" class="profil-foto ${k.foto ? 'var' : ''}" data-profil-foto title="${k.foto ? 'Fotoğrafı değiştir' : 'Fotoğraf çek ya da yükle'}">${k.foto ? `<img src="${k.foto}" alt="${e(tamAd(k))} fotoğrafı">` : `${ik('kursiyer')}<small>Biyometrik</small>`}</button>${k.dogrulamaFoto && k.dogrulamaFoto.veri ? `<button type="button" class="profil-foto ikinci var" data-profil-foto title="Kurumda çekilen fotoğraf (kimlik doğrulama) · ${tarih(k.dogrulamaFoto.tarih)}"><img src="${k.dogrulamaFoto.veri}" alt="${e(tamAd(k))} kurumda çekilen fotoğraf"><small class="foto-etiket">Kurum</small></button>` : `<button type="button" class="profil-foto ikinci bos" data-profil-foto title="Kurumda çekilen fotoğraf yok · çek ya da yükle (kimlik doğrulama)">${ik('kursiyer')}<small>Kurum</small></button>`}<div><span class="profil-no">No ${e(String(k.no || '—'))}</span><h2 style="margin-top:6px">${e(tamAd(k))}</h2><div class="meta"><span>${asamaRozet(k.asama)}</span>${mebEtiketleri(k).map(x => `<span title="MEBBİS etiketi">${rozet(x, /ceza|dışı|dondur/i.test(x) ? 'kirmizi' : /ücretsiz/i.test(x) ? 'yesil' : 'mor')}</span>`).join('')}<span>${ik('direksiyon')}${S0.ad}</span><span>${ik('tel')}<span class="num">${e(k.tel)}</span></span><span>${ik('kursiyer')}${e(eg.ad)}</span></div>${eksenHtml(k)}</div>
         <div class="sag"><button class="dg dg-wp" data-wp>${ik('wp')}WhatsApp</button>${kalanBorc(k) > 0 && !k.kapali ? `<button class="dg dg-ana" data-odeme-al>${ik('kart')}Ödeme al</button>` : ''}<button class="dg dg-cizgi" data-ileri ${k.asama === 'Ehliyet' || k.kapali ? 'disabled' : ''}>${ik('ok')}Sonraki aşamaya geçir</button>${ozelNotDugme(k)}${mudurMu() ? `<details class="kayit-diger"><summary class="dg dg-hafif" aria-label="Diğer işlemler">⋯</summary><div class="kayit-diger-menu">${!k.kapali && k.asama !== 'Ehliyet' ? '<button class="dg dg-hafif" data-kapat-kayit>Kaydı kapat (ayrıldı / dondur)</button>' : ''}${k.kapali || k.asama === 'Ehliyet' ? '<button class="dg dg-hafif" data-kayit-sil style="color:var(--kirmizi)">Kaydı sil</button>' : ''}</div></details>` : ''}</div></div>
-      ${k.kapali ? `<div class="ipucu uyari" style="margin:0 20px 14px">${isaret('uyari', 22)}<span style="flex:1"><b>${k.kapali.tur === 'dondur' ? 'Kayıt donduruldu' : 'Kayıt kapatıldı'}</b> · ${tarih(k.kapali.tarih)} · ${e(k.kapali.neden)}${k.kapali.kim ? ' · ' + e(k.kapali.kim) : ''}</span>${mudurMu() ? '<button class="dg dg-cizgi dg-kucuk" data-kayit-ac>Yeniden aç</button>' : ''}</div>` : ''}
+      ${k.kapali ? `<div class="ipucu uyari" style="margin:0 20px 14px">${isaret('uyari', 22)}<span style="flex:1"><b>${k.kapali.tur === 'dondur' ? 'Kayıt donduruldu' : k.kapali.tur === 'arsiv' ? 'Arşivde · otomatik hatırlatma kapalı' : 'Kayıt kapatıldı'}</b> · ${tarih(k.kapali.tarih)} · ${e(k.kapali.neden)}${k.kapali.kim ? ' · ' + e(k.kapali.kim) : ''}</span>${mudurMu() ? `<button class="dg dg-cizgi dg-kucuk" data-kayit-ac>${k.kapali.tur === 'arsiv' ? 'Arşivden çıkar' : 'Yeniden aç'}</button>` : ''}</div>` : ''}
       ${yol(asamaNo(k), true)}
       ${profilEksikleri(k)}
       <div style="height:18px"></div>
@@ -1917,7 +1918,7 @@ ${mesajlar.length ? '' : '<li style="color:var(--soluk)">Bu kursiyere henüz mes
         if (ev.target.closest('[data-kapat-kayit]')) kayitKapat(k);
         if (ev.target.closest('[data-kayit-sil]')) kayitSilPenceresi(k);
         if (ev.target.closest('[data-ozel-ac]')) ozelNotPenceresi(k, () => ciz());
-        if (ev.target.closest('[data-kayit-ac]')) { const eski = k.kapali; if (eski && eski.tur === 'kapat') { k.odeme.taksitler.forEach(t => { if (t.iptal === eski.tarih) delete t.iptal; }); k.odeme.toplam += eski.iptalTutar || 0; } k.kapali = null; islem('Kaydı yeniden açtı', tamAd(k)); kaydet(); bildir(tamAd(k) + ' kaydı yeniden açıldı' + (eski && eski.tur === 'kapat' ? '; iptal edilen taksitler geri alındı, vadelerini kontrol edin' : '')); yenile(); }
+        if (ev.target.closest('[data-kayit-ac]')) { const eski = k.kapali; if (eski && eski.tur === 'arsiv') { onaySor('Arşivden çıkınca bu öğrenciye taksit, sınav ve doğum günü hatırlatmaları yeniden gider; toplu mesaj ve kurallar da onu sayar.', { baslik: tamAd(k) + ' arşivden çıkarılsın mı?', evet: 'Arşivden çıkar' }).then(ok => { if (!ok || k.kapali !== eski) return; k.kapali = null; islem('Arşivden çıkardı', tamAd(k)); kaydet(); bildir(tamAd(k) + ' arşivden çıkarıldı'); yenile(); }); return; } if (eski && eski.tur === 'kapat') { k.odeme.taksitler.forEach(t => { if (t.iptal === eski.tarih) delete t.iptal; }); k.odeme.toplam += eski.iptalTutar || 0; } k.kapali = null; islem('Kaydı yeniden açtı', tamAd(k)); kaydet(); bildir(tamAd(k) + ' kaydı yeniden açıldı' + (eski && eski.tur === 'kapat' ? '; iptal edilen taksitler geri alındı, vadelerini kontrol edin' : '')); yenile(); }
         if (ev.target.closest('[data-evrak-hatirlat]')) evrakIstePenceresi(k);
         if (ev.target.closest('[data-esinav-tercih]')) import('./sayfalar2.js?v=234').then(m => m.esinavTercihPenceresi(k, yenile));
         { const hy = ev.target.closest('[data-hak-yandi]'); if (hy) return hakYandiIsle(k, hy.dataset.hakYandi); }
