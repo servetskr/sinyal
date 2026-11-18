@@ -565,7 +565,30 @@
       return o;
     },
   });
-  const CEKME_EKRAN = { merkezler: ['skt02007'], sonuclar: ['skt02008'], fotograf: ['skt02006'], kurum: ['skt01001'], gruplar: ['skt03002', 'skt03001'], kursiyerler: ['skt02006'], personel: [], araclar: ['skt01002'], sinavlar: ['skt04003'], dosya: ['skt02009'], randevular: ['skt01005'], ucretler: ['skt02007'], teorik: ['skt04001'], ucretIlani: [], yetki: ['ook15003', 'ook15004'], direksiyonProgrami: ['skt04002'] };
+  // MEB-036 (1.17.0): SKT02013 dönem aday listesi — cmbEgitimDonemi (autopostback) → cmbAdayAdSoyad seçenekleri (ad soyad ve T.C.); dönem başına
+  //  tek istek, fotoğrafsız, durum ya da onay bilgisi yok. ayar.donemler (en çok 6) yoksa içinde bulunulan ay, listede yoksa ondan önceki en yeni dönem.
+  //  Yanıttaki seçili dönem istenen değilse alınmaz (bayat). Fatura formuna ve hiçbir düğmeye dokunulmaz.
+  Object.assign(CEKME, {
+    async kimlikler(ilerle, ayar = {}) {
+      const t = await getir('/SKT/skt02013.aspx'), el = elBul(t.doc, 'cmbEgitimDonemi'); if (!el || el.tagName !== 'SELECT') throw ekranHata(t.doc, 'cmbEgitimDonemi');
+      const var_ = [...el.options].map(o => o.value).filter(v => /^\d{6}$/.test(v)), bu = new Date(), simdi = String(bu.getFullYear() * 100 + bu.getMonth() + 1);
+      const iste = (Array.isArray(ayar.donemler) ? ayar.donemler : ayar.donem ? [ayar.donem] : []).map(String).filter(v => var_.includes(v));
+      const dl = (iste.length ? iste : [var_.includes(simdi) ? simdi : var_.filter(v => v <= simdi).sort().pop()]).filter(Boolean).slice(0, 6);
+      if (!dl.length) throw new MebHata('Fatura Kayıt ekranında istenen dönem yok; aday listesi okunmadı', 'veri');
+      const secili = d => { const s = elBul(d, 'cmbEgitimDonemi'); return s ? (s.querySelector('option[selected]') || {}).value || '' : ''; };
+      const o = [];
+      for (const [i, d] of dl.entries()) {
+        ilerle(`Dönem aday listesi ${d.slice(0, 4)}/${d.slice(4)}`, (i + 1) / dl.length);
+        const r = await postla(t, { cmbEgitimDonemi: d }, { tetik: 'cmbEgitimDonemi' });
+        const a = elBul(r.doc, 'cmbAdayAdSoyad'); if (!a || a.tagName !== 'SELECT') throw ekranHata(r.doc, 'cmbAdayAdSoyad');
+        if (secili(r.doc) !== d) { o.push({ donem: d, hata: 'bayat' }); continue; }
+        const adaylar = [...a.options].filter(x => x.value && !/^(-1|0)$/.test(x.value)).map(x => { const m = metin(x), tc = /^\d{11}$/.test(x.value) ? x.value : (m.match(/(?:^|\D)(\d{11})(?:\D|$)/) || [])[1] || ''; return { tc, ad: m.replace(/\d{11}/, '').replace(/^[\s\-–:()]+|[\s\-–:()]+$/g, '').replace(/\s+/g, ' ').trim() }; });
+        o.push({ donem: d, adaylar });
+      }
+      return o;
+    },
+  });
+  const CEKME_EKRAN = { kimlikler: ['skt02013'], merkezler: ['skt02007'], sonuclar: ['skt02008'], fotograf: ['skt02006'], kurum: ['skt01001'], gruplar: ['skt03002', 'skt03001'], kursiyerler: ['skt02006'], personel: [], araclar: ['skt01002'], sinavlar: ['skt04003'], dosya: ['skt02009'], randevular: ['skt01005'], ucretler: ['skt02007'], teorik: ['skt04001'], ucretIlani: [], yetki: ['ook15003', 'ook15004'], direksiyonProgrami: ['skt04002'] };
   // Aday Durum Görüntüleme: tek adayın bütün dosyası
   async function adayDosyasi(taban, tc) {
     const r = await postla(taban, { txtTcKimlikNo: tc }, { dugme: 'ImageButton1' });
