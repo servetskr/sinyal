@@ -647,6 +647,12 @@ function bekleEkrani(metin) {
   clearInterval(ipucuSayac);
   document.getElementById('uyg').innerHTML = `<div class="yukleme" role="status" aria-live="polite"><div class="yk-ic"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="#1b2b45"/><g fill="none" stroke="#ffc21a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20l12 12-12 12" stroke-opacity=".38"/><path d="M33 20l12 12-12 12"/></g></svg><b class="yk-ad"><span class="mk">md</span>Sinyal</b><div class="yk-cubuk" aria-hidden="true"><i></i></div><p class="yk-alt">${e(metin || 'mdSinyal açılıyor')}</p></div></div>`;
 }
+// YON-058: giriş sayfasından gelinip bu cihazda zaten açık oturum varsa sessizce ana ekrana gitmez; seçim sorulur
+function acikOturumSor(u) {
+  pencere({ baslik: 'Bu cihazda zaten girişlisiniz', taslak: false, icerik: `<p style="font-size:14.5px">Şu an <b>${e(u.ad || u.eposta || '')}</b> hesabıyla girişlisiniz${S.kurs && S.kurs.ad ? ` (${e(S.kurs.ad)})` : ''}.</p><p style="font-size:13.5px;color:var(--soluk);margin-top:6px">Aynı hesapla devam edebilir ya da çıkış yapıp başka bir hesapla girebilirsiniz. Oturum kendiliğinden kapanmaz (Ayarlar › Güvenlik).</p>`,
+    altlik: '<button class="dg dg-cizgi" data-oc-cik>Çıkış yap ve başka hesapla gir</button><button class="dg dg-ana" data-kapat>Devam et</button>',
+    onAc(p) { p.querySelector('[data-oc-cik]').addEventListener('click', () => { islem('Çıkış yaptı', 'başka hesapla girmek için'); kaydet(); kapatPencere(); B.cikisYap().then(() => { try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } location.hash = '#/giris'; location.reload(); }); }); } });
+}
 // Gerçek kurs hesabıyla oturum aç
 function bulutOturumu(u, yeniGiris) {
   // demo hesabı (Yönetim › Hesaplar › Hesap oluştur › Demo): bulut verisine bağlanmaz, bu cihazdaki örnek verili demo açılır
@@ -1140,7 +1146,7 @@ else if (B.bulutKayitli() && (() => { const h = hareketOku(HAREKET); return !!(h
 else if (B.bulutKayitli()) {
   oturum.kullanici = null; bekleEkrani('Kurs verisi yükleniyor…');
   const girisIstendi = GIRIS_YOL[location.hash];  // giriş sayfasından gelindi ama bu cihazda zaten açık oturum var
-  B.bulutBaslat().then(u => { if (u) { bulutOturumu(u, false); if (girisIstendi) setTimeout(() => bildir('Bu cihazda zaten girişlisiniz. Başka bir hesapla girmek için sağ üstteki profilinizden “Çıkış yap”a basın.', 'uyari'), 900); } else girisEkrani('pin'); }).catch(x => { girisEkrani('pin'); bildir(B.hataMetni(x), 'uyari'); });
+  B.bulutBaslat().then(u => { if (u) { bulutOturumu(u, false); if (girisIstendi) setTimeout(() => acikOturumSor(u), 700); } else girisEkrani('pin'); }).catch(x => { girisEkrani('pin'); bildir(B.hataMetni(x), 'uyari'); });
   const kp = sessionStorageAl('sinyal-kapandi'); if (kp) { try { sessionStorage.removeItem('sinyal-kapandi'); } catch (x) { } setTimeout(() => bildir(kp + ' dakika işlem yapılmadığı için oturum kapandı; tekrar giriş yapın', 'uyari'), 400); }
 }
 else if (sessionStorageAl('sinyal-kapandi')) { const kp = sessionStorageAl('sinyal-kapandi'); try { sessionStorage.removeItem('sinyal-kapandi'); } catch (x) { } oturum.kullanici = null; girisEkrani('pin'); setTimeout(() => bildir(kp + ' dakika işlem yapılmadığı için oturum kapandı; tekrar giriş yapın', 'uyari'), 400); }
