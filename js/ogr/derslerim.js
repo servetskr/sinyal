@@ -2,7 +2,7 @@
 // öğretmen notları) ve Geçmiş (yapılan dersler, öğrenci onayı, değerlendirme).
 // Eski ogrenci.js derslerHtml / programHtml / yaklasanHtml / degerlendirKart / ders defteri işlevleri buraya taşındı;
 // onay, itiraz, yıldız, takvim dosyası (data-og-*) ogrenci.js ogBagla'da; ders al, kursa yaz, saat değiştir, iptal portal.js ogGenelTik'te çalışır.
-import { S, BECERI, DERS_TUR_AD, egitmen, arac, ogretmen, fark, gun, tarihOku, iso, iptalEdilebilir, dersSirasi, kapaliGun, ogrOzellik, tamAd, gerekliDireksiyon, teorikVar, egitimSinifi, teorikSaat } from '../veri.js?v=234';
+import { S, BECERI, DERS_TUR_AD, egitmen, arac, ogretmen, fark, gun, tarihOku, iso, iptalEdilebilir, dersSirasi, kapaliGun, ogrOzellik, tamAd, gerekliDireksiyon, teorikVar, egitimSinifi, teorikSaat, dersTurleri } from '../veri.js?v=234';
 import { tarihUzun, gunAdi, gunKisa, ayAdi } from '../ui.js?v=234';
 import * as TK from '../takvim.js?v=234';
 import { onayBekleyen, MUFREDAT, sinavAdi, hakDurum, dirSayac, TEORIKSIZ_METIN } from '../ogrenci.js?v=234';
@@ -191,6 +191,8 @@ function gelisimHtml(k, ctx) {
   const kutu = (ust, n, top, birim) => `<div class="ox-kart ox-drs-ilerleme"><small>${ust}</small><b>${n}<span>/${top} ${birim}</span></b>${serit(top ? Math.min(100, n / top * 100) : 0, n >= top ? 'yesil' : 'mavi')}</div>`;
   // teorik eğitimi olmayan öğrencide (fark, muaf, otomatikten manuele, römork) teorik ilerlemesi yerine kısa açıklama; ek dersler ayrı sayılır
   let h = `<div class="ox-drs-ilerlemeler ${dir && tv ? '' : 'tek'}">${dir ? kutu(ds.ek ? `Direksiyon · ${ds.ek} ek ders` : 'Direksiyon', ds.n, ds.g, 'ders') : ''}${tv ? kutu('Teorik', k.teorik, teorikSaat(k), 'saat') : ''}</div>${tv ? '' : not(TEORIKSIZ_METIN)}`;
+  // ders türleri (UYG-006): alan/simülatör, akan trafik, gece — her biri yapılan / gereken
+  { const dt = dir ? dersTurleri(k) : null; if (dt && dt.length > 1) h += `<div class="ox-drs-turler" aria-label="Ders türlerine göre">${dt.map(x => cip(`${esc(x.ad)} ${x.n}/${x.g}`, x.n >= x.g ? 'yesil' : 'gri')).join('')}</div>`; }
   if (dir) {
     const { l, son, once } = beceriOzet(k), sayi = Math.min(3, l.length);
     if (l.length) {
@@ -378,6 +380,7 @@ button.ox-drs-kart:active{transform:scale(.985)}
 
 /* gelişim */
 .ox-drs-ilerlemeler{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ox-drs-turler{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}
 .ox-drs-ilerlemeler.tek{grid-template-columns:1fr}
 .ox-drs-ilerlemeler .ox-kart+.ox-kart{margin-top:0}
 .ox-drs-ilerleme{display:grid;gap:6px;padding:14px 16px 16px}

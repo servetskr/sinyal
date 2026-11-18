@@ -281,6 +281,15 @@ export function geceBaslangic(t) {
   return /^\d{2}:\d{2}$/.test(elle || '') ? elle : gunBatimi(t);
 }
 export const geceDersMi = d => !!d && !!d.tarih && /^\d{2}:\d{2}/.test(d.saat || '') && d.saat.slice(0, 5) >= geceBaslangic(d.tarih);
+// Direksiyon ilerlemesi ders türüne göre (UYG-006, UYG-007): ilk kez belge alanda 2 saat alan ya da simülatör (md.7/1), kalanı akan trafik; gece dersi ayrıca.
+// Yapılan dersler sayılır (gelmedi ve iptal sayılmaz). Gerekmeyen tür listeye girmez; direksiyon dersi yoksa null.
+export function dersTurleri(k) {
+  const g = gerekliDireksiyon(k); if (!k || !g) return null;
+  const altG = !mevcutKod(k.mevcutEhliyet) && !egitimSinifi(k.sinif) ? Math.min(2, g) : 0;
+  const yd = sbDers(S.dersler).filter(d => d.kursiyer === k.id && d.durum === 'Yapıldı'), alt = yd.filter(d => d.tur === 'alan' || d.tur === 'simulator').length;
+  const gg = geceGerekli(k), gece = gg ? sbDers(S.dersler).filter(d => d.kursiyer === k.id && d.durum !== 'Gelmedi' && d.durum !== 'İptal' && geceDersMi(d)).length : 0;
+  return [altG ? { tur: 'alan', ad: 'Alan / simülatör', n: Math.min(alt, altG), g: altG } : null, { tur: 'trafik', ad: 'Akan trafik', n: Math.min(yd.length - Math.min(alt, altG), g - altG), g: g - altG }, gg ? { tur: 'gece', ad: 'Gece', n: Math.min(gece, gg), g: gg } : null].filter(Boolean);
+}
 // MEB iş günü: programdaki tek iş günü tanımı (MTSK sürelerinde: sınav onayı 4 iş günü, randevu 4 iş günü, sınav ücreti 6 iş günü, mazeret 5 iş günü).
 // Pazartesi–Cuma; resmî tatil ve bayramlar hariç. Cumartesi iş günü değildir (657 md.99, MTSK md.16/7; eyup-sorular-cevaplar.md madde 11), eski
 // mebCumartesi ayarı artık okunmaz. Arife ve kursun girdiği idari izin günleri de sayılmaz: teyit bekliyor (madde 11), son tarih erkene çekilir.

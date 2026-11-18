@@ -3,7 +3,7 @@
 // Alt ekran: 'kapanmamis' (geçmiş günlerden kapatılmamış dersler: Yapıldı / Gelmedi). Aracım, güzergâhlar ve hesap js/usta/arac.js'tedir.
 // Eski portal.js egitmenPortal() "bugun" bölümünün bütün işlevleri burada: dersi başlat, bitir ve imzalat, ders menüsü (⋯), başlat (sıradaki dışındaki
 // ders için, saati gelince), kapatılmamış derste Yapıldı / Gelmedi, imza linkini yeniden gönder, son not, konum durumu, araç ve bakım, güzergâh püf noktaları.
-import { S, SINIFLAR, gun, fark, tarihOku, kursiyer, tamAd, sbDers, geceDersMi, geceGerekli, gerekliDireksiyon, sinifEtiket } from '../veri.js?v=234';
+import { S, SINIFLAR, gun, fark, tarihOku, kursiyer, tamAd, sbDers, geceDersMi, geceGerekli, gerekliDireksiyon, sinifEtiket, DERS_TUR_AD, dersTurleri } from '../veri.js?v=234';
 import { tarihUzun, ayAdi, gunAdi } from '../ui.js?v=234';
 import { guzergahlar } from '../guzergah.js?v=234';
 import { esc, oi, bolum, baglanti, kart, gorsel, dugme, satir, liste, cip, bos, geri, sayfaBas, stilEkle } from '../ogr/ui.js?v=234';
@@ -33,6 +33,10 @@ const imzaBekliyor = d => d.durum === 'Yapıldı' && d.imza && d.imza.kursiyerBe
 // Gece dersi (gün batımından sonra başlayan ders; veri.js geceDersMi). Program ve öğrenci ayrıntısı da bunları kullanır.
 const AY_IK = '<svg class="ox-i" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>';
 export const geceCip = d => geceDersMi(d) ? `<span class="ox-ugc">${AY_IK}Gece dersi</span>` : '';
+// ders türü (UYG-007): alan ya da simülatör dersi ayrıca işaretlenir; akan trafik varsayılan, çipsiz
+export const turCip = d => d && (d.tur === 'alan' || d.tur === 'simulator') ? `<span class="ox-ugc">${DERS_TUR_AD[d.tur]}</span>` : '';
+// öğrencinin ders türlerine göre ilerlemesi tek satırda: "Alan / simülatör 1/2 · Akan trafik 8/14 · Gece 0/2"
+export const turOzet = k => { const dt = dersTurleri(k); return dt && dt.length > 1 ? `<small class="ox-ubg-turler">${dt.map(x => `${esc(x.ad)} ${x.n}/${x.g}`).join(' · ')}</small>` : ''; };
 // Öğrencinin gece dersi sayısı: kurallar.js (M04 ve ders ekleme notu) ile aynı sayım; gelmediği ve iptal dersler sayılmaz. Gerekmiyorsa null.
 export function geceSayim(k) {
   const g = geceGerekli(k); if (!g) return null;
@@ -75,7 +79,7 @@ function siraKart(ctx, d) {
   }
   return `<section class="ox-hero ox-ubg-sira${basladi ? ' derste' : ''}" aria-label="${basladi ? 'Süren ders' : 'Sıradaki ders'}: ${esc(tamAd(k))}">
     <div class="ox-ubg-sira-ust">${etiket}<button type="button" class="ox-ubg-diger" data-ders-diger="${esc(d.id)}" aria-label="${esc(tamAd(k))}: diğer işlemler">${oi('nokta3')}</button></div>
-    <div class="ox-ubg-sira-orta"><div class="ox-ubg-kim"><h2${tamAd(k).length > 18 ? ' class="uzun"' : ''}>${esc(tamAd(k))}</h2><p>${esc(s.uzun)}</p>${s.top || geceDersMi(d) ? `<small>${s.top ? (no <= s.top ? `${no}. ders / ${s.top}` : esc(ctx.P.dersEtiket(d, k))) : ''}${geceCip(d)}</small>` : ''}</div>${saat}</div>
+    <div class="ox-ubg-sira-orta"><div class="ox-ubg-kim"><h2${tamAd(k).length > 18 ? ' class="uzun"' : ''}>${esc(tamAd(k))}</h2><p>${esc(s.uzun)}</p>${turOzet(k)}${s.top || geceDersMi(d) ? `<small>${s.top ? (no <= s.top ? `${no}. ders / ${s.top}` : esc(ctx.P.dersEtiket(d, k))) : ''}${geceCip(d)}${turCip(d)}</small>` : ''}</div>${saat}</div>
     ${ek}<div class="ox-ubg-sira-dg">${dg}</div></section>`;
 }
 
@@ -115,7 +119,7 @@ function dersSatir(ctx, d, { gizli = false, aktifVar = false, erken = false } = 
   const imza = imzaBekliyor(d) ? `<div class="ox-ubg-imza"><button type="button" data-imza-tekrar="${esc(d.id)}">${oi('wp')}<span>İmza linkini yeniden gönder</span></button></div>` : '';
   return `<div class="ox-ubg-ders${plan ? '' : ' bitti'}"${gizli ? ' data-ubg-fazla hidden' : ''}>
     <div class="ox-ubg-ders-sat"><button type="button" class="ox-ubg-ders-ana" data-ders-diger="${esc(d.id)}" aria-label="${esc(d.saat)}, ${esc(tamAd(k))}, ${no}. ders: işlemler">
-      <b class="ox-ubg-ders-saat">${esc(d.saat)}</b><span class="ox-ubg-ders-govde"><b>${esc(tamAd(k))}</b><small>${alt}${geceCip(d)}</small></span>${dis ? '' : `<span class="ox-ubg-ders-sag">${sag}</span>`}</button>${dis ? `<span class="ox-ubg-ders-dg">${dis}</span>` : ''}</div>${imza}</div>`;
+      <b class="ox-ubg-ders-saat">${esc(d.saat)}</b><span class="ox-ubg-ders-govde"><b>${esc(tamAd(k))}</b><small>${alt}${geceCip(d)}${turCip(d)}</small></span>${dis ? '' : `<span class="ox-ubg-ders-sag">${sag}</span>`}</button>${dis ? `<span class="ox-ubg-ders-dg">${dis}</span>` : ''}</div>${imza}</div>`;
 }
 
 function yarinMetni(ctx) {
@@ -282,7 +286,7 @@ stilEkle('ox-ubg', `
 .ox-ubg-daha[aria-expanded=true] .ox-i{transform:rotate(180deg)}
 .ox-ubg-bek{color:#c26a00;font-weight:600}
 /* kutular */
-.ox-ubg-alt{margin-top:24px}.ox-ubg-kutular+.ox-liste{margin-top:12px}
+.ox-ubg-alt{margin-top:24px}.ox-ubg-turler{display:block;margin-top:4px;color:var(--ox-ikincil);font-size:12.5px}.ox-ubg-kutular+.ox-liste{margin-top:12px}
 .ox-ubg-kutular{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .ox-ubg-kutu{position:relative;display:flex!important;flex-direction:column;min-width:0;padding:12px 12px 14px 14px;text-align:left}
 .ox-ubg-kutu .ox-ubg-kutu-yazi{margin-top:auto}
