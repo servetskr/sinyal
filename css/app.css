@@ -3757,3 +3757,6 @@ a.kart.gosterge { text-decoration: none; color: inherit; display: block; }
 .eksen small { font-size: 10.5px; font-weight: 600; color: var(--soluk); text-transform: uppercase; letter-spacing: .03em; }
 .eksen.yesil { border-color: #2e7d32; color: #1b5e20; } .eksen.kirmizi { border-color: var(--kirmizi); color: var(--kirmizi); } .eksen.mavi { border-color: #0a4da2; color: #0a4da2; } .eksen.sari { border-color: #e0a100; color: #8a5a00; }
 .eksen.genel { background: var(--panel-2); }
+/* KAY-109 */
+[data-ks="ileri"].ks-hazir { box-shadow: 0 0 0 3px rgba(46, 125, 50, .35); }
+[data-ks="ileri"].ks-hazir::after { content: " ✓"; }

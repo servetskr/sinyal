@@ -4,7 +4,7 @@ import { S, kaydet, oturum } from './veri.js?v=234';
 import { e } from './ui.js?v=234';
 
 const YEREL = 'sinyal-gorunum';
-export const TERCIH_VARSAYILAN = { tema: 'levha', yazi: 'normal', sayfaBasi: 0, yapiskan: false, sekmeHatirla: false, dugme: 'sag' };
+export const TERCIH_VARSAYILAN = { tema: 'levha', yazi: 'normal', sayfaBasi: 0, yapiskan: false, sekmeHatirla: false, dugme: 'sag', kayitOtoIleri: true };
 const kimlik = () => { try { const u = oturum.kullanici || {}; return String(u.uid || u.id || ''); } catch (x) { return ''; } };
 const yerelOku = (a, v = {}) => { try { return JSON.parse(localStorage.getItem(a) || 'null') || v; } catch (x) { return v; } };
 const yerelYaz = (a, v) => { try { localStorage.setItem(a, JSON.stringify(v)); } catch (x) { } };
@@ -44,7 +44,7 @@ export function tercihHtml() {
     <div><b style="color:var(--murekkep)">Yazı boyutu</b>${sec('yazi', [['kucuk', 'Küçük'], ['normal', 'Normal'], ['buyuk', 'Büyük']])}</div>
     <div><b style="color:var(--murekkep)">Listelerde sayfa başına kayıt</b>${sec('sayfaBasi', [[0, 'Hepsi'], [25, '25'], [50, '50'], [100, '100']])}<small style="color:var(--soluk)">Kursiyer listesinde; fazlası “Daha fazla göster” ile açılır.</small></div>
     <div><b style="color:var(--murekkep)">Pencere düğmeleri</b>${sec('dugme', [['sag', 'Sağda'], ['sol', 'Solda']])}</div>
-    <div style="display:grid;gap:6px">${tik('yapiskan', 'Yapışkan süzgeç', 'Kursiyer listesindeki süzgeç sayfadan çıkınca da kalır; liste kayarken süzgeç üstte durur.')}${tik('sekmeHatirla', 'Sekmeyi hatırla', 'Ayarlar, MEB işlemleri, Raporlar, Mesajlar menüden açılınca en son baktığınız sekmede açılır.')}</div>
+    <div style="display:grid;gap:6px">${tik('yapiskan', 'Yapışkan süzgeç', 'Kursiyer listesindeki süzgeç sayfadan çıkınca da kalır; liste kayarken süzgeç üstte durur.')}${tik('kayitOtoIleri', 'Kayıtta adım bitince ilerle', 'Öğrenci kayıt formunda bir adımın zorunlu seçimleri tamamlanınca kısa bir beklemeyle sonraki adıma geçilir; Enter da ilerletir.')}${tik('sekmeHatirla', 'Sekmeyi hatırla', 'Ayarlar, MEB işlemleri, Raporlar, Mesajlar menüden açılınca en son baktığınız sekmede açılır.')}</div>
     <p style="font-size:13px;color:var(--soluk)">Tercihler ${e((oturum.kullanici || {}).ad || 'sizin')} hesabına kaydedilir; başka cihazdan girince de geçerlidir.</p></div>`;
 }
 // değişiklik dinleyicisi (Ayarlar › Görünüm ve kullanıcı menüsündeki pencere ortak)
