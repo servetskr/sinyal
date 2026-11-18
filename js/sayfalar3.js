@@ -1,5 +1,5 @@
 import { onkosulSeridi } from './onkosul.js?v=234';
-import { sinavGecmisi, ekToplam, kurumKisileri, gordu, taksitVade, S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas, sb, sbDers, sbSinav, gorunum, subede, SOZLESME_VARSAYILAN, satistaSiniflar, ayEkle, YONTEMLER, yontemAd, selam, kursAdi, dersKonulari, evrakKaynak, ayniTcKayit, taksitBol, aydinlatmaMetni, gerekliDireksiyon, cokSube, varsayilanSube, kuralAyar, MEVCUT_BELGELER, eskiBelgeTarihi, deneyimEksik, aracSiniflari, tabanListesi, teorikVar, ekDersFiyat, kursiyerTaban } from './veri.js?v=234';
+import { sinavGecmisi, ekToplam, kurumKisileri, gordu, taksitVade, S, kaydet, gun, fark, iso, BUGUN, SINIFLAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gonderimEkle, tcGecerli, islem, oturum, eksikEvrak, mebOnKontrol, tcMaskele, yas, sb, sbDers, sbSinav, gorunum, subede, SOZLESME_VARSAYILAN, satistaSiniflar, ayEkle, YONTEMLER, yontemAd, selam, kursAdi, dersKonulari, evrakKaynak, ayniTcKayit, taksitBol, aydinlatmaMetni, gerekliDireksiyon, cokSube, varsayilanSube, kuralAyar, MEVCUT_BELGELER, eskiBelgeTarihi, deneyimEksik, aracSiniflari, tabanListesi, teorikVar, ekDersFiyat, kursiyerTaban, kdvOrani } from './veri.js?v=234';
 import { e, tl, ik, rozet, plaka, bos, isaret, yonLevhasi, ekranNotu, aracGorsel, pencere, kapatPencere, bildir, tarih, tarihUzun, bugunMetni, fotoKucult, csvIndir, olcumler, imzaAlani, tamTarih, yaziyla, belgeYazdir, waAc, apiAcik, belgeWhatsApp, waSirali } from './ui.js?v=234';
 import { yenile } from './app.js?v=234';
 import { fotoAl } from './sayfalar1.js?v=234';   // KAY-115
@@ -70,7 +70,7 @@ function sozlesmeGovde(k, o = {}) {
 // Tarife yoksa direksiyon satırının toplamı, ücretin teorik dışında kalan kısmıdır; böylece satırlar sözleşme ücretine eşit olur.
 function ucretDokumu(k) {
   if (!k.odeme || !(sozlesmeUcreti(k) > 0)) return '';
-  const su = saatUcretleri(k), u = sozlesmeUcreti(k), kdv = ((S.entegrasyon || {}).kdv ?? 10), ts = su.teorik ? su.teorikSaat : 0, ds = su.direksiyon ? su.dirSaat : 0;
+  const su = saatUcretleri(k), u = sozlesmeUcreti(k), kdv = kdvOrani(k.sinif), ts = su.teorik ? su.teorikSaat : 0, ds = su.direksiyon ? su.dirSaat : 0;
   if (!ts && !ds) return '';
   const tT = ts * su.teorik, dT = su.kaynak === 'tarife' ? ds * su.direksiyon : Math.max(0, u - tT), dU = ds ? dT / ds : 0;
   const para = n => n.toLocaleString('tr-TR', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }) + ' ₺', haric = n => para(Math.round(n / (1 + kdv / 100) * 100) / 100);
@@ -90,7 +90,7 @@ export function sozlesmeMaddeleri(k, o = {}) {
   return sozlesmeMaddeleri0(k).concat(o.mesafeli ? [caymaMaddesi()] : []);
 }
 function sozlesmeMaddeleri0(k) {
-  const K = S.kurs, S0 = SINIFLAR[k.sinif], tv = !k.id || teorikVar(k), dir = gerekliDireksiyon(k), kdv = ((S.entegrasyon || {}).kdv ?? 10), su = k.odeme ? saatUcretleri(k) : null;
+  const K = S.kurs, S0 = SINIFLAR[k.sinif], tv = !k.id || teorikVar(k), dir = gerekliDireksiyon(k), kdv = kdvOrani(k.sinif), su = k.odeme ? saatUcretleri(k) : null;
   const saatT = n => !n ? '—' : `${tl(n)} (KDV hariç ${(n / (1 + kdv / 100)).toLocaleString('tr-TR', { maximumFractionDigits: 2 })} ₺, KDV %${kdv})`;
   const alan = { kurs: K.ad, sinif: S0.ad, teorik: S0.teorik, direksiyon: dir, hak: K.sinavHak || 4, tekrarE: tl((K.tekrarUcret || {}).esinav || 0), tekrarD: tl((K.tekrarUcret || {}).dsinav || 0), ekDers: tl(ekDersFiyat(k.sinif)), kdv: '%' + kdv, teorikSaatUcreti: su && tv ? saatT(su.teorik) : '—', direksiyonSaatUcreti: su && dir ? saatT(su.direksiyon) : '—' };
   // teorik eğitimi olmayan (e-sınav muafı, mevcut belgeyle başka sınıf) ya da direksiyonu olmayan (G, 100 ceza) öğrencide o kısım metinden çıkar

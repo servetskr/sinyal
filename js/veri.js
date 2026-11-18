@@ -996,6 +996,10 @@ function goc(o) {
   Object.keys(SINIFLAR).forEach(k => { SINIFLAR[k] = { ...SINIF_VARSAYILAN[k], ...(o.kurs.siniflar[k] || {}) }; });
   Object.keys(o.kurs.siniflar).forEach(k => { if (!SINIFLAR[k]) SINIFLAR[k] = o.kurs.siniflar[k]; });
   (o.hareket || []).forEach(h => { if (h.yontem === 'Havale/EFT') h.yontem = 'Havale'; });
+  // PAR-005: eski sürümün varsayılanı KDV %20 kurs ayarına kayıtlıydı; 5580 eğitimi %10 (II sayılı liste B/15). Bir kez %10'a çekilir,
+  // işlem kaydına yazılır; kurs sonradan bilerek başka oran seçerse (kdvGoc işaretli) dokunulmaz.
+  if (o.entegrasyon && o.entegrasyon.kdv === 20 && !o.entegrasyon.kdvGoc) { o.entegrasyon.kdv = 10; o.entegrasyon.kdvGoc = new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10); (o.islemler = o.islemler || []).unshift({ zaman: new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 16), kim: 'Sistem', ne: 'KDV oranını %10 yaptı', ayrinti: '5580 kapsamındaki eğitim: KDV II sayılı liste B/15 (eski varsayılan %20 düzeltildi)' }); }
+  else if (o.entegrasyon && !o.entegrasyon.kdvGoc) o.entegrasyon.kdvGoc = 'gerekmedi';
   (o.kursiyerler || []).forEach(k => { k.odeme.taksitler.forEach(t => { if (t.yontem === 'Havale/EFT') t.yontem = 'Havale'; }); });
   // kalıcı makbuz numaraları (yıl içinde sıralı)
   o.sayac = o.sayac || {};
