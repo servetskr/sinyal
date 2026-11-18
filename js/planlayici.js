@@ -94,6 +94,31 @@ export function aracSec(T, h, k, t, s) {
 export const simulatorler = () => (S.simulatorler || []).filter(x => x && (x.sicilNo || x.id) && (!x.durum || /hizmette/i.test(x.durum)));
 const simSec = (T, t, s) => simulatorler().find(m => !T.dolu.has('m|' + t + '|' + s + '|' + m.id)) || null;
 
+// UYG-010: öğrencinin bildirdiği müsait zamanlar. k.musaitlik = { gun: { '1': ['sabah', 'ogle', 'aksam'], …, '6': [...] }, not, tarih, kaynak }
+// Haftanın günü (1 Pzt … 6 Cmt; Pazar kurs kapalı) × dilim (sabah 12:00'den önce, öğle 12:00–17:00, akşam 17:00 ve sonrası). Bildirim yoksa ya da
+// hiçbir gün işaretli değilse kısıt yok. Öğrenci uygulamasından ogrenciGelen yoluyla gelir (bulut.js ogrenciUygula musaitlikTemizle'yi çağırır),
+// ofiste öğrenci dosyasından da girilebilir. Planlayıcı müsait olmayan saate öneri yapmaz.
+export const MUSAIT_GUN = [['1', 'Pzt', 'Pazartesi'], ['2', 'Sal', 'Salı'], ['3', 'Çar', 'Çarşamba'], ['4', 'Per', 'Perşembe'], ['5', 'Cum', 'Cuma'], ['6', 'Cmt', 'Cumartesi']];
+export const MUSAIT_DILIM = [['sabah', 'Sabah', '12:00’den önce'], ['ogle', 'Öğle', '12:00–17:00'], ['aksam', 'Akşam', '17:00’den sonra']];
+export const dilimOf = s => { const m = saatSay(s); return m < 12 * 60 ? 'sabah' : m < 17 * 60 ? 'ogle' : 'aksam'; };
+// gelen veriyi süzer: yalnız bilinen gün ve dilimler; not 200 karakter; boşsa null
+export function musaitlikTemizle(m) {
+  if (!m || typeof m !== 'object' || !m.gun || typeof m.gun !== 'object') return null;
+  const gl = {}; MUSAIT_GUN.forEach(([g]) => { const l = Array.isArray(m.gun[g]) ? MUSAIT_DILIM.map(d => d[0]).filter(d => m.gun[g].includes(d)) : []; if (l.length) gl[g] = l; });
+  if (!Object.keys(gl).length) return null;
+  const not = typeof m.not === 'string' ? m.not.replace(/[<>"'`]/g, '').trim().slice(0, 200) : '';
+  return { gun: gl, ...(not ? { not } : {}), tarih: /^\d{4}-\d{2}-\d{2}$/.test(m.tarih || '') ? m.tarih : gun(0), ...(m.kaynak === 'ofis' ? { kaynak: 'ofis' } : { kaynak: 'ogrenci' }) };
+}
+export const musaitlikVar = k => !!(k && k.musaitlik && k.musaitlik.gun && Object.values(k.musaitlik.gun).some(l => Array.isArray(l) && l.length));
+export function musaitMi(k, t, s) {
+  if (!musaitlikVar(k)) return true;
+  const l = k.musaitlik.gun[String(tarihOku(t).getDay())]; return Array.isArray(l) && l.includes(dilimOf(s));
+}
+export function musaitlikOzet(m) {
+  if (!m || !m.gun) return '';
+  return MUSAIT_GUN.filter(([g]) => (m.gun[g] || []).length).map(([g, kisa]) => { const l = m.gun[g]; return kisa + ' ' + (l.length === 3 ? 'bütün gün' : MUSAIT_DILIM.filter(d => l.includes(d[0])).map(d => d[1].toLocaleLowerCase('tr')).join(', ')); }).join(' · ');
+}
+
 // Saatler: kursun direksiyon ders saatleri (öğle arası hariç); arifede 13:00'ten sonra yok (DIR-051)
 function gunSaatleri(t) { return dersSaatleri().filter(s => !(arifeMi(t) && s >= '13:00')); }
 // Tercih ("Hafta içi akşam" vb., S.bekleme) uygun saatleri öne alır; zorunlu değil (DIR-036)
@@ -128,7 +153,7 @@ export function planOner({ kursiyerler = null, bas = null, gunSay = 14, hocaSeci
       : S.kurs.borcluDers === 'engelle' && gecikenler(k).length ? 'Geciken taksiti var; Ayarlar’da borçluya ders verilmiyor.' : '';
     if (red) return yerlesmeyen.push({ kursiyer: k.id, ad: tamAd(k), eksik: { toplam: ih.toplam, simAlan: ih.simAlan, trafik: ih.trafik, gece: ih.gece }, neden: [red] });
     const st = sonTarih(k), simIzin = !belgeliMi(k), ilkBelge = !belgeliMi(k);
-    adaylar.push({ k, ih, kalan: ih.toplam, simAlan: ih.simAlan, gece: geceKisitli(k) ? 0 : ih.gece, geceIstenen: ih.gece, st, simIzin, ilkBelge, son: sonDers(k), neden: {}, yerlesen: 0, tercih: tercih[k.id] || '' });
+    adaylar.push({ k, ih, musait: musaitlikVar(k), kalan: ih.toplam, simAlan: ih.simAlan, gece: geceKisitli(k) ? 0 : ih.gece, geceIstenen: ih.gece, st, simIzin, ilkBelge, son: sonDers(k), neden: {}, yerlesen: 0, tercih: tercih[k.id] || '' });
   });
   const kalanGun = x => x.st ? fark(x.st.t) : 9999;
   adaylar.sort((a, b) => kalanGun(a) - kalanGun(b) || (b.st && b.st.sinav ? 1 : 0) - (a.st && a.st.sinav ? 1 : 0) || b.kalan - a.kalan || a.son.localeCompare(b.son));
@@ -147,6 +172,7 @@ export function planOner({ kursiyerler = null, bas = null, gunSay = 14, hocaSeci
     if ((T.kGun[k.id + '|' + t] || 0) >= kSinir) return neden(x, 'gunluk'), false;
     if ((T.kHafta[k.id + '|' + hk] || 0) >= haftalikK) return neden(x, 'haftalik'), false;
     let saatler = tercihSirala(gunSaatleri(t), t, x.tercih);
+    if (x.musait) { saatler = saatler.filter(s => musaitMi(k, t, s)); if (!saatler.length) return neden(x, 'musait'), false; }   // UYG-010
     const geceMi = s => geceDersMi({ tarih: t, saat: s });
     if (tur === 'gece') { saatler = saatler.filter(s => geceMi(s) && s <= GECE_SON); if (!saatler.length) return neden(x, 'geceSaat'), false; }
     else if (geceKisitli(k)) saatler = saatler.filter(s => !geceMi(s));
@@ -213,6 +239,7 @@ export function planOner({ kursiyerler = null, bas = null, gunSay = 14, hocaSeci
     if (n.ustaYok) l.push('Öğrenciye öğretmen atanmamış (öğrenci dosyası › Öğretmen) ya da “Başka yetkili öğretmenlere de dağıt” kapalı.');
     if (n.arac && !l.some(m => /araç/.test(m))) l.push('Uygun saatlerde boş ya da muayenesi geçerli araç yok.');
     if (x.st && n.sonTarih) l.push(`${x.st.neden} için son gün ${trT(x.st.t)}; ${x.kalan} ders bu tarihe sığmıyor.`);
+    if (n.musait && x.musait) l.push(`Öğrenci yalnız şu zamanlarda müsait: ${musaitlikOzet(x.k.musaitlik)}. Bu zamanlarda yer kalmadı.`);
     if (n.haftalik) l.push(`Kursiyer başına haftada en çok ${haftalikK} ders (Ayarlar › Kurs bilgileri › Otomatik plan).`);
     if (!l.length) l.push(n.saat ? 'Bu aralıkta öğretmenin boş saati kalmadı.' : 'Bu aralıkta uygun gün bulunamadı.');
     yerlesmeyen.push({ kursiyer: x.k.id, eksik: { toplam: x.kalan, simAlan: Math.max(0, x.simAlan), trafik: Math.max(0, x.kalan - Math.max(0, x.simAlan)), gece: Math.max(0, x.gece) }, neden: [...new Set(l)], ad });

@@ -3882,3 +3882,12 @@ tr.secili-satir td { background: rgba(10, 77, 162, .06); }
 .tel-onizleme .ox-sekme { left: 0; right: 0; bottom: 0; width: auto; transform: none; border-width: .5px 0 0; border-radius: 0; box-shadow: none; }
 /* PAR-056: tedarikçi satırında rozet ve düğmeler dar ekranda alt satıra iner */
 @media (max-width: 640px) { .cari-td li { flex-wrap: wrap; } .cari-td li > div[style*="flex:1"] { flex: 1 1 100% !important; } .cari-td li > .sag { margin-left: 0; flex-wrap: wrap; flex: 1 1 auto; } }
+/* UYG-010: müsait zamanlar ızgarası (öğrenci dosyası) */
+.musait-izgara { display: grid; grid-template-columns: 44px repeat(3, minmax(52px, 84px)); gap: 4px 6px; align-items: center; font-size: 13.5px; }
+.musait-izgara > small { text-align: center; color: var(--soluk); font-weight: 600; line-height: 1.25; }
+.musait-izgara > b { color: var(--murekkep); }
+.musait-izgara > span[role=cell] { display: grid; place-items: center; height: 30px; border-radius: 8px; background: var(--cizgi-2); color: #fff; }
+.musait-izgara > span[role=cell].on { background: var(--yesil); }
+.musait-izgara > span[role=cell] svg { width: 16px; height: 16px; }
+.musait-sec label { display: grid; place-items: center; height: 40px; border: 1px solid var(--cizgi); border-radius: 8px; cursor: pointer; }
+.musait-sec input { width: 20px; height: 20px; }
