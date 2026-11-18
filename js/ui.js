@@ -1,5 +1,5 @@
-import { EMU } from './firebase-ayar.js?v=230';
-import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=230';
+import { EMU } from './firebase-ayar.js?v=233';
+import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=233';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -118,7 +118,7 @@ let acikPencere = null;
 // korumali: içine bilgi girilen pencere (ders bitirme, imza) dışarı dokununca ya da Esc ile kapanmaz; yalnız Vazgeç/✕ ile
 let oncekiOdak = null;
 // Formdaki eksik ya da hatalı alanları birlikte işaretler, ilk alana kaydırır; liste: [[alan, mesaj], ...]. Hata varsa true döner.
-export function alanHatalari(form, liste) {
+export function alanHatalari(form, liste, { sessiz = false } = {}) {
   if (bildirKanca.f && liste && liste.length) try { bildirKanca.f('form'); } catch (x) { }
   form.querySelectorAll('.alan-hata').forEach(x => x.remove());
   form.querySelectorAll('[aria-invalid="true"]').forEach(x => x.removeAttribute('aria-invalid'));
@@ -137,34 +137,110 @@ export function alanHatalari(form, liste) {
   const ilk = liste[0][0];
   (ilk.closest('.alan') || ilk.closest('label') || ilk).scrollIntoView({ block: 'center', behavior: 'smooth' });
   if (ilk.type !== 'radio' && ilk.type !== 'checkbox') ilk.focus({ preventScroll: true });
-  bildir(liste.length === 1 ? liste[0][1] : `${liste.length} alan eksik ya da hatalı; işaretli alanları düzeltin`, 'uyari');
+  if (!sessiz) bildir(liste.length === 1 ? liste[0][1] : `${liste.length} alan eksik ya da hatalı; işaretli alanları düzeltin`, 'uyari');
   return true;
 }
+// --- Taslaklar: girdi olan pencere ✕ / Vazgeç ile kapatılırken "Taslak olarak sakla" seçilirse alanlar saklanır.
+// Aynı pencere (aynı başlık ya da verilen taslak anahtarı) yeniden açılınca üstte "Kaldığınız yerden devam edin" şeridi çıkar.
+// Kurs personelinde S.taslaklar (bulutta eşitlenir; personel verisi cihaza yazılmaz kuralı bozulmaz), öbür ekranlarda yalnız bu sekmenin oturumu.
+// Şifre, PIN ve doğrulama kodu alanları sayılmaz, saklanmaz. Fotoğraf ve dosya alanları saklanmaz.
+const TASLAK_SINIR = 40, OTURUM_TASLAK = 'sinyal-taslak';
+const taslakBulutta = () => { try { const r = oturum.kullanici && oturum.kullanici.rol; return !!(S && ['mudur', 'sekreter', 'ortak'].includes(r) && !(S.kurs && S.kurs.tur === 'yonetim')); } catch (x) { return false; } };
+export function taslaklar() { if (taslakBulutta()) return Array.isArray(S.taslaklar) ? S.taslaklar : []; try { return JSON.parse(sessionStorage.getItem(OTURUM_TASLAK) || '[]'); } catch (x) { return []; } }
+function taslakYaz(l) { l = l.slice(0, TASLAK_SINIR); if (taslakBulutta()) { S.taslaklar = l; kaydet(); } else { try { sessionStorage.setItem(OTURUM_TASLAK, JSON.stringify(l)); } catch (x) { } } try { document.dispatchEvent(new CustomEvent('sinyal-taslak')); } catch (x) { } }
+export const taslakBul = id => taslaklar().find(t => t.id === id) || null;
+export function taslakSil(id) { if (!id || !taslaklar().some(t => t.id === id)) return; taslakYaz(taslaklar().filter(t => t.id !== id)); }
+export function taslakSakla(t) { taslakYaz([{ ...t, tarih: new Date().toISOString(), kim: oturum.kullanici ? oturum.kullanici.ad : '' }, ...taslaklar().filter(x => x.id !== t.id)]); }
+const gizliAlan = x => x.type === 'password' || x.type === 'file' || x.type === 'hidden' || x.autocomplete === 'one-time-code' || /(^|[-_])(pin|sifre|parola|kod)\d*$/i.test(x.name || x.id || '') || x.hasAttribute('data-pin-tekrar') || x.hasAttribute('data-sifre-tekrar') || x.hasAttribute('data-kod') || !!x.closest('[data-taslak-yok]');
+// Formun adlı alanlarını düz nesneye çevirir (radyo: seçili değer; aynı adlı çoklu onay kutusu: dizi; tek onay kutusu: true/false)
+export function alanlariOku(kok) {
+  const o = {};
+  kok.querySelectorAll('input[name],select[name],textarea[name]').forEach(x => {
+    if (gizliAlan(x)) return; const n = x.name;
+    if (x.type === 'radio') { if (x.checked) o[n] = x.value; else if (!(n in o)) o[n] = null; }
+    else if (x.type === 'checkbox') { const g = kok.querySelectorAll(`input[type=checkbox][name="${CSS.escape(n)}"]`); o[n] = g.length > 1 ? [...g].filter(c => c.checked).map(c => c.value) : x.checked; }
+    else o[n] = x.value;
+  });
+  return o;
+}
+export function alanlariYaz(kok, o) {
+  if (!o) return;
+  Object.entries(o).forEach(([n, v]) => kok.querySelectorAll(`[name="${CSS.escape(n)}"]`).forEach(x => {
+    if (gizliAlan(x)) return;
+    if (x.type === 'radio') x.checked = x.value === v;
+    else if (x.type === 'checkbox') x.checked = Array.isArray(v) ? v.includes(x.value) : !!v;
+    else if (v != null && (x.tagName !== 'SELECT' || [...x.options].some(op => op.value === v))) x.value = v;
+  }));
+}
+const saatKisa = iso => { try { const d = new Date(iso), b = new Date(); return (d.toDateString() === b.toDateString() ? 'bugün ' : d.getDate() + ' ' + AY[d.getMonth()] + ' ') + d.toTimeString().slice(0, 5); } catch (x) { return ''; } };
+export const taslakZamani = saatKisa;
+// Pencerenin içinde soru katmanı (tarayıcının confirm kutusu yerine): secenekler [[deger, metin, sinif]], sec(deger)
+export function pencereSor(d, { baslik, metin, secenekler }, sec) {
+  const p = d.querySelector('.pencere'); if (!p || p.querySelector('.pencere-sor')) return;
+  const o = document.createElement('div'); o.className = 'pencere-sor'; o.setAttribute('role', 'alertdialog'); o.setAttribute('aria-label', baslik);
+  o.innerHTML = `<div class="pencere-sor-ic"><h3>${e(baslik)}</h3>${metin ? `<p>${metin}</p>` : ''}${secenekler.map(([v, t, c]) => `<button type="button" class="dg ${c || 'dg-cizgi'}" data-sor="${e(v)}">${t}</button>`).join('')}</div>`;
+  p.appendChild(o); requestAnimationFrame(() => o.classList.add('acik'));
+  o.addEventListener('click', ev => { ev.stopPropagation(); const b = ev.target.closest('[data-sor]'); if (!b) return; o.remove(); sec(b.dataset.sor); });
+  o.addEventListener('keydown', ev => { if (ev.key === 'Escape') { ev.stopPropagation(); o.remove(); sec('vazgec'); } });
+  setTimeout(() => { const b = o.querySelector('[data-sor]'); if (b) b.focus(); }, 30);
+}
+// ✕ ya da Vazgeç: girdi varsa sorar. Kaydet sonrası koddan kapanan pencerenin taslağı silinir (iş bitti).
+const IPTAL_DUGME = /^(vazgeç|iptal|kapat|sonra|geri dön|şimdi değil)$/i;
+function kapatIstegi(d, kaynak, ev) {
+  const iptal = !kaynak || kaynak.closest('header') || IPTAL_DUGME.test((kaynak.textContent || '').trim());
+  if (!iptal) { kapatPencere(); return; }
+  if (!d.dataset.degisti) { d._kullaniciKapatti = true; kapatPencere(); return; }
+  if (ev && kaynak && kaynak.tagName !== 'A') ev.preventDefault();
+  if (!d._taslak) return pencereSor(d, { baslik: 'Girdiğiniz bilgiler kaydedilmedi', metin: 'Kapatırsanız bu pencerede girdikleriniz kaybolur.', secenekler: [['cik', 'Kaydetmeden çık', 'dg-cizgi'], ['vazgec', 'Vazgeç, devam et', 'dg-ana']] }, x => { if (x === 'cik') { d._kullaniciKapatti = true; kapatPencere(); } });
+  pencereSor(d, { baslik: 'Girdiğiniz bilgiler kaydedilmedi', metin: 'Taslak olarak saklarsanız bu pencereyi yeniden açtığınızda kaldığınız yerden devam edersiniz.', secenekler: [['sakla', ik('indir') + 'Taslak olarak sakla', 'dg-ana'], ['cik', 'Kaydetmeden çık', 'dg-cizgi'], ['vazgec', 'Vazgeç, devam et', 'dg-hafif']] }, s => {
+    if (s === 'vazgec') return;
+    if (s === 'sakla') { const t = d._taslak; taslakSakla({ id: t.anahtar, baslik: t.baslik, ozet: t.ozet ? t.ozet(d) : '', alanlar: alanlariOku(d), ek: t.ek ? t.ek(d) : null }); bildir('Taslak saklandı; yeniden açınca kaldığınız yerden devam edersiniz'); }
+    else taslakSil(d._taslak.anahtar);
+    d._kullaniciKapatti = true; kapatPencere();
+  });
+}
 // ust: true → açık pencere kapanmaz, gizlenip yığına konur; üstteki kapanınca (kaydet ya da vazgeç) alttaki girilen bilgilerle geri gelir
+// Hiçbir pencere dışarı dokununca ya da Esc ile kapanmaz (kullanıcı kararı 18 Kas 2026); yalnız ✕ / Vazgeç ile, girdi varsa sorarak.
+// buyuk: masaüstünde geniş ve uzun, telefonda tam ekran. taslak: false → taslak tutulmaz; metin → taslak anahtarı (varsayılan başlık).
+// taslakEk(d) taslağa eklenecek bilgi (ör. adım), taslakOzet(d) listede görünen kısa ad, taslakYukle(d, t) şeritten "Devam et"e basınca.
 const yigin = [];
-export function pencere({ baslik, icerik, altlik = '', genis = false, onAc, korumali = false, alt = false, ust = false }) {
+export function pencere({ baslik, icerik, altlik = '', genis = false, buyuk = false, onAc, korumali = false, alt = false, ust = false, taslak, taslakEk, taslakOzet, taslakYukle }) {
   if (ust && acikPencere) { acikPencere.hidden = true; yigin.push({ d: acikPencere, odak: oncekiOdak }); acikPencere = null; } else tumPencereleriKapat();
   oncekiOdak = document.activeElement;
   const d = document.createElement('div');
-  d.className = 'perde' + (alt ? ' alt-sayfa' : '');  // alt: telefonda alttan açılan sayfa (hesap menüsü gibi)
-  d.innerHTML = `<div class="pencere ${genis ? 'genis' : ''}" role="dialog" aria-modal="true" aria-label="${e(baslik)}">
+  d.className = 'perde' + (alt ? ' alt-sayfa' : '') + (buyuk ? ' perde-buyuk' : '');  // alt: telefonda alttan açılan sayfa (hesap menüsü gibi)
+  d.innerHTML = `<div class="pencere ${genis ? 'genis' : ''} ${buyuk ? 'buyuk' : ''}" role="dialog" aria-modal="true" aria-label="${e(baslik)}">
     <header><h2>${e(baslik)}</h2><button class="dg-ikon" data-kapat aria-label="Kapat">${ik('kapat')}</button></header>
     <div class="pencere-govde">${icerik}</div>${altlik ? `<footer>${altlik}</footer>` : ''}</div>`;
   document.body.appendChild(d);
   document.body.classList.add('kilitli');
   requestAnimationFrame(() => d.classList.add('acik'));
   if (korumali) d.dataset.korumali = '1';
-  d.addEventListener('click', ev => { if ((ev.target === d && !korumali) || ev.target.closest('[data-kapat]')) kapatPencere(); });
+  // korumalı akış pencereleri (ders bitirme, imza, MEBBİS'e yazma) taslak tutmaz; anahtar sayfa + başlık (aynı başlıklı başka sayfadaki pencereye taslak önerilmez)
+  if (taslak !== false && !(korumali && typeof taslak !== 'string')) d._taslak = { anahtar: typeof taslak === 'string' ? taslak : 'p:' + String(location.hash || '').split('?')[0] + '|' + baslik, baslik, ek: taslakEk, ozet: taslakOzet };
+  const iz = ev => { const t = ev.target; if (!ev.isTrusted || !t.matches || !t.matches('input,select,textarea') || gizliAlan(t)) return; d.dataset.degisti = '1'; };
+  d.addEventListener('input', iz, true); d.addEventListener('change', iz, true);
+  d.addEventListener('click', ev => { const k = ev.target.closest('[data-kapat]'); if (k && d.contains(k)) kapatIstegi(d, k, ev); });
   acikPencere = d;
-  const ilk = d.querySelector('input,select,textarea,button:not([data-kapat])'); if (ilk) setTimeout(() => ilk.focus(), 60);
+  // aynı pencerenin saklı taslağı: şeritle sorulur, kendiliğinden doldurulmaz
+  const ts = d._taslak && typeof taslak !== 'string' ? taslakBul(d._taslak.anahtar) : null;
+  if (ts) {
+    const g = d.querySelector('.pencere-govde'), sr = document.createElement('div'); sr.className = 'taslak-serit';
+    sr.innerHTML = `${ik('indir')}<span><b>Saklı taslak var</b> · ${e(saatKisa(ts.tarih))}${ts.kim ? ' · ' + e(ts.kim) : ''}</span><button type="button" class="dg dg-ana dg-kucuk" data-taslak-devam>Kaldığım yerden devam et</button><button type="button" class="dg dg-hafif dg-kucuk" data-taslak-at>Sil</button>`;
+    g.prepend(sr);
+    sr.querySelector('[data-taslak-devam]').addEventListener('click', () => { alanlariYaz(d, ts.alanlar); d.querySelectorAll('form').forEach(f => { f.dispatchEvent(new Event('input', { bubbles: true })); f.dispatchEvent(new Event('change', { bubbles: true })); }); alanlariYaz(d, ts.alanlar); if (taslakYukle) taslakYukle(d, ts); d.dataset.degisti = '1'; sr.remove(); bildir('Taslak yüklendi'); });
+    sr.querySelector('[data-taslak-at]').addEventListener('click', () => { taslakSil(ts.id); sr.remove(); });
+  }
+  const ilk = d.querySelector('.pencere-govde input:not([type=hidden]),.pencere-govde select,.pencere-govde textarea,button:not([data-kapat])'); if (ilk && !buyuk) setTimeout(() => ilk.focus(), 60);
   if (onAc) onAc(d);
   return d;
 }
 function tumPencereleriKapat() { while (yigin.length) yigin.pop().d.remove(); kapatPencere(); }
-export function kapatPencere() { if (acikPencere && yigin.length) { acikPencere.remove(); const o = yigin.pop(); acikPencere = o.d; acikPencere.hidden = false; oncekiOdak = o.odak; return; } if (acikPencere) { acikPencere.remove(); acikPencere = null; document.body.classList.remove('kilitli'); if (oncekiOdak && oncekiOdak.isConnected && oncekiOdak.focus) { try { oncekiOdak.focus(); } catch (x) { } } oncekiOdak = null; } }
+// Koddan kapanan (kaydet sonrası) pencerenin taslağı silinir; ✕ / Vazgeç'le kapananınki (kullanıcı kapattı) kalır
+export function kapatPencere() { if (acikPencere && !acikPencere._kullaniciKapatti && acikPencere._taslak) taslakSil(acikPencere._taslak.anahtar); if (acikPencere && yigin.length) { acikPencere.remove(); const o = yigin.pop(); acikPencere = o.d; acikPencere.hidden = false; oncekiOdak = o.odak; return; } if (acikPencere) { acikPencere.remove(); acikPencere = null; document.body.classList.remove('kilitli'); if (oncekiOdak && oncekiOdak.isConnected && oncekiOdak.focus) { try { oncekiOdak.focus(); } catch (x) { } } oncekiOdak = null; } }
+export const acikPencereVar = () => !!acikPencere;
 // Pencere açıkken Tab odağı pencerenin içinde döner (klavye ve ekran okuyucu kullanıcıları arkadaki sayfaya düşmesin)
 document.addEventListener('keydown', ev => { if (ev.key !== 'Tab' || !acikPencere) return; const l = [...acikPencere.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')].filter(x => x.offsetParent !== null); if (!l.length) return; const ilk = l[0], son = l[l.length - 1]; if (ev.shiftKey && document.activeElement === ilk) { ev.preventDefault(); son.focus(); } else if (!ev.shiftKey && document.activeElement === son) { ev.preventDefault(); ilk.focus(); } else if (!acikPencere.contains(document.activeElement)) { ev.preventDefault(); ilk.focus(); } });
-document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !(acikPencere && acikPencere.dataset.korumali)) kapatPencere(); });
 
 // Tam ekran akışta (öğretmenin "Dersi bitir" adımları, öğrencinin tam ekran ekranları) bildirimler üstte durur: aynı anda yalnız
 // en yenisi görünür, başlığı ve adım göstergesini kapatacak yığın oluşmaz. Aynı metin ikinci kez gelirse eskisi kaldırılır.
@@ -562,7 +638,7 @@ function sifreSor(neden, ok) {
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Onayla</button>`,
     onAc(d) {
       const inp = d.querySelector('[data-sifre-tekrar]'), btn = d.querySelector('[data-k]');
-      const dene = () => { btn.disabled = true; import('./bulut.js?v=230').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
+      const dene = () => { btn.disabled = true; import('./bulut.js?v=233').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
       btn.addEventListener('click', dene); inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') dene(); }); setTimeout(() => inp.focus(), 50);
     },
   });
