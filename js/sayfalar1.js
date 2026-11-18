@@ -1670,14 +1670,14 @@ export function plan() {
   const sutunlar = planGorunum === 'egitmen' ? sb(S.egitmenler) : sb(S.araclar);
   const gDers = sbDers(S.dersler).filter(d => d.tarih === planGun);
   // DIR-051: Pazar kapalı; resmî tatil ve arife öğleden sonrası engel değil — işaretli, ders yazılırken onay istenir (MEM bu dersleri silebilir, 28/07/2020 duyurusu)
-  const kapali = kapaliGun(planGun) === 'Pazar' ? 'Pazar' : null, tatilGun = kapaliGun(planGun) === 'Resmî tatil', arifeGun = arifeMi(planGun);
-  const tatilSaat = s => tatilGun || (arifeGun && s >= '13:00');
+  const kapali = kapaliGun(planGun) === 'Pazar' ? 'Pazar' : null, tatilGun = kapaliGun(planGun) === 'Resmî tatil', kursKapali = kapaliGun(planGun) === 'Kurs kapalı', arifeGun = arifeMi(planGun);   // DIG-002: kursa özel kapalı gün
+  const tatilSaat = s => tatilGun || kursKapali || (arifeGun && s >= '13:00');
   const sutunEg = sut => planGorunum === 'egitmen' ? sut.id : sut.egitmen;
   const hucre = (sut, s) => {
     if (s === '13:00') return `<div class="tk-hucre ogle" title="Öğle arası"></div>`;
     const iz = izinli(sutunEg(sut), planGun);
     const d = gDers.find(x => x.saat === s && (planGorunum === 'egitmen' ? x.egitmen === sut.id : x.arac === sut.id));
-    if (!d) { if (iz || kapali) return `<div class="tk-hucre ${iz ? 'izinli' : ''}" title="${iz ? e(iz.tur) : e(kapali)}"></div>`; return `<div class="tk-hucre bos-hucre${tatilSaat(s) ? ' tatil-saat' : ''}" data-ekle="${sut.id}|${s}" data-hucre="${sut.id}|${s}" tabindex="0" role="button" aria-label="${s} ders ekle"${tatilSaat(s) ? ` title="${tatilGun ? 'Resmî tatil' : 'Arife (öğleden sonra)'}: MEM bu saatteki dersi silebilir"` : ''}></div>`; }
+    if (!d) { if (iz || kapali) return `<div class="tk-hucre ${iz ? 'izinli' : ''}" title="${iz ? e(iz.tur) : e(kapali)}"></div>`; return `<div class="tk-hucre bos-hucre${tatilSaat(s) ? ' tatil-saat' : ''}" data-ekle="${sut.id}|${s}" data-hucre="${sut.id}|${s}" tabindex="0" role="button" aria-label="${s} ders ekle"${tatilSaat(s) ? ` title="${kursKapali ? 'Kurs kapalı günü' : tatilGun ? 'Resmî tatil: MEM bu saatteki dersi silebilir' : 'Arife (öğleden sonra): MEM bu saatteki dersi silebilir'}"` : ''}></div>`; }
     const k = kursiyer(d.kursiyer);
     return `<div class="tk-hucre" data-hucre="${sut.id}|${s}"><div class="ders ${d.durum === 'Yapıldı' ? 'yapildi' : d.durum === 'Gelmedi' ? 'gelmedi' : ''} ${d.tekrar ? 'tekrar' : ''}" style="--ur:${ustaRengi(egitmen(d.egitmen))}" data-ders="${e(d.id)}" draggable="${d.durum === 'Planlandı'}" tabindex="0" role="button"><b>${e(tamAd(k))}</b><small>${d.tur ? DERS_TUR_AD[d.tur] + ' · ' : ''}${planGorunum === 'egitmen' ? (d.arac ? arac(d.arac).plaka : '') : egitmen(d.egitmen).ad} · ${dersSirasi(d, k) ? dersSirasi(d, k) + '. ders' : e(d.durum)}</small></div></div>`;
   };
@@ -1709,7 +1709,7 @@ export function plan() {
     ${planlanmamisKarti()}${ogrenciDersDurumu()}
     ${planGorunum === 'arac' ? ustaLejant() : ''}
     <div class="kart" style="overflow:hidden">
-      ${kapali ? `<div class="ipucu uyari" style="margin:14px">${isaret('dur', 20)}Pazar günü kurs kapalı, ders planlanamaz.</div>` : tatilGun || arifeGun ? `<div class="ipucu uyari" style="margin:14px">${isaret('uyari', 20)}<span>${tatilGun ? 'Resmî tatil' : 'Arife: öğleden sonra (13:00 sonrası) resmî tatil'}. Ders yazılabilir; yazarken onay istenir. MEM bu saatlerdeki dersleri silebilir (28/07/2020 duyurusu).</span></div>` : ''}
+      ${kapali ? `<div class="ipucu uyari" style="margin:14px">${isaret('dur', 20)}Pazar günü kurs kapalı, ders planlanamaz.</div>` : kursKapali ? `<div class="ipucu uyari" style="margin:14px">${isaret('uyari', 20)}<span>Kursun kapalı günü (Ayarlar › MEB kuralları). Ders yazılabilir; yazarken onay istenir.</span></div>` : tatilGun || arifeGun ? `<div class="ipucu uyari" style="margin:14px">${isaret('uyari', 20)}<span>${tatilGun ? 'Resmî tatil' : 'Arife: öğleden sonra (13:00 sonrası) resmî tatil'}. Ders yazılabilir; yazarken onay istenir. MEM bu saatlerdeki dersleri silebilir (28/07/2020 duyurusu).</span></div>` : ''}
       <div class="takvim" style="--sutun:${sutunlar.length}">
         <div class="tk-bas"></div>
         ${sutunlar.map(bas).join('')}
@@ -1854,7 +1854,7 @@ function dersEkle(sutunId, saat) {
       <div class="alan"><label for="d-k">Kursiyer</label><select id="d-k"><option value="">Öğrenci seçin</option>${adaylar.map(k => `<option value="${k.id}">${e(tamAd(k))} · ${SINIFLAR[k.sinif].ad} · ${k.direksiyon + planli(k.id)}/${gerekliDireksiyon(k)}${k.egitmen === eg.id ? '' : ' · başka usta öğretici'}</option>`).join('')}</select></div>
       <div class="alan" style="margin-top:12px"><label for="d-tur">Ders türü</label><select id="d-tur">${Object.entries(DERS_TUR_AD).map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select></div>
       ${(() => { const sl = (S.simulatorler || []).filter(x => x && x.sicilNo && (!x.durum || /hizmette/i.test(x.durum))); return sl.length > 1 ? `<div class="alan" id="d-sim-alan" hidden style="margin-top:12px"><label for="d-sim">Simülatör</label><select id="d-sim">${sl.map(x => `<option value="${e(x.id)}">${e(x.sicilNo)}${x.ad ? ' · ' + e(x.ad) : ''}</option>`).join('')}</select><small style="color:var(--soluk)">MEBBİS’e bu cihazın sicil numarasıyla yazılır.</small></div>` : ''; })()}
-      ${kapaliGun(planGun) === 'Resmî tatil' || (arifeMi(planGun) && saat >= '13:00') ? `<label id="d-tatil" style="display:flex;gap:8px;align-items:flex-start;margin-top:12px;font-size:14px" class="ipucu uyari"><input type="checkbox" name="tatilOnay" style="margin-top:3px"><span>${tarihUzun(planGun)} ${kapaliGun(planGun) === 'Resmî tatil' ? 'resmî tatil' : 'arife: öğleden sonra resmî tatil'}. Emin misiniz? MEM bu dersi silebilir (28/07/2020 duyurusu).</span></label>` : ''}
+      ${kapaliGun(planGun) === 'Kurs kapalı' ? `<label id="d-tatil" style="display:flex;gap:8px;align-items:flex-start;margin-top:12px;font-size:14px" class="ipucu uyari"><input type="checkbox" name="tatilOnay" style="margin-top:3px"><span>${tarihUzun(planGun)} kursun kapalı günü. Yine de ders eklensin mi?</span></label>` : kapaliGun(planGun) === 'Resmî tatil' || (arifeMi(planGun) && saat >= '13:00') ? `<label id="d-tatil" style="display:flex;gap:8px;align-items:flex-start;margin-top:12px;font-size:14px" class="ipucu uyari"><input type="checkbox" name="tatilOnay" style="margin-top:3px"><span>${tarihUzun(planGun)} ${kapaliGun(planGun) === 'Resmî tatil' ? 'resmî tatil' : 'arife: öğleden sonra resmî tatil'}. Emin misiniz? MEM bu dersi silebilir (28/07/2020 duyurusu).</span></label>` : ''}
       <div id="d-uyari" style="margin-top:12px;display:grid;gap:6px"></div>
       <label id="d-ek-alan" hidden style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:14px"><input type="checkbox" name="ek"> Ek ders ücretini (sınıfının ek ders fiyatıyla) ödeme planına ekle</label>
       <div class="alan" style="margin-top:12px"><label for="d-tekrar">Tekrar</label><select id="d-tekrar"><option value="0">Tek seferlik</option><option value="2">Her hafta aynı saatte · 2 hafta</option><option value="4">Her hafta aynı saatte · 4 hafta</option><option value="6">Her hafta aynı saatte · 6 hafta</option></select></div>
@@ -1885,7 +1885,7 @@ function dersEkle(sutunId, saat) {
         for (let h = 0; h <= Math.max(0, n - 1); h++) {
           const t = tarihOku(planGun); t.setDate(t.getDate() + 7 * h); const ti = iso(t);
           // DIR-051: ilk ders resmî tatile/arifeye onayla yazılabilir; tekrarlanan haftalarda Pazar ve tatil atlanır
-          if (kapaliGun(ti) && !(h === 0 && kapaliGun(ti) === 'Resmî tatil')) { atlanan.push(tarih(ti) + ' ' + kapaliGun(ti).toLowerCase()); continue; }
+          if (kapaliGun(ti) && !(h === 0 && ['Resmî tatil', 'Kurs kapalı'].includes(kapaliGun(ti)))) { atlanan.push(tarih(ti) + ' ' + kapaliGun(ti).toLowerCase()); continue; }
           if (S.dersler.some(x => x.tarih === ti && x.saat === saat && (x.egitmen === eg.id || x.kursiyer === k.id))) { atlanan.push(tarih(ti) + ' dolu'); continue; }
           if (izinli(eg.id, ti)) { atlanan.push(tarih(ti) + ' öğretmen izinli'); continue; }
           if (KR.gunlukDersSorun(k.id, ti)) { atlanan.push(tarih(ti) + ' günlük ders sınırı dolu (md.16/4)'); continue; }  // pencerede gösterilen denetimle aynı (kurallar.js)

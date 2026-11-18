@@ -66,7 +66,10 @@ export const TATILLER = ['01-01', '04-23', '05-01', '05-19', '07-15', '08-30', '
 //   Ramazan Bayramı 26-28 Şubat 2028 (arife 25 Şubat Cuma), Kurban Bayramı 5-8 Mayıs 2028 (arife 4 Mayıs Perşembe)
 const BAYRAMLAR = ['2026-03-20', '2026-03-21', '2026-03-22', '2026-05-27', '2026-05-28', '2026-05-29', '2026-05-30', '2027-03-09', '2027-03-10', '2027-03-11', '2027-05-16', '2027-05-17', '2027-05-18', '2027-05-19',
   '2028-02-26', '2028-02-27', '2028-02-28', '2028-05-05', '2028-05-06', '2028-05-07', '2028-05-08'];
-export const kapaliGun = t => tarihOku(t).getDay() === 0 ? 'Pazar' : (TATILLER.includes(t.slice(5)) || BAYRAMLAR.includes(t)) ? 'Resmî tatil' : null;
+// S yüklenirken (demo üretimi) de çağrılır: S henüz tanımlı değilse kursa özel kapalı gün yok sayılır
+const kursKapaliMi = t => { try { return !!(S && S.kurs && Array.isArray(S.kurs.kapaliGunler) && S.kurs.kapaliGunler.includes(t)); } catch (x) { return false; } };
+// DIG-002: kursa özel kapalı gün (S.kurs.kapaliGunler, Ayarlar › MEB kuralları): ders planlanmaz (onayla eklenir), MEB süresi değişmez
+export const kapaliGun = t => tarihOku(t).getDay() === 0 ? 'Pazar' : (TATILLER.includes(t.slice(5)) || BAYRAMLAR.includes(t)) ? 'Resmî tatil' : kursKapaliMi(t) ? 'Kurs kapalı' : null;
 // Arife (yarım gün): Ramazan ve Kurban bayramlarının bir önceki günü + 28 Ekim (cumhuriyet bayramı arifesi). Kurs açık günü sayılır (kapaliGun),
 // MEB iş günü sayılmaz (mebIsGunuMu; eyup-sorular-cevaplar.md madde 11: yarım günlerin nasıl sayılacağı yazmıyor, teyit gelene kadar son tarih erkene çekilir).
 const ARIFELER = BAYRAMLAR.filter(t => { const d = tarihOku(t); d.setDate(d.getDate() - 1); return !BAYRAMLAR.includes(iso(d)); }).map(t => { const d = tarihOku(t); d.setDate(d.getDate() - 1); return iso(d); });
