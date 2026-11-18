@@ -401,6 +401,7 @@ export function ogretmenPencere(o, sonra, on) {
   pencere({
     baslik: o ? 'Teorik öğretmen · ' + o.ad : 'Teorik öğretmen ekle',
     icerik: `<form id="f-ogr" class="form-izgara" novalidate>
+      <div class="alan tam" style="display:flex;gap:12px;align-items:center"><span data-og-foto-on style="width:54px;height:70px;border-radius:6px;overflow:hidden;flex:none;background:var(--zemin);border:1px solid var(--cizgi);display:grid;place-items:center">${v.foto ? `<img src="${e(v.foto)}" alt="" style="width:100%;height:100%;object-fit:cover">` : '<small style="color:var(--soluk)">Foto</small>'}</span><div><span class="dg dg-cizgi dg-kucuk" style="position:relative;overflow:hidden">${v.foto ? 'Fotoğrafı değiştir' : 'Fotoğraf ekle'}<input type="file" accept="image/*" data-og-foto aria-label="Öğretmen fotoğrafı" style="position:absolute;inset:0;opacity:0;cursor:pointer"></span><small style="display:block;color:var(--soluk);margin-top:4px">Kurum kimlik kartında kullanılır (350×450’ye kırpılır).</small></div></div>
       <div class="alan"><label for="og-ad">Ad soyad</label><input id="og-ad" name="ad" value="${e(v.ad || '')}" autocomplete="off"></div>
       <div class="alan"><label for="og-br">Branş</label><select id="og-br" name="brans">${BRANS.map(b => `<option ${v.brans && nrmBrans(v.brans) === nrmBrans(b) ? 'selected' : ''}>${b}</option>`).join('')}</select></div>
       <div class="alan"><label for="og-tel">Telefon</label><input id="og-tel" name="tel" inputmode="tel" value="${e(v.tel || '')}"></div>
@@ -408,6 +409,8 @@ export function ogretmenPencere(o, sonra, on) {
       <div class="alan"><label for="og-tc">T.C. kimlik no</label><input id="og-tc" name="tc" inputmode="numeric" maxlength="11" value="${e(v.tc || '')}" placeholder="isteğe bağlı" autocomplete="off"><small style="color:var(--soluk)">MEBBİS teorik programında öğretmen T.C. ve izin no ile seçilir; personel eşleşmesinde de kullanılır.</small></div></form>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-ogr">Kaydet</button>`,
     onAc(d) {
+      let foto = null;
+      d.querySelector('[data-og-foto]').addEventListener('change', ev => { const dosya = ev.target.files[0]; if (!dosya) return; import('./sayfalar5.js?v=234').then(m => m.personelFotoKirp(dosya)).then(u => { foto = u; d.querySelector('[data-og-foto-on]').innerHTML = `<img src="${u}" alt="" style="width:100%;height:100%;object-fit:cover">`; }).catch(() => bildir('Fotoğraf okunamadı', 'uyari')); });
       d.querySelector('form').addEventListener('submit', ev => {
         ev.preventDefault(); const f = ev.target, ad = f.ad.value.trim().toLocaleUpperCase('tr');
         if (!ad) return bildir('Ad soyad yazın', 'uyari');
@@ -416,7 +419,7 @@ export function ogretmenPencere(o, sonra, on) {
         const tc = f.tc.value.replace(/\D/g, ''); if (tc && !tcGecerli(tc)) return bildir('T.C. kimlik numarası geçersiz', 'uyari');
         const ayni = [...S.egitmenler, ...(S.ogretmenler || [])].find(y => y !== o && ((izin && String(y.calismaIzinNo || '') === izin) || (tc && y.tc === tc)));
         if (ayni) return bildir(`${ayni.ad} kartında aynı ${izin && String(ayni.calismaIzinNo || '') === izin ? 'izin no' : 'T.C.'} var`, 'uyari');
-        const x = o || { id: 'o' + Date.now(), ...(on && on.tc ? { tc: on.tc } : {}), ...(on && on.meb ? { meb: on.meb } : {}), ...(on && on.mebIzinBitis ? { mebIzinBitis: on.mebIzinBitis } : {}) }; Object.assign(x, { ad, brans: f.brans.value, tel: f.tel.value.trim(), calismaIzinNo: izin, tc: tc || null });
+        const x = o || { id: 'o' + Date.now(), ...(on && on.tc ? { tc: on.tc } : {}), ...(on && on.meb ? { meb: on.meb } : {}), ...(on && on.mebIzinBitis ? { mebIzinBitis: on.mebIzinBitis } : {}) }; Object.assign(x, { ad, brans: f.brans.value, tel: f.tel.value.trim(), calismaIzinNo: izin, tc: tc || null }); if (foto) { x.foto = foto; x.fotoTarih = gun(0); }
         if (!o) S.ogretmenler = [...(S.ogretmenler || []), x];
         islem(o ? 'Teorik öğretmeni düzenledi' : on && on.meb ? 'MEBBİS’teki personelden teorik öğretmen kartı açtı' : 'Teorik öğretmen ekledi', ad); kaydet(); kapatPencere(); bildir(ad + ' kaydedildi', 'tamam'); sonra && sonra();
       });

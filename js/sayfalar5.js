@@ -112,10 +112,33 @@ export function personelFotoKirp(dosya) {
     r.readAsDataURL(dosya);
   });
 }
+// PER-015: fotoğraflı kurum kimlik kartı (MTSK Yön. md.46/A-7: eğitim personeli yakasında taşır). 85,6×54 mm, A4'te 10 kart (2×5), kesme çizgili.
+// Bilgiler kurs ve personel kartından: kurs adı ve kurum kodu, ad soyad, görev, MEBBİS izin no, çalışma izni bitişi; altta müdür imza/mühür yeri.
+export function kimlikKartlari(l = personelListesi()) {
+  if (!l.length) return bildir('Kimlik kartı basılacak personel yok', 'uyari');
+  const sube = (S.subeler || [])[0] || {}, kurs = S.kurs.resmiAd || ('Özel ' + String(S.kurs.ad || '').replace(/^özel\s+/i, '')), kod = sube.kurumKodu || S.kurs.kurumKodu || '';
+  const kart = ({ x, gorev }) => { const bit = x.mebIzinBitis || (x.meb || {}).izinBit;
+    return `<div style="width:85.6mm;height:54mm;box-sizing:border-box;border:0.3mm dashed #999;border-radius:3mm;padding:3mm 3.5mm;display:flex;flex-direction:column;gap:1.5mm;break-inside:avoid;font-family:Arial,sans-serif;overflow:hidden">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:2mm;border-bottom:0.4mm solid #123;padding-bottom:1mm"><b style="font-size:7.5pt;line-height:1.15;text-transform:uppercase">${e(kurs)}</b>${kod ? `<span style="font-size:6.5pt;white-space:nowrap">Kurum kodu ${e(kod)}</span>` : ''}</div>
+      <div style="display:flex;gap:3mm;flex:1;min-height:0">
+        <div style="width:22mm;height:29mm;flex:none;border:0.3mm solid #999;display:grid;place-items:center;overflow:hidden;background:#f4f4f4">${x.foto ? `<img src="${e(x.foto)}" alt="" style="width:100%;height:100%;object-fit:cover">` : '<span style="font-size:6.5pt;color:#888;text-align:center">Fotoğraf<br>yapıştırın</span>'}</div>
+        <div style="display:flex;flex-direction:column;gap:1mm;min-width:0;font-size:7.5pt;line-height:1.25">
+          <span style="font-size:6.5pt;letter-spacing:.3mm;color:#555">KURUM KİMLİK KARTI</span>
+          <b style="font-size:10pt;line-height:1.15">${e(String(x.ad || '').toLocaleUpperCase('tr'))}</b>
+          <span>${e(gorev)}${x.brans && gorev !== x.brans ? ' · ' + e(x.brans) : ''}</span>
+          ${x.calismaIzinNo ? `<span>Çalışma izni no: <b>${e(x.calismaIzinNo)}</b></span>` : ''}
+          ${bit ? `<span>Geçerlilik: ${e(bit.split('-').reverse().join('.'))}</span>` : ''}
+        </div></div>
+      <div style="display:flex;justify-content:flex-end;font-size:6.5pt;color:#555"><span style="border-top:0.3mm solid #999;padding-top:0.6mm;min-width:30mm;text-align:center">Kurs müdürü · imza, mühür</span></div></div>`; };
+  const sayfalar = []; for (let i = 0; i < l.length; i += 10) sayfalar.push(`<div style="display:grid;grid-template-columns:85.6mm 85.6mm;gap:4mm;justify-content:center;${i + 10 < l.length ? 'page-break-after:always;' : ''}">${l.slice(i, i + 10).map(kart).join('')}</div>`);
+  const eksik = l.filter(p => !p.x.foto).length; if (eksik) bildir(`${eksik} kişinin fotoğrafı yok; kartında fotoğraf kutusu boş çıkar`, 'uyari');
+  islem('Kurum kimlik kartlarını yazdırdı', l.length + ' kişi');
+  return belgeYazdir(sayfalar.join(''), 'Kurum kimlik kartları');
+}
 function personelFotoKarti() {
   const l = personelListesi(), eks = l.filter(p => !p.x.foto);
   if (!l.length) return '';
-  return `<div class="kart" id="personel-foto"><div class="kart-bas"><h3>Personel fotoğrafları</h3><small>${eks.length ? eks.length + ' kişinin fotoğrafı yok' : 'Hepsinin fotoğrafı var'}</small></div>
+  return `<div class="kart" id="personel-foto"><div class="kart-bas"><h3>Personel fotoğrafları</h3><small>${eks.length ? eks.length + ' kişinin fotoğrafı yok' : 'Hepsinin fotoğrafı var'}</small><div class="sag"><button class="dg dg-cizgi dg-kucuk" data-kimlik-kart>${ik('belge')}Kimlik kartlarını yazdır</button></div></div>
     ${eks.length ? `<div class="kart-govde" style="padding-bottom:0"><p class="ipucu uyari">${isaret('uyari', 18)}<span>Fotoğrafı olmayan personel MEBBİS’in fotoğraf ekranında “eksik” listesine düşer; denetimde fotoğraflı kurum kimlik kartı aranır. <small style="color:var(--soluk)">Dayanak: MEBBİS RSI01001, MTSK Yön. md.46/A-7 · uyarıdır, ders ve kayıt engellenmez.</small></span></p></div>` : ''}
     <ul class="liste" style="margin-top:8px">${l.map(({ x, tur, gorev }) => `<li><span style="width:42px;height:54px;border-radius:6px;overflow:hidden;flex:none;background:var(--zemin);display:grid;place-items:center;border:1px solid var(--cizgi)">${x.foto ? `<img src="${e(x.foto)}" alt="${e(x.ad)} fotoğrafı" style="width:100%;height:100%;object-fit:cover">` : `<b style="color:var(--soluk);font-size:13px">${e(String(x.ad || '').split(' ').map(y => y[0] || '').join('').slice(0, 2).toLocaleUpperCase('tr'))}</b>`}</span>
       <div style="flex:1;min-width:0"><b style="color:var(--murekkep);display:block">${e(x.ad)}</b><small style="color:var(--soluk)">${gorev} · ${x.foto ? 'fotoğraf var' + (x.fotoTarih ? ', ' + tarih(x.fotoTarih) : '') : '<b style="color:var(--kirmizi)">fotoğraf yok</b>'}</small></div>
@@ -839,6 +862,7 @@ export function ayarBaglan(k) {
   });
   k.addEventListener('click', ev => {
     const t = ev.target;
+    if (t.closest('[data-kimlik-kart]')) return kimlikKartlari();
     if (t.closest('[data-kul-ekle]')) return kullaniciFormu();
     if (t.closest('[data-davet]')) return davetFormu();
     if (t.closest('[data-iki-ac]')) return ikiAdimKur();

@@ -4,7 +4,7 @@ import * as MZ from './mevzuat.js?v=234';
 import * as DN from './denetim.js?v=234';
 import { alanHatalari, e, saatDe, saatE, tl, sayi, ik, rozet, asamaRozet, avatar, plaka, ilerleme, bos, pencere, kapatPencere, bildir, sekmeler, tarih, tarihUzun, goreli, cubukGrafik, halka, ayAdi, csvIndir, waAc, waSirali, tamTarih, apiAcik, isaret, ekranNotu, aracGorsel, olcumler, yonLevhasi } from './ui.js?v=234';
 import { yenile } from './app.js?v=234';
-import { AYAR_SEKMELERI, ayarBaglan, ustaDavet, personelOzeti, mebAracKur, mebAktar, mebCek, MEB_BILGI } from './sayfalar5.js?v=234';
+import { AYAR_SEKMELERI, ayarBaglan, ustaDavet, kimlikKartlari, personelFotoKirp, personelOzeti, mebAracKur, mebAktar, mebCek, MEB_BILGI } from './sayfalar5.js?v=234';
 import * as MB from './mebmerkez.js?v=234';
 import { kisaArama as mzKisaArama, kisaAramaBaglan as mzKisaBaglan } from './sayfa-mevzuat.js?v=234';
 import * as EKL from './eklenti.js?v=234';
@@ -602,6 +602,7 @@ export function ustaDuzenle(id, on) {
   pencere({
     baslik: id ? x.ad + ' · düzenle' : 'Usta öğretici ekle', genis: true,
     icerik: `<form class="form-izgara" id="f-usta">
+      <div class="alan tam" style="display:flex;gap:12px;align-items:center"><span data-usta-foto-on style="width:54px;height:70px;border-radius:6px;overflow:hidden;flex:none;background:var(--zemin);border:1px solid var(--cizgi);display:grid;place-items:center">${x.foto ? `<img src="${e(x.foto)}" alt="" style="width:100%;height:100%;object-fit:cover">` : '<small style="color:var(--soluk)">Foto</small>'}</span><div><span class="dg dg-cizgi dg-kucuk" style="position:relative;overflow:hidden">${x.foto ? 'Fotoğrafı değiştir' : 'Fotoğraf ekle'}<input type="file" accept="image/*" data-usta-foto aria-label="Personel fotoğrafı" style="position:absolute;inset:0;opacity:0;cursor:pointer"></span><small style="display:block;color:var(--soluk);margin-top:4px">Kurum kimlik kartında ve MEBBİS fotoğraf listesinde kullanılır (350×450’ye kırpılır).</small></div></div>
       <div class="alan"><label>Ad soyad</label><input name="ad" value="${e(x.ad)}" required></div>
       <div class="alan"><label>Telefon</label><input name="tel" value="${e(x.tel)}" inputmode="tel" required></div>
       <div class="alan"><label>T.C. kimlik no</label><input name="tc" value="${e(x.tc || '')}" inputmode="numeric" maxlength="11" placeholder="isteğe bağlı" autocomplete="off"><small style="color:var(--soluk)">MEBBİS personeliyle eşleşmede izin no’dan sonra bu kullanılır.</small></div>
@@ -623,6 +624,8 @@ export function ustaDuzenle(id, on) {
       ${id ? '' : '<p style="font-size:13px;color:var(--soluk);margin-top:10px">Usta öğreticinin telefondan kendi ekranına girmesi için Ayarlar › Kullanıcılar’dan PIN verin.</p>'}`,
     altlik: `${id ? '<button class="dg dg-hafif" data-sil style="margin-right:auto">Ekipten çıkar</button>' : ''}<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-usta">${id ? 'Kaydet' : 'Ekle'}</button>`,
     onAc(d) {
+      let foto = null;
+      d.querySelector('[data-usta-foto]').addEventListener('change', ev => { const dosya = ev.target.files[0]; if (!dosya) return; personelFotoKirp(dosya).then(u => { foto = u; d.querySelector('[data-usta-foto-on]').innerHTML = `<img src="${u}" alt="" style="width:100%;height:100%;object-fit:cover">`; }).catch(() => bildir('Fotoğraf okunamadı', 'uyari')); });
       d.querySelector('form').addEventListener('submit', ev => {
         ev.preventDefault(); const f = ev.target, sin = [...f.querySelectorAll('[name=sinif]:checked')].map(i => i.value);
         if (!f.ad.value.trim()) return bildir('Ad soyad gerekli', 'uyari');
@@ -639,6 +642,7 @@ export function ustaDuzenle(id, on) {
         if (seri && !/^[A-Z0-9]{6,12}$/.test(seri)) return bildir('Kimlik seri no harf ve rakamdan oluşmalı (ör. A12B34567)', 'uyari');
         const yeni = { ad: f.ad.value.trim(), tel: f.tel.value.trim(), tc: tc || null, eposta: ep || null, kimlikSeri: seri || null, dogumTarihi: f.dogumTarihi.value || null, mebStatu: f.mebStatu.value === '' ? null : f.mebStatu.value, siniflar: sin, maas: tutarOku(f.maas.value) || 0, prim: tutarOku(f.prim.value) || 0, baslama: f.baslama.value.trim(), calismaIzinNo: izinNo || null, mebIzinBitis: f.mebIzinBitis.value || null, haftalikSinir: Math.min(80, Math.max(0, parseInt(f.haftalikSinir.value, 10) || 0)) || null, belgeler: { sertifika: f.sertifika.value || null, saglik: f.saglik.value || null, adli: f.adli.value || null } };
         Object.keys(yeni.belgeler).forEach(b => { if (!yeni.belgeler[b]) delete yeni.belgeler[b]; });
+        if (foto) { yeni.foto = foto; yeni.fotoTarih = gun(0); }
         if (id) { Object.assign(x, yeni); islem('Usta öğretici bilgisini düzenledi', yeni.ad); } else { S.egitmenler.push({ id: 'e' + Date.now(), renk: ['#2f6fde', '#0f8a5f', '#b45309', '#7c3aed', '#be123c'][S.egitmenler.length % 5], ...(m ? { meb: m } : {}), ...yeni, sube: seciliSube() ? seciliSube().id : (S.subeler || [{}])[0].id }); islem(m ? 'MEBBİS’teki personelden usta öğretici kartı açtı' : 'Usta öğretici ekledi', yeni.ad); }
         kaydet(); kapatPencere(); bildir(id ? 'Bilgiler kaydedildi' : yeni.ad + ' ekibe eklendi'); yenile();
       });
@@ -677,7 +681,7 @@ export function filo(alt) {
   // PER-001/027: son MEBBİS personel çekmesinden — kartı olmayanlar ('Kart aç') ve yalnız adla eşleşenler ('Evet, bağla')
   const { yeni: perYeni, oneri: perOneri } = mebPersonelBekleyen();
   const perBanner = mudurMu() && (perYeni.length || perOneri.length) ? `${perYeni.length ? `<div class="ipucu uyari" style="margin-bottom:10px;flex-wrap:wrap">${isaret('bilgi', 20)}<span style="flex:1;min-width:220px">MEBBİS’te görevde olup mdSinyal’de kartı olmayan ${perYeni.length} personel: ${perYeni.map(y => `<b>${e(adDuzelt(y.ad))}</b> (${e([y.gorev, y.izinNo ? 'izin no ' + y.izinNo : ''].filter(Boolean).join(' · '))})`).join(', ')}</span>${perYeni.slice(0, 6).map((y, i) => `<button class="dg dg-cizgi dg-kucuk" data-meb-per-ekle="${i}">${e(adDuzelt(y.ad))} · Kart aç</button>`).join('')}</div>` : ''}${perOneri.map((o, i) => `<div class="ipucu" style="margin-bottom:10px;flex-wrap:wrap">${isaret('bilgi', 20)}<span style="flex:1;min-width:220px">MEBBİS’teki <b>${e(o.mebAd)}</b>${o.izinNo ? ' (izin no ' + e(o.izinNo) + ')' : ''} mdSinyal’deki <b>${e(o.ad)}</b> ile aynı kişi mi? Yalnız ad tuttu; onaylamadan karta bir şey yazılmadı.</span><button class="dg dg-cizgi dg-kucuk" data-meb-per-red="${i}">Hayır</button><button class="dg dg-ana dg-kucuk" data-meb-per-bagla="${i}">Evet, bağla</button></div>`).join('')}` : '';
-  if (durum.filo === 'egitmen') govde = `${perBanner}<div class="izgara iz-3">${sb(S.egitmenler).map(x => {
+  if (durum.filo === 'egitmen') govde = `${perBanner}${mudurMu() ? `<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="dg dg-cizgi dg-kucuk" data-kimlik-kartlari>${ik('belge')}Kurum kimlik kartlarını yazdır</button></div>` : ''}<div class="izgara iz-3">${sb(S.egitmenler).map(x => {
       const bugun = sbDers(S.dersler).filter(d => d.egitmen === x.id && d.tarih === gun(0)), ks = sb(S.kursiyerler).filter(k => k.egitmen === x.id && k.asama !== 'Ehliyet');
       const sin = S.sinavlar.filter(s => s.tur === 'Direksiyon').flatMap(s => Object.entries(s.sonuc || {})).filter(([id]) => kursiyer(id) && kursiyer(id).egitmen === x.id);
       const gec = sin.length ? Math.round(sin.filter(([, v]) => v === 'Geçti').length / sin.length * 100) : null;
@@ -728,6 +732,7 @@ export function filo(alt) {
             ${eksik.length ? `<div class="ipucu uyari" style="margin-top:12px">${isaret('uyari', 18)}<span>Kartta eksik: ${eksik.join(', ')}. Bunları MEBBİS’te elle yazarsınız ya da önce kartı düzenleyin.</span></div>` : ''}`,
             altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button>${eksik.length ? `<button class="dg dg-hafif" data-duzenle>Kartı düzenle</button>` : ''}<button class="dg dg-ana" data-git>Ekranda doldur</button>`,
             onAc(d) { const dz = d.querySelector('[data-duzenle]'); if (dz) dz.addEventListener('click', () => { kapatPencere(); ustaDuzenle(x.id); }); d.querySelector('[data-git]').addEventListener('click', () => { kapatPencere(); EKL.izinIstegiGonder(x); }); } }); } }
+        if (t.closest('[data-kimlik-kartlari]')) return kimlikKartlari();
         { const dv = t.closest('[data-usta-davet]'); if (dv) { const x = egitmen(dv.dataset.ustaDavet); return x && ustaDavet(x); } }
         // PER-027: MEBBİS'teki personelden kart — usta öğretici ise usta kartı, değilse teorik öğretmen kartı (bilgiler dolu açılır, kullanıcı kaydeder)
         { const pe = t.closest('[data-meb-per-ekle]'); if (pe) { const y = mebPersonelBekleyen().yeni[+pe.dataset.mebPerEkle]; if (!y) return;
