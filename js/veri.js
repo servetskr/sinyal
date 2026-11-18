@@ -1637,7 +1637,8 @@ export function mebOnKontrol(k) {
   l.push([tcGecerli(k.tc || ''), 'TC kimlik numarası geçerli biçimde']);
   l.push([!S.kursiyerler.some(x => x !== k && x.id !== k.id && x.tc && x.tc === k.tc && x.sinif === k.sinif && x.asama !== 'Ehliyet'), 'Aynı TC ile aynı sınıfa açık kayıt yok']);
   l.push([!!k.dogumTarihi, 'Doğum tarihi girildi']);
-  l.push([!!k.kimlikSeri, 'Kimlik kartı (nüfus cüzdanı) seri no girildi']);  // KAY-007: dönem kaydı ön kontrolü
+  l.push([!!k.kimlikSeri, 'Kimlik kartı (nüfus cüzdanı) seri no girildi']);
+  if (k.nakil) l.push([!!k.mebIslendi, `Kapanan kurumdan nakil${k.nakil.kurum ? ' (' + esc(k.nakil.kurum) + ')' : ''}: MEBBİS kaydı il MEM ekranından yapılır (07/03/2023 duyurusu); il MEM’e başvurun`]);  // KAY-110  // KAY-007: dönem kaydı ön kontrolü
   // yaş ve önceki belge: KTY md.76/3 yaş istisnası (k.yasIstisna) burada uygulanır; kayıt formu ve dosya da bu satırları gösterir
   { const yd = yasDenetim(k); l.push([yd.tamam, yd.satir]); }
   { const de = deneyimEksik(k.sinif, k.mevcutEhliyet); if (de) l.push(yasIstisnaGecerli(k.yasIstisna) && yasIstisnaKapsar(k.sinif) ? [true, `${de} · aranmaz: yaş istisnası (KTY md.76/3): ${esc(yasIstisnaMetin(k.yasIstisna))}`] : [false, de]);
