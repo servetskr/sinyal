@@ -291,6 +291,11 @@ export const mebIsGunuSay = (bas, bit) => { let n = 0; const d = tarihOku(bas), 
 export const mebIsGunuGeri = (t, n) => { const d = tarihOku(t); let i = 0; while (i < n) { d.setDate(d.getDate() - 1); if (mebIsGunuMu(iso(d))) i++; } return iso(d); };
 // Sınav hakları (MTSK md.15): e-sınav 4; uygulama ilk 4, 60 gün içinde başvurana 4 daha (md.15/4). Kurs ayarı sinavHak ilk dört hakkın sayısıdır.
 export const sinavHakSiniri = (k, tur) => { const n = (S && S.kurs && S.kurs.sinavHak) || 4; return tur === 'e-Sınav' ? n : n * (k && k.ikinciHak ? 2 : 1); };
+// Kalan hak, içinde bulunulan dört hak diliminden (UYG-001): ikinci dört hakkı alan öğrencide "0 / 8" yerine "3 / 4 · ikinci dört hak"
+export function kalanHak(k, tur, x) {
+  const n = (S && S.kurs && S.kurs.sinavHak) || 4, kul = (x && +x.hak) || 0, ikinci = tur !== 'e-Sınav' && !!(k && k.ikinciHak) && kul >= n;
+  return { kalan: Math.max(0, (ikinci ? 2 * n : n) - kul), toplam: n, ikinci, etiket: ikinci ? 'İkinci dört hakkından kalan' : 'Kalan sınav hakkın' };
+}
 export const IKINCI_HAK_GUN = 60;
 // e-Sınav hak durumu (TEO-009): kullanilan = yerel e-Sınav oturumlarında sonucu olan (Girmedi dahil) oturum sayısı; sira = sıradaki hak.
 // MEBBİS "E-Sınav Hak" (SKT02009) sıradaki hakkı gösterir: 1–4 "sıradaki N. hak" (kullanılan = değer − 1), 5 "süre doldu", 0 "hakkı doldu".

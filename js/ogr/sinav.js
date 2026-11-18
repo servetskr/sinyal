@@ -3,7 +3,7 @@
 // aynı localStorage anahtarı 'sinyal-test-'+k.id, aynı veri etkileri: k.konuAnaliz, k.yanlislar, k.deneme, HZ.gorulenEkle, HZ.tekrarGuncelle, kaydet()).
 // Ekranlar: deneme girişi, deneme sorusu, soru listesi, bitirme onayı, sonuç, yanlış inceleme (tam ekran akışlar);
 // çalışma araçları, test ayarları, bugünkü tekrar, yanlışlarım (Öğren alt ekranları).
-import { S, kaydet, SINIFLAR, fark, gonderimEkle, ogrOzellik, tamAd, sinavHakSiniri, gerekliDireksiyon, egitimSinifi } from '../veri.js?v=234';
+import { S, kaydet, SINIFLAR, fark, gonderimEkle, ogrOzellik, tamAd, kalanHak, gerekliDireksiyon, egitimSinifi } from '../veri.js?v=234';
 import { bildir, tarih, goreli, gunKisa } from '../ui.js?v=234';
 import * as HZ from '../hazirlik.js?v=234';
 import { hakDurum, tekrarUcret, esinavVar, TEORIKSIZ_METIN } from '../ogrenci.js?v=234';
@@ -291,15 +291,15 @@ function sinavlarHtml(k) {
   const sonr = tur => (S.sinavlar || []).filter(s => s.tur === tur && (s.kursiyerler || []).includes(k.id) && fark(s.tarih) >= 0 && !(s.sonuc || {})[k.id]).sort((a, b) => a.tarih.localeCompare(b.tarih))[0];
   const kartH = (tur, x, sn, getir, bilgi, ek = '') => {
     if (x && x.sonuc === 'Geçti') return kart(`<div class="ox-snv-sv-bas">${ikonKutu('dogru', 'yesil')}<span class="ox-satir-govde"><b>${tur}</b><small class="yesil">Geçtin${x.puan ? ' · ' + x.puan + ' puan' : ''}</small></span>${cip('Tamam', 'yesil')}</div>`, 'ox-snv-sv');
-    const veri = tur === 'e-Sınav' ? 'e-Sınav' : 'Direksiyon', hak = sinavHakSiniri(k, veri), kalan = Math.max(0, hak - ((x && x.hak) || 0)), tk = tekrarUcret(k, veri, x);
+    const veri = tur === 'e-Sınav' ? 'e-Sınav' : 'Direksiyon', kh = kalanHak(k, veri, x), hak = kh.toplam, kalan = kh.kalan, tk = tekrarUcret(k, veri, x);
     // hak doldu (kurs henüz karar vermedi): "Bekliyor", randevu, tekrar ücreti ve "yanına al" satırları yerine durum metni
     const hd = hakDurum(k);
     if (hd && hd.tur === veri && !sn) return kart(`<div class="ox-snv-sv-bas">${ikonKutu('uyari', 'turuncu')}<span class="ox-satir-govde"><b>${tur}</b><small>Sınav hakkın kalmadı</small></span>${cip('Hak doldu', 'turuncu')}</div>
       <p class="ox-snv-sv-yer">${oi('bilgi')}<span>${esc(hd.metin)}</span></p>
-      <div class="ox-snv-sv-dl"><div><span>Kalan sınav hakkın</span><b>${kalan} / ${hak}</b></div></div>`, 'ox-snv-sv');
+      <div class="ox-snv-sv-dl"><div><span>${kh.etiket}</span><b>${kalan} / ${hak}</b></div></div>`, 'ox-snv-sv');
     return kart(`<div class="ox-snv-sv-bas">${ikonKutu('takvim', sn ? 'mavi' : 'gri')}<span class="ox-satir-govde"><b>${tur}</b><small>${sn ? `${gunKisa(sn.tarih)} ${tarih(sn.tarih)} · ${esc(sn.saat)}` : 'Henüz tarih yok'}</small></span>${sn ? cip(esc(goreli(sn.tarih))) : cip('Bekliyor', 'gri')}</div>
       <p class="ox-snv-sv-yer">${sn && sn.yer ? `${oi('harita')}<span>${esc(sn.yer)}</span>` : `${oi('bilgi')}<span>${bilgi}</span>`}</p>
-      <div class="ox-snv-sv-dl"><div><span>Kalan sınav hakkın</span><b>${kalan} / ${hak}</b></div><div><span>${tk.etiket} <small>${tk.not}</small></span><b>${tk.tutar ? tl(tk.tutar) : '—'}</b></div></div>
+      <div class="ox-snv-sv-dl"><div><span>${kh.etiket}</span><b>${kalan} / ${hak}</b></div><div><span>${tk.etiket} <small>${tk.not}</small></span><b>${tk.tutar ? tl(tk.tutar) : '—'}</b></div></div>
       <details class="ox-snv-sv-getir"${sn && fark(sn.tarih) <= 7 ? ' open' : ''}><summary><span>Sınav günü yanına al</span>${oi('asagi')}</summary><ul>${getir.map(g => `<li>${oi('tik')}<span>${esc(g)}</span></li>`).join('')}</ul></details>${ek}`, 'ox-snv-sv');
   };
   if (egitimSinifi(k.sinif)) return bolum('Sınavların') + not('Bu eğitimin sınavı yok. Teorik derslerin tamamına katılınca eğitim belgen kurstan verilir.');

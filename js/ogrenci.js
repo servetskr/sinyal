@@ -1,6 +1,6 @@
 // Öğrenci paneli sekmeleri: dersler (yaklaşan + defter + gelişim + teorik konular), sınavlar, ödemeler, belgeler; bölümler açılır kapanır modüller
 import { odemeKodu, ibanlar, ibanBicim, S, kaydet, gun, fark, tarihOku, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen, ogrOzellik, oturum, DERS_TUR_AD, iptalEdilebilir, teorikSaat } from './veri.js?v=234';
-import { gerekliDireksiyon, sinavHakSiniri } from './veri.js?v=234';
+import { gerekliDireksiyon, kalanHak } from './veri.js?v=234';
 import { sinifEtiket, egitimSinifi, teorikVar, ekTur, kursBorcu, resmiMasraflar, kursiyerTaban, tabanListesi, ekDersTabani, ekDersFiyat, uygulamaSinavUcreti, esinavUcreti, motorSinif } from './veri.js?v=234';
 import { satirAdi } from './taban.js?v=234';
 import * as TK from './takvim.js?v=234';
@@ -219,13 +219,13 @@ export function sinavlarHtml(k) {
   // hak sınırı öğrenciye göre (md.15): e-Sınav 4; uygulama ilk 4, ikinci dört hakta 8. Tekrar ücreti hak sırasına göre, öğrencinin kendi masrafı (liste not 5)
   const kart = (id, tur, x, sonraki, getir) => {
     if (x && x.sonuc === 'Geçti') return `<div class="og-satir og-satir-tamam"><span class="og-m-ik">${ik('tik')}</span><div><b>${tur}</b><small>Geçtin${x.puan ? ' · ' + x.puan + ' puan' : ''}</small></div>${rozet('Tamam', 'yesil')}</div>`;
-    const veri = tur === 'e-Sınav' ? 'e-Sınav' : 'Direksiyon', hak = sinavHakSiniri(k, veri), kalan = Math.max(0, hak - ((x && x.hak) || 0)), tk = tekrarUcret(k, veri, x);
+    const veri = tur === 'e-Sınav' ? 'e-Sınav' : 'Direksiyon', kh = kalanHak(k, veri, x), hak = kh.toplam, kalan = kh.kalan, tk = tekrarUcret(k, veri, x);
     const hd = hakDurum(k), doldu = hd && hd.tur === veri && !sonraki;  // hak doldu: bekleme, randevu ve tekrar ücreti satırları gizli
     if (doldu) return modul(id, { ikon: 'sinav', baslik: tur, ozet: 'Sınav hakkın kalmadı', sag: rozet('Hak doldu', 'uyari'), acik: true },
-      `<p class="og-not" style="margin:0 0 10px">${e(hd.metin)}</p><div class="og-satirlar"><div><span>Kalan sınav hakkın</span><b>${kalan} / ${hak}</b></div></div>`);
+      `<p class="og-not" style="margin:0 0 10px">${e(hd.metin)}</p><div class="og-satirlar"><div><span>${kh.etiket}</span><b>${kalan} / ${hak}</b></div></div>`);
     return modul(id, { ikon: 'sinav', baslik: tur, ozet: sonraki ? `${gunK(sonraki.tarih)} ${sonraki.saat} · ${e(sonraki.yer)}` : 'Henüz tarih yok', sag: sonraki ? rozet(goreli(sonraki.tarih), 'mavi') : rozet('Bekliyor', 'notr'), acik: !!sonraki && fark(sonraki.tarih) <= 7 },
       `${sonraki ? `<p class="og-yer">${ik('harita')}${e(sonraki.yer)}</p>` : `<p class="og-not" style="margin:0 0 10px">${tur === 'e-Sınav' ? 'Teorik derslerin bitince kurs e-Sınav randevunu alır.' : 'Direksiyon derslerin bitince kurs sınav tarihini bildirir.'}</p>`}
-      <div class="og-satirlar"><div><span>Kalan sınav hakkın</span><b>${kalan} / ${hak}</b></div><div><span>${tk.etiket} <small>${tk.not}</small></span><b>${tk.tutar ? tl(tk.tutar) : '—'}</b></div></div>
+      <div class="og-satirlar"><div><span>${kh.etiket}</span><b>${kalan} / ${hak}</b></div><div><span>${tk.etiket} <small>${tk.not}</small></span><b>${tk.tutar ? tl(tk.tutar) : '—'}</b></div></div>
       <p class="et" style="margin-top:12px">Yanına al</p><ul class="og-getir">${getir.map(g => `<li>${isaret('tamam', 16)}${e(g)}</li>`).join('')}</ul>`);
   };
   const sonr = tur => S.sinavlar.filter(s => s.tur === tur && s.kursiyerler.includes(k.id) && fark(s.tarih) >= 0 && !(s.sonuc || {})[k.id]).sort((a, b) => a.tarih.localeCompare(b.tarih))[0];
