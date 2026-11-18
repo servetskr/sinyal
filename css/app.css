@@ -3716,6 +3716,18 @@ a.kart.gosterge { text-decoration: none; color: inherit; }   /* DENETİM Ö2: di
 .meb-gecmis summary { cursor: pointer; color: var(--murekkep); font-weight: 600; }
 .meb-gecmis ul { list-style: none; display: grid; gap: 4px; margin-top: 6px; }
 .meb-gecmis small { color: var(--soluk); }
+.meb-acilir summary { min-height: 40px; display: flex; align-items: center; padding: 6px 0; border-top: 1px solid var(--cizgi-2); }
+.meb-acilir ul { gap: 0; }
+.meb-acilir li { padding: 8px 0; border-bottom: 1px solid var(--cizgi-2); }
+.meb-acilir li:last-child { border-bottom: 0; }
+.meb-ac-ust { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.meb-ac-ust > .meb-ac-m { color: var(--metin); flex: 1 1 160px; min-width: 0; }
+.meb-ac-ust > b:first-child { color: var(--murekkep); min-width: 84px; }
+.meb-acilir li > small { display: block; margin-top: 2px; overflow-wrap: anywhere; }
+.meb-gerekce { margin: 4px 0 0; font-size: 13px; line-height: 1.45; color: var(--metin); white-space: pre-line; overflow-wrap: anywhere; }
+.meb-gerekce span { display: inline-block; min-width: 52px; margin-right: 6px; font-weight: 700; color: var(--soluk); }
+.meb-ac-bas { display: block; margin: 8px 0 0; font-size: 12.5px; color: var(--soluk); text-transform: none; }
+.meb-ac-dip { display: block; margin: 4px 0 2px; }
 .rz-cip { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-right: 6px; }
 /* KAY-068 */
 .ev-tablo th { font-size: 12px; white-space: nowrap; }

@@ -1141,8 +1141,35 @@ function mebteKarti(k) {
       ${satir('MEBBİS’in gösterdiği son tarih', M.haklarSonGun ? tY(M.haklarSonGun) + ' <small style="font-weight:400;color:var(--soluk)">(sistem sınırı, yönetmelikte yok)</small>' : '')}
       ${satir('Sertifika tarihi', M.sertifikaTarihi ? tY(M.sertifikaTarihi) : '')}${satir('Kayıt ücreti (MEBBİS)', M.kayitUcretiTL ? tl(M.kayitUcretiTL) : '')}</ul>
     ${mebFarkHtml(k)}
+    ${mebSinavGecmisiHtml(k, tY)}${mebAdayGecmisiHtml(k, tY)}
     ${(k.mebAlinan || []).length ? `<details class="meb-gecmis"><summary>Değişiklik geçmişi (${k.mebAlinan.length})</summary><ul>${k.mebAlinan.slice().reverse().map(x => `<li><b>${e(x.alan)}</b>: ${e(x.eski || '—')} → ${e(x.yeni || '—')} <small>${e(x.ekran || 'MEBBİS')} · ${tarih(x.zaman.slice(0, 10))} · ${e(x.kim || '')}</small></li>`).join('')}</ul></details>` : ''}
     <p style="font-size:13px;color:var(--soluk);margin-top:8px">${isaret('tamam', 16)} Ön kontrol: kayıt tamam</p></div></div>`;
+}
+// KAY-078: 'MEBBİS’te' kartında açılır iki satır. Sınav geçmişi: SKT02009 uygulama sınavı satırları (k.meb.uygulamaSinavlari: kod, tarih, katılım,
+// sonuç; Başkan ve Üye gerekçesi tam metin) ve e-Sınav seansları (k.meb.esinavlar). Aday geçmişi: önceki dönem satırları (k.meb.kayitlar) ve
+// sertifikalar (k.meb.sertifikalar, dgSertifika; madde 34 'Aday Geçmiş'). Veri mebtoplu.js dosyalariIsle'de okunur; burada yalnız gösterilir.
+const SONUC_YAZ = { gecti: 'Geçti', kaldi: 'Kaldı', girmedi: 'Girmedi' };
+function mebSinavGecmisiHtml(k, tY) {
+  const M = k.meb || {};
+  const uy = (M.uygulamaSinavlari || []).filter(y => y && (y.tarih || y.kod)).map(y => {
+    const kat = y.katilim || MN.katilim(y.durum), son = y.sonucKod || MN.sonucKodu(y.sonuc), g = y.baskan || y.uye ? { baskan: y.baskan || '', uye: y.uye || '' } : MN.gerekceAyir(y.sonuc);
+    return { tur: 'Uygulama', tarih: y.tarih || '', kod: String(y.kod || ''), kat: kat === 'girmedi' || son === 'girmedi' ? 'Girmedi' : kat === 'girdi' || son === 'gecti' || son === 'kaldi' ? 'Girdi' : '', son: son && son !== 'girmedi' ? SONUC_YAZ[son] : '', baskan: g.baskan, uye: g.uye, ek: [y.plaka ? '<span class="mono">' + e(y.plaka) + '</span>' : '', y.usta ? e(y.usta) : '', y.buKayit === false && y.donem ? 'önceki dönem ' + e(MN.donemMetni(y.donem) || y.donem) : ''].filter(Boolean) };
+  });
+  const es = (M.esinavlar || []).filter(y => y && y.tarih).map(y => ({ tur: 'e-Sınav', tarih: y.tarih, kod: '', kat: y.sonuc === 'girmedi' ? 'Girmedi' : y.sonuc || y.puan != null ? 'Girdi' : '', son: y.sonuc && y.sonuc !== 'girmedi' ? SONUC_YAZ[y.sonuc] + (y.puan != null ? ' · ' + y.puan + ' puan' : '') : '', ek: [y.saat ? e(y.saat) : ''].filter(Boolean) }));
+  const l = [...uy, ...es].sort((a, b) => String(b.tarih).localeCompare(String(a.tarih))); if (!l.length) return '';
+  const renk = s => s === 'Geçti' || /^Geçti/.test(s) ? 'var(--yesil)' : /^Kaldı/.test(s) ? 'var(--kirmizi)' : 'var(--soluk)';
+  return `<details class="meb-gecmis meb-acilir"><summary>Sınav geçmişi (${l.length})</summary><ul>${l.map(x => `<li><div class="meb-ac-ust"><b>${x.tarih ? tY(x.tarih) : 'tarih yok'}</b><span class="meb-ac-m">${e(x.tur)}${x.kod ? ' · kod <span class="mono">' + e(x.kod) + '</span>' : ''}${x.kat ? ' · ' + x.kat : ''}</span>${x.son ? `<b style="color:${renk(x.son)}">${e(x.son)}</b>` : ''}</div>${x.ek.length ? `<small>${x.ek.join(' · ')}</small>` : ''}${x.baskan ? `<p class="meb-gerekce"><span>Başkan</span>${e(x.baskan)}</p>` : ''}${x.uye ? `<p class="meb-gerekce"><span>Üye</span>${e(x.uye)}</p>` : ''}</li>`).join('')}</ul><small class="meb-ac-dip">MEBBİS aday dosyasından (SKT02009) okundu; gerekçeler MEBBİS’teki gibi yazılır.</small></details>`;
+}
+function mebAdayGecmisiHtml(k, tY) {
+  const M = k.meb || {}, kd = M.kurumKodu || '';
+  const ky = (M.kayitlar || []).filter(y => y && (y.donem || y.durum)), sr = (M.sertifikalar || []).filter(y => y && (y.tarih || y.istenen || y.mevcut));
+  if (!ky.length && !sr.length) return '';
+  const bu = y => !!M.donem && MN.donemKodu(y.donem) === MN.donemKodu(M.donem) && (!y.kurum || !kd || y.kurum === kd);
+  const kurumYaz = v => v ? (v === kd ? 'bu kurs' : 'kurum ' + e(v)) : '';
+  return `<details class="meb-gecmis meb-acilir"><summary>Aday geçmişi (${ky.length + sr.length})</summary>
+    ${ky.length ? `<b class="meb-ac-bas">Dönem kayıtları</b><ul>${ky.slice().sort((a, b) => String(MN.donemKodu(b.donem) || b.donem).localeCompare(String(MN.donemKodu(a.donem) || a.donem))).map(y => `<li><div class="meb-ac-ust"><b>${e(MN.donemMetni(MN.donemKodu(y.donem)) || y.donem || 'dönem yok')}</b><span class="meb-ac-m">${[y.istenen ? 'istenen ' + e(y.istenen) : '', kurumYaz(y.kurum)].filter(Boolean).join(' · ')}</span>${bu(y) ? rozet('Bu kayıt', 'mavi') : ''}</div>${y.durum ? `<small>${e(y.durum)}</small>` : ''}</li>`).join('')}</ul>` : ''}
+    ${sr.length ? `<b class="meb-ac-bas">Sertifikalar</b><ul>${sr.map(y => `<li><div class="meb-ac-ust"><b>${y.tarih ? tY(y.tarih) : 'tarih yok'}</b><span class="meb-ac-m">${[y.mevcut ? 'mevcut ' + e(y.mevcut) : '', y.istenen ? 'alınan ' + e(y.istenen) : '', kurumYaz(y.kurum)].filter(Boolean).join(' · ')}</span></div></li>`).join('')}</ul>` : ''}
+    <small class="meb-ac-dip">Başka kurslardaki kayıtlar ve eski sertifikalar da görünür (MEBBİS ‘Aday Geçmiş’).</small></details>`;
 }
 // KAY-080..083: MEBBİS'le farklı alanlar; ad soyad, cinsiyet ve mevcut belge tek dokunuşla alınır (sertifika sınıfı ücret ve sözleşmeye dokunduğu için ayrı pencerede, KAY-004)
 const MF_AL = ['Ad soyad', 'Cinsiyet', 'Mevcut belge'];
