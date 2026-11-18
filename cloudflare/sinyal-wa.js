@@ -449,8 +449,13 @@ const ONIZLEME = {
 };
 
 // ---- /eposta: kursun rapor ve yedek e-postaları (sinyal-kaynak/belgeler/eposta-gonderici.md) ----
-// Sağlayıcı soyut: RESEND_API_KEY (önerilen) ya da GMAIL_CLIENT_ID + GMAIL_CLIENT_SECRET + GMAIL_REFRESH_TOKEN (Gmail API).
-// Gönderen: EPOSTA_GONDEREN (ör. "mdSinyal <rapor@mdsinyal.com>"). Sahibin analiz e-postası: SAHIP_EPOSTA.
+// MSJ-040 kararı (18 Kas): bütün e-postalar mdSinyal'in kendi adresinden, Resend üzerinden: gönderen "mdSinyal <destek@mdsinyal.com>"
+// (mdsinyal.com alan adı Resend'de doğrulanmış olmalı; bir Gmail adresi gönderen yapılamaz, Gmail DMARC'ı üçüncü taraf gönderimini reddeder).
+// Firebase'in şifre yenileme / doğrulama e-postaları da aynı Resend hesabından SMTP ile gider (konsol ayarı; kod yok).
+// Sağlayıcı: RESEND_API_KEY (asıl yol). GMAIL_CLIENT_ID + GMAIL_CLIENT_SECRET + GMAIL_REFRESH_TOKEN (Gmail API) yalnız YEDEK yoldur, Resend
+// anahtarı yoksa kullanılır; o yolda gönderen Gmail hesabının kendi adresi ya da onaylı takma adı olmalı (EPOSTA_GONDEREN ile verin).
+// Gönderen: EPOSTA_GONDEREN (varsayılan "mdSinyal <destek@mdsinyal.com>"). Sahibin analiz e-postası: SAHIP_EPOSTA.
+// Resend ücretsiz planı günde 100 / ayda 3.000 e-posta: kurs sayısı artınca izlenmeli (öğrenci e-postası EPOSTA_OGRENCI_SINIR ile de sınırlı).
 // Kötüye kullanım engeli: alıcı yalnız kursun ONAYLI adresleri (müdür ekler, adrese giden onay linkine dokunulunca açılır);
 // gövde ve ek boyutu sınırlı; kurs başına günde EPOSTA_GUNLUK_SINIR (varsayılan 12) e-posta; günlük/haftalık/aylık rapor dönem başına bir kez.
 // KV: 'epadres:<kurs>' adres listesi (belirteç tutulmaz) · 'eponay:<belirteç>' 7 gün · 'epsay:<kurs>:<gün>' sayaç 2 gün · 'epgitti:<kurs>:<tür>:<dönem>' 40 gün
@@ -468,8 +473,9 @@ function belirtecEposta(req) {
 const epGun = () => new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10);
 const b64 = s => { const b = new TextEncoder().encode(s); let x = ''; for (let i = 0; i < b.length; i += 0x8000) x += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(x); };
 const epKacis = s => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const EP_GONDEREN = 'mdSinyal <destek@mdsinyal.com>';   // MSJ-040
 function epSaglayici(env) {
-  const kimden = env.EPOSTA_GONDEREN || 'mdSinyal <rapor@mdsinyal.com>';
+  const kimden = env.EPOSTA_GONDEREN || EP_GONDEREN;
   if (env.RESEND_API_KEY) return { ad: 'resend', async gonder(o) {
     const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: 'Bearer ' + env.RESEND_API_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ from: kimden, to: o.kime, subject: o.konu, html: o.html, text: o.metin || undefined, ...(o.ek ? { attachments: [{ filename: o.ek.ad, content: o.ek.b64 }] } : {}) }) });
