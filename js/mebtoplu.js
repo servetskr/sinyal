@@ -151,7 +151,10 @@ async function fotoHazirla(src) {
 }
 /* ---------- sınav randevusu saatleri ---------- */
 // Sınav aracı: kursiyerin araçlı son dersinin aracı (ekranda doldur yolu da aynı aracı kullanır)
-const sinavAraci = k => { const d = k && S.dersler.filter(y => y.kursiyer === k.id && y.arac).sort((a, b) => b.tarih.localeCompare(a.tarih))[0]; return arac(d && d.arac) || {}; };
+// SNV-077: sınav aracı önce sınav günü atamasından (s.atama[k].plaka, Sınav günü › satır), yoksa son direksiyon dersinin aracı
+const sinavAraci = (k, sn) => { const p = sn && k && ((sn.atama || {})[k.id] || {}).plaka; if (p) { const a = (S.araclar || []).find(y => plakaNrm(y.plaka) === plakaNrm(p)); if (a) return a; }
+  const d = k && S.dersler.filter(y => y.kursiyer === k.id && y.arac).sort((a, b) => b.tarih.localeCompare(a.tarih))[0]; return arac(d && d.arac) || {}; };
+const sinavUstasiA = (k, sn, ar) => egitmen(sn && k && ((sn.atama || {})[k.id] || {}).egitmen) || egitmen(ar.egitmen) || egitmen(k && k.egitmen) || {};
 const sinavKimligi = (sid, kid) => 'sinav-' + sid + '-' + kid;
 // Bir sınavda araç başına dolu saatler: { PLAKA: Set(saat) }. Dolu sayılan: MEBBİS'e yazılmış (s.mebKisi ya da iz "tamam") ve
 // Yardımcı'ya gönderilmiş, sonucu henüz gelmemiş (iz "gonderildi", 7 günden yeni; aktarım merkezindeki "Gönderildi" ile aynı süre) adaylar.
@@ -164,7 +167,7 @@ function doluSaatler(sid, haric) {
   const bilinmeyen = [];
   kids.forEach(kid => {
     const id = sinavKimligi(sid, kid); if (haric.has(id)) return;
-    const v = md[id], p = plakaNrm((v && v.plaka) || sinavAraci(kursiyer(kid)).plaka); if (!p) return;
+    const v = md[id], p = plakaNrm((v && v.plaka) || sinavAraci(kursiyer(kid), s).plaka); if (!p) return;
     const d = o[p] = o[p] || new Set();
     if (v && SINAV_SAATLERI.includes(v.saat)) d.add(v.saat); else bilinmeyen.push(p);
   });
@@ -184,7 +187,10 @@ export function randevuSaatleri(l, haric = new Set(), koru = null) {
   const yeni = l.map(j => {
     if (j.tur !== 'randevu') return j;
     const d = doluAl(sidOf(j)), adaylar = [];
-    j.adaylar.forEach(a => { const p = plakaNrm(a.plaka), set = d[p] = d[p] || new Set(), saat = kalsin[a.id] || SINAV_SAATLERI.find(t => !set.has(t)); if (!saat) return bos.push(a); set.add(saat); adaylar.push({ ...a, saat }); });
+    // SNV-077: sınav gününde elle verilen saat boşsa o saat (Sınav günü › satır)
+    const sn = S.sinavlar.find(y => y.id === sidOf(j)), elleSaat = a => { const kid = String(a.id).split('-').pop(), x = sn && (sn.atama || {})[kid]; return x && x.elle && SINAV_SAATLERI.includes(x.saat) ? x.saat : ''; };
+    [...j.adaylar].sort((a, b) => (elleSaat(b) ? 1 : 0) - (elleSaat(a) ? 1 : 0)).forEach(a => { const p = plakaNrm(a.plaka), set = d[p] = d[p] || new Set(), es = elleSaat(a), saat = kalsin[a.id] || (es && !set.has(es) ? es : '') || SINAV_SAATLERI.find(t => !set.has(t)); if (!saat) return bos.push(a); set.add(saat); adaylar.push({ ...a, saat }); });
+    adaylar.sort((a, b) => j.adaylar.indexOf(j.adaylar.find(x => x.id === a.id)) - j.adaylar.indexOf(j.adaylar.find(x => x.id === b.id)));
     return { ...j, adaylar };
   });
   return { l: yeni, bos };
@@ -249,7 +255,7 @@ export async function hazirla(ids, { foto = true, koru = null } = {}) {
   sec.filter(x => x.tur === 'sinav').forEach(x => {
     const s = S.sinavlar.find(y => y.id === x.ref.sinav), k = kursiyer(x.ref.kursiyer); if (!s || !k) return;
     if (egitimSinifi(k.sinif)) return ekle(x, CEZA_NOT);
-    const ar = sinavAraci(k), eg = egitmen(ar.egitmen) || egitmen(k.egitmen) || {};
+    const ar = sinavAraci(k, s), eg = sinavUstasiA(k, s, ar);
     if (!ar.plaka) return ekle(x, k.sinif === 'B-EN' && k.kendiArac ? 'Kendi aracıyla (md.7/5): aracın plakası modüle tanımlı olmalı; randevuyu MEBBİS’e elle girin' : 'Sınav aracı bulunamadı (öğrencinin dersinde araç yok)');
     const anahtar = s.id + '|' + tabanSinif(k.sinif);
     const j = rnd[anahtar] = rnd[anahtar] || { id: 'randevu-' + anahtar, tur: 'randevu', baslik: `Sınav ${trT(s.tarih).replace(/\//g, '.')} · ${tabanSinif(k.sinif)}`, tarih: trT(s.tarih), sertifika: tabanSinif(k.sinif) + ' SINIFI', adaylar: [] };
@@ -326,7 +332,7 @@ function kuralGirdisi(ids) {
   ids.forEach(id => {
     const [t, ...p] = String(id).split('-');
     if (t === 'ders') l.push({ id, tur: 'program' });
-    else if (t === 'sinav') { const sid = p.slice(0, -1).join('-'), k = kursiyer(p[p.length - 1]), ar = sinavAraci(k), eg = egitmen(ar.egitmen) || egitmen(k && k.egitmen) || {}; (rnd[sid] = rnd[sid] || { id: 'randevu-' + sid, tur: 'randevu', adaylar: [] }).adaylar.push({ id, plaka: String(ar.plaka || '').replace(/\s/g, ''), personelAd: eg.ad || '' }); }
+    else if (t === 'sinav') { const sid = p.slice(0, -1).join('-'), k = kursiyer(p[p.length - 1]), sn0 = S.sinavlar.find(y => y.id === sid), ar = sinavAraci(k, sn0), eg = sinavUstasiA(k, sn0, ar); (rnd[sid] = rnd[sid] || { id: 'randevu-' + sid, tur: 'randevu', adaylar: [] }).adaylar.push({ id, plaka: String(ar.plaka || '').replace(/\s/g, ''), personelAd: eg.ad || '' }); }
     else if (t === 'onay') onay.adaylar.push({ id });
     else if (['kayit', 'evrak', 'esinav', 'teorik'].includes(t)) l.push({ id, tur: t });
   });

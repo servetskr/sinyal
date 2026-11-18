@@ -1,6 +1,6 @@
 // SNV-037..046, SNV-060, SNV-005: "Sınav günü" ekranı (#/sinav/<oturum>) — komisyonlar, saat dilimleri, satır alt sayfası, yazdır, süreler şeridi, kalanları aktar.
 // Atama (SNV-040): s.atama = { [kursiyerId]: { kom, saat, plaka, egitmen, elle } } yalnız elle değiştirilenleri tutar; ötekiler her açılışta yeniden hesaplanır.
-import { S, kaydet, gun, fark, tamAd, kursiyer, egitmen, arac, SINIFLAR, hakDurumu, islem, oturum, kuralAyar, mebIsGunuGeri, tcMaskele, izinDurumu } from './veri.js?v=234';
+import { aracUygun, S, kaydet, gun, fark, tamAd, kursiyer, egitmen, arac, SINIFLAR, hakDurumu, islem, oturum, kuralAyar, mebIsGunuGeri, tcMaskele, izinDurumu } from './veri.js?v=234';
 import { e, ik, rozet, avatar, tarih, tarihUzun, pencere, kapatPencere, bildir, bos, isaret, belgeYazdir } from './ui.js?v=234';
 import * as KR from './kurallar.js?v=234';
 import * as MEB from './eklenti.js?v=234';
@@ -106,7 +106,8 @@ function satirSayfasi(s, k, yenile) {
   pencere({ baslik: tamAd(k) + ' · sınav günü', icerik: `<form class="form-izgara" id="f-sg">
       <div class="alan"><label for="sg-k">Komisyon</label><select id="sg-k" name="kom" class="girdi">${[...koms, koms.length + 1].map(c => `<option value="${c}" ${c === x.kom ? 'selected' : ''}>${c}. komisyon</option>`).join('')}</select></div>
       <div class="alan"><label for="sg-s">Saat</label><select id="sg-s" name="saat" class="girdi">${SINAV_SAATLERI.map(t => `<option ${t === x.saat ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
-      <div class="alan"><label for="sg-a">Araç</label><select id="sg-a" name="plaka" class="girdi">${(S.araclar || []).filter(a => !a.pasif).map(a => `<option value="${e(a.plaka)}" ${a.plaka === x.plaka ? 'selected' : ''}>${e(a.plaka)} · ${e(a.sinif || '')}</option>`).join('')}</select></div>
+      <div class="alan"><label for="sg-a">Araç</label><select id="sg-a" name="plaka" class="girdi">${(() => { const l = (S.araclar || []).filter(a => !a.pasif), uy = l.filter(a => aracUygun(a, k.sinif)), di = l.filter(a => !aracUygun(a, k.sinif)), op = a => `<option value="${e(a.plaka)}" ${a.plaka === x.plaka ? 'selected' : ''}>${e(a.plaka)} · ${e(a.sinif || '')}${a.model ? ' · ' + e(a.model) : ''}</option>`;
+        return `<optgroup label="${e(k.sinif)} sınıfına uygun">${uy.map(op).join('')}</optgroup>${di.length ? `<optgroup label="Diğer araçlar">${di.map(op).join('')}</optgroup>` : ''}`; })()}</select></div>
       <div class="alan"><label for="sg-u">Usta öğretici</label><select id="sg-u" name="eg" class="girdi">${(S.egitmenler || []).filter(y => !y.ayrildi).map(y => `<option value="${e(y.id)}" ${x.eg && y.id === x.eg.id ? 'selected' : ''}>${e(y.ad)}</option>`).join('')}</select></div>
       <p class="alan tam" style="font-size:13px;color:var(--soluk)">Değişiklik yalnız bu sınavın atamasına yazılır; öğrencinin genel kaydı değişmez. Elle değiştirilen aday yeniden hesaplamada yerinde kalır.</p></form>`,
     altlik: `<button class="dg dg-hafif" data-sg-cikar style="margin-right:auto;color:var(--kirmizi)">Sınavdan çıkar</button>${x.elle ? '<button class="dg dg-cizgi" data-sg-sifirla>Kendiliğinden ata</button>' : ''}<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-sg-kaydet>Kaydet</button>`,

@@ -96,7 +96,8 @@ export function mebIsleri(hepsi) {
     ].filter(Boolean) });
   });
   sbSinav(S.sinavlar).filter(s => s.tur === 'Direksiyon' && fark(s.tarih) >= (hepsi ? -14 : 0)).forEach(s => (s.kursiyerler || []).map(kursiyer).filter(Boolean).filter(k => !k.prova && !egitimSinifi(k.sinif)).filter(k => (s.mebKisi || []).includes(k.id) ? hepsi : (!s.mebBildirim && fark(s.tarih) >= 0)).forEach(k => {
-    const d = S.dersler.filter(x => x.kursiyer === k.id && x.arac).sort((a, b) => b.tarih.localeCompare(a.tarih))[0], ar = arac(d && d.arac) || {}, eg = egitmen(k.egitmen) || {};
+    // SNV-077: sınav günü ataması (araç, usta) önce; yoksa son dersin aracı ve öğrencinin ustası
+    const at = (s.atama || {})[k.id] || {}, d = S.dersler.filter(x => x.kursiyer === k.id && x.arac).sort((a, b) => b.tarih.localeCompare(a.tarih))[0], ar = (at.plaka && (S.araclar || []).find(a => String(a.plaka).replace(/\s/g, '') === String(at.plaka).replace(/\s/g, ''))) || arac(d && d.arac) || {}, eg = egitmen(at.egitmen) || egitmen(k.egitmen) || {};
     isler.push({ id: 'sinav-' + s.id + '-' + k.id, tur: 'sinav', ref: { sinav: s.id, kursiyer: k.id }, bitti: (s.mebKisi || []).includes(k.id), meta: { ad: tamAd(k), sinif: k.sinif, egitmen: k.egitmen, tarih: s.tarih, detay: `${tr(s.tarih)} ${s.saat || ''} · ${s.yer || ''}` + (k.sinif === 'B-EN' ? ' · B Engelli: MEBBİS’te B olarak; rapor kodu ve kendi aracı modüle ayrıca tanımlanır' : '') }, son: isGunuGeri(s.tarih, sinavIsGunu()), neden: `Sınavdan ${sinavIsGunu()} iş günü önce`, baslik: `${tamAd(k)} · ${tr(s.tarih)} sınavı`, alanlar: [
       alan('Sınav Tarihi', tr(s.tarih), ['sinavtarihi', 'tarih']), alan(TC[0], k.tc, TC[1]), alan('Kursiyer', tamAd(k), ['kursiyer', 'adisoyadi']), alan('Araç Plakası', ar.plaka, ['plaka', 'aracplakasi', 'sinavaraci']), alan('Usta Öğretici', personel(eg), ['ustaogretici', 'ogretici']),
     ].filter(Boolean) });
