@@ -998,11 +998,15 @@
       const ekranHatalari = new Set();
       // MEB-106 (B12): önündeki iş yazılamadıysa bağlı iş denenmez — grubu açılamayan şubenin kayıtları, kaydı yapılamayan adayın evrakı ve e-sınavı
       const grupAnahtar = x => [x.donem, x.grupNo, x.subeNo].join('|'), olmayanGrup = new Set(), olmayanTc = new Set();
+      // MEB-082: T.C. kimlik no doğrulama hanesi tutmayan aday MEBBİS'e gönderilmez (mdSinyal de denetler; bu ikinci kilit)
+      const tcGecerli = tc => { if (!/^[1-9]\d{10}$/.test(tc || '')) return false; const d = tc.split('').map(Number), t1 = ((d[0] + d[2] + d[4] + d[6] + d[8]) * 7 - (d[1] + d[3] + d[5] + d[7])) % 10, t2 = d.slice(0, 10).reduce((a, b) => a + b, 0) % 10; return ((t1 + 10) % 10) === d[9] && t2 === d[10]; };
       const sonucBak = x => { const r = sonuc.yazilan.filter(y => idlerOf(x).includes(y.id)); if (!r.length || r.every(y => y.ok)) return; if (x.tur === 'grup') olmayanGrup.add(grupAnahtar(x)); if (x.tur === 'kayit' && x.tc) olmayanTc.add(x.tc); };
-      for (const [i, x] of yazilacak.entries()) {
+      for (let [i, x] of yazilacak.entries()) {
         await denetimle();
         { const bagli = x.tur === 'kayit' && olmayanGrup.has(grupAnahtar(x)) ? `Bekliyor: önce ${x.donemAd || x.donem} grup/şube MEBBİS’te açılmalı (grup işi bu turda yazılamadı)` : ['evrak', 'esinav'].includes(x.tur) && x.tc && olmayanTc.has(x.tc) ? 'Bekliyor: önce aday kaydı MEBBİS’e girilmeli (kayıt işi bu turda yazılamadı)' : '';
           if (bagli) { idlerOf(x).forEach(id => sonuc.yazilan.push({ id, ok: false, not: bagli, hataTur: 'bagimli' })); if (x.tur === 'kayit' && x.tc) olmayanTc.add(x.tc); await kaydet('calisiyor'); continue; } }
+        if (x.tc && !tcGecerli(String(x.tc))) { idlerOf(x).forEach(id => sonuc.yazilan.push({ id, ok: false, not: 'T.C. kimlik no geçersiz (doğrulama hanesi tutmuyor); gönderilmedi', hataTur: 'veri' })); if (x.tur === 'kayit') olmayanTc.add(x.tc); await kaydet('calisiyor'); continue; }
+        if (Array.isArray(x.adaylar) && x.adaylar.some(a => a.tc && !tcGecerli(String(a.tc)))) { const kotu = x.adaylar.filter(a => a.tc && !tcGecerli(String(a.tc))); kotu.forEach(a => sonuc.yazilan.push({ id: a.id, ok: false, not: 'T.C. kimlik no geçersiz (doğrulama hanesi tutmuyor); gönderilmedi', hataTur: 'veri' })); x = { ...x, adaylar: x.adaylar.filter(a => !kotu.includes(a)) }; if (!x.adaylar.length) { await kaydet('calisiyor'); continue; } }
         ilerle(`MEBBİS’e yazılıyor ${i + 1}/${yazilacak.length}: ${x.baslik || x.tur}`, (i + 1) / yazilacak.length);
         const ids = idlerOf(x), ekr = ekranlariOf(x);
         const engel = ekr.map(k => on[k]).find(o => o && !o.ok);
