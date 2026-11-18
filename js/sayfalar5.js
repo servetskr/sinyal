@@ -14,6 +14,7 @@ import * as ME from './mebevrak.js?v=234';
 import * as KR from './kurallar.js?v=234';
 import { listeAdi } from './taban.js?v=234';
 import { muafMi, muafSonGun } from './gruplar.js?v=234';
+import { sozlesmeUcreti } from './mevzuat.js?v=234';
 
 /* ================= MEB KURALLARI: KAYNAK VE SORUMLULUK ================= */
 const MTSK = 'MTSK Yönetmeliği (ÖÖKGM, Ocak 2025 metni)';
@@ -346,6 +347,22 @@ function ayVerisi(ay = 0) {
   return { d0, buAy, kdv: S.entegrasyon.kdv ?? 10, oran: (S.entegrasyon.kdv ?? 10) / 100, ayAd: d0.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' }), ek: d0.getFullYear() + '-' + String(d0.getMonth() + 1).padStart(2, '0'),
     gelir: hr.filter(h => h.tur === 'Gelir' && !iadeMi(h)), iade: hr.filter(iadeMi), emanet: hr.filter(resmiTahsilat), gider: hr.filter(h => h.tur !== 'Gelir' && !iadeMi(h)), ders: S.dersler.filter(d => d.durum === 'Yapıldı' && buAy(d.tarih)) };
 }
+// PAR-038: kursiyer sözleşmesi belli parayı içeren mukavelenamedir; sözleşme toplam ücreti üzerinden binde 9,48 damga vergisi
+// (DVK (1) sayılı tablo I/A-1, DV Genel Tebliği Seri 71 tablosu 2026; GİB özelgesi E-71387770-155-28824, 10/05/2022). Nispi vergide tek nüsha vergilenir.
+// Sözleşme tarihi: imza tarihi, imza yoksa kayıt tarihi. Ücretsiz (%3) ve prova öğrencisi sayılmaz (bedel yok). Bono 2026 tablosunda yok, vergisi alınmaz.
+export const DAMGA_BINDE = 9.48;
+export function sozlesmeDamga(ay = 0) {
+  const v = ayVerisi(ay), l = S.kursiyerler.filter(k => !k.prova && !k.ucretsiz && k.odeme && v.buAy((k.sozlesmeImza || {}).tarih || k.kayit))
+    .map(k => { const u = kurus(sozlesmeUcreti(k) || 0); return { k, tarih: (k.sozlesmeImza || {}).tarih || k.kayit, u, dv: kurus(u * DAMGA_BINDE / 1000) }; }).sort((a, b) => a.tarih.localeCompare(b.tarih));
+  return { l, adet: l.length, toplam: kurus(l.reduce((a, x) => a + x.u, 0)), dv: kurus(l.reduce((a, x) => a + x.dv, 0)) };
+}
+function sozlesmeSayfasi(ay = 0) {
+  const d = sozlesmeDamga(ay);
+  return [['Sözleşme tarihi', 'Öğrenci', 'TC kimlik no', 'Sınıf', 'Sözleşme toplam ücreti', 'Damga vergisi (binde 9,48)'],
+    ...d.l.map(x => [trTarih(x.tarih), tamAd(x.k), x.k.tc || '', sinifAd(x.k.sinif, x.k), x.u, x.dv]),
+    ['', 'Toplam', d.adet + ' sözleşme', '', d.toplam, d.dv], [],
+    ['Not: Kursiyer sözleşmesi toplam ücret üzerinden binde 9,48 damga vergisine tabidir (DVK (1) sayılı tablo I/A-1; GİB özelgesi E-71387770-155-28824, 10/05/2022). Nispi vergide tek nüsha vergilenir. Sürekli damga vergisi mükellefi kurs ertesi ayın 26’sına kadar beyan eder. Ücretsiz (%3) kursiyer sözleşmesi bedelsiz olduğu için listede yok. Bono (senet) 2026 tablosunda yer almaz.']];
+}
 // Fatura listesi: müşavirin fatura keseceği her tahsilat bir satır; iadeler ayrı bölümde eksi tutarla
 export function faturaListesi(ay = 0) {
   const v = ayVerisi(ay), bas = ['Sıra', 'Tarih', 'Alıcı adı soyadı', 'TC kimlik no', 'Adres', 'Açıklama', 'KDV hariç tutar', 'KDV oranı (%)', 'KDV tutarı', 'Toplam (KDV dahil)', 'Ödeme yöntemi', 'Makbuz no', 'Fatura no'];
@@ -397,18 +414,20 @@ export async function musavirPaketi(ay = 0) {
   const giderS = [['Tarih', 'Kategori', 'Açıklama', 'Tutar', 'Ödeme yöntemi', 'Makbuz / fatura no', 'Tedarikçi']];
   o.gider.forEach(h => giderS.push([trTarih(h.tarih), h.kategori || '', h.aciklama || '', h.tutar, h.yontem || '', h.fatura || h.no || (h.alis && ((S.alisFaturalari || []).find(a => a.id === h.alis) || {}).belgeNo) || '', (h.tedarikci && ((S.tedarikciler || []).find(t => t.id === h.tedarikci) || {}).ad) || '']));
   const alisS = CR.alisSatirlari(o.buAy);  // PAR-056: ayın alış faturaları
+  const dm = sozlesmeDamga(ay);  // PAR-038
   const ozet = [[S.kurs.ad + ' · ' + o.ayAd + ' mali müşavir paketi'], S.entegrasyon.vkn ? ['Vergi kimlik no', S.entegrasyon.vkn] : [], [],
     ['Tahsilat (iade hariç)', o.gelirT], ...o.yontem.map(([y, t]) => ['  ' + YONTEM_AD[y], t]), ...(o.emanetT ? [['  İçinde sınav ücreti emaneti (KDV’siz, 336; kurs geliri değil)', o.emanetT]] : []), ['İadeler', o.iadeT], ['Net tahsilat', o.gelirT - o.iadeT], [],
     ['Toplam gider (iade hariç)', o.giderT], ...o.kat.map(([k, t]) => ['  ' + k, t]), [],
     ['KDV oranı (5580 eğitimi, %)', o.kdv], ['Hesaplanan KDV (tahmini)', o.kdvH], ['İndirilecek KDV (tahmini)', o.kdvI], [],
+    ['Bu ay imzalanan sözleşmeler (adet)', dm.adet], ['  Sözleşmelerin toplam tutarı', dm.toplam], ['  Damga vergisi (binde 9,48)', dm.dv], [],
     ['Personel brüt toplamı (prim dahil)', o.brut], ['Yapılan ders', o.ders.length], ['Faturası kesilmemiş tahsilat', o.faturasiz], [],
     ['Sayfalar'], ['Fatura listesi', 'Fatura kesilecek her tahsilat: alıcı, TC, adres, KDV ayrımı, makbuz no. İadeler altta ayrı bölümde.'], ['Banka ve POS', 'Havale ve kart tahsilatlarının günlük toplamları; banka ekstresi ve POS raporuyla mutabakat için.'],
     ['Giderler', 'Ayın giderleri (iadeler hariç).'], ['Alış faturaları', 'Ayın gider faturaları: tedarikçi, VKN, belge no, matrah, KDV, ödenen ve kalan (vadeli olanlar dahil).'], ['Muhasebe fişleri', 'Her hareketin hesap kodlu fiş satırları (genel düzen; Logo, Mikro, Zirve).'],
     ['Luca fiş aktarımı', 'Luca “Excel’den fiş aktarımı” için. Sütun adları Luca sürümüne göre değişebilir; aktarım ekranında sütunları eşleyin. Hesap kodları ana hesaptır (100, 102, 600…); alt hesap kullanıyorsanız (ör. 100.01) düzeltin.'],
-    ['Personel özeti', 'Brüt ücret, ders primi, izin ve avans; bordro için.'], ['Puantaj', 'Usta öğreticilerin ay içinde verdiği her ders.'], [],
+    ['Sözleşmeler', 'Bu ay imzalanan kursiyer sözleşmeleri: adet, toplam ücret ve binde 9,48 damga vergisi.'], ['Personel özeti', 'Brüt ücret, ders primi, izin ve avans; bordro için.'], ['Puantaj', 'Usta öğreticilerin ay içinde verdiği her ders.'], [],
     ['Not', 'mdSinyal makbuzu fatura yerine geçmez. Faturaları kestikten sonra “Fatura listesi” sayfasındaki Fatura no sütununu doldurup kursa geri gönderin; kurs dosyayı mdSinyal’e yükleyince numaralar makbuzlara işlenir. Sınav ücreti, harç ve kart ücreti kursiyerin kendi masrafıdır (il taban listesi not 5): kurs geliri olarak değil 336 emanet hesabına KDV’siz işlendi ve fatura listesine alınmadı. Sürücü kursu eğitim hizmetinde KDV %10’dur (KDV kararı II sayılı liste B-15); SRC gibi 5580 sayılı Kanun dışındaki eğitimlerde %20 uygulanır (fatura listesinde satır başına oran). Oranı siz teyit edin.']];
   const wb = XLSX.utils.book_new();
-  [['Özet', ozet], ['Fatura listesi', faturaListesi(ay)], ['Banka ve POS', bankaPos(ay)], ['Giderler', giderS], ...(alisS.length > 1 ? [['Alış faturaları', alisS]] : []), ['Muhasebe fişleri', muhasebeFisi(ay)], ['Luca fiş aktarımı', lucaFisi(ay)], ['Personel özeti', personelOzeti(ay)], ['Puantaj', puantaj(ay)]]
+  [['Özet', ozet], ['Fatura listesi', faturaListesi(ay)], ['Banka ve POS', bankaPos(ay)], ['Giderler', giderS], ...(alisS.length > 1 ? [['Alış faturaları', alisS]] : []), ['Sözleşmeler', sozlesmeSayfasi(ay)], ['Muhasebe fişleri', muhasebeFisi(ay)], ['Luca fiş aktarımı', lucaFisi(ay)], ['Personel özeti', personelOzeti(ay)], ['Puantaj', puantaj(ay)]]
     .forEach(([ad, veri]) => XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(veri), ad));
   XLSX.writeFile(wb, `musavir-paketi-${o.ek}.xlsx`);
 }
@@ -424,6 +443,7 @@ export function aylikOzetHtml(ay = 0) {
       ${tablo('Personel ve ders', s('Personel', o.kisi + ' kişi') + s('Brüt ücret toplamı (prim dahil)', tl(o.brut), 1) + o.dersT.map(([a, n]) => s(a, n + ' ders')).join('') + s('Yapılan ders', o.ders.length + ' ders', 1))}</div>
   </div>
   ${tablo('Fatura durumu', s('Tahsilat sayısı', o.gelir.length) + s('Faturası kesilmemiş', o.faturasiz, 1) + s('İade', o.iade.length))}
+  ${(dm => tablo('Bu ay imzalanan sözleşmeler', s('Adet', dm.adet) + s('Toplam tutar', tl(dm.toplam)) + s('Damga vergisi (binde 9,48)', tl(dm.dv), 1)))(sozlesmeDamga(ay))}
   <p style="margin-top:14px"><small>KDV rakamları kasadaki hareketlerden ve Ayarlar’daki %${o.kdv} oranından hesaplanmış tahmindir; beyanname için mali müşavirin kayıtları esastır. Brüt ücretten net ücret, SGK ve vergi kesintileri bordroda hesaplanır. Ayrıntılar aynı ayın müşavir paketindedir (Excel).</small></p>
   <p style="text-align:right;color:#555"><small>mdSinyal · ${e(new Date().toLocaleDateString('tr-TR'))} tarihinde hazırlandı</small></p>`;
 }
@@ -470,7 +490,7 @@ function entegrasyonSekme() {
       <p style="font-size:14px">Bordro ve SGK işlemleri mali müşavirinizde kalır. mdSinyal ona her ay ihtiyaç duyduğu özeti hazırlar: maaş, yapılan ders, ders primi, izin.</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="dg dg-ana" data-musavir-paket="0">${ik('indir')}Bu ayın müşavir paketi (Excel)</button><button class="dg dg-cizgi" data-musavir-paket="1">Geçen ay</button></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="dg dg-cizgi" data-musavir-pdf="0">Aylık özet (PDF)</button><button class="dg dg-cizgi" data-musavir-pdf="1">Geçen ayın özeti</button><button class="dg dg-cizgi" data-personel-ozet>Yalnız personel özeti</button></div>
-      <small style="color:var(--soluk)">Pakette tek dosyada: özet, fatura listesi (fatura kesilecek tahsilatlar ve iadeler), banka ve POS mutabakatı, giderler, muhasebe fişleri, Luca fiş aktarımı, personel özeti ve usta öğretici puantajı. Aylık özet tek sayfalık PDF’tir: gelir, gider, tahmini KDV, personel ve ders sayısı.</small>
+      <small style="color:var(--soluk)">Pakette tek dosyada: özet, fatura listesi (fatura kesilecek tahsilatlar ve iadeler), banka ve POS mutabakatı, giderler, bu ay imzalanan sözleşmeler ve damga vergisi, muhasebe fişleri, Luca fiş aktarımı, personel özeti ve usta öğretici puantajı. Aylık özet tek sayfalık PDF’tir: gelir, gider, tahmini KDV, personel ve ders sayısı.</small>
       <div style="display:grid;gap:4px"><div><label class="dg dg-cizgi" style="cursor:pointer">${ik('belge')}Fatura numaralarını içe aktar<input type="file" accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" data-fatura-yukle hidden></label></div>
         <small style="color:var(--soluk)">Müşaviriniz faturaları kesip “Fatura listesi”ni Fatura no sütunu dolu olarak geri gönderdiğinde yükleyin. “Makbuz no” ve “Fatura no” sütunları olan her Excel ya da CSV olur; numaralar makbuzla eşleşip tahsilatlara işlenir.</small></div>
       <div class="alan"><label for="musavir">Mali müşavirin e-postası</label><input id="musavir" class="girdi" type="email" data-musavir value="${e(g.musavir.eposta)}" placeholder="musavir@firma.com"></div>
