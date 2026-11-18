@@ -192,6 +192,16 @@ const KURALLAR = [
         });
       });
     } },
+  // PER-019, PER-021: personel evrakı bitişi (kişi kartındaki evraklar; usta öğreticinin sertifika/sağlık/adli tarihleri M13'te) ve teslim günü geçmiş zimmet
+  { id: 'P04', sira: 258, ad: 'Personel evrakı ve zimmet', dayanak: 'Kurum içi takip (MTSK Yön. md.46: personel dosyası)', kapsam: 'personel', ciddiyet: 'uyari', bugun: true, bugunAd: n => `${n} personel evrakı ya da zimmeti takipte`,
+    kontrol(l) {
+      const kisiler = [...(S.egitmenler || []), ...(S.ogretmenler || []), ...(S.personel || [])].filter(x => x && !x.pasif && !x.ayrildi);
+      kisiler.forEach(x => {
+        (x.evraklar || []).filter(v => v.bitis && fark(v.bitis) <= 30).forEach(v => { const g = fark(v.bitis), ad = ({ saglik: 'Sağlık raporu', adli: 'Adli sicil kaydı', sertifika: 'Usta öğretici sertifikası', ogrenim: 'Öğrenim belgesi', ehliyet: 'Sürücü belgesi', sozlesme: 'İş sözleşmesi', sgk: 'SGK bildirgesi', kimlik: 'Nüfus cüzdanı sureti', ikamet: 'Yerleşim yeri belgesi', askerlik: 'Askerlik belgesi', ilkyardim: 'İlk yardım sertifikası' }[v.tur] || 'Evrak');
+          l.push(bul('uyari', `${x.ad} · ${ad} ${g < 0 ? tarih(v.bitis) + ' tarihinde bitti' : g === 0 ? 'bugün bitiyor' : g + ' gün sonra bitiyor'}`, 'Yenisini alıp personel kartına ekleyin (Ekip ve araçlar › Personel ve maaş › kişi › Evraklar).', '#/filo/personel', { personel: [x.id] })); });
+        (x.zimmet || []).filter(z => !z.iade && z.teslim && fark(z.teslim) < 0).forEach(z => l.push(bul('uyari', `${x.ad} · ${z.tur} zimmeti teslim günü geçti (${tarih(z.teslim)})`, `${z.ne} ${tarih(z.verildi)} tarihinde verildi. İade alındıysa personel kartında “İade alındı” deyin.`, '#/filo/personel', { personel: [x.id] })));
+      });
+    } },
   // PER-003: çalışma izni bitişi (MEBBİS OOK12001'den; kartta elle de girilir). Bitti ya da bugün → engel; 30 gün ve daha az → uyarı (uzatma sözleşmesi
   // bitişten en geç 30 gün önce MEM'e verilir, ÖÖKY 27/1; süresi dolan personel MEBBİS'te her gün kendiliğinden pasife çekilir, ders/randevu listesinden düşer).
   // Ders ve sınav randevusu MEBBİS'e yazılırken (mebtoplu kuralDenetimi) ve ders planlanırken (dersKontrol) aynı izinDurumu o günün tarihiyle bakılır.
