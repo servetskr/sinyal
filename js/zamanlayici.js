@@ -1,5 +1,5 @@
 import { planlilariGonder } from './mesaj.js?v=234';
-import { izinBitisi, adaySinavSaati, esinavUcreti, esinavHakDurum, odemeKodu, ibanMetni, S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, gecikenler, kalanBorc, islem, gonderimEkle, yerelZaman, oturum, kapaliGun, SINIFLAR, risk, selam, kursAdi, bulutKanca, mudurTel, ekDersFiyat, ekDersTabani } from './veri.js?v=234';
+import { izinBitisi, memVermeSuresi, adaySinavSaati, esinavUcreti, esinavHakDurum, odemeKodu, ibanMetni, S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, gecikenler, kalanBorc, islem, gonderimEkle, yerelZaman, oturum, kapaliGun, SINIFLAR, risk, selam, kursAdi, bulutKanca, mudurTel, ekDersFiyat, ekDersTabani } from './veri.js?v=234';
 import { tl, tamTarih, tarihUzun, saatDe, apiAcik, apiGonder, etiket, bildir, waSirali } from './ui.js?v=234';
 import { denetimSkoru } from './ozellik.js?v=234';
 import * as KR from './kurallar.js?v=234';
@@ -80,7 +80,7 @@ const URET = {
     S.araclar.forEach(a => [['muayene', 'muayenesi'], ['sigorta', 'trafik sigortası'], ['kasko', 'kaskosu']].forEach(([x, ad]) => { if (a[x] && fark(a[x]) > 0) uyar(fark(a[x]), mudur(), a.plaka + ' ' + ad, a[x]); }));
     // PER-028: öğretmenin çalışma izni (MEBBİS'ten okunan bitiş) — müdüre 30, 15, 7 ve 1 gün önce; izin bitişinden sonraya planlı ders sayısı da yazılır
     [...S.egitmenler, ...(S.ogretmenler || [])].forEach(h => { const t = izinBitisi(h); if (!t || fark(t) <= 0) return; const ileri = S.dersler.filter(d => d.egitmen === h.id && d.durum === 'Planlandı' && d.tarih > t).length;
-      uyar(fark(t), mudur(), h.ad + ' çalışma izni', t, ` Uzatma sözleşmesi bitişten en geç 30 gün önce MEM’e verilir.${ileri ? ` Bitişten sonraya ${ileri} planlı dersi var.` : ''}`);
+      uyar(fark(t), mudur(), h.ad + ' çalışma izni', t, ` ${(ms => ms ? ms.metin.charAt(0).toLocaleUpperCase('tr') + ms.metin.slice(1) + '.' : '')(memVermeSuresi(t))}${ileri ? ` Bitişten sonraya ${ileri} planlı dersi var.` : ''}`);
       // MSJ-018: öğretmenin kendisine de (o13 biçimi aynı; yeni Meta şablonu gerekmez)
       if (h.tel) uyar(fark(t), hoca(h), h.ad.split(' ')[0] + ' Hoca, MEBBİS çalışma izniniz', t, ' Yenilenmezse ders ve sınava giremezsiniz.'); });
     S.egitmenler.forEach(h => Object.entries(h.belgeler || {}).forEach(([b, t]) => { if (t && fark(t) > 0) { const ad = { sertifika: 'usta öğretici sertifikanız', saglik: 'sağlık raporunuz', adli: 'adli sicil kaydınız' }[b]; uyar(fark(t), hoca(h), h.ad.split(' ')[0] + ' Hoca, ' + ad, t, ' Süresi dolarsa ders veremezsiniz.'); } }));

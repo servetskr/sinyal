@@ -1660,6 +1660,12 @@ export function risk(k) {
 
 export const ogretmen = id => (S.ogretmenler || []).find(o => o.id === id);
 export const tcMaskele = tc => tc ? tc.slice(0, 3) + '*****' + tc.slice(-3) : '—';
+// DENETİM Ö4 (PER-028): çalışma izni uzatma sözleşmesi bitişten en geç 30 gün önce MEM'e verilir. Son gün = bitiş − 30.
+// Döner: { son, kalan, metin } — kalan < 0 ise süre geçti; izin bitmişse null.
+export function memVermeSuresi(bitis, onGun = 30) {
+  if (!bitis || fark(bitis) < 0) return null; const d = tarihOku(bitis); d.setDate(d.getDate() - onGun); const son = iso(d), kalan = fark(son), tr = son.split('-').reverse().join('.');
+  return { son, kalan, metin: kalan < 0 ? `uzatmayı MEM’e verme süresi ${-kalan} gün önce geçti (son gün ${tr}); hemen MEM’e başvurun` : kalan === 0 ? `uzatma sözleşmesi bugün MEM’e verilmeli (son gün)` : `uzatma sözleşmesini MEM’e vermek için ${kalan} gün kaldı (son gün ${tr})` };
+}
 export function tcGecerli(tc) {
   if (!/^[1-9]\d{10}$/.test(tc)) return false;
   const d = tc.split('').map(Number);
