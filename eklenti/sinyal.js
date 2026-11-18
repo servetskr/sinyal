@@ -16,6 +16,7 @@
 //   toplu-iptal       {id?}                                → iş depodan kalkar; o ana kadar yazılanlar toplu-durum {son, iptal} ile teslim edilir
 //   toplu-yuk-koy     {id, yaz[]}                          → toplu-yuk-alindi {id, ok, durum, n} | {id, ok:false, neden} | {id, ok:false, mesgul, kalan}
 //   toplu-sonuc-onay  {id, zaman}                          → teslim kaydı silinir (eski zamanlı onay silmez)
+//   harita-yenile     {}                                   → (1.18) ekran haritası hemen yeniden alınır; yanıt harita-durum. Toplu işten önce de kendiliğinden alınır
 //   kuyruk / cek / bitenler-onay / temizle                 → "Ekranda doldur" ve tek liste yolu (mebbis.js), değişmedi
 // Yardımcı → sayfa
 //   merhaba           {surum, ozellik[]}
@@ -29,11 +30,11 @@
 //                     hataTur: oturum · ekran · ekran-dur · veri · mebbis · kod · dogrulama · kurum · dur · iptal · belirsiz · yarim
 //   toplu-yuk-iste    {id, kalan[]}                        tarayıcı kapanıp kişisel yük silinince; sayfa yalnız onaylı kimlikleri yeniden hazırlar
 //   ekran-degisti     {id, ekranlar[{ekran, ad, eksik[], iz, kaynak, yardimci, harita}]}   toplu-durum.sonuc.ekranDegisti'nin ayrı bildirimi
-//   harita-durum      {ok, surum, ayni?} | {ok:false, neden}   mdSinyal'in /eklenti/harita.json'u arka planda denetlendi
+//   harita-durum      {ok, surum, ayni?} | {ok:false, neden}   mdSinyal'in /eklenti/harita.json'u arka planda denetlendi (açılışta, 30 dk'da bir, toplu işten önce, harita-yenile'de)
 //   toplu-alindi · toplu-yuk-alindi · kuyruk-alindi · cek-alindi · tablo · bitenler · hatalar · temizlendi
 // =====
 const SURUM = chrome.runtime.getManifest().version;
-const OZELLIK = ['onayli-teslim', 'mesgul', 'durdur-kalici', 'harita', 'kurum', 'denetle', 'ekran-degisti', 'olcum', 'izle', 'ayar'];
+const OZELLIK = ['onayli-teslim', 'mesgul', 'durdur-kalici', 'harita', 'kurum', 'denetle', 'ekran-degisti', 'olcum', 'izle', 'ayar', 'harita-yenile'];
 const KOKLER = ['https://mdsinyal.com', 'https://www.mdsinyal.com', 'https://servetskr.github.io'];
 const sayfaya = (tur, veri) => window.postMessage({ kaynak: 'sinyal-eklenti', tur, veri }, location.origin);
 const gonder = m => new Promise(ok => { try { chrome.runtime.sendMessage(m, ok); } catch (x) { ok(null); } });
@@ -47,7 +48,9 @@ window.addEventListener('message', async ev => {
   if (tur === 'ping') { sayfaya('merhaba', { surum: SURUM, ozellik: OZELLIK }); if (haritaSon) sayfaya('harita-durum', haritaSon); return; }
   if (tur === 'kuyruk') { const r = await gonder({ tur: 'kuyruk-koy', isler: veri.isler, kurs: veri.kurs, oto: !!veri.oto }); const s = await gonder({ tur: 'mebbis-ac' }); return sayfaya('kuyruk-alindi', { ...r, sekme: s && s.sekme }); }
   if (tur === 'cek') { await gonder({ tur: 'hedef-koy', hedef: { tip: 'al', amac: veri.amac, zaman: Date.now(), tik: [], dogrudan: false, durum: 'gidiyor' } }); const s = await gonder({ tur: 'mebbis-ac' }); return sayfaya('cek-alindi', { sekme: s && s.sekme }); }
+  if (tur === 'harita-yenile') { await haritaGetir(); return; }   // yanıt harita-durum ile gelir
   if (tur === 'toplu') {
+    await haritaTaze();   // MEB-111: düzeltilmiş harita iş başlamadan Yardımcı'ya ulaşsın
     const r = await gonder({ tur: 'toplu-koy', is: veri });
     // B9: yarım iş varken yeni iş reddedilir; sayfa "devam et ya da iptal et" diye sorar (id: yarım iş, reddedilen: yeni iş).
     // Bu durumda MEBBİS sekmesine geçilmez: yetkili soruyu mdSinyal'de görür; "Devam et" seçerse sekme o zaman açılır.
@@ -97,19 +100,31 @@ async function yokla() {
     if (x.son && g) teslimEt(x);
   }
 }
-// Ekran alan haritası: mdSinyal kendi adresinde yayınlar (yalnız veri: ekran yolları ve alan kimlikleri). Arka plan kaynağı, sürümü ve şemayı denetler.
-async function haritaGetir() {
-  if (!KOKLER.includes(location.origin)) return;
+// Ekran alan haritası: mdSinyal kendi adresinde yayınlar (yalnız veri: ekran yolları ve alan kimlikleri). Arka plan kaynağı, sürümü, şemayı ve
+// (ACIK_ANAHTAR varsa) imzayı denetler. MEB-111: ekran değişince aynı gün düzeltme için harita sayfa açıkken de yenilenir:
+// açılışta, 30 dakikada bir, sekme 10 dakikadan uzun gizli kalıp yeniden görününce, her toplu işten ("Ekranları denetle" dahil) önce
+// (son alım 2 dakikadan eskiyse) ve sayfa "harita-yenile" deyince. Alınamazsa Yardımcı son kabul ettiği ya da gömülü haritasıyla çalışır.
+let haritaZaman = 0, haritaSuren = null;
+function haritaGetir() {
+  if (!KOKLER.includes(location.origin)) return Promise.resolve(null);
+  if (haritaSuren) return haritaSuren;
   const adres = location.origin + (location.origin === 'https://servetskr.github.io' ? '/sinyal' : '') + '/eklenti/harita.json';
-  try {
-    const r = await fetch(adres, { cache: 'no-cache', credentials: 'omit' }); if (!r.ok) throw new Error(String(r.status));
-    const metin = await r.text(); if (metin.length > 64000) throw new Error('çok büyük');
-    const s = await gonder({ tur: 'harita-koy', harita: JSON.parse(metin) });
-    haritaSon = s || { ok: false, neden: 'yanıt yok' };
-  } catch (x) { haritaSon = { ok: false, neden: 'harita alınamadı; Yardımcı’nın gömülü haritası kullanılır' }; }
-  sayfaya('harita-durum', haritaSon);
+  haritaSuren = (async () => {
+    try {
+      // ?surum= eki: GitHub Pages CDN'i (10 dk) ve sitenin servis çalışanını atlar (sw.js 'surum' ekli isteğe dokunmaz)
+      const r = await fetch(adres + '?surum=' + Date.now().toString(36), { cache: 'no-store', credentials: 'omit' }); if (!r.ok) throw new Error(String(r.status));
+      const metin = await r.text(); if (metin.length > 64000) throw new Error('çok büyük');
+      const s = await gonder({ tur: 'harita-koy', harita: JSON.parse(metin) });
+      haritaSon = s || { ok: false, neden: 'yanıt yok' };
+    } catch (x) { haritaSon = { ok: false, neden: 'harita alınamadı; Yardımcı’nın gömülü haritası kullanılır' }; }
+    haritaZaman = Date.now(); sayfaya('harita-durum', haritaSon); return haritaSon;
+  })().finally(() => { haritaSuren = null; });
+  return haritaSuren;
 }
-document.addEventListener('visibilitychange', () => { if (!document.hidden) yokla(); });
+// toplu işten önce taze harita: en çok 6 sn beklenir (ağ yavaşsa iş beklemez, Yardımcı elindeki haritayla başlar)
+const haritaTaze = (yas = 120e3) => Date.now() - haritaZaman < yas ? Promise.resolve(haritaSon) : Promise.race([haritaGetir(), new Promise(ok => setTimeout(ok, 6000))]);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { yokla(); if (Date.now() - haritaZaman > 10 * 60e3) haritaGetir(); } });
+setInterval(() => haritaGetir(), 30 * 60e3);
 setInterval(yokla, 4000);
 gonder({ tur: 'sinyal-burada' });
 window.addEventListener('DOMContentLoaded', () => { sayfaya('merhaba', { surum: SURUM, ozellik: OZELLIK }); yokla(); haritaGetir(); });

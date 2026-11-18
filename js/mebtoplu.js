@@ -1363,6 +1363,7 @@ export function topluBaglan(k, yenileFn) {
     if (ev.target.closest('[data-mt-durdur]')) { isDurdur(); return yenileFn(); }
     const dv = ev.target.closest('[data-mt-devam]'); if (dv) { devamEt(dv.dataset.mtDevam === 'sonraki'); return; }
     if (ev.target.closest('[data-mk-alarm-gizle]')) { MK.alarmGizle(); return yenileFn(); }
+    if (ev.target.closest('[data-mk-harita-yenile]')) { bildir(EK.haritaYenile() ? 'Yardımcı ekran haritasını yeniden alıyor; yeni sürüm varsa birkaç saniye içinde burada görünür' : 'Bu Yardımcı sürümü haritayı mdSinyal sayfası yenilenince alır; sayfayı yenileyin', 'tamam'); return; }
     if (ev.target.closest('[data-mt-denetle]')) return ekranDenetle();
     if (ev.target.closest('[data-mt-denetim-goster]')) return MK.denetimPenceresi();
   });
