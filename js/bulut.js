@@ -676,6 +676,7 @@ async function gunlukYedek() {
   const d = await F.getDoc(F.doc(db, 'kurslar', bulut.kurs, 'yedekler', tarih)).catch(() => null);
   if (d && d.exists()) return;
   try { await yedekAl(); } catch (x) { if (x.code !== 'permission-denied') throw x; }  // başka cihaz aynı anda aldıysa ikinci kopya reddedilir
+  try { const dp = S.kurs && S.kurs.depolama; if (!dp || (Date.now() - new Date(dp.tarih).getTime()) > 7 * 864e5) await depolamaOlc(); } catch (x) { }  // YON-079: haftada bir ölçüm
   // YON-040: dönem sonu yedeği — yeni ayın ilk açılışında geçen ayın (dönemin) kapanış hâli etiketli olarak bir kez alınır ve saklama temizliğinde silinmez
   try { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); const ay = iso(d).slice(0, 7).replace('-', ''), etk = 'donem-sonu-' + ay; const l = await yedekler(); if (!l.some(y => y.etiket === etk)) await yedekAl(etk); } catch (x) { if (x.code !== 'permission-denied') console.error(x); }
   if (bulut.rol === 'mudur') eskiYedekleriSil().catch(() => { });
@@ -754,6 +755,17 @@ export async function dosyadanGeriYukle(veri, ad) {
 }
 // YON-041: yedekte fotoğraf, evrak ve imzalar ayrı belgede (kurslar/{k}/dosyalar, içerik değiştirilemez) başvuruyla durur; buluttan geri dönüşte
 // başvurular çözülür. Bilgisayara indirilen yedek dosyası tek başına yetsin diye indirmeden önce bütün başvurular gerçek içerikle doldurulur.
+// YON-034, YON-079: kurs başına depolama ölçümü (ücretsiz Firebase planında bütün proje için 1 GiB tek havuz): kurs verisi, dosyalar (fotoğraf, evrak, imza)
+// ve yedekler bayt olarak; sonuç S.kurs.depolama'ya yazılır (sahip paneli bütün kursların toplamını ve eşiği bundan gösterir). Yeni okuma maliyeti yalnız yedek listesi.
+export async function depolamaOlc() {
+  const B = s => new TextEncoder().encode(s).length, ids = new Set(), veri = anlikMetin();
+  veri.replace(new RegExp(DOSYA_ON + '([a-z0-9]+)', 'g'), (m, id) => { ids.add(id); return m; });
+  let dosya = 0, bilinmeyen = 0; ids.forEach(id => { const v = dosyaVeri.get(id); if (v) dosya += v.length; else bilinmeyen++; });
+  if (bilinmeyen && ids.size > bilinmeyen) dosya += Math.round(dosya / (ids.size - bilinmeyen)) * bilinmeyen;  // yüklenmemiş dosyalar ortalamayla
+  let yedek = 0, ys = 0; try { (await yedekler()).forEach(y => { yedek += +y.boyut || 0; ys++; }); } catch (x) { }
+  const d = { tarih: iso(new Date()), veri: B(veri), dosya, dosyaSayi: ids.size, yedek, yedekSayi: ys }; d.toplam = d.veri + d.dosya + d.yedek;
+  S.kurs.depolama = d; kaydet(); return d;
+}
 export async function yedekDosyalariCoz(veri) {
   const ids = new Set(); JSON.stringify(veri, (k, x) => { if (typeof x === 'string' && x.startsWith(DOSYA_ON)) ids.add(x.slice(DOSYA_ON.length)); return x; });
   const { db, F } = await sdk(); let bulunamayan = 0;

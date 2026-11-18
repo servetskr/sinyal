@@ -174,6 +174,7 @@ async function kursIstatistik(k, ad, sehir) {
   const ks = V.kursiyerler || [], cevap = V.destekCevap || {};
   (V.destek || []).forEach(t => destekler.push({ ...t, kurs: k, kursAd: ad, kanal: 'mdSinyal', ...(cevap[t.id] || {}) }));
   return {
+    depolama: (V.kurs && V.kurs.depolama) || null,  // YON-079
     ad, sehir, kursiyer: ks.length, aktif: ks.filter(x => x.asama !== 'Ehliyet' && !x.pasif && !x.silindi).length,
     dersAy: (V.dersler || []).filter(x => String(x.tarih || '').startsWith(ay)).length,
     tahsilAy: (V.hareket || []).filter(x => x.tur === 'Gelir' && String(x.tarih || '').startsWith(ay)).reduce((t, x) => t + (+x.tutar || 0), 0),
@@ -297,7 +298,10 @@ function kursIstHtml() {
   const l = Object.entries(kursIst).sort((a, b) => (b[1].son || '').localeCompare(a[1].son || ''));
   if (!l.length) return `<div class="sh-bos">${ik('kursiyer')}<b>Henüz kurs hesabı yok</b><small>“Kurs hesabı linki” ile ilk kursu aç.</small></div>`;
   const kutu = (et, d, alt2) => `<div><small>${et}</small><b>${d}</b>${alt2 ? `<span>${alt2}</span>` : ''}</div>`;
-  return `<div class="sh-ist-izgara">${l.map(([k, x]) => {
+  // YON-034, YON-079: depolama — ücretsiz Firebase planında 1 GiB bütün proje için; kursların son ölçümü toplanır, %70 / %85 eşikte uyarı, "kaç kursa yeter"
+  const GiB = 1073741824, ol = l.filter(([, x]) => x.depolama && x.depolama.toplam), top = ol.reduce((a, [, x]) => a + x.depolama.toplam, 0), ort = ol.length ? top / ol.length : 0, oran = top / GiB, mbT = n => (n / 1048576).toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + ' MB';
+  const depo = `<div class="sh-depo ${oran >= 0.85 ? 'kirmizi' : oran >= 0.7 ? 'sari' : ''}"><b>Depolama ${mbT(top)} / 1.024 MB (%${Math.round(oran * 100)})</b><small>${ol.length}/${l.length} kurs ölçüldü${ort ? ` · kurs başına ortalama ${mbT(ort)} · bu ortalamayla yaklaşık ${Math.floor(GiB * 0.85 / ort)} kursa yeter (%85 sınırı)` : ''}${oran >= 0.85 ? ' · %85 aşıldı: fotoğraf sıkıştırma ve yedek saklama süresini gözden geçirin' : oran >= 0.7 ? ' · %70 aşıldı' : ''}</small></div>`;
+  return depo + `<div class="sh-ist-izgara">${l.map(([k, x]) => {
     const hs = hesaplar.filter(h => h.kurs === k && !h.silinecek), per = hs.filter(h => h.rol && h.rol !== 'ogrenci').length, ogr = hs.filter(h => h.rol === 'ogrenci').length;
     const ogrAktif = hs.filter(h => h.rol === 'ogrenci' && h.sonGiris > Date.now() - 30 * 864e5).length, acik = destekler.filter(t => t.kurs === k && (t.durum || 'Açık') !== 'Çözüldü').length;
     return `<article class="sh-ist" data-sh-kurs="${e(k)}" role="button" tabindex="0">
@@ -305,7 +309,7 @@ function kursIstHtml() {
       ${x.hata ? `<p class="sh-hata">${ik('uyari')}<span>Veri okunamadı: ${e(x.hata)}</span></p>` : `<div class="sh-ist-kutular">
         ${kutu('Kursiyer', x.aktif, x.kursiyer + ' kayıtlı')}${kutu('Bu ay ders', x.dersAy, '')}${kutu('Bu ay tahsilat', tl(x.tahsilAy), '')}
         ${kutu('Oturum', x.oturum, 'son 30 gün')}${kutu('Aktif kişi', x.aktifKisi, per + ' personel hesabı')}${kutu('Öğrenci girişi', ogrAktif, ogr + ' öğrenci hesabı')}</div>
-      <footer><span>${ik('mesaj')}${x.gonderimAy} mesaj bu ay${x.otoAy ? ' (' + x.otoAy + ' otomatik)' : ''}${(() => { const u = mesajUcret(), m = x.waBagli ? x.gonderimAy : 0; return m ? ` · tahmini ${tl(m * u.hizmet)}${m > u.kota ? ` · <b style="color:var(--kirmizi)">kota ${u.kota} aşıldı (+${m - u.kota})</b>` : ''}` : ''; })()}</span><span>${ik('aday')}${x.adaylar} aday</span>${acik ? `<span class="uyar">${ik('uyari')}${acik} açık destek</span>` : ''}</footer>`}
+      <footer><span>${x.depolama ? `${(x.depolama.toplam / 1048576).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} MB · ` : ''}${ik('mesaj')}${x.gonderimAy} mesaj bu ay${x.otoAy ? ' (' + x.otoAy + ' otomatik)' : ''}${(() => { const u = mesajUcret(), m = x.waBagli ? x.gonderimAy : 0; return m ? ` · tahmini ${tl(m * u.hizmet)}${m > u.kota ? ` · <b style="color:var(--kirmizi)">kota ${u.kota} aşıldı (+${m - u.kota})</b>` : ''}` : ''; })()}</span><span>${ik('aday')}${x.adaylar} aday</span>${acik ? `<span class="uyar">${ik('uyari')}${acik} açık destek</span>` : ''}</footer>`}
     </article>`;
   }).join('')}</div><p class="sh-dip">Oturum ve aktif kişi son 30 günün işlem kaydından sayılır. Kutuya dokununca kursun hesapları, hesap oluşturma ve kursu silme açılır.</p>
     <details class="sh-dip"><summary>WhatsApp mesaj ücreti ve kota (tahmin için)</summary><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">${[['hizmet', 'Hizmet mesajı (₺)'], ['pazarlama', 'Pazarlama mesajı (₺)'], ['kota', 'Fiyata dahil aylık kota']].map(([a, et]) => `<label style="display:grid;gap:4px;font-size:13px">${et}<input data-mesaj-ucret="${a}" inputmode="decimal" value="${String(mesajUcret()[a]).replace('.', ',')}" style="width:130px"></label>`).join('')}</div><small>Bu cihazda saklanır. Tahmin bütün mesajları hizmet sayar; 24 saat penceresindeki cevaplar ücretsizdir, gerçek tutar Meta faturasındadır.</small></details>`;
