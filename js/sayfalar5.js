@@ -1,5 +1,5 @@
 import * as EK from './eklenti.js?v=234';
-import { S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, kursiyer, DERS_TUR_AD, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube, tutarOku, gunBatimi, kursIli, sinifEtiket, ekTur, kursiyerTaban, gerekliDireksiyon, tabanListesi, ekDersTabani, eskiBelgeTarihi, MEVCUT_BELGELER } from './veri.js?v=234';
+import { ekToplam, kalanBorc, S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, kursiyer, DERS_TUR_AD, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube, tutarOku, gunBatimi, kursIli, sinifEtiket, ekTur, kursiyerTaban, gerekliDireksiyon, tabanListesi, ekDersTabani, eskiBelgeTarihi, MEVCUT_BELGELER } from './veri.js?v=234';
 import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor, belgeYazdir, kisaLink, siteLink } from './ui.js?v=234';
 import { yenile } from './app.js?v=234';
 import * as B from './bulut.js?v=234';
@@ -597,7 +597,7 @@ function kontrolEt(r, i = 0) {
 }
 function aktarimSekme() {
   let govde = '';
-  if (aktarim.sonuc) govde = `<div class="kart"><div class="kart-govde">${isaret('tamam', 34)}<h3 style="margin:10px 0 4px">${aktarim.sonuc.n} ${{ kursiyer: 'kursiyer', taksit: 'taksit', arac: 'araç', ogretmen: 'öğretmen' }[aktarim.sonuc.tur]} aktarıldı</h3><p style="color:var(--soluk)">${aktarim.sonuc.atla} satır hatalı olduğu için atlandı. ${{ kursiyer: 'Yapılmış ders sayısına göre aşamaları ayarlandı; KVKK rızası ilk ziyarette alınır. Sırada taksit planı dosyası var.', taksit: 'Ödenmiş taksitler kasaya tahsilat olarak işlendi; ödenmemişler vadesinde hatırlatılır.', arac: 'Muayene ve sigorta bitişleri takibe alındı.' }[aktarim.sonuc.tur]}</p><div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap"><a class="dg dg-ana" href="#/kursiyerler">Kursiyerleri gör</a><button class="dg dg-cizgi" data-aktarim-geri>Bu aktarımı geri al</button><button class="dg dg-hafif" data-aktarim-yeni>Yeni dosya</button></div></div></div>`;
+  if (aktarim.sonuc) govde = `<div class="kart"><div class="kart-govde">${isaret('tamam', 34)}<h3 style="margin:10px 0 4px">${aktarim.sonuc.n} ${{ kursiyer: 'kursiyer', taksit: 'taksit', arac: 'araç', ogretmen: 'öğretmen' }[aktarim.sonuc.tur]} aktarıldı</h3><p style="color:var(--soluk)">${aktarim.sonuc.atla} satır hatalı olduğu için atlandı. ${{ kursiyer: 'Yapılmış ders sayısına göre aşamaları ayarlandı; KVKK rızası ilk ziyarette alınır. “Ödenen” sütunu devir (eski programda ödenmiş) olarak alındı, kasaya yazılmadı. Sırada taksit planı dosyası var: ödenmiş taksitler bu devirden düşülür, aynı para iki kez sayılmaz.', taksit: 'Ödenmiş taksitler öğrencinin bakiyesinde ödenmiş sayıldı ve “Ödenen” devrinden düşüldü; eski programdaki para olduğu için kasaya yeniden tahsilat yazılmadı. Ödenmemişler vadesinde hatırlatılır.', arac: 'Muayene ve sigorta bitişleri takibe alındı.' }[aktarim.sonuc.tur]}</p>${['kursiyer', 'taksit'].includes(aktarim.sonuc.tur) ? aktarimBakiye(aktarim.sonuc.id) : ''}${(aktarim.paraNot || []).length && aktarim.sonuc.tur === 'taksit' ? `<p class="ipucu uyari" style="margin-top:10px;text-align:left">${isaret('uyari', 18)}<span>Ödenmiş taksitler “Ödenen” sütunundan fazla: ${e(aktarim.paraNot.slice(0, 5).join(' · '))}${aktarim.paraNot.length > 5 ? '…' : ''}</span></p>` : ''}<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap"><a class="dg dg-ana" href="#/kursiyerler">Kursiyerleri gör</a><button class="dg dg-cizgi" data-aktarim-geri>Bu aktarımı geri al</button><button class="dg dg-hafif" data-aktarim-yeni>Yeni dosya</button></div></div></div>`;
   else if (aktarim.satirlar) {
     const veri = aktarim.satirlar, sonuc = veri.map(kontrolEt);
     const ok = sonuc.filter(s => !s.hata.length).length, hata = sonuc.length - ok, uy = sonuc.filter(s => !s.hata.length && s.uyari.length).length;
@@ -620,14 +620,24 @@ function aktarimSekme() {
 function aktarimUygula() {
   const id = 'akt' + Date.now(); let n = 0, atla = 0;
   if (aktarim.tur === 'taksit') {
+    // DIG-057: eski programda ödenmiş taksit kasaya yeniden tahsilat yazılmaz (para eski programın kasasından geçti); öğrenci bakiyesinde ödenmiş sayılır.
+    // Kursiyer dosyasındaki 'Ödenen' devir olarak alınmışsa ödenmiş taksitler devirden düşülür: aynı para iki kez sayılmaz. İki toplam tutmuyorsa öğrenci başına uyarı.
+    const kisi = new Map();
     aktarim.satirlar.map(kontrolEt).forEach(({ x, hata, k }) => {
       if (hata.length) { atla++; return; }
       const vade = tarihCoz(x.vade), od = tarihCoz(x.odeme), tutar = tutarCoz(x.tutar), yon = /kart|pos/i.test(x.yontem) ? 'Kart' : /havale|eft|banka/i.test(x.yontem) ? 'Havale' : 'Nakit';
-      k.odeme.taksitler.push({ vade, tutar, odendi: od || null, yontem: od ? yon : null, aktarim: id });
+      k.odeme.taksitler.push({ vade, tutar, odendi: od || null, yontem: od ? yon : null, aktarim: id, ...(od ? { devir: true } : {}) });
       k.odeme.taksitler.sort((a, b) => a.vade.localeCompare(b.vade));
-      if (od) S.hareket.unshift({ id: 'h' + Date.now() + n, tarih: od, tur: 'Gelir', kategori: 'Taksit', aciklama: tamAd(k) + ' · aktarılan taksit', tutar, yontem: yon, kursiyer: k.id, aktarim: id });
+      const o = kisi.get(k) || { odenmis: 0, adet: 0 }; if (od) { o.odenmis += tutar; o.adet++; } kisi.set(k, o);
       n++;
     });
+    const notlar = [];
+    kisi.forEach((o, k) => { const dv = k.odeme.devirAktarim; if (!o.adet || !dv) return;
+      const kalanDevir = Math.max(0, dv.tutar - o.odenmis), fazla = Math.max(0, o.odenmis - dv.tutar);
+      dv.dusumler = [...(dv.dusumler || []), { id, tutar: dv.tutar - kalanDevir }]; k.odeme.pesin = kalanDevir; dv.tutar = kalanDevir;   // geri alınabilsin diye düşülen tutar aktarım kimliğiyle saklanır
+      const m = `Taksit dosyasından ${o.adet} ödeme (${tl(o.odenmis)}) alındı; Excel’deki “Ödenen” bu yüzden ${kalanDevir ? tl(kalanDevir) + ' peşinat/devir olarak kaldı' : 'devir sayılmadı'}.` + (fazla ? ` Uyarı: ödenmiş taksitler “Ödenen” sütunundan ${tl(fazla)} fazla; eski programdaki bakiyeyi kontrol edin.` : '');
+      (k.notlar = k.notlar || []).push({ tarih: gun(0), metin: m }); if (fazla) notlar.push(tamAd(k) + ': ' + tl(fazla) + ' fazla'); });
+    aktarim.paraNot = notlar;
   } else if (aktarim.tur === 'ogretmen') {
     const RENK = ['#2f6fde', '#1f7a3e', '#b45309', '#6744b8', '#d52b1e', '#0f766e'];
     aktarim.satirlar.map(kontrolEt).forEach(({ x, hata }, i) => {
@@ -653,7 +663,7 @@ function aktarimUygula() {
     // direksiyon: öğrencinin gerekli saati (mevcut belge, otomatik, eski tip…); sınıfın genel saatiyle kırpılmaz
     const td = taslak.muaf ? SINIFLAR[sn].teorik : Math.min(SINIFLAR[sn].teorik, Math.round(tutarCoz(x.teorikDers))), dd = Math.min(gerekliDireksiyon(taslak), Math.round(tutarCoz(x.direksiyonDers)));
     const asama = dd > 0 || taslak.muaf ? 'Direksiyon' : td >= SINIFLAR[sn].teorik ? 'Sınav' : td > 0 ? 'Teorik' : 'Evrak';
-    const yeni = { id: 'k' + Date.now() + i, aktarim: id, ad: String(x.ad).trim(), soyad: String(x.soyad).trim(), tel: x.tel, tc: String(x.tc || '').trim(), dogumTarihi: tarihCoz(x.dogum), dogum: tarihCoz(x.dogum).slice(0, 4), adres: x.adres || '', ogrenim: '', sinif: sn, kayit: kt, egitmen: eg ? eg.id : null, sube: varsayilanSube(), asama, teorik: td, direksiyon: dd, evrak: Object.fromEntries(EVRAKLAR.map(([z]) => [z, false])), mebIslendi: aktarim.kaynak === 'MEBBİS', esinav: null, dsinav: null, odeme: { toplam, sozlesme: toplam, pesin: od, pesinTarih: kt, taksitler: [], senetli: false }, kaynak: 'Aktarım', yorum: null, notlar: [{ tarih: gun(0), metin: 'Eski programdan aktarıldı.' }], deneme: [], acil: null, kvkk: null };
+    const yeni = { id: 'k' + Date.now() + i, aktarim: id, ad: String(x.ad).trim(), soyad: String(x.soyad).trim(), tel: x.tel, tc: String(x.tc || '').trim(), dogumTarihi: tarihCoz(x.dogum), dogum: tarihCoz(x.dogum).slice(0, 4), adres: x.adres || '', ogrenim: '', sinif: sn, kayit: kt, egitmen: eg ? eg.id : null, sube: varsayilanSube(), asama, teorik: td, direksiyon: dd, evrak: Object.fromEntries(EVRAKLAR.map(([z]) => [z, false])), mebIslendi: aktarim.kaynak === 'MEBBİS', esinav: null, dsinav: null, odeme: { toplam, sozlesme: toplam, pesin: od, pesinTarih: kt, taksitler: [], senetli: false, ...(od ? { devirAktarim: { tutar: od, ilk: od, kaynak: 'Excel “Ödenen” sütunu', id } } : {}) }, kaynak: 'Aktarım', yorum: null, notlar: [{ tarih: gun(0), metin: 'Eski programdan aktarıldı.' }], deneme: [], acil: null, kvkk: null };
     ['mevcutEhliyet', 'oncekiBelge', 'mevcutOtomatik', 'mevcutEski'].forEach(a => { if (taslak[a]) yeni[a] = taslak[a]; });
     if (taslak.muaf) { yeni.muaf = taslak.muaf; yeni.esinav = { sonuc: 'Geçti', puan: null, tarih: taslak.muaf.esinavTarih, muaf: true }; }
     // il taban listesindeki satır aktarım anındaki hâliyle saklanır (kayıt formundaki gibi; denetimde dayanak)
@@ -663,6 +673,12 @@ function aktarimUygula() {
   });
   aktarim.sonuc = { id, n, atla, tur: 'kursiyer' }; aktarim.satirlar = null;
   islem('Kursiyer aktardı', n + ' kayıt'); kaydet();
+}
+// DIG-057: aktarım sonunda bakiye özeti — eski programın bakiye raporuyla karşılaştırılacak toplamlar
+function aktarimBakiye(id) {
+  const l = S.kursiyerler.filter(k => k.aktarim === id || (k.odeme.taksitler || []).some(t => t.aktarim === id)); if (!l.length) return '';
+  const top = l.reduce((a, k) => a + (k.odeme.toplam || 0) + ekToplam(k), 0), od = l.reduce((a, k) => a + odenen(k), 0), kal = l.reduce((a, k) => a + kalanBorc(k), 0), dv = l.reduce((a, k) => a + ((k.odeme.devirAktarim || {}).tutar || 0), 0);
+  return `<div class="ipucu" style="margin-top:12px;text-align:left">${isaret('bilgi', 20)}<span><b>Bakiye özeti (${l.length} öğrenci):</b> sözleşme ${tl(top)}, ödenen ${tl(od)}${dv ? ` (bunun ${tl(dv)}’si “Ödenen” sütunundan devir)` : ''}, kalan ${tl(kal)}. Bu toplamı eski programın bakiye raporuyla karşılaştırın. Eski programda ödenmiş taksitler kasaya yeniden tahsilat olarak yazılmadı.</span></div>`;
 }
 
 /* ================= GÖRÜNÜM ================= */
@@ -899,7 +915,8 @@ export function ayarBaglan(k) {
     if (t.closest('[data-sablon-csv]')) csvIndir(`sinyal-${aktarim.tur}-sablonu.csv`, [TUR_ALAN().map(a => a[1]), { kursiyer: ['12345678950', 'Ali', 'Yıldız', '0532 000 00 01', '14.03.2004', 'B', '02.10.2026', '24000', '8000', 'Odunpazarı', '12', '3', 'Yok', '', '', '', ''], taksit: ['12345678950', '02.11.2026', '4000', '', 'Kart'], arac: ['26 AB 123', 'Renault Clio', '2023', 'B', '12.05.2027', '01.03.2027'] }[aktarim.tur]]);
     if (t.closest('[data-aktar-onay]')) { aktarimUygula(); yenile(); }
     if (t.closest('[data-aktarim-yeni]')) { aktarim.satirlar = null; aktarim.sonuc = null; yenile(); }
-    if (t.closest('[data-aktarim-geri]')) { const id = aktarim.sonuc.id; S.kursiyerler = S.kursiyerler.filter(x => x.aktarim !== id); S.kursiyerler.forEach(k => { k.odeme.taksitler = k.odeme.taksitler.filter(x => x.aktarim !== id); }); S.hareket = S.hareket.filter(x => x.aktarim !== id); S.araclar = S.araclar.filter(x => x.aktarim !== id); islem('Aktarımı geri aldı', aktarim.sonuc.n + ' kayıt'); kaydet(); aktarim.sonuc = null; bildir('Aktarım geri alındı'); yenile(); }
+    if (t.closest('[data-aktarim-geri]')) { const id = aktarim.sonuc.id; S.kursiyerler.forEach(k => { const dv = k.odeme && k.odeme.devirAktarim; if (!dv || !dv.dusumler) return; const d = dv.dusumler.filter(x => x.id === id).reduce((a, x) => a + x.tutar, 0); if (d) { k.odeme.pesin += d; dv.tutar += d; } dv.dusumler = dv.dusumler.filter(x => x.id !== id); });   // DIG-057: devirden düşülen geri eklenir
+      S.kursiyerler = S.kursiyerler.filter(x => x.aktarim !== id); S.kursiyerler.forEach(k => { k.odeme.taksitler = k.odeme.taksitler.filter(x => x.aktarim !== id); }); S.hareket = S.hareket.filter(x => x.aktarim !== id); S.araclar = S.araclar.filter(x => x.aktarim !== id); islem('Aktarımı geri aldı', aktarim.sonuc.n + ' kayıt'); kaydet(); aktarim.sonuc = null; bildir('Aktarım geri alındı'); yenile(); }
   });
 }
 
