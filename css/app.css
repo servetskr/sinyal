@@ -3531,3 +3531,7 @@ button.rozet:focus-visible { outline: 2px solid var(--levha); outline-offset: 2p
 /* PAR-036: süzülen kayıtların istatistiği ve toplu işlem */
 .suz-ist { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; padding: 8px 20px; font-size: 13.5px; color: var(--soluk); border-top: 1px solid var(--cizgi-2); }
 .suz-ist b { color: var(--murekkep); }
+/* PAR-056/057: gider faturası bölümü */
+.alis-alan { border: 1px solid var(--cizgi); border-radius: 8px; padding: 10px 12px 12px; }
+.alis-alan legend { font-weight: 700; font-size: 14px; color: var(--murekkep); padding: 0 4px; }
+.alis-alan legend small { font-weight: 400; color: var(--soluk); }

@@ -16,6 +16,7 @@ import { kurallariHazirla, zamanliKural, kuralSaati, ornekGonder, zamanlayiciCal
 import * as MM from './mesaj.js?v=234';
 import * as BL from './bulut.js?v=234';
 import * as KR from './kurallar.js?v=234';
+import * as CR from './cari.js?v=234';
 import { SINIF_VARSAYILAN, gecisSatirlari, DERS_SAAT_VARSAYILAN, planAyar, gerekliDireksiyon, geceGerekli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, sinavHakSiniri, DERS_KURAL_TARIH, kuralAyar, mebKurum, programAcik, varsayilanYontem } from './veri.js?v=234';
 import { listeAdi, gecerlilikMetni } from './taban.js?v=234';
 import * as RK from './rapor-kasa.js?v=234';
@@ -336,6 +337,7 @@ export function kasa(alt) {
     <div class="kart"><div class="kart-bas"><h3>Gün sonu</h3><small>${bugunMetni2()}</small><div class="sag"><button class="dg dg-ana dg-kucuk" data-gunsonu ${S.gunSonu.includes(gun(0)) ? 'disabled' : ''}>${S.gunSonu.includes(gun(0)) ? 'Gün kapatıldı' : 'Günü kapat'}</button>${mudurMu() && S.gunSonu.length ? `<button class="dg dg-hafif dg-kucuk" data-gun-ac>Kapatılmış günü aç</button>` : ''}</div></div>${gunAcikListe()}<div class="kart-govde">${(r => `<div class="izgara iz-4" style="margin-bottom:14px"><div class="gosterge-k"><small>Ciro</small><b>${tl(r.ciro)}</b><span>tahsilat − iptal − iade</span></div><div class="gosterge-k"><small>Masraf</small><b>${tl(r.masraf)}</b><span>bugünkü gider</span></div><div class="gosterge-k"><small>Günlük kasa</small><b>${tl(r.gunluk)}</b><span>giren − çıkan nakit</span></div><div class="gosterge-k"><small>Devreden kasa</small><b>${r.devreden == null ? '—' : tl(r.devreden)}</b><span>gün sonunda kasada</span></div></div>`)(RK.gunSonuHesap(gun(0)))}<dl class="bilgi-tablo"><dt>Nakit (gelir − gider)</dt><dd>${tl(yon('Nakit'))}</dd><dt>Kart (gelir − gider)</dt><dd>${tl(yon('Kart'))}</dd><dt>Havale / EFT (gelir − gider)</dt><dd>${tl(yon('Havale'))}</dd><dt>Bugünkü gider</dt><dd>${tl(gC.reduce((a, h) => a + h.tutar, 0))}</dd><dt>Kasada olması gereken</dt><dd>${tl(hesapBakiye(S.hesaplar.find(x => x.id === varsayilanHesap('Nakit', gorunum.sube)) || S.hesaplar[0]))}</dd><dt>İşlem sayısı</dt><dd>${gG.length + gC.length}</dd></dl><div class="alan" style="margin-top:14px;max-width:320px"><label for="sayim">Kasada sayılan nakit (₺)</label><input id="sayim" inputmode="numeric" placeholder="${hesapBakiye(S.hesaplar.find(x => x.id === varsayilanHesap('Nakit', gorunum.sube)) || S.hesaplar[0])}" ${S.gunSonu.includes(gun(0)) ? 'disabled' : ''}><small id="sayim-fark" style="color:var(--soluk)"></small></div><p style="font-size:13.5px;color:var(--soluk);margin-top:12px">Kasadaki nakdi sayıp yazın. Günü kapatınca özet kurs müdürüne WhatsApp’tan gider${EP.raporAyar().gunluk ? '; kursun onaylı bir e-posta adresi varsa günlük rapor e-postası da gider' : ''}. Kapatılan güne kayıt eklenemez.</p></div></div>`; }
   if (durum.kasa === 'vade') govde = RK.vadeHtml();
   if (durum.kasa === 'fatura') govde = faturaListesiHtml();
+  if (durum.kasa === 'cari') govde = CR.cariHtml();
   if (durum.kasa === 'analiz') govde = RK.analizHtml();
   if (durum.kasa === 'geciken') govde = `<div class="kart"><div class="kart-bas"><h3>Geciken taksitler</h3><small>${gec.length} taksit · ${tl(gecikenT)}</small><div class="sag"><button class="dg dg-wp dg-kucuk" data-toplu>${ik('wp')}Hepsine hatırlat</button></div></div><div class="tablo-kap" style="margin-top:10px"><table class="tablo tablo-mobil"><thead><tr><th>Kursiyer</th><th>Vade</th><th>Gecikme</th><th class="sag">Tutar</th><th></th></tr></thead><tbody>${gec.map(x => taksitSatir(x, true)).join('') || `<tr><td colspan="5">${bos('Geciken taksit yok', 'Tüm ödemeler zamanında.')}</td></tr>`}</tbody></table></div></div>`;
   return {
@@ -348,11 +350,12 @@ export function kasa(alt) {
     </div><div class="ara-bosluk"></div>
     <div class="kart"><div class="kart-bas"><h3>Son 6 ay</h3><small><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--levha)"></i> gelir &nbsp; <i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#f0c9c4"></i> gider</small></div><div class="kart-govde">${cubukGrafik(grafik, { bicim: v => sayi(Math.round(v / 1000)) + 'k', seri2: 'Gider' })}</div></div>
     <div class="ara-bosluk"></div>
-    <div class="bolum-bas"><div id="sek">${sekmeler([['hareket', 'Hareketler'], ['takvim', 'Taksit takvimi', yaklasan.length], ['geciken', 'Gecikenler', gec.length], ['senet', 'Senetler', senetler.filter(x => !x.t.odendi).length], ['vade', 'Vade raporu'], ['hesap', 'Kasa ve banka'], ['analiz', 'Gün sonu analizi'], ...((S.faturalar || []).length ? [['fatura', 'Faturalar', (S.faturalar || []).filter(f => f.durum === 'taslak').length]] : [])], durum.kasa)}</div><div class="sag"><button class="dg dg-cizgi" data-fatura>${ik('belge')}e-Arşiv fatura</button><button class="dg dg-ana" data-hareket>${ik('arti')}Gelir / gider ekle</button></div></div>
+    <div class="bolum-bas"><div id="sek">${sekmeler([['hareket', 'Hareketler'], ['takvim', 'Taksit takvimi', yaklasan.length], ['geciken', 'Gecikenler', gec.length], ['senet', 'Senetler', senetler.filter(x => !x.t.odendi).length], ['vade', 'Vade raporu'], ['hesap', 'Kasa ve banka'], ['analiz', 'Gün sonu analizi'], ...((S.tedarikciler || []).length ? [['cari', 'Tedarikçiler', (S.alisFaturalari || []).filter(a => !a.iptal && CR.alisKalan(a) > 0 && fark(a.vade) < 0).length]] : []), ...((S.faturalar || []).length ? [['fatura', 'Faturalar', (S.faturalar || []).filter(f => f.durum === 'taslak').length]] : [])], durum.kasa)}</div><div class="sag"><button class="dg dg-cizgi" data-fatura>${ik('belge')}e-Arşiv fatura</button><button class="dg dg-ana" data-hareket>${ik('arti')}Gelir / gider ekle</button></div></div>
     ${govde}`,
     baglan(k) {
       if (durum.kasa === 'vade') RK.vadeBaglan(k, yenile);
       if (durum.kasa === 'analiz') RK.analizBaglan(k, yenile);
+      if (durum.kasa === 'cari') CR.cariBagla(k, yenile);
       const sy = k.querySelector('#sayim'); if (sy) sy.addEventListener('input', () => { const f = (tutarOku(sy.value) || 0) - +sy.placeholder; k.querySelector('#sayim-fark').innerHTML = sy.value ? (f ? `<b style="color:var(--kirmizi)">Fark ${f > 0 ? '+' : ''}${tl(f)}</b>` : '<b style="color:var(--yesil)">Kasa tutuyor</b>') : ''; });
       k.addEventListener('click', ev => {
         const t = ev.target;
@@ -528,15 +531,19 @@ export function hareketEkle() {
       <div class="alan"><label>Tutar (₺)</label><input name="tutar" inputmode="numeric" required placeholder="0"></div>
       <div class="alan"><label>Tarih</label><input type="date" name="tarih" value="${gun(0)}"></div>
       <div class="alan"><label>Yöntem</label><select name="y">${YONTEMLER.map(y => `<option value="${y}">${yontemAd(y)}</option>`).join('')}</select></div>${hesapSecici('Nakit')}
-      <div class="alan tam"><label>Açıklama</label><input name="a" placeholder="Örn. 26 SN 214 yakıt"></div></form>`,
+      <div class="alan tam"><label>Açıklama</label><input name="a" placeholder="Örn. 26 SN 214 yakıt"></div>${CR.faturaAlaniHtml()}</form>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-h">Kaydet</button>`,
     onAc(d) { const f0 = d.querySelector('form'), yeniGoster = () => { f0.katYeni.hidden = f0.kat.value !== '__yeni'; if (!f0.katYeni.hidden) f0.katYeni.focus(); };
       f0.addEventListener('change', ev => { if (ev.target.name === 'tur') { f0.kat.innerHTML = katSecenek(f0.tur.value); yeniGoster(); } if (ev.target.name === 'kat') yeniGoster(); });
       const kd = d.querySelector('[data-kt-duzen]'); if (kd) kd.addEventListener('click', () => { kapatPencere(); kategoriPenceresi(); });
+      CR.faturaAlaniBagla(f0);  // PAR-056/057
       d.querySelector('form').addEventListener('submit', ev => { ev.preventDefault(); const f = ev.target, v = tutarOku(f.tutar.value); if (!v) return bildir('Tutar girin', 'uyari');
         if (f.kat.value === '__yeni') { const ad = f.katYeni.value.trim().replace(/\s+/g, ' '); if (!ad) { f.katYeni.focus(); return bildir('Yeni kategorinin adını yazın', 'uyari'); } const var_ = kategoriler(f.tur.value).find(x => x.toLocaleLowerCase('tr') === ad.toLocaleLowerCase('tr'));
           if (!var_) { const o = { ...(S.kurs.kategoriler || {}) }; o[f.tur.value] = [...(o[f.tur.value] || []), ad]; S.kurs.kategoriler = o; islem('Kategori ekledi', f.tur.value + ' · ' + ad); }
-          const op = document.createElement('option'); op.textContent = var_ || ad; op.selected = true; f.kat.prepend(op); } if (S.gunSonu.includes(f.tarih.value)) return bildir(tamTarih(f.tarih.value) + ' günü kapatıldı; bu tarihe kayıt eklenemez', 'uyari'); S.hareket.unshift({ id: 'h' + Date.now(), tarih: f.tarih.value, tur: f.tur.value, kategori: f.kat.value, aciklama: f.a.value || f.kat.value, tutar: v, yontem: f.y.value, ...hesapOku(f, f.y.value) }); islem(f.tur.value + ' ekledi', (f.a.value || f.kat.value) + ' · ' + tl(v)); kaydet(); kapatPencere(); bildir('Kaydedildi'); yenile(); }); },
+          const op = document.createElement('option'); op.textContent = var_ || ad; op.selected = true; f.kat.prepend(op); } if (S.gunSonu.includes(f.tarih.value)) return bildir(tamTarih(f.tarih.value) + ' günü kapatıldı; bu tarihe kayıt eklenemez', 'uyari');
+        const fa = CR.faturaOku(f, { tutar: v, tarih: f.tarih.value || gun(0), kategori: f.kat.value, aciklama: f.a.value.trim() }); if (fa && fa.hata) return bildir(fa.hata, 'uyari');
+        if (fa && fa.vadeli) { kaydet(); kapatPencere(); bildir('Vadeli gider faturası kaydedildi; kasaya ödeme yapınca Kasa › Tedarikçiler › Öde'); return yenile(); }
+        const hid = 'h' + Date.now(); S.hareket.unshift({ id: hid, tarih: f.tarih.value, tur: f.tur.value, kategori: f.kat.value, aciklama: f.a.value || f.kat.value, tutar: v, yontem: f.y.value, ...hesapOku(f, f.y.value), ...(fa ? { alis: fa.a.id, tedarikci: fa.a.tedarikci } : {}) }); if (fa) fa.a.odemeler.push(hid); islem(f.tur.value + ' ekledi', (f.a.value || f.kat.value) + ' · ' + tl(v)); kaydet(); kapatPencere(); bildir('Kaydedildi'); yenile(); }); },
   });
 }
 // PAR-054: fatura yaşam döngüsü — taslak (entegratör yok, mali değeri yok) → kesildi (GİB'e iletildi ya da müşavir kesti) → iptal.
