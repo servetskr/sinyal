@@ -334,3 +334,20 @@ export async function hatirlatmaEpostaGonder(k) {
   } catch (x) { mesajHata(x); }
 }
 export const ogrenciEpostasiVar = ogrEpostaVar;
+
+// ---- YON-069: sözleşme / onay metninin e-posta kopyası (metin + SHA-256) ----
+// Worker 'sozlesme' türü: yalnız müdür; alıcı onaylayanın doğrulanmış hesap e-postası ve kursun onaylı yönetici adresleri; belge + sürüm başına bir kez.
+// Metin, özetin hesaplandığı hâliyle (aynı karakterler) gönderilir: e-postadaki metnin SHA-256'sı onay kaydındakiyle aynı çıkar.
+export async function sozlesmeKopyasi({ id, baslik, surum, metin, ozet, kim, zaman }) {
+  if (!bulutta() || !bulutKanca.yetki) return { demo: true };
+  const kurs = S.kurs.ad || 'Kurs', tarihS = new Date(zaman).toLocaleString('tr-TR');
+  const govde = [
+    `<p style="margin:0 0 12px;font-size:15px;line-height:1.55"><b>${e(kurs)}</b> adına <b>${e(kim || 'kurs müdürü')}</b>, ${e(tarihS)} tarihinde “${e(baslik)}” metnini (sürüm ${+surum || 1}) mdSinyal’de e-onayladı. Onaylanan metnin tam hâli aşağıdadır.</p>`,
+    not(`<b>SHA-256 özeti:</b><br><span style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;word-break:break-all">${e(ozet)}</span><br>Metnin özeti onay kaydındakiyle aynıdır; metin değişirse özet de değişir.`),
+    bolum('Onaylanan metin', `<div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:${R.murekkep};white-space:pre-wrap">${e(metin)}</div>`),
+  ].join('\n');
+  return istek('eposta/gonder', { tur: 'sozlesme', donem: (String(id).replace(/[^\w]/g, '') + '-' + (+surum || 1)).slice(0, 20), konu: `${kurs} · ${baslik} · e-onay kopyası`,
+    html: kabuk({ ust: kurs + ' · ' + tarihS, baslik: 'E-onay kopyası', govde, onizleme: baslik + ' · sürüm ' + (+surum || 1) + ' · SHA-256 ' + String(ozet).slice(0, 12),
+      alt: 'Bu e-posta, onayın kaydı olarak onaylayan kişinin hesap e-postasına ve kursun onaylı yönetici adreslerine gönderildi. Saklamanız önerilir.' }),
+    metin: [`${kurs} · ${baslik} · sürüm ${+surum || 1}`, `E-onaylayan: ${kim || ''} · ${tarihS}`, `SHA-256: ${ozet}`, '', metin].join('\n') });
+}

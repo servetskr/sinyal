@@ -456,8 +456,15 @@ const ONIZLEME = {
 // KV: 'epadres:<kurs>' adres listesi (belirteç tutulmaz) · 'eponay:<belirteç>' 7 gün · 'epsay:<kurs>:<gün>' sayaç 2 gün · 'epgitti:<kurs>:<tür>:<dönem>' 40 gün
 // Bu anahtarlar GET /k/ okuyucusunda engelli (iç kayıt). Sayaç ve 'bir kez' kaydı KV'de oku-yaz: paralel isteklerde YAKLAŞIK sınırdır.
 // Ücretsiz Workers planında istek başına işlemci süresi kısa: ek en çok ~1,2 milyon base64 karakter (~900 KB), worker eki ayrıştırmaz.
-const EP_TUR = ['gunluk', 'haftalik', 'aylik', 'deneme', 'yedek'], EP_EN_FAZLA_ADRES = 3;
+// YON-069: 'sozlesme' — sözleşme / onay metninin kopyası (metin + SHA-256): yalnız müdür; alıcı onaylayanın doğrulanmış hesap e-postası
+// (Firebase belirtecindeki email, email_verified) ve kursun onaylı yönetici adresleri; belge + sürüm başına bir kez (donem), ek yok.
+const EP_TUR = ['gunluk', 'haftalik', 'aylik', 'deneme', 'yedek', 'sozlesme'], EP_EN_FAZLA_ADRES = 3;
 const epGecerli = a => /^[^\s@<>,;"]{1,64}@[A-Za-z0-9.-]{1,180}\.[A-Za-z]{2,24}$/.test(a);
+// isteği yapanın doğrulanmış hesap e-postası (belirteç uyeRol'de Firestore'a gösterilerek doğrulanır; öğrenci giriş adresleri hariç)
+function belirtecEposta(req) {
+  try { const p = JSON.parse(atob((req.headers.get('Authorization') || '').replace(/^Bearer /, '').split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))), a = String(p.email || '').trim().toLowerCase();
+    return p.email_verified === true && epGecerli(a) && !/@ogrenci\.sinyal\.app$/.test(a) ? a : ''; } catch (x) { return ''; }
+}
 const epGun = () => new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10);
 const b64 = s => { const b = new TextEncoder().encode(s); let x = ''; for (let i = 0; i < b.length; i += 0x8000) x += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(x); };
 const epKacis = s => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -779,12 +786,14 @@ async function eposta(req, env, url, yol, cevap) {
     let b; try { b = JSON.parse(ham); } catch (x) { return cevap({ ok: false, hata: 'gecersiz' }, 400); }
     const tur = EP_TUR.includes(b.tur) ? b.tur : null, donem = String(b.donem || '').replace(/[^\w-]/g, '').slice(0, 20);
     if (!tur || typeof b.html !== 'string' || b.html.length > 400e3) return cevap({ ok: false, hata: 'gecersiz' }, 400);
+    if (tur === 'sozlesme' && (rol !== 'mudur' || !donem)) return cevap({ ok: false, hata: rol !== 'mudur' ? 'Sözleşme kopyasını yalnız kurs müdürü alır' : 'gecersiz' }, rol !== 'mudur' ? 403 : 400);
     // kullanıcı türündeki adreslere yalnız günlük rapor gider (haftalık/aylık mali özet ve bütün veriler yöneticiye)
-    const kime = l.filter(x => x.onay && (x.tur !== 'kullanici' || tur === 'gunluk')).map(x => x.a); if (!kime.length) return cevap({ ok: false, adresYok: true, hata: 'Bu rapor için onaylı e-posta adresi yok' }, 400);
-    let ek = null; if (b.ek) { const ad = String(b.ek.ad || '').replace(/[^\w.-]/g, '').slice(0, 80); const v = b.ek.b64;
+    const kime = [...new Set([...(tur === 'sozlesme' ? [belirtecEposta(req)].filter(Boolean) : []), ...l.filter(x => x.onay && (x.tur !== 'kullanici' || tur === 'gunluk')).map(x => x.a)])];
+    if (!kime.length) return cevap({ ok: false, adresYok: true, hata: 'Bu rapor için onaylı e-posta adresi yok' }, 400);
+    let ek = null; if (b.ek && tur !== 'sozlesme') { const ad = String(b.ek.ad || '').replace(/[^\w.-]/g, '').slice(0, 80); const v = b.ek.b64;
       // eki baştan sona taramak işlemci süresini aşar: uzunluk ve uçlar denetlenir, geçersiz base64'ü sağlayıcı reddeder
       if (!/\.(xlsx|json|gz)$/.test(ad) || typeof v !== 'string' || v.length > 1.2e6 || v.length % 4 || !/^[A-Za-z0-9+/]{1,64}$/.test(v.slice(0, 64)) || !/^[A-Za-z0-9+/=]{1,64}$/.test(v.slice(-64))) return cevap({ ok: false, hata: 'ek geçersiz' }, 400); ek = { ad, b64: v }; }
-    const tek = ['gunluk', 'haftalik', 'aylik'].includes(tur) && donem ? 'epgitti:' + kurs + ':' + tur + ':' + donem : null;
+    const tek = ['gunluk', 'haftalik', 'aylik', 'sozlesme'].includes(tur) && donem ? 'epgitti:' + kurs + ':' + tur + ':' + donem : null;
     if (tek && await env.LINK.get(tek)) return cevap({ ok: true, zatenGitti: true });
     const s = await epSay(env, kurs); if (s.n >= (+env.EPOSTA_GUNLUK_SINIR || 12)) return cevap({ ok: false, hata: 'Bugünlük e-posta sınırı doldu' }, 429);
     try { await S.gonder({ kime, konu: String(b.konu || 'mdSinyal raporu').slice(0, 150), html: b.html, metin: String(b.metin || '').slice(0, 100e3), ek }); } catch (x) { console.error(x); return cevap({ ok: false, hata: 'Gönderilemedi' }, 502); }
