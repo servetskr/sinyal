@@ -14,6 +14,7 @@
 // /hata: uygulama hatalarının kişisel veri içermeyen kısa kaydı (POST, sitenin kendi adresinden); KV 'hata:<gün>:<iz>' 7 gün.
 //   GET /hata yalnız platform sahibine: Firebase oturum belirteci (sahip uid) ya da SAHIP_ANAHTAR (gizli) ile.
 // /eposta: kursun rapor ve yedek e-postaları (onaylı adreslere); /eposta/sahip platform sahibinin analiz e-postası. Ayrıntı eposta() üstünde.
+// /mebbis/ekran-alarm (YON-062): MEBBİS ekranı değişti alarmı sahibe WhatsApp şablonuyla, ekran başına günde bir; ayrıntı ekranAlarm() üstünde.
 //   /eposta/ogrenci (PAR-058): öğrenciye tek alıcılı makbuz / ödeme hatırlatması; ayrıntı epOgrenci() üstünde.
 // /mevzuat/*: mevzuat arama (sorgu gömme), kursa gelen MEB yazılarını yükleme/listeleme/silme, özet ve kaynaklı cevap. Ayrıntı mevzuatUc() üstünde.
 const IZINLI = ['https://mdsinyal.com', 'http://localhost:4481', 'http://127.0.0.1:4481'];
@@ -627,6 +628,40 @@ async function sms(req, env, url, yol, cevap) {
     return cevap({ ok: false, kod, hata: SMS_HATA[kod] || ('SMS gönderilemedi (Netgsm ' + (kod || 'cevap yok') + ')') }, 502);
   }
   return cevap({ ok: false }, 404);
+}
+// ---- YON-062: "MEBBİS ekranı değişti" alarmı platform sahibine WhatsApp şablonuyla ----
+// Kursun mdSinyal'i Yardımcı'dan ekran değişti bildirimi alınca (js/mebkayit.js ekranDegisti) POST /mebbis/ekran-alarm {ekranlar:[{ekran,eksik}], yardimci}.
+// Aynı ekran için günde bir ileti (bütün kurslar için ortak: ekran MEB'de değişince hepsini etkiler), günde en çok EKRAN_ALARM_GUNLUK (varsayılan 10) ileti.
+// Gönderen mdSinyal'in kendi hattı (PHONE_ID + WA_TOKEN), alıcı SAHIP_TEL; şablon EKRAN_ALARM_SABLON (varsayılan mebbis_ekran_alarmi, hizmet/UTILITY)
+// ve EKRAN_ALARM_DIL (varsayılan tr), tek gövde değişkeni. Meta'ya onaya gönderilecek şablon metni taslağı:
+//   "mdSinyal uyarısı: MEBBİS ekranı değişti. {{1}}. Yardımcı bu ekranın işlerini durdurdu; ekran haritasını güncelleyin."
+// KV: 'ekalarm:<EKRAN>:<gün>' 2 gün (kursun kimliği), 'ekalarm:say:<gün>' 2 gün. SAHIP_TEL tanımlı değilse yalnız {ok, kurulu:false} döner.
+const EKRAN_KOD = /^SKT\d{5}$/;
+async function ekranAlarm(req, env, cevap, kurs) {
+  if (!env.LINK) return cevap({ ok: false, hata: 'Depo yok' }, 500);
+  const b = await req.json().catch(() => ({}));
+  const l = (Array.isArray(b.ekranlar) ? b.ekranlar : []).slice(0, 10).map(x => ({ kod: String((x && x.ekran) || '').toUpperCase(), eksik: (Array.isArray(x && x.eksik) ? x.eksik : []).map(String).filter(y => /^[\w$.:-]{1,40}$/.test(y)).slice(0, 6) })).filter(x => EKRAN_KOD.test(x.kod));
+  if (!l.length) return cevap({ ok: false, hata: 'Ekran kodu geçersiz' }, 400);
+  if (!env.SAHIP_TEL || !env.WA_TOKEN || !env.PHONE_ID) return cevap({ ok: true, kurulu: false, gonderildi: [] });
+  const gun = epGun(), yeni = [];
+  for (const x of l) { if (yeni.some(y => y.kod === x.kod)) continue; if (!(await env.LINK.get('ekalarm:' + x.kod + ':' + gun))) yeni.push(x); }
+  if (!yeni.length) return cevap({ ok: true, gonderildi: [], zaten: true });
+  const sa = 'ekalarm:say:' + gun, n = +((await env.LINK.get(sa)) || 0);
+  if (n >= (+env.EKRAN_ALARM_GUNLUK || 10)) return cevap({ ok: true, gonderildi: [], sinir: true });
+  // önce işaretlenir (aynı anda gelen iki bildirim iki ileti göndermesin), gönderilemezse işaret kaldırılır
+  for (const x of yeni) await env.LINK.put('ekalarm:' + x.kod + ':' + gun, kurs, { expirationTtl: 2 * 86400 });
+  await env.LINK.put(sa, String(n + 1), { expirationTtl: 2 * 86400 });
+  const kursAd = (await kursAdiOku(req, kurs)) || 'bir kurs', yrd = String(b.yardimci || '').replace(/[^\w.-]/g, '').slice(0, 12);
+  const metin = yeni.map(x => x.kod + (x.eksik.length ? ' (eksik: ' + x.eksik.join(', ') + ')' : '')).join('; ') + ' · bildiren: ' + kursAd + (yrd ? ' · Yardımcı ' + yrd : '');
+  const r = await fetch('https://graph.facebook.com/v25.0/' + env.PHONE_ID + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + env.WA_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify(sablonGovde(rakam(env.SAHIP_TEL), env.EKRAN_ALARM_SABLON || 'mebbis_ekran_alarmi', env.EKRAN_ALARM_DIL || 'tr', metin)) }).catch(() => null);
+  const j = r ? await r.json().catch(() => ({})) : {};
+  if (!r || !r.ok) {
+    for (const x of yeni) await env.LINK.delete('ekalarm:' + x.kod + ':' + gun).catch(() => {});
+    await env.LINK.put(sa, String(n), { expirationTtl: 2 * 86400 }).catch(() => {});
+    console.error(JSON.stringify({ tur: 'hata', konu: 'ekran alarmı WhatsApp', kod: j.error && j.error.code, hata: String((j.error && j.error.message) || 'ulaşılamadı').slice(0, 200) }));
+    return cevap({ ok: false, hata: 'WhatsApp iletisi gönderilemedi' }, 502);
+  }
+  return cevap({ ok: true, gonderildi: yeni.map(x => x.kod) });
 }
 // ---- PAR-058: öğrenciye tek alıcılı e-posta (makbuz, ödeme hatırlatması) ----
 // Alıcı istekteki tek adres (öğrencinin kayıttaki e-postası); kursun onaylı adres listesi aranmaz. Kötüye kullanım engeli: yalnız ofis rolleri
@@ -1543,6 +1578,7 @@ export default {
     let rol = null;
     if (gercek) { rol = await uyeRol(req, kursId); if (!rol || !PERSONEL.includes(rol)) return cevap({ ok: false, hata: 'Yetki yok' }, 403); }
     if (yol === 'belge/oku') return belgeOku(req, env, cevap, { gercek, rol, kursId });   // KAY-033
+    if (yol === 'mebbis/ekran-alarm') return gercek && req.method === 'POST' ? ekranAlarm(req, env, cevap, kursId) : cevap({ ok: false, hata: 'Yetki yok' }, 403);   // YON-062
     // mevzuat ve MEB yazıları: arama, yükleme, özet, cevap (kimlik ve yetki mevzuatUc() içinde; /mevzuat/gom demoya da açık)
     if (yol === 'mevzuat' || yol.startsWith('mevzuat/')) return mevzuat(req, env, url, yol, cevap, { gercek, rol, kursId, origin });
     // Kurs verisinin günlük yedeği (Firestore'dan ayrı yerde): kimlik, kullanıcının kendi Firebase oturumuyla Firestore'dan doğrulanır
@@ -1712,7 +1748,7 @@ export default {
     if (req.method === 'GET') {
       if (!yol) return cevap({ ok: true, hazir: !!(env.WA_TOKEN && env.PHONE_ID && env.ALICI), belge: true, kisa: !!env.LINK, kursHatti: true, sablon: !!env.SABLON_AD, demoHatlari: { usta: !!env.PHONE_ID_USTA, mudur: !!env.PHONE_ID_MUDUR } });
       const anahtar = yol.startsWith('k/') ? yol.slice(2) : yol;
-      if (/^(gelen$|(hat|hatno|gelen|medya|durum|yedek|kisaad|kursad|hata|sohbet|epadres|eponay|epsay|epgitti|epogr|mbelge)[:-])/.test(anahtar)) return cevap({ ok: false }, 404);  // iç kayıtlar (e-posta adresleri ve onay belirteçleri dahil) kısa link gibi okunamaz
+      if (/^(gelen$|(hat|hatno|gelen|medya|durum|yedek|kisaad|kursad|hata|sohbet|epadres|eponay|epsay|epgitti|epogr|ekalarm|mbelge)[:-])/.test(anahtar)) return cevap({ ok: false }, 404);  // iç kayıtlar (e-posta adresleri ve onay belirteçleri dahil) kısa link gibi okunamaz
       // imza dönüşü: sunucu kaydı (zaman, IP, ülke, tarayıcı) yalnız imza isteğinin mührünü bilen kursa verilir (?ka=)
       if (yol.startsWith('k/takip-') && env.LINK) {
         const g = await env.LINK.getWithMetadata(anahtar), md = g.metadata || null;
