@@ -3448,3 +3448,22 @@ input[type="tel"], input[inputmode="tel"], input[inputmode="numeric"], input[nam
 .dy-devam { background: none; border: 0; padding: 0; color: var(--levha); font: 700 14px var(--govde); cursor: pointer; }
 .dy-cizelge .dy-kart.dy-yeni { border-color: var(--levha); box-shadow: inset 3px 0 0 var(--levha); }
 .dy-bag-satir { margin: 6px 0 0; text-align: center; font-size: 13.5px; }
+
+/* DIG-011: kişisel not defteri */
+.nd-ekle { padding: 10px 16px 4px; }
+.nd-liste { list-style: none; margin: 4px 0 0; padding: 0 8px 8px; }
+.nd-satir { display: flex; gap: 10px; align-items: flex-start; padding: 8px; border-radius: 8px; border-left: 3px solid transparent; }
+.nd-satir + .nd-satir { margin-top: 2px; }
+.nd-satir:hover { background: var(--panel-2); }
+.nd-sari { border-left-color: #d9a400; } .nd-yesil { border-left-color: #2e8b57; } .nd-mavi { border-left-color: var(--levha); } .nd-kirmizi { border-left-color: var(--kirmizi); }
+.nd-onay { flex: none; width: 22px; height: 22px; margin-top: 1px; border: 1.5px solid var(--cizgi); border-radius: 6px; background: var(--panel); display: grid; place-items: center; cursor: pointer; padding: 0; }
+.nd-onay .ik { width: 14px; height: 14px; }
+.nd-tamam .nd-metin span { text-decoration: line-through; color: var(--soluk); }
+.nd-metin { flex: 1; min-width: 0; font-size: 14.5px; color: var(--murekkep); overflow-wrap: anywhere; }
+.nd-metin small { display: flex; gap: 4px; align-items: center; font-size: 12.5px; color: var(--soluk); margin-top: 2px; }
+.nd-metin small .ik { width: 13px; height: 13px; }
+.nd-alarm.gecti { color: var(--kirmizi); font-weight: 600; }
+.nd-dg { display: flex; gap: 2px; flex: none; }
+.nd-dg .dg-ikon { width: 30px; height: 30px; }
+.nd-bos { padding: 10px 8px; color: var(--soluk); font-size: 14px; }
+.nd-ac { background: none; border: 0; padding: 4px 16px 12px; color: var(--levha); font: 600 13.5px var(--govde); cursor: pointer; }

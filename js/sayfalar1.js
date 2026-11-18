@@ -21,6 +21,7 @@ import * as KR from './kurallar.js?v=234';
 import * as PL from './planlayici.js?v=234';
 import * as UY from './mebuyum.js?v=234';
 import * as PS from './psikoteknik.js?v=234';
+import * as NT from './notlar.js?v=234';
 import * as PK from './personel.js?v=234';
 import { listeAdi, satirAdi } from './taban.js?v=234';
 
@@ -166,6 +167,7 @@ export function genel(alt) {
       ], S.kurs.ad + ' · ' + bugunMetni())}
     </div>
     <div class="ara-bosluk"></div>
+    ${NT.notKarti() ? NT.notKarti() + '<div class="ara-bosluk"></div>' : ''}
     <div class="kart">
       <div class="kart-bas"><h3>Bugünün direksiyon dersleri</h3><small>${bugunDers.filter(d => d.durum === 'Yapıldı').length}/${bugunDers.length} tamamlandı</small><div class="sag"><a class="dg dg-cizgi dg-kucuk" href="#/plan">Planı aç</a></div></div>
       <ul class="liste" style="margin-top:8px">${bugunDers.length ? bugunDers.slice(0, 6).map(dersSatir).join('') : '<li>' + bos('Bugün direksiyon dersi yok', kapaliGun(gun(0)) ? (kapaliGun(gun(0)) === 'Pazar' ? 'Pazar günü kurs kapalı.' : 'Bugün resmî tatil; kurs kapalı.') : 'Plandan boş saatlere ders ekleyebilirsiniz.') + '</li>'}</ul>
@@ -199,6 +201,7 @@ export function genel(alt) {
     <div class="kart"><div class="kart-bas"><h3>Kursiyerler hangi aşamada?</h3><small>Bir aşamaya dokunun, o kursiyerler açılsın</small></div><div class="kart-govde"><div class="yolculuk-kap">${yolDurak}</div></div></div>
     </details>`,
     baglan(k) {
+      NT.notBaglan(k, yenile); setTimeout(NT.alarmlariGoster, 1500);   // DIG-011: kişisel not defteri ve alarmlar
       if (alt === 'evrak') { history.replaceState(null, '', '#/genel'); import('./evrak.js?v=234').then(m => m.sahipsizPencere(yenile)); }
       k.addEventListener('click', ev => { const pk = ev.target.closest('[data-per-kart-ana]'); if (pk) { const [tur, id] = pk.dataset.perKartAna.split(':'); PK.personelKarti(tur, id, 'genel'); } });
       const onburo = () => ((S.kullanicilar || []).find(u => u.rol === 'sekreter') || {}).ad || 'Ön büro';
