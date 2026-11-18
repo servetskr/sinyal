@@ -8,7 +8,7 @@ import { satirAdi, listeAdi } from './taban.js?v=234';
 
 /* ================= BELGELER VE ÇIKTILAR ================= */
 const gorunumSube = () => gorunum.sube;
-const BELGE_GRUP = { fatura: 'Kursiyer', sozlesme: 'Kursiyer', bilgi: 'Kursiyer', takip: 'Kursiyer', makbuz: 'Kursiyer', senet: 'Kursiyer', ek1: 'MEB resmî formları', ek5: 'MEB resmî formları', ek34: 'MEB resmî formları', ek8: 'MEB resmî formları', aracdosya: 'MEB resmî formları', ek12: 'MEB resmî formları', ek10: 'MEB resmî formları', hazir: 'MEB resmî formları', dersdefteri: 'MEB resmî formları', meis: 'MEB ve denetim', evrakdefteri: 'Defterler (md.42)', sertifikadefteri: 'Defterler (md.42)', yoklamadefteri: 'Defterler (md.42)', donemyedek: 'Defterler (md.42)', denetim: 'MEB ve denetim', devam: 'MEB ve denetim', program: 'MEB ve denetim', sinav: 'MEB ve denetim', dilekce: 'MEB ve denetim', hizmet: 'Sözleşme ve KVKK', vis: 'Sözleşme ve KVKK', aydinlatma: 'Sözleşme ve KVKK' };
+const BELGE_GRUP = { fatura: 'Kursiyer', sozlesme: 'Kursiyer', bilgi: 'Kursiyer', takip: 'Kursiyer', makbuz: 'Kursiyer', senet: 'Kursiyer', ek1: 'MEB resmî formları', ek5: 'MEB resmî formları', ek34: 'MEB resmî formları', ek8: 'MEB resmî formları', aracdosya: 'MEB resmî formları', ek12: 'MEB resmî formları', ek10: 'MEB resmî formları', hazir: 'MEB resmî formları', dersdefteri: 'MEB resmî formları', meis: 'MEB ve denetim', evrakdefteri: 'Defterler (md.42)', sertifikadefteri: 'Defterler (md.42)', yoklamadefteri: 'Defterler (md.42)', yoklamacizelge: 'Defterler (md.42)', teorikprogram: 'MEB ve denetim', donemyedek: 'Defterler (md.42)', denetim: 'MEB ve denetim', devam: 'MEB ve denetim', program: 'MEB ve denetim', sinav: 'MEB ve denetim', dilekce: 'MEB ve denetim', hizmet: 'Sözleşme ve KVKK', vis: 'Sözleşme ve KVKK', aydinlatma: 'Sözleşme ve KVKK' };
 const SABLONLAR = [
   ['sozlesme', 'Kursiyer sözleşmesi', 'Ücret, taksit planı ve imza alanlarıyla', 'kursiyer'],
   ['bilgi', 'Kursiyer bilgi formu', 'Kimlik, iletişim, acil durum kişisi, evrak durumu', 'kursiyer'],
@@ -33,6 +33,8 @@ const SABLONLAR = [
   ['evrakdefteri', 'Gelen-giden evrak kayıt defteri', 'Kursa gelen ve kurstan giden resmî yazılar; yıl içinde sıra numaralı', 'defter'],
   ['sertifikadefteri', 'Sertifika defteri', 'Verilen sertifikalar; teslim tarihi ve imza sütunuyla', 'defter'],
   ['yoklamadefteri', 'Kursiyer yoklama defteri', 'Teorik derslerin yoklaması, grup ve ders ders', 'defter'],
+  ['yoklamacizelge', 'Yoklama çizelgesi (imzalı)', 'Grubun dersleri için imza sütunlu çizelge; sütun ve sayfa başına kursiyer ayarlı', 'defter'],
+  ['teorikprogram', 'Teorik ders programı', 'Tarih, saat, ders, öğretici, derslik; ders başına saat özeti', 'defter'],
   ['donemyedek', 'Dönem sonu yedeği (md.42/3)', 'Defterlerin ve ders defterinin dönem sonu yedeği tek dosyada', 'defter'],
   ['devam', 'Teorik devam çizelgesi', 'Gruplara göre katılım ve imza sütunu', 'tek'],
   ['hizmet', 'mdSinyal hizmet sözleşmesi', 'Erişilebilirlik, sorumluluk, veri teslimi, fesih', 'tek'],

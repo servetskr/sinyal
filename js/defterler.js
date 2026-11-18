@@ -8,6 +8,8 @@ export const DEFTERLER = [
   ['evrakdefteri', 'Gelen-giden evrak kayıt defteri (md.42)', 'Kursa gelen ve kurstan giden resmî yazılar; yıl içinde sıra numaralı', 'defter'],
   ['sertifikadefteri', 'Sertifika defteri', 'Verilen sertifika ve eğitim belgeleri; teslim tarihi ve imza sütunuyla', 'defter'],
   ['yoklamadefteri', 'Kursiyer yoklama defteri (md.42)', 'Teorik derslerin yoklaması, grup ve ders ders', 'defter'],
+  ['yoklamacizelge', 'Yoklama çizelgesi (imzalı)', 'Grubun dersleri için imza sütunlu çizelge; sütun ve sayfa başına kursiyer ayarlı', 'defter'],
+  ['teorikprogram', 'Teorik ders programı', 'Grubun teorik programı: tarih, saat, ders, öğretici, derslik; ders başına saat özeti', 'defter'],
   ['donemyedek', 'Dönem sonu yedeği (md.42/3)', 'Defterlerin ve ders defterinin dönem sonu yedeği tek dosyada', 'defter'],
 ];
 export function defterAc(tur) {
@@ -15,6 +17,8 @@ export function defterAc(tur) {
   if (tur === 'sertifikadefteri') return sertifikaDefteri();
   if (tur === 'yoklamadefteri') return yoklamaDefteri();
   if (tur === 'donemyedek') return donemYedegi();
+  if (tur === 'yoklamacizelge') return yoklamaCizelgesi();
+  if (tur === 'teorikprogram') return teorikProgram();
 }
 
 const trT = t => t ? String(t).slice(0, 10).split('-').reverse().join('.') : '';
@@ -179,3 +183,59 @@ function donemYedegi() {
 }
 // önizleme ve test için yazdırma çıktıları
 export const yazdirHtml = { evrak: () => evrakYazdirHtml(), sertifika: () => sertifikaYazdirHtml(), yoklama: () => yoklamaYazdirHtml() };
+
+/* ---------- Yoklama çizelgesi ve teorik ders programı çıktısı (TEO-013; Çizgi 'Belge Çıkart') ---------- */
+const durumC = { grup: '', sutun: 8, sayfa: 25, bas: '' };
+const GUN = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+const ogretmenAd = id => ((S.ogretmenler || []).find(o => o.id === id) || {}).ad || '';
+const grupDersleri = gid => S.teorik.filter(t => (t.grup || 'aksam') === gid).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat));
+const grupSecimi = (gl, v) => `<label class="vr-alan"><span>Grup</span><select class="girdi" data-c="grup">${gl.map(g => `<option value="${e(g.id)}" ${g.id === v ? 'selected' : ''}>${e(g.ad || g.id)}</option>`).join('')}</select></label>`;
+function cizelgeHtml() {
+  const g = gruplar().find(x => x.id === durumC.grup) || {}, kisiler = sb(S.kursiyerler).filter(k => (k.teorikGrup || '') === durumC.grup && !k.kapali).sort((a, b) => tamAd(a).localeCompare(tamAd(b), 'tr'));
+  const ders = grupDersleri(durumC.grup).filter(t => !durumC.bas || t.tarih >= durumC.bas).slice(0, durumC.sutun);
+  const bosSutun = Math.max(0, durumC.sutun - ders.length), sayfalar = []; for (let i = 0; i < Math.max(1, kisiler.length); i += durumC.sayfa) sayfalar.push(kisiler.slice(i, i + durumC.sayfa));
+  return `<div data-yatay>${sayfalar.map((l, j) => `<div style="${j ? 'page-break-before:always' : ''}">${BAS('KURSİYER YOKLAMA ÇİZELGESİ', (g.ad || '') + (sayfalar.length > 1 ? ` · sayfa ${j + 1}/${sayfalar.length}` : ''))}
+    <table style="font-size:10.5px"><tr><th style="width:24px">#</th><th style="width:88px">T.C. kimlik no</th><th style="min-width:130px">Adı soyadı</th>${ders.map(t => `<th style="font-weight:400">${trT(t.tarih)}<br>${e(t.saat || '')} · ${e(String(t.konu || '').slice(0, 14))}</th>`).join('')}${Array.from({ length: bosSutun }, () => '<th style="font-weight:400">…/…/……</th>').join('')}</tr>
+    ${l.map((k, i) => `<tr><td>${j * durumC.sayfa + i + 1}</td><td>${e(k.tc || '')}</td><td>${e(tamAd(k))}</td>${Array.from({ length: durumC.sutun }, () => '<td style="height:24px"></td>').join('')}</tr>`).join('') || `<tr><td colspan="${durumC.sutun + 3}">Bu grupta kursiyer yok</td></tr>`}
+    <tr><td></td><td></td><td>Öğreticinin adı ve imzası</td>${Array.from({ length: durumC.sutun }, (_, i) => `<td style="height:30px;font-size:9.5px">${ders[i] ? e(ogretmenAd(ders[i].ogretmen)) : ''}</td>`).join('')}</tr></table></div>`).join('')}${NOT}</div>`;
+}
+function yoklamaCizelgesi() {
+  const gl = gruplar(); if (!gl.length) return pencere({ baslik: 'Yoklama çizelgesi', icerik: '<p>Henüz teorik dersi olan grup yok.</p>', altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button>' });
+  if (!gl.some(g => g.id === durumC.grup)) durumC.grup = gl[0].id;
+  if (!durumC.bas) durumC.bas = gun(0);
+  const ust = () => `<div class="vr-suzgec" style="margin-top:0">${grupSecimi(gl, durumC.grup)}<label class="vr-alan"><span>İlk ders</span><input class="girdi" type="date" data-c="bas" value="${e(durumC.bas)}"></label><label class="vr-alan"><span>Sütun (ders)</span><select class="girdi" data-c="sutun">${[4, 6, 8, 10, 12].map(n => `<option ${n === durumC.sutun ? 'selected' : ''}>${n}</option>`).join('')}</select></label><label class="vr-alan"><span>Sayfa başına kursiyer</span><select class="girdi" data-c="sayfa">${[15, 20, 25, 30].map(n => `<option ${n === durumC.sayfa ? 'selected' : ''}>${n}</option>`).join('')}</select></label></div>`;
+  pencere({
+    baslik: 'Yoklama çizelgesi', genis: true,
+    icerik: `<div data-c-ust>${ust()}</div><div style="background:var(--zemin);padding:14px;border-radius:8px;max-height:56vh;overflow:auto"><div class="a4" data-c-a4>${cizelgeHtml()}</div></div>`,
+    altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-c-yazdir>${ik('belge')}Yazdır / PDF</button>`,
+    onAc(d) {
+      d.addEventListener('change', ev => { const x = ev.target.closest('[data-c]'); if (!x) return; durumC[x.dataset.c] = ['sutun', 'sayfa'].includes(x.dataset.c) ? +x.value : x.value; d.querySelector('[data-c-a4]').innerHTML = cizelgeHtml(); });
+      d.querySelector('[data-c-yazdir]').addEventListener('click', () => { belgeYazdir(cizelgeHtml(), 'Yoklama çizelgesi'); islem('Yoklama çizelgesini yazdırdı', (gl.find(g => g.id === durumC.grup) || {}).ad || ''); kaydet(); });
+    },
+  });
+}
+const DERS_HEDEF = [['Trafik ve Çevre', 16], ['İlk Yardım', 8], ['Araç Tekniği', 6], ['Trafik Adabı', 4]];
+// konu adından ders (gruplar.js konuNo ile aynı mantık; Türkçe büyük İ için önce küçük harfe çevrilir)
+const dersTuru = t => { const n = String(t.konu || '').toLocaleLowerCase('tr'); return /ilk ?yard/.test(n) ? 'İlk Yardım' : /araç|arac|motor|teknik/.test(n) ? 'Araç Tekniği' : /adab|adap/.test(n) ? 'Trafik Adabı' : 'Trafik ve Çevre'; };
+function programHtml() {
+  const g = gruplar().find(x => x.id === durumC.grup) || {}, l = grupDersleri(durumC.grup);
+  const top = DERS_HEDEF.map(([ad, hedef]) => [ad, hedef, l.filter(t => dersTuru(t) === ad).reduce((a, t) => a + (+t.sure || 1), 0)]);
+  return BAS('TEORİK DERS PROGRAMI', (g.ad || '') + (g.baslangic ? ' · ' + trT(g.baslangic) + ' başlangıç' : '')) + `<table style="font-size:11px"><tr><th style="width:26px">#</th><th>Tarih</th><th>Gün</th><th>Saat</th><th>Süre</th><th>Ders</th><th>Konu</th><th>Öğretici</th><th>Derslik</th></tr>
+    ${l.map((t, i) => `<tr><td>${i + 1}</td><td>${trT(t.tarih)}</td><td>${GUN[new Date(t.tarih + 'T12:00').getDay()]}</td><td>${e(t.saat || '')}</td><td>${t.sure || 1} saat</td><td>${e(dersTuru(t))}</td><td>${e(t.konu || '')}</td><td>${e(ogretmenAd(t.ogretmen))}</td><td>${e(t.salon || g.derslik || '')}</td></tr>`).join('') || '<tr><td colspan="9">Bu gruba teorik ders girilmemiş</td></tr>'}</table>
+    <p style="font-weight:700;margin:12px 0 4px">Ders başına saat</p><table style="font-size:11px;max-width:420px"><tr><th>Ders</th><th>Programda</th><th>Gereken</th></tr>${top.map(([ad, h, n]) => `<tr><td>${ad}</td><td>${n}</td><td>${h}${n < h ? ' <b>(' + (h - n) + ' eksik)</b>' : ''}</td></tr>`).join('')}<tr><td><b>Toplam</b></td><td><b>${top.reduce((a, x) => a + x[2], 0)}</b></td><td><b>34</b></td></tr></table>
+    <p style="font-size:10.5px;margin-top:10px">MTSK Yön. md.12/4, 23/1: teorik program dönem başlamadan MEBBİS’e girilir; günde 2–6 saat teorik ders (md.16/4).</p>`;
+}
+function teorikProgram() {
+  const gl = gruplar(); if (!gl.length) return pencere({ baslik: 'Teorik ders programı', icerik: '<p>Henüz teorik dersi olan grup yok.</p>', altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button>' });
+  if (!gl.some(g => g.id === durumC.grup)) durumC.grup = gl[0].id;
+  pencere({
+    baslik: 'Teorik ders programı', genis: true,
+    icerik: `<div class="vr-suzgec" style="margin-top:0">${grupSecimi(gl, durumC.grup)}</div><div style="background:var(--zemin);padding:14px;border-radius:8px;max-height:56vh;overflow:auto"><div class="a4" data-p-a4>${programHtml()}</div></div>`,
+    altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-cizgi" data-p-excel>${ik('indir')}Excel</button><button class="dg dg-ana" data-p-yazdir>${ik('belge')}Yazdır / PDF</button>`,
+    onAc(d) {
+      d.addEventListener('change', ev => { const x = ev.target.closest('[data-c="grup"]'); if (!x) return; durumC.grup = x.value; d.querySelector('[data-p-a4]').innerHTML = programHtml(); });
+      d.querySelector('[data-p-yazdir]').addEventListener('click', () => { belgeYazdir(programHtml(), 'Teorik ders programı'); islem('Teorik ders programını yazdırdı', (gl.find(g => g.id === durumC.grup) || {}).ad || ''); kaydet(); });
+      d.querySelector('[data-p-excel]').addEventListener('click', () => csvIndir('teorik-program-' + durumC.grup + '.csv', [['Tarih', 'Saat', 'Süre', 'Ders', 'Konu', 'Öğretici', 'Derslik'], ...grupDersleri(durumC.grup).map(t => [t.tarih, t.saat || '', t.sure || 1, dersTuru(t), t.konu || '', ogretmenAd(t.ogretmen), t.salon || ''])]));
+    },
+  });
+}
