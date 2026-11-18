@@ -3535,3 +3535,5 @@ button.rozet:focus-visible { outline: 2px solid var(--levha); outline-offset: 2p
 .alis-alan { border: 1px solid var(--cizgi); border-radius: 8px; padding: 10px 12px 12px; }
 .alis-alan legend { font-weight: 700; font-size: 14px; color: var(--murekkep); padding: 0 4px; }
 .alis-alan legend small { font-weight: 400; color: var(--soluk); }
+/* PAR-038: senet planı satırı */
+.sn-plan { display: grid; grid-template-columns: 1fr 1fr 36px; gap: 6px; margin-bottom: 6px; align-items: center; }

@@ -117,6 +117,25 @@ export function makbuzHtml(h, k) {
   const css = `<style>.mk-bas{display:flex;gap:12px;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:8px;margin-bottom:8px}.mk-logo{width:64px;height:64px;object-fit:contain}.mk-kes{border-top:1px dashed #777;margin:18px 0;text-align:center;font-size:10px;color:#777}.mk .imza{margin-top:26px}</style>`;
   return css + (A.nusha === 2 ? nusha('Kurs nüshası') + (A.boyut === 'A5' ? '<div class="sayfa-sonu"></div>' : '<div class="mk-kes">✂ kesiniz</div>') + nusha('Öğrenci nüshası') : nusha(''));
 }
+// PAR-038: senet (bono) — ayarlar öğrencide (k.odeme.senet): yazdırma türü cari (açık taksitler) | elle (plan: tutar + vade) | bos (boş senet),
+// borçlu bireysel ya da kurumsal (ünvan, VKN), bedel nakden | malen, kefil (ad, TC, adres), kopya sayısı; seri bonoda muacceliyet kaydı, yetkili mahkeme
+export const senetAyar = k => { const o = (k.odeme && k.odeme.senet) || {}; return { tur: ['elle', 'bos'].includes(o.tur) ? o.tur : 'cari', borclu: o.borclu === 'kurumsal' ? 'kurumsal' : 'bireysel', firma: o.firma || {}, bedel: o.bedel === 'Malen' ? 'Malen' : 'Nakden', kefil: o.kefil || {}, kopya: Math.max(1, Math.min(3, +o.kopya || 1)), plan: Array.isArray(o.plan) ? o.plan : [], mahkeme: o.mahkeme || S.kurs.sehir || '', duzenleme: o.duzenleme || k.odeme.pesinTarih || k.kayit }; };
+function senetHtml(k) {
+  const A = senetAyar(k), bos = A.tur === 'bos';
+  const l = bos ? [{ tutar: 0, vade: '' }] : A.tur === 'elle' ? A.plan.filter(x => +x.tutar > 0 && x.vade) : k.odeme.taksitler.map((t, i) => ({ tutar: t.tutar - (t.kismi || 0), vade: t.vade, i, t })).filter(x => !x.t.odendi && !x.t.iptal);
+  if (!l.length) return kursBas('Senet') + `<p>${A.tur === 'elle' ? 'Senet planında satır yok; öğrenci › Ödeme › Senet’ten tutar ve vade girin.' : 'Ödenmemiş taksit yok; senet düzenlenecek borç kalmadı.'}</p>`;
+  const bosAlan = (v, w = '') => v ? e(v) : `<span style="display:inline-block;min-width:${w || '160px'};border-bottom:1px dotted #777">&nbsp;</span>`;
+  const borcluTablo = A.borclu === 'kurumsal' ? `<tr><th style="width:30%">Ünvan</th><td>${bosAlan(A.firma.unvan)}</td></tr><tr><th>Vergi dairesi / no</th><td>${bosAlan([A.firma.vd, A.firma.vkn].filter(Boolean).join(' / '))}</td></tr><tr><th>Yetkili</th><td>${bosAlan(A.firma.yetkili || (bos ? '' : tamAd(k)))}</td></tr><tr><th>Adres</th><td>${bosAlan(A.firma.adres || (bos ? '' : k.adres))}</td></tr>`
+    : `<tr><th style="width:30%">Ad soyad</th><td>${bosAlan(bos ? '' : tamAd(k))}</td></tr><tr><th>TC kimlik no</th><td>${bosAlan(bos ? '' : k.tc)}</td></tr><tr><th>Adres</th><td>${bosAlan(bos ? '' : k.adres)}</td></tr>`;
+  const seri = l.length > 1, sayfa = (x, n) => `<h1>Bono (emre muharrer senet)</h1><p class="a4-alt">${x.i != null ? (x.i + 1) + '. taksit · ' : ''}${n + 1}/${l.length}${!bos ? ' · No S-' + String(k.id).slice(1) + '-' + (n + 1) : ''}</p>
+      <table><tr><th>Düzenleme yeri</th><td>${e(S.kurs.sehir || '')}</td><th>Düzenleme tarihi</th><td>${bos ? bosAlan('') : tamTarih(A.duzenleme)}</td></tr><tr><th>Ödeme günü</th><td>${x.vade ? tamTarih(x.vade) : bosAlan('')}</td><th>Ödeme yeri</th><td>${e(S.kurs.sehir || '')}</td></tr><tr><th>Tutar</th><td colspan="3">${x.tutar ? `<b>${tl(x.tutar)}</b> · #${yaziyla(x.tutar)}#` : bosAlan('', '260px')}</td></tr></table>
+      <p>İşbu bononun karşılığında ${x.vade ? tamTarih(x.vade) : '…/…/……'} tarihinde ${e(S.kurs.unvan || S.kurs.ad)} veya emrühavalesine yukarıda yazılı tutarı kayıtsız şartsız ödeyeceğim. Bedeli <b>${A.bedel.toLocaleLowerCase('tr')}</b> ahzolunmuştur (eğitim hizmeti).${seri ? ' Bu bono birbirini izleyen seri bonolardan biridir; herhangi birinin vadesinde ödenmemesi hâlinde vadesi gelmemiş diğer bonoların tamamı muaccel olur.' : ''} Ödenmediği takdirde ${e(A.mahkeme)} mahkemeleri ve icra daireleri yetkilidir.</p>
+      <table><tr><th colspan="2">Borçlu (düzenleyen) · ${A.borclu === 'kurumsal' ? 'kurumsal' : 'bireysel'}</th></tr>${borcluTablo}</table>
+      <table><tr><th colspan="2">Kefil (aval veren)${A.kefil.ad ? '' : ' · isteğe bağlı'}</th></tr><tr><th style="width:30%">Ad soyad</th><td>${bosAlan(A.kefil.ad)}</td></tr><tr><th>TC kimlik no</th><td>${bosAlan(A.kefil.tc)}</td></tr><tr><th>Adres</th><td>${bosAlan(A.kefil.adres)}</td></tr></table>
+      <div class="imza"><div>Borçlu imzası${A.borclu === 'kurumsal' ? ' ve kaşe' : ''}</div><div>Kefil imzası</div></div>`;
+  const sayfalar = l.flatMap((x, n) => Array.from({ length: A.kopya }, () => sayfa(x, n)));
+  return sayfalar.map((h, n) => `<div class="${n < sayfalar.length - 1 ? 'sayfa-sonu' : ''}">${h}</div>`).join('');
+}
 export function belgeHtml(tur, id, hid) {
   if (tur === 'denetim') {
     const eks = denetimEksikleri(), akt = S.kursiyerler.filter(k => k.asama !== 'Ehliyet');
@@ -203,16 +222,8 @@ export function belgeHtml(tur, id, hid) {
     if (!h) return kursBas('Tahsilat makbuzu') + '<p>Bu kursiyerden henüz tahsilat yok.</p>';
     return makbuzHtml(h, k);
   }
-  if (tur === 'senet') {
-    const acik = k.odeme.taksitler.map((t, i) => ({ t, i })).filter(x => !x.t.odendi && !x.t.iptal);
-    if (!acik.length) return kursBas('Senet') + '<p>Ödenmemiş taksit yok; senet düzenlenecek borç kalmadı.</p>';
-    return acik.map(({ t, i }, n) => `<div class="${n < acik.length - 1 ? 'sayfa-sonu' : ''}"><h1>Bono (emre muharrer senet)</h1><p class="a4-alt">${i + 1}. taksit · ${n + 1}/${acik.length}</p>
-      <table><tr><th>Düzenleme yeri</th><td>${e(S.kurs.sehir || '')}</td><th>Düzenleme tarihi</th><td>${tamTarih(k.odeme.pesinTarih || k.kayit)}</td></tr><tr><th>Ödeme günü</th><td>${tamTarih(t.vade)}</td><th>Ödeme yeri</th><td>${e(S.kurs.sehir || '')}</td></tr><tr><th>Tutar</th><td colspan="3"><b>${tl(t.tutar)}</b> · #${yaziyla(t.tutar)}#</td></tr></table>
-      <p>İşbu bononun karşılığında ${tamTarih(t.vade)} tarihinde ${e(S.kurs.ad)} veya emrühavalesine yukarıda yazılı tutarı kayıtsız şartsız ödeyeceğim. Bedeli eğitim hizmeti olarak alınmıştır. Ödenmediği takdirde ${e(S.kurs.sehir || '')} mahkeme ve icra daireleri yetkilidir.</p>
-      <table><tr><th colspan="2">Borçlu (düzenleyen)</th></tr><tr><th style="width:30%">Ad soyad</th><td>${e(tamAd(k))}</td></tr><tr><th>TC kimlik no</th><td>${e(k.tc || '')}</td></tr><tr><th>Adres</th><td>${e(k.adres || '')}</td></tr></table>
-      <table><tr><th colspan="2">Kefil (aval veren) · isteğe bağlı</th></tr><tr><th style="width:30%">Ad soyad</th><td></td></tr><tr><th>TC kimlik no</th><td></td></tr><tr><th>Adres</th><td></td></tr></table>
-      <div class="imza"><div>Borçlu imzası</div><div>Kefil imzası</div></div></div>`).join('');
-  }
+  if (tur === 'senet') return senetHtml(k);
+
   return '';
 }
 // Kayıt sonrası sözleşme: ekranda parmakla imza ya da yazdırıp ıslak imza

@@ -1212,7 +1212,7 @@ function odemeSekmesi(k) {
     kalan ? ['link', 'Ödeme bilgisini WhatsApp’tan gönder', 'wp'] : null,
     ['plan', 'Taksit planını yeniden böl', 'takvim'], ['ek', 'Ek kalem ekle (ek ders, özel ders, sınav, kitap…)', 'arti'],
     mudurMu() && kalan ? ['indirim', 'İndirim uygula', 'kalem'] : null, mudurMu() ? ['iade', 'İade yap', 'sifirla'] : null, mudurMu() && !k.ucretsiz ? ['ucretsiz', 'Ücretsiz kursiyer (%3)', 'kursiyer'] : null,
-    k.odeme.senetli ? ['senet', 'Senet (yazdır / PDF)', 'belge'] : null, mudurMu() && !S.hareket.some(h => h.kursiyer === k.id && h.tur === 'Gelir') ? ['devir', 'Devir (açılış) bakiyesi gir', 'kalem'] : null, mudurMu() && (kalan || avukattaMi(k)) ? ['avukat', avukattaMi(k) ? 'Avukat takibini kapat' : 'Avukata ver', 'belge'] : null, mudurMu() && (k.odeme.taksitler || []).length ? ['senetli', k.odeme.senetli ? 'Senetli satışı kaldır' : 'Senetli satış (taksitlere senet)', 'belge'] : null, S.hareket.some(h => h.kursiyer === k.id && h.tur === 'Gelir') ? ['makbuz', 'Makbuzlar (yazdır / PDF)', 'belge'] : null,
+    k.odeme.senetli ? ['senetHazirla', 'Senet (yazdır / PDF)', 'belge'] : null, mudurMu() && !S.hareket.some(h => h.kursiyer === k.id && h.tur === 'Gelir') ? ['devir', 'Devir (açılış) bakiyesi gir', 'kalem'] : null, mudurMu() && (kalan || avukattaMi(k)) ? ['avukat', avukattaMi(k) ? 'Avukat takibini kapat' : 'Avukata ver', 'belge'] : null, mudurMu() && (k.odeme.taksitler || []).length ? ['senetli', k.odeme.senetli ? 'Senetli satışı kaldır' : 'Senetli satış (taksitlere senet)', 'belge'] : null, S.hareket.some(h => h.kursiyer === k.id && h.tur === 'Gelir') ? ['makbuz', 'Makbuzlar (yazdır / PDF)', 'belge'] : null,
   ].filter(Boolean);
   return `<div class="kart odeme-ozet">
     <div class="oo-ust">
@@ -1577,6 +1577,31 @@ export function ekKalemTahsil(k, j) {
   });
 }
 // PAR-037: avukat takibi (k.avukat { tarih, avukat, aciklama, kim, kapandi? }); avukat adları kurs listesinde (S.kurs.avukatlar) birikir
+// PAR-038: senet hazırlama — yazdırma türü (açık taksitler / elle plan / boş senet), borçlu bireysel ya da kurumsal, bedel nakden ya da malen, kefil, kopya, yetkili mahkeme; önizlemeyle (sayfalar3 senetHtml)
+function senetPenceresi(k) {
+  const o = (k.odeme.senet = k.odeme.senet || {}), acik = k.odeme.taksitler.filter(t => !t.odendi && !t.iptal), plan = (o.plan && o.plan.length ? o.plan : acik.map(t => ({ tutar: t.tutar - (t.kismi || 0), vade: t.vade }))), kf = o.kefil || {}, fr = o.firma || {};
+  const planSatir = (x, i) => `<div class="sn-plan" data-sn-satir><input class="girdi" name="pt" inputmode="decimal" value="${x.tutar || ''}" placeholder="Tutar" aria-label="${i + 1}. senet tutarı"><input class="girdi" name="pv" type="date" value="${e(x.vade || '')}" aria-label="${i + 1}. senet vadesi"><button type="button" class="dg-ikon" data-sn-sil aria-label="Satırı sil">${ik('kapat')}</button></div>`;
+  pencere({ baslik: 'Senet · ' + tamAd(k), taslak: false, icerik: `<form id="f-sn" class="form-izgara">
+      <div class="alan tam"><span class="et">Yazdırma türü</span><div class="secim"><label><input type="radio" name="tur" value="cari" ${(o.tur || 'cari') === 'cari' ? 'checked' : ''}><span>Açık taksitlerden (${acik.length})</span></label><label><input type="radio" name="tur" value="elle" ${o.tur === 'elle' ? 'checked' : ''}><span>Elle plan</span></label><label><input type="radio" name="tur" value="bos" ${o.tur === 'bos' ? 'checked' : ''}><span>Boş senet</span></label></div></div>
+      <div class="alan tam" data-sn="elle"><span class="et">Senet planı (tutar ve vade)</span><div data-sn-plan>${plan.map(planSatir).join('')}</div><button type="button" class="dg dg-hafif dg-kucuk" data-sn-ekle>${ik('arti')}Satır ekle</button></div>
+      <div class="alan tam"><span class="et">Borçlu</span><div class="secim"><label><input type="radio" name="borclu" value="bireysel" ${o.borclu !== 'kurumsal' ? 'checked' : ''}><span>Bireysel</span></label><label><input type="radio" name="borclu" value="kurumsal" ${o.borclu === 'kurumsal' ? 'checked' : ''}><span>Kurumsal</span></label></div></div>
+      <div class="alan" data-sn="kurumsal"><label for="sn-fu">Ünvan</label><input id="sn-fu" name="fu" maxlength="120" value="${e(fr.unvan || '')}"></div><div class="alan" data-sn="kurumsal"><label for="sn-fv">VKN</label><input id="sn-fv" name="fv" inputmode="numeric" maxlength="10" value="${e(fr.vkn || '')}"></div><div class="alan" data-sn="kurumsal"><label for="sn-fd">Vergi dairesi</label><input id="sn-fd" name="fd" maxlength="60" value="${e(fr.vd || '')}"></div><div class="alan" data-sn="kurumsal"><label for="sn-fy">Yetkili</label><input id="sn-fy" name="fy" maxlength="80" value="${e(fr.yetkili || tamAd(k))}"></div>
+      <div class="alan"><label for="sn-b">Bedel</label><select id="sn-b" name="bedel"><option ${o.bedel !== 'Malen' ? 'selected' : ''}>Nakden</option><option ${o.bedel === 'Malen' ? 'selected' : ''}>Malen</option></select></div>
+      <div class="alan"><label for="sn-k">Kopya</label><select id="sn-k" name="kopya">${[1, 2, 3].map(n => `<option ${+(o.kopya || 1) === n ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+      <div class="alan"><label for="sn-m">Yetkili mahkeme ve icra</label><input id="sn-m" name="mahkeme" maxlength="40" value="${e(o.mahkeme || S.kurs.sehir || '')}"></div>
+      <div class="alan"><label for="sn-ka">Kefil ad soyad</label><input id="sn-ka" name="ka" maxlength="80" value="${e(kf.ad || '')}" placeholder="isteğe bağlı"></div><div class="alan"><label for="sn-kt">Kefil TC</label><input id="sn-kt" name="kt" inputmode="numeric" maxlength="11" value="${e(kf.tc || '')}"></div><div class="alan tam"><label for="sn-kd">Kefil adresi</label><input id="sn-kd" name="kd" maxlength="160" value="${e(kf.adres || '')}"></div></form>`,
+    altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-sn">Kaydet ve önizle</button>',
+    onAc(p) { const f = p.querySelector('form'), gor = () => { p.querySelectorAll('[data-sn="elle"]').forEach(x => { x.hidden = f.tur.value !== 'elle'; }); p.querySelectorAll('[data-sn="kurumsal"]').forEach(x => { x.hidden = f.borclu.value !== 'kurumsal'; }); };
+      f.addEventListener('change', gor); gor();
+      p.addEventListener('click', ev => { if (ev.target.closest('[data-sn-ekle]')) { p.querySelector('[data-sn-plan]').insertAdjacentHTML('beforeend', planSatir({}, p.querySelectorAll('[data-sn-satir]').length)); } const sl = ev.target.closest('[data-sn-sil]'); if (sl) sl.closest('[data-sn-satir]').remove(); });
+      f.addEventListener('submit', ev => { ev.preventDefault();
+        if (f.kt.value.trim() && !tcGecerli(f.kt.value.trim())) return bildir('Kefilin TC kimlik numarası geçersiz', 'uyari');
+        const pl = [...p.querySelectorAll('[data-sn-satir]')].map(r => ({ tutar: tutarOku(r.querySelector('[name=pt]').value) || 0, vade: r.querySelector('[name=pv]').value })).filter(x => x.tutar > 0 && x.vade);
+        if (f.tur.value === 'elle' && !pl.length) return bildir('Senet planına en az bir tutar ve vade girin', 'uyari');
+        if (f.borclu.value === 'kurumsal' && !f.fu.value.trim()) return bildir('Kurumsal senette ünvanı yazın', 'uyari');
+        k.odeme.senet = { tur: f.tur.value, borclu: f.borclu.value, firma: f.borclu.value === 'kurumsal' ? { unvan: f.fu.value.trim(), vkn: f.fv.value.trim(), vd: f.fd.value.trim(), yetkili: f.fy.value.trim(), adres: k.adres || '' } : {}, bedel: f.bedel.value, kopya: +f.kopya.value || 1, mahkeme: f.mahkeme.value.trim(), kefil: { ad: f.ka.value.trim(), tc: f.kt.value.trim(), adres: f.kd.value.trim() }, plan: pl, duzenleme: o.duzenleme || gun(0) };
+        islem('Senet hazırladı', tamAd(k) + ' · ' + ({ cari: 'açık taksitlerden', elle: pl.length + ' senet elle', bos: 'boş senet' })[f.tur.value]); kaydet(); kapatPencere(); import('./sayfalar3.js?v=234').then(m => m.belgeAc('senet', k.id)); }); } });
+}
 // PAR-031: elle devir (açılış bakiyesi) — eski programdan gelen öğrencide henüz tahsilat yokken: önceki programda ödenen, kalan borç ve vadesi, kursun öğrenciye borcu (alacak)
 function devirPenceresi(k) {
   if (!mudurMu()) return bildir('Yalnız kurs müdürü', 'uyari'); if (S.hareket.some(h => h.kursiyer === k.id && h.tur === 'Gelir')) return bildir('Bu öğrenciden mdSinyal’de tahsilat alınmış; devir yalnız ilk açılışta girilir', 'uyari');
@@ -1641,6 +1666,7 @@ export function odemeIslem(k, tur, oneri) {
   if (tur === 'ucretsiz') return MZ.ucretsizYap(k, yenile);
   if (tur === 'avukat') return avukatPenceresi(k);
   if (tur === 'devir') return devirPenceresi(k);
+  if (tur === 'senetHazirla') return senetPenceresi(k);
   if (tur === 'indirim' && !indirimNedenleri().length) return bildir('İndirim türlerinin hepsi kapalı: Ayarlar › Sınıf ve ücretler › İndirim türleri', 'uyari');
   // PAR-021: "Senedi var" işareti; taksitler senetle takip edilir (Kasa › Senetler, senet PDF'i, hatırlatma / avukat takibi)
   if (tur === 'senetli') { if (!mudurMu()) return bildir('Yalnız kurs müdürü', 'uyari'); geriAlNoktasi(); k.odeme.senetli = !k.odeme.senetli; islem(k.odeme.senetli ? 'Senetli satış yaptı' : 'Senetli satışı kaldırdı', tamAd(k)); kaydet(); bildir(k.odeme.senetli ? 'Senetli: taksitler Kasa › Senetler’de; senedi buradan yazdırın' : 'Senet işareti kaldırıldı', 'tamam', true); return yenile(); }
