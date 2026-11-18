@@ -1250,7 +1250,10 @@ export function ayarlar(alt) {
         const t = ev.target;
         { const g = t.closest('[data-gecis],[data-taban-ek]'); if (g) { if (!mudurMu()) return bildir('Ücretleri yalnız müdür değiştirir', 'uyari'); const v = tutarOku(t.value);
           if (g.dataset.gecis) { const l = { ...(S.kurs.gecisUcret || {}) }; if (v == null) delete l[g.dataset.gecis]; else l[g.dataset.gecis] = v; S.kurs.gecisUcret = l; islem('Geçiş ücretini değiştirdi', g.dataset.gecis + ': ' + (v == null ? 'taban' : tl(v))); }
-          else { S.kurs[g.dataset.tabanEk] = g.dataset.tabanEk === 'ozelDersUcreti' ? (v || null) : (v || 0); islem(g.dataset.tabanEk === 'ekDersUcreti' ? 'Ek direksiyon dersi ücretini değiştirdi' : 'Özel ders ücretini değiştirdi', tl(v || 0)); }
+          else { // PAR-006: ek ve özel ders ücreti il taban ücretinin altında kaydedilmez (MTSK md.43; tek düzenleme yeri burası)
+            const L = tabanListesi(), sat = L && L.satirlar.find(x => x.tur === (g.dataset.tabanEk === 'ozelDersUcreti' ? 'ozel' : 'ilave')), tb = sat ? sat.toplam : 0;
+            if (v != null && v > 0 && tb && v < tb) { t.value = S.kurs[g.dataset.tabanEk] ?? ''; return bildir(`${listeAdi(L)}: ${g.dataset.tabanEk === 'ozelDersUcreti' ? 'özel ders' : 'ilave direksiyon ders saati'} en az ${tl(tb)} (KDV dahil); taban altında ücret alınamaz`, 'uyari'); }
+            S.kurs[g.dataset.tabanEk] = g.dataset.tabanEk === 'ozelDersUcreti' ? (v || null) : (v || 0); islem(g.dataset.tabanEk === 'ekDersUcreti' ? 'Ek direksiyon dersi ücretini değiştirdi' : 'Özel ders ücretini değiştirdi', tl(v || 0)); }
           kaydet(); bildir('Kaydedildi'); return yenile(); } }
         const u = t.closest('[data-ucret-k],[data-ucret-uyg],[data-diger]'); if (!u) return;
         if (!mudurMu()) return bildir('Ücretleri yalnız müdür değiştirir', 'uyari');

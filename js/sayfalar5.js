@@ -1,5 +1,5 @@
 import * as EK from './eklenti.js?v=234';
-import { ekToplam, kalanBorc, S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, kursiyer, DERS_TUR_AD, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube, tutarOku, gunBatimi, kursIli, sinifEtiket, ekTur, kursiyerTaban, gerekliDireksiyon, tabanListesi, ekDersTabani, eskiBelgeTarihi, MEVCUT_BELGELER } from './veri.js?v=234';
+import { ekDersFiyat, ekToplam, kalanBorc, S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, kursiyer, DERS_TUR_AD, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube, tutarOku, gunBatimi, kursIli, sinifEtiket, ekTur, kursiyerTaban, gerekliDireksiyon, tabanListesi, ekDersTabani, eskiBelgeTarihi, MEVCUT_BELGELER } from './veri.js?v=234';
 import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor, belgeYazdir, kisaLink, siteLink } from './ui.js?v=234';
 import { yenile } from './app.js?v=234';
 import * as B from './bulut.js?v=234';
@@ -45,6 +45,7 @@ const AY_ADI = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz'
 const CIDDIYET_AD = { engel: ['Engel', 'kirmizi'], uyari: ['Uyarı', 'sari'], bilgi: ['Bilgi', 'notr'] };
 function kuralGirdi(k) {
   const r = KURAL_KAYNAK[k];
+  if (k === 'ekDersUcreti') return `<b>${tl(ekDersFiyat('B'))}</b> <a href="#/ayarlar/sinif" style="color:var(--levha);font-weight:700;font-size:13px">Sınıf ve ücretler’de değiştirin</a>`;   // PAR-006: tek düzenleme yeri
   return `<input class="girdi" data-kural="${k}" type="number" min="${r.min ?? 0}"${r.max != null ? ` max="${r.max}"` : ''} step="1" value="${e(kuralDeger(k) ?? '')}" aria-label="${e(r.ad)}" style="width:86px;height:34px;display:inline-block"> <span style="color:var(--soluk);font-size:13px">${e(r.birim)}</span>`;
 }
 const kaynakHtml = r => r.url ? `<a href="${r.url}" target="_blank" rel="noopener" style="color:var(--levha);font-weight:700">${e(r.kaynak)}</a>` : e(r.kaynak);
