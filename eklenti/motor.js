@@ -377,7 +377,22 @@
       return o;
     },
   });
-  const CEKME_EKRAN = { gruplar: ['skt03002', 'skt03001'], kursiyerler: ['skt02006'], personel: [], araclar: ['skt01002'], sinavlar: ['skt04003'], dosya: ['skt02009'], randevular: ['skt01005'], ucretler: ['skt02007'], teorik: ['skt04001'] };
+  // 1.14.0 (RAP-006): SKT01001 Kurum Bilgileri salt okunur ekran; yalnız GET, hiçbir düğmeye basılmaz.
+  //  Bina kontenjanı (etiket hücresinin yanındaki sayı), kurum alt programları (sertifika sınıfı, ruhsat alma, kapanma, durum), derslikler, araçlar.
+  Object.assign(CEKME, {
+    async kurum() {
+      const t = await getir('/SKT/skt01001.aspx'), d = t.doc;
+      let bina = '';
+      for (const c of d.querySelectorAll('td, th, span, label')) { if (!/^binakontenjan/.test(norm(metin(c)))) continue;
+        const ic = metin(c).match(/(\d{1,4})\s*$/); if (ic) { bina = ic[1]; break; }
+        const yan = c.nextElementSibling || (c.parentElement && c.parentElement.nextElementSibling); const m = yan && metin(yan).match(/^\s*(\d{1,4})\b/); if (m) { bina = m[1]; break; } }
+      if (!bina) { const m = metin(d.body).match(/Bina\s*Kontenjan[ıi]?\s*:?\s*(\d{1,4})/i); if (m) bina = m[1]; }
+      const programlar = tabloId(d, 'dgProgramlar') || tabloBaslikla(d, /sinifi/, /ruhsat/);
+      if (!programlar && !bina) throw ekranHata(d, 'dgProgramlar', 'tablosu');
+      return { binaKontenjan: bina, programlar: programlar || { baslik: [], satirlar: [], stil: [] }, derslikler: tabloId(d, 'dgDerslikBilgileri') || { baslik: [], satirlar: [], stil: [] }, araclar: tabloId(d, 'dgAracBilgileri') || { baslik: [], satirlar: [], stil: [] } };
+    },
+  });
+  const CEKME_EKRAN = { kurum: ['skt01001'], gruplar: ['skt03002', 'skt03001'], kursiyerler: ['skt02006'], personel: [], araclar: ['skt01002'], sinavlar: ['skt04003'], dosya: ['skt02009'], randevular: ['skt01005'], ucretler: ['skt02007'], teorik: ['skt04001'] };
   // Aday Durum Görüntüleme: tek adayın bütün dosyası
   async function adayDosyasi(taban, tc) {
     const r = await postla(taban, { txtTcKimlikNo: tc }, { dugme: 'ImageButton1' });

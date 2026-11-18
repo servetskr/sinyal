@@ -897,6 +897,16 @@ const ESKI_KAPSAM = { A1: ['M', 'A1'], A2: ['M', 'A1', 'A2', 'A', 'B1'], B: ['M'
 // istenen sertifika bu seçenektir (Aday Durum skt02009'da görüldü, 18 Kas; SOR-020). Seçenek metni kayıt ekranında farklı çıkarsa
 // eklenti seçeneği bulamaz ve işi "seçeneklerde yok" diye durdurur; MEBBİS'e yanlış sınıf gitmez.
 export const MEB_CEZA_SERTIFIKA = '100 Ceza Puanı (Manuel)';
+// MEBBİS kurum bilgisi (SKT01001; mebtoplu.js kurumIsle yazar): seçili şubenin, okunmadıysa null. RAP-006
+export const mebKurum = () => { const s = seciliSube() || (S.subeler || [])[0]; return (s && s.mebKurum) || (S.kurs && S.kurs.mebKurum) || null; };
+// program: { kod: 'B', ruhsat, kapanma, durum: 'AÇIK' }; kapanma tarihi yoksa ve durum açıksa açık
+export const programAcik = (o, kod) => !!o && (o.programlar || []).some(p => p.kod === kod && !p.kapanma && /açık|acik/.test(String(p.durum || 'AÇIK').toLocaleLowerCase('tr')));
+// sınıfın MEBBİS programı kapalı ya da yoksa uyarı metni; kurum bilgisi okunmadıysa ya da program kodu çıkmayan sınıfta (100 ceza, SRC) boş
+export function programUyarisi(sinif) {
+  const o = mebKurum(), kod = anaSinif(sinif); if (!o || !(o.programlar || []).length || !/^(A1|A2|B1|BE|C1E|C1|CE|D1E|D1|DE|[ABCDFGM])$/.test(kod) || programAcik(o, kod)) return '';
+  const p = o.programlar.find(x => x.kod === kod);
+  return p ? `MEBBİS’te kurumunuzun ${kod} sınıfı programı kapalı${p.kapanma ? ' (' + p.kapanma.split('-').reverse().join('.') + ')' : ''}; bu sınıfa MEBBİS kaydı açılamaz.` : `MEBBİS’te kurumunuzun ${kod} sınıfı programı yok (kurum bilgileri ${String(o.okundu || '').split('-').reverse().join('.')} okundu); bu sınıfa MEBBİS kaydı açılamaz.`;
+}
 export const egitimSinifi = sinif => ((SINIFLAR[sinif] || {}).tur || 'ehliyet') === 'egitim';
 // Ekranda sınıf adı: "B sınıfı · Manuel/Otomatik/Engelli", ehliyet dışı türlerde kendi adı ("100 ceza puanı eğitimi", "SRC1 · …")
 export function sinifEtiket(sinif, k) {
@@ -1189,6 +1199,8 @@ export function mebOnKontrol(k) {
     const so = yasIstisnaSorun(k.yasIstisna), y0 = yas(k.dogumTarihi), n0 = asgariYasHesap(k.sinif, k.mevcutEhliyet, (k.oncekiBelge || {}).tarih, false).yas;
     if (so && yasIstisnaKapsar(k.sinif) && (de || (y0 != null && y0 < n0))) l.push([false, `Yaş istisnası (KTY md.76/3) uygulanmadı: ${esc(so)}. Kursiyer dosyasında İstisnalar › Değiştir’den kapsamı seçin.`]); }
   // Aday sürücü belgesi iptal edilen kişi: kursta eğitime başlaması için idari para cezalarının tamamı tahsil edilmiş olmalı (KTK ek md.17, 7590 sayılı Kanun, RG 31/7/2026; eyup-sorular-cevaplar.md madde 4)
+  // kurumun MEBBİS sertifika programı (SKT01001 okunduysa; RAP-006)
+  { const pu = programUyarisi(k.sinif); if (pu) l.push([false, pu]); }
   if (k.adayIptal) l.push([!!k.adayIptal.cezaOdendi, 'Aday belgesi iptal edilmişti: idari para cezalarının tamamı ödendi (KTK ek md.17)']);
   const g = (S.gruplar || []).find(x => x.id === k.teorikGrup);
   l.push(g ? [!['Kayıt', 'Evrak'].includes(k.asama) || k.kayit <= g.baslangic, `Kayıt grubun başlangıcından önce (${g.ad} ${g.baslangic.split('-').reverse().join('.')})`] : [false, 'Dönem grubu seçilmedi']);

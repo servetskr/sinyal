@@ -1,7 +1,7 @@
 // MEBBİS dönem grupları. MEBBİS'teki "Dönem Grup Açılış Tarihi" ve "Grup Şube Tanımlama" ekranlarıyla birebir:
 // dönem YYYYAA, grup 1–3 (her grubun tek başlangıç tarihi, ayın 1'i ile 10'u arası), şube A–H. Ad: "Kasım 1A".
 // Kursiyer kaydı grubun başlangıcından önce yapılır (MTSK Yönetmeliği 12/2); evrakı tamam ve gruba atanmış kursiyer aktiftir.
-import { S, kaydet, gun, fark, iso, SINIFLAR, tamAd, islem, eksikEvrak, sb, anaSinif } from './veri.js?v=234';
+import { S, kaydet, gun, fark, iso, SINIFLAR, tamAd, islem, eksikEvrak, sb, anaSinif, mebKurum } from './veri.js?v=234';
 import { e, pencere, kapatPencere, bildir, rozet, tarih, isaret, ik } from './ui.js?v=234';
 import * as KR from './kurallar.js?v=234';
 
@@ -9,6 +9,7 @@ export const AYLAR = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'T
 export const SUBELER = 'ABCDEFGH'.split('');   // MEBBİS'te şube seçenekleri A..H (8 şube)
 export const GRUP_NOLAR = [1, 2, 3];          // bir dönemde en çok 3 grup tarihi (16/7)
 
+const nrmAd = t => String(t || '').toLocaleLowerCase('tr').replace(/[^a-z0-9çğıöşü]/g, '');
 const ayAd = donem => AYLAR[+String(donem).slice(4, 6) - 1] || '';
 export const donemAdi = donem => `${String(donem).slice(0, 4)} - ${ayAd(donem)}`;          // MEBBİS biçimi: "2026 - Kasım"
 export const grupAdi = (donem, no, sube) => `${ayAd(donem)} ${no}${sube}`;               // "Kasım 1A"
@@ -95,7 +96,7 @@ export function grupFormu(on = {}, sonra) {
       <div class="alan"><label for="g-bas">Başlangıç tarihi</label><input id="g-bas" name="baslangic" type="date" value="${e(v.baslangic)}" ${kilit ? 'disabled' : ''}></div>
       <div class="alan"><label for="g-sinif">Sınıf</label><select id="g-sinif" name="sinif"><option value="">Bütün sınıflar</option>${sinifler.map(([k, x]) => `<option value="${k}" ${v.sinif === k ? 'selected' : ''}>${e(x.ad.split(' ·')[0])}</option>`).join('')}</select><small style="color:var(--soluk)">İlk kez ehliyet alanlar genelde aynı gruptadır; ehliyet türüne göre ayrı grup gerekiyorsa sınıf seçin.</small></div>
       <div class="alan"><label for="g-dl">Derslik</label><input id="g-dl" name="derslik" value="${e(v.derslik)}" placeholder="Derslik 1"></div>
-      <div class="alan"><label for="g-kon">Kontenjan</label><input id="g-kon" name="kontenjan" inputmode="numeric" value="${e(v.kontenjan)}" placeholder="Boş bırakılabilir"></div>
+      <div class="alan"><label for="g-kon">Kontenjan</label><input id="g-kon" name="kontenjan" inputmode="numeric" value="${e(v.kontenjan)}" placeholder="Boş bırakılabilir"><small id="g-kon-not" style="color:var(--soluk)"></small></div>
       <div class="alan tam"><span class="et">MEBBİS’teki adı</span><b id="g-ad" style="font-size:18px;color:var(--murekkep)"></b> <small id="g-hata" style="display:block;color:var(--kirmizi);font-weight:700;margin-top:4px"></small></div>
       ${kilit ? `<p class="ipucu uyari tam">${isaret('uyari', 18)}<span>Bu gruba ${kilit} kursiyer atanmış; dönem, grup, şube ve tarih değiştirilemez (MEBBİS’te de açılış tarihi sonradan değişmez).</span></p>` : ''}
     </form>`,
@@ -110,6 +111,11 @@ export function grupFormu(on = {}, sonra) {
         const kardes = (S.gruplar || []).find(y => y.id !== (g0 && g0.id) && mebGrubuMu(y) && y.donem === x.donem && +y.grupNo === x.grupNo);
         if (kardes && !kilit && f.baslangic.value !== kardes.baslangic) f.baslangic.value = kardes.baslangic;
         d.querySelector('#g-ad').textContent = grupAdi(x.donem, x.grupNo, x.sube);
+        // MEBBİS kurum bilgisi okunduysa: derslik ve bina kontenjanı (SKT01001; RAP-006)
+        { const mk = mebKurum(), n = d.querySelector('#g-kon-not'); if (n && mk) { const dl = (mk.derslikler || []).filter(y => !/kapal/i.test(y.durum || '')), en = Math.max(0, ...dl.map(y => y.kontenjan || 0)), uyg = dl.find(y => x.derslik && nrmAd(y.ad) === nrmAd(x.derslik));
+          const sinir = (uyg && uyg.kontenjan) || en || null, asar = x.kontenjan && sinir && x.kontenjan > sinir;
+          n.style.color = asar ? 'var(--kirmizi)' : 'var(--soluk)'; n.style.fontWeight = asar ? '700' : '';
+          n.textContent = asar ? `MEBBİS’te ${uyg ? uyg.ad + ' ' : 'en büyük derslik '}kontenjanı ${sinir}; grup kontenjanı bunu aşamaz` : sinir ? `MEBBİS’te ${uyg ? uyg.ad : 'derslik'} kontenjanı ${sinir}${mk.binaKontenjan ? ' · bina ' + mk.binaKontenjan : ''}` : mk.binaKontenjan ? 'MEBBİS’te bina kontenjanı ' + mk.binaKontenjan : ''; } }
         d.querySelector('#g-hata').textContent = f.baslangic.value ? grupHatasi(oku(), g0 && g0.id) : '';
       };
       f.addEventListener('change', guncelle); f.addEventListener('input', guncelle); guncelle();

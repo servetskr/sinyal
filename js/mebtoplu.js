@@ -1,7 +1,7 @@
 // MEBBİS toplu çekme ve toplu yazma (mdSinyal tarafı). İşi MEBBİS Yardımcısı'nın arka plan motoru (eklenti/motor.js)
 // kursun kendi MEBBİS oturumunda, ekran açmadan yürütür; sonuç buraya gelir ve kayıtlarla eşlenir.
 // Gönderilen ve gelen iletilerin adları ve alanları: js/eklenti.js başındaki ileti sözleşmesi tablosu (eklenti/sinyal.js'te de aynısı).
-import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, sb, sbDers, cokSube, seciliSube, eksikEvrak, anaSinif, egitimSinifi, ekTur, kursiyerTaban, tutarOku, MEB_CEZA_SERTIFIKA } from './veri.js?v=234';
+import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, sb, sbDers, cokSube, seciliSube, eksikEvrak, anaSinif, egitimSinifi, ekTur, kursiyerTaban, tutarOku, MEB_CEZA_SERTIFIKA, programAcik } from './veri.js?v=234';
 import { bildir, pencere, kapatPencere, e, ik, isaret, rozet, tarih } from './ui.js?v=234';
 import * as GR from './gruplar.js?v=234';
 import * as EK from './eklenti.js?v=234';
@@ -12,6 +12,7 @@ import * as KR from './kurallar.js?v=234';
 import { sozlesmeUcreti } from './mevzuat.js?v=234';
 
 export const CEKILECEK = [
+  ['kurum', 'Kurum bilgileri', 'Bina kontenjanı, açık sertifika programları ve ruhsat tarihleri, derslikler (Yardımcı 1.14)'],
   ['gruplar', 'Dönem grupları', 'Dönem, grup ve şubeler; eksik grup kartları açılır'],
   ['kursiyerler', 'Kursiyer karşılaştırma', 'MEBBİS kayıtları mdSinyal’e alınmaz; sertifika sınıfı, mevcut belge, ad ve cinsiyet farkları listelenir'],
   ['dosya', 'Aday dosyaları', 'Aktif kursiyerlerin grubu, hakları, son tarihleri, sınav geçmişi'],
@@ -572,9 +573,23 @@ function uygula(v, tekrar = false) {
   if (v.araclar && (v.araclar.arac || v.araclar.simulator)) o.araclar = araclariIsle(v.araclar);
   if (v.sinavlar && (v.sinavlar.uygulama || v.sinavlar.esinav)) o.sinavlar = v.sinavlar;
   if (Array.isArray(v.dosya)) o.dosya = dosyalariIsle(v.dosya);
+  if (v.kurum && !v.kurum.hata) o.kurum = kurumIsle(v.kurum); else if (v.kurum && v.kurum.hata) o.kurumHata = v.kurum.hata;
   // yalnız yazma yapılan işte "veri aldı" kaydı düşmez (B10)
   if (Object.keys(v).filter(k => k !== 'denetim').length) { S.mebCekim = { ...(S.mebCekim || {}), toplu: gun(0) + ' ' + new Date().toTimeString().slice(0, 5) }; if (!tekrar) islem('MEBBİS’ten toplu veri aldı', Object.keys(o).join(', ')); }
   kaydet();
+  return o;
+}
+
+// Kurum bilgileri (SKT01001, RAP-006): bina kontenjanı, kurum alt programları (sertifika sınıfı → ruhsat, kapanma, durum), derslikler.
+// Seçili şubenin kaydına yazılır (her şubenin MEBBİS hesabı ayrı); kayıt formu kapalı programı, grup formu derslik kontenjanını uyarır.
+const programKodu = t => { const m = String(t || '').toLocaleUpperCase('tr').replace(/İ/g, 'I').match(/^\s*(A1|A2|B1|BE|C1E|C1|CE|D1E|D1|DE|[ABCDFGM])\s+SINIFI/); return m ? m[1] : ''; };
+export function kurumIsle(v) {
+  const p = v.programlar || { baslik: [], satirlar: [] }, b = p.baslik || [], i = { s: sutun(b, 'sinif'), r: sutun(b, 'ruhsat'), k: sutun(b, 'kapanma'), d: sutun(b, /^durumu?$/) };
+  const programlar = (p.satirlar || []).map(r => ({ ad: r[i.s >= 0 ? i.s : 0] || '', kod: programKodu(r[i.s >= 0 ? i.s : 0]), ruhsat: tarihIso(r[i.r]), kapanma: tarihIso(r[i.k]), durum: String(r[i.d] || '').trim() })).filter(x => x.ad);
+  const dl = v.derslikler || { baslik: [], satirlar: [] }, db = dl.baslik || [], j = { t: sutun(db, 'dersliktur'), a: sutun(db, 'derslikadi'), k: sutun(db, 'kontenjan'), d: sutun(db, 'odanindurumu', /^durumu?$/) };
+  const derslikler = (dl.satirlar || []).map(r => ({ tur: r[j.t] || '', ad: r[j.a] || '', kontenjan: +String(r[j.k] || '').replace(/\D/g, '') || null, durum: String(r[j.d] || '').trim() })).filter(x => x.ad || x.tur);
+  const o = { binaKontenjan: +v.binaKontenjan || null, programlar, derslikler, okundu: gun(0) };
+  const s = seciliSube() || (S.subeler || [])[0]; if (s) s.mebKurum = o; else S.kurs.mebKurum = o;
   return o;
 }
 
@@ -712,10 +727,12 @@ function ozetGoster(o, yazilan) {
     l.push(satir(`Kursiyerler: MEBBİS’te ${kr.toplam} aday, ${kr.eslesen} mdSinyal’le eşleşti${fr.length ? `, <span style="color:var(--kirmizi)">${fr.length} kişide fark var</span>` : ', fark yok'}`, kr.yok.length ? `MEBBİS’te olup mdSinyal’de olmayan ${kr.yok.length} aday (mdSinyal’e alınmaz; adaylar önceki programdan aktarılır): ${kr.yok.slice(0, 8).map(z => e(z.ad || z.tc)).join(', ')}${kr.yok.length > 8 ? '…' : ''}` : ''));
     if (fr.length) l.push(`<li><div class="tablo-kap"><table class="tablo"><thead><tr><th>Kursiyer</th><th>Alan</th><th>MEBBİS’te</th><th>mdSinyal’de</th></tr></thead><tbody>${fr.flatMap(z => z.fk.map(([a, m, b2], j) => `<tr>${j ? '<td></td>' : `<td><a href="#/kursiyer/${e(z.id)}" data-kapat>${e(z.ad)}</a></td>`}<td>${e(a)}</td><td><b>${e(m)}</b></td><td>${e(b2)}</td></tr>`)).join('')}</tbody></table></div><small style="color:var(--soluk)">Hangisi doğruysa onu düzeltin: mdSinyal’de öğrenci dosyasından, MEBBİS’te kendi ekranından. mdSinyal hiçbir bilgiyi kendiliğinden değiştirmedi.</small></li>`);
   }
+  if (o.kurum) l.push(satir(`Kurum bilgileri: bina kontenjanı ${o.kurum.binaKontenjan || '—'}, ${o.kurum.programlar.filter(p => programAcik(o.kurum, p.kod)).length} açık program (${o.kurum.programlar.filter(p => programAcik(o.kurum, p.kod)).map(p => p.kod).join(', ') || '—'}), ${o.kurum.derslikler.length} derslik`, o.kurum.programlar.some(p => !programAcik(o.kurum, p.kod)) ? 'Kapalı program: ' + o.kurum.programlar.filter(p => !programAcik(o.kurum, p.kod)).map(p => e(p.kod || p.ad) + (p.kapanma ? ' (' + p.kapanma.split('-').reverse().join('.') + ')' : '')).join(', ') : ''));
   if (o.dosya) l.push(satir(`Aday dosyaları: ${o.dosya.okunan} okundu, ${o.dosya.atanan} kursiyer dönem grubuna atandı`));
   if (o.personel) l.push(satir(`Personel: ${o.personel.guncel} kişinin izin no’su güncellendi`, o.personel.yeni.length ? `mdSinyal’de olmayan: ${o.personel.yeni.map(e).join(', ')}` : ''));
   if (o.araclar) l.push(satir(`Araçlar: ${o.araclar.guncel} aracın muayene tarihi güncellendi`, o.araclar.yeni.length ? `mdSinyal’de olmayan: ${o.araclar.yeni.map(e).join(', ')}` : ''));
   if (o.sinavlar) l.push(satir(`Sınav sonuçları okundu`, 'Sonuçları sınav oturumlarına doldurmak için aşağıdaki düğmeye basın'));
+  if (o.kurumHata) l.push(`<li class="ipucu uyari">${isaret('uyari', 18)}<span>Kurum bilgileri: ${e(o.kurumHata)}${/tanımıyor/.test(o.kurumHata) ? ' Yardımcı’yı 1.14 sürümüne güncelleyin.' : ''}</span></li>`);
   if (o.kursiyerHata || o.gruplarHata) l.push(`<li class="ipucu uyari">${isaret('uyari', 18)}<span>${e(o.kursiyerHata || o.gruplarHata)}</span></li>`);
   pencere({
     baslik: 'MEBBİS işi bitti',
@@ -730,7 +747,7 @@ function ozetGoster(o, yazilan) {
 }
 
 /* ---------- MEBBİS aktarım merkezindeki kartlar ---------- */
-const secim = new Set(['gruplar', 'kursiyerler', 'dosya', 'personel', 'araclar', 'sinavlar']);
+const secim = new Set(['kurum', 'gruplar', 'kursiyerler', 'dosya', 'personel', 'araclar', 'sinavlar']);
 // Süren, durmuş ya da parçası bitmiş yazma işi: onaylayan, parça, kalan iş; durdur, devam, iptal
 // cekGizle: "MEBBİS'ten al" sekmesinde çekme işinin durumu topluKart'ta zaten görünür
 export function isKarti(cekGizle) {
