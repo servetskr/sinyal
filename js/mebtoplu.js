@@ -1,7 +1,7 @@
 // MEBBİS toplu çekme ve toplu yazma (mdSinyal tarafı). İşi MEBBİS Yardımcısı'nın arka plan motoru (eklenti/motor.js)
 // kursun kendi MEBBİS oturumunda, ekran açmadan yürütür; sonuç buraya gelir ve kayıtlarla eşlenir.
 // Gönderilen ve gelen iletilerin adları ve alanları: js/eklenti.js başındaki ileti sözleşmesi tablosu (eklenti/sinyal.js'te de aynısı).
-import { ILLER, S, kaydet, EGITIM_TURU, TEORIK_EGITIM_TURU, egitimTuruOf, teorikEgitimTuru, gun, iso, fark, izinDurumu, ustaYetkili, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, sb, sbDers, cokSube, seciliSube, eksikEvrak, anaSinif, egitimSinifi, ekTur, kursiyerTaban, tutarOku, MEB_CEZA_SERTIFIKA, programAcik, esinavUcretiIsle, esinavUcretiVar, esinavHakDurum, teorikSaat } from './veri.js?v=234';
+import { ILLER, S, kaydet, hakDurumu, EGITIM_TURU, TEORIK_EGITIM_TURU, egitimTuruOf, teorikEgitimTuru, gun, iso, fark, izinDurumu, ustaYetkili, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, sb, sbDers, cokSube, seciliSube, eksikEvrak, anaSinif, egitimSinifi, ekTur, kursiyerTaban, tutarOku, MEB_CEZA_SERTIFIKA, programAcik, esinavUcretiIsle, esinavUcretiVar, esinavHakDurum, teorikSaat } from './veri.js?v=234';
 import { bildir, pencere, kapatPencere, e, ik, isaret, rozet, tarih, tl } from './ui.js?v=234';
 import * as GR from './gruplar.js?v=234';
 import * as MN from './mebnorm.js?v=234';   // MEB-039/040: MEBBİS dönem, sertifika, T.C., tarih ve sonuç metinleri buradan geçmeden karşılaştırılmaz
@@ -61,13 +61,24 @@ function baslat(is, mesaj, kayitla = true) {
 }
 
 /* ---------- toplu çekme ---------- */
-export function topluCek(neler) {
-  if (!hazirMi(() => topluCek(neler))) return;   // çekme MEBBİS'e yazmaz: yalnız kurum bilgilendirmesi gerekir, iş onayı gerekmez
+// MEB-006: aday dosyası (SKT02009) kuyruğu. Bir çekmede en çok 400 aday (~1,4 sn yanıt + 1,1 sn ara; 400 aday ≈ 17 dk, oturum ~40 dk).
+// Sıra: Sınav › Direksiyon › Teorik › 2. direksiyon süresindekiler › bekleyenler; grup içinde en eski okunan (hiç okunmamış en başta).
+export const DOSYA_EN_COK = 400;
+const ikinciSurede = k => !!(k.ikinciHak || (k.meb && k.meb.ikinciDireksiyon)) || (() => { try { const h = hakDurumu(k); return h.kalan === 0 && !h.gecti; } catch (x) { return false; } })();
+export function dosyaKuyrugu() {
+  const sira = k => ({ 'Sınav': 0, 'Direksiyon': 1, 'Teorik': 2 })[k.asama] ?? (ikinciSurede(k) ? 3 : 4);
+  return sb(S.kursiyerler).filter(k => !k.kapali && MN.tcGecerli(String(k.tc || '')) && (GR.bekleyenMi(k) || ['Teorik', 'Direksiyon', 'Sınav'].includes(k.asama) || ikinciSurede(k)))
+    .map(k => ({ k, s: sira(k), o: String((k.meb || {}).dosyaOkuma || '') })).sort((a, b) => a.s - b.s || a.o.localeCompare(b.o)).map(x => x.k.tc);
+}
+// MEB-021: ops.tc verilirse yalnız o kursiyerin aday dosyası okunur (öğrenci dosyasındaki "MEBBİS'ten güncelle")
+export function topluCek(neler, ops = {}) {
+  if (!hazirMi(() => topluCek(neler, ops))) return;   // çekme MEBBİS'e yazmaz: yalnız kurum bilgilendirmesi gerekir, iş onayı gerekmez
   const cek = neler.filter(x => x !== 'dosya');
-  // aday dosyası: bekleyen ve süreci devam eden kursiyerler (en çok 150; her biri MEBBİS'te bir sorgu)
-  const dosya = neler.includes('dosya') ? sb(S.kursiyerler).filter(k => !k.kapali && /^\d{11}$/.test(k.tc || '') && (GR.bekleyenMi(k) || ['Teorik', 'Direksiyon', 'Sınav'].includes(k.asama))).slice(0, 150).map(k => k.tc) : [];
+  const tum = !neler.includes('dosya') ? [] : ops.tc ? [ops.tc] : dosyaKuyrugu(), dosya = tum.slice(0, DOSYA_EN_COK);
+  S.mebDosyaKalan = tum.length - dosya.length; kaydet();
   // kurum: Yardımcı açık MEBBİS hesabının seçili şubeye ait olduğunu denetler (yanlış şubenin verisi gelmesin)
-  baslat({ id: 't' + Date.now(), kurum: MK.kurumBilgi().kod || '', cek, dosya, yaz: [] }, `MEBBİS’ten çekiliyor: ${CEKILECEK.filter(x => neler.includes(x[0])).map(x => x[1].toLocaleLowerCase('tr')).join(', ')}`);
+  const tek = ops.tc && S.kursiyerler.find(k => k.tc === ops.tc);
+  baslat({ id: 't' + Date.now(), kurum: MK.kurumBilgi().kod || '', cek, dosya, yaz: [] }, tek ? `MEBBİS’ten ${tamAd(tek)} için aday dosyası okunuyor` : `MEBBİS’ten çekiliyor: ${CEKILECEK.filter(x => neler.includes(x[0])).map(x => x[1].toLocaleLowerCase('tr')).join(', ')}${dosya.length ? ` (${dosya.length} aday dosyası)` : ''}`);
 }
 /* ---------- "Ekranları denetle": Yardımcı her MEBBİS ekranını yalnız açar (GET), beklediği alanları arar; hiçbir şey yazılmaz ---------- */
 export function ekranDenetle() {
@@ -909,6 +920,7 @@ function ozetGoster(o, yazilan) {
   if (o.ucretler) l.push(satir(`e-Sınav ücretleri: MEBBİS listesinde ${o.ucretler.toplam} aday, ${o.ucretler.yeni} adayın sıradaki hakkı “ücret yattı” oldu${o.ucretler.ayni ? `, ${o.ucretler.ayni} zaten işaretliydi` : ''}`, o.ucretler.yok ? `${o.ucretler.yok} aday mdSinyal’de açık kayıt olarak yok` : ''));
   if (o.ucretHata) l.push(`<li class="ipucu uyari">${isaret('uyari', 18)}<span>e-Sınav ücretleri: ${e(o.ucretHata)}</span></li>`);
   if (o.kurum) l.push(satir(`Kurum bilgileri: bina kontenjanı ${o.kurum.binaKontenjan || '—'}, ${o.kurum.programlar.filter(p => programAcik(o.kurum, p.kod)).length} açık program (${o.kurum.programlar.filter(p => programAcik(o.kurum, p.kod)).map(p => p.kod).join(', ') || '—'}), ${o.kurum.derslikler.length} derslik`, o.kurum.programlar.some(p => !programAcik(o.kurum, p.kod)) ? 'Kapalı program: ' + o.kurum.programlar.filter(p => !programAcik(o.kurum, p.kod)).map(p => e(p.kod || p.ad) + (p.kapanma ? ' (' + p.kapanma.split('-').reverse().join('.') + ')' : '')).join(', ') : ''));
+  if (o.dosya && S.mebDosyaKalan > 0) l.push(`<li style="font-size:13px;color:var(--soluk)">${S.mebDosyaKalan} kursiyerin aday dosyası bu sefer okunmadı (bir çekmede en çok ${DOSYA_EN_COK}); bir sonraki güncellemede ilk onlar okunur.</li>`);
   if (o.dosya) l.push(satir(`Aday dosyaları: ${o.dosya.okunan} okundu, ${o.dosya.atanan} kursiyer dönem grubuna atandı${o.dosya.farkli ? `, <span style="color:var(--kirmizi)">${o.dosya.farkli} kursiyerin grubu MEBBİS’tekinden farklı</span>` : ''}`, [o.dosya.farkli ? 'Öğrenci dosyasında Dönem grubu satırındaki “MEBBİS’teki gruba taşı” ile düzeltin.' : '', o.dosya.belirsiz ? `${o.dosya.belirsiz} kursiyerde MEBBİS’te birden çok açık dönem satırı var; grup kendiliğinden atanmadı.` : ''].filter(Boolean).join(' ')));
   if (o.personel) l.push(satir(`Personel: ${o.personel.guncel} kişinin izin no’su eklendi; izin bitişleri ve haftalık saatler alındı`, [o.personel.yeni.length ? `mdSinyal’de olmayan: ${o.personel.yeni.map(e).join(', ')} (Ekip ve araçlar › Usta öğreticiler’de “Kart aç”)` : '', (o.personel.oneri || []).length ? `${o.personel.oneri.length} kişi yalnız adla eşleşti; Usta öğreticiler’de “Evet, bağla” ile onaylayın` : '', (o.personel.ayrilan || []).length ? `MEBBİS’te görevden ayrılmış görünen: ${o.personel.ayrilan.map(e).join(', ')} (kartında “Ekipten çıkar”)` : '', (o.personel.gorunmeyen || []).length ? `MEBBİS’in görevdeki listesinde olmayan: ${o.personel.gorunmeyen.map(e).join(', ')}` : '', ...(o.personel.farklar || []).map(e)].filter(Boolean).join(' · ')));
   if (o.araclar) l.push(satir(`Araçlar: ${o.araclar.guncel} aracın muayene tarihi MEBBİS’ten alındı`, [o.araclar.yeni.length ? `mdSinyal’de olmayan: ${o.araclar.yeni.map(e).join(', ')} (Ekip ve araçlar’da “mdSinyal’e ekle”)` : '', ...(o.araclar.farklar || []).map(e)].filter(Boolean).join(' · ')));
