@@ -76,19 +76,22 @@ export function evrakHtml(k) {
   const alan = (ad, et, deger, ek = '') => `<div class="alan"><label>${et}</label><input name="${ad}" value="${e(deger || '')}" autocomplete="off" ${ek}></div>`;
   const tarihAlan = (ad, et, deger) => `<div class="alan"><label>${et}</label><input name="${ad}" type="date" value="${e(tarihGir(deger))}"></div>`;
   const tu = tarihUyariHtml(tarihUyarilari(k));
+  // KAY-035: belgeyi veren alanında son 5 farklı kayıt önerilir (en yeni kayıttan)
+  const son5 = blok => [...new Set((S.kursiyerler || []).filter(x => x !== k && x.mebEvrak && x.mebEvrak[blok] && x.mebEvrak[blok].veren).sort((a, b) => String(b.kayit || '').localeCompare(String(a.kayit || ''))).map(x => x.mebEvrak[blok].veren))].slice(0, 5);
+  const dl = (id, l) => `<datalist id="${id}">${l.map(x => `<option value="${e(x)}">`).join('')}</datalist>`;
   return `<div class="alan tam" data-me-tarih data-kid="${e((k && k.id) || '')}"${tu ? '' : ' style="display:none"'}>${tu}</div><details class="alan tam me-evrak" ${k && k.mebEvrak ? '' : ''}><summary style="cursor:pointer;font-weight:700;color:var(--murekkep)">MEBBİS evrak bilgileri <small style="font-weight:400;color:var(--soluk)">belgelerin üzerinde yazar; MEBBİS’e kayıtla birlikte gider</small></summary>
     <div class="form-izgara" style="margin-top:10px">
       <b class="tam" style="font-size:13.5px">Öğrenim belgesi</b>
-      ${alan('meOgVeren', 'Belgeyi veren okul', o.veren, 'maxlength="100" placeholder="ör. Tepebaşı Anadolu Lisesi"')}
+      ${alan('meOgVeren', 'Belgeyi veren okul', o.veren, 'maxlength="100" list="me-dl-og" placeholder="ör. Tepebaşı Anadolu Lisesi"')}${dl('me-dl-og', son5('ogrenim'))}
       <div class="alan"><label>Belge türü</label><select name="meOgTur"><option value="">Seçin</option>${OGRENIM_BELGELERI.map(x => `<option ${o.tur === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
       ${tarihAlan('meOgTarih', 'Belge tarihi', o.tarih)}${alan('meOgSayi', 'Belge sayısı', o.sayi, 'maxlength="10"')}
       <b class="tam" style="font-size:13.5px">Sağlık raporu</b>
       <div class="alan"><label>Engel durumu</label><select name="meSgOzur"><option value="Yok" ${oz !== 'Var' ? 'selected' : ''}>Engeli yok</option><option value="Var" ${oz === 'Var' ? 'selected' : ''}>Engeli var</option></select>${k && k.sinif === 'B-EN' && oz !== 'Var' ? '<small style="color:var(--kirmizi)">B Engelli: engel durumu “Var” olmalı</small>' : ''}</div>
       ${alan('meSgRef', 'Rapor referans no (e-Nabız)', s.refNo, 'maxlength="30"')}
       <b class="tam" style="font-size:13.5px">Adli sicil (sabıka) belgesi</b>
-      ${alan('meAdVeren', 'Belgeyi veren', a.veren || 'E-DEVLET', 'maxlength="100"')}${tarihAlan('meAdTarih', 'Belge tarihi', a.tarih)}${alan('meAdSayi', 'Belge sayısı', a.sayi, 'maxlength="10"')}
+      ${alan('meAdVeren', 'Belgeyi veren', a.veren || 'E-DEVLET', 'maxlength="100" list="me-dl-ad"')}${dl('me-dl-ad', son5('adli'))}${tarihAlan('meAdTarih', 'Belge tarihi', a.tarih)}${alan('meAdSayi', 'Belge sayısı', a.sayi, 'maxlength="10"')}
       <b class="tam" style="font-size:13.5px">Parmak izi belgesi</b>
-      ${alan('mePiVeren', 'Belgeyi veren', p.veren, 'maxlength="100"')}${tarihAlan('mePiTarih', 'Belge tarihi', p.tarih)}${alan('mePiSayi', 'Belge sayısı', p.sayi, 'maxlength="10"')}
+      ${alan('mePiVeren', 'Belgeyi veren', p.veren, 'maxlength="100" list="me-dl-pi"')}${dl('me-dl-pi', son5('parmak'))}${tarihAlan('mePiTarih', 'Belge tarihi', p.tarih)}${alan('mePiSayi', 'Belge sayısı', p.sayi, 'maxlength="10"')}
     </div></details>`;
 }
 export function evrakOku(f) {

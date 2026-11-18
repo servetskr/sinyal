@@ -221,6 +221,8 @@ export async function hazirla(ids, { foto = true, koru = null } = {}) {
     if (x.tur === 'evrak') {
       const k = kursiyer(r.kursiyer), g = k && mebGrup(k); if (!g) { ekle(x, 'Dönem grubuna atanmamış'); continue; }
       const { l: ev } = ME.evrakPaketi(k); if (k.sinif === 'B-EN' && (ev.saglik || {}).ozur !== 'Var') { ekle(x, 'B Engelli: engel durumu “Var” olmalı (öğrenci dosyası › Bilgiler › MEBBİS evrak bilgileri)'); continue; } if (!Object.keys(ev).length) { ekle(x, 'Evrak bilgisi girilmemiş (öğrenci dosyası › Bilgiler › Düzenle)'); continue; }
+      // KAY-037: kesin tarih hataları (gelecekte ya da doğumdan önce) MEBBİS'e yazmayı durdurur; süre uyarıları durdurmaz
+      { const kes = ME.tarihUyarilari(k).filter(u => u.dayanak === 'Tarih denetimi'); if (kes.length) { ekle(x, kes[0].metin + ' Düzeltmeden MEBBİS’e yazılmaz.'); continue; } }
       l.push({ id: x.id, tur: 'evrak', baslik: tamAd(k), donem: g.donem, tc: k.tc, adSoyad: tamAd(k), evrak: ev });
     }
     if (x.tur === 'grup') { const g = GR.grupBul(r.grup); if (!g) continue; l.push({ id: x.id, tur: 'grup', baslik: g.ad, donem: g.donem, donemAd: GR.donemAdi(g.donem), grupNo: g.grupNo, subeNo: subeNo(g), sube: g.sube, baslangic: trT(g.baslangic) }); }
