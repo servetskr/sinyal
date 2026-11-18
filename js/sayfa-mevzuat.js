@@ -683,6 +683,7 @@ function belgeEklePenceresi(k) {
   pencere({
     baslik: 'Belge ekle', korumali: false,
     icerik: `<form class="mz-yukle" data-mz-yukle novalidate>
+      <p class="ipucu uyari" style="margin:0 0 12px">${isaret('uyari', 20)}<span><b>Kişi bilgisi içeren belge (öğrenci evrakı vb.) yüklemeyin; yalnız MEB/ilçe yazıları.</b> Yüklenen yazının metni özetlemek ve sorulara cevap vermek için yazı işleme hizmetine gönderilir.</span></p>
       <div class="alan"><span class="et">Dosya</span><label class="mz-dosya"><input id="mz-dosya" type="file" name="dosya" accept=".pdf,.docx,.jpg,.jpeg,.png,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png"><span class="dg dg-cizgi dg-kucuk" aria-hidden="true">${ik('belge')}Dosya seç</span><span class="mz-dosya-ad" data-mz-dosya-ad>Seçilmedi</span></label><small class="mz-yardim">PDF, Word (.docx), JPG ya da PNG; en çok 10 MB</small></div>
       <div class="alan"><label for="mz-metin">ya da metni yapıştırın</label><textarea id="mz-metin" name="metin" rows="5" placeholder="Yazının metnini buraya yapıştırabilirsiniz"></textarea></div>
       <div class="form-izgara">
@@ -690,6 +691,7 @@ function belgeEklePenceresi(k) {
         <div class="alan"><label for="mz-tarih">Yazının tarihi</label><input id="mz-tarih" type="date" name="tarih" max="${bugun}"></div>
         <div class="alan"><label for="mz-sayi">Sayı</label><input id="mz-sayi" name="sayi" maxlength="80" placeholder="Ör. E-12345678-100"></div>
       </div>
+      <label class="tam ind-tik" style="margin-top:10px"><input type="checkbox" name="kisisiz"> Bu belge bir MEB/ilçe yazısı; öğrenci ya da personel kişi bilgisi içermiyor</label>
       <div class="mz-ilerleme" data-mz-ilerleme hidden></div>
     </form>`,
     altlik: `<button type="button" class="dg dg-cizgi" data-kapat>Vazgeç</button><button type="button" class="dg dg-ana" data-mz-gonder>Yükle</button>`,
@@ -707,6 +709,8 @@ function belgeYukle(d, k) {
   let tur = x ? (x.type || (/\.docx$/i.test(x.name) ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : /\.pdf$/i.test(x.name) ? 'application/pdf' : '')) : 'text/plain;charset=utf-8';
   if (x && !/^(application\/pdf|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document|image\/(jpeg|png))$/.test(tur)) return bildir('Bu dosya türü okunamaz; PDF, Word (.docx), JPG ya da PNG seçin', 'uyari');
   if (!ad) return bildir('Yazıya bir başlık verin', 'uyari');
+  // karar (18 Kas): öğrenci belgeleri hiçbir yoldan bu uca gitmez; yükleyen belgenin kişi bilgisi içermediğini onaylar
+  if (!f.kisisiz.checked) return bildir('Yalnız MEB/ilçe yazısı yüklenir: kişi bilgisi içermediğini işaretleyin', 'uyari');
   const kok = apiKok();
   if (!kok) return bildir('Yerel denemede belge servisi kapalı', 'uyari');
   const il = d.querySelector('[data-mz-ilerleme]'), dg = d.querySelector('[data-mz-gonder]');
