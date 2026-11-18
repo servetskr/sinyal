@@ -1276,6 +1276,18 @@ export function programUyarisi(sinif) {
 export const egitimSinifi = sinif => ((SINIFLAR[sinif] || {}).tur || 'ehliyet') === 'egitim';
 // PAR-005/068: KDV oranı sınıfa (fatura kalemine) göre. 5580 sayılı Kanun kapsamındaki sürücü kursu eğitimi %10 (2007/13033 BKK II sayılı liste B/15,
 // 7346 s. CBK, 10/07/2023'ten beri); kurs ayarı S.entegrasyon.kdv bu oranı tutar. 5580 dışındaki eğitimler (SRC, psikoteknik, MYK) genel oran %20.
+// PAR-032 (YON-030): gecikme faizi hesaplayıcı. Yalnız hesaplar ve gösterir, borca hiçbir zaman kendiliğinden eklemez. Müdür Ayarlar'da açar:
+// S.kurs.gecikmeFaizi { acik, yontem: 'yasal' | 'avans' | 'sabit', oran (yıllık %) }. Varsayılan kapalı. Faizin alınıp alınamayacağı açık (mali cevaplar 14):
+// ÖÖKY m.54/1-b, 55/4 ve il taban listesi notu ilan dışı her ücreti yasaklıyor; gösterildiği her yerde FAIZ_UYARI görünür.
+export const FAIZ_UYARI = 'İl taban fiyat listesi kurs ücreti dışında hiçbir ad altında ücret alınmasını yasaklıyor (not 4); faiz istemeden önce avukatınıza danışın.';
+export const FAIZ_YONTEM = { yasal: 'Yasal faiz (3095 sayılı Kanun m.1)', avans: 'Avans faizi (TCMB oranı, 3095 m.2/2)', sabit: 'Sabit oran (sözleşmedeki)' };
+export const YASAL_FAIZ_VARSAYILAN = 24;  // yıllık %, 1 Haziran 2024'ten beri; güncel oranı müdür teyit eder
+export const faizAyar = () => { const o = (S.kurs || {}).gecikmeFaizi || {}, yontem = FAIZ_YONTEM[o.yontem] ? o.yontem : 'yasal', oran = +o.oran > 0 ? +o.oran : yontem === 'yasal' ? YASAL_FAIZ_VARSAYILAN : 0; return { acik: !!o.acik, yontem, oran, girilen: +o.oran > 0 }; };
+export function gecikmeFaizi(k, bugun = gun(0)) {
+  const a = faizAyar(), l = (((k || {}).odeme || {}).taksitler || []).map((t, i) => ({ t, i })).filter(x => !x.t.odendi && !x.t.iptal && x.t.vade && x.t.vade < bugun)
+    .map(x => { const kalan = (+x.t.tutar || 0) - (+x.t.kismi || 0), g = Math.round((tarihOku(bugun) - tarihOku(x.t.vade)) / 864e5); return { i: x.i, vade: x.t.vade, kalan, gun: g, faiz: Math.round(kalan * a.oran / 100 * g / 365 * 100) / 100 }; }).filter(x => x.kalan > 0);
+  return { ...a, l, toplam: Math.round(l.reduce((s, x) => s + x.faiz, 0) * 100) / 100 };
+}
 // PAR-048: saklama süresi. Tacir defter ve dayanağı belgeleri 10 yıl saklar (TTK m.82/1-d, 82/5); süre belgenin ait olduğu takvim yılının sonundan başlar.
 // VUK m.253'teki 5 yıl yetmez. Kurs ayarı (S.kurs.saklamaYil) daha uzun olabilir, 10'dan kısa olamaz.
 export const SAKLAMA_YIL = 10;
