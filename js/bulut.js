@@ -1434,7 +1434,7 @@ export async function devirleriIsle() {
   if (!bulut.kurs || !fb || !['mudur', 'sekreter'].includes(bulut.rol)) return 0;
   const { db, F } = fb; let n = 0;
   const q = await F.getDocs(F.query(F.collection(db, 'devirler'), F.where('eskiKurs', '==', bulut.kurs), F.where('durum', '==', 'onay'))).catch(() => null); if (!q) return 0;
-  for (const d of q.docs) { const tel = d.id, v = d.data(), k = (S.kursiyerler || []).find(x => x.hesap && x.hesap.tel === tel);
+  for (const d of q.docs) { const tel = d.id, v = d.data(), l = (S.kursiyerler || []).filter(x => x.hesap && x.hesap.tel === tel), k = l.find(x => !x.hesap.eposta) || l[0];   // YON-002: telefonla giren hesap önce kapanır
     try { if (k) { await ogrenciHesapKapat(k); (k.notlar = k.notlar || []).unshift({ tarih: gun(0), metin: 'Telefon numarası öğrencinin onayıyla ' + (v.yeniKursAd || 'başka bir kursa') + ' devredildi; bu kurstaki öğrenci hesabı kapandı.' }); islem('Numara devrini tamamladı', (k.ad || '') + ' · ' + (v.yeniKursAd || '')); }
       await F.updateDoc(F.doc(db, 'devirler', tel), { durum: 'kapandi', kapanis: F.serverTimestamp() }); n++; } catch (x) { console.warn('devir', x); } }
   if (n) kaydet(); return n;
