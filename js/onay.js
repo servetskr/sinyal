@@ -3,7 +3,7 @@
 // (pencerenin açılması onay sayılmaz). Kayıt kişi başına ve metnin sürümüyle kurs verisinde tutulur (cihazlar arası):
 // S.onaylar[kişi][metin] = { surum, gordu, onay?, gosterme, ad }. Metin değişince (sürüm artınca) yeniden sorulur.
 import { S, kaydet, islem, oturum } from './veri.js?v=234';
-import { pencere, kapatPencere, e, isaret } from './ui.js?v=234';
+import { pencere, kapatPencere, e, isaret, bildir } from './ui.js?v=234';
 
 // YON-069: metnin SHA-256 özeti (onay kaydında metnin o anki hâli kanıtlanır)
 export async function ozet(metin) { try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(metin))); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); } catch (x) { return ''; } }
@@ -28,7 +28,10 @@ async function bilgiKaydet(b, onay, gosterme, metin) {
   const onayli = onay || (eski.surum === b.surum && eski.onay);
   S.onaylar = { ...(S.onaylar || {}), [id]: { ...((S.onaylar || {})[id] || {}), [b.id]: { surum: b.surum, gordu: simdi, ...(onayli ? { onay: onay ? simdi : eski.onay } : {}), gosterme: !!gosterme, ad: u.ad || '' } } };
   if (onay && !(eski.surum === b.surum && eski.onay)) islem('Bilgilendirmeyi onayladı', b.baslik + ' · sürüm ' + b.surum);
-  if (onay && b.kurs && S.kurs) { const oz = await ozet(metin || b.metin); S.kurs.sozlesmeOnay = { ...(S.kurs.sozlesmeOnay || {}), [b.id]: { kim: u.ad || '', uid: id, eposta: u.eposta || '', zaman: simdi, surum: b.surum, ozet: oz } }; islem('Sözleşmeyi kurs adına e-onayladı', b.baslik + ' · sürüm ' + b.surum + ' · SHA-256 ' + oz.slice(0, 12)); }
+  if (onay && b.kurs && S.kurs) { const oz = await ozet(metin || b.metin); S.kurs.sozlesmeOnay = { ...(S.kurs.sozlesmeOnay || {}), [b.id]: { kim: u.ad || '', uid: id, eposta: u.eposta || '', zaman: simdi, surum: b.surum, ozet: oz } }; islem('Sözleşmeyi kurs adına e-onayladı', b.baslik + ' · sürüm ' + b.surum + ' · SHA-256 ' + oz.slice(0, 12));
+    // YON-069: metin + SHA-256 kopyası e-postayla (onaylayanın hesap e-postası ve kursun onaylı adresleri; adres yoksa sessizce geçilir)
+    const mt = String(metin || b.metin); import('./eposta.js?v=234').then(m => m.sozlesmeKopyasi({ id: b.id, baslik: b.baslik, surum: b.surum, metin: mt, ozet: oz, kim: u.ad || '', zaman: simdi }))
+      .then(r => { if (r && r.ok && !r.zatenGitti) bildir('Onay kopyası e-postayla gönderildi'); }).catch(() => {}); }
   kaydet();
 }
 // bekleyen metinleri sırayla gösterir; başka pencere açıksa beklemez, sonraki girişe kalır

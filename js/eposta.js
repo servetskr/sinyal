@@ -4,7 +4,7 @@
 // Tetikleme sunucusuz: günlük rapor gün sonu kapatılınca; haftalık ve aylık rapor dönemin ilk açılışında, tek cihazdan
 // (bulut.js sahiplen: kurslar/{kurs}/gonderim belgesi bir kez oluşturulabilir; kilit 3 saatlik dilime bağlı, gönderemeyen cihazın yerine
 // sonraki dilimde başka cihaz dener) ve worker'da dönem başına bir kez. Açık kalan sekmede saatte bir yeniden bakılır.
-import { S, kaydet, gun, islem, oturum, bulutKanca, tamAd, gecikenler } from './veri.js?v=234';
+import { S, kaydet, gun, islem, oturum, bulutKanca, tamAd, gecikenler, kalanBorc, yontemAd } from './veri.js?v=234';
 import { e, tl, ik, bildir, rozet, tamTarih } from './ui.js?v=234';
 import { WORKER, bulut, bulutta, hesapEposta } from './bulut.js?v=234';
 // YON-068: hesabın e-postası doğrulanana kadar rapor / yedek e-postası ve Drive yedeği çalışmaz (yanlış yazılan adrese gitmesin)
@@ -297,3 +297,57 @@ export function veriSekmesiBagla(k) {
 }
 // Hızlı yardımcı: rapor önizlemesi (deneme ve testler için)
 export const raporOnizle = (tur = 'gunluk', bas = gun(0), bit = bas) => raporHtml(tur, raporVerisi(bas, bit));
+
+// ---- PAR-058: öğrenciye tek alıcılı e-posta (makbuz, ödeme hatırlatması) ----
+// Worker /eposta/ogrenci: yalnız müdür, ön büro, şube müdürü; gövdeyi worker kurar (burada yalnız satırlar ve düz not gider),
+// kurs başına günlük sınır ve aynı adrese günde 3. Alıcı öğrencinin kayıttaki e-postası (k.eposta).
+const ogrEpostaVar = k => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String((k && k.eposta) || '').trim());
+export async function ogrenciyeEposta(tur, k, { satirlar = [], not = '', ek = null } = {}) {
+  if (!ogrEpostaVar(k)) throw hata('Öğrencinin e-posta adresi kayıtlı değil (öğrenci kartı › Kimlik ve iletişim › E-posta)');
+  if (!bulutta()) return { ok: true, demo: true };   // demo: gönderilmez
+  return istek('eposta/ogrenci', { tur, adres: String(k.eposta).trim(), ad: tamAd(k), satirlar, not, ...(ek ? { ek } : {}) });
+}
+const taksitKalani = t => (+t.tutar || 0) - (+t.kismi || 0);
+export function makbuzSatirlari(k, h) {
+  const kalan = kalanBorc(k);
+  return [...(h.no ? [['Makbuz no', h.no]] : []), ['Tutar', tl(h.tutar)], ['Ödeme yöntemi', yontemAd(h.yontem) || '—'], ['Tarih', tamTarih(h.tarih)], ...(h.kategori ? [['Açıklama', h.kategori]] : []), ['Kalan borç', kalan ? tl(kalan) : 'Borcunuz kalmadı']];
+}
+export function hatirlatmaSatirlari(k) {
+  const gec = gecikenler(k), kalan = kalanBorc(k);
+  return [...gec.slice(0, 6).map(t => ['Vadesi geçen taksit · ' + tamTarih(t.vade), tl(taksitKalani(t))]), ...(gec.length > 6 ? [['Diğer gecikmiş taksit', String(gec.length - 6)]] : []), ['Kalan borç', tl(kalan)]];
+}
+// Düğmeler için hazır çağrılar: sonucu kullanıcıya bildirir, işlem kaydına yazar
+export async function makbuzEpostaGonder(k, hid) {
+  const h = (S.hareket || []).find(x => x.id === hid); if (!k || !h) return;
+  try {
+    const r = await ogrenciyeEposta('makbuz', k, { satirlar: makbuzSatirlari(k, h), not: 'Ödemeniz için teşekkür ederiz.' });
+    if (r.demo) return bildir('Demo: e-posta gönderilmedi');
+    islem('Makbuzu e-postayla gönderdi', tamAd(k) + ' · ' + tl(h.tutar)); kaydet(); bildir('Makbuz e-postası gönderildi: ' + k.eposta, 'tamam');
+  } catch (x) { mesajHata(x); }
+}
+export async function hatirlatmaEpostaGonder(k) {
+  if (!k || !kalanBorc(k)) return bildir('Öğrencinin borcu yok', 'uyari');
+  try {
+    const r = await ogrenciyeEposta('hatirlatma', k, { satirlar: hatirlatmaSatirlari(k), not: 'Ödemenizi kurs ofisinde ya da kursun bildirdiği hesaba yapabilirsiniz. Ödediyseniz bu e-postayı dikkate almayın.' });
+    if (r.demo) return bildir('Demo: e-posta gönderilmedi');
+    islem('Ödeme hatırlatmasını e-postayla gönderdi', tamAd(k) + ' · ' + tl(kalanBorc(k))); kaydet(); bildir('Hatırlatma e-postası gönderildi: ' + k.eposta, 'tamam');
+  } catch (x) { mesajHata(x); }
+}
+export const ogrenciEpostasiVar = ogrEpostaVar;
+
+// ---- YON-069: sözleşme / onay metninin e-posta kopyası (metin + SHA-256) ----
+// Worker 'sozlesme' türü: yalnız müdür; alıcı onaylayanın doğrulanmış hesap e-postası ve kursun onaylı yönetici adresleri; belge + sürüm başına bir kez.
+// Metin, özetin hesaplandığı hâliyle (aynı karakterler) gönderilir: e-postadaki metnin SHA-256'sı onay kaydındakiyle aynı çıkar.
+export async function sozlesmeKopyasi({ id, baslik, surum, metin, ozet, kim, zaman }) {
+  if (!bulutta() || !bulutKanca.yetki) return { demo: true };
+  const kurs = S.kurs.ad || 'Kurs', tarihS = new Date(zaman).toLocaleString('tr-TR');
+  const govde = [
+    `<p style="margin:0 0 12px;font-size:15px;line-height:1.55"><b>${e(kurs)}</b> adına <b>${e(kim || 'kurs müdürü')}</b>, ${e(tarihS)} tarihinde “${e(baslik)}” metnini (sürüm ${+surum || 1}) mdSinyal’de e-onayladı. Onaylanan metnin tam hâli aşağıdadır.</p>`,
+    not(`<b>SHA-256 özeti:</b><br><span style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;word-break:break-all">${e(ozet)}</span><br>Metnin özeti onay kaydındakiyle aynıdır; metin değişirse özet de değişir.`),
+    bolum('Onaylanan metin', `<div style="margin-top:10px;font-size:13.5px;line-height:1.6;color:${R.murekkep};white-space:pre-wrap">${e(metin)}</div>`),
+  ].join('\n');
+  return istek('eposta/gonder', { tur: 'sozlesme', donem: (String(id).replace(/[^\w]/g, '') + '-' + (+surum || 1)).slice(0, 20), konu: `${kurs} · ${baslik} · e-onay kopyası`,
+    html: kabuk({ ust: kurs + ' · ' + tarihS, baslik: 'E-onay kopyası', govde, onizleme: baslik + ' · sürüm ' + (+surum || 1) + ' · SHA-256 ' + String(ozet).slice(0, 12),
+      alt: 'Bu e-posta, onayın kaydı olarak onaylayan kişinin hesap e-postasına ve kursun onaylı yönetici adreslerine gönderildi. Saklamanız önerilir.' }),
+    metin: [`${kurs} · ${baslik} · sürüm ${+surum || 1}`, `E-onaylayan: ${kim || ''} · ${tarihS}`, `SHA-256: ${ozet}`, '', metin].join('\n') });
+}

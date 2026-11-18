@@ -14,6 +14,8 @@
 // /hata: uygulama hatalarının kişisel veri içermeyen kısa kaydı (POST, sitenin kendi adresinden); KV 'hata:<gün>:<iz>' 7 gün.
 //   GET /hata yalnız platform sahibine: Firebase oturum belirteci (sahip uid) ya da SAHIP_ANAHTAR (gizli) ile.
 // /eposta: kursun rapor ve yedek e-postaları (onaylı adreslere); /eposta/sahip platform sahibinin analiz e-postası. Ayrıntı eposta() üstünde.
+// /mebbis/ekran-alarm (YON-062): MEBBİS ekranı değişti alarmı sahibe WhatsApp şablonuyla, ekran başına günde bir; ayrıntı ekranAlarm() üstünde.
+//   /eposta/ogrenci (PAR-058): öğrenciye tek alıcılı makbuz / ödeme hatırlatması; ayrıntı epOgrenci() üstünde.
 // /mevzuat/*: mevzuat arama (sorgu gömme), kursa gelen MEB yazılarını yükleme/listeleme/silme, özet ve kaynaklı cevap. Ayrıntı mevzuatUc() üstünde.
 const IZINLI = ['https://mdsinyal.com', 'http://localhost:4481', 'http://127.0.0.1:4481'];
 const HEDEF = /^(https:\/\/mdsinyal\.com\/|https:\/\/servetskr\.github\.io\/sinyal\/|http:\/\/localhost:4481\/)/;
@@ -149,7 +151,14 @@ function demoHatSec(env, metin, rol) {
 // Kursun kendi WhatsApp hattı (Meta'daki telefon numarası kimliği + kalıcı erişim anahtarı); anahtar tarayıcıya hiç dönmez
 const kursHat = async (env, kurs) => { try { return JSON.parse((await env.LINK.get('hat:' + kurs)) || 'null'); } catch (x) { return null; } };
 // Onaylı şablonla gönderim: tek gövde değişkeni ({{1}}); değişken satır sonu ve 4'ten fazla boşluk içeremez (Meta kuralı)
-const sablonParam = metin => metin.replace(/\s*\n+\s*/g, ' · ').replace(/[\t ]{4,}/g, '   ').slice(0, 1000);
+// MSJ-010/MSJ-023: Meta şablon gövdesi en çok 1.024 karakter (sabit metin + değişken). Onaylı şablonların sabit metni ~70 karakter
+// (sinyal_bildirim, sinyal_kampanya, mebbis_ekran_alarmi); pay bırakılarak değişken 940 karakterde kesilir (sonuna …). Şablon metni uzarsa SABLON_SABIT artırılır.
+const SABLON_GOVDE_SINIR = 1024, SABLON_SABIT = 84, SABLON_DEGISKEN = SABLON_GOVDE_SINIR - SABLON_SABIT;
+// uzunluk UTF-16 birimiyle sayılır (emoji iki birim: hangi sayımla da sınır aşılmasın); yarım kalan emoji (vekil çift) atılır
+const sablonKes = t => t.length > SABLON_DEGISKEN ? t.slice(0, SABLON_DEGISKEN - 1).replace(/[\uD800-\uDBFF]$/, '').trimEnd() + '…' : t;
+// Meta kuralı: değişkende satır sonu, sekme ve art arda 4'ten fazla boşluk olamaz (132000 hatası). Satır sonu ' · ' olur; sekme ve öteki
+// boşluk karakterleri (dikey sekme, form besleme, bölünmez boşluk, Unicode satır/paragraf ayırıcı) tek boşluğa, 4 ve daha uzun boşluk dizisi 3 boşluğa iner.
+const sablonParam = metin => sablonKes(String(metin).replace(/\s*[\r\n\u2028\u2029]+\s*/g, ' · ').replace(/[\t\v\f\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]/g, ' ').replace(/ {4,}/g, '   ').trim());
 const sablonGovde = (to, ad, dil, metin) => ({ messaging_product: 'whatsapp', to, type: 'template', template: { name: ad, language: { code: dil || 'tr' }, components: [{ type: 'body', parameters: [{ type: 'text', text: sablonParam(metin) }] }] } });
 // Kişinin kursun hattına en son yazdığı an (webhook yazar, 25 saat tutulur). Pencere açık değilse serbest metin Meta'da sonradan
 // 131047 ile düşer ve bu hata isteğin cevabında değil webhook'ta gelir; bu yüzden şablon tanımlı kursta pencere kapalıysa doğrudan şablon gider.
@@ -447,20 +456,33 @@ const ONIZLEME = {
 };
 
 // ---- /eposta: kursun rapor ve yedek e-postaları (sinyal-kaynak/belgeler/eposta-gonderici.md) ----
-// Sağlayıcı soyut: RESEND_API_KEY (önerilen) ya da GMAIL_CLIENT_ID + GMAIL_CLIENT_SECRET + GMAIL_REFRESH_TOKEN (Gmail API).
-// Gönderen: EPOSTA_GONDEREN (ör. "mdSinyal <rapor@mdsinyal.com>"). Sahibin analiz e-postası: SAHIP_EPOSTA.
+// MSJ-040 kararı (18 Kas): bütün e-postalar mdSinyal'in kendi adresinden, Resend üzerinden: gönderen "mdSinyal <destek@mdsinyal.com>"
+// (mdsinyal.com alan adı Resend'de doğrulanmış olmalı; bir Gmail adresi gönderen yapılamaz, Gmail DMARC'ı üçüncü taraf gönderimini reddeder).
+// Firebase'in şifre yenileme / doğrulama e-postaları da aynı Resend hesabından SMTP ile gider (konsol ayarı; kod yok).
+// Sağlayıcı: RESEND_API_KEY (asıl yol). GMAIL_CLIENT_ID + GMAIL_CLIENT_SECRET + GMAIL_REFRESH_TOKEN (Gmail API) yalnız YEDEK yoldur, Resend
+// anahtarı yoksa kullanılır; o yolda gönderen Gmail hesabının kendi adresi ya da onaylı takma adı olmalı (EPOSTA_GONDEREN ile verin).
+// Gönderen: EPOSTA_GONDEREN (varsayılan "mdSinyal <destek@mdsinyal.com>"). Sahibin analiz e-postası: SAHIP_EPOSTA.
+// Resend ücretsiz planı günde 100 / ayda 3.000 e-posta: kurs sayısı artınca izlenmeli (öğrenci e-postası EPOSTA_OGRENCI_SINIR ile de sınırlı).
 // Kötüye kullanım engeli: alıcı yalnız kursun ONAYLI adresleri (müdür ekler, adrese giden onay linkine dokunulunca açılır);
 // gövde ve ek boyutu sınırlı; kurs başına günde EPOSTA_GUNLUK_SINIR (varsayılan 12) e-posta; günlük/haftalık/aylık rapor dönem başına bir kez.
 // KV: 'epadres:<kurs>' adres listesi (belirteç tutulmaz) · 'eponay:<belirteç>' 7 gün · 'epsay:<kurs>:<gün>' sayaç 2 gün · 'epgitti:<kurs>:<tür>:<dönem>' 40 gün
 // Bu anahtarlar GET /k/ okuyucusunda engelli (iç kayıt). Sayaç ve 'bir kez' kaydı KV'de oku-yaz: paralel isteklerde YAKLAŞIK sınırdır.
 // Ücretsiz Workers planında istek başına işlemci süresi kısa: ek en çok ~1,2 milyon base64 karakter (~900 KB), worker eki ayrıştırmaz.
-const EP_TUR = ['gunluk', 'haftalik', 'aylik', 'deneme', 'yedek'], EP_EN_FAZLA_ADRES = 3;
+// YON-069: 'sozlesme' — sözleşme / onay metninin kopyası (metin + SHA-256): yalnız müdür; alıcı onaylayanın doğrulanmış hesap e-postası
+// (Firebase belirtecindeki email, email_verified) ve kursun onaylı yönetici adresleri; belge + sürüm başına bir kez (donem), ek yok.
+const EP_TUR = ['gunluk', 'haftalik', 'aylik', 'deneme', 'yedek', 'sozlesme'], EP_EN_FAZLA_ADRES = 3;
 const epGecerli = a => /^[^\s@<>,;"]{1,64}@[A-Za-z0-9.-]{1,180}\.[A-Za-z]{2,24}$/.test(a);
+// isteği yapanın doğrulanmış hesap e-postası (belirteç uyeRol'de Firestore'a gösterilerek doğrulanır; öğrenci giriş adresleri hariç)
+function belirtecEposta(req) {
+  try { const p = JSON.parse(atob((req.headers.get('Authorization') || '').replace(/^Bearer /, '').split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))), a = String(p.email || '').trim().toLowerCase();
+    return p.email_verified === true && epGecerli(a) && !/@ogrenci\.sinyal\.app$/.test(a) ? a : ''; } catch (x) { return ''; }
+}
 const epGun = () => new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10);
 const b64 = s => { const b = new TextEncoder().encode(s); let x = ''; for (let i = 0; i < b.length; i += 0x8000) x += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(x); };
 const epKacis = s => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const EP_GONDEREN = 'mdSinyal <destek@mdsinyal.com>';   // MSJ-040
 function epSaglayici(env) {
-  const kimden = env.EPOSTA_GONDEREN || 'mdSinyal <rapor@mdsinyal.com>';
+  const kimden = env.EPOSTA_GONDEREN || EP_GONDEREN;
   if (env.RESEND_API_KEY) return { ad: 'resend', async gonder(o) {
     const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: 'Bearer ' + env.RESEND_API_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({ from: kimden, to: o.kime, subject: o.konu, html: o.html, text: o.metin || undefined, ...(o.ek ? { attachments: [{ filename: o.ek.ad, content: o.ek.b64 }] } : {}) }) });
@@ -627,6 +649,77 @@ async function sms(req, env, url, yol, cevap) {
   }
   return cevap({ ok: false }, 404);
 }
+// ---- YON-062: "MEBBİS ekranı değişti" alarmı platform sahibine WhatsApp şablonuyla ----
+// Kursun mdSinyal'i Yardımcı'dan ekran değişti bildirimi alınca (js/mebkayit.js ekranDegisti) POST /mebbis/ekran-alarm {ekranlar:[{ekran,eksik}], yardimci}.
+// Aynı ekran için günde bir ileti (bütün kurslar için ortak: ekran MEB'de değişince hepsini etkiler), günde en çok EKRAN_ALARM_GUNLUK (varsayılan 10) ileti.
+// Gönderen mdSinyal'in kendi hattı (PHONE_ID + WA_TOKEN), alıcı SAHIP_TEL; şablon EKRAN_ALARM_SABLON (varsayılan mebbis_ekran_alarmi, hizmet/UTILITY)
+// ve EKRAN_ALARM_DIL (varsayılan tr), tek gövde değişkeni. Meta'ya onaya gönderilecek şablon metni taslağı:
+//   "mdSinyal uyarısı: MEBBİS ekranı değişti. {{1}}. Yardımcı bu ekranın işlerini durdurdu; ekran haritasını güncelleyin."
+// KV: 'ekalarm:<EKRAN>:<gün>' 2 gün (kursun kimliği), 'ekalarm:say:<gün>' 2 gün. SAHIP_TEL tanımlı değilse yalnız {ok, kurulu:false} döner.
+const EKRAN_KOD = /^SKT\d{5}$/;
+async function ekranAlarm(req, env, cevap, kurs) {
+  if (!env.LINK) return cevap({ ok: false, hata: 'Depo yok' }, 500);
+  const b = await req.json().catch(() => ({}));
+  const l = (Array.isArray(b.ekranlar) ? b.ekranlar : []).slice(0, 10).map(x => ({ kod: String((x && x.ekran) || '').toUpperCase(), eksik: (Array.isArray(x && x.eksik) ? x.eksik : []).map(String).filter(y => /^[\w$.:-]{1,40}$/.test(y)).slice(0, 6) })).filter(x => EKRAN_KOD.test(x.kod));
+  if (!l.length) return cevap({ ok: false, hata: 'Ekran kodu geçersiz' }, 400);
+  if (!env.SAHIP_TEL || !env.WA_TOKEN || !env.PHONE_ID) return cevap({ ok: true, kurulu: false, gonderildi: [] });
+  const gun = epGun(), yeni = [];
+  for (const x of l) { if (yeni.some(y => y.kod === x.kod)) continue; if (!(await env.LINK.get('ekalarm:' + x.kod + ':' + gun))) yeni.push(x); }
+  if (!yeni.length) return cevap({ ok: true, gonderildi: [], zaten: true });
+  const sa = 'ekalarm:say:' + gun, n = +((await env.LINK.get(sa)) || 0);
+  if (n >= (+env.EKRAN_ALARM_GUNLUK || 10)) return cevap({ ok: true, gonderildi: [], sinir: true });
+  // önce işaretlenir (aynı anda gelen iki bildirim iki ileti göndermesin), gönderilemezse işaret kaldırılır
+  for (const x of yeni) await env.LINK.put('ekalarm:' + x.kod + ':' + gun, kurs, { expirationTtl: 2 * 86400 });
+  await env.LINK.put(sa, String(n + 1), { expirationTtl: 2 * 86400 });
+  const kursAd = (await kursAdiOku(req, kurs)) || 'bir kurs', yrd = String(b.yardimci || '').replace(/[^\w.-]/g, '').slice(0, 12);
+  const metin = yeni.map(x => x.kod + (x.eksik.length ? ' (eksik: ' + x.eksik.join(', ') + ')' : '')).join('; ') + ' · bildiren: ' + kursAd + (yrd ? ' · Yardımcı ' + yrd : '');
+  const r = await fetch('https://graph.facebook.com/v25.0/' + env.PHONE_ID + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + env.WA_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify(sablonGovde(rakam(env.SAHIP_TEL), env.EKRAN_ALARM_SABLON || 'mebbis_ekran_alarmi', env.EKRAN_ALARM_DIL || 'tr', metin)) }).catch(() => null);
+  const j = r ? await r.json().catch(() => ({})) : {};
+  if (!r || !r.ok) {
+    for (const x of yeni) await env.LINK.delete('ekalarm:' + x.kod + ':' + gun).catch(() => {});
+    await env.LINK.put(sa, String(n), { expirationTtl: 2 * 86400 }).catch(() => {});
+    console.error(JSON.stringify({ tur: 'hata', konu: 'ekran alarmı WhatsApp', kod: j.error && j.error.code, hata: String((j.error && j.error.message) || 'ulaşılamadı').slice(0, 200) }));
+    return cevap({ ok: false, hata: 'WhatsApp iletisi gönderilemedi' }, 502);
+  }
+  return cevap({ ok: true, gonderildi: yeni.map(x => x.kod) });
+}
+// ---- PAR-058: öğrenciye tek alıcılı e-posta (makbuz, ödeme hatırlatması) ----
+// Alıcı istekteki tek adres (öğrencinin kayıttaki e-postası); kursun onaylı adres listesi aranmaz. Kötüye kullanım engeli: yalnız ofis rolleri
+// (müdür, ön büro, şube müdürü); gövde istemciden HTML olarak alınmaz, worker kalıptan kurar (satırlar ve not düz metin, kaçışlı), konu
+// kurs adı + türden oluşur; kurs başına günde EPOSTA_OGRENCI_SINIR (varsayılan 40), aynı adrese günde 3. İsteğe bağlı tek PDF eki (makbuz).
+// KV 'epogr:<kurs>:<gün>' {n, a:{<adresin SHA-256 ilk 16 hanesi>: sayı}} 2 gün (adres açık yazılmaz). Sayaç oku-yaz: yaklaşık sınırdır.
+const EP_OGR_TUR = { makbuz: ['Ödeme makbuzu', 'Ödemeniz alındı'], hatirlatma: ['Ödeme hatırlatması', 'Ödeme hatırlatması'] };
+const EP_OGR_ROL = ['mudur', 'sekreter', 'subemudur'], EP_OGR_KISI = 3;
+const sha256Hex = async s => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(s))))].map(x => x.toString(16).padStart(2, '0')).join('');
+const epDuz = (s, n) => String(s == null ? '' : s).replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '').trim().slice(0, n);
+async function epOgrenci(req, env, cevap, S, kurs, rol) {
+  if (!rol || !EP_OGR_ROL.includes(rol)) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
+  if (!S) return cevap({ ok: false, kurulu: false, hata: 'E-posta servisi henüz kurulmadı' }, 503);
+  const ham = await req.text(); if (ham.length > 1.4e6) return cevap({ ok: false, hata: 'Dosya çok büyük' }, 413);
+  let b; try { b = JSON.parse(ham); } catch (x) { return cevap({ ok: false, hata: 'gecersiz' }, 400); }
+  const T = EP_OGR_TUR[b.tur], adres = String(b.adres || '').trim().toLowerCase();
+  if (!T) return cevap({ ok: false, hata: 'gecersiz' }, 400);
+  if (!epGecerli(adres) || /@ogrenci\.sinyal\.app$/.test(adres)) return cevap({ ok: false, hata: 'Öğrencinin e-posta adresi geçersiz' }, 400);
+  const satir = (Array.isArray(b.satirlar) ? b.satirlar : []).slice(0, 12).map(x => Array.isArray(x) ? [epDuz(x[0], 60), epDuz(x[1], 160)] : null).filter(x => x && x[0]);
+  const not = epDuz(b.not, 1000), ad = epDuz(b.ad, 80).replace(/[\r\n]/g, ' ');
+  if (!satir.length && !not) return cevap({ ok: false, hata: 'E-posta boş' }, 400);
+  let ek = null; if (b.ek) { const ead = String(b.ek.ad || '').replace(/[^\w.-]/g, '').slice(0, 80), v = b.ek.b64;
+    if (!/\.pdf$/i.test(ead) || typeof v !== 'string' || v.length > 1.2e6 || v.length % 4 || !/^[A-Za-z0-9+/]{1,64}$/.test(v.slice(0, 64)) || !/^[A-Za-z0-9+/=]{1,64}$/.test(v.slice(-64))) return cevap({ ok: false, hata: 'ek geçersiz' }, 400); ek = { ad: ead, b64: v }; }
+  const an = 'epogr:' + kurs + ':' + epGun(), h = (await sha256Hex(adres)).slice(0, 16);
+  let say; try { say = JSON.parse((await env.LINK.get(an)) || 'null'); } catch (x) { say = null; } say = say && typeof say === 'object' ? say : { n: 0, a: {} }; say.a = say.a || {};
+  const sinir = +env.EPOSTA_OGRENCI_SINIR || 40;
+  if (say.n >= sinir) return cevap({ ok: false, hata: 'Bugünlük öğrenci e-postası sınırı doldu (' + sinir + '); yarın tekrar deneyin' }, 429);
+  if ((say.a[h] || 0) >= EP_OGR_KISI) return cevap({ ok: false, hata: 'Bu adrese bugün ' + EP_OGR_KISI + ' e-posta gitti; yarın tekrar deneyin' }, 429);
+  // kurs adı istemciden alınmaz (konuya istenen metin yazılamasın): isteği yapanın kimliğiyle kurs belgesinden okunur
+  const kursAd = (await kursAdiOku(req, kurs)) || 'Sürücü kursunuz';
+  const tablo = satir.length ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:4px 0 16px;border-collapse:collapse">${satir.map(([k, v]) => `<tr><td style="padding:9px 0;border-bottom:1px solid #e8ebf1;font-size:14.5px;color:#6b7280">${epKacis(k)}</td><td align="right" style="padding:9px 0;border-bottom:1px solid #e8ebf1;font-size:14.5px;font-weight:700;color:#0f1729">${epKacis(v)}</td></tr>`).join('')}</table>` : '';
+  const govde = `${ad ? `<p style="margin:0 0 12px;font-size:15px;line-height:1.55">Sayın ${epKacis(ad)},</p>` : ''}${tablo}${not ? `<p style="margin:0;font-size:15px;line-height:1.55">${epKacis(not).replace(/\n/g, '<br>')}</p>` : ''}${ek ? '<p style="margin:14px 0 0;font-size:13px;color:#6b7280">Makbuz PDF olarak ektedir.</p>' : ''}`;
+  const metin = [ad ? 'Sayın ' + ad + ',' : null, ...satir.map(([k, v]) => k + ': ' + v), not || null, '', kursAd].filter(x => x !== null).join('\n');
+  try { await S.gonder({ kime: [adres], konu: kursAd + ' · ' + T[0], metin, html: epKabuk(T[1], govde, 'Bu e-posta ' + kursAd + ' tarafından mdSinyal üzerinden gönderildi. Sorunuz için kursunuzla görüşün.', kursAd + ' · ' + T[0]), ek }); }
+  catch (x) { console.error(x); return cevap({ ok: false, hata: 'Gönderilemedi' }, 502); }
+  say.n++; say.a[h] = (say.a[h] || 0) + 1; await env.LINK.put(an, JSON.stringify(say), { expirationTtl: 2 * 86400 });
+  return cevap({ ok: true, kalan: Math.max(0, sinir - say.n) });
+}
 async function eposta(req, env, url, yol, cevap) {
   if (!env.LINK) return cevap({ ok: false, hata: 'Depo yok' }, 500);
   const S = epSaglayici(env);
@@ -666,6 +759,7 @@ async function eposta(req, env, url, yol, cevap) {
     await epSayYaz(env, s); if (tek) await env.LINK.put(tek, '1', { expirationTtl: 40 * 86400 }); return cevap({ ok: true });
   }
   const kurs = req.headers.get('X-Kurs') || url.searchParams.get('kurs') || '', rol = await uyeRol(req, kurs);
+  if (yol === 'eposta/ogrenci' && req.method === 'POST') return epOgrenci(req, env, cevap, S, kurs, rol);   // PAR-058
   if (!rol || !['mudur', 'sekreter'].includes(rol)) return cevap({ ok: false, hata: 'Yetki yok' }, 403);  // öğretmen adresleri görmez
   const l = await epAdresler(env, kurs);
   if (yol === 'eposta' && req.method === 'GET') return cevap({ ok: true, kurulu: !!S, adresler: l.map(x => ({ a: x.a, onay: !!x.onay, tur: x.tur === 'kullanici' ? 'kullanici' : 'yonetici' })), enFazla: EP_EN_FAZLA_ADRES });
@@ -705,12 +799,14 @@ async function eposta(req, env, url, yol, cevap) {
     let b; try { b = JSON.parse(ham); } catch (x) { return cevap({ ok: false, hata: 'gecersiz' }, 400); }
     const tur = EP_TUR.includes(b.tur) ? b.tur : null, donem = String(b.donem || '').replace(/[^\w-]/g, '').slice(0, 20);
     if (!tur || typeof b.html !== 'string' || b.html.length > 400e3) return cevap({ ok: false, hata: 'gecersiz' }, 400);
+    if (tur === 'sozlesme' && (rol !== 'mudur' || !donem)) return cevap({ ok: false, hata: rol !== 'mudur' ? 'Sözleşme kopyasını yalnız kurs müdürü alır' : 'gecersiz' }, rol !== 'mudur' ? 403 : 400);
     // kullanıcı türündeki adreslere yalnız günlük rapor gider (haftalık/aylık mali özet ve bütün veriler yöneticiye)
-    const kime = l.filter(x => x.onay && (x.tur !== 'kullanici' || tur === 'gunluk')).map(x => x.a); if (!kime.length) return cevap({ ok: false, adresYok: true, hata: 'Bu rapor için onaylı e-posta adresi yok' }, 400);
-    let ek = null; if (b.ek) { const ad = String(b.ek.ad || '').replace(/[^\w.-]/g, '').slice(0, 80); const v = b.ek.b64;
+    const kime = [...new Set([...(tur === 'sozlesme' ? [belirtecEposta(req)].filter(Boolean) : []), ...l.filter(x => x.onay && (x.tur !== 'kullanici' || tur === 'gunluk')).map(x => x.a)])];
+    if (!kime.length) return cevap({ ok: false, adresYok: true, hata: 'Bu rapor için onaylı e-posta adresi yok' }, 400);
+    let ek = null; if (b.ek && tur !== 'sozlesme') { const ad = String(b.ek.ad || '').replace(/[^\w.-]/g, '').slice(0, 80); const v = b.ek.b64;
       // eki baştan sona taramak işlemci süresini aşar: uzunluk ve uçlar denetlenir, geçersiz base64'ü sağlayıcı reddeder
       if (!/\.(xlsx|json|gz)$/.test(ad) || typeof v !== 'string' || v.length > 1.2e6 || v.length % 4 || !/^[A-Za-z0-9+/]{1,64}$/.test(v.slice(0, 64)) || !/^[A-Za-z0-9+/=]{1,64}$/.test(v.slice(-64))) return cevap({ ok: false, hata: 'ek geçersiz' }, 400); ek = { ad, b64: v }; }
-    const tek = ['gunluk', 'haftalik', 'aylik'].includes(tur) && donem ? 'epgitti:' + kurs + ':' + tur + ':' + donem : null;
+    const tek = ['gunluk', 'haftalik', 'aylik', 'sozlesme'].includes(tur) && donem ? 'epgitti:' + kurs + ':' + tur + ':' + donem : null;
     if (tek && await env.LINK.get(tek)) return cevap({ ok: true, zatenGitti: true });
     const s = await epSay(env, kurs); if (s.n >= (+env.EPOSTA_GUNLUK_SINIR || 12)) return cevap({ ok: false, hata: 'Bugünlük e-posta sınırı doldu' }, 429);
     try { await S.gonder({ kime, konu: String(b.konu || 'mdSinyal raporu').slice(0, 150), html: b.html, metin: String(b.metin || '').slice(0, 100e3), ek }); } catch (x) { console.error(x); return cevap({ ok: false, hata: 'Gönderilemedi' }, 502); }
@@ -1504,6 +1600,7 @@ export default {
     let rol = null;
     if (gercek) { rol = await uyeRol(req, kursId); if (!rol || !PERSONEL.includes(rol)) return cevap({ ok: false, hata: 'Yetki yok' }, 403); }
     if (yol === 'belge/oku') return belgeOku(req, env, cevap, { gercek, rol, kursId });   // KAY-033
+    if (yol === 'mebbis/ekran-alarm') return gercek && req.method === 'POST' ? ekranAlarm(req, env, cevap, kursId) : cevap({ ok: false, hata: 'Yetki yok' }, 403);   // YON-062
     // mevzuat ve MEB yazıları: arama, yükleme, özet, cevap (kimlik ve yetki mevzuatUc() içinde; /mevzuat/gom demoya da açık)
     if (yol === 'mevzuat' || yol.startsWith('mevzuat/')) return mevzuat(req, env, url, yol, cevap, { gercek, rol, kursId, origin });
     // Kurs verisinin günlük yedeği (Firestore'dan ayrı yerde): kimlik, kullanıcının kendi Firebase oturumuyla Firestore'dan doğrulanır
@@ -1543,7 +1640,8 @@ export default {
       const phoneId = rakam(b.phoneId), token = String(b.token || '').trim(), wabaId = rakam(b.wabaId), appSecret = String(b.appSecret || '').trim(), pin = rakam(b.pin);
       const sablon = String(b.sablon || '').trim().toLowerCase(), sablonDil = String(b.sablonDil || 'tr').trim() || 'tr';
       // MSJ-023: pazarlama (tanıtım) mesajları için ayrı onaylı şablon (isteğe bağlı); yoksa genel şablon kullanılır
-      const sablonPaz = String(b.sablonPazarlama || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+      // adı geçersizse sessizce temizlenmez: kaydedilmez, uyarı döner (bağlantı bozulmaz)
+      const sablonPazHam = String(b.sablonPazarlama || '').trim().toLowerCase(), sablonPaz = /^[a-z0-9_]{1,512}$/.test(sablonPazHam) ? sablonPazHam : '';
       if (sablon && !/^[a-z0-9_]{1,512}$/.test(sablon)) return cevap({ ok: false, hata: 'Şablon adı yalnız küçük harf, rakam ve alt çizgi içerebilir' }, 400);
       if (appSecret && !/^[0-9a-f]{32}$/i.test(appSecret)) return cevap({ ok: false, hata: 'Uygulama gizli anahtarı 32 karakter olmalı (Meta › Uygulama ayarları › Temel)' }, 400);
       if (!phoneId || token.length < 20) return cevap({ ok: false, hata: 'Telefon numarası kimliği ve erişim anahtarı gerekli' }, 400);
@@ -1556,6 +1654,18 @@ export default {
       const j = await r.json().catch(() => ({}));
       if (!r.ok) return cevap({ ok: false, hata: 'Meta hattı doğrulamadı: ' + ((j.error && j.error.message) || r.status) }, 400);
       const G2 = 'https://graph.facebook.com/v25.0/', yetki = { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, uyarilar = [];
+      if (sablonPazHam && !sablonPaz) uyarilar.push('Pazarlama şablonu adı “' + sablonPazHam.slice(0, 60) + '” geçersiz (yalnız küçük harf, rakam ve alt çizgi); kaydedilmedi, tanıtım mesajları genel şablonla gider');
+      // şablon Meta'da var mı, onaylı mı, beklenen sınıfta mı (MSJ-023: pazarlama şablonu da denetlenir); sorun bağlantıyı bozmaz, uyarı olur
+      const sablonDenetle = async (ad, sinif, tanim) => {
+        const rs = await fetch(G2 + wabaId + '/message_templates?fields=name,status,category,language&name=' + encodeURIComponent(ad), { headers: yetki });
+        const js = await rs.json().catch(() => ({})), t = ((js && js.data) || []).find(x => x.name === ad && (x.language || '').toLowerCase().startsWith(sablonDil.toLowerCase().slice(0, 2)));
+        if (!rs.ok) return tanim + ' denetlenemedi: ' + ((js.error && js.error.message) || rs.status);
+        if (!t) return '“' + ad + '” ' + tanim.toLocaleLowerCase('tr') + ' bu hesapta (' + sablonDil + ') bulunamadı';
+        if (t.status !== 'APPROVED') return '“' + ad + '” ' + tanim.toLocaleLowerCase('tr') + ' henüz onaylı değil (' + t.status + ')';
+        if (t.category !== sinif) return sinif === 'UTILITY' ? '“' + ad + '” şablonu ' + t.category + ' sınıfında; hizmet (UTILITY) sınıfı daha ucuzdur'
+          : '“' + ad + '” pazarlama şablonu ' + t.category + ' sınıfında; tanıtım mesajları pazarlama (MARKETING) sınıfında olmalı, yoksa Meta şablonu yeniden sınıflar ya da durdurur';
+        return '';
+      };
       // Numara Cloud API'ye kayıtlı değilse (platform_type ≠ CLOUD_API) mesaj gitmez (Meta 133010): iki adımlı doğrulama PIN'iyle kaydedilir
       if (j.platform_type && j.platform_type !== 'CLOUD_API') {
         if (!pin) return cevap({ ok: false, kayitGerekli: true, hata: 'Numara henüz Cloud API’ye kayıtlı değil. 6 haneli iki adımlı doğrulama PIN’ini girip yeniden deneyin (yeni numarada PIN’i siz belirlersiniz)' }, 400);
@@ -1569,14 +1679,8 @@ export default {
       if (wabaId) {
         const ra = await fetch(G2 + wabaId + '/subscribed_apps', { method: 'POST', headers: yetki });
         if (!ra.ok) { const ja = await ra.json().catch(() => ({})); uyarilar.push('Gelen mesaj aboneliği açılamadı: ' + ((ja.error && ja.error.message) || ra.status)); }
-        if (sablon) {
-          const rs = await fetch(G2 + wabaId + '/message_templates?fields=name,status,category,language&name=' + encodeURIComponent(sablon), { headers: yetki });
-          const js = await rs.json().catch(() => ({})), t = ((js && js.data) || []).find(x => x.name === sablon && (x.language || '').toLowerCase().startsWith(sablonDil.toLowerCase().slice(0, 2)));
-          if (!rs.ok) uyarilar.push('Şablon denetlenemedi: ' + ((js.error && js.error.message) || rs.status));
-          else if (!t) uyarilar.push('“' + sablon + '” şablonu bu hesapta (' + sablonDil + ') bulunamadı');
-          else if (t.status !== 'APPROVED') uyarilar.push('“' + sablon + '” şablonu henüz onaylı değil (' + t.status + ')');
-          else if (t.category !== 'UTILITY') uyarilar.push('“' + sablon + '” şablonu ' + t.category + ' sınıfında; hizmet (UTILITY) sınıfı daha ucuzdur');
-        }
+        if (sablon) { const u = await sablonDenetle(sablon, 'UTILITY', 'Şablon'); if (u) uyarilar.push(u); }
+        if (sablonPaz) { const u = await sablonDenetle(sablonPaz, 'MARKETING', 'Pazarlama şablonu'); if (u) uyarilar.push(u); }
       } else uyarilar.push('WhatsApp hesap kimliği (WABA ID) girilmedi: gelen mesaj aboneliği ve şablon denetlenmedi');
       if (h && h.phoneId !== phoneId) await env.LINK.delete('hatno:' + h.phoneId);
       // kursa özel webhook doğrulama belirteci (kursun kendi Meta uygulamasında girilir; ortak belirteç paylaşılmaz)
@@ -1585,7 +1689,7 @@ export default {
       await env.LINK.put('hat:' + kursId, JSON.stringify(kayit));
       await env.LINK.put('hatno:' + phoneId, kursId);
       if (!h || h.dog !== dog) await env.LINK.put('hatdog:' + dog, kursId);
-      return cevap({ ok: true, bagli: true, no: kayit.no, ad: kayit.ad, kalite: j.quality_rating || '', sablon: kayit.sablon || '', gizli: !!kayit.appSecret, uyarilar, webhook: { adres: new URL(req.url).origin + '/webhook', belirtec: dog } });
+      return cevap({ ok: true, bagli: true, no: kayit.no, ad: kayit.ad, kalite: j.quality_rating || '', sablon: kayit.sablon || '', sablonPazarlama: kayit.sablonPazarlama || '', gizli: !!kayit.appSecret, uyarilar, webhook: { adres: new URL(req.url).origin + '/webhook', belirtec: dog } });
     }
     // Meta webhook doğrulaması (abonelik kurulurken bir kez)
     if (yol === 'webhook' && req.method === 'GET') {
@@ -1673,7 +1777,7 @@ export default {
     if (req.method === 'GET') {
       if (!yol) return cevap({ ok: true, hazir: !!(env.WA_TOKEN && env.PHONE_ID && env.ALICI), belge: true, kisa: !!env.LINK, kursHatti: true, sablon: !!env.SABLON_AD, demoHatlari: { usta: !!env.PHONE_ID_USTA, mudur: !!env.PHONE_ID_MUDUR } });
       const anahtar = yol.startsWith('k/') ? yol.slice(2) : yol;
-      if (/^(gelen$|(hat|hatno|gelen|medya|durum|yedek|kisaad|kursad|hata|sohbet|epadres|eponay|epsay|epgitti|mbelge)[:-])/.test(anahtar)) return cevap({ ok: false }, 404);  // iç kayıtlar (e-posta adresleri ve onay belirteçleri dahil) kısa link gibi okunamaz
+      if (/^(gelen$|(hat|hatno|gelen|medya|durum|yedek|kisaad|kursad|hata|sohbet|epadres|eponay|epsay|epgitti|epogr|ekalarm|mbelge)[:-])/.test(anahtar)) return cevap({ ok: false }, 404);  // iç kayıtlar (e-posta adresleri ve onay belirteçleri dahil) kısa link gibi okunamaz
       // imza dönüşü: sunucu kaydı (zaman, IP, ülke, tarayıcı) yalnız imza isteğinin mührünü bilen kursa verilir (?ka=)
       if (yol.startsWith('k/takip-') && env.LINK) {
         const g = await env.LINK.getWithMetadata(anahtar), md = g.metadata || null;

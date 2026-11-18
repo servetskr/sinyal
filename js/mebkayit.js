@@ -3,7 +3,7 @@
 // ~30 dakikalık parçalara bölme ve süre tahmini, Yardımcı'nın "MEBBİS ekranı değişti" bildirimi, her iş türü için elle giriş.
 // İşlem kaydı mevcut islem() ile sunucudaki yalnız eklenebilir kayda (kurslar/{k}/kayit) gider; TC ve değerlerin açık hâli yazılmaz.
 // Yardımcı'dan gelen iletilerin alanları: js/eklenti.js başındaki ileti sözleşmesi tablosu (ekranDegisti, mebKurum, kurum, olcum, veri.denetim, harita-durum).
-import { islemYetkili, S, kaydet, islem, oturum, tamAd, kursiyer, tcMaskele, seciliSube, cokSube, kuralAyar } from './veri.js?v=234';
+import { islemYetkili, S, kaydet, islem, oturum, tamAd, kursiyer, tcMaskele, seciliSube, cokSube, kuralAyar, bulutKanca } from './veri.js?v=234';
 import { pencere, kapatPencere, bildir, e, ik, isaret, rozet } from './ui.js?v=234';
 import * as GR from './gruplar.js?v=234';
 
@@ -306,18 +306,24 @@ export function izMetni(v) {
 }
 
 /* ---------- (g) "MEBBİS ekranı değişti" bildirimi: kursa açık uyarı, kayıt ve MEB işlemleri ekranında kırmızı kart ---------- */
+// YON-062: yeni alarm platform sahibine de WhatsApp ile iletilir (worker /mebbis/ekran-alarm; ekran başına günde bir ileti). Demoda ve bulutsuz çalışmada iletilmez; sonuç beklenmez.
+function ekranAlarmSahibe(l) {
+  if (!bulutKanca.yetki || !l.length) return;
+  import('./bulut.js?v=234').then(async B => { const h = await bulutKanca.yetki(); await fetch(B.WORKER + '/mebbis/ekran-alarm', { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ ekranlar: l.map(({ ekran, eksik }) => ({ ekran, eksik })), yardimci: (l.find(x => x.yardimci) || {}).yardimci || '' }) }); }).catch(() => {});
+}
 // l: [{ ekran: 'SKT03004', eksik: ['cmbDersSaati'], parmakIzi, yardimci, harita }]
 export function ekranDegisti(l, isId) {
   if (!Array.isArray(l) || !l.length) return false;
-  const a = S.mebEkranAlarm = S.mebEkranAlarm || { ekranlar: {} }; let yeni = 0;
+  const a = S.mebEkranAlarm = S.mebEkranAlarm || { ekranlar: {} }; let yeni = 0; const bildirilen = [];
   l.forEach(x => {
     const kod = String(x.ekran || '').toUpperCase().slice(0, 20) || 'bilinmeyen ekran', eski = a.ekranlar[kod];
     if (eski && eski.is === isId) return;   // aynı işin sonucu her yoklamada yeniden gelir: bir kez uyarılır (gizlendikten sonra da)
     a.ekranlar[kod] = { eksik: (x.eksik || []).map(String).slice(0, 12), zaman: Date.now(), is: isId, goruldu: false };
     islem('MEBBİS ekranı değişti', kisalt(`${kod} · eksik: ${(x.eksik || []).join(', ') || '—'}${x.yardimci ? ' · Yardımcı ' + x.yardimci : ''}${x.harita ? ' · harita ' + x.harita : ''}${isId ? ' · iş ' + isId : ''}`, 300));
-    yeni++;
+    yeni++; bildirilen.push({ ekran: kod, eksik: (x.eksik || []).map(String).slice(0, 6), yardimci: x.yardimci });
   });
   if (!yeni) return false;
+  ekranAlarmSahibe(bildirilen);
   Object.entries(a.ekranlar).forEach(([k, v]) => { if (!v || Date.now() - (v.zaman || 0) > 30 * 864e5) delete a.ekranlar[k]; });   // 30 günden eski uyarılar silinir
   a.zaman = Date.now(); kaydet();
   bildir(`MEBBİS ekranı değişti (${Object.keys(a.ekranlar).filter(k => !a.ekranlar[k].goruldu).join(', ')}). Bu ekranın işleri gönderilmedi; MEB işlemleri › MEBBİS aktarımı ekranına bakın.`, 'uyari');
