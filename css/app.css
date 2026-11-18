@@ -3891,3 +3891,13 @@ tr.secili-satir td { background: rgba(10, 77, 162, .06); }
 .musait-izgara > span[role=cell] svg { width: 16px; height: 16px; }
 .musait-sec label { display: grid; place-items: center; height: 40px; border: 1px solid var(--cizgi); border-radius: 8px; cursor: pointer; }
 .musait-sec input { width: 20px; height: 20px; }
+/* YON-037: sahip paneli · MEBBİS ekran alarmları */
+.sh-ea { margin-bottom: 14px; }
+.sh-ea h2 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: 16px; margin: 0 0 8px; }
+.sh-ea h2 span { font-size: 13px; font-weight: 500; color: var(--soluk); }
+.sh-ea-ekran summary { display: flex; gap: 10px; align-items: center; padding: 10px 12px; cursor: pointer; list-style: none; min-height: 44px; }
+.sh-ea-ekran summary::-webkit-details-marker { display: none; }
+.sh-ea-ekran ul { list-style: none; margin: 0; padding: 0 12px 10px 54px; display: grid; gap: 6px; }
+.sh-ea-ekran li b { display: block; font-size: 14px; color: var(--murekkep); }
+.sh-ea-ekran li small { color: var(--soluk); overflow-wrap: anywhere; }
+.sh-ea-yok { margin: 0 0 12px; }
