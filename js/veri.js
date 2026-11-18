@@ -1184,6 +1184,20 @@ export const kursAdi = hal => adEk(S.kurs.ad, hal);
 // Sınıfın kullanabileceği araç sınıfları: B Engelli önce B-EN (aparatlı) araç, yoksa otomatik B aracı (md.7/5: raporundaki şartları taşıyan araç)
 export const aracSiniflari = sinif => sinif === 'B-EN' ? ['B-EN', 'B-O'] : [sinif];
 // ARC-018: araç kendi sınıfına ek olarak kartta işaretlenen sınıflarda da kullanılır (ör. A2 aracıyla A1 dersi; MEBBİS SKT03004 araç listesine göre)
+// PER-003: çalışma izni durumu (MEBBİS'ten okunan bitiş; eski kayıtlarda eg.mebIzinBitis). t verilirse o güne göre (sınav günü için Y07).
+// tur: 'yok' (bitiş bilinmiyor) · 'bitti' · 'bugun' · 'yakin' (≤15 gün) · 'uyari' (≤30 gün) · 'ok'
+export const izinBitisi = eg => (eg && (eg.mebIzinBitis || (eg.meb || {}).izinBit)) || '';
+export function izinDurumu(eg, t) {
+  const bit = izinBitisi(eg); if (!bit) return { tur: 'yok', kalan: null, bit: '' };
+  const kalan = Math.round((tarihOku(bit) - (t ? tarihOku(t) : BUGUN)) / 864e5);
+  return { bit, kalan, tur: kalan < 0 ? 'bitti' : kalan === 0 ? 'bugun' : kalan <= 15 ? 'yakin' : kalan <= 30 ? 'uyari' : 'ok' };
+}
+// PER-011: haftalık ders sınırı — elle girilen; yoksa MEBBİS personelindeki Maaş/Ücret KDS'nin büyüğü; o da yoksa 40 (ÖÖKY 26/5)
+export function haftalikSinir(eg) {
+  if (eg && +eg.haftalikSinir > 0) return { n: +eg.haftalikSinir, kaynak: 'elle' };
+  const m = eg && eg.meb; if (m && +m.haftaSaat > 0) return { n: +m.haftaSaat, kaynak: +m.maasKds >= +m.ucretKds ? 'Maaş KDS' : 'Ücret KDS' };
+  return { n: 40, kaynak: 'varsayılan' };
+}
 export const aracUygun = (a, sinif) => !!a && aracSiniflari(sinif).some(s => a.sinif === s || (a.ekSiniflar || []).includes(s));
 export const ustaAraci = (egId, sinif) => { for (const s of aracSiniflari(sinif)) { const a = S.araclar.find(a => a.egitmen === egId && a.sinif === s); if (a) return a; } return S.araclar.find(a => a.egitmen === egId && aracUygun(a, sinif)); };
 export function dersAraci(egId, sinif, t, saat, haric) {

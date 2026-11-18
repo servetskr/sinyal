@@ -684,19 +684,48 @@ function kursiyerleriIsle(liste) {
   });
   return { toplam: kisi.size, eslesen, yok, farklar };
 }
+// PER-001, 002, 005, 006, 027: MEBBİS personel listesi (OOK12001 dgPersonelArama; yedek OOK54001).
+// Eşleme: izin no → TC → (yalnız öneri) ad. Adla bulunan kişiye hiçbir şey yazılmaz; S.mebPersonelOneri'ye "bağla" önerisi düşer.
+// Görevde: Durumu tam "Görevde", pembe (geçmiş) satır değil ve görevden ayrılma boş. Aynı kişinin birden çok satırı varsa görevde satırı,
+// yoksa en yeni izin bitişli satır (ayrılma bilgisi için). İzin no ve TC dolu ise ezilmez, fark gösterilir; izin bitişi her zaman alınır.
+// Bütün sütunlar x.meb'de; haftaSaat = Maaş KDS ile Ücret KDS'nin büyüğü. mdSinyal'de olmayan görevdeki kişi S.mebPersonelYeni (kart aç önerisi).
 function personeliIsle(t) {
-  const b = t.baslik, i = { izin: sutun(b, 'izinno'), tc: sutun(b, 'kimlik'), ad: sutun(b, /^adi?$/), soyad: sutun(b, /^soyadi?$/), gorev: sutun(b, /^gorevi$/), brans: sutun(b, 'brans'), bitis: sutun(b, 'izinbitis'), durum: sutun(b, /^durumu$/) };
-  let guncel = 0; const yeni = [];
+  const b = t.baslik, i = { izin: sutun(b, 'izinno'), tc: sutun(b, 'kimlik'), ad: sutun(b, /^adi?$/), soyad: sutun(b, /^soyadi?$/), gorev: sutun(b, /^gorevi?$/), brans: sutun(b, 'brans'), statu: sutun(b, 'statu'), bas: sutun(b, 'izinbasla'), bitis: sutun(b, 'izinbitis'), ayrilma: sutun(b, /ayrilmatarih|gorevdenayrilma$|^ayrilma$/), neden: sutun(b, /ayrilmaneden|neden/), maas: sutun(b, 'maaskds'), ucret: sutun(b, 'ucretkds'), durum: sutun(b, /^durumu?$/), foto: sutun(b, 'foto') };
+  const al = (r, k) => i[k] >= 0 ? String(r[i[k]] == null ? '' : r[i[k]]).trim() : '';
+  const kisiler = new Map();
   t.satirlar.forEach((r, j) => {
-    if (t.gecmis && t.gecmis[j]) return; if (i.durum >= 0 && r[i.durum] && !/gorevde/.test(nrm(r[i.durum]))) return;
-    const ad = nrm(`${r[i.ad] || ''}${r[i.soyad] || ''}`), izin = String(r[i.izin] || '').replace(/\D/g, '');
-    const eg = S.egitmenler.find(x => nrm(x.ad) === ad) || (S.ogretmenler || []).find(x => nrm(x.ad) === ad);
-    if (!eg) { yeni.push(`${r[i.ad]} ${r[i.soyad]} · ${r[i.gorev] || ''}`); return; }
-    if (izin && eg.calismaIzinNo !== izin) { eg.calismaIzinNo = izin; guncel++; }
-    if (i.bitis >= 0 && tarihIso(r[i.bitis])) eg.mebIzinBitis = tarihIso(r[i.bitis]);
-    if (i.tc >= 0 && !eg.tc && /^\d{11}$/.test(r[i.tc])) eg.tc = r[i.tc];
+    const izin = al(r, 'izin').replace(/\D/g, ''), tc = al(r, 'tc').replace(/\D/g, ''), adSoyad = `${al(r, 'ad')} ${al(r, 'soyad')}`.trim(), ayrilma = tarihIso(al(r, 'ayrilma'));
+    // durum sütunu yoksa (OOK54001 yalnız görevdekileri listeler) satır görevde sayılır
+    const gorevde = (i.durum < 0 || nrm(al(r, 'durum')) === 'gorevde') && !(t.gecmis && t.gecmis[j]) && !ayrilma;
+    const maas = +al(r, 'maas').replace(/\D/g, '') || 0, ucret = +al(r, 'ucret').replace(/\D/g, '') || 0;
+    const satir = { izinNo: izin, tc: /^\d{11}$/.test(tc) ? tc : '', ad: adSoyad, gorev: al(r, 'gorev'), brans: al(r, 'brans'), statu: al(r, 'statu'), izinBas: tarihIso(al(r, 'bas')), izinBit: tarihIso(al(r, 'bitis')), ayrilma, ayrilmaNedeni: al(r, 'neden'), durum: al(r, 'durum'), maasKds: maas, ucretKds: ucret, haftaSaat: Math.max(maas, ucret) || null, fotoVar: i.foto >= 0 ? /var|evet|✓/i.test(al(r, 'foto')) : null, gorevde, okuma: gun(0) };
+    const anahtar = satir.tc || izin || nrm(adSoyad); if (!anahtar) return;
+    (kisiler.get(anahtar) || kisiler.set(anahtar, []).get(anahtar)).push(satir);
   });
-  return { guncel, yeni };
+  let guncel = 0; const yeni = [], oneri = [], farklar = [], ayrilan = [], gorulen = new Set();
+  const herkes = () => [...S.egitmenler, ...(S.ogretmenler || [])];
+  kisiler.forEach(l => {
+    const r = l.find(x => x.gorevde) || l.slice().sort((a, b) => String(b.izinBit).localeCompare(String(a.izinBit)))[0];
+    const eg = herkes().find(x => r.izinNo && String(x.calismaIzinNo || '') === r.izinNo) || herkes().find(x => r.tc && x.tc === r.tc);
+    if (!eg) {
+      const adla = r.gorevde && herkes().find(x => nrm(x.ad) === nrm(r.ad)), { gorevde: _g, ...meb } = r;
+      if (adla) oneri.push({ id: adla.id, ad: adla.ad, mebAd: r.ad, izinNo: r.izinNo, tc: r.tc, meb });
+      else if (r.gorevde) yeni.push({ ad: r.ad, izinNo: r.izinNo, tc: r.tc, gorev: r.gorev, brans: r.brans, izinBit: r.izinBit, haftaSaat: r.haftaSaat, meb });
+      return;
+    }
+    gorulen.add(eg.id);
+    const { gorevde, ...meb } = r; eg.meb = { ...(eg.meb || {}), ...meb };
+    if (r.izinNo) { if (!eg.calismaIzinNo) { eg.calismaIzinNo = r.izinNo; guncel++; } else if (String(eg.calismaIzinNo) !== r.izinNo) { eg.meb.izinFark = r.izinNo; farklar.push(`${eg.ad}: izin no mdSinyal’de ${eg.calismaIzinNo}, MEBBİS’te ${r.izinNo}`); } else delete eg.meb.izinFark; }
+    if (r.tc) { if (!eg.tc) eg.tc = r.tc; else if (eg.tc !== r.tc) { eg.meb.tcFark = true; farklar.push(`${eg.ad}: TC mdSinyal’dekinden farklı`); } else delete eg.meb.tcFark; }
+    if (r.izinBit) eg.mebIzinBitis = r.izinBit;   // geriye uyum (UYG-009 izin kartı bunu okur)
+    if (!gorevde && r.ayrilma) { eg.meb.ayrildi = r.ayrilma; if (S.egitmenler.includes(eg)) ayrilan.push(`${eg.ad} (${tarih(r.ayrilma)})`); } else delete eg.meb.ayrildi;
+    delete eg.mebGorevdeDegil;
+  });
+  // mdSinyal'de aktif ama MEBBİS'in görevdeki listesinde görünmeyen usta (liste yalnız görevdekileri getirdiyse ya da satırı hiç yoksa)
+  const gorunmeyen = t.satirlar.length ? S.egitmenler.filter(x => !x.pasif && !x.ayrildi && !gorulen.has(x.id) && !oneri.some(o => o.id === x.id) && (x.calismaIzinNo || x.tc)) : [];   // adla öneri bekleyen 'görünmüyor' sayılmaz
+  gorunmeyen.forEach(x => { x.mebGorevdeDegil = gun(0); });
+  S.mebPersonelYeni = yeni; S.mebPersonelOneri = oneri;
+  return { guncel, yeni: yeni.map(y => `${y.ad} · ${y.gorev}`), oneri, farklar, ayrilan, gorunmeyen: gorunmeyen.map(x => x.ad) };
 }
 function araclariIsle(v) {
   const t = v.arac; let guncel = 0; const yeni = [], yeniKart = [], farklar = [];
@@ -809,7 +838,7 @@ function ozetGoster(o, yazilan) {
   if (o.ucretHata) l.push(`<li class="ipucu uyari">${isaret('uyari', 18)}<span>e-Sınav ücretleri: ${e(o.ucretHata)}</span></li>`);
   if (o.kurum) l.push(satir(`Kurum bilgileri: bina kontenjanı ${o.kurum.binaKontenjan || '—'}, ${o.kurum.programlar.filter(p => programAcik(o.kurum, p.kod)).length} açık program (${o.kurum.programlar.filter(p => programAcik(o.kurum, p.kod)).map(p => p.kod).join(', ') || '—'}), ${o.kurum.derslikler.length} derslik`, o.kurum.programlar.some(p => !programAcik(o.kurum, p.kod)) ? 'Kapalı program: ' + o.kurum.programlar.filter(p => !programAcik(o.kurum, p.kod)).map(p => e(p.kod || p.ad) + (p.kapanma ? ' (' + p.kapanma.split('-').reverse().join('.') + ')' : '')).join(', ') : ''));
   if (o.dosya) l.push(satir(`Aday dosyaları: ${o.dosya.okunan} okundu, ${o.dosya.atanan} kursiyer dönem grubuna atandı${o.dosya.farkli ? `, <span style="color:var(--kirmizi)">${o.dosya.farkli} kursiyerin grubu MEBBİS’tekinden farklı</span>` : ''}`, [o.dosya.farkli ? 'Öğrenci dosyasında Dönem grubu satırındaki “MEBBİS’teki gruba taşı” ile düzeltin.' : '', o.dosya.belirsiz ? `${o.dosya.belirsiz} kursiyerde MEBBİS’te birden çok açık dönem satırı var; grup kendiliğinden atanmadı.` : ''].filter(Boolean).join(' ')));
-  if (o.personel) l.push(satir(`Personel: ${o.personel.guncel} kişinin izin no’su güncellendi`, o.personel.yeni.length ? `mdSinyal’de olmayan: ${o.personel.yeni.map(e).join(', ')}` : ''));
+  if (o.personel) l.push(satir(`Personel: ${o.personel.guncel} kişinin izin no’su eklendi; izin bitişleri ve haftalık saatler alındı`, [o.personel.yeni.length ? `mdSinyal’de olmayan: ${o.personel.yeni.map(e).join(', ')} (Ekip ve araçlar › Usta öğreticiler’de “Kart aç”)` : '', (o.personel.oneri || []).length ? `${o.personel.oneri.length} kişi yalnız adla eşleşti; Usta öğreticiler’de “Evet, bağla” ile onaylayın` : '', (o.personel.ayrilan || []).length ? `MEBBİS’te görevden ayrılmış görünen: ${o.personel.ayrilan.map(e).join(', ')} (kartında “Ekipten çıkar”)` : '', (o.personel.gorunmeyen || []).length ? `MEBBİS’in görevdeki listesinde olmayan: ${o.personel.gorunmeyen.map(e).join(', ')}` : '', ...(o.personel.farklar || []).map(e)].filter(Boolean).join(' · ')));
   if (o.araclar) l.push(satir(`Araçlar: ${o.araclar.guncel} aracın muayene tarihi MEBBİS’ten alındı`, [o.araclar.yeni.length ? `mdSinyal’de olmayan: ${o.araclar.yeni.map(e).join(', ')} (Ekip ve araçlar’da “mdSinyal’e ekle”)` : '', ...(o.araclar.farklar || []).map(e)].filter(Boolean).join(' · ')));
   if (o.sinavlar) l.push(satir(`Sınav sonuçları okundu`, 'Sonuçları sınav oturumlarına doldurmak için aşağıdaki düğmeye basın'));
   if (o.ucretIlani) { const I = o.ucretIlani, b = I.satirlar.find(x => /Sertifika\s*Yok/i.test(x.sinif) && /"B"/.test(x.sinif));

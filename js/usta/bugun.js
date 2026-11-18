@@ -3,7 +3,7 @@
 // Alt ekran: 'kapanmamis' (geçmiş günlerden kapatılmamış dersler: Yapıldı / Gelmedi). Aracım, güzergâhlar ve hesap js/usta/arac.js'tedir.
 // Eski portal.js egitmenPortal() "bugun" bölümünün bütün işlevleri burada: dersi başlat, bitir ve imzalat, ders menüsü (⋯), başlat (sıradaki dışındaki
 // ders için, saati gelince), kapatılmamış derste Yapıldı / Gelmedi, imza linkini yeniden gönder, son not, konum durumu, araç ve bakım, güzergâh püf noktaları.
-import { S, SINIFLAR, gun, fark, tarihOku, kursiyer, tamAd, sbDers, geceDersMi, geceGerekli, gerekliDireksiyon, sinifEtiket, DERS_TUR_AD, dersTurleri } from '../veri.js?v=234';
+import { S, SINIFLAR, gun, fark, tarihOku, kursiyer, tamAd, sbDers, geceDersMi, geceGerekli, gerekliDireksiyon, sinifEtiket, DERS_TUR_AD, dersTurleri, haftalikSinir } from '../veri.js?v=234';
 import { tarihUzun, ayAdi, gunAdi } from '../ui.js?v=234';
 import { guzergahlar } from '../guzergah.js?v=234';
 import { esc, oi, bolum, baglanti, kart, gorsel, dugme, satir, liste, cip, bos, geri, sayfaBas, stilEkle } from '../ogr/ui.js?v=234';
@@ -58,7 +58,9 @@ function ust(ctx, iptalsiz, yapilan) {
 export function haftaYuku(eg) {
   const off = (new Date().getDay() + 6) % 7, bas = gun(-off), son = gun(6 - off);
   const n = S.dersler.filter(d => d.egitmen === eg.id && d.tarih >= bas && d.tarih <= son && d.durum !== 'İptal' && d.durum !== 'Gelmedi').length;
-  return { n, sinir: +eg.haftalikSinir || 0 };
+  // sınır: elle girilen ya da MEBBİS'teki haftalık saat (KDS); ikisi de yoksa sayı sınırsız gösterilir
+  const hs = haftalikSinir(eg);
+  return { n, sinir: hs.kaynak === 'varsayılan' ? 0 : hs.n };
 }
 // UYG-009: çalışma izni bitişine 30 gün ya da daha az kaldıysa (ya da bittiyse) öğretmene kart
 export function izinKarti(eg) {

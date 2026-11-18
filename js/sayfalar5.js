@@ -682,7 +682,9 @@ function davetListesi(k) {
   const yer = k.querySelector('[data-davet-liste]'); if (!yer) return;
   B.davetler().then(l => { yer.innerHTML = l.length ? `<div class="kart-govde" style="border-top:1px solid var(--cizgi)"><b style="color:var(--murekkep)">Bekleyen davetler</b><ul class="liste">${l.map(d => `<li><div style="flex:1;min-width:0"><b>${e(d.ad)}</b><small style="display:block;color:var(--soluk)">${ROL[d.rol] || d.rol} · link ${tarih(d.son.toISOString().slice(0, 10))} tarihine kadar geçerli</small></div><span class="sag" style="gap:6px"><button class="dg dg-hafif dg-kucuk" data-davet-kopya="${d.kod}">Linki kopyala</button><button class="dg dg-hafif dg-kucuk" data-davet-sil="${d.kod}">İptal et</button></span></li>`).join('')}</ul></div>` : ''; }).catch(() => { });
 }
-function davetFormu() {
+// PER-027: usta kartındaki 'Uygulamaya davet et' — formu o öğretmenle dolu açar (bulutta davet linki, demoda PIN'li kullanıcı)
+export function ustaDavet(eg) { return B.bulutta() ? davetFormu(eg) : kullaniciFormu(eg); }
+function davetFormu(on) {
   const bosUsta = S.egitmenler.filter(x => !S.kullanicilar.some(u => u.usta === x.id));
   pencere({
     baslik: 'Çalışan davet et',
@@ -694,6 +696,7 @@ function davetFormu() {
     onAc(d) {
       const f = d.querySelector('form'); f.addEventListener('change', () => { d.querySelector('#davet-usta').hidden = f.rol.value !== 'usta'; });
       f.ad.addEventListener('input', () => { const eg = bosUsta.find(x => x.ad.toLocaleLowerCase('tr') === f.ad.value.trim().toLocaleLowerCase('tr')); if (eg) { f.usta.value = eg.id; f.querySelector('[name=rol][value=usta]').checked = true; d.querySelector('#davet-usta').hidden = false; } });
+      if (on) { f.ad.value = on.ad; f.querySelector('[name=rol][value=usta]').checked = true; d.querySelector('#davet-usta').hidden = false; if ([...f.usta.options].some(o => o.value === on.id)) f.usta.value = on.id; }
       f.addEventListener('submit', ev => {
         ev.preventDefault(); const ad = f.ad.value.trim();
         if (ad.length < 3) return bildir('Ad soyad girin', 'uyari');
@@ -720,7 +723,7 @@ async function davetGoster(ad, link, kisi, rol) {
   });
   yenile();
 }
-function kullaniciFormu() {
+function kullaniciFormu(on) {
   pencere({
     baslik: 'Kullanıcı ekle',
     icerik: `<form class="form-izgara" id="f-kul"><div class="alan"><label>Ad soyad</label><input name="ad" required autocomplete="off"></div><div class="alan"><label>Telefon</label><input name="tel" inputmode="tel" placeholder="05xx xxx xx xx"></div>
@@ -732,6 +735,7 @@ function kullaniciFormu() {
     onAc(d) {
       const f = d.querySelector('form'); f.addEventListener('change', () => { d.querySelector('#kul-usta').hidden = f.rol.value !== 'usta'; });
       f.ad.addEventListener('input', () => { const eg = S.egitmenler.find(x => x.ad.toLocaleLowerCase('tr') === f.ad.value.trim().toLocaleLowerCase('tr')); if (eg && [...f.usta.options].some(o => o.value === eg.id)) { f.usta.value = eg.id; f.querySelector('[name=rol][value=usta]').checked = true; d.querySelector('#kul-usta').hidden = false; } });
+      if (on) { f.ad.value = on.ad; f.tel.value = on.tel || ''; f.ad.dispatchEvent(new Event('input')); }
       f.addEventListener('submit', ev => {
         ev.preventDefault(); const ad = f.ad.value.trim();
         if (ad.length < 3) return bildir('Ad soyad girin', 'uyari');
