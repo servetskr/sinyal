@@ -190,7 +190,7 @@ function doluSaatler(sid, haric) {
 // haric: hazırlanan bütün sınav kimlikleri (gönderilecek ve onayda bırakılanlar). Döner: { l (yeni kayıtlar), bos: saati kalmayan adaylar }
 // koru: süren işin kimliği (devam, sonraki parça, yük yeniden istendi). Bu işte gönderilmiş adayın saati boşsa aynen kalır:
 // Yardımcı durdurulan parçayı elindeki ilk yükle sürdürür; saat değişirse iz ile MEBBİS'teki saat ayrılır ve sonraki aday çakışabilir.
-const ALAN_UZUNLUK = { veren: 100, sayi: 10, belgeNo: 10, refNo: 20, no: 100, tutar: 10, personelAd: 100 };
+const ALAN_UZUNLUK = { veren: 100, sayi: 10, belgeNo: 10, refNo: 30, no: 100, tutar: 10, personelAd: 100 };
 export const metinAlan = (v, n) => String(v == null ? '' : v).replace(/["<>'!&=]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n || 100);
 // yalnız ALAN_UZUNLUK'taki metin alanları temizlenir (fotoğraf, kimlik, tarih gibi alanlara dokunulmaz); iç içe evrak paketi de
 function alanTemizle(o) { if (!o || typeof o !== 'object') return; Object.keys(o).forEach(a => { const v = o[a]; if (typeof v === 'string' && ALAN_UZUNLUK[a]) o[a] = metinAlan(v, ALAN_UZUNLUK[a]); else if (v && typeof v === 'object' && a !== 'foto') alanTemizle(v); }); }
@@ -244,7 +244,7 @@ export async function hazirla(ids, { foto = true, koru = null } = {}) {
       if (k.sinif === 'B-EN') { ekle(x, (SINIFLAR[k.sinif] || {}).ad + ': MEBBİS’teki sertifika adı doğrulanmadı, kaydı MEBBİS’e elle girin'); continue; }
       const mevcut = k.mevcutEhliyet && k.mevcutEhliyet !== 'Yok' ? k.mevcutEhliyet + ' SINIFI' : '';
       if (k.nakil) { ekle(x, 'Kapanan kurumdan nakil: MEBBİS kaydı il MEM ekranından yapılır (07/03/2023 duyurusu); il MEM’e başvurun'); continue; }  // KAY-110
-      l.push({ id: x.id, tur: 'kayit', baslik: tamAd(k), donem: g.donem, grupNo: g.grupNo, subeNo: subeNo(g), tc: k.tc, istenen: sertifikaMetni(k), mevcut, belgeNo: mevcut ? String((k.oncekiBelge || {}).sayi || '') : '', cep: cep10(k.tel), foto: foto ? await fotoHazirla(k.foto) : '', sozlesme: k.sozlesmeImza && k.sozlesmeImza.tarih ? trT(k.sozlesmeImza.tarih) : '', adSoyad: tamAd(k), evrak: k.mebEvrak ? ME.evrakPaketi(k).l : null });
+      l.push({ id: x.id, tur: 'kayit', baslik: tamAd(k), donem: g.donem, grupNo: g.grupNo, subeNo: subeNo(g), tc: k.tc, istenen: sertifikaMetni(k), mevcut, belgeNo: mevcut ? String((k.oncekiBelge || {}).sayi || '') : '', cep: cep10(k.tel), foto: foto && !(S.kurs.mebYalnizBiyometrik && k.fotoKaynak === 'kamera') ? await fotoHazirla(k.foto) : '', sozlesme: k.sozlesmeImza && k.sozlesmeImza.tarih ? trT(k.sozlesmeImza.tarih) : '', adSoyad: tamAd(k), evrak: k.mebEvrak ? ME.evrakPaketi(k).l : null });
     }
     if (x.tur === 'evrak') {
       const k = kursiyer(r.kursiyer), g = k && mebGrup(k); if (!g) { ekle(x, 'Dönem grubuna atanmamış'); continue; }

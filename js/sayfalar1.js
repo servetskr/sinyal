@@ -886,7 +886,7 @@ export function kursiyerFormu(on = {}) {
         { const ie = iletisimEkOku(f); if (ie) yeni.iletisimEk = ie; }
         if (f.referans.value.trim()) yeni.referans = f.referans.value.trim();  // KAY-017
         if (f.nakil.checked) { const sy = n => { const v = parseInt(f[n].value, 10); return isNaN(v) ? null : v; }; yeni.nakil = { kurum: f.nakilKurum.value.trim(), esinavKalan: sy('nakilEsHak'), uygulamaKalan: sy('nakilUygHak'), teorik: sy('nakilTeorik'), direksiyon: sy('nakilDireksiyon'), tarih: gun(0) }; }  // KAY-110
-        if (foto) { yeni.foto = foto; yeni.fotoTarih = gun(0); }
+        if (foto) { yeni.foto = foto; yeni.fotoTarih = gun(0); yeni.fotoKaynak = 'yukleme'; }
         if (dfoto) yeni.dogrulamaFoto = { veri: dfoto, tarih: gun(0), kim: oturum.kullanici ? oturum.kullanici.ad : '', kimlik: !!f.dkimlik.checked };
         if (f.muaf.checked && f.muafTarih.value && GR.muafMi({ muaf: { sonSinav: f.muafTarih.value } }, yeni.kayit)) {
           // son 3 yılda e-sınavı geçen (15/5): teorik eğitim ve sınavdan muaf, yalnız direksiyon sınavına girer
@@ -1590,7 +1590,7 @@ function kameraCek() {
 }
 function profilFoto(k) {
   const KURAL = ['Son 6 ay içinde çekilmiş', 'Beyaz ya da açık renk düz fon', 'Yüz tam karşıdan, gözler açık ve net', 'Şapka, gözlük yansıması ve gölge yok', 'Yüz kadrajı dolduruyor, kimlikteki kişiyle aynı'];
-  let veri = k.foto || null, dveri = (k.dogrulamaFoto || {}).veri || null;
+  let veri = k.foto || null, dveri = (k.dogrulamaFoto || {}).veri || null, veriKaynak = k.fotoKaynak || '';
   pencere({
     baslik: 'Kayıt fotoğrafı · ' + tamAd(k), genis: true,
     icerik: `<div class="foto-cek"><div class="foto-onizle">${veri ? `<img src="${veri}" alt="">` : `${ik('kursiyer')}<small>Henüz fotoğraf yok</small>`}</div>
@@ -1604,15 +1604,15 @@ function profilFoto(k) {
       ${k.dogrulamaFoto ? `<p style="font-size:12.5px;color:var(--soluk);margin-top:8px">${tarih(k.dogrulamaFoto.tarih)} · ${e(k.dogrulamaFoto.kim || '')}</p>` : ''}</div></div>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-foto-kaydet>Kaydet</button>`,
     onAc(d) {
-      d.querySelector('[data-foto-sec]').addEventListener('change', ev => { const f = ev.target.files[0]; if (!f) return; fotoKucult(f, 480).then(u => { veri = u; d.querySelector('.foto-onizle').innerHTML = `<img src="${u}" alt="">`; d.querySelectorAll('[data-kural]').forEach(c => { c.checked = false; }); }).catch(() => bildir('Fotoğraf okunamadı', 'uyari')); });
+      d.querySelector('[data-foto-sec]').addEventListener('change', ev => { const f = ev.target.files[0]; if (!f) return; veriKaynak = 'yukleme'; fotoKucult(f, 480).then(u => { veri = u; d.querySelector('.foto-onizle').innerHTML = `<img src="${u}" alt="">`; d.querySelectorAll('[data-kural]').forEach(c => { c.checked = false; }); }).catch(() => bildir('Fotoğraf okunamadı', 'uyari')); });
       d.querySelector('[data-dfoto-sec]').addEventListener('change', ev => { const f = ev.target.files[0]; if (!f) return; fotoKucult(f, 480).then(u => { dveri = u; d.querySelector('[data-donizle]').innerHTML = `<img src="${u}" alt="">`; d.querySelector('[data-dkimlik]').checked = false; }).catch(() => bildir('Fotoğraf okunamadı', 'uyari')); });
-      d.addEventListener('click', ev => { const kb = ev.target.closest('[data-kamera]'); if (!kb) return; kameraCek().then(u => { if (!u) return; if (kb.dataset.kamera === 'foto') { veri = u; d.querySelector('.foto-onizle').innerHTML = `<img src="${u}" alt="">`; d.querySelectorAll('[data-kural]').forEach(c => { c.checked = false; }); } else { dveri = u; d.querySelector('[data-donizle]').innerHTML = `<img src="${u}" alt="">`; d.querySelector('[data-dkimlik]').checked = false; } }); });  // KAY-047
+      d.addEventListener('click', ev => { const kb = ev.target.closest('[data-kamera]'); if (!kb) return; kameraCek().then(u => { if (!u) return; if (kb.dataset.kamera === 'foto') { veri = u; veriKaynak = 'kamera'; d.querySelector('.foto-onizle').innerHTML = `<img src="${u}" alt="">`; d.querySelectorAll('[data-kural]').forEach(c => { c.checked = false; }); } else { dveri = u; d.querySelector('[data-donizle]').innerHTML = `<img src="${u}" alt="">`; d.querySelector('[data-dkimlik]').checked = false; } }); });  // KAY-047
       d.querySelector('[data-foto-kaydet]').addEventListener('click', () => {
         if (!veri && !dveri) return bildir('Önce fotoğraf çekin ya da yükleyin', 'uyari');
         if (veri && veri !== k.foto && [...d.querySelectorAll('[data-kural]')].some(c => !c.checked)) return bildir('Biyometrik kontrolün hepsini işaretleyin; uymayan fotoğraf MEB’den döner', 'uyari');
         const dk = d.querySelector('[data-dkimlik]').checked;
         if (dveri && dveri !== (k.dogrulamaFoto || {}).veri && !dk) return bildir('Doğrulama fotoğrafı için kimlik kartıyla karşılaştırmayı işaretleyin', 'uyari');
-        if (veri && veri !== k.foto) { k.foto = veri; k.fotoTarih = gun(0); islem('Kayıt fotoğrafı ekledi', tamAd(k)); }
+        if (veri && veri !== k.foto) { k.foto = veri; k.fotoTarih = gun(0); k.fotoKaynak = veriKaynak || 'yukleme'; islem('Kayıt fotoğrafı ekledi', tamAd(k) + (k.fotoKaynak === 'kamera' ? ' · kurs kamerasıyla' : '')); }   // MEB-068
         if (dveri && dveri !== (k.dogrulamaFoto || {}).veri) { k.dogrulamaFoto = { veri: dveri, tarih: gun(0), kim: oturum.kullanici ? oturum.kullanici.ad : '', kimlik: dk }; islem('Kimlik doğrulama fotoğrafı çekti', tamAd(k)); }
         kaydet(); kapatPencere(); bildir('Fotoğraf kaydedildi'); yenile();
       });

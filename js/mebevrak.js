@@ -58,6 +58,7 @@ export function tarihUyarilari(k, ham = {}) {
   [['saglik', 'Sağlık raporu'], ['adli', 'Adli sicil belgesi']].forEach(([x, ad]) => { const gs = dg[x] && isoYap(dg[x].gecerlilik); if (gs && gs < bugun) l.push({ alan: x, metin: `${ad} üzerindeki geçerlilik tarihi (${tYaz(gs)}) geçmiş.`, dayanak: 'Belgenin kendi geçerlilik tarihi (doğrulamada girildi)' }); });
   const ft = isoYap(k.fotoTarih), fa = belgeSure('fotoGecerlilikAy');
   if (ft && fa && !k.mebIslendi && ayEkleIso(ft, fa) < bugun) l.push({ alan: 'foto', metin: `Biyometrik fotoğraf ${tYaz(ft)} tarihinde eklendi, ${fa} aydan eski. MEBBİS'e gitmeden yenisini isteyin.`, dayanak: 'MTSK Yön. md.11/1-a-3 (son altı ayda çekilmiş biyometrik fotoğraf)' });
+  if (k.foto && !k.mebIslendi && S.kurs && S.kurs.mebYalnizBiyometrik && k.fotoKaynak === 'kamera') l.push({ alan: 'foto', metin: 'Fotoğraf kurs kamerasıyla çekildi; ayara göre MEBBİS’e gönderilmez. Fotoğrafçıdan alınan biyometrik fotoğrafı yükleyin.', dayanak: 'Ayarlar › MEB kuralları › MEBBİS’e yalnız biyometrik fotoğraf gönder (MEB-068)' });
   return l;
 }
 export const tarihUyariHtml = l => l.length ? `<div class="ipucu uyari" style="display:block"><b style="display:flex;gap:6px;align-items:center;margin-bottom:4px">${isaret('uyari', 18)}Belge tarihi uyarıları <small style="font-weight:400;color:var(--soluk)">kayıt engellenmez</small></b>${l.map(x => `<p style="margin:4px 0 0;font-size:13.5px">${e(x.metin)} <small style="color:var(--soluk)">Dayanak: ${e(x.dayanak)}</small>${x.teyit ? ' <b style="color:var(--turuncu);font-size:12px">· süre teyit bekliyor</b>' : ''}</p>`).join('')}</div>` : '';
@@ -116,7 +117,10 @@ const trT = t => String(t || '').split('.').join('/');   // 07.12.2026 → 07/12
 export function evrakPaketi(k) {
   const v = k.mebEvrak || {}, l = {}, eksik = [];
   if (v.ogrenim && v.ogrenim.tur && !OGRENIM_BELGELERI.includes(v.ogrenim.tur)) eksik.push('öğrenim belge türü MEBBİS listesinden yeniden seçilmeli'); else if (v.ogrenim && v.ogrenim.tur) l.ogrenim = { veren: v.ogrenim.veren, tur: v.ogrenim.tur, tarih: trT(v.ogrenim.tarih), sayi: v.ogrenim.sayi }; else eksik.push('öğrenim belgesi');
-  l.saglik = { ozur: (v.saglik || {}).ozur || ENGEL_VARSAYILAN(k.sinif), refNo: (v.saglik || {}).refNo || '' };
+  // MEB-068: Ayarlar 'Sağlık raporunu referans numarasıyla gönder' açıksa numarasız rapor eksik sayılır; kapalıyken (varsayılan) numara varsa gönderilir
+  const refZorunlu = !!(S.kurs && S.kurs.mebSaglikRef === true), ref = String((v.saglik || {}).refNo || '').trim();
+  l.saglik = { ozur: (v.saglik || {}).ozur || ENGEL_VARSAYILAN(k.sinif), refNo: ref };
+  if (refZorunlu && !ref) eksik.push('sağlık raporu referans no (e-Nabız)');
   if (k.sinif === 'B-EN' && l.saglik.ozur !== 'Var') eksik.push('B Engelli: engel durumu Var olmalı');   // rapor no e-Nabız referans no ile aynı olmayabilir: yalnız elle girilen gider
   if (v.adli) l.adli = { veren: v.adli.veren, tarih: trT(v.adli.tarih), sayi: v.adli.sayi }; else eksik.push('adli sicil');
   if (v.parmak) l.parmak = { veren: v.parmak.veren, tarih: trT(v.parmak.tarih), sayi: v.parmak.sayi }; else eksik.push('parmak izi');
