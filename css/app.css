@@ -316,6 +316,7 @@ h1,h2,h3,h4{color:var(--murekkep);font-family:var(--baslik);font-weight:800;line
 .tk-bas .arac-fig{width:64px}
 .tk-bas>div:last-child{min-width:0}
 .tk-bas b,.tk-bas small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.tk-bas small.tk-hafta{font-weight:700;color:var(--murekkep)}.tk-bas small.tk-hafta.yakin{color:#b45309}.tk-bas small.tk-hafta.asti{color:var(--kirmizi)}
 .tk-saat{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--soluk);padding:8px 10px;border-bottom:1px solid var(--cizgi-2);height:70px}
 .tk-hucre{border-left:1px solid var(--cizgi-2);border-bottom:1px solid var(--cizgi-2);padding:4px;height:70px;position:relative}
 .tk-hucre.bos-hucre:hover{background:#fff;cursor:pointer}

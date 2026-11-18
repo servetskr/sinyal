@@ -1,4 +1,4 @@
-import { ekDersFiyat, uygulamaSinavUcreti, esinavUcreti, digerUcretler, ibanlar, ibanVarsayilan, ibanBicim, ibanGecerli, S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, gonderimEkle, risk, islem, geriAlNoktasi, oturum, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube, kapaliGun, YONTEMLER, yontemAd, gecikenTutar, aktifSiniflar, sinifKaydet, ayEkle, isGunuSay, arsivle, selam, kursAdi, memnuniyet, tuketim, beklenenTuketim, OGR_OZELLIK, ogrOzellik, mudurTel, tutarOku, tcGecerli, izinDurumu, izinBitisi, haftalikSinir, aydinlatmaMetni, ekTur, egitimSinifi, sinifEtiket, tabanListesi, tabanDurumu, sinifTabani, satirUcreti, satirUcretKaynagi, tabanUcretleriYaz, ekDersTabani, ozelDersTabani, teorikSaat } from './veri.js?v=234';
+import { ekDersFiyat, uygulamaSinavUcreti, esinavUcreti, digerUcretler, ibanlar, ibanVarsayilan, ibanBicim, ibanGecerli, S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, gonderimEkle, risk, islem, geriAlNoktasi, oturum, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube, kapaliGun, YONTEMLER, yontemAd, gecikenTutar, aktifSiniflar, sinifKaydet, ayEkle, isGunuSay, arsivle, selam, kursAdi, memnuniyet, tuketim, beklenenTuketim, OGR_OZELLIK, ogrOzellik, mudurTel, tutarOku, tcGecerli, izinDurumu, izinBitisi, haftalikSinir, haftaDers, aydinlatmaMetni, ekTur, egitimSinifi, sinifEtiket, tabanListesi, tabanDurumu, sinifTabani, satirUcreti, satirUcretKaynagi, tabanUcretleriYaz, ekDersTabani, ozelDersTabani, teorikSaat } from './veri.js?v=234';
 import * as HS from './hesap.js?v=234';
 import * as MZ from './mevzuat.js?v=234';
 import * as DN from './denetim.js?v=234';
@@ -575,10 +575,9 @@ const adDuzelt = t => String(t || '').toLocaleLowerCase('tr').replace(/(^|[\s-])
 const IZIN_TON = { bitti: 'kirmizi', bugun: 'kirmizi', yakin: 'turuncu', uyari: 'sari', ok: 'notr' };
 export function ustaMebRozet(x) {
   const d = izinDurumu(x), m = x.meb || {}, hs = haftalikSinir(x);
-  const off = (BUGUN.getDay() + 6) % 7, bas = gun(-off), son = gun(6 - off);
-  const n = S.dersler.filter(y => y.egitmen === x.id && y.tarih >= bas && y.tarih <= son && y.durum !== 'İptal' && y.durum !== 'Gelmedi').length;
+  const n = haftaDers(x.id);
   const rz = d.tur === 'yok' ? '' : rozet(d.tur === 'bitti' ? `Çalışma izni bitti · ${tarih(d.bit)}` : d.tur === 'bugun' ? 'Çalışma izni bugün bitiyor' : `Çalışma izni ${tarih(d.bit)} · ${d.kalan} gün${d.tur === 'ok' ? '' : ' kaldı'}`, IZIN_TON[d.tur]);
-  const kaynak = { elle: 'kartta yazılı', 'Maaş KDS': 'MEBBİS Maaş KDS', 'Ücret KDS': 'MEBBİS Ücret KDS', varsayılan: 'varsayılan sınır' }[hs.kaynak];
+  const kaynak = { elle: 'kartta yazılı', 'Maaş KDS': 'MEBBİS Maaş KDS', 'Ücret KDS': 'MEBBİS Ücret KDS', varsayılan: 'ÖÖKY md.26/5', müdür: 'müdür, ÖÖKY md.26/6' }[hs.kaynak];
   const satir = `<div class="belge-satir"><span>İzin no</span><b${x.calismaIzinNo ? ' class="mono"' : ' style="color:var(--kirmizi)"'}>${x.calismaIzinNo ? e(x.calismaIzinNo) : 'Yok'}</b>${m.izinFark ? rozet('MEBBİS’te farklı: ' + m.izinFark, 'kirmizi') : ''}</div>
     <div class="belge-satir"><span>Bu hafta</span><b style="${n > hs.n ? 'color:var(--kirmizi)' : ''}">${n}/${hs.n} ders saati</b><small style="color:var(--soluk);margin-left:6px">${kaynak}</small></div>`;
   let not = '';

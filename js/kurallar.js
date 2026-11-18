@@ -5,7 +5,7 @@
 // 'uyari', 'bilgi'. Dizinin üstünde ek alanlar: kural (kimlik), kursiyer (id), kursiyerler (birden çok kişiye ait oturum bulgusunda kimlik listesi, ör. Y04), kisa (öğrenci dosyasında ad olmadan başlık), yalnizDosya, eylem.
 // DOM yok; yalnız veri.js'e bağlı (Node'da denenebilir). Bugün: veri.js BUGUN / gun().
 // Yeni kurallar ilk sürümde yalnız "uyarı"dır; Eyüp Bey teyit edince engele çevrilebilir (belgeler/eksikler/eyup-sorular.md).
-import { S, gun, fark, aracUygun, izinDurumu, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
+import { S, gun, fark, aracUygun, izinDurumu, haftalikSinir, haftaDers, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
 
 /* ---------- yardımcılar (ui.js'teki biçimlerle aynı; ui.js DOM'a bağlı olduğu için burada kopyası) ---------- */
 const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
@@ -265,6 +265,8 @@ export function dersKontrol(o) {
   const ayni = DL.filter(x => x.kursiyer === k.id && x.tarih === planGun && x.durum !== 'İptal'), cak = ayni.find(x => x.saat === saat);  // iptal edilen ders saati boş sayılır (otomatik dağıtımla aynı)
   if (cak) sorun.push(`Bu kursiyerin aynı saatte ${(egitmen(cak.egitmen) || { ad: 'başka bir usta öğretici' }).ad} ile dersi var.`);
   { const egDolu = DL.find(x => x.egitmen === eg.id && x.tarih === planGun && x.saat === saat && x.durum !== 'İptal'); if (egDolu) sorun.push(`${eg.ad} bu saatte ${tamAd(kursiyer(egDolu.kursiyer) || { ad: 'başka bir öğrenci', soyad: '' })} ile derste.`); }
+  // PER-011: haftalık ders sınırı (elle / MEBBİS KDS / müdür 20 / 40; ÖÖKY 26/5-6): bu dersle aşılıyorsa planlanmaz
+  { const hs = haftalikSinir(eg), n = haftaDers(eg.id, planGun, DL); if (n + 1 > hs.n) sorun.push(`${eg.ad} o hafta ${n} ders saati veriyor; haftalık sınır ${hs.n} (${hs.kaynak === 'elle' ? 'kartta yazılı' : hs.kaynak === 'varsayılan' ? 'ÖÖKY md.26/5' : hs.kaynak === 'müdür' ? 'müdür, ÖÖKY md.26/6' : 'MEBBİS ' + hs.kaynak}). Başka öğretmene ya da başka haftaya alın.`); }
   const ustaGun = DL.filter(x => x.egitmen === eg.id && x.tarih === planGun).length, ustaSinir = S.kurs.egitmenGunlukSinir || S.kurs.ustaGunlukSinir || 8;
   if (ustaGun >= ustaSinir) not.push(`${eg.ad} o gün ${ustaGun} ders veriyor; usta başına günlük sınır ${ustaSinir} ders. Yorgunluk denetimde sorulabilir.`);
   { const g = cak ? null : gunlukDersSorun(k.id, planGun, DL); if (g) sorun.push(g); }

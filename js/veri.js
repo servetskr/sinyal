@@ -1195,11 +1195,19 @@ export function izinDurumu(eg, t) {
   const kalan = Math.round((tarihOku(bit) - (t ? tarihOku(t) : BUGUN)) / 864e5);
   return { bit, kalan, tur: kalan < 0 ? 'bitti' : kalan === 0 ? 'bugun' : kalan <= 15 ? 'yakin' : kalan <= 30 ? 'uyari' : 'ok' };
 }
-// PER-011: haftalık ders sınırı — elle girilen; yoksa MEBBİS personelindeki Maaş/Ücret KDS'nin büyüğü; o da yoksa 40 (ÖÖKY 26/5)
+// PER-011: haftalık ders sınırı — elle girilen; yoksa MEBBİS personelindeki Maaş/Ücret KDS'nin büyüğü; o da yoksa müdür 20
+// (12 saat aylık karşılığı + 8 saat ücretli, ÖÖKY 26/6), diğer eğitim personeli 40 (ÖÖKY 26/5)
 export function haftalikSinir(eg) {
   if (eg && +eg.haftalikSinir > 0) return { n: +eg.haftalikSinir, kaynak: 'elle' };
   const m = eg && eg.meb; if (m && +m.haftaSaat > 0) return { n: +m.haftaSaat, kaynak: +m.maasKds >= +m.ucretKds ? 'Maaş KDS' : 'Ücret KDS' };
+  if (eg && /m[uü]d[uü]r/i.test(String((m && m.gorev) || eg.gorev || ''))) return { n: 20, kaynak: 'müdür' };
   return { n: 40, kaynak: 'varsayılan' };
+}
+// Öğretmenin t gününün haftasındaki (Pazartesi–Pazar) direksiyon dersleri; iptal ve gelmedi sayılmaz. liste: taslaklı ders listesi (planlayıcı)
+export function haftaDers(egId, t = gun(0), liste = S.dersler) {
+  const d = tarihOku(t), off = (d.getDay() + 6) % 7, b = new Date(d); b.setDate(d.getDate() - off); const s = new Date(b); s.setDate(b.getDate() + 6);
+  const bas = iso(b), son = iso(s);
+  return liste.filter(x => x.egitmen === egId && x.tarih >= bas && x.tarih <= son && x.durum !== 'İptal' && x.durum !== 'Gelmedi').length;
 }
 export const aracUygun = (a, sinif) => !!a && aracSiniflari(sinif).some(s => a.sinif === s || (a.ekSiniflar || []).includes(s));
 export const ustaAraci = (egId, sinif) => { for (const s of aracSiniflari(sinif)) { const a = S.araclar.find(a => a.egitmen === egId && a.sinif === s); if (a) return a; } return S.araclar.find(a => a.egitmen === egId && aracUygun(a, sinif)); };
