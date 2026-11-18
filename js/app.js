@@ -204,7 +204,7 @@ function iskelet() {
         ${!['usta', 'teorik', 'muhasebe'].includes(oturum.kullanici.rol) ? `<button class="yeni-dugme" data-yeni-menu aria-label="Yeni ekle">${ik('arti')}<span>Yeni</span></button>` : ''}
         <button class="kullanici-cip" data-hesap title="Hesabım: ekranlar ve çıkış" aria-label="${e(oturum.kullanici.ad)} · ${ROL_AD[oturum.kullanici.rol]} · hesap menüsü"><i class="kc-bas" aria-hidden="true">${basHarf(oturum.kullanici.ad)}</i><b>${e(oturum.kullanici.ad)}</b><small>${ROL_AD[oturum.kullanici.rol]}</small></button>
       </header>`}
-      ${oturum.kullanici.ziyaretci ? `<div class="ziyaretci-serit"><span><b>Demo görünümü</b> · örnek verilerle. Mesajlar kimseye gitmez, ekranda gösterilir.</span><span class="zs-dugmeler"><button data-soru-ornek title="DIG-029: onay bekleyen yeni soru bankası örneği">Yeni soru örneği (100)</button><button data-cikis>Çık</button></span></div>` : ''}
+      ${oturum.kullanici.ziyaretci ? `<div class="ziyaretci-serit"><span><b>Demo görünümü</b> · örnek verilerle. Mesajlar kimseye gitmez, ekranda gösterilir.</span><span class="zs-dugmeler"><button data-soru-ornek title="Onay bekleyen yeni soru bankası örneği">Yeni soru örneği (100)</button><button data-cikis>Çık</button></span></div>` : ''}
       <main class="icerik" id="icerik"></main>
     </div>
   </div>
@@ -580,7 +580,7 @@ function ogretmenGirisi() {
   document.title = 'Öğretmen girişi · mdSinyal';
   const kayitli = B.bulutKayitli(), { oi, esc } = OXU, EPOSTA = /^\S+@\S+\.\S+$/;
   // UYG-022 (karar): öğretmen yalnız e-posta + şifreyle girer; telefon numarası yazana ne yapacağı söylenir
-  const TEL_YAZDI = 'Öğretmen girişi yalnız e-postayla. Davetle hesap açtığın e-postayı yaz; hatırlamıyorsan ya da e-postan yoksa kurs müdüründen yeni davet bağlantısı iste.';
+  const TEL_YAZDI = 'Öğretmen girişi yalnız e-postayla. Davetle hesap açtığınız e-postayı yazın; hatırlamıyorsanız ya da e-postanız yoksa kurs müdürünüzden yeni davet bağlantısı isteyin.';
   const telMi = v => !v.includes('@') && v.replace(/\D/g, '').length >= 10;
   const { govde, alan, alanHata, temizle, uyari, yukle, birak, ac } = ugrKabuk('Öğretmen uygulaması');
   let eposta = (kayitli && kayitli.eposta) || '';
