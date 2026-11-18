@@ -3751,3 +3751,9 @@ a.kart.gosterge { text-decoration: none; color: inherit; display: block; }
 .fk-ciftler figure { margin: 0; }
 .fk-ciftler img, .fk-ciftler span { width: 100%; aspect-ratio: 3/4; object-fit: cover; border-radius: 6px; background: var(--panel-2); display: grid; place-items: center; font-size: 12px; color: var(--soluk); }
 .fk-ciftler figcaption { font-size: 11.5px; color: var(--soluk); margin-top: 3px; }
+/* KAY-062: dört eksenli durum */
+.eksen-serit { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.eksen { display: inline-flex; flex-direction: column; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--cizgi); font-size: 12.5px; font-weight: 700; color: var(--murekkep); line-height: 1.2; }
+.eksen small { font-size: 10.5px; font-weight: 600; color: var(--soluk); text-transform: uppercase; letter-spacing: .03em; }
+.eksen.yesil { border-color: #2e7d32; color: #1b5e20; } .eksen.kirmizi { border-color: var(--kirmizi); color: var(--kirmizi); } .eksen.mavi { border-color: #0a4da2; color: #0a4da2; } .eksen.sari { border-color: #e0a100; color: #8a5a00; }
+.eksen.genel { background: var(--panel-2); }
