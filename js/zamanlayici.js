@@ -57,7 +57,10 @@ const kural = id => S.otomasyonlar.find(o => o.id === id);
 // MSJ-031: T.C., şifre, PIN ve IBAN değişkeni şablonda doldurulmaz (KVKK)
 const doldur = (id, alan) => { alan = { kurs: S.kurs.ad, kursa: kursAdi('e'), kursta: kursAdi('de'), ...alan }; ['tc', 'tckn', 'tcno', 'kimlik', 'sifre', 'parola', 'pin', 'iban'].forEach(a => { delete alan[a]; }); if (alan.kisi && !alan.selam) alan.selam = selam(alan.kisi); return (kural(id) ? kural(id).sablon : '').replace(/\{(\w+)\}/g, (x, a) => alan[a] != null ? alan[a] : ''); };
 // PAR-058: öğrencinin mesaj kanalı (WhatsApp, SMS, e-posta); WhatsApp dışı kanal API ile gitmez, elle gönderilecekler kuyruğuna düşer
-const ogr = k => ({ ad: tamAd(k), tel: k.tel, rol: 'ÖĞRENCİ', ...(k.mesajKanal && k.mesajKanal !== 'WhatsApp' ? { kanal: k.mesajKanal, eposta: k.eposta || '' } : {}) });
+// KAY-106 (SOR-057): WhatsApp bilgilendirme onayını açıkça vermeyen (k.kvkk.whatsapp === false) öğrenciye WhatsApp gitmez; e-postası varsa e-postayla gider, yoksa gönderilmez (kim: null).
+// Onay alanı olmayan eski kayıtlar eskisi gibi WhatsApp'tan alır.
+const waRed = k => !!(k && k.kvkk && k.kvkk.whatsapp === false);
+const ogr = k => waRed(k) ? (k.eposta ? { ad: tamAd(k), tel: k.tel, rol: 'ÖĞRENCİ', kanal: 'E-posta', eposta: k.eposta, not: 'WhatsApp onayı yok' } : null) : ({ ad: tamAd(k), tel: k.tel, rol: 'ÖĞRENCİ', ...(k.mesajKanal && k.mesajKanal !== 'WhatsApp' ? { kanal: k.mesajKanal, eposta: k.eposta || '' } : {}) });
 const hoca = h => ({ ad: h.ad, tel: h.tel, rol: 'HOCA' });
 const mudur = () => ({ ad: S.kurs.yetkili || 'Kurs müdürü', tel: mudurTel(), rol: 'MÜDÜR' });
 const odeme = k => S.kurs.iban ? `Havale/EFT için IBAN: ${ibanMetni()}; açıklamaya ${k ? 'ödeme kodunuzu (' + odemeKodu(k) + ') ve ' : ''}adınızı soyadınızı yazın; ${kursAdi('de')} nakit ya da kartla da ödeyebilirsiniz.` : `${kursAdi('e')} uğrayıp nakit ya da kartla ödeyebilirsiniz.`;
@@ -134,14 +137,14 @@ export function aksamOzeti() {
 }
 export const zamanliKural = id => !!URET[id];
 // Bugün bu kuraldan kimlere gidecek (henüz gitmemiş olanlar); kurallar sekmesindeki önizleme bunu gösterir
-export function gidecekler(id) { kurallariHazirla(); if (!URET[id]) return []; const z = S.zamanli; return URET[id](false).filter(Boolean).filter(x => !z.gonderilen[x.anahtar]); }
+export function gidecekler(id) { kurallariHazirla(); if (!URET[id]) return []; const z = S.zamanli; return URET[id](false).filter(x => x && x.kim).filter(x => !z.gonderilen[x.anahtar]); }
 
 // Şu an zamanı gelmiş, gönderilmemiş mesajlar
 export function zamaniGelenler() {
   kurallariHazirla();
   const simdi = new Date().toTimeString().slice(0, 5), z = S.zamanli, l = [];
   S.otomasyonlar.filter(o => o.acik && URET[o.id] && simdi >= SAAT[o.id]).forEach(o => {
-    const adaylar = URET[o.id](false).filter(Boolean).filter(x => !z.gonderilen[x.anahtar] && !z.kuyruk.some(q => q.anahtar === x.anahtar));
+    const adaylar = URET[o.id](false).filter(x => x && x.kim).filter(x => !z.gonderilen[x.anahtar] && !z.kuyruk.some(q => q.anahtar === x.anahtar));
     adaylar.forEach(x => l.push({ ...x, kural: o.id }));
   });
   return l;
@@ -196,7 +199,7 @@ export function kuyruguGonder(sonra) {
 // Demo: bir kuraldan tek örnek mesajı hemen gönder (tarih şartı aranmaz)
 export async function ornekGonder(id) {
   kurallariHazirla();
-  const x = (URET[id](true) || []).filter(Boolean)[0];
+  const x = (URET[id](true) || []).filter(x => x && x.kim)[0];
   if (!x) return bildir('Bu kural için uygun kayıt yok', 'uyari');
   islem('Zamanlı mesaj örneği gönderdi', kural(id).ad);
   if (apiAcik()) { const s = await apiGonder(etiket(x.kim.ad, x.kim.rol) + x.metin, undefined, undefined, x.kim); S.zamanli.kayit.unshift({ zaman: yerelZaman(), kural: id, kime: x.kim.ad, rol: x.kim.rol, metin: x.metin, id: s.id || null, durum: s.ok ? 'örnek gönderildi' : 'hata: ' + s.hata }); if (s.ok) etkiUygula(x); kaydet(); return bildir(s.ok ? `“${kural(id).ad}” örneği gönderildi ✓` : s.hata, s.ok ? 'wp' : 'uyari'); }
