@@ -13,7 +13,7 @@ const gorselHtml = g => !g ? '' : String(g).startsWith('L:') ? levhaSvg(g.slice(
 import { randevuAl, randevuIptal, kursaYaz } from './ozellik.js?v=234';
 import * as OG from './ogrenci.js?v=234';
 import * as HZ from './hazirlik.js?v=234';
-import { ogrOzellik, ibanlar, ibanBicim, odemeKodu } from './veri.js?v=234';
+import { ogrOzellik, ogrAktif, ibanlar, ibanBicim, odemeKodu } from './veri.js?v=234';
 import * as GZ from './guzergah.js?v=234';
 import { ustaAlacak } from './risk.js?v=234';
 import { ayAdi } from './ozellik.js?v=234';
@@ -564,6 +564,7 @@ export function ogrenciPortal() {
   if (!ogId || !kursiyer(ogId)) { const puan = k => (sonrakiDers(k) ? 4 : 0) + (k.odeme.taksitler.some(t => !t.odendi) ? 2 : 0) + (S.dersler.some(d => d.kursiyer === k.id && d.beceri) ? 2 : 0) + (k.asama === 'Direksiyon' ? 1 : 0); ogId = [...S.kursiyerler].sort((a, b) => puan(b) - puan(a))[0].id; }
   if (ogSekme === 'program') ogSekme = 'ders';
   const k = kursiyer(ogId), S0 = SINIFLAR[k.sinif];
+  ogrAktif(k);   // Plus paket denetimi bu öğrenciye göre (UYG-019)
   const sd = sonrakiDers(k);
   const sinav = S.sinavlar.filter(s => s.kursiyerler.includes(k.id) && fark(s.tarih) >= 0 && !(s.sonuc || {})[k.id]).sort((a, b) => a.tarih.localeCompare(b.tarih))[0];
   // Yeni öğrenci tasarımı (js/ogr/): öğrencinin kendi telefonunda. Personel önizlemesi eski düzende kalır.

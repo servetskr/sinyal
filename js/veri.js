@@ -1144,7 +1144,12 @@ export const tamAd = k => k.ad + ' ' + k.soyad;
 // öğrenci uygulamasının ek özellikleri: kurs Ayarlar › Öğrenci uygulaması’ndan kapatabilir (varsayılan açık)
 export const OGR_OZELLIK = [['hazirlik', 'Sınava hazırlık puanı ve öneriler'], ['tekrar', 'Aralıklı tekrar (yanlış soruların yeniden sorulması)'], ['direksiyon', 'Uygulama sınavına hazırlık (resmî form maddeleri, park ve dönüş şemaları)'], ['ikaz', 'Gösterge paneli ve ikaz lambaları'], ['motor', '4 zamanlı motor ve debriyaj denemesi'], ['tehlike', 'Tehlike algısı çalışması'], ['sesli', 'Konu anlatımlarını sesli dinleme'], ['dersOnay', 'Ders defteri: öğrenci her direksiyon dersini kendi telefonundan onaylar ya da itiraz eder (varsayılan kapalı)']];
 const OGR_KAPALI = ['dersOnay'];  // kursun açması gereken özellikler
-export const ogrOzellik = ad => { const v = ((S.kurs || {}).ogrOzellik || {})[ad]; return OGR_KAPALI.includes(ad) ? v === true : v !== false; };
+// UYG-019 'Plus' paket altyapısı (SOR-097): S.kurs.plus = { acik, ozellikler: [anahtar], fiyat }. Paket açıksa listedeki özellikler yalnız k.plus
+// işaretli öğrencide açılır; paket kapalıyken (varsayılan) her şey eskisi gibi açık. Hangi öğrencinin ekranı çizildiğini ogrAktif(k) bildirir.
+let OGR_AKTIF = null;
+export const ogrAktif = k => { OGR_AKTIF = k || null; };
+export const plusDahil = ad => { const p = (S.kurs || {}).plus; return !!(p && p.acik && (p.ozellikler || []).includes(ad)); };
+export const ogrOzellik = ad => { const v = ((S.kurs || {}).ogrOzellik || {})[ad]; const acik = OGR_KAPALI.includes(ad) ? v === true : v !== false; return acik && !(plusDahil(ad) && OGR_AKTIF && !OGR_AKTIF.plus); };
 // Mesaj hitabı: "Merhaba Elif Hanım," / "Merhaba Hüseyin Hoca,"; cinsiyeti bilinmeyen (aday vb.) için "Sayın Deniz Akın,"
 // Kurs müdürünün kendi cep telefonu: müdüre giden bildirimler buraya gider. Kursun WhatsApp hattı (wp / bağlı hat) olamaz:
 // hat kendine mesaj atamaz. Boşsa müdür bildirimi WhatsApp'tan gitmez, uygulama içinde kalır.

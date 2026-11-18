@@ -25,7 +25,7 @@ export function hesapSeridi(k) {
   const durum = h ? [B.telGoster(h.tel), 'açıldı ' + tarih(h.acildi), h.sifirlandi ? 'şifre yenilendi ' + tarih(h.sifirlandi) : '', k.hesapAktif ? 'kullanıyor' + (k.sonGiris ? ' · son giriş ' + tarih(k.sonGiris) : '') : 'ilk giriş bekleniyor'].filter(Boolean).join(' · ') : 'Öğrenci kendi telefonundan program, ders, ödeme, sınav ve evraklarını görsün; ders alsın, evrak yüklesin, deneme sınavı çözsün';
   return `<div class="panel-serit"><span>${ik('tel')}<b>Öğrenci hesabı</b><small>${e(durum)}</small></span><span class="sag" style="gap:6px">${h
     ? `<button type="button" class="dg dg-hafif dg-kucuk" data-hesap-sifre>Yeni geçici şifre gönder</button><button type="button" class="dg dg-hafif dg-kucuk" data-hesap-kapat>Hesabı kapat</button>`
-    : `<button type="button" class="dg dg-ana dg-kucuk" data-hesap-ac>Hesap aç ve WhatsApp’tan gönder</button>`}</span></div>`;
+    : `<button type="button" class="dg dg-ana dg-kucuk" data-hesap-ac>Hesap aç ve WhatsApp’tan gönder</button>`}${(S.kurs.plus || {}).acik ? `<label style="display:flex;gap:6px;align-items:center;font-size:13.5px;color:var(--murekkep)"><input type="checkbox" data-hesap-plus ${k.plus ? 'checked' : ''}>Plus paket</label>` : ''}</span></div>`;
 }
 // kayıt sırasında: hesap arka planda açılır, giriş bilgileri gönderilir
 // Kayıt sonrası karşılama: öğrenciye konusuna göre ayrı mesajlar (hoş geldin, eksik evrak, uygulama girişi, ödeme planı, teorik ders),
@@ -80,6 +80,8 @@ export function hesapTikla(ev, k, yenile) {
     });
     return true;
   }
+  // UYG-019: öğrencinin Plus paketi (Ayarlar › Öğrenci uygulaması'nda paket açıksa görünür)
+  { const pl = ev.target.closest('[data-hesap-plus]'); if (pl) { k.plus = pl.checked || undefined; islem(pl.checked ? 'Plus paketi açtı' : 'Plus paketi kapattı', tamAd(k)); kaydet(); bildir(pl.checked ? 'Plus paket açıldı' : 'Plus paket kapatıldı'); return true; } }
   if (ev.target.closest('[data-hesap-kapat]')) {
     pencere({ baslik: 'Öğrenci hesabı kapatılsın mı?', icerik: `<p>${e(tamAd(k))} artık uygulamaya giremez. Öğrenci kurstan ayrıldıysa ya da telefonu başkasının eline geçtiyse kapatın; gerekirse yeniden açabilirsiniz.</p>`,
       altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Hesabı kapat</button>',
