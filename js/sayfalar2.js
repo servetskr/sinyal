@@ -237,13 +237,15 @@ export function esinavTercihPenceresi(k, sonra) {
       islem('e-Sınav dili kaydetti', tamAd(k) + ' · ' + dil + (tad ? ' · tercüman ' + tad : '') + (f.isitme.checked ? ' · işaret dili' : '') + (f.islendi.checked ? ' · MEBBİS’e işlendi' : '')); kaydet(); kapatPencere(); bildir('Kaydedildi'); sonra && sonra(); }); },
   });
 }
-export function sonucGir(s, hazir) {
-  const ks = s.kursiyerler.map(kursiyer).filter(Boolean), es = s.tur === 'e-Sınav', ESIK = 70;
+export function sonucGir(s, hazir, ops = {}) {  // ops.sonra: kaydedip mesajlar bitince (SNV-006 sıradaki oturum)
+  // SNV-006: sonucu daha önce girilmiş adaylar pencereye gelmez (yeniden kaydetmek hakkı iki kez sayardı; değiştirmek için 'Sonucu düzelt')
+  const tum = s.kursiyerler.map(kursiyer).filter(Boolean), ks = tum.filter(k => !(s.sonuc || {})[k.id]), es = s.tur === 'e-Sınav', ESIK = 70;
+  if (!ks.length) { bildir('Bu oturumda sonuçların hepsi girilmiş; değiştirmek için “Sonucu düzelt”', 'uyari'); return ops.sonra && ops.sonra(); }
   // SNV-001/017: hak numarası ve sınır çekirdekten (hakDurumu); ikinci dört hakta numara dilimden başlar
   const hakBilgi = k => { const h = hakDurumu(k, s.tur); return { hak: h.kullanilan + 1, sinir: h.sinir + (h.mazeretHak || 0), dilim: h.dilim, mazeret: h.mazeretSinavi }; };  // SNV-025: mazeret sınavı hakkı sınıra eklenir
   pencere({
     baslik: s.tur + ' sonuçları', genis: false,
-    icerik: `<p style="color:var(--soluk);margin-bottom:10px">${tarihUzun(s.tarih)} · ${ks.length} kursiyer · ${es ? `sonuç belgesindeki puanı girin, ${ESIK} ve üstü geçer` : 'sınav komisyonunun sonucunu işaretleyin'}</p>${ks.map(k => `<div class="evrak" style="flex-wrap:wrap" data-satir="${k.id}">${avatar(k.ad, k.soyad, k.foto)}<span style="flex:1;color:var(--murekkep);min-width:140px">${e(tamAd(k))}<small style="display:block;color:${(hb => hb.hak >= hb.sinir ? 'var(--kirmizi);font-weight:700' : 'var(--soluk)')(hakBilgi(k))}">${(hb => hb.hak > hb.sinir ? 'hakkı dolu · sonuç girilmez' : `${hb.dilim === 2 ? 'İkinci dört hak · ' : ''}${hb.hak}. hak${hb.hak >= hb.sinir ? (!es && !k.ikinciHak ? ' · ilk dört hakkın sonuncusu' : ' · son hak') : ''}`)(hakBilgi(k))}</small></span>
+    icerik: `<p style="color:var(--soluk);margin-bottom:10px">${tarihUzun(s.tarih)} · ${ks.length} kursiyer${tum.length > ks.length ? ` (${tum.length - ks.length} öğrencinin sonucu daha önce girildi)` : ''} · ${es ? `sonuç belgesindeki puanı girin, ${ESIK} ve üstü geçer` : 'sınav komisyonunun sonucunu işaretleyin'}</p>${ks.map(k => `<div class="evrak" style="flex-wrap:wrap" data-satir="${k.id}">${avatar(k.ad, k.soyad, k.foto)}<span style="flex:1;color:var(--murekkep);min-width:140px">${e(tamAd(k))}<small style="display:block;color:${(hb => hb.hak >= hb.sinir ? 'var(--kirmizi);font-weight:700' : 'var(--soluk)')(hakBilgi(k))}">${(hb => hb.hak > hb.sinir ? 'hakkı dolu · sonuç girilmez' : `${hb.dilim === 2 ? 'İkinci dört hak · ' : ''}${hb.hak}. hak${hb.hak >= hb.sinir ? (!es && !k.ikinciHak ? ' · ilk dört hakkın sonuncusu' : ' · son hak') : ''}`)(hakBilgi(k))}</small></span>
         ${es ? `<input class="girdi" name="p-${k.id}" inputmode="numeric" maxlength="3" placeholder="Puan" aria-label="${e(tamAd(k))} puanı" style="width:78px;text-align:center"><span data-durum="${k.id}" style="width:56px;font-size:13px;font-weight:700"></span><label style="font-size:13px;display:flex;gap:4px;align-items:center"><input type="checkbox" name="g-${k.id}"> Girmedi</label>`
         : `<div class="secim"><label><input type="radio" name="${k.id}" value="Geçti"><span>Geçti</span></label><label><input type="radio" name="${k.id}" value="Kaldı"><span>Kaldı</span></label><label><input type="radio" name="${k.id}" value="Girmedi"><span>Girmedi</span></label></div>`}</div>`).join('')}
       <div class="ipucu" style="margin-top:14px">${ik('robot')}<span>Geçenlere tebrik ve Google yorum isteği gider. Kalanların tekrar ücreti (${tl(es ? esinavUcreti(2) : uygulamaSinavUcreti(2, s.tarih))}) ${!es && sinavUcretKip() === 'aday' ? 'adayın kendisi yatırır' : 'ödeme planına eklenir'}; sonraki adımı bir sonraki ekranda seçersiniz. Girmeyen kursiyerin hakkı düşer.</span></div>`,
@@ -277,7 +279,7 @@ export function sonucGir(s, hazir) {
         });
         kaydet(); kapatPencere(); bildir(`${g}/${ks.length} geçti`); yenile();
         const hocaya = {}; ks.forEach(k => { const h = egitmen(k.egitmen); if (h) (hocaya[h.id] = hocaya[h.id] || { h, l: [] }).l.push(tamAd(k) + ': ' + (s.sonuc[k.id] === 'Geçti' ? 'geçti' : s.sonuc[k.id] === 'Girmedi' ? 'girmedi' : 'kaldı')); });
-        waSirali([...mesaj.map(([k, m]) => ({ ad: tamAd(k), tel: k.tel, rol: 'ÖĞRENCİ', metin: m.replace(/\s{2,}/g, ' ').trim() })), ...Object.values(hocaya).map(({ h, l }) => ({ ad: h.ad, tel: h.tel, rol: 'HOCA', metin: `${h.ad.split(' ')[0]} Hoca, ${tarih(s.tarih)} ${s.tur.toLocaleLowerCase('tr')} sonuçları: ${l.join('; ')}.` }))], 'Sonuçları bildir', { bitince: () => { if (kalan.length) SG.kalanlaraGit(s); } });
+        waSirali([...mesaj.map(([k, m]) => ({ ad: tamAd(k), tel: k.tel, rol: 'ÖĞRENCİ', metin: m.replace(/\s{2,}/g, ' ').trim() })), ...Object.values(hocaya).map(({ h, l }) => ({ ad: h.ad, tel: h.tel, rol: 'HOCA', metin: `${h.ad.split(' ')[0]} Hoca, ${tarih(s.tarih)} ${s.tur.toLocaleLowerCase('tr')} sonuçları: ${l.join('; ')}.` }))], 'Sonuçları bildir', { bitince: () => { if (ops.sonra) return ops.sonra(); if (kalan.length) SG.kalanlaraGit(s); } });
       });
     },
   });

@@ -3683,3 +3683,11 @@ a.kart.gosterge { text-decoration: none; color: inherit; display: block; }
 .hak-mazeret-bas { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
 .hak-mazeret-bas b { color: var(--murekkep); font-size: 14px; }
 .hak-mazeret .liste li { padding-left: 0; padding-right: 0; }
+
+/* SNV-006: MEBBİS sonuç akışı */
+.sa-ozet { font-size: 14.5px; margin: 0 0 10px; }
+.sa-kartlar { display: grid; gap: 8px; }
+.sa-kart { display: flex; align-items: center; gap: 12px; justify-content: space-between; padding: 10px 14px; border: 1px solid var(--cizgi); border-radius: 10px; }
+.sa-kart small { display: block; color: var(--soluk); margin-top: 2px; }
+.sa-kart.tamam { background: var(--panel-2); }
+.sa-bas { margin: 16px 0 4px; font-size: 14px; color: var(--murekkep); }
