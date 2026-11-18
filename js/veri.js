@@ -425,6 +425,13 @@ export const YONTEMLER = ['Nakit', 'Kart', 'Havale'];
 // Tahsilatta önce seçili gelen yöntem: kurs ayarı (Ayarlar › Kurs; SOR-085, RAP-009); ayarlanmadıysa eskisi gibi Kart
 export const varsayilanYontem = () => YONTEMLER.includes((S.kurs || {}).varsayilanYontem) ? S.kurs.varsayilanYontem : 'Kart';
 export const yontemAd = y => y === 'Havale' ? 'Havale/EFT' : y;
+// PAR-050: hareketin düştüğü kasa/banka hesabı (S.hesaplar). Yeni hareket h.hesap taşır; taşımayan eski hareket yöntemin varsayılan hesabına sayılır
+// (Nakit → kasa, Kart → POS, POS yoksa varsayılan banka, Havale → varsayılan banka). İki banka hesabı aynı havaleyi iki kez saymaz.
+const HESAP_TUR = { Nakit: 'Kasa', Kart: 'POS', Havale: 'Banka' };
+export const bankaHesaplari = () => (S.hesaplar || []).filter(h => h.tur === 'Banka');
+export function varsayilanHesap(y) { const l = S.hesaplar || [], bul = t => l.find(h => h.tur === t && h.varsayilan) || l.find(h => h.tur === t); return (bul(HESAP_TUR[y] || 'Banka') || (y === 'Kart' ? bul('Banka') : null) || {}).id || null; }
+export const hareketHesabi = h => h.hesap && (S.hesaplar || []).some(x => x.id === h.hesap) ? h.hesap : varsayilanHesap(h.tur === 'Gider' && h.yontem === 'Kart' ? 'Havale' : h.yontem);  // kartla gider bankadan çıkar, POS'tan değil
+export const bankayaHesabi = h => h.bankayaHesap && (S.hesaplar || []).some(x => x.id === h.bankayaHesap) ? h.bankayaHesap : varsayilanHesap('Havale');
 // Ay ekleme: 31 Ocak + 1 ay = 28/29 Şubat (taşma yok)
 export const ayEkle = (t, n) => { const d = tarihOku(t), g = d.getDate(); d.setDate(1); d.setMonth(d.getMonth() + n); const son = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); d.setDate(Math.min(g, son)); return iso(d); };
 // İki tarih arasındaki iş günü (bas hariç, bit dahil). Eski ad: MEB iş günü sayımına bağlı (mebIsGunuMu); ayrı bir hesap tutulmaz

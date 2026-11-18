@@ -1,4 +1,4 @@
-import { kursiyerDersleri, kayitDondurmaMi, planAyar, dersSaatleri, EGITIM_TURU, egitimTuruOf, mebEtiketleri, dersSayaci, arifeMi, ustaRengi, haftalikSinir, haftaDers, ekDersFiyat, ozelDersFiyat, uygulamaSinavUcreti, esinavUcreti, digerUcretler, odemeKodu, ibanMetni, dersSirasi, S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, risk, BECERI, islem, geriAlNoktasi, oturum, tcGecerli, tcMaskele, DERS_TUR_AD, ek3Sinif, ogretmen, yas, mebOnKontrol, sb, sbDers, sbSinav, kapaliGun, ustaAraci, dersAraci, yerelZaman, aktifSiniflar, satistaSiniflar, YONTEMLER, yontemAd, ayEkle, gecikenTutar, selam, kursAdi, tuketim, beklenenTuketim, mudurTel, evrakKaynak, tutarOku, taksitBol, ayniTcKayit, dersIptalIz, egitimSinifi, ekTur, aracSiniflari, kursiyerTaban, tabanListesi, ekDersTabani, ozelDersTabani, programUyarisi, varsayilanYontem, teorikVar, belgeliMi, esinavsizBelgeli, teorikSaat, TEORIK_MUAF_DERS, dersKonulariResmi } from './veri.js?v=234';
+import { bankaHesaplari, varsayilanHesap, kursiyerDersleri, kayitDondurmaMi, planAyar, dersSaatleri, EGITIM_TURU, egitimTuruOf, mebEtiketleri, dersSayaci, arifeMi, ustaRengi, haftalikSinir, haftaDers, ekDersFiyat, ozelDersFiyat, uygulamaSinavUcreti, esinavUcreti, digerUcretler, odemeKodu, ibanMetni, dersSirasi, S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, risk, BECERI, islem, geriAlNoktasi, oturum, tcGecerli, tcMaskele, DERS_TUR_AD, ek3Sinif, ogretmen, yas, mebOnKontrol, sb, sbDers, sbSinav, kapaliGun, ustaAraci, dersAraci, yerelZaman, aktifSiniflar, satistaSiniflar, YONTEMLER, yontemAd, ayEkle, gecikenTutar, selam, kursAdi, tuketim, beklenenTuketim, mudurTel, evrakKaynak, tutarOku, taksitBol, ayniTcKayit, dersIptalIz, egitimSinifi, ekTur, aracSiniflari, kursiyerTaban, tabanListesi, ekDersTabani, ozelDersTabani, programUyarisi, varsayilanYontem, teorikVar, belgeliMi, esinavsizBelgeli, teorikSaat, TEORIK_MUAF_DERS, dersKonulariResmi } from './veri.js?v=234';
 import { alanHatalari, e, saatDe, saatE, tl, sayi, ik, rozet, asamaRozet, avatar, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, sekmeler, tarih, tarihUzun, goreli, gunKisa, cubukGrafik, halka, ayAdi, isaret, yonLevhasi, olcumler, aracGorsel, ekranNotu, bugunMetni, fotoKucult, waAc, waSirali, tamTarih, pinSor, taslaklar, taslakBul, taslakSil, taslakSakla, alanlariOku, alanlariYaz, taslakZamani, pencereSor } from './ui.js?v=234';
 import { yenile } from './app.js?v=234';
 import { denetimEksikleri, sozlesmeImzalat, sozlesmeDondur } from './sayfalar3.js?v=234';
@@ -474,7 +474,7 @@ export function kursiyerFormu(on = {}) {
       <div class="ks-blok"><h4>Nasıl ödeyecek?</h4><div class="alan"><span class="et">Ödeme şekli</span>${sec('odemeSekli', [['taksit', 'Taksitli'], ['pesin', 'Peşin, tek seferde']], 'taksit')}</div>
         <div class="form-izgara" style="margin-top:12px"><div class="alan" data-ks-taksitli><label for="k-pesin">Peşinat</label><input id="k-pesin" name="pesin" inputmode="numeric" value="8000"></div>
         <div class="alan" data-ks-taksitli><span class="et">Taksit sayısı</span>${sec('taksit', Array.from({ length: taksitEnCok() }, (_, i) => [String(i + 1), String(i + 1)]), String(taksitVarsayilan()))}</div>
-        <div class="alan tam"><span class="et" data-ks-yontem-et>Peşinat nasıl alındı?</span>${sec('yontem', YONTEMLER.map(y => [y, yontemAd(y)]), '')}</div></div>
+        <div class="alan tam"><span class="et" data-ks-yontem-et>Peşinat nasıl alındı?</span>${sec('yontem', YONTEMLER.map(y => [y, yontemAd(y)]), '')}</div>${hesapSecici('')}</div>
         <ul class="ks-plan" id="k-plan"></ul>
         <div class="ks-banka" data-ks-banka hidden>${ik('kart')}<span></span></div></div>
       <div class="ks-not" data-ks-sonra hidden>${isaret('bilgi', 18)}<span><b>Ödeme sonra girilecek.</b> Kurs ücreti borç olarak yazılır, vadesi bir hafta sonra. Plan öğrenci dosyasında Ödeme › “Taksit planını yeniden böl”den yapılır. <button type="button" class="dg dg-hafif dg-kucuk" data-ks-odeme-geri>Şimdi gir</button></span></div>`)}
@@ -704,7 +704,7 @@ export function kursiyerFormu(on = {}) {
         GR.aktifEt(yeni);
         import('./zamanlayici.js?v=234').then(m => m.anlikBildirim('o21', { ad: tamAd(yeni), sinif: (SINIFLAR[yeni.sinif] || {}).ad || yeni.sinif, kaydeden: (oturum.kullanici || {}).ad || '' })).catch(() => { });   // MSJ-026
         S.kursiyerler.unshift(yeni); islem('Kursiyer kaydetti', tamAd(yeni) + ' · ' + SINIFLAR[s].ad + (GR.grupBul(yeni.teorikGrup) ? ' · ' + GR.grupBul(yeni.teorikGrup).ad : ' · bekleyen dönem') + (odemeSonra ? ' · ödeme planı sonra' : '') + (yeni.yasIstisna ? ` · yaş istisnası (KTY md.76/3): ${yeni.yasIstisna.tur} · ${yeni.yasIstisna.not}` : ''));
-        if (p) S.hareket.unshift({ id: 'h' + Date.now(), tarih: gun(0), tur: 'Gelir', kategori: 'Kurs ücreti', aciklama: tamAd(yeni) + (n ? ' · peşinat' : ' · peşin ödeme'), tutar: p, yontem, kursiyer: yeni.id });
+        if (p) S.hareket.unshift({ id: 'h' + Date.now(), tarih: gun(0), tur: 'Gelir', kategori: 'Kurs ücreti', aciklama: tamAd(yeni) + (n ? ' · peşinat' : ' · peşin ödeme'), tutar: p, yontem, ...hesapOku(f, yontem), kursiyer: yeni.id });
         if (on.adayId) { const a = S.adaylar.find(x => x.id === on.adayId); if (a) a.asama = 'Kayıt'; }
         removeEventListener('resize', isikKonum);
         kaydet(); kapatPencere();
@@ -1455,6 +1455,10 @@ export function odemeAl(k, sonra) {
 }
 // Tahsilat penceresi: tutar (sıradaki taksitle dolu, değiştirilebilir), yöntem, tarih, isteğe bağlı not.
 // Taksitten az alınırsa kalan aynı taksitte açık kalır (kısmi); fazlası sıradaki açık taksitlere geçer. Tek tahsilat = tek kasa hareketi = tek makbuz.
+// PAR-050: havale/EFT'de hangi banka hesabına (iki ve daha çok banka hesabı varsa); yöntem değişince görünür/gizlenir
+export const hesapSecici = (y, secili) => { const l = bankaHesaplari(); if (l.length < 2) return ''; const v = secili || varsayilanHesap('Havale'); return `<div class="alan hs-sec" data-hesap-alan ${y === 'Havale' ? '' : 'hidden'}><label>Hangi banka hesabına?</label><select name="hesap" class="girdi">${l.map(h => `<option value="${e(h.id)}" ${h.id === v ? 'selected' : ''}>${e(h.ad)}</option>`).join('')}</select></div>`; };
+export const hesapOku = (kap, y) => { const s = kap && kap.querySelector('[name=hesap]'); return y === 'Havale' && s && s.value ? { hesap: s.value } : {}; };
+document.addEventListener('change', ev => { const t = ev.target; if (!t || !['y', 'yontem'].includes(t.name)) return; const kap = t.closest('form, .perde'); if (kap) kap.querySelectorAll('[data-hesap-alan]').forEach(a => { a.hidden = t.value !== 'Havale'; }); });
 export function tahsilAl(k, i, sonra) {
   const t = k.odeme.taksitler[i]; if (!t || t.odendi || t.iptal) return odemeAl(k, sonra);
   const kalan = taksitKalan(t), sira = [{ t, i }, ...acikTaksitler(k).filter(x => x.i !== i)], azami = sira.reduce((a, x) => a + taksitKalan(x.t), 0), gec = fark(t.vade) < 0;
@@ -1462,7 +1466,7 @@ export function tahsilAl(k, i, sonra) {
     baslik: 'Ödeme al',
     icerik: `<form id="f-tahsil" class="tahsil-form"><div class="kisi" style="margin-bottom:14px"><div><b>${e(tamAd(k))}</b><small${gec ? ' style="color:var(--kirmizi);font-weight:700"' : ''}>${i + 1}. taksit · vade ${tarih(t.vade)}${gec ? ' · gecikti' : ''}${t.kismi ? ' · ' + tl(t.kismi) + ' önceden ödendi' : ''}</small></div><small style="margin-left:auto;text-align:right;color:var(--soluk)">Kalan borç<b class="sayi" style="display:block;font-size:17px;color:var(--murekkep)">${tl(kalanBorc(k))}</b></small></div>
       <div class="alan"><label for="t-tutar">Tutar (₺)</label><input id="t-tutar" name="tutar" class="tahsil-tutar" inputmode="numeric" autocomplete="off" value="${kalan}"><small data-tutar-not style="color:var(--soluk)"></small></div>
-      <span class="et" style="display:block;margin-top:14px">Ödeme yöntemi</span><div class="secim tahsil-yontem" style="margin-top:6px">${YONTEMLER.map((y, j) => `<label><input type="radio" name="y" value="${y}" ${y === varsayilanYontem() ? 'checked' : ''}><span>${yontemAd(y)}</span></label>`).join('')}</div>
+      <span class="et" style="display:block;margin-top:14px">Ödeme yöntemi</span><div class="secim tahsil-yontem" style="margin-top:6px">${YONTEMLER.map((y, j) => `<label><input type="radio" name="y" value="${y}" ${y === varsayilanYontem() ? 'checked' : ''}><span>${yontemAd(y)}</span></label>`).join('')}</div>${hesapSecici(varsayilanYontem())}
       <p class="ipucu uyari" data-nakit hidden style="margin-top:10px">${isaret('uyari', 18)}<span>Eğitim ücreti kurumun MEB’e bildirilmiş banka hesabına yatırılarak tahsil edilir (Özel Öğretim Kurumları Yönetmeliği m.55/3, 5 Eylül 2025). Nakit aldıysanız bankaya yatırın.</span></p>
       <div class="tahsil-alt"><div class="alan"><label for="t-tarih">Tarih</label><input id="t-tarih" name="tarih" type="date" value="${gun(0)}" max="${gun(0)}"></div>
       <div class="alan"><label for="t-not">Not <small style="color:var(--soluk);font-weight:400">(isteğe bağlı)</small></label><input id="t-not" name="not" maxlength="200" placeholder="Örn. annesi getirdi"></div></div>
@@ -1490,7 +1494,7 @@ export function tahsilAl(k, i, sonra) {
           parca.push((x.i + 1) + '. taksit' + (x.t.odendi ? '' : ' (kısmi)'));
         }
         islem('Tahsilat aldı', tamAd(k) + ' · ' + parca.join(', ') + ' · ' + tl(v) + (aciklamaNot ? ' · ' + aciklamaNot : ''));
-        const hid = 'h' + Date.now(); S.hareket.unshift({ id: hid, tarih: tarihSec, tur: 'Gelir', kategori: 'Taksit', aciklama: tamAd(k) + ' · ' + parca.join(', '), tutar: v, yontem: y, kursiyer: k.id, dagilim, ...(aciklamaNot ? { not: aciklamaNot } : {}) });
+        const hid = 'h' + Date.now(); S.hareket.unshift({ id: hid, tarih: tarihSec, tur: 'Gelir', kategori: 'Taksit', aciklama: tamAd(k) + ' · ' + parca.join(', '), tutar: v, yontem: y, ...hesapOku(d, y), kursiyer: k.id, dagilim, ...(aciklamaNot ? { not: aciklamaNot } : {}) });
         const makGit = d.querySelector('[name=mak]') && d.querySelector('[name=mak]').checked;
         kaydet(); kapatPencere();
         if (makGit) wpGonder(k, `${selam(k)} ${tl(v)} ödemeniz alındı, teşekkür ederiz. Kalan borcunuz ${tl(kalanBorc(k))}. ${S.kurs.ad}`, 'Makbuz');
@@ -1522,7 +1526,7 @@ export function ekKalemTahsil(k, j) {
   const x = k.odeme.ekler[j];
   pencere({
     baslik: x.ad + ' · ' + tl(x.tutar),
-    icerik: `<div class="alan"><span class="et">Ödeme yöntemi</span><div class="secim">${YONTEMLER.map(y => `<label><input type="radio" name="y" value="${y}" ${y === varsayilanYontem() ? 'checked' : ''}><span>${y}</span></label>`).join('')}</div></div><div class="alan" style="margin-top:10px;max-width:220px"><label for="ek-tarih">Tarih</label><input id="ek-tarih" class="girdi" name="tarih" type="date" value="${gun(0)}" max="${gun(0)}"></div><label style="display:flex;gap:8px;align-items:center;margin-top:14px;font-size:14px"><input type="checkbox" name="mak"> Makbuzu yazdır</label>`,
+    icerik: `<div class="alan"><span class="et">Ödeme yöntemi</span><div class="secim">${YONTEMLER.map(y => `<label><input type="radio" name="y" value="${y}" ${y === varsayilanYontem() ? 'checked' : ''}><span>${y}</span></label>`).join('')}</div></div>${hesapSecici(varsayilanYontem())}<div class="alan" style="margin-top:10px;max-width:220px"><label for="ek-tarih">Tarih</label><input id="ek-tarih" class="girdi" name="tarih" type="date" value="${gun(0)}" max="${gun(0)}"></div><label style="display:flex;gap:8px;align-items:center;margin-top:14px;font-size:14px"><input type="checkbox" name="mak"> Makbuzu yazdır</label>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Tahsil et</button>`,
     onAc(d) {
       d.querySelector('[data-k]').addEventListener('click', () => {
@@ -1531,7 +1535,7 @@ export function ekKalemTahsil(k, j) {
         if (tarihSec > gun(0)) return bildir('İleri tarihli ödeme kaydedilemez', 'uyari');
         if ((S.gunSonu || []).includes(tarihSec)) return bildir(tamTarih(tarihSec) + ' günü kapatıldı; bu tarihe kayıt eklenemez', 'uyari');
         geriAlNoktasi(); x.odendi = tarihSec; const hid = 'h' + Date.now();
-        S.hareket.unshift({ id: hid, tarih: tarihSec, tur: 'Gelir', kategori: x.ad, aciklama: tamAd(k) + ' · ' + x.ad, tutar: x.tutar, yontem: d.querySelector('[name=y]:checked').value, kursiyer: k.id });
+        S.hareket.unshift({ id: hid, tarih: tarihSec, tur: 'Gelir', kategori: x.ad, aciklama: tamAd(k) + ' · ' + x.ad, tutar: x.tutar, yontem: d.querySelector('[name=y]:checked').value, ...hesapOku(d, d.querySelector('[name=y]:checked').value), kursiyer: k.id });
         islem('Tahsilat aldı', tamAd(k) + ' · ' + x.ad + ' · ' + tl(x.tutar)); kaydet(); kapatPencere(); bildir(x.ad + ' tahsil edildi', 'tamam', true); yenile();
         if (d.querySelector('[name=mak]').checked) import('./sayfalar3.js?v=234').then(m => m.belgeAc('makbuz', hid));
       });
