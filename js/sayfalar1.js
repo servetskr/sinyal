@@ -1197,11 +1197,11 @@ function odemeSekmesi(k) {
     kalan ? ['link', 'Ödeme bilgisini WhatsApp’tan gönder', 'wp'] : null,
     ['plan', 'Taksit planını yeniden böl', 'takvim'], ['ek', 'Ek kalem ekle (ek ders, özel ders, sınav, kitap…)', 'arti'],
     mudurMu() && kalan ? ['indirim', 'İndirim uygula', 'kalem'] : null, mudurMu() ? ['iade', 'İade yap', 'sifirla'] : null, mudurMu() && !k.ucretsiz ? ['ucretsiz', 'Ücretsiz kursiyer (%3)', 'kursiyer'] : null,
-    k.odeme.senetli ? ['senet', 'Senet (yazdır / PDF)', 'belge'] : null, mudurMu() && (kalan || avukattaMi(k)) ? ['avukat', avukattaMi(k) ? 'Avukat takibini kapat' : 'Avukata ver', 'belge'] : null, mudurMu() && (k.odeme.taksitler || []).length ? ['senetli', k.odeme.senetli ? 'Senetli satışı kaldır' : 'Senetli satış (taksitlere senet)', 'belge'] : null, S.hareket.some(h => h.kursiyer === k.id && h.tur === 'Gelir') ? ['makbuz', 'Makbuzlar (yazdır / PDF)', 'belge'] : null,
+    k.odeme.senetli ? ['senet', 'Senet (yazdır / PDF)', 'belge'] : null, mudurMu() && !S.hareket.some(h => h.kursiyer === k.id && h.tur === 'Gelir') ? ['devir', 'Devir (açılış) bakiyesi gir', 'kalem'] : null, mudurMu() && (kalan || avukattaMi(k)) ? ['avukat', avukattaMi(k) ? 'Avukat takibini kapat' : 'Avukata ver', 'belge'] : null, mudurMu() && (k.odeme.taksitler || []).length ? ['senetli', k.odeme.senetli ? 'Senetli satışı kaldır' : 'Senetli satış (taksitlere senet)', 'belge'] : null, S.hareket.some(h => h.kursiyer === k.id && h.tur === 'Gelir') ? ['makbuz', 'Makbuzlar (yazdır / PDF)', 'belge'] : null,
   ].filter(Boolean);
   return `<div class="kart odeme-ozet">
     <div class="oo-ust">
-      <div class="oo-kalan${kalan ? '' : ' tamam'}"><small>Kalan borç</small><b class="sayi">${kalan ? tl(kalan) : 'Borcu yok'}</b>${k.odeme.senetli || k.ucretsiz || k.odeme.iade || avukattaMi(k) ? `<span>${[avukattaMi(k) ? rozet('Avukata verildi', 'kirmizi') + ' ' + e(k.avukat.avukat || '') + ' · ' + tarih(k.avukat.tarih) : '', k.odeme.senetli ? rozet('Senetli', 'mor') : '', k.ucretsiz ? 'Ücretsiz kursiyer (' + e(k.ucretsiz.neden) + ')' : '', k.odeme.iade ? 'İade ' + tl(k.odeme.iade) : ''].filter(Boolean).join(' · ')}</span>` : ''}</div>
+      <div class="oo-kalan${kalan ? '' : ' tamam'}"><small>Kalan borç</small><b class="sayi">${kalan ? tl(kalan) : 'Borcu yok'}</b>${k.odeme.senetli || k.ucretsiz || k.odeme.iade || avukattaMi(k) || k.odeme.devirAktarim || k.odeme.devirAlacak ? `<span>${[k.odeme.devirAktarim && k.odeme.devirAktarim.tutar ? 'Devir: önceki programda ödenen ' + tl(k.odeme.devirAktarim.tutar) : '', k.odeme.devirAlacak ? rozet('Devir alacak ' + tl(k.odeme.devirAlacak), 'mavi') : '', avukattaMi(k) ? rozet('Avukata verildi', 'kirmizi') + ' ' + e(k.avukat.avukat || '') + ' · ' + tarih(k.avukat.tarih) : '', k.odeme.senetli ? rozet('Senetli', 'mor') : '', k.ucretsiz ? 'Ücretsiz kursiyer (' + e(k.ucretsiz.neden) + ')' : '', k.odeme.iade ? 'İade ' + tl(k.odeme.iade) : ''].filter(Boolean).join(' · ')}</span>` : ''}</div>
       ${sonraki}
     </div>
     <div class="oo-ilerleme"><div class="oo-ilerleme-yazi"><span>Ödenen <b class="sayi">${tl(od)}</b></span><span>Toplam <b class="sayi">${tl(toplam)}</b></span></div>${ilerleme(od, toplam, 'yesil')}</div>
@@ -1562,6 +1562,21 @@ export function ekKalemTahsil(k, j) {
   });
 }
 // PAR-037: avukat takibi (k.avukat { tarih, avukat, aciklama, kim, kapandi? }); avukat adları kurs listesinde (S.kurs.avukatlar) birikir
+// PAR-031: elle devir (açılış bakiyesi) — eski programdan gelen öğrencide henüz tahsilat yokken: önceki programda ödenen, kalan borç ve vadesi, kursun öğrenciye borcu (alacak)
+function devirPenceresi(k) {
+  if (!mudurMu()) return bildir('Yalnız kurs müdürü', 'uyari'); if (S.hareket.some(h => h.kursiyer === k.id && h.tur === 'Gelir')) return bildir('Bu öğrenciden mdSinyal’de tahsilat alınmış; devir yalnız ilk açılışta girilir', 'uyari');
+  const dv = k.odeme.devirAktarim || {}, od0 = dv.tutar || 0, kal0 = Math.max(0, k.odeme.toplam - od0);
+  pencere({ baslik: 'Devir (açılış) bakiyesi', taslak: false, icerik: `<form id="f-dv" class="form-izgara"><p class="tam" style="font-size:13.5px;color:var(--soluk)">Eski programdaki bakiyeyi girin. Ödenen tutar peşinat/devir olarak, kalan borç tek taksit olarak yazılır; sözleşme ücreti = ödenen + kalan borç. Kasaya hareket yazılmaz.</p>
+      <div class="alan"><label for="dv-o">Önceki programda ödenen (₺)</label><input id="dv-o" name="o" inputmode="numeric" value="${od0 || ''}"></div>
+      <div class="alan"><label for="dv-b">Kalan borç (devir borç, ₺)</label><input id="dv-b" name="b" inputmode="numeric" value="${kal0 || ''}"></div>
+      <div class="alan"><label for="dv-v">Kalan borcun vadesi</label><input id="dv-v" name="v" type="date" value="${(k.odeme.taksitler.find(t => !t.odendi && !t.iptal) || {}).vade || ayEkle(gun(0), 1)}"></div>
+      <div class="alan"><label for="dv-a">Devir alacak (kursun öğrenciye borcu, ₺)</label><input id="dv-a" name="a" inputmode="numeric" value="${k.odeme.devirAlacak || ''}"></div></form>`,
+    altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-dv">Kaydet</button>',
+    onAc(p) { p.querySelector('form').addEventListener('submit', ev => { ev.preventDefault(); const f = ev.target, o = tutarOku(f.o.value) || 0, b = tutarOku(f.b.value) || 0, a = tutarOku(f.a.value) || 0; if (!o && !b && !a) return bildir('Bir tutar girin', 'uyari');
+      geriAlNoktasi(); const top = o + b; k.odeme.toplam = top; if (!k.odeme.sozlesme) k.odeme.sozlesme = top; k.odeme.pesin = o; k.odeme.devirAktarim = { ...(k.odeme.devirAktarim || {}), tutar: o, ilk: o, kaynak: 'Elle devir', tarih: gun(0) };
+      k.odeme.taksitler = b ? [{ vade: f.v.value || ayEkle(gun(0), 1), tutar: b, odendi: null, yontem: null, aciklama: 'Devir borç' }] : []; if (a) k.odeme.devirAlacak = a; else delete k.odeme.devirAlacak; delete k.odeme.planSonra;
+      islem('Devir bakiyesi girdi', `${tamAd(k)} · ödenen ${tl(o)} · kalan ${tl(b)}${a ? ' · alacak ' + tl(a) : ''}`); kaydet(); kapatPencere(); bildir('Devir bakiyesi kaydedildi'); yenile(); }); } });
+}
 export const avukattaMi = k => !!(k && k.avukat && !k.avukat.kapandi);
 function avukatPenceresi(k) {
   if (!mudurMu()) return bildir('Yalnız kurs müdürü', 'uyari');
@@ -1583,6 +1598,7 @@ const indirimNedenleri = () => { const t = indirimTurleri(); return [t.kisi ? 'K
 export function odemeIslem(k, tur, oneri) {
   if (tur === 'ucretsiz') return MZ.ucretsizYap(k, yenile);
   if (tur === 'avukat') return avukatPenceresi(k);
+  if (tur === 'devir') return devirPenceresi(k);
   if (tur === 'indirim' && !indirimNedenleri().length) return bildir('İndirim türlerinin hepsi kapalı: Ayarlar › Sınıf ve ücretler › İndirim türleri', 'uyari');
   // PAR-021: "Senedi var" işareti; taksitler senetle takip edilir (Kasa › Senetler, senet PDF'i, hatırlatma / avukat takibi)
   if (tur === 'senetli') { if (!mudurMu()) return bildir('Yalnız kurs müdürü', 'uyari'); geriAlNoktasi(); k.odeme.senetli = !k.odeme.senetli; islem(k.odeme.senetli ? 'Senetli satış yaptı' : 'Senetli satışı kaldırdı', tamAd(k)); kaydet(); bildir(k.odeme.senetli ? 'Senetli: taksitler Kasa › Senetler’de; senedi buradan yazdırın' : 'Senet işareti kaldırıldı', 'tamam', true); return yenile(); }

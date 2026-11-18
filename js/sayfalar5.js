@@ -455,6 +455,8 @@ const ALANLAR = [
   ['kayit', 'Kayıt tarihi', ['kayittarihi', 'kayit', 'kayittar']],
   ['toplam', 'Kurs ücreti', ['toplam', 'ucret', 'kursucreti', 'toplamucret', 'tutar']],
   ['odenen', 'Ödenen', ['odenen', 'tahsilat', 'odenentutar', 'tahsiledilen']],
+  ['devirBorc', 'Devir borç', ['devirborc', 'kalanborc', 'borcbakiyesi', 'kalantutar']],  // PAR-031: eski programdan devreden borç / alacak
+  ['devirAlacak', 'Devir alacak', ['deviralacak', 'alacakbakiyesi', 'fazlaodeme']],
   ['adres', 'Adres', ['adres', 'ikametadresi']],
   ['teorikDers', 'Yapılan teorik ders', ['teorik', 'teorikders', 'teorikdersler', 'katildigiteorik']],
   ['direksiyonDers', 'Yapılan direksiyon dersi', ['direksiyon', 'direksiyonders', 'yapilandireksiyon', 'direksiyondersi']],
@@ -663,12 +665,13 @@ function aktarimUygula() {
     if (hata.length) { atla++; return; }
     const taslak = aktarimTaslak(x), sn = taslak.sinif, kt = taslak.kayit, tx = kursiyerTaban(taslak);
     // ücret boşsa: taban listesindeki satırın ücreti (fark, muaf, eski tip…), liste yoksa sınıf ücreti
-    const toplam = tutarCoz(x.toplam) || (tx && tx.satir && tx.ucret) || SINIFLAR[sn].ucret || 0, od = Math.min(tutarCoz(x.odenen), toplam);
+    const db = tutarCoz(x.devirBorc) || 0, da = tutarCoz(x.devirAlacak) || 0, od0 = tutarCoz(x.odenen) || 0;  // PAR-031: ücret yazılmamış, devir borç yazılmışsa ücret = ödenen + devir borç
+    const toplam = tutarCoz(x.toplam) || (db ? od0 + db : 0) || (tx && tx.satir && tx.ucret) || SINIFLAR[sn].ucret || 0, od = Math.min(od0, toplam);
     const eg = S.egitmenler.find(z => z.siniflar.includes(sn) && (z.sube === varsayilanSube())) || S.egitmenler.find(z => z.siniflar.includes(sn)) || null;  // öğretmen henüz yoksa boş kalır, sonra atanır
     // direksiyon: öğrencinin gerekli saati (mevcut belge, otomatik, eski tip…); sınıfın genel saatiyle kırpılmaz
     const td = taslak.muaf ? SINIFLAR[sn].teorik : Math.min(SINIFLAR[sn].teorik, Math.round(tutarCoz(x.teorikDers))), dd = Math.min(gerekliDireksiyon(taslak), Math.round(tutarCoz(x.direksiyonDers)));
     const asama = dd > 0 || taslak.muaf ? 'Direksiyon' : td >= SINIFLAR[sn].teorik ? 'Sınav' : td > 0 ? 'Teorik' : 'Evrak';
-    const yeni = { id: 'k' + Date.now() + i, aktarim: id, ad: String(x.ad).trim(), soyad: String(x.soyad).trim(), tel: x.tel, tc: String(x.tc || '').trim(), dogumTarihi: tarihCoz(x.dogum), dogum: tarihCoz(x.dogum).slice(0, 4), adres: x.adres || '', ogrenim: '', sinif: sn, kayit: kt, egitmen: eg ? eg.id : null, sube: varsayilanSube(), asama, teorik: td, direksiyon: dd, evrak: Object.fromEntries(EVRAKLAR.map(([z]) => [z, false])), mebIslendi: aktarim.kaynak === 'MEBBİS', esinav: null, dsinav: null, odeme: { toplam, sozlesme: toplam, pesin: od, pesinTarih: kt, taksitler: [], senetli: false, ...(od ? { devirAktarim: { tutar: od, ilk: od, kaynak: 'Excel “Ödenen” sütunu', id } } : {}) }, kaynak: 'Aktarım', yorum: null, notlar: [{ tarih: gun(0), metin: 'Eski programdan aktarıldı.' }], deneme: [], acil: null, kvkk: null };
+    const yeni = { id: 'k' + Date.now() + i, aktarim: id, ad: String(x.ad).trim(), soyad: String(x.soyad).trim(), tel: x.tel, tc: String(x.tc || '').trim(), dogumTarihi: tarihCoz(x.dogum), dogum: tarihCoz(x.dogum).slice(0, 4), adres: x.adres || '', ogrenim: '', sinif: sn, kayit: kt, egitmen: eg ? eg.id : null, sube: varsayilanSube(), asama, teorik: td, direksiyon: dd, evrak: Object.fromEntries(EVRAKLAR.map(([z]) => [z, false])), mebIslendi: aktarim.kaynak === 'MEBBİS', esinav: null, dsinav: null, odeme: { toplam, sozlesme: toplam, pesin: od, pesinTarih: kt, taksitler: [], senetli: false, ...(da ? { devirAlacak: da } : {}), ...(db && db !== toplam - od ? { devirNot: `Eski programda devir borç ${db} ₺; ücret − ödenen ${toplam - od} ₺` } : {}), ...(od ? { devirAktarim: { tutar: od, ilk: od, kaynak: 'Excel “Ödenen” sütunu', id } } : {}) }, kaynak: 'Aktarım', yorum: null, notlar: [{ tarih: gun(0), metin: 'Eski programdan aktarıldı.' }], deneme: [], acil: null, kvkk: null };
     ['mevcutEhliyet', 'oncekiBelge', 'mevcutOtomatik', 'mevcutEski'].forEach(a => { if (taslak[a]) yeni[a] = taslak[a]; });
     if (taslak.muaf) { yeni.muaf = taslak.muaf; yeni.esinav = { sonuc: 'Geçti', puan: null, tarih: taslak.muaf.esinavTarih, muaf: true }; }
     // il taban listesindeki satır aktarım anındaki hâliyle saklanır (kayıt formundaki gibi; denetimde dayanak)
