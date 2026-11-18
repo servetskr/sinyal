@@ -372,11 +372,13 @@ export function kasa(alt) {
   const ayToplam = (m, tur) => { const d = new Date(ayBas); d.setMonth(d.getMonth() - m); return sb(S.hareket).filter(h => h.tur === tur && tarihOku(h.tarih).getMonth() === d.getMonth() && tarihOku(h.tarih).getFullYear() === d.getFullYear()).reduce((a, h) => a + h.tutar, 0); };
   const gelir = ayToplam(0, 'Gelir'), gider = ayToplam(0, 'Gider');
   const alacak = sb(S.kursiyerler).reduce((a, k) => a + kalanBorc(k), 0);
-  const gecikenK = sb(S.kursiyerler).filter(k => gecikenler(k).length);
+  // DIG-051: Çizgi'den arşive alınan öğrenciler (kapali.tur 'arsiv') hatırlatma listelerinde yok; toplamları kartta ayrı yazar
+  const arsivde = k => !!(k.kapali && k.kapali.tur === 'arsiv'), arsivGec = sb(S.kursiyerler).filter(k => arsivde(k) && gecikenler(k).length), arsivGecT = arsivGec.reduce((a, k) => a + gecikenTutar(k), 0);
+  const gecikenK = sb(S.kursiyerler).filter(k => !arsivde(k) && gecikenler(k).length);
   const gecikenT = gecikenK.reduce((a, k) => a + gecikenTutar(k), 0);
   const grafik = []; for (let m = 5; m >= 0; m--) { const d = new Date(ayBas); d.setMonth(d.getMonth() - m); grafik.push({ e: ayAdi(d.getMonth()), v: ayToplam(m, 'Gelir'), v2: ayToplam(m, 'Gider'), vurgu: m === 0 }); }
-  const yaklasan = sb(S.kursiyerler).flatMap(k => k.odeme.taksitler.map((t, i) => ({ k, t, i }))).filter(x => !x.t.odendi && !x.t.iptal && fark(x.t.vade) >= 0 && fark(x.t.vade) <= 30).sort((a, b) => a.t.vade.localeCompare(b.t.vade));
-  const gec = sb(S.kursiyerler).flatMap(k => k.odeme.taksitler.map((t, i) => ({ k, t, i }))).filter(x => !x.t.odendi && !x.t.iptal && fark(x.t.vade) < 0).sort((a, b) => a.t.vade.localeCompare(b.t.vade));
+  const yaklasan = sb(S.kursiyerler).filter(k => !arsivde(k)).flatMap(k => k.odeme.taksitler.map((t, i) => ({ k, t, i }))).filter(x => !x.t.odendi && !x.t.iptal && fark(x.t.vade) >= 0 && fark(x.t.vade) <= 30).sort((a, b) => a.t.vade.localeCompare(b.t.vade));
+  const gec = sb(S.kursiyerler).filter(k => !arsivde(k)).flatMap(k => k.odeme.taksitler.map((t, i) => ({ k, t, i }))).filter(x => !x.t.odendi && !x.t.iptal && fark(x.t.vade) < 0).sort((a, b) => a.t.vade.localeCompare(b.t.vade));
   // PAR-043 (SOR-140): genel hareket raporu — tarih aralığı, tür, kategori, açıklama / makbuz / evrak no süzgeci; süzgeç varsa bütün eşleşenler (300'e kadar) ve toplamlar
   const hs_ = hrSuzgec, suzVar = !!(hs_.bas || hs_.bit || hs_.tur || hs_.kat || hs_.ara), araK = hs_.ara.toLocaleLowerCase('tr');
   const hrTum = [...sb(S.hareket)].filter(h => (!hs_.bas || h.tarih >= hs_.bas) && (!hs_.bit || h.tarih <= hs_.bit) && (!hs_.tur || h.tur === hs_.tur) && (!hs_.kat || h.kategori === hs_.kat) && (!araK || [h.aciklama, h.no, h.fatura, h.kategori, h.not].join(' ').toLocaleLowerCase('tr').includes(araK))).sort((a, b) => (b.tarih + b.id).localeCompare(a.tarih + a.id));
@@ -403,7 +405,7 @@ export function kasa(alt) {
   if (durum.kasa === 'fatura') govde = faturaListesiHtml() + eksikFaturaHtml();
   if (durum.kasa === 'cari') govde = CR.cariHtml(kalanBorc);
   if (durum.kasa === 'analiz') govde = RK.analizHtml();
-  if (durum.kasa === 'geciken') govde = `<div class="kart"><div class="kart-bas"><h3>Geciken taksitler</h3><small>${gec.length} taksit · ${tl(gecikenT)}</small><div class="sag"><button class="dg dg-wp dg-kucuk" data-toplu>${ik('wp')}Hepsine hatırlat</button></div></div><div class="tablo-kap" style="margin-top:10px"><table class="tablo tablo-mobil"><thead><tr><th>Kursiyer</th><th>Vade</th><th>Gecikme</th><th class="sag">Tutar</th><th></th></tr></thead><tbody>${gec.map(x => taksitSatir(x, true)).join('') || `<tr><td colspan="5">${bos('Geciken taksit yok', 'Tüm ödemeler zamanında.')}</td></tr>`}</tbody></table></div></div>`;
+  if (durum.kasa === 'geciken') govde = `<div class="kart"><div class="kart-bas"><h3>Geciken taksitler</h3><small>${gec.length} taksit · ${tl(gecikenT)}${arsivGec.length ? ` · arşivdeki ${arsivGec.length} öğrencinin ${tl(arsivGecT)} borcu listede yok` : ''}</small><div class="sag"><button class="dg dg-wp dg-kucuk" data-toplu>${ik('wp')}Hepsine hatırlat</button></div></div><div class="tablo-kap" style="margin-top:10px"><table class="tablo tablo-mobil"><thead><tr><th>Kursiyer</th><th>Vade</th><th>Gecikme</th><th class="sag">Tutar</th><th></th></tr></thead><tbody>${gec.map(x => taksitSatir(x, true)).join('') || `<tr><td colspan="5">${bos('Geciken taksit yok', 'Tüm ödemeler zamanında.')}</td></tr>`}</tbody></table></div></div>`;
   return {
     baslik: 'Kasa ve ödemeler', alt: ayAdi(BUGUN.getMonth(), true) + ' ' + BUGUN.getFullYear(),
     html: `${ekranNotu('Kim ne ödedi, kimin taksiti gecikti, kasada ve bankada ne var. Geciken taksite tek dokunuşla hatırlatma ve ödeme bilgisi gider.')}<div class="izgara iz-4">

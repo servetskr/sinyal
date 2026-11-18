@@ -116,7 +116,7 @@ try { rol = localStorage.getItem('sinyal-rol') || 'yonetici'; } catch (x) { }
 function sayaclar() {
   return {
     adaylar: [S.adaylar.filter(a => a.asama === 'Yeni').length, false],
-    kasa: [sb(S.kursiyerler).filter(k => gecikenler(k).length).length, false],   // DENETİM K8: Kasa sayfası gibi şube süzgecine uyar
+    kasa: [sb(S.kursiyerler).filter(k => !(k.kapali && k.kapali.tur === 'arsiv') && gecikenler(k).length).length, false],   // DENETİM K8: Kasa sayfası gibi şube süzgecine uyar; arşivdekiler sayılmaz (DIG-051)
     meb: [S.kursiyerler.filter(k => !k.mebIslendi && !eksikEvrak(k).length).length, true],
     sosyal: [S.sosyal.yorumlar.filter(y => y.durum === 'devir' || y.durum === 'onay').length + S.devredilen.length, false],
     kurulum: [Y5.kurulumAdimlari().filter(x => !x[1]).length, true],
