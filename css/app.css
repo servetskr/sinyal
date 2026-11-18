@@ -3843,3 +3843,6 @@ tr.secili-satir td { background: rgba(10, 77, 162, .06); }
 @media (max-width:600px){.mx-dugmeler{width:100%;justify-content:stretch}.mx-dugmeler>.dg{flex:1}}
 .kb-arac label{display:inline;margin:0}
 .kb-arac .girdi{width:auto;min-width:180px;flex:none}
+/* DENETİM Ö1: kurulum adımları — sağdaki rozet ve düğmeler sarar; telefonda alta iner, sayfa taşmaz */
+.kur-liste .kur-sag{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;max-width:40%;flex:none}
+@media (max-width:600px){.kur-liste li{flex-wrap:wrap}.kur-liste .kur-sag{max-width:none;width:100%;justify-content:flex-start;padding-left:34px}}
