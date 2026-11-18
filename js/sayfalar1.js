@@ -1354,10 +1354,12 @@ const imzasizDers = k => kursiyerDersleri(k.id).filter(d => imzasiz(d)).sort((a,
 // DIR-010: dersler sekmesinde sayaçlar — zorunlu (normal; ikinci dört hakta önceki + 2. direksiyon), eğitim yeri, gece, telafi (ön sınav), başarısız aday, 2. direksiyon
 function dersSayacSeridi(k) {
   const ds = dersSayaci(k); if (!ds.gerekli && !ds.yapildi) return '';
-  const k_ = (et, deger, alt, tur = 'notr') => `<div class="sayac-kutu ${tur}"><small>${et}</small><b>${deger}</b>${alt ? `<span>${alt}</span>` : ''}</div>`, pl = n => n ? ` · ${n} planlı` : '';
+  // KAY-071: oranlı sayaçlarda halka (yapılan / gereken)
+  const halka = deger => { const m = String(deger).match(/^(\d+)\/(\d+)$/); if (!m || !+m[2]) return ''; const p = Math.min(100, Math.round(+m[1] / +m[2] * 100)); return `<i class="sayac-halka" style="--p:${p}%" aria-hidden="true"></i>`; };
+  const k_ = (et, deger, alt, tur = 'notr') => `<div class="sayac-kutu ${tur}">${halka(deger)}<small>${et}</small><b>${deger}</b>${alt ? `<span>${alt}</span>` : ''}</div>`, pl = n => n ? ` · ${n} planlı` : '';
   const l = [k_(ds.ikinci ? 'Zorunlu (ikinci dört hak)' : 'Zorunlu ders', `${ds.zorunlu.yapildi}/${ds.gerekli}`, (ds.aktarim ? `${ds.aktarim} eski programdan` : '') + pl(ds.zorunlu.planli), ds.zorunlu.yapildi >= ds.gerekli ? 'yesil' : 'notr')];
   if (ds.alanSim.gerek) l.push(k_('Alan / simülatör', `${ds.alanSim.yapildi}/${ds.alanSim.gerek}`, `trafik ${ds.trafik.yapildi}${pl(ds.alanSim.planli)}`, ds.alanSim.yapildi >= ds.alanSim.gerek ? 'yesil' : 'uyari'));
-  if (ds.gece.gerek) l.push(k_('Gece', `${ds.gece.yapildi}/${ds.gece.gerek}`, pl(ds.gece.planli).slice(3), ds.gece.yapildi >= ds.gece.gerek ? 'yesil' : ds.gece.yapildi + ds.gece.planli >= ds.gece.gerek ? 'notr' : 'uyari'));
+  if (ds.gece.gerek) l.push(k_('Gece', `${ds.gece.yapildi}/${ds.gece.gerek}`, [pl(ds.gece.planli).slice(3), ds.gece.yapildi < ds.gece.gerek ? `bugün gece ${geceBaslangic(gun(0))}’de başlıyor` : ''].filter(Boolean).join(' · '), ds.gece.yapildi >= ds.gece.gerek ? 'yesil' : ds.gece.yapildi + ds.gece.planli >= ds.gece.gerek ? 'notr' : 'uyari'));
   if (ds.telafi.yapildi || ds.telafi.planli) l.push(k_('Telafi (ön sınav)', ds.telafi.yapildi, 'md.7/7, zorunluya sayılmaz' + pl(ds.telafi.planli)));
   if (ds.basarisiz.gerek || ds.basarisiz.yapildi || ds.basarisiz.planli) l.push(k_('Başarısız aday', ds.basarisiz.gerek ? `${ds.basarisiz.sonra}/${ds.basarisiz.gerek}` : ds.basarisiz.yapildi, ds.basarisiz.gerek ? `${tarih(ds.basarisiz.sonSinav)} sınavından sonra (md.15)${pl(ds.basarisiz.planli)}` : 'ek ders' + pl(ds.basarisiz.planli), ds.basarisiz.gerek ? (ds.basarisiz.sonra >= ds.basarisiz.gerek ? 'yesil' : 'uyari') : 'notr'));
   { const mo = k.meb && k.meb.dersOzet; if (mo) { const m = ds.yapildi, fk = mo.yapilmis !== m; l.push(k_('MEBBİS’te', `${mo.yapilmis} ders`, `mdSinyal’de ${m} yapıldı${mo.ileri ? ` · ${mo.ileri} ileri tarihli` : ''} · ${tarih(mo.okuma)} okuma`, fk ? 'uyari' : 'yesil')); } }   // DIR-027

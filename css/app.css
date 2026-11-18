@@ -3722,3 +3722,8 @@ a.kart.gosterge { text-decoration: none; color: inherit; display: block; }
 .ev-var { color: var(--yesil, #1b5e20); font-weight: 800; }
 .ev-yok { color: var(--kirmizi); font-weight: 800; }
 .ev-bek { color: #8a5a00; font-weight: 800; }
+/* KAY-071: sayaç halkası */
+.sayac-kutu { position: relative; }
+.sayac-halka { position: absolute; top: 8px; right: 8px; width: 26px; height: 26px; border-radius: 50%; background: conic-gradient(var(--levha, #0a4da2) var(--p), var(--cizgi-2, #e5e5e5) 0); -webkit-mask: radial-gradient(circle, transparent 7px, #000 8px); mask: radial-gradient(circle, transparent 7px, #000 8px); }
+.sayac-kutu.yesil .sayac-halka { background: conic-gradient(#2e7d32 var(--p), var(--cizgi-2, #e5e5e5) 0); }
+.sayac-kutu.uyari .sayac-halka { background: conic-gradient(#e0a100 var(--p), var(--cizgi-2, #e5e5e5) 0); }
