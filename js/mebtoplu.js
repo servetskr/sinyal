@@ -19,6 +19,7 @@ export const CEKILECEK = [
   ['personel', 'Personel', 'İzin no, branş, çalışma izni bitişi'],
   ['araclar', 'Araçlar', 'Muayene, şanzıman, MEBBİS durumu, simülatör'],
   ['sinavlar', 'Sınav sonuçları', 'Son 3 uygulama dönemi ve 2 aylık e-sınav'],
+  ['teorik', 'Teorik program', 'Son 4 dönemin MEBBİS’teki teorik ders programı (SKT04001); şube başına 34 saat denetimi ve teorik bitiş tarihi (Yardımcı 1.13)'],
   ['ucretler', 'e-Sınav ücretleri', 'Ücret yatıran adaylar (SKT02007); sıradaki hakkın ücreti işaretlenir (Yardımcı 1.13)'],
 ];
 // durum: bu sekmedeki bellek; süren iş ayrıca S.mebIs'te kalıcı (sayfa yenilense de parça ve onay bilgisi kalır)
@@ -227,7 +228,7 @@ export async function hazirla(ids, { foto = true, koru = null } = {}) {
       const dl = String(t.salon || g.derslik || '').match(/\d+/);
       l.push({ id: x.id, tur: 'teorik', baslik: x.baslik, donem: g.donem, grupNo: g.grupNo, subeNo: subeNo(g), tarih: trT(t.tarih), saatler, dersTuru: dersTuru(t.konu), derslik: dl ? 'DERSLİK-' + dl[0] : '', izinNo: izin(o), personelAd: o.ad || '', egitimTuru: 'Normal' });
     }
-    if (x.tur === 'esinav') { const k = kursiyer(r.kursiyer), g = k && mebGrup(k); if (!g) { ekle(x, 'Dönem grubuna atanmamış'); continue; } if (egitimSinifi(k.sinif)) { ekle(x, CEZA_NOT); continue; } l.push({ id: x.id, tur: 'esinav', baslik: tamAd(k), tc: k.tc, donem: g.donem, istenen: tabanSinif(k.sinif) + ' SINIFI', gun: String(S.kurs.esinavGun || '0') }); }
+    if (x.tur === 'esinav') { const k = kursiyer(r.kursiyer), g = k && mebGrup(k); if (!g) { ekle(x, 'Dönem grubuna atanmamış'); continue; } { const tb = GR.teorikBitis(k); if (tb && tb.tarih >= gun(0)) { ekle(x, `Teorik dersler ${tarih(tb.tarih)} ${tb.tarih.slice(0, 4)} tarihinde bitiyor (${tb.kaynak === 'MEBBİS' ? 'MEBBİS programı' : 'mdSinyal planı'}); MEBBİS teorik dersler bitmeden e-sınav başvurusu almaz`); continue; } } if (egitimSinifi(k.sinif)) { ekle(x, CEZA_NOT); continue; } l.push({ id: x.id, tur: 'esinav', baslik: tamAd(k), tc: k.tc, donem: g.donem, istenen: tabanSinif(k.sinif) + ' SINIFI', gun: String(S.kurs.esinavGun || '0') }); }
     if (x.tur === 'fatura') {
       const f = (S.faturalar || []).find(y => y.no === r.fatura), k = f && kursiyer(f.kursiyer), g = k && mebGrup(k); if (!g) { ekle(x, 'Öğrenci dönem grubuna atanmamış'); continue; }
       if (resmiFatura(f)) { ekle(x, 'Sınav ücreti, harç ya da kart faturası: kursiyerin masrafı, MEBBİS fatura modülüne girilmez'); continue; }
@@ -581,6 +582,7 @@ function uygula(v, tekrar = false) {
   if (v.araclar && (v.araclar.arac || v.araclar.simulator)) o.araclar = araclariIsle(v.araclar);
   if (v.sinavlar && (v.sinavlar.uygulama || v.sinavlar.esinav)) o.sinavlar = v.sinavlar;
   if (Array.isArray(v.dosya)) o.dosya = dosyalariIsle(v.dosya);
+  if (Array.isArray(v.teorik)) o.teorik = teorikProgramIsle(v.teorik); else if (v.teorik && v.teorik.hata) o.teorikHata = v.teorik.hata;
   if (v.ucretler && Array.isArray(v.ucretler.satirlar)) o.ucretler = ucretleriIsle(v.ucretler); else if (v.ucretler && v.ucretler.hata) o.ucretHata = v.ucretler.hata;
   if (v.kurum && !v.kurum.hata) o.kurum = kurumIsle(v.kurum); else if (v.kurum && v.kurum.hata) o.kurumHata = v.kurum.hata;
   // yalnız yazma yapılan işte "veri aldı" kaydı düşmez (B10)
@@ -594,6 +596,24 @@ function uygula(v, tekrar = false) {
 const programKodu = t => { const m = String(t || '').toLocaleUpperCase('tr').replace(/İ/g, 'I').match(/^\s*(A1|A2|B1|BE|C1E|C1|CE|D1E|D1|DE|[ABCDFGM])\s+SINIFI/); return m ? m[1] : ''; };
 // SKT02007 "Ücret Yatıran Aday Listesi" (TEO-010): listedeki adayın SIRADAKİ e-sınav hakkının ücreti yattı sayılır (k.esinavUcret[sira]).
 // Aynı hak için ikinci okuma tarihi ezmez; aday kalınca sıradaki hak boş olduğundan ücret kendiliğinden "bekleniyor"a döner.
+// SKT04001 Teorik Ders Programı (TEO-015, TEO-017): dönem başına bütün şubelerin teorik dersleri tek liste. Şube başına toplam saat, ders türü dağılımı
+// ve SON DERS TARİHİ gruba yazılır (g.mebTeorik); adayın "MEBBİS'e göre teorik dersler … bitiyor" tarihi buradan gelir (e-sınav başvurusu ön koşulu).
+export function teorikProgramIsle(liste) {
+  const ozet = new Map();
+  (liste || []).forEach(t => { const b = t.baslik || [], i = { g: sutun(b, 'grup'), s: sutun(b, 'sube'), t: sutun(b, 'derstarihi', /tarih/), d: sutun(b, 'dersturu', 'dersadi', /^ders$/), sa: sutun(b, 'derssaati', /saat/) };
+    (t.satirlar || []).forEach(r => { const grupNo = +((String(r[i.g] || '').match(/[123]/) || [])[0] || 0), sube = ((String(r[i.s] || '').toLocaleUpperCase('tr').match(/[A-H]/) || [])[0]) || '', tarih = tarihIso(r[i.t]);
+      if (!grupNo || !sube || !tarih) return; const key = t.donem + '|' + grupNo + '|' + sube, o = ozet.get(key) || { donem: t.donem, grupNo, sube, saat: 0, son: '', ilk: '', ders: { trafik: 0, ilkyardim: 0, arac: 0, adap: 0 } };
+      const n = String(r[i.d] || '').toLocaleLowerCase('tr'); o.ders[/ilk ?yard/.test(n) ? 'ilkyardim' : /araç|arac|motor|teknik/.test(n) ? 'arac' : /adab|adap/.test(n) ? 'adap' : 'trafik']++;
+      o.saat++; if (tarih > o.son) o.son = tarih; if (!o.ilk || tarih < o.ilk) o.ilk = tarih; ozet.set(key, o); }); });
+  let guncel = 0; const eksik = [];
+  ozet.forEach(o => { const g = (S.gruplar || []).find(y => GR.mebGrubuMu(y) && y.donem === o.donem && +y.grupNo === o.grupNo && y.sube === o.sube); if (!g) return;
+    g.mebTeorik = { saat: o.saat, ilk: o.ilk, son: o.son, ders: o.ders, okuma: gun(0) }; guncel++; if (o.saat < 34 && !g.teoriksiz) eksik.push(g.ad + ' ' + o.saat + '/34'); });
+  // okunan dönemlerde programı hiç olmayan teorikli şubeler
+  const donemler = new Set((liste || []).map(t => t.donem));
+  (S.gruplar || []).filter(g => GR.mebGrubuMu(g) && donemler.has(g.donem) && !g.teoriksiz && ![...ozet.values()].some(o => o.donem === g.donem && o.grupNo === +g.grupNo && o.sube === g.sube)).forEach(g => { g.mebTeorik = { saat: 0, son: '', ilk: '', ders: {}, okuma: gun(0) }; eksik.push(g.ad + ' 0/34'); });
+  if (guncel) islem('MEBBİS’ten teorik programı aldı', guncel + ' şube');
+  return { guncel, eksik, donem: donemler.size };
+}
 export function ucretleriIsle(t) {
   const i = sutun(t.baslik || [], 'kimlik', /^tc/); let yeni = 0, ayni = 0, yok = 0;
   (t.satirlar || []).forEach(r => { const tc = String(r[i >= 0 ? i : 0] || '').replace(/\D/g, ''); if (tc.length !== 11) return; const k = S.kursiyerler.find(x => x.tc === tc && !x.kapali); if (!k) { yok++; return; }
@@ -757,6 +777,8 @@ function ozetGoster(o, yazilan) {
     l.push(satir(`Kursiyerler: MEBBİS’te ${kr.toplam} aday, ${kr.eslesen} mdSinyal’le eşleşti${fr.length ? `, <span style="color:var(--kirmizi)">${fr.length} kişide fark var</span>` : ', fark yok'}`, kr.yok.length ? `MEBBİS’te olup mdSinyal’de olmayan ${kr.yok.length} aday (mdSinyal’e alınmaz; adaylar önceki programdan aktarılır): ${kr.yok.slice(0, 8).map(z => e(z.ad || z.tc)).join(', ')}${kr.yok.length > 8 ? '…' : ''}` : ''));
     if (fr.length) l.push(`<li><div class="tablo-kap"><table class="tablo"><thead><tr><th>Kursiyer</th><th>Alan</th><th>MEBBİS’te</th><th>mdSinyal’de</th></tr></thead><tbody>${fr.flatMap(z => z.fk.map(([a, m, b2], j) => `<tr>${j ? '<td></td>' : `<td><a href="#/kursiyer/${e(z.id)}" data-kapat>${e(z.ad)}</a></td>`}<td>${e(a)}</td><td><b>${e(m)}</b></td><td>${e(b2)}</td></tr>`)).join('')}</tbody></table></div><small style="color:var(--soluk)">Hangisi doğruysa onu düzeltin: mdSinyal’de öğrenci dosyasından, MEBBİS’te kendi ekranından. mdSinyal hiçbir bilgiyi kendiliğinden değiştirmedi.</small></li>`);
   }
+  if (o.teorik) l.push(satir(`Teorik program: ${o.teorik.donem} dönem, ${o.teorik.guncel} şube okundu${o.teorik.eksik.length ? `, <span style="color:var(--kirmizi)">${o.teorik.eksik.length} şubede 34 saat tamam değil</span>` : ''}`, o.teorik.eksik.length ? e(o.teorik.eksik.join(', ')) + ' (belgeliler şubesi sayılmaz)' : ''));
+  if (o.teorikHata) l.push(`<li class="ipucu uyari">${isaret('uyari', 18)}<span>Teorik program: ${e(o.teorikHata)}</span></li>`);
   if (o.ucretler) l.push(satir(`e-Sınav ücretleri: MEBBİS listesinde ${o.ucretler.toplam} aday, ${o.ucretler.yeni} adayın sıradaki hakkı “ücret yattı” oldu${o.ucretler.ayni ? `, ${o.ucretler.ayni} zaten işaretliydi` : ''}`, o.ucretler.yok ? `${o.ucretler.yok} aday mdSinyal’de açık kayıt olarak yok` : ''));
   if (o.ucretHata) l.push(`<li class="ipucu uyari">${isaret('uyari', 18)}<span>e-Sınav ücretleri: ${e(o.ucretHata)}</span></li>`);
   if (o.kurum) l.push(satir(`Kurum bilgileri: bina kontenjanı ${o.kurum.binaKontenjan || '—'}, ${o.kurum.programlar.filter(p => programAcik(o.kurum, p.kod)).length} açık program (${o.kurum.programlar.filter(p => programAcik(o.kurum, p.kod)).map(p => p.kod).join(', ') || '—'}), ${o.kurum.derslikler.length} derslik`, o.kurum.programlar.some(p => !programAcik(o.kurum, p.kod)) ? 'Kapalı program: ' + o.kurum.programlar.filter(p => !programAcik(o.kurum, p.kod)).map(p => e(p.kod || p.ad) + (p.kapanma ? ' (' + p.kapanma.split('-').reverse().join('.') + ')' : '')).join(', ') : ''));
@@ -779,7 +801,7 @@ function ozetGoster(o, yazilan) {
 }
 
 /* ---------- MEBBİS aktarım merkezindeki kartlar ---------- */
-const secim = new Set(['kurum', 'gruplar', 'kursiyerler', 'dosya', 'personel', 'araclar', 'sinavlar', 'ucretler']);
+const secim = new Set(['kurum', 'gruplar', 'teorik', 'kursiyerler', 'dosya', 'personel', 'araclar', 'sinavlar', 'ucretler']);
 // Süren, durmuş ya da parçası bitmiş yazma işi: onaylayan, parça, kalan iş; durdur, devam, iptal
 // cekGizle: "MEBBİS'ten al" sekmesinde çekme işinin durumu topluKart'ta zaten görünür
 export function isKarti(cekGizle) {
