@@ -133,6 +133,8 @@ export function mevzuatKurallari() {
     [bu, sonra].map(ucretsizDurum).filter(uc => uc.n && uc.eksik).forEach(uc => l.push(['bilgi', `${uc.donemAd} dönemi ücretsiz kursiyer kontenjanı: ${uc.var}/${uc.gerek}`, `Bu dönemde ${uc.n} kursiyer; en az %3’ü ücretsiz okutulur (5580 m.13). Yerleştirmeyi il/ilçe MEM MEBBİS’ten yapar; kurs program başlamadan kontenjanı kadar adayı sistemden çeker. MEBBİS’teki dönem kontenjanıyla karşılaştırın.`, '#/kursiyerler'])); }
   // Yasal iade süresi (ÖÖKY m.56/4: en geç 1 ay)
   S.kursiyerler.filter(k => k.kapali && k.kapali.iadeSon && !k.kapali.iadeYapildi).forEach(k => { const kalan = fark(k.kapali.iadeSon); l.push([kalan < 0 ? 'dur' : kalan <= 7 ? 'yasak' : 'uyari', `${tamAd(k)} · ${tl(k.kapali.iadeTutar || 0)} iade ${kalan < 0 ? -kalan + ' gün gecikti' : kalan + ' gün içinde yapılmalı'}`, `Ayrılan kursiyere iade, ayrılıştan itibaren en geç 1 ay içinde yapılır (${OOKY} m.56/4).`, '#/kursiyer/' + k.id]); });
+  // PAR-009: MEBBİS'teki kayıt ücreti sözleşme ücretinden farklı (fatura sözleşmedeki gerçek ücretle kesilir; düzeltilecek olan MEBBİS kaydı)
+  ks.filter(k => !k.kapali && !k.ucretsiz && !k.prova).forEach(k => { const d = faturaDenetimi(k); if (d.mebFark) l.push(['uyari', `${tamAd(k)} · MEBBİS’teki ücret sözleşmeden farklı`, `MEBBİS’te ${tl(d.mebU)}, sözleşmede ${tl(d.hesap)}. MEBBİS’e alınan gerçek ücret işlenir (MTSK Yön. m.43/2); fatura sözleşme ücretiyle kesilir. MEBBİS kaydını düzeltin.`, '#/kursiyer/' + k.id]); });
   // Sınava hazır yazısı
   ks.filter(k => hazirGerekli(k) && (!k.hazirYazi || !k.hazirYazi.yuklendi)).forEach(k => l.push([k.hazirYazi ? 'uyari' : 'yasak', `${tamAd(k)} · sınava hazır yazısı ${k.hazirYazi ? 'MEBBİS’e yüklenmedi' : 'yok'}`, 'Usta öğretici kararını yazıyla bildirir; kurs yazıyı tarayıp modüle yükler (md.7/7, Danıştay 8. D. 8/10/2025 YD).', '#/kursiyer/' + k.id]));
   // Direksiyonda kalan: tekrar sınavdan önce en az 2 saat ders (m.15)
@@ -245,10 +247,12 @@ kuralEkle({ id: 'T10', sira: 869, ad: 'Kursiyerin sözleşme ücreti ücret ilan
   kontrol(l) { const I = S.kurs.mebUcretIlani; if (!I || !(I.satirlar || []).length) return;
     aktifKursiyerler().filter(k => k.odeme && String(k.kayit || '') >= (I.gecerliBas || '')).forEach(k => { const r = ilanSatiri(k.sinif, k.mevcutEhliyet, I); if (!r) return; const u = sozlesmeUcreti(k); if (!(u > r.toplam)) return;
       l.push(bul('uyari', `${tamAd(k)} · ücret ${tl(u)}, ilan ${tl(r.toplam)}`, `MEBBİS’teki ${I.yil || ''} ücret ilanında “${r.sinif}” satırı ${tl(r.toplam)}. İlan edilen ücretin üzerinde ücret istenemez (ÖÖKY md.54/1-d).`, '#/kursiyer/' + k.id, { kursiyer: k.id, kisa: `Ücret ${tl(u)}: MEB ilanı ${tl(r.toplam)} (ÖÖKY 54/1-d)`, eylem: 'odeme' })); }); } });
-// PAR-009: "MEB ücreti kadar fatura kesildi mi" — hesaplanan fatura (MEBBİS'e bildirilen kayıt ücreti; okunmadıysa sözleşme ücreti), kesilen (iptal hariç kurs faturaları), eksik kalan
+// PAR-009 (mali cevaplar 4, 10): fatura sözleşmedeki gerçek ücret üzerinden kesilir (VUK m.229; KDVK m.20, 27). Hesaplanan = sözleşme ücreti,
+// kesilen = iptal edilmemiş kurs faturaları (sınav ücreti emaneti ve ek ders faturaları hariç: onlar sözleşme ücretinin dışında). MEBBİS'e de alınan
+// gerçek ücret işlenir (MTSK Yön. m.43/2); MEBBİS'teki kayıt ücreti sözleşmeden farklıysa ayrı uyumsuzluk (mebFark = MEBBİS − sözleşme; düzeltilecek olan MEBBİS kaydı).
 export function faturaDenetimi(k) {
-  if (k.ucretsiz) return { hesap: 0, kaynak: 'ücretsiz', kesilen: 0, eksik: 0, ucretsiz: true };  // PAR-021: %3 ücretsiz kursiyerde fatura beklenmez (KDVK 17/2-b)
-  const mebU = k.meb && (k.meb.kayitUcretiTL || tutarOku(k.meb.kayitUcreti)), hesap = +(mebU || sozlesmeUcreti(k) || 0), resmiF = f => { const h = f.hareket && S.hareket.find(x => x.id === f.hareket); return !!h && ekTur({ ad: h.kategori }) === 'resmi'; };
-  const kesilen = (S.faturalar || []).filter(f => f.kursiyer === k.id && f.durum !== 'iptal' && !resmiF(f)).reduce((a, f) => a + (+f.tutar || 0), 0);
-  return { hesap, kaynak: mebU ? 'MEBBİS' : 'sözleşme', kesilen, eksik: Math.max(0, Math.round((hesap - kesilen) * 100) / 100) };
+  if (k.ucretsiz) return { hesap: 0, kaynak: 'ücretsiz', kesilen: 0, eksik: 0, ucretsiz: true, mebU: 0, mebFark: 0 };  // PAR-021: %3 ücretsiz kursiyerde fatura beklenmez (KDVK 17/2-b)
+  const mebU = +(k.meb && (k.meb.kayitUcretiTL || tutarOku(k.meb.kayitUcreti))) || 0, hesap = +(sozlesmeUcreti(k) || 0), disi = f => { const h = f.hareket && S.hareket.find(x => x.id === f.hareket); return !!h && ['resmi', 'ders'].includes(ekTur({ ad: h.kategori })); };
+  const kesilen = (S.faturalar || []).filter(f => f.kursiyer === k.id && f.durum !== 'iptal' && !disi(f)).reduce((a, f) => a + (+f.tutar || 0), 0);
+  return { hesap, kaynak: 'sözleşme', kesilen, eksik: Math.max(0, Math.round((hesap - kesilen) * 100) / 100), mebU, mebFark: mebU && Math.abs(mebU - hesap) >= 1 ? Math.round((mebU - hesap) * 100) / 100 : 0 };
 }
