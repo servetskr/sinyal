@@ -1274,6 +1274,10 @@ export function programUyarisi(sinif) {
   return p ? `MEBBİS’te kurumunuzun ${kod} sınıfı programı kapalı${p.kapanma ? ' (' + p.kapanma.split('-').reverse().join('.') + ')' : ''}; bu sınıfa MEBBİS kaydı açılamaz.` : `MEBBİS’te kurumunuzun ${kod} sınıfı programı yok (kurum bilgileri ${String(o.okundu || '').split('-').reverse().join('.')} okundu); bu sınıfa MEBBİS kaydı açılamaz.`;
 }
 export const egitimSinifi = sinif => ((SINIFLAR[sinif] || {}).tur || 'ehliyet') === 'egitim';
+// PAR-005/068: KDV oranı sınıfa (fatura kalemine) göre. 5580 sayılı Kanun kapsamındaki sürücü kursu eğitimi %10 (2007/13033 BKK II sayılı liste B/15,
+// 7346 s. CBK, 10/07/2023'ten beri); kurs ayarı S.entegrasyon.kdv bu oranı tutar. 5580 dışındaki eğitimler (SRC, psikoteknik, MYK) genel oran %20.
+export const KDV_EGITIM = 10, KDV_GENEL = 20, KDV_GENEL_TURLER = ['src', 'psikoteknik', 'myk'];
+export const kdvOrani = sinif => KDV_GENEL_TURLER.includes((SINIFLAR[sinif] || {}).tur) ? KDV_GENEL : (((S.entegrasyon || {}).kdv) ?? KDV_EGITIM);
 // Ekranda sınıf adı: "B sınıfı · Manuel/Otomatik/Engelli", ehliyet dışı türlerde kendi adı ("100 ceza puanı eğitimi", "SRC1 · …")
 export function sinifEtiket(sinif, k) {
   const S0 = SINIFLAR[sinif] || {}, tur = S0.tur || 'ehliyet';
