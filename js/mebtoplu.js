@@ -129,7 +129,8 @@ export function ekIsler(hepsi) {
     l.push({ ...is_('esinav', 'esinav-' + k.id, `${tamAd(k)} · ${tabanSinif(k.sinif)}`, { ad: tamAd(k), sinif: k.sinif, egitmen: k.egitmen, tarih: k.kayit, detay: `Teorik tamam · ${hd.sira}. hak · ${uc ? 'ücret yattı' : 'ücret bekleniyor (MEBBİS başvuruyu almaz)'}` + (k.sinif === 'B-EN' ? ' · ' + B_EN_NOT : '') }, null, 'Son e-sınav randevusu grup başlangıcından 90 gün içinde', { kursiyer: k.id }), bitti: !!k.mebEsinav });
   });
   // sınav ücreti, harç, kart (resmî kalem) faturası MEBBİS fatura modülüne girilmez: kursiyerin masrafı, kurs geliri değil (il taban listesi not 5)
-  (S.faturalar || []).filter(f => f.no && f.kursiyer && !resmiFatura(f) && (hepsi || !f.meb) && fark(f.tarih) >= -120).forEach(f => {
+  // PAR-054: iptal edilen ve taslak (mali değeri olmayan) fatura MEBBİS'e gitmez
+  (S.faturalar || []).filter(f => f.no && f.kursiyer && !['iptal', 'taslak'].includes(f.durum) && !resmiFatura(f) && (hepsi || !f.meb) && fark(f.tarih) >= -120).forEach(f => {
     const k = kursiyer(f.kursiyer); if (!k) return;
     l.push({ ...is_('fatura', 'fatura-' + f.no, `${tamAd(k)} · ${f.no} · ${f.tutar} ₺`, { ad: tamAd(k), sinif: k.sinif, egitmen: k.egitmen, tarih: f.tarih, detay: `${trT(f.tarih).replace(/\//g, '.')} · ${f.tutar} ₺` }, null, 'Fatura modüle girilir (12/1)', { fatura: f.no }), bitti: !!f.meb });
   });
