@@ -891,7 +891,7 @@ function kayitKapat(k, onNeden = '') {
   pencere({
     baslik: 'Kaydı kapat · ' + tamAd(k),
     icerik: `<div class="secim" style="margin-bottom:12px"><label><input type="radio" name="tur" value="kapat" checked><span>Kurstan ayrıldı</span></label><label><input type="radio" name="tur" value="dondur"><span>Dondur (sonra devam edecek)</span></label>${mudurMu() ? '<label><input type="radio" name="tur" value="sil"><span>Yanlış ya da deneme kaydı: tamamen sil</span></label>' : ''}</div>
-      <p class="ipucu uyari" data-sil-bilgi hidden style="margin-bottom:12px">${isaret('uyari', 18)}<span>Kayıt; dersleri, ödemeleri, sınav listeleri ve öğrenci hesabıyla birlikte kalıcı olarak silinir. Gerçek öğrenciler için kullanmayın; MEB kayıtları silinmemelidir.</span></p>
+      <p class="ipucu uyari" data-sil-bilgi hidden style="margin-bottom:12px">${isaret('uyari', 18)}<span>Kayıt; dersleri, sınav listeleri ve öğrenci hesabıyla birlikte kalıcı olarak silinir. Alınmış ödemeler kasada ve makbuz serisinde “silinen öğrenci” adıyla kalır. Gerçek öğrenciler için kullanmayın; MEB kayıtları silinmemelidir.</span></p>
       <div class="alan"><label>Neden</label><input class="girdi" data-neden value="${e(onNeden)}" placeholder="Örn. şehir değiştirdi, başka kursa nakil (md.13/2)"></div>
       <ul class="liste" style="margin-top:12px;font-size:14px"><li>${isaret('bilgi', 20)}<span>${planli.length} planlı direksiyon dersi iptal edilir; usta öğretici bilgilendirilir.</span></li>
         <li data-kapat-bilgi>${isaret('bilgi', 20)}<span>${acik.length} açık taksit (${tl(acikTutar)}) iptal edilir.</span></li>
@@ -1284,7 +1284,8 @@ async function kayitSilIslem(k, neden) {
   const ad = tamAd(k), id = k.id;
   S.kursiyerler = S.kursiyerler.filter(x => x.id !== id);
   S.dersler = S.dersler.filter(x => x.kursiyer !== id);
-  S.hareket = S.hareket.filter(x => x.kursiyer !== id);
+  // PAR-048: para hareketleri silinmez (makbuz serisi, kapanmış gün sonu, kasa ve müşavire giden fişler değişmesin); öğrenci bağı 'silinen öğrenci' izine döner
+  S.hareket.forEach(x => { if (x.kursiyer !== id) return; x.silinenKursiyer = { id, ad, no: k.no || '', tarih: gun(0) }; delete x.kursiyer; if (x.aciklama && !String(x.aciklama).includes(ad)) x.aciklama = ad + ' · ' + x.aciklama; });
   S.sinavlar.forEach(x => { x.kursiyerler = (x.kursiyerler || []).filter(y => y !== id); if (x.sonuc) delete x.sonuc[id]; });
   S.bekleme = (S.bekleme || []).filter(b => b.kursiyer !== id);
   (S.bosTeklif || []).forEach(t => { t.adaylar = (t.adaylar || []).filter(y => y !== id); });
@@ -1296,7 +1297,7 @@ function kayitSilPenceresi(k) {
   if (!mudurMu()) return;
   pencere({
     baslik: 'Kaydı sil · ' + tamAd(k),
-    icerik: `<p class="ipucu uyari" style="margin-bottom:12px">${isaret('uyari', 18)}<span>Kayıt; dersleri, ödemeleri, sınav listeleri ve öğrenci hesabıyla birlikte kalıcı olarak silinir. Yalnız yanlış ya da deneme kayıtları için kullanın; gerçek öğrencilerin kayıtları MEB için saklanmalıdır.</span></p><div class="alan"><label>Neden</label><input class="girdi" data-neden placeholder="Örn. deneme kaydı"></div>`,
+    icerik: `<p class="ipucu uyari" style="margin-bottom:12px">${isaret('uyari', 18)}<span>Kayıt; dersleri, sınav listeleri ve öğrenci hesabıyla birlikte kalıcı olarak silinir. Alınmış ödemeler kasada ve makbuz serisinde “silinen öğrenci” adıyla kalır. Yalnız yanlış ya da deneme kayıtları için kullanın; gerçek öğrencilerin kayıtları MEB için saklanmalıdır.</span></p><div class="alan"><label>Neden</label><input class="girdi" data-neden placeholder="Örn. deneme kaydı"></div>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Kalıcı olarak sil</button>`,
     onAc(d) { d.querySelector('[data-k]').addEventListener('click', () => { const neden = d.querySelector('[data-neden]').value.trim(); if (neden.length < 3) return bildir('Neden yazın', 'uyari'); pinSor('Kaydı tamamen silmek').then(onay => { if (onay) kayitSilIslem(k, neden); }); }); },
   });
