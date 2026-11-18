@@ -6,6 +6,7 @@ import { yenile } from './app.js?v=234';
 import { destekWa } from './iletisim.js?v=234';
 import * as ON from './onay.js?v=234';
 import * as TC from './tercih.js?v=234';
+import * as IP from './ipliste.js?v=234';
 import { ONKOSUL, onkosulTamam, onkosulHaritasi } from './onkosul.js?v=234';
 import * as B from './bulut.js?v=234';
 import { wpGonder } from './sayfalar1.js?v=234';
@@ -158,7 +159,7 @@ function personelFotoKarti() {
 const cihazAdi = () => { const u = navigator.userAgent; const t = /Edg\//.test(u) ? 'Edge' : /Chrome\//.test(u) ? 'Chrome' : /Safari\//.test(u) ? 'Safari' : /Firefox\//.test(u) ? 'Firefox' : 'Tarayıcı'; const s = /iPhone|iPad/.test(u) ? 'iPhone' : /Android/.test(u) ? 'Android' : /Mac/.test(u) ? 'Mac' : /Windows/.test(u) ? 'Windows' : ''; return t + (s ? ' · ' + s : ''); };
 function guvenlikSekme() {
   const g = S.guvenlik;
-  if (B.bulutta()) return bulutGuvenlik(g);
+  if (B.bulutta()) return bulutGuvenlik(g) + IP.ipKarti();
   const anah = (yol, deger, b, a, kilit) => `<li style="align-items:flex-start"><span class="anahtar" style="margin-top:2px"><input type="checkbox" data-guv="${yol}" ${deger ? 'checked' : ''} ${kilit ? 'disabled' : ''} aria-label="${e(b)}"><i></i></span><div><b style="color:var(--murekkep);display:block">${b}</b><small style="color:var(--metin);font-size:13.5px">${a}</small></div></li>`;
   return `<div class="izgara iz-2">
     <div class="kart"><div class="kart-bas"><h3>Giriş</h3></div><ul class="liste" style="margin-top:8px">
@@ -171,7 +172,7 @@ function guvenlikSekme() {
       <p style="font-size:13px;color:var(--soluk);padding:0 20px 8px">Diğer cihazlardaki oturumları görme ve uzaktan kapatma sunucu kurulumuyla açılır.</p>
       <div class="kart-bas" style="padding-top:6px"><h3>Kişisel veri erişimi</h3></div><div class="kart-govde"><p style="font-size:14px">TC görüntüleme, veri indirme ve evrak açma kullanıcı adıyla kaydedilir. <a href="#/ayarlar/gecmis" style="color:var(--levha);font-weight:700">İşlem geçmişi</a></p>
       <p style="font-size:14px;margin-top:8px">Bu demoda veriler yalnız bu tarayıcıda durur. Kurs hesabında veriler bulutta şifreli tutulur ve her gün ilk açılışta iki ayrı yere yedeklenir: Google Firebase’de son 31 günün her günü ve son 12 ayın her ayının ilk yedeği durur; Cloudflare’deki ikinci kopya 35 gün durur. Yedekler değiştirilemez, kurs hesabından 30 günden önce silinemez.</p></div></div>
-  </div>`;
+  </div>` + IP.ipKarti();
 }
 
 // Gerçek kurs hesabının güvenlik ayarları ve yedekleri
@@ -896,6 +897,7 @@ export function ayarBaglan(k) {
   });
   k.addEventListener('click', ev => { const bi = ev.target.closest('[data-bi-yeni],[data-bi-duzen]'); if (bi) return ON.bilgiDuzenle(bi.dataset.biDuzen || null, yenile); const bo = ev.target.closest('[data-bi-oku]'); if (bo) { ON.bilgiGoster(ON.bilgiler().filter(x => x.id === bo.dataset.biOku)); const bekle = setInterval(() => { if (!document.querySelector('.perde')) { clearInterval(bekle); yenile(); } }, 700); } });  // YON-028
   k.addEventListener('click', ev => { if (ev.target.closest('[data-ki-meb]')) { if (cokSube() && !seciliSube()) return bildir('Önce üstten şube seçin; her şubenin bilgisi kendi MEBBİS hesabından okunur', 'uyari'); return import('./mebtoplu.js?v=234').then(m => m.topluCek(['kurum'])); } if (!ev.target.closest('[data-ki-kase-sil]')) return; delete S.kurs.kase; islem('Kaşe / imza görselini kaldırdı'); kaydet(); yenile(); });  // YON-071
+  IP.ipBagla(k);  // YON-021
   davetListesi(k); yedekListesi(k); sunucuKaydi(k); if (B.bulutta()) ikiAdimSatiri(k);
   k.addEventListener('change', ev => {
     const t = ev.target;

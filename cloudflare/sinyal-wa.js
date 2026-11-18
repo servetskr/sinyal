@@ -1416,6 +1416,8 @@ export default {
     if (yol === 'talep' && req.method === 'POST') return IZINLI.includes(origin) ? talepAl(req, env, cevap) : cevap({ ok: false, hata: 'Izin yok' }, 403);
     if (yol === 'talep/yonet') return talepYonet(req, env, url, cevap);
     if (yol === 'saglik') return saglikOku(req, env, url, cevap);   // MSJ-021
+    // YON-021: istemcinin IP adresi (IP yetkilendirme: ön büroyu kurs bilgisayarına bağlama); yalnız sitenin kendi adresinden, kayıt tutulmaz
+    if (yol === 'ip' && req.method === 'GET') return IZINLI.includes(origin) ? cevap({ ok: true, ip: req.headers.get('CF-Connecting-IP') || '' }) : cevap({ ok: false, hata: 'Izin yok' }, 403);
     if (yol === 'soru-bildir' && req.method === 'POST') return IZINLI.includes(origin) ? soruBildirAl(req, env, cevap) : cevap({ ok: false, hata: 'Izin yok' }, 403);
     if (yol === 'soru-bildir/yonet') return soruBildirYonet(req, env, url, cevap);
     // kursun rapor ve yedek e-postaları (kimlik denetimi eposta() içinde)

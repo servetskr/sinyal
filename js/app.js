@@ -158,7 +158,7 @@ export function destekPenceresi(hazirMetin = '') {
     } });
 }
 // YON-018: ön büro yetkisi başka cihazdan değişince menü yeniden çizilsin
-let bilgiSoruldu = false;
+let bilgiSoruldu = false, ipDenetlendi = false;
 const yetkiImza = () => JSON.stringify((S.kurs || {}).yetki || null) + '|' + ((oturum.kullanici || {}).rol || '');
 let sonYetki = '';
 function iskelet() {
@@ -251,6 +251,11 @@ export function yenile(kaydirma = false) {
   yer.replaceChildren(kap);
   if (ekranDuzey(r.ad === 'kursiyer' ? 'kursiyerler' : r.ad) === 'gor') saltOkunur(kap);
   kurulumSeridi(kap); epostaSeridi(kap);
+  // YON-021: ön büro IP yetkilendirmesi (oturum başına bir kez); izin yoksa içerik kapanır, yalnız çıkış
+  if (!ipDenetlendi && oturum.kullanici.bulut && oturum.kullanici.rol === 'sekreter') { ipDenetlendi = true; import('./ipliste.js?v=234').then(m => m.ipDenetle()).then(d => { if (d.izin) return; islem('İzinsiz IP’den giriş denedi', d.ip); kaydet(); document.getElementById('icerik') && document.getElementById('icerik').replaceChildren();
+    const girise = () => B.cikisYap().then(() => { try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } location.hash = '#/giris'; location.reload(); });
+    setTimeout(() => { const bak = setInterval(() => { if (!document.querySelector('.perde')) { clearInterval(bak); girise(); } }, 500); }, 1500);
+    pencere({ baslik: 'Bu bilgisayardan girişe izin yok', korumali: true, icerik: `<p style="font-size:14.5px">Kurs müdürü ön büro girişini belirli internet adreslerine bağlamış. Bu bilgisayarın adresi (<b class="mono">${e(d.ip)}</b>) listede yok.</p><p style="font-size:13.5px;color:var(--soluk);margin-top:8px">Kurs bilgisayarından girin ya da kurs müdüründen bu adresi Ayarlar › Güvenlik › IP yetkilendirme’ye eklemesini isteyin.</p>`, altlik: '<button class="dg dg-ana" data-ip-cik>Çıkış yap</button>', onAc(p) { p.querySelector('[data-ip-cik]').addEventListener('click', girise); } }); }); }
   // YON-028: açık onaylı bilgilendirmeler; oturum başına bir kez, sayfa oturduktan sonra (başka pencere açıksa sonraki girişe)
   if (!bilgiSoruldu && oturum.kullanici.bulut && ['mudur', 'sekreter'].includes(oturum.kullanici.rol)) { bilgiSoruldu = true; const dene = n => { if (document.querySelector('.perde')) { if (n < 40) setTimeout(() => dene(n + 1), 3000); return; } import('./onay.js?v=234').then(m => m.bilgiGoster()); }; setTimeout(() => dene(0), 1500); }  // başka pencere açıksa kapanınca (en çok 2 dk)
   if (s.baglan) { try { s.baglan(kap); } catch (x) { console.error(x); } }
