@@ -8,7 +8,7 @@ import { pencere, kapatPencere, bildir, e, ik, isaret, rozet } from './ui.js?v=2
 import * as GR from './gruplar.js?v=234';
 
 /* ---------- sabitler ---------- */
-export const MEB_KABUL_SURUM = 'mk-2026-11-1';   // metin değişince artırılır; kurs yeniden onaylar
+export const MEB_KABUL_SURUM = 'mk-2026-11-2';   // K9: doğrulama cümlesi koddaki gerçeğe uyduruldu   // metin değişince artırılır; kurs yeniden onaylar
 export const SIRA = ['grup', 'kayit', 'evrak', 'onay', 'teorik', 'program', 'esinav', 'randevu', 'fatura'];
 export const TUR_AD = { grup: 'Dönem grubu', kayit: 'Kayıt', evrak: 'Evrak', onay: 'Kurum onayı', teorik: 'Teorik program', program: 'Direksiyon programı', esinav: 'e-Sınav başvurusu', randevu: 'Sınav randevusu', sinav: 'Sınav randevusu', fatura: 'Fatura', odeme: 'Fatura', izin: 'Çalışma izni', ogrenim: 'Öğrenim bilgileri' };
 const MEB = 'https://mebbis.meb.gov.tr/SKT/';
@@ -60,7 +60,7 @@ export const elleSecildi = () => { const k = S.kurs.mebKabul; return !!(k && k.k
 const MADDELER = [
   'Yardımcı yalnız bu bilgisayarda, kurs yetkilisinin kendi açtığı MEBBİS oturumunda çalışır. MEBBİS şifresini istemez, görmez, saklamaz.',
   'Kayıtları kurs yetkilisi mdSinyal’de kontrol eder ve “MEBBİS’e yaz” ile bir kez onaylar. Onay penceresi neyin, kimin adına yazılacağını gösterir.',
-  'Yardımcı onaylanan kayıtları sırayla ilgili MEBBİS formlarına yazar, kaydeder ve MEBBİS’ten okuyarak doğrular.',
+  'Yardımcı onaylanan kayıtları sırayla ilgili MEBBİS formlarına yazar ve kaydeder. Listesi okunabilen ekranlarda kaydı MEBBİS’ten okuyarak doğrular; yalnız MEBBİS’in mesajıyla doğrulanabilen kayıtlar “MEBBİS’te kontrol edin” diye ayrıca gösterilir.',   // DENETİM K9
   'Güvenlik kodunu her zaman yetkili girer. Silme ve geri alınamaz işlemler otomatik yapılmaz; kurum onayı ayrı sekmeden ayrıca verilir.',
   'İstekler insan hızında, yaklaşık 1 saniye arayla gider. Yetkili istediği an durdurabilir.',
   'Onaylayanın adı, rolü ve zamanı; her kaydın sonucu ve MEBBİS’in verdiği mesaj mdSinyal’in silinemeyen işlem kaydına yazılır.',
