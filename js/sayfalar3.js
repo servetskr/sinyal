@@ -8,7 +8,7 @@ import { satirAdi, listeAdi } from './taban.js?v=234';
 
 /* ================= BELGELER VE ÇIKTILAR ================= */
 const gorunumSube = () => gorunum.sube;
-const BELGE_GRUP = { fatura: 'Kursiyer', sozlesme: 'Kursiyer', bilgi: 'Kursiyer', takip: 'Kursiyer', makbuz: 'Kursiyer', senet: 'Kursiyer', ek1: 'MEB resmî formları', ek5: 'MEB resmî formları', ek34: 'MEB resmî formları', ek8: 'MEB resmî formları', aracdosya: 'MEB resmî formları', ek12: 'MEB resmî formları', ek10: 'MEB resmî formları', hazir: 'MEB resmî formları', dersdefteri: 'MEB resmî formları', denetim: 'MEB ve denetim', devam: 'MEB ve denetim', program: 'MEB ve denetim', sinav: 'MEB ve denetim', dilekce: 'MEB ve denetim', hizmet: 'Sözleşme ve KVKK', vis: 'Sözleşme ve KVKK', aydinlatma: 'Sözleşme ve KVKK' };
+const BELGE_GRUP = { fatura: 'Kursiyer', sozlesme: 'Kursiyer', bilgi: 'Kursiyer', takip: 'Kursiyer', makbuz: 'Kursiyer', senet: 'Kursiyer', ek1: 'MEB resmî formları', ek5: 'MEB resmî formları', ek34: 'MEB resmî formları', ek8: 'MEB resmî formları', aracdosya: 'MEB resmî formları', ek12: 'MEB resmî formları', ek10: 'MEB resmî formları', hazir: 'MEB resmî formları', dersdefteri: 'MEB resmî formları', meis: 'MEB ve denetim', denetim: 'MEB ve denetim', devam: 'MEB ve denetim', program: 'MEB ve denetim', sinav: 'MEB ve denetim', dilekce: 'MEB ve denetim', hizmet: 'Sözleşme ve KVKK', vis: 'Sözleşme ve KVKK', aydinlatma: 'Sözleşme ve KVKK' };
 const SABLONLAR = [
   ['sozlesme', 'Kursiyer sözleşmesi', 'Ücret, taksit planı ve imza alanlarıyla', 'kursiyer'],
   ['bilgi', 'Kursiyer bilgi formu', 'Kimlik, iletişim, acil durum kişisi, evrak durumu', 'kursiyer'],
@@ -28,6 +28,7 @@ const SABLONLAR = [
   ['ek10', 'Sınav aracı değişiklik formu (EK-10)', 'Arızalanan sınav aracının yerine başka araç', 'resmi'],
   ['dersdefteri', 'Teorik ders defteri (md.42)', 'Gruba göre işlenen dersler, öğretici ve katılım', 'resmi'],
   ['hazir', 'Sınava hazır yazısı (md.7/7)', 'Usta öğreticinin uygulama sınavına hazır bildirimi; taranıp MEBBİS’e yüklenir', 'resmi'],
+  ['meis', 'Dönem (MEİS) istatistiği', 'Yaş × öğrenim × cinsiyet; genel ve sertifika başına, yazdır ya da Excel', 'resmi'],
   ['devam', 'Teorik devam çizelgesi', 'Gruplara göre katılım ve imza sütunu', 'tek'],
   ['hizmet', 'mdSinyal hizmet sözleşmesi', 'Erişilebilirlik, sorumluluk, veri teslimi, fesih', 'tek'],
   ['vis', 'Veri işleme sözleşmesi', 'KVKK: kurs veri sorumlusu, mdSinyal veri işleyen', 'tek'],

@@ -394,7 +394,7 @@ function uret() {
       yorum: asama === 'Ehliyet' ? (r() < 0.55 ? 'yapti' : 'istendi') : null,
       notlar: [],
       tc: tcUret(), dogumTarihi: (2008 - ara(0, 24)) + '-' + String(ara(1, 12)).padStart(2, '0') + '-' + String(ara(1, 28)).padStart(2, '0'),
-      adres: sec(MAH) + ' Mah., ' + sec(['Odunpazarı', 'Tepebaşı']) + ' / Eskişehir', ogrenim: sec(['Lise', 'Lise', 'Lisans', 'Önlisans', 'Ortaokul']), cinsiyet: kadin ? 'Kadın' : 'Erkek',
+      adres: sec(MAH) + ' Mah., ' + sec(['Odunpazarı', 'Tepebaşı']) + ' / Eskişehir', ogrenim: sec(['Lise', 'Lise', 'Lisans', 'Önlisans', 'Ortaokul', 'Meslek ve teknik lise', 'Meslek ve teknik lise', 'İlkokul']), cinsiyet: kadin ? 'Kadın' : 'Erkek',
       teorikGrup: r() < 0.65 ? 'aksam' : 'sabah',
       deneme: ['Teorik', 'Direksiyon', 'Sınav'].includes(asama) ? Array.from({ length: ara(2, 6) }, () => ara(r() < 0.18 ? 38 : 58, r() < 0.18 ? 66 : 96)) : [],
       acil: { ad: sec(ADLAR_K.concat(ADLAR_E)) + ' ' + sec(SOYADLAR), yakinlik: sec(['Anne', 'Baba', 'Eş', 'Kardeş']), tel: tel() },

@@ -353,7 +353,8 @@ const KS_ADIM = [
 const KS_ATLANIR = new Set(['evrak', 'odeme']);
 const FOTO_KURAL = ['Son 6 ay içinde çekilmiş', 'Beyaz ya da açık renk düz fon', 'Yüz tam karşıdan, gözler açık ve net', 'Şapka, gözlük yansıması ve gölge yok', 'Yüz kadrajı dolduruyor, kimlikteki kişiyle aynı'];
 const KAN_GRUPLARI = ['A Rh+', 'A Rh−', 'B Rh+', 'B Rh−', 'AB Rh+', 'AB Rh−', '0 Rh+', '0 Rh−'];
-const OGRENIM_DURUM = ['İlkokul', 'Ortaokul', 'Lise', 'Önlisans', 'Lisans', 'Yüksek lisans', 'Doktora'];
+// MEB dönem (MEİS) istatistiği kümeleri: İlkokul · İlköğretim+Ortaokul · Genel lise · Meslek ve teknik lise · Fakülte ve YO (resmi.js meisOgrenim)
+const OGRENIM_DURUM = ['İlkokul', 'İlköğretim', 'Ortaokul', 'Lise', 'Meslek ve teknik lise', 'Önlisans', 'Lisans', 'Yüksek lisans', 'Doktora'];
 const cepGecerli = t => { let n = String(t || '').replace(/\D/g, ''); if (n.startsWith('90')) n = n.slice(2); if (n.startsWith('0')) n = n.slice(1); return /^5\d{9}$/.test(n); };
 const taksitEnCok = () => Math.max(1, Math.min(24, +((S.kurs || {}).taksitEnCok) || 6));
 const taksitVarsayilan = () => Math.min(5, taksitEnCok());
