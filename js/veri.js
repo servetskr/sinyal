@@ -297,6 +297,14 @@ export const mebIsGunuMu = t => { const g = tarihOku(t).getDay(); if (g === 0 ||
 // bas hariç, bit dahil iş günü sayısı
 export const mebIsGunuSay = (bas, bit) => { let n = 0; const d = tarihOku(bas), b = tarihOku(bit); while (d < b) { d.setDate(d.getDate() + 1); if (mebIsGunuMu(iso(d))) n++; } return n; };
 // t'den n iş günü önceki gün
+// MSJ-001: adayın kendi uygulama sınavı saati — MEBBİS'e yazılıp doğrulanmış randevu (S.mebDurum 'sinav-<oturum>-<aday>'.saat, durum 'tamam')
+// ya da oturumdaki aday ataması (s.atama[aday].saat); yoksa oturumun saati (kesin: false)
+export function adaySinavSaati(s, k) {
+  const v = (S.mebDurum || {})['sinav-' + s.id + '-' + (k && k.id)], a = s.atama && k && s.atama[k.id];
+  if (v && v.durum === 'tamam' && /^\d{2}:\d{2}$/.test(v.saat || '')) return { saat: v.saat, kesin: true };
+  if (a && /^\d{2}:\d{2}$/.test(a.saat || '')) return { saat: a.saat, kesin: true };
+  return { saat: s.saat || '', kesin: false };
+}
 // t'den sonraki n'inci MEB iş günü (ayrılış bildirimi gibi ileri süreler)
 export const mebIsGunuIleri = (t, n) => { const d = tarihOku(t); let i = 0; while (i < n) { d.setDate(d.getDate() + 1); if (mebIsGunuMu(iso(d))) i++; } return iso(d); };
 export const mebIsGunuGeri = (t, n) => { const d = tarihOku(t); let i = 0; while (i < n) { d.setDate(d.getDate() - 1); if (mebIsGunuMu(iso(d))) i++; } return iso(d); };
