@@ -1680,7 +1680,8 @@ export const yerelZaman = () => { const d = new Date(); return iso(d) + 'T' + d.
 // YON-027: "kim neyi gördü" — kişisel veri görüntüleme kaydı; aynı kullanıcı aynı şeyi bir oturumda bir kez yazar (öğrenci dosyası, belge önizlemesi)
 const gorulen = new Set();
 export function gordu(ne, ayrinti = '') { const a = ne + '|' + ayrinti; if (gorulen.has(a)) return; gorulen.add(a); islem(ne, ayrinti); }
-export function islem(ne, ayrinti = '') { const x = { zaman: yerelZaman(), kim: oturum.kullanici ? oturum.kullanici.ad : 'Sistem', ne, ayrinti }; S.islemler.unshift(x); if (S.islemler.length > 3000) S.islemler.length = 3000; if (bulutKanca.kayit) bulutKanca.kayit(x); }
+// ek (isteğe bağlı): { meb: { hedef: { kursiyer } } } — MEBBİS işleri sunucu kaydında öğrenciye göre aranabilsin (MEB-093); yerel listeye yazılmaz
+export function islem(ne, ayrinti = '', ek) { const x = { zaman: yerelZaman(), kim: oturum.kullanici ? oturum.kullanici.ad : 'Sistem', ne, ayrinti }; S.islemler.unshift(x); if (S.islemler.length > 3000) S.islemler.length = 3000; if (bulutKanca.kayit) bulutKanca.kayit(ek && ek.meb ? { ...x, meb: ek.meb } : x); }
 // geri alma: son değişiklikten önceki durumun anlık görüntüsü
 // Geri alma noktası: fotoğraf ve imza gibi büyük metinler kopyalanmaz (değişmez değerler; işaretle tutulur), yalnız veri yapısı kopyalanır
 let anlik = null, anlikBuyuk = null;

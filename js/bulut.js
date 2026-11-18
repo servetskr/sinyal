@@ -2,6 +2,7 @@
 // kurslar/{kurs}/v altında parça parça durur. Her kayıt ayrı alan olarak yazılır: iki kişi aynı anda
 // farklı kayıtları değiştirirse ikisi de korunur. Fotoğraf ve imzalar kurslar/{kurs}/dosyalar'da ayrı belge.
 import { DESTEK } from './iletisim.js?v=234';
+import { musaitlikTemizle, musaitlikOzet } from './planlayici.js?v=234';
 import { FIREBASE, EMU, emuBagla } from './firebase-ayar.js?v=234';
 import { izTabaniYenile, makbuzBaslangic, makbuzBicim, dersDiziniBoz, SINIFLAR, kuralAyar, S, bulutVeri, bosVeri, kaydetDinle, kaydet, oturum, bulutKanca, makbuzSira, islem, iso, EVRAKLAR, gun, fark, tamAd, iptalEdilebilir, dersIptalIz, geceKisitli, geceDersMi, gerekliDireksiyon } from './veri.js?v=234';
 
@@ -641,7 +642,15 @@ async function makbuzDenetle() {
 // Sunucu işlem kaydı: yalnız eklenebilir, değiştirilemez ve silinemez (Firestore kuralı)
 function kayitYaz(x) {
   const { db, F } = fb;
-  F.addDoc(F.collection(db, 'kurslar', bulut.kurs, 'kayit'), { uid: bulut.uid, ad: bulut.ad, ne: String(x.ne || ''), ayrinti: String(x.ayrinti || '').slice(0, 300), yerel: x.zaman, cihaz, zaman: F.serverTimestamp() }).catch(e => console.error(e));
+  const meb = x.meb && x.meb.hedef && typeof x.meb.hedef.kursiyer === 'string' ? { meb: { hedef: { kursiyer: x.meb.hedef.kursiyer.slice(0, 60) } } } : {};   // MEB-093
+  F.addDoc(F.collection(db, 'kurslar', bulut.kurs, 'kayit'), { uid: bulut.uid, ad: bulut.ad, ne: String(x.ne || ''), ayrinti: String(x.ayrinti || '').slice(0, 300), yerel: x.zaman, cihaz, ...meb, zaman: F.serverTimestamp() }).catch(e => console.error(e));
+}
+// MEB-093: bir öğrencinin MEBBİS işleri sunucu kaydında (en yeni 50). Bileşik dizin (meb.hedef.kursiyer + zaman azalan; belgeler/firestore.indexes.taslak.json)
+// yoksa Firestore hatası olduğu gibi atılır; öğrenci dosyası o zaman ada göre aramaya döner.
+export async function mebGecmisi(kid) {
+  const { db, F } = await sdk();
+  const q = await F.getDocs(F.query(F.collection(db, 'kurslar', bulut.kurs, 'kayit'), F.where('meb.hedef.kursiyer', '==', String(kid)), F.orderBy('zaman', 'desc'), F.limit(50)));
+  return q.docs.map(d => { const v = d.data(); return { ...v, zaman: v.zaman ? v.zaman.toDate() : null }; });
 }
 export async function kayitlar(n = 300) {
   const { db, F } = await sdk();
@@ -954,6 +963,8 @@ function ogrenciUygula(docId, g) {
     if (x.a === 'kursiyerler' && x.id === k.id && y) {
       ['deneme', 'denemeDetay', 'bildirilenSorular', 'bildirimDuzeltildi', 'yanlislar', 'konuAnaliz', 'okunan', 'tekrar', 'gorulen', 'dirCalisma', 'tehlike'].forEach(f => { if (y[f] !== undefined && JSON.stringify(y[f]).length < 50000) k[f] = guvenliVeri(y[f]); });
       ['hesapAktif', 'sonGiris'].forEach(f => { if (typeof y[f] === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(y[f]) && y[f] !== k[f]) { k[f] = y[f]; if (f === 'hesapAktif') notlar.push('şifresini belirleyip hesabını kullanmaya başladı'); } });
+      // UYG-010: öğrencinin bildirdiği müsait zamanlar (temizlenmiş biçimde; planlayıcı bunlara göre yerleştirir)
+      if ('musaitlik' in y) { const m = musaitlikTemizle(y.musaitlik); if (JSON.stringify(m) !== JSON.stringify(k.musaitlik || null)) { k.musaitlik = m; notlar.push(m ? 'müsait zamanlarını bildirdi: ' + musaitlikOzet(m) : 'müsaitlik bildirimini kaldırdı'); } }
       Object.entries(y.evrakYuklenen || {}).forEach(([key, e]) => {
         if (!e || !e.veri || !EVRAKLAR.some(z => z[0] === key) || k.evrak[key]) return;
         if (typeof e.veri !== 'string' || e.veri.length > 950000 || !DOSYA_BICIM.test(e.veri)) return;

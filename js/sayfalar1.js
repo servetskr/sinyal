@@ -33,13 +33,8 @@ import { listeAdi, satirAdi } from './taban.js?v=234';
 
 // KAY-115: fotoğraf yükleme (JPEG, PNG; tarayıcı açabiliyorsa HEIC de). Tarayıcı dosyayı açamazsa sessiz kalmaz, nedenini söyler:
 // iPhone'un HEIC fotoğrafını çoğu Chrome ve Android açamaz (Safari açar). Hata iletisi x.message'da; çağıran bildir(x.message) der.
-export const heicMi = f => !!f && (/image\/hei[cf]/i.test(f.type || '') || /\.hei[cf]$/i.test(f.name || ''));
-export function fotoHataMetni(f) {
-  if (heicMi(f)) return 'Bu fotoğraf iPhone’un HEIC biçiminde ve bu tarayıcı açamıyor. iPhone’da Ayarlar › Kamera › Biçimler › “En Uyumlu”yu seçip yeniden çekin ya da fotoğrafı JPEG olarak gönderin.';
-  if (f && f.type && !/^image\//.test(f.type)) return 'Bu dosya fotoğraf değil. JPEG ya da PNG bir fotoğraf seçin.';
-  return 'Fotoğraf açılamadı. JPEG ya da PNG bir fotoğraf seçin.';
-}
-export const fotoAl = (f, max) => fotoKucult(f, max).catch(() => { throw Object.assign(new Error(fotoHataMetni(f)), { foto: true }); });
+// KAY-115: ileti ui.js'te (heicMi, fotoHataMetni); fotoKucult açılamayan dosyada bu iletiyle (x.message) reddeder
+export const fotoAl = (f, max) => fotoKucult(f, max);
 const aktifler = () => sb(S.kursiyerler).filter(k => k.asama !== 'Ehliyet' && !k.kapali);
 // KTY md.76/3 yaş istisnası (k.yasIstisna) veri.js'te uygulanır: mebOnKontrol, yasDenetim, asgariYasHesap ve deneyimEksik istisnayı bilir.
 // Kayıt formu, dosya şeridi ve MEBBİS ön kontrol kartı aynı işlevi çağırır.
@@ -1220,7 +1215,8 @@ async function mebGecmisiSunucu(k) {
   try {
     let l = null, yol = 'dizin';
     if (typeof B.mebGecmisi === 'function') { try { l = await B.mebGecmisi(k.id); } catch (x) { if (!/index|precondition|dizin/i.test(String((x && (x.code || x.message)) || x))) throw x; } }
-    if (!l) { const ad = tamAd(k).toLocaleLowerCase('tr'); yol = 'ad'; l = (await B.kayitlar(500)).filter(x => MEB_NE.test(String(x.ne || '') + ' ' + String(x.ayrinti || '')) && String(x.ayrinti || '').toLocaleLowerCase('tr').includes(ad)); }
+    // eski kayıtlarda öğrenci alanı yok: sorgu boş dönerse ada göre de bak
+    if (!l || !l.length) { const ad = tamAd(k).toLocaleLowerCase('tr'); yol = 'ad'; l = (await B.kayitlar(500)).filter(x => MEB_NE.test(String(x.ne || '') + ' ' + String(x.ayrinti || '')) && String(x.ayrinti || '').toLocaleLowerCase('tr').includes(ad)); }
     mebSunucu[k.id] = { durum: 'tamam', l, yol };
   } catch (x) { mebSunucu[k.id] = { durum: 'hata', hata: B.hataMetni(x) }; }
   yenile();
@@ -1803,7 +1799,7 @@ function profilEksikleri(k) {
     // md.12/1: MEBBİS'e girilen kaydın belgesi sistemden alınır, kursiyere imzalatılır, kurum onayından önce sisteme geri yüklenir (eyup-sorular-cevaplar.md madde 17)
     kayitBelgesiBekliyor(k) && ['uyari', `Kayıt belgesi: MEBBİS’ten yazdırın, kursiyere imzalatın, MEBBİS’e yükleyin<small style="display:block;color:var(--soluk);font-size:12.5px">MTSK Yön. md.12/1 · kurum onayından önce</small>`, '<button class="dg dg-cizgi dg-kucuk" data-kayit-belgesi>Yükledim</button>'],
     k.odeme && k.odeme.planSonra && !k.odeme.taksitler.some(t => t.odendi) && k.odeme.taksitler.filter(t => !t.iptal).length <= 1 && ['uyari', 'Ödeme planı yapılmadı (kayıtta atlandı)', '<button class="dg dg-cizgi dg-kucuk" data-odeme-islem="plan">Planı yap</button>'],
-    gec && ['uyari', `Geciken ödeme ${tl(gec)}`, `<button class="dg dg-wp dg-kucuk" data-link>${ik('wp')}Hatırlat</button>`],
+    gec && ['uyari', `Geciken ödeme ${tl(gec)}`, `<button class="dg dg-wp dg-kucuk" data-link>${ik('wp')}Hatırlat</button>${S._bulut && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(k.eposta || '').trim()) ? ` <button class="dg dg-cizgi dg-kucuk" data-hatirlat-eposta>${ik('gonder')}E-postayla</button>` : ''}`],
     ev.length && ['uyari', `${ev.length} evrak eksik: ${ev.map(([, ad]) => ad.split(' (')[0].toLocaleLowerCase('tr')).join(', ')}`, `<button class="dg dg-wp dg-kucuk" data-evrak-hatirlat>${ik('wp')}WhatsApp’tan iste</button>`],
     !k.evrak.sozlesme && ['uyari', 'Sözleşme imzalanmadı', '<button class="dg dg-cizgi dg-kucuk" data-sozlesme>İmzaya gönder</button>'],
     !k.foto && ['bilgi', 'Kayıt fotoğrafı yok', '<button class="dg dg-cizgi dg-kucuk" data-profil-foto>Çek</button>'],
@@ -1828,6 +1824,7 @@ function odemeSekmesi(k) {
     : `<div class="oo-sonraki tamam"><small>Sıradaki taksit</small><b>Yok</b><span>Bütün taksitler ödendi</span></div>`;
   const islemler = [
     kalan ? ['link', 'Ödeme bilgisini WhatsApp’tan gönder', 'wp'] : null,
+    gec.length && S._bulut && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(k.eposta || '').trim()) ? ['hatirlatEposta', 'Gecikme hatırlatmasını e-postayla gönder', 'gonder'] : null,   // PAR-058
     ['plan', 'Taksit planını yeniden böl', 'takvim'], ['ek', 'Ek kalem ekle (ek ders, özel ders, sınav, kitap…)', 'arti'],
     islemYetkili('indirim') && kalan ? ['indirim', 'İndirim uygula', 'kalem'] : null, islemYetkili('iade') ? ['iade', 'İade yap', 'sifirla'] : null, mudurMu() && !k.ucretsiz ? ['ucretsiz', 'Ücretsiz kursiyer (%3)', 'kursiyer'] : null,
     k.odeme.senetli ? ['senetHazirla', 'Senet (yazdır / PDF)', 'belge'] : null, islemYetkili('devir') && !S.hareket.some(h => h.kursiyer === k.id && h.tur === 'Gelir') ? ['devir', 'Devir (açılış) bakiyesi gir', 'kalem'] : null, islemYetkili('senet') && (kalan || avukattaMi(k)) ? ['avukat', avukattaMi(k) ? 'Avukat takibini kapat' : 'Avukata ver', 'belge'] : null, islemYetkili('senet') && (k.odeme.taksitler || []).length ? ['senetli', k.odeme.senetli ? 'Senetli satışı kaldır' : 'Senetli satış (taksitlere senet)', 'belge'] : null, S.hareket.some(h => h.kursiyer === k.id && h.tur === 'Gelir') ? ['makbuz', 'Makbuzlar (yazdır / PDF)', 'belge'] : null,
@@ -1840,7 +1837,7 @@ function odemeSekmesi(k) {
     <div class="oo-ilerleme"><div class="oo-ilerleme-yazi"><span>Ödenen <b class="sayi">${tl(od)}</b></span><span>Toplam <b class="sayi">${tl(toplam)}</b></span></div>${ilerleme(od, toplam, 'yesil')}</div>
     ${gec.length > 1 ? `<p class="oo-uyari">${isaret('uyari', 18)}<span>${gec.length} taksit gecikti · toplam ${tl(gecikenTutar(k))}</span></p>` : ''}
     ${alinabilir ? `<button type="button" class="dg dg-ana oo-al" data-odeme-al>${ik('kart')}Ödeme al</button>` : ''}
-    <details class="oo-menu"><summary>Diğer işlemler</summary><div class="oo-menu-liste">${islemler.map(([t, a, ikon]) => `<button type="button" class="dg dg-hafif" ${t === 'link' ? 'data-link' : t === 'senet' || t === 'makbuz' ? `data-belge="${t}"` : `data-odeme-islem="${t}"`}>${ik(ikon)}${a}</button>`).join('')}</div></details>
+    <details class="oo-menu"><summary>Diğer işlemler</summary><div class="oo-menu-liste">${islemler.map(([t, a, ikon]) => `<button type="button" class="dg dg-hafif" ${t === 'link' ? 'data-link' : t === 'hatirlatEposta' ? 'data-hatirlat-eposta' : t === 'senet' || t === 'makbuz' ? `data-belge="${t}"` : `data-odeme-islem="${t}"`}>${ik(ikon)}${a}</button>`).join('')}</div></details>
   </div>
   <details class="kart oo-blok"><summary><b>Taksit planı</b><small>${odenenSay}/${taksitSay} taksit ödendi${k.odeme.ekler && k.odeme.ekler.length ? ' · ' + k.odeme.ekler.length + ' ek kalem' : ''}</small></summary><div class="kart-govde">
     ${kalan && !S.kurs.iban ? `<p class="ipucu" style="margin-bottom:10px">${isaret('bilgi', 18)}<span>Ödeme bilgisinde IBAN görünmesi için Ayarlar › Kurs bilgileri’ne kursun banka hesabını girin (eğitim ücreti kurum hesabına yatırılarak tahsil edilir).</span></p>` : ''}
@@ -2047,6 +2044,7 @@ ${mesajlar.length ? '' : '<li style="color:var(--soluk)">Bu kursiyere henüz mes
         if (ev.target.closest('[data-profil-foto]')) return profilFoto(k);
         if (ev.target.closest('[data-musait-duzen]')) return musaitlikPenceresi(k);   // UYG-010
         if (ev.target.closest('[data-meb-gecmis-sunucu]')) return mebGecmisiSunucu(k);   // MEB-093
+        { const he = ev.target.closest('[data-hatirlat-eposta]'); if (he) { he.disabled = true; return import('./eposta.js?v=234').then(m => m.hatirlatmaEpostaGonder(k)).finally(() => { he.disabled = false; }); } }   // PAR-058
         if (ev.target.closest('[data-deneme-yeni]')) return import('./deneme.js?v=234').then(m => m.denemeAc(k, yenile));
         const dy = ev.target.closest('[data-deneme-yazdir]'); if (dy) return import('./deneme.js?v=234').then(m => m.denemeYazdir(k, (k.dDeneme || []).find(x => x.id === dy.dataset.denemeYazdir)));
         if (HS.hesapTikla(ev, k, yenile)) return;
@@ -2200,9 +2198,10 @@ function makbuzPenceresi(k, hid) {
     baslik: 'Ödeme kaydedildi',
     icerik: `<div class="makbuz-ozet">${isaret('tamam', 40)}<b class="sayi">${tl(h.tutar)}</b><span>${e(tamAd(k))} · ${e(yontemAd(h.yontem))} · ${tarih(h.tarih)}</span></div>
       <dl class="bilgi-tablo" style="margin-top:14px"><dt>Makbuz no</dt><dd class="mono" data-makbuz-no>${e(h.no || '—')}</dd><dt>Kalan borç</dt><dd><b class="sayi">${kalan ? tl(kalan) : 'Borcu yok'}</b></dd>${sn ? `<dt>${fark(sn.t.vade) < 0 ? 'Gecikmiş taksit' : 'Sıradaki taksit'}</dt><dd${fark(sn.t.vade) < 0 ? ' style="color:var(--kirmizi);font-weight:700"' : ''}>${tarih(sn.t.vade)} · ${tl(taksitKalan(sn.t))}${fark(sn.t.vade) < 0 ? ' · gecikti' : ''}</dd>` : ''}</dl>`,
-    altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-cizgi" data-makbuz-pdf>${ik('belge')}Makbuz PDF</button><button class="dg dg-wp" data-makbuz-wp>${ik('wp')}WhatsApp’tan gönder</button>`,
+    altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-cizgi" data-makbuz-pdf>${ik('belge')}Makbuz PDF</button>${S._bulut && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(k.eposta || '').trim()) ? `<button class="dg dg-cizgi" data-makbuz-eposta>${ik('gonder')}E-postayla gönder</button>` : ''}<button class="dg dg-wp" data-makbuz-wp>${ik('wp')}WhatsApp’tan gönder</button>`,
     onAc(d) {
       d.querySelector('[data-makbuz-pdf]').addEventListener('click', () => { kapatPencere(); import('./sayfalar3.js?v=234').then(m => m.belgeAc('makbuz', hid)); });
+      { const ep = d.querySelector('[data-makbuz-eposta]'); if (ep) ep.addEventListener('click', () => { ep.disabled = true; import('./eposta.js?v=234').then(m => m.makbuzEpostaGonder(k, hid)).finally(() => { ep.disabled = false; }); }); }   // PAR-058
       d.querySelector('[data-makbuz-wp]').addEventListener('click', () => { kapatPencere(); wpGonder(k, `${selam(k)} ${tl(h.tutar)} ödemeniz alındı, teşekkür ederiz. Kalan borcunuz ${tl(kalanBorc(k))}. ${S.kurs.ad}`, 'Makbuz'); });
     },
   });

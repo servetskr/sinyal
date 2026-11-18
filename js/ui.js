@@ -577,8 +577,16 @@ export function aracGorsel(a, cls = '') {
 export function ekranNotu(metin, tur = 'bilgi') { return `<p class="ekran-notu">${isaret(tur, 20)}<span>${metin}</span></p>`; }
 
 // Fotoğrafı küçült (tarayıcıda saklamak için ~600px JPEG)
+// KAY-115: tarayıcının açamadığı fotoğraf (iPhone HEIC, bozuk dosya, PDF) sessiz kalmaz; fotoKucult bu iletiyle (Error.message) reddeder
+export const heicMi = f => !!f && (/image\/hei[cf]/i.test(f.type || '') || /\.hei[cf]$/i.test(f.name || ''));
+export function fotoHataMetni(f) {
+  if (heicMi(f)) return 'Bu fotoğraf iPhone’un HEIC biçiminde ve bu tarayıcı açamıyor. iPhone’da Ayarlar › Kamera › Biçimler › “En Uyumlu”yu seçip yeniden çekin ya da fotoğrafı JPEG olarak gönderin.';
+  if (f && f.type && !/^image\//.test(f.type)) return 'Bu dosya fotoğraf değil. JPEG ya da PNG bir fotoğraf seçin.';
+  return 'Fotoğraf açılamadı. JPEG ya da PNG bir fotoğraf seçin.';
+}
 export function fotoKucult(dosya, max = 640) {
-  return new Promise((coz, red) => {
+  return new Promise((coz, red0) => {
+    const red = () => red0(Object.assign(new Error(fotoHataMetni(dosya)), { foto: true }));
     const r = new FileReader();
     r.onerror = red;
     r.onload = () => { const im = new Image(); im.onload = () => { const o = Math.min(1, max / Math.max(im.width, im.height)); const c = document.createElement('canvas'); c.width = Math.round(im.width * o); c.height = Math.round(im.height * o); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); coz(c.toDataURL('image/jpeg', 0.72)); }; im.onerror = red; im.src = r.result; };
