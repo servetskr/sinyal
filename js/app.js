@@ -579,6 +579,9 @@ function ogretmenGirisi() {
   ugrStil();
   document.title = 'Öğretmen girişi · mdSinyal';
   const kayitli = B.bulutKayitli(), { oi, esc } = OXU, EPOSTA = /^\S+@\S+\.\S+$/;
+  // UYG-022 (karar): öğretmen yalnız e-posta + şifreyle girer; telefon numarası yazana ne yapacağı söylenir
+  const TEL_YAZDI = 'Öğretmen girişi yalnız e-postayla. Davetle hesap açtığın e-postayı yaz; hatırlamıyorsan ya da e-postan yoksa kurs müdüründen yeni davet bağlantısı iste.';
+  const telMi = v => !v.includes('@') && v.replace(/\D/g, '').length >= 10;
   const { govde, alan, alanHata, temizle, uyari, yukle, birak, ac } = ugrKabuk('Öğretmen uygulaması');
   let eposta = (kayitli && kayitli.eposta) || '';
   const ortak = f => { f.addEventListener('input', ev => { const a = ev.target.closest('.ox-ugr-alan'); if (a && a.classList.contains('hatali')) { a.classList.remove('hatali'); ev.target.removeAttribute('aria-invalid'); a.querySelector('.ox-ugr-ipucu').hidden = true; } if (ev.target.name === 'eposta') eposta = ev.target.value; }); };
@@ -598,7 +601,7 @@ function ogretmenGirisi() {
         OXU.satir({ baslik: 'Kurs müdürü ya da ön büroyum', alt: 'Kurs hesabının e-postası ve şifresiyle girin', attrs: { 'data-giris-pin': true } }),
         OXU.satir({ baslik: 'Öğrenciyim', alt: 'E-postanız ve şifrenizle girin', attrs: { 'data-ogrenci-giris': true } }),
       ])}
-      ${OXU.not('Davetiniz yoksa kurs müdürünüze yazın. Davet bağlantısı WhatsApp’tan gelir.', 'wp')}
+      ${OXU.not('Öğretmen girişi yalnız e-posta ve şifreyle. Davetiniz yoksa, e-postanızı hatırlamıyorsanız ya da e-postanız yoksa kurs müdürünüzden yeni davet bağlantısı isteyin; bağlantıda e-postanızı ve şifrenizi kendiniz belirlersiniz.', 'wp')}
       <div class="ox-ugr-son"><button type="button" class="ox-bag" data-tanitim>mdSinyal nedir?</button></div>`, odak, anim);
     const f = govde.querySelector('form');
     ortak(f);
@@ -612,6 +615,7 @@ function ogretmenGirisi() {
       ev.preventDefault(); const btn = f.querySelector('[type=submit]'), yer = govde.querySelector('[data-yardim]');
       temizle(f);
       if (!f.eposta.value.trim()) return alanHata(f, 'eposta', 'E-posta adresinizi yazın');
+      if (telMi(f.eposta.value)) return alanHata(f, 'eposta', TEL_YAZDI);
       if (!EPOSTA.test(f.eposta.value.trim())) return alanHata(f, 'eposta', 'E-posta adresini kontrol edin');
       if (!f.sifre.value) return alanHata(f, 'sifre', 'Şifrenizi girin');
       yukle(btn, 'Giriliyor…'); yer.innerHTML = '';
@@ -637,6 +641,7 @@ function ogretmenGirisi() {
       ev.preventDefault(); const btn = f.querySelector('[type=submit]'), ep = f.eposta.value.trim();
       temizle(f);
       if (!ep) return alanHata(f, 'eposta', 'E-posta adresinizi yazın');
+      if (telMi(ep)) return alanHata(f, 'eposta', TEL_YAZDI);
       if (!EPOSTA.test(ep)) return alanHata(f, 'eposta', 'E-posta adresini kontrol edin');
       yukle(btn, 'Gönderiliyor…'); tamam.innerHTML = '';
       B.sifreSifirla(ep).then(() => {
