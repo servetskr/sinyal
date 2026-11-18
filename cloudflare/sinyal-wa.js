@@ -426,6 +426,59 @@ const epKabuk = (baslik, govde, alt, onizleme) => `<!doctype html><html lang="tr
 <tr><td style="padding:16px 24px 20px;background:#fafbfc;border-top:1px solid #e8ebf1;font-size:12.5px;line-height:1.5;color:#6b7280">${alt ? `<div>${epKacis(alt)}</div>` : ''}<div style="margin-top:6px"><a href="https://mdsinyal.com" style="color:#6b7280;font-weight:700;text-decoration:none">mdSinyal</a> · sürücü kursu yönetim programı</div></td></tr>
 </table></td></tr></table></body></html>`;
 const epSayfa = (baslik, metin, form) => new Response(`<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${epKacis(baslik)} · mdSinyal</title></head><body style="margin:0;background:#0f1729;color:#e9edf5;font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;display:grid;place-items:center;min-height:100vh;padding:16px;box-sizing:border-box"><main style="max-width:420px;text-align:center"><h1 style="font-size:22px;margin:0 0 8px">${epKacis(baslik)}</h1><p style="margin:0 0 20px;color:#b8c2d6">${epKacis(metin)}</p>${form ? `<form method="post" action="https://api.mdsinyal.com/eposta/onay"><input type="hidden" name="t" value="${epKacis(form)}"><button type="submit" style="font:inherit;color:#fff;background:#2563eb;border:0;padding:12px 20px;border-radius:12px;font-weight:600;cursor:pointer">Adresimi onayla</button></form>` : `<a href="https://mdsinyal.com/" style="color:#fff;background:#2563eb;padding:12px 20px;border-radius:12px;text-decoration:none;font-weight:600;display:inline-block">mdSinyal’i aç</a>`}</main></body></html>`, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex' } });
+// ---- DIG-035: kursun kendi web sitesindeki ön kayıt formu ----
+// Kurs müdürü bir anahtar alır ('onkayit:k:<kurs>' ↔ 'onkayit:a:<anahtar>'); sitedeki form anahtarla POST /onkayit'a yazar (girişsiz, her kaynaktan; JSON ya da düz form).
+// Ön kayıtlar 'onkayit:q:<kurs>' kuyruğunda bekler (en çok 200, 60 gün); kurs cihazı açılınca alır (GET onkayit/bekleyen) ve aldıklarını siler (POST onkayit/alindi).
+// Kötüye kullanıma karşı: KVKK onayı zorunlu, gizli 'web' alanı (bot tuzağı) dolu gelirse sessizce kabul edilmiş gibi döner, IP başına saatte 10 kayıt.
+// Onaylı e-posta adresi ve e-posta servisi varsa kursa kısa bildirim gider (günlük e-posta sınırından sayılır).
+const OK_TTL = 60 * 86400;
+const okTel = t => { const d = String(t || '').replace(/\D/g, '').replace(/^90/, '').replace(/^0/, ''); return /^5\d{9}$/.test(d) ? '0' + d : ''; };
+const okKac = s => String(s == null ? '' : s).replace(/[<>]/g, '').trim();
+async function onKayitAl(req, env, url) {
+  const acikCors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' };
+  const json = (o, st = 200) => new Response(JSON.stringify(o), { status: st, headers: { ...acikCors, 'Content-Type': 'application/json' } });
+  if (req.method === 'OPTIONS') return new Response(null, { headers: acikCors });
+  if (req.method !== 'POST') return json({ ok: false }, 405);
+  if (!env.LINK) return json({ ok: false, hata: 'Depo yok' }, 500);
+  const tur = req.headers.get('Content-Type') || '', duz = !tur.includes('json'); let b = {};
+  try { const ham = await req.text(); if (ham.length > 20000) return json({ ok: false, hata: 'Çok uzun' }, 413); b = duz ? Object.fromEntries(new URLSearchParams(ham)) : JSON.parse(ham); } catch (x) { return json({ ok: false, hata: 'gecersiz' }, 400); }
+  const geri = okKac(b.geri || req.headers.get('Referer') || ''), sayfa = (baslik, metin) => new Response(`<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${baslik}</title></head><body style="font-family:system-ui,sans-serif;max-width:520px;margin:48px auto;padding:0 16px;line-height:1.5"><h1 style="font-size:22px">${baslik}</h1><p>${metin}</p>${/^https?:\/\//.test(geri) ? `<p><a href="${geri.replace(/"/g, '')}">Siteye dön</a></p>` : ''}</body></html>`, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+  const yanit = (ok, metin, st = 200) => duz ? sayfa(ok ? 'Teşekkürler' : 'Gönderilemedi', metin) : json(ok ? { ok: true } : { ok: false, hata: metin }, ok ? 200 : st);
+  const anahtar = String(b.anahtar || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 40), kurs = anahtar && await env.LINK.get('onkayit:a:' + anahtar);
+  if (!kurs) return yanit(false, 'Form anahtarı geçersiz. Kursa telefonla ulaşın.', 403);
+  if (String(b.web || '').trim()) return yanit(true, 'Bilgileriniz alındı. Kurs sizi arayacak.');   // bot tuzağı
+  const ad = okKac(b.ad).slice(0, 60), tel = okTel(b.tel), kvkk = b.kvkk === true || ['on', 'evet', 'true', '1'].includes(String(b.kvkk).toLowerCase());
+  if (ad.length < 3 || !tel) return yanit(false, 'Ad soyad ve cep telefonu gerekli.', 400);
+  if (!kvkk) return yanit(false, 'Kişisel verilerin işlenmesine onay vermeden ön kayıt alınamaz.', 400);
+  const ip = req.headers.get('CF-Connecting-IP') || 'yok', sa = 'onkayit:ip:' + kurs + ':' + ip + ':' + new Date().toISOString().slice(0, 13), n = +((await env.LINK.get(sa)) || 0);
+  if (n >= 10) return yanit(false, 'Çok fazla deneme; biraz sonra tekrar deneyin.', 429);
+  await env.LINK.put(sa, String(n + 1), { expirationTtl: 3700 });
+  const q = 'onkayit:q:' + kurs; let l = []; try { l = JSON.parse((await env.LINK.get(q)) || '[]'); } catch (x) { }
+  const x = { id: 'w' + Date.now().toString(36) + crypto.randomUUID().slice(0, 6), zaman: new Date().toISOString(), ad, tel, sinif: okKac(b.sinif).slice(0, 12), mesaj: okKac(b.mesaj).slice(0, 600), kvkk: true, kaynak: okKac(b.kaynak || 'Web sitesi').slice(0, 40) };
+  l.push(x); if (l.length > 200) l = l.slice(-200); await env.LINK.put(q, JSON.stringify(l), { expirationTtl: OK_TTL });
+  // e-posta bildirimi (varsa): adın yalnız ilk harfi, telefon yok (e-posta kişi verisi taşımasın; ayrıntı uygulamada)
+  try { const S = epSaglayici(env), kime = (await epAdresler(env, kurs)).filter(y => y.onay && y.tur !== 'kullanici').map(y => y.a);
+    if (S && kime.length) { const s2 = await epSay(env, kurs); if (s2.n < (+env.EPOSTA_GUNLUK_SINIR || 12)) { await S.gonder({ kime, konu: 'Web sitesinden yeni ön kayıt', html: epKabuk('Yeni ön kayıt', `<p style="margin:0 0 12px;font-size:16px">Web sitenizdeki formdan ${epKacis(ad.charAt(0))}. adlı bir aday ön kayıt bıraktı${x.sinif ? ' (' + epKacis(x.sinif) + ' sınıfı)' : ''}.</p><p style="margin:0;font-size:15px">Ayrıntılar mdSinyal’de Yeni öğrenciler’de.</p>`, '', 'Yeni ön kayıt'), metin: 'Web sitenizden yeni ön kayıt geldi. Ayrıntılar mdSinyal’de Yeni öğrenciler’de.' }); await epSayYaz(env, s2); } } } catch (e) { console.error(e); }
+  return yanit(true, 'Bilgileriniz alındı. Kurs en kısa sürede sizi arayacak.');
+}
+async function onKayitYonet(req, env, url, yol, cevap) {
+  if (!env.LINK) return cevap({ ok: false, hata: 'Depo yok' }, 500);
+  const kurs = req.headers.get('X-Kurs') || url.searchParams.get('kurs') || '', rol = await uyeRol(req, kurs);
+  if (!rol || !['mudur', 'sekreter'].includes(rol)) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
+  const ka = 'onkayit:k:' + kurs, q = 'onkayit:q:' + kurs;
+  if (yol === 'onkayit/anahtar' && req.method === 'GET') return cevap({ ok: true, anahtar: (await env.LINK.get(ka)) || '' });
+  if (yol === 'onkayit/anahtar' && req.method === 'POST') {
+    if (rol !== 'mudur') return cevap({ ok: false, hata: 'Yalnız kurs müdürü' }, 403);
+    const eski = await env.LINK.get(ka); if (eski) await env.LINK.delete('onkayit:a:' + eski);
+    const yeni = Array.from(crypto.getRandomValues(new Uint8Array(15)), x => 'abcdefghjkmnpqrstuvwxyz23456789'[x % 31]).join('');
+    await env.LINK.put(ka, yeni); await env.LINK.put('onkayit:a:' + yeni, kurs); return cevap({ ok: true, anahtar: yeni });
+  }
+  if (yol === 'onkayit/bekleyen' && req.method === 'GET') { let l = []; try { l = JSON.parse((await env.LINK.get(q)) || '[]'); } catch (x) { } return cevap({ ok: true, liste: l }); }
+  if (yol === 'onkayit/alindi' && req.method === 'POST') { let b = {}; try { b = await req.json(); } catch (x) { } const ids = new Set(Array.isArray(b.idler) ? b.idler.map(String) : []);
+    let l = []; try { l = JSON.parse((await env.LINK.get(q)) || '[]'); } catch (x) { } const kalan = l.filter(x => !ids.has(x.id));
+    if (kalan.length) await env.LINK.put(q, JSON.stringify(kalan), { expirationTtl: OK_TTL }); else await env.LINK.delete(q); return cevap({ ok: true, kalan: kalan.length }); }
+  return cevap({ ok: false }, 404);
+}
 // ---- MSJ-025: SMS yedeği (Netgsm) ----
 // Kursun kendi Netgsm hesabı: kullanıcı kodu, şifre ve onaylı başlık sunucuda 'sms:<kurs>' anahtarında (istemciye geri dönmez). WhatsApp'ı olmayan
 // numaraya ya da şablonla da gidemeyen mesaja yedek. Netgsm 'send/get' API: cevap '00 <id>' (01, 02 de başarı); hata kodları Türkçeye çevrilir.
@@ -1299,6 +1352,7 @@ export default {
   async scheduled(olay, env, ctx) { ctx.waitUntil(hatSaglik(env).catch(x => console.error(JSON.stringify({ tur: 'hata', konu: 'hat sağlığı', hata: String((x && x.message) || x).slice(0, 200) })))); ctx.waitUntil(mvTakip(env).then(() => (new Date().getUTCDay() === 1 ? mvBulten(env) : null)).catch(x => console.error(JSON.stringify({ tur: 'hata', konu: 'mevzuat takip', hata: String((x && x.message) || x).slice(0, 200) })))); },
   async fetch(req, env) {
     const url = new URL(req.url), origin = req.headers.get('Origin') || '';
+    if (url.pathname.replace(/\/+$/, '') === '/onkayit') return onKayitAl(req, env, url);   // DIG-035: kursun kendi sitesindeki form, girişsiz
     if (url.hostname === 'mdsinyal.com' && req.method === 'GET' && /^\/[dihDIH]\/[A-Za-z0-9_-]/.test(url.pathname)) return onizleme(req, url);
     const cors = { 'Access-Control-Allow-Origin': IZINLI.includes(origin) ? origin : IZINLI[0], 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Kurs, X-Yedek, X-Sikistirma', 'Access-Control-Expose-Headers': 'X-Sikistirma', 'Vary': 'Origin' };
     const cevap = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
@@ -1320,6 +1374,7 @@ export default {
     // kursun rapor ve yedek e-postaları (kimlik denetimi eposta() içinde)
     if (yol === 'eposta' || yol.startsWith('eposta/')) return eposta(req, env, url, yol, cevap);
     if (yol === 'sms' || yol === 'sms/hat') return sms(req, env, url, yol, cevap);   // MSJ-025
+    if (yol.startsWith('onkayit/')) return onKayitYonet(req, env, url, yol, cevap);   // DIG-035 (kurs tarafı)
     const G = 'https://graph.facebook.com/v25.0/' + env.PHONE_ID;
     // Gerçek kurs isteği: Firebase oturumu + kurs kimliği (yoksa demo yolu)
     // ortak derlem eklemeleri: okuma herkese açık, yazma platform sahibi (kurs üyeliği aranmaz)

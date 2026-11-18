@@ -2,7 +2,7 @@
 // kurslar/{kurs}/v altında parça parça durur. Her kayıt ayrı alan olarak yazılır: iki kişi aynı anda
 // farklı kayıtları değiştirirse ikisi de korunur. Fotoğraf ve imzalar kurslar/{kurs}/dosyalar'da ayrı belge.
 import { FIREBASE, EMU, emuBagla } from './firebase-ayar.js?v=234';
-import { kuralAyar, S, bulutVeri, bosVeri, kaydetDinle, kaydet, oturum, bulutKanca, makbuzSira, islem, iso, EVRAKLAR, gun, fark, tamAd, iptalEdilebilir, dersIptalIz, geceKisitli, geceDersMi, gerekliDireksiyon } from './veri.js?v=234';
+import { SINIFLAR, kuralAyar, S, bulutVeri, bosVeri, kaydetDinle, kaydet, oturum, bulutKanca, makbuzSira, islem, iso, EVRAKLAR, gun, fark, tamAd, iptalEdilebilir, dersIptalIz, geceKisitli, geceDersMi, gerekliDireksiyon } from './veri.js?v=234';
 
 const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
 const YEREL = 'sinyal-bulut';
@@ -609,6 +609,23 @@ export async function smsHat(govde) {
 export async function smsGonder(tel, metin) {
   try { const r = await fetch(WORKER + '/sms', { method: 'POST', headers: await kursBasligi(), body: JSON.stringify({ tel, metin }) }); const j = await r.json().catch(() => ({})); return r.ok && j.ok ? j : { ok: false, hata: j.hata || 'SMS gönderilemedi' }; }
   catch (x) { return { ok: false, hata: 'SMS servisine ulaşılamadı' }; }
+}
+// DIG-035: kursun web sitesindeki ön kayıt formu — anahtar (müdür üretir) ve bekleyen ön kayıtları alma
+export async function onKayitAnahtar(yeni = false) {
+  const r = await fetch(WORKER + '/onkayit/anahtar', yeni ? { method: 'POST', headers: await kursBasligi(), body: '{}' } : { headers: await kursBasligi() });
+  const j = await r.json().catch(() => ({})); if (!r.ok || !j.ok) throw new Error(j.hata || 'Ön kayıt servisine ulaşılamadı'); return j.anahtar || '';
+}
+let onKayitSon = 0;
+export async function onKayitlariAl() {
+  if (!bulut.kurs || !['mudur', 'sekreter'].includes(bulut.rol) || Date.now() - onKayitSon < 60e3) return 0; onKayitSon = Date.now();
+  try {
+    const r = await fetch(WORKER + '/onkayit/bekleyen', { headers: await kursBasligi() }), j = await r.json().catch(() => ({})); if (!r.ok || !j.ok || !(j.liste || []).length) return 0;
+    const var_ = new Set((S.adaylar || []).map(a => a.onKayit).filter(Boolean)), yeni = j.liste.filter(x => !var_.has(x.id));
+    yeni.forEach(x => { const t = new Date(x.zaman); S.adaylar.unshift({ id: 'l' + Date.now().toString(36) + x.id.slice(-4), onKayit: x.id, ad: x.ad, tel: x.tel, kaynak: 'Web sitesi', kanal: 'Web formu', sinif: SINIFLAR[x.sinif] ? x.sinif : 'B', asama: 'Yeni', tarih: iso(t), saat: t.toTimeString().slice(0, 5), takip: null, not: '', kvkk: { tarih: iso(t), kaynak: 'web formu' }, mesajlar: [{ kim: 'aday', metin: x.mesaj || 'Web sitesinden ön kayıt bıraktı.' }] }); });
+    if (yeni.length) { islem('Web sitesinden ön kayıt aldı', yeni.length + ' kişi'); kaydet(); }
+    await fetch(WORKER + '/onkayit/alindi', { method: 'POST', headers: await kursBasligi(), body: JSON.stringify({ idler: j.liste.map(x => x.id) }) });
+    return yeni.length;
+  } catch (x) { return 0; }
 }
 // Kursa özel kısa link: mdsinyal.com/<ad> kursun kapı ekranını açar (yalnız müdür; ad sunucuda kursa ayrılır)
 export async function kisaAdAyarla(ad, hedef) {

@@ -1095,6 +1095,25 @@ async function anonimlestir(k) {
     S.devredilen = (S.devredilen || []).filter(m => m.ad !== ad);
   }
 }
+// DIG-035: kursun kendi web sitesine konacak ön kayıt formu; gelenler Yeni öğrenciler'e düşer (kurs cihazı açılınca)
+function onKayitKarti() {
+  const bulutta = !!(oturum.kullanici && oturum.kullanici.bulut);
+  return `<div class="kart" style="margin-top:16px"><div class="kart-bas"><h3>Web sitesi ön kayıt formu</h3><small>Sitenize konan form, adayı doğrudan Yeni öğrenciler’e yazar</small></div><div class="kart-govde" style="display:grid;gap:12px" data-ok-alan>
+    ${bulutta ? `<p style="font-size:14px;margin:0">Form bir anahtarla çalışır. Anahtarı yenilerseniz eski form çalışmaz; sitedeki kodu yenisiyle değiştirin. Gelen ön kayıt bu ekranlardan biri açılınca alınır ve Bugün listesinde “yeni öğrenci cevap bekliyor” olarak görünür; e-posta adresi kayıtlıysa kısa bildirim gider.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">${mudurMu() ? '<button type="button" class="dg dg-ana dg-kucuk" data-ok-anahtar>Anahtarı göster ya da oluştur</button>' : '<span style="color:var(--soluk);font-size:14px">Anahtarı kurs müdürü oluşturur.</span>'}</div><div data-ok-kod></div>`
+    : `<p class="ipucu" style="margin:0">${isaret('bilgi', 18)}<span>Bu özellik kurs hesabıyla açılır (demo hesapta çalışmaz). Kurs müdürü bir anahtar oluşturur; mdSinyal sitenize yapıştırılacak hazır form kodunu verir. KVKK onay kutusu formda zorunludur.</span></p>`}
+  </div></div>`;
+}
+const onKayitKodu = a => `<form action="https://api.mdsinyal.com/onkayit" method="post" style="display:grid;gap:8px;max-width:420px;font-family:inherit">
+  <input type="hidden" name="anahtar" value="${a}">
+  <input name="ad" required minlength="3" placeholder="Adınız soyadınız">
+  <input name="tel" required inputmode="tel" placeholder="Cep telefonunuz (05xx xxx xx xx)">
+  <select name="sinif"><option value="B">B sınıfı (otomobil)</option><option value="A2">A2 (motosiklet)</option><option value="A">A</option><option value="C">C (kamyon)</option><option value="D">D (otobüs)</option></select>
+  <textarea name="mesaj" rows="3" placeholder="Sormak istediğiniz (isteğe bağlı)"></textarea>
+  <input name="web" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true">
+  <label><input type="checkbox" name="kvkk" required> Kişisel verilerimin ön kayıt ve iletişim amacıyla işlenmesine onay veriyorum.</label>
+  <button type="submit">Ön kayıt bırak</button>
+</form>`;
 // DIR-035/037: direksiyon ders saatleri (plan ızgarası, otomatik plan, öğrencinin kendi dersini alması) ve otomatik plan ayarları; değişince hemen kaydedilir
 function dersSaatKarti() {
   const o = { ...DERS_SAAT_VARSAYILAN, ...(S.kurs.dersSaat || {}) }, A = planAyar(), mud = mudurMu(), dis = mud ? '' : ' disabled';
@@ -1169,6 +1188,7 @@ export function ayarlar(alt) {
       <div class="alan"><label>Öğrenci indirimi (₺)</label><input name="oin" inputmode="numeric" value="${((S.kurs.indirimler || [])[0] || {}).tutar || 0}"${tabanL ? ' disabled title="İl taban fiyat listesi notu 6"' : ''}>${tabanL ? `<small style="color:var(--kirmizi)">${e(listeAdi(tabanL))}, not 6–7: hiçbir ad altında indirim kampanyası düzenlenemez; ücret taban ücretin altına indirilemez.</small>` : ''}</div>
       <div class="tam"><button class="dg dg-ana" type="submit">Değişiklikleri kaydet</button></div></form></div></div>
     ${dersSaatKarti()}
+    ${onKayitKarti()}
     ${mudurMu() && (!S._bulut || S.kurs.sunumAcik) ? `<div class="kart" style="margin-top:16px"><div class="kart-govde" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">${isaret('bilgi', 26)}<div style="flex:1;min-width:240px"><b style="color:var(--murekkep)">Sunum verisi</b><p style="font-size:14px;margin-top:2px">Öğrencinize (Servet Sakar) öğretmenini (Ahmet) atar; geçmiş puanlı dersler, bugün ve sonraki günlerde planlı dersler, ödeme planı ve uygulama sınavı tarihi ekler. Öğretmen, öğrenci ve müdür ekranları dolu görünür. Mesaj gönderilmez; tek dokunuşla kaldırılır.</p></div>${S.dersler.some(d => d.sunum) ? '<button type="button" class="dg dg-cizgi" data-sunum-kaldir>Sunum verisini kaldır</button>' : '<button type="button" class="dg dg-ana" data-sunum-ekle>Sunum verisi ekle</button>'}</div></div>` : ''}`;
   if (durum.ayar === 'ogrenciapp') govde = `<p class="ekran-notu">${isaret('bilgi', 20)}<span>Öğrencilerin telefonundaki uygulamada hangi çalışma araçlarının görüneceğini seçin. Ders programı, dersler, ödemeler, belgeler, soru bankası ve deneme sınavı her zaman açıktır.</span></p>
     <div class="kart"><ul class="liste">${OGR_OZELLIK.map(([k, ad]) => `<li><label style="display:flex;gap:12px;align-items:center;width:100%;cursor:pointer"><span class="anahtar"><input type="checkbox" data-ogr-oz="${k}" ${((S.kurs.ogrOzellik || {})[k] ?? (k !== 'dersOnay')) ? 'checked' : ''} aria-label="${e(ad)}"><i></i></span><span style="flex:1;color:var(--murekkep)">${e(ad)}</span></label>${(S.kurs.plus || {}).acik ? `<label style="display:flex;gap:6px;align-items:center;font-size:13px;color:var(--soluk);flex:none"><input type="checkbox" data-plus-oz="${k}" ${((S.kurs.plus || {}).ozellikler || []).includes(k) ? 'checked' : ''}>Plus’ta</label>` : ''}</li>`).join('')}</ul></div>
@@ -1246,6 +1266,12 @@ export function ayarlar(alt) {
           if (sm) { const v = +SINIF_VARSAYILAN[k].direksiyon; S.kurs.siniflar = S.kurs.siniflar || {}; sinifKaydet(k, { direksiyon: v }); islem('Sınıf direksiyon saatini mevzuat değerine döndürdü', k + ' · ' + v); bildir(`${k} sınıfı ${v} saat (mevzuat)`); }
           else { S.kurs.sinifFarkOnay = { ...(S.kurs.sinifFarkOnay || {}), [k]: SINIFLAR[k].direksiyon + '/' + SINIF_VARSAYILAN[k].direksiyon }; islem('Sınıf direksiyon saatini onayladı (mevzuattan farklı)', k + ' · ' + SINIFLAR[k].direksiyon); bildir('Onaylandı; sizin ya da mevzuatın değeri değişirse yeniden sorulur'); }
           kaydet(); return yenile(); } }
+        { const oa = ev.target.closest('[data-ok-anahtar], [data-ok-yenile]'); if (oa) {    // DIG-035
+          if (oa.matches('[data-ok-yenile]') && !confirm('Anahtar yenilensin mi? Sitedeki eski form çalışmaz; yeni kodu sitenize koymanız gerekir.')) return;
+          oa.disabled = true; BL.onKayitAnahtar(oa.matches('[data-ok-yenile]')).then(async a => { if (!a) a = await BL.onKayitAnahtar(true); const kod = onKayitKodu(a), y = k.querySelector('[data-ok-kod]');
+            y.innerHTML = `<label style="font-size:13.5px;font-weight:700;color:var(--murekkep)">Sitenize yapıştırılacak kod</label><textarea class="girdi" rows="9" readonly style="font:12.5px/1.45 var(--mono);width:100%" data-ok-metin>${e(kod)}</textarea><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" class="dg dg-cizgi dg-kucuk" data-ok-kopyala>Kodu kopyala</button><button type="button" class="dg dg-hafif dg-kucuk" data-ok-yenile>Anahtarı yenile</button></div>`;
+            islem(oa.matches('[data-ok-yenile]') ? 'Ön kayıt formu anahtarını yeniledi' : 'Ön kayıt formu kodunu aldı', ''); }).catch(x => bildir(x.message, 'uyari')).finally(() => { oa.disabled = false; }); return; }
+          if (ev.target.closest('[data-ok-kopyala]')) { const t = k.querySelector('[data-ok-metin]'); navigator.clipboard.writeText(t.value).then(() => bildir('Kod kopyalandı; sitenizin ön kayıt sayfasına yapıştırın'), () => { t.select(); bildir('Kod seçildi; kopyalayın', 'uyari'); }); return; } }
         if (ev.target.closest('[data-taban-uygula]')) { if (!mudurMu()) return bildir('Ücretleri yalnız müdür değiştirir', 'uyari'); geriAlNoktasi(); const n = tabanUcretleriYaz(false); islem('Taban altındaki ücretleri tabana yükseltti', n + ' ücret'); kaydet(); bildir(n ? n + ' ücret tabana yükseltildi' : 'Tabanın altında ücret yok'); return yenile(); }
         if (ev.target.closest('[data-diger-ekle]')) { if (!mudurMu()) return bildir('Ücretleri yalnız müdür değiştirir', 'uyari'); S.kurs.digerUcretler = [...digerUcretler(), { id: 'u' + Date.now().toString(36), ad: digerUcretler().length ? 'YENİ KALEM' : 'KİTAP', tutar: 0 }]; kaydet(); yenile(); return; }
         const sl = ev.target.closest('[data-diger-sil]'); if (sl) { if (!mudurMu()) return bildir('Ücretleri yalnız müdür değiştirir', 'uyari'); S.kurs.digerUcretler = digerUcretler().filter(x => x.id !== sl.dataset.digerSil); islem('Ücret kalemini sildi'); kaydet(); yenile(); }

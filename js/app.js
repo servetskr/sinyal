@@ -233,6 +233,7 @@ export function yenile(kaydirma = false) {
   kap.innerHTML = s.html;
   yer.replaceChildren(kap);
   if (s.baglan) { try { s.baglan(kap); } catch (x) { console.error(x); } }
+  if (r.ad === 'genel' || r.ad === 'adaylar') B.onKayitlariAl().then(n => { if (n) { bildir(`Web sitesinden ${n} ön kayıt geldi; Yeni öğrenciler’de`); if (location.hash.startsWith('#/adaylar')) yenile(); } });   // DIG-035
   if (r.ad === 'genel') { GU.anaEkranaEkle(kap); duyuruAlani(kap); }  // kurulu sürüm, “Güncellemeleri denetle”, yeni sürüm kartı; DIG-040 duyurular
   kap.querySelectorAll('.sekmeler').forEach(sk => { const sec = sk.querySelector('.secili'); if (sec && sk.scrollWidth > sk.clientWidth) sk.scrollLeft = Math.max(0, sec.offsetLeft - sk.offsetLeft - 24); });
   const menuAd = r.ad === 'kursiyer' ? 'kursiyerler' : r.ad;
