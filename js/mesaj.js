@@ -124,7 +124,7 @@ async function gonder(c) {
     const r = c.kisiler[i];
     if (sinirli && i >= DEMO_SINIR) { c.sonuc.push({ ad: r.ad, rol: r.rol, durum: 'demo sınırı' }); continue; }
     const ek = EKLER[c.id] || c.ekVeri;
-    const s = await apiGonder(etiket(r.ad, r.rol) + r.metin, ek ? { base64: ek.base64, dosya: ek.dosya, tur: ek.tur } : undefined, undefined, r);
+    const s = await apiGonder(etiket(r.ad, r.rol) + r.metin, ek ? { base64: ek.base64, dosya: ek.dosya, tur: ek.tur } : undefined, undefined, r, c.tanitim ? { kategori: 'pazarlama' } : {});   // MSJ-023: tanıtım → pazarlama şablonu
     c.sonuc.push({ ad: r.ad, rol: r.rol, id: s.id || null, durum: s.ok ? 'gönderildi' : 'hata: ' + s.hata });
     if (!s.ok && /24 saat|ulaşılamadı/.test(s.hata || '')) { bildir(s.hata, 'uyari'); break; }
     await new Promise(z => setTimeout(z, 300));
@@ -237,7 +237,7 @@ function gonderTikla(yenile, not6Tamam = false) {
   }
   const kisilerL = sec.map(r => ({ ad: r.ad, tel: r.tel, rol: r.rol, metin: sonMetin(kisiyeOzel(m, r)) }));
   const baslik = durum.sablon || (GRUPLAR.find(g => g[0] === durum.grup) || [0, 'Mesaj'])[1];
-  const c = { id: 'm' + Date.now(), tarih: gun(0), baslik, sablon: sonMetin(m), grup: durum.grup, kisiler: kisilerL, durum: 'hazır', cevapIste: durum.cevapIste, ekAd: durum.ek ? durum.ek.dosya : null };
+  const c = { id: 'm' + Date.now(), tarih: gun(0), baslik, sablon: sonMetin(m), grup: durum.grup, kisiler: kisilerL, durum: 'hazır', cevapIste: durum.cevapIste, ekAd: durum.ek ? durum.ek.dosya : null, ...(durum.tanitim ? { tanitim: true } : {}) };
   if (durum.ek) EKLER[c.id] = durum.ek;
   S.kampanyalar = S.kampanyalar || [];
   if (durum.zaman === 'plan') {

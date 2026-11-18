@@ -1034,6 +1034,7 @@ function hatBaglaPenceresi() {
         ${alan('token', 'Kalıcı erişim anahtarı (System user token)', 'type="password" autocomplete="off" placeholder="EAAG…"')}
         ${alan('wabaId', 'WhatsApp Business hesap kimliği (WABA ID)', 'inputmode="numeric" placeholder="1029384756…"', 'Öğrencilerin yazdıkları mdSinyal’e bu kimlikle gelir')}
         ${alan('sablon', 'Onaylı mesaj şablonunun adı <small style="font-weight:400">önerilir</small>', 'autocomplete="off" placeholder="sinyal_bildirim"', 'Son 24 saatte size yazmamış kişiye (hatırlatma, gün sonu özeti) mesaj yalnız şablonla gider')}
+        ${alan('sablonPazarlama', 'Pazarlama şablonunun adı <small style="font-weight:400">isteğe bağlı</small>', 'autocomplete="off" placeholder="sinyal_kampanya"', 'Tanıtım (kampanya) mesajları için Meta’da “Pazarlama” sınıfında onaylı ayrı şablon; boşsa yukarıdaki kullanılır')}
         ${alan('appSecret', 'Uygulama gizli anahtarı (App secret) <small style="font-weight:400">önerilir</small>', 'type="password" autocomplete="off" placeholder="32 karakter"', 'Meta › Uygulama ayarları › Temel. Gelen mesajların gerçekten Meta’dan geldiği bununla doğrulanır')}
         <div class="alan tam" data-pin-alan hidden><label>İki adımlı doğrulama PIN’i (6 hane)</label><input name="pin" inputmode="numeric" maxlength="6" autocomplete="off"><small style="color:var(--soluk)">Numara Cloud API’ye ilk kez kaydediliyor. Yeni numarada PIN’i siz belirlersiniz; bir yere not edin.</small></div>
       </div>
@@ -1042,7 +1043,7 @@ function hatBaglaPenceresi() {
     onAc(d) {
       d.querySelector('[data-hat-kaydet]').addEventListener('click', ev => {
         const v = ad => (d.querySelector(`[name=${ad}]`) || {}).value.trim();
-        const govde = { phoneId: v('phoneId'), token: v('token'), wabaId: v('wabaId'), sablon: v('sablon'), appSecret: v('appSecret'), pin: v('pin') };
+        const govde = { phoneId: v('phoneId'), token: v('token'), wabaId: v('wabaId'), sablon: v('sablon'), sablonPazarlama: v('sablonPazarlama'), appSecret: v('appSecret'), pin: v('pin') };
         if (!govde.phoneId || !govde.token) return bildir('Telefon numarası kimliği ve erişim anahtarı gerekli', 'uyari');
         ev.target.disabled = true; ev.target.textContent = 'Doğrulanıyor…';
         import('./bulut.js?v=234').then(B => B.waHat(govde).then(j => {

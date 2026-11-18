@@ -1328,12 +1328,14 @@ export default {
     if (yol === 'hat') {
       if (!gercek) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
       const h = await kursHat(env, kursId);
-      if (req.method === 'GET') return cevap({ ok: true, bagli: !!h, no: h ? h.no : '', ad: h ? h.ad : '', sablon: (h && h.sablon) || '', gizli: !!(h && h.appSecret), ...(h && h.dog && rol === 'mudur' ? { webhook: { adres: new URL(req.url).origin + '/webhook', belirtec: h.dog } } : {}) });
+      if (req.method === 'GET') return cevap({ ok: true, bagli: !!h, no: h ? h.no : '', ad: h ? h.ad : '', sablon: (h && h.sablon) || '', sablonPazarlama: (h && h.sablonPazarlama) || '', gizli: !!(h && h.appSecret), ...(h && h.dog && rol === 'mudur' ? { webhook: { adres: new URL(req.url).origin + '/webhook', belirtec: h.dog } } : {}) });
       if (rol !== 'mudur') return cevap({ ok: false, hata: 'Hattı yalnız kurs müdürü bağlar' }, 403);
       let b; try { b = await req.json(); } catch (x) { return cevap({ ok: false, hata: 'Gecersiz istek' }, 400); }
       if (b.sil) { if (h) { await env.LINK.delete('hatno:' + h.phoneId); if (h.dog) await env.LINK.delete('hatdog:' + h.dog); } await env.LINK.delete('hat:' + kursId); return cevap({ ok: true, bagli: false }); }
       const phoneId = rakam(b.phoneId), token = String(b.token || '').trim(), wabaId = rakam(b.wabaId), appSecret = String(b.appSecret || '').trim(), pin = rakam(b.pin);
       const sablon = String(b.sablon || '').trim().toLowerCase(), sablonDil = String(b.sablonDil || 'tr').trim() || 'tr';
+      // MSJ-023: pazarlama (tanıtım) mesajları için ayrı onaylı şablon (isteğe bağlı); yoksa genel şablon kullanılır
+      const sablonPaz = String(b.sablonPazarlama || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
       if (sablon && !/^[a-z0-9_]{1,512}$/.test(sablon)) return cevap({ ok: false, hata: 'Şablon adı yalnız küçük harf, rakam ve alt çizgi içerebilir' }, 400);
       if (appSecret && !/^[0-9a-f]{32}$/i.test(appSecret)) return cevap({ ok: false, hata: 'Uygulama gizli anahtarı 32 karakter olmalı (Meta › Uygulama ayarları › Temel)' }, 400);
       if (!phoneId || token.length < 20) return cevap({ ok: false, hata: 'Telefon numarası kimliği ve erişim anahtarı gerekli' }, 400);
@@ -1371,7 +1373,7 @@ export default {
       if (h && h.phoneId !== phoneId) await env.LINK.delete('hatno:' + h.phoneId);
       // kursa özel webhook doğrulama belirteci (kursun kendi Meta uygulamasında girilir; ortak belirteç paylaşılmaz)
       const dog = (h && h.dog) || [...crypto.getRandomValues(new Uint8Array(12))].map(x => x.toString(16).padStart(2, '0')).join('');
-      const kayit = { phoneId, token, no: j.display_phone_number || '', ad: j.verified_name || '', dog, ...(wabaId ? { wabaId } : {}), ...(sablon ? { sablon, sablonDil } : {}), ...(appSecret ? { appSecret } : h && h.appSecret ? { appSecret: h.appSecret } : {}) };
+      const kayit = { phoneId, token, no: j.display_phone_number || '', ad: j.verified_name || '', dog, ...(wabaId ? { wabaId } : {}), ...(sablon ? { sablon, sablonDil } : {}), ...(sablonPaz ? { sablonPazarlama: sablonPaz } : {}), ...(appSecret ? { appSecret } : h && h.appSecret ? { appSecret: h.appSecret } : {}) };
       await env.LINK.put('hat:' + kursId, JSON.stringify(kayit));
       await env.LINK.put('hatno:' + phoneId, kursId);
       if (!h || h.dog !== dog) await env.LINK.put('hatdog:' + dog, kursId);
@@ -1535,8 +1537,10 @@ export default {
       phoneId = h.phoneId; token = h.token;
     }
     // şablonu tanımlı kursta, kişi son 24 saatte yazmadıysa serbest metin denenmez (Meta sonradan 131047 ile düşürür): doğrudan şablon
-    if (gercek && h.sablon && !(b.belge && b.belge.base64) && env.LINK && !(await pencereAcik(env, kursId, to))) {
-      const rs = await fetch('https://graph.facebook.com/v25.0/' + phoneId + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(sablonGovde(to, h.sablon, h.sablonDil, metin)) });
+    // MSJ-023: mesaj türüne göre şablon (kategori 'pazarlama' → kursun pazarlama şablonu, yoksa genel şablon)
+    const kSablon = h && (b.kategori === 'pazarlama' && h.sablonPazarlama ? h.sablonPazarlama : h.sablon);
+    if (gercek && kSablon && !(b.belge && b.belge.base64) && env.LINK && !(await pencereAcik(env, kursId, to))) {
+      const rs = await fetch('https://graph.facebook.com/v25.0/' + phoneId + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(sablonGovde(to, kSablon, h.sablonDil, metin)) });
       const js = await rs.json().catch(() => ({}));
       if (rs.ok) return cevap({ ok: true, id: js.messages && js.messages[0] && js.messages[0].id, sablon: true });
       return cevap({ ok: false, kod: js.error && js.error.code, hata: 'Şablonla gönderilemedi: ' + ((js.error && js.error.message) || 'Meta hatasi') }, 502);
@@ -1546,7 +1550,7 @@ export default {
     const r = await fetch('https://graph.facebook.com/v25.0/' + phoneId + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(g.govde) });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) {
-      const kod = j.error && j.error.code, sablon = (h && h.sablon) || env.SABLON_AD;
+      const kod = j.error && j.error.code, sablon = kSablon || env.SABLON_AD;
       // 24 saat penceresi kapalı: onaylı şablonla tekrar (yalnız metin mesajı; şablon değişkeni satır sonu içeremez)
       if (kod === 131047 && sablon && !(b.belge && b.belge.base64)) {
         const r2 = await fetch('https://graph.facebook.com/v25.0/' + phoneId + '/messages', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(sablonGovde(to, sablon, (h && h.sablonDil) || env.SABLON_DIL, metin)) });
