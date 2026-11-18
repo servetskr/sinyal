@@ -343,6 +343,9 @@ const gunUzun = t => { const d = tarihOku(t); return d.getDate() + ' ' + AY[d.ge
 export const SINAV_UYGUNLUK_TEYIT = 'Derslerin MEBBİS’e son giriş gününe kadar bitmesi Haller kursunun düzeni; yönetmelikte açıkça yazmıyor.';
 // dersleri db tarihinde biten aday için kural gereği en erken sınav günü (takvimde oturum yoksa varsayım: Cumartesi)
 export function enErkenSinavGunu(db, N = kuralAyar('sinavBildirimIsGunu')) {
+  // SNV-041: kurs uygulama sınavı günlerini tanımladıysa yalnız onlar; yoksa Cumartesi
+  const tanimli = ((S.kurs && S.kurs.sinavGunleri) || []).filter(t => t >= gun(1)).sort();
+  if (tanimli.length) return tanimli.find(t => mebIsGunuGeri(t, N) >= db) || null;
   let d = gun(1); for (let i = 0; i < 120; i++) { const t = gunEkle(d, i); if (tarihOku(t).getDay() === 6 && mebIsGunuGeri(t, N) >= db) return t; } return null;
 }
 export function sinavaUygunluk(k, s) {

@@ -3,6 +3,7 @@ import { ilSecenekleri, ekranDuzey, ekranYetkili, kullaniciSubesi, S, tamAd, gec
 import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=234';
 import * as Y1 from './sayfalar1.js?v=234';
 import * as Y2 from './sayfalar2.js?v=234';
+import * as SG from './sinavgunu.js?v=234';
 import * as P from './portal.js?v=234';
 import * as OXU from './ogr/ui.js?v=234';
 import * as Y3 from './sayfalar3.js?v=234';
@@ -85,7 +86,7 @@ const SAYFALAR = {
   egitmen: P.egitmenPortal, ogrenci: P.ogrenciPortal,
   belgeler: Y3.belgeler, kayit: Y3.kayitSayfasi, guven: Y3.guven, mebbis: Y3.mebbisAsistani,
   sosyal: Y4.sosyal, kurulum: Y5.kurulum, 'imza-geldi': IM.imzaGeldi, senaryo: SN.senaryolar, karlilik: OZ.karlilik, analiz: AN.analiz,
-  mevzuat: MZ.mevzuat, ilanlar: IL.ilanlar,
+  mevzuat: MZ.mevzuat, ilanlar: IL.ilanlar, sinav: SG.sinavGunu,
 };
 const ROL_AD = { mudur: 'Kurs müdürü', sekreter: 'Ön büro', usta: 'Usta öğretici', ortak: 'Ortak' };
 const YASAK = { mudur: [], sekreter: ['raporlar', 'ayarlar', 'guven', 'kurulum', 'senaryo', 'karlilik', 'analiz'], usta: Object.keys(SAYFALAR).filter(k => !['egitmen', 'imza-geldi'].includes(k)), ortak: Object.keys(SAYFALAR),
@@ -93,7 +94,8 @@ const YASAK = { mudur: [], sekreter: ['raporlar', 'ayarlar', 'guven', 'kurulum',
   teorik: Object.keys(SAYFALAR).filter(k => !['teorik'].includes(k)), muhasebe: Object.keys(SAYFALAR).filter(k => !['kasa'].includes(k)), subemudur: ['ayarlar', 'guven', 'kurulum', 'senaryo'] };
 // rolün ana ekranı
 export const anaSayfa = (u = oturum.kullanici) => !u ? '#/genel' : u.rol === 'usta' ? '#/egitmen' : u.rol === 'teorik' ? '#/teorik' : u.rol === 'muhasebe' ? '#/kasa' : '#/genel';
-const izinli = ad => { const u = oturum.kullanici; return u && !(YASAK[u.gorev === 'subemudur' ? 'subemudur' : u.rol] || Object.keys(SAYFALAR)).includes(ad) && !((u.ziyaretci || u.bulut) && ad === 'senaryo') && ekranYetkili(ad); };  // YON-018: müdürün kapattığı ekran ön büroya görünmez
+const UST_EKRAN = { kursiyer: 'kursiyerler', sinav: 'sinavlar' }, ustEkran = ad => UST_EKRAN[ad] || ad;
+const izinli = ad => { ad = ustEkran(ad); const u = oturum.kullanici; return u && !(YASAK[u.gorev === 'subemudur' ? 'subemudur' : u.rol] || Object.keys(SAYFALAR)).includes(ad) && !((u.ziyaretci || u.bulut) && ad === 'senaryo') && ekranYetkili(ad); };  // YON-018: müdürün kapattığı ekran ön büroya görünmez
 
 // Menü günlük işe göre: önce bugün, sonra öğrenci işleri, para, kurum işleri, analiz; az kullanılanlar en altta
 const MENU = [
@@ -262,7 +264,7 @@ export function yenile(kaydirma = false) {
   kap.className = 'sayfa sayfa-' + r.ad;
   kap.innerHTML = s.html;
   yer.replaceChildren(kap);
-  if (ekranDuzey(r.ad === 'kursiyer' ? 'kursiyerler' : r.ad) === 'gor') saltOkunur(kap);
+  if (ekranDuzey(ustEkran(r.ad)) === 'gor') saltOkunur(kap);
   kurulumSeridi(kap); epostaSeridi(kap);
   // YON-074: onaylanmış numara devirleri (bu kurs eski kurssa) ofis cihazında işlenir; oturum başına ve 10 dakikada bir
   if (!devirBakildi && oturum.kullanici.bulut && ['mudur', 'sekreter'].includes(oturum.kullanici.rol)) { devirBakildi = true; const bak = () => B.devirleriIsle().then(n => { if (n) { bildir(n + ' öğrencinin numarası onayıyla başka kursa devredildi; hesapları kapandı'); yenile(); } }).catch(() => { }); setTimeout(bak, 6000); setInterval(bak, 600000); }
@@ -277,7 +279,7 @@ export function yenile(kaydirma = false) {
   if (r.ad === 'genel' || r.ad === 'adaylar') B.onKayitlariAl().then(n => { if (n) { bildir(`Web sitesinden ${n} ön kayıt geldi; Yeni öğrenciler’de`); if (location.hash.startsWith('#/adaylar')) yenile(); } });   // DIG-035
   if (r.ad === 'genel') { GU.anaEkranaEkle(kap); duyuruAlani(kap); }  // kurulu sürüm, “Güncellemeleri denetle”, yeni sürüm kartı; DIG-040 duyurular
   kap.querySelectorAll('.sekmeler').forEach(sk => { const sec = sk.querySelector('.secili'); if (sec && sk.scrollWidth > sk.clientWidth) sk.scrollLeft = Math.max(0, sec.offsetLeft - sk.offsetLeft - 24); });
-  const menuAd = r.ad === 'kursiyer' ? 'kursiyerler' : r.ad;
+  const menuAd = ustEkran(r.ad);
   document.querySelectorAll('[data-menu]').forEach(a => a.classList.toggle('secili', a.dataset.menu === menuAd));
   const say = sayaclar();
   document.querySelectorAll('.yan [data-menu]').forEach(a => {

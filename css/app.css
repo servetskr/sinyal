@@ -3630,3 +3630,29 @@ body.suzgec-yapiskan .sayfa-kursiyerler .filtre{position:sticky;top:0;z-index:6;
 .hv-oturum span { font-weight: 700; color: var(--murekkep); font-size: 13.5px; }
 .hv-oturum.secili { border-color: var(--levha); box-shadow: inset 0 0 0 1px var(--levha); }
 a.kart.gosterge { text-decoration: none; color: inherit; display: block; }
+
+/* SNV-037..046: Sınav günü */
+.sgn-ust .sgn-baslik { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.sgn-ust .sgn-baslik b { font-size: 22px; color: var(--murekkep); font-weight: 800; }
+.sgn-ust .sgn-baslik span { color: var(--soluk); font-size: 14px; }
+.sgn-ozet { margin: 6px 0 0; font-size: 14.5px; color: var(--murekkep); font-weight: 600; }
+.sgn-dagilim { margin: 2px 0 0; font-size: 13px; color: var(--soluk); }
+.sgn-sureler, .sgn-dugmeler, .sgn-oto { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.sgn-oto { font-size: 13px; color: var(--soluk); align-items: center; }
+.sgn-kom { margin-top: 14px; }
+.sgn-satir { align-items: flex-start; }
+.sgn-tik { cursor: pointer; }
+.sgn-tik:hover, .sgn-tik:focus-visible { background: var(--panel-2); outline: none; }
+.sgn-satir small { display: block; color: var(--soluk); margin-top: 2px; }
+.sgn-saat { align-self: flex-start; flex: none; min-width: 52px; padding: 3px 0; border-radius: 6px; background: var(--murekkep); color: #fff; font: 700 13px/1.4 Overpass, sans-serif; text-align: center; margin-top: 4px; }
+.sgn-saat.elle { background: #b26a00; }
+.sgn-rozet { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.sgn-kalan { margin-top: 14px; }
+.sgn-bag { color: inherit; text-decoration: none; }
+.sgn-bag:hover { text-decoration: underline; }
+.sgn-gun-cipler { display: flex; flex-wrap: wrap; gap: 8px; }
+.sgn-gun-cip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px; border: 1px solid var(--cizgi); border-radius: 999px; font-size: 13.5px; }
+.sgn-gun-cip a { color: var(--murekkep); font-weight: 600; }
+.sgn-gun-ac { border: 0; background: none; color: var(--mavi, #0a4da2); font-size: 12.5px; cursor: pointer; padding: 2px 4px; }
+.sgn-gun-sil { border: 0; background: none; color: var(--soluk); font-size: 17px; line-height: 1; cursor: pointer; padding: 2px 6px; border-radius: 50%; min-width: 28px; min-height: 28px; }
+.sgn-gun-sil:hover { background: var(--cizgi-2); color: var(--kirmizi); }
