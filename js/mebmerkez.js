@@ -93,6 +93,7 @@ export function merkezSekme() {
           ${EK.eklenti.var ? `<button type="button" data-mt-denetle ${subeSorun ? 'disabled' : ''}>${ik('goz')}Ekranları denetle <small>yalnız okunur</small></button>` : ''}
           <button type="button" data-mm-kurulum ${subeSorun ? 'disabled' : ''}>${ik('indir')}Kurulum bilgilerini al <small>kurum, gruplar, personel, araçlar, ücret ilanı, banka hesabı</small></button>
           <button type="button" data-mm-tur="al">${ik('indir')}Tek liste al <small>açık MEBBİS ekranından</small></button>
+          ${(oturum.kullanici || {}).rol === 'mudur' && EK.eklenti.var ? `<button type="button" data-mm-donemsil ${subeSorun ? 'disabled' : ''}>${ik('uyari')}Aday dönem kaydını sil <small>yalnız müdür, tek aday, geri alınamaz</small></button>` : ''}
           <a href="#/meb/asistan">${ik('belge')}Elle giriş <small>Yardımcı’sız sıralı giriş</small></a></div></details></div></div>
 
       ${EK.eklenti.var ? `<label style="display:flex;gap:8px;align-items:center;font-size:13.5px;color:var(--metin);cursor:pointer"><input type="checkbox" data-mm-izle ${MT.izleAcik() ? 'checked' : ''}><span><b style="color:var(--murekkep)">İzle</b> · Yardımcı çalışırken MEBBİS sekmesi öne gelir; doldurduğu her formu ve MEBBİS’in yanıtını orada görürsünüz (Yardımcı 1.17)</span></label>` : ''}
@@ -182,6 +183,7 @@ export function merkezBaglan(k, yenile) {
     { const ua = t.closest('[data-uy-ac]'); if (ua) { UY.ac(ua.dataset.uyAc); return yenile(); } }
     { const uk = t.closest('[data-uy-kapat]'); if (uk) return uyKapatPenceresi(uk.dataset.uyKapat, yenile); }
     if (t.closest('[data-mm-kurulum]')) return MT.topluCek(MT.KURULUM_CEK);   // MEB-188
+    if (t.closest('[data-mm-donemsil]')) return MT.donemSil();   // MEB-184
     if (t.closest('[data-mm-merkez]')) return MT.topluCek(['merkezler']);   // MEB-027
     if (t.closest('[data-mm-guncelle]')) return MT.topluCek(['gruplar', 'kursiyerler', 'dosya', 'personel', 'araclar', 'sinavlar', 'sonuclar', 'merkezler', 'direksiyonProgrami', 'randevular']);
     if (t.closest('[data-mm-hepsini]')) { const ids = butunIsler(true).filter(x => !x.bitti && x.tur !== 'onay').map(x => x.id); MT.yaz(ids).then(r => { if (r) m.secili.clear(); yenile(); }); return; }

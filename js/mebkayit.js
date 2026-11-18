@@ -12,6 +12,7 @@ import * as EK from './eklenti.js?v=234';   // MEB-089: Kur bağlantısı (mağa
 export const MEB_KABUL_SURUM = 'mk-2026-11-2';   // K9: doğrulama cümlesi koddaki gerçeğe uyduruldu   // metin değişince artırılır; kurs yeniden onaylar
 export const SIRA = ['grup', 'kayit', 'evrak', 'onay', 'teorik', 'program', 'esinav', 'randevu', 'fatura'];
 export const TUR_AD = { grup: 'Dönem grubu', kayit: 'Kayıt', evrak: 'Evrak', onay: 'Kurum onayı', teorik: 'Teorik program', program: 'Direksiyon programı', esinav: 'e-Sınav başvurusu', randevu: 'Sınav randevusu', sinav: 'Sınav randevusu', fatura: 'Fatura', odeme: 'Fatura', izin: 'Çalışma izni', ogrenim: 'Öğrenim bilgileri' };
+TUR_AD.dsil = 'Aday dönem kaydı silme';   // MEB-184 (mebtoplu.js donemSil)
 const MEB = 'https://mebbis.meb.gov.tr/SKT/';
 // MEBBİS ekranları (motor.js'teki yollarla aynı)
 export const EKRAN = {
