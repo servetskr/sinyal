@@ -52,14 +52,18 @@ async function uyelikBul(user) {
   if (!p.exists()) return null;
   // demo hesabı (Yönetim › Hesaplar › Hesap oluştur › Demo): hiçbir kursa bağlı değildir, girişte bu cihazdaki demo verisi açılır
   if (p.data().demo === true) return { demo: true, uid: user.uid, ad: user.displayName || 'Demo', eposta: user.email };
-  const kurs = p.data().kurs; if (typeof kurs !== 'string' || !kurs) return null;
-  const u = await F.getDoc(F.doc(db, 'kurslar', kurs, 'uyeler', user.uid));
+  // YON-072: bir hesap birden çok kursta — kullanicilar/{uid} = { kurs (son katılınan), kurslar: [...] }; bu cihazda son seçilen kurs açılır
+  const pd = p.data(), liste = [...new Set([...(Array.isArray(pd.kurslar) ? pd.kurslar : []), pd.kurs].filter(x => typeof x === 'string' && x))];
+  if (!liste.length) return null;
+  let secim = null; try { secim = localStorage.getItem(SECILI + user.uid); } catch (x) { }
+  let kurs = liste.includes(secim) ? secim : pd.kurs, u = await F.getDoc(F.doc(db, 'kurslar', kurs, 'uyeler', user.uid));
+  if (!u.exists()) { for (const k of liste) { if (k === kurs) continue; const y = await F.getDoc(F.doc(db, 'kurslar', k, 'uyeler', user.uid)).catch(() => null); if (y && y.exists()) { kurs = k; u = y; break; } } }
   if (!u.exists()) return null;
   const d = u.data();
   // YON-081: kurs durumu (sahip Yönetim › Kurslar'dan değiştirir): askıda ya da kapalı kursa girilmez; sahibin açtığı kursta ilk veri kurs belgesinden
   let kb = {}; try { const k0 = await F.getDoc(F.doc(db, 'kurslar', kurs)); kb = k0.exists() ? k0.data() : {}; } catch (x) { }
   if (kb.durum === 'askida' || kb.durum === 'kapali') { try { await fb.A.signOut(fb.auth); } catch (x) { } throw hata(kb.durum === 'kapali' ? 'Bu kurs hesabı kapatıldı. Verileriniz için mdSinyal ile görüşün (WhatsApp ' + DESTEK.telGoster + ').' : 'Bu kurs hesabı şu an askıda. mdSinyal ile görüşün (WhatsApp ' + DESTEK.telGoster + ').'); }
-  return { kurs, uid: user.uid, ad: d.ad || user.displayName || user.email, rol: d.rol, usta: d.usta || null, eposta: user.email, ...(kb.ad ? { kursAd: kb.ad, kursSehir: kb.sehir || '', kursIlce: kb.ilce || '', mudurTel: kb.mudurTel || '', subeSayisi: +kb.subeSayisi || 1 } : {}) };
+  return { kurs, kurslar: liste, uid: user.uid, ad: d.ad || user.displayName || user.email, rol: d.rol, usta: d.usta || null, eposta: user.email, ...(kb.ad ? { kursAd: kb.ad, kursSehir: kb.sehir || '', kursIlce: kb.ilce || '', mudurTel: kb.mudurTel || '', subeSayisi: +kb.subeSayisi || 1 } : {}) };
 }
 // kodSor: iki adımlı giriş açıksa doğrulama uygulamasındaki 6 haneli kodu isteyen fonksiyon (Promise<string|null>)
 export async function girisYap(eposta, sifre, kodSor) {
@@ -119,8 +123,7 @@ async function hesapAc(eposta, sifre, ad) {
   try { user = (await A.createUserWithEmailAndPassword(auth, eposta.trim(), sifre)).user; try { await A.sendEmailVerification(user); } catch (z) { } }  // YON-068: açılışta doğrulama e-postası
   catch (x) {
     if (x.code !== 'auth/email-already-in-use') throw x;
-    user = (await A.signInWithEmailAndPassword(auth, eposta.trim(), sifre)).user;
-    if (await uyelikBul(user)) throw hata('Bu e-posta zaten bir kursa bağlı; giriş ekranından girin');
+    user = (await A.signInWithEmailAndPassword(auth, eposta.trim(), sifre)).user;  // YON-072: başka kursta hesabı olan aynı e-postayla bu kursa da katılır
   }
   if (ad) try { await A.updateProfile(user, { displayName: ad }); } catch (x) { }
   return user;
@@ -146,6 +149,9 @@ export async function kursDavetOlustur(not) {
   await F.setDoc(F.doc(db, 'kursDavetleri', kod), { olusturan: auth.currentUser.uid, not: String(not || '').slice(0, 120), tarih: F.serverTimestamp(), son: F.Timestamp.fromDate(son) });
   return { kod, link: kursDavetLinki(kod), son };
 }
+// YON-072: kullanicilar belgesine yeni kursu ekler (eskiler korunur); yeni kurs bu cihazda seçili olur
+const SECILI = 'sinyal-secili-kurs-';
+async function kursListesineEkle(F, db, uid, kurs) { let eski = {}; try { const p = await F.getDoc(F.doc(db, 'kullanicilar', uid)); eski = p.exists() ? p.data() : {}; } catch (x) { } const l = [...new Set([...(Array.isArray(eski.kurslar) ? eski.kurslar : []), ...(eski.kurs ? [eski.kurs] : []), kurs])]; try { localStorage.setItem(SECILI + uid, kurs); } catch (x) { } return { kurs, kurslar: l }; }
 export async function kursAc({ kursAd, yetkili, sehir, eposta, sifre, mudurTel, davetKod, onayMetni }) {
   if (!davetKod || !(await kursDavetGetir(davetKod))) throw hata('Bu hesap açma linki geçersiz ya da süresi dolmuş; mdSinyal ekibinden yeni link isteyin');
   const user = await hesapAc(eposta, sifre, yetkili);
@@ -155,7 +161,7 @@ export async function kursAc({ kursAd, yetkili, sehir, eposta, sifre, mudurTel, 
   b.set(kRef, { ad: kursAd, sahip: user.uid, sehir: sehir || '', olusturma: F.serverTimestamp(), davetKod });
   b.delete(F.doc(db, 'kursDavetleri', davetKod));  // kod tek kullanımlık
   b.set(F.doc(db, 'kurslar', kRef.id, 'uyeler', user.uid), { ad: yetkili, rol: 'mudur', eposta: user.email, katilma: F.serverTimestamp() });
-  b.set(F.doc(db, 'kullanicilar', user.uid), { kurs: kRef.id });
+  b.set(F.doc(db, 'kullanicilar', user.uid), await kursListesineEkle(F, db, user.uid, kRef.id));
   await b.commit();
   // YON-069: hesap açılışındaki onay (kutudaki metin, sürüm, SHA-256 özeti, kim, ne zaman) kurs verisine yazılır
   const veri = bosVeri({ kursAd, yetkili, sehir, mudurTel }), metin = String(onayMetni || '').replace(/\s+/g, ' ').trim();
@@ -194,13 +200,23 @@ export async function davetKabul(kurs, kod, { eposta, sifre, ad, yeni }) {
   if (!dv) throw hata('Bu davetin süresi dolmuş ya da kullanılmış; kurs müdüründen yeni link isteyin');
   const { auth, A, db, F } = fb;
   const user = yeni ? await hesapAc(eposta, sifre, ad) : (await A.signInWithEmailAndPassword(auth, eposta.trim(), sifre)).user;
-  if (!yeni && await uyelikBul(user)) throw hata('Bu hesap zaten bir kursa bağlı');
   const b = F.writeBatch(db);
   b.set(F.doc(db, 'kurslar', kurs, 'uyeler', user.uid), { ad: ad || dv.ad, rol: dv.rol, usta: dv.usta || null, eposta: user.email, davet: kod, katilma: F.serverTimestamp() });
-  b.set(F.doc(db, 'kullanicilar', user.uid), { kurs });
+  b.set(F.doc(db, 'kullanicilar', user.uid), await kursListesineEkle(F, db, user.uid, kurs));
   b.delete(F.doc(db, 'kurslar', kurs, 'davetler', kod));
   await b.commit();
   return baglan({ kurs, uid: user.uid, ad: ad || dv.ad, rol: dv.rol, usta: dv.usta || null, eposta: user.email });
+}
+// YON-072: hesabın kursları (ad ve rol) ve kurs değiştirme: seçim bu cihazda saklanır, yerel kopya silinir, sayfa seçilen kursla açılır
+export async function kurslarim() {
+  const { db, F } = await sdk(), uid = bulut.uid; const p = await F.getDoc(F.doc(db, 'kullanicilar', uid)); const pd = p.exists() ? p.data() : {};
+  const l = [...new Set([...(Array.isArray(pd.kurslar) ? pd.kurslar : []), pd.kurs].filter(Boolean))];
+  return (await Promise.all(l.map(async k => { try { const [kd, ud] = await Promise.all([F.getDoc(F.doc(db, 'kurslar', k)), F.getDoc(F.doc(db, 'kurslar', k, 'uyeler', uid))]); return ud.exists() ? { id: k, ad: (kd.exists() && kd.data().ad) || 'Kurs', rol: ud.data().rol, secili: k === bulut.kurs } : null; } catch (x) { return null; } }))).filter(Boolean);
+}
+export async function kursDegistir(k) {
+  try { await Promise.race([akit(), new Promise(r => setTimeout(r, 4000))]); } catch (x) { }
+  try { localStorage.setItem(SECILI + bulut.uid, k); localStorage.removeItem(YEREL); } catch (x) { }
+  yerelTemizle(); await onbellekSil(); location.hash = '#/genel'; location.reload();
 }
 export async function uyeGuncelle(uid, alan) { const { db, F } = await sdk(); await F.updateDoc(F.doc(db, 'kurslar', bulut.kurs, 'uyeler', uid), alan); }
 export async function uyeCikar(uid) { const { db, F } = await sdk(); await F.deleteDoc(F.doc(db, 'kurslar', bulut.kurs, 'uyeler', uid)); }
@@ -212,7 +228,7 @@ export async function bulutBaslat() {
   const user = await new Promise(coz => { const kapat = A.onAuthStateChanged(auth, u => { kapat(); coz(u); }); });
   if (!user || user.uid !== k.uid) { try { localStorage.removeItem(YEREL); } catch (x) { } return null; }
   let u = null;
-  try { u = await uyelikBul(user); } catch (x) { u = k; }  // çevrimdışı: son bilinen üyelikle aç
+  try { u = await uyelikBul(user); } catch (x) { if (x && x.kullanici) { localStorage.removeItem(YEREL); throw x; } u = k; }  // çevrimdışı: son bilinen üyelikle aç; askı / kapalı (YON-081) gibi bilinen engel geçilmez
   if (!u || u.demo) { await cikisYap(); throw hata('Bu kursa erişiminiz kaldırılmış; kurs müdürüyle görüşün'); }
   return baglan(u);
 }
@@ -500,7 +516,7 @@ async function baglan(u, ilkVeri) {
   kancalariKur(u);
   addEventListener('pagehide', () => { akit(); });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') akit(); });
-  return { id: u.uid, ad: u.ad, rol: u.rol, ...(u.usta ? { usta: u.usta } : {}), bulut: true };
+  return { id: u.uid, ad: u.ad, rol: u.rol, ...(u.usta ? { usta: u.usta } : {}), ...(Array.isArray(u.kurslar) && u.kurslar.length > 1 ? { kurslar: u.kurslar } : {}), bulut: true };
 }
 
 // Üst çubuktaki küçük durum yazısı
@@ -1178,7 +1194,7 @@ async function ustaBaglan(u) {
   kancalariKur(u);
   addEventListener('pagehide', () => { ustaGonder(); });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') ustaGonder(); });
-  return { id: u.uid, ad: u.ad, rol: 'usta', usta: u.usta, bulut: true };
+  return { id: u.uid, ad: u.ad, rol: 'usta', usta: u.usta, ...(Array.isArray(u.kurslar) && u.kurslar.length > 1 ? { kurslar: u.kurslar } : {}), bulut: true };
 }
 function ustaPlanla() { clearTimeout(ust.zaman); ust.zaman = setTimeout(ustaGonder, 600); }
 async function ustaGonder() {
