@@ -6,6 +6,7 @@ import * as EK from './eklenti.js?v=234';
 import * as MT from './mebtoplu.js?v=234';
 import * as MK from './mebkayit.js?v=234';
 import * as UY from './mebuyum.js?v=234';
+import * as GR from './gruplar.js?v=234';
 import * as MX from './mebekran.js?v=234';   // MEB-187: üst şerit, açık pencereler, aday × adım matrisi
 import { pencere, kapatPencere, bildir, tl, waAc } from './ui.js?v=234';
 
@@ -69,6 +70,7 @@ function uyumsuzKarti() {
 export function merkezSekme() {
   const hepsi = butunIsler(true), sayi = t => hepsi.filter(x => x.tur === t && !x.bitti).length;
   const subeSorun = cokSube() && !seciliSube();
+  { const n = GR.mebGrupGoc(); if (n) { islem('Dönem gruplarını MEBBİS’te var saydı', n + ' grup (öğrencisi MEBBİS’e kayıtlı)'); kaydet(); } }   // DENETİM Ö5 göç
   EK.bekleyenleriIsle();   // girişten önce gelen Yardımcı bildirimi (harita-durum) varsa şimdi işlenir; kırmızı kart aşağıda çıkar
   let h = MK.alarmKarti() + MT.isKarti(m.tur === 'al');
   // DENETİM Ö3: 'Yardımcı kurulu değil' ve 'şube seçin' artık bir kez — durum şeridinde (Kur bağlantısıyla) ve sayfanın üstündeki şube uyarısında

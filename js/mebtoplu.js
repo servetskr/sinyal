@@ -257,7 +257,8 @@ export async function hazirla(ids, { foto = true, koru = null } = {}) {
     const r = x.ref || {};
     if (x.tur === 'kayit') {
       const k = kursiyer(r.kursiyer), g = k && mebGrup(k); if (!g) { ekle(x, 'Dönem grubuna atanmamış'); continue; }
-      if (!g.meb && !yazilacakGrup.has(g.id)) { ekle(x, `“${g.ad}” grubu MEBBİS’e yazılmadı: önce grubu ve şubesini yazın (şubesiz gruba kayıt yapılamaz) ya da MEBBİS’te varsa “MEBBİS’ten al › Dönem grupları”yla eşleyin`); continue; }
+      if (g.meb === false && !yazilacakGrup.has(g.id)) {   // DENETİM Ö5: yalnız mdSinyal'de açılıp MEBBİS'e yazılmamış grup durdurur; işareti olmayan eski grup uyarıyla geçer (kuralDenetimi G01)
+       ekle(x, `“${g.ad}” grubu MEBBİS’e yazılmadı: önce grubu ve şubesini yazın (şubesiz gruba kayıt yapılamaz) ya da MEBBİS’te varsa “MEBBİS’ten al › Dönem grupları”yla eşleyin`); continue; }
       if (!/^\d{11}$/.test(k.tc || '')) { ekle(x, 'TC kimlik no eksik'); continue; }
       if (!cep10(k.tel)) { ekle(x, 'Cep telefonu 10 hane değil'); continue; }
       // B Engelli'nin MEBBİS'teki sertifika adı doğrulanmadı: yanlış sınıfla kayıt açılmasın diye toplu yazmaya alınmaz.
@@ -378,6 +379,8 @@ export function kuralDenetimi(l) {
     if (x.tur === 'onay') return x.adaylar.forEach(a => bak(a.id, 'onay', { k: kursiyer(String(a.id).replace(/^onay-/, '')) }));
     if (['kayit', 'evrak', 'esinav'].includes(x.tur)) bak(x.id, x.tur, { k: kursiyer(String(x.id).slice(x.tur.length + 1)) });
   });
+  // DENETİM Ö5: işareti olmayan (kuraldan önce açılmış) grupta kayıt gönderilir ama uyarılır
+  l.filter(x => x.tur === 'kayit').forEach(x => { const k = kursiyer(String(x.id).slice(6)), g = k && GR.kursiyerGrubu(k); if (g && g.meb === undefined) ekle(x.id, 'uyari', 'G01', `“${g.ad}” grubunun MEBBİS’te açık olduğu mdSinyal’de doğrulanmadı. Önce “MEBBİS’ten güncelle › Dönem grupları” ile eşleyin; MEBBİS’te yoksa kayıt reddedilir.`); });
   // MEB-154: aynı adayın birden çok faturası seçiliyse uyarı (MEBBİS'e hangisinin gideceği onay penceresinde seçilir; istenmeyen bırakılır)
   { const ft = {}; l.filter(x => x.tur === 'fatura').forEach(x => (ft[x.tc] = ft[x.tc] || []).push(x));
     Object.values(ft).filter(y => y.length > 1).forEach(y => y.forEach(x => ekle(x.id, 'uyari', 'F01', `Bu adayın ${y.length} faturası seçili (${y.map(z => `${z.no} · ${z.tarih} · ${z.tutar} ₺`).join('; ')}). MEBBİS’e gidecek olanı bırakın, ötekilerin işaretini kaldırın.`))); }

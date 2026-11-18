@@ -43,6 +43,7 @@ export function pencereler(hepsi) {
     ekle({ tur: 'sinav', baslik: `Sınav randevusu${gunler[0] ? ' · ' + tarih(gunler[0]) : ''}`, sure: sureMetin(s, `sınavdan ${kuralAyar('sinavBildirimIsGunu')} iş günü önce`), sayi: `${r.length} aday${gunler.length > 1 ? ` · ${gunler.length} sınav günü` : ''}`, dugme: 'Randevuları gör', son: s }); } }
   { const kp = kayitPenceresi(), k = tur('kayit'), ev = tur('evrak');
     if (k.length || ev.length) ekle({ tur: k.length ? 'kayit' : 'evrak', baslik: `${kp.ad} kaydı ${kp.acik ? 'açık' : 'henüz açılmadı'}`, sure: kp.acik ? sureMetin(kp.bit) : `Açılış ${tarih(kp.bas)}`, sayi: [k.length && `${k.length} kayıt`, ev.length && `${ev.length} evrak`].filter(Boolean).join(' · ') + ' bekliyor', dugme: 'Kayıtları gör', son: kp.acik ? kp.bit : '', sakin: !kp.acik }); }
+  { const bl = GR.mebDurumuBilinmeyenGruplar(); if (bl.length) ekle({ tur: 'grup', baslik: 'Dönem gruplarını eşleyin', sure: 'kayıtlardan önce', sayi: `${bl.length} grubun MEBBİS’te açık olduğu doğrulanmadı (${bl.slice(0, 3).map(g => g.ad).join(', ')}${bl.length > 3 ? '…' : ''})`, dugme: 'MEBBİS’ten güncelle', guncelle: true, son: gun(0) }); }   // DENETİM Ö5
   { const g = tur('grup'); if (g.length) ekle({ tur: 'grup', baslik: 'Dönem grubu aç', sure: 'kayıttan önce', sayi: `${g.length} grup/şube MEBBİS’te yok`, dugme: 'Grupları gör', son: enYakin(g) }); }
   { const t = tur('teorik'); if (t.length) { const s = enYakin(t); ekle({ tur: 'teorik', baslik: 'Teorik ders programı', sure: sureMetin(s, 'ders gününden önce'), sayi: `${t.length} ders bekliyor`, dugme: 'Dersleri gör', son: s }); } }
   { const es = tur('esinav'); if (es.length) { const y = es.filter(x => !(x.meta && x.meta.ucretYok)).length; ekle({ tur: 'esinav', baslik: 'e-Sınav başvurusu', sure: 'ücret yatınca', sayi: `ücreti yatan ${y} · yatmayan ${es.length - y}`, dugme: 'Başvuruları gör', son: enYakin(es) }); } }
@@ -54,7 +55,7 @@ export function pencerelerHtml(hepsi) {
   const l = pencereler(hepsi);
   if (!l.length) return `<div class="mx-pencereler"><div class="mx-pk mx-sakin"><b>Açık MEBBİS işi yok</b><div class="mx-sure">Bütün kayıtlar, dersler ve randevular MEBBİS’te</div></div></div>`;
   return `<div class="mx-pencereler">${l.map(x => { const k = x.son ? fark(x.son) : null, acil = k != null && k <= 1;
-    return `<div class="mx-pk${acil ? ' mx-acil' : x.sakin ? ' mx-sakin' : ''}"><b>${e(x.baslik)}</b>${x.sure ? `<div class="mx-sure">${e(x.sure)}</div>` : ''}<div class="mx-sayi">${e(x.sayi)}</div><button type="button" class="dg ${acil ? 'dg-ana' : 'dg-cizgi'} dg-kucuk" data-mx-tur="${e(x.tur)}">${e(x.dugme)}</button></div>`; }).join('')}</div>`;
+    return `<div class="mx-pk${acil ? ' mx-acil' : x.sakin ? ' mx-sakin' : ''}"><b>${e(x.baslik)}</b>${x.sure ? `<div class="mx-sure">${e(x.sure)}</div>` : ''}<div class="mx-sayi">${e(x.sayi)}</div><button type="button" class="dg ${acil ? 'dg-ana' : 'dg-cizgi'} dg-kucuk" ${x.guncelle ? 'data-mm-guncelle' : `data-mx-tur="${e(x.tur)}"`}>${e(x.dugme)}</button></div>`; }).join('')}</div>`;
 }
 
 /* ---------- aday × adım matrisi ---------- */

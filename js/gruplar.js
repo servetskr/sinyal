@@ -16,6 +16,13 @@ const ayAd = donem => (MN.donemMetni(MN.donemKodu(donem)).split(' - ')[1]) || ''
 export const donemAdi = donem => MN.donemMetni(MN.donemKodu(donem)) || `${String(donem).slice(0, 4)} - ${ayAd(donem)}`;          // MEBBİS biçimi: "2026 - Kasım"
 export const grupAdi = (donem, no, sube) => `${ayAd(donem)} ${no}${sube}`;               // "Kasım 1A"
 export const mebGrubuMu = g => !!(g && g.donem && g.grupNo && g.sube);
+// DENETİM Ö5 (DON-005) göç: işaret kuralından önce açılmış gruplarda g.meb yok (undefined = bilinmiyor). Grubun bir öğrencisi MEBBİS'e kayıtlıysa
+// grup MEBBİS'te vardır: g.meb = true yazılır. Kalan 'bilinmiyor' gruplar kaydı durdurmaz, yalnız uyarı verir ve 'MEBBİS'ten güncelle' ile eşlenir.
+export function mebGrupGoc() {
+  let n = 0; (S.gruplar || []).forEach(g => { if (!mebGrubuMu(g) || g.meb !== undefined) return; if ((S.kursiyerler || []).some(k => k.teorikGrup === g.id && k.mebIslendi)) { g.meb = true; g.mebGoc = gun(0); n++; } });
+  return n;
+}
+export const mebDurumuBilinmeyenGruplar = () => (S.gruplar || []).filter(g => mebGrubuMu(g) && g.meb === undefined && (S.kursiyerler || []).some(k => k.teorikGrup === g.id && !k.kapali && !k.mebIslendi));
 // Kurs tipi (DON-009, SOR-056): MTSK (sürücü kursu: ehliyet sınıfları ve 100 ceza), SRC, İş makinesi. Eski gruplarda tip yok = MTSK.
 export const KURS_TIPLERI = [['MTSK', 'Sürücü kursu (MTSK)'], ['SRC', 'SRC mesleki yeterlilik'], ['OP', 'İş makinesi operatörlüğü']];
 export const sinifTipi = sinif => { const t = (SINIFLAR[sinif] || {}).tur; return t === 'src' ? 'SRC' : t === 'operator' ? 'OP' : 'MTSK'; };
@@ -197,7 +204,7 @@ export function grupFormu(on = {}, sonra) {
         // yeni grup: MEBBİS'te başlangıç tarihi sonradan değişmez; kesin karar bir kez sorulur (aynı grubun yeni şubesinde tarih zaten belli)
         const kardes0 = !g0 && (S.gruplar || []).some(y => mebGrubuMu(y) && y.donem === x.donem && +y.grupNo === x.grupNo);
         if (!g0 && !kardes0 && !f.dataset.kesin) return pencereSor(d, { baslik: 'Başlangıç tarihi kesin mi?', metin: `${grupAdi(x.donem, x.grupNo, x.sube)} ${tarih(x.baslangic)} tarihinde başlayacak. MEBBİS’te grup başlangıç tarihi sonradan değiştirilemez; bu dönemde Grup ${x.grupNo} bu tarihle açılır.${donemUyarisi(x) ? ' ' + donemUyarisi(x) : ''}`, secenekler: [['evet', 'Evet, grubu aç', 'dg-ana'], ['vazgec', 'Tarihi değiştireceğim', 'dg-cizgi']] }, c => { if (c === 'evet') { f.dataset.kesin = '1'; f.requestSubmit(); } });
-        const g = g0 || { id: 'g' + x.donem + '-' + x.grupNo + x.sube, kaynak: 'mdSinyal' };
+        const g = g0 || { id: 'g' + x.donem + '-' + x.grupNo + x.sube, kaynak: 'mdSinyal', meb: false };   // DENETİM Ö5: mdSinyal'de yeni açılan grup MEBBİS'e yazılana kadar açıkça 'yok'
         Object.assign(g, { ...x, ad: grupAdi(x.donem, x.grupNo, x.sube) });
         if (!g0) { S.gruplar = [...(S.gruplar || []), g]; islem('Dönem grubu açtı', g.ad + ' · ' + g.baslangic); } else islem('Dönem grubunu düzenledi', g.ad);
         kaydet(); kapatPencere(); bildir(`${g.ad} ${g0 ? 'güncellendi' : 'oluşturuldu'}. MEBBİS’te de aynı grubu (${donemAdi(g.donem)}, Grup ${g.grupNo}, ${g.sube} Şubesi, ${tarih(g.baslangic)}) açın.`, 'tamam');
