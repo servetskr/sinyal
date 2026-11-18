@@ -19,6 +19,7 @@
 // /mevzuat/*: mevzuat arama (sorgu gömme), kursa gelen MEB yazılarını yükleme/listeleme/silme, özet ve kaynaklı cevap. Ayrıntı mevzuatUc() üstünde.
 // KAY-033 (18 Kas kararı): belge görüntüsü okuma ucu (belge/oku, OCR_MODEL) kaldırıldı; öğrenci belgesi hiçbir dış yapay zekâya gönderilmez.
 //   env.AI ([ai] bağlaması) yalnız mevzuat gömme modeli ve PDF/DOCX → metin (toMarkdown) için kalır.
+// /servis (UYG-012, MSJ-021): Firestore servis hesabı (FIREBASE_SA) ile ofis kapalıyken öğrenci istekleri ve hatırlatmalar; ayrıntı aşağıda 'SERVİS HESABI' bölümünde, kurulum SERVIS-HESABI.md.
 const IZINLI = ['https://mdsinyal.com', 'http://localhost:4481', 'http://127.0.0.1:4481'];
 const HEDEF = /^(https:\/\/mdsinyal\.com\/|https:\/\/servetskr\.github\.io\/sinyal\/|http:\/\/localhost:4481\/)/;
 const kucuk = s => String(s || '').toLocaleLowerCase('tr');
@@ -1492,9 +1493,485 @@ async function onizleme(req, url) {
     .transform(new Response(r.body, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'X-Robots-Tag': 'noindex' } }));
 }
 
+// ======== SERVİS HESABI ========
+// UYG-012 / MSJ-021: worker'ın Firestore servis hesabı ve ofis kapalıyken çalışan işler (Cloudflare Cron).
+// Kurulum ve kapatma: cloudflare/SERVIS-HESABI.md. FIREBASE_SA (gizli) tanımlı değilse burada hiçbir şey çalışmaz.
+//
+// 1) Google servis hesabı: FIREBASE_SA = Firebase konsolundan indirilen JSON (client_email, private_key, project_id).
+//    RS256 JWT WebCrypto ile imzalanır, oauth2.googleapis.com/token'dan erişim jetonu alınır, süresi bitene kadar bellekte tutulur
+//    (KV'ye ya da günlüğe yazılmaz). Kapsam yalnız Firestore (datastore).
+// 2) Öğrenci istekleri (kurslar/{k}/ogrenciGelen): ofis cihazı açıkken saniyeler içinde işler ve siler. SERVIS_BEKLE_DK (varsayılan 10)
+//    dakikadan uzun bekleyen istek "ofis kapalı" sayılır ve js/bulut.js ogrenciUygula'nın GÜVENLİ kısmı burada aynı denetimlerle işlenir:
+//    çalışma alanları, hesap etkinleşmesi, müsaitlik, evrak ve e-Sınav dekontu yükleme, sınav deneyimi (onay bekler), ders iptali (24 saat),
+//    ders puanı ve ders defteri onayı/itirazı, ders alma (saat/öğretmen/araç çakışması, günlük sınır, gece kısıtı), öğrenci bildirimleri.
+//    Karar gerektiren istek ofise bırakılır (belge silinmez, ofis açılınca işler): ek ders teklifine cevap (ödeme planı değişir) ve
+//    gece kısıtlı öğrencinin akşam saatindeki ders isteği (gün batımı ofis cihazında hesaplanır).
+//    Her şey tek Firestore işleminde (transaction): istek belgesi silinir, kayıtlar aynı alan düzeniyle (kurslar/{k}/v kovaları) yazılır,
+//    öğrencinin ekranı (ogrenciler/{kod}: v, islenen, sonuclar) güncellenir. Ofis cihazı aynı anda işlerse işlemlerden biri düşer, tekrar yazılmaz.
+// 3) Zamanlı hatırlatmalar (js/zamanlayici.js): uygulama gerekmeden hesaplanabilen WhatsApp kuralları o1 (yarınki direksiyon dersi, öğrenciye),
+//    o10 (yarınki program, öğretmene), o16 (doğum günü). Kuralın saatinden 30 dk sonra, 21:00'e kadar; kursun kendi hattı (KV hat:<kurs>) bağlıysa,
+//    kural açıksa, demo sınırı kapalıysa (Zamanlı mesajlar › Demo sınırı) ve öğrencinin WhatsApp onayı varsa. Aynı mesaj iki kez gitmez:
+//    uygulamanın kullandığı kilit belgesi (kurslar/{k}/gonderim/g…, anahtar 'z|<kural anahtarı>|<gün>') önce oluşturulur; oluşturamayan göndermez.
+//    Gönderilen, zamanli.gonderilen ve gönderim geçmişine yazılır (ofis cihazı da 'gönderildi' görür).
+// İstek bütçesi: ücretsiz planda bir çalıştırmada en çok 50 alt istek var (SERVIS_ISTEK, varsayılan 45); bitince iş sonraki çalıştırmaya kalır.
+
+const TOKEN_URL = 'https://oauth2.googleapis.com/token', KAPSAM = 'https://www.googleapis.com/auth/datastore', PROJE = 'sinyal-5d37a';
+export class SaHata extends Error { }
+export class ButceBitti extends Error { }
+
+// ---- servis hesabı ve jeton ----
+export function saOku(env) {
+  if (!env || !env.FIREBASE_SA) return null;
+  try { const o = JSON.parse(env.FIREBASE_SA); if (!o.client_email || !/BEGIN PRIVATE KEY/.test(o.private_key || '')) return null; return { eposta: o.client_email, anahtar: o.private_key, proje: /^[a-z0-9-]{4,40}$/.test(o.project_id || '') ? o.project_id : PROJE }; } catch (x) { return null; }
+}
+const b64uBayt = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+const b64u = s => b64uBayt(new TextEncoder().encode(s));
+async function rsaImzala(pem, veri) {
+  const der = Uint8Array.from(atob(pem.replace(/-----[A-Z ]+-----/g, '').replace(/\s+/g, '')), c => c.charCodeAt(0));
+  const k = await crypto.subtle.importKey('pkcs8', der, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
+  return new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', k, new TextEncoder().encode(veri)));
+}
+let jeton = null;   // { t, son, eposta } — yalnız bu isolate'in belleğinde
+export const jetonSifirla = () => { jeton = null; };
+export async function saJeton(is) {
+  const sa = is.sa, simdi = is.simdi();
+  if (jeton && jeton.eposta === sa.eposta && jeton.son - 120e3 > simdi) return jeton.t;
+  const iat = Math.floor(simdi / 1000), ic = b64u(JSON.stringify({ alg: 'RS256', typ: 'JWT' })) + '.' + b64u(JSON.stringify({ iss: sa.eposta, scope: KAPSAM, aud: TOKEN_URL, iat, exp: iat + 3600 }));
+  let imza; try { imza = await rsaImzala(sa.anahtar, ic); } catch (x) { throw new SaHata('FIREBASE_SA özel anahtarı okunamadı'); }
+  const r = await is.f(TOKEN_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'grant_type=' + encodeURIComponent('urn:ietf:params:oauth:grant-type:jwt-bearer') + '&assertion=' + ic + '.' + b64uBayt(imza) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.access_token) throw new SaHata('Google erişim jetonu alınamadı: ' + String(j.error_description || j.error || r.status).slice(0, 120));
+  jeton = { t: j.access_token, son: simdi + (+j.expires_in || 3600) * 1000, eposta: sa.eposta };
+  return jeton.t;
+}
+// iş bağlamı: bütçeli fetch, saat, gönderim yardımcıları (sinyal-wa.js verir)
+export function isBaglam(env, o = {}) {
+  const is = { env, sa: saOku(env), kalan: +o.butce || +env.SERVIS_ISTEK || 45, simdi: o.simdi || (() => Date.now()), gonder: o.gonder, hatOku: o.hatOku };
+  is.proje = is.sa ? is.sa.proje : PROJE;
+  is.f = (u, i) => { if (--is.kalan < 0) throw new ButceBitti('istek bütçesi bitti'); return fetch(u, i); };
+  return is;
+}
+
+// ---- Firestore REST ----
+const fsKok = is => `https://firestore.googleapis.com/v1/projects/${is.proje}/databases/(default)/documents`;
+export const fsAd = (is, yol) => `projects/${is.proje}/databases/(default)/documents/${yol}`;
+export async function fsIstek(is, yol, govde) {
+  const t = await saJeton(is);
+  const r = await is.f(fsKok(is) + yol, { method: 'POST', headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' }, body: JSON.stringify(govde || {}) });
+  const j = await r.json().catch(() => null);
+  if (!r.ok) throw new SaHata('Firestore ' + r.status + ': ' + String((j && (j.error && j.error.message || (Array.isArray(j) && j[0] && j[0].error && j[0].error.message))) || '').slice(0, 160));
+  return j;
+}
+export function fsDeger(v) {
+  if (v === null || v === undefined) return { nullValue: null };
+  if (typeof v === 'boolean') return { booleanValue: v };
+  if (typeof v === 'number') return Number.isInteger(v) && Math.abs(v) <= Number.MAX_SAFE_INTEGER ? { integerValue: String(v) } : { doubleValue: v };
+  if (typeof v === 'string') return { stringValue: v };
+  if (Array.isArray(v)) return { arrayValue: { values: v.map(fsDeger) } };
+  return { mapValue: { fields: fsAlanlar(v) } };
+}
+export const fsAlanlar = o => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined).map(([k, v]) => [k, fsDeger(v)]));
+export function fsJs(d) {
+  if (!d || typeof d !== 'object') return null;
+  if ('stringValue' in d) return d.stringValue; if ('integerValue' in d) return Number(d.integerValue); if ('doubleValue' in d) return Number(d.doubleValue);
+  if ('booleanValue' in d) return d.booleanValue; if ('timestampValue' in d) return d.timestampValue; if ('mapValue' in d) return fsNesne(d.mapValue.fields);
+  if ('arrayValue' in d) return (d.arrayValue.values || []).map(fsJs); return null;
+}
+export const fsNesne = f => Object.fromEntries(Object.entries(f || {}).map(([k, v]) => [k, fsJs(v)]));
+// alan yolu: kimlikte harf/rakam dışı karakter varsa ters tırnakla (Firestore field path)
+export const alanYolu = (...p) => p.map(s => /^[A-Za-z_][A-Za-z_0-9]*$/.test(s) ? s : '`' + String(s).replace(/\\/g, '\\\\').replace(/`/g, '\\`') + '`').join('.');
+
+// ---- istemcinin veri düzeni (js/bulut.js ile AYNI kalmalı: BUYUK, h32, kovaAd, dosya kimliği) ----
+export const BUYUK = { dersler: 64, kursiyerler: 64, hareket: 64, islemler: 16, gonderimler: 16, teorik: 8, adaylar: 8, sinavlar: 8, kampanyalar: 8, imzaTalepleri: 8 };
+export const h32 = (s, t = 2166136261) => { for (let i = 0; i < s.length; i++) { t ^= s.charCodeAt(i); t = Math.imul(t, 16777619); } return t >>> 0; };
+export const kovaAd = (a, id) => a + '~' + (h32(String(id)) % (BUYUK[a] || 1));
+const DOSYA_ON = 'sinyal-dosya:', DOSYA_SINIR = 3000, OZEL_EVRAK = new Set(['saglik', 'adli']), PARA = /^(hareket|kursiyerler|faturalar)~\d+$/;
+const dosyaKimlik = s => 'd' + h32(s).toString(36) + h32(s, 5381).toString(36) + s.length.toString(36);
+export const kilitKimlik = anahtar => 'g' + h32(anahtar).toString(36) + h32(anahtar, 5381).toString(36);
+const rastgele = n => [...crypto.getRandomValues(new Uint8Array(n))].map(x => 'abcdefghijkmnpqrstuvwxyz23456789'[x % 32]).join('');
+// kayda yazılacak JSON: büyük dosya metni ayrı belgeye (dosyalar/{id}) çıkar, sağlık raporu ve adli sicil 'oz' işaretli (bulut.js yaz())
+function yazSun(v, dosyalar) {
+  const ozel = new WeakSet();
+  return JSON.stringify(v, function (k, x) {
+    if (OZEL_EVRAK.has(k) && x && typeof x === 'object') ozel.add(x);
+    if (typeof x === 'string' && x.length > DOSYA_SINIR && x.startsWith('data:')) { const id = dosyaKimlik(x), e = dosyalar.get(id); dosyalar.set(id, { v: x, oz: !!((e && e.oz) || ozel.has(this)) }); return DOSYA_ON + id; }
+    return x;
+  });
+}
+// öğrenci ekranına giden kopyada büyük dosyalar ve dosya bağları olmaz (bulut.js veriAt)
+const veriAt = (k, x) => typeof x === 'string' && x.length > DOSYA_SINIR && x.startsWith('data:') ? null : (typeof x === 'string' && x.startsWith(DOSYA_ON) ? null : x);
+
+// ---- Türkiye saati (UTC+3, yaz saati yok) ----
+const tr = ms => new Date(ms + 3 * 3600e3).toISOString();
+export const trGun = (ms, n = 0) => tr(ms + n * 864e5).slice(0, 10);
+export const trSaat = ms => tr(ms).slice(11, 16);
+const yerelZaman = ms => trGun(ms) + 'T' + trSaat(ms);
+
+// ---- kurs verisini oku (kovalar), yaz (aynı düzen) ----
+// diziler: { ad: 'hepsi' | [kimlik] }, tekler: ['kurs', …] (t~ belgeleri), ek: başka belge yolları
+export async function kursOku(is, kurs, { diziler = {}, tekler = [], ek = [], islem = null }) {
+  const vAdlar = [];
+  for (const [a, s] of Object.entries(diziler)) vAdlar.push(...(s === 'hepsi' ? [...Array(BUYUK[a] || 1).keys()].map(i => a + '~' + i) : [...new Set(s.map(id => kovaAd(a, id)))]));
+  tekler.forEach(a => vAdlar.push('t~' + a));
+  const yollar = [...vAdlar.map(x => `kurslar/${kurs}/v/${x}`), ...ek];
+  const c = yollar.length ? await fsIstek(is, ':batchGet', { documents: yollar.map(y => fsAd(is, y)), ...(islem ? { transaction: islem } : {}) }) : [];
+  const bul = new Map(); (c || []).forEach(x => { if (x.found) bul.set(x.found.name, x.found); });
+  const V = { dizi: {}, kayit: {}, kimlik: new WeakMap(), tek: {}, ek: {}, var: new Set() };
+  Object.keys(diziler).forEach(a => { V.kayit[a] = new Map(); });
+  for (const ad of vAdlar) {
+    const b = bul.get(fsAd(is, `kurslar/${kurs}/v/${ad}`)); if (!b) continue; V.var.add(ad);
+    const f = fsNesne(b.fields);
+    if (ad.startsWith('t~')) { try { V.tek[ad.slice(2)] = JSON.parse(f.t); } catch (x) { } continue; }
+    const a = ad.split('~')[0];
+    Object.entries(f.i || {}).forEach(([id, o]) => { if (!o || typeof o.v !== 'string') return; let el; try { el = JSON.parse(o.v); } catch (x) { return; } V.kayit[a].set(id, { el, x: +o.x || 0 }); V.kimlik.set(el, id); });
+  }
+  Object.keys(diziler).forEach(a => { V.dizi[a] = [...V.kayit[a].values()].sort((p, q) => p.x - q.x).map(z => z.el); });
+  ek.forEach(y => { const b = bul.get(fsAd(is, y)); V.ek[y] = b ? { alan: fsNesne(b.fields), zaman: b.updateTime } : null; });
+  return V;
+}
+// Firestore yazıları: dizi kayıtları alan alan (i.`kimlik`), tek parça t~, düz belgeler
+export class Yazim {
+  constructor(is, kurs) { this.is = is; this.kurs = kurs; this.kovalar = new Map(); this.diger = []; this.dosyalar = new Map(); this.sira = 0; }
+  dizi(a, id, el, x) { const k = kovaAd(a, id); let b = this.kovalar.get(k); if (!b) this.kovalar.set(k, b = { a, i: {} }); b.i[id] = el === null ? null : { v: yazSun(el, this.dosyalar), x }; }
+  // başa eklenen kayıt (islemler, gonderimler, dersIptaller, devredilen: unshift): sıra sayısı mevcutların hepsinden küçük
+  basa(a, el) { if (el.id == null && !el._k) el._k = rastgele(10); this.dizi(a, el.id != null ? String(el.id) : '_' + el._k, el, -(this.is.simdi() * 1000 + (++this.sira))); }
+  sona(a, el) { this.dizi(a, String(el.id), el, this.is.simdi() * 1000 + (++this.sira)); }
+  tek(a, o) { this.belge(`kurslar/${this.kurs}/v/t~${a}`, { a, t: yazSun(o, this.dosyalar) }); }
+  belge(yol, alanlar, { maske, zaman = [] } = {}) { this.diger.push({ update: { name: fsAd(this.is, yol), fields: fsAlanlar(alanlar) }, ...(maske ? { updateMask: { fieldPaths: maske } } : {}), ...(zaman.length ? { updateTransforms: zaman.map(z => ({ fieldPath: z, setToServerValue: 'REQUEST_TIME' })) } : {}) }); }
+  sil(yol) { this.diger.push({ delete: fsAd(this.is, yol) }); }
+  kayit(ne, ayrinti, zaman) { this.belge(`kurslar/${this.kurs}/kayit/s${this.is.simdi().toString(36)}${rastgele(8)}`, { uid: 'sunucu', ad: 'Sunucu (ofis kapalıyken)', ne, ayrinti: String(ayrinti || '').slice(0, 300), yerel: zaman, cihaz: 'sunucu' }, { zaman: ['zaman'] }); }
+  yazilar() {
+    const w = [];
+    this.dosyalar.forEach((d, id) => w.push({ update: { name: fsAd(this.is, `kurslar/${this.kurs}/dosyalar/${id}`), fields: fsAlanlar(d.oz ? { v: d.v, oz: true } : { v: d.v }) } }));
+    this.kovalar.forEach((b, ad) => {
+      const ic = {}, maske = ['a', 'd'];
+      Object.entries(b.i).forEach(([id, o]) => { maske.push(alanYolu('i', id)); if (o) ic[id] = { mapValue: { fields: { v: { stringValue: o.v }, x: fsDeger(o.x) } } }; });
+      const alan = { a: { stringValue: b.a }, d: { booleanValue: true }, i: { mapValue: { fields: ic } } };
+      // PAR-053: para kovasına yazan paket aynı pakette iz belgesi oluşturur (kuralın istediği düzen; servis hesabı kuralsız yazsa da iz kalsın)
+      if (PARA.test(ad)) { const izId = 'iz' + this.is.simdi().toString(36) + rastgele(6); alan.iz = { stringValue: izId }; maske.push('iz'); w.push({ update: { name: fsAd(this.is, `kurslar/${this.kurs}/kayit/${izId}`), fields: fsAlanlar({ uid: 'sunucu', ad: 'Sunucu (ofis kapalıyken)', tur: 'iz', ne: 'Para verisi kaydedildi', ayrinti: ad }) }, updateTransforms: [{ fieldPath: 'zaman', setToServerValue: 'REQUEST_TIME' }] }); }
+      w.push({ update: { name: fsAd(this.is, `kurslar/${this.kurs}/v/${ad}`), fields: alan }, updateMask: { fieldPaths: maske } });
+    });
+    return [...w, ...this.diger];
+  }
+}
+// tek seferde kilit belgeleri (oluşturulabilirse bizim): batchWrite atomik değildir, her yazının sonucu ayrı döner
+async function kilitAl(is, kurs, anahtarlar) {
+  if (!anahtarlar.length) return [];
+  const c = await fsIstek(is, ':batchWrite', { writes: anahtarlar.map(a => ({ update: { name: fsAd(is, `kurslar/${kurs}/gonderim/${kilitKimlik(a)}`), fields: fsAlanlar({ uid: 'sunucu', cihaz: 'sunucu' }) }, currentDocument: { exists: false }, updateTransforms: [{ fieldPath: 'zaman', setToServerValue: 'REQUEST_TIME' }] })) });
+  return anahtarlar.map((a, i) => !((c.status || [])[i] && (c.status || [])[i].code));
+}
+async function kilitBirak(is, kurs, anahtarlar) {
+  if (!anahtarlar.length) return; try { await fsIstek(is, ':batchWrite', { writes: anahtarlar.map(a => ({ delete: fsAd(is, `kurslar/${kurs}/gonderim/${kilitKimlik(a)}`) })) }); } catch (x) { }
+}
+
+// ---- kurs ayarlarından yardımcılar (js/veri.js, js/ui.js ile aynı) ----
+const rakamlar = t => { let n = String(t || '').replace(/\D/g, ''); if (n.startsWith('0')) n = '90' + n.slice(1); else if (n.length === 10 && n.startsWith('5')) n = '90' + n; return n; };
+export function waNumara(tel) { const ham = String(tel || '').trim(); let n = ham.replace(/\D/g, ''); if (ham.startsWith('+') || ham.startsWith('00')) { n = n.replace(/^00/, ''); return n.length >= 11 && n.length <= 15 ? n : ''; } if (n.startsWith('0')) n = '90' + n.slice(1); else if (n.length === 10 && n.startsWith('5')) n = '90' + n; return n.length >= 12 && n.length <= 15 ? n : ''; }
+const mudurTel = K => { const t = rakamlar(K && K.mudurTel); if (t.length < 12) return ''; const hat = [K.wp, K.waHat && K.waHat.no].map(rakamlar).filter(Boolean); return hat.includes(t) ? '' : K.mudurTel; };
+const tamAd = k => k.ad + ' ' + k.soyad;
+const KURAL_ARALIK = { gunlukDersSiniri: [1, 2, 2] };
+const kuralAyar = (K, a) => { const [en, ust, v] = KURAL_ARALIK[a], x = K ? K[a] : undefined; return x !== '' && x != null && isFinite(+x) && +x >= en && +x <= ust ? +x : v; };
+function adEk(ad, hal) {
+  ad = String(ad || '').trim(); if (!hal || !ad) return ad;
+  const kc = ad.toLocaleLowerCase('tr'), sesliler = 'aeıioöuü', son = [...kc].reverse().find(c => sesliler.includes(c)) || 'e';
+  const kalin = 'aıou'.includes(son), yuvarlak = 'ouöü'.includes(son), seslyBiter = sesliler.includes(kc.slice(-1)), iyelik = /(kursu|merkezi|okulu|akademisi|kurumu)$/.test(kc);
+  const unlu = { e: kalin ? 'a' : 'e', de: kalin ? 'da' : 'de', den: kalin ? 'dan' : 'den', in: kalin ? (yuvarlak ? 'un' : 'ın') : (yuvarlak ? 'ün' : 'in') }[hal];
+  if (iyelik) return ad + '’n' + unlu; if (seslyBiter) return ad + '’' + ({ e: 'y', in: 'n' }[hal] || '') + unlu;
+  return ad + '’' + ('fstkçşhp'.includes(kc.slice(-1)) && unlu[0] === 'd' ? 't' + unlu.slice(1) : unlu);
+}
+const selamKisi = x => { const ilk = String(x.ad || '').trim().split(/\s+/)[0], tam = x.soyad != null ? tamAd(x) : String(x.ad || '').trim(); return x.cinsiyet === 'Kadın' ? `Merhaba ${ilk} Hanım,` : x.cinsiyet === 'Erkek' ? `Merhaba ${ilk} Bey,` : `Sayın ${tam},`; };
+const SAAT_OKU = ['sıfır', 'bir', 'iki', 'üç', 'dört', 'beş', 'altı', 'yedi', 'sekiz', 'dokuz', 'on', 'on bir', 'on iki', 'on üç', 'on dört', 'on beş', 'on altı', 'on yedi', 'on sekiz', 'on dokuz', 'yirmi', 'yirmi bir', 'yirmi iki', 'yirmi üç'];
+const sesli = s => { const h = (String(s).match(/^(\d{1,2})/) || [])[1], m = String(s).slice(-2); return (m === '00' ? SAAT_OKU[+h] : ({ '15': 'on beş', '30': 'otuz', '45': 'kırk beş' }[m] || 'sıfır')) || ''; };
+const ince = w => 'eiöü'.includes((w.match(/[aıoueiöü](?=[^aıoueiöü]*$)/) || ['e'])[0]);
+export const saatDe = s => { const w = sesli(s); return s + '’' + (/[çfhkpsşt]$/.test(w) ? 't' : 'd') + (ince(w) ? 'e' : 'a'); };
+const SINIF_AD = { M: 'M · Motorlu bisiklet', A1: 'A1 · Hafif motosiklet', A2: 'A2 · Motosiklet', A: 'A · Motosiklet (sınırsız)', B1: 'B1 · Dört tekerlekli motosiklet', B: 'B · Manuel', 'B-O': 'B · Otomatik', 'B-EN': 'B · Engelli', BE: 'BE · Römorklu otomobil', C1: 'C1 · Hafif kamyon', C1E: 'C1E · Römorklu hafif kamyon', C: 'C · Kamyon', CE: 'CE · Çekici (tır)', D1: 'D1 · Minibüs', D1E: 'D1E · Römorklu minibüs', D: 'D · Otobüs', DE: 'DE · Römorklu otobüs', F: 'F · Traktör', G: 'G · İş makinesi' };
+
+// ---- öğrenci isteği (js/bulut.js ogrenciUygula'nın güvenli kısmı) ----
+const KIMLIK_BICIM = /^[A-Za-z0-9_-]{1,40}$/, TARIH_BICIM = /^\d{4}-\d{2}-\d{2}$/, SAAT_BICIM = /^\d{2}:\d{2}$/;
+const DOSYA_BICIM = /^data:(image\/jpeg|image\/png|application\/pdf);base64,[A-Za-z0-9+/]+={0,2}$/;
+const EVRAK_AD = { saglik: 'Sürücü olur sağlık raporu', ogrenim: 'Öğrenim belgesi', adli: 'Adli sicil kaydı (barkodlu)', foto: 'Biyometrik fotoğraf', kimlik: 'Kimlik fotokopisi', sozlesme: 'İmzalı sözleşme' };
+const CALISMA = ['deneme', 'denemeDetay', 'bildirilenSorular', 'bildirimDuzeltildi', 'yanlislar', 'konuAnaliz', 'okunan', 'tekrar', 'gorulen', 'dirCalisma', 'tehlike'];
+const guvenliVeri = v => typeof v === 'string' ? v.replace(/[<>"'`]/g, '').slice(0, 500) : Array.isArray(v) ? v.slice(0, 2000).map(guvenliVeri)
+  : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).slice(0, 2000).map(([a, b]) => [String(a).replace(/[<>"'`]/g, '').slice(0, 80), guvenliVeri(b)]))
+  : (typeof v === 'number' && isFinite(v)) || typeof v === 'boolean' || v === null ? v : null;
+const MUSAIT_GUN = [['1', 'Pzt'], ['2', 'Sal'], ['3', 'Çar'], ['4', 'Per'], ['5', 'Cum'], ['6', 'Cmt']], MUSAIT_DILIM = [['sabah', 'Sabah'], ['ogle', 'Öğle'], ['aksam', 'Akşam']];
+function musaitlikTemizle(m, bugun) {
+  if (!m || typeof m !== 'object' || !m.gun || typeof m.gun !== 'object') return null;
+  const gl = {}; MUSAIT_GUN.forEach(([g]) => { const l = Array.isArray(m.gun[g]) ? MUSAIT_DILIM.map(d => d[0]).filter(d => m.gun[g].includes(d)) : []; if (l.length) gl[g] = l; });
+  if (!Object.keys(gl).length) return null;
+  const not = typeof m.not === 'string' ? m.not.replace(/[<>"'`]/g, '').trim().slice(0, 200) : '';
+  return { gun: gl, ...(not ? { not } : {}), tarih: TARIH_BICIM.test(m.tarih || '') ? m.tarih : bugun, ...(m.kaynak === 'ofis' ? { kaynak: 'ofis' } : { kaynak: 'ogrenci' }) };
+}
+const musaitlikOzet = m => !m || !m.gun ? '' : MUSAIT_GUN.filter(([g]) => (m.gun[g] || []).length).map(([g, kisa]) => { const l = m.gun[g]; return kisa + ' ' + (l.length === 3 ? 'bütün gün' : MUSAIT_DILIM.filter(d => l.includes(d[0])).map(d => d[1].toLocaleLowerCase('tr')).join(', ')); }).join(' · ');
+const dersKalanSaat = (d, simdi) => (Date.parse(d.tarih + 'T' + (SAAT_BICIM.test(d.saat || '') ? d.saat : '00:00') + ':00+03:00') - simdi) / 36e5;
+const geceKisitli = k => !!(k && k.saglikRapor && k.saglikRapor.geceKisit);
+// gece dersi mi: kursun elle girdiği gece başlangıcı (ay bazında) varsa ona göre; yoksa 16:00'dan önce kesin gündüz, sonrası belirsiz (null → ofis)
+function geceMi(K, d) { const elle = K && K.geceSaatleri && K.geceSaatleri[String(d.tarih).slice(5, 7)]; if (SAAT_BICIM.test(elle || '')) return d.saat.slice(0, 5) >= elle; return d.saat < '16:00' ? false : null; }
+
+// D: { kurs, kursiyerler, dersler, egitmenler, araclar, bosTeklif, kazanim }; g: ogrenciGelen belgesi. D yerinde değişir.
+// Dönüş: { ofis: neden } (hiçbir şey yazılmaz) ya da { k, degisti: {...}, notlar, retler, gunluk, gonder }
+export function ogrenciIsle(D, g, docId, simdi) {
+  const k = D.kursiyerler.find(x => x.id === g.kursiyer); if (!k || !Array.isArray(g.d)) return { bos: true };
+  const bugun = trGun(simdi), zaman = yerelZaman(simdi), saat = trSaat(simdi);
+  const notlar = [], retler = [], gunluk = { islemler: [], gonderimler: [], dersIptaller: [], devredilen: [] }, gonder = [], dersDegisen = new Set(), dersEklenen = [], dersSilinen = [];
+  let kDegisti = false, kazanim = false;
+  const liste = g.d.slice(0, 30).map(x => { let y = null; try { y = x.v ? JSON.parse(x.v) : null; } catch (e) { return null; } return { x, y }; }).filter(Boolean);
+  // karar gerektirenler: ofiste işlensin
+  for (const { x, y } of liste) {
+    if (x.a === 'kursiyerler' && x.id === k.id && y && k.ekDersTeklif && y.ekDersTeklif === null) return { ofis: 'ek ders teklifine cevap (ödeme planı ofiste işlenir)' };
+    if (x.a === 'dersler' && y && !D.dersler.some(z => z.id === x.id) && geceKisitli(k) && SAAT_BICIM.test(y.saat || '') && TARIH_BICIM.test(y.tarih || '') && geceMi(D.kurs, y) === null) return { ofis: 'gece kısıtlı öğrencinin akşam ders isteği (gün batımı ofiste hesaplanır)' };
+  }
+  for (const { x, y } of liste) {
+    if (x.a === 'kursiyerler' && x.id === k.id && y) {
+      CALISMA.forEach(f => { if (y[f] !== undefined && JSON.stringify(y[f]).length < 50000) { const v = guvenliVeri(y[f]); if (JSON.stringify(v) !== JSON.stringify(k[f])) { k[f] = v; kDegisti = true; } } });
+      ['hesapAktif', 'sonGiris'].forEach(f => { if (typeof y[f] === 'string' && TARIH_BICIM.test(y[f]) && y[f] !== k[f]) { k[f] = y[f]; kDegisti = true; if (f === 'hesapAktif') notlar.push('şifresini belirleyip hesabını kullanmaya başladı'); } });
+      if ('musaitlik' in y) { const m = musaitlikTemizle(y.musaitlik, bugun); if (JSON.stringify(m) !== JSON.stringify(k.musaitlik || null)) { k.musaitlik = m; kDegisti = true; notlar.push(m ? 'müsait zamanlarını bildirdi: ' + musaitlikOzet(m) : 'müsaitlik bildirimini kaldırdı'); } }
+      Object.entries(y.evrakYuklenen || {}).forEach(([key, e]) => {
+        if (!e || !e.veri || !EVRAK_AD[key] || (k.evrak && k.evrak[key])) return;
+        if (typeof e.veri !== 'string' || e.veri.length > 950000 || !DOSYA_BICIM.test(e.veri)) return;
+        k.evrakYuklenen = k.evrakYuklenen || {}; k.evrakYuklenen[key] = { tarih: bugun, dosya: String(e.dosya || '').replace(/[<>"'`]/g, '').slice(0, 120), boyut: e.veri.length, tur: e.veri.startsWith('data:application/pdf') ? 'pdf' : 'resim', veri: e.veri };
+        kDegisti = true; notlar.push(EVRAK_AD[key] + ' belgesini yükledi');
+      });
+      { const dk = y.esinavDekont; if (dk && typeof dk.veri === 'string' && dk.veri.length <= 950000 && DOSYA_BICIM.test(dk.veri) && /^\d{1,2}$/.test(String(dk.sira)) && !(k.esinavDekont && k.esinavDekont.veri === dk.veri)) {
+        k.esinavDekont = { sira: +dk.sira, tarih: bugun, dosya: String(dk.dosya || '').replace(/[<>"'`]/g, '').slice(0, 120), tur: dk.veri.startsWith('data:application/pdf') ? 'pdf' : 'resim', veri: dk.veri, onay: null };
+        kDegisti = true; notlar.push('e-Sınav ücreti dekontunu yükledi'); } }
+      if (y.sinavDeneyimi && typeof y.sinavDeneyimi.metin === 'string' && y.sinavDeneyimi.metin.trim().length >= 10 && !(k.sinavDeneyimi && k.sinavDeneyimi.metin === y.sinavDeneyimi.metin)) {
+        const sd = y.sinavDeneyimi; k.sinavDeneyimi = { metin: sd.metin.trim().slice(0, 1000), guzergah: String(sd.guzergah || '').slice(0, 40), sonuc: ['Geçti', 'Kaldı'].includes(sd.sonuc) ? sd.sonuc : '', tarih: bugun, onay: null };
+        kDegisti = true; notlar.push('sınav deneyimini paylaştı (onayınızı bekliyor: Sınav güzergâhları)');
+      }
+    } else if (x.a === 'dersler') {
+      const d = D.dersler.find(z => z.id === x.id);
+      if (d && d.kursiyer === k.id) {
+        if (!y) {
+          if (d.durum === 'Planlandı' && dersKalanSaat(d, simdi) >= 24) {
+            gunluk.dersIptaller.push({ id: d.id, kursiyer: d.kursiyer, egitmen: d.egitmen, arac: d.arac || null, tarih: d.tarih, saat: d.saat, meb: !!d.meb, iptal: { zaman, kim: 'Öğrenci paneli', neden: 'Kursiyer iptal etti (öğrenci paneli)', not: '' } });
+            D.dersler = D.dersler.filter(z => z !== d); dersSilinen.push(d); notlar.push(d.tarih + ' ' + d.saat + ' dersini iptal etti');
+          } else { notlar.push('iptal isteği reddedildi (24 saatten az kaldı)'); retler.push(d.tarih + ' ' + d.saat + ' dersinin iptali yapılamadı: derse 24 saatten az kaldı. Kursu arayın.'); }
+        } else if (y.ogrenciPuan && typeof y.ogrenciPuan.puan === 'number' && d.durum === 'Yapıldı') { d.ogrenciPuan = { puan: Math.max(1, Math.min(5, Math.round(y.ogrenciPuan.puan))), yorum: String(y.ogrenciPuan.yorum || '').slice(0, 300), tarih: bugun }; dersDegisen.add(d); notlar.push('dersi puanladı'); }
+        if (y && y.ogrenciOnay && ['onay', 'itiraz'].includes(y.ogrenciOnay.durum) && d.durum === 'Yapıldı' && !d.ogrenciOnay) {
+          d.ogrenciOnay = { durum: y.ogrenciOnay.durum, not: String(y.ogrenciOnay.not || '').slice(0, 300), tarih: bugun }; dersDegisen.add(d);
+          notlar.push(d.tarih + ' ' + d.saat + ' dersini ' + (d.ogrenciOnay.durum === 'onay' ? 'onayladı' : 'itiraz etti' + (d.ogrenciOnay.not ? ': ' + d.ogrenciOnay.not : '')));
+          if (d.ogrenciOnay.durum === 'itiraz') gunluk.devredilen.push({ ad: tamAd(k), kanal: 'Ders defteri', konu: 'Ders itirazı', mesaj: d.tarih + ' ' + d.saat + ' dersi yapılmadı diyor' + (d.ogrenciOnay.not ? ': ' + d.ogrenciOnay.not : ''), neden: 'Öğrenci dersi onaylamadı', saat, bildirim: [] });
+        }
+      } else if (!d && y && KIMLIK_BICIM.test(String(x.id)) && y.kursiyer === k.id && y.durum === 'Planlandı' && TARIH_BICIM.test(y.tarih || '') && SAAT_BICIM.test(y.saat || '') && y.tarih >= bugun && D.egitmenler.some(e => e.id === y.egitmen)) {
+        if (D.dersler.some(z => z.tarih === y.tarih && z.saat === y.saat && (z.egitmen === y.egitmen || z.kursiyer === k.id) && z.durum !== 'İptal')) { notlar.push(y.tarih + ' ' + y.saat + ' ders isteği reddedildi: saat dolu'); retler.push(y.tarih + ' ' + y.saat + ' ders isteğin alınamadı: o saat dolmuş. Başka bir saat seç.'); continue; }
+        if (geceKisitli(k) && geceMi(D.kurs, y)) { notlar.push(y.tarih + ' ' + y.saat + ' ders isteği reddedildi: gece kısıtı'); retler.push(y.tarih + ' ' + y.saat + ' ders isteğin alınamadı: sağlık raporuna göre gece dersi alamazsın. Gün batımından önceki bir saat seç.'); continue; }
+        { const sinir = kuralAyar(D.kurs, 'gunlukDersSiniri'), n = D.dersler.filter(z => z.kursiyer === k.id && z.tarih === y.tarih && z.durum !== 'İptal').length;
+          if (n >= sinir) { notlar.push(y.tarih + ' ' + y.saat + ' ders isteği reddedildi: günlük sınır'); retler.push(y.tarih + ' ' + y.saat + ' ders isteğin alınamadı: aynı gün en çok ' + sinir + ' saat direksiyon dersi alınabilir. Başka bir gün seç.'); continue; } }
+        const arac0 = D.araclar.some(a => a.id === y.arac) ? y.arac : null;
+        if (arac0 && D.dersler.some(z => z.arac === arac0 && z.tarih === y.tarih && z.saat === y.saat && z.durum !== 'İptal')) { notlar.push(y.tarih + ' ' + y.saat + ' ders isteği reddedildi: araç dolu'); retler.push(y.tarih + ' ' + y.saat + ' ders isteğin alınamadı: o saatte araç başka derste. Başka bir saat seç.'); continue; }
+        const yeni = { id: String(x.id), kursiyer: k.id, egitmen: y.egitmen, arac: arac0, tarih: y.tarih, saat: y.saat, durum: 'Planlandı', eklendi: bugun, kaynak: 'kursiyer' };
+        D.dersler.push(yeni); dersEklenen.push(yeni);
+        const t = (D.bosTeklif || []).find(z => z.tarih === y.tarih && z.saat === y.saat && z.egitmen === y.egitmen);
+        if (t) { D.bosTeklif = D.bosTeklif.filter(z => z !== t); D.bosTeklifSilinen = [...(D.bosTeklifSilinen || []), t]; D.kazanim = D.kazanim || {}; D.kazanim.doldurulan = (D.kazanim.doldurulan || 0) + 1; kazanim = true; }
+        notlar.push(y.tarih + ' ' + y.saat + ' direksiyon dersi aldı');
+      }
+    } else if (x.a === 'gonderimler' && y && !x.eski) {
+      const m = { zaman: new Date(simdi).toISOString(), kime: String(y.kime || '').slice(0, 80), metin: String(y.metin || '').slice(0, 1000), tur: String(y.tur || 'Öğrenci').slice(0, 60) };
+      const ustalari = new Set([k.egitmen, ...D.dersler.filter(z => z.kursiyer === k.id).map(z => z.egitmen)].filter(Boolean));
+      const hoca = y.rol === 'HOCA' ? D.egitmenler.find(h => h.ad === m.kime && ustalari.has(h.id)) : null;
+      const izinli = y.rol === 'MÜDÜR' || !!hoca;
+      gunluk.gonderimler.push(m);
+      if (!izinli && y.iletilecek) { gunluk.islemler.push({ zaman, kim: 'Sunucu', ne: 'Öğrenci panelinden izinsiz bildirim engellendi', ayrinti: tamAd(k) + ' → ' + m.kime }); continue; }
+      if (retler.length && /dersi aldı|dersini iptal etti/.test(m.metin)) continue;
+      if (y.iletilecek && D.kurs && D.kurs.waApi && !D.kurs.demoNumara) { const tel = waNumara(y.rol === 'MÜDÜR' ? mudurTel(D.kurs) : hoca && hoca.tel); if (tel) gonder.push({ anahtar: 'og|' + docId + '|' + x.id, tel, metin: m.metin, kime: m.kime }); }
+    }
+  }
+  if (notlar.length) gunluk.islemler.push({ zaman, kim: 'Sunucu', ne: 'Öğrenci panelinden', ayrinti: tamAd(k) + ': ' + notlar.join(', ') });
+  return { k, kDegisti, kazanim, dersDegisen: [...dersDegisen], dersEklenen, dersSilinen, notlar, retler, gunluk, gonder };
+}
+// öğrencinin ekranı: kayıt, dersler ve boş saat teklifleri yeniden hesaplanır (bulut.js ogrenciVerisiDen), öbür bölümler olduğu gibi kalır
+function projeksiyon(eskiV, D, k, bugun) {
+  let o = {}; try { o = JSON.parse(eskiV || '{}') || {}; } catch (x) { }
+  const ben = { ...k, tc: k.tc ? '•••••••' + String(k.tc).slice(-4) : '' }; ['notlar', 'panelKod', 'hesap', 'ozelNot', 'ozelNotlar', 'ozelNotTarih'].forEach(f => delete ben[f]);
+  const sec = (x, l) => { const r = {}; l.forEach(a => { if (x && x[a] !== undefined) r[a] = x[a]; }); return r; };
+  o.kursiyerler = [ben];
+  o.dersler = D.dersler.filter(d => d.kursiyer === k.id).map(d => { const x = { ...d }; delete x.konum; delete x.konumBit; delete x.iz; return x; })
+    .concat(D.dersler.filter(d => d.kursiyer !== k.id && d.egitmen === k.egitmen && d.tarih >= bugun && d.durum === 'Planlandı').map(d => ({ ...sec(d, ['id', 'egitmen', 'arac', 'tarih', 'saat', 'durum']), kursiyer: null })));
+  o.bosTeklif = (D.bosTeklif || []).filter(t => (t.adaylar || []).includes(k.id)).map(t => ({ ...t, adaylar: [k.id] }));
+  return JSON.stringify(o, veriAt);
+}
+
+const gelenYolu = /documents\/kurslar\/([A-Za-z0-9]{10,40})\/ogrenciGelen\/([A-Za-z0-9_-]{1,64})$/;
+const izinliKurs = (env, kurs) => { const l = String(env.SERVIS_KURSLAR || '').split(',').map(s => s.trim()).filter(Boolean); return !l.length || l.includes(kurs); };
+// Bekleyen öğrenci isteklerini bul ve kurs kurs işle
+export async function ogrenciGelenIsle(is, durum) {
+  const simdi = is.simdi(), bekle = Math.max(1, +is.env.SERVIS_BEKLE_DK || 10) * 60e3;
+  const q = await fsIstek(is, ':runQuery', { structuredQuery: { from: [{ collectionId: 'ogrenciGelen', allDescendants: true }], limit: 200 } });
+  const kurslar = new Map();
+  for (const r of q || []) {
+    const b = r.document; if (!b) continue; const m = gelenYolu.exec(b.name); if (!m) continue;
+    const [, kurs, id] = m, f = fsNesne(b.fields), t = Date.parse(f.zaman || b.createTime || '') || 0;
+    if (!t || simdi - t < bekle || !izinliKurs(is.env, kurs)) continue;
+    if (await is.env.LINK.get('srv:ofis:' + kurs + ':' + id)) continue;   // daha önce ofise bırakıldı
+    if (!kurslar.has(kurs)) kurslar.set(kurs, []); kurslar.get(kurs).push({ id, t, g: f });
+  }
+  let n = 0;
+  for (const [kurs, l] of kurslar) {
+    if (n++ >= (+is.env.SERVIS_KURS || 3)) break;
+    l.sort((a, b) => a.t - b.t);
+    try { await kursOgrenciIsle(is, kurs, l.slice(0, 20), durum); }
+    catch (x) { if (x instanceof ButceBitti) throw x; durum.hata.push('öğrenci ' + kurs.slice(0, 6) + ': ' + String(x.message || x).slice(0, 120)); }
+  }
+}
+async function kursOgrenciIsle(is, kurs, gelenler, durum) {
+  const simdi = is.simdi(), bugun = trGun(simdi), zaman = yerelZaman(simdi);
+  const tx = (await fsIstek(is, ':beginTransaction', { options: { readWrite: {} } })).transaction;
+  let isim = null, yazildi = false;
+  try {
+    const gelenYol = x => `kurslar/${kurs}/ogrenciGelen/${x.id}`, projeYol = kod => `kurslar/${kurs}/ogrenciler/${kod}`;
+    const kodlar = [...new Set(gelenler.map(x => String(x.g.kod || '')).filter(k => /^[A-Za-z0-9]{6,64}$/.test(k)))];
+    const V = await kursOku(is, kurs, { diziler: { kursiyerler: [...new Set(gelenler.map(x => String(x.g.kursiyer || '')))], dersler: 'hepsi', egitmenler: 'hepsi', araclar: 'hepsi', bosTeklif: 'hepsi' }, tekler: ['kurs', 'kazanim'], ek: [...gelenler.map(gelenYol), ...kodlar.map(projeYol)], islem: tx });
+    const D = { kurs: V.tek.kurs || {}, kursiyerler: V.dizi.kursiyerler, dersler: V.dizi.dersler, egitmenler: V.dizi.egitmenler, araclar: V.dizi.araclar, bosTeklif: V.dizi.bosTeklif, kazanim: V.tek.kazanim };
+    const Y = new Yazim(is, kurs), ofis = [], gonder = [], ofisteki = new Set(), proje = new Map(), xEski = (a, el) => { const id = V.kimlik.get(el); return id ? V.kayit[a].get(id).x : null; };
+    let islenen = 0, kazanim = false; const dersD = new Set(), dersS = new Set(), dersE = new Set();
+    for (const x of gelenler) {
+      if (!V.ek[gelenYol(x)]) continue;   // bu arada ofis işledi
+      if (ofisteki.has(x.g.kursiyer)) { ofis.push(x.id); durum.ogrenci.ofise++; continue; }   // aynı öğrencinin önceki isteği ofiste: sıra bozulmasın
+      const r = ogrenciIsle(D, x.g, x.id, simdi);
+      if (r.ofis) { ofis.push(x.id); ofisteki.add(x.g.kursiyer); durum.ogrenci.ofise++; continue; }
+      Y.sil(gelenYol(x)); islenen++;
+      if (r.bos) continue;
+      const { k } = r;
+      if (r.kDegisti) Y.dizi('kursiyerler', V.kimlik.get(k) || k.id, k, xEski('kursiyerler', k) ?? simdi * 1000);
+      r.dersDegisen.forEach(d => dersD.add(d)); r.dersSilinen.forEach(d => dersS.add(d)); r.dersEklenen.forEach(d => dersE.add(d));
+      Object.entries(r.gunluk).forEach(([a, l]) => l.forEach(el => Y.basa(a, el)));
+      kazanim = kazanim || r.kazanim;
+      r.gunluk.islemler.forEach(i => Y.kayit(i.ne, i.ayrinti, zaman));
+      gonder.push(...r.gonder);
+      const kod = /^[A-Za-z0-9]{6,64}$/.test(String(x.g.kod || '')) ? String(x.g.kod) : null;
+      if (kod && V.ek[projeYol(kod)]) { const p = proje.get(kod) || { k, islenen: [...(V.ek[projeYol(kod)].alan.islenen || [])], sonuclar: [...(V.ek[projeYol(kod)].alan.sonuclar || [])] }; p.k = k; p.islenen.unshift(x.id); if (r.retler.length) p.sonuclar.unshift({ doc: x.id, ret: r.retler.slice(0, 5), zaman: simdi }); proje.set(kod, p); }
+    }
+    // aynı turda eklenip iptal edilen ders yazılmaz; yalnız sunucuda var olan silinir
+    dersE.forEach(d => { if (D.dersler.includes(d)) Y.sona('dersler', d); });
+    dersS.forEach(d => { if (V.kimlik.has(d)) Y.dizi('dersler', V.kimlik.get(d), null); });
+    dersD.forEach(d => { if (D.dersler.includes(d) && !dersE.has(d)) Y.dizi('dersler', V.kimlik.get(d) || d.id, d, xEski('dersler', d) ?? simdi * 1000); });
+    (D.bosTeklifSilinen || []).forEach(t => Y.dizi('bosTeklif', V.kimlik.get(t) || String(t.id), null));
+    if (kazanim) Y.tek('kazanim', D.kazanim);
+    proje.forEach((p, kod) => Y.belge(projeYol(kod), { v: projeksiyon(V.ek[projeYol(kod)].alan.v, D, p.k, bugun), islenen: p.islenen.slice(0, 20), sonuclar: p.sonuclar.slice(0, 10) }, { maske: ['v', 'islenen', 'sonuclar'], zaman: ['guncel'] }));
+    const yazilar = Y.yazilar();
+    if (yazilar.length) { await fsIstek(is, ':commit', { writes: yazilar, transaction: tx }); yazildi = true; }
+    else { isim = tx; }
+    durum.ogrenci.islenen += islenen;
+    for (const id of ofis) await is.env.LINK.put('srv:ofis:' + kurs + ':' + id, '1', { expirationTtl: 14 * 86400 });
+    // öğrenci bildirimleri (müdür / öğretmen): gece gitmez (kayıtta durur), uygulamanın kilidiyle bir kez
+    const saat = trSaat(simdi);
+    if (gonder.length && saat >= '08:00' && saat < '21:00') await kilitliGonder(is, kurs, gonder, durum, 'ogrenci');
+  } catch (x) { if (!yazildi) isim = tx; throw x; }
+  finally { if (isim) { try { await fsIstek(is, ':rollback', { transaction: isim }); } catch (y) { } } }
+}
+// kilit al → gönder → gönderilemeyenin kilidini bırak
+async function kilitliGonder(is, kurs, l, durum, tur) {
+  const h = await is.hatOku(is.env, kurs); if (!h) return [];
+  const ok = await kilitAl(is, kurs, l.map(x => x.anahtar)), giden = [], birak = [];
+  for (let i = 0; i < l.length; i++) {
+    if (!ok[i]) continue;
+    // gönderim (Meta) en çok 2 istek sayılır; kilit bırakmaya 1 istek kalmalı
+    if (is.kalan < 3) { birak.push(...l.slice(i).filter((_, j) => ok[i + j]).map(z => z.anahtar)); durum.butce = true; break; }
+    is.kalan -= 2;
+    let s; try { s = await is.gonder(is.env, kurs, h, l[i].tel, l[i].metin); } catch (x) { s = { ok: false, hata: String(x.message || x) }; }
+    if (s.ok) { giden.push(l[i]); durum[tur].gonderilen++; } else { birak.push(l[i].anahtar); durum.hata.push(tur + ' gönderilemedi: ' + String(s.hata || '').slice(0, 80)); }
+  }
+  if (birak.length) await kilitBirak(is, kurs, birak);
+  return giden;
+}
+
+// ---- zamanlı hatırlatmalar (js/zamanlayici.js URET.o1, o10, o16) ----
+const KURAL_SAAT = { o1: '18:30', o10: '18:30', o16: '10:30' };   // uygulamadaki saat + 30 dk: uygulama açıksa önce o gönderir
+const DILIM = [['aksam', ['o1', 'o10']], ['sabah', ['o16']]];
+const doldur = (K, sablon, alan) => { alan = { kurs: K.ad, kursa: adEk(K.ad, 'e'), kursta: adEk(K.ad, 'de'), ...alan }; ['tc', 'tckn', 'tcno', 'kimlik', 'sifre', 'parola', 'pin', 'iban'].forEach(a => { delete alan[a]; }); if (alan.kisi && !alan.selam) alan.selam = selamKisi(alan.kisi); return String(sablon || '').replace('{saat}’te', '{saatte}').replace(/\{(\w+)\}/g, (x, a) => alan[a] != null ? alan[a] : ''); };
+// öğrenciye WhatsApp: arşivdeki, WhatsApp onayı vermeyen ya da başka kanal seçen öğrenciye sunucudan gitmez (uygulama e-posta/SMS kuyruğuna koyar)
+const ogrWa = k => !k || (k.kapali && k.kapali.tur === 'arsiv') || (k.kvkk && k.kvkk.whatsapp === false) || (k.mesajKanal && k.mesajKanal !== 'WhatsApp') ? null : waNumara(k.tel);
+export function hatirlatmaUret(V, kurallar, simdi) {
+  const K = V.tek.kurs || {}, yarin = trGun(simdi, 1), bugun = trGun(simdi), oto = new Map((V.dizi.otomasyonlar || []).map(o => [o.id, o])), l = [];
+  const kursiyer = id => V.dizi.kursiyerler.find(k => k.id === id), egitmen = id => V.dizi.egitmenler.find(e => e.id === id);
+  for (const id of kurallar) {
+    const o = oto.get(id); if (!o || !o.acik) continue;
+    if (id === 'o1') V.dizi.dersler.filter(d => d.durum === 'Planlandı' && d.tarih === yarin).forEach(d => { const k = kursiyer(d.kursiyer), h = egitmen(d.egitmen), tel = ogrWa(k); if (k && h && tel) l.push({ kural: id, anahtar: 'o1|' + d.id, tel, kime: tamAd(k), rol: 'ÖĞRENCİ', kid: k.id, metin: doldur(K, o.sablon, { kisi: k, ad: k.ad, saat: d.saat, saatte: saatDe(d.saat), egitmen: h.ad }) }); });
+    if (id === 'o10') V.dizi.egitmenler.forEach(h => { const ds = V.dizi.dersler.filter(d => d.egitmen === h.id && d.durum === 'Planlandı' && d.tarih === yarin).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat)), tel = waNumara(h.tel);
+      if (ds.length && tel) l.push({ kural: id, anahtar: 'o10|' + h.id + '|' + yarin, tel, kime: h.ad, rol: 'HOCA', metin: doldur(K, o.sablon, { ad: String(h.ad).split(' ')[0], liste: ds.map(d => { const k = kursiyer(d.kursiyer); return d.saat + ' ' + (k ? tamAd(k) + ' (' + (SINIF_AD[k.sinif] || k.sinif || '') + ')' : ''); }).join(', ') }) }); });
+    if (id === 'o16') V.dizi.kursiyerler.filter(k => !k.kapali && k.dogumTarihi && String(k.dogumTarihi).slice(5) === bugun.slice(5)).forEach(k => { const tel = ogrWa(k); if (tel) l.push({ kural: id, anahtar: 'o16|' + k.id + '|' + bugun.slice(0, 4), tel, kime: tamAd(k), rol: 'ÖĞRENCİ', kid: k.id, metin: doldur(K, o.sablon, { kisi: k, ad: k.ad }) }); });
+  }
+  return l;
+}
+export async function hatirlatmalar(is, durum) {
+  const simdi = is.simdi(), saat = trSaat(simdi), bugun = trGun(simdi);
+  if (saat < '08:00' || saat >= '21:00') return;
+  const kurslar = []; let imlec;
+  do { const r = await is.env.LINK.list({ prefix: 'hat:', cursor: imlec }); r.keys.forEach(x => kurslar.push(x.name.slice(4))); imlec = r.list_complete === false ? r.cursor : null; } while (imlec);
+  let n = 0;
+  for (const kurs of kurslar) {
+    if (!/^[A-Za-z0-9]{10,40}$/.test(kurs) || !izinliKurs(is.env, kurs)) continue;
+    const dilimler = [];
+    for (const [ad, kurallar] of DILIM) { const acik = kurallar.filter(k => saat >= KURAL_SAAT[k]); if (acik.length && !(await is.env.LINK.get(`srv:hat:${kurs}:${bugun}:${ad}`))) dilimler.push([ad, acik]); }
+    if (!dilimler.length) continue;
+    if (n++ >= (+is.env.SERVIS_KURS || 3)) break;
+    try { await kursHatirlat(is, kurs, dilimler, durum); }
+    catch (x) { if (x instanceof ButceBitti) throw x; durum.hata.push('hatırlatma ' + kurs.slice(0, 6) + ': ' + String(x.message || x).slice(0, 120)); }
+  }
+}
+async function kursHatirlat(is, kurs, dilimler, durum) {
+  const simdi = is.simdi(), bugun = trGun(simdi), bitti = () => Promise.all(dilimler.map(([ad]) => is.env.LINK.put(`srv:hat:${kurs}:${bugun}:${ad}`, '1', { expirationTtl: 2 * 86400 })));
+  const V = await kursOku(is, kurs, { diziler: { dersler: 'hepsi', kursiyerler: 'hepsi', egitmenler: 'hepsi', otomasyonlar: 'hepsi' }, tekler: ['kurs', 'zamanli'] });
+  const K = V.tek.kurs || {}, z = V.tek.zamanli;
+  // demo kursu, demo yönlendirmesi ya da demo sınırı açık (her kuraldan günde 2): uygulamaya bırakılır
+  if (K.waApiVarsayilan || K.demoNumara || !z || z.sinir !== false) { durum.hatirlatma.atlanan++; return bitti(); }
+  const gonderilen = z.gonderilen || {}, enCok = +is.env.SERVIS_MESAJ || 20;
+  const adaylar = hatirlatmaUret(V, dilimler.flatMap(([, l]) => l), simdi).filter(x => !gonderilen[x.anahtar]);
+  const bu = adaylar.slice(0, Math.max(0, Math.min(enCok, Math.floor((is.kalan - 8) / 2))));
+  const giden = await kilitliGonder(is, kurs, bu.map(x => ({ ...x, anahtar: 'z|' + x.anahtar + '|' + bugun })), durum, 'hatirlatma');
+  if (giden.length) {
+    // gönderildi bilgisi uygulamanın zamanli kaydına ve gönderim geçmişine (tek işlemde; zamanli o an yeniden okunur)
+    const tx = (await fsIstek(is, ':beginTransaction', { options: { readWrite: {} } })).transaction;
+    try {
+      const V2 = await kursOku(is, kurs, { tekler: ['zamanli'], islem: tx }), z2 = V2.tek.zamanli || z, Y = new Yazim(is, kurs), zaman = yerelZaman(simdi);
+      z2.gonderilen = z2.gonderilen || {}; z2.kayit = z2.kayit || []; z2.gunluk = z2.gunluk || {};
+      giden.forEach(x => { const a = x.anahtar.slice(2, x.anahtar.lastIndexOf('|')); z2.gonderilen[a] = bugun; z2.kayit.unshift({ zaman, kural: x.kural, kime: x.kime, rol: x.rol, metin: x.metin, durum: 'gönderildi (sunucu)' }); z2.gunluk[bugun + x.kural] = (z2.gunluk[bugun + x.kural] || 0) + 1;
+        Y.basa('gonderimler', { zaman: new Date(simdi).toISOString(), kime: x.kime, metin: x.metin, tur: ({ o1: 'Direksiyon dersi hatırlatması', o10: 'Hocaya yarınki program', o16: 'Doğum günü kutlaması' })[x.kural], ...(x.kid ? { kid: x.kid } : {}), oto: true }); });
+      z2.kayit = z2.kayit.slice(0, 80); Y.tek('zamanli', z2);
+      await fsIstek(is, ':commit', { writes: Y.yazilar(), transaction: tx });
+    } catch (x) { try { await fsIstek(is, ':rollback', { transaction: tx }); } catch (y) { } throw x; }
+  }
+  if (bu.length === adaylar.length) await bitti(); else if (bu.length < enCok) durum.butce = true;   // kalanlar sonraki çalıştırmada
+}
+
+// ---- Cron girişi ----
+export async function servisCalistir(env, o = {}) {
+  if (!saOku(env) || !env.LINK) return { kapali: true };
+  const is = isBaglam(env, o), durum = { zaman: new Date(is.simdi()).toISOString(), ogrenci: { islenen: 0, ofise: 0, gonderilen: 0 }, hatirlatma: { gonderilen: 0, atlanan: 0 }, hata: [], butce: false };
+  for (const is0 of [ogrenciGelenIsle, hatirlatmalar]) {
+    try { await is0(is, durum); } catch (x) { if (x instanceof ButceBitti) { durum.butce = true; break; } durum.hata.push(String(x.message || x).slice(0, 160)); }
+  }
+  durum.hata = durum.hata.slice(0, 10);
+  try { await env.LINK.put('servis:durum', JSON.stringify(durum)); } catch (x) { }
+  if (durum.hata.length) console.warn(JSON.stringify({ tur: 'uyari', konu: 'servis', hata: durum.hata.slice(0, 3) }));
+  return durum;
+}
+// ---- UYG-012 / MSJ-021: servis hesabı işleri (kurulum SERVIS-HESABI.md) ----
+// Kursun kendi hattından düz metin; şablon tanımlıysa ve kişi 24 saatte yazmadıysa doğrudan şablon, 131047'de şablonla tekrar (ana gönderim yoluyla aynı kural)
+async function hatMetinGonder(env, kurs, h, to, metin) {
+  const G = 'https://graph.facebook.com/v25.0/' + h.phoneId + '/messages', H = { Authorization: 'Bearer ' + h.token, 'Content-Type': 'application/json' };
+  const yolla = async govde => { const r = await fetch(G, { method: 'POST', headers: H, body: JSON.stringify(govde) }); const j = await r.json().catch(() => ({})); return r.ok ? { ok: true, id: j.messages && j.messages[0] && j.messages[0].id } : { ok: false, kod: j.error && j.error.code, hata: (j.error && j.error.message) || 'Meta hatasi' }; };
+  if (h.sablon && env.LINK && !(await pencereAcik(env, kurs, to))) return yolla(sablonGovde(to, h.sablon, h.sablonDil, metin));
+  const s = await yolla({ messaging_product: 'whatsapp', to, type: 'text', text: { body: metin, preview_url: true } });
+  if (!s.ok && s.kod === 131047 && (h.sablon || env.SABLON_AD)) return yolla(sablonGovde(to, h.sablon || env.SABLON_AD, h.sablonDil || env.SABLON_DIL, metin));
+  return s;
+}
+export const servisSecenek = { gonder: hatMetinGonder, hatOku: kursHat };
+// GET /servis: son çalıştırmanın özeti (kurulu mu, işlenen, gönderilen, hatalar); POST /servis/calistir: şimdi bir kez çalıştır. Yalnız platform sahibi.
+async function servisUc(req, env, yol, cevap) {
+  if (!(await sahipMi(req, env))) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
+  const kurulu = !!saOku(env);
+  if (yol === 'servis/calistir' && req.method === 'POST') return kurulu ? cevap({ ok: true, kurulu, ...(await servisCalistir(env, servisSecenek)) }) : cevap({ ok: false, kurulu, hata: 'FIREBASE_SA tanımlı değil' }, 409);
+  let son = null; try { son = JSON.parse((env.LINK && await env.LINK.get('servis:durum')) || 'null'); } catch (x) { }
+  return cevap({ ok: true, kurulu, son });
+}
 export default {
-  // günlük mevzuat takibi (wrangler.toml [triggers] crons)
-  async scheduled(olay, env, ctx) { ctx.waitUntil(hatSaglik(env).catch(x => console.error(JSON.stringify({ tur: 'hata', konu: 'hat sağlığı', hata: String((x && x.message) || x).slice(0, 200) })))); ctx.waitUntil(mvTakip(env).then(() => (new Date().getUTCDay() === 1 ? mvBulten(env) : null)).catch(x => console.error(JSON.stringify({ tur: 'hata', konu: 'mevzuat takip', hata: String((x && x.message) || x).slice(0, 200) })))); },
+  // Cron: "0 4 * * *" günlük (hat sağlığı, mevzuat takibi, pazartesi bülten); "*/" ile başlayan sık tetik (ör. "*/15 * * * *") servis hesabı işleri
+  async scheduled(olay, env, ctx) {
+    if (olay && String(olay.cron || '').startsWith('*/')) { ctx.waitUntil(servisCalistir(env, servisSecenek).catch(x => console.error(JSON.stringify({ tur: 'hata', konu: 'servis', hata: String((x && x.message) || x).slice(0, 200) })))); return; }
+    ctx.waitUntil(hatSaglik(env).catch(x => console.error(JSON.stringify({ tur: 'hata', konu: 'hat sağlığı', hata: String((x && x.message) || x).slice(0, 200) })))); ctx.waitUntil(mvTakip(env).then(() => (new Date().getUTCDay() === 1 ? mvBulten(env) : null)).catch(x => console.error(JSON.stringify({ tur: 'hata', konu: 'mevzuat takip', hata: String((x && x.message) || x).slice(0, 200) }))));
+  },
   async fetch(req, env) {
     const url = new URL(req.url), origin = req.headers.get('Origin') || '';
     if (url.pathname.replace(/\/+$/, '') === '/onkayit') return onKayitAl(req, env, url);   // DIG-035: kursun kendi sitesindeki form, girişsiz
@@ -1514,6 +1991,7 @@ export default {
     if (yol === 'talep' && req.method === 'POST') return IZINLI.includes(origin) ? talepAl(req, env, cevap) : cevap({ ok: false, hata: 'Izin yok' }, 403);
     if (yol === 'talep/yonet') return talepYonet(req, env, url, cevap);
     if (yol === 'saglik') return saglikOku(req, env, url, cevap);   // MSJ-021
+    if (yol === 'servis' || yol === 'servis/calistir') return servisUc(req, env, yol, cevap);   // UYG-012
     // YON-021: istemcinin IP adresi (IP yetkilendirme: ön büroyu kurs bilgisayarına bağlama); yalnız sitenin kendi adresinden, kayıt tutulmaz
     if (yol === 'ip' && req.method === 'GET') return IZINLI.includes(origin) ? cevap({ ok: true, ip: req.headers.get('CF-Connecting-IP') || '' }) : cevap({ ok: false, hata: 'Izin yok' }, 403);
     if (yol === 'soru-bildir' && req.method === 'POST') return IZINLI.includes(origin) ? soruBildirAl(req, env, cevap) : cevap({ ok: false, hata: 'Izin yok' }, 403);
