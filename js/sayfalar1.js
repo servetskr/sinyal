@@ -723,9 +723,16 @@ export function kursiyerler(filtre) {
   const HIZMET = { ehliyet: 'Sürücü kursu', egitim: '100 ceza puanı eğitimi', src: 'SRC', operator: 'İş makinesi' }, hizmetOf = k => (SINIFLAR[k.sinif] || {}).tur || 'ehliyet';
   const hizmetler = [...new Set(sb(S.kursiyerler).map(hizmetOf))].filter(x => HIZMET[x]);
   const say = a => a === 'Tümü' ? sb(S.kursiyerler).length : sb(S.kursiyerler).filter(k => k.asama === a).length;
-  function satirlar() {
+  function suzulen() {
     let l = sb(S.kursiyerler).filter(k => (sekme === 'Tümü' || k.asama === sekme) && (!sinif || k.sinif === sinif) && (!hizmet || hizmetOf(k) === hizmet) && (!grup || (grup === '_yok' ? !GR.kursiyerGrubu(k) : k.teorikGrup === grup)) && (!borclu || gecikenler(k).length) && (!avukatta || avukattaMi(k)) && (!bekleyen || GR.bekleyenMi(k)));
     if (q) { const s = q.toLocaleLowerCase('tr'); l = l.filter(k => (tamAd(k) + ' ' + k.tel + ' ' + odemeKodu(k)).toLocaleLowerCase('tr').includes(s)); }
+    return l;
+  }
+  // PAR-036: süzülen kayıtların istatistiği
+  const istatistik = () => { const l = suzulen(), top = l.reduce((a, k) => a + (k.odeme.toplam || 0) + ekToplam(k), 0), od = l.reduce((a, k) => a + odenen(k), 0), kal = l.reduce((a, k) => a + kalanBorc(k), 0), gec = l.filter(k => gecikenler(k).length).length;
+    return `<b>${l.length}</b> öğrenci · ücret ${tl(top)} · ödenen ${tl(od)} · kalan <b>${tl(kal)}</b>${gec ? ` · ${gec} öğrencinin taksiti gecikti` : ''}`; };
+  function satirlar() {
+    const l = suzulen();
     if (!l.length) return `<tr><td colspan="7">${bos('Bu filtreye uyan kursiyer yok', 'Filtreyi değiştirin ya da yeni kursiyer ekleyin.')}</td></tr>`;
     return l.map(k => {
       const g = gecikenler(k), sd = sonrakiDers(k), S0 = SINIFLAR[k.sinif];
@@ -755,10 +762,11 @@ export function kursiyerler(filtre) {
         <button class="cip" data-borclu>${ik('uyari')}&nbsp;Taksiti gecikenler</button>${sb(S.kursiyerler).some(avukattaMi) ? `<button class="cip" data-avukatta>${ik('belge')}&nbsp;Avukatta (${sb(S.kursiyerler).filter(avukattaMi).length})</button>` : ''}
         <button class="cip" data-bekleyen title="Kaydı yapıldı; dönem grubuna atanmadı ya da evrakı eksik">${ik('saat')}&nbsp;Bekleyenler (${sb(S.kursiyerler).filter(GR.bekleyenMi).length})</button>
       </div>
+      <div class="suz-ist"><span id="ist">${istatistik()}</span>${['mudur', 'sekreter'].includes(oturum.kullanici.rol) ? `<button class="dg dg-hafif dg-kucuk" data-toplu-odeme>${ik('kalem')}Süzülenlere toplu işlem</button>` : ''}</div>
       <div class="tablo-kap"><table class="tablo tablo-mobil"><thead><tr><th>Kursiyer</th><th>Sınıf</th><th>Aşama</th><th>Direksiyon</th><th>Kalan ödeme</th><th>Sınav riski</th><th>Sonraki ders</th></tr></thead><tbody id="tb">${satirlar()}</tbody></table></div>
     </div>`,
     baglan(k) {
-      const tb = k.querySelector('#tb'), ciz = () => tb.innerHTML = satirlar();
+      const tb = k.querySelector('#tb'), ciz = () => { tb.innerHTML = satirlar(); k.querySelector('#ist').innerHTML = istatistik(); };
       k.addEventListener('click', ev => {
         const s = ev.target.closest('[data-sekme]'); if (s) { sekme = s.dataset.sekme; k.querySelector('#sek').innerHTML = sekmeler([['Tümü', 'Tümü', say('Tümü')], ...ASAMALAR.map(a => [a, a, say(a)])], sekme); ciz(); }
         const g = ev.target.closest('[data-git]'); if (g) location.hash = '#/kursiyer/' + g.dataset.git;
@@ -768,6 +776,7 @@ export function kursiyerler(filtre) {
         { const av = ev.target.closest('[data-avukatta]'); if (av) { avukatta = !avukatta; av.classList.toggle('secili', avukatta); ciz(); } }
         const bk = ev.target.closest('[data-bekleyen]'); if (bk) { bekleyen = !bekleyen; bk.classList.toggle('secili', bekleyen); ciz(); }
         if (ev.target.closest('[data-toplu-hesap]')) return HS.topluHesap(yenile);
+        if (ev.target.closest('[data-toplu-odeme]')) return topluOdeme(suzulen(), ciz);
         if (ev.target.closest('[data-disa]')) import('./ui.js?v=234').then(u => { u.csvIndir('kursiyerler.csv', [['Ad', 'Soyad', 'Telefon', 'Sınıf', 'Dönem grubu', 'Aşama', 'Kayıt', 'Direksiyon', 'Toplam', 'Ödenen', 'Kalan'], ...S.kursiyerler.map(x => [x.ad, x.soyad, x.tel, SINIFLAR[x.sinif].ad, (GR.kursiyerGrubu(x) || {}).ad || '', x.asama, x.kayit, x.direksiyon, x.odeme.toplam, odenen(x), kalanBorc(x)])]); bildir('Kursiyer listesi indirildi'); });
       });
       k.addEventListener('keydown', ev => { const g = ev.target.closest('[data-git]'); if (g && ev.key === 'Enter') location.hash = '#/kursiyer/' + g.dataset.git; });
@@ -1595,6 +1604,33 @@ function avukatPenceresi(k) {
 // hepsi taban üstünde serbest, tabanın altına düşüren indirim engellenir (MTSK Yön. 43/2), yetki müdürde
 export const indirimTurleri = () => { const o = S.kurs.indirimTurleri || {}; return { kisi: o.kisi !== false, pesin: o.pesin !== false, kampanya: !!o.kampanya && !!String(o.kampanyaAd || '').trim(), kampanyaAd: String(o.kampanyaAd || '').trim(), kampanyaIlan: o.kampanyaIlan || '' }; };
 const indirimNedenleri = () => { const t = indirimTurleri(); return [t.kisi ? 'Kişiye özel indirim (taban üstünde)' : '', t.pesin ? 'Peşin ödeme farkı' : '', t.kampanya ? 'Kampanya: ' + t.kampanyaAd : ''].filter(Boolean); };
+// PAR-036: süzülen öğrencilere toplu borçlandırma (ek kalem; 'aynı kalemi olmayanlara') ve toplu tahsilat (seçilen kalemin ödenmemiş olanları; her öğrenciye ayrı makbuz)
+function topluOdeme(l, sonra) {
+  if (!l.length) return bildir('Süzgece uyan öğrenci yok', 'uyari');
+  const tabanL = tabanListesi(), kalemler = [['e-Sınav ücreti', esinavUcreti(1)], ['e-Sınav tekrar ücreti', esinavUcreti(2)], ['Uygulama sınavı ücreti', uygulamaSinavUcreti(2)], ...digerUcretler().map(x => [x.ad, x.tutar || 0])];
+  const acikAdlar = [...new Set(l.flatMap(k => ((k.odeme || {}).ekler || []).filter(x => !x.odendi && !x.kursOdedi).map(x => x.ad)))];
+  pencere({ baslik: `Toplu işlem · ${l.length} öğrenci`, taslak: false, icerik: `<form id="f-to" class="form-izgara"><div class="alan tam"><div class="secim"><label><input type="radio" name="m" value="borc" checked><span>Borçlandır</span></label><label><input type="radio" name="m" value="tahsil" ${acikAdlar.length ? '' : 'disabled'}><span>Tahsil et</span></label></div></div>
+      <div class="alan" data-to="borc"><label for="to-k">Kalem</label><select id="to-k" name="k">${kalemler.map(([a, t]) => `<option data-t="${t}">${e(a)}</option>`).join('')}</select></div>
+      <div class="alan" data-to="borc"><label for="to-t">Tutar (₺)</label><input id="to-t" name="t" inputmode="numeric" value="${kalemler[0][1] || ''}"></div>
+      <label class="alan tam ind-tik" data-to="borc"><input type="checkbox" name="ayni" checked> Bu kalemi zaten olanları atla</label>
+      <div class="alan" data-to="tahsil" hidden><label for="to-a">Ödenmemiş kalem</label><select id="to-a" name="a">${acikAdlar.map(a => `<option>${e(a)}</option>`).join('')}</select></div>
+      <div class="alan" data-to="tahsil" hidden><label for="to-y">Yöntem</label><select id="to-y" name="y">${YONTEMLER.map(y => `<option value="${y}" ${y === varsayilanYontem() ? 'selected' : ''}>${yontemAd(y)}</option>`).join('')}</select></div>
+      <p class="tam" data-to-ozet style="font-size:14px;margin:4px 0 0"></p>
+      ${tabanL ? `<p class="tam" style="font-size:13px;color:var(--soluk)">${e(listeAdi(tabanL))}: sınav ücretleri kursiyerin masrafıdır (emanet); kurs ücreti dışında ders dışı kalem toplu eklenmez (not 4).</p>` : ''}</form>`,
+    altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-to">Uygula</button>',
+    onAc(p) { const f = p.querySelector('form'), oz = p.querySelector('[data-to-ozet]');
+      const hedef = () => f.m.value === 'borc' ? l.filter(k => !f.ayni.checked || !((k.odeme || {}).ekler || []).some(x => x.ad === f.k.value)) : l.filter(k => ((k.odeme || {}).ekler || []).some(x => x.ad === f.a.value && !x.odendi && !x.kursOdedi));
+      const guncelle = () => { p.querySelectorAll('[data-to]').forEach(x => { x.hidden = x.dataset.to !== f.m.value; }); const h = hedef(), v = tutarOku(f.t.value) || 0; oz.innerHTML = f.m.value === 'borc' ? `<b>${h.length}</b> öğrenciye ${e(f.k.value)} · ${tl(v)} (toplam ${tl(v * h.length)})` : `<b>${h.length}</b> öğrenciden ${e(f.a.value)} tahsil edilir (${tl(h.reduce((a, k) => a + ((k.odeme.ekler.find(x => x.ad === f.a.value && !x.odendi && !x.kursOdedi) || {}).tutar || 0), 0))}); her biri ayrı makbuz`; };
+      f.addEventListener('change', ev => { if (ev.target.name === 'k') f.t.value = ev.target.selectedOptions[0].dataset.t || ''; guncelle(); }); f.addEventListener('input', guncelle); guncelle();
+      f.addEventListener('submit', ev => { ev.preventDefault(); const h = hedef(); if (!h.length) return bildir('Uygulanacak öğrenci yok', 'uyari');
+        if ((S.gunSonu || []).includes(gun(0)) && f.m.value === 'tahsil') return bildir('Bugün kapatıldı; tahsilat eklenemez', 'uyari');
+        geriAlNoktasi();
+        if (f.m.value === 'borc') { const v = tutarOku(f.t.value) || 0, ad = f.k.value; if (!v) return bildir('Tutar girin', 'uyari'); if (tabanL && digerUcretler().some(x => x.ad === ad)) return bildir(`“${ad}”: ${listeAdi(tabanL)} gereği kurs ücreti dışı kalem toplu eklenmez (not 4); gerekirse öğrenci dosyasından tek tek`, 'uyari');
+          h.forEach(k => { k.odeme.ekler = k.odeme.ekler || []; k.odeme.ekler.push({ ad, tutar: v, odendi: null, tur: ekTur({ ad }) }); }); islem('Toplu borçlandırdı', `${ad} · ${tl(v)} · ${h.length} öğrenci`); }
+        else { const ad = f.a.value, y = f.y.value; let n = 0, top = 0; h.forEach((k, j) => { const x = k.odeme.ekler.find(z => z.ad === ad && !z.odendi && !z.kursOdedi); if (!x) return; x.odendi = gun(0); S.hareket.unshift({ id: 'h' + (Date.now() + j), tarih: gun(0), tur: 'Gelir', kategori: x.ad, aciklama: tamAd(k) + ' · ' + x.ad, tutar: x.tutar, yontem: y, kursiyer: k.id }); n++; top += x.tutar; });
+          islem('Toplu tahsilat aldı', `${ad} · ${n} öğrenci · ${tl(top)}`); }
+        kaydet(); kapatPencere(); bildir(f.m.value === 'borc' ? `${h.length} öğrenciye eklendi` : `${h.length} öğrenciden tahsil edildi`, 'tamam', true); sonra && sonra(); }); } });
+}
 export function odemeIslem(k, tur, oneri) {
   if (tur === 'ucretsiz') return MZ.ucretsizYap(k, yenile);
   if (tur === 'avukat') return avukatPenceresi(k);

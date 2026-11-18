@@ -3528,3 +3528,6 @@ button.rozet:focus-visible { outline: 2px solid var(--levha); outline-offset: 2p
 /* PAR-059: indirim türleri */
 .ind-tik { display: flex; gap: 8px; align-items: center; font-size: 14px; min-height: 32px; }
 .ind-tik input { width: 18px; height: 18px; }
+/* PAR-036: süzülen kayıtların istatistiği ve toplu işlem */
+.suz-ist { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; padding: 8px 20px; font-size: 13.5px; color: var(--soluk); border-top: 1px solid var(--cizgi-2); }
+.suz-ist b { color: var(--murekkep); }
