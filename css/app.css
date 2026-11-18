@@ -3349,3 +3349,12 @@ p.mz-kanit-uyari{margin:-4px 0 10px;font-size:13px}
 /* DIR-002: Ayarlar › Geçiş saatleri */
 .gecis-sat { display: flex; align-items: center; gap: 12px; padding: 10px 20px; border-top: 1px solid var(--cizgi); font-size: 14px; }
 .gecis-bas { padding: 8px 20px; background: var(--panel-2); border-top: 1px solid var(--cizgi); font-size: 12.5px; font-weight: 600; color: var(--soluk); }
+
+/* DIR-010: öğrenci dosyası › Dersler sayaçları */
+.sayac-serit { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 20px 6px; }
+.sayac-kutu { flex: 1 1 130px; min-width: 0; border: 1px solid var(--cizgi); border-radius: 10px; padding: 8px 12px; background: var(--panel); }
+.sayac-kutu small { display: block; font-size: 12px; color: var(--soluk); }
+.sayac-kutu b { display: block; font: 600 18px/1.2 var(--baslik); color: var(--murekkep); font-variant-numeric: tabular-nums; }
+.sayac-kutu span { display: block; font-size: 12px; color: var(--soluk); }
+.sayac-kutu.yesil { border-color: #9bd3a8; background: #f1faf3; }
+.sayac-kutu.uyari { border-color: #e8c45a; background: var(--sari-acik); }

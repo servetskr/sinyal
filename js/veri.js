@@ -1096,7 +1096,17 @@ export function dersSayaci(k, bas) {
   const as = d => d.tur === 'alan' || d.tur === 'simulator', yap = l.filter(d => d.durum === 'Yapıldı'), pl = l.filter(d => d.durum === 'Planlandı');
   const gerekli = gerekliDireksiyon(k), aktarim = Math.max(0, (+(k && k.direksiyon) || 0) - yap.length);
   const turlu = String((k && k.kayit) || '') >= ALAN_SIM_KURAL_TARIH || (S.dersler || []).some(d => d.kursiyer === (k && k.id) && d.tur);
-  return { gerekli, yapildi: yap.length + aktarim, planli: pl.length, aktarim, alanSim: { gerek: belgeliMi(k) || !gerekli || !turlu ? 0 : Math.min(ALAN_SIM_SAAT, gerekli), yapildi: yap.filter(as).length, planli: pl.filter(as).length }, trafik: { yapildi: yap.filter(d => !as(d)).length, planli: pl.filter(d => !as(d)).length } };
+  // DIR-010: eğitim türüne göre dağılım (egitimTuruOf), gece, başarısız aday (son sınavdan sonra, md.15) ve ikinci dört hak.
+  // 'zorunlu': zorunlu ders gereksinimine sayılan (normal; ikinci dört hakta önceki + 2. direksiyon). k.direksiyon geriye uyum için bütün yapılan dersleri sayar
+  // (usta uygulaması ve öğrenci ekranı ek dersi direksiyon − gerekli olarak gösterir).
+  const egitim = {}; Object.keys(EGITIM_TURU).forEach(a => { egitim[a] = { yapildi: 0, planli: 0 }; });
+  l.filter(d => d.durum === 'Yapıldı' || d.durum === 'Planlandı').forEach(d => { const a = egitimTuruOf(k, d); egitim[a][d.durum === 'Yapıldı' ? 'yapildi' : 'planli']++; });
+  const ds = (k && k.dsinav) || {}, kaldi = !!ds.tarih && (ds.sonuc === 'Kaldı' || ds.sonuc === 'Girmedi' || ds.girmedi);
+  const ih = k && k.ikinciHak, ikinci = ih ? { ...egitim.ikinci, gerek: Math.max(0, (+ih.hedef || 0) - (+ih.onceki || 0)), onceki: +ih.onceki || 0 } : null;
+  const basarisiz = { ...egitim.basarisiz, gerek: kaldi && !ih ? kuralAyar('telafiSaat') : 0, sonSinav: kaldi ? ds.tarih : '', sonra: kaldi ? yap.filter(d => d.tarih > ds.tarih && egitimTuruOf(k, d) === 'basarisiz').length : 0 };
+  const gece = { yapildi: yap.filter(geceDersMi).length, planli: pl.filter(geceDersMi).length, gerek: geceGerekli(k) };
+  const zorunlu = ih ? { yapildi: ikinci.onceki + egitim.ikinci.yapildi, planli: egitim.ikinci.planli } : { yapildi: egitim.normal.yapildi + aktarim, planli: egitim.normal.planli };
+  return { gerekli, yapildi: yap.length + aktarim, planli: pl.length, aktarim, egitim, zorunlu, ikinci, basarisiz, telafi: egitim.onSinav, gece, alanSim: { gerek: belgeliMi(k) || !gerekli || !turlu ? 0 : Math.min(ALAN_SIM_SAAT, gerekli), yapildi: yap.filter(as).length, planli: pl.filter(as).length }, trafik: { yapildi: yap.filter(d => !as(d)).length, planli: pl.filter(d => !as(d)).length } };
 }
 export const esinavsizBelgeli = k => belgeliMi(k) && !teorikVar(k);
 export function teorikVar(k) {
