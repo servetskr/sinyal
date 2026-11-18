@@ -146,7 +146,7 @@ Kullanıcı sayısında sınır yoktur: müdür, ön büro, bütün öğretmenle
 ### Güvenlik ve KVKK
 
 **Verilerimiz nerede tutuluyor?**
-Bulutta, şifreli olarak. Her gün yedek alınır; yedeğin bir kopyası ayrı bir yerde tutulur.
+Bulutta, şifreli olarak. Her gün bütün kayıtların yedeği alınır; yedeğin bir kopyası ayrı bir yerde tutulur. Fotoğraflar, belge taramaları ve imzalar ayrıca saklanır; bir yedeğe geri dönüldüğünde yerlerinde kalır.
 
 **Kim neyi görebilir?**
 Herkes kendi e-posta ya da telefonuyla girer. Öğretmen yalnız kendi öğrencilerini ve derslerini, öğrenci yalnız kendi bilgilerini görür. Bir kursun çalışanı başka kursun verisini göremez. Yapılan her işlem kimin yaptığıyla birlikte kaydedilir.
@@ -166,7 +166,7 @@ Var. Öğrenci derslerini, ödeme planını, sınav hazırlığını ve belgeler
 Cep telefonu numarası ve şifreyle. İlk şifre kayıttan sonra kursun WhatsApp’ından gelir; öğrenci ilk girişte kendi şifresini belirler.
 
 **Şifresini unutan ne yapar?**
-Giriş ekranında şifre yanlış girilince yardım kartı kendiliğinden çıkar. Öğrenci kursuna haber verir; kurs ekibi mdSinyal’e WhatsApp’tan yazar, dakikalar içinde yeni şifre verilir.
+Öğrenci kursuna haber verir; kurs, öğrenci dosyasından tek dokunuşla yeni geçici şifre oluşturup öğrenciye kendisi gönderir. Öğrenci bu şifreyle girer ve kendi şifresini belirler. Kurs ekibi ve öğretmenler giriş ekranındaki “Şifremi unuttum” ile e-postalarına gelen bağlantıdan yeni şifre belirler.
 
 **Öğretmenler nasıl eklenir?**
 Kurs müdürü öğretmene davet linki gönderir; öğretmen kendi e-postası ve şifresiyle hesabını açar ve yalnız kendi ders ekranını görür.
@@ -185,7 +185,7 @@ Ders değişikliği isteyen öğrenciye, dersine 24 saatten fazla varsa aynı ö
 ### MEB
 
 **MEBBİS’e otomatik işliyor mu?**
-MEBBİS Yardımcısı (Chrome eklentisi) formları sizin açtığınız MEBBİS oturumunda doldurur. MEBBİS şifrenizi istemez ve saklamaz; her kaydı “Kaydet”e basarak siz onaylarsınız.
+Onayınızla, evet. Kurs yetkilisi yazılacak kayıtları kontrol eder ve bir kez “MEBBİS’e yaz” ile onaylar; MEBBİS Yardımcısı (Chrome ya da Edge eklentisi) sizin açtığınız MEBBİS oturumunda formları doldurur, kaydeder ve kaydın MEBBİS’e geçtiğini doğrular. Güvenlik kodunu ve geri alınamaz adımları yetkili yapar; yazma istediğiniz an durdurulur. MEBBİS şifreniz istenmez, görülmez, saklanmaz.
 
 **MEB denetimine hazırlıkta yardımcı oluyor mu?**
 Evet. Denetim modu, denetimde bakılan eksikleri tek listede gösterir: süresi dolan ya da dolmak üzere olan personel ve araç belgeleri (muayene, sigorta), imzasız ya da kısa süren direksiyon dersleri, eksik kursiyer evrakı ve KVKK aydınlatması kaydı olmayan kursiyerler.
