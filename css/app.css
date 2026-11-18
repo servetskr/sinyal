@@ -3514,3 +3514,11 @@ button.rozet:focus-visible { outline: 2px solid var(--levha); outline-offset: 2p
 .tahsil-mak .et { width: 100%; }
 .tahsil-mak label { display: flex; gap: 8px; align-items: center; min-height: 32px; }
 .tahsil-mak input { width: 18px; height: 18px; }
+/* PAR-018: gelir/gider kategorileri */
+.kt-liste { display: flex; flex-wrap: wrap; gap: 6px; }
+.kt-cip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border: 1px solid var(--cizgi); border-radius: 999px; font-size: 13.5px; background: var(--kart, #fff); }
+.kt-cip.sabit { color: var(--soluk); }
+.kt-cip button { border: 0; background: none; padding: 2px; display: inline-flex; cursor: pointer; color: var(--soluk); min-width: 24px; min-height: 24px; align-items: center; justify-content: center; }
+.kt-cip button svg { width: 14px; height: 14px; }
+.kt-ekle { display: flex; gap: 8px; margin-top: 8px; }
+.kt-ekle .girdi { flex: 1; min-width: 0; }

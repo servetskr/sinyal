@@ -462,17 +462,36 @@ function hareketDuzelt(h) {
     },
   });
 }
+// PAR-018: gelir/gider kategorileri — sabit liste + kursun kendi kategorileri (S.kurs.kategoriler { Gider: [], Gelir: [] }); 'Sınav harcı' emanet olarak ayrı işlenir
+const KAT_VARSAYILAN = { Gider: ['Yakıt', 'Bakım', 'Kira', 'Maaş', 'Fatura', 'Reklam', 'Sınav harcı', 'Diğer'], Gelir: ['Diğer'] };
+export const kategoriler = tur => { const o = (S.kurs.kategoriler || {})[tur] || []; return [...KAT_VARSAYILAN[tur].filter(x => x !== 'Diğer'), ...o.filter(x => !KAT_VARSAYILAN[tur].includes(x)), 'Diğer']; };
+const katSecenek = tur => kategoriler(tur).map(x => `<option>${e(x)}</option>`).join('') + '<option value="__yeni">+ Yeni kategori…</option>';
+function kategoriPenceresi() {
+  const liste = () => ['Gider', 'Gelir'].map(tur => `<h4 style="margin:10px 0 6px">${tur}</h4><div class="kt-liste">${KAT_VARSAYILAN[tur].map(x => `<span class="kt-cip sabit">${e(x)}</span>`).join('')}${((S.kurs.kategoriler || {})[tur] || []).map(x => `<span class="kt-cip">${e(x)}<button type="button" data-kt-sil="${tur}|${e(x)}" aria-label="${e(x)} kategorisini kaldır">${ik('kapat')}</button></span>`).join('')}</div>
+    <form class="kt-ekle" data-kt-tur="${tur}"><input class="girdi" name="ad" maxlength="40" placeholder="Yeni ${tur.toLocaleLowerCase('tr')} kategorisi" aria-label="Yeni ${tur.toLocaleLowerCase('tr')} kategorisi"><button class="dg dg-cizgi dg-kucuk">Ekle</button></form>`).join('');
+  pencere({ baslik: 'Gelir ve gider kategorileri', taslak: false, icerik: `<p style="font-size:13.5px;color:var(--soluk)">Sabit kategoriler raporlarda ve müşavir paketinde özel işlenir (Sınav harcı emanettir); kendi kategorileriniz genel gider/gelir olarak gider. Kaldırılan kategori eski kayıtlarda kalır.</p><div data-kt>${liste()}</div>`, altlik: '<button class="dg dg-ana" data-kapat>Tamam</button>',
+    onAc(p) { const kap = p.querySelector('[data-kt]'), yen = () => { kap.innerHTML = liste(); };
+      kap.addEventListener('submit', ev => { ev.preventDefault(); const f = ev.target, tur = f.dataset.ktTur, ad = f.ad.value.trim().replace(/\s+/g, ' '); if (!ad) return; if (kategoriler(tur).some(x => x.toLocaleLowerCase('tr') === ad.toLocaleLowerCase('tr'))) return bildir('Bu kategori zaten var', 'uyari');
+        const o = { ...(S.kurs.kategoriler || {}) }; o[tur] = [...(o[tur] || []), ad]; S.kurs.kategoriler = o; islem('Kategori ekledi', tur + ' · ' + ad); kaydet(); yen(); const i = kap.querySelector(`[data-kt-tur="${tur}"] input`); if (i) i.focus(); });
+      kap.addEventListener('click', ev => { const b = ev.target.closest('[data-kt-sil]'); if (!b) return; const [tur, ad] = b.dataset.ktSil.split('|'); const o = { ...(S.kurs.kategoriler || {}) }; o[tur] = (o[tur] || []).filter(x => x !== ad); S.kurs.kategoriler = o; islem('Kategoriyi kaldırdı', tur + ' · ' + ad); kaydet(); yen(); }); } });
+}
 export function hareketEkle() {
   pencere({
     baslik: 'Gelir / gider ekle',
     icerik: `<form class="form-izgara" id="f-h"><div class="alan tam"><div class="secim"><label><input type="radio" name="tur" value="Gider" checked><span>Gider</span></label><label><input type="radio" name="tur" value="Gelir"><span>Gelir</span></label></div></div>
-      <div class="alan"><label>Kategori</label><select name="kat">${['Yakıt', 'Bakım', 'Kira', 'Maaş', 'Fatura', 'Reklam', 'Sınav harcı', 'Diğer'].map(x => `<option>${x}</option>`).join('')}</select></div>
+      <div class="alan"><label for="h-kat">Kategori</label><select id="h-kat" name="kat">${katSecenek('Gider')}</select><input name="katYeni" class="girdi" maxlength="40" placeholder="Yeni kategorinin adı" hidden style="margin-top:6px" aria-label="Yeni kategorinin adı">${mudurMu() ? '<button type="button" class="dg dg-hafif dg-kucuk" data-kt-duzen style="margin-top:4px;align-self:flex-start">Kategorileri düzenle</button>' : ''}</div>
       <div class="alan"><label>Tutar (₺)</label><input name="tutar" inputmode="numeric" required placeholder="0"></div>
       <div class="alan"><label>Tarih</label><input type="date" name="tarih" value="${gun(0)}"></div>
       <div class="alan"><label>Yöntem</label><select name="y">${YONTEMLER.map(y => `<option value="${y}">${yontemAd(y)}</option>`).join('')}</select></div>${hesapSecici('Nakit')}
       <div class="alan tam"><label>Açıklama</label><input name="a" placeholder="Örn. 26 SN 214 yakıt"></div></form>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-h">Kaydet</button>`,
-    onAc(d) { d.querySelector('form').addEventListener('submit', ev => { ev.preventDefault(); const f = ev.target, v = tutarOku(f.tutar.value); if (!v) return bildir('Tutar girin', 'uyari'); if (S.gunSonu.includes(f.tarih.value)) return bildir(tamTarih(f.tarih.value) + ' günü kapatıldı; bu tarihe kayıt eklenemez', 'uyari'); S.hareket.unshift({ id: 'h' + Date.now(), tarih: f.tarih.value, tur: f.tur.value, kategori: f.kat.value, aciklama: f.a.value || f.kat.value, tutar: v, yontem: f.y.value, ...hesapOku(f, f.y.value) }); islem(f.tur.value + ' ekledi', (f.a.value || f.kat.value) + ' · ' + tl(v)); kaydet(); kapatPencere(); bildir('Kaydedildi'); yenile(); }); },
+    onAc(d) { const f0 = d.querySelector('form'), yeniGoster = () => { f0.katYeni.hidden = f0.kat.value !== '__yeni'; if (!f0.katYeni.hidden) f0.katYeni.focus(); };
+      f0.addEventListener('change', ev => { if (ev.target.name === 'tur') { f0.kat.innerHTML = katSecenek(f0.tur.value); yeniGoster(); } if (ev.target.name === 'kat') yeniGoster(); });
+      const kd = d.querySelector('[data-kt-duzen]'); if (kd) kd.addEventListener('click', () => { kapatPencere(); kategoriPenceresi(); });
+      d.querySelector('form').addEventListener('submit', ev => { ev.preventDefault(); const f = ev.target, v = tutarOku(f.tutar.value); if (!v) return bildir('Tutar girin', 'uyari');
+        if (f.kat.value === '__yeni') { const ad = f.katYeni.value.trim().replace(/\s+/g, ' '); if (!ad) { f.katYeni.focus(); return bildir('Yeni kategorinin adını yazın', 'uyari'); } const var_ = kategoriler(f.tur.value).find(x => x.toLocaleLowerCase('tr') === ad.toLocaleLowerCase('tr'));
+          if (!var_) { const o = { ...(S.kurs.kategoriler || {}) }; o[f.tur.value] = [...(o[f.tur.value] || []), ad]; S.kurs.kategoriler = o; islem('Kategori ekledi', f.tur.value + ' · ' + ad); }
+          const op = document.createElement('option'); op.textContent = var_ || ad; op.selected = true; f.kat.prepend(op); } if (S.gunSonu.includes(f.tarih.value)) return bildir(tamTarih(f.tarih.value) + ' günü kapatıldı; bu tarihe kayıt eklenemez', 'uyari'); S.hareket.unshift({ id: 'h' + Date.now(), tarih: f.tarih.value, tur: f.tur.value, kategori: f.kat.value, aciklama: f.a.value || f.kat.value, tutar: v, yontem: f.y.value, ...hesapOku(f, f.y.value) }); islem(f.tur.value + ' ekledi', (f.a.value || f.kat.value) + ' · ' + tl(v)); kaydet(); kapatPencere(); bildir('Kaydedildi'); yenile(); }); },
   });
 }
 function faturaKes() {
