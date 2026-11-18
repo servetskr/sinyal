@@ -1,5 +1,5 @@
 // Mesaj merkezi: grup ya da tek tek seçilen kişilere kişiye özel WhatsApp mesajı, planlı gönderim, iletildi/okundu takibi
-import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, kalanBorc, gecikenler, gecikenTutar, eksikEvrak, sonrakiDers, risk, islem, sb, aktifSiniflar, SINIFLAR, selam, kursAdi, adEk, yerelZaman, bulutKanca, tabanListesi } from './veri.js?v=234';
+import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, kalanBorc, gecikenler, gecikenTutar, eksikEvrak, sonrakiDers, risk, islem, sb, aktifSiniflar, SINIFLAR, selam, kursAdi, adEk, yerelZaman, bulutKanca, tabanListesi, odenen, adaySinavSaati } from './veri.js?v=234';
 import { e, tl, ik, rozet, bos, pencere, kapatPencere, bildir, tarihUzun, apiAcik, apiGonder, etiket, waSirali, ziyaretci, isaret, waIstek, metaHata } from './ui.js?v=234';
 
 const durum = { grup: 'aktif', sinif: '', ogretmen: '', secili: null, sira: 0, zaman: 'simdi', metin: null, sablon: '', ek: null, cevapIste: false, tanitim: false };
@@ -26,7 +26,8 @@ const GRUPLAR = [
   ['aday', 'Adaylar', null],
 ];
 // Kişiye özel alanlar: metinde {ad} gibi yazılır, her kişi için ayrı dolar
-const ALANLAR = [['selam', 'Hitap'], ['ad', 'Ad'], ['kurs', 'Kurs adı'], ['borc', 'Kalan borç'], ['geciken', 'Geciken tutar'], ['ders', 'Sıradaki ders'], ['ogretmen', 'Öğretmeni'], ['sinav', 'Sınavı'], ['evrak', 'Eksik evrak']];
+// MSJ-022: eksik evrak, son e-sınav ve uygulama sınavı (tarih, saat, puan/sonuç), usta öğretici, uygulama aracı plakası, ödenen tutar da eklendi
+const ALANLAR = [['selam', 'Hitap'], ['ad', 'Ad'], ['kurs', 'Kurs adı'], ['borc', 'Kalan borç'], ['odenen', 'Ödenen tutar'], ['geciken', 'Geciken tutar'], ['ders', 'Sıradaki ders'], ['ogretmen', 'Öğretmeni'], ['plaka', 'Ders aracı plakası'], ['sinav', 'Sıradaki sınavı'], ['esinav_sonuc', 'Son e-sınav sonucu'], ['uygulama_sonuc', 'Son uygulama sınavı sonucu'], ['evrak', 'Eksik evrak']];
 const SABLONLAR = [
   ['Kapalı gün', '{selam} resmî tatil nedeniyle yarın {kurs} kapalı olacaktır. Yarınki dersleriniz yeniden planlanacak; yeni saatiniz size ayrıca bildirilecek.'],
   ['Sıradaki ders', '{selam} sıradaki direksiyon dersiniz {ders}, öğretmeniniz {ogretmen}. Gelemeyecekseniz bu mesajı yanıtlamanız yeterli.'],
@@ -55,8 +56,13 @@ function degerler(r) {
     selam: r.tip === 'aday' ? selam({ ad: r.ad }) : selam(r.kisi), ad: String(r.ad).split(' ')[0], kurs: S.kurs.ad, kursa: kursAdi('e'), kursta: kursAdi('de'),
     borc: k ? tl(kalanBorc(k)) : '', geciken: k && gecikenler(k).length ? tl(gecikenTutar(k)) : '',
     ders: d ? `${tarihUzun(d.tarih)} saat ${d.saat}` : '', ogretmen: h ? h.ad : '',
-    sinav: s ? `${s.tur === 'e-Sınav' ? 'e-sınavınız' : 'uygulama sınavınız'} ${tarihUzun(s.tarih)} saat ${s.saat}, yer: ${s.yer}` : '',
+    sinav: s ? `${s.tur === 'e-Sınav' ? 'e-sınavınız' : 'uygulama sınavınız'} ${tarihUzun(s.tarih)} saat ${adaySinavSaati(s, k).saat}, yer: ${s.yer}` : '',
     evrak: k ? eksikEvrak(k).map(x => x[1].toLocaleLowerCase('tr')).join(', ') : '',
+    eksik_evrak: k ? eksikEvrak(k).map(x => x[1].toLocaleLowerCase('tr')).join(', ') : '',
+    odenen: k ? tl(odenen(k)) : '', bakiye: k ? tl(kalanBorc(k)) : '', usta: h ? h.ad : '',
+    plaka: k ? (() => { const dd = S.dersler.filter(x => x.kursiyer === k.id && x.arac).sort((a, b) => b.tarih.localeCompare(a.tarih))[0], ar = dd && S.araclar.find(a => a.id === dd.arac); return ar ? ar.plaka : ''; })() : '',
+    esinav_sonuc: k && k.esinav && k.esinav.sonuc ? `e-sınav${k.esinav.tarih ? ' ' + tarihUzun(k.esinav.tarih) : ''}: ${k.esinav.puan != null ? k.esinav.puan + ' puan, ' : ''}${k.esinav.sonuc.toLocaleLowerCase('tr')}` : '',
+    uygulama_sonuc: k && k.dsinav && k.dsinav.sonuc ? `uygulama sınavı${k.dsinav.tarih ? ' ' + tarihUzun(k.dsinav.tarih) : ''}: ${k.dsinav.sonuc.toLocaleLowerCase('tr')}` : '',
   };
 }
 // MSJ-031: şablona kişinin T.C. kimlik numarası, şifresi ya da PIN'i hiçbir zaman konmaz (KVKK); bu adlarla değişken eklense de doldurulmaz
