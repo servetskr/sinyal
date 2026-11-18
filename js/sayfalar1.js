@@ -3,7 +3,7 @@ import { ziyaretci, alanHatalari, e, saatDe, saatE, tl, sayi, ik, rozet, asamaRo
 import { yenile } from './app.js?v=234';
 import { denetimEksikleri, sozlesmeImzalat, sozlesmeDondur } from './sayfalar3.js?v=234';
 import { bosSaatler } from './sayfalar4.js?v=234';
-import { evrakDogrula, kurulumAdimlari } from './sayfalar5.js?v=234';
+import { evrakDogrula, kurulumAdimlari, kurulumKarti, kurulumKarsila } from './sayfalar5.js?v=234';
 import { KONULAR } from './konular.js?v=234';
 import * as MZ from './mevzuat.js?v=234';
 import * as HS from './hesap.js?v=234';
@@ -159,7 +159,7 @@ export function genel(alt) {
 
   return {
     baslik: 'Genel bakış',
-    html: `
+    html: `${kurulumKarti()}
     <div class="izgara iz-21">
       <div class="kart bugun-kart"><div class="kart-bas"><h3>Bugün yapılacaklar</h3><small>${gorunen.length ? 'Önem sırasıyla' : ''}${bitenSay ? ' · ' + bitenSay + ' iş tamamlandı ya da ertelendi' : ''}</small></div>
         <ul class="liste" style="margin-top:8px">${ilk5.map(isSatir).join('') || '<li>' + bos('Her şey yolunda', 'Bugün sizi bekleyen iş yok.') + '</li>'}</ul>
@@ -207,6 +207,7 @@ export function genel(alt) {
     </details>`,
     baglan(k) {
       NT.notBaglan(k, yenile); setTimeout(NT.alarmlariGoster, 1500);   // DIG-011: kişisel not defteri ve alarmlar
+      if (kurBitmedi && mudurMu() && S._bulut && !S.kurs.kurulumKarsilama && !document.querySelector('.perde')) setTimeout(kurulumKarsila, 600);   // YON-075: ilk girişte karşılama
       if (alt === 'evrak') { history.replaceState(null, '', '#/genel'); import('./evrak.js?v=234').then(m => m.sahipsizPencere(yenile)); }
       k.addEventListener('click', ev => { const pk = ev.target.closest('[data-per-kart-ana]'); if (pk) { const [tur, id] = pk.dataset.perKartAna.split(':'); PK.personelKarti(tur, id, 'genel'); } });
       const onburo = () => ((S.kullanicilar || []).find(u => u.rol === 'sekreter') || {}).ad || 'Ön büro';

@@ -3,6 +3,7 @@ import * as CR from './cari.js?v=234';
 import { ilSecenekleri, kimlikEksikleri, EKRAN_DUZEY, YETKI_EKRAN, YETKI_ISLEM, makbuzAyar, makbuzBicim, makbuzSeri, makbuzSira, ekDersFiyat, ekToplam, kalanBorc, S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, kursiyer, DERS_TUR_AD, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube, tutarOku, gunBatimi, kursIli, sinifEtiket, ekTur, kursiyerTaban, gerekliDireksiyon, tabanListesi, ekDersTabani, eskiBelgeTarihi, MEVCUT_BELGELER } from './veri.js?v=234';
 import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor, belgeYazdir, kisaLink, siteLink } from './ui.js?v=234';
 import { yenile } from './app.js?v=234';
+import { destekWa } from './iletisim.js?v=234';
 import * as B from './bulut.js?v=234';
 import { wpGonder } from './sayfalar1.js?v=234';
 import * as ME from './mebevrak.js?v=234';
@@ -1080,12 +1081,13 @@ export function kurulum() {
   return {
     baslik: 'Kurulum', alt: `${biten}/${top} adım tamam${atlanan ? ` · ${atlanan} atlandı` : ''}`,
     html: `${ekranNotu('Kurulumun çoğunu biz yaparız. Sizden istenenler kısa ve her birinin yanında yazar. Toplam süre: kurs tarafında yaklaşık 45 dakika.')}
-    <div class="kart"><div class="kart-govde">${ilerleme(biten + atlanan, top, 'yesil')}<p style="margin-top:8px;font-size:14px"><b>${biten}</b> / ${top} adım tamamlandı${atlanan ? ` · ${atlanan} adım atlandı` : ''}</p></div>
+    <div class="kart"><div class="kart-govde">${ilerleme(biten + atlanan, top, 'yesil')}<p style="margin-top:8px;font-size:14px"><b>${biten}</b> / ${top} adım tamamlandı${atlanan ? ` · ${atlanan} adım atlandı` : ''}</p><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">${l.some(x => !x[1]) ? `<button class="dg dg-ana dg-kucuk" data-kur-devam="${l.findIndex(x => !x[1])}">Sıradaki adıma geç</button>` : ''}<button class="dg dg-cizgi dg-kucuk" data-kur-rapor>Kurulum raporu</button></div></div>
     <ul class="liste">${l.map((x, i) => `<li style="align-items:flex-start">${isaret(x[5].ok ? 'tamam' : x[5].atlandi || x[5].istege ? 'bilgi' : 'zorunlu', 26)}<div style="flex:1;min-width:0"><b style="color:var(--murekkep);display:block">${i + 1}. ${x[0]}</b><small style="color:var(--metin);font-size:13.5px">${x[4]}</small>${iz(x)}</div><span class="sag" style="flex-wrap:wrap;justify-content:flex-end;gap:6px">${rozet(x[2], x[2].startsWith('Biz') ? 'mavi' : 'notr')}${durum(x)}${dugme(x, i)}</span></li>`).join('')}</ul></div>`,
     baglan(kap) {
       kap.addEventListener('click', ev => {
         const t = ev.target; if (!(t instanceof Element)) return;
         if (t.closest('[data-kur-yardimci]')) return EK.kurulumPenceresi();
+        if (t.closest('[data-kur-rapor]')) return kurulumRaporu();
         const b = t.closest('[data-kur-atla],[data-kur-geri],[data-kur-onay]'); if (!b) return;
         const id = b.dataset.kurAtla || b.dataset.kurGeri || b.dataset.kurOnay, ad = l.find(x => x[5].id === id); if (!ad) return;
         if (!oturum.kullanici || oturum.kullanici.rol !== 'mudur') return bildir('Kurulum adımlarını kurs müdürü işaretler', 'uyari');
@@ -1096,6 +1098,50 @@ export function kurulum() {
       });
     },
   };
+}
+
+// YON-075: kurulum sihirbazı — karşılama penceresi (ilk girişte), ana sayfada kalıcı kart, adım ekranında şerit (app.js), bitince rapor
+export const KUR_AKIS = 'sinyal-kurulum-akis';
+export function kurulumDurumu() {
+  const l = kurulumAdimlari(), { top, biten, atlanan } = kurSayim(l), sonraki = l.findIndex(x => !x[1]);
+  return { l, top, biten, atlanan, yuzde: top ? Math.round((biten + atlanan) / top * 100) : 100, sonraki, bitti: sonraki < 0 };
+}
+// adımı başlat: adım ekranına gider (akış açık kalır); adresi olmayan adım (Yardımcı) kendi penceresini açar
+export function kurulumBaslat(i) {
+  const l = kurulumAdimlari(), x = l[i]; if (!x) return;
+  if (!x[3]) return EK.kurulumPenceresi();
+  try { sessionStorage.setItem(KUR_AKIS, String(i)); } catch (z) { }
+  if (location.hash === x[3]) yenile(true); else location.hash = x[3];
+}
+export function kurulumAtla(id) { const ad = kurulumAdimlari().find(x => x[5].id === id); if (!ad || ad[5].ok) return; kurIz(id, { atlandi: true }); islem('Kurulum adımını atladı', ad[0]); kaydet(); }
+export function kurulumKarti() {
+  if (!oturum.kullanici || oturum.kullanici.rol !== 'mudur' || !S._bulut) return '';  // demoda gösterilmez
+  const d = kurulumDurumu(); if (d.bitti) return '';
+  const x = d.l[d.sonraki];
+  return `<div class="kart kur-kart"><div class="kart-govde"><div class="kur-kart-ust"><div><small>Kurulum · %${d.yuzde}</small><b>Sıradaki: ${e(x[0])}</b><span>${d.biten} / ${d.top} adım tamam${d.atlanan ? ` · ${d.atlanan} atlandı` : ''} · ${e(x[2])}</span></div>
+    <div class="kur-kart-dug"><button type="button" class="dg dg-ana" data-kur-devam="${d.sonraki}">Devam et</button><a class="dg dg-hafif" href="#/kurulum">Bütün adımlar</a></div></div>${ilerleme(d.biten + d.atlanan, d.top, 'yesil')}</div></div>`;
+}
+export function kurulumKarsila() {
+  const d = kurulumDurumu(), u = oturum.kullanici || {};
+  S.kurs.kurulumKarsilama = { tarih: gun(0), kim: u.ad || '' }; kaydet();
+  pencere({ baslik: 'Hoş geldiniz', genis: true, taslak: false, icerik: `<p style="font-size:15px">${e(S.kurs.ad || 'Kursunuz')} için mdSinyal hazır. Birkaç adımda kurumu tanıtıp numaraları, ücretleri ve ekibi girelim; her adımın ekranı sırayla açılır.</p>
+      <div style="margin:12px 0 6px">${ilerleme(d.biten + d.atlanan, d.top, 'yesil')}<small style="color:var(--soluk)">${d.biten} / ${d.top} adım tamam · kurs tarafında yaklaşık 45 dakika</small></div>
+      <ol class="kur-liste">${d.l.filter(x => !x[5].istege).map(x => `<li class="${x[5].ok ? 'tamam' : x[5].atlandi ? 'atlandi' : ''}"><b>${e(x[0])}</b><small>${e(x[2])}</small></li>`).join('')}</ol>
+      <p style="font-size:13.5px;color:var(--soluk)">Gerekmeyen adımı “Atla, sonra yap” ile geçebilirsiniz; ana sayfadaki Kurulum kartından istediğiniz an devam edersiniz. “Biz” yazan adımları mdSinyal ekibi sizinle birlikte yapar.</p>`,
+    altlik: `<button class="dg dg-cizgi" data-kapat>Sonra</button><button class="dg dg-ana" data-kur-basla>Kuruluma başla</button>`,
+    onAc(p) { p.querySelector('[data-kur-basla]').addEventListener('click', () => { kapatPencere(); const n = kurulumDurumu().sonraki; if (n >= 0) kurulumBaslat(n); }); } });
+}
+// bitince (ya da Kurulum sayfasından): yapılanlar ve atlananlar; müdür WhatsApp'tan mdSinyal'e gönderir
+export function kurulumRaporu(ilk) {
+  const d = kurulumDurumu(), yap = d.l.filter(x => x[5].ok), atl = d.l.filter(x => x[5].atlandi), kal = d.l.filter(x => !x[1]);
+  if (ilk && !S.kurs.kurulumRapor) { S.kurs.kurulumRapor = { tarih: gun(0), kim: (oturum.kullanici || {}).ad || '', yapilan: yap.length, atlanan: atl.map(x => x[5].id) }; islem('Kurulumu tamamladı', `${yap.length} adım${atl.length ? ' · ' + atl.length + ' atlandı' : ''}`); kaydet(); }
+  const kayit = x => x[5].kayit ? ` · ${e(x[5].kayit.kim || '')} ${tarih(x[5].kayit.tarih)}` : '';
+  const metin = `Kurulum raporu · ${S.kurs.ad || ''}\nYapılan (${yap.length}): ${yap.map(x => x[0]).join(', ') || '—'}\nAtlanan (${atl.length}): ${atl.map(x => x[0]).join(', ') || '—'}${kal.length ? `\nKalan (${kal.length}): ${kal.map(x => x[0]).join(', ')}` : ''}`;
+  pencere({ baslik: d.bitti ? 'Kurulum tamamlandı' : 'Kurulum raporu', genis: true, icerik: `${d.bitti ? `<p class="ipucu" style="margin-bottom:12px">${isaret('tamam', 20)}<span>Kurulum bitti. Atlanan adımlar Kurulum sayfasında durur; istediğiniz an yaparsınız.</span></p>` : ''}
+      <p><b>Yapılan (${yap.length})</b></p><ul class="liste">${yap.map(x => `<li>${isaret('tamam', 18)}<span style="flex:1">${e(x[0])}<small style="color:var(--soluk)">${kayit(x)}</small></span></li>`).join('') || '<li>—</li>'}</ul>
+      ${atl.length ? `<p style="margin-top:10px"><b>Atlanan (${atl.length})</b></p><ul class="liste">${atl.map(x => `<li>${isaret('bilgi', 18)}<span style="flex:1">${e(x[0])}<small style="color:var(--soluk)">${kayit(x)}</small></span></li>`).join('')}</ul>` : ''}
+      ${kal.length ? `<p style="margin-top:10px"><b>Kalan (${kal.length})</b></p><ul class="liste">${kal.map(x => `<li>${isaret('zorunlu', 18)}<span>${e(x[0])}</span></li>`).join('')}</ul>` : ''}`,
+    altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button><a class="dg dg-wp" href="${destekWa(metin)}" target="_blank" rel="noopener">${ik('wp')}mdSinyal’e gönder</a>` });
 }
 
 /* ================= MEBBİS YARDIMCISI (isteğe bağlı Chrome eklentisi) =================

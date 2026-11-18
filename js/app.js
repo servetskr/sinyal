@@ -162,7 +162,8 @@ function iskelet() {
   const say = sayaclar();
   // az kullanılanlar ("Diğer") kapalı bir grupta durur; içindeki sayfa açıkken grup açık gelir
   const satir = ([k, t, i]) => `<a href="#/${k}" data-menu="${k}"><span class="ok" aria-hidden="true">${i}</span><span>${t}</span>${say[k] && say[k][0] ? `<b class="${say[k][1] ? '' : 'uyar'}">${say[k][0]}</b>` : ''}</a>`;
-  const menu = MENU.map(([g, l]) => [g, l.filter(([k]) => izinli(k))]).filter(([, l]) => l.length).map(([g, l]) => g === 'Diğer' ? `<details class="yan-grup" ${l.some(([k]) => location.hash.startsWith('#/' + k)) ? 'open' : ''}><summary class="yan-baslik">${g}</summary>${l.map(satir).join('')}</details>` : `<div class="yan-baslik">${g}</div>` + l.map(satir).join('')).join('');
+  const kurAcik = izinli('kurulum') && oturum.kullanici.rol === 'mudur' && S._bulut && !Y5.kurulumDurumu().bitti;  // YON-075: kurulum bitene kadar üstte
+  const menu = MENU.map(([g, l]) => [g, g === 'Bugün' && kurAcik ? [...l, ['kurulum', 'Kurulum', '→']] : g === 'Diğer' && kurAcik ? l.filter(([k]) => k !== 'kurulum') : l]).map(([g, l]) => [g, l.filter(([k]) => izinli(k))]).filter(([, l]) => l.length).map(([g, l]) => g === 'Diğer' ? `<details class="yan-grup" ${l.some(([k]) => location.hash.startsWith('#/' + k)) ? 'open' : ''}><summary class="yan-baslik">${g}</summary>${l.map(satir).join('')}</details>` : `<div class="yan-baslik">${g}</div>` + l.map(satir).join('')).join('');
   document.getElementById('uyg').innerHTML = `
   <div class="uyg">
     <aside class="yan" id="yan" aria-label="Ana menü"><div class="yan-levha">
@@ -242,6 +243,7 @@ export function yenile(kaydirma = false) {
   kap.innerHTML = s.html;
   yer.replaceChildren(kap);
   if (ekranDuzey(r.ad === 'kursiyer' ? 'kursiyerler' : r.ad) === 'gor') saltOkunur(kap);
+  kurulumSeridi(kap);
   if (s.baglan) { try { s.baglan(kap); } catch (x) { console.error(x); } }
   if (r.ad === 'genel' || r.ad === 'adaylar') B.onKayitlariAl().then(n => { if (n) { bildir(`Web sitesinden ${n} ön kayıt geldi; Yeni öğrenciler’de`); if (location.hash.startsWith('#/adaylar')) yenile(); } });   // DIG-035
   if (r.ad === 'genel') { GU.anaEkranaEkle(kap); duyuruAlani(kap); }  // kurulu sürüm, “Güncellemeleri denetle”, yeni sürüm kartı; DIG-040 duyurular
@@ -332,20 +334,33 @@ document.addEventListener('click', ev => { if (ev.target.closest('[data-yeni-men
 // Kullanıcı adımın ekranından başka yere giderse akış biter; Kurulum sayfasından yeniden başlar.
 const AKIS = 'sinyal-kurulum-akis';
 document.addEventListener('click', ev => { const a = ev.target.closest('[data-kurulum-adim]'); if (a) try { sessionStorage.setItem(AKIS, a.dataset.kurulumAdim); } catch (x) { } });
-function kurulumAkisi() {
+// YON-075: ana sayfa kartı ve Kurulum sayfasındaki 'Devam et'; adım ekranındaki şeritte 'Atla, sonra yap' ve 'Kurulumdan çık'
+document.addEventListener('click', ev => {
+  const d = ev.target.closest('[data-kur-devam]'); if (d) return Y5.kurulumBaslat(+d.dataset.kurDevam);
+  const at = ev.target.closest('[data-kur-serit-atla]'); if (at) { Y5.kurulumAtla(at.dataset.kurSeritAtla); return kurulumAkisi(true); }
+  if (ev.target.closest('[data-kur-serit-cik]')) { try { sessionStorage.removeItem(AKIS); } catch (x) { } ev.target.closest('.kur-serit').remove(); }
+});
+function kurulumSeridi(kap) {
+  let i = null; try { i = sessionStorage.getItem(AKIS); } catch (x) { }
+  if (i == null || !oturum.kullanici || oturum.kullanici.rol !== 'mudur') return;
+  const d = Y5.kurulumDurumu(), x = d.l[+i]; if (!x || x[1] || !x[3] || !location.hash.startsWith(x[3].split('/').slice(0, 2).join('/'))) return;
+  const sira = d.l.filter(y => !y[5].istege).indexOf(x) + 1;
+  kap.insertAdjacentHTML('afterbegin', `<div class="kur-serit" role="region" aria-label="Kurulum"><div class="kur-serit-yazi"><small>Kurulum · adım ${sira} / ${d.top} · %${d.yuzde}</small><b>${e(x[0])}</b><span>${e(x[4])}</span></div><div class="kur-serit-dug"><button type="button" class="dg dg-cizgi dg-kucuk" data-kur-serit-atla="${e(x[5].id)}">Atla, sonra yap</button><a class="dg dg-hafif dg-kucuk" href="#/kurulum">Bütün adımlar</a><button type="button" class="dg dg-hafif dg-kucuk" data-kur-serit-cik aria-label="Kurulum şeridini kapat">${ik('kapat')}</button></div></div>`);
+}
+function kurulumAkisi(zorla) {
   let i = null; try { i = sessionStorage.getItem(AKIS); } catch (x) { }
   if (i == null || !oturum.kullanici || oturum.kullanici.rol !== 'mudur') return;
   const bitir = () => { try { sessionStorage.removeItem(AKIS); } catch (x) { } };
   const l = Y5.kurulumAdimlari(), adim = l[+i];
   if (!adim) return bitir();
   const kok = adim[3].split('/').slice(0, 2).join('/');
-  if (!location.hash.startsWith(kok)) return bitir();  // adımın ekranından çıkıldı
-  if (!adim[1]) return;  // adım henüz tamamlanmadı
+  if (!zorla && !location.hash.startsWith(kok)) return bitir();  // adımın ekranından çıkıldı
+  if (!adim[1]) return;  // adım henüz tamamlanmadı (atlanan adım x[1] sayılır)
   const git = x => !x[1] && !!x[3];  // adresi olmayan adım (MEBBİS Yardımcısı: kurulum penceresi) akışta atlanır, Kurulum sayfasından yapılır
   const n = l.findIndex((x, j) => j > +i && git(x)), sonraki = n >= 0 ? n : l.findIndex(git);
-  if (sonraki < 0) { bitir(); bildir(l.some(x => !x[1]) ? 'Adımlar bitti; MEBBİS Yardımcısı’nı Kurulum sayfasından kurun' : 'Kurulum tamamlandı'); setTimeout(() => { location.hash = '#/kurulum'; }, 900); return; }
+  if (sonraki < 0) { bitir(); if (l.some(x => !x[1])) bildir('Adımlar bitti; MEBBİS Yardımcısı’nı Kurulum sayfasından kurun'); setTimeout(() => { location.hash = '#/kurulum'; if (!l.some(x => !x[1])) setTimeout(() => Y5.kurulumRaporu(true), 400); }, 900); return; }  // YON-075: bitince rapor
   try { sessionStorage.setItem(AKIS, String(sonraki)); } catch (x) { }
-  bildir(adim[0] + ' tamam · sıradaki: ' + l[sonraki][0]);
+  bildir(adim[0] + (adim[5] && adim[5].atlandi ? ' atlandı' : ' tamam') + ' · sıradaki: ' + l[sonraki][0]);
   setTimeout(() => { if (location.hash === l[sonraki][3]) yenile(true); else location.hash = l[sonraki][3]; }, 900);
 }
 document.addEventListener('change', ev => { const s = ev.target.closest('[data-sube]'); if (!s) return; if (kullaniciSubesi()) { s.value = kullaniciSubesi(); return bildir('Hesabınız bu şubeyle sınırlı', 'uyari'); } subeSec(s.value); document.querySelectorAll('[data-sube]').forEach(x => { x.value = s.value; }); bildir(s.value ? S.subeler.find(x => x.id === s.value).ad + ' gösteriliyor' : 'Tüm şubeler gösteriliyor'); yenile(); });
@@ -737,7 +752,7 @@ function kursAcEkrani(davetKod) {
     if (!f.onay.checked) return bildir('Verilerin nerede saklanacağını okuduğunuzu işaretleyin', 'uyari');
     btn.disabled = true; btn.textContent = 'Hesap açılıyor…';
     B.kursAc({ kursAd: f.kurs.value.trim(), yetkili: f.ad.value.trim(), sehir: f.sehir.value.trim(), eposta: f.eposta.value.trim(), sifre: f.sifre.value, mudurTel: f.tel.value.trim(), davetKod })
-      .then(u => { history.replaceState(null, '', '#/genel'); bulutOturumu(u, true); bildir('Kurs hesabı açıldı. Önce Ayarlar’dan kurs bilgilerini, sonra öğrenci listenizi ekleyin'); })
+      .then(u => { history.replaceState(null, '', '#/genel'); bulutOturumu(u, true); bildir('Kurs hesabı açıldı. Kurulum adımları ana sayfada; “Kuruluma başla” ile sırayla açılır'); })
       .catch(x => { btn.disabled = false; btn.textContent = 'Kurs hesabını aç'; bildir(B.hataMetni(x), 'uyari'); });
   });
 }
