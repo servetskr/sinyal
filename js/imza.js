@@ -52,7 +52,7 @@ const kursWp = () => S.kurs.wp || '';
 function belgeModeli(tur, k, dersIdleri) {
   const kurs = { ad: S.kurs.ad, tel: S.kurs.tel, adres: S.kurs.adres, yetkili: S.kurs.yetkili, wp: kursWp() };
   const kisi = { ad: tamAd(k), tc: k.tc ? k.tc.slice(0, 3) + '•••••' + k.tc.slice(-3) : '', tel: k.tel };
-  if (tur === 'sozlesme') { const x = kursiyerTaban(k); return { kurs, kisi, sinif: sinifEtiket(k.sinif, k), kayit: k.kayit, odeme: { toplam: k.odeme.toplam, pesin: k.odeme.pesin, pesinTarih: k.odeme.pesinTarih, taksit: k.odeme.taksitler.map(t => [t.vade, t.tutar]), indirim: x ? null : (k.odeme.indirim || null) }, taban: x && x.satir ? { ad: satirAdi(x.satir), tutar: x.taban, liste: listeAdi(x.liste) } : null, madde: sozlesmeMaddeleri(k) }; }  // il taban listesi: öğrenci imzalamadan önce taban ve not 4–5 görünür; indirim satırı gösterilmez (not 6)
+  if (tur === 'sozlesme') { const x = kursiyerTaban(k); return { kurs, kisi, sinif: sinifEtiket(k.sinif, k), kayit: k.kayit, odeme: { toplam: k.odeme.toplam, pesin: k.odeme.pesin, pesinTarih: k.odeme.pesinTarih, taksit: k.odeme.taksitler.map(t => [t.vade, t.tutar]), indirim: x ? null : (k.odeme.indirim || null) }, taban: x && x.satir ? { ad: satirAdi(x.satir), tutar: x.taban, liste: listeAdi(x.liste) } : null, madde: sozlesmeMaddeleri(k, { mesafeli: true }) }; }  // il taban listesi: öğrenci imzalamadan önce taban ve not 4–5 görünür; indirim satırı gösterilmez (not 6)
   return { kurs, kisi, sinif: SINIFLAR[k.sinif].ad, ders: dersIdleri.map(id => S.dersler.find(d => d.id === id)).filter(Boolean).map(d => [d.tarih, d.bas ? d.bas + '–' + d.bit : d.saat, egitmen(d.egitmen).ad, d.arac ? arac(d.arac).plaka : '', d.sure || null]) };
 }
 
@@ -66,7 +66,7 @@ export async function imzaIste(tur, k, dersIdleri = []) {
   const link = await kisaLink(uzun, tur === 'sozlesme' ? 'sozlesme imzasi' : 'ders katilim imzasi');
   if (link === uzun && uzun.length > 1500) bildir('Kısa link oluşturulamadı; uzun link WhatsApp’ta kesilebilir', 'uyari');
   S.imzaTalepleri = (S.imzaTalepleri || []).filter(t => !(t.durum === 'bekliyor' && t.kursiyer === k.id && t.tur === tur && (tur === 'sozlesme' || dersIdleri.every(x => t.dersler.includes(x)))));
-  S.imzaTalepleri.push({ id, tur, kursiyer: k.id, dersler: dersIdleri, ozet, belgeOzet: bo, tarih: yerelZaman(), durum: 'bekliyor', link, ...(tur === 'sozlesme' ? { metin: sozlesmeDondur(k) } : {}) });
+  S.imzaTalepleri.push({ id, tur, kursiyer: k.id, dersler: dersIdleri, ozet, belgeOzet: bo, tarih: yerelZaman(), durum: 'bekliyor', link, ...(tur === 'sozlesme' ? { metin: sozlesmeDondur(k, { mesafeli: true }) } : {}) });  // PAR-060: uzaktan imza = mesafeli sözleşme, cayma maddesiyle
   const dersler = dersIdleri.map(x => S.dersler.find(d => d.id === x)).filter(Boolean).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat));
   const satir = d => `• ${tarihUzun(d.tarih)} ${d.bas || d.saat}${d.bit ? '–' + d.bit : ''}${egitmen(d.egitmen) ? ' · ' + egitmen(d.egitmen).ad : ''}`;
   const metin = tur === 'sozlesme'
@@ -376,7 +376,7 @@ async function imzaIsle(paket, sunucu) {
   const ol = donenImzaOlcu(r.s);
   kanit.olcu = ol.olcu; if (ol.sorun) { kanit.olcuAlti = true; kanit.olcuNot = ol.sorun; }
   if (t.tur === 'sozlesme') {
-    k.sozlesmeImza = { tarih: z.slice(0, 10), yontem: 'Uzaktan (WhatsApp linki)', url: resim, ad: r.ad, cihaz: r.cihaz, metin: t.metin || sozlesmeDondur(k), kanit };
+    k.sozlesmeImza = { tarih: z.slice(0, 10), yontem: 'Uzaktan (WhatsApp linki)', url: resim, ad: r.ad, cihaz: r.cihaz, metin: t.metin || sozlesmeDondur(k, { mesafeli: true }), kanit };
     k.evrak.sozlesme = true; GR.aktifEt(k);  // evrak tamam ve dönem grubuna atanmışsa aktif olur
   } else t.dersler.forEach(id => { const d = S.dersler.find(x => x.id === id); if (d) d.imza = { ...(d.imza || {}), zaman: d.imza && d.imza.zaman ? d.imza.zaman : z, kursiyer: resim, kursiyerUzaktan: z, kursiyerBekliyor: false, usta: d.imza ? d.imza.usta : null, kanit }; });
   t.durum = 'imzalandi'; t.imzaZaman = z; t.imzalayan = r.ad; t.kanit = kanit;

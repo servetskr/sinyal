@@ -46,8 +46,8 @@ const imzaHucre = (d, kim) => `<td style="width:90px;text-align:center">${d.imza
 const metinKodla = h => { const b = new TextEncoder().encode(h); let t = ''; for (let i = 0; i < b.length; i += 8192) t += String.fromCharCode.apply(null, b.subarray(i, i + 8192)); return 'data:text/html;charset=utf-8;base64,' + btoa(t); };
 const metinCoz = d => { try { const t = atob(d.slice(d.indexOf(',') + 1)); return new TextDecoder().decode(Uint8Array.from(t, c => c.charCodeAt(0))); } catch (x) { return null; } };
 // Sözleşmenin imza alanı dışındaki gövdesi (kursiyer, kurs, ücret, taksitler, maddeler)
-function sozlesmeGovde(k) {
-  const K = S.kurs, S0 = SINIFLAR[k.sinif], maddeler = sozlesmeMaddeleri(k);
+function sozlesmeGovde(k, o = {}) {
+  const K = S.kurs, S0 = SINIFLAR[k.sinif], maddeler = sozlesmeMaddeleri(k, o);
   return `<p style="text-align:right">Sözleşme no: ${e(k.id.replace('k', 'S-'))} · ${tamTarih(k.kayit)}</p>
     <table><tr><th colspan="4">Kursiyer</th></tr><tr><th>Ad soyad</th><td>${e(tamAd(k))}</td><th>TC kimlik no</th><td>${e(k.tc || '')}</td></tr><tr><th>Doğum tarihi</th><td>${tamTarih(k.dogumTarihi)}</td><th>Telefon</th><td>${e(k.tel)}</td></tr><tr><th>Adres</th><td colspan="3">${e(k.adres || '')}</td></tr>
     <tr><th colspan="4">Kurs</th></tr><tr><th>Unvan</th><td>${e(K.ad)}</td><th>Telefon</th><td>${e(K.tel)}</td></tr><tr><th>Adres</th><td colspan="3">${e(K.adres)}</td></tr></table>
@@ -72,10 +72,16 @@ function ucretDokumu(k) {
     <tr><th colspan="4">Toplam (KDV %${kdv} dahil)</th><td>${para(tT + dT)}</td></tr></table>
     <p style="font-size:11px">Ücret, ders saati ile saat ücretinin çarpımıdır${dU % 1 ? ' (saat ücreti kuruşa yuvarlanmıştır)' : ''}. ${su.kaynak === 'tarife' ? 'Saat ücretleri kursun ücret tarifesindendir.' : !ts ? 'Bu eğitimde teorik ders yoktur; ücretin tamamı direksiyon eğitimidir.' : !ds ? 'Bu eğitimde direksiyon dersi yoktur; ücretin tamamı teorik derstir.' : su.kaynak === 'taban' ? 'Teorik ve direksiyon payı il taban fiyat listesindeki orana göre ayrılmıştır.' : 'Teorik ve direksiyon payı kursun belirlediği orana göre ayrılmıştır.'}</p>`;
 }
-export const sozlesmeDondur = k => { sozlesmeSaatDondur(k); return metinKodla(sozlesmeGovde(k)); };
+export const sozlesmeDondur = (k, o = {}) => { sozlesmeSaatDondur(k); return metinKodla(sozlesmeGovde(k, o)); };
 // {direksiyon}: öğrencinin asgari ders sayısı (veri.js gerekliDireksiyon: sınıf + mevcut ehliyet, elle girilen, eski kayıtta dondurulmuş değer).
 // İmzalı sözleşmede bu metin değil, imza anında dondurulan metin (k.sozlesmeImza.metin) gösterilir.
-export function sozlesmeMaddeleri(k) {
+// PAR-060: cayma maddesi sözleşme türüne bağlı — kursta (yüz yüze) imzalanan sözleşmede yok; uzaktan (mesafeli: WhatsApp linkiyle) imzalananda
+// 6502 sayılı Kanun md.48 ve Mesafeli Sözleşmeler Yönetmeliği'ne göre 14 günlük cayma hakkı maddesi kendiliğinden eklenir. Metin avukat onayına sunulacak (YON-030).
+export const caymaMaddesi = () => `Cayma hakkı. Bu sözleşme uzaktan (mesafeli) kurulmuştur. Kursiyer, sözleşmenin kurulduğu günden başlayarak 14 gün içinde gerekçe göstermeden ve cezai şart ödemeden sözleşmeden cayabilir (6502 sayılı Tüketicinin Korunması Hakkında Kanun md.48; Mesafeli Sözleşmeler Yönetmeliği). Cayma bildirimi bu süre içinde ${S.kurs.unvan || S.kurs.ad || 'kursa'} yazılı olarak ya da kalıcı veri saklayıcısıyla (e-posta, WhatsApp${S.kurs.tel ? ', ' + S.kurs.tel : ''}) yapılır. Cayma hâlinde ödenen tutar bildirimin kursa ulaştığı günden başlayarak 14 gün içinde iade edilir. Cayma süresi dolmadan kursiyerin açık onayıyla eğitime başlanmışsa, onay verilen hizmet için cayma hakkı kullanılamaz (Mesafeli Sözleşmeler Yönetmeliği md.15).`;
+export function sozlesmeMaddeleri(k, o = {}) {
+  return sozlesmeMaddeleri0(k).concat(o.mesafeli ? [caymaMaddesi()] : []);
+}
+function sozlesmeMaddeleri0(k) {
   const K = S.kurs, S0 = SINIFLAR[k.sinif], tv = !k.id || teorikVar(k), dir = gerekliDireksiyon(k), kdv = ((S.entegrasyon || {}).kdv ?? 10), su = k.odeme ? saatUcretleri(k) : null;
   const saatT = n => !n ? '—' : `${tl(n)} (KDV hariç ${(n / (1 + kdv / 100)).toLocaleString('tr-TR', { maximumFractionDigits: 2 })} ₺, KDV %${kdv})`;
   const alan = { kurs: K.ad, sinif: S0.ad, teorik: S0.teorik, direksiyon: dir, hak: K.sinavHak || 4, tekrarE: tl((K.tekrarUcret || {}).esinav || 0), tekrarD: tl((K.tekrarUcret || {}).dsinav || 0), ekDers: tl(ekDersFiyat(k.sinif)), kdv: '%' + kdv, teorikSaatUcreti: su && tv ? saatT(su.teorik) : '—', direksiyonSaatUcreti: su && dir ? saatT(su.direksiyon) : '—' };
