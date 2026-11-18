@@ -71,8 +71,7 @@ export function merkezSekme() {
   const subeSorun = cokSube() && !seciliSube();
   EK.bekleyenleriIsle();   // girişten önce gelen Yardımcı bildirimi (harita-durum) varsa şimdi işlenir; kırmızı kart aşağıda çıkar
   let h = MK.alarmKarti() + MT.isKarti(m.tur === 'al');
-  if (!EK.eklenti.var) h += `<div class="ipucu uyari" style="margin-bottom:14px">${isaret('uyari', 20)}<span><b>MEBBİS Yardımcısı bu tarayıcıda kurulu değil.</b> Aktarım için Chrome’a bir kez kurun; kurulana kadar “Elle giriş” sekmesinden sırayla girebilirsiniz. <button type="button" data-meb-arac-kur style="background:none;border:0;padding:0;color:var(--levha);font-weight:700;cursor:pointer;font:inherit">Nasıl kurulur?</button></span></div>`;
-  if (subeSorun) h += `<div class="ipucu uyari" style="margin-bottom:14px">${isaret('uyari', 20)}<span>Her şubenin MEBBİS hesabı ayrı. Aktarmak için yukarıdan şube seçin.</span></div>`;
+  // DENETİM Ö3: 'Yardımcı kurulu değil' ve 'şube seçin' artık bir kez — durum şeridinde (Kur bağlantısıyla) ve sayfanın üstündeki şube uyarısında
   // MEBBİS'e girildikten sonra iptal edilen ya da silinen dersler: MEBBİS'teki programdan elle silinmeli (denetimde program ile fiili ders uyuşsun)
   const silinecek = [...new Map((S.mebSilinecek || []).map(x => [x.id, x])).values()];
   if (silinecek.length) h += `<div class="kart" style="margin-bottom:14px;border-color:var(--sari)"><div class="kart-bas"><h3>MEBBİS’ten silinecek dersler</h3><small>MEBBİS’e girildikten sonra iptal edildi ya da silindi · ${silinecek.length}</small></div><ul class="liste" style="margin-top:6px">${silinecek.map(x => { const kk = kursiyer(x.kursiyer); return `<li><span style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(kk ? tamAd(kk) : 'Silinmiş kursiyer')}</b><small style="display:block;color:var(--soluk)">${tarih(x.tarih)} ${e(x.saat)} · ${e((egitmen(x.egitmen) || {}).ad || '')}</small></span><button class="dg dg-cizgi dg-kucuk" data-meb-sildim="${e(x.id)}">MEBBİS’ten sildim</button></li>`; }).join('')}</ul><p class="og-not" style="margin:0 16px 14px">Taşınan dersler ise “Direksiyon programı” listesine “DEĞİŞTİ” notuyla yeniden düştü; MEBBİS’te eski kaydı düzeltin.</p></div>`;
@@ -92,12 +91,13 @@ export function merkezSekme() {
           <button type="button" data-mm-kurulum ${subeSorun ? 'disabled' : ''}>${ik('indir')}Kurulum bilgilerini al <small>kurum, gruplar, personel, araçlar, ücret ilanı</small></button>
           <button type="button" data-mm-tur="al">${ik('indir')}Tek liste al <small>açık MEBBİS ekranından</small></button>
           <a href="#/meb/asistan">${ik('belge')}Elle giriş <small>Yardımcı’sız sıralı giriş</small></a></div></details></div></div>
-      ${subeSorun ? `<small style="color:#7a5200">Yazmak ve güncellemek için yukarıdan şube seçin (her şubenin MEBBİS hesabı ayrı).</small>` : ''}
+
       ${S.mebDenetim ? `<small style="color:var(--soluk)">${MK.denetimOzeti()} · <button type="button" data-mt-denetim-goster style="background:none;border:0;padding:0;color:var(--levha);font-weight:700;cursor:pointer;font:inherit">Ayrıntı</button></small>` : ''}</div></div>`;
     h += `<p class="mx-baslik">Şimdi açık olan MEBBİS işleri</p>${MX.pencerelerHtml(hepsi)}`; }
-  h += `<div class="mx-gorunum" role="tablist">${[['liste', 'İş listesi'], ['matris', 'Öğrenci × adım']].map(([k, a]) => `<button type="button" role="tab" aria-selected="${m.gorunum === k}" class="${m.gorunum === k ? 'secili' : ''}" data-mx-gorunum="${k}">${a}</button>`).join('')}</div>`;
-  if (m.gorunum === 'matris') { h += `<div class="kart">${MX.matrisHtml(m.donem)}</div>`; return h; }
-  h += `<div class="kart"><div style="padding:12px 16px 0">${sekmeler(TURLER.map(([k, ad]) => [k, ad, k === 'al' ? null : sayi(k)]), m.tur, 'mm-tur')}</div>`;
+  // DENETİM Ö3: görünüm seçimi ayrı bir sekme katı değil, iş kartının başlığında sağda
+  const gorunum = `<div class="mx-gorunum" role="tablist" aria-label="Görünüm">${[['liste', 'İş listesi'], ['matris', 'Öğrenci × adım']].map(([k, a]) => `<button type="button" role="tab" aria-selected="${m.gorunum === k}" class="${m.gorunum === k ? 'secili' : ''}" data-mx-gorunum="${k}">${a}</button>`).join('')}</div>`;
+  if (m.gorunum === 'matris') { h += `<div class="kart"><div class="mx-kb"><b style="color:var(--murekkep);padding-top:8px">Öğrenci × adım</b>${gorunum}</div>${MX.matrisHtml(m.donem)}</div>`; return h; }
+  h += `<div class="kart"><div class="mx-kb"><div>${sekmeler(TURLER.map(([k, ad]) => [k, ad, k === 'al' ? null : sayi(k)]), m.tur, 'mm-tur')}</div>${gorunum}</div>`;
   if (m.tur === 'esinav') h += `<div style="padding:12px 16px 0;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label for="mm-esgun" style="font-weight:700;color:var(--murekkep)">Gün tercihi</label><select id="mm-esgun" class="girdi" data-mm-esgun>${[['0', 'En erken tarih'], ['1', 'Hafta içi'], ['2', 'Hafta sonu']].map(([v, t]) => `<option value="${v}" ${String(S.kurs.esinavGun || '0') === v ? 'selected' : ''}>${t}</option>`).join('')}</select><small style="color:var(--soluk)">MEBBİS randevuyu bu tercihe göre verir; öğrenci dosyasında (e-Sınav tercihleri) ayrı gün seçilmişse o geçerli. Ücreti yatmamış öğrenci gönderilmez.</small></div>`;
   if (m.tur === 'onay') h += `<p class="ipucu uyari" style="margin:12px 16px 0">${isaret('uyari', 18)}<span>Kurum onayından sonra MEBBİS’te fotoğraf ve bilgiler düzeltilemez. Yardımcı yalnız MEBBİS’te fotoğrafı ve evrak kontrolü tamam olanları onaylar.</span></p>`;
   if (m.tur === 'al') {

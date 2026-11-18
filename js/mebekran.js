@@ -1,6 +1,6 @@
 // MEB-187: MEBBİS aktarımı ekranının yeni iskeleti — üst şerit (Yardımcı · MEBBİS oturumu · şu an), takvime bağlı "açık MEBBİS pencereleri",
 // aday × adım matrisi (MEBBİS'in giriş sırasıyla). Yalnız gösterir; yazma ve okuma mebtoplu.js / eklenti.js üzerinden, onaylı.
-import { S, gun, fark, iso, sb, tamAd, kuralAyar } from './veri.js?v=234';
+import { S, gun, fark, iso, sb, tamAd, kuralAyar, cokSube, seciliSube } from './veri.js?v=234';
 import { e, tarih, ik } from './ui.js?v=234';
 import * as GR from './gruplar.js?v=234';
 import * as EK from './eklenti.js?v=234';
@@ -14,7 +14,8 @@ const AY = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'A
 export function durumSeridi() {
   const E = EK.eklenti, o = E.oturum, yas = o ? Date.now() - o.zaman : Infinity, calisiyor = MT.suruyor();
   const nokta = r => `<i class="mx-nokta" style="background:${r}"></i>`;
-  const kurulu = E.var ? `${nokta('var(--yesil)')}Yardımcı kurulu${E.surum ? ' · ' + e(E.surum) : ''}` : `${nokta('var(--kirmizi)')}Yardımcı bu tarayıcıda kurulu değil`;
+  const kurulu = E.var ? `${nokta('var(--yesil)')}Yardımcı kurulu${E.surum ? ' · ' + e(E.surum) : ''}` : `${nokta('var(--kirmizi)')}Yardımcı bu tarayıcıda kurulu değil · <button type="button" class="mx-bag" data-meb-arac-kur>Nasıl kurulur?</button> <span class="mx-soluk">(kurulana kadar Elle giriş)</span>`;
+  const sb_ = cokSube() && seciliSube(), kurum = sb_ ? `<span>${nokta('var(--levha)')}MEBBİS kurumu: <b>${e(sb_.ad)}</b>${sb_.kurumKodu ? ` · <span class="mono">${e(sb_.kurumKodu)}</span>` : ''}</span>` : '';
   const oturum = !E.var ? `${nokta('var(--cizgi)')}MEBBİS oturumu bilinmiyor`
     : !o ? `${nokta('var(--cizgi)')}MEBBİS oturumu: MEBBİS’e girin`
       : !o.acik ? `${nokta('var(--kirmizi)')}MEBBİS oturumu kapandı · yeniden girin`
@@ -22,7 +23,7 @@ export function durumSeridi() {
           : `${nokta('var(--yesil)')}MEBBİS oturumu açık · ${saat(o.zaman)}`;
   const simdi = calisiyor ? `${nokta('var(--levha)')}Şu an: ${e(MT.durum.adim || 'çalışıyor')}` : `${nokta('var(--cizgi)')}Şu an boşta`;
   const z = (S.mebCekim || {}).toplu;
-  return `<div class="mx-durum"><span>${kurulu}</span><span>${oturum}</span><span>${simdi}</span>${z ? `<span class="mx-soluk">Son güncelleme ${e(z.slice(8, 10) + '.' + z.slice(5, 7) + ' ' + z.slice(11))}</span>` : ''}</div>`;
+  return `<div class="mx-durum">${kurum}<span>${kurulu}</span><span>${oturum}</span><span>${simdi}</span>${z ? `<span class="mx-soluk">Son güncelleme ${e(z.slice(8, 10) + '.' + z.slice(5, 7) + ' ' + z.slice(11))}</span>` : ''}</div>`;
 }
 
 /* ---------- açık MEBBİS pencereleri (takvim) ---------- */
