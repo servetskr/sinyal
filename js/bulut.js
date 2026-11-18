@@ -725,6 +725,8 @@ export function ogrenciVerisiDen(D, k) {
     egitmenler: L('egitmenler').map(x => sec(x, ['id', 'ad', 'renk', 'siniflar', 'sube', 'sinif'])),
     araclar: L('araclar').map(x => sec(x, ['id', 'plaka', 'model', 'sinif', 'vites', 'egitmen', 'renk', 'yil'])),
     ogretmenler: L('ogretmenler').map(x => sec(x, ['id', 'ad'])),
+    // UYG-013: imzası beklenen belgeler (WhatsApp'a giden imza linkiyle aynı); öğrenci uygulamada 'İmzala' ile açar
+    imzaTalepleri: L('imzaTalepleri').filter(t => t.kursiyer === id && t.durum === 'bekliyor' && t.link).map(t => sec(t, ['id', 'tur', 'tarih', 'link', 'dersler'])),
     entegrasyon: { kdv: (D.entegrasyon || {}).kdv, earsiv: { bagli: false }, muhasebe: {}, musavir: {} },
   };
 }

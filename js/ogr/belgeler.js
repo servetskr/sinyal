@@ -1,5 +1,5 @@
 // Belgeler sekmesi (yeni tasarım): kayıt evraklarının durumu, evrak listesi (yükleme), sözleşme ve formlar.
-import { EVRAKLAR, SINIFLAR, tamAd } from '../veri.js?v=234';
+import { S, EVRAKLAR, SINIFLAR, tamAd } from '../veri.js?v=234';
 import { tarih } from '../ui.js?v=234';
 import { kursaYaz } from '../ozellik.js?v=234';
 import { esc, oi, sayfaBas, geri, bolum, heroKart, baglanti, liste, satir, ikonKutu, cip, not, stilEkle } from './ui.js?v=234';
@@ -30,7 +30,11 @@ function anaHtml(k) {
     dir ? ['takip', 'Direksiyon eğitimi takip formu', `${k.direksiyon} ders işlendi`, 'panoListe', 'gri'] : null,
     ['bilgi', 'Bilgi formu', 'Kayıtta verdiğin bilgiler', 'kimlik', 'gri'],
   ].filter(Boolean);
+  // UYG-013: imzanı bekleyen belgeler (kurs imzaya gönderdiyse); imza sayfası WhatsApp linkiyle aynı
+  const imz = (S.imzaTalepleri || []).filter(t => t.kursiyer === k.id && t.durum === 'bekliyor' && t.link);
+  const imzaH = imz.length ? bolum('İmzanı bekliyor') + liste(imz.map(t => satir({ ikon: 'imza', ton: 'turuncu', baslik: t.tur === 'sozlesme' ? 'Kurs sözleşmesi' : 'Direksiyon takip formu', alt: esc(t.tur === 'sozlesme' ? 'Okuyup imzala' : `${(t.dersler || []).length} ders · kontrol edip imzala`), sag: '<span class="ox-bag">İmzala</span>', etiket: 'a', attrs: { href: t.link } }))) : '';
   return sayfaBas('Belgeler', 'Kayıt evrakların ve kurs belgelerin.')
+    + imzaH
     + hero
     + bolum('Sözleşme ve formlar')
     + liste(formlar.map(([tur, ad, alt, ik, ton]) => satir({ ikon: ik, ton, baslik: ad, alt: esc(alt), attrs: { 'data-og-belge': tur, 'data-ad': ad } })))
