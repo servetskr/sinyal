@@ -88,7 +88,9 @@ const topla = (l, f = () => true) => l.filter(f).reduce((a, h) => a + (+h.tutar 
 // resmî (emanet) tahsilat: sınav ücreti, harç, kart; ek kalemin türünden (veri.js ekTur)
 const resmiGelir = h => { if (h.tur !== 'Gelir' || ['Kurs ücreti', 'Taksit', 'Peşinat'].includes(h.kategori)) return false; const k = h.kursiyer && S.kursiyerler.find(x => x.id === h.kursiyer), x = k && ((k.odeme || {}).ekler || []).find(y => y.ad === h.kategori); return ekTur(x || { ad: h.kategori }) === 'resmi'; };
 const kasaHesabi = () => (S.hesaplar || []).find(h => h.id === 'kasa') || (S.hesaplar || [])[0] || { bakiye: 0 };
-const nakitNet = (l, bas, bit) => l.reduce((a, h) => { if (h.yontem === 'Nakit' && h.tarih >= bas && h.tarih <= bit) a += h.tur === 'Gelir' ? +h.tutar || 0 : -(+h.tutar || 0); if (h.bankaya && h.yontem === 'Nakit' && h.tur === 'Gelir' && h.bankaya >= bas && h.bankaya <= bit) a -= +h.tutar || 0; return a; }, 0);
+// PAR-042: kasadan çıkan / kasaya giren hesaplar arası transfer de kasa nakdini değiştirir
+const transferNet = (bas, bit) => { const id = kasaHesabi().id; return (S.transferler || []).reduce((a, x) => x.tarih >= bas && x.tarih <= bit ? a + (x.hedef === id ? +x.tutar || 0 : 0) - (x.kaynak === id ? +x.tutar || 0 : 0) : a, 0); };
+const nakitNet = (l, bas, bit) => transferNet(bas, bit) + l.reduce((a, h) => { if (h.yontem === 'Nakit' && h.tarih >= bas && h.tarih <= bit) a += h.tur === 'Gelir' ? +h.tutar || 0 : -(+h.tutar || 0); if (h.bankaya && h.yontem === 'Nakit' && h.tur === 'Gelir' && h.bankaya >= bas && h.bankaya <= bit) a -= +h.tutar || 0; return a; }, 0);
 // t günü sonunda kasada olması gereken nakit. Açılış girilmişse açılıştan ileri, girilmemişse bugünkü bakiyeden geriye doğru hesaplanır.
 export function nakitBakiye(t) {
   const hs = kasaHesabi(), l = sb(S.hareket), bugun = gun(0);

@@ -1266,7 +1266,7 @@ export function demoyaDon() { mebIz = null; ANAHTAR = 'sinyal-demo-v20'; S = yuk
 // Yeni kurs: ayarlar ve şablonlar hazır, kayıtlar boş
 export function bosVeri({ kursAd, yetkili, sehir, mudurTel }) {
   const o = uret();
-  ['kursiyerler', 'dersler', 'hareket', 'adaylar', 'sinavlar', 'teorik', 'gonderimler', 'islemler', 'kampanyalar', 'cezalar', 'avanslar', 'ustaOdemeleri', 'devredilen', 'imzaTalepleri', 'bosTeklif', 'faturalar', 'izinler', 'duyurular', 'bekleme', 'gelenAlinan', 'egitmenler', 'araclar', 'ogretmenler', 'personel', 'kullanicilar', 'arsiv', 'gunSonu'].forEach(k => { if (Array.isArray(o[k])) o[k] = []; });
+  ['kursiyerler', 'dersler', 'hareket', 'adaylar', 'sinavlar', 'teorik', 'gonderimler', 'islemler', 'kampanyalar', 'cezalar', 'avanslar', 'ustaOdemeleri', 'devredilen', 'imzaTalepleri', 'bosTeklif', 'faturalar', 'izinler', 'duyurular', 'bekleme', 'gelenAlinan', 'egitmenler', 'araclar', 'ogretmenler', 'personel', 'kullanicilar', 'arsiv', 'gunSonu', 'transferler', 'gunAcmalar'].forEach(k => { if (Array.isArray(o[k])) o[k] = []; });
   o.subeler = [{ id: 's1', ad: 'Merkez', semt: '', kurumKodu: '', mudur: yetkili || '', mebbis: '' }];
   o.kurs = { ...o.kurs, ad: kursAd || 'Sürücü kursu', yetkili: yetkili || '', sehir: sehir || '', tel: '', adres: sehir || '', puan: null, yorumSayisi: 0, web: '', wp: '', mudurTel: mudurTel || '', iban: '', waApi: '', yorumLink: '' };
   o.zamanli = { gonderilen: {}, kayit: [], kuyruk: [], son: null, sinir: false };
