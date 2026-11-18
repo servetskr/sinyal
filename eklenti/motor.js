@@ -233,10 +233,12 @@
     const l = o.filter(y => y.value === pid && sinifKodu(y.textContent) === k && (!sz || norm(y.textContent).includes(sz)));
     return l.length === 1 ? l[0] : null;
   }
-  function secenek(doc, ad, aranan, { metinle = false, sinif = false } = {}) {
+  // DIR-009: eğitim türü değerle (1 Normal, 2 Telafi, 3 2.Direksiyon, 4 Başarısız Aday) seçilir; seçeneğin metni de aynı türü söylemiyorsa metinle
+  function egitimSecenegi(o, kod, metin) { const k = norm(metin).slice(0, 6); if (!kod || !k) return null; const l = o.filter(y => y.value === String(kod) && norm(y.textContent).startsWith(k)); return l.length === 1 ? l[0] : null; }
+  function secenek(doc, ad, aranan, { metinle = false, sinif = false, egitim = null } = {}) {
     const el = elBul(doc, ad); if (!el || el.tagName !== 'SELECT') throw ekranHata(doc, ad);
-    const o = [...el.options], a = String(aranan), n = norm(a);
-    const x = (sinif && sinifSecenegi(o, a)) || (!metinle && o.find(y => y.value === a)) || o.find(y => norm(y.textContent) === n) || o.find(y => n && norm(y.textContent).startsWith(n)) || o.find(y => n && norm(y.textContent).includes(n));
+    const o = [...el.options], a = String(egitim ? egitim.metin : aranan), n = norm(a);
+    const x = (egitim && egitimSecenegi(o, egitim.kod, egitim.metin)) || (sinif && sinifSecenegi(o, a)) || (!metinle && o.find(y => y.value === a)) || o.find(y => norm(y.textContent) === n) || o.find(y => n && norm(y.textContent).startsWith(n)) || o.find(y => n && norm(y.textContent).includes(n));
     if (!x || x.value === '-1' || x.value === '') throw new MebHata(`“${a}” MEBBİS’te seçeneklerde yok (${ad})`, 'veri');
     return x.value;
   }
@@ -470,7 +472,7 @@
   const personelMetni = is => is.izinNo ? M('izinNo') + is.izinNo : is.personelAd;
 
   /* ---------- yazma: direksiyon ders programı (SKT03004) ---------- */
-  // is: { id, tc, donem, grupNo, subeNo, tarih (gg/aa/yyyy), saat (SS:DD), yer ('Akan Trafik'|'Simülatör'), plaka, simulator, izinNo, personelAd, egitimTuru (metin) }
+  // is: { id, tc, donem, grupNo, subeNo, tarih (gg/aa/yyyy), saat (SS:DD), yer ('Akan Trafik'|'Simülatör'), plaka, simulator, izinNo, personelAd, egitimTuru (metin), egitimTuruKod (değer 1-4) }
   async function programYaz(is, kodIste) {
     let s = await getir('/SKT/skt03004.aspx'); const b = {};
     s = await sec(s, b, 'cmbDonem', is.donem); s = await sec(s, b, 'cmbGrup', String(is.grupNo)); s = await sec(s, b, 'cmbSube', String(is.subeNo));
@@ -494,7 +496,7 @@
     b[adOf(s.doc, 'Ustarih1_txtTarihGiris')] = is.tarih;
     s = await sec(s, b, 'cmbDersSaati', is.saat, { metinle: true });
     s = await sec(s, b, 'cmbDersiVerenPersonel', personelMetni(is), { metinle: true });
-    s = await sec(s, b, 'cmbEgitimTuru', is.egitimTuru || M('normal'), { metinle: true });
+    s = await sec(s, b, 'cmbEgitimTuru', is.egitimTuru || M('normal'), { metinle: true, egitim: { kod: is.egitimTuruKod || '', metin: is.egitimTuru || M('normal') } });
     return kaydetDogrula(s, b, varMi, kodIste);
   }
 
@@ -510,7 +512,7 @@
       b[adOf(s.doc, 'Us_tarih1_txtTarihGiris')] = is.tarih;
       s = await sec(s, b, 'cmbDersSaati', saat, { metinle: true });
       s = await sec(s, b, 'cmbDersiVerenPersonel', personelMetni(is), { metinle: true });
-      s = await sec(s, b, 'cmbEgitimTuru', is.egitimTuru || M('normal'), { metinle: true });
+      s = await sec(s, b, 'cmbEgitimTuru', is.egitimTuru || M('normal'), { metinle: true, egitim: { kod: is.egitimTuruKod || '', metin: is.egitimTuru || M('normal') } });
       await kaydetDogrula(s, b, d => satirVar(d, null, is.tarih, saat + ' -'), kodIste); notlar.push(saat + ' girildi'); yeni++;
     }
     return { ok: true, not: notlar.join(' · '), dogrulama: yeni ? 'liste' : 'zaten' };

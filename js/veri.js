@@ -13,6 +13,15 @@ const BEKLENEN_TUKETIM = { C: 22, 'C-O': 22, A2: 3.5, A: 4.5, M: 2.5 };
 export const motorSinif = sinif => /^(A|M)/.test(String(sinif || ''));
 // Ders türleri: simülatör ve eğitim alanı saatleri 9/1/2025'ten beri asgari direksiyon saatine eklenir (MTSK Yön. değişikliği)
 export const DERS_TUR_AD = { trafik: 'Direksiyon (trafikte)', alan: 'Eğitim alanı', simulator: 'Simülatör' };
+// DIR-009: dersin eğitim türü (MEBBİS SKT03004 cmbEgitimTuru değeri). ad: MEBBİS'teki seçenek metni (yedek eşleşme), kod: seçenek değeri.
+export const EGITIM_TURU = {
+  normal: { kod: '1', ad: 'Normal Eğitim', kisa: 'Normal' },
+  onSinav: { kod: '2', ad: 'Telafi Eğitim(Ön Sınav )', kisa: 'Telafi (ön sınav)' },
+  ikinci: { kod: '3', ad: '2.Direksiyon Eğitimi', kisa: '2. direksiyon' },
+  basarisiz: { kod: '4', ad: 'Başarısız Aday Eğitimi', kisa: 'Başarısız aday' },
+};
+// Teorik (SKT03003): 1 Normal, 2 Telafi Eğitim
+export const TEORIK_EGITIM_TURU = { normal: { kod: '1', ad: 'Normal', kisa: 'Normal' }, telafi: { kod: '2', ad: 'Telafi Eğitim', kisa: 'Telafi' } };
 // Uygulama sınav formu: M, A1, A2, A ve B1 EK-3 ile, diğer sınıflar EK-4 ile değerlendirilir
 export const ek3Sinif = sinif => motorSinif(sinif) || String(sinif || '') === 'B1';
 export const konuListesi = sinif => motorSinif(sinif) ? DERS_KONU_MOTOR : DERS_KONU;
@@ -215,6 +224,28 @@ export function gecisSatirlari() {
   ac.forEach(h => ekle(h, h, { otomatik: true }));
   return l;
 }
+// DIR-009: dersin eğitim türü. Müdürün seçtiği (d.egitimTuru) önce gelir; yoksa kural sırası:
+// 1) ikinci dört hak başladıysa (k.ikinciHak.tarih ya da MEBBİS'ten k.meb.ikinciDireksiyon) ve ders o gün ya da sonra: 'ikinci'
+// 2) son uygulama sınavı Kaldı ya da Girmedi ve ders sınavdan sonra: 'basarisiz' (md.15)
+// 3) hiç uygulama sınavına girmemiş, sınava hazır yazısı yok ve bu dersten önce gereken ders sayısı tamamlanmış: 'onSinav' (Telafi Eğitim, md.7/7)
+// 4) öteki: 'normal'
+const hazirYazisiVar = k => !!((k.meb && /^\d{4}-\d{2}-\d{2}$/.test(k.meb.uygunluk || '')) || (k.hazirYazi && k.hazirYazi.yuklendi));
+export function egitimTuruOf(k, d) {
+  if (!k || !d) return 'normal';
+  if (EGITIM_TURU[d.egitimTuru]) return d.egitimTuru;
+  const t = d.tarih || '', ikinci = (k.ikinciHak && k.ikinciHak.tarih) || (k.meb && k.meb.ikinciDireksiyon) || '';
+  if (ikinci && t >= ikinci) return 'ikinci';
+  const ds = k.dsinav || {};
+  if (ds.tarih && (ds.sonuc === 'Kaldı' || ds.sonuc === 'Girmedi' || ds.girmedi) && t > ds.tarih) return 'basarisiz';
+  if (!ds.tarih && !hazirYazisiVar(k)) {
+    const G = gerekliDireksiyon(k); if (!G) return 'normal';
+    const an = t + ' ' + (d.saat || ''), l = (S.dersler || []).filter(x => x.kursiyer === k.id && x.id !== d.id && x.durum !== 'İptal' && x.durum !== 'Gelmedi' && (x.tarih + ' ' + (x.saat || '')) < an && (!x.egitimTuru || x.egitimTuru === 'normal'));
+    const kayitli = (S.dersler || []).filter(x => x.kursiyer === k.id && x.durum === 'Yapıldı').length, aktarim = Math.max(0, (+k.direksiyon || 0) - kayitli);
+    if (l.length + aktarim >= G) return 'onSinav';
+  }
+  return 'normal';
+}
+export const teorikEgitimTuru = t => (t && TEORIK_EGITIM_TURU[t.egitimTuru]) ? t.egitimTuru : 'normal';
 // Yeni kurala göre mi hesaplanır? Gerçek kursta kural tarihinden önceki kayıtlar eski saatte donar (demo her zaman yeni kural)
 export const eskiDersKurali = k => !!(S && S._bulut) && !!k && k.dersKural !== 2 && String(k.kayit || '') < DERS_KURAL_TARIH;
 // Öğrenciye özgü gerekli direksiyon saati ve açıklaması
@@ -912,7 +943,7 @@ export function sinifKaydet(k, alan) { if (alan && 'ucret' in alan) S.kurs.ucret
 // Saati/öğretmeni/aracı değişen ders yeniden "MEBBİS'e girilecek" olur; silinen ders "MEBBİS'ten silinecek" listesine yazılır.
 let mebIz = null;
 function mebDegisimIzle() {
-  const iz = d => [d.tarih, d.saat, d.egitmen, d.arac || '', d.kursiyer].join('|'), simdi = new Map();
+  const iz = d => [d.tarih, d.saat, d.egitmen, d.arac || '', d.kursiyer, d.egitimTuru || ''].join('|'), simdi = new Map();  // DIR-009: elle değişen eğitim türü de MEBBİS kaydını eskitir
   (S.dersler || []).forEach(d => { if (d.meb) simdi.set(d.id, iz(d)); });
   if (mebIz) {
     const varolan = new Map((S.dersler || []).map(d => [d.id, d]));
@@ -924,6 +955,8 @@ function mebDegisimIzle() {
   }
   mebIz = simdi;
 }
+// Taban yüklemede kurulur: sayfa açıldıktan sonraki ilk değişiklik de (saat, öğretmen, araç, eğitim türü) MEBBİS kaydını eskitir.
+mebDegisimIzle();
 // Ödeme uzlaştırma: taksitin ödenmiş tutarı, onu ödeyen kasa hareketlerinden (dağılım) aşağı düşemez.
 // İki cihaz aynı kursiyeri farklı anlarda değiştirip eski kopya yazılırsa "ödendi" işareti silinebiliyordu; hareket ayrı kayıt olduğu için kalır ve buradan geri gelir.
 function odemeUzlas() {
@@ -1153,8 +1186,8 @@ export function kaydet() { subeTamamla(); noTamamla(); odemeUzlas(); mebDegisimI
   if (!ANAHTAR.startsWith('sinyal-bulut-') || ANAHTAR.startsWith('sinyal-bulut-ogr-')) { try { localStorage.setItem(ANAHTAR, JSON.stringify(S)); } catch (e) { } }
   if (kaydetDinleyici) kaydetDinleyici(); }
 // Bulut (gerçek kurs): veri Firestore'dan gelir; yerel kopya kursa özel anahtarda tutulur, günlük yenilenmez
-export function bulutVeri(yeni, kursId) { mebIz = null; ANAHTAR = 'sinyal-bulut-' + kursId; yeni._bulut = true; S = goc(yeni); if (!String(kursId).startsWith('ogr-')) { try { localStorage.removeItem(ANAHTAR); } catch (e) { } } }
-export function demoyaDon() { mebIz = null; ANAHTAR = 'sinyal-demo-v20'; S = yukle(); }
+export function bulutVeri(yeni, kursId) { mebIz = null; ANAHTAR = 'sinyal-bulut-' + kursId; yeni._bulut = true; S = goc(yeni); mebDegisimIzle(); if (!String(kursId).startsWith('ogr-')) { try { localStorage.removeItem(ANAHTAR); } catch (e) { } } }
+export function demoyaDon() { mebIz = null; ANAHTAR = 'sinyal-demo-v20'; S = yukle(); mebDegisimIzle(); }
 // Yeni kurs: ayarlar ve şablonlar hazır, kayıtlar boş
 export function bosVeri({ kursAd, yetkili, sehir, mudurTel }) {
   const o = uret();

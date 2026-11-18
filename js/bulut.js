@@ -931,7 +931,7 @@ const DIZI_USTA = ['dersler', 'kursiyerler', 'gonderimler', 'imzaTalepleri', 'de
 const KURSIYER_USTA = ['id', 'no', 'ad', 'soyad', 'tel', 'foto', 'sinif', 'asama', 'egitmen', 'sube', 'kapali', 'direksiyon', 'teorik', 'deneme', 'dDeneme', 'esinav', 'dsinav', 'kayit', 'teorikGrup', 'mevcutEhliyet', 'ekDersHakki', 'cinsiyet', 'muaf',
   // öğrenciye özgü direksiyon saati (veri.js direksiyonAyrinti): müdürün elle girdiği değer, ders kuralı, mevcut belge ayrıntısı, ikinci dört hak
   'dersKural', 'gerekliElle', 'gerekliElleNot', 'ikinciHak', 'mevcutOtomatik', 'mevcutEski', 'oncekiBelge'];
-const DERS_KORUNAN = new Set(['id', 'kursiyer', 'egitmen', 'tarih', 'saat', 'arac', 'meb', 'mebDegisti', 'ogrenciOnay', 'ogrenciPuan', 'tur', 'kaynak', 'eklendi', 'onayBekliyor']);
+const DERS_KORUNAN = new Set(['id', 'kursiyer', 'egitmen', 'tarih', 'saat', 'arac', 'meb', 'mebDegisti', 'egitimTuru', 'ogrenciOnay', 'ogrenciPuan', 'tur', 'kaynak', 'eklendi', 'onayBekliyor']);
 const ustaKirli = new Set(), ustaSon = new Map(), ustaIslenen = new Map();
 export function ustaVerisi(egId, gunSiniri = 180) {
   const bugun = iso(new Date()), eski = iso(new Date(Date.now() - gunSiniri * 864e5));

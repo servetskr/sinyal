@@ -1,7 +1,7 @@
 // MEBBİS toplu çekme ve toplu yazma (mdSinyal tarafı). İşi MEBBİS Yardımcısı'nın arka plan motoru (eklenti/motor.js)
 // kursun kendi MEBBİS oturumunda, ekran açmadan yürütür; sonuç buraya gelir ve kayıtlarla eşlenir.
 // Gönderilen ve gelen iletilerin adları ve alanları: js/eklenti.js başındaki ileti sözleşmesi tablosu (eklenti/sinyal.js'te de aynısı).
-import { S, kaydet, gun, iso, fark, izinDurumu, ustaYetkili, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, sb, sbDers, cokSube, seciliSube, eksikEvrak, anaSinif, egitimSinifi, ekTur, kursiyerTaban, tutarOku, MEB_CEZA_SERTIFIKA, programAcik, esinavUcretiIsle, esinavUcretiVar, esinavHakDurum, teorikSaat } from './veri.js?v=234';
+import { S, kaydet, EGITIM_TURU, TEORIK_EGITIM_TURU, egitimTuruOf, teorikEgitimTuru, gun, iso, fark, izinDurumu, ustaYetkili, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, sb, sbDers, cokSube, seciliSube, eksikEvrak, anaSinif, egitimSinifi, ekTur, kursiyerTaban, tutarOku, MEB_CEZA_SERTIFIKA, programAcik, esinavUcretiIsle, esinavUcretiVar, esinavHakDurum, teorikSaat } from './veri.js?v=234';
 import { bildir, pencere, kapatPencere, e, ik, isaret, rozet, tarih, tl } from './ui.js?v=234';
 import * as GR from './gruplar.js?v=234';
 import * as EK from './eklenti.js?v=234';
@@ -85,14 +85,7 @@ const sertifikaMetni = k => { if (k.sinif === 'CEZA') return MEB_CEZA_SERTIFIKA;
 const mebGrup = k => { const g = GR.kursiyerGrubu(k); return g && GR.mebGrubuMu(g) ? g : null; };
 const subeNo = g => GR.SUBELER.indexOf(g.sube) + 1;
 const SINAV_SAATLERI = ['08:30', '09:15', '10:00', '10:45', '11:30', '13:00', '13:45', '14:30', '15:15', '16:00'];   // 40 dk + 5 dk, öğle arası 12:15
-// MEBBİS 03004 eğitim türleri: 1 Normal Eğitim · 2 Telafi Eğitim(Ön Sınav) · 3 2.Direksiyon Eğitimi · 4 Başarısız Aday Eğitimi.
-// 2. direksiyon aşamasına geçen adayın (aday dosyasından k.meb.ikinciDireksiyon) o tarihten sonraki dersleri "2.Direksiyon Eğitimi" türüyle yazılır.
-function egitimTuru(k, d) {
-  const ikinci = (k.meb && k.meb.ikinciDireksiyon) || '';
-  if (ikinci && d.tarih >= ikinci) return '2.Direksiyon Eğitimi';
-  const sonKalma = (k.dsinav && k.dsinav.sonuc === 'Kaldı' && k.dsinav.tarih) || '';
-  return sonKalma && d.tarih > sonKalma ? 'Başarısız Aday Eğitimi' : 'Normal Eğitim';
-}
+// MEBBİS 03004 eğitim türleri (DIR-009): veri.js EGITIM_TURU / egitimTuruOf — değer (kod) ve metin birlikte gider; Yardımcı önce değerle, olmazsa metinle seçer.
 // Simülatör dersinde MEBBİS'e gidecek kimlik: cihazın MEBBİS "Cihazın Sicil Numarası" (skt01002 simülatör listesi "Seri Numarası", 13 hane).
 // S.simulatorler MEBBİS'ten araç okunurken doldurulur. Dersin kendi simülatörü (d.simulator) yoksa hizmetteki tek simülatör kullanılır;
 // birden çok simülatör varsa ve ders hangisi olduğunu söylemiyorsa sicil no boş gider ve Yardımcı yalnız MEBBİS'te tek simülatör varsa onu seçer.
@@ -232,7 +225,7 @@ export async function hazirla(ids, { foto = true, koru = null } = {}) {
       if (!dl) { ekle(x, 'Derslik yok: teorik dersin dersliğini seçin (MEBBİS “DERSLİK-n” ister)'); continue; }
       if (!t.konu) { ekle(x, 'Ders konusu (türü) yok'); continue; }
       if (!(t.tarih > gun(0))) { ekle(x, 'Bugünün ya da geçmişin dersi MEBBİS’e yazılmaz'); continue; }
-      l.push({ id: x.id, tur: 'teorik', baslik: x.baslik, donem: g.donem, grupNo: g.grupNo, subeNo: subeNo(g), tarih: trT(t.tarih), saatler, dersTuru: dersTuru(t.konu), derslik: dl ? 'DERSLİK-' + dl[0] : '', izinNo: izin(o), personelAd: o.ad || '', egitimTuru: 'Normal' });
+      l.push({ id: x.id, tur: 'teorik', baslik: x.baslik, donem: g.donem, grupNo: g.grupNo, subeNo: subeNo(g), tarih: trT(t.tarih), saatler, dersTuru: dersTuru(t.konu), derslik: dl ? 'DERSLİK-' + dl[0] : '', izinNo: izin(o), personelAd: o.ad || '', ...(() => { const et = TEORIK_EGITIM_TURU[teorikEgitimTuru(t)]; return { egitimTuru: et.ad, egitimTuruKod: et.kod }; })() });
     }
     if (x.tur === 'esinav') { const k = kursiyer(r.kursiyer), g = k && mebGrup(k); if (!g) { ekle(x, 'Dönem grubuna atanmamış'); continue; } { const tb = GR.teorikBitis(k); if (tb && tb.tarih >= gun(0)) { ekle(x, `Teorik dersler ${tarih(tb.tarih)} ${tb.tarih.slice(0, 4)} tarihinde bitiyor (${tb.kaynak === 'MEBBİS' ? 'MEBBİS programı' : 'mdSinyal planı'}); MEBBİS teorik dersler bitmeden e-sınav başvurusu almaz`); continue; } } if (egitimSinifi(k.sinif)) { ekle(x, CEZA_NOT); continue; } l.push({ id: x.id, tur: 'esinav', baslik: tamAd(k), tc: k.tc, donem: g.donem, istenen: tabanSinif(k.sinif) + ' SINIFI', gun: String(S.kurs.esinavGun || '0') }); }
     if (x.tur === 'fatura') {
@@ -463,7 +456,7 @@ export function programIsleri(idler) {
     if (sim && !simulatorSicil(d)) return hatalar.push([id, baslik, (S.simulatorler || []).some(x => x && x.sicilNo) ? 'Birden çok simülatör var; planda derse dokunup simülatörünü seçin' : 'Simülatör sicil numarası yok: Ekip ve araçlar › Simülatörler']);
     if (!/^\d{2}:00/.test(d.saat || '')) return hatalar.push([id, baslik, `Ders saati ${d.saat}: MEBBİS’te dersler tam saatte başlar`]);
     l.push({ id, tur: 'program', baslik, tc: k.tc, donem: g.donem, grupNo: g.grupNo, subeNo: subeNo(g), tarih: trT(d.tarih), saat: d.saat.slice(0, 5),
-      yer: sim ? 'Simülatör' : 'Akan Trafik', plaka: sim ? '' : ar.plaka.replace(/\s/g, ''), simulator: sim ? simulatorSicil(d) : '', izinNo: izin(eg), personelAd: eg.ad || '', egitimTuru: egitimTuru(k, d) });
+      yer: sim ? 'Simülatör' : 'Akan Trafik', plaka: sim ? '' : ar.plaka.replace(/\s/g, ''), simulator: sim ? simulatorSicil(d) : '', izinNo: izin(eg), personelAd: eg.ad || '', ...(() => { const et = EGITIM_TURU[egitimTuruOf(k, d)]; return { egitimTuru: et.ad, egitimTuruKod: et.kod }; })() });
   });
   return { l, hatalar };
 }
