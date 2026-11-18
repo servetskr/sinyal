@@ -1,7 +1,7 @@
 // MEBBİS toplu çekme ve toplu yazma (mdSinyal tarafı). İşi MEBBİS Yardımcısı'nın arka plan motoru (eklenti/motor.js)
 // kursun kendi MEBBİS oturumunda, ekran açmadan yürütür; sonuç buraya gelir ve kayıtlarla eşlenir.
 // Gönderilen ve gelen iletilerin adları ve alanları: js/eklenti.js başındaki ileti sözleşmesi tablosu (eklenti/sinyal.js'te de aynısı).
-import { ILLER, S, kaydet, hakDurumu, asamaFarki, EGITIM_TURU, TEORIK_EGITIM_TURU, egitimTuruOf, teorikEgitimTuru, gun, iso, fark, izinDurumu, ustaYetkili, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, sb, sbDers, cokSube, seciliSube, eksikEvrak, anaSinif, egitimSinifi, ekTur, kursiyerTaban, tutarOku, MEB_CEZA_SERTIFIKA, programAcik, esinavUcretiIsle, esinavUcretiVar, esinavHakDurum, teorikSaat } from './veri.js?v=234';
+import { ILLER, S, kaydet, oturum, hakDurumu, asamaFarki, EGITIM_TURU, TEORIK_EGITIM_TURU, egitimTuruOf, teorikEgitimTuru, gun, iso, fark, izinDurumu, ustaYetkili, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, sb, sbDers, cokSube, seciliSube, eksikEvrak, anaSinif, egitimSinifi, ekTur, kursiyerTaban, tutarOku, MEB_CEZA_SERTIFIKA, programAcik, esinavUcretiIsle, esinavUcretiVar, esinavHakDurum, teorikSaat } from './veri.js?v=234';
 import { bildir, pencere, kapatPencere, e, ik, isaret, rozet, tarih, tl } from './ui.js?v=234';
 import * as GR from './gruplar.js?v=234';
 import * as MN from './mebnorm.js?v=234';   // MEB-039/040: MEBBİS dönem, sertifika, T.C., tarih ve sonuç metinleri buradan geçmeden karşılaştırılmaz
@@ -386,13 +386,32 @@ export function kuralBilgi(ids, devam, { dugme } = {}) {
 
 // MEBBİS'e yaz: hazırla → iş onayı penceresi (ne, kimin adına, kim onaylıyor, süre, parça) → iş fişi → ilk parça Yardımcı'ya
 // Döner: true (iş Yardımcı'ya gönderildi) ya da undefined (vazgeçildi, engel var)
+export function onayTeyit(onaylar) {
+  return new Promise(ok => {
+    let bitti = false; const son = v => { if (bitti) return; bitti = true; ok(v); };
+    const adlar = onaylar.flatMap(x => (x.adaylar || []).map(a => { const k = (S.kursiyerler || []).find(y => y.tc === a.tc); return k ? tamAd(k) : MK.maskele(a.tc); }));
+    pencere({ baslik: 'Kurum onayı · geri alınamaz', icerik: `<p class="ipucu uyari">${isaret('uyari', 18)}<span>Kurum onayı verildikten sonra MEBBİS’te adayın fotoğrafı ve bilgileri düzeltilemez, onay geri alınamaz. Yardımcı yalnız fotoğrafı ve evrak kontrolü tamam olanları onaylar.</span></p>
+        <p style="font-size:14px;margin-top:10px"><b>${adlar.length} aday</b> (${onaylar.map(x => e(x.baslik)).join(', ')}):</p><ul style="max-height:34vh;overflow:auto;font-size:13.5px;margin:6px 0 0 18px">${adlar.map(a => `<li>${e(a)}</li>`).join('')}</ul>
+        <label style="display:flex;gap:8px;align-items:flex-start;margin-top:12px;font-size:14px"><input type="checkbox" data-ot-bil> <span>Bu adayların bilgilerini ve fotoğraflarını kontrol ettim; kurum onayının geri alınamayacağını biliyorum.</span></label>`,
+      altlik: '<button class="dg dg-cizgi" data-ot-hayir>Onayı gönderme</button><button class="dg dg-ana" data-ot-evet disabled>Kurum onayını da gönder</button>',
+      onAc(p) { const c = p.querySelector('[data-ot-bil]'), ev = p.querySelector('[data-ot-evet]'); c.addEventListener('change', () => { ev.disabled = !c.checked; });
+        ev.addEventListener('click', () => { islem('Kurum onayı gönderimini teyit etti', adlar.length + ' aday'); son(true); kapatPencere(); }); p.querySelector('[data-ot-hayir]').addEventListener('click', () => { son(false); kapatPencere(); });
+        new MutationObserver((_, o) => { if (!p.isConnected) { o.disconnect(); son(false); } }).observe(document.body, { childList: true, subtree: true }); } });
+  });
+}
 export async function yaz(ids) {
   if (!MK.yazabilir()) return bildir(MK.YETKI_YOK_YAZ, 'uyari');
   if (onkosulEngel('MEBBİS’e yazma')) return;  // YON-077: kurum kodu yoksa yanlış kurum koruması çalışmaz
   // kurum "Yardımcı'yı kullanmayacağım" derse aynı işler elle giriş penceresinde açılır
   // (kayıt, direksiyon programı ve sınav randevusu mevcut "Elle giriş" ekranlarındadır; pencere yalnız öteki altı tür için açılır)
   if (!hazirMi(() => yaz(ids), () => { const el = ids.filter(id => MK.ELLE_TURLER.includes(String(id).split('-')[0])); if (el.length) elleGir(el); })) return;
-  const { l, hata, basliklar } = await hazirla(ids);
+  const { l: l0, hata, basliklar } = await hazirla(ids);
+  // MEB-070 (SOR-066): kurum onayı geri alınamaz → yalnız kurs müdürü, aday aday önizleme ve ayrı 'geri alınamaz' teyidiyle; öteki işlerle aynı onayda gitmez
+  let l = l0; const onaylar = l.filter(x => x.tur === 'onay');
+  if (onaylar.length) {
+    if ((oturum.kullanici || {}).rol !== 'mudur') { onaylar.forEach(x => hata.push([x.id, 'Kurum onayını yalnız kurs müdürü verir'])); l = l.filter(x => x.tur !== 'onay'); }
+    else if (!(await onayTeyit(onaylar))) { l = l.filter(x => x.tur !== 'onay'); if (!l.length) return bildir('Kurum onayı gönderilmedi'); }
+  }
   S.mebDurum = S.mebDurum || {};
   hata.forEach(([id, not]) => { S.mebDurum[id] = { durum: 'hata', zaman: Date.now(), not }; });
   if (!l.length) { kaydet(); yenile(); return bildir(hata.length ? `${hata.length} iş gönderilemedi: ${hata[0][1]}` : 'MEBBİS’e yazılacak iş yok', 'uyari'); }
@@ -580,12 +599,21 @@ function parcaBittiGoster(o, yazilan) {
 }
 // Yazılan her kayıt: bayrak işaretlenir, ekranda iz kalır (başarıda da), sunucu kaydına kayıt başına bir satır yazılır.
 // Aynı sonuç her yoklamada yeniden gelir: iz (is + durum + not) aynıysa ikinci kez kaydedilmez.
+// MEB-063: randevuda MEBBİS'in 'en az … aday' iletisi grubun küçüklüğüdür; MEB-064: direksiyon programında çakışma iletisi (araç/usta üzerine ders var)
+// saat kendiliğinden kaydırılmaz, ders d.mebHata ile işaretlenir; ders penceresinde 'Başka saat seç' planlama ekranını o gün ve usta için açar
+const CAKISMA = /[üu]zerine.*ders|ders.*(var|kay[ıi]tl[ıi])|[çc]ak[ıi][şs]|ayn[ıi] saat/i;
+function hataMetni(id, ok, not) {
+  if (ok || !not) return not; const tur = String(id).split('-')[0];
+  if (tur === 'sinav' && /en az/i.test(not) && !/^MEBBİS grubu küçük buldu/.test(not)) return 'MEBBİS grubu küçük buldu: ' + not;
+  if (tur === 'ders' && CAKISMA.test(not)) { const d = (S.dersler || []).find(y => y.id === String(id).slice(5)); if (d) d.mebHata = { not, zaman: gun(0), tur: 'cakisma' }; return 'MEBBİS’te aynı saatte araç ya da usta dolu (saat kaydırılmadı): ' + not; }
+  return not;
+}
 export function yazilanlariIsle(l, isId, kaynak = 'yardimci') {
   let n = 0; S.mebDurum = S.mebDurum || {};
   const u = MK.kim();
   const isaretle = (id, ok, not) => {
     const [tur, ...p] = id.split('-'), r = p.join('-');
-    if (tur === 'ders') { const d = S.dersler.find(y => y.id === r); if (d && ok && !d.meb) { d.meb = true; delete d.mebDegisti; return 1; } }
+    if (tur === 'ders') { const d = S.dersler.find(y => y.id === r); if (d && ok && !d.meb) { d.meb = true; delete d.mebDegisti; delete d.mebHata; return 1; } }
     if (tur === 'teorik') { const t = (S.teorik || []).find(y => y.id === r); if (t && ok && !t.meb) { t.meb = true; return 1; } }
     if (tur === 'kayit') { const k = kursiyer(r); if (k && ok && !k.mebIslendi) { k.mebIslendi = true; if (k.mebEvrak && !/(öğrenim|sağlık raporu|adli sicil|parmak izi): /.test(not || '')) k.mebEvrakGirildi = gun(0); return 1; } }
     if (tur === 'evrak') { const k = kursiyer(r); if (k && ok && !k.mebEvrakGirildi) { k.mebEvrakGirildi = gun(0); return 1; } }
@@ -599,7 +627,7 @@ export function yazilanlariIsle(l, isId, kaynak = 'yardimci') {
   const turOf = id => { const t = id.split('-')[0]; return t === 'ders' ? 'program' : t; };
   l.forEach(x => {
     if (!x || !x.id) return;
-    const once = S.mebDurum[x.id], dur = x.ok ? 'tamam' : 'hata', not = String(x.not || '').slice(0, 240);
+    const once = S.mebDurum[x.id], dur = x.ok ? 'tamam' : 'hata', not = hataMetni(x.id, x.ok, String(x.not || '')).slice(0, 240);
     if (once && once.is === isId && once.durum === dur && (once.not || '') === not) return;   // bu sonuç zaten işlendi
     const tur = (once && once.tur) || turOf(x.id), baslik = (once && once.baslik) || '';
     if (x.ok) n += isaretle(x.id, true, x.not);

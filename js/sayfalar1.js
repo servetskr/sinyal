@@ -2477,6 +2477,7 @@ export function plan() {
 }
 // “+ Yeni” penceresinden: belirli öğretmen, gün ve saat için ders ekleme penceresini açar
 export function dersPlanlaAc(egId, tarih, saat) { planGun = tarih; planGorunum = 'egitmen'; dersEkle(egId, saat); }
+export function planGunuAc(tarih) { planGun = tarih; planGorunum = 'egitmen'; if (typeof planDonem !== 'undefined') planDonem = 'gun'; if (location.hash !== '#/plan') location.hash = '#/plan'; else import('./app.js?v=234').then(m => m.yenile()); }   // MEB-064: dersin günü, usta görünümü
 // Otomatik planlama: önerilen dersler listelenir, müdür seçtiklerini ekler
 // DIR-039: otomatik plan penceresi (planlayici.js planOner). Üstte başlangıç, süre, dağıtım ve aday seçimi; gün gün öneriler (onay kutulu),
 // ustaların hafta yükü, katlanır "Yerleşmeyenler"; "Seçilenleri plana ekle" ve "Ekle ve MEBBİS’e yaz" (yalnız 5 gün ve sonrası; mebtoplu.yaz).
@@ -2659,7 +2660,9 @@ function psikoSatiri(k) {
   const x = PS.kursiyerRandevusu(k);
   return `<div class="ps-satir">${ik('takvim')}<span style="flex:1;min-width:0"><b>Psikoteknik</b> · ${x ? `${tarih(x.tarih)} ${x.saat} · ${e(x.kaynak)} · ${x.sonuc ? e(x.sonuc) : e(x.durum.toLocaleLowerCase('tr'))}` : 'randevu yok'}</span>${PS.engel({ kursiyer: k.id }) ? '' : `<button type="button" class="dg dg-cizgi dg-kucuk" data-ps-ver>Randevu ver</button>`}<a class="dg dg-hafif dg-kucuk" href="#/sinavlar/psiko">Randevular</a></div>`;
 }
-function dersUyumSatiri(d) { const u = UY.dersUyumsuz(d.id); if (!u) return ''; const m = UY.metin(u); return `<dt>MEBBİS</dt><dd><b style="color:var(--kirmizi)">${e(m.etiket.join(', '))}</b>${m.meb ? `<small style="display:block">${e(m.meb)}</small>` : ''}<small style="display:block;color:var(--metin)">${e(m.ne)} <a href="#/meb" style="color:var(--levha);font-weight:700">Uyumsuzluklar</a></small></dd>`; }
+function dersUyumSatiri(d) { const u = UY.dersUyumsuz(d.id);
+  if (d.mebHata && !d.meb) return `<dt>MEBBİS</dt><dd><b style="color:var(--kirmizi)">MEBBİS’e yazılamadı: aynı saatte araç ya da usta dolu</b><small style="display:block">${e(d.mebHata.not || '')}</small><button type="button" class="dg dg-cizgi dg-kucuk" data-ders-baska-saat style="margin-top:6px">Başka saat seç</button></dd>`;   // MEB-064
+  if (!u) return ''; const m = UY.metin(u); return `<dt>MEBBİS</dt><dd><b style="color:var(--kirmizi)">${e(m.etiket.join(', '))}</b>${m.meb ? `<small style="display:block">${e(m.meb)}</small>` : ''}<small style="display:block;color:var(--metin)">${e(m.ne)} <a href="#/meb" style="color:var(--levha);font-weight:700">Uyumsuzluklar</a></small></dd>`; }
 function dersEgitimSatiri(d, k) {
   const oto = (() => { const x = { ...d }; delete x.egitimTuru; return egitimTuruOf(k, x); })(), sec = EGITIM_TURU[d.egitimTuru] ? d.egitimTuru : '';
   const neden = { normal: 'zorunlu ders', onSinav: 'gereken dersler bitti, sınava hazır yazısı yok (md.7/7)', ikinci: 'ikinci dört hak başladı', basarisiz: 'son uygulama sınavından sonra (md.15)' }[oto];
@@ -2677,6 +2680,7 @@ function dersAc(id) {
       { const se = p.querySelector('[data-ders-egitim]'); if (se) se.addEventListener('change', () => { const eski = d.egitimTuru || ''; if (se.value) d.egitimTuru = se.value; else delete d.egitimTuru; islem('Dersin eğitim türünü değiştirdi', `${tamAd(k)} · ${tarih(d.tarih)} ${d.saat} · ${eski ? EGITIM_TURU[eski].kisa : 'kendiliğinden'} → ${se.value ? EGITIM_TURU[se.value].kisa : 'kendiliğinden'}`); kaydet(); bildir(d.meb === false && d.mebDegisti ? 'Kaydedildi; ders yeniden MEBBİS’e girilecek' : 'Kaydedildi'); }); }
       { const ss = p.querySelector('[data-ders-sim]'); if (ss) ss.addEventListener('change', () => { const dd = S.dersler.find(x => x.id === ss.dataset.dersSim); if (!dd) return; dd.simulator = ss.value; islem('Simülatör dersinin cihazını seçti', ((S.simulatorler || []).find(x => x.id === ss.value) || {}).sicilNo || ''); kaydet(); bildir('Simülatör kaydedildi'); }); }
       p.addEventListener('click', ev => {
+        if (ev.target.closest('[data-ders-baska-saat]')) { kapatPencere(); bildir('Dersi bu günün planında başka bir saate taşıyın; yeni saat MEBBİS’e yeniden yazılır'); return planGunuAc(d.tarih); }   // MEB-064: saat kendiliğinden kaydırılmaz, kullanıcı seçer
         const henuz = () => d.tarih > gun(0) || (d.tarih === gun(0) && d.saat > new Date().toTimeString().slice(0, 5));
         if (ev.target.closest('[data-yapildi]') && henuz()) return bildir(`Bu ders ${tarihUzun(d.tarih)} ${d.saat}; saati gelmeden “Yapıldı” işaretlenemez`, 'uyari');
         if (ev.target.closest('[data-gelmedi]') && henuz()) return bildir('Dersin saati gelmeden “Gelmedi” işaretlenemez', 'uyari');
