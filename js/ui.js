@@ -412,6 +412,11 @@ export async function apiGonder(metin, belge, adres, kime, ek = {}) {
     const r = adres ? await fetch(adres, govde) : await waIstek('/', govde);
     const j = await r.json().catch(() => ({}));
     if (r.ok && j.ok) { bitir(true); return { ok: true, id: j.id || null }; }
+    // MSJ-025: numara WhatsApp kullanmıyorsa (Meta 131026) ve kursun SMS hesabı bağlıysa aynı metin SMS ile gider (belge SMS'le gitmez)
+    if (+j.kod === 131026 && S.kurs && S.kurs.smsBagli && S._bulut && tel && !(belge && belge.base64)) {
+      const sm = await import('./bulut.js?v=234').then(B => B.smsGonder(tel, sadeDil(metin))).catch(() => ({ ok: false }));
+      if (sm.ok) { bitir(true); return { ok: true, id: sm.id || null, kanal: 'SMS' }; }
+    }
     bitir(false, j.hata);
     return { ok: false, hata: metaHata(j) };
   } catch (x) { bitir(false, 'ulaşılamadı'); return { ok: false, hata: 'WhatsApp servisine ulaşılamadı' }; }

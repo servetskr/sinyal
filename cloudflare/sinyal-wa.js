@@ -426,6 +426,39 @@ const epKabuk = (baslik, govde, alt, onizleme) => `<!doctype html><html lang="tr
 <tr><td style="padding:16px 24px 20px;background:#fafbfc;border-top:1px solid #e8ebf1;font-size:12.5px;line-height:1.5;color:#6b7280">${alt ? `<div>${epKacis(alt)}</div>` : ''}<div style="margin-top:6px"><a href="https://mdsinyal.com" style="color:#6b7280;font-weight:700;text-decoration:none">mdSinyal</a> · sürücü kursu yönetim programı</div></td></tr>
 </table></td></tr></table></body></html>`;
 const epSayfa = (baslik, metin, form) => new Response(`<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${epKacis(baslik)} · mdSinyal</title></head><body style="margin:0;background:#0f1729;color:#e9edf5;font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;display:grid;place-items:center;min-height:100vh;padding:16px;box-sizing:border-box"><main style="max-width:420px;text-align:center"><h1 style="font-size:22px;margin:0 0 8px">${epKacis(baslik)}</h1><p style="margin:0 0 20px;color:#b8c2d6">${epKacis(metin)}</p>${form ? `<form method="post" action="https://api.mdsinyal.com/eposta/onay"><input type="hidden" name="t" value="${epKacis(form)}"><button type="submit" style="font:inherit;color:#fff;background:#2563eb;border:0;padding:12px 20px;border-radius:12px;font-weight:600;cursor:pointer">Adresimi onayla</button></form>` : `<a href="https://mdsinyal.com/" style="color:#fff;background:#2563eb;padding:12px 20px;border-radius:12px;text-decoration:none;font-weight:600;display:inline-block">mdSinyal’i aç</a>`}</main></body></html>`, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex' } });
+// ---- MSJ-025: SMS yedeği (Netgsm) ----
+// Kursun kendi Netgsm hesabı: kullanıcı kodu, şifre ve onaylı başlık sunucuda 'sms:<kurs>' anahtarında (istemciye geri dönmez). WhatsApp'ı olmayan
+// numaraya ya da şablonla da gidemeyen mesaja yedek. Netgsm 'send/get' API: cevap '00 <id>' (01, 02 de başarı); hata kodları Türkçeye çevrilir.
+const SMS_HATA = { '20': 'Mesaj metni hatalı ya da çok uzun', '30': 'Netgsm kullanıcı adı/şifresi geçersiz ya da API erişim izni (IP) yok', '40': 'SMS başlığı (gönderici adı) Netgsm’de tanımlı değil', '50': 'İYS kontrollü gönderimde alıcının izni yok', '51': 'İYS marka bilgisi bulunamadı', '70': 'Hatalı istek (eksik ya da yanlış alan)', '80': 'Gönderim sınırı aşıldı', '85': 'Aynı numaraya kısa sürede aynı mesaj (mükerrer)' };
+const smsTel = t => { const d = String(t || '').replace(/\D/g, '').replace(/^90/, '').replace(/^0/, ''); return /^5\d{9}$/.test(d) ? d : ''; };
+async function sms(req, env, url, yol, cevap) {
+  if (!env.LINK) return cevap({ ok: false, hata: 'Depo yok' }, 500);
+  const kurs = req.headers.get('X-Kurs') || url.searchParams.get('kurs') || '', rol = await uyeRol(req, kurs);
+  if (!rol || !['mudur', 'sekreter'].includes(rol)) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
+  const an = 'sms:' + kurs, kayit = JSON.parse((await env.LINK.get(an)) || 'null');
+  if (yol === 'sms/hat' && req.method === 'GET') return cevap({ ok: true, bagli: !!kayit, baslik: kayit ? kayit.baslik : '' });
+  if (yol === 'sms/hat' && req.method === 'POST') {
+    if (rol !== 'mudur') return cevap({ ok: false, hata: 'SMS hesabını yalnız kurs müdürü bağlar' }, 403);
+    const b = await req.json().catch(() => ({}));
+    if (b.sil) { await env.LINK.delete(an); return cevap({ ok: true, bagli: false }); }
+    const kullanici = String(b.kullanici || '').replace(/\D/g, ''), sifre = String(b.sifre || ''), baslik = String(b.baslik || '').trim().slice(0, 11);
+    if (!/^\d{10}$/.test(kullanici) || !sifre || !baslik) return cevap({ ok: false, hata: 'Netgsm kullanıcı kodu (10 hane), şifre ve onaylı SMS başlığı gerekli' }, 400);
+    await env.LINK.put(an, JSON.stringify({ kullanici, sifre, baslik, z: new Date().toISOString() }));
+    return cevap({ ok: true, bagli: true, baslik });
+  }
+  if (yol === 'sms' && req.method === 'POST') {
+    if (!kayit) return cevap({ ok: false, hata: 'SMS hesabı bağlı değil (Ayarlar › Kurs bilgileri › SMS)' }, 409);
+    const b = await req.json().catch(() => ({})), tel = smsTel(b.tel), metin = String(b.metin || '').trim().slice(0, 900);
+    if (!tel) return cevap({ ok: false, hata: 'Alıcının cep telefonu geçersiz' }, 400);
+    if (!metin) return cevap({ ok: false, hata: 'Mesaj boş' }, 400);
+    const q = new URLSearchParams({ usercode: kayit.kullanici, password: kayit.sifre, gsmno: tel, message: metin, msgheader: kayit.baslik, dil: 'TR' });
+    let t = ''; try { const r = await fetch('https://api.netgsm.com.tr/sms/send/get?' + q.toString()); t = (await r.text()).trim(); } catch (x) { return cevap({ ok: false, hata: 'Netgsm’e ulaşılamadı' }, 502); }
+    const kod = t.split(/\s+/)[0];
+    if (['00', '01', '02'].includes(kod)) return cevap({ ok: true, id: t.split(/\s+/)[1] || null, kanal: 'SMS' });
+    return cevap({ ok: false, kod, hata: SMS_HATA[kod] || ('SMS gönderilemedi (Netgsm ' + (kod || 'cevap yok') + ')') }, 502);
+  }
+  return cevap({ ok: false }, 404);
+}
 async function eposta(req, env, url, yol, cevap) {
   if (!env.LINK) return cevap({ ok: false, hata: 'Depo yok' }, 500);
   const S = epSaglayici(env);
@@ -1286,6 +1319,7 @@ export default {
     if (yol === 'soru-bildir/yonet') return soruBildirYonet(req, env, url, cevap);
     // kursun rapor ve yedek e-postaları (kimlik denetimi eposta() içinde)
     if (yol === 'eposta' || yol.startsWith('eposta/')) return eposta(req, env, url, yol, cevap);
+    if (yol === 'sms' || yol === 'sms/hat') return sms(req, env, url, yol, cevap);   // MSJ-025
     const G = 'https://graph.facebook.com/v25.0/' + env.PHONE_ID;
     // Gerçek kurs isteği: Firebase oturumu + kurs kimliği (yoksa demo yolu)
     // ortak derlem eklemeleri: okuma herkese açık, yazma platform sahibi (kurs üyeliği aranmaz)

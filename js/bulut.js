@@ -587,6 +587,16 @@ export async function waHat(govde) {
   if (!r.ok || !j.ok) throw Object.assign(new Error(j.hata || 'WhatsApp servisine ulaşılamadı'), { kullanici: j.hata || 'WhatsApp servisine ulaşılamadı', kayitGerekli: !!j.kayitGerekli });
   return j;
 }
+// MSJ-025: Netgsm SMS hesabı (bağla/kaldır/durum) ve SMS gönderimi; kimlik bilgileri yalnız serviste
+const kursBasligi = async () => ({ ...(await bulutKanca.yetki()), 'Content-Type': 'application/json' });
+export async function smsHat(govde) {
+  const r = await fetch(WORKER + '/sms/hat', govde ? { method: 'POST', headers: await kursBasligi(), body: JSON.stringify(govde) } : { headers: await kursBasligi() });
+  const j = await r.json().catch(() => ({})); if (!r.ok || !j.ok) throw new Error(j.hata || 'SMS servisine ulaşılamadı'); return j;
+}
+export async function smsGonder(tel, metin) {
+  try { const r = await fetch(WORKER + '/sms', { method: 'POST', headers: await kursBasligi(), body: JSON.stringify({ tel, metin }) }); const j = await r.json().catch(() => ({})); return r.ok && j.ok ? j : { ok: false, hata: j.hata || 'SMS gönderilemedi' }; }
+  catch (x) { return { ok: false, hata: 'SMS servisine ulaşılamadı' }; }
+}
 // Kursa özel kısa link: mdsinyal.com/<ad> kursun kapı ekranını açar (yalnız müdür; ad sunucuda kursa ayrılır)
 export async function kisaAdAyarla(ad, hedef) {
   const h = { ...(await bulutKanca.yetki()), 'Content-Type': 'application/json' };
