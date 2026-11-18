@@ -55,9 +55,9 @@ export const durum = { calisiyor: false, id: null, adim: '', baslama: 0, son: nu
 export const suruyor = () => durum.calisiyor && Date.now() - (durum.sonIlerleme || durum.baslama) < 5 * 60e3;
 // Toplu iş, Durdur/Devam, onaylı teslim, kurum denetimi ve "Ekranları denetle" Yardımcı 1.12.0 ile geldi
 export const GEREKEN_SURUM = '1.12.0';
-// DENETİM Ö6: bu yayının Yardımcı'sı 1.16.0. 1.12–1.15 çalışır ama yeni okumaları tanımaz: o okumalar işe konmaz, kullanıcıya hangi sürümün gerektiği söylenir.
-export const ONERILEN_SURUM = '1.16.0';
-export const CEK_SURUM = { teorik: '1.13.0', ucretler: '1.13.0', randevular: '1.13.0', kurum: '1.14.0', ucretIlani: '1.15.0', yetki: '1.16.0', direksiyonProgrami: '1.16.0' };
+// DENETİM Ö6: bu yayının Yardımcı'sı 1.17.0. 1.12–1.16 çalışır ama yeni okumaları tanımaz: o okumalar işe konmaz, kullanıcıya hangi sürümün gerektiği söylenir.
+export const ONERILEN_SURUM = '1.17.0';
+export const CEK_SURUM = { teorik: '1.13.0', ucretler: '1.13.0', randevular: '1.13.0', kurum: '1.14.0', ucretIlani: '1.15.0', yetki: '1.16.0', direksiyonProgrami: '1.16.0', fotograf: '1.17.0' };
 export const surumEnAz = (gerek, var_ = EK.eklenti.surum) => { const sv = String(var_ || '0').split('.').map(Number), g = String(gerek).split('.').map(Number); for (let i = 0; i < 3; i++) if ((sv[i] || 0) !== (g[i] || 0)) return (sv[i] || 0) > (g[i] || 0); return true; };
 const surumUygun = () => { const sv = String(EK.eklenti.surum || '0').split('.').map(Number), g = GEREKEN_SURUM.split('.').map(Number); for (let i = 0; i < 3; i++) if ((sv[i] || 0) !== g[i]) return (sv[i] || 0) > g[i]; return true; };
 const yeniSurum = surumUygun;
@@ -106,7 +106,28 @@ export function topluCek(neler, ops = {}) {
   S.mebDosyaKalan = tum.length - dosya.length; kaydet();
   // kurum: Yardımcı açık MEBBİS hesabının seçili şubeye ait olduğunu denetler (yanlış şubenin verisi gelmesin)
   const tek = ops.tc && S.kursiyerler.find(k => k.tc === ops.tc);
-  baslat({ id: 't' + Date.now(), kurum: MK.kurumBilgi().kod || '', cek, dosya, yaz: [] }, tek ? `MEBBİS’ten ${tamAd(tek)} için aday dosyası okunuyor` : `MEBBİS’ten çekiliyor: ${CEKILECEK.filter(x => cek.includes(x[0]) || (x[0] === 'dosya' && dosya.length)).map(x => x[1].replace(/^([A-ZÇĞİÖŞÜ])(?=[a-zçğıöşü])/, c => c.toLocaleLowerCase('tr'))).join(', ')}${dosya.length ? ` (${dosya.length} aday dosyası)` : ''}`);
+  // ops.ayar: okuma başına seçenekler (Yardımcı 1.17: is.ayar[ad], ör. fotoğraf için T.C.); ops.mesaj: bildirim metni
+  baslat({ id: 't' + Date.now(), kurum: MK.kurumBilgi().kod || '', cek, dosya, yaz: [], ...(ops.ayar ? { ayar: ops.ayar } : {}) }, ops.mesaj ? ops.mesaj : tek ? `MEBBİS’ten ${tamAd(tek)} için aday dosyası okunuyor` : `MEBBİS’ten çekiliyor: ${CEKILECEK.filter(x => cek.includes(x[0]) || (x[0] === 'dosya' && dosya.length)).map(x => x[1].replace(/^([A-ZÇĞİÖŞÜ])(?=[a-zçğıöşü])/, c => c.toLocaleLowerCase('tr'))).join(', ')}${dosya.length ? ` (${dosya.length} aday dosyası)` : ''}`);
+}
+// MEB-029 / KAY-044: tek kursiyerin MEBBİS fotoğrafları (SKT02006: biyometrik ve kayıt fotoğrafı), yalnız istenince. Kişisel biyometrik veri:
+// S'ye ve buluta yazılmaz, yalnız bu sekmenin belleğinde durur (sayfa yenilenince gider). Öğrenci kartı yan yana gösterir:
+//   MT.mebFotografIste(k)            → Yardımcı'ya tek T.C. için okuma işi gönderir (Yardımcı 1.17.0 gerekir; eskiyse güncelleme penceresi)
+//   MT.mebFotografi(k.id)            → { biyometrik, kayit (dataURL ya da ''), zaman, bulunamadi? } | null
+//   window 'meb-fotograf' olayı      → detail: { kid, ...aynı nesne } (sonuç gelince; kart kendini yenileyebilir)
+const FOTO = new Map();
+export const mebFotografi = kid => FOTO.get(kid) || null;
+export function mebFotografIste(k) {
+  if (!k || !MN.tcGecerli(String(k.tc || ''))) return bildir('Kursiyerin T.C. kimlik numarası geçerli değil', 'uyari');
+  if (EK.eklenti.var && !surumEnAz(CEK_SURUM.fotograf)) return pencere({ baslik: 'MEBBİS Yardımcısı’nı güncelleyin', icerik: `<p>MEBBİS’ten fotoğraf almak için Yardımcı <b>${CEK_SURUM.fotograf}</b> ya da yenisi gerekir; bu tarayıcıda <b>${e(EK.eklenti.surum || 'eski sürüm')}</b> kurulu.</p><p style="margin-top:8px"><a href="${EK.EKLENTI_ZIP}" download style="font-weight:700">Yardımcı ${ONERILEN_SURUM} paketini indir</a></p>`, altlik: '<button class="dg dg-ana" data-kapat>Tamam</button>' });
+  const m = k.meb || {};
+  topluCek(['fotograf'], { ayar: { fotograf: { tc: k.tc, donem: MN.donemKodu(m.donem) || '', durum: m.durumKod != null ? String(m.durumKod) : '' } }, mesaj: `MEBBİS’ten ${tamAd(k)} için fotoğraflar alınıyor (kaydedilmez)` });
+}
+function fotografIsle(v) {
+  const k = v && S.kursiyerler.find(y => y.tc === v.tc && !y.kapali) || (v && S.kursiyerler.find(y => y.tc === v.tc)); if (!k) return null;
+  const o = { biyometrik: /^data:image\//.test(v.biyometrik || '') ? v.biyometrik : '', kayit: /^data:image\//.test(v.kayit || '') ? v.kayit : '', zaman: Date.now(), ...(v.bulunamadi ? { bulunamadi: true } : {}) };
+  FOTO.set(k.id, o);
+  try { window.dispatchEvent(new CustomEvent('meb-fotograf', { detail: { kid: k.id, ...o } })); } catch (x) { }
+  return { kid: k.id, ad: tamAd(k), var: !!(o.biyometrik || o.kayit), bulunamadi: !!v.bulunamadi };
 }
 /* ---------- "Ekranları denetle": Yardımcı her MEBBİS ekranını yalnız açar (GET), beklediği alanları arar; hiçbir şey yazılmaz ---------- */
 export function ekranDenetle() {
@@ -746,9 +767,10 @@ function uygula(v, tekrar = false) {
   if (v.ucretler && Array.isArray(v.ucretler.satirlar)) o.ucretler = ucretleriIsle(v.ucretler); else if (v.ucretler && v.ucretler.hata) o.ucretHata = v.ucretler.hata;
   if (v.kurum && !v.kurum.hata) o.kurum = kurumIsle(v.kurum); else if (v.kurum && v.kurum.hata) o.kurumHata = v.kurum.hata;
   if (v.yetki && Array.isArray(v.yetki.kisiler)) o.yetki = yetkiIsle(v.yetki); else if (v.yetki && v.yetki.hata) o.yetkiHata = v.yetki.hata;
+  if (v.fotograf && !v.fotograf.hata) o.fotograf = fotografIsle(v.fotograf); else if (v.fotograf && v.fotograf.hata) o.fotografHata = v.fotograf.hata;   // MEB-029: S'ye yazılmaz
   if (v.ucretIlani && Array.isArray(v.ucretIlani.satirlar)) o.ucretIlani = ucretIlaniIsle(v.ucretIlani); else if (v.ucretIlani && v.ucretIlani.hata) o.ucretIlaniHata = v.ucretIlani.hata;
-  // yalnız yazma yapılan işte "veri aldı" kaydı düşmez (B10)
-  if (Object.keys(v).filter(k => k !== 'denetim').length) { S.mebCekim = { ...(S.mebCekim || {}), toplu: gun(0) + ' ' + new Date().toTimeString().slice(0, 5) }; if (!tekrar) islem('MEBBİS’ten toplu veri aldı', Object.keys(o).join(', ')); }
+  // yalnız yazma yapılan işte "veri aldı" kaydı düşmez (B10); yalnız fotoğraf istendiyse de (kişisel veri kaydı tutulmaz)
+  if (Object.keys(v).filter(k => !['denetim', 'fotograf'].includes(k)).length) { S.mebCekim = { ...(S.mebCekim || {}), toplu: gun(0) + ' ' + new Date().toTimeString().slice(0, 5) }; if (!tekrar) islem('MEBBİS’ten toplu veri aldı', Object.keys(o).join(', ')); }
   kaydet();
   return o;
 }
@@ -1078,6 +1100,11 @@ function sinavTablosu(v) {
   return sat;
 }
 function ozetGoster(o, yazilan) {
+  // MEB-029: yalnız fotoğraf istendiyse özet penceresi açılmaz; sonuç öğrenci kartında görünür
+  if ((o.fotograf || o.fotografHata) && !yazilan.length && Object.keys(o).every(k => ['fotograf', 'fotografHata', 'otoDoldu'].includes(k))) {
+    bildir(o.fotografHata ? 'MEBBİS fotoğrafı alınamadı: ' + o.fotografHata : !o.fotograf ? 'Fotoğraf geldi ama kursiyer bulunamadı' : o.fotograf.bulunamadi ? `${o.fotograf.ad}: MEBBİS’te aday satırı bulunamadı` : o.fotograf.var ? `${o.fotograf.ad}: MEBBİS fotoğrafları geldi (kaydedilmedi)` : `${o.fotograf.ad}: MEBBİS’te fotoğraf yok`, o.fotograf && o.fotograf.var ? 'tamam' : 'uyari');
+    return yenile();
+  }
   const ok = yazilan.filter(x => x.ok).length, hata = yazilan.filter(x => !x.ok), kontrol = yazilan.filter(x => x.ok && x.dogrulama === 'mesaj').length;
   const satir = (b, a) => `<li style="display:flex;gap:10px;align-items:flex-start">${isaret('tamam', 18)}<div><b style="color:var(--murekkep)">${b}</b>${a ? `<small style="display:block;color:var(--soluk)">${a}</small>` : ''}</div></li>`;
   const l = [];

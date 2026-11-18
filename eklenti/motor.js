@@ -255,13 +255,20 @@
   }
 
   /* ---------- tablo okuma ---------- */
+  // MEB-030 (1.17.0): fotoğraf hücresi — satırda gömülü resim (data:image ya da imgResim/imgWebcam) var mı. Görüntünün kendisi alınmaz;
+  //  tabloda en az bir resim varsa resim: [[hücre başına true/false]] (satirlar ile aynı sıra). Sil gibi simge resimleri sayılmaz.
+  const resimVar = c => !!c.querySelector('img[src^="data:image" i], img[id$="imgResim" i], img[id$="imgWebcam" i], img[id*="Biyometrik" i], img[id*="Fotograf" i]');
   function tabloOku(t) {
     if (!t) return null;
-    const satirlar = [...t.rows].filter(r => r.closest('table') === t).map(r => [...r.cells].map(c => metin(c)));
-    const stiller = [...t.rows].filter(r => r.closest('table') === t).map(r => r.getAttribute('style') || r.getAttribute('bgcolor') || '');
-    const l = satirlar.map((r, i) => ({ r, s: stiller[i] })).filter(x => x.r.some(Boolean));
+    const rows = [...t.rows].filter(r => r.closest('table') === t);
+    const satirlar = rows.map(r => [...r.cells].map(c => metin(c)));
+    const stiller = rows.map(r => r.getAttribute('style') || r.getAttribute('bgcolor') || '');
+    const resimler = rows.map(r => [...r.cells].map(resimVar));
+    const l = satirlar.map((r, i) => ({ r, s: stiller[i], g: resimler[i] })).filter(x => x.r.some(Boolean));
     if (!l.length) return null;
-    return { baslik: l[0].r, satirlar: l.slice(1).map(x => x.r), stil: l.slice(1).map(x => x.s) };
+    const o = { baslik: l[0].r, satirlar: l.slice(1).map(x => x.r), stil: l.slice(1).map(x => x.s) };
+    if (l.slice(1).some(x => x.g.some(Boolean))) o.resim = l.slice(1).map(x => x.g);
+    return o;
   }
   const tabloEl = (doc, id) => doc.querySelector(`table[id$="${CSS.escape(A(doc, id))}"]`);
   const tabloId = (doc, id) => tabloOku(tabloEl(doc, id));
@@ -470,7 +477,34 @@
       return tb;
     },
   });
-  const CEKME_EKRAN = { kurum: ['skt01001'], gruplar: ['skt03002', 'skt03001'], kursiyerler: ['skt02006'], personel: [], araclar: ['skt01002'], sinavlar: ['skt04003'], dosya: ['skt02009'], randevular: ['skt01005'], ucretler: ['skt02007'], teorik: ['skt04001'], ucretIlani: [], yetki: ['ook15003', 'ook15004'], direksiyonProgrami: ['skt04002'] };
+  // 1.17.0 okuma işleri. ayar: mdSinyal'in işle gönderdiği seçenekler (is.ayar[ad]) ve açık hesabın kurum kodu (ayar.kurum).
+  Object.assign(CEKME, {
+    // MEB-029 / KAY-044: tek adayın MEBBİS fotoğrafları (SKT02006 satırındaki biyometrik ve kayıt fotoğrafı, base64). Yalnız istenince, tek T.C. için;
+    //  toplu çekmelerde fotoğraf hiç alınmaz (tabloOku yalnız resim var/yok bayrağı verir). T.C. süzgeci öğrenci durumu süzgecini aşmadığı için
+    //  durumlar sırayla denenir (mdSinyal'in bildiği durum önce); her sorgu yalnız o adayın satırını döndürür. Yalnız Listele (okuma) basılır.
+    async fotograf(ilerle, ayar = {}) {
+      const tc = String(ayar.tc || '').replace(/\D/g, '');
+      if (!/^[1-9]\d{10}$/.test(tc)) throw new MebHata('Fotoğraf için geçerli bir T.C. kimlik no gelmedi', 'veri');
+      const t = await getir('/SKT/skt02006.aspx');
+      const dEl = elBul(t.doc, 'cmbOgrenciDurumu'); if (!dEl) throw ekranHata(t.doc, 'cmbOgrenciDurumu');
+      const donemler = [...(elBul(t.doc, 'cmbEgitimDonemi') || { options: [] }).options].map(o => o.value);
+      const dn = ayar.donem && donemler.includes(String(ayar.donem)) ? String(ayar.donem) : D('tumDonemler');
+      const onay = secenek(t.doc, 'cmbDurumu', D('durumTumu'));
+      const hepsi = [...dEl.options].map(o => o.value).filter(v => v !== '' && v !== '-1'), once = String(ayar.durum ?? '');
+      const sira = hepsi.includes(once) ? [once, ...hepsi.filter(v => v !== once)] : hepsi;
+      const kaynak = c => { const im = c && c.querySelector('img[src^="data:image" i]'); const s = im ? im.getAttribute('src') || '' : ''; return s.length <= 600000 ? s : ''; };
+      for (const [i, dv] of sira.entries()) {
+        ilerle(`Fotoğraf: aday MEBBİS’te aranıyor (${i + 1}/${sira.length})`, (i + 1) / sira.length);
+        const r = await postla(t, { cmbEgitimDonemi: dn, cmbDurumu: onay, cmbOgrenciDurumu: dv, txtTcKimlikNo: tc }, { dugme: 'btnListele' });
+        const tb = tabloEl(r.doc, 'dgListele'); if (!tb) continue;
+        const rows = [...tb.rows].filter(x => x.closest('table') === tb), tr = rows.slice(1).find(x => metin(x).replace(/\D/g, ' ').split(' ').includes(tc)); if (!tr) continue;
+        const b = [...rows[0].cells].map(c => norm(metin(c))), ib = b.findIndex(h => /biyometrik/.test(h)), ik = b.findIndex(h => /kayitfoto|kayitresmi/.test(h)), c = [...tr.cells];
+        return { tc, durum: dv, donem: dn, biyometrik: ib >= 0 ? kaynak(c[ib]) : '', kayit: ik >= 0 ? kaynak(c[ik]) : '', sutunYok: ib < 0 || ik < 0 };
+      }
+      return { tc, bulunamadi: true };
+    },
+  });
+  const CEKME_EKRAN = { fotograf: ['skt02006'], kurum: ['skt01001'], gruplar: ['skt03002', 'skt03001'], kursiyerler: ['skt02006'], personel: [], araclar: ['skt01002'], sinavlar: ['skt04003'], dosya: ['skt02009'], randevular: ['skt01005'], ucretler: ['skt02007'], teorik: ['skt04001'], ucretIlani: [], yetki: ['ook15003', 'ook15004'], direksiyonProgrami: ['skt04002'] };
   // Aday Durum Görüntüleme: tek adayın bütün dosyası
   async function adayDosyasi(taban, tc) {
     const r = await postla(taban, { txtTcKimlikNo: tc }, { dugme: 'ImageButton1' });
@@ -978,9 +1012,9 @@
       const cekEngel = ekranlar => ekranlar.map(k => cekOn[k]).find(o => o && !o.ok);
       for (const ne of cekilecek) {
         await denetimle(); if (!CEKME[ne]) { sonuc.veri[ne] = { hata: 'Bu sürüm bu çekmeyi tanımıyor: ' + ne }; continue; }
-        ilerle({ gruplar: 'Dönem grupları okunuyor', kursiyerler: 'Kursiyerler okunuyor', personel: 'Personel okunuyor', araclar: 'Araçlar okunuyor', sinavlar: 'Sınav sonuçları okunuyor' }[ne] || ne, 0);
+        ilerle({ gruplar: 'Dönem grupları okunuyor', kursiyerler: 'Kursiyerler okunuyor', personel: 'Personel okunuyor', araclar: 'Araçlar okunuyor', sinavlar: 'Sınav sonuçları okunuyor', sonuclar: 'Toplu sınav sonuçları okunuyor', merkezler: 'e-Sınav merkezleri okunuyor', kimlikler: 'Dönem aday listesi okunuyor', fotograf: 'Fotoğraf alınıyor' }[ne] || ne, 0);
         const e = cekEngel(CEKME_EKRAN[ne] || []); if (e) { sonuc.veri[ne] = { hata: e.not, hataTur: e.tur }; await kaydet('calisiyor'); continue; }
-        try { sonuc.veri[ne] = await CEKME[ne](ilerle); } catch (x) { if (durduran(x)) throw x; ekranKaydet(x); sonuc.veri[ne] = { hata: x.message, hataTur: x.tur }; }
+        try { sonuc.veri[ne] = await CEKME[ne](ilerle, { ...(((is.ayar || {})[ne]) || {}), kurum: (sonuc.kurum && sonuc.kurum.kod) || '' }); } catch (x) { if (durduran(x)) throw x; ekranKaydet(x); sonuc.veri[ne] = { hata: x.message, hataTur: x.tur }; }
         await kaydet('calisiyor');
       }
       if (dosyaVar) {
