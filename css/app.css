@@ -3716,3 +3716,4 @@ a.kart.gosterge { text-decoration: none; color: inherit; display: block; }
 .meb-gecmis summary { cursor: pointer; color: var(--murekkep); font-weight: 600; }
 .meb-gecmis ul { list-style: none; display: grid; gap: 4px; margin-top: 6px; }
 .meb-gecmis small { color: var(--soluk); }
+.rz-cip { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-right: 6px; }
