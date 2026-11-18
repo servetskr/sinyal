@@ -83,11 +83,19 @@ function ucretDokumu(k) {
 export const sozlesmeDondur = (k, o = {}) => { sozlesmeSaatDondur(k); return metinKodla(sozlesmeGovde(k, o)); };
 // {direksiyon}: öğrencinin asgari ders sayısı (veri.js gerekliDireksiyon: sınıf + mevcut ehliyet, elle girilen, eski kayıtta dondurulmuş değer).
 // İmzalı sözleşmede bu metin değil, imza anında dondurulan metin (k.sozlesmeImza.metin) gösterilir.
-// PAR-060: cayma maddesi sözleşme türüne bağlı — kursta (yüz yüze) imzalanan sözleşmede yok; uzaktan (mesafeli: WhatsApp linkiyle) imzalananda
-// 6502 sayılı Kanun md.48 ve Mesafeli Sözleşmeler Yönetmeliği'ne göre 14 günlük cayma hakkı maddesi kendiliğinden eklenir. Metin avukat onayına sunulacak (YON-030).
-export const caymaMaddesi = () => `Cayma hakkı. Bu sözleşme uzaktan (mesafeli) kurulmuştur. Kursiyer, sözleşmenin kurulduğu günden başlayarak 14 gün içinde gerekçe göstermeden ve cezai şart ödemeden sözleşmeden cayabilir (6502 sayılı Tüketicinin Korunması Hakkında Kanun md.48; Mesafeli Sözleşmeler Yönetmeliği). Cayma bildirimi bu süre içinde ${S.kurs.unvan || S.kurs.ad || 'kursa'} yazılı olarak ya da kalıcı veri saklayıcısıyla (e-posta, WhatsApp${S.kurs.tel ? ', ' + S.kurs.tel : ''}) yapılır. Cayma hâlinde ödenen tutar bildirimin kursa ulaştığı günden başlayarak 14 gün içinde iade edilir. Cayma süresi dolmadan kursiyerin açık onayıyla eğitime başlanmışsa, onay verilen hizmet için cayma hakkı kullanılamaz (Mesafeli Sözleşmeler Yönetmeliği md.15).`;
+// PAR-060 (18 Kas kararı; metin hukuk paketi 02, avukat onayında kesinleşir): cayma maddesi sözleşmenin kuruluş biçimi ve ödemesinden türetilir,
+// kurs ayarıyla kapatılamaz. Kursta + peşin: madde yok (ÖÖKY m.56 iadesi). Kursta + taksitli: 7 gün (6502 m.17-18, Taksitle Satış Sözleşmeleri Yön.).
+// Uzaktan (mesafeli: WhatsApp linkiyle imza): 14 gün (6502 m.48, Mesafeli Sözleşmeler Yön.); taksitli de olsa 14 gün.
+export const taksitliMi = k => !!(k && k.odeme && ((k.odeme.taksitler || []).filter(t => !t.iptal).length > 1 || k.odeme.senetli));
+const caymaBildirim = () => { const K = S.kurs || {}; const l = [K.eposta ? 'e-posta: ' + K.eposta : '', K.wp || K.tel ? 'WhatsApp: ' + (K.wp || K.tel) : '', K.adres ? 'adres: ' + K.adres : ''].filter(Boolean); return l.length ? ' (' + l.join(', ') + ')' : ''; };
+export function caymaMaddesi(k, o = {}) {
+  const ad = S.kurs.unvan || S.kurs.ad || 'Kurs';
+  if (o.mesafeli) return `Cayma hakkı. Bu sözleşme uzaktan iletişim aracıyla, ${ad} yetkilisi ile kursiyer aynı anda aynı yerde bulunmadan kurulmuştur. Kursiyer, sözleşmenin kurulduğu günden başlayarak on dört gün içinde hiçbir gerekçe göstermeden ve cezai şart ödemeden sözleşmeden cayabilir (6502 sayılı Kanun md.48; Mesafeli Sözleşmeler Yönetmeliği). Cayma bildirimi bu süre içinde kursa yazılı olarak ya da kalıcı veri saklayıcısıyla${caymaBildirim()} yapılır; bildirimin süre içinde gönderilmiş olması yeterlidir. Kurs, bildirimin ulaştığını kursiyere gecikmeden teyit eder. Cayma hâlinde kurs, bildirimin kendisine ulaştığı günden başlayarak on dört gün içinde tahsil ettiği bütün ödemeleri, ödemede kullanılan araca uygun biçimde, tek seferde ve masrafsız iade eder; senet gibi borç belgelerini de geri verir. Cayma süresi dolmadan kursiyerin açık onayıyla eğitime başlanmışsa kursiyer cayma hakkını kullanamaz; bu durumda kurstan ayrılmada iade maddesi uygulanır.`;
+  if (taksitliMi(k)) return `Cayma hakkı. Bu sözleşme taksitle ödeme içerdiğinden kursiyer, sözleşmenin kurulduğu günden başlayarak yedi gün içinde hiçbir gerekçe göstermeden ve cezai şart ödemeden sözleşmeden cayabilir (6502 sayılı Kanun md.17-18; Taksitle Satış Sözleşmeleri Hakkında Yönetmelik). Cayma bildirimi bu süre içinde kursa yazılı olarak ya da kalıcı veri saklayıcısıyla${caymaBildirim()} yapılır; bildirimin süre içinde gönderilmiş olması yeterlidir. Cayma hâlinde kurs, bildirimin kendisine ulaştığı günden başlayarak yedi gün içinde aldığı bütün ödemeleri ve kursiyeri borç altına sokan bütün belgeleri (senet vb.) masrafsız iade eder. Cayma süresi içinde kursiyerin açık onayıyla eğitime başlanmışsa kursiyer cayma hakkını kullanamaz; bu durumda kurstan ayrılmada iade maddesi uygulanır.`;
+  return '';
+}
 export function sozlesmeMaddeleri(k, o = {}) {
-  return sozlesmeMaddeleri0(k).concat(o.mesafeli ? [caymaMaddesi()] : []);
+  const c = caymaMaddesi(k, o); return sozlesmeMaddeleri0(k).concat(c ? [c] : []);
 }
 function sozlesmeMaddeleri0(k) {
   const K = S.kurs, S0 = SINIFLAR[k.sinif], tv = !k.id || teorikVar(k), dir = gerekliDireksiyon(k), kdv = kdvOrani(k.sinif), su = k.odeme ? saatUcretleri(k) : null;
