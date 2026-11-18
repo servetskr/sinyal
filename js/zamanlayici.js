@@ -27,7 +27,7 @@ const SIZ_SABLON = {
   o3: '{selam} {tur} sınavınız {tarih} {saatte}, yer: {yer}. Kimliğinizi yanınıza almayı unutmayın. {kurs}',
   o4: '{selam} kaydınızı tamamlamak için {evrak} eksik. {kursa} getirdiğinizde işlemlerinizi hemen başlatıyoruz.',
   o5: '{selam} tebrikler, artık ehliyetiniz var! {kurs} hakkında Google’da birkaç cümle yazarsanız çok seviniriz: {link}',
-  o6: '{selam} {tur} sınavı bu sefer olmadı. Üzülmeyin, {kalan_hak} hakkınız daha var. Yönetmelik gereği tekrar sınavdan önce en az {telafi} saat ek direksiyon dersi alınıyor ({tutar}); saatlerini ayarlayalım mı? Öğrenci uygulamasından ya da bu mesaja “evet” yazarak onaylayabilirsiniz.',
+  o6: '{selam} {tur} sınavı bu sefer olmadı. {kalan_hak} Yönetmelik gereği tekrar sınavdan önce en az {telafi} saat ek direksiyon dersi alınıyor ({tutar}); saatlerini ayarlayalım mı? Öğrenci uygulamasından ya da bu mesaja “evet” yazarak onaylayabilirsiniz.',
   o7: '{selam} kayıtla ilgili aklınıza takılan bir şey var mı? Bu hafta başlayan gruba hâlâ yer var. {kurs}',
   o8: '{selam} e-sınav randevunuz {tarih} {saatte}, yer: {yer}. Kimliğinizi ve e-sınav ücreti dekontunu yanınıza alın.',
   o9: '{selam} {tur} sınav sonucunuz: {sonuc}. {kalan_hak}'
