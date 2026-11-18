@@ -611,7 +611,7 @@ export function kursiyerFormu(on = {}) {
         ${metinAlan('acilAd', 'Acil durumda aranacak kişi')}${metinAlan('acilYakinlik', 'Yakınlığı', 'placeholder="ör. annesi"')}${metinAlan('acilTel', 'Onun telefonu', 'inputmode="tel"')}
         ${iletisimEkHtml()}
       </div></details></div>`)}
-    ${panel(1, `<div class="ks-blok"><h4>Sınıf <small>ücret kurs ayarlarından</small></h4><div class="ks-sinif" role="radiogroup" aria-label="Sınıf">${satistaSiniflar().map(([k, v], i, l) => { const [s0, ...r] = String(v.ad).split(' · '); return `<label><input type="radio" name="sinif" value="${k}" ${(on.sinif && l.some(x => x[0] === on.sinif) ? k === on.sinif : i === 0) ? 'checked' : ''}><span><b>${e(s0)}</b><small>${e(r.join(' · ') || (v.direksiyon ? v.direksiyon + ' ders direksiyon' : 'teorik'))}</small><em>${tl(v.ucret)}</em></span></label>`; }).join('')}</div>
+    ${panel(1, `<div class="ks-blok"><h4>Sınıf <small>ücret kurs ayarlarından</small></h4><div class="ks-sinif" role="radiogroup" aria-label="Sınıf">${satistaSiniflar().map(([k, v], i, l) => { const [s0, ...r] = String(v.ad).split(' · '); return `<label><input type="radio" name="sinif" value="${k}" ${on.sinif && l.some(x => x[0] === on.sinif) && k === on.sinif ? 'checked' : ''}><span><b>${e(s0)}</b><small>${e(r.join(' · ') || (v.direksiyon ? v.direksiyon + ' ders direksiyon' : 'teorik'))}</small><em>${tl(v.ucret)}</em></span></label>`; }).join('')}</div>
         <p class="ks-not" id="k-dirnot"></p>
         <p class="ks-not" id="k-taban" hidden></p>
         <p class="ks-not uyari" id="k-program" hidden></p>
@@ -688,6 +688,11 @@ export function kursiyerFormu(on = {}) {
       const ucret0 = (x = tabanX()) => x && x.satir && x.ucret != null ? x.ucret : SINIFLAR[f.sinif.value].ucret;
       const guncelle = () => {
         const s = f.sinif.value, eg = S.egitmenler.filter(x => x.siniflar.includes(s));
+        // DENETİM K4: sınıf önceden seçili gelmez; seçilene kadar ücret, ders ve öğretmen alanları beklemede
+        if (!s) { d.querySelector('[data-ks-ucret]').textContent = '—'; d.querySelector('[data-ks-ucret-sinif]').textContent = 'Önce sınıfı seçin';
+          f.egitmen.innerHTML = '<option value="">Önce sınıfı seçin</option>'; d.querySelector('#k-dirnot').innerHTML = `${isaret('bilgi', 18)}<span>Sınıfı seçince ders sayısı ve ücret burada görünür.</span>`;
+          { const ad = [f.ad.value.trim(), f.soyad.value.trim()].filter(Boolean).join(' '); d.querySelector('[data-ks-ad]').textContent = ad || 'Yeni öğrenci'; }
+          return; }
         { const gl = GR.kayitGruplari(s), once = f.grup.value || on.grup || ''; // not 23 (DON-003): dönem seçtirilmez; varsayılan “bekleyen dönem”, grup sonra atanır (Öğrenciler › Bekleyen ya da grup kartından toplu atama)
           f.grup.innerHTML = `<option value="__bekle">Bekleyen dönem: grup sonra atanır</option>` + (gl.length ? GR.grupSecenekleri(gl, once) : ''); f.grup.value = once && [...f.grup.options].some(o => o.value === once) ? once : '__bekle';
           const gs = GR.grupBul(f.grup.value), gd = gs && GR.grupDoluluk(gs), tkl = teorikVar(adayX()), su = gs ? GR.subeUyarisi(tkl, gs) : '', bs = !gs && !tkl && GR.belgeliAyri() ? gl.find(GR.belgeliSubesi) : null;
@@ -739,6 +744,7 @@ export function kursiyerFormu(on = {}) {
       // --- Denetim: [alan, mesaj] listesi; her alanın adımı panelinden bulunur ---
       const hatalar = (son = false) => {
         const h = [];
+        if (!f.sinif.value) return [[f.querySelector('[name=sinif]'), 'Sınıfı seçin: ücret, ders sayısı ve MEBBİS kaydı buna göre']];   // DENETİM K4: sınıf önceden seçili gelmez
         if (!tcGecerli(f.tc.value.trim())) h.push([f.tc, f.tc.value.trim() ? 'Bu TC kimlik numarası geçerli değil' : 'TC kimlik numarası gerekli']);
         else { const c = ayniTcKayit(f.tc.value, f.sinif.value); if (c.ayni) h.push([f.tc, `Bu TC ile ${SINIFLAR[c.ayni.sinif].ad} sınıfında açık kayıt var: ${tamAd(c.ayni)} (No ${c.ayni.no || '—'}). Aynı kişi iki kez kaydedilemez.`]); }
         if (!f.ad.value.trim()) h.push([f.ad, 'Ad gerekli']);
