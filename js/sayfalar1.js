@@ -492,6 +492,20 @@ export function durumEksen(k) {
 }
 const EKSEN_TON = { 'Başarılı': 'yesil', 'Muaf': 'yesil', 'Ödendi': 'yesil', 'Teslim aldı': 'yesil', 'Hak kazandı': 'yesil', 'Ücretsiz': 'yesil', 'Sertifika düzenlendi': 'yesil', 'Dosya yaktı': 'kirmizi', 'Gecikmede': 'kirmizi', 'İşlem durdu': 'kirmizi', 'Sınav aşamasında': 'mavi', '2. direksiyon': 'sari' };
 const eksenHtml = k => { const d = durumEksen(k); return `<div class="eksen-serit" title="Genel durum: ${d.genel}">${[['Teorik', d.teorik], ['Uygulama', d.uygulama], ['Belge', d.belge], ['Ödeme', d.odeme]].filter(([, v]) => v !== '—').map(([a, v]) => `<span class="eksen ${EKSEN_TON[v] || ''}"><small>${a}</small>${v}</span>`).join('')}<span class="eksen genel"><small>Genel</small>${d.genel}</span></div>`; };
+// KAY-118: her öğrenci tek ana kategoride (MEBBİS durum kodu varsa onunla); öncelik sırası: silinmiş, iptal, dondurulmuş, kapalı, mezun, hakkı dolmuş, 2. direksiyon, muaf, belgeli, ücretsiz, aktif
+const KATEGORI = [['aktif', 'Aktif'], ['belgeli', 'Belgeli'], ['muaf', 'Muaf'], ['ikinci', '2. direksiyon'], ['dondur', 'Dondurulmuş'], ['doldu', 'Hakkı dolmuş'], ['mezun', 'Mezun'], ['silindi', 'Kaydı silinmiş'], ['iptal', 'Sertifikası iptal'], ['ucretsiz', 'Ücretsiz aday'], ['kapali', 'Kayıt kapalı'], ['tumu', 'Tümü']];
+export function anaKategori(k) {
+  const kod = parseInt((String((k.meb || {}).durum || '').match(/^\s*(\d+)/) || [])[1], 10);
+  if (k.kayitSilindi || kod === 11) return 'silindi'; if (kod === 6) return 'iptal';
+  if ((k.kapali && k.kapali.tur === 'dondur') || kod === 13) return 'dondur'; if (k.kapali) return 'kapali';
+  if (k.asama === 'Ehliyet' || (k.kapanis || {}).sertifika || kod === 5) return 'mezun';
+  if ((k.hakBitti && !k.hakBitti.cozuldu) || [3, 4, 10].includes(kod)) return 'doldu';
+  if (k.ikinciHak || kod === 22) return 'ikinci'; if (k.muaf || kod === 23) return 'muaf';
+  if (esinavsizBelgeli(k)) return 'belgeli'; if (k.ucretsiz || kod === 15) return 'ucretsiz';
+  return 'aktif';
+}
+const katSeridi = sec => { const l = sb(S.kursiyerler), n = {}; l.forEach(k => { const c = anaKategori(k); n[c] = (n[c] || 0) + 1; }); n.tumu = l.length;
+  return KATEGORI.filter(([id]) => n[id] || id === sec || id === 'aktif' || id === 'tumu').map(([id, ad]) => `<button type="button" role="tab" class="kat-cip ${id === sec ? 'secili' : ''}" aria-selected="${id === sec}" data-kat="${id}">${ad} <b>${n[id] || 0}</b></button>`).join(''); };
 let tcGoster = false;  // KAY-067: listede T.C. maskesi (oturum boyunca)
 const cepGecerli = t => { let n = String(t || '').replace(/\D/g, ''); if (n.startsWith('90')) n = n.slice(2); if (n.startsWith('0')) n = n.slice(1); return /^5\d{9}$/.test(n); };
 const taksitEnCok = () => taksitSiniri();  // PAR-034: ön büro kurs ayarı kadar, müdür en az 12
@@ -860,6 +874,7 @@ export function kursiyerler(filtre) {
   let sekme = filtre && ASAMALAR.includes(filtre) ? filtre : 'Tümü', q = '', sinif = '', grup = '', hizmet = '', borclu = false, avukatta = false, bekleyen = filtre === 'bekleyen';
   let etiket = '';  // KAY-018/019/021: kursun sınıflandırması, riskli, kaydı silindi
   let bakim = '', usta = '', hakSuz = '', sinavaGir = '';  // KAY-052/055
+  let kat = filtre ? 'tumu' : 'aktif';  // KAY-118: ana kategori (varsayılan Aktif; gizlenenler sayılır)
   // YON-063: yapışkan süzgeç (adresle gelen süzgeç önceliklidir) ve sayfa başına kayıt
   { const ys = !filtre && TC.suzgecOku('kursiyerler'); if (ys) ({ sekme = 'Tümü', q = '', sinif = '', grup = '', hizmet = '', borclu = false, avukatta = false, bekleyen = false } = ys); }
   const sayfaBasi = +TC.tercihler().sayfaBasi || 0; let gosterilen = sayfaBasi;
@@ -868,7 +883,7 @@ export function kursiyerler(filtre) {
   const hizmetler = [...new Set(sb(S.kursiyerler).map(hizmetOf))].filter(x => HIZMET[x]);
   const say = a => a === 'Tümü' ? sb(S.kursiyerler).length : sb(S.kursiyerler).filter(k => k.asama === a).length;
   function suzulen() {
-    let l = sb(S.kursiyerler).filter(k => (sekme === 'Tümü' || k.asama === sekme) && (!sinif || k.sinif === sinif) && (!hizmet || hizmetOf(k) === hizmet) && (!grup || (grup === '_yok' ? !GR.kursiyerGrubu(k) : k.teorikGrup === grup)) && (!borclu || gecikenler(k).length) && (!avukatta || avukattaMi(k)) && (!bekleyen || GR.bekleyenMi(k)) && etiketUyar(k, etiket) && (!bakim || BAKIM.find(x => x[0] === bakim)[2](k)) && (!usta || k.egitmen === usta) && (!hakSuz || String(hakDurumu(k, 'Direksiyon').kullanilan) === hakSuz) && (!sinavaGir || sinavaGirUyar(k, sinavaGir)));
+    let l = sb(S.kursiyerler).filter(k => (sekme === 'Tümü' || k.asama === sekme) && (!sinif || k.sinif === sinif) && (!hizmet || hizmetOf(k) === hizmet) && (!grup || (grup === '_yok' ? !GR.kursiyerGrubu(k) : k.teorikGrup === grup)) && (!borclu || gecikenler(k).length) && (!avukatta || avukattaMi(k)) && (!bekleyen || GR.bekleyenMi(k)) && etiketUyar(k, etiket) && (kat === 'tumu' || bakim || anaKategori(k) === kat) && (!bakim || BAKIM.find(x => x[0] === bakim)[2](k)) && (!usta || k.egitmen === usta) && (!hakSuz || String(hakDurumu(k, 'Direksiyon').kullanilan) === hakSuz) && (!sinavaGir || sinavaGirUyar(k, sinavaGir)));
     if (q) { const s = q.toLocaleLowerCase('tr'); l = l.filter(k => (tamAd(k) + ' ' + k.tel + ' ' + odemeKodu(k) + ' ' + (k.tc || '')).toLocaleLowerCase('tr').includes(s)); }
     return l;
   }
@@ -910,6 +925,7 @@ export function kursiyerler(filtre) {
     <div class="bolum-bas"><div><h2>Kursiyer listesi</h2></div><div class="sag">${['mudur', 'sekreter'].includes(oturum.kullanici.rol) ? `<button class="dg dg-cizgi" data-toplu-hesap>${ik('tel')}Öğrenci hesapları</button>` : ''}<button class="dg dg-cizgi" data-disa>${ik('indir')}Excel’e aktar</button><button class="dg dg-cizgi" data-liste-yazdir>${ik('belge')}PDF / yazdır</button><button class="dg dg-cizgi" data-evrak-tablo>${ik('belge')}Evrak tablosu</button><button class="dg dg-cizgi" data-foto-karsilastir>${ik('kursiyer')}Fotoğraf karşılaştırma</button><button class="dg dg-cizgi" data-toplu-belge>${ik('belge')}Toplu belge</button><button class="dg dg-ana" data-yeni>${ik('arti')}Yeni kursiyer</button></div></div>
     <div data-yarim-kap>${yarimKayitlar()}</div>
     ${uyariSeritleri()}
+    <div class="kat-serit" role="tablist" aria-label="Öğrenci kategorileri" data-kat-serit>${katSeridi(kat)}</div>
     ${bakimSeridi()}
     <div id="sek">${sekmeler([['Tümü', 'Tümü', say('Tümü')], ...ASAMALAR.map(a => [a, a, say(a)])], sekme)}</div>
     <div class="kart">
@@ -949,7 +965,8 @@ export function kursiyerler(filtre) {
         if (ev.target.closest('[data-foto-karsilastir]')) return fotoKarsilastir(suzulen());  // KAY-043
         if (ev.target.closest('[data-toplu-belge]')) return topluBelge(suzulen());  // KAY-092
         { const bk0 = ev.target.closest('[data-bakim]'); if (bk0) { bakim = bakim === bk0.dataset.bakim ? '' : bk0.dataset.bakim; k.querySelectorAll('[data-bakim]').forEach(x => x.classList.toggle('secili', x.dataset.bakim === bakim)); if (bakim && sekme !== 'Tümü') { sekme = 'Tümü'; k.querySelector('#sek').innerHTML = sekmeler([['Tümü', 'Tümü', say('Tümü')], ...ASAMALAR.map(a => [a, a, say(a)])], sekme); } return ciz(); } }
-        if (ev.target.closest('[data-hepsini-goster]')) { sekme = 'Tümü'; q = ''; sinif = ''; grup = ''; hizmet = ''; borclu = false; avukatta = false; bekleyen = false; etiket = ''; bakim = ''; usta = ''; hakSuz = ''; sinavaGir = ''; k.querySelectorAll('select.girdi').forEach(x => { x.value = ''; }); const qi = k.querySelector('[data-q]'); if (qi) qi.value = ''; k.querySelectorAll('.cip.secili, [data-bakim].secili').forEach(x => x.classList.remove('secili')); k.querySelector('#sek').innerHTML = sekmeler([['Tümü', 'Tümü', say('Tümü')], ...ASAMALAR.map(a => [a, a, say(a)])], sekme); return ciz(); }  // KAY-066
+        { const kb0 = ev.target.closest('[data-kat]'); if (kb0) { kat = kb0.dataset.kat; k.querySelector('[data-kat-serit]').innerHTML = katSeridi(kat); return ciz(); } }
+        if (ev.target.closest('[data-hepsini-goster]')) { kat = 'tumu'; const ks0 = k.querySelector('[data-kat-serit]'); if (ks0) ks0.innerHTML = katSeridi(kat); sekme = 'Tümü'; q = ''; sinif = ''; grup = ''; hizmet = ''; borclu = false; avukatta = false; bekleyen = false; etiket = ''; bakim = ''; usta = ''; hakSuz = ''; sinavaGir = ''; k.querySelectorAll('select.girdi').forEach(x => { x.value = ''; }); const qi = k.querySelector('[data-q]'); if (qi) qi.value = ''; k.querySelectorAll('.cip.secili, [data-bakim].secili').forEach(x => x.classList.remove('secili')); k.querySelector('#sek').innerHTML = sekmeler([['Tümü', 'Tümü', say('Tümü')], ...ASAMALAR.map(a => [a, a, say(a)])], sekme); return ciz(); }  // KAY-066
         // KAY-102: süzülen öğrenci listesinin A4 çıktısı (yatay); T.C. maskeli
         if (ev.target.closest('[data-liste-yazdir]')) { const l = suzulen(); import('./ui.js?v=234').then(u => { islem('Kursiyer listesini yazdırdı', l.length + ' kişi'); kaydet();
           u.belgeYazdir(`<div data-yatay></div><h1>Öğrenci listesi</h1><p class="a4-alt">${e(S.kurs.ad || '')} · ${l.length} öğrenci · ${tarih(gun(0))}</p><table><tr><th>#</th><th>Ad soyad</th><th>T.C.</th><th>Telefon</th><th>Sınıf</th><th>Dönem grubu</th><th>Aşama</th><th>Direksiyon</th><th>Hak</th><th>Kalan</th></tr>${l.map((x, i) => { const h = hakDurumu(x, ['Direksiyon', 'Sınav', 'Ehliyet'].includes(x.asama) ? 'Direksiyon' : 'e-Sınav'); return `<tr><td>${i + 1}</td><td>${e(tamAd(x))}</td><td class="nw">${e(tcMaskele(x.tc || ''))}</td><td class="nw">${e(x.tel || '')}</td><td>${e((SINIFLAR[x.sinif] || {}).ad || x.sinif)}</td><td>${e((GR.kursiyerGrubu(x) || {}).ad || '')}</td><td>${e(x.asama)}</td><td>${gerekliDireksiyon(x) ? x.direksiyon + '/' + gerekliDireksiyon(x) : '—'}</td><td>${h.gecti ? 'geçti' : h.kullanilan + '/' + h.sinir}</td><td class="nw">${kalanBorc(x) ? tl(kalanBorc(x)) : '—'}</td></tr>`; }).join('')}</table>`, 'Öğrenci listesi'); }); return; }

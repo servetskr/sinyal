@@ -3760,3 +3760,9 @@ a.kart.gosterge { text-decoration: none; color: inherit; display: block; }
 /* KAY-109 */
 [data-ks="ileri"].ks-hazir { box-shadow: 0 0 0 3px rgba(46, 125, 50, .35); }
 [data-ks="ileri"].ks-hazir::after { content: " ✓"; }
+/* KAY-118: kategori alt sekmeleri */
+.kat-serit { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 4px; }
+.kat-cip { flex: none; border: 1px solid var(--cizgi); background: var(--panel, #fff); border-radius: 999px; padding: 6px 12px; font: 600 13px/1 inherit; cursor: pointer; color: var(--murekkep); }
+.kat-cip b { color: var(--soluk); font-weight: 700; margin-left: 2px; }
+.kat-cip.secili { background: var(--murekkep); color: #fff; border-color: var(--murekkep); }
+.kat-cip.secili b { color: rgba(255,255,255,.8); }
