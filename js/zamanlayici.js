@@ -1,7 +1,9 @@
 import { planlilariGonder } from './mesaj.js?v=234';
-import { izinBitisi, adaySinavSaati, odemeKodu, ibanMetni, S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, gecikenler, kalanBorc, islem, gonderimEkle, yerelZaman, oturum, kapaliGun, SINIFLAR, risk, selam, kursAdi, bulutKanca, mudurTel, ekDersFiyat, ekDersTabani } from './veri.js?v=234';
+import { izinBitisi, adaySinavSaati, esinavUcreti, esinavHakDurum, odemeKodu, ibanMetni, S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, gecikenler, kalanBorc, islem, gonderimEkle, yerelZaman, oturum, kapaliGun, SINIFLAR, risk, selam, kursAdi, bulutKanca, mudurTel, ekDersFiyat, ekDersTabani } from './veri.js?v=234';
 import { tl, tamTarih, tarihUzun, saatDe, apiAcik, apiGonder, etiket, bildir, waSirali } from './ui.js?v=234';
 import { denetimSkoru } from './ozellik.js?v=234';
+import * as KR from './kurallar.js?v=234';
+import * as TY from './teorikyol.js?v=234';
 
 /* ================= ZAMANLI MESAJLAR =================
    mdSinyal açıkken her dakika zamanı gelen mesajları bulur. WhatsApp API bağlıysa kendiliğinden gönderir;
@@ -15,6 +17,10 @@ const YENI_KURALLAR = [
   { id: 'o13', ad: 'Belge, araç ve çalışma izni süresi uyarısı', ne: 'Bitmeden 30, 15, 7 ve 1 gün önce 09:00’da', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: '{konu} {kalan} bitiyor ({tarih}). Yenilemeyi unutmayın.' },
   { id: 'o15', ad: 'Kalma riski yüksek kursiyere ek ders teklifi', ne: 'Risk yükselince ertesi gün 12:00’de', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: '{selam} son derslerinize göre sınavdan önce {n} ek direksiyon dersi ({tutar}) öneriyoruz{odak}. Kursiyer ekranından ya da bu mesaja “evet” yazarak onaylayabilirsiniz.' },
   { id: 'o16', ad: 'Doğum günü kutlaması', ne: 'Doğum gününde 10:00’da', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: '{selam} doğum gününüz kutlu olsun! {kurs} olarak size sağlıklı, mutlu ve kazasız bir yıl dileriz.' },
+  // MSJ-016, MSJ-015, MSJ-019
+  { id: 'o17', ad: 'İkinci dört hak hatırlatması', ne: 'Son sınavdan 30 gün sonra ve başvuru son gününden 10 gün önce 10:00’da', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: '{selam} uygulama sınavı haklarınız dolmuştu. {sonGun} tarihine kadar başvurursanız {hak} sınav hakkı daha kazanırsınız; derslerinizi birlikte planlayalım. {kurs}' },
+  { id: 'o18', ad: 'Uygulama sınavı saati kesinleşti', ne: 'MEBBİS randevusu doğrulanınca (08:00–21:00)', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: '{selam} uygulama sınavı saatiniz kesinleşti: {tarih} {saatte}, araç {plaka}, usta öğretmeniniz {usta}. Kimliğinizi yanınıza alın. {kurs}' },
+  { id: 'o19', ad: 'e-Sınav ücreti hatırlatması', ne: 'Teorik bitip sıradaki hakkın ücreti yatmadıysa haftada bir, 11:00’de', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: '{selam} e-sınava başvurabilmeniz için sıradaki sınav hakkınızın ücretini ({ucret}) kendi T.C. kimlik numaranızla yatırıp dekontu kursa iletin; öğrenci uygulamasından da yükleyebilirsiniz. {kurs}' },
   { id: 'o14', ad: 'Teorik grup başlangıcı', ne: 'Gruptan iki gün önce 10:00’da', kanal: 'WhatsApp', acik: true, gonderim: 0, sablon: '{selam} teorik dersleriniz {tarih} {saatte} başlıyor ({grup}, {derslik}). Görüşmek üzere. {kurs}' },
 ];
 // Eski “sen” dilli şablonları “siz” diline ve hitaba ({selam}) çevir
@@ -42,7 +48,7 @@ export function kurallariHazirla() {
   S.otomasyonlar.forEach(o => { if (SIZ_SABLON[o.id] && !o.sablon.includes('{selam}') && o.sablon.includes('{ad}')) o.sablon = SIZ_SABLON[o.id]; if (o.id === 'o10' && o.sablon.startsWith('{ad} Hoca')) o.sablon = 'Merhaba ' + o.sablon; if (o.id === 'o2') o.sablon = o.sablon.replace('{odeme} {kurs}', '{odeme}'); });
   S.zamanli = S.zamanli || { gonderilen: {}, kayit: [], kuyruk: [], son: null, sinir: true };
 }
-const SAAT = { o1: '18:00', o10: '18:00', o11: '18:00', o12: '19:00', o13: '09:00', o2: '10:00', o3: '10:00', o14: '10:00', o4: '11:00', o7: '11:00', o15: '12:00', o16: '10:00' };
+const SAAT = { o1: '18:00', o10: '18:00', o11: '18:00', o12: '19:00', o13: '09:00', o2: '10:00', o3: '10:00', o14: '10:00', o4: '11:00', o7: '11:00', o15: '12:00', o16: '10:00', o17: '10:00', o18: '08:00', o19: '11:00' };
 export const kuralSaati = id => SAAT[id] || null;
 const kural = id => S.otomasyonlar.find(o => o.id === id);
 // MSJ-031: T.C., şifre, PIN ve IBAN değişkeni şablonda doldurulmaz (KVKK)
@@ -74,6 +80,18 @@ const URET = {
     return ornek ? l.sort((a, b) => a.anahtar.split('|').pop().localeCompare(b.anahtar.split('|').pop())).slice(0, 1) : l; },
   o14: ornek => (S.gruplar || []).filter(g => ornek ? fark(g.baslangic) >= 0 : fark(g.baslangic) === 2).flatMap(g => S.kursiyerler.filter(k => k.teorikGrup === g.id && ['Kayıt', 'Evrak', 'Teorik'].includes(k.asama) && !k.teorik).map(k => ({ anahtar: 'o14|' + g.id + '|' + k.id, kim: ogr(k), metin: doldur('o14', { kisi: k, ad: k.ad, tarih: tarihUzun(g.baslangic), saatte: saatDe(TEORIK_SAAT[g.id] || '18:30'), grup: g.ad.toLocaleLowerCase('tr'), derslik: g.derslik }) }))),
 };
+// MSJ-016: ilk dört uygulama hakkı dolan, ikinci dört hakkı başlatmamış ve 'istemiyor' denmemiş kursiyere: son sınavdan 30 gün sonra ve son günden 10 gün önce
+URET.o17 = ornek => { const l = S.kursiyerler.filter(k => !k.kapali && k.hakBitti && !k.hakBitti.cozuldu && !k.hakBitti.istemiyor && k.hakBitti.tur === 'Direksiyon' && !k.ikinciHak).map(k => ({ k, son: KR.ikinciHakSonGun(k) })).filter(x => x.son && fark(x.son) >= 0);
+  return (ornek ? l.slice(0, 1) : l.filter(({ k, son }) => fark(k.hakBitti.tarih) === -30 || fark(son) === 10)).map(({ k, son }) => ({ anahtar: 'o17|' + k.id + '|' + (fark(son) === 10 ? 'son10' : 'g30'), kim: ogr(k), metin: doldur('o17', { kisi: k, ad: k.ad, sonGun: tarihUzun(son), hak: ({ 4: 'dört', 3: 'üç', 5: 'beş', 6: 'altı' })[(S.kurs.sinavHak || 4)] || (S.kurs.sinavHak || 4) }) })); };
+// MSJ-015: MEBBİS randevusu doğrulanan (S.mebDurum 'tamam' saatli ya da s.atama) adaya kesin saat, araç ve öğretmen; gece gitmez
+URET.o18 = ornek => { if (!ornek && new Date().getHours() >= 21) return [];
+  return S.sinavlar.filter(s => s.tur === 'Direksiyon' && fark(s.tarih) >= 0).flatMap(s => (s.kursiyerler || []).map(kursiyer).filter(Boolean).map(k => ({ s, k, sa: adaySinavSaati(s, k) })).filter(x => x.sa.kesin)).slice(0, ornek ? 1 : 1e9)
+    .map(({ s, k, sa }) => { const v = (S.mebDurum || {})['sinav-' + s.id + '-' + k.id] || {}, u = KR.sinavUstasi(k), d = S.dersler.filter(y => y.kursiyer === k.id && y.arac).sort((a, b) => b.tarih.localeCompare(a.tarih))[0], ar = d && S.araclar.find(a => a.id === d.arac);
+      return { anahtar: 'o18|' + s.id + '|' + k.id + '|' + sa.saat, kim: ogr(k), metin: doldur('o18', { kisi: k, ad: k.ad, tarih: tarihUzun(s.tarih), saat: sa.saat, saatte: saatDe(sa.saat), plaka: v.plaka || (ar && ar.plaka) || 'kursun aracı', usta: u ? u.ad : 'kursunuz' }) }; }); };
+// MSJ-019: teorik dersleri biten, sıradaki e-sınav hakkının ücreti yatmamış kursiyere haftada en çok bir kez (anahtar hafta numarasıyla); MEB hesabı/IBAN yazılmaz
+URET.o19 = ornek => { const d = new Date(), hafta = d.getFullYear() + '-' + Math.ceil(((d - new Date(d.getFullYear(), 0, 1)) / 864e5 + new Date(d.getFullYear(), 0, 1).getDay() + 1) / 7);
+  const l = TY.yolAdaylari().filter(k => TY.esinavAsamasi(k) === 'ucret');
+  return (ornek ? l.slice(0, 1) : l).map(k => ({ anahtar: 'o19|' + k.id + '|' + hafta, kim: ogr(k), metin: doldur('o19', { kisi: k, ad: k.ad, ucret: tl(esinavUcreti(esinavHakDurum(k).sira)) }) })); };
 URET.o16 = ornek => { const bg = gun(0).slice(5); const l = S.kursiyerler.filter(k => !k.kapali && k.dogumTarihi && (ornek || k.dogumTarihi.slice(5) === bg)); return (ornek ? l.slice(0, 1) : l).map(k => ({ anahtar: 'o16|' + k.id + '|' + gun(0).slice(0, 4), kim: ogr(k), metin: doldur('o16', { kisi: k, ad: k.ad }) })); };
 // Ek ders teklifinin birim ücreti: sınıfa özel ek ders ücreti, yoksa kursun ek ders ücreti, o da yoksa il taban listesindeki ilave ders ücreti; taban altına inmez
 const ekDersBirim = sinif => { const f = ekDersFiyat(sinif) || ekDersTabani() || 0, t = ekDersTabani() || 0; return Math.max(f, t); };
