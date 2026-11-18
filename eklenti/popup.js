@@ -10,6 +10,10 @@ async function ciz() {
   else if (!c.acik) rozet($('oturum'), 'Kapalı · yeniden girin', 'kirmizi');
   else if (yas > 6 * 60e3) rozet($('oturum'), `Son görülme ${saat(c.zaman)}`, 'gri');
   else rozet($('oturum'), `Açık · ${saat(c.zaman)}`, 'yesil');
+  // MEB-110: kullanılan ekran haritası (web'den alınan sürüm ya da gömülü), imza denetimi ve son deneme
+  const h = await sor({ tur: 'harita-bilgi' }), d = h && h.deneme;
+  if (h && h.surum) rozet($('harita'), `${h.surum}${h.imzali ? ' · imzalı' : ''}`, h.anahtar && !h.imzali ? 'kirmizi' : 'yesil'); else rozet($('harita'), 'Gömülü', 'gri');
+  $('harita').title = d ? `Son deneme ${saat(d.zaman)}: ${d.ok ? 'kabul' : 'ret · ' + d.neden}${h.anahtar ? '' : ' · imza denetimi kapalı'}` : 'mdSinyal açılınca alınır';
   const t = await sor({ tur: 'toplu-al' }), s = (t && t.sonuc) || {};
   if (t && !t.bitti && t.durum !== 'iptal') {
     const durdu = t.durum === 'durduruldu';

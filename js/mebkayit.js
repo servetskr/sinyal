@@ -12,6 +12,7 @@ import * as EK from './eklenti.js?v=234';   // MEB-089: Kur bağlantısı (mağa
 export const MEB_KABUL_SURUM = 'mk-2026-11-2';   // K9: doğrulama cümlesi koddaki gerçeğe uyduruldu   // metin değişince artırılır; kurs yeniden onaylar
 export const SIRA = ['grup', 'kayit', 'evrak', 'onay', 'teorik', 'program', 'esinav', 'randevu', 'fatura'];
 export const TUR_AD = { grup: 'Dönem grubu', kayit: 'Kayıt', evrak: 'Evrak', onay: 'Kurum onayı', teorik: 'Teorik program', program: 'Direksiyon programı', esinav: 'e-Sınav başvurusu', randevu: 'Sınav randevusu', sinav: 'Sınav randevusu', fatura: 'Fatura', odeme: 'Fatura', izin: 'Çalışma izni', ogrenim: 'Öğrenim bilgileri' };
+TUR_AD.dsil = 'Aday dönem kaydı silme';   // MEB-184 (mebtoplu.js donemSil)
 const MEB = 'https://mebbis.meb.gov.tr/SKT/';
 // MEBBİS ekranları (motor.js'teki yollarla aynı)
 export const EKRAN = {
@@ -319,7 +320,7 @@ export function ekranDegisti(l, isId) {
   l.forEach(x => {
     const kod = String(x.ekran || '').toUpperCase().slice(0, 20) || 'bilinmeyen ekran', eski = a.ekranlar[kod];
     if (eski && eski.is === isId) return;   // aynı işin sonucu her yoklamada yeniden gelir: bir kez uyarılır (gizlendikten sonra da)
-    a.ekranlar[kod] = { eksik: (x.eksik || []).map(String).slice(0, 12), zaman: Date.now(), is: isId, goruldu: false };
+    a.ekranlar[kod] = { eksik: (x.eksik || []).map(String).slice(0, 12), zaman: Date.now(), is: isId, goruldu: false, harita: String(x.harita || '').slice(0, 30) };
     islem('MEBBİS ekranı değişti', kisalt(`${kod} · eksik: ${(x.eksik || []).join(', ') || '—'}${x.yardimci ? ' · Yardımcı ' + x.yardimci : ''}${x.harita ? ' · harita ' + x.harita : ''}${isId ? ' · iş ' + isId : ''}`, 300));
     yeni++; bildirilen.push({ ekran: kod, eksik: (x.eksik || []).map(String).slice(0, 6), yardimci: x.yardimci });
   });
@@ -334,13 +335,18 @@ const haritaKarti = h => `<div class="kart" style="margin-bottom:14px;border:2px
     <p style="font-size:14px;color:#8a1d14;margin-top:2px">${h.guncelle ? 'mdSinyal’in yeni MEBBİS ekran haritası daha yeni bir Yardımcı sürümü istiyor. Yardımcı şimdilik kendi gömülü haritasıyla çalışıyor; MEBBİS ekranları değiştiyse bazı işler “ekran değişti” diye durabilir.' : 'Yardımcı, mdSinyal’den gelen MEBBİS ekran haritasını denetimden geçiremedi ve kullanmadı; kendi gömülü haritasıyla çalışıyor.'} <span class="mono" style="font-size:12.5px">${e(h.neden)}</span></p>
     <p style="font-size:13.5px;color:#8a1d14;margin-top:4px">${h.guncelle ? `${EK.kurBaglantisi('Yeni sürümü indirin', 'color:inherit;font-weight:700')} ya da Chrome Web Mağazası güncellemesini bekleyin. ` : 'Durumu mdSinyal’e bildirin (Hesabım › Destek). '}Kayıt işlem geçmişine düştü · ${saatMetni(h.zaman)}</p></div>
     <button class="dg dg-cizgi dg-kucuk" data-mk-alarm-gizle>Gördüm, gizle</button></div></div>`;
+// MEB-111: alarmdan sonra daha yeni bir ekran haritası Yardımcı'ya ulaştıysa (S.mebHaritaSurum) düzeltme gelmiş olabilir: "Ekranları denetle" istenir
+const haritaSurumu = s => (String(s || '').match(/\d{4}\.\d{2}\.\d{2}-\d{1,3}/) || [''])[0];
+const surumSirasi = s => { const m = haritaSurumu(s).match(/^(\d{4})\.(\d{2})\.(\d{2})-(\d{1,3})$/); return m ? +m[1] * 1e7 + +m[2] * 1e5 + +m[3] * 1e3 + +m[4] : 0; };
+export const duzeltmeGeldi = v => !!v && !!S.mebHaritaSurum && surumSirasi(S.mebHaritaSurum) > surumSirasi(v.harita);
 export function alarmKarti() {
   const a = S.mebEkranAlarm, h = a && a.harita && !a.harita.goruldu && !a.harita.cozuldu ? haritaKarti(a.harita) : '';
   const l = Object.entries((a && a.ekranlar) || {}).filter(([, v]) => v && !v.goruldu); if (!l.length) return h;
   return h + `<div class="kart" style="margin-bottom:14px;border:2px solid var(--kirmizi);background:var(--kirmizi-acik)" role="alert"><div class="kart-govde" style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">${isaret('dur', 26)}<div style="flex:1;min-width:240px"><b style="font-family:var(--baslik);font-size:17px;color:#8a1d14;display:block">MEBBİS ekranı değişti</b>
     <p style="font-size:14px;color:#8a1d14;margin-top:2px">Yardımcı şu ekranlarda beklediği alanı bulamadı ve bu ekranlara hiçbir şey yazmadı: ${l.map(([k, v]) => `<b class="mono">${e(k)}</b>${v.eksik.length ? ' (' + e(v.eksik.join(', ')) + ')' : ''}`).join(', ')}. Diğer işler sürdü.</p>
-    <p style="font-size:13.5px;color:#8a1d14;margin-top:4px">Bu işleri şimdilik “Elle gir” ile girin ve durumu mdSinyal’e bildirin (Hesabım › Destek). Kayıt işlem geçmişine düştü · ${saatMetni(Math.max(...l.map(([, v]) => v.zaman || 0)))}</p></div>
-    <button class="dg dg-cizgi dg-kucuk" data-mk-alarm-gizle>Gördüm, gizle</button></div></div>`;
+    ${l.some(([, v]) => duzeltmeGeldi(v)) ? `<p style="font-size:14px;color:var(--murekkep);margin-top:8px;background:#fff;border-radius:8px;padding:8px 10px"><b>Düzeltilmiş ekran haritası geldi</b> (sürüm ${e(S.mebHaritaSurum)}). “Ekranları denetle” ile bakın; ekran uygun çıkarsa o işleri yeniden gönderin.</p>`
+      : `<p style="font-size:13.5px;color:#8a1d14;margin-top:4px">mdSinyal ekran haritasını düzeltip yayınlayınca Yardımcı onu kendiliğinden alır (eklenti güncellemesi gerekmez); o zaman burada “Ekranları denetle” istenir. O zamana kadar bu işleri “Elle gir” ile girebilirsiniz. Kayıt işlem geçmişine düştü · ${saatMetni(Math.max(...l.map(([, v]) => v.zaman || 0)))}</p>`}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${l.some(([, v]) => duzeltmeGeldi(v)) ? '<button class="dg dg-ana dg-kucuk" data-mt-denetle>Ekranları denetle</button>' : '<button class="dg dg-cizgi dg-kucuk" data-mk-harita-yenile>Yeni haritayı al</button>'}<button class="dg dg-cizgi dg-kucuk" data-mk-alarm-gizle>Gördüm, gizle</button></div></div></div>`;
 }
 // gizlenen uyarı silinmez, "görüldü" olur: aynı işin yeniden gelen sonucu uyarıyı geri açmaz; yeni bir işte aynı ekran yine bozuksa yeniden uyarır
 export function alarmGizle() {
@@ -436,7 +442,11 @@ export function haritaDurum(v) {
   if (v.ok) {
     let n = 0;
     if (h && !h.cozuldu) { h.cozuldu = Date.now(); h.goruldu = true; islem('MEBBİS ekran haritası düzeldi', `sürüm ${v.surum || '—'}`); n++; }
-    if (!v.ayni && v.surum && S.mebHaritaSurum !== v.surum) { S.mebHaritaSurum = v.surum; islem('MEBBİS ekran haritası güncellendi', `Yardımcı yeni haritayı aldı · sürüm ${v.surum}`); n++; }
+    if (!v.ayni && v.surum && S.mebHaritaSurum !== v.surum) {
+      S.mebHaritaSurum = v.surum; islem('MEBBİS ekran haritası güncellendi', `Yardımcı yeni haritayı aldı · sürüm ${v.surum}`); n++;
+      // MEB-111: açık ekran uyarısı varsa düzeltme gelmiş olabilir
+      if (Object.values(a.ekranlar || {}).some(x => x && !x.goruldu && duzeltmeGeldi(x))) bildir(`Yeni MEBBİS ekran haritası geldi (${v.surum}). MEB işlemleri › MEBBİS aktarımı’nda “Ekranları denetle”ye basın; uygun çıkan ekranların işlerini yeniden gönderin.`, 'tamam', true);
+    }
     if (n) kaydet(); return !!n;
   }
   if (/alınamadı|yanıt yok|eski sürüm/i.test(neden)) return false;

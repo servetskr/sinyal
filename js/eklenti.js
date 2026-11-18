@@ -8,6 +8,7 @@
 //   toplu-durdur {id} · toplu-devam {id} · toplu-iptal {id?}                 mebtoplu.js isDurdur / devamEt, mesgulGeldi / isIptal, cekIptal
 //   toplu-yuk-koy {id, yaz[]}                                                mebtoplu.js yukIste (Yardımcı toplu-yuk-iste deyince)
 //   toplu-sonuc-onay {id, zaman}                                             mebtoplu.js durumGeldi (son sonuç işlenince)
+//   harita-yenile {}                                                         bu dosya haritaYenile (1.18; mebkayit.js alarm kartı "Yeni haritayı al"); toplu işten önce Yardımcı kendisi de alır
 //   kuyruk · cek · bitenler-onay                                             bu dosya ("Ekranda doldur" yedek yolu)
 // Yardımcı → sayfa (kaynak 'sinyal-eklenti'; işleyen)
 //   merhaba {surum, ozellik[]}                                               bu dosya: eklenti.var/surum/ozellik; 1.12+ → Durdur ve "Ekranları denetle" görünür
@@ -21,7 +22,8 @@
 //   toplu-alindi {ok, id, sekme} | {mesgul, id, reddedilen, kalan, durum}   mesgul → mebtoplu.js mesgulGeldi
 //   toplu-yuk-iste {id, kalan[]} → mebtoplu.js yukIste · toplu-yuk-alindi {id, ok, durum, n, neden} → mebtoplu.js yukAlindi
 //   ekran-degisti {id, ekranlar[{ekran, ad, eksik, iz, kaynak, yardimci, harita}]}  → mebkayit.js ekranDegisti (aynı işte ekran başına bir kez)
-//   harita-durum {ok, surum, ayni?} | {ok:false, neden}                     → mebkayit.js haritaDurum: ret → kırmızı kart + islem(); düzelince kalkar
+//   harita-durum {ok, surum, ayni?} | {ok:false, neden}                     → mebkayit.js haritaDurum: ret → kırmızı kart + islem(); düzelince kalkar;
+//                                                                            yeni sürüm gelince açık ekran uyarısında "Ekranları denetle" önerilir (MEB-111)
 //   tablo · bitenler · hatalar                                               bu dosya (tek liste ve "Ekranda doldur" yolu)
 // Kurs verisi yüklenmeden (giriş öncesi) gelen toplu-durum işlenmez, Yardımcı yeniden verir; harita-durum ise bekletilir (bekleyenleriIsle).
 // =====
@@ -325,6 +327,8 @@ function farkliSonuclar(l) {
     altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button>',
     onAc(p) { p.querySelectorAll('[data-mf]').forEach(b => b.addEventListener('click', () => { const x = l[+b.dataset.mf], k = kursiyer(x.kid), s = S.sinavlar.find(y => y.id === x.sid); kapatPencere(); import('./sayfalar2.js?v=234').then(m => setTimeout(() => m.sonucDuzelt(s, k, { ...x.d, kaynak: 'mebbis' }), 250)); })); } });
 }
+// MEB-111: ekran haritasını hemen yeniden al (Yardımcı 1.18; eskisi iletiyi yok sayar, harita mdSinyal yenilenince gelir)
+export const haritaYenile = () => { if (!eklenti.ozellik.includes('harita-yenile')) return false; sayfadan('harita-yenile', {}); return true; };
 // Kurs verisi ve oturum hazır mı (Yardımcı'dan gelen sonuç ancak o zaman işlenir)
 const hazir = () => !!(S && S.kursiyerler && oturum.kullanici);
 // harita-durum sayfa açılışında bir kez gelir, çoğu zaman girişten önce: bekletilir, kurs verisi gelince işlenir
