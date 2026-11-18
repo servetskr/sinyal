@@ -5,7 +5,7 @@
 // 'uyari', 'bilgi'. Dizinin üstünde ek alanlar: kural (kimlik), kursiyer (id), kursiyerler (birden çok kişiye ait oturum bulgusunda kimlik listesi, ör. Y04), kisa (öğrenci dosyasında ad olmadan başlık), yalnizDosya, eylem.
 // DOM yok; yalnız veri.js'e bağlı (Node'da denenebilir). Bugün: veri.js BUGUN / gun().
 // Yeni kurallar ilk sürümde yalnız "uyarı"dır; Eyüp Bey teyit edince engele çevrilebilir (belgeler/eksikler/eyup-sorular.md).
-import { S, gun, fark, aracUygun, izinDurumu, mebIsGunuIleri, haftalikSinir, haftaDers, ustaYetkili, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
+import { S, gun, fark, aracUygun, belgeliMi, izinDurumu, mebIsGunuIleri, haftalikSinir, haftaDers, ustaYetkili, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
 
 /* ---------- yardımcılar (ui.js'teki biçimlerle aynı; ui.js DOM'a bağlı olduğu için burada kopyası) ---------- */
 const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
@@ -302,6 +302,8 @@ export function dersKontrol(o) {
   Object.entries(eg.belgeler || {}).filter(([, t]) => t < planGun).forEach(([b]) => sorun.push(eg.ad + ' · ' + ({ sertifika: 'usta öğretici sertifikası', saglik: 'sağlık raporu', adli: 'adli sicil kaydı' }[b]) + ' süresi dolmuş; bu tarihte ders planlanamaz.'));
   const ayni = DL.filter(x => x.kursiyer === k.id && x.tarih === planGun && x.durum !== 'İptal'), cak = ayni.find(x => x.saat === saat);  // iptal edilen ders saati boş sayılır (otomatik dağıtımla aynı)
   if (cak) sorun.push(`Bu kursiyerin aynı saatte ${(egitmen(cak.egitmen) || { ad: 'başka bir usta öğretici' }).ad} ile dersi var.`);
+  // DIR-050: simülatör dersi yalnız ilk kez sürücü belgesi alacak adaya (belgesi olan, başka sınıf alan adaya alan dersi verilir)
+  if (tur === 'simulator' && belgeliMi(k)) sorun.push(`Simülatör dersi yalnız ilk kez sürücü belgesi alacak adaya verilir; ${tamAd(k)} adayının ${k.mevcutEhliyet} belgesi var (alan dersi verin).`);
   // DIR-047: aynı araç ya da aynı simülatör aynı saatte iki derste olamaz (kimin dersi olduğu yazılır)
   { const arDolu = ar && DL.find(x => x.arac === ar.id && x.tarih === planGun && x.saat === saat && x.durum !== 'İptal' && x.kursiyer !== k.id); if (arDolu) sorun.push(`${ar.plaka} bu saatte ${tamAd(kursiyer(arDolu.kursiyer) || { ad: 'başka bir öğrenci', soyad: '' })} dersinde (${(egitmen(arDolu.egitmen) || {}).ad || ''}).`); }
   if (tur === 'simulator' && o.simulator) { const smDolu = DL.find(x => x.tur === 'simulator' && x.simulator === o.simulator && x.tarih === planGun && x.saat === saat && x.durum !== 'İptal' && x.kursiyer !== k.id); if (smDolu) sorun.push(`Simülatör bu saatte ${tamAd(kursiyer(smDolu.kursiyer) || { ad: 'başka bir öğrenci', soyad: '' })} dersinde.`); }
