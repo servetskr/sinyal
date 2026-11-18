@@ -3932,3 +3932,10 @@ tr.secili-satir td { background: rgba(10, 77, 162, .06); }
 .ogn-devam-yazi small{color:var(--u-vurgu)}
 .ogn-sure{color:var(--u-ikincil)}
 .ogn-cubuk{background:rgba(11,24,48,.1)}
+/* KAY-049: kayıt sihirbazında UAVT sırasıyla adres */
+.uavt-blok{display:grid;gap:8px}
+.uavt-blok>.et small{font-weight:400;color:var(--soluk)}
+.uavt-blok .uavt-yonerge{margin-top:0}
+.uavt-izgara{margin-top:4px}
+.uavt-onizle{font-size:13.5px;color:var(--soluk);margin:0}
+.uavt-onizle b{color:var(--murekkep);font-weight:600}

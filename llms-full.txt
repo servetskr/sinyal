@@ -203,6 +203,9 @@ Ders değişikliği isteyen öğrenciye, dersine 24 saatten fazla varsa aynı ö
 **MEBBİS’e otomatik işliyor mu?**
 Onayınızla, evet. Kurs yetkilisi yazılacak kayıtları kontrol eder ve bir kez “MEBBİS’e yaz” ile onaylar; MEBBİS Yardımcısı (Chrome ya da Edge eklentisi) sizin açtığınız MEBBİS oturumunda formları doldurur, kaydeder ve kaydın MEBBİS’e geçtiğini doğrular. Güvenlik kodunu ve geri alınamaz adımları yetkili yapar; yazma istediğiniz an durdurulur. MEBBİS şifreniz istenmez, görülmez, saklanmaz.
 
+**Öğrencinin adresi kayıtta nasıl girilir?**
+Adresi öğrencinin e-Devlet › Adres Bilgilerim sayfasındaki gibi girin; adres kodu varsa yazın. Kayıt ekranında adres e-Devlet’teki sırayla alınır: il, ilçe, mahalle, cadde ya da sokak, dış kapı no ve iç kapı no. Adres kodu (UAVT) 10 hanelidir, e-Devlet’teki adres sayfasında yazar; girilmesi isteğe bağlıdır. MEBBİS’teki adres beyanı da aynı sırayla seçilir; adres e-Devlet’teki gibi girilirse aktarımda fark çıkmaz.
+
 **MEB denetimine hazırlıkta yardımcı oluyor mu?**
 Evet. Denetim modu, denetimde bakılan eksikleri tek listede gösterir: süresi dolan ya da dolmak üzere olan personel ve araç belgeleri (muayene, sigorta), imzasız ya da kısa süren direksiyon dersleri, eksik kursiyer evrakı ve KVKK aydınlatması kaydı olmayan kursiyerler.
 
