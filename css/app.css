@@ -3467,3 +3467,10 @@ input[type="tel"], input[inputmode="tel"], input[inputmode="numeric"], input[nam
 .nd-dg .dg-ikon { width: 30px; height: 30px; }
 .nd-bos { padding: 10px 8px; color: var(--soluk); font-size: 14px; }
 .nd-ac { background: none; border: 0; padding: 4px 16px 12px; color: var(--levha); font: 600 13.5px var(--govde); cursor: pointer; }
+
+/* DIG-009: görüşme kaydı */
+.gr-satir { align-items: flex-start !important; gap: 10px; }
+.gr-satir b a { color: var(--murekkep); }
+.gr-kontrol { display: inline-flex; gap: 4px; align-items: center; font-size: 12.5px; color: var(--metin); white-space: nowrap; }
+.gr-kontrol .ik { width: 13px; height: 13px; }
+.gr-kontrol.bugun { color: var(--levha); font-weight: 700; } .gr-kontrol.gec { color: var(--kirmizi); font-weight: 700; } .gr-kontrol.bitti { color: var(--soluk); }

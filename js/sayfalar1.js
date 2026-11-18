@@ -22,6 +22,7 @@ import * as PL from './planlayici.js?v=234';
 import * as UY from './mebuyum.js?v=234';
 import * as PS from './psikoteknik.js?v=234';
 import * as NT from './notlar.js?v=234';
+import * as GO from './gorusme.js?v=234';
 import * as PK from './personel.js?v=234';
 import { listeAdi, satirAdi } from './taban.js?v=234';
 
@@ -253,13 +254,15 @@ export function adaylar(id) {
     </div>
     <div class="ara-bosluk"></div>
     <div class="bolum-bas"><div><h2>Aday panosu</h2><p>Kartı açıp konuşmayı görün, aşamasını değiştirin ya da kursiyere çevirin.</p></div><div class="sag"><button class="dg dg-ana" data-yeni-aday>${ik('arti')}Aday ekle</button></div></div>
-    <div class="pano">${ADAY_ASAMA.map(([a, renk]) => { const l = S.adaylar.filter(x => x.asama === a); return `<section class="pano-sutun" aria-label="${a}"><h3><i style="background:${renk}"></i>${a}<b>${l.length}</b></h3>${l.map(kart).join('') || '<p style="font-size:12.5px;color:var(--soluk);padding:6px">Bu aşamada aday yok.</p>'}</section>`; }).join('')}</div>`,
+    <div class="pano">${ADAY_ASAMA.map(([a, renk]) => { const l = S.adaylar.filter(x => x.asama === a); return `<section class="pano-sutun" aria-label="${a}"><h3><i style="background:${renk}"></i>${a}<b>${l.length}</b></h3>${l.map(kart).join('') || '<p style="font-size:12.5px;color:var(--soluk);padding:6px">Bu aşamada aday yok.</p>'}</section>`; }).join('')}</div>
+    <div class="ara-bosluk"></div>${GO.gorusmeKarti()}`,
     baglan(k) {
       k.addEventListener('click', ev => {
         const c = ev.target.closest('[data-aday]'); if (c) adayAc(c.dataset.aday);
         if (ev.target.closest('[data-yeni-aday]')) adayEkle();
       });
       k.addEventListener('keydown', ev => { const c = ev.target.closest('[data-aday]'); if (c && ev.key === 'Enter') adayAc(c.dataset.aday); });
+      GO.gorusmeBaglan(k, yenile);   // DIG-009
       if (id) setTimeout(() => adayAc(id), 50);
     },
   };
@@ -1340,6 +1343,7 @@ export function kursiyerDetay(id) {
     if (profilSekme === 'sinav') return psikoSatiri(k) + (k.hakBitti && !k.hakBitti.cozuldu ? hakBittiKart(k) + '<div class="ara-bosluk"></div>' : '') + (!(k.esinav && k.esinav.sonuc === 'Geçti') ? HZ.hazirlikKarti(k, false) : '') + /* hak doldu kararı: Yapılacaklar › “Karar ver” bu sekmeyi açar */ MZ.hazirKarti(k) + denemeKarti(k) + `<div class="izgara iz-2">${[['e-Sınav', k.esinav], ['Uygulama sınavı', k.dsinav]].map(([t, s]) => `<div class="kart gosterge"><small>${t}</small><b>${s ? s.sonuc : '—'}</b><span>${s ? (s.puan ? s.puan + ' puan · ' : '') + s.hak + '. hak' + (s.sonuc === 'Kaldı' ? ' · ' + Math.max(0, (S.kurs.sinavHak || 4) - s.hak) + ' hak kaldı' : '') : (t === 'e-Sınav' ? (k.teorik >= teorikSaat(k) - 4 ? 'Sınava hazır' : 'Teorik dersler sürüyor') : k.dsinavPlan ? 'Sınav ' + goreli(k.dsinavPlan) : 'Direksiyon dersleri sürüyor')}</span></div>`).join('')}</div>
       <div class="ara-bosluk"></div><div class="kart"><div class="kart-bas"><h3>Sınav oturumları</h3></div><ul class="liste" style="margin-top:8px">${sinavlar.map(s => `<li><span class="oto-ik">${ik(s.tur === 'e-Sınav' ? 'teorik' : 'direksiyon')}</span><div><b style="color:var(--murekkep)">${s.tur} · ${tarihUzun(s.tarih)} ${s.saat}</b><small style="display:block;color:var(--soluk)">${e(s.yer)}</small></div><span class="sag">${s.sonuc[k.id] ? rozet(s.sonuc[k.id], s.sonuc[k.id] === 'Geçti' ? 'yesil' : 'kirmizi') : rozet(goreli(s.tarih), 'mavi')}</span></li>`).join('') || '<li>' + bos('Henüz sınava atanmadı', 'Sınavlar sayfasından oturuma ekleyebilirsiniz.') + '</li>'}</ul></div>`;
     return `<div class="kd-bolum">
+      ${GO.gorusmeKarti({ kisi: { tur: 'kursiyer', id: k.id, tel: k.tel }, baslik: 'Görüşmeler' })}<div class="ara-bosluk"></div>
       <div class="kart"><div class="kart-bas"><h3>Notlar</h3></div><div class="kart-govde">
         <ul class="zaman-cizgisi">${k.notlar.map(n => `<li>${e(n.metin)}<small>${goreli(n.tarih)}</small></li>`).join('') || '<li style="color:var(--soluk)">Henüz not yok.<small>Usta öğretici notları ve görüşmeler burada birikir.</small></li>'}</ul>
         <form data-not style="display:flex;gap:8px;margin-top:10px"><input class="girdi" name="n" placeholder="Not ekleyin" aria-label="Not"><button class="dg dg-koyu" type="submit">Ekle</button></form>
@@ -1417,6 +1421,7 @@ ${mesajlar.length ? '' : '<li style="color:var(--soluk)">Bu kursiyere henüz mes
         if (ev.target.closest('[data-sozlesme]')) sozlesmeImzalat(k);
         { const po = ev.target.closest('[data-plan-oner]'); if (po) return otoPlanPenceresi({ kursiyerler: [k.id] }); }   // DIR-041
         if (ev.target.closest('[data-ps-ver]')) return PS.randevuPenceresi({ kursiyerId: k.id, sonra: yenile });   // DIR-043
+        if (GO.gorusmeTikla(ev, yenile, { tur: 'kursiyer', id: k.id, ad: tamAd(k), tel: k.tel })) return;   // DIG-009
         if (ev.target.closest('[data-ders-imza]')) import('./imza.js?v=234').then(m => m.imzayaGonderPenceresi(k, 'ders', imzasizDers(k).map(d => d.id)));
         { const bd = ev.target.closest('[data-bilgi-duzenle]'); if (bd) bilgiDuzenle(k, bd.dataset.bilgiDuzenle || 'kimlik'); }
         if (ev.target.closest('[data-gerekli-elle]')) gerekliElleDuzenle(k);

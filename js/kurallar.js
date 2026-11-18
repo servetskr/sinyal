@@ -99,6 +99,10 @@ const KURALLAR = [
           const l2 = S.araclar.filter(a => !a.kapali && !(S.hareket || []).some(h => h.arac === a.id && h.kategori === 'MTV' && h.tarih >= bas && h.tarih <= son));
           if (l2.length) l.push(bul('uyari', `MTV ${ay === 1 ? '1' : '2'}. taksit: ${l2.length} aracın ödemesi kayıtlı değil`, `Son gün ${ay === 1 ? '31 Ocak' : '31 Temmuz'}. Ödeyince Ekip ve araçlar’da araç kartından “Masraf ekle › MTV” ile kaydedin: ${l2.slice(0, 6).map(a => a.plaka).join(', ')}${l2.length > 6 ? '…' : ''}.`, '#/filo', { bugun: true })); } }
     } },
+  // DIG-009: görüşme kaydında tekrar arama zamanı gelen (günü bugün ya da geçmiş, kapatılmamış); liste süzgeciyle aynı ölçüt (gorusme.js kontrolGelen)
+  { id: 'G01', sira: 124, ad: 'Tekrar aranacak görüşmeler', dayanak: 'Kurs içi takip (görüşme kaydı)', kapsam: 'kurs', ciddiyet: 'bilgi', bugun: true, bugunAd: n => `${n} kişi tekrar aranacak`,
+    kontrol(l) { (S.gorusmeler || []).filter(g => g.kontrol && !g.kapandi && g.kontrol.slice(0, 10) <= gun(0)).forEach(g => { const ad = (g.kisi && g.kisi.ad) || 'Görüşme', gec = g.kontrol.slice(0, 10) < gun(0);
+      l.push(bul(gec ? 'uyari' : 'bilgi', `${ad} · tekrar ara ${gec ? tarih(g.kontrol.slice(0, 10)) + ' (geçti)' : 'bugün ' + (g.kontrol.slice(11, 16) || '')}`, `${g.konu || 'Görüşme'}${g.etiket ? ' · ' + g.etiket : ''}${g.detay ? ' · ' + g.detay.slice(0, 100) : ''}`, '#/adaylar', { bugun: true })); }); } },
   { id: 'K01', sira: 123, ad: 'Bugün vadesi gelen taksitler', dayanak: 'Kurs sözleşmesi (ödeme planı)', kapsam: 'kursiyer', ciddiyet: 'bilgi', bugun: true, bugunAd: n => `${n} öğrencinin taksiti bugün`,
     kontrol(l) { sb(S.kursiyerler).filter(k => !k.kapali && k.odeme).forEach(k => { const t = (k.odeme.taksitler || []).filter(x => !x.odendi && !x.iptal && x.vade === gun(0)); if (!t.length) return;
       const tutar = t.reduce((a, x) => a + (+x.tutar || 0) - (+x.kismi || 0), 0); l.push(bul('bilgi', `${tamAd(k)} · taksit bugün (${tutar.toLocaleString('tr-TR')} ₺)`, 'Ödeme gelmezse yarın gecikmiş sayılır; hatırlatma otomasyonu açıksa mesaj gider.', '#/kursiyer/' + k.id, { kursiyer: k.id, bugun: true })); }); } },
