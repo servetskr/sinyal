@@ -4,6 +4,7 @@
 // Usta öğreticinin sertifika, sağlık raporu ve adli sicil tarihleri (eg.belgeler; M13 kuralı) evrak eklenince güncellenir.
 import { S, kaydet, gun, fark, tarihOku, islem, sb, tutarOku, tcGecerli, mebIsGunuMu } from './veri.js?v=234';
 import { e, ik, rozet, tarih, isaret, pencere, kapatPencere, bildir, fotoKucult, sekmeler } from './ui.js?v=234';
+import { ustaAlacak } from './risk.js?v=234';
 
 export const GOREVLER = ['Kurucu', 'Kurs Müdürü', 'Müdür Yardımcısı', 'Usta Öğretici', 'Uzman Öğretici', 'Psikolog', 'Büro Personeli', 'Muhasebe', 'Pist Sorumlusu', 'Şoför', 'Araç Bakım', 'Temizlik Personeli', 'Güvenlik', 'Diğer'];
 export const BRANSLAR = ['Trafik ve Çevre', 'İlk Yardım', 'Araç Tekniği', 'Trafik Adabı', 'Direksiyon Eğitimi'];
@@ -28,15 +29,34 @@ export function yillikIzin(x) {
   return { hak, kullanilan, kalan: hak - kullanilan, kidem, elle: +x.yillikIzinGun > 0 };
 }
 // P04 ve kart için: bitişi geçmiş ya da 30 gün içinde biten evraklar
+// PER-022: aylık hakediş. Ders ücretli (statü '0'): yapılan ders saati × ders ücreti (usta: direksiyon dersi; teorik öğretmen: teorik ders saati).
+// Aylık ücretli: maaş + (ustada) ders primi. Avans ve hakediş ödemeleri düşülür → bakiye. ay: 'YYYY-MM'
+export function hakedis(x, tur, ay) {
+  // usta öğretici: ofisin hakediş tablosu ve öğretmenin 'Kazancım' ekranıyla aynı hesap (risk.js ustaAlacak, ödemeler S.ustaOdemeleri)
+  if (tur === 'usta') { const [y0, m0] = gun(0).split('-').map(Number), geri = (y0 - +ay.slice(0, 4)) * 12 + (m0 - +ay.slice(5, 7)), a = ustaAlacak(x, geri);
+    return { ay, dersUcretli: a.dersUcretli, ders: a.ders, birim: a.primBirim, maas: a.maas, dersTutar: a.prim, toplam: a.brut, avans: a.avans, odenen: a.odenen, odemeler: a.odemeler, bakiye: a.brut - a.avans - a.odenen }; }
+  const ayin = t => String(t || '').slice(0, 7) === ay, dersUcretli = String(x.mebStatu) === '0';
+  const ders = tur === 'usta' ? S.dersler.filter(d => d.egitmen === x.id && d.durum === 'Yapıldı' && ayin(d.tarih)).length : tur === 'ogretmen' ? (S.teorik || []).filter(t => t.ogretmen === x.id && ayin(t.tarih) && t.tarih <= gun(0)).reduce((a, t) => a + (+t.sure || 1), 0) : 0;
+  const birim = dersUcretli ? (+x.dersUcreti || 0) : tur === 'usta' ? (+x.prim || 0) : 0;
+  const maas = dersUcretli ? 0 : (+x.maas || 0), dersTutar = ders * birim;
+  const avans = (S.avanslar || []).filter(a => a.kim === x.ad && ayin(a.tarih)).reduce((a, v) => a + (+v.tutar || 0), 0);
+  const odemeler = (S.personelOdemeler || []).filter(o => o.kim === x.id && o.ay === ay), odenen = odemeler.reduce((a, v) => a + (+v.tutar || 0), 0);
+  const toplam = maas + dersTutar;
+  return { ay, dersUcretli, ders, birim, maas, dersTutar, toplam, avans, odenen, odemeler, bakiye: toplam - avans - odenen };
+}
+const AY_AD = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+const ayAdi = ay => AY_AD[+ay.slice(5, 7) - 1] + ' ' + ay.slice(0, 4);
+const ayKay = (ay, n) => { const d = new Date(+ay.slice(0, 4), +ay.slice(5, 7) - 1 + n, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
+const TL = n => new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 }).format(Math.round(n)) + ' ₺';
 export const evrakDurumu = v => !v.bitis ? null : fark(v.bitis) < 0 ? 'bitti' : fark(v.bitis) <= 30 ? 'yakin' : null;
 
-const durum = { sekme: 'genel' };
+const durum = { sekme: 'genel', ay: gun(0).slice(0, 7) };
 export function personelKarti(tur, id, sekme) {
   const x = personelBul(tur, id); if (!x) return bildir('Kişi bulunamadı', 'uyari');
   if (sekme) durum.sekme = sekme;
   const yenidenAc = s => { kapatPencere(); personelKarti(tur, id, s); };
   const gorev = gorevleri(x, tur), branslar = Array.isArray(x.branslar) ? x.branslar : x.brans ? [x.brans] : [];
-  const SEKME = [['genel', 'Genel'], ['evrak', 'Evraklar', (x.evraklar || []).filter(evrakDurumu).length], ['zimmet', 'Zimmet', (x.zimmet || []).filter(z => !z.iade).length], ['izin', 'İzin']];
+  const SEKME = [['genel', 'Genel'], ['evrak', 'Evraklar', (x.evraklar || []).filter(evrakDurumu).length], ['zimmet', 'Zimmet', (x.zimmet || []).filter(z => !z.iade).length], ['izin', 'İzin'], ['hakedis', 'Hakediş']];
   const ust = `<div style="margin:-4px 0 14px">${sekmeler(SEKME.map(([k, ad, n]) => [k, ad, n || null]), durum.sekme, 'pk-sekme')}</div>`;
   let govde = '', altlik = '<button class="dg dg-cizgi" data-kapat>Kapat</button>';
   if (durum.sekme === 'genel') {
@@ -48,6 +68,7 @@ export function personelKarti(tur, id, sekme) {
       <div class="alan tam"><span class="et">Görevleri</span><div class="secim">${GOREVLER.map(g => `<label><input type="checkbox" name="gorev" value="${e(g)}" ${gorev.includes(g) ? 'checked' : ''}><span>${e(g)}</span></label>`).join('')}</div></div>
       <div class="alan tam"><span class="et">Branşları</span><div class="secim">${BRANSLAR.map(g => `<label><input type="checkbox" name="brans" value="${e(g)}" ${branslar.some(b => b.toLocaleLowerCase('tr') === g.toLocaleLowerCase('tr')) ? 'checked' : ''}><span>${e(g)}</span></label>`).join('')}</div></div>
       <div class="alan"><label>Statü</label><select name="statu"><option value="">Seçilmedi</option>${STATULER.map(([v, t]) => `<option value="${v}" ${String(x.mebStatu ?? '') === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+      <div class="alan"><label>Ders ücreti (₺/saat)</label><input name="dersUcreti" inputmode="numeric" value="${e(x.dersUcreti || '')}" placeholder="ders ücretli statüde"><small style="color:var(--soluk)">Ders ücretli personelin hakedişi yapılan ders saati × bu ücret.</small></div>
       <div class="alan"><label>Yıllık izin hakkı (gün)</label><input name="yillik" inputmode="numeric" value="${e(x.yillikIzinGun || '')}" placeholder="kıdeme göre ${yillikIzin({ ...x, yillikIzinGun: 0 }).hak}"></div></form>`;
     altlik = `${ozel ? '<button class="dg dg-hafif" data-pk-sil style="margin-right:auto">Personeli çıkar</button>' : ''}<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-pk">Kaydet</button>`;
   } else if (durum.sekme === 'evrak') {
@@ -75,6 +96,18 @@ export function personelKarti(tur, id, sekme) {
         <div class="alan"><label>Veriliş</label><input name="verildi" type="date" value="${gun(0)}"></div>
         <div class="alan"><label>Planlanan teslim</label><input name="teslim" type="date"></div></form>`;
     altlik = `<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" type="submit" form="f-pk-zimmet">${ik('arti')}Zimmet ekle</button>`;
+  } else if (durum.sekme === 'hakedis') {
+    const h = hakedis(x, tur, durum.ay), od = h.odemeler || [];
+    const satir = (a, b, c = '') => `<div class="belge-satir"><span>${a}</span><b class="sayi">${b}</b>${c ? `<small style="color:var(--soluk);margin-left:6px">${c}</small>` : ''}</div>`;
+    govde = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><button class="dg dg-hafif dg-kucuk" data-pk-ay="-1" aria-label="Önceki ay">‹</button><b style="min-width:120px;text-align:center">${ayAdi(durum.ay)}</b><button class="dg dg-hafif dg-kucuk" data-pk-ay="1" aria-label="Sonraki ay" ${durum.ay >= gun(0).slice(0, 7) ? 'disabled' : ''}>›</button></div>
+      ${h.dersUcretli && !h.birim ? `<p class="ipucu uyari" style="margin:0 0 10px">${isaret('uyari', 18)}<span>Ders ücretli, ama ders ücreti girilmemiş. Genel sekmesinde “Ders ücreti” yazın.</span></p>` : ''}
+      ${h.maas ? satir('Aylık ücret', TL(h.maas)) : ''}
+      ${tur !== 'personel' ? satir(h.dersUcretli ? 'Ders ücreti' : 'Ders primi', TL(h.dersTutar), `${h.ders} ${tur === 'usta' ? 'direksiyon dersi' : 'teorik ders saati'} × ${TL(h.birim)}`) : ''}
+      ${satir('Hakediş', TL(h.toplam))}${satir('Avans', h.avans ? '− ' + TL(h.avans) : '—')}${satir('Ödenen', h.odenen ? '− ' + TL(h.odenen) : '—', od.map(o => tarih(o.tarih)).join(', '))}
+      <div class="belge-satir" style="border-top:1px solid var(--cizgi);margin-top:4px;padding-top:8px"><span><b>Kalan</b></span><b class="sayi" style="color:${h.bakiye < 0 ? 'var(--kirmizi)' : 'var(--murekkep)'}">${TL(h.bakiye)}</b></div>
+      <p style="font-size:12.5px;color:var(--soluk);margin-top:8px">Tutarlar mdSinyal’deki ders kayıtları ve kartta yazılı ücretlerle hesaplanır; SGK ve vergi kesintileri bordroda yapılır.</p>
+      ${h.bakiye > 0 ? `<form class="form-izgara" id="f-pk-ode" style="margin-top:12px;border-top:1px solid var(--cizgi-2);padding-top:12px"><div class="alan"><label>Ödenen tutar (₺)</label><input name="tutar" inputmode="numeric" value="${Math.round(h.bakiye)}"></div><div class="alan"><label>Ödeme</label><select name="yontem"><option>Havale</option><option>Nakit</option></select></div></form>` : ''}`;
+    altlik = `<button class="dg dg-cizgi" data-kapat>Kapat</button>${h.bakiye > 0 ? `<button class="dg dg-ana" type="submit" form="f-pk-ode">Ödemeyi kaydet</button>` : ''}`;
   } else {
     const y = yillikIzin(x), l = (S.izinler || []).filter(i => i.kim === x.id).sort((a, b) => b.bas.localeCompare(a.bas));
     govde = `<div class="izgara iz-3" style="margin-bottom:12px">${[['Yıllık izin hakkı', y.hak + ' gün', y.elle ? 'kartta yazılı' : y.kidem == null ? 'başlama yılı yok, 14' : y.kidem + ' yıl kıdem (İş K. md.53)'], ['Bu yıl kullanılan', y.kullanilan + ' gün', 'Pazar ve resmî tatil sayılmaz'], ['Kalan', y.kalan + ' gün', y.kalan < 0 ? 'hak aşıldı' : '']].map(([a, b, c], i) => `<div class="kart gosterge"><small>${a}</small><b style="${i === 2 && y.kalan < 0 ? 'color:var(--kirmizi)' : ''}">${b}</b><span>${e(c)}</span></div>`).join('')}</div>
@@ -89,6 +122,7 @@ export function personelKarti(tur, id, sekme) {
     onAc(d) {
       d.addEventListener('click', ev => {
         const s = ev.target.closest('[data-pk-sekme]'); if (s) { durum.sekme = s.dataset.pkSekme; return yenidenAc(); }
+        const ay = ev.target.closest('[data-pk-ay]'); if (ay) { durum.ay = ayKay(durum.ay, +ay.dataset.pkAy); return yenidenAc(); }
         if (ev.target.closest('[data-pk-asil]')) { kapatPencere(); return tur === 'usta' ? import('./sayfalar2.js?v=234').then(m => m.ustaDuzenle(x.id)) : import('./gruplar.js?v=234').then(m => m.ogretmenPencere(x, () => import('./app.js?v=234').then(a => a.yenile()))); }
         const ea = ev.target.closest('[data-pk-evrak-ac]'); if (ea) { const v = (x.evraklar || []).find(z => z.id === ea.dataset.pkEvrakAc); if (v && v.dosya) { const w = window.open(); if (w) { w.document.title = evrakAd(v.tur); w.document.body.style.margin = '0'; w.document.body.innerHTML = v.dosya.tur === 'pdf' ? `<iframe src="${v.dosya.veri}" style="border:0;width:100vw;height:100vh"></iframe>` : `<img src="${v.dosya.veri}" style="max-width:100%">`; } islem('Personel evrakını açtı', x.ad + ' · ' + evrakAd(v.tur)); kaydet(); } return; }
         const es = ev.target.closest('[data-pk-evrak-sil]'); if (es) { const v = (x.evraklar || []).find(z => z.id === es.dataset.pkEvrakSil); if (!v) return; x.evraklar = x.evraklar.filter(z => z !== v); islem('Personel evrakını sildi', x.ad + ' · ' + evrakAd(v.tur)); kaydet(); return yenidenAc(); }
@@ -109,7 +143,7 @@ export function personelKarti(tur, id, sekme) {
             if (!gorevler.length) return bildir('En az bir görev seçin', 'uyari');
             Object.assign(x, { ad, tel: f.tel.value.trim(), tc: tc || null, maas: tutarOku(f.maas.value) || 0, baslama: f.baslama.value || x.baslama || '', gorev: gorevler.join(', ') });
           }
-          Object.assign(x, { gorevler, branslar: br, mebStatu: f.statu.value === '' ? null : f.statu.value, yillikIzinGun: Math.min(60, Math.max(0, parseInt(f.yillik.value, 10) || 0)) || null });
+          Object.assign(x, { gorevler, branslar: br, dersUcreti: tutarOku(f.dersUcreti.value) || null, mebStatu: f.statu.value === '' ? null : f.statu.value, yillikIzinGun: Math.min(60, Math.max(0, parseInt(f.yillik.value, 10) || 0)) || null });
           if (tur === 'ogretmen' && br.length && !br.some(b => b.toLocaleLowerCase('tr') === String(x.brans || '').toLocaleLowerCase('tr'))) x.brans = br[0];
           islem('Personel kartını düzenledi', x.ad); kaydet(); bildir('Kaydedildi'); kapatPencere(); return import('./app.js?v=234').then(a => a.yenile());
         }
@@ -129,6 +163,13 @@ export function personelKarti(tur, id, sekme) {
           if (f.teslim.value && f.teslim.value < f.verildi.value) return bildir('Teslim günü verilişten önce olamaz', 'uyari');
           x.zimmet = [...(x.zimmet || []), { id: 'z' + Date.now().toString(36), tur: f.tur.value, ne, verildi: f.verildi.value || gun(0), teslim: f.teslim.value || null, iade: null }];
           islem('Zimmet verdi', `${x.ad} · ${f.tur.value} ${ne}`); kaydet(); bildir('Zimmet kaydedildi'); return yenidenAc();
+        }
+        if (f.id === 'f-pk-ode') {
+          const tutar = tutarOku(f.tutar.value); if (!tutar) return bildir('Tutarı yazın', 'uyari');
+          if (tur === 'usta') { S.ustaOdemeleri = S.ustaOdemeleri || []; S.ustaOdemeleri.unshift({ id: 'uo' + Date.now(), egitmen: x.id, ay: durum.ay, tutar, tarih: gun(0), yontem: f.yontem.value }); }
+          else S.personelOdemeler = [...(S.personelOdemeler || []), { id: 'po' + Date.now().toString(36), kim: x.id, ay: durum.ay, tutar, tarih: gun(0), yontem: f.yontem.value }];
+          S.hareket.unshift({ id: 'h' + Date.now(), tarih: gun(0), tur: 'Gider', kategori: 'Maaş', aciklama: `${x.ad} · ${ayAdi(durum.ay)} hakedişi`, tutar, yontem: f.yontem.value });
+          islem('Personel hakedişi ödedi', `${x.ad} · ${ayAdi(durum.ay)} · ${TL(tutar)}`); kaydet(); bildir('Ödeme kasaya gider olarak işlendi'); return yenidenAc();
         }
         if (f.id === 'f-pk-izin') {
           const bit = f.bit.value < f.bas.value ? f.bas.value : f.bit.value; S.izinler.push({ id: 'z' + Date.now().toString(36), kim: x.id, bas: f.bas.value, bit, tur: f.tur.value });
