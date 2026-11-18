@@ -14,7 +14,7 @@ const CEK = [
   ['grup', 'Dönem grupları', 'MEBBİS’teki dönem, grup ve şubeler (ör. Kasım 1A) mdSinyal’e grup kartı olarak gelir. İlk kurulumda önce bunu çekin.'],
   ['sinav', 'Sınav sonuçları', 'e-Sınav ve direksiyon sonuçları mdSinyal’in sonuç penceresine dolar; siz kaydedersiniz.'],
   ['mutabakat', 'MEBBİS ile karşılaştır', 'MEBBİS’teki kursiyer listesi mdSinyal’le karşılaştırılır, farklar gösterilir.'],
-  ['kursiyer', 'Kursiyer listesi', 'Geçişte MEBBİS’teki kursiyerleri mdSinyal’e alır.'],
+  ['kursiyer', 'Kursiyer listesi', 'İlk geçiş için: açık listeyi Veri aktarımı ekranına getirir, sütunları kontrol edip siz aktarırsınız. “MEBBİS’ten güncelle” kursiyer aktarmaz, yalnız karşılaştırır.'],   // MEB-074
   ['ogretmen', 'Usta öğreticiler', 'Personel listesini alır.'],
   ['arac', 'Araçlar', 'Araç listesini plakalarıyla alır.'],
 ];

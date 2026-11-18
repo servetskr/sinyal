@@ -488,7 +488,7 @@ function canliTut() {
     if (Date.now() - o < ARALIK - 5e3) return; try { localStorage.setItem(ANAHTAR, String(Date.now())); } catch (x) {}
     try {
       const r = await fetch('/main.aspx', { credentials: 'same-origin', cache: 'no-store', redirect: 'follow' }), t = await r.text();
-      if (GIRIS.test(r.url) || DUSTU.test(t) || /type=["']?password/i.test(t)) { dustu = true; goster('MEBBİS oturumu kapandı. Sayfayı yenileyip yeniden girin; Yardımcı kaldığı yerden sürer.', '#9b2226'); return; }
+      if (GIRIS.test(r.url) || DUSTU.test(t) || /type=["']?password/i.test(t)) { dustu = true; goster('MEBBİS oturumu kapandı. Sayfayı yenileyip yeniden girin; Yardımcı kaldığı yerden sürer. MEB Ajanda kodunu yanlış girerseniz sistem geçici engeller: kodun bitmesine 10 saniyeden az kala girmeyin.', '#9b2226'); return; }
       son = Date.now(); if (serit.style.display === 'block' && !dustu) goster(`Oturum açık tutuluyor · son yoklama ${saat(son)} · bu sekmeyi kapatmayın`);
     } catch (x) { /* ağ hatası: bir sonraki yoklamada yeniden denenir */ }
   };

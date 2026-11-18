@@ -602,8 +602,23 @@ function parcaBittiGoster(o, yazilan) {
 // MEB-063: randevuda MEBBİS'in 'en az … aday' iletisi grubun küçüklüğüdür; MEB-064: direksiyon programında çakışma iletisi (araç/usta üzerine ders var)
 // saat kendiliğinden kaydırılmaz, ders d.mebHata ile işaretlenir; ders penceresinde 'Başka saat seç' planlama ekranını o gün ve usta için açar
 const CAKISMA = /[üu]zerine.*ders|ders.*(var|kay[ıi]tl[ıi])|[çc]ak[ıi][şs]|ayn[ıi] saat/i;
+// MEB-079, MEB-183 (SOR-135): MEBBİS'in kendi hata metni korunur, arkasına ne yapılacağı eklenir; tanınmayan kayıt hatasında olası nedenler
+const MEBBIS_HATA = [
+  [/grup ve [şs]ube tan[ıi]mlamas[ıi] bulunamad/i, x => `Önce ${x.donem ? x.donem + ' ' : ''}grubunu ve şubesini MEBBİS’te açın (MEBBİS aktarımı › Dönem grubu)`],
+  [/zaten kay[ıi]tl[ıi]|kay[ıi]t(l[ıi])? (bulunmaktad[ıi]r|var)|daha [öo]nce kaydedil/i, () => 'Aday bu dönemde MEBBİS’te zaten kayıtlı; “MEBBİS’ten güncelle” ile okuyun, mdSinyal kendiliğinden işaretler'],
+  [/kay[ıi]t.{0,30}(kapal[ıi]|kapat[ıi]lm[ıi][şs])|kay[ıi]t (d[öo]nemi|tarihleri).{0,20}d[ıi][şs]/i, () => 'Dönem kayıt penceresi kapalı (MEBBİS önceki ayın ortasından ayın 10’una kadar açar); sonraki döneme kaydedin'],
+  [/kontenjan/i, () => 'Başka bir sınav günü seçin (kontenjan dolu)'],
+  [/g[üu]venlik kodu/i, () => 'Güvenlik kodu yanlış ya da süresi geçti; yeniden deneyin'],
+];
+const OLASI_NEDEN = 'Olası nedenler: MEBBİS’te dönem-şube kaydı kapalı olabilir; aday bu dönemde ya da başka kursta zaten kayıtlı olabilir; grup ve şube MEBBİS’te açılmamış olabilir';
+function hataAciklama(id, not) {
+  const [tur, ...p] = String(id).split('-'), k = ['kayit', 'evrak', 'onay', 'esinav'].includes(tur) ? kursiyer(p.join('-')) : null, g = k && mebGrup(k);
+  const b = MEBBIS_HATA.find(([re]) => re.test(not)); if (b) return b[1]({ donem: g ? GR.donemAdi(g.donem) : '' });
+  return tur === 'kayit' && !/oturum|ekran|kurum/i.test(not) ? OLASI_NEDEN : '';
+}
 function hataMetni(id, ok, not) {
-  if (ok || !not) return not; const tur = String(id).split('-')[0];
+  if (ok || !not || / · Ne yapılmalı: | · Olası nedenler: /.test(not)) return not; const tur = String(id).split('-')[0];
+  { const a = hataAciklama(id, not); if (a) not = not + (a.startsWith('Olası') ? ' · ' + a : ' · Ne yapılmalı: ' + a); }
   if (tur === 'sinav' && /en az/i.test(not) && !/^MEBBİS grubu küçük buldu/.test(not)) return 'MEBBİS grubu küçük buldu: ' + not;
   if (tur === 'ders' && CAKISMA.test(not)) { const d = (S.dersler || []).find(y => y.id === String(id).slice(5)); if (d) d.mebHata = { not, zaman: gun(0), tur: 'cakisma' }; return 'MEBBİS’te aynı saatte araç ya da usta dolu (saat kaydırılmadı): ' + not; }
   return not;
@@ -627,7 +642,7 @@ export function yazilanlariIsle(l, isId, kaynak = 'yardimci') {
   const turOf = id => { const t = id.split('-')[0]; return t === 'ders' ? 'program' : t; };
   l.forEach(x => {
     if (!x || !x.id) return;
-    const once = S.mebDurum[x.id], dur = x.ok ? 'tamam' : 'hata', not = hataMetni(x.id, x.ok, String(x.not || '')).slice(0, 240);
+    const once = S.mebDurum[x.id], dur = x.ok ? 'tamam' : 'hata', not = hataMetni(x.id, x.ok, String(x.not || '')).slice(0, 400);
     if (once && once.is === isId && once.durum === dur && (once.not || '') === not) return;   // bu sonuç zaten işlendi
     const tur = (once && once.tur) || turOf(x.id), baslik = (once && once.baslik) || '';
     if (x.ok) n += isaretle(x.id, true, x.not);
@@ -1076,7 +1091,7 @@ export function isKarti(cekGizle) {
   const aciklama = calis ? `${e(durum.adim || 'başlıyor')}. MEBBİS sekmesini kapatmayın; MEBBİS’te başka işlem yapabilirsiniz.`
     : sessiz ? 'Yardımcı birkaç dakikadır ilerleme bildirmedi. Önce MEBBİS sekmesine bakın: iş sürüyorsa bekleyin, durduysa kaldığı yerden devam edin.'
     : m.durum === 'parca-bitti' ? 'Sonraki parçadan önce MEBBİS’ten çıkıp yeniden girin (oturum yaklaşık 40 dakikada kapanabiliyor), sonra sonraki parçayı başlatın.'
-    : m.durum === 'oturum' ? 'MEBBİS’e yeniden girin; Yardımcı kaldığı yerden sürer. Sürmezse “Kaldığı yerden devam et”e basın.'
+    : m.durum === 'oturum' ? 'MEBBİS’e yeniden girin; Yardımcı kaldığı yerden sürer. Sürmezse “Kaldığı yerden devam et”e basın. MEB Ajanda kodunu yanlış girerseniz MEBBİS sizi geçici engeller; kodun süresinin bitmesine 10 saniyeden az kala girmeyin.'
     : m.durum === 'kurum' ? `${m.not ? e(m.not) + ' ' : ''}MEBBİS’ten çıkıp bu işin kurumunun (kurum kodu ${e(m.onay.kurum || '—')}) hesabıyla girin, sonra “Kaldığı yerden devam et”e basın.`
     : `${m.not ? e(m.not) + '. ' : ''}Yazılmış işler yeniden yazılmaz; kalanlar için “Kaldığı yerden devam et”e basın.`;
   return `<div class="kart" style="margin-bottom:14px;border-color:${calis ? 'var(--levha)' : 'var(--sari)'}"><div class="kart-govde" style="display:grid;gap:8px">
