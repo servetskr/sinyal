@@ -125,19 +125,41 @@ export function topluHesap(yenile) {
   if (!l.length) return bildir('Aktif öğrencilerin hepsinin hesabı açık');
   pencere({
     baslik: 'Öğrenci hesapları', genis: true,
-    icerik: `<p style="font-size:14px;margin-bottom:10px"><b>${uygun.length}</b> aktif öğrencinin hesabı yok. Hesaplar açılır, her öğrenciye giriş bilgileri WhatsApp’tan sırayla gönderilir; öğrenci ilk girişte kendi şifresini belirler.</p>
+    icerik: `<p style="font-size:14px;margin-bottom:10px"><b>${uygun.length}</b> aktif öğrencinin hesabı yok. Hesaplar açılır; giriş bilgileri WhatsApp’tan sırayla gönderilir ya da WhatsApp’ı açmadan yazdırılabilir giriş kartları çıkar (öğrenciye elden verilir). Öğrenci ilk girişte kendi şifresini belirler.</p>
       ${gecersiz.length ? `<p class="ipucu uyari" style="margin-bottom:10px">${ik('uyari')}<span>${gecersiz.length} öğrencinin cep telefonu geçersiz, atlanacak: ${e(gecersiz.slice(0, 5).map(tamAd).join(', '))}${gecersiz.length > 5 ? '…' : ''}</span></p>` : ''}
       <ul class="liste" style="max-height:260px;overflow:auto">${uygun.map(k => `<li><label style="display:flex;gap:8px;align-items:center;width:100%"><input type="checkbox" checked data-ogr="${k.id}"><span style="flex:1">${e(tamAd(k))}</span><small style="color:var(--soluk)">${e(B.telGoster(B.telNorm(k.tel)))} · ${e(k.asama)}</small></label></li>`).join('')}</ul>`,
-    altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Hesapları aç</button>`,
+    altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-cizgi" data-k data-kart>Aç ve kartları yazdır</button><button class="dg dg-ana" data-k>Aç ve WhatsApp’tan gönder</button>`,
     onAc(d) {
-      d.querySelector('[data-k]').addEventListener('click', async ev => {
+      d.querySelectorAll('[data-k]').forEach(btn => btn.addEventListener('click', async ev => {
+        const kartla = !!ev.currentTarget.dataset.kart, kartlar = [];
         const sec = uygun.filter(k => d.querySelector(`[data-ogr="${k.id}"]`).checked); if (!sec.length) return bildir('Öğrenci seçin', 'uyari');
         const b = ev.target; b.disabled = true; const giden = [], hata = [];
-        for (const [i, k] of sec.entries()) { b.textContent = `Açılıyor ${i + 1}/${sec.length}…`; try { const r = await ac(k); const a = alici(k); giden.push({ ad: a.ad, tel: a.tel, rol: a.rol, tur: 'Öğrenci hesabı', metin: mesaj(k, r) }); } catch (x) { hata.push(tamAd(k) + ': ' + B.hataMetni(x)); } }
-        islem('Toplu öğrenci hesabı açtı', giden.length + ' öğrenci'); kaydet(); kapatPencere(); yenile();
+        d.querySelectorAll('[data-k]').forEach(x => { x.disabled = true; });
+        for (const [i, k] of sec.entries()) { b.textContent = `Açılıyor ${i + 1}/${sec.length}…`; try { const r = await ac(k); if (kartla) kartlar.push({ ad: tamAd(k), tel: r.tel, sifre: r.sifre }); else { const a = alici(k); giden.push({ ad: a.ad, tel: a.tel, rol: a.rol, tur: 'Öğrenci hesabı', metin: mesaj(k, r) }); } } catch (x) { hata.push(tamAd(k) + ': ' + B.hataMetni(x)); } }
+        islem('Toplu öğrenci hesabı açtı', (giden.length + kartlar.length) + ' öğrenci' + (kartla ? ' · giriş kartı' : '')); kaydet(); kapatPencere(); yenile();
         if (hata.length) bildir(hata.length + ' hesap açılamadı: ' + hata[0], 'uyari');
         if (giden.length) waSirali(giden, 'Öğrenci hesapları · giriş bilgileri');
-      });
+        if (kartlar.length) girisKartlari(kartlar);
+      }));
     },
   });
+}
+
+// UYG-021: WhatsApp bağlı değilken öğrencileri uygulamaya almak için yazdırılabilir giriş kartları (A4'e 8 kart) ve kursta asılacak QR afiş.
+// Geçici şifre yalnız bu çıktıda görünür, hiçbir yerde saklanmaz; öğrenci ilk girişte kendi şifresini belirler.
+const qrYukle = () => window.QRCode ? Promise.resolve() : new Promise((ok, red) => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'; sc.onload = ok; sc.onerror = () => red(new Error('QR aracı yüklenemedi')); document.head.appendChild(sc); });
+async function qrResim(metin, boy = 160) {
+  try { await qrYukle(); const kap = document.createElement('div'); new window.QRCode(kap, { text: metin, width: boy, height: boy, correctLevel: window.QRCode.CorrectLevel.M }); const c = kap.querySelector('canvas'); return c ? c.toDataURL('image/png') : (kap.querySelector('img') || {}).src || ''; } catch (x) { return ''; }
+}
+export async function girisKartlari(l) {
+  const link = B.ogrenciGirisLinki(), qr = await qrResim(link, 140), kurs = kursAdi();
+  const kart = x => `<div style="border:1px dashed #889;border-radius:10px;padding:12px 14px;display:flex;gap:12px;align-items:center;break-inside:avoid;height:58mm;box-sizing:border-box">${qr ? `<img src="${qr}" alt="" style="width:30mm;height:30mm">` : ''}<div style="font-size:11.5pt;line-height:1.45"><b style="font-size:12.5pt">${e(x.ad)}</b><br>${e(kurs)} öğrenci uygulaması<br>Giriş: <b>${e(link.replace(/^https?:\/\//, ''))}</b><br>Telefon: <b>${e(B.telGoster(x.tel))}</b><br>Geçici şifre: <b style="font-family:monospace;font-size:13pt">${e(x.sifre)}</b><br><small>İlk girişte kendi şifreni belirle. Kartı kimseyle paylaşma.</small></div></div>`;
+  const sayfalar = []; for (let i = 0; i < l.length; i += 8) sayfalar.push(`<div style="display:grid;grid-template-columns:1fr 1fr;gap:6mm;${i + 8 < l.length ? 'page-break-after:always;' : ''}">${l.slice(i, i + 8).map(kart).join('')}</div>`);
+  const { belgeYazdir } = await import('./ui.js?v=234');
+  return belgeYazdir(sayfalar.join(''), 'Öğrenci giriş kartları');
+}
+export async function qrAfis() {
+  const link = B.ogrenciGirisLinki(), qr = await qrResim(link, 420), kurs = kursAdi();
+  const { belgeYazdir } = await import('./ui.js?v=234');
+  return belgeYazdir(`<div style="text-align:center;padding:20mm 10mm;font-family:sans-serif"><p style="font-size:16pt;margin:0 0 6mm">${e(kurs)}</p><h1 style="font-size:30pt;margin:0 0 8mm">Öğrenci uygulamasına gir</h1>${qr ? `<img src="${qr}" alt="" style="width:110mm;height:110mm">` : ''}<p style="font-size:20pt;margin:8mm 0 4mm"><b>${e(link.replace(/^https?:\/\//, ''))}</b></p><p style="font-size:14pt;line-height:1.5;margin:0">Telefonunla kodu okut. Cep telefonun ve kursundan aldığın geçici şifreyle gir,<br>ilk girişte kendi şifreni belirle. Şifren yoksa ön büroya sor.</p></div>`, 'Öğrenci uygulaması afişi');
 }
