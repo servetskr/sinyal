@@ -333,9 +333,12 @@ function tekBekleCoz() {
   if (kayip.length) { bulut.kalici = 'Çevrimdışıyken yaptığın ' + kayip.map(a => TEK_AD[a] || a).join(', ') + ' değişikliği kaydedilmedi: başka bir cihaz bu arada aynı kaydı değiştirmiş, güncel hâli gösteriliyor. Değişikliğin Ayarlar › Veri aktarımı’ndaki kurtarma kaydında.'; durumYaz(); }
 }
 export const sunucuHazir = () => sunucuGeldi;
+export const SALT_OKUR = ['ortak', 'muhasebe'];
 export async function akit() {
   if (!bulut.kurs || !fb) return;
-  if (bulut.rol === 'ortak') return;  // mdSinyal Yönetim'de ortak yalnız görür; sunucu kuralı da yazmasına izin vermez
+  // ortak (mdSinyal Yönetim) ve muhasebe / mali müşavir yalnız görür; sunucu kuralı da yazmalarına izin vermez (DENETİM Ö12: yazmayı denemez,
+  // kurtarma kaydı ve kalıcı 'kaydedilemedi' uyarısı çıkmaz). Bu rollerin ekranlarında düzenleme düğmeleri zaten yok.
+  if (SALT_OKUR.includes(bulut.rol)) { farklar(); yeniDosya = new Map(); return; }   // değişiklikler sunucuya gönderilmez (açılıştaki göçler de)
   if (bulut.rol === 'usta') return ustaGonder();  // öğretmen kurs verisine doğrudan yazmaz; yaptıkları ustaGelen'e gider
   clearTimeout(zamanla); zamanla = null;
   const yazilar = farklar(), dosyalar = yeniDosya; yeniDosya = new Map();
@@ -347,10 +350,17 @@ export async function akit() {
   const ekle = (ref, veri, boyut, kayit) => { if (n >= 450 || boy + boyut > 6e6) { kapat(); b = F.writeBatch(db); n = 0; boy = 0; icerik = []; } b.set(ref, veri, { merge: true }); n++; boy += boyut; if (kayit) icerik.push(kayit); };
   // Firestore belge sınırı 1 MiB: 700 KB'lık PDF base64'te ~956 bin karakter eder, sığar
   dosyalar.forEach((v, id) => { if (v.length > 1040000) { bulut.kalici = 'Bir dosya çok büyük olduğu için kaydedilemedi; daha küçük bir fotoğraf ya da PDF yükleyin'; return; } ekle(F.doc(db, ...kok, 'dosyalar', id), { v }, v.length); yuklu.add(id); });
+  // PAR-053: para kovasına (hareket, kursiyerler, faturalar) yazan her paket aynı pakette bir iz belgesi (kayit, tur 'iz') oluşturur;
+  // sunucu kuralı izi olmayan para yazımını reddeder. İz silinemez, değiştirilemez; müdürün işlem geçmişinde gizlenir.
+  const PARA = /^(hareket|kursiyerler|faturalar)~\d+$/; let izId = null, izPaket = null;
+  const iz = (id) => { if (n >= 448) { kapat(); b = F.writeBatch(db); n = 0; boy = 0; icerik = []; }
+    if (izPaket !== b) { izId = 'iz' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); izPaket = b; ekle(F.doc(db, ...kok, 'kayit', izId), { uid: bulut.uid, ad: bulut.ad || '', tur: 'iz', ne: 'Para verisi kaydedildi', ayrinti: id, zaman: F.serverTimestamp() }, 200); }
+    return izId; };
   yazilar.forEach((w, id) => {
     const veri = { a: w.a };
     if (w.d) { veri.d = true; veri.i = {}; Object.entries(w.i).forEach(([k, x]) => { veri.i[k] = x === null ? F.deleteField() : x; }); }
     else veri.t = w.t;
+    if (PARA.test(id)) { const boyut = JSON.stringify(w).length; if (boy + boyut + 300 > 6e6) { kapat(); b = F.writeBatch(db); n = 0; boy = 0; icerik = []; } veri.iz = iz(id); }
     ekle(F.doc(db, ...kok, 'v', id), veri, JSON.stringify(w).length, { id, w });
   });
   kapat();
@@ -596,8 +606,8 @@ function kayitYaz(x) {
 }
 export async function kayitlar(n = 300) {
   const { db, F } = await sdk();
-  const q = await F.getDocs(F.query(F.collection(db, 'kurslar', bulut.kurs, 'kayit'), F.orderBy('zaman', 'desc'), F.limit(n)));
-  return q.docs.map(d => { const v = d.data(); return { ...v, zaman: v.zaman ? v.zaman.toDate() : null }; });
+  const q = await F.getDocs(F.query(F.collection(db, 'kurslar', bulut.kurs, 'kayit'), F.orderBy('zaman', 'desc'), F.limit(n * 2)));
+  return q.docs.map(d => { const v = d.data(); return { ...v, zaman: v.zaman ? v.zaman.toDate() : null }; }).filter(v => v.tur !== 'iz').slice(0, n);   // PAR-053 izleri gizli
 }
 // kural sınırı 20.000 karakter: sığmazsa önce düğme sayaçları, sonra ekranların yarısı bırakılır (metin kesilmez, JSON bozulmaz)
 const kullanimMetni = o => { let m = JSON.stringify(o); if (m.length > 20000) m = JSON.stringify({ ...o, dugme: {} }); if (m.length > 20000) m = JSON.stringify({ ...o, dugme: {}, ekran: Object.fromEntries(Object.entries(o.ekran || {}).slice(0, 25)) }); return m; };
@@ -852,6 +862,7 @@ export const ogrenciVerisi = k => ogrenciVerisiDen(S, k);
 export const ogrenciPanelMetni = (D, k) => JSON.stringify(ogrenciVerisiDen(D, k), veriAt);
 
 async function projeksiyonYaz() {
+  if (SALT_OKUR.includes(bulut.rol)) { projeKirli.clear(); return; }   // DENETİM Ö12: öğrenci belgelerine yalnız ofis yazar
   if (projeKirli.size) { ustaKirli.add('*'); setTimeout(ustaProjeksiyonYaz, 0); }
   if (!bulut.kurs || !fb || !projeKirli.size) return;
   const hepsi = projeKirli.has('*'), ids = new Set(projeKirli); projeKirli.clear();

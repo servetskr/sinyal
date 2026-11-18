@@ -7,6 +7,21 @@
       "Bildirim daha belirgin: altta sarı kart ve “Şimdi güncelle” düğmesi.",
       "Ana ekranın en altında kurulu sürüm ve “Güncellemeleri denetle” düğmesi var; Hesabım menüsünde de görünüyor.",
       "“Şimdi güncelle” yeni sürümü doğrudan sunucudan açıyor, sonra “Güncelleme tamam” diye onay veriyor."
+    ],
+    "234": [
+      "Öğrenci kaydı adım adım: kayıt sihirbazı zorunlu alanları önde sorar, yarım kalan kayıt taslak olarak saklanır.",
+      "Öğrenci dosyası sekmeli ve durum rozetli; Öğrenciler listesinde kategori sekmeleri, sütun seçimi, hazır görünümler ve toplu güncelleme.",
+      "MEB işlemleri yenilendi: bugün MEBBİS’te yapılacak işler son günüyle üstte, öğrenci × adım tablosu, MEBBİS hatalarında ne yapılacağı yazıyor.",
+      "MEBBİS Yardımcısı 1.16: MEBBİS oturumunu açık tutar, araç çubuğunda ne yaptığını gösterir. Kurs bilgisayarında güncelleyin.",
+      "Kurum onayı artık ayrı: yalnız kurs müdürü, aday listesini görüp “geri alınamaz” diye onaylar.",
+      "Sınav günü ekranı: komisyonlar, saat ve araç ataması, komisyon listesi Excel’i; sınav hakları, ikinci dört hak ve mazeretli sınav tek yerden.",
+      "Direksiyon planı: otomatik plan önerisi, öğretmene göre renk, tatil ve arife günleri; MEBBİS’le çakışan ders işaretlenir.",
+      "Kasa: gün sonu ve vade raporu, şube kasası; para işlemleri iz bırakır.",
+      "Belgeler: kayıt defterleri, MEİS istatistiği, yoklama çizelgesi, sınav aracı kontrol formu.",
+      "Ana sayfada personel tarihleri: çalışma izni bitişi ve uzatmayı MEM’e verme süresi.",
+      "Yeni roller: şube müdürü, teorik öğretmen ve yalnız görüntüleyen muhasebe.",
+      "Öğrenciler telefonla olduğu gibi e-postayla da girebilir; şifre yenileme e-postayla.",
+      "Kurulum ekranı ve prova günü; Raporlar tek sayfada."
     ]
   }
 }
