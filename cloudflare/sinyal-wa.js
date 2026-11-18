@@ -190,11 +190,32 @@ async function metaImzaDogru(env, ham, baslik, ekGizli) {
   const gizliler = String(env.APP_SECRET || '').split(',').map(x => x.trim()).filter(Boolean);
   // kursun kendi uygulama anahtarı varsa imza zorunlu olur (global APP_SECRET tanımlı olmasa da)
   if (ekGizli) gizliler.push(ekGizli);
-  if (!gizliler.length) { if (!imzaUyarisi) { imzaUyarisi = true; console.warn(JSON.stringify({ tur: 'uyari', konu: 'APP_SECRET tanımlı değil; Meta webhook imzası denetlenmiyor' })); } return true; }
+  // MSJ-005: IMZA_ZORUNLU=1 iken gizli anahtar tanımlı değilse webhook kabul edilmez (yanlış ayarla mesaj kaybolmasın diye ayrı adım)
+  if (!gizliler.length) { if (String(env.IMZA_ZORUNLU || '') === '1') return false; if (!imzaUyarisi) { imzaUyarisi = true; console.warn(JSON.stringify({ tur: 'uyari', konu: 'APP_SECRET tanımlı değil; Meta webhook imzası denetlenmiyor' })); } return true; }
   const m = /^sha256=([0-9a-f]{64})$/i.exec(String(baslik || '').trim()); if (!m) return false;
   const gelen = m[1].toLowerCase();
   for (const g of gizliler) if (esit(await hmacHex(g, ham), gelen)) return true;
   return false;
+}
+// ---- MSJ-021: hat sağlığı (günlük Cron) ----
+// Bağlı her kurs hattının ve demo hattının Meta belirteci GET graph/{PHONE_ID} ile denenir; sonuç 'saglik' anahtarında (7 günlük geçersiz imza sayılarıyla).
+// Belirteç düşmüşse kurs fark etmeden önce platform sahibi /saglik'ta görür. Kursa ait belirteç ya da numara kayda yazılmaz (yalnız kurs kimliği, sonuç, kalite).
+async function hatSaglik(env) {
+  if (!env.LINK) return null;
+  const dene = async (telId, token) => { if (!telId || !token) return { ok: false, kod: 'eksik' }; try { const r = await fetch('https://graph.facebook.com/v25.0/' + telId + '?fields=verified_name,quality_rating', { headers: { Authorization: 'Bearer ' + token } }); const j = await r.json().catch(() => ({})); return r.ok ? { ok: true, kalite: j.quality_rating || '' } : { ok: false, kod: (j.error && j.error.code) || r.status }; } catch (x) { return { ok: false, kod: 'ag' }; } };
+  const hatlar = [];
+  if (env.PHONE_ID && env.WA_TOKEN) hatlar.push({ kurs: 'demo', ...(await dene(env.PHONE_ID, env.WA_TOKEN)) });
+  let imlec; do { const l = await env.LINK.list({ prefix: 'hat:', cursor: imlec }); for (const k of l.keys) { const h = await kursHat(env, k.name.slice(4)); if (h) hatlar.push({ kurs: k.name.slice(4), ...(await dene(h.phoneId, h.token)) }); } imlec = l.list_complete ? null : l.cursor; } while (imlec);
+  const imza = {}; for (let i = 0; i < 7; i++) { const g = new Date(Date.now() - i * 864e5).toISOString().slice(0, 10), n = +(await env.LINK.get('imzahata:' + g)) || 0; if (n) imza[g] = n; }
+  const o = { zaman: new Date().toISOString(), hatlar, sorunlu: hatlar.filter(h => !h.ok).length, imzaHata: imza };
+  await env.LINK.put('saglik', JSON.stringify(o));
+  if (o.sorunlu) console.warn(JSON.stringify({ tur: 'uyari', konu: 'hat sağlığı', sorunlu: o.sorunlu, kurslar: hatlar.filter(h => !h.ok).map(h => h.kurs + ':' + h.kod) }));
+  return o;
+}
+async function saglikOku(req, env, url, cevap) {
+  if (!(await sahipMi(req, env))) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
+  if (url.searchParams.get('yenile') === '1') return cevap({ ok: true, ...(await hatSaglik(env)) });
+  return cevap({ ok: true, ...(JSON.parse((env.LINK && await env.LINK.get('saglik')) || 'null') || { zaman: null, hatlar: [] }) });
 }
 // ---- uygulama hata kayıtları ----
 const SAHIP_UID = 'BRqadaBjfLdWjA3NtHL568z41Ng2', FIREBASE_KEY = 'AIzaSyDbcCLYjyvOBQgUNErTMHtWCCIVJulQ7F4';
@@ -1239,7 +1260,7 @@ async function onizleme(req, url) {
 
 export default {
   // günlük mevzuat takibi (wrangler.toml [triggers] crons)
-  async scheduled(olay, env, ctx) { ctx.waitUntil(mvTakip(env).then(() => (new Date().getUTCDay() === 1 ? mvBulten(env) : null)).catch(x => console.error(JSON.stringify({ tur: 'hata', konu: 'mevzuat takip', hata: String((x && x.message) || x).slice(0, 200) })))); },
+  async scheduled(olay, env, ctx) { ctx.waitUntil(hatSaglik(env).catch(x => console.error(JSON.stringify({ tur: 'hata', konu: 'hat sağlığı', hata: String((x && x.message) || x).slice(0, 200) })))); ctx.waitUntil(mvTakip(env).then(() => (new Date().getUTCDay() === 1 ? mvBulten(env) : null)).catch(x => console.error(JSON.stringify({ tur: 'hata', konu: 'mevzuat takip', hata: String((x && x.message) || x).slice(0, 200) })))); },
   async fetch(req, env) {
     const url = new URL(req.url), origin = req.headers.get('Origin') || '';
     if (url.hostname === 'mdsinyal.com' && req.method === 'GET' && /^\/[dihDIH]\/[A-Za-z0-9_-]/.test(url.pathname)) return onizleme(req, url);
@@ -1257,6 +1278,7 @@ export default {
     // site formları: POST girişsiz (yalnız sitenin kendi adresinden); yönetim (liste, durum, silme) yalnız platform sahibi
     if (yol === 'talep' && req.method === 'POST') return IZINLI.includes(origin) ? talepAl(req, env, cevap) : cevap({ ok: false, hata: 'Izin yok' }, 403);
     if (yol === 'talep/yonet') return talepYonet(req, env, url, cevap);
+    if (yol === 'saglik') return saglikOku(req, env, url, cevap);   // MSJ-021
     if (yol === 'soru-bildir' && req.method === 'POST') return IZINLI.includes(origin) ? soruBildirAl(req, env, cevap) : cevap({ ok: false, hata: 'Izin yok' }, 403);
     if (yol === 'soru-bildir/yonet') return soruBildirYonet(req, env, url, cevap);
     // kursun rapor ve yedek e-postaları (kimlik denetimi eposta() içinde)
@@ -1364,7 +1386,10 @@ export default {
       // kursun kendi Meta uygulamasından gelen istek o uygulamanın gizli anahtarıyla imzalıdır: gövdedeki hat kimliğinden kurs bulunur, imza onunla da denenir
       let ekGizli = '';
       try { const on = JSON.parse(new TextDecoder().decode(ham)), pid = on.entry[0].changes[0].value.metadata.phone_number_id, ks = pid && env.LINK && await env.LINK.get('hatno:' + pid), hh = ks && await kursHat(env, ks); ekGizli = (hh && hh.appSecret) || ''; } catch (x) { }
-      if (!(await metaImzaDogru(env, ham, req.headers.get('X-Hub-Signature-256'), ekGizli))) { console.warn(JSON.stringify({ tur: 'uyari', konu: 'webhook imzası geçersiz', ip: req.headers.get('CF-Connecting-IP') || '' })); return new Response('Imza gecersiz', { status: 403 }); }
+      if (!(await metaImzaDogru(env, ham, req.headers.get('X-Hub-Signature-256'), ekGizli))) { console.warn(JSON.stringify({ tur: 'uyari', konu: 'webhook imzası geçersiz', ip: req.headers.get('CF-Connecting-IP') || '' }));
+        // MSJ-005: geçersiz imza sayacı (günlük; /saglik'ta görünür) ve 401
+        if (env.LINK) { const an = 'imzahata:' + new Date().toISOString().slice(0, 10); try { await env.LINK.put(an, String((+(await env.LINK.get(an)) || 0) + 1), { expirationTtl: 8 * 86400 }); } catch (x) { } }
+        return new Response('Imza gecersiz', { status: 401 }); }
       let p; try { p = JSON.parse(new TextDecoder().decode(ham)); } catch (x) { return new Response('ok'); }
       const v = p && p.entry && p.entry[0] && p.entry[0].changes && p.entry[0].changes[0] && p.entry[0].changes[0].value;
       // gönderilen mesajların durumu (gönderildi / iletildi / okundu): mdSinyal ekranında ✓✓ olarak görünür
