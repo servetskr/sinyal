@@ -269,7 +269,7 @@ function gorusmeAyarla(a) {
         if (!['Kayıt', 'Kaybedildi'].includes(a.asama)) a.asama = 'Görüşme';
         a.takip = x.tarih;
         const metin = `${selam(a.ad)} ${tarihUzun(x.tarih)} ${x.saat} için ${kursAdi('de')} kayıt görüşmenizi ayarladık. Adresimiz ${S.kurs.adres}. Gelirken kimliğinizi getirin.`;
-        a.mesajlar.push({ kim: 'kurs', metin }); islem('Kayıt görüşmesi ayarladı', a.ad + ' · ' + tarih(x.tarih) + ' ' + x.saat); kaydet();
+        a.mesajlar.push({ kim: 'kurs', metin, z: new Date().toISOString() }); islem('Kayıt görüşmesi ayarladı', a.ad + ' · ' + tarih(x.tarih) + ' ' + x.saat); kaydet();
         if (!d.querySelector('[name=bildir]').checked) bildir('Görüşme kaydedildi'); else wpGonder(a.ad, metin, 'Görüşme bildirimi');
         adayAc(a.id); yenile();
       });
@@ -308,7 +308,7 @@ function adayAc(id) {
       d.addEventListener('change', () => { kaydetAday(); yenile(); });
       d.querySelector('[data-yaz]').addEventListener('submit', ev => {
         ev.preventDefault(); const m = ev.target.m.value.trim(); if (!m) return;
-        a.mesajlar.push({ kim: 'kurs', metin: m });
+        a.mesajlar.push({ kim: 'kurs', metin: m, z: new Date().toISOString() });
         if (a.devir) {
           const og = d.querySelector('[data-ogret]');
           if (og && og.checked) { S.asistanBilgi.push({ konu: 'Aday sorusu: ' + sonSoru.slice(0, 48), soru: sonSoru, metin: m, onay: gun(0) }); islem('Asistana bilgi ekledi', sonSoru); }

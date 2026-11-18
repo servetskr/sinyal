@@ -82,10 +82,13 @@ async function dersAkisi(env, kurs, kimden, metin) {
   await env.LINK.put(anahtar, JSON.stringify({ adim: 'dersBekle' }), { expirationTtl: 3600 }).catch(() => {});
   return { metin: 'Talebinizi aldım, dersinize bakıyorum. Uygun saatleri birazdan buradan yazacağım.', konu: 'Ders değişikliği', kurs, ek: { niyet: 'dersDegistir' } };
 }
+// MSJ-009: gelen kutusu 60 gün saklanır — her yazışta 60 günden eski kayıtlar düşer, anahtar da 60 gün yazılmazsa kendiliğinden silinir
+const GELEN_GUN = 60;
+const gelenYaz = (env, an, l) => { const sinir = Date.now() - GELEN_GUN * 864e5; return env.LINK.put(an, JSON.stringify(l.filter(x => !x.zaman || Date.parse(x.zaman) >= sinir).slice(0, 200)), { expirationTtl: GELEN_GUN * 86400 }); };
 async function kursaDusur(env, kurs, m, v, metin, c) {
   const l = JSON.parse((await env.LINK.get('gelen:' + kurs)) || '[]');
   l.unshift({ id: m.id, zaman: new Date(+m.timestamp * 1000 || Date.now()).toISOString(), ad: (v.contacts && v.contacts[0] && v.contacts[0].profile && v.contacts[0].profile.name) || '', tel: m.from, son4: m.from.slice(-4), metin, cevap: c.metin, konu: c.konu, devir: !!c.devir, yanit: null, cevapTur: null, medya: null, ...(c.ek || {}) });
-  await env.LINK.put('gelen:' + kurs, JSON.stringify(l.slice(0, 200)));
+  await gelenYaz(env, 'gelen:' + kurs, l);
 }
 async function sohbet(env, kimden, metin) {
   const anahtar = 'sohbet:' + rakam(kimden); let d = {};
@@ -1389,7 +1392,7 @@ export default {
         }
         const l = JSON.parse((await env.LINK.get('gelen:' + kurs)) || '[]');
         l.unshift({ id: m.id, zaman: new Date(+m.timestamp * 1000 || Date.now()).toISOString(), ad: (v.contacts && v.contacts[0] && v.contacts[0].profile && v.contacts[0].profile.name) || '', tel: m.from, son4: m.from.slice(-4), metin, cevap: '', konu: medya ? 'Evrak' : '', devir: true, yanit: (m.context && m.context.id) || null, cevapTur: medya ? null : cevapTuru(metin), medya });
-        await env.LINK.put('gelen:' + kurs, JSON.stringify(l.slice(0, 200)));
+        await gelenYaz(env, 'gelen:' + kurs, l);
         return new Response('ok');
       }
       // Demo hattı: yalnızca kursun numarasına, kayıtlı ALICI'dan gelenler işlenir
@@ -1408,7 +1411,7 @@ export default {
       if (env.LINK) {
         const l = JSON.parse((await env.LINK.get('gelen')) || '[]');
         l.unshift({ id: m.id, zaman: new Date(+m.timestamp * 1000 || Date.now()).toISOString(), ad: (v.contacts && v.contacts[0] && v.contacts[0].profile && v.contacts[0].profile.name) || '', son4: m.from.slice(-4), metin, cevap: c.metin, konu: c.konu, devir: !!c.devir, yanit: (m.context && m.context.id) || null, cevapTur: medya ? null : cevapTuru(metin), medya });
-        await env.LINK.put('gelen', JSON.stringify(l.slice(0, 50)));
+        await gelenYaz(env, 'gelen', l.slice(0, 50));
       }
       return new Response('ok');
     }

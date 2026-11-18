@@ -845,6 +845,11 @@ function goc(o) {
     x.evraklar = [...(x.evraklar || []), { id: 'pe-ek21-' + x.id, tur: 'ek21', not: '', tarih: t, bitis: iso(d) }]; }); }
   if (demo && !o._per) { o._per = true; (o.egitmenler || []).forEach((x, i) => { if (!x.calismaIzinNo || x.mebIzinBitis) return; const bit = gun(i === 1 ? 24 : 150 + i * 70), kds = i === 2 ? 30 : 40;
     x.mebIzinBitis = bit; x.meb = { izinNo: x.calismaIzinNo, gorev: 'Usta Öğretici', brans: 'Direksiyon Eğitimi', statu: i === 2 ? 'Ücretli' : 'Sözleşmeli', izinBas: gun(i === 1 ? -341 : -215 + i * 70), izinBit: bit, maasKds: i === 2 ? 0 : kds, ucretKds: i === 2 ? kds : 0, haftaSaat: kds, okuma: gun(-1), ...(x.meb || {}) }; }); }
+  // MSJ-009: gelen kutusu 60 gün saklanır — aday sohbetlerinde 60 günden eski mesajlar ve devredilen eski kayıtlar düşer.
+  // Tarihi olmayan eski mesajlar adayın son tarihi 60 günden eskiyse düşer (o tarihten sonra yazışma olmadığı için).
+  { const sinir = Date.now() - 60 * 864e5, eski = t => t && Date.parse(t) < sinir;
+    (o.adaylar || []).forEach(a => { if (!Array.isArray(a.mesajlar) || !a.mesajlar.length) return; const tarihsizEski = a.tarih && Date.parse(a.tarih + 'T23:59:59') < sinir; a.mesajlar = a.mesajlar.filter(m => m && (m.z ? !eski(m.z) : !tarihsizEski)); });
+    if (Array.isArray(o.devredilen)) o.devredilen = o.devredilen.filter(d => !d || !eski(d.z)); }
   if (o.kurs.kendiRandevu === undefined) o.kurs.kendiRandevu = true;
   noTamamla(o.kursiyerler || []);
   // gönderim geçmişi sınırsız büyümesin (eşitleme kovaları 1 MB sınırına yaklaşmasın): son 5000 mesaj
