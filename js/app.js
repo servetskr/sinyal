@@ -22,6 +22,7 @@ import * as SH from './sahip.js?v=234';
 import * as MZ from './sayfa-mevzuat.js?v=234';
 import * as RM from './raporlar.js?v=234';
 import * as GU from './guncelleme.js?v=234';
+import * as DY from './duyuru.js?v=234';
 
 /* ---------- uygulama hatalarının otomatik bildirimi ----------
    window.onerror / unhandledrejection → worker /hata (api.mdsinyal.com). Gönderilen: sürüm, rota adı (#/ad; kimlik ve kod kırpılır), rol,
@@ -54,6 +55,12 @@ async function hataBildir(tur, hata, yer) {
 window.addEventListener('error', ev => { if (ev && ev.target && ev.target !== window && !ev.error) return; hataBildir('hata', ev.error || ev.message, ev.filename ? `${ev.filename}:${ev.lineno}:${ev.colno}` : ''); });
 window.addEventListener('unhandledrejection', ev => { const r = ev && ev.reason; if (r && (r.kullanici || r.code === 'permission-denied' || r.name === 'AbortError')) return; hataBildir('soz', r instanceof Error ? r : String(r && r.message || r || 'Promise reddedildi')); });
 
+// DIG-040: kurs ana ekranının altında "Duyurular" bağlantısı; önemli ve okunmamış duyuru bir kez pencere olarak açılır
+function duyuruAlani(kap) {
+  DY.yukle().then(() => { const s = kap.querySelector('[data-sg-alan="alt"]'); if (!s || kap.querySelector('[data-dy-liste]')) return; const n = DY.okunmamis().length;
+    s.insertAdjacentHTML('afterend', `<p class="dy-bag-satir"><button type="button" class="sg-bag" data-dy-liste>Duyurular${n ? ` · ${n} yeni` : ''}</button></p>`); setTimeout(() => DY.goster(), 1200); });
+}
+document.addEventListener('click', ev => { if (ev.target.closest('[data-dy-liste]')) { ev.preventDefault(); DY.listeAc().then(() => document.querySelectorAll('[data-dy-liste]').forEach(b => { b.textContent = 'Duyurular'; })); } });
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
   plan: Y1.plan, teorik: Y1.teorik, sinavlar: Y2.sinavlar, guzergah: GZ.sayfa, kasa: Y2.kasa, filo: Y2.filo,
@@ -222,7 +229,7 @@ export function yenile(kaydirma = false) {
   kap.innerHTML = s.html;
   yer.replaceChildren(kap);
   if (s.baglan) { try { s.baglan(kap); } catch (x) { console.error(x); } }
-  if (r.ad === 'genel') GU.anaEkranaEkle(kap);  // kurulu sürüm, “Güncellemeleri denetle”, yeni sürüm kartı
+  if (r.ad === 'genel') { GU.anaEkranaEkle(kap); duyuruAlani(kap); }  // kurulu sürüm, “Güncellemeleri denetle”, yeni sürüm kartı; DIG-040 duyurular
   kap.querySelectorAll('.sekmeler').forEach(sk => { const sec = sk.querySelector('.secili'); if (sec && sk.scrollWidth > sk.clientWidth) sk.scrollLeft = Math.max(0, sec.offsetLeft - sk.offsetLeft - 24); });
   const menuAd = r.ad === 'kursiyer' ? 'kursiyerler' : r.ad;
   document.querySelectorAll('[data-menu]').forEach(a => a.classList.toggle('secili', a.dataset.menu === menuAd));
