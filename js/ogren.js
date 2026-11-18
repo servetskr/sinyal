@@ -115,6 +115,7 @@ function anaHtml(k, ctx) {
     + `<div class="ox-ogr-araclar">`
     + liste([satir({ ikon: 'panoSoru', baslik: 'Deneme sınavı', alt: denemeAlt, sag: `<span class="ox-bag">${yarimDeneme ? 'Devam et' : 'İncele'}${oi('ok')}</span>`, ok: false, attrs: { 'data-ox-alt': 'deneme' }, cls: 'ox-ogr-deneme' })])
     + liste([satir({ ikon: 'kartlar', baslik: 'Çalışma araçları', alt: 'Hızlı test ve konu tekrarı', attrs: { 'data-ox-alt': 'araclar' } })])
+    + liste([satir({ ikon: 'kalkan', baslik: 'Kurallar ve sık sorulanlar', alt: 'Ders, sınav ve trafik kurallarında arayın', attrs: { 'data-ox-alt': 'kurallar' } })])
     + `</div>`;
 }
 

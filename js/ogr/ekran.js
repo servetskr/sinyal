@@ -20,6 +20,7 @@ import * as BLG from './belgeler.js?v=234';
 import * as SNV from './sinav.js?v=234';
 import * as ARC from './araclar.js?v=234';
 import * as OGRN from '../ogren.js?v=234';
+import * as KUR from './kurallar.js?v=234';
 export { altEkran, altAc, altKapat, ustCubuk };
 
 const SINAV_ALT = /^(deneme|araclar|test-ayar|tekrar|yanlislar)(:|$)/, ARAC_ALT = /^(tehlike|etkilesim|direksiyon)(:|$)/;
@@ -34,6 +35,7 @@ function sec(sekme, ctx) {
     const a = altEkran() || '';
     if (SINAV_ALT.test(a)) return SNV.altEkran(a, ctx);
     if (ARAC_ALT.test(a)) return ARC.altEkran(a, ctx);
+    if (a === 'kurallar') return KUR.ekran('ogrenci', { geriAttrs: { 'data-ox-alt': '' }, geriEtiket: 'Öğren', yenile: () => ctx.yenile(false) });
     return OGRN.ekran ? OGRN.ekran(ctx) : null;
   }
   return null;

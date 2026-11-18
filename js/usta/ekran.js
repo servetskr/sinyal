@@ -23,6 +23,7 @@ import * as OGR from './ogrenciler.js?v=234';
 import * as KZN from './kazanc.js?v=234';
 import * as DRS from './ders.js?v=234';
 import * as ARC from './arac.js?v=234';
+import * as KUR from '../ogr/kurallar.js?v=234';
 
 const oku = (a, d) => { try { return sessionStorage.getItem(a) || d; } catch (x) { return d; } };
 const yaz = (a, v) => { try { if (v) sessionStorage.setItem(a, v); else sessionStorage.removeItem(a); } catch (x) { } };
@@ -50,6 +51,7 @@ function veri(eg) {
 function sec(ctx) {
   if (DRS.aktif && DRS.aktif(ctx)) return DRS.ekran(ctx);
   if (ARAC_ALT.test(ctx.alt)) return ARC.altEkran(ctx.alt, ctx);
+  if (ctx.alt === 'kurallar') return KUR.ekran('usta', { geriAttrs: { 'data-ux-alt': '' }, geriEtiket: (USTA_SEKMELER.find(x => x[0] === ctx.sekme) || [])[1] || 'Bugün', yenile: () => ctx.yenile(false) });
   const m = MODUL[ctx.sekme]; return m && m.ekran ? m.ekran(ctx) : null;
 }
 const bul = id => S.dersler.find(x => x.id === id);

@@ -190,8 +190,9 @@ export function ekran(ctx) {
   } else if (!sd) govde = bittiKart(ctx) + eksikKart(ctx) + bitenler(ctx, biten, iptalsiz);
   else govde = siraKart(ctx, sd) + eksikKart(ctx) + program(ctx, kalanlar, aktifVar) + bitenler(ctx, biten, iptalsiz);
   const k2 = kutular(ctx);
+  const kural = liste([satir({ ikon: 'kalkan', baslik: 'Kurallar ve sık sorulanlar', alt: 'Ders, sınav ve görevle ilgili mevzuat', attrs: { 'data-ux-alt': 'kurallar' } })]);
   return {
-    html: ust(ctx, iptalsiz, yapilan) + govde + (k2 ? `<div class="ox-ubg-alt">${k2}</div>` : ''),
+    html: ust(ctx, iptalsiz, yapilan) + govde + `<div class="ox-ubg-alt">${k2}${kural}</div>`,
     baglan(kap) {
       clearInterval(sayac); sayac = null;
       const el = kap.querySelector('[data-ubg-sure]');
@@ -281,7 +282,7 @@ stilEkle('ox-ubg', `
 .ox-ubg-daha[aria-expanded=true] .ox-i{transform:rotate(180deg)}
 .ox-ubg-bek{color:#c26a00;font-weight:600}
 /* kutular */
-.ox-ubg-alt{margin-top:24px}
+.ox-ubg-alt{margin-top:24px}.ox-ubg-kutular+.ox-liste{margin-top:12px}
 .ox-ubg-kutular{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .ox-ubg-kutu{position:relative;display:flex!important;flex-direction:column;min-width:0;padding:12px 12px 14px 14px;text-align:left}
 .ox-ubg-kutu .ox-ubg-kutu-yazi{margin-top:auto}
