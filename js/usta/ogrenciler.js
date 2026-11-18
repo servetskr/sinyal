@@ -46,7 +46,7 @@ function ogrSatir(k) {
   const ilerleme = dir ? `<span class="ox-uog-il">${serit(dirSay(k).yuzde, k.direksiyon >= gerekliDireksiyon(k) ? 'yesil' : 'mavi', true)}<small>${dirSay(k).n} ders tamamlandı${dirSay(k).ek ? ` · ${dirSay(k).ek} ek ders` : ''}</small></span>` : '';
   const ad = esc(tamAd(k));
   return `<button type="button" class="ox-satir ox-uog-ogr" data-ogr-ac="${esc(k.id)}" data-uog-m="${esc(araMetin(tamAd(k) + ' ' + (k.tel || '') + ' ' + (k.no || '')))}" aria-label="${ad}${r ? ', ek çalışma öneriliyor' : ''}: ayrıntılar">
-    ${avatar(k)}<span class="ox-uog-ogr-g"><b>${ad}${r ? '<i class="ox-uog-nokta"></i>' : ''}</b><small>${sonraki}</small>${ilerleme}${r ? '<em class="ox-uog-risk">Ek çalışma öneriliyor</em>' : ''}</span><span class="ox-chev">${oi('sag')}</span></button>`;
+    ${avatar(k)}<span class="ox-uog-ogr-g"><b>${ad}${r ? '<i class="ox-uog-nokta"></i>' : ''}</b><small>${sonraki}${k.muaf ? ' · e-Sınav muaf' : ''}</small>${ilerleme}${r ? '<em class="ox-uog-risk">Ek çalışma öneriliyor</em>' : ''}</span><span class="ox-chev">${oi('sag')}</span></button>`;
 }
 function listeHtml(ctx) {
   const l = ctx.ogrenciler;
@@ -99,7 +99,7 @@ function ayrintiHtml(ctx, k) {
     gc ? `<span class="ox-uog-gece${gc.y >= gc.g ? ' tamam' : ''}"><svg class="ox-i" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>Gece dersi ${Math.min(gc.y, gc.g)}/${gc.g}</span>` : '',
     sd ? `<span>${oi('saat')}Sonraki ders: ${esc(sd.saat)} (${sdGun})</span>` : sv ? `<span>${oi('bayrak')}Sınav: ${gunAy(sv.tarih)} · ${esc(sv.saat)}</span>` : `<span>${oi('saat')}Planlı ders yok</span>`,
   ].filter(Boolean).join('');
-  const profil = `<div class="ox-kart ox-uog-profil"><div class="ox-uog-profil-ust">${avatar(k, 'buyuk')}<div class="ox-uog-profil-ad"><h1>${esc(tamAd(k))}</h1><p>${sinifYaz(k)}</p>${cip(esc(k.asama) + ' aşamasında', k.asama === 'Sınav' ? 'mor' : k.asama === 'Direksiyon' ? 'mavi' : 'gri')}</div></div>
+  const profil = `<div class="ox-kart ox-uog-profil"><div class="ox-uog-profil-ust">${avatar(k, 'buyuk')}<div class="ox-uog-profil-ad"><h1>${esc(tamAd(k))}</h1><p>${sinifYaz(k)}</p>${cip(esc(k.asama) + ' aşamasında', k.asama === 'Sınav' ? 'mor' : k.asama === 'Direksiyon' ? 'mavi' : 'gri')}${k.muaf ? ' ' + cip('e-Sınav muaf', 'yesil') : ''}</div></div>
     ${ayrac()}<div class="ox-uog-meta">${meta}</div>${gerekliDireksiyon(k) ? `<div class="ox-uog-profil-il">${serit(dirSay(k).yuzde, k.direksiyon >= gerekliDireksiyon(k) ? 'yesil' : 'mavi')}<small>${dirSay(k).n}/${dirSay(k).g}${dirSay(k).ek ? ` · ek ${dirSay(k).ek}` : ''}</small></div>` : ''}</div>`;
   const uyari = r ? `<div class="ox-uog-uyari" role="note">${oi('uyari')}<div><b>Ek çalışma öneriliyor</b>${r.nedenler.length ? `<p>${esc(r.nedenler.slice(0, 2).join(' · '))}</p>` : ''}</div></div>` : '';
   const ddSatir = dd

@@ -907,7 +907,7 @@ export function ogrenciAyril() { try { localStorage.removeItem('sinyal-ogrenci')
 // kurs verisinin tamamını değil yalnız bu belgeyi okur. Öğretmenin yaptıkları (ders başlat/bitir, imza, not, deneme) ustaGelen'e
 // yazılır, ofis cihazı denetleyip kayda işler. Kendi telefonunda değişiklik hemen görünür; ofiste mdSinyal açık değilse kayda sonra geçer.
 const DIZI_USTA = ['dersler', 'kursiyerler', 'gonderimler', 'imzaTalepleri', 'dersIptaller', 'islemler', 'pufGelen'];
-const KURSIYER_USTA = ['id', 'no', 'ad', 'soyad', 'tel', 'foto', 'sinif', 'asama', 'egitmen', 'sube', 'kapali', 'direksiyon', 'teorik', 'deneme', 'dDeneme', 'esinav', 'dsinav', 'kayit', 'teorikGrup', 'mevcutEhliyet', 'ekDersHakki', 'cinsiyet',
+const KURSIYER_USTA = ['id', 'no', 'ad', 'soyad', 'tel', 'foto', 'sinif', 'asama', 'egitmen', 'sube', 'kapali', 'direksiyon', 'teorik', 'deneme', 'dDeneme', 'esinav', 'dsinav', 'kayit', 'teorikGrup', 'mevcutEhliyet', 'ekDersHakki', 'cinsiyet', 'muaf',
   // öğrenciye özgü direksiyon saati (veri.js direksiyonAyrinti): müdürün elle girdiği değer, ders kuralı, mevcut belge ayrıntısı, ikinci dört hak
   'dersKural', 'gerekliElle', 'gerekliElleNot', 'ikinciHak', 'mevcutOtomatik', 'mevcutEski', 'oncekiBelge'];
 const DERS_KORUNAN = new Set(['id', 'kursiyer', 'egitmen', 'tarih', 'saat', 'arac', 'meb', 'mebDegisti', 'ogrenciOnay', 'ogrenciPuan', 'tur', 'kaynak', 'eklendi', 'onayBekliyor']);
