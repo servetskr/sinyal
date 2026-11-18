@@ -549,7 +549,7 @@ async function makbuzDenetle() {
   try {
     for (const h of benim) {
       const m = makbuzSira(h.no); if (!m) { delete h.noGecici; continue; }
-      const cakisan = S.hareket.some(x => x !== h && x.no === h.no);
+      const cakisan = S.hareket.some(x => x !== h && x.no === h.no && !(h.grup && x.grup === h.grup));  // PAR-061: parçalı ödemenin parçaları aynı numarayı taşır
       if (cakisan) { const eski = h.no, n = await sayacAyir(m[0]); h.no = makbuzBicim(m[0], n); islem('Makbuz numarası değişti', eski + ' başka cihazda da verilmişti; yeni numara ' + h.no); import('./ui.js?v=234').then(m => m.bildir(`Makbuz ${eski} çevrimdışıyken verilmişti ve başka cihazdaki makbuzla çakıştı; yeni numarası ${h.no}. Makbuzu verdiyseniz yenisini yazdırın.`, 'uyari')); }
       else await sayacAyir(m[0], m[1] - 1);
       delete h.noGecici;

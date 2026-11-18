@@ -3522,3 +3522,6 @@ button.rozet:focus-visible { outline: 2px solid var(--levha); outline-offset: 2p
 .kt-cip button svg { width: 14px; height: 14px; }
 .kt-ekle { display: flex; gap: 8px; margin-top: 8px; }
 .kt-ekle .girdi { flex: 1; min-width: 0; }
+/* PAR-061: parçalı ödeme */
+.parca-alan { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px 12px; margin-top: 8px; padding: 10px 12px; border: 1px dashed var(--cizgi); border-radius: 8px; }
+.parca-alan .tam { grid-column: 1 / -1; }
