@@ -2,10 +2,11 @@
 // Eski portal.js "Aracın" bölümü (model, plaka, bakıma kalan km), guzergah.js ustaHtml (güzergâhlar, püf noktaları, kursa iletilen notlar,
 // "Püf noktası ekle" formu: data-gz-usta, guzergah.js'teki ortak submit dinleyicisi işler) ve app.js hesap penceresi (Kursu ara, mdSinyal Destek:
 // data-destek, Çıkış yap / Kullanıcı değiştir: data-cikis; ikisi de app.js'teki belge dinleyicisinde çalışır) buraya taşındı.
-import { S, SINIFLAR, oturum, tarihOku } from '../veri.js?v=233';
-import { ayAdi, tarih } from '../ui.js?v=233';
-import { guzergahlar } from '../guzergah.js?v=233';
-import { esc, oi, sayfaBas, geri, bolum, kart, gorsel, dugme, satir, liste, radyo, ikonKutu, bos, not, stilEkle } from '../ogr/ui.js?v=233';
+import { S, SINIFLAR, oturum, tarihOku } from '../veri.js?v=234';
+import { ayAdi, tarih } from '../ui.js?v=234';
+import { guzergahlar } from '../guzergah.js?v=234';
+import { kisaMetin } from '../guncelleme.js?v=234';
+import { esc, oi, sayfaBas, geri, bolum, kart, gorsel, dugme, satir, liste, radyo, ikonKutu, bos, not, stilEkle } from '../ogr/ui.js?v=234';
 
 const geriBugun = () => geri('Bugün', { 'data-ux-alt': '' });
 const uzunTarih = t => { if (!t) return ''; const d = tarihOku(t); return d.getDate() + ' ' + ayAdi(d.getMonth(), true) + ' ' + d.getFullYear(); };
@@ -100,6 +101,8 @@ function hesapHtml(ctx) {
   const satirlar = [
     tel ? satir({ ikon: 'tel', baslik: 'Kursu ara', alt: esc(S.kurs.tel), etiket: 'a', attrs: { href: 'tel:' + tel } }) : '',
     satir({ ikon: 'mesaj', baslik: 'mdSinyal Destek', alt: 'Sorun, soru ya da istek bildir', attrs: { 'data-destek': true } }),
+    // kurulu sürüm ve güncelleme denetimi (tıklama js/guncelleme.js'te)
+    satir({ ikon: 'sifirla', ton: 'gri', baslik: 'Uygulama sürümü', alt: `<span data-sg-metin>${esc(kisaMetin())}</span>`, attrs: { 'data-sg-denetle': true } }),
   ].filter(Boolean);
   return geriBugun() + sayfaBas('Hesabım') + kim
     + `<div class="ox-uar-ara">${liste(satirlar)}</div>`

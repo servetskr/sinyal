@@ -1,12 +1,12 @@
 // Öğren: içerik haritası (ana ekran) ve modül sayfaları. Ders oynatıcı js/ogr/ders.js, ortak veri js/ogr/ogrveri.js.
-import { S, ogrOzellik } from './veri.js?v=233';
-import { e, ik } from './ui.js?v=233';
-import { MUFREDAT } from './ogrenci.js?v=233';
-import { UNITE_AD, ILKYARDIM_SVG, kapakSvg, konular, bitti, sonuc, siradaki, sayac, levhaYukle, veriler, altEkran, altAc, altKapat } from './ogr/ogrveri.js?v=233';
-import { dersBaslat } from './ogr/ders.js?v=233';
-import { SAHNELER } from './tehlike.js?v=233';
-import { yarim, yarimKart, yarimBagla } from './ogr/sinav.js?v=233';
-import { esc, oi, sayfaBas, geri, bolum, heroKart, gorsel, dugme, liste, satir, konuSatir, serit, bos, stilEkle } from './ogr/ui.js?v=233';
+import { S, ogrOzellik } from './veri.js?v=234';
+import { e, ik } from './ui.js?v=234';
+import { MUFREDAT } from './ogrenci.js?v=234';
+import { UNITE_AD, ILKYARDIM_SVG, kapakSvg, konular, bitti, sonuc, siradaki, sayac, levhaYukle, veriler, altEkran, altAc, altKapat } from './ogr/ogrveri.js?v=234';
+import { dersBaslat } from './ogr/ders.js?v=234';
+import { SAHNELER } from './tehlike.js?v=234';
+import { yarim, yarimKart, yarimBagla } from './ogr/sinav.js?v=234';
+import { esc, oi, sayfaBas, geri, bolum, heroKart, gorsel, dugme, liste, satir, konuSatir, serit, bos, stilEkle } from './ogr/ui.js?v=234';
 export { siradaki, dersBaslat };
 export const onYukle = cb => { if (!veriler().LV) levhaYukle().then(() => cb && cb()); };
 

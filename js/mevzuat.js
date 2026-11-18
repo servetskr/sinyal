@@ -1,10 +1,10 @@
 // Mevzuat uyum kuralları: ücret, tahsilat, iade, ücretsiz kontenjan, sınava hazır yazısı, planlama ve personel denetimleri.
 // Dayanak: Özel Öğretim Kurumları Yönetmeliği (RG 5/9/2025-33008 değişikliği: m.54, m.55/3, m.56/3-b, m.56/4), MTSK Yönetmeliği
 // (m.7/7 ve Danıştay 8. D. 8/10/2025 YD kararı, m.15, m.16/8, m.20, m.43), 5580 sayılı Kanun m.13 (%3 ücretsiz).
-import { S, gun, fark, SINIFLAR, SINIF_VARSAYILAN, tamAd, islem, kaydet, oturum, egitmen, sb, sbDers, gerekliDireksiyon, direksiyonAyrinti, ustaAraci } from './veri.js?v=233';
-import { e, tl, tarih, pencere, kapatPencere, bildir, belgeYazdir, isaret } from './ui.js?v=233';
-import { denetimUyarilari } from './denetim.js?v=233';
-import { kuralEkle } from './kurallar.js?v=233';
+import { S, gun, fark, SINIFLAR, SINIF_VARSAYILAN, tamAd, islem, kaydet, oturum, egitmen, sb, sbDers, gerekliDireksiyon, direksiyonAyrinti, ustaAraci } from './veri.js?v=234';
+import { e, tl, tarih, pencere, kapatPencere, bildir, belgeYazdir, isaret } from './ui.js?v=234';
+import { denetimUyarilari } from './denetim.js?v=234';
+import { kuralEkle } from './kurallar.js?v=234';
 
 const OOKY = 'Özel Öğretim Kurumları Yönetmeliği';
 const yil = () => gun(0).slice(0, 4);
@@ -95,7 +95,7 @@ export function hazirKarti(k) {
 }
 // öğrenci dosyasındaki tıklamalar (dosya yeniden çizildiği için olay yetkisiyle)
 export function hazirTikla(ev, k, yenile) {
-  if (ev.target.closest('[data-hazir-yazi]')) { import('./resmi.js?v=233').then(m => m.resmiAc('hazir', k.id)); return true; }
+  if (ev.target.closest('[data-hazir-yazi]')) { import('./resmi.js?v=234').then(m => m.resmiAc('hazir', k.id)); return true; }
   if (ev.target.closest('[data-hazir-yuklendi]')) { k.hazirYazi.yuklendi = gun(0); islem('Sınava hazır yazısını MEBBİS’e yükledi', tamAd(k)); kaydet(); bildir('Kaydedildi'); if (yenile) yenile(); return true; }
   return false;
 }

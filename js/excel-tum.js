@@ -1,6 +1,6 @@
 // Bütün veriler tek Excel dosyasında (çok sayfalı) + tam yedek (.json). Hizmet sözleşmesi kursa verisini istediği an
 // toplu alabileceğini söz veriyor: Ayarlar › Veri ve e-posta, Raporlar › Tam döküm ve aylık rapor e-postası bu modülü kullanır.
-import { S, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, SINIFLAR, gun } from './veri.js?v=233';
+import { S, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, SINIFLAR, gun } from './veri.js?v=234';
 
 // Excel hücresi en çok 32.767 karakter: daha uzun metin (gömülü dosya, imza) kısaltılır
 const t = x => (x === undefined || x === null ? '' : typeof x === 'string' && x.length > 32000 ? (x.startsWith('data:') ? '(dosya)' : x.slice(0, 32000) + '…') : x);
@@ -50,7 +50,7 @@ export function tumSayfalar(D = S) {
 }
 
 // Excel okuyucu yalnız gerektiğinde yüklenir (sayfalar5.js ile aynı kaynak)
-export const xlsxHazir = () => import('./sayfalar5.js?v=233').then(m => m.xlsxYukle());
+export const xlsxHazir = () => import('./sayfalar5.js?v=234').then(m => m.xlsxYukle());
 // aoa_to_sheet metni dize hücresi (t:'s') olarak yazar; .xlsx'te dize hücresi formül olarak çalışmaz, öne ' eklemek gerekmez
 // (eklenirse '+90… gibi telefonlarda görünür kalırdı). Formül riski yalnız CSV'de; o yol sayfalar5.js'te.
 export async function tumKitap(D = S) {

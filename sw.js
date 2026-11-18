@@ -2,6 +2,8 @@
 // WhatsApp köprüsü, yazı tipleri gibi dış istekler önbelleğe alınmaz.
 const ONBELLEK = 'sinyal-v7';  // sürüm değişince eski dosyalar silinir (v6: birikmiş eski sürümler ve sürüm sorguları temizlenir)
 self.addEventListener('install', () => self.skipWaiting());
+// "Şimdi güncelle" (js/guncelleme.js) bekleyen yeni servis çalışanını hemen devreye alır
+self.addEventListener('message', ev => { if (ev.data === 'atla') self.skipWaiting(); });
 self.addEventListener('activate', ev => ev.waitUntil(caches.keys().then(l => Promise.all(l.filter(k => k !== ONBELLEK).map(k => caches.delete(k)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', ev => {
   const r = ev.request, u = new URL(r.url);
@@ -25,7 +27,11 @@ self.addEventListener('fetch', ev => {
     })));
     return;
   }
-  ev.respondWith(fetch(taze ? new Request(r, { cache: 'no-cache' }) : r).then(yanit => {
+  // Site GitHub Pages'te: CDN sayfayı 10 dakika tutar ve tarayıcının no-cache isteğini dinlemez; yayından sonra yenileyen eski sürümü alıyordu.
+  // Sayfa açılışında (yalnız / ve .html ile biten adresler: yönlendirme olmaz) istek benzersiz bir ekle CDN'i atlar; sayfanın adresi değişmez.
+  const sayfa = r.mode === 'navigate' && /(\/|\.html)$/.test(u.pathname);
+  const istek = sayfa ? new Request(u.pathname + u.search + (u.search ? '&' : '?') + 'surum=' + Date.now().toString(36), { cache: 'no-store', credentials: 'same-origin', redirect: 'manual' }) : taze ? new Request(r, { cache: 'no-cache' }) : r;
+  ev.respondWith(fetch(istek).then(yanit => {
     if (yanit.ok) { const kopya = yanit.clone(); caches.open(ONBELLEK).then(c => c.put(u.origin + u.pathname, kopya)); }  // sorgu eki olmadan tek kayıt
     return yanit;
   }).catch(() => caches.match(r).then(x => x || caches.match(u.origin + u.pathname)).then(x => x || (r.mode === 'navigate' ? caches.match('./').then(y => y || caches.match('./index.html')).then(y => y || Response.error()) : Response.error()))));

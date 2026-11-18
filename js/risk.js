@@ -1,5 +1,5 @@
-import { S, gun, fark, SINIFLAR, egitmen, kapaliGun, dersAraci, risk, kursAdi } from './veri.js?v=233';
-import { gerekliDireksiyon, kuralAyar, geceKisitli, geceDersMi } from './veri.js?v=233';
+import { S, gun, fark, SINIFLAR, egitmen, kapaliGun, dersAraci, risk, kursAdi } from './veri.js?v=234';
+import { gerekliDireksiyon, kuralAyar, geceKisitli, geceDersMi } from './veri.js?v=234';
 
 const ort = l => l.length ? l.reduce((a, x) => a + x, 0) / l.length : null;
 export const riskliler = (l = S.kursiyerler) => l.map(k => ({ k, r: risk(k) })).filter(x => x.r && x.r.puan >= 25).sort((a, b) => b.r.puan - a.r.puan);
