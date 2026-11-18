@@ -45,7 +45,10 @@ function yereldenTeslim(r) {
 
 /* ---------- ekran haritası: mdSinyal sayfasından gelir, yalnız veri; denetlenmeden kullanılmaz ---------- */
 const SINYAL_KOKLER = ['https://mdsinyal.com', 'https://www.mdsinyal.com', 'https://servetskr.github.io'];
-const ACIK_ANAHTAR = null;   // imza istenirse: ECDSA P-256 açık anahtarı (JWK). null iken kaynak, sürüm ve şema denetlenir.
+// imza istenirse: ECDSA P-256 açık anahtarı (JWK). null iken kaynak, sürüm ve şema denetlenir.
+// MEB-110: anahtar ve imza sinyal-kaynak/arac/harita_imzala.mjs ile (anahtar → bu satıra yapıştırılacak JWK; imzala → harita.json'a "imza").
+// Özel anahtar yalnız yetkilinin bilgisayarında (depo dışında). Sınama: arac/mebbis-test/harita-imza-test.mjs (imzalı kabul, imzasız/bozuk ret).
+const ACIK_ANAHTAR = null;
 const KIMLIK = /^[A-Za-z0-9_$İıŞşĞğÜüÖöÇç]{1,64}$/, YOL = /^\/(SKT|Ookgm)\/[A-Za-z0-9]{3,20}\.aspx$/, DEGER = /^-?\d{1,4}(,-?\d{1,4}){0,15}$/;
 const YASAK = /sil|delete|iptal|kald[ıi]r|[çc][ıi]k[ıi][şs]|exit|logout/i, SURUM_D = /^\d{4}\.\d{2}\.\d{2}-\d{1,3}$/;
 const metinUygun = (v, n) => typeof v === 'string' && v.length <= n && !/[<>"'`\\{}]/.test(v);
@@ -207,6 +210,8 @@ async function isle(m, kimden) {
   if (m.tur === 'canli-al') return (await al('canli')) || null;
   if (m.tur === 'ilerleme-al') { const il = (await yerel('ilerleme')) || {}, t = await al('toplu'); return Object.values(il).map(r => ({ ...r, oturumda: !!(t && t.id === r.id) })); }
   if (m.tur === 'harita-koy') return haritaKoy(m.harita, kimden);
+  // MEB-173: İzle kipi açılınca işin yürüdüğü MEBBİS sekmesi öne gelir (yalnız MEBBİS sekmesinden gelen istek)
+  if (m.tur === 'izle-sekme') { const t = kimden && kimden.tab; if (!t || !/^https:\/\/mebbis\.meb\.gov\.tr\//.test(t.url || '')) return { ok: false }; try { await chrome.tabs.update(t.id, { active: true }); await chrome.windows.update(t.windowId, { focused: true }); } catch (x) { } return { ok: true }; }
   if (m.tur === 'harita-al') { const h = await yerel('harita'); return h && !haritaDenetle(h) ? { harita: h } : null; }
   if (m.tur === 'hedef-koy') { await koy('hedef', m.hedef); return { ok: true }; }
   if (m.tur === 'hedef-al') return (await al('hedef')) || null;

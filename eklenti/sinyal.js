@@ -6,7 +6,8 @@
 //         eklenti → sayfa: window.postMessage({kaynak:'sinyal-eklenti', tur, veri}). Bütün alanlar isteğe bağlıdır; bilinmeyen alan yok sayılır.
 // Sayfa → Yardımcı
 //   ping              {}                                   → merhaba {surum, ozellik[]} (+ biliniyorsa son harita-durum yeniden)
-//   toplu             {id, isId?, kurum, cek[], dosya[], yaz[], denetle?, onay?{kim,rol,zaman,surum,kurum,sube}, parca?{no,toplam,butceDk}}
+//   toplu             {id, isId?, kurum, cek[], dosya[], yaz[], denetle?, onay?{kim,rol,zaman,surum,kurum,sube}, parca?{no,toplam,butceDk},
+//                      ayar?{<okuma>:{…}} (1.17: okuma seçenekleri, ör. fotograf {tc}, sonuclar {gun}), izle? (1.17: MEB-173 İzle kipi)}
 //                     arka 'toplu-koy' → toplu-alindi {ok, id, sekme} | {mesgul:true, id (yarım iş), reddedilen (yeni iş), kalan, durum, mesaj}
 //                     denetle:true → "Ekranları denetle": motor yalnız GET yapar, sonuç sonuc.veri.denetim'de
 //                     kurum: motor açık MEBBİS hesabının kurum kodunu bununla karşılaştırır; uyuşmazsa hiçbir şey yazmaz (hataTur 'kurum')
@@ -32,7 +33,7 @@
 //   toplu-alindi · toplu-yuk-alindi · kuyruk-alindi · cek-alindi · tablo · bitenler · hatalar · temizlendi
 // =====
 const SURUM = chrome.runtime.getManifest().version;
-const OZELLIK = ['onayli-teslim', 'mesgul', 'durdur-kalici', 'harita', 'kurum', 'denetle', 'ekran-degisti', 'olcum'];
+const OZELLIK = ['onayli-teslim', 'mesgul', 'durdur-kalici', 'harita', 'kurum', 'denetle', 'ekran-degisti', 'olcum', 'izle', 'ayar'];
 const KOKLER = ['https://mdsinyal.com', 'https://www.mdsinyal.com', 'https://servetskr.github.io'];
 const sayfaya = (tur, veri) => window.postMessage({ kaynak: 'sinyal-eklenti', tur, veri }, location.origin);
 const gonder = m => new Promise(ok => { try { chrome.runtime.sendMessage(m, ok); } catch (x) { ok(null); } });
