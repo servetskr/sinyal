@@ -180,7 +180,7 @@ export function belgeHtml(tur, id, hid) {
     <p><b>1. Hizmet.</b> mdSinyal yazılımının tarayıcı ve telefon üzerinden kullanımı; kurulum, mevcut kayıtların aktarımı ve kullanıcılara kullanım eğitimi.</p>
     <p><b>2. Erişim ve destek.</b> Sağlayıcı hizmetin kesintisiz çalışması için gereken özeni gösterir. Planlı bakım önceden bildirilir. Destek WhatsApp üzerinden verilir.</p>
     <p><b>3. Mevzuat.</b> mdSinyal’in MEB kural kontrolleri yardımcıdır; kuralın kaynağı ekranda gösterilir. MEBBİS’e girilen bilginin doğruluğu ve son karar Kurs’tadır.</p>
-    <p><b>4. Veriler.</b> Kurs veri sorumlusu, Sağlayıcı veri işleyendir (ayrı Veri İşleme Sözleşmesi). Veriler bulutta (Google Firebase) şifreli saklanır. Kurs istediği an tüm verisini indirebilir.</p>
+    <p><b>4. Veriler.</b> Kurs veri sorumlusu, Sağlayıcı veri işleyendir (ayrı Veri İşleme Sözleşmesi). Veriler bulutta şifreli saklanır. Kurs istediği an tüm verisini indirebilir.</p>
     <p><b>5. Ücret.</b> Ücret ve ödeme koşulları bu sözleşmenin ekinde belirlenir.</p>
     <p><b>6. Fesih.</b> Taraflar ekte belirtilen bildirim süresiyle sözleşmeyi feshedebilir. Sözleşme bitince veriler 30 gün içinde Excel ve tam yedek dosyası olarak teslim edilir; ardından veriler ve bütün yedekleri en geç 30 gün içinde silinir.</p>
     <div class="imza">${imzaKisi('Kurs', kursAdina())}<div>Sağlayıcı</div></div>`;
@@ -196,7 +196,7 @@ export function belgeHtml(tur, id, hid) {
     <tr><th>MEBBİS Yardımcısı (Chrome eklentisi)</th><td>Kurs’un kendi bilgisayarındaki Chrome’da, Kurs’un açtığı MEBBİS sekmesinde çalışır. Gidecek kayıtlar ve sonuçlar yalnız o bilgisayardaki tarayıcının oturum deposunda tutulur; tarayıcı kapanınca silinir. Eklentinin yerel deposunda kalıcı olarak yalnız kişisel veri içermeyenler saklanır: ekran ayarları, alan eşlemeleri, mdSinyal’den gelen ekran haritası ve iş ilerlemesi (iş kimlikleri ile yazıldı/yazılamadı bilgisi; ad, TC ve MEBBİS mesajı yok). Sağlayıcı’nın sunucusuna veri göndermez. Güvenlik kodunu ve geri alınamaz adımları Kurs yetkilisi yapar; yetkili işi istediği an durdurabilir. Yardımcı kullanılmadan her iş elle de yapılabilir.</td></tr>
     <tr><th>Biyometrik fotoğraf</th><td>Özel nitelikli veridir. Yalnız MEBBİS kaydı ve kurs belgeleri için işlenir; yüz tanıma ya da başka bir amaçla kullanılmaz. MEBBİS ölçüsüne (350×450) Kurs’un tarayıcısında çevrilir. Erişim rol yetkisiyle sınırlıdır. Kursiyer kaydı silinince ya da anonimleştirilince fotoğraf da silinir.</td></tr>
     <tr><th>Güvenlik önlemleri</th><td>Aktarımda ve depolamada şifreleme, kullanıcıya özel giriş, rol bazlı yetki, işlem kaydı, günlük yedek, TC kimlik numaralarının ekranda gizlenmesi</td></tr>
-    <tr><th>Alt işleyenler</th><td>Google (barındırma), Meta/WhatsApp (mesaj iletimi), Cloudflare (mesaj köprüsü ve kısa bağlantılar); Kurs’un seçtiği e-Arşiv entegratörü ve ödeme kuruluşu. Alt işleyen değişikliği Kurs’a önceden bildirilir; Kurs itiraz ederse sözleşmeyi bedelsiz feshedebilir.</td></tr>
+    <tr><th>Alt işleyenler</th><td>barındırma ve yedekleme hizmeti sağlayıcıları, WhatsApp mesaj iletimi (Meta), mesaj köprüsü ve kısa bağlantı hizmeti; unvanları imzalı ekte yazılır; Kurs’un seçtiği e-Arşiv entegratörü ve ödeme kuruluşu. Alt işleyen değişikliği Kurs’a önceden bildirilir; Kurs itiraz ederse sözleşmeyi bedelsiz feshedebilir.</td></tr>
     <tr><th>Personel</th><td>Verilere erişen Sağlayıcı personeli gizlilik yükümlülüğü altındadır; erişim yalnızca destek ve aktarım için gerektiği ölçüde yapılır ve işlem kaydına yazılır.</td></tr>
     <tr><th>İlgili kişi başvuruları</th><td>Kurs’a yapılan KVKK başvurularında Sağlayıcı gereken bilgiyi ve teknik desteği gecikmeksizin sağlar.</td></tr>
     <tr><th>İhlal bildirimi</th><td>Sağlayıcı bir veri ihlalini öğrendiği anda, gecikmeksizin ve en geç 24 saat içinde Kurs’a bildirir; Kurs’un Kurul’a ve ilgili kişilere bildirim yükümlülüğüne destek olur.</td></tr>
@@ -206,7 +206,7 @@ export function belgeHtml(tur, id, hid) {
   // aydinlatma: veri konumu metne yazılmaz (ürün kararı); ayardaki 'konum' burada kullanılmaz
   if (tur === 'aydinlatma') { const v = S.sosyal ? S.sosyal.ayar.veri : { saklamaAy: 12 }; return kursBas('Mesajlaşma kanalları aydınlatma metni') + `<p>${e(S.kurs.ad)} olarak Instagram, Facebook ve WhatsApp üzerinden bize yazdığınız mesajları; kurs hakkında bilgi vermek, kayıt görüşmesi ayarlamak ve sizi geri aramak amacıyla işliyoruz.</p>
       <p>Mesajlarınıza ilk olarak kursun otomatik asistanı cevap verir. Asistan yalnızca kursun onayladığı bilgileri kullanır; cevabını bilmediği soruları, sağlık durumu, şikâyet ve pazarlık gibi konuları kurs yetkilisine aktarır.</p>
-      <p>Mesajlarınız bulut altyapısında, aktarımda ve depolamada şifrelenerek işlenir; kişisel verilerin yurt dışına aktarılması gerektiğinde KVKK’nın 9. maddesine uyulur. Konuşmalar ${v.saklamaAy} ay saklanır, ardından silinir.</p>
+      <p>Mesajlarınız bulut altyapısında, aktarımda ve depolamada şifrelenerek işlenir; kişisel verilerin aktarılması gerektiğinde KVKK’nın 8. ve 9. maddelerine uyulur. Konuşmalar ${v.saklamaAy} ay saklanır, ardından silinir.</p>
       <p>KVKK’nın 11. maddesi kapsamındaki haklarınız (bilgi talep etme, düzeltme, silme, itiraz) için ${e(S.kurs.tel)} numarasından ya da kursa yazılı olarak başvurabilirsiniz.</p>`; }
   if (tur === 'program') {
     const eg = egitmen(id), gunler = []; for (let n = 0; n < 7; n++) gunler.push(gun(n));
@@ -553,9 +553,9 @@ export function guven() {
     <div class="kart guven-kahraman"><div>
       <small>Verileriniz nerede durur?</small>
       <h2>Google’ın bulut altyapısında, şifreli.</h2>
-      <p>Kurs hesabında öğrenci, ödeme ve ders kayıtlarınız bulutta (Google Firebase) şifreli olarak tutulur. Kurs bilgisayarında veri durmaz: bilgisayar bozulsa, çalınsa ya da virüs bulaşsa da kayıtlarınız kaybolmaz.</p>
+      <p>Kurs hesabında öğrenci, ödeme ve ders kayıtlarınız bulutta şifreli olarak tutulur. Kurs bilgisayarında veri durmaz: bilgisayar bozulsa, çalınsa ya da virüs bulaşsa da kayıtlarınız kaybolmaz.</p>
       <p class="guven-not">${bulutta ? 'Bu hesabın kayıtları şu an bulutta duruyor; internet kesilirse cihazda bekler, bağlantı gelince gönderilir.' : 'Bu demoda veriler yalnız açık olduğu tarayıcıda durur; hiçbir sunucuya gönderilmez.'}</p>
-    </div><div class="guven-katman" aria-hidden="true">${[['Kurs ekranı', 'tarayıcı · telefon'], ['Şifreli bağlantı', 'HTTPS'], ['Bulut', 'Google Firebase · şifreli'], ['Günlük yedek', 'geri dönüş']].map(([a, b], n) => `<div style="--n:${n}"><b>${a}</b><small>${b}</small></div>`).join('')}</div></div>
+    </div><div class="guven-katman" aria-hidden="true">${[['Kurs ekranı', 'tarayıcı · telefon'], ['Şifreli bağlantı', 'HTTPS'], ['Bulut', 'şifreli saklama'], ['Günlük yedek', 'geri dönüş']].map(([a, b], n) => `<div style="--n:${n}"><b>${a}</b><small>${b}</small></div>`).join('')}</div></div>
     <div class="ara-bosluk"></div>
     <div class="izgara iz-2">
       <div class="kart"><div class="kart-bas"><h3>Kim neyi görür, ne yapar</h3></div><ul class="liste" style="margin-top:8px">
@@ -570,7 +570,7 @@ export function guven() {
       <div class="kart"><div class="kart-bas"><h3>Saldırı ya da arıza olursa</h3></div><ul class="liste" style="margin-top:8px">
         ${madde('tamam', 'Şifreli bağlantı ve şifreli depolama', 'Ekranla sunucu arasındaki her şey şifreli (HTTPS) gider; veriler Google’ın sunucularında şifreli saklanır. Kursa üye olmayan hiçbir hesap kayıtları okuyamaz.', 'Bugün')}
         ${madde('tamam', 'İki cihaz aynı anda çalışabilir', 'Ön büro ve müdür aynı anda kayıt girse de iki değişiklik de korunur; ekranlar birkaç saniyede güncellenir.', 'Bugün')}
-        ${madde('tamam', 'Her gün otomatik yedek, iki ayrı yerde', 'Her gün ilk açılışta kursun bütün kayıtları iki ayrı yere kopyalanır. Google Firebase’de son 31 günün her günü ve son 12 ayın her ayının ilk yedeği durur; Cloudflare’deki ikinci kopya 35 gün durur. Yedekler değiştirilemez, kurs hesabından 30 günden önce silinemez; müdür tek tuşla istediği güne döner.', 'Bugün')}
+        ${madde('tamam', 'Her gün otomatik yedek, iki ayrı yerde', 'Her gün ilk açılışta kursun bütün kayıtları iki ayrı yere kopyalanır. Birinci kopyada son 31 günün her günü ve son 12 ayın her ayının ilk yedeği durur; ayrı bir altyapıdaki ikinci kopya 35 gün durur. Yedekler değiştirilemez, kurs hesabından 30 günden önce silinemez; müdür tek tuşla istediği güne döner.', 'Bugün')}
         ${madde('tamam', 'Belgeler ayrı ve korumalı', 'Öğrencinin telefonundan yüklediği sağlık raporu, adli sicil ve fotoğraflar ayrı belgelerde durur; yalnız kursun kullanıcıları açabilir, her açılış kayda geçer.', 'Bugün')}
         ${madde('tamam', 'İşlem kaydı sunucuda, silinemez', 'mdSinyal’de yapılan giriş, çıkış, değişiklik ve belge açma işlemleri kim yaptı, ne zaman yaptı bilgisiyle sunucuya yazılır; yazılan kayıtları müdür dahil kimse değiştiremez ya da silemez.', 'Bugün')}
         ${madde('tamam', 'USB’ye yedek, uzaktan bağlanma yok', 'Yedek almak için flaş bellek, destek için bilgisayarınıza uzaktan bağlanma programı gerekmez.', '')}
@@ -586,7 +586,7 @@ export function guven() {
       <div class="kart"><div class="kart-bas"><h3>KVKK</h3></div><ul class="liste" style="margin-top:8px">
         ${madde('tamam', 'Aydınlatma ve açık rıza kayıtta alınır', 'Kayıt penceresinde ve kayıt formunda aydınlatma metni gösterilir, onay kaydedilir.', 'Bugün')}
         ${madde('bilgi', 'Kurs veri sorumlusu, mdSinyal veri işleyen', 'Aradaki sorumluluklar veri işleme sözleşmesinde yazılı olur.', '')}
-        ${madde('bilgi', 'Yurt dışına aktarım', 'Bulut altyapısının sunucuları yurt dışında bulunduğu için KVKK’nın 9. maddesine göre standart sözleşme imzalanır ve Kurul’a bildirilir. Kurulumda birlikte yapılır.', 'Kurulumda')}
+        ${madde('bilgi', 'Altyapı sağlayıcılarına aktarım', 'Hizmet alınan altyapı sağlayıcılarına aktarım KVKK’nın 8. ve 9. maddelerine uygun yapılır; gereken sözleşme ve bildirimler kurulumda birlikte yapılır.', 'Kurulumda')}
       </ul></div>
     </div>`,
     baglan(k) {
