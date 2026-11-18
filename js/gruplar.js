@@ -43,6 +43,19 @@ export const muafSonGun = t => { const d = new Date(t + 'T12:00:00'); d.setFullY
 // Model: k.muaf = { dayanak: '15/5', sonSinav, son, kaynak: 'elle'|'MEBBİS', not }. Eski kayıtlarda yalnız esinavTarih var: o tarih son sınav sayılır.
 export const muafSonSinav = k => (k && k.muaf && (k.muaf.sonSinav || k.muaf.esinavTarih)) || '';
 export const muafMi = (k, gunu) => { const t = muafSonSinav(k), g = gunu || (k && k.kayit) || gun(0); return !!t && t <= g && g <= muafSonGun(t); };
+// Muafiyet önerisi (TEO-002): MEBBİS aday dosyasından (SKT02009) teoriği geçtiğine dair iz ve son girdiği sınav. Hiçbiri kendiliğinden işaretlemez.
+// İz: MEBBİS durumunda 'muaf', e-sınav satırında 70 ve üstü puan, ikinci direksiyon aşamasına geçiş tarihi. Son sınav: kayıttan önceki e-sınav ve uygulama sınavlarının en geçi.
+export function muafiyetOnerisi(k) {
+  const m = (k && k.meb) || {}; if (!k || k.muaf) return null;
+  const once = t => t && (!k.kayit || t <= k.kayit);
+  const es = (m.esinavlar || []).filter(x => once(x.tarih)), uy = (m.uygulamaSinavlari || []).filter(x => once(x.tarih));
+  const iz = [/muaf/i.test(m.durum || '') ? 'MEBBİS durumu “' + m.durum + '”' : '', es.some(x => x.puan >= 70) ? 'e-sınavı ' + Math.max(...es.filter(x => x.puan >= 70).map(x => x.puan)) + ' puanla geçmiş' : '', m.ikinciDireksiyon && once(m.ikinciDireksiyon) ? 'ikinci direksiyon aşamasına geçmiş (' + m.ikinciDireksiyon.split('-').reverse().join('.') + ')' : ''].filter(Boolean);
+  if (!iz.length) return null;
+  const sonSinav = [...es.map(x => x.tarih), ...uy.map(x => x.tarih)].sort().pop() || '';
+  if (!sonSinav) return { iz, sonSinav: '', son: '', gecerli: null, metin: `MEBBİS’e göre teoriği geçmiş (${iz.join(', ')}); son girdiği sınavın tarihi bilinmiyor, muafiyet için elle girin.` };
+  const son = muafSonGun(sonSinav), gecerli = (k.kayit || gun(0)) <= son;
+  return { iz, sonSinav, son, gecerli, kaynak: /muaf/i.test(m.durum || '') ? 'mebbis' : '15/5', metin: gecerli ? `MEBBİS’e göre e-sınavdan muaf olabilir: ${iz.join(', ')}; son sınav ${sonSinav.split('-').reverse().join('.')}, muafiyet ${son.split('-').reverse().join('.')}’e kadar.` : `Muafiyet süresi ${son.split('-').reverse().join('.')}’te doldu (son sınav ${sonSinav.split('-').reverse().join('.')}); e-sınava girmesi gerekir.` };
+}
 export const muafKaydi = (sonSinav, kaynak = 'elle', not = '') => ({ dayanak: '15/5', sonSinav, son: muafSonGun(sonSinav), kaynak, ...(not ? { not } : {}), esinavTarih: sonSinav });
 
 /* ---------- bekleyen / aktif ---------- */
