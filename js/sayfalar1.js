@@ -1,4 +1,4 @@
-import { cokSube, izinDurumu, mebIsGunuIleri, mebIsGunuGeri as KR_SON, dersBitisi, sinavGecmisi, hakDurumu, islemYetkili, gordu, satirUcretKaynagi, makbuzNoVer, taksitAyar, taksitSiniri, taksitVade, bankaHesaplari, varsayilanHesap, kursiyerDersleri, kayitDondurmaMi, planAyar, dersSaatleri, EGITIM_TURU, egitimTuruOf, mebEtiketleri, dersSayaci, arifeMi, ustaRengi, haftalikSinir, haftaDers, ekDersFiyat, ozelDersFiyat, uygulamaSinavUcreti, esinavUcreti, digerUcretler, odemeKodu, ibanMetni, dersSirasi, S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, risk, BECERI, islem, geriAlNoktasi, oturum, tcGecerli, tcMaskele, DERS_TUR_AD, ek3Sinif, ogretmen, yas, mebOnKontrol, sb, sbDers, sbSinav, kapaliGun, ustaAraci, dersAraci, yerelZaman, aktifSiniflar, satistaSiniflar, YONTEMLER, yontemAd, ayEkle, gecikenTutar, selam, kursAdi, tuketim, beklenenTuketim, mudurTel, evrakKaynak, tutarOku, taksitBol, ayniTcKayit, dersIptalIz, egitimSinifi, ekTur, aracSiniflari, kursiyerTaban, tabanListesi, ekDersTabani, ozelDersTabani, programUyarisi, varsayilanYontem, teorikVar, belgeliMi, esinavsizBelgeli, teorikSaat, TEORIK_MUAF_DERS, dersKonulariResmi } from './veri.js?v=234';
+import { asamaFarki, cokSube, izinDurumu, mebIsGunuIleri, mebIsGunuGeri as KR_SON, dersBitisi, sinavGecmisi, hakDurumu, islemYetkili, gordu, satirUcretKaynagi, makbuzNoVer, taksitAyar, taksitSiniri, taksitVade, bankaHesaplari, varsayilanHesap, kursiyerDersleri, kayitDondurmaMi, planAyar, dersSaatleri, EGITIM_TURU, egitimTuruOf, mebEtiketleri, dersSayaci, arifeMi, ustaRengi, haftalikSinir, haftaDers, ekDersFiyat, ozelDersFiyat, uygulamaSinavUcreti, esinavUcreti, digerUcretler, odemeKodu, ibanMetni, dersSirasi, S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, risk, BECERI, islem, geriAlNoktasi, oturum, tcGecerli, tcMaskele, DERS_TUR_AD, ek3Sinif, ogretmen, yas, mebOnKontrol, sb, sbDers, sbSinav, kapaliGun, ustaAraci, dersAraci, yerelZaman, aktifSiniflar, satistaSiniflar, YONTEMLER, yontemAd, ayEkle, gecikenTutar, selam, kursAdi, tuketim, beklenenTuketim, mudurTel, evrakKaynak, tutarOku, taksitBol, ayniTcKayit, dersIptalIz, egitimSinifi, ekTur, aracSiniflari, kursiyerTaban, tabanListesi, ekDersTabani, ozelDersTabani, programUyarisi, varsayilanYontem, teorikVar, belgeliMi, esinavsizBelgeli, teorikSaat, TEORIK_MUAF_DERS, dersKonulariResmi } from './veri.js?v=234';
 import * as MN from './mebnorm.js?v=234';
 import * as CR from './cari.js?v=234';
 import * as SG from './sinavgunu.js?v=234';
@@ -1140,9 +1140,34 @@ function mebteKarti(k) {
 }
 // KAY-080..083: MEBBİS'le farklı alanlar; ad soyad, cinsiyet ve mevcut belge tek dokunuşla alınır (sertifika sınıfı ücret ve sözleşmeye dokunduğu için ayrı pencerede, KAY-004)
 const MF_AL = ['Ad soyad', 'Cinsiyet', 'Mevcut belge'];
+// MEB-049: aşama farkında güvenli dört düzeltme (her biri onaylı); MEB-051: 'Böyle kalsın' (k.mebKabul, mebtoplu kabulAnahtar ile aynı biçim)
+const MF_EYLEM = { ehliyet: 'Ehliyet aşamasına al', direksiyon: 'Direksiyona geçir', ikinci: 'İkinci dört hakkı başlat', kapat: 'Kaydı kapat' };
+const mfKabulAnahtar = z => [z[0], z[1], z[2]].map(v => String(v == null ? '' : v)).join('|');
 function mebFarkHtml(k) {
   const l = ((k.mebFark || {}).fk || []); if (!l.length) return '';
-  return `<div class="meb-fark"><b>MEBBİS’le farklı (${l.length})</b><ul>${l.map(([alan, meb, yerel], i) => `<li><div><span>${e(alan)}</span><small>MEBBİS: <b>${e(meb)}</b> · mdSinyal: ${e(yerel || '—')}</small></div>${MF_AL.includes(alan) ? `<button type="button" class="dg dg-cizgi dg-kucuk" data-mf-al="${i}">MEBBİS’tekini al</button>` : alan === 'Sertifika sınıfı' || alan === 'Şanzıman' ? `<button type="button" class="dg dg-cizgi dg-kucuk" data-mf-sinif="${e(alan === 'Şanzıman' ? (meb === 'Otomatik' ? 'B-O' : 'B') : meb)}">Sınıfı değiştir</button>` : ''}</li>`).join('')}</ul></div>`;
+  const af = l.some(z => z[0] === 'Aşama') ? asamaFarki(k) : null;
+  return `<div class="meb-fark"><b>MEBBİS’le farklı (${l.length})</b><ul>${l.map(([alan, meb, yerel], i) => `<li><div><span>${e(alan)}</span><small>MEBBİS: <b>${e(meb)}</b> · mdSinyal: ${e(yerel || '—')}</small></div>${MF_AL.includes(alan) ? `<button type="button" class="dg dg-cizgi dg-kucuk" data-mf-al="${i}">MEBBİS’tekini al</button>` : alan === 'Sertifika sınıfı' || alan === 'Şanzıman' ? `<button type="button" class="dg dg-cizgi dg-kucuk" data-mf-sinif="${e(alan === 'Şanzıman' ? (meb === 'Otomatik' ? 'B-O' : 'B') : meb)}">Sınıfı değiştir</button>` : alan === 'Aşama' && af && af.eylem ? `<button type="button" class="dg dg-cizgi dg-kucuk" data-mf-asama="${e(af.eylem)}" title="${e(af.mesaj)}">${MF_EYLEM[af.eylem]}</button>` : ''}<button type="button" class="dg dg-hafif dg-kucuk" data-mf-kabul="${i}" title="Bu fark aynı değerlerle bir daha sorulmaz; değer değişirse yeniden çıkar">Böyle kalsın</button></li>`).join('')}</ul>${af ? `<small style="display:block;color:var(--soluk);margin-top:6px">${e(af.mesaj)}</small>` : ''}</div>`;
+}
+function mebFarkKabul(k, i) {
+  const fk = (k.mebFark || {}).fk || [], z = fk[i]; if (!z) return;
+  k.mebKabul = { ...(k.mebKabul || {}), [mfKabulAnahtar(z)]: { kim: (oturum.kullanici || {}).ad || '', zaman: new Date().toISOString() } };
+  fk.splice(i, 1); if (!fk.length) k.mebFark = null;
+  islem('MEBBİS farkını olduğu gibi bıraktı', `${tamAd(k)} · ${z[0]}: MEBBİS ${z[1]} · mdSinyal ${z[2] || '—'}`); kaydet(); bildir('Fark kapatıldı; MEBBİS’teki değer değişirse yeniden gösterilir'); yenile();
+}
+function asamaDuzelt(k, eylem) {
+  const af = asamaFarki(k); if (!af || af.eylem !== eylem) return bildir('Bu fark artık geçerli değil; MEBBİS’ten yeniden güncelleyin', 'uyari');
+  const bitir = (ne, ay) => { const fk = ((k.mebFark || {}).fk || []).filter(z => z[0] !== 'Aşama'); k.mebFark = fk.length ? { ...k.mebFark, fk } : null; islem(ne, `${tamAd(k)} · ${ay} · MEBBİS: ${af.meb}`); kaydet(); kapatPencere(); yenile(); };
+  if (eylem === 'kapat') return kayitKapat(k, `MEBBİS’te “${af.meb}” görünüyor`);
+  if (eylem === 'ikinci') { if (!k.hakBitti) k.hakBitti = { tur: 'Direksiyon', tarih: (k.dsinav && k.dsinav.tarih) || '' }; return hakKarar(k, 'ikinci', 0, { tarih: (k.meb || {}).ikinciDireksiyon || '' }); }
+  const ehl = eylem === 'ehliyet';
+  pencere({ baslik: MF_EYLEM[eylem], icerik: `<p style="font-size:14px">${e(tamAd(k))}: mdSinyal’de <b>${e(af.sinyal)}</b>, MEBBİS’te <b>${e(af.meb)}</b>.</p>
+      ${ehl ? `<p style="font-size:13.5px;margin-top:8px">Aşama <b>Ehliyet</b> olur. Ödeme ve dosya kapanışı ayrıca izlenir.</p>` : `<div class="alan" style="margin-top:12px"><label for="as-neden">Neden? (zorunlu)</label><select id="as-neden" class="girdi"><option value="">Seçin</option><option>e-sınavı geçti</option><option>e-sınavdan muaf</option><option>belgeli (e-sınavsız)</option></select></div>`}
+      <small style="display:block;color:var(--soluk);margin-top:8px">İşlem kaydına yazılır; Geri al ile dönülebilir.</small>`,
+    altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-as-onay>${MF_EYLEM[eylem]}</button>`,
+    onAc(p) { p.querySelector('[data-as-onay]').addEventListener('click', () => {
+      const n = ehl ? '' : p.querySelector('#as-neden').value; if (!ehl && !n) return bildir('Nedeni seçin', 'uyari');
+      geriAlNoktasi(); const eski = k.asama; k.asama = ehl ? 'Ehliyet' : 'Direksiyon';
+      bitir('Aşamayı MEBBİS’e göre değiştirdi', `${eski} → ${k.asama}${n ? ' · neden: ' + n : ''}`); bildir(`${tamAd(k)}: aşama ${k.asama}`); }); } });
 }
 const buyukHarfDuzelt = t => String(t || '').toLocaleLowerCase('tr').replace(/(^|\s)(\S)/g, (m, a, b) => a + b.toLocaleUpperCase('tr'));
 function mebFarkAl(k, i) {
@@ -1959,6 +1984,8 @@ ${mesajlar.length ? '' : '<li style="color:var(--soluk)">Bu kursiyere henüz mes
         { const rk = ev.target.closest('[data-rz-kayit]'); if (rk) { const r = (k.rezervasyonlar || []).find(x => x.id === rk.dataset.rzKayit); if (r) return kursiyerFormu({ ad: k.ad, soyad: k.soyad, tel: k.tel, tc: k.tc, dogumTarihi: k.dogumTarihi, cinsiyet: k.cinsiyet, sinif: r.sinif, rezervasyon: k.id + '|' + r.id }); } }
         { const rs = ev.target.closest('[data-rz-sil]'); if (rs) { k.rezervasyonlar = (k.rezervasyonlar || []).filter(x => x.id !== rs.dataset.rzSil); islem('Sonraki sınıf sırasından çıkardı', tamAd(k)); kaydet(); return yenile(); } }
         { const ma = ev.target.closest('[data-mf-al]'); if (ma) return mebFarkAl(k, +ma.dataset.mfAl); }  // KAY-080..083
+        { const mk = ev.target.closest('[data-mf-kabul]'); if (mk) return mebFarkKabul(k, +mk.dataset.mfKabul); }  // MEB-051
+        { const mz = ev.target.closest('[data-mf-asama]'); if (mz) return asamaDuzelt(k, mz.dataset.mfAsama); }  // MEB-049
         { const ms = ev.target.closest('[data-mf-sinif]'); if (ms) return sinifFarkPenceresi(k, ms.dataset.mfSinif); }  // KAY-004
         { const gb = ev.target.closest('[data-giris-belgesi]'); if (gb) { const s = S.sinavlar.find(x => x.id === gb.dataset.girisBelgesi); if (!s) return; s.girisBelgesi = { ...(s.girisBelgesi || {}) }; if (s.girisBelgesi[k.id]) delete s.girisBelgesi[k.id]; else s.girisBelgesi[k.id] = gun(0); islem(s.girisBelgesi[k.id] ? 'Sınav giriş belgesi alındı işaretledi' : 'Sınav giriş belgesi işaretini kaldırdı', tamAd(k) + ' · ' + s.tur + ' ' + tarih(s.tarih)); kaydet(); return yenile(); } }  // SNV-082/083
         { const mm = ev.target.closest('[data-mazeret-mem]'); if (mm) { const m = (k.mazeretler || []).find(x => x.id === mm.dataset.mazeretMem); if (m) { m.memIletildi = gun(0); islem('Mazeret belgesini MEM’e iletti', tamAd(k) + ' · ' + tarih(m.sinavTarihi)); kaydet(); yenile(); } return; } }

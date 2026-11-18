@@ -542,6 +542,54 @@ export const ayEkle = (t, n) => { const d = tarihOku(t), g = d.getDate(); d.setD
 export const isGunuSay = (bas, bit) => mebIsGunuSay(bas, bit);
 
 export const ASAMALAR = ['Kayıt', 'Evrak', 'Teorik', 'Direksiyon', 'Sınav', 'Ehliyet'];
+// MEB-047: MEBBİS SKT02006 'Öğrenci Durumu' (cmbOgrenciDurumu, 19 değer; 16–21 yok) → mdSinyal aşamaları. Eşleme kodla; metinden kod yalnız kod yoksa.
+// tur: aktif (süreç sürüyor) · kapanis (dosya kapanır) · etiket (aşama söylemez; ceza, dondurma, kayıt dışı, ücretsiz, A1/125 CC)
+export const MEB_DURUM = {
+  0: { ad: 'Kursa Başvuru Aşamasında', asamalar: ['Kayıt', 'Evrak', 'Teorik'], tur: 'aktif' },
+  1: { ad: 'Teorik Sınav Aşamasında', asamalar: ['Teorik'], tur: 'aktif' },
+  2: { ad: 'Uygulama Sınav Aşamasında', asamalar: ['Direksiyon', 'Sınav'], tur: 'aktif' },
+  3: { ad: 'Teorik Sınav Hakkı Doldu', asamalar: ['Teorik'], tur: 'kapanis' },
+  4: { ad: 'Uygulama Sınav Hakkı Doldu', asamalar: ['Direksiyon', 'Sınav'], tur: 'kapanis' },
+  5: { ad: 'Sertifika Almaya Hak Kazandı', asamalar: ['Ehliyet'], tur: 'aktif' },
+  6: { ad: 'Sertifikası İptal Edildi', asamalar: [], tur: 'kapanis' },
+  7: { ad: 'e-Sınav Aşamasında', asamalar: ['Teorik'], tur: 'aktif' },
+  8: { ad: 'e-Sınav Test Aşamasında', asamalar: ['Teorik'], tur: 'aktif' },
+  9: { ad: 'e-Sınavdan Başarısız Oldu', asamalar: ['Teorik'], tur: 'aktif' },
+  10: { ad: 'e-Sınav Hakkı Doldu', asamalar: ['Teorik'], tur: 'kapanis' },
+  11: { ad: 'Kaydı Silindi', asamalar: [], tur: 'kapanis' },
+  12: { ad: 'Ceza Kaydı Var', asamalar: [], tur: 'etiket' },
+  13: { ad: 'Kayıt Dondurma', asamalar: [], tur: 'etiket' },
+  14: { ad: 'Kayıt Dışı Aday', asamalar: [], tur: 'etiket' },
+  15: { ad: 'Ücretsiz Aday', asamalar: [], tur: 'etiket' },
+  22: { ad: '2.Direksiyon Aşamasında', asamalar: ['Direksiyon', 'Sınav'], tur: 'aktif' },
+  23: { ad: 'e-Sınavdan Muaf Aday', asamalar: ['Direksiyon', 'Sınav'], tur: 'aktif' },
+  24: { ad: 'A1/125 CC Sertifika', asamalar: [], tur: 'etiket' },
+};
+const durumSade = t => String(t || '').toLocaleLowerCase('tr').replace(/[^a-zçğıöşü0-9]/g, '');
+// adayın MEBBİS durum kodu: SKT02006 sorgu kodu (k.meb.durumKod), yoksa durum metninin başındaki sayı, yoksa metinden
+export function mebDurumKodu(k) {
+  const M = (k && k.meb) || {}, n = parseInt(M.durumKod, 10); if (MEB_DURUM[n]) return n;
+  const t = String(M.durum || ''), b = parseInt((t.match(/^\s*(\d+)/) || [])[1], 10); if (MEB_DURUM[b]) return b;
+  const s = durumSade(t.replace(/^\s*\d+\s*-?\s*/, '')); if (!s) return null;
+  const e = Object.entries(MEB_DURUM).find(([, d]) => durumSade(d.ad) === s); return e ? +e[0] : null;
+}
+// MEB-048: aşama farkı → { kod, meb, sinyal, mesaj, eylem, guvenli } ya da null. eylem: 'ehliyet' | 'direksiyon' | 'ikinci' | 'kapat' (MEB-049, onayla)
+export function asamaFarki(k) {
+  const kod = mebDurumKodu(k), d = MEB_DURUM[kod]; if (!k || !d || d.tur === 'etiket') return null;
+  const sinyal = k.kapali ? 'Kapalı' : k.asama || '', o = (mesaj, eylem = '') => ({ kod, meb: d.ad, sinyal, mesaj, eylem, guvenli: !!eylem });
+  if (k.kapali) return d.tur === 'kapanis' || kod === 5 ? null : o(`MEBBİS’te süreç sürüyor (${d.ad}), mdSinyal’de dosya kapalı`);
+  if (d.tur === 'kapanis') return [6, 11].includes(kod) ? o(`MEBBİS’te ${d.ad.toLocaleLowerCase('tr')}; mdSinyal’de dosya açık`, 'kapat') : kod === 4 ? (k.ikinciHak ? null : o('MEBBİS’te uygulama sınavı hakkı doldu; ikinci dört hak başlatılmadıysa dosya kapanır')) : o(`MEBBİS’te ${d.ad.toLocaleLowerCase('tr')}; mdSinyal’de ${sinyal}`);
+  if (kod === 22 && !k.ikinciHak) return o('MEBBİS’te 2. direksiyon aşamasında; mdSinyal’de ikinci dört hak başlamadı', 'ikinci');
+  if (d.asamalar.includes(k.asama)) {
+    if (kod === 8 && !(S.sinavlar || []).some(x => x.tur === 'e-Sınav' && (x.kursiyerler || []).includes(k.id) && fark(x.tarih) >= 0)) return o('MEBBİS’te e-sınav randevusu var, mdSinyal’de e-sınav oturumu yok');
+    return null;
+  }
+  if (kod === 5) return o('MEBBİS’te sertifika almaya hak kazandı; mdSinyal’de ' + sinyal, 'ehliyet');
+  if ([2, 23].includes(kod) && k.asama === 'Teorik') return o(`MEBBİS ${kod === 23 ? 'e-sınavdan muaf' : 'uygulama sınavı aşamasında'} diyor; mdSinyal’de Teorik`, 'direksiyon');
+  if (kod === 0 && ['Direksiyon', 'Sınav'].includes(k.asama)) return (k.mevcutEhliyet && k.mevcutEhliyet !== 'Yok') || k.muaf ? null : o('MEBBİS’te kursa başvuru aşamasında (ilçe onayı bekleniyor olabilir); mdSinyal’de ' + sinyal);
+  if ([1, 7, 8, 9].includes(kod) && ['Direksiyon', 'Sınav'].includes(k.asama)) return o('MEBBİS teorik diyor; e-sınav sonucu MEBBİS’e işlenmemiş ya da mdSinyal kaydı yanlış');
+  return o(`MEBBİS’te ${d.ad}, mdSinyal’de ${sinyal}`);
+}
 export const EVRAKLAR = [
   ['saglik', 'Sürücü olur sağlık raporu'], ['ogrenim', 'Öğrenim belgesi'], ['adli', 'Adli sicil kaydı (barkodlu)'], ['foto', 'Biyometrik fotoğraf'],
   ['kimlik', 'Kimlik fotokopisi'], ['sozlesme', 'İmzalı sözleşme'],
