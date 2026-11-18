@@ -410,6 +410,74 @@ export function kalanHakCumlesi(k, tur, x) {
   return h.ikinci ? `Üzülmeyin, ikinci dört hakkınızdan ${h.kalan} hak kaldı.` : `Üzülmeyin, ${h.kalan} hakkınız daha var.`;
 }
 export const IKINCI_HAK_GUN = 60;
+/* ---------- SNV-001/013/014/015/016: sınav hakkı ve ders bitişi çekirdeği (DOM'suz; ekranlar ve kurallar yalnız bunları kullanır) ----------
+   k.hakKayitlari (SNV-015) = [{ tur: 'Direksiyon'|'e-Sınav', tarih, sonuc: 'Girmedi'|'Kaldı', kod?, kaynak: 'meb-eksik'|'7-7'|'elle', not, kim, zaman }]:
+   oturumu olmayan hak kayıtları. k.dsinav / k.esinav yalnız son sınavın özetidir. */
+const sonucNorm = v => { const t = String(v || '').toLocaleLowerCase('tr'); if (/girmedi|katılmadı|katilmadi/.test(t)) return 'Girmedi'; if (/başarısız|basarisiz|kaldı|kaldi/.test(t)) return 'Kaldı'; if (/başarılı|basarili|geçti|gecti/.test(t)) return 'Geçti'; return 'Listede'; };
+const HAK_YAKAR = ['Kaldı', 'Girmedi', 'Geçti'];
+const AYLAR_KISA = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+const ikinciDilimBas = k => { if (!k || !k.ikinciHak) return ''; return [k.ikinciHak.tarih, (k.meb || {}).ikinciDireksiyon].filter(Boolean).sort()[0] || ''; };
+// SNV-013: adayın bir türdeki bütün sınavları tek listede; oturum, MEBBİS dosyası ve hak kayıtları birleşir (aynı sınav bir kez: önce kod, sonra tarih)
+export function sinavGecmisi(k, tur = 'Direksiyon') {
+  if (!k) return [];
+  const es = tur === 'e-Sınav', l = [];
+  const ekle = x => {
+    const ayni = l.find(y => (x.kod && y.kod && x.kod === y.kod) || (x.tarih && y.tarih === x.tarih));
+    if (!ayni) return l.push(x);
+    if (!ayni.kod && x.kod) ayni.kod = x.kod;
+    if (ayni.sonuc === 'Listede' && x.sonuc !== 'Listede') { ayni.sonuc = x.sonuc; ayni.kaynakSonuc = x.kaynak; }
+    if (x.puan != null && ayni.puan == null) ayni.puan = x.puan;
+    (ayni.kaynaklar = ayni.kaynaklar || [ayni.kaynak]).push(x.kaynak);
+  };
+  (S.sinavlar || []).filter(s => s.tur === tur && (s.kursiyerler || []).includes(k.id)).forEach(s => { const v = (s.sonuc || {})[k.id];
+    ekle({ tarih: s.tarih, kod: s.kod || s.mebKod || '', sonuc: HAK_YAKAR.includes(v) ? v : 'Listede', kaynak: 'oturum', oturum: s.id }); });
+  if (es) ((k.meb || {}).esinavlar || []).forEach(y => { if (y.tarih) ekle({ tarih: y.tarih, kod: '', sonuc: y.puan == null ? 'Listede' : +y.puan >= 70 ? 'Geçti' : 'Kaldı', puan: y.puan, kaynak: 'meb' }); });
+  else ((k.meb || {}).uygulamaSinavlari || []).forEach(y => { if (y.tarih || y.kod) ekle({ tarih: y.tarih || '', kod: String(y.kod || ''), sonuc: sonucNorm((y.durum || '') + ' ' + (y.sonuc || '')), kaynak: 'meb' }); });
+  (k.hakKayitlari || []).filter(x => x.tur === tur).forEach(x => ekle({ tarih: x.tarih, kod: x.kod || '', sonuc: x.sonuc, kaynak: x.kaynak === '7-7' ? '7-7' : x.kaynak || 'elle', gerekce: x.not || '' }));
+  const bas = es ? '' : ikinciDilimBas(k);
+  return l.sort((a, b) => String(a.tarih).localeCompare(String(b.tarih))).map(x => ({ ...x, dilim: bas && x.tarih > bas ? 2 : 1 }));
+}
+// SNV-014: hak durumu — yerel geçmiş ile MEBBİS'in son okuması birlikte; "önce durum, sonra sayı"
+export function hakDurumu(k, tur = 'Direksiyon') {
+  const es = tur === 'e-Sınav', n = (S && S.kurs && S.kurs.sinavHak) || 4, M = (k && k.meb) || {};
+  const dilim = !es && k && k.ikinciHak ? 2 : 1, bas = es ? '' : ikinciDilimBas(k);
+  const gecmis = sinavGecmisi(k, tur), dilimde = gecmis.filter(x => !bas || x.tarih > bas), yanan = dilimde.filter(x => HAK_YAKAR.includes(x.sonuc));
+  let meb = null;
+  const okuma = M.dosyaOkuma || '';
+  if (okuma && (!bas || okuma > bas)) {
+    if (es) { const ham = M.esinavHak != null && String(M.esinavHak).trim() !== '' ? +String(M.esinavHak).replace(/\D/g, '') : null;
+      if (ham != null && !isNaN(ham)) meb = { kullanilan: ham >= 1 && ham <= 4 ? ham - 1 : n, tarih: okuma, durumKod: null, sureDoldu: ham === 5, doldu: ham === 0 }; }
+    else { const kod = parseInt(String(M.durum || '').match(/^\s*(\d+)/) ? String(M.durum).match(/^\s*(\d+)/)[1] : '', 10), sayi = String(M.uygulamaHak ?? '').trim();
+      if (kod === 4) meb = { kullanilan: n, tarih: okuma, durumKod: 4, doldu: true };
+      else if ([2, 22, 23].includes(kod) && /^\d+$/.test(sayi)) meb = { kullanilan: +sayi, tarih: okuma, durumKod: kod }; }
+  }
+  const yerel = yanan.length, onceki = meb ? yanan.filter(x => x.tarih <= meb.tarih).length : 0, sonra = meb ? yanan.filter(x => x.tarih > meb.tarih).length : 0;
+  const kullanilan = Math.min(n, meb ? Math.max(meb.kullanilan + sonra, yerel) : yerel);
+  const bilinmeyen = meb ? Math.max(0, meb.kullanilan - onceki) : 0;
+  const fark = !meb ? '' : meb.kullanilan > onceki ? 'MEBBİS fazla' : onceki > meb.kullanilan ? 'mdSinyal fazla' : '';
+  const kalan = Math.max(0, n - kullanilan), gecti = gecmis.some(x => x.sonuc === 'Geçti'), bugun = iso(new Date());
+  const listede = gecmis.find(x => x.sonuc === 'Listede' && x.tarih >= bugun) || null;
+  const siradaki = kalan ? kullanilan + 1 : null, gun2 = t => { const d = tarihOku(t); return d.getDate() + ' ' + AYLAR_KISA[d.getMonth()]; };
+  const cumle = gecti ? 'Sınavı geçti' : meb && meb.sureDoldu ? 'e-Sınav süresi doldu' : !kalan ? `Hakkı doldu (${kullanilan}/${n})` + (dilim === 2 ? ' · ikinci dört hak' : '')
+    : (dilim === 2 ? 'İkinci dört hak · ' : '') + (kullanilan ? `${kullanilan} hak kullanıldı · sıradaki ${siradaki}. hak` : `${siradaki}. hak`) + (listede ? ` · ${gun2(listede.tarih)} sınavına yazılı` : '');
+  return { kullanilan, sinir: n, kalan, dilim, siradaki, meb, fark, bilinmeyen, cumle, gecti, listede, yerel, gecmis };
+}
+// SNV-016: zorunlu direksiyon dersinin tamamlandığı (ya da planla tamamlanacağı) gün; yetmiyorsa null ve gerekçe.
+// İkinci dört hakta hedef k.ikinciHak.hedef; kaldıktan sonra son başarısız sınavdan sonraki telafi dersinin (kuralAyar telafiSaat) günü.
+export function dersBitisi(k) {
+  if (!k) return { tarih: null, gerekce: '' };
+  const l = (S.dersler || []).filter(d => d.kursiyer === k.id && !['İptal', 'Gelmedi'].includes(d.durum)).sort((a, b) => (a.tarih + (a.saat || '')).localeCompare(b.tarih + (b.saat || '')));
+  const yapildiS = l.filter(d => d.durum === 'Yapıldı').length, onceden = Math.max(0, (+k.direksiyon || 0) - yapildiS);  // aktarımla gelen ve kaydı olmayan dersler
+  const hedef = k.ikinciHak && k.ikinciHak.hedef ? +k.ikinciHak.hedef : gerekliDireksiyon(k), sira = hedef - onceden;
+  let tarih = null, gerekce = '';
+  if (!hedef) return { tarih: null, gerekce: 'Bu sınıfta direksiyon dersi yok', yok: true };
+  if (sira <= 0) tarih = (l[0] && l[0].tarih) || k.kayit || null; else if (l.length >= sira) tarih = l[sira - 1].tarih; else gerekce = `Program tamamlanmadı: ${onceden + l.length}/${hedef} ders`;
+  // kaldıktan sonra: son başarısız sınavdan sonra telafi dersi
+  const sonKalma = sinavGecmisi(k, 'Direksiyon').filter(x => x.sonuc === 'Kaldı' || x.sonuc === 'Girmedi').pop();
+  if (tarih && sonKalma) { const tn = KURAL_ARALIK.telafiSaat ? kuralAyar('telafiSaat') : 2, sonra = l.filter(d => d.tarih > sonKalma.tarih);
+    if (sonra.length >= tn) tarih = [tarih, sonra[tn - 1].tarih].sort().pop(); else { gerekce = `Kaldıktan sonra ${tn} saat telafi dersi gerekli: ${sonra.length}/${tn}`; tarih = null; } }
+  return { tarih, gerekce, tamam: !!tarih && tarih <= iso(new Date()) };
+}
 // e-Sınav hak durumu (TEO-009): kullanilan = yerel e-Sınav oturumlarında sonucu olan (Girmedi dahil) oturum sayısı; sira = sıradaki hak.
 // MEBBİS "E-Sınav Hak" (SKT02009) sıradaki hakkı gösterir: 1–4 "sıradaki N. hak" (kullanılan = değer − 1), 5 "süre doldu", 0 "hakkı doldu".
 export function esinavHakDurum(k) {
