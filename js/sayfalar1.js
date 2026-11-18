@@ -589,7 +589,7 @@ export function kursiyerFormu(on = {}) {
       <div class="ks-ray-alt" data-ks-taslak-not>${ik('indir')}<span>${ts ? 'Taslaktan devam · ' + e(taslakZamani(ts.tarih)) : 'Kapatırken taslak olarak saklanabilir'}</span></div></nav>
     <div class="ks-cubuk"><ol>${KS_ADIM.map(() => '<li></li>').join('')}</ol><p><span data-ks-cubuk-ad></span><span data-ks-cubuk-sonra></span></p></div>
     <div class="ks-icerik"><form id="f-kursiyer" novalidate autocomplete="off">
-    ${panel(0, `<div class="ks-blok"><h4>Kimlik <small>MEBBİS’e gider</small></h4><div class="form-izgara">
+    ${panel(0, `<div class="ks-blok"><h4>Kimlik <small>MEBBİS’e gider</small><button type="button" class="dg dg-hafif dg-kucuk" data-belge-oku style="text-transform:none;letter-spacing:0">${ik('belge')}Belgeden oku</button></h4><div class="form-izgara">
         <div class="alan"><label for="k-tc">TC kimlik no</label><input id="k-tc" name="tc" inputmode="numeric" maxlength="11" value="${e(on.tc || '')}" required autocomplete="off"></div>
         <div class="alan"><label for="k-dogum">Doğum tarihi</label><input id="k-dogum" name="dogumTarihi" type="date" value="${e(on.dogumTarihi || '')}"></div>
         <div class="alan"><label for="k-ad">Ad</label><input id="k-ad" name="ad" value="${e(on.ad || '')}" required autocomplete="off"></div>
@@ -678,6 +678,7 @@ export function kursiyerFormu(on = {}) {
     taslakOzet: d => { const f = d.querySelector('form'); const a = [f.ad.value.trim(), f.soyad.value.trim()].filter(Boolean).join(' '); const s = f.sinif.value && SINIFLAR[f.sinif.value]; return (a || 'Adsız kayıt') + (s ? ' · ' + s.ad : ''); },
     onAc(d) {
       const f = d.querySelector('form'), paneller = [...d.querySelectorAll('.ks-panel')];
+      d.addEventListener('click', ev => { if (ev.target.closest('[data-belge-oku]')) import('./belgeoku.js?v=234').then(m => m.belgeOkuAc(d)); });   // KAY-033
       const deger = n => (f.querySelector(`[name="${n}"]:checked`) || {}).value || '';
       const taksitN = () => deger('odemeSekli') === 'pesin' ? 0 : +deger('taksit') || 1;
       const indirimTutar = () => 0;   // taban fiyat kararı (2026): kayıtta indirim yok; müdür dosyadan uygular
@@ -832,7 +833,7 @@ export function kursiyerFormu(on = {}) {
       let otoZaman = null;
       const hazirGoster = () => { const b = d.querySelector('[data-ks="ileri"]'); if (b) b.classList.toggle('ks-hazir', adim < KS_ADIM.length - 1 && adimTamamMi(adim)); };
       f.addEventListener('input', hazirGoster);
-      f.addEventListener('change', ev => { hazirGoster(); const t = ev.target; if (!(t.type === 'radio' || t.tagName === 'SELECT') || adimOf(t) !== adim || adim >= KS_ADIM.length - 2) return;
+      f.addEventListener('change', ev => { hazirGoster(); const t = ev.target; if (!ev.isTrusted || !(t.type === 'radio' || t.tagName === 'SELECT') || adimOf(t) !== adim || adim >= KS_ADIM.length - 2) return;   // yalnız kullanıcının kendi seçimi ilerletir (belgeden okuma gibi koddan doldurma ilerletmez)
         if (TC.tercihler().kayitOtoIleri === false || !adimTamamMi(adim)) return; clearTimeout(otoZaman); const a0 = adim; otoZaman = setTimeout(() => { if (adim === a0 && adimTamamMi(adim)) { ileri(); bildir('Adım tamam; sonraki adıma geçildi (Geri ile dönebilirsiniz)'); } }, 700); });
       // TC alanından çıkınca: aynı TC'li kayıtlar ve eski kayıttan bilgi aktarma (KAY-103)
       const tcBak = () => {
