@@ -435,9 +435,9 @@ export function ilkUygunSinav(k, o = {}) {
 }
 // Süre son uygulama sınavının tarihinden sayılır (sonuç aynı gün açıklanır varsayımı); eski kayıtta hakBitti.tarih yoksa k.dsinav.tarih, o da yoksa null
 export const ikinciHakSonGun = k => { const t = String((k.hakBitti && k.hakBitti.tarih) || (k.dsinav && k.dsinav.tarih) || '').slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(t) ? gunEkle(t, IKINCI_HAK_GUN) : null; };
-// Teorik derslerin grup ve gün toplamı (bugün ve sonrası)
+// Teorik derslerin grup ve gün toplamı (bugün ve sonrası). SRC dersleri (srcModul) sayılmaz: SRC programında hafta sonu 8 saate kadar (src.js, DIR-044)
 export function teorikGunleri(bas = gun(0)) {
-  const m = new Map(); (S.teorik || []).filter(t => t && t.tarih >= bas).forEach(t => { const a = (t.grup || '') + '|' + t.tarih, x = m.get(a) || { grup: t.grup || '', tarih: t.tarih, saat: 0 }; x.saat += +t.sure || 1; m.set(a, x); });
+  const m = new Map(); (S.teorik || []).filter(t => t && t.tarih >= bas && !t.srcModul).forEach(t => { const a = (t.grup || '') + '|' + t.tarih, x = m.get(a) || { grup: t.grup || '', tarih: t.tarih, saat: 0 }; x.saat += +t.sure || 1; m.set(a, x); });
   return [...m.values()].sort((a, b) => a.tarih.localeCompare(b.tarih));
 }
 // Teorik plan denetimi (gruplar.js teorik ders penceresi için): o gün grubun mevcut saati + eklenecek saat
