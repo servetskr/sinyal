@@ -26,7 +26,7 @@
 // Kurs verisi yüklenmeden (giriş öncesi) gelen toplu-durum işlenmez, Yardımcı yeniden verir; harita-durum ise bekletilir (bekleyenleriIsle).
 // =====
 import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, eksikEvrak, sb, sbDers, sbSinav, oturum, cokSube, seciliSube, mebIsGunuGeri, kuralAyar, egitimSinifi, MEB_CEZA_SERTIFIKA } from './veri.js?v=234';
-import { bildir, pencere, e, ik, isaret } from './ui.js?v=234';
+import { bildir, pencere, kapatPencere, e, ik, isaret } from './ui.js?v=234';
 import * as GR from './gruplar.js?v=234';
 import * as MK from './mebkayit.js?v=234';
 import { onkosulEngel } from './onkosul.js?v=234';
@@ -258,22 +258,31 @@ export function sinavSonucuAl(sat) {
     return p != null ? { v: p >= 70 ? 'Geçti' : 'Kaldı', puan: p } : null;
   };
   const tarihIso = v => { const m = String(v || '').match(/(\d{1,2})[./-](\d{1,2})[./-](\d{4})/); return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : ''; };
-  const oturum = {}; let bulunamayan = 0;
+  const oturum = {}, farklar = []; let bulunamayan = 0;
   sat.slice(1).forEach(r => {
     const tc = String(r[iTc] || '').replace(/\D/g, ''), k = tc && S.kursiyerler.find(x => x.tc === tc), d = deger(r); if (!k || !d) { bulunamayan++; return; }
     const t = iTar >= 0 ? tarihIso(r[iTar]) : '';
     const s = sbSinav(S.sinavlar).filter(x => (x.kursiyerler || []).includes(k.id) && !(x.sonuc || {})[k.id] && fark(x.tarih) <= 0 && (!t || x.tarih === t)).sort((a, b) => b.tarih.localeCompare(a.tarih))[0];
-    if (!s) { bulunamayan++; return; }
+    if (!s) { // SNV-086: sonucu girilmiş oturumda MEBBİS farklı diyorsa (ör. Geçti → Kaldı) düzeltme önerilir
+      const g = sbSinav(S.sinavlar).find(x => (x.kursiyerler || []).includes(k.id) && (x.sonuc || {})[k.id] && fark(x.tarih) <= 0 && (!t || x.tarih === t));
+      if (g && g.sonuc[k.id] !== d.v) farklar.push({ sid: g.id, kid: k.id, d, yerel: g.sonuc[k.id] }); else if (!g) bulunamayan++; return; }
     (oturum[s.id] = oturum[s.id] || {})[k.id] = d;
   });
+  if (farklar.length) setTimeout(() => farkliSonuclar(farklar), 900);
   const sira = Object.entries(oturum).sort((a, b) => Object.keys(b[1]).length - Object.keys(a[1]).length);
-  if (!sira.length) return bildir('Listedeki kişilerden sonucu girilmemiş bir sınav oturumunda olan bulunamadı', 'uyari');
+  if (!sira.length) return farklar.length ? undefined : bildir('Listedeki kişilerden sonucu girilmemiş bir sınav oturumunda olan bulunamadı', 'uyari');
   const [sid, hazir] = sira[0], s = S.sinavlar.find(x => x.id === sid);
   location.hash = '#/sinavlar';
   import('./sayfalar2.js?v=234').then(m => setTimeout(() => {
     m.sonucGir(s, hazir);
     bildir(`${Object.keys(hazir).length} kursiyerin sonucu MEBBİS’ten dolduruldu; kontrol edip “Sonuçları kaydet”e basın.${sira.length > 1 ? ` ${sira.length - 1} oturum daha var; kaydettikten sonra listeyi tekrar gönderin.` : ''}${bulunamayan ? ` ${bulunamayan} satır eşleşmedi.` : ''}`);
   }, 400));
+}
+// SNV-086: MEBBİS'teki sonuç mdSinyal'dekinden farklı: her satırda 'Düzelt' sonucDuzelt'i MEBBİS sonucuyla açar (aşama, mezuniyet ve belge adımları geri alınır)
+function farkliSonuclar(l) {
+  pencere({ baslik: 'MEBBİS’le farklı sınav sonuçları', genis: true, icerik: `<p style="font-size:14px;margin-bottom:8px">${l.length} öğrencinin sonucu MEBBİS’te farklı. Sonuç sonradan değişmiş olabilir (ör. itiraz); kontrol edip düzeltin.</p><ul class="liste">${l.map((x, i) => { const k = kursiyer(x.kid), s = S.sinavlar.find(y => y.id === x.sid); return `<li><div style="flex:1;min-width:0"><b>${e(tamAd(k))}</b><small style="display:block;color:var(--soluk)">${e(s.tur)} · ${e(s.tarih.split('-').reverse().join('.'))} · mdSinyal: <b>${e(x.yerel)}</b> → MEBBİS: <b style="color:${x.d.v === 'Geçti' ? 'var(--yesil)' : 'var(--kirmizi)'}">${e(x.d.v)}</b>${x.d.puan != null ? ' (' + x.d.puan + ')' : ''}</small></div><button class="dg dg-ana dg-kucuk" data-mf="${i}">Düzelt</button></li>`; }).join('')}</ul>`,
+    altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button>',
+    onAc(p) { p.querySelectorAll('[data-mf]').forEach(b => b.addEventListener('click', () => { const x = l[+b.dataset.mf], k = kursiyer(x.kid), s = S.sinavlar.find(y => y.id === x.sid); kapatPencere(); import('./sayfalar2.js?v=234').then(m => setTimeout(() => m.sonucDuzelt(s, k, { ...x.d, kaynak: 'mebbis' }), 250)); })); } });
 }
 // Kurs verisi ve oturum hazır mı (Yardımcı'dan gelen sonuç ancak o zaman işlenir)
 const hazir = () => !!(S && S.kursiyerler && oturum.kullanici);

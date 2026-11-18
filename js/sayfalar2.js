@@ -279,14 +279,15 @@ function sonucDuzeltListe(s) {
     altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button>',
     onAc(d) { d.querySelectorAll('[data-sd]').forEach(b => b.addEventListener('click', () => { kapatPencere(); sonucDuzelt(s, kursiyer(b.dataset.sd)); })); } });
 }
-function sonucDuzelt(s, k) {
-  const es = s.tur === 'e-Sınav', kayit = es ? k.esinav : k.dsinav, ESIK = 70, eski = s.sonuc[k.id];
+// SNV-086: MEBBİS'ten gelen farklı sonuç da bu yoldan düzeltilir (on: { v, puan, kaynak } seçimi önceden işaretler)
+export function sonucDuzelt(s, k, on) {
+  const es = s.tur === 'e-Sınav', kayit = es ? k.esinav : k.dsinav, ESIK = 70, eski = s.sonuc[k.id], sec = (on && on.v) || eski;
   const sonraGirdi = S.sinavlar.some(x => x.tur === s.tur && x.id !== s.id && x.tarih > s.tarih && (x.sonuc || {})[k.id]);
   if (!kayit || sonraGirdi) return bildir(`${tamAd(k)} bu sınavdan sonra başka bir ${s.tur.toLocaleLowerCase('tr')} sınavına girmiş; önce son sınavın sonucunu düzeltin`, 'uyari');
   pencere({ baslik: tamAd(k) + ' · sonucu düzelt', icerik: `<p style="color:var(--soluk);margin-bottom:10px">${s.tur} · ${tarihUzun(s.tarih)} · şu an: <b>${e(eski)}</b>${kayit.puan != null ? ' (' + kayit.puan + ' puan)' : ''} · ${kayit.hak}. hak</p>
-      <div class="secim"><label><input type="radio" name="v" value="Geçti" ${eski === 'Geçti' ? 'checked' : ''}><span>Geçti</span></label><label><input type="radio" name="v" value="Kaldı" ${eski === 'Kaldı' ? 'checked' : ''}><span>Kaldı</span></label><label><input type="radio" name="v" value="Girmedi" ${eski === 'Girmedi' ? 'checked' : ''}><span>Girmedi</span></label></div>
-      ${es ? `<div class="alan" style="margin-top:12px"><label>Puan</label><input class="girdi" name="puan" inputmode="numeric" maxlength="3" value="${kayit.puan != null ? kayit.puan : ''}" style="width:90px"></div>` : ''}
-      <div class="ipucu" style="margin-top:12px">${ik('bilgi')}<span>Öğrenciye kendiliğinden mesaj gitmez. Geçti olarak düzeltilirse sonraki sınav kaydı, ödenmemiş tekrar sınavı ücreti ve kullanılmamış ek ders teklifi kaldırılır.</span></div>`,
+      <div class="secim"><label><input type="radio" name="v" value="Geçti" ${sec === 'Geçti' ? 'checked' : ''}><span>Geçti</span></label><label><input type="radio" name="v" value="Kaldı" ${sec === 'Kaldı' ? 'checked' : ''}><span>Kaldı</span></label><label><input type="radio" name="v" value="Girmedi" ${sec === 'Girmedi' ? 'checked' : ''}><span>Girmedi</span></label></div>
+      ${es ? `<div class="alan" style="margin-top:12px"><label>Puan</label><input class="girdi" name="puan" inputmode="numeric" maxlength="3" value="${on && on.puan != null ? on.puan : kayit.puan != null ? kayit.puan : ''}" style="width:90px"></div>` : ''}
+      ${on ? `<div class="ipucu uyari" style="margin-top:12px">${isaret('uyari', 18)}<span>MEBBİS bu sınavın sonucunu <b>${e(on.v)}</b> gösteriyor; mdSinyal’de ${e(eski)}. Kaydederseniz aşama ve belge adımları buna göre güncellenir.</span></div>` : ''}<div class="ipucu" style="margin-top:12px">${ik('bilgi')}<span>Öğrenciye kendiliğinden mesaj gitmez. Geçti olarak düzeltilirse sonraki sınav kaydı, ödenmemiş tekrar sınavı ücreti ve kullanılmamış ek ders teklifi kaldırılır.</span></div>`,
     altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Düzeltmeyi kaydet</button>',
     onAc(d) { d.querySelector('[data-k]').addEventListener('click', () => {
       const r = d.querySelector('[name=v]:checked'); if (!r) return bildir('Sonucu seçin', 'uyari');
@@ -308,7 +309,7 @@ function sonucDuzelt(s, k) {
         if (k.kapanis && !Object.keys(k.kapanis).length) delete k.kapanis;
         if (hakDurumu(k, s.tur).kalan === 0) k.hakBitti = { tur: s.tur, tarih: s.tarih };  // SNV-001: sınır çekirdekten
       }
-      islem('Sınav sonucunu düzeltti', `${tamAd(k)} · ${s.tur} ${tarih(s.tarih)} · ${eski} → ${v}${puan != null ? ' (' + puan + ')' : ''}`);
+      islem('Sınav sonucunu düzeltti', `${tamAd(k)} · ${s.tur} ${tarih(s.tarih)} · ${eski} → ${v}${puan != null ? ' (' + puan + ')' : ''}` + (on ? ' · MEBBİS’teki sonuca göre' : ''));
       kaydet(); kapatPencere(); bildir('Sonuç düzeltildi'); yenile();
     }); } });
 }
