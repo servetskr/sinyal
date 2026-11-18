@@ -19,6 +19,8 @@
 // /mevzuat/*: mevzuat arama (sorgu gömme), kursa gelen MEB yazılarını yükleme/listeleme/silme, özet ve kaynaklı cevap. Ayrıntı mevzuatUc() üstünde.
 // KAY-033 (18 Kas kararı): belge görüntüsü okuma ucu (belge/oku, OCR_MODEL) kaldırıldı; öğrenci belgesi hiçbir dış yapay zekâya gönderilmez.
 //   env.AI ([ai] bağlaması) yalnız mevzuat gömme modeli ve PDF/DOCX → metin (toMarkdown) için kalır.
+// /earsiv (PAR-011): kursun seçtiği e-Arşiv entegratörü (Nilvera, Uyumsoft, İzibiz; deneme kipi); ayrıntı 'E-ARŞİV' bölümünde.
+//   Gizli EARSIV_ANAHTAR (en az 32 karakter) bir kez: openssl rand -base64 48 | npx wrangler secret put EARSIV_ANAHTAR. Değişirse kayıtlı hesaplar çözülmez, kurslar yeniden girer.
 // /servis (UYG-012, MSJ-021): Firestore servis hesabı (FIREBASE_SA) ile ofis kapalıyken öğrenci istekleri ve hatırlatmalar; ayrıntı aşağıda 'SERVİS HESABI' bölümünde, kurulum SERVIS-HESABI.md.
 const IZINLI = ['https://mdsinyal.com', 'http://localhost:4481', 'http://127.0.0.1:4481'];
 const HEDEF = /^(https:\/\/mdsinyal\.com\/|https:\/\/servetskr\.github\.io\/sinyal\/|http:\/\/localhost:4481\/)/;
@@ -1493,6 +1495,246 @@ async function onizleme(req, url) {
     .transform(new Response(r.body, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'X-Robots-Tag': 'noindex' } }));
 }
 
+// ======== E-ARŞİV (PAR-011) ========
+// Kurs kendi e-Arşiv entegratörünü seçer (Ayarlar › Entegrasyon); faturalar bu servis üzerinden entegratöre gider.
+// Hesap bilgisi (API anahtarı / kullanıcı adı-şifre) müdürün cihazından bir kez gelir, EARSIV_ANAHTAR (gizli, en az 32 karakter) ile
+// AES-GCM şifrelenip KV 'earsiv:<kurs>'a yazılır (ek veri: kurs kimliği; başka kursun kaydına taşınamaz). Tarayıcıya ve Firestore'a hiç dönmez.
+// Deneme kipi: hiçbir entegratöre istek gitmez; fatura numarası, durum, iptal ve PDF bu serviste benzetilir (KV 'earsiv:deneme:…', 30 gün).
+// Uçlar (Firebase oturumu + X-Kurs): GET earsiv (durum ve entegratör listesi; anahtar dönmez) · POST earsiv/hesap (müdür; kaydet ya da {sil})
+//   · POST earsiv/dene (müdür; bağlantı denemesi) · POST earsiv/fatura · earsiv/iptal · earsiv/durum · earsiv/pdf (müdür, ön büro, şube müdürü).
+// Bağlayıcı arayüzü (her entegratör): dene(h) · olustur(h, f) → { uuid, no, durum } · iptal(h, uuid, neden) · durum(h, uuid) → { durum } · pdf(h, uuid) → bayt
+//   h = { kimlik, test (entegratörün test ortamı), f (fetch) }; durum: 'bekliyor' | 'tamam' | 'hata' | 'iptal'.
+// e-Arşiv iptali (GİB): yalnız alıcı adı/unvanı ya da VKN/TCKN hatası gerekçesiyle; neden parametresi bu ikisinden biri olmalı.
+const EA_ROL = ['mudur', 'sekreter', 'subemudur'];
+export const EA_IPTAL_NEDEN = { alici_ad: 'Alıcı adı / unvanı hatalı', alici_vkn: 'Alıcı VKN / T.C. kimlik no hatalı' };
+const EA_KDV = [0, 1, 10, 20];
+const eaYuvarla = n => Math.round((+n + Number.EPSILON) * 100) / 100;
+const eaMetin = (s, n) => String(s == null ? '' : s).replace(/[\u0000-\u001f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
+const eaXml = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c]));
+const eaSaatTR = () => new Date(Date.now() + 3 * 3600e3).toISOString();
+class EaHata extends Error { constructor(m, s = 400) { super(m); this.s = s; } }
+// ---- normal fatura biçimi (istemciden) → denetlenmiş fatura ----
+// { uuid?, no? (ABC2026000000001), seri? (3 harf), tarih: 'YYYY-MM-DD', saat?: 'HH:MM', not?, alici: { ad, soyad?, vkn? (10) | tckn? (11), vergiDairesi?, adres?, ilce, il, eposta?, tel? },
+//   satirlar: [{ ad, miktar, birim? ('C62' adet), birimFiyat (KDV hariç), kdv (0/1/10/20) }], satici: { vkn|tckn, unvan, vergiDairesi?, adres?, ilce?, il? } }
+export function eaFaturaDogrula(b, simdi = Date.now()) {
+  const f = b && typeof b === 'object' ? b : {}, a = f.alici || {}, s = f.satici || {};
+  const bugun = new Date(simdi + 3 * 3600e3).toISOString().slice(0, 10), once = new Date(simdi + 3 * 3600e3 - 7 * 864e5).toISOString().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(f.tarih || '') || f.tarih > bugun) throw new EaHata('Fatura tarihi geçersiz ya da ileri tarihli');
+  if (f.tarih < once) throw new EaHata('e-Arşiv fatura en geç 7 gün içinde düzenlenir (VUK 231/5); tarih çok eski');
+  const vkn = String(a.vkn || '').replace(/\D/g, ''), tckn = String(a.tckn || '').replace(/\D/g, '');
+  if (!(vkn.length === 10 || tckn.length === 11)) throw new EaHata('Alıcının VKN (10 hane) ya da T.C. kimlik numarası (11 hane) gerekli');
+  if (!eaMetin(a.ad, 120)) throw new EaHata('Alıcı adı gerekli');
+  if (!eaMetin(a.il, 40) || !eaMetin(a.ilce, 60)) throw new EaHata('Alıcının il ve ilçesi gerekli');
+  const svkn = String(s.vkn || s.tckn || '').replace(/\D/g, '');
+  if (!(svkn.length === 10 || svkn.length === 11) || !eaMetin(s.unvan, 160)) throw new EaHata('Kursun vergi numarası ve unvanı gerekli (Ayarlar › Entegrasyon)');
+  if (!Array.isArray(f.satirlar) || !f.satirlar.length || f.satirlar.length > 50) throw new EaHata('Fatura satırı yok ya da çok fazla');
+  const satirlar = f.satirlar.map((x, i) => {
+    const miktar = +x.miktar, fiyat = +x.birimFiyat, kdv = +x.kdv;
+    if (!eaMetin(x.ad, 200) || !(miktar > 0) || !(fiyat >= 0) || !EA_KDV.includes(kdv)) throw new EaHata((i + 1) + '. satır geçersiz (ad, miktar, birim fiyat, KDV oranı 0/1/10/20)');
+    const tutar = eaYuvarla(miktar * fiyat);
+    return { sira: i + 1, ad: eaMetin(x.ad, 200), miktar, birim: /^[A-Z0-9]{2,3}$/.test(x.birim || '') ? x.birim : 'C62', birimFiyat: eaYuvarla(fiyat), kdv, tutar, kdvTutar: eaYuvarla(tutar * kdv / 100) };
+  });
+  const matrah = eaYuvarla(satirlar.reduce((t, x) => t + x.tutar, 0)), kdvToplam = eaYuvarla(satirlar.reduce((t, x) => t + x.kdvTutar, 0));
+  const kdvler = EA_KDV.map(o => ({ oran: o, matrah: eaYuvarla(satirlar.filter(x => x.kdv === o).reduce((t, x) => t + x.tutar, 0)), tutar: eaYuvarla(satirlar.filter(x => x.kdv === o).reduce((t, x) => t + x.kdvTutar, 0)) })).filter(x => satirlar.some(y => y.kdv === x.oran));
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(f.uuid || '') ? f.uuid.toLowerCase() : crypto.randomUUID();
+  const no = /^[A-Z0-9]{3}\d{13}$/.test(f.no || '') ? f.no : '', seri = /^[A-Z0-9]{3}$/.test(String(f.seri || '').toLocaleUpperCase('tr')) ? String(f.seri).toLocaleUpperCase('tr') : (no ? no.slice(0, 3) : '');
+  const ad = eaMetin(a.ad, 120), soyad = eaMetin(a.soyad, 80);
+  return { uuid, no, seri, tarih: f.tarih, saat: /^\d{2}:\d{2}$/.test(f.saat || '') ? f.saat : '12:00', not: eaMetin(f.not, 500),
+    alici: { ad, soyad, tamAd: (ad + ' ' + soyad).trim(), vkn, tckn, kisi: !vkn, vergiDairesi: eaMetin(a.vergiDairesi, 80), adres: eaMetin(a.adres, 250), ilce: eaMetin(a.ilce, 60), il: eaMetin(a.il, 40), eposta: eaMetin(a.eposta, 120), tel: eaMetin(a.tel, 20) },
+    satici: { vkn: svkn, unvan: eaMetin(s.unvan, 160), vergiDairesi: eaMetin(s.vergiDairesi, 80), adres: eaMetin(s.adres, 250), ilce: eaMetin(s.ilce, 60), il: eaMetin(s.il, 40) },
+    satirlar, matrah, kdvToplam, kdvler, toplam: eaYuvarla(matrah + kdvToplam) };
+}
+// UBL-TR 1.2 e-Arşiv faturası (imza ve XSLT'yi entegratör ekler). TODO(entegratör): gönderim şekli ve ek alanlar hesabın kılavuzuyla teyit edilmeli.
+export function eaUbl(f) {
+  const t = n => n.toFixed(2), para = n => `currencyID="TRY">${t(n)}`;
+  const taraf = (p, kisi) => `<cac:Party><cac:PartyIdentification><cbc:ID schemeID="${p.vkn && p.vkn.length === 10 ? 'VKN' : 'TCKN'}">${eaXml(p.vkn || p.tckn)}</cbc:ID></cac:PartyIdentification>${kisi ? '' : `<cac:PartyName><cbc:Name>${eaXml(p.unvan || p.tamAd)}</cbc:Name></cac:PartyName>`}<cac:PostalAddress><cbc:StreetName>${eaXml(p.adres)}</cbc:StreetName><cbc:CitySubdivisionName>${eaXml(p.ilce)}</cbc:CitySubdivisionName><cbc:CityName>${eaXml(p.il)}</cbc:CityName><cac:Country><cbc:Name>Türkiye</cbc:Name></cac:Country></cac:PostalAddress>${p.vergiDairesi ? `<cac:PartyTaxScheme><cac:TaxScheme><cbc:Name>${eaXml(p.vergiDairesi)}</cbc:Name></cac:TaxScheme></cac:PartyTaxScheme>` : ''}${p.eposta ? `<cac:Contact><cbc:ElectronicMail>${eaXml(p.eposta)}</cbc:ElectronicMail></cac:Contact>` : ''}${kisi ? `<cac:Person><cbc:FirstName>${eaXml(p.ad)}</cbc:FirstName><cbc:FamilyName>${eaXml(p.soyad || '-')}</cbc:FamilyName></cac:Person>` : ''}</cac:Party>`;
+  const vergi = (l, top) => `<cac:TaxTotal><cbc:TaxAmount ${para(top)}</cbc:TaxAmount>${l.map(x => `<cac:TaxSubtotal><cbc:TaxableAmount ${para(x.matrah)}</cbc:TaxableAmount><cbc:TaxAmount ${para(x.tutar)}</cbc:TaxAmount><cbc:Percent>${x.oran}</cbc:Percent><cac:TaxCategory>${x.oran === 0 ? '<cbc:TaxExemptionReasonCode>351</cbc:TaxExemptionReasonCode><cbc:TaxExemptionReason>İstisna olmayan diğer</cbc:TaxExemptionReason>' : ''}<cac:TaxScheme><cbc:Name>KDV</cbc:Name><cbc:TaxTypeCode>0015</cbc:TaxTypeCode></cac:TaxScheme></cac:TaxCategory></cac:TaxSubtotal>`).join('')}</cac:TaxTotal>`;
+  return `<?xml version="1.0" encoding="UTF-8"?><Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2" xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">`
+    + `<cbc:UBLVersionID>2.1</cbc:UBLVersionID><cbc:CustomizationID>TR1.2</cbc:CustomizationID><cbc:ProfileID>EARSIVFATURA</cbc:ProfileID><cbc:ID>${eaXml(f.no)}</cbc:ID><cbc:CopyIndicator>false</cbc:CopyIndicator><cbc:UUID>${f.uuid}</cbc:UUID>`
+    + `<cbc:IssueDate>${f.tarih}</cbc:IssueDate><cbc:IssueTime>${f.saat}:00</cbc:IssueTime><cbc:InvoiceTypeCode>SATIS</cbc:InvoiceTypeCode>${f.not ? `<cbc:Note>${eaXml(f.not)}</cbc:Note>` : ''}<cbc:DocumentCurrencyCode>TRY</cbc:DocumentCurrencyCode><cbc:LineCountNumeric>${f.satirlar.length}</cbc:LineCountNumeric>`
+    + `<cac:AdditionalDocumentReference><cbc:ID>ELEKTRONIK</cbc:ID><cbc:IssueDate>${f.tarih}</cbc:IssueDate><cbc:DocumentTypeCode>SEND_TYPE</cbc:DocumentTypeCode></cac:AdditionalDocumentReference>`
+    + `<cac:AccountingSupplierParty>${taraf(f.satici, false)}</cac:AccountingSupplierParty><cac:AccountingCustomerParty>${taraf(f.alici, f.alici.kisi)}</cac:AccountingCustomerParty>`
+    + vergi(f.kdvler, f.kdvToplam)
+    + `<cac:LegalMonetaryTotal><cbc:LineExtensionAmount ${para(f.matrah)}</cbc:LineExtensionAmount><cbc:TaxExclusiveAmount ${para(f.matrah)}</cbc:TaxExclusiveAmount><cbc:TaxInclusiveAmount ${para(f.toplam)}</cbc:TaxInclusiveAmount><cbc:PayableAmount ${para(f.toplam)}</cbc:PayableAmount></cac:LegalMonetaryTotal>`
+    + f.satirlar.map(x => `<cac:InvoiceLine><cbc:ID>${x.sira}</cbc:ID><cbc:InvoicedQuantity unitCode="${x.birim}">${x.miktar}</cbc:InvoicedQuantity><cbc:LineExtensionAmount ${para(x.tutar)}</cbc:LineExtensionAmount>${vergi([{ oran: x.kdv, matrah: x.tutar, tutar: x.kdvTutar }], x.kdvTutar)}<cac:Item><cbc:Name>${eaXml(x.ad)}</cbc:Name></cac:Item><cac:Price><cbc:PriceAmount ${para(x.birimFiyat)}</cbc:PriceAmount></cac:Price></cac:InvoiceLine>`).join('')
+    + `</Invoice>`;
+}
+const eaB64 = s => { const u = typeof s === 'string' ? new TextEncoder().encode(s) : s; let x = ''; for (let i = 0; i < u.length; i += 0x8000) x += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(x); };
+const eaB64Bayt = s => Uint8Array.from(atob(String(s || '').replace(/\s+/g, '')), c => c.charCodeAt(0));
+const eaEtiket = (xml, ad) => { const m = new RegExp('<(?:[\\w-]+:)?' + ad + '\\b([^>]*)>([\\s\\S]*?)</(?:[\\w-]+:)?' + ad + '>').exec(xml); return m ? { oz: m[1], ic: m[2] } : null; };
+const eaOz = (oz, ad) => { const m = new RegExp('\\b' + ad + '="([^"]*)"').exec(oz || ''); return m ? m[1] : ''; };
+async function eaSoap(h, url, eylem, govde, baslik = '') {
+  const r = await h.f(url, { method: 'POST', headers: { 'Content-Type': 'text/xml; charset=utf-8', SOAPAction: eylem }, body: `<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Header>${baslik}</s:Header><s:Body>${govde}</s:Body></s:Envelope>` });
+  const x = await r.text(); const hata = eaEtiket(x, 'faultstring') || eaEtiket(x, 'Text');
+  if (!r.ok || hata) throw new EaHata('Entegratör hatası: ' + eaMetin(hata ? hata.ic : r.status, 200), 502);
+  return x;
+}
+// ---- bağlayıcılar ----
+const EA_ENTEGRATOR = {
+  // yerel benzetim: hiçbir dış istek yok. Alıcı VKN 1111111111 → GİB reddi benzetilir.
+  deneme: { ad: 'Deneme (benzetim)', alanlar: [], hazir: true,
+    async dene() { return { ok: true, ileti: 'Deneme kipi: bağlantı benzetildi, entegratöre istek gitmedi' }; },
+    async olustur(h, f) {
+      if (f.alici.vkn === '1111111111') throw new EaHata('Deneme: alıcı VKN GİB kayıtlarında bulunamadı (benzetim)', 422);
+      const yil = f.tarih.slice(0, 4), sa = `earsiv:deneme:sayac:${h.kurs}:${yil}`, n = +((await h.env.LINK.get(sa)) || 0) + 1; await h.env.LINK.put(sa, String(n));
+      const no = f.no || ((f.seri || 'DNM') + yil + String(n).padStart(9, '0'));
+      await h.env.LINK.put(`earsiv:deneme:${h.kurs}:${f.uuid}`, JSON.stringify({ no, durum: 'tamam', tarih: f.tarih, toplam: f.toplam, alici: f.alici.tamAd }), { expirationTtl: 30 * 86400 });
+      return { uuid: f.uuid, no, durum: 'tamam' };
+    },
+    async kayit(h, uuid) { const v = await h.env.LINK.get(`earsiv:deneme:${h.kurs}:${uuid}`); if (!v) throw new EaHata('Fatura bulunamadı', 404); return JSON.parse(v); },
+    async iptal(h, uuid) { const v = await this.kayit(h, uuid); if (v.durum === 'iptal') throw new EaHata('Fatura zaten iptal edilmiş', 409); v.durum = 'iptal'; await h.env.LINK.put(`earsiv:deneme:${h.kurs}:${uuid}`, JSON.stringify(v), { expirationTtl: 30 * 86400 }); return { durum: 'iptal' }; },
+    async durum(h, uuid) { const v = await this.kayit(h, uuid); return { durum: v.durum, no: v.no }; },
+    async pdf(h, uuid) { const v = await this.kayit(h, uuid); return eaDenemePdf([`DENEME FATURASI - GECERLI DEGILDIR`, `No: ${v.no}`, `Tarih: ${v.tarih}`, `Toplam: ${v.toplam.toFixed(2)} TL`, v.durum === 'iptal' ? 'IPTAL EDILDI' : '']); },
+  },
+  // Nilvera REST (developer.nilvera.com, e-Arşiv API; Bearer API anahtarı). Test: apitest.nilvera.com.
+  nilvera: { ad: 'Nilvera', alanlar: [['apiKey', 'API anahtarı', true]], hazir: true,
+    kok: h => h.test ? 'https://apitest.nilvera.com' : 'https://api.nilvera.com',   // TODO: canlı adres Nilvera portalından teyit edilmeli
+    istek(h, yol, o = {}) { return h.f(this.kok(h) + yol, { ...o, headers: { Authorization: 'Bearer ' + h.kimlik.apiKey, ...(o.govde ? { 'Content-Type': 'application/json' } : {}) }, ...(o.govde ? { body: JSON.stringify(o.govde) } : {}) }); },
+    async cevap(r) { const t = await r.text(); let j = null; try { j = JSON.parse(t); } catch (x) { } if (!r.ok) throw new EaHata('Nilvera: ' + eaMetin((j && (j.Message || j.message || (Array.isArray(j) && j.join(', ')) || (j.Errors && JSON.stringify(j.Errors)))) || r.status, 200), r.status === 401 || r.status === 403 ? 401 : 502); return j; },
+    async dene(h) { await this.cevap(await this.istek(h, '/general/Company')); return { ok: true, ileti: 'Nilvera hesabı doğrulandı' }; },   // TODO: firma bilgisi ucu (general API) teyit
+    async olustur(h, f) {
+      const a = f.alici;
+      const govde = { ArchiveInvoice: {
+        InvoiceInfo: { UUID: f.uuid, InvoiceType: 'SATIS', InvoiceSerieOrNumber: f.no || f.seri || null, IssueDate: f.tarih + 'T' + f.saat + ':00', CurrencyCode: 'TRY', SalesPlatform: 'NORMAL', SendType: 'ELEKTRONIK', LineExtensionAmount: f.matrah, KdvTotal: f.kdvToplam, PayableAmount: f.toplam },
+        CustomerInfo: { TaxNumber: a.vkn || a.tckn, Name: a.tamAd, TaxOffice: a.vergiDairesi || null, Address: a.adres || null, District: a.ilce, City: a.il, Country: 'Türkiye', Mail: a.eposta || null, Phone: a.tel || null },   // TODO: şahısta ad/soyad ayrımı (Nilvera Name'i bölüyor mu) teyit
+        InvoiceLines: f.satirlar.map(x => ({ Index: String(x.sira), Name: x.ad, Quantity: x.miktar, UnitType: x.birim, Price: x.birimFiyat, KDVPercent: x.kdv, KDVTotal: x.kdvTutar })),
+        Notes: f.not ? [f.not] : null } };
+      const j = await this.cevap(await this.istek(h, '/earchive/Send/Model', { method: 'POST', govde }));
+      return { uuid: (j && j.UUID) || f.uuid, no: (j && j.InvoiceNumber) || f.no, durum: 'bekliyor' };
+    },
+    async iptal(h, uuid) { await this.cevap(await this.istek(h, '/earchive/Invoices/' + uuid + '/Cancel', { method: 'PUT' })); return { durum: 'iptal' }; },
+    async durum(h, uuid) { const j = await this.cevap(await this.istek(h, '/earchive/Invoices/' + uuid + '/Status')) || {}; return { durum: j.CancelStatus ? 'iptal' : ({ succeed: 'tamam', waiting: 'bekliyor', error: 'hata' })[j.StatusCode] || 'bekliyor', ayrinti: eaMetin(j.StatusDetail, 200), raporlandi: j.ReportStatus === 'Reported' }; },
+    async pdf(h, uuid) {
+      const r = await this.istek(h, '/earchive/Invoices/' + uuid + '/pdf'); if (!r.ok) await this.cevap(r);
+      // belgede içerik türü yazmıyor: ham PDF ya da base64 metin (tırnaklı olabilir) gelebilir
+      const u = new Uint8Array(await r.arrayBuffer()); if (u[0] === 0x25 && u[1] === 0x50) return u;
+      return eaB64Bayt(new TextDecoder().decode(u).replace(/^"|"$/g, ''));
+    },
+  },
+  // Uyumsoft SOAP (efatura(-test).uyumsoft.com.tr/Services/Integration, ad alanı tempuri.org, eylem IIntegration/<işlem>).
+  uyumsoft: { ad: 'Uyumsoft', alanlar: [['kullanici', 'Kullanıcı adı'], ['sifre', 'Şifre', true]], hazir: true,
+    url: h => h.test ? 'https://efatura-test.uyumsoft.com.tr/Services/Integration' : 'https://efatura.uyumsoft.com.tr/Services/Integration',
+    // TODO: kimlik doğrulama WS-Security UsernameToken (Uyumsoft entegrasyon kılavuzuyla teyit)
+    baslik: h => `<o:Security xmlns:o="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" s:mustUnderstand="1"><o:UsernameToken><o:Username>${eaXml(h.kimlik.kullanici)}</o:Username><o:Password>${eaXml(h.kimlik.sifre)}</o:Password></o:UsernameToken></o:Security>`,
+    async cagir(h, islem, ic) { const x = await eaSoap(h, this.url(h), 'http://tempuri.org/IIntegration/' + islem, `<${islem} xmlns="http://tempuri.org/">${ic}</${islem}>`, this.baslik(h)); const s = eaEtiket(x, islem + 'Result'); if (!s || eaOz(s.oz, 'IsSucceded') === 'false') throw new EaHata('Uyumsoft: ' + eaMetin(s ? eaOz(s.oz, 'Message') : 'boş cevap', 200), 502); return s; },
+    // bağlantı denemesi: bilinmeyen bir kimlikle durum sorgusu; kimlik hatası SOAP hatası döner, 'bulunamadı' cevabı bağlantının çalıştığını gösterir
+    async dene(h) { await eaSoap(h, this.url(h), 'http://tempuri.org/IIntegration/QueryOutboxInvoiceStatus', `<QueryOutboxInvoiceStatus xmlns="http://tempuri.org/"><invoiceIds><string xmlns="http://schemas.microsoft.com/2003/10/Serialization/Arrays">${crypto.randomUUID()}</string></invoiceIds></QueryOutboxInvoiceStatus>`, this.baslik(h)); return { ok: true, ileti: 'Uyumsoft hesabı doğrulandı' }; },
+    async olustur(h, f) {
+      // TODO: Invoice öğesinin içi UBL ad alanında; EArchiveInvoiceInfo (DeliveryType) alan adları kılavuzla teyit edilmeli
+      const ubl = eaUbl(f).replace(/^<\?xml[^>]*\?>/, '').replace(/^<Invoice xmlns="[^"]*" /, '<Invoice ');   // kök SendInvoice ad alanında, çocuklar cac/cbc önekli
+      const s = await this.cagir(h, 'SendInvoice', `<invoices><InvoiceInfo LocalDocumentId="${f.uuid}">${ubl}<EArchiveInvoiceInfo DeliveryType="Electronic"/><Scenario>eArchive</Scenario><CreateDateUtc>${new Date().toISOString()}</CreateDateUtc></InvoiceInfo></invoices>`);
+      const v = eaEtiket(s.ic, 'Value') || { oz: /<[^>]*Value\b([^>]*)\/>/.exec(s.ic) ? /<[^>]*Value\b([^>]*)\/>/.exec(s.ic)[1] : '' };
+      return { uuid: eaOz(v.oz, 'Id') || f.uuid, no: eaOz(v.oz, 'Number') || f.no, durum: 'bekliyor' };
+    },
+    async iptal(h, uuid) { await this.cagir(h, 'CancelEArchiveInvoice', `<request InvoiceId="${eaXml(uuid)}" CancelDate="${new Date().toISOString()}"/>`); return { durum: 'iptal' }; },
+    async durum(h, uuid) { const s = await this.cagir(h, 'QueryOutboxInvoiceStatus', `<invoiceIds><string xmlns="http://schemas.microsoft.com/2003/10/Serialization/Arrays">${eaXml(uuid)}</string></invoiceIds>`); const m = /<[^>]*Value\b([^>]*)\/?>/.exec(s.ic) || []; const st = eaOz(m[1], 'Status'); return { durum: /Cancel/i.test(st) ? 'iptal' : /Error|Declined|Fail/i.test(st) ? 'hata' : /Approved|Succe|Sent|Archived/i.test(st) ? 'tamam' : 'bekliyor', ayrinti: eaMetin(eaOz(m[1], 'Message') || st, 200) }; },   // TODO: InvoiceStatus değer listesi
+    async pdf(h, uuid) { const s = await this.cagir(h, 'GetOutboxInvoicePdf', `<invoiceId>${eaXml(uuid)}</invoiceId>`); const d = eaEtiket(s.ic, 'Data'); if (!d) throw new EaHata('Uyumsoft PDF boş', 502); return eaB64Bayt(d.ic); },
+  },
+  // İzibiz SOAP: AuthenticationWS Login → SESSION_ID, EArchiveInvoiceWS. TODO: işlem ve alan adları İzibiz e-Arşiv kılavuzuyla teyit edilmeli (belge herkese açık değil).
+  izibiz: { ad: 'İzibiz', alanlar: [['kullanici', 'Kullanıcı adı'], ['sifre', 'Şifre', true]], hazir: true,
+    kok: h => h.test ? 'https://efaturatest.izibiz.com.tr' : 'https://efatura.izibiz.com.tr',
+    async oturum(h) {
+      const x = await eaSoap(h, this.kok(h) + '/AuthenticationWS', 'login', `<Login xmlns="http://schemas.i2i.com/ei/wsdl"><REQUEST_HEADER><SESSION_ID>-1</SESSION_ID><APPLICATION_NAME>mdSinyal</APPLICATION_NAME></REQUEST_HEADER><USER_NAME>${eaXml(h.kimlik.kullanici)}</USER_NAME><PASSWORD>${eaXml(h.kimlik.sifre)}</PASSWORD></Login>`);
+      const s = eaEtiket(x, 'SESSION_ID'); if (!s || !s.ic || s.ic === '-1') throw new EaHata('İzibiz oturumu açılamadı', 401); return s.ic;
+    },
+    bas: (sid) => `<REQUEST_HEADER><SESSION_ID>${eaXml(sid)}</SESSION_ID><COMPRESSED>N</COMPRESSED><APPLICATION_NAME>mdSinyal</APPLICATION_NAME></REQUEST_HEADER>`,
+    async cagir(h, islem, ic) { const sid = await this.oturum(h); const x = await eaSoap(h, this.kok(h) + '/EArchiveInvoiceWS', islem, `<${islem}Request xmlns="http://schemas.i2i.com/ei/wsdl/archive">${this.bas(sid)}${ic}</${islem}Request>`); const e = eaEtiket(x, 'ERROR_TYPE'); if (e) throw new EaHata('İzibiz: ' + eaMetin((eaEtiket(e.ic, 'ERROR_SHORT_DES') || e).ic, 200), 502); return x; },
+    async dene(h) { await this.oturum(h); return { ok: true, ileti: 'İzibiz oturumu açıldı' }; },
+    async olustur(h, f) {
+      const x = await this.cagir(h, 'WriteToArchiveExtended', `<ArchiveInvoiceExtendedContent><INVOICE_PROPERTIES><EARSIV_FLAG>Y</EARSIV_FLAG><EARSIV_PROPERTIES><EARSIV_TYPE>NORMAL</EARSIV_TYPE><SUB_STATUS>NEW</SUB_STATUS>${f.alici.eposta ? `<EARSIV_EMAIL>${eaXml(f.alici.eposta)}</EARSIV_EMAIL>` : ''}</EARSIV_PROPERTIES><INVOICE_CONTENT>${eaB64(eaUbl(f))}</INVOICE_CONTENT></INVOICE_PROPERTIES></ArchiveInvoiceExtendedContent>`);
+      return { uuid: f.uuid, no: ((eaEtiket(x, 'INVOICE_ID') || {}).ic) || f.no, durum: 'bekliyor' };
+    },
+    async iptal(h, uuid) { await this.cagir(h, 'CancelEArchiveInvoice', `<CancelEArsivInvoiceContent><FATURA_UUID>${eaXml(uuid)}</FATURA_UUID><IPTAL_TARIHI>${eaSaatTR().slice(0, 10)}</IPTAL_TARIHI></CancelEArsivInvoiceContent>`); return { durum: 'iptal' }; },
+    async durum(h, uuid) { const x = await this.cagir(h, 'GetEArchiveInvoiceStatus', `<UUID>${eaXml(uuid)}</UUID>`); const d = ((eaEtiket(x, 'INVOICE_STATUS') || eaEtiket(x, 'STATUS') || {}).ic || ''); return { durum: /IPTAL|CANCEL/i.test(d) ? 'iptal' : /HATA|ERROR/i.test(d) ? 'hata' : /RAPOR|SUCCE|BASARI|TAMAM/i.test(d) ? 'tamam' : 'bekliyor', ayrinti: eaMetin(d, 200) }; },
+    async pdf(h, uuid) { const x = await this.cagir(h, 'ReadFromArchive', `<INVOICEID>${eaXml(uuid)}</INVOICEID><PORTAL_DIRECTION>OUT</PORTAL_DIRECTION><PROFILE>PDF</PROFILE>`); const d = eaEtiket(x, 'INVOICE') || eaEtiket(x, 'CONTENT'); if (!d) throw new EaHata('İzibiz PDF boş', 502); return eaB64Bayt(d.ic.replace(/<[^>]+>/g, '')); },
+  },
+  // TÜRMOB e-Entegratör (Luca): herkese açık API belgesi bulunamadı; kursun hesabıyla gelen kılavuz okununca eklenecek
+  turmob: { ad: 'TÜRMOB e-Entegratör (Luca)', alanlar: [], hazir: false, not: 'Bağlantı belgesi TÜRMOB’dan istendiğinde eklenecek. O zamana kadar deneme kipiyle hazırlanabilir ya da faturayı mali müşavir keser.' },
+};
+// Deneme PDF'i: tek sayfa, ASCII metin (Türkçe harfler sadeleştirilir); geçerli PDF 1.4
+function eaDenemePdf(satirlar) {
+  const s = t => String(t).replace(/[ğĞ]/g, 'g').replace(/[üÜ]/g, 'u').replace(/[şŞ]/g, 's').replace(/[ıİ]/g, 'i').replace(/[öÖ]/g, 'o').replace(/[çÇ]/g, 'c').replace(/[^\x20-\x7e]/g, '').replace(/[()\\]/g, '\\$&');
+  const akis = 'BT /F1 14 Tf 60 780 Td 18 TL ' + satirlar.filter(Boolean).map(x => `(${s(x)}) '`).join(' ') + ' ET';
+  const nes = ['<< /Type /Catalog /Pages 2 0 R >>', '<< /Type /Pages /Kids [3 0 R] /Count 1 >>', '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>', `<< /Length ${akis.length} >>\nstream\n${akis}\nendstream`, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'];
+  let o = '%PDF-1.4\n'; const yer = []; nes.forEach((n, i) => { yer.push(o.length); o += `${i + 1} 0 obj\n${n}\nendobj\n`; });
+  const x = o.length; o += `xref\n0 ${nes.length + 1}\n0000000000 65535 f \n` + yer.map(p => String(p).padStart(10, '0') + ' 00000 n \n').join('') + `trailer\n<< /Size ${nes.length + 1} /Root 1 0 R >>\nstartxref\n${x}\n%%EOF\n`;
+  return new TextEncoder().encode(o);
+}
+// ---- hesap bilgisinin şifrelenmesi (AES-GCM, anahtar EARSIV_ANAHTAR'dan; ek veri kurs kimliği) ----
+async function eaAnahtar(env) { if (String(env.EARSIV_ANAHTAR || '').length < 32) throw new EaHata('Sunucuda e-Arşiv şifreleme anahtarı tanımlı değil (EARSIV_ANAHTAR); mdSinyal ekibine yazın', 503); return crypto.subtle.importKey('raw', await crypto.subtle.digest('SHA-256', new TextEncoder().encode('mdsinyal-earsiv|' + env.EARSIV_ANAHTAR)), 'AES-GCM', false, ['encrypt', 'decrypt']); }
+async function eaSifrele(env, kurs, o) { const iv = crypto.getRandomValues(new Uint8Array(12)), c = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: new TextEncoder().encode(kurs) }, await eaAnahtar(env), new TextEncoder().encode(JSON.stringify(o)))); const t = new Uint8Array(12 + c.length); t.set(iv); t.set(c, 12); return eaB64(t); }
+async function eaCoz(env, kurs, s) { const t = eaB64Bayt(s); try { return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: t.slice(0, 12), additionalData: new TextEncoder().encode(kurs) }, await eaAnahtar(env), t.slice(12)))); } catch (x) { if (x instanceof EaHata) throw x; throw new EaHata('Kayıtlı hesap bilgisi çözülemedi; hesabı yeniden girin', 409); } }
+const eaMaske = v => { v = String(v || ''); return v.length <= 4 ? '••••' : '••••' + v.slice(-4); };
+const eaHesapOku = async (env, kurs) => { try { return JSON.parse((await env.LINK.get('earsiv:' + kurs)) || 'null'); } catch (x) { return null; } };
+async function eaGunluk(env, kurs, x) {   // PAR-011 hata günlüğü: kişisel veri yok (fatura kimliği, numara, işlem, sonuç)
+  const a = 'earsiv:gunluk:' + kurs; let l = []; try { l = JSON.parse((await env.LINK.get(a)) || '[]'); } catch (e) { }
+  l.unshift({ zaman: new Date().toISOString(), ...x }); await env.LINK.put(a, JSON.stringify(l.slice(0, 50)), { expirationTtl: 180 * 86400 });
+}
+async function earsiv(req, env, yol, cevap, { gercek, rol, kursId }) {
+  if (!gercek) return cevap({ ok: false, hata: 'e-Arşiv kurs hesabıyla çalışır' }, 403);
+  const GET = req.method === 'GET', POST = req.method === 'POST';
+  const hesap = await eaHesapOku(env, kursId);
+  const ozet = h => h ? { entegrator: h.entegrator, ad: (EA_ENTEGRATOR[h.entegrator] || {}).ad || h.entegrator, deneme: !!h.deneme, test: !!h.test, ozet: h.ozet || {}, zaman: h.zaman, son: h.son || null } : null;
+  try {
+    if (yol === 'earsiv' && GET) {
+      let gunluk = []; if (rol === 'mudur') { try { gunluk = JSON.parse((await env.LINK.get('earsiv:gunluk:' + kursId)) || '[]').slice(0, 20); } catch (x) { } }
+      return cevap({ ok: true, hesap: ozet(hesap), sunucuAnahtari: String(env.EARSIV_ANAHTAR || '').length >= 32, iptalNedenleri: EA_IPTAL_NEDEN, gunluk, entegratorler: Object.entries(EA_ENTEGRATOR).filter(([id]) => id !== 'deneme').map(([id, e]) => ({ id, ad: e.ad, hazir: e.hazir, alanlar: e.alanlar.map(([a, et, gizli]) => ({ ad: a, etiket: et, gizli: !!gizli })), not: e.not || '' })) });
+    }
+    if (!POST) return cevap({ ok: false }, 405);
+    let b = {}; try { b = await req.json(); } catch (x) { return cevap({ ok: false, hata: 'İstek okunamadı' }, 400); }
+    if (yol === 'earsiv/hesap') {
+      if (rol !== 'mudur') return cevap({ ok: false, hata: 'e-Arşiv hesabını yalnız kurs müdürü bağlar' }, 403);
+      if (b.sil) { await env.LINK.delete('earsiv:' + kursId); await eaGunluk(env, kursId, { islem: 'hesap kaldırıldı', ok: true }); return cevap({ ok: true, hesap: null }); }
+      const id = String(b.entegrator || ''), E = EA_ENTEGRATOR[id];
+      if (!E || id === 'deneme') return cevap({ ok: false, hata: 'Entegratör seçin' }, 400);
+      const deneme = !!b.deneme;
+      if (!E.hazir && !deneme) return cevap({ ok: false, hata: E.ad + ' bağlantısı henüz hazır değil; deneme kipini açın' }, 400);
+      const k0 = b.kimlik && typeof b.kimlik === 'object' ? b.kimlik : {}, kimlik = {};
+      E.alanlar.forEach(([a]) => { const v = String(k0[a] == null ? '' : k0[a]).trim(); if (v) kimlik[a] = v.slice(0, 400); });
+      const eksik = E.alanlar.filter(([a]) => !kimlik[a]);
+      // aynı entegratörde boş bırakılan alan eski değerini korur (anahtarı yeniden yazmak gerekmesin)
+      let eski = {}; if (eksik.length && hesap && hesap.entegrator === id && hesap.sifre) eski = await eaCoz(env, kursId, hesap.sifre);
+      eksik.forEach(([a]) => { if (eski[a]) kimlik[a] = eski[a]; });
+      if (!deneme && E.alanlar.some(([a]) => !kimlik[a])) return cevap({ ok: false, hata: E.alanlar.filter(([a]) => !kimlik[a]).map(x => x[1]).join(', ') + ' gerekli' }, 400);
+      const kayit = { entegrator: id, deneme, test: !!b.test, zaman: new Date().toISOString(), ozet: Object.fromEntries(E.alanlar.filter(([a]) => kimlik[a]).map(([a, , gizli]) => [a, gizli ? eaMaske(kimlik[a]) : eaMetin(kimlik[a], 60)])), ...(Object.keys(kimlik).length ? { sifre: await eaSifrele(env, kursId, kimlik) } : {}) };
+      await env.LINK.put('earsiv:' + kursId, JSON.stringify(kayit));
+      await eaGunluk(env, kursId, { islem: 'hesap kaydedildi', entegrator: id, deneme, ok: true });
+      return cevap({ ok: true, hesap: ozet(kayit) });
+    }
+    if (!hesap) return cevap({ ok: false, hata: 'e-Arşiv entegratörü bağlı değil (Ayarlar › Entegrasyon)' }, 409);
+    const E = hesap.deneme ? EA_ENTEGRATOR.deneme : EA_ENTEGRATOR[hesap.entegrator];
+    if (!E || !E.hazir) return cevap({ ok: false, hata: 'Seçili entegratör henüz hazır değil' }, 409);
+    if (mvSinirAsti('earsiv:' + kursId, 30)) return cevap({ ok: false, hata: 'Çok sık işlem; bir dakika sonra tekrar deneyin' }, 429);
+    const h = { env, kurs: kursId, test: !!hesap.test, f: (u, o) => fetch(u, o), kimlik: !hesap.deneme && hesap.sifre ? await eaCoz(env, kursId, hesap.sifre) : {} };
+    const uuidAl = () => { const u = String(b.uuid || '').toLowerCase(); if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(u)) throw new EaHata('Fatura kimliği (uuid) geçersiz'); return u; };
+    if (yol === 'earsiv/dene') {
+      if (rol !== 'mudur') return cevap({ ok: false, hata: 'Yetki yok' }, 403);
+      let s; try { s = await E.dene(h); } catch (x) { s = { ok: false, hata: x.message }; }
+      hesap.son = { ok: !!s.ok, zaman: new Date().toISOString(), ileti: eaMetin(s.ileti || s.hata, 200) }; await env.LINK.put('earsiv:' + kursId, JSON.stringify(hesap));
+      await eaGunluk(env, kursId, { islem: 'bağlantı denemesi', deneme: !!hesap.deneme, ok: !!s.ok, hata: s.ok ? undefined : eaMetin(s.hata, 160) });
+      return cevap({ ok: !!s.ok, deneme: !!hesap.deneme, ileti: s.ileti, hata: s.hata, hesap: ozet(hesap) }, s.ok ? 200 : 502);
+    }
+    if (!EA_ROL.includes(rol)) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
+    if (yol === 'earsiv/fatura') {
+      const f = eaFaturaDogrula(b.fatura);
+      try { const s = await E.olustur(h, f); await eaGunluk(env, kursId, { islem: 'fatura', uuid: s.uuid, no: s.no, deneme: !!hesap.deneme, ok: true }); return cevap({ ok: true, deneme: !!hesap.deneme, ...s, toplam: f.toplam, matrah: f.matrah, kdv: f.kdvToplam }); }
+      catch (x) { await eaGunluk(env, kursId, { islem: 'fatura', uuid: f.uuid, deneme: !!hesap.deneme, ok: false, hata: eaMetin(x.message, 160) }); throw x; }
+    }
+    if (yol === 'earsiv/iptal') {
+      const uuid = uuidAl(), neden = String(b.neden || '');
+      if (!EA_IPTAL_NEDEN[neden]) return cevap({ ok: false, hata: 'e-Arşiv fatura yalnız alıcı adı/unvanı ya da VKN/TCKN hatası nedeniyle iptal edilir; öbür hatalarda iade faturası düzenleyin', nedenler: EA_IPTAL_NEDEN }, 400);
+      try { const s = await E.iptal(h, uuid, EA_IPTAL_NEDEN[neden]); await eaGunluk(env, kursId, { islem: 'iptal', uuid, neden, deneme: !!hesap.deneme, ok: true }); return cevap({ ok: true, uuid, neden, ...s }); }
+      catch (x) { await eaGunluk(env, kursId, { islem: 'iptal', uuid, neden, deneme: !!hesap.deneme, ok: false, hata: eaMetin(x.message, 160) }); throw x; }
+    }
+    if (yol === 'earsiv/durum') { const uuid = uuidAl(); return cevap({ ok: true, uuid, deneme: !!hesap.deneme, ...(await E.durum(h, uuid)) }); }
+    if (yol === 'earsiv/pdf') { const uuid = uuidAl(), pdf = await E.pdf(h, uuid); return new Response(pdf, { headers: { ...cevap.cors, 'Content-Type': 'application/pdf', 'Content-Disposition': `inline; filename="fatura-${uuid.slice(0, 8)}.pdf"`, 'Cache-Control': 'no-store' } }); }
+    return cevap({ ok: false, hata: 'Bilinmeyen adres' }, 404);
+  } catch (x) {
+    if (x instanceof EaHata) return cevap({ ok: false, hata: x.message }, x.s);
+    console.error(JSON.stringify({ tur: 'hata', konu: 'earsiv', hata: String((x && x.message) || x).slice(0, 200) }));
+    return cevap({ ok: false, hata: 'Entegratöre ulaşılamadı; biraz sonra tekrar deneyin' }, 502);
+  }
+}
 // ======== SERVİS HESABI ========
 // UYG-012 / MSJ-021: worker'ın Firestore servis hesabı ve ofis kapalıyken çalışan işler (Cloudflare Cron).
 // Kurulum ve kapatma: cloudflare/SERVIS-HESABI.md. FIREBASE_SA (gizli) tanımlı değilse burada hiçbir şey çalışmaz.
@@ -2011,6 +2253,7 @@ export default {
     const kursId = req.headers.get('X-Kurs') || url.searchParams.get('kurs') || '';
     let rol = null;
     if (gercek) { rol = await uyeRol(req, kursId); if (!rol || !PERSONEL.includes(rol)) return cevap({ ok: false, hata: 'Yetki yok' }, 403); }
+    if (yol === 'earsiv' || yol.startsWith('earsiv/')) return earsiv(req, env, yol, cevap, { gercek, rol, kursId });   // PAR-011
     if (yol === 'mebbis/ekran-alarm') return gercek && req.method === 'POST' ? ekranAlarm(req, env, cevap, kursId) : cevap({ ok: false, hata: 'Yetki yok' }, 403);   // YON-062
     // mevzuat ve MEB yazıları: arama, yükleme, özet, cevap (kimlik ve yetki mevzuatUc() içinde; /mevzuat/gom demoya da açık)
     if (yol === 'mevzuat' || yol.startsWith('mevzuat/')) return mevzuat(req, env, url, yol, cevap, { gercek, rol, kursId, origin });
