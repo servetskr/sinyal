@@ -151,7 +151,12 @@ function demoHatSec(env, metin, rol) {
 // Kursun kendi WhatsApp hattı (Meta'daki telefon numarası kimliği + kalıcı erişim anahtarı); anahtar tarayıcıya hiç dönmez
 const kursHat = async (env, kurs) => { try { return JSON.parse((await env.LINK.get('hat:' + kurs)) || 'null'); } catch (x) { return null; } };
 // Onaylı şablonla gönderim: tek gövde değişkeni ({{1}}); değişken satır sonu ve 4'ten fazla boşluk içeremez (Meta kuralı)
-const sablonParam = metin => metin.replace(/\s*\n+\s*/g, ' · ').replace(/[\t ]{4,}/g, '   ').slice(0, 1000);
+// MSJ-010/MSJ-023: Meta şablon gövdesi en çok 1.024 karakter (sabit metin + değişken). Onaylı şablonların sabit metni ~70 karakter
+// (sinyal_bildirim, sinyal_kampanya, mebbis_ekran_alarmi); pay bırakılarak değişken 940 karakterde kesilir (sonuna …). Şablon metni uzarsa SABLON_SABIT artırılır.
+const SABLON_GOVDE_SINIR = 1024, SABLON_SABIT = 84, SABLON_DEGISKEN = SABLON_GOVDE_SINIR - SABLON_SABIT;
+// uzunluk UTF-16 birimiyle sayılır (emoji iki birim: hangi sayımla da sınır aşılmasın); yarım kalan emoji (vekil çift) atılır
+const sablonKes = t => t.length > SABLON_DEGISKEN ? t.slice(0, SABLON_DEGISKEN - 1).replace(/[\uD800-\uDBFF]$/, '').trimEnd() + '…' : t;
+const sablonParam = metin => sablonKes(String(metin).replace(/\s*\n+\s*/g, ' · ').replace(/[\t ]{4,}/g, '   '));
 const sablonGovde = (to, ad, dil, metin) => ({ messaging_product: 'whatsapp', to, type: 'template', template: { name: ad, language: { code: dil || 'tr' }, components: [{ type: 'body', parameters: [{ type: 'text', text: sablonParam(metin) }] }] } });
 // Kişinin kursun hattına en son yazdığı an (webhook yazar, 25 saat tutulur). Pencere açık değilse serbest metin Meta'da sonradan
 // 131047 ile düşer ve bu hata isteğin cevabında değil webhook'ta gelir; bu yüzden şablon tanımlı kursta pencere kapalıysa doğrudan şablon gider.
