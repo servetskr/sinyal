@@ -4,6 +4,9 @@
 import { e, isaret } from './ui.js?v=234';
 import { S, gun } from './veri.js?v=234';
 
+// KAY-011: engel bilgisi (MEBBİS'e 'Var/Yok' gider; ayrıntı e-sınav ve aday belgesi için kursta tutulur)
+export const ENGEL_TURLERI = ['Ortopedik (el/kol)', 'Ortopedik (yürüyemiyor)', 'İşitme, dil ve konuşma', 'Görme (bir gözü görmüyor)', 'Görme (büyüteçle)', 'Süreğen hastalık'];
+export const AB_KODLARI = [['01', 'Görüş düzeltme / koruma'], ['01.01', 'Gözlük'], ['01.02', 'Kontakt lens'], ['01.05', 'Göz siperi'], ['01.06', 'Gözlük veya kontakt lens'], ['01.07', 'Özel optik araç'], ['02', 'İşitme cihazı / iletişim yardımı'], ['03', 'Protez / ortez'], ['03.01', 'Kol protezi / ortezi'], ['03.02', 'Bacak protezi / ortezi']];
 export const OGRENIM_BELGELERI = ['Diploma', 'Mezuniyet Belgesi', 'Öğrenim Belgesi', 'Tasdikname', 'Geçici Mezuniyet Belgesi'];
 // MEBBİS metin kuralı: " < > ' ! & = yasak, baş/son boşluk yasak, uzunluk sınırı
 export const temiz = (v, n) => String(v || '').replace(/["<>'!&=]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n || 100);
@@ -68,6 +71,7 @@ function formUyariYenile(f) {
 const ENGEL_VARSAYILAN = sinif => sinif === 'B-EN' ? 'Var' : 'Yok';
 if (typeof document !== 'undefined') document.addEventListener('change', ev => { const t = ev.target; if (!t || !t.name) return; const f0 = t.closest('form');
   if (f0 && t.name === 'meSgOzur') t.dataset.elle = '1';
+  if (f0 && t.name === 'meSgOzur') f0.querySelectorAll('[data-me-engel]').forEach(x => { x.hidden = t.value !== 'Var' && !(x.querySelector('[name=meSgAb]') || {}).value; });
   if (f0 && t.name === 'sinif') { const oz = f0.querySelector('[name=meSgOzur]'); if (oz && !oz.dataset.elle) oz.value = ENGEL_VARSAYILAN(t.value); }
   if (!/^(dogumTarihi|dogum|raporTarih|rtar|meAdTarih|meOgTarih|mePiTarih)$/.test(t.name)) return; const f = t.closest('form'); if (f) formUyariYenile(f); });
 
@@ -88,6 +92,8 @@ export function evrakHtml(k) {
       <b class="tam" style="font-size:13.5px">Sağlık raporu</b>
       <div class="alan"><label>Engel durumu</label><select name="meSgOzur"><option value="Yok" ${oz !== 'Var' ? 'selected' : ''}>Engeli yok</option><option value="Var" ${oz === 'Var' ? 'selected' : ''}>Engeli var</option></select>${k && k.sinif === 'B-EN' && oz !== 'Var' ? '<small style="color:var(--kirmizi)">B Engelli: engel durumu “Var” olmalı</small>' : ''}</div>
       ${alan('meSgRef', 'Rapor referans no (e-Nabız)', s.refNo, 'maxlength="30"')}
+      <div class="alan" data-me-engel ${oz === 'Var' ? '' : 'hidden'}><label>Engel türü</label><select name="meSgEngel"><option value="">Seçin</option>${ENGEL_TURLERI.map(x => `<option ${s.engelTur === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
+      <div class="alan" data-me-engel ${oz === 'Var' || s.abKod ? '' : 'hidden'}><label>AB kodu (raporda)</label><select name="meSgAb"><option value="">Yok</option>${AB_KODLARI.map(([k, a]) => `<option value="${k}" ${s.abKod === k ? 'selected' : ''}>${k} · ${a}</option>`).join('')}</select></div>
       <b class="tam" style="font-size:13.5px">Adli sicil (sabıka) belgesi</b>
       ${alan('meAdVeren', 'Belgeyi veren', a.veren || 'E-DEVLET', 'maxlength="100" list="me-dl-ad"')}${dl('me-dl-ad', son5('adli'))}${tarihAlan('meAdTarih', 'Belge tarihi', a.tarih)}${alan('meAdSayi', 'Belge sayısı', a.sayi, 'maxlength="10"')}
       <b class="tam" style="font-size:13.5px">Parmak izi belgesi</b>
@@ -99,6 +105,7 @@ export function evrakOku(f) {
   const blok = (veren, tarih, sayi) => (g(veren).trim() && (g(tarih) || g(sayi).trim())) ? { veren: temiz(g(veren)), tarih: tarihYaz(g(tarih)), sayi: temiz(g(sayi), 10) } : null;
   const o = blok('meOgVeren', 'meOgTarih', 'meOgSayi'); if (o) o.tur = g('meOgTur');
   const sg = { ozur: g('meSgOzur') || ENGEL_VARSAYILAN((f.querySelector('[name="sinif"]:checked') || f.querySelector('[name="sinif"]') || {}).value), refNo: temiz(g('meSgRef'), 30) };
+  if (sg.ozur === 'Var' && g('meSgEngel')) sg.engelTur = g('meSgEngel'); if (g('meSgAb')) sg.abKod = g('meSgAb');
   return { ogrenim: o, saglik: sg, adli: blok('meAdVeren', 'meAdTarih', 'meAdSayi'), parmak: blok('mePiVeren', 'mePiTarih', 'mePiSayi') };
 }
 // MEBBİS'e gidecek evrak paketi (motor: evrakYaz); eksik blok gönderilmez, eksik listesine yazılır
