@@ -443,7 +443,8 @@ export function yukAlindi(v) {
 }
 export function programIsleri(idler) {
   const l = [], hatalar = [];
-  sbDers(S.dersler).filter(d => d.durum === 'Planlandı' && !d.meb && fark(d.tarih) >= 0 && (!idler || idler.includes('ders-' + d.id))).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat)).forEach(d => {
+  // DIR-048: yalnız ileri tarihli (yarın ve sonrası) ve gönderilmemiş ders gönderilir; geçmiş ya da bugünün dersi MEBBİS'e yazılmaz
+  sbDers(S.dersler).filter(d => d.durum === 'Planlandı' && !d.meb && fark(d.tarih) > 0 && (!idler || idler.includes('ders-' + d.id))).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat)).forEach(d => {
     const k = kursiyer(d.kursiyer); if (!k) return;
     const g = mebGrup(k), eg = egitmen(d.egitmen) || {}, ar = arac(d.arac) || {}, id = 'ders-' + d.id;
     const baslik = `${tamAd(k)} · ${d.tarih.split('-').reverse().join('.')} ${d.saat}`;

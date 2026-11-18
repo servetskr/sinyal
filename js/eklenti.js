@@ -75,7 +75,8 @@ export function mebIsleri(hepsi) {
       alan('Cep Telefonu', cep10(k.tel), ['ceptelefonu', 'ceptelefonno', 'telefon', 'gsm', 'tel']),
     ].filter(Boolean) });
   });
-  sbDers(S.dersler).filter(d => d.durum === 'Planlandı' && ((fark(d.tarih) >= 0 && !d.meb) || (hepsi && d.meb && fark(d.tarih) >= -14))).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat)).forEach(d => {
+  // DIR-048: gönderilecek ders yarından itibaren (aktarılanlar listesi geçmişi de gösterir)
+  sbDers(S.dersler).filter(d => d.durum === 'Planlandı' && ((fark(d.tarih) > 0 && !d.meb) || (hepsi && d.meb && fark(d.tarih) >= -14))).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat)).forEach(d => {
     const k = kursiyer(d.kursiyer); if (!k) return; const eg = egitmen(d.egitmen) || {}, ar = arac(d.arac) || {};
     isler.push({ id: 'ders-' + d.id, tur: 'program', ref: { ders: d.id }, bitti: !!d.meb, meta: { ad: tamAd(k), sinif: k.sinif, egitmen: d.egitmen, tarih: d.tarih, detay: `${d.mebDegisti ? 'DEĞİŞTİ (MEBBİS’teki eski kayıt: ' + d.mebDegisti.eski + ') · ' : ''}${tr(d.tarih)} ${d.saat} · ${eg.ad || ''} · ${ar.plaka || ''}` }, son: gunEkle(d.tarih, -kuralAyar('programOnGun')), neden: `Dersten ${kuralAyar('programOnGun')} gün önce`, baslik: `${tamAd(k)} · ${tr(d.tarih)} ${d.saat}`, alanlar: [
       alan('Tarih', tr(d.tarih), ['derstarihi', 'tarih', 'egitimtarihi']), alan('Saat', d.saat, ['dersaati', 'baslangicsaati', 'saat']), alan(TC[0], k.tc, TC[1]), alan('Kursiyer', tamAd(k), ['kursiyer', 'kursiyeradi', 'adisoyadi']),
