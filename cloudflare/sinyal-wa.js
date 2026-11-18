@@ -17,6 +17,11 @@
 // /mebbis/ekran-alarm (YON-062): MEBBİS ekranı değişti alarmı sahibe WhatsApp şablonuyla, ekran başına günde bir; ayrıntı ekranAlarm() üstünde.
 //   /eposta/ogrenci (PAR-058): öğrenciye tek alıcılı makbuz / ödeme hatırlatması; ayrıntı epOgrenci() üstünde.
 // /mevzuat/*: mevzuat arama (sorgu gömme), kursa gelen MEB yazılarını yükleme/listeleme/silme, özet ve kaynaklı cevap. Ayrıntı mevzuatUc() üstünde.
+// KAY-033 (18 Kas kararı): belge görüntüsü okuma ucu (belge/oku, OCR_MODEL) kaldırıldı; öğrenci belgesi hiçbir dış yapay zekâya gönderilmez.
+//   env.AI ([ai] bağlaması) yalnız mevzuat gömme modeli ve PDF/DOCX → metin (toMarkdown) için kalır.
+// /earsiv (PAR-011): kursun seçtiği e-Arşiv entegratörü (Nilvera, Uyumsoft, İzibiz; deneme kipi); ayrıntı 'E-ARŞİV' bölümünde.
+//   Gizli EARSIV_ANAHTAR (en az 32 karakter) bir kez: openssl rand -base64 48 | npx wrangler secret put EARSIV_ANAHTAR. Değişirse kayıtlı hesaplar çözülmez, kurslar yeniden girer.
+// /servis (UYG-012, MSJ-021): Firestore servis hesabı (FIREBASE_SA) ile ofis kapalıyken öğrenci istekleri ve hatırlatmalar; ayrıntı aşağıda 'SERVİS HESABI' bölümünde, kurulum SERVIS-HESABI.md.
 const IZINLI = ['https://mdsinyal.com', 'http://localhost:4481', 'http://127.0.0.1:4481'];
 const HEDEF = /^(https:\/\/mdsinyal\.com\/|https:\/\/servetskr\.github\.io\/sinyal\/|http:\/\/localhost:4481\/)/;
 const kucuk = s => String(s || '').toLocaleLowerCase('tr');
@@ -377,74 +382,6 @@ async function hataListe(req, env, url, cevap) {
   const l = await env.LINK.list({ prefix: on, limit: 1000 });
   const liste = l.keys.map(k => ({ id: k.name.slice(5), gun: k.name.slice(5, 15), ...(k.metadata || {}) })).sort((a, b) => String(b.son).localeCompare(String(a.son))).slice(0, 300);
   return cevap({ ok: true, liste, toplam: l.keys.length });
-}
-// KAY-033: belgeden okuma (yapay zekâ). Ön büro bir belge fotoğrafı (ya da PDF'in ilk sayfası, istemcide JPEG'e çevrilir) gönderir;
-// görüntü okuyan model alanları JSON olarak döndürür, istemci yalnız formdaki BOŞ alanlara yazar ve kullanıcı onaylar.
-// Görüntü ve sonuç saklanmaz, günlüğe yazılmaz (yalnız tür, süre ve hata türü). Model: OCR_MODEL (düz değişken), varsayılan aşağıda.
-// Yetki: kursun müdürü, ön bürosu ya da şube müdürü (Firebase oturumu + kurs üyeliği). Sınır: kurs başına dakikada 6, görüntü en çok ~2 MB.
-const OCR_MODEL = '@cf/google/gemma-3-12b-it';
-const BELGE_TUR = {
-  kimlik: { ad: 'nüfus cüzdanı / kimlik kartı', alan: { tc: 'T.C. kimlik no (11 hane)', ad: 'ad', soyad: 'soyad', dogumTarihi: 'doğum tarihi', babaAdi: 'baba adı', anaAdi: 'ana adı', dogumYeri: 'doğum yeri', seriNo: 'seri no' } },
-  ehliyet: { ad: 'sürücü belgesi', alan: { tc: 'T.C. kimlik no', ad: 'ad', soyad: 'soyad', dogumTarihi: 'doğum tarihi', belgeNo: 'belge no', siniflar: 'sınıflar (ör. B, A2)', verilisTarihi: 'veriliş tarihi' } },
-  saglik: { ad: 'sürücü sağlık raporu', alan: { tc: 'T.C. kimlik no', adSoyad: 'ad soyad', dogumTarihi: 'doğum tarihi', kanGrubu: 'kan grubu', raporTarihi: 'rapor tarihi', raporNo: 'rapor no', tani: 'tanı', kurum: 'sağlık kuruluşu', doktor: 'doktor adı', karar: 'karar (sürücü olur / olamaz, kısıtlar)' } },
-  sabika: { ad: 'adli sicil kaydı (sabıka kaydı)', alan: { tc: 'T.C. kimlik no', adSoyad: 'ad soyad', dogumTarihi: 'doğum tarihi', veren: 'veren yer', babaAdi: 'baba adı', anaAdi: 'ana adı', nufusIl: 'nüfusa kayıtlı il', belgeTarihi: 'belge tarihi', belgeNo: 'belge no / barkod', karar: 'karar (kaydı yok / var)' } },
-  ogrenim: { ad: 'öğrenim belgesi (diploma)', alan: { adSoyad: 'ad soyad', okul: 'okul adı', belgeTarihi: 'belge tarihi', belgeNo: 'belge no', belgeTuru: 'belge türü (listeden)' } },
-  ikametgah: { ad: 'yerleşim yeri belgesi (ikametgâh)', alan: { tc: 'T.C. kimlik no', adSoyad: 'ad soyad', adres: 'adres', belgeTarihi: 'belge tarihi' } },
-};
-const OCR_OGRENIM = ['II. Kademe Okur Yazarlık Belgesi', 'İlkokul Diploma', 'İlköğretim Diploma', 'İlköğretim Tasdikname', 'Açık İlköğretim Öğrenci Belgesi', 'Ortaokul Diploma', 'Ortaokul Tasdikname', 'Lise Diploma', 'Lise Tasdikname', 'Lise Öğrenci Belgesi', 'Üniversite Öğrenci Belgesi', 'Üniversite Diploma', 'Üniversite Geçici Mezuniyet Belgesi', 'Yabancı Okul Diploması'];
-const OCR_KAN = ['A Rh+', 'A Rh−', 'B Rh+', 'B Rh−', 'AB Rh+', 'AB Rh−', '0 Rh+', '0 Rh−'];
-function ocrTcGecerli(t) { if (!/^[1-9]\d{10}$/.test(t)) return false; const d = [...t].map(Number); const t10 = ((d[0] + d[2] + d[4] + d[6] + d[8]) * 7 - (d[1] + d[3] + d[5] + d[7])) % 10; return ((t10 + 10) % 10) === d[9] && d.slice(0, 10).reduce((a, b) => a + b, 0) % 10 === d[10]; }
-function ocrTarih(v) {
-  const s = String(v || '').trim(); let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
-  m = s.match(/^(\d{1,2})[./\- ](\d{1,2})[./\- ](\d{4})$/); if (m && +m[2] >= 1 && +m[2] <= 12 && +m[1] >= 1 && +m[1] <= 31) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
-  return '';
-}
-function ocrKan(v) { const s = String(v || '').toLocaleUpperCase('tr').replace(/\s+/g, '').replace(/^O/, '0'); const m = s.match(/^(AB|A|B|0)(?:RH)?\(?([+\-−]|POZ|NEG)/); if (!m) return ''; return `${m[1]} Rh${m[2] === '+' || m[2] === 'POZ' ? '+' : '−'}`; }
-function ocrOgrenim(v) { const s = String(v || '').toLocaleLowerCase('tr'); if (!s) return ''; return OCR_OGRENIM.find(x => x.toLocaleLowerCase('tr') === s) || OCR_OGRENIM.find(x => s.includes(x.toLocaleLowerCase('tr'))) || ''; }
-// modelin metninden JSON nesnesini çıkar ve alanları düzelt; bilinmeyen alan atılır, değerler kısaltılır
-export function ocrCoz(tur, ham) {
-  const T = BELGE_TUR[tur]; if (!T) return {};
-  let o = null; const m = String(ham || '').match(/\{[\s\S]*\}/); if (m) { try { o = JSON.parse(m[0]); } catch (x) { o = null; } }
-  if (!o || typeof o !== 'object') return {};
-  const c = {};
-  for (const k of Object.keys(T.alan)) {
-    let v = o[k]; if (v == null) continue; v = String(v).replace(/[\u0000-\u001f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160); if (!v || /^(yok|null|-|bilinmiyor|okunamadı)$/i.test(v)) continue;
-    if (k === 'tc') { v = v.replace(/\D/g, ''); if (!ocrTcGecerli(v)) continue; }
-    else if (/tarih/i.test(k)) { v = ocrTarih(v); if (!v) continue; }
-    else if (k === 'kanGrubu') { v = ocrKan(v); if (!v) continue; }
-    else if (k === 'belgeTuru') { v = ocrOgrenim(v); if (!v) continue; }
-    c[k] = v;
-  }
-  return c;
-}
-function ocrIstem(tur) {
-  const T = BELGE_TUR[tur];
-  return `Bu görüntü bir Türk ${T.ad}. Görüntüde YAZAN bilgileri oku, tahmin etme. Yalnız şu anahtarlarla tek bir JSON nesnesi döndür, başka hiçbir şey yazma: ${JSON.stringify(T.alan)}. ` +
-    `Okuyamadığın ya da belgede olmayan alanı hiç yazma. Tarihleri GG.AA.YYYY biçiminde yaz.` + (tur === 'ogrenim' ? ` belgeTuru şu listeden biri olmalı: ${OCR_OGRENIM.join(' | ')}.` : '') + (tur === 'saglik' ? ' kanGrubu "A Rh+" biçiminde.' : '');
-}
-async function belgeOku(req, env, cevap, { gercek, rol, kursId }) {
-  if (req.method !== 'POST') return cevap({ ok: false }, 405);
-  if (!gercek) return cevap({ ok: false, hata: 'Belgeden okuma kurs hesabıyla çalışır' }, 403);
-  if (!['mudur', 'sekreter', 'subemudur'].includes(rol)) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
-  if (!env.AI) return cevap({ ok: false, kurulu: false, hata: 'Yapay zekâ henüz bağlı değil' }, 503);
-  if (mvSinirAsti('ocr:' + kursId, 6)) return cevap({ ok: false, hata: 'Çok sık okuma yapıldı; bir dakika sonra tekrar deneyin' }, 429);
-  let b; try { b = await req.json(); } catch (x) { return cevap({ ok: false, hata: 'İstek okunamadı' }, 400); }
-  const tur = String((b && b.tur) || ''), gorsel = String((b && b.gorsel) || '');
-  if (!BELGE_TUR[tur]) return cevap({ ok: false, hata: 'Belge türü bilinmiyor' }, 400);
-  if (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(gorsel)) return cevap({ ok: false, hata: 'Görüntü JPEG, PNG ya da WEBP olmalı' }, 400);
-  if (gorsel.length > 2.8e6) return cevap({ ok: false, hata: 'Görüntü çok büyük; daha küçük çekin' }, 413);
-  const bas = Date.now(), model = env.OCR_MODEL || OCR_MODEL;
-  let metin = '';
-  try {
-    const r = await env.AI.run(model, { messages: [{ role: 'user', content: [{ type: 'text', text: ocrIstem(tur) }, { type: 'image_url', image_url: { url: gorsel } }] }], max_tokens: 700, temperature: 0 });
-    metin = typeof r === 'string' ? r : (r && (r.response || (r.choices && r.choices[0] && r.choices[0].message && r.choices[0].message.content))) || '';
-  } catch (x) {
-    console.warn(JSON.stringify({ tur: 'uyari', konu: 'belge-oku', belge: tur, hata: String((x && x.message) || x).slice(0, 160) }));
-    return cevap({ ok: false, hata: 'Belge şu an okunamadı; biraz sonra tekrar deneyin' }, 502);
-  }
-  const alanlar = ocrCoz(tur, metin);
-  console.log(JSON.stringify({ tur: 'belge-oku', belge: tur, ms: Date.now() - bas, alan: Object.keys(alanlar).length }));
-  return cevap({ ok: true, tur, alanlar });
 }
 // Link önizlemesi (WhatsApp): mdsinyal.com/d/*, /i/*, /h/* bu servise route edilirse (Cloudflare vekili açık olmalı;
 // belgeler/link-standardi.md), sitenin 404.html yönlendiricisi 200 durum koduyla ve linkin türüne uygun başlıkla döner.
@@ -1558,9 +1495,725 @@ async function onizleme(req, url) {
     .transform(new Response(r.body, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300', 'X-Robots-Tag': 'noindex' } }));
 }
 
+// ======== E-ARŞİV (PAR-011) ========
+// Kurs kendi e-Arşiv entegratörünü seçer (Ayarlar › Entegrasyon); faturalar bu servis üzerinden entegratöre gider.
+// Hesap bilgisi (API anahtarı / kullanıcı adı-şifre) müdürün cihazından bir kez gelir, EARSIV_ANAHTAR (gizli, en az 32 karakter) ile
+// AES-GCM şifrelenip KV 'earsiv:<kurs>'a yazılır (ek veri: kurs kimliği; başka kursun kaydına taşınamaz). Tarayıcıya ve Firestore'a hiç dönmez.
+// Deneme kipi: hiçbir entegratöre istek gitmez; fatura numarası, durum, iptal ve PDF bu serviste benzetilir (KV 'earsiv:deneme:…', 30 gün).
+// Uçlar (Firebase oturumu + X-Kurs): GET earsiv (durum ve entegratör listesi; anahtar dönmez) · POST earsiv/hesap (müdür; kaydet ya da {sil})
+//   · POST earsiv/dene (müdür; bağlantı denemesi) · POST earsiv/fatura · earsiv/iptal · earsiv/durum · earsiv/pdf (müdür, ön büro, şube müdürü).
+// Bağlayıcı arayüzü (her entegratör): dene(h) · olustur(h, f) → { uuid, no, durum } · iptal(h, uuid, neden) · durum(h, uuid) → { durum } · pdf(h, uuid) → bayt
+//   h = { kimlik, test (entegratörün test ortamı), f (fetch) }; durum: 'bekliyor' | 'tamam' | 'hata' | 'iptal'.
+// e-Arşiv iptali (GİB): yalnız alıcı adı/unvanı ya da VKN/TCKN hatası gerekçesiyle; neden parametresi bu ikisinden biri olmalı.
+const EA_ROL = ['mudur', 'sekreter', 'subemudur'];
+export const EA_IPTAL_NEDEN = { alici_ad: 'Alıcı adı / unvanı hatalı', alici_vkn: 'Alıcı VKN / T.C. kimlik no hatalı' };
+const EA_KDV = [0, 1, 10, 20];
+const eaYuvarla = n => Math.round((+n + Number.EPSILON) * 100) / 100;
+const eaMetin = (s, n) => String(s == null ? '' : s).replace(/[\u0000-\u001f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
+const eaXml = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c]));
+const eaSaatTR = () => new Date(Date.now() + 3 * 3600e3).toISOString();
+class EaHata extends Error { constructor(m, s = 400) { super(m); this.s = s; } }
+// ---- normal fatura biçimi (istemciden) → denetlenmiş fatura ----
+// { uuid?, no? (ABC2026000000001), seri? (3 harf), tarih: 'YYYY-MM-DD', saat?: 'HH:MM', not?, alici: { ad, soyad?, vkn? (10) | tckn? (11), vergiDairesi?, adres?, ilce, il, eposta?, tel? },
+//   satirlar: [{ ad, miktar, birim? ('C62' adet), birimFiyat (KDV hariç), kdv (0/1/10/20) }], satici: { vkn|tckn, unvan, vergiDairesi?, adres?, ilce?, il? } }
+export function eaFaturaDogrula(b, simdi = Date.now()) {
+  const f = b && typeof b === 'object' ? b : {}, a = f.alici || {}, s = f.satici || {};
+  const bugun = new Date(simdi + 3 * 3600e3).toISOString().slice(0, 10), once = new Date(simdi + 3 * 3600e3 - 7 * 864e5).toISOString().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(f.tarih || '') || f.tarih > bugun) throw new EaHata('Fatura tarihi geçersiz ya da ileri tarihli');
+  if (f.tarih < once) throw new EaHata('e-Arşiv fatura en geç 7 gün içinde düzenlenir (VUK 231/5); tarih çok eski');
+  const vkn = String(a.vkn || '').replace(/\D/g, ''), tckn = String(a.tckn || '').replace(/\D/g, '');
+  if (!(vkn.length === 10 || tckn.length === 11)) throw new EaHata('Alıcının VKN (10 hane) ya da T.C. kimlik numarası (11 hane) gerekli');
+  if (!eaMetin(a.ad, 120)) throw new EaHata('Alıcı adı gerekli');
+  if (!eaMetin(a.il, 40) || !eaMetin(a.ilce, 60)) throw new EaHata('Alıcının il ve ilçesi gerekli');
+  const svkn = String(s.vkn || s.tckn || '').replace(/\D/g, '');
+  if (!(svkn.length === 10 || svkn.length === 11) || !eaMetin(s.unvan, 160)) throw new EaHata('Kursun vergi numarası ve unvanı gerekli (Ayarlar › Entegrasyon)');
+  if (!Array.isArray(f.satirlar) || !f.satirlar.length || f.satirlar.length > 50) throw new EaHata('Fatura satırı yok ya da çok fazla');
+  const satirlar = f.satirlar.map((x, i) => {
+    const miktar = +x.miktar, fiyat = +x.birimFiyat, kdv = +x.kdv;
+    if (!eaMetin(x.ad, 200) || !(miktar > 0) || !(fiyat >= 0) || !EA_KDV.includes(kdv)) throw new EaHata((i + 1) + '. satır geçersiz (ad, miktar, birim fiyat, KDV oranı 0/1/10/20)');
+    const tutar = eaYuvarla(miktar * fiyat);
+    return { sira: i + 1, ad: eaMetin(x.ad, 200), miktar, birim: /^[A-Z0-9]{2,3}$/.test(x.birim || '') ? x.birim : 'C62', birimFiyat: eaYuvarla(fiyat), kdv, tutar, kdvTutar: eaYuvarla(tutar * kdv / 100) };
+  });
+  const matrah = eaYuvarla(satirlar.reduce((t, x) => t + x.tutar, 0)), kdvToplam = eaYuvarla(satirlar.reduce((t, x) => t + x.kdvTutar, 0));
+  const kdvler = EA_KDV.map(o => ({ oran: o, matrah: eaYuvarla(satirlar.filter(x => x.kdv === o).reduce((t, x) => t + x.tutar, 0)), tutar: eaYuvarla(satirlar.filter(x => x.kdv === o).reduce((t, x) => t + x.kdvTutar, 0)) })).filter(x => satirlar.some(y => y.kdv === x.oran));
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(f.uuid || '') ? f.uuid.toLowerCase() : crypto.randomUUID();
+  const no = /^[A-Z0-9]{3}\d{13}$/.test(f.no || '') ? f.no : '', seri = /^[A-Z0-9]{3}$/.test(String(f.seri || '').toLocaleUpperCase('tr')) ? String(f.seri).toLocaleUpperCase('tr') : (no ? no.slice(0, 3) : '');
+  const ad = eaMetin(a.ad, 120), soyad = eaMetin(a.soyad, 80);
+  return { uuid, no, seri, tarih: f.tarih, saat: /^\d{2}:\d{2}$/.test(f.saat || '') ? f.saat : '12:00', not: eaMetin(f.not, 500),
+    alici: { ad, soyad, tamAd: (ad + ' ' + soyad).trim(), vkn, tckn, kisi: !vkn, vergiDairesi: eaMetin(a.vergiDairesi, 80), adres: eaMetin(a.adres, 250), ilce: eaMetin(a.ilce, 60), il: eaMetin(a.il, 40), eposta: eaMetin(a.eposta, 120), tel: eaMetin(a.tel, 20) },
+    satici: { vkn: svkn, unvan: eaMetin(s.unvan, 160), vergiDairesi: eaMetin(s.vergiDairesi, 80), adres: eaMetin(s.adres, 250), ilce: eaMetin(s.ilce, 60), il: eaMetin(s.il, 40) },
+    satirlar, matrah, kdvToplam, kdvler, toplam: eaYuvarla(matrah + kdvToplam) };
+}
+// UBL-TR 1.2 e-Arşiv faturası (imza ve XSLT'yi entegratör ekler). TODO(entegratör): gönderim şekli ve ek alanlar hesabın kılavuzuyla teyit edilmeli.
+export function eaUbl(f) {
+  const t = n => n.toFixed(2), para = n => `currencyID="TRY">${t(n)}`;
+  const taraf = (p, kisi) => `<cac:Party><cac:PartyIdentification><cbc:ID schemeID="${p.vkn && p.vkn.length === 10 ? 'VKN' : 'TCKN'}">${eaXml(p.vkn || p.tckn)}</cbc:ID></cac:PartyIdentification>${kisi ? '' : `<cac:PartyName><cbc:Name>${eaXml(p.unvan || p.tamAd)}</cbc:Name></cac:PartyName>`}<cac:PostalAddress><cbc:StreetName>${eaXml(p.adres)}</cbc:StreetName><cbc:CitySubdivisionName>${eaXml(p.ilce)}</cbc:CitySubdivisionName><cbc:CityName>${eaXml(p.il)}</cbc:CityName><cac:Country><cbc:Name>Türkiye</cbc:Name></cac:Country></cac:PostalAddress>${p.vergiDairesi ? `<cac:PartyTaxScheme><cac:TaxScheme><cbc:Name>${eaXml(p.vergiDairesi)}</cbc:Name></cac:TaxScheme></cac:PartyTaxScheme>` : ''}${p.eposta ? `<cac:Contact><cbc:ElectronicMail>${eaXml(p.eposta)}</cbc:ElectronicMail></cac:Contact>` : ''}${kisi ? `<cac:Person><cbc:FirstName>${eaXml(p.ad)}</cbc:FirstName><cbc:FamilyName>${eaXml(p.soyad || '-')}</cbc:FamilyName></cac:Person>` : ''}</cac:Party>`;
+  const vergi = (l, top) => `<cac:TaxTotal><cbc:TaxAmount ${para(top)}</cbc:TaxAmount>${l.map(x => `<cac:TaxSubtotal><cbc:TaxableAmount ${para(x.matrah)}</cbc:TaxableAmount><cbc:TaxAmount ${para(x.tutar)}</cbc:TaxAmount><cbc:Percent>${x.oran}</cbc:Percent><cac:TaxCategory>${x.oran === 0 ? '<cbc:TaxExemptionReasonCode>351</cbc:TaxExemptionReasonCode><cbc:TaxExemptionReason>İstisna olmayan diğer</cbc:TaxExemptionReason>' : ''}<cac:TaxScheme><cbc:Name>KDV</cbc:Name><cbc:TaxTypeCode>0015</cbc:TaxTypeCode></cac:TaxScheme></cac:TaxCategory></cac:TaxSubtotal>`).join('')}</cac:TaxTotal>`;
+  return `<?xml version="1.0" encoding="UTF-8"?><Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2" xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">`
+    + `<cbc:UBLVersionID>2.1</cbc:UBLVersionID><cbc:CustomizationID>TR1.2</cbc:CustomizationID><cbc:ProfileID>EARSIVFATURA</cbc:ProfileID><cbc:ID>${eaXml(f.no)}</cbc:ID><cbc:CopyIndicator>false</cbc:CopyIndicator><cbc:UUID>${f.uuid}</cbc:UUID>`
+    + `<cbc:IssueDate>${f.tarih}</cbc:IssueDate><cbc:IssueTime>${f.saat}:00</cbc:IssueTime><cbc:InvoiceTypeCode>SATIS</cbc:InvoiceTypeCode>${f.not ? `<cbc:Note>${eaXml(f.not)}</cbc:Note>` : ''}<cbc:DocumentCurrencyCode>TRY</cbc:DocumentCurrencyCode><cbc:LineCountNumeric>${f.satirlar.length}</cbc:LineCountNumeric>`
+    + `<cac:AdditionalDocumentReference><cbc:ID>ELEKTRONIK</cbc:ID><cbc:IssueDate>${f.tarih}</cbc:IssueDate><cbc:DocumentTypeCode>SEND_TYPE</cbc:DocumentTypeCode></cac:AdditionalDocumentReference>`
+    + `<cac:AccountingSupplierParty>${taraf(f.satici, false)}</cac:AccountingSupplierParty><cac:AccountingCustomerParty>${taraf(f.alici, f.alici.kisi)}</cac:AccountingCustomerParty>`
+    + vergi(f.kdvler, f.kdvToplam)
+    + `<cac:LegalMonetaryTotal><cbc:LineExtensionAmount ${para(f.matrah)}</cbc:LineExtensionAmount><cbc:TaxExclusiveAmount ${para(f.matrah)}</cbc:TaxExclusiveAmount><cbc:TaxInclusiveAmount ${para(f.toplam)}</cbc:TaxInclusiveAmount><cbc:PayableAmount ${para(f.toplam)}</cbc:PayableAmount></cac:LegalMonetaryTotal>`
+    + f.satirlar.map(x => `<cac:InvoiceLine><cbc:ID>${x.sira}</cbc:ID><cbc:InvoicedQuantity unitCode="${x.birim}">${x.miktar}</cbc:InvoicedQuantity><cbc:LineExtensionAmount ${para(x.tutar)}</cbc:LineExtensionAmount>${vergi([{ oran: x.kdv, matrah: x.tutar, tutar: x.kdvTutar }], x.kdvTutar)}<cac:Item><cbc:Name>${eaXml(x.ad)}</cbc:Name></cac:Item><cac:Price><cbc:PriceAmount ${para(x.birimFiyat)}</cbc:PriceAmount></cac:Price></cac:InvoiceLine>`).join('')
+    + `</Invoice>`;
+}
+const eaB64 = s => { const u = typeof s === 'string' ? new TextEncoder().encode(s) : s; let x = ''; for (let i = 0; i < u.length; i += 0x8000) x += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(x); };
+const eaB64Bayt = s => Uint8Array.from(atob(String(s || '').replace(/\s+/g, '')), c => c.charCodeAt(0));
+const eaEtiket = (xml, ad) => { const m = new RegExp('<(?:[\\w-]+:)?' + ad + '\\b([^>]*)>([\\s\\S]*?)</(?:[\\w-]+:)?' + ad + '>').exec(xml); return m ? { oz: m[1], ic: m[2] } : null; };
+const eaOz = (oz, ad) => { const m = new RegExp('\\b' + ad + '="([^"]*)"').exec(oz || ''); return m ? m[1] : ''; };
+async function eaSoap(h, url, eylem, govde, baslik = '') {
+  const r = await h.f(url, { method: 'POST', headers: { 'Content-Type': 'text/xml; charset=utf-8', SOAPAction: eylem }, body: `<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"><s:Header>${baslik}</s:Header><s:Body>${govde}</s:Body></s:Envelope>` });
+  const x = await r.text(); const hata = eaEtiket(x, 'faultstring') || eaEtiket(x, 'Text');
+  if (!r.ok || hata) throw new EaHata('Entegratör hatası: ' + eaMetin(hata ? hata.ic : r.status, 200), 502);
+  return x;
+}
+// ---- bağlayıcılar ----
+const EA_ENTEGRATOR = {
+  // yerel benzetim: hiçbir dış istek yok. Alıcı VKN 1111111111 → GİB reddi benzetilir.
+  deneme: { ad: 'Deneme (benzetim)', alanlar: [], hazir: true,
+    async dene() { return { ok: true, ileti: 'Deneme kipi: bağlantı benzetildi, entegratöre istek gitmedi' }; },
+    async olustur(h, f) {
+      if (f.alici.vkn === '1111111111') throw new EaHata('Deneme: alıcı VKN GİB kayıtlarında bulunamadı (benzetim)', 422);
+      const yil = f.tarih.slice(0, 4), sa = `earsiv:deneme:sayac:${h.kurs}:${yil}`, n = +((await h.env.LINK.get(sa)) || 0) + 1; await h.env.LINK.put(sa, String(n));
+      const no = f.no || ((f.seri || 'DNM') + yil + String(n).padStart(9, '0'));
+      await h.env.LINK.put(`earsiv:deneme:${h.kurs}:${f.uuid}`, JSON.stringify({ no, durum: 'tamam', tarih: f.tarih, toplam: f.toplam, alici: f.alici.tamAd }), { expirationTtl: 30 * 86400 });
+      return { uuid: f.uuid, no, durum: 'tamam' };
+    },
+    async kayit(h, uuid) { const v = await h.env.LINK.get(`earsiv:deneme:${h.kurs}:${uuid}`); if (!v) throw new EaHata('Fatura bulunamadı', 404); return JSON.parse(v); },
+    async iptal(h, uuid) { const v = await this.kayit(h, uuid); if (v.durum === 'iptal') throw new EaHata('Fatura zaten iptal edilmiş', 409); v.durum = 'iptal'; await h.env.LINK.put(`earsiv:deneme:${h.kurs}:${uuid}`, JSON.stringify(v), { expirationTtl: 30 * 86400 }); return { durum: 'iptal' }; },
+    async durum(h, uuid) { const v = await this.kayit(h, uuid); return { durum: v.durum, no: v.no }; },
+    async pdf(h, uuid) { const v = await this.kayit(h, uuid); return eaDenemePdf([`DENEME FATURASI - GECERLI DEGILDIR`, `No: ${v.no}`, `Tarih: ${v.tarih}`, `Toplam: ${v.toplam.toFixed(2)} TL`, v.durum === 'iptal' ? 'IPTAL EDILDI' : '']); },
+  },
+  // Nilvera REST (developer.nilvera.com, e-Arşiv API; Bearer API anahtarı). Test: apitest.nilvera.com.
+  nilvera: { ad: 'Nilvera', alanlar: [['apiKey', 'API anahtarı', true]], hazir: true,
+    kok: h => h.test ? 'https://apitest.nilvera.com' : 'https://api.nilvera.com',   // TODO: canlı adres Nilvera portalından teyit edilmeli
+    istek(h, yol, o = {}) { return h.f(this.kok(h) + yol, { ...o, headers: { Authorization: 'Bearer ' + h.kimlik.apiKey, ...(o.govde ? { 'Content-Type': 'application/json' } : {}) }, ...(o.govde ? { body: JSON.stringify(o.govde) } : {}) }); },
+    async cevap(r) { const t = await r.text(); let j = null; try { j = JSON.parse(t); } catch (x) { } if (!r.ok) throw new EaHata('Nilvera: ' + eaMetin((j && (j.Message || j.message || (Array.isArray(j) && j.join(', ')) || (j.Errors && JSON.stringify(j.Errors)))) || r.status, 200), r.status === 401 || r.status === 403 ? 401 : 502); return j; },
+    async dene(h) { await this.cevap(await this.istek(h, '/general/Company')); return { ok: true, ileti: 'Nilvera hesabı doğrulandı' }; },   // TODO: firma bilgisi ucu (general API) teyit
+    async olustur(h, f) {
+      const a = f.alici;
+      const govde = { ArchiveInvoice: {
+        InvoiceInfo: { UUID: f.uuid, InvoiceType: 'SATIS', InvoiceSerieOrNumber: f.no || f.seri || null, IssueDate: f.tarih + 'T' + f.saat + ':00', CurrencyCode: 'TRY', SalesPlatform: 'NORMAL', SendType: 'ELEKTRONIK', LineExtensionAmount: f.matrah, KdvTotal: f.kdvToplam, PayableAmount: f.toplam },
+        CustomerInfo: { TaxNumber: a.vkn || a.tckn, Name: a.tamAd, TaxOffice: a.vergiDairesi || null, Address: a.adres || null, District: a.ilce, City: a.il, Country: 'Türkiye', Mail: a.eposta || null, Phone: a.tel || null },   // TODO: şahısta ad/soyad ayrımı (Nilvera Name'i bölüyor mu) teyit
+        InvoiceLines: f.satirlar.map(x => ({ Index: String(x.sira), Name: x.ad, Quantity: x.miktar, UnitType: x.birim, Price: x.birimFiyat, KDVPercent: x.kdv, KDVTotal: x.kdvTutar })),
+        Notes: f.not ? [f.not] : null } };
+      const j = await this.cevap(await this.istek(h, '/earchive/Send/Model', { method: 'POST', govde }));
+      return { uuid: (j && j.UUID) || f.uuid, no: (j && j.InvoiceNumber) || f.no, durum: 'bekliyor' };
+    },
+    async iptal(h, uuid) { await this.cevap(await this.istek(h, '/earchive/Invoices/' + uuid + '/Cancel', { method: 'PUT' })); return { durum: 'iptal' }; },
+    async durum(h, uuid) { const j = await this.cevap(await this.istek(h, '/earchive/Invoices/' + uuid + '/Status')) || {}; return { durum: j.CancelStatus ? 'iptal' : ({ succeed: 'tamam', waiting: 'bekliyor', error: 'hata' })[j.StatusCode] || 'bekliyor', ayrinti: eaMetin(j.StatusDetail, 200), raporlandi: j.ReportStatus === 'Reported' }; },
+    async pdf(h, uuid) {
+      const r = await this.istek(h, '/earchive/Invoices/' + uuid + '/pdf'); if (!r.ok) await this.cevap(r);
+      // belgede içerik türü yazmıyor: ham PDF ya da base64 metin (tırnaklı olabilir) gelebilir
+      const u = new Uint8Array(await r.arrayBuffer()); if (u[0] === 0x25 && u[1] === 0x50) return u;
+      return eaB64Bayt(new TextDecoder().decode(u).replace(/^"|"$/g, ''));
+    },
+  },
+  // Uyumsoft SOAP (efatura(-test).uyumsoft.com.tr/Services/Integration, ad alanı tempuri.org, eylem IIntegration/<işlem>).
+  uyumsoft: { ad: 'Uyumsoft', alanlar: [['kullanici', 'Kullanıcı adı'], ['sifre', 'Şifre', true]], hazir: true,
+    url: h => h.test ? 'https://efatura-test.uyumsoft.com.tr/Services/Integration' : 'https://efatura.uyumsoft.com.tr/Services/Integration',
+    // TODO: kimlik doğrulama WS-Security UsernameToken (Uyumsoft entegrasyon kılavuzuyla teyit)
+    baslik: h => `<o:Security xmlns:o="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" s:mustUnderstand="1"><o:UsernameToken><o:Username>${eaXml(h.kimlik.kullanici)}</o:Username><o:Password>${eaXml(h.kimlik.sifre)}</o:Password></o:UsernameToken></o:Security>`,
+    async cagir(h, islem, ic) { const x = await eaSoap(h, this.url(h), 'http://tempuri.org/IIntegration/' + islem, `<${islem} xmlns="http://tempuri.org/">${ic}</${islem}>`, this.baslik(h)); const s = eaEtiket(x, islem + 'Result'); if (!s || eaOz(s.oz, 'IsSucceded') === 'false') throw new EaHata('Uyumsoft: ' + eaMetin(s ? eaOz(s.oz, 'Message') : 'boş cevap', 200), 502); return s; },
+    // bağlantı denemesi: bilinmeyen bir kimlikle durum sorgusu; kimlik hatası SOAP hatası döner, 'bulunamadı' cevabı bağlantının çalıştığını gösterir
+    async dene(h) { await eaSoap(h, this.url(h), 'http://tempuri.org/IIntegration/QueryOutboxInvoiceStatus', `<QueryOutboxInvoiceStatus xmlns="http://tempuri.org/"><invoiceIds><string xmlns="http://schemas.microsoft.com/2003/10/Serialization/Arrays">${crypto.randomUUID()}</string></invoiceIds></QueryOutboxInvoiceStatus>`, this.baslik(h)); return { ok: true, ileti: 'Uyumsoft hesabı doğrulandı' }; },
+    async olustur(h, f) {
+      // TODO: Invoice öğesinin içi UBL ad alanında; EArchiveInvoiceInfo (DeliveryType) alan adları kılavuzla teyit edilmeli
+      const ubl = eaUbl(f).replace(/^<\?xml[^>]*\?>/, '').replace(/^<Invoice xmlns="[^"]*" /, '<Invoice ');   // kök SendInvoice ad alanında, çocuklar cac/cbc önekli
+      const s = await this.cagir(h, 'SendInvoice', `<invoices><InvoiceInfo LocalDocumentId="${f.uuid}">${ubl}<EArchiveInvoiceInfo DeliveryType="Electronic"/><Scenario>eArchive</Scenario><CreateDateUtc>${new Date().toISOString()}</CreateDateUtc></InvoiceInfo></invoices>`);
+      const v = eaEtiket(s.ic, 'Value') || { oz: /<[^>]*Value\b([^>]*)\/>/.exec(s.ic) ? /<[^>]*Value\b([^>]*)\/>/.exec(s.ic)[1] : '' };
+      return { uuid: eaOz(v.oz, 'Id') || f.uuid, no: eaOz(v.oz, 'Number') || f.no, durum: 'bekliyor' };
+    },
+    async iptal(h, uuid) { await this.cagir(h, 'CancelEArchiveInvoice', `<request InvoiceId="${eaXml(uuid)}" CancelDate="${new Date().toISOString()}"/>`); return { durum: 'iptal' }; },
+    async durum(h, uuid) { const s = await this.cagir(h, 'QueryOutboxInvoiceStatus', `<invoiceIds><string xmlns="http://schemas.microsoft.com/2003/10/Serialization/Arrays">${eaXml(uuid)}</string></invoiceIds>`); const m = /<[^>]*Value\b([^>]*)\/?>/.exec(s.ic) || []; const st = eaOz(m[1], 'Status'); return { durum: /Cancel/i.test(st) ? 'iptal' : /Error|Declined|Fail/i.test(st) ? 'hata' : /Approved|Succe|Sent|Archived/i.test(st) ? 'tamam' : 'bekliyor', ayrinti: eaMetin(eaOz(m[1], 'Message') || st, 200) }; },   // TODO: InvoiceStatus değer listesi
+    async pdf(h, uuid) { const s = await this.cagir(h, 'GetOutboxInvoicePdf', `<invoiceId>${eaXml(uuid)}</invoiceId>`); const d = eaEtiket(s.ic, 'Data'); if (!d) throw new EaHata('Uyumsoft PDF boş', 502); return eaB64Bayt(d.ic); },
+  },
+  // İzibiz SOAP: AuthenticationWS Login → SESSION_ID, EArchiveInvoiceWS. TODO: işlem ve alan adları İzibiz e-Arşiv kılavuzuyla teyit edilmeli (belge herkese açık değil).
+  izibiz: { ad: 'İzibiz', alanlar: [['kullanici', 'Kullanıcı adı'], ['sifre', 'Şifre', true]], hazir: true,
+    kok: h => h.test ? 'https://efaturatest.izibiz.com.tr' : 'https://efatura.izibiz.com.tr',
+    async oturum(h) {
+      const x = await eaSoap(h, this.kok(h) + '/AuthenticationWS', 'login', `<Login xmlns="http://schemas.i2i.com/ei/wsdl"><REQUEST_HEADER><SESSION_ID>-1</SESSION_ID><APPLICATION_NAME>mdSinyal</APPLICATION_NAME></REQUEST_HEADER><USER_NAME>${eaXml(h.kimlik.kullanici)}</USER_NAME><PASSWORD>${eaXml(h.kimlik.sifre)}</PASSWORD></Login>`);
+      const s = eaEtiket(x, 'SESSION_ID'); if (!s || !s.ic || s.ic === '-1') throw new EaHata('İzibiz oturumu açılamadı', 401); return s.ic;
+    },
+    bas: (sid) => `<REQUEST_HEADER><SESSION_ID>${eaXml(sid)}</SESSION_ID><COMPRESSED>N</COMPRESSED><APPLICATION_NAME>mdSinyal</APPLICATION_NAME></REQUEST_HEADER>`,
+    async cagir(h, islem, ic) { const sid = await this.oturum(h); const x = await eaSoap(h, this.kok(h) + '/EArchiveInvoiceWS', islem, `<${islem}Request xmlns="http://schemas.i2i.com/ei/wsdl/archive">${this.bas(sid)}${ic}</${islem}Request>`); const e = eaEtiket(x, 'ERROR_TYPE'); if (e) throw new EaHata('İzibiz: ' + eaMetin((eaEtiket(e.ic, 'ERROR_SHORT_DES') || e).ic, 200), 502); return x; },
+    async dene(h) { await this.oturum(h); return { ok: true, ileti: 'İzibiz oturumu açıldı' }; },
+    async olustur(h, f) {
+      const x = await this.cagir(h, 'WriteToArchiveExtended', `<ArchiveInvoiceExtendedContent><INVOICE_PROPERTIES><EARSIV_FLAG>Y</EARSIV_FLAG><EARSIV_PROPERTIES><EARSIV_TYPE>NORMAL</EARSIV_TYPE><SUB_STATUS>NEW</SUB_STATUS>${f.alici.eposta ? `<EARSIV_EMAIL>${eaXml(f.alici.eposta)}</EARSIV_EMAIL>` : ''}</EARSIV_PROPERTIES><INVOICE_CONTENT>${eaB64(eaUbl(f))}</INVOICE_CONTENT></INVOICE_PROPERTIES></ArchiveInvoiceExtendedContent>`);
+      return { uuid: f.uuid, no: ((eaEtiket(x, 'INVOICE_ID') || {}).ic) || f.no, durum: 'bekliyor' };
+    },
+    async iptal(h, uuid) { await this.cagir(h, 'CancelEArchiveInvoice', `<CancelEArsivInvoiceContent><FATURA_UUID>${eaXml(uuid)}</FATURA_UUID><IPTAL_TARIHI>${eaSaatTR().slice(0, 10)}</IPTAL_TARIHI></CancelEArsivInvoiceContent>`); return { durum: 'iptal' }; },
+    async durum(h, uuid) { const x = await this.cagir(h, 'GetEArchiveInvoiceStatus', `<UUID>${eaXml(uuid)}</UUID>`); const d = ((eaEtiket(x, 'INVOICE_STATUS') || eaEtiket(x, 'STATUS') || {}).ic || ''); return { durum: /IPTAL|CANCEL/i.test(d) ? 'iptal' : /HATA|ERROR/i.test(d) ? 'hata' : /RAPOR|SUCCE|BASARI|TAMAM/i.test(d) ? 'tamam' : 'bekliyor', ayrinti: eaMetin(d, 200) }; },
+    async pdf(h, uuid) { const x = await this.cagir(h, 'ReadFromArchive', `<INVOICEID>${eaXml(uuid)}</INVOICEID><PORTAL_DIRECTION>OUT</PORTAL_DIRECTION><PROFILE>PDF</PROFILE>`); const d = eaEtiket(x, 'INVOICE') || eaEtiket(x, 'CONTENT'); if (!d) throw new EaHata('İzibiz PDF boş', 502); return eaB64Bayt(d.ic.replace(/<[^>]+>/g, '')); },
+  },
+  // TÜRMOB e-Entegratör (Luca): herkese açık API belgesi bulunamadı; kursun hesabıyla gelen kılavuz okununca eklenecek
+  turmob: { ad: 'TÜRMOB e-Entegratör (Luca)', alanlar: [], hazir: false, not: 'Bağlantı belgesi TÜRMOB’dan istendiğinde eklenecek. O zamana kadar deneme kipiyle hazırlanabilir ya da faturayı mali müşavir keser.' },
+};
+// Deneme PDF'i: tek sayfa, ASCII metin (Türkçe harfler sadeleştirilir); geçerli PDF 1.4
+function eaDenemePdf(satirlar) {
+  const s = t => String(t).replace(/[ğĞ]/g, 'g').replace(/[üÜ]/g, 'u').replace(/[şŞ]/g, 's').replace(/[ıİ]/g, 'i').replace(/[öÖ]/g, 'o').replace(/[çÇ]/g, 'c').replace(/[^\x20-\x7e]/g, '').replace(/[()\\]/g, '\\$&');
+  const akis = 'BT /F1 14 Tf 60 780 Td 18 TL ' + satirlar.filter(Boolean).map(x => `(${s(x)}) '`).join(' ') + ' ET';
+  const nes = ['<< /Type /Catalog /Pages 2 0 R >>', '<< /Type /Pages /Kids [3 0 R] /Count 1 >>', '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>', `<< /Length ${akis.length} >>\nstream\n${akis}\nendstream`, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'];
+  let o = '%PDF-1.4\n'; const yer = []; nes.forEach((n, i) => { yer.push(o.length); o += `${i + 1} 0 obj\n${n}\nendobj\n`; });
+  const x = o.length; o += `xref\n0 ${nes.length + 1}\n0000000000 65535 f \n` + yer.map(p => String(p).padStart(10, '0') + ' 00000 n \n').join('') + `trailer\n<< /Size ${nes.length + 1} /Root 1 0 R >>\nstartxref\n${x}\n%%EOF\n`;
+  return new TextEncoder().encode(o);
+}
+// ---- hesap bilgisinin şifrelenmesi (AES-GCM, anahtar EARSIV_ANAHTAR'dan; ek veri kurs kimliği) ----
+async function eaAnahtar(env) { if (String(env.EARSIV_ANAHTAR || '').length < 32) throw new EaHata('Sunucuda e-Arşiv şifreleme anahtarı tanımlı değil (EARSIV_ANAHTAR); mdSinyal ekibine yazın', 503); return crypto.subtle.importKey('raw', await crypto.subtle.digest('SHA-256', new TextEncoder().encode('mdsinyal-earsiv|' + env.EARSIV_ANAHTAR)), 'AES-GCM', false, ['encrypt', 'decrypt']); }
+async function eaSifrele(env, kurs, o) { const iv = crypto.getRandomValues(new Uint8Array(12)), c = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: new TextEncoder().encode(kurs) }, await eaAnahtar(env), new TextEncoder().encode(JSON.stringify(o)))); const t = new Uint8Array(12 + c.length); t.set(iv); t.set(c, 12); return eaB64(t); }
+async function eaCoz(env, kurs, s) { const t = eaB64Bayt(s); try { return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: t.slice(0, 12), additionalData: new TextEncoder().encode(kurs) }, await eaAnahtar(env), t.slice(12)))); } catch (x) { if (x instanceof EaHata) throw x; throw new EaHata('Kayıtlı hesap bilgisi çözülemedi; hesabı yeniden girin', 409); } }
+const eaMaske = v => { v = String(v || ''); return v.length <= 4 ? '••••' : '••••' + v.slice(-4); };
+const eaHesapOku = async (env, kurs) => { try { return JSON.parse((await env.LINK.get('earsiv:' + kurs)) || 'null'); } catch (x) { return null; } };
+async function eaGunluk(env, kurs, x) {   // PAR-011 hata günlüğü: kişisel veri yok (fatura kimliği, numara, işlem, sonuç)
+  const a = 'earsiv:gunluk:' + kurs; let l = []; try { l = JSON.parse((await env.LINK.get(a)) || '[]'); } catch (e) { }
+  l.unshift({ zaman: new Date().toISOString(), ...x }); await env.LINK.put(a, JSON.stringify(l.slice(0, 50)), { expirationTtl: 180 * 86400 });
+}
+async function earsiv(req, env, yol, cevap, { gercek, rol, kursId }) {
+  if (!gercek) return cevap({ ok: false, hata: 'e-Arşiv kurs hesabıyla çalışır' }, 403);
+  const GET = req.method === 'GET', POST = req.method === 'POST';
+  const hesap = await eaHesapOku(env, kursId);
+  const ozet = h => h ? { entegrator: h.entegrator, ad: (EA_ENTEGRATOR[h.entegrator] || {}).ad || h.entegrator, deneme: !!h.deneme, test: !!h.test, ozet: h.ozet || {}, zaman: h.zaman, son: h.son || null } : null;
+  try {
+    if (yol === 'earsiv' && GET) {
+      let gunluk = []; if (rol === 'mudur') { try { gunluk = JSON.parse((await env.LINK.get('earsiv:gunluk:' + kursId)) || '[]').slice(0, 20); } catch (x) { } }
+      return cevap({ ok: true, hesap: ozet(hesap), sunucuAnahtari: String(env.EARSIV_ANAHTAR || '').length >= 32, iptalNedenleri: EA_IPTAL_NEDEN, gunluk, entegratorler: Object.entries(EA_ENTEGRATOR).filter(([id]) => id !== 'deneme').map(([id, e]) => ({ id, ad: e.ad, hazir: e.hazir, alanlar: e.alanlar.map(([a, et, gizli]) => ({ ad: a, etiket: et, gizli: !!gizli })), not: e.not || '' })) });
+    }
+    if (!POST) return cevap({ ok: false }, 405);
+    let b = {}; try { b = await req.json(); } catch (x) { return cevap({ ok: false, hata: 'İstek okunamadı' }, 400); }
+    if (yol === 'earsiv/hesap') {
+      if (rol !== 'mudur') return cevap({ ok: false, hata: 'e-Arşiv hesabını yalnız kurs müdürü bağlar' }, 403);
+      if (b.sil) { await env.LINK.delete('earsiv:' + kursId); await eaGunluk(env, kursId, { islem: 'hesap kaldırıldı', ok: true }); return cevap({ ok: true, hesap: null }); }
+      const id = String(b.entegrator || ''), E = EA_ENTEGRATOR[id];
+      if (!E || id === 'deneme') return cevap({ ok: false, hata: 'Entegratör seçin' }, 400);
+      const deneme = !!b.deneme;
+      if (!E.hazir && !deneme) return cevap({ ok: false, hata: E.ad + ' bağlantısı henüz hazır değil; deneme kipini açın' }, 400);
+      const k0 = b.kimlik && typeof b.kimlik === 'object' ? b.kimlik : {}, kimlik = {};
+      E.alanlar.forEach(([a]) => { const v = String(k0[a] == null ? '' : k0[a]).trim(); if (v) kimlik[a] = v.slice(0, 400); });
+      const eksik = E.alanlar.filter(([a]) => !kimlik[a]);
+      // aynı entegratörde boş bırakılan alan eski değerini korur (anahtarı yeniden yazmak gerekmesin)
+      let eski = {}; if (eksik.length && hesap && hesap.entegrator === id && hesap.sifre) eski = await eaCoz(env, kursId, hesap.sifre);
+      eksik.forEach(([a]) => { if (eski[a]) kimlik[a] = eski[a]; });
+      if (!deneme && E.alanlar.some(([a]) => !kimlik[a])) return cevap({ ok: false, hata: E.alanlar.filter(([a]) => !kimlik[a]).map(x => x[1]).join(', ') + ' gerekli' }, 400);
+      const kayit = { entegrator: id, deneme, test: !!b.test, zaman: new Date().toISOString(), ozet: Object.fromEntries(E.alanlar.filter(([a]) => kimlik[a]).map(([a, , gizli]) => [a, gizli ? eaMaske(kimlik[a]) : eaMetin(kimlik[a], 60)])), ...(Object.keys(kimlik).length ? { sifre: await eaSifrele(env, kursId, kimlik) } : {}) };
+      await env.LINK.put('earsiv:' + kursId, JSON.stringify(kayit));
+      await eaGunluk(env, kursId, { islem: 'hesap kaydedildi', entegrator: id, deneme, ok: true });
+      return cevap({ ok: true, hesap: ozet(kayit) });
+    }
+    if (!hesap) return cevap({ ok: false, hata: 'e-Arşiv entegratörü bağlı değil (Ayarlar › Entegrasyon)' }, 409);
+    const E = hesap.deneme ? EA_ENTEGRATOR.deneme : EA_ENTEGRATOR[hesap.entegrator];
+    if (!E || !E.hazir) return cevap({ ok: false, hata: 'Seçili entegratör henüz hazır değil' }, 409);
+    if (mvSinirAsti('earsiv:' + kursId, 30)) return cevap({ ok: false, hata: 'Çok sık işlem; bir dakika sonra tekrar deneyin' }, 429);
+    const h = { env, kurs: kursId, test: !!hesap.test, f: (u, o) => fetch(u, o), kimlik: !hesap.deneme && hesap.sifre ? await eaCoz(env, kursId, hesap.sifre) : {} };
+    const uuidAl = () => { const u = String(b.uuid || '').toLowerCase(); if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(u)) throw new EaHata('Fatura kimliği (uuid) geçersiz'); return u; };
+    if (yol === 'earsiv/dene') {
+      if (rol !== 'mudur') return cevap({ ok: false, hata: 'Yetki yok' }, 403);
+      let s; try { s = await E.dene(h); } catch (x) { s = { ok: false, hata: x.message }; }
+      hesap.son = { ok: !!s.ok, zaman: new Date().toISOString(), ileti: eaMetin(s.ileti || s.hata, 200) }; await env.LINK.put('earsiv:' + kursId, JSON.stringify(hesap));
+      await eaGunluk(env, kursId, { islem: 'bağlantı denemesi', deneme: !!hesap.deneme, ok: !!s.ok, hata: s.ok ? undefined : eaMetin(s.hata, 160) });
+      return cevap({ ok: !!s.ok, deneme: !!hesap.deneme, ileti: s.ileti, hata: s.hata, hesap: ozet(hesap) }, s.ok ? 200 : 502);
+    }
+    if (!EA_ROL.includes(rol)) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
+    if (yol === 'earsiv/fatura') {
+      const f = eaFaturaDogrula(b.fatura);
+      try { const s = await E.olustur(h, f); await eaGunluk(env, kursId, { islem: 'fatura', uuid: s.uuid, no: s.no, deneme: !!hesap.deneme, ok: true }); return cevap({ ok: true, deneme: !!hesap.deneme, ...s, toplam: f.toplam, matrah: f.matrah, kdv: f.kdvToplam }); }
+      catch (x) { await eaGunluk(env, kursId, { islem: 'fatura', uuid: f.uuid, deneme: !!hesap.deneme, ok: false, hata: eaMetin(x.message, 160) }); throw x; }
+    }
+    if (yol === 'earsiv/iptal') {
+      const uuid = uuidAl(), neden = String(b.neden || '');
+      if (!EA_IPTAL_NEDEN[neden]) return cevap({ ok: false, hata: 'e-Arşiv fatura yalnız alıcı adı/unvanı ya da VKN/TCKN hatası nedeniyle iptal edilir; öbür hatalarda iade faturası düzenleyin', nedenler: EA_IPTAL_NEDEN }, 400);
+      try { const s = await E.iptal(h, uuid, EA_IPTAL_NEDEN[neden]); await eaGunluk(env, kursId, { islem: 'iptal', uuid, neden, deneme: !!hesap.deneme, ok: true }); return cevap({ ok: true, uuid, neden, ...s }); }
+      catch (x) { await eaGunluk(env, kursId, { islem: 'iptal', uuid, neden, deneme: !!hesap.deneme, ok: false, hata: eaMetin(x.message, 160) }); throw x; }
+    }
+    if (yol === 'earsiv/durum') { const uuid = uuidAl(); return cevap({ ok: true, uuid, deneme: !!hesap.deneme, ...(await E.durum(h, uuid)) }); }
+    if (yol === 'earsiv/pdf') { const uuid = uuidAl(), pdf = await E.pdf(h, uuid); return new Response(pdf, { headers: { ...cevap.cors, 'Content-Type': 'application/pdf', 'Content-Disposition': `inline; filename="fatura-${uuid.slice(0, 8)}.pdf"`, 'Cache-Control': 'no-store' } }); }
+    return cevap({ ok: false, hata: 'Bilinmeyen adres' }, 404);
+  } catch (x) {
+    if (x instanceof EaHata) return cevap({ ok: false, hata: x.message }, x.s);
+    console.error(JSON.stringify({ tur: 'hata', konu: 'earsiv', hata: String((x && x.message) || x).slice(0, 200) }));
+    return cevap({ ok: false, hata: 'Entegratöre ulaşılamadı; biraz sonra tekrar deneyin' }, 502);
+  }
+}
+// ======== SERVİS HESABI ========
+// UYG-012 / MSJ-021: worker'ın Firestore servis hesabı ve ofis kapalıyken çalışan işler (Cloudflare Cron).
+// Kurulum ve kapatma: cloudflare/SERVIS-HESABI.md. FIREBASE_SA (gizli) tanımlı değilse burada hiçbir şey çalışmaz.
+//
+// 1) Google servis hesabı: FIREBASE_SA = Firebase konsolundan indirilen JSON (client_email, private_key, project_id).
+//    RS256 JWT WebCrypto ile imzalanır, oauth2.googleapis.com/token'dan erişim jetonu alınır, süresi bitene kadar bellekte tutulur
+//    (KV'ye ya da günlüğe yazılmaz). Kapsam yalnız Firestore (datastore).
+// 2) Öğrenci istekleri (kurslar/{k}/ogrenciGelen): ofis cihazı açıkken saniyeler içinde işler ve siler. SERVIS_BEKLE_DK (varsayılan 10)
+//    dakikadan uzun bekleyen istek "ofis kapalı" sayılır ve js/bulut.js ogrenciUygula'nın GÜVENLİ kısmı burada aynı denetimlerle işlenir:
+//    çalışma alanları, hesap etkinleşmesi, müsaitlik, evrak ve e-Sınav dekontu yükleme, sınav deneyimi (onay bekler), ders iptali (24 saat),
+//    ders puanı ve ders defteri onayı/itirazı, ders alma (saat/öğretmen/araç çakışması, günlük sınır, gece kısıtı), öğrenci bildirimleri.
+//    Karar gerektiren istek ofise bırakılır (belge silinmez, ofis açılınca işler): ek ders teklifine cevap (ödeme planı değişir) ve
+//    gece kısıtlı öğrencinin akşam saatindeki ders isteği (gün batımı ofis cihazında hesaplanır).
+//    Her şey tek Firestore işleminde (transaction): istek belgesi silinir, kayıtlar aynı alan düzeniyle (kurslar/{k}/v kovaları) yazılır,
+//    öğrencinin ekranı (ogrenciler/{kod}: v, islenen, sonuclar) güncellenir. Ofis cihazı aynı anda işlerse işlemlerden biri düşer, tekrar yazılmaz.
+// 3) Zamanlı hatırlatmalar (js/zamanlayici.js): uygulama gerekmeden hesaplanabilen WhatsApp kuralları o1 (yarınki direksiyon dersi, öğrenciye),
+//    o10 (yarınki program, öğretmene), o16 (doğum günü). Kuralın saatinden 30 dk sonra, 21:00'e kadar; kursun kendi hattı (KV hat:<kurs>) bağlıysa,
+//    kural açıksa, demo sınırı kapalıysa (Zamanlı mesajlar › Demo sınırı) ve öğrencinin WhatsApp onayı varsa. Aynı mesaj iki kez gitmez:
+//    uygulamanın kullandığı kilit belgesi (kurslar/{k}/gonderim/g…, anahtar 'z|<kural anahtarı>|<gün>') önce oluşturulur; oluşturamayan göndermez.
+//    Gönderilen, zamanli.gonderilen ve gönderim geçmişine yazılır (ofis cihazı da 'gönderildi' görür).
+// İstek bütçesi: ücretsiz planda bir çalıştırmada en çok 50 alt istek var (SERVIS_ISTEK, varsayılan 45); bitince iş sonraki çalıştırmaya kalır.
+
+const TOKEN_URL = 'https://oauth2.googleapis.com/token', KAPSAM = 'https://www.googleapis.com/auth/datastore', PROJE = 'sinyal-5d37a';
+export class SaHata extends Error { }
+export class ButceBitti extends Error { }
+
+// ---- servis hesabı ve jeton ----
+export function saOku(env) {
+  if (!env || !env.FIREBASE_SA) return null;
+  try { const o = JSON.parse(env.FIREBASE_SA); if (!o.client_email || !/BEGIN PRIVATE KEY/.test(o.private_key || '')) return null; return { eposta: o.client_email, anahtar: o.private_key, proje: /^[a-z0-9-]{4,40}$/.test(o.project_id || '') ? o.project_id : PROJE }; } catch (x) { return null; }
+}
+const b64uBayt = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+const b64u = s => b64uBayt(new TextEncoder().encode(s));
+async function rsaImzala(pem, veri) {
+  const der = Uint8Array.from(atob(pem.replace(/-----[A-Z ]+-----/g, '').replace(/\s+/g, '')), c => c.charCodeAt(0));
+  const k = await crypto.subtle.importKey('pkcs8', der, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
+  return new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', k, new TextEncoder().encode(veri)));
+}
+let jeton = null;   // { t, son, eposta } — yalnız bu isolate'in belleğinde
+export const jetonSifirla = () => { jeton = null; };
+export async function saJeton(is) {
+  const sa = is.sa, simdi = is.simdi();
+  if (jeton && jeton.eposta === sa.eposta && jeton.son - 120e3 > simdi) return jeton.t;
+  const iat = Math.floor(simdi / 1000), ic = b64u(JSON.stringify({ alg: 'RS256', typ: 'JWT' })) + '.' + b64u(JSON.stringify({ iss: sa.eposta, scope: KAPSAM, aud: TOKEN_URL, iat, exp: iat + 3600 }));
+  let imza; try { imza = await rsaImzala(sa.anahtar, ic); } catch (x) { throw new SaHata('FIREBASE_SA özel anahtarı okunamadı'); }
+  const r = await is.f(TOKEN_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'grant_type=' + encodeURIComponent('urn:ietf:params:oauth:grant-type:jwt-bearer') + '&assertion=' + ic + '.' + b64uBayt(imza) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.access_token) throw new SaHata('Google erişim jetonu alınamadı: ' + String(j.error_description || j.error || r.status).slice(0, 120));
+  jeton = { t: j.access_token, son: simdi + (+j.expires_in || 3600) * 1000, eposta: sa.eposta };
+  return jeton.t;
+}
+// iş bağlamı: bütçeli fetch, saat, gönderim yardımcıları (sinyal-wa.js verir)
+export function isBaglam(env, o = {}) {
+  const is = { env, sa: saOku(env), kalan: +o.butce || +env.SERVIS_ISTEK || 45, simdi: o.simdi || (() => Date.now()), gonder: o.gonder, hatOku: o.hatOku };
+  is.proje = is.sa ? is.sa.proje : PROJE;
+  is.f = (u, i) => { if (--is.kalan < 0) throw new ButceBitti('istek bütçesi bitti'); return fetch(u, i); };
+  return is;
+}
+
+// ---- Firestore REST ----
+const fsKok = is => `https://firestore.googleapis.com/v1/projects/${is.proje}/databases/(default)/documents`;
+export const fsAd = (is, yol) => `projects/${is.proje}/databases/(default)/documents/${yol}`;
+export async function fsIstek(is, yol, govde) {
+  const t = await saJeton(is);
+  const r = await is.f(fsKok(is) + yol, { method: 'POST', headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' }, body: JSON.stringify(govde || {}) });
+  const j = await r.json().catch(() => null);
+  if (!r.ok) throw new SaHata('Firestore ' + r.status + ': ' + String((j && (j.error && j.error.message || (Array.isArray(j) && j[0] && j[0].error && j[0].error.message))) || '').slice(0, 160));
+  return j;
+}
+export function fsDeger(v) {
+  if (v === null || v === undefined) return { nullValue: null };
+  if (typeof v === 'boolean') return { booleanValue: v };
+  if (typeof v === 'number') return Number.isInteger(v) && Math.abs(v) <= Number.MAX_SAFE_INTEGER ? { integerValue: String(v) } : { doubleValue: v };
+  if (typeof v === 'string') return { stringValue: v };
+  if (Array.isArray(v)) return { arrayValue: { values: v.map(fsDeger) } };
+  return { mapValue: { fields: fsAlanlar(v) } };
+}
+export const fsAlanlar = o => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined).map(([k, v]) => [k, fsDeger(v)]));
+export function fsJs(d) {
+  if (!d || typeof d !== 'object') return null;
+  if ('stringValue' in d) return d.stringValue; if ('integerValue' in d) return Number(d.integerValue); if ('doubleValue' in d) return Number(d.doubleValue);
+  if ('booleanValue' in d) return d.booleanValue; if ('timestampValue' in d) return d.timestampValue; if ('mapValue' in d) return fsNesne(d.mapValue.fields);
+  if ('arrayValue' in d) return (d.arrayValue.values || []).map(fsJs); return null;
+}
+export const fsNesne = f => Object.fromEntries(Object.entries(f || {}).map(([k, v]) => [k, fsJs(v)]));
+// alan yolu: kimlikte harf/rakam dışı karakter varsa ters tırnakla (Firestore field path)
+export const alanYolu = (...p) => p.map(s => /^[A-Za-z_][A-Za-z_0-9]*$/.test(s) ? s : '`' + String(s).replace(/\\/g, '\\\\').replace(/`/g, '\\`') + '`').join('.');
+
+// ---- istemcinin veri düzeni (js/bulut.js ile AYNI kalmalı: BUYUK, h32, kovaAd, dosya kimliği) ----
+export const BUYUK = { dersler: 64, kursiyerler: 64, hareket: 64, islemler: 16, gonderimler: 16, teorik: 8, adaylar: 8, sinavlar: 8, kampanyalar: 8, imzaTalepleri: 8 };
+export const h32 = (s, t = 2166136261) => { for (let i = 0; i < s.length; i++) { t ^= s.charCodeAt(i); t = Math.imul(t, 16777619); } return t >>> 0; };
+export const kovaAd = (a, id) => a + '~' + (h32(String(id)) % (BUYUK[a] || 1));
+const DOSYA_ON = 'sinyal-dosya:', DOSYA_SINIR = 3000, OZEL_EVRAK = new Set(['saglik', 'adli']), PARA = /^(hareket|kursiyerler|faturalar)~\d+$/;
+const dosyaKimlik = s => 'd' + h32(s).toString(36) + h32(s, 5381).toString(36) + s.length.toString(36);
+export const kilitKimlik = anahtar => 'g' + h32(anahtar).toString(36) + h32(anahtar, 5381).toString(36);
+const rastgele = n => [...crypto.getRandomValues(new Uint8Array(n))].map(x => 'abcdefghijkmnpqrstuvwxyz23456789'[x % 32]).join('');
+// kayda yazılacak JSON: büyük dosya metni ayrı belgeye (dosyalar/{id}) çıkar, sağlık raporu ve adli sicil 'oz' işaretli (bulut.js yaz())
+function yazSun(v, dosyalar) {
+  const ozel = new WeakSet();
+  return JSON.stringify(v, function (k, x) {
+    if (OZEL_EVRAK.has(k) && x && typeof x === 'object') ozel.add(x);
+    if (typeof x === 'string' && x.length > DOSYA_SINIR && x.startsWith('data:')) { const id = dosyaKimlik(x), e = dosyalar.get(id); dosyalar.set(id, { v: x, oz: !!((e && e.oz) || ozel.has(this)) }); return DOSYA_ON + id; }
+    return x;
+  });
+}
+// öğrenci ekranına giden kopyada büyük dosyalar ve dosya bağları olmaz (bulut.js veriAt)
+const veriAt = (k, x) => typeof x === 'string' && x.length > DOSYA_SINIR && x.startsWith('data:') ? null : (typeof x === 'string' && x.startsWith(DOSYA_ON) ? null : x);
+
+// ---- Türkiye saati (UTC+3, yaz saati yok) ----
+const tr = ms => new Date(ms + 3 * 3600e3).toISOString();
+export const trGun = (ms, n = 0) => tr(ms + n * 864e5).slice(0, 10);
+export const trSaat = ms => tr(ms).slice(11, 16);
+const yerelZaman = ms => trGun(ms) + 'T' + trSaat(ms);
+
+// ---- kurs verisini oku (kovalar), yaz (aynı düzen) ----
+// diziler: { ad: 'hepsi' | [kimlik] }, tekler: ['kurs', …] (t~ belgeleri), ek: başka belge yolları
+export async function kursOku(is, kurs, { diziler = {}, tekler = [], ek = [], islem = null }) {
+  const vAdlar = [];
+  for (const [a, s] of Object.entries(diziler)) vAdlar.push(...(s === 'hepsi' ? [...Array(BUYUK[a] || 1).keys()].map(i => a + '~' + i) : [...new Set(s.map(id => kovaAd(a, id)))]));
+  tekler.forEach(a => vAdlar.push('t~' + a));
+  const yollar = [...vAdlar.map(x => `kurslar/${kurs}/v/${x}`), ...ek];
+  const c = yollar.length ? await fsIstek(is, ':batchGet', { documents: yollar.map(y => fsAd(is, y)), ...(islem ? { transaction: islem } : {}) }) : [];
+  const bul = new Map(); (c || []).forEach(x => { if (x.found) bul.set(x.found.name, x.found); });
+  const V = { dizi: {}, kayit: {}, kimlik: new WeakMap(), tek: {}, ek: {}, var: new Set() };
+  Object.keys(diziler).forEach(a => { V.kayit[a] = new Map(); });
+  for (const ad of vAdlar) {
+    const b = bul.get(fsAd(is, `kurslar/${kurs}/v/${ad}`)); if (!b) continue; V.var.add(ad);
+    const f = fsNesne(b.fields);
+    if (ad.startsWith('t~')) { try { V.tek[ad.slice(2)] = JSON.parse(f.t); } catch (x) { } continue; }
+    const a = ad.split('~')[0];
+    Object.entries(f.i || {}).forEach(([id, o]) => { if (!o || typeof o.v !== 'string') return; let el; try { el = JSON.parse(o.v); } catch (x) { return; } V.kayit[a].set(id, { el, x: +o.x || 0 }); V.kimlik.set(el, id); });
+  }
+  Object.keys(diziler).forEach(a => { V.dizi[a] = [...V.kayit[a].values()].sort((p, q) => p.x - q.x).map(z => z.el); });
+  ek.forEach(y => { const b = bul.get(fsAd(is, y)); V.ek[y] = b ? { alan: fsNesne(b.fields), zaman: b.updateTime } : null; });
+  return V;
+}
+// Firestore yazıları: dizi kayıtları alan alan (i.`kimlik`), tek parça t~, düz belgeler
+export class Yazim {
+  constructor(is, kurs) { this.is = is; this.kurs = kurs; this.kovalar = new Map(); this.diger = []; this.dosyalar = new Map(); this.sira = 0; }
+  dizi(a, id, el, x) { const k = kovaAd(a, id); let b = this.kovalar.get(k); if (!b) this.kovalar.set(k, b = { a, i: {} }); b.i[id] = el === null ? null : { v: yazSun(el, this.dosyalar), x }; }
+  // başa eklenen kayıt (islemler, gonderimler, dersIptaller, devredilen: unshift): sıra sayısı mevcutların hepsinden küçük
+  basa(a, el) { if (el.id == null && !el._k) el._k = rastgele(10); this.dizi(a, el.id != null ? String(el.id) : '_' + el._k, el, -(this.is.simdi() * 1000 + (++this.sira))); }
+  sona(a, el) { this.dizi(a, String(el.id), el, this.is.simdi() * 1000 + (++this.sira)); }
+  tek(a, o) { this.belge(`kurslar/${this.kurs}/v/t~${a}`, { a, t: yazSun(o, this.dosyalar) }); }
+  belge(yol, alanlar, { maske, zaman = [] } = {}) { this.diger.push({ update: { name: fsAd(this.is, yol), fields: fsAlanlar(alanlar) }, ...(maske ? { updateMask: { fieldPaths: maske } } : {}), ...(zaman.length ? { updateTransforms: zaman.map(z => ({ fieldPath: z, setToServerValue: 'REQUEST_TIME' })) } : {}) }); }
+  sil(yol) { this.diger.push({ delete: fsAd(this.is, yol) }); }
+  kayit(ne, ayrinti, zaman) { this.belge(`kurslar/${this.kurs}/kayit/s${this.is.simdi().toString(36)}${rastgele(8)}`, { uid: 'sunucu', ad: 'Sunucu (ofis kapalıyken)', ne, ayrinti: String(ayrinti || '').slice(0, 300), yerel: zaman, cihaz: 'sunucu' }, { zaman: ['zaman'] }); }
+  yazilar() {
+    const w = [];
+    this.dosyalar.forEach((d, id) => w.push({ update: { name: fsAd(this.is, `kurslar/${this.kurs}/dosyalar/${id}`), fields: fsAlanlar(d.oz ? { v: d.v, oz: true } : { v: d.v }) } }));
+    this.kovalar.forEach((b, ad) => {
+      const ic = {}, maske = ['a', 'd'];
+      Object.entries(b.i).forEach(([id, o]) => { maske.push(alanYolu('i', id)); if (o) ic[id] = { mapValue: { fields: { v: { stringValue: o.v }, x: fsDeger(o.x) } } }; });
+      const alan = { a: { stringValue: b.a }, d: { booleanValue: true }, i: { mapValue: { fields: ic } } };
+      // PAR-053: para kovasına yazan paket aynı pakette iz belgesi oluşturur (kuralın istediği düzen; servis hesabı kuralsız yazsa da iz kalsın)
+      if (PARA.test(ad)) { const izId = 'iz' + this.is.simdi().toString(36) + rastgele(6); alan.iz = { stringValue: izId }; maske.push('iz'); w.push({ update: { name: fsAd(this.is, `kurslar/${this.kurs}/kayit/${izId}`), fields: fsAlanlar({ uid: 'sunucu', ad: 'Sunucu (ofis kapalıyken)', tur: 'iz', ne: 'Para verisi kaydedildi', ayrinti: ad }) }, updateTransforms: [{ fieldPath: 'zaman', setToServerValue: 'REQUEST_TIME' }] }); }
+      w.push({ update: { name: fsAd(this.is, `kurslar/${this.kurs}/v/${ad}`), fields: alan }, updateMask: { fieldPaths: maske } });
+    });
+    return [...w, ...this.diger];
+  }
+}
+// tek seferde kilit belgeleri (oluşturulabilirse bizim): batchWrite atomik değildir, her yazının sonucu ayrı döner
+async function kilitAl(is, kurs, anahtarlar) {
+  if (!anahtarlar.length) return [];
+  const c = await fsIstek(is, ':batchWrite', { writes: anahtarlar.map(a => ({ update: { name: fsAd(is, `kurslar/${kurs}/gonderim/${kilitKimlik(a)}`), fields: fsAlanlar({ uid: 'sunucu', cihaz: 'sunucu' }) }, currentDocument: { exists: false }, updateTransforms: [{ fieldPath: 'zaman', setToServerValue: 'REQUEST_TIME' }] })) });
+  return anahtarlar.map((a, i) => !((c.status || [])[i] && (c.status || [])[i].code));
+}
+async function kilitBirak(is, kurs, anahtarlar) {
+  if (!anahtarlar.length) return; try { await fsIstek(is, ':batchWrite', { writes: anahtarlar.map(a => ({ delete: fsAd(is, `kurslar/${kurs}/gonderim/${kilitKimlik(a)}`) })) }); } catch (x) { }
+}
+
+// ---- kurs ayarlarından yardımcılar (js/veri.js, js/ui.js ile aynı) ----
+const rakamlar = t => { let n = String(t || '').replace(/\D/g, ''); if (n.startsWith('0')) n = '90' + n.slice(1); else if (n.length === 10 && n.startsWith('5')) n = '90' + n; return n; };
+export function waNumara(tel) { const ham = String(tel || '').trim(); let n = ham.replace(/\D/g, ''); if (ham.startsWith('+') || ham.startsWith('00')) { n = n.replace(/^00/, ''); return n.length >= 11 && n.length <= 15 ? n : ''; } if (n.startsWith('0')) n = '90' + n.slice(1); else if (n.length === 10 && n.startsWith('5')) n = '90' + n; return n.length >= 12 && n.length <= 15 ? n : ''; }
+const mudurTel = K => { const t = rakamlar(K && K.mudurTel); if (t.length < 12) return ''; const hat = [K.wp, K.waHat && K.waHat.no].map(rakamlar).filter(Boolean); return hat.includes(t) ? '' : K.mudurTel; };
+const tamAd = k => k.ad + ' ' + k.soyad;
+const KURAL_ARALIK = { gunlukDersSiniri: [1, 2, 2] };
+const kuralAyar = (K, a) => { const [en, ust, v] = KURAL_ARALIK[a], x = K ? K[a] : undefined; return x !== '' && x != null && isFinite(+x) && +x >= en && +x <= ust ? +x : v; };
+function adEk(ad, hal) {
+  ad = String(ad || '').trim(); if (!hal || !ad) return ad;
+  const kc = ad.toLocaleLowerCase('tr'), sesliler = 'aeıioöuü', son = [...kc].reverse().find(c => sesliler.includes(c)) || 'e';
+  const kalin = 'aıou'.includes(son), yuvarlak = 'ouöü'.includes(son), seslyBiter = sesliler.includes(kc.slice(-1)), iyelik = /(kursu|merkezi|okulu|akademisi|kurumu)$/.test(kc);
+  const unlu = { e: kalin ? 'a' : 'e', de: kalin ? 'da' : 'de', den: kalin ? 'dan' : 'den', in: kalin ? (yuvarlak ? 'un' : 'ın') : (yuvarlak ? 'ün' : 'in') }[hal];
+  if (iyelik) return ad + '’n' + unlu; if (seslyBiter) return ad + '’' + ({ e: 'y', in: 'n' }[hal] || '') + unlu;
+  return ad + '’' + ('fstkçşhp'.includes(kc.slice(-1)) && unlu[0] === 'd' ? 't' + unlu.slice(1) : unlu);
+}
+const selamKisi = x => { const ilk = String(x.ad || '').trim().split(/\s+/)[0], tam = x.soyad != null ? tamAd(x) : String(x.ad || '').trim(); return x.cinsiyet === 'Kadın' ? `Merhaba ${ilk} Hanım,` : x.cinsiyet === 'Erkek' ? `Merhaba ${ilk} Bey,` : `Sayın ${tam},`; };
+const SAAT_OKU = ['sıfır', 'bir', 'iki', 'üç', 'dört', 'beş', 'altı', 'yedi', 'sekiz', 'dokuz', 'on', 'on bir', 'on iki', 'on üç', 'on dört', 'on beş', 'on altı', 'on yedi', 'on sekiz', 'on dokuz', 'yirmi', 'yirmi bir', 'yirmi iki', 'yirmi üç'];
+const sesli = s => { const h = (String(s).match(/^(\d{1,2})/) || [])[1], m = String(s).slice(-2); return (m === '00' ? SAAT_OKU[+h] : ({ '15': 'on beş', '30': 'otuz', '45': 'kırk beş' }[m] || 'sıfır')) || ''; };
+const ince = w => 'eiöü'.includes((w.match(/[aıoueiöü](?=[^aıoueiöü]*$)/) || ['e'])[0]);
+export const saatDe = s => { const w = sesli(s); return s + '’' + (/[çfhkpsşt]$/.test(w) ? 't' : 'd') + (ince(w) ? 'e' : 'a'); };
+const SINIF_AD = { M: 'M · Motorlu bisiklet', A1: 'A1 · Hafif motosiklet', A2: 'A2 · Motosiklet', A: 'A · Motosiklet (sınırsız)', B1: 'B1 · Dört tekerlekli motosiklet', B: 'B · Manuel', 'B-O': 'B · Otomatik', 'B-EN': 'B · Engelli', BE: 'BE · Römorklu otomobil', C1: 'C1 · Hafif kamyon', C1E: 'C1E · Römorklu hafif kamyon', C: 'C · Kamyon', CE: 'CE · Çekici (tır)', D1: 'D1 · Minibüs', D1E: 'D1E · Römorklu minibüs', D: 'D · Otobüs', DE: 'DE · Römorklu otobüs', F: 'F · Traktör', G: 'G · İş makinesi' };
+
+// ---- öğrenci isteği (js/bulut.js ogrenciUygula'nın güvenli kısmı) ----
+const KIMLIK_BICIM = /^[A-Za-z0-9_-]{1,40}$/, TARIH_BICIM = /^\d{4}-\d{2}-\d{2}$/, SAAT_BICIM = /^\d{2}:\d{2}$/;
+const DOSYA_BICIM = /^data:(image\/jpeg|image\/png|application\/pdf);base64,[A-Za-z0-9+/]+={0,2}$/;
+const EVRAK_AD = { saglik: 'Sürücü olur sağlık raporu', ogrenim: 'Öğrenim belgesi', adli: 'Adli sicil kaydı (barkodlu)', foto: 'Biyometrik fotoğraf', kimlik: 'Kimlik fotokopisi', sozlesme: 'İmzalı sözleşme' };
+const CALISMA = ['deneme', 'denemeDetay', 'bildirilenSorular', 'bildirimDuzeltildi', 'yanlislar', 'konuAnaliz', 'okunan', 'tekrar', 'gorulen', 'dirCalisma', 'tehlike'];
+const guvenliVeri = v => typeof v === 'string' ? v.replace(/[<>"'`]/g, '').slice(0, 500) : Array.isArray(v) ? v.slice(0, 2000).map(guvenliVeri)
+  : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).slice(0, 2000).map(([a, b]) => [String(a).replace(/[<>"'`]/g, '').slice(0, 80), guvenliVeri(b)]))
+  : (typeof v === 'number' && isFinite(v)) || typeof v === 'boolean' || v === null ? v : null;
+const MUSAIT_GUN = [['1', 'Pzt'], ['2', 'Sal'], ['3', 'Çar'], ['4', 'Per'], ['5', 'Cum'], ['6', 'Cmt']], MUSAIT_DILIM = [['sabah', 'Sabah'], ['ogle', 'Öğle'], ['aksam', 'Akşam']];
+function musaitlikTemizle(m, bugun) {
+  if (!m || typeof m !== 'object' || !m.gun || typeof m.gun !== 'object') return null;
+  const gl = {}; MUSAIT_GUN.forEach(([g]) => { const l = Array.isArray(m.gun[g]) ? MUSAIT_DILIM.map(d => d[0]).filter(d => m.gun[g].includes(d)) : []; if (l.length) gl[g] = l; });
+  if (!Object.keys(gl).length) return null;
+  const not = typeof m.not === 'string' ? m.not.replace(/[<>"'`]/g, '').trim().slice(0, 200) : '';
+  return { gun: gl, ...(not ? { not } : {}), tarih: TARIH_BICIM.test(m.tarih || '') ? m.tarih : bugun, ...(m.kaynak === 'ofis' ? { kaynak: 'ofis' } : { kaynak: 'ogrenci' }) };
+}
+const musaitlikOzet = m => !m || !m.gun ? '' : MUSAIT_GUN.filter(([g]) => (m.gun[g] || []).length).map(([g, kisa]) => { const l = m.gun[g]; return kisa + ' ' + (l.length === 3 ? 'bütün gün' : MUSAIT_DILIM.filter(d => l.includes(d[0])).map(d => d[1].toLocaleLowerCase('tr')).join(', ')); }).join(' · ');
+const dersKalanSaat = (d, simdi) => (Date.parse(d.tarih + 'T' + (SAAT_BICIM.test(d.saat || '') ? d.saat : '00:00') + ':00+03:00') - simdi) / 36e5;
+const geceKisitli = k => !!(k && k.saglikRapor && k.saglikRapor.geceKisit);
+// gece dersi mi: kursun elle girdiği gece başlangıcı (ay bazında) varsa ona göre; yoksa 16:00'dan önce kesin gündüz, sonrası belirsiz (null → ofis)
+function geceMi(K, d) { const elle = K && K.geceSaatleri && K.geceSaatleri[String(d.tarih).slice(5, 7)]; if (SAAT_BICIM.test(elle || '')) return d.saat.slice(0, 5) >= elle; return d.saat < '16:00' ? false : null; }
+
+// D: { kurs, kursiyerler, dersler, egitmenler, araclar, bosTeklif, kazanim }; g: ogrenciGelen belgesi. D yerinde değişir.
+// Dönüş: { ofis: neden } (hiçbir şey yazılmaz) ya da { k, degisti: {...}, notlar, retler, gunluk, gonder }
+export function ogrenciIsle(D, g, docId, simdi) {
+  const k = D.kursiyerler.find(x => x.id === g.kursiyer); if (!k || !Array.isArray(g.d)) return { bos: true };
+  const bugun = trGun(simdi), zaman = yerelZaman(simdi), saat = trSaat(simdi);
+  const notlar = [], retler = [], gunluk = { islemler: [], gonderimler: [], dersIptaller: [], devredilen: [] }, gonder = [], dersDegisen = new Set(), dersEklenen = [], dersSilinen = [];
+  let kDegisti = false, kazanim = false;
+  const liste = g.d.slice(0, 30).map(x => { let y = null; try { y = x.v ? JSON.parse(x.v) : null; } catch (e) { return null; } return { x, y }; }).filter(Boolean);
+  // karar gerektirenler: ofiste işlensin
+  for (const { x, y } of liste) {
+    if (x.a === 'kursiyerler' && x.id === k.id && y && k.ekDersTeklif && y.ekDersTeklif === null) return { ofis: 'ek ders teklifine cevap (ödeme planı ofiste işlenir)' };
+    if (x.a === 'dersler' && y && !D.dersler.some(z => z.id === x.id) && geceKisitli(k) && SAAT_BICIM.test(y.saat || '') && TARIH_BICIM.test(y.tarih || '') && geceMi(D.kurs, y) === null) return { ofis: 'gece kısıtlı öğrencinin akşam ders isteği (gün batımı ofiste hesaplanır)' };
+  }
+  for (const { x, y } of liste) {
+    if (x.a === 'kursiyerler' && x.id === k.id && y) {
+      CALISMA.forEach(f => { if (y[f] !== undefined && JSON.stringify(y[f]).length < 50000) { const v = guvenliVeri(y[f]); if (JSON.stringify(v) !== JSON.stringify(k[f])) { k[f] = v; kDegisti = true; } } });
+      ['hesapAktif', 'sonGiris'].forEach(f => { if (typeof y[f] === 'string' && TARIH_BICIM.test(y[f]) && y[f] !== k[f]) { k[f] = y[f]; kDegisti = true; if (f === 'hesapAktif') notlar.push('şifresini belirleyip hesabını kullanmaya başladı'); } });
+      if ('musaitlik' in y) { const m = musaitlikTemizle(y.musaitlik, bugun); if (JSON.stringify(m) !== JSON.stringify(k.musaitlik || null)) { k.musaitlik = m; kDegisti = true; notlar.push(m ? 'müsait zamanlarını bildirdi: ' + musaitlikOzet(m) : 'müsaitlik bildirimini kaldırdı'); } }
+      Object.entries(y.evrakYuklenen || {}).forEach(([key, e]) => {
+        if (!e || !e.veri || !EVRAK_AD[key] || (k.evrak && k.evrak[key])) return;
+        if (typeof e.veri !== 'string' || e.veri.length > 950000 || !DOSYA_BICIM.test(e.veri)) return;
+        k.evrakYuklenen = k.evrakYuklenen || {}; k.evrakYuklenen[key] = { tarih: bugun, dosya: String(e.dosya || '').replace(/[<>"'`]/g, '').slice(0, 120), boyut: e.veri.length, tur: e.veri.startsWith('data:application/pdf') ? 'pdf' : 'resim', veri: e.veri };
+        kDegisti = true; notlar.push(EVRAK_AD[key] + ' belgesini yükledi');
+      });
+      { const dk = y.esinavDekont; if (dk && typeof dk.veri === 'string' && dk.veri.length <= 950000 && DOSYA_BICIM.test(dk.veri) && /^\d{1,2}$/.test(String(dk.sira)) && !(k.esinavDekont && k.esinavDekont.veri === dk.veri)) {
+        k.esinavDekont = { sira: +dk.sira, tarih: bugun, dosya: String(dk.dosya || '').replace(/[<>"'`]/g, '').slice(0, 120), tur: dk.veri.startsWith('data:application/pdf') ? 'pdf' : 'resim', veri: dk.veri, onay: null };
+        kDegisti = true; notlar.push('e-Sınav ücreti dekontunu yükledi'); } }
+      if (y.sinavDeneyimi && typeof y.sinavDeneyimi.metin === 'string' && y.sinavDeneyimi.metin.trim().length >= 10 && !(k.sinavDeneyimi && k.sinavDeneyimi.metin === y.sinavDeneyimi.metin)) {
+        const sd = y.sinavDeneyimi; k.sinavDeneyimi = { metin: sd.metin.trim().slice(0, 1000), guzergah: String(sd.guzergah || '').slice(0, 40), sonuc: ['Geçti', 'Kaldı'].includes(sd.sonuc) ? sd.sonuc : '', tarih: bugun, onay: null };
+        kDegisti = true; notlar.push('sınav deneyimini paylaştı (onayınızı bekliyor: Sınav güzergâhları)');
+      }
+    } else if (x.a === 'dersler') {
+      const d = D.dersler.find(z => z.id === x.id);
+      if (d && d.kursiyer === k.id) {
+        if (!y) {
+          if (d.durum === 'Planlandı' && dersKalanSaat(d, simdi) >= 24) {
+            gunluk.dersIptaller.push({ id: d.id, kursiyer: d.kursiyer, egitmen: d.egitmen, arac: d.arac || null, tarih: d.tarih, saat: d.saat, meb: !!d.meb, iptal: { zaman, kim: 'Öğrenci paneli', neden: 'Kursiyer iptal etti (öğrenci paneli)', not: '' } });
+            D.dersler = D.dersler.filter(z => z !== d); dersSilinen.push(d); notlar.push(d.tarih + ' ' + d.saat + ' dersini iptal etti');
+          } else { notlar.push('iptal isteği reddedildi (24 saatten az kaldı)'); retler.push(d.tarih + ' ' + d.saat + ' dersinin iptali yapılamadı: derse 24 saatten az kaldı. Kursu arayın.'); }
+        } else if (y.ogrenciPuan && typeof y.ogrenciPuan.puan === 'number' && d.durum === 'Yapıldı') { d.ogrenciPuan = { puan: Math.max(1, Math.min(5, Math.round(y.ogrenciPuan.puan))), yorum: String(y.ogrenciPuan.yorum || '').slice(0, 300), tarih: bugun }; dersDegisen.add(d); notlar.push('dersi puanladı'); }
+        if (y && y.ogrenciOnay && ['onay', 'itiraz'].includes(y.ogrenciOnay.durum) && d.durum === 'Yapıldı' && !d.ogrenciOnay) {
+          d.ogrenciOnay = { durum: y.ogrenciOnay.durum, not: String(y.ogrenciOnay.not || '').slice(0, 300), tarih: bugun }; dersDegisen.add(d);
+          notlar.push(d.tarih + ' ' + d.saat + ' dersini ' + (d.ogrenciOnay.durum === 'onay' ? 'onayladı' : 'itiraz etti' + (d.ogrenciOnay.not ? ': ' + d.ogrenciOnay.not : '')));
+          if (d.ogrenciOnay.durum === 'itiraz') gunluk.devredilen.push({ ad: tamAd(k), kanal: 'Ders defteri', konu: 'Ders itirazı', mesaj: d.tarih + ' ' + d.saat + ' dersi yapılmadı diyor' + (d.ogrenciOnay.not ? ': ' + d.ogrenciOnay.not : ''), neden: 'Öğrenci dersi onaylamadı', saat, bildirim: [] });
+        }
+      } else if (!d && y && KIMLIK_BICIM.test(String(x.id)) && y.kursiyer === k.id && y.durum === 'Planlandı' && TARIH_BICIM.test(y.tarih || '') && SAAT_BICIM.test(y.saat || '') && y.tarih >= bugun && D.egitmenler.some(e => e.id === y.egitmen)) {
+        if (D.dersler.some(z => z.tarih === y.tarih && z.saat === y.saat && (z.egitmen === y.egitmen || z.kursiyer === k.id) && z.durum !== 'İptal')) { notlar.push(y.tarih + ' ' + y.saat + ' ders isteği reddedildi: saat dolu'); retler.push(y.tarih + ' ' + y.saat + ' ders isteğin alınamadı: o saat dolmuş. Başka bir saat seç.'); continue; }
+        if (geceKisitli(k) && geceMi(D.kurs, y)) { notlar.push(y.tarih + ' ' + y.saat + ' ders isteği reddedildi: gece kısıtı'); retler.push(y.tarih + ' ' + y.saat + ' ders isteğin alınamadı: sağlık raporuna göre gece dersi alamazsın. Gün batımından önceki bir saat seç.'); continue; }
+        { const sinir = kuralAyar(D.kurs, 'gunlukDersSiniri'), n = D.dersler.filter(z => z.kursiyer === k.id && z.tarih === y.tarih && z.durum !== 'İptal').length;
+          if (n >= sinir) { notlar.push(y.tarih + ' ' + y.saat + ' ders isteği reddedildi: günlük sınır'); retler.push(y.tarih + ' ' + y.saat + ' ders isteğin alınamadı: aynı gün en çok ' + sinir + ' saat direksiyon dersi alınabilir. Başka bir gün seç.'); continue; } }
+        const arac0 = D.araclar.some(a => a.id === y.arac) ? y.arac : null;
+        if (arac0 && D.dersler.some(z => z.arac === arac0 && z.tarih === y.tarih && z.saat === y.saat && z.durum !== 'İptal')) { notlar.push(y.tarih + ' ' + y.saat + ' ders isteği reddedildi: araç dolu'); retler.push(y.tarih + ' ' + y.saat + ' ders isteğin alınamadı: o saatte araç başka derste. Başka bir saat seç.'); continue; }
+        const yeni = { id: String(x.id), kursiyer: k.id, egitmen: y.egitmen, arac: arac0, tarih: y.tarih, saat: y.saat, durum: 'Planlandı', eklendi: bugun, kaynak: 'kursiyer' };
+        D.dersler.push(yeni); dersEklenen.push(yeni);
+        const t = (D.bosTeklif || []).find(z => z.tarih === y.tarih && z.saat === y.saat && z.egitmen === y.egitmen);
+        if (t) { D.bosTeklif = D.bosTeklif.filter(z => z !== t); D.bosTeklifSilinen = [...(D.bosTeklifSilinen || []), t]; D.kazanim = D.kazanim || {}; D.kazanim.doldurulan = (D.kazanim.doldurulan || 0) + 1; kazanim = true; }
+        notlar.push(y.tarih + ' ' + y.saat + ' direksiyon dersi aldı');
+      }
+    } else if (x.a === 'gonderimler' && y && !x.eski) {
+      const m = { zaman: new Date(simdi).toISOString(), kime: String(y.kime || '').slice(0, 80), metin: String(y.metin || '').slice(0, 1000), tur: String(y.tur || 'Öğrenci').slice(0, 60) };
+      const ustalari = new Set([k.egitmen, ...D.dersler.filter(z => z.kursiyer === k.id).map(z => z.egitmen)].filter(Boolean));
+      const hoca = y.rol === 'HOCA' ? D.egitmenler.find(h => h.ad === m.kime && ustalari.has(h.id)) : null;
+      const izinli = y.rol === 'MÜDÜR' || !!hoca;
+      gunluk.gonderimler.push(m);
+      if (!izinli && y.iletilecek) { gunluk.islemler.push({ zaman, kim: 'Sunucu', ne: 'Öğrenci panelinden izinsiz bildirim engellendi', ayrinti: tamAd(k) + ' → ' + m.kime }); continue; }
+      if (retler.length && /dersi aldı|dersini iptal etti/.test(m.metin)) continue;
+      if (y.iletilecek && D.kurs && D.kurs.waApi && !D.kurs.demoNumara) { const tel = waNumara(y.rol === 'MÜDÜR' ? mudurTel(D.kurs) : hoca && hoca.tel); if (tel) gonder.push({ anahtar: 'og|' + docId + '|' + x.id, tel, metin: m.metin, kime: m.kime }); }
+    }
+  }
+  if (notlar.length) gunluk.islemler.push({ zaman, kim: 'Sunucu', ne: 'Öğrenci panelinden', ayrinti: tamAd(k) + ': ' + notlar.join(', ') });
+  return { k, kDegisti, kazanim, dersDegisen: [...dersDegisen], dersEklenen, dersSilinen, notlar, retler, gunluk, gonder };
+}
+// öğrencinin ekranı: kayıt, dersler ve boş saat teklifleri yeniden hesaplanır (bulut.js ogrenciVerisiDen), öbür bölümler olduğu gibi kalır
+function projeksiyon(eskiV, D, k, bugun) {
+  let o = {}; try { o = JSON.parse(eskiV || '{}') || {}; } catch (x) { }
+  const ben = { ...k, tc: k.tc ? '•••••••' + String(k.tc).slice(-4) : '' }; ['notlar', 'panelKod', 'hesap', 'ozelNot', 'ozelNotlar', 'ozelNotTarih'].forEach(f => delete ben[f]);
+  const sec = (x, l) => { const r = {}; l.forEach(a => { if (x && x[a] !== undefined) r[a] = x[a]; }); return r; };
+  o.kursiyerler = [ben];
+  o.dersler = D.dersler.filter(d => d.kursiyer === k.id).map(d => { const x = { ...d }; delete x.konum; delete x.konumBit; delete x.iz; return x; })
+    .concat(D.dersler.filter(d => d.kursiyer !== k.id && d.egitmen === k.egitmen && d.tarih >= bugun && d.durum === 'Planlandı').map(d => ({ ...sec(d, ['id', 'egitmen', 'arac', 'tarih', 'saat', 'durum']), kursiyer: null })));
+  o.bosTeklif = (D.bosTeklif || []).filter(t => (t.adaylar || []).includes(k.id)).map(t => ({ ...t, adaylar: [k.id] }));
+  return JSON.stringify(o, veriAt);
+}
+
+const gelenYolu = /documents\/kurslar\/([A-Za-z0-9]{10,40})\/ogrenciGelen\/([A-Za-z0-9_-]{1,64})$/;
+const izinliKurs = (env, kurs) => { const l = String(env.SERVIS_KURSLAR || '').split(',').map(s => s.trim()).filter(Boolean); return !l.length || l.includes(kurs); };
+// Bekleyen öğrenci isteklerini bul ve kurs kurs işle
+export async function ogrenciGelenIsle(is, durum) {
+  const simdi = is.simdi(), bekle = Math.max(1, +is.env.SERVIS_BEKLE_DK || 10) * 60e3;
+  const q = await fsIstek(is, ':runQuery', { structuredQuery: { from: [{ collectionId: 'ogrenciGelen', allDescendants: true }], limit: 200 } });
+  const kurslar = new Map();
+  for (const r of q || []) {
+    const b = r.document; if (!b) continue; const m = gelenYolu.exec(b.name); if (!m) continue;
+    const [, kurs, id] = m, f = fsNesne(b.fields), t = Date.parse(f.zaman || b.createTime || '') || 0;
+    if (!t || simdi - t < bekle || !izinliKurs(is.env, kurs)) continue;
+    if (await is.env.LINK.get('srv:ofis:' + kurs + ':' + id)) continue;   // daha önce ofise bırakıldı
+    if (!kurslar.has(kurs)) kurslar.set(kurs, []); kurslar.get(kurs).push({ id, t, g: f });
+  }
+  let n = 0;
+  for (const [kurs, l] of kurslar) {
+    if (n++ >= (+is.env.SERVIS_KURS || 3)) break;
+    l.sort((a, b) => a.t - b.t);
+    try { await kursOgrenciIsle(is, kurs, l.slice(0, 20), durum); }
+    catch (x) { if (x instanceof ButceBitti) throw x; durum.hata.push('öğrenci ' + kurs.slice(0, 6) + ': ' + String(x.message || x).slice(0, 120)); }
+  }
+}
+async function kursOgrenciIsle(is, kurs, gelenler, durum) {
+  const simdi = is.simdi(), bugun = trGun(simdi), zaman = yerelZaman(simdi);
+  const tx = (await fsIstek(is, ':beginTransaction', { options: { readWrite: {} } })).transaction;
+  let isim = null, yazildi = false;
+  try {
+    const gelenYol = x => `kurslar/${kurs}/ogrenciGelen/${x.id}`, projeYol = kod => `kurslar/${kurs}/ogrenciler/${kod}`;
+    const kodlar = [...new Set(gelenler.map(x => String(x.g.kod || '')).filter(k => /^[A-Za-z0-9]{6,64}$/.test(k)))];
+    const V = await kursOku(is, kurs, { diziler: { kursiyerler: [...new Set(gelenler.map(x => String(x.g.kursiyer || '')))], dersler: 'hepsi', egitmenler: 'hepsi', araclar: 'hepsi', bosTeklif: 'hepsi' }, tekler: ['kurs', 'kazanim'], ek: [...gelenler.map(gelenYol), ...kodlar.map(projeYol)], islem: tx });
+    const D = { kurs: V.tek.kurs || {}, kursiyerler: V.dizi.kursiyerler, dersler: V.dizi.dersler, egitmenler: V.dizi.egitmenler, araclar: V.dizi.araclar, bosTeklif: V.dizi.bosTeklif, kazanim: V.tek.kazanim };
+    const Y = new Yazim(is, kurs), ofis = [], gonder = [], ofisteki = new Set(), proje = new Map(), xEski = (a, el) => { const id = V.kimlik.get(el); return id ? V.kayit[a].get(id).x : null; };
+    let islenen = 0, kazanim = false; const dersD = new Set(), dersS = new Set(), dersE = new Set();
+    for (const x of gelenler) {
+      if (!V.ek[gelenYol(x)]) continue;   // bu arada ofis işledi
+      if (ofisteki.has(x.g.kursiyer)) { ofis.push(x.id); durum.ogrenci.ofise++; continue; }   // aynı öğrencinin önceki isteği ofiste: sıra bozulmasın
+      const r = ogrenciIsle(D, x.g, x.id, simdi);
+      if (r.ofis) { ofis.push(x.id); ofisteki.add(x.g.kursiyer); durum.ogrenci.ofise++; continue; }
+      Y.sil(gelenYol(x)); islenen++;
+      if (r.bos) continue;
+      const { k } = r;
+      if (r.kDegisti) Y.dizi('kursiyerler', V.kimlik.get(k) || k.id, k, xEski('kursiyerler', k) ?? simdi * 1000);
+      r.dersDegisen.forEach(d => dersD.add(d)); r.dersSilinen.forEach(d => dersS.add(d)); r.dersEklenen.forEach(d => dersE.add(d));
+      Object.entries(r.gunluk).forEach(([a, l]) => l.forEach(el => Y.basa(a, el)));
+      kazanim = kazanim || r.kazanim;
+      r.gunluk.islemler.forEach(i => Y.kayit(i.ne, i.ayrinti, zaman));
+      gonder.push(...r.gonder);
+      const kod = /^[A-Za-z0-9]{6,64}$/.test(String(x.g.kod || '')) ? String(x.g.kod) : null;
+      if (kod && V.ek[projeYol(kod)]) { const p = proje.get(kod) || { k, islenen: [...(V.ek[projeYol(kod)].alan.islenen || [])], sonuclar: [...(V.ek[projeYol(kod)].alan.sonuclar || [])] }; p.k = k; p.islenen.unshift(x.id); if (r.retler.length) p.sonuclar.unshift({ doc: x.id, ret: r.retler.slice(0, 5), zaman: simdi }); proje.set(kod, p); }
+    }
+    // aynı turda eklenip iptal edilen ders yazılmaz; yalnız sunucuda var olan silinir
+    dersE.forEach(d => { if (D.dersler.includes(d)) Y.sona('dersler', d); });
+    dersS.forEach(d => { if (V.kimlik.has(d)) Y.dizi('dersler', V.kimlik.get(d), null); });
+    dersD.forEach(d => { if (D.dersler.includes(d) && !dersE.has(d)) Y.dizi('dersler', V.kimlik.get(d) || d.id, d, xEski('dersler', d) ?? simdi * 1000); });
+    (D.bosTeklifSilinen || []).forEach(t => Y.dizi('bosTeklif', V.kimlik.get(t) || String(t.id), null));
+    if (kazanim) Y.tek('kazanim', D.kazanim);
+    proje.forEach((p, kod) => Y.belge(projeYol(kod), { v: projeksiyon(V.ek[projeYol(kod)].alan.v, D, p.k, bugun), islenen: p.islenen.slice(0, 20), sonuclar: p.sonuclar.slice(0, 10) }, { maske: ['v', 'islenen', 'sonuclar'], zaman: ['guncel'] }));
+    const yazilar = Y.yazilar();
+    if (yazilar.length) { await fsIstek(is, ':commit', { writes: yazilar, transaction: tx }); yazildi = true; }
+    else { isim = tx; }
+    durum.ogrenci.islenen += islenen;
+    for (const id of ofis) await is.env.LINK.put('srv:ofis:' + kurs + ':' + id, '1', { expirationTtl: 14 * 86400 });
+    // öğrenci bildirimleri (müdür / öğretmen): gece gitmez (kayıtta durur), uygulamanın kilidiyle bir kez
+    const saat = trSaat(simdi);
+    if (gonder.length && saat >= '08:00' && saat < '21:00') await kilitliGonder(is, kurs, gonder, durum, 'ogrenci');
+  } catch (x) { if (!yazildi) isim = tx; throw x; }
+  finally { if (isim) { try { await fsIstek(is, ':rollback', { transaction: isim }); } catch (y) { } } }
+}
+// kilit al → gönder → gönderilemeyenin kilidini bırak
+async function kilitliGonder(is, kurs, l, durum, tur) {
+  const h = await is.hatOku(is.env, kurs); if (!h) return [];
+  const ok = await kilitAl(is, kurs, l.map(x => x.anahtar)), giden = [], birak = [];
+  for (let i = 0; i < l.length; i++) {
+    if (!ok[i]) continue;
+    // gönderim (Meta) en çok 2 istek sayılır; kilit bırakmaya 1 istek kalmalı
+    if (is.kalan < 3) { birak.push(...l.slice(i).filter((_, j) => ok[i + j]).map(z => z.anahtar)); durum.butce = true; break; }
+    is.kalan -= 2;
+    let s; try { s = await is.gonder(is.env, kurs, h, l[i].tel, l[i].metin); } catch (x) { s = { ok: false, hata: String(x.message || x) }; }
+    if (s.ok) { giden.push(l[i]); durum[tur].gonderilen++; } else { birak.push(l[i].anahtar); durum.hata.push(tur + ' gönderilemedi: ' + String(s.hata || '').slice(0, 80)); }
+  }
+  if (birak.length) await kilitBirak(is, kurs, birak);
+  return giden;
+}
+
+// ---- zamanlı hatırlatmalar (js/zamanlayici.js URET.o1, o10, o16) ----
+const KURAL_SAAT = { o1: '18:30', o10: '18:30', o16: '10:30' };   // uygulamadaki saat + 30 dk: uygulama açıksa önce o gönderir
+const DILIM = [['aksam', ['o1', 'o10']], ['sabah', ['o16']]];
+const doldur = (K, sablon, alan) => { alan = { kurs: K.ad, kursa: adEk(K.ad, 'e'), kursta: adEk(K.ad, 'de'), ...alan }; ['tc', 'tckn', 'tcno', 'kimlik', 'sifre', 'parola', 'pin', 'iban'].forEach(a => { delete alan[a]; }); if (alan.kisi && !alan.selam) alan.selam = selamKisi(alan.kisi); return String(sablon || '').replace('{saat}’te', '{saatte}').replace(/\{(\w+)\}/g, (x, a) => alan[a] != null ? alan[a] : ''); };
+// öğrenciye WhatsApp: arşivdeki, WhatsApp onayı vermeyen ya da başka kanal seçen öğrenciye sunucudan gitmez (uygulama e-posta/SMS kuyruğuna koyar)
+const ogrWa = k => !k || (k.kapali && k.kapali.tur === 'arsiv') || (k.kvkk && k.kvkk.whatsapp === false) || (k.mesajKanal && k.mesajKanal !== 'WhatsApp') ? null : waNumara(k.tel);
+export function hatirlatmaUret(V, kurallar, simdi) {
+  const K = V.tek.kurs || {}, yarin = trGun(simdi, 1), bugun = trGun(simdi), oto = new Map((V.dizi.otomasyonlar || []).map(o => [o.id, o])), l = [];
+  const kursiyer = id => V.dizi.kursiyerler.find(k => k.id === id), egitmen = id => V.dizi.egitmenler.find(e => e.id === id);
+  for (const id of kurallar) {
+    const o = oto.get(id); if (!o || !o.acik) continue;
+    if (id === 'o1') V.dizi.dersler.filter(d => d.durum === 'Planlandı' && d.tarih === yarin).forEach(d => { const k = kursiyer(d.kursiyer), h = egitmen(d.egitmen), tel = ogrWa(k); if (k && h && tel) l.push({ kural: id, anahtar: 'o1|' + d.id, tel, kime: tamAd(k), rol: 'ÖĞRENCİ', kid: k.id, metin: doldur(K, o.sablon, { kisi: k, ad: k.ad, saat: d.saat, saatte: saatDe(d.saat), egitmen: h.ad }) }); });
+    if (id === 'o10') V.dizi.egitmenler.forEach(h => { const ds = V.dizi.dersler.filter(d => d.egitmen === h.id && d.durum === 'Planlandı' && d.tarih === yarin).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat)), tel = waNumara(h.tel);
+      if (ds.length && tel) l.push({ kural: id, anahtar: 'o10|' + h.id + '|' + yarin, tel, kime: h.ad, rol: 'HOCA', metin: doldur(K, o.sablon, { ad: String(h.ad).split(' ')[0], liste: ds.map(d => { const k = kursiyer(d.kursiyer); return d.saat + ' ' + (k ? tamAd(k) + ' (' + (SINIF_AD[k.sinif] || k.sinif || '') + ')' : ''); }).join(', ') }) }); });
+    if (id === 'o16') V.dizi.kursiyerler.filter(k => !k.kapali && k.dogumTarihi && String(k.dogumTarihi).slice(5) === bugun.slice(5)).forEach(k => { const tel = ogrWa(k); if (tel) l.push({ kural: id, anahtar: 'o16|' + k.id + '|' + bugun.slice(0, 4), tel, kime: tamAd(k), rol: 'ÖĞRENCİ', kid: k.id, metin: doldur(K, o.sablon, { kisi: k, ad: k.ad }) }); });
+  }
+  return l;
+}
+export async function hatirlatmalar(is, durum) {
+  const simdi = is.simdi(), saat = trSaat(simdi), bugun = trGun(simdi);
+  if (saat < '08:00' || saat >= '21:00') return;
+  const kurslar = []; let imlec;
+  do { const r = await is.env.LINK.list({ prefix: 'hat:', cursor: imlec }); r.keys.forEach(x => kurslar.push(x.name.slice(4))); imlec = r.list_complete === false ? r.cursor : null; } while (imlec);
+  let n = 0;
+  for (const kurs of kurslar) {
+    if (!/^[A-Za-z0-9]{10,40}$/.test(kurs) || !izinliKurs(is.env, kurs)) continue;
+    const dilimler = [];
+    for (const [ad, kurallar] of DILIM) { const acik = kurallar.filter(k => saat >= KURAL_SAAT[k]); if (acik.length && !(await is.env.LINK.get(`srv:hat:${kurs}:${bugun}:${ad}`))) dilimler.push([ad, acik]); }
+    if (!dilimler.length) continue;
+    if (n++ >= (+is.env.SERVIS_KURS || 3)) break;
+    try { await kursHatirlat(is, kurs, dilimler, durum); }
+    catch (x) { if (x instanceof ButceBitti) throw x; durum.hata.push('hatırlatma ' + kurs.slice(0, 6) + ': ' + String(x.message || x).slice(0, 120)); }
+  }
+}
+async function kursHatirlat(is, kurs, dilimler, durum) {
+  const simdi = is.simdi(), bugun = trGun(simdi), bitti = () => Promise.all(dilimler.map(([ad]) => is.env.LINK.put(`srv:hat:${kurs}:${bugun}:${ad}`, '1', { expirationTtl: 2 * 86400 })));
+  const V = await kursOku(is, kurs, { diziler: { dersler: 'hepsi', kursiyerler: 'hepsi', egitmenler: 'hepsi', otomasyonlar: 'hepsi' }, tekler: ['kurs', 'zamanli'] });
+  const K = V.tek.kurs || {}, z = V.tek.zamanli;
+  // demo kursu, demo yönlendirmesi ya da demo sınırı açık (her kuraldan günde 2): uygulamaya bırakılır
+  if (K.waApiVarsayilan || K.demoNumara || !z || z.sinir !== false) { durum.hatirlatma.atlanan++; return bitti(); }
+  const gonderilen = z.gonderilen || {}, enCok = +is.env.SERVIS_MESAJ || 20;
+  const adaylar = hatirlatmaUret(V, dilimler.flatMap(([, l]) => l), simdi).filter(x => !gonderilen[x.anahtar]);
+  const bu = adaylar.slice(0, Math.max(0, Math.min(enCok, Math.floor((is.kalan - 8) / 2))));
+  const giden = await kilitliGonder(is, kurs, bu.map(x => ({ ...x, anahtar: 'z|' + x.anahtar + '|' + bugun })), durum, 'hatirlatma');
+  if (giden.length) {
+    // gönderildi bilgisi uygulamanın zamanli kaydına ve gönderim geçmişine (tek işlemde; zamanli o an yeniden okunur)
+    const tx = (await fsIstek(is, ':beginTransaction', { options: { readWrite: {} } })).transaction;
+    try {
+      const V2 = await kursOku(is, kurs, { tekler: ['zamanli'], islem: tx }), z2 = V2.tek.zamanli || z, Y = new Yazim(is, kurs), zaman = yerelZaman(simdi);
+      z2.gonderilen = z2.gonderilen || {}; z2.kayit = z2.kayit || []; z2.gunluk = z2.gunluk || {};
+      giden.forEach(x => { const a = x.anahtar.slice(2, x.anahtar.lastIndexOf('|')); z2.gonderilen[a] = bugun; z2.kayit.unshift({ zaman, kural: x.kural, kime: x.kime, rol: x.rol, metin: x.metin, durum: 'gönderildi (sunucu)' }); z2.gunluk[bugun + x.kural] = (z2.gunluk[bugun + x.kural] || 0) + 1;
+        Y.basa('gonderimler', { zaman: new Date(simdi).toISOString(), kime: x.kime, metin: x.metin, tur: ({ o1: 'Direksiyon dersi hatırlatması', o10: 'Hocaya yarınki program', o16: 'Doğum günü kutlaması' })[x.kural], ...(x.kid ? { kid: x.kid } : {}), oto: true }); });
+      z2.kayit = z2.kayit.slice(0, 80); Y.tek('zamanli', z2);
+      await fsIstek(is, ':commit', { writes: Y.yazilar(), transaction: tx });
+    } catch (x) { try { await fsIstek(is, ':rollback', { transaction: tx }); } catch (y) { } throw x; }
+  }
+  if (bu.length === adaylar.length) await bitti(); else if (bu.length < enCok) durum.butce = true;   // kalanlar sonraki çalıştırmada
+}
+
+// ---- Cron girişi ----
+export async function servisCalistir(env, o = {}) {
+  if (!saOku(env) || !env.LINK) return { kapali: true };
+  const is = isBaglam(env, o), durum = { zaman: new Date(is.simdi()).toISOString(), ogrenci: { islenen: 0, ofise: 0, gonderilen: 0 }, hatirlatma: { gonderilen: 0, atlanan: 0 }, hata: [], butce: false };
+  for (const is0 of [ogrenciGelenIsle, hatirlatmalar]) {
+    try { await is0(is, durum); } catch (x) { if (x instanceof ButceBitti) { durum.butce = true; break; } durum.hata.push(String(x.message || x).slice(0, 160)); }
+  }
+  durum.hata = durum.hata.slice(0, 10);
+  try { await env.LINK.put('servis:durum', JSON.stringify(durum)); } catch (x) { }
+  if (durum.hata.length) console.warn(JSON.stringify({ tur: 'uyari', konu: 'servis', hata: durum.hata.slice(0, 3) }));
+  return durum;
+}
+// ---- UYG-012 / MSJ-021: servis hesabı işleri (kurulum SERVIS-HESABI.md) ----
+// Kursun kendi hattından düz metin; şablon tanımlıysa ve kişi 24 saatte yazmadıysa doğrudan şablon, 131047'de şablonla tekrar (ana gönderim yoluyla aynı kural)
+async function hatMetinGonder(env, kurs, h, to, metin) {
+  const G = 'https://graph.facebook.com/v25.0/' + h.phoneId + '/messages', H = { Authorization: 'Bearer ' + h.token, 'Content-Type': 'application/json' };
+  const yolla = async govde => { const r = await fetch(G, { method: 'POST', headers: H, body: JSON.stringify(govde) }); const j = await r.json().catch(() => ({})); return r.ok ? { ok: true, id: j.messages && j.messages[0] && j.messages[0].id } : { ok: false, kod: j.error && j.error.code, hata: (j.error && j.error.message) || 'Meta hatasi' }; };
+  if (h.sablon && env.LINK && !(await pencereAcik(env, kurs, to))) return yolla(sablonGovde(to, h.sablon, h.sablonDil, metin));
+  const s = await yolla({ messaging_product: 'whatsapp', to, type: 'text', text: { body: metin, preview_url: true } });
+  if (!s.ok && s.kod === 131047 && (h.sablon || env.SABLON_AD)) return yolla(sablonGovde(to, h.sablon || env.SABLON_AD, h.sablonDil || env.SABLON_DIL, metin));
+  return s;
+}
+export const servisSecenek = { gonder: hatMetinGonder, hatOku: kursHat };
+// GET /servis: son çalıştırmanın özeti (kurulu mu, işlenen, gönderilen, hatalar); POST /servis/calistir: şimdi bir kez çalıştır. Yalnız platform sahibi.
+async function servisUc(req, env, yol, cevap) {
+  if (!(await sahipMi(req, env))) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
+  const kurulu = !!saOku(env);
+  if (yol === 'servis/calistir' && req.method === 'POST') return kurulu ? cevap({ ok: true, kurulu, ...(await servisCalistir(env, servisSecenek)) }) : cevap({ ok: false, kurulu, hata: 'FIREBASE_SA tanımlı değil' }, 409);
+  let son = null; try { son = JSON.parse((env.LINK && await env.LINK.get('servis:durum')) || 'null'); } catch (x) { }
+  return cevap({ ok: true, kurulu, son });
+}
 export default {
-  // günlük mevzuat takibi (wrangler.toml [triggers] crons)
-  async scheduled(olay, env, ctx) { ctx.waitUntil(hatSaglik(env).catch(x => console.error(JSON.stringify({ tur: 'hata', konu: 'hat sağlığı', hata: String((x && x.message) || x).slice(0, 200) })))); ctx.waitUntil(mvTakip(env).then(() => (new Date().getUTCDay() === 1 ? mvBulten(env) : null)).catch(x => console.error(JSON.stringify({ tur: 'hata', konu: 'mevzuat takip', hata: String((x && x.message) || x).slice(0, 200) })))); },
+  // Cron: "0 4 * * *" günlük (hat sağlığı, mevzuat takibi, pazartesi bülten); "*/" ile başlayan sık tetik (ör. "*/15 * * * *") servis hesabı işleri
+  async scheduled(olay, env, ctx) {
+    if (olay && String(olay.cron || '').startsWith('*/')) { ctx.waitUntil(servisCalistir(env, servisSecenek).catch(x => console.error(JSON.stringify({ tur: 'hata', konu: 'servis', hata: String((x && x.message) || x).slice(0, 200) })))); return; }
+    ctx.waitUntil(hatSaglik(env).catch(x => console.error(JSON.stringify({ tur: 'hata', konu: 'hat sağlığı', hata: String((x && x.message) || x).slice(0, 200) })))); ctx.waitUntil(mvTakip(env).then(() => (new Date().getUTCDay() === 1 ? mvBulten(env) : null)).catch(x => console.error(JSON.stringify({ tur: 'hata', konu: 'mevzuat takip', hata: String((x && x.message) || x).slice(0, 200) }))));
+  },
   async fetch(req, env) {
     const url = new URL(req.url), origin = req.headers.get('Origin') || '';
     if (url.pathname.replace(/\/+$/, '') === '/onkayit') return onKayitAl(req, env, url);   // DIG-035: kursun kendi sitesindeki form, girişsiz
@@ -1580,6 +2233,7 @@ export default {
     if (yol === 'talep' && req.method === 'POST') return IZINLI.includes(origin) ? talepAl(req, env, cevap) : cevap({ ok: false, hata: 'Izin yok' }, 403);
     if (yol === 'talep/yonet') return talepYonet(req, env, url, cevap);
     if (yol === 'saglik') return saglikOku(req, env, url, cevap);   // MSJ-021
+    if (yol === 'servis' || yol === 'servis/calistir') return servisUc(req, env, yol, cevap);   // UYG-012
     // YON-021: istemcinin IP adresi (IP yetkilendirme: ön büroyu kurs bilgisayarına bağlama); yalnız sitenin kendi adresinden, kayıt tutulmaz
     if (yol === 'ip' && req.method === 'GET') return IZINLI.includes(origin) ? cevap({ ok: true, ip: req.headers.get('CF-Connecting-IP') || '' }) : cevap({ ok: false, hata: 'Izin yok' }, 403);
     if (yol === 'soru-bildir' && req.method === 'POST') return IZINLI.includes(origin) ? soruBildirAl(req, env, cevap) : cevap({ ok: false, hata: 'Izin yok' }, 403);
@@ -1599,7 +2253,7 @@ export default {
     const kursId = req.headers.get('X-Kurs') || url.searchParams.get('kurs') || '';
     let rol = null;
     if (gercek) { rol = await uyeRol(req, kursId); if (!rol || !PERSONEL.includes(rol)) return cevap({ ok: false, hata: 'Yetki yok' }, 403); }
-    if (yol === 'belge/oku') return belgeOku(req, env, cevap, { gercek, rol, kursId });   // KAY-033
+    if (yol === 'earsiv' || yol.startsWith('earsiv/')) return earsiv(req, env, yol, cevap, { gercek, rol, kursId });   // PAR-011
     if (yol === 'mebbis/ekran-alarm') return gercek && req.method === 'POST' ? ekranAlarm(req, env, cevap, kursId) : cevap({ ok: false, hata: 'Yetki yok' }, 403);   // YON-062
     // mevzuat ve MEB yazıları: arama, yükleme, özet, cevap (kimlik ve yetki mevzuatUc() içinde; /mevzuat/gom demoya da açık)
     if (yol === 'mevzuat' || yol.startsWith('mevzuat/')) return mevzuat(req, env, url, yol, cevap, { gercek, rol, kursId, origin });
