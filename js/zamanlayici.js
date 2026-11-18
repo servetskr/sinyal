@@ -27,7 +27,7 @@ const SIZ_SABLON = {
   o3: '{selam} {tur} sınavınız {tarih} {saatte}, yer: {yer}. Kimliğinizi yanınıza almayı unutmayın. {kurs}',
   o4: '{selam} kaydınızı tamamlamak için {evrak} eksik. {kursa} getirdiğinizde işlemlerinizi hemen başlatıyoruz.',
   o5: '{selam} tebrikler, artık ehliyetiniz var! {kurs} hakkında Google’da birkaç cümle yazarsanız çok seviniriz: {link}',
-  o6: '{selam} bu sefer olmadı ama çok yakındınız. Bir sonraki sınava kadar 2 ek ders ayarlayalım mı?',
+  o6: '{selam} {tur} sınavı bu sefer olmadı. Üzülmeyin, {kalan_hak} hakkınız daha var. Yönetmelik gereği tekrar sınavdan önce en az {telafi} saat ek direksiyon dersi alınıyor ({tutar}); saatlerini ayarlayalım mı? Öğrenci uygulamasından ya da bu mesaja “evet” yazarak onaylayabilirsiniz.',
   o7: '{selam} kayıtla ilgili aklınıza takılan bir şey var mı? Bu hafta başlayan gruba hâlâ yer var. {kurs}',
   o8: '{selam} e-sınav randevunuz {tarih} {saatte}, yer: {yer}. Kimliğinizi ve e-sınav ücreti dekontunu yanınıza alın.',
   o9: '{selam} {tur} sınav sonucunuz: {sonuc}. {kalan_hak}'
@@ -66,7 +66,9 @@ const URET = {
     S.araclar.forEach(a => [['muayene', 'muayenesi'], ['sigorta', 'trafik sigortası'], ['kasko', 'kaskosu']].forEach(([x, ad]) => { if (a[x] && fark(a[x]) > 0) uyar(fark(a[x]), mudur(), a.plaka + ' ' + ad, a[x]); }));
     // PER-028: öğretmenin çalışma izni (MEBBİS'ten okunan bitiş) — müdüre 30, 15, 7 ve 1 gün önce; izin bitişinden sonraya planlı ders sayısı da yazılır
     [...S.egitmenler, ...(S.ogretmenler || [])].forEach(h => { const t = izinBitisi(h); if (!t || fark(t) <= 0) return; const ileri = S.dersler.filter(d => d.egitmen === h.id && d.durum === 'Planlandı' && d.tarih > t).length;
-      uyar(fark(t), mudur(), h.ad + ' çalışma izni', t, ` Uzatma sözleşmesi bitişten en geç 30 gün önce MEM’e verilir.${ileri ? ` Bitişten sonraya ${ileri} planlı dersi var.` : ''}`); });
+      uyar(fark(t), mudur(), h.ad + ' çalışma izni', t, ` Uzatma sözleşmesi bitişten en geç 30 gün önce MEM’e verilir.${ileri ? ` Bitişten sonraya ${ileri} planlı dersi var.` : ''}`);
+      // MSJ-018: öğretmenin kendisine de (o13 biçimi aynı; yeni Meta şablonu gerekmez)
+      if (h.tel) uyar(fark(t), hoca(h), h.ad.split(' ')[0] + ' Hoca, MEBBİS çalışma izniniz', t, ' Yenilenmezse ders ve sınava giremezsiniz.'); });
     S.egitmenler.forEach(h => Object.entries(h.belgeler || {}).forEach(([b, t]) => { if (t && fark(t) > 0) { const ad = { sertifika: 'usta öğretici sertifikanız', saglik: 'sağlık raporunuz', adli: 'adli sicil kaydınız' }[b]; uyar(fark(t), hoca(h), h.ad.split(' ')[0] + ' Hoca, ' + ad, t, ' Süresi dolarsa ders veremezsiniz.'); } }));
     return ornek ? l.sort((a, b) => a.anahtar.split('|').pop().localeCompare(b.anahtar.split('|').pop())).slice(0, 1) : l; },
   o14: ornek => (S.gruplar || []).filter(g => ornek ? fark(g.baslangic) >= 0 : fark(g.baslangic) === 2).flatMap(g => S.kursiyerler.filter(k => k.teorikGrup === g.id && ['Kayıt', 'Evrak', 'Teorik'].includes(k.asama) && !k.teorik).map(k => ({ anahtar: 'o14|' + g.id + '|' + k.id, kim: ogr(k), metin: doldur('o14', { kisi: k, ad: k.ad, tarih: tarihUzun(g.baslangic), saatte: saatDe(TEORIK_SAAT[g.id] || '18:30'), grup: g.ad.toLocaleLowerCase('tr'), derslik: g.derslik }) }))),
