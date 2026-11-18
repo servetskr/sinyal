@@ -1,5 +1,5 @@
 // mdSinyal demo verisi: tarihler bugüne göre üretilir, tarayıcıda saklanır.
-import { listeBul, listeDurumu, kursunIli, satirBul, tabanTutar, sinifSatiri, ozelSatir, donemi } from './taban.js?v=223';
+import { listeBul, listeDurumu, kursunIli, satirBul, tabanTutar, sinifSatiri, ozelSatir, donemi } from './taban.js?v=234';
 let ANAHTAR = 'sinyal-demo-v20';
 // Usta öğreticinin ders sonunda puanladığı beceriler
 export const BECERI = [['kalkis', 'Kalkış ve duruş'], ['serit', 'Şerit ve ayna'], ['kavsak', 'Kavşak ve öncelik'], ['park', 'Park'], ['rampa', 'Rampa ve yokuş']];

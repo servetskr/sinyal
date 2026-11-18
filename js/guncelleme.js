@@ -7,7 +7,7 @@
 // Şimdi: sürüm surum.json'dan (her seferinde sunucudan) okunur, bilinen yeni sürüm cihazda saklanır; yenileme ve kapatıp açmada
 // bildirim yine çıkar, yalnız yeni sürüm gerçekten açılınca kalkar. "Şimdi güncelle" önbelleği temizler, servis çalışanını yeniler ve
 // sayfayı CDN'i atlayan bir adresle açar; açılan sürüm denetlenir, olmadıysa bir kez daha denenir.
-import { pencere, kapatPencere, bildir, e } from './ui.js?v=232';
+import { pencere, kapatPencere, bildir, e } from './ui.js?v=234';
 
 export const KURULU = +(new URL(import.meta.url).searchParams.get('v') || 0);
 const K_YENI = 'sinyal-yeni-surum';        // { v, ilk, notlar } sunucuda görülen, henüz kurulmamış sürüm

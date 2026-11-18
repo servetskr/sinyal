@@ -1,6 +1,6 @@
 {
   "aciklama": "Uygulamanın yayındaki sürümü (js/guncelleme.js okur). anahtar alanını sinyal-kaynak/arac/surum.py kendisi yükseltir. notlar: sürüm numarasına göre kısa, sade maddeler; yoksa 'Neler yeni?' görünmez.",
-  "anahtar": "?v=232",
+  "anahtar": "?v=234",
   "notlar": {
     "232": [
       "Yeni sürüm bildirimi artık sayfa yenilense ya da uygulama kapatılıp açılsa da kaybolmuyor; yalnız güncelleyince kalkıyor.",
