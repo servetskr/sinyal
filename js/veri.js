@@ -1183,12 +1183,14 @@ export const kursAdi = hal => adEk(S.kurs.ad, hal);
 // Direksiyon aracı: önce ustanın kursiyerin sınıfındaki aracı, o saatte doluysa aynı sınıftaki boş araç.
 // Sınıfın kullanabileceği araç sınıfları: B Engelli önce B-EN (aparatlı) araç, yoksa otomatik B aracı (md.7/5: raporundaki şartları taşıyan araç)
 export const aracSiniflari = sinif => sinif === 'B-EN' ? ['B-EN', 'B-O'] : [sinif];
-export const ustaAraci = (egId, sinif) => { for (const s of aracSiniflari(sinif)) { const a = S.araclar.find(a => a.egitmen === egId && a.sinif === s); if (a) return a; } return undefined; };
+// ARC-018: araç kendi sınıfına ek olarak kartta işaretlenen sınıflarda da kullanılır (ör. A2 aracıyla A1 dersi; MEBBİS SKT03004 araç listesine göre)
+export const aracUygun = (a, sinif) => !!a && aracSiniflari(sinif).some(s => a.sinif === s || (a.ekSiniflar || []).includes(s));
+export const ustaAraci = (egId, sinif) => { for (const s of aracSiniflari(sinif)) { const a = S.araclar.find(a => a.egitmen === egId && a.sinif === s); if (a) return a; } return S.araclar.find(a => a.egitmen === egId && aracUygun(a, sinif)); };
 export function dersAraci(egId, sinif, t, saat, haric) {
   const bos = a => !S.dersler.some(d => d !== haric && d.arac === a.id && d.tarih === t && d.saat === saat);
   const o = ustaAraci(egId, sinif); if (o && bos(o)) return o;
   for (const s of aracSiniflari(sinif)) { const a = S.araclar.filter(a => a.sinif === s && a !== o).find(bos); if (a) return a; }
-  return null;
+  return S.araclar.filter(a => a !== o && aracUygun(a, sinif)).find(bos) || null;
 }
 export const ekToplam = k => (k.odeme.ekler || []).reduce((a, x) => a + x.tutar, 0);
 export const odenen = k => k.odeme.pesin + k.odeme.taksitler.reduce((a, t) => a + (t.odendi ? t.tutar : (t.kismi || 0)), 0) + (k.odeme.ekler || []).filter(x => x.odendi).reduce((a, x) => a + x.tutar, 0) - (k.odeme.iade || 0);

@@ -5,7 +5,7 @@
 // 'uyari', 'bilgi'. Dizinin üstünde ek alanlar: kural (kimlik), kursiyer (id), kursiyerler (birden çok kişiye ait oturum bulgusunda kimlik listesi, ör. Y04), kisa (öğrenci dosyasında ad olmadan başlık), yalnizDosya, eylem.
 // DOM yok; yalnız veri.js'e bağlı (Node'da denenebilir). Bugün: veri.js BUGUN / gun().
 // Yeni kurallar ilk sürümde yalnız "uyarı"dır; Eyüp Bey teyit edince engele çevrilebilir (belgeler/eksikler/eyup-sorular.md).
-import { S, gun, fark, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
+import { S, gun, fark, aracUygun, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
 
 /* ---------- yardımcılar (ui.js'teki biçimlerle aynı; ui.js DOM'a bağlı olduğu için burada kopyası) ---------- */
 const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
@@ -226,6 +226,8 @@ export function dersKontrol(o) {
   // md.23/1: direksiyon programı MEBBİS’e dersten en az N gün önce girilir (M01 ile aynı ölçü: ders tarihi − ekleme günü)
   { const n = kuralAyar('programOnGun'), g = (tarihOku(planGun) - tarihOku(gun(0))) / 864e5; if (g >= 0 && g < n) not.push(`MEBBİS’e en az ${n} gün önce girilmeli; geç girilen program md.23/1’e aykırı.`); }
   if (ar && [ar.muayene, ar.sigorta].some(t => t && t < planGun)) sorun.push(ar.plaka + ' muayene/sigorta süresi dolmuş; bu tarihte ders planlanamaz.');
+  // ARC-018, ARC-023: araç öğrencinin sınıfına uygun olmalı (kendi sınıfı ya da kartta işaretli ek sınıf); CE adayına yalnız CE aracı
+  if (ar && tur !== 'simulator' && !(k.sinif === 'B-EN' && k.kendiArac) && !aracUygun(ar, k.sinif)) sorun.push(k.sinif === 'CE' ? `CE adayına yalnız CE sınıfı tanımlı araçla ders verilir; ${ar.plaka} ${ar.sinif} aracı.` : `${ar.plaka} ${ar.sinif} aracı; ${sinifEtiket(k.sinif, k)} dersine uygun değil (araç kartında ek sınıf işaretli değil).`);
   // ARC-006: yaş sınırını aşmış araçla ders planlanmaz (yaş planlanan tarihin yılına göre)
   if (ar && aracYasSiniri(ar) && aracYasi(ar, +planGun.slice(0, 4)) > aracYasSiniri(ar)) sorun.push(`${ar.plaka} ${aracYasi(ar, +planGun.slice(0, 4))} yaşında; bu sınıfta eğitim aracı ${aracYasSiniri(ar)} yaşından büyük olamaz (MTSK md.17/2-d).`);
   // ARC-002: MEBBİS'te 'Muayene Tarihi Doldu' ya da 'Hizmet Dışı' görünen araçla ders planlanmaz
