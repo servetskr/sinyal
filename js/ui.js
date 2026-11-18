@@ -452,7 +452,7 @@ const ROL_YAZI = { 'ÖĞRENCİ': 'öğrenciye', 'HOCA': 'usta öğreticiye', 'M�
 function onizle(liste, baslik, bitince) {
   pencere({
     baslik: baslik || 'Gidecek mesaj',
-    icerik: `<p class="ipucu" style="margin-bottom:12px">${isaret('bilgi', 18)}<span>Demo görünümü: gerçek kullanımda ${liste.length > 1 ? 'bu ' + liste.length + ' mesaj' : 'bu mesaj'} WhatsApp’tan kendiliğinden gider. Burada yalnız gösteriliyor.</span></p>
+    icerik: `<p class="ipucu" style="margin-bottom:12px">${isaret('bilgi', 18)}<span>Demo görünümü: gerçek kullanımda ${liste.length > 1 ? 'bu ' + liste.length + ' mesaj' : 'bu mesaj'} ${/SMS/.test(baslik) ? 'cihazın SMS uygulamasında hazır açılır' : 'WhatsApp’tan kendiliğinden gider'}. Burada yalnız gösteriliyor.</span></p>
       <div style="display:grid;gap:10px;max-height:52vh;overflow:auto">${liste.map(x => `<div><small style="display:block;color:var(--soluk);margin-bottom:4px">${e(x.ad || '')}${x.rol ? ' · ' + (x.rol === 'KURSA GELEN' ? adEk(S.kurs.ad, 'e') : ROL_YAZI[x.rol] || x.rol.toLocaleLowerCase('tr')) : ''}</small><div class="balon giden" style="max-width:100%;white-space:pre-line;overflow-wrap:anywhere">${e(x.metin)}</div></div>`).join('')}</div>`,
     altlik: '<button class="dg dg-ana" data-onizle-tamam>Tamam</button>',
     onAc(d) { d.querySelector('[data-onizle-tamam]').addEventListener('click', () => { kapatPencere(); if (bitince) bitince(new Set(liste.map((x, i) => i))); }); },

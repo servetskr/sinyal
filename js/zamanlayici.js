@@ -56,7 +56,8 @@ export const kuralSaati = id => SAAT[id] || null;
 const kural = id => S.otomasyonlar.find(o => o.id === id);
 // MSJ-031: T.C., şifre, PIN ve IBAN değişkeni şablonda doldurulmaz (KVKK)
 const doldur = (id, alan) => { alan = { kurs: S.kurs.ad, kursa: kursAdi('e'), kursta: kursAdi('de'), ...alan }; ['tc', 'tckn', 'tcno', 'kimlik', 'sifre', 'parola', 'pin', 'iban'].forEach(a => { delete alan[a]; }); if (alan.kisi && !alan.selam) alan.selam = selam(alan.kisi); return (kural(id) ? kural(id).sablon : '').replace(/\{(\w+)\}/g, (x, a) => alan[a] != null ? alan[a] : ''); };
-const ogr = k => ({ ad: tamAd(k), tel: k.tel, rol: 'ÖĞRENCİ' });
+// PAR-058: öğrencinin mesaj kanalı (WhatsApp, SMS, e-posta); WhatsApp dışı kanal API ile gitmez, elle gönderilecekler kuyruğuna düşer
+const ogr = k => ({ ad: tamAd(k), tel: k.tel, rol: 'ÖĞRENCİ', ...(k.mesajKanal && k.mesajKanal !== 'WhatsApp' ? { kanal: k.mesajKanal, eposta: k.eposta || '' } : {}) });
 const hoca = h => ({ ad: h.ad, tel: h.tel, rol: 'HOCA' });
 const mudur = () => ({ ad: S.kurs.yetkili || 'Kurs müdürü', tel: mudurTel(), rol: 'MÜDÜR' });
 const odeme = k => S.kurs.iban ? `Havale/EFT için IBAN: ${ibanMetni()}; açıklamaya ${k ? 'ödeme kodunuzu (' + odemeKodu(k) + ') ve ' : ''}adınızı soyadınızı yazın; ${kursAdi('de')} nakit ya da kartla da ödeyebilirsiniz.` : `${kursAdi('e')} uğrayıp nakit ya da kartla ödeyebilirsiniz.`;
@@ -160,7 +161,7 @@ export async function zamanlayiciCalistir(elle = false) {
     for (const x of l) {
       const atla = z.sinir && apiAcik() && ((z.gunluk || {})[bugun + x.kural] || 0) >= 2;
       if (atla) { z.gonderilen[x.anahtar] = bugun; z.kayit.unshift({ zaman: yerelZaman(), kural: x.kural, kime: x.kim.ad, rol: x.kim.rol, metin: x.metin, durum: 'demo sınırı' }); continue; }
-      if (apiAcik()) {
+      if (apiAcik() && !(x.kim && x.kim.kanal)) {
         // gerçek kursta birden çok cihaz açık olabilir: mesajı ilk sahiplenen cihaz gönderir, öbürleri atlar
         if (bulutKanca.sahiplen && !(await bulutKanca.sahiplen('z|' + x.anahtar + '|' + bugun))) continue;  // öbür cihaz gönderdi; kaydı eşitlemeyle gelir
         const s = await apiGonder(etiket(x.kim.ad, x.kim.rol) + x.metin, undefined, undefined, x.kim);
@@ -183,8 +184,14 @@ export async function zamanlayiciCalistir(elle = false) {
 // API yokken kuyruktakileri sırayla WhatsApp’ta aç
 export function kuyruguGonder(sonra) {
   const z = S.zamanli; if (!z || !z.kuyruk.length) return bildir('Bekleyen zamanlı mesaj yok');
-  const l = z.kuyruk.slice();
-  waSirali(l.map(x => ({ ad: x.kim.ad, tel: x.kim.tel, rol: x.kim.rol, metin: x.metin, tur: kural(x.kural).ad })), 'Zamanı gelen mesajlar', { bitince: acilan => { const ac = acilan || new Set(l.map((x, i) => i)); l.forEach((x, i) => { if (!ac.has(i)) return; z.gonderilen[x.anahtar] = gun(0); z.kuyruk = z.kuyruk.filter(q => q.anahtar !== x.anahtar); z.kayit.unshift({ zaman: yerelZaman(), kural: x.kural, kime: x.kim.ad, rol: x.kim.rol, metin: x.metin, durum: 'gönderildi' }); kural(x.kural).gonderim++; etkiUygula(x); }); kaydet(); if (sonra) sonra(); } });
+  const hepsi = z.kuyruk.slice(), tamam = x => { z.gonderilen[x.anahtar] = gun(0); z.kuyruk = z.kuyruk.filter(q => q.anahtar !== x.anahtar); z.kayit.unshift({ zaman: yerelZaman(), kural: x.kural, kime: x.kim.ad, rol: x.kim.rol, metin: x.metin, durum: 'gönderildi' }); kural(x.kural).gonderim++; etkiUygula(x); };
+  // PAR-058: e-posta kanalındakiler cihazın e-posta uygulamasıyla tek tek; SMS kanalındakiler sırayla SMS; öbürleri WhatsApp
+  const ep = hepsi.filter(x => x.kim.kanal === 'E-posta' && x.kim.eposta), sms = hepsi.filter(x => x.kim.kanal === 'SMS' || (x.kim.kanal === 'E-posta' && !x.kim.eposta)), l = hepsi.filter(x => !ep.includes(x) && !sms.includes(x));
+  const epPencere = () => { if (!ep.length) { if (sonra) sonra(); return; } import('./ui.js?v=234').then(u => u.pencere({ baslik: 'E-postayla gidecekler', taslak: false, icerik: `<ul class="liste">${ep.map((x, i) => `<li><div style="flex:1;min-width:0"><b>${u.e(x.kim.ad)}</b><small style="display:block;color:var(--soluk)">${u.e(kural(x.kural).ad)}</small></div><a class="dg dg-cizgi dg-kucuk" data-ep-i="${i}" href="mailto:${encodeURIComponent(x.kim.eposta)}?subject=${encodeURIComponent((S.kurs.ad || '') + ' · ' + kural(x.kural).ad)}&body=${encodeURIComponent(x.metin)}">E-postayı aç</a></li>`).join('')}</ul>`, altlik: '<button class="dg dg-ana" data-kapat>Bitti</button>',
+    onAc(p) { p.addEventListener('click', ev => { const a = ev.target.closest('[data-ep-i]'); if (!a) return; const x = ep[+a.dataset.epI]; tamam(x); gonderimEkle(x.kim.ad, x.metin, kural(x.kural).ad + ' (e-posta)'); a.textContent = 'Açıldı ✓'; kaydet(); }); } })); if (sonra) sonra(); };
+  const smsSira = () => sms.length ? waSirali(sms.map(x => ({ ad: x.kim.ad, tel: x.kim.tel, rol: x.kim.rol, metin: x.metin, tur: kural(x.kural).ad })), 'SMS ile gidecekler', { kanal: 'SMS', bitince: acilan => { const ac = acilan || new Set(sms.map((x, i) => i)); sms.forEach((x, i) => { if (ac.has(i)) tamam(x); }); kaydet(); epPencere(); } }) : epPencere();
+  if (!l.length) return smsSira();
+  waSirali(l.map(x => ({ ad: x.kim.ad, tel: x.kim.tel, rol: x.kim.rol, metin: x.metin, tur: kural(x.kural).ad })), 'Zamanı gelen mesajlar', { bitince: acilan => { const ac = acilan || new Set(l.map((x, i) => i)); l.forEach((x, i) => { if (!ac.has(i)) return; tamam(x); }); kaydet(); smsSira(); } });
 }
 // Demo: bir kuraldan tek örnek mesajı hemen gönder (tarih şartı aranmaz)
 export async function ornekGonder(id) {
