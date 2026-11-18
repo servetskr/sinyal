@@ -6,6 +6,7 @@ import { e, ik, pencere, kapatPencere, bildir, tl, siteLink } from './ui.js?v=23
 import { S, kaydet, islem, bulutKanca } from './veri.js?v=234';
 import { ogrenciPanelMetni, WORKER } from './bulut.js?v=234';
 import { EMU } from './firebase-ayar.js?v=234';
+import { ETIKET_RE, etiketCoz } from './mevzuat-ara.js?v=234';
 import { kabuk as epKabuk, kutular, bolum, satirlar, bos, not, nokta, dugme, R, SITE } from './eposta-kabuk.js?v=234';
 
 // EMU (firebase-ayar.js, yalnız localhost + açık işaret): REST istekleri yerel emülatöre gider, Google onayı yerine emülatörün yönetici belirteci kullanılır
@@ -1110,7 +1111,7 @@ function mevzuatYonetHtml() {
         <label class="tam">Not<input name="not" maxlength="400" placeholder="Ör. 1 Ocak 2027'den itibaren yeni tutarlar geçerli"></label>
         <button class="dg dg-ana dg-kucuk" type="submit">Kaydet</button>
       </form>
-      ${Object.keys(durum).length ? `<div class="sh-liste">${Object.entries(durum).map(([id, d]) => `<div class="sh-satir" style="cursor:default"><span class="sh-av sh-av-yok">${ik('uyari')}</span><span class="sh-satir-ic"><b>${e(adi(id))} · ${e((MO_DURUM.find(x => x[0] === d.durum) || [, d.durum])[1])}</b><small style="white-space:normal">${e([d.not, d.yerine ? 'yerine: ' + adi(d.yerine) : '', moTarih(d.tarih)].filter(Boolean).join(' · '))}</small></span><button class="dg dg-hafif dg-kucuk" data-sh-mo-durum-sil="${e(id)}">Kaldır</button></div>`).join('')}</div>` : ''}
+      ${Object.keys(durum).length ? `<div class="sh-liste">${Object.entries(durum).map(([id, d]) => `<div class="sh-satir" style="cursor:default"><span class="sh-av sh-av-yok">${ik('uyari')}</span><span class="sh-satir-ic"><b>${e(adi(id))} · ${e((MO_DURUM.find(x => x[0] === d.durum) || [, d.durum])[1])}</b><small style="white-space:normal">${e([d.not, d.yerine ? 'yerine: ' + adi(d.yerine) : '', moTarih(d.tarih)].filter(Boolean).join(' · '))}</small></span><button class="dg dg-hafif dg-kucuk" data-sh-mo-durum-sil="${e(id)}">Kaldır</button></div>${gozdenHtml(id, d)}`).join('')}</div>` : ''}
     </section>
     ${sssBolumHtml()}
     <section class="sh-grup"><h2>Duyurular<span>kursların mevzuat ekranında “Güncel değişiklikler”</span></h2>
@@ -1126,6 +1127,50 @@ function mevzuatYonetHtml() {
       ${duyurular.length ? `<div class="sh-liste">${duyurular.map(d => `<div class="sh-satir" style="cursor:default"><span class="sh-av sh-av-hizmet">${ik('bilgi')}</span><span class="sh-satir-ic"><b>${e(d.baslik)}</b><small style="white-space:normal">${e([moTarih(d.tarih), d.metin].filter(Boolean).join(' · '))}</small></span><button class="dg dg-hafif dg-kucuk" data-sh-mo-duyuru-sil="${e(d.id)}">Sil</button></div>`).join('')}</div>` : ''}
     </section>
   </div>`;
+}
+// ---- MEV-019: belge 'Değişti' ya da 'Yürürlükten kalktı' işaretlenince o belgeye dayanan hazır cevaplar (SSS), panelden yazılan SSS'ler
+// ve rehber bölümleri gözden geçirme listesine düşer. Not alanında madde yazılırsa ("md.7 ve md.39 değişti") liste o maddelere daralır.
+// "Gözden geçirildi" işareti bu tarayıcıda tutulur (durum yeniden kaydedilince, yani tarihi değişince liste baştan açılır).
+const maddeNo = m => (String(m || '').match(/(\d+)/) || [])[1] || '';
+const notMaddeleri = t => new Set([...String(t || '').matchAll(/(?:md\.?|madde)\s*(\d+)/giu)].map(r => r[1]));
+const GOZDEN = 'sinyal-mo-gozden';
+const gozdenOku = () => { try { return JSON.parse(localStorage.getItem(GOZDEN) || '{}'); } catch (x) { return {}; } };
+const gozdenYaz = o => { try { localStorage.setItem(GOZDEN, JSON.stringify(o)); } catch (x) { } };
+async function etkiYukle() {
+  if (mo.etki || mo.etkiYukleniyor) return; mo.etkiYukleniyor = true;
+  try {
+    const dz = await (await fetch(siteLink('veri/mevzuat/dizin.json'))).json(), sb = dz.belgeler.findIndex(b => b.id === 'sss'), rb = dz.belgeler.findIndex(b => b.id === 'rehber');
+    const sss = dz.parcalar.filter(p => p.b === sb && p.sss).map(p => ({ id: p.sss.id, soru: p.m, kisa: p.sss.kisa, ayrinti: p.sss.ayrinti || [], adimlar: p.sss.adimlar || [], dikkat: p.sss.dikkat || '', dayanakHam: p.sss.dayanak || [], dayanak: (p.sss.dayanak || []).map(d => d.belge + ': ' + d.m), konu: p.baslik || '' }));
+    if (!mo.hazir) mo.hazir = sss.map(({ dayanakHam, ...x }) => x);
+    const rehber = new Map();
+    for (const p of dz.parcalar) {
+      if (p.b !== rb) continue;
+      const l = rehber.get(p.m) || []; for (const r of String(p.t || '').matchAll(ETIKET_RE)) { const c = etiketCoz(r[1]); if (c && c.belge) l.push({ belge: c.belge, m: c.m || '' }); } rehber.set(p.m, l);
+    }
+    mo.etki = { sss, rehber: [...rehber].map(([bolum, et]) => ({ bolum, et })) };
+  } catch (x) { mo.etki = { hata: turkceHata(x), sss: [], rehber: [] }; }
+  mo.etkiYukleniyor = false; ciz();
+}
+function etkilenenler(id, d) {
+  const md = notMaddeleri(d.not), uy = x => x.belge === id && (!md.size || md.has(maddeNo(x.m)));
+  const panel = ((mo.veri && mo.veri.sss) || { kayitlar: [] }).kayitlar.filter(k => (k.dayanak || []).some(uy));
+  const gizli = new Set(((mo.veri && mo.veri.sss) || { gizli: [] }).gizli || []);
+  return { md, panel, sss: mo.etki.sss.filter(x => !gizli.has(x.id) && x.dayanakHam.some(uy)), rehber: mo.etki.rehber.filter(r => r.et.some(uy)).map(r => r.bolum) };
+}
+function gozdenHtml(id, d) {
+  if (!['degisti', 'kalkti'].includes(d.durum)) return '';
+  if (!mo.etki) { setTimeout(etkiYukle, 0); return `<p class="sh-dip">Bu belgeye dayanan cevaplar aranıyor…</p>`; }
+  if (mo.etki.hata) return `<p class="sh-dip">Gözden geçirme listesi çıkarılamadı: ${e(mo.etki.hata)}</p>`;
+  const x = etkilenenler(id, d), anahtar = id + '|' + (d.tarih || ''), g = new Set(gozdenOku()[anahtar] || []);
+  const top = x.sss.length + x.panel.length + x.rehber.length, bitti = [...x.sss.map(y => 's:' + y.id), ...x.panel.map(y => 'p:' + y.id), ...x.rehber.map(y => 'r:' + y)].filter(k => g.has(k)).length;
+  if (!top) return `<p class="sh-dip">Bu belgeye${x.md.size ? ' (md.' + [...x.md].join(', md.') + ')' : ''} dayanan hazır cevap ya da rehber bölümü yok.</p>`;
+  const sat = (k, ic, dg = '') => `<div class="sh-satir" style="cursor:default;align-items:flex-start${g.has(k) ? ';opacity:.55' : ''}"><button class="sh-gozden${g.has(k) ? ' secili' : ''}" data-sh-gozden="${e(anahtar)}" data-k="${e(k)}" role="checkbox" aria-checked="${g.has(k)}" aria-label="Gözden geçirildi">${ik('tik')}</button><span class="sh-satir-ic">${ic}</span>${dg}</div>`;
+  return `<details class="sh-mz-etki"${bitti < top ? ' open' : ''}><summary>Gözden geçir: ${[x.sss.length ? x.sss.length + ' hazır cevap' : '', x.panel.length ? x.panel.length + ' panel SSS' : '', x.rehber.length ? x.rehber.length + ' rehber bölümü' : ''].filter(Boolean).join(' · ')}${x.md.size ? ' (md.' + [...x.md].join(', md.') + ')' : ''} · <b>${bitti}/${top} bitti</b></summary>
+    <p class="sh-dip">Kısa cevap ve rakamlar yeni metne göre okunsun; değişen hazır cevabı “Düzelt” ile yeniden yazın, rehber bölümü kaynak dosyasından (arac/mevzuat/rehber) düzeltilip yeniden üretilir. Bitirdiğinizi işaretleyin.</p>
+    <div class="sh-liste">${x.sss.map(y => sat('s:' + y.id, `<b>${e(y.soru)}</b><small style="white-space:normal">${e(y.kisa)}</small><small>Hazır cevap · ${e(y.dayanak.join(', '))}</small>`, `<button class="dg dg-cizgi dg-kucuk" data-sh-sss-duzelt="${e(y.id)}">Düzelt</button>`)).join('')}
+    ${x.panel.map(y => sat('p:' + y.id, `<b>${e(y.soru)}</b><small style="white-space:normal">${e(y.kisa)}</small><small>Panelden yazılan SSS</small>`, `<button class="dg dg-cizgi dg-kucuk" data-sh-sss-duzen="${e(y.id)}">Düzenle</button>`)).join('')}
+    ${x.rehber.map(y => sat('r:' + y, `<b>Rehber · ${e(y)}</b><small>Kısa cevap, öne çıkan rakamlar ve “Ne yapılır” adımları</small>`, `<a class="dg dg-cizgi dg-kucuk" href="${e(siteLink('rehber/'))}" target="_blank" rel="noopener">Rehber</a>`)).join('')}</div>
+  </details>`;
 }
 // Sık sorulanlar: panelden yazılan kayıtlar (bütün kurslarda hazır cevap ve asistan kaynağı) ve statik derlemdeki hazır cevapları gizleme/düzeltme
 function sssBolumHtml() {
@@ -1344,6 +1389,7 @@ async function destekTikla(t) {
   const mu = t.closest('[data-sh-mo-duyuru-sil]'); if (mu) { await moIslem('/mevzuat/ortak/duyuru', { sil: mu.dataset.shMoDuyuruSil }, 'Duyuru silindi'); return true; }
   if (t.closest('[data-sh-sss-ekle]')) { if (!mo.toc) await mevzuatYonetYukle(); sssPenceresi(); return true; }
   if (t.closest('[data-sh-sss-hazir]')) { hazirCevaplarYukle(); return true; }
+  const gz = t.closest('[data-sh-gozden]'); if (gz) { const o = gozdenOku(), l = new Set(o[gz.dataset.shGozden] || []); if (l.has(gz.dataset.k)) l.delete(gz.dataset.k); else l.add(gz.dataset.k); o[gz.dataset.shGozden] = [...l]; gozdenYaz(o); ciz(); return true; }
   const sd = t.closest('[data-sh-sss-duzen]'); if (sd) { const k = ((mo.veri && mo.veri.sss) || { kayitlar: [] }).kayitlar.find(x => x.id === sd.dataset.shSssDuzen); if (k) sssPenceresi(k); return true; }
   const sz = t.closest('[data-sh-sss-duzelt]'); if (sz) { const x = (mo.hazir || []).find(y => y.id === sz.dataset.shSssDuzelt); if (x) sssPenceresi(null, { ...x, yerine: x.id }); return true; }
   const sg = t.closest('[data-sh-sss-gizle]'); if (sg) { await moIslem('/mevzuat/ortak/sss-gizle', { id: sg.dataset.shSssGizle, gizle: sg.dataset.gizle === '1' }, sg.dataset.gizle === '1' ? 'Hazır cevap gizlendi' : 'Hazır cevap açıldı'); return true; }

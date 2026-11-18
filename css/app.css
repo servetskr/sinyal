@@ -3046,6 +3046,13 @@ p.mz-kanit-uyari{margin:-4px 0 10px;font-size:13px}
 .asistan-dugme:hover{background:#1e3a6e}
 @media (max-width:900px){.asistan-dugme{width:40px;padding:0;justify-content:center}.asistan-dugme span{display:none}}
 .dn-dayanak{color:var(--levha);text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px;font-weight:600}
+.sh-mz-etki{margin:0 0 10px;background:#fff;border:1px solid var(--cizgi);border-radius:14px;padding:10px 12px}
+.sh-mz-etki>summary{cursor:pointer;font-size:14px;color:var(--murekkep);list-style-position:outside}
+.sh-mz-etki>summary b{color:var(--yesil,#18a058)}
+.sh-mz-etki .sh-liste{margin-top:8px;max-height:420px;overflow:auto}
+.sh-gozden{flex:none;width:28px;height:28px;border-radius:8px;border:1.5px solid var(--cizgi);background:#fff;display:grid;place-items:center;color:transparent;cursor:pointer;margin-top:2px}
+.sh-gozden svg{width:16px;height:16px}
+.sh-gozden.secili{background:var(--yesil,#18a058);border-color:var(--yesil,#18a058);color:#fff}
 .sh-mz-bulten{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#fff;border:1px solid var(--cizgi);border-radius:14px;padding:10px 12px;margin:0 0 10px}
 .sh-mz-bulten>span{flex:1;min-width:200px}
 .sh-mz-bulten b{display:block;color:var(--murekkep);font-size:14.5px}
