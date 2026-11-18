@@ -23,6 +23,7 @@ export const KURAL_KAYNAK = {
   aracKursiyer: { ad: 'Bir eğitim döneminde araç başına en çok kursiyer kaydı', birim: 'kursiyer', tur: 'mevzuat', varsayilan: 12, min: 1, max: 50, kaynak: MTSK + ', md.16/8 (B belgeliye A1’de iki katı, md.39/5; kontenjan dışı md.6/4 sayılmaz)', url: MTSK_URL },
   sinavUcretIsGunu: { ad: 'Uygulama sınavı ücreti döner sermayeye, sınavdan en geç', birim: 'iş günü önce', tur: 'mevzuat', varsayilan: 6, min: 1, max: 30, kaynak: MTSK + ', md.43/5', url: MTSK_URL },
   // Asgari yaş burada yok: tek kaynak sınıf tablosu (Ayarlar › Sınıf ve ücretler › Asgari yaş; KTY md.76, istisna md.76/3 veri.js)
+  telafiSaat: { ad: 'Kaldıktan sonra tekrar sınavdan önce en az ek direksiyon', birim: 'saat', tur: 'mevzuat', varsayilan: 2, min: 2, max: 10, kaynak: MTSK + ', md.15 (başarısız aday eğitimi, en az 2 saat)', url: MTSK_URL },
   tekrarBekleme: { ad: 'Kaldıktan sonra tekrar sınava bekleme', birim: 'gün', tur: 'kurs', varsayilan: 15, min: 0, max: 120, kaynak: 'Kurs uygulaması: mevzuatta sabit bir gün sayısı yok, kurs belirler' },
   devamsizlikSiniri: { ad: 'Teorik devamsızlık uyarı sınırı', birim: 'ders', tur: 'kurs', varsayilan: 4, min: 1, max: 34, kaynak: 'Kurs uygulaması: uyarı eşiği, mevzuattaki devam şartını kurs müdürü kontrol eder' },
   ekDersUcreti: { ad: 'Ek direksiyon dersi ücreti', birim: '₺', tur: 'kurs', min: 0, max: 100000, kaynak: 'Kurs kararı (il taban ücretinin altında olamaz)' },

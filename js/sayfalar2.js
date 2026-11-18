@@ -193,9 +193,12 @@ export function sonucGir(s, hazir) {
           if (gecti) { g++; if (es) { k.asama = SINIFLAR[k.sinif].direksiyon ? 'Direksiyon' : 'Ehliyet'; if (kuralAcik('o9')) mesaj.push([k, `${selam(k)} tebrikler, e-sınavı ${o.puan} puanla geçtiniz! ${SINIFLAR[k.sinif].direksiyon ? 'Sıradaki adım direksiyon dersleri; saatlerini birlikte ayarlayalım.' : 'Belgeniz için sizi arayacağız.'}`]); } else { k.asama = 'Ehliyet'; k.kapanis = {}; if (kuralAcik('o5')) { k.yorum = 'istendi'; mesaj.push([k, yorumMetni(k)]); } else if (kuralAcik('o9')) mesaj.push([k, `${selam(k)} tebrikler, uygulama sınavını geçtiniz! Ehliyetiniz hayırlı olsun.`]); } return; }
           if (hak >= HAKk(k)) { k.hakBitti = { tur: s.tur, tarih: s.tarih }; mesaj.push([k, !es && !k.ikinciHak ? `${selam(k)} uygulama sınavı bu sefer olmadı ve ilk dört sınav hakkınız doldu. 60 gün içinde başvurup direksiyon derslerini yeniden alırsanız dört hak daha kazanırsınız; sizi arayacağız.` : `${selam(k)} ${es ? 'e-sınav' : 'uygulama sınavı'} bu sefer olmadı ve sınav haklarınız doldu. Yeni dönem kaydı için sizi arayacağız.`]); }
           else {
-            const teklif = !es && kuralAcik('o6') && !k.ekDersTeklif;
-            if (teklif) k.ekDersTeklif = { n: 2, tutar: 2 * ekDersFiyat(k.sinif), tarih: gun(0), neden: 'kaldi' };
-            if (kuralAcik('o9') || teklif) mesaj.push([k, `${selam(k)} ${es ? 'e-sınav' : 'uygulama sınavı'} bu sefer olmadı. Üzülmeyin, ${HAKk(k) - hak} hakkınız daha var; sonraki oturumu birlikte planlayalım.${teklif ? ` Yönetmelik gereği tekrar sınavdan önce en az 2 saat ek direksiyon dersi alınıyor (${tl(2 * S.kurs.ekDersUcreti)}); saatlerini ayarlayalım mı? Kursiyer ekranından ya da bu mesaja “evet” yazarak onaylayabilirsiniz.` : ''}`]);
+            // MSJ-017: telafi (başarısız aday eğitimi) eşiği tek yerden: kuralAyar('telafiSaat'), MTSK md.15; mesaj o6 şablonundan (kurs düzenleyebilir)
+            const teklif = !es && kuralAcik('o6') && !k.ekDersTeklif, tn = kuralAyar('telafiSaat'), ttutar = tn * ekDersFiyat(k.sinif);
+            if (teklif) k.ekDersTeklif = { n: tn, tutar: ttutar, tarih: gun(0), neden: 'kaldi' };
+            const o6 = teklif && (S.otomasyonlar.find(x => x.id === 'o6') || {}).sablon;
+            if (o6) mesaj.push([k, o6.replace(/\{(\w+)\}/g, (m0, a) => ({ selam: selam(k), ad: k.ad, tur: 'uygulama', kalan_hak: HAKk(k) - hak, telafi: tn, tutar: tl(ttutar), kurs: S.kurs.ad })[a] ?? m0)]);
+            else if (kuralAcik('o9') || teklif) mesaj.push([k, `${selam(k)} ${es ? 'e-sınav' : 'uygulama sınavı'} bu sefer olmadı. Üzülmeyin, ${HAKk(k) - hak} hakkınız daha var; sonraki oturumu birlikte planlayalım.${teklif ? ` Yönetmelik gereği tekrar sınavdan önce en az ${tn} saat ek direksiyon dersi alınıyor (${tl(ttutar)}); saatlerini ayarlayalım mı? Kursiyer ekranından ya da bu mesaja “evet” yazarak onaylayabilirsiniz.` : ''}`]);
           }
           kalan.push(k);
         });

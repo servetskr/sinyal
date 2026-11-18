@@ -253,7 +253,7 @@ export function yasDenetim(k) {
 // Kural motorunun okuduğu sayı ayarları (Ayarlar › MEB kuralları): [en az, en çok, varsayılan]; sayfalar5.js KURAL_KAYNAK'taki min/max/varsayilan ile aynı.
 // Eskiden kaydedilmiş geçersiz değer (boş, 0, eksi, aralık dışı) varsayılanla okunur: ekranda görünen değer ile kodun kullandığı değer aynı olur.
 // programOnGun alt sınırı 5: MTSK Yön. md.23/1 direksiyon programını en az 5 gün önce ister; eskiden kaydedilmiş 1–4 değeri 5 okunur.
-export const KURAL_ARALIK = { programOnGun: [5, 30, 5], gunlukDersSiniri: [1, 2, 2], geceDersi: [1, 10, 2], sinavBildirimIsGunu: [1, 20, 4], direksiyonSure: [1, 365, 90], sinavUcretIsGunu: [1, 30, 6], tekrarBekleme: [0, 120, 15], devamsizlikSiniri: [1, 34, 4], aracKursiyer: [1, 50, 12] };
+export const KURAL_ARALIK = { programOnGun: [5, 30, 5], gunlukDersSiniri: [1, 2, 2], geceDersi: [1, 10, 2], sinavBildirimIsGunu: [1, 20, 4], direksiyonSure: [1, 365, 90], sinavUcretIsGunu: [1, 30, 6], tekrarBekleme: [0, 120, 15], telafiSaat: [2, 10, 2], devamsizlikSiniri: [1, 34, 4], aracKursiyer: [1, 50, 12] };
 export const kuralAyar = a => { const [en, ust, v] = KURAL_ARALIK[a], x = S && S.kurs ? S.kurs[a] : undefined; return x !== '' && x != null && isFinite(+x) && +x >= en && +x <= ust ? +x : v; };
 export const geceKisitli = k => !!(k && k.saglikRapor && k.saglikRapor.geceKisit);
 export const geceGerekli = k => { if (!k || !gerekliDireksiyon(k) || geceKisitli(k) || k.sinif === 'G' || (k.sinif === 'CE' && !(S && S.kurs && S.kurs.geceCE))) return 0; return kuralAyar('geceDersi'); };
@@ -566,7 +566,7 @@ function uret() {
     { id: 'o3', ad: 'Sınav bilgilendirmesi', ne: 'Sınava 3 gün ve 1 gün kala', kanal: 'WhatsApp', acik: true, gonderim: 96, sablon: '{selam} {tur} sınavınız {tarih} {saatte}, yer: {yer}. Kimliğinizi yanınıza almayı unutmayın. {kurs}' },
     { id: 'o4', ad: 'Eksik evrak hatırlatması', ne: 'Kayıttan 3 gün sonra, evrak eksikse', kanal: 'WhatsApp', acik: true, gonderim: 41, sablon: '{selam} kaydınızı tamamlamak için {evrak} eksik. {kursa} getirdiğinizde işlemlerinizi hemen başlatıyoruz.' },
     { id: 'o5', ad: 'Google yorum isteği', ne: 'Uygulama sınavını geçince', kanal: 'WhatsApp', acik: true, gonderim: 57, sablon: '{selam} tebrikler, artık ehliyetiniz var! {kurs} hakkında Google’da birkaç cümle yazarsanız çok seviniriz: {link}' },
-    { id: 'o6', ad: 'Kalan kursiyere ek ders önerisi', ne: 'Sınav sonucu girildiğinde', kanal: 'WhatsApp', acik: true, gonderim: 12, sablon: '{selam} bu sefer olmadı ama çok yakındınız. Bir sonraki sınava kadar 2 ek ders ayarlayalım mı?' },
+    { id: 'o6', ad: 'Kalan kursiyere ek ders önerisi', ne: 'Sınav sonucu girildiğinde', kanal: 'WhatsApp', acik: true, gonderim: 12, sablon: '{selam} {tur} sınavı bu sefer olmadı. Üzülmeyin, {kalan_hak} hakkınız daha var. Yönetmelik gereği tekrar sınavdan önce en az {telafi} saat ek direksiyon dersi alınıyor ({tutar}); saatlerini ayarlayalım mı? Öğrenci uygulamasından ya da bu mesaja “evet” yazarak onaylayabilirsiniz.' },
     { id: 'o8', ad: 'e-Sınav randevusu ve giriş belgesi', ne: 'Randevu kesinleşince', kanal: 'WhatsApp', acik: true, gonderim: 64, sablon: '{selam} e-sınav randevunuz {tarih} {saatte}, yer: {yer}. Giriş belgeniz ekte; kimliğinizi unutmayın.' },
     { id: 'o9', ad: 'Sınav sonucu bildirimi', ne: 'Sonuç girilince', kanal: 'WhatsApp', acik: true, gonderim: 88, sablon: '{selam} {tur} sınav sonucunuz: {sonuc}. {kalan_hak}' },
     { id: 'o7', ad: 'Düşünen adaya takip', ne: 'Bilgi aldıktan 2 gün sonra', kanal: 'WhatsApp', acik: false, gonderim: 0, sablon: '{selam} kayıtla ilgili aklınıza takılan bir şey var mı? Bu hafta başlayan gruba hâlâ yer var. {kurs}' },
@@ -768,7 +768,7 @@ function goc(o) {
   // gerçek kurs: demo kursun gönderim sayıları devralınmasın (bir kez sıfırlanır; sonra gerçek gönderimlerle artar)
   // işaret kuralın kendisinde: kurs ayarlarına (tek parça kaydedilir) dokunulmaz; önbellekten açılan eski bir cihaz ayarları geri yazamasın
   if (o._bulut) (o.otomasyonlar || []).forEach(x => { if (!x.gercekSayac) { x.gonderim = 0; x.gercekSayac = true; } });
-  (o.otomasyonlar || []).forEach(x => { if (x.id === 'o8') x.sablon = '{selam} e-sınav randevunuz {tarih} {saatte}, yer: {yer}. Kimliğinizi ve e-sınav ücreti dekontunu yanınıza alın.'; if (x.id === 'o6') x.ne = 'Uygulama sınavından kalınca'; });
+  (o.otomasyonlar || []).forEach(x => { if (x.id === 'o8') x.sablon = '{selam} e-sınav randevunuz {tarih} {saatte}, yer: {yer}. Kimliğinizi ve e-sınav ücreti dekontunu yanınıza alın.'; if (x.id === 'o6') { x.ne = 'Uygulama sınavından kalınca'; if (/2 ek ders ayarlayalım/.test(x.sablon || '')) x.sablon = '{selam} {tur} sınavı bu sefer olmadı. Üzülmeyin, {kalan_hak} hakkınız daha var. Yönetmelik gereği tekrar sınavdan önce en az {telafi} saat ek direksiyon dersi alınıyor ({tutar}); saatlerini ayarlayalım mı? Öğrenci uygulamasından ya da bu mesaja “evet” yazarak onaylayabilirsiniz.'; } });  // MSJ-017: eski varsayılan o6 metni telafi eşiğiyle
   if (o.kazanim && !o.kazanim.gercek) o.kazanim = { gercek: true, doldurulan: 0, ekDers: 0, yorum: 0 };
   // geçmiş derslerin beceri puanları (usta öğretici ders bitiminde 1–5 verir); eski kayıtlara kursiyerin seyrine göre doldurulur
   const hs = x => { let h = 7; for (const c of String(x)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
