@@ -717,6 +717,8 @@ function belgeYukle(d, k) {
     r.send(govde);
   })).then(async j => {
     goster(100, 'Tamam');
+    // md.42 gelen evrak kayıt defteri: yüklenen yazı sıra numarasıyla deftere girer (gönderen kurum dosyada düzeltilebilir; RAP-004)
+    import('./defterler.js?v=234').then(m => m.evrakEkle({ yon: 'Gelen', belgeTarih: f.tarih.value || '', sayi: f.sayi.value.trim(), kurum: '', konu: ad, kaynak: 'mevzuat' })).catch(() => { });
     await kursYenile();
     if (k.isConnected) { kursBolumu(k); kursKumesi().catch(() => { }); }
     const b = j.belge || {}, oz = ozetBol(b.ozet);

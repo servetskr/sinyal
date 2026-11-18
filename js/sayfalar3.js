@@ -8,7 +8,7 @@ import { satirAdi, listeAdi } from './taban.js?v=234';
 
 /* ================= BELGELER VE ÇIKTILAR ================= */
 const gorunumSube = () => gorunum.sube;
-const BELGE_GRUP = { fatura: 'Kursiyer', sozlesme: 'Kursiyer', bilgi: 'Kursiyer', takip: 'Kursiyer', makbuz: 'Kursiyer', senet: 'Kursiyer', ek1: 'MEB resmî formları', ek5: 'MEB resmî formları', ek34: 'MEB resmî formları', ek8: 'MEB resmî formları', aracdosya: 'MEB resmî formları', ek12: 'MEB resmî formları', ek10: 'MEB resmî formları', hazir: 'MEB resmî formları', dersdefteri: 'MEB resmî formları', meis: 'MEB ve denetim', denetim: 'MEB ve denetim', devam: 'MEB ve denetim', program: 'MEB ve denetim', sinav: 'MEB ve denetim', dilekce: 'MEB ve denetim', hizmet: 'Sözleşme ve KVKK', vis: 'Sözleşme ve KVKK', aydinlatma: 'Sözleşme ve KVKK' };
+const BELGE_GRUP = { fatura: 'Kursiyer', sozlesme: 'Kursiyer', bilgi: 'Kursiyer', takip: 'Kursiyer', makbuz: 'Kursiyer', senet: 'Kursiyer', ek1: 'MEB resmî formları', ek5: 'MEB resmî formları', ek34: 'MEB resmî formları', ek8: 'MEB resmî formları', aracdosya: 'MEB resmî formları', ek12: 'MEB resmî formları', ek10: 'MEB resmî formları', hazir: 'MEB resmî formları', dersdefteri: 'MEB resmî formları', meis: 'MEB ve denetim', evrakdefteri: 'Defterler (md.42)', sertifikadefteri: 'Defterler (md.42)', yoklamadefteri: 'Defterler (md.42)', donemyedek: 'Defterler (md.42)', denetim: 'MEB ve denetim', devam: 'MEB ve denetim', program: 'MEB ve denetim', sinav: 'MEB ve denetim', dilekce: 'MEB ve denetim', hizmet: 'Sözleşme ve KVKK', vis: 'Sözleşme ve KVKK', aydinlatma: 'Sözleşme ve KVKK' };
 const SABLONLAR = [
   ['sozlesme', 'Kursiyer sözleşmesi', 'Ücret, taksit planı ve imza alanlarıyla', 'kursiyer'],
   ['bilgi', 'Kursiyer bilgi formu', 'Kimlik, iletişim, acil durum kişisi, evrak durumu', 'kursiyer'],
@@ -29,6 +29,11 @@ const SABLONLAR = [
   ['dersdefteri', 'Teorik ders defteri (md.42)', 'Gruba göre işlenen dersler, öğretici ve katılım', 'resmi'],
   ['hazir', 'Sınava hazır yazısı (md.7/7)', 'Usta öğreticinin uygulama sınavına hazır bildirimi; taranıp MEBBİS’e yüklenir', 'resmi'],
   ['meis', 'Dönem (MEİS) istatistiği', 'Yaş × öğrenim × cinsiyet; genel ve sertifika başına, yazdır ya da Excel', 'resmi'],
+  // md.42 defterleri (RAP-004; js/defterler.js DEFTERLER ile aynı)
+  ['evrakdefteri', 'Gelen-giden evrak kayıt defteri', 'Kursa gelen ve kurstan giden resmî yazılar; yıl içinde sıra numaralı', 'defter'],
+  ['sertifikadefteri', 'Sertifika defteri', 'Verilen sertifikalar; teslim tarihi ve imza sütunuyla', 'defter'],
+  ['yoklamadefteri', 'Kursiyer yoklama defteri', 'Teorik derslerin yoklaması, grup ve ders ders', 'defter'],
+  ['donemyedek', 'Dönem sonu yedeği (md.42/3)', 'Defterlerin ve ders defterinin dönem sonu yedeği tek dosyada', 'defter'],
   ['devam', 'Teorik devam çizelgesi', 'Gruplara göre katılım ve imza sütunu', 'tek'],
   ['hizmet', 'mdSinyal hizmet sözleşmesi', 'Erişilebilirlik, sorumluluk, veri teslimi, fesih', 'tek'],
   ['vis', 'Veri işleme sözleşmesi', 'KVKK: kurs veri sorumlusu, mdSinyal veri işleyen', 'tek'],
@@ -198,6 +203,7 @@ export function sozlesmeImzalat(k) {
 export function belgeAc(tur, id) {
   const s = SABLONLAR.find(x => x[0] === tur);
   if (s && s[3] === 'resmi') return import('./resmi.js?v=234').then(m => m.resmiAc(tur, id, kid => belgeHtml('takip', kid)));
+  if (s && s[3] === 'defter') return import('./defterler.js?v=234').then(m => m.defterAc(tur));
   const yazdirBtn = `<button class="dg dg-ana" data-yazdir>${ik('belge')}Yazdır / PDF</button>`;
   if (s[3] === 'tek') { pencere({ baslik: s[1], genis: true, icerik: `<div style="background:var(--zemin);padding:18px;border-radius:8px;max-height:66vh;overflow:auto"><div class="a4" id="a4">${belgeHtml(tur)}</div></div>`, altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button>${yazdirBtn}`, onAc(d) { d.querySelector('[data-yazdir]').addEventListener('click', () => { belgeYazdir(belgeHtml(tur), s[1]); islem(s[1] + ' yazdırdı'); kaydet(); }); } }); return; }
   const gelir = () => S.hareket.filter(h => h.tur === 'Gelir' && h.kursiyer && subede(kursiyer(h.kursiyer))).sort((a, b) => (b.tarih + b.id).localeCompare(a.tarih + a.id));
@@ -227,7 +233,7 @@ export function belgeler() {
   return {
     baslik: 'Belgeler ve çıktılar', alt: 'Kayıtlardan otomatik dolan, yazdırmaya hazır formlar',
     html: `${ekranNotu('Formu seçin, kişiyi seçin; bilgiler kayıttan dolar. Yazdırın ya da WhatsApp’tan PDF olarak gönderin.')}
-    ${['Kursiyer', 'MEB resmî formları', 'MEB ve denetim', 'Sözleşme ve KVKK'].map(g => `<div class="bolum-bas" style="margin-top:6px"><div><h2>${g}</h2></div></div><div class="belge-liste" style="margin-bottom:18px">${SABLONLAR.filter(x => BELGE_GRUP[x[0]] === g).map(([k, t, a]) => `<button class="belge-kart" data-belge="${k}"><span class="kagit"><i></i><i></i><i style="width:80%"></i><i></i><i style="width:65%"></i><i style="width:90%"></i></span><b>${t}</b><small>${a}</small></button>`).join('')}</div>`).join('')}`,
+    ${['Kursiyer', 'MEB resmî formları', 'MEB ve denetim', 'Defterler (md.42)', 'Sözleşme ve KVKK'].map(g => `<div class="bolum-bas" style="margin-top:6px"><div><h2>${g}</h2></div></div><div class="belge-liste" style="margin-bottom:18px">${SABLONLAR.filter(x => BELGE_GRUP[x[0]] === g).map(([k, t, a]) => `<button class="belge-kart" data-belge="${k}"><span class="kagit"><i></i><i></i><i style="width:80%"></i><i></i><i style="width:65%"></i><i style="width:90%"></i></span><b>${t}</b><small>${a}</small></button>`).join('')}</div>`).join('')}`,
     baglan(k) { k.addEventListener('click', ev => { const b = ev.target.closest('[data-belge]'); if (b) belgeAc(b.dataset.belge); }); },
   };
 }

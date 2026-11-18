@@ -3289,3 +3289,7 @@ p.mz-kanit-uyari{margin:-4px 0 10px;font-size:13px}
 .gosterge-k span{font-size:11.5px;color:var(--soluk)}
 @media (max-width:600px){.izgara.iz-4>.gosterge-k{min-width:0}}
 .ks-not.uyari{background:color-mix(in srgb,var(--kirmizi) 9%,var(--panel));color:var(--murekkep)}
+/* md.42 defterleri (Belgeler › Defterler, RAP-004) */
+.yd-tablo th,.yd-tablo td{padding:6px 7px;font-size:12.5px;white-space:nowrap}
+.yd-tablo td.yd-yok{color:var(--kirmizi);font-weight:800}
+@media (max-width:600px){.vr-suzgec>.sekmeler,.vr-suzgec>.dg,.vr-suzgec>small{grid-column:1/-1;min-width:0;max-width:100%;overflow-x:auto}.vr-suzgec>span:empty{display:none}}
