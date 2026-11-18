@@ -376,7 +376,7 @@ export function kasa(alt) {
   if (durum.kasa === 'vade') govde = RK.vadeHtml();
   if (durum.kasa === 'bakiye') govde = RK.bakiyeHtml();  // PAR-029
   if (durum.kasa === 'fatura') govde = faturaListesiHtml() + eksikFaturaHtml();
-  if (durum.kasa === 'cari') govde = CR.cariHtml();
+  if (durum.kasa === 'cari') govde = CR.cariHtml(kalanBorc);
   if (durum.kasa === 'analiz') govde = RK.analizHtml();
   if (durum.kasa === 'geciken') govde = `<div class="kart"><div class="kart-bas"><h3>Geciken taksitler</h3><small>${gec.length} taksit · ${tl(gecikenT)}</small><div class="sag"><button class="dg dg-wp dg-kucuk" data-toplu>${ik('wp')}Hepsine hatırlat</button></div></div><div class="tablo-kap" style="margin-top:10px"><table class="tablo tablo-mobil"><thead><tr><th>Kursiyer</th><th>Vade</th><th>Gecikme</th><th class="sag">Tutar</th><th></th></tr></thead><tbody>${gec.map(x => taksitSatir(x, true)).join('') || `<tr><td colspan="5">${bos('Geciken taksit yok', 'Tüm ödemeler zamanında.')}</td></tr>`}</tbody></table></div></div>`;
   return {
@@ -389,7 +389,7 @@ export function kasa(alt) {
     </div><div class="ara-bosluk"></div>
     <div class="kart"><div class="kart-bas"><h3>Son 6 ay</h3><small><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--levha)"></i> gelir &nbsp; <i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#f0c9c4"></i> gider</small></div><div class="kart-govde">${cubukGrafik(grafik, { bicim: v => sayi(Math.round(v / 1000)) + 'k', seri2: 'Gider' })}</div></div>
     <div class="ara-bosluk"></div>
-    <div class="bolum-bas"><div id="sek">${sekmeler([['hareket', 'Hareketler'], ['takvim', 'Taksit takvimi', yaklasan.length], ['geciken', 'Gecikenler', gec.length], ['senet', 'Senetler', senetler.filter(x => !x.t.odendi).length], ['vade', 'Vade raporu'], ['bakiye', 'Detaylı bakiye'], ['hesap', 'Kasa ve banka'], ['analiz', 'Gün sonu analizi'], ['fatura', 'Faturalar'], ...((S.tedarikciler || []).length ? [['cari', 'Tedarikçiler', (S.alisFaturalari || []).filter(a => !a.iptal && CR.alisKalan(a) > 0 && fark(a.vade) < 0).length]] : [])], durum.kasa)}</div><div class="sag"><button class="dg dg-cizgi" data-fatura>${ik('belge')}e-Arşiv fatura</button><button class="dg dg-ana" data-hareket>${ik('arti')}Gelir / gider ekle</button></div></div>
+    <div class="bolum-bas"><div id="sek">${sekmeler([['hareket', 'Hareketler'], ['takvim', 'Taksit takvimi', yaklasan.length], ['geciken', 'Gecikenler', gec.length], ['senet', 'Senetler', senetler.filter(x => !x.t.odendi).length], ['vade', 'Vade raporu'], ['bakiye', 'Detaylı bakiye'], ['hesap', 'Kasa ve banka'], ['analiz', 'Gün sonu analizi'], ['fatura', 'Faturalar'], ...((S.tedarikciler || []).length || (S.firmalar || []).length ? [['cari', 'Cari (firma, tedarikçi)', (S.alisFaturalari || []).filter(a => !a.iptal && CR.alisKalan(a) > 0 && fark(a.vade) < 0).length]] : [])], durum.kasa)}</div><div class="sag"><button class="dg dg-cizgi" data-fatura>${ik('belge')}e-Arşiv fatura</button><button class="dg dg-ana" data-hareket>${ik('arti')}Gelir / gider ekle</button></div></div>
     ${govde}`,
     baglan(k) {
       if (durum.kasa === 'vade') RK.vadeBaglan(k, yenile);

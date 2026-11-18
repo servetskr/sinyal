@@ -7,6 +7,11 @@
 import { S, kaydet, gun, fark, islem, oturum, sb, tutarOku, YONTEMLER, yontemAd, geriAlNoktasi } from './veri.js?v=234';
 import { e, tl, ik, rozet, tarih, pencere, kapatPencere, bildir, bos } from './ui.js?v=234';
 
+// KAY-022 (SOR-060/061): firma carisi — kurumsal eğitimde ücreti firma öder; öğrenci k.firma ile bağlanır. S.firmalar [{ id, ad, vkn, vergiDairesi, tel, yetkili }]
+export const firmalar = () => (S.firmalar = S.firmalar || []);
+export const firma = id => firmalar().find(x => x.id === id);
+export const firmaOgrencileri = id => sb(S.kursiyerler).filter(k => k.firma === id);
+export function firmaEkle(ad) { ad = String(ad || '').trim().replace(/\s+/g, ' '); if (!ad) return null; const v = firmalar().find(y => y.ad.toLocaleLowerCase('tr') === ad.toLocaleLowerCase('tr')); if (v) return v; const y = { id: 'fr' + Date.now().toString(36), ad }; firmalar().push(y); islem('Firma ekledi', ad); return y; }
 export const tedarikciler = () => (S.tedarikciler = S.tedarikciler || []);
 export const alislar = () => (S.alisFaturalari = S.alisFaturalari || []);
 export const tedarikci = id => tedarikciler().find(x => x.id === id);
@@ -49,7 +54,15 @@ export function faturaOku(f, { tutar, tarih: t, kategori, aciklama }) {
 }
 
 // Kasa › Tedarikçiler sekmesi
-export function cariHtml() {
+function firmaHtml(kalanBorc) {
+  const l = firmalar(); if (!l.length) return '';
+  return `<div class="kart" style="margin-bottom:16px"><div class="kart-bas"><h3>Firmalar</h3><small>${l.length} firma · kurumsal eğitimde ücreti firma öder</small></div><ul class="liste">${l.map(f => { const o = firmaOgrencileri(f.id), b = o.reduce((t, k) => t + (kalanBorc ? kalanBorc(k) : 0), 0);
+    return `<li><div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(f.ad)}</b><small style="display:block;color:var(--soluk)">${o.length} öğrenci${o.length ? ': ' + o.slice(0, 4).map(k => e(k.ad + ' ' + k.soyad)).join(', ') + (o.length > 4 ? '…' : '') : ''}</small></div><span class="sag">${b ? `<b class="sayi">${tl(b)}</b>` : rozet('Borç yok', 'yesil')}</span></li>`; }).join('')}</ul></div>`;
+}
+export function cariHtml(kalanBorc) {
+  return firmaHtml(kalanBorc) + tedarikciHtml();
+}
+function tedarikciHtml() {
   const l = tedarikciler().slice().sort((x, y) => tedarikciBakiye(y.id) - tedarikciBakiye(x.id) || x.ad.localeCompare(y.ad, 'tr')), acik = alislar().filter(a => !a.iptal && alisKalan(a) > 0).sort((x, y) => String(x.vade).localeCompare(y.vade));
   const top = acik.reduce((t, a) => t + alisKalan(a), 0), gec = acik.filter(a => fark(a.vade) < 0);
   return `<div class="kart"><div class="kart-bas"><h3>Tedarikçiler</h3><small>${l.length} tedarikçi · borç <b>${tl(top)}</b>${gec.length ? ` · ${gec.length} faturanın vadesi geçti` : ''}</small><div class="sag"><button class="dg dg-cizgi dg-kucuk" data-td-ekle>${ik('arti')}Tedarikçi ekle</button></div></div>
