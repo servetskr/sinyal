@@ -426,6 +426,53 @@ const epKabuk = (baslik, govde, alt, onizleme) => `<!doctype html><html lang="tr
 <tr><td style="padding:16px 24px 20px;background:#fafbfc;border-top:1px solid #e8ebf1;font-size:12.5px;line-height:1.5;color:#6b7280">${alt ? `<div>${epKacis(alt)}</div>` : ''}<div style="margin-top:6px"><a href="https://mdsinyal.com" style="color:#6b7280;font-weight:700;text-decoration:none">mdSinyal</a> · sürücü kursu yönetim programı</div></td></tr>
 </table></td></tr></table></body></html>`;
 const epSayfa = (baslik, metin, form) => new Response(`<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${epKacis(baslik)} · mdSinyal</title></head><body style="margin:0;background:#0f1729;color:#e9edf5;font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;display:grid;place-items:center;min-height:100vh;padding:16px;box-sizing:border-box"><main style="max-width:420px;text-align:center"><h1 style="font-size:22px;margin:0 0 8px">${epKacis(baslik)}</h1><p style="margin:0 0 20px;color:#b8c2d6">${epKacis(metin)}</p>${form ? `<form method="post" action="https://api.mdsinyal.com/eposta/onay"><input type="hidden" name="t" value="${epKacis(form)}"><button type="submit" style="font:inherit;color:#fff;background:#2563eb;border:0;padding:12px 20px;border-radius:12px;font-weight:600;cursor:pointer">Adresimi onayla</button></form>` : `<a href="https://mdsinyal.com/" style="color:#fff;background:#2563eb;padding:12px 20px;border-radius:12px;text-decoration:none;font-weight:600;display:inline-block">mdSinyal’i aç</a>`}</main></body></html>`, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-Robots-Tag': 'noindex' } });
+// ---- DIG-037: kurslar arası ilan panosu ----
+// Kurs müdürü ilan verir (Genel, Araç, Ekipman, İş Birliği; başlık, açıklama, iletişim, yayın başlangıç/bitiş, en çok 10 küçük resim). İlan platform
+// sahibi onaylayınca yayına girer; bütün kursların müdür ve ön bürosu yayındaki ilanları görür. 'ilan:<id>' (ilan), 'ilan:dizin' (kimlik, kurs, durum, tarihler).
+const ILAN_KAT = ['Genel', 'Araç', 'Ekipman', 'İş Birliği'], ILAN_DURUM = ['bekliyor', 'yayinda', 'reddedildi', 'kaldirildi'];
+const ilanDizin = async env => { try { return JSON.parse((await env.LINK.get('ilan:dizin')) || '[]'); } catch (x) { return []; } };
+const ilanYayinda = (x, bugun) => x.durum === 'yayinda' && (!x.bas || x.bas <= bugun) && (!x.bit || x.bit >= bugun);
+async function ilanlar(req, env, url, yol, cevap) {
+  if (!env.LINK) return cevap({ ok: false, hata: 'Depo yok' }, 500);
+  const bugun = new Date(Date.now() + 3 * 3600e3).toISOString().slice(0, 10);
+  if (yol === 'ilan/yonet') {   // platform sahibi: bütün ilanlar ve onay
+    if (!(await sahipMi(req, env))) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
+    const d = await ilanDizin(env);
+    if (req.method === 'GET') return cevap({ ok: true, liste: (await Promise.all(d.map(x => env.LINK.get('ilan:' + x.id, { type: 'json' })))).filter(Boolean) });
+    let b = {}; try { b = await req.json(); } catch (x) { } const i = d.findIndex(x => x.id === b.id); if (i < 0 || !ILAN_DURUM.includes(b.durum)) return cevap({ ok: false }, 400);
+    const v = await env.LINK.get('ilan:' + b.id, { type: 'json' }); if (!v) return cevap({ ok: false }, 404);
+    v.durum = b.durum; v.yonetimNot = String(b.not || '').slice(0, 300); v.onayZaman = new Date().toISOString(); d[i].durum = b.durum;
+    await env.LINK.put('ilan:' + b.id, JSON.stringify(v)); await env.LINK.put('ilan:dizin', JSON.stringify(d)); return cevap({ ok: true });
+  }
+  const kurs = req.headers.get('X-Kurs') || url.searchParams.get('kurs') || '', rol = await uyeRol(req, kurs);
+  if (!rol || !['mudur', 'sekreter'].includes(rol)) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
+  const d = await ilanDizin(env);
+  if (yol === 'ilan' && req.method === 'GET') {
+    const sec = d.filter(x => ilanYayinda(x, bugun) || x.kurs === kurs).slice(-300);
+    const l = (await Promise.all(sec.map(x => env.LINK.get('ilan:' + x.id, { type: 'json' })))).filter(Boolean).map(v => ({ ...v, benim: v.kurs === kurs, kurs: undefined }));
+    return cevap({ ok: true, liste: l });
+  }
+  if (yol === 'ilan' && req.method === 'POST') {
+    if (rol !== 'mudur') return cevap({ ok: false, hata: 'İlanı kurs müdürü verir' }, 403);
+    const ham = await req.text(); if (ham.length > 2.2e6) return cevap({ ok: false, hata: 'Resimler çok büyük' }, 413);
+    let b; try { b = JSON.parse(ham); } catch (x) { return cevap({ ok: false, hata: 'gecersiz' }, 400); }
+    const baslik = String(b.baslik || '').trim().slice(0, 90), aciklama = String(b.aciklama || '').trim().slice(0, 2000), iletisim = String(b.iletisim || '').trim().slice(0, 120);
+    const kat = ILAN_KAT.includes(b.kategori) ? b.kategori : null, tarihMi = t => /^\d{4}-\d{2}-\d{2}$/.test(t || ''), bas = tarihMi(b.bas) ? b.bas : bugun, bit = tarihMi(b.bit) ? b.bit : '';
+    const resimler = (Array.isArray(b.resimler) ? b.resimler : []).slice(0, 10).filter(x => typeof x === 'string' && /^data:image\/(jpeg|png|webp);base64,/.test(x) && x.length < 220e3);
+    if (!kat || baslik.length < 5 || aciklama.length < 10 || iletisim.length < 5) return cevap({ ok: false, hata: 'Kategori, başlık, açıklama ve iletişim gerekli' }, 400);
+    if (bit && bit < bas) return cevap({ ok: false, hata: 'Bitiş başlangıçtan önce olamaz' }, 400);
+    if (d.filter(x => x.kurs === kurs && ['bekliyor', 'yayinda'].includes(x.durum)).length >= 10) return cevap({ ok: false, hata: 'Aynı anda en çok 10 ilan' }, 429);
+    const id = 'i' + Date.now().toString(36) + crypto.randomUUID().slice(0, 6), v = { id, kurs, kursAd: String(b.kursAd || '').slice(0, 80), kategori: kat, baslik, aciklama, iletisim, bas, bit, resimler, durum: 'bekliyor', zaman: new Date().toISOString() };
+    await env.LINK.put('ilan:' + id, JSON.stringify(v)); d.push({ id, kurs, durum: 'bekliyor', bas, bit }); await env.LINK.put('ilan:dizin', JSON.stringify(d.slice(-2000)));
+    return cevap({ ok: true, id, durum: 'bekliyor' });
+  }
+  if (yol === 'ilan/kaldir' && req.method === 'POST') {
+    if (rol !== 'mudur') return cevap({ ok: false, hata: 'Yalnız kurs müdürü' }, 403);
+    let b = {}; try { b = await req.json(); } catch (x) { } const i = d.findIndex(x => x.id === b.id && x.kurs === kurs); if (i < 0) return cevap({ ok: false }, 404);
+    const v = await env.LINK.get('ilan:' + b.id, { type: 'json' }); if (v) { v.durum = 'kaldirildi'; await env.LINK.put('ilan:' + b.id, JSON.stringify(v)); } d[i].durum = 'kaldirildi'; await env.LINK.put('ilan:dizin', JSON.stringify(d)); return cevap({ ok: true });
+  }
+  return cevap({ ok: false }, 404);
+}
 // ---- DIG-035: kursun kendi web sitesindeki ön kayıt formu ----
 // Kurs müdürü bir anahtar alır ('onkayit:k:<kurs>' ↔ 'onkayit:a:<anahtar>'); sitedeki form anahtarla POST /onkayit'a yazar (girişsiz, her kaynaktan; JSON ya da düz form).
 // Ön kayıtlar 'onkayit:q:<kurs>' kuyruğunda bekler (en çok 200, 60 gün); kurs cihazı açılınca alır (GET onkayit/bekleyen) ve aldıklarını siler (POST onkayit/alindi).
@@ -1375,6 +1422,7 @@ export default {
     if (yol === 'eposta' || yol.startsWith('eposta/')) return eposta(req, env, url, yol, cevap);
     if (yol === 'sms' || yol === 'sms/hat') return sms(req, env, url, yol, cevap);   // MSJ-025
     if (yol.startsWith('onkayit/')) return onKayitYonet(req, env, url, yol, cevap);   // DIG-035 (kurs tarafı)
+    if (yol === 'ilan' || yol.startsWith('ilan/')) return ilanlar(req, env, url, yol, cevap);   // DIG-037
     const G = 'https://graph.facebook.com/v25.0/' + env.PHONE_ID;
     // Gerçek kurs isteği: Firebase oturumu + kurs kimliği (yoksa demo yolu)
     // ortak derlem eklemeleri: okuma herkese açık, yazma platform sahibi (kurs üyeliği aranmaz)

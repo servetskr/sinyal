@@ -611,6 +611,11 @@ export async function smsGonder(tel, metin) {
   try { const r = await fetch(WORKER + '/sms', { method: 'POST', headers: await kursBasligi(), body: JSON.stringify({ tel, metin }) }); const j = await r.json().catch(() => ({})); return r.ok && j.ok ? j : { ok: false, hata: j.hata || 'SMS gönderilemedi' }; }
   catch (x) { return { ok: false, hata: 'SMS servisine ulaşılamadı' }; }
 }
+// DIG-037: kurslar arası ilan panosu
+export async function ilanIstek(yol, govde) {
+  const r = await fetch(WORKER + '/' + yol, govde ? { method: 'POST', headers: await kursBasligi(), body: JSON.stringify(govde) } : { headers: await kursBasligi() });
+  const j = await r.json().catch(() => ({})); if (!r.ok || !j.ok) throw new Error(j.hata || 'İlan servisine ulaşılamadı'); return j;
+}
 // DIG-035: kursun web sitesindeki ön kayıt formu — anahtar (müdür üretir) ve bekleyen ön kayıtları alma
 export async function onKayitAnahtar(yeni = false) {
   const r = await fetch(WORKER + '/onkayit/anahtar', yeni ? { method: 'POST', headers: await kursBasligi(), body: '{}' } : { headers: await kursBasligi() });

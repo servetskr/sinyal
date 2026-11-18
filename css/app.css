@@ -3480,3 +3480,16 @@ input[type="tel"], input[inputmode="tel"], input[inputmode="numeric"], input[nam
 .ns-madde { border: 1px solid var(--cizgi); border-radius: 10px; padding: 8px 12px; margin-bottom: 6px; background: var(--panel); }
 .ns-madde summary { cursor: pointer; font-weight: 600; color: var(--murekkep); font-size: 14.5px; }
 .ns-madde ol { margin: 8px 0 8px 18px; padding: 0; font-size: 14px; display: grid; gap: 4px; }
+
+/* DIG-037: ilan panosu */
+.il-bas { font: 700 13px var(--govde); color: var(--soluk); text-transform: uppercase; letter-spacing: .05em; margin: 18px 0 8px; }
+.il-kart { overflow: hidden; }
+.il-kart h3 { font: 600 17px/1.3 var(--baslik); color: var(--murekkep); margin: 4px 0 6px; text-transform: none; letter-spacing: 0; }
+.il-kart p { font-size: 14px; margin: 0 0 6px; white-space: pre-wrap; }
+.il-kat { font-size: 12.5px; color: var(--soluk); }
+.il-iletisim { display: flex; gap: 6px; align-items: center; font-weight: 600; color: var(--murekkep) !important; }
+.il-iletisim .ik { width: 15px; height: 15px; }
+.il-resim { display: flex; gap: 2px; height: 140px; background: var(--panel-2); }
+.il-resim img { flex: 1; min-width: 0; object-fit: cover; }
+.il-onizle { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.il-onizle img { width: 64px; height: 64px; object-fit: cover; border-radius: 6px; }

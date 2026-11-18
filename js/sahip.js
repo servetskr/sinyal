@@ -858,11 +858,11 @@ const kimlikUret = () => 's' + Date.now().toString(36) + Math.random().toString(
 
 function destekHtml() {
   const v = isl(), l = tumTalepler(), acik = l.filter(t => tDurum(t) !== 'Çözüldü').length, ay = bugunIso().slice(0, 7), hAy = v.hizmetler.filter(h => String(h.tarih || '').startsWith(ay));
-  const sek = [['talepler', 'Talepler', acik], ['hizmetler', 'Hizmetler', v.hizmetler.length], ['hatalar', 'Son hatalar', hataRozet()], ['asistan', 'Asistan', ag.liste ? ag.liste.filter(x => !x.iyi).length : 0], ['site', 'Site formları', sf.liste ? sf.liste.filter(x => (x.durum || 'yeni') === 'yeni').length : 0], ['soru', 'Soru bankası', sq.liste ? sq.liste.filter(x => x.durum === 'yeni').length : 0], ['mevzuat', 'Mevzuat', mo.takip ? (mo.takip.yeni || []).length : 0]];
+  const sek = [['talepler', 'Talepler', acik], ['hizmetler', 'Hizmetler', v.hizmetler.length], ['hatalar', 'Son hatalar', hataRozet()], ['asistan', 'Asistan', ag.liste ? ag.liste.filter(x => !x.iyi).length : 0], ['site', 'Site formları', sf.liste ? sf.liste.filter(x => (x.durum || 'yeni') === 'yeni').length : 0], ['soru', 'Soru bankası', sq.liste ? sq.liste.filter(x => x.durum === 'yeni').length : 0], ['mevzuat', 'Mevzuat', mo.takip ? (mo.takip.yeni || []).length : 0], ['ilan', 'İlanlar', il.liste ? il.liste.filter(x => x.durum === 'bekliyor').length : 0]];
   return `<div class="sh-bas"><div><h1>Destek</h1><p>${acik} açık talep · bu ay ${hAy.length} hizmet</p></div>
       <div class="sh-bas-dg"><button class="dg dg-cizgi dg-kucuk" data-sh-yenile ${yukleniyor ? 'disabled' : ''}>${ik('sifirla')}${yukleniyor ? 'Yükleniyor…' : 'Yenile'}</button><button class="dg dg-cizgi dg-kucuk" data-sh-talep-ekle>${ik('arti')}Talep ekle</button><button class="dg dg-ana dg-kucuk" data-sh-hizmet-ekle>${ik('arti')}Hizmet ekle</button></div></div>
     <div class="sh-suz sh-alt" role="tablist">${sek.map(([k, a, n]) => `<button role="tab" aria-selected="${destekAlt === k}" class="${destekAlt === k ? 'secili' : ''}" data-sh-dalt="${k}">${a}${n ? ` <em>${n}</em>` : ''}</button>`).join('')}</div>
-    ${destekAlt === 'talepler' ? talepListeHtml(l) : destekAlt === 'hatalar' ? hataListeHtml() : destekAlt === 'asistan' ? asistanGeriHtml() : destekAlt === 'mevzuat' ? mevzuatYonetHtml() : destekAlt === 'site' ? siteFormHtml() : destekAlt === 'soru' ? soruBildirHtml() : hizmetListeHtml(v.hizmetler)}`;
+    ${destekAlt === 'talepler' ? talepListeHtml(l) : destekAlt === 'hatalar' ? hataListeHtml() : destekAlt === 'asistan' ? asistanGeriHtml() : destekAlt === 'mevzuat' ? mevzuatYonetHtml() : destekAlt === 'site' ? siteFormHtml() : destekAlt === 'soru' ? soruBildirHtml() : destekAlt === 'ilan' ? ilanYonetHtml() : hizmetListeHtml(v.hizmetler)}`;
 }
 // ---- Soru bankası bildirimleri (UYG-018): öğrencilerin 'Soruda hata var' bildirimleri, soru başına tek satır (worker /soru-bildir/yonet) ----
 const sq = { liste: null, yukleniyor: false, hata: '', yetkisiz: false, suz: 'yeni' };
@@ -890,6 +890,19 @@ function animGorusHtml() {
   return `<h3 style="margin:22px 0 10px;font-size:16px;color:var(--murekkep)">Animasyon görüşleri</h3><div class="sh-liste">${l.map(x => `<div class="sh-satir" style="cursor:default;align-items:flex-start"><span class="sh-av ${x.duzelt && x.durum !== 'duzeltildi' ? 'sh-av-yok' : 'sh-av-hizmet'}">${ik(x.duzelt && x.durum !== 'duzeltildi' ? 'uyari' : 'tik')}</span><span class="sh-satir-ic"><b>${e(x.ad || x.anim)}</b><small>${x.dogru || 0} öğretmen doğru · ${x.duzelt || 0} öğretmen düzeltilmeli · son ${e(new Date(x.son).toLocaleDateString('tr-TR'))}</small>${(x.bildirimler || []).filter(b => b.not).slice(-3).reverse().map(b => `<small style="white-space:normal">${e(b.not)}</small>`).join('')}</span><span style="flex:none"><select class="dg dg-hafif dg-kucuk" data-sh-an-durum="${e(x.anim)}" aria-label="Durum">${[['yeni', 'Bakılacak'], ['duzeltildi', 'Düzeltildi'], ['onayli', 'Onaylı']].map(([k, a]) => `<option value="${k}"${x.durum === k ? ' selected' : ''}>${a}</option>`).join('')}</select></span></div>`).join('')}</div>`;
 }
 // ---- Site formları (SIT-009 iletişim, SIT-020 başvuru): worker /talep/yonet; kayıtlar 180 gün durur ----
+// DIG-037: kurslar arası ilan panosu — onay bekleyen ilanlar (yayına alma, reddetme, kaldırma)
+const il = { liste: null, yukleniyor: false, hata: '', yetkisiz: false };
+async function ilanYukle() { if (il.yukleniyor) return; il.yukleniyor = true; il.hata = ''; ciz(); try { il.liste = ((await moIstek('/ilan/yonet')).liste || []).sort((a, b) => (a.durum === 'bekliyor' ? 0 : 1) - (b.durum === 'bekliyor' ? 0 : 1) || String(b.zaman).localeCompare(String(a.zaman))); il.yetkisiz = false; } catch (x) { if (x.yetkisiz) il.yetkisiz = true; else il.hata = turkceHata(x); } il.yukleniyor = false; ciz(); }
+function ilanYonetHtml() {
+  if (il.liste === null && !il.yukleniyor && !il.yetkisiz && !il.hata) setTimeout(ilanYukle, 0);
+  if (il.yetkisiz) return `<div class="sh-bos">${ik('kilit')}<b>İlanları yalnız platform sahibi onaylar</b></div>`;
+  if (il.hata && !il.liste) return `<div class="sh-bos">${ik('uyari')}<b>İlanlar okunamadı</b><small>${e(il.hata)}</small></div>`;
+  if (!il.liste) return `<div class="sh-bos">${ik('saat')}<b>İlanlar yükleniyor…</b></div>`;
+  if (!il.liste.length) return `<div class="sh-bos">${ik('tik')}<b>Henüz ilan yok</b><small>Kurs müdürleri İlan panosu’ndan ilan verince burada onay bekler.</small></div>`;
+  const AD = { bekliyor: 'Onay bekliyor', yayinda: 'Yayında', reddedildi: 'Reddedildi', kaldirildi: 'Kaldırıldı' };
+  return `<div class="sh-liste">${il.liste.map(x => `<div class="sh-satir" style="cursor:default;align-items:flex-start"><span class="sh-satir-ic"><b>${e(x.kategori)} · ${e(x.baslik)}</b><small>${e(x.kursAd || '')} · ${e(x.iletisim)} · ${e(x.bas || '')}${x.bit ? '–' + e(x.bit) : ''} · ${(x.resimler || []).length} resim</small><small style="white-space:pre-wrap">${e(String(x.aciklama).slice(0, 400))}</small></span>
+    <span class="sh-satir-sag" style="flex-direction:column;align-items:flex-end;gap:6px"><em class="sh-durum-r">${AD[x.durum] || x.durum}</em>${x.durum === 'bekliyor' ? `<button class="dg dg-ana dg-kucuk" data-sh-ilan="${e(x.id)}:yayinda">Yayına al</button><button class="dg dg-cizgi dg-kucuk" data-sh-ilan="${e(x.id)}:reddedildi">Reddet</button>` : x.durum === 'yayinda' ? `<button class="dg dg-cizgi dg-kucuk" data-sh-ilan="${e(x.id)}:kaldirildi">Kaldır</button>` : ''}</span></div>`).join('')}</div>`;
+}
 const sf = { liste: null, yukleniyor: false, hata: '', yetkisiz: false, suz: 'yeni' };
 const SF_DURUM = [['yeni', 'Yeni'], ['arandi', 'Arandı'], ['kapandi', 'Kapandı']];
 async function siteFormYukle() {
@@ -1465,6 +1478,7 @@ async function destekTikla(t) {
   if (t.closest('[data-sh-sss-ekle]')) { if (!mo.toc) await mevzuatYonetYukle(); sssPenceresi(); return true; }
   if (t.closest('[data-sh-sss-hazir]')) { hazirCevaplarYukle(); return true; }
   if (t.closest('[data-sh-sf-yenile]')) { siteFormYukle(); return true; }
+  { const ia = t.closest('[data-sh-ilan]'); if (ia) { const [id, durum] = ia.dataset.shIlan.split(':'); ia.disabled = true; moIstek('/ilan/yonet', { yontem: 'POST', govde: { id, durum } }).then(() => { il.liste = il.liste.map(x => x.id === id ? { ...x, durum } : x); bildir(durum === 'yayinda' ? 'İlan yayında' : 'Kaydedildi'); ciz(); }).catch(x => { bildir(turkceHata(x), 'uyari'); ia.disabled = false; }); return true; } }   // DIG-037
   if (t.closest('[data-sh-sq-yenile]')) { soruBildirYukle(); return true; }
   const sqz = t.closest('[data-sh-sq-suz]'); if (sqz) { sq.suz = sqz.dataset.shSqSuz; ciz(); return true; }
   const sfz = t.closest('[data-sh-sf-suz]'); if (sfz) { sf.suz = sfz.dataset.shSfSuz; ciz(); return true; }
