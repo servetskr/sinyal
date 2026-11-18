@@ -3323,3 +3323,4 @@ p.mz-kanit-uyari{margin:-4px 0 10px;font-size:13px}
 .kart.es-satir{display:flex;align-items:center;gap:12px;padding:12px 16px;flex-wrap:wrap}
 .kart.es-satir b{flex:1 1 200px;font-size:14.5px;color:var(--murekkep)}
 .es-satir-ik{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;background:color-mix(in srgb,var(--mor,#6744b8) 14%,transparent);color:var(--mor,#6744b8)}
+.es-satir .es-dekont{display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap}

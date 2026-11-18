@@ -1,6 +1,6 @@
 // Öğrenci paneli sekmeleri: dersler (yaklaşan + defter + gelişim + teorik konular), sınavlar, ödemeler, belgeler; bölümler açılır kapanır modüller
 import { odemeKodu, ibanlar, ibanBicim, S, kaydet, gun, fark, tarihOku, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen, ogrOzellik, oturum, DERS_TUR_AD, iptalEdilebilir, teorikSaat } from './veri.js?v=234';
-import { gerekliDireksiyon, kalanHak } from './veri.js?v=234';
+import { gerekliDireksiyon, kalanHak, esinavHakDurum } from './veri.js?v=234';
 import { sinifEtiket, egitimSinifi, teorikVar, ekTur, kursBorcu, resmiMasraflar, kursiyerTaban, tabanListesi, ekDersTabani, ekDersFiyat, uygulamaSinavUcreti, esinavUcreti, motorSinif } from './veri.js?v=234';
 import { satirAdi } from './taban.js?v=234';
 import * as TK from './takvim.js?v=234';
@@ -364,6 +364,20 @@ export function ogBagla(kap, k, yenile) {
     const bg = t.closest('[data-og-belge]'); if (bg) return belgeGoster(bg.dataset.ogBelge, k.id, undefined, bg.dataset.ad || ((bg.closest('li') || bg).querySelector('b') || {}).textContent || '');
   });
   kap.addEventListener('change', ev => {
+    // UYG-003: e-sınav ücreti dekontu (sıradaki hak için); kursa gider, kurs kontrol edip "ücret yattı" der
+    const dk = ev.target.closest('[data-og-dekont]');
+    if (dk && dk.files[0]) {
+      const f = dk.files[0], pdf = f.type === 'application/pdf' || /\.pdf$/i.test(f.name), resim = /^image\//.test(f.type);
+      if (!pdf && !resim) return bildir('Dekontun fotoğrafını ya da PDF’ini yükle', 'uyari');
+      if (pdf && f.size > 700 * 1024) return bildir('PDF 700 KB’tan büyük; dekontun fotoğrafını çekip yükle', 'uyari');
+      bildir('Dekont hazırlanıyor…');
+      (resim ? fotoKucult(f, 1600) : new Promise((coz, red) => { const r = new FileReader(); r.onload = () => coz(r.result); r.onerror = red; r.readAsDataURL(f); })).then(veri => {
+        k.esinavDekont = { sira: esinavHakDurum(k).sira, tarih: gun(0), dosya: f.name, tur: pdf ? 'pdf' : 'resim', veri };
+        islem('Öğrenci e-sınav dekontu yükledi', tamAd(k)); kaydet(); bildirimler([{ kim: 'mudur', metin: `${tamAd(k)} öğrenci panelinden e-Sınav ücreti dekontunu yükledi; öğrenci dosyasından kontrol edin.`, tur: 'Öğrenci evrakı' }], 'Dekont yüklendi');
+        bildir('Dekontun kursa gönderildi'); yenile();
+      }).catch(() => bildir('Dosya okunamadı; tekrar dene', 'uyari'));
+      return;
+    }
     const inp = ev.target.closest('[data-og-evrak]'); if (!inp || !inp.files[0]) return;
     const f = inp.files[0], key = inp.dataset.ogEvrak, ad = (EVRAKLAR.find(x => x[0] === key) || [0, key])[1];
     const pdf = f.type === 'application/pdf' || /\.pdf$/i.test(f.name), resim = /^image\//.test(f.type);

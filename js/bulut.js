@@ -791,6 +791,10 @@ function ogrenciUygula(docId, g) {
         k.evrakYuklenen = k.evrakYuklenen || {}; k.evrakYuklenen[key] = { tarih: bugun, dosya: String(e.dosya || '').replace(/[<>"'`]/g, '').slice(0, 120), boyut: e.veri.length, tur: e.veri.startsWith('data:application/pdf') ? 'pdf' : 'resim', veri: e.veri };
         notlar.push((EVRAKLAR.find(z => z[0] === key) || [0, key])[1] + ' belgesini yükledi');
       });
+      // e-sınav ücreti dekontu (UYG-003): sıradaki hak için; kurs öğrenci dosyasında görüp "ücret yattı" der
+      { const dk = y.esinavDekont; if (dk && typeof dk.veri === 'string' && dk.veri.length <= 950000 && DOSYA_BICIM.test(dk.veri) && /^\d{1,2}$/.test(String(dk.sira)) && !(k.esinavDekont && k.esinavDekont.veri === dk.veri)) {
+        k.esinavDekont = { sira: +dk.sira, tarih: bugun, dosya: String(dk.dosya || '').replace(/[<>"'`]/g, '').slice(0, 120), tur: dk.veri.startsWith('data:application/pdf') ? 'pdf' : 'resim', veri: dk.veri, onay: null };
+        notlar.push('e-Sınav ücreti dekontunu yükledi'); } }
       // sınav deneyimi: onay bekler; müdür onaylayınca güzergâha kısaltılmış adla eklenir
       if (y.sinavDeneyimi && typeof y.sinavDeneyimi.metin === 'string' && y.sinavDeneyimi.metin.trim().length >= 10 && !(k.sinavDeneyimi && k.sinavDeneyimi.metin === y.sinavDeneyimi.metin)) {
         const sd = y.sinavDeneyimi; k.sinavDeneyimi = { metin: sd.metin.trim().slice(0, 1000), guzergah: String(sd.guzergah || '').slice(0, 40), sonuc: ['Geçti', 'Kaldı'].includes(sd.sonuc) ? sd.sonuc : '', tarih: bugun, onay: null };

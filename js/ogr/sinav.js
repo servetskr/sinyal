@@ -3,7 +3,7 @@
 // aynı localStorage anahtarı 'sinyal-test-'+k.id, aynı veri etkileri: k.konuAnaliz, k.yanlislar, k.deneme, HZ.gorulenEkle, HZ.tekrarGuncelle, kaydet()).
 // Ekranlar: deneme girişi, deneme sorusu, soru listesi, bitirme onayı, sonuç, yanlış inceleme (tam ekran akışlar);
 // çalışma araçları, test ayarları, bugünkü tekrar, yanlışlarım (Öğren alt ekranları).
-import { S, kaydet, SINIFLAR, fark, gonderimEkle, ogrOzellik, tamAd, kalanHak, gerekliDireksiyon, egitimSinifi } from '../veri.js?v=234';
+import { S, kaydet, SINIFLAR, fark, gonderimEkle, ogrOzellik, tamAd, kalanHak, gerekliDireksiyon, egitimSinifi, esinavHakDurum } from '../veri.js?v=234';
 import { bildir, tarih, goreli, gunKisa } from '../ui.js?v=234';
 import * as HZ from '../hazirlik.js?v=234';
 import { hakDurum, tekrarUcret, esinavVar, TEORIKSIZ_METIN } from '../ogrenci.js?v=234';
@@ -284,6 +284,8 @@ function konuBasariHtml(k) {
     return `<button type="button" class="ox-satir ox-snv-ks" data-snv-basla="konu" data-unite="${kn}">${ikonKutu(ik, ton)}<span class="ox-satir-govde"><b>${esc(uniteAd(kn))}</b>${serit(o || 0, zayif ? 'turuncu' : 'yesil', true)}<small class="${zayif ? 'kirmizi' : ''}">${o == null ? 'Henüz soru çözmedin' : `${sayi(t)} soru${zayif ? ' · çalışman gerek' : ''}`}</small></span><span class="ox-satir-sag ${zayif ? 'zayif' : ''}">${o == null ? '–' : '%' + o}</span><span class="ox-chev">${oi('sag')}</span></button>`;
   }));
 }
+// UYG-003: öğrencinin yüklediği e-sınav ücreti dekontu bu hak için mi (kurs onaylayınca ücret yattı sayılır)
+const dekontVar = k => !!(k.esinavDekont && String(k.esinavDekont.sira) === String(esinavHakDurum(k).sira));
 function sinavlarHtml(k) {
   // hak sınırı öğrenciye göre (md.15): e-Sınav 4; uygulama ilk 4, ikinci dört hak başlatıldıysa 8
   // tekrar sınav ücreti hak sırasına göre (veri.js uygulamaSinavUcreti / esinavUcreti); öğrencinin kendi masrafı, kurs ücretine dahil değil (liste not 5)
@@ -303,7 +305,7 @@ function sinavlarHtml(k) {
       <details class="ox-snv-sv-getir"${sn && fark(sn.tarih) <= 7 ? ' open' : ''}><summary><span>Sınav günü yanına al</span>${oi('asagi')}</summary><ul>${getir.map(g => `<li>${oi('tik')}<span>${esc(g)}</span></li>`).join('')}</ul></details>${ek}`, 'ox-snv-sv');
   };
   if (egitimSinifi(k.sinif)) return bolum('Sınavların') + not('Bu eğitimin sınavı yok. Teorik derslerin tamamına katılınca eğitim belgen kurstan verilir.');
-  return bolum('Sınavların') + (esinavVar(k) ? kartH('e-Sınav', k.esinav, sonr('e-Sınav'), ['T.C. kimlik kartın (fotokopi geçmez)', 'e-Sınav ücreti dekontu', 'Sınavdan 30 dakika önce sınav merkezinde ol'], 'Teorik derslerin bitince kurs e-Sınav randevunu alır.', (t => t && !(k.esinav && k.esinav.sonuc === 'Geçti') ? `<p class="ox-snv-sv-yer">${oi('bilgi')}<span>${esc(t)}${/ücret bekleniyor/.test(t) ? '. Ücreti yatırıp dekontu kursuna ilet.' : ''}</span></p>` : '')(TY.esinavSatiri(k))) : not(TEORIKSIZ_METIN))
+  return bolum('Sınavların') + (esinavVar(k) ? kartH('e-Sınav', k.esinav, sonr('e-Sınav'), ['T.C. kimlik kartın (fotokopi geçmez)', 'e-Sınav ücreti dekontu', 'Sınavdan 30 dakika önce sınav merkezinde ol'], 'Teorik derslerin bitince kurs e-Sınav randevunu alır.', (t => t && !(k.esinav && k.esinav.sonuc === 'Geçti') ? `<p class="ox-snv-sv-yer">${oi('bilgi')}<span>${esc(t)}${/ücret bekleniyor/.test(t) ? (dekontVar(k) ? '. Dekontun kursa gönderildi; kurs kontrol edince ücret yattı görünür.' : '. Ücreti yatırıp dekontunu buradan yükle.') : ''}</span></p>${/ücret bekleniyor/.test(t) && !dekontVar(k) ? `<div class="ox-snv-sv-bag"><label class="ox-blg-yukle">${oi('arti')}<span>Dekontu yükle</span><input type="file" accept="image/*,application/pdf" data-og-dekont hidden></label></div>` : ''}` : '')(TY.esinavSatiri(k))) : not(TEORIKSIZ_METIN))
     + (dir ? kartH('Uygulama sınavı', k.dsinav, sonr('Direksiyon'), ['T.C. kimlik kartın', 'Gözlük ya da lens kullanıyorsan yanında olsun', 'Sınavdan 30 dakika önce sınav yerinde ol'], 'Direksiyon derslerin bitince kurs sınav tarihini bildirir.',
       ogrOzellik('direksiyon') ? `<div class="ox-snv-sv-bag">${baglanti('Uygulama sınavına hazırlan', { 'data-ox-alt': 'direksiyon:|araclar' }, true)}</div>` : '') : '');
 }
