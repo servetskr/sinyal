@@ -3506,3 +3506,6 @@ button.rozet:focus-visible { outline: 2px solid var(--levha); outline-offset: 2p
 /* PAR-050: Kasa › Hesaplar · hesap ekle */
 .hs-ekle { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 120px; border: 1.5px dashed var(--cizgi); background: transparent; color: var(--levha); font: inherit; font-weight: 700; cursor: pointer; }
 .hs-ekle:hover { border-color: var(--levha); }
+/* PAR-070: makbuz numarası ayarı */
+.mk-ayar { border: 1px solid var(--cizgi); border-radius: 8px; padding: 10px 14px 12px; }
+.mk-ayar legend { font-weight: 700; font-size: 14px; color: var(--murekkep); padding: 0 4px; }

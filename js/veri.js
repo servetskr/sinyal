@@ -949,8 +949,16 @@ function goc(o) {
 // Yeni tahsilata kalıcı makbuz numarası
 // Bulut kancaları (bulut.js doldurur; demoda boş): makbuz numarası, sunucu işlem kaydı, zamanlı mesajın tek cihazdan gitmesi
 export const bulutKanca = { makbuzNo: null, kayit: null, sahiplen: null, cihaz: null, yetki: null };
-const makbuzBicim = (yil, n) => 'M' + yil + '-' + String(n).padStart(5, '0');
-export const makbuzSira = (no) => { const m = /^M(\d{4})-(\d+)$/.exec(no || ''); return m ? [m[1], +m[2]] : null; };
+// PAR-070: makbuz numarası biçimi kurulumda ayarlanır (S.kurs.makbuz { onek, yillik, basla, uzunluk }); varsayılan eskisi gibi M2026-00001.
+// Seri: yıllıksa yıl (yıl başında 1'den), değilse tek seri 'S'. İlk makbuzdan sonra önek, yıl ve uzunluk kilitlenir; başlangıç numarası yalnız yükseltilebilir.
+export const makbuzAyar = () => { const m = (S.kurs && S.kurs.makbuz) || {}; return { onek: String(m.onek ?? 'M'), yillik: m.yillik !== false, basla: Math.max(1, Math.floor(+m.basla) || 1), uzunluk: Math.min(8, Math.max(3, Math.floor(+m.uzunluk) || 5)) }; };
+export const makbuzSeri = t => makbuzAyar().yillik ? String(t).slice(0, 4) : 'S';
+// başlangıç numarası girildiği serinin (yılın) içindir; sonraki yıl yine 1'den
+export const makbuzBaslangic = seri => { const m = (S.kurs && S.kurs.makbuz) || {}; return !makbuzAyar().yillik || !m.baslaSeri || m.baslaSeri === seri ? makbuzAyar().basla : 1; };
+export const makbuzBicim = (seri, n) => { const a = makbuzAyar(), s = String(n).padStart(a.uzunluk, '0'); return a.yillik ? a.onek + seri + '-' + s : a.onek + s; };
+const reKac = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+export const makbuzSira = (no) => { const a = makbuzAyar(), m = new RegExp('^' + reKac(a.onek) + (a.yillik ? '(\\d{4})-(\\d+)$' : '(\\d+)$')).exec(no || ''); return m ? (a.yillik ? [m[1], +m[2]] : ['S', +m[1]]) : null; };
+export const makbuzKilitli = () => (S.hareket || []).some(h => h.no);
 // Yakıt tüketimi (L/100 km): litre ve kilometre sayacı girilmiş dolumlardan, dolu depo yöntemiyle (iki dolum arası km'ye sonraki dolumun litresi)
 export const beklenenTuketim = a => BEKLENEN_TUKETIM[a.sinif] || (S.kurs.maliyet && S.kurs.maliyet.tuketim) || 6.5;
 export function tuketim(a, gunSay = 120) {
@@ -964,12 +972,12 @@ export function tuketim(a, gunSay = 120) {
 }
 export function makbuzNoVer(h) {
   if (h.no || h.tur !== 'Gelir') return h.no;
-  const yil = h.tarih.slice(0, 4);
+  const yil = makbuzSeri(h.tarih);
   // gerçek kurs: numara sunucudaki sayaçtan ayrılır, iki cihaz aynı numarayı veremez
   const n = bulutKanca.makbuzNo && bulutKanca.makbuzNo(yil);
   if (n) { h.no = makbuzBicim(yil, n); return h.no; }
   S.sayac = S.sayac || {};
-  const enBuyuk = Math.max(S.sayac['m' + yil] || 0, ...(S.hareket || []).map(x => { const m = makbuzSira(x.no); return m && m[0] === yil ? m[1] : 0; }));
+  const enBuyuk = Math.max(S.sayac['m' + yil] || 0, makbuzBaslangic(yil) - 1, ...(S.hareket || []).map(x => { const m = makbuzSira(x.no); return m && m[0] === yil ? m[1] : 0; }));
   S.sayac['m' + yil] = enBuyuk + 1; h.no = makbuzBicim(yil, enBuyuk + 1);
   if (bulutKanca.makbuzNo) h.noGecici = bulutKanca.cihaz || true;  // çevrimdışı verildi; bağlantı gelince çakışma denetlenir
   return h.no;

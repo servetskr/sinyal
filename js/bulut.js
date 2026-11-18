@@ -2,7 +2,7 @@
 // kurslar/{kurs}/v altında parça parça durur. Her kayıt ayrı alan olarak yazılır: iki kişi aynı anda
 // farklı kayıtları değiştirirse ikisi de korunur. Fotoğraf ve imzalar kurslar/{kurs}/dosyalar'da ayrı belge.
 import { FIREBASE, EMU, emuBagla } from './firebase-ayar.js?v=234';
-import { dersDiziniBoz, SINIFLAR, kuralAyar, S, bulutVeri, bosVeri, kaydetDinle, kaydet, oturum, bulutKanca, makbuzSira, islem, iso, EVRAKLAR, gun, fark, tamAd, iptalEdilebilir, dersIptalIz, geceKisitli, geceDersMi, gerekliDireksiyon } from './veri.js?v=234';
+import { makbuzBaslangic, makbuzBicim, dersDiziniBoz, SINIFLAR, kuralAyar, S, bulutVeri, bosVeri, kaydetDinle, kaydet, oturum, bulutKanca, makbuzSira, islem, iso, EVRAKLAR, gun, fark, tamAd, iptalEdilebilir, dersIptalIz, geceKisitli, geceDersMi, gerekliDireksiyon } from './veri.js?v=234';
 
 const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
 const YEREL = 'sinyal-bulut';
@@ -519,8 +519,8 @@ const rezervOku = () => { try { return JSON.parse(localStorage.getItem(REZ()) ||
 const rezervYaz = r => { try { r ? localStorage.setItem(REZ(), JSON.stringify(r)) : localStorage.removeItem(REZ()); } catch (x) { } };
 const enBuyukMakbuz = yil => Math.max(0, ...(S.hareket || []).map(h => { const m = makbuzSira(h.no); return m && m[0] === yil ? m[1] : 0; }));
 async function sayacAyir(yil, enAz = 0) {
-  const { db, F } = fb, ref = F.doc(db, 'kurslar', bulut.kurs, 'sayac', 'makbuz-' + yil);
-  return F.runTransaction(db, async t => { const d = await t.get(ref); const n = Math.max(d.exists() ? d.data().n || 0 : 0, enBuyukMakbuz(yil), enAz) + 1; t.set(ref, { n }); return n; });
+  const { db, F } = fb, ref = F.doc(db, 'kurslar', bulut.kurs, 'sayac', 'makbuz-' + yil);  // yil: makbuz serisi (yıl ya da tek seri 'S', veri.js makbuzSeri)
+  return F.runTransaction(db, async t => { const d = await t.get(ref); const n = Math.max(d.exists() ? d.data().n || 0 : 0, enBuyukMakbuz(yil), enAz, makbuzBaslangic(yil) - 1) + 1; t.set(ref, { n }); return n; });
 }
 // Fatura numarası: seri + yıl başına sunucu sayacı (kurslar/{kurs}/sayac/fatura-<seri><yıl>); yerelde en büyük numaradan aşağı düşmez
 export async function faturaNoAyir(seri, yil, enAz = 0) {
@@ -550,7 +550,7 @@ async function makbuzDenetle() {
     for (const h of benim) {
       const m = makbuzSira(h.no); if (!m) { delete h.noGecici; continue; }
       const cakisan = S.hareket.some(x => x !== h && x.no === h.no);
-      if (cakisan) { const eski = h.no, n = await sayacAyir(m[0]); h.no = 'M' + m[0] + '-' + String(n).padStart(5, '0'); islem('Makbuz numarası değişti', eski + ' başka cihazda da verilmişti; yeni numara ' + h.no); import('./ui.js?v=234').then(m => m.bildir(`Makbuz ${eski} çevrimdışıyken verilmişti ve başka cihazdaki makbuzla çakıştı; yeni numarası ${h.no}. Makbuzu verdiyseniz yenisini yazdırın.`, 'uyari')); }
+      if (cakisan) { const eski = h.no, n = await sayacAyir(m[0]); h.no = makbuzBicim(m[0], n); islem('Makbuz numarası değişti', eski + ' başka cihazda da verilmişti; yeni numara ' + h.no); import('./ui.js?v=234').then(m => m.bildir(`Makbuz ${eski} çevrimdışıyken verilmişti ve başka cihazdaki makbuzla çakıştı; yeni numarası ${h.no}. Makbuzu verdiyseniz yenisini yazdırın.`, 'uyari')); }
       else await sayacAyir(m[0], m[1] - 1);
       delete h.noGecici;
     }
