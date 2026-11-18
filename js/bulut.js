@@ -1003,7 +1003,7 @@ export async function ogrenciBaglan(kurs, kod) {
       // öğrencinin iptali/isteği ekrandan silinip hiç gönderilmiyordu (senkron testi 17 Kas 2026; öğretmen tarafı ustaGonder ile zaten böyle)
       if (ogrZaman) { clearTimeout(ogrZaman); ogrZaman = null; ogrenciGonder(); }
       ogrenciKur(JSON.parse(v.v));
-      if (ilk) { ilk = false; kaydetDinle(ogrenciPlanla); coz(S.kursiyerler[0]); } else yenileFn();
+      if (ilk) { ilk = false; kaydetDinle(ogrenciPlanla); coz(S.kursiyerler[0]); ogrenciEslemeTazele(S.kursiyerler[0]); } else yenileFn();
     }, x => { if (ilk) { ilk = false; red(x); } else location.reload(); }));  // hesap kapatıldı ya da şifre yenilendi: yeniden giriş
   });
 }
@@ -1239,7 +1239,9 @@ export async function ogrenciHesapAc(k) {
   const { db, F, A } = await sdk();
   const tref = F.doc(db, 'telefonlar', tel), t = await F.getDoc(tref);
   if (t.exists() && t.data().k !== bulut.kurs) throw hata('Bu telefon numarasıyla başka bir kursta öğrenci hesabı var. Öğrencinin başka bir numarasını girin');
-  const sifre = geciciSifre(), eposta = tel + '.' + rastgele(6) + '@ogrenci.sinyal.app';
+  // YON-082: öğrencinin kayıtta e-postası varsa hesap gerçek e-postayla açılır (doğrulama e-postası gider); yoksa ya da başka hesapta kullanılıyorsa iç adres
+  const sifre = geciciSifre(), gercek = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(k.eposta || '').trim()) ? String(k.eposta).trim().toLowerCase() : '';
+  let eposta = gercek || (tel + '.' + rastgele(6) + '@ogrenci.sinyal.app');
   if (!k.panelKod) k.panelKod = rastgele(24);
   const { initializeApp, deleteApp } = await import(SDK + 'firebase-app.js');
   const app2 = initializeApp(FIREBASE, 'ogr-' + Date.now());
@@ -1247,7 +1249,10 @@ export async function ogrenciHesapAc(k) {
   try {
     const a2 = A.initializeAuth(app2, { persistence: A.inMemoryPersistence }), db2 = F.getFirestore(app2);
     emuBagla(A, F, a2, db2);
-    uid = (await A.createUserWithEmailAndPassword(a2, eposta, sifre)).user.uid;
+    let yeniU;
+    try { yeniU = (await A.createUserWithEmailAndPassword(a2, eposta, sifre)).user; }
+    catch (x) { if (!gercek || x.code !== 'auth/email-already-in-use') throw x; eposta = tel + '.' + rastgele(6) + '@ogrenci.sinyal.app'; yeniU = (await A.createUserWithEmailAndPassword(a2, eposta, sifre)).user; }
+    uid = yeniU.uid; if (!/@ogrenci\.sinyal\.app$/.test(eposta)) { try { await A.sendEmailVerification(yeniU); } catch (x) { } }
     await F.setDoc(F.doc(db2, 'kullanicilar', uid), { kurs: bulut.kurs, rol: 'ogrenci', kod: k.panelKod, kursiyer: k.id, ilkGiris: true });
     await A.signOut(a2);
   } finally { deleteApp(app2).catch(() => { }); }
@@ -1257,7 +1262,7 @@ export async function ogrenciHesapAc(k) {
   await panelAc(k);
   await F.setDoc(tref, { k: bulut.kurs, h: { [k.id]: eposta } }, { merge: true });
   kaydet();
-  return { tel, sifre, yeniden };
+  return { tel, sifre, yeniden, ...(/@ogrenci\.sinyal\.app$/.test(eposta) ? {} : { eposta }) };
 }
 export async function ogrenciHesapKapat(k) {
   const { db, F } = await sdk(), tel = (k.hesap || {}).tel;
@@ -1279,7 +1284,11 @@ async function ogrenciUyelik(user) {
   return { ...d, uid: user.uid };
 }
 export async function ogrenciGiris(telGiris, sifre) {
-  const tel = telNorm(telGiris); if (!tel) throw hata('Cep telefonu numaranızı 05xx xxx xx xx biçiminde yazın');
+  // YON-082: öğrenci e-postasıyla da girer (hesabı gerçek e-postayla açıldıysa ya da sonradan e-postasını eklediyse)
+  if (String(telGiris).includes('@')) { if (!sifre) throw hata('Şifrenizi girin'); const { auth, A } = await sdk();
+    try { const u = await ogrenciUyelik((await A.signInWithEmailAndPassword(auth, String(telGiris).trim(), sifre)).user); try { localStorage.removeItem(YEREL); } catch (z) { } return u; }
+    catch (x) { if (x.kullanici || x.code === 'auth/too-many-requests' || x.code === 'auth/network-request-failed') throw x; throw hata('E-posta ya da şifre hatalı'); } }
+  const tel = telNorm(telGiris); if (!tel) throw hata('Cep telefonu numaranızı (05xx xxx xx xx) ya da e-postanızı yazın');
   if (!sifre) throw hata('Şifrenizi girin');
   const { auth, db, F, A } = await sdk();
   const t = await belgeOkuDene(F, F.doc(db, 'telefonlar', tel)), adresler = t.exists() ? Object.values(t.data().h || {}) : [];
@@ -1293,6 +1302,15 @@ export async function ogrenciGiris(telGiris, sifre) {
   // yalnız şifre / hesap hatası "hatalı" diye gösterilir; başka bir hata (bağlantı, izin) kendi adıyla görünsün ki gizlenmesin
   if (son && son.code && !/wrong-password|invalid-credential|invalid-login|user-not-found|invalid-email|user-disabled/.test(son.code)) { console.warn('öğrenci girişi', son.code, son.message); throw hata('Giriş yapılamadı (' + son.code.replace(/^auth\//, '') + '). Biraz sonra tekrar deneyin; sürerse kursunuza haber verin'); }
   throw hata('Telefon numarası ya da şifre hatalı');
+}
+// YON-082: öğrenci uygulamasından e-posta ekleme / değiştirme — doğrulama bağlantısına tıklanınca hesabın e-postası değişir
+export async function ogrenciEpostaEkle(eposta) { const { auth, A } = await sdk(); if (!auth.currentUser) throw hata('Önce giriş yapın'); await A.verifyBeforeUpdateEmail(auth.currentUser, String(eposta).trim()); }
+export const ogrenciEposta = () => { const u = fb && fb.auth && fb.auth.currentUser; return u && u.email && !/@ogrenci\.sinyal\.app$/.test(u.email) ? u.email : ''; };
+// hesabın e-postası değiştiyse telefonla giriş eşlemesi (telefonlar/{tel}.h[kursiyer]) öğrencinin kendisince güncellenir (kural: yalnız kendi girişi, değer kendi e-postası)
+export async function ogrenciEslemeTazele(k) {
+  try { const { auth, db, F } = await sdk(), em = auth.currentUser && auth.currentUser.email, tel = telNorm(k && k.tel); if (!em || !tel || !ogr.kurs) return;
+    const t = await F.getDoc(F.doc(db, 'telefonlar', tel)); if (!t.exists() || t.data().k !== ogr.kurs) return; const h = t.data().h || {};
+    if (h[k.id] && h[k.id] !== em) await F.updateDoc(F.doc(db, 'telefonlar', tel), { ['h.' + k.id]: em }); } catch (x) { }
 }
 // Giriş ekranı açılınca Firebase arka planda hazırlanır; öğrenci yazarken iner
 export const sdkHazirla = () => { sdk().catch(() => { }); };

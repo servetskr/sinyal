@@ -8,7 +8,7 @@ import { wpGonder, alici, odemeBilgisi, bilgiDuzenle } from './sayfalar1.js?v=23
 
 const yetkili = () => oturum.kullanici && ['mudur', 'sekreter'].includes(oturum.kullanici.rol);
 
-export const mesaj = (k, r) => `${selam(k)}\n\n*${S.kurs.ad}* öğrenci uygulamasında ${r.yeniden ? 'şifreniz yenilendi' : 'hesabınız açıldı'}.\n\n*Giriş:* ${B.ogrenciGirisLinki()}\n*Telefon:* ${B.telGoster(r.tel)}\n*Geçici şifre:* ${r.sifre}\n\nİlk girişte kendi şifrenizi belirleyeceksiniz.${r.yeniden ? '' : ' Ders programınızı, ödemelerinizi ve sınavlarınızı buradan görebilir, belgelerinizi yükleyebilirsiniz.'}\n\nŞifrenizi kimseyle paylaşmayın.`;
+export const mesaj = (k, r) => `${selam(k)}\n\n*${S.kurs.ad}* öğrenci uygulamasında ${r.yeniden ? 'şifreniz yenilendi' : 'hesabınız açıldı'}.\n\n*Giriş:* ${B.ogrenciGirisLinki()}\n*Telefon:* ${B.telGoster(r.tel)}${r.eposta ? `\n*ya da e-posta:* ${r.eposta} (e-postanıza gelen doğrulama bağlantısına dokunun)` : ''}\n*Geçici şifre:* ${r.sifre}\n\nİlk girişte kendi şifrenizi belirleyeceksiniz.${r.yeniden ? '' : ' Ders programınızı, ödemelerinizi ve sınavlarınızı buradan görebilir, belgelerinizi yükleyebilirsiniz.'}\n\nŞifrenizi kimseyle paylaşmayın.`;
 
 // Demoda gerçek hesap açılmaz: akış ve mesaj aynıdır, mesaj yalnız demo numarasına gider
 async function ac(k) {

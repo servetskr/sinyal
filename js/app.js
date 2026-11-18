@@ -66,6 +66,10 @@ function duyuruAlani(kap) {
 // DIG-025: iki cihaz aynı alanı aynı anda değiştirince kaybeden cihaz uyarılır (bulut.js birleştirme)
 addEventListener('sinyal-cakisma', ev => { const m = ev.detail && ev.detail.metin; if (!m) return; if (document.querySelector('.perde')) return bildir(m, 'uyari');
   pencere({ baslik: 'Değişikliğiniz başka cihazınkiyle çakıştı', taslak: false, icerik: `<p style="font-size:14px">${e(m)}</p>`, altlik: '<button class="dg dg-ana" data-kapat>Tamam</button>' }); });
+// YON-082: öğrenci e-postasını ekler; doğrulama bağlantısına dokununca hesabın e-postası olur (telefonla giriş ilk e-posta girişinden sonra yine çalışır)
+document.addEventListener('click', ev => { if (!ev.target.closest('[data-ogr-eposta]')) return; ev.preventDefault(); kapatPencere();
+  setTimeout(() => pencere({ baslik: B.ogrenciEposta() ? 'E-postanı değiştir' : 'E-postanı ekle', icerik: `<form data-oe><label class="og-alan"><span class="og-alan-et">E-posta</span><span class="og-girdi"><input name="e" type="email" autocomplete="email" required value="${e(B.ogrenciEposta())}"></span></label><p style="font-size:13.5px;color:var(--soluk);margin-top:8px">Bu adrese bir doğrulama bağlantısı gelir; dokununca e-postanla girersin, şifreni unutursan bağlantı e-postana gelir. Bağlantıdan sonra bir kez e-postanla gir; telefonla giriş de çalışmaya devam eder.</p></form>`,
+    altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-oe-gonder>Bağlantı gönder</button>', onAc(p) { p.querySelector('[data-oe-gonder]').addEventListener('click', () => { const v = p.querySelector('[name=e]').value.trim(); if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return bildir('E-postanı yaz', 'uyari'); B.ogrenciEpostaEkle(v).then(() => { kapatPencere(); bildir(v + ' adresine doğrulama bağlantısı gönderildi; gelen kutuna ve istenmeyen klasörüne bak'); }).catch(x => bildir(B.hataMetni(x), 'uyari')); }); } }), 200); });
 // YON-072: birden çok kursta hesabı olan kişi kurs değiştirir
 document.addEventListener('click', ev => { if (!ev.target.closest('[data-kurs-degistir]')) return; ev.preventDefault(); kapatPencere();
   B.kurslarim().then(l => pencere({ baslik: 'Kurs değiştir', icerik: `<ul class="liste">${l.map(k => `<li><div style="flex:1;min-width:0"><b>${e(k.ad)}</b><small style="display:block;color:var(--soluk)">${e({ mudur: 'Kurs müdürü', sekreter: 'Ön büro', usta: 'Usta öğretici', ortak: 'Ortak' }[k.rol] || k.rol)}</small></div>${k.secili ? '<span class="rozet rozet-yesil">açık</span>' : `<button class="dg dg-ana dg-kucuk" data-kurs-sec="${e(k.id)}">Aç</button>`}</li>`).join('')}</ul>`,
@@ -130,7 +134,7 @@ function hesapSayfasi() {
   const tel = (S.kurs.tel || '').replace(/\s/g, '');
   const satir = (ikon, metin, ek, ton = '') => `<span class="hs-ik ${ton}">${ik(ikon)}</span><span class="hs-metin">${metin}${ek ? `<small>${ek}</small>` : ''}</span>`;
   pencere({ baslik: 'Hesabım', alt: true, icerik: `<div class="hs-kim"><span class="app-profil buyuk" aria-hidden="true">${basHarf(ad)}</span><div><b>${e(ad)}</b><small>${e(S.kurs.ad)} · ${ogr ? 'Öğrenci' : ORT.yonetimModu() || u.rol === 'ortak' ? (u.rol === 'mudur' ? 'Yönetici' : 'Ortak · yalnız görüntüler') : ROL_AD[u.rol]}</small></div></div>
-    <div class="hs-liste">${ogr ? `<button type="button" data-ogr-sifre>${satir('kilit', 'Şifremi değiştir')}${ik('sag')}</button>` : ''}
+    <div class="hs-liste">${ogr ? `<button type="button" data-ogr-sifre>${satir('kilit', 'Şifremi değiştir')}${ik('sag')}</button><button type="button" data-ogr-eposta>${satir('mesaj', B.ogrenciEposta() ? 'E-postamı değiştir' : 'E-postamı ekle', B.ogrenciEposta() ? e(B.ogrenciEposta()) : 'E-postanla da girersin; şifreni e-postayla yenilersin')}${ik('sag')}</button>` : ''}
       ${tel && !ORT.yonetimModu() && u.rol !== 'ortak' ? `<a href="tel:${e(tel)}">${satir('tel', 'Kursu ara', e(S.kurs.tel))}${ik('sag')}</a>` : ''}
       ${!ogr && !ORT.yonetimModu() && ['mudur', 'sekreter'].includes(u.rol) ? `<a href="#/genel" data-kapat>${satir('genel', 'Kurs ekranı', 'Müdür ve ön büro paneli')}${ik('sag')}</a><a href="#/egitmen" data-kapat>${satir('kursiyer', 'Öğretmen ekranı', 'Usta öğreticinin telefonda gördüğü; öğretmen seçilir')}${ik('sag')}</a><a href="#/ogrenci" data-kapat>${satir('tel', 'Öğrenci ekranı', 'Öğrencinin telefonda gördüğü; öğrenci seçilir')}${ik('sag')}</a>` : ''}
       ${!ogr && u.bulut && (u.kurslar || []).length > 1 ? `<button type="button" data-kurs-degistir>${satir('kursiyer', 'Kurs değiştir', (u.kurslar.length) + ' kursta hesabınız var')}${ik('sag')}</button>` : ''}
@@ -931,11 +935,12 @@ function ogrenciGirisEkrani(not) {
   const { oi, esc } = OXU;
   const { govde, alan, alanHata, temizle, uyari, yukle, birak, ac } = ugrKabuk('Öğrenci uygulaması');
   let tel = '';
-  const telAlan = () => alan('tel', 'tel', oi('tel'), 'Cep telefonun', `inputmode="tel" autocomplete="tel" required value="${esc(tel)}"`, false, '05xx xxx xx xx');
+  // YON-082: telefon ya da e-posta
+  const telAlan = () => alan('tel', 'text', oi('tel'), 'Cep telefonun ya da e-postan', `autocomplete="username" autocapitalize="off" spellcheck="false" required value="${esc(tel)}"`, false, '05xx xxx xx xx ya da e-posta');
   const ortak = f => ugrGirdiTemizle(f, t => { if (t.name === 'tel') tel = t.value; });
 
   function girisGoster(odak, anim = true) {
-    ac(`${OXU.sayfaBas('Öğrenci girişi', 'Kursuna kayıtlı cep telefonun ve şifrenle gir.')}
+    ac(`${OXU.sayfaBas('Öğrenci girişi', 'Kursuna kayıtlı cep telefonun (ya da e-postan) ve şifrenle gir.')}
       ${not ? `<div class="ox-ugr-bilgi" role="status">${oi('uyari')}<span>${esc(not)}</span></div>` : ''}
       <form class="ox-ugr-form" novalidate>
         ${telAlan()}
@@ -960,7 +965,7 @@ function ogrenciGirisEkrani(not) {
     f.addEventListener('submit', ev => {
       ev.preventDefault(); const btn = f.querySelector('[type=submit]'), yer = govde.querySelector('[data-yardim]');
       temizle(f);
-      if (f.tel.value.replace(/\D/g, '').length < 10) return alanHata(f, 'tel', 'Cep telefonunu yaz');
+      if (!f.tel.value.includes('@') && f.tel.value.replace(/\D/g, '').length < 10) return alanHata(f, 'tel', 'Cep telefonunu ya da e-postanı yaz');
       if (!f.sifre.value) return alanHata(f, 'sifre', 'Şifreni yaz');
       yukle(btn, 'Giriliyor…'); yer.innerHTML = '';
       B.ogrenciGiris(f.tel.value, f.sifre.value).then(u => u.ilkGiris ? sifreBelirleEkrani(u) : ogrenciModu(u.kurs, u.kod)).catch(x => { birak(btn, 'Giriş yap'); uyari(f, B.hataMetni(x)); if (SH.girisHatasiMi(x) && !/hesap yok/.test(x.kullanici || '')) yardimAc(govde, { kim: f.tel.value.trim(), tur: 'ogrenci' }); });
@@ -971,7 +976,8 @@ function ogrenciGirisEkrani(not) {
   // ("WhatsApp'tan iste" 16 Kas 2026'da kaldırıldı); ekran yalnız ne yapılacağını söyler.
   function unuttumGoster() {
     ac(`${OXU.geri('Giriş', { 'data-ugr-geri': true })}
-      ${OXU.sayfaBas('Şifremi unuttum', 'Öğrenci hesabını kursun açar; yeni şifreni de kursun verir.')}
+      ${OXU.sayfaBas('Şifremi unuttum', 'E-postanla girdiysen bağlantı e-postana gelir; telefonla girdiysen yeni şifreni kursun verir.')}
+      <form class="ox-ugr-ep" data-ugr-ep style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 14px"><input class="girdi" name="e" type="email" autocomplete="email" placeholder="E-postan" value="${esc(String(tel).includes('@') ? tel : '')}" style="flex:1;min-width:200px"><button class="ox-dg ox-dg-ana" type="submit"><span>Bağlantı gönder</span></button></form>
       <ol class="ox-ugr-yol">
         <li><b>1</b><span>Kursuna “şifremi unuttum” de: telefonla ara ya da kursa uğra.</span></li>
         <li><b>2</b><span>Kursun sana yeni geçici şifre verir.</span></li>
@@ -979,6 +985,7 @@ function ogrenciGirisEkrani(not) {
       </ol>
       <button type="button" class="ox-dg ox-dg-ana genis ox-ugr-dg" data-ugr-geri2><span>Giriş ekranına dön</span></button>`);
     const h1 = govde.querySelector('.ox-sayfa-bas h1'); h1.tabIndex = -1; h1.focus({ preventScroll: true });
+    govde.querySelector('[data-ugr-ep]').addEventListener('submit', ev => { ev.preventDefault(); const v = ev.target.e.value.trim(); if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return bildir('E-postanı yaz', 'uyari'); B.sifreSifirla(v).then(() => bildir('Hesabın varsa şifre yenileme bağlantısı e-postana gönderildi')).catch(() => bildir('Hesabın varsa şifre yenileme bağlantısı e-postana gönderildi')); });
     govde.querySelector('[data-ugr-geri]').addEventListener('click', () => girisGoster('[data-sifre-unut]'));
     govde.querySelector('[data-ugr-geri2]').addEventListener('click', () => girisGoster('[data-sifre-unut]'));
   }
