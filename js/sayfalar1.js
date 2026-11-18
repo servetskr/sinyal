@@ -432,6 +432,25 @@ function evrakTablosu(l) {
     altlik: `<button class="dg dg-cizgi" data-ev-csv>${ik('indir')}Excel</button><button class="dg dg-ana" data-kapat>Kapat</button>`,
     onAc(p) { p.querySelector('[data-ev-csv]').addEventListener('click', () => import('./ui.js?v=234').then(u => u.csvIndir('evrak-tablosu.csv', [['Ad soyad', 'Aşama', ...S2.map(x => x[1])], ...l.map(k => [tamAd(k), k.asama, ...S2.map(([x]) => ({ var: 'Var', yok: 'Yok', bekliyor: 'Onay bekliyor' })[hal(k, x)])])]))); } });
 }
+// KAY-052/053/057: 'Bugün bakılacaklar' — aciliyet sırasıyla sayaç kartları; her biri liste süzgeci (hakDurumu, dersBitisi, MEBBİS alanları)
+const sonucsuzSinav = k => (S.sinavlar || []).some(s => fark(s.tarih) < 0 && (s.kursiyerler || []).includes(k.id) && !(s.sonuc || {})[k.id]);
+const BAKIM = [
+  ['sonuc', 'Sonucu girilmedi', sonucsuzSinav, 'kirmizi'],
+  ['hazir', 'Sınava hazır', k => { if (k.kapali || !(SINIFLAR[k.sinif] || {}).direksiyon) return false; const h = hakDurumu(k, 'Direksiyon'), db = dersBitisi(k); return !h.gecti && h.kalan > 0 && !h.listede && !!db.tarih && db.tarih <= gun(0) && !!(hakDurumu(k, 'e-Sınav').gecti || k.muaf); }, 'yesil'],
+  ['sonhak', 'Son hakkına yakın', k => { const h = hakDurumu(k, 'Direksiyon'); return !k.kapali && !h.gecti && h.kalan > 0 && h.kullanilan >= 3; }, 'sari'],
+  ['doldu', 'Hakkı doldu / 60 gün', k => !k.kapali && !!k.hakBitti && !k.hakBitti.cozuldu, 'kirmizi'],
+  ['mebfark', 'MEBBİS’le farklı', k => !k.kapali && !!(k.mebFark && (k.mebFark.fk || []).length), 'sari'],
+  ['mebeski', 'MEBBİS bilgisi eski', k => !k.kapali && k.asama !== 'Ehliyet' && !!((k.meb || {}).dosyaOkuma) && fark(k.meb.dosyaOkuma) < -30, 'notr'],
+  ['tekil', 'Kaydı tekil değil', k => ((k.meb || {}).kayitSayisi || 0) > 1, 'sari'],
+  ['geciken', 'Taksiti geciken', k => gecikenler(k).length > 0, 'kirmizi'],
+  ['bekleyen', 'Bekleyen (grup/evrak)', k => !k.kapali && GR.bekleyenMi(k), 'notr'],
+  ['evraksure', 'Evrak süresi doluyor', k => !k.kapali && !k.mebIslendi && ME.tarihUyarilari(k).length > 0, 'sari'],
+];
+function bakimSeridi() { const l = sb(S.kursiyerler), c = BAKIM.map(([id, ad, f, ton]) => [id, ad, l.filter(f).length, ton]).filter(x => x[2]);
+  return c.length ? `<div class="bakim-serit" role="list" aria-label="Bugün bakılacaklar">${c.map(([id, ad, n, ton]) => `<button type="button" class="bakim-kart ${ton}" data-bakim="${id}" role="listitem"><b>${n}</b><span>${ad}</span></button>`).join('')}</div>` : ''; }
+// KAY-055: 'şu sınava girebilir' süzgeci (sinavaUygunluk); '_yok' = yaklaşan hiçbir sınava uygun değil
+const sinavaGirUyar = (k, sid) => { if (!(SINIFLAR[k.sinif] || {}).direksiyon || k.kapali) return false; const l = (S.sinavlar || []).filter(s => s.tur === 'Direksiyon' && fark(s.tarih) >= 0);
+  if (sid === '_yok') return !hakDurumu(k, 'Direksiyon').gecti && !l.some(s => KR.sinavaUygunluk(k, s).uygun); const s = l.find(x => x.id === sid); return !!s && KR.sinavaUygunluk(k, s).uygun; };
 let tcGoster = false;  // KAY-067: listede T.C. maskesi (oturum boyunca)
 const cepGecerli = t => { let n = String(t || '').replace(/\D/g, ''); if (n.startsWith('90')) n = n.slice(2); if (n.startsWith('0')) n = n.slice(1); return /^5\d{9}$/.test(n); };
 const taksitEnCok = () => taksitSiniri();  // PAR-034: ön büro kurs ayarı kadar, müdür en az 12
@@ -792,6 +811,7 @@ export function kursiyerFormu(on = {}) {
 export function kursiyerler(filtre) {
   let sekme = filtre && ASAMALAR.includes(filtre) ? filtre : 'Tümü', q = '', sinif = '', grup = '', hizmet = '', borclu = false, avukatta = false, bekleyen = filtre === 'bekleyen';
   let etiket = '';  // KAY-018/019/021: kursun sınıflandırması, riskli, kaydı silindi
+  let bakim = '', usta = '', hakSuz = '', sinavaGir = '';  // KAY-052/055
   // YON-063: yapışkan süzgeç (adresle gelen süzgeç önceliklidir) ve sayfa başına kayıt
   { const ys = !filtre && TC.suzgecOku('kursiyerler'); if (ys) ({ sekme = 'Tümü', q = '', sinif = '', grup = '', hizmet = '', borclu = false, avukatta = false, bekleyen = false } = ys); }
   const sayfaBasi = +TC.tercihler().sayfaBasi || 0; let gosterilen = sayfaBasi;
@@ -800,13 +820,16 @@ export function kursiyerler(filtre) {
   const hizmetler = [...new Set(sb(S.kursiyerler).map(hizmetOf))].filter(x => HIZMET[x]);
   const say = a => a === 'Tümü' ? sb(S.kursiyerler).length : sb(S.kursiyerler).filter(k => k.asama === a).length;
   function suzulen() {
-    let l = sb(S.kursiyerler).filter(k => (sekme === 'Tümü' || k.asama === sekme) && (!sinif || k.sinif === sinif) && (!hizmet || hizmetOf(k) === hizmet) && (!grup || (grup === '_yok' ? !GR.kursiyerGrubu(k) : k.teorikGrup === grup)) && (!borclu || gecikenler(k).length) && (!avukatta || avukattaMi(k)) && (!bekleyen || GR.bekleyenMi(k)) && etiketUyar(k, etiket));
+    let l = sb(S.kursiyerler).filter(k => (sekme === 'Tümü' || k.asama === sekme) && (!sinif || k.sinif === sinif) && (!hizmet || hizmetOf(k) === hizmet) && (!grup || (grup === '_yok' ? !GR.kursiyerGrubu(k) : k.teorikGrup === grup)) && (!borclu || gecikenler(k).length) && (!avukatta || avukattaMi(k)) && (!bekleyen || GR.bekleyenMi(k)) && etiketUyar(k, etiket) && (!bakim || BAKIM.find(x => x[0] === bakim)[2](k)) && (!usta || k.egitmen === usta) && (!hakSuz || String(hakDurumu(k, 'Direksiyon').kullanilan) === hakSuz) && (!sinavaGir || sinavaGirUyar(k, sinavaGir)));
     if (q) { const s = q.toLocaleLowerCase('tr'); l = l.filter(k => (tamAd(k) + ' ' + k.tel + ' ' + odemeKodu(k) + ' ' + (k.tc || '')).toLocaleLowerCase('tr').includes(s)); }
     return l;
   }
   // PAR-036: süzülen kayıtların istatistiği
+  // KAY-066: süzgeç yüzünden gizlenenler aşamaya göre sayılır; 'Hepsini göster' bütün süzgeçleri kaldırır
+  const gizlenen = () => { const l = suzulen(), hepsi = sb(S.kursiyerler), g = hepsi.filter(k => !l.includes(k)); if (!g.length || g.length === hepsi.length) return ''; const m = {}; g.forEach(k => { const a = k.ikinciHak ? '2. direksiyon' : k.asama.toLocaleLowerCase('tr'); m[a] = (m[a] || 0) + 1; });
+    return ` · <span class="gizlenen">Gizlenen: ${Object.entries(m).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([a, n]) => n + ' ' + a).join(' · ')}</span> <button class="dg dg-hafif dg-kucuk" data-hepsini-goster>Hepsini göster</button>`; };
   const istatistik = () => { const l = suzulen(), top = l.reduce((a, k) => a + (k.odeme.toplam || 0) + ekToplam(k), 0), od = l.reduce((a, k) => a + odenen(k), 0), kal = l.reduce((a, k) => a + kalanBorc(k), 0), gec = l.filter(k => gecikenler(k).length).length;
-    return `<b>${l.length}</b> öğrenci · ücret ${tl(top)} · ödenen ${tl(od)} · kalan <b>${tl(kal)}</b>${gec ? ` · ${gec} öğrencinin taksiti gecikti` : ''}`; };
+    return `<b>${l.length}</b> öğrenci · ücret ${tl(top)} · ödenen ${tl(od)} · kalan <b>${tl(kal)}</b>${gec ? ` · ${gec} öğrencinin taksiti gecikti` : ''}${gizlenen()}`; };
   const fark0 = fark;
   // KAY-060: MEBBİS resmî durumunun kısa adı (fark varsa turuncu nokta, bilgi 30 günden eskiyse gri saat); KAY-061: hak sütunu; KAY-067: T.C. maskesi
   const mebRozet = k => { const M = k.meb || {}; if (!M.durum && !M.dosyaOkuma) return '';
@@ -838,12 +861,16 @@ export function kursiyerler(filtre) {
     html: `${ekranNotu('Her kursiyerin nerede olduğu, ne kadar borcu kaldığı ve sınavda kalma riski tek satırda. Satıra dokunun, dosyası açılsın.')}
     <div class="bolum-bas"><div><h2>Kursiyer listesi</h2></div><div class="sag">${['mudur', 'sekreter'].includes(oturum.kullanici.rol) ? `<button class="dg dg-cizgi" data-toplu-hesap>${ik('tel')}Öğrenci hesapları</button>` : ''}<button class="dg dg-cizgi" data-disa>${ik('indir')}Excel’e aktar</button><button class="dg dg-cizgi" data-liste-yazdir>${ik('belge')}PDF / yazdır</button><button class="dg dg-cizgi" data-evrak-tablo>${ik('belge')}Evrak tablosu</button><button class="dg dg-ana" data-yeni>${ik('arti')}Yeni kursiyer</button></div></div>
     <div data-yarim-kap>${yarimKayitlar()}</div>
+    ${bakimSeridi()}
     <div id="sek">${sekmeler([['Tümü', 'Tümü', say('Tümü')], ...ASAMALAR.map(a => [a, a, say(a)])], sekme)}</div>
     <div class="kart">
       <div class="filtre">
         <div class="ara-kutu">${ik('ara')}<input class="girdi" type="search" placeholder="Ad ya da telefon" data-q aria-label="Kursiyer ara"></div>
         ${hizmetler.length > 1 ? `<select class="girdi" data-hizmet aria-label="Hizmet türü"><option value="">Bütün hizmetler</option>${hizmetler.map(x => `<option value="${x}">${HIZMET[x]} (${sb(S.kursiyerler).filter(k => hizmetOf(k) === x).length})</option>`).join('')}</select>` : ''}
         <select class="girdi" data-sinif aria-label="Sınıf"><option value="">Tüm sınıflar</option>${aktifSiniflar().map(([k, v]) => `<option value="${k}">${v.ad}</option>`).join('')}</select>
+        <select class="girdi" data-usta aria-label="Öğretmen"><option value="">Tüm öğretmenler</option>${S.egitmenler.filter(x => !x.ayrildi).map(x => `<option value="${e(x.id)}">${e(x.ad)}</option>`).join('')}</select>
+        <select class="girdi" data-haksuz aria-label="Kullanılan hak"><option value="">Hak: hepsi</option>${[0, 1, 2, 3, 4].map(n => `<option value="${n}">${n} hak kullanmış</option>`).join('')}</select>
+        ${(S.sinavlar || []).some(x => x.tur === 'Direksiyon' && fark(x.tarih) >= 0) ? `<select class="girdi" data-sinavagir aria-label="Şu sınava girebilir"><option value="">Şu sınava girebilir…</option>${S.sinavlar.filter(x => x.tur === 'Direksiyon' && fark(x.tarih) >= 0).sort((a, b) => a.tarih.localeCompare(b.tarih)).map(x => `<option value="${x.id}">${tarih(x.tarih)} sınavına uygun</option>`).join('')}<option value="_yok">Uygun sınav yok</option></select>` : ''}
         ${(S.gruplar || []).length ? `<select class="girdi" data-grup aria-label="Dönem grubu"><option value="">Tüm gruplar</option><option value="_yok">Gruba atanmamış</option>${[...S.gruplar].sort((a, b) => String(b.baslangic || '').localeCompare(String(a.baslangic || ''))).map(g => `<option value="${e(g.id)}">${e(g.ad)}${g.sinif && SINIFLAR[g.sinif] ? ' · ' + e(SINIFLAR[g.sinif].ad.split(' ·')[0]) : ''} (${sb(S.kursiyerler).filter(x => x.teorikGrup === g.id).length})</option>`).join('')}</select>` : ''}
         ${etiketSecenekleri().length ? `<select class="girdi" data-etiket aria-label="Etiket"><option value="">Tüm etiketler</option>${etiketSecenekleri().map(([v, a, n]) => `<option value="${e(v)}">${e(a)} (${n})</option>`).join('')}</select>` : ''}
         <button class="cip" data-borclu>${ik('uyari')}&nbsp;Taksiti gecikenler</button>${sb(S.kursiyerler).some(avukattaMi) ? `<button class="cip" data-avukatta>${ik('belge')}&nbsp;Avukatta (${sb(S.kursiyerler).filter(avukattaMi).length})</button>` : ''}
@@ -870,6 +897,8 @@ export function kursiyerler(filtre) {
         if (ev.target.closest('[data-toplu-hesap]')) return HS.topluHesap(yenile);
         if (ev.target.closest('[data-toplu-odeme]')) return topluOdeme(suzulen(), ciz);
         if (ev.target.closest('[data-evrak-tablo]')) return evrakTablosu(suzulen());  // KAY-068
+        { const bk0 = ev.target.closest('[data-bakim]'); if (bk0) { bakim = bakim === bk0.dataset.bakim ? '' : bk0.dataset.bakim; k.querySelectorAll('[data-bakim]').forEach(x => x.classList.toggle('secili', x.dataset.bakim === bakim)); if (bakim && sekme !== 'Tümü') { sekme = 'Tümü'; k.querySelector('#sek').innerHTML = sekmeler([['Tümü', 'Tümü', say('Tümü')], ...ASAMALAR.map(a => [a, a, say(a)])], sekme); } return ciz(); } }
+        if (ev.target.closest('[data-hepsini-goster]')) { sekme = 'Tümü'; q = ''; sinif = ''; grup = ''; hizmet = ''; borclu = false; avukatta = false; bekleyen = false; etiket = ''; bakim = ''; usta = ''; hakSuz = ''; sinavaGir = ''; k.querySelectorAll('select.girdi').forEach(x => { x.value = ''; }); const qi = k.querySelector('[data-q]'); if (qi) qi.value = ''; k.querySelectorAll('.cip.secili, [data-bakim].secili').forEach(x => x.classList.remove('secili')); k.querySelector('#sek').innerHTML = sekmeler([['Tümü', 'Tümü', say('Tümü')], ...ASAMALAR.map(a => [a, a, say(a)])], sekme); return ciz(); }  // KAY-066
         // KAY-102: süzülen öğrenci listesinin A4 çıktısı (yatay); T.C. maskeli
         if (ev.target.closest('[data-liste-yazdir]')) { const l = suzulen(); import('./ui.js?v=234').then(u => { islem('Kursiyer listesini yazdırdı', l.length + ' kişi'); kaydet();
           u.belgeYazdir(`<div data-yatay></div><h1>Öğrenci listesi</h1><p class="a4-alt">${e(S.kurs.ad || '')} · ${l.length} öğrenci · ${tarih(gun(0))}</p><table><tr><th>#</th><th>Ad soyad</th><th>T.C.</th><th>Telefon</th><th>Sınıf</th><th>Dönem grubu</th><th>Aşama</th><th>Direksiyon</th><th>Hak</th><th>Kalan</th></tr>${l.map((x, i) => { const h = hakDurumu(x, ['Direksiyon', 'Sınav', 'Ehliyet'].includes(x.asama) ? 'Direksiyon' : 'e-Sınav'); return `<tr><td>${i + 1}</td><td>${e(tamAd(x))}</td><td class="nw">${e(tcMaskele(x.tc || ''))}</td><td class="nw">${e(x.tel || '')}</td><td>${e((SINIFLAR[x.sinif] || {}).ad || x.sinif)}</td><td>${e((GR.kursiyerGrubu(x) || {}).ad || '')}</td><td>${e(x.asama)}</td><td>${gerekliDireksiyon(x) ? x.direksiyon + '/' + gerekliDireksiyon(x) : '—'}</td><td>${h.gecti ? 'geçti' : h.kullanilan + '/' + h.sinir}</td><td class="nw">${kalanBorc(x) ? tl(kalanBorc(x)) : '—'}</td></tr>`; }).join('')}</table>`, 'Öğrenci listesi'); }); return; }
@@ -881,6 +910,7 @@ export function kursiyerler(filtre) {
       { const h = k.querySelector('[data-hizmet]'); if (h) h.addEventListener('change', ev => { hizmet = ev.target.value; ciz(); }); }
       const gs = k.querySelector('[data-grup]'); if (gs) gs.addEventListener('change', ev => { grup = ev.target.value; ciz(); });
       const es0 = k.querySelector('[data-etiket]'); if (es0) es0.addEventListener('change', ev => { etiket = ev.target.value; ciz(); });
+      [['[data-usta]', v => { usta = v; }], ['[data-haksuz]', v => { hakSuz = v; }], ['[data-sinavagir]', v => { sinavaGir = v; }]].forEach(([sel, f]) => { const x = k.querySelector(sel); if (x) x.addEventListener('change', ev => { f(ev.target.value); ciz(); }); });
     },
   };
 }

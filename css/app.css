@@ -3727,3 +3727,13 @@ a.kart.gosterge { text-decoration: none; color: inherit; display: block; }
 .sayac-halka { position: absolute; top: 8px; right: 8px; width: 26px; height: 26px; border-radius: 50%; background: conic-gradient(var(--levha, #0a4da2) var(--p), var(--cizgi-2, #e5e5e5) 0); -webkit-mask: radial-gradient(circle, transparent 7px, #000 8px); mask: radial-gradient(circle, transparent 7px, #000 8px); }
 .sayac-kutu.yesil .sayac-halka { background: conic-gradient(#2e7d32 var(--p), var(--cizgi-2, #e5e5e5) 0); }
 .sayac-kutu.uyari .sayac-halka { background: conic-gradient(#e0a100 var(--p), var(--cizgi-2, #e5e5e5) 0); }
+/* KAY-052: bugün bakılacaklar şeridi */
+.bakim-serit { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 10px; margin-bottom: 4px; scrollbar-width: thin; }
+.bakim-kart { flex: none; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 120px; padding: 10px 12px; border-radius: 12px; border: 1.5px solid var(--cizgi); background: var(--panel, #fff); cursor: pointer; text-align: left; font: inherit; }
+.bakim-kart b { font: 800 20px/1 var(--baslik, inherit); color: var(--murekkep); }
+.bakim-kart span { font-size: 12.5px; color: var(--soluk); }
+.bakim-kart.kirmizi b { color: var(--kirmizi); }
+.bakim-kart.sari b { color: #a15c00; }
+.bakim-kart.yesil b { color: #1b5e20; }
+.bakim-kart.secili { border-color: var(--murekkep); box-shadow: 0 0 0 2px var(--murekkep) inset; }
+.gizlenen { color: #8a5a00; }
