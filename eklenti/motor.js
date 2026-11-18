@@ -224,7 +224,8 @@
   // Seçim kutusunda değeri bul: önce değer, sonra metin (tam, baş, içerir); yoksa açık hata (MEBBİS'e geçersiz değer gitmez)
   // sinif: sertifika sınıfı listesi. Önce Program ID değeriyle seçilir (2504 B, 2502 A1, 2503 A2, 2514 A; 01005 ve 02007'de canlı doğrulandı);
   // yalnız o değerli seçenek metni de aynı sınıfı söylüyorsa (ve Manuel/Otomatik istendiyse onu da içeriyorsa) tek seçeneğe düşer. Yoksa metinle seçilir.
-  const PROGRAM_ID = { A: '2514', A1: '2502', A2: '2503', B: '2504' };
+  // M 2513 (DIR-007, kaynak: MEB program listesi; canlıda görülmedi): değeri tutan seçeneğin metni de 'M SINIFI' demiyorsa metinle seçilir
+  const PROGRAM_ID = { A: '2514', A1: '2502', A2: '2503', B: '2504', M: '2513' };
   const sinifKodu = t => { const m = String(t || '').toLocaleUpperCase('tr').replace(/İ/g, 'I').match(/^\s*(A1|A2|B1|BE|C1E|C1|CE|D1E|D1|DE|[ABCDFGMK])\s+SINIFI/); return m ? m[1] : ''; };
   function sinifSecenegi(o, aranan) {
     const k = sinifKodu(aranan), pid = PROGRAM_ID[k]; if (!pid) return null;
