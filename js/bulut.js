@@ -96,7 +96,11 @@ export async function ikiAdimBaslat() {
 }
 export async function epostaDogrula() { const { auth, A } = await sdk(); await A.sendEmailVerification(auth.currentUser); }
 // YON-068: hesabın e-postası doğrulandı mı (Firebase). Bağlantı açılmadıysa null; doğrulama bağlantısına tıklandıktan sonra yenile ile güncellenir
-export const hesapEposta = () => { const u = fb && fb.auth && fb.auth.currentUser; return u && u.email && !/@ogrenci\.sinyal\.app$/.test(u.email) ? { eposta: u.email, dogrulandi: !!u.emailVerified } : null; };
+// YON-001: öğrencinin iç (giriş için uydurulan) adresi. Yeni hesaplar mdsinyal.com alt alanında açılır (alan adı bizde; ogrenci.mdsinyal.com'a
+// null MX konur, posta alınamaz). Eski hesaplar @ogrenci.sinyal.app ile sürer; ikisi de iç adres sayılır (doğrulama e-postası gitmez, ekranda gösterilmez).
+export const OGR_ALAN = 'ogrenci.mdsinyal.com';
+export const icAdresMi = e => /@ogrenci\.(mdsinyal\.com|sinyal\.app)$/i.test(String(e || ''));
+export const hesapEposta = () => { const u = fb && fb.auth && fb.auth.currentUser; return u && u.email && !icAdresMi(u.email) ? { eposta: u.email, dogrulandi: !!u.emailVerified } : null; };
 export async function hesapEpostaYenile() { const { auth } = await sdk(); if (auth.currentUser) { await auth.currentUser.reload(); try { await auth.currentUser.getIdToken(true); } catch (x) { } } return hesapEposta(); }
 export async function ikiAdimKapat() { const { auth, A } = await sdk(); const m = A.multiFactor(auth.currentUser), f = m.enrolledFactors.find(x => x.factorId === A.TotpMultiFactorGenerator.FACTOR_ID); if (f) await m.unenroll(f); }
 export async function sifreSifirla(eposta) { const { auth, A } = await sdk(); await A.sendPasswordResetEmail(auth, eposta.trim()); }
@@ -136,7 +140,7 @@ export const kursDavetLinki = kod => siteLink('h/' + kod);
 export async function kursDavetGetir(kod) {
   const { db, F } = await sdk();
   const d = await F.getDoc(F.doc(db, 'kursDavetleri', kod)).catch(() => null);
-  if (!d || !d.exists()) return null; const v = d.data(); if (v.son && v.son.toDate() < new Date()) return null; return v;
+  if (!d || !d.exists()) return null; const v = d.data(); if (v.kullanan || (v.son && v.son.toDate() < new Date())) return null; return v;
 }
 export async function yoneticiMi() {
   if (!fb || !fb.auth.currentUser) return false;
@@ -159,7 +163,7 @@ export async function kursAc({ kursAd, yetkili, sehir, eposta, sifre, mudurTel, 
   const kRef = F.doc(F.collection(db, 'kurslar'));
   const b = F.writeBatch(db);
   b.set(kRef, { ad: kursAd, sahip: user.uid, sehir: sehir || '', olusturma: F.serverTimestamp(), davetKod });
-  b.delete(F.doc(db, 'kursDavetleri', davetKod));  // kod tek kullanımlık
+  b.update(F.doc(db, 'kursDavetleri', davetKod), { kullanan: user.uid, kurs: kRef.id });  // kod tek kullanımlık: silinmez, kullanıldı diye işaretlenir (YON-003 kuralı)
   b.set(F.doc(db, 'kurslar', kRef.id, 'uyeler', user.uid), { ad: yetkili, rol: 'mudur', eposta: user.email, katilma: F.serverTimestamp() });
   b.set(F.doc(db, 'kullanicilar', user.uid), await kursListesineEkle(F, db, user.uid, kRef.id));
   await b.commit();
@@ -244,13 +248,19 @@ let yeniDosya = new Map();
 let dinleyiciler = [], zamanla = null, ilkHazir = null, yenileFn = () => { };
 export const bulutYenileDinle = f => { yenileFn = f; };
 
-function dosyaRef(s) {
+// YON-056: özel nitelikli evrak (sağlık raporu, adli sicil) dosyası 'oz: true' işaretiyle yazılır; sunucu kuralı bunu yalnız müdür ve
+// ön büroya okutur (şube müdürü de ön büro rolündedir; muhasebe, ortak, teorik öğretmen okuyamaz). İşaretsiz eski dosyalar, ofis cihazı
+// onları yüklediğinde bir kez işaretlenir (içerik değişmez; kural içeriği aynı kalan güncellemeye izin verir).
+const OZEL_EVRAK = new Set(['saglik', 'adli']), ozelId = new Set(), ozVar = new Map();
+let ozelNesne = new WeakSet();
+function dosyaRef(s, ozel) {
   let id = dosyaId.get(s);
   if (!id) { id = 'd' + h32(s).toString(36) + h32(s, 5381).toString(36) + s.length.toString(36); dosyaId.set(s, id); dosyaVeri.set(id, s); }
+  if (ozel) ozelId.add(id);
   if (!yuklu.has(id)) yeniDosya.set(id, s);
   return DOSYA_ON + id;
 }
-const yaz = v => JSON.stringify(v, (k, x) => typeof x === 'string' && x.length > DOSYA_SINIR && x.startsWith('data:') ? dosyaRef(x) : x);
+const yaz = v => JSON.stringify(v, function (k, x) { if (OZEL_EVRAK.has(k) && x && typeof x === 'object') ozelNesne.add(x); return typeof x === 'string' && x.length > DOSYA_SINIR && x.startsWith('data:') ? dosyaRef(x, ozelNesne.has(this)) : x; });
 const oku = j => JSON.parse(j, (k, x) => { if (typeof x === 'string' && x.startsWith(DOSYA_ON)) { const id = x.slice(DOSYA_ON.length); yuklu.add(id); if (dosyaVeri.has(id)) return dosyaVeri.get(id); eksik.add(id); } return x; });
 const nesneDizisi = v => Array.isArray(v) && v.every(x => x && typeof x === 'object' && !Array.isArray(x));
 function kimlikler(dizi) {
@@ -334,6 +344,24 @@ function tekBekleCoz() {
 }
 export const sunucuHazir = () => sunucuGeldi;
 export const SALT_OKUR = ['ortak', 'muhasebe'];
+// YON-004: yetki, IP listesi ve banka hesapları kurs belgesinde (kurslar/{k}.korunan, JSON metni) tutulur; o belgeye kural gereği
+// yalnız kurs müdürü yazar. Kurs verisindeki (v/t~kurs) kopyaları geçersizdir: kurs belgesindeki değer her gelişte üstüne konur, böylece
+// ön büro bunları sunucu düzeyinde değiştiremez (yetkisini büyütemez, IBAN'ı değiştiremez). Müdür değiştirince ayrıca kurs belgesine yazılır;
+// alan henüz yoksa müdürün cihazı bir kez taşır (göç).
+const KORUNAN = ['yetki', 'ipListe', 'iban', 'ibanlar'];
+let korunan = null, korunanSon = null, korunanGeldi = false;   // kurs belgesinden gelen nesne / metin (null: henüz yok); sunucudaki kurs belgesi geldi mi
+const korunanMetni = () => { const o = {}; KORUNAN.forEach(k => { if (S.kurs && S.kurs[k] !== undefined) o[k] = S.kurs[k]; }); return JSON.stringify(o); };
+function korunanUygula() {
+  if (!korunan || !S.kurs || typeof S.kurs !== 'object') return false; let d = false;
+  KORUNAN.forEach(k => { const v = korunan[k]; if (JSON.stringify(S.kurs[k]) !== JSON.stringify(v)) { if (v === undefined) delete S.kurs[k]; else S.kurs[k] = v; d = true; } });
+  return d;
+}
+function korunanYaz() {
+  if (bulut.rol !== 'mudur' || !sunucuGeldi || !korunanGeldi || !fb || !bulut.kurs) return;
+  const j = korunanMetni(); if (j === korunanSon) return;
+  korunanSon = j; korunan = JSON.parse(j);
+  fb.F.updateDoc(fb.F.doc(fb.db, 'kurslar', bulut.kurs), { korunan: j }).catch(x => console.warn('korunan ayar yazılamadı', x && x.code));
+}
 export async function akit() {
   if (!bulut.kurs || !fb) return;
   // ortak (mdSinyal Yönetim) ve muhasebe / mali müşavir yalnız görür; sunucu kuralı da yazmalarına izin vermez (DENETİM Ö12: yazmayı denemez,
@@ -342,14 +370,16 @@ export async function akit() {
   if (bulut.rol === 'usta') return ustaGonder();  // öğretmen kurs verisine doğrudan yazmaz; yaptıkları ustaGelen'e gider
   clearTimeout(zamanla); zamanla = null;
   const yazilar = farklar(), dosyalar = yeniDosya; yeniDosya = new Map();
-  if (!yazilar.size && !dosyalar.size) return;
+  korunanYaz();   // YON-004
+  if (!yazilar.size && !dosyalar.size && ![...ozelId].some(id => ozVar.get(id) === false)) return;
   const { db, F } = fb, kok = ['kurslar', bulut.kurs];
   // Her paketin içeriği tutulur: sunucu reddederse (yetki, boyut) değişiklikler kaybolmasın diye cihaza "kurtarma" kaydı düşer ve uyarı kalıcı olur
   let b = F.writeBatch(db), n = 0, boy = 0, icerik = []; const isler = [];
   const kapat = () => { const ic = icerik; isler.push(b.commit().then(() => null, x => { kurtarmaYaz(ic, x); throw x; })); };
   const ekle = (ref, veri, boyut, kayit) => { if (n >= 450 || boy + boyut > 6e6) { kapat(); b = F.writeBatch(db); n = 0; boy = 0; icerik = []; } b.set(ref, veri, { merge: true }); n++; boy += boyut; if (kayit) icerik.push(kayit); };
   // Firestore belge sınırı 1 MiB: 700 KB'lık PDF base64'te ~956 bin karakter eder, sığar
-  dosyalar.forEach((v, id) => { if (v.length > 1040000) { bulut.kalici = 'Bir dosya çok büyük olduğu için kaydedilemedi; daha küçük bir fotoğraf ya da PDF yükleyin'; return; } ekle(F.doc(db, ...kok, 'dosyalar', id), { v }, v.length); yuklu.add(id); });
+  dosyalar.forEach((v, id) => { if (v.length > 1040000) { bulut.kalici = 'Bir dosya çok büyük olduğu için kaydedilemedi; daha küçük bir fotoğraf ya da PDF yükleyin'; return; } ekle(F.doc(db, ...kok, 'dosyalar', id), ozelId.has(id) ? { v, oz: true } : { v }, v.length); yuklu.add(id); if (ozelId.has(id)) ozVar.set(id, true); });
+  ozelId.forEach(id => { if (ozVar.get(id) === false && !dosyalar.has(id)) { ekle(F.doc(db, ...kok, 'dosyalar', id), { oz: true }, 20); ozVar.set(id, true); } });   // YON-056: eski dosyayı işaretle
   // PAR-053: para kovasına (hareket, kursiyerler, faturalar) yazan her paket aynı pakette bir iz belgesi (kayit, tur 'iz') oluşturur;
   // sunucu kuralı izi olmayan para yazımını reddeder. İz silinemez, değiştirilemez; müdürün işlem geçmişinde gizlenir.
   const PARA = /^(hareket|kursiyerler|faturalar)~\d+$/; let izId = null, izPaket = null;
@@ -440,6 +470,7 @@ function uygula(degisen, uzak) {
       tekSon.set(a, veri.t);
       const v = oku(gelenBirlestir('t~', a, veri.t));  // kurs ayarları da aynı anda iki cihazdan değişirse alan alan birleşir (yukarıdaki not)
       if (v && typeof v === 'object' && !Array.isArray(v) && S[a] && typeof S[a] === 'object' && !Array.isArray(S[a])) { Object.keys(S[a]).forEach(k => delete S[a][k]); Object.assign(S[a], v); } else S[a] = v;
+      if (a === 'kurs') korunanUygula();   // YON-004: korunan ayarlar kurs belgesinden
       oldu = true;
     }
   });
@@ -462,7 +493,7 @@ async function dosyalariGetir() {
   await Promise.all(ids.map(async id => {
     const ref = F.doc(db, 'kurslar', bulut.kurs, 'dosyalar', id);
     let d; try { d = await F.getDocFromCache(ref); } catch (x) { try { d = await F.getDoc(ref); } catch (y) { return; } }
-    if (d.exists()) { const v = d.data().v; dosyaVeri.set(id, v); dosyaId.set(v, id); }
+    if (d.exists()) { const v = d.data().v; dosyaVeri.set(id, v); dosyaId.set(v, id); ozVar.set(id, !!d.data().oz); }
   }));
   const gez = o => { if (!o || typeof o !== 'object') return; for (const k of Object.keys(o)) { const x = o[k]; if (typeof x === 'string') { if (x.startsWith(DOSYA_ON) && dosyaVeri.has(x.slice(DOSYA_ON.length))) o[k] = dosyaVeri.get(x.slice(DOSYA_ON.length)); } else if (x && typeof x === 'object') gez(x); } };
   gez(S); yenileFn();
@@ -484,7 +515,12 @@ async function baglan(u, ilkVeri) {
     const coz = () => { clearTimeout(bekci); try { sessionStorage.removeItem('sinyal-yeniden'); } catch (x) { } coz0(); };
     // DENETİM Ö7 (YON-081): sahip kursu askıya alır ya da kapatırsa açık oturumlar hemen kapanır (sunucu kuralı yazmayı zaten reddeder;
     // istemci boşuna yazmayı denemesin, kurtarma kaydı birikmesin). Giriş ekranı nedeni söyler.
-    dinleyiciler.push(F.onSnapshot(F.doc(db, 'kurslar', u.kurs), d => { const v = d.exists() ? d.data() : {}; if (v.durum === 'askida' || v.durum === 'kapali') cikisYap().then(() => location.reload()); }, () => { }));
+    dinleyiciler.push(F.onSnapshot(F.doc(db, 'kurslar', u.kurs), { includeMetadataChanges: true }, d => { const v = d.exists() ? d.data() : {}; if (v.durum === 'askida' || v.durum === 'kapali') { if (!bulut.cikiliyor) { bulut.cikiliyor = true; cikisYap().then(() => location.reload()); } return; }
+      // YON-004: korunan ayarlar (yetki, IP listesi, banka hesapları)
+      if (!d.metadata.fromCache) korunanGeldi = true;
+      if (typeof v.korunan === 'string' && v.korunan !== korunanSon) { try { korunan = JSON.parse(v.korunan); korunanSon = v.korunan; if (korunanUygula()) { kaydet(); yenileFn(); } } catch (x) { } }
+      else if (v.korunan === undefined && !d.metadata.fromCache && bulut.rol === 'mudur') setTimeout(() => { if (korunanSon === null && sunucuGeldi) korunanYaz(); }, 3000);   // bir kerelik göç
+    }, () => { }));
     dinleyiciler.push(F.onSnapshot(F.collection(db, 'kurslar', u.kurs, 'v'), { includeMetadataChanges: true }, q => {
       bulut.durum = q.metadata.fromCache ? 'cevrimdisi' : 'cevrimici';
       // ilk sunucu görüntüsü: sunucuGeldi, sunucudaki hâl uygulandıktan SONRA açılır. Eskiden önce açılıyordu; önbellekle açılan cihazın
@@ -1256,7 +1292,7 @@ export async function ogrenciHesapAc(k) {
   if (t.exists() && t.data().k !== bulut.kurs) throw Object.assign(hata('Bu telefon numarasıyla başka bir kursta öğrenci hesabı var. Öğrencinin onayıyla numarayı bu kursa alabilirsiniz (Numara devri) ya da başka bir numara girin'), { baskaKurs: true, tel });
   // YON-082: öğrencinin kayıtta e-postası varsa hesap gerçek e-postayla açılır (doğrulama e-postası gider); yoksa ya da başka hesapta kullanılıyorsa iç adres
   const sifre = geciciSifre(), gercek = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(k.eposta || '').trim()) ? String(k.eposta).trim().toLowerCase() : '';
-  let eposta = gercek || (tel + '.' + rastgele(6) + '@ogrenci.sinyal.app');
+  let eposta = gercek || (tel + '.' + rastgele(6) + '@' + OGR_ALAN);
   if (!k.panelKod) k.panelKod = rastgele(24);
   const { initializeApp, deleteApp } = await import(SDK + 'firebase-app.js');
   const app2 = initializeApp(FIREBASE, 'ogr-' + Date.now());
@@ -1266,8 +1302,8 @@ export async function ogrenciHesapAc(k) {
     emuBagla(A, F, a2, db2);
     let yeniU;
     try { yeniU = (await A.createUserWithEmailAndPassword(a2, eposta, sifre)).user; }
-    catch (x) { if (!gercek || x.code !== 'auth/email-already-in-use') throw x; eposta = tel + '.' + rastgele(6) + '@ogrenci.sinyal.app'; yeniU = (await A.createUserWithEmailAndPassword(a2, eposta, sifre)).user; }
-    uid = yeniU.uid; if (!/@ogrenci\.sinyal\.app$/.test(eposta)) { try { await A.sendEmailVerification(yeniU); } catch (x) { } }
+    catch (x) { if (!gercek || x.code !== 'auth/email-already-in-use') throw x; eposta = tel + '.' + rastgele(6) + '@' + OGR_ALAN; yeniU = (await A.createUserWithEmailAndPassword(a2, eposta, sifre)).user; }
+    uid = yeniU.uid; if (!icAdresMi(eposta)) { try { await A.sendEmailVerification(yeniU); } catch (x) { } }
     await F.setDoc(F.doc(db2, 'kullanicilar', uid), { kurs: bulut.kurs, rol: 'ogrenci', kod: k.panelKod, kursiyer: k.id, ilkGiris: true });
     await A.signOut(a2);
   } finally { deleteApp(app2).catch(() => { }); }
@@ -1277,7 +1313,7 @@ export async function ogrenciHesapAc(k) {
   await panelAc(k);
   await F.setDoc(tref, { k: bulut.kurs, h: { [k.id]: eposta } }, { merge: true });
   kaydet();
-  return { tel, sifre, yeniden, ...(/@ogrenci\.sinyal\.app$/.test(eposta) ? {} : { eposta }) };
+  return { tel, sifre, yeniden, ...(icAdresMi(eposta) ? {} : { eposta }) };
 }
 export async function ogrenciHesapKapat(k) {
   const { db, F } = await sdk(), tel = (k.hesap || {}).tel;
@@ -1356,7 +1392,7 @@ export async function devirleriIsle() {
 }
 // YON-082: öğrenci uygulamasından e-posta ekleme / değiştirme — doğrulama bağlantısına tıklanınca hesabın e-postası değişir
 export async function ogrenciEpostaEkle(eposta) { const { auth, A } = await sdk(); if (!auth.currentUser) throw hata('Önce giriş yapın'); await A.verifyBeforeUpdateEmail(auth.currentUser, String(eposta).trim()); }
-export const ogrenciEposta = () => { const u = fb && fb.auth && fb.auth.currentUser; return u && u.email && !/@ogrenci\.sinyal\.app$/.test(u.email) ? u.email : ''; };
+export const ogrenciEposta = () => { const u = fb && fb.auth && fb.auth.currentUser; return u && u.email && !icAdresMi(u.email) ? u.email : ''; };
 // hesabın e-postası değiştiyse telefonla giriş eşlemesi (telefonlar/{tel}.h[kursiyer]) öğrencinin kendisince güncellenir (kural: yalnız kendi girişi, değer kendi e-postası)
 export async function ogrenciEslemeTazele(k) {
   try { const { auth, db, F } = await sdk(), em = auth.currentUser && auth.currentUser.email, tel = telNorm(k && k.tel); if (!em || !tel || !ogr.kurs) return;

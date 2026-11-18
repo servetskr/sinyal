@@ -1251,6 +1251,7 @@ function ibanListeHtml() {
   return `<div class="iban-liste">${l.map(h => `<div class="iban-satir"><div class="iban-bilgi"><b>${e(h.ad || 'Hesap')}${h.varsayilan ? ` <span class="rozet rozet-mavi">Varsayılan</span>` : ''}</b><span class="mono">${e(ibanBicim(h.iban))}</span><small>${e([h.banka, h.alici].filter(Boolean).join(' · ') || 'Banka ve hesap sahibi girilmedi')}${h.not ? ' · ' + e(h.not) : ''}</small></div><button type="button" class="dg dg-cizgi dg-kucuk" data-iban-duzenle="${e(h.id)}">Düzenle</button></div>`).join('') || '<p class="iban-bos">Henüz banka hesabı yok.</p>'}<button type="button" class="dg dg-cizgi dg-kucuk" data-iban-ekle>${ik('arti')}Hesap ekle</button></div>`;
 }
 function ibanPenceresi(h) {
+  if (S._bulut && oturum.kullanici && oturum.kullanici.rol !== 'mudur') return bildir('Banka hesaplarını kurs müdürü değiştirir', 'uyari');   // YON-004: sunucuda da yalnız müdür
   const yeni = !h, l = ibanlar();
   h = h || { id: 'h' + Date.now().toString(36), ad: '', banka: '', alici: S.kurs.ad || '', iban: '', not: '', varsayilan: !l.length };
   pencere({

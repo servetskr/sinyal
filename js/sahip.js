@@ -838,7 +838,7 @@ async function ogrenciOlustur(k, x, sifre) {
   const tj = await api(FS + ':batchGet', { documents: [tamYol('telefonlar/' + tel)] });
   const tb = (tj.find(y => y.found) || {}).found, tk = tb ? alanlar(tb.fields).k : null;
   if (tk && tk !== k) throw new Error('Bu telefon numarasıyla başka bir kursta öğrenci hesabı var. Öğrencinin başka bir numarasını girin');
-  const eposta = tel + '.' + rastgele(6) + '@ogrenci.sinyal.app', kod = guncel.panelKod || rastgele(24), simdi = new Date();
+  const eposta = tel + '.' + rastgele(6) + '@ogrenci.mdsinyal.com'   /* YON-001 */, kod = guncel.panelKod || rastgele(24), simdi = new Date();
   const ad = [guncel.ad, guncel.soyad].filter(Boolean).join(' ') || 'Öğrenci';
   const j = await api(IT + '/accounts', { email: eposta, password: sifre });
   const uid = j.localId; if (!uid) throw new Error('Google hesap kimliği dönmedi');
