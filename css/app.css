@@ -3766,3 +3766,10 @@ a.kart.gosterge { text-decoration: none; color: inherit; display: block; }
 .kat-cip b { color: var(--soluk); font-weight: 700; margin-left: 2px; }
 .kat-cip.secili { background: var(--murekkep); color: #fff; border-color: var(--murekkep); }
 .kat-cip.secili b { color: rgba(255,255,255,.8); }
+/* KAY-063/064/065 */
+.sec-hucre { width: 36px; text-align: center; cursor: default; }
+.sec-hucre input { width: 18px; height: 18px; cursor: pointer; }
+tr.secili-satir td { background: rgba(10, 77, 162, .06); }
+.toplu-cubuk { position: sticky; top: 0; z-index: 3; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px 12px; background: var(--murekkep); color: #fff; border-radius: 10px; margin: 6px 0; }
+.toplu-cubuk .dg { background: #fff; }
+.toplu-cubuk .ks-bosluk { flex: 1; }
