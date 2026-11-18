@@ -1522,12 +1522,16 @@ export function ekKalemTahsil(k, j) {
   const x = k.odeme.ekler[j];
   pencere({
     baslik: x.ad + ' · ' + tl(x.tutar),
-    icerik: `<div class="alan"><span class="et">Ödeme yöntemi</span><div class="secim">${YONTEMLER.map(y => `<label><input type="radio" name="y" value="${y}" ${y === varsayilanYontem() ? 'checked' : ''}><span>${y}</span></label>`).join('')}</div></div><label style="display:flex;gap:8px;align-items:center;margin-top:14px;font-size:14px"><input type="checkbox" name="mak"> Makbuzu yazdır</label>`,
+    icerik: `<div class="alan"><span class="et">Ödeme yöntemi</span><div class="secim">${YONTEMLER.map(y => `<label><input type="radio" name="y" value="${y}" ${y === varsayilanYontem() ? 'checked' : ''}><span>${y}</span></label>`).join('')}</div></div><div class="alan" style="margin-top:10px;max-width:220px"><label for="ek-tarih">Tarih</label><input id="ek-tarih" class="girdi" name="tarih" type="date" value="${gun(0)}" max="${gun(0)}"></div><label style="display:flex;gap:8px;align-items:center;margin-top:14px;font-size:14px"><input type="checkbox" name="mak"> Makbuzu yazdır</label>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Tahsil et</button>`,
     onAc(d) {
       d.querySelector('[data-k]').addEventListener('click', () => {
-        geriAlNoktasi(); x.odendi = gun(0); const hid = 'h' + Date.now();
-        S.hareket.unshift({ id: hid, tarih: gun(0), tur: 'Gelir', kategori: x.ad, aciklama: tamAd(k) + ' · ' + x.ad, tutar: x.tutar, yontem: d.querySelector('[name=y]:checked').value, kursiyer: k.id });
+        // PAR-051: tahsilAl ile aynı tarih seçimi ve gün sonu kuralı (kapatılmış güne kayıt yok, ileri tarih yok)
+        const tarihSec = (d.querySelector('[name=tarih]') || {}).value || gun(0);
+        if (tarihSec > gun(0)) return bildir('İleri tarihli ödeme kaydedilemez', 'uyari');
+        if ((S.gunSonu || []).includes(tarihSec)) return bildir(tamTarih(tarihSec) + ' günü kapatıldı; bu tarihe kayıt eklenemez', 'uyari');
+        geriAlNoktasi(); x.odendi = tarihSec; const hid = 'h' + Date.now();
+        S.hareket.unshift({ id: hid, tarih: tarihSec, tur: 'Gelir', kategori: x.ad, aciklama: tamAd(k) + ' · ' + x.ad, tutar: x.tutar, yontem: d.querySelector('[name=y]:checked').value, kursiyer: k.id });
         islem('Tahsilat aldı', tamAd(k) + ' · ' + x.ad + ' · ' + tl(x.tutar)); kaydet(); kapatPencere(); bildir(x.ad + ' tahsil edildi', 'tamam', true); yenile();
         if (d.querySelector('[name=mak]').checked) import('./sayfalar3.js?v=234').then(m => m.belgeAc('makbuz', hid));
       });
