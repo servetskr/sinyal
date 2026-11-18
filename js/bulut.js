@@ -43,9 +43,11 @@ export const hataMetni = x => HATA[x && x.code] || (x && x.kullanici) || 'İşle
 const hata = m => Object.assign(new Error(m), { kullanici: m });
 
 // ---- giriş ----
+// Girişten hemen sonra Firestore bağlantısı henüz kurulmamışsa okuma 'unavailable' (istemci çevrimdışı) döner: kısa aralıkla birkaç kez yeniden denenir
+async function belgeOkuDene(F, ref, kez = 4) { for (let i = 0; ; i++) { try { return await F.getDoc(ref); } catch (x) { if (x.code !== 'unavailable' || i >= kez - 1) throw x; await new Promise(r => setTimeout(r, 600 * (i + 1))); } } }
 async function uyelikBul(user) {
   const { db, F } = await sdk();
-  const p = await F.getDoc(F.doc(db, 'kullanicilar', user.uid));
+  const p = await belgeOkuDene(F, F.doc(db, 'kullanicilar', user.uid));
   if (!p.exists()) return null;
   // demo hesabı (Yönetim › Hesaplar › Hesap oluştur › Demo): hiçbir kursa bağlı değildir, girişte bu cihazdaki demo verisi açılır
   if (p.data().demo === true) return { demo: true, uid: user.uid, ad: user.displayName || 'Demo', eposta: user.email };
@@ -1241,7 +1243,7 @@ export async function ogrenciHesapKapat(k) {
 // öğrencinin telefonu
 async function ogrenciUyelik(user) {
   const { db, F, auth, A } = await sdk();
-  const p = await F.getDoc(F.doc(db, 'kullanicilar', user.uid)), d = p.exists() ? p.data() : null;
+  const p = await belgeOkuDene(F, F.doc(db, 'kullanicilar', user.uid)), d = p.exists() ? p.data() : null;
   if (!d || d.rol !== 'ogrenci') { await A.signOut(auth); throw hata('Bu hesap bir öğrenci hesabı değil'); }
   try { localStorage.setItem('sinyal-ogrenci', JSON.stringify({ kurs: d.kurs, kod: d.kod, hesap: true })); } catch (x) { }
   return { ...d, uid: user.uid };
@@ -1250,7 +1252,7 @@ export async function ogrenciGiris(telGiris, sifre) {
   const tel = telNorm(telGiris); if (!tel) throw hata('Cep telefonu numaranızı 05xx xxx xx xx biçiminde yazın');
   if (!sifre) throw hata('Şifrenizi girin');
   const { auth, db, F, A } = await sdk();
-  const t = await F.getDoc(F.doc(db, 'telefonlar', tel)), adresler = t.exists() ? Object.values(t.data().h || {}) : [];
+  const t = await belgeOkuDene(F, F.doc(db, 'telefonlar', tel)), adresler = t.exists() ? Object.values(t.data().h || {}) : [];
   if (!adresler.length) throw hata('Bu numarayla açılmış öğrenci hesabı yok. Kursunuzdan hesap açmasını isteyin');
   let son = null;
   for (const a of adresler) {
