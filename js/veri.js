@@ -1240,7 +1240,11 @@ export const odemeKodu = k => { if (!k || !k.id) return ''; let t = 2166136261; 
 export const ibanMetni = (K = S.kurs) => { const h = ibanVarsayilan(K); if (!h) return ''; const ek = [h.banka, h.alici || K.ad].filter(Boolean).join(' · '); return h.iban + (ek ? ' (' + ek + ')' : ''); };
 let kaydetDinleyici = null;
 export const kaydetDinle = f => { kaydetDinleyici = f; };
-export function kaydet() { dIdx = null; subeTamamla(); noTamamla(); odemeUzlas(); mebDegisimIzle(); (S.hareket || []).forEach(h => { if (h.tur === 'Gelir' && !h.no) makbuzNoVer(h); }); // Kurs personelinin bulut verisi cihaza tam kopya olarak yazılmaz (Firestore kendi önbelleğini tutar; çıkışta silinir); demo ve öğrencinin kendi küçük kopyası yazılır
+// PAR-044: para kayıtlarında denetim izi. Yeni hareket (kimliği 'h' + oluşturma zamanı) ilk kayıtta kaydedeni ve zamanını alır; eski kayıtlara dokunulmaz.
+// Düzeltmede h.degistiren / h.degisZamani (sayfalar2.js hareketDuzelt), iptalde h.iptal.kim.
+function hareketIz() { let u; try { u = oturum.kullanici; } catch (x) { return; } if (!u) return; const ad = u.ad || u.id || '', simdi = Date.now(); for (const h of S.hareket || []) { if (h.kaydeden) continue; const m = /^h(\d{13})/.exec(h.id || ''); if (m && simdi - +m[1] < 600000) { h.kaydeden = ad; h.kayitZamani = new Date(+m[1]).toISOString(); } } }
+export const izMetni = h => [h.kaydeden ? 'Kaydeden ' + h.kaydeden + (h.kayitZamani ? ' · ' + h.kayitZamani.slice(8, 10) + '.' + h.kayitZamani.slice(5, 7) + ' ' + new Date(h.kayitZamani).toTimeString().slice(0, 5) : '') : '', h.degistiren ? 'Değiştiren ' + h.degistiren + (h.degisZamani ? ' · ' + h.degisZamani.slice(8, 10) + '.' + h.degisZamani.slice(5, 7) + ' ' + new Date(h.degisZamani).toTimeString().slice(0, 5) : '') : ''].filter(Boolean).join(' · ');
+export function kaydet() { dIdx = null; subeTamamla(); noTamamla(); odemeUzlas(); mebDegisimIzle(); hareketIz(); (S.hareket || []).forEach(h => { if (h.tur === 'Gelir' && !h.no) makbuzNoVer(h); }); // Kurs personelinin bulut verisi cihaza tam kopya olarak yazılmaz (Firestore kendi önbelleğini tutar; çıkışta silinir); demo ve öğrencinin kendi küçük kopyası yazılır
   if (!ANAHTAR.startsWith('sinyal-bulut-') || ANAHTAR.startsWith('sinyal-bulut-ogr-')) { try { localStorage.setItem(ANAHTAR, JSON.stringify(S)); } catch (e) { } }
   if (kaydetDinleyici) kaydetDinleyici(); }
 // Bulut (gerçek kurs): veri Firestore'dan gelir; yerel kopya kursa özel anahtarda tutulur, günlük yenilenmez
