@@ -17,6 +17,8 @@
 // /mebbis/ekran-alarm (YON-062): MEBBİS ekranı değişti alarmı sahibe WhatsApp şablonuyla, ekran başına günde bir; ayrıntı ekranAlarm() üstünde.
 //   /eposta/ogrenci (PAR-058): öğrenciye tek alıcılı makbuz / ödeme hatırlatması; ayrıntı epOgrenci() üstünde.
 // /mevzuat/*: mevzuat arama (sorgu gömme), kursa gelen MEB yazılarını yükleme/listeleme/silme, özet ve kaynaklı cevap. Ayrıntı mevzuatUc() üstünde.
+// KAY-033 (18 Kas kararı): belge görüntüsü okuma ucu (belge/oku, OCR_MODEL) kaldırıldı; öğrenci belgesi hiçbir dış yapay zekâya gönderilmez.
+//   env.AI ([ai] bağlaması) yalnız mevzuat gömme modeli ve PDF/DOCX → metin (toMarkdown) için kalır.
 const IZINLI = ['https://mdsinyal.com', 'http://localhost:4481', 'http://127.0.0.1:4481'];
 const HEDEF = /^(https:\/\/mdsinyal\.com\/|https:\/\/servetskr\.github\.io\/sinyal\/|http:\/\/localhost:4481\/)/;
 const kucuk = s => String(s || '').toLocaleLowerCase('tr');
@@ -377,74 +379,6 @@ async function hataListe(req, env, url, cevap) {
   const l = await env.LINK.list({ prefix: on, limit: 1000 });
   const liste = l.keys.map(k => ({ id: k.name.slice(5), gun: k.name.slice(5, 15), ...(k.metadata || {}) })).sort((a, b) => String(b.son).localeCompare(String(a.son))).slice(0, 300);
   return cevap({ ok: true, liste, toplam: l.keys.length });
-}
-// KAY-033: belgeden okuma (yapay zekâ). Ön büro bir belge fotoğrafı (ya da PDF'in ilk sayfası, istemcide JPEG'e çevrilir) gönderir;
-// görüntü okuyan model alanları JSON olarak döndürür, istemci yalnız formdaki BOŞ alanlara yazar ve kullanıcı onaylar.
-// Görüntü ve sonuç saklanmaz, günlüğe yazılmaz (yalnız tür, süre ve hata türü). Model: OCR_MODEL (düz değişken), varsayılan aşağıda.
-// Yetki: kursun müdürü, ön bürosu ya da şube müdürü (Firebase oturumu + kurs üyeliği). Sınır: kurs başına dakikada 6, görüntü en çok ~2 MB.
-const OCR_MODEL = '@cf/google/gemma-3-12b-it';
-const BELGE_TUR = {
-  kimlik: { ad: 'nüfus cüzdanı / kimlik kartı', alan: { tc: 'T.C. kimlik no (11 hane)', ad: 'ad', soyad: 'soyad', dogumTarihi: 'doğum tarihi', babaAdi: 'baba adı', anaAdi: 'ana adı', dogumYeri: 'doğum yeri', seriNo: 'seri no' } },
-  ehliyet: { ad: 'sürücü belgesi', alan: { tc: 'T.C. kimlik no', ad: 'ad', soyad: 'soyad', dogumTarihi: 'doğum tarihi', belgeNo: 'belge no', siniflar: 'sınıflar (ör. B, A2)', verilisTarihi: 'veriliş tarihi' } },
-  saglik: { ad: 'sürücü sağlık raporu', alan: { tc: 'T.C. kimlik no', adSoyad: 'ad soyad', dogumTarihi: 'doğum tarihi', kanGrubu: 'kan grubu', raporTarihi: 'rapor tarihi', raporNo: 'rapor no', tani: 'tanı', kurum: 'sağlık kuruluşu', doktor: 'doktor adı', karar: 'karar (sürücü olur / olamaz, kısıtlar)' } },
-  sabika: { ad: 'adli sicil kaydı (sabıka kaydı)', alan: { tc: 'T.C. kimlik no', adSoyad: 'ad soyad', dogumTarihi: 'doğum tarihi', veren: 'veren yer', babaAdi: 'baba adı', anaAdi: 'ana adı', nufusIl: 'nüfusa kayıtlı il', belgeTarihi: 'belge tarihi', belgeNo: 'belge no / barkod', karar: 'karar (kaydı yok / var)' } },
-  ogrenim: { ad: 'öğrenim belgesi (diploma)', alan: { adSoyad: 'ad soyad', okul: 'okul adı', belgeTarihi: 'belge tarihi', belgeNo: 'belge no', belgeTuru: 'belge türü (listeden)' } },
-  ikametgah: { ad: 'yerleşim yeri belgesi (ikametgâh)', alan: { tc: 'T.C. kimlik no', adSoyad: 'ad soyad', adres: 'adres', belgeTarihi: 'belge tarihi' } },
-};
-const OCR_OGRENIM = ['II. Kademe Okur Yazarlık Belgesi', 'İlkokul Diploma', 'İlköğretim Diploma', 'İlköğretim Tasdikname', 'Açık İlköğretim Öğrenci Belgesi', 'Ortaokul Diploma', 'Ortaokul Tasdikname', 'Lise Diploma', 'Lise Tasdikname', 'Lise Öğrenci Belgesi', 'Üniversite Öğrenci Belgesi', 'Üniversite Diploma', 'Üniversite Geçici Mezuniyet Belgesi', 'Yabancı Okul Diploması'];
-const OCR_KAN = ['A Rh+', 'A Rh−', 'B Rh+', 'B Rh−', 'AB Rh+', 'AB Rh−', '0 Rh+', '0 Rh−'];
-function ocrTcGecerli(t) { if (!/^[1-9]\d{10}$/.test(t)) return false; const d = [...t].map(Number); const t10 = ((d[0] + d[2] + d[4] + d[6] + d[8]) * 7 - (d[1] + d[3] + d[5] + d[7])) % 10; return ((t10 + 10) % 10) === d[9] && d.slice(0, 10).reduce((a, b) => a + b, 0) % 10 === d[10]; }
-function ocrTarih(v) {
-  const s = String(v || '').trim(); let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
-  m = s.match(/^(\d{1,2})[./\- ](\d{1,2})[./\- ](\d{4})$/); if (m && +m[2] >= 1 && +m[2] <= 12 && +m[1] >= 1 && +m[1] <= 31) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
-  return '';
-}
-function ocrKan(v) { const s = String(v || '').toLocaleUpperCase('tr').replace(/\s+/g, '').replace(/^O/, '0'); const m = s.match(/^(AB|A|B|0)(?:RH)?\(?([+\-−]|POZ|NEG)/); if (!m) return ''; return `${m[1]} Rh${m[2] === '+' || m[2] === 'POZ' ? '+' : '−'}`; }
-function ocrOgrenim(v) { const s = String(v || '').toLocaleLowerCase('tr'); if (!s) return ''; return OCR_OGRENIM.find(x => x.toLocaleLowerCase('tr') === s) || OCR_OGRENIM.find(x => s.includes(x.toLocaleLowerCase('tr'))) || ''; }
-// modelin metninden JSON nesnesini çıkar ve alanları düzelt; bilinmeyen alan atılır, değerler kısaltılır
-export function ocrCoz(tur, ham) {
-  const T = BELGE_TUR[tur]; if (!T) return {};
-  let o = null; const m = String(ham || '').match(/\{[\s\S]*\}/); if (m) { try { o = JSON.parse(m[0]); } catch (x) { o = null; } }
-  if (!o || typeof o !== 'object') return {};
-  const c = {};
-  for (const k of Object.keys(T.alan)) {
-    let v = o[k]; if (v == null) continue; v = String(v).replace(/[\u0000-\u001f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160); if (!v || /^(yok|null|-|bilinmiyor|okunamadı)$/i.test(v)) continue;
-    if (k === 'tc') { v = v.replace(/\D/g, ''); if (!ocrTcGecerli(v)) continue; }
-    else if (/tarih/i.test(k)) { v = ocrTarih(v); if (!v) continue; }
-    else if (k === 'kanGrubu') { v = ocrKan(v); if (!v) continue; }
-    else if (k === 'belgeTuru') { v = ocrOgrenim(v); if (!v) continue; }
-    c[k] = v;
-  }
-  return c;
-}
-function ocrIstem(tur) {
-  const T = BELGE_TUR[tur];
-  return `Bu görüntü bir Türk ${T.ad}. Görüntüde YAZAN bilgileri oku, tahmin etme. Yalnız şu anahtarlarla tek bir JSON nesnesi döndür, başka hiçbir şey yazma: ${JSON.stringify(T.alan)}. ` +
-    `Okuyamadığın ya da belgede olmayan alanı hiç yazma. Tarihleri GG.AA.YYYY biçiminde yaz.` + (tur === 'ogrenim' ? ` belgeTuru şu listeden biri olmalı: ${OCR_OGRENIM.join(' | ')}.` : '') + (tur === 'saglik' ? ' kanGrubu "A Rh+" biçiminde.' : '');
-}
-async function belgeOku(req, env, cevap, { gercek, rol, kursId }) {
-  if (req.method !== 'POST') return cevap({ ok: false }, 405);
-  if (!gercek) return cevap({ ok: false, hata: 'Belgeden okuma kurs hesabıyla çalışır' }, 403);
-  if (!['mudur', 'sekreter', 'subemudur'].includes(rol)) return cevap({ ok: false, hata: 'Yetki yok' }, 403);
-  if (!env.AI) return cevap({ ok: false, kurulu: false, hata: 'Yapay zekâ henüz bağlı değil' }, 503);
-  if (mvSinirAsti('ocr:' + kursId, 6)) return cevap({ ok: false, hata: 'Çok sık okuma yapıldı; bir dakika sonra tekrar deneyin' }, 429);
-  let b; try { b = await req.json(); } catch (x) { return cevap({ ok: false, hata: 'İstek okunamadı' }, 400); }
-  const tur = String((b && b.tur) || ''), gorsel = String((b && b.gorsel) || '');
-  if (!BELGE_TUR[tur]) return cevap({ ok: false, hata: 'Belge türü bilinmiyor' }, 400);
-  if (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(gorsel)) return cevap({ ok: false, hata: 'Görüntü JPEG, PNG ya da WEBP olmalı' }, 400);
-  if (gorsel.length > 2.8e6) return cevap({ ok: false, hata: 'Görüntü çok büyük; daha küçük çekin' }, 413);
-  const bas = Date.now(), model = env.OCR_MODEL || OCR_MODEL;
-  let metin = '';
-  try {
-    const r = await env.AI.run(model, { messages: [{ role: 'user', content: [{ type: 'text', text: ocrIstem(tur) }, { type: 'image_url', image_url: { url: gorsel } }] }], max_tokens: 700, temperature: 0 });
-    metin = typeof r === 'string' ? r : (r && (r.response || (r.choices && r.choices[0] && r.choices[0].message && r.choices[0].message.content))) || '';
-  } catch (x) {
-    console.warn(JSON.stringify({ tur: 'uyari', konu: 'belge-oku', belge: tur, hata: String((x && x.message) || x).slice(0, 160) }));
-    return cevap({ ok: false, hata: 'Belge şu an okunamadı; biraz sonra tekrar deneyin' }, 502);
-  }
-  const alanlar = ocrCoz(tur, metin);
-  console.log(JSON.stringify({ tur: 'belge-oku', belge: tur, ms: Date.now() - bas, alan: Object.keys(alanlar).length }));
-  return cevap({ ok: true, tur, alanlar });
 }
 // Link önizlemesi (WhatsApp): mdsinyal.com/d/*, /i/*, /h/* bu servise route edilirse (Cloudflare vekili açık olmalı;
 // belgeler/link-standardi.md), sitenin 404.html yönlendiricisi 200 durum koduyla ve linkin türüne uygun başlıkla döner.
@@ -1599,7 +1533,6 @@ export default {
     const kursId = req.headers.get('X-Kurs') || url.searchParams.get('kurs') || '';
     let rol = null;
     if (gercek) { rol = await uyeRol(req, kursId); if (!rol || !PERSONEL.includes(rol)) return cevap({ ok: false, hata: 'Yetki yok' }, 403); }
-    if (yol === 'belge/oku') return belgeOku(req, env, cevap, { gercek, rol, kursId });   // KAY-033
     if (yol === 'mebbis/ekran-alarm') return gercek && req.method === 'POST' ? ekranAlarm(req, env, cevap, kursId) : cevap({ ok: false, hata: 'Yetki yok' }, 403);   // YON-062
     // mevzuat ve MEB yazıları: arama, yükleme, özet, cevap (kimlik ve yetki mevzuatUc() içinde; /mevzuat/gom demoya da açık)
     if (yol === 'mevzuat' || yol.startsWith('mevzuat/')) return mevzuat(req, env, url, yol, cevap, { gercek, rol, kursId, origin });
