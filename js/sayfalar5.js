@@ -4,6 +4,7 @@ import { ilSecenekleri, kimlikEksikleri, EKRAN_DUZEY, YETKI_EKRAN, YETKI_ISLEM, 
 import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor, belgeYazdir, kisaLink, siteLink } from './ui.js?v=234';
 import { yenile } from './app.js?v=234';
 import { destekWa } from './iletisim.js?v=234';
+import * as ON from './onay.js?v=234';
 import { ONKOSUL, onkosulTamam, onkosulHaritasi } from './onkosul.js?v=234';
 import * as B from './bulut.js?v=234';
 import { wpGonder } from './sayfalar1.js?v=234';
@@ -779,9 +780,9 @@ function yetkiKarti() {
     <fieldset><legend>Yapabileceği hassas işlemler</legend>${YETKI_ISLEM.map(([k, t]) => `<label class="ind-tik"><input type="checkbox" data-yetki-islem="${k}" ${is[k] ? 'checked' : ''}> ${t}</label>`).join('')}<small style="color:var(--soluk)">Taksit sayısı sınırı: Ayarlar › Kurs bilgileri › En çok taksit (ön büro). Şube ve kasa kısıtı kullanıcı satırında.</small></fieldset></div></div>`;
 }
 function kullaniciSekme() {
-  if (B.bulutta()) return bulutKullanicilar() + yetkiKarti();
+  if (B.bulutta()) return bulutKullanicilar() + yetkiKarti() + ON.bilgiKarti();
   const sonGiris = u => (S.islemler.find(x => x.kim === u.ad && x.ne === 'Giriş yaptı') || {}).zaman;
-  return `<div class="kart"><div class="kart-bas"><h3>Kullanıcılar</h3><small>${S.kullanicilar.length} kişi · her biri kendi PIN’iyle girer</small><div class="sag"><button class="dg dg-ana dg-kucuk" data-kul-ekle>${ik('arti')}Kullanıcı ekle</button></div></div><ul class="liste">${S.kullanicilar.map(u => { const g = sonGiris(u), ben = oturum.kullanici && oturum.kullanici.id === u.id; return `<li>${avatar(...u.ad.split(' '))}<div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(u.ad)}${ben ? ' · siz' : ''}</b><small style="display:block;color:var(--soluk)">${ROL_YETKI[u.rol]}${u.usta && egitmen(u.usta) ? ' · ' + e(egitmen(u.usta).ad) + ' derslerini görür' : ''}${u.tel ? ' · ' + e(u.tel) : ''} · ${g ? 'son giriş ' + goreli(g.slice(0, 10)) + ' ' + g.slice(11, 16) : 'henüz girmedi'}</small></div><span class="sag" style="gap:6px">${kulSubeSec(u)}${rozet(ROL[u.rol], u.rol === 'mudur' ? 'sari' : 'notr')}<button class="dg dg-hafif dg-kucuk" data-kul-pin="${u.id}">PIN değiştir</button>${ben ? '' : `<button class="dg dg-hafif dg-kucuk" data-kul-sil="${u.id}">Kaldır</button>`}</span></li>`; }).join('')}</ul></div>` + yetkiKarti();
+  return `<div class="kart"><div class="kart-bas"><h3>Kullanıcılar</h3><small>${S.kullanicilar.length} kişi · her biri kendi PIN’iyle girer</small><div class="sag"><button class="dg dg-ana dg-kucuk" data-kul-ekle>${ik('arti')}Kullanıcı ekle</button></div></div><ul class="liste">${S.kullanicilar.map(u => { const g = sonGiris(u), ben = oturum.kullanici && oturum.kullanici.id === u.id; return `<li>${avatar(...u.ad.split(' '))}<div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(u.ad)}${ben ? ' · siz' : ''}</b><small style="display:block;color:var(--soluk)">${ROL_YETKI[u.rol]}${u.usta && egitmen(u.usta) ? ' · ' + e(egitmen(u.usta).ad) + ' derslerini görür' : ''}${u.tel ? ' · ' + e(u.tel) : ''} · ${g ? 'son giriş ' + goreli(g.slice(0, 10)) + ' ' + g.slice(11, 16) : 'henüz girmedi'}</small></div><span class="sag" style="gap:6px">${kulSubeSec(u)}${rozet(ROL[u.rol], u.rol === 'mudur' ? 'sari' : 'notr')}<button class="dg dg-hafif dg-kucuk" data-kul-pin="${u.id}">PIN değiştir</button>${ben ? '' : `<button class="dg dg-hafif dg-kucuk" data-kul-sil="${u.id}">Kaldır</button>`}</span></li>`; }).join('')}</ul></div>` + yetkiKarti() + ON.bilgiKarti();
 }
 // Gerçek kurs hesabı: herkes kendi e-posta ve şifresiyle girer; çalışan davet linkiyle katılır
 function bulutKullanicilar() {
@@ -900,6 +901,7 @@ export function ayarBaglan(k) {
     if (ev.target.closest('[data-kurtarma-indir]')) { const a2 = document.createElement('a'); a2.href = URL.createObjectURL(new Blob([localStorage.getItem('sinyal-kurtarma') || '[]'], { type: 'application/json' })); a2.download = 'mdsinyal-kaydedilemeyenler.json'; a2.click(); setTimeout(() => URL.revokeObjectURL(a2.href), 3000); }
     if (ev.target.closest('[data-kurtarma-sil]') && confirm('Kaydedilemeyen değişiklikler bu cihazdan silinsin mi? Önce indirdiğinizden emin olun.')) { try { localStorage.removeItem('sinyal-kurtarma'); } catch (x) { } import('./bulut.js?v=234').then(B => { B.bulut.kalici = ''; B.durumYaz(); }); yenile(); }
   });
+  k.addEventListener('click', ev => { const bi = ev.target.closest('[data-bi-yeni],[data-bi-duzen]'); if (bi) return ON.bilgiDuzenle(bi.dataset.biDuzen || null, yenile); });  // YON-028
   k.addEventListener('click', ev => { if (ev.target.closest('[data-ki-meb]')) { if (cokSube() && !seciliSube()) return bildir('Önce üstten şube seçin; her şubenin bilgisi kendi MEBBİS hesabından okunur', 'uyari'); return import('./mebtoplu.js?v=234').then(m => m.topluCek(['kurum'])); } if (!ev.target.closest('[data-ki-kase-sil]')) return; delete S.kurs.kase; islem('Kaşe / imza görselini kaldırdı'); kaydet(); yenile(); });  // YON-071
   davetListesi(k); yedekListesi(k); sunucuKaydi(k); if (B.bulutta()) ikiAdimSatiri(k);
   k.addEventListener('change', ev => {

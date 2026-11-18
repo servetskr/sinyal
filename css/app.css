@@ -3584,3 +3584,5 @@ button.rozet:focus-visible { outline: 2px solid var(--levha); outline-offset: 2p
 .onk-bag { display: inline-flex; align-items: center; gap: 4px; margin: 2px 10px 2px 0; font-size: 13.5px; color: var(--murekkep); }
 .onk-bag.tamam { color: var(--soluk); }
 .onkosul-serit a { color: var(--levha); font-weight: 700; white-space: nowrap; }
+/* YON-028: bilgilendirme metni */
+.bilgi-metin { max-height: 50vh; overflow: auto; font-size: 14.5px; line-height: 1.55; color: var(--metin); border: 1px solid var(--cizgi); border-radius: 8px; padding: 12px 14px; background: var(--zemin, #fafafa); }

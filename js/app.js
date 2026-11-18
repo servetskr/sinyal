@@ -154,6 +154,7 @@ export function destekPenceresi(hazirMetin = '') {
     } });
 }
 // YON-018: ön büro yetkisi başka cihazdan değişince menü yeniden çizilsin
+let bilgiSoruldu = false;
 const yetkiImza = () => JSON.stringify((S.kurs || {}).yetki || null) + '|' + ((oturum.kullanici || {}).rol || '');
 let sonYetki = '';
 function iskelet() {
@@ -244,6 +245,8 @@ export function yenile(kaydirma = false) {
   yer.replaceChildren(kap);
   if (ekranDuzey(r.ad === 'kursiyer' ? 'kursiyerler' : r.ad) === 'gor') saltOkunur(kap);
   kurulumSeridi(kap);
+  // YON-028: açık onaylı bilgilendirmeler; oturum başına bir kez, sayfa oturduktan sonra (başka pencere açıksa sonraki girişe)
+  if (!bilgiSoruldu && ['mudur', 'sekreter'].includes(oturum.kullanici.rol)) { bilgiSoruldu = true; setTimeout(() => import('./onay.js?v=234').then(m => m.bilgiGoster()), 1500); }
   if (s.baglan) { try { s.baglan(kap); } catch (x) { console.error(x); } }
   if (r.ad === 'genel' || r.ad === 'adaylar') B.onKayitlariAl().then(n => { if (n) { bildir(`Web sitesinden ${n} ön kayıt geldi; Yeni öğrenciler’de`); if (location.hash.startsWith('#/adaylar')) yenile(); } });   // DIG-035
   if (r.ad === 'genel') { GU.anaEkranaEkle(kap); duyuruAlani(kap); }  // kurulu sürüm, “Güncellemeleri denetle”, yeni sürüm kartı; DIG-040 duyurular
