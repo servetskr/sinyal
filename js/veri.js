@@ -137,7 +137,7 @@ const TABLO2 = {
 // Tablodaki sayı akan trafik saatidir (Tablo 1 başlığı; eyup-sorular-cevaplar.md madde 1) ve yönetmeliğin alt sınırıdır: elle girilen değer bunun altındaysa uyarılır.
 // Toplamın "tablo + 2 saat alan ya da simülatör" olduğu metinde açıkça yazmıyor (madde 1, yorum): +2 eklenir ama "teyit bekliyor" görünür. Boş hücreler de teyit bekliyor.
 // Hücreye özgü not: M→B1 akan trafikte en az 12 saat (il tablosundaki 8 saat yönetmeliğin altında kalıyor). B→A1 md.39/5 ayrıca (direksiyonHesap).
-const TABLO_NOT = { 'M>B1': 'Akan trafikte en az 12 saat; il tablosunda görünen 8 saat yönetmeliğin altında kalıyor.' };
+const TABLO_NOT = { 'M>B1': 'Akan trafikte en az 12 saat (md.39 Tablo 1); il listesinde görünen 8 saat yönetmeliğin altında kalıyor, mdSinyal 12 saati esas alır.' };
 // +2 saatin dayanağı: ÖÖKGM 20/9/2024 MTSK açıklama yazısı md.20 (alan ya da simülatör eğitimi md.7'deki saatlere eklenerek yapılır); il taban listeleri de böyle sayıyor
 const ARTI2_DAYANAK = 'ÖÖKGM 20/9/2024 açıklama yazısı md.20';
 // Otomatikten manuele (md.39/2 "direksiyon eğitimi dersinin yarısı"): en tutarlı okuma md.7/1 akan trafik saatinin yarısı, +2 yok (madde 2; yorum, teyit bekliyor).
@@ -177,7 +177,17 @@ export function deneyimEksik(sinif, mevcut, istisna) { const h = anaSinif(sinif)
 const mevcutKod = m => (m && m !== 'Yok') ? String(m) : '';
 // Sınıf ve mevcut belgeden asgari direksiyon saati: { saat, kaynak, teyit, alt (elle girilen değer için alt sınır), altDayanak, altNot }
 // o: { otomatik, eski, belgeTarih (mevcut belgenin veriliş tarihi; B→A1 md.39/5) }
+// DIR-002: kursun geçiş tablosu (Ayarlar › Sınıf ve ücretler). S.kurs.gecisSaat[anahtar] = saat; boş: mevzuat hesabı. Anahtar 'M>B1', eski belge 'B>C·eski', otomatikten manuele 'B-oto'.
+// Yönetmelik alt sınırının altındaki değer kaydedilir ama ayarlarda, kursiyer dosyasında ve Mevzuat denetiminde uyarı olarak görünür.
+export const gecisAnahtar = (m, h, o = {}) => m === h ? (o.otomatik ? h + '-oto' : '') : `${m}>${h}${o.eski || m === 'E' ? '·eski' : ''}`;
 export function direksiyonHesap(sinif, mevcut, o = {}) {
+  const r = mevzuatDireksiyon(sinif, mevcut, o), m = mevcutKod(mevcut), h = anaSinif(sinif), a = m && (SINIFLAR[sinif] || {}).direksiyon && ((SINIFLAR[sinif] || {}).tur || 'ehliyet') === 'ehliyet' ? gecisAnahtar(m, h, o) : '';
+  const ov = a ? (((S || {}).kurs || {}).gecisSaat || {})[a] : null;
+  if (ov == null || ov === '' || !isFinite(+ov)) return r;
+  const sa = Math.max(0, Math.round(+ov)), alt = r.alt || 0, altinda = !!(alt && sa < alt);
+  return { ...r, saat: sa, mevzuat: r.saat, teyit: false, kursTablo: true, altinda, kaynak: `Kursun geçiş tablosu (Ayarlar › Sınıf ve ücretler): ${sa} saat; mevzuat hesabı ${r.saat} saat` + (altinda ? `. Alt sınır ${virgul(alt)} saat (${r.altDayanak}); tablodaki değer bunun altında` : '') };
+}
+function mevzuatDireksiyon(sinif, mevcut, o = {}) {
   const S0 = SINIFLAR[sinif] || {}, ilk = +S0.direksiyon || 0, m = mevcutKod(mevcut);
   if (!ilk) return { saat: 0, kaynak: 'Bu sınıfta direksiyon eğitimi yok' };
   if ((S0.tur || 'ehliyet') !== 'ehliyet' || !m) return { saat: ilk, kaynak: 'İlk kez belge: 2 saat alan ya da simülatör + akan trafik (md.7/1)', teyit: !!S0.teyit && sinif === 'D1E' };
@@ -186,7 +196,7 @@ export function direksiyonHesap(sinif, mevcut, o = {}) {
     const alt = otomatikAltSinir(h);
     return { saat: ilk, teyit: true, alt, altDayanak: 'md.39/2; en tutarlı okumaya göre akan trafik saatinin yarısı, teyit bekliyor', kaynak: `Belgesi “sadece otomatik”: manuel için direksiyon eğitiminin yarısı (md.39/2). En tutarlı okumaya göre alt sınır akan trafik saatinin yarısı: ${virgul(alt)} saat, +2 eklenmez (teyit bekliyor). Saat ve ücrette il tablosu kullanılır: il MEM değerini dosyadan elle girin.` }; }
   const eski = !!o.eski || m === 'E', T = eski ? TABLO2 : TABLO1, v = (T[m] || {})[h];
-  if (v == null) return { saat: ilk, teyit: true, kaynak: `${m} → ${h}: Tablo ${eski ? 2 : 1}’de değer yok; ilk kez belge saati kullanıldı (${['G>F', 'D1>D1E'].includes(m + '>' + h) ? 'tablonun bu hücresi boş, yönetmelik bir şey söylemiyor' : 'bu geçiş tabloda yer almıyor; il MEM’e sorun'}).` };
+  if (v == null) return { saat: ilk, teyit: true, kaynak: `${m} → ${h}: Tablo ${eski ? 2 : 1}’de değer yok; ilk kez belge saati kullanıldı (${['G>F', 'D1>D1E'].includes(m + '>' + h) ? 'tablonun bu hücresi boş; il MEM’in değerini Ayarlar › Sınıf ve ücretler › Geçiş saatleri’ne girin' : 'bu geçiş tabloda yer almıyor; il MEM’e sorun'}).` };
   let not = TABLO_NOT[m + '>' + h], alt = v, altDayanak = `md.39 Tablo ${eski ? 2 : 1}, akan trafik saati`, altNot = '';
   // md.39/5: KTY md.85/2 şartını taşıyan (en az 2 yıllık B belgeli) A1 adayına md.7'deki sürenin yarısı verilir; MEB A1 fark programı toplam 6 ders saati.
   // Belge 2 yılını doldurduysa alt sınır yarı süre; tarih yoksa alt sınır denetlenmez, bilgi notu çıkar.
@@ -194,7 +204,16 @@ export function direksiyonHesap(sinif, mevcut, o = {}) {
     if (!iki) { alt = 0; altNot = `md.39/5: B belgesi en az 2 yıllıksa A1 için süre yarıya iner (alt sınır ${virgul(yari)} saat); belge tarihini girin.`; not = altNot + ' İl tablosu 8.'; }
     else if (iki <= BUGUN) { alt = yari; altDayanak = 'md.39/5, yarı süre; MEB A1 fark programı 6 ders saati'; not = `md.39/5: B belgesi en az 2 yıllık; A1 için direksiyon eğitiminin yarısı verilir (MEB A1 fark programı toplam 6 ders saati, il tablosu 8).`; }
     else { not = `md.39/5 yarı süre, B belgesi ${iso(iki).split('-').reverse().join('.')} tarihinde 2 yılını doldurunca uygulanır.`; altDayanak += `; md.39/5 yarı süre B belgesi ${iso(iki).split('-').reverse().join('.')} tarihinde 2 yılını doldurunca`; } }
-  return { saat: v + 2, teyit: !!TABLO_NOT[m + '>' + h] || (m === 'B' && h === 'A1' && !yilSonra(o.belgeTarih, 2)), alt, altDayanak, altNot, kaynak: `Farklı sınıf (md.39, Tablo ${eski ? 2 : 1}${eski ? ': belge 01.01.2016’dan önce' : ''}): ${v} saat akan trafik + 2 saat alan ya da simülatör (${ARTI2_DAYANAK})${not ? '. ' + not : ''}` };
+  return { saat: v + 2, teyit: m === 'B' && h === 'A1' && !yilSonra(o.belgeTarih, 2), alt, altDayanak, altNot, kaynak: `Farklı sınıf (md.39, Tablo ${eski ? 2 : 1}${eski ? ': belge 01.01.2016’dan önce' : ''}): ${v} saat akan trafik + 2 saat alan ya da simülatör (${ARTI2_DAYANAK})${not ? '. ' + not : ''}` };
+}
+// Ayarlar ekranı için geçiş satırları: hedef sınıf açık ve direksiyon eğitimi olan; Tablo 1, Tablo 2 (01.01.2016 öncesi belge) ve otomatikten manuele
+export function gecisSatirlari() {
+  const ac = Object.keys(SINIFLAR).filter(k => SINIFLAR[k].aktif && +SINIFLAR[k].direksiyon && (SINIFLAR[k].tur || 'ehliyet') === 'ehliyet' && anaSinif(k) === k), l = [];
+  const ekle = (m, h, o) => { const r = mevzuatDireksiyon(h, m, o); l.push({ anahtar: gecisAnahtar(m, h, o), m, h, eski: !!o.eski, oto: !!o.otomatik, mevzuat: r.saat, alt: r.alt || 0, altDayanak: r.altDayanak || '', bos: !o.otomatik && ((o.eski ? TABLO2 : TABLO1)[m] || {})[h] == null, kaynak: r.kaynak }); };
+  [[TABLO1, false], [TABLO2, true]].forEach(([T, eski]) => Object.keys(T).forEach(m => Object.keys(T[m]).filter(h => ac.includes(h)).forEach(h => ekle(m, h, { eski }))));
+  [['G', 'F'], ['D1', 'D1E']].filter(([, h]) => ac.includes(h)).forEach(([m, h]) => ekle(m, h, {}));
+  ac.forEach(h => ekle(h, h, { otomatik: true }));
+  return l;
 }
 // Yeni kurala göre mi hesaplanır? Gerçek kursta kural tarihinden önceki kayıtlar eski saatte donar (demo her zaman yeni kural)
 export const eskiDersKurali = k => !!(S && S._bulut) && !!k && k.dersKural !== 2 && String(k.kayit || '') < DERS_KURAL_TARIH;
