@@ -1640,7 +1640,8 @@ export default {
       const phoneId = rakam(b.phoneId), token = String(b.token || '').trim(), wabaId = rakam(b.wabaId), appSecret = String(b.appSecret || '').trim(), pin = rakam(b.pin);
       const sablon = String(b.sablon || '').trim().toLowerCase(), sablonDil = String(b.sablonDil || 'tr').trim() || 'tr';
       // MSJ-023: pazarlama (tanıtım) mesajları için ayrı onaylı şablon (isteğe bağlı); yoksa genel şablon kullanılır
-      const sablonPaz = String(b.sablonPazarlama || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+      // adı geçersizse sessizce temizlenmez: kaydedilmez, uyarı döner (bağlantı bozulmaz)
+      const sablonPazHam = String(b.sablonPazarlama || '').trim().toLowerCase(), sablonPaz = /^[a-z0-9_]{1,512}$/.test(sablonPazHam) ? sablonPazHam : '';
       if (sablon && !/^[a-z0-9_]{1,512}$/.test(sablon)) return cevap({ ok: false, hata: 'Şablon adı yalnız küçük harf, rakam ve alt çizgi içerebilir' }, 400);
       if (appSecret && !/^[0-9a-f]{32}$/i.test(appSecret)) return cevap({ ok: false, hata: 'Uygulama gizli anahtarı 32 karakter olmalı (Meta › Uygulama ayarları › Temel)' }, 400);
       if (!phoneId || token.length < 20) return cevap({ ok: false, hata: 'Telefon numarası kimliği ve erişim anahtarı gerekli' }, 400);
@@ -1653,6 +1654,18 @@ export default {
       const j = await r.json().catch(() => ({}));
       if (!r.ok) return cevap({ ok: false, hata: 'Meta hattı doğrulamadı: ' + ((j.error && j.error.message) || r.status) }, 400);
       const G2 = 'https://graph.facebook.com/v25.0/', yetki = { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, uyarilar = [];
+      if (sablonPazHam && !sablonPaz) uyarilar.push('Pazarlama şablonu adı “' + sablonPazHam.slice(0, 60) + '” geçersiz (yalnız küçük harf, rakam ve alt çizgi); kaydedilmedi, tanıtım mesajları genel şablonla gider');
+      // şablon Meta'da var mı, onaylı mı, beklenen sınıfta mı (MSJ-023: pazarlama şablonu da denetlenir); sorun bağlantıyı bozmaz, uyarı olur
+      const sablonDenetle = async (ad, sinif, tanim) => {
+        const rs = await fetch(G2 + wabaId + '/message_templates?fields=name,status,category,language&name=' + encodeURIComponent(ad), { headers: yetki });
+        const js = await rs.json().catch(() => ({})), t = ((js && js.data) || []).find(x => x.name === ad && (x.language || '').toLowerCase().startsWith(sablonDil.toLowerCase().slice(0, 2)));
+        if (!rs.ok) return tanim + ' denetlenemedi: ' + ((js.error && js.error.message) || rs.status);
+        if (!t) return '“' + ad + '” ' + tanim.toLocaleLowerCase('tr') + ' bu hesapta (' + sablonDil + ') bulunamadı';
+        if (t.status !== 'APPROVED') return '“' + ad + '” ' + tanim.toLocaleLowerCase('tr') + ' henüz onaylı değil (' + t.status + ')';
+        if (t.category !== sinif) return sinif === 'UTILITY' ? '“' + ad + '” şablonu ' + t.category + ' sınıfında; hizmet (UTILITY) sınıfı daha ucuzdur'
+          : '“' + ad + '” pazarlama şablonu ' + t.category + ' sınıfında; tanıtım mesajları pazarlama (MARKETING) sınıfında olmalı, yoksa Meta şablonu yeniden sınıflar ya da durdurur';
+        return '';
+      };
       // Numara Cloud API'ye kayıtlı değilse (platform_type ≠ CLOUD_API) mesaj gitmez (Meta 133010): iki adımlı doğrulama PIN'iyle kaydedilir
       if (j.platform_type && j.platform_type !== 'CLOUD_API') {
         if (!pin) return cevap({ ok: false, kayitGerekli: true, hata: 'Numara henüz Cloud API’ye kayıtlı değil. 6 haneli iki adımlı doğrulama PIN’ini girip yeniden deneyin (yeni numarada PIN’i siz belirlersiniz)' }, 400);
@@ -1666,14 +1679,8 @@ export default {
       if (wabaId) {
         const ra = await fetch(G2 + wabaId + '/subscribed_apps', { method: 'POST', headers: yetki });
         if (!ra.ok) { const ja = await ra.json().catch(() => ({})); uyarilar.push('Gelen mesaj aboneliği açılamadı: ' + ((ja.error && ja.error.message) || ra.status)); }
-        if (sablon) {
-          const rs = await fetch(G2 + wabaId + '/message_templates?fields=name,status,category,language&name=' + encodeURIComponent(sablon), { headers: yetki });
-          const js = await rs.json().catch(() => ({})), t = ((js && js.data) || []).find(x => x.name === sablon && (x.language || '').toLowerCase().startsWith(sablonDil.toLowerCase().slice(0, 2)));
-          if (!rs.ok) uyarilar.push('Şablon denetlenemedi: ' + ((js.error && js.error.message) || rs.status));
-          else if (!t) uyarilar.push('“' + sablon + '” şablonu bu hesapta (' + sablonDil + ') bulunamadı');
-          else if (t.status !== 'APPROVED') uyarilar.push('“' + sablon + '” şablonu henüz onaylı değil (' + t.status + ')');
-          else if (t.category !== 'UTILITY') uyarilar.push('“' + sablon + '” şablonu ' + t.category + ' sınıfında; hizmet (UTILITY) sınıfı daha ucuzdur');
-        }
+        if (sablon) { const u = await sablonDenetle(sablon, 'UTILITY', 'Şablon'); if (u) uyarilar.push(u); }
+        if (sablonPaz) { const u = await sablonDenetle(sablonPaz, 'MARKETING', 'Pazarlama şablonu'); if (u) uyarilar.push(u); }
       } else uyarilar.push('WhatsApp hesap kimliği (WABA ID) girilmedi: gelen mesaj aboneliği ve şablon denetlenmedi');
       if (h && h.phoneId !== phoneId) await env.LINK.delete('hatno:' + h.phoneId);
       // kursa özel webhook doğrulama belirteci (kursun kendi Meta uygulamasında girilir; ortak belirteç paylaşılmaz)
@@ -1682,7 +1689,7 @@ export default {
       await env.LINK.put('hat:' + kursId, JSON.stringify(kayit));
       await env.LINK.put('hatno:' + phoneId, kursId);
       if (!h || h.dog !== dog) await env.LINK.put('hatdog:' + dog, kursId);
-      return cevap({ ok: true, bagli: true, no: kayit.no, ad: kayit.ad, kalite: j.quality_rating || '', sablon: kayit.sablon || '', gizli: !!kayit.appSecret, uyarilar, webhook: { adres: new URL(req.url).origin + '/webhook', belirtec: dog } });
+      return cevap({ ok: true, bagli: true, no: kayit.no, ad: kayit.ad, kalite: j.quality_rating || '', sablon: kayit.sablon || '', sablonPazarlama: kayit.sablonPazarlama || '', gizli: !!kayit.appSecret, uyarilar, webhook: { adres: new URL(req.url).origin + '/webhook', belirtec: dog } });
     }
     // Meta webhook doğrulaması (abonelik kurulurken bir kez)
     if (yol === 'webhook' && req.method === 'GET') {
