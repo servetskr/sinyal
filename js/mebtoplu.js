@@ -453,6 +453,8 @@ export function programIsleri(idler) {
     if (!izin(eg) && !eg.ad) return hatalar.push([id, baslik, 'Öğretmen yok']);
     const sim = d.tur === 'simulator';
     if (!sim && !ar.plaka) return hatalar.push([id, baslik, 'Araç yok']);
+    // DIR-025: simülatör dersi sicil numarasız gönderilmez (MEBBİS 'Cihazın Sicil Numarası' ister); birden çok cihazda dersin cihazı seçilmiş olmalı
+    if (sim && !simulatorSicil(d)) return hatalar.push([id, baslik, (S.simulatorler || []).some(x => x && x.sicilNo) ? 'Birden çok simülatör var; planda derse dokunup simülatörünü seçin' : 'Simülatör sicil numarası yok: Ekip ve araçlar › Simülatörler']);
     if (!/^\d{2}:00/.test(d.saat || '')) return hatalar.push([id, baslik, `Ders saati ${d.saat}: MEBBİS’te dersler tam saatte başlar`]);
     l.push({ id, tur: 'program', baslik, tc: k.tc, donem: g.donem, grupNo: g.grupNo, subeNo: subeNo(g), tarih: trT(d.tarih), saat: d.saat.slice(0, 5),
       yer: sim ? 'Simülatör' : 'Akan Trafik', plaka: sim ? '' : ar.plaka.replace(/\s/g, ''), simulator: sim ? simulatorSicil(d) : '', izinNo: izin(eg), personelAd: eg.ad || '', egitimTuru: egitimTuru(k, d) });
