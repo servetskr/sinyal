@@ -479,7 +479,7 @@ export function dersBitisi(k) {
   if (!hedef) return { tarih: null, gerekce: 'Bu sınıfta direksiyon dersi yok', yok: true };
   if (sira <= 0) tarih = (l[0] && l[0].tarih) || k.kayit || null; else if (l.length >= sira) tarih = l[sira - 1].tarih; else gerekce = `Program tamamlanmadı: ${onceden + l.length}/${hedef} ders`;
   // kaldıktan sonra: son başarısız sınavdan sonra telafi dersi
-  const sonKalma = sinavGecmisi(k, 'Direksiyon').filter(x => x.sonuc === 'Kaldı' || x.sonuc === 'Girmedi').pop();
+  const sonKalma = sinavGecmisi(k, 'Direksiyon').filter(x => x.sonuc === 'Kaldı').pop();  // Girmedi sonrası telafi yalnız uyarı (SNV-096, M08)
   if (tarih && sonKalma) { const tn = KURAL_ARALIK.telafiSaat ? kuralAyar('telafiSaat') : 2, sonra = l.filter(d => d.tarih > sonKalma.tarih);
     if (sonra.length >= tn) tarih = [tarih, sonra[tn - 1].tarih].sort().pop(); else { gerekce = `Kaldıktan sonra ${tn} saat telafi dersi gerekli: ${sonra.length}/${tn}`; tarih = null; } }
   return { tarih, gerekce, tamam: !!tarih && tarih <= iso(new Date()) };

@@ -5,7 +5,7 @@
 // 'uyari', 'bilgi'. Dizinin üstünde ek alanlar: kural (kimlik), kursiyer (id), kursiyerler (birden çok kişiye ait oturum bulgusunda kimlik listesi, ör. Y04), kisa (öğrenci dosyasında ad olmadan başlık), yalnizDosya, eylem.
 // DOM yok; yalnız veri.js'e bağlı (Node'da denenebilir). Bugün: veri.js BUGUN / gun().
 // Yeni kurallar ilk sürümde yalnız "uyarı"dır; Eyüp Bey teyit edince engele çevrilebilir (belgeler/eksikler/eyup-sorular.md).
-import { dersBitisi, hakDurumu, oturum, kursiyerDersleri, S, gun, fark, aracUygun, belgeliMi, dersSayaci, kayitDondurmaMi, izinDurumu, mebIsGunuIleri, haftalikSinir, haftaDers, ustaYetkili, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
+import { sinavGecmisi, dersBitisi, hakDurumu, oturum, kursiyerDersleri, S, gun, fark, aracUygun, belgeliMi, dersSayaci, kayitDondurmaMi, izinDurumu, mebIsGunuIleri, haftalikSinir, haftaDers, ustaYetkili, tarihOku, iso, SINIFLAR, kursiyer, egitmen, tamAd, sb, sbDers, sbSinav, eksikEvrak, gecikenler, gerekliDireksiyon, geceGerekli, geceKisitli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, IKINCI_HAK_GUN, KURAL_ARALIK, kuralAyar, sinifEtiket, esinavsizBelgeli } from './veri.js?v=234';
 
 /* ---------- yardımcılar (ui.js'teki biçimlerle aynı; ui.js DOM'a bağlı olduğu için burada kopyası) ---------- */
 const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
@@ -64,8 +64,16 @@ const KURALLAR = [
   { id: 'M07', sira: 70, ad: 'e-Sınava yazılanın evrakı tam', dayanak: 'MTSK Yön. (kayıt evrakı)', kapsam: 'sinav', ciddiyet: 'engel',
     kontrol(l) { sbSinav(S.sinavlar).filter(s => s.tur === 'e-Sınav' && fark(s.tarih) >= 0).forEach(s => s.kursiyerler.map(kursiyer).filter(k => k && eksikEvrak(k).length).forEach(k => l.push(['yasak', `${tamAd(k)} e-sınava kayıtlı ama evrakı eksik`, eksikEvrak(k).map(x => x[1]).join(', '), '#/kursiyer/' + k.id]))); } },
   // uygulama sınavında kalan: tekrar sınavdan önce en az 2 ek direksiyon dersi (yapılmış) gerekir
-  { id: 'M08', sira: 80, ad: 'Kaldıktan sonra ek ders (telafi) yapılmadan tekrar sınav yok', dayanak: 'MTSK Yön. md.15', kapsam: 'kursiyer', ciddiyet: 'uyari', ayar: 'telafiSaat',
-    kontrol(l) { sb(S.kursiyerler).filter(k => k.dsinav && k.dsinav.sonuc === 'Kaldı' && !k.dsinav.girmedi && k.dsinavPlan && kursiyerDersleri(k.id).filter(d => d.durum === 'Yapıldı' && d.tarih > k.dsinav.tarih).length < kuralAyar('telafiSaat')).forEach(k => l.push(['uyari', `${tamAd(k)} tekrar uygulama sınavına yazıldı ama kaldıktan sonra ${kuralAyar('telafiSaat')} ek ders tamamlanmadı`, `Sınavdan önce en az ${kuralAyar('telafiSaat')} saat ek direksiyon dersi yapılmalı.`, '#/kursiyer/' + k.id])); } },
+  // SNV-003: kaldıktan sonra yeni sınavdan önce en az telafiSaat saat "Başarısız Aday Eğitimi" (MTSK Yön. md.15, Y 15/1); yalnız yazılı olduğu gelecek oturuma göre,
+  // planlı ders sayılır ama "planlı, henüz yapılmadı" diye ayrılır. SNV-096: 'Girmedi' sonrası da uyarı (Y 15/1 yalnız başarısızı sayar; MEBBİS girmediyi 'Başarısız' yazıyor)
+  { id: 'M08', sira: 80, ad: 'Kaldıktan sonra 2 saat eğitim (sınav gününden önce)', dayanak: 'MTSK Yön. md.15; Y 15/1 Başarısız Aday Eğitimi', kapsam: 'kursiyer', ciddiyet: 'uyari', ayar: 'telafiSaat', bugun: true,
+    kontrol(l) { const tn = kuralAyar('telafiSaat');
+      sbSinav(S.sinavlar).filter(s => s.tur === 'Direksiyon' && fark(s.tarih) >= 0).forEach(s => (s.kursiyerler || []).map(kursiyer).filter(Boolean).forEach(k => { if ((s.sonuc || {})[k.id]) return;
+        const t = telafiDurumu(k, s.tarih); if (!t.gerekli || t.yapildi >= tn) return;
+        const ne = t.girmedi ? 'girmediği' : 'kaldığı', kisa = `${tarih(s.tarih)} sınavından önce Başarısız Aday Eğitimi ${t.yapildi}/${tn}${t.planli ? ` (${t.planli} planlı, henüz yapılmadı)` : ''}`;
+        l.push(bul('uyari', `${tamAd(k)} · ${kisa}`, `${tarih(t.sonKalma.tarih)} sınavında ${ne} için yeni sınavdan önce en az ${tn} saat “Başarısız Aday Eğitimi” girilmeli (MTSK Yön. md.15)${t.girmedi ? '; girmedi sonucu yönetmelikte sayılmıyor ama MEBBİS “Başarısız” yazıyor, uyarı olarak' : ''}. ${t.eksik ? t.eksik + ' saat daha planlayın.' : 'Planlı dersler sınavdan önce yapılmalı.'}${t.mebSayi != null ? ` MEBBİS ders tablosunda ${t.mebSayi} saat.` : ''}`, '#/kursiyer/' + k.id, { kural: 'M08', kursiyer: k.id, kisa }));
+      })); },
+  },
   { id: 'M09', sira: 90, ad: 'Tekrar sınav öncesi bekleme', dayanak: 'Kurs ayarı (mevzuatta sabit gün yok)', kapsam: 'kursiyer', ciddiyet: 'uyari', ayar: 'tekrarBekleme',
     kontrol(l, K) { sb(S.kursiyerler).filter(k => k.dsinav && k.dsinav.sonuc === 'Kaldı' && !k.dsinav.girmedi && k.dsinavPlan && (tarihOku(k.dsinavPlan) - tarihOku(k.dsinav.tarih)) / 864e5 < K.tekrarBekleme).forEach(k => l.push(bul('uyari', `${tamAd(k)} tekrar sınavı bekleme süresinden önce`, `Kaldıktan sonra en az ${K.tekrarBekleme} gün (kurs ayarı).`, '#/sinavlar', { kursiyer: k.id }))); } },
   // Grup başlama tarihinden itibaren son e-sınav hakkı için randevu alma süresi 90 günü geçemez (MTSK md.15/1, ilk cümle): grup başlangıcı + 90 gün = son e-sınav randevusu.
@@ -316,6 +324,16 @@ export function ilceTakvimi() {
     const l = [...kodlar.values()].sort((a, b) => a.tarih.localeCompare(b.tarih)); l.forEach(x => { x.kursiyerler = kursOt.filter(s => x.gunler.includes(s.tarih)).flatMap(s => s.kursiyerler || []); delete x.gunler; }); return l; }
   const gunler = new Map(); kursOt.forEach(s => { const g = gunler.get(s.tarih) || { kod: s.tarih, tarih: s.tarih, kursiyerler: [] }; g.kursiyerler.push(...(s.kursiyerler || [])); gunler.set(s.tarih, g); });
   return Object.assign([...gunler.values()].sort((a, b) => a.tarih.localeCompare(b.tarih)), { kurs: true });
+}
+// SNV-059: kaldıktan sonra sınav gününe kadar telafi (Başarısız Aday Eğitimi): yapılan ve planlı ayrı; MEBBİS ders tablosu varsa onun sayısı da.
+// Girmedi sonrası (SNV-096) gerekli sayılır ama girmedi işaretiyle (yalnız uyarı)
+export function telafiDurumu(k, sinavTarihi) {
+  const g = sinavGecmisi(k, 'Direksiyon').filter(x => (x.sonuc === 'Kaldı' || x.sonuc === 'Girmedi') && (!sinavTarihi || x.tarih < sinavTarihi)), son = g[g.length - 1];
+  if (!son) return { gerekli: false };
+  const tn = kuralAyar('telafiSaat'), l = kursiyerDersleri(k.id).filter(d => d.tarih > son.tarih && (!sinavTarihi || d.tarih < sinavTarihi) && !['İptal', 'Gelmedi'].includes(d.durum));
+  const yapildi = l.filter(d => d.durum === 'Yapıldı').length, planli = l.length - yapildi;
+  const mebL = ((k.meb || {}).dersler || []).filter(d => /başarısız/i.test(d.egitimTuru || d.tur || '') && (d.tarih || '') > son.tarih), mebSayi = (k.meb || {}).dersler ? mebL.length : null;
+  return { gerekli: true, girmedi: son.sonuc === 'Girmedi', yapildi, planli, mebSayi, eksik: Math.max(0, tn - (yapildi + planli)), sonKalma: son };
 }
 // SNV-027: sınava uygunluk (tek çekirdek; sınava yazan her yol bunu kullanır). Engeller sırayla: e-sınav, hak, program, MEBBİS son giriş, telafi, başka oturum.
 // Teyit: derslerin son giriş gününe (sınavdan sinavBildirimIsGunu iş günü önce) kadar bitmesi Haller kursunun düzeni; yönetmelikte açıkça yazmıyor.
