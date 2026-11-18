@@ -74,10 +74,22 @@ const sertifikaMetni = k => { const b = tabanSinif(k.sinif), oto = /-O$/.test(k.
 const mebGrup = k => { const g = GR.kursiyerGrubu(k); return g && GR.mebGrubuMu(g) ? g : null; };
 const subeNo = g => GR.SUBELER.indexOf(g.sube) + 1;
 const SINAV_SAATLERI = ['08:30', '09:15', '10:00', '10:45', '11:30', '13:00', '13:45', '14:30', '15:15', '16:00'];   // 40 dk + 5 dk, öğle arası 12:15
+// MEBBİS 03004 eğitim türleri: 1 Normal Eğitim · 2 Telafi Eğitim(Ön Sınav) · 3 2.Direksiyon Eğitimi · 4 Başarısız Aday Eğitimi.
+// 2. direksiyon aşamasına geçen adayın (aday dosyasından k.meb.ikinciDireksiyon) o tarihten sonraki dersleri "2.Direksiyon Eğitimi" türüyle yazılır.
 function egitimTuru(k, d) {
+  const ikinci = (k.meb && k.meb.ikinciDireksiyon) || '';
+  if (ikinci && d.tarih >= ikinci) return '2.Direksiyon Eğitimi';
   const sonKalma = (k.dsinav && k.dsinav.sonuc === 'Kaldı' && k.dsinav.tarih) || '';
   return sonKalma && d.tarih > sonKalma ? 'Başarısız Aday Eğitimi' : 'Normal Eğitim';
 }
+// Simülatör dersinde MEBBİS'e gidecek kimlik: cihazın MEBBİS "Cihazın Sicil Numarası" (skt01002 simülatör listesi "Seri Numarası", 13 hane).
+// S.simulatorler MEBBİS'ten araç okunurken doldurulur. Dersin kendi simülatörü (d.simulator) yoksa hizmetteki tek simülatör kullanılır;
+// birden çok simülatör varsa ve ders hangisi olduğunu söylemiyorsa sicil no boş gider ve Yardımcı yalnız MEBBİS'te tek simülatör varsa onu seçer.
+const simulatorSicil = d => {
+  const l = (S.simulatorler || []).filter(x => x && x.sicilNo);
+  const x = (d.simulator && l.find(y => y.id === d.simulator || y.sicilNo === d.simulator)) || (() => { const h = l.filter(y => !y.durum || /hizmette/i.test(nrm(y.durum))); return h.length === 1 ? h[0] : null; })();
+  return x ? x.sicilNo : '';
+};
 const dersTuru = konu => { const n = nrm(konu); return /ilk ?yard|ilkyard/.test(n) ? 'İlkyardım' : /arac|motor|teknik/.test(n) ? 'Araç Tekniği' : /adab|adap/.test(n) ? 'Trafik Adabı' : 'Trafik ve Çevre'; };
 const ogretmenOf = id => (S.ogretmenler || []).find(o => o.id === id) || egitmen(id) || {};
 const is_ = (tur, id, baslik, meta, son, neden, ref) => ({ id, tur, baslik, meta, son, neden, ref, alanlar: [], bitti: false });
@@ -406,7 +418,7 @@ export function programIsleri(idler) {
     if (!sim && !ar.plaka) return hatalar.push([id, baslik, 'Araç yok']);
     if (!/^\d{2}:00/.test(d.saat || '')) return hatalar.push([id, baslik, `Ders saati ${d.saat}: MEBBİS’te dersler tam saatte başlar`]);
     l.push({ id, tur: 'program', baslik, tc: k.tc, donem: g.donem, grupNo: g.grupNo, subeNo: subeNo(g), tarih: trT(d.tarih), saat: d.saat.slice(0, 5),
-      yer: sim ? 'Simülatör' : 'Akan Trafik', plaka: sim ? '' : ar.plaka.replace(/\s/g, ''), simulator: sim ? (ar.sasiNo || '') : '', izinNo: izin(eg), personelAd: eg.ad || '', egitimTuru: egitimTuru(k, d) });
+      yer: sim ? 'Simülatör' : 'Akan Trafik', plaka: sim ? '' : ar.plaka.replace(/\s/g, ''), simulator: sim ? simulatorSicil(d) : '', izinNo: izin(eg), personelAd: eg.ad || '', egitimTuru: egitimTuru(k, d) });
   });
   return { l, hatalar };
 }
@@ -614,7 +626,21 @@ function araclariIsle(v) {
       if (i.durum >= 0) a.mebDurum = r[i.durum];
     });
   }
-  return { guncel, yeni, simulator: v.simulator ? v.simulator.satirlar.length : 0 };
+  // Simülatörler (dgSimulatorBilgileri: Seri Numarası · Alınma Tarihi · Cihaz Durumu · Kurum Onay · MEM Onay). "Seri Numarası" = MEBBİS sicil no;
+  // 03004 simülatör dersinde cmbSimulatorSeriNo seçeneğinin değeri budur. Liste MEBBİS'teki hâliyle yenilenir (eski kayıtların kimliği korunur).
+  let simulator = 0;
+  if (v.simulator && v.simulator.satirlar) {
+    const b = v.simulator.baslik, i = { no: sutun(b, 'serinumarasi', 'sicil', 'serino'), alinma: sutun(b, 'alinma'), durum: sutun(b, 'cihazdurumu', /^durumu?$/), kurum: sutun(b, 'kurumonay'), mem: sutun(b, 'memonay') };
+    const eski = S.simulatorler || [], yeniL = [];
+    v.simulator.satirlar.forEach(r => {
+      const no = String(r[i.no] || '').replace(/\s/g, ''); if (!/^\d{4,20}$/.test(no)) return;
+      const o = eski.find(x => x.sicilNo === no) || { id: 'sim-' + no };
+      yeniL.push({ ...o, sicilNo: no, alinma: tarihIso(r[i.alinma]) || o.alinma || '', durum: i.durum >= 0 ? r[i.durum] || '' : o.durum || '', kurumOnay: i.kurum >= 0 ? r[i.kurum] || '' : '', memOnay: i.mem >= 0 ? r[i.mem] || '' : '', kaynak: 'MEBBİS', okuma: gun(0) });
+    });
+    if (yeniL.length || !eski.length) S.simulatorler = yeniL;
+    simulator = yeniL.length;
+  }
+  return { guncel, yeni, simulator };
 }
 // Aday dosyası: grup/şube eşleşir (grup kartı yoksa açılır), haklar ve son tarihler kursiyere yazılır
 function dosyalariIsle(l) {
@@ -641,8 +667,11 @@ function dosyalariIsle(l) {
 
 function sinavTablosu(v) {
   const sat = [['TC Kimlik No', 'Sınav Tarihi', 'Sonuç', 'Puan']];
-  (v.uygulama || []).forEach(t => { const b = t.baslik, i = { tc: sutun(b, 'kimlik'), t: sutun(b, 'sinavtarihi'), p: sutun(b, 'puandurumu'), s: sutun(b, 'sinavsonucu') }; t.satirlar.forEach(r => sat.push([r[i.tc], r[i.t], /girmedi/i.test(r[i.p]) ? 'Girmedi' : r[i.s], ''])); });
-  (v.esinav || []).forEach(t => { const b = t.baslik, i = { tc: sutun(b, 'kimlik'), t: sutun(b, 'sinavtarihi'), d: sutun(b, 'esinavdurum'), p: sutun(b, /^esinav$/) }; t.satirlar.forEach(r => sat.push([r[i.tc], r[i.t], r[i.d], r[i.p]])); });
+  // Sütunlar iki kaynaktan gelebilir (Yardımcı 1.13.0 "Excel'e Aktar", eskisi ekrandaki tablo):
+  // uygulama Excel: TC_KIMLIK_NO · SINAV_TARIHI · PUAN_DURUM · SINAV_SONUCU (PUAN hep -1, kullanılmaz) — ekran: Puan Durumu · Sınav Sonucu
+  // e-sınav Excel: TEK_SINAV (puan) · SINAV_DURUM (Girmedi) · TEK_SINAV_DURUM (Geçti/Kaldı) — ekran: e-Sınav · Sınav Durum · e-Sınav Durum
+  (v.uygulama || []).forEach(t => { const b = t.baslik, i = { tc: sutun(b, 'kimlik'), t: sutun(b, 'sinavtarihi'), p: sutun(b, 'puandurum'), s: sutun(b, 'sinavsonucu') }; t.satirlar.forEach(r => sat.push([r[i.tc], r[i.t], /girmedi/i.test(r[i.p] || '') ? 'Girmedi' : r[i.s], ''])); });
+  (v.esinav || []).forEach(t => { const b = t.baslik, i = { tc: sutun(b, 'kimlik'), t: sutun(b, 'sinavtarihi'), d: sutun(b, 'esinavdurum', 'teksinavdurum'), g: sutun(b, /^sinavdurumu?$/), p: sutun(b, /^esinav$/, /^teksinav$/) }; t.satirlar.forEach(r => sat.push([r[i.tc], r[i.t], /girmedi/i.test(r[i.g] || '') && !r[i.d] ? 'Girmedi' : r[i.d], r[i.p]])); });
   return sat;
 }
 function ozetGoster(o, yazilan) {

@@ -1,5 +1,5 @@
 {
- "surum": "2026.11.16-1",
+ "surum": "2026.11.18-1",
  "enAzYardimci": "1.12.0",
  "aciklama": "mdSinyal MEBBİS Yardımcısı ekran haritası. Yalnız veri: ekran yolları, alan kimlikleri, seçenek değerleri.",
  "ekran": {
@@ -173,6 +173,14 @@
     "cmbSinavTuru"
    ]
   },
+  "skt04001": {
+   "ad": "SKT04001 Teorik Ders Programı Görüntüleme",
+   "yol": "/SKT/skt04001.aspx",
+   "zorunlu": [
+    "cmbDonemi",
+    "btnListeleGrid"
+   ]
+  },
   "ook00001": {
    "ad": "OOK00001",
    "yol": "/Ookgm/ook00001.aspx",
@@ -193,12 +201,14 @@
   "durumKurumBekliyor": "0",
   "durumKurumOnayli": "1",
   "durumTumu": "4",
-  "ogrenciTumu": "0",
   "turArac": "1",
   "turSimulator": "2",
   "sinavUygulama": "2",
   "sinavEsinav": "3",
-  "sonDurumlar": "5,6,11"
+  "sonDurumlar": "5,6,11",
+  "ogrenciBasvuru": "0",
+  "tumDonemler": "1",
+  "personelGorevde": "1"
  },
  "metin": {
   "izinNo": "İzin No:",

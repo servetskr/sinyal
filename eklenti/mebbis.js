@@ -88,7 +88,8 @@
   // MEBBİS'in sonuç mesajı: yalnız mesaj kutularındaki yazı (sayfadaki sütun başlıkları ya da menü yazıları başarı/hata sanılmasın)
   function mesajMetni() { return [...document.querySelectorAll('.alert, [role=alert], [role=status], .validation-summary-errors, .field-validation-error, [id*="mesaj" i], [id*="lblHata" i], [id*="lblBilgi" i], [class*="mesaj" i], [class*="message" i], .ui-dialog-content, .swal2-html-container, .modal-body, .toast')].filter(gorunur).map(x => x.innerText.trim()).filter(Boolean).join('\n').slice(0, 2000); }
   // MEBBİS menüsünde hedef ekranı bulma: yalnız gezinme bağlantıları; silme, kaydetme, çıkış gibi düğmelere asla basılmaz
-  const TEHLIKE = /sil|iptal|çıkış|kapat|onay|kaydet|gönder|güncelle|vazgeç|reddet|yazdır|indir|excel|başvur|oluştur|aktar|tamamla|sorgula|ara$/i;
+  // 1.13.0: "Listede Görünmeyen Adaylar İçin Tıklayınız" (btnAdayEkle, 17 Kas'ta kayıt yaptı), arşiv, karekod, şifre, hata bildirimi de asla
+  const TEHLIKE = /sil|iptal|çıkış|kapat|onay|kaydet|gönder|güncelle|vazgeç|reddet|yazdır|indir|excel|başvur|oluştur|aktar|tamamla|sorgula|ara$|tıklay|görünmeyen|arşiv|karekod|şifre|bildir|değiştir/i;
   const elMetin = el => String(el.innerText || el.textContent || el.value || el.title || '').replace(/\s+/g, ' ').trim();
   // Yalnız menüdeki gezinme bağlantıları (düğmeler ve form içindeki bağlantılar asla); "ekle" yalnız menü içinde kabul edilir
   const MENU_KAP = 'nav, [role=menu], [role=menubar], [role=tree], ul, .menu, [id*="menu" i], [class*="menu" i], [id*="tree" i]';
