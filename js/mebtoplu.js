@@ -724,6 +724,8 @@ function personeliIsle(t) {
     if (r.izinNo) { if (!eg.calismaIzinNo) { eg.calismaIzinNo = r.izinNo; guncel++; } else if (String(eg.calismaIzinNo) !== r.izinNo) { eg.meb.izinFark = r.izinNo; farklar.push(`${eg.ad}: izin no mdSinyal’de ${eg.calismaIzinNo}, MEBBİS’te ${r.izinNo}`); } else delete eg.meb.izinFark; }
     if (r.tc) { if (!eg.tc) eg.tc = r.tc; else if (eg.tc !== r.tc) { eg.meb.tcFark = true; farklar.push(`${eg.ad}: TC mdSinyal’dekinden farklı`); } else delete eg.meb.tcFark; }
     if (r.izinBit) eg.mebIzinBitis = r.izinBit;   // geriye uyum (UYG-009 izin kartı bunu okur)
+    // PER-010: MEBBİS'te istenen çalışma izni onaylandı (yeni bitiş isteğin eskisinden ileri): istek izi kalkar
+    if (eg.mebIzinIstek && gorevde && r.izinBit && r.izinBit > (eg.mebIzinIstek.eskiBit || '')) delete eg.mebIzinIstek;
     if (!gorevde && r.ayrilma) { eg.meb.ayrildi = r.ayrilma; if (S.egitmenler.includes(eg)) ayrilan.push(`${eg.ad} (${tarih(r.ayrilma)})`); } else delete eg.meb.ayrildi;
     delete eg.mebGorevdeDegil;
   });

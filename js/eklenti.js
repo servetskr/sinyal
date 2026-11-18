@@ -114,6 +114,35 @@ export function yardimciyaGonder(idler, gidince) {
   import('./mebtoplu.js?v=234').then(m => m.kuralBilgi(isler.map(x => x.id), gonder, { dugme: 'Ekranda doldur' }), () => gonder());
 }
 
+// PER-010: personel çalışma izni isteği (OOK13002 'Çalışma İzni Ekle'). Yalnız "Ekranda doldur" yolu: Yardımcı formu karttaki bilgilerle doldurur;
+// güvenlik kodunu yazmak, 'Bilgileri Getir', fotoğraf seçmek ve Kaydet kullanıcıdadır. Statü/görev/branş seçimi sayfayı yeniler: Yardımcı'da
+// 'Tekrar doldur' kalan alanları yazar. Başlama ve bitiş tarihlerini il/ilçe MEM girer. Toplu motor (aktarım merkezi) bu işi almaz.
+export const MEB_STATU = [['1', 'Asıl Görevli Aylık Ücretli Eğitim Personeli'], ['0', 'Ders Ücretli Eğitim Personeli'], ['2', 'Diğer Personel']];
+export function izinIsi(eg) {
+  const st = MEB_STATU.find(x => x[0] === String(eg.mebStatu)) || null, ders = st && st[0] === '0', hs = +eg.haftalikSinir || +((eg.meb || {}).haftaSaat) || 40;
+  const al = (etiket, deger, es) => alan(etiket, deger, es);
+  return { id: 'izin-' + eg.id, tur: 'izin', ref: { egitmen: eg.id }, bitti: false, meta: { ad: eg.ad, egitmen: eg.id, tarih: gun(0), detay: 'Çalışma izni isteği' }, son: gun(3), neden: 'Çalışma izni', baslik: eg.ad, alanlar: [
+    al('Tc Kimlik No', eg.tc, ['idtckimlikno', 'tckimlikno', 'tc']), al('Seri No', eg.kimlikSeri, ['txtserino', 'serino']), al('Doğum Tarihi', tr(eg.dogumTarihi), ['txtdogumtarihi', 'dogumtarihigunayyil', 'dogumtarihi']),
+    al('Cep Telefonu', cep10(eg.tel), ['txttel', 'ceptelefonu']), al('e-Posta', eg.eposta, ['txteposta', 'eposta']),
+    al('Statüsü', st && st[1], ['cmbstatusu', 'statusu']), al('Görevi', 'Usta Öğretici', ['cmbgorev', 'gorevi']),
+    ...(st && !ders ? [al('Brüt Ücret (Aylık)', eg.maas ? Math.round(eg.maas) : null, ['idbrutucret', 'brutucretaylik'])] : []),
+    ...(st ? [al('Maaş Karşılığı Ders Sayısı', ders ? 0 : hs, ['idmkgderssayisi', 'maaskarsiligiderssayisi']), al('Ders Ücreti Karşılığı Ders Sayısı', ders ? hs : null, ['iddkggirecegiderssayisi', 'dersucretikarsiligiderssayisi'])] : []),
+    al('Branş 1', 'Direksiyon', ['cmbbrans1', 'brans1']),
+  ].filter(Boolean) };
+}
+export function izinIstegiGonder(eg) {
+  if (!eklenti.var) return kurulumPenceresi();
+  { const v = String(eklenti.surum || '0').split('.').map(Number); if (v[0] < 1 || (v[0] === 1 && (v[1] || 0) < 16)) return bildir('Çalışma izni formunu doldurmak için Yardımcı 1.16.0 gerekir; MEB işlemleri › MEBBİS Yardımcısı’ndan güncelleyin', 'uyari'); }
+  if (!MK.onaylayabilir()) return bildir('MEBBİS işini kurs müdürü ya da ön büro başlatır', 'uyari');
+  if (!MK.kabulDenetle(() => izinIstegiGonder(eg))) return;
+  if (cokSube() && !seciliSube()) return bildir('Önce üstten şube seçin; her şubenin işleri kendi MEBBİS hesabına girilir', 'uyari');
+  const is = izinIsi(eg);
+  sayfadan('kuyruk', { isler: [is], kurs: S.kurs.ad, oto: true });
+  S.mebDurum = S.mebDurum || {}; S.mebDurum[is.id] = { durum: 'gonderildi', zaman: Date.now(), is: 'ekranda', tur: 'izin', baslik: MK.maskele(eg.ad).slice(0, 80) };
+  eg.mebIzinIstek = { tarih: gun(0), eskiBit: eg.mebIzinBitis || (eg.meb || {}).izinBit || '' }; islem('MEBBİS’te çalışma izni isteği başlattı', eg.ad); kaydet(); yenileFn();
+  bildir('MEBBİS sekmesi açılıyor. “Çalışma İzni Ekle” ekranında Yardımcı formu doldurur; güvenlik kodunu ve fotoğrafı siz girip Kaydet’e basarsınız.');
+}
+
 // MEBBİS'ten veri çek: Yardımcı MEBBİS sekmesine geçer, ilgili listeyi kendisi açar ve mdSinyal'e gönderir
 const CEK_AD = { grup: 'dönem gruplarını', kursiyer: 'kursiyer listesini', sinav: 'sınav sonuçlarını', mutabakat: 'kursiyer listesini karşılaştırma için', taksit: 'ödemeleri', ogretmen: 'usta öğretici listesini', arac: 'araç listesini' };
 export function mebbistenCek(amac) {
@@ -147,6 +176,7 @@ function bitenleriIsle(l) {
     if (b.tur === 'program') { const d = S.dersler.find(x => x.id === r.ders); if (d && !d.meb) { d.meb = true; delete d.mebDegisti; n++; } }
     if (b.tur === 'sinav') { const s = S.sinavlar.find(x => x.id === r.sinav); if (s) { s.mebKisi = [...new Set([...(s.mebKisi || []), r.kursiyer])]; if ((s.kursiyerler || []).every(x => s.mebKisi.includes(x))) s.mebBildirim = true; n++; } }
     if (b.tur === 'odeme') { const h = (S.hareket || []).find(x => x.id === r.hareket); if (h && !h.meb) { h.meb = gun(0); n++; } }
+    if (b.tur === 'izin') { const eg = egitmen(r.egitmen); if (eg) { eg.mebIzinIstek = { ...(eg.mebIzinIstek || {}), girildi: gun(0) }; n++; } }
   });
   // Ekranda doldur yolunda Kaydet'e kullanıcı basar: iz ve işlem kaydı "elle girildi (Yardımcı formu doldurdu)" olarak düşer
   S.mebDurum = S.mebDurum || {};
