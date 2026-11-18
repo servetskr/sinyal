@@ -2,7 +2,7 @@
 // mdSinyal Yönetim panelinin “Hesaplar” bölümünde açılır (yalnız Servet; ortak görmez).
 // Yetki Firebase güvenlik kurallarından değil, Google hesabından gelir: Firebase projesinin sahibi olan Google hesabıyla
 // bağlanılır, Google IAM izin verirse işlem yapılır. Sunucu, gizli anahtar yok; erişim belirteci yalnız bellekte durur (1 saat).
-import { e, ik, pencere, kapatPencere, bildir, tl, siteLink } from './ui.js?v=234';
+import { e, ik, pencere, kapatPencere, bildir, tl, siteLink, onaySor } from './ui.js?v=234';
 import { S, kaydet, islem, bulutKanca, ilSecenekleri } from './veri.js?v=234';
 import { ogrenciPanelMetni, WORKER } from './bulut.js?v=234';
 import { EMU } from './firebase-ayar.js?v=234';
@@ -509,7 +509,7 @@ function kursPenceresi(k) {
       p.querySelector('[data-p-hesaplar]').addEventListener('click', () => { kapatPencere(); alt = 'hesaplar'; suzgec = 'hepsi'; arama = x.ad; ciz(); });
       const ol = p.querySelector('[data-p-olustur]'); if (ol) ol.addEventListener('click', async () => { try { await googleIste(); } catch (y) { return islemHata(y); } hesapAcPenceresi({ kurs: k }); });
       p.querySelector('[data-p-kurs-sil]').addEventListener('click', () => kursSilPenceresi(k));
-      const du = p.querySelector('[data-p-durum]'); if (du) du.addEventListener('change', async () => { const v = du.value, eski = x.durum || 'etkin'; if (v !== 'etkin' && !confirm(`${x.ad} ${KURS_DURUM[v].toLocaleLowerCase('tr')} yapılsın mı? Kursun bütün kullanıcıları girişte durdurulur.`)) { du.value = eski; return; }
+      const du = p.querySelector('[data-p-durum]'); if (du) du.addEventListener('change', async () => { const v = du.value, eski = x.durum || 'etkin'; if (v !== 'etkin' && !(await onaySor('Kursun bütün kullanıcıları girişte durdurulur; açık oturumlar kapanır.', { baslik: `${x.ad} ${KURS_DURUM[v].toLocaleLowerCase('tr')} yapılsın mı?`, evet: KURS_DURUM[v], tehlike: true }))) { du.value = eski; return; }
         try { await googleIste(); await kursDurumYaz(k, v, eski); x.durum = v; bildir(`${x.ad}: ${KURS_DURUM[v]}`); kapatPencere(); ciz(); } catch (y) { du.value = eski; islemHata(y); } });
     },
   });

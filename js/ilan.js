@@ -1,7 +1,7 @@
 // Kurslar arası ilan panosu (DIG-037, karar SOR-052): satılık araç, ekipman, iş birliği… Kurs müdürü ilan verir, mdSinyal onaylayınca bütün kurslar görür.
 // Veri sunucuda (worker KV); kursun kimliği başka kurslara gösterilmez, iletişim bilgisi ilanda yazandır. Demo hesapta çalışmaz (örnek ilanlarla anlatılır).
 import { S, oturum, islem, kaydet } from './veri.js?v=234';
-import { e, ik, rozet, bos, pencere, kapatPencere, bildir, tarih, fotoKucult, ekranNotu } from './ui.js?v=234';
+import { e, ik, rozet, bos, pencere, kapatPencere, bildir, tarih, fotoKucult, ekranNotu, onaySor } from './ui.js?v=234';
 import * as BL from './bulut.js?v=234';
 import { yenile } from './app.js?v=234';
 
@@ -26,10 +26,10 @@ export function ilanlar() {
     ${benim.length ? `<h3 class="il-bas">İlanlarınız</h3><div class="izgara iz-3">${benim.map(kart).join('')}</div>` : ''}
     ${diger.length ? `<h3 class="il-bas">${ornek ? 'Örnek ilanlar' : 'Yayındaki ilanlar'}</h3><div class="izgara iz-3">${diger.map(kart).join('')}</div>` : !benim.length && st.liste ? `<div class="kart"><div class="kart-govde">${bos('Bu kategoride ilan yok', 'İlk ilanı siz verin.')}</div></div>` : ''}`,
     baglan(k) {
-      k.addEventListener('click', ev => {
+      k.addEventListener('click', async ev => {
         const c = ev.target.closest('[data-il-kat]'); if (c) { st.kat = c.dataset.ilKat; return yenile(); }
         if (ev.target.closest('[data-il-ver]')) return ilanVer();
-        const kd = ev.target.closest('[data-il-kaldir]'); if (kd && confirm('İlan yayından kaldırılsın mı?')) BL.ilanIstek('ilan/kaldir', { id: kd.dataset.ilKaldir }).then(() => { islem('İlanı kaldırdı', ''); kaydet(); bildir('İlan kaldırıldı'); st.liste = null; yukle(); }).catch(x => bildir(x.message, 'uyari'));
+        const kd = ev.target.closest('[data-il-kaldir]'); if (kd && await onaySor('İlan sitede ve ilan listesinde görünmez olur.', { baslik: 'İlan yayından kaldırılsın mı?', evet: 'Kaldır', tehlike: true })) BL.ilanIstek('ilan/kaldir', { id: kd.dataset.ilKaldir }).then(() => { islem('İlanı kaldırdı', ''); kaydet(); bildir('İlan kaldırıldı'); st.liste = null; yukle(); }).catch(x => bildir(x.message, 'uyari'));
       });
     } };
 }

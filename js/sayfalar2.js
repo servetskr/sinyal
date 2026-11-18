@@ -3,7 +3,7 @@ import { ulusalSinav, hakDurumu, ilSecenekleri, islemYetkili, ekranYetkili, YETK
 import * as HS from './hesap.js?v=234';
 import * as MZ from './mevzuat.js?v=234';
 import * as DN from './denetim.js?v=234';
-import { pencereSor, pinSor, apiGonder, alanHatalari, e, saatDe, saatE, tl, sayi, ik, rozet, asamaRozet, avatar, plaka, ilerleme, bos, pencere, kapatPencere, bildir, sekmeler, tarih, tarihUzun, goreli, cubukGrafik, halka, ayAdi, csvIndir, waAc, waSirali, tamTarih, apiAcik, isaret, ekranNotu, aracGorsel, olcumler, yonLevhasi, fotoKucult } from './ui.js?v=234';
+import { pencereSor, pinSor, apiGonder, alanHatalari, e, saatDe, saatE, tl, sayi, ik, rozet, asamaRozet, avatar, plaka, ilerleme, bos, pencere, kapatPencere, bildir, sekmeler, tarih, tarihUzun, goreli, cubukGrafik, halka, ayAdi, csvIndir, waAc, waSirali, tamTarih, apiAcik, isaret, ekranNotu, aracGorsel, olcumler, yonLevhasi, fotoKucult, onaySor } from './ui.js?v=234';
 import { yenile } from './app.js?v=234';
 import { AYAR_SEKMELERI, ayarBaglan, ustaDavet, kimlikKartlari, personelFotoKirp, personelOzeti, mebAracKur, mebAktar, mebCek, MEB_BILGI } from './sayfalar5.js?v=234';
 import * as MB from './mebmerkez.js?v=234';
@@ -571,7 +571,7 @@ function hareketDuzelt(h) {
       f.addEventListener('submit', ev => { ev.preventDefault(); const eski = h.aciklama + ' · ' + tl(h.tutar) + ' · ' + h.yontem; h.aciklama = f.a.value.trim() || h.aciklama; h.yontem = f.y.value; h.degistiren = oturum.kullanici ? oturum.kullanici.ad : ''; h.degisZamani = new Date().toISOString(); const hs0 = hesapOku(f, h.yontem); if (hs0.hesap) h.hesap = hs0.hesap; else delete h.hesap; if (!kursiyerli && !kapali) h.tutar = tutarOku(f.tutar.value) || h.tutar; islem('Kasa hareketini düzeltti', eski + ' → ' + h.aciklama + ' · ' + tl(h.tutar) + ' · ' + h.yontem); kaydet(); kapatPencere(); bildir('Hareket düzeltildi'); yenile(); });
       const ip = d.querySelector('[data-iptal]'); if (ip) ip.addEventListener('click', () => tahsilatIptal(h));
       d.querySelector('[data-kilit]').addEventListener('click', () => { if (h.kilit) { delete h.kilit; islem('Para kaydının kilidini açtı', h.aciklama + ' · ' + tl(h.tutar)); } else { h.kilit = { id: benimId(), ad: oturum.kullanici ? oturum.kullanici.ad : '', zaman: new Date().toISOString() }; islem('Para kaydını kilitledi', h.aciklama + ' · ' + tl(h.tutar)); } kaydet(); kapatPencere(); bildir(h.kilit ? 'Kayıt kilitlendi; öteki kullanıcılar değiştiremez' : 'Kilit açıldı'); yenile(); });
-      const sl = d.querySelector('[data-sil]'); if (sl) sl.addEventListener('click', () => { if (!confirm('Bu hareket silinsin mi? ' + h.aciklama + ' · ' + tl(h.tutar))) return; geriAlNoktasi(); S.hareket = S.hareket.filter(x => x !== h); islem('Kasa hareketini sildi', h.aciklama + ' · ' + tl(h.tutar)); kaydet(); kapatPencere(); bildir('Hareket silindi'); yenile(); });
+      const sl = d.querySelector('[data-sil]'); if (sl) sl.addEventListener('click', async () => { if (!(await onaySor(h.aciklama + ' · ' + tl(h.tutar), { baslik: 'Bu hareket silinsin mi?', evet: 'Sil', tehlike: true }))) return; geriAlNoktasi(); S.hareket = S.hareket.filter(x => x !== h); islem('Kasa hareketini sildi', h.aciklama + ' · ' + tl(h.tutar)); kaydet(); kapatPencere(); bildir('Hareket silindi'); yenile(); });
     },
   });
 }
@@ -1279,8 +1279,8 @@ function ibanPenceresi(h) {
         islem(yeni ? 'Banka hesabı ekledi' : 'Banka hesabını güncelledi', ad); kaydet(); kapatPencere(); bildir(yeni ? 'Hesap eklendi' : 'Hesap güncellendi'); yenile();
       });
       const sil = d.querySelector('[data-iban-sil]');
-      if (sil) sil.addEventListener('click', () => {
-        if (!confirm('“' + (h.ad || 'Hesap') + '” silinsin mi?')) return;
+      if (sil) sil.addEventListener('click', async () => {
+        if (!(await onaySor('“' + (h.ad || 'Hesap') + '” silinsin mi?', { baslik: 'Hesap silinsin mi?', evet: 'Sil', tehlike: true }))) return;
         const liste = ibanlar().filter(y => y.id !== h.id).map(x => ({ ...x }));
         if (liste.length && !liste.some(y => y.varsayilan)) liste[0].varsayilan = true;
         S.kurs.ibanlar = liste; S.kurs.iban = liste.length ? ibanVarsayilan().iban : '';
@@ -1589,7 +1589,7 @@ export function ayarlar(alt) {
         else if (u.dataset.diger) { const [id, alan] = u.dataset.diger.split(':'), l = digerUcretler().map(x => ({ ...x })), x = l.find(y => y.id === id); if (!x) return; x[alan] = alan === 'tutar' ? v : t.value.trim(); S.kurs.digerUcretler = l; }
         islem('Ücret kalemini değiştirdi'); kaydet(); bildir('Kaydedildi');
       });
-      k.addEventListener('click', ev => {
+      k.addEventListener('click', async ev => {
         { const ta = ev.target.closest('[data-tarife-ac]'); if (ta) return tarifeGoster(ta.dataset.tarifeAc); }
         if (ev.target.closest('[data-tarife-kaydet]')) { if (!mudurMu()) return bildir('Yalnız kurs müdürü', 'uyari'); const y = gun(0).slice(0, 4); S.kurs.tarifeArsiv = { ...(S.kurs.tarifeArsiv || {}), [y]: tarifeAnlik() }; islem('Ücret tarifesini kaydetti', y); kaydet(); bildir(y + ' tarifesi kaydedildi'); return yenile(); }
         { const td = ev.target.closest('[data-taban-destek]'); if (td) return import('./app.js?v=234').then(m => m.destekPenceresi(td.dataset.tabanDestek)); }  // PAR-069
@@ -1598,7 +1598,7 @@ export function ayarlar(alt) {
           else { S.kurs.sinifFarkOnay = { ...(S.kurs.sinifFarkOnay || {}), [k]: SINIFLAR[k].direksiyon + '/' + SINIF_VARSAYILAN[k].direksiyon }; islem('Sınıf direksiyon saatini onayladı (mevzuattan farklı)', k + ' · ' + SINIFLAR[k].direksiyon); bildir('Onaylandı; sizin ya da mevzuatın değeri değişirse yeniden sorulur'); }
           kaydet(); return yenile(); } }
         { const oa = ev.target.closest('[data-ok-anahtar], [data-ok-yenile]'); if (oa) {    // DIG-035
-          if (oa.matches('[data-ok-yenile]') && !confirm('Anahtar yenilensin mi? Sitedeki eski form çalışmaz; yeni kodu sitenize koymanız gerekir.')) return;
+          if (oa.matches('[data-ok-yenile]') && !(await onaySor('Sitedeki eski form çalışmaz; yeni kodu sitenize koymanız gerekir.', { baslik: 'Anahtar yenilensin mi?', evet: 'Yenile' }))) return;
           oa.disabled = true; BL.onKayitAnahtar(oa.matches('[data-ok-yenile]')).then(async a => { if (!a) a = await BL.onKayitAnahtar(true); const kod = onKayitKodu(a), y = k.querySelector('[data-ok-kod]');
             y.innerHTML = `<label style="font-size:13.5px;font-weight:700;color:var(--murekkep)">Sitenize yapıştırılacak kod</label><textarea class="girdi" rows="9" readonly style="font:12.5px/1.45 var(--mono);width:100%" data-ok-metin>${e(kod)}</textarea><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button type="button" class="dg dg-cizgi dg-kucuk" data-ok-kopyala>Kodu kopyala</button><button type="button" class="dg dg-hafif dg-kucuk" data-ok-yenile>Anahtarı yenile</button></div>`;
             islem(oa.matches('[data-ok-yenile]') ? 'Ön kayıt formu anahtarını yeniledi' : 'Ön kayıt formu kodunu aldı', ''); }).catch(x => bildir(x.message, 'uyari')).finally(() => { oa.disabled = false; }); return; }

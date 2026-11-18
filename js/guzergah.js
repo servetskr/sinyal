@@ -3,7 +3,7 @@
 // Aday sınavdan sonra deneyimini yazar; kurs müdürü onaylayınca diğer adaylar görür (adı "Elif Ö." gibi kısaltılır).
 // Veri S.kurs.guzergahlar içinde durur; böylece öğrenci ve öğretmen ekranlarına kendiliğinden gider. Onay bekleyen deneyim yalnız adayın kendi kaydındadır.
 import { S, kaydet, gun, islem, oturum, tamAd, kursiyer } from './veri.js?v=234';
-import { e, ik, tarih, pencere, kapatPencere, bildir } from './ui.js?v=234';
+import { e, ik, tarih, pencere, kapatPencere, bildir, onaySor } from './ui.js?v=234';
 
 const yenile = () => import('./app.js?v=234').then(m => m.yenile());
 export const guzergahlar = () => S.kurs.guzergahlar || [];
@@ -74,7 +74,7 @@ function duzenlePenceresi(g) {
         S.kurs.guzergahlar = l; islem(yeni ? 'Güzergâh ekledi' : 'Güzergâhı güncelledi', x.ad); kaydet(); kapatPencere(); bildir('Kaydedildi'); yenile();
       });
       const s = d.querySelector('[data-gz-sil]');
-      if (s) s.addEventListener('click', () => { if (!confirm('“' + g.ad + '” ve püf noktaları silinsin mi?')) return; S.kurs.guzergahlar = guzergahlar().filter(y => y.id !== g.id); islem('Güzergâhı sildi', g.ad); kaydet(); kapatPencere(); yenile(); });
+      if (s) s.addEventListener('click', async () => { if (!(await onaySor('“' + g.ad + '” ve püf noktaları silinir.', { baslik: 'Güzergâh silinsin mi?', evet: 'Sil', tehlike: true }))) return; S.kurs.guzergahlar = guzergahlar().filter(y => y.id !== g.id); islem('Güzergâhı sildi', g.ad); kaydet(); kapatPencere(); yenile(); });
     },
   });
 }

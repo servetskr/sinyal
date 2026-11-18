@@ -1,7 +1,7 @@
 // SNV-037..046, SNV-060, SNV-005: "Sınav günü" ekranı (#/sinav/<oturum>) — komisyonlar, saat dilimleri, satır alt sayfası, yazdır, süreler şeridi, kalanları aktar.
 // Atama (SNV-040): s.atama = { [kursiyerId]: { kom, saat, plaka, egitmen, elle } } yalnız elle değiştirilenleri tutar; ötekiler her açılışta yeniden hesaplanır.
 import { ulusalSinav, aracUygun, S, kaydet, gun, fark, tamAd, kursiyer, egitmen, arac, SINIFLAR, hakDurumu, islem, oturum, kuralAyar, mebIsGunuGeri, tcMaskele, izinDurumu } from './veri.js?v=234';
-import { e, ik, rozet, avatar, tarih, tarihUzun, pencere, kapatPencere, bildir, bos, isaret, belgeYazdir } from './ui.js?v=234';
+import { e, ik, rozet, avatar, tarih, tarihUzun, pencere, kapatPencere, bildir, bos, isaret, belgeYazdir, onaySor } from './ui.js?v=234';
 import * as KR from './kurallar.js?v=234';
 import * as MEB from './eklenti.js?v=234';
 
@@ -114,7 +114,7 @@ function satirSayfasi(s, k, yenile) {
     onAc(p) { const f = p.querySelector('#f-sg');
       p.querySelector('[data-sg-kaydet]').addEventListener('click', () => { s.atama = { ...(s.atama || {}), [k.id]: { kom: +f.kom.value, saat: f.saat.value, plaka: f.plaka.value, egitmen: f.eg.value, elle: true } }; islem('Sınav gününde atamayı değiştirdi', `${tamAd(k)} · ${tarih(s.tarih)} · ${f.kom.value}. komisyon ${f.saat.value} · ${f.plaka.value}`); kaydet(); kapatPencere(); yenile(); });
       const sf = p.querySelector('[data-sg-sifirla]'); if (sf) sf.addEventListener('click', () => { const a = { ...(s.atama || {}) }; delete a[k.id]; s.atama = a; kaydet(); kapatPencere(); yenile(); });
-      p.querySelector('[data-sg-cikar]').addEventListener('click', () => { if (!confirm(tamAd(k) + ' bu sınavdan çıkarılsın mı?')) return; s.kursiyerler = s.kursiyerler.filter(i => i !== k.id); const a = { ...(s.atama || {}) }; delete a[k.id]; s.atama = a; if (k.dsinavPlan === s.tarih) delete k.dsinavPlan; if (k.odeme && k.odeme.ekler) k.odeme.ekler = k.odeme.ekler.filter(y => !(y.sinav === s.id && !y.odendi)); islem('Sınavdan çıkardı', tamAd(k) + ' · ' + s.tur + ' ' + tarih(s.tarih)); kaydet(); kapatPencere(); yenile(); });
+      p.querySelector('[data-sg-cikar]').addEventListener('click', async () => { if (!(await onaySor(tamAd(k) + ' bu sınavdan çıkarılsın mı?', { baslik: 'Sınavdan çıkar', evet: 'Çıkar', tehlike: true }))) return; s.kursiyerler = s.kursiyerler.filter(i => i !== k.id); const a = { ...(s.atama || {}) }; delete a[k.id]; s.atama = a; if (k.dsinavPlan === s.tarih) delete k.dsinavPlan; if (k.odeme && k.odeme.ekler) k.odeme.ekler = k.odeme.ekler.filter(y => !(y.sinav === s.id && !y.odendi)); islem('Sınavdan çıkardı', tamAd(k) + ' · ' + s.tur + ' ' + tarih(s.tarih)); kaydet(); kapatPencere(); yenile(); });
     } });
 }
 // SNV-045: A4, komisyon başına bölüm; T.C. maskeli

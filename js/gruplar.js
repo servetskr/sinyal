@@ -2,7 +2,7 @@
 // dönem YYYYAA, grup 1–3 (her grubun tek başlangıç tarihi, ayın 1'i ile 10'u arası), şube A–H. Ad: "Kasım 1A".
 // Kursiyer kaydı grubun başlangıcından önce yapılır (MTSK Yönetmeliği 12/2); evrakı tamam ve gruba atanmış kursiyer aktiftir.
 import { S, kaydet, gun, fark, iso, SINIFLAR, tamAd, tcGecerli, islem, eksikEvrak, sb, anaSinif, mebKurum, teorikVar, esinavsizBelgeli, derslikListesi, derslikOner, DERSLIK_TURLERI } from './veri.js?v=234';
-import { e, pencere, kapatPencere, bildir, rozet, tarih, isaret, ik, pencereSor, bos } from './ui.js?v=234';
+import { e, pencere, kapatPencere, bildir, rozet, tarih, isaret, ik, pencereSor, bos, onaySor } from './ui.js?v=234';
 import * as KR from './kurallar.js?v=234';
 import * as MN from './mebnorm.js?v=234';
 const { AYLAR } = MN;
@@ -232,10 +232,10 @@ export function grupAtaPencere(k, sonra) {
     onAc(d) {
       d.querySelector('[data-yeni-grup]').addEventListener('click', () => { kapatPencere(); grupFormu({ sinif: '' }, g => g && grupAtaPencere(k, sonra)); });
       const b = d.querySelector('[data-ata]'); if (!b) return;
-      b.addEventListener('click', () => {
+      b.addEventListener('click', async () => {
         const g = grupBul(d.querySelector('#ga-g').value); if (!g) return;
-        { const su = subeUyarisi(teorikVar(k), g); if (su && !confirm(su + '\n\nYine de bu şubeye atansın mı?')) return; }
-        if (k.kayit && g.baslangic && k.kayit > g.baslangic && !confirm(`${tamAd(k)} ${tarih(k.kayit)} tarihinde kaydolmuş; ${g.ad} ${tarih(g.baslangic)} tarihinde başladı. Kayıt grubun başlangıcından önce olmalı (12/2). MEBBİS’te zaten bu gruptaysa devam edin. Atansın mı?`)) return;
+        { const su = subeUyarisi(teorikVar(k), g); if (su && !(await onaySor(su, { baslik: 'Yine de bu şubeye atansın mı?', evet: 'Ata' }))) return; }
+        if (k.kayit && g.baslangic && k.kayit > g.baslangic && !(await onaySor(`${tamAd(k)} ${tarih(k.kayit)} tarihinde kaydolmuş; ${g.ad} ${tarih(g.baslangic)} tarihinde başladı. Kayıt grubun başlangıcından önce olmalı (12/2). MEBBİS’te zaten bu gruptaysa devam edin.`, { baslik: 'Kayıt tarihi grubun başlangıcından sonra', evet: 'Yine de ata' }))) return;
         const aktif = grupAta(k, g); islem('Gruba atadı', tamAd(k) + ' · ' + g.ad); kaydet(); kapatPencere();
         bildir(`${tamAd(k)} ${g.ad} grubuna atandı${aktif ? '; evrakı tam olduğu için aktif oldu' : bekleyenMi(k) ? '; evrakı tamamlanınca aktif olur' : ''}`, 'tamam');
         sonra && sonra();
@@ -257,10 +257,10 @@ export function topluAtaPencere(g, sonra) {
     onAc(d) {
       const h = d.querySelector('[data-hepsi]'); if (h) h.addEventListener('change', () => d.querySelectorAll('[name=k]').forEach(x => { x.checked = h.checked; }));
       const b = d.querySelector('[data-ata]'); if (!b) return;
-      b.addEventListener('click', () => {
+      b.addEventListener('click', async () => {
         const l = [...d.querySelectorAll('[name=k]:checked')].map(x => S.kursiyerler.find(k => k.id === x.value)).filter(Boolean);
         if (!l.length) return bildir('Kursiyer seçin', 'uyari');
-        if (g.kontenjan && kisiler(g).length + l.length > g.kontenjan && !confirm(`${g.ad} kontenjanı ${g.kontenjan}; atanınca ${kisiler(g).length + l.length} olacak. Devam edilsin mi?`)) return;
+        if (g.kontenjan && kisiler(g).length + l.length > g.kontenjan && !(await onaySor(`${g.ad} kontenjanı ${g.kontenjan}; atanınca ${kisiler(g).length + l.length} olacak.`, { baslik: 'Kontenjan aşılıyor', evet: 'Yine de ata' }))) return;
         const aktif = l.filter(k => grupAta(k, g)).length;
         islem('Gruba toplu atadı', g.ad + ' · ' + l.length + ' kursiyer'); kaydet(); kapatPencere();
         bildir(`${l.length} kursiyer ${g.ad} grubuna atandı${aktif ? ` · ${aktif} kişi aktif oldu` : ''}`, 'tamam');

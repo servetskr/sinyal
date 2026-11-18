@@ -1,7 +1,7 @@
 import * as EK from './eklenti.js?v=234';
 import * as CR from './cari.js?v=234';
 import { ilSecenekleri, kimlikEksikleri, EKRAN_DUZEY, YETKI_EKRAN, YETKI_ISLEM, makbuzAyar, makbuzBicim, makbuzSeri, makbuzSira, ekDersFiyat, ekToplam, kalanBorc, S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, kursiyer, DERS_TUR_AD, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube, tutarOku, gunBatimi, kursIli, sinifEtiket, ekTur, kursiyerTaban, gerekliDireksiyon, tabanListesi, ekDersTabani, eskiBelgeTarihi, MEVCUT_BELGELER } from './veri.js?v=234';
-import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor, belgeYazdir, kisaLink, siteLink } from './ui.js?v=234';
+import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor, belgeYazdir, kisaLink, siteLink, onaySor } from './ui.js?v=234';
 import { yenile } from './app.js?v=234';
 import { destekWa } from './iletisim.js?v=234';
 import * as ON from './onay.js?v=234';
@@ -907,15 +907,15 @@ export function ayarBaglan(k) {
         onAc(p) { p.querySelector('[data-k]').addEventListener('click', () => { p.querySelector('[data-k]').disabled = true; B.dosyadanGeriYukle(v, f.name).then(() => { kapatPencere(); bildir('Yedek dosyası yüklendi'); yenile(); }).catch(x => { kapatPencere(); bildir(B.hataMetni(x), 'uyari'); }); }); } });
     });
   });
-  k.addEventListener('click', ev => {
+  k.addEventListener('click', async ev => {
     if (ev.target.closest('[data-kurtarma-indir]')) { const a2 = document.createElement('a'); a2.href = URL.createObjectURL(new Blob([localStorage.getItem('sinyal-kurtarma') || '[]'], { type: 'application/json' })); a2.download = 'mdsinyal-kaydedilemeyenler.json'; a2.click(); setTimeout(() => URL.revokeObjectURL(a2.href), 3000); }
-    if (ev.target.closest('[data-kurtarma-sil]') && confirm('Kaydedilemeyen değişiklikler bu cihazdan silinsin mi? Önce indirdiğinizden emin olun.')) { try { localStorage.removeItem('sinyal-kurtarma'); } catch (x) { } import('./bulut.js?v=234').then(B => { B.bulut.kalici = ''; B.durumYaz(); }); yenile(); }
+    if (ev.target.closest('[data-kurtarma-sil]') && await onaySor('Önce indirdiğinizden emin olun; silinen değişiklik geri gelmez.', { baslik: 'Kaydedilemeyen değişiklikler silinsin mi?', evet: 'Sil', tehlike: true })) { try { localStorage.removeItem('sinyal-kurtarma'); } catch (x) { } import('./bulut.js?v=234').then(B => { B.bulut.kalici = ''; B.durumYaz(); }); yenile(); }
   });
   k.addEventListener('click', ev => { const bi = ev.target.closest('[data-bi-yeni],[data-bi-duzen]'); if (bi) return ON.bilgiDuzenle(bi.dataset.biDuzen || null, yenile); const bo = ev.target.closest('[data-bi-oku]'); if (bo) { ON.bilgiGoster(ON.bilgiler().filter(x => x.id === bo.dataset.biOku)); const bekle = setInterval(() => { if (!document.querySelector('.perde')) { clearInterval(bekle); yenile(); } }, 700); } });  // YON-028
   k.addEventListener('click', ev => { if (ev.target.closest('[data-ki-meb]')) { if (cokSube() && !seciliSube()) return bildir('Önce üstten şube seçin; her şubenin bilgisi kendi MEBBİS hesabından okunur', 'uyari'); return import('./mebtoplu.js?v=234').then(m => m.topluCek(['kurum'])); } if (!ev.target.closest('[data-ki-kase-sil]')) return; delete S.kurs.kase; islem('Kaşe / imza görselini kaldırdı'); kaydet(); yenile(); });  // YON-071
   IP.ipBagla(k);  // YON-021
   davetListesi(k); yedekListesi(k); sunucuKaydi(k); if (B.bulutta()) ikiAdimSatiri(k);
-  k.addEventListener('change', ev => {
+  k.addEventListener('change', async ev => {
     const t = ev.target;
     if (t.matches('[data-uye-rol]')) { if (!oturum.kullanici || oturum.kullanici.rol !== 'mudur') { t.value = (S.kullanicilar.find(x => x.id === t.dataset.uyeRol) || {}).rol || ''; return bildir('Rolü yalnız kurs müdürü değiştirir; kimse kendinde olmayan yetkiyi veremez', 'uyari'); } const u = S.kullanicilar.find(x => x.id === t.dataset.uyeRol); B.uyeGuncelle(u.id, { rol: t.value }).then(() => { islem('Rol değiştirdi', u.ad + ' · ' + ROL[t.value]); kaydet(); bildir(u.ad + ' artık ' + ROL[t.value]); }).catch(x => { bildir(B.hataMetni(x), 'uyari'); yenile(); }); return; }
     const pf = t.closest('[data-personel-foto]'); if (pf && pf.files && pf.files[0]) { const [tur, id] = pf.dataset.personelFoto.split(':'), x = (tur === 'usta' ? S.egitmenler : S.ogretmenler || []).find(y => y.id === id); if (!x) return; personelFotoKirp(pf.files[0]).then(u => { x.foto = u; x.fotoTarih = gun(0); islem('Personel fotoğrafı ekledi', x.ad); kaydet(); bildir(x.ad + ' fotoğrafı kaydedildi'); yenile(); }).catch(() => bildir('Fotoğraf okunamadı', 'uyari')); return; }
@@ -927,7 +927,7 @@ export function ayarBaglan(k) {
       const v = +ham;
       if (!/^\d+$/.test(ham) || !kuralGecerli(key, v)) { t.value = eski ?? ''; return bildir(`${r.ad}: ${r.max != null ? `${r.min ?? 0} ile ${r.max} arasında` : `en az ${r.min ?? 0}`} bir tam sayı girin${(r.min ?? 0) === 0 && r.teyit ? ' (0 = denetim kapalı)' : ''}. Değer değişmedi.`, 'uyari'); }
       // ek ders ücreti il taban listesindeki ilave direksiyon ders saat ücretinin altındaysa onay istenir (tek kaynak: Sınıf ve ücretler)
-      if (key === 'ekDersUcreti') { const tb = ekDersTabani(), L = tabanListesi(); if (tb && v < tb && !confirm(`${L ? listeAdi(L) : 'İl taban fiyat listesi'}: ilave direksiyon ders saat ücreti en az ${tl(tb)} (KDV dahil). Girilen ${tl(v)} bunun altında; il taban listesinin altında ücret alınamaz. Yine de kaydedilsin mi?`)) { t.value = eski ?? ''; return; } }
+      if (key === 'ekDersUcreti') { const tb = ekDersTabani(), L = tabanListesi(); if (tb && v < tb && !(await onaySor(`${L ? listeAdi(L) : 'İl taban fiyat listesi'}: ilave direksiyon ders saat ücreti en az ${tl(tb)} (KDV dahil). Girilen ${tl(v)} bunun altında; il taban listesinin altında ücret alınamaz.`, { baslik: 'Ücret taban altında', evet: 'Yine de kaydet' }))) { t.value = eski ?? ''; return; } }
       S.kurs[key] = v; if (r.tur === 'mevzuat') { S.kurs.kuralDegisen = S.kurs.kuralDegisen || {}; if (v === r.varsayilan) delete S.kurs.kuralDegisen[key]; else S.kurs.kuralDegisen[key] = true; }
       islem('Kural değerini değiştirdi', r.ad + ': ' + eski + ' → ' + v); kaydet(); bildir('Kural kaydedildi'); yenile(); }
     if (t.matches('[data-gece-ay]')) { const ay = t.dataset.geceAy, v = t.value, ad = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'][+ay - 1], eski = (S.kurs.geceSaatleri || {})[ay] || 'hesaplanan';
@@ -1192,7 +1192,7 @@ export function provaPenceresi() {
       <ul class="liste" style="margin-top:8px">${l.map(x => `<li style="align-items:flex-start">${isaret(x[1] ? 'tamam' : 'zorunlu', 22)}<div style="flex:1;min-width:0"><b>${e(x[0])}</b><small style="display:block;color:var(--soluk)">${e(x[3])}</small></div>${x[1] ? rozet('Tamam', 'yesil') : `<a class="dg dg-cizgi dg-kucuk" href="${x[2]}" data-kapat>Git</a>`}</li>`).join('')}</ul>
       <p class="ipucu uyari" style="margin-top:10px">${isaret('uyari', 18)}<span>Prova verisi silinince prova öğrencisi, dersleri, tahsilatı, mesajları ve öğrenci hesabı gider; gerçek kayıtlara dokunulmaz.</span></p>`,
     altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-prova-sil style="background:var(--kirmizi);border-color:var(--kirmizi)">Prova verisini sil${n === l.length ? ' ve bitir' : ''}</button>`,
-    onAc(p) { p.querySelector('[data-prova-sil]').addEventListener('click', async () => { if (!confirm('Prova öğrencisi ve bütün prova kayıtları silinsin mi? Gerçek kayıtlara dokunulmaz.')) return; const b = p.querySelector('[data-prova-sil]'); b.disabled = true; await provaSil(n, l.length); kapatPencere(); yenile(); }); } });
+    onAc(p) { p.querySelector('[data-prova-sil]').addEventListener('click', async () => { if (!(await onaySor('Gerçek kayıtlara dokunulmaz.', { baslik: 'Prova öğrencisi ve bütün prova kayıtları silinsin mi?', evet: 'Sil', tehlike: true }))) return; const b = p.querySelector('[data-prova-sil]'); b.disabled = true; await provaSil(n, l.length); kapatPencere(); yenile(); }); } });
 }
 // prova öğrencisine bağlı her kayıt silinir (kursiyer / kid alanı, sınav listeleri); öğrenci hesabı varsa kapatılır, numara serbest kalır
 export async function provaSil(yapilan, toplam) {

@@ -186,6 +186,17 @@ export function pencereSor(d, { baslik, metin, secenekler, girdi }, sec) {
   o.addEventListener('keydown', ev => { if (ev.key === 'Escape') { ev.stopPropagation(); o.remove(); sec('vazgec'); } });
   setTimeout(() => { const b = o.querySelector('[data-sor]'); if (b) b.focus(); }, 30);
 }
+// DENETİM K2: tarayıcının confirm() kutusu yerine uygulamanın kendi sorusu; Promise<boolean> döner (Evet → true, Vazgeç / ✕ → false).
+// Açık pencere varsa sorunun katmanı o pencerenin içinde açılır (pencere kapanmaz); yoksa küçük bir soru penceresi açılır.
+export function onaySor(metin, { baslik = 'Emin misiniz?', evet = 'Evet', hayir = 'Vazgeç', tehlike = false } = {}) {
+  const govde = e(String(metin || '')).replace(/\n/g, '<br>'), sinif = tehlike ? 'dg-tehlike' : 'dg-ana';
+  return new Promise(coz => {
+    if (acikPencere && !acikPencere.hidden && !acikPencere.querySelector('.pencere-sor')) return pencereSor(acikPencere, { baslik, metin: govde, secenekler: [['vazgec', e(hayir), 'dg-cizgi'], ['evet', e(evet), sinif]] }, s => coz(s === 'evet'));
+    let bitti = false; const bit = v => { if (!bitti) { bitti = true; coz(v); } };
+    pencere({ baslik, icerik: `<p style="font-size:15px;line-height:1.5;margin:0">${govde}</p>`, altlik: `<button class="dg dg-cizgi" data-kapat>${e(hayir)}</button><button class="dg ${sinif}" data-onay-evet>${e(evet)}</button>`, taslak: false,
+      onAc(d) { d.addEventListener('click', ev => { if (ev.target.closest('[data-onay-evet]')) { bit(true); kapatPencere(); } else if (ev.target.closest('[data-kapat]')) bit(false); }); setTimeout(() => { const b = d.querySelector('[data-onay-evet]'); if (b) b.focus(); }, 30); } });
+  });
+}
 // ✕ ya da Vazgeç: girdi varsa sorar. Kaydet sonrası koddan kapanan pencerenin taslağı silinir (iş bitti).
 const IPTAL_DUGME = /^(vazgeç|iptal|kapat|sonra|geri dön|şimdi değil)$/i;
 function kapatIstegi(d, kaynak, ev) {
