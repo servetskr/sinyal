@@ -508,7 +508,8 @@ async function baglan(u, ilkVeri) {
       if (S.kullanicilar.some(x => x.rol === 'usta' && x.usta && !ustaOnce.has(x.usta))) { ustaKirli.add('*'); setTimeout(ustaProjeksiyonYaz, 0); }
       if (!q.docs.some(d => d.id === u.uid)) { cikisYap().then(() => location.reload()); return; }
       const ben = q.docs.find(d => d.id === u.uid).data();
-      if (oturum.kullanici && oturum.kullanici.bulut && (ben.rol !== oturum.kullanici.rol || (ben.usta || null) !== (oturum.kullanici.usta || null))) { Object.assign(oturum.kullanici, { rol: ben.rol, usta: ben.usta || undefined }); }
+      { const rolU = ben.rol === 'subemudur' ? 'sekreter' : ben.rol, gorevU = ben.rol === 'subemudur' ? 'subemudur' : undefined;  // YON-073: şube müdürü ön büro ekranlarıyla
+        if (oturum.kullanici && oturum.kullanici.bulut && (rolU !== oturum.kullanici.rol || gorevU !== oturum.kullanici.gorev || (ben.usta || null) !== (oturum.kullanici.usta || null))) { Object.assign(oturum.kullanici, { rol: rolU, gorev: gorevU, usta: ben.usta || undefined }); } }
       yenileFn();
     }, () => { }));
   });
