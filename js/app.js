@@ -1,5 +1,5 @@
 import { DESTEK } from './iletisim.js?v=234';
-import { ilSecenekleri, ekranDuzey, ekranYetkili, kullaniciSubesi, S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec, sinifEtiket } from './veri.js?v=234';
+import { ilSecenekleri, ekranDuzey, ekranYetkili, kullaniciSubesi, S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec, sinifEtiket, sb } from './veri.js?v=234';
 import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=234';
 import * as Y1 from './sayfalar1.js?v=234';
 import * as Y2 from './sayfalar2.js?v=234';
@@ -116,7 +116,7 @@ try { rol = localStorage.getItem('sinyal-rol') || 'yonetici'; } catch (x) { }
 function sayaclar() {
   return {
     adaylar: [S.adaylar.filter(a => a.asama === 'Yeni').length, false],
-    kasa: [S.kursiyerler.filter(k => gecikenler(k).length).length, false],
+    kasa: [sb(S.kursiyerler).filter(k => gecikenler(k).length).length, false],   // DENETİM K8: Kasa sayfası gibi şube süzgecine uyar
     meb: [S.kursiyerler.filter(k => !k.mebIslendi && !eksikEvrak(k).length).length, true],
     sosyal: [S.sosyal.yorumlar.filter(y => y.durum === 'devir' || y.durum === 'onay').length + S.devredilen.length, false],
     kurulum: [Y5.kurulumAdimlari().filter(x => !x[1]).length, true],
