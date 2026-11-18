@@ -1,7 +1,7 @@
 // MEBBİS dönem grupları. MEBBİS'teki "Dönem Grup Açılış Tarihi" ve "Grup Şube Tanımlama" ekranlarıyla birebir:
 // dönem YYYYAA, grup 1–3 (her grubun tek başlangıç tarihi, ayın 1'i ile 10'u arası), şube A–H. Ad: "Kasım 1A".
 // Kursiyer kaydı grubun başlangıcından önce yapılır (MTSK Yönetmeliği 12/2); evrakı tamam ve gruba atanmış kursiyer aktiftir.
-import { S, kaydet, gun, fark, iso, SINIFLAR, tamAd, islem, eksikEvrak, sb, anaSinif, mebKurum } from './veri.js?v=234';
+import { S, kaydet, gun, fark, iso, SINIFLAR, tamAd, islem, eksikEvrak, sb, anaSinif, mebKurum, teorikVar } from './veri.js?v=234';
 import { e, pencere, kapatPencere, bildir, rozet, tarih, isaret, ik, pencereSor, bos } from './ui.js?v=234';
 import * as KR from './kurallar.js?v=234';
 
@@ -18,6 +18,17 @@ export const mebGrubuMu = g => !!(g && g.donem && g.grupNo && g.sube);
 export const KURS_TIPLERI = [['MTSK', 'Sürücü kursu (MTSK)'], ['SRC', 'SRC mesleki yeterlilik'], ['OP', 'İş makinesi operatörlüğü']];
 export const sinifTipi = sinif => { const t = (SINIFLAR[sinif] || {}).tur; return t === 'src' ? 'SRC' : t === 'operator' ? 'OP' : 'MTSK'; };
 export const grupTipi = g => (g && g.tip) || 'MTSK';
+// Belgeliler şubesi (DON-011, SOR-211): mevcut belgesi olan, teorik derse girmeyen adaylar için teorik programı olmayan şube. Zorunlu değil, kurs tercihi;
+// ayar Ayarlar › Dönem ve gruplar 'Belgelileri ayrı şubede topla' (varsayılan açık: öneri ve uyarılar).
+export const belgeliSubesi = g => !!(g && g.teoriksiz);
+export const belgeliAyri = () => (S.kurs || {}).belgeliAyriSube !== false;
+// Öğrenci ↔ şube uyumu uyarısı (yalnız ayar açıkken): belgeli aday teorikli şubede ya da teorikli aday belgeliler şubesinde
+export function subeUyarisi(teorikli, g) {
+  if (!g || !belgeliAyri() || !mebGrubuMu(g)) return '';
+  if (!teorikli && !belgeliSubesi(g)) { const b = (S.gruplar || []).find(x => belgeliSubesi(x) && x.donem === g.donem && +x.grupNo === +g.grupNo); return `Bu aday teorik derse girmez; ${b ? b.ad + ' (belgeliler şubesi)' : 'teorik programı olmayan ayrı bir şube (ör. ' + grupAdi(g.donem, g.grupNo, sonrakiSube(g) || 'C') + ')'} önerilir. Teorik şubede kalırsa denetimde yoklamada derse gelmeyen görünebilir.`; }
+  if (teorikli && belgeliSubesi(g)) return `${g.ad} belgeliler şubesi (teorik programı yok); bu aday teorik derse girecek, teorik programı olan bir şube seçin.`;
+  return '';
+}
 export const tipAdi = t => (KURS_TIPLERI.find(x => x[0] === t) || [, t])[1];
 export const grupBul = id => (S.gruplar || []).find(g => g.id === id) || null;
 export const kursiyerGrubu = k => (k && grupBul(k.teorikGrup)) || null;
@@ -113,7 +124,7 @@ export function grupFormu(on = {}, sonra) {
   const g0 = on.id ? grupBul(on.id) : null, kilit = g0 && kisiler(g0).length;
   // ayın 10'u geçtiyse yeni grup ancak gelecek aya açılır
   const bugunDonem = (() => { const d = new Date(); if (d.getDate() > 10) { d.setDate(1); d.setMonth(d.getMonth() + 1); } return donemOf(iso(d)); })();
-  const v = { donem: (g0 && g0.donem) || on.donem || bugunDonem, grupNo: (g0 && g0.grupNo) || on.grupNo || 1, sube: (g0 && g0.sube) || on.sube || 'A', baslangic: (g0 && g0.baslangic) || '', sinif: (g0 && g0.sinif) || on.sinif || '', derslik: (g0 && g0.derslik) || '', kontenjan: (g0 && g0.kontenjan) || '', tip: (g0 && grupTipi(g0)) || on.tip || (on.sinif ? sinifTipi(on.sinif) : 'MTSK'), ozelKod: (g0 && g0.ozelKod) || '' };
+  const v = { donem: (g0 && g0.donem) || on.donem || bugunDonem, grupNo: (g0 && g0.grupNo) || on.grupNo || 1, sube: (g0 && g0.sube) || on.sube || 'A', baslangic: (g0 && g0.baslangic) || '', sinif: (g0 && g0.sinif) || on.sinif || '', derslik: (g0 && g0.derslik) || '', kontenjan: (g0 && g0.kontenjan) || '', tip: (g0 && grupTipi(g0)) || on.tip || (on.sinif ? sinifTipi(on.sinif) : 'MTSK'), ozelKod: (g0 && g0.ozelKod) || '', teoriksiz: !!(g0 ? g0.teoriksiz : on.teoriksiz) };
   const sinifler = Object.entries(SINIFLAR).filter(([k, x]) => x.aktif !== false || k === v.sinif);
   const sinifSecenek = tip => `<option value="">Bütün sınıflar</option>${sinifler.filter(([k]) => sinifTipi(k) === tip).map(([k, x]) => `<option value="${k}" ${v.sinif === k ? 'selected' : ''}>${e(x.ad.split(' ·')[0])}</option>`).join('')}`;
   pencere({
@@ -126,6 +137,7 @@ export function grupFormu(on = {}, sonra) {
       <div class="alan"><label for="g-sube">Şube</label><select id="g-sube" name="sube" ${kilit ? 'disabled' : ''}>${SUBELER.map(s => `<option value="${s}" ${v.sube === s ? 'selected' : ''}>${s} Şubesi</option>`).join('')}</select></div>
       <div class="alan"><label for="g-bas">Başlangıç tarihi</label><input id="g-bas" name="baslangic" type="date" value="${e(v.baslangic)}" ${kilit ? 'disabled' : ''}></div>
       <div class="alan"><label for="g-tip">Kurs tipi</label><select id="g-tip" name="tip" ${kilit ? 'disabled' : ''}>${KURS_TIPLERI.map(([k, t]) => `<option value="${k}" ${v.tip === k ? 'selected' : ''}>${e(t)}</option>`).join('')}</select></div>
+      <label class="alan tam" style="flex-direction:row;display:flex;gap:10px;align-items:flex-start;font-size:14px"><span class="anahtar"><input type="checkbox" name="teoriksiz" ${v.teoriksiz ? 'checked' : ''}><i></i></span><span><b>Belgeliler şubesi</b> · teorik programı yok<small style="display:block;color:var(--soluk)">Mevcut belgesi olan, teorik derse girmeyen adaylar için. MEBBİS’e bu şubeye teorik ders girilmez; teorik ders denetimi bu şubeyi saymaz.</small></span></label>
       <div class="alan"><label for="g-ozel">Özel kod <small style="color:var(--soluk);font-weight:400">isteğe bağlı</small></label><input id="g-ozel" name="ozelKod" maxlength="40" value="${e(v.ozelKod)}" placeholder="Ör. Hafta sonu, Belgeliler"></div>
       <div class="alan"><label for="g-sinif">Sınıf</label><select id="g-sinif" name="sinif">${sinifSecenek(v.tip)}</select><small style="color:var(--soluk)">İlk kez ehliyet alanlar genelde aynı gruptadır; ehliyet türüne göre ayrı grup gerekiyorsa sınıf seçin.</small></div>
       <div class="alan"><label for="g-dl">Derslik</label><input id="g-dl" name="derslik" value="${e(v.derslik)}" placeholder="Derslik 1"></div>
@@ -137,7 +149,7 @@ export function grupFormu(on = {}, sonra) {
     altlik: `${g0 && !kilit ? '<button class="dg dg-cizgi" data-grup-sil style="margin-right:auto;color:var(--kirmizi)">Grubu sil</button>' : ''}<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-grup">${g0 ? 'Kaydet' : 'Grubu oluştur'}</button>`,
     onAc(d) {
       const f = d.querySelector('form');
-      const oku = () => ({ donem: f.donem.value, grupNo: +f.grupNo.value, sube: f.sube.value, baslangic: f.baslangic.value, sinif: f.sinif.value, derslik: f.derslik.value.trim(), kontenjan: +String(f.kontenjan.value).replace(/\D/g, '') || null, tip: f.tip.value || 'MTSK', ozelKod: f.ozelKod.value.trim() });
+      const oku = () => ({ donem: f.donem.value, grupNo: +f.grupNo.value, sube: f.sube.value, baslangic: f.baslangic.value, sinif: f.sinif.value, derslik: f.derslik.value.trim(), kontenjan: +String(f.kontenjan.value).replace(/\D/g, '') || null, tip: f.tip.value || 'MTSK', ozelKod: f.ozelKod.value.trim(), teoriksiz: !!f.teoriksiz.checked });
       const guncelle = () => {
         const x = oku();
         f.baslangic.min = ayBasi(x.donem) + '-01'; f.baslangic.max = ayBasi(x.donem) + '-10';
@@ -196,6 +208,7 @@ export function grupAtaPencere(k, sonra) {
       const b = d.querySelector('[data-ata]'); if (!b) return;
       b.addEventListener('click', () => {
         const g = grupBul(d.querySelector('#ga-g').value); if (!g) return;
+        { const su = subeUyarisi(teorikVar(k), g); if (su && !confirm(su + '\n\nYine de bu şubeye atansın mı?')) return; }
         if (k.kayit && g.baslangic && k.kayit > g.baslangic && !confirm(`${tamAd(k)} ${tarih(k.kayit)} tarihinde kaydolmuş; ${g.ad} ${tarih(g.baslangic)} tarihinde başladı. Kayıt grubun başlangıcından önce olmalı (12/2). MEBBİS’te zaten bu gruptaysa devam edin. Atansın mı?`)) return;
         const aktif = grupAta(k, g); islem('Gruba atadı', tamAd(k) + ' · ' + g.ad); kaydet(); kapatPencere();
         bildir(`${tamAd(k)} ${g.ad} grubuna atandı${aktif ? '; evrakı tam olduğu için aktif oldu' : bekleyenMi(k) ? '; evrakı tamamlanınca aktif olur' : ''}`, 'tamam');
@@ -237,13 +250,14 @@ export function gruplarKarti() {
   const bek = sb(S.kursiyerler).filter(bekleyenMi);
   return `<div class="kart"><div class="kart-bas"><h3>Dönem grupları</h3><small>MEBBİS’teki dönem, grup ve şubelerle aynı</small><div class="sag"><button class="dg dg-ana dg-kucuk" data-grup-yeni>${ik('arti')}Yeni grup</button></div></div>
     ${l.length ? `<ul class="liste grup-liste" style="margin-top:8px">${l.map(g => { const n = kisiler(g).length, bas = fark(g.baslangic); return `<li><div style="flex:1;min-width:0"><b style="color:var(--murekkep)">${e(g.ad)}</b>${mebGrubuMu(g) ? '' : ' ' + rozet('MEBBİS dışı', 'notr')}<small style="display:block;color:var(--soluk)">${mebGrubuMu(g) ? e(donemAdi(g.donem)) + ' · Grup ' + g.grupNo + ' · ' + g.sube + ' Şubesi · ' : ''}${bas > 0 ? tarih(g.baslangic) + ' başlıyor' : bas === 0 ? 'bugün başlıyor' : tarih(g.baslangic) + ' başladı'}${g.sinif ? ' · ' + e(((SINIFLAR[g.sinif] || {}).ad || g.sinif).split(' ·')[0]) : ''}${g.derslik ? ' · ' + e(g.derslik) : ''}</small></div>
-      <span class="sag"><span class="sayi" style="font-size:13px">${n}${g.kontenjan ? '/' + g.kontenjan : ''} kişi · teorik ${teorikDurum(g).toplam}/34 saat</span><button class="dg dg-cizgi dg-kucuk" data-teorik-ekle="${e(g.id)}">Ders ekle</button><button class="dg dg-cizgi dg-kucuk" data-grup-ata="${e(g.id)}">Kursiyer ata</button>${mebGrubuMu(g) ? `<button class="dg dg-hafif dg-kucuk" data-grup-duzenle="${e(g.id)}" aria-label="Düzenle">${ik('kalem')}</button>` : ''}</span></li>`; }).join('')}</ul>`
+      <span class="sag"><span class="sayi" style="font-size:13px">${n}${g.kontenjan ? '/' + g.kontenjan : ''} kişi · ${belgeliSubesi(g) ? 'belgeliler · teorik yok' : `teorik ${teorikDurum(g).toplam}/34 saat`}</span><button class="dg dg-cizgi dg-kucuk" data-teorik-ekle="${e(g.id)}">Ders ekle</button><button class="dg dg-cizgi dg-kucuk" data-grup-ata="${e(g.id)}">Kursiyer ata</button>${mebGrubuMu(g) ? `<button class="dg dg-hafif dg-kucuk" data-grup-duzenle="${e(g.id)}" aria-label="Düzenle">${ik('kalem')}</button>` : ''}</span></li>`; }).join('')}</ul>`
       : `<div class="kart-govde"><p style="color:var(--metin)">Henüz dönem grubu yok. MEBBİS’te açtığınız grubu burada da açın (ör. <b>Kasım 1A</b>); kayıtta grup seçimi zorunlu. MEBBİS Yardımcısı kuruluysa <b>MEB işlemleri › MEBBİS’ten al › Dönem grupları</b> ile MEBBİS’teki grupları da çekebilirsiniz.</p></div>`}
     ${bek.length ? `<div class="kart-bas" style="padding-top:18px"><h3>Bekleyen kursiyerler</h3><small>Kaydı yapıldı; gruba atanmadı ya da evrakı eksik · ${bek.length}</small></div>
       <ul class="liste" style="margin-top:6px">${bek.slice(0, 30).map(k => `<li><a class="kisi" href="#/kursiyer/${k.id}" style="flex:1;min-width:0"><div><b>${e(tamAd(k))}</b><small>${e(SINIFLAR[k.sinif].ad.split(' ·')[0])} · ${e(bekleyenNedeni(k).join(' · '))}</small></div></a>${kursiyerGrubu(k) ? '' : `<button class="dg dg-cizgi dg-kucuk" data-kursiyer-grup="${k.id}">Gruba ata</button>`}</li>`).join('')}</ul>` : ''}
   </div>`;
 }
 export function gruplarBaglan(k, yenile) {
+  k.addEventListener('change', ev => { const b = ev.target.closest('[data-belgeli-ayri]'); if (!b) return; S.kurs.belgeliAyriSube = b.checked; islem('Belgeliler şubesi ayarını değiştirdi', b.checked ? 'açık' : 'kapalı'); kaydet(); bildir(b.checked ? 'Belgeli adaylara ayrı şube önerilecek' : 'Belgeliler şubesi önerisi kapandı'); });
   k.addEventListener('click', ev => {
     if (ev.target.closest('[data-grup-yeni]')) return grupFormu({}, () => yenile());
     const a = ev.target.closest('[data-grup-ata]'); if (a) { const g = grupBul(a.dataset.grupAta); return g && topluAtaPencere(g, yenile); }
@@ -294,6 +308,7 @@ export function teorikDurum(g) {
   return { saat, toplam: saat.reduce((a, b) => a + b, 0) };
 }
 export function teorikDersPencere(g, sonra) {
+  if (belgeliSubesi(g)) return pencere({ baslik: g.ad + ' · teorik ders', icerik: `<p>${e(g.ad)} belgeliler şubesi: teorik programı yok, MEBBİS’e bu şubeye teorik ders girilmez. Teorik ders eklemek için önce grup kartında “Belgeliler şubesi” işaretini kaldırın.</p>`, altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button>' });
   const og = S.ogretmenler || [], d = teorikDurum(g);
   pencere({
     baslik: g.ad + ' · teorik ders ekle',
@@ -390,9 +405,10 @@ export function donemSekmesiHtml() {
   const donemler = [...new Set(meb.map(g => g.donem))].sort().reverse();
   const tut = meb.filter(g => grupTutarsizliklari(g).length);
   const satir = g => { const d = grupDoluluk(g), t = grupTutarsizliklari(g);
-    return `<tr><td><b style="color:var(--murekkep)">${e(g.ad)}</b>${t.length ? `<small style="display:block;color:var(--kirmizi);font-weight:700">${isaret('uyari', 14)} ${e(t.join(' · '))}</small>` : ''}</td><td class="rf-nw">${g.baslangic ? tarih(g.baslangic) + ' ' + g.baslangic.slice(0, 4) : '—'}</td><td class="m-gizle">${grupTipi(g) !== 'MTSK' ? rozet(grupTipi(g), 'mavi') + ' ' : ''}${g.sinif ? e(((SINIFLAR[g.sinif] || {}).ad || g.sinif).split(' ·')[0]) : 'Bütün sınıflar'}${g.ozelKod ? `<small style="display:block;color:var(--soluk)">${e(g.ozelKod)}</small>` : ''}</td><td class="m-gizle">${e(g.derslik || '—')}</td><td class="rf-nw"><span class="sayi">${d.n}${d.k ? '/' + d.k : ''}</span>${d.dolu ? ' ' + rozet('dolu', 'kirmizi') : ''}</td><td>${g.meb ? rozet(g.kaynak === 'MEBBİS' ? 'MEBBİS’ten' : 'MEBBİS’te', 'yesil') : rozet('MEBBİS’e girilecek', 'uyari')}</td><td class="rf-nw">${g.mebBaslangic && g.mebBaslangic !== g.baslangic ? `<button type="button" class="dg dg-ana dg-kucuk" data-grup-meb-tarih="${e(g.id)}">MEBBİS tarihini al</button> ` : ''}<button type="button" class="dg dg-hafif dg-kucuk" data-grup-duzenle="${e(g.id)}">Düzenle</button></td></tr>`; };
+    return `<tr><td><b style="color:var(--murekkep)">${e(g.ad)}</b>${t.length ? `<small style="display:block;color:var(--kirmizi);font-weight:700">${isaret('uyari', 14)} ${e(t.join(' · '))}</small>` : ''}</td><td class="rf-nw">${g.baslangic ? tarih(g.baslangic) + ' ' + g.baslangic.slice(0, 4) : '—'}</td><td class="m-gizle">${grupTipi(g) !== 'MTSK' ? rozet(grupTipi(g), 'mavi') + ' ' : ''}${belgeliSubesi(g) ? rozet('Belgeliler', 'notr') + ' ' : ''}${g.sinif ? e(((SINIFLAR[g.sinif] || {}).ad || g.sinif).split(' ·')[0]) : 'Bütün sınıflar'}${g.ozelKod ? `<small style="display:block;color:var(--soluk)">${e(g.ozelKod)}</small>` : ''}</td><td class="m-gizle">${e(g.derslik || '—')}</td><td class="rf-nw"><span class="sayi">${d.n}${d.k ? '/' + d.k : ''}</span>${d.dolu ? ' ' + rozet('dolu', 'kirmizi') : ''}</td><td>${g.meb ? rozet(g.kaynak === 'MEBBİS' ? 'MEBBİS’ten' : 'MEBBİS’te', 'yesil') : rozet('MEBBİS’e girilecek', 'uyari')}</td><td class="rf-nw">${g.mebBaslangic && g.mebBaslangic !== g.baslangic ? `<button type="button" class="dg dg-ana dg-kucuk" data-grup-meb-tarih="${e(g.id)}">MEBBİS tarihini al</button> ` : ''}<button type="button" class="dg dg-hafif dg-kucuk" data-grup-duzenle="${e(g.id)}">Düzenle</button></td></tr>`; };
   return `<div class="kart"><div class="kart-bas"><h3>Dönem ve gruplar</h3><small>MEBBİS’teki dönem, grup ve şubelerle birebir</small><div class="sag"><button type="button" class="dg dg-ana dg-kucuk" data-grup-yeni>${ik('arti')}Yeni grup</button></div></div>
     <div class="kart-govde" style="padding-bottom:0"><p class="ipucu">${isaret('bilgi', 18)}<span>Dönem <b>YYYY-Ay</b>; bir dönemde en çok 3 grup (Grup 1–3), her grubun tek başlangıç günü ayın <b>1–10’u</b> arasında, şubeler (A–H) grubun gününü alır. Başlangıç MEBBİS’te sonradan değişmez. Şu an MEBBİS’te yeni grup açılabilen dönem: <b>${e(donemAdi(ac))}</b>.</span></p>
+      <label style="display:flex;gap:10px;align-items:flex-start;font-size:14px;margin-top:12px"><span class="anahtar"><input type="checkbox" data-belgeli-ayri ${belgeliAyri() ? 'checked' : ''}><i></i></span><span><b>Belgelileri ayrı şubede topla</b><small style="display:block;color:var(--soluk)">Mevcut belgesi olan (teorik derse girmeyen) adaylar için kayıtta ve atamada teorik programı olmayan şube önerilir. Zorunlu değil, kurs tercihidir.</small></span></label>
       ${tut.length ? `<p class="ipucu uyari" style="margin-top:10px">${isaret('uyari', 18)}<span><b>${tut.length} grupta tarih tutarsızlığı var.</b> Grubu düzenleyip MEBBİS’teki tarihle aynı yapın; kursiyerlerin 90 gün ve sınav hakkı süreleri grup başlangıcından hesaplanır.</span></p>` : ''}</div>
     ${donemler.length ? donemler.map(dn => `<div class="kart-bas" style="padding-top:16px"><h3 style="font-size:15px">${e(donemAdi(dn))}</h3><small>${meb.filter(g => g.donem === dn).length} şube${dn === ac ? ' · MEBBİS’te yeni grup açılabilir' : ''}</small></div>
       <div class="tablo-kap"><table class="tablo tablo-mobil"><thead><tr><th>Grup / şube</th><th>Başlangıç</th><th class="m-gizle">Sınıf</th><th class="m-gizle">Derslik</th><th>Kayıtlı</th><th>MEBBİS</th><th></th></tr></thead><tbody>${meb.filter(g => g.donem === dn).sort((a, b) => +a.grupNo - +b.grupNo || a.sube.localeCompare(b.sube)).map(satir).join('')}</tbody></table></div>`).join('')
