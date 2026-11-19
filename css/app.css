@@ -3816,6 +3816,26 @@ tr.secili-satir td { background: rgba(10, 77, 162, .06); }
 .adim-kontrol .adim-not { display: block; padding: 0 12px 10px 36px; color: var(--soluk); font-size: 12.5px; }
 /* MEB-187: MEBBİS aktarımı — üst şerit, açık pencereler, görünüm seçimi, öğrenci × adım matrisi */
 .mx-ust{margin-bottom:14px}
+.mx-soru{display:grid;gap:6px;justify-items:start;padding:4px 0 2px}
+.mx-soru-b{font-family:var(--baslik);font-size:26px;line-height:1.2;color:var(--murekkep)}
+.mx-soru>small{color:var(--soluk);font-size:14px}
+.mx-basla{height:56px;padding:0 36px;font-size:18px;margin-top:8px;gap:10px}
+.mx-alt{display:flex;gap:6px 16px;align-items:center;flex-wrap:wrap;margin-top:4px}
+.mx-bag{display:inline-flex;gap:6px;align-items:center;background:none;border:0;padding:6px 0;color:var(--levha);font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.mx-bag:disabled{color:var(--soluk);cursor:default}
+.mx-alt .mx-menu summary{height:36px}
+.mx-alt{position:relative}
+.mx-alt .mx-menu{position:static}
+.mx-alt .mx-menu>div{left:0;right:auto;max-width:calc(100vw - 40px)}
+@media (max-width:600px){.mx-soru-b{font-size:22px}}
+.mx-ayrinti{margin-top:4px}
+.mx-ayrinti>summary{list-style:none;cursor:pointer;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;padding:12px 16px;border:1.5px solid var(--cizgi);border-radius:12px;background:var(--panel);font-family:var(--baslik);font-weight:700;color:var(--murekkep);font-size:15.5px}
+.mx-ayrinti>summary::-webkit-details-marker{display:none}
+.mx-ayrinti>summary::before{content:'▸';color:var(--soluk)}
+.mx-ayrinti[open]>summary::before{content:'▾'}
+.mx-ayrinti>summary small{font-family:inherit;font-weight:400;color:var(--soluk);font-size:13px}
+.mx-ayrinti[open]>summary{margin-bottom:12px}
+.mx-ayrinti>summary:focus-visible{outline:3px solid var(--levha);outline-offset:2px}
 .mx-durum{display:flex;gap:6px 18px;flex-wrap:wrap;font-size:13.5px;color:var(--metin)}
 .mx-durum span{display:inline-flex;gap:6px;align-items:center}
 .mx-nokta{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
