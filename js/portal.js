@@ -1,29 +1,28 @@
-import { dersSirasi, oturum, islem, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, yerelZaman, BECERI, risk, ekToplam, selam, kursAdi, konuListesi, konuOner, DERS_TUR_AD, dersKalanSaat, dersIptalIz } from './veri.js?v=231';
-import { gerekliDireksiyon } from './veri.js?v=231';
-import { e, saatDe, saatE, tl, ik, rozet, avatar, csvIndir, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani, waAc, waNumara } from './ui.js?v=231';
-import { yenile } from './app.js?v=231';
-import { ekDersKabul, bosTeklifKabul, wpGonder, bildirimler } from './sayfalar1.js?v=231';
-import { KONULAR } from './konular.js?v=231';
+import { dersSirasi, oturum, islem, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, yerelZaman, BECERI, risk, ekToplam, selam, kursAdi, konuListesi, konuOner, DERS_TUR_AD, dersKalanSaat, dersIptalIz, gerekliDireksiyon, sinifEtiket, egitimSinifi, teorikVar, teorikSaat } from './veri.js?v=235';
+import { e, saatDe, saatE, tl, ik, rozet, avatar, csvIndir, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani, waAc, waNumara } from './ui.js?v=235';
+import { yenile } from './app.js?v=235';
+import { ekDersKabul, bosTeklifKabul, wpGonder, bildirimler } from './sayfalar1.js?v=235';
+import { KONULAR } from './konular.js?v=235';
 // Soru bankası büyük; yalnız Sınavlar sekmesi ya da test açılınca yüklenir (açılış hızını etkilemesin)
 let SORULAR = [], soruYuk = null, DISI = new Set();
 // Sorular ve levha çizimleri yalnız sınav sekmesinde yüklenir; levhalı sorularda görsel "L:<kod>" olarak durur
 let levhaSvg = () => '';
 // yüklenemezse (zayıf internet) bir sonraki dokunuşta yeniden denenir; öğrenciye haber verilir
-const sorulariYukle = () => soruYuk || (soruYuk = Promise.all([import('./sorular.js?v=231'), import('./levha.js?v=231').catch(() => null)]).then(([m, l]) => { SORULAR = m.SORULAR; DISI = new Set(m.HAVUZ_DISI || []); if (l) levhaSvg = l.levhaSvg; }).catch(x => { soruYuk = null; bildir('Sorular yüklenemedi; internet bağlantını kontrol edip tekrar dene', 'uyari'); throw x; }));
+const sorulariYukle = () => soruYuk || (soruYuk = Promise.all([import('./sorular.js?v=235'), import('./levha.js?v=235').catch(() => null)]).then(([m, l]) => { SORULAR = m.SORULAR; DISI = new Set(m.HAVUZ_DISI || []); if (l) levhaSvg = l.levhaSvg; }).catch(x => { soruYuk = null; bildir('Sorular yüklenemedi; internet bağlantını kontrol edip tekrar dene', 'uyari'); throw x; }));
 const gorselHtml = g => !g ? '' : String(g).startsWith('L:') ? levhaSvg(g.slice(2)) : g;
-import { randevuAl, randevuIptal, kursaYaz } from './ozellik.js?v=231';
-import * as OG from './ogrenci.js?v=231';
-import * as HZ from './hazirlik.js?v=231';
-import { ogrOzellik, ibanlar, ibanBicim, odemeKodu } from './veri.js?v=231';
-import * as GZ from './guzergah.js?v=231';
-import { ustaAlacak } from './risk.js?v=231';
-import { ayAdi } from './ozellik.js?v=231';
-import { soruKonu } from './soruKonu.js?v=231';
-import { MUFREDAT } from './ogrenci.js?v=231';
-import * as TK from './takvim.js?v=231';
-import * as OGR from './ogren.js?v=231';
-import * as OX from './ogr/ekran.js?v=231';
-import * as UX from './usta/ekran.js?v=231';
+import { randevuAl, randevuIptal, kursaYaz } from './ozellik.js?v=235';
+import * as OG from './ogrenci.js?v=235';
+import * as HZ from './hazirlik.js?v=235';
+import { ogrOzellik, ogrAktif, ibanlar, ibanBicim, odemeKodu } from './veri.js?v=235';
+import * as GZ from './guzergah.js?v=235';
+import { ustaAlacak } from './risk.js?v=235';
+import { ayAdi } from './ozellik.js?v=235';
+import { soruKonu } from './soruKonu.js?v=235';
+import { MUFREDAT } from './ogrenci.js?v=235';
+import * as TK from './takvim.js?v=235';
+import * as OGR from './ogren.js?v=235';
+import * as OX from './ogr/ekran.js?v=235';
+import * as UX from './usta/ekran.js?v=235';
 
 let egId = 'e1', egSekme = 'bugun';
 let ogId = null, ogSekme = (() => { try { return sessionStorage.getItem('sinyal-og-sekme') || 'durum'; } catch (x) { return 'durum'; } })();
@@ -64,16 +63,21 @@ export const imzaUzaktan = ustaImza => ({ zaman: yerelZaman(), kursiyer: null, k
 // Dersi "yapıldı" kaydeder: konu, beceri, not (öğrenci notlarına da), süre ve konum bitişi; ders sayısı bir artar.
 // Geçmiş günden ya da başlatılmadan kapatılan derste süre boş kalır, "sonradan kapatıldı" işaretlenir. Kısa ders (<40 dk) uyarılır.
 // Öğrenci imzası bekleniyorsa imza linki WhatsApp'tan istenir. kapat: kayıttan hemen sonra (bildirim ve yenilemeden önce) çağrılır.
-export async function dersKaydet(d, { konular = [], beceri = null, not = '', imza = null } = {}, { kapat = null, sessiz = false } = {}) {
+// MEV-010 hazırlık: dersin araç kamerası kaydı (isteğe bağlı: 'var' | 'yok'; boş = belirtilmedi). MEB'in ders kamerası düzeni netleşince
+// bu alan o sisteme bağlanır; şimdilik yalnız kayıt ve hatırlatma, dış bağlantı yok.
+export const DERS_KAMERA = { var: 'Var', yok: 'Yok' };
+export const KAMERA_HATIRLAT = 'Araçta ders kamerası varsa kaydın açık olduğunu kontrol edin.';
+export const dersKameraYaz = (d, v) => { if (DERS_KAMERA[v]) d.kamera = v; else delete d.kamera; };
+export async function dersKaydet(d, { konular = [], beceri = null, not = '', imza = null, kamera } = {}, { kapat = null, sessiz = false } = {}) {
   const ks = kursiyer(d.kursiyer), gecmis = d.tarih < gun(0), once = risk(ks), uzak = !!(imza && imza.kursiyerBekliyor);
   d.beceri = beceri && Object.keys(beceri).length ? beceri : null; d.konular = konuListesi(ks.sinif).map(x => x[0]).filter(id => konular.includes(id)).concat(konular.filter(id => !konuListesi(ks.sinif).some(x => x[0] === id)));
   const n = String(not || '').trim().slice(0, 300); if (n) { d.not = n; ks.notlar.unshift({ tarih: gun(0), metin: n }); }
-  d.durum = 'Yapıldı'; d.imza = imza;
+  d.durum = 'Yapıldı'; d.imza = imza; if (kamera !== undefined) dersKameraYaz(d, kamera);
   if (gecmis || !d.bas) { d.sonradan = gun(0); } else { d.bit = new Date().toTimeString().slice(0, 5); izBitir(d); d.sure = d.basZaman ? Math.round((Date.now() - d.basZaman) / 60e3) : null; }
-  ks.direksiyon = Math.min(gerekliDireksiyon(ks), ks.direksiyon + 1);
+  ks.direksiyon = (ks.direksiyon || 0) + 1;  // ek dersler de sayılır (zorunlu sayıda donarsa ödenen ek ders bitince yeniden ücretsiz ders planlanabiliyordu)
   if (uzak) {
     islem('Ders tamamlandı, öğrenci imzası istendi', tamAd(ks) + ' · ' + d.tarih + ' ' + d.saat); riskKontrol(ks, once); kaydet(); if (kapat) kapat();
-    const m = await import('./imza.js?v=231'); await m.imzaIste('ders', ks, [d.id]); if (!sessiz) bildir('Ders kaydedildi; imza linki öğrenciye gidiyor', 'wp');
+    const m = await import('./imza.js?v=235'); await m.imzaIste('ders', ks, [d.id]); if (!sessiz) bildir('Ders kaydedildi; imza linki öğrenciye gidiyor', 'wp');
   } else {
     if (d.sure != null && d.sure < 40) bildir(`Ders ${d.sure} dk sürdü; kısa ders olarak işaretlendi`, 'uyari');
     islem('Ders imzalı tamamlandı', tamAd(ks) + ' · ' + d.tarih + ' ' + d.saat); riskKontrol(ks, once); kaydet(); if (kapat) kapat(); if (!sessiz) bildir('Ders imzalandı ve takip formuna işlendi');
@@ -206,74 +210,36 @@ const DURUM_TON = { 'Yapıldı': 'yesil', 'Gelmedi': 'kirmizi', 'İptal': 'notr'
 // Günün saatine göre selam (öğretmen ve öğrenci ekranının başlığı)
 export const selamla = () => { const s = new Date().getHours(); return s < 5 ? 'İyi geceler' : s < 11 ? 'Günaydın' : s < 18 ? 'İyi günler' : s < 23 ? 'İyi akşamlar' : 'İyi geceler'; };
 // ---- Uygulama parçaları (öğretmen ve öğrenci) ----
-// Üst bölümün arka planı: ufka uzanan gece yolu; şerit çizgisi yavaşça akar (hareket azaltılmışsa durur)
-// Üst bölüm sahneleri: gece (yıldız, ay, şehir, uzak yolda süzülen farlar) ve gündüz (güneş, bulut, kuş, açık tonlu şehir, küçük arabalar).
-// Her şey -700…1100 birim genişlikte çizilir; görüş alanı üst bölümün oranına göre ayarlanır (heroBoyutla), böylece dar telefonda da
-// geniş ekranda da kenarlarda boşluk kalmaz, sahne büyüyüp yazıların üstüne çıkmaz. Hareketler yavaş; hareket azaltılmışsa durur.
-const SAHNE_X0 = -700, SAHNE_X1 = 1100;
-const sahneYol = (() => { let d = `M${SAHNE_X0} 206`; for (let x = SAHNE_X0, i = 0; x < SAHNE_X1; x += 130, i++) d += ` S${x + 95} ${i % 2 ? 216 : 194} ${x + 130} ${i % 2 ? 208 : 202}`; return d; })();
-const sahneTepe = (y0, gen, yuk) => { let d = `M${SAHNE_X0} ${y0}`; for (let x = SAHNE_X0, i = 0; x < SAHNE_X1; x += gen, i++) d += ` S${x + gen * .6} ${y0 - (i % 2 ? yuk : yuk * .4)} ${x + gen} ${y0 - (i % 3 ? yuk * .3 : 0)}`; return d + ` V260 H${SAHNE_X0}Z`; };
-function sahneSehir(tohum, pencereli) {
-  let r = tohum; const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
-  let x = SAHNE_X0, bina = '', pencere = '';
-  while (x < SAHNE_X1) {
-    const w = 13 + rnd() * 20, h = 12 + rnd() * 30, ust = 234 - h;
-    bina += `<rect x="${x.toFixed(1)}" y="${ust.toFixed(1)}" width="${w.toFixed(1)}" height="${(h + 40).toFixed(1)}" rx="1"/>`;
-    if (pencereli) for (let py = ust + 5; py < 226; py += 6) for (let px = x + 3; px < x + w - 3; px += 5) if (rnd() < .2) pencere += `<rect class="${rnd() < .3 ? 'u-pencere' : ''}" x="${px.toFixed(1)}" y="${py.toFixed(1)}" width="1.8" height="2.4" style="animation-delay:-${(rnd() * 14).toFixed(1)}s"/>`;
-    x += w + .8 + rnd() * 2.5;
-  }
-  return { bina, pencere };
-}
-const GECE_SVG = (() => {
-  let r = 11; const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
-  const yildiz = Array.from({ length: 110 }, () => { const anim = rnd() < .3; return `<circle${anim ? ' class="u-yildiz"' : ''} cx="${(SAHNE_X0 + rnd() * (SAHNE_X1 - SAHNE_X0)).toFixed(1)}" cy="${(rnd() * 150).toFixed(1)}" r="${(.45 + rnd() * .9).toFixed(2)}" opacity="${anim ? 1 : (.25 + rnd() * .5).toFixed(2)}"${anim ? ` style="animation-duration:${(5 + rnd() * 5).toFixed(1)}s;animation-delay:-${(rnd() * 9).toFixed(1)}s"` : ''}/>`; }).join('');
-  const { bina, pencere } = sahneSehir(17, true);
-  const far = (renk, gecikme, ters) => `<g><circle r="3.2" fill="${renk}" opacity=".22"/><circle r="1.15" fill="${renk}"/><animateMotion dur="${ters ? 110 : 95}s" begin="-${gecikme}s" repeatCount="indefinite" path="${sahneYol}" ${ters ? 'keyPoints="1;0" keyTimes="0;1" calcMode="linear"' : ''}/></g>`;
-  const farlar = [0, 12, 24, 36, 48, 60, 72, 84].map((g, i) => far(i % 3 === 2 ? '#ff8a7a' : '#fff3c9', g, i % 3 === 2)).join('');
-  return `<svg class="u-gece" viewBox="50 0 300 260" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
-    <g fill="#fff">${yildiz}</g>
-    <g class="u-ay-isik" fill="#f3e6c0"><circle cx="338" cy="50" r="40" opacity=".03"/><circle cx="338" cy="50" r="30" opacity=".04"/><circle cx="338" cy="50" r="21" opacity=".06"/><circle cx="338" cy="50" r="15.5" opacity=".08"/></g><circle cx="338" cy="50" r="11.5" fill="#f3e6c0" opacity=".92"/><circle cx="334" cy="47" r="2.4" fill="#e2d2a6" opacity=".6"/><circle cx="341.5" cy="54" r="1.6" fill="#e2d2a6" opacity=".55"/>
-    <path d="${sahneTepe(214, 160, 14)}" fill="#132a52" opacity=".85"/>
-    <g fill="#0f2346">${bina}</g><g fill="#ffd77a" opacity=".55">${pencere}</g>
-    <path d="${sahneYol}" stroke="#2c4a7c" stroke-width="2.2" fill="none"/>${farlar}
-    <path d="${sahneTepe(234, 140, 8)}" fill="#0a1a35"/>
-  </svg>`;
-})();
-const GUNDUZ_SVG = (() => {
-  const { bina } = sahneSehir(29, false);
-  const bulut = (cx, cy, o, gec) => `<g class="u-bulut-kay" style="animation-delay:-${gec}s"><g fill="#fff" opacity="${o}"><circle cx="${cx}" cy="${cy}" r="10"/><circle cx="${cx + 12}" cy="${cy - 6}" r="13"/><circle cx="${cx + 27}" cy="${cy}" r="10"/><rect x="${cx}" y="${cy}" width="27" height="10"/></g></g>`;
-  const bulutlar = [[0, 40, .32, 0], [0, 72, .24, 70], [0, 26, .3, 140], [0, 58, .26, 210], [0, 34, .3, 280], [0, 80, .22, 350]].map(b => bulut(...b)).join('');
-  const araba = (renk, gec, ters) => `<g><g transform="translate(-4 -4)"><rect x="0" y="2.2" width="8" height="3.2" rx="1.4" fill="${renk}"/><rect x="2" y=".4" width="4" height="2.4" rx="1" fill="${renk}"/><circle cx="2" cy="5.6" r=".9" fill="#1c2129"/><circle cx="6" cy="5.6" r=".9" fill="#1c2129"/></g><animateMotion dur="${ters ? 120 : 105}s" begin="-${gec}s" repeatCount="indefinite" rotate="${ters ? 'auto-reverse' : 'auto'}" path="${sahneYol}" ${ters ? 'keyPoints="1;0" keyTimes="0;1" calcMode="linear"' : ''}/></g>`;
-  const arabalar = [['#f2b705', 0], ['#ffffff', 14], ['#e0483d', 28, 1], ['#0a4da2', 42, 1], ['#2fa36b', 56], ['#ffffff', 70, 1], ['#f2b705', 84, 1], ['#e0483d', 98]].map(a => araba(...a)).join('');
-  return `<svg class="u-gece" viewBox="50 0 300 260" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
-    <g class="u-ay-isik" fill="#fff4cf"><circle cx="338" cy="50" r="44" opacity=".06"/><circle cx="338" cy="50" r="32" opacity=".09"/><circle cx="338" cy="50" r="22" opacity=".14"/></g><circle cx="338" cy="50" r="13" fill="#fff1bf"/>
-    ${bulutlar}
-    <g stroke="#e8f1fb" stroke-width="1.2" fill="none" stroke-linecap="round" opacity=".7"><path d="M-4 0 q2 -2.4 4 0 q2 -2.4 4 0"/><path d="M8 -6 q1.6 -2 3 0 q1.6 -2 3 0"/><animateMotion dur="120s" begin="-20s" repeatCount="indefinite" path="M${SAHNE_X0} 110 C-200 96 200 120 500 100 S900 92 ${SAHNE_X1} 96"/></g>
-    <path d="${sahneTepe(214, 160, 14)}" fill="#8bbbe8" opacity=".9"/>
-    <g fill="#6c9fd6">${bina}</g>
-    <path d="${sahneYol}" stroke="#5a8cc6" stroke-width="2.4" fill="none"/>${arabalar}
-    <path d="${sahneTepe(234, 140, 8)}" fill="#4f84c2"/>
-  </svg>`;
-})();
-// görüş alanı: yükseklik 260 birim sabit, genişlik üst bölümün oranına göre (300–1700), sahne ortada
-function heroBoyutla() {
-  document.querySelectorAll('svg.u-gece').forEach(g => { const r = g.getBoundingClientRect(); if (!r.width || !r.height) return; const vw = Math.max(300, Math.min(1700, 260 * r.width / r.height)); g.setAttribute('viewBox', `${(200 - vw / 2).toFixed(1)} 0 ${vw.toFixed(1)} 260`); });
-}
-addEventListener('resize', () => requestAnimationFrame(heroBoyutla));
-const gunduzMu = () => { const s = new Date().getHours(); return s >= 6 && s < 18; };
-const heroSahne = () => gunduzMu() ? GUNDUZ_SVG : GECE_SVG;
+// UYG-016 (18 Kas kararı): öğretmen ve öğrenci ekranlarında gökyüzü sahnesi (gece/gündüz animasyonu) kaldırıldı; eski üst bölüm
+// de yeni tasarımın sade, açık arka planını kullanır (css/app.css sonundaki UYG-016 kuralları). Yeni tasarım (js/ogr, js/usta) bunu zaten kullanmıyordu.
+const gunduzMu = () => false;
+const heroSahne = () => '';
 const AV_RENK = ['#2f6fde', '#c2410c', '#0f8a5f', '#7a5cd6', '#b4233a', '#0e7490', '#a16207'];
 const avDaire = (k, cls = '') => k.foto ? `<img class="u-av ${cls}" src="${e(k.foto)}" alt="">` : `<span class="u-av ${cls}" style="--r:${AV_RENK[[...((k.ad || '') + (k.soyad || ''))].reduce((a, c) => a + c.charCodeAt(0), 0) % AV_RENK.length]}" aria-hidden="true">${e(((k.ad || '?')[0] + ((k.soyad || '')[0] || '')).toLocaleUpperCase('tr'))}</span>`;
 // sayfa üstü rengi: üst bölüm varsa telefonun durum çubuğu da lacivert olur
-const temaUst = koyu => { if (koyu) heroBoyutla(); if (koyu && window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) document.querySelectorAll('svg.u-gece').forEach(g => { try { g.pauseAnimations(); } catch (x) { } }); document.body.classList.toggle('hero-acik', koyu); document.body.classList.toggle('hero-gunduz', koyu && gunduzMu()); const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = koyu ? (gunduzMu() ? '#174f99' : '#0b1830') : '#f2f2f7'; };
+// DENETİM K10 (UYG-007/009, MEV-009): ofisteki önizleme öğretmenin / öğrencinin gördüğü yeni tasarımı telefon çerçevesinde gösterir.
+// Çerçeve transform'lu: alttaki sekme çubuğu ve tam ekran katmanlar (position:fixed) çerçevenin içinde kalır, ofis menüsünü örtmez.
+function telOnizleme(y, baslik, secim, degisti) {
+  return {
+    baslik, alt: 'Personel önizlemesi · telefonda görünen ekran',
+    html: `<div class="og-onizleme u-onizleme">${isaret('bilgi', 16)}<span>Personel önizlemesi</span>${secim}</div><div class="tel-onizleme"><div class="tel-kaydir">${y.html}</div></div>`,
+    baglan(kap) { if (y.baglan) y.baglan(kap); kap.addEventListener('change', degisti); },
+  };
+}
+const temaUst = () => { document.body.classList.remove('hero-acik', 'hero-gunduz'); const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = '#f2f2f7'; };
 export const dersNo = (d, k) => dersSirasi(d, k) || k.direksiyon;
+// Öğretmen ekranında ders sırası: zorunlu sayının üstü "Ek ders 1/2" olarak yazılır ("17. ders / 16" yerine)
+export function dersEtiket(d, k) {
+  const no = dersNo(d, k), g = gerekliDireksiyon(k); if (!g || no <= g) return `${no}. ders`;
+  const ek = no - g, h = +k.ekDersHakki || 0; return `Ek ders ${ek}${h >= ek ? '/' + h : ''}`;
+}
 // Sıradaki (ya da sürmekte olan) ders: üst bölüme taşan büyük kart, tek ana düğme
 function egSiraKart(d) {
   const k = kursiyer(d.kursiyer); if (!k) return '';
   const S0 = SINIFLAR[k.sinif], basladi = !!d.bas, a = d.arac && arac(d.arac);
   return `<article class="u-sira">
     <div class="u-sira-ust"><span class="u-etiket ${basladi ? 'canli' : ''}">${basladi ? 'Derste · ' + saatDe(d.bas) + ' beri' : 'Sıradaki ders'}</span><b class="u-sira-saat">${d.saat}</b></div>
-    <div class="u-sira-kim">${avDaire(k)}<div><b>${e(tamAd(k))}</b><small>${e(S0.ad)} · ${dersNo(d, k)}. ders / ${gerekliDireksiyon(k)}${a ? ' · ' + e(a.plaka) : ''}</small></div></div>
+    <div class="u-sira-kim">${avDaire(k)}<div><b>${e(tamAd(k))}</b>${dersNo(d, k) <= 2 ? `<small style="display:block;font-weight:700;color:${k.aracKullanabiliyor ? '#1b5e20' : '#8a5a00'}">${k.aracKullanabiliyor ? 'Araç kullanabiliyor' : 'Araç kullanmayı bilmiyor (ilk ders)'}</small>` : ''}<small>${e(sinifEtiket(k.sinif, k))} · ${dersNo(d, k) <= gerekliDireksiyon(k) ? `${dersNo(d, k)}. ders / ${gerekliDireksiyon(k)}` : dersEtiket(d, k)}${a ? ' · ' + e(a.plaka) : d.kendiArac || (!d.arac && k.kendiArac) ? ' · kendi aracı' : ''}</small></div></div>
     ${!basladi && k.notlar && k.notlar[0] ? `<p class="u-not">${ik('kalem')}<span>${e(k.notlar[0].metin)}</span></p>` : ''}
     ${basladi ? `<p class="u-not mavi">${ik('harita')}<span>${d.konum ? 'Konum alındı' : d.konum === false ? 'Konum alınamadı' : 'Konum alınıyor…'}. Bitince imzalat; süre kendiliğinden yazılır.</span></p>` : ''}
     <div class="u-sira-dg">${basladi ? `<button class="u-dg birincil" data-yapildi="${e(d.id)}">${ik('tik')}Bitir ve imzalat</button>` : `<button class="u-dg birincil" data-ders-basla="${e(d.id)}">${ik('direksiyon')}Dersi başlat</button>`}<button class="u-dg ikon" data-ders-diger="${e(d.id)}" aria-label="Diğer işlemler">${ik('nokta')}</button></div>
@@ -288,17 +254,17 @@ function egSatir(d, siradaki) {
     : d.bas ? `<span class="u-durum mavi">Derste</span>` : siradaki ? `<span class="u-durum mavi">Sırada</span>` : `<button class="u-hap" data-ders-basla="${e(d.id)}">Başlat</button>`;
   const imzaBek = d.durum === 'Yapıldı' && d.imza && d.imza.kursiyerBekliyor;
   return `<div class="u-satir ${acik ? '' : 'kapali'} ${siradaki ? 'sira' : ''}"><span class="u-saat">${d.saat}${gecmis ? `<small>${gunKisa(d.tarih)} ${tarih(d.tarih)}</small>` : ''}</span>
-    <span class="u-satir-govde"><b>${e(tamAd(k))}</b><small>${acik ? no + '. ders' : no + ' ders'} · ${e(S0.ad)}${d.durum === 'Yapıldı' && d.sure != null ? ' · ' + d.sure + ' dk' + (d.sure < 40 ? ' (kısa)' : '') : ''}</small>${imzaBek ? `<small class="uyari">İmza bekleniyor · <button class="u-bag" data-imza-tekrar="${e(d.id)}">linki yeniden gönder</button></small>` : ''}</span>${sag}${acik && !gecmis ? `<button class="u-nokta" data-ders-diger="${e(d.id)}" aria-label="${e(tamAd(k))} için diğer işlemler">${ik('nokta')}</button>` : ''}</div>`;
+    <span class="u-satir-govde"><b>${e(tamAd(k))}</b><small>${dersEtiket(d, k)} · ${e(sinifEtiket(k.sinif, k))}${d.durum === 'Yapıldı' && d.sure != null ? ' · ' + d.sure + ' dk' + (d.sure < 40 ? ' (kısa)' : '') : ''}</small>${imzaBek ? `<small class="uyari">İmza bekleniyor · <button class="u-bag" data-imza-tekrar="${e(d.id)}">linki yeniden gönder</button></small>` : ''}</span>${sag}${acik && !gecmis ? `<button class="u-nokta" data-ders-diger="${e(d.id)}" aria-label="${e(tamAd(k))} için diğer işlemler">${ik('nokta')}</button>` : ''}</div>`;
 }
 // Öğrenci ayrıntısı (öğretmen): alttan açılan sayfa
 export function egOgrAc(k) {
   const S0 = SINIFLAR[k.sinif], sd = sonrakiDers(k), dd = (k.dDeneme || []).slice(-1)[0], r = risk(k), tel = (k.tel || '').replace(/\s/g, '');
   const sat = (ikon, ton, b, s2) => `<div class="u-satir"><span class="u-ik ${ton}">${ik(ikon)}</span><span class="u-satir-govde"><b>${b}</b>${s2 ? `<small>${s2}</small>` : ''}</span></div>`;
-  pencere({ baslik: 'Öğrenci', alt: true, icerik: `<div class="u-ogr-ust">${avDaire(k, 'buyuk')}<div><b>${e(tamAd(k))}</b><small>${e(S0.ad)} · ${e(k.asama)}</small></div></div>
-    ${gerekliDireksiyon(k) ? `<div class="u-ilerleme"><span>Direksiyon dersleri</span><b>${k.direksiyon}<small>/${gerekliDireksiyon(k)}</small></b>${ilerleme(k.direksiyon, gerekliDireksiyon(k), 'yesil')}</div>` : ''}
+  pencere({ baslik: 'Öğrenci', alt: true, icerik: `<div class="u-ogr-ust">${avDaire(k, 'buyuk')}<div><b>${e(tamAd(k))}</b><small>${e(sinifEtiket(k.sinif, k))} · ${e(k.asama)}</small></div></div>
+    ${gerekliDireksiyon(k) ? (() => { const x = OG.dirSayac(k); return `<div class="u-ilerleme"><span>Direksiyon dersleri${x.ek ? ` · ${x.ek} ek ders` : ''}</span><b>${x.n}<small>/${x.g}</small></b>${ilerleme(x.n, x.g, 'yesil')}</div>`; })() : ''}
     <div class="u-liste">${sat('takvim', 'mavi', 'Sonraki ders', sd ? tarihUzun(sd.tarih) + ' · ' + sd.saat : 'Planlı ders yok')}${dd ? sat('sinav', dd.sonuc === 'Geçti' ? 'yesil' : 'kirmizi', 'Son deneme sınavı', dd.sonuc === 'Geçti' ? 'Sınavı geçerdi' : 'Sınavdan kalırdı') : ''}${r && r.puan >= 50 ? sat('uyari', 'turuncu', 'Sınav riski yüksek', 'Ek ders ve deneme önerilir') : ''}</div>
     <div class="u-sayfa-dg"><button class="u-dg birincil" data-ogr-deneme>${ik('sinav')}Deneme sınavı yap</button>${tel ? `<a class="u-dg" href="tel:${e(tel)}">${ik('tel')}Ara</a>` : ''}</div>`,
-    onAc(d) { d.querySelector('[data-ogr-deneme]').addEventListener('click', () => { kapatPencere(); import('./deneme.js?v=231').then(m => m.denemeAc(k, yenile)); }); } });
+    onAc(d) { d.querySelector('[data-ogr-deneme]').addEventListener('click', () => { kapatPencere(); import('./deneme.js?v=235').then(m => m.denemeAc(k, yenile)); }); } });
 }
 let egProg = { mod: 'hafta', kay: 0 }, egAra = '';
 const araMetin = t => String(t || '').toLocaleLowerCase('tr');
@@ -329,7 +295,7 @@ export async function progIndir(eg) {
   const sat = [['Tarih', 'Gün', 'Saat', 'Öğrenci', 'Sınıf', 'Ders no', 'Araç', 'Durum', 'Süre (dk)'], ...l.map(d => { const k = kursiyer(d.kursiyer), a = d.arac && arac(d.arac); return [d.tarih.split('-').reverse().join('.'), gunKisa(d.tarih), d.saat, k ? tamAd(k) : '', k ? SINIFLAR[k.sinif].ad : '', k ? dersNo(d, k) : '', a ? a.plaka : '', progDurum(d)[0], d.sure != null ? d.sure : '']; })];
   const ad = 'ders-programi-' + gunler[0] + '_' + gunler[gunler.length - 1];
   try {
-    await import('./sayfalar5.js?v=231').then(m => m.xlsxYukle());
+    await import('./sayfalar5.js?v=235').then(m => m.xlsxYukle());
     const X = window.XLSX, ws = X.utils.aoa_to_sheet(sat), wb = X.utils.book_new();
     ws['!cols'] = [12, 6, 7, 24, 14, 8, 12, 11, 9].map(w => ({ wch: w })); ws['!autofilter'] = { ref: 'A1:I' + sat.length };
     X.utils.book_append_sheet(wb, ws, 'Program'); X.writeFile(wb, ad + '.xlsx');
@@ -342,11 +308,14 @@ const EG_SEKME = [['bugun', 'Bugün', 'direksiyon'], ['hafta', 'Program', 'takvi
 export function egitmenPortal() {
   const usta = oturum.kullanici && oturum.kullanici.rol === 'usta';
   if (usta) egId = oturum.kullanici.usta;
+  else if (!egId && oturum.kullanici && oturum.kullanici.usta) egId = oturum.kullanici.usta;  // YON-057: müdür / ön büro aynı zamanda usta öğretici
   const eg = egitmen(egId) || (!usta && S.egitmenler[0]);
   if (!eg) return { baslik: 'Öğretmen ekranı', alt: 'Telefondan kullanılan ekran', html: `<div class="portal portal-og"><div class="u-bos">${ik('kursiyer')}<b>${usta ? 'Hesabın bir öğretmen kaydına bağlı değil' : 'Henüz öğretmen yok'}</b><p>${usta ? 'Kurs müdürü Ayarlar › Kullanıcılar’dan seni yeniden davet etmeli.' : 'Filo › Öğretmenler’den öğretmen ekleyince ders ekranı burada görünür.'}</p></div></div>` };
   egId = eg.id;
   if (!EG_SEKME.some(x => x[0] === egSekme)) egSekme = 'bugun';
   if (usta) { const y = UX.ciz(eg, { yenile, temaUst }); if (y) return y; const us = UX.sekmeSimdi(); if (EG_SEKME.some(x => x[0] === us)) egSekme = us; }
+  else { const y = UX.ciz(eg, { yenile, temaUst: () => { } });   // DENETİM K10: personel önizlemesi de yeni tasarım
+    if (y) return telOnizleme(y, 'Öğretmen ekranı', `<select class="girdi" data-eg aria-label="Öğretmen seç">${S.egitmenler.map(x => `<option value="${x.id}" ${x.id === eg.id ? 'selected' : ''}>${e(x.ad)}</option>`).join('')}</select>`, ev => { if (ev.target.matches('[data-eg]')) { egId = ev.target.value; yenile(); } }); }
   const benim = S.dersler.filter(d => d.egitmen === eg.id);
   const bugun = benim.filter(d => d.tarih === gun(0)).sort((a, b) => a.saat.localeCompare(b.saat));
   const kapanmamis = benim.filter(d => d.durum === 'Planlandı' && d.tarih < gun(0) && d.tarih >= gun(-60)).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat));
@@ -372,7 +341,7 @@ export function egitmenPortal() {
     const satirlar = gunler.map(t => { const l = dersleri(t), bg = t === gun(0) ? ' bugun' : '', gh = `<td class="u-gun" rowspan="${Math.max(1, l.length)}"><b>${+t.slice(8)}</b><small>${gunKisa(t)}</small></td>`;
       if (!l.length) return egProg.mod === 'hafta' ? `<tr class="gun-ilk bos${bg}">${gh}<td colspan="3">Ders yok</td></tr>` : '';
       return l.map((d, n) => { const k = kursiyer(d.kursiyer), S0 = k && SINIFLAR[k.sinif], dr = progDurum(d);
-        return `<tr class="${n ? '' : 'gun-ilk'}${bg}${d.durum === 'İptal' ? ' iptal' : ''}">${n ? '' : gh}<td class="u-t-saat">${d.saat}</td><td class="u-t-ad">${k ? e(tamAd(k)) : '—'}${S0 ? `<small>${k ? dersNo(d, k) + '. ders · ' : ''}${e(S0.ad.split(' · ')[0])}</small>` : ''}</td><td><span class="u-durum ${dr[1]}">${dr[0]}</span></td></tr>`; }).join(''); }).join('');
+        return `<tr class="${n ? '' : 'gun-ilk'}${bg}${d.durum === 'İptal' ? ' iptal' : ''}">${n ? '' : gh}<td class="u-t-saat">${d.saat}</td><td class="u-t-ad">${k ? e(tamAd(k)) : '—'}${S0 ? `<small>${k ? dersEtiket(d, k) + ' · ' : ''}${e(S0.ad.split(' · ')[0])}</small>` : ''}</td><td><span class="u-durum ${dr[1]}">${dr[0]}</span></td></tr>`; }).join(''); }).join('');
     govde = `<header class="u-baslik"><h1>Program</h1><small>${metin} · ${toplam} ders</small></header>
       <div class="u-prog-arac"><div class="u-bolum">${[['hafta', 'Hafta'], ['ay', 'Ay']].map(([m, t]) => `<button data-prog-mod="${m}" class="${egProg.mod === m ? 'secili' : ''}" aria-pressed="${egProg.mod === m}">${t}</button>`).join('')}</div>
         <div class="u-prog-git"><button data-prog-git="-1" aria-label="Önceki">${ik('sag', 'ters')}</button><button data-prog-git="0" ${egProg.kay ? '' : 'disabled'}>Bugün</button><button data-prog-git="1" aria-label="Sonraki">${ik('sag')}</button></div></div>
@@ -422,7 +391,7 @@ export function egitmenPortal() {
         if (t.closest('[data-ara-sil]')) { egAra = ''; const i = k.querySelector('[data-ogr-ara]'); i.value = ''; araSuz(k); return i.focus(); }
         const db = t.closest('[data-ders-basla]'); if (db) return dersBaslat(S.dersler.find(x => x.id === db.dataset.dersBasla), eg);
         const y = t.closest('[data-yapildi]'); if (y) return dersKapat(S.dersler.find(x => x.id === y.dataset.yapildi));
-        const it = t.closest('[data-imza-tekrar]'); if (it) { const d = S.dersler.find(x => x.id === it.dataset.imzaTekrar); import('./imza.js?v=231').then(m => m.imzaIste('ders', kursiyer(d.kursiyer), [d.id])); return; }
+        const it = t.closest('[data-imza-tekrar]'); if (it) { const d = S.dersler.find(x => x.id === it.dataset.imzaTekrar); import('./imza.js?v=235').then(m => m.imzaIste('ders', kursiyer(d.kursiyer), [d.id])); return; }
         const g = t.closest('[data-gelmedi]'); if (g) return gelmediIsaretle(S.dersler.find(x => x.id === g.dataset.gelmedi));
         const dg = t.closest('[data-ders-diger]'); if (dg) return dersDiger(S.dersler.find(x => x.id === dg.dataset.dersDiger));
       });
@@ -473,14 +442,16 @@ function ogHero(k, sd, sinav) {
   const S0 = SINIFLAR[k.sinif], n = Math.max(0, asamaNo(k)), esGecti = k.esinav && k.esinav.sonuc === 'Geçti';
   let ust = '', bas = '', alt = '', dg = '';
   // üst bölüm sade: saat büyük, altında tek kısa satır (öğretmen, araç, plaka Derslerim sekmesinde)
-  if (sd) { ust = 'Sıradaki dersin'; bas = `${goreli(sd.tarih)}, ${sd.saat}`; alt = `Direksiyon · ${k.direksiyon + 1}. ders`; }
+  const tv = teorikVar(k), egt = egitimSinifi(k.sinif), g = gerekliDireksiyon(k);
+  if (sd) { ust = 'Sıradaki dersin'; bas = `${goreli(sd.tarih)}, ${sd.saat}`; alt = `Direksiyon · ${g && k.direksiyon + 1 > g ? 'ek ders' : (k.direksiyon + 1) + '. ders'}`; }
   else if (sinav) { ust = 'Sıradaki sınavın'; bas = `${goreli(sinav.tarih)}, ${sinav.saat}`; alt = e(sinav.tur); dg = `<button class="u-cam" data-ogs="sinav">Sınav bilgileri</button>`; }
-  else if (k.asama === 'Ehliyet') { ust = 'Tebrikler'; bas = 'Ehliyetini aldın'; alt = 'İyi yolculuklar'; }
-  else if (!esGecti && ['Kayıt', 'Evrak', 'Teorik'].includes(k.asama)) { ust = 'Şimdi sıra sende'; bas = 'e-Sınava hazırlan'; dg = `<button class="u-cam sari" data-test-basla="deneme" data-og-sinava>Deneme sınavı çöz</button>`; }
+  else if (k.asama === 'Ehliyet') { ust = 'Tebrikler'; if (egt) { bas = 'Eğitimin tamamlandı'; alt = 'Eğitim belgen kurstan verilir.'; } else { bas = 'Ehliyetini aldın'; alt = 'İyi yolculuklar'; } }
+  else if (egt) { ust = 'Durumun'; bas = k.teorik >= teorikSaat(k) ? 'Teorik derslerin bitti' : 'Teorik derslerine devam'; alt = k.teorik >= teorikSaat(k) ? 'Eğitim belgen kurstan verilir.' : 'Eğitim belgesi için derslerin tamamına katılman gerekir.'; }
+  else if (OG.esinavVar(k) && !esGecti && ['Kayıt', 'Evrak', 'Teorik'].includes(k.asama)) { ust = 'Şimdi sıra sende'; bas = 'e-Sınava hazırlan'; dg = `<button class="u-cam sari" data-test-basla="deneme" data-og-sinava>Deneme sınavı çöz</button>`; }
   else if (gerekliDireksiyon(k)) { ust = 'Planlı dersin yok'; bas = 'Direksiyon dersi al'; dg = `<button class="u-cam sari" data-iste>${ik('arti')}Ders al</button>`; }
   else { ust = 'Durumun'; bas = e(k.asama); }
-  const ic = k.asama === 'Direksiyon' && gerekliDireksiyon(k) ? k.direksiyon / gerekliDireksiyon(k) : k.asama === 'Teorik' && S0.teorik ? k.teorik / S0.teorik : 0;
-  const ilerMetin = k.asama === 'Ehliyet' ? 'Ehliyet alındı' : k.asama + ' aşaması', ilerSag = k.asama === 'Direksiyon' && gerekliDireksiyon(k) ? `${k.direksiyon}/${gerekliDireksiyon(k)} ders` : k.asama === 'Teorik' && S0.teorik ? `${k.teorik}/${S0.teorik} saat` : `${n + 1}/${ASAMALAR.length}`;
+  const ds = OG.dirSayac(k), ic = k.asama === 'Direksiyon' && g ? ds.n / g : k.asama === 'Teorik' && tv && teorikSaat(k) ? Math.min(1, k.teorik / teorikSaat(k)) : 0;
+  const ilerMetin = k.asama === 'Ehliyet' ? (egt ? 'Eğitim tamamlandı' : 'Ehliyet alındı') : k.asama + ' aşaması', ilerSag = k.asama === 'Direksiyon' && g ? `${ds.n}/${g} ders${ds.ek ? ' · ' + ds.ek + ' ek' : ''}` : tv && k.asama === 'Teorik' && teorikSaat(k) ? `${k.teorik}/${teorikSaat(k)} saat` : `${n + 1}/${ASAMALAR.length}`;
   return `<section class="u-hero ${gunduzMu() ? 'gunduz' : ''}">${heroSahne()}<div class="u-hero-ic"><small>${selamla()}, ${e(k.ad)}</small><span class="u-hero-ust">${ust}</span><h1>${bas}</h1>${alt ? `<p>${alt}</p>` : ''}${dg ? `<div class="u-hero-dg">${dg}</div>` : ''}
     <div class="u-asama" role="img" aria-label="Aşama ${n + 1}/${ASAMALAR.length}: ${e(k.asama)}"><div class="u-asama-cubuk">${ASAMALAR.map((a, i) => `<i class="${i < n || k.asama === 'Ehliyet' ? 'dolu' : i === n ? 'simdi' : ''}" ${i === n ? `style="--ic:${Math.round(Math.max(.12, ic) * 100)}%"` : ''}></i>`).join('')}</div><span>${ilerMetin}<b>${ilerSag}</b></span></div></div></section>`;
 }
@@ -489,8 +460,10 @@ function ogGovde(k, sd, sinav) {
   const S0 = SINIFLAR[k.sinif], sn = OG.sonrakiTaksit(k), tb = ogrOzellik('tekrar') ? HZ.tekrarBugun(k).length : 0, esGecti = k.esinav && k.esinav.sonuc === 'Geçti';
   const is = [], satir = (ikon, ton, baslik, alt, dugme) => `<div class="u-satir"><span class="u-ik ${ton}">${ik(ikon)}</span><span class="u-satir-govde"><b>${baslik}</b>${alt ? `<small>${alt}</small>` : ''}</span>${dugme}</div>`;
   if (sn && fark(sn.t.vade) < 0) is.push(satir('kart', 'kirmizi', 'Taksitin gecikti', `${tl(sn.t.tutar - (sn.t.kismi || 0))} · vade ${tarih(sn.t.vade)}`, `<button class="u-hap" data-ode="${sn.i}">Öde</button>`));
-  if (k.ekDersTeklif) is.push(satir('direksiyon', 'mavi', `${k.ekDersTeklif.n} ek ders önerisi`, `${tl(k.ekDersTeklif.tutar)} · kabul edersen ödeme planına eklenir`, `<span class="u-satir-dg"><button class="u-hap gri" data-og-ekders="hayir">Hayır</button><button class="u-hap" data-og-ekders="evet">Kabul</button></span>`));
-  (S.bosTeklif || []).filter(t => t.adaylar.includes(k.id) && fark(t.tarih) >= 0).forEach(t => is.push(satir('saat', 'mavi', `Boş saat: ${goreli(t.tarih)} ${t.saat}`, e((egitmen(t.egitmen) || {}).ad || 'Öğretmen') + (t.fiyat ? ' · %' + t.yuzde + ' indirimli ' + tl(t.fiyat) : '') + ' · ilk kabul eden alır', `<button class="u-hap" data-og-bos="${t.id}">Al</button>`)));
+  const et = OG.ekDersTeklifBilgi(k);  // birim ücret il tabanının altındaysa kabul yerine kursa sorulur
+  if (et) is.push(satir('direksiyon', 'mavi', e(et.baslik), e(et.alt), `<span class="u-satir-dg"><button class="u-hap gri" data-og-ekders="hayir">Hayır</button>${et.kabul ? '<button class="u-hap" data-og-ekders="evet">Kabul</button>' : '<button class="u-hap" data-kursa-yaz="ekTeklif">Kursa sor</button>'}</span>`));
+  // boş saat: indirim yok (il taban listesi not 6); zorunlu dersi kalana ek ücret yok, kalmayana ilave ders ücreti
+  (S.bosTeklif || []).filter(t => (t.adaylar || []).includes(k.id) && fark(t.tarih) >= 0).forEach(t => is.push(satir('saat', 'mavi', `Boş saat: ${goreli(t.tarih)} ${t.saat}`, e((egitmen(t.egitmen) || {}).ad || 'Öğretmen') + ' · ' + e(OG.bosSaatUcret(k)) + ' · ilk kabul eden alır', `<button class="u-hap" data-og-bos="${t.id}">Al</button>`)));
   const ob = gerekliDireksiyon(k) && ogrOzellik('dersOnay') ? OG.onayBekleyen(k) : 0;
   if (ob) is.push(satir('kalem', 'sari', `${ob} dersini onayla`, 'Ders yapıldıysa ders defterinde onayla', `<button class="u-hap" data-git="ders:defter">Aç</button>`));
   const eb = OG.eksikBelge(k);
@@ -500,12 +473,12 @@ function ogGovde(k, sd, sinav) {
   if (sinav && sd && fark(sinav.tarih) <= 14) is.push(satir('sinav', 'mavi', `${e(sinav.tur)} sınavın ${goreli(sinav.tarih).toLocaleLowerCase('tr')}`, `${sinav.saat} · ${e(sinav.yer)}`, `<button class="u-hap" data-ogs="sinav">Gör</button>`));
   const deg = OG.degerlendirKart(k);
   const yapilacak = is.length || deg ? `<section class="u-grup"><h2 class="u-grup-bas">Yapman gerekenler</h2>${deg}${is.length ? `<div class="u-liste">${is.join('')}</div>` : ''}</section>` : '';
-  const hz = HZ.hazirlik(k), kalan = kalanBorc(k);
+  const hz = HZ.hazirlik(k), kalan = OG.kursOzet(k).kalan, tv = teorikVar(k), ds = OG.dirSayac(k);  // resmî masraflar kurs borcuna sayılmaz
   const durum = (sekme, ikon, ton, baslik, deger, alt) => `<button class="u-satir dokun" data-ogs="${sekme}"><span class="u-ik ${ton}">${ik(ikon)}</span><span class="u-satir-govde"><b>${baslik}</b>${alt ? `<small>${alt}</small>` : ''}</span><span class="u-deger">${deger}</span>${ik('sag')}</button>`;
   const ozet = `<section class="u-grup"><h2 class="u-grup-bas">Durumun</h2><div class="u-liste">
-    ${gerekliDireksiyon(k) ? durum('ders', 'direksiyon', 'mavi', 'Direksiyon dersleri', `${k.direksiyon}/${gerekliDireksiyon(k)}`, sd ? 'Sıradaki ' + goreli(sd.tarih).toLocaleLowerCase('tr') + ' ' + sd.saat : 'Planlı ders yok') : ''}
-    ${durum('ders', 'teorik', 'mor', 'Teorik dersler', `${k.teorik}/${S0.teorik}`)}
-    ${esGecti ? durum('sinav', 'sinav', 'yesil', 'e-Sınav', 'Geçti', k.esinav.puan ? k.esinav.puan + ' puan' : '') : durum('sinav', 'sinav', 'turuncu', 'e-Sınava hazırlık', hz.puan + '/100', 'Deneme çözdükçe artar')}
+    ${gerekliDireksiyon(k) ? durum('ders', 'direksiyon', 'mavi', 'Direksiyon dersleri', `${ds.n}/${ds.g}`, (sd ? 'Sıradaki ' + goreli(sd.tarih).toLocaleLowerCase('tr') + ' ' + sd.saat : 'Planlı ders yok') + (ds.ek ? ` · ${ds.ek} ek ders` : '')) : ''}
+    ${tv ? durum('ders', 'teorik', 'mor', 'Teorik dersler', `${k.teorik}/${teorikSaat(k)}`) : `<div class="u-satir"><span class="u-ik gri">${ik('teorik')}</span><span class="u-satir-govde"><small>${OG.TEORIKSIZ_METIN}</small></span></div>`}
+    ${!OG.esinavVar(k) ? '' : esGecti ? durum('sinav', 'sinav', 'yesil', 'e-Sınav', 'Geçti', k.esinav.puan ? k.esinav.puan + ' puan' : '') : durum('sinav', 'sinav', 'turuncu', 'e-Sınava hazırlık', hz.puan + '/100', 'Deneme çözdükçe artar')}
     ${durum('odeme', 'kart', sn && fark(sn.t.vade) < 0 ? 'kirmizi' : 'yesil', 'Ödemeler', kalan ? tl(kalan) : 'Tamam', kalan && sn ? 'Sonraki taksit ' + tarih(sn.t.vade) : 'Borcun yok')}
     ${durum('evrak', 'belge', eb ? 'turuncu' : 'gri', 'Belgeler', eb ? eb + ' eksik' : 'Tamam')}
   </div></section>`;
@@ -515,25 +488,26 @@ function ogGovde(k, sd, sinav) {
 function sinavMenu(k) {
   const tb = ogrOzellik('tekrar') ? HZ.tekrarBugun(k).length : 0, son = (k.deneme || []).slice(-3), yn = (k.yanlislar || []).length;
   const esGecti = k.esinav && k.esinav.sonuc === 'Geçti', dirVar = gerekliDireksiyon(k) && ogrOzellik('direksiyon'), dirOnce = dirVar && ['Direksiyon', 'Sınav'].includes(k.asama);
+  const esVar = OG.esinavVar(k), tv = teorikVar(k), ds = OG.dirSayac(k);  // e-sınavı olmayan (fark, muaf, 100 ceza) öğrencide e-Sınav kutusu ve bölümü yok
   const karo = (mod, baslik, alt, ikon, ek = '') => `<button class="og-karo" data-test-basla="${mod}" ${ek}><span class="og-karo-ik">${ik(ikon)}</span><b>${baslik}</b><small>${alt}</small></button>`;
   const oranlar = Object.entries(KONULAR).map(([kn, [ad]]) => [kn, ad, konuOran(k, kn)]), zayif = oranlar.filter(x => x[2] != null && x[2] < 70).sort((a, b) => a[2] - b[2])[0];
-  const calis = `${ogrOzellik('hazirlik') && !esGecti ? HZ.hazirlikKarti(k, true) : ''}
+  const calis = `${ogrOzellik('hazirlik') && esVar && !esGecti ? HZ.hazirlikKarti(k, true) : ''}
     <div class="og-karolar"><button class="og-karo og-karo-ana" data-test-basla="deneme"><span class="og-karo-ik">${ik('sinav')}</span><b>Deneme sınavı</b><small>50 soru · 45 dakika · geçme puanı 70${son.length ? ' · son puanların ' + son.join(', ') : ''}</small></button>
       ${tb ? karo('tekrar', 'Bugünkü tekrar', tb + ' soru', 'sifirla') : ''}${karo('hizli', 'Hızlı test', '10 karışık soru', 'saat')}${karo('yanlis', 'Yanlışlarım', yn + ' soru', 'kapat', yn ? '' : 'disabled')}
       ${ogrOzellik('tehlike') ? `<button class="og-karo" data-tehlike><span class="og-karo-ik">${ik('uyari')}</span><b>Tehlike algısı</b><small>${(k.tehlike || []).length ? 'Son puan ' + k.tehlike.slice(-1)[0].puan + '/' + k.tehlike.slice(-1)[0].en : '8 kısa sahne'}</small></button>` : ''}</div>
     ${OG.modul('konular', { ikon: 'teorik', baslik: 'Konu konu başarın', ozet: zayif ? `En zayıf: ${e(zayif[1])} %${zayif[2]}` : 'Bir konuya dokun, 10 soruluk test başlar' },
       `<div class="og-konu-liste">${oranlar.map(([kn, ad, o]) => `<button class="konu-sat" data-test-basla="konu" data-konu="${kn}"><span>${ad}</span>${o != null && o < 70 ? rozet('Çalış', 'kirmizi') : ''}<b class="mono" style="color:${o != null && o < 70 ? 'var(--kirmizi)' : 'var(--murekkep)'}">${o == null ? '–' : '%' + o}</b>${ilerleme(o || 0, 100, o != null && o < 70 ? '' : 'yesil')}</button>`).join('')}</div>`)}
     <p class="og-not og-orta">Havuzda ${SORULAR.length ? SORULAR.length.toLocaleString('tr-TR') : '4.000’den fazla'} soru var. Sonuçların kursun ekranında görünür.</p>`;
-  const esBolum = esGecti ? `<section class="og-grup">${OG.modul('esCalis', { ikon: 'teorik', baslik: 'Teorik soruları tekrar et', ozet: 'e-Sınavı geçtin; istersen çalışmaya devam edebilirsin' }, calis)}</section>` : `<section class="og-grup"><h3 class="og-grup-bas">e-Sınava çalış</h3>${calis}</section>`;
+  const esBolum = esGecti || !esVar ? `<section class="og-grup">${OG.modul('esCalis', { ikon: 'teorik', baslik: 'Teorik soruları tekrar et', ozet: esVar ? 'e-Sınavı geçtin; istersen çalışmaya devam edebilirsin' : 'e-Sınavın yok; istersen trafik bilgini tazeleyebilirsin' }, calis)}</section>` : `<section class="og-grup"><h3 class="og-grup-bas">e-Sınava çalış</h3>${calis}</section>`;
   const dirBolum = dirVar ? `<section class="og-grup"><h3 class="og-grup-bas">Uygulama sınavına çalış</h3>${OG.dirDenemeHtml(k)}${OG.modul('dirhaz', { ikon: 'direksiyon', baslik: 'Sınavda neye bakılır', ozet: `Resmî değerlendirme formu · ${Object.keys(k.dirCalisma || {}).length} bölüm çalışıldı`, acik: false }, '<div data-dir-yer></div>')}</section>` : '';
   // Tek sayfa: üstte özet; altında sınavlar, çalışma, dersler ve ders içerikleri (her biri açılır kapanır)
   const S0 = SINIFLAR[k.sinif];
   const sonr = tur => S.sinavlar.filter(x => x.tur === tur && x.kursiyerler.includes(k.id) && fark(x.tarih) >= 0 && !(x.sonuc || {})[k.id]).sort((a, b) => a.tarih.localeCompare(b.tarih))[0];
   const esS = sonr('e-Sınav'), dS = sonr('Direksiyon'), dGecti = k.dsinav && k.dsinav.sonuc === 'Geçti';
   const kutu = (ust, ana, alt, ton = '') => `<div class="og-ozet-kutu ${ton}"><small>${ust}</small><b>${ana}</b><span>${alt}</span></div>`;
-  const ozet = `<div class="og-ozet-kutular">${kutu('e-Sınav', esGecti ? 'Geçtin' : esS ? gunKisa(esS.tarih) : 'Tarih yok', esGecti ? (k.esinav.puan ? k.esinav.puan + ' puan' : '') : esS ? goreli(esS.tarih) + ' · ' + esS.saat : son.length ? 'Son deneme ' + son.slice(-1)[0] : 'Deneme çöz, hazırlan', esGecti ? 'tamam' : '')}
+  const ozet = `<div class="og-ozet-kutular">${!esVar ? '' : kutu('e-Sınav', esGecti ? 'Geçtin' : esS ? gunKisa(esS.tarih) : 'Tarih yok', esGecti ? (k.esinav.puan ? k.esinav.puan + ' puan' : '') : esS ? goreli(esS.tarih) + ' · ' + esS.saat : son.length ? 'Son deneme ' + son.slice(-1)[0] : 'Deneme çöz, hazırlan', esGecti ? 'tamam' : '')}
     ${dirVar ? kutu('Uygulama sınavı', dGecti ? 'Geçtin' : dS ? gunKisa(dS.tarih) : 'Tarih yok', dGecti ? '' : dS ? goreli(dS.tarih) + ' · ' + dS.saat : 'Dersler bitince', dGecti ? 'tamam' : '') : ''}
-    ${kutu('Derslerin', (dirVar ? k.direksiyon + '<i>/' + gerekliDireksiyon(k) + '</i>' : k.teorik + '<i>/' + S0.teorik + '</i>'), dirVar ? 'direksiyon · teorik ' + k.teorik + '/' + S0.teorik : 'teorik saat')}</div>`;
+    ${kutu('Derslerin', (dirVar ? ds.n + '<i>/' + ds.g + '</i>' : k.teorik + '<i>/' + teorikSaat(k) + '</i>'), dirVar ? 'direksiyon' + (ds.ek ? ` · ${ds.ek} ek ders` : '') + (tv ? ' · teorik ' + k.teorik + '/' + teorikSaat(k) : '') : 'teorik saat')}</div>${tv ? '' : `<p class="og-not og-orta">${OG.TEORIKSIZ_METIN}</p>`}`;
   const dersler = `<section class="og-grup"><h3 class="og-grup-bas">Derslerin</h3>${OG.modul('sinavDers', { ikon: 'takvim', baslik: 'Yaklaşan dersler', ozet: (() => { const sd = sonrakiDers(k); return sd ? 'Sıradaki: ' + gunKisa(sd.tarih) + ' ' + sd.saat : 'Planlı dersin yok'; })() }, OG.yaklasanHtml(k) + `<button class="dg dg-cizgi og-genis" data-git="ders" style="margin-top:10px">Tüm derslerim</button>`)}</section>`;
   const icerik = `<section class="og-grup"><h3 class="og-grup-bas">Ders içerikleri</h3>${OG.teorikModul(k, false)}</section>`;
   return ozet + `<section class="og-grup"><h3 class="og-grup-bas">Sınavların</h3>${OG.sinavlarHtml(k)}${GZ.ogrenciHtml(k)}</section>` + (dirOnce ? dirBolum + esBolum : esBolum + dirBolum);
@@ -541,7 +515,7 @@ function sinavMenu(k) {
 // Öğrenci ekranlarında ortak eylemler (ödeme, ders saati değişikliği, randevu, kursa yaz, ek ders cevabı): eski ve yeni tasarım birlikte kullanır
 function ogGenelTik(t, k) {
   const o = t.closest('[data-ode]'); if (o) odemeYap(k, +o.dataset.ode);
-  const oe = t.closest('[data-og-ekders]'); if (oe) { if (oe.dataset.ogEkders === 'evet') ekDersKabul(k); else { k.ekDersTeklif = null; kaydet(); bildirimler([{ kim: 'mudur', metin: `${tamAd(k)} ek direksiyon dersi teklifini istemedi.`, tur: 'Kursiyer cevabı' }], 'Ek ders'); bildir('Cevabın kursa iletildi'); yenile(); } }
+  const oe = t.closest('[data-og-ekders]'); if (oe) { if (oe.dataset.ogEkders === 'evet') { const et = OG.ekDersTeklifBilgi(k); if (et && !et.kabul) return kursaYaz(k, 'ekTeklif'); ekDersKabul(k); } else { k.ekDersTeklif = null; kaydet(); bildirimler([{ kim: 'mudur', metin: `${tamAd(k)} ek direksiyon dersi teklifini istemedi.`, tur: 'Kursiyer cevabı' }], 'Ek ders'); bildir('Cevabın kursa iletildi'); yenile(); } }
   const ob = t.closest('[data-og-bos]'); if (ob) bosTeklifKabul(ob.dataset.ogBos, k.id, true);
   const dg = t.closest('[data-degis]'); if (dg) { const sd2 = sonrakiDers(k), m = `Merhaba, ben ${tamAd(k)}. ${sd2 ? tarihUzun(sd2.tarih) + ' ' + sd2.saat + ' direksiyon dersimin saatini' : 'Ders saatimi'} değiştirmek istiyorum.`; gonderimEkle(S.kurs.ad, m, 'Kursiyer talebi'); const kno = S.kurs.wp || S.kurs.wpGenel || S.kurs.tel; if (!waNumara(kno)) return bildir('Kursun WhatsApp numarası kayıtlı değil; kursu arayın' + (S.kurs.tel ? ': ' + S.kurs.tel : ''), 'uyari'); if (waAc(kno, m, 'WhatsApp', tamAd(k), false, 'KURSA GELEN') !== 'api') bildir('WhatsApp açıldı; mesajı kursa gönder', 'wp'); }
   if (t.closest('[data-iste]')) return randevuAl(k);
@@ -555,12 +529,14 @@ export function ogrenciPortal() {
   if (!ogId || !kursiyer(ogId)) { const puan = k => (sonrakiDers(k) ? 4 : 0) + (k.odeme.taksitler.some(t => !t.odendi) ? 2 : 0) + (S.dersler.some(d => d.kursiyer === k.id && d.beceri) ? 2 : 0) + (k.asama === 'Direksiyon' ? 1 : 0); ogId = [...S.kursiyerler].sort((a, b) => puan(b) - puan(a))[0].id; }
   if (ogSekme === 'program') ogSekme = 'ders';
   const k = kursiyer(ogId), S0 = SINIFLAR[k.sinif];
+  ogrAktif(k);   // Plus paket denetimi bu öğrenciye göre (UYG-019)
   const sd = sonrakiDers(k);
   const sinav = S.sinavlar.filter(s => s.kursiyerler.includes(k.id) && fark(s.tarih) >= 0 && !(s.sonuc || {})[k.id]).sort((a, b) => a.tarih.localeCompare(b.tarih))[0];
-  // Yeni öğrenci tasarımı (js/ogr/): öğrencinin kendi telefonunda. Personel önizlemesi eski düzende kalır.
-  if (oturum.kullanici && oturum.kullanici.rol === 'ogrenci') {
-    const y = OX.ciz(ogSekme, { k, S0, sd, sinav, yenile, git: (sk, alt) => { ogSekme = sk; sekmeSakla(); if (alt !== undefined) OX.altAc(alt); yenile(true); }, genelTik: t => ogGenelTik(t, k), odemeYap: i => odemeYap(k, i), temaUst });
-    if (y) return y;
+  // Yeni öğrenci tasarımı (js/ogr/): öğrencinin kendi telefonunda; personel önizlemesinde telefon çerçevesi içinde (DENETİM K10)
+  { const kendi = !!(oturum.kullanici && oturum.kullanici.rol === 'ogrenci');
+    const y = OX.ciz(ogSekme, { k, S0, sd, sinav, yenile, git: (sk, alt) => { ogSekme = sk; sekmeSakla(); if (alt !== undefined) OX.altAc(alt); yenile(true); }, genelTik: t => ogGenelTik(t, k), odemeYap: i => odemeYap(k, i), temaUst: kendi ? temaUst : () => { } });
+    if (y && kendi) return y;
+    if (y) return telOnizleme(y, 'Öğrenci ekranı', `<select class="girdi" data-og aria-label="Öğrenci seç">${S.kursiyerler.slice(0, 40).map(x => `<option value="${x.id}" ${x.id === k.id ? 'selected' : ''}>${e(tamAd(x))}</option>`).join('')}</select>`, ev => { if (ev.target.matches('[data-og]')) { ogId = ev.target.value; test = { mod: null }; OG.modulSifirla(); yenile(); } });
   }
   let govde = '';
   // eski düzen Öğren modülü: alt ekran değeri yeni tasarımla ortak (sessionStorage 'sinyal-og-alt'); eski düzen yalnız bildiği değerleri açar
@@ -602,7 +578,7 @@ export function ogrenciPortal() {
     baslik: 'Kursiyer ekranı', alt: 'Kursiyerin telefonunda gördüğü ekran',
     html: `${kendi ? '' : `<div class="og-onizleme u-onizleme">${isaret('bilgi', 16)}<span>Personel önizlemesi</span><select class="girdi" data-og aria-label="Öğrenci seç">${S.kursiyerler.slice(0, 40).map(x => `<option value="${x.id}" ${x.id === k.id ? 'selected' : ''}>${e(tamAd(x))}</option>`).join('')}</select></div>`}
       ${ogSekme === 'durum' ? ogHero(k, sd, sinav) : ogrenUst ? OGR.ustHtml(k) : ''}<div class="portal portal-og ${ogSekme === 'durum' ? 'hero-alti' : ogrenUst ? 'ogn-alti' : ''}">
-      ${ogSekme === 'durum' || ogSekme === 'sinav' ? '' : `<header class="u-baslik"><h1>${OG_SEKME.find(x => x[0] === ogSekme)[1]}</h1><small>${e(tamAd(k))} · ${e(S0.ad)}</small></header>`}
+      ${ogSekme === 'durum' || ogSekme === 'sinav' ? '' : `<header class="u-baslik"><h1>${OG_SEKME.find(x => x[0] === ogSekme)[1]}</h1><small>${e(tamAd(k))} · ${e(sinifEtiket(k.sinif, k))}</small></header>`}
       ${govde}
     </div>
     <nav class="og-sekme" aria-label="Öğrenci paneli">${OG_SEKME.map(([kk, t, i]) => `<button data-ogs="${kk}" class="${kk === ogSekme ? 'secili' : ''}" ${kk === ogSekme ? 'aria-current="page"' : ''}>${ik(i)}<span>${t}</span></button>`).join('')}</nav>`,

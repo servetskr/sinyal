@@ -1,0 +1,32 @@
+{
+  "aciklama": "Kurslara duyurular (js/duyuru.js okur, DIG-040). Yeni duyuru en üste; id değişmez. kime: rollerden biri ya da birkaçı (mudur, sekreter, usta); yoksa kurs ekibi. onemli: true ise ilk girişte pencere açılır, değilse yalnız Duyurular listesinde görünür.",
+  "duyurular": [
+    {
+      "id": "2026-11-18-meb-uyumsuzluk",
+      "tarih": "2026-11-18",
+      "baslik": "MEBBİS ile uyumsuzluklar listesi",
+      "ozet": "MEBBİS’teki direksiyon programı mdSinyal’deki gerçek derslerle karşılaştırılıyor; farklar MEB işlemleri’nde listeleniyor.",
+      "metin": "MEB işlemleri › MEBBİS’ten güncelle artık kurumun direksiyon programını da okuyor (son 6 hafta ve önümüzdeki 5 hafta). Tarih, saat, öğretmen ya da araç farkı olan dersler, MEBBİS’te olmayan ya da yalnız MEBBİS’te olan dersler “MEBBİS ile uyumsuzluklar” kartında görünür. Bilerek bıraktığınız farkı açıklama yazarak kapatabilirsiniz; açıklama işlem kaydına yazılır. Denetimde eğitimin Modül’e girilen gün ve saatte yapılıp yapılmadığına bakılır.",
+      "kime": ["mudur", "sekreter"],
+      "onemli": true
+    },
+    {
+      "id": "2026-11-18-otomatik-plan",
+      "tarih": "2026-11-18",
+      "baslik": "Otomatik ders planı yenilendi",
+      "ozet": "Planlayıcı gece dersini, simülatör/alan sırasını, öğretmenin haftalık sınırını ve son tarihleri gözetiyor; yerleşmeyen dersin nedenini yazıyor.",
+      "metin": "Direksiyon planı › Otomatik planla: 1 ya da 2 hafta, istenirse başka yetkili öğretmenlere dağıtım, seçili öğrenciler. Öneriler gün gün gelir; istemediğinizin işaretini kaldırırsınız. “Ekle ve MEBBİS’e yaz” yalnız 5 gün ve sonrasındaki dersleri gönderir. Ders saatlerini ve otomatik plan ayarlarını Ayarlar › Kurs bilgileri’nden değiştirebilirsiniz.",
+      "kime": ["mudur", "sekreter"],
+      "onemli": true
+    },
+    {
+      "id": "2026-11-18-psikoteknik",
+      "tarih": "2026-11-18",
+      "baslik": "Psikoteknik randevusu",
+      "ozet": "Sınavlar › Psikoteknik sekmesinden öğrenciye ya da kurs dışından birine randevu verilebiliyor.",
+      "metin": "Sonucu başarılı olan kişiye yeni randevu verilmez; bir kişinin aynı anda tek açık randevusu olur; aynı oda ve saate ikinci randevu verilmez.",
+      "kime": ["mudur", "sekreter"],
+      "onemli": false
+    }
+  ]
+}

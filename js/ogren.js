@@ -1,12 +1,12 @@
 // Öğren: içerik haritası (ana ekran) ve modül sayfaları. Ders oynatıcı js/ogr/ders.js, ortak veri js/ogr/ogrveri.js.
-import { S, ogrOzellik } from './veri.js?v=231';
-import { e, ik } from './ui.js?v=231';
-import { MUFREDAT } from './ogrenci.js?v=231';
-import { UNITE_AD, ILKYARDIM_SVG, kapakSvg, konular, bitti, sonuc, siradaki, sayac, levhaYukle, veriler, altEkran, altAc, altKapat } from './ogr/ogrveri.js?v=231';
-import { dersBaslat } from './ogr/ders.js?v=231';
-import { SAHNELER } from './tehlike.js?v=231';
-import { yarim, yarimKart, yarimBagla } from './ogr/sinav.js?v=231';
-import { esc, oi, sayfaBas, geri, bolum, heroKart, gorsel, dugme, liste, satir, konuSatir, serit, bos, stilEkle } from './ogr/ui.js?v=231';
+import { S, ogrOzellik } from './veri.js?v=235';
+import { e, ik } from './ui.js?v=235';
+import { MUFREDAT } from './ogrenci.js?v=235';
+import { UNITE_AD, ILKYARDIM_SVG, kapakSvg, konular, bitti, sonuc, siradaki, sayac, levhaYukle, veriler, altEkran, altAc, altKapat } from './ogr/ogrveri.js?v=235';
+import { dersBaslat } from './ogr/ders.js?v=235';
+import { SAHNELER } from './tehlike.js?v=235';
+import { yarim, yarimKart, yarimBagla } from './ogr/sinav.js?v=235';
+import { esc, oi, sayfaBas, geri, bolum, heroKart, gorsel, dugme, liste, satir, konuSatir, serit, bos, stilEkle } from './ogr/ui.js?v=235';
 export { siradaki, dersBaslat };
 export const onYukle = cb => { if (!veriler().LV) levhaYukle().then(() => cb && cb()); };
 
@@ -115,6 +115,7 @@ function anaHtml(k, ctx) {
     + `<div class="ox-ogr-araclar">`
     + liste([satir({ ikon: 'panoSoru', baslik: 'Deneme sınavı', alt: denemeAlt, sag: `<span class="ox-bag">${yarimDeneme ? 'Devam et' : 'İncele'}${oi('ok')}</span>`, ok: false, attrs: { 'data-ox-alt': 'deneme' }, cls: 'ox-ogr-deneme' })])
     + liste([satir({ ikon: 'kartlar', baslik: 'Çalışma araçları', alt: 'Hızlı test ve konu tekrarı', attrs: { 'data-ox-alt': 'araclar' } })])
+    + liste([satir({ ikon: 'kalkan', baslik: 'Kurallar ve sık sorulanlar', alt: 'Ders, sınav ve trafik kurallarında arayın', attrs: { 'data-ox-alt': 'kurallar' } })])
     + `</div>`;
 }
 

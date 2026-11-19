@@ -1,7 +1,7 @@
 // WhatsApp'tan gelen evrak: öğrenci belgenin fotoğrafını ya da PDF'ini kursun numarasına atar; belge doğru öğrencinin
 // dosyasına, doğru başlığa düşer. Okunmayacak kadar bulanıksa işaretlenir, tek tuşla yeniden istenir.
-import { S, kaydet, gun, EVRAKLAR, tamAd, islem, eksikEvrak, gonderimEkle, selam, evrakKaynak } from './veri.js?v=231';
-import { e, pencere, kapatPencere, bildir, fotoKucult, ik, waIstek, waAc, apiAcik } from './ui.js?v=231';
+import { S, kaydet, gun, EVRAKLAR, tamAd, islem, eksikEvrak, gonderimEkle, selam, evrakKaynak } from './veri.js?v=235';
+import { e, pencere, kapatPencere, bildir, fotoKucult, ik, waIstek, waAc, apiAcik } from './ui.js?v=235';
 
 const rakam = x => String(x || '').replace(/\D/g, '');
 const kucuk = s => String(s || '').toLocaleLowerCase('tr');
@@ -41,6 +41,15 @@ export const BULANIK_SINIR = 250;  // net belge fotoğrafında binlerce, belirgi
 // Eşik kurs ayarı (Ayarlar › MEB kuralları › Evrak bulanıklık eşiği, S.kurs.bulanikSinir); 0 yazılırsa denetim kapalı.
 // Varsayılan 250 gerçek evrakla ayarlanmadı: kurs "onayla / yeniden iste" kararlarından sonra değeri düzeltebilir.
 export const bulanikSinir = () => { const v = S && S.kurs && S.kurs.bulanikSinir; return v === 0 ? 0 : +v > 0 ? +v : BULANIK_SINIR; };
+// KAY-040/041: ofisin 'onayla' / 'yeniden iste' kararları yalnız sayı olarak toplanır (görüntü saklanmaz): S.netlikOrnek [{ net, karar: 'onay'|'red', tur }], en çok 300
+export function netlikKarari(y, karar, tur) { if (!y || y.net == null) return; S.netlikOrnek = [...(S.netlikOrnek || []), { net: +y.net, karar, tur }].slice(-300); }
+// öneri: onaylananların alt %10'u ile reddedilenlerin üst %75'i arasının ortası (en az 10 onay ve 3 red)
+export function netlikOnerisi() {
+  const l = S.netlikOrnek || [], on = l.filter(x => x.karar === 'onay').map(x => x.net).sort((a, b) => a - b), red = l.filter(x => x.karar === 'red').map(x => x.net).sort((a, b) => a - b);
+  const q = (a, p) => a[Math.min(a.length - 1, Math.max(0, Math.floor(p * (a.length - 1))))];
+  if (on.length < 10 || red.length < 3) return { n: l.length, on: on.length, red: red.length, oneri: null };
+  const alt = q(on, 0.1), ust = q(red, 0.75); return { n: l.length, on: on.length, red: red.length, oneri: Math.max(20, Math.round((alt + ust) / 2)), alt, ust };
+}
 export const bulanikMi = net => net != null && bulanikSinir() > 0 && net < bulanikSinir();
 // Uygulama içi yüklemeler için: { net, bulanik }. WhatsApp'tan gelen evrakla aynı ölçü ve eşik. Yazılı belge içindir; vesikalık fotoğrafa uygulanmaz.
 export async function netlikOlc(veri) { if (!/^data:image\//.test(String(veri || ''))) return null; const net = await netlik(veri); return { net, bulanik: bulanikMi(net) }; }

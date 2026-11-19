@@ -1,25 +1,32 @@
-import { S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec } from './veri.js?v=231';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=231';
-import * as Y1 from './sayfalar1.js?v=231';
-import * as Y2 from './sayfalar2.js?v=231';
-import * as P from './portal.js?v=231';
-import * as OXU from './ogr/ui.js?v=231';
-import * as Y3 from './sayfalar3.js?v=231';
-import * as Y4 from './sayfalar4.js?v=231';
-import * as Y5 from './sayfalar5.js?v=231';
-import * as IM from './imza.js?v=231';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=231';
-import * as SN from './senaryo.js?v=231';
-import * as OZ from './ozellik.js?v=231';
-import { durumlariGuncelle } from './mesaj.js?v=231';
-import { yeniMenu } from './yeni.js?v=231';
-import * as B from './bulut.js?v=231';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=231';
-import * as AN from './analiz.js?v=231';
-import * as GZ from './guzergah.js?v=231';
-import * as ORT from './ortak.js?v=231';
-import * as SH from './sahip.js?v=231';
-import * as MZ from './sayfa-mevzuat.js?v=231';
+import { DESTEK } from './iletisim.js?v=235';
+import { ilSecenekleri, ekranDuzey, ekranYetkili, kullaniciSubesi, S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec, sinifEtiket, sb } from './veri.js?v=235';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=235';
+import * as Y1 from './sayfalar1.js?v=235';
+import * as Y2 from './sayfalar2.js?v=235';
+import * as SG from './sinavgunu.js?v=235';
+import * as P from './portal.js?v=235';
+import * as OXU from './ogr/ui.js?v=235';
+import * as Y3 from './sayfalar3.js?v=235';
+import * as Y4 from './sayfalar4.js?v=235';
+import * as Y5 from './sayfalar5.js?v=235';
+import * as IM from './imza.js?v=235';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=235';
+import * as SN from './senaryo.js?v=235';
+import * as OZ from './ozellik.js?v=235';
+import { durumlariGuncelle } from './mesaj.js?v=235';
+import { yeniMenu } from './yeni.js?v=235';
+import * as B from './bulut.js?v=235';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=235';
+import * as AN from './analiz.js?v=235';
+import * as GZ from './guzergah.js?v=235';
+import * as ORT from './ortak.js?v=235';
+import * as SH from './sahip.js?v=235';
+import * as MZ from './sayfa-mevzuat.js?v=235';
+import * as RM from './raporlar.js?v=235';
+import * as GU from './guncelleme.js?v=235';
+import * as DY from './duyuru.js?v=235';
+import * as IL from './ilan.js?v=235';
+import * as TC from './tercih.js?v=235';
 
 /* ---------- uygulama hatalarının otomatik bildirimi ----------
    window.onerror / unhandledrejection → worker /hata (api.mdsinyal.com). Gönderilen: sürüm, rota adı (#/ad; kimlik ve kod kırpılır), rol,
@@ -52,18 +59,43 @@ async function hataBildir(tur, hata, yer) {
 window.addEventListener('error', ev => { if (ev && ev.target && ev.target !== window && !ev.error) return; hataBildir('hata', ev.error || ev.message, ev.filename ? `${ev.filename}:${ev.lineno}:${ev.colno}` : ''); });
 window.addEventListener('unhandledrejection', ev => { const r = ev && ev.reason; if (r && (r.kullanici || r.code === 'permission-denied' || r.name === 'AbortError')) return; hataBildir('soz', r instanceof Error ? r : String(r && r.message || r || 'Promise reddedildi')); });
 
+// DIG-040: kurs ana ekranının altında "Duyurular" bağlantısı; önemli ve okunmamış duyuru bir kez pencere olarak açılır
+function duyuruAlani(kap) {
+  DY.yukle().then(() => { const s = kap.querySelector('[data-sg-alan="alt"]'); if (!s || kap.querySelector('[data-dy-liste]')) return; const n = DY.okunmamis().length;
+    s.insertAdjacentHTML('afterend', `<p class="dy-bag-satir"><button type="button" class="sg-bag" data-dy-liste>Duyurular${n ? ` · ${n} yeni` : ''}</button></p>`); setTimeout(() => DY.goster(), 1200); });
+}
+// DIG-025: iki cihaz aynı alanı aynı anda değiştirince kaybeden cihaz uyarılır (bulut.js birleştirme)
+addEventListener('sinyal-cakisma', ev => { const m = ev.detail && ev.detail.metin; if (!m) return; if (document.querySelector('.perde')) return bildir(m, 'uyari');
+  pencere({ baslik: 'Değişikliğiniz başka cihazınkiyle çakıştı', taslak: false, icerik: `<p style="font-size:14px">${e(m)}</p>`, altlik: '<button class="dg dg-ana" data-kapat>Tamam</button>' }); });
+// YON-082 / YON-002: öğrenci e-postasını ekler; doğrulama bağlantısına dokununca hesabın e-postası olur, telefonla giriş kapanır (eşlemede gerçek e-posta durmaz)
+document.addEventListener('click', ev => { if (!ev.target.closest('[data-ogr-eposta]')) return; ev.preventDefault(); kapatPencere();
+  setTimeout(() => pencere({ baslik: B.ogrenciEposta() ? 'E-postanı değiştir' : 'E-postanı ekle', icerik: `<form data-oe><label class="og-alan"><span class="og-alan-et">E-posta</span><span class="og-girdi"><input name="e" type="email" autocomplete="email" required value="${e(B.ogrenciEposta())}"></span></label><p style="font-size:13.5px;color:var(--soluk);margin-top:8px">Bu adrese bir doğrulama bağlantısı gelir. Dokununca bundan sonra e-postan ve şifrenle girersin; telefonla giriş kapanır. Şifreni unutursan bağlantı e-postana gelir.</p></form>`,
+    altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-oe-gonder>Bağlantı gönder</button>', onAc(p) { p.querySelector('[data-oe-gonder]').addEventListener('click', () => { const v = p.querySelector('[name=e]').value.trim(); if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return bildir('E-postanı yaz', 'uyari'); B.ogrenciEpostaEkle(v).then(() => { kapatPencere(); bildir(v + ' adresine doğrulama bağlantısı gönderildi; gelen kutuna ve istenmeyen klasörüne bak'); }).catch(x => bildir(B.hataMetni(x), 'uyari')); }); } }), 200); });
+// YON-072: birden çok kursta hesabı olan kişi kurs değiştirir
+document.addEventListener('click', ev => { if (!ev.target.closest('[data-kurs-degistir]')) return; ev.preventDefault(); kapatPencere();
+  B.kurslarim().then(l => pencere({ baslik: 'Kurs değiştir', icerik: `<ul class="liste">${l.map(k => `<li><div style="flex:1;min-width:0"><b>${e(k.ad)}</b><small style="display:block;color:var(--soluk)">${e({ mudur: 'Kurs müdürü', sekreter: 'Ön büro', usta: 'Usta öğretici', ortak: 'Ortak' }[k.rol] || k.rol)}</small></div>${k.secili ? '<span class="rozet rozet-yesil">açık</span>' : `<button class="dg dg-ana dg-kucuk" data-kurs-sec="${e(k.id)}">Aç</button>`}</li>`).join('')}</ul>`,
+    altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button>', onAc(p) { p.querySelectorAll('[data-kurs-sec]').forEach(b => b.addEventListener('click', () => { b.disabled = true; b.textContent = 'Açılıyor…'; const k = l.find(x => x.id === b.dataset.kursSec); islem('Kurs değiştirdi', k ? k.ad : ''); kaydet(); B.kursDegistir(b.dataset.kursSec); })); } })).catch(x => bildir(B.hataMetni(x), 'uyari')); });
+// YON-063: kişisel tercihler penceresi (kullanıcı menüsünden)
+document.addEventListener('click', ev => { if (!ev.target.closest('[data-tercih]')) return; ev.preventDefault(); import('./tercih.js?v=235').then(TC => { kapatPencere(); setTimeout(() => pencere({ baslik: 'Görünüm ve tercihler', icerik: TC.tercihHtml(), altlik: '<button class="dg dg-ana" data-kapat>Tamam</button>', onAc(p) { p.addEventListener('change', e2 => { if (TC.tercihDegisti(e2.target)) yenile(); }); } }), 200); }); });
+document.addEventListener('click', ev => { if (ev.target.closest('[data-nasil]')) { ev.preventDefault(); return import('./nasil.js?v=235').then(m => m.nasilAc()); } });   // DIG-031
+document.addEventListener('click', ev => { if (ev.target.closest('[data-dy-liste]')) { ev.preventDefault(); DY.listeAc().then(() => document.querySelectorAll('[data-dy-liste]').forEach(b => { b.textContent = 'Duyurular'; })); } });
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
   plan: Y1.plan, teorik: Y1.teorik, sinavlar: Y2.sinavlar, guzergah: GZ.sayfa, kasa: Y2.kasa, filo: Y2.filo,
-  mesajlar: Y2.mesajlar, meb: Y2.meb, raporlar: Y2.raporlar, ayarlar: Y2.ayarlar,
+  mesajlar: Y2.mesajlar, meb: Y2.meb, raporlar: RM.raporMerkezi, ayarlar: Y2.ayarlar,
   egitmen: P.egitmenPortal, ogrenci: P.ogrenciPortal,
   belgeler: Y3.belgeler, kayit: Y3.kayitSayfasi, guven: Y3.guven, mebbis: Y3.mebbisAsistani,
   sosyal: Y4.sosyal, kurulum: Y5.kurulum, 'imza-geldi': IM.imzaGeldi, senaryo: SN.senaryolar, karlilik: OZ.karlilik, analiz: AN.analiz,
-  mevzuat: MZ.mevzuat,
+  mevzuat: MZ.mevzuat, ilanlar: IL.ilanlar, sinav: SG.sinavGunu,
 };
 const ROL_AD = { mudur: 'Kurs müdürü', sekreter: 'Ön büro', usta: 'Usta öğretici', ortak: 'Ortak' };
-const YASAK = { mudur: [], sekreter: ['raporlar', 'ayarlar', 'guven', 'kurulum', 'senaryo', 'karlilik', 'analiz'], usta: Object.keys(SAYFALAR).filter(k => !['egitmen', 'imza-geldi'].includes(k)), ortak: Object.keys(SAYFALAR) };
-const izinli = ad => { const u = oturum.kullanici; return u && !(YASAK[u.rol] || Object.keys(SAYFALAR)).includes(ad) && !((u.ziyaretci || u.bulut) && ad === 'senaryo'); };
+const YASAK = { mudur: [], sekreter: ['raporlar', 'ayarlar', 'guven', 'kurulum', 'senaryo', 'karlilik', 'analiz'], usta: Object.keys(SAYFALAR).filter(k => !['egitmen', 'imza-geldi'].includes(k)), ortak: Object.keys(SAYFALAR),
+  // YON-073: teorik öğretmen yalnız teorik dersler ve yoklama; muhasebe / mali müşavir yalnız kasa (salt okunur); şube müdürü ön büro gibi, raporlar açık (kendi şubesi)
+  teorik: Object.keys(SAYFALAR).filter(k => !['teorik'].includes(k)), muhasebe: Object.keys(SAYFALAR).filter(k => !['kasa'].includes(k)), subemudur: ['ayarlar', 'guven', 'kurulum', 'senaryo'] };
+// rolün ana ekranı
+export const anaSayfa = (u = oturum.kullanici) => !u ? '#/genel' : u.rol === 'usta' ? '#/egitmen' : u.rol === 'teorik' ? '#/teorik' : u.rol === 'muhasebe' ? '#/kasa' : '#/genel';
+const UST_EKRAN = { kursiyer: 'kursiyerler', sinav: 'sinavlar' }, ustEkran = ad => UST_EKRAN[ad] || ad;
+const izinli = ad => { ad = ustEkran(ad); const u = oturum.kullanici; return u && !(YASAK[u.gorev === 'subemudur' ? 'subemudur' : u.rol] || Object.keys(SAYFALAR)).includes(ad) && !((u.ziyaretci || u.bulut) && ad === 'senaryo') && ekranYetkili(ad); };  // YON-018: müdürün kapattığı ekran ön büroya görünmez
 
 // Menü günlük işe göre: önce bugün, sonra öğrenci işleri, para, kurum işleri, analiz; az kullanılanlar en altta
 const MENU = [
@@ -71,8 +103,8 @@ const MENU = [
   ['Öğrenciler', [['kursiyerler', 'Kursiyerler', '→'], ['plan', 'Direksiyon planı', '→'], ['teorik', 'Teorik dersler', '→'], ['sinavlar', 'Sınavlar', '→'], ['guzergah', 'Sınav güzergâhları', '→']]],
   ['Para', [['kasa', 'Kasa ve ödemeler', '→']]],
   ['Kurum', [['meb', 'MEB işlemleri', '→'], ['mevzuat', 'Mevzuat asistanı', '→'], ['belgeler', 'Belgeler ve çıktılar', '→'], ['filo', 'Ekip ve araçlar', '→']]],
-  ['Analiz', [['analiz', 'Analiz', '→'], ['raporlar', 'Raporlar', '→'], ['karlilik', 'Kârlılık ve kapasite', '→']]],
-  ['Diğer', [['sosyal', 'Sosyal medya asistanı', '↗'], ['kayit', 'Kayıt formu', '↗'], ['ogrenci', 'Kursiyer ekranı', '↗'], ['senaryo', 'Demo senaryoları', '↗'], ['kurulum', 'Kurulum', '→'], ['guven', 'Verileriniz ve güvenlik', '→'], ['ayarlar', 'Ayarlar', '→']]],
+  ['Analiz', [['raporlar', 'Raporlar', '→']]],
+  ['Diğer', [['ilanlar', 'İlan panosu', '→'], ['sosyal', 'Sosyal medya asistanı', '↗'], ['kayit', 'Kayıt formu', '↗'], ['ogrenci', 'Kursiyer ekranı', '↗'], ['senaryo', 'Demo senaryoları', '↗'], ['kurulum', 'Kurulum', '→'], ['guven', 'Verileriniz ve güvenlik', '→'], ['ayarlar', 'Ayarlar', '→']]],
 ];
 // Aramada sayfaların yanında özellikler de çıkar (ör. "müşavir" yazınca müşavir paketi)
 const OZELLIKLER = [['Müşavir paketi (Excel)', '#/ayarlar/entegrasyon', 'muhasebe fatura e-arşiv luca'], ['Sunum verisi (örnek dersler)', '#/ayarlar/kurs', 'sunum örnek ders öğretmen tanıtım'], ['Otomatik planla', '#/plan', 'ders dağıt program'], ['WhatsApp hattını bağla', '#/ayarlar/kurs', 'otomatik mesaj api'], ['İki adımlı giriş', '#/ayarlar/guvenlik', 'doğrulama kodu güvenlik'], ['Ders defteri (öğrenci onayı)', '#/ayarlar/ogrenciapp', 'itiraz onay'], ['Öğrenci uygulaması ayarları', '#/ayarlar/ogrenciapp', 'kursiyer ekranı'], ['Sınıf ve ücretler', '#/ayarlar/sinif', 'fiyat taban ücret'], ['Kullanıcılar ve davet', '#/ayarlar/kullanici', 'çalışan personel'], ['Yedekler', '#/ayarlar/guvenlik', 'yedek geri yükle'], ['İşlem geçmişi', '#/ayarlar/gecmis', 'log kim ne yaptı'], ['KVKK ve anonimleştirme', '#/ayarlar/kvkk', 'kişisel veri imha'], ['Veri aktarımı (Excel)', '#/ayarlar/aktarim', 'içe aktar eski program'], ['Denetim modu', '#/meb', 'müfettiş denetim'], ['MEBBİS Yardımcısı', '#/meb', 'eklenti chrome'], ['Puantaj ve personel özeti', '#/ayarlar/entegrasyon', 'bordro maaş prim']];
@@ -84,7 +116,7 @@ try { rol = localStorage.getItem('sinyal-rol') || 'yonetici'; } catch (x) { }
 function sayaclar() {
   return {
     adaylar: [S.adaylar.filter(a => a.asama === 'Yeni').length, false],
-    kasa: [S.kursiyerler.filter(k => gecikenler(k).length).length, false],
+    kasa: [sb(S.kursiyerler).filter(k => !(k.kapali && k.kapali.tur === 'arsiv') && gecikenler(k).length).length, false],   // DENETİM K8: Kasa sayfası gibi şube süzgecine uyar; arşivdekiler sayılmaz (DIG-051)
     meb: [S.kursiyerler.filter(k => !k.mebIslendi && !eksikEvrak(k).length).length, true],
     sosyal: [S.sosyal.yorumlar.filter(y => y.durum === 'devir' || y.durum === 'onay').length + S.devredilen.length, false],
     kurulum: [Y5.kurulumAdimlari().filter(x => !x[1]).length, true],
@@ -104,49 +136,61 @@ function hesapSayfasi() {
   const tel = (S.kurs.tel || '').replace(/\s/g, '');
   const satir = (ikon, metin, ek, ton = '') => `<span class="hs-ik ${ton}">${ik(ikon)}</span><span class="hs-metin">${metin}${ek ? `<small>${ek}</small>` : ''}</span>`;
   pencere({ baslik: 'Hesabım', alt: true, icerik: `<div class="hs-kim"><span class="app-profil buyuk" aria-hidden="true">${basHarf(ad)}</span><div><b>${e(ad)}</b><small>${e(S.kurs.ad)} · ${ogr ? 'Öğrenci' : ORT.yonetimModu() || u.rol === 'ortak' ? (u.rol === 'mudur' ? 'Yönetici' : 'Ortak · yalnız görüntüler') : ROL_AD[u.rol]}</small></div></div>
-    <div class="hs-liste">${ogr ? `<button type="button" data-ogr-sifre>${satir('kilit', 'Şifremi değiştir')}${ik('sag')}</button>` : ''}
+    <div class="hs-liste">${ogr ? `<button type="button" data-ogr-sifre>${satir('kilit', 'Şifremi değiştir')}${ik('sag')}</button><button type="button" data-ogr-eposta>${satir('mesaj', B.ogrenciEposta() ? 'E-postamı değiştir' : 'E-postamı ekle', B.ogrenciEposta() ? e(B.ogrenciEposta()) : 'E-postanla da girersin; şifreni e-postayla yenilersin')}${ik('sag')}</button>` : ''}
       ${tel && !ORT.yonetimModu() && u.rol !== 'ortak' ? `<a href="tel:${e(tel)}">${satir('tel', 'Kursu ara', e(S.kurs.tel))}${ik('sag')}</a>` : ''}
       ${!ogr && !ORT.yonetimModu() && ['mudur', 'sekreter'].includes(u.rol) ? `<a href="#/genel" data-kapat>${satir('genel', 'Kurs ekranı', 'Müdür ve ön büro paneli')}${ik('sag')}</a><a href="#/egitmen" data-kapat>${satir('kursiyer', 'Öğretmen ekranı', 'Usta öğreticinin telefonda gördüğü; öğretmen seçilir')}${ik('sag')}</a><a href="#/ogrenci" data-kapat>${satir('tel', 'Öğrenci ekranı', 'Öğrencinin telefonda gördüğü; öğrenci seçilir')}${ik('sag')}</a>` : ''}
+      ${!ogr && u.bulut && (u.kurslar || []).length > 1 ? `<button type="button" data-kurs-degistir>${satir('kursiyer', 'Kurs değiştir', (u.kurslar.length) + ' kursta hesabınız var')}${ik('sag')}</button>` : ''}
+      ${!ogr && ['mudur', 'sekreter'].includes(u.rol) && !ORT.yonetimModu() ? `<button type="button" data-tercih>${satir('ayar', 'Görünüm ve tercihler', 'Yazı boyu, tema, liste, süzgeç, sekme')}${ik('sag')}</button>` : ''}
+      ${!ogr && u.rol !== 'usta' && !ORT.yonetimModu() ? `<button type="button" data-nasil>${satir('belge', 'Nasıl yapılır?', 'Sık işlerin adım adım anlatımı')}${ik('sag')}</button>` : ''}
       ${!ogr && u.rol !== 'usta' ? `<a href="yardimci/" target="_blank" rel="noopener">${satir('indir', 'MEBBİS Yardımcısı’nı kur', 'En güncel sürüm ve kurulum adımları · mdsinyal.com/yardimci')}${ik('sag')}</a>` : ''}
       ${ORT.yonetimModu() && u.rol === 'mudur' ? `<button type="button" data-yn-hesaplar>${satir('kilit', 'Hesaplar', 'Kurs hesapları, kullanıcılar, şifre yenileme')}${ik('sag')}</button>` : ''}
-      ${!ogr && !ORT.yonetimModu() && u.rol !== 'ortak' ? `<button type="button" data-destek>${satir('mesaj', 'mdSinyal Destek', 'Sorun, soru ya da istek bildir')}${ik('sag')}</button>` : ''}</div>
+      ${!ogr && !ORT.yonetimModu() && u.rol !== 'ortak' ? `<button type="button" data-destek>${satir('mesaj', 'mdSinyal Destek', 'Sorun, soru ya da istek bildir')}${ik('sag')}</button>` : ''}
+      <button type="button" data-sg-denetle>${satir('sifirla', 'Uygulama sürümü', `<span data-sg-metin>${e(GU.kisaMetin())}</span>`)}${ik('sag')}</button></div>
     <div class="hs-liste"><button type="button" class="hs-cikis" ${ogr ? 'data-ogr-cikis' : 'data-cikis'}>${satir('cikis', u.bulut || ogr ? 'Çıkış yap' : 'Kullanıcı değiştir', '', 'kirmizi')}</button></div>` });
 }
 // Kurs personeli mdSinyal'e destek talebi açar: talep kursun verisine yazılır, Servet mdSinyal Yönetim › Destek'te görür ve cevaplar
-const DESTEK_TUR = ['Hata', 'Soru', 'İstek', 'Eğitim'];
-function destekPenceresi() {
+const DESTEK_TUR = ['Hata', 'Öneri', 'Soru', 'İstek', 'Eğitim'];   // DIG-030: öneri ayrı tür; öncelik (Normal / Acil) talepte
+export function destekPenceresi(hazirMetin = '') {
   const u = oturum.kullanici, yazar = !!u.bulut && ['mudur', 'sekreter'].includes(u.rol), c = S.destekCevap || {};
   const l = (S.destek || []).slice().sort((a, b) => String(b.zaman).localeCompare(String(a.zaman)));
   const wa = 'https://wa.me/' + SH.DESTEK_TEL + '?text=' + encodeURIComponent('Merhaba, ' + (S.kurs.ad || 'kursumuz') + ' için mdSinyal desteği rica ediyorum.');
   pencere({ baslik: 'mdSinyal Destek', alt: true, icerik: `${yazar ? `<form id="f-destek" class="og-giris-form yn-form">
       <div class="sh-durum-sec ds-tur" role="radiogroup">${DESTEK_TUR.map((t, i) => `<button type="button" role="radio" aria-checked="${!i}" class="${!i ? 'secili' : ''}" data-ds-tur="${t}">${t}</button>`).join('')}</div>
+      <label class="og-alan" style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" name="acil" style="width:18px;height:18px"> Acil: işimi durduruyor</label>
       <label class="og-alan"><span class="og-alan-et">Ne oldu, ne istiyorsun?</span><span class="og-girdi yn-alan-uzun"><textarea name="metin" rows="4" required placeholder="Örn. Taksit ekranında ödeme kaydedilmiyor"></textarea></span></label></form>`
-      : `<p class="ekran-notu" style="margin:0 0 12px">${ik('uyari')}<span>Talebi kurs müdürü ya da ön büro açar. Acil bir durum için WhatsApp’tan yazabilirsin.</span></p>`}
-    <a class="ds-wa" target="_blank" rel="noopener" href="${wa}">${ik('wp')}<span>Acil mi? mdSinyal’e WhatsApp’tan yaz<small>0501 363 65 36</small></span></a>
+      : `<p class="ekran-notu" style="margin:0 0 12px">${ik('uyari')}<span>Talebi kurs müdürü ya da ön büro açar. Acil bir durum için destek hattına WhatsApp’tan yazabilirsin.</span></p>`}
+    <a class="ds-wa" target="_blank" rel="noopener" href="${wa}">${ik('wp')}<span>WhatsApp destek hattı<small>${DESTEK.telGoster} · ${DESTEK.saat.toLocaleLowerCase('tr')}</small></span></a>
+    <p class="ds-saat">Talepler ve WhatsApp mesajları ${DESTEK.saat.toLocaleLowerCase('tr')} arası cevaplanır. E-posta: <a href="mailto:${DESTEK.eposta}">${DESTEK.eposta}</a></p>
     ${l.length ? `<h3 class="krsd-bas">Talepleriniz</h3><div class="ds-liste">${l.map(t => { const x = c[t.id] || {}, d = x.durum || 'Açık';
-      return `<div class="ds-talep"><div><b>${e(t.tur)} · ${e(String(t.metin).slice(0, 80))}</b><small>${e(t.kim || '')} · ${e(new Date(t.zaman).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }))}</small>${x.cevap ? `<p class="ds-cevap">${ik('mesaj')}<span><b>mdSinyal:</b> ${e(x.cevap)}</span></p>` : ''}</div><em class="ds-durum ${d === 'Çözüldü' ? 'ok' : d === 'İnceleniyor' ? 'bak' : ''}">${e(d)}</em></div>`; }).join('')}</div>` : ''}`,
+      return `<div class="ds-talep"><div><b>${t.oncelik === 'Acil' ? '<span style="color:var(--kirmizi)">Acil · </span>' : ''}${e(t.tur)} · ${e(String(t.metin).slice(0, 80))}</b><small>${e(t.kim || '')} · ${e(new Date(t.zaman).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }))}</small>${x.cevap ? `<p class="ds-cevap">${ik('mesaj')}<span><b>mdSinyal:</b> ${e(x.cevap)}</span></p>` : ''}</div><em class="ds-durum ${d === 'Çözüldü' ? 'ok' : d === 'İnceleniyor' ? 'bak' : ''}">${e(d)}</em></div>`; }).join('')}</div>` : ''}`,
     altlik: yazar ? `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-destek">Gönder</button>` : '<button class="dg dg-ana" data-kapat>Tamam</button>',
-    onAc: p => {
+    onAc: p => { if (hazirMetin) { const ta = p.querySelector('textarea[name=metin]'); if (ta) ta.value = hazirMetin; }
       if (!yazar) return;
       let tur = DESTEK_TUR[0];
       p.querySelectorAll('[data-ds-tur]').forEach(b => b.addEventListener('click', () => { tur = b.dataset.dsTur; p.querySelectorAll('[data-ds-tur]').forEach(x => { x.classList.toggle('secili', x === b); x.setAttribute('aria-checked', x === b); }); }));
       p.querySelector('form').addEventListener('submit', ev => { ev.preventDefault(); const m = ev.target.metin.value.trim(); if (m.length < 3) return bildir('Kısaca ne olduğunu yaz', 'uyari');
-        (S.destek = S.destek || []).push({ id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), zaman: new Date().toISOString(), kim: u.ad, rol: u.rol, tur, metin: m.slice(0, 2000) });
-        islem('mdSinyal Destek talebi açtı', tur); kaydet(); kapatPencere(); bildir('Talebin mdSinyal’e iletildi; cevap buraya gelecek'); });
+        (S.destek = S.destek || []).push({ id: 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), zaman: new Date().toISOString(), kim: u.ad, rol: u.rol, tur, oncelik: ev.target.acil.checked ? 'Acil' : 'Normal', metin: m.slice(0, 2000) });
+        islem('mdSinyal Destek talebi açtı', tur); kaydet(); kapatPencere(); bildir('Talebin mdSinyal’e iletildi; cevap buraya gelecek (' + DESTEK.saat.toLocaleLowerCase('tr') + ')'); });
     } });
 }
+// YON-018: ön büro yetkisi başka cihazdan değişince menü yeniden çizilsin
+let bilgiSoruldu = false, ipDenetlendi = false, devirBakildi = false, epostaTemizlendi = false, talepBakildi = false, talepSayi = 0;
+const yetkiImza = () => JSON.stringify((S.kurs || {}).yetki || null) + '|' + ((oturum.kullanici || {}).rol || '');
+let sonYetki = '';
 function iskelet() {
-  kurallariHazirla(); zamanlayiciBaslat();
+  sonYetki = yetkiImza(); kurallariHazirla(); zamanlayiciBaslat(); Y5.temaUygula();
+  { const ks = kullaniciSubesi(); if (ks && gorunum.sube !== ks) subeSec(ks); }  // PAR-040: şubeye kısıtlı kullanıcı
   const say = sayaclar();
   // az kullanılanlar ("Diğer") kapalı bir grupta durur; içindeki sayfa açıkken grup açık gelir
   const satir = ([k, t, i]) => `<a href="#/${k}" data-menu="${k}"><span class="ok" aria-hidden="true">${i}</span><span>${t}</span>${say[k] && say[k][0] ? `<b class="${say[k][1] ? '' : 'uyar'}">${say[k][0]}</b>` : ''}</a>`;
-  const menu = MENU.map(([g, l]) => [g, l.filter(([k]) => izinli(k))]).filter(([, l]) => l.length).map(([g, l]) => g === 'Diğer' ? `<details class="yan-grup" ${l.some(([k]) => location.hash.startsWith('#/' + k)) ? 'open' : ''}><summary class="yan-baslik">${g}</summary>${l.map(satir).join('')}</details>` : `<div class="yan-baslik">${g}</div>` + l.map(satir).join('')).join('');
+  const kurAcik = izinli('kurulum') && oturum.kullanici.rol === 'mudur' && S._bulut && !Y5.kurulumDurumu().bitti;  // YON-075: kurulum bitene kadar üstte
+  const menu = MENU.map(([g, l]) => [g, g === 'Bugün' && kurAcik ? [...l, ['kurulum', 'Kurulum', '→']] : g === 'Diğer' && kurAcik ? l.filter(([k]) => k !== 'kurulum') : l]).map(([g, l]) => [g, l.filter(([k]) => izinli(k))]).filter(([, l]) => l.length).map(([g, l]) => g === 'Diğer' ? `<details class="yan-grup" ${l.some(([k]) => location.hash.startsWith('#/' + k)) ? 'open' : ''}><summary class="yan-baslik">${g}</summary>${l.map(satir).join('')}</details>` : `<div class="yan-baslik">${g}</div>` + l.map(satir).join('')).join('');
   document.getElementById('uyg').innerHTML = `
   <div class="uyg">
     <aside class="yan" id="yan" aria-label="Ana menü"><div class="yan-levha">
       <a class="logo" href="#/genel" aria-label="mdSinyal ana sayfa"><svg class="logo-isaret" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="#141e33"/><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="1.2"/><g fill="none" stroke="#ffc21a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20l12 12-12 12" stroke-opacity=".38"/><path d="M33 20l12 12-12 12"/></g></svg><span><b><span class="mk">md</span>Sinyal</b><small>${e(S.kurs.ad)}</small></span></a>
       <nav>${menu}</nav>
-      ${(S.subeler || []).length > 1 && oturum.kullanici.rol !== 'usta' ? `<label class="sube-yan"><span>Şube</span><select data-sube aria-label="Şube">${['', ...S.subeler.map(x => x.id)].map(id => `<option value="${id}" ${gorunum.sube === id ? 'selected' : ''}>${id ? e(S.subeler.find(x => x.id === id).ad) : 'Tüm şubeler'}</option>`).join('')}</select></label>` : ''}
+      ${(S.subeler || []).length > 1 && oturum.kullanici.rol !== 'usta' ? `<label class="sube-yan"><span>Şube</span><select data-sube aria-label="Şube" ${kullaniciSubesi() ? 'disabled title="Hesabınız bu şubeyle sınırlı"' : ''}>${['', ...S.subeler.map(x => x.id)].map(id => `<option value="${id}" ${gorunum.sube === id ? 'selected' : ''}>${id ? e(S.subeler.find(x => x.id === id).ad) : 'Tüm şubeler'}</option>`).join('')}</select></label>` : ''}
       <div class="yan-alt"><b>${e(oturum.kullanici.ad)}</b><span>${ROL_AD[oturum.kullanici.rol]}</span>${S.kurs.demoNumara ? `<span style="display:block;margin-top:4px;font-size:12px;opacity:.85">Mesajlar → ${e(S.kurs.demoNumara)}</span>` : ''}<button class="dg dg-cizgi dg-kucuk" style="margin-top:8px;width:100%;background:transparent;color:#fff;border-color:#fff" data-cikis>${oturum.kullanici.bulut ? 'Çıkış yap' : 'Kullanıcı değiştir'}</button></div>
     </div></aside>
     <div class="ana">
@@ -154,22 +198,22 @@ function iskelet() {
         <button class="dg-ikon mobil-ust-sol" data-yan aria-label="Menüyü aç">${ik('menu')}</button>
         <div class="ust-baslik"><small id="ust-alt">${bugunMetni()}</small>${oturum.kullanici.bulut ? '<span id="bulut-durum" class="bulut-durum" role="status"></span>' : ''}<h1 id="ust-baslik">Genel bakış</h1></div>
         <a class="dg dg-hafif portal-geri" href="#/genel">← Panele dön</a>
-        ${(S.subeler || []).length > 1 && oturum.kullanici.rol !== 'usta' ? `<label class="sube-sec"><span class="gizli-et">Şube</span><select data-sube aria-label="Şube">${['', ...S.subeler.map(x => x.id)].map(id => `<option value="${id}" ${gorunum.sube === id ? 'selected' : ''}>${id ? e(S.subeler.find(x => x.id === id).ad) : 'Tüm şubeler'}</option>`).join('')}</select></label>` : ''}
+        ${(S.subeler || []).length > 1 && oturum.kullanici.rol !== 'usta' ? `<label class="sube-sec"><span class="gizli-et">Şube</span><select data-sube aria-label="Şube" ${kullaniciSubesi() ? 'disabled title="Hesabınız bu şubeyle sınırlı"' : ''}>${['', ...S.subeler.map(x => x.id)].map(id => `<option value="${id}" ${gorunum.sube === id ? 'selected' : ''}>${id ? e(S.subeler.find(x => x.id === id).ad) : 'Tüm şubeler'}</option>`).join('')}</select></label>` : ''}
         <button class="arama" data-ara aria-label="Ara">${ik('ara')}<span>Kursiyer, aday, plaka ara</span><kbd>⌘K</kbd></button>
         ${oturum.kullanici.rol !== 'usta' && izinli('mevzuat') ? `<a class="asistan-dugme" href="#/mevzuat" title="Mevzuat asistanı: yönetmelik ve MEB yazılarından dayanaklı cevap" aria-label="Mevzuat asistanına sor">${ik('robot')}<span>Asistana sor</span></a>` : ''}
-        ${oturum.kullanici.rol !== 'usta' ? `<button class="yeni-dugme" data-yeni-menu aria-label="Yeni ekle">${ik('arti')}<span>Yeni</span></button>` : ''}
+        ${!['usta', 'teorik', 'muhasebe'].includes(oturum.kullanici.rol) ? `<button class="yeni-dugme" data-yeni-menu aria-label="Yeni ekle">${ik('arti')}<span>Yeni</span></button>` : ''}
         <button class="kullanici-cip" data-hesap title="Hesabım: ekranlar ve çıkış" aria-label="${e(oturum.kullanici.ad)} · ${ROL_AD[oturum.kullanici.rol]} · hesap menüsü"><i class="kc-bas" aria-hidden="true">${basHarf(oturum.kullanici.ad)}</i><b>${e(oturum.kullanici.ad)}</b><small>${ROL_AD[oturum.kullanici.rol]}</small></button>
       </header>`}
-      ${oturum.kullanici.ziyaretci ? `<div class="ziyaretci-serit"><span><b>Demo görünümü</b> · örnek verilerle. Mesajlar kimseye gitmez, ekranda gösterilir.</span><button data-cikis>Çık</button></div>` : ''}
+      ${oturum.kullanici.ziyaretci ? `<div class="ziyaretci-serit"><span><b>Demo görünümü</b> · örnek verilerle. Mesajlar kimseye gitmez, ekranda gösterilir.</span><span class="zs-dugmeler"><button data-soru-ornek title="Onay bekleyen yeni soru bankası örneği">Yeni soru örneği (100)</button><button data-cikis>Çık</button></span></div>` : ''}
       <main class="icerik" id="icerik"></main>
     </div>
   </div>
   <nav class="alt-menu" aria-label="Hızlı menü">
     <a href="#/genel" data-menu="genel">${ik('genel')}Bugün</a>
-    <a href="#/kursiyerler" data-menu="kursiyerler">${ik('kursiyer')}Kursiyer</a>
-    ${oturum.kullanici.rol !== 'usta' ? `<button class="alt-yeni" data-yeni-menu aria-label="Yeni ekle"><span>${ik('arti')}</span>Yeni</button>` : ''}
-    <a href="#/plan" data-menu="plan">${ik('direksiyon')}Plan</a>
-    <a href="#/kasa" data-menu="kasa">${ik('kasa')}Kasa</a>
+    ${izinli('kursiyerler') ? `<a href="#/kursiyerler" data-menu="kursiyerler">${ik('kursiyer')}Kursiyer</a>` : ''}
+    ${!['usta', 'teorik', 'muhasebe'].includes(oturum.kullanici.rol) ? `<button class="alt-yeni" data-yeni-menu aria-label="Yeni ekle"><span>${ik('arti')}</span>Yeni</button>` : ''}
+    ${izinli('plan') ? `<a href="#/plan" data-menu="plan">${ik('direksiyon')}Plan</a>` : ''}
+    ${izinli('kasa') ? `<a href="#/kasa" data-menu="kasa">${ik('kasa')}Kasa</a>` : ''}
   </nav>`;
 }
 
@@ -181,6 +225,8 @@ function imzaSayfasiAc() { IM.imzaSayfasi(document.getElementById('uyg'), imzaLi
 function rota() {
   const h = (location.hash || '#/genel').slice(2).split('/');
   h[0] = h[0].split('?')[0];  // #/mevzuat?q=… gibi sorgu ekli rotalar
+  // eski adresler Raporlar merkezine (RAP-009): #/analiz/<alt> → #/raporlar/<alt>, #/karlilik → #/raporlar/karlilik
+  if (h[0] === 'analiz' || h[0] === 'karlilik') { const y = h[0] === 'karlilik' ? 'karlilik' : (h[1] || 'ogrenci'); history.replaceState(null, '', '#/raporlar/' + y); return { ad: 'raporlar', id: y }; }
   return { ad: SAYFALAR[h[0]] ? h[0] : 'genel', id: h[1] ? decodeURIComponent(h[1]) : null };
 }
 
@@ -191,13 +237,16 @@ export function yenile(kaydirma = false) {
   if (!oturum.kullanici) { if (location.hash.startsWith('#/imza-geldi/')) try { sessionStorage.setItem('sinyal-bekleyen', location.hash); } catch (x) { } if (document.querySelector('.giris')) return; return girisEkrani(location.hash.startsWith('#/imza-geldi/') ? 'pin' : 'tanitim'); }
   // mdSinyal Yönetim hesabı: kurs ekranları yok, yalnız gelir paylaşımı (yönetici girer, ortak görür)
   if (oturum.kullanici.bulut && (ORT.yonetimModu() || oturum.kullanici.rol === 'ortak')) return yonetimCiz(kaydirma);
+  { const ks = kullaniciSubesi(); if (ks && gorunum.sube !== ks) subeSec(ks); }  // PAR-040: şubeye kısıtlı kullanıcı her çizimde kendi şubesinde kalır
   if (location.hash === '#/yonetim-kur' && oturum.kullanici.bulut && oturum.kullanici.rol === 'mudur') return yonetimKurCiz();
   // başka cihazdan eksik alanla gelen sınav kaydı sayfaları çökertmesin
   (S.sinavlar || []).forEach(x => { if (!x.sonuc || typeof x.sonuc !== 'object') x.sonuc = {}; if (!Array.isArray(x.kursiyerler)) x.kursiyerler = []; });
-  if (!document.getElementById('icerik')) iskelet();
+  if (!document.getElementById('icerik') || yetkiImza() !== sonYetki) iskelet();
   let r = rota();
+  // YON-063: sekme hatırlama — menüden sekmesiz gelince en son sekme
+  if (TC.SEKMELI.includes(r.ad)) { if (r.id == null) { const son = TC.sekmeOku(r.ad); if (son && son.startsWith('#/' + r.ad + '/')) { history.replaceState(null, '', son); r = rota(); } } else TC.sekmeYaz(r.ad, location.hash); }
   kurulumAkisi();
-  if (!izinli(r.ad)) { if (oturum.kullanici.rol === 'sekreter' && SAYFALAR[r.ad]) bildir('Bu ekran yalnız kurs müdürüne açık', 'uyari'); location.hash = oturum.kullanici.rol === 'usta' ? '#/egitmen' : '#/genel'; return; }
+  if (!izinli(r.ad)) { if (oturum.kullanici.rol === 'sekreter' && SAYFALAR[r.ad]) bildir(ekranYetkili(r.ad) ? 'Bu ekran yalnız kurs müdürüne açık' : 'Bu ekran ön büroya kapalı; müdür Ayarlar › Kullanıcılar › Ön büro yetkileri’nden açabilir', 'uyari'); location.hash = anaSayfa(); return; }
   const yer = document.getElementById('icerik');
   if (!yer) return;
   const portal = r.ad === 'egitmen' || r.ad === 'ogrenci' || r.ad === 'kayit';
@@ -216,9 +265,26 @@ export function yenile(kaydirma = false) {
   kap.className = 'sayfa sayfa-' + r.ad;
   kap.innerHTML = s.html;
   yer.replaceChildren(kap);
+  if (ekranDuzey(ustEkran(r.ad)) === 'gor') saltOkunur(kap);
+  kurulumSeridi(kap); epostaSeridi(kap); talepSeridi(kap, r.ad);
+  // YON-074: onaylanmış numara devirleri (bu kurs eski kurssa) ofis cihazında işlenir; oturum başına ve 10 dakikada bir
+  if (!devirBakildi && oturum.kullanici.bulut && ['mudur', 'sekreter'].includes(oturum.kullanici.rol)) { devirBakildi = true; const bak = () => B.devirleriIsle().then(n => { if (n) { bildir(n + ' öğrencinin numarası onayıyla başka kursa devredildi; hesapları kapandı'); yenile(); } }).catch(() => { }); setTimeout(bak, 6000); setInterval(bak, 600000); }
+  // UYG-021: kurs koduyla açılan öğrenci hesapları onay bekliyorsa ofis görür (oturum başına ve 5 dakikada bir sayılır)
+  if (!talepBakildi && oturum.kullanici.bulut && ['mudur', 'sekreter', 'subemudur'].includes(oturum.kullanici.rol)) { talepBakildi = true; const say = () => import('./hesaptalep.js?v=235').then(HT => HT.talepSay()).then(n => { if (n !== talepSayi) { talepSayi = n; if (['genel', 'kursiyerler'].includes(rota().ad) && !document.querySelector('.perde')) yenile(); } }).catch(() => { }); setTimeout(say, 4000); setInterval(say, 300000); }
+  // YON-002 göçü: eski sürümün telefon eşlemesine yazdığı gerçek e-postalar bir kez silinir (cihaz ve kurs başına; tekrar zararsız)
+  if (!epostaTemizlendi && oturum.kullanici.bulut && ['mudur', 'sekreter', 'subemudur'].includes(oturum.kullanici.rol)) { epostaTemizlendi = true; setTimeout(() => B.telEslemeleriTemizle().catch(() => { }), 9000); }
+  // YON-021: ön büro IP yetkilendirmesi (oturum başına bir kez); izin yoksa içerik kapanır, yalnız çıkış
+  if (!ipDenetlendi && oturum.kullanici.bulut && oturum.kullanici.rol === 'sekreter') { ipDenetlendi = true; import('./ipliste.js?v=235').then(m => m.ipDenetle()).then(d => { if (d.izin) return; islem('İzinsiz IP’den giriş denedi', d.ip); kaydet(); document.getElementById('icerik') && document.getElementById('icerik').replaceChildren();
+    const girise = () => B.cikisYap().then(() => { try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } location.hash = '#/giris'; location.reload(); });
+    setTimeout(() => { const bak = setInterval(() => { if (!document.querySelector('.perde')) { clearInterval(bak); girise(); } }, 500); }, 1500);
+    pencere({ baslik: 'Bu bilgisayardan girişe izin yok', korumali: true, icerik: `<p style="font-size:14.5px">Kurs müdürü ön büro girişini belirli internet adreslerine bağlamış. Bu bilgisayarın adresi (<b class="mono">${e(d.ip)}</b>) listede yok.</p><p style="font-size:13.5px;color:var(--soluk);margin-top:8px">Kurs bilgisayarından girin ya da kurs müdüründen bu adresi Ayarlar › Güvenlik › IP yetkilendirme’ye eklemesini isteyin.</p>`, altlik: '<button class="dg dg-ana" data-ip-cik>Çıkış yap</button>', onAc(p) { p.querySelector('[data-ip-cik]').addEventListener('click', girise); } }); }); }
+  // YON-028: açık onaylı bilgilendirmeler; oturum başına bir kez, sayfa oturduktan sonra (başka pencere açıksa sonraki girişe)
+  if (!bilgiSoruldu && oturum.kullanici.bulut && ['mudur', 'sekreter'].includes(oturum.kullanici.rol)) { bilgiSoruldu = true; const dene = n => { if (document.querySelector('.perde')) { if (n < 40) setTimeout(() => dene(n + 1), 3000); return; } import('./onay.js?v=235').then(m => m.bilgiGoster()); }; setTimeout(() => dene(0), 1500); }  // başka pencere açıksa kapanınca (en çok 2 dk)
   if (s.baglan) { try { s.baglan(kap); } catch (x) { console.error(x); } }
+  if (r.ad === 'genel' || r.ad === 'adaylar') B.onKayitlariAl().then(n => { if (n) { bildir(`Web sitesinden ${n} ön kayıt geldi; Yeni öğrenciler’de`); if (location.hash.startsWith('#/adaylar')) yenile(); } });   // DIG-035
+  if (r.ad === 'genel') { GU.anaEkranaEkle(kap); duyuruAlani(kap); }  // kurulu sürüm, “Güncellemeleri denetle”, yeni sürüm kartı; DIG-040 duyurular
   kap.querySelectorAll('.sekmeler').forEach(sk => { const sec = sk.querySelector('.secili'); if (sec && sk.scrollWidth > sk.clientWidth) sk.scrollLeft = Math.max(0, sec.offsetLeft - sk.offsetLeft - 24); });
-  const menuAd = r.ad === 'kursiyer' ? 'kursiyerler' : r.ad;
+  const menuAd = ustEkran(r.ad);
   document.querySelectorAll('[data-menu]').forEach(a => a.classList.toggle('secili', a.dataset.menu === menuAd));
   const say = sayaclar();
   document.querySelectorAll('.yan [data-menu]').forEach(a => {
@@ -227,6 +293,17 @@ export function yenile(kaydirma = false) {
     else if (b) b.remove();
   });
   if (kaydirma) window.scrollTo(0, 0);
+}
+
+// YON-018: ön büroya “yalnız görür” verilen ekran: liste, sekme, süzgeç, dışa aktarma ve çıktı açık; ekleme, düzenleme, silme düğmeleri ve kaydeden alanlar çalışmaz
+const SALT_SERBEST = 'a[href], summary, [role=tab], .sekmeler button, .vr-suzgec *, [aria-pressed], [data-gun], [data-gorunum], [data-donem], [data-borclu], [data-bekleyen], [data-disa], [data-belge], [data-gr-suz], [data-liste], [data-sohbet-geri], [data-salt-serbest]';
+function saltOkunur(kap) {
+  kap.classList.add('salt-okunur');
+  kap.insertAdjacentHTML('afterbegin', `<p class="ipucu salt-okunur-serit" role="note">${ik('kilit')}<span>Bu ekranda <b>yalnız görme</b> yetkiniz var: kayıt ekleyemez, değiştiremez, silemezsiniz. Yetkiyi kurs müdürü verir.</span></p>`);
+  const dur = ev => { ev.preventDefault(); ev.stopImmediatePropagation(); bildir('Bu ekranda yalnız görme yetkiniz var', 'uyari'); };
+  kap.addEventListener('click', ev => { const t = ev.target; if (!(t instanceof Element) || t.closest(SALT_SERBEST)) return; if (t.closest('button, [role=button], input[type=checkbox], input[type=radio], input[type=file]')) dur(ev); }, true);
+  kap.addEventListener('change', ev => { const t = ev.target; if (t instanceof Element && (t.type === 'search' || t.closest(SALT_SERBEST))) return; dur(ev); }, true);
+  ['submit', 'dragstart', 'drop'].forEach(tur => kap.addEventListener(tur, dur, true));
 }
 
 function rolSec(r) {
@@ -239,7 +316,7 @@ function rolSec(r) {
 function aramaAc() {
   if (!oturum.kullanici || oturum.kullanici.rol === 'usta') return;
   const kayitlar = [
-    ...S.kursiyerler.map(k => ({ t: tamAd(k), a: 'Kursiyer · ' + k.sinif + ' · ' + k.tel, h: '#/kursiyer/' + k.id, g: 'Kursiyerler' })),
+    ...S.kursiyerler.map(k => ({ t: tamAd(k), a: 'Kursiyer · ' + sinifEtiket(k.sinif, k) + ' · ' + k.tel, h: '#/kursiyer/' + k.id, g: 'Kursiyerler' })),
     ...S.adaylar.map(a => ({ t: a.ad, a: 'Aday · ' + a.asama, h: '#/adaylar/' + a.id, g: 'Adaylar' })),
     ...S.araclar.map(a => ({ t: a.plaka, a: a.model, h: '#/filo', g: 'Araçlar' })),
     ...S.egitmenler.map(x => ({ t: x.ad, a: 'Usta öğretici', h: '#/filo', g: 'Usta öğreticiler' })),
@@ -293,26 +370,72 @@ document.addEventListener('click', ev => { if (ev.target.closest('[data-yeni-men
 // Kullanıcı adımın ekranından başka yere giderse akış biter; Kurulum sayfasından yeniden başlar.
 const AKIS = 'sinyal-kurulum-akis';
 document.addEventListener('click', ev => { const a = ev.target.closest('[data-kurulum-adim]'); if (a) try { sessionStorage.setItem(AKIS, a.dataset.kurulumAdim); } catch (x) { } });
-function kurulumAkisi() {
+// YON-075: ana sayfa kartı ve Kurulum sayfasındaki 'Devam et'; adım ekranındaki şeritte 'Atla, sonra yap' ve 'Kurulumdan çık'
+document.addEventListener('click', ev => {
+  const d = ev.target.closest('[data-kur-devam]'); if (d) return Y5.kurulumBaslat(+d.dataset.kurDevam);
+  const at = ev.target.closest('[data-kur-serit-atla]'); if (at) { Y5.kurulumAtla(at.dataset.kurSeritAtla); return kurulumAkisi(true); }
+  if (ev.target.closest('[data-kur-serit-cik]')) { try { sessionStorage.removeItem(AKIS); } catch (x) { } ev.target.closest('.kur-serit').remove(); }
+});
+// YON-068: hesabın e-postası doğrulanmadıysa ofis ekranlarının üstünde şerit (yeniden gönder · doğruladım)
+function epostaSeridi(kap) {
+  const u = oturum.kullanici; if (!u || !u.bulut || !['mudur', 'sekreter'].includes(u.rol)) return;
+  const h = B.hesapEposta(); if (!h || h.dogrulandi) return;
+  kap.insertAdjacentHTML('afterbegin', `<div class="ipucu uyari eposta-serit" role="status"><span style="flex:1;min-width:0"><b>E-postanızı doğrulayın.</b> ${e(h.eposta)} adresine bir bağlantı gönderdik; bağlantıya dokununca doğrulanır. Doğrulanana kadar rapor ve yedek e-postası gitmez, Drive yedeği alınmaz. Adres yanlışsa kurs müdürüne ya da mdSinyal’e yazın.</span><span class="eposta-serit-dug"><button type="button" class="dg dg-cizgi dg-kucuk" data-ep-dog-gonder>Yeniden gönder</button><button type="button" class="dg dg-ana dg-kucuk" data-ep-dog-yenile>Doğruladım</button></span></div>`);
+}
+document.addEventListener('click', ev => {
+  if (ev.target.closest('[data-ep-dog-gonder]')) { const b = ev.target.closest('[data-ep-dog-gonder]'); b.disabled = true; return B.epostaDogrula().then(() => bildir('Doğrulama bağlantısı yeniden gönderildi; gelen kutusuna ve istenmeyen klasörüne bakın')).catch(x => { b.disabled = false; bildir(B.hataMetni(x), 'uyari'); }); }
+  if (ev.target.closest('[data-ep-dog-yenile]')) return B.hesapEpostaYenile().then(h => { if (h && h.dogrulandi) { islem('Hesap e-postasını doğruladı', h.eposta); kaydet(); bildir('E-posta doğrulandı'); yenile(); } else bildir('Henüz doğrulanmadı; e-postadaki bağlantıya dokunun, sonra yeniden deneyin', 'uyari'); }).catch(x => bildir(B.hataMetni(x), 'uyari'));
+});
+// UYG-021: bekleyen öğrenci hesap istekleri (ana ekran ve öğrenciler listesi)
+function talepSeridi(kap, ad) {
+  const u = oturum.kullanici; if (!talepSayi || !u || !u.bulut || !['mudur', 'sekreter', 'subemudur'].includes(u.rol) || !['genel', 'kursiyerler'].includes(ad)) return;
+  kap.insertAdjacentHTML('afterbegin', `<div class="ipucu talep-serit" role="status" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1;min-width:0"><b>${talepSayi} öğrenci uygulama hesabı için onay bekliyor.</b> Kurs koduyla hesap açtılar; kendi kayıtlarıyla eşleştirip onaylayın.</span><button type="button" class="dg dg-ana dg-kucuk" data-talep-ac>İstekleri gör</button></div>`);
+}
+document.addEventListener('click', ev => { if (!ev.target.closest('[data-talep-ac]')) return; import('./hesaptalep.js?v=235').then(HT => HT.talepPenceresi(() => { talepSayi = HT.bekleyenSayi; yenile(); })); });
+function kurulumSeridi(kap) {
+  let i = null; try { i = sessionStorage.getItem(AKIS); } catch (x) { }
+  if (i == null || !oturum.kullanici || oturum.kullanici.rol !== 'mudur') return;
+  const d = Y5.kurulumDurumu(), x = d.l[+i]; if (!x || x[1] || !x[3] || !location.hash.startsWith(x[3].split('/').slice(0, 2).join('/'))) return;
+  const sira = d.l.filter(y => !y[5].istege).indexOf(x) + 1;
+  kap.insertAdjacentHTML('afterbegin', `<div class="kur-serit" role="region" aria-label="Kurulum"><div class="kur-serit-yazi"><small>Kurulum · adım ${sira} / ${d.top} · %${d.yuzde}</small><b>${e(x[0])}</b><span>${e(x[4])}</span></div><div class="kur-serit-dug"><button type="button" class="dg dg-cizgi dg-kucuk" data-kur-serit-atla="${e(x[5].id)}">Atla, sonra yap</button><a class="dg dg-hafif dg-kucuk" href="#/kurulum">Bütün adımlar</a><button type="button" class="dg dg-hafif dg-kucuk" data-kur-serit-cik aria-label="Kurulum şeridini kapat">${ik('kapat')}</button></div></div>`);
+}
+function kurulumAkisi(zorla) {
   let i = null; try { i = sessionStorage.getItem(AKIS); } catch (x) { }
   if (i == null || !oturum.kullanici || oturum.kullanici.rol !== 'mudur') return;
   const bitir = () => { try { sessionStorage.removeItem(AKIS); } catch (x) { } };
   const l = Y5.kurulumAdimlari(), adim = l[+i];
   if (!adim) return bitir();
   const kok = adim[3].split('/').slice(0, 2).join('/');
-  if (!location.hash.startsWith(kok)) return bitir();  // adımın ekranından çıkıldı
-  if (!adim[1]) return;  // adım henüz tamamlanmadı
-  const n = l.findIndex((x, j) => j > +i && !x[1]), sonraki = n >= 0 ? n : l.findIndex(x => !x[1]);
-  if (sonraki < 0) { bitir(); bildir('Kurulum tamamlandı'); setTimeout(() => { location.hash = '#/kurulum'; }, 900); return; }
+  if (!zorla && !location.hash.startsWith(kok)) return bitir();  // adımın ekranından çıkıldı
+  if (!adim[1]) return;  // adım henüz tamamlanmadı (atlanan adım x[1] sayılır)
+  const git = x => !x[1] && !!x[3];  // adresi olmayan adım (MEBBİS Yardımcısı: kurulum penceresi) akışta atlanır, Kurulum sayfasından yapılır
+  const n = l.findIndex((x, j) => j > +i && git(x)), sonraki = n >= 0 ? n : l.findIndex(git);
+  if (sonraki < 0) { bitir(); if (l.some(x => !x[1])) bildir('Adımlar bitti; MEBBİS Yardımcısı’nı Kurulum sayfasından kurun'); setTimeout(() => { location.hash = '#/kurulum'; if (!l.some(x => !x[1])) setTimeout(() => Y5.kurulumRaporu(true), 400); }, 900); return; }  // YON-075: bitince rapor
   try { sessionStorage.setItem(AKIS, String(sonraki)); } catch (x) { }
-  bildir(adim[0] + ' tamam · sıradaki: ' + l[sonraki][0]);
+  bildir(adim[0] + (adim[5] && adim[5].atlandi ? ' atlandı' : ' tamam') + ' · sıradaki: ' + l[sonraki][0]);
   setTimeout(() => { if (location.hash === l[sonraki][3]) yenile(true); else location.hash = l[sonraki][3]; }, 900);
 }
-document.addEventListener('change', ev => { const s = ev.target.closest('[data-sube]'); if (!s) return; subeSec(s.value); document.querySelectorAll('[data-sube]').forEach(x => { x.value = s.value; }); bildir(s.value ? S.subeler.find(x => x.id === s.value).ad + ' gösteriliyor' : 'Tüm şubeler gösteriliyor'); yenile(); });
+document.addEventListener('change', ev => { const s = ev.target.closest('[data-sube]'); if (!s) return; if (kullaniciSubesi()) { s.value = kullaniciSubesi(); return bildir('Hesabınız bu şubeyle sınırlı', 'uyari'); } subeSec(s.value); document.querySelectorAll('[data-sube]').forEach(x => { x.value = s.value; }); bildir(s.value ? S.subeler.find(x => x.id === s.value).ad + ' gösteriliyor' : 'Tüm şubeler gösteriliyor'); yenile(); });
 Y5.temaUygula();
 
 let sonAd = null;
-window.addEventListener('hashchange', () => { if (location.hash.startsWith('#/kapi')) return kapiEkrani(); if (demoSoru() != null && oturum.kullanici && oturum.kullanici.ziyaretci) { location.hash = '#/mevzuat?q=' + demoSoru(); return; } if (GIRIS_YOL[location.hash] && oturum.kullanici && oturum.kullanici.ziyaretci) { oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } } if (!oturum.kullanici && !B.bulutKayitli()) { if (location.hash === '#/demo' || demoSoru() != null) return demoyaGir(); if (GIRIS_YOL[location.hash]) { girisEkrani(GIRIS_YOL[location.hash]); return window.scrollTo(0, 0); } } if (location.hash === '#/sahip') { ORT.sekmeSec('hesaplar'); location.hash = '#/yonetim'; return; } if (imzaLinki()) return imzaSayfasiAc(); if (!(oturum.kullanici && oturum.kullanici.bulut)) { if (yonetimKurYolu()) return yonetimHesapEkrani(yonetimKurYolu()); if (yonetimGirisYolu()) return yonetimGirisEkrani(); } if (kursDavetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return kursDavetEkrani(); if (oturum.kullanici && oturum.kullanici.rol === 'ogrenci') return; if (ogrYolu()) return eskiLink(); if (location.hash === '#/ogrenci-giris') return ogrenciGirisEkrani((oturum.kullanici && oturum.kullanici.bulut) || B.bulutKayitli() ? 'Bu cihazda bir personel hesabı açık. Öğrenci olarak girersen o oturum kapanır.' : undefined); if (davetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return davetEkrani(); const r = rota(); yenile(r.ad !== sonAd); sonAd = r.ad; });
+// DIG-055: sayfadaki kaydet düğmeli formda (Ayarlar › Kurs bilgileri gibi) değişiklik varken başka sayfaya geçilirse sorulur; sayfa kapanırken de tarayıcı uyarır.
+// Değişince kendiliğinden kaydedilen alanlar ve pencereler (kendi taslak kuralı var, DIG-059) bu denetime girmez.
+let sayfaKirli = null, sonHash = location.hash, geriAlindi = false;
+const kirliForm = () => sayfaKirli && document.contains(sayfaKirli) && !sayfaKirli.closest('.perde') ? sayfaKirli : (sayfaKirli = null);
+document.addEventListener('input', ev => { if (!ev.isTrusted) return; const f = ev.target.closest && ev.target.closest('#icerik form'); if (!f || f.closest('.perde') || f.dataset.kirliDegil !== undefined || !f.querySelector('button[type=submit], button:not([type]), input[type=submit]')) return; sayfaKirli = f; }, true);
+document.addEventListener('submit', ev => { if (ev.target === sayfaKirli) sayfaKirli = null; }, true);
+addEventListener('beforeunload', ev => { if (kirliForm()) { ev.preventDefault(); ev.returnValue = ''; } });
+window.addEventListener('hashchange', ev => {
+  if (geriAlindi) { geriAlindi = false; return; }
+  const yeni = location.hash;
+  if (!kirliForm() || yeni === sonHash) { sonHash = yeni; return; }
+  ev.stopImmediatePropagation(); geriAlindi = false; history.replaceState(history.state, '', sonHash || '#/genel');
+  pencere({ baslik: 'Kaydedilmedi, çıkılsın mı?', icerik: '<p style="font-size:14px">Bu sayfada değiştirdiğiniz bilgiler henüz kaydedilmedi. Çıkarsanız değişiklikler kaybolur.</p>', taslak: false,
+    altlik: '<button class="dg dg-cizgi" data-kc-cik>Kaydetmeden çık</button><button class="dg dg-ana" data-kapat>Geri dön</button>',
+    onAc(p) { p.querySelector('[data-kc-cik]').addEventListener('click', () => { sayfaKirli = null; kapatPencere(); location.hash = yeni; }); } });
+});
+window.addEventListener('hashchange', () => { if (location.hash.startsWith('#/kapi')) return kapiEkrani(); if (demoSoru() != null && oturum.kullanici && oturum.kullanici.ziyaretci) { location.hash = '#/mevzuat?q=' + demoSoru(); return; } if (GIRIS_YOL[location.hash] && oturum.kullanici && oturum.kullanici.ziyaretci) { oturum.kullanici = null; try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } } if (GIRIS_YOL[location.hash] && oturum.kullanici && oturum.kullanici.bulut) { const u0 = oturum.kullanici; history.replaceState(null, '', anaSayfa(u0)); yenile(); return setTimeout(() => acikOturumSor(u0), 400); } if (!oturum.kullanici && !B.bulutKayitli()) { if (location.hash === '#/demo' || demoSoru() != null) return demoyaGir(); if (GIRIS_YOL[location.hash]) { girisEkrani(GIRIS_YOL[location.hash]); return window.scrollTo(0, 0); } } if (location.hash === '#/sahip') { ORT.sekmeSec('hesaplar'); location.hash = '#/yonetim'; return; } if (imzaLinki()) return imzaSayfasiAc(); if (!(oturum.kullanici && oturum.kullanici.bulut)) { if (yonetimKurYolu()) return yonetimHesapEkrani(yonetimKurYolu()); if (yonetimGirisYolu()) return yonetimGirisEkrani(); } if (kursDavetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return kursDavetEkrani(); if (oturum.kullanici && oturum.kullanici.rol === 'ogrenci') return; if (ogrYolu()) return eskiLink(); if (ogrKayitYolu() != null) return ogrenciKayitEkrani(ogrKayitYolu()); if (location.hash === '#/ogrenci-giris') return ogrenciGirisEkrani((oturum.kullanici && oturum.kullanici.bulut) || B.bulutKayitli() ? 'Bu cihazda bir personel hesabı açık. Öğrenci olarak girersen o oturum kapanır.' : undefined); if (davetYolu() && !(oturum.kullanici && oturum.kullanici.bulut)) return davetEkrani(); const r = rota(); yenile(r.ad !== sonAd); sonAd = r.ad; });
 
 // QR’dan gelen ilk sayfa index.html’de hazır durur (beklemeden görünsün); sonradan dönmek için saklanır
 const TANITIM = (() => { const t = document.getElementById('tanitim'); return t ? t.outerHTML : ''; })();
@@ -456,6 +579,9 @@ function ogretmenGirisi() {
   ugrStil();
   document.title = 'Öğretmen girişi · mdSinyal';
   const kayitli = B.bulutKayitli(), { oi, esc } = OXU, EPOSTA = /^\S+@\S+\.\S+$/;
+  // UYG-022 (karar): öğretmen yalnız e-posta + şifreyle girer; telefon numarası yazana ne yapacağı söylenir
+  const TEL_YAZDI = 'Öğretmen girişi yalnız e-postayla. Davetle hesap açtığınız e-postayı yazın; hatırlamıyorsanız ya da e-postanız yoksa kurs müdürünüzden yeni davet bağlantısı isteyin.';
+  const telMi = v => !v.includes('@') && v.replace(/\D/g, '').length >= 10;
   const { govde, alan, alanHata, temizle, uyari, yukle, birak, ac } = ugrKabuk('Öğretmen uygulaması');
   let eposta = (kayitli && kayitli.eposta) || '';
   const ortak = f => { f.addEventListener('input', ev => { const a = ev.target.closest('.ox-ugr-alan'); if (a && a.classList.contains('hatali')) { a.classList.remove('hatali'); ev.target.removeAttribute('aria-invalid'); a.querySelector('.ox-ugr-ipucu').hidden = true; } if (ev.target.name === 'eposta') eposta = ev.target.value; }); };
@@ -473,9 +599,9 @@ function ogretmenGirisi() {
       <p class="ox-ugr-ara">Öğretmen değil misiniz?</p>
       ${OXU.liste([
         OXU.satir({ baslik: 'Kurs müdürü ya da ön büroyum', alt: 'Kurs hesabının e-postası ve şifresiyle girin', attrs: { 'data-giris-pin': true } }),
-        OXU.satir({ baslik: 'Öğrenciyim', alt: 'Telefon numaranız ve şifrenizle girin', attrs: { 'data-ogrenci-giris': true } }),
+        OXU.satir({ baslik: 'Öğrenciyim', alt: 'E-postanız ve şifrenizle girin', attrs: { 'data-ogrenci-giris': true } }),
       ])}
-      ${OXU.not('Davetiniz yoksa kurs müdürünüze yazın. Davet bağlantısı WhatsApp’tan gelir.', 'wp')}
+      ${OXU.not('Öğretmen girişi yalnız e-posta ve şifreyle. Davetiniz yoksa, e-postanızı hatırlamıyorsanız ya da e-postanız yoksa kurs müdürünüzden yeni davet bağlantısı isteyin; bağlantıda e-postanızı ve şifrenizi kendiniz belirlersiniz.', 'wp')}
       <div class="ox-ugr-son"><button type="button" class="ox-bag" data-tanitim>mdSinyal nedir?</button></div>`, odak, anim);
     const f = govde.querySelector('form');
     ortak(f);
@@ -489,6 +615,7 @@ function ogretmenGirisi() {
       ev.preventDefault(); const btn = f.querySelector('[type=submit]'), yer = govde.querySelector('[data-yardim]');
       temizle(f);
       if (!f.eposta.value.trim()) return alanHata(f, 'eposta', 'E-posta adresinizi yazın');
+      if (telMi(f.eposta.value)) return alanHata(f, 'eposta', TEL_YAZDI);
       if (!EPOSTA.test(f.eposta.value.trim())) return alanHata(f, 'eposta', 'E-posta adresini kontrol edin');
       if (!f.sifre.value) return alanHata(f, 'sifre', 'Şifrenizi girin');
       yukle(btn, 'Giriliyor…'); yer.innerHTML = '';
@@ -514,6 +641,7 @@ function ogretmenGirisi() {
       ev.preventDefault(); const btn = f.querySelector('[type=submit]'), ep = f.eposta.value.trim();
       temizle(f);
       if (!ep) return alanHata(f, 'eposta', 'E-posta adresinizi yazın');
+      if (telMi(ep)) return alanHata(f, 'eposta', TEL_YAZDI);
       if (!EPOSTA.test(ep)) return alanHata(f, 'eposta', 'E-posta adresini kontrol edin');
       yukle(btn, 'Gönderiliyor…'); tamam.innerHTML = '';
       B.sifreSifirla(ep).then(() => {
@@ -553,7 +681,7 @@ function girisEkrani(mod = 'tanitim') {
     <h1>${ogt ? 'Öğretmen girişi' : 'Kurs hesabınızla girin'}</h1><p>${ogt ? 'Kurs müdürünün WhatsApp’tan gönderdiği davetle belirlediğiniz e-posta ve şifreyle girin. Bugünkü dersleriniz, haftanız ve öğrencileriniz açılır. Davetiniz yoksa kurs müdürünüze yazın.' : 'Kurs müdürü, ön büro ve öğretmenler kendi e-postası ve şifresiyle girer; herkes yalnız kendi ekranlarını görür.'}</p>
     <form class="giris-eposta" novalidate><label>E-posta<input name="eposta" type="email" autocomplete="username" inputmode="email" required value="${e((kayitli && kayitli.eposta) || '')}"></label><label>Şifre<input name="sifre" type="password" autocomplete="current-password" required></label><button class="dg dg-koyu" type="submit">Giriş yap</button></form>
     <p class="giris-baglar"><button type="button" data-sifre-unut>Şifremi unuttum</button>${ogt ? '<button type="button" data-giris-pin>Kurs müdürü ya da ön büroyum</button>' : '<button type="button" data-kurs-ac>Kursum için hesap açmak istiyorum</button>'}</p><div data-yardim></div>
-    <button class="giris-demo" type="button" data-ogrenci-giris style="margin:18px 0 0"><b>Öğrenciyim</b><small>Telefon numaranız ve şifrenizle girin</small><span aria-hidden="true">→</span></button>${ogt ? '' : '<button class="giris-demo" data-demo style="margin:10px 0 0"><b>Demoyu incele</b><small>Giriş gerekmez · örnek verilerle · mesaj gönderilmez</small><span aria-hidden="true">→</span></button>'}
+    <button class="giris-demo" type="button" data-ogrenci-giris style="margin:18px 0 0"><b>Öğrenciyim</b><small>E-postanız ve şifrenizle girin</small><span aria-hidden="true">→</span></button>${ogt ? '' : '<button class="giris-demo" data-demo style="margin:10px 0 0"><b>Demoyu incele</b><small>Giriş gerekmez · örnek verilerle · mesaj gönderilmez</small><span aria-hidden="true">→</span></button>'}
     <details class="giris-ornek"${ogt ? ' hidden' : ''}${mod === 'pin-demo' || sessionStorageAl('sinyal-bekleyen') ? ' open' : ''}><summary>Demo: örnek kursta çalışan olarak dene (PIN)</summary>
     <p class="giris-not" style="margin:8px 0 10px">Demo kursun kullanıcıları. Gerçek kurs hesabında PIN yerine e-posta ve şifre kullanılır.</p>
     <div class="giris-kisiler">${S.kullanicilar.map(u => `<button class="giris-kisi" data-kim="${u.id}"><b>${e(u.ad)}</b><small>${ROL_AD[u.rol]}</small></button>`).join('')}</div>
@@ -563,7 +691,7 @@ function girisEkrani(mod = 'tanitim') {
   const kok = document.getElementById('uyg');
   const dm = kok.querySelector('[data-demo]'); if (dm) dm.addEventListener('click', demoyaGir);
   kok.querySelector('[data-tanitim]').addEventListener('click', () => { girisEkrani('tanitim'); window.scrollTo(0, 0); });
-  const ka = kok.querySelector('[data-kurs-ac]'); if (ka) ka.addEventListener('click', () => pencere({ baslik: 'Kurs hesabı nasıl açılır?', icerik: '<p style="font-size:14.5px">mdSinyal hesabı kurulumla birlikte açılır: kayıtlarınızı taşırız, ekibinize kısa bir eğitim veririz. Görüşmek için <b>Servet Sakar · 0501 363 65 36</b> (telefon ve WhatsApp). Size özel hesap açma linki gönderilir.</p>', altlik: '<button class="dg dg-ana" data-kapat>Tamam</button>' }));
+  const ka = kok.querySelector('[data-kurs-ac]'); if (ka) ka.addEventListener('click', () => pencere({ baslik: 'Kurs hesabı nasıl açılır?', icerik: '<p style="font-size:14.5px">Kurs hesabını mdSinyal ekibi açar; kurulum günü kayıtlarınızı taşırız, ekibinize kısa bir eğitim veririz. Başvuru formunu doldurun, en geç bir iş günü içinde sizi arayalım. Ya da <b>' + DESTEK.ad + ' · ' + DESTEK.telGoster + '</b> (telefon ve WhatsApp, ' + DESTEK.saat.toLocaleLowerCase('tr') + ').</p>', altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button><a class="dg dg-ana" href="basla/">Başvuru formu</a>' }));
   const gp = kok.querySelector('[data-giris-pin]'); if (gp) gp.addEventListener('click', () => { girisEkrani('pin'); window.scrollTo(0, 0); });
   kok.querySelector('[data-ogrenci-giris]').addEventListener('click', () => { if (location.hash === '#/ogrenci-giris') ogrenciGirisEkrani(); else location.hash = '#/ogrenci-giris'; });  // ekranı hashchange çizer (iki kez çizilirse şifre göster düğmesi bozuluyordu)
   kok.querySelector('[data-sifre-unut]').addEventListener('click', () => {
@@ -595,7 +723,7 @@ function girisEkrani(mod = 'tanitim') {
     sonHareket = Date.now(); hareketYaz(true);
     islem('Giriş yaptı'); kaydet();
     let bekleyen = null; try { bekleyen = sessionStorage.getItem('sinyal-bekleyen'); sessionStorage.removeItem('sinyal-bekleyen'); } catch (x) { }
-    iskelet(); location.hash = bekleyen || (secilen.rol === 'usta' ? '#/egitmen' : '#/genel'); sonAd = rota().ad; yenile(true);
+    iskelet(); location.hash = bekleyen || anaSayfa(secilen); sonAd = rota().ad; yenile(true);
   });
 }
 function sessionStorageAl(k) { try { return sessionStorage.getItem(k); } catch (x) { return null; } }
@@ -606,6 +734,12 @@ let ipucuSayac = null;
 function bekleEkrani(metin) {
   clearInterval(ipucuSayac);
   document.getElementById('uyg').innerHTML = `<div class="yukleme" role="status" aria-live="polite"><div class="yk-ic"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 0C55 0 64 9 64 32S55 64 32 64 0 55 0 32 9 0 32 0Z" fill="#1b2b45"/><g fill="none" stroke="#ffc21a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20l12 12-12 12" stroke-opacity=".38"/><path d="M33 20l12 12-12 12"/></g></svg><b class="yk-ad"><span class="mk">md</span>Sinyal</b><div class="yk-cubuk" aria-hidden="true"><i></i></div><p class="yk-alt">${e(metin || 'mdSinyal açılıyor')}</p></div></div>`;
+}
+// YON-058: giriş sayfasından gelinip bu cihazda zaten açık oturum varsa sessizce ana ekrana gitmez; seçim sorulur
+function acikOturumSor(u) {
+  pencere({ baslik: 'Bu cihazda zaten girişlisiniz', taslak: false, icerik: `<p style="font-size:14.5px">Şu an <b>${e(u.ad || u.eposta || '')}</b> hesabıyla girişlisiniz${S.kurs && S.kurs.ad ? ` (${e(S.kurs.ad)})` : ''}.</p><p style="font-size:13.5px;color:var(--soluk);margin-top:6px">Aynı hesapla devam edebilir ya da çıkış yapıp başka bir hesapla girebilirsiniz. Oturum kendiliğinden kapanmaz (Ayarlar › Güvenlik).</p>`,
+    altlik: '<button class="dg dg-cizgi" data-oc-cik>Çıkış yap ve başka hesapla gir</button><button class="dg dg-ana" data-kapat>Devam et</button>',
+    onAc(p) { p.querySelector('[data-oc-cik]').addEventListener('click', () => { islem('Çıkış yaptı', 'başka hesapla girmek için'); kaydet(); kapatPencere(); B.cikisYap().then(() => { try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } location.hash = '#/giris'; location.reload(); }); }); } });
 }
 // Gerçek kurs hesabıyla oturum aç
 function bulutOturumu(u, yeniGiris) {
@@ -628,7 +762,7 @@ function bulutOturumu(u, yeniGiris) {
   // mdSinyal ekibi (yönetici) hesabı: Ayarlar › Diğer'de kurs hesabı açma linki oluşturur
   B.yoneticiMi().then(y => { if (y && !B.bulut.yonetici) { B.bulut.yonetici = true; yenile(); } }).catch(() => { });
   const h = location.hash.slice(2).split('/')[0];
-  if (bekleyen) location.hash = bekleyen; else if (!SAYFALAR[h] || h === 'davet' || yeniGiris) location.hash = u.rol === 'usta' ? '#/egitmen' : '#/genel';
+  if (bekleyen) location.hash = bekleyen; else if (!SAYFALAR[h] || h === 'davet' || yeniGiris) location.hash = anaSayfa(u);
   sonAd = rota().ad; yenile(true);
 }
 B.bulutYenileDinle(() => {
@@ -644,7 +778,7 @@ const kursDavetYolu = () => { const m = location.hash.match(/^#\/yeni-kurs\/([a-
 async function kursDavetEkrani() {
   const kod = kursDavetYolu(); bekleEkrani('Hesap açma linki kontrol ediliyor…');
   let dv = null; try { dv = await B.kursDavetGetir(kod); } catch (x) { }
-  if (!dv) { document.getElementById('uyg').innerHTML = `<div class="giris"><div class="giris-levha">${LOGO}<h1>Bu link geçersiz</h1><p>Hesap açma linkinin süresi dolmuş ya da daha önce kullanılmış. Yeni link için Servet Sakar · 0501 363 65 36.</p></div></div>`; return; }
+  if (!dv) { document.getElementById('uyg').innerHTML = `<div class="giris"><div class="giris-levha">${LOGO}<h1>Bu link geçersiz</h1><p>Hesap açma linkinin süresi dolmuş ya da daha önce kullanılmış. Yeni link için ${DESTEK.ad} · ${DESTEK.telGoster}.</p></div></div>`; return; }
   kursAcEkrani(kod);
 }
 function kursAcEkrani(davetKod) {
@@ -654,7 +788,7 @@ function kursAcEkrani(davetKod) {
     <h1>Yeni kurs hesabı</h1><p>Kursunuzun verileri boş bir hesapla başlar. Öğrenci listenizi sonra Excel’den aktarabilirsiniz.</p>
     <form class="giris-eposta" novalidate>
       <label>Kursun adı<input name="kurs" required placeholder="Örn. Örnek Sürücü Kursu" autocomplete="organization"></label>
-      <label>Şehir<input name="sehir" autocomplete="address-level1"></label>
+      <label>İl<select name="sehir" required>${ilSecenekleri("")}</select></label>
       <label>Adınız soyadınız<input name="ad" required autocomplete="name"></label>
       <label>Cep telefonunuz <small style="font-weight:400;opacity:.85">yeni kayıt, iptal ve günlük özet WhatsApp’tan buraya gelir</small><input name="tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="05xx xxx xx xx"></label>
       <label>E-posta<input name="eposta" type="email" inputmode="email" autocomplete="username" required></label>
@@ -674,14 +808,14 @@ function kursAcEkrani(davetKod) {
     if (f.sifre.value !== f.sifre2.value) { bildir('İki şifre aynı değil; şifreyi tekrar yazın', 'uyari'); return f.sifre2.focus(); }
     if (!f.onay.checked) return bildir('Verilerin nerede saklanacağını okuduğunuzu işaretleyin', 'uyari');
     btn.disabled = true; btn.textContent = 'Hesap açılıyor…';
-    B.kursAc({ kursAd: f.kurs.value.trim(), yetkili: f.ad.value.trim(), sehir: f.sehir.value.trim(), eposta: f.eposta.value.trim(), sifre: f.sifre.value, mudurTel: f.tel.value.trim(), davetKod })
-      .then(u => { history.replaceState(null, '', '#/genel'); bulutOturumu(u, true); bildir('Kurs hesabı açıldı. Önce Ayarlar’dan kurs bilgilerini, sonra öğrenci listenizi ekleyin'); })
+    B.kursAc({ onayMetni: (f.querySelector('.giris-onay span') || {}).textContent || '', kursAd: f.kurs.value.trim(), yetkili: f.ad.value.trim(), sehir: f.sehir.value.trim(), eposta: f.eposta.value.trim(), sifre: f.sifre.value, mudurTel: f.tel.value.trim(), davetKod })
+      .then(u => { history.replaceState(null, '', '#/genel'); bulutOturumu(u, true); bildir('Kurs hesabı açıldı. Kurulum adımları ana sayfada; “Kuruluma başla” ile sırayla açılır'); })
       .catch(x => { btn.disabled = false; btn.textContent = 'Kurs hesabını aç'; bildir(B.hataMetni(x), 'uyari'); });
   });
 }
 // Öğrenci hesabı: telefon numarası + şifre. Hesabı kurs açar, geçici şifre WhatsApp'tan gelir; ilk girişte öğrenci kendi şifresini belirler.
 const ogrYolu = () => /^#\/ogr\/[A-Za-z0-9]+\/[a-z0-9]+$/.test(location.hash);
-function eskiLink() { history.replaceState(null, '', '#/ogrenci-giris'); ogrenciGirisEkrani('Öğrenci paneli artık kendi hesabınızla açılıyor. Kursunuzun WhatsApp’tan gönderdiği telefon numarası ve şifreyle girin.'); }
+function eskiLink() { history.replaceState(null, '', '#/ogrenci-giris'); ogrenciGirisEkrani('Öğrenci paneli artık kendi hesabınızla açılıyor. E-postanız (ya da kursun verdiği telefon numarası) ve şifrenizle girin.'); }
 // Öğrenci giriş ekranları: açık zemin, tek kart, büyük dokunma alanları, şifreyi göster düğmesi ve canlı şifre kuralları
 const ogrKap = (ic, alt = '') => `<div class="og-giris"><div class="og-giris-ust">${LOGO}</div><main class="og-giris-kart">${ic}</main>${alt}</div>`;
 const ogrAlan = (ad, et, tur, ikon, ek = '') => `<label class="og-alan"><span class="og-alan-et">${et}</span><span class="og-girdi">${ik(ikon)}<input name="${ad}" type="${tur}" ${ek}>${tur === 'password' ? `<button type="button" class="og-goz" data-goz aria-label="Şifreyi göster" aria-pressed="false">${ik('goz')}</button>` : ''}</span></label>`;
@@ -821,11 +955,12 @@ function ogrenciGirisEkrani(not) {
   const { oi, esc } = OXU;
   const { govde, alan, alanHata, temizle, uyari, yukle, birak, ac } = ugrKabuk('Öğrenci uygulaması');
   let tel = '';
-  const telAlan = () => alan('tel', 'tel', oi('tel'), 'Cep telefonun', `inputmode="tel" autocomplete="tel" required value="${esc(tel)}"`, false, '05xx xxx xx xx');
+  // YON-002: e-posta (e-postası olmayan eski öğrenci telefonla girer)
+  const telAlan = () => alan('tel', 'text', oi('mesaj'), 'E-postan', `inputmode="email" autocomplete="username" autocapitalize="off" spellcheck="false" required value="${esc(tel)}"`, false, 'E-postan (yoksa cep telefonun)');
   const ortak = f => ugrGirdiTemizle(f, t => { if (t.name === 'tel') tel = t.value; });
 
   function girisGoster(odak, anim = true) {
-    ac(`${OXU.sayfaBas('Öğrenci girişi', 'Kursuna kayıtlı cep telefonun ve şifrenle gir.')}
+    ac(`${OXU.sayfaBas('Öğrenci girişi', 'E-postan ve şifrenle gir. E-postan yoksa kursun verdiği cep telefonu numarasıyla girebilirsin.')}
       ${not ? `<div class="ox-ugr-bilgi" role="status">${oi('uyari')}<span>${esc(not)}</span></div>` : ''}
       <form class="ox-ugr-form" novalidate>
         ${telAlan()}
@@ -835,7 +970,7 @@ function ogrenciGirisEkrani(not) {
       </form>
       <div class="ox-ugr-unut"><button type="button" class="ox-bag" data-sifre-unut>Şifremi unuttum</button></div>
       <div data-yardim></div>
-      ${OXU.not('İlk şifren kaydından sonra kursunun WhatsApp’ından gelir.', 'wp')}
+      ${OXU.liste([OXU.satir({ baslik: 'Hesabım yok', alt: 'Kursunun verdiği kurs koduyla kendin aç', attrs: { 'data-ogr-kayit': true } })])}
       <p class="ox-ugr-ara">Öğrenci değil misiniz?</p>
       ${OXU.liste([
         OXU.satir({ baslik: 'Öğretmenim', alt: 'Davetle açtığınız <span class="ox-ugr-nb">e-posta</span> ve şifreyle girin', attrs: { 'data-ogretmen-giris': true } }),
@@ -844,13 +979,14 @@ function ogrenciGirisEkrani(not) {
     const f = govde.querySelector('form');
     ortak(f); ugrGozler(f);
     govde.querySelector('[data-sifre-unut]').addEventListener('click', () => { tel = f.tel.value; unuttumGoster(); });
+    govde.querySelector('[data-ogr-kayit]').addEventListener('click', () => { location.hash = '#/ogrenci-kayit'; });
     // öğretmen girişi adres çubuğunda da görünsün; personel oturumu kayıtlıyken hashchange onu çizmez, bu yüzden doğrudan çizilir
     govde.querySelector('[data-ogretmen-giris]').addEventListener('click', () => { history.pushState(null, '', '#/ogretmen-giris'); girisEkrani('ogretmen'); window.scrollTo(0, 0); });
     govde.querySelector('[data-giris-pin]').addEventListener('click', () => { location.hash = ''; girisEkrani('pin'); window.scrollTo(0, 0); });
     f.addEventListener('submit', ev => {
       ev.preventDefault(); const btn = f.querySelector('[type=submit]'), yer = govde.querySelector('[data-yardim]');
       temizle(f);
-      if (f.tel.value.replace(/\D/g, '').length < 10) return alanHata(f, 'tel', 'Cep telefonunu yaz');
+      if (!f.tel.value.includes('@') && f.tel.value.replace(/\D/g, '').length < 10) return alanHata(f, 'tel', 'E-postanı yaz (e-postan yoksa cep telefonunu)');
       if (!f.sifre.value) return alanHata(f, 'sifre', 'Şifreni yaz');
       yukle(btn, 'Giriliyor…'); yer.innerHTML = '';
       B.ogrenciGiris(f.tel.value, f.sifre.value).then(u => u.ilkGiris ? sifreBelirleEkrani(u) : ogrenciModu(u.kurs, u.kod)).catch(x => { birak(btn, 'Giriş yap'); uyari(f, B.hataMetni(x)); if (SH.girisHatasiMi(x) && !/hesap yok/.test(x.kullanici || '')) yardimAc(govde, { kim: f.tel.value.trim(), tur: 'ogrenci' }); });
@@ -861,7 +997,8 @@ function ogrenciGirisEkrani(not) {
   // ("WhatsApp'tan iste" 16 Kas 2026'da kaldırıldı); ekran yalnız ne yapılacağını söyler.
   function unuttumGoster() {
     ac(`${OXU.geri('Giriş', { 'data-ugr-geri': true })}
-      ${OXU.sayfaBas('Şifremi unuttum', 'Öğrenci hesabını kursun açar; yeni şifreni de kursun verir.')}
+      ${OXU.sayfaBas('Şifremi unuttum', 'E-postanla girdiysen bağlantı e-postana gelir; telefonla girdiysen yeni şifreni kursun verir.')}
+      <form class="ox-ugr-ep" data-ugr-ep style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 14px"><input class="girdi" name="e" type="email" autocomplete="email" placeholder="E-postan" value="${esc(String(tel).includes('@') ? tel : '')}" style="flex:1;min-width:200px"><button class="ox-dg ox-dg-ana" type="submit"><span>Bağlantı gönder</span></button></form>
       <ol class="ox-ugr-yol">
         <li><b>1</b><span>Kursuna “şifremi unuttum” de: telefonla ara ya da kursa uğra.</span></li>
         <li><b>2</b><span>Kursun sana yeni geçici şifre verir.</span></li>
@@ -869,11 +1006,56 @@ function ogrenciGirisEkrani(not) {
       </ol>
       <button type="button" class="ox-dg ox-dg-ana genis ox-ugr-dg" data-ugr-geri2><span>Giriş ekranına dön</span></button>`);
     const h1 = govde.querySelector('.ox-sayfa-bas h1'); h1.tabIndex = -1; h1.focus({ preventScroll: true });
+    govde.querySelector('[data-ugr-ep]').addEventListener('submit', ev => { ev.preventDefault(); const v = ev.target.e.value.trim(); if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return bildir('E-postanı yaz', 'uyari'); B.sifreSifirla(v).then(() => bildir('Hesabın varsa şifre yenileme bağlantısı e-postana gönderildi')).catch(() => bildir('Hesabın varsa şifre yenileme bağlantısı e-postana gönderildi')); });
     govde.querySelector('[data-ugr-geri]').addEventListener('click', () => girisGoster('[data-sifre-unut]'));
     govde.querySelector('[data-ugr-geri2]').addEventListener('click', () => girisGoster('[data-sifre-unut]'));
   }
 
   girisGoster(null, false);
+}
+// UYG-021: öğrenci kurs koduyla kendi hesabını açar (#/ogrenci-kayit/<KOD>: QR afiş ve kayıt linki). Hesap e-posta + şifreyle açılır,
+// istek kursa düşer; kurs kendi kaydıyla eşleştirip onaylayınca öğrenci aynı e-posta ve şifreyle girer. WhatsApp gerekmez.
+const ogrKayitYolu = () => { const m = location.hash.match(/^#\/ogrenci-kayit(?:\/([A-Za-z0-9]{0,10}))?$/); return m ? (m[1] || '') : null; };
+function ogrenciKayitEkrani(kod0) {
+  B.sdkHazirla();
+  document.body.classList.remove('portal-modu', 'ox-modu', 'ox-tam-acik', 'ox-akis-acik'); document.title = 'Öğrenci hesabı aç · mdSinyal';
+  ugrOgrStil();
+  const { oi, esc } = OXU;
+  const { govde, alan, alanHata, temizle, uyari, yukle, birak, ac } = ugrKabuk('Öğrenci uygulaması');
+  const kod = B.kursKoduNorm(kod0);
+  ac(`${OXU.geri('Giriş', { 'data-ugr-geri': true })}
+    ${OXU.sayfaBas('Hesabını aç', 'Kursunun verdiği kurs kodunu, adını ve e-postanı yaz, kendi şifreni belirle. Kursun onaylayınca bu e-posta ve şifreyle girersin.')}
+    <form class="ox-ugr-form" novalidate>
+      ${alan('kod', 'text', oi('kalkan'), 'Kurs kodu', `autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="10" required value="${esc(kod)}"`, false, 'Kurs kodu (ör. ABC234)')}
+      ${alan('ad', 'text', oi('kisi'), 'Adın', 'autocomplete="given-name" required maxlength="60"')}
+      ${alan('soyad', 'text', oi('kisi'), 'Soyadın', 'autocomplete="family-name" required maxlength="60"')}
+      ${alan('tel', 'tel', oi('tel'), 'Cep telefonun', 'autocomplete="tel" inputmode="tel" required', false, 'Cep telefonun (05xx xxx xx xx)')}
+      ${alan('eposta', 'email', oi('mesaj'), 'E-postan', 'autocomplete="email" autocapitalize="off" spellcheck="false" required')}
+      ${alan('s1', 'password', oi('kilit'), 'Şifre', 'autocomplete="new-password" required minlength="8"', true, 'Şifre (en az 8 karakter)')}
+      ${alan('s2', 'password', oi('kilit'), 'Şifre (tekrar)', 'autocomplete="new-password" required', true)}
+      <div class="ox-ugr-uyari" role="alert" hidden></div>
+      <button type="submit" class="ox-dg ox-dg-ana genis ox-ugr-dg"><span>Hesabımı aç</span></button>
+    </form>
+    ${OXU.not('Kurs kodunu kursundan, afişten ya da kursun gönderdiği linkten alırsın. Adın ve telefonun kurstaki kaydınla eşleştirilir.', 'bilgi')}`, kod ? '#ugr-ad' : '#ugr-kod');
+  const f = govde.querySelector('form'), btn = f.querySelector('[type=submit]'); ugrGozler(f); ugrGirdiTemizle(f);
+  govde.querySelector('[data-ugr-geri]').addEventListener('click', () => { location.hash = '#/ogrenci-giris'; });
+  f.addEventListener('submit', ev => {
+    ev.preventDefault(); if (btn.disabled) return; temizle(f);
+    if (B.kursKoduNorm(f.kod.value).length < 6) return alanHata(f, 'kod', 'Kurs kodunu yaz (6 harf ya da rakam)');
+    if (f.ad.value.trim().length < 2) return alanHata(f, 'ad', 'Adını yaz');
+    if (!f.soyad.value.trim()) return alanHata(f, 'soyad', 'Soyadını yaz');
+    if (!B.telNorm(f.tel.value)) return alanHata(f, 'tel', 'Cep telefonunu yaz (05xx xxx xx xx)');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.eposta.value.trim())) return alanHata(f, 'eposta', 'E-postanı doğru yaz');
+    if (f.s1.value.length < 8) return alanHata(f, 's1', 'Şifre en az 8 karakter olmalı');
+    if (f.s1.value !== f.s2.value) return alanHata(f, 's2', 'İki şifre aynı değil');
+    yukle(btn, 'Gönderiliyor…');
+    B.ogrenciKayitOl({ kod: f.kod.value, ad: f.ad.value, soyad: f.soyad.value, tel: f.tel.value, eposta: f.eposta.value, sifre: f.s1.value }).then(r => {
+      ac(`${OXU.sayfaBas('İsteğin kursa gitti', `${esc(r.kursAd || 'Kursun')} isteğini kendi kaydınla eşleştirip onaylayınca ${esc(r.eposta)} ve şifrenle girersin.`)}
+        ${OXU.not(r.onceden ? 'Bu e-postayla bekleyen isteğin zaten vardı; yeniden gönderilmedi.' : 'E-postana bir doğrulama bağlantısı da gönderdik; dokunman yeterli.', 'bilgi')}
+        <button type="button" class="ox-dg ox-dg-ana genis ox-ugr-dg" data-ugr-giris><span>Giriş ekranına git</span></button>`);
+      govde.querySelector('[data-ugr-giris]').addEventListener('click', () => { location.hash = '#/ogrenci-giris'; });
+    }).catch(x => { birak(btn, 'Hesabımı aç'); uyari(f, B.hataMetni(x)); });
+  });
 }
 function sifreBelirleEkrani(u) {
   document.body.classList.remove('portal-modu', 'ox-modu', 'ox-tam-acik', 'ox-akis-acik'); document.title = 'Şifreni belirle · mdSinyal';
@@ -944,7 +1126,7 @@ function yonetimCiz(kaydir) {
   kap.className = 'sayfa sayfa-yonetim';
   if (!ORT.yonetimModu()) kap.innerHTML = `<div class="kart"><div class="bos"><b>Bu hesap henüz kurulmadı</b><p>Servet Sakar hesabı kurduğunda gelir paylaşımı burada görünür.</p></div></div>`;
   else { try { kap.innerHTML = ORT.yonetimHtml(u.rol); } catch (x) { console.error(x); kap.innerHTML = '<div class="kart"><div class="bos"><b>Ekran açılamadı</b><p>Sayfayı yenileyin.</p></div></div>'; } }
-  yer.replaceChildren(kap);
+  yer.replaceChildren(kap); GU.anaEkranaEkle(kap);
   if (ORT.yonetimModu()) { try { ORT.yonetimBaglan(kap, u.rol, yenile); } catch (x) { console.error(x); } }
   const shg = kap.querySelector('[data-sh-gomulu]'); if (shg && u.rol === 'mudur') SH.sahipGomulu(shg, B.bulut.eposta, shg.dataset.shGor || 'hesaplar');
   if (u.rol === 'mudur' && ORT.yonetimModu()) { SH.hazirla(); kap.addEventListener('click', ev => { if (ev.target.closest('[data-yn-sekme="hesaplar"],[data-yn-sekme="destek"]')) SH.otoBaglan(); }, true); }
@@ -977,6 +1159,18 @@ function kapiEkrani() {
     </div></div></div>`;
 }
 // Davet linki: #/davet/<kurs>/<kod>
+// YON-074: numara devri onay sayfası (öğrenci eski hesabıyla girip onaylar; oturum hemen kapanır)
+const devirYolu = () => { const m = location.hash.match(/^#\/devir\/(905\d{9})\/([a-z0-9]{8,})$/); return m ? [m[1], m[2]] : null; };
+function devirEkrani() {
+  const [tel, kod] = devirYolu(), kok = document.getElementById('uyg'); document.title = 'Numara devri · mdSinyal';
+  kok.innerHTML = `<div class="giris"><div class="giris-levha">${LOGO}<h1>Numara devri</h1><p>Yeni kursun öğrenci uygulamasında hesabının açılabilmesi için numaranı (${e(B.telGoster(tel))}) eski kursundaki hesaptan almak istiyor. Onaylarsan eski kurstaki öğrenci hesabın kapanır.</p>
+    <form class="giris-eposta" novalidate data-devir-form><label>Cep telefonun ya da e-postan<input name="g" autocomplete="username" value="${e(B.telGoster(tel))}"></label><label>Eski hesabının şifresi<input name="s" type="password" autocomplete="current-password" required></label>
+    <button class="dg dg-ana" type="submit">Devri onayla</button></form><p class="giris-baglar" style="font-size:13px">Bu isteği sen istemediysen sayfayı kapat; hiçbir şey değişmez.</p></div></div>`;
+  const f = kok.querySelector('[data-devir-form]');
+  f.addEventListener('submit', ev => { ev.preventDefault(); const btn = f.querySelector('button'); btn.disabled = true; btn.textContent = 'Onaylanıyor…';
+    B.devirOnayla(tel, kod, f.g.value, f.s.value).then(r => { kok.querySelector('.giris-levha').innerHTML = `${LOGO}<h1>Onaylandı</h1><p>${e(r.yeniKursAd || 'Yeni kursun')} hesabını açınca giriş bilgilerin WhatsApp’tan gelir. Eski kurstaki hesabın kapanıyor.</p>`; })
+      .catch(x => { btn.disabled = false; btn.textContent = 'Devri onayla'; bildir(B.hataMetni(x), 'uyari'); }); });
+}
 const davetYolu = () => { const m = location.hash.match(/^#\/davet\/([^/]+)\/([^/]+)$/); return m ? [m[1], m[2]] : null; };
 async function davetEkrani() {
   const [kurs, kod] = davetYolu();
@@ -1013,8 +1207,10 @@ async function davetEkrani() {
 document.addEventListener('click', ev => { if (ev.target.closest('[data-yeniden-yukle]')) location.reload(); });
 document.addEventListener('click', ev => {
   if (ev.target.closest('[data-cikis]')) kapatPencere();
-  if (ev.target.closest('[data-hesap]')) { if (oturum.kullanici && oturum.kullanici.rol === 'usta' && document.body.classList.contains('ox-modu')) return import('./usta/ekran.js?v=231').then(m => { m.hesapAc(); yenile(true); }); return hesapSayfasi(); }
+  if (ev.target.closest('[data-hesap]')) { if (oturum.kullanici && oturum.kullanici.rol === 'usta' && document.body.classList.contains('ox-modu')) return import('./usta/ekran.js?v=235').then(m => { m.hesapAc(); yenile(true); }); return hesapSayfasi(); }
   if (ev.target.closest('[data-destek]')) return destekPenceresi();
+  // DIG-029: yeni soru bankası örneği yalnız demo şeridinden açılır (js/soru-ornek.js)
+  if (ev.target.closest('[data-soru-ornek]') && ziyaretci()) return import('./soru-ornek.js?v=235').then(m => m.soruOrnekAc()).catch(() => bildir('Soru örneği yüklenemedi; bağlantınızı kontrol edip tekrar deneyin', 'uyari'));
   // Yönetim: Hesaplar telefonda profil menüsünden açılır (alt çubuk 6 sekme kalır)
   if (ev.target.closest('[data-yn-hesaplar]')) { kapatPencere(); ORT.sekmeSec('hesaplar'); yonetimCiz(true); SH.otoBaglan(); return; }
   if (ev.target.closest('[data-ogr-cikis]')) return B.ogrenciCikis().then(() => location.replace(new URL('giris/?cikis=1', location.href.split('#')[0].replace(/[^/]*$/, '')).href));
@@ -1081,6 +1277,8 @@ if (location.hash.startsWith('#/kapi')) kapiEkrani();
 else if (imzaLinki()) imzaSayfasiAc();
 else if (ogrYolu()) eskiLink();
 else if (location.hash === '#/ogrenci-giris') ogrenciGirisEkrani(B.bulutKayitli() ? 'Bu cihazda bir personel hesabı açık. Öğrenci olarak girersen o oturum kapanır.' : undefined);
+else if (ogrKayitYolu() != null) ogrenciKayitEkrani(ogrKayitYolu());
+else if (devirYolu()) devirEkrani();
 else if (davetYolu()) davetEkrani();
 else if (kursDavetYolu()) kursDavetEkrani();
 else if (yonetimKurYolu() && !B.bulutKayitli()) yonetimHesapEkrani(yonetimKurYolu());
@@ -1100,7 +1298,7 @@ else if (B.bulutKayitli() && (() => { const h = hareketOku(HAREKET); return !!(h
 else if (B.bulutKayitli()) {
   oturum.kullanici = null; bekleEkrani('Kurs verisi yükleniyor…');
   const girisIstendi = GIRIS_YOL[location.hash];  // giriş sayfasından gelindi ama bu cihazda zaten açık oturum var
-  B.bulutBaslat().then(u => { if (u) { bulutOturumu(u, false); if (girisIstendi) setTimeout(() => bildir('Bu cihazda zaten girişlisiniz. Başka bir hesapla girmek için sağ üstteki profilinizden “Çıkış yap”a basın.', 'uyari'), 900); } else girisEkrani('pin'); }).catch(x => { girisEkrani('pin'); bildir(B.hataMetni(x), 'uyari'); });
+  B.bulutBaslat().then(u => { if (u) { bulutOturumu(u, false); if (girisIstendi) setTimeout(() => acikOturumSor(u), 700); } else girisEkrani('pin'); }).catch(x => { girisEkrani('pin'); bildir(B.hataMetni(x), 'uyari'); });
   const kp = sessionStorageAl('sinyal-kapandi'); if (kp) { try { sessionStorage.removeItem('sinyal-kapandi'); } catch (x) { } setTimeout(() => bildir(kp + ' dakika işlem yapılmadığı için oturum kapandı; tekrar giriş yapın', 'uyari'), 400); }
 }
 else if (sessionStorageAl('sinyal-kapandi')) { const kp = sessionStorageAl('sinyal-kapandi'); try { sessionStorage.removeItem('sinyal-kapandi'); } catch (x) { } oturum.kullanici = null; girisEkrani('pin'); setTimeout(() => bildir(kp + ' dakika işlem yapılmadığı için oturum kapandı; tekrar giriş yapın', 'uyari'), 400); }
@@ -1110,22 +1308,10 @@ else if (oturum.kullanici && !oturum.kullanici.bulut && oturum.kullanici.rol !==
   girisEkrani(zy ? 'tanitim' : 'pin'); if (!zy) setTimeout(() => bildir('Uzun süre işlem yapılmadığı için oturum kapandı; tekrar giriş yapın', 'uyari'), 400);  // tanıtım ziyaretçisine uyarı gösterilmez
 }
 else if (oturum.kullanici && !oturum.kullanici.bulut && oturum.kullanici.rol === 'ogrenci') ogrenciCiz(true);
-else if (oturum.kullanici && !oturum.kullanici.bulut) { iskelet(); if (!location.hash) location.hash = oturum.kullanici.rol === 'usta' ? '#/egitmen' : '#/genel'; sonAd = rota().ad; yenile(); }
+else if (oturum.kullanici && !oturum.kullanici.bulut) { iskelet(); if (!location.hash) location.hash = anaSayfa(); sonAd = rota().ad; yenile(); }
 else girisEkrani(location.hash.startsWith('#/imza-geldi/') ? 'pin' : 'tanitim');
 
-// Yeni sürüm: ana ekrana eklenmiş uygulamada yenile düğmesi yok; uygulama öne gelince sunucudaki sürüme bakılır, yenisi varsa altta "Güncelle" şeridi çıkar
-const SURUM = +(new URL(import.meta.url).searchParams.get('v') || 0);
-async function surumBak() {
-  try {
-    const t = await (await fetch('./?surum=' + Date.now(), { cache: 'no-store' })).text(), v = +((t.match(/(?:baslat|app)\.js\?v=(\d+)/) || [])[1] || 0);
-    if (!(v > SURUM) || document.getElementById('surum-serit')) return;
-    const d = document.createElement('div'); d.id = 'surum-serit'; d.className = 'surum-serit'; d.setAttribute('role', 'status');
-    d.innerHTML = '<span>Yeni sürüm hazır</span><button type="button">Güncelle</button>';
-    d.querySelector('button').addEventListener('click', async () => { try { await Promise.all((await caches.keys()).map(k => caches.delete(k))); const r = await navigator.serviceWorker.getRegistration(); if (r) await r.update(); } catch (x) { } location.reload(); });
-    document.body.appendChild(d);
-  } catch (x) { }
-}
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') surumBak(); });
-setTimeout(surumBak, 4000);
+// Yeni sürüm bildirimi: kalıcı şerit, ana ekranda sürüm alanı, temiz güncelleme (js/guncelleme.js)
+GU.baslat();
 // kullanım analizi (kişisel veri içermez; kullanim.js): ekran, düğme adı, süre, hata türü sayılır, günde bir özet yazılır
-setTimeout(() => import('./kullanim.js?v=231').then(m => m.baslat()).catch(() => { }), 1500);
+setTimeout(() => import('./kullanim.js?v=235').then(m => m.baslat()).catch(() => { }), 1500);

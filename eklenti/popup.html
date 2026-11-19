@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>mdSinyal MEBBİS Yardımcısı</title>
+<style>
+  :root{--murekkep:#111417;--metin:#373d44;--soluk:#767c84;--cizgi:#e4e3dc;--levha:#0a4da2;--yesil:#1f7a3e;--yesil-acik:#e2f0e6;--kirmizi:#d52b1e;--kirmizi-acik:#fbe8e5;--sari-acik:#fff4cf}
+  body{margin:0;width:320px;font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--metin);background:#fbfbf8}
+  header{display:flex;gap:10px;align-items:center;padding:12px 14px;background:var(--levha);color:#fff}
+  header img{width:28px;height:28px;border-radius:6px;background:#fff}
+  header b{font-size:15px} header small{display:block;opacity:.85;font-size:12px}
+  ul{list-style:none;margin:0;padding:6px 14px}
+  li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--cizgi)}
+  li:last-child{border-bottom:0}
+  li span{color:var(--soluk)}
+  .r{border-radius:999px;padding:2px 9px;font-size:12.5px;font-weight:700;text-align:right;max-width:190px}
+  .yesil{background:var(--yesil-acik);color:var(--yesil)} .kirmizi{background:var(--kirmizi-acik);color:var(--kirmizi)} .gri{background:#eee;color:#555} .mavi{background:#e2eaf5;color:var(--levha)}
+  .ilerleme{height:6px;background:var(--cizgi);border-radius:99px;margin:0 14px 8px;overflow:hidden} .ilerleme i{display:block;height:100%;background:var(--levha);width:0}
+  p{margin:0 14px 10px;font-size:12.5px;color:var(--soluk)}
+  footer{display:flex;gap:8px;padding:10px 14px 14px}
+  button{flex:1;border:1.5px solid #d3d2ca;background:#fff;border-radius:9px;padding:8px;font:inherit;font-weight:700;color:var(--murekkep);cursor:pointer}
+  button.ana{background:var(--levha);border-color:var(--levha);color:#fff}
+</style>
+</head>
+<body>
+<header><img src="simge-48.png" alt=""><div><b>MEBBİS Yardımcısı</b><small id="surum">mdSinyal</small></div></header>
+<ul>
+  <li><span>Kurulu</span><b class="r yesil" id="kurulu">Evet</b></li>
+  <li><span>MEBBİS oturumu</span><b class="r gri" id="oturum">Bakılıyor…</b></li>
+  <li><span>Şu an</span><b class="r gri" id="simdi">Boşta</b></li>
+  <li><span>Ekran haritası</span><b class="r gri" id="harita" title="">Gömülü</b></li>
+</ul>
+<div class="ilerleme" id="cubuk" hidden><i></i></div>
+<p id="not">İşleri mdSinyal’de MEB işlemleri › MEBBİS aktarımı’ndan başlatın. MEBBİS sekmesini kapatmayın, önde tutun.</p>
+<footer><button id="mebbis">MEBBİS’i aç</button><button class="ana" id="sinyal">mdSinyal’e dön</button></footer>
+<script src="popup.js"></script>
+</body>
+</html>

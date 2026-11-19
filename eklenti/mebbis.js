@@ -88,7 +88,8 @@
   // MEBBİS'in sonuç mesajı: yalnız mesaj kutularındaki yazı (sayfadaki sütun başlıkları ya da menü yazıları başarı/hata sanılmasın)
   function mesajMetni() { return [...document.querySelectorAll('.alert, [role=alert], [role=status], .validation-summary-errors, .field-validation-error, [id*="mesaj" i], [id*="lblHata" i], [id*="lblBilgi" i], [class*="mesaj" i], [class*="message" i], .ui-dialog-content, .swal2-html-container, .modal-body, .toast')].filter(gorunur).map(x => x.innerText.trim()).filter(Boolean).join('\n').slice(0, 2000); }
   // MEBBİS menüsünde hedef ekranı bulma: yalnız gezinme bağlantıları; silme, kaydetme, çıkış gibi düğmelere asla basılmaz
-  const TEHLIKE = /sil|iptal|çıkış|kapat|onay|kaydet|gönder|güncelle|vazgeç|reddet|yazdır|indir|excel|başvur|oluştur|aktar|tamamla|sorgula|ara$/i;
+  // 1.13.0: "Listede Görünmeyen Adaylar İçin Tıklayınız" (btnAdayEkle, 17 Kas'ta kayıt yaptı), arşiv, karekod, şifre, hata bildirimi de asla
+  const TEHLIKE = /sil|iptal|çıkış|kapat|onay|kaydet|gönder|güncelle|vazgeç|reddet|yazdır|indir|excel|başvur|oluştur|aktar|tamamla|sorgula|ara$|tıklay|görünmeyen|arşiv|karekod|şifre|bildir|değiştir/i;
   const elMetin = el => String(el.innerText || el.textContent || el.value || el.title || '').replace(/\s+/g, ' ').trim();
   // Yalnız menüdeki gezinme bağlantıları (düğmeler ve form içindeki bağlantılar asla); "ekle" yalnız menü içinde kabul edilir
   const MENU_KAP = 'nav, [role=menu], [role=menubar], [role=tree], ul, .menu, [id*="menu" i], [class*="menu" i], [id*="tree" i]';
@@ -136,6 +137,10 @@
     ['program', 'Direksiyon programı', 'direksiyon eğitimi programı giriş'],
     ['kayit', 'Kayıt', 'aday dönem kayıt'],
     ['odeme', 'Fatura', 'fatura kayıt'],
+    // PER-010: OOK13002 'Çalışma İzni Ekle' (iç başlık 'Personel İstekleri'); güvenlik kodu, Bilgileri Getir, fotoğraf ve Kaydet kullanıcıda
+    ['izin', 'Çalışma izni', 'çalışma izni ekle'],
+    // PER-025: OOK13006 'Personel Öğrenim Bilgileri Giriş' (OOK13001 'Eklenecek Çalışma İzin Listesi'nden Aç); Kaydet kullanıcıda
+    ['ogrenim', 'Öğrenim bilgileri', 'personel öğrenim bilgileri giriş'],
   ];
   const AD = Object.fromEntries(TURLER.map(x => [x[0], x[1]])), FORM = Object.fromEntries(TURLER.map(x => [x[0], x[2]])), SIRA = Object.fromEntries(TURLER.map((x, i) => [x[0], i]));
   const AL = [
@@ -176,6 +181,7 @@
     .ac{display:flex;align-items:center;justify-content:space-between;width:100%;background:none;padding:6px 0;color:#14284b;font-size:13px;border-top:1px solid #eee;border-radius:0;margin-top:10px}
     .oto{display:flex;align-items:center;gap:6px;font-size:12.5px;color:#374151;cursor:pointer}.oto i{width:30px;height:17px;border-radius:10px;background:#cbd5e1;position:relative;flex:none}.oto i::after{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:left .15s}.oto.acik i{background:#1f8a46}.oto.acik i::after{left:15px}
     .kucuk{font-size:12px;color:#6b7280;margin-bottom:4px}
+    .uc{border:1px solid #e3e3e3;border-radius:12px;padding:4px 12px;margin-bottom:10px}.uc div{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:13px}.uc div:last-child{border-bottom:0}.uc span{color:#6b7280}.uc b{border-radius:999px;padding:2px 9px;font-size:12px;background:#eee;color:#444;max-width:170px;text-align:right}.uc b.ok{background:#e2f0e6;color:#1f7a3e}.uc b.kot{background:#fbe8e5;color:#d52b1e}.uc b.is{background:#e2eaf5;color:#0a4da2}
     .sir{border:1px solid #e3e3e3;border-radius:12px;padding:11px 12px;margin-bottom:10px}.sir b{display:block;font-size:15px}.sir small{display:block;color:#555;margin:2px 0 6px}
     .buyuk{display:block;width:100%;background:#2f6fde;color:#fff;font-size:15px;padding:12px;border-radius:10px;margin-bottom:8px}
     .satir{display:flex;justify-content:space-between;align-items:center;width:100%;background:#f3f4f6;color:#1d1d1d;padding:9px 11px;border-radius:9px;font-weight:600;margin-top:6px}
@@ -212,7 +218,10 @@
     let h = '';
     // ANA: yalnız sıradaki iş ve Başla
     if (durum.ekran === 'ana') {
-      h += `<div class="sir" style="border-color:#c9d6f2;background:#f6f9ff"><b>MEBBİS işleri mdSinyal’den başlar</b><small style="margin-bottom:0">mdSinyal › MEB işlemleri: <b>MEBBİS’ten güncelle</b> bilgileri çeker, <b>Hepsini MEBBİS’e yaz</b> bekleyen işleri girer. Yardımcı bu sekmede ekran açmadan yürütür; siz yalnız güvenlik kodu istenirse kodu yazarsınız.</small></div>`;
+      // MEB-187: üç durum tek bakışta — kurulu mu, MEBBİS oturumu açık mı, şu an ne yapıyor
+      { const t = durum.toplu, calisiyor = t && !t.bitti && t.durum !== 'iptal', durdu = calisiyor && t.durum === 'durduruldu';
+        h += `<div class="uc"><div><span>Kurulu</span><b class="ok">${e(chrome.runtime.getManifest().version)}</b></div><div><span>MEBBİS oturumu</span><b class="${giris ? 'kot' : 'ok'}">${giris ? 'Giriş bekleniyor' : 'Açık'}</b></div><div><span>Şu an</span><b class="${durdu ? 'kot' : calisiyor ? 'is' : ''}">${durdu ? 'Durduruldu' : calisiyor ? e((t.sonuc || {}).adim || 'Çalışıyor') : 'Boşta'}</b></div></div>`; }
+      h += `<div class="sir" style="border-color:#c9d6f2;background:#f6f9ff"><b>MEBBİS işleri mdSinyal’den başlar</b><small style="margin-bottom:0">mdSinyal › MEB işlemleri: <b>MEBBİS’ten güncelle</b> bilgileri çeker, <b>Bekleyenleri MEBBİS’e yaz</b> bekleyen işleri girer. Yardımcı bu sekmede ekran açmadan yürütür; siz yalnız güvenlik kodu istenirse kodu yazarsınız.</small></div>`;
       h += `<button class="buyuk" data-sinyal>mdSinyal’i aç</button>`;
       if (hepsi.length) {
         const say = TURLER.map(([k, ad]) => [ad, sirali(k).length]).filter(x => x[1]).map(([ad, n]) => `${n} ${ad.toLocaleLowerCase('tr')}`).join(' · ');
@@ -346,6 +355,7 @@
   async function yukle() {
     durum.q = await gonder({ tur: 'kuyruk-al' }) || { isler: [] }; durum.q.isler = durum.q.isler || [];
     durum.sayfa = await gonder({ tur: 'sayfa-al' }) || {};
+    durum.toplu = await gonder({ tur: 'toplu-al' });   // MEB-187: 'şu an' satırı
     ciz();
   }
   async function tara() {
@@ -454,4 +464,42 @@
   chrome.runtime.onMessage.addListener(m => { if (m && m.tur === 'yeniden-bak') { durum.hedef = null; durum.ilerliyor = false; basla(); } });
   setInterval(() => { if (durum.hedef && ['ogren', 'giris', 'sorgu'].includes(durum.hedef.durum)) ilerle(); }, 2500);
   setInterval(() => { if (durum.ekran === 'ana' && !(g.activeElement && g.activeElement.matches && g.activeElement.matches('[data-ara]'))) yukle(); if (durum.ekran === 'al' && !durum.tablo) tara(); }, 5000);
+  canliTut();
 })();
+
+/* ---------- MEB-180: MEBBİS oturumunu açık tut ----------
+   Girişten sonra 2,5 dakikada bir main.aspx'e yalnız GET atılır (hiçbir düğmeye basılmaz, hiçbir şey kaydedilmez). Birden çok MEBBİS sekmesi
+   varsa yalnız biri yoklar (bu kökendeki localStorage zaman damgası). "Oturum Süreniz Dolmuştur" sayfası açılırsa sekme bir kez main.aspx'e
+   götürülür (çoğu zaman şifresiz geri gelir); yine düşükse yoklama durur, kullanıcı yeniden girer. Arka plandaki sekmeyi Chrome yavaşlatır:
+   sekme arkaya alınınca küçük şerit "önde tutun" der. */
+function canliTut() {
+  if (window !== window.top || window.__sinyalCanli) return; window.__sinyalCanli = true;
+  const DUSTU = /Oturum S[üu]reniz Dolmu/i, GIRIS = /oturumsonu|giris\.aspx|login/i, ANAHTAR = 'sinyal-canli-tut', ARALIK = 150e3, DENE = 'sinyal-oturum-dene';
+  const ss = (k, v) => { try { if (v === undefined) return sessionStorage.getItem(k); if (v === null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, v); } catch (x) { return null; } };
+  const sayfaDustu = () => GIRIS.test(location.href) || !!document.querySelector('input[type=password]') || DUSTU.test((document.body && document.body.innerText) || '');
+  // MEB-187: oturum durumu arka plana (açılır pencere ve mdSinyal üst şeridi okur); değer yok, yalnız açık/kapalı ve zaman
+  const bildir = acik => { try { chrome.runtime.sendMessage({ tur: 'canli-koy', durum: { acik, zaman: Date.now() } }, () => void chrome.runtime.lastError); } catch (x) { /* eklenti yenilendi */ } };
+  if (sayfaDustu()) {
+    bildir(false);
+    // oturum sonu sayfası: bir kez main.aspx denenir (aynı sekmede); döngüye girmesin diye sekme başına bir deneme
+    if (DUSTU.test((document.body && document.body.innerText) || '') && !ss(DENE)) { ss(DENE, String(Date.now())); location.replace('/main.aspx'); }
+    return;
+  }
+  ss(DENE, null); bildir(true);
+  let dustu = false, son = 0;
+  const serit = document.createElement('div');
+  serit.setAttribute('style', 'position:fixed;left:12px;bottom:12px;z-index:2147483000;background:#1d3557;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:6px 10px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.25);max-width:320px;opacity:.92;display:none');
+  const goster = (t, renk) => { serit.textContent = t; serit.style.background = renk || '#1d3557'; serit.style.display = 'block'; if (!serit.isConnected && document.body) document.body.appendChild(serit); };
+  const saat = t => new Date(t).toTimeString().slice(0, 5);
+  const yokla = async () => {
+    if (dustu) return; let o = 0; try { o = +localStorage.getItem(ANAHTAR) || 0; } catch (x) {}
+    if (Date.now() - o < ARALIK - 5e3) return; try { localStorage.setItem(ANAHTAR, String(Date.now())); } catch (x) {}
+    try {
+      const r = await fetch('/main.aspx', { credentials: 'same-origin', cache: 'no-store', redirect: 'follow' }), t = await r.text();
+      if (GIRIS.test(r.url) || DUSTU.test(t) || /type=["']?password/i.test(t)) { dustu = true; bildir(false); goster('MEBBİS oturumu kapandı. Sayfayı yenileyip yeniden girin; Yardımcı kaldığı yerden sürer. MEB Ajanda kodunu yanlış girerseniz sistem geçici engeller: kodun bitmesine 10 saniyeden az kala girmeyin.', '#9b2226'); return; }
+      son = Date.now(); bildir(true); if (serit.style.display === 'block' && !dustu) goster(`Oturum açık tutuluyor · son yoklama ${saat(son)} · bu sekmeyi kapatmayın`);
+    } catch (x) { /* ağ hatası: bir sonraki yoklamada yeniden denenir */ }
+  };
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { yokla(); } else if (!dustu) goster(`Oturum açık tutuluyor${son ? ' · son yoklama ' + saat(son) : ''}. Yardımcı çalışırken bu sekmeyi önde tutun: arka sekmeyi Chrome yavaşlatır, oturum düşebilir.`); });
+  setInterval(yokla, 30e3); setTimeout(yokla, 20e3);
+}

@@ -1,6 +1,6 @@
-import { S, kaydet, gun, islem, tarihOku, oturum, kapaliGun, SINIFLAR, satistaSiniflar } from './veri.js?v=231';
-import { e, ik, rozet, isaret, ekranNotu, sekmeler, olcumler, yonLevhasi, cubukGrafik, halka, pencere, kapatPencere, bildir, sayi, tl, goreli, tarih, apiAcik, apiGonder } from './ui.js?v=231';
-import { yenile } from './app.js?v=231';
+import { S, kaydet, gun, islem, tarihOku, oturum, kapaliGun, SINIFLAR, satistaSiniflar, tabanListesi, kursiyerTaban, sinifTabani, sinifEtiket } from './veri.js?v=235';
+import { e, ik, rozet, isaret, ekranNotu, sekmeler, olcumler, yonLevhasi, cubukGrafik, halka, pencere, kapatPencere, bildir, sayi, tl, goreli, tarih, apiAcik, apiGonder } from './ui.js?v=235';
+import { yenile } from './app.js?v=235';
 
 /* ================= SOSYAL MEDYA ASİSTANI (DengChat modülü) =================
    Gelen kutusu "Mesajlar"da kalır. Bu modül kanalları bağlar, Instagram
@@ -9,7 +9,8 @@ import { yenile } from './app.js?v=231';
 const durum = { sekme: 'ozet', kanal: 'igm', deneme: [] };
 const KANAL_IK = { igm: 'ig', igy: 'ig', wp: 'wp', fb: 'fb' };
 const KANAL_KISA = { igm: 'Instagram', igy: 'Instagram yorum', wp: 'WhatsApp', fb: 'Facebook' };
-const ORT_UCRET = 25_000;
+// Özet ekranındaki tahmini ciro için ortalama kurs ücreti: satıştaki sınıfların ücret ortalaması (Ayarlar › Sınıf ve ücretler)
+const ortUcret = () => { const l = satistaSiniflar(); return l.length ? Math.round(l.reduce((a, [, v]) => a + (+v.ucret || 0), 0) / l.length) : 0; };
 
 const sos = () => S.sosyal;
 // Instagram ve Facebook, Meta onayı alınana kadar gerçek kurs hesabında gösterilmez (örnek kursta görünür)
@@ -21,7 +22,7 @@ const bekleyenDevir = () => sos().yorumlar.filter(y => y.durum === 'devir').leng
 const KURALLAR = [
   { devir: 'saglik', k: /protez|engel|sağlık sorun|ilaç|hastalı|epilep|şeker hast|görme|duyma/i, n: 'Sağlık durumu' },
   { devir: 'sikayet', k: /rezalet|şikayet|memnun değil|berbat|mağdur|dolandır/i, n: 'Şikâyet' },
-  { devir: 'indirim', k: /indirim|pazarlık|son fiyat|kardeş|arkadaşla gel|daha ucuz|başka yerde/i, n: 'İndirim pazarlığı' },
+  { devir: 'indirim', k: /indirim|pazarlık|son fiyat|kardeş|arkadaşla gel|arkadaşımla|daha ucuz|başka yerde|kampanya|promosyon|hediye|toplu kayıt|burslu/i, n: 'İndirim pazarlığı' },
   { devir: 'insan', k: /yetkili|insanla|biriyle görüş|müdür|sizi arayayım|telefonla görüş/i, n: 'Yetkili istedi' },
   { bilgi: 'Süre', k: /kaç gün|kaç ay|ne kadar sür|süre|ne zaman biter|hızlı/i },
   { bilgi: 'Sınav ücretleri', k: /sınav ücret|e-?sınav|harç|tekrar sınav/i },
@@ -31,11 +32,64 @@ const KURALLAR = [
 ];
 const TEL = /(\+?90|0)?\s*5\d{2}[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}/;
 
-const SINIF_SOR = [[/otomatik|otomotik/i, 'B otomatik'], [/motor|a2\b|motosiklet/i, 'A2'], [/kamyon|\bc\b|c sınıf|tır/i, 'C'], [/manuel|düz vites|\bb\b|araba/i, 'B manuel']];
-// Fiyat her zaman Ayarlar › Sınıf ve ücretler'den okunur (tek kaynak)
-const ETIKET_SINIF = { 'B otomatik': 'B-O', 'B manuel': 'B', 'A2': 'A2', 'C': 'C' };
-const fiyatBul = etiket => { const s = SINIFLAR[ETIKET_SINIF[etiket]]; return s && s.aktif && s.ucret ? s.ucret.toLocaleString('tr-TR') + ' TL' : null; };
-const fiyatListesi = () => satistaSiniflar().map(([, v]) => v.ad.replace(' · ', ' ') + ' ' + v.ucret.toLocaleString('tr-TR') + ' TL').join(', ');
+// Sınıf tanıma: önce özel sınıflar (B Engelli, 100 ceza), sonra kelimeler, en son sınıf kodları (C1, CE, A2…)
+const ENGELLI_RX = /engelli|engel durum|aparatlı/i;
+const CEZA_RX = /ceza puan|100 ceza|yüz ceza|el kon|geri alın|geri alındı/i;
+const SINIF_KELIME = [[ENGELLI_RX, 'B-EN'], [CEZA_RX, 'CEZA'], [/otomatik|otomotik/i, 'B-O'], [/hafif motosiklet/i, 'A1'], [/motor|motosiklet/i, 'A2'], [/(?:^|\s)(?:tır|çekici)/i, 'CE'], [/kamyon/i, 'C'], [/minibüs/i, 'D1'], [/otobüs/i, 'D'], [/traktör/i, 'F'], [/iş makine/i, 'G'], [/manuel|düz vites|araba|otomobil/i, 'B']];
+const HARF = 'a-zA-ZçğıöşüÇĞİÖŞÜ0-9';
+const KOD_RX = new RegExp(`(?:^|[^${HARF}])(src ?[1-5]|c1e|d1e|c1|d1|a1|a2|b1|be|ce|de|[abcdfgm])(?![${HARF}])`, 'gi');
+// "B ehliyetim var", "B sınıfı belgem var", "B'm var", "elimde C ehliyeti var": mevcut belge (geçiş ücreti için)
+const MEVCUT_RX = new RegExp(`(?:^|[^${HARF}])(c1e|d1e|c1|d1|a1|a2|b1|be|ce|de|[abcdfgm])(?:\\s*sınıfı)?\\s*(?:['’]?(?:m|im|ım|um|üm)|(?:ehliyet|belge|sürücü belge)\\w*)\\s*(?:de\\s+|da\\s+)?(?:var|mevcut|sahibiyim)(?!\\s*m[ıi](?:[^${HARF}]|$))`, 'i');
+const kodSinif = (kod, soru) => { kod = kod.toUpperCase().replace(' ', ''); if (kod === 'B' && /otomatik|otomotik/i.test(soru)) return 'B-O'; return SINIFLAR[kod] ? kod : null; };
+// Sorudan { mevcut, otomatik (belgesi "sadece otomatik"), hedef } çıkarır; tek harfli kod yalnız büyük yazıldıysa ya da ardından sınıf/ehliyet geliyorsa (b ve c küçük de olur)
+function sinifCoz(soru) {
+  let q = String(soru || ''), mevcut = null, otomatik = false;
+  const m = q.match(MEVCUT_RX);
+  if (m) { mevcut = m[1].toUpperCase(); otomatik = mevcut === 'B' && /otomatik\s*(?:b\s*)?(?:ehliyet|belge)/i.test(q); q = q.slice(0, m.index) + ' ' + q.slice(m.index + m[0].length); }
+  else if (/otomatik\s*(?:ehliyet|belge)\w*\s*(?:im|ım)?\s*var/i.test(q)) { mevcut = 'B'; otomatik = true; q = q.replace(/otomatik\s*(?:ehliyet|belge)\w*\s*(?:im|ım)?\s*var/i, ' '); }
+  const kelime = SINIF_KELIME.find(([rx]) => rx.test(q));
+  let hedef = kelime ? kelime[1] : null;
+  if (!hedef) for (const x of q.matchAll(KOD_RX)) {
+    const kod = x[1], tek = kod.length === 1, sonra = q.slice(x.index + x[0].length);
+    if (tek && !/[bc]/i.test(kod) && kod !== kod.toUpperCase() && !/^\s*(?:sınıf|ehliyet|belge|['’])/i.test(sonra)) continue;
+    hedef = kodSinif(kod, q); if (hedef) break;
+  }
+  return { mevcut, otomatik, hedef };
+}
+// Cevapta sınıfın adı (Ayarlar › Sınıf ve ücretler'deki sınıf; fiyat her zaman oradan okunur, tek kaynak)
+const sinifSoz = sinif => ({ B: 'B manuel', 'B-O': 'B otomatik', 'B-EN': 'B Engelli' })[sinif] || (sinif === 'CEZA' ? sinifEtiket(sinif) : sinif);
+const para = n => (+n).toLocaleString('tr-TR', { maximumFractionDigits: 2 }) + ' TL';
+const satista = sinif => { const v = SINIFLAR[sinif]; return !!(v && v.aktif && v.ucret > 0); };
+// Ancak belgeyle alınan sınıfın (C, CE, D…) en yaygın önceki belgesi: cevap "B belgesiyle C" diye verilir
+const ONCEKI_BELGE = { CE: 'C', C1E: 'C1', D1E: 'D1', DE: 'D' };
+// Sorulan sınıfın (ve varsa adayın mevcut belgesinin) ücreti. İl taban listesi varsa satır ücreti listeden ve kursun geçiş ücretlerinden;
+// ücret tabanın altındaysa ya da satır bulunamazsa fiyat söylenmez, soru devredilir. Dönüş: { etiket, tutar, kisa? (liste için) } | { devir } | { bilgi } | null (sınıf satışta değil)
+function ucretBul(sinif, mevcut, otomatik) {
+  if (!satista(sinif)) return null;
+  const L = tabanListesi(), ad = sinifSoz(sinif);
+  const tasla = m => kursiyerTaban({ sinif, mevcutEhliyet: m || 'Yok', mevcutOtomatik: !!otomatik, kayit: gun(0) }, L);
+  const sonuc = (x, etiket) => !x || !x.satir ? null : !(x.ucret > 0) || (x.taban && x.ucret < x.taban) ? { devir: 'Ücret il taban fiyatının altında görünüyor' } : { etiket, tutar: x.ucret };
+  if (!L) {
+    // listesi olmayan ilde geçiş ücreti bilinmez: yalnız zaten belgeyle alınan sınıflarda (C, D, römork…) sınıf ücreti söylenir
+    if (mevcut && !['BE', 'C1', 'C1E', 'C', 'CE', 'D1', 'D1E', 'D', 'DE'].includes(sinif)) return { devir: 'Mevcut belgeye göre ücret soruldu' };
+    const v = SINIFLAR[sinif].ucret, t = sinifTabani(sinif);
+    return t && v < t ? { devir: 'Ücret il taban ücretinin altında görünüyor' } : { etiket: `${ad} kurs ücretimiz`, tutar: v };
+  }
+  if (mevcut) {
+    const x = tasla(mevcut);
+    if (x && x.kapsar) return { bilgi: x.neden };
+    return sonuc(x, `${otomatik ? 'Otomatik ' : ''}${mevcut} belgeniz varsa ${ad}:`) || { devir: (x && x.neden) || 'Geçiş ücreti listede bulunamadı' };
+  }
+  const x = tasla(null), r = sonuc(x, `${ad} kurs ücretimiz`); if (r) return r;
+  const on = ONCEKI_BELGE[sinif] || 'B', y = tasla(on);
+  const z = sonuc(y, `${ad} sınıfı mevcut bir belgeyle alınır. ${on} belgesiyle ${ad}:`); if (z && z.tutar) z.kisa = `${on} belgesiyle ${ad}`;
+  return z || { devir: (x && x.neden) || 'Ücret listede bulunamadı' };
+}
+// Taksit cümlesi kursun "Fiyat ve taksit" bilgisinden (Mesajlar › Asistanın bildikleri) okunur; yazılı değilse taksit sözü verilmez
+const taksitCumlesi = soru => { const b = (S.asistanBilgi || []).find(x => x.konu === 'Fiyat ve taksit'), c = b && String(b.metin || '').split(/(?<=[.!?])\s+/).find(x => /taksit/i.test(x)); return c ? ' ' + c.trim() : /taksit|peşin|kredi kart/i.test(soru || '') ? ' Taksit seçeneklerini yetkilimiz kayıt görüşmesinde anlatır.' : ''; };
+const SINIF_EK = { 'B-EN': ' Eğitim, sağlık raporunuzdaki şartlara uygun araçla verilir; raporunuzu kayıt görüşmesinde yetkilimiz değerlendirir.', CEZA: ' Bu eğitim, 100 ceza puanı nedeniyle geri alınan sürücü belgesi için verilen yalnız teorik eğitimdir; derslerin tamamına devam gerekir.' };
+const fiyatListesi = () => satistaSiniflar().map(([k]) => { const f = ucretBul(k); return f && f.tutar ? `${f.kisa || sinifSoz(k)} ${para(f.tutar)}` : null; }).filter(Boolean).join(', ');
+const sinifSorusu = () => { const l = satistaSiniflar().map(([k]) => sinifSoz(k)); return 'Hangi ehliyet için soruyorsunuz' + (l.length ? ': ' + (l.length > 1 ? l.slice(0, -1).join(', ') + ' ya da ' + l[l.length - 1] : l[0]) : '') + '? Elinizde ehliyet varsa onu da yazın, ücret mevcut belgeye göre değişiyor.'; };
 export function bosSaatler(adet = 3) {
   const sb_ = sos().gorusmeSablon, l = [];
   for (let n = 1; n <= 21 && l.length < adet; n++) {
@@ -71,28 +125,56 @@ function cevapUret(soru, ilk) {
     const n = (soru.match(/\b([1-3])\b/) || [])[1], sl = n ? bekleyen.slotlar[+n - 1] : bekleyen.slotlar.find(x => soru.includes(x.saat.slice(0, 2)));
     if (sl && !sos().slotlar.some(x => x.tarih === sl.tarih && x.saat === sl.saat && x.dolu)) { { sos().slotlar.push({ tarih: sl.tarih, saat: sl.saat, dolu: 'Deneme müşterisi', kanal: KANAL_KISA[durum.kanal] }); kaydet(); bekleyen = null; return { metin: beyan + `${slotMetni(sl)} için kayıt görüşmenizi ayarladım. Adresimiz ${S.kurs.adres}. Gelirken kimliğinizi getirin; numaranızı yazarsanız bir gün önce hatırlatırız.`, kaynak: 'Kurs takvimi · boş saat ayrıldı' }; } }
   }
-  // bekleyen soru: hangi sınıf
-  if (bekleyen && bekleyen.tur === 'fiyat') { const s2 = SINIF_SOR.find(([r]) => r.test(soru)); if (s2) { bekleyen = null; const f = fiyatBul(s2[1]); if (f) return { metin: beyan + `${s2[1]} kurs ücretimiz ${f}. Peşinat sonrası 5 aya kadar taksit yapıyoruz. Kayıt görüşmesi için uygun bir gün ayarlayalım mı?`, kaynak: 'Fiyat ve taksit · yalnızca sorulan sınıf' }; } }
-  if (/kaç yaş|yaş sınır|17 yaş|16 yaş|yaşındayım/i.test(soru)) return { metin: beyan + `Yaş sınırları: ${satistaSiniflar().map(([k, v]) => v.ad.split(' · ')[0] + ' ' + (v.yas || S.kurs.asgariYas) + (k === 'A' ? ' (en az 2 yıllık A2 belgesiyle; A2 yoksa ' + (v.yasA2siz || 24) + ')' : '')).join(', ')}. Bu yaşı doldurduğunuz gün kaydınızı yapabiliriz; numaranızı yazarsanız o tarihte size hatırlatalım.`, kaynak: 'Ayarlar › Sınıf ve ücretler: asgari yaş' };
+  const devret = (neden, on = 'Bu konuyu kurs yetkilimizin cevaplaması daha doğru olur. ') => ({ metin: beyan + on + (a.bildirim.bekletme ? beklet() : 'Telefon numaranızı yazarsanız sizi arayalım.'), kaynak: 'Size devredildi · ' + neden, devir: neden });
+  // Fiyat cevabı: yalnız sorulan sınıf (ve adayın mevcut belgesi). Taban altı ya da bulunamayan ücret söylenmez, devredilir. Sınıf satışta değilse null.
+  const fiyatCevap = (c, son = '') => {
+    const sinif = c.hedef, ozel = sinif === 'B-EN' || sinif === 'CEZA';
+    if (a.fiyat === 'telefon') return { metin: beyan + (ozel && satista(sinif) ? `${sinifSoz(sinif)} eğitimi veriyoruz.${SINIF_EK[sinif]} ` : '') + 'Ücretlerimizi taksit seçenekleriyle birlikte telefonda detaylı anlatalım. Numaranızı yazar mısınız?', kaynak: 'Fiyat politikası: telefonda' };
+    if (!sinif) { bekleyen = { tur: 'fiyat', mevcut: c.mevcut, otomatik: c.otomatik }; return { metin: beyan + (/taksit|peşin|kredi kart/i.test(soru) ? taksitCumlesi(soru).trim() + ' ' : '') + sinifSorusu(), kaynak: 'Fiyat politikası: önce sınıfı sor' }; }
+    const f = ucretBul(sinif, c.mevcut, c.otomatik);
+    if (!f) return null;
+    bekleyen = null;
+    if (f.devir) return devret('Ücret · ' + f.devir, 'Bu ücreti kurs yetkilimizin söylemesi daha doğru olur. ');
+    if (f.bilgi) return { metin: beyan + f.bilgi + ' Ayrıntıyı kayıt görüşmesinde konuşalım.', kaynak: 'İl taban fiyat listesi · mevcut belge' };
+    if (!c.mevcut && f.etiket.includes('belgesiyle')) bekleyen = { tur: 'fiyat', sinif };
+    return { metin: beyan + `${f.etiket} ${para(f.tutar)} (KDV dahil).` + (SINIF_EK[sinif] || '') + taksitCumlesi(soru) + son, kaynak: 'Fiyat ve taksit · yalnızca sorulan sınıf' + (c.mevcut ? ' · mevcut belgeye göre (il taban listesi)' : '') };
+  };
+  // bekleyen soru: hangi sınıf (ya da "B belgesiyle C" cevabından sonra adayın kendi belgesi)
+  if (bekleyen && bekleyen.tur === 'fiyat') {
+    const c = sinifCoz(soru), b0 = bekleyen;
+    if (c.hedef || c.mevcut) {
+      const r = fiyatCevap({ hedef: c.hedef || b0.sinif || null, mevcut: c.mevcut || b0.mevcut || null, otomatik: c.mevcut ? c.otomatik : !!b0.otomatik }, ' Kayıt görüşmesi için uygun bir gün ayarlayalım mı?');
+      if (r) return r;
+      bekleyen = null; return devret('Ücret · satışta olmayan sınıf soruldu', 'Bu sınıfın ücretini kurs yetkilimizin söylemesi daha doğru olur. ');
+    }
+  }
+  if (/kaç yaş|yaş sınır|17 yaş|16 yaş|yaşındayım/i.test(soru)) return { metin: beyan + `Yaş sınırları: ${satistaSiniflar().filter(([, v]) => (v.tur || 'ehliyet') === 'ehliyet').map(([k, v]) => (k.startsWith('B-') ? sinifSoz(k) : v.ad.split(' · ')[0]) + ' ' + (v.yas || S.kurs.asgariYas) + (k === 'A' ? ' (en az 2 yıllık A2 belgesiyle; A2 yoksa ' + (v.yasA2siz || 24) + ')' : '')).join(', ')}. Bu yaşı doldurduğunuz gün kaydınızı yapabiliriz; numaranızı yazarsanız o tarihte size hatırlatalım.`, kaynak: 'Ayarlar › Sınıf ve ücretler: asgari yaş' };
   if (a.randevu && /kayda gel|kaydolmaya gel|görüşme|uğra|randevu|gelip kaydol|yüz yüze|ne zaman gel/i.test(soru)) {
     const sl = bosSlotlar();
     if (sl.length) { bekleyen = { tur: 'randevu', slotlar: sl }; return { metin: beyan + 'Kayıt görüşmesi için takvimimizdeki boş saatler: ' + sl.map((x, i) => `${i + 1}) ${slotMetni(x)}`).join(', ') + '. Hangisi size uygun?', kaynak: 'Kurs takvimi · yalnızca boş saatler' }; }
   }
   { const b = ogretilenBul(soru); if (b) return { metin: beyan + b.metin, kaynak: 'Kursun öğrettiği cevap · ' + b.konu }; }
+  const indirimKural = KURALLAR.find(r => r.devir === 'indirim');
+  // B Engelli ve 100 ceza: sınıf satıştaysa sağlık devrinden önce fiyat ve eğitim bilgisi verilir ("engelli" kelimesi tek başına sağlık sorusu değildir)
+  { const oz = ENGELLI_RX.test(soru) ? 'B-EN' : CEZA_RX.test(soru) ? 'CEZA' : null;
+    if (oz && satista(oz) && !indirimKural.k.test(soru)) { const r = fiyatCevap({ ...sinifCoz(soru), hedef: oz }, ' Kayıt görüşmesi için uygun bir gün ayarlayalım mı?'); if (r) return r; } }
   for (const r of KURALLAR) {
     if (!r.k.test(soru)) continue;
+    // il taban listesi notu 6: hiçbir ad altında indirim ve kampanya yok; cevap verilir, istenirse yine yetkiliye devredilir
+    if (r.devir === 'indirim' && tabanListesi()) {
+      const not6 = 'İl taban fiyat listesi gereği öğrenci, kardeş, arkadaş, toplu kayıt dahil hiçbir ad altında indirim ve kampanya yapılamıyor; ücretlerimiz il taban fiyatına uygundur. ';
+      if (!a.devir.indirim) return { metin: beyan + not6.trim(), kaynak: 'İl taban fiyat listesi · not 6' };
+      return devret(r.n, not6);
+    }
     if (r.devir) {
       if (!a.devir[r.devir]) continue;
-      return { metin: beyan + 'Bu konuyu kurs yetkilimizin cevaplaması daha doğru olur. ' + (a.bildirim.bekletme ? beklet() : 'Telefon numaranızı yazarsanız sizi arayalım.'), kaynak: 'Size devredildi · ' + r.n, devir: r.n };
+      return devret(r.n);
     }
-    if (r.bilgi === 'Fiyat ve taksit' && a.fiyat !== 'liste') {
-      if (a.fiyat === 'telefon') return { metin: beyan + 'Ücretlerimizi taksit seçenekleriyle birlikte telefonda detaylı anlatalım. Numaranızı yazar mısınız?', kaynak: 'Fiyat politikası: telefonda' };
-      const s2 = SINIF_SOR.find(([rx]) => rx.test(soru)), f = s2 && fiyatBul(s2[1]);
-      if (f) return { metin: beyan + `${s2[1]} kurs ücretimiz ${f}. Peşinat sonrası 5 aya kadar taksit yapıyoruz.`, kaynak: 'Fiyat ve taksit · yalnızca sorulan sınıf' };
-      bekleyen = { tur: 'fiyat' };
-      return { metin: beyan + 'Hangi ehliyet için soruyorsunuz: otomatik, manuel, motosiklet (A2) ya da kamyon (C)?', kaynak: 'Fiyat politikası: önce sınıfı sor' };
+    if (r.bilgi === 'Fiyat ve taksit') {
+      const c = sinifCoz(soru);
+      if (a.fiyat === 'liste' && !c.mevcut) { const l = fiyatListesi(); return l ? { metin: beyan + 'Kurs ücretlerimiz (KDV dahil): ' + l + '.' + taksitCumlesi(soru), kaynak: 'Ayarlar › Sınıf ve ücretler' } : devret('Ücret · satışta ücretli sınıf yok', 'Ücretlerimizi kurs yetkilimizin söylemesi daha doğru olur. '); }
+      return fiyatCevap(c) || devret('Ücret · satışta olmayan sınıf soruldu', 'Bu sınıfın ücretini kurs yetkilimizin söylemesi daha doğru olur. ');
     }
-    if (r.bilgi === 'Fiyat ve taksit') return { metin: beyan + 'Kurs ücretlerimiz: ' + fiyatListesi() + '. Peşinat sonrası 5 aya kadar taksit yapıyoruz.', kaynak: 'Ayarlar › Sınıf ve ücretler' };
     const b = S.asistanBilgi.find(x => x.konu === r.bilgi);
     if (b) return { metin: beyan + b.metin, kaynak: b.konu };
   }
@@ -105,7 +187,7 @@ function cevapUret(soru, ilk) {
 /* --- Sekmeler --- */
 function ozet() {
   const a = sos().ay, k = sos().kanalDagilim;
-  const ciro = a.kayit * ORT_UCRET;
+  const ciro = a.kayit * ortUcret();
   const saat = sos().saatlik.map((v, i) => ({ e: i % 3 === 0 ? String(i).padStart(2, '0') : '', v, vurgu: i < 9 || i >= 19 }));
   const sonAday = S.adaylar.filter(x => ['Instagram'].includes(x.kanal) || x.kaynak === 'Instagram').slice(0, 5);
   return `${olcumler([
@@ -151,7 +233,7 @@ function kanallar() {
     ['tamam', 'Meta uyarısında kendini durdurur', 'Hesaba kısıtlama ya da uyarı gelirse asistan o kanalda hemen susar, size bildirim gelir; mesajlar kaybolmaz, gelen kutusuna düşer.'],
     ['tamam', 'Resmî bağlantı', 'Meta’nın izin verdiği resmî bağlantıyla çalışır; şifreniz ve hesabınızın oturumu mdSinyal’de değildir.'],
   ].map(([t, b, a]) => `<li style="align-items:flex-start">${isaret(t, 22)}<div><b style="color:var(--murekkep);display:block">${b}</b><small style="color:var(--metin);font-size:13.5px">${a}</small></div></li>`).join('')}
-    <li style="align-items:flex-start"><span class="anahtar" style="margin-top:2px"><input type="checkbox" data-hiz ${sos().ayar.hizSiniri ? 'checked' : ''} aria-label="Hız sınırı"><i></i></span><div><b style="color:var(--murekkep);display:block">Hız sınırı</b><small style="color:var(--metin);font-size:13.5px">Dakikada en fazla 20 cevap; yeni bağlanan hesaplarda ilk hafta yarı hızda. Kampanya günü yoğunluğunda bile hesap doğal görünür.</small></div></li></ul></div>
+    <li style="align-items:flex-start"><span class="anahtar" style="margin-top:2px"><input type="checkbox" data-hiz ${sos().ayar.hizSiniri ? 'checked' : ''} aria-label="Hız sınırı"><i></i></span><div><b style="color:var(--murekkep);display:block">Hız sınırı</b><small style="color:var(--metin);font-size:13.5px">Dakikada en fazla 20 cevap; yeni bağlanan hesaplarda ilk hafta yarı hızda. Yoğun günlerde bile hesap doğal görünür.</small></div></li></ul></div>
   <div class="ara-bosluk"></div>
   <div class="kart"><div class="kart-bas"><h3>Kurulum nasıl oluyor?</h3><small>Kurulumu biz yapıyoruz, yaklaşık 30 dakika</small></div><ul class="liste" style="margin-top:8px">${[
     ['zorunlu', 'Hesaplar sizin kalır', 'Instagram ve Facebook hesaplarınıza şifrenizi bize vermeden, Meta’nın kendi giriş ekranından izin verirsiniz.'],
@@ -195,7 +277,7 @@ function yorumlar() {
 }
 
 function dene() {
-  const ilkSoru = ['Fiyat ne kadar?', 'Otomatik', 'Hangi evraklar lazım?', 'Akşam dersi var mı?', 'Kayda gelmek istiyorum', '2', '17 yaşındayım kaydolabilir miyim?', 'Üç kardeş gelirsek indirim olur mu?', 'Sol ayağımda protez var', 'Numaram 0532 111 22 33'];
+  const ilkSoru = ['Fiyat ne kadar?', 'Otomatik', 'Hangi evraklar lazım?', 'Akşam dersi var mı?', 'Kayda gelmek istiyorum', '2', '17 yaşındayım kaydolabilir miyim?', 'B ehliyetim var, C ne kadar?', 'Üç kardeş gelirsek indirim olur mu?', 'Sol ayağımda protez var', 'Numaram 0532 111 22 33'];
   const mesajlar = durum.deneme;
   const kanal = durum.kanal;
   return `${ekranNotu('Asistanı müşteri gibi deneyin. Cevaplar yalnızca “Mesajlar › Asistanın bildikleri” sayfasındaki onaylı bilgilerden gelir; bilmediği soruyu uydurmaz, size devreder.')}
@@ -225,7 +307,7 @@ function kurallar() {
       <label class="tam" style="display:flex;align-items:center;gap:12px;font-size:14.5px;opacity:.75"><span class="anahtar"><input type="checkbox" checked disabled><i></i></span><span>İlk mesajda otomatik asistan olduğunu söyler <small style="display:block;color:var(--soluk)">Meta kuralı, kapatılamaz</small></span></label>
       <div class="tam"><button class="dg dg-ana" type="submit">Kaydet</button></div></form></div></div>
     <div class="kart"><div class="kart-bas"><h3>Ne zaman size devreder?</h3><small>Devredilen konuşmada asistan susar, size bildirim gelir</small></div><ul class="liste" style="margin-top:8px">
-      ${satir('indirim', 'İndirim ve pazarlık', 'Kurs bilgisindeki indirimler dışında fiyat sözü vermez.')}
+      ${satir('indirim', 'İndirim ve pazarlık', 'İndirim ve pazarlık sözü vermez (il taban listesi not 6).')}
       ${satir('sikayet', 'Şikâyet ve kızgın müşteri', 'Yorumda da DM’de de cevabı siz yazarsınız.')}
       ${satir('saglik', 'Sağlık ve özel durum', 'Protez, ilaç, engel durumu gibi sorular.')}
       ${satir('insan', 'Yetkiliyle görüşmek isteyen', '“Biriyle konuşabilir miyim?” dendiğinde.')}
@@ -240,7 +322,7 @@ function kurallar() {
       <div><b style="color:var(--murekkep)">Fiyat sorulunca</b><div class="secim" style="margin-top:8px">${[['sorulan', 'Yalnızca sorulan sınıfın fiyatı'], ['liste', 'Tüm fiyat listesi'], ['telefon', 'Fiyatı telefonda söyleriz']].map(([v, t]) => `<label><input type="radio" name="fiyat" value="${v}" data-fiyat ${a.fiyat === v ? 'checked' : ''}><span>${t}</span></label>`).join('')}</div></div>
       <label style="display:flex;gap:12px;align-items:flex-start"><span class="anahtar" style="margin-top:2px"><input type="checkbox" data-randevu ${a.randevu ? 'checked' : ''}><i></i></span><span><b style="color:var(--murekkep)">Kayıt görüşmesi ayarlayabilir</b><small style="display:block;color:var(--soluk)">Yalnızca takvimdeki boş saatleri önerir; aynı saate iki kişi yazılmaz. Boş saat: ${sos().slotlar.filter(x => !x.dolu).length}, dolu: ${sos().slotlar.filter(x => x.dolu).length}.</small></span></label>
       <div><b style="color:var(--murekkep)">Cevaplar nasıl gitsin?</b><div class="secim" style="margin-top:8px">${[['otomatik', 'Doğrudan gönder'], ['karisik', 'Fiyat ve randevuyu önce bana göster'], ['taslak', 'Her cevabı önce bana göster']].map(([v, t]) => `<label><input type="radio" name="onaymodu" value="${v}" data-onay-modu ${a.onayModu === v ? 'checked' : ''}><span>${t}</span></label>`).join('')}</div><small style="display:block;color:var(--soluk);margin-top:6px">İlk haftalarda “önce bana göster” ile başlayıp asistana güvendikçe açabilirsiniz.</small></div>
-      <div style="font-size:13.5px;color:var(--metin);background:var(--panel-2);border-radius:8px;padding:10px 12px"><b>Asla söz vermez:</b> indirim, kesin sınav tarihi, “kesin geçersiniz” gibi garanti, belgede olmayan bilgi.</div></div></div>
+      <div style="font-size:13.5px;color:var(--metin);background:var(--panel-2);border-radius:8px;padding:10px 12px"><b>Asla söz vermez:</b> indirim ya da kampanya (il taban listesi not 6), kesin sınav tarihi, “kesin geçersiniz” gibi garanti, belgede olmayan bilgi.</div></div></div>
     <div class="kart"><div class="kart-bas"><h3>Kişisel veriler (KVKK)</h3><small>Asistana yazılanlar nerede işlenir?</small></div><div class="kart-govde" style="display:grid;gap:14px">
       <p style="font-size:14px;color:var(--metin);margin:0">Asistan mdSinyal’in bulut altyapısında çalışır; dil modeli kullanmaz, hazır kurallarla cevap verir. Mesajlar WhatsApp ve bulut altyapısından geçer.</p>
       <small style="color:var(--soluk);font-size:13px;margin-top:-6px">Otomatik cevap şimdilik yalnız deneme hattında açık. Kursunuzun kendi WhatsApp hattında yalnız ders değişikliği talepleri otomatik cevaplanır; diğer mesajlar Mesajlar’a düşer. Fiyat, randevu ve cevap ayarları şimdilik yalnız “Asistanı dene”de uygulanır.</small>
@@ -328,7 +410,7 @@ export function sosyal(alt) {
         const ygz = t.closest('[data-yorum-gizle]'); if (ygz) { const y = sos().yorumlar.find(x => x.id === ygz.dataset.yorumGizle); y.durum = 'gizli'; islem('Yorumu gizledi', y.kim); kaydet(); bildir('Yorum gizlendi'); yenile(); return; }
         const ybr = t.closest('[data-yorum-birak]'); if (ybr) { const y = sos().yorumlar.find(x => x.id === ybr.dataset.yorumBirak); y.durum = 'devir'; kaydet(); bildir('Yorum görünür kaldı; cevabı size bırakıldı'); yenile(); return; }
         const tk = t.closest('[data-test-kanal]'); if (tk) { const c = sos().kanallar.find(x => x.id === tk.dataset.testKanal); if (c.id !== 'wp' || !apiAcik()) return baglantiGerekli(c); tk.disabled = true; tk.textContent = 'Gönderiliyor…'; apiGonder(`${S.kurs.ad} · kanal denemesi\nBu mesaj mdSinyal’den WhatsApp hattının çalıştığını doğrulamak için gönderildi.`, undefined, undefined, { ad: S.kurs.ad, rol: 'KURSA GELEN' }).then(r => { if (r.ok) { c.son = new Date().toTimeString().slice(0, 5); islem('WhatsApp hattını denedi'); kaydet(); bildir('Deneme mesajı WhatsApp’a gönderildi'); } else bildir(r.hata, 'uyari'); yenile(); }); return; }
-        const ba = t.closest('[data-belge-ac]'); if (ba) { import('./sayfalar3.js?v=231').then(m => m.belgeAc(ba.dataset.belgeAc)); return; }
+        const ba = t.closest('[data-belge-ac]'); if (ba) { import('./sayfalar3.js?v=235').then(m => m.belgeAc(ba.dataset.belgeAc)); return; }
         const yg = t.closest('[data-yorum-goster]'); if (yg) { const y = sos().yorumlar.find(x => x.id === yg.dataset.yorumGoster); y.durum = 'devir'; kaydet(); bildir('Yorum görünür yapıldı; cevabı size bırakıldı'); yenile(); }
       });
       k.addEventListener('change', ev => {

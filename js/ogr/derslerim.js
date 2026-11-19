@@ -2,14 +2,14 @@
 // öğretmen notları) ve Geçmiş (yapılan dersler, öğrenci onayı, değerlendirme).
 // Eski ogrenci.js derslerHtml / programHtml / yaklasanHtml / degerlendirKart / ders defteri işlevleri buraya taşındı;
 // onay, itiraz, yıldız, takvim dosyası (data-og-*) ogrenci.js ogBagla'da; ders al, kursa yaz, saat değiştir, iptal portal.js ogGenelTik'te çalışır.
-import { S, BECERI, DERS_TUR_AD, egitmen, arac, ogretmen, fark, gun, tarihOku, iso, iptalEdilebilir, dersSirasi, kapaliGun, ogrOzellik, tamAd } from '../veri.js?v=231';
-import { gerekliDireksiyon } from '../veri.js?v=231';
-import { tarihUzun, gunAdi, gunKisa, ayAdi } from '../ui.js?v=231';
-import * as TK from '../takvim.js?v=231';
-import { onayBekleyen, MUFREDAT, sinavAdi, hakDurum } from '../ogrenci.js?v=231';
-import { randevuEngeli, engelYazilir } from '../risk.js?v=231';
-import { kursaYaz } from '../ozellik.js?v=231';
-import { esc, oi, sayfaBas, geri, bolum, kart, liste, satir, ikonKutu, cip, serit, not, bos, dugme, sekmeler, stilEkle } from './ui.js?v=231';
+import { kaydet, S, BECERI, DERS_TUR_AD, egitmen, arac, ogretmen, fark, gun, tarihOku, iso, iptalEdilebilir, dersSirasi, kapaliGun, ogrOzellik, tamAd, gerekliDireksiyon, teorikVar, egitimSinifi, teorikSaat, dersTurleri } from '../veri.js?v=235';
+import { tarihUzun, gunAdi, gunKisa, ayAdi, bildir } from '../ui.js?v=235';
+import * as PL from '../planlayici.js?v=235';
+import * as TK from '../takvim.js?v=235';
+import { onayBekleyen, MUFREDAT, sinavAdi, hakDurum, dirSayac, TEORIKSIZ_METIN } from '../ogrenci.js?v=235';
+import { randevuEngeli, engelYazilir } from '../risk.js?v=235';
+import { kursaYaz } from '../ozellik.js?v=235';
+import { esc, oi, sayfaBas, geri, bolum, kart, liste, satir, ikonKutu, cip, serit, not, bos, dugme, sekmeler, stilEkle } from './ui.js?v=235';
 
 /* ---------- ekran durumu (yeniden çizimde korunur) ---------- */
 let sekme = 'program';   // 'program' | 'gelisim' | 'gecmis'
@@ -17,6 +17,7 @@ let secili = null;       // seçili gün (YYYY-AA-GG); null → varsayılan gün
 let ayAcik = false;      // ay görünümü (başlıktaki "Kasım 2026 ⌄")
 let acik = null;         // ayrıntısı açık dersin kimliği
 let onayHepsi = false;   // Geçmiş: onay bekleyen derslerin hepsi görünsün mü
+let musait = null;       // UYG-010: müsaitlik düzenleniyorsa taslak { gun: { '1': [...] }, not }
 
 const ekleGun = (t, n) => { const d = tarihOku(t); d.setDate(d.getDate() + n); return iso(d); };
 const ayKaydir = (t, n) => { const d = tarihOku(t); d.setDate(1); d.setMonth(d.getMonth() + n); return iso(d); };
@@ -27,7 +28,7 @@ const virgul = v => v.toFixed(1).replace('.', ',');
 const yildizlar = n => `<span class="ox-drs-yildizlar" role="img" aria-label="${n}/5 yıldız">${[1, 2, 3, 4, 5].map(i => oi('yildiz', i <= n ? 'dolu' : '')).join('')}</span>`;
 
 /* ---------- veriler ---------- */
-const teorikDonem = k => ['Kayıt', 'Evrak', 'Teorik'].includes(k.asama) || (S.teorik || []).some(t => (t.yoklama || []).includes(k.id));
+const teorikDonem = k => (teorikVar(k) && ['Kayıt', 'Evrak', 'Teorik'].includes(k.asama)) || (S.teorik || []).some(t => (t.yoklama || []).includes(k.id));
 // Takvimdeki bütün olaylar: direksiyon dersleri (iptal ve tarihi geçmiş planlı hariç), teorik dersler, sınavlar (eski takvimOlaylari)
 function olaylar(k) {
   const l = [];
@@ -72,7 +73,7 @@ function kartBilgi(o, k, sd) {
       else if (o.tarih === bugun) { c = cip('Bugün', 'gri'); ton = 'turuncu'; }
       else c = cip(fark(o.tarih) === 1 ? 'Yarın' : 'Planlı', 'gri');
     } else c = d.durum === 'Yapıldı' ? cip('Yapıldı', 'yesil') : cip(d.durum === 'Gelmedi' ? 'Gelmedin' : esc(d.durum), 'kirmizi');
-    return { ikon: 'direksiyon', ad, cip: c, ton, kim: h ? h.ad : '', kimIkon: 'kisi', sag2: a ? a.plaka : '', sag2Ikon: 'arac', ac: true };
+    return { ikon: 'direksiyon', ad, cip: c, ton, kim: h ? h.ad : '', kimIkon: 'kisi', sag2: a ? a.plaka : d.kendiArac || k.kendiArac ? 'Kendi aracın' : '', sag2Ikon: 'arac', ac: true };
   }
   if (o.tur === 'teorik') {
     const t = o.t, og = ogretmen(t.ogretmen), gecti = o.tarih < bugun, vardi = (t.yoklama || []).includes(k.id);
@@ -135,21 +136,35 @@ function programHtml(k, ctx, l) {
   const ileri = l.some(o => o.tarih >= gun(0) && !(o.tur === 'direksiyon' && o.d.durum !== 'Planlandı'));
   return ay + takvim
     + `<div class="ox-bolum ox-drs-gun-bas"><h2>${esc(gunBaslik(secili))}</h2>${sayi ? `<span class="ox-bolum-sag">${sayi}</span>` : ''}</div>`
-    + `<div class="ox-drs-kartlar">${govde}</div>` + al
+    + `<div class="ox-drs-kartlar">${govde}</div>` + al + (dir && !bitti ? musaitHtml(k) : '')
     + (ileri ? `<button type="button" class="ox-drs-tel" data-og-takvim>${oi('takvim')}<span>Telefon takvimine ekle</span></button>` : '')
     + (bitti ? '' : `<p class="ox-drs-dip">Program değişirse WhatsApp’tan haber verilir.</p>`);
+}
+
+/* ---------- UYG-010: müsait olduğum zamanlar ---------- */
+// Öğrenci gün × dilim işaretler; kaydedince k.musaitlik kurs verisine gider (öğrenci → kurs yolu, ogrenciGelen). Hepsi boşsa null: kısıt yok.
+function musaitHtml(k) {
+  const m = k.musaitlik;
+  if (!musait) return liste([satir({ ikon: 'saat', ton: m ? 'yesil' : 'mavi', baslik: 'Müsait olduğum zamanlar', alt: m && m.gun ? esc(PL.musaitlikOzet(m)) : 'Bildirmedin. İşaretlersen dersler bu zamanlara planlanır.', attrs: { 'data-ox-mst-ac': true } })], 'ox-mst');
+  const g = musait.gun;
+  return kart(`<h3 class="ox-mst-bas">Hangi zamanlarda derse gelebilirsin?</h3><p class="ox-mst-alt">Uygun olanlara dokun. Kurs dersleri yalnız bu zamanlara planlar.</p>
+    <div class="ox-mst-izgara" role="group" aria-label="Müsait zamanlar"><span></span>${PL.MUSAIT_DILIM.map(([, ad, ara]) => `<small><b>${ad}</b>${ara}</small>`).join('')}
+    ${PL.MUSAIT_GUN.map(([gn, , uzun]) => `<b class="ox-mst-gun">${uzun}</b>${PL.MUSAIT_DILIM.map(([d, ad]) => { const on = (g[gn] || []).includes(d); return `<button type="button" class="ox-mst-h${on ? ' secili' : ''}" role="checkbox" aria-checked="${on}" aria-label="${uzun} ${ad.toLocaleLowerCase('tr')}" data-ox-mst-h="${gn}|${d}">${on ? oi('tik') : ''}</button>`; }).join('')}`).join('')}</div>
+    <label class="ox-mst-not"><span>Not (isteğe bağlı)</span><input type="text" maxlength="200" data-ox-mst-not value="${esc(musait.not || '')}" placeholder="Örn. Cuma 18:00’den sonra gelebilirim"></label>
+    <div class="ox-mst-dg">${dugme('Vazgeç', { 'data-ox-mst-vazgec': true }, { tur: 'cizgi', kucuk: true })}${dugme('Kursa gönder', { 'data-ox-mst-kaydet': true }, { kucuk: true })}</div>`, 'ox-mst-kart');
 }
 
 /* ---------- ders ayrıntısı ---------- */
 function ayrintiHtml(k, ctx, o) {
   const d = o.d, h = egitmen(d.egitmen), a = d.arac && arac(d.arac), plan = d.durum === 'Planlandı', b = kartBilgi(o, k, ctx.sd), sira = dersSirasi(d, k);
   const kalan = plan ? (new Date(d.tarih + 'T' + d.saat + ':00') - Date.now()) / 36e5 : 0;
-  const ozet = `<div class="ox-kart ox-drs-ozet ${b.ton}"><div class="ox-drs-ozet-ust">${ikonKutu('direksiyon', b.ton === 'turuncu' ? 'turuncu' : 'mavi')}<span class="ox-drs-ozet-ad"><b>${esc(b.ad)}</b><small>${sira ? sira + '. direksiyon dersin' : 'Direksiyon dersi'}</small></span>${b.cip}</div>
+  const ozet = `<div class="ox-kart ox-drs-ozet ${b.ton}"><div class="ox-drs-ozet-ust">${ikonKutu('direksiyon', b.ton === 'turuncu' ? 'turuncu' : 'mavi')}<span class="ox-drs-ozet-ad"><b>${esc(b.ad)}</b><small>${sira ? (gerekliDireksiyon(k) && sira > gerekliDireksiyon(k) ? (sira - gerekliDireksiyon(k)) + '. ek dersin' : sira + '. direksiyon dersin') : 'Direksiyon dersi'}</small></span>${b.cip}</div>
     <b class="ox-drs-ozet-saat">${esc(d.saat)}</b><p class="ox-drs-ozet-tarih">${esc(tarihUzun(d.tarih))} · ${esc(goreliKisa(d.tarih))}</p></div>`;
   const kurs = S.kurs || {}, adres = [kurs.ad, kurs.adres].filter(Boolean).join(', ');
   const bilgi = [
     satir({ ikon: 'kisi', baslik: esc(h ? h.ad : 'Öğretmen belli değil'), alt: 'Usta öğretici', ok: false }),
-    a ? satir({ ikon: 'arac', baslik: esc(a.plaka), alt: esc([a.model, a.vites].filter(Boolean).join(' · ')), ok: false }) : '',
+    a ? satir({ ikon: 'arac', baslik: esc(a.plaka), alt: esc([a.model, a.vites].filter(Boolean).join(' · ')), ok: false })
+      : d.kendiArac || k.kendiArac ? satir({ ikon: 'arac', baslik: 'Kendi aracın', alt: 'Raporuna uygun kendi aracınla ders', ok: false }) : '',
     plan && adres ? satir({ ikon: 'harita', baslik: 'Yol tarifi', alt: esc(adres), etiket: 'a', attrs: { href: 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(adres), target: '_blank', rel: 'noopener' } }) : '',
     !plan && d.sure ? satir({ ikon: 'saat', baslik: `${esc(d.bas || d.saat)}–${esc(d.bit || '')} · ${d.sure} dakika`, alt: [d.konum ? 'Konum alındı' : '', d.meb ? 'MEBBİS’e işlendi' : ''].filter(Boolean).join(' · ') || 'Ders süresi', ok: false }) : '',
   ].filter(Boolean);
@@ -187,9 +202,12 @@ function ayrintiHtml(k, ctx, o) {
 const beceriSatir = (ad, v, once) => `<div class="ox-drs-bs"><span class="ox-drs-bs-ad">${esc(ad)}</span><span class="ox-drs-bs-d ${puanTon(v)}">${virgul(v)}${once != null ? `<em class="${v >= once ? 'yukari' : 'asagi'}" role="img" aria-label="${v >= once ? 'öncekine göre arttı' : 'öncekine göre azaldı'}">${oi(v >= once ? 'yukari' : 'asagi')}</em>` : ''}</span>${serit(v / 5 * 100, puanTon(v))}</div>`;
 const notKart = d => `<figure class="ox-kart ox-drs-not"><blockquote>“${esc(d.not)}”</blockquote><figcaption>${esc((egitmen(d.egitmen) || {}).ad || '')} · ${esc(gunAy(d.tarih))}</figcaption></figure>`;
 function gelisimHtml(k, ctx) {
-  const S0 = ctx.S0, dir = !!gerekliDireksiyon(k);
-  const kutu = (ust, n, top, birim) => `<div class="ox-kart ox-drs-ilerleme"><small>${ust}</small><b>${n}<span>/${top} ${birim}</span></b>${serit(top ? n / top * 100 : 0, n >= top ? 'yesil' : 'mavi')}</div>`;
-  let h = `<div class="ox-drs-ilerlemeler ${dir ? '' : 'tek'}">${dir ? kutu('Direksiyon', k.direksiyon, gerekliDireksiyon(k), 'ders') : ''}${kutu('Teorik', k.teorik, S0.teorik, 'saat')}</div>`;
+  const S0 = ctx.S0, dir = !!gerekliDireksiyon(k), tv = teorikVar(k), ds = dirSayac(k);
+  const kutu = (ust, n, top, birim) => `<div class="ox-kart ox-drs-ilerleme"><small>${ust}</small><b>${n}<span>/${top} ${birim}</span></b>${serit(top ? Math.min(100, n / top * 100) : 0, n >= top ? 'yesil' : 'mavi')}</div>`;
+  // teorik eğitimi olmayan öğrencide (fark, muaf, otomatikten manuele, römork) teorik ilerlemesi yerine kısa açıklama; ek dersler ayrı sayılır
+  let h = `<div class="ox-drs-ilerlemeler ${dir && tv ? '' : 'tek'}">${dir ? kutu(ds.ek ? `Direksiyon · ${ds.ek} ek ders` : 'Direksiyon', ds.n, ds.g, 'ders') : ''}${tv ? kutu('Teorik', k.teorik, teorikSaat(k), 'saat') : ''}</div>${tv ? '' : not(TEORIKSIZ_METIN)}`;
+  // ders türleri (UYG-006): alan/simülatör, akan trafik, gece — her biri yapılan / gereken
+  { const dt = dir ? dersTurleri(k) : null; if (dt && dt.length > 1) h += `<div class="ox-drs-turler" aria-label="Ders türlerine göre">${dt.map(x => cip(esc(x.etiket), x.n >= x.g ? 'yesil' : 'gri')).join('')}</div>`; }
   if (dir) {
     const { l, son, once } = beceriOzet(k), sayi = Math.min(3, l.length);
     if (l.length) {
@@ -201,7 +219,7 @@ function gelisimHtml(k, ctx) {
     } else h += bolum('Beceri puanların') + kart(bos('grafik', 'Henüz puan yok', 'İlk direksiyon dersinden sonra öğretmeninin verdiği puanlar burada görünür.'), 'ox-drs-bos');
   }
   const okunan = Object.keys(k.okunan || {}).length, konuTop = MUFREDAT.reduce((a, x) => a + x[3].length, 0);
-  h += bolum('Teorik') + liste([satir({ ikon: 'kitap', ton: 'mor', baslik: 'Konu anlatımları ve testler', alt: `${okunan}/${konuTop} konu tamamlandı`, attrs: { 'data-ogs': 'sinav' } })]);
+  if (!egitimSinifi(k.sinif)) h += bolum('Teorik') + liste([satir({ ikon: 'kitap', ton: 'mor', baslik: 'Konu anlatımları ve testler', alt: `${okunan}/${konuTop} konu tamamlandı`, attrs: { 'data-ogs': 'sinav' } })]);
   return h;
 }
 
@@ -237,7 +255,8 @@ function gecmisHtml(k, ctx) {
     h += bolum('Ders defterin') + `<div class="ox-kart ox-drs-defter">${c('Sözleşmede', gerekliDireksiyon(k) + (k.ekDersHakki || 0))}${c('Yapıldı', yap.length)}${c('Onayladın', onay, onay ? 'yesil' : '')}${itiraz ? c('İtiraz', itiraz, 'kirmizi') : c('MEBBİS’te', yap.filter(d => d.meb).length)}</div>`;
   }
   const gelmedi = gecmis.filter(d => d.durum === 'Gelmedi').length;
-  h += bolum('Yapılan dersler', `${k.direksiyon}/${gerekliDireksiyon(k)}${gelmedi ? ' · ' + gelmedi + ' gelmedin' : ''}`) + liste(gecmis.map(d => {
+  const dsy = dirSayac(k);
+  h += bolum('Yapılan dersler', `${dsy.n}/${dsy.g}${dsy.ek ? ' · ' + dsy.ek + ' ek ders' : ''}${gelmedi ? ' · ' + gelmedi + ' gelmedin' : ''}`) + liste(gecmis.map(d => {
     const ok = d.durum === 'Yapıldı', o2 = d.ogrenciOnay, h2 = egitmen(d.egitmen);
     const sag = !ok ? cip(d.durum === 'Gelmedi' ? 'Gelmedin' : esc(d.durum), 'kirmizi') : o2 ? cip(o2.durum === 'onay' ? 'Onayladın' : 'İtiraz', o2.durum === 'onay' ? 'yesil' : 'kirmizi') : d.ogrenciPuan ? `<span class="ox-drs-puan-k" aria-label="${d.ogrenciPuan.puan}/5 yıldız">${oi('yildiz', 'dolu')}${d.ogrenciPuan.puan}</span>` : '';
     return satir({ sol: ikonKutu(ok ? 'tik' : 'yanlis', ok ? 'yesil' : 'kirmizi'), baslik: `${esc(gunAy(d.tarih))} · ${esc(d.saat)}`, alt: esc([h2 && h2.ad, d.sure ? d.sure + ' dk' : ''].filter(Boolean).join(' · ')), sag, attrs: { 'data-ox-drs-ac': d.id } });
@@ -272,6 +291,12 @@ export function ekran(ctx) {
         if (t.closest('[data-ox-drs-ay]')) { ayAcik = !ayAcik; ctx.yenile(); return; }
         const a = t.closest('[data-ox-drs-ac]'); if (a) { acik = a.dataset.oxDrsAc; ctx.yenile(true); return; }
         if (t.closest('[data-ox-drs-onay-hepsi]')) { onayHepsi = !onayHepsi; ctx.yenile(); return; }
+        // UYG-010: müsaitlik düzenleme
+        if (t.closest('[data-ox-mst-ac]')) { const m = k.musaitlik || {}; musait = { gun: JSON.parse(JSON.stringify(m.gun || {})), not: m.not || '' }; ctx.yenile(); return; }
+        const mh = t.closest('[data-ox-mst-h]'); if (mh && musait) { const [gn, d] = mh.dataset.oxMstH.split('|'), l = musait.gun[gn] || []; musait.gun[gn] = l.includes(d) ? l.filter(x => x !== d) : [...l, d]; const on = musait.gun[gn].includes(d); mh.classList.toggle('secili', on); mh.setAttribute('aria-checked', String(on)); mh.innerHTML = on ? oi('tik') : ''; return; }
+        if (t.closest('[data-ox-mst-vazgec]')) { musait = null; ctx.yenile(); return; }
+        if (t.closest('[data-ox-mst-kaydet]') && musait) { const n = kap.querySelector('[data-ox-mst-not]'); const m = PL.musaitlikTemizle({ gun: musait.gun, not: n ? n.value : '', tarih: gun(0) });
+          k.musaitlik = m; musait = null; kaydet(); bildir(m ? 'Müsait zamanların kursa gönderildi' : 'Müsaitlik bildirimin kaldırıldı; kurs her saate planlayabilir', 'tamam'); ctx.yenile(); return; }
         if (t.closest('[data-ox-drs-geri]')) { acik = null; ctx.yenile(true); return; }
         const dg = t.closest('[data-ox-drs-degis]'); if (dg) { const d = S.dersler.find(x => x.id === dg.dataset.oxDrsDegis); if (d) kursaYaz(k, 'ders', `Merhaba, ben ${tamAd(k)}. ${tarihUzun(d.tarih)} ${d.saat} direksiyon dersimin saatini değiştirmek istiyorum.`); return; }
         const yz = t.closest('[data-ox-drs-yaz]'); if (yz) { const d = S.dersler.find(x => x.id === yz.dataset.oxDrsYaz); if (d) kursaYaz(k, 'ders', `Merhaba, ben ${tamAd(k)}. ${tarihUzun(d.tarih)} ${d.saat} direksiyon dersimle ilgili yazıyorum.`); }
@@ -281,6 +306,23 @@ export function ekran(ctx) {
 }
 
 /* ---------- stiller ---------- */
+stilEkle('ox-musait', `
+.ox-mst{margin-top:12px}
+.ox-mst-kart{margin-top:12px;padding:16px}
+.ox-mst-bas{font-size:17px;font-weight:700;color:var(--ox-bas);margin:0}
+.ox-mst-alt{margin:4px 0 12px;font-size:14px;color:var(--ox-ikincil)}
+.ox-mst-izgara{display:grid;grid-template-columns:minmax(80px,1fr) repeat(3,minmax(56px,72px));gap:6px 8px;align-items:center}
+.ox-mst-izgara>small{display:grid;text-align:center;font-size:11.5px;line-height:1.25;color:var(--ox-ikincil)}
+.ox-mst-izgara>small b{font-size:13px;color:var(--ox-bas)}
+.ox-mst-gun{font-size:15px;font-weight:600;color:var(--ox-bas)}
+.ox-mst-h{display:grid;place-items:center;height:44px;border:1.5px solid #c9d6ea;border-radius:10px;background:var(--ox-kart);color:#fff}
+.ox-mst-h.secili{background:var(--ox-mavi);border-color:var(--ox-mavi)}
+.ox-mst-h .ox-i{width:20px;height:20px;stroke-width:2.6}
+.ox-mst-not{display:grid;gap:6px;margin-top:14px;font-size:14px;color:var(--ox-ikincil)}
+.ox-mst-not input{min-height:44px;padding:0 12px;border:1.5px solid #c9d6ea;border-radius:10px;font-size:16px;background:var(--ox-kart);color:var(--ox-bas)}
+.ox-mst-dg{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+`);
+
 stilEkle('ox-derslerim', `
 /* sekmeler: referanstaki 36px çubuk; dokunma alanı 44px (düğmeler çubuğun üstüne/altına 4px taşar) */
 .ox-drs-sayfa>.ox-sekmeler.cizgi{margin:-6px 0 14px}
@@ -376,6 +418,7 @@ button.ox-drs-kart:active{transform:scale(.985)}
 
 /* gelişim */
 .ox-drs-ilerlemeler{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ox-drs-turler{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}
 .ox-drs-ilerlemeler.tek{grid-template-columns:1fr}
 .ox-drs-ilerlemeler .ox-kart+.ox-kart{margin-top:0}
 .ox-drs-ilerleme{display:grid;gap:6px;padding:14px 16px 16px}

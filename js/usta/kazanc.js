@@ -1,10 +1,10 @@
 // Öğretmen › Kazancım (yeni tasarım): ay seçici, bu ayın kalan alacağı (brüt), kazanç dökümü (sabit ücret, ders primi, avans, yapılan ödeme),
 // kontrol bekleyen dersler (imza eksik, 40 dakikadan kısa) ve önceki ayların ödeme durumu. Alt ekran 'ayrinti': ayın dersleri (süzgeçli) ve ödemeler.
 // Hesap js/risk.js ustaAlacak() ile yapılır; ofisin hakediş tablosu da aynı işlevi kullanır. Eski portal.js "Kazancım" bilgilerinin hepsi burada.
-import { S, kursiyer, tamAd, tarihOku } from '../veri.js?v=231';
-import { ayAdi, gunKisa } from '../ui.js?v=231';
-import { ustaAlacak } from '../risk.js?v=231';
-import { esc, oi, tl, geri, bolum, baglanti, kart, liste, satir, ikonKutu, cip, not, bos, sekmeler, gorsel, stilEkle } from '../ogr/ui.js?v=231';
+import { S, kursiyer, tamAd, tarihOku } from '../veri.js?v=235';
+import { ayAdi, gunKisa } from '../ui.js?v=235';
+import { ustaAlacak } from '../risk.js?v=235';
+import { esc, oi, tl, geri, bolum, baglanti, kart, liste, satir, ikonKutu, cip, not, bos, sekmeler, gorsel, stilEkle } from '../ogr/ui.js?v=235';
 
 /* ---------- ekran durumu (yeniden çizimde korunur) ---------- */
 const DURUM = 'sinyal-eg-kazanc';
@@ -95,7 +95,7 @@ function anaHtml(eg) {
 
 /* ---------- Kazanç ayrıntısı ---------- */
 function dersSatir(d) {
-  const k = kursiyer(d.kursiyer), no = k && P && P.dersNo ? P.dersNo(d, k) : '';
+  const k = kursiyer(d.kursiyer), no = k && P && P.dersEtiket ? P.dersEtiket(d, k) : '';  // "5. ders" ya da zorunlu sayının üstünde "Ek ders 1/2"
   const im = imzaEksik(d), ks = kisaMi(d);
   const sag = im || ks ? `<span class="ox-ukz-cipler">${im ? cip('İmza eksik', 'turuncu') : ''}${ks ? cip('Kısa ders', 'ox-ukz-sari') : ''}</span>`
     : `<span class="ox-ukz-tamam" role="img" aria-label="Kontrol tamam">${oi('tik')}</span>`;
@@ -103,7 +103,7 @@ function dersSatir(d) {
   return satir({
     sol: yaprak(gunKisa(d.tarih).toLocaleUpperCase('tr'), String(dt.getDate()), 'kucuk'),
     baslik: esc(k ? tamAd(k) : 'Öğrenci'),
-    alt: [esc(d.saat || ''), no ? no + '. ders' : '', d.sure != null ? d.sure + ' dk' : ''].filter(Boolean).join(' · '),
+    alt: [esc(d.saat || ''), no ? esc(no) : '', d.sure != null ? d.sure + ' dk' : ''].filter(Boolean).join(' · '),
     sag, ok: false, cls: 'ox-ukz-ders',
   });
 }

@@ -2,11 +2,10 @@
 // dersi iptal et, not ekle, kapatılmamış dersin kaydını tamamla (tam ekran, .ox-akis) ile ders menüsü (alttan sayfa) ve
 // "Öğrenci gelmedi mi?" onayı (pencere). Kayıt kuralları portal.js'te: dersKaydet, dersIptalEt, gelmediYap, notEkle (eski pencereler de onları çağırır).
 // Akış durumu sessionStorage'da tutulur (adım, seçilen konular, puanlar, not); sayfa yenilenirse aynı adımdan sürer, imzalar yeniden atılır.
-import { S, BECERI, SINIFLAR, kursiyer, egitmen, tamAd, gun, fark, tarihOku, konuListesi, konuOner, geceDersMi } from '../veri.js?v=231';
-import { gerekliDireksiyon } from '../veri.js?v=231';
-import { bildir, bildirimKapat, imzaAlani, tarihUzun, ayAdi } from '../ui.js?v=231';
-import * as P from '../portal.js?v=231';
-import { esc, oi, dugme, satir, liste, kutucuk, radyo, not, stilEkle, odakTuzagi } from '../ogr/ui.js?v=231';
+import { S, BECERI, SINIFLAR, kursiyer, egitmen, tamAd, gun, fark, tarihOku, konuListesi, konuOner, geceDersMi, gerekliDireksiyon, sinifEtiket } from '../veri.js?v=235';
+import { bildir, bildirimKapat, imzaAlani, tarihUzun, ayAdi } from '../ui.js?v=235';
+import * as P from '../portal.js?v=235';
+import { esc, oi, dugme, satir, liste, kutucuk, radyo, not, stilEkle, odakTuzagi } from '../ogr/ui.js?v=235';
 
 /* ---------- akış durumu ---------- */
 // A: { ekran: 'bitir' | 'sonuc' | 'iptal' | 'not' | 'kayit', id, adim, konular, beceri, not, neden, iptalNot, metin, gir, anim }
@@ -25,7 +24,7 @@ const kapat = ctx => { bildirimKapat('uyari'); A = null; tuval = null; sakla(); 
 const gunAy = t => { const d = tarihOku(t); return d.getDate() + ' ' + ayAdi(d.getMonth(), true); };
 const gunMetin = t => { const f = fark(t); return f === 0 ? 'Bugün' : f === -1 ? 'Dün' : f === 1 ? 'Yarın' : gunAy(t); };
 // "B sınıfı · Manuel" (Bugün ekranındaki sıradaki ders kartıyla aynı yazım)
-const sinifAd = k => { const S0 = SINIFLAR[k.sinif] || {}, kod = String(k.sinif || '').replace(/-O$/, ''), v = k.vites || String(S0.ad || '').split(' · ')[1] || ''; return kod ? `${kod} sınıfı${v ? ' · ' + v : ''}` : ''; };
+const sinifAd = k => k && k.sinif ? sinifEtiket(k.sinif, k) : '';
 const harf = k => ((k.ad || '?')[0] + ((k.soyad || '')[0] || '')).toLocaleUpperCase('tr');
 const avatar = k => `<span class="ox-udr-av" aria-hidden="true">${k.foto ? `<img src="${esc(k.foto)}" alt="">` : esc(harf(k))}</span>`;
 const dersAlt = (d, k) => `${gunMetin(d.tarih)} · ${esc(d.saat)} · ${P.dersNo(d, k)}. ders${geceDersMi(d) ? ' · gece dersi' : ''}`;
@@ -60,7 +59,11 @@ function degerHtml(d, k) {
     + `<div class="ox-kart ox-udr-beceri">${BECERI.map(([id, ad]) => `<div class="ox-udr-b"><span class="ox-udr-b-ad" id="ox-udr-b-${id}">${esc(ad)}</span>
       <span class="ox-udr-b-sec" role="radiogroup" aria-labelledby="ox-udr-b-${id}">${[1, 2, 3, 4, 5].map(n => `<button type="button" role="radio" aria-checked="${b[id] === n}" class="${b[id] === n ? 'secili' : ''}" data-udr-beceri="${id}" data-n="${n}" aria-label="${n}">${n}</button>`).join('')}</span></div>`).join('')}</div>`
     + alan('Not', 'isteğe bağlı', `<textarea data-udr-not rows="3" maxlength="300" placeholder="Kısa not ekleyin…">${esc(A.not || '')}</textarea>`)
-    + `<p class="ox-udr-ipucu-y">Öğrenci notu kendi ekranında görür.</p>`;
+    + `<p class="ox-udr-ipucu-y">Öğrenci notu kendi ekranında görür.</p>`
+    // MEV-010: ders kamerası kaydı (isteğe bağlı; seçili olana yeniden dokununca kalkar)
+    + `<div class="ox-udr-alan ox-udr-kamera"><span class="ox-udr-et" id="ox-udr-kam">Ders kamerası kaydı <small>isteğe bağlı</small></span>
+      <span class="ox-udr-b-sec ox-udr-kam-sec" role="radiogroup" aria-labelledby="ox-udr-kam">${Object.entries(P.DERS_KAMERA).map(([id, ad]) => `<button type="button" role="radio" aria-checked="${A.kamera === id}" class="${A.kamera === id ? 'secili' : ''}" data-udr-kamera="${id}">${ad}</button>`).join('')}</span>
+      <span class="ox-udr-ipucu-y">${P.KAMERA_HATIRLAT}</span></div>`;
 }
 const tuvalHtml = (kim, baslik, ek = '') => `<div class="ox-udr-imza"><div class="ox-udr-imza-bas"><span><b>${baslik}</b>${ek ? `<small>· ${ek}</small>` : ''}</span><button type="button" class="ox-udr-temizle" data-udr-temizle="${kim}" hidden>${oi('sifirla')}<span>Temizle</span></button></div>
   <div class="ox-udr-tuval"><canvas data-udr-imza="${kim}" aria-label="${baslik}: parmağınızla imza atın"></canvas><span class="ox-udr-tuval-ip" aria-hidden="true">${oi('kalem')}<span>İmza atın</span></span></div><p class="ox-udr-imza-uyari" data-udr-uyari="${kim}" role="status" hidden></p></div>`;
@@ -97,7 +100,7 @@ function sonucHtml(d, k) {
   ].filter(Boolean);
   const uyari = uzak ? `<div class="ox-udr-uyari" role="status">${oi('saat')}<span><b>Öğrenci imzası bekleniyor</b><small>Öğrenci WhatsApp’taki linkten imzalayınca takip formuna işlenir. Link ulaşmadıysa yeniden gönder.</small></span></div>` : '';
   const ic = `<div class="ox-udr-sonuc ${A.anim ? '' : 'gir'}"><span class="ox-udr-tik" aria-hidden="true">${oi('tik')}</span><h1 id="ox-udr-bas">Ders kaydedildi</h1>
-    <p>${esc(tamAd(k))}</p><p class="ox-udr-sonuc-alt">${esc(sinifAd(k))} · ${P.dersNo(d, k)}. ders</p></div>${uyari}${liste(satirlar, 'ox-udr-ozet')}`;
+    <p>${esc(tamAd(k))}</p><p class="ox-udr-sonuc-alt">${esc(sinifAd(k))} · ${esc(P.dersEtiket(d, k))}</p></div>${uyari}${liste(satirlar, 'ox-udr-ozet')}`;
   const alt = (uzak ? dugme('İmza linkini yeniden gönder', { 'data-imza-tekrar': d.id }, { tur: 'ikincil', ikon: 'wp', genis: true }) : '')
     + dugme('Bugün’e dön', { 'data-udr-bugun': true }, { genis: true });
   return `<div class="ox-akis-ust"><button type="button" class="ox-ikon-dg" data-udr-kapat aria-label="Kapat">${oi('kapat')}</button><span></span><span></span></div>`
@@ -127,7 +130,7 @@ function notHtml(d, k) {
 function kayitHtml(d, k) {
   const gecen = -fark(d.tarih);
   const ic = liste([
-    satir({ sol: avatar(k), baslik: esc(tamAd(k)), alt: `${esc(sinifAd(k))} · ${P.dersNo(d, k)}. ders`, ok: false }),
+    satir({ sol: avatar(k), baslik: esc(tamAd(k)), alt: `${esc(sinifAd(k))} · ${esc(P.dersEtiket(d, k))}`, ok: false }),
     satir({ ikon: 'takvim', ton: 'turuncu', baslik: `${esc(tarihUzun(d.tarih))} · ${esc(d.saat)}`, alt: gecen > 0 ? `${gecen === 1 ? 'Dün' : gecen + ' gün önce'} · kapatılmadı` : 'Kapatılmadı', altTon: 'turuncu', ok: false }),
   ], 'ox-udr-ders')
     + baslikH('Ders durumunu tamamla')
@@ -208,6 +211,12 @@ function bagla(kok, d, k, ctx) {
       bc.parentElement.querySelectorAll('button').forEach(b => { const s = A.beceri[id] === +b.dataset.n; b.classList.toggle('secili', s); b.setAttribute('aria-checked', String(s)); });
       return;
     }
+    const km = t.closest('[data-udr-kamera]');
+    if (km) {
+      A.kamera = A.kamera === km.dataset.udrKamera ? '' : km.dataset.udrKamera; sakla();
+      kok.querySelectorAll('[data-udr-kamera]').forEach(b => { const s = A.kamera === b.dataset.udrKamera; b.classList.toggle('secili', s); b.setAttribute('aria-checked', String(s)); });
+      return;
+    }
     if (t.closest('[data-udr-ileri]')) {
       if (A.adim === 1 && !A.konular.length) return bildir('Takip formu için dersin konusunu seç', 'uyari');
       return adimGit(A.adim + 1);
@@ -234,7 +243,8 @@ function bagla(kok, d, k, ctx) {
   });
   kok.addEventListener('keydown', ev => {
     if (ev.key !== 'Escape' || katman) return;
-    if (A.ekran === 'bitir' && A.adim > 1) adimGit(A.adim - 1); else kapat(ctx);
+    // DENETİM K1 (DIG-059): Esc pencereyi kapatmaz; ders bitirme adımlarında yalnız bir adım geri
+    if (A.ekran === 'bitir' && A.adim > 1) adimGit(A.adim - 1);
   });
 }
 
@@ -285,7 +295,7 @@ function kaydet(kok, d, ctx, uzak) {
   else if (ik.api.bos() || iu.api.bos()) { tuvalDurum(kok); return bildir(imzaEksik(ik, 'Öğrenci imzası') || imzaEksik(iu, 'Öğretmen imzası') || 'İki imza da gerekli. Öğrenci yanında değilse “WhatsApp’tan imzalat”', 'uyari'); }
   kok.querySelectorAll('[data-udr-tamam],[data-udr-uzak]').forEach(b => { b.disabled = true; });
   const imza = uzak ? P.imzaUzaktan(iu.api.url()) : P.imzaYerinde(ik.api.url(), iu.api.url());
-  const secim = { konular: A.konular.slice(), beceri: A.beceri && Object.keys(A.beceri).length ? { ...A.beceri } : null, not: A.not || '', imza };
+  const secim = { konular: A.konular.slice(), beceri: A.beceri && Object.keys(A.beceri).length ? { ...A.beceri } : null, not: A.not || '', imza, kamera: A.kamera || '' };
   // kayıttan hemen sonra sonuç ekranı; uzaktan imzada link hazırlanırken (kısa link, WhatsApp) sonuç ekranı açık durur
   // kayıt başarılı: bekleyen bütün bildirimler kapanır (kısa ders uyarısı sonuç ekranında zaten yazıyor)
   P.dersKaydet(d, secim, { sessiz: true, kapat: () => { bildirimKapat(); A = { ekran: 'sonuc', id: d.id }; tuval = null; sakla(); if (uzak) ctx.yenile(true); } })
@@ -302,7 +312,7 @@ function katmanAc(html, alttan, kur) {
   document.body.appendChild(el);
   katman = { el, serbest: odakTuzagi(el) };
   requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('acik')));
-  el.addEventListener('click', ev => { if (ev.target === el || ev.target.closest('[data-udr-k-kapat]')) katmanKapat(); });
+  el.addEventListener('click', ev => { if (ev.target.closest('[data-udr-k-kapat]')) katmanKapat(); });   // DENETİM K1: dışa tıklama kapatmaz
   el.addEventListener('keydown', ev => { if (ev.key === 'Escape') { ev.stopPropagation(); katmanKapat(); } });
   kur(el);
   const ilk = el.querySelector('[data-udr-k-odak]') || el.querySelector('.ox-satir[href], button.ox-satir'); if (ilk) try { ilk.focus({ preventScroll: true }); } catch (x) { }
@@ -422,6 +432,8 @@ stilEkle('ox-uders', `
 .ox-udr-b-sec button::after{content:"";position:absolute;inset:-5px 0}
 .ox-udr-b-sec button.secili{background:var(--ox-mavi);color:#fff;box-shadow:0 1px 2px rgba(10,102,242,.25)}
 .ox-udr-b-sec button:active{transform:scale(.95)}
+.ox-udr-kam-sec{grid-template-columns:repeat(2,minmax(0,1fr))}
+.ox-udr-kamera .ox-udr-ipucu-y{margin-top:0}
 
 /* 3 · imzalar */
 .ox-udr-imza+.ox-udr-imza{margin-top:18px}

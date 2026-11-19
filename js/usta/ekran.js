@@ -14,15 +14,16 @@
 //   data-ders-basla="<ders-id>"    dersi başlat;  data-yapildi="<id>" dersi bitir akışı;  data-gelmedi="<id>" gelmedi onayı
 //   data-ders-diger="<id>"         ders menüsü (ara, not, iptal, gelmedi);  data-ders-iptal="<id>" iptal
 //   data-imza-tekrar="<id>"        imza linkini yeniden gönder;  data-ogr-ac="<öğrenci-id>" öğrenci ayrıntısı;  data-prog-indir Excel
-import { S, gun, kursiyer, tamAd } from '../veri.js?v=231';
-import { sekmeCubugu, USTA_SEKMELER } from '../ogr/ui.js?v=231';
-import * as P from '../portal.js?v=231';
-import * as BGN from './bugun.js?v=231';
-import * as PRG from './program.js?v=231';
-import * as OGR from './ogrenciler.js?v=231';
-import * as KZN from './kazanc.js?v=231';
-import * as DRS from './ders.js?v=231';
-import * as ARC from './arac.js?v=231';
+import { S, gun, kursiyer, tamAd } from '../veri.js?v=235';
+import { sekmeCubugu, USTA_SEKMELER } from '../ogr/ui.js?v=235';
+import * as P from '../portal.js?v=235';
+import * as BGN from './bugun.js?v=235';
+import * as PRG from './program.js?v=235';
+import * as OGR from './ogrenciler.js?v=235';
+import * as KZN from './kazanc.js?v=235';
+import * as DRS from './ders.js?v=235';
+import * as ARC from './arac.js?v=235';
+import * as KUR from '../ogr/kurallar.js?v=235';
 
 const oku = (a, d) => { try { return sessionStorage.getItem(a) || d; } catch (x) { return d; } };
 const yaz = (a, v) => { try { if (v) sessionStorage.setItem(a, v); else sessionStorage.removeItem(a); } catch (x) { } };
@@ -34,7 +35,7 @@ export const hesapAc = () => { sekme = 'bugun'; yaz('sinyal-eg-sekme', 'bugun');
 export const sekmeAc = s => { sekme = s; yaz('sinyal-eg-sekme', s); };
 export const sekmeSimdi = () => sekme;
 const MODUL = { bugun: BGN, hafta: PRG, kursiyer: OGR, kazanc: KZN };
-const ARAC_ALT = /^(arac|guzergah|hesap)(:|$)/;
+const ARAC_ALT = /^(arac|guzergah|hesap|izin|anim|onizle)(:|$)/;
 
 function veri(eg) {
   const benim = S.dersler.filter(d => d.egitmen === eg.id);
@@ -50,6 +51,7 @@ function veri(eg) {
 function sec(ctx) {
   if (DRS.aktif && DRS.aktif(ctx)) return DRS.ekran(ctx);
   if (ARAC_ALT.test(ctx.alt)) return ARC.altEkran(ctx.alt, ctx);
+  if (ctx.alt === 'kurallar') return KUR.ekran('usta', { geriAttrs: { 'data-ux-alt': '' }, geriEtiket: (USTA_SEKMELER.find(x => x[0] === ctx.sekme) || [])[1] || 'Bugün', yenile: () => ctx.yenile(false) });
   const m = MODUL[ctx.sekme]; return m && m.ekran ? m.ekran(ctx) : null;
 }
 const bul = id => S.dersler.find(x => x.id === id);
@@ -82,7 +84,7 @@ export function ciz(eg, dis) {
         const gm = t.closest('[data-gelmedi]'); if (gm) { const d = bul(gm.dataset.gelmedi); return DRS.gelmedi ? DRS.gelmedi(d, ctx) : P.gelmediIsaretle(d); }
         const dg = t.closest('[data-ders-diger]'); if (dg) { const d = bul(dg.dataset.dersDiger); return DRS.menu ? DRS.menu(d, ctx) : P.dersDiger(d); }
         const ip = t.closest('[data-ders-iptal]'); if (ip) { const d = bul(ip.dataset.dersIptal); return DRS.iptal ? DRS.iptal(d, ctx) : P.dersIptal(d); }
-        const it = t.closest('[data-imza-tekrar]'); if (it) { const d = bul(it.dataset.imzaTekrar); return import('../imza.js?v=231').then(m => m.imzaIste('ders', kursiyer(d.kursiyer), [d.id])); }
+        const it = t.closest('[data-imza-tekrar]'); if (it) { const d = bul(it.dataset.imzaTekrar); return import('../imza.js?v=235').then(m => m.imzaIste('ders', kursiyer(d.kursiyer), [d.id])); }
         const oa = t.closest('[data-ogr-ac]'); if (oa) return ctx.git('kursiyer', 'ogr:' + oa.dataset.ogrAc);
         if (t.closest('[data-prog-indir]')) return P.progIndir(eg);
       });

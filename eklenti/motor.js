@@ -3,7 +3,7 @@
 //  - Çekme: dönem grupları, bütün kursiyerler (her öğrenci durumu ayrı sorgulanır), aday dosyaları, personel, araçlar, sınav sonuçları.
 //  - Yazma: kayıtları sırayla ilgili formlara yazar, kaydeder ve mümkün olan yerde MEBBİS listesinden geri okuyarak doğrular.
 // Güvenlik kodunu her zaman yetkili yazar (kod otomatik çözülmez). Yetkili istediği an durdurur; durdurulan iş kendiliğinden yeniden başlamaz.
-// Güvenceler (1.12.0):
+// Güvenceler (1.12.0; 1.13.0 ile düğme beyaz listesi, seçenek denetimi, 09 ile kayıt denetimi, 04003 bütün kodlar + Excel):
 //  - Başarı: önce olumsuz mesaj aranır ("başarısız", "kaydedilemedi", "hata"…), sonra olumlu; yalnız mesajla biten kayıt "mesaj" doğrulamasıyla işaretlenir.
 //  - Ekran: beklenen alan, düğme ya da tablo yoksa hiçbir değer yanlış adla gönderilmez; iş o ekranda durur ve mdSinyal'e "ekran değişti" bildirilir.
 //  - Kurum: açık MEBBİS hesabının kurum kodu işin kurum koduyla uyuşmazsa hiçbir şey yazılmaz; okunamazsa yetkiliye sorulur.
@@ -25,7 +25,7 @@
   /* ---------- alan haritası (gömülü). Yalnız ekran yolları, alan kimlikleri, seçenek değerleri ve kısa eşleme metinleri; kod yok ---------- */
   // zorunlu: ekran ilk açıldığında (GET) bulunması gereken alanlar; ön denetim bunlara bakar. alan: { kodda geçen ad: MEBBİS'teki gerçek ad }
   const HARITA_VARSAYILAN = {
-    surum: '2026.11.16-1', enAzYardimci: '1.12.0',
+    surum: '2026.11.18-3', enAzYardimci: '1.12.0',
     ekran: {
       skt01001: { ad: 'SKT01001 Kurum Bilgileri', yol: '/SKT/skt01001.aspx', zorunlu: [] },
       skt01002: { ad: 'SKT01002 Kurum Araç Giriş', yol: '/SKT/skt01002.aspx', zorunlu: ['dropTurSecim'] },
@@ -37,6 +37,7 @@
       skt02005: { ad: 'SKT02005 Adli Sicil', yol: '/SKT/skt02005.aspx', zorunlu: ['cmbEgitimDonemi', 'cmbAdayAdSoyad'] },
       skt02006: { ad: 'SKT02006 Dönem Adaylarını Onaylama', yol: '/SKT/skt02006.aspx', zorunlu: ['cmbEgitimDonemi', 'cmbDurumu', 'cmbOgrenciDurumu', 'btnListele'] },
       skt02007: { ad: 'SKT02007 e-Sınav Başvuru', yol: '/SKT/skt02007.aspx', zorunlu: ['btnUcretListe', 'txtTcKimlikNo', 'btnTCGetir', 'cmbEgitimDonemi', 'cmbIstenenEhliyetSinifi', 'hiddenKaydet'] },
+      skt02008: { ad: 'SKT02008 Sınav Sonuç Listeleme', yol: '/SKT/skt02008.aspx', zorunlu: ['cmbKurum', 'cmbSinavTipi', 'cmbSinavTarihi', 'btnListele'] },
       skt02009: { ad: 'SKT02009 Aday Durum Görüntüleme', yol: '/SKT/skt02009.aspx', zorunlu: ['txtTcKimlikNo', 'ImageButton1'] },
       skt02010: { ad: 'SKT02010 Parmak İzi', yol: '/SKT/SKT02010.aspx', zorunlu: ['cmbEgitimDonemi', 'cmbAdayAdSoyad'] },
       skt02011: { ad: 'SKT02011 Sözleşme', yol: '/SKT/skt02011.aspx', zorunlu: ['cmbEgitimDonemi', 'cmbAdayAdSoyad'] },
@@ -46,12 +47,17 @@
       skt03003: { ad: 'SKT03003 Teorik Ders Programı Giriş', yol: '/SKT/skt03003.aspx', zorunlu: ['cmbDonemi', 'cmbGrupAdi', 'cmbSubesi', 'btnListeleGrid', 'hiddenKaydet'] },
       skt03004: { ad: 'SKT03004 Direksiyon Ders Programı Giriş', yol: '/SKT/skt03004.aspx', zorunlu: ['cmbDonem', 'cmbGrup', 'cmbSube', 'btnAdayGetir', 'hiddenKaydet'] },
       skt04003: { ad: 'SKT04003 Sınav Bilgileri Görüntüleme', yol: '/SKT/skt04003.aspx', zorunlu: ['cmbSinavTuru'] },
+      skt04001: { ad: 'SKT04001 Teorik Ders Programı Görüntüleme', yol: '/SKT/skt04001.aspx', zorunlu: ['cmbDonemi', 'btnListeleGrid'] },
+      skt04002: { ad: 'SKT04002 Direksiyon Ders Programı Görüntüleme', yol: '/SKT/skt04002.aspx', zorunlu: ['cmbKurum'] },
       ook00001: { ad: 'OOK00001', yol: '/Ookgm/ook00001.aspx', zorunlu: [] },
       ook12001: { ad: 'OOK12001 Personel Arama', yol: '/Ookgm/ook12001.aspx', zorunlu: [] },
       ook54001: { ad: 'OOK54001 Personel', yol: '/Ookgm/ook54001.aspx', zorunlu: [] },
+      ook36002: { ad: 'OOK36002 Banka Bilgileri', yol: '/Ookgm/ook36002.aspx', zorunlu: [] },
     },
-    // cmbDurumu: 0 kurum onay bekliyor, 1 kurum onaylandı, 4 döneme kayıtlı tüm adaylar · cmbOgrenciDurumu 0 tümü · dropTurSecim 1 araç, 2 simülatör · cmbSinavTuru 2 uygulama, 3 e-sınav
-    deger: { durumKurumBekliyor: '0', durumKurumOnayli: '1', durumTumu: '4', ogrenciTumu: '0', turArac: '1', turSimulator: '2', sinavUygulama: '2', sinavEsinav: '3', sonDurumlar: '5,6,11' },
+    // cmbDurumu: 0 kurum onay bekliyor, 1 kurum onaylandı, 4 döneme kayıtlı tüm adaylar · cmbOgrenciDurumu 0 = "Kursa Başvuru Aşamasında" ("tümü" seçeneği YOK; 17 Kas canlı)
+    // donemSilCanli (MEB-184): '1' yalnız Aday Dönem Sil canlı MEBBİS'te kullanıcı gözetiminde denendikten sonra imzalı haritayla verilir; '0' iken iş reddedilir
+    // cmbEgitimDonemi 1 = "-Tüm Dönemler-" · dropTurSecim 1 araç, 2 simülatör · cmbSinavTuru 2 uygulama, 3 e-sınav · OOK12001 cmbPersonelDurum 1 Görevde
+    deger: { durumKurumBekliyor: '0', durumKurumOnayli: '1', durumTumu: '4', ogrenciBasvuru: '0', tumDonemler: '1', turArac: '1', turSimulator: '2', sinavUygulama: '2', sinavEsinav: '3', sonDurumlar: '5,6,11', personelGorevde: '1', donemSilCanli: '0' },
     metin: { izinNo: 'İzin No:', onaylandi: 'Onaylandı', tamam: 'Tamam', grup: 'Grup ', grupTire: 'Grup-', sube: ' Ş', subeUzun: ' ŞUBES', normal: 'Normal' },
   };
   const surumSayi = s => { const m = String(s || '').match(/^(\d{4})\.(\d{2})\.(\d{2})-(\d{1,3})$/); return m ? m.slice(1).map(Number) : [0, 0, 0, 0]; };
@@ -141,24 +147,110 @@
     });
     return l;
   }
+  /* ---------- düğme beyaz listesi (1.13.0; KAPSAM.md §3, 17–18 Kas canlı envanter) ---------- */
+  // Motor yalnız bu listede adı geçen düğmelere basar. Liste koddadır; web'den gelen alan haritası değiştiremez
+  // (harita bir adı başka bir alana yönlendirse bile denetim sayfadaki gerçek öğenin adına yapılır).
+  //  OKUMA: canlıda basılıp kayıt yapmadığı kanıtlanmış düğmeler (her işte basılabilir).
+  //  YAZMA: kayıt yapan ya da MERNİS sorgulayan düğmeler; yalnız onaylanmış yazma işi sürerken (yazmaIzni) basılabilir.
+  //  ASLA: hiçbir yoldan basılmaz, tetiklenmez, gizli alanla da gönderilmez. 17 Kas 23:23'te btnAdayEkle okuma sanılıp basıldı ve kayıt yaptı.
+  // Listede olmayan düğmeye basılmak istenirse basılmaz; iş "ekran" hatasıyla durur.
+  const DUGME_OKUMA = {
+    skt01005: ['btnListele', 'btnRandevu'], skt01006: ['btnListele'],
+    skt02001: ['Button1', 'btnSertifikali', 'Button2', 'btnImageButton'], skt02006: ['btnListele'], skt02007: ['btnUcretListe'], skt02008: ['btnListele'],
+    skt02009: ['ImageButton1'], skt02013: ['btnTC'], skt03003: ['btnListeleGrid'], skt03004: ['btnAdayGetir', 'ImageButton1'],
+    skt04001: ['btnListeleGrid'], skt04002: ['btnListele'], skt04003: ['btnListeleGrid', 'btnExcel'],
+    ook12001: ['btnAra'], ook15001: ['btnAra'], rsi01001: ['btnList'],
+  };
+  // YAZMA: skt02001 "Bilgileri Getir" (MERNİS; adı sayfadan metinle bulunur), skt02002 fotoğraf kaydı, skt02007 MERNİS kimlik sorgusu
+  const DUGME_YAZMA = { skt02001: ['btnBilgileriGetir'], skt02002: ['ButtonSave'], skt02007: ['btnTCGetir'] };
+  const DUGME_YAZMA_METIN = { skt02001: /^bilgileri ?getir$/ };
+  // gizli "eylem" alanları: Kaydet (hiddenKaydet) yazmadır; OOK12001 Ara düğmesinin betiği hdnPageMode='Sorgulama' ile gönderir (okuma)
+  const EYLEM_ALAN = { hiddenKaydet: 'yazma', hdnPageMode: 'okuma' };
+  const ASLA_AD = ['btnAdayEkle', 'btnOnayGonder', 'btnOnay', 'btnDegisiklik', 'imgHataBildirim', 'btnKareKod', 'mazeretliBtn', 'mazeretsizBtn', 'btnArsiv', 'btnSifre', 'silme_b', 'yeniKayit_b', 'hdnSilme', 'hdnSil'];
+  const ASLA_METIN = /listede g[öo]r[üu]nmeyen|t[ıi]klay[ıi]n[ıi]z|onay kodu|[şs]anz[ıi]man kayd[ıi]|hata bildir|karekod|mazeretli|mazeretsiz|ar[şs]iv|[şs]ifre|^sil$|^yeni$/i;
+  let yazmaIzni = false, silmeIzni = false, aktifOnay = null;
+  const sonAd = s => String(s || '').split(/[$:]/).pop();
+  const adEsit = (el, ad) => [el.name, el.id].some(x => x && (x === ad || sonAd(x) === ad || x.endsWith('_' + ad)));
+  const dugmeYazi = el => String(el.value || el.title || el.alt || el.textContent || '').replace(/\s+/g, ' ').trim();
+  // metin denetimi yalnız düğmelerde (seçim kutusunun seçenek metinleri "Kaydı Silindi" gibi sözcükler taşır)
+  const dugmeMi = el => el.tagName === 'BUTTON' || el.tagName === 'A' || (el.tagName === 'INPUT' && ['submit', 'button', 'image', 'reset'].includes((el.type || '').toLowerCase()));
+  const aslaMi = el => ASLA_AD.some(a => adEsit(el, a)) || (dugmeMi(el) && ASLA_METIN.test(dugmeYazi(el)));
+  // MebHata yasak: denetim hatası durdurucudur ("ekran-dur"); hiçbir istek gönderilmez
+  const yasak = (doc, el, neden) => new MebHata(`Güvenlik: ${ekranAd(doc && doc.__ekran)} ekranında “${dugmeYazi(el) || el.name || el.id}” düğmesine basılmadı (${neden}). Hiçbir şey gönderilmedi.`, 'ekran-dur', { ekran: doc && doc.__ekran, eksik: [el.name || el.id || '?'] });
+  function dugmeDenetle(doc, el) {
+    if (aslaMi(el)) throw yasak(doc, el, 'asla listesinde');
+    const kod = doc.__ekran || '';
+    if ((DUGME_OKUMA[kod] || []).some(a => adEsit(el, a))) return 'okuma';
+    if ((DUGME_YAZMA[kod] || []).some(a => adEsit(el, a)) || (DUGME_YAZMA_METIN[kod] && DUGME_YAZMA_METIN[kod].test(kucuk(dugmeYazi(el))))) {
+      if (yazmaIzni) return 'yazma';
+      throw yasak(doc, el, 'kayıt yapan düğme; yalnız onaylanmış yazma işinde');
+    }
+    throw yasak(doc, el, 'beyaz listede yok');
+  }
+  // autopostback tetikleyicisi yalnız seçim kutusu ya da işaret kutusu olabilir (düğme __EVENTTARGET ile de basılmasın)
+  function tetikDenetle(doc, el) {
+    if (aslaMi(el)) throw yasak(doc, el, 'asla listesinde');
+    const t = (el.type || '').toLowerCase();
+    if (el.tagName === 'SELECT' || (el.tagName === 'INPUT' && (t === 'checkbox' || t === 'radio'))) return;
+    throw yasak(doc, el, 'tetikleyici seçim kutusu değil');
+  }
+  // Seçim kutusuna gönderilecek değer seçeneklerde olmalı; seçeneksiz kutu hiç gönderilmez (MEBBİS genel hata sayfası, 04003'te iki kez)
+  function secimDenetle(doc, el, v) {
+    if (!el || el.tagName !== 'SELECT') return;
+    const o = [...el.options];
+    if (!o.length) throw new MebHata(`${ekranAd(doc.__ekran)} ekranında “${el.name || el.id}” listesinin seçeneği yok; boş değer gönderilmedi`, 'veri');
+    if (!o.some(x => x.value === String(v))) throw new MebHata(`“${v}” değeri ${ekranAd(doc.__ekran)} ekranındaki “${el.name || el.id}” listesinde yok; gönderilmedi`, 'veri');
+  }
   // Formu gönderir. degis: { alanKimliğiYaAdı: değer }. tetik: autopostback yapan alan. dugme: basılan düğme (görselse .x/.y)
-  async function postla({ doc, yol }, degis = {}, { tetik = null, dugme = null } = {}) {
+  // arguman: yalnız liste tablosunun satır seçimi ('Select$N', ör. OOK15003 'Aç'); başka bağımsız değişkenle postback gitmez
+  async function postla({ doc, yol }, degis = {}, { tetik = null, dugme = null, arguman = '' } = {}) {
     const f = anaForm(doc); if (!f) throw ekranHata(doc, 'form', 'formu');
     const hedef = new URL(f.getAttribute('action') || yolOf(yol), doc.__url || new URL(yolOf(yol), KOK).href).href;
-    const m = new Map(alanlar(doc));
-    Object.entries(degis).forEach(([k, v]) => { const el = SERBEST.has(k) ? elBul(doc, k) : null; m.set(SERBEST.has(k) ? (el ? el.name || el.id : k) : adOf(doc, k), v); });
-    m.set('__EVENTTARGET', tetik ? adOf(doc, tetik) : ''); m.set('__EVENTARGUMENT', '');
+    const m = new Map(alanlar(doc)), degisen = new Set();
+    Object.entries(degis).forEach(([k, v]) => {
+      const el = elBul(doc, k);
+      if (el && aslaMi(el)) throw yasak(doc, el, 'asla listesinde');
+      // MEB-184: silme alanı (hdnKayitNoSilmeIcin…) yalnız onaylı Aday Dönem Sil işinde ve yalnız SKT02006'da gönderilir
+      if ([k, el && el.name, el && el.id].some(z => /silme/i.test(z || '')) && !(silmeIzni && doc.__ekran === 'skt02006' && sonAd(el ? el.name || el.id : k) === 'hdnKayitNoSilmeIcin')) throw yasak(doc, el || { name: k }, 'silme yalnız onaylı Aday Dönem Sil işinde');
+      const eylem = el ? Object.keys(EYLEM_ALAN).find(a => adEsit(el, a)) : null;
+      if (eylem && EYLEM_ALAN[eylem] === 'yazma' && !yazmaIzni) throw yasak(doc, el, 'Kaydet yalnız onaylanmış yazma işinde');
+      if (SERBEST.has(k)) { m.set(el ? el.name || el.id : k, v); degisen.add(el ? el.name || el.id : k); return; }
+      const ad = adOf(doc, k); secimDenetle(doc, el, v); m.set(ad, v); degisen.add(ad);
+    });
+    if (tetik) { const t = elBul(doc, tetik); if (!t) throw ekranHata(doc, tetik); if (arguman) { if (!(t.tagName === 'TABLE' && /^Select\$\d{1,3}$/.test(arguman)) || aslaMi(t)) throw yasak(doc, t, 'yalnız liste satırı seçilebilir'); } else tetikDenetle(doc, t); }
+    // satır seçiminde hedef, satırdaki bağlantının __doPostBack('hedef','Select$N') çağrısından okunur (UniqueID; id'deki '_' ile tahmin edilmez)
+    const satirHedef = () => { const a = [...elBul(doc, tetik).querySelectorAll('a[href*="__doPostBack"]')].map(x => /__doPostBack\('([^']+)','([^']+)'\)/.exec(x.getAttribute('href') || '')).find(x => x && x[2] === arguman); if (!a) throw ekranHata(doc, tetik + ' ' + arguman, 'satırı'); return a[1]; };
+    m.set('__EVENTTARGET', tetik ? (arguman ? satirHedef() : adOf(doc, tetik)) : ''); m.set('__EVENTARGUMENT', arguman || '');
     const govde = [...m].map(([k, v]) => kodla(k) + '=' + kodla(v));
-    if (dugme) { const d = elBul(doc, dugme); if (!d) throw ekranHata(doc, dugme, 'düğmesi'); const ad = d.name || d.id; if ((d.type || '').toLowerCase() === 'image') govde.push(kodla(ad + '.x') + '=7', kodla(ad + '.y') + '=7'); else govde.push(kodla(ad) + '=' + kodla(d.value || '')); }
+    if (dugme) { const d = elBul(doc, dugme); if (!d) throw ekranHata(doc, dugme, 'düğmesi'); dugmeDenetle(doc, d); const ad = d.name || d.id; if ((d.type || '').toLowerCase() === 'image') govde.push(kodla(ad + '.x') + '=7', kodla(ad + '.y') + '=7'); else govde.push(kodla(ad) + '=' + kodla(d.value || '')); }
+    if (izle) { izleGoster(doc, m, degisen, dugme && elBul(doc, dugme), m.get('hiddenKaydet') === 'Kaydet' || [...m.keys()].some(k => sonAd(k) === 'hiddenKaydet' && m.get(k) === 'Kaydet') ? 'kaydediliyor' : 'gönderiliyor'); await uyku(IZLE_BEKLE); }
     await bekle();
     const r = await fetch(hedef, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: govde.join('&') });
-    return { doc: denetle(await coz(r), yol), yol };
+    const yd = denetle(await coz(r), yol);
+    if (izle) izleGoster(yd, null, null, null, 'MEBBİS yanıtı');
+    return { doc: yd, yol };
   }
   // Seçim kutusunda değeri bul: önce değer, sonra metin (tam, baş, içerir); yoksa açık hata (MEBBİS'e geçersiz değer gitmez)
-  function secenek(doc, ad, aranan, { metinle = false } = {}) {
+  // sinif: sertifika sınıfı listesi. Önce Program ID değeriyle seçilir (2504 B, 2502 A1, 2503 A2, 2514 A; 01005 ve 02007'de canlı doğrulandı);
+  // yalnız o değerli seçenek metni de aynı sınıfı söylüyorsa (ve Manuel/Otomatik istendiyse onu da içeriyorsa) tek seçeneğe düşer. Yoksa metinle seçilir.
+  // M 2513 (DIR-007, kaynak: MEB program listesi; canlıda görülmedi): değeri tutan seçeneğin metni de 'M SINIFI' demiyorsa metinle seçilir
+  const PROGRAM_ID = { A: '2514', A1: '2502', A2: '2503', B: '2504', M: '2513' };
+  const sinifKodu = t => { const m = String(t || '').toLocaleUpperCase('tr').replace(/İ/g, 'I').match(/^\s*(A1|A2|B1|BE|C1E|C1|CE|D1E|D1|DE|[ABCDFGMK])\s+SINIFI/); return m ? m[1] : ''; };
+  function sinifSecenegi(o, aranan) {
+    const k = sinifKodu(aranan), pid = PROGRAM_ID[k]; if (!pid) return null;
+    const n = norm(aranan), sz = /otomatik/.test(n) ? 'otomatik' : /manuel/.test(n) ? 'manuel' : '';
+    const l = o.filter(y => y.value === pid && sinifKodu(y.textContent) === k && (!sz || norm(y.textContent).includes(sz)));
+    return l.length === 1 ? l[0] : null;
+  }
+  // DIR-009: eğitim türü değerle (1 Normal, 2 Telafi, 3 2.Direksiyon, 4 Başarısız Aday) seçilir; seçeneğin metni de aynı türü söylemiyorsa metinle
+  function egitimSecenegi(o, kod, metin) { const k = norm(metin).slice(0, 6); if (!kod || !k) return null; const l = o.filter(y => y.value === String(kod) && norm(y.textContent).startsWith(k)); return l.length === 1 ? l[0] : null; }
+  // MEB-055: ders saati değerle (indeks = saat − 7: 0 "07:00 - 07:50" … 15 "22:00 - 22:50"), derslik değerle (1 = "DERSLİK-1"); seçeneğin metni de aynı saati/dersliği söylemiyorsa metinle
+  function saatSecenegi(o, saat) { const m = String(saat || '').match(/^(\d{1,2})[:.]/); if (!m) return null; const hh = m[1].padStart(2, '0'), l = o.filter(y => y.value === String(+hh - 7) && norm(y.textContent).startsWith(hh + '00')); return l.length === 1 ? l[0] : null; }
+  function derslikSecenegi(o, d) { const m = String(d || '').match(/(\d+)\s*$/); if (!m) return null; const l = o.filter(y => y.value === m[1] && norm(y.textContent) === 'derslik' + m[1]); return l.length === 1 ? l[0] : null; }
+  function secenek(doc, ad, aranan, { metinle = false, sinif = false, egitim = null, saat = false, derslik = false } = {}) {
     const el = elBul(doc, ad); if (!el || el.tagName !== 'SELECT') throw ekranHata(doc, ad);
-    const o = [...el.options], a = String(aranan), n = norm(a);
-    const x = (!metinle && o.find(y => y.value === a)) || o.find(y => norm(y.textContent) === n) || o.find(y => n && norm(y.textContent).startsWith(n)) || o.find(y => n && norm(y.textContent).includes(n));
+    const o = [...el.options], a = String(egitim ? egitim.metin : aranan), n = norm(a);
+    const x = (egitim && egitimSecenegi(o, egitim.kod, egitim.metin)) || (saat && saatSecenegi(o, a)) || (derslik && derslikSecenegi(o, a)) || (sinif && sinifSecenegi(o, a)) || (!metinle && o.find(y => y.value === a)) || o.find(y => norm(y.textContent) === n) || o.find(y => n && norm(y.textContent).startsWith(n)) || o.find(y => n && norm(y.textContent).includes(n));
     if (!x || x.value === '-1' || x.value === '') throw new MebHata(`“${a}” MEBBİS’te seçeneklerde yok (${ad})`, 'veri');
     return x.value;
   }
@@ -171,13 +263,20 @@
   }
 
   /* ---------- tablo okuma ---------- */
+  // MEB-030 (1.17.0): fotoğraf hücresi — satırda gömülü resim (data:image ya da imgResim/imgWebcam) var mı. Görüntünün kendisi alınmaz;
+  //  tabloda en az bir resim varsa resim: [[hücre başına true/false]] (satirlar ile aynı sıra). Sil gibi simge resimleri sayılmaz.
+  const resimVar = c => !!c.querySelector('img[src^="data:image" i], img[id$="imgResim" i], img[id$="imgWebcam" i], img[id*="Biyometrik" i], img[id*="Fotograf" i]');
   function tabloOku(t) {
     if (!t) return null;
-    const satirlar = [...t.rows].filter(r => r.closest('table') === t).map(r => [...r.cells].map(c => metin(c)));
-    const stiller = [...t.rows].filter(r => r.closest('table') === t).map(r => r.getAttribute('style') || r.getAttribute('bgcolor') || '');
-    const l = satirlar.map((r, i) => ({ r, s: stiller[i] })).filter(x => x.r.some(Boolean));
+    const rows = [...t.rows].filter(r => r.closest('table') === t);
+    const satirlar = rows.map(r => [...r.cells].map(c => metin(c)));
+    const stiller = rows.map(r => r.getAttribute('style') || r.getAttribute('bgcolor') || '');
+    const resimler = rows.map(r => [...r.cells].map(resimVar));
+    const l = satirlar.map((r, i) => ({ r, s: stiller[i], g: resimler[i] })).filter(x => x.r.some(Boolean));
     if (!l.length) return null;
-    return { baslik: l[0].r, satirlar: l.slice(1).map(x => x.r), stil: l.slice(1).map(x => x.s) };
+    const o = { baslik: l[0].r, satirlar: l.slice(1).map(x => x.r), stil: l.slice(1).map(x => x.s) };
+    if (l.slice(1).some(x => x.g.some(Boolean))) o.resim = l.slice(1).map(x => x.g);
+    return o;
   }
   const tabloEl = (doc, id) => doc.querySelector(`table[id$="${CSS.escape(A(doc, id))}"]`);
   const tabloId = (doc, id) => tabloOku(tabloEl(doc, id));
@@ -216,11 +315,12 @@
       const donemler = [...(elBul(t.doc, 'cmbEgitimDonemi') || { options: [] }).options].map(o => o.value).filter(v => /^\d{6}$/.test(v)).sort().reverse().slice(0, 6);
       if (!durum.length) throw new MebHata('Dönem Adaylarını Onaylama ekranında öğrenci durumu listesi okunamadı', 'ekran', { ekran: 'skt02006', eksik: ['cmbOgrenciDurumu'] });
       const onay = secenek(t.doc, 'cmbDurumu', D('durumTumu'));
-      const sonuc = []; let i = 0;
+      const sonuc = []; let i = 0, tum = D('tumDonemler');
+      secimDenetle(t.doc, elBul(t.doc, 'cmbEgitimDonemi'), tum);   // "-Tüm Dönemler-" seçeneği gerçekten var mı (yoksa hiçbir sorgu gitmez)
       for (const [dv, dad] of durum) {
-        const dl = SON.has(dv) ? donemler : ['1'];
+        const dl = SON.has(dv) ? donemler : [tum];
         for (const dn of dl) {
-          ilerle(`Kursiyerler: ${dad}${dn !== '1' ? ' · ' + dn.slice(0, 4) + '/' + dn.slice(4) : ''}`, ++i / (durum.length + 3 * donemler.length));
+          ilerle(`Kursiyerler: ${dad}${dn !== tum ? ' · ' + dn.slice(0, 4) + '/' + dn.slice(4) : ''}`, ++i / (durum.length + 3 * donemler.length));
           const r = await postla(t, { cmbEgitimDonemi: dn, cmbDurumu: onay, cmbOgrenciDurumu: dv }, { dugme: 'btnListele' });
           const tb = tabloId(r.doc, 'dgListele'); if (tb) sonuc.push({ durum: dv, durumAd: dad, donemSuzgec: dn, ...tb });
         }
@@ -229,9 +329,10 @@
     },
     async personel() {
       try {
-        const t = await getir('/Ookgm/ook12001.aspx');
-        const r = await postla(t, { hdnPageMode: 'Sorgulama' });
-        const tb = tabloId(r.doc, 'dgPersonelArama'); if (tb) return { kaynak: 'ook12001', ...tb, gecmis: tb.stil.map(s => /ffdcdc/i.test(s)) };
+        // "Personel Durumu = Görevde" süzgeci: yalnız güncel personel (Haller 17 Kas: 8). Süzgeç yoksa eski yol: bütün liste + pembe satır (ffdcdc) = geçmiş
+        const t = await getir('/Ookgm/ook12001.aspx'), pd = elBul(t.doc, 'cmbPersonelDurum'), gorevde = pd && [...pd.options].some(o => o.value === D('personelGorevde'));
+        const r = await postla(t, { hdnPageMode: 'Sorgulama', ...(gorevde ? { cmbPersonelDurum: D('personelGorevde') } : {}) });
+        const tb = tabloId(r.doc, 'dgPersonelArama'); if (tb) return { kaynak: 'ook12001', suzgec: gorevde ? 'gorevde' : '', ...tb, gecmis: tb.stil.map(s => /ffdcdc/i.test(s)) };
       } catch (x) { if (durduran(x)) throw x; }
       let t = await getir('/Ookgm/ook54001.aspx'), tb = tabloBaslikla(t.doc, /izinno/);
       if (!tb) { await getir('/Ookgm/ook00001.aspx'); t = await getir('/Ookgm/ook54001.aspx'); tb = tabloBaslikla(t.doc, /izinno/); }
@@ -243,27 +344,292 @@
       try { const s = await postla(t, { dropTurSecim: secenek(t.doc, 'dropTurSecim', D('turSimulator')) }, { tetik: 'dropTurSecim' }); o.simulator = tabloId(s.doc, 'dgSimulatorBilgileri'); } catch (x) { if (durduran(x)) throw x; ekranKaydet(x); }
       return o;
     },
-    // Sınav Bilgileri Görüntüleme: uygulamada seçenek bir sınav dönemi (kod), e-sınavda bir ay; son 3 dönem / 2 ay
+    // Sınav Bilgileri Görüntüleme (skt04003). Canlı (17 Kas): uygulamada seçenekler yalnız SON İKİ sınav kodu, gün gün, sıra karışık ve kod tekrarlı
+    // (değer = sınav kodu; bir kod o sınav döneminin bütün günlerini döndürür); e-sınavda değer AY numarası (son 4 ay, yıl yok).
+    // Her tekil değer bir kez sorgulanır. Satırlar "Excel'e Aktar" çıktısından okunur (sabit sütun adları, fotoğrafsız; ekrandakiyle birebir);
+    // Excel alınamazsa ekrandaki tablo kullanılır. ekranSatir: ekrandaki tablonun satır sayısı (karşılaştırma için).
     async sinavlar(ilerle) {
       const t = await getir('/SKT/skt04003.aspx'), o = { uygulama: [], esinav: [] };
-      for (const [tur, adet, tablo] of [[D('sinavUygulama'), 3, 'dgDonemler1'], [D('sinavEsinav'), 2, 'dgDonemler2']]) {
-        const uyg = tur === D('sinavUygulama');
+      for (const [tur, tablo] of [[D('sinavUygulama'), 'dgDonemler1'], [D('sinavEsinav'), 'dgDonemler2']]) {
+        const uyg = tur === D('sinavUygulama'), ne = uyg ? 'uygulama' : 'esinav';
         const a = await postla(t, { cmbSinavTuru: secenek(t.doc, 'cmbSinavTuru', tur) }, { tetik: 'cmbSinavTuru' });
-        const deger = [...new Set([...(elBul(a.doc, 'cmbSinavTarihi') || { options: [] }).options].map(x => x.value).filter(v => v && v !== '0' && v !== '-1'))].slice(0, adet);
-        for (const v of deger) { ilerle(`Sınav sonuçları (${uyg ? 'uygulama' : 'e-sınav'})`, 0.5); const r = await postla(a, { cmbSinavTarihi: v }, { dugme: 'btnListeleGrid' }); const tb = tabloId(r.doc, tablo); if (tb) o[uyg ? 'uygulama' : 'esinav'].push({ kod: v, ...tb }); }
+        const sec_ = elBul(a.doc, 'cmbSinavTarihi');
+        if (!sec_ || sec_.tagName !== 'SELECT') throw ekranHata(a.doc, 'cmbSinavTarihi');
+        const etiket = new Map(); [...sec_.options].forEach(x => { if (x.value && !/^(0|-1)$/.test(x.value)) etiket.set(x.value, [...(etiket.get(x.value) || []), metin(x)]); });
+        const deger = [...etiket.keys()];   // seçenek sırasıyla, tekil
+        for (const [j, v] of deger.entries()) {
+          ilerle(`Sınav sonuçları (${uyg ? 'uygulama' : 'e-sınav'} ${j + 1}/${deger.length})`, 0.5);
+          const r = await postla(a, { cmbSinavTarihi: v }, { dugme: 'btnListeleGrid' });
+          const ekran = tabloId(r.doc, tablo);
+          let excel = null;
+          // Excel isteği aynı seçimle gider; satır sayısı ekrandakiyle tutmazsa ekrandaki tablo kullanılır
+          if (ekran && elBul(r.doc, 'btnExcel')) { try { excel = tabloBaslikla((await postla(r, { cmbSinavTarihi: v }, { dugme: 'btnExcel' })).doc, /kimlik/); } catch (x) { if (durduran(x)) throw x; } }
+          const excelUygun = !!excel && excel.satirlar.length === ekran.satirlar.length, tb = excelUygun ? excel : ekran;
+          const ek = { kod: v, secenek: etiket.get(v), kaynak: excelUygun ? 'excel' : ekran ? 'ekran' : 'yok', ekranSatir: ekran ? ekran.satirlar.length : 0, ...(excel && !excelUygun ? { excelSatir: excel.satirlar.length } : {}) };
+          o[ne].push(tb ? { ...ek, ...tb } : { ...ek, baslik: [], satirlar: [], stil: [] });
+        }
       }
       return o;
     },
   };
-  const CEKME_EKRAN = { gruplar: ['skt03002', 'skt03001'], kursiyerler: ['skt02006'], personel: [], araclar: ['skt01002'], sinavlar: ['skt04003'], dosya: ['skt02009'] };
+  // 1.13.0 okuma işleri (yalnız beyaz listedeki okuma düğmeleri; site henüz göstermiyor, sonuç sonuc.veri'de):
+  //  randevular: skt01005 "Randevu Verilmiş Aday Listesi" (seçimden bağımsız, bütün verilmiş randevular) + sıradaki sınav günü × sertifika "Listele" (randevu verilebilecekler)
+  //  ucretler: skt02007 "Ücret Yatıran Aday Listesi" · teorik: skt04001 son 4 dönemin teorik programı
+  Object.assign(CEKME, {
+    async randevular(ilerle) {
+      const t = await getir('/SKT/skt01005.aspx');
+      const v = await postla(t, {}, { dugme: 'btnRandevu' });
+      const o = { verilmis: tabloId(v.doc, 'dgListele1') || { baslik: [], satirlar: [], stil: [] }, uygun: [] };
+      const tar = [...((elBul(t.doc, 'cmbSinavTarihi') || { options: [] }).options)].filter(x => x.value && x.value !== '-1');
+      const ser = [...((elBul(t.doc, 'cmbSertifika') || { options: [] }).options)].filter(x => x.value && x.value !== '-1');
+      for (const x of tar.slice(0, 1)) for (const y of ser) {
+        ilerle(`Randevu listesi ${metin(x)} · ${metin(y)}`, 0.5);
+        const r = await postla(t, { cmbSinavTarihi: x.value, cmbSertifika: y.value }, { dugme: 'btnListele' });
+        const tb = tabloId(r.doc, 'dgListele');
+        o.uygun.push({ tarih: metin(x), sertifika: metin(y), sertifikaDeger: y.value, ...(tb || { baslik: [], satirlar: [], stil: [] }) });
+      }
+      return o;
+    },
+    async ucretler() {
+      const t = await getir('/SKT/skt02007.aspx'), r = await postla(t, {}, { dugme: 'btnUcretListe' });
+      return tabloId(r.doc, 'gvUcretListe') || { baslik: [], satirlar: [], stil: [] };
+    },
+    async teorik(ilerle) {
+      const t = await getir('/SKT/skt04001.aspx'), el = elBul(t.doc, 'cmbDonemi'); if (!el) throw ekranHata(t.doc, 'cmbDonemi');
+      const ay = new Date(), simdi = ay.getFullYear() * 100 + ay.getMonth() + 1;
+      const dl = [...el.options].map(o => o.value).filter(v => /^\d{6}$/.test(v) && +v <= simdi + 1).sort().reverse().slice(0, 4), o = [];
+      for (const d of dl) { ilerle(`Teorik program ${d.slice(0, 4)}/${d.slice(4)}`, 0.5); const r = await postla(t, { cmbDonemi: d }, { dugme: 'btnListeleGrid' }); const tb = tabloBaslikla(r.doc, /ders/, /saat/) || tabloId(r.doc, 'dgDonemler'); o.push({ donem: d, ...(tb || { baslik: [], satirlar: [], stil: [] }) }); }
+      return o;
+    },
+  });
+  // 1.16.0 (DIR-026): SKT04002 Direksiyon Ders Programı Görüntüleme — kurumun bütün direksiyon dersleri, dönemden bağımsız 7 günlük tarih aralıklarıyla
+  //  (tarih verilince dönem süzgeci kalkar; ~400 satırda "Kayıt Sayısı Fazla…" → aralık ikiye bölünür). Yalnız Listele (okuma) basılır.
+  //  Varsayılan aralık: 6 hafta geri, 5 hafta ileri. TC sütunu yok; aday adıyla eşleşir (mdSinyal tarafı).
+  const isoGun = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const isoTr = t => t.split('-').reverse().join('/');
+  const gunKaydir = (t, n) => { const d = new Date(+t.slice(0, 4), +t.slice(5, 7) - 1, +t.slice(8, 10)); d.setDate(d.getDate() + n); return isoGun(d); };
+  const gunFark = (a, b) => Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 864e5);
+  Object.assign(CEKME, {
+    async direksiyonProgrami(ilerle, { geri = 42, ileri = 35 } = {}) {
+      let t = await getir('/SKT/skt04002.aspx');
+      const kr = elBul(t.doc, 'cmbKurum'); if (!kr) throw ekranHata(t.doc, 'cmbKurum');
+      const kv = [...kr.options].map(o => o.value).find(v => v && v !== '-1'); if (!kv) throw new MebHata('Direksiyon programı ekranında kurum seçeneği yok', 'ekran', { ekran: 'skt04002', eksik: ['cmbKurum'] });
+      if (kr.value !== kv) t = await postla(t, { cmbKurum: kv }, { tetik: 'cmbKurum' });
+      const dEl = elBul(t.doc, 'cmbDonemi'); if (!dEl) throw ekranHata(t.doc, 'cmbDonemi');
+      const donem = [...dEl.options].map(o => o.value).find(v => /^\d{6}$/.test(v)) || dEl.value; if (!donem) throw ekranHata(t.doc, 'cmbDonemi', 'seçenekleri');
+      const a1 = adOf(t.doc, 'Us_tarih1_txtTarihGiris'), a2 = adOf(t.doc, 'Us_tarih2_txtTarihGiris');
+      const bugun = isoGun(new Date()), bas = gunKaydir(bugun, -geri), son = gunKaydir(bugun, ileri);
+      const out = { bas, son, baslik: null, satirlar: [], parca: 0, bolunen: 0 };
+      const oku = async (a, b) => {
+        const r = await postla(t, { cmbDonemi: donem, [a1]: isoTr(a), [a2]: isoTr(b) }, { dugme: 'btnListele' }); out.parca++;
+        const gv = norm(metin(r.doc.body));
+        if (/kayitsayisifazla/.test(gv)) { if (a === b) throw new MebHata(`${isoTr(a)} günü için MEBBİS “Kayıt sayısı fazla” diyor; bu gün okunamadı`, 'veri'); out.bolunen++; const m = gunKaydir(a, Math.floor(gunFark(a, b) / 2)); await oku(a, m); await oku(gunKaydir(m, 1), b); return; }
+        const tb = tabloBaslikla(r.doc, /aday/, /plaka/, /tarih/); if (!tb) return;   // "Kurumunuz Tarafından Girilmiş Ders Kaydı Bulunamadı."
+        out.baslik = out.baslik || tb.baslik; out.satirlar.push(...tb.satirlar);
+      };
+      for (let a = bas, i = 0; a <= son; a = gunKaydir(a, 7), i++) { const b = gunKaydir(a, 6) > son ? son : gunKaydir(a, 6); ilerle(`Direksiyon programı ${isoTr(a)}–${isoTr(b)}`, Math.min(.95, i / Math.ceil((geri + ileri + 1) / 7))); await oku(a, b); }
+      out.baslik = out.baslik || [];
+      return out;
+    },
+  });
+  // 1.14.0 (RAP-006): SKT01001 Kurum Bilgileri salt okunur ekran; yalnız GET, hiçbir düğmeye basılmaz.
+  //  Bina kontenjanı (etiket hücresinin yanındaki sayı), kurum alt programları (sertifika sınıfı, ruhsat alma, kapanma, durum), derslikler, araçlar.
+  Object.assign(CEKME, {
+    async kurum() {
+      const t = await getir('/SKT/skt01001.aspx'), d = t.doc;
+      let bina = '';
+      for (const c of d.querySelectorAll('td, th, span, label')) { if (!/^binakontenjan/.test(norm(metin(c)))) continue;
+        const ic = metin(c).match(/(\d{1,4})\s*$/); if (ic) { bina = ic[1]; break; }
+        const yan = c.nextElementSibling || (c.parentElement && c.parentElement.nextElementSibling); const m = yan && metin(yan).match(/^\s*(\d{1,4})\b/); if (m) { bina = m[1]; break; } }
+      if (!bina) { const m = metin(d.body).match(/Bina\s*Kontenjan[ıi]?\s*:?\s*(\d{1,4})/i); if (m) bina = m[1]; }
+      const programlar = tabloId(d, 'dgProgramlar') || tabloBaslikla(d, /sinifi/, /ruhsat/);
+      if (!programlar && !bina) throw ekranHata(d, 'dgProgramlar', 'tablosu');
+      // 1.16.0 (YON-071): kurum künyesi — etiket hücresinin yanındaki değer (kurum kodu, adı, il, ilçe, adres, müdür); yalnız okunur
+      const KUNYE = [['kod', /^kurumkodu$/], ['ad', /^kurum(un)?adi$/], ['il', /^il(adi)?$/], ['ilce', /^ilce(adi)?$/], ['adres', /^(kurum)?(acik)?adres(i)?$/], ['mudur', /^(kurum)?mudur(u)?(adi)?(soyadi)?$/]];
+      const kunye = {};
+      for (const c of d.querySelectorAll('td, th, span, label')) {
+        const k = KUNYE.find(([, re]) => re.test(norm(metin(c)))); if (!k || kunye[k[0]] || c.children.length > 1) continue;
+        const yan = c.nextElementSibling, alan = yan && yan.querySelector('input:not([type=hidden]), textarea, select');
+        const v = String(alan ? (alan.tagName === 'SELECT' ? metin(alan.options[alan.selectedIndex]) : alan.value) : metin(yan)).trim();
+        if (v && v.length <= 200 && !KUNYE.some(([, re]) => re.test(norm(v)))) kunye[k[0]] = v;
+      }
+      return { kunye, binaKontenjan: bina, programlar: programlar || { baslik: [], satirlar: [], stil: [] }, derslikler: tabloId(d, 'dgDerslikBilgileri') || { baslik: [], satirlar: [], stil: [] }, araclar: tabloId(d, 'dgAracBilgileri') || { baslik: [], satirlar: [], stil: [] } };
+    },
+  });
+  // 1.15.0 (SIT-006): OOK01002 kurum künyesindeki dgUcret (MEB onaylı ücret ilanı). Yalnız GET: bu sayfada künye düzenlenebilir,
+  //  Kaydet'e (hiddenKaydet) ve hiçbir düğmeye basılmaz. OOK modülüne ilk girişte sayfa ana sayfaya dönerse önce modül sayfası açılır.
+  Object.assign(CEKME, {
+    // PER-012: öğretmenin derse gireceği programlar (sınıf × teorik/uygulama). OOK15003 'Toplu Onay İzin İstek Listesi' (yalnız toplu onayla izin
+    // alınmış personel) → satır 'Aç' (Select$N) → OOK15004 'Personel Bilgi Girişi' salt okunur okunur; Kaydet'e asla basılmaz.
+    async yetki(ilerle) {
+      const t = await getir('/Ookgm/ook15003.aspx'), el = tabloEl(t.doc, 'dgIstekOnaylanan');
+      if (!el) throw ekranHata(t.doc, 'dgIstekOnaylanan', 'tablosu');
+      const liste = tabloOku(el) || { baslik: [], satirlar: [] }, kisiler = [];
+      const hucre = c => { const k = c.querySelector('input[type=checkbox]'); return k ? (k.checked || k.hasAttribute('checked') ? '1' : '0') : metin(c); };
+      const izgara = (d, id) => { const tb = tabloEl(d, id); if (!tb) return null; const rows = [...tb.rows].filter(x => x.closest('table') === tb); return rows.length ? { baslik: [...rows[0].cells].map(c => metin(c)), satirlar: rows.slice(1).map(x => [...x.cells].map(hucre)).filter(x => x.some(Boolean)) } : null; };
+      for (let i = 0; i < liste.satirlar.length && i < 60; i++) {
+        ilerle && ilerle(`Öğretmen yetkileri: ${i + 1}/${liste.satirlar.length}`, (i + 1) / liste.satirlar.length);
+        try {
+          const r = await postla(t, {}, { tetik: 'dgIstekOnaylanan', arguman: 'Select$' + i }), d = r.doc;
+          const kayitNo = (metin(d.body).match(/Kay[ıi]t\s*No\s*:?\s*(\d{5,9})/i) || [])[1] || '';
+          kisiler.push({ satir: liste.satirlar[i], kayitNo, secilen: izgara(d, 'dgDerseGirecegiProgram'), acik: izgara(d, 'gvKurumdaAcikProgramlar') });
+        } catch (x) { if (durduran(x)) throw x; kisiler.push({ satir: liste.satirlar[i], hata: x.message || String(x) }); }
+      }
+      return { baslik: liste.baslik, kisiler };
+    },
+    async ucretIlani() {
+      const oku = d => tabloId(d, 'dgUcret') || tabloBaslikla(d, /sinifi/, /toplam/);
+      let t = await getir('/Ookgm/ook01002.aspx'), tb = oku(t.doc);
+      if (!tb) { await getir('/Ookgm/ook00001.aspx'); t = await getir('/Ookgm/ook01002.aspx'); tb = oku(t.doc); }
+      if (!tb) throw ekranHata(t.doc, 'dgUcret', 'tablosu');
+      return tb;
+    },
+  });
+  // 1.17.0 okuma işleri. ayar: mdSinyal'in işle gönderdiği seçenekler (is.ayar[ad]) ve açık hesabın kurum kodu (ayar.kurum).
+  Object.assign(CEKME, {
+    // MEB-029 / KAY-044: tek adayın MEBBİS fotoğrafları (SKT02006 satırındaki biyometrik ve kayıt fotoğrafı, base64). Yalnız istenince, tek T.C. için;
+    //  toplu çekmelerde fotoğraf hiç alınmaz (tabloOku yalnız resim var/yok bayrağı verir). T.C. süzgeci öğrenci durumu süzgecini aşmadığı için
+    //  durumlar sırayla denenir (mdSinyal'in bildiği durum önce); her sorgu yalnız o adayın satırını döndürür. Yalnız Listele (okuma) basılır.
+    async fotograf(ilerle, ayar = {}) {
+      const tc = String(ayar.tc || '').replace(/\D/g, '');
+      if (!/^[1-9]\d{10}$/.test(tc)) throw new MebHata('Fotoğraf için geçerli bir T.C. kimlik no gelmedi', 'veri');
+      const t = await getir('/SKT/skt02006.aspx');
+      const dEl = elBul(t.doc, 'cmbOgrenciDurumu'); if (!dEl) throw ekranHata(t.doc, 'cmbOgrenciDurumu');
+      const donemler = [...(elBul(t.doc, 'cmbEgitimDonemi') || { options: [] }).options].map(o => o.value);
+      const dn = ayar.donem && donemler.includes(String(ayar.donem)) ? String(ayar.donem) : D('tumDonemler');
+      const onay = secenek(t.doc, 'cmbDurumu', D('durumTumu'));
+      const hepsi = [...dEl.options].map(o => o.value).filter(v => v !== '' && v !== '-1'), once = String(ayar.durum ?? '');
+      const sira = hepsi.includes(once) ? [once, ...hepsi.filter(v => v !== once)] : hepsi;
+      const kaynak = c => { const im = c && c.querySelector('img[src^="data:image" i]'); const s = im ? im.getAttribute('src') || '' : ''; return s.length <= 600000 ? s : ''; };
+      for (const [i, dv] of sira.entries()) {
+        ilerle(`Fotoğraf: aday MEBBİS’te aranıyor (${i + 1}/${sira.length})`, (i + 1) / sira.length);
+        const r = await postla(t, { cmbEgitimDonemi: dn, cmbDurumu: onay, cmbOgrenciDurumu: dv, txtTcKimlikNo: tc }, { dugme: 'btnListele' });
+        const tb = tabloEl(r.doc, 'dgListele'); if (!tb) continue;
+        const rows = [...tb.rows].filter(x => x.closest('table') === tb), tr = rows.slice(1).find(x => metin(x).replace(/\D/g, ' ').split(' ').includes(tc)); if (!tr) continue;
+        const b = [...rows[0].cells].map(c => norm(metin(c))), ib = b.findIndex(h => /biyometrik/.test(h)), ik = b.findIndex(h => /kayitfoto|kayitresmi/.test(h)), c = [...tr.cells];
+        return { tc, durum: dv, donem: dn, biyometrik: ib >= 0 ? kaynak(c[ib]) : '', kayit: ik >= 0 ? kaynak(c[ik]) : '', sutunYok: ib < 0 || ik < 0 };
+      }
+      return { tc, bulunamadi: true };
+    },
+  });
+  // MEB-022 (1.17.0): SKT02008 Sınav Sonuç Listeleme — toplu sınav sonucu tarih aralığıyla. Kurum seçimi kilitli (kendi kurum); seçili kurum yoksa
+  //  ya da başka kurumsa sorgu gitmez. Her sınav tipi (2 uygulama, 3 e-sınav) için tip sayfası bir kez açılır (autopostback); tarih seçeneklerinin
+  //  metninden (yoksa değerinden) gün okunur, aralıkla süzülür, gönderilen değer hep sayfadaki seçenek değeridir. Her tarih aynı tip sayfasından
+  //  Listele ile sorgulanır (zincirleme postback yok). Tablo seçili tipe göre: 2 dgUygulama, 3 dgEsinav. Tablonun Sınav Tarihi sütunu istenen günü
+  //  söylemiyorsa (önceki sorgunun bayat tablosu) alınmaz, bos[]'a düşer. Varsayılan aralık son 60 gün (ayar.gun, en çok 366).
+  //  Çıktı { bas, bit, kurum, uygulama[{deger, tarih, secenek, baslik, satirlar}], esinav[…], bos[{tip, deger, tarih, neden}] }.
+  const tarihOf = s => { const m = String(s || '').match(/(\d{2})[./](\d{2})[./](\d{4})/); return m ? `${m[3]}-${m[2]}-${m[1]}` : ''; };
+  Object.assign(CEKME, {
+    async sonuclar(ilerle, ayar = {}) {
+      const gunSay = Math.min(366, Math.max(1, Math.round(+ayar.gun) || 60)), isoMu = x => /^\d{4}-\d{2}-\d{2}$/.test(String(x || ''));
+      const bit = isoMu(ayar.bit) ? ayar.bit : isoGun(new Date()); let bas = isoMu(ayar.bas) ? ayar.bas : gunKaydir(bit, -gunSay); if (gunFark(bas, bit) > 366) bas = gunKaydir(bit, -366);
+      const TIP = [D('sinavUygulama'), D('sinavEsinav')], tipler = (Array.isArray(ayar.tipler) ? ayar.tipler : TIP).map(String).filter(x => TIP.includes(x));
+      const t = await getir('/SKT/skt02008.aspx');
+      const kr = elBul(t.doc, 'cmbKurum'); if (!kr || kr.tagName !== 'SELECT') throw ekranHata(t.doc, 'cmbKurum');
+      const ks = kr.querySelector('option[selected]') || kr.options[kr.selectedIndex];
+      if (!ks || !ks.value || ks.value === '-1') throw new MebHata('Sınav sonuç ekranında kurum seçili değil; başka kursun verisi okunmasın diye sorgu gönderilmedi', 'veri');
+      const kk = String(ayar.kurum || '').replace(/\D/g, ''), kv = ks.value.replace(/\D/g, '');
+      if (kk && kv && kv.length === kk.length && kv !== kk && !metin(ks).includes(kk)) throw new MebHata(`Sınav sonuç ekranında seçili kurum (${kv}) açık hesabın kurumu (${kk}) değil; sorgu gönderilmedi`, 'veri');
+      const o = { bas, bit, kurum: ks.value, uygulama: [], esinav: [], bos: [] };
+      for (const tip of tipler) {
+        const uyg = tip === D('sinavUygulama'), ne = uyg ? 'uygulama' : 'esinav', tablo = uyg ? 'dgUygulama' : 'dgEsinav';
+        const ts = elBul(t.doc, 'cmbSinavTipi'); if (!ts || ts.tagName !== 'SELECT') throw ekranHata(t.doc, 'cmbSinavTipi');
+        const secili = (ts.querySelector('option[selected]') || ts.options[0] || {}).value;
+        const a = secili === tip ? t : await postla(t, { cmbSinavTipi: secenek(t.doc, 'cmbSinavTipi', tip) }, { tetik: 'cmbSinavTipi' });
+        const sel = elBul(a.doc, 'cmbSinavTarihi'); if (!sel || sel.tagName !== 'SELECT') throw ekranHata(a.doc, 'cmbSinavTarihi');
+        const gor = new Set(), l = [...sel.options].filter(x => x.value && !/^(0|-1)$/.test(x.value) && !gor.has(x.value) && gor.add(x.value))
+          .map(x => ({ v: x.value, m: metin(x), t: tarihOf(metin(x)) || tarihOf(x.value) })).filter(x => x.t && x.t >= bas && x.t <= bit).slice(0, 400);
+        for (const [j, x] of l.entries()) {
+          ilerle(`Toplu sınav sonuçları (${uyg ? 'uygulama' : 'e-sınav'} ${j + 1}/${l.length})`, (j + 1) / l.length);
+          const r = await postla(a, { cmbSinavTarihi: x.v }, { dugme: 'btnListele' });
+          const tb = tabloId(r.doc, tablo);
+          if (!tb) { o.bos.push({ tip, deger: x.v, tarih: x.t, neden: 'kayıt yok' }); continue; }
+          const ti = tb.baslik.map(norm).findIndex(h => /sinavtarihi/.test(h)), gunler = ti >= 0 ? [...new Set(tb.satirlar.map(y => tarihOf(y[ti])).filter(Boolean))] : [];
+          if (gunler.length && gunler.some(z => z !== x.t)) { o.bos.push({ tip, deger: x.v, tarih: x.t, neden: 'bayat tablo' }); continue; }
+          o[ne].push({ deger: x.v, tarih: x.t, secenek: x.m, ...tb });
+        }
+      }
+      return o;
+    },
+  });
+  // MEB-027 / SNV-079 / MEB-171 (30) (1.17.0): SKT02007 e-Sınav merkezleri. ddlTestMerkezi seçenekleri tek tek (autopostback, her biri GET sayfasından;
+  //  açılışta seçili merkez için ek istek yok); lblKontenjan (kalan kontenjan), lblTarih (en erken randevu, saatli), lblBekleyen (onay bekleyen).
+  //  Yanıtta seçili merkez istenen değilse değerler alınmaz (bayat). Hiçbir düğmeye basılmaz; MERNİS sorgusu yok.
+  Object.assign(CEKME, {
+    async merkezler(ilerle) {
+      const t = await getir('/SKT/skt02007.aspx'), el = elBul(t.doc, 'ddlTestMerkezi'); if (!el || el.tagName !== 'SELECT') throw ekranHata(t.doc, 'ddlTestMerkezi');
+      const secili = d => { const s = elBul(d, 'ddlTestMerkezi'); return s ? (s.querySelector('option[selected]') || s.options[s.selectedIndex] || {}).value || '' : ''; };
+      const etiket = (d, ad) => { const x = elBul(d, ad); return x ? metin(x) : null; };
+      const l = [...el.options].filter(o => o.value && o.value !== '-1').slice(0, 30), acik = secili(t.doc), o = [];
+      for (const [i, x] of l.entries()) {
+        ilerle(`e-Sınav merkezleri ${i + 1}/${l.length}: ${metin(x)}`, (i + 1) / l.length);
+        const d = x.value === acik ? t.doc : (await postla(t, { ddlTestMerkezi: x.value }, { tetik: 'ddlTestMerkezi' })).doc;
+        if (secili(d) !== x.value) { o.push({ kod: x.value, ad: metin(x), hata: 'bayat' }); continue; }
+        const k = etiket(d, 'lblKontenjan'), tr = etiket(d, 'lblTarih'), b = etiket(d, 'lblBekleyen');
+        if (k == null && tr == null && b == null) throw ekranHata(d, 'lblKontenjan');
+        o.push({ kod: x.value, ad: metin(x), kontenjan: k, tarih: tr, bekleyen: b });
+      }
+      return o;
+    },
+  });
+  // MEB-036 (1.17.0): SKT02013 dönem aday listesi — cmbEgitimDonemi (autopostback) → cmbAdayAdSoyad seçenekleri (ad soyad ve T.C.); dönem başına
+  //  tek istek, fotoğrafsız, durum ya da onay bilgisi yok. ayar.donemler (en çok 6) yoksa içinde bulunulan ay, listede yoksa ondan önceki en yeni dönem.
+  //  Yanıttaki seçili dönem istenen değilse alınmaz (bayat). Fatura formuna ve hiçbir düğmeye dokunulmaz.
+  Object.assign(CEKME, {
+    async kimlikler(ilerle, ayar = {}) {
+      const t = await getir('/SKT/skt02013.aspx'), el = elBul(t.doc, 'cmbEgitimDonemi'); if (!el || el.tagName !== 'SELECT') throw ekranHata(t.doc, 'cmbEgitimDonemi');
+      const var_ = [...el.options].map(o => o.value).filter(v => /^\d{6}$/.test(v)), bu = new Date(), simdi = String(bu.getFullYear() * 100 + bu.getMonth() + 1);
+      const iste = (Array.isArray(ayar.donemler) ? ayar.donemler : ayar.donem ? [ayar.donem] : []).map(String).filter(v => var_.includes(v));
+      const dl = (iste.length ? iste : [var_.includes(simdi) ? simdi : var_.filter(v => v <= simdi).sort().pop()]).filter(Boolean).slice(0, 6);
+      if (!dl.length) throw new MebHata('Fatura Kayıt ekranında istenen dönem yok; aday listesi okunmadı', 'veri');
+      const secili = d => { const s = elBul(d, 'cmbEgitimDonemi'); return s ? (s.querySelector('option[selected]') || {}).value || '' : ''; };
+      const o = [];
+      for (const [i, d] of dl.entries()) {
+        ilerle(`Dönem aday listesi ${d.slice(0, 4)}/${d.slice(4)}`, (i + 1) / dl.length);
+        const r = await postla(t, { cmbEgitimDonemi: d }, { tetik: 'cmbEgitimDonemi' });
+        const a = elBul(r.doc, 'cmbAdayAdSoyad'); if (!a || a.tagName !== 'SELECT') throw ekranHata(r.doc, 'cmbAdayAdSoyad');
+        if (secili(r.doc) !== d) { o.push({ donem: d, hata: 'bayat' }); continue; }
+        const adaylar = [...a.options].filter(x => x.value && !/^(-1|0)$/.test(x.value)).map(x => { const m = metin(x), tc = /^\d{11}$/.test(x.value) ? x.value : (m.match(/(?:^|\D)(\d{11})(?:\D|$)/) || [])[1] || ''; return { tc, ad: m.replace(/\d{11}/, '').replace(/^[\s\-–:()]+|[\s\-–:()]+$/g, '').replace(/\s+/g, ' ').trim() }; });
+        o.push({ donem: d, adaylar });
+      }
+      return o;
+    },
+  });
+  // PAR-028 (1.18.0): OOK36002 Banka Bilgileri Giriş — kurumun MEBBİS'e bildirdiği banka hesabı (IBAN; ÖÖKY 55/3). Yalnız GET: grdBankaIbanBilgileri
+  //  tablosu okunur; satırdaki "Seç"e (sec$N), Kaydet'e ve il seçimine (autopostback) dokunulmaz. Tablo id'yle, yoksa başlıktan (IBAN + Banka) bulunur;
+  //  ikisi de yoksa "ekran değişti". OOK modülüne ilk girişte sayfa ana sayfaya dönerse önce modül sayfası açılır (ucretIlani gibi).
+  //  IBAN TR + 24 hane ve mod-97 denetiminden geçmezse alınmaz (gecersiz sayılır). Çıktı { hesaplar[{iban, banka, sube, il, ilce}], gecersiz }.
+  const ibanGecerli = v => { if (!/^TR\d{24}$/.test(v)) return false; const d = (v.slice(4) + v.slice(0, 4)).replace(/[A-Z]/g, c => String(c.charCodeAt(0) - 55)); let k = 0; for (const c of d) k = (k * 10 + +c) % 97; return k === 1; };
+  Object.assign(CEKME, {
+    async iban() {
+      const oku = d => tabloId(d, 'grdBankaIbanBilgileri') || tabloBaslikla(d, /iban/, /banka/);
+      let t = await getir('/Ookgm/ook36002.aspx'), tb = oku(t.doc);
+      if (!tb && !elBul(t.doc, 'txtIban')) { await getir('/Ookgm/ook00001.aspx'); t = await getir('/Ookgm/ook36002.aspx'); tb = oku(t.doc); }
+      if (!tb) { if (elBul(t.doc, 'txtIban')) return { hesaplar: [], gecersiz: 0 }; throw ekranHata(t.doc, 'grdBankaIbanBilgileri', 'tablosu'); }   // form var, kayıtlı hesap yok
+      const b = tb.baslik.map(norm), i = { iban: b.findIndex(h => /iban/.test(h)), banka: b.findIndex(h => /bankaadi|^banka$/.test(h)), sube: b.findIndex(h => /sube/.test(h)), il: b.findIndex(h => /ila?di?$|bankail(adi)?$/.test(h) && !/ilce/.test(h)), ilce: b.findIndex(h => /ilce/.test(h)) };
+      if (i.iban < 0) throw ekranHata(t.doc, 'grdBankaIbanBilgileri › IBAN', 'sütunu');
+      const hucre = (r, j) => j >= 0 ? String(r[j] || '').replace(/\s+/g, ' ').trim().slice(0, 120) : '';
+      let gecersiz = 0; const hesaplar = [];
+      for (const r of tb.satirlar) {
+        const iban = String(r[i.iban] || '').replace(/\s/g, '').toUpperCase(); if (!iban) continue;
+        if (!ibanGecerli(iban)) { gecersiz++; continue; }
+        if (!hesaplar.some(x => x.iban === iban)) hesaplar.push({ iban, banka: hucre(r, i.banka), sube: hucre(r, i.sube), il: hucre(r, i.il), ilce: hucre(r, i.ilce) });
+      }
+      return { hesaplar: hesaplar.slice(0, 5), gecersiz };
+    },
+  });
+  const CEKME_EKRAN = { iban: [], kimlikler: ['skt02013'], merkezler: ['skt02007'], sonuclar: ['skt02008'], fotograf: ['skt02006'], kurum: ['skt01001'], gruplar: ['skt03002', 'skt03001'], kursiyerler: ['skt02006'], personel: [], araclar: ['skt01002'], sinavlar: ['skt04003'], dosya: ['skt02009'], randevular: ['skt01005'], ucretler: ['skt02007'], teorik: ['skt04001'], ucretIlani: [], yetki: ['ook15003', 'ook15004'], direksiyonProgrami: ['skt04002'] };
   // Aday Durum Görüntüleme: tek adayın bütün dosyası
   async function adayDosyasi(taban, tc) {
     const r = await postla(taban, { txtTcKimlikNo: tc }, { dugme: 'ImageButton1' });
     const d = r.doc, govde = metin(d.body);
     const tarihSonra = et => { const m = govde.match(new RegExp(et + '[^0-9]{0,40}(\\d{2}[./]\\d{2}[./]\\d{4})', 'i')); return m ? m[1] : ''; };
+    // MEB-008: yanıttaki T.C. kutusunun değeri (sorgulanan) ve dönem tablosu yoksa bulunamadı + sayfanın uyarı metni; mdSinyal başka kişinin dosyasını işlemez (MEB-009)
+    const tcEl = elBul(d, 'txtTcKimlikNo'), sorgulanan = String((tcEl && tcEl.value) || '').replace(/\D/g, ''), dt = tabloEl(d, 'dgDonemBilgileri');
+    const uyari = !dt ? ((govde.match(/[^.!\n]*(bulunamad|kay[ıi]t yok|kay[ıi]tl[ıi] de[ğg]il)[^.!\n]*/i) || [])[0] || '').trim().slice(0, 160) : '';
     return {
-      tc, donem: tabloId(d, 'dgDonemBilgileri'), esinav: tabloId(d, 'dgTeorikSinavlar'), uygulama: tabloId(d, 'dgUygulamaNot'),
-      dersler: tabloId(d, 'dgDersProgrami'), sertifika: tabloId(d, 'dgSertifika'),
+      tc, sorgulanan, bulunamadi: !dt, uyari, donem: tabloId(d, 'dgDonemBilgileri'), esinav: tabloId(d, 'dgTeorikSinavlar'), uygulama: tabloId(d, 'dgUygulamaNot'),
+      dersler: tabloId(d, 'dgDersProgrami'), sertifika: tabloId(d, 'dgSertifika'), rapor: tabloId(d, 'dgRaporBilgileri'), ilceSinav: tabloId(d, 'dgIlUygSnv'),   // MEB-015 mazeret raporu · MEB-024 ilçe uygulama sınavı takvimi (kod ↔ tarih)
       ikinciDireksiyon: tarihSonra('İkinci Direksiyon Aşamasına Geçtiği Tarih'), uygunluk: tarihSonra('Uygulama Sınavına Uygunluk Tarihi'),
     };
   }
@@ -300,7 +666,7 @@
   const personelMetni = is => is.izinNo ? M('izinNo') + is.izinNo : is.personelAd;
 
   /* ---------- yazma: direksiyon ders programı (SKT03004) ---------- */
-  // is: { id, tc, donem, grupNo, subeNo, tarih (gg/aa/yyyy), saat (SS:DD), yer ('Akan Trafik'|'Simülatör'), plaka, simulator, izinNo, personelAd, egitimTuru (metin) }
+  // is: { id, tc, donem, grupNo, subeNo, tarih (gg/aa/yyyy), saat (SS:DD), yer ('Akan Trafik'|'Simülatör'), plaka, simulator, izinNo, personelAd, egitimTuru (metin), egitimTuruKod (değer 1-4) }
   async function programYaz(is, kodIste) {
     let s = await getir('/SKT/skt03004.aspx'); const b = {};
     s = await sec(s, b, 'cmbDonem', is.donem); s = await sec(s, b, 'cmbGrup', String(is.grupNo)); s = await sec(s, b, 'cmbSube', String(is.subeNo));
@@ -312,12 +678,19 @@
     const varMi = d => satirVar(d, 'dgDonemler', is.tarih, is.saat);
     if (varMi(s.doc)) return { ok: true, not: 'MEBBİS’te zaten vardı', dogrulama: 'zaten' };   // aynı ders iki kez girilmez
     s = await sec(s, b, 'cmbEgitimYeri', is.yer, { metinle: true });
-    if (/sim/i.test(norm(is.yer))) { const so = elBul(s.doc, 'cmbSimulatorSeriNo'), tek = so ? [...so.options].filter(x => x.value && x.value !== '-1') : []; s = await sec(s, b, 'cmbSimulatorSeriNo', is.simulator || (tek.length === 1 ? tek[0].value : ''), { metinle: !!is.simulator }); }
+    // simülatör: seçenek değeri cihazın MEBBİS "Cihazın Sicil Numarası" (13 hane; skt01002 simülatör listesi "Seri Numarası"). Aracın şasi no'su değil.
+    // is.simulator boşsa ve listede tek simülatör varsa o seçilir; birden çoksa sicil no şart.
+    if (/sim/i.test(norm(is.yer))) {
+      const so = elBul(s.doc, 'cmbSimulatorSeriNo'); if (!so) throw ekranHata(s.doc, 'cmbSimulatorSeriNo');
+      const tek = [...so.options].filter(x => x.value && x.value !== '-1'), sicil = String(is.simulator || '').replace(/\s/g, '');
+      if (!sicil && tek.length !== 1) throw new MebHata(`Simülatörün MEBBİS sicil numarası yok (MEBBİS’te ${tek.length} simülatör var); önce MEBBİS’ten araçları güncelleyin`, 'veri');
+      s = await sec(s, b, 'cmbSimulatorSeriNo', sicil || tek[0].value);
+    }
     else s = await sec(s, b, 'cmbAracBilgileri', is.plaka, { metinle: true });
     b[adOf(s.doc, 'Ustarih1_txtTarihGiris')] = is.tarih;
-    s = await sec(s, b, 'cmbDersSaati', is.saat, { metinle: true });
+    s = await sec(s, b, 'cmbDersSaati', is.saat, { metinle: true, saat: true });
     s = await sec(s, b, 'cmbDersiVerenPersonel', personelMetni(is), { metinle: true });
-    s = await sec(s, b, 'cmbEgitimTuru', is.egitimTuru || M('normal'), { metinle: true });
+    s = await sec(s, b, 'cmbEgitimTuru', is.egitimTuru || M('normal'), { metinle: true, egitim: { kod: is.egitimTuruKod || '', metin: is.egitimTuru || M('normal') } });
     return kaydetDogrula(s, b, varMi, kodIste);
   }
 
@@ -329,11 +702,11 @@
       let { s, b } = await zincir('/SKT/skt03003.aspx', [['cmbDonemi', is.donem], ['cmbGrupAdi', String(is.grupNo)], ['cmbSubesi', String(is.subeNo)]], 'btnListeleGrid');
       if (satirVar(s.doc, 'dgDonemler', is.tarih, saat) || satirVar(s.doc, null, is.tarih, saat + ' -')) { notlar.push(saat + ' zaten vardı'); continue; }
       s = await sec(s, b, 'cmbDersTuru', is.dersTuru, { metinle: true });
-      if (is.derslik) s = await sec(s, b, 'cmbDerslikAdi', is.derslik, { metinle: true });
+      if (is.derslik) s = await sec(s, b, 'cmbDerslikAdi', is.derslik, { metinle: true, derslik: true });
       b[adOf(s.doc, 'Us_tarih1_txtTarihGiris')] = is.tarih;
-      s = await sec(s, b, 'cmbDersSaati', saat, { metinle: true });
+      s = await sec(s, b, 'cmbDersSaati', saat, { metinle: true, saat: true });
       s = await sec(s, b, 'cmbDersiVerenPersonel', personelMetni(is), { metinle: true });
-      s = await sec(s, b, 'cmbEgitimTuru', is.egitimTuru || M('normal'), { metinle: true });
+      s = await sec(s, b, 'cmbEgitimTuru', is.egitimTuru || M('normal'), { metinle: true, egitim: { kod: is.egitimTuruKod || '', metin: is.egitimTuru || M('normal') } });
       await kaydetDogrula(s, b, d => satirVar(d, null, is.tarih, saat + ' -'), kodIste); notlar.push(saat + ' girildi'); yeni++;
     }
     return { ok: true, not: notlar.join(' · '), dogrulama: yeni ? 'liste' : 'zaten' };
@@ -344,10 +717,11 @@
   async function randevuYaz(is, kodIste) {
     const t = await getir('/SKT/skt01005.aspx');
     const tv = secenek(t.doc, 'cmbSinavTarihi', is.tarih, { metinle: true });
-    let s = await postla(t, { cmbSinavTarihi: tv, cmbSertifika: secenek(t.doc, 'cmbSertifika', is.sertifika, { metinle: true }) }, { dugme: 'btnListele' });
+    let s = await postla(t, { cmbSinavTarihi: tv, cmbSertifika: secenek(t.doc, 'cmbSertifika', is.sertifika, { metinle: true, sinif: true }) }, { dugme: 'btnListele' });
     const b = {}, alt = [];
     for (const a of is.adaylar) {
       try {
+        if (!a.plaka || !a.saat || !(a.izinNo || a.personelAd)) throw new MebHata(`Randevu satırı eksik (${[!a.plaka && 'araç', !(a.izinNo || a.personelAd) && 'usta öğretici', !a.saat && 'saat'].filter(Boolean).join(', ')}); gönderilmedi`, 'veri');   // MEB-178
         const tr = satirBul(s.doc, 'dgListele', a.tc); if (!tr) throw new MebHata('Aday randevu listesinde yok (ilçe kontenjanı, sınıf ya da aday durumu)', 'veri');
         // B3: satırda beklenen alan yoksa boş değere erişilmez; "ekran değişti" olarak durur
         const alan = son => { const el = tr.querySelector(`[id$="${CSS.escape(A(s.doc, son))}"]`); if (!el || !el.name) throw ekranHata(s.doc, son); return el; };
@@ -369,6 +743,10 @@
   /* ---------- fatura (SKT02013) ---------- */
   // is: { donem, tc, no, tarih, tutar }
   async function faturaYaz(is, kodIste) {
+    // MEB-178: MEBBİS fatura formu girileni denetlemiyor; biçim burada denetlenir, hatalı iş gönderilmez
+    if (!String(is.no || '').trim() || String(is.no).length > 100) throw new MebHata('Fatura numarası boş ya da çok uzun; gönderilmedi', 'veri');
+    if (!/^\d{1,7}(,\d{1,2})?$/.test(String(is.tutar || '')) || !(parseFloat(String(is.tutar).replace(',', '.')) > 0)) throw new MebHata(`Fatura tutarı MEBBİS biçiminde değil (${is.tutar || 'boş'}); gönderilmedi`, 'veri');
+    if (!/^(0[1-9]|[12]\d|3[01])\/(0[1-9]|1[0-2])\/(19|20)\d{2}$/.test(String(is.tarih || ''))) throw new MebHata(`Fatura tarihi gg/aa/yyyy değil (${is.tarih || 'boş'}); gönderilmedi`, 'veri');
     let { s, b } = await zincir('/SKT/skt02013.aspx', [['cmbEgitimDonemi', is.donem]]);
     s = await postla(s, { ...b, txtTC: is.tc }, { dugme: 'btnTC' }); Object.keys(b).forEach(k => delete b[k]);
     if (!elBul(s.doc, 'txtSayi')) throw new MebHata('Fatura formu açılmadı (aday bu dönemde yok)', 'veri');
@@ -387,8 +765,8 @@
     const ad = elBul(s.doc, 'lblAd'); if (!ad || !metin(ad)) throw new MebHata('Kimlik bilgileri gelmedi (MERNİS)', 'veri');
     const b = {}; const r = s.doc.querySelector(`input[type=radio][id*="${CSS.escape(A(s.doc, 'rblEsinav'))}"][value="${CSS.escape(is.gun || '0')}"]`); if (!r) throw ekranHata(s.doc, 'rblEsinav'); b[r.name] = r.value;
     s = await sec(s, b, 'cmbEgitimDonemi', is.donem);
-    if (is.mevcut) { s = await sec(s, b, 'cmbMevcutEhliyetSinifi', is.mevcut, { metinle: true }); if (!is.belgeNo) throw new MebHata('Mevcut belge numarası yok', 'veri'); b[adOf(s.doc, 'txtEhliyetBelgeNo')] = is.belgeNo; }
-    s = await sec(s, b, 'cmbIstenenEhliyetSinifi', is.istenen, { metinle: true });
+    if (is.mevcut) { s = await sec(s, b, 'cmbMevcutEhliyetSinifi', is.mevcut, { metinle: true, sinif: true }); if (!is.belgeNo) throw new MebHata('Mevcut belge numarası yok', 'veri'); b[adOf(s.doc, 'txtEhliyetBelgeNo')] = is.belgeNo; }
+    s = await sec(s, b, 'cmbIstenenEhliyetSinifi', is.istenen, { metinle: true, sinif: true });
     return kaydetDogrula(s, b, async (d, k) => basari(k), kodIste, {}, 'mesaj');
   }
 
@@ -425,7 +803,7 @@
   // is: { donem, adaylar: [{ id, tc }] }
   async function onayYaz(is, kodIste) {
     const t = await getir('/SKT/skt02006.aspx');
-    const s = await postla(t, { cmbEgitimDonemi: is.donem, cmbDurumu: D('durumKurumBekliyor'), cmbOgrenciDurumu: D('ogrenciTumu') }, { dugme: 'btnListele' });
+    const s = await postla(t, { cmbEgitimDonemi: is.donem, cmbDurumu: D('durumKurumBekliyor'), cmbOgrenciDurumu: D('ogrenciBasvuru') }, { dugme: 'btnListele' });
     const b = {}, alt = [];
     for (const a of is.adaylar) {
       const tr = satirBul(s.doc, 'dgListele', a.tc) || satirBul(s.doc, null, a.tc);
@@ -438,7 +816,7 @@
     const gidecek = alt.filter(x => x.ok === null); if (!gidecek.length) return { ok: false, alt: alt.map(({ tc, ...x }) => x), not: 'Onaylanacak aday yok' };
     // B4: kaydedildi diye varsayılmaz; olumsuz mesaj ya da güvenlik kodu isteği varsa yeniden denenir, sonra "onaylananlar" listesinden okunur
     await kaydetDogrula(s, b, async (d, k) => basari(k) || !k.yeni.some(m => KOD.test(m)), kodIste);
-    const v = await postla(t, { cmbEgitimDonemi: is.donem, cmbDurumu: D('durumKurumOnayli'), cmbOgrenciDurumu: D('ogrenciTumu') }, { dugme: 'btnListele' });
+    const v = await postla(t, { cmbEgitimDonemi: is.donem, cmbDurumu: D('durumKurumOnayli'), cmbOgrenciDurumu: D('ogrenciBasvuru') }, { dugme: 'btnListele' });
     gidecek.forEach(x => { x.ok = satirVar(v.doc, 'dgListele', x.tc); x.not = x.ok ? '' : 'Onaylananlar listesinde görünmedi'; x.dogrulama = 'liste'; });
     return { ok: true, alt: alt.map(({ tc, ...x }) => x) };
   }
@@ -485,10 +863,22 @@
     return { ok: true, not, dogrulama: 'mesaj' };
   }
   /* ---------- yeni aday kaydı (SKT02001) + fotoğraf (SKT02002) + sözleşme tarihi (SKT02011) ---------- */
-  // Kayıt yazmadan önce ve sonra SKT02006 "Döneme kayıtlı tüm adaylar" listesinde TC aranır (çift kayıt olmasın, kayıt gerçekten oluşsun)
+  // Kayıt yazmadan önce ve sonra adayın bu dönemde kaydı var mı (çift kayıt olmasın, kayıt gerçekten oluşsun).
+  // 1.13.0: SKT02009 Aday Durum (TC) dönem satırlarından okunur. Eskiden 02006'da cmbOgrenciDurumu '0' "tümü" sanılıyordu; 0 = "Kursa Başvuru Aşamasında"
+  // ve belgeli aday kayıttan hemen sonra "Uygulama Sınav Aşamasında" (durum 2) göründüğü için kayıtlı sayılmıyor, yeniden kaydedilmeye çalışılıyordu.
+  const AYLAR = ['ocak', 'subat', 'mart', 'nisan', 'mayis', 'haziran', 'temmuz', 'agustos', 'eylul', 'ekim', 'kasim', 'aralik'];
+  const donemUyar = (yazi, kod) => { const n = norm(yazi), k = String(kod || ''); if (!/^\d{6}$/.test(k)) return false; return n === k || n === k.slice(0, 4) + AYLAR[+k.slice(4) - 1]; };
   async function kayitliMi(is) {
-    const v = await postla(await getir('/SKT/skt02006.aspx'), { cmbEgitimDonemi: is.donem, cmbDurumu: D('durumTumu'), cmbOgrenciDurumu: D('ogrenciTumu') }, { dugme: 'btnListele' });
-    return satirVar(v.doc, 'dgListele', is.tc);
+    const r = await postla(await getir('/SKT/skt02009.aspx'), { txtTcKimlikNo: is.tc }, { dugme: 'ImageButton1' });
+    const tb = tabloId(r.doc, 'dgDonemBilgileri');
+    if (!tb) {
+      // tablo yoksa yalnız MEBBİS "bulunamadı" diyorsa kayıtsız sayılır; başka bir sayfa geldiyse kayıt denenmez
+      if (/bulunama|kay[ıi]t yok|bulunmamaktad/.test(kucuk(metin(r.doc.body)))) return false;
+      throw ekranHata(r.doc, 'dgDonemBilgileri', 'tablosu');
+    }
+    const b = tb.baslik.map(norm), di = b.findIndex(h => /^donemi?$/.test(h)), si = b.findIndex(h => /^durumu$/.test(h));
+    if (di < 0) throw ekranHata(r.doc, 'dgDonemBilgileri › Dönemi', 'sütunu');
+    return tb.satirlar.some(row => donemUyar(row[di], is.donem) && !(si >= 0 && /kaydisilindi/.test(norm(row[si]))));
   }
   // is: { donem, grupNo, subeNo, tc, istenen, mevcut, belgeNo, cep, foto (dataURL 350×450), sozlesme (gg/aa/yyyy) }
   async function kayitYaz(is, kodIste) {
@@ -504,8 +894,8 @@
       s = await postla(s, { txt_TcKimlikNo: is.tc }, { dugme: getirD ? (getirD.name || getirD.id) : 'btnBilgileriGetir' });
       const ad = elBul(s.doc, 'lblAd'); if (!ad || !metin(ad)) throw new MebHata('Kimlik bilgileri gelmedi (MERNİS); TC’yi kontrol edin', 'veri');
       b[adOf(s.doc, 'txt_TcKimlikNo')] = is.tc;
-      s = await sec(s, b, 'cmbIstenenEhliyetSinifi', is.istenen, { metinle: true });
-      if (is.mevcut) { s = await sec(s, b, 'cmbMevcutEhliyetSinifi', is.mevcut, { metinle: true }); if (!is.belgeNo) throw new MebHata('Mevcut belge numarası yok', 'veri'); b[adOf(s.doc, 'txtEhliyetBelgeNo')] = is.belgeNo; }
+      s = await sec(s, b, 'cmbIstenenEhliyetSinifi', is.istenen, { metinle: true, sinif: true });
+      if (is.mevcut) { s = await sec(s, b, 'cmbMevcutEhliyetSinifi', is.mevcut, { metinle: true, sinif: true }); if (!is.belgeNo) throw new MebHata('Mevcut belge numarası yok', 'veri'); b[adOf(s.doc, 'txtEhliyetBelgeNo')] = is.belgeNo; }
       b[adOf(s.doc, 'txtCepTelefonNo')] = is.cep;
       await kaydetDogrula(s, b, async () => kayitliMi(is), kodIste);
       notlar.push('kayıt girildi');
@@ -524,9 +914,53 @@
     return { ok: true, not: notlar.join(' · '), dogrulama };
   }
 
-  const YAZMA = { evrak: (is, k) => evrakYaz(is, k, false), program: programYaz, teorik: teorikYaz, randevu: randevuYaz, fatura: faturaYaz, esinav: esinavYaz, grup: grupYaz, onay: onayYaz, kayit: kayitYaz };
+  /* ---------- MEB-184 (1.18.0): Aday Dönem Sil (SKT02006 satırındaki Sil) ---------- */
+  // MEBBİS'te: satırdaki Sil resmi fnIslemSecSilme(KayitNo) → confirm("Seçmiş Olduğunuz Dönem Kaydı Silinecek…") → hdnKayitNoSilmeIcin=KayitNo + form gönderimi
+  //  (TEKNIK-SPEC; anahtar TC+DÖNEM). Sil düğmesine canlıda hiç basılmadı: KayitNo biçimi ve sunucunun yanıtı GÖRÜLMEDİ. Bu yüzden ekran haritasında
+  //  deger.donemSilCanli = '1' olmadan (ilk canlı deneme kullanıcı gözetiminde yapılıp imzalı haritayla açılır) iş hiçbir istek göndermeden reddedilir.
+  // Güvenceler: iş yalnız tek başına gelir (yurut), onaylayan kurs müdürü (onay.rol), onayKodu === dönem kodu (mdSinyal'de yazılan teyit),
+  //  aday 09'da o dönemde kayıtlı değilse hiçbir şey gönderilmez ('zaten'), 06'da T.C. + dönem tek satır ve MEBBİS'teki ad mdSinyal'dekiyle uyuşmalı,
+  //  MEBBİS sekmesinde son bir kez sorulur; gönderimden sonra 09'dan geri okunur (kayıt hâlâ görünüyorsa başarısız).
+  const SIL_CAGRI = /fnIslemSecSilme\s*\(\s*['"]?([^'")]{1,60}?)['"]?\s*\)/;
+  async function donemSilYaz(x) {
+    if (D('donemSilCanli') !== '1') throw new MebHata('Aday Dönem Sil, canlı MEBBİS’te gözetimli ilk deneme yapılana kadar kapalı (ekran haritasında “canlı denetim yapıldı” işareti yok). Hiçbir şey gönderilmedi.', 'veri');
+    if (!aktifOnay || aktifOnay.rol !== 'mudur') throw new MebHata('Dönem kaydını yalnız kurs müdürü sildirebilir; hiçbir şey gönderilmedi', 'veri');
+    if (!/^\d{6}$/.test(String(x.donem || '')) || String(x.onayKodu || '') !== String(x.donem)) throw new MebHata('Silme teyidi (yazılan dönem kodu) dönemle uyuşmuyor; hiçbir şey gönderilmedi', 'veri');
+    if (!(await kayitliMi(x))) return { ok: true, not: 'Aday bu dönemde MEBBİS’te kayıtlı değil (önceden silinmiş ya da hiç kaydedilmemiş); hiçbir şey gönderilmedi', dogrulama: 'zaten' };
+    const t = await getir('/SKT/skt02006.aspx');
+    const dEl = elBul(t.doc, 'cmbOgrenciDurumu'); if (!dEl) throw ekranHata(t.doc, 'cmbOgrenciDurumu');
+    secimDenetle(t.doc, elBul(t.doc, 'cmbEgitimDonemi'), x.donem);
+    const onay = secenek(t.doc, 'cmbDurumu', D('durumTumu')), hepsi = [...dEl.options].map(o => o.value).filter(v => v !== '' && v !== '-1'), once = String(x.durum ?? '');
+    let bulunan = null;
+    // T.C. süzgeci öğrenci durumu süzgecini aşmaz: durumlar sırayla (mdSinyal'in bildiği önce); yalnız Listele (okuma) basılır
+    for (const dv of hepsi.includes(once) ? [once, ...hepsi.filter(v => v !== once)] : hepsi) {
+      const r = await postla(t, { cmbEgitimDonemi: x.donem, cmbDurumu: onay, cmbOgrenciDurumu: dv, txtTcKimlikNo: x.tc }, { dugme: 'btnListele' });
+      const tb = tabloEl(r.doc, 'dgListele'); if (!tb) continue;
+      const rows = [...tb.rows].filter(y => y.closest('table') === tb), bas = [...rows[0].cells].map(c => norm(metin(c)));
+      const di = bas.findIndex(h => /^donemi?$/.test(h)), ai = bas.findIndex(h => /adisoyadi|adsoyad/.test(h));
+      const l = rows.slice(1).filter(y => metin(y).replace(/\D/g, ' ').split(' ').includes(x.tc) && di >= 0 && donemUyar(metin(y.cells[di]), x.donem));
+      if (!l.length) continue;
+      if (l.length > 1) throw new MebHata('SKT02006’da bu T.C. ve dönem için birden çok satır var; silme gönderilmedi', 'veri');
+      bulunan = { r, tr: l[0], ad: ai >= 0 ? metin(l[0].cells[ai]) : '', donem: metin(l[0].cells[di]) }; break;
+    }
+    if (!bulunan) throw new MebHata('Aday SKT02006 listesinde bu dönemle bulunamadı; silme gönderilmedi', 'veri');
+    const a = norm(bulunan.ad), b = norm(x.adSoyad);
+    if (!a || !b || !(a === b || a.includes(b) || b.includes(a))) throw new MebHata('MEBBİS’teki aday adı mdSinyal’dekiyle uyuşmuyor; silme gönderilmedi', 'veri');
+    const sil = [...bulunan.tr.querySelectorAll('[onclick], a[href]')].map(el => SIL_CAGRI.exec(el.getAttribute('onclick') || el.getAttribute('href') || '')).find(Boolean);
+    if (!sil) throw ekranHata(bulunan.r.doc, 'dgListele › Sil (fnIslemSecSilme)', 'bağlantısı');
+    const kayitNo = sil[1].trim();
+    if (!/^[0-9A-Za-z|_.\-]{1,60}$/.test(kayitNo)) throw new MebHata('Sil bağlantısının kayıt anahtarı beklenmeyen biçimde; hiçbir şey gönderilmedi', 'ekran', { ekran: 'skt02006', eksik: ['fnIslemSecSilme'] });
+    const c = await sor('MEBBİS’te dönem kaydı silinecek', `${bulunan.ad} · ${bulunan.donem || x.donem} dönemi. Geri alınamaz; MEBBİS’in kendi “Dönem Kaydı Silinecek” onayının yerine geçer.`, [['hayir', 'Vazgeç'], ['evet', 'Sil']]); kontrol();
+    if (c !== 'evet') throw new MebHata('Silme MEBBİS sekmesinde onaylanmadı; hiçbir şey gönderilmedi', 'veri');
+    const onceM = mesajlar(bulunan.r.doc); let y;
+    silmeIzni = true; try { y = await postla(bulunan.r, { hdnKayitNoSilmeIcin: kayitNo }); } finally { silmeIzni = false; }
+    const k = sonucOku(onceM, y.doc);
+    if (await kayitliMi(x)) throw new MebHata(k.yeni.join(' · ') || 'Dönem kaydı MEBBİS’te hâlâ görünüyor; silinmedi (MEBBİS’te SKT02006’dan kontrol edin)', olumsuz(k) ? 'veri' : 'dogrulama');
+    return { ok: true, not: 'Dönem kaydı silindi; SKT02009’dan geri okundu' + (k.yeni.length ? ' · ' + k.yeni.join(' · ') : ''), dogrulama: 'liste' };
+  }
+  const YAZMA = { donemSil: donemSilYaz, evrak: (is, k) => evrakYaz(is, k, false), program: programYaz, teorik: teorikYaz, randevu: randevuYaz, fatura: faturaYaz, esinav: esinavYaz, grup: grupYaz, onay: onayYaz, kayit: kayitYaz };
   const EVRAK_EKRAN = { ogrenim: 'skt02003', saglik: 'skt02004', adli: 'skt02005', parmak: 'skt02010' };
-  const ekranlariOf = x => ({ program: ['skt03004'], teorik: ['skt03003'], randevu: ['skt01005'], fatura: ['skt02013'], esinav: ['skt02007'], grup: ['skt03001', 'skt03002'], onay: ['skt02006'], kayit: ['skt02001', 'skt02006'], evrak: Object.keys(x.evrak || {}).map(k => EVRAK_EKRAN[k]).filter(Boolean) }[x.tur] || []);
+  const ekranlariOf = x => ({ program: ['skt03004'], teorik: ['skt03003'], randevu: ['skt01005'], fatura: ['skt02013'], esinav: ['skt02007'], grup: ['skt03001', 'skt03002'], onay: ['skt02006'], kayit: ['skt02001', 'skt02006'], donemSil: ['skt02006', 'skt02009'], evrak: Object.keys(x.evrak || {}).map(k => EVRAK_EKRAN[k]).filter(Boolean) }[x.tur] || []);
   const idlerOf = x => x.adaylar ? x.adaylar.map(a => a.id) : [x.id];
 
   /* ---------- ön denetim: işte kullanılacak her ekran bir kez açılır, zorunlu alanlar aranır (kayıt yapılmaz) ---------- */
@@ -596,6 +1030,42 @@
     sonuc.kurum = { ...(k || { kod: '', ad: '' }), eslesme: 'yetkili' };
   }
 
+  /* ---------- MEB-173 (1.17.0): İzle kipi ---------- */
+  // İş arka planda (fetch) sürer; İzle açıkken her gönderimden önce formun doldurulmuş hâli, sonra MEBBİS'in yanıtı bu sekmede görünür bir panelde
+  // gösterilir (değişen alanlar sarı). Panel yalnız görüntüdür: betik, form, bağlantı, dış resim ve stil atılır; iframe sandbox'lı (betik ve form yok),
+  // içerik güvenlik politikası yalnız gömülü (data:) resme izin verir → panel MEBBİS'e hiçbir istek göndermez (güvenlik kodu resmi de yenilenmez).
+  // Açma: iş yükünde izle:true (mdSinyal'de "İzle" kutusu) ya da karttaki İzle düğmesi (bu tarayıcıda hatırlanır). Açıkken MEBBİS sekmesi öne gelir.
+  let izle = false; const IZLE_BEKLE = 500;
+  const CSP = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'">`;
+  function izleHtml(doc, m, degisen, dugmeEl) {
+    const c = doc.documentElement.cloneNode(true);
+    if (dugmeEl && dugmeEl.name) { const d = c.querySelector(`[name="${CSS.escape(dugmeEl.name)}"]`); if (d) d.setAttribute('data-izle', '1'); }
+    c.querySelectorAll('script, iframe, frame, frameset, object, embed, link, meta, base, noscript, audio, video, source, svg image').forEach(x => x.remove());
+    c.querySelectorAll('*').forEach(x => [...x.attributes].forEach(a => {
+      const n = a.name.toLowerCase();
+      if (n.startsWith('on') || ['href', 'action', 'formaction', 'background', 'poster', 'srcset', 'xlink:href', 'ping'].includes(n) || (n === 'src' && !/^data:image\//i.test(a.value)) || (n === 'style' && /url\s*\(|expression/i.test(a.value))) x.removeAttribute(a.name);
+    }));
+    c.querySelectorAll('style').forEach(x => { x.textContent = x.textContent.replace(/@import[^;]*;?/gi, '').replace(/url\s*\([^)]*\)/gi, 'none'); });
+    if (m) c.querySelectorAll('input[name], select[name], textarea[name]').forEach(el => {
+      if (!m.has(el.name)) return; const v = String(m.get(el.name)), t = (el.type || '').toLowerCase();
+      if (el.tagName === 'SELECT') el.querySelectorAll('option').forEach(o => { if (o.getAttribute('value') === v) o.setAttribute('selected', 'selected'); else o.removeAttribute('selected'); });
+      else if (t === 'checkbox' || t === 'radio') { if ((el.getAttribute('value') || 'on') === v) el.setAttribute('checked', 'checked'); }
+      else if (el.tagName === 'TEXTAREA') el.textContent = v; else if (t !== 'file') el.setAttribute('value', v.length > 200 ? v.slice(0, 40) + '…' : v);
+      if (degisen && degisen.has(el.name)) el.setAttribute('data-izle', '1');
+    });
+    c.querySelectorAll('input, select, textarea, button').forEach(el => el.setAttribute('disabled', ''));
+    const b = c.querySelector('body');
+    return `<!doctype html><html><head><meta charset="utf-8">${CSP}<style>body{font:13px system-ui,sans-serif;margin:8px;color:#111}[data-izle]{outline:3px solid #ffc21a!important;background:#fff6cc!important}</style></head>${b ? b.outerHTML : '<body></body>'}</html>`;
+  }
+  function izleGoster(doc, m, degisen, dugmeEl, durumYazi) {
+    try {
+      const p = g.querySelector('.izle'); p.classList.remove('gizli');
+      p.querySelector('[data-izb]').textContent = `İzle · ${ekranAd(doc.__ekran)} · ${durumYazi}`;
+      p.querySelector('iframe').srcdoc = izleHtml(doc, m, degisen, dugmeEl);
+    } catch (x) { }
+  }
+  const izleKoy = v => { izle = !!v; if (!izle) { const p = g.querySelector('.izle'); if (p) p.classList.add('gizli'); } else gonder({ tur: 'izle-sekme' }); };
+
   /* ---------- durum kartı (sayfanın sol altında) ---------- */
   const kok = document.createElement('div'); kok.id = 'sinyal-motor';
   const g = kok.attachShadow({ mode: 'open' });
@@ -608,10 +1078,15 @@
     small{color:#b9c3d6;display:block}.olc{margin-top:4px;font-variant-numeric:tabular-nums}.kod{margin-top:10px;background:#fff;color:#14284b;border-radius:10px;padding:10px}.kod p{margin:4px 0 0;font-size:13px}.kod img{display:block;max-width:100%;margin:6px 0;border:1px solid #ddd;border-radius:6px}
     input{width:100%;height:38px;border:1.5px solid #c8d0de;border-radius:8px;padding:0 10px;font-size:16px;letter-spacing:2px}
     button{cursor:pointer;border:0;border-radius:8px;height:34px;padding:0 12px;font-weight:700;font-size:13px}.ana{background:#ffc21a;color:#14284b}.cz{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.35)}.kod .cz{color:#14284b;border-color:#c8d0de}
-    .alt{display:flex;gap:8px;margin-top:10px;justify-content:flex-end;flex-wrap:wrap}.alt:empty{display:none}</style>
+    .alt{display:flex;gap:8px;margin-top:10px;justify-content:flex-end;flex-wrap:wrap}.alt:empty{display:none}
+    .izle{position:fixed;right:16px;top:16px;bottom:16px;z-index:2147483646;width:min(46vw,640px);background:#fff;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.35);display:flex;flex-direction:column;overflow:hidden}.izle.gizli{display:none}
+    .izle .iu{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#0f1d33;color:#fff;font-size:13px}.izle .iu b{flex:1;font-weight:700}.izle iframe{flex:1;border:0;width:100%;background:#fff}
+    @media (max-width:700px){.izle{left:16px;width:auto;top:auto;height:45vh}}</style>
+    <div class="izle gizli" role="region" aria-label="İzle: Yardımcı'nın işlediği MEBBİS sayfası"><div class="iu"><b data-izb>İzle</b><button class="cz" data-izk>Kapat</button></div><iframe sandbox="" title="MEBBİS sayfası (yalnız görüntü)"></iframe></div>
     <div class="k gizli"><div class="ust" title="Sürükleyerek taşıyın · çift tıklayınca köşesine döner"><i></i><b data-baslik>mdSinyal · MEBBİS’te çalışıyor</b><span class="yz" data-yz></span><button class="kc" data-kucult aria-label="Küçült ya da büyüt">▾</button></div><div class="gv"><div data-adim></div><div class="bar"><i style="width:0"></i></div><small data-alt></small><small class="olc" data-olcum></small><div data-kod></div><div class="alt" data-dugmeler></div></div></div>`;
   const kart = g.querySelector('.k'), q = s => g.querySelector(s);
   if (window.__sinyalTasi) window.__sinyalTasi(kart, g.querySelector('.ust'), 'is');   // tasi.js
+  g.querySelector('[data-izk]').addEventListener('click', () => { izleKoy(false); gonder({ tur: 'ayar-koy', ad: 'izle', deger: false }); calisanDugmeler(); });
   q('[data-kucult]').addEventListener('click', () => { kart.classList.toggle('kucuk'); gonder({ tur: 'ayar-koy', ad: 'is-kucuk', deger: kart.classList.contains('kucuk') }); });
   gonder({ tur: 'ayar-al', ad: 'is-kucuk' }).then(v => { if (v) kart.classList.add('kucuk'); });
   const goster = (adim, oran, alt, baslik) => {
@@ -689,8 +1164,13 @@
     goster('Yarım kalan MEBBİS işi', null, `Tarayıcı kapandığı için iş bilgileri silindi. ${ok} iş yazılmıştı${kalan > 0 ? `, ${kalan} iş gönderilmedi` : ''}. mdSinyal sekmesini açın: yazılanlar oraya işlenir, kalanları yeniden gönderin.`, 'mdSinyal · MEBBİS');
     durumSinif('dur'); dugmeler([['kapat', 'Kapat', 'cz', () => kart.classList.add('gizli')], ['ac', 'mdSinyal’i aç', 'ana', () => gonder({ tur: 'sinyal-ac' })]]);
   }
+  // çalışırken kart düğmeleri: Durdur ve İzle (aç/kapat)
+  function calisanDugmeler() {
+    if (!calisiyor) return;
+    dugmeler([['izle', izle ? 'İzlemeyi kapat' : 'İzle', 'cz', () => { izleKoy(!izle); gonder({ tur: 'ayar-koy', ad: 'izle', deger: izle }); calisanDugmeler(); }], ['dur', 'Durdur', 'cz', () => durdurBas(aktifId)]]);
+  }
   async function geriSay(saniye) {
-    dugmeler([['dur', 'Durdur', 'cz', () => durdurBas(aktifId)]]);
+    calisanDugmeler();
     for (let i = saniye; i > 0; i--) { goster('Kaldığı yerden sürüyor', null, `${i} sn içinde başlıyor. Yazılmış kayıtlar yeniden yazılmaz.`); await uyku(1000); kontrol(); }
   }
   async function yurut({ devam = false } = {}) {
@@ -707,6 +1187,7 @@
     }
     calisiyor = true; durdur = false; iptal = false; aktifId = is.id; ekranOlaylari = [];
     await haritaYukle();
+    izleKoy(!!is.izle || (await gonder({ tur: 'ayar-al', ad: 'izle' })) === true);   // MEB-173
     const sonuc = is.sonuc || { veri: {}, yazilan: [], hata: null };
     const oncekiTur = sonuc.hataTur; sonuc.hata = null; sonuc.hataTur = null; sonuc.mebKurum = null; sonuc.yardimci = SURUM; sonuc.harita = H.surum + (haritaKaynak === 'web' ? ' (web)' : '');
     olc = sonuc.olcum = sonuc.olcum || { basla: Date.now(), bitis: null, istek: 0, kod: { istenen: 0, girilen: 0, atlanan: 0, bekleme_ms: 0 }, tur: {}, oturumDusme: [] }; olc.bitis = null;
@@ -714,7 +1195,7 @@
     const kaydet = (durum, bitti) => { olaylariEkle(); return gonder({ tur: 'toplu-durum', id: is.id, sonuc, bitti: !!bitti, durum, sahip: SAHIP }); };
     // her işten önce depoya bakılır (B7): mdSinyal'den iptal ya da başka yerden durdurma hemen görülür
     const denetimle = async () => { const t = await gonder({ tur: 'toplu-al' }); if (!t || t.id !== is.id || t.iptal) iptal = true; else if (t.durum === 'durduruldu') durdur = true; kontrol(); };
-    const ilerle = (adim, oran) => { kontrol(); goster(adim, oran, 'Bu sekmeyi kapatmayın; MEBBİS’te başka işlem yapabilirsiniz.', 'mdSinyal · MEBBİS’te çalışıyor'); sonuc.adim = adim; q('[data-olcum]').textContent = olcumYazi(olc, sonuc); };
+    const ilerle = (adim, oran) => { kontrol(); goster(adim, oran, 'Bu sekmeyi kapatmayın; MEBBİS’te başka işlem yapabilirsiniz.', 'mdSinyal · MEBBİS’te çalışıyor'); sonuc.adim = adim; if (typeof oran === 'number') sonuc.oran = oran; q('[data-olcum]').textContent = olcumYazi(olc, sonuc); };
     // çalışırken depoya bakar: mdSinyal'den iptal, başka sekmeden durdur; kilidi tazeler
     const izle = setInterval(async () => {
       const t = await gonder({ tur: 'toplu-al' });
@@ -722,7 +1203,7 @@
       if ((iptal || durdur) && soruKapat) soruKapat();
       if (!iptal) gonder({ tur: 'toplu-kilit', id: is.id, sahip: SAHIP });
     }, 2500);
-    durumSinif(''); dugmeler([['dur', 'Durdur', 'cz', () => durdurBas(is.id)]]);
+    durumSinif(''); calisanDugmeler();
     try {
       if (oncekiTur === 'oturum' && (sonuc.yazilan.length || Object.keys(sonuc.veri).length || sonuc.suruyor)) await geriSay(5);
       await kaydet('calisiyor');
@@ -736,9 +1217,9 @@
       const cekEngel = ekranlar => ekranlar.map(k => cekOn[k]).find(o => o && !o.ok);
       for (const ne of cekilecek) {
         await denetimle(); if (!CEKME[ne]) { sonuc.veri[ne] = { hata: 'Bu sürüm bu çekmeyi tanımıyor: ' + ne }; continue; }
-        ilerle({ gruplar: 'Dönem grupları okunuyor', kursiyerler: 'Kursiyerler okunuyor', personel: 'Personel okunuyor', araclar: 'Araçlar okunuyor', sinavlar: 'Sınav sonuçları okunuyor' }[ne] || ne, 0);
+        ilerle({ gruplar: 'Dönem grupları okunuyor', kursiyerler: 'Kursiyerler okunuyor', personel: 'Personel okunuyor', araclar: 'Araçlar okunuyor', sinavlar: 'Sınav sonuçları okunuyor', sonuclar: 'Toplu sınav sonuçları okunuyor', merkezler: 'e-Sınav merkezleri okunuyor', kimlikler: 'Dönem aday listesi okunuyor', fotograf: 'Fotoğraf alınıyor', iban: 'Kurum banka hesabı okunuyor' }[ne] || ne, 0);
         const e = cekEngel(CEKME_EKRAN[ne] || []); if (e) { sonuc.veri[ne] = { hata: e.not, hataTur: e.tur }; await kaydet('calisiyor'); continue; }
-        try { sonuc.veri[ne] = await CEKME[ne](ilerle); } catch (x) { if (durduran(x)) throw x; ekranKaydet(x); sonuc.veri[ne] = { hata: x.message, hataTur: x.tur }; }
+        try { sonuc.veri[ne] = await CEKME[ne](ilerle, { ...(((is.ayar || {})[ne]) || {}), kurum: (sonuc.kurum && sonuc.kurum.kod) || '' }); } catch (x) { if (durduran(x)) throw x; ekranKaydet(x); sonuc.veri[ne] = { hata: x.message, hataTur: x.tur }; }
         await kaydet('calisiyor');
       }
       if (dosyaVar) {
@@ -754,15 +1235,30 @@
       }
       // yazma
       const yazildi = new Set(sonuc.yazilan.map(y => y.id));
-      const yazilacak = (is.yaz || []).filter(x => !idlerOf(x).some(id => yazildi.has(id)));
+      let yazilacak = (is.yaz || []).filter(x => !idlerOf(x).some(id => yazildi.has(id)));
+      // MEB-184: dönem silme hiçbir zaman toplu gitmez: yükte başka iş (çekme dahil) ya da ikinci silme varsa hiçbir silme gönderilmez
+      aktifOnay = is.onay || null;
+      { const sl = yazilacak.filter(x => x.tur === 'donemSil');
+        if (sl.length && (sl.length > 1 || (is.yaz || []).length > 1 || (is.cek || []).length || (is.dosya || []).length)) { sl.forEach(x => sonuc.yazilan.push({ id: x.id, ok: false, not: 'Dönem silme yalnız tek aday için, başka işle birlikte olmadan gönderilir; hiçbir şey gönderilmedi', hataTur: 'veri' })); yazilacak = yazilacak.filter(x => x.tur !== 'donemSil'); await kaydet('calisiyor'); } }
       // yarıda kalan kayıt (istek gitti, yanıt gelmedi): ön denetimi olan işler denetlenerek sürer, e-sınav yeniden gönderilmez
       const belirsiz = new Set(sonuc.suruyor && !yazildi.has(sonuc.suruyor) ? [sonuc.suruyor] : []); sonuc.suruyor = null;
       const on = yazilacak.length ? await onUcus(yazilacak.flatMap(ekranlariOf), ilerle) : {};
       const ekranHatalari = new Set();
-      for (const [i, x] of yazilacak.entries()) {
+      // MEB-106 (B12): önündeki iş yazılamadıysa bağlı iş denenmez — grubu açılamayan şubenin kayıtları, kaydı yapılamayan adayın evrakı ve e-sınavı
+      const grupAnahtar = x => [x.donem, x.grupNo, x.subeNo].join('|'), olmayanGrup = new Set(), olmayanTc = new Set();
+      // MEB-082: T.C. kimlik no doğrulama hanesi tutmayan aday MEBBİS'e gönderilmez (mdSinyal de denetler; bu ikinci kilit)
+      const tcGecerli = tc => { if (!/^[1-9]\d{10}$/.test(tc || '')) return false; const d = tc.split('').map(Number), t1 = ((d[0] + d[2] + d[4] + d[6] + d[8]) * 7 - (d[1] + d[3] + d[5] + d[7])) % 10, t2 = d.slice(0, 10).reduce((a, b) => a + b, 0) % 10; return ((t1 + 10) % 10) === d[9] && t2 === d[10]; };
+      const sonucBak = x => { const r = sonuc.yazilan.filter(y => idlerOf(x).includes(y.id)); if (!r.length || r.every(y => y.ok)) return; if (x.tur === 'grup') olmayanGrup.add(grupAnahtar(x)); if (x.tur === 'kayit' && x.tc) olmayanTc.add(x.tc); };
+      for (let [i, x] of yazilacak.entries()) {
         await denetimle();
+        { const bagli = x.tur === 'kayit' && olmayanGrup.has(grupAnahtar(x)) ? `Bekliyor: önce ${x.donemAd || x.donem} grup/şube MEBBİS’te açılmalı (grup işi bu turda yazılamadı)` : ['evrak', 'esinav'].includes(x.tur) && x.tc && olmayanTc.has(x.tc) ? 'Bekliyor: önce aday kaydı MEBBİS’e girilmeli (kayıt işi bu turda yazılamadı)' : '';
+          if (bagli) { idlerOf(x).forEach(id => sonuc.yazilan.push({ id, ok: false, not: bagli, hataTur: 'bagimli' })); if (x.tur === 'kayit' && x.tc) olmayanTc.add(x.tc); await kaydet('calisiyor'); continue; } }
+        if (x.tc && !tcGecerli(String(x.tc))) { idlerOf(x).forEach(id => sonuc.yazilan.push({ id, ok: false, not: 'T.C. kimlik no geçersiz (doğrulama hanesi tutmuyor); gönderilmedi', hataTur: 'veri' })); if (x.tur === 'kayit') olmayanTc.add(x.tc); await kaydet('calisiyor'); continue; }
+        if (Array.isArray(x.adaylar) && x.adaylar.some(a => a.tc && !tcGecerli(String(a.tc)))) { const kotu = x.adaylar.filter(a => a.tc && !tcGecerli(String(a.tc))); kotu.forEach(a => sonuc.yazilan.push({ id: a.id, ok: false, not: 'T.C. kimlik no geçersiz (doğrulama hanesi tutmuyor); gönderilmedi', hataTur: 'veri' })); x = { ...x, adaylar: x.adaylar.filter(a => !kotu.includes(a)) }; if (!x.adaylar.length) { await kaydet('calisiyor'); continue; } }
         ilerle(`MEBBİS’e yazılıyor ${i + 1}/${yazilacak.length}: ${x.baslik || x.tur}`, (i + 1) / yazilacak.length);
         const ids = idlerOf(x), ekr = ekranlariOf(x);
+        // MEB-191: uygulamadaki satır "İşleniyor → MEBBİS'te" göstersin diye şu an yazılan işlerin kimliği hemen bildirilir
+        sonuc.simdi = ids; kaydet('calisiyor');
         const engel = ekr.map(k => on[k]).find(o => o && !o.ok);
         if (engel) { ids.forEach(id => sonuc.yazilan.push({ id, ok: false, not: engel.not, hataTur: engel.tur, ekran: engel.kod, eksik: engel.eksik || [] })); await kaydet('calisiyor'); continue; }
         if (!YAZMA[x.tur]) { ids.forEach(id => sonuc.yazilan.push({ id, ok: false, not: 'Bu Yardımcı sürümü bu iş türünü tanımıyor: ' + x.tur, hataTur: 'veri' })); continue; }
@@ -770,7 +1266,8 @@
         sonuc.suruyor = x.id; await kaydet('calisiyor');
         const t0 = Date.now(), k0 = olc.kod.istenen, ek = () => ({ sure: Date.now() - t0, kod: olc.kod.istenen - k0, ekran: ekr[0] || '' });
         try {
-          const r = await YAZMA[x.tur](x, kodIste);
+          // yazma düğmeleri ve Kaydet yalnız bu çağrı sürerken açık (beyaz liste: DUGME_YAZMA, EYLEM_ALAN)
+          let r; yazmaIzni = true; try { r = await YAZMA[x.tur](x, kodIste); } finally { yazmaIzni = false; }
           if (r.alt) r.alt.forEach(y => sonuc.yazilan.push({ id: y.id, ok: !!y.ok, not: y.not || '', dogrulama: y.ok ? (y.dogrulama || 'liste') : '', ...ek() }));
           else sonuc.yazilan.push({ id: x.id, ok: !!r.ok, not: r.not || '', dogrulama: r.ok ? (r.dogrulama || 'liste') : '', ...ek() });
           const tt = olc.tur[x.tur] = olc.tur[x.tur] || { n: 0, ms: 0 }; tt.n++; tt.ms += Date.now() - t0;
@@ -781,9 +1278,10 @@
           ids.forEach(id => sonuc.yazilan.push({ id, ok: false, not: h.message, hataTur: h.tur, ...ek(), ...(h.tur === 'ekran' ? { ekran: h.ekran || ekr[0] || '', eksik: h.eksik || [] } : {}) }));
           if (ekranHatalari.size >= 2) { sonuc.suruyor = null; throw new MebHata(`MEBBİS’te birden çok ekran değişmiş görünüyor (${[...ekranHatalari].map(ekranAd).join(', ')}). İş durduruldu ve mdSinyal’e bildirildi; ekran haritası güncellenince “Yeniden dene” ile sürer.`, 'ekran-dur'); }
         }
-        sonuc.suruyor = null; await kaydet('calisiyor');
+        sonucBak(x); sonuc.suruyor = null; await kaydet('calisiyor');
       }
       olc.bitis = Date.now();
+      sonuc.simdi = [];
       await kaydet('bitti', true);
       const yz = sonuc.yazilan, say = f => yz.filter(f).length, ok = say(x => x.ok), hata = say(x => !x.ok), mesajla = say(x => x.ok && x.dogrulama === 'mesaj'), zaten = say(x => x.ok && x.dogrulama === 'zaten');
       goster('✓ Bitti', 1, (is.yaz || []).length ? `${ok - mesajla - zaten} kayıt MEBBİS’e girildi ve listeden doğrulandı${mesajla ? `, ${mesajla} kayıt yalnız MEBBİS mesajıyla doğrulandı (MEBBİS’te kontrol edin)` : ''}${zaten ? `, ${zaten} kayıt zaten vardı` : ''}${hata ? `, ${hata} kayıt girilemedi` : ''}. Sonuç mdSinyal’de.` : 'Veriler mdSinyal’e gönderildi.', 'mdSinyal · MEBBİS');
@@ -808,6 +1306,8 @@
       q('[data-olcum]').textContent = olcumYazi(olc, sonuc);
     } finally { clearInterval(izle); calisiyor = false; aktifId = null; gonder({ tur: 'toplu-kilit-birak', id: is.id, sahip: SAHIP }); }
   }
+  // yerel test (sinyal-kaynak/arac/mebbis-test): yalnız test sayfası bu kancayı tanımlarsa iç işlevler verilir; eklentide tanımsız (içerik betiği yalıtılmış dünyada)
+  if (typeof globalThis.__sinyalMotorTest === 'function') globalThis.__sinyalMotorTest({ CEKME, YAZMA, postla, getir, secenek, kayitliMi, adayDosyasi, dugmeDenetle, izleAc: v => izleKoy(v), izlePanel: () => { const p = g.querySelector('.izle'), f = p.querySelector('iframe'); return { acik: !p.classList.contains('gizli'), baslik: p.querySelector('[data-izb]').textContent, srcdoc: f.srcdoc, sandbox: f.getAttribute('sandbox') }; }, yazmaAc: async f => { yazmaIzni = true; try { return await f(); } finally { yazmaIzni = false; } }, onayKoy: o => { aktifOnay = o; }, haritaKoy: h => { H = h ? birlestir(HARITA_VARSAYILAN, h) : HARITA_VARSAYILAN; } });
   const ekle = () => { if (!document.body) return setTimeout(ekle, 300); document.body.appendChild(kok); yurut(); };
   // sayfa değişirken kilit bırakılır; yeni sayfadaki motor beklemeden sürdürebilsin
   addEventListener('pagehide', () => { if (aktifId) gonder({ tur: 'toplu-kilit-birak', id: aktifId, sahip: SAHIP }); });

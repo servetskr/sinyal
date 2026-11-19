@@ -3,14 +3,16 @@
 // ~30 dakikalık parçalara bölme ve süre tahmini, Yardımcı'nın "MEBBİS ekranı değişti" bildirimi, her iş türü için elle giriş.
 // İşlem kaydı mevcut islem() ile sunucudaki yalnız eklenebilir kayda (kurslar/{k}/kayit) gider; TC ve değerlerin açık hâli yazılmaz.
 // Yardımcı'dan gelen iletilerin alanları: js/eklenti.js başındaki ileti sözleşmesi tablosu (ekranDegisti, mebKurum, kurum, olcum, veri.denetim, harita-durum).
-import { S, kaydet, islem, oturum, tamAd, kursiyer, tcMaskele, seciliSube, cokSube, kuralAyar } from './veri.js?v=231';
-import { pencere, kapatPencere, bildir, e, ik, isaret, rozet } from './ui.js?v=231';
-import * as GR from './gruplar.js?v=231';
+import { islemYetkili, S, kaydet, islem, oturum, tamAd, kursiyer, tcMaskele, seciliSube, cokSube, kuralAyar, bulutKanca } from './veri.js?v=235';
+import { pencere, kapatPencere, bildir, e, ik, isaret, rozet } from './ui.js?v=235';
+import * as GR from './gruplar.js?v=235';
+import * as EK from './eklenti.js?v=235';   // MEB-089: Kur bağlantısı (mağaza onaylıysa mağaza, değilse zip); döngü yalnız çizim anında kullanılır
 
 /* ---------- sabitler ---------- */
-export const MEB_KABUL_SURUM = 'mk-2026-11-1';   // metin değişince artırılır; kurs yeniden onaylar
+export const MEB_KABUL_SURUM = 'mk-2026-11-2';   // K9: doğrulama cümlesi koddaki gerçeğe uyduruldu   // metin değişince artırılır; kurs yeniden onaylar
 export const SIRA = ['grup', 'kayit', 'evrak', 'onay', 'teorik', 'program', 'esinav', 'randevu', 'fatura'];
-export const TUR_AD = { grup: 'Dönem grubu', kayit: 'Kayıt', evrak: 'Evrak', onay: 'Kurum onayı', teorik: 'Teorik program', program: 'Direksiyon programı', esinav: 'e-Sınav başvurusu', randevu: 'Sınav randevusu', sinav: 'Sınav randevusu', fatura: 'Fatura' };
+export const TUR_AD = { grup: 'Dönem grubu', kayit: 'Kayıt', evrak: 'Evrak', onay: 'Kurum onayı', teorik: 'Teorik program', program: 'Direksiyon programı', esinav: 'e-Sınav başvurusu', randevu: 'Sınav randevusu', sinav: 'Sınav randevusu', fatura: 'Fatura', odeme: 'Fatura', izin: 'Çalışma izni', ogrenim: 'Öğrenim bilgileri' };
+TUR_AD.dsil = 'Aday dönem kaydı silme';   // MEB-184 (mebtoplu.js donemSil)
 const MEB = 'https://mebbis.meb.gov.tr/SKT/';
 // MEBBİS ekranları (motor.js'teki yollarla aynı)
 export const EKRAN = {
@@ -39,8 +41,13 @@ const adaySayisi = l => l.reduce((a, x) => a + (x.adaylar ? x.adaylar.length : 1
 export const isKimlikleri = x => x.adaylar ? x.adaylar.map(a => a.id) : [x.id];
 
 /* ---------- kim onaylayabilir ---------- */
-// Müdür ve ön büro onaylayabilir; onaylayanın rolü kayda yazılır (yalnız müdür mü sorusu açık: Eyüp Bey'e soruldu)
+// Müdür ve ön büro MEBBİS işini başlatabilir (çekme, hazırlama, elle giriş); onaylayanın rolü kayda yazılır.
+// SOR-065 / YON-018: “MEBBİS’e yaz” onayı ve kurum bilgilendirmesinin kabulü varsayılan olarak müdürde; müdür ön büroya Ayarlar › Kullanıcılar › Ön büro yetkileri’nden açabilir.
 export function onaylayabilir() { const u = oturum.kullanici; return !!u && ['mudur', 'sekreter'].includes(u.rol); }
+const yetkili = ad => { const u = oturum.kullanici; return !!u && (u.rol === 'mudur' || (u.rol === 'sekreter' && islemYetkili(ad))); };
+export const yazabilir = () => yetkili('mebYaz');
+export const kabulEdebilir = () => yetkili('mebKabul');
+export const YETKI_YOK_YAZ = 'MEBBİS’e yaz onayını kurs müdürü verir; ön büro işleri hazırlar ve çekme yapar. Müdür bu yetkiyi Ayarlar › Kullanıcılar › Ön büro yetkileri’nden açabilir.';
 export function kim() { const u = oturum.kullanici || {}; return { ad: u.ad || 'Bilinmiyor', rol: u.rol || '', rolAd: rolAdi(u.rol), uid: u.uid || u.id || '' }; }
 function kurum() {
   const s = seciliSube() || (!cokSube() && (S.subeler || [])[0]) || {};
@@ -55,14 +62,14 @@ export const elleSecildi = () => { const k = S.kurs.mebKabul; return !!(k && k.k
 const MADDELER = [
   'Yardımcı yalnız bu bilgisayarda, kurs yetkilisinin kendi açtığı MEBBİS oturumunda çalışır. MEBBİS şifresini istemez, görmez, saklamaz.',
   'Kayıtları kurs yetkilisi mdSinyal’de kontrol eder ve “MEBBİS’e yaz” ile bir kez onaylar. Onay penceresi neyin, kimin adına yazılacağını gösterir.',
-  'Yardımcı onaylanan kayıtları sırayla ilgili MEBBİS formlarına yazar, kaydeder ve MEBBİS’ten okuyarak doğrular.',
+  'Yardımcı onaylanan kayıtları sırayla ilgili MEBBİS formlarına yazar ve kaydeder. Listesi okunabilen ekranlarda kaydı MEBBİS’ten okuyarak doğrular; yalnız MEBBİS’in mesajıyla doğrulanabilen kayıtlar “MEBBİS’te kontrol edin” diye ayrıca gösterilir.',   // DENETİM K9
   'Güvenlik kodunu her zaman yetkili girer. Silme ve geri alınamaz işlemler otomatik yapılmaz; kurum onayı ayrı sekmeden ayrıca verilir.',
   'İstekler insan hızında, yaklaşık 1 saniye arayla gider. Yetkili istediği an durdurabilir.',
   'Onaylayanın adı, rolü ve zamanı; her kaydın sonucu ve MEBBİS’in verdiği mesaj mdSinyal’in silinemeyen işlem kaydına yazılır.',
   'MEBBİS’e girilen bilgilerin doğruluğu, resmî süreler ve son karar kursun sorumluluğundadır.',
 ];
 export function kabulPenceresi(sonra, elleSonra) {
-  if (!onaylayabilir()) return bildir('MEBBİS Yardımcısı kullanım onayını kurs müdürü ya da ön büro verir', 'uyari');
+  if (!kabulEdebilir()) return bildir('MEBBİS Yardımcısı kurum bilgilendirmesini kurs müdürü kabul eder; bir kez kabul edilince ön büro da işleri başlatabilir. Müdür bu yetkiyi Ayarlar › Kullanıcılar › Ön büro yetkileri’nden ön büroya açabilir.', 'uyari');
   const k = kim();
   pencere({
     baslik: 'MEBBİS Yardımcısı nasıl çalışır, sorumluluk kimde', genis: true,
@@ -188,7 +195,7 @@ export function engelliCikar(l, haric = []) {
 // kural: kural motoru bulguları (mebtoplu.js kuralDenetimi). haric: engelli olup işaretlenmeyen kimlikler (gönderilmez);
 // bilerek: [{ id, kurallar }] kural engeline rağmen işaretlenenler (işlem kaydına yazılır)
 // sikistir(haric): gönderilecek liste (bırakılanlar çıkmış, randevu saatleri yeniden verilmiş; mebtoplu.js). Süre, parça, "N iş" rozeti ve saatler bundan.
-export function isOnayPenceresi({ l, hata = [], basliklar = {}, kural = {}, sikistir }) {
+export function isOnayPenceresi({ l, hata = [], basliklar = {}, kural = {}, sikistir, zaten = 0 }) {
   return new Promise(ok => {
     let sonuc = null;
     const kimlikler = l.flatMap(isKimlikleri), engelIds = kimlikler.filter(id => engelli(kural, id)), uyariIds = kimlikler.filter(id => !engelli(kural, id) && kural[id] && (kural[id].uyari || []).length);
@@ -210,6 +217,7 @@ export function isOnayPenceresi({ l, hata = [], basliklar = {}, kural = {}, siki
     pencere({
       baslik: `MEBBİS’e yazılacaklar · ${sayi} iş`, genis: true, korumali: true,
       icerik: `<div style="display:grid;gap:12px">
+        <p style="font-size:14px;margin:0"><b style="color:var(--murekkep)">${sayi} hazır</b>${hata.length ? ` · <span style="color:var(--kirmizi)">${hata.length} eksik (gönderilmez)</span>` : ''}${engelIds.length ? ` · ${engelIds.length} kural engelli` : ''}${zaten ? ` · ${zaten} zaten MEBBİS’te (listeye alınmadı)` : ''}</p>
         <div class="kart" style="box-shadow:none;margin:0"><div class="kart-govde" style="display:grid;gap:4px;font-size:14px">
           <span><b style="color:var(--murekkep)">Kimin adına:</b> ${e(kr.kurs)}${kr.sube ? ' · ' + e(kr.sube) + ' şubesi' : ''}${kr.kod ? ` · kurum kodu <span class="mono">${e(kr.kod)}</span>` : ''}${kr.mudur ? ' · müdür ' + e(kr.mudur) : ''}</span>
           <span><b style="color:var(--murekkep)">MEBBİS kullanıcısı:</b> şu an MEBBİS’e giriş yapmış hesap${kr.hesap ? ' (' + e(kr.hesap) + ')' : ''}. Kayıtlar MEBBİS’te bu hesabın adıyla görünür; Yardımcı şifreyi görmez.</span>
@@ -300,18 +308,24 @@ export function izMetni(v) {
 }
 
 /* ---------- (g) "MEBBİS ekranı değişti" bildirimi: kursa açık uyarı, kayıt ve MEB işlemleri ekranında kırmızı kart ---------- */
+// YON-062: yeni alarm platform sahibine de WhatsApp ile iletilir (worker /mebbis/ekran-alarm; ekran başına günde bir ileti). Demoda ve bulutsuz çalışmada iletilmez; sonuç beklenmez.
+function ekranAlarmSahibe(l) {
+  if (!bulutKanca.yetki || !l.length) return;
+  import('./bulut.js?v=235').then(async B => { const h = await bulutKanca.yetki(); await fetch(B.WORKER + '/mebbis/ekran-alarm', { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ ekranlar: l.map(({ ekran, eksik }) => ({ ekran, eksik })), yardimci: (l.find(x => x.yardimci) || {}).yardimci || '' }) }); }).catch(() => {});
+}
 // l: [{ ekran: 'SKT03004', eksik: ['cmbDersSaati'], parmakIzi, yardimci, harita }]
 export function ekranDegisti(l, isId) {
   if (!Array.isArray(l) || !l.length) return false;
-  const a = S.mebEkranAlarm = S.mebEkranAlarm || { ekranlar: {} }; let yeni = 0;
+  const a = S.mebEkranAlarm = S.mebEkranAlarm || { ekranlar: {} }; let yeni = 0; const bildirilen = [];
   l.forEach(x => {
     const kod = String(x.ekran || '').toUpperCase().slice(0, 20) || 'bilinmeyen ekran', eski = a.ekranlar[kod];
     if (eski && eski.is === isId) return;   // aynı işin sonucu her yoklamada yeniden gelir: bir kez uyarılır (gizlendikten sonra da)
-    a.ekranlar[kod] = { eksik: (x.eksik || []).map(String).slice(0, 12), zaman: Date.now(), is: isId, goruldu: false };
+    a.ekranlar[kod] = { eksik: (x.eksik || []).map(String).slice(0, 12), zaman: Date.now(), is: isId, goruldu: false, harita: String(x.harita || '').slice(0, 30) };
     islem('MEBBİS ekranı değişti', kisalt(`${kod} · eksik: ${(x.eksik || []).join(', ') || '—'}${x.yardimci ? ' · Yardımcı ' + x.yardimci : ''}${x.harita ? ' · harita ' + x.harita : ''}${isId ? ' · iş ' + isId : ''}`, 300));
-    yeni++;
+    yeni++; bildirilen.push({ ekran: kod, eksik: (x.eksik || []).map(String).slice(0, 6), yardimci: x.yardimci });
   });
   if (!yeni) return false;
+  ekranAlarmSahibe(bildirilen);
   Object.entries(a.ekranlar).forEach(([k, v]) => { if (!v || Date.now() - (v.zaman || 0) > 30 * 864e5) delete a.ekranlar[k]; });   // 30 günden eski uyarılar silinir
   a.zaman = Date.now(); kaydet();
   bildir(`MEBBİS ekranı değişti (${Object.keys(a.ekranlar).filter(k => !a.ekranlar[k].goruldu).join(', ')}). Bu ekranın işleri gönderilmedi; MEB işlemleri › MEBBİS aktarımı ekranına bakın.`, 'uyari');
@@ -319,15 +333,20 @@ export function ekranDegisti(l, isId) {
 }
 const haritaKarti = h => `<div class="kart" style="margin-bottom:14px;border:2px solid var(--kirmizi);background:var(--kirmizi-acik)" role="alert"><div class="kart-govde" style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">${isaret('dur', 26)}<div style="flex:1;min-width:240px"><b style="font-family:var(--baslik);font-size:17px;color:#8a1d14;display:block">${h.guncelle ? 'MEBBİS Yardımcısı’nı güncelleyin' : 'Yardımcı ekran haritasını kabul etmedi'}</b>
     <p style="font-size:14px;color:#8a1d14;margin-top:2px">${h.guncelle ? 'mdSinyal’in yeni MEBBİS ekran haritası daha yeni bir Yardımcı sürümü istiyor. Yardımcı şimdilik kendi gömülü haritasıyla çalışıyor; MEBBİS ekranları değiştiyse bazı işler “ekran değişti” diye durabilir.' : 'Yardımcı, mdSinyal’den gelen MEBBİS ekran haritasını denetimden geçiremedi ve kullanmadı; kendi gömülü haritasıyla çalışıyor.'} <span class="mono" style="font-size:12.5px">${e(h.neden)}</span></p>
-    <p style="font-size:13.5px;color:#8a1d14;margin-top:4px">${h.guncelle ? `<a href="eklenti/mdsinyal-mebbis.zip" download style="color:inherit;font-weight:700">Yeni sürümü indirin</a> ya da Chrome Web Mağazası güncellemesini bekleyin. ` : 'Durumu mdSinyal’e bildirin (Hesabım › Destek). '}Kayıt işlem geçmişine düştü · ${saatMetni(h.zaman)}</p></div>
+    <p style="font-size:13.5px;color:#8a1d14;margin-top:4px">${h.guncelle ? `${EK.kurBaglantisi('Yeni sürümü indirin', 'color:inherit;font-weight:700')} ya da Chrome Web Mağazası güncellemesini bekleyin. ` : 'Durumu mdSinyal’e bildirin (Hesabım › Destek). '}Kayıt işlem geçmişine düştü · ${saatMetni(h.zaman)}</p></div>
     <button class="dg dg-cizgi dg-kucuk" data-mk-alarm-gizle>Gördüm, gizle</button></div></div>`;
+// MEB-111: alarmdan sonra daha yeni bir ekran haritası Yardımcı'ya ulaştıysa (S.mebHaritaSurum) düzeltme gelmiş olabilir: "Ekranları denetle" istenir
+const haritaSurumu = s => (String(s || '').match(/\d{4}\.\d{2}\.\d{2}-\d{1,3}/) || [''])[0];
+const surumSirasi = s => { const m = haritaSurumu(s).match(/^(\d{4})\.(\d{2})\.(\d{2})-(\d{1,3})$/); return m ? +m[1] * 1e7 + +m[2] * 1e5 + +m[3] * 1e3 + +m[4] : 0; };
+export const duzeltmeGeldi = v => !!v && !!S.mebHaritaSurum && surumSirasi(S.mebHaritaSurum) > surumSirasi(v.harita);
 export function alarmKarti() {
   const a = S.mebEkranAlarm, h = a && a.harita && !a.harita.goruldu && !a.harita.cozuldu ? haritaKarti(a.harita) : '';
   const l = Object.entries((a && a.ekranlar) || {}).filter(([, v]) => v && !v.goruldu); if (!l.length) return h;
   return h + `<div class="kart" style="margin-bottom:14px;border:2px solid var(--kirmizi);background:var(--kirmizi-acik)" role="alert"><div class="kart-govde" style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">${isaret('dur', 26)}<div style="flex:1;min-width:240px"><b style="font-family:var(--baslik);font-size:17px;color:#8a1d14;display:block">MEBBİS ekranı değişti</b>
     <p style="font-size:14px;color:#8a1d14;margin-top:2px">Yardımcı şu ekranlarda beklediği alanı bulamadı ve bu ekranlara hiçbir şey yazmadı: ${l.map(([k, v]) => `<b class="mono">${e(k)}</b>${v.eksik.length ? ' (' + e(v.eksik.join(', ')) + ')' : ''}`).join(', ')}. Diğer işler sürdü.</p>
-    <p style="font-size:13.5px;color:#8a1d14;margin-top:4px">Bu işleri şimdilik “Elle gir” ile girin ve durumu mdSinyal’e bildirin (Hesabım › Destek). Kayıt işlem geçmişine düştü · ${saatMetni(Math.max(...l.map(([, v]) => v.zaman || 0)))}</p></div>
-    <button class="dg dg-cizgi dg-kucuk" data-mk-alarm-gizle>Gördüm, gizle</button></div></div>`;
+    ${l.some(([, v]) => duzeltmeGeldi(v)) ? `<p style="font-size:14px;color:var(--murekkep);margin-top:8px;background:#fff;border-radius:8px;padding:8px 10px"><b>Düzeltilmiş ekran haritası geldi</b> (sürüm ${e(S.mebHaritaSurum)}). “Ekranları denetle” ile bakın; ekran uygun çıkarsa o işleri yeniden gönderin.</p>`
+      : `<p style="font-size:13.5px;color:#8a1d14;margin-top:4px">mdSinyal ekran haritasını düzeltip yayınlayınca Yardımcı onu kendiliğinden alır (eklenti güncellemesi gerekmez); o zaman burada “Ekranları denetle” istenir. O zamana kadar bu işleri “Elle gir” ile girebilirsiniz. Kayıt işlem geçmişine düştü · ${saatMetni(Math.max(...l.map(([, v]) => v.zaman || 0)))}</p>`}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${l.some(([, v]) => duzeltmeGeldi(v)) ? '<button class="dg dg-ana dg-kucuk" data-mt-denetle>Ekranları denetle</button>' : '<button class="dg dg-cizgi dg-kucuk" data-mk-harita-yenile>Yeni haritayı al</button>'}<button class="dg dg-cizgi dg-kucuk" data-mk-alarm-gizle>Gördüm, gizle</button></div></div></div>`;
 }
 // gizlenen uyarı silinmez, "görüldü" olur: aynı işin yeniden gelen sonucu uyarıyı geri açmaz; yeni bir işte aynı ekran yine bozuksa yeniden uyarır
 export function alarmGizle() {
@@ -423,7 +442,11 @@ export function haritaDurum(v) {
   if (v.ok) {
     let n = 0;
     if (h && !h.cozuldu) { h.cozuldu = Date.now(); h.goruldu = true; islem('MEBBİS ekran haritası düzeldi', `sürüm ${v.surum || '—'}`); n++; }
-    if (!v.ayni && v.surum && S.mebHaritaSurum !== v.surum) { S.mebHaritaSurum = v.surum; islem('MEBBİS ekran haritası güncellendi', `Yardımcı yeni haritayı aldı · sürüm ${v.surum}`); n++; }
+    if (!v.ayni && v.surum && S.mebHaritaSurum !== v.surum) {
+      S.mebHaritaSurum = v.surum; islem('MEBBİS ekran haritası güncellendi', `Yardımcı yeni haritayı aldı · sürüm ${v.surum}`); n++;
+      // MEB-111: açık ekran uyarısı varsa düzeltme gelmiş olabilir
+      if (Object.values(a.ekranlar || {}).some(x => x && !x.goruldu && duzeltmeGeldi(x))) bildir(`Yeni MEBBİS ekran haritası geldi (${v.surum}). MEB işlemleri › MEBBİS aktarımı’nda “Ekranları denetle”ye basın; uygun çıkan ekranların işlerini yeniden gönderin.`, 'tamam', true);
+    }
     if (n) kaydet(); return !!n;
   }
   if (/alınamadı|yanıt yok|eski sürüm/i.test(neden)) return false;
@@ -487,7 +510,7 @@ export function ellePencere(l, hata, girdim, basliklar = {}, kural = {}) {
     onAc(d) {
       d.addEventListener('click', ev => {
         const c = ev.target.closest('[data-elle-kopya]'); if (c) { panoya(c.dataset.elleKopya).then(ok => bildir(ok === false ? 'Kopyalanamadı; değeri elle seçin' : 'Kopyalandı', ok === false ? 'uyari' : 'tamam')); return; }
-        const s = ev.target.closest('[data-elle-sirali]'); if (s) { const x = isler[+s.dataset.elleSirali], alanlar = ELLE[x.tur](x).flatMap(([kod, , a]) => a.filter(y => y[1] != null && y[1] !== '').map(([et, v]) => [kod, et, String(v)])); import('./sayfalar5.js?v=231').then(m => m.siraliPencere(x.baslik || TUR_AD[x.tur], alanlar, () => girdim(isKimlikleri(x)))); return; }
+        const s = ev.target.closest('[data-elle-sirali]'); if (s) { const x = isler[+s.dataset.elleSirali], alanlar = ELLE[x.tur](x).flatMap(([kod, , a]) => a.filter(y => y[1] != null && y[1] !== '').map(([et, v]) => [kod, et, String(v)])); import('./sayfalar5.js?v=235').then(m => m.siraliPencere(x.baslik || TUR_AD[x.tur], alanlar, () => girdim(isKimlikleri(x)))); return; }
         const g = ev.target.closest('[data-elle-girdim]'); if (g) { const x = isler[+g.dataset.elleGirdim]; girdim(isKimlikleri(x)); const k = g.closest('[data-elle-is]'); if (k) k.remove(); if (!d.querySelector('[data-elle-is]')) kapatPencere(); return; }
         if (ev.target.closest('[data-elle-hepsi]')) { girdim(isler.flatMap(isKimlikleri)); kapatPencere(); }
       });

@@ -6,7 +6,7 @@
    - Atıf takibi: seçilen maddelerin içinde geçen "39 uncu madde", "Karayolları Trafik Yönetmeliğinin 85 inci maddesi" gibi atıflar
      yapay zekâya giden kaynaklara eklenir (çok adımlı kanıt).
    Ölçüm: sinyal-kaynak arac/mevzuat/olc-asistan.mjs (soru-seti-2 ve bağımsız soru-seti-3). */
-import { sadele, kokler, dengele, resmiDegil, kaynakSec, KAYNAK } from './mevzuat-ara.js?v=231';
+import { sadele, kokler, dengele, resmiDegil, kaynakSec, KAYNAK } from './mevzuat-ara.js?v=235';
 
 /* ---------- kavramlar ---------- */
 // kavram.json → derlenmiş kalıplar (bir kez)
@@ -221,7 +221,7 @@ let kavramYukleniyor = null;
 // veri/mevzuat/kavram.json: ilk kullanımda indirilir; inmezse asistan kavramsız (yalnız arama ve yapay zekâ) çalışır
 export function kavramYukle({ getir = (u) => fetch(u), kok = new URL('../veri/mevzuat/', import.meta.url).href } = {}) {
   if (kavramYukleniyor) return kavramYukleniyor;
-  kavramYukleniyor = getir(kok + 'kavram.json?v=231').then(r => (r.ok ? r.json() : null)).then(kavramKur).catch(() => null);
+  kavramYukleniyor = getir(kok + 'kavram.json?v=235').then(r => (r.ok ? r.json() : null)).then(kavramKur).catch(() => null);
   return kavramYukleniyor;
 }
 
@@ -242,6 +242,33 @@ export function sayilarBul(t, yazili = false) {
   if (yazili) for (const m of t.toLocaleLowerCase('tr-TR').matchAll(/\p{L}+/gu)) if (YAZI_SAYI[m[0]] != null) o.push(String(YAZI_SAYI[m[0]]));
   return o;
 }
+// Hesap (MEV-021, SOR-074): cevapta açıkça gösterilen işlem "50 × %70 = 35", "16 + 2 = 18", "23.510 / 2 = 11.755" bulunur ve doğrulanır.
+// İşlenenler kaynakta geçiyor ve sonuç tutuyorsa sonuç "türetilmiş rakam" sayılır, uydurma sayılmaz. Tutmayan işlem ayrıca bildirilir.
+const sayiDeger = x => { x = String(x).trim(); if (/^\d{1,3}(?:\.\d{3})+(?:,\d+)?$/.test(x)) x = x.replace(/\./g, ''); return parseFloat(x.replace(',', '.')); };
+const BIRIM = '(?:\\s*(?:TL|₺|saat|ders|soru|gün|ay|yıl|kişi|puan|km))?';
+const SAYI_T = `(?:%\\s*\\d[\\d.,]*|\\d[\\d.,]*\\s*%?${BIRIM})`;
+const ISLEM_RE = new RegExp(`(${SAYI_T}(?:\\s*[×x*+\\-−–/÷]\\s*${SAYI_T})+)\\s*=\\s*(\\d[\\d.,]*)`, 'gu');
+export function hesaplar(t) {
+  const o = [];
+  for (const m of String(t || '').matchAll(ISLEM_RE)) {
+    const sol = m[1].replace(/[.,]$/, ''), son = m[2].replace(/[.,]$/, '');
+    const parca = [...sol.replace(new RegExp(BIRIM.slice(3, -2), 'gu'), ' ').matchAll(/(%\s*\d[\d.,]*|\d[\d.,]*\s*%?)|([×x*+\-−–/÷])/gu)];
+    const say = [], op = [];
+    for (const p of parca) { if (p[1]) { const yuzde = p[1].includes('%'); const v = sayiDeger(p[1].replace(/[%\s]/g, '')); say.push(yuzde ? v / 100 : v); } else op.push({ '×': '*', x: '*', '*': '*', '÷': '/', '/': '/', '+': '+', '-': '-', '−': '-', '–': '-' }[p[2]]); }
+    if (say.length !== op.length + 1 || say.some(Number.isNaN)) continue;
+    // önce çarpma/bölme, sonra toplama/çıkarma
+    const s2 = [say[0]], o2 = [];
+    op.forEach((x, i) => { if (x === '*' || x === '/') s2[s2.length - 1] = x === '*' ? s2[s2.length - 1] * say[i + 1] : s2[s2.length - 1] / say[i + 1]; else { o2.push(x); s2.push(say[i + 1]); } });
+    const deger = o2.reduce((a, x, i) => x === '+' ? a + s2[i + 1] : a - s2[i + 1], s2[0]), sonuc = sayiDeger(son);
+    o.push({ ifade: m[0].replace(/[.,]$/, ''), islenen: sayilarBul(sol), sonuc: sayilarBul(son)[0] || son, dogru: Math.abs(deger - sonuc) <= Math.max(0.01, Math.abs(deger) * 0.001) });
+  }
+  return o;
+}
+// metindeki rakamlardan kaynakta (ya da soruda) geçmeyenler; doğru ve işlenenleri kaynakta olan hesabın sonucu hariç
+export function kaynaktaOlmayan(metin, var_) {
+  const h = hesaplar(metin), tur = new Set(h.filter(x => x.dogru && x.islenen.every(n => var_.has(n))).map(x => x.sonuc));
+  return { eksik: [...new Set(sayilarBul(metin))].filter(n => !var_.has(n) && !tur.has(n)), hesap: h };
+}
 export function kanitDenetle(metin, kaynaklar) {
   const qk = new Set(kokler(metin)), say = [...new Set(sayilarBul(metin))];
   let en = null;
@@ -253,6 +280,6 @@ export function kanitDenetle(metin, kaynaklar) {
       if (!en || p + ps > en.p) en = { p: p + ps, cumle: cc.length > 360 ? cc.slice(0, 357) + '…' : cc, no };
     }
   });
-  const hepsi = new Set(kaynaklar.flatMap(x => sayilarBul(x.t, true)));
-  return { cumle: en && en.p > 0 ? en.cumle : '', no: en ? en.no : null, sayi: say.length, eksik: say.filter(x => !hepsi.has(x)) };
+  const hepsi = new Set(kaynaklar.flatMap(x => sayilarBul(x.t, true))), ko = kaynaktaOlmayan(metin, hepsi);
+  return { cumle: en && en.p > 0 ? en.cumle : '', no: en ? en.no : null, sayi: say.length, eksik: ko.eksik, hesap: ko.hesap };
 }

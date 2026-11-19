@@ -22,10 +22,26 @@
 - [Ana sayfa](https://mdsinyal.com/): genel tanıtım, modüller, kullanıcı rolleri, geçiş adımları
 - [Özellikler](https://mdsinyal.com/ozellikler/): her özelliğin açıklaması ve ekranı
 - [Sık sorulan sorular](https://mdsinyal.com/sss/): kurulum ve geçiş, güvenlik ve KVKK, WhatsApp, MEBBİS
+- [Başlayın](https://mdsinyal.com/basla/): geçiş adımları, kurulum günü, önceden hazırlanacaklar ve başvuru formu
 - [İletişim](https://mdsinyal.com/iletisim/): tanıtım görüşmesi isteği
+- [Kullanım kılavuzu](https://mdsinyal.com/kilavuz/): kurulum adımları, günlük işler, öğretmen ve öğrenci uygulaması
+- [Güvenlik](https://mdsinyal.com/guvenlik/): belgelerin korunması, yedekler, silme, MEBBİS şifresi ve KVKK soruları
 - [Gizlilik ve KVKK](https://mdsinyal.com/gizlilik.html): işlenen veriler, hukuki sebepler, saklama süreleri
 
 ## Yakında
+
+Aşağıdaki özellikler hazırlanıyor. Yeni özellikler aynı fiyata dahildir; ayrıca ücret istenmez. Kurs hesabını mdSinyal ekibi açar ve kurulumu sizinle birlikte yapar.
+
+- WhatsApp’ı tek dokunuşla bağlama: Kursunuz kendi WhatsApp numarasını mdSinyal içinden, Meta’nın kendi penceresiyle bağlar. Ayar ekranlarıyla uğraşmazsınız.
+- e-Arşiv fatura: Tahsilatın faturası mdSinyal’den kesilir ve kursunuzun seçtiği entegratöre kendi hesabınızla gider. Eksik fatura denetimi bugün de var.
+- Kartla ödeme linki ve QR kod: Öğrenci taksitini telefonundan kartla öder; ödeme kursunuzun ödeme kuruluşu hesabına geçer, kasaya ve taksite kendiliğinden işlenir.
+- MEBBİS Yardımcısı Chrome mağazasında: Yardımcı mağazadan tek tıkla kurulur, kendiliğinden güncellenir.
+- Web sitenizden kayıt formu: Kursunuzun sitesine konan formdan gelen başvuru doğrudan mdSinyal’e düşer.
+- SMS yedeği: WhatsApp’ı olmayan öğrenciye hatırlatma, kursunuzun SMS hesabından gider.
+- MEİS beyanında ön doldurma: Yıllık bina ve donanım beyanında geçen yılın değerleri hazır gelir; siz kontrol edip kaydedersiniz.
+- Uygulama kapalıyken de hatırlatma: Ders ve taksit hatırlatmaları kurs bilgisayarı kapalı olsa da zamanında gider.
+
+### Yeni yönetmeliğe hazırlık
 
 MEB, direksiyon sınavı için yeni yönetmelik taslağı hazırladı: sınavın serbest güzergâhta, akan trafikte yapılması ve kamerayla kaydedilmesi gündemde. Metin henüz Resmî Gazete’de yayımlanmadı. Yayımlandığında mdSinyal yeni kurallara göre güncellenir.
 

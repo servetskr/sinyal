@@ -1,8 +1,8 @@
 // Denetim modu: habersiz denetimde (MTSK Yön. m.46/A) tek ekran: şu an hangi derste kim, hangi araçta, MEBBİS programına uygun mu;
 // araçta bulunması gereken belgeler (m.17/3), öz kontrol listesi (EK-16/17 maddelerinden) ve tek tıkla çıktılar.
 // Denetim kayıtları: bulgu, eksik giderme süresi (m.46: 20 gün) ve 5580 m.7/2 cezalarında tekerrür (7590 sayılı Kanun: tekrarda 5 kat, üçüncüde ruhsat iptali).
-import { S, kaydet, gun, fark, tamAd, islem, kursiyer, egitmen, arac, oturum, sbDers, sb, tutarOku } from './veri.js?v=231';
-import { e, ik, isaret, pencere, kapatPencere, bildir, tarih, rozet } from './ui.js?v=231';
+import { S, kaydet, gun, fark, tamAd, islem, kursiyer, egitmen, arac, oturum, sbDers, sb, tutarOku, tabanListesi } from './veri.js?v=235';
+import { e, ik, isaret, pencere, kapatPencere, bildir, tarih, rozet } from './ui.js?v=235';
 
 const simdi = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
 const dk = s => { const [h, m] = String(s || '0:0').split(':').map(Number); return h * 60 + (m || 0); };
@@ -48,6 +48,8 @@ function kontroller(a) {
     ['ek5', 'Akan trafikteki kursiyerlerin K sınıfı aday belgesi (EK-5) geçerli', sb(S.kursiyerler).filter(k => k.asama === 'Direksiyon').every(k => kBelge(k)[0] === 'tamam') ? true : false, 'Bazı kursiyerlerin K belgesi yok ya da süresi dolmuş', 'ek5'],
     ['yoklama', 'Teorik derste yoklama alındı; kursta olmayan kursiyer devamsız yazıldı (m.46/A/8)', null, '', 'dersdefteri'],
     ['ilan', 'Ücret ilanı kursta görünür yerde asılı', S.kurs.tarifeIlan === gun(0).slice(0, 4) ? null : false, 'Bu yılın ücret ilanı işaretlenmemiş'],
+    // il taban fiyat listesi olan ilde: ücretler listeye uygun, liste ve ücret ilanı kursta asılı (uygunluğu T01 kuralı denetler)
+    ...(tabanListesi() ? [['taban', 'Ücretler il taban fiyat listesine uygun, liste ve ücret ilanı kursta asılı (T01)', null]] : []),
     ['defter', 'Gelen-giden evrak defteri, personel özlük dosyaları ve ücretsiz kursiyer dosyası güncel (m.42)', null],
   ];
 }
@@ -68,7 +70,7 @@ export function denetimModuAc(yenile) {
       const g = p.querySelector('[data-dn]');
       g.addEventListener('click', ev => {
         const i = ev.target.closest('[data-dn-isaret]'); if (i && !i.disabled) { const x = S.denetimKontrol.isaret; x[i.dataset.dnIsaret] = x[i.dataset.dnIsaret] === true ? false : x[i.dataset.dnIsaret] === false ? undefined : true; kaydet(); g.innerHTML = ciz(); return; }
-        const y = ev.target.closest('[data-dn-yazdir]'); if (y) { const [tur, id] = y.dataset.dnYazdir.split('|'); return import('./sayfalar3.js?v=231').then(m => m.belgeAc(tur, id || undefined)); }
+        const y = ev.target.closest('[data-dn-yazdir]'); if (y) { const [tur, id] = y.dataset.dnYazdir.split('|'); return import('./sayfalar3.js?v=235').then(m => m.belgeAc(tur, id || undefined)); }
       });
       const zaman = setInterval(() => { if (!document.body.contains(p)) return clearInterval(zaman); if (!g.querySelector(':focus')) g.innerHTML = ciz(); }, 60000);
       p.querySelector('[data-dn-kayit]').addEventListener('click', () => { kapatPencere(); setTimeout(() => denetimKaydiAc(yenile), 200); });

@@ -1,11 +1,12 @@
 // Kısa ders oynatıcı (tam ekran katman, yeni tasarım): ders başlangıcı, okuma kartları, araya giren kısa sorular, video,
 // akılda kalsın ve ders sonucu. Katman ui.js .ox-akis + akisUst/akisAlt/sik/cevapKutu ile kurulur; sınıflar ox-dr- önekli.
-import { kaydet, gun, ogrOzellik } from '../veri.js?v=231';
-import { MUFREDAT } from '../ogrenci.js?v=231';
-import * as HZ from '../hazirlik.js?v=231';
-import { SORU_KONU } from '../soruKonu.js?v=231';
-import { UNITE_AD, kapakSvg, konular, bitti, sayac, yarimOku, yarimYaz, yarimSil, yukle, veriler } from './ogrveri.js?v=231';
-import { esc, oi, gorsel as cizim, dugme, ikonKutu, satir, liste, serit, bolum, akisUst, akisAlt, sik, cevapKutu, stilEkle, odakTuzagi } from './ui.js?v=231';
+import { kaydet, gun, ogrOzellik } from '../veri.js?v=235';
+import { mufredatResmiDers } from '../veri.js?v=235';
+import { MUFREDAT } from '../ogrenci.js?v=235';
+import * as HZ from '../hazirlik.js?v=235';
+import { SORU_KONU } from '../soruKonu.js?v=235';
+import { UNITE_AD, kapakSvg, konular, bitti, sayac, yarimOku, yarimYaz, yarimSil, yukle, veriler } from './ogrveri.js?v=235';
+import { esc, oi, gorsel as cizim, dugme, ikonKutu, satir, liste, serit, bolum, akisUst, akisAlt, sik, cevapKutu, stilEkle, odakTuzagi } from './ui.js?v=235';
 
 /* ---------- ders içeriği ---------- */
 // cümlelere böl ("md.", "vb." gibi kısaltmalarda bölme), ~430 karakterlik kartlara topla
@@ -137,7 +138,7 @@ async function dersAc(k, id, yenile, { gecmisVar = false, odak = null } = {}) {
   const odaklar = () => [...kok.querySelectorAll('button:not([disabled]),a[href],iframe,[tabindex]:not([tabindex="-1"])')]
     .filter(el => el.checkVisibility ? el.checkVisibility({ visibilityProperty: true }) : el.offsetParent !== null);
   const tus = ev => {
-    if (ev.key === 'Escape') { ev.preventDefault(); kapat(); return; }
+    if (ev.key === 'Escape') { ev.preventDefault(); return; }   // DENETİM K1: Esc kapatmaz
     if (ev.key !== 'Tab' || acik !== kok) return;
     const l = odaklar(); if (!l.length) return;
     const a = document.activeElement, ilk = l[0], son = l[l.length - 1];
@@ -194,7 +195,7 @@ async function dersAc(k, id, yenile, { gecmisVar = false, odak = null } = {}) {
       const dk = Math.max(3, Math.round((okuSay * 40 + soruSay * 20) / 60)), hedef = (DR.akilda || []).slice(0, 3);
       return {
         h: `${cizim(cizimAd(key), '', 'ox-dr-hero ox-dr-c-' + key)}
-          <p class="ox-dr-goz">${esc(UNITE_AD[key] || '')} · ${no}. konu</p>
+          <p class="ox-dr-goz">${esc(UNITE_AD[key] || '')} · ${no}. konu${mufredatResmiDers(key, no) ? ` · MEB programında ${mufredatResmiDers(key, no)}. ders` : ''}</p>
           <h1 class="ox-dr-baslik">${esc(ad)}</h1>
           <p class="ox-dr-meta">${oi('kartlar')}<span>${okuSay} kart · ${soruSay} soru · yaklaşık ${dk} dakika</span></p>
           ${hedef.length ? `${bolum('Bu derste öğreneceklerin')}<ul class="ox-dr-maddeler">${hedef.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}`,

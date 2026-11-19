@@ -1,6 +1,10 @@
-import { S, BUGUN, iso, kapaliGun, ASAMALAR, KAYNAKLAR, kursiyer, tamAd, eksikEvrak, gecikenler, gecikenTutar, memnuniyet, sb, sbDers } from './veri.js?v=231';
-import { e, tl, sayi, rozet, asamaRozet, olcumler, sekmeler, ilerleme, bos, ekranNotu, ayAdi } from './ui.js?v=231';
-import { riskliler } from './risk.js?v=231';
+import { S, BUGUN, iso, kapaliGun, ASAMALAR, KAYNAKLAR, kursiyer, tamAd, eksikEvrak, gecikenler, gecikenTutar, memnuniyet, sb, sbDers, ekTur } from './veri.js?v=235';
+// Sınav ücreti, harç, kart tahsilatı kurs geliri değildir (kursiyerin masrafı, emanet; il taban listesi not 5). Ek kalem tahsilatında kategori kalemin adıdır.
+// Karşılığı olan döner sermaye ödemesi (gider "Sınav harcı") da kurs gideri sayılmaz. (sayfalar5.js hareketTur ile aynı kural)
+const resmiHareket = h => { if (h.tur === 'Gider') return h.kategori === 'Sınav harcı'; if (h.tur !== 'Gelir' || ['Kurs ücreti', 'Taksit', 'Peşinat', 'İade'].includes(h.kategori)) return false;
+  const k = h.kursiyer && kursiyer(h.kursiyer), x = k && ((k.odeme || {}).ekler || []).find(y => y.ad === h.kategori); return ekTur(x || { ad: h.kategori }) === 'resmi'; };
+import { e, tl, sayi, rozet, asamaRozet, olcumler, sekmeler, ilerleme, bos, ekranNotu, ayAdi } from './ui.js?v=235';
+import { riskliler } from './risk.js?v=235';
 
 /* ================= ANALİZ =================
    Öğrenci, usta öğretici ve kurs göstergeleri tek sayfada. Sekme hash'ten gelir: #/analiz/<ogrenci|usta|kurs> */
@@ -141,8 +145,8 @@ function kurs() {
   const adaylar = sb(S.adaylar || []);
   const ay = n => {
     const kayit = liste.filter(k => ayda(k.kayit, n)).length;
-    const gelir = hareket.filter(h => h.tur === 'Gelir' && ayda(h.tarih, n)).reduce((a, h) => a + (+h.tutar || 0), 0);
-    const gider = hareket.filter(h => h.tur === 'Gider' && ayda(h.tarih, n)).reduce((a, h) => a + (+h.tutar || 0), 0);
+    const gelir = hareket.filter(h => h.tur === 'Gelir' && !resmiHareket(h) && ayda(h.tarih, n)).reduce((a, h) => a + (+h.tutar || 0), 0);
+    const gider = hareket.filter(h => h.tur === 'Gider' && !resmiHareket(h) && ayda(h.tarih, n)).reduce((a, h) => a + (+h.tutar || 0), 0);
     const ders = dersler.filter(d => ['Yapıldı', 'Planlandı'].includes(d.durum) && ayda(d.tarih, n)).length;
     const kapasite = ustaSay * isGunu(n) * 8;
     return { kayit, gelir, gider, net: gelir - gider, ders, kapasite, doluluk: yuzde(ders, kapasite) };
@@ -180,13 +184,16 @@ function kurs() {
   <p style="font-size:13px;color:var(--soluk);padding:4px 20px 18px">Doluluk tahminidir: kapasite = usta öğretici sayısı (${ustaSay}) × ayın iş günü × günde 8 ders. İzinler ve araç durumu hesaba katılmaz.</p>`)}
   <div class="ara-bosluk"></div>
   <div class="izgara iz-2">
+    ${(() => { const m = new Map(); liste.forEach(k => { if (k.referans) m.set(k.referans, (m.get(k.referans) || 0) + 1); }); const r = [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10), mx = Math.max(1, ...r.map(x => x[1]));  // KAY-017
+      return r.length ? kart('Getirenler', `${r.reduce((t, x) => t + x[1], 0)} kayıt · getiren kişi ya da kuruma göre`, `<div class="kart-govde">${r.map(([ad, n]) => cubuk(e(ad), n, mx, { deger: String(n) })).join('')}</div>`) : ''; })()}
     ${kart('Kayıt kaynakları', `${liste.length} kursiyer · parantez içi ${ayAd(0)}`, kaynak.length ? `<div class="kart-govde">${kaynak.map(x => cubuk(e(x.ad), x.n, maxK, { deger: `${x.n} · ${yzMetin(yuzde(x.n, liste.length))}${x.buAy ? ` (${x.buAy})` : ''}` })).join('')}</div>` : bos('Kaynak bilgisi yok', 'Kayıt sırasında kursiyerin kursu nereden duyduğunu seçtiğinizde dağılım burada görünür.'))}
     ${kart('Adaydan kayda dönüşüm', adaylar.length ? `Kayda dönüşen aday: ${yzMetin(yuzde(kayitA, adaylar.length))}` : '', adaylar.length ? `<div class="kart-govde">${huni.map(([t, n], i) => cubuk(t, n, huni[0][1], { tur: i === 3 ? 'yesil' : '', deger: i ? `${n} · ${yzMetin(yuzde(n, huni[0][1]))}` : sayi(n) })).join('')}
       <p style="font-size:13px;color:var(--soluk)">${kaybedilen ? `${kaybedilen} aday kaybedildi. Sonuçlanan adaylarda kayıt oranı ${yzMetin(yuzde(kayitA, kayitA + kaybedilen))}.` : 'Kaybedilen aday yok.'} <a href="#/adaylar" style="color:var(--levha);font-weight:700">Yeni öğrenciler</a></p></div>` : bos('Henüz aday yok', 'WhatsApp, Instagram ya da telefonla gelen adaylar eklendikçe dönüşüm oranı burada görünür.', '<a class="dg dg-cizgi" href="#/adaylar">Yeni öğrenciler</a>'))}
   </div>`;
 }
 
-export function analiz(alt) {
+// gomulu: Raporlar merkezinin sekmesi olarak çizilir (kendi sekme çubuğu yok; RAP-009)
+export function analiz(alt, { gomulu = false } = {}) {
   if (alt && SEKMELER.some(([k]) => k === alt)) sekme = alt;
   if (!SEKMELER.some(([k]) => k === sekme)) sekme = 'ogrenci';
   const govde = { ogrenci: ogrenciler, usta: ustalar, kurs }[sekme]();
@@ -197,10 +204,10 @@ export function analiz(alt) {
   }[sekme];
   return {
     baslik: 'Analiz', alt: 'Öğrenci, usta öğretici ve kurs göstergeleri',
-    html: `${ekranNotu(not)}<div id="sek">${sekmeler(SEKMELER, sekme)}</div>${govde}`,
+    html: `${ekranNotu(not)}${gomulu ? '' : `<div id="sek">${sekmeler(SEKMELER, sekme)}</div>`}${govde}`,
     baglan(k) {
       k.addEventListener('click', ev => {
-        const s = ev.target.closest('[data-sekme]'); if (s) { location.hash = '#/analiz/' + s.dataset.sekme; }
+        const s = !gomulu && ev.target.closest('[data-sekme]'); if (s) { location.hash = '#/raporlar/' + s.dataset.sekme; }
       });
     },
   };

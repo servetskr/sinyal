@@ -3,14 +3,17 @@
 // aynı localStorage anahtarı 'sinyal-test-'+k.id, aynı veri etkileri: k.konuAnaliz, k.yanlislar, k.deneme, HZ.gorulenEkle, HZ.tekrarGuncelle, kaydet()).
 // Ekranlar: deneme girişi, deneme sorusu, soru listesi, bitirme onayı, sonuç, yanlış inceleme (tam ekran akışlar);
 // çalışma araçları, test ayarları, bugünkü tekrar, yanlışlarım (Öğren alt ekranları).
-import { S, kaydet, SINIFLAR, fark, gonderimEkle, ogrOzellik, tamAd, sinavHakSiniri } from '../veri.js?v=231';
-import { bildir, tarih, goreli, gunKisa } from '../ui.js?v=231';
-import * as HZ from '../hazirlik.js?v=231';
-import { hakDurum } from '../ogrenci.js?v=231';
-import { KONULAR } from '../konular.js?v=231';
-import { soruKonu, SORU_KONU } from '../soruKonu.js?v=231';
-import { UNITE_AD, konular, altAc, altKapat, altEkran as altSimdi } from './ogrveri.js?v=231';
-import { esc, oi, sayfaBas, geri, bolum, kart, heroKart, dugme, ikonKutu, satir, liste, cip, serit, not, bos, sekmeler, kutucuk, radyo, akisUst, akisAlt, sik, cevapKutu, baglanti, stilEkle, tl, odakTuzagi, gorsel } from './ui.js?v=231';
+import { S, kaydet, SINIFLAR, fark, gonderimEkle, ogrOzellik, tamAd, kalanHak, gerekliDireksiyon, egitimSinifi, esinavHakDurum, mufredatResmiDers } from '../veri.js?v=235';
+import { bildir, tarih, goreli, gunKisa } from '../ui.js?v=235';
+import * as HZ from '../hazirlik.js?v=235';
+import { hakDurum, tekrarUcret, esinavVar, TEORIKSIZ_METIN } from '../ogrenci.js?v=235';
+import * as TY from '../teorikyol.js?v=235';
+import * as B from '../bulut.js?v=235';
+const SURUM = new URL(import.meta.url).searchParams.get('v') || '';
+import { KONULAR } from '../konular.js?v=235';
+import { soruKonu, SORU_KONU } from '../soruKonu.js?v=235';
+import { UNITE_AD, konular, altAc, altKapat, altEkran as altSimdi } from './ogrveri.js?v=235';
+import { esc, oi, sayfaBas, geri, bolum, kart, heroKart, dugme, ikonKutu, satir, liste, cip, serit, not, bos, sekmeler, kutucuk, radyo, akisUst, akisAlt, sik, cevapKutu, baglanti, stilEkle, tl, odakTuzagi, gorsel } from './ui.js?v=235';
 
 const SURE = 45 * 60e3, GECME = 70, HARF = 'ABCD';
 const MOD_AD = { deneme: 'Deneme sınavı', hizli: 'Hızlı test', konu: 'Konu testi', yanlis: 'Yanlışlarım', tekrar: 'Bugünkü tekrar' };
@@ -20,7 +23,7 @@ const sayi = n => (+n || 0).toLocaleString('tr-TR');
 
 /* ---------- soru bankası (yalnız gerekince yüklenir) ---------- */
 let SR = null, LV = null, yuk = null, DISI = new Set();
-const sorulariYukle = () => SR ? Promise.resolve() : yuk || (yuk = Promise.all([import('../sorular.js?v=231'), import('../levha.js?v=231').catch(() => null)])
+const sorulariYukle = () => SR ? Promise.resolve() : yuk || (yuk = Promise.all([import('../sorular.js?v=235'), import('../levha.js?v=235').catch(() => null)])
   .then(([m, l]) => { SR = m.SORULAR; DISI = new Set(m.HAVUZ_DISI || []); LV = l; }).catch(x => { yuk = null; throw x; }));
 const gorselHtml = g => !g ? '' : String(g).startsWith('L:') ? (LV && LV.levhaSvg ? LV.levhaSvg(g.slice(2)) : '') : String(g);
 const karistir = l => { const a = l.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -100,6 +103,8 @@ function bitir(k) {
   k.yanlislar = [...new Set([...(k.yanlislar || []).filter(x => !dogruQ.includes(x)), ...yanlis])];
   test.eksik = test.liste.length - test.cevaplar.length;
   if (test.mod === 'deneme' && !test.eksik) { k.deneme = k.deneme || []; k.deneme.push(test.dogru * 2); }
+  // UYG-005: deneme ve testlerin ayrıntısı kurs panelinde listelenir (son 60 kayıt)
+  { const n = test.liste.length, d = test.dogru, cv = test.cevaplar.length; k.denemeDetay = [...(k.denemeDetay || []), { tur: test.mod, bas: new Date(test.basla || Date.now()).toISOString(), bit: new Date().toISOString(), sure: Math.round((test.harcanan || 0) / 1000), soru: n, dogru: d, yanlis: cv - d, bos: n - cv, puan: test.mod === 'deneme' ? d * 2 : Math.round(d / Math.max(1, n) * 100), tamam: !test.eksik }].slice(-60); }
   HZ.gorulenEkle(k, test.cevaplar.map(([qi]) => qi));
   HZ.tekrarGuncelle(k, test.cevaplar.map(([qi, c]) => [qi, c === SR[qi][3]]));
   // sonuç tablosu: her konuda kaç soru vardı (boşlar dahil), kaçı doğru
@@ -143,7 +148,9 @@ function sayacKur(ctx) {
 /* ---------- ortak parçalar ---------- */
 const gorselKutu = q => { const g = gorselHtml(q[4]); return g ? `<div class="ox-snv-gorsel" aria-hidden="true">${g}</div>` : ''; };
 const kaynakHtml = q => q[6] ? `<small class="ox-snv-kaynak">${esc(q[6])}</small>` : '';
-const baglarHtml = (qi, konuyuOku = true) => { const id = konuyuOku ? soruKonu(qi, SR[qi][0]) : null; return `<div class="ox-snv-baglar">${id ? baglanti('Konuyu oku', { 'data-og-ders': id }, true) : '<span></span>'}${baglanti('Soruda hata var', { 'data-snv': 'bildir', 'data-qi': qi }, true)}</div>`; };
+// UYG-014: sorunun MEB teorik ders programındaki yeri (soru → konu anlatımı → resmî ders; veri.js mufredatResmiDers)
+const resmiDersEtiket = qi => { const id = soruKonu(qi, SR[qi][0]); if (!id) return ''; const [kat, no] = id.split('-'), d = mufredatResmiDers(kat, +no); return d ? `<p class="ox-snv-resmi">${esc(uniteAd(kat))} dersi · MEB programında ${d}. ders</p>` : ''; };
+const baglarHtml = (qi, konuyuOku = true) => { const id = konuyuOku ? soruKonu(qi, SR[qi][0]) : null; return `${resmiDersEtiket(qi)}<div class="ox-snv-baglar">${id ? baglanti('Konuyu oku', { 'data-og-ders': id }, true) : '<span></span>'}${baglanti('Soruda hata var', { 'data-snv': 'bildir', 'data-qi': qi }, true)}</div>`; };
 const NEDEN = ['Doğru cevap yanlış işaretlenmiş', 'Soru ya da şıklar anlaşılmıyor', 'Bilgi güncel değil', 'Görsel hatalı', 'Diğer'];
 function modalHtml() {
   if (!modal) return '';
@@ -264,6 +271,7 @@ function devamEt(ctx) {
   return sorulariYukle().then(() => { test.duraklat = false; test.sonTik = Date.now(); gorunum = 'soru'; gecis = true; altAc(test.mod === 'deneme' ? 'deneme' : 'araclar'); ctx.yenile(true); }).catch(() => bildir('Sorular yüklenemedi; internet bağlantını kontrol edip tekrar dene', 'uyari'));
 }
 function hazirlikHtml(k) {
+  if (!esinavVar(k)) return '';  // e-sınavı olmayan öğrenci (fark, muaf, 100 ceza): e-Sınav hazırlık puanı gösterilmez
   const esGecti = k.esinav && k.esinav.sonuc === 'Geçti';
   if (esGecti) return bolum('Sınava hazırlığın') + liste([satir({ ikon: 'dogru', ton: 'yesil', baslik: 'e-Sınavı geçtin', alt: `${k.esinav.puan ? k.esinav.puan + ' puan · ' : ''}İstersen çalışmaya devam edebilirsin.` })]);
   if (!ogrOzellik('hazirlik')) return '';
@@ -275,32 +283,60 @@ function hazirlikHtml(k) {
     ${satirH('Soru bankası', h.kaps, `Hedef ${sayi(h.hedef)} soru: ${sayi(h.gor)} soru gördün`)}
     ${h.oneri.length ? `<div class="ox-snv-oneri"><b>Şimdi ne yapmalısın</b><ul>${h.oneri.map(o => `<li>${esc(o)}</li>`).join('')}</ul></div>` : ''}`, 'ox-snv-hz');
 }
+// UYG-004: en zayıf konu önerisi. Kaynak önce e-sınav ders puanı (k.esinav.dersPuan: { trafik, motor, ilkyardim, adab }; MEBBİS kurum hesabında
+// bugün görünmüyor, girilirse kullanılır), yoksa deneme ve testlerdeki konu başarısı (en az 10 soru çözülmüş ve geçme oranının altında).
+export function zayifKonu(k) {
+  if (k.esinav && k.esinav.sonuc === 'Geçti') return null;   // e-sınavı geçen öğrenciye öneri gösterilmez
+  const dp = (k.esinav && k.esinav.dersPuan) || null;
+  if (dp) { const l = Object.keys(KONULAR).filter(kn => dp[kn] != null && isFinite(+dp[kn])).sort((a, b) => +dp[a] - +dp[b]); if (l.length && +dp[l[0]] < GECME) return { kn: l[0], oran: Math.round(+dp[l[0]]), kaynak: 'esinav' }; }
+  const l = Object.keys(KONULAR).map(kn => { const a = (k.konuAnaliz || {})[kn]; return a && a[1] >= 10 ? { kn, oran: Math.round(a[0] / a[1] * 100) } : null; }).filter(Boolean).sort((a, b) => a.oran - b.oran);
+  return l.length && l[0].oran < GECME ? { ...l[0], kaynak: 'deneme' } : null;
+}
 function konuBasariHtml(k) {
   const oran = kn => { const a = (k.konuAnaliz || {})[kn]; return a && a[1] ? [Math.round(a[0] / a[1] * 100), a[1]] : [null, 0]; };
-  return bolum('Konu konu başarın', 'Dokun, 10 soru') + liste(Object.keys(KONULAR).map(kn => {
+  const z = zayifKonu(k), [zik, zton] = z ? UNITE_IK[z.kn] : [];
+  const oneri = z ? `<button type="button" class="ox-kart ox-snv-oneri" data-snv-basla="konu" data-unite="${z.kn}">${ikonKutu(zik, zton)}<span class="ox-satir-govde"><small>Önerilen çalışma</small><b>${esc(uniteAd(z.kn))}</b><small>${z.kaynak === 'esinav' ? `e-Sınavda bu dersten %${z.oran} aldın` : `Bu konuda başarın %${z.oran}`}; 10 soruluk test çöz.</small></span><span class="ox-chev">${oi('sag')}</span></button>` : '';
+  return bolum('Konu konu başarın', 'Dokun, 10 soru') + oneri + liste(Object.keys(KONULAR).map(kn => {
     const [o, t] = oran(kn), zayif = o != null && o < GECME, [ik, ton] = UNITE_IK[kn];
     return `<button type="button" class="ox-satir ox-snv-ks" data-snv-basla="konu" data-unite="${kn}">${ikonKutu(ik, ton)}<span class="ox-satir-govde"><b>${esc(uniteAd(kn))}</b>${serit(o || 0, zayif ? 'turuncu' : 'yesil', true)}<small class="${zayif ? 'kirmizi' : ''}">${o == null ? 'Henüz soru çözmedin' : `${sayi(t)} soru${zayif ? ' · çalışman gerek' : ''}`}</small></span><span class="ox-satir-sag ${zayif ? 'zayif' : ''}">${o == null ? '–' : '%' + o}</span><span class="ox-chev">${oi('sag')}</span></button>`;
   }));
 }
+// UYG-018: hatalı soru bildirimi mdSinyal'e (worker /soru-bildir); düzeltilen bildirimler günde bir kez sorulur, öğrenciye bir kez söylenir
+async function kursIzi() { const kurs = (B.bulut && B.bulut.kurs) || ''; if (!kurs) return 'demo'; return [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(kurs)))].slice(0, 4).map(x => x.toString(16).padStart(2, '0')).join(''); }
+async function soruBildirGonder(qi, neden, aciklama, metin) {
+  if (!(B.bulut && B.bulut.kurs)) return;   // demo ve yerel denemede gönderilmez
+  try { await fetch(B.WORKER + '/soru-bildir', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ qi, neden, aciklama, metin: String(metin || '').slice(0, 160), surum: String(SURUM || ''), ks: await kursIzi() }), mode: 'cors', credentials: 'omit', keepalive: true }); } catch (x) { }
+}
+let duzeltilenSoru = null;
+function duzeltilenleriSor(k, yenile) {
+  if (!(B.bulut && B.bulut.kurs)) return;
+  const l = (k.bildirilenSorular || []).filter(q => !(k.bildirimDuzeltildi || []).includes(q)); if (!l.length) return;
+  const an = 'sinyal-soru-durum', bugun = new Date().toISOString().slice(0, 10); try { if (localStorage.getItem(an) === bugun) return; localStorage.setItem(an, bugun); } catch (x) { }
+  fetch(B.WORKER + '/soru-bildir/yonet?durum=' + l.join(','), { mode: 'cors', credentials: 'omit' }).then(r => r.json()).then(j => { const d = (j && j.duzeltildi) || []; if (!d.length) return; k.bildirimDuzeltildi = [...new Set([...(k.bildirimDuzeltildi || []), ...d])]; duzeltilenSoru = d.length; kaydet(); yenile && yenile(); }).catch(() => { });
+}
+// UYG-003: öğrencinin yüklediği e-sınav ücreti dekontu bu hak için mi (kurs onaylayınca ücret yattı sayılır)
+const dekontVar = k => !!(k.esinavDekont && String(k.esinavDekont.sira) === String(esinavHakDurum(k).sira));
 function sinavlarHtml(k) {
   // hak sınırı öğrenciye göre (md.15): e-Sınav 4; uygulama ilk 4, ikinci dört hak başlatıldıysa 8
-  const tu = S.kurs.tekrarUcret || {}, dir = !!SINIFLAR[k.sinif].direksiyon;
+  // tekrar sınav ücreti hak sırasına göre (veri.js uygulamaSinavUcreti / esinavUcreti); öğrencinin kendi masrafı, kurs ücretine dahil değil (liste not 5)
+  const dir = gerekliDireksiyon(k) > 0;
   const sonr = tur => (S.sinavlar || []).filter(s => s.tur === tur && (s.kursiyerler || []).includes(k.id) && fark(s.tarih) >= 0 && !(s.sonuc || {})[k.id]).sort((a, b) => a.tarih.localeCompare(b.tarih))[0];
-  const kartH = (tur, x, sn, getir, ucret, bilgi, ek = '') => {
+  const kartH = (tur, x, sn, getir, bilgi, ek = '') => {
     if (x && x.sonuc === 'Geçti') return kart(`<div class="ox-snv-sv-bas">${ikonKutu('dogru', 'yesil')}<span class="ox-satir-govde"><b>${tur}</b><small class="yesil">Geçtin${x.puan ? ' · ' + x.puan + ' puan' : ''}</small></span>${cip('Tamam', 'yesil')}</div>`, 'ox-snv-sv');
-    const veri = tur === 'e-Sınav' ? 'e-Sınav' : 'Direksiyon', hak = sinavHakSiniri(k, veri), kalan = Math.max(0, hak - ((x && x.hak) || 0));
+    const veri = tur === 'e-Sınav' ? 'e-Sınav' : 'Direksiyon', kh = kalanHak(k, veri, x), hak = kh.toplam, kalan = kh.kalan, tk = tekrarUcret(k, veri, x);
     // hak doldu (kurs henüz karar vermedi): "Bekliyor", randevu, tekrar ücreti ve "yanına al" satırları yerine durum metni
     const hd = hakDurum(k);
     if (hd && hd.tur === veri && !sn) return kart(`<div class="ox-snv-sv-bas">${ikonKutu('uyari', 'turuncu')}<span class="ox-satir-govde"><b>${tur}</b><small>Sınav hakkın kalmadı</small></span>${cip('Hak doldu', 'turuncu')}</div>
       <p class="ox-snv-sv-yer">${oi('bilgi')}<span>${esc(hd.metin)}</span></p>
-      <div class="ox-snv-sv-dl"><div><span>Kalan sınav hakkın</span><b>${kalan} / ${hak}</b></div></div>`, 'ox-snv-sv');
+      <div class="ox-snv-sv-dl"><div><span>${kh.etiket}</span><b>${kalan} / ${hak}</b></div></div>`, 'ox-snv-sv');
     return kart(`<div class="ox-snv-sv-bas">${ikonKutu('takvim', sn ? 'mavi' : 'gri')}<span class="ox-satir-govde"><b>${tur}</b><small>${sn ? `${gunKisa(sn.tarih)} ${tarih(sn.tarih)} · ${esc(sn.saat)}` : 'Henüz tarih yok'}</small></span>${sn ? cip(esc(goreli(sn.tarih))) : cip('Bekliyor', 'gri')}</div>
       <p class="ox-snv-sv-yer">${sn && sn.yer ? `${oi('harita')}<span>${esc(sn.yer)}</span>` : `${oi('bilgi')}<span>${bilgi}</span>`}</p>
-      <div class="ox-snv-sv-dl"><div><span>Kalan sınav hakkın</span><b>${kalan} / ${hak}</b></div><div><span>Kalırsan tekrar sınav ücreti</span><b>${ucret ? tl(ucret) : '—'}</b></div></div>
+      <div class="ox-snv-sv-dl"><div><span>${kh.etiket}</span><b>${kalan} / ${hak}</b></div><div><span>${tk.etiket} <small>${tk.not}</small></span><b>${tk.tutar ? tl(tk.tutar) : '—'}</b></div></div>
       <details class="ox-snv-sv-getir"${sn && fark(sn.tarih) <= 7 ? ' open' : ''}><summary><span>Sınav günü yanına al</span>${oi('asagi')}</summary><ul>${getir.map(g => `<li>${oi('tik')}<span>${esc(g)}</span></li>`).join('')}</ul></details>${ek}`, 'ox-snv-sv');
   };
-  return bolum('Sınavların') + kartH('e-Sınav', k.esinav, sonr('e-Sınav'), ['T.C. kimlik kartın (fotokopi geçmez)', 'e-Sınav ücreti dekontu', 'Sınavdan 30 dakika önce sınav merkezinde ol'], tu.esinav, 'Teorik derslerin bitince kurs e-Sınav randevunu alır.')
-    + (dir ? kartH('Uygulama sınavı', k.dsinav, sonr('Direksiyon'), ['T.C. kimlik kartın', 'Gözlük ya da lens kullanıyorsan yanında olsun', 'Sınavdan 30 dakika önce sınav yerinde ol'], tu.dsinav, 'Direksiyon derslerin bitince kurs sınav tarihini bildirir.',
+  if (egitimSinifi(k.sinif)) return bolum('Sınavların') + not('Bu eğitimin sınavı yok. Teorik derslerin tamamına katılınca eğitim belgen kurstan verilir.');
+  return bolum('Sınavların') + (esinavVar(k) ? kartH('e-Sınav', k.esinav, sonr('e-Sınav'), ['T.C. kimlik kartın (fotokopi geçmez)', 'e-Sınav ücreti dekontu', 'Sınavdan 30 dakika önce sınav merkezinde ol'], 'Teorik derslerin bitince kurs e-Sınav randevunu alır.', (t => t && !(k.esinav && k.esinav.sonuc === 'Geçti') ? `<p class="ox-snv-sv-yer">${oi('bilgi')}<span>${esc(t)}${/ücret bekleniyor/.test(t) ? (dekontVar(k) ? '. Dekontun kursa gönderildi; kurs kontrol edince ücret yattı görünür.' : '. Ücreti yatırıp dekontunu buradan yükle.') : ''}</span></p>${/ücret bekleniyor/.test(t) && !dekontVar(k) ? `<div class="ox-snv-sv-bag"><label class="ox-blg-yukle">${oi('arti')}<span>Dekontu yükle</span><input type="file" accept="image/*,application/pdf" data-og-dekont hidden></label></div>` : ''}` : '')(TY.esinavSatiri(k))) : not(TEORIKSIZ_METIN))
+    + (dir ? kartH('Uygulama sınavı', k.dsinav, sonr('Direksiyon'), ['T.C. kimlik kartın', 'Gözlük ya da lens kullanıyorsan yanında olsun', 'Sınavdan 30 dakika önce sınav yerinde ol'], 'Direksiyon derslerin bitince kurs sınav tarihini bildirir.',
       ogrOzellik('direksiyon') ? `<div class="ox-snv-sv-bag">${baglanti('Uygulama sınavına hazırlan', { 'data-ox-alt': 'direksiyon:|araclar' }, true)}</div>` : '') : '');
 }
 function araclarHtml(k) {
@@ -317,6 +353,7 @@ function araclarHtml(k) {
     + `<div class="ox-snv-kutular">${kutu('kronometre', 'Hızlı test', '10 soru', { 'data-snv-basla': 'hizli' })}${kutu('panoListe', 'Konu testi', `${ayar.n} soru`, { 'data-ox-alt': 'test-ayar' })}</div>`
     + liste(satirlar, 'ox-snv-araclar')
     + `<p class="ox-snv-toplam">Toplam: ${sayi(dn)} deneme · ${sayi(cozulen)} soru çözüldü</p>`
+    + (duzeltilenSoru ? (n => (duzeltilenSoru = null, not(`Bildirdiğin ${n} soru incelendi ve düzeltildi. Teşekkürler!`, 'dogru')))(duzeltilenSoru) : '')
     + hazirlikHtml(k) + konuBasariHtml(k) + sinavlarHtml(k)
     + not(`Havuzda ${sayi(SORU_KONU.length)} soru var. Sonuçların kursun ekranında görünür.`);
 }
@@ -392,7 +429,7 @@ export function altEkran(ad, ctx) {
   testGeriYukle(k);
   let html;
   if (a === 'deneme') html = denemeGirisHtml(k);
-  else if (a === 'araclar') html = araclarHtml(k);
+  else if (a === 'araclar') { duzeltilenleriSor(k, () => ctx.yenile()); html = araclarHtml(k); }
   else if (a === 'test-ayar') html = testAyarHtml();
   else if (a === 'tekrar') html = tekrarHtml(k);
   else if (a === 'yanlislar') { html = yanlislarHtml(k); if (!SR && (k.yanlislar || []).length) sorulariYukle().then(() => ctx.yenile()).catch(() => { }); }
@@ -418,11 +455,11 @@ function degisOnay(ctx, yeni) {
     <div class="ox-snv-modal-dg sar">${dugme(dn ? 'Denemeye dön' : 'Teste dön', { 'data-snv-d': 'devam' }, { tur: 'ikincil' })}${dugme('Yeni test başlat', { 'data-snv-d': 'yeni' })}</div></div></div>`);
   const perde = kok.lastElementChild, cik = odakTuzagi(perde);
   degis = { perde, birak: cik };
-  perde.addEventListener('keydown', ev => { if (ev.key === 'Escape') { ev.stopPropagation(); degisKapat(); } });
+  perde.addEventListener('keydown', ev => { if (ev.key === 'Escape') ev.stopPropagation(); });   // DENETİM K1: Esc kapatmaz
   perde.addEventListener('click', ev => {
     ev.stopPropagation();
     const b = ev.target.closest('[data-snv-d]');
-    if (!b) { if (!ev.target.closest('.ox-snv-modal')) degisKapat(); return; }
+    if (!b) return;   // DENETİM K1: dışa tıklama kapatmaz
     const is = b.dataset.snvD;
     degisKapat();
     if (is === 'devam') devamEt(ctx);
@@ -432,7 +469,6 @@ function degisOnay(ctx, yeni) {
 }
 
 /* ---------- olaylar ---------- */
-let tusBagli = false;
 // pencere açıkken odak içeride kalır, arkadaki sayfa etkisizdir (odakTuzagi); kapanınca ya da ekran yeniden çizilince bırakılır
 let serbest = null;
 const tuzakBirak = () => { if (serbest) { const f = serbest; serbest = null; f(); } };
@@ -455,7 +491,7 @@ function yerinde(ctx, sonra) {
 function bagla(kap, ctx) {
   const { k } = ctx;
   tuzakBirak(); degisKapat();
-  if (!tusBagli) { tusBagli = true; document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && modal && document.querySelector('[data-snv-perde]')) modalKapat(); }); }
+  // DENETİM K1: Esc modalı kapatmaz (kapatma düğmesiyle)
   if (kap.querySelector('[data-snv-ekran="deneme"]')) sayacKur(ctx);
   { const p = kap.querySelector('[data-snv-perde]'); if (p) tuzakKur(p); }
   // sekme değişirken: gösterilen sonuç kapanır, süren test duraklar (ekran.js'in dinleyicisinden önce çalışır)
@@ -469,7 +505,7 @@ function bagla(kap, ctx) {
   });
   kap.addEventListener('click', ev => {
     const t = ev.target;
-    if (t.closest('[data-snv-perde]') && !t.closest('.ox-snv-modal')) return modalKapat();
+    if (t.closest('[data-snv-perde]') && !t.closest('.ox-snv-modal')) return;   // DENETİM K1: dışa tıklama kapatmaz
     const nd = t.closest('[data-snv-neden]');
     if (nd) { kap.querySelectorAll('[data-snv-neden]').forEach(b => { const s = b === nd; b.classList.toggle('secili', s); b.setAttribute('aria-checked', String(s)); }); return; }
     const sk = t.closest('[data-snv-sik]');
@@ -527,6 +563,9 @@ function bagla(kap, ctx) {
     if (is === 'bildir-gonder' && modal && modal.tur === 'bildir') {
       const qi = modal.qi, q = SR[qi], m = document.querySelector('.ox-snv-modal'), sn = m.querySelector('[data-snv-neden].secili'), ac = (m.querySelector('[data-snv-aciklama]').value || '').trim().slice(0, 300);
       gonderimEkle(S.kurs.ad, `${tamAd(k)} soru bildirdi (#${qi + 1}): ${NEDEN[sn ? +sn.dataset.snvNeden : 0]}${ac ? ' · ' + ac : ''} · “${q[1].slice(0, 90)}”`, 'Soru bildirimi');
+      // UYG-018: mdSinyal'in soru bankası kuyruğuna da gider (kişi bilgisi gitmez: soru no, neden, açıklama, kursun kısa izi)
+      soruBildirGonder(qi, NEDEN[sn ? +sn.dataset.snvNeden : 0], ac, q[1]);
+      k.bildirilenSorular = [...new Set([...(k.bildirilenSorular || []), qi])].slice(-30);
       kaydet(); modalKapat(); bildir('Teşekkürler, soru incelenmek üzere iletildi');
     }
   });
@@ -534,6 +573,8 @@ function bagla(kap, ctx) {
 
 /* ---------- stiller (yalnız ui.js değişkenleri) ---------- */
 stilEkle('ox-sinav', `
+.ox-snv-resmi{margin:10px 0 0;font-size:12.5px;color:var(--ox-ikincil)}
+.ox-snv-oneri{display:flex!important;align-items:center;gap:12px;width:100%;text-align:left;padding:14px 16px;margin:0 0 12px;border-color:#f5d39a;background:var(--ox-turuncu-acik)}.ox-snv-oneri .ox-satir-govde{flex:1;min-width:0;display:grid;gap:2px}.ox-snv-oneri b{font-size:16px}.ox-snv-oneri small{color:var(--ox-ikincil);font-size:13px}
 .ox-snv-akis .ox-akis-ust{grid-template-columns:72px 1fr 72px}
 .ox-snv-akis .ox-akis-sag{font-size:14.5px;font-weight:600;color:var(--ox-bas);font-variant-numeric:tabular-nums;padding-right:8px}
 .ox-snv-akis .ox-akis-sag:has(.ox-snv-ust-bag){padding-right:0}

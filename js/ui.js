@@ -1,5 +1,5 @@
-import { EMU } from './firebase-ayar.js?v=231';
-import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=231';
+import { EMU } from './firebase-ayar.js?v=235';
+import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=235';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -118,7 +118,7 @@ let acikPencere = null;
 // korumali: içine bilgi girilen pencere (ders bitirme, imza) dışarı dokununca ya da Esc ile kapanmaz; yalnız Vazgeç/✕ ile
 let oncekiOdak = null;
 // Formdaki eksik ya da hatalı alanları birlikte işaretler, ilk alana kaydırır; liste: [[alan, mesaj], ...]. Hata varsa true döner.
-export function alanHatalari(form, liste) {
+export function alanHatalari(form, liste, { sessiz = false } = {}) {
   if (bildirKanca.f && liste && liste.length) try { bildirKanca.f('form'); } catch (x) { }
   form.querySelectorAll('.alan-hata').forEach(x => x.remove());
   form.querySelectorAll('[aria-invalid="true"]').forEach(x => x.removeAttribute('aria-invalid'));
@@ -137,34 +137,123 @@ export function alanHatalari(form, liste) {
   const ilk = liste[0][0];
   (ilk.closest('.alan') || ilk.closest('label') || ilk).scrollIntoView({ block: 'center', behavior: 'smooth' });
   if (ilk.type !== 'radio' && ilk.type !== 'checkbox') ilk.focus({ preventScroll: true });
-  bildir(liste.length === 1 ? liste[0][1] : `${liste.length} alan eksik ya da hatalı; işaretli alanları düzeltin`, 'uyari');
+  if (!sessiz) bildir(liste.length === 1 ? liste[0][1] : `${liste.length} alan eksik ya da hatalı; işaretli alanları düzeltin`, 'uyari');
   return true;
 }
+// --- Taslaklar: girdi olan pencere ✕ / Vazgeç ile kapatılırken "Taslak olarak sakla" seçilirse alanlar saklanır.
+// Aynı pencere (aynı başlık ya da verilen taslak anahtarı) yeniden açılınca üstte "Kaldığınız yerden devam edin" şeridi çıkar.
+// Kurs personelinde S.taslaklar (bulutta eşitlenir; personel verisi cihaza yazılmaz kuralı bozulmaz), öbür ekranlarda yalnız bu sekmenin oturumu.
+// Şifre, PIN ve doğrulama kodu alanları sayılmaz, saklanmaz. Fotoğraf ve dosya alanları saklanmaz.
+const TASLAK_SINIR = 40, OTURUM_TASLAK = 'sinyal-taslak';
+const taslakBulutta = () => { try { const r = oturum.kullanici && oturum.kullanici.rol; return !!(S && ['mudur', 'sekreter', 'ortak'].includes(r) && !(S.kurs && S.kurs.tur === 'yonetim')); } catch (x) { return false; } };
+export function taslaklar() { if (taslakBulutta()) return Array.isArray(S.taslaklar) ? S.taslaklar : []; try { return JSON.parse(sessionStorage.getItem(OTURUM_TASLAK) || '[]'); } catch (x) { return []; } }
+function taslakYaz(l) { l = l.slice(0, TASLAK_SINIR); if (taslakBulutta()) { S.taslaklar = l; kaydet(); } else { try { sessionStorage.setItem(OTURUM_TASLAK, JSON.stringify(l)); } catch (x) { } } try { document.dispatchEvent(new CustomEvent('sinyal-taslak')); } catch (x) { } }
+export const taslakBul = id => taslaklar().find(t => t.id === id) || null;
+export function taslakSil(id) { if (!id || !taslaklar().some(t => t.id === id)) return; taslakYaz(taslaklar().filter(t => t.id !== id)); }
+export function taslakSakla(t) { taslakYaz([{ ...t, tarih: new Date().toISOString(), kim: oturum.kullanici ? oturum.kullanici.ad : '' }, ...taslaklar().filter(x => x.id !== t.id)]); }
+const gizliAlan = x => x.type === 'password' || x.type === 'file' || x.type === 'hidden' || x.autocomplete === 'one-time-code' || /(^|[-_])(pin|sifre|parola|kod)\d*$/i.test(x.name || x.id || '') || x.hasAttribute('data-pin-tekrar') || x.hasAttribute('data-sifre-tekrar') || x.hasAttribute('data-kod') || !!x.closest('[data-taslak-yok]');
+// Formun adlı alanlarını düz nesneye çevirir (radyo: seçili değer; aynı adlı çoklu onay kutusu: dizi; tek onay kutusu: true/false)
+export function alanlariOku(kok) {
+  const o = {};
+  kok.querySelectorAll('input[name],select[name],textarea[name]').forEach(x => {
+    if (gizliAlan(x)) return; const n = x.name;
+    if (x.type === 'radio') { if (x.checked) o[n] = x.value; else if (!(n in o)) o[n] = null; }
+    else if (x.type === 'checkbox') { const g = kok.querySelectorAll(`input[type=checkbox][name="${CSS.escape(n)}"]`); o[n] = g.length > 1 ? [...g].filter(c => c.checked).map(c => c.value) : x.checked; }
+    else o[n] = x.value;
+  });
+  return o;
+}
+export function alanlariYaz(kok, o) {
+  if (!o) return;
+  Object.entries(o).forEach(([n, v]) => kok.querySelectorAll(`[name="${CSS.escape(n)}"]`).forEach(x => {
+    if (gizliAlan(x)) return;
+    if (x.type === 'radio') x.checked = x.value === v;
+    else if (x.type === 'checkbox') x.checked = Array.isArray(v) ? v.includes(x.value) : !!v;
+    else if (v != null && (x.tagName !== 'SELECT' || [...x.options].some(op => op.value === v))) x.value = v;
+  }));
+}
+const saatKisa = iso => { try { const d = new Date(iso), b = new Date(); return (d.toDateString() === b.toDateString() ? 'bugün ' : d.getDate() + ' ' + AY[d.getMonth()] + ' ') + d.toTimeString().slice(0, 5); } catch (x) { return ''; } };
+export const taslakZamani = saatKisa;
+// Pencerenin içinde soru katmanı (tarayıcının confirm kutusu yerine): secenekler [[deger, metin, sinif]], sec(deger)
+// girdi: { etiket, enAz } verilirse kısa bir metin (gerekçe) istenir; 'vazgec' dışındaki seçimde en az enAz harf zorunlu, sec(secim, metin)
+export function pencereSor(d, { baslik, metin, secenekler, girdi }, sec) {
+  const p = d.querySelector('.pencere'); if (!p || p.querySelector('.pencere-sor')) return;
+  const o = document.createElement('div'); o.className = 'pencere-sor'; o.setAttribute('role', 'alertdialog'); o.setAttribute('aria-label', baslik);
+  o.innerHTML = `<div class="pencere-sor-ic"><h3>${e(baslik)}</h3>${metin ? `<p>${metin}</p>` : ''}${girdi ? `<label style="display:block;text-align:left;font-size:13.5px;margin:6px 0 10px">${e(girdi.etiket)}<input class="girdi" data-sor-girdi maxlength="200" style="margin-top:4px"></label>` : ''}${secenekler.map(([v, t, c]) => `<button type="button" class="dg ${c || 'dg-cizgi'}" data-sor="${e(v)}">${t}</button>`).join('')}</div>`;
+  p.appendChild(o); requestAnimationFrame(() => o.classList.add('acik'));
+  o.addEventListener('click', ev => { ev.stopPropagation(); const b = ev.target.closest('[data-sor]'); if (!b) return; const gi = o.querySelector('[data-sor-girdi]'), gv = gi ? gi.value.trim() : '';
+    if (gi && (girdi.icin ? girdi.icin.includes(b.dataset.sor) : b.dataset.sor !== 'vazgec') && gv.length < (girdi.enAz || 1)) { gi.focus(); gi.setAttribute('aria-invalid', 'true'); return; } o.remove(); sec(b.dataset.sor, gv); });
+  o.addEventListener('keydown', ev => { if (ev.key === 'Escape') { ev.stopPropagation(); o.remove(); sec('vazgec'); } });
+  setTimeout(() => { const b = o.querySelector('[data-sor]'); if (b) b.focus(); }, 30);
+}
+// DENETİM K2: tarayıcının confirm() kutusu yerine uygulamanın kendi sorusu; Promise<boolean> döner (Evet → true, Vazgeç / ✕ → false).
+// Açık pencere varsa sorunun katmanı o pencerenin içinde açılır (pencere kapanmaz); yoksa küçük bir soru penceresi açılır.
+export function onaySor(metin, { baslik = 'Emin misiniz?', evet = 'Evet', hayir = 'Vazgeç', tehlike = false } = {}) {
+  const govde = e(String(metin || '')).replace(/\n/g, '<br>'), sinif = tehlike ? 'dg-tehlike' : 'dg-ana';
+  return new Promise(coz => {
+    if (acikPencere && !acikPencere.hidden && !acikPencere.querySelector('.pencere-sor')) return pencereSor(acikPencere, { baslik, metin: govde, secenekler: [['vazgec', e(hayir), 'dg-cizgi'], ['evet', e(evet), sinif]] }, s => coz(s === 'evet'));
+    let bitti = false; const bit = v => { if (!bitti) { bitti = true; coz(v); } };
+    pencere({ baslik, icerik: `<p style="font-size:15px;line-height:1.5;margin:0">${govde}</p>`, altlik: `<button class="dg dg-cizgi" data-kapat>${e(hayir)}</button><button class="dg ${sinif}" data-onay-evet>${e(evet)}</button>`, taslak: false,
+      onAc(d) { d.addEventListener('click', ev => { if (ev.target.closest('[data-onay-evet]')) { bit(true); kapatPencere(); } else if (ev.target.closest('[data-kapat]')) bit(false); }); setTimeout(() => { const b = d.querySelector('[data-onay-evet]'); if (b) b.focus(); }, 30); } });
+  });
+}
+// ✕ ya da Vazgeç: girdi varsa sorar. Kaydet sonrası koddan kapanan pencerenin taslağı silinir (iş bitti).
+const IPTAL_DUGME = /^(vazgeç|iptal|kapat|sonra|geri dön|şimdi değil)$/i;
+function kapatIstegi(d, kaynak, ev) {
+  const iptal = !kaynak || kaynak.closest('header') || IPTAL_DUGME.test((kaynak.textContent || '').trim());
+  if (!iptal) { kapatPencere(); return; }
+  if (!d.dataset.degisti) { d._kullaniciKapatti = true; kapatPencere(); return; }
+  if (ev && kaynak && kaynak.tagName !== 'A') ev.preventDefault();
+  if (!d._taslak) return pencereSor(d, { baslik: 'Girdiğiniz bilgiler kaydedilmedi', metin: 'Kapatırsanız bu pencerede girdikleriniz kaybolur.', secenekler: [['cik', 'Kaydetmeden çık', 'dg-cizgi'], ['vazgec', 'Vazgeç, devam et', 'dg-ana']] }, x => { if (x === 'cik') { d._kullaniciKapatti = true; kapatPencere(); } });
+  pencereSor(d, { baslik: 'Girdiğiniz bilgiler kaydedilmedi', metin: 'Taslak olarak saklarsanız bu pencereyi yeniden açtığınızda kaldığınız yerden devam edersiniz.', secenekler: [['sakla', ik('indir') + 'Taslak olarak sakla', 'dg-ana'], ['cik', 'Kaydetmeden çık', 'dg-cizgi'], ['vazgec', 'Vazgeç, devam et', 'dg-hafif']] }, s => {
+    if (s === 'vazgec') return;
+    if (s === 'sakla') { const t = d._taslak; taslakSakla({ id: t.anahtar, baslik: t.baslik, ozet: t.ozet ? t.ozet(d) : '', alanlar: alanlariOku(d), ek: t.ek ? t.ek(d) : null }); bildir('Taslak saklandı; yeniden açınca kaldığınız yerden devam edersiniz'); }
+    else taslakSil(d._taslak.anahtar);
+    d._kullaniciKapatti = true; kapatPencere();
+  });
+}
 // ust: true → açık pencere kapanmaz, gizlenip yığına konur; üstteki kapanınca (kaydet ya da vazgeç) alttaki girilen bilgilerle geri gelir
+// Hiçbir pencere dışarı dokununca ya da Esc ile kapanmaz (kullanıcı kararı 18 Kas 2026); yalnız ✕ / Vazgeç ile, girdi varsa sorarak.
+// buyuk: masaüstünde geniş ve uzun, telefonda tam ekran. taslak: false → taslak tutulmaz; metin → taslak anahtarı (varsayılan başlık).
+// taslakEk(d) taslağa eklenecek bilgi (ör. adım), taslakOzet(d) listede görünen kısa ad, taslakYukle(d, t) şeritten "Devam et"e basınca.
 const yigin = [];
-export function pencere({ baslik, icerik, altlik = '', genis = false, onAc, korumali = false, alt = false, ust = false }) {
+export function pencere({ baslik, icerik, altlik = '', genis = false, buyuk = false, onAc, korumali = false, alt = false, ust = false, taslak, taslakEk, taslakOzet, taslakYukle }) {
   if (ust && acikPencere) { acikPencere.hidden = true; yigin.push({ d: acikPencere, odak: oncekiOdak }); acikPencere = null; } else tumPencereleriKapat();
   oncekiOdak = document.activeElement;
   const d = document.createElement('div');
-  d.className = 'perde' + (alt ? ' alt-sayfa' : '');  // alt: telefonda alttan açılan sayfa (hesap menüsü gibi)
-  d.innerHTML = `<div class="pencere ${genis ? 'genis' : ''}" role="dialog" aria-modal="true" aria-label="${e(baslik)}">
+  d.className = 'perde' + (alt ? ' alt-sayfa' : '') + (buyuk ? ' perde-buyuk' : '');  // alt: telefonda alttan açılan sayfa (hesap menüsü gibi)
+  d.innerHTML = `<div class="pencere ${genis ? 'genis' : ''} ${buyuk ? 'buyuk' : ''}" role="dialog" aria-modal="true" aria-label="${e(baslik)}">
     <header><h2>${e(baslik)}</h2><button class="dg-ikon" data-kapat aria-label="Kapat">${ik('kapat')}</button></header>
     <div class="pencere-govde">${icerik}</div>${altlik ? `<footer>${altlik}</footer>` : ''}</div>`;
   document.body.appendChild(d);
   document.body.classList.add('kilitli');
   requestAnimationFrame(() => d.classList.add('acik'));
   if (korumali) d.dataset.korumali = '1';
-  d.addEventListener('click', ev => { if ((ev.target === d && !korumali) || ev.target.closest('[data-kapat]')) kapatPencere(); });
+  // korumalı akış pencereleri (ders bitirme, imza, MEBBİS'e yazma) taslak tutmaz; anahtar sayfa + başlık (aynı başlıklı başka sayfadaki pencereye taslak önerilmez)
+  if (taslak !== false && !(korumali && typeof taslak !== 'string')) d._taslak = { anahtar: typeof taslak === 'string' ? taslak : 'p:' + String(location.hash || '').split('?')[0] + '|' + baslik, baslik, ek: taslakEk, ozet: taslakOzet };
+  const iz = ev => { const t = ev.target; if (!ev.isTrusted || !t.matches || !t.matches('input,select,textarea') || gizliAlan(t)) return; d.dataset.degisti = '1'; };
+  d.addEventListener('input', iz, true); d.addEventListener('change', iz, true);
+  d.addEventListener('click', ev => { const k = ev.target.closest('[data-kapat]'); if (k && d.contains(k)) kapatIstegi(d, k, ev); });
   acikPencere = d;
-  const ilk = d.querySelector('input,select,textarea,button:not([data-kapat])'); if (ilk) setTimeout(() => ilk.focus(), 60);
+  // aynı pencerenin saklı taslağı: şeritle sorulur, kendiliğinden doldurulmaz
+  const ts = d._taslak && typeof taslak !== 'string' ? taslakBul(d._taslak.anahtar) : null;
+  if (ts) {
+    const g = d.querySelector('.pencere-govde'), sr = document.createElement('div'); sr.className = 'taslak-serit';
+    sr.innerHTML = `${ik('indir')}<span><b>Saklı taslak var</b> · ${e(saatKisa(ts.tarih))}${ts.kim ? ' · ' + e(ts.kim) : ''}</span><button type="button" class="dg dg-ana dg-kucuk" data-taslak-devam>Kaldığım yerden devam et</button><button type="button" class="dg dg-hafif dg-kucuk" data-taslak-at>Sil</button>`;
+    g.prepend(sr);
+    sr.querySelector('[data-taslak-devam]').addEventListener('click', () => { alanlariYaz(d, ts.alanlar); d.querySelectorAll('form').forEach(f => { f.dispatchEvent(new Event('input', { bubbles: true })); f.dispatchEvent(new Event('change', { bubbles: true })); }); alanlariYaz(d, ts.alanlar); if (taslakYukle) taslakYukle(d, ts); d.dataset.degisti = '1'; sr.remove(); bildir('Taslak yüklendi'); });
+    sr.querySelector('[data-taslak-at]').addEventListener('click', () => { taslakSil(ts.id); sr.remove(); });
+  }
+  const ilk = d.querySelector('.pencere-govde input:not([type=hidden]),.pencere-govde select,.pencere-govde textarea,button:not([data-kapat])'); if (ilk && !buyuk) setTimeout(() => ilk.focus(), 60);
   if (onAc) onAc(d);
   return d;
 }
 function tumPencereleriKapat() { while (yigin.length) yigin.pop().d.remove(); kapatPencere(); }
-export function kapatPencere() { if (acikPencere && yigin.length) { acikPencere.remove(); const o = yigin.pop(); acikPencere = o.d; acikPencere.hidden = false; oncekiOdak = o.odak; return; } if (acikPencere) { acikPencere.remove(); acikPencere = null; document.body.classList.remove('kilitli'); if (oncekiOdak && oncekiOdak.isConnected && oncekiOdak.focus) { try { oncekiOdak.focus(); } catch (x) { } } oncekiOdak = null; } }
+// Koddan kapanan (kaydet sonrası) pencerenin taslağı silinir; ✕ / Vazgeç'le kapananınki (kullanıcı kapattı) kalır
+export function kapatPencere() { if (acikPencere && !acikPencere._kullaniciKapatti && acikPencere._taslak) taslakSil(acikPencere._taslak.anahtar); if (acikPencere && yigin.length) { acikPencere.remove(); const o = yigin.pop(); acikPencere = o.d; acikPencere.hidden = false; oncekiOdak = o.odak; return; } if (acikPencere) { acikPencere.remove(); acikPencere = null; document.body.classList.remove('kilitli'); if (oncekiOdak && oncekiOdak.isConnected && oncekiOdak.focus) { try { oncekiOdak.focus(); } catch (x) { } } oncekiOdak = null; } }
+export const acikPencereVar = () => !!acikPencere;
 // Pencere açıkken Tab odağı pencerenin içinde döner (klavye ve ekran okuyucu kullanıcıları arkadaki sayfaya düşmesin)
 document.addEventListener('keydown', ev => { if (ev.key !== 'Tab' || !acikPencere) return; const l = [...acikPencere.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')].filter(x => x.offsetParent !== null); if (!l.length) return; const ilk = l[0], son = l[l.length - 1]; if (ev.shiftKey && document.activeElement === ilk) { ev.preventDefault(); son.focus(); } else if (!ev.shiftKey && document.activeElement === son) { ev.preventDefault(); ilk.focus(); } else if (!acikPencere.contains(document.activeElement)) { ev.preventDefault(); ilk.focus(); } });
-document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !(acikPencere && acikPencere.dataset.korumali)) kapatPencere(); });
 
 // Tam ekran akışta (öğretmenin "Dersi bitir" adımları, öğrencinin tam ekran ekranları) bildirimler üstte durur: aynı anda yalnız
 // en yenisi görünür, başlığı ve adım göstergesini kapatacak yığın oluşmaz. Aynı metin ikinci kez gelirse eskisi kaldırılır.
@@ -221,7 +310,7 @@ table{width:100%;border-collapse:collapse;margin:8px 0;page-break-inside:auto}tr
 export function belgeYazdir(html, baslik = 'Belge') {
   const f = document.createElement('iframe'); f.setAttribute('aria-hidden', 'true'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
   document.body.appendChild(f);
-  const d = f.contentDocument; d.open(); d.write(`<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>${e(baslik)}</title><style>${A4_CSS}${html.includes('data-yatay') ? '@page{size:A4 landscape}' : ''}</style></head><body>${html}</body></html>`); d.close();
+  const d = f.contentDocument; d.open(); d.write(`<!doctype html><html lang="tr"><head><meta charset="utf-8"><title>${e(baslik)}</title><style>${A4_CSS}${html.includes('data-yatay') ? '@page{size:A4 landscape}' : html.includes('data-a5') ? '@page{size:A5;margin:9mm}' : ''}</style></head><body>${html}</body></html>`); d.close();
   const imgs = [...d.images].filter(i => !i.complete).map(i => new Promise(r => { i.onload = i.onerror = r; }));
   return Promise.all(imgs).then(() => { f.contentWindow.focus(); f.contentWindow.print(); setTimeout(() => f.remove(), 1000); });
 }
@@ -308,8 +397,21 @@ export function metaHata(j) {
   if ([130429, 131048, 131056, 80007].includes(k) || /rate limit|spam/i.test(m)) return 'Kısa sürede çok mesaj gönderildi; birkaç dakika sonra tekrar deneyin';
   if (k === 132001 || /template.*(not exist|does not exist)/i.test(m)) return 'Mesaj şablonu Meta’da bulunamadı ya da henüz onaylanmadı';
   if (/Şablonla da gönderilemedi/.test(m)) return 'Mesaj gönderilemedi: 24 saat penceresi kapalı ve onaylı şablonla da gitmedi. Şablonun onayını kontrol edin';
+  // MSJ-024: ödeme, kayıt ve izin hataları (Meta Cloud API hata kodları)
+  if (k === 131042 || /payment|eligibility/i.test(m)) return 'Meta hesabında ödeme yöntemi eksik ya da sorunlu. Meta İşletme Yöneticisi › Faturalandırma’dan ödeme yöntemini ekleyin; düzelince mesajlar gider';
+  if (k === 133010 || /not registered/i.test(m)) return 'WhatsApp numarası Meta’da kayıtlı değil (hat bağlantısı tamamlanmamış). Ayarlar › Kurs bilgileri › WhatsApp hattını yeniden bağlayın';
+  if (k === 10 || /does not have permission/i.test(m)) return 'WhatsApp uygulamasının bu işlem için izni yok. Hattı yeniden bağlarken mesaj gönderme iznini onaylayın';
+  if (k === 200 || /permissions? error/i.test(m)) return 'WhatsApp hesabına erişim izni verilmemiş ya da geri alınmış. Meta İşletme ayarlarında mdSinyal’e izin verin ya da hattı yeniden bağlayın';
+  if (k === 368 || /temporarily blocked/i.test(m)) return 'WhatsApp hesabı kural ihlali nedeniyle geçici olarak engellenmiş; Meta İşletme Yöneticisi’ndeki bildirimi kontrol edin';
+  if (k === 131049) return 'Meta bu kişiye şu an pazarlama mesajı iletmedi (kişi başına sınır). Daha sonra tekrar deneyin';
+  if (k === 131021) return 'Mesaj kursun kendi numarasına gönderilemez; alıcı numarasını kontrol edin';
+  if ([132000, 132012].includes(k)) return 'Şablondaki alan sayısı ya da biçimi Meta’daki onaylı şablonla uyuşmuyor; şablonu kontrol edin';
+  if ([132015, 132016].includes(k)) return 'Mesaj şablonu Meta tarafından durduruldu ya da kapatıldı (düşük kalite puanı). Şablonu Meta’da yenileyin';
+  if ([131000, 131016, 133004].includes(k)) return 'WhatsApp servisi şu an cevap vermiyor; birkaç dakika sonra tekrar deneyin';
   // servisin kendi Türkçe uyarıları olduğu gibi; Meta'dan gelen İngilizce metin yerine genel Türkçe cümle
-  return m && !/\b(the|is|not|number|recipient|message|error|invalid|failed|parameter|permission|unsupported|request|account)\b/i.test(m) ? m : 'WhatsApp mesajı gönderilemedi' + (k ? ' (Meta kodu ' + k + ')' : '') + '. Biraz sonra tekrar deneyin';
+  if (k === 132007) return 'Şablon metni Meta’nın biçim kurallarına uymuyor; şablonu düzeltip yeniden onaya gönderin';
+  // Türkçe harf taşımayan (İngilizce) Meta metni gösterilmez
+  return m && /[çğıöşüÇĞİÖŞÜ]/.test(m) && !/\b(the|is|not|number|recipient|message|error|invalid|failed|parameter|permission|unsupported|request|account)\b/i.test(m) ? m : 'WhatsApp mesajı gönderilemedi' + (k ? ' (Meta kodu ' + k + ')' : '') + '. Biraz sonra tekrar deneyin';
 }
 export async function apiGonder(metin, belge, adres, kime, ek = {}) {
   if (oturum.kullanici && oturum.kullanici.ziyaretci) return { ok: false, hata: 'Demo görünümünde mesaj gönderilmez' };
@@ -323,6 +425,11 @@ export async function apiGonder(metin, belge, adres, kime, ek = {}) {
     const r = adres ? await fetch(adres, govde) : await waIstek('/', govde);
     const j = await r.json().catch(() => ({}));
     if (r.ok && j.ok) { bitir(true); return { ok: true, id: j.id || null }; }
+    // MSJ-025: numara WhatsApp kullanmıyorsa (Meta 131026) ve kursun SMS hesabı bağlıysa aynı metin SMS ile gider (belge SMS'le gitmez)
+    if (+j.kod === 131026 && S.kurs && S.kurs.smsBagli && S._bulut && tel && !(belge && belge.base64)) {
+      const sm = await import('./bulut.js?v=235').then(B => B.smsGonder(tel, sadeDil(metin))).catch(() => ({ ok: false }));
+      if (sm.ok) { bitir(true); return { ok: true, id: sm.id || null, kanal: 'SMS' }; }
+    }
     bitir(false, j.hata);
     return { ok: false, hata: metaHata(j) };
   } catch (x) { bitir(false, 'ulaşılamadı'); return { ok: false, hata: 'WhatsApp servisine ulaşılamadı' }; }
@@ -358,7 +465,7 @@ const ROL_YAZI = { 'ÖĞRENCİ': 'öğrenciye', 'HOCA': 'usta öğreticiye', 'M�
 function onizle(liste, baslik, bitince) {
   pencere({
     baslik: baslik || 'Gidecek mesaj',
-    icerik: `<p class="ipucu" style="margin-bottom:12px">${isaret('bilgi', 18)}<span>Demo görünümü: gerçek kullanımda ${liste.length > 1 ? 'bu ' + liste.length + ' mesaj' : 'bu mesaj'} WhatsApp’tan kendiliğinden gider. Burada yalnız gösteriliyor.</span></p>
+    icerik: `<p class="ipucu" style="margin-bottom:12px">${isaret('bilgi', 18)}<span>Demo görünümü: gerçek kullanımda ${liste.length > 1 ? 'bu ' + liste.length + ' mesaj' : 'bu mesaj'} ${/SMS/.test(baslik) ? 'cihazın SMS uygulamasında hazır açılır' : 'WhatsApp’tan kendiliğinden gider'}. Burada yalnız gösteriliyor.</span></p>
       <div style="display:grid;gap:10px;max-height:52vh;overflow:auto">${liste.map(x => `<div><small style="display:block;color:var(--soluk);margin-bottom:4px">${e(x.ad || '')}${x.rol ? ' · ' + (x.rol === 'KURSA GELEN' ? adEk(S.kurs.ad, 'e') : ROL_YAZI[x.rol] || x.rol.toLocaleLowerCase('tr')) : ''}</small><div class="balon giden" style="max-width:100%;white-space:pre-line;overflow-wrap:anywhere">${e(x.metin)}</div></div>`).join('')}</div>`,
     altlik: '<button class="dg dg-ana" data-onizle-tamam>Tamam</button>',
     onAc(d) { d.querySelector('[data-onizle-tamam]').addEventListener('click', () => { kapatPencere(); if (bitince) bitince(new Set(liste.map((x, i) => i))); }); },
@@ -470,8 +577,16 @@ export function aracGorsel(a, cls = '') {
 export function ekranNotu(metin, tur = 'bilgi') { return `<p class="ekran-notu">${isaret(tur, 20)}<span>${metin}</span></p>`; }
 
 // Fotoğrafı küçült (tarayıcıda saklamak için ~600px JPEG)
+// KAY-115: tarayıcının açamadığı fotoğraf (iPhone HEIC, bozuk dosya, PDF) sessiz kalmaz; fotoKucult bu iletiyle (Error.message) reddeder
+export const heicMi = f => !!f && (/image\/hei[cf]/i.test(f.type || '') || /\.hei[cf]$/i.test(f.name || ''));
+export function fotoHataMetni(f) {
+  if (heicMi(f)) return 'Bu fotoğraf iPhone’un HEIC biçiminde ve bu tarayıcı açamıyor. iPhone’da Ayarlar › Kamera › Biçimler › “En Uyumlu”yu seçip yeniden çekin ya da fotoğrafı JPEG olarak gönderin.';
+  if (f && f.type && !/^image\//.test(f.type)) return 'Bu dosya fotoğraf değil. JPEG ya da PNG bir fotoğraf seçin.';
+  return 'Fotoğraf açılamadı. JPEG ya da PNG bir fotoğraf seçin.';
+}
 export function fotoKucult(dosya, max = 640) {
-  return new Promise((coz, red) => {
+  return new Promise((coz, red0) => {
+    const red = () => red0(Object.assign(new Error(fotoHataMetni(dosya)), { foto: true }));
     const r = new FileReader();
     r.onerror = red;
     r.onload = () => { const im = new Image(); im.onload = () => { const o = Math.min(1, max / Math.max(im.width, im.height)); const c = document.createElement('canvas'); c.width = Math.round(im.width * o); c.height = Math.round(im.height * o); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); coz(c.toDataURL('image/jpeg', 0.72)); }; im.onerror = red; im.src = r.result; };
@@ -562,7 +677,7 @@ function sifreSor(neden, ok) {
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Onayla</button>`,
     onAc(d) {
       const inp = d.querySelector('[data-sifre-tekrar]'), btn = d.querySelector('[data-k]');
-      const dene = () => { btn.disabled = true; import('./bulut.js?v=231').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
+      const dene = () => { btn.disabled = true; import('./bulut.js?v=235').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
       btn.addEventListener('click', dene); inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') dene(); }); setTimeout(() => inp.focus(), 50);
     },
   });

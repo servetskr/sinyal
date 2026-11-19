@@ -2,11 +2,12 @@
 // mdSinyal Yönetim panelinin “Hesaplar” bölümünde açılır (yalnız Servet; ortak görmez).
 // Yetki Firebase güvenlik kurallarından değil, Google hesabından gelir: Firebase projesinin sahibi olan Google hesabıyla
 // bağlanılır, Google IAM izin verirse işlem yapılır. Sunucu, gizli anahtar yok; erişim belirteci yalnız bellekte durur (1 saat).
-import { e, ik, pencere, kapatPencere, bildir, tl, siteLink } from './ui.js?v=231';
-import { S, kaydet, islem, bulutKanca } from './veri.js?v=231';
-import { ogrenciPanelMetni, WORKER } from './bulut.js?v=231';
-import { EMU } from './firebase-ayar.js?v=231';
-import { kabuk as epKabuk, kutular, bolum, satirlar, bos, not, nokta, dugme, R, SITE } from './eposta-kabuk.js?v=231';
+import { e, ik, pencere, kapatPencere, bildir, tl, siteLink, onaySor } from './ui.js?v=235';
+import { S, kaydet, islem, bulutKanca, ilSecenekleri } from './veri.js?v=235';
+import { ogrenciPanelMetni, WORKER } from './bulut.js?v=235';
+import { EMU } from './firebase-ayar.js?v=235';
+import { ETIKET_RE, etiketCoz } from './mevzuat-ara.js?v=235';
+import { kabuk as epKabuk, kutular, bolum, satirlar, bos, not, nokta, dugme, R, SITE } from './eposta-kabuk.js?v=235';
 
 // EMU (firebase-ayar.js, yalnız localhost + açık işaret): REST istekleri yerel emülatöre gider, Google onayı yerine emülatörün yönetici belirteci kullanılır
 const PROJE = EMU ? EMU.proje : 'sinyal-5d37a';
@@ -15,12 +16,14 @@ const KAPSAM = 'https://www.googleapis.com/auth/cloud-platform';
 const IT = (EMU ? EMU.auth + '/identitytoolkit.googleapis.com' : 'https://identitytoolkit.googleapis.com') + '/v1/projects/' + PROJE;
 const FS_AD = 'projects/' + PROJE + '/databases/(default)/documents';
 const FS = (EMU ? 'http://' + EMU.fsHost + ':' + EMU.fsPort : 'https://firestore.googleapis.com') + '/v1/' + FS_AD;
-export const DESTEK_TEL = '905013636536';
+import { DESTEK } from './iletisim.js?v=235';
+export const DESTEK_TEL = DESTEK.tel;  // YON-067: tek kaynak js/iletisim.js
 const YONETIM_KURS = 'mdSinyal Yönetim';
 const ROL = { mudur: 'Kurs müdürü', sekreter: 'Ön büro', usta: 'Öğretmen', ortak: 'Ortak', ogrenci: 'Öğrenci', demo: 'Demo' };
 const SUZGEC = [['hepsi', 'Hepsi'], ['personel', 'Kurs personeli'], ['ogrenci', 'Öğrenciler'], ['yonetim', 'Yönetim']];
 
 const SIL_GUN = 7;  // silinen hesap bu kadar gün geri alınabilir, sonra kalıcı silinir
+let ekranAlarm = { l: [], durum: '' };   // YON-037
 let silinecekler = [], kursIst = {}, destekler = [], gorunum = 'hesaplar', alt = 'kurslar', destekAlt = 'talepler';
 let belirtec = null, bitis = 0, hesaplar = null, suzgec = 'hepsi', arama = '', kok = null, yukleniyor = false, hataMetni = '', gomulu = false, ipucu = '';
 
@@ -140,8 +143,50 @@ async function yukle() {
     const ad = (kurslar['kurslar/' + k] || {}).ad || 'Adı bilinmeyen kurs';
     if (ad === YONETIM_KURS) continue;
     try { kursIst[k] = await kursIstatistik(k, ad, (kurslar['kurslar/' + k] || {}).sehir || ''); } catch (x) { kursIst[k] = { ad, hata: turkceHata(x) }; }
-    if (!kurslar['kurslar/' + k]) kursIst[k].belgeYok = true;  // kurs kaydı silinmiş, alt verisi kalmış: yalnız silinebilir, hesap açılmaz
+    if (!kurslar['kurslar/' + k]) kursIst[k].belgeYok = true;
+    else { const kb = kurslar['kurslar/' + k]; Object.assign(kursIst[k], { durum: kb.durum || 'etkin', tur: kb.tur || '', acan: kb.acan || '' }); }  // YON-081  // kurs kaydı silinmiş, alt verisi kalmış: yalnız silinebilir, hesap açılmaz
   }
+  await ekranAlarmYukle();
+}
+// YON-037: MEBBİS ekran alarmları — Yardımcı bir MEBBİS ekranında beklediği alanı bulamayınca kurs cihazı işlem kaydına (kurslar/{k}/kayit)
+// ne: 'MEBBİS ekranı değişti', ayrinti: 'SKT03004 · eksik: cmbDersSaati · Yardımcı 1.16 · harita 3 · iş …' yazar (mebkayit.js ekranDegisti).
+// Bütün kurslar tek sorguda: collectionGroup('kayit') where ne == … (tek alan dizini, collection group kapsamı; konsoldan açılır, YON-038).
+// Dizin yoksa Firestore FAILED_PRECONDITION döner: liste kursların kendi verisindeki son uyarılardan (S.mebEkranAlarm, 30 gün) kurulur ve
+// dizinin açılması gerektiği yazılır. Sahip okuması güvenlik kuralının ilk bloğuyla (match /{yol=**}) yapılır; yeni kural gerekmez.
+export const EKRAN_ALARM_NE = 'MEBBİS ekranı değişti';
+const ALARM_GUN = 60;
+export function ekranAlarmCoz(j, adOf = () => '') {
+  return (Array.isArray(j) ? j : []).filter(x => x && x.document).map(x => {
+    const d = x.document, f = alanlar(d.fields), m = String(d.name || '').match(/\/documents\/kurslar\/([^/]+)\/kayit\/([^/]+)$/), a = String(f.ayrinti || '');
+    const kod = (a.split(' · ')[0] || '').trim(), eksik = ((a.match(/eksik: ([^·]*)/) || [])[1] || '').trim(), yrd = ((a.match(/Yardımcı ([^\s·]+)/) || [])[1] || ''), is = ((a.match(/· iş ([^\s·]+)/) || [])[1] || '');
+    const kurs = m ? m[1] : '';
+    return { kurs, kursAd: adOf(kurs) || '', ekran: kod || 'bilinmeyen ekran', eksik: eksik && eksik !== '—' ? eksik : '', yardimci: yrd, is, kim: f.ad || '', zaman: f.zaman || f.yerel || '' };
+  }).filter(x => x.kurs && (!x.zaman || Date.now() - Date.parse(x.zaman) < ALARM_GUN * 864e5)).sort((a, b) => String(b.zaman).localeCompare(String(a.zaman)));
+}
+// dizin yokken: kursların verisindeki S.mebEkranAlarm.ekranlar { [kod]: { eksik[], zaman (ms), is } }
+function yedekAlarmlar() {
+  return Object.entries(kursIst).flatMap(([k, x]) => Object.entries(((x && x.ekranAlarm) || {}).ekranlar || {}).filter(([, v]) => v && v.zaman).map(([kod, v]) => ({ kurs: k, kursAd: x.ad || '', ekran: kod, eksik: (v.eksik || []).join(', '), yardimci: '', is: v.is || '', kim: '', zaman: new Date(v.zaman).toISOString(), goruldu: !!v.goruldu })))
+    .filter(x => Date.now() - Date.parse(x.zaman) < ALARM_GUN * 864e5).sort((a, b) => b.zaman.localeCompare(a.zaman));
+}
+async function ekranAlarmYukle() {
+  try {
+    const j = await api(FS + ':runQuery', { structuredQuery: { from: [{ collectionId: 'kayit', allDescendants: true }], where: { fieldFilter: { field: { fieldPath: 'ne' }, op: 'EQUAL', value: { stringValue: EKRAN_ALARM_NE } } }, limit: 500 } });
+    ekranAlarm = { l: ekranAlarmCoz(j, k => (kursIst[k] || {}).ad), durum: 'tamam' };
+  } catch (x) {
+    const dizin = x.durum === 'FAILED_PRECONDITION' || /index/i.test(x.message || '');
+    ekranAlarm = { l: yedekAlarmlar(), durum: dizin ? 'dizin' : 'hata', hata: dizin ? '' : turkceHata(x) };
+  }
+}
+export function ekranAlarmHtml(ea = ekranAlarm) {
+  const l = ea.l || [], gec = t => t ? new Date(t).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+  const uyari = ea.durum === 'dizin' ? `<p class="sh-hata">${ik('uyari')}<span>Bütün kursları tek sorguda okumak için Firestore dizini gerekiyor (kayit · ne, collection group). Firebase konsolu › Firestore › Dizinler’den açın (YON-038). Şimdilik kursların kendi verisindeki son ${30} günün uyarıları gösteriliyor.</span></p>`
+    : ea.durum === 'hata' ? `<p class="sh-hata">${ik('uyari')}<span>Ekran alarmları okunamadı: ${e(ea.hata || '')}</span></p>` : '';
+  if (!l.length) return ea.durum === 'tamam' ? `<p class="sh-dip sh-ea-yok">${ik('tik')} MEBBİS ekran alarmı yok (son ${ALARM_GUN} gün).</p>` : uyari ? `<section class="sh-ea">${uyari}</section>` : '';
+  const ekranlar = new Map(); l.forEach(x => { const g = ekranlar.get(x.ekran) || { ekran: x.ekran, l: [], kurslar: new Set() }; g.l.push(x); g.kurslar.add(x.kurs); ekranlar.set(x.ekran, g); });
+  return `<section class="sh-ea"><h2>MEBBİS ekran alarmları<span>${ekranlar.size} ekran · ${new Set(l.map(x => x.kurs)).size} kurs · son ${ALARM_GUN} gün</span></h2>${uyari}
+    <div class="sh-liste">${[...ekranlar.values()].map(g => { const son = g.l[0]; return `<details class="sh-ea-ekran"><summary><span class="sh-av sh-av-yok">${ik('uyari')}</span><span class="sh-satir-ic"><b class="mono">${e(g.ekran)}</b><small>${g.kurslar.size} kurs · ${g.l.length} alarm · son ${e(gec(son.zaman))}${son.eksik ? ' · eksik: ' + e(son.eksik) : ''}</small></span></summary>
+      <ul>${g.l.map(x => `<li><b>${e(x.kursAd || x.kurs)}</b><small>${[gec(x.zaman), x.eksik ? 'eksik: ' + x.eksik : '', x.yardimci ? 'Yardımcı ' + x.yardimci : '', x.kim, x.is ? 'iş ' + x.is : '', x.goruldu ? 'kursta görüldü' : ''].filter(Boolean).map(e).join(' · ')}</small></li>`).join('')}</ul></details>`; }).join('')}</div>
+    <p class="sh-dip">Yardımcı bu ekranlarda beklediği alanı bulamadı ve o ekrana yazmadı. Ekran haritasını güncelleyin; kurslar bu sırada “Elle gir” ile çalışır.</p></section>`;
 }
 const kalanGun = x => SIL_GUN - Math.floor((Date.now() - Date.parse(x.zaman)) / 864e5);
 // kursun mdSinyal verisi (kurslar/{kurs}/v): diziler parça parça, diğerleri tek belge
@@ -172,10 +217,14 @@ async function kursIstatistik(k, ad, sehir) {
   const ks = V.kursiyerler || [], cevap = V.destekCevap || {};
   (V.destek || []).forEach(t => destekler.push({ ...t, kurs: k, kursAd: ad, kanal: 'mdSinyal', ...(cevap[t.id] || {}) }));
   return {
+    depolama: (V.kurs && V.kurs.depolama) || null,  // YON-079
+    ekranAlarm: V.mebEkranAlarm || null,  // YON-037: dizin yokken yedek kaynak
     ad, sehir, kursiyer: ks.length, aktif: ks.filter(x => x.asama !== 'Ehliyet' && !x.pasif && !x.silindi).length,
     dersAy: (V.dersler || []).filter(x => String(x.tarih || '').startsWith(ay)).length,
     tahsilAy: (V.hareket || []).filter(x => x.tur === 'Gelir' && String(x.tarih || '').startsWith(ay)).reduce((t, x) => t + (+x.tutar || 0), 0),
     gonderimAy: (V.gonderimler || []).filter(x => String(x.zaman || '').startsWith(ay)).length,
+    otoAy: (V.gonderimler || []).filter(x => x.oto && String(x.zaman || '').startsWith(ay)).length,
+    waBagli: !!((V.kurs || {}).waHat || (V.kurs || {}).waApi),
     adaylar: (V.adaylar || []).length,
     oturum: kayit.filter(x => x.ne === 'Giriş yaptı').length, islem: kayit.length,
     aktifKisi: new Set(kayit.map(x => x.uid).filter(Boolean)).size,
@@ -291,20 +340,29 @@ const gunOnce = iso => { if (!iso) return 'hiç'; const g = Math.floor((Date.now
 // her kurs için kısa istatistik kutusu
 function kursIstHtml() {
   const l = Object.entries(kursIst).sort((a, b) => (b[1].son || '').localeCompare(a[1].son || ''));
-  if (!l.length) return `<div class="sh-bos">${ik('kursiyer')}<b>Henüz kurs hesabı yok</b><small>“Kurs hesabı linki” ile ilk kursu aç.</small></div>`;
+  if (!l.length) return `<div class="sh-bos">${ik('kursiyer')}<b>Henüz kurs hesabı yok</b><small>“Kurs aç” ile ilk kursu açın.</small><button class="dg dg-ana dg-kucuk" data-sh-kurs-ac style="margin-top:10px">${ik('arti')}Kurs aç</button></div>`;
   const kutu = (et, d, alt2) => `<div><small>${et}</small><b>${d}</b>${alt2 ? `<span>${alt2}</span>` : ''}</div>`;
-  return `<div class="sh-ist-izgara">${l.map(([k, x]) => {
+  // YON-034, YON-079: depolama — ücretsiz Firebase planında 1 GiB bütün proje için; kursların son ölçümü toplanır, %70 / %85 eşikte uyarı, "kaç kursa yeter"
+  const GiB = 1073741824, ol = l.filter(([, x]) => x.depolama && x.depolama.toplam), top = ol.reduce((a, [, x]) => a + x.depolama.toplam, 0), ort = ol.length ? top / ol.length : 0, oran = top / GiB, mbT = n => (n / 1048576).toLocaleString('tr-TR', { maximumFractionDigits: 1 }) + ' MB';
+  const depo = `<div class="sh-depo ${oran >= 0.85 ? 'kirmizi' : oran >= 0.7 ? 'sari' : ''}"><b>Depolama ${mbT(top)} / 1.024 MB (%${Math.round(oran * 100)})</b><small>${ol.length}/${l.length} kurs ölçüldü${ort ? ` · kurs başına ortalama ${mbT(ort)} · bu ortalamayla yaklaşık ${Math.floor(GiB * 0.85 / ort)} kursa yeter (%85 sınırı)` : ''}${oran >= 0.85 ? ' · %85 aşıldı: fotoğraf sıkıştırma ve yedek saklama süresini gözden geçirin' : oran >= 0.7 ? ' · %70 aşıldı' : ''}</small></div>`;
+  return `<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="dg dg-ana dg-kucuk" data-sh-kurs-ac>${ik('arti')}Kurs aç</button></div>` + depo + ekranAlarmHtml() + `<div class="sh-ist-izgara">${l.map(([k, x]) => {
     const hs = hesaplar.filter(h => h.kurs === k && !h.silinecek), per = hs.filter(h => h.rol && h.rol !== 'ogrenci').length, ogr = hs.filter(h => h.rol === 'ogrenci').length;
     const ogrAktif = hs.filter(h => h.rol === 'ogrenci' && h.sonGiris > Date.now() - 30 * 864e5).length, acik = destekler.filter(t => t.kurs === k && (t.durum || 'Açık') !== 'Çözüldü').length;
     return `<article class="sh-ist" data-sh-kurs="${e(k)}" role="button" tabindex="0">
-      <header><b>${e(x.ad)}</b><small>${e(x.belgeYok ? 'Kurs kaydı silinmiş, eski verisi kalmış · silmek için dokun' : [x.sehir, 'son hareket ' + gunOnce(x.son), per + ogr ? '' : 'hesabı yok'].filter(Boolean).join(' · '))}</small></header>
+      <header><b>${e(x.ad)}${x.durum && x.durum !== 'etkin' ? ` <span class="rozet ${x.durum === 'kapali' ? 'rozet-kirmizi' : 'rozet-uyari'}">${KURS_DURUM[x.durum] || x.durum}</span>` : ''}${x.tur && x.tur !== 'ucretli' ? ` <span class="rozet">${KURS_TUR[x.tur] || x.tur}</span>` : ''}</b><small>${e(x.belgeYok ? 'Kurs kaydı silinmiş, eski verisi kalmış · silmek için dokun' : [x.sehir, 'son hareket ' + gunOnce(x.son), per + ogr ? '' : 'hesabı yok'].filter(Boolean).join(' · '))}</small></header>
       ${x.hata ? `<p class="sh-hata">${ik('uyari')}<span>Veri okunamadı: ${e(x.hata)}</span></p>` : `<div class="sh-ist-kutular">
         ${kutu('Kursiyer', x.aktif, x.kursiyer + ' kayıtlı')}${kutu('Bu ay ders', x.dersAy, '')}${kutu('Bu ay tahsilat', tl(x.tahsilAy), '')}
         ${kutu('Oturum', x.oturum, 'son 30 gün')}${kutu('Aktif kişi', x.aktifKisi, per + ' personel hesabı')}${kutu('Öğrenci girişi', ogrAktif, ogr + ' öğrenci hesabı')}</div>
-      <footer><span>${ik('mesaj')}${x.gonderimAy} mesaj bu ay</span><span>${ik('aday')}${x.adaylar} aday</span>${acik ? `<span class="uyar">${ik('uyari')}${acik} açık destek</span>` : ''}</footer>`}
+      <footer><span>${x.depolama ? `${(x.depolama.toplam / 1048576).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} MB · ` : ''}${ik('mesaj')}${x.gonderimAy} mesaj bu ay${x.otoAy ? ' (' + x.otoAy + ' otomatik)' : ''}${(() => { const u = mesajUcret(), m = x.waBagli ? x.gonderimAy : 0; return m ? ` · tahmini ${tl(m * u.hizmet)}${m > u.kota ? ` · <b style="color:var(--kirmizi)">kota ${u.kota} aşıldı (+${m - u.kota})</b>` : ''}` : ''; })()}</span><span>${ik('aday')}${x.adaylar} aday</span>${acik ? `<span class="uyar">${ik('uyari')}${acik} açık destek</span>` : ''}</footer>`}
     </article>`;
-  }).join('')}</div><p class="sh-dip">Oturum ve aktif kişi son 30 günün işlem kaydından sayılır. Kutuya dokununca kursun hesapları, hesap oluşturma ve kursu silme açılır.</p>`;
+  }).join('')}</div><p class="sh-dip">Oturum ve aktif kişi son 30 günün işlem kaydından sayılır. Kutuya dokununca kursun hesapları, hesap oluşturma ve kursu silme açılır.</p>
+    <details class="sh-dip"><summary>WhatsApp mesaj ücreti ve kota (tahmin için)</summary><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">${[['hizmet', 'Hizmet mesajı (₺)'], ['pazarlama', 'Pazarlama mesajı (₺)'], ['kota', 'Fiyata dahil aylık kota']].map(([a, et]) => `<label style="display:grid;gap:4px;font-size:13px">${et}<input data-mesaj-ucret="${a}" inputmode="decimal" value="${String(mesajUcret()[a]).replace('.', ',')}" style="width:130px"></label>`).join('')}</div><small>Bu cihazda saklanır. Tahmin bütün mesajları hizmet sayar; 24 saat penceresindeki cevaplar ücretsizdir, gerçek tutar Meta faturasındadır.</small></details>`;
 }
+// MSJ-038: WhatsApp mesaj sayacı ve tahmini maliyet — Meta şablon (hizmet) mesajı başına ücret ve fiyata dahil aylık kota Yönetim'de bu cihazda
+// ayarlanır (varsayılan: hizmet 0,25 ₺, pazarlama 0,50 ₺, kota 1.000). Tahmin yalnız WhatsApp hattı bağlı kursta, bütün mesajlar hizmet sayılarak;
+// 24 saat penceresindeki cevaplar ücretsizdir, gerçek tutar Meta faturasındadır.
+const MESAJ_UCRET = 'sinyal-yonetim-mesaj-ucret';
+function mesajUcret() { try { return { hizmet: 0.25, pazarlama: 0.5, kota: 1000, ...JSON.parse(localStorage.getItem(MESAJ_UCRET) || '{}') }; } catch (x) { return { hizmet: 0.25, pazarlama: 0.5, kota: 1000 }; } }
 function silinenHtml() {
   if (!silinecekler.length) return `<div class="sh-bos">${ik('tik')}<b>Silinen hesap yok</b><small>Sildiğin hesaplar ${SIL_GUN} gün burada durur; bu sürede geri alabilirsin.</small></div>`;
   return `<div class="sh-liste">${silinecekler.slice().sort((a, b) => b.zaman.localeCompare(a.zaman)).map(x => `<div class="sh-satir sh-silinen">
@@ -344,6 +402,15 @@ async function yenile() {
 }
 
 function yaz(ev) {
+  // MSJ-038: mesaj ücreti/kota (bu cihazda); geçersiz sayı yazılmaz
+  { const mu = ev.target.closest && ev.target.closest('[data-mesaj-ucret]'); if (mu) { const v = parseFloat(String(mu.value).replace(',', '.')); if (isFinite(v) && v >= 0) { const o = mesajUcret(); o[mu.dataset.mesajUcret] = mu.dataset.mesajUcret === 'kota' ? Math.round(v) : v; try { localStorage.setItem(MESAJ_UCRET, JSON.stringify(o)); } catch (x) { } } return; } }
+  const and = ev.target.closest('[data-sh-an-durum]');
+  if (and) { const anim = and.dataset.shAnDurum, durum = and.value; moIstek('/soru-bildir/yonet', { yontem: 'POST', govde: { anim, durum } }).then(j => { sq.anim = (sq.anim || []).map(x => x.anim === anim ? j.kayit : x); bildir('Animasyon durumu güncellendi'); ciz(); }).catch(x => { bildir(turkceHata(x), 'uyari'); ciz(); }); return; }
+  const sqd = ev.target.closest('[data-sh-sq-durum]');
+  if (sqd) { const qi = +sqd.dataset.shSqDurum, durum = sqd.value; moIstek('/soru-bildir/yonet', { yontem: 'POST', govde: { qi, durum } }).then(j => { sq.liste = sq.liste.map(x => x.qi === qi ? j.kayit : x); bildir('Soru #' + (qi + 1) + ': ' + (durum === 'duzeltildi' ? 'düzeltildi' : durum === 'reddedildi' ? 'hata yok' : 'yeni')); ciz(); }).catch(x => { bildir(turkceHata(x), 'uyari'); ciz(); }); return; }
+  // site formu durumu (select'in input olayı)
+  const sfd = ev.target.closest('[data-sh-sf-durum]');
+  if (sfd) { const id = sfd.dataset.shSfDurum, durum = sfd.value; moIstek('/talep/yonet', { yontem: 'POST', govde: { id, durum } }).then(j => { sf.liste = sf.liste.map(x => x.id === id ? j.kayit : x); bildir('Durum: ' + (SF_DURUM.find(x => x[0] === durum) || [, durum])[1]); ciz(); }).catch(x => { bildir(turkceHata(x), 'uyari'); ciz(); }); return; }
   const sa = ev.target.closest('[data-sh-sss-ara]');
   if (sa) { mo.hazirAra = sa.value; const l = kok.querySelector('[data-sh-sss-hazir-liste]'); if (l && mo.hazir) { const q = mo.hazirAra.toLocaleLowerCase('tr-TR'); l.innerHTML = hazirListeHtml(mo.hazir.filter(x => !q || (x.soru + ' ' + x.kisa).toLocaleLowerCase('tr-TR').includes(q)).slice(0, 40), (mo.veri && mo.veri.sss) || { gizli: [] }); } return; }
   const a = ev.target.closest('[data-sh-ara]'); if (!a) return;
@@ -359,6 +426,7 @@ async function tikla(ev) {
   if (t.closest('[data-sh-yenile]')) return yenile();
   const al = t.closest('[data-sh-alt]'); if (al) { alt = al.dataset.shAlt; return ciz(); }
   if (alt === 'kullanim' && gorunum !== 'destek' && await kullanimTikla(t)) return;
+  if (t.closest('[data-sh-kurs-ac]')) return googleIste().then(kursAcPenceresi).catch(islemHata);
   const kr = t.closest('[data-sh-kurs]'); if (kr) return kursPenceresi(kr.dataset.shKurs);
   if (!bagli() && t.closest('[data-sh-davet],[data-sh-sifre],[data-sh-hesap],[data-sh-geri],[data-sh-hesap-ac],[data-sh-numara]')) { try { await baglan(); hataMetni = ''; } catch (x) { return bildir(turkceHata(x), 'uyari'); } }
   const gr = t.closest('[data-sh-geri]'); if (gr) { const x = silinecekler.find(y => y.uid === gr.dataset.shGeri); if (!x) return; gr.disabled = true; try { await silmeGeriAl(x); bildir(x.ad + ' geri alındı; yeniden girebilir'); ciz(); } catch (y) { gr.disabled = false; islemHata(y); } return; }
@@ -477,14 +545,67 @@ function kursPenceresi(k) {
       <div class="sh-islem">
         <button class="sh-islem-dg birincil" data-p-hesaplar>${ik('kursiyer')}<span><b>Hesaplarını göster</b><small>Bu kursun personel ve öğrenci hesapları</small></span></button>
         ${x.belgeYok ? '' : `<button class="sh-islem-dg" data-p-olustur>${ik('arti')}<span><b>Bu kursta hesap oluştur</b><small>Müdür, ön büro, öğretmen ya da öğrenci hesabı</small></span></button>`}
+        ${x.belgeYok ? '' : `<div class="sh-bilgi-satir"><span>Durum</span><select class="girdi" data-p-durum style="width:auto">${Object.entries(KURS_DURUM).map(([v, a]) => `<option value="${v}" ${(x.durum || 'etkin') === v ? 'selected' : ''}>${a}</option>`).join('')}</select></div>`}
         <button class="sh-islem-dg tehlike" data-p-kurs-sil>${ik('kapat')}<span><b>Kursu sil</b><small>Kursun bütün verisi ve hesapları kalıcı silinir; önce yedeği iner</small></span></button>
       </div>`,
     onAc: p => {
       p.querySelector('[data-p-hesaplar]').addEventListener('click', () => { kapatPencere(); alt = 'hesaplar'; suzgec = 'hepsi'; arama = x.ad; ciz(); });
       const ol = p.querySelector('[data-p-olustur]'); if (ol) ol.addEventListener('click', async () => { try { await googleIste(); } catch (y) { return islemHata(y); } hesapAcPenceresi({ kurs: k }); });
       p.querySelector('[data-p-kurs-sil]').addEventListener('click', () => kursSilPenceresi(k));
+      const du = p.querySelector('[data-p-durum]'); if (du) du.addEventListener('change', async () => { const v = du.value, eski = x.durum || 'etkin'; if (v !== 'etkin' && !(await onaySor('Kursun bütün kullanıcıları girişte durdurulur; açık oturumlar kapanır.', { baslik: `${x.ad} ${KURS_DURUM[v].toLocaleLowerCase('tr')} yapılsın mı?`, evet: KURS_DURUM[v], tehlike: true }))) { du.value = eski; return; }
+        try { await googleIste(); await kursDurumYaz(k, v, eski); x.durum = v; bildir(`${x.ad}: ${KURS_DURUM[v]}`); kapatPencere(); ciz(); } catch (y) { du.value = eski; islemHata(y); } });
     },
   });
+}
+// YON-081: kurs durumu ve kullanım türü; durum değişikliği kursun işlem kaydına (kayit) yazılır
+const KURS_DURUM = { etkin: 'Etkin', askida: 'Askıda', kapali: 'Kapalı' }, KURS_TUR = { ucretli: 'Ücretli', ucretsiz: 'Ücretsiz kullanım', test: 'Test / demo' };
+const sahipKaydi = (k, ne, ayrinti, simdi) => ({ update: { name: tamYol('kurslar/' + k + '/kayit/' + rastgele(20)), fields: fsAlanlar({ uid: 'mdSinyal', ad: 'mdSinyal Yönetim', ne, ayrinti: String(ayrinti).slice(0, 300), yerel: simdi.toISOString(), cihaz: 'mdSinyal Yönetim › Kurslar', zaman: simdi }) }, currentDocument: { exists: false } });
+async function kursDurumYaz(k, v, eski) {
+  const simdi = new Date();
+  await commit([{ update: { name: tamYol('kurslar/' + k), fields: fsAlanlar({ durum: v, durumZaman: simdi }) }, updateMask: { fieldPaths: ['durum', 'durumZaman'] }, currentDocument: { exists: true } }, sahipKaydi(k, 'mdSinyal kurs durumunu değiştirdi', (KURS_DURUM[eski] || eski) + ' → ' + KURS_DURUM[v], simdi)]);
+}
+// YON-081: kursu sahip açar — müdür hesabı rastgele şifreyle açılır, müdüre şifresini kendisinin belirleyeceği ilk giriş bağlantısı e-postayla gider;
+// kurs verisi müdürün ilk girişinde kurs belgesindeki ad, il ve şube sayısıyla kurulur (bulut.js). Davet kodu yolu tek kullanımlık link olarak kalır.
+function kursAcPenceresi() {
+  pencere({ baslik: 'Kurs aç', alt: true, icerik: `<form id="f-ka" class="form-izgara" novalidate>
+      <div class="alan tam"><label for="ka-ad">Kursun adı</label><input id="ka-ad" name="ad" required maxlength="80" placeholder="Örn. Örnek Sürücü Kursu"></div>
+      <div class="alan"><label for="ka-il">İl</label><select id="ka-il" name="il" required>${ilSecenekleri('')}</select></div>
+      <div class="alan"><label for="ka-ilce">İlçe</label><input id="ka-ilce" name="ilce" maxlength="40"></div>
+      <div class="alan"><label for="ka-m">Müdürün adı soyadı</label><input id="ka-m" name="mudur" required maxlength="80" autocomplete="off"></div>
+      <div class="alan"><label for="ka-e">Müdürün e-postası</label><input id="ka-e" name="eposta" type="email" required maxlength="120" autocomplete="off"></div>
+      <div class="alan"><label for="ka-t">Müdürün cep telefonu</label><input id="ka-t" name="tel" inputmode="tel" maxlength="20" placeholder="05xx xxx xx xx"></div>
+      <div class="alan"><label for="ka-s">Şube sayısı</label><input id="ka-s" name="sube" type="number" min="1" max="9" value="1"></div>
+      <div class="alan"><label for="ka-tur">Kullanım türü</label><select id="ka-tur" name="tur">${Object.entries(KURS_TUR).map(([v, a]) => `<option value="${v}">${a}</option>`).join('')}</select></div>
+      <div class="alan tam"><label for="ka-not">Not <small style="font-weight:400">isteğe bağlı, yalnız Yönetim’de görünür</small></label><input id="ka-not" name="not" maxlength="200"></div>
+      <p class="alan tam" style="font-size:13px;color:var(--soluk)">Müdüre şifresini kendisinin belirleyeceği ilk giriş bağlantısı e-postayla gider; bağlantıyla şifre konunca e-posta da doğrulanmış olur.</p></form>`,
+    altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-ka-ac>Kursu aç</button>',
+    onAc(p) {
+      const f = p.querySelector('#f-ka'), b = p.querySelector('[data-ka-ac]');
+      b.addEventListener('click', async () => {
+        const ad = f.ad.value.trim(), il = f.il.value, mudur = f.mudur.value.trim(), eposta = f.eposta.value.trim().toLowerCase();
+        if (!ad || !il || !mudur || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(eposta)) return bildir('Kurs adı, il, müdürün adı ve geçerli e-postası gerekli', 'uyari');
+        b.disabled = true; b.textContent = 'Açılıyor…';
+        try { const x = await kursAc({ ad, il, ilce: f.ilce.value.trim(), mudur, eposta, tel: f.tel.value.trim(), sube: Math.min(9, Math.max(1, +f.sube.value || 1)), tur: f.tur.value, not: f.not.value.trim() });
+          kapatPencere(); pencere({ baslik: 'Kurs açıldı', icerik: `<p style="font-size:14.5px"><b>${e(ad)}</b> açıldı. ${x.eposta ? `<b>${e(eposta)}</b> adresine ilk giriş bağlantısı gönderildi; müdür bağlantıyla şifresini belirleyip <b>Kurs müdürü ya da ön büroyum</b> girişinden girer.` : `İlk giriş bağlantısı gönderilemedi (${e(x.hata || '')}); hesap listesinden müdüre “Yeni şifre ver” ile şifre verin.`}</p>`, altlik: '<button class="dg dg-ana" data-kapat>Tamam</button>' });
+          yenile(); }
+        catch (y) { b.disabled = false; b.textContent = 'Kursu aç'; islemHata(y); }
+      });
+    } });
+}
+async function kursAc(g) {
+  const simdi = new Date(), j = await api(IT + '/accounts', { email: g.eposta, password: geciciSifre() + geciciSifre(), displayName: g.mudur });
+  const uid = j.localId; if (!uid) throw new Error('Google hesap kimliği dönmedi');
+  const k = rastgele(20, 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789');
+  try {
+    await commit([
+      { update: { name: tamYol('kurslar/' + k), fields: fsAlanlar({ ad: g.ad, sahip: uid, sehir: g.il, ilce: g.ilce || '', olusturma: simdi, acan: 'mdSinyal', tur: g.tur, durum: 'etkin', subeSayisi: g.sube, mudurTel: g.tel || '', not: g.not || '' }) }, currentDocument: { exists: false } },
+      { update: { name: tamYol('kullanicilar/' + uid), fields: fsAlanlar({ kurs: k }) }, currentDocument: { exists: false } },
+      { update: { name: tamYol('kurslar/' + k + '/uyeler/' + uid), fields: fsAlanlar({ ad: g.mudur, rol: 'mudur', eposta: g.eposta, katilma: simdi, acan: 'mdSinyal' }) }, currentDocument: { exists: false } },
+      sahipKaydi(k, 'mdSinyal kursu açtı', `${g.ad} · ${g.il}${g.ilce ? ' / ' + g.ilce : ''} · müdür ${g.mudur} · ${KURS_TUR[g.tur] || g.tur}${g.sube > 1 ? ' · ' + g.sube + ' şube' : ''}`, simdi),
+    ]);
+  } catch (y) { await api(IT + '/accounts:delete', { localId: uid }).catch(() => { }); throw y; }
+  try { await api(IT + '/accounts:sendOobCode', { requestType: 'PASSWORD_RESET', email: g.eposta }); return { k, uid, eposta: true }; }
+  catch (y) { return { k, uid, eposta: false, hata: turkceHata(y) }; }
 }
 
 // Kursu silme: adını yazarak onaylanır; önce kursun BÜTÜN verisi (kurs belgesi ve bütün alt koleksiyonları ham alanlarıyla:
@@ -760,7 +881,7 @@ async function ogrenciOlustur(k, x, sifre) {
   const tj = await api(FS + ':batchGet', { documents: [tamYol('telefonlar/' + tel)] });
   const tb = (tj.find(y => y.found) || {}).found, tk = tb ? alanlar(tb.fields).k : null;
   if (tk && tk !== k) throw new Error('Bu telefon numarasıyla başka bir kursta öğrenci hesabı var. Öğrencinin başka bir numarasını girin');
-  const eposta = tel + '.' + rastgele(6) + '@ogrenci.sinyal.app', kod = guncel.panelKod || rastgele(24), simdi = new Date();
+  const eposta = tel + '.' + rastgele(6) + '@ogrenci.mdsinyal.com'   /* YON-001 */, kod = guncel.panelKod || rastgele(24), simdi = new Date();
   const ad = [guncel.ad, guncel.soyad].filter(Boolean).join(' ') || 'Öğrenci';
   const j = await api(IT + '/accounts', { email: eposta, password: sifre });
   const uid = j.localId; if (!uid) throw new Error('Google hesap kimliği dönmedi');
@@ -830,7 +951,7 @@ const isl = () => { const v = S.isletme || {}; v.destekElle = v.destekElle || []
 const tKey = t => (t.elle ? 'e:' : t.kurs + ':') + t.id;
 const tDurum = t => t.durum || 'Açık';
 const tumTalepler = () => destekler.concat(isl().destekElle.map(t => ({ ...t, elle: true })))
-  .sort((a, b) => (tDurum(a) === 'Çözüldü') - (tDurum(b) === 'Çözüldü') || String(b.zaman || '').localeCompare(String(a.zaman || '')));
+  .sort((a, b) => (tDurum(a) === 'Çözüldü') - (tDurum(b) === 'Çözüldü') || (b.oncelik === 'Acil') - (a.oncelik === 'Acil') || String(b.zaman || '').localeCompare(String(a.zaman || '')));   // DIG-030: açık acil talepler üstte
 const waTel = t => { let d = String(t || '').replace(/\D/g, ''); if (d.startsWith('0')) d = d.slice(1); if (d.length === 10) d = '90' + d; return /^90\d{10}$/.test(d) ? d : ''; };
 const gunTarih = d => d ? new Date(d).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' }) : '';
 const ayBaslik = ym => new Date(ym + '-01T12:00').toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
@@ -840,11 +961,82 @@ const kimlikUret = () => 's' + Date.now().toString(36) + Math.random().toString(
 
 function destekHtml() {
   const v = isl(), l = tumTalepler(), acik = l.filter(t => tDurum(t) !== 'Çözüldü').length, ay = bugunIso().slice(0, 7), hAy = v.hizmetler.filter(h => String(h.tarih || '').startsWith(ay));
-  const sek = [['talepler', 'Talepler', acik], ['hizmetler', 'Hizmetler', v.hizmetler.length], ['hatalar', 'Son hatalar', hataRozet()], ['asistan', 'Asistan', ag.liste ? ag.liste.filter(x => !x.iyi).length : 0], ['mevzuat', 'Mevzuat', mo.takip ? (mo.takip.yeni || []).length : 0]];
+  const sek = [['talepler', 'Talepler', acik], ['hizmetler', 'Hizmetler', v.hizmetler.length], ['hatalar', 'Son hatalar', hataRozet()], ['asistan', 'Asistan', ag.liste ? ag.liste.filter(x => !x.iyi).length : 0], ['site', 'Site formları', sf.liste ? sf.liste.filter(x => (x.durum || 'yeni') === 'yeni').length : 0], ['soru', 'Soru bankası', sq.liste ? sq.liste.filter(x => x.durum === 'yeni').length : 0], ['mevzuat', 'Mevzuat', mo.takip ? (mo.takip.yeni || []).length : 0], ['ilan', 'İlanlar', il.liste ? il.liste.filter(x => x.durum === 'bekliyor').length : 0]];
   return `<div class="sh-bas"><div><h1>Destek</h1><p>${acik} açık talep · bu ay ${hAy.length} hizmet</p></div>
       <div class="sh-bas-dg"><button class="dg dg-cizgi dg-kucuk" data-sh-yenile ${yukleniyor ? 'disabled' : ''}>${ik('sifirla')}${yukleniyor ? 'Yükleniyor…' : 'Yenile'}</button><button class="dg dg-cizgi dg-kucuk" data-sh-talep-ekle>${ik('arti')}Talep ekle</button><button class="dg dg-ana dg-kucuk" data-sh-hizmet-ekle>${ik('arti')}Hizmet ekle</button></div></div>
     <div class="sh-suz sh-alt" role="tablist">${sek.map(([k, a, n]) => `<button role="tab" aria-selected="${destekAlt === k}" class="${destekAlt === k ? 'secili' : ''}" data-sh-dalt="${k}">${a}${n ? ` <em>${n}</em>` : ''}</button>`).join('')}</div>
-    ${destekAlt === 'talepler' ? talepListeHtml(l) : destekAlt === 'hatalar' ? hataListeHtml() : destekAlt === 'asistan' ? asistanGeriHtml() : destekAlt === 'mevzuat' ? mevzuatYonetHtml() : hizmetListeHtml(v.hizmetler)}`;
+    ${destekAlt === 'talepler' ? talepListeHtml(l) : destekAlt === 'hatalar' ? hataListeHtml() : destekAlt === 'asistan' ? asistanGeriHtml() : destekAlt === 'mevzuat' ? mevzuatYonetHtml() : destekAlt === 'site' ? siteFormHtml() : destekAlt === 'soru' ? soruBildirHtml() : destekAlt === 'ilan' ? ilanYonetHtml() : hizmetListeHtml(v.hizmetler)}`;
+}
+// ---- Soru bankası bildirimleri (UYG-018): öğrencilerin 'Soruda hata var' bildirimleri, soru başına tek satır (worker /soru-bildir/yonet) ----
+const sq = { liste: null, yukleniyor: false, hata: '', yetkisiz: false, suz: 'yeni' };
+async function soruBildirYukle() {
+  if (sq.yukleniyor) return; sq.yukleniyor = true; sq.hata = ''; ciz();
+  try { const [j, a] = await Promise.all([moIstek('/soru-bildir/yonet'), moIstek('/soru-bildir/yonet?tur=anim').catch(() => ({ liste: [] }))]); sq.liste = j.liste || []; sq.anim = a.liste || []; sq.yetkisiz = false; } catch (x) { if (x.yetkisiz) sq.yetkisiz = true; else sq.hata = turkceHata(x); }
+  sq.yukleniyor = false; ciz();
+}
+function soruBildirHtml() {
+  if (sq.liste === null && !sq.yukleniyor && !sq.yetkisiz && !sq.hata) setTimeout(soruBildirYukle, 0);
+  if (sq.yetkisiz) return `<div class="sh-bos">${ik('kilit')}<b>Soru bildirimlerini yalnız platform sahibi görür</b></div>`;
+  if (sq.hata && !sq.liste) return `<div class="sh-bos">${ik('uyari')}<b>Bildirimler okunamadı</b><small>${e(sq.hata)}</small><button class="dg dg-cizgi dg-kucuk" data-sh-sq-yenile>Yeniden dene</button></div>`;
+  if (!sq.liste) return `<div class="sh-bos">${ik('saat')}<b>Soru bildirimleri yükleniyor…</b></div>`;
+  const D = [['yeni', 'Yeni'], ['duzeltildi', 'Düzeltildi'], ['reddedildi', 'Hata yok']], say = d => sq.liste.filter(x => x.durum === d).length, l = sq.liste.filter(x => sq.suz === 'hepsi' || x.durum === sq.suz);
+  const ust = `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:4px 0 12px"><div class="sh-suz" role="tablist">${[...D.map(([k, a]) => [k, a, say(k)]), ['hepsi', 'Hepsi', sq.liste.length]].map(([k, a, n]) => `<button role="tab" aria-selected="${sq.suz === k}" class="${sq.suz === k ? 'secili' : ''}" data-sh-sq-suz="${k}">${a} <em>${n}</em></button>`).join('')}</div><button class="dg dg-cizgi dg-kucuk" data-sh-sq-yenile>${ik('sifirla')}Yenile</button></div>`;
+  if (!l.length) return ust + `<div class="sh-bos">${ik('tik')}<b>${sq.liste.length ? 'Bu süzgeçte bildirim yok' : 'Henüz soru bildirimi yok'}</b><small>Öğrenciler bir soruda “Soruda hata var” dediğinde burada soru başına toplanır. Soruyu düzeltip yayınladıktan sonra “Düzeltildi” deyin; bildiren öğrenciye uygulamada haber verilir.</small></div>`;
+  return ust + `<div class="sh-liste">${l.map(x => `<div class="sh-satir" style="cursor:default;align-items:flex-start"><span class="sh-av ${x.durum === 'yeni' ? 'sh-av-yok' : 'sh-av-hizmet'}">${ik(x.durum === 'yeni' ? 'uyari' : 'tik')}</span>
+    <span class="sh-satir-ic"><b>Soru #${x.qi + 1}${x.metin ? ' · ' + e(x.metin) : ''}</b><small>${x.sayi} bildirim · son ${e(new Date(x.son).toLocaleDateString('tr-TR'))}</small>${(x.bildirimler || []).slice(-3).reverse().map(b => `<small style="white-space:normal">${e([b.neden, b.aciklama, b.surum ? 'v' + b.surum : ''].filter(Boolean).join(' · '))}</small>`).join('')}</span>
+    <span style="display:flex;gap:6px;flex:none"><select class="dg dg-hafif dg-kucuk" data-sh-sq-durum="${x.qi}" aria-label="Durum">${D.map(([k, a]) => `<option value="${k}"${x.durum === k ? ' selected' : ''}>${a}</option>`).join('')}</select></span></div>`).join('')}</div>
+    <p class="sh-dip">Soru metni sinyal-kaynak’taki soru bankasından düzeltilir; sürüm yayınlanınca “Düzeltildi” seçin. Kayıtlar 1 yıl durur.</p>${animGorusHtml()}`;
+}
+// UYG-020: usta öğreticilerin animasyon görüşleri (öğretmen uygulaması › Hesabım › Animasyonlar)
+function animGorusHtml() {
+  const l = sq.anim || []; if (!l.length) return `<p class="sh-dip">Henüz animasyon görüşü yok. Usta öğreticiler öğretmen uygulamasında Hesabım › Animasyonlar’dan görüş bildirir.</p>`;
+  return `<h3 style="margin:22px 0 10px;font-size:16px;color:var(--murekkep)">Animasyon görüşleri</h3><div class="sh-liste">${l.map(x => `<div class="sh-satir" style="cursor:default;align-items:flex-start"><span class="sh-av ${x.duzelt && x.durum !== 'duzeltildi' ? 'sh-av-yok' : 'sh-av-hizmet'}">${ik(x.duzelt && x.durum !== 'duzeltildi' ? 'uyari' : 'tik')}</span><span class="sh-satir-ic"><b>${e(x.ad || x.anim)}</b><small>${x.dogru || 0} öğretmen doğru · ${x.duzelt || 0} öğretmen düzeltilmeli · son ${e(new Date(x.son).toLocaleDateString('tr-TR'))}</small>${(x.bildirimler || []).filter(b => b.not).slice(-3).reverse().map(b => `<small style="white-space:normal">${e(b.not)}</small>`).join('')}</span><span style="flex:none"><select class="dg dg-hafif dg-kucuk" data-sh-an-durum="${e(x.anim)}" aria-label="Durum">${[['yeni', 'Bakılacak'], ['duzeltildi', 'Düzeltildi'], ['onayli', 'Onaylı']].map(([k, a]) => `<option value="${k}"${x.durum === k ? ' selected' : ''}>${a}</option>`).join('')}</select></span></div>`).join('')}</div>`;
+}
+// ---- Site formları (SIT-009 iletişim, SIT-020 başvuru): worker /talep/yonet; kayıtlar 180 gün durur ----
+// DIG-037: kurslar arası ilan panosu — onay bekleyen ilanlar (yayına alma, reddetme, kaldırma)
+const il = { liste: null, yukleniyor: false, hata: '', yetkisiz: false };
+async function ilanYukle() { if (il.yukleniyor) return; il.yukleniyor = true; il.hata = ''; ciz(); try { il.liste = ((await moIstek('/ilan/yonet')).liste || []).sort((a, b) => (a.durum === 'bekliyor' ? 0 : 1) - (b.durum === 'bekliyor' ? 0 : 1) || String(b.zaman).localeCompare(String(a.zaman))); il.yetkisiz = false; } catch (x) { if (x.yetkisiz) il.yetkisiz = true; else il.hata = turkceHata(x); } il.yukleniyor = false; ciz(); }
+function ilanYonetHtml() {
+  if (il.liste === null && !il.yukleniyor && !il.yetkisiz && !il.hata) setTimeout(ilanYukle, 0);
+  if (il.yetkisiz) return `<div class="sh-bos">${ik('kilit')}<b>İlanları yalnız platform sahibi onaylar</b></div>`;
+  if (il.hata && !il.liste) return `<div class="sh-bos">${ik('uyari')}<b>İlanlar okunamadı</b><small>${e(il.hata)}</small></div>`;
+  if (!il.liste) return `<div class="sh-bos">${ik('saat')}<b>İlanlar yükleniyor…</b></div>`;
+  if (!il.liste.length) return `<div class="sh-bos">${ik('tik')}<b>Henüz ilan yok</b><small>Kurs müdürleri İlan panosu’ndan ilan verince burada onay bekler.</small></div>`;
+  const AD = { bekliyor: 'Onay bekliyor', yayinda: 'Yayında', reddedildi: 'Reddedildi', kaldirildi: 'Kaldırıldı' };
+  return `<div class="sh-liste">${il.liste.map(x => `<div class="sh-satir" style="cursor:default;align-items:flex-start"><span class="sh-satir-ic"><b>${e(x.kategori)} · ${e(x.baslik)}</b><small>${e(x.kursAd || '')} · ${e(x.iletisim)} · ${e(x.bas || '')}${x.bit ? '–' + e(x.bit) : ''} · ${(x.resimler || []).length} resim</small><small style="white-space:pre-wrap">${e(String(x.aciklama).slice(0, 400))}</small></span>
+    <span class="sh-satir-sag" style="flex-direction:column;align-items:flex-end;gap:6px"><em class="sh-durum-r">${AD[x.durum] || x.durum}</em>${x.durum === 'bekliyor' ? `<button class="dg dg-ana dg-kucuk" data-sh-ilan="${e(x.id)}:yayinda">Yayına al</button><button class="dg dg-cizgi dg-kucuk" data-sh-ilan="${e(x.id)}:reddedildi">Reddet</button>` : x.durum === 'yayinda' ? `<button class="dg dg-cizgi dg-kucuk" data-sh-ilan="${e(x.id)}:kaldirildi">Kaldır</button>` : ''}</span></div>`).join('')}</div>`;
+}
+const sf = { liste: null, yukleniyor: false, hata: '', yetkisiz: false, suz: 'yeni' };
+const SF_DURUM = [['yeni', 'Yeni'], ['arandi', 'Arandı'], ['kapandi', 'Kapandı']];
+async function siteFormYukle() {
+  if (sf.yukleniyor) return; sf.yukleniyor = true; sf.hata = ''; ciz();
+  try { const j = await moIstek('/talep/yonet'); sf.liste = j.liste || []; sf.yetkisiz = false; }
+  catch (x) { if (x.yetkisiz) sf.yetkisiz = true; else sf.hata = turkceHata(x); }
+  sf.yukleniyor = false; ciz();
+}
+function siteFormHtml() {
+  if (sf.liste === null && !sf.yukleniyor && !sf.yetkisiz && !sf.hata) setTimeout(siteFormYukle, 0);
+  if (sf.yetkisiz) return `<div class="sh-bos">${ik('kilit')}<b>Site formlarını yalnız platform sahibi görür</b><small>mdSinyal Yönetim’e platform sahibinin hesabıyla gir.</small></div>`;
+  if (sf.hata && !sf.liste) return `<div class="sh-bos">${ik('uyari')}<b>Site formları okunamadı</b><small>${e(sf.hata)}</small><button class="dg dg-cizgi dg-kucuk" data-sh-sf-yenile>Yeniden dene</button></div>`;
+  if (!sf.liste) return `<div class="sh-bos">${ik('saat')}<b>Site formları yükleniyor…</b></div>`;
+  const say = d => sf.liste.filter(x => (x.durum || 'yeni') === d).length, l = sf.liste.filter(x => sf.suz === 'hepsi' || (x.durum || 'yeni') === sf.suz);
+  const ust = `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:4px 0 12px">
+    <div class="sh-suz" role="tablist">${[...SF_DURUM.map(([k, a]) => [k, a, say(k)]), ['hepsi', 'Hepsi', sf.liste.length]].map(([k, a, n]) => `<button role="tab" aria-selected="${sf.suz === k}" class="${sf.suz === k ? 'secili' : ''}" data-sh-sf-suz="${k}">${a} <em>${n}</em></button>`).join('')}</div>
+    <button class="dg dg-cizgi dg-kucuk" data-sh-sf-yenile ${sf.yukleniyor ? 'disabled' : ''}>${ik('sifirla')}Yenile</button></div>`;
+  if (!l.length) return ust + `<div class="sh-bos">${ik('tik')}<b>${sf.liste.length ? 'Bu süzgeçte kayıt yok' : 'Henüz form gelmedi'}</b><small>mdsinyal.com’daki iletişim ve başvuru formlarından gelenler burada görünür; 6 ay sonra kendiliğinden silinir.</small></div>`;
+  const zaman = z => new Date(z).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const tel = t => String(t || '').replace(/\D/g, '').replace(/^0/, '90');
+  return ust + `<div class="sh-liste">${l.map(x => `<div class="sh-satir" style="cursor:default;align-items:flex-start">
+    <span class="sh-av ${x.tur === 'basvuru' ? 'sh-av-hizmet' : ''}">${ik(x.tur === 'basvuru' ? 'arti' : 'mesaj')}</span>
+    <span class="sh-satir-ic"><b>${e(x.ad)} · ${e(x.kurs)}${x.sehir ? ' · ' + e(x.sehir) : ''}</b>
+      <small>${e([x.tur === 'basvuru' ? 'Başvuru' : 'İletişim', zaman(x.z), x.konu, x.tel, x.eposta].filter(Boolean).join(' · '))}</small>
+      ${[x.sube && 'Şube: ' + x.sube, x.ogrenci && 'Yıllık öğrenci: ' + x.ogrenci, x.program && 'Program: ' + x.program, x.gun && 'Uygun gün: ' + x.gun].filter(Boolean).length ? `<small style="white-space:normal">${e([x.sube && 'Şube: ' + x.sube, x.ogrenci && 'Yıllık öğrenci: ' + x.ogrenci, x.program && 'Program: ' + x.program, x.gun && 'Uygun gün: ' + x.gun].filter(Boolean).join(' · '))}</small>` : ''}
+      ${x.not ? `<small style="white-space:normal;color:var(--murekkep)">${e(x.not)}</small>` : ''}</span>
+    <span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;flex:none;max-width:260px">
+      ${x.tel ? `<a class="dg dg-cizgi dg-kucuk" href="tel:+${e(tel(x.tel))}">Ara</a><a class="dg dg-cizgi dg-kucuk" href="https://wa.me/${e(tel(x.tel))}" target="_blank" rel="noopener">WhatsApp</a>` : ''}${x.eposta ? `<a class="dg dg-cizgi dg-kucuk" href="mailto:${e(x.eposta)}">E-posta</a>` : ''}
+      <select class="dg dg-hafif dg-kucuk" data-sh-sf-durum="${e(x.id)}" aria-label="Durum">${SF_DURUM.map(([k, a]) => `<option value="${k}"${(x.durum || 'yeni') === k ? ' selected' : ''}>${a}</option>`).join('')}</select>
+      <button class="dg dg-hafif dg-kucuk" data-sh-sf-sil="${e(x.id)}">Sil</button></span></div>`).join('')}</div>
+    <p class="sh-dip">Son ${Math.min(100, sf.liste.length)} form. Kayıtlar 180 gün sonra kendiliğinden silinir.</p>`;
 }
 // ---- Kullanım (kullanim.js özetleri) ----
 // Her cihaz günde bir kez kurslar/{kurs}/kullanim/{gün}_{cihaz} belgesine { o: JSON metni, g: gün } yazar. Kişisel veri yok:
@@ -960,7 +1152,7 @@ let kuOtoBakildi = false;
 async function kullanimHaftalik() {
   if (kuOtoBakildi || !(S.kurs && S.kurs.sahipAnaliz) || !Object.keys(kursIst).length) return; kuOtoBakildi = true;
   try {
-    const { gecenHafta } = await import('./eposta.js?v=231'), h = gecenHafta();
+    const { gecenHafta } = await import('./eposta.js?v=235'), h = gecenHafta();
     if (S.kurs.sahipAnalizSon === h.donem) return;
     const T = await kullanimOku(aralikGunler(h.bas, h.bit));
     const j = await kullanimGonder(T, h.bas.split('-').reverse().join('.') + ' – ' + h.bit.split('-').reverse().join('.'), h.donem);
@@ -1110,7 +1302,7 @@ function mevzuatYonetHtml() {
         <label class="tam">Not<input name="not" maxlength="400" placeholder="Ör. 1 Ocak 2027'den itibaren yeni tutarlar geçerli"></label>
         <button class="dg dg-ana dg-kucuk" type="submit">Kaydet</button>
       </form>
-      ${Object.keys(durum).length ? `<div class="sh-liste">${Object.entries(durum).map(([id, d]) => `<div class="sh-satir" style="cursor:default"><span class="sh-av sh-av-yok">${ik('uyari')}</span><span class="sh-satir-ic"><b>${e(adi(id))} · ${e((MO_DURUM.find(x => x[0] === d.durum) || [, d.durum])[1])}</b><small style="white-space:normal">${e([d.not, d.yerine ? 'yerine: ' + adi(d.yerine) : '', moTarih(d.tarih)].filter(Boolean).join(' · '))}</small></span><button class="dg dg-hafif dg-kucuk" data-sh-mo-durum-sil="${e(id)}">Kaldır</button></div>`).join('')}</div>` : ''}
+      ${Object.keys(durum).length ? `<div class="sh-liste">${Object.entries(durum).map(([id, d]) => `<div class="sh-satir" style="cursor:default"><span class="sh-av sh-av-yok">${ik('uyari')}</span><span class="sh-satir-ic"><b>${e(adi(id))} · ${e((MO_DURUM.find(x => x[0] === d.durum) || [, d.durum])[1])}</b><small style="white-space:normal">${e([d.not, d.yerine ? 'yerine: ' + adi(d.yerine) : '', moTarih(d.tarih)].filter(Boolean).join(' · '))}</small></span><button class="dg dg-hafif dg-kucuk" data-sh-mo-durum-sil="${e(id)}">Kaldır</button></div>${gozdenHtml(id, d)}`).join('')}</div>` : ''}
     </section>
     ${sssBolumHtml()}
     <section class="sh-grup"><h2>Duyurular<span>kursların mevzuat ekranında “Güncel değişiklikler”</span></h2>
@@ -1126,6 +1318,50 @@ function mevzuatYonetHtml() {
       ${duyurular.length ? `<div class="sh-liste">${duyurular.map(d => `<div class="sh-satir" style="cursor:default"><span class="sh-av sh-av-hizmet">${ik('bilgi')}</span><span class="sh-satir-ic"><b>${e(d.baslik)}</b><small style="white-space:normal">${e([moTarih(d.tarih), d.metin].filter(Boolean).join(' · '))}</small></span><button class="dg dg-hafif dg-kucuk" data-sh-mo-duyuru-sil="${e(d.id)}">Sil</button></div>`).join('')}</div>` : ''}
     </section>
   </div>`;
+}
+// ---- MEV-019: belge 'Değişti' ya da 'Yürürlükten kalktı' işaretlenince o belgeye dayanan hazır cevaplar (SSS), panelden yazılan SSS'ler
+// ve rehber bölümleri gözden geçirme listesine düşer. Not alanında madde yazılırsa ("md.7 ve md.39 değişti") liste o maddelere daralır.
+// "Gözden geçirildi" işareti bu tarayıcıda tutulur (durum yeniden kaydedilince, yani tarihi değişince liste baştan açılır).
+const maddeNo = m => (String(m || '').match(/(\d+)/) || [])[1] || '';
+const notMaddeleri = t => new Set([...String(t || '').matchAll(/(?:md\.?|madde)\s*(\d+)/giu)].map(r => r[1]));
+const GOZDEN = 'sinyal-mo-gozden';
+const gozdenOku = () => { try { return JSON.parse(localStorage.getItem(GOZDEN) || '{}'); } catch (x) { return {}; } };
+const gozdenYaz = o => { try { localStorage.setItem(GOZDEN, JSON.stringify(o)); } catch (x) { } };
+async function etkiYukle() {
+  if (mo.etki || mo.etkiYukleniyor) return; mo.etkiYukleniyor = true;
+  try {
+    const dz = await (await fetch(siteLink('veri/mevzuat/dizin.json'))).json(), sb = dz.belgeler.findIndex(b => b.id === 'sss'), rb = dz.belgeler.findIndex(b => b.id === 'rehber');
+    const sss = dz.parcalar.filter(p => p.b === sb && p.sss).map(p => ({ id: p.sss.id, soru: p.m, kisa: p.sss.kisa, ayrinti: p.sss.ayrinti || [], adimlar: p.sss.adimlar || [], dikkat: p.sss.dikkat || '', dayanakHam: p.sss.dayanak || [], dayanak: (p.sss.dayanak || []).map(d => d.belge + ': ' + d.m), konu: p.baslik || '' }));
+    if (!mo.hazir) mo.hazir = sss.map(({ dayanakHam, ...x }) => x);
+    const rehber = new Map();
+    for (const p of dz.parcalar) {
+      if (p.b !== rb) continue;
+      const l = rehber.get(p.m) || []; for (const r of String(p.t || '').matchAll(ETIKET_RE)) { const c = etiketCoz(r[1]); if (c && c.belge) l.push({ belge: c.belge, m: c.m || '' }); } rehber.set(p.m, l);
+    }
+    mo.etki = { sss, rehber: [...rehber].map(([bolum, et]) => ({ bolum, et })) };
+  } catch (x) { mo.etki = { hata: turkceHata(x), sss: [], rehber: [] }; }
+  mo.etkiYukleniyor = false; ciz();
+}
+function etkilenenler(id, d) {
+  const md = notMaddeleri(d.not), uy = x => x.belge === id && (!md.size || md.has(maddeNo(x.m)));
+  const panel = ((mo.veri && mo.veri.sss) || { kayitlar: [] }).kayitlar.filter(k => (k.dayanak || []).some(uy));
+  const gizli = new Set(((mo.veri && mo.veri.sss) || { gizli: [] }).gizli || []);
+  return { md, panel, sss: mo.etki.sss.filter(x => !gizli.has(x.id) && x.dayanakHam.some(uy)), rehber: mo.etki.rehber.filter(r => r.et.some(uy)).map(r => r.bolum) };
+}
+function gozdenHtml(id, d) {
+  if (!['degisti', 'kalkti'].includes(d.durum)) return '';
+  if (!mo.etki) { setTimeout(etkiYukle, 0); return `<p class="sh-dip">Bu belgeye dayanan cevaplar aranıyor…</p>`; }
+  if (mo.etki.hata) return `<p class="sh-dip">Gözden geçirme listesi çıkarılamadı: ${e(mo.etki.hata)}</p>`;
+  const x = etkilenenler(id, d), anahtar = id + '|' + (d.tarih || ''), g = new Set(gozdenOku()[anahtar] || []);
+  const top = x.sss.length + x.panel.length + x.rehber.length, bitti = [...x.sss.map(y => 's:' + y.id), ...x.panel.map(y => 'p:' + y.id), ...x.rehber.map(y => 'r:' + y)].filter(k => g.has(k)).length;
+  if (!top) return `<p class="sh-dip">Bu belgeye${x.md.size ? ' (md.' + [...x.md].join(', md.') + ')' : ''} dayanan hazır cevap ya da rehber bölümü yok.</p>`;
+  const sat = (k, ic, dg = '') => `<div class="sh-satir" style="cursor:default;align-items:flex-start${g.has(k) ? ';opacity:.55' : ''}"><button class="sh-gozden${g.has(k) ? ' secili' : ''}" data-sh-gozden="${e(anahtar)}" data-k="${e(k)}" role="checkbox" aria-checked="${g.has(k)}" aria-label="Gözden geçirildi">${ik('tik')}</button><span class="sh-satir-ic">${ic}</span>${dg}</div>`;
+  return `<details class="sh-mz-etki"${bitti < top ? ' open' : ''}><summary>Gözden geçir: ${[x.sss.length ? x.sss.length + ' hazır cevap' : '', x.panel.length ? x.panel.length + ' panel SSS' : '', x.rehber.length ? x.rehber.length + ' rehber bölümü' : ''].filter(Boolean).join(' · ')}${x.md.size ? ' (md.' + [...x.md].join(', md.') + ')' : ''} · <b>${bitti}/${top} bitti</b></summary>
+    <p class="sh-dip">Kısa cevap ve rakamlar yeni metne göre okunsun; değişen hazır cevabı “Düzelt” ile yeniden yazın, rehber bölümü kaynak dosyasından (arac/mevzuat/rehber) düzeltilip yeniden üretilir. Bitirdiğinizi işaretleyin.</p>
+    <div class="sh-liste">${x.sss.map(y => sat('s:' + y.id, `<b>${e(y.soru)}</b><small style="white-space:normal">${e(y.kisa)}</small><small>Hazır cevap · ${e(y.dayanak.join(', '))}</small>`, `<button class="dg dg-cizgi dg-kucuk" data-sh-sss-duzelt="${e(y.id)}">Düzelt</button>`)).join('')}
+    ${x.panel.map(y => sat('p:' + y.id, `<b>${e(y.soru)}</b><small style="white-space:normal">${e(y.kisa)}</small><small>Panelden yazılan SSS</small>`, `<button class="dg dg-cizgi dg-kucuk" data-sh-sss-duzen="${e(y.id)}">Düzenle</button>`)).join('')}
+    ${x.rehber.map(y => sat('r:' + y, `<b>Rehber · ${e(y)}</b><small>Kısa cevap, öne çıkan rakamlar ve “Ne yapılır” adımları</small>`, `<a class="dg dg-cizgi dg-kucuk" href="${e(siteLink('rehber/'))}" target="_blank" rel="noopener">Rehber</a>`)).join('')}</div>
+  </details>`;
 }
 // Sık sorulanlar: panelden yazılan kayıtlar (bütün kurslarda hazır cevap ve asistan kaynağı) ve statik derlemdeki hazır cevapları gizleme/düzeltme
 function sssBolumHtml() {
@@ -1259,7 +1495,7 @@ function talepListeHtml(l) {
   if (!l.length) return `<div class="sh-bos">${ik('mesaj')}<b>Destek talebi yok</b><small>Kurslar mdSinyal’de Hesabım › mdSinyal Destek’ten talep açınca burada görünür. WhatsApp ya da telefonla gelenleri “Talep ekle” ile kaydet.</small></div>`;
   return `<div class="sh-liste">${l.map(t => `<button class="sh-satir sh-t-${TDURUM.find(d => d[0] === tDurum(t))[1]}" data-sh-talep="${e(tKey(t))}">
     <span class="sh-t-nokta" aria-hidden="true"></span>
-    <span class="sh-satir-ic"><b>${e(t.tur || 'Talep')} · ${e(String(t.metin || '').slice(0, 90))}</b><small>${e([t.kursAd, t.kim, gunOnce(t.zaman), t.kanal || 'mdSinyal'].filter(Boolean).join(' · '))}</small></span>
+    <span class="sh-satir-ic"><b>${t.oncelik === 'Acil' ? '<span style="color:#b42318">ACİL · </span>' : ''}${e(t.tur || 'Talep')} · ${e(String(t.metin || '').slice(0, 90))}</b><small>${e([t.kursAd, t.kim, gunOnce(t.zaman), t.kanal || 'mdSinyal'].filter(Boolean).join(' · '))}</small></span>
     <span class="sh-satir-sag"><em class="sh-durum-r">${e(tDurum(t))}</em>${ik('sag')}</span></button>`).join('')}</div>`;
 }
 function hizmetListeHtml(l) {
@@ -1344,6 +1580,13 @@ async function destekTikla(t) {
   const mu = t.closest('[data-sh-mo-duyuru-sil]'); if (mu) { await moIslem('/mevzuat/ortak/duyuru', { sil: mu.dataset.shMoDuyuruSil }, 'Duyuru silindi'); return true; }
   if (t.closest('[data-sh-sss-ekle]')) { if (!mo.toc) await mevzuatYonetYukle(); sssPenceresi(); return true; }
   if (t.closest('[data-sh-sss-hazir]')) { hazirCevaplarYukle(); return true; }
+  if (t.closest('[data-sh-sf-yenile]')) { siteFormYukle(); return true; }
+  { const ia = t.closest('[data-sh-ilan]'); if (ia) { const [id, durum] = ia.dataset.shIlan.split(':'); ia.disabled = true; moIstek('/ilan/yonet', { yontem: 'POST', govde: { id, durum } }).then(() => { il.liste = il.liste.map(x => x.id === id ? { ...x, durum } : x); bildir(durum === 'yayinda' ? 'İlan yayında' : 'Kaydedildi'); ciz(); }).catch(x => { bildir(turkceHata(x), 'uyari'); ia.disabled = false; }); return true; } }   // DIG-037
+  if (t.closest('[data-sh-sq-yenile]')) { soruBildirYukle(); return true; }
+  const sqz = t.closest('[data-sh-sq-suz]'); if (sqz) { sq.suz = sqz.dataset.shSqSuz; ciz(); return true; }
+  const sfz = t.closest('[data-sh-sf-suz]'); if (sfz) { sf.suz = sfz.dataset.shSfSuz; ciz(); return true; }
+  const sfs = t.closest('[data-sh-sf-sil]'); if (sfs) { if (!sfs.dataset.onay) { sfs.dataset.onay = '1'; sfs.textContent = 'Silmeyi onayla'; return true; } try { await moIstek('/talep/yonet', { yontem: 'POST', govde: { sil: sfs.dataset.shSfSil } }); sf.liste = sf.liste.filter(x => x.id !== sfs.dataset.shSfSil); bildir('Form kaydı silindi'); } catch (x) { bildir(turkceHata(x), 'uyari'); } ciz(); return true; }
+  const gz = t.closest('[data-sh-gozden]'); if (gz) { const o = gozdenOku(), l = new Set(o[gz.dataset.shGozden] || []); if (l.has(gz.dataset.k)) l.delete(gz.dataset.k); else l.add(gz.dataset.k); o[gz.dataset.shGozden] = [...l]; gozdenYaz(o); ciz(); return true; }
   const sd = t.closest('[data-sh-sss-duzen]'); if (sd) { const k = ((mo.veri && mo.veri.sss) || { kayitlar: [] }).kayitlar.find(x => x.id === sd.dataset.shSssDuzen); if (k) sssPenceresi(k); return true; }
   const sz = t.closest('[data-sh-sss-duzelt]'); if (sz) { const x = (mo.hazir || []).find(y => y.id === sz.dataset.shSssDuzelt); if (x) sssPenceresi(null, { ...x, yerine: x.id }); return true; }
   const sg = t.closest('[data-sh-sss-gizle]'); if (sg) { await moIslem('/mevzuat/ortak/sss-gizle', { id: sg.dataset.shSssGizle, gizle: sg.dataset.gizle === '1' }, sg.dataset.gizle === '1' ? 'Hazır cevap gizlendi' : 'Hazır cevap açıldı'); return true; }

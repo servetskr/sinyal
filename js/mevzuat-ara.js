@@ -1,12 +1,13 @@
 /* Mevzuat arama motoru (tarayıcıda çalışır, DOM kullanmaz; node'da da sınanır: arac/mevzuat/arayuz-test.mjs)
-   İki küme: 'ortak' (bütün kurslara aynı derlem: veri/mevzuat/dizin.json + vektor.bin) ve 'kurs' (kursa gelen yazılar: worker /mevzuat/hepsi).
+   Kümeler: 'ortak' (bütün kurslara aynı derlem: veri/mevzuat/dizin.json + vektor.bin), 'ek' (platformun sonradan eklediği belgeler),
+   'kurs' (kursa gelen yazılar: worker /mevzuat/hepsi) ve 'taban' (il taban fiyat listeleri: veri/taban-fiyat/*.md, js/taban.js'ten üretilir; yalnız kelime araması).
    Arama üç yoldan gelir ve birleşir:
    1) Madde yakalama: "madde 15", "md.15", "m.15/1", "mtsk 15", "ööky 56", "15. madde" → o maddenin parçaları en üstte.
    2) Kelime: Türkçe sadeleştirme + hafif kök kırpma + BM25 (parça metni, belge kısa adı, madde no ve başlık); gündelik söz resmî karşılığıyla da aranır (ESANLAM).
    3) Anlam: sorgu vektörü (worker /mevzuat/gom, dışarıdan verilen gom() ile) × N×D int8 vektörler (nokta çarpımı).
    Kelime ve anlam listeleri RRF (k=60) ile birleşir; aynı maddenin sonraki parçaları geriye kayar (çeşitlilik). gom() yoksa ya da hata verirse yalnız kelime araması döner, anlamKapali: true. */
 
-const SURUM = '?v=231';
+const SURUM = '?v=235';
 const RRF_K = 60, LISTE_N = 60;
 const KELIME_AG = 1, ANLAM_AG = 1;  // RRF ağırlıkları; k 10/30/100 ve ağırlık 0,8–1,5 denendi, fark en çok 1 soru
 const BM25_K1 = 1.2, BM25_B = 0.75;
@@ -295,7 +296,7 @@ const FILTRE_UYAR = {
   hepsi: () => true,
   mevzuat: (k, b) => (k === 'ortak' || k === 'ek') && MEVZUAT_TUR.has(b.tur),
   yazi: (k, b) => b.tur === 'yazi',
-  program: (k, b) => (k === 'ortak' || k === 'ek') && KILAVUZ_TUR.has(b.tur),
+  program: (k, b) => (k === 'ortak' || k === 'ek' || k === 'taban') && KILAVUZ_TUR.has(b.tur),
   rehber: (k, b) => b.tur === 'rehber',
   sss: (k, b) => b.tur === 'sss',
   kurs: k => k === 'kurs',
@@ -355,11 +356,13 @@ export function etiketBul(kume, c) {
   return ilk;
 }
 
+const bugunIso = () => new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+const ayinSonu = ym => { const [y, a] = String(ym).split('-').map(Number); return y && a ? new Date(Date.UTC(y, a, 0)).toISOString().slice(0, 10) : ''; };
 const TUR_AGIRLIK = { program: 0.85, 'rehber-resmi': 0.85, bilgilendirme: 0.85, form: 0.85 };
 // Platform sahibinin işaretlediği belge durumu: yürürlükten kalkan ve değişen belge geri düşer (yerine eklenen belge öne çıkar)
 const DURUM_AGIRLIK = { kalkti: 0.5, degisti: 0.75, taslak: 0.7 };
 // arama kümeleri ve birleşik dizindeki sıraları: statik derlem, platform eklemeleri, kursun yazıları
-const KUMELER = ['ortak', 'ek', 'kurs'];
+const KUMELER = ['ortak', 'ek', 'kurs', 'taban'];
 // mdSinyal metinleri (rehber, sık sorulanlar) listeyi doldurmasın: ilk sırada resmî parça, ilk 6'da en çok 2 ve ilk 10'da en çok 3 mdSinyal parçası.
 // Fazlası sıradaki resmî parçalardan sonraya kayar (kendi aralarındaki sıra korunur). Yalnız mdSinyal parçası varsa (filtre) olduğu gibi kalır.
 export function dengele(sira, degil) {
@@ -533,6 +536,8 @@ export function yeniMotor() {
     return o;
   }
 
+  // süresi dolan taban listesi platform işareti olmadan da 'yürürlükten kalktı' sayılır (geride kalır, ekranda işaretlenir)
+  const belgeDurumu = b => durum[b.id] || (b.bitis && b.bitis < bugunIso() ? { durum: 'kalkti', not: `Bu listenin süresi doldu (geçerlilik: ${b.gecerlilik || b.bitis}). Yeni il listesi yayımlanınca güncellenir.`, tarih: b.bitis } : null);
   const kayitAl = id => { const [ad, i] = hazirDizin().kayit[id]; const k = kume[ad]; const p = k.parcalar[i]; return { ad, i, p, b: k.belgeler[p.b] || {} }; };
 
   async function ara(sorgu, { filtre = 'hepsi', n = 30, gom = null, anlam = true, esanlam = true } = {}) {
@@ -604,7 +609,7 @@ export function yeniMotor() {
     anlamL.forEach(([id], r) => { aSira.set(id, r); rrf.set(id, (rrf.get(id) || 0) + ANLAM_AG / (RRF_K + r + 1)); });
     // Belge türü önceliği: aynı derecede eşleşen parçalarda bağlayıcı metin (kanun, yönetmelik, yönerge, tebliğ, kılavuz) öne geçer;
     // ders programı, denetim rehberi ve kurum bilgilendirmesi biraz geride kalır (0,85: aynı eşleşmede yaklaşık 10 sıra). Kurs yazıları ve mdSinyal metinleri 1.
-    for (const [id, x] of rrf) { const b = kayitAl(id).b, d = durum[b.id]; rrf.set(id, x * (TUR_AGIRLIK[b.tur] || 1) * (d ? DURUM_AGIRLIK[d.durum] || 1 : 1)); }
+    for (const [id, x] of rrf) { const b = kayitAl(id).b, d = belgeDurumu(b); rrf.set(id, x * (TUR_AGIRLIK[b.tur] || 1) * (d ? DURUM_AGIRLIK[d.durum] || 1 : 1)); }
     // Çeşitlilik: aynı maddenin ikinci ve sonraki parçaları, başka maddelerin hepsinden sonraya kayar (madde penceresi zaten bütün maddeyi gösterir).
     // Sonra dengele: mdSinyal metinleri ilk sıraları doldurmaz.
     const mSay = new Map(), once = [], ertele = [];
@@ -620,7 +625,8 @@ export function yeniMotor() {
       if (goruldu.has(id)) return; goruldu.add(id);
       const { ad, i, p, b } = kayitAl(id);
       const set = new Set(sonuc.vurguKok), pk = new Set(kokler(`${p.t || ''} ${p.baslik || ''}`));
-      sonuc.sonuc.push({ kaynak: ad, belge: b, parca: p, sira: i, skor, neden, vurgu: [...set].filter(w => pk.has(w)), ...(durum[b.id] ? { durum: durum[b.id] } : {}) });
+      const bd = belgeDurumu(b);
+      sonuc.sonuc.push({ kaynak: ad, belge: b, parca: p, sira: i, skor, neden, vurgu: [...set].filter(w => pk.has(w)), ...(bd ? { durum: bd } : {}) });
     };
     maddeIdler.forEach((id, r) => ekle(id, 1 + 1 / (r + 1), 'madde'));
     for (const [id, s] of sira) {
@@ -695,14 +701,46 @@ export function yeniMotor() {
       return kumeKur('ek', belgeler, parcalar, uyumlu && v && v.length === parcalar.length * D ? v : null, D);
     },
     ekSil() { kume.ek = null; dizin = null; },
+    // İl taban fiyat listeleri: [{ id, il, yil, donemBit: 'YYYY-MM', md }] (veri/taban-fiyat). Her satır bir parça; metnin başında
+    // "taban ücret, kurs kendi ücretini belirler, KDV dahil" ibaresi durur ki cevap bunu atlamasın.
+    tabanKur(listeler) {
+      const belgeler = [], parcalar = [];
+      for (const L of listeler || []) {
+        const md = String(L.md || ''); if (!md) continue;
+        const bi = belgeler.length, ad = `${L.il} ${L.yil} taban fiyat listesi`;
+        const kaynak = (md.match(/^Kaynak: (.+?)\. Geçerlilik/m) || [])[1] || '', gecerlilik = (md.match(/Geçerlilik: (.+?)\. Ücretler/) || [])[1] || '';
+        belgeler.push({ id: 'taban-' + L.id, ad: `${ad} (valilik maliyet tablosu)`, kisa: ad, tur: 'bilgilendirme', kaynakAd: kaynak, gecerlilik, bitis: L.donemBit ? ayinSonu(L.donemBit) : '', taban: true,
+          ozet: `${kaynak}. Geçerlilik: ${gecerlilik}. Tutarlar taban (en düşük) ücrettir; her kurs kendi ücretini belirler ama bu tutarların altına inemez (MTSK Yön. md.43/4). KDV dahildir.` });
+        const on = `${ad} (taban ücret: kurs kendi ücretini belirler, bunun altına inemez; KDV dahil; geçerlilik ${gecerlilik})`;
+        let bolum = '';
+        // özet parça: ilk kez belge alacakların sınıf sınıf taban ücreti ("B sınıfı kurs ücreti ne kadar" gibi genel sorular buraya düşer)
+        const ozet = [...md.matchAll(/^- [A-Z]\d+: İlk kez (.+?) sertifikası .*Taban ücret ([\d.,]+ TL)\./gm)].map(r => `${r[1]} ${r[2]}`);
+        if (ozet.length) parcalar.push({ b: bi, m: 'Özet', baslik: 'Sınıf sınıf kurs ücreti, ilk kez sürücü belgesi alacak aday', t: `${on}. İlk kez sürücü belgesi alacak adayın sınıflara göre taban kurs ücreti (teorik ve direksiyon dahil): ${ozet.join('; ')}. Belgesi olup başka sınıf alacakların ücreti ayrı satırlardadır.` });
+        for (const x of md.split('\n')) {
+          const b = x.match(/^## (.+)/); if (b) { bolum = b[1]; continue; }
+          let r;
+          if (bolum === 'Satırlar' && (r = x.match(/^- ([A-Z]\d+): (.+)/))) {
+            // başlık kimin için olduğunu söyler: "B Manuel sınıfı kurs ücreti (ilk belge)", "A2 → B geçiş ücreti"
+            const ilk = r[2].match(/^İlk kez (.+?) sertifikası/), gc = r[2].match(/^Mevcut belgesi (.+?) olan aday (.+?) sınıfı için/), ms = r[2].match(/^e-Sınavdan muaf olan .*?\) (.+?) adayı/);
+            const sn = x => x.replace(/^(\S+) (Manuel|Otomatik|Engelli)$/, (y, c, t) => `${c} sınıfı (${t.toLocaleLowerCase('tr')})`).replace(/^(\S+)$/, '$1 sınıfı');
+            const baslik = ilk ? `${sn(ilk[1])} kurs ücreti, ilk kez sürücü belgesi alacak aday` : gc ? `${gc[1]} belgeli adayın ${sn(gc[2])} geçiş ücreti` : ms ? `${ms[1]} e-sınav muaf aday ücreti` : 'Taban ücret';
+            parcalar.push({ b: bi, m: r[1], baslik, t: `${on}: ${r[2]}` });
+          }
+          else if (bolum === 'Notlar' && (r = x.match(/^(\d+)\. (.+)/))) parcalar.push({ b: bi, m: 'Not ' + r[1], baslik: 'Liste notu', t: `${ad}, not ${r[1]}: ${r[2]}` });
+          else if (bolum === 'Okuma notları' && (r = x.match(/^- (.+)/))) parcalar.push({ b: bi, m: 'Okuma notu', baslik: 'mdSinyal okuma notu', t: `${ad}: ${r[1]}` });
+        }
+      }
+      return parcalar.length ? kumeKur('taban', belgeler, parcalar, null, boyut) : (kume.taban = null, dizin = null, null);
+    },
     durumKur(d) { durum = d && typeof d === 'object' ? d : {}; },
     // platform sahibinin gizlediği (yerine yenisini yazdığı) statik hazır cevaplar aramaya girmez
     sssGizle(l) { gizliSss = new Set(Array.isArray(l) ? l : []); },
     get durum() { return durum; },
+    belgeDurumu,
     ara, madde,
     dizinKur, takmalar,
     get kume() { return kume; },
-    get bilgi() { const d = hazirDizin(); return { model, boyut, onek, parca: d.N, terim: d.terim.size, kurulum: d.sure, ortak: kume.ortak ? kume.ortak.parcalar.length : 0, ek: kume.ek ? kume.ek.parcalar.length : 0, kurs: kume.kurs ? kume.kurs.parcalar.length : 0, ortakVektor: !!(kume.ortak && kume.ortak.vek), kursVektor: !!(kume.kurs && kume.kurs.vek) }; },
+    get bilgi() { const d = hazirDizin(); return { model, boyut, onek, parca: d.N, terim: d.terim.size, kurulum: d.sure, ortak: kume.ortak ? kume.ortak.parcalar.length : 0, ek: kume.ek ? kume.ek.parcalar.length : 0, kurs: kume.kurs ? kume.kurs.parcalar.length : 0, taban: kume.taban ? kume.taban.parcalar.length : 0, ortakVektor: !!(kume.ortak && kume.ortak.vek), kursVektor: !!(kume.kurs && kume.kurs.vek) }; },
   };
 }
 
@@ -719,6 +757,14 @@ export function yukle({ getir = (u, s) => fetch(u, s), kok = new URL('../veri/me
     let vek = null;
     try { const v = await getir(kok + 'vektor.bin' + SURUM); if (v.ok) vek = new Int8Array(await v.arrayBuffer()); } catch (x) { vek = null; }
     motor.ortakKur(dz, vek);
+    // il taban fiyat listeleri (inmezse arama onlarsız çalışır)
+    try {
+      const tk = new URL('../taban-fiyat/', kok).href, td = await getir(tk + 'dizin.json' + SURUM);
+      if (td.ok) {
+        const l = (await td.json()).listeler || [];
+        motor.tabanKur((await Promise.all(l.map(async x => { try { const r2 = await getir(tk + x.md + SURUM); return r2.ok ? { ...x, md: await r2.text() } : null; } catch (y) { return null; } }))).filter(Boolean));
+      }
+    } catch (x) { /* taban listesi aramaya katılmaz */ }
     motor.dizinKur();
     return motor;
   })();

@@ -1,6 +1,7 @@
 // Bütün veriler tek Excel dosyasında (çok sayfalı) + tam yedek (.json). Hizmet sözleşmesi kursa verisini istediği an
 // toplu alabileceğini söz veriyor: Ayarlar › Veri ve e-posta, Raporlar › Tam döküm ve aylık rapor e-postası bu modülü kullanır.
-import { S, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, SINIFLAR, gun } from './veri.js?v=231';
+import { S, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, SINIFLAR, gun, kursiyerTaban, gerekliDireksiyon } from './veri.js?v=235';
+import { satirAdi } from './taban.js?v=235';
 
 // Excel hücresi en çok 32.767 karakter: daha uzun metin (gömülü dosya, imza) kısaltılır
 const t = x => (x === undefined || x === null ? '' : typeof x === 'string' && x.length > 32000 ? (x.startsWith('data:') ? '(dosya)' : x.slice(0, 32000) + '…') : x);
@@ -21,12 +22,16 @@ export function tumSayfalar(D = S) {
   const puan = (x, id) => { const k = ks.find(y => y.id === id) || {}, r = (x.sonuc || {})[id]; return r && typeof r === 'object' && r.puan != null ? r.puan : t(((/direksiyon|uygulama/i.test(x.tur || '') ? k.dsinav : k.esinav) || {}).puan); };
   const kisi = { kursiyer: kn, egitmen: eg, usta: eg, arac: ar };
   const guvenOdenen = x => { try { return odenen(x); } catch (y) { return ''; } }, guvenKalan = x => { try { return kalanBorc(x); } catch (y) { return ''; } };
+  // il taban listesi: öğrencinin satırı ve taban tutarı (liste yoksa boş), gerekli direksiyon saati; hesap güncel kurs ayarıyla yapılır
+  const tabanX = x => { try { return kursiyerTaban(x); } catch (y) { return null; } }, gerekli = x => { try { return gerekliDireksiyon(x); } catch (y) { return ''; } };
+  const sozU = x => { const o = od(x); return o.sozlesme || ((o.toplam || 0) + (o.iade || 0) + ((x.kapali || {}).iptalTutar || 0)); };
+  const mevcutAd = x => x.mevcutEhliyet && x.mevcutEhliyet !== 'Yok' ? x.mevcutEhliyet : '';
   return {
-    'Kursiyerler': [['No', 'TC', 'Ad', 'Soyad', 'Telefon', 'E-posta', 'Doğum tarihi', 'Cinsiyet', 'Adres', 'Öğrenim', 'Sınıf', 'Aşama', 'Kayıt', 'Şube', 'Usta öğretici', 'Teorik', 'Direksiyon', 'Toplam ücret', 'Peşinat', 'Peşinat tarihi', 'Ödenen', 'Kalan', 'Durum'],
-      ...ks.map(x => [t(x.no), t(x.tc), t(x.ad), t(x.soyad), t(x.tel), t(x.eposta), t(x.dogumTarihi), t(x.cinsiyet), t(x.adres), t(x.ogrenim), (SINIFLAR[x.sinif] || {}).ad || t(x.sinif), t(x.asama), t(x.kayit), t(x.sube), eg(x.egitmen), t(x.teorik), t(x.direksiyon), t(od(x).toplam), t(od(x).pesin), t(od(x).pesinTarih), guvenOdenen(x), guvenKalan(x), x.kapali ? 'Kapalı' : x.pasif ? 'Pasif' : 'Açık'])],
+    'Kursiyerler': [['No', 'TC', 'Ad', 'Soyad', 'Telefon', 'E-posta', 'Doğum tarihi', 'Cinsiyet', 'Adres', 'Öğrenim', 'Sınıf', 'Sınıf kodu', 'Mevcut belge', 'Belge tarihi', 'Sadece otomatik', '2016 öncesi', 'e-Sınav muaf tarihi', 'Aşama', 'Kayıt', 'Şube', 'Usta öğretici', 'Teorik', 'Direksiyon', 'Gerekli direksiyon', 'Taban satırı', 'Taban (₺)', 'Sözleşme ücreti', 'Toplam ücret', 'Peşinat', 'Peşinat tarihi', 'Ödenen', 'Kalan', 'Ücretsiz', 'Durum'],
+      ...ks.map(x => { const tx = tabanX(x); return [t(x.no), t(x.tc), t(x.ad), t(x.soyad), t(x.tel), t(x.eposta), t(x.dogumTarihi), t(x.cinsiyet), t(x.adres), t(x.ogrenim), (SINIFLAR[x.sinif] || {}).ad || t(x.sinif), t(x.sinif), mevcutAd(x), mevcutAd(x) ? t((x.oncekiBelge || {}).tarih) : '', x.mevcutOtomatik ? 'Evet' : '', x.mevcutEski ? 'Evet' : '', t((x.muaf || {}).sonSinav || (x.muaf || {}).esinavTarih), t(x.asama), t(x.kayit), t(x.sube), eg(x.egitmen), t(x.teorik), t(x.direksiyon), gerekli(x), tx && tx.satir ? satirAdi(tx.satir) : '', tx && tx.taban != null ? tx.taban : '', t(sozU(x)), t(od(x).toplam), t(od(x).pesin), t(od(x).pesinTarih), guvenOdenen(x), guvenKalan(x), x.ucretsiz ? 'Evet' + (x.ucretsiz.neden ? ' · ' + t(x.ucretsiz.neden) : '') : '', x.kapali ? 'Kapalı' : x.pasif ? 'Pasif' : 'Açık']; })],
     'Taksitler': [['Kursiyer', 'Sıra', 'Vade', 'Tutar', 'Ödenen kısmi', 'Ödendi', 'Yöntem', 'Açıklama'], ...ks.flatMap(x => (od(x).taksitler || []).map((y, i) => [tamAd(x), i + 1, t(y.vade), t(y.tutar), y.kismi || 0, t(y.odendi), t(y.yontem), t(y.aciklama)]))],
     'Ek kalemler': [['Kursiyer', 'Kalem', 'Tutar', 'Ödendi'], ...ks.flatMap(x => (od(x).ekler || []).map(y => [tamAd(x), t(y.ad), t(y.tutar), t(y.odendi)]))],
-    'Kasa': [['Tarih', 'Makbuz no', 'Tür', 'Kategori', 'Açıklama', 'Yöntem', 'Tutar', 'Kursiyer', 'İptal'], ...(D.hareket || []).map(x => [t(x.tarih), t(x.no), t(x.tur), t(x.kategori), t(x.aciklama), t(x.yontem), t(x.tutar), kn(x.kursiyer), x.iptal ? t(x.iptal.tarih) + ' · ' + t(x.iptal.neden) : ''])],
+    'Kasa': [['Tarih', 'Makbuz no', 'Tür', 'Kategori', 'Açıklama', 'Yöntem', 'Tutar', 'Kursiyer', 'Vade', 'Kaydeden', 'Kayıt zamanı', 'Değiştiren', 'Değiştirme zamanı', 'İptal'], ...(D.hareket || []).map(x => [t(x.tarih), t(x.no), t(x.tur), t(x.kategori), t(x.aciklama), t(x.yontem), t(x.tutar), kn(x.kursiyer), (x.dagilim || []).map(d => d.vade).filter(Boolean).join(' '), t(x.kaydeden), t((x.kayitZamani || '').replace('T', ' ').slice(0, 16)), t(x.degistiren), t((x.degisZamani || '').replace('T', ' ').slice(0, 16)), x.iptal ? t(x.iptal.tarih) + ' · ' + t(x.iptal.kim) + ' · ' + t(x.iptal.neden) : ''])],
     'Gün sonu': [['Kapatılan gün'], ...(D.gunSonu || []).slice().sort().map(g => [g])],
     'Dersler': [['Tarih', 'Saat', 'Kursiyer', 'Usta öğretici', 'Araç', 'Tür', 'Durum', 'Başlangıç', 'Bitiş', 'Süre (dk)', 'MEBBİS'], ...(D.dersler || []).map(d => [t(d.tarih), t(d.saat), kn(d.kursiyer), eg(d.egitmen), ar(d.arac), d.tur || 'trafik', t(d.durum), t(d.bas), t(d.bit), t(d.sure), d.meb ? 'Girildi' : ''])],
     'Sınavlar': [['Tür', 'Tarih', 'Saat', 'Yer', 'Kursiyer', 'Sonuç', 'Puan'], ...(D.sinavlar || []).flatMap(x => (x.kursiyerler || []).map(id => [t(x.tur), t(x.tarih), t(x.saat), t(x.yer), kn(id), sonucAd((x.sonuc || {})[id]), puan(x, id)]))],
@@ -50,7 +55,7 @@ export function tumSayfalar(D = S) {
 }
 
 // Excel okuyucu yalnız gerektiğinde yüklenir (sayfalar5.js ile aynı kaynak)
-export const xlsxHazir = () => import('./sayfalar5.js?v=231').then(m => m.xlsxYukle());
+export const xlsxHazir = () => import('./sayfalar5.js?v=235').then(m => m.xlsxYukle());
 // aoa_to_sheet metni dize hücresi (t:'s') olarak yazar; .xlsx'te dize hücresi formül olarak çalışmaz, öne ' eklemek gerekmez
 // (eklenirse '+90… gibi telefonlarda görünür kalırdı). Formül riski yalnız CSV'de; o yol sayfalar5.js'te.
 export async function tumKitap(D = S) {

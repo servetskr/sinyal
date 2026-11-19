@@ -2,10 +2,14 @@
 // Eski portal.js "Aracın" bölümü (model, plaka, bakıma kalan km), guzergah.js ustaHtml (güzergâhlar, püf noktaları, kursa iletilen notlar,
 // "Püf noktası ekle" formu: data-gz-usta, guzergah.js'teki ortak submit dinleyicisi işler) ve app.js hesap penceresi (Kursu ara, mdSinyal Destek:
 // data-destek, Çıkış yap / Kullanıcı değiştir: data-cikis; ikisi de app.js'teki belge dinleyicisinde çalışır) buraya taşındı.
-import { S, SINIFLAR, oturum, tarihOku } from '../veri.js?v=231';
-import { ayAdi, tarih } from '../ui.js?v=231';
-import { guzergahlar } from '../guzergah.js?v=231';
-import { esc, oi, sayfaBas, geri, bolum, kart, gorsel, dugme, satir, liste, radyo, ikonKutu, bos, not, stilEkle } from '../ogr/ui.js?v=231';
+import { S, SINIFLAR, oturum, tarihOku, sinifEtiket, anaSinif, fark, kaydet } from '../veri.js?v=235';
+import { haftaYuku, izinKarti } from './bugun.js?v=235';
+import { ayAdi, tarih, bildir } from '../ui.js?v=235';
+import { guzergahlar } from '../guzergah.js?v=235';
+import { kisaMetin } from '../guncelleme.js?v=235';
+import * as ARC from '../ogr/araclar.js?v=235';
+import * as B from '../bulut.js?v=235';
+import { esc, oi, sayfaBas, geri, bolum, kart, gorsel, dugme, satir, liste, radyo, ikonKutu, bos, not, stilEkle } from '../ogr/ui.js?v=235';
 
 const geriBugun = () => geri('Bugün', { 'data-ux-alt': '' });
 const uzunTarih = t => { if (!t) return ''; const d = tarihOku(t); return d.getDate() + ' ' + ayAdi(d.getMonth(), true) + ' ' + d.getFullYear(); };
@@ -14,8 +18,9 @@ const harfler = ad => String(ad || '?').trim().split(/\s+/).filter(Boolean).map(
 
 /* ---------- Aracım ---------- */
 function aracKart(a) {
-  const kod = String(a.sinif || '').replace(/-O$/, ''), S0 = SINIFLAR[a.sinif] || {};
-  const vites = a.vites || String(S0.ad || '').split(' · ')[1] || '';
+  // sınıf: "B sınıfı · Otomatik/Engelli" (veri.js sinifEtiket); vites satırı yalnız manuel/otomatik bilgisi varsa ("Vites: Engelli" yazılmaz)
+  const kod = a.sinif ? anaSinif(a.sinif) : '', S0 = SINIFLAR[a.sinif] || {}, parca = String(S0.ad || '').split(' · ')[1] || '';
+  const vites = a.vites || (/manuel|otomatik/i.test(parca) ? parca : '');
   const km = (+a.bakimKm || 0) - (+a.km || 0);
   const bakim = a.bakimKm ? liste([satir({
     sol: ikonKutu('ayar', km <= 0 ? 'kirmizi' : km <= 500 ? 'turuncu' : 'mavi'),
@@ -27,7 +32,7 @@ function aracKart(a) {
     ['Kilometre', a.km ? sayi(a.km) + ' km' : ''], ['Muayene', uzunTarih(a.muayene)], ['Trafik sigortası', uzunTarih(a.sigorta)], ['Kasko', uzunTarih(a.kasko)],
   ].filter(([, v]) => v != null && v !== '');
   return `<section class="ox-hero ox-uar-arac">${gorsel('usta-arac', a.model || 'Araç', 'ox-uar-arac-g')}
-      <div class="ox-uar-arac-yazi"><h2>${esc(a.model || 'Araç')}</h2><p class="ox-uar-plaka">${esc(a.plaka || '')}</p>${kod ? `<p>${esc(kod)} sınıfı${vites ? ' · ' + esc(vites) : ''}</p>` : ''}</div></section>`
+      <div class="ox-uar-arac-yazi"><h2>${esc(a.model || 'Araç')}</h2><p class="ox-uar-plaka">${esc(a.plaka || '')}</p>${a.sinif ? `<p>${esc(sinifEtiket(a.sinif))}${vites && !/manuel|otomatik/i.test(sinifEtiket(a.sinif)) ? ' · ' + esc(vites) : ''}</p>` : ''}</div></section>`
     + (bakim ? `<div class="ox-uar-ara">${bakim}</div>` : '')
     + bolum('Araç bilgileri')
     + `<div class="ox-liste ox-uar-tablo">${tablo.map(([e, v]) => `<div class="ox-uar-tsat"><span>${esc(e)}</span><b>${esc(v)}</b></div>`).join('')}</div>`;
@@ -99,9 +104,17 @@ function hesapHtml(ctx) {
   const kim = `<div class="ox-kart ox-uar-kim"><span class="ox-uar-av" aria-hidden="true">${foto}</span><div><h2>${esc(eg.ad || u.ad || '')}</h2><p>${esc(S.kurs.ad || '')}</p><p>Öğretmen</p></div></div>`;
   const satirlar = [
     tel ? satir({ ikon: 'tel', baslik: 'Kursu ara', alt: esc(S.kurs.tel), etiket: 'a', attrs: { href: 'tel:' + tel } }) : '',
+    satir({ ikon: 'oynat', baslik: 'Animasyonlar · görüşün', alt: 'Öğrencilerin izlediği animasyonları gözden geçir', attrs: { 'data-ux-alt': 'anim' } }),
+    satir({ ikon: 'takvim', baslik: 'Müsait olmadığım gün', alt: 'İzin ya da mazeret bildir; kurs onaylayınca o gün ders verilmez', attrs: { 'data-ux-alt': 'izin' } }),
     satir({ ikon: 'mesaj', baslik: 'mdSinyal Destek', alt: 'Sorun, soru ya da istek bildir', attrs: { 'data-destek': true } }),
+    // kurulu sürüm ve güncelleme denetimi (tıklama js/guncelleme.js'te)
+    satir({ ikon: 'sifirla', ton: 'gri', baslik: 'Uygulama sürümü', alt: `<span data-sg-metin>${esc(kisaMetin())}</span>`, attrs: { 'data-sg-denetle': true } }),
   ].filter(Boolean);
-  return geriBugun() + sayfaBas('Hesabım') + kim
+  // UYG-009: çalışma izni ve haftalık ders yükü
+  const iz = eg.mebIzinBitis ? satir({ ikon: 'kimlik', ton: fark(eg.mebIzinBitis) <= 30 ? 'turuncu' : 'gri', baslik: 'Çalışma izni', alt: esc(`${tarih(eg.mebIzinBitis)} tarihine kadar${fark(eg.mebIzinBitis) < 0 ? ' · bitti' : fark(eg.mebIzinBitis) <= 30 ? ` · ${fark(eg.mebIzinBitis)} gün kaldı` : ''}`), ok: false }) : '';
+  const hy = haftaYuku(eg), hs = hy.n || hy.sinir ? satir({ ikon: 'takvim', ton: 'gri', baslik: 'Bu hafta', alt: `${hy.n}${hy.sinir ? ' / ' + hy.sinir : ''} ders`, ok: false }) : '';
+  return geriBugun() + sayfaBas('Hesabım') + kim + izinKarti(eg)
+    + (iz || hs ? `<div class="ox-uar-ara">${liste([iz, hs].filter(Boolean))}</div>` : '')
     + `<div class="ox-uar-ara">${liste(satirlar)}</div>`
     + `<div class="ox-uar-ara">${liste([satir({ ikon: 'cikis', ton: 'kirmizi', baslik: u.bulut ? 'Çıkış yap' : 'Kullanıcı değiştir', attrs: { 'data-cikis': true }, ok: false, cls: 'ox-uar-cikis' })])}</div>`
     + not('Bilgilerin yanlışsa kurs müdürüne söyle; adını ve telefonunu kurs günceller.');
@@ -112,6 +125,9 @@ export function altEkran(ad, ctx) {
   if (a === 'arac') return { html: aracHtml(ctx) };
   if (a === 'guzergah') return { html: gzHtml(), baglan: gzBagla };
   if (a === 'hesap') return { html: hesapHtml(ctx) };
+  if (a === 'izin') return { html: izinHtml(ctx), baglan: kap => izinBagla(kap, ctx) };
+  if (a === 'anim') return { html: animListeHtml() };
+  if (a === 'onizle') return animOnizle(String(ad).slice(7), ctx);
   return null;
 }
 
@@ -167,3 +183,58 @@ stilEkle('ox-uar', `
 .ox-uar-cikis .ox-satir-govde b{color:var(--ox-kirmizi)}
 a.ox-satir{text-decoration:none;color:inherit}
 `);
+
+/* UYG-010: 'müsait değilim' bildirimi — öğretmen gün (ya da aralık) ve neden yazar; ofiste onay bekleyen izin talebi olur (bulut.js ustaUygula) */
+const IZ_DURUM = { bekliyor: ['Kursun onayında', 'turuncu'], onaylandi: ['Onaylandı', 'yesil'], reddedildi: ['Onaylanmadı', 'kirmizi'] };
+function izinHtml(ctx) {
+  const l = (S.izinTalepleri || []).filter(t => t.kim === ctx.eg.id).slice(0, 12), bugun = new Date().toISOString().slice(0, 10);
+  return geri('Hesabım', { 'data-ux-alt': 'hesap' }) + sayfaBas('Müsait olmadığım gün', 'Kurs onaylayınca o günlere ders planlanmaz.')
+    + kart(`<form class="ox-uiz-form" data-uiz-form novalidate><label>İlk gün<input type="date" name="bas" min="${bugun}" value="${bugun}" required></label><label>Son gün<input type="date" name="bit" min="${bugun}" value="${bugun}" required></label><label class="tam">Neden <small>isteğe bağlı</small><input name="neden" maxlength="200" placeholder="Ör. hastane randevusu"></label><p class="ox-uiz-hata" data-uiz-hata hidden></p><button type="submit" class="ox-dg ox-dg-ana genis"><span>Kursa bildir</span></button></form>`)
+    + (l.length ? bolum('Bildirimlerin') + liste(l.map(t => satir({ ikon: 'takvim', ton: IZ_DURUM[t.durum] ? IZ_DURUM[t.durum][1] : 'gri', baslik: esc(t.bas === t.bit ? tarih(t.bas) : tarih(t.bas) + ' – ' + tarih(t.bit)), alt: esc([IZ_DURUM[t.durum] ? IZ_DURUM[t.durum][0] : t.durum, t.neden].filter(Boolean).join(' · ')), ok: false }))) : '');
+}
+function izinBagla(kap, ctx) {
+  stilEkle('ox-uiz', '.ox-uiz-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px}.ox-uiz-form label{display:grid;gap:6px;font-size:14px;font-weight:600}.ox-uiz-form label.tam,.ox-uiz-form button,.ox-uiz-form p{grid-column:1/-1}.ox-uiz-form input{height:46px;border:1.5px solid var(--ox-cizgi);border-radius:12px;padding:0 12px;font:inherit;font-size:16px;background:var(--ox-kart);min-width:0}.ox-uiz-form small{font-weight:400;color:var(--ox-ikincil)}.ox-uiz-hata{color:var(--ox-kirmizi);font-size:14px;margin:0}');
+  const f = kap.querySelector('[data-uiz-form]'); if (!f) return;
+  f.addEventListener('submit', ev => {
+    ev.preventDefault(); const h = f.querySelector('[data-uiz-hata]'), bas = f.bas.value, bit = f.bit.value || bas;
+    if (!bas || bit < bas) { h.hidden = false; h.textContent = 'Son gün ilk günden önce olamaz.'; return; }
+    S.izinTalepleri = [{ id: 'it' + Date.now().toString(36), kim: ctx.eg.id, bas, bit, neden: f.neden.value.trim().slice(0, 200), tarih: new Date().toISOString().slice(0, 10), durum: 'bekliyor' }, ...(S.izinTalepleri || [])];
+    kaydet(); ctx.altAc('izin');
+  });
+}
+
+/* UYG-020 (SOR-098): öğrencinin izlediği animasyonları usta öğretici gözden geçirir; her birinin altında "Doğru mu?" görüşü mdSinyal'e gider
+   (worker /soru-bildir, anim). Animasyon öğrenci uygulamasının kendi ekranıyla (ogr/araclar.js) örnek bir B sınıfı öğrenciyle çizilir. */
+const ANIM = [['etkilesim:motor', 'Motorun çalışması'], ['etkilesim:ikaz', 'Gösterge paneli ve ikaz lambaları'], ['etkilesim:kalkis', 'Debriyajla kalkış'], ['tehlike', 'Tehlike algısı sahneleri'], ['direksiyon', 'Uygulama sınavı şemaları']];
+const GORUS = 'sinyal-anim-gorus';
+const gorusOku = () => { try { return JSON.parse(localStorage.getItem(GORUS) || '{}'); } catch (x) { return {}; } };
+function animListeHtml() {
+  const g = gorusOku();
+  return geri('Hesabım', { 'data-ux-alt': 'hesap' }) + sayfaBas('Animasyonlar', 'Öğrenciler bunları izleyip çalışıyor. Bir usta öğretici olarak doğru olup olmadığını söyle.')
+    + liste(ANIM.map(([id, ad]) => satir({ ikon: 'oynat', ton: g[id] === 'dogru' ? 'yesil' : g[id] ? 'turuncu' : 'mavi', baslik: esc(ad), alt: g[id] === 'dogru' ? 'Doğru dedin' : g[id] ? 'Düzeltilmeli dedin' : 'Henüz bakmadın', attrs: { 'data-ux-alt': 'onizle:' + id } })))
+    + not('Görüşün mdSinyal ekibine gider; düzeltilmesi gereken yerleri yazarsan içerik buna göre düzeltilir.');
+}
+function animOnizle(id, ctx) {
+  const x = ANIM.find(y => y[0] === id.split('|')[0]) || ANIM.find(y => id.startsWith(y[0]));
+  let y = null;
+  const ogrCtx = { k: { id: 'onizleme', ad: 'Örnek', soyad: 'Öğrenci', sinif: 'B', direksiyon: 0, tehlike: [] }, yenile: ctx.yenile, git: () => { }, S0: SINIFLAR.B };
+  try { y = ARC.altEkran(id, ogrCtx); } catch (e) { y = null; }
+  if (!y) return { html: geri('Animasyonlar', { 'data-ux-alt': 'anim' }) + kart(bos('uyari', 'Açılamadı', 'Bu animasyon şu an gösterilemiyor.')) };
+  // öğrenci ekranının iç gezinmesi öğretmen ekranında da çalışsın: data-ox-alt → data-ux-alt="onizle:…", Öğren'e dönüş → animasyon listesi
+  const html = y.html.replace(/data-ox-alt="([^"]*)"/g, (_, a) => a ? `data-ux-alt="onizle:${esc(a)}"` : 'data-ux-alt="anim"').replace(/data-ox-arc-sekme="([^"]*)"/g, (m, a) => `${m} data-ux-alt="onizle:etkilesim:${esc(a)}"`).replace(/(<button type="button" class="ox-geri" data-ux-alt="anim">[\s\S]*?<span>)[^<]*(<\/span>)/, '$1Animasyonlar$2');
+  const ad = x ? x[1] : id, g = gorusOku()[x ? x[0] : id];
+  const gorus = `<div class="ox-kart ox-uan-gorus" data-uan="${esc(x ? x[0] : id)}" data-uan-ad="${esc(ad)}"><b>Bu animasyon doğru mu?</b>${g ? `<small>${g === 'dogru' ? 'Doğru dedin; teşekkürler.' : 'Düzeltilmeli dedin; teşekkürler.'} İstersen yeniden gönderebilirsin.</small>` : ''}<textarea data-uan-not maxlength="300" placeholder="Düzeltilmesi gereken yer (isteğe bağlı)"></textarea><div class="ox-uan-dg"><button type="button" class="ox-dg ox-dg-ikincil" data-uan-karar="duzelt"><span>Düzeltilmeli</span></button><button type="button" class="ox-dg ox-dg-ana" data-uan-karar="dogru"><span>Doğru</span></button></div></div>`;
+  return { html: `<div class="ox-uan">${html}</div>` + gorus, baglan: kap => { if (y.baglan) { try { y.baglan(kap); } catch (e) { console.error(e); } } animGorusBagla(kap); } };
+}
+function animGorusBagla(kap) {
+  stilEkle('ox-uan', '.ox-uan-gorus{display:grid;gap:10px;padding:16px;margin-top:16px}.ox-uan-gorus small{color:var(--ox-ikincil)}.ox-uan-gorus textarea{min-height:70px;border:1.5px solid var(--ox-cizgi);border-radius:12px;padding:10px 12px;font:inherit;font-size:15px;resize:vertical}.ox-uan-dg{display:grid;grid-template-columns:1fr 1fr;gap:10px}');
+  const k = kap.querySelector('[data-uan]'); if (!k) return;
+  k.addEventListener('click', async ev => {
+    const b = ev.target.closest('[data-uan-karar]'); if (!b) return;
+    const karar = b.dataset.uanKarar, notu = k.querySelector('[data-uan-not]').value.trim();
+    if (karar === 'duzelt' && !notu) { k.querySelector('[data-uan-not]').focus(); return bildir('Neyin düzeltilmesi gerektiğini kısaca yaz', 'uyari'); }
+    const o = gorusOku(); o[k.dataset.uan] = karar; try { localStorage.setItem(GORUS, JSON.stringify(o)); } catch (x) { }
+    if (B.bulut && B.bulut.kurs) { try { await fetch(B.WORKER + '/soru-bildir', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ anim: k.dataset.uan, ad: k.dataset.uanAd, karar, not: notu }), mode: 'cors', credentials: 'omit' }); } catch (x) { } }
+    bildir('Görüşün iletildi, teşekkürler'); k.querySelector('small') ? k.querySelector('small').textContent = (karar === 'dogru' ? 'Doğru dedin; teşekkürler.' : 'Düzeltilmeli dedin; teşekkürler.') : k.querySelector('b').insertAdjacentHTML('afterend', `<small>${karar === 'dogru' ? 'Doğru dedin; teşekkürler.' : 'Düzeltilmeli dedin; teşekkürler.'}</small>`);
+  });
+}

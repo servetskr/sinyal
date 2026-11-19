@@ -45,7 +45,11 @@ function yereldenTeslim(r) {
 
 /* ---------- ekran haritası: mdSinyal sayfasından gelir, yalnız veri; denetlenmeden kullanılmaz ---------- */
 const SINYAL_KOKLER = ['https://mdsinyal.com', 'https://www.mdsinyal.com', 'https://servetskr.github.io'];
-const ACIK_ANAHTAR = null;   // imza istenirse: ECDSA P-256 açık anahtarı (JWK). null iken kaynak, sürüm ve şema denetlenir.
+// imza istenirse: ECDSA P-256 açık anahtarı (JWK). null iken kaynak, sürüm ve şema denetlenir.
+// MEB-110: anahtar ve imza sinyal-kaynak/arac/harita_imzala.mjs ile (anahtar → bu satıra yapıştırılacak JWK; imzala → harita.json'a "imza").
+// Özel anahtar yalnız yetkilinin bilgisayarında (depo dışında). Sınama: arac/mebbis-test/harita-imza-test.mjs (imzalı kabul, imzasız/bozuk ret).
+// Adım adım (anahtar üretme, yapıştırma, her değişiklikte imzalama ve yayın): sinyal-kaynak/belgeler/revizyon/HARITA-IMZA-ADIMLARI.md
+const ACIK_ANAHTAR = null;
 const KIMLIK = /^[A-Za-z0-9_$İıŞşĞğÜüÖöÇç]{1,64}$/, YOL = /^\/(SKT|Ookgm)\/[A-Za-z0-9]{3,20}\.aspx$/, DEGER = /^-?\d{1,4}(,-?\d{1,4}){0,15}$/;
 const YASAK = /sil|delete|iptal|kald[ıi]r|[çc][ıi]k[ıi][şs]|exit|logout/i, SURUM_D = /^\d{4}\.\d{2}\.\d{2}-\d{1,3}$/;
 const metinUygun = (v, n) => typeof v === 'string' && v.length <= n && !/[<>"'`\\{}]/.test(v);
@@ -89,17 +93,26 @@ async function imzaDogru(h) {
     return await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, anahtar, ham, new TextEncoder().encode(JSON.stringify(sirala(govde))));
   } catch (x) { return false; }
 }
+// MEB-110: saklanan harita her kullanımda yeniden denetlenir (şema + ACIK_ANAHTAR varsa imza). Anahtar sonradan konunca eski imzasız harita kullanılmaz;
+// Yardımcı gömülü haritasıyla çalışır (motor.js HARITA_VARSAYILAN).
+async function haritaGecerli(h) { return !!h && !haritaDenetle(h) && (!ACIK_ANAHTAR || await imzaDogru(h)); }
 const gonderenKok = k => { try { return new URL((k && (k.url || (k.tab && k.tab.url))) || '').origin; } catch (x) { return ''; } };
+// Son deneme (zaman, sonuç, neden) açılır pencerede görünür; kişisel veri yok
+const denemeYaz = (r, h) => yerelKoy('haritaDeneme', { zaman: Date.now(), ok: !!r.ok, surum: (h && typeof h.surum === 'string' ? h.surum : '').slice(0, 20), neden: String(r.neden || '').slice(0, 160) });
 async function haritaKoy(h, kimden) {
   if (!kimden || kimden.id !== chrome.runtime.id || !SINYAL_KOKLER.includes(gonderenKok(kimden))) return { ok: false, neden: 'kaynak mdSinyal değil' };
+  const r = await haritaKoyIc(h); await denemeYaz(r, h); return r;
+}
+async function haritaKoyIc(h) {
   if (JSON.stringify(h || '').length > 64000) return { ok: false, neden: 'çok büyük' };
   const neden = haritaDenetle(h); if (neden) return { ok: false, neden };
   if (ACIK_ANAHTAR && !(await imzaDogru(h))) return { ok: false, neden: 'imza geçersiz' };
-  const son = await yerel('haritaSon');
+  // geri alma denetimi saklanan geçerli haritaya göre: saklanan geçersizse (anahtar sonradan kondu, eski kayıt imzasız) yenisi sürümüne bakılmadan konur
+  const son = (await haritaGecerli(await yerel('harita'))) ? await yerel('haritaSon') : null;
   if (son && surumKars(h.surum, son) < 0) return { ok: false, neden: `eski sürüm (${h.surum} < ${son})` };
   if (son && surumKars(h.surum, son) === 0) return { ok: true, surum: h.surum, ayni: true };
-  const { imza, aciklama, ...temiz } = h;
-  await chrome.storage.local.set({ harita: temiz, haritaSon: h.surum, haritaZaman: Date.now() });
+  // imza ve açıklama da saklanır: harita-al her seferinde imzayı yeniden doğrular
+  await chrome.storage.local.set({ harita: h, haritaSon: h.surum, haritaZaman: Date.now() });
   return { ok: true, surum: h.surum };
 }
 
@@ -202,9 +215,16 @@ async function isle(m, kimden) {
     if (!t || t.id !== m.id || t.bitti) await ilerlemeYaz(m.id, r => r && !(t && t.id === m.id) && !['bitti', 'iptal'].includes(r.durum) && (r.kimlikler || []).length > (r.yazilan || []).filter(y => y.ok).length ? { ...r, teslim: true } : null);
     return { ok: true };
   }
+  // MEB-187: MEBBİS oturumu açık mı (mebbis.js yoklar); açılır pencere ve mdSinyal üst şeridi
+  if (m.tur === 'canli-koy') { await koy('canli', { acik: !!(m.durum && m.durum.acik), zaman: (m.durum && m.durum.zaman) || Date.now() }); return { ok: true }; }
+  if (m.tur === 'canli-al') return (await al('canli')) || null;
   if (m.tur === 'ilerleme-al') { const il = (await yerel('ilerleme')) || {}, t = await al('toplu'); return Object.values(il).map(r => ({ ...r, oturumda: !!(t && t.id === r.id) })); }
   if (m.tur === 'harita-koy') return haritaKoy(m.harita, kimden);
-  if (m.tur === 'harita-al') { const h = await yerel('harita'); return h && !haritaDenetle(h) ? { harita: h } : null; }
+  // MEB-173: İzle kipi açılınca işin yürüdüğü MEBBİS sekmesi öne gelir (yalnız MEBBİS sekmesinden gelen istek)
+  if (m.tur === 'izle-sekme') { const t = kimden && kimden.tab; if (!t || !/^https:\/\/mebbis\.meb\.gov\.tr\//.test(t.url || '')) return { ok: false }; try { await chrome.tabs.update(t.id, { active: true }); await chrome.windows.update(t.windowId, { focused: true }); } catch (x) { } return { ok: true }; }
+  if (m.tur === 'harita-al') { const h = await yerel('harita'); if (!(await haritaGecerli(h))) return null; const { imza, aciklama, ...temiz } = h; return { harita: temiz }; }
+  // açılır pencere: kullanılan haritanın sürümü, alındığı zaman, imza denetimi açık mı, son deneme
+  if (m.tur === 'harita-bilgi') { const h = await yerel('harita'), gecerli = await haritaGecerli(h); return { surum: gecerli ? h.surum : '', zaman: gecerli ? (await yerel('haritaZaman')) || 0 : 0, imzali: !!(gecerli && h.imza), anahtar: !!ACIK_ANAHTAR, deneme: (await yerel('haritaDeneme')) || null }; }
   if (m.tur === 'hedef-koy') { await koy('hedef', m.hedef); return { ok: true }; }
   if (m.tur === 'hedef-al') return (await al('hedef')) || null;
   if (m.tur === 'hedef-sil') { await chrome.storage.session.remove('hedef'); return { ok: true }; }

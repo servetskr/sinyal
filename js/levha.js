@@ -1,10 +1,11 @@
 // mdSinyal — Türkiye trafik işaret levhaları kütüphanesi (düz ES modülü, dış bağımlılık yok).
 // Kaynak: KGM "Karayolu Trafik İşaretleme Standartları" (2020) — Trafik İşaretleri El Kitabının güncellenmiş baskısı:
 // https://www.kgm.gov.tr/SiteCollectionDocuments/KGMdocuments/Trafik/IsaretlerElKitabi/KarayoluTrafikIsaretlemeStandartlari1.pdf
+// UYG-015 (18 Kas 2026): adlar ve anlamlar 2020 baskısıyla karşılaştırıldı (sinyal-kaynak belgeler/revizyon/UYG-015-KARSILASTIRMA.md).
 // Kodlar ve adlar el kitabındaki gibidir. Soru bankasında satır içi SVG'si zaten bulunan 12 levha
 // (TT-1, TT-2, TT-4, P-1, P-2, TT-29a, TT-26b, B-38, B-39, TT-35a, B-15, T-1a) burada tekrarlanmaz.
 //
-// Kullanım:  import { LEVHA, levhaSvg } from './levha.js?v=231';  el.innerHTML = levhaSvg('T-11');
+// Kullanım:  import { LEVHA, levhaSvg } from './levha.js?v=235';  el.innerHTML = levhaSvg('T-11');
 
 const KR = '#d52b1e', MV = '#0a4da2', SY = '#1a1a1a', BY = '#ffffff', SR = '#f7d117', TU = '#f39200', GR = '#8c8c8c', SU = '#1e73c8';
 
@@ -173,9 +174,9 @@ L('T-12', 'Okul Geçidi', 'Okul ya da oyun alanı gibi çocukların sık geçti�
   ucgen(tasi(33, 54, 0.62, yaya()) + tasi(57, 58, 0.62, kiz())));
 L('T-13', 'Bisiklet Geçebilir', 'Bisiklet yolunun bu yola bağlandığını ya da bisikletlilerin karşıya geçebileceği kesimi bildirir.',
   ucgen(tasi(41, 62, 0.62, bisikletli())));
-L('T-14a', 'Ehli Hayvanlar Geçebilir', 'Yolda evcil hayvanlar bulunabileceğini veya geçiş yapabileceğini bildirir.',
+L('T-14a', 'Ehli Hayvanlar Geçebilir', 'Yolda evcil hayvanlar bulunabileceğini veya geçiş yapabileceğini, yol yüzeyinde kir ve çamur olabileceğini bildirir.',
   ucgen(tasi(33, 63, 0.9, inek())));
-L('T-14b', 'Vahşi Hayvanlar Geçebilir', 'Yolda vahşi hayvanlar bulunabileceğini veya geçiş yapabileceğini bildirir.',
+L('T-14b', 'Vahşi Hayvanlar Geçebilir', 'Yolda vahşi hayvanlar bulunabileceğini veya geçiş yapabileceğini, yol yüzeyinde kir ve çamur olabileceğini bildirir.',
   ucgen(tasi(32, 52, 0.9, geyik())));
 L('T-15', 'Yolda Çalışma', 'İleride yol çalışması olduğunu, yol yüzeyinin kir ve çamur nedeniyle kaygan olabileceğini bildirir.',
   `<rect x="4" y="4" width="112" height="112" rx="4" fill="${SR}"/>` +
@@ -197,22 +198,22 @@ L('T-18', 'Yandan Rüzgar', 'Yandan kuvvetli rüzgar esebileceğini bildirir; h�
     }
     return s + `<polygon points="38,56 86,64 86,68 38,72" fill="none" stroke="${SY}" stroke-width="1.6"/>`;
   })()));
-L('T-19', 'İki Yönlü Trafik', 'Tek yönlü yol kesiminin iki yönlü trafiğe dönüştüğünü bildirir.',
+L('T-19', 'İki Yönlü Trafik', 'İleride iki yönlü trafiğin işlediği yol kesimi olduğunu bildirir (ör. tek yönlü yoldan iki yönlü yola geçiş).',
   ucgen(ok(48, 48, 48, 96, 6) + ok(72, 96, 72, 48, 6)));
 L('T-20', 'Dikkat', 'Diğer levhalarla belirtilemeyen bir tehlike olduğunu bildirir; tehlikenin cinsi ilave panelde yazar.',
   ucgen(`<rect x="55" y="42" width="10" height="36" rx="3" fill="${SY}"/>` + daire(60, 88, 5.5)));
 L('T-21', 'Kontrolsüz Kavşak', 'İleride genel geçiş önceliği kuralının (sağdan gelenin önceliği) uygulandığı kontrolsüz kavşak olduğunu bildirir.',
   ucgen(yol('M45 57 L75 89 M75 57 L45 89', 9)));
 const ANA = sekil('M60 42 L67 50 V97 L60 91 L53 97 V50 Z');
-L('T-22a', 'Ana Yol - Tali Yol Kavşağı (sağ ve soldan)', 'Sağdan ve soldan tali yol bağlanan kavşağa yaklaşıldığını, ilk geçiş hakkının bu yoldakilere ait olduğunu bildirir.',
+L('T-22a', 'Ana Yol - Tali Yol Kavşağı (sağ ve soldan)', 'Sağdan ve soldan tali yol bağlanan kavşağa yaklaşıldığını, ilk geçiş hakkının bu yoldakilere ait olduğunu bildirir; bu kesimde öndeki taşıtı geçmek de yasaktır.',
   ucgen(ANA + kutu(36, 66, 48, 7)));
-L('T-22b', 'Ana Yol - Tali Yol Kavşağı (sağdan)', 'Sağdan tali yol bağlanan kavşağa yaklaşıldığını, ilk geçiş hakkının bu yoldakilere ait olduğunu bildirir.',
+L('T-22b', 'Ana Yol - Tali Yol Kavşağı (sağdan)', 'Sağdan tali yol bağlanan kavşağa yaklaşıldığını, ilk geçiş hakkının bu yoldakilere ait olduğunu bildirir; bu kesimde öndeki taşıtı geçmek de yasaktır.',
   ucgen(ANA + kutu(60, 66, 26, 7)));
-L('T-22c', 'Ana Yol - Tali Yol Kavşağı (soldan)', 'Soldan tali yol bağlanan kavşağa yaklaşıldığını, ilk geçiş hakkının bu yoldakilere ait olduğunu bildirir.',
+L('T-22c', 'Ana Yol - Tali Yol Kavşağı (soldan)', 'Soldan tali yol bağlanan kavşağa yaklaşıldığını, ilk geçiş hakkının bu yoldakilere ait olduğunu bildirir; bu kesimde öndeki taşıtı geçmek de yasaktır.',
   ucgen(ANA + kutu(34, 66, 26, 7)));
-L('T-22d', 'Ana Yol - Tali Yol Kavşağı (önce sağdan, sonra soldan)', 'Kademeli tali yol kavşağına yaklaşıldığını, ilk geçiş hakkının bu yoldakilere ait olduğunu bildirir.',
+L('T-22d', 'Ana Yol - Tali Yol Kavşağı (önce sağdan, sonra soldan)', 'Kademeli tali yol kavşağına yaklaşıldığını, ilk geçiş hakkının bu yoldakilere ait olduğunu bildirir; bu kesimde öndeki taşıtı geçmek de yasaktır.',
   ucgen(ANA + kutu(38, 58, 22, 6) + kutu(60, 76, 26, 6)));
-L('T-22e', 'Ana Yol - Tali Yol Kavşağı (önce soldan, sonra sağdan)', 'Kademeli tali yol kavşağına yaklaşıldığını, ilk geçiş hakkının bu yoldakilere ait olduğunu bildirir.',
+L('T-22e', 'Ana Yol - Tali Yol Kavşağı (önce soldan, sonra sağdan)', 'Kademeli tali yol kavşağına yaklaşıldığını, ilk geçiş hakkının bu yoldakilere ait olduğunu bildirir; bu kesimde öndeki taşıtı geçmek de yasaktır.',
   ucgen(ANA + kutu(60, 58, 22, 6) + kutu(34, 76, 26, 6)));
 L('T-23a', 'Sağdan Ana Yola Giriş', 'Bölünmüş yola sağdan bir yan yolun ya da bağlantı yolunun katıldığını bildirir.',
   ucgen(sekil('M53 40 L60 48 V97 H46 V48 Z') + sekil('M59 62 L84 97 H71 L59 80 Z')));
@@ -242,9 +243,9 @@ const yaklasim = (etiket, yler) => `<rect x="40" y="6" width="40" height="108" f
   yler.map(y => `<polygon points="42,${y + 10} 78,${y - 8} 78,${y + 2} 42,${y + 20}" fill="${KR}"/>`).join('');
 L('T-28a', 'Hemzemin Demiryolu Geçidi Yaklaşım Levhası (3 bantlı)', 'Hemzemin geçide yaklaşıldığını bildirir; geçit uyarı levhasının (T-25/T-26) altında kullanılır.',
   yaklasim('300m', [36, 60, 84]));
-L('T-29a', 'Hemzemin Demiryolu Geçidi Yaklaşım Levhası (2 bantlı)', 'Hemzemin geçide yaklaşıldığını bildirir; 3 bantlı levhadan sonra, geçide daha yakın konur.',
+L('T-29a', 'Hemzemin Demiryolu Geçidi Yaklaşım Levhası (2 bantlı)', 'Hemzemin geçide yaklaşıldığını bildirir; geçide yaklaşık 200 m kala konur (3 bantlı levhadan sonra).',
   yaklasim('200m', [56, 80]));
-L('T-30a', 'Hemzemin Demiryolu Geçidi Yaklaşım Levhası (1 bantlı)', 'Hemzemin geçide yaklaşıldığını bildirir; geçide en yakın yaklaşım levhasıdır.',
+L('T-30a', 'Hemzemin Demiryolu Geçidi Yaklaşım Levhası (1 bantlı)', 'Hemzemin geçide yaklaşıldığını bildirir; geçide yaklaşık 100 m kala konan, en yakın yaklaşım levhasıdır.',
   yaklasim('100m', [76]));
 L('T-33a', 'Tehlikeli Viraj Yön Levhası', 'Tehlikeli virajın dış kenarında virajın yönünü göstererek sürücüye kılavuzluk eder.',
   `<rect x="22" y="12" width="76" height="96" fill="${BY}" stroke="#b5b5b5" stroke-width="1.5"/>` + `<polygon points="34,60 66,20 86,20 54,60 86,100 66,100" fill="${KR}"/>`);

@@ -1,13 +1,14 @@
 // Öğrenci hesapları (kurs tarafı): müdür ya da ön büro hesabı açar, giriş bilgileri öğrenciye WhatsApp'tan gider,
 // öğrenci ilk girişte kendi şifresini belirler. Şifresini unutan öğrenci kursa söyler; buradan tek dokunuşla yeni geçici şifre gider.
-import { S, kaydet, gun, tamAd, islem, selam, oturum, sb, SINIFLAR, egitmen, eksikEvrak, kursAdi } from './veri.js?v=231';
-import { e, ik, tarih, pencere, kapatPencere, bildir, waSirali, tl, tamTarih, apiAcik } from './ui.js?v=231';
-import * as B from './bulut.js?v=231';
-import { wpGonder, alici, odemeBilgisi, bilgiDuzenle } from './sayfalar1.js?v=231';
+import { S, kaydet, gun, tamAd, islem, selam, oturum, sb, SINIFLAR, egitmen, eksikEvrak, kursAdi } from './veri.js?v=235';
+import { sinifEtiket, teorikVar, gerekliDireksiyon, tabanListesi } from './veri.js?v=235';
+import { e, ik, tarih, pencere, kapatPencere, bildir, waSirali, tl, tamTarih, apiAcik } from './ui.js?v=235';
+import * as B from './bulut.js?v=235';
+import { wpGonder, alici, odemeBilgisi, bilgiDuzenle } from './sayfalar1.js?v=235';
 
 const yetkili = () => oturum.kullanici && ['mudur', 'sekreter'].includes(oturum.kullanici.rol);
 
-export const mesaj = (k, r) => `${selam(k)}\n\n*${S.kurs.ad}* öğrenci uygulamasında ${r.yeniden ? 'şifreniz yenilendi' : 'hesabınız açıldı'}.\n\n*Giriş:* ${B.ogrenciGirisLinki()}\n*Telefon:* ${B.telGoster(r.tel)}\n*Geçici şifre:* ${r.sifre}\n\nİlk girişte kendi şifrenizi belirleyeceksiniz.${r.yeniden ? '' : ' Ders programınızı, ödemelerinizi ve sınavlarınızı buradan görebilir, belgelerinizi yükleyebilirsiniz.'}\n\nŞifrenizi kimseyle paylaşmayın.`;
+export const mesaj = (k, r) => `${selam(k)}\n\n*${S.kurs.ad}* öğrenci uygulamasında ${r.yeniden ? 'şifreniz yenilendi' : 'hesabınız açıldı'}.\n\n*Giriş:* ${B.ogrenciGirisLinki()}${r.eposta ? `\n*E-posta:* ${r.eposta} (e-postanıza gelen doğrulama bağlantısına da dokunun)` : `\n*Telefon:* ${B.telGoster(r.tel)}`}\n*Geçici şifre:* ${r.sifre}\n\nİlk girişte kendi şifrenizi belirleyeceksiniz.${r.yeniden ? '' : ' Ders programınızı, ödemelerinizi ve sınavlarınızı buradan görebilir, belgelerinizi yükleyebilirsiniz.'}\n\nŞifrenizi kimseyle paylaşmayın.`;
 
 // Demoda gerçek hesap açılmaz: akış ve mesaj aynıdır, mesaj yalnız demo numarasına gider
 async function ac(k) {
@@ -18,13 +19,27 @@ async function ac(k) {
 }
 async function kapat(k) { if (B.bulutta()) return B.ogrenciHesapKapat(k); k.hesap = null; delete k.hesapAktif; }
 
+// YON-074: numara devri — öğrenciye WhatsApp'tan onay bağlantısı; onaylanıp eski kurs kapatınca hesap buradan açılır
+export function devirPenceresi(k, yenile) {
+  pencere({ baslik: 'Numara başka kursta kayıtlı', icerik: `<p style="font-size:14.5px">${e(B.telGoster(B.telNorm(k.tel)))} numarasıyla başka bir kursta öğrenci hesabı var (nakil gelen ya da başka kursu bitirmiş öğrenci).</p>
+      <ol class="liste" style="margin-top:8px"><li>Öğrenciye WhatsApp’tan onay bağlantısı gider.</li><li>Öğrenci eski hesabıyla girip devri onaylar.</li><li>Eski kurs hesabı kapatır (onların mdSinyal’i açılınca kendiliğinden); numara bu kursa geçer.</li><li>“Durumu yenile” ile hesabı buradan açarsınız.</li></ol>`,
+    altlik: '<button class="dg dg-cizgi" data-devir-duzelt>Numarayı düzelt</button><button class="dg dg-ana" data-devir-gonder>Numara devri iste</button>',
+    onAc(p) { p.querySelector('[data-devir-duzelt]').addEventListener('click', () => { kapatPencere(); bilgiDuzenle(k); });
+      p.querySelector('[data-devir-gonder]').addEventListener('click', () => devirGonder(k, yenile)); } });
+}
+function devirGonder(k, yenile) {
+  B.devirIste(k).then(d => { kapatPencere(); islem('Numara devri istedi', tamAd(k)); kaydet();
+    wpGonder(k, `${selam(k)}\n\n*${S.kurs.ad}* öğrenci uygulamasında hesabınızı açmak istiyoruz; numaranız başka bir kursun uygulamasında kayıtlı. Onaylarsanız eski kurstaki öğrenci hesabınız kapanır, numaranız bu kursa geçer:\n${d.link}\n\nOnaylamak için eski hesabınızın şifresiyle girin. Bu isteği siz istemediyseniz bağlantıyı açmayın.`, 'Numara devri');
+    bildir('Onay bağlantısı WhatsApp’tan gönderildi'); yenile && yenile(); }).catch(x => bildir(B.hataMetni(x), 'uyari'));
+}
 export function hesapSeridi(k) {
   if (!yetkili() || k.kapali) return '';
   const h = k.hesap;
-  const durum = h ? [B.telGoster(h.tel), 'açıldı ' + tarih(h.acildi), h.sifirlandi ? 'şifre yenilendi ' + tarih(h.sifirlandi) : '', k.hesapAktif ? 'kullanıyor' + (k.sonGiris ? ' · son giriş ' + tarih(k.sonGiris) : '') : 'ilk giriş bekleniyor'].filter(Boolean).join(' · ') : 'Öğrenci kendi telefonundan program, ders, ödeme, sınav ve evraklarını görsün; ders alsın, evrak yüklesin, deneme sınavı çözsün';
+  const durum = h ? [h.eposta || B.telGoster(h.tel), 'açıldı ' + tarih(h.acildi), h.sifirlandi ? 'şifre yenilendi ' + tarih(h.sifirlandi) : '', k.hesapAktif ? 'kullanıyor' + (k.sonGiris ? ' · son giriş ' + tarih(k.sonGiris) : '') : 'ilk giriş bekleniyor'].filter(Boolean).join(' · ') : 'Öğrenci kendi telefonundan program, ders, ödeme, sınav ve evraklarını görsün; ders alsın, evrak yüklesin, deneme sınavı çözsün';
   return `<div class="panel-serit"><span>${ik('tel')}<b>Öğrenci hesabı</b><small>${e(durum)}</small></span><span class="sag" style="gap:6px">${h
     ? `<button type="button" class="dg dg-hafif dg-kucuk" data-hesap-sifre>Yeni geçici şifre gönder</button><button type="button" class="dg dg-hafif dg-kucuk" data-hesap-kapat>Hesabı kapat</button>`
-    : `<button type="button" class="dg dg-ana dg-kucuk" data-hesap-ac>Hesap aç ve WhatsApp’tan gönder</button>`}</span></div>`;
+    : k.devir && k.devir.durum !== 'kapandi' ? `<small style="color:var(--sari-koyu,#a15c00)">Numara devri bekleniyor (${tarih(k.devir.tarih)})</small><button type="button" class="dg dg-cizgi dg-kucuk" data-devir-durum>Durumu yenile</button><button type="button" class="dg dg-hafif dg-kucuk" data-devir-iste>Bağlantıyı yeniden gönder</button>`
+    : `<button type="button" class="dg dg-ana dg-kucuk" data-hesap-ac>Hesap aç ve WhatsApp’tan gönder</button>`}${(S.kurs.plus || {}).acik ? `<label style="display:flex;gap:6px;align-items:center;font-size:13.5px;color:var(--murekkep)"><input type="checkbox" data-hesap-plus ${k.plus ? 'checked' : ''}>Plus paket</label>` : ''}</span></div>`;
 }
 // kayıt sırasında: hesap arka planda açılır, giriş bilgileri gönderilir
 // Kayıt sonrası karşılama: öğrenciye konusuna göre ayrı mesajlar (hoş geldin, eksik evrak, uygulama girişi, ödeme planı, teorik ders),
@@ -38,22 +53,24 @@ export async function karsilama(k, { hos = true, hesap = true, sonra, kaynak = '
   if (hesap && !k.hesap) r = await ac(k).then(x => { islem('Öğrenci hesabı açtı', tamAd(k)); kaydet(); return x; }).catch(x => { bildir('Öğrenci hesabı açılamadı: ' + B.hataMetni(x) + '. Öğrenci dosyasından tekrar deneyin', 'uyari'); return null; });
   const a = alici(k), ogr = metin => ({ ad: a.ad, tel: a.tel, rol: a.rol, metin, tur: 'Hoş geldin' }), l = [];
   if (hos) {
-    l.push(ogr(`${selam(k)} ${S.kurs.ad} ailesine hoş geldiniz! ${evden ? 'Kaydınız alındı; peşinat ödenince kesinleşir.' : 'Kaydınız tamamlandı.'} Sınıfınız: ${SINIFLAR[k.sinif].ad}.`));
+    l.push(ogr(`${selam(k)} ${S.kurs.ad} ailesine hoş geldiniz! ${evden ? 'Ön kaydınız alındı. Kaydınız kurs merkezinde, kurs müdürünün gözetiminde tamamlanır.' : 'Kaydınız tamamlandı.'} Sınıfınız: ${sinifEtiket(k.sinif, k)}.`));
     const ek = eksikEvrak(k).filter(([x]) => x !== 'sozlesme');
     if (ek.length) l.push(ogr(`Kaydınızı tamamlamak için şu belgeler eksik:\n${ek.map(([, ad]) => '• ' + ad).join('\n')}\nBelgelerin fotoğrafını ya da PDF'ini bu numaraya WhatsApp'tan gönderebilirsiniz; her belge doğrudan dosyanıza işlenir.`));
   }
-  if (r) l.push(ogr(`Öğrenci uygulamanız hazır.\nGiriş: ${B.ogrenciGirisLinki()}\nKullanıcı adı: ${B.telGoster(r.tel)}\nGeçici şifre: ${r.sifre}\nİlk girişte şifrenizi değiştirmeyi unutmayın. Ders programınızı, ödemelerinizi ve sınavlarınızı buradan görebilir, sınava çalışabilirsiniz.`));
+  if (r) l.push(ogr(`Öğrenci uygulamanız hazır.\nGiriş: ${B.ogrenciGirisLinki()}\nKullanıcı adı: ${r.eposta || B.telGoster(r.tel)}\nGeçici şifre: ${r.sifre}\nİlk girişte şifrenizi değiştirmeyi unutmayın. Ders programınızı, ödemelerinizi ve sınavlarınızı buradan görebilir, sınava çalışabilirsiniz.`));
   if (hos) {
-    const o = k.odeme, t = o.taksitler.filter(x => !x.iptal);
-    l.push(ogr(t.length ? `Ödeme planınız (toplam ${tl(o.toplam)}):\n${o.pesin ? `• Peşinat: ${tl(o.pesin)} (ödendi)\n` : ''}${t.map((x, i) => `• ${x.aciklama || (i + 1) + '. taksit'}: ${tamTarih(x.vade)} · ${tl(x.tutar)}${x.odendi ? ' (ödendi)' : ''}`).join('\n')}\n${odemeBilgisi(k)}` : `Kurs ücretiniz ${tl(o.toplam)}${o.pesin >= o.toplam ? ' peşin ödendi, teşekkürler.' : '. ' + odemeBilgisi()}`));
-    const g = (S.gruplar || []).find(x => x.id === k.teorikGrup);
+    // ücret notu (il taban listesi notları 1, 4): KDV dahil; liste varken kurs ücreti dışında ücret alınmaz
+    const o = k.odeme, t = o.taksitler.filter(x => !x.iptal), kdv = tabanListesi() ? '\nTutarlar KDV dahildir; kurs ücreti dışında hiçbir ad altında ücret alınmaz.' : '\nTutarlar KDV dahildir.';
+    l.push(ogr((t.length ? `Ödeme planınız (toplam ${tl(o.toplam)}):\n${o.pesin ? `• Peşinat: ${tl(o.pesin)} (ödendi)\n` : ''}${t.map((x, i) => `• ${x.aciklama || (i + 1) + '. taksit'}: ${tamTarih(x.vade)} · ${tl(x.tutar)}${x.odendi ? ' (ödendi)' : ''}`).join('\n')}\n${odemeBilgisi(k)}` : `Kurs ücretiniz ${tl(o.toplam)}${o.pesin >= o.toplam ? ' peşin ödendi, teşekkürler.' : '. ' + odemeBilgisi()}`) + kdv));
+    // teorik mesajı yalnız teorik eğitim alana (fark, e-sınav muafı, otomatikten manuele, römork öğrencisinde teorik yok)
+    const tv = teorikVar(k), g = tv && (S.gruplar || []).find(x => x.id === k.teorikGrup);
     if (g) l.push(ogr(`Teorik dersleriniz ${tamTarih(g.baslangic)} tarihinde başlıyor: ${g.ad}${g.saat ? ', ' + g.saat : ''}. Derslere kimliğinizle gelin.`));
     const h = egitmen(k.egitmen);
-    if (h) { const b = alici(h); l.push({ ad: b.ad, tel: b.tel, rol: b.rol, tur: 'Yeni öğrenci', metin: `${h.ad.split(' ')[0]} Hoca, yeni öğrenciniz: ${tamAd(k)} · ${SINIFLAR[k.sinif].ad} · ${k.tel}. Direksiyon dersleri e-sınavdan sonra planlanacak; planlanınca size ayrıca bildirim gelir.` }); }
+    if (h && gerekliDireksiyon(k) > 0) { const b = alici(h); l.push({ ad: b.ad, tel: b.tel, rol: b.rol, tur: 'Yeni öğrenci', metin: `${h.ad.split(' ')[0]} Hoca, yeni öğrenciniz: ${tamAd(k)} · ${sinifEtiket(k.sinif, k)} · ${k.tel}. ${tv ? 'Direksiyon dersleri e-sınavdan sonra planlanacak; planlanınca size ayrıca bildirim gelir.' : 'Teorik eğitimi yok; direksiyon dersleri hemen planlanabilir. Planlanınca size ayrıca bildirim gelir.'}` }); }
   }
   // kurs müdürüne her yeni kayıtta özet (kaydı müdür kendisi yaptıysa da kayıt olarak gelir)
   const m = alici('mudur'), h = egitmen(k.egitmen), ek = eksikEvrak(k).filter(([x]) => x !== 'sozlesme'), kim = oturum.kullanici && oturum.kullanici.ad, o = k.odeme, pes = o.taksitler.find(x => !x.iptal && x.aciklama === 'Peşinat' && !x.odendi), bul = Object.keys(k.evrakYuklenen || {}).filter(x => k.evrakYuklenen[x].bulanik);
-  l.push({ ad: m.ad, tel: m.tel, rol: m.rol, tur: 'Yeni kayıt', metin: `Yeni kayıt${evden ? ' (kayıt formu)' : ''}: ${tamAd(k)} · ${SINIFLAR[k.sinif].ad} · ${k.tel}\nÜcret ${tl(o.toplam)}${o.pesin ? ' · peşinat ' + tl(o.pesin) : ''}${o.taksitler.filter(x => !x.iptal && x.aciklama !== 'Peşinat').length ? ' · ' + o.taksitler.filter(x => !x.iptal && x.aciklama !== 'Peşinat').length + ' taksit' : ''}${h ? '\nUsta öğretici: ' + h.ad : ''}${ek.length ? '\nEksik evrak: ' + ek.map(([, ad]) => ad.toLocaleLowerCase('tr')).join(', ') : ''}${bul.length ? '\nBulanık evrak, kontrol edin: ' + bul.length + ' belge' : ''}${evden ? '\nSözleşme ekranda imzalandı.' + (pes ? ' Peşinat ' + tl(pes.tutar) + ' henüz ödenmedi.' : '') + '\nKayıt: kayıt formu' : kim ? '\nKaydeden: ' + kim : ''}` });
+  l.push({ ad: m.ad, tel: m.tel, rol: m.rol, tur: 'Yeni kayıt', metin: `Yeni kayıt${evden ? ' (kayıt formu)' : ''}: ${tamAd(k)} · ${sinifEtiket(k.sinif, k)} · ${k.tel}\nÜcret ${tl(o.toplam)}${o.pesin ? ' · peşinat ' + tl(o.pesin) : ''}${o.taksitler.filter(x => !x.iptal && x.aciklama !== 'Peşinat').length ? ' · ' + o.taksitler.filter(x => !x.iptal && x.aciklama !== 'Peşinat').length + ' taksit' : ''}${h ? '\nUsta öğretici: ' + h.ad : ''}${ek.length ? '\nEksik evrak: ' + ek.map(([, ad]) => ad.toLocaleLowerCase('tr')).join(', ') : ''}${bul.length ? '\nBulanık evrak, kontrol edin: ' + bul.length + ' belge' : ''}${evden ? '\nSözleşme ekranda imzalandı.' + (pes ? ' Peşinat ' + tl(pes.tutar) + ' henüz ödenmedi.' : '') + '\nKayıt: kayıt formu' : kim ? '\nKaydeden: ' + kim : ''}` });
   waSirali(l, 'Kayıt mesajları', { sessiz: true, bitince: api ? undefined : sonra });
 }
 export function hesapAcSessiz(k) {
@@ -62,6 +79,10 @@ export function hesapAcSessiz(k) {
 }
 // öğrenci dosyasındaki tıklamalar; işlendiyse true
 export function hesapTikla(ev, k, yenile) {
+  if (ev.target.closest('[data-devir-iste]')) { devirGonder(k, yenile); return true; }
+  const dd = ev.target.closest('[data-devir-durum]'); if (dd) { dd.disabled = true; B.devirDurum(B.telNorm(k.tel)).then(d => { dd.disabled = false;
+    if (!d || d.durum === 'kapandi') { k.devir = { ...(k.devir || {}), durum: 'kapandi' }; kaydet(); bildir('Numara serbest; hesap açılıyor'); const b = document.createElement('button'); b.dataset.hesapAc = ''; hesapTikla({ target: b }, k, yenile); }
+    else bildir(d.durum === 'onay' ? 'Öğrenci onayladı; eski kursun hesabı kapatması bekleniyor' : 'Öğrenci henüz onaylamadı', 'uyari'); }).catch(x => { dd.disabled = false; bildir(B.hataMetni(x), 'uyari'); }); return true; }
   const b = ev.target.closest('[data-hesap-ac], [data-hesap-sifre]');
   if (b) {
     b.disabled = true;
@@ -72,11 +93,15 @@ export function hesapTikla(ev, k, yenile) {
       yenile();
     }).catch(x => {
       b.disabled = false; const m = B.hataMetni(x); bildir(m, 'uyari');
+      // YON-074: numara başka kursta → öğrenci onayıyla devir önerilir
+      if (x.baskaKurs) return devirPenceresi(k, yenile);
       // numara başka kursta kayıtlı ya da geçersizse numara düzenleme ekranı hemen açılır (not 16)
       if (/numara/i.test(m) && /başka bir kursta|geçersiz/i.test(m)) { bilgiDuzenle(k); setTimeout(() => { const t = document.querySelector('.pencere [name=tel]'); if (t) { t.focus(); t.select(); } }, 120); }
     });
     return true;
   }
+  // UYG-019: öğrencinin Plus paketi (Ayarlar › Öğrenci uygulaması'nda paket açıksa görünür)
+  { const pl = ev.target.closest('[data-hesap-plus]'); if (pl) { k.plus = pl.checked || undefined; islem(pl.checked ? 'Plus paketi açtı' : 'Plus paketi kapattı', tamAd(k)); kaydet(); bildir(pl.checked ? 'Plus paket açıldı' : 'Plus paket kapatıldı'); return true; } }
   if (ev.target.closest('[data-hesap-kapat]')) {
     pencere({ baslik: 'Öğrenci hesabı kapatılsın mı?', icerik: `<p>${e(tamAd(k))} artık uygulamaya giremez. Öğrenci kurstan ayrıldıysa ya da telefonu başkasının eline geçtiyse kapatın; gerekirse yeniden açabilirsiniz.</p>`,
       altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Hesabı kapat</button>',
@@ -103,10 +128,11 @@ export function uygulamaPenceresi(yenile) {
   };
   const d = pencere({
     baslik: 'Öğrenci uygulaması daveti', genis: true, icerik: '',
-    altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-u-toplu>Hesabı olmayanların hepsine</button>`,
+    altlik: `<button class="dg dg-cizgi" data-kapat>Kapat</button>${B.bulutta() ? '<button class="dg dg-cizgi" data-u-istek>Kurs koduyla gelen istekler</button>' : ''}<button class="dg dg-ana" data-u-toplu>Hesabı olmayanların hepsine</button>`,
     onAc(d) {
       d.addEventListener('click', ev => {
         if (ev.target.closest('[data-u-toplu]')) { kapatPencere(); return topluHesap(yenile); }
+        if (ev.target.closest('[data-u-istek]')) { kapatPencere(); return import('./hesaptalep.js?v=235').then(HT => HT.talepPenceresi(yenile)); }   // UYG-021
         const b = ev.target.closest('[data-u-ac]'); if (!b) return;
         const k = S.kursiyerler.find(x => String(x.id) === b.dataset.uAc); if (!k) return;
         b.disabled = true;
@@ -122,19 +148,46 @@ export function topluHesap(yenile) {
   if (!l.length) return bildir('Aktif öğrencilerin hepsinin hesabı açık');
   pencere({
     baslik: 'Öğrenci hesapları', genis: true,
-    icerik: `<p style="font-size:14px;margin-bottom:10px"><b>${uygun.length}</b> aktif öğrencinin hesabı yok. Hesaplar açılır, her öğrenciye giriş bilgileri WhatsApp’tan sırayla gönderilir; öğrenci ilk girişte kendi şifresini belirler.</p>
+    icerik: `<p style="font-size:14px;margin-bottom:10px"><b>${uygun.length}</b> aktif öğrencinin hesabı yok. Hesaplar açılır; giriş bilgileri WhatsApp’tan sırayla gönderilir ya da WhatsApp’ı açmadan yazdırılabilir giriş kartları çıkar (öğrenciye elden verilir). Öğrenci ilk girişte kendi şifresini belirler.</p>
       ${gecersiz.length ? `<p class="ipucu uyari" style="margin-bottom:10px">${ik('uyari')}<span>${gecersiz.length} öğrencinin cep telefonu geçersiz, atlanacak: ${e(gecersiz.slice(0, 5).map(tamAd).join(', '))}${gecersiz.length > 5 ? '…' : ''}</span></p>` : ''}
       <ul class="liste" style="max-height:260px;overflow:auto">${uygun.map(k => `<li><label style="display:flex;gap:8px;align-items:center;width:100%"><input type="checkbox" checked data-ogr="${k.id}"><span style="flex:1">${e(tamAd(k))}</span><small style="color:var(--soluk)">${e(B.telGoster(B.telNorm(k.tel)))} · ${e(k.asama)}</small></label></li>`).join('')}</ul>`,
-    altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Hesapları aç</button>`,
+    altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-cizgi" data-k data-kart>Aç ve kartları yazdır</button><button class="dg dg-ana" data-k>Aç ve WhatsApp’tan gönder</button>`,
     onAc(d) {
-      d.querySelector('[data-k]').addEventListener('click', async ev => {
+      d.querySelectorAll('[data-k]').forEach(btn => btn.addEventListener('click', async ev => {
+        const kartla = !!ev.currentTarget.dataset.kart, kartlar = [];
         const sec = uygun.filter(k => d.querySelector(`[data-ogr="${k.id}"]`).checked); if (!sec.length) return bildir('Öğrenci seçin', 'uyari');
         const b = ev.target; b.disabled = true; const giden = [], hata = [];
-        for (const [i, k] of sec.entries()) { b.textContent = `Açılıyor ${i + 1}/${sec.length}…`; try { const r = await ac(k); const a = alici(k); giden.push({ ad: a.ad, tel: a.tel, rol: a.rol, tur: 'Öğrenci hesabı', metin: mesaj(k, r) }); } catch (x) { hata.push(tamAd(k) + ': ' + B.hataMetni(x)); } }
-        islem('Toplu öğrenci hesabı açtı', giden.length + ' öğrenci'); kaydet(); kapatPencere(); yenile();
+        d.querySelectorAll('[data-k]').forEach(x => { x.disabled = true; });
+        for (const [i, k] of sec.entries()) { b.textContent = `Açılıyor ${i + 1}/${sec.length}…`; try { const r = await ac(k); if (kartla) kartlar.push({ ad: tamAd(k), tel: r.tel, eposta: r.eposta, sifre: r.sifre }); else { const a = alici(k); giden.push({ ad: a.ad, tel: a.tel, rol: a.rol, tur: 'Öğrenci hesabı', metin: mesaj(k, r) }); } } catch (x) { hata.push(tamAd(k) + ': ' + B.hataMetni(x)); } }
+        islem('Toplu öğrenci hesabı açtı', (giden.length + kartlar.length) + ' öğrenci' + (kartla ? ' · giriş kartı' : '')); kaydet(); kapatPencere(); yenile();
         if (hata.length) bildir(hata.length + ' hesap açılamadı: ' + hata[0], 'uyari');
         if (giden.length) waSirali(giden, 'Öğrenci hesapları · giriş bilgileri');
-      });
+        if (kartlar.length) girisKartlari(kartlar);
+      }));
     },
   });
+}
+
+// UYG-021: WhatsApp bağlı değilken öğrencileri uygulamaya almak için yazdırılabilir giriş kartları (A4'e 8 kart) ve kursta asılacak QR afiş.
+// Geçici şifre yalnız bu çıktıda görünür, hiçbir yerde saklanmaz; öğrenci ilk girişte kendi şifresini belirler.
+const qrYukle = () => window.QRCode ? Promise.resolve() : new Promise((ok, red) => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'; sc.onload = ok; sc.onerror = () => red(new Error('QR aracı yüklenemedi')); document.head.appendChild(sc); });
+async function qrResim(metin, boy = 160) {
+  try { await qrYukle(); const kap = document.createElement('div'); new window.QRCode(kap, { text: metin, width: boy, height: boy, correctLevel: window.QRCode.CorrectLevel.M }); const c = kap.querySelector('canvas'); return c ? c.toDataURL('image/png') : (kap.querySelector('img') || {}).src || ''; } catch (x) { return ''; }
+}
+export async function girisKartlari(l) {
+  const link = B.ogrenciGirisLinki(), qr = await qrResim(link, 140), kurs = kursAdi();
+  const kart = x => `<div style="border:1px dashed #889;border-radius:10px;padding:12px 14px;display:flex;gap:12px;align-items:center;break-inside:avoid;height:58mm;box-sizing:border-box">${qr ? `<img src="${qr}" alt="" style="width:30mm;height:30mm">` : ''}<div style="font-size:11.5pt;line-height:1.45"><b style="font-size:12.5pt">${e(x.ad)}</b><br>${e(kurs)} öğrenci uygulaması<br>Giriş: <b>${e(link.replace(/^https?:\/\//, ''))}</b><br>${x.eposta ? `E-posta: <b>${e(x.eposta)}</b>` : `Telefon: <b>${e(B.telGoster(x.tel))}</b>`}<br>Geçici şifre: <b style="font-family:monospace;font-size:13pt">${e(x.sifre)}</b><br><small>İlk girişte kendi şifreni belirle. Kartı kimseyle paylaşma.</small></div></div>`;
+  const sayfalar = []; for (let i = 0; i < l.length; i += 8) sayfalar.push(`<div style="display:grid;grid-template-columns:1fr 1fr;gap:6mm;${i + 8 < l.length ? 'page-break-after:always;' : ''}">${l.slice(i, i + 8).map(kart).join('')}</div>`);
+  const { belgeYazdir } = await import('./ui.js?v=235');
+  return belgeYazdir(sayfalar.join(''), 'Öğrenci giriş kartları');
+}
+// UYG-021: kurs kodu varsa (müdür bir kez oluşturur) QR kayıt linkini açar: hesabı olmayan öğrenci kodla kendi hesabını açar, hesabı olan girer
+export async function qrAfis() {
+  let kod = ''; try { kod = await B.kursKoduAl(); } catch (x) { }
+  const link = kod ? B.ogrenciKayitLinki(kod) : B.ogrenciGirisLinki(), giris = B.ogrenciGirisLinki(), qr = await qrResim(link, 420), kurs = kursAdi();
+  const { belgeYazdir } = await import('./ui.js?v=235');
+  const alt = kod
+    ? `<p style="font-size:22pt;margin:8mm 0 4mm">Kurs kodu: <b style="font-family:monospace;letter-spacing:.12em">${e(kod)}</b></p><p style="font-size:14pt;line-height:1.5;margin:0">Telefonunla kodu okut. Hesabın yoksa adını, e-postanı yaz ve kendi şifreni belirle;<br>kursun onaylayınca girersin. Hesabın varsa: <b>${e(giris.replace(/^https?:\/\//, ''))}</b></p>`
+    : `<p style="font-size:20pt;margin:8mm 0 4mm"><b>${e(link.replace(/^https?:\/\//, ''))}</b></p><p style="font-size:14pt;line-height:1.5;margin:0">Telefonunla kodu okut. E-postan (ya da cep telefonun) ve kursundan aldığın geçici şifreyle gir,<br>ilk girişte kendi şifreni belirle. Şifren yoksa ön büroya sor.</p>`;
+  return belgeYazdir(`<div style="text-align:center;padding:20mm 10mm;font-family:sans-serif"><p style="font-size:16pt;margin:0 0 6mm">${e(kurs)}</p><h1 style="font-size:30pt;margin:0 0 8mm">Öğrenci uygulamasına gir</h1>${qr ? `<img src="${qr}" alt="" style="width:110mm;height:110mm">` : ''}${alt}</div>`, 'Öğrenci uygulaması afişi');
 }
