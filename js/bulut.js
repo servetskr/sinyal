@@ -264,14 +264,27 @@ function dosyaRef(s, ozel) {
 const yaz = v => JSON.stringify(v, function (k, x) { if (OZEL_EVRAK.has(k) && x && typeof x === 'object') ozelNesne.add(x); return typeof x === 'string' && x.length > DOSYA_SINIR && x.startsWith('data:') ? dosyaRef(x, ozelNesne.has(this)) : x; });
 const oku = j => JSON.parse(j, (k, x) => { if (typeof x === 'string' && x.startsWith(DOSYA_ON)) { const id = x.slice(DOSYA_ON.length); yuklu.add(id); if (dosyaVeri.has(id)) return dosyaVeri.get(id); eksik.add(id); } return x; });
 const nesneDizisi = v => Array.isArray(v) && v.every(x => x && typeof x === 'object' && !Array.isArray(x));
+// Aynı kimlikli iki kayıt varsa ikincisi gizli anahtarla (_k, kaydın içinde saklanır, cihazlar arası aynıdır) ayrı tutulur.
+// _k'si olan kayıt sıradan bağımsız olarak hep o anahtarla eşlenir: eşleme sıraya bağlıyken iki cihaz dizinin sırasını farklı
+// tuttuğunda "ilk k3"ü farklı kayıtlara bağlıyordu; birinde silinen kayıt öbüründe kalıyor, cihazlar birbirinin yazdığını
+// tersine yazıyordu (senkron 12d, 19 Kas). Kopyalanan kayıt _k'yi de taşırsa yenisi verilir.
+// Yeni bir kopya eklenince düz kimlik bu cihazda onu zaten taşıyan (asıl) kayıtta kalır, gizli anahtarı yeni gelen alır: kopya öne
+// eklendiğinde asıl kaydın anahtarı değişmesin; değişirse her ofis cihazı asıl kayda ayrı anahtar verip birbirini eziyordu (senkron 12e).
 function kimlikler(dizi) {
-  const gor = new Set();
-  return dizi.map(el => {
-    let id = el.id != null ? String(el.id) : null;
-    if (id == null || gor.has(id)) { if (!el._k) el._k = rastgele(10); id = '_' + el._k; }
+  const gor = new Set(), out = dizi.map(el => {
+    if (!el._k) return null;
+    let id = '_' + el._k; if (gor.has(id)) { el._k = rastgele(10); id = '_' + el._k; }
     gor.add(id); return id;
   });
+  // bu cihazda düz kimliği daha önce taşıyan nesne onu korur (öne eklenen kopya yeni nesnedir, gizli anahtarı o alır)
+  dizi.forEach((el, n) => { if (out[n] || el.id == null) return; const id = String(el.id); if (anahtarBellek.get(el) === id && !gor.has(id)) { out[n] = id; gor.add(id); } });
+  return dizi.map((el, n) => {
+    let id = out[n];
+    if (!id) { id = el.id != null ? String(el.id) : null; if (id == null || gor.has(id)) { el._k = rastgele(10); id = '_' + el._k; } gor.add(id); }
+    anahtarBellek.set(el, id); return id;
+  });
 }
+const anahtarBellek = new WeakMap();  // kayıt nesnesi → bu cihazda son eşlendiği anahtar
 // Sıralama: her kaydın kalıcı bir sıra sayısı var; yeni kayıt komşularının arasına girer, eskiler yeniden yazılmaz
 function siralar(ids, eski) {
   let xs = ids.map(id => eski.has(id) ? eski.get(id).x : null), onc = -Infinity;
@@ -482,7 +495,7 @@ function uygula(degisen, uzak) {
     ds.forEach((v, k) => {
       if (ofis) { const o0 = mevcut.get(k); try { kirlet(a, v === null ? null : JSON.parse(v), o0 ? { v: JSON.stringify(o0) } : null); } catch (x) { } }
       if (v === null) { mevcut.delete(k); return; } v = gelenBirlestir(a, k, v); const yeni = oku(v), o = mevcut.get(k); if (o) { Object.keys(o).forEach(x => delete o[x]); Object.assign(o, yeni); } else mevcut.set(k, yeni); });
-    const s = son.get(a), sirali = [...s.entries()].sort((p, q) => p[1].x - q[1].x).map(([k]) => mevcut.get(k) || oku(s.get(k).v));
+    const s = son.get(a), sirali = [...s.entries()].sort((p, q) => p[1].x - q[1].x).map(([k]) => { const el = mevcut.get(k) || oku(s.get(k).v); anahtarBellek.set(el, k); return el; });
     dizi.length = 0; dizi.push(...sirali); oldu = true;
   });
   if (eksik.size) dosyalariGetir();
