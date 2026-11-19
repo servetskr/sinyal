@@ -1,7 +1,7 @@
 // Kurallar ve sık sorulanlar (MEV-009): öğrenci ve öğretmen uygulamasında mevzuat araması.
 // Veri veri/mevzuat/sss-uygulama.json (derlemin SSS'sinden; kime gösterileceği 'kim' alanında). İnternet yoksa ya da dosya inmezse ekran bunu söyler.
 // Arama telefonda, bağlantısız: soru, farklı söylenişleri, kısa cevap ve ayrıntıda Türkçe sadeleştirilmiş kelime eşleşmesi.
-import { esc, oi, sayfaBas, geri, bolum, kart, bos, not, stilEkle } from './ui.js?v=234';
+import { esc, oi, sayfaBas, geri, bolum, kart, bos, not, stilEkle } from './ui.js?v=235';
 
 let veri = null, sozu = null, hata = '';
 const durum = { q: '', konu: '', acik: '' };
@@ -12,7 +12,7 @@ const BOS = new Set(['icin', 'ile', 'nasil', 'neden', 'nedir', 'olur', 'olursa',
 const kelimeler = s => nrm(s).split(/\s+/).filter(w => w.length > 2 && !BOS.has(w)).map(kok);
 export function yukle() {
   if (veri || sozu) return sozu || Promise.resolve(veri);
-  sozu = fetch(new URL('../../veri/mevzuat/sss-uygulama.json', import.meta.url).href + '?v=234').then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  sozu = fetch(new URL('../../veri/mevzuat/sss-uygulama.json', import.meta.url).href + '?v=235').then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then(j => { veri = (j.sorular || []).map(x => ({ ...x, ara: kelimeler([x.soru, ...(x.esler || []), x.kisa, ...(x.ayrinti || [])].join(' ')), baslikAra: kelimeler([x.soru, ...(x.esler || [])].join(' ')) })); hata = ''; return veri; })
     .catch(() => { hata = 'Sorular yüklenemedi; internet bağlantınızı kontrol edip yeniden açın.'; sozu = null; return null; });
   return sozu;

@@ -1,9 +1,9 @@
 // MEB resmî formları: MTSK Yönetmeliği eklerinin düzeninde, kayıtlardan dolan ya da boş (elle doldurmak için) çıktılar.
 // Kaynak: mevzuat.gov.tr 7.5.18408 ekleri (EK-1, EK-3, EK-4, EK-5, EK-8, EK-10, EK-12) ve md.17/3, md.42 içerik şartları.
-import { S, kaydet, gun, oturum, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, ek3Sinif, dersKonulari, gorunum, sb, sbSinav, gerekliDireksiyon, geceDersMi, aracSiniflari, egitimSinifi, sinifEtiket, dersKonulariResmi } from './veri.js?v=234';
-import { e, pencere, bildir, belgeYazdir, ik, csvIndir } from './ui.js?v=234';
-import * as GR from './gruplar.js?v=234';
-import { EK3, EK4, EK3_NOT, EK4_NOT, EK12 } from './formlar.js?v=234';
+import { S, kaydet, gun, oturum, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, ek3Sinif, dersKonulari, gorunum, sb, sbSinav, gerekliDireksiyon, geceDersMi, aracSiniflari, egitimSinifi, sinifEtiket, dersKonulariResmi } from './veri.js?v=235';
+import { e, pencere, bildir, belgeYazdir, ik, csvIndir } from './ui.js?v=235';
+import * as GR from './gruplar.js?v=235';
+import { EK3, EK4, EK3_NOT, EK4_NOT, EK12 } from './formlar.js?v=235';
 
 const trTarih = t => t ? String(t).slice(0, 10).split('-').reverse().join('.') : '';
 const BUYUK = s => String(s || '').toLocaleUpperCase('tr');
@@ -326,7 +326,7 @@ export const RESMI = {
   meis: ['Dönem (MEİS) istatistiği', 'Yaş × öğrenim × cinsiyet; genel ve sertifika başına tablo', 'donem'],
 };
 export function resmiAc(tur, id, takip) {
-  if (tur === 'komisyon') return import('./komisyon.js?v=234').then(m => m.komisyonSec());  // SNV-063
+  if (tur === 'komisyon') return import('./komisyon.js?v=235').then(m => m.komisyonSec());  // SNV-063
   if (takip) takipFormu = takip;
   const [baslik, , tip] = RESMI[tur];
   const dSinavlar = () => sbSinav(S.sinavlar).filter(s => /direksiyon/i.test(s.tur)).sort((a, b) => b.tarih.localeCompare(a.tarih));

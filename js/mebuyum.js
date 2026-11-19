@@ -3,8 +3,8 @@
 // girdiyse (ör. Pazar yapılan ders Cumartesi girilmiş, son dakika saat değişikliği işlenmemiş) geri okumada (SKT04002 haftalık program, SKT02009 aday dosyası)
 // fark burada yakalanır: ders satırında rozet, MEB işlemleri'nde liste, Bugün'de hatırlatma. Kurs açıklama yazıp "bilerek bırakıldı" diye kapatabilir.
 // MTSK md.46/A: denetimde eğitimin Modül'e girilen gün ve saatte yapılıp yapılmadığına bakılır; uyumsuzluk denetim riskidir.
-import { donemKodu } from './mebnorm.js?v=234';
-import { S, geceDersMi, gun, kursiyer, egitmen, arac, tamAd, islem, kaydet, EGITIM_TURU, egitimTuruOf } from './veri.js?v=234';
+import { donemKodu } from './mebnorm.js?v=235';
+import { S, geceDersMi, gun, kursiyer, egitmen, arac, tamAd, islem, kaydet, EGITIM_TURU, egitimTuruOf } from './veri.js?v=235';
 
 export const nrm = x => String(x || '').toLocaleLowerCase('tr').replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/[^a-z0-9]/g, '');
 const plakaN = p => String(p || '').toLocaleUpperCase('tr').replace(/\(.*?\)/g, '').replace(/[^A-Z0-9]/g, '');

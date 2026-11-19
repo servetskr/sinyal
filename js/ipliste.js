@@ -1,9 +1,9 @@
 // YON-021: IP yetkilendirme — ön büroyu kurs bilgisayarına bağlama. S.kurs.ipListe = { acik, kayitlar: [{ id, ip, kim: 'hepsi' | kullanıcı kimliği, not, aktif }] }.
 // DENETİM K6: güvenlik önlemi değil, hatırlatma (ekranda yazar). Kurs müdürü her IP'den girer. Ön büro girişte denetlenir: liste açık ve kişiye (ya da 'tüm ön büro'ya) ait etkin kayıt varsa IP bunlardan biri olmalı.
 // IP'yi worker'ın /ip ucu verir (CF-Connecting-IP; kayıt tutulmaz). Worker'a ulaşılamazsa giriş engellenmez, işlem kaydına yazılır (kurs dışarıda kilitli kalmasın).
-import { S, kaydet, islem, oturum } from './veri.js?v=234';
-import { e, bildir, ik, isaret, onaySor } from './ui.js?v=234';
-import { WORKER } from './bulut.js?v=234';
+import { S, kaydet, islem, oturum } from './veri.js?v=235';
+import { e, bildir, ik, isaret, onaySor } from './ui.js?v=235';
+import { WORKER } from './bulut.js?v=235';
 
 const liste = () => (S.kurs && S.kurs.ipListe) || { acik: false, kayitlar: [] };
 const IP_RE = /^(\d{1,3}\.){3}\d{1,3}$|^[0-9a-f:]{3,39}$/i;
@@ -31,11 +31,11 @@ export function ipBagla(k) {
   k.addEventListener('submit', ev => { const f = ev.target.closest('[data-ip-ekle]'); if (!f) return; ev.preventDefault();
     const ip = f.ip.value.trim(); if (!IP_RE.test(ip)) return bildir('Geçerli bir IP adresi yazın (ör. 88.230.12.34)', 'uyari');
     const L = liste(); if (L.kayitlar.some(x => x.ip === ip && x.kim === f.kim.value)) return bildir('Bu kayıt zaten var', 'uyari');
-    S.kurs.ipListe = { ...L, kayitlar: [...L.kayitlar, { id: 'ip' + Date.now().toString(36), ip, kim: f.kim.value, not: f.not.value.trim(), aktif: true }] }; yaz('IP yetkisi ekledi', ip + ' · ' + kimAd(f.kim.value)); import('./app.js?v=234').then(m => m.yenile()); });
+    S.kurs.ipListe = { ...L, kayitlar: [...L.kayitlar, { id: 'ip' + Date.now().toString(36), ip, kim: f.kim.value, not: f.not.value.trim(), aktif: true }] }; yaz('IP yetkisi ekledi', ip + ' · ' + kimAd(f.kim.value)); import('./app.js?v=235').then(m => m.yenile()); });
   k.addEventListener('click', async ev => { const d = ev.target.closest('[data-ip-duraklat],[data-ip-sil]'); if (!d) return; const L = liste(), id = d.dataset.ipDuraklat || d.dataset.ipSil, x = L.kayitlar.find(y => y.id === id); if (!x) return;
     if (d.dataset.ipSil) { if (!(await onaySor(x.ip + ' · ' + kimAd(x.kim), { baslik: 'IP yetkisi silinsin mi?', evet: 'Sil', tehlike: true }))) return; S.kurs.ipListe = { ...L, kayitlar: L.kayitlar.filter(y => y.id !== id) }; yaz('IP yetkisini sildi', x.ip + ' · ' + kimAd(x.kim)); }
     else { S.kurs.ipListe = { ...L, kayitlar: L.kayitlar.map(y => y.id === id ? { ...y, aktif: !y.aktif } : y) }; yaz(x.aktif ? 'IP yetkisini duraklattı' : 'IP yetkisini başlattı', x.ip); }
-    import('./app.js?v=234').then(m => m.yenile()); });
+    import('./app.js?v=235').then(m => m.yenile()); });
 }
 // ön büro girişinde: izin yoksa { izin: false, ip }; denetim gerekmiyorsa ya da IP öğrenilemediyse izin verilir
 export async function ipDenetle() {

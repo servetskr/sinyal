@@ -1,14 +1,14 @@
 // Öğrenci paneli sekmeleri: dersler (yaklaşan + defter + gelişim + teorik konular), sınavlar, ödemeler, belgeler; bölümler açılır kapanır modüller
-import { odemeKodu, ibanlar, ibanBicim, S, kaydet, gun, fark, tarihOku, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen, ogrOzellik, oturum, DERS_TUR_AD, iptalEdilebilir, teorikSaat } from './veri.js?v=234';
-import { gerekliDireksiyon, kalanHak, esinavHakDurum } from './veri.js?v=234';
-import { sinifEtiket, egitimSinifi, teorikVar, ekTur, kursBorcu, resmiMasraflar, kursiyerTaban, tabanListesi, ekDersTabani, ekDersFiyat, uygulamaSinavUcreti, esinavUcreti, motorSinif } from './veri.js?v=234';
-import { satirAdi } from './taban.js?v=234';
-import * as TK from './takvim.js?v=234';
-import { randevuEngeli, engelYazilir } from './risk.js?v=234';
-import { bildirimler } from './sayfalar1.js?v=234';
-import { e, tl, ik, rozet, ilerleme, pencere, kapatPencere, bildir, tarih, goreli, isaret, belgeYazdir, fotoKucult, ayAdi } from './ui.js?v=234';
-import { ikinciHakSonGun } from './kurallar.js?v=234';
-import { belgeHtml } from './sayfalar3.js?v=234';
+import { odemeKodu, ibanlar, ibanBicim, S, kaydet, gun, fark, tarihOku, SINIFLAR, EVRAKLAR, egitmen, arac, tamAd, odenen, kalanBorc, ekToplam, BECERI, islem, gonderimEkle, ogretmen, ogrOzellik, oturum, DERS_TUR_AD, iptalEdilebilir, teorikSaat } from './veri.js?v=235';
+import { gerekliDireksiyon, kalanHak, esinavHakDurum } from './veri.js?v=235';
+import { sinifEtiket, egitimSinifi, teorikVar, ekTur, kursBorcu, resmiMasraflar, kursiyerTaban, tabanListesi, ekDersTabani, ekDersFiyat, uygulamaSinavUcreti, esinavUcreti, motorSinif } from './veri.js?v=235';
+import { satirAdi } from './taban.js?v=235';
+import * as TK from './takvim.js?v=235';
+import { randevuEngeli, engelYazilir } from './risk.js?v=235';
+import { bildirimler } from './sayfalar1.js?v=235';
+import { e, tl, ik, rozet, ilerleme, pencere, kapatPencere, bildir, tarih, goreli, isaret, belgeYazdir, fotoKucult, ayAdi } from './ui.js?v=235';
+import { ikinciHakSonGun } from './kurallar.js?v=235';
+import { belgeHtml } from './sayfalar3.js?v=235';
 
 // MEB teorik eğitim programı: konu, ders saati, başlıklar (anahtarlar soru bankasıyla aynı)
 export const MUFREDAT = [
@@ -300,7 +300,7 @@ export function belgelerHtml(k) {
 /* ---------- konu anlatımı ---------- */
 // İçerik ayrı dosyada; yalnız açılınca yüklenir (açılış hızını etkilemesin)
 let dersYuk = null;
-const dersleriYukle = () => dersYuk || (dersYuk = import('./dersler.js?v=234').then(m => m.DERSLER).catch(() => ({})));
+const dersleriYukle = () => dersYuk || (dersYuk = import('./dersler.js?v=235').then(m => m.DERSLER).catch(() => ({})));
 async function dersAc(k, id, yenile) {
   const D = await dersleriYukle(), d = D[id], [key, no] = [id.replace(/-\d+$/, ''), +id.split('-').pop()], konu = MUFREDAT.find(x => x[0] === key), baslik = konu ? konu[3][no - 1] : id;
   const sonraki = konu && no < konu[3].length ? key + '-' + (no + 1) : null;
@@ -337,7 +337,7 @@ async function dersAc(k, id, yenile) {
 
 /* ---------- olaylar ---------- */
 // direksiyon hazırlık bölümü ayrı dosyada (resmî form maddeleriyle); yer tutucu varsa yüklenir
-const dirYukle = () => import('./direksiyon.js?v=234');
+const dirYukle = () => import('./direksiyon.js?v=235');
 export function ogBagla(kap, k, yenile) {
   const yer = kap.querySelectorAll('[data-dir-yer]'); if (yer.length) dirYukle().then(m => yer.forEach(y => { y.innerHTML = m.direksiyonHtml(k, true); })).catch(() => { });
   kap.addEventListener('toggle', ev => { const m = ev.target; if (!m.matches || !m.matches('[data-modul]')) return; const id = m.dataset.modul; if (m.open) { ACIK.add(id); KAPALI.delete(id); } else { ACIK.delete(id); KAPALI.add(id); } }, true);
@@ -345,12 +345,12 @@ export function ogBagla(kap, k, yenile) {
     const t = ev.target;
     if (t.closest('.tk2') && TK.takvimTikla(t, ogTk)) return yenile();
     const dr = t.closest('[data-dir]'); if (dr) return dirYukle().then(m => m.direksiyonAc(k, dr.dataset.dir, yenile));
-    if (t.closest('[data-ikaz]')) return import('./ikaz.js?v=234').then(m => m.ikazAc());
-    if (t.closest('[data-motor4]')) return import('./motor.js?v=234').then(m => m.motorAc());
-    if (t.closest('[data-debriyaj]')) return import('./motor.js?v=234').then(m => m.debriyajAc());
-    if (t.closest('[data-tehlike]')) return import('./tehlike.js?v=234').then(m => m.tehlikeAc(k));
+    if (t.closest('[data-ikaz]')) return import('./ikaz.js?v=235').then(m => m.ikazAc());
+    if (t.closest('[data-motor4]')) return import('./motor.js?v=235').then(m => m.motorAc());
+    if (t.closest('[data-debriyaj]')) return import('./motor.js?v=235').then(m => m.debriyajAc());
+    if (t.closest('[data-tehlike]')) return import('./tehlike.js?v=235').then(m => m.tehlikeAc(k));
     if (t.closest('[data-kur-android]') && window.__kurulum) { window.__kurulum.prompt(); window.__kurulum.userChoice.finally(() => { window.__kurulum = null; yenile(); }); return; }
-    const od = t.closest('[data-og-ders]'); if (od) return import('./ogren.js?v=234').then(m => m.dersBaslat(k, od.dataset.ogDers, yenile)).catch(() => dersAc(k, od.dataset.ogDers, yenile));
+    const od = t.closest('[data-og-ders]'); if (od) return import('./ogren.js?v=235').then(m => m.dersBaslat(k, od.dataset.ogDers, yenile)).catch(() => dersAc(k, od.dataset.ogDers, yenile));
     const yz = t.closest('[data-og-yildiz]'); if (yz) { const kart = yz.closest('.og-degerlendir'), n = +yz.dataset.ogYildiz; kart.dataset.puan = n; kart.querySelectorAll('[data-og-yildiz]').forEach(b => { b.classList.toggle('secili', +b.dataset.ogYildiz <= n); if (b.getAttribute('role') === 'radio') b.setAttribute('aria-checked', String(+b.dataset.ogYildiz === n)); }); kart.querySelector('[data-og-puan]').disabled = false; return; }
     const oo = t.closest('[data-og-onay]'); if (oo) { const d = S.dersler.find(x => x.id === oo.dataset.ogOnay); if (!d) return; d.ogrenciOnay = { durum: 'onay', tarih: gun(0) }; islem('Öğrenci dersi onayladı', tamAd(k) + ' · ' + d.tarih + ' ' + d.saat); kaydet(); bildir('Teşekkürler, ders onaylandı'); return yenile(); }
     const oi = t.closest('[data-og-itiraz]'); if (oi) { const d = S.dersler.find(x => x.id === oi.dataset.ogItiraz); if (!d) return;
@@ -389,7 +389,7 @@ export function ogBagla(kap, k, yenile) {
     const oku = resim ? fotoKucult(f, 1600) : new Promise((coz, red) => { const r = new FileReader(); r.onload = () => coz(r.result); r.onerror = red; r.readAsDataURL(f); });
     oku.then(async veri => {
       // KAY-040: yazılı belge fotoğrafında netlik ölçülür (vesikalık fotoğrafa uygulanmaz); ofis kararıyla birlikte eşik ayarına örnek olur
-      let nt = null; if (!pdf && key !== 'foto') { try { nt = await (await import('./evrak.js?v=234')).netlikOlc(veri); } catch (x) { } }
+      let nt = null; if (!pdf && key !== 'foto') { try { nt = await (await import('./evrak.js?v=235')).netlikOlc(veri); } catch (x) { } }
       k.evrakYuklenen = k.evrakYuklenen || {}; k.evrakYuklenen[key] = { tarih: gun(0), dosya: f.name, boyut: veri.length, tur: pdf ? 'pdf' : 'resim', veri, ...(nt ? { net: nt.net, bulanik: nt.bulanik } : {}) };
       islem('Öğrenci evrak yükledi', tamAd(k) + ' · ' + ad); kaydet(); bildirimler([{ kim: 'mudur', metin: `${tamAd(k)} öğrenci panelinden “${ad}” belgesini yükledi; öğrenci dosyasından kontrol edin.`, tur: 'Öğrenci evrakı' }], 'Belge yüklendi');
       bildir('Belgen kursa gönderildi; kontrol edilince tamamlanır'); yenile();

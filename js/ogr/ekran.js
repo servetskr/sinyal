@@ -10,17 +10,17 @@
 //   data-ox-git="<sekme>[:<alt>]" başka sekmenin alt ekranına git (örn. "sinav:deneme")
 //   data-ox-alt="<alt>"           Öğren sekmesinde alt ekran aç; data-ox-alt="" Öğren ana ekranına döner
 //   data-og-ders="<konu-id>"      kısa dersi aç (ogrenci.js ogBagla), data-ode / data-iste / data-kursa-yaz / data-degis / data-og-iptal (portal.js ogGenelTik)
-import { sekmeCubugu, ustCubuk } from './ui.js?v=234';
-import { altEkran, altAc, altKapat } from './ogrveri.js?v=234';
-import * as OG from '../ogrenci.js?v=234';
-import * as ANA from './anasayfa.js?v=234';
-import * as DRS from './derslerim.js?v=234';
-import * as ODE from './odeme.js?v=234';
-import * as BLG from './belgeler.js?v=234';
-import * as SNV from './sinav.js?v=234';
-import * as ARC from './araclar.js?v=234';
-import * as OGRN from '../ogren.js?v=234';
-import * as KUR from './kurallar.js?v=234';
+import { sekmeCubugu, ustCubuk } from './ui.js?v=235';
+import { altEkran, altAc, altKapat } from './ogrveri.js?v=235';
+import * as OG from '../ogrenci.js?v=235';
+import * as ANA from './anasayfa.js?v=235';
+import * as DRS from './derslerim.js?v=235';
+import * as ODE from './odeme.js?v=235';
+import * as BLG from './belgeler.js?v=235';
+import * as SNV from './sinav.js?v=235';
+import * as ARC from './araclar.js?v=235';
+import * as OGRN from '../ogren.js?v=235';
+import * as KUR from './kurallar.js?v=235';
 export { altEkran, altAc, altKapat, ustCubuk };
 
 const SINAV_ALT = /^(deneme|araclar|test-ayar|tekrar|yanlislar)(:|$)/, ARAC_ALT = /^(tehlike|etkilesim|direksiyon)(:|$)/;

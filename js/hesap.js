@@ -1,10 +1,10 @@
 // Öğrenci hesapları (kurs tarafı): müdür ya da ön büro hesabı açar, giriş bilgileri öğrenciye WhatsApp'tan gider,
 // öğrenci ilk girişte kendi şifresini belirler. Şifresini unutan öğrenci kursa söyler; buradan tek dokunuşla yeni geçici şifre gider.
-import { S, kaydet, gun, tamAd, islem, selam, oturum, sb, SINIFLAR, egitmen, eksikEvrak, kursAdi } from './veri.js?v=234';
-import { sinifEtiket, teorikVar, gerekliDireksiyon, tabanListesi } from './veri.js?v=234';
-import { e, ik, tarih, pencere, kapatPencere, bildir, waSirali, tl, tamTarih, apiAcik } from './ui.js?v=234';
-import * as B from './bulut.js?v=234';
-import { wpGonder, alici, odemeBilgisi, bilgiDuzenle } from './sayfalar1.js?v=234';
+import { S, kaydet, gun, tamAd, islem, selam, oturum, sb, SINIFLAR, egitmen, eksikEvrak, kursAdi } from './veri.js?v=235';
+import { sinifEtiket, teorikVar, gerekliDireksiyon, tabanListesi } from './veri.js?v=235';
+import { e, ik, tarih, pencere, kapatPencere, bildir, waSirali, tl, tamTarih, apiAcik } from './ui.js?v=235';
+import * as B from './bulut.js?v=235';
+import { wpGonder, alici, odemeBilgisi, bilgiDuzenle } from './sayfalar1.js?v=235';
 
 const yetkili = () => oturum.kullanici && ['mudur', 'sekreter'].includes(oturum.kullanici.rol);
 
@@ -132,7 +132,7 @@ export function uygulamaPenceresi(yenile) {
     onAc(d) {
       d.addEventListener('click', ev => {
         if (ev.target.closest('[data-u-toplu]')) { kapatPencere(); return topluHesap(yenile); }
-        if (ev.target.closest('[data-u-istek]')) { kapatPencere(); return import('./hesaptalep.js?v=234').then(HT => HT.talepPenceresi(yenile)); }   // UYG-021
+        if (ev.target.closest('[data-u-istek]')) { kapatPencere(); return import('./hesaptalep.js?v=235').then(HT => HT.talepPenceresi(yenile)); }   // UYG-021
         const b = ev.target.closest('[data-u-ac]'); if (!b) return;
         const k = S.kursiyerler.find(x => String(x.id) === b.dataset.uAc); if (!k) return;
         b.disabled = true;
@@ -178,14 +178,14 @@ export async function girisKartlari(l) {
   const link = B.ogrenciGirisLinki(), qr = await qrResim(link, 140), kurs = kursAdi();
   const kart = x => `<div style="border:1px dashed #889;border-radius:10px;padding:12px 14px;display:flex;gap:12px;align-items:center;break-inside:avoid;height:58mm;box-sizing:border-box">${qr ? `<img src="${qr}" alt="" style="width:30mm;height:30mm">` : ''}<div style="font-size:11.5pt;line-height:1.45"><b style="font-size:12.5pt">${e(x.ad)}</b><br>${e(kurs)} öğrenci uygulaması<br>Giriş: <b>${e(link.replace(/^https?:\/\//, ''))}</b><br>${x.eposta ? `E-posta: <b>${e(x.eposta)}</b>` : `Telefon: <b>${e(B.telGoster(x.tel))}</b>`}<br>Geçici şifre: <b style="font-family:monospace;font-size:13pt">${e(x.sifre)}</b><br><small>İlk girişte kendi şifreni belirle. Kartı kimseyle paylaşma.</small></div></div>`;
   const sayfalar = []; for (let i = 0; i < l.length; i += 8) sayfalar.push(`<div style="display:grid;grid-template-columns:1fr 1fr;gap:6mm;${i + 8 < l.length ? 'page-break-after:always;' : ''}">${l.slice(i, i + 8).map(kart).join('')}</div>`);
-  const { belgeYazdir } = await import('./ui.js?v=234');
+  const { belgeYazdir } = await import('./ui.js?v=235');
   return belgeYazdir(sayfalar.join(''), 'Öğrenci giriş kartları');
 }
 // UYG-021: kurs kodu varsa (müdür bir kez oluşturur) QR kayıt linkini açar: hesabı olmayan öğrenci kodla kendi hesabını açar, hesabı olan girer
 export async function qrAfis() {
   let kod = ''; try { kod = await B.kursKoduAl(); } catch (x) { }
   const link = kod ? B.ogrenciKayitLinki(kod) : B.ogrenciGirisLinki(), giris = B.ogrenciGirisLinki(), qr = await qrResim(link, 420), kurs = kursAdi();
-  const { belgeYazdir } = await import('./ui.js?v=234');
+  const { belgeYazdir } = await import('./ui.js?v=235');
   const alt = kod
     ? `<p style="font-size:22pt;margin:8mm 0 4mm">Kurs kodu: <b style="font-family:monospace;letter-spacing:.12em">${e(kod)}</b></p><p style="font-size:14pt;line-height:1.5;margin:0">Telefonunla kodu okut. Hesabın yoksa adını, e-postanı yaz ve kendi şifreni belirle;<br>kursun onaylayınca girersin. Hesabın varsa: <b>${e(giris.replace(/^https?:\/\//, ''))}</b></p>`
     : `<p style="font-size:20pt;margin:8mm 0 4mm"><b>${e(link.replace(/^https?:\/\//, ''))}</b></p><p style="font-size:14pt;line-height:1.5;margin:0">Telefonunla kodu okut. E-postan (ya da cep telefonun) ve kursundan aldığın geçici şifreyle gir,<br>ilk girişte kendi şifreni belirle. Şifren yoksa ön büroya sor.</p>`;

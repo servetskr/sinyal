@@ -1,9 +1,9 @@
 // SNV-037..046, SNV-060, SNV-005: "Sınav günü" ekranı (#/sinav/<oturum>) — komisyonlar, saat dilimleri, satır alt sayfası, yazdır, süreler şeridi, kalanları aktar.
 // Atama (SNV-040): s.atama = { [kursiyerId]: { kom, saat, plaka, egitmen, elle } } yalnız elle değiştirilenleri tutar; ötekiler her açılışta yeniden hesaplanır.
-import { ulusalSinav, aracUygun, S, kaydet, gun, fark, tamAd, kursiyer, egitmen, arac, SINIFLAR, hakDurumu, islem, oturum, kuralAyar, mebIsGunuGeri, tcMaskele, izinDurumu } from './veri.js?v=234';
-import { e, ik, rozet, avatar, tarih, tarihUzun, pencere, kapatPencere, bildir, bos, isaret, belgeYazdir, onaySor } from './ui.js?v=234';
-import * as KR from './kurallar.js?v=234';
-import * as MEB from './eklenti.js?v=234';
+import { ulusalSinav, aracUygun, S, kaydet, gun, fark, tamAd, kursiyer, egitmen, arac, SINIFLAR, hakDurumu, islem, oturum, kuralAyar, mebIsGunuGeri, tcMaskele, izinDurumu } from './veri.js?v=235';
+import { e, ik, rozet, avatar, tarih, tarihUzun, pencere, kapatPencere, bildir, bos, isaret, belgeYazdir, onaySor } from './ui.js?v=235';
+import * as KR from './kurallar.js?v=235';
+import * as MEB from './eklenti.js?v=235';
 
 // SNV-041: dilimler 40 dk + 5 dk ara, öğle arası 12:10–13:00 (mebtoplu.js'teki MEBBİS randevu dilimleriyle aynı)
 export const SINAV_SAATLERI = ['08:30', '09:15', '10:00', '10:45', '11:30', '13:00', '13:45', '14:30', '15:15', '16:00'];
@@ -124,23 +124,23 @@ function yazdir(s) {
     ${koms.map(c => `<h2 style="font-size:15px;margin:14px 0 6px">${s.tur === 'e-Sınav' ? 'Adaylar' : c + '. komisyon'}</h2><table><tr><th>Sıra</th><th>Saat</th><th>Ad soyad</th><th>T.C.</th><th>Sınıf</th><th>Usta</th><th>Plaka</th><th style="width:110px">İmza</th></tr>${l.filter(x => x.kom === c).sort((a, b) => String(a.saat).localeCompare(String(b.saat))).map((x, i) => `<tr><td>${i + 1}</td><td>${e(x.saat || '')}</td><td>${e(tamAd(x.k))}</td><td>${e(tcMaskele(x.k.tc || ''))}</td><td>${e(((SINIFLAR[x.k.sinif] || {}).ad || x.k.sinif).split(' ·')[0])}</td><td>${e(x.eg ? x.eg.ad : '')}</td><td>${e(x.plaka || '')}</td><td></td></tr>`).join('')}</table>`).join('')}`, `${s.tur} sınavı · ${tarih(s.tarih)}`);
 }
 function baglan(kap, s) {
-  const yenile = () => import('./app.js?v=234').then(m => m.yenile());
+  const yenile = () => import('./app.js?v=235').then(m => m.yenile());
   kalanListesi(kap, s);
   kap.addEventListener('change', ev => { if (ev.target.closest('[data-sg-hedef]')) kalanListesi(kap, s); });
   kap.addEventListener('click', async ev => { const t = ev.target;
     const sa = t.closest('[data-sg-aday]'); if (sa && !t.closest('a,button') && s.tur === 'Direksiyon') return satirSayfasi(s, kursiyer(sa.dataset.sgAday), yenile);
     if (t.closest('[data-sg-yazdir]')) return yazdir(s);
-    if (t.closest('[data-sg-komisyon]')) return (await import('./komisyon.js?v=234')).komisyonPenceresi(s);
-    const ed = t.closest('[data-sg-ekders]'); if (ed) return (await import('./sayfalar1.js?v=234')).ekDersOner(kursiyer(ed.dataset.sgEkders), yenile);
-    if (t.closest('[data-sg-sonuc]')) return (await import('./sayfalar2.js?v=234')).sonucGir(s);
-    if (t.closest('[data-sg-ekle]')) return (await import('./sayfalar2.js?v=234')).sinavaEkle(s);
-    if (t.closest('[data-sg-hatir]')) return (await import('./sayfalar2.js?v=234')).sinavHatirlat(s);
+    if (t.closest('[data-sg-komisyon]')) return (await import('./komisyon.js?v=235')).komisyonPenceresi(s);
+    const ed = t.closest('[data-sg-ekders]'); if (ed) return (await import('./sayfalar1.js?v=235')).ekDersOner(kursiyer(ed.dataset.sgEkders), yenile);
+    if (t.closest('[data-sg-sonuc]')) return (await import('./sayfalar2.js?v=235')).sonucGir(s);
+    if (t.closest('[data-sg-ekle]')) return (await import('./sayfalar2.js?v=235')).sinavaEkle(s);
+    if (t.closest('[data-sg-hatir]')) return (await import('./sayfalar2.js?v=235')).sinavHatirlat(s);
     if (t.closest('[data-sg-aktar]')) { const hedef = S.sinavlar.find(x => x.id === kap.querySelector('[data-sg-hedef]').value), ids = [...kap.querySelectorAll('[data-sg-kalan]:checked:not(:disabled)')].map(x => x.dataset.sgKalan);
-      if (!ids.length) return bildir('Aktarılacak aday seçin', 'uyari'); const S2 = await import('./sayfalar2.js?v=234');
+      if (!ids.length) return bildir('Aktarılacak aday seçin', 'uyari'); const S2 = await import('./sayfalar2.js?v=235');
       hedef.kursiyerler.push(...ids); ids.map(kursiyer).forEach(k => { if (hedef.tur === 'Direksiyon') k.dsinavPlan = hedef.tarih; S2.sinavUcreti(k, hedef); });
       islem('Kalanları aktardı', `${s.tur} ${tarih(s.tarih)} → ${tarih(hedef.tarih)} · ${ids.map(kursiyer).map(tamAd).join(', ')}`); kaydet(); bildir(`${ids.length} aday ${tarih(hedef.tarih)} sınavına aktarıldı`); return yenile(); }
   });
-  kap.addEventListener('keydown', ev => { const sa = ev.target.closest('[data-sg-aday]'); if (sa && ev.key === 'Enter' && s.tur === 'Direksiyon') satirSayfasi(s, kursiyer(sa.dataset.sgAday), () => import('./app.js?v=234').then(m => m.yenile())); });
+  kap.addEventListener('keydown', ev => { const sa = ev.target.closest('[data-sg-aday]'); if (sa && ev.key === 'Enter' && s.tur === 'Direksiyon') satirSayfasi(s, kursiyer(sa.dataset.sgAday), () => import('./app.js?v=235').then(m => m.yenile())); });
 }
 
 // SNV-041: kursun uygulama sınavı günleri (ilçe MEM'in verdiği; MTSKY 28/2-3: hafta sonu). S.kurs.sinavGunleri = ['YYYY-AA-GG', …]
@@ -152,7 +152,7 @@ export function gunlerKarti() {
       <form data-sg-gun-ekle style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:12px"><label class="vr-alan"><span>Gün ekle</span><input class="girdi" type="date" name="t" min="${gun(0)}" required></label><button class="dg dg-cizgi dg-kucuk" type="submit">${ik('arti')}Ekle</button></form></div></div>`;
 }
 export function gunlerBagla(kap) {
-  const yenile = () => import('./app.js?v=234').then(m => m.yenile());
+  const yenile = () => import('./app.js?v=235').then(m => m.yenile());
   const f = kap.querySelector('[data-sg-gun-ekle]');
   if (f) f.addEventListener('submit', ev => { ev.preventDefault(); const t = f.t.value; if (!t) return; const l = sinavGunleri(true);
     if (l.includes(t)) return bildir('Bu gün zaten ekli', 'uyari');

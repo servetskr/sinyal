@@ -1,8 +1,8 @@
 // MEBBİS aday evrak ekranlarının istediği bilgiler (belge değil, belge üzerindeki bilgiler):
 // Öğrenim (SKT02003), Sağlık raporu (SKT02004), Sabıka/adli sicil (SKT02005), Parmak izi (SKT02010, menüde "İmza").
 // Kayıt formunda ve öğrenci dosyasında girilir; "MEBBİS'e yaz" kayıtla birlikte bu ekranları da doldurur.
-import { e, isaret } from './ui.js?v=234';
-import { S, gun } from './veri.js?v=234';
+import { e, isaret } from './ui.js?v=235';
+import { S, gun } from './veri.js?v=235';
 
 // KAY-011: engel bilgisi (MEBBİS'e 'Var/Yok' gider; ayrıntı e-sınav ve aday belgesi için kursta tutulur)
 export const ENGEL_TURLERI = ['Ortopedik (el/kol)', 'Ortopedik (yürüyemiyor)', 'İşitme, dil ve konuşma', 'Görme (bir gözü görmüyor)', 'Görme (büyüteçle)', 'Süreğen hastalık'];

@@ -1,7 +1,7 @@
 // YON-063: kişisel görünüm tercihleri — kişi başına, cihazlar arası (S.kisisel[kişi]); açılışta veri gelmeden önce de
 // uygulanabilsin diye bu cihazda da tutulur (localStorage 'sinyal-gorunum'). Yapışkan süzgeç ve sekme hatırlama cihaza özeldir.
-import { S, kaydet, oturum } from './veri.js?v=234';
-import { e } from './ui.js?v=234';
+import { S, kaydet, oturum } from './veri.js?v=235';
+import { e } from './ui.js?v=235';
 
 const YEREL = 'sinyal-gorunum';
 export const TERCIH_VARSAYILAN = { tema: 'levha', yazi: 'normal', sayfaBasi: 0, yapiskan: false, sekmeHatirla: false, dugme: 'sag', kayitOtoIleri: true, gizliSutun: [] };

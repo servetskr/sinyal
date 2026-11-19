@@ -27,12 +27,12 @@
 //   tablo · bitenler · hatalar                                               bu dosya (tek liste ve "Ekranda doldur" yolu)
 // Kurs verisi yüklenmeden (giriş öncesi) gelen toplu-durum işlenmez, Yardımcı yeniden verir; harita-durum ise bekletilir (bekleyenleriIsle).
 // =====
-import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, eksikEvrak, sb, sbDers, sbSinav, oturum, cokSube, seciliSube, mebIsGunuGeri, kuralAyar, egitimSinifi, MEB_CEZA_SERTIFIKA } from './veri.js?v=234';
-import { bildir, pencere, kapatPencere, e, ik, isaret, tarihUzun } from './ui.js?v=234';
-import * as GR from './gruplar.js?v=234';
-import * as MN from './mebnorm.js?v=234';
-import * as MK from './mebkayit.js?v=234';
-import { onkosulEngel } from './onkosul.js?v=234';
+import { S, kaydet, gun, iso, fark, tamAd, islem, SINIFLAR, egitmen, arac, kursiyer, eksikEvrak, sb, sbDers, sbSinav, oturum, cokSube, seciliSube, mebIsGunuGeri, kuralAyar, egitimSinifi, MEB_CEZA_SERTIFIKA } from './veri.js?v=235';
+import { bildir, pencere, kapatPencere, e, ik, isaret, tarihUzun } from './ui.js?v=235';
+import * as GR from './gruplar.js?v=235';
+import * as MN from './mebnorm.js?v=235';
+import * as MK from './mebkayit.js?v=235';
+import { onkosulEngel } from './onkosul.js?v=235';
 
 export const eklenti = { var: false, surum: null, ozellik: [], harita: null, oturum: null };   // oturum: { acik, zaman } (MEB-187; Yardımcı MEBBİS'i yokladıkça)
 const sayfadan = (tur, veri) => window.postMessage({ kaynak: 'sinyal-sayfa', tur, veri }, location.origin);
@@ -137,7 +137,7 @@ export function yardimciyaGonder(idler, gidince) {
     bildir(`${isler.length} iş MEBBİS’e aktarılıyor. MEBBİS sekmesi açılıyor; girmediyseniz kendi şifrenizle girin, Yardımcı sırayla yürütür.`);
   };
   // kural bulguları (engel kırmızı, uyarı turuncu) önce bilgi olarak görünür; bu yol durdurmaz. Bulgu yoksa ya da denetim yüklenemezse hemen gönderilir.
-  import('./mebtoplu.js?v=234').then(m => m.kuralBilgi(isler.map(x => x.id), gonder, { dugme: 'Ekranda doldur' }), () => gonder());
+  import('./mebtoplu.js?v=235').then(m => m.kuralBilgi(isler.map(x => x.id), gonder, { dugme: 'Ekranda doldur' }), () => gonder());
 }
 
 // PER-010: personel çalışma izni isteği (OOK13002 'Çalışma İzni Ekle'). Yalnız "Ekranda doldur" yolu: Yardımcı formu karttaki bilgilerle doldurur;
@@ -251,11 +251,11 @@ function hatalariIsle(l) {
 function tabloGeldi(veri) {
   const sat = veri.satirlar, n = sat.length - 1;
   S.mebCekim = { ...(S.mebCekim || {}), [veri.amac || 'liste']: gun(0) + ' ' + new Date().toTimeString().slice(0, 5) }; kaydet();
-  if (veri.amac === 'mutabakat') return import('./ozellik.js?v=234').then(m => { if (m.mutabakatTablodan(sat, 'MEBBİS · ' + (veri.baslik || 'liste'))) { location.hash = '#/meb/mutabakat'; yenileFn(); } });
+  if (veri.amac === 'mutabakat') return import('./ozellik.js?v=235').then(m => { if (m.mutabakatTablodan(sat, 'MEBBİS · ' + (veri.baslik || 'liste'))) { location.hash = '#/meb/mutabakat'; yenileFn(); } });
   if (veri.amac === 'sinav') return sinavSonucuAl(sat);
   if (veri.amac === 'grup') return GR.mebbisGruplariAl(sat);
   const t = ['kursiyer', 'taksit', 'arac', 'ogretmen'].includes(veri.amac) ? veri.amac : turTahmin(sat[0] || []);
-  import('./sayfalar5.js?v=234').then(m => { location.hash = '#/ayarlar/aktarim'; setTimeout(() => { m.aktarimYukle(sat, t, 'MEBBİS'); bildir(`MEBBİS’ten ${n} satırlık liste geldi; sütunları kontrol edip aktarın`); }, 300); });
+  import('./sayfalar5.js?v=235').then(m => { location.hash = '#/ayarlar/aktarim'; setTimeout(() => { m.aktarimYukle(sat, t, 'MEBBİS'); bildir(`MEBBİS’ten ${n} satırlık liste geldi; sütunları kontrol edip aktarın`); }, 300); });
 }
 // Sınav sonuç listesi: TC ile kursiyer bulunur, en uygun oturumun sonuç penceresi dolu açılır; kaydetmeyi kullanıcı yapar
 const nrm = x => String(x || '').toLocaleLowerCase('tr').replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/[^a-z0-9]/g, '');
@@ -290,7 +290,7 @@ export function sinavSonucuAl(sat) {
   location.hash = '#/sinavlar';
   // tek oturum ve başka satır yoksa doğrudan sonuç penceresi (eski akış)
   if (sira.length === 1 && !disarida.length) { const s = S.sinavlar.find(x => x.id === sira[0]), hazir = oturum[sira[0]];
-    return import('./sayfalar2.js?v=234').then(m => setTimeout(() => { m.sonucGir(s, hazir); bildir(`${Object.keys(hazir).length} kursiyerin sonucu MEBBİS’ten dolduruldu; kontrol edip “Sonuçları kaydet”e basın.${bulunamayan ? ` ${bulunamayan} satır eşleşmedi.` : ''}${yok.size ? ` MEBBİS’te ${yok.size} kişi var, mdSinyal’de yok.` : ''}`); }, 400)); }
+    return import('./sayfalar2.js?v=235').then(m => setTimeout(() => { m.sonucGir(s, hazir); bildir(`${Object.keys(hazir).length} kursiyerin sonucu MEBBİS’ten dolduruldu; kontrol edip “Sonuçları kaydet”e basın.${bulunamayan ? ` ${bulunamayan} satır eşleşmedi.` : ''}${yok.size ? ` MEBBİS’te ${yok.size} kişi var, mdSinyal’de yok.` : ''}`); }, 400)); }
   setTimeout(sonucAkisi, 400);
 }
 // SNV-006: birden çok sınav günü — her gün bir kart; 'Sonuçları gir' o oturumun penceresini dolu açar, kaydedince buraya döner ve sıradaki gün açılır
@@ -301,7 +301,7 @@ export function sonucAkisi(acilacak) {
   const l = Object.entries(A.oturum).map(([sid, h]) => ({ s: S.sinavlar.find(x => x.id === sid), h })).filter(x => x.s).sort((a, b) => a.s.tarih.localeCompare(b.s.tarih));
   l.forEach(x => { if (Object.keys(x.h).every(kid => (x.s.sonuc || {})[kid])) A.girilen.add(x.s.id); });
   const bekleyen = l.filter(x => !A.girilen.has(x.s.id)), toplam = l.reduce((t, x) => t + Object.keys(x.h).length, 0);
-  const ac = x => { kapatPencere(); import('./sayfalar2.js?v=234').then(m => setTimeout(() => m.sonucGir(x.s, x.h, { sonra: () => { A.girilen.add(x.s.id); setTimeout(() => sonucAkisi(true), 300); } }), 200)); };
+  const ac = x => { kapatPencere(); import('./sayfalar2.js?v=235').then(m => setTimeout(() => m.sonucGir(x.s, x.h, { sonra: () => { A.girilen.add(x.s.id); setTimeout(() => sonucAkisi(true), 300); } }), 200)); };
   if (acilacak === true && bekleyen.length && !A.disarida.length) return ac(bekleyen[0]);
   const dis = A.disarida.filter(x => { const k = kursiyer(x.kid); return k && !sbSinav(S.sinavlar).some(s => s.tarih === x.t && (s.kursiyerler || []).includes(k.id)); });
   pencere({ baslik: 'MEBBİS sınav sonuçları', genis: true, icerik: `<p class="sa-ozet"><b>${l.length} sınav günü · ${toplam} sonuç</b>${bekleyen.length ? ` · ${bekleyen.length} gün bekliyor` : ' · hepsi girildi'}</p>
@@ -325,7 +325,7 @@ export function sonucAkisi(acilacak) {
 function farkliSonuclar(l) {
   pencere({ baslik: 'MEBBİS’le farklı sınav sonuçları', genis: true, icerik: `<p style="font-size:14px;margin-bottom:8px">${l.length} öğrencinin sonucu MEBBİS’te farklı. Sonuç sonradan değişmiş olabilir (ör. itiraz); kontrol edip düzeltin.</p><ul class="liste">${l.map((x, i) => { const k = kursiyer(x.kid), s = S.sinavlar.find(y => y.id === x.sid); return `<li><div style="flex:1;min-width:0"><b>${e(tamAd(k))}</b><small style="display:block;color:var(--soluk)">${e(s.tur)} · ${e(s.tarih.split('-').reverse().join('.'))} · mdSinyal: <b>${e(x.yerel)}</b> → MEBBİS: <b style="color:${x.d.v === 'Geçti' ? 'var(--yesil)' : 'var(--kirmizi)'}">${e(x.d.v)}</b>${x.d.puan != null ? ' (' + x.d.puan + ')' : ''}</small></div><button class="dg dg-ana dg-kucuk" data-mf="${i}">Düzelt</button></li>`; }).join('')}</ul>`,
     altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button>',
-    onAc(p) { p.querySelectorAll('[data-mf]').forEach(b => b.addEventListener('click', () => { const x = l[+b.dataset.mf], k = kursiyer(x.kid), s = S.sinavlar.find(y => y.id === x.sid); kapatPencere(); import('./sayfalar2.js?v=234').then(m => setTimeout(() => m.sonucDuzelt(s, k, { ...x.d, kaynak: 'mebbis' }), 250)); })); } });
+    onAc(p) { p.querySelectorAll('[data-mf]').forEach(b => b.addEventListener('click', () => { const x = l[+b.dataset.mf], k = kursiyer(x.kid), s = S.sinavlar.find(y => y.id === x.sid); kapatPencere(); import('./sayfalar2.js?v=235').then(m => setTimeout(() => m.sonucDuzelt(s, k, { ...x.d, kaynak: 'mebbis' }), 250)); })); } });
 }
 // MEB-111: ekran haritasını hemen yeniden al (Yardımcı 1.18; eskisi iletiyi yok sayar, harita mdSinyal yenilenince gelir)
 export const haritaYenile = () => { if (!eklenti.ozellik.includes('harita-yenile')) return false; sayfadan('harita-yenile', {}); return true; };
@@ -349,11 +349,11 @@ export function eklentiBaslat() {
     if (tur === 'tablo' && veri && veri.satirlar) tabloGeldi(veri);
     if (tur === 'bitenler' && Array.isArray(veri)) bitenleriIsle(veri);
     if (tur === 'hatalar' && Array.isArray(veri)) hatalariIsle(veri);
-    if (tur === 'toplu-durum' && veri && S && S.kursiyerler && oturum.kullanici) import('./mebtoplu.js?v=234').then(m => m.durumGeldi(veri));
+    if (tur === 'toplu-durum' && veri && S && S.kursiyerler && oturum.kullanici) import('./mebtoplu.js?v=235').then(m => m.durumGeldi(veri));
     // Yardımcı 1.12 → mdSinyal (eklenti/sinyal.js iletir): yarım iş varken yeni iş reddi, kayıp yükün yeniden istenmesi, ekran değişti
-    if (tur === 'toplu-alindi' && veri && veri.mesgul && oturum.kullanici) import('./mebtoplu.js?v=234').then(m => m.mesgulGeldi(veri));
-    if (tur === 'toplu-yuk-iste' && veri && S && S.kursiyerler && oturum.kullanici) import('./mebtoplu.js?v=234').then(m => m.yukIste(veri));
-    if (tur === 'toplu-yuk-alindi' && veri && oturum.kullanici) import('./mebtoplu.js?v=234').then(m => m.yukAlindi(veri));
+    if (tur === 'toplu-alindi' && veri && veri.mesgul && oturum.kullanici) import('./mebtoplu.js?v=235').then(m => m.mesgulGeldi(veri));
+    if (tur === 'toplu-yuk-iste' && veri && S && S.kursiyerler && oturum.kullanici) import('./mebtoplu.js?v=235').then(m => m.yukIste(veri));
+    if (tur === 'toplu-yuk-alindi' && veri && oturum.kullanici) import('./mebtoplu.js?v=235').then(m => m.yukAlindi(veri));
     if (tur === 'ekran-degisti' && veri && S && S.kursiyerler && oturum.kullanici) { if (MK.ekranDegisti(Array.isArray(veri.ekranlar) ? veri.ekranlar : [veri], veri.id || '')) yenileFn(); }
   });
   sayfadan('ping', {});

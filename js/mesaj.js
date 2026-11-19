@@ -1,6 +1,6 @@
 // Mesaj merkezi: grup ya da tek tek seçilen kişilere kişiye özel WhatsApp mesajı, planlı gönderim, iletildi/okundu takibi
-import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, kalanBorc, gecikenler, gecikenTutar, eksikEvrak, sonrakiDers, risk, islem, sb, aktifSiniflar, SINIFLAR, selam, kursAdi, adEk, yerelZaman, bulutKanca, tabanListesi, odenen, adaySinavSaati } from './veri.js?v=234';
-import { e, tl, ik, rozet, bos, pencere, kapatPencere, bildir, tarihUzun, apiAcik, apiGonder, etiket, waSirali, ziyaretci, isaret, waIstek, metaHata } from './ui.js?v=234';
+import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, kalanBorc, gecikenler, gecikenTutar, eksikEvrak, sonrakiDers, risk, islem, sb, aktifSiniflar, SINIFLAR, selam, kursAdi, adEk, yerelZaman, bulutKanca, tabanListesi, odenen, adaySinavSaati } from './veri.js?v=235';
+import { e, tl, ik, rozet, bos, pencere, kapatPencere, bildir, tarihUzun, apiAcik, apiGonder, etiket, waSirali, ziyaretci, isaret, waIstek, metaHata } from './ui.js?v=235';
 
 const durum = { grup: 'aktif', sinif: '', ogretmen: '', secili: null, sira: 0, zaman: 'simdi', metin: null, sablon: '', ek: null, cevapIste: false, tanitim: false };
 // Tanıtım (ticari ileti) mesajı yalnız izni olan öğrencilere gider; eski kayıtlardaki birleşik rıza izin sayılır

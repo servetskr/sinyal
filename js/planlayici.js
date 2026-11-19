@@ -12,7 +12,7 @@ import {
   S, gun, iso, tarihOku, fark, kapaliGun, arifeMi, egitmen, kursiyer, tamAd, gecikenler, SINIFLAR, kuralAyar, dersSayaci, gerekliDireksiyon, geceDersMi,
   geceBaslangic, geceKisitli, geceGerekli, kayitDondurmaMi, belgeliMi, izinDurumu, haftalikSinir, ustaYetkili, ustaAraci, aracSiniflari, aracUygun,
   egitimTuruOf, EGITIM_TURU, dersSaatleri, planAyar, anaSinif, hazirYazisiVar,
-} from './veri.js?v=234';
+} from './veri.js?v=235';
 
 const B_ENGELLI_KENDI = k => !!k && k.sinif === 'B-EN' && !!k.kendiArac;
 const gunEkle = (t, n) => { const d = tarihOku(t); d.setDate(d.getDate() + n); return iso(d); };

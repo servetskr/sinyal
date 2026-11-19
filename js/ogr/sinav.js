@@ -3,17 +3,17 @@
 // aynı localStorage anahtarı 'sinyal-test-'+k.id, aynı veri etkileri: k.konuAnaliz, k.yanlislar, k.deneme, HZ.gorulenEkle, HZ.tekrarGuncelle, kaydet()).
 // Ekranlar: deneme girişi, deneme sorusu, soru listesi, bitirme onayı, sonuç, yanlış inceleme (tam ekran akışlar);
 // çalışma araçları, test ayarları, bugünkü tekrar, yanlışlarım (Öğren alt ekranları).
-import { S, kaydet, SINIFLAR, fark, gonderimEkle, ogrOzellik, tamAd, kalanHak, gerekliDireksiyon, egitimSinifi, esinavHakDurum, mufredatResmiDers } from '../veri.js?v=234';
-import { bildir, tarih, goreli, gunKisa } from '../ui.js?v=234';
-import * as HZ from '../hazirlik.js?v=234';
-import { hakDurum, tekrarUcret, esinavVar, TEORIKSIZ_METIN } from '../ogrenci.js?v=234';
-import * as TY from '../teorikyol.js?v=234';
-import * as B from '../bulut.js?v=234';
+import { S, kaydet, SINIFLAR, fark, gonderimEkle, ogrOzellik, tamAd, kalanHak, gerekliDireksiyon, egitimSinifi, esinavHakDurum, mufredatResmiDers } from '../veri.js?v=235';
+import { bildir, tarih, goreli, gunKisa } from '../ui.js?v=235';
+import * as HZ from '../hazirlik.js?v=235';
+import { hakDurum, tekrarUcret, esinavVar, TEORIKSIZ_METIN } from '../ogrenci.js?v=235';
+import * as TY from '../teorikyol.js?v=235';
+import * as B from '../bulut.js?v=235';
 const SURUM = new URL(import.meta.url).searchParams.get('v') || '';
-import { KONULAR } from '../konular.js?v=234';
-import { soruKonu, SORU_KONU } from '../soruKonu.js?v=234';
-import { UNITE_AD, konular, altAc, altKapat, altEkran as altSimdi } from './ogrveri.js?v=234';
-import { esc, oi, sayfaBas, geri, bolum, kart, heroKart, dugme, ikonKutu, satir, liste, cip, serit, not, bos, sekmeler, kutucuk, radyo, akisUst, akisAlt, sik, cevapKutu, baglanti, stilEkle, tl, odakTuzagi, gorsel } from './ui.js?v=234';
+import { KONULAR } from '../konular.js?v=235';
+import { soruKonu, SORU_KONU } from '../soruKonu.js?v=235';
+import { UNITE_AD, konular, altAc, altKapat, altEkran as altSimdi } from './ogrveri.js?v=235';
+import { esc, oi, sayfaBas, geri, bolum, kart, heroKart, dugme, ikonKutu, satir, liste, cip, serit, not, bos, sekmeler, kutucuk, radyo, akisUst, akisAlt, sik, cevapKutu, baglanti, stilEkle, tl, odakTuzagi, gorsel } from './ui.js?v=235';
 
 const SURE = 45 * 60e3, GECME = 70, HARF = 'ABCD';
 const MOD_AD = { deneme: 'Deneme sınavı', hizli: 'Hızlı test', konu: 'Konu testi', yanlis: 'Yanlışlarım', tekrar: 'Bugünkü tekrar' };
@@ -23,7 +23,7 @@ const sayi = n => (+n || 0).toLocaleString('tr-TR');
 
 /* ---------- soru bankası (yalnız gerekince yüklenir) ---------- */
 let SR = null, LV = null, yuk = null, DISI = new Set();
-const sorulariYukle = () => SR ? Promise.resolve() : yuk || (yuk = Promise.all([import('../sorular.js?v=234'), import('../levha.js?v=234').catch(() => null)])
+const sorulariYukle = () => SR ? Promise.resolve() : yuk || (yuk = Promise.all([import('../sorular.js?v=235'), import('../levha.js?v=235').catch(() => null)])
   .then(([m, l]) => { SR = m.SORULAR; DISI = new Set(m.HAVUZ_DISI || []); LV = l; }).catch(x => { yuk = null; throw x; }));
 const gorselHtml = g => !g ? '' : String(g).startsWith('L:') ? (LV && LV.levhaSvg ? LV.levhaSvg(g.slice(2)) : '') : String(g);
 const karistir = l => { const a = l.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };

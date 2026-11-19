@@ -2,8 +2,8 @@
 // Metin ilgili roldeki kişiye her girişte çıkar; kişi "Bir daha gösterme" diyene kadar sürer. Onay yalnız açık tıklamayla kaydedilir
 // (pencerenin açılması onay sayılmaz). Kayıt kişi başına ve metnin sürümüyle kurs verisinde tutulur (cihazlar arası):
 // S.onaylar[kişi][metin] = { surum, gordu, onay?, gosterme, ad }. Metin değişince (sürüm artınca) yeniden sorulur.
-import { S, kaydet, islem, oturum } from './veri.js?v=234';
-import { pencere, kapatPencere, e, isaret, bildir } from './ui.js?v=234';
+import { S, kaydet, islem, oturum } from './veri.js?v=235';
+import { pencere, kapatPencere, e, isaret, bildir } from './ui.js?v=235';
 
 // YON-069: metnin SHA-256 özeti (onay kaydında metnin o anki hâli kanıtlanır)
 export async function ozet(metin) { try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(metin))); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); } catch (x) { return ''; } }
@@ -30,14 +30,14 @@ async function bilgiKaydet(b, onay, gosterme, metin) {
   if (onay && !(eski.surum === b.surum && eski.onay)) islem('Bilgilendirmeyi onayladı', b.baslik + ' · sürüm ' + b.surum);
   if (onay && b.kurs && S.kurs) { const oz = await ozet(metin || b.metin); S.kurs.sozlesmeOnay = { ...(S.kurs.sozlesmeOnay || {}), [b.id]: { kim: u.ad || '', uid: id, eposta: u.eposta || '', zaman: simdi, surum: b.surum, ozet: oz } }; islem('Sözleşmeyi kurs adına e-onayladı', b.baslik + ' · sürüm ' + b.surum + ' · SHA-256 ' + oz.slice(0, 12));
     // YON-069: metin + SHA-256 kopyası e-postayla (onaylayanın hesap e-postası ve kursun onaylı adresleri; adres yoksa sessizce geçilir)
-    const mt = String(metin || b.metin); import('./eposta.js?v=234').then(m => m.sozlesmeKopyasi({ id: b.id, baslik: b.baslik, surum: b.surum, metin: mt, ozet: oz, kim: u.ad || '', zaman: simdi }))
+    const mt = String(metin || b.metin); import('./eposta.js?v=235').then(m => m.sozlesmeKopyasi({ id: b.id, baslik: b.baslik, surum: b.surum, metin: mt, ozet: oz, kim: u.ad || '', zaman: simdi }))
       .then(r => { if (r && r.ok && !r.zatenGitti) bildir('Onay kopyası e-postayla gönderildi'); }).catch(() => {}); }
   kaydet();
 }
 // bekleyen metinleri sırayla gösterir; başka pencere açıksa beklemez, sonraki girişe kalır
 export function bilgiGoster(l = bekleyenBilgiler()) {
   if (!l.length || document.querySelector('.perde')) return;
-  if (l[0].belge && !l[0]._html) return import('./sayfalar3.js?v=234').then(m => { l[0]._html = m.belgeHtml(l[0].belge); bilgiGoster(l); });
+  if (l[0].belge && !l[0]._html) return import('./sayfalar3.js?v=235').then(m => { l[0]._html = m.belgeHtml(l[0].belge); bilgiGoster(l); });
   const b = l[0], k = kayit(kimlik(), b.id), onayli = !!(k && k.surum === b.surum && k.onay);
   pencere({ baslik: b.baslik, genis: true, taslak: false, icerik: `${b.surum > 1 && k && k.surum !== b.surum ? `<p class="ipucu" style="margin-bottom:10px">${isaret('bilgi', 18)}<span>Metin güncellendi; yeniden okuyun.</span></p>` : ''}
       <div class="bilgi-metin ${b._html ? 'a4-onizleme' : ''}">${b._html || e(b.metin).replace(/\n/g, '<br>')}</div>

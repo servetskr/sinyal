@@ -2,12 +2,12 @@
 // mdSinyal Yönetim panelinin “Hesaplar” bölümünde açılır (yalnız Servet; ortak görmez).
 // Yetki Firebase güvenlik kurallarından değil, Google hesabından gelir: Firebase projesinin sahibi olan Google hesabıyla
 // bağlanılır, Google IAM izin verirse işlem yapılır. Sunucu, gizli anahtar yok; erişim belirteci yalnız bellekte durur (1 saat).
-import { e, ik, pencere, kapatPencere, bildir, tl, siteLink, onaySor } from './ui.js?v=234';
-import { S, kaydet, islem, bulutKanca, ilSecenekleri } from './veri.js?v=234';
-import { ogrenciPanelMetni, WORKER } from './bulut.js?v=234';
-import { EMU } from './firebase-ayar.js?v=234';
-import { ETIKET_RE, etiketCoz } from './mevzuat-ara.js?v=234';
-import { kabuk as epKabuk, kutular, bolum, satirlar, bos, not, nokta, dugme, R, SITE } from './eposta-kabuk.js?v=234';
+import { e, ik, pencere, kapatPencere, bildir, tl, siteLink, onaySor } from './ui.js?v=235';
+import { S, kaydet, islem, bulutKanca, ilSecenekleri } from './veri.js?v=235';
+import { ogrenciPanelMetni, WORKER } from './bulut.js?v=235';
+import { EMU } from './firebase-ayar.js?v=235';
+import { ETIKET_RE, etiketCoz } from './mevzuat-ara.js?v=235';
+import { kabuk as epKabuk, kutular, bolum, satirlar, bos, not, nokta, dugme, R, SITE } from './eposta-kabuk.js?v=235';
 
 // EMU (firebase-ayar.js, yalnız localhost + açık işaret): REST istekleri yerel emülatöre gider, Google onayı yerine emülatörün yönetici belirteci kullanılır
 const PROJE = EMU ? EMU.proje : 'sinyal-5d37a';
@@ -16,7 +16,7 @@ const KAPSAM = 'https://www.googleapis.com/auth/cloud-platform';
 const IT = (EMU ? EMU.auth + '/identitytoolkit.googleapis.com' : 'https://identitytoolkit.googleapis.com') + '/v1/projects/' + PROJE;
 const FS_AD = 'projects/' + PROJE + '/databases/(default)/documents';
 const FS = (EMU ? 'http://' + EMU.fsHost + ':' + EMU.fsPort : 'https://firestore.googleapis.com') + '/v1/' + FS_AD;
-import { DESTEK } from './iletisim.js?v=234';
+import { DESTEK } from './iletisim.js?v=235';
 export const DESTEK_TEL = DESTEK.tel;  // YON-067: tek kaynak js/iletisim.js
 const YONETIM_KURS = 'mdSinyal Yönetim';
 const ROL = { mudur: 'Kurs müdürü', sekreter: 'Ön büro', usta: 'Öğretmen', ortak: 'Ortak', ogrenci: 'Öğrenci', demo: 'Demo' };
@@ -1152,7 +1152,7 @@ let kuOtoBakildi = false;
 async function kullanimHaftalik() {
   if (kuOtoBakildi || !(S.kurs && S.kurs.sahipAnaliz) || !Object.keys(kursIst).length) return; kuOtoBakildi = true;
   try {
-    const { gecenHafta } = await import('./eposta.js?v=234'), h = gecenHafta();
+    const { gecenHafta } = await import('./eposta.js?v=235'), h = gecenHafta();
     if (S.kurs.sahipAnalizSon === h.donem) return;
     const T = await kullanimOku(aralikGunler(h.bas, h.bit));
     const j = await kullanimGonder(T, h.bas.split('-').reverse().join('.') + ' – ' + h.bit.split('-').reverse().join('.'), h.donem);

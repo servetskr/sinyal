@@ -1,6 +1,6 @@
 {
   "aciklama": "Uygulamanın yayındaki sürümü (js/guncelleme.js okur). anahtar alanını sinyal-kaynak/arac/surum.py kendisi yükseltir. notlar: sürüm numarasına göre kısa, sade maddeler; yoksa 'Neler yeni?' görünmez.",
-  "anahtar": "?v=234",
+  "anahtar": "?v=235",
   "notlar": {
     "232": [
       "Yeni sürüm bildirimi artık sayfa yenilense ya da uygulama kapatılıp açılsa da kaybolmuyor; yalnız güncelleyince kalkıyor.",
@@ -8,11 +8,11 @@
       "Ana ekranın en altında kurulu sürüm ve “Güncellemeleri denetle” düğmesi var; Hesabım menüsünde de görünüyor.",
       "“Şimdi güncelle” yeni sürümü doğrudan sunucudan açıyor, sonra “Güncelleme tamam” diye onay veriyor."
     ],
-    "234": [
+    "235": [
       "Öğrenci kaydı adım adım: kayıt sihirbazı zorunlu alanları önde sorar, yarım kalan kayıt taslak olarak saklanır.",
       "Öğrenci dosyası sekmeli ve durum rozetli; Öğrenciler listesinde kategori sekmeleri, sütun seçimi, hazır görünümler ve toplu güncelleme.",
-      "MEB işlemleri yenilendi: bugün MEBBİS’te yapılacak işler son günüyle üstte, öğrenci × adım tablosu, MEBBİS hatalarında ne yapılacağı yazıyor.",
-      "MEBBİS Yardımcısı 1.16: MEBBİS oturumunu açık tutar, araç çubuğunda ne yaptığını gösterir. Kurs bilgisayarında güncelleyin.",
+      "MEB işlemleri yenilendi: tek “Başla” düğmesi, bugün MEBBİS’te yapılacak işler son günüyle üstte, öğrenci × adım tablosu, MEBBİS hatalarında ne yapılacağı yazıyor.",
+      "MEBBİS Yardımcısı 1.18: MEBBİS oturumunu açık tutar, yaptığı işi tabloda canlı gösterir. Kurs bilgisayarında güncelleyin.",
       "Kurum onayı artık ayrı: yalnız kurs müdürü, aday listesini görüp “geri alınamaz” diye onaylar.",
       "Sınav günü ekranı: komisyonlar, saat ve araç ataması, komisyon listesi Excel’i; sınav hakları, ikinci dört hak ve mazeretli sınav tek yerden.",
       "Direksiyon planı: otomatik plan önerisi, öğretmene göre renk, tatil ve arife günleri; MEBBİS’le çakışan ders işaretlenir.",
@@ -21,7 +21,9 @@
       "Ana sayfada personel tarihleri: çalışma izni bitişi ve uzatmayı MEM’e verme süresi.",
       "Yeni roller: şube müdürü, teorik öğretmen ve yalnız görüntüleyen muhasebe.",
       "Öğrenciler telefonla olduğu gibi e-postayla da girebilir; şifre yenileme e-postayla.",
-      "Kurulum ekranı ve prova günü; Raporlar tek sayfada."
+      "Kurulum ekranı ve prova günü; Raporlar tek sayfada.",
+      "Kasa: sürücü kursu eğitim hizmetinde KDV varsayılanı %10; sözleşmede cayma maddesi sözleşme türüne göre.",
+      "Öğretmenler e-posta ve şifreyle girer."
     ]
   }
 }

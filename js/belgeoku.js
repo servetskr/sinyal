@@ -3,8 +3,8 @@
 // kontrol haneleri ve T.C. algoritması js/mrz.js'te denetlenir. Tutan alanlar yalnız formdaki BOŞ alanlara, kullanıcı seçip onaylayınca yazılır.
 // Sürücü belgesinde (Karayolları Trafik Yönetmeliği Ek-28) makine okunur alan yok; desteklenmez.
 // Okuyucu dosyaları (~6 MB) ancak "Belgeden oku" açılınca yüklenir; pencere kapanınca işçi kapatılır. Görsel okumadan sonra bırakılır.
-import { e, ik, pencere, kapatPencere, bildir } from './ui.js?v=234';
-import { mrzBul } from './mrz.js?v=234';
+import { e, ik, pencere, kapatPencere, bildir } from './ui.js?v=235';
+import { mrzBul } from './mrz.js?v=235';
 
 const AD = { tc: 'T.C. kimlik no', soyad: 'Soyad', ad: 'Ad', dogumTarihi: 'Doğum tarihi', cinsiyet: 'Cinsiyet', belgeNo: 'Kimlik kartı seri no', sonGecerlilik: 'Son geçerlilik' };
 // okunan alan → kayıt formundaki alan (name); listede olmayanlar yalnız bilgi olarak gösterilir
@@ -21,7 +21,7 @@ function okuyucu() {
   if (hazirlik) return hazirlik;
   hazirlik = (async () => {
     if (typeof WebAssembly !== 'object' || typeof Worker !== 'function') throw hataTr('Bu tarayıcı cihazda okumayı desteklemiyor. Bilgileri elle girin.');
-    const T = (await import('./tesseract/tesseract.esm.min.js?v=234')).default;
+    const T = (await import('./tesseract/tesseract.esm.min.js?v=235')).default;
     const w = await T.createWorker('ocrb_int', 1, {
       workerPath: KOK + 'worker.min.js', corePath: KOK + (simdVar() ? 'tesseract-core-simd-lstm.js' : 'tesseract-core-lstm.js'), langPath: KOK,
       workerBlobURL: false, cacheMethod: 'none', gzip: true, logger: m => durumBildir && durumBildir(m),

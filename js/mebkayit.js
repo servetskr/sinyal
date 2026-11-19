@@ -3,10 +3,10 @@
 // ~30 dakikalık parçalara bölme ve süre tahmini, Yardımcı'nın "MEBBİS ekranı değişti" bildirimi, her iş türü için elle giriş.
 // İşlem kaydı mevcut islem() ile sunucudaki yalnız eklenebilir kayda (kurslar/{k}/kayit) gider; TC ve değerlerin açık hâli yazılmaz.
 // Yardımcı'dan gelen iletilerin alanları: js/eklenti.js başındaki ileti sözleşmesi tablosu (ekranDegisti, mebKurum, kurum, olcum, veri.denetim, harita-durum).
-import { islemYetkili, S, kaydet, islem, oturum, tamAd, kursiyer, tcMaskele, seciliSube, cokSube, kuralAyar, bulutKanca } from './veri.js?v=234';
-import { pencere, kapatPencere, bildir, e, ik, isaret, rozet } from './ui.js?v=234';
-import * as GR from './gruplar.js?v=234';
-import * as EK from './eklenti.js?v=234';   // MEB-089: Kur bağlantısı (mağaza onaylıysa mağaza, değilse zip); döngü yalnız çizim anında kullanılır
+import { islemYetkili, S, kaydet, islem, oturum, tamAd, kursiyer, tcMaskele, seciliSube, cokSube, kuralAyar, bulutKanca } from './veri.js?v=235';
+import { pencere, kapatPencere, bildir, e, ik, isaret, rozet } from './ui.js?v=235';
+import * as GR from './gruplar.js?v=235';
+import * as EK from './eklenti.js?v=235';   // MEB-089: Kur bağlantısı (mağaza onaylıysa mağaza, değilse zip); döngü yalnız çizim anında kullanılır
 
 /* ---------- sabitler ---------- */
 export const MEB_KABUL_SURUM = 'mk-2026-11-2';   // K9: doğrulama cümlesi koddaki gerçeğe uyduruldu   // metin değişince artırılır; kurs yeniden onaylar
@@ -311,7 +311,7 @@ export function izMetni(v) {
 // YON-062: yeni alarm platform sahibine de WhatsApp ile iletilir (worker /mebbis/ekran-alarm; ekran başına günde bir ileti). Demoda ve bulutsuz çalışmada iletilmez; sonuç beklenmez.
 function ekranAlarmSahibe(l) {
   if (!bulutKanca.yetki || !l.length) return;
-  import('./bulut.js?v=234').then(async B => { const h = await bulutKanca.yetki(); await fetch(B.WORKER + '/mebbis/ekran-alarm', { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ ekranlar: l.map(({ ekran, eksik }) => ({ ekran, eksik })), yardimci: (l.find(x => x.yardimci) || {}).yardimci || '' }) }); }).catch(() => {});
+  import('./bulut.js?v=235').then(async B => { const h = await bulutKanca.yetki(); await fetch(B.WORKER + '/mebbis/ekran-alarm', { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ ekranlar: l.map(({ ekran, eksik }) => ({ ekran, eksik })), yardimci: (l.find(x => x.yardimci) || {}).yardimci || '' }) }); }).catch(() => {});
 }
 // l: [{ ekran: 'SKT03004', eksik: ['cmbDersSaati'], parmakIzi, yardimci, harita }]
 export function ekranDegisti(l, isId) {
@@ -510,7 +510,7 @@ export function ellePencere(l, hata, girdim, basliklar = {}, kural = {}) {
     onAc(d) {
       d.addEventListener('click', ev => {
         const c = ev.target.closest('[data-elle-kopya]'); if (c) { panoya(c.dataset.elleKopya).then(ok => bildir(ok === false ? 'Kopyalanamadı; değeri elle seçin' : 'Kopyalandı', ok === false ? 'uyari' : 'tamam')); return; }
-        const s = ev.target.closest('[data-elle-sirali]'); if (s) { const x = isler[+s.dataset.elleSirali], alanlar = ELLE[x.tur](x).flatMap(([kod, , a]) => a.filter(y => y[1] != null && y[1] !== '').map(([et, v]) => [kod, et, String(v)])); import('./sayfalar5.js?v=234').then(m => m.siraliPencere(x.baslik || TUR_AD[x.tur], alanlar, () => girdim(isKimlikleri(x)))); return; }
+        const s = ev.target.closest('[data-elle-sirali]'); if (s) { const x = isler[+s.dataset.elleSirali], alanlar = ELLE[x.tur](x).flatMap(([kod, , a]) => a.filter(y => y[1] != null && y[1] !== '').map(([et, v]) => [kod, et, String(v)])); import('./sayfalar5.js?v=235').then(m => m.siraliPencere(x.baslik || TUR_AD[x.tur], alanlar, () => girdim(isKimlikleri(x)))); return; }
         const g = ev.target.closest('[data-elle-girdim]'); if (g) { const x = isler[+g.dataset.elleGirdim]; girdim(isKimlikleri(x)); const k = g.closest('[data-elle-is]'); if (k) k.remove(); if (!d.querySelector('[data-elle-is]')) kapatPencere(); return; }
         if (ev.target.closest('[data-elle-hepsi]')) { girdim(isler.flatMap(isKimlikleri)); kapatPencere(); }
       });

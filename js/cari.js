@@ -5,9 +5,9 @@
 // Tedarikçi bakiyesi = faturalar − ödemeler. Müşavir paketine "Alış faturaları" sayfası (sayfalar5.js).
 // Belge görseli (a.gorsel = { veri: data URL, tur: 'resim'|'pdf', ad, tarih }): fotoğraf ve imzalar gibi kurs verisinde durur; büyük metin
 // bulut.js'te kurslar/{k}/dosyalar'a ayrı belge olarak gider (Firebase Storage gerekmez). Fotoğraf 1400 px JPEG'e küçültülür, PDF en çok 700 KB.
-import { S, kaydet, gun, fark, islem, oturum, sb, tutarOku, YONTEMLER, yontemAd, geriAlNoktasi } from './veri.js?v=234';
-import { e, tl, ik, rozet, tarih, pencere, kapatPencere, bildir, bos } from './ui.js?v=234';
-import { fotoAl } from './sayfalar1.js?v=234';
+import { S, kaydet, gun, fark, islem, oturum, sb, tutarOku, YONTEMLER, yontemAd, geriAlNoktasi } from './veri.js?v=235';
+import { e, tl, ik, rozet, tarih, pencere, kapatPencere, bildir, bos } from './ui.js?v=235';
+import { fotoAl } from './sayfalar1.js?v=235';
 
 // KAY-022 (SOR-060/061): firma carisi — kurumsal eğitimde ücreti firma öder; öğrenci k.firma ile bağlanır. S.firmalar [{ id, ad, vkn, vergiDairesi, tel, yetkili }]
 export const firmalar = () => (S.firmalar = S.firmalar || []);

@@ -1,10 +1,10 @@
-import { S, BUGUN, iso, kapaliGun, ASAMALAR, KAYNAKLAR, kursiyer, tamAd, eksikEvrak, gecikenler, gecikenTutar, memnuniyet, sb, sbDers, ekTur } from './veri.js?v=234';
+import { S, BUGUN, iso, kapaliGun, ASAMALAR, KAYNAKLAR, kursiyer, tamAd, eksikEvrak, gecikenler, gecikenTutar, memnuniyet, sb, sbDers, ekTur } from './veri.js?v=235';
 // Sınav ücreti, harç, kart tahsilatı kurs geliri değildir (kursiyerin masrafı, emanet; il taban listesi not 5). Ek kalem tahsilatında kategori kalemin adıdır.
 // Karşılığı olan döner sermaye ödemesi (gider "Sınav harcı") da kurs gideri sayılmaz. (sayfalar5.js hareketTur ile aynı kural)
 const resmiHareket = h => { if (h.tur === 'Gider') return h.kategori === 'Sınav harcı'; if (h.tur !== 'Gelir' || ['Kurs ücreti', 'Taksit', 'Peşinat', 'İade'].includes(h.kategori)) return false;
   const k = h.kursiyer && kursiyer(h.kursiyer), x = k && ((k.odeme || {}).ekler || []).find(y => y.ad === h.kategori); return ekTur(x || { ad: h.kategori }) === 'resmi'; };
-import { e, tl, sayi, rozet, asamaRozet, olcumler, sekmeler, ilerleme, bos, ekranNotu, ayAdi } from './ui.js?v=234';
-import { riskliler } from './risk.js?v=234';
+import { e, tl, sayi, rozet, asamaRozet, olcumler, sekmeler, ilerleme, bos, ekranNotu, ayAdi } from './ui.js?v=235';
+import { riskliler } from './risk.js?v=235';
 
 /* ================= ANALİZ =================
    Öğrenci, usta öğretici ve kurs göstergeleri tek sayfada. Sekme hash'ten gelir: #/analiz/<ogrenci|usta|kurs> */

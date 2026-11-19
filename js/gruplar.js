@@ -1,11 +1,11 @@
 // MEBBİS dönem grupları. MEBBİS'teki "Dönem Grup Açılış Tarihi" ve "Grup Şube Tanımlama" ekranlarıyla birebir:
 // dönem YYYYAA, grup 1–3 (her grubun tek başlangıç tarihi, ayın 1'i ile 10'u arası), şube A–H. Ad: "Kasım 1A".
 // Kursiyer kaydı grubun başlangıcından önce yapılır (MTSK Yönetmeliği 12/2); evrakı tamam ve gruba atanmış kursiyer aktiftir.
-import { S, kaydet, gun, fark, iso, SINIFLAR, tamAd, tcGecerli, islem, eksikEvrak, sb, anaSinif, mebKurum, teorikVar, esinavsizBelgeli, derslikListesi, derslikOner, DERSLIK_TURLERI } from './veri.js?v=234';
-import { e, pencere, kapatPencere, bildir, rozet, tarih, isaret, ik, pencereSor, bos, onaySor } from './ui.js?v=234';
-import * as KR from './kurallar.js?v=234';
-import * as MN from './mebnorm.js?v=234';
-import * as SRCE from './src-ekran.js?v=234';   // DIR-044: SRC grupları resmî SRC programıyla planlanır
+import { S, kaydet, gun, fark, iso, SINIFLAR, tamAd, tcGecerli, islem, eksikEvrak, sb, anaSinif, mebKurum, teorikVar, esinavsizBelgeli, derslikListesi, derslikOner, DERSLIK_TURLERI } from './veri.js?v=235';
+import { e, pencere, kapatPencere, bildir, rozet, tarih, isaret, ik, pencereSor, bos, onaySor } from './ui.js?v=235';
+import * as KR from './kurallar.js?v=235';
+import * as MN from './mebnorm.js?v=235';
+import * as SRCE from './src-ekran.js?v=235';   // DIR-044: SRC grupları resmî SRC programıyla planlanır
 const { AYLAR } = MN;
 
 export { AYLAR };   // MEB-039: ay adları ve dönem biçimi mebnorm.js'te tek yerde
@@ -432,7 +432,7 @@ export function ogretmenPencere(o, sonra, on) {
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-ogr">Kaydet</button>`,
     onAc(d) {
       let foto = null;
-      d.querySelector('[data-og-foto]').addEventListener('change', ev => { const dosya = ev.target.files[0]; if (!dosya) return; import('./sayfalar5.js?v=234').then(m => m.personelFotoKirp(dosya)).then(u => { foto = u; d.querySelector('[data-og-foto-on]').innerHTML = `<img src="${u}" alt="" style="width:100%;height:100%;object-fit:cover">`; }).catch(() => bildir('Fotoğraf okunamadı', 'uyari')); });
+      d.querySelector('[data-og-foto]').addEventListener('change', ev => { const dosya = ev.target.files[0]; if (!dosya) return; import('./sayfalar5.js?v=235').then(m => m.personelFotoKirp(dosya)).then(u => { foto = u; d.querySelector('[data-og-foto-on]').innerHTML = `<img src="${u}" alt="" style="width:100%;height:100%;object-fit:cover">`; }).catch(() => bildir('Fotoğraf okunamadı', 'uyari')); });
       d.querySelector('form').addEventListener('submit', ev => {
         ev.preventDefault(); const f = ev.target, ad = f.ad.value.trim().toLocaleUpperCase('tr');
         if (!ad) return bildir('Ad soyad yazın', 'uyari');

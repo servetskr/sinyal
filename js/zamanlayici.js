@@ -1,9 +1,9 @@
-import { planlilariGonder } from './mesaj.js?v=234';
-import { izinBitisi, memVermeSuresi, adaySinavSaati, esinavUcreti, esinavHakDurum, odemeKodu, ibanMetni, S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, gecikenler, kalanBorc, islem, gonderimEkle, yerelZaman, oturum, kapaliGun, SINIFLAR, risk, selam, kursAdi, bulutKanca, mudurTel, ekDersFiyat, ekDersTabani } from './veri.js?v=234';
-import { tl, tamTarih, tarihUzun, saatDe, apiAcik, apiGonder, etiket, bildir, waSirali } from './ui.js?v=234';
-import { denetimSkoru } from './ozellik.js?v=234';
-import * as KR from './kurallar.js?v=234';
-import * as TY from './teorikyol.js?v=234';
+import { planlilariGonder } from './mesaj.js?v=235';
+import { izinBitisi, memVermeSuresi, adaySinavSaati, esinavUcreti, esinavHakDurum, odemeKodu, ibanMetni, S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, gecikenler, kalanBorc, islem, gonderimEkle, yerelZaman, oturum, kapaliGun, SINIFLAR, risk, selam, kursAdi, bulutKanca, mudurTel, ekDersFiyat, ekDersTabani } from './veri.js?v=235';
+import { tl, tamTarih, tarihUzun, saatDe, apiAcik, apiGonder, etiket, bildir, waSirali } from './ui.js?v=235';
+import { denetimSkoru } from './ozellik.js?v=235';
+import * as KR from './kurallar.js?v=235';
+import * as TY from './teorikyol.js?v=235';
 
 /* ================= ZAMANLI MESAJLAR =================
    mdSinyal açıkken her dakika zamanı gelen mesajları bulur. WhatsApp API bağlıysa kendiliğinden gönderir;
@@ -192,7 +192,7 @@ export function kuyruguGonder(sonra) {
   const hepsi = z.kuyruk.slice(), tamam = x => { z.gonderilen[x.anahtar] = gun(0); z.kuyruk = z.kuyruk.filter(q => q.anahtar !== x.anahtar); z.kayit.unshift({ zaman: yerelZaman(), kural: x.kural, kime: x.kim.ad, rol: x.kim.rol, metin: x.metin, durum: 'gönderildi' }); kural(x.kural).gonderim++; etkiUygula(x); };
   // PAR-058: e-posta kanalındakiler cihazın e-posta uygulamasıyla tek tek; SMS kanalındakiler sırayla SMS; öbürleri WhatsApp
   const ep = hepsi.filter(x => x.kim.kanal === 'E-posta' && x.kim.eposta), sms = hepsi.filter(x => x.kim.kanal === 'SMS' || (x.kim.kanal === 'E-posta' && !x.kim.eposta)), l = hepsi.filter(x => !ep.includes(x) && !sms.includes(x));
-  const epPencere = () => { if (!ep.length) { if (sonra) sonra(); return; } import('./ui.js?v=234').then(u => u.pencere({ baslik: 'E-postayla gidecekler', taslak: false, icerik: `<ul class="liste">${ep.map((x, i) => `<li><div style="flex:1;min-width:0"><b>${u.e(x.kim.ad)}</b><small style="display:block;color:var(--soluk)">${u.e(kural(x.kural).ad)}</small></div><a class="dg dg-cizgi dg-kucuk" data-ep-i="${i}" href="mailto:${encodeURIComponent(x.kim.eposta)}?subject=${encodeURIComponent((S.kurs.ad || '') + ' · ' + kural(x.kural).ad)}&body=${encodeURIComponent(x.metin)}">E-postayı aç</a></li>`).join('')}</ul>`, altlik: '<button class="dg dg-ana" data-kapat>Bitti</button>',
+  const epPencere = () => { if (!ep.length) { if (sonra) sonra(); return; } import('./ui.js?v=235').then(u => u.pencere({ baslik: 'E-postayla gidecekler', taslak: false, icerik: `<ul class="liste">${ep.map((x, i) => `<li><div style="flex:1;min-width:0"><b>${u.e(x.kim.ad)}</b><small style="display:block;color:var(--soluk)">${u.e(kural(x.kural).ad)}</small></div><a class="dg dg-cizgi dg-kucuk" data-ep-i="${i}" href="mailto:${encodeURIComponent(x.kim.eposta)}?subject=${encodeURIComponent((S.kurs.ad || '') + ' · ' + kural(x.kural).ad)}&body=${encodeURIComponent(x.metin)}">E-postayı aç</a></li>`).join('')}</ul>`, altlik: '<button class="dg dg-ana" data-kapat>Bitti</button>',
     onAc(p) { p.addEventListener('click', ev => { const a = ev.target.closest('[data-ep-i]'); if (!a) return; const x = ep[+a.dataset.epI]; tamam(x); gonderimEkle(x.kim.ad, x.metin, kural(x.kural).ad + ' (e-posta)'); a.textContent = 'Açıldı ✓'; kaydet(); }); } })); if (sonra) sonra(); };
   const smsSira = () => sms.length ? waSirali(sms.map(x => ({ ad: x.kim.ad, tel: x.kim.tel, rol: x.kim.rol, metin: x.metin, tur: kural(x.kural).ad })), 'SMS ile gidecekler', { kanal: 'SMS', bitince: acilan => { const ac = acilan || new Set(sms.map((x, i) => i)); sms.forEach((x, i) => { if (ac.has(i)) tamam(x); }); kaydet(); epPencere(); } }) : epPencere();
   if (!l.length) return smsSira();

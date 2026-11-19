@@ -1,8 +1,8 @@
 // YON-077: önkoşul haritası — her özelliğin dayandığı bilgiler tek tabloda.
 // Kurulum listesindeki ek adımlar (sayfalar5 kurulumAdimlari) ve özelliğin ekranındaki "Önce şunu tamamla →" şeridi buradan üretilir.
 // Yeni özellik bir bilgiye dayanıyorsa buraya satır eklenir (kabul ölçütü); düzey: zorunlu (özellik onsuz çalışmaz / yanlış çıkar) · onerilen · istege.
-import { S, kimlikEksikleri } from './veri.js?v=234';
-import { pencere, kapatPencere } from './ui.js?v=234';
+import { S, kimlikEksikleri } from './veri.js?v=235';
+import { pencere, kapatPencere } from './ui.js?v=235';
 
 const aktifUsta = () => (S.egitmenler || []).filter(x => !x.ayrildi && !x.pasif);
 const aktifArac = () => (S.araclar || []).filter(a => !a.ayrildi && !a.pasif && !a.satildi);

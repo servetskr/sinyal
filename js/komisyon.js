@@ -1,9 +1,9 @@
 // SNV-063..071: MEM'e dekontla verilen "Özel MTSK Sınav Komisyon Listesi" (Excel). Kaynak: temiz şablon veri/sablon/komisyon-listesi.xlsx
 // (kurum logosu, yardımcı sütunlar ve formüller çıkarılmış; SNV-068). Şablon bozulmadan doldurulur: ZIP girdileri olduğu gibi kopyalanır,
 // yalnız sheet1.xml değişir ve saklanmış (sıkıştırmasız) yazılır. Dış kütüphane yok.
-import { S, kaydet, tamAd, kursiyer, egitmen, SINIFLAR, islem, mebSinavUcretiGoster, ibanBicim, ibanGecerli, tcMaskele, sbSinav, fark } from './veri.js?v=234';
-import { e, tl, tarih, tarihUzun, pencere, kapatPencere, bildir, rozet, belgeYazdir, isaret, ik } from './ui.js?v=234';
-import { sinavAtamasi } from './sinavgunu.js?v=234';
+import { S, kaydet, tamAd, kursiyer, egitmen, SINIFLAR, islem, mebSinavUcretiGoster, ibanBicim, ibanGecerli, tcMaskele, sbSinav, fark } from './veri.js?v=235';
+import { e, tl, tarih, tarihUzun, pencere, kapatPencere, bildir, rozet, belgeYazdir, isaret, ik } from './ui.js?v=235';
+import { sinavAtamasi } from './sinavgunu.js?v=235';
 
 /* ---------- ZIP (SNV-069) ---------- */
 const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();

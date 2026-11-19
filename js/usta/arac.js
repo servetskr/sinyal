@@ -2,14 +2,14 @@
 // Eski portal.js "Aracın" bölümü (model, plaka, bakıma kalan km), guzergah.js ustaHtml (güzergâhlar, püf noktaları, kursa iletilen notlar,
 // "Püf noktası ekle" formu: data-gz-usta, guzergah.js'teki ortak submit dinleyicisi işler) ve app.js hesap penceresi (Kursu ara, mdSinyal Destek:
 // data-destek, Çıkış yap / Kullanıcı değiştir: data-cikis; ikisi de app.js'teki belge dinleyicisinde çalışır) buraya taşındı.
-import { S, SINIFLAR, oturum, tarihOku, sinifEtiket, anaSinif, fark, kaydet } from '../veri.js?v=234';
-import { haftaYuku, izinKarti } from './bugun.js?v=234';
-import { ayAdi, tarih, bildir } from '../ui.js?v=234';
-import { guzergahlar } from '../guzergah.js?v=234';
-import { kisaMetin } from '../guncelleme.js?v=234';
-import * as ARC from '../ogr/araclar.js?v=234';
-import * as B from '../bulut.js?v=234';
-import { esc, oi, sayfaBas, geri, bolum, kart, gorsel, dugme, satir, liste, radyo, ikonKutu, bos, not, stilEkle } from '../ogr/ui.js?v=234';
+import { S, SINIFLAR, oturum, tarihOku, sinifEtiket, anaSinif, fark, kaydet } from '../veri.js?v=235';
+import { haftaYuku, izinKarti } from './bugun.js?v=235';
+import { ayAdi, tarih, bildir } from '../ui.js?v=235';
+import { guzergahlar } from '../guzergah.js?v=235';
+import { kisaMetin } from '../guncelleme.js?v=235';
+import * as ARC from '../ogr/araclar.js?v=235';
+import * as B from '../bulut.js?v=235';
+import { esc, oi, sayfaBas, geri, bolum, kart, gorsel, dugme, satir, liste, radyo, ikonKutu, bos, not, stilEkle } from '../ogr/ui.js?v=235';
 
 const geriBugun = () => geri('Bugün', { 'data-ux-alt': '' });
 const uzunTarih = t => { if (!t) return ''; const d = tarihOku(t); return d.getDate() + ' ' + ayAdi(d.getMonth(), true) + ' ' + d.getFullYear(); };

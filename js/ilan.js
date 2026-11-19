@@ -1,9 +1,9 @@
 // Kurslar arası ilan panosu (DIG-037, karar SOR-052): satılık araç, ekipman, iş birliği… Kurs müdürü ilan verir, mdSinyal onaylayınca bütün kurslar görür.
 // Veri sunucuda (worker KV); kursun kimliği başka kurslara gösterilmez, iletişim bilgisi ilanda yazandır. Demo hesapta çalışmaz (örnek ilanlarla anlatılır).
-import { S, oturum, islem, kaydet } from './veri.js?v=234';
-import { e, ik, rozet, bos, pencere, kapatPencere, bildir, tarih, fotoKucult, ekranNotu, onaySor } from './ui.js?v=234';
-import * as BL from './bulut.js?v=234';
-import { yenile } from './app.js?v=234';
+import { S, oturum, islem, kaydet } from './veri.js?v=235';
+import { e, ik, rozet, bos, pencere, kapatPencere, bildir, tarih, fotoKucult, ekranNotu, onaySor } from './ui.js?v=235';
+import * as BL from './bulut.js?v=235';
+import { yenile } from './app.js?v=235';
 
 const KAT = ['Genel', 'Araç', 'Ekipman', 'İş Birliği'];
 const st = { liste: null, hata: '', kat: '', yukleniyor: false };

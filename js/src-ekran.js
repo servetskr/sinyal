@@ -1,9 +1,9 @@
 // SRC ders programı ekranları (DIR-044): grubun SRC programı, sayaç, ders ekleme, otomatik doldurma ve MEBBİS'e gönderilecek liste.
 // Dersler teorik derslerle aynı koleksiyonda (S.teorik) durur, srcModul alanıyla ayrılır: yoklama ve ders defteri aynı çalışır.
 // MEBBİS'e yazmaz; liste yalnız gösterilir (MEBBİS Özel Mesleki Yeterlilik modülüne girilecek satırlar).
-import { S, kaydet, gun, fark, islem, kapaliGun, derslikListesi, geriAlNoktasi } from './veri.js?v=234';
-import { e, pencere, kapatPencere, bildir, isaret, tarih, belgeYazdir, csvIndir, onaySor } from './ui.js?v=234';
-import * as SRC from './src.js?v=234';
+import { S, kaydet, gun, fark, islem, kapaliGun, derslikListesi, geriAlNoktasi } from './veri.js?v=235';
+import { e, pencere, kapatPencere, bildir, isaret, tarih, belgeYazdir, csvIndir, onaySor } from './ui.js?v=235';
+import * as SRC from './src.js?v=235';
 
 const EGITICI_AD = { ulasim: 'Trafik/ulaşım', hukuk: 'Hukuk/iktisat', psikoloji: 'Psikoloji', ilkyardim: 'İlk yardım eğitmeni' };
 const ogretmenBul = id => (S.ogretmenler || []).find(o => o.id === id) || null;

@@ -1,7 +1,7 @@
 // Kasa raporları: vade raporu (RAP-002). Kasa › "Vade raporu" sekmesinde çizilir.
 // Bütün geçmiş: kursiyerlerin bütün taksitleri (kapanan kayıtlar dahil), vade aralığı, yalnız ödenmeyenler, avukatta olanlar, kayıt durumu ve sınıf süzgeci.
-import { S, gun, fark, SINIFLAR, tamAd, sb, tcMaskele, oturum, sinifEtiket, ekTur, varsayilanHesap, hareketHesabi, gorunum } from './veri.js?v=234';
-import { e, tl, rozet, tarih, ik, csvIndir } from './ui.js?v=234';
+import { S, gun, fark, SINIFLAR, tamAd, sb, tcMaskele, oturum, sinifEtiket, ekTur, varsayilanHesap, hareketHesabi, gorunum } from './veri.js?v=235';
+import { e, tl, rozet, tarih, ik, csvIndir } from './ui.js?v=235';
 
 // süzgeç durumu sayfa yenilense de bu oturumda kalır
 export const vadeSuzgec = { bas: '', bit: '', odenmemis: true, avukat: false, avBas: '', avBit: '', kayit: 'hepsi', sinif: '' };

@@ -1,11 +1,11 @@
 // MEB-187: MEBBİS aktarımı ekranının yeni iskeleti — üst şerit (Yardımcı · MEBBİS oturumu · şu an), takvime bağlı "açık MEBBİS pencereleri",
 // aday × adım matrisi (MEBBİS'in giriş sırasıyla). Yalnız gösterir; yazma ve okuma mebtoplu.js / eklenti.js üzerinden, onaylı.
-import { S, gun, fark, iso, sb, tamAd, kuralAyar, cokSube, seciliSube } from './veri.js?v=234';
-import { e, tarih, ik } from './ui.js?v=234';
-import * as GR from './gruplar.js?v=234';
-import * as EK from './eklenti.js?v=234';
-import * as MT from './mebtoplu.js?v=234';
-import * as ME from './mebevrak.js?v=234';
+import { S, gun, fark, iso, sb, tamAd, kuralAyar, cokSube, seciliSube } from './veri.js?v=235';
+import { e, tarih, ik } from './ui.js?v=235';
+import * as GR from './gruplar.js?v=235';
+import * as EK from './eklenti.js?v=235';
+import * as MT from './mebtoplu.js?v=235';
+import * as ME from './mebevrak.js?v=235';
 
 const saat = t => new Date(t).toTimeString().slice(0, 5);
 const AY = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];

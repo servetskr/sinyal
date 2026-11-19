@@ -1,5 +1,5 @@
-import { EMU } from './firebase-ayar.js?v=234';
-import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=234';
+import { EMU } from './firebase-ayar.js?v=235';
+import { ASAMALAR, tarihOku, fark, BUGUN, S, gonderimEkle, oturum, adEk, kaydet, bulutKanca, mudurTel, onburoTel } from './veri.js?v=235';
 
 export const e = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const TL = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
@@ -427,7 +427,7 @@ export async function apiGonder(metin, belge, adres, kime, ek = {}) {
     if (r.ok && j.ok) { bitir(true); return { ok: true, id: j.id || null }; }
     // MSJ-025: numara WhatsApp kullanmıyorsa (Meta 131026) ve kursun SMS hesabı bağlıysa aynı metin SMS ile gider (belge SMS'le gitmez)
     if (+j.kod === 131026 && S.kurs && S.kurs.smsBagli && S._bulut && tel && !(belge && belge.base64)) {
-      const sm = await import('./bulut.js?v=234').then(B => B.smsGonder(tel, sadeDil(metin))).catch(() => ({ ok: false }));
+      const sm = await import('./bulut.js?v=235').then(B => B.smsGonder(tel, sadeDil(metin))).catch(() => ({ ok: false }));
       if (sm.ok) { bitir(true); return { ok: true, id: sm.id || null, kanal: 'SMS' }; }
     }
     bitir(false, j.hata);
@@ -677,7 +677,7 @@ function sifreSor(neden, ok) {
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Onayla</button>`,
     onAc(d) {
       const inp = d.querySelector('[data-sifre-tekrar]'), btn = d.querySelector('[data-k]');
-      const dene = () => { btn.disabled = true; import('./bulut.js?v=234').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
+      const dene = () => { btn.disabled = true; import('./bulut.js?v=235').then(m => m.sifreDogrula(inp.value)).then(v => { btn.disabled = false; if (v) { kapatPencere(); ok(true); } else { bildir('Şifre hatalı', 'uyari'); inp.value = ''; inp.focus(); } }); };
       btn.addEventListener('click', dene); inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') dene(); }); setTimeout(() => inp.focus(), 50);
     },
   });

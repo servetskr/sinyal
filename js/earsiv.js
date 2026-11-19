@@ -4,9 +4,9 @@
 // Deneme kipi: entegratöre hiç istek gitmez; numara, durum, iptal ve PDF sunucuda benzetilir.
 // Fatura kesme ekranı için (sayfalar2): earsivFaturaKes, earsivIptal (neden: EARSIV_IPTAL_NEDEN anahtarı), earsivSorgu, earsivPdf.
 // S.entegrasyon.earsiv.bagli bu modülde değişmez: fatura kesme gerçekten bu uçlara bağlandığında o ekran açar.
-import { S, kaydet, islem, oturum, bulutKanca } from './veri.js?v=234';
-import { e, bildir, rozet, onaySor } from './ui.js?v=234';
-import { WORKER, bulutta } from './bulut.js?v=234';
+import { S, kaydet, islem, oturum, bulutKanca } from './veri.js?v=235';
+import { e, bildir, rozet, onaySor } from './ui.js?v=235';
+import { WORKER, bulutta } from './bulut.js?v=235';
 
 export const EARSIV_IPTAL_NEDEN = { alici_ad: 'Alıcı adı / unvanı hatalı', alici_vkn: 'Alıcı VKN / T.C. kimlik no hatalı' };
 async function istek(yol, govde) {

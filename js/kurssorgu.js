@@ -2,9 +2,9 @@
 // Bütün hesap cihazda; yapay zekâya ve sunucuya kişi verisi gitmez. Anlaşılan ölçüt cevabın başında cümleyle yazılır (yanlış anlaşıldıysa görülsün).
 // Konu: teorik ders, direksiyon eğitimi, e-sınav, uygulama sınavı, evrak, ödeme. Durum: bitti / bitmedi / başlamadı / sürüyor / geçti / kaldı / girmedi / eksik / gecikti.
 // Tarih: "24 Kasım", "24.11.2026", "bugün", "yarın", "bu hafta" + önce / sonra / kadar / itibaren. "MEBBİS'e göre": MEBBİS'ten okunan veri esas alınır.
-import { S, gun, fark, iso, tarihOku, SINIFLAR, tamAd, sb, gerekliDireksiyon, kalanBorc, gecikenler, eksikEvrak, kursiyerDersleri } from './veri.js?v=234';
-import * as GR from './gruplar.js?v=234';
-import { e, tl, tarih, bos } from './ui.js?v=234';
+import { S, gun, fark, iso, tarihOku, SINIFLAR, tamAd, sb, gerekliDireksiyon, kalanBorc, gecikenler, eksikEvrak, kursiyerDersleri } from './veri.js?v=235';
+import * as GR from './gruplar.js?v=235';
+import { e, tl, tarih, bos } from './ui.js?v=235';
 
 const sade = v => String(v || '').toLocaleLowerCase('tr').replace(/[’'`]/g, '').replace(/\s+/g, ' ').trim();
 const AY = ['ocak', 'şubat', 'mart', 'nisan', 'mayıs', 'haziran', 'temmuz', 'ağustos', 'eylül', 'ekim', 'kasım', 'aralık'];

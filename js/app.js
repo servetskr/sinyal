@@ -1,32 +1,32 @@
-import { DESTEK } from './iletisim.js?v=234';
-import { ilSecenekleri, ekranDuzey, ekranYetkili, kullaniciSubesi, S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec, sinifEtiket, sb } from './veri.js?v=234';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=234';
-import * as Y1 from './sayfalar1.js?v=234';
-import * as Y2 from './sayfalar2.js?v=234';
-import * as SG from './sinavgunu.js?v=234';
-import * as P from './portal.js?v=234';
-import * as OXU from './ogr/ui.js?v=234';
-import * as Y3 from './sayfalar3.js?v=234';
-import * as Y4 from './sayfalar4.js?v=234';
-import * as Y5 from './sayfalar5.js?v=234';
-import * as IM from './imza.js?v=234';
-import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=234';
-import * as SN from './senaryo.js?v=234';
-import * as OZ from './ozellik.js?v=234';
-import { durumlariGuncelle } from './mesaj.js?v=234';
-import { yeniMenu } from './yeni.js?v=234';
-import * as B from './bulut.js?v=234';
-import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=234';
-import * as AN from './analiz.js?v=234';
-import * as GZ from './guzergah.js?v=234';
-import * as ORT from './ortak.js?v=234';
-import * as SH from './sahip.js?v=234';
-import * as MZ from './sayfa-mevzuat.js?v=234';
-import * as RM from './raporlar.js?v=234';
-import * as GU from './guncelleme.js?v=234';
-import * as DY from './duyuru.js?v=234';
-import * as IL from './ilan.js?v=234';
-import * as TC from './tercih.js?v=234';
+import { DESTEK } from './iletisim.js?v=235';
+import { ilSecenekleri, ekranDuzey, ekranYetkili, kullaniciSubesi, S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec, sinifEtiket, sb } from './veri.js?v=235';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=235';
+import * as Y1 from './sayfalar1.js?v=235';
+import * as Y2 from './sayfalar2.js?v=235';
+import * as SG from './sinavgunu.js?v=235';
+import * as P from './portal.js?v=235';
+import * as OXU from './ogr/ui.js?v=235';
+import * as Y3 from './sayfalar3.js?v=235';
+import * as Y4 from './sayfalar4.js?v=235';
+import * as Y5 from './sayfalar5.js?v=235';
+import * as IM from './imza.js?v=235';
+import { zamanlayiciBaslat, kurallariHazirla } from './zamanlayici.js?v=235';
+import * as SN from './senaryo.js?v=235';
+import * as OZ from './ozellik.js?v=235';
+import { durumlariGuncelle } from './mesaj.js?v=235';
+import { yeniMenu } from './yeni.js?v=235';
+import * as B from './bulut.js?v=235';
+import { eklentiBaslat, eklentiYenile } from './eklenti.js?v=235';
+import * as AN from './analiz.js?v=235';
+import * as GZ from './guzergah.js?v=235';
+import * as ORT from './ortak.js?v=235';
+import * as SH from './sahip.js?v=235';
+import * as MZ from './sayfa-mevzuat.js?v=235';
+import * as RM from './raporlar.js?v=235';
+import * as GU from './guncelleme.js?v=235';
+import * as DY from './duyuru.js?v=235';
+import * as IL from './ilan.js?v=235';
+import * as TC from './tercih.js?v=235';
 
 /* ---------- uygulama hatalarının otomatik bildirimi ----------
    window.onerror / unhandledrejection → worker /hata (api.mdsinyal.com). Gönderilen: sürüm, rota adı (#/ad; kimlik ve kod kırpılır), rol,
@@ -76,8 +76,8 @@ document.addEventListener('click', ev => { if (!ev.target.closest('[data-kurs-de
   B.kurslarim().then(l => pencere({ baslik: 'Kurs değiştir', icerik: `<ul class="liste">${l.map(k => `<li><div style="flex:1;min-width:0"><b>${e(k.ad)}</b><small style="display:block;color:var(--soluk)">${e({ mudur: 'Kurs müdürü', sekreter: 'Ön büro', usta: 'Usta öğretici', ortak: 'Ortak' }[k.rol] || k.rol)}</small></div>${k.secili ? '<span class="rozet rozet-yesil">açık</span>' : `<button class="dg dg-ana dg-kucuk" data-kurs-sec="${e(k.id)}">Aç</button>`}</li>`).join('')}</ul>`,
     altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button>', onAc(p) { p.querySelectorAll('[data-kurs-sec]').forEach(b => b.addEventListener('click', () => { b.disabled = true; b.textContent = 'Açılıyor…'; const k = l.find(x => x.id === b.dataset.kursSec); islem('Kurs değiştirdi', k ? k.ad : ''); kaydet(); B.kursDegistir(b.dataset.kursSec); })); } })).catch(x => bildir(B.hataMetni(x), 'uyari')); });
 // YON-063: kişisel tercihler penceresi (kullanıcı menüsünden)
-document.addEventListener('click', ev => { if (!ev.target.closest('[data-tercih]')) return; ev.preventDefault(); import('./tercih.js?v=234').then(TC => { kapatPencere(); setTimeout(() => pencere({ baslik: 'Görünüm ve tercihler', icerik: TC.tercihHtml(), altlik: '<button class="dg dg-ana" data-kapat>Tamam</button>', onAc(p) { p.addEventListener('change', e2 => { if (TC.tercihDegisti(e2.target)) yenile(); }); } }), 200); }); });
-document.addEventListener('click', ev => { if (ev.target.closest('[data-nasil]')) { ev.preventDefault(); return import('./nasil.js?v=234').then(m => m.nasilAc()); } });   // DIG-031
+document.addEventListener('click', ev => { if (!ev.target.closest('[data-tercih]')) return; ev.preventDefault(); import('./tercih.js?v=235').then(TC => { kapatPencere(); setTimeout(() => pencere({ baslik: 'Görünüm ve tercihler', icerik: TC.tercihHtml(), altlik: '<button class="dg dg-ana" data-kapat>Tamam</button>', onAc(p) { p.addEventListener('change', e2 => { if (TC.tercihDegisti(e2.target)) yenile(); }); } }), 200); }); });
+document.addEventListener('click', ev => { if (ev.target.closest('[data-nasil]')) { ev.preventDefault(); return import('./nasil.js?v=235').then(m => m.nasilAc()); } });   // DIG-031
 document.addEventListener('click', ev => { if (ev.target.closest('[data-dy-liste]')) { ev.preventDefault(); DY.listeAc().then(() => document.querySelectorAll('[data-dy-liste]').forEach(b => { b.textContent = 'Duyurular'; })); } });
 const SAYFALAR = {
   genel: Y1.genel, adaylar: Y1.adaylar, kursiyerler: Y1.kursiyerler, kursiyer: Y1.kursiyerDetay,
@@ -270,16 +270,16 @@ export function yenile(kaydirma = false) {
   // YON-074: onaylanmış numara devirleri (bu kurs eski kurssa) ofis cihazında işlenir; oturum başına ve 10 dakikada bir
   if (!devirBakildi && oturum.kullanici.bulut && ['mudur', 'sekreter'].includes(oturum.kullanici.rol)) { devirBakildi = true; const bak = () => B.devirleriIsle().then(n => { if (n) { bildir(n + ' öğrencinin numarası onayıyla başka kursa devredildi; hesapları kapandı'); yenile(); } }).catch(() => { }); setTimeout(bak, 6000); setInterval(bak, 600000); }
   // UYG-021: kurs koduyla açılan öğrenci hesapları onay bekliyorsa ofis görür (oturum başına ve 5 dakikada bir sayılır)
-  if (!talepBakildi && oturum.kullanici.bulut && ['mudur', 'sekreter', 'subemudur'].includes(oturum.kullanici.rol)) { talepBakildi = true; const say = () => import('./hesaptalep.js?v=234').then(HT => HT.talepSay()).then(n => { if (n !== talepSayi) { talepSayi = n; if (['genel', 'kursiyerler'].includes(rota().ad) && !document.querySelector('.perde')) yenile(); } }).catch(() => { }); setTimeout(say, 4000); setInterval(say, 300000); }
+  if (!talepBakildi && oturum.kullanici.bulut && ['mudur', 'sekreter', 'subemudur'].includes(oturum.kullanici.rol)) { talepBakildi = true; const say = () => import('./hesaptalep.js?v=235').then(HT => HT.talepSay()).then(n => { if (n !== talepSayi) { talepSayi = n; if (['genel', 'kursiyerler'].includes(rota().ad) && !document.querySelector('.perde')) yenile(); } }).catch(() => { }); setTimeout(say, 4000); setInterval(say, 300000); }
   // YON-002 göçü: eski sürümün telefon eşlemesine yazdığı gerçek e-postalar bir kez silinir (cihaz ve kurs başına; tekrar zararsız)
   if (!epostaTemizlendi && oturum.kullanici.bulut && ['mudur', 'sekreter', 'subemudur'].includes(oturum.kullanici.rol)) { epostaTemizlendi = true; setTimeout(() => B.telEslemeleriTemizle().catch(() => { }), 9000); }
   // YON-021: ön büro IP yetkilendirmesi (oturum başına bir kez); izin yoksa içerik kapanır, yalnız çıkış
-  if (!ipDenetlendi && oturum.kullanici.bulut && oturum.kullanici.rol === 'sekreter') { ipDenetlendi = true; import('./ipliste.js?v=234').then(m => m.ipDenetle()).then(d => { if (d.izin) return; islem('İzinsiz IP’den giriş denedi', d.ip); kaydet(); document.getElementById('icerik') && document.getElementById('icerik').replaceChildren();
+  if (!ipDenetlendi && oturum.kullanici.bulut && oturum.kullanici.rol === 'sekreter') { ipDenetlendi = true; import('./ipliste.js?v=235').then(m => m.ipDenetle()).then(d => { if (d.izin) return; islem('İzinsiz IP’den giriş denedi', d.ip); kaydet(); document.getElementById('icerik') && document.getElementById('icerik').replaceChildren();
     const girise = () => B.cikisYap().then(() => { try { sessionStorage.removeItem('sinyal-oturum'); } catch (x) { } location.hash = '#/giris'; location.reload(); });
     setTimeout(() => { const bak = setInterval(() => { if (!document.querySelector('.perde')) { clearInterval(bak); girise(); } }, 500); }, 1500);
     pencere({ baslik: 'Bu bilgisayardan girişe izin yok', korumali: true, icerik: `<p style="font-size:14.5px">Kurs müdürü ön büro girişini belirli internet adreslerine bağlamış. Bu bilgisayarın adresi (<b class="mono">${e(d.ip)}</b>) listede yok.</p><p style="font-size:13.5px;color:var(--soluk);margin-top:8px">Kurs bilgisayarından girin ya da kurs müdüründen bu adresi Ayarlar › Güvenlik › IP yetkilendirme’ye eklemesini isteyin.</p>`, altlik: '<button class="dg dg-ana" data-ip-cik>Çıkış yap</button>', onAc(p) { p.querySelector('[data-ip-cik]').addEventListener('click', girise); } }); }); }
   // YON-028: açık onaylı bilgilendirmeler; oturum başına bir kez, sayfa oturduktan sonra (başka pencere açıksa sonraki girişe)
-  if (!bilgiSoruldu && oturum.kullanici.bulut && ['mudur', 'sekreter'].includes(oturum.kullanici.rol)) { bilgiSoruldu = true; const dene = n => { if (document.querySelector('.perde')) { if (n < 40) setTimeout(() => dene(n + 1), 3000); return; } import('./onay.js?v=234').then(m => m.bilgiGoster()); }; setTimeout(() => dene(0), 1500); }  // başka pencere açıksa kapanınca (en çok 2 dk)
+  if (!bilgiSoruldu && oturum.kullanici.bulut && ['mudur', 'sekreter'].includes(oturum.kullanici.rol)) { bilgiSoruldu = true; const dene = n => { if (document.querySelector('.perde')) { if (n < 40) setTimeout(() => dene(n + 1), 3000); return; } import('./onay.js?v=235').then(m => m.bilgiGoster()); }; setTimeout(() => dene(0), 1500); }  // başka pencere açıksa kapanınca (en çok 2 dk)
   if (s.baglan) { try { s.baglan(kap); } catch (x) { console.error(x); } }
   if (r.ad === 'genel' || r.ad === 'adaylar') B.onKayitlariAl().then(n => { if (n) { bildir(`Web sitesinden ${n} ön kayıt geldi; Yeni öğrenciler’de`); if (location.hash.startsWith('#/adaylar')) yenile(); } });   // DIG-035
   if (r.ad === 'genel') { GU.anaEkranaEkle(kap); duyuruAlani(kap); }  // kurulu sürüm, “Güncellemeleri denetle”, yeni sürüm kartı; DIG-040 duyurular
@@ -391,7 +391,7 @@ function talepSeridi(kap, ad) {
   const u = oturum.kullanici; if (!talepSayi || !u || !u.bulut || !['mudur', 'sekreter', 'subemudur'].includes(u.rol) || !['genel', 'kursiyerler'].includes(ad)) return;
   kap.insertAdjacentHTML('afterbegin', `<div class="ipucu talep-serit" role="status" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1;min-width:0"><b>${talepSayi} öğrenci uygulama hesabı için onay bekliyor.</b> Kurs koduyla hesap açtılar; kendi kayıtlarıyla eşleştirip onaylayın.</span><button type="button" class="dg dg-ana dg-kucuk" data-talep-ac>İstekleri gör</button></div>`);
 }
-document.addEventListener('click', ev => { if (!ev.target.closest('[data-talep-ac]')) return; import('./hesaptalep.js?v=234').then(HT => HT.talepPenceresi(() => { talepSayi = HT.bekleyenSayi; yenile(); })); });
+document.addEventListener('click', ev => { if (!ev.target.closest('[data-talep-ac]')) return; import('./hesaptalep.js?v=235').then(HT => HT.talepPenceresi(() => { talepSayi = HT.bekleyenSayi; yenile(); })); });
 function kurulumSeridi(kap) {
   let i = null; try { i = sessionStorage.getItem(AKIS); } catch (x) { }
   if (i == null || !oturum.kullanici || oturum.kullanici.rol !== 'mudur') return;
@@ -1207,10 +1207,10 @@ async function davetEkrani() {
 document.addEventListener('click', ev => { if (ev.target.closest('[data-yeniden-yukle]')) location.reload(); });
 document.addEventListener('click', ev => {
   if (ev.target.closest('[data-cikis]')) kapatPencere();
-  if (ev.target.closest('[data-hesap]')) { if (oturum.kullanici && oturum.kullanici.rol === 'usta' && document.body.classList.contains('ox-modu')) return import('./usta/ekran.js?v=234').then(m => { m.hesapAc(); yenile(true); }); return hesapSayfasi(); }
+  if (ev.target.closest('[data-hesap]')) { if (oturum.kullanici && oturum.kullanici.rol === 'usta' && document.body.classList.contains('ox-modu')) return import('./usta/ekran.js?v=235').then(m => { m.hesapAc(); yenile(true); }); return hesapSayfasi(); }
   if (ev.target.closest('[data-destek]')) return destekPenceresi();
   // DIG-029: yeni soru bankası örneği yalnız demo şeridinden açılır (js/soru-ornek.js)
-  if (ev.target.closest('[data-soru-ornek]') && ziyaretci()) return import('./soru-ornek.js?v=234').then(m => m.soruOrnekAc()).catch(() => bildir('Soru örneği yüklenemedi; bağlantınızı kontrol edip tekrar deneyin', 'uyari'));
+  if (ev.target.closest('[data-soru-ornek]') && ziyaretci()) return import('./soru-ornek.js?v=235').then(m => m.soruOrnekAc()).catch(() => bildir('Soru örneği yüklenemedi; bağlantınızı kontrol edip tekrar deneyin', 'uyari'));
   // Yönetim: Hesaplar telefonda profil menüsünden açılır (alt çubuk 6 sekme kalır)
   if (ev.target.closest('[data-yn-hesaplar]')) { kapatPencere(); ORT.sekmeSec('hesaplar'); yonetimCiz(true); SH.otoBaglan(); return; }
   if (ev.target.closest('[data-ogr-cikis]')) return B.ogrenciCikis().then(() => location.replace(new URL('giris/?cikis=1', location.href.split('#')[0].replace(/[^/]*$/, '')).href));
@@ -1314,4 +1314,4 @@ else girisEkrani(location.hash.startsWith('#/imza-geldi/') ? 'pin' : 'tanitim');
 // Yeni sürüm bildirimi: kalıcı şerit, ana ekranda sürüm alanı, temiz güncelleme (js/guncelleme.js)
 GU.baslat();
 // kullanım analizi (kişisel veri içermez; kullanim.js): ekran, düğme adı, süre, hata türü sayılır, günde bir özet yazılır
-setTimeout(() => import('./kullanim.js?v=234').then(m => m.baslat()).catch(() => { }), 1500);
+setTimeout(() => import('./kullanim.js?v=235').then(m => m.baslat()).catch(() => { }), 1500);

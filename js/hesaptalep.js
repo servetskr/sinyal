@@ -1,9 +1,9 @@
 // UYG-021: öğrenci kurs koduyla kendi hesabını açar (e-posta + şifre); istek ofise düşer. Ofis (müdür, ön büro) burada isteği
 // kurstaki öğrenci kaydıyla eşleştirip onaylar ya da siler. Onaylanınca öğrenci aynı e-posta ve şifreyle kendi verisiyle girer.
 // Kurs kodu (kursKodlari/{KOD}) QR afişte ve kayıt linkinde durur; kodu kurs müdürü bir kez oluşturur.
-import { S, kaydet, tamAd, islem, sb, oturum } from './veri.js?v=234';
-import { e, pencere, pencereSor, bildir, tarih } from './ui.js?v=234';
-import * as B from './bulut.js?v=234';
+import { S, kaydet, tamAd, islem, sb, oturum } from './veri.js?v=235';
+import { e, pencere, pencereSor, bildir, tarih } from './ui.js?v=235';
+import * as B from './bulut.js?v=235';
 
 export let bekleyenSayi = 0;
 export async function talepSay() { try { bekleyenSayi = (await B.hesapTalepleri()).length; } catch (x) { } return bekleyenSayi; }
@@ -43,7 +43,7 @@ export async function talepPenceresi(yenile) {
       d.addEventListener('click', ev => {
         if (ev.target.closest('[data-ht-kod]')) { const b = ev.target.closest('[data-ht-kod]'); b.disabled = true; return B.kursKoduAl().then(k => { kod = k; ciz(d); bildir('Kurs kodu hazır: ' + k); }).catch(x => { b.disabled = false; bildir(B.hataMetni(x), 'uyari'); }); }
         if (ev.target.closest('[data-ht-kopyala]')) { const link = B.ogrenciKayitLinki(kod); try { navigator.clipboard.writeText(link); bildir('Link kopyalandı'); } catch (x) { bildir(link); } return; }
-        if (ev.target.closest('[data-ht-afis]')) { islem('Öğrenci uygulaması QR afişini yazdırdı'); return import('./hesap.js?v=234').then(H => H.qrAfis()).catch(x => bildir(x.message || 'Afiş hazırlanamadı', 'uyari')); }
+        if (ev.target.closest('[data-ht-afis]')) { islem('Öğrenci uygulaması QR afişini yazdırdı'); return import('./hesap.js?v=235').then(H => H.qrAfis()).catch(x => bildir(x.message || 'Afiş hazırlanamadı', 'uyari')); }
         const li = ev.target.closest('[data-ht]'); if (!li) return;
         const t = l.find(x => x.uid === li.dataset.ht); if (!t) return;
         if (ev.target.closest('[data-ht-sil]')) {

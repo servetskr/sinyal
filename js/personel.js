@@ -2,9 +2,9 @@
 // Sekmeler: Genel (görevler çoklu, branşlar, statü, iletişim, maaş) · Evraklar (tür, alınma, bitiş, dosya; bitişe 30 gün kala uyarı, kural P04)
 // · Zimmet (araç, anahtar, diğer; veriliş, planlanan teslim, iade) · İzin (izin listesi, yıllık izin hakkı ve kalanı, İş Kanunu md.53).
 // Usta öğreticinin sertifika, sağlık raporu ve adli sicil tarihleri (eg.belgeler; M13 kuralı) evrak eklenince güncellenir.
-import { S, kaydet, gun, fark, tarihOku, islem, sb, tutarOku, tcGecerli, mebIsGunuMu } from './veri.js?v=234';
-import { e, ik, rozet, tarih, isaret, pencere, kapatPencere, bildir, fotoKucult, sekmeler } from './ui.js?v=234';
-import { ustaAlacak } from './risk.js?v=234';
+import { S, kaydet, gun, fark, tarihOku, islem, sb, tutarOku, tcGecerli, mebIsGunuMu } from './veri.js?v=235';
+import { e, ik, rozet, tarih, isaret, pencere, kapatPencere, bildir, fotoKucult, sekmeler } from './ui.js?v=235';
+import { ustaAlacak } from './risk.js?v=235';
 
 export const GOREVLER = ['Kurucu', 'Kurs Müdürü', 'Müdür Yardımcısı', 'Usta Öğretici', 'Uzman Öğretici', 'Psikolog', 'Büro Personeli', 'Muhasebe', 'Pist Sorumlusu', 'Şoför', 'Araç Bakım', 'Temizlik Personeli', 'Güvenlik', 'Diğer'];
 export const BRANSLAR = ['Trafik ve Çevre', 'İlk Yardım', 'Araç Tekniği', 'Trafik Adabı', 'Direksiyon Eğitimi'];
@@ -153,14 +153,14 @@ export function personelKarti(tur, id, sekme) {
       d.addEventListener('click', ev => {
         const s = ev.target.closest('[data-pk-sekme]'); if (s) { durum.sekme = s.dataset.pkSekme; return yenidenAc(); }
         const ay = ev.target.closest('[data-pk-ay]'); if (ay) { durum.ay = ayKay(durum.ay, +ay.dataset.pkAy); return yenidenAc(); }
-        if (ev.target.closest('[data-pk-asil]')) { kapatPencere(); return tur === 'usta' ? import('./sayfalar2.js?v=234').then(m => m.ustaDuzenle(x.id)) : import('./gruplar.js?v=234').then(m => m.ogretmenPencere(x, () => import('./app.js?v=234').then(a => a.yenile()))); }
+        if (ev.target.closest('[data-pk-asil]')) { kapatPencere(); return tur === 'usta' ? import('./sayfalar2.js?v=235').then(m => m.ustaDuzenle(x.id)) : import('./gruplar.js?v=235').then(m => m.ogretmenPencere(x, () => import('./app.js?v=235').then(a => a.yenile()))); }
         const ea = ev.target.closest('[data-pk-evrak-ac]'); if (ea) { const v = (x.evraklar || []).find(z => z.id === ea.dataset.pkEvrakAc); if (v && v.dosya) { const w = window.open(); if (w) { w.document.title = evrakAd(v.tur); w.document.body.style.margin = '0'; w.document.body.innerHTML = v.dosya.tur === 'pdf' ? `<iframe src="${v.dosya.veri}" style="border:0;width:100vw;height:100vh"></iframe>` : `<img src="${v.dosya.veri}" style="max-width:100%">`; } islem('Personel evrakını açtı', x.ad + ' · ' + evrakAd(v.tur)); kaydet(); } return; }
         const es = ev.target.closest('[data-pk-evrak-sil]'); if (es) { const v = (x.evraklar || []).find(z => z.id === es.dataset.pkEvrakSil); if (!v) return; x.evraklar = x.evraklar.filter(z => z !== v); islem('Personel evrakını sildi', x.ad + ' · ' + evrakAd(v.tur)); kaydet(); return yenidenAc(); }
         const zi = ev.target.closest('[data-pk-iade]'); if (zi) { const z = (x.zimmet || []).find(q => q.id === zi.dataset.pkIade); if (!z) return; z.iade = gun(0); islem('Zimmet iadesi aldı', `${x.ad} · ${z.tur} ${z.ne}`); kaydet(); bildir('İade kaydedildi'); return yenidenAc(); }
         if (ev.target.closest('[data-pk-sil]')) { const izinde = (S.izinler || []).some(i => i.kim === x.id && fark(i.bit || i.bas) >= 0), acikZ = (x.zimmet || []).filter(z => !z.iade).length;
           if (acikZ) return bildir(`${x.ad} üzerinde ${acikZ} iade edilmemiş zimmet var; önce iadeyi kaydedin`, 'uyari');
           S.cikanlar = S.cikanlar || { egitmen: [], arac: [] }; S.cikanlar.personel = S.cikanlar.personel || []; S.cikanlar.personel.push({ ...x, cikis: gun(0) });
-          S.personel = S.personel.filter(y => y !== x); islem('Personeli çıkardı', x.ad + (izinde ? ' (ileri tarihli izni vardı)' : '')); kaydet(); kapatPencere(); bildir(gorevleri(x, tur).some(g => /müdür|öğretici/i.test(g)) ? x.ad + ' çıkarıldı. Eğitim personeli ayrılışı 5 iş günü içinde MEM’e bildirilir (ÖÖKY md.44/4)' : x.ad + ' personel listesinden çıkarıldı; kayıtları arşivde', 'uyari'); import('./app.js?v=234').then(a => a.yenile()); }
+          S.personel = S.personel.filter(y => y !== x); islem('Personeli çıkardı', x.ad + (izinde ? ' (ileri tarihli izni vardı)' : '')); kaydet(); kapatPencere(); bildir(gorevleri(x, tur).some(g => /müdür|öğretici/i.test(g)) ? x.ad + ' çıkarıldı. Eğitim personeli ayrılışı 5 iş günü içinde MEM’e bildirilir (ÖÖKY md.44/4)' : x.ad + ' personel listesinden çıkarıldı; kayıtları arşivde', 'uyari'); import('./app.js?v=235').then(a => a.yenile()); }
       });
       const z = d.querySelector('#f-pk-zimmet'); if (z) { const tg = () => { const a = z.tur.value === 'Araç'; d.querySelector('[data-z-arac]').hidden = !a; d.querySelector('[data-z-ne]').hidden = a; }; z.tur.addEventListener('change', tg); tg(); }
       d.addEventListener('submit', async ev => {
@@ -176,7 +176,7 @@ export function personelKarti(tur, id, sekme) {
           Object.assign(x, { gorevler, branslar: br, dersUcreti: tutarOku(f.dersUcreti.value) || null, mebStatu: f.statu.value === '' ? null : f.statu.value, yillikIzinGun: Math.min(60, Math.max(0, parseInt(f.yillik.value, 10) || 0)) || null });
           if (tur !== 'personel') { const o = {}; ['okulCinsi', 'okul', 'fakulte', 'yuksekokul', 'anabilim', 'bolum', 'mezuniyet', 'belgeCinsi', 'belgeSayi', 'belgeTarih'].forEach(k => { const v = (f['o_' + k].value || '').trim(); if (v) o[k] = v; }); x.ogrenim = Object.keys(o).length ? o : null; }
           if (tur === 'ogretmen' && br.length && !br.some(b => b.toLocaleLowerCase('tr') === String(x.brans || '').toLocaleLowerCase('tr'))) x.brans = br[0];
-          islem('Personel kartını düzenledi', x.ad); kaydet(); bildir('Kaydedildi'); kapatPencere(); return import('./app.js?v=234').then(a => a.yenile());
+          islem('Personel kartını düzenledi', x.ad); kaydet(); bildir('Kaydedildi'); kapatPencere(); return import('./app.js?v=235').then(a => a.yenile());
         }
         if (f.id === 'f-pk-evrak') {
           if (f.bitis.value && f.tarih.value && f.bitis.value < f.tarih.value) return bildir('Bitiş alındığı tarihten önce olamaz', 'uyari');
@@ -226,6 +226,6 @@ export function personelEkle() {
     onAc(d) { d.querySelector('form').addEventListener('submit', ev => { ev.preventDefault(); const f = ev.target, ad = f.ad.value.trim(), g = [...f.querySelectorAll('[name=gorev]:checked')].map(i => i.value);
       if (ad.length < 3) return bildir('Ad soyad girin', 'uyari'); if (!g.length) return bildir('En az bir görev seçin', 'uyari');
       Object.assign(x, { ad, tel: f.tel.value.trim(), maas: tutarOku(f.maas.value) || 0, baslama: f.baslama.value || '', gorevler: g, gorev: g.join(', ') });
-      S.personel = [...(S.personel || []), x]; islem('Personel ekledi', ad + ' · ' + x.gorev); kaydet(); kapatPencere(); bildir(ad + ' eklendi'); import('./app.js?v=234').then(a => a.yenile()); }); },
+      S.personel = [...(S.personel || []), x]; islem('Personel ekledi', ad + ' · ' + x.gorev); kaydet(); kapatPencere(); bildir(ad + ' eklendi'); import('./app.js?v=235').then(a => a.yenile()); }); },
   });
 }

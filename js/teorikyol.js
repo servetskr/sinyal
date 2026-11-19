@@ -1,8 +1,8 @@
 // e-Sınav yolu (TEO-007, TEO-008): teorikteki her aday tek bir bölümde. esinavAsamasi DOM'suzdur; ekran Sınavlar › "e-Sınav yolu" sekmesi.
 // Bölüm sırası (ilk tutan bölüm): muaf → doldu → geçti → bekleyen → sonuç → randevu → derste → ücret → tekrar → başvuru.
-import { esinavUcreti, S, gun, fark, SINIFLAR, tamAd, sb, sbSinav, egitimSinifi, esinavsizBelgeli, esinavHakDurum, esinavUcretiVar, esinavUcretiIsle, teorikSaat, islem, kaydet, sinifEtiket } from './veri.js?v=234';
-import { e, rozet, tarih, ik, avatar, bildir, pencere, kapatPencere, bos } from './ui.js?v=234';
-import * as GR from './gruplar.js?v=234';
+import { esinavUcreti, S, gun, fark, SINIFLAR, tamAd, sb, sbSinav, egitimSinifi, esinavsizBelgeli, esinavHakDurum, esinavUcretiVar, esinavUcretiIsle, teorikSaat, islem, kaydet, sinifEtiket } from './veri.js?v=235';
+import { e, rozet, tarih, ik, avatar, bildir, pencere, kapatPencere, bos } from './ui.js?v=235';
+import * as GR from './gruplar.js?v=235';
 
 export const YOL_BOLUM = [
   ['bekleyen', 'Kayıt bekliyor', 'Grup ya da evrak eksik'],
@@ -66,7 +66,7 @@ export function yolBaglan(k, yenile, { oturumaEkle, sonucGir } = {}) {
   k.addEventListener('click', ev => {
     const b = ev.target.closest('[data-ey-bolum]'); if (b) { yolDurum.bolum = b.dataset.eyBolum; return yenile(); }
     const u = ev.target.closest('[data-ey-ucret]'); if (u) { const x = S.kursiyerler.find(y => y.id === u.dataset.eyUcret); if (!x) return; const h = esinavHakDurum(x); if (esinavUcretiIsle(x, 'elle', gun(0))) { islem('e-Sınav ücretini işaretledi', `${tamAd(x)} · ${h.sira}. hak`); kaydet(); bildir(`${tamAd(x)} · ${h.sira}. hak ücreti işaretlendi`, 'tamam'); } return yenile(); }
-    { const p = ev.target.closest('[data-ey-plan]'); if (p) return import('./sayfalar1.js?v=234').then(m => m.otoPlanPenceresi({ kursiyerler: [p.dataset.eyPlan] })); }   // DIR-041
+    { const p = ev.target.closest('[data-ey-plan]'); if (p) return import('./sayfalar1.js?v=235').then(m => m.otoPlanPenceresi({ kursiyerler: [p.dataset.eyPlan] })); }   // DIR-041
     const a = ev.target.closest('[data-ey-ekle]'); if (a && oturumaEkle) return oturumaEkle(S.kursiyerler.find(y => y.id === a.dataset.eyEkle));
     const s = ev.target.closest('[data-ey-sonuc]'); if (s && sonucGir) { const x = S.kursiyerler.find(y => y.id === s.dataset.eySonuc); const o = esOturumlari(x).filter(z => fark(z.tarih) <= 0 && !(z.sonuc || {})[x.id]).sort((p, q) => q.tarih.localeCompare(p.tarih))[0]; return o && sonucGir(o); }
   });

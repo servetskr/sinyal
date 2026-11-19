@@ -2,8 +2,8 @@
 // Gelen havaleler okunur; açıklamada öğrencinin ödeme kodu (veri.js odemeKodu, "MD" + 5 harf) ya da TC kimlik numarası varsa öğrenci bulunur.
 // Eşleşen satırlar tahsilat taslağıdır: müdür ya da ön büro işaretleyip onaylar; tahsilat açık taksitlere vade sırasıyla dağılır (tahsilAl ile aynı kural),
 // seçilen banka hesabına (h.hesap) yazılır. Aynı ekstre satırı ikinci kez işlenmez (h.ekstre anahtarı). Eşleşmeyenler listede kalır, elle işlenir.
-import { S, kaydet, gun, kursiyer, tamAd, odemeKodu, tutarOku, islem, geriAlNoktasi, bankaHesaplari, varsayilanHesap, makbuzNoVer, kalanBorc } from './veri.js?v=234';
-import { e, tl, rozet, tarih, pencere, kapatPencere, bildir, isaret } from './ui.js?v=234';
+import { S, kaydet, gun, kursiyer, tamAd, odemeKodu, tutarOku, islem, geriAlNoktasi, bankaHesaplari, varsayilanHesap, makbuzNoVer, kalanBorc } from './veri.js?v=235';
+import { e, tl, rozet, tarih, pencere, kapatPencere, bildir, isaret } from './ui.js?v=235';
 
 const sade = s => String(s ?? '').toLocaleLowerCase('tr').replace(/ı/g, 'i').replace(/ç/g, 'c').replace(/ğ/g, 'g').replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/[^a-z0-9]/g, '');
 const anahtar = r => [r.tarih, r.tutar, sade(r.aciklama).slice(0, 60)].join('|');
@@ -56,7 +56,7 @@ export function ekstrePenceresi(satirlar, sonra) {
       bildir(`${n} havale işlendi (${tl(top)})${atla ? `; ${atla} satır açık taksitten fazla ya da günü kapalı, elle bakın` : ''}`, atla ? 'uyari' : 'tamam', true); sonra && sonra(); }); } });
 }
 export async function ekstreYukle(dosya, sonra) {
-  const S5 = await import('./sayfalar5.js?v=234');
+  const S5 = await import('./sayfalar5.js?v=235');
   let tablo; try { tablo = /\.xlsx?$/i.test(dosya.name) ? await S5.excelOku(dosya) : S5.csvOku(await S5.csvMetin(dosya)); } catch (x) { return bildir('Dosya okunamadı: ' + (x.message || x), 'uyari'); }
   const r = ekstreSatirlari(tablo, S5.tarihCoz); if (r.hata) return bildir(r.hata, 'uyari'); if (!r.l.length) return bildir('Ekstrede gelen havale bulunamadı', 'uyari');
   ekstrePenceresi(r.l, sonra);

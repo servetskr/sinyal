@@ -1,8 +1,8 @@
 // Kişisel not defteri (DIG-011, Çizgi Ö3): yalnız ekleyen görür (kullanıcı başına S.notlarim[kullanıcı]; ekranda başkasınınki listelenmez).
 // Yaz + Enter ile eklenir; düzenle, renk, alarm (tarihi gelince panel açılır açılmaz uyarı), sabitle, tamamlandı (listeden kalkar), sil + geri al.
 // Sıra: sabitlenenler, sonra alarmı yakın olanlar, sonra yeniler.
-import { S, oturum, kaydet, gun, geriAlNoktasi } from './veri.js?v=234';
-import { e, ik, bildir, pencere, kapatPencere } from './ui.js?v=234';
+import { S, oturum, kaydet, gun, geriAlNoktasi } from './veri.js?v=235';
+import { e, ik, bildir, pencere, kapatPencere } from './ui.js?v=235';
 
 const RENK = { '': 'Renksiz', sari: 'Sarı', yesil: 'Yeşil', mavi: 'Mavi', kirmizi: 'Kırmızı' };
 const kim = () => (oturum.kullanici && (oturum.kullanici.id || oturum.kullanici.ad)) || 'cihaz';

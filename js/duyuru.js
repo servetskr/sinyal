@@ -1,8 +1,8 @@
 // Duyurular ve sürüm notları (DIG-040): kurslara yeni özellik ve MEBBİS değişikliği duyurusu. Kaynak duyurular.json (sitede, her açılışta sunucudan).
 // Önemli ve okunmamış duyuru kurs ana ekranında bir kez pencere olarak açılır: "Devamını oku", "Okudum, tekrar gösterme", "Sonra" (bu oturumda bir daha açılmaz).
 // Okundu kaydı kullanıcı başına kurs verisinde (S.duyuruOkundu[kullanıcı] = [id…]): öteki cihazda tekrar çıkmaz. Bütün duyurular tarih sırasıyla "Duyurular" penceresinde.
-import { S, oturum, kaydet, tarihOku } from './veri.js?v=234';
-import { pencere, kapatPencere, e } from './ui.js?v=234';
+import { S, oturum, kaydet, tarihOku } from './veri.js?v=235';
+import { pencere, kapatPencere, e } from './ui.js?v=235';
 
 let liste = null, yukleniyor = null, buOturumdaKapandi = false;
 const AY = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];

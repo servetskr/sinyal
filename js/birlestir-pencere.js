@@ -2,9 +2,9 @@
 // Öğrenci listesinde "olası mükerrer" şeridi → çiftler penceresi → önizleme (iki kayıt yan yana, alan seçimi, taşınacaklar, para
 // mutabakatı) → hassas işlem onayı → birleştir. Birleştirme 30 gün içinde öğrenci dosyasından ya da çiftler penceresinden geri alınır.
 // Yetki: kurs müdürü, şube müdürü ve ön büro (18 Kas kararı). Her birleştirme ve geri alma işlem kaydına yazılır.
-import { S, kaydet, islem, oturum, gun, tamAd, SINIFLAR } from './veri.js?v=234';
-import { e, tl, ik, isaret, pencere, kapatPencere, bildir, pinSor, onaySor, tarih } from './ui.js?v=234';
-import * as BR from './birlestir.js?v=234';
+import { S, kaydet, islem, oturum, gun, tamAd, SINIFLAR } from './veri.js?v=235';
+import { e, tl, ik, isaret, pencere, kapatPencere, bildir, pinSor, onaySor, tarih } from './ui.js?v=235';
+import * as BR from './birlestir.js?v=235';
 
 export const yetkili = () => { const u = oturum.kullanici; return !!u && (u.rol === 'mudur' || u.rol === 'sekreter' || u.gorev === 'subemudur'); };
 const KOL_AD = { dersler: 'direksiyon dersi', hareket: 'kasa hareketi (tahsilat)', sinavlar: 'sınav kaydı', imzaTalepleri: 'imza isteği', gonderimler: 'mesaj', teorik: 'teorik yoklama',

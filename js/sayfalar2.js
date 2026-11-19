@@ -1,34 +1,34 @@
-import { onkosulSeridi } from './onkosul.js?v=234';
-import { ulusalSinav, hakDurumu, ilSecenekleri, islemYetkili, ekranYetkili, YETKI_EKRAN, YETKI_ISLEM, tarifeAnlik, posKalem, posGecis, taksitAyar, makbuzBaslangic, makbuzAyar, makbuzKilitli, makbuzBicim, makbuzSeri, makbuzSira, izMetni, hareketHesabi, bankayaHesabi, bankaHesaplari, varsayilanHesap, ekDersFiyat, uygulamaSinavUcreti, mebSinavUcreti, mebSinavUcretiGoster, sinavUcretKip, esinavUcreti, digerUcretler, ibanlar, ibanVarsayilan, ibanBicim, ibanGecerli, S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, gonderimEkle, risk, islem, geriAlNoktasi, oturum, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube, kapaliGun, YONTEMLER, yontemAd, gecikenTutar, aktifSiniflar, sinifKaydet, ayEkle, isGunuSay, arsivle, selam, kursAdi, memnuniyet, tuketim, beklenenTuketim, OGR_OZELLIK, ogrOzellik, mudurTel, tutarOku, tcGecerli, mebIsGunuIleri, adaySinavSaati, kalanHakCumlesi, USTA_PALET, ustaRengi, izinDurumu, izinBitisi, haftalikSinir, haftaDers, aydinlatmaMetni, ekTur, egitimSinifi, sinifEtiket, tabanListesi, tabanDurumu, sinifTabani, satirUcreti, satirUcretKaynagi, tabanUcretleriYaz, ekDersTabani, ozelDersTabani, teorikSaat } from './veri.js?v=234';
-import * as HS from './hesap.js?v=234';
-import * as MZ from './mevzuat.js?v=234';
-import * as DN from './denetim.js?v=234';
-import { pencereSor, pinSor, apiGonder, alanHatalari, e, saatDe, saatE, tl, sayi, ik, rozet, asamaRozet, avatar, plaka, ilerleme, bos, pencere, kapatPencere, bildir, sekmeler, tarih, tarihUzun, goreli, cubukGrafik, halka, ayAdi, csvIndir, waAc, waSirali, tamTarih, apiAcik, isaret, ekranNotu, aracGorsel, olcumler, yonLevhasi, fotoKucult, onaySor, belgeYazdir } from './ui.js?v=234';
-import { yenile } from './app.js?v=234';
-import { AYAR_SEKMELERI, ayarBaglan, ustaDavet, kimlikKartlari, personelFotoKirp, personelOzeti, mebAracKur, mebAktar, mebCek, MEB_BILGI } from './sayfalar5.js?v=234';
-import * as MB from './mebmerkez.js?v=234';
-import { kisaArama as mzKisaArama, kisaAramaBaglan as mzKisaBaglan } from './sayfa-mevzuat.js?v=234';
-import * as EKL from './eklenti.js?v=234';
-import { nakitDekontHtml, nakitDekontBagla, nakitDekontOku, fotoAl, hesapSecici, hesapOku, wpGonder, tahsilAl, ekDersOner, kisiListe, odemeBilgisi, yorumMetni, alici, mudurMu, bildirimler } from './sayfalar1.js?v=234';
-import { denetimEksikleri, mebSiraBaslat } from './sayfalar3.js?v=234';
-import * as OZ from './ozellik.js?v=234';
-import * as EP from './eposta.js?v=234';
-import { kurallariHazirla, zamanliKural, kuralSaati, ornekGonder, zamanlayiciCalistir, kuyruguGonder, gidecekler } from './zamanlayici.js?v=234';
-import * as MM from './mesaj.js?v=234';
-import * as BL from './bulut.js?v=234';
-import * as KR from './kurallar.js?v=234';
-import * as CR from './cari.js?v=234';
-import { destekWa } from './iletisim.js?v=234';
-import * as S5L from './sayfalar5.js?v=234';
-import { SINIF_VARSAYILAN, gecisSatirlari, DERS_SAAT_VARSAYILAN, planAyar, gerekliDireksiyon, geceGerekli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, sinavHakSiniri, DERS_KURAL_TARIH, kuralAyar, mebKurum, programAcik, varsayilanYontem, kdvOrani, KDV_EGITIM, KDV_GENEL, saklamaYili, saklamaBitti, faizAyar, FAIZ_UYARI, FAIZ_YONTEM, YASAL_FAIZ_VARSAYILAN } from './veri.js?v=234';
-import { listeAdi, gecerlilikMetni, satirAdi as satirAdiT } from './taban.js?v=234';
-import * as RK from './rapor-kasa.js?v=234';
-import * as GR from './gruplar.js?v=234';
-import * as PS from './psikoteknik.js?v=234';
-import * as HV from './sinavhavuz.js?v=234';
-import * as SG from './sinavgunu.js?v=234';
-import * as TY from './teorikyol.js?v=234';
-import * as PK from './personel.js?v=234';
+import { onkosulSeridi } from './onkosul.js?v=235';
+import { ulusalSinav, hakDurumu, ilSecenekleri, islemYetkili, ekranYetkili, YETKI_EKRAN, YETKI_ISLEM, tarifeAnlik, posKalem, posGecis, taksitAyar, makbuzBaslangic, makbuzAyar, makbuzKilitli, makbuzBicim, makbuzSeri, makbuzSira, izMetni, hareketHesabi, bankayaHesabi, bankaHesaplari, varsayilanHesap, ekDersFiyat, uygulamaSinavUcreti, mebSinavUcreti, mebSinavUcretiGoster, sinavUcretKip, esinavUcreti, digerUcretler, ibanlar, ibanVarsayilan, ibanBicim, ibanGecerli, S, kaydet, gun, fark, iso, tarihOku, BUGUN, SINIFLAR, ASAMALAR, EVRAKLAR, KAYNAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, gonderimEkle, risk, islem, geriAlNoktasi, oturum, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube, kapaliGun, YONTEMLER, yontemAd, gecikenTutar, aktifSiniflar, sinifKaydet, ayEkle, isGunuSay, arsivle, selam, kursAdi, memnuniyet, tuketim, beklenenTuketim, OGR_OZELLIK, ogrOzellik, mudurTel, tutarOku, tcGecerli, mebIsGunuIleri, adaySinavSaati, kalanHakCumlesi, USTA_PALET, ustaRengi, izinDurumu, izinBitisi, haftalikSinir, haftaDers, aydinlatmaMetni, ekTur, egitimSinifi, sinifEtiket, tabanListesi, tabanDurumu, sinifTabani, satirUcreti, satirUcretKaynagi, tabanUcretleriYaz, ekDersTabani, ozelDersTabani, teorikSaat } from './veri.js?v=235';
+import * as HS from './hesap.js?v=235';
+import * as MZ from './mevzuat.js?v=235';
+import * as DN from './denetim.js?v=235';
+import { pencereSor, pinSor, apiGonder, alanHatalari, e, saatDe, saatE, tl, sayi, ik, rozet, asamaRozet, avatar, plaka, ilerleme, bos, pencere, kapatPencere, bildir, sekmeler, tarih, tarihUzun, goreli, cubukGrafik, halka, ayAdi, csvIndir, waAc, waSirali, tamTarih, apiAcik, isaret, ekranNotu, aracGorsel, olcumler, yonLevhasi, fotoKucult, onaySor, belgeYazdir } from './ui.js?v=235';
+import { yenile } from './app.js?v=235';
+import { AYAR_SEKMELERI, ayarBaglan, ustaDavet, kimlikKartlari, personelFotoKirp, personelOzeti, mebAracKur, mebAktar, mebCek, MEB_BILGI } from './sayfalar5.js?v=235';
+import * as MB from './mebmerkez.js?v=235';
+import { kisaArama as mzKisaArama, kisaAramaBaglan as mzKisaBaglan } from './sayfa-mevzuat.js?v=235';
+import * as EKL from './eklenti.js?v=235';
+import { nakitDekontHtml, nakitDekontBagla, nakitDekontOku, fotoAl, hesapSecici, hesapOku, wpGonder, tahsilAl, ekDersOner, kisiListe, odemeBilgisi, yorumMetni, alici, mudurMu, bildirimler } from './sayfalar1.js?v=235';
+import { denetimEksikleri, mebSiraBaslat } from './sayfalar3.js?v=235';
+import * as OZ from './ozellik.js?v=235';
+import * as EP from './eposta.js?v=235';
+import { kurallariHazirla, zamanliKural, kuralSaati, ornekGonder, zamanlayiciCalistir, kuyruguGonder, gidecekler } from './zamanlayici.js?v=235';
+import * as MM from './mesaj.js?v=235';
+import * as BL from './bulut.js?v=235';
+import * as KR from './kurallar.js?v=235';
+import * as CR from './cari.js?v=235';
+import { destekWa } from './iletisim.js?v=235';
+import * as S5L from './sayfalar5.js?v=235';
+import { SINIF_VARSAYILAN, gecisSatirlari, DERS_SAAT_VARSAYILAN, planAyar, gerekliDireksiyon, geceGerekli, geceDersMi, geceBaslangic, mebIsGunuSay, mebIsGunuGeri, sinavHakSiniri, DERS_KURAL_TARIH, kuralAyar, mebKurum, programAcik, varsayilanYontem, kdvOrani, KDV_EGITIM, KDV_GENEL, saklamaYili, saklamaBitti, faizAyar, FAIZ_UYARI, FAIZ_YONTEM, YASAL_FAIZ_VARSAYILAN } from './veri.js?v=235';
+import { listeAdi, gecerlilikMetni, satirAdi as satirAdiT } from './taban.js?v=235';
+import * as RK from './rapor-kasa.js?v=235';
+import * as GR from './gruplar.js?v=235';
+import * as PS from './psikoteknik.js?v=235';
+import * as HV from './sinavhavuz.js?v=235';
+import * as SG from './sinavgunu.js?v=235';
+import * as TY from './teorikyol.js?v=235';
+import * as PK from './personel.js?v=235';
 
 const durum = { sinav: 'yaklasan', kasa: 'hareket', filo: 'arac', mesaj: 'gelen', meb: 'aktarim', ayar: 'kurs' };
 let secSohbet = null, gecmisKim = '', sohbetAcik = false;
@@ -94,7 +94,7 @@ export function sinavlar(alt) {
         const h = t.closest('[data-hatir]'); if (h) sinavHatirlat(sbSinav(S.sinavlar).find(x => x.id === h.dataset.hatir));
         { const sk = t.closest('[data-su-kip]'); if (sk) { const [kid, sid] = sk.dataset.suKip.split('|'), k = kursiyer(kid), s2 = S.sinavlar.find(x => x.id === sid); if (!k || !s2) return; k.sinavKip = { ...(k.sinavKip || {}) }; delete k.sinavKip[sid]; if (sinavUcretKip() === 'aday') k.sinavKip[sid] = 'kurs'; sinavUcreti(k, s2); islem('Sınav ücretini kurs yatırır yaptı', tamAd(k)); kaydet(); return yenile(); } }
         { const se = t.closest('[data-su-ekle]'); if (se) { const [kid, sid] = se.dataset.suEkle.split('|'), k = kursiyer(kid), s2 = S.sinavlar.find(x => x.id === sid); if (!k || !s2) return; sinavUcreti(k, s2); kaydet(); return yenile(); } }
-        { const st = t.closest('[data-su-tahsil]'); if (st) { const [kid, j] = st.dataset.suTahsil.split('|'), k = kursiyer(kid); if (k) return import('./sayfalar1.js?v=234').then(m => m.ekKalemTahsil(k, +j)); } }
+        { const st = t.closest('[data-su-tahsil]'); if (st) { const [kid, j] = st.dataset.suTahsil.split('|'), k = kursiyer(kid); if (k) return import('./sayfalar1.js?v=235').then(m => m.ekKalemTahsil(k, +j)); } }
         { const sd = t.closest('[data-su-dekont]'); if (sd) { const s2 = S.sinavlar.find(x => x.id === sd.dataset.suDekont); if (!s2) return; const d = s2.dekont || {};
           return pencere({ baslik: 'Döner sermaye dekontu · ' + tarih(s2.tarih), taslak: false, icerik: `<form id="f-dk" class="form-izgara"><div class="alan"><label for="dk-no">Dekont no</label><input id="dk-no" name="no" value="${e(d.no || '')}"></div><div class="alan"><label for="dk-t">Tutar (₺)</label><input id="dk-t" name="tutar" inputmode="numeric" value="${e(d.tutar || '')}"></div><div class="alan"><label for="dk-tr">Yatırma tarihi</label><input id="dk-tr" name="tarih" type="date" value="${e(d.tarih || gun(0))}" max="${gun(0)}"></div>${S.kurs.sinavHesap && S.kurs.sinavHesap.iban ? `<p class="tam" style="font-size:13px;color:var(--soluk)">Hesap: ${e(S.kurs.sinavHesap.banka || '')} · <span class="num">${e(S.kurs.sinavHesap.iban)}</span></p>` : ''}
               <fieldset class="tam su-kipler"><legend>Ücreti kendisi yatıran adaylar</legend><small>İşaretli aday kurs borcuna yazılmaz, listeye ve dekont tutarına girmez.</small>${s2.kursiyerler.map(kursiyer).filter(Boolean).map(k => `<label><input type="checkbox" name="kendi" value="${e(k.id)}" ${(((k.sinavKip || {})[s2.id]) || sinavUcretKip()) === 'aday' ? 'checked' : ''}> ${e(tamAd(k))}</label>`).join('')}</fieldset></form>`,
@@ -424,7 +424,7 @@ export function kasa(alt) {
       if (durum.kasa === 'analiz') RK.analizBaglan(k, yenile);
       if (durum.kasa === 'cari') CR.cariBagla(k, yenile);
       k.addEventListener('change', ev => { const x = ev.target.closest('[data-hs]'); if (!x) return; hrSuzgec[x.dataset.hs] = x.value; yenile(); });
-      k.addEventListener('change', ev => { const x = ev.target.closest('[data-ekstre]'); if (!x || !x.files || !x.files[0]) return; const d = x.files[0]; x.value = ''; import('./ekstre.js?v=234').then(m => m.ekstreYukle(d, yenile)); });  // PAR-055
+      k.addEventListener('change', ev => { const x = ev.target.closest('[data-ekstre]'); if (!x || !x.files || !x.files[0]) return; const d = x.files[0]; x.value = ''; import('./ekstre.js?v=235').then(m => m.ekstreYukle(d, yenile)); });  // PAR-055
       const sy = k.querySelector('#sayim'); if (sy) sy.addEventListener('input', () => { const f = (tutarOku(sy.value) || 0) - +sy.placeholder; k.querySelector('#sayim-fark').innerHTML = sy.value ? (f ? `<b style="color:var(--kirmizi)">Fark ${f > 0 ? '+' : ''}${tl(f)}</b>` : '<b style="color:var(--yesil)">Kasa tutuyor</b>') : ''; });
       k.addEventListener('click', ev => {
         const t = ev.target;
@@ -454,7 +454,7 @@ export function kasa(alt) {
           altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-k>Kaydet</button>', onAc(p) { p.querySelector('[data-k]').addEventListener('click', () => { const v = tutarOku(p.querySelector('[name=v]').value), tt = p.querySelector('[name=t]').value || gun(0); hs.bakiye = v; hs.acilis = tt; islem('Açılış bakiyesini girdi', hs.ad + ' · ' + tl(v) + ' · ' + tt); kaydet(); kapatPencere(); bildir('Açılış bakiyesi kaydedildi'); yenile(); }); } }); }
         const hd = t.closest('[data-h-duz]'); if (hd) hareketDuzelt(S.hareket.find(x => x.id === hd.dataset.hDuz));
         const bk = t.closest('[data-bankaya]'); if (bk) { const h = S.hareket.find(x => x.id === bk.dataset.bankaya); if (h) bankayaPenceresi(h); }
-        const sn = t.closest('[data-senet]'); if (sn) import('./sayfalar3.js?v=234').then(m => m.belgeAc('senet', sn.dataset.senet));
+        const sn = t.closest('[data-senet]'); if (sn) import('./sayfalar3.js?v=235').then(m => m.belgeAc('senet', sn.dataset.senet));
         const senetBul = el => { const [kid, i] = el.split('|'), k = kursiyer(kid); return { k, i: +i, t: k.odeme.taksitler[+i] }; };
         const sti = t.closest('[data-senet-tahsil]'); if (sti) { const { k, i } = senetBul(sti.dataset.senetTahsil); return tahsilAl(k, i); }
         const sih = t.closest('[data-senet-ihtar]'); if (sih) { const { k, i, t: tk } = senetBul(sih.dataset.senetIhtar); tk.senetTakip = [{ durum: 'Hatırlatıldı', tarih: gun(0) }, ...(tk.senetTakip || [])]; islem('Senet hatırlatması gönderdi', tamAd(k) + ' · ' + (i + 1) + '. senet'); kaydet(); wpGonder(k, `${selam(k)} ${tamTarih(tk.vade)} vadeli ${tl(tk.tutar - (tk.kismi || 0))} tutarındaki senedinizin ödemesi gecikmiş görünüyor. En geç 7 gün içinde ödeme yapmanızı rica ederiz; aksi hâlde senet yasal takibe verilecektir. ${odemeBilgisi(k)}`, 'Senet hatırlatması'); return yenile(); }
@@ -463,7 +463,7 @@ export function kasa(alt) {
         { const gk = t.closest('[data-gun-kapat]'); if (gk) return gunYenidenKapat(gk.dataset.gunKapat); }
         if (t.closest('[data-gunsonu]')) { const sy = k.querySelector('#sayim'); if (!sy.value.trim()) { sy.focus(); return bildir('Önce kasadaki nakdi sayıp yazın', 'uyari'); } const bek = +sy.placeholder, say = tutarOku(sy.value), fk = say - bek; S.gunSonu.push(gun(0)); islem('Günü kapattı', 'Sayım ' + tl(say) + (fk ? ' · fark ' + tl(fk) : ' · fark yok')); kaydet(); const bh = sb(S.hareket).filter(h => h.tarih === gun(0)), gel = bh.filter(h => h.tur === 'Gelir').reduce((a, h) => a + h.tutar, 0), gid = bh.filter(h => h.tur === 'Gider').reduce((a, h) => a + h.tutar, 0); const gs = RK.gunSonuHesap(gun(0)); const ozet = `${S.kurs.ad} · ${tamTarih(gun(0))} gün sonu\nTahsilat: ${tl(gel)} (${bh.filter(h => h.tur === 'Gelir').length} işlem)\nGider: ${tl(gid)}\nCiro: ${tl(gs.ciro)} · Masraf: ${tl(gs.masraf)}\nGünlük kasa: ${tl(gs.gunluk)}\nKasa sayımı: ${tl(say)}${fk ? ' · fark ' + tl(fk) : ' · fark yok'}\nDevreden kasa: ${tl(say)}\nKapatan: ${oturum.kullanici ? oturum.kullanici.ad : ''}`; yenile(); EP.gunlukRapor(gun(0), { say, fark: fk, ciro: gs.ciro, masraf: gs.masraf, gunluk: gs.gunluk }).catch(() => { }); if (waAc(mudurTel(), ozet, 'WhatsApp', S.kurs.yetkili, false, 'MÜDÜR', 'Gün sonu') !== 'api') bildir(mudurTel() ? 'Gün kapatıldı; özet kursun WhatsApp hattına hazır' : 'Gün kapatıldı. Özeti göndereceğiniz kişiyi WhatsApp’ta seçin', 'wp'); }
         if (t.closest('[data-fatura]')) faturaKes();
-        { const fg = t.closest('[data-fatura-gor]'); if (fg) return import('./sayfalar3.js?v=234').then(m => m.belgeAc('fatura', fg.dataset.faturaGor)); }
+        { const fg = t.closest('[data-fatura-gor]'); if (fg) return import('./sayfalar3.js?v=235').then(m => m.belgeAc('fatura', fg.dataset.faturaGor)); }
         { const fi = t.closest('[data-fatura-iptal]'); if (fi) return faturaIptal(fi.dataset.faturaIptal); }
         if (t.closest('[data-eksik-faturala]')) return eksikFaturala();
         { const gy = t.closest('[data-gp-yaz]'); if (gy) return giderPusulasiYazdir(gy.dataset.gpYaz); }
@@ -757,7 +757,7 @@ function faturaKes() {
     altlik: `<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-kes>${taslak ? 'Taslağı hazırla' : 'Faturayı kes'}</button>`,
     onAc(d) {
       const ilk = d.querySelector('[name=h]:not([disabled])'); if (ilk) ilk.checked = true;
-      d.querySelectorAll('[data-fatura-ac]').forEach(b => b.addEventListener('click', ev => { ev.preventDefault(); import('./sayfalar3.js?v=234').then(m => m.belgeAc('fatura', b.dataset.faturaAc)); }));
+      d.querySelectorAll('[data-fatura-ac]').forEach(b => b.addEventListener('click', ev => { ev.preventDefault(); import('./sayfalar3.js?v=235').then(m => m.belgeAc('fatura', b.dataset.faturaAc)); }));
       d.querySelector('[data-kes]').addEventListener('click', async ev => {
         const sec = d.querySelector('[name=h]:checked'); if (!sec) return bildir('Faturası kesilmemiş bir tahsilat seçin', 'uyari');
         const h = S.hareket.find(x => x.id === sec.value), k = kursiyer(h.kursiyer);
@@ -767,13 +767,13 @@ function faturaKes() {
         const yil = gun(0).slice(0, 4), seri = (g.earsiv.seri || 'SNY').toUpperCase().slice(0, 3);
         const enBuyuk = Math.max(0, ...S.faturalar.filter(f => String(f.no).startsWith(seri + yil)).map(f => +String(f.no).slice(seri.length + 4) || 0));
         let sira = enBuyuk + 1;
-        if (S._bulut) { const btn = ev.currentTarget; btn.disabled = true; try { sira = await (await import('./bulut.js?v=234')).faturaNoAyir(seri, yil, enBuyuk); } catch (x) { btn.disabled = false; return bildir('Fatura numarası için internet bağlantısı gerekiyor; bağlantıyı kontrol edip yeniden deneyin', 'uyari'); } btn.disabled = false; }
+        if (S._bulut) { const btn = ev.currentTarget; btn.disabled = true; try { sira = await (await import('./bulut.js?v=235')).faturaNoAyir(seri, yil, enBuyuk); } catch (x) { btn.disabled = false; return bildir('Fatura numarası için internet bağlantısı gerekiyor; bağlantıyı kontrol edip yeniden deneyin', 'uyari'); } btn.disabled = false; }
         const no = seri + yil + String(sira).padStart(9, '0');
         const ettn = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())).toUpperCase();
         S.faturalar.push({ no, ettn, tarih: gun(0), kursiyer: k.id, hareket: h.id, tutar: h.tutar, kdv: kdvOrani(k.sinif), aciklama: sinifEtiket(k.sinif, k) + (egitimSinifi(k.sinif) ? ' · sürücü kursu eğitim hizmeti' : ' sertifika eğitimi · sürücü kursu eğitim hizmeti') + (h.kategori && h.kategori !== 'Kurs ücreti' ? ' · ' + h.kategori.toLowerCase() : ''), yontem: h.yontem, odemeTarih: h.tarih, durum: taslak ? 'taslak' : 'sira' });
         h.fatura = no; islem('Fatura kesti', no + ' · ' + tamAd(k) + ' · ' + tl(h.tutar)); kaydet();
         bildir((taslak ? 'Fatura taslağı ' : 'Fatura ') + no + (taslak ? ' hazırlandı' : ' kesildi')); yenile();
-        import('./sayfalar3.js?v=234').then(m => m.belgeAc('fatura', no));
+        import('./sayfalar3.js?v=235').then(m => m.belgeAc('fatura', no));
       });
     },
   });
@@ -1093,7 +1093,7 @@ export function filo(alt) {
           return pencere({ baslik: a.plaka + ' filodan çıkarılsın mı?', icerik: `<p style="font-size:14.5px">MEBBİS’te hizmet dışı görünüyor. Filodan çıkarılınca planda ve araç listelerinde görünmez; kayıtları arşivde kalır.</p>`, altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-evet>Filodan çıkar</button>', onAc(d) { d.querySelector('[data-evet]').addEventListener('click', () => { arsivle('arac', a); S.araclar = S.araclar.filter(x => x !== a); islem('Hizmet dışı aracı filodan çıkardı', a.plaka); kaydet(); kapatPencere(); bildir(a.plaka + ' filodan çıkarıldı'); yenile(); }); } }); }
         const ud = t.closest('[data-usta-duzenle]'); if (ud) return ustaDuzenle(ud.dataset.ustaDuzenle);
         // PER-008: çalışma izni hatırlatmaları takvim dosyası (.ics) olarak; yeniden alınınca etkinlikler çoğalmaz, güncellenir
-        { const ic = t.closest('[data-usta-ics]'); if (ic) { const x = egitmen(ic.dataset.ustaIcs), bit = izinBitisi(x); if (!x || !bit) return; return import('./ics.js?v=234').then(m => { const n = m.icsIndir(`calisma-izni-${x.ad.toLocaleLowerCase('tr').replace(/[^a-z0-9çğıöşü]+/g, '-')}.ics`, m.izinOlaylari(x, bit, S.kurs.ad), 'mdSinyal · çalışma izinleri'); bildir(n ? `Takvim dosyası indirildi: ${n} hatırlatma (09:00). Açınca telefonun takvimine eklenir; yeniden eklerseniz çoğalmaz.` : 'Hatırlatma günleri geçmiş; eklenecek etkinlik yok', n ? 'tamam' : 'uyari'); }); } }
+        { const ic = t.closest('[data-usta-ics]'); if (ic) { const x = egitmen(ic.dataset.ustaIcs), bit = izinBitisi(x); if (!x || !bit) return; return import('./ics.js?v=235').then(m => { const n = m.icsIndir(`calisma-izni-${x.ad.toLocaleLowerCase('tr').replace(/[^a-z0-9çğıöşü]+/g, '-')}.ics`, m.izinOlaylari(x, bit, S.kurs.ad), 'mdSinyal · çalışma izinleri'); bildir(n ? `Takvim dosyası indirildi: ${n} hatırlatma (09:00). Açınca telefonun takvimine eklenir; yeniden eklerseniz çoğalmaz.` : 'Hatırlatma günleri geçmiş; eklenecek etkinlik yok', n ? 'tamam' : 'uyari'); }); } }
         // PER-010: MEBBİS OOK13002 'Çalışma İzni Ekle' formunu Yardımcı karttaki bilgilerle doldurur ("Ekranda doldur"); güvenlik kodu, fotoğraf, Kaydet kullanıcıda
         { const zi = t.closest('[data-usta-izin-iste]'); if (zi) { const x = egitmen(zi.dataset.ustaIzinIste); if (!x) return; const is = EKL.izinIsi(x), var_ = new Set(is.alanlar.map(a => a.etiket));
           const eksik = [['Tc Kimlik No', 'T.C. kimlik no'], ['Seri No', 'kimlik kartı seri no'], ['Doğum Tarihi', 'doğum tarihi'], ['Cep Telefonu', 'cep telefonu'], ['Statüsü', 'MEBBİS statüsü']].filter(([k]) => !var_.has(k)).map(([, a]) => a);
@@ -1294,13 +1294,13 @@ export function meb(alt) {
         const s = t.closest('[data-sekme]'); if (s) { durum.meb = s.dataset.sekme; if (location.hash !== '#/meb') location.hash = '#/meb'; else yenile(); }
         if (t.closest('[data-evrak-toplu]')) { const ml = x => `${selam(x)} kaydınızı tamamlamak için şu evraklar eksik: ${eksikEvrak(x).map(z => z[1].toLocaleLowerCase('tr')).join(', ')}. ${kursAdi('e')} getirebilir ya da fotoğraflarını buraya gönderebilirsiniz.`; waSirali(kisiListe(eksik, ml), 'Eksik evrak hatırlatması'); }
         const c = t.closest('[data-csv]'); if (c) { csvIndir('esinav-basvuru.csv', [['TC', 'Ad', 'Soyad', 'Telefon', 'Sınıf', 'Teorik saat'], ...esinav.map(x => [x.tc, x.ad, x.soyad, x.tel, SINIFLAR[x.sinif].ad, x.teorik])]); bildir('Liste indirildi'); }
-        if (t.closest('[data-denetim-dosya]')) import('./sayfalar3.js?v=234').then(m => m.belgeAc('denetim'));
+        if (t.closest('[data-denetim-dosya]')) import('./sayfalar3.js?v=235').then(m => m.belgeAc('denetim'));
       });
       if (durum.meb === 'mutabakat') OZ.mutabakatBaglan(k);
       k.addEventListener('click', ev => {
         const t = ev.target;
-        if (t.closest('[data-program]')) import('./sayfalar3.js?v=234').then(m => m.programPenceresi());
-        const sb = t.closest('[data-sinav-bildir]'); if (sb) import('./sayfalar3.js?v=234').then(m => m.sinavBildirimPenceresi(sb.dataset.sinavBildir));
+        if (t.closest('[data-program]')) import('./sayfalar3.js?v=235').then(m => m.programPenceresi());
+        const sb = t.closest('[data-sinav-bildir]'); if (sb) import('./sayfalar3.js?v=235').then(m => m.sinavBildirimPenceresi(sb.dataset.sinavBildir));
       });
     },
   };
@@ -1412,7 +1412,7 @@ function hatBaglaPenceresi() {
         const govde = { phoneId: v('phoneId'), token: v('token'), wabaId: v('wabaId'), sablon: v('sablon'), sablonPazarlama: v('sablonPazarlama'), appSecret: v('appSecret'), pin: v('pin') };
         if (!govde.phoneId || !govde.token) return bildir('Telefon numarası kimliği ve erişim anahtarı gerekli', 'uyari');
         ev.target.disabled = true; ev.target.textContent = 'Doğrulanıyor…';
-        import('./bulut.js?v=234').then(B => B.waHat(govde).then(j => {
+        import('./bulut.js?v=235').then(B => B.waHat(govde).then(j => {
           S.kurs.waHat = { no: j.no, ad: j.ad, ...(j.sablon ? { sablon: j.sablon } : {}) }; S.kurs.waApi = B.WORKER; S.kurs.waApiVarsayilan = false; delete S.kurs.demoNumara;
           islem('WhatsApp hattını bağladı', j.no); kaydet(); kapatPencere(); yenile(); hatSonucPenceresi(j);
         }))
@@ -1443,7 +1443,7 @@ const imhaListesi = () => S.kursiyerler.filter(k => !k.anonim && k.dsinav && k.d
 // Öğrenci uygulaması hesabı ve kişisel linki kapatılır; ders imzaları, konumlar, notlar, yüklenen belgeler; kasa ve mesaj kayıtlarındaki ad da silinir.
 async function anonimlestir(k) {
   const ad = tamAd(k);
-  if (k.hesap || k.panelKod) { try { const B = await import('./bulut.js?v=234'); await B.ogrenciHesapKapat(k); } catch (x) { } }
+  if (k.hesap || k.panelKod) { try { const B = await import('./bulut.js?v=235'); await B.ogrenciHesapKapat(k); } catch (x) { } }
   ['tel', 'tc', 'adres', 'dogumTarihi', 'dogum', 'eposta', 'veli', 'foto', 'evrakFoto', 'evrakYuklenen', 'dogrulama', 'saglikRapor', 'adliSicil', 'acil', 'notlar', 'ozelNotlar', 'ozelNot', 'ozelNotTarih', 'sozlesmeImza', 'kvkk', 'ogrenim', 'cinsiyet', 'hesap', 'hesapAktif', 'panelKod', 'sonGiris', 'babaAdi', 'anaAdi', 'dogumYeri',
     // MEBBİS'ten gelen ve MEB evrakı için girilen kişisel bilgiler (v198–v203): nüfus, önceki belge, sağlık/adli sicil/öğrenim, kimlik doğrulama fotoğrafı, evrak PDF'leri, MEBBİS kayıt dökümü
     'mebEvrak', 'mebEvrakGirildi', 'nufus', 'oncekiBelge', 'dogrulamaFoto', 'evrakPdf', 'fotoTarih', 'meb', 'mebNo', 'mebEsinav'].forEach(x => delete k[x]);
@@ -1695,7 +1695,7 @@ export function ayarlar(alt) {
       k.addEventListener('click', async ev => {
         { const ta = ev.target.closest('[data-tarife-ac]'); if (ta) return tarifeGoster(ta.dataset.tarifeAc); }
         if (ev.target.closest('[data-tarife-kaydet]')) { if (!mudurMu()) return bildir('Yalnız kurs müdürü', 'uyari'); const y = gun(0).slice(0, 4); S.kurs.tarifeArsiv = { ...(S.kurs.tarifeArsiv || {}), [y]: tarifeAnlik() }; islem('Ücret tarifesini kaydetti', y); kaydet(); bildir(y + ' tarifesi kaydedildi'); return yenile(); }
-        { const td = ev.target.closest('[data-taban-destek]'); if (td) return import('./app.js?v=234').then(m => m.destekPenceresi(td.dataset.tabanDestek)); }  // PAR-069
+        { const td = ev.target.closest('[data-taban-destek]'); if (td) return import('./app.js?v=235').then(m => m.destekPenceresi(td.dataset.tabanDestek)); }  // PAR-069
         { const sm = ev.target.closest('[data-sinif-mevzuat]'), so = ev.target.closest('[data-sinif-onay]'); if (sm || so) { if (!mudurMu()) return bildir('Yalnız kurs müdürü', 'uyari'); const k = (sm || so).dataset[sm ? 'sinifMevzuat' : 'sinifOnay'];
           if (sm) { const v = +SINIF_VARSAYILAN[k].direksiyon; S.kurs.siniflar = S.kurs.siniflar || {}; sinifKaydet(k, { direksiyon: v }); islem('Sınıf direksiyon saatini mevzuat değerine döndürdü', k + ' · ' + v); bildir(`${k} sınıfı ${v} saat (mevzuat)`); }
           else { S.kurs.sinifFarkOnay = { ...(S.kurs.sinifFarkOnay || {}), [k]: SINIFLAR[k].direksiyon + '/' + SINIF_VARSAYILAN[k].direksiyon }; islem('Sınıf direksiyon saatini onayladı (mevzuattan farklı)', k + ' · ' + SINIFLAR[k].direksiyon); bildir('Onaylandı; sizin ya da mevzuatın değeri değişirse yeniden sorulur'); }
@@ -1712,8 +1712,8 @@ export function ayarlar(alt) {
       });
       k.addEventListener('click', ev => {
         const s = ev.target.closest('[data-sekme]'); if (s) { durum.ayar = s.dataset.sekme; yenile(); }
-        if (ev.target.closest('[data-sunum-ekle]') && (!S._bulut || S.kurs.sunumAcik)) return import('./sunum.js?v=234').then(m => { const r = m.sunumVerisiEkle(); if (!r.ok) return bildir(r.hata, 'uyari'); kaydet(); bildir(`Sunum verisi eklendi: ${r.k.ad} · ${r.h.ad}. Öğretmen ekranında bugünkü dersler hazır`); yenile(); });
-        if (ev.target.closest('[data-sunum-kaldir]')) return import('./sunum.js?v=234').then(m => { m.sunumVerisiKaldir(); kaydet(); bildir('Sunum verisi kaldırıldı; öğrencinin önceki bilgileri geri geldi'); yenile(); });
+        if (ev.target.closest('[data-sunum-ekle]') && (!S._bulut || S.kurs.sunumAcik)) return import('./sunum.js?v=235').then(m => { const r = m.sunumVerisiEkle(); if (!r.ok) return bildir(r.hata, 'uyari'); kaydet(); bildir(`Sunum verisi eklendi: ${r.k.ad} · ${r.h.ad}. Öğretmen ekranında bugünkü dersler hazır`); yenile(); });
+        if (ev.target.closest('[data-sunum-kaldir]')) return import('./sunum.js?v=235').then(m => { m.sunumVerisiKaldir(); kaydet(); bildir('Sunum verisi kaldırıldı; öğrencinin önceki bilgileri geri geldi'); yenile(); });
         if (ev.target.closest('[data-kisa-kopyala]')) { const l = 'https://mdsinyal.com/' + S.kurs.kisaAd; try { navigator.clipboard.writeText(l); bildir('Link kopyalandı: ' + l); } catch (x) { bildir(l); } return; }
         if (ev.target.closest('[data-kisa-ad]')) {
           if (!mudurMu()) return bildir('Kısa linki yalnız kurs müdürü belirler', 'uyari');
@@ -1722,7 +1722,7 @@ export function ayarlar(alt) {
           // sitenin kendi adresleri kursa verilmez (belgeler/link-standardi.md; sunucu da aynı listeyi denetler)
           if (['ozellikler', 'iletisim', 'giris', 'gizlilik', 'eklenti', 'fonts', 'demo', 'yonetim', 'sinyal', 'mdsinyal', 'admin', 'destek', 'kayit', 'blog', 'ogrenci', 'ogretmen', 'hesap', 'sifre', 'davet', 'imza', 'prototip'].includes(ad)) { bildir('Bu ad mdSinyal sayfalarına ayrılmış; başka bir ad seçin', 'uyari'); return i.focus(); }
           const b = ev.target.closest('[data-kisa-ad]'); b.disabled = true;
-          return import('./bulut.js?v=234').then(B => { const wp = String(S.kurs.wp || S.kurs.tel || '').replace(/\D/g, '').replace(/^0/, '90'); const hedef = 'https://mdsinyal.com/#/kapi?k=' + encodeURIComponent(B.bulut.kurs) + '&ad=' + encodeURIComponent(S.kurs.ad || '') + (wp ? '&wp=' + wp : ''); return B.kisaAdAyarla(ad, hedef); })
+          return import('./bulut.js?v=235').then(B => { const wp = String(S.kurs.wp || S.kurs.tel || '').replace(/\D/g, '').replace(/^0/, '90'); const hedef = 'https://mdsinyal.com/#/kapi?k=' + encodeURIComponent(B.bulut.kurs) + '&ad=' + encodeURIComponent(S.kurs.ad || '') + (wp ? '&wp=' + wp : ''); return B.kisaAdAyarla(ad, hedef); })
             .then(() => { S.kurs.kisaAd = ad; islem('Kursa özel linki belirledi', 'mdsinyal.com/' + ad); kaydet(); bildir('Link hazır: mdsinyal.com/' + ad); yenile(); })
             .catch(x => { b.disabled = false; bildir(x.kullanici || x.message, 'uyari'); });
         }
@@ -1731,11 +1731,11 @@ export function ayarlar(alt) {
         if (ev.target.closest('[data-api-dene]')) { const u = k.querySelector('[name=waApi]').value.trim(); if (!/^https:\/\//.test(u)) return bildir('https:// ile başlayan adresi girin', 'uyari'); fetch(u).then(r => r.json()).then(j => bildir(j.hazir ? 'Bağlantı hazır; kaydedip mesaj gönderebilirsiniz' : 'Servis çalışıyor ama erişim anahtarı (WA_TOKEN) eksik', j.hazir ? 'tamam' : 'uyari')).catch(() => bildir('Servise ulaşılamadı; adresi kontrol edin', 'uyari')); }
         if (ev.target.closest('[data-anonim]')) { if (!mudurMu()) return bildir('Yalnız müdür yapabilir', 'uyari'); const l = imhaListesi(); pencere({ baslik: 'Süresi dolanları anonimleştir', icerik: `<p style="font-size:14.5px">${l.length} kursiyerin adı, telefonu, TC kimlik numarası, adresi, evrak fotoğrafları, ders imzaları, konumları ve notları silinir; öğrenci uygulaması hesabı kapanır. Ödeme ve ders kayıtları isimsiz olarak kalır. <b>Bu işlem geri alınamaz.</b></p>`, altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" data-anonim-onay>Anonimleştir</button>', onAc(d) { d.querySelector('[data-anonim-onay]').addEventListener('click', async () => { d.querySelector('[data-anonim-onay]').disabled = true; for (const k of l) await anonimlestir(k); islem('Saklama süresi dolan kayıtları anonimleştirdi', l.length + ' kursiyer'); kaydet(); kapatPencere(); bildir(l.length + ' kayıt anonimleştirildi'); yenile(); }); } }); }
         // MSJ-025: Netgsm SMS hesabı (kimlik bilgileri yalnız sunucuda)
-        if (ev.target.closest('[data-sms-bagla]')) { if (!mudurMu()) return bildir('Yalnız kurs müdürü', 'uyari'); return pencere({ baslik: 'Netgsm SMS hesabını bağla', icerik: `<form class="form-izgara" id="f-sms"><div class="alan"><label>Kullanıcı kodu</label><input name="kullanici" inputmode="numeric" maxlength="10" placeholder="850xxxxxxx" autocomplete="off"></div><div class="alan"><label>API şifresi</label><input name="sifre" type="password" autocomplete="new-password"></div><div class="alan tam"><label>SMS başlığı</label><input name="baslik" maxlength="11" placeholder="Netgsm’de onaylı gönderici adı" autocomplete="off"></div></form><p style="font-size:13px;color:var(--soluk);margin-top:8px">Netgsm panelinde API erişimini açın (gerekirse IP kısıtını kaldırın). Ticari (tanıtım) SMS için İYS kaydı gerekir.</p>`, altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-sms">Bağla</button>', onAc(d) { d.querySelector('form').addEventListener('submit', ev2 => { ev2.preventDefault(); const f = ev2.target; import('./bulut.js?v=234').then(B => B.smsHat({ kullanici: f.kullanici.value, sifre: f.sifre.value, baslik: f.baslik.value })).then(j => { S.kurs.smsBagli = { baslik: j.baslik }; islem('SMS hesabını bağladı', j.baslik); kaydet(); kapatPencere(); bildir('SMS hesabı bağlandı'); yenile(); }).catch(x => bildir(x.message, 'uyari')); }); } }); }
-        if (ev.target.closest('[data-sms-kaldir]')) { if (!mudurMu()) return bildir('Yalnız kurs müdürü', 'uyari'); return import('./bulut.js?v=234').then(B => B.smsHat({ sil: true })).then(() => { delete S.kurs.smsBagli; islem('SMS hesabının bağlantısını kaldırdı'); kaydet(); bildir('SMS bağlantısı kaldırıldı'); yenile(); }).catch(x => bildir(x.message, 'uyari')); }
-        if (ev.target.closest('[data-hat-bilgi]')) { if (!mudurMu()) return bildir('Yalnız kurs müdürü', 'uyari'); import('./bulut.js?v=234').then(B => B.waHat()).then(j => hatSonucPenceresi({ ...j, no: j.no || (S.kurs.waHat || {}).no || '', uyarilar: [] })).catch(x => bildir(x.kullanici || x.message, 'uyari')); return; }
+        if (ev.target.closest('[data-sms-bagla]')) { if (!mudurMu()) return bildir('Yalnız kurs müdürü', 'uyari'); return pencere({ baslik: 'Netgsm SMS hesabını bağla', icerik: `<form class="form-izgara" id="f-sms"><div class="alan"><label>Kullanıcı kodu</label><input name="kullanici" inputmode="numeric" maxlength="10" placeholder="850xxxxxxx" autocomplete="off"></div><div class="alan"><label>API şifresi</label><input name="sifre" type="password" autocomplete="new-password"></div><div class="alan tam"><label>SMS başlığı</label><input name="baslik" maxlength="11" placeholder="Netgsm’de onaylı gönderici adı" autocomplete="off"></div></form><p style="font-size:13px;color:var(--soluk);margin-top:8px">Netgsm panelinde API erişimini açın (gerekirse IP kısıtını kaldırın). Ticari (tanıtım) SMS için İYS kaydı gerekir.</p>`, altlik: '<button class="dg dg-cizgi" data-kapat>Vazgeç</button><button class="dg dg-ana" type="submit" form="f-sms">Bağla</button>', onAc(d) { d.querySelector('form').addEventListener('submit', ev2 => { ev2.preventDefault(); const f = ev2.target; import('./bulut.js?v=235').then(B => B.smsHat({ kullanici: f.kullanici.value, sifre: f.sifre.value, baslik: f.baslik.value })).then(j => { S.kurs.smsBagli = { baslik: j.baslik }; islem('SMS hesabını bağladı', j.baslik); kaydet(); kapatPencere(); bildir('SMS hesabı bağlandı'); yenile(); }).catch(x => bildir(x.message, 'uyari')); }); } }); }
+        if (ev.target.closest('[data-sms-kaldir]')) { if (!mudurMu()) return bildir('Yalnız kurs müdürü', 'uyari'); return import('./bulut.js?v=235').then(B => B.smsHat({ sil: true })).then(() => { delete S.kurs.smsBagli; islem('SMS hesabının bağlantısını kaldırdı'); kaydet(); bildir('SMS bağlantısı kaldırıldı'); yenile(); }).catch(x => bildir(x.message, 'uyari')); }
+        if (ev.target.closest('[data-hat-bilgi]')) { if (!mudurMu()) return bildir('Yalnız kurs müdürü', 'uyari'); import('./bulut.js?v=235').then(B => B.waHat()).then(j => hatSonucPenceresi({ ...j, no: j.no || (S.kurs.waHat || {}).no || '', uyarilar: [] })).catch(x => bildir(x.kullanici || x.message, 'uyari')); return; }
         if (ev.target.closest('[data-hat-bagla]')) { if (!mudurMu()) return bildir('WhatsApp hattını yalnız kurs müdürü bağlar', 'uyari'); return hatBaglaPenceresi(); }
-        if (ev.target.closest('[data-hat-kaldir]')) { if (!mudurMu()) return bildir('Yalnız kurs müdürü', 'uyari'); import('./bulut.js?v=234').then(B => B.waHat({ sil: true })).then(() => { delete S.kurs.waHat; S.kurs.waApi = ''; islem('WhatsApp hattının bağlantısını kaldırdı'); kaydet(); bildir('WhatsApp hattı kaldırıldı; mesajlar hazır metinle açılacak'); yenile(); }).catch(x => bildir(x.kullanici || x.message, 'uyari')); return; }
+        if (ev.target.closest('[data-hat-kaldir]')) { if (!mudurMu()) return bildir('Yalnız kurs müdürü', 'uyari'); import('./bulut.js?v=235').then(B => B.waHat({ sil: true })).then(() => { delete S.kurs.waHat; S.kurs.waApi = ''; islem('WhatsApp hattının bağlantısını kaldırdı'); kaydet(); bildir('WhatsApp hattı kaldırıldı; mesajlar hazır metinle açılacak'); yenile(); }).catch(x => bildir(x.kullanici || x.message, 'uyari')); return; }
         if (ev.target.closest('[data-ucret-onay]')) { if (!mudurMu()) return bildir('Yalnız müdür onaylar', 'uyari'); S.kurs.ucretOnay = gun(0); islem('Sınıf ücretlerini onayladı'); kaydet(); bildir('Ücretler onaylandı'); return yenile(); }
         if (ev.target.closest('[data-kd-olustur]')) { const not = (k.querySelector('[data-kd-not]') || {}).value || ''; const yer = k.querySelector('[data-kd-sonuc]'); yer.textContent = 'Oluşturuluyor…'; return BL.kursDavetOlustur(not).then(d => { islem('Kurs hesabı linki oluşturdu', not); kaydet(); yer.innerHTML = `<p style="font-size:13.5px;word-break:break-all;background:var(--panel-2);border-radius:8px;padding:10px 12px">${e(d.link)}</p><button class="dg dg-cizgi dg-kucuk" style="margin-top:8px" data-kd-kopya="${e(d.link)}">Linki kopyala</button>`; }).catch(x => { yer.textContent = BL.hataMetni(x); }); }
         const kdk = ev.target.closest('[data-kd-kopya]'); if (kdk) { try { navigator.clipboard.writeText(kdk.dataset.kdKopya); bildir('Link kopyalandı'); } catch (x) { bildir(kdk.dataset.kdKopya); } return; }

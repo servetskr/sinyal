@@ -1,8 +1,8 @@
 // MTSK Yönetmeliği md.42 defterleri (RAP-004): gelen-giden evrak kayıt defteri, sertifika defteri, kursiyer yoklama defteri ve dönem sonu yedeği.
 // md.42/3: defter ve dosyalar her eğitim dönemi sonunda yedeklenmek koşuluyla elektronik ortamda tutulabilir. Kayıtlar silinmez; düzeltme işlem kaydına yazılır.
-import { S, kaydet, gun, islem, tamAd, sinifEtiket, oturum, sb, kursiyer } from './veri.js?v=234';
-import { e, pencere, kapatPencere, bildir, belgeYazdir, ik, csvIndir, tarih, rozet, sekmeler } from './ui.js?v=234';
-import * as GR from './gruplar.js?v=234';
+import { S, kaydet, gun, islem, tamAd, sinifEtiket, oturum, sb, kursiyer } from './veri.js?v=235';
+import { e, pencere, kapatPencere, bildir, belgeYazdir, ik, csvIndir, tarih, rozet, sekmeler } from './ui.js?v=235';
+import * as GR from './gruplar.js?v=235';
 
 export const DEFTERLER = [
   ['evrakdefteri', 'Gelen-giden evrak kayıt defteri (md.42)', 'Kursa gelen ve kurstan giden resmî yazılar; yıl içinde sıra numaralı', 'defter'],

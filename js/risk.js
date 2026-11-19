@@ -1,5 +1,5 @@
-import { kayitDondurmaMi, arifeMi, izinDurumu, haftalikSinir, haftaDers, ustaYetkili, S, gun, fark, SINIFLAR, egitmen, kapaliGun, dersAraci, risk, kursAdi } from './veri.js?v=234';
-import { gerekliDireksiyon, kuralAyar, geceKisitli, geceDersMi, dersSaatleri } from './veri.js?v=234';
+import { kayitDondurmaMi, arifeMi, izinDurumu, haftalikSinir, haftaDers, ustaYetkili, S, gun, fark, SINIFLAR, egitmen, kapaliGun, dersAraci, risk, kursAdi } from './veri.js?v=235';
+import { gerekliDireksiyon, kuralAyar, geceKisitli, geceDersMi, dersSaatleri } from './veri.js?v=235';
 
 // B Engelli adayı kendi (raporuna uygun) aracıyla eğitim alıyorsa (MTSK Yön. md.7/5) ders kurs aracı olmadan planlanır (arac: null, "kendi aracı")
 export const kendiAracli = k => !!k && k.sinif === 'B-EN' && !!k.kendiArac;
@@ -65,7 +65,7 @@ export function randevuEngeli(k) {
   return null;
 }
 // Otomatik ders planı (öneri): planlayici.js planOner (DIR-031). Bu sarmal eski çağrılar için: yalnız öneri listesini döndürür.
-export async function otomatikPlan({ gunSay = 7 } = {}) { const P = await import('./planlayici.js?v=234'); return P.planOner({ gunSay }).oneriler; }
+export async function otomatikPlan({ gunSay = 7 } = {}) { const P = await import('./planlayici.js?v=235'); return P.planOner({ gunSay }).oneriler; }
 // Kursiyerin alabileceği boş saatler (kendi dersini alma, iptal sonrası teklif, ders taşıma). Sağlık raporunda gece kısıtı olana gün batımından
 // sonraki saatler sunulmaz (MTSK Yön. md.7/3 son cümle; eyup-sorular-cevaplar.md madde 5).
 export function bosSlotlar(k, gunSay = 7) {

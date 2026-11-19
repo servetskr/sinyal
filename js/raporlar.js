@@ -1,9 +1,9 @@
 // Raporlar merkezi (RAP-009, SOR-085 kararı): Analiz, Raporlar ve Kârlılık tek sayfada sekmelerle.
 // Adres #/raporlar/<sekme>; eski #/analiz/<alt> ve #/karlilik adresleri app.js rota() içinde buraya yönlenir.
-import { sekmeler } from './ui.js?v=234';
-import * as Y2 from './sayfalar2.js?v=234';
-import * as AN from './analiz.js?v=234';
-import * as OZ from './ozellik.js?v=234';
+import { sekmeler } from './ui.js?v=235';
+import * as Y2 from './sayfalar2.js?v=235';
+import * as AN from './analiz.js?v=235';
+import * as OZ from './ozellik.js?v=235';
 
 export const RAPOR_SEKMELERI = [['genel', 'Genel'], ['ogrenci', 'Öğrenciler'], ['usta', 'Usta öğreticiler'], ['kurs', 'Bu ay'], ['karlilik', 'Kârlılık ve kapasite']];
 let sekme = 'genel';

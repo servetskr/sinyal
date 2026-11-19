@@ -1,8 +1,8 @@
 // SNV-031..036, SNV-051, SNV-061: Sınavlar › "Sınava girecekler" havuzu. Yeni veri alanı yok: hepsi hakDurumu, dersBitisi, sinavaUygunluk,
 // telafiDurumu ve k.meb.dosyaOkuma'dan. Seçim kaydedilmez; seçilenler "Sınava yaz" alt sayfasında oturum seçilip uygunluk denetimiyle yazılır.
-import { S, kaydet, gun, fark, tamAd, kursiyer, egitmen, arac, SINIFLAR, sb, hakDurumu, dersBitisi, islem, oturum, kuralAyar } from './veri.js?v=234';
-import { e, ik, rozet, avatar, tarih, tarihUzun, pencere, kapatPencere, bildir, bos, isaret } from './ui.js?v=234';
-import * as KR from './kurallar.js?v=234';
+import { S, kaydet, gun, fark, tamAd, kursiyer, egitmen, arac, SINIFLAR, sb, hakDurumu, dersBitisi, islem, oturum, kuralAyar } from './veri.js?v=235';
+import { e, ik, rozet, avatar, tarih, tarihUzun, pencere, kapatPencere, bildir, bos, isaret } from './ui.js?v=235';
+import * as KR from './kurallar.js?v=235';
 
 const D = { suz: 'hepsi', usta: '', yazili: false, sira: 'bitis', secim: new Set() };
 const MOTO = /^(M|A1|A2|A)$/;
@@ -66,7 +66,7 @@ export function havuzBaglan(kap, yenile) {
     if (t.closest('[data-hv-yazili]')) { D.yazili = !D.yazili; return yenile(); }
     if (t.closest('[data-hv-temizle]')) { D.secim.clear(); return yenile(); }
     if (t.closest('[data-hv-yaz]')) return sinavaYazSayfasi([...D.secim].map(kursiyer).filter(Boolean), yenile);
-    const kr = t.closest('[data-hv-karar]'); if (kr) { const [karar, id] = kr.dataset.hvKarar.split(':'); return import('./sayfalar1.js?v=234').then(m => m.hakKarar(kursiyer(id), karar)); }
+    const kr = t.closest('[data-hv-karar]'); if (kr) { const [karar, id] = kr.dataset.hvKarar.split(':'); return import('./sayfalar1.js?v=235').then(m => m.hakKarar(kursiyer(id), karar)); }
     const ar = t.closest('[data-hv-aradi]'); if (ar) return aramaSayfasi(kursiyer(ar.dataset.hvAradi), yenile); });
 }
 // SNV-036: "Sınava yaz" alt sayfası — gelecekteki Direksiyon oturumları, her birinde "N adaydan M'si uygun"; oturum seçilince aday aday uygunluk
@@ -93,7 +93,7 @@ export function sinavaYazSayfasi(ks, yenile, onSecili) {
       p.querySelector('[data-hv-onay]').addEventListener('click', async () => {
         if (!secS) return bildir('Oturum seçin', 'uyari');
         const ids = [...p.querySelectorAll('[data-hv-aday]:checked:not(:disabled)')].map(x => x.dataset.hvAday); if (!ids.length) return bildir('Uygun aday seçin', 'uyari');
-        const atlanan = ks.filter(k => !ids.includes(k.id)).map(k => ({ k, u: KR.sinavaUygunluk(k, secS) })), S2 = await import('./sayfalar2.js?v=234');
+        const atlanan = ks.filter(k => !ids.includes(k.id)).map(k => ({ k, u: KR.sinavaUygunluk(k, secS) })), S2 = await import('./sayfalar2.js?v=235');
         secS.kursiyerler.push(...ids); ids.map(kursiyer).forEach(k => { k.dsinavPlan = secS.tarih; S2.sinavUcreti(k, secS); D.secim.delete(k.id); });
         islem('Sınava kursiyer yazdı', 'Direksiyon · ' + tarih(secS.tarih) + ' · ' + ids.map(kursiyer).map(tamAd).join(', ')); kaydet(); kapatPencere();
         bildir(`${ids.length} aday ${tarih(secS.tarih)} sınavına yazıldı${atlanan.length ? ` · ${atlanan.length} aday atlandı: ${atlanan.slice(0, 2).map(x => tamAd(x.k).split(' ')[0] + ' (' + (x.u.engel[0] || 'seçilmedi') + ')').join(', ')}` : ''}`, atlanan.length ? 'uyari' : 'tamam', true);

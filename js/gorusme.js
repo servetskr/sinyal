@@ -3,8 +3,8 @@
 // Bugün: kontrol günü bugün ya da geçmiş, kapatılmamış görüşmeler (kural G01). Liste süzgeçleri ve Bugün sayacı aynı ölçütü kullanır (Çizgi'deki sayaç/liste farkı olmasın).
 // Model: S.gorusmeler = [{ id, zaman, kontrol ('YYYY-AA-GGTSS:DD' | ''), kisi: { tur: 'aday'|'kursiyer'|'diger', id?, ad, tel }, konu, etiket, detay,
 //                          kanal, kaydeden, kayitZaman, degistiren?, degisZaman?, kapandi? }]
-import { S, oturum, kaydet, gun, kursiyer, tamAd, islem } from './veri.js?v=234';
-import { e, ik, rozet, pencere, kapatPencere, bildir, tarih, bos, isaret } from './ui.js?v=234';
+import { S, oturum, kaydet, gun, kursiyer, tamAd, islem } from './veri.js?v=235';
+import { e, ik, rozet, pencere, kapatPencere, bildir, tarih, bos, isaret } from './ui.js?v=235';
 
 export const KANALLAR = ['Telefon', 'Yüz yüze', 'WhatsApp', 'Diğer'];
 const VARSAYILAN_ETIKET = ['Fiyat sordu', 'Kayıt olacak', 'Düşünüyor', 'Ödeme', 'Şikâyet', 'Vazgeçti'];

@@ -2,14 +2,14 @@
 // öğretmen notları) ve Geçmiş (yapılan dersler, öğrenci onayı, değerlendirme).
 // Eski ogrenci.js derslerHtml / programHtml / yaklasanHtml / degerlendirKart / ders defteri işlevleri buraya taşındı;
 // onay, itiraz, yıldız, takvim dosyası (data-og-*) ogrenci.js ogBagla'da; ders al, kursa yaz, saat değiştir, iptal portal.js ogGenelTik'te çalışır.
-import { kaydet, S, BECERI, DERS_TUR_AD, egitmen, arac, ogretmen, fark, gun, tarihOku, iso, iptalEdilebilir, dersSirasi, kapaliGun, ogrOzellik, tamAd, gerekliDireksiyon, teorikVar, egitimSinifi, teorikSaat, dersTurleri } from '../veri.js?v=234';
-import { tarihUzun, gunAdi, gunKisa, ayAdi, bildir } from '../ui.js?v=234';
-import * as PL from '../planlayici.js?v=234';
-import * as TK from '../takvim.js?v=234';
-import { onayBekleyen, MUFREDAT, sinavAdi, hakDurum, dirSayac, TEORIKSIZ_METIN } from '../ogrenci.js?v=234';
-import { randevuEngeli, engelYazilir } from '../risk.js?v=234';
-import { kursaYaz } from '../ozellik.js?v=234';
-import { esc, oi, sayfaBas, geri, bolum, kart, liste, satir, ikonKutu, cip, serit, not, bos, dugme, sekmeler, stilEkle } from './ui.js?v=234';
+import { kaydet, S, BECERI, DERS_TUR_AD, egitmen, arac, ogretmen, fark, gun, tarihOku, iso, iptalEdilebilir, dersSirasi, kapaliGun, ogrOzellik, tamAd, gerekliDireksiyon, teorikVar, egitimSinifi, teorikSaat, dersTurleri } from '../veri.js?v=235';
+import { tarihUzun, gunAdi, gunKisa, ayAdi, bildir } from '../ui.js?v=235';
+import * as PL from '../planlayici.js?v=235';
+import * as TK from '../takvim.js?v=235';
+import { onayBekleyen, MUFREDAT, sinavAdi, hakDurum, dirSayac, TEORIKSIZ_METIN } from '../ogrenci.js?v=235';
+import { randevuEngeli, engelYazilir } from '../risk.js?v=235';
+import { kursaYaz } from '../ozellik.js?v=235';
+import { esc, oi, sayfaBas, geri, bolum, kart, liste, satir, ikonKutu, cip, serit, not, bos, dugme, sekmeler, stilEkle } from './ui.js?v=235';
 
 /* ---------- ekran durumu (yeniden çizimde korunur) ---------- */
 let sekme = 'program';   // 'program' | 'gelisim' | 'gecmis'

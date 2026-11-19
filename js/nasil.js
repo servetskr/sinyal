@@ -1,7 +1,7 @@
 // "Nasıl yapılır?" (DIG-031): sık işlerin kısa, adım adım yazılı anlatımı; aranabilir, her maddede ilgili ekrana "Aç" bağlantısı.
 // Konu listesi Çizgi'nin yardım başlıklarından ve kurs ekiplerinin sık sorduklarından (kimlik numarası uyarısı, personel seçilemiyor, sınava öğrenci ekleme).
 // Ekran kayıtları (30–60 sn) hazırlanınca maddeye 'video' alanı eklenir; şimdilik yazılı.
-import { e, pencere } from './ui.js?v=234';
+import { e, pencere } from './ui.js?v=235';
 
 export const NASIL = [
   ['Kayıt', 'Yeni öğrenci kaydı', '#/kayit', ['Üstteki “Yeni” › Öğrenci kaydı’na basın.', 'Kimlik ve iletişim bilgilerini girin; T.C. numarası denetlenir.', 'Sınıfı, mevcut belgeyi, dönem ve grubu seçin; ücret ve taksitler hazır gelir.', 'Sözleşmeyi ekranda imzalatın; öğrenciye uygulama girişi gider.']],

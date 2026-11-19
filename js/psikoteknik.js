@@ -2,9 +2,9 @@
 // Kurallar (Çizgi #95): sonucu "Başarılı" olan kişiye yeni randevu verilmez; bir kişinin aynı anda tek açık (Planlandı) randevusu olur;
 // aynı kaynakta aynı gün ve saate iki randevu verilmez; geçmiş güne randevu verilmez.
 // Model: S.psikoteknik = [{ id, kursiyer?, ad, tel, tc?, tarih, saat, kaynak, psikolog, test, durum: Planlandı|Geldi|Gelmedi|İptal, sonuc: ''|Başarılı|Başarısız, not, kaydeden, eklendi }]
-import { S, gun, fark, kursiyer, tamAd, islem, kaydet, sb, oturum, selam, kursAdi, tcGecerli } from './veri.js?v=234';
-import { e, ik, rozet, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, bos, isaret } from './ui.js?v=234';
-import { bildirimler } from './sayfalar1.js?v=234';
+import { S, gun, fark, kursiyer, tamAd, islem, kaydet, sb, oturum, selam, kursAdi, tcGecerli } from './veri.js?v=235';
+import { e, ik, rozet, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, bos, isaret } from './ui.js?v=235';
+import { bildirimler } from './sayfalar1.js?v=235';
 
 export const TESTLER = ['Psikoteknik değerlendirme', 'Tekrar değerlendirme'];
 const SAATLER = Array.from({ length: 20 }, (_, i) => String(9 + Math.floor(i / 2)).padStart(2, '0') + (i % 2 ? ':30' : ':00'));

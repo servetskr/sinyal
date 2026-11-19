@@ -1,7 +1,7 @@
 // DIG-029: yeni soru bankası örneği (100 soru) önizlemesi. Yalnız demo görünümünde, sarı demo şeridindeki
 // "Yeni soru örneği (100)" düğmesiyle açılır (app.js). Mevcut bankaya (sorular.js) ve öğrenci kayıtlarına dokunmaz:
 // cevaplar yalnız bu pencerede tutulur, hiçbir yere yazılmaz.
-import { e, pencere, sekmeler } from './ui.js?v=234';
+import { e, pencere, sekmeler } from './ui.js?v=235';
 
 const DERS = [['hepsi', 'Tümü'], ['ilkyardim', 'İlk Yardım'], ['trafik', 'Trafik ve Çevre'], ['motor', 'Araç Tekniği'], ['adab', 'Trafik Adabı']];
 const HARF = 'ABCD';
@@ -64,7 +64,7 @@ function ciz(kok) {
 }
 
 export function soruOrnekAc() {
-  return Promise.all([import('./sorular-ornek.js?v=234'), import('./levha.js?v=234').catch(() => null)]).then(([m, l]) => {
+  return Promise.all([import('./sorular-ornek.js?v=235'), import('./levha.js?v=235').catch(() => null)]).then(([m, l]) => {
     SR = m.SORULAR_ORNEK; LV = l;
     pencere({ baslik: `Yeni soru örneği (${SR.length})`, genis: true, taslak: false, icerik: '<div data-so-kok></div>', onAc(p) {
       const kok = p.querySelector('[data-so-kok]'), ust = () => { const g = p.querySelector('.pencere-govde'); if (g) g.scrollTop = 0; };

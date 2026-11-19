@@ -1,14 +1,14 @@
 // MEBBİS aktarım merkezi: MEBBİS'e gidecek işler türlerine göre sekmelerde, filtrelenir, seçilir, toplu aktarılır.
 // Aktarımı MEBBİS Yardımcısı (Chrome eklentisi) kursun kendi MEBBİS oturumunda yürütür; MEBBİS'ten veri çekme de buradan başlar.
-import { S, oturum, fark, SINIFLAR, egitmen, sb, seciliSube, cokSube, kursiyer, tamAd, islem, kaydet, esinavUcreti } from './veri.js?v=234';
-import { e, tarih, rozet, isaret, ik, sekmeler, bos } from './ui.js?v=234';
-import * as EK from './eklenti.js?v=234';
-import * as MT from './mebtoplu.js?v=234';
-import * as MK from './mebkayit.js?v=234';
-import * as UY from './mebuyum.js?v=234';
-import * as GR from './gruplar.js?v=234';
-import * as MX from './mebekran.js?v=234';   // MEB-187: üst şerit, açık pencereler, aday × adım matrisi
-import { pencere, kapatPencere, bildir, tl, waAc } from './ui.js?v=234';
+import { S, oturum, fark, SINIFLAR, egitmen, sb, seciliSube, cokSube, kursiyer, tamAd, islem, kaydet, esinavUcreti } from './veri.js?v=235';
+import { e, tarih, rozet, isaret, ik, sekmeler, bos } from './ui.js?v=235';
+import * as EK from './eklenti.js?v=235';
+import * as MT from './mebtoplu.js?v=235';
+import * as MK from './mebkayit.js?v=235';
+import * as UY from './mebuyum.js?v=235';
+import * as GR from './gruplar.js?v=235';
+import * as MX from './mebekran.js?v=235';   // MEB-187: üst şerit, açık pencereler, aday × adım matrisi
+import { pencere, kapatPencere, bildir, tl, waAc } from './ui.js?v=235';
 
 const TURLER = [['kayit', 'Kayıt'], ['evrak', 'Evrak'], ['grup', 'Dönem grubu'], ['onay', 'Kurum onayı'], ['teorik', 'Teorik program'], ['program', 'Direksiyon programı'], ['esinav', 'e-Sınav başvurusu'], ['sinav', 'Sınav randevusu'], ['fatura', 'Fatura'], ['al', 'MEBBİS’ten al']];
 const butunIsler = hepsi => [...EK.mebIsleri(hepsi), ...MT.ekIsler(hepsi)];
@@ -154,9 +154,9 @@ export function merkezSekme() {
 // Kural bulguları önce bilgi olarak gösterilir (MT.kuralBilgi; bulgu yoksa doğrudan); altı türde bulgular elle giriş kartlarında görünür
 function elleGir(ids) {
   const t = m.tur;
-  if (t === 'kayit') return MT.kuralBilgi(ids, () => { const kid = ids[0] && ids[0].replace(/^kayit-/, ''); if (ids.length === 1) { location.hash = '#/mebbis/' + kid; return; } import('./sayfalar3.js?v=234').then(x => x.mebSiraBaslat(true)); }, { dugme: 'Elle girişe geç' });
-  if (t === 'program') return MT.kuralBilgi(ids, () => import('./sayfalar3.js?v=234').then(x => x.programPenceresi()), { dugme: 'Elle girişe geç' });
-  if (t === 'sinav') { const x0 = butunIsler(true).find(y => y.id === ids[0]); return MT.kuralBilgi(ids, () => import('./sayfalar3.js?v=234').then(x => x.sinavBildirimPenceresi(x0 && x0.ref.sinav)), { dugme: 'Elle girişe geç' }); }
+  if (t === 'kayit') return MT.kuralBilgi(ids, () => { const kid = ids[0] && ids[0].replace(/^kayit-/, ''); if (ids.length === 1) { location.hash = '#/mebbis/' + kid; return; } import('./sayfalar3.js?v=235').then(x => x.mebSiraBaslat(true)); }, { dugme: 'Elle girişe geç' });
+  if (t === 'program') return MT.kuralBilgi(ids, () => import('./sayfalar3.js?v=235').then(x => x.programPenceresi()), { dugme: 'Elle girişe geç' });
+  if (t === 'sinav') { const x0 = butunIsler(true).find(y => y.id === ids[0]); return MT.kuralBilgi(ids, () => import('./sayfalar3.js?v=235').then(x => x.sinavBildirimPenceresi(x0 && x0.ref.sinav)), { dugme: 'Elle girişe geç' }); }
   MT.elleGir(ids);
 }
 export function uyKapatPenceresi(anahtar, sonra) {

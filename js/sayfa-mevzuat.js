@@ -2,13 +2,13 @@
    Arama motoru js/mevzuat-ara.js: ortak derlem (veri/mevzuat) + kursa gelen yazılar (worker /mevzuat/*).
    Anlam araması için sorgu vektörü worker'dan gelir (/mevzuat/gom); ulaşılamazsa yalnız kelimeyle aranır.
    Yerel denemede (localhost) worker'a istek gitmez; yerel worker için localStorage 'sinyal-mevzuat-api' = 'http://127.0.0.1:8787'. */
-import { S, oturum, bulutKanca } from './veri.js?v=234';
-import { e, ik, rozet, bos, pencere, kapatPencere, bildir, ekranNotu, isaret, tamTarih, ilerleme } from './ui.js?v=234';
-import { WORKER } from './bulut.js?v=234';
-import * as KS from './kurssorgu.js?v=234';
-import { csvIndir } from './ui.js?v=234';
-import { motor, yukle, yuklendi, base64Int8, kokler, alinti, FILTRELER, ETIKET_RE, etiketCoz, etiketBul, resmiDegil, kisaCevapSec, cevapNormalle, cevapDuzMetin } from './mevzuat-ara.js?v=234';
-import { kavramYukle, asistanAra, asistanKaynak, asistanSoru, kanitDenetle, sayilarBul, kaynaktaOlmayan } from './mevzuat-anla.js?v=234';
+import { S, oturum, bulutKanca } from './veri.js?v=235';
+import { e, ik, rozet, bos, pencere, kapatPencere, bildir, ekranNotu, isaret, tamTarih, ilerleme } from './ui.js?v=235';
+import { WORKER } from './bulut.js?v=235';
+import * as KS from './kurssorgu.js?v=235';
+import { csvIndir } from './ui.js?v=235';
+import { motor, yukle, yuklendi, base64Int8, kokler, alinti, FILTRELER, ETIKET_RE, etiketCoz, etiketBul, resmiDegil, kisaCevapSec, cevapNormalle, cevapDuzMetin } from './mevzuat-ara.js?v=235';
+import { kavramYukle, asistanAra, asistanKaynak, asistanSoru, kanitDenetle, sayilarBul, kaynaktaOlmayan } from './mevzuat-anla.js?v=235';
 
 const TUR_AD = { yonetmelik: 'Yönetmelik', kanun: 'Kanun', yonerge: 'Yönerge', teblig: 'Tebliğ', kilavuz: 'Kılavuz', program: 'Ders programı', yazi: 'MEB yazısı', form: 'Form',
   'rehber-resmi': 'Denetim rehberi', bilgilendirme: 'Resmî bilgilendirme', rehber: 'mdSinyal rehberi (resmî metin değil)', sss: 'mdSinyal sık sorulanlar (resmî metin değil)' };
@@ -736,7 +736,7 @@ function belgeYukle(d, k) {
   })).then(async j => {
     goster(100, 'Tamam');
     // md.42 gelen evrak kayıt defteri: yüklenen yazı sıra numarasıyla deftere girer (gönderen kurum dosyada düzeltilebilir; RAP-004)
-    import('./defterler.js?v=234').then(m => m.evrakEkle({ yon: 'Gelen', belgeTarih: f.tarih.value || '', sayi: f.sayi.value.trim(), kurum: '', konu: ad, kaynak: 'mevzuat' })).catch(() => { });
+    import('./defterler.js?v=235').then(m => m.evrakEkle({ yon: 'Gelen', belgeTarih: f.tarih.value || '', sayi: f.sayi.value.trim(), kurum: '', konu: ad, kaynak: 'mevzuat' })).catch(() => { });
     await kursYenile();
     if (k.isConnected) { kursBolumu(k); kursKumesi().catch(() => { }); }
     const b = j.belge || {}, oz = ozetBol(b.ozet);

@@ -1,21 +1,21 @@
-import * as EK from './eklenti.js?v=234';
-import * as CR from './cari.js?v=234';
-import { ilSecenekleri, kimlikEksikleri, EKRAN_DUZEY, YETKI_EKRAN, YETKI_ISLEM, makbuzAyar, makbuzBicim, makbuzSeri, makbuzSira, ekDersFiyat, ekToplam, kalanBorc, S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, kursiyer, DERS_TUR_AD, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube, tutarOku, gunBatimi, kursIli, sinifEtiket, ekTur, kursiyerTaban, gerekliDireksiyon, tabanListesi, ekDersTabani, eskiBelgeTarihi, MEVCUT_BELGELER, kdvOrani, posKalem } from './veri.js?v=234';
-import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor, belgeYazdir, kisaLink, siteLink, onaySor } from './ui.js?v=234';
-import { yenile } from './app.js?v=234';
-import { destekWa } from './iletisim.js?v=234';
-import * as ON from './onay.js?v=234';
-import * as TC from './tercih.js?v=234';
-import * as IP from './ipliste.js?v=234';
-import { ONKOSUL, onkosulTamam, onkosulHaritasi } from './onkosul.js?v=234';
-import * as B from './bulut.js?v=234';
-import { earsivKart } from './earsiv.js?v=234';   // PAR-011: e-Arşiv entegratör bağlantısı
-import { wpGonder } from './sayfalar1.js?v=234';
-import * as ME from './mebevrak.js?v=234';
-import * as KR from './kurallar.js?v=234';
-import { listeAdi } from './taban.js?v=234';
-import { muafMi, muafSonGun } from './gruplar.js?v=234';
-import { sozlesmeUcreti } from './mevzuat.js?v=234';
+import * as EK from './eklenti.js?v=235';
+import * as CR from './cari.js?v=235';
+import { ilSecenekleri, kimlikEksikleri, EKRAN_DUZEY, YETKI_EKRAN, YETKI_ISLEM, makbuzAyar, makbuzBicim, makbuzSeri, makbuzSira, ekDersFiyat, ekToplam, kalanBorc, S, kaydet, gun, fark, tarihOku, BUGUN, SINIFLAR, EVRAKLAR, tamAd, tcGecerli, islem, kursiyer, DERS_TUR_AD, oturum, odenen, egitmen, varsayilanSube, eksikEvrak, SOZLESME_VARSAYILAN, sb, sbDers, sbSinav, gorunum, seciliSube, cokSube, tutarOku, gunBatimi, kursIli, sinifEtiket, ekTur, kursiyerTaban, gerekliDireksiyon, tabanListesi, ekDersTabani, eskiBelgeTarihi, MEVCUT_BELGELER, kdvOrani, posKalem } from './veri.js?v=235';
+import { e, tl, sayi, ik, rozet, isaret, ekranNotu, olcumler, pencere, kapatPencere, bildir, tarih, csvIndir, ilerleme, avatar, goreli, pinSor, belgeYazdir, kisaLink, siteLink, onaySor } from './ui.js?v=235';
+import { yenile } from './app.js?v=235';
+import { destekWa } from './iletisim.js?v=235';
+import * as ON from './onay.js?v=235';
+import * as TC from './tercih.js?v=235';
+import * as IP from './ipliste.js?v=235';
+import { ONKOSUL, onkosulTamam, onkosulHaritasi } from './onkosul.js?v=235';
+import * as B from './bulut.js?v=235';
+import { earsivKart } from './earsiv.js?v=235';   // PAR-011: e-Arşiv entegratör bağlantısı
+import { wpGonder } from './sayfalar1.js?v=235';
+import * as ME from './mebevrak.js?v=235';
+import * as KR from './kurallar.js?v=235';
+import { listeAdi } from './taban.js?v=235';
+import { muafMi, muafSonGun } from './gruplar.js?v=235';
+import { sozlesmeUcreti } from './mevzuat.js?v=235';
 
 /* ================= MEB KURALLARI: KAYNAK VE SORUMLULUK ================= */
 const MTSK = 'MTSK Yönetmeliği (ÖÖKGM, Ocak 2025 metni)';
@@ -66,7 +66,7 @@ function kuralGirdi(k) {
 }
 const kaynakHtml = r => r.url ? `<a href="${r.url}" target="_blank" rel="noopener" style="color:var(--levha);font-weight:700">${e(r.kaynak)}</a>` : e(r.kaynak);
 // KAY-041: bulanıklık eşiği kursun kendi kararlarıyla (onaylanan/yeniden istenen evrakın netlik sayıları) önerilir
-let EVM = null; import('./evrak.js?v=234').then(m => { EVM = m; }).catch(() => { });
+let EVM = null; import('./evrak.js?v=235').then(m => { EVM = m; }).catch(() => { });
 const netlikNotu = () => { if (!EVM) return ''; const o = EVM.netlikOnerisi(); return `<small style="display:block;color:var(--soluk);font-size:12.5px;margin-top:2px">${o.n ? `${o.on} onay, ${o.red} yeniden isteme kaydedildi` : 'Öğrenci evrakını onayladıkça ya da yeniden istedikçe sayılar toplanır'}${o.oneri ? ` · önerilen eşik <b>${o.oneri}</b> (onaylanan alt %10: ${o.alt}, reddedilen üst %75: ${o.ust}) <button type="button" class="dg dg-hafif dg-kucuk" data-netlik-oneri="${o.oneri}">Uygula</button>` : o.n ? ' · öneri için en az 10 onay ve 3 yeniden isteme gerekir' : ''}</small>`; };
 function degerDurum(k) {
   const K = S.kurs, r = KURAL_KAYNAK[k];
@@ -958,10 +958,10 @@ export function ayarBaglan(k) {
   });
   k.addEventListener('click', async ev => {
     if (ev.target.closest('[data-kurtarma-indir]')) { const a2 = document.createElement('a'); a2.href = URL.createObjectURL(new Blob([localStorage.getItem('sinyal-kurtarma') || '[]'], { type: 'application/json' })); a2.download = 'mdsinyal-kaydedilemeyenler.json'; a2.click(); setTimeout(() => URL.revokeObjectURL(a2.href), 3000); }
-    if (ev.target.closest('[data-kurtarma-sil]') && await onaySor('Önce indirdiğinizden emin olun; silinen değişiklik geri gelmez.', { baslik: 'Kaydedilemeyen değişiklikler silinsin mi?', evet: 'Sil', tehlike: true })) { try { localStorage.removeItem('sinyal-kurtarma'); } catch (x) { } import('./bulut.js?v=234').then(B => { B.bulut.kalici = ''; B.durumYaz(); }); yenile(); }
+    if (ev.target.closest('[data-kurtarma-sil]') && await onaySor('Önce indirdiğinizden emin olun; silinen değişiklik geri gelmez.', { baslik: 'Kaydedilemeyen değişiklikler silinsin mi?', evet: 'Sil', tehlike: true })) { try { localStorage.removeItem('sinyal-kurtarma'); } catch (x) { } import('./bulut.js?v=235').then(B => { B.bulut.kalici = ''; B.durumYaz(); }); yenile(); }
   });
   k.addEventListener('click', ev => { const bi = ev.target.closest('[data-bi-yeni],[data-bi-duzen]'); if (bi) return ON.bilgiDuzenle(bi.dataset.biDuzen || null, yenile); const bo = ev.target.closest('[data-bi-oku]'); if (bo) { ON.bilgiGoster(ON.bilgiler().filter(x => x.id === bo.dataset.biOku)); const bekle = setInterval(() => { if (!document.querySelector('.perde')) { clearInterval(bekle); yenile(); } }, 700); } });  // YON-028
-  k.addEventListener('click', ev => { if (ev.target.closest('[data-ki-meb]')) { if (cokSube() && !seciliSube()) return bildir('Önce üstten şube seçin; her şubenin bilgisi kendi MEBBİS hesabından okunur', 'uyari'); return import('./mebtoplu.js?v=234').then(m => m.topluCek(['kurum'])); } if (!ev.target.closest('[data-ki-kase-sil]')) return; delete S.kurs.kase; islem('Kaşe / imza görselini kaldırdı'); kaydet(); yenile(); });  // YON-071
+  k.addEventListener('click', ev => { if (ev.target.closest('[data-ki-meb]')) { if (cokSube() && !seciliSube()) return bildir('Önce üstten şube seçin; her şubenin bilgisi kendi MEBBİS hesabından okunur', 'uyari'); return import('./mebtoplu.js?v=235').then(m => m.topluCek(['kurum'])); } if (!ev.target.closest('[data-ki-kase-sil]')) return; delete S.kurs.kase; islem('Kaşe / imza görselini kaldırdı'); kaydet(); yenile(); });  // YON-071
   IP.ipBagla(k);  // YON-021
   davetListesi(k); yedekListesi(k); sunucuKaydi(k); if (B.bulutta()) ikiAdimSatiri(k);
   k.addEventListener('change', async ev => {
@@ -1074,7 +1074,7 @@ export function ayarBaglan(k) {
     if (t.closest('[data-sube-ekle]')) { const n = S.subeler.length + 1; S.subeler.push({ id: 's' + Date.now(), ad: 'Yeni şube ' + n, semt: '', kurumKodu: '', mudur: '', mebbis: '' }); islem('Şube ekledi'); kaydet(); bildir('Şube eklendi; kurum kodunu ve müdürünü yazın'); yenile(); }
     { const no = t.closest('[data-netlik-oneri]'); if (no) { S.kurs.bulanikSinir = +no.dataset.netlikOneri; S.kurs.kuralDegisen = { ...(S.kurs.kuralDegisen || {}), bulanikSinir: gun(0) }; islem('Bulanıklık eşiğini önerilen değere çekti', String(S.kurs.bulanikSinir)); kaydet(); bildir('Eşik ' + S.kurs.bulanikSinir + ' oldu'); return yenile(); } }  // KAY-041
     if (t.closest('[data-kural-onay]')) { S.kurs.kuralOnay = { kim: oturum.kullanici ? oturum.kullanici.ad : '', tarih: gun(0) }; islem('Kural değerlerini onayladı'); kaydet(); bildir('Kural değerleri onaylandı'); yenile(); }
-    const bo = t.closest('[data-belge-ac]'); if (bo) import('./sayfalar3.js?v=234').then(m => m.belgeAc(bo.dataset.belgeAc));
+    const bo = t.closest('[data-belge-ac]'); if (bo) import('./sayfalar3.js?v=235').then(m => m.belgeAc(bo.dataset.belgeAc));
     const ok = t.closest('[data-oturum-kapat]'); if (ok) { const o = S.guvenlik.oturumlar.splice(+ok.dataset.oturumKapat, 1)[0]; islem('Oturumu kapattırdı', o.kim + ' · ' + o.cihaz); kaydet(); bildir(o.kim + ' · ' + o.cihaz + ' oturumu kapatıldı'); yenile(); }
     const fs = t.closest('[data-fis]'); if (fs) { const n = +fs.dataset.fis, d = new Date(BUGUN); d.setMonth(d.getMonth() - n); csvIndir(`muhasebe-fisleri-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}.csv`, muhasebeFisi(n)); islem('Muhasebe fişlerini indirdi'); kaydet(); }
     if (t.closest('[data-parasut]')) pencere({ baslik: 'Paraşüt · bağlantı gerekli', icerik: `<div class="ipucu uyari" style="margin-bottom:12px">${isaret('uyari', 22)}<span>Paraşüt bağlantısı için kursun Paraşüt hesabından alınan API anahtarı gerekir. Anahtar girilene kadar tahsilatlar Paraşüt’e aktarılmaz.</span></div><p style="font-size:14.5px">Bu arada aylık muhasebe fişini CSV olarak indirip Paraşüt’e veya muhasebecinize yükleyebilirsiniz; fişte her tahsilat, gider ve iade ayrı satırdır.</p>`, altlik: '<button class="dg dg-cizgi" data-kapat>Kapat</button><button class="dg dg-ana" data-pfis>Bu ayın fişini indir</button>', onAc(d) { d.querySelector('[data-pfis]').addEventListener('click', () => { const d0 = new Date(BUGUN); csvIndir(`muhasebe-fisleri-${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}.csv`, muhasebeFisi(0)); islem('Muhasebe fişlerini indirdi'); kaydet(); kapatPencere(); }); } });
