@@ -110,6 +110,8 @@ function hazirMi(sonra, elleSonra) {
   if (!MK.kabulDenetle(sonra, elleSonra)) return false;
   return true;
 }
+// MEB-191: şu an MEBBİS'e yazılan işlerin kimlikleri (ör. 'kayit-k1'); iş sürmüyorsa boş
+export const islenenIsler = () => suruyor() ? new Set(durum.simdi || []) : new Set();
 // Yardımcı'daki süren iş bu yazma işinin bir parçası mı (çekme işi ya da eski iş değil)
 const buIsSuruyor = m => !!m && suruyor() && String(durum.id || '').startsWith(m.id);
 // MEB-173: İzle kipi (Yardımcı 1.17): iş sürerken MEBBİS sekmesi öne gelir, her gönderilen form ve yanıt orada görünür. Bu tarayıcıda hatırlanır.
@@ -692,6 +694,7 @@ export function durumGeldi(r) {
   const pNo = buIs ? (r.id === m.id ? 0 : Math.max(0, (+String(r.id).slice(m.id.length + 1) || 1) - 1)) : -1, guncelParca = buIs && pNo === m.no;
   const iptal = !!r.iptal || sn.hataTur === 'iptal', son = !!r.bitti || !!r.son;
   durum.adim = sn.adim || durum.adim; durum.son = r; durum.id = r.id || durum.id;
+  durum.simdi = son || sn.hata ? [] : Array.isArray(sn.simdi) ? sn.simdi : (durum.simdi || []);  // MEB-191: Yardımcı'nın şu an yazdığı işler
   if (r.zaman) durum.sonIlerleme = Math.max(durum.sonIlerleme || 0, r.zaman); else if (!son) durum.sonIlerleme = Date.now();
   // "MEBBİS ekranı değişti": iş tamamen durduysa (hataTur) ya da tek tek ekranlar (ekranDegisti, yazilan[].hataTur)
   durum.olcum = sn.olcum ? MK.olcumMetni(sn.olcum, sn.yazilan) : durum.olcum;

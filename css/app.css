@@ -3853,6 +3853,8 @@ tr.secili-satir td { background: rgba(10, 77, 162, .06); }
 .mx-hata{background:var(--kirmizi-acik);color:var(--kirmizi)}
 .mx-elle{background:var(--panel-2);color:var(--metin)}
 .mx-bos{color:var(--soluk)}
+.mx-isleniyor{background:var(--levha);color:#fff;animation:mx-nabiz 1.4s ease-in-out infinite}
+@keyframes mx-nabiz{50%{opacity:.55}}
 .mx-lejant{display:flex;gap:6px 16px;flex-wrap:wrap;font-size:13px;color:var(--soluk);padding:10px 16px 14px}
 .mx-lejant>span{display:inline-flex;gap:6px;align-items:center}
 @media (max-width:600px){.mx-ust .dg-ana{width:100%}.mx-pencereler{grid-template-columns:1fr}}

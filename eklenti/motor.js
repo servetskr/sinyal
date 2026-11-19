@@ -1257,6 +1257,8 @@
         if (Array.isArray(x.adaylar) && x.adaylar.some(a => a.tc && !tcGecerli(String(a.tc)))) { const kotu = x.adaylar.filter(a => a.tc && !tcGecerli(String(a.tc))); kotu.forEach(a => sonuc.yazilan.push({ id: a.id, ok: false, not: 'T.C. kimlik no geçersiz (doğrulama hanesi tutmuyor); gönderilmedi', hataTur: 'veri' })); x = { ...x, adaylar: x.adaylar.filter(a => !kotu.includes(a)) }; if (!x.adaylar.length) { await kaydet('calisiyor'); continue; } }
         ilerle(`MEBBİS’e yazılıyor ${i + 1}/${yazilacak.length}: ${x.baslik || x.tur}`, (i + 1) / yazilacak.length);
         const ids = idlerOf(x), ekr = ekranlariOf(x);
+        // MEB-191: uygulamadaki satır "İşleniyor → MEBBİS'te" göstersin diye şu an yazılan işlerin kimliği hemen bildirilir
+        sonuc.simdi = ids; kaydet('calisiyor');
         const engel = ekr.map(k => on[k]).find(o => o && !o.ok);
         if (engel) { ids.forEach(id => sonuc.yazilan.push({ id, ok: false, not: engel.not, hataTur: engel.tur, ekran: engel.kod, eksik: engel.eksik || [] })); await kaydet('calisiyor'); continue; }
         if (!YAZMA[x.tur]) { ids.forEach(id => sonuc.yazilan.push({ id, ok: false, not: 'Bu Yardımcı sürümü bu iş türünü tanımıyor: ' + x.tur, hataTur: 'veri' })); continue; }
@@ -1279,6 +1281,7 @@
         sonucBak(x); sonuc.suruyor = null; await kaydet('calisiyor');
       }
       olc.bitis = Date.now();
+      sonuc.simdi = [];
       await kaydet('bitti', true);
       const yz = sonuc.yazilan, say = f => yz.filter(f).length, ok = say(x => x.ok), hata = say(x => !x.ok), mesajla = say(x => x.ok && x.dogrulama === 'mesaj'), zaten = say(x => x.ok && x.dogrulama === 'zaten');
       goster('✓ Bitti', 1, (is.yaz || []).length ? `${ok - mesajla - zaten} kayıt MEBBİS’e girildi ve listeden doğrulandı${mesajla ? `, ${mesajla} kayıt yalnız MEBBİS mesajıyla doğrulandı (MEBBİS’te kontrol edin)` : ''}${zaten ? `, ${zaten} kayıt zaten vardı` : ''}${hata ? `, ${hata} kayıt girilemedi` : ''}. Sonuç mdSinyal’de.` : 'Veriler mdSinyal’e gönderildi.', 'mdSinyal · MEBBİS');

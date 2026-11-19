@@ -89,16 +89,20 @@ function hucreler(k) {
     ilce: /onayland/i.test(ilce) ? ['ok', 'İlçe onayladı'] : /bekl/i.test(ilce) || k.mebOnay ? ['bos', 'İlçe onayı bekleniyor'] : ['bos', ''],
   };
 }
-const ISARET = { ok: '✓', hazir: '●', eksik: '!', hata: '✕', bos: '·', elle: '✎' };
+const ISARET = { ok: '✓', hazir: '●', eksik: '!', hata: '✕', bos: '·', elle: '✎', isleniyor: '↻' };
+// MEB-191: Yardımcı'nın şu an yazdığı iş (kimlik 'tur-kursiyer') matriste hangi sütunlara düşer
+const IS_SUTUN = { kayit: ['kayit'], evrak: ['ogrenim', 'saglik', 'adli', 'parmak'], onay: ['onay'], foto: ['foto'], sozlesme: ['sozlesme'], fatura: ['fatura'] };
+const islenenHucreler = () => { const h = new Set(); MT.islenenIsler().forEach(id => { const [tur, ...p] = String(id).split('-'); (IS_SUTUN[tur] || []).forEach(s => h.add(p.join('-') + '|' + s)); }); return h; };
 export function matrisHtml(donem) {
   const dl = matrisDonemleri(); if (!dl.length) return `<div class="kart-govde"><p style="color:var(--soluk)">Dönem grubuna atanmış öğrenci yok. Öğrencileri dönem gruplarına atayınca adım adım durum burada görünür.</p></div>`;
   const d = dl.includes(donem) ? donem : dl[0], gids = new Set((S.gruplar || []).filter(g => GR.mebGrubuMu(g) && g.donem === d).map(g => g.id));
   const ks = sb(S.kursiyerler).filter(k => gids.has(k.teorikGrup) && !(k.kapali && /silin/i.test(String(k.kapanisNeden || k.kapanis || '')))).sort((a, b) => tamAd(a).localeCompare(tamAd(b), 'tr'));
-  const satir = ks.map(k => [k, hucreler(k)]), say = (s, c) => satir.filter(([, h]) => h[s][0] === c).length;
+  const isl = islenenHucreler();
+  const satir = ks.map(k => { const h = hucreler(k); SUTUN.forEach(([s]) => { if (h[s][0] !== 'ok' && isl.has(k.id + '|' + s)) h[s] = ['isleniyor', 'İşleniyor → MEBBİS’te']; }); return [k, h]; }), say = (s, c) => satir.filter(([, h]) => h[s][0] === c).length;
   const onayaHazir = say('onay', 'hazir');
   return `<div class="kb-arac"><label for="mx-donem"><b>Dönem</b></label><select id="mx-donem" class="girdi" data-mx-donem>${dl.map(x => `<option value="${x}" ${x === d ? 'selected' : ''}>${e(GR.donemAdi(x))}</option>`).join('')}</select>
       <span class="mx-soluk">${ks.length} öğrenci</span><span style="flex:1"></span>${onayaHazir ? `<button type="button" class="dg dg-cizgi dg-kucuk" data-mx-tur="onay">${onayaHazir} öğrenci onaya hazır</button>` : ''}</div>
     <div class="tablo-kap mx-matris"><table class="tablo"><thead><tr><th>Öğrenci</th>${SUTUN.map(([s, a]) => { const n = say(s, 'hazir'); return `<th>${e(a)}${n ? `<small>${n} hazır</small>` : ''}</th>`; }).join('')}</tr></thead>
     <tbody>${satir.map(([k, h]) => `<tr><td><a href="#/kursiyer/${e(k.id)}"><b>${e(tamAd(k))}</b></a><small>${e(k.sinif || '')}</small></td>${SUTUN.map(([s]) => { const [c, n] = h[s]; return `<td><span class="mx-h mx-${c}" title="${e(n)}" aria-label="${e(n)}">${ISARET[c]}</span></td>`; }).join('')}</tr>`).join('')}</tbody></table></div>
-    <div class="mx-lejant">${[['ok', 'MEBBİS’te'], ['hazir', 'gönderime hazır'], ['eksik', 'eksik (üstüne gelin)'], ['hata', 'MEBBİS hata verdi'], ['elle', 'MEBBİS’te elle'], ['bos', 'sırası gelmedi']].map(([c, a]) => `<span><span class="mx-h mx-${c}">${ISARET[c]}</span> ${a}</span>`).join('')}</div>`;
+    <div class="mx-lejant">${[['ok', 'MEBBİS’te'], ['hazir', 'gönderime hazır'], ['eksik', 'eksik (üstüne gelin)'], ['hata', 'MEBBİS hata verdi'], ['elle', 'MEBBİS’te elle'], ['bos', 'sırası gelmedi'], ...(isl.size ? [['isleniyor', 'şu an MEBBİS’e yazılıyor']] : [])].map(([c, a]) => `<span><span class="mx-h mx-${c}">${ISARET[c]}</span> ${a}</span>`).join('')}</div>`;
 }
