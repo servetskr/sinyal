@@ -1,6 +1,6 @@
 // mdSinyal demo verisi: tarihler bugüne göre üretilir, tarayıcıda saklanır.
 import { listeBul, listeDurumu, kursunIli, satirBul, tabanTutar, sinifSatiri, ozelSatir, donemi } from './taban.js?v=234';
-let ANAHTAR = 'sinyal-demo-v20';
+let ANAHTAR = 'sinyal-demo-v21';
 // Usta öğreticinin ders sonunda puanladığı beceriler
 export const BECERI = [['kalkis', 'Kalkış ve duruş'], ['serit', 'Şerit ve ayna'], ['kavsak', 'Kavşak ve öncelik'], ['park', 'Park'], ['rampa', 'Rampa ve yokuş']];
 // Direksiyon dersi konuları: takip formunda zorunlu (MTSK Yön. md.17/3-d). Başlıklar sınavdaki değerlendirme formlarının (EK-4 otomobil, EK-3 motosiklet) bölümleriyle aynı.
@@ -849,9 +849,13 @@ function uret() {
     { id: 'pos', ad: 'POS cihazı (kartla tahsilat)', tur: 'POS', bakiye: 38900 },
   ];
   const kazanim = { doldurulan: 14, ekDers: 9, yorum: 23 };
+  // MEB-192: örnek gruplar MEBBİS biçiminde (dönem, grup no, şube; başlangıç dönemin ayında 1–10 arası) ve MEBBİS'te açık sayılır;
+  // böylece demoda MEB işlemleri › Ayrıntılar › Öğrenci × adım matrisi dolar. Dönem, MEBBİS'te bugün açılabilen dönemdir (ayın 10'undan sonra gelecek ay).
+  const dd = new Date(); if (dd.getDate() > 10) { dd.setDate(1); dd.setMonth(dd.getMonth() + 1); }
+  const dDonem = `${dd.getFullYear()}${String(dd.getMonth() + 1).padStart(2, '0')}`, dAy = `${dDonem.slice(0, 4)}-${dDonem.slice(4)}`;
   const gruplar = [
-    { id: 'aksam', ad: 'Akşam grubu', derslik: 'Derslik 1', baslangic: gun(5), kontenjan: 24 },
-    { id: 'sabah', ad: 'Sabah grubu', derslik: 'Derslik 2', baslangic: gun(12), kontenjan: 16 },
+    { id: 'aksam', ad: 'Akşam grubu', derslik: 'Derslik 1', baslangic: dAy + '-05', kontenjan: 24, donem: dDonem, grupNo: 1, sube: 'A', meb: true },
+    { id: 'sabah', ad: 'Sabah grubu', derslik: 'Derslik 2', baslangic: dAy + '-08', kontenjan: 16, donem: dDonem, grupNo: 2, sube: 'A', meb: true },
   ];
   kursiyerler.forEach(k => { k.kvkk = { tarih: k.kayit, kanal: r() < 0.3 ? 'Kayıt formu (kurs cihazı)' : 'Kursta imzalı form', riza: true }; });
   const arsiv = [
@@ -1481,7 +1485,7 @@ export function kaydet() { dIdx = null; subeTamamla(); noTamamla(); odemeUzlas()
   if (kaydetDinleyici) kaydetDinleyici(); }
 // Bulut (gerçek kurs): veri Firestore'dan gelir; yerel kopya kursa özel anahtarda tutulur, günlük yenilenmez
 export function bulutVeri(yeni, kursId) { mebIz = null; ANAHTAR = 'sinyal-bulut-' + kursId; yeni._bulut = true; S = goc(yeni); mebDegisimIzle(); izTabaniYenile(); if (!String(kursId).startsWith('ogr-')) { try { localStorage.removeItem(ANAHTAR); } catch (e) { } } }
-export function demoyaDon() { mebIz = null; ANAHTAR = 'sinyal-demo-v20'; S = yukle(); mebDegisimIzle(); izTabaniYenile(); }
+export function demoyaDon() { mebIz = null; ANAHTAR = 'sinyal-demo-v21'; S = yukle(); mebDegisimIzle(); izTabaniYenile(); }
 // Yeni kurs: ayarlar ve şablonlar hazır, kayıtlar boş
 export function bosVeri({ kursAd, yetkili, sehir, mudurTel }) {
   const o = uret();
