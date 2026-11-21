@@ -95,7 +95,22 @@ export async function ikiAdimBaslat() {
   const gizli = await A.TotpMultiFactorGenerator.generateSecret(oturum);
   return { anahtar: gizli.secretKey, url: gizli.generateQrCodeUrl(auth.currentUser.email, 'mdSinyal'), bitir: kod => A.multiFactor(auth.currentUser).enroll(A.TotpMultiFactorGenerator.assertionForEnrollment(gizli, kod), 'Doğrulama uygulaması') };
 }
-export async function epostaDogrula() { const { auth, A } = await sdk(); await A.sendEmailVerification(auth.currentUser); }
+// MSJ-042: şifre yenileme ve doğrulama e-postaları önce mdSinyal'in kendi adresinden (worker /hesap/*, Resend) istenir; worker
+// yoksa, sınır dolduysa ya da bir hata olursa Firebase'in kendi e-postası gider (yedek). Emülatörde doğrudan Firebase.
+async function hesapPostasi(yol, govde, idToken) {
+  if (EMU) return false;
+  try {
+    const r = await fetch(WORKER + '/hesap/' + yol, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(idToken ? { Authorization: 'Bearer ' + idToken } : {}) }, body: JSON.stringify(govde || {}) });
+    const j = await r.json().catch(() => ({})); return !!(r.ok && j.ok);
+  } catch (x) { return false; }
+}
+async function dogrulamaGonder(A, user) {
+  if (!user) return;
+  let tok = ''; try { tok = await user.getIdToken(); } catch (x) { }
+  if (tok && await hesapPostasi('dogrula', {}, tok)) return;
+  await A.sendEmailVerification(user);
+}
+export async function epostaDogrula() { const { auth, A } = await sdk(); await dogrulamaGonder(A, auth.currentUser); }
 // YON-068: hesabın e-postası doğrulandı mı (Firebase). Bağlantı açılmadıysa null; doğrulama bağlantısına tıklandıktan sonra yenile ile güncellenir
 // YON-001: öğrencinin iç (giriş için uydurulan) adresi. Yeni hesaplar mdsinyal.com alt alanında açılır (alan adı bizde; ogrenci.mdsinyal.com'a
 // null MX konur, posta alınamaz). Eski hesaplar @ogrenci.sinyal.app ile sürer; ikisi de iç adres sayılır (doğrulama e-postası gitmez, ekranda gösterilmez).
@@ -104,7 +119,7 @@ export const icAdresMi = e => /@ogrenci\.(mdsinyal\.com|sinyal\.app)$/i.test(Str
 export const hesapEposta = () => { const u = fb && fb.auth && fb.auth.currentUser; return u && u.email && !icAdresMi(u.email) ? { eposta: u.email, dogrulandi: !!u.emailVerified } : null; };
 export async function hesapEpostaYenile() { const { auth } = await sdk(); if (auth.currentUser) { await auth.currentUser.reload(); try { await auth.currentUser.getIdToken(true); } catch (x) { } } return hesapEposta(); }
 export async function ikiAdimKapat() { const { auth, A } = await sdk(); const m = A.multiFactor(auth.currentUser), f = m.enrolledFactors.find(x => x.factorId === A.TotpMultiFactorGenerator.FACTOR_ID); if (f) await m.unenroll(f); }
-export async function sifreSifirla(eposta) { const { auth, A } = await sdk(); await A.sendPasswordResetEmail(auth, eposta.trim()); }
+export async function sifreSifirla(eposta) { const { auth, A } = await sdk(); if (await hesapPostasi('sifre', { eposta: eposta.trim() })) return; await A.sendPasswordResetEmail(auth, eposta.trim()); }
 export async function sifreDogrula(sifre) {
   const { auth, A } = await sdk();
   try { await A.reauthenticateWithCredential(auth.currentUser, A.EmailAuthProvider.credential(auth.currentUser.email, sifre)); return true; } catch (x) { return x.code === 'auth/multi-factor-auth-required'; }  // iki adımlı hesapta şifre doğruysa ikinci adım istenir
@@ -125,7 +140,7 @@ async function hesapAc(eposta, sifre, ad) {
   const { auth, A } = await sdk();
   if (sifre.length < 8) throw hata('Şifre en az 8 karakter olmalı');
   let user;
-  try { user = (await A.createUserWithEmailAndPassword(auth, eposta.trim(), sifre)).user; try { await A.sendEmailVerification(user); } catch (z) { } }  // YON-068: açılışta doğrulama e-postası
+  try { user = (await A.createUserWithEmailAndPassword(auth, eposta.trim(), sifre)).user; try { await dogrulamaGonder(A, user); } catch (z) { } }  // YON-068: açılışta doğrulama e-postası
   catch (x) {
     if (x.code !== 'auth/email-already-in-use') throw x;
     user = (await A.signInWithEmailAndPassword(auth, eposta.trim(), sifre)).user;  // YON-072: başka kursta hesabı olan aynı e-postayla bu kursa da katılır
@@ -1356,7 +1371,7 @@ export async function ogrenciHesapAc(k) {
     let yeniU = null;
     if (gercek) { try { yeniU = (await A.createUserWithEmailAndPassword(a2, gercek, sifre)).user; } catch (x) { if (x.code !== 'auth/email-already-in-use' || !tel) throw x; } }
     if (!yeniU) { if (gercek) await telDenetle(); eposta = tel + '.' + rastgele(6) + '@' + OGR_ALAN; yeniU = (await A.createUserWithEmailAndPassword(a2, eposta, sifre)).user; }
-    uid = yeniU.uid; if (!icAdresMi(eposta)) { try { await A.sendEmailVerification(yeniU); } catch (x) { } }
+    uid = yeniU.uid; if (!icAdresMi(eposta)) { try { await dogrulamaGonder(A, yeniU); } catch (x) { } }
     await F.setDoc(F.doc(db2, 'kullanicilar', uid), { kurs: bulut.kurs, rol: 'ogrenci', kod: k.panelKod, kursiyer: k.id, ilkGiris: true });
     await A.signOut(a2);
   } finally { deleteApp(app2).catch(() => { }); }
@@ -1516,7 +1531,7 @@ export async function ogrenciKayitOl({ kod, ad, soyad, tel, eposta, sifre }) {
     await F.setDoc(kref, { rol: 'aday', kurs: kk.kurs, kursAd: kk.ad });
     const tref = F.doc(db2, 'kurslar', kk.kurs, 'hesapTalepleri', user.uid), te = await F.getDoc(tref);
     if (!te.exists()) await F.setDoc(tref, { ad: ad.slice(0, 60), soyad: soyad.slice(0, 60), tel: t, eposta: user.email, kod: kk.kod, zaman: F.serverTimestamp() });
-    if (yeni) { try { await A.sendEmailVerification(user); } catch (x) { } }
+    if (yeni) { try { await dogrulamaGonder(A, user); } catch (x) { } }
     await A.signOut(a2);
     return { kursAd: kk.ad, eposta: user.email, onceden: te.exists() };
   } finally { deleteApp(app2).catch(() => { }); }

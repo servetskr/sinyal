@@ -2209,6 +2209,163 @@ async function servisUc(req, env, yol, cevap) {
   let son = null; try { son = JSON.parse((env.LINK && await env.LINK.get('servis:durum')) || 'null'); } catch (x) { }
   return cevap({ ok: true, kurulu, son });
 }
+// ==== MSJ-042: hesap e-postaları (şifre yenileme, e-posta doğrulama) mdSinyal adresinden ====
+// MSJ-042 (21 Kas 2026): hesap e-postaları (şifre yenileme, e-posta doğrulama) Firebase'in kendi göndericisi yerine
+// mdSinyal'in adresinden (Resend, "mdSinyal <destek@mdsinyal.com>") ve mdSinyal tasarımıyla gider.
+// Neden: Firebase konsolu bu projede şablon düzenlemeyi kilitledi (gönderen adı, konu, metin, işlem adresi değiştirilemiyor).
+// Bağlantıyı yine Firebase üretir: Identity Toolkit accounts:sendOobCode + returnOobLink (servis hesabı, FIREBASE_SA);
+// e-postayı biz göndeririz. Bağlantı mdsinyal.com/hesap/ sayfasına çevrilir (resetPassword, verifyEmail, recoverEmail).
+//
+// Uçlar (sinyal-wa.js yönlendirir, yalnız sitenin kendi adresinden):
+//   POST /hesap/sifre    { eposta }                 girişsiz. Hesap yoksa da aynı cevap (hesap varlığı sızmaz).
+//   POST /hesap/dogrula  Authorization: Bearer <idToken>   girişli kullanıcının kendi adresine doğrulama.
+// Cevap: { ok: true } gönderildi (ya da hesap yok) · { ok: false, yedek: true } → istemci Firebase'in kendi e-postasına düşer
+// (servis hesabı yok, Resend yok, günlük sınır doldu, Google hatası). Kötüye kullanım: adres başına günde 5, IP başına saatte 20,
+// bütün hesap e-postaları için günde HESAP_EPOSTA_GUNLUK (varsayılan 60; Resend ücretsiz planı günde 100 ve kurs raporlarıyla ortak).
+// KV (LINK): 'hspa:<sha256(adres)>:<gün>' · 'hspi:<ip>:<saat>' · 'hspg:<gün>' (2 gün). Adres düz yazılmaz.
+
+const HS_TOKEN_URL = 'https://oauth2.googleapis.com/token';
+const HS_KAPSAM = 'https://www.googleapis.com/auth/identitytoolkit';
+const HS_SITE = 'https://mdsinyal.com/hesap/';
+const HS_ADRES_GUN = 5, HS_IP_SAAT = 20, HS_GENEL_GUN = 60;
+
+const hsB64uBayt = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+const hsB64u = s => hsB64uBayt(new TextEncoder().encode(s));
+const hsGecerli = a => /^[^\s@<>,;"]{1,64}@[A-Za-z0-9.-]{1,180}\.[A-Za-z]{2,24}$/.test(a);
+// sistemin iç giriş adresleri gerçek posta kutusu değildir
+const hsIcAdres = a => /@(ogrenci\.(mdsinyal\.com|sinyal\.app)|yonetim\.sinyal\.invalid)$/i.test(a);
+const hsKacis = s => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function hsSaOku(env) {
+  if (!env || !env.FIREBASE_SA) return null;
+  try { const o = JSON.parse(env.FIREBASE_SA); if (!o.client_email || !/BEGIN PRIVATE KEY/.test(o.private_key || '')) return null;
+    return { eposta: o.client_email, anahtar: o.private_key, proje: /^[a-z0-9-]{4,40}$/.test(o.project_id || '') ? o.project_id : 'sinyal-5d37a' }; } catch (x) { return null; }
+}
+let hsJeton = null;   // bu isolate'in belleğinde, kapsamı identitytoolkit (servis.js'teki Firestore jetonundan ayrı)
+export const hesapJetonSifirla = () => { hsJeton = null; };
+async function hsErisimJetonu(sa, f, simdi) {
+  if (hsJeton && hsJeton.eposta === sa.eposta && hsJeton.son - 120e3 > simdi) return hsJeton.t;
+  const iat = Math.floor(simdi / 1000);
+  const ic = hsB64u(JSON.stringify({ alg: 'RS256', typ: 'JWT' })) + '.' + hsB64u(JSON.stringify({ iss: sa.eposta, scope: HS_KAPSAM, aud: HS_TOKEN_URL, iat, exp: iat + 3600 }));
+  const der = Uint8Array.from(atob(sa.anahtar.replace(/-----[A-Z ]+-----/g, '').replace(/\s+/g, '')), c => c.charCodeAt(0));
+  const k = await crypto.subtle.importKey('pkcs8', der, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
+  const imza = new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', k, new TextEncoder().encode(ic)));
+  const r = await f(HS_TOKEN_URL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'grant_type=' + encodeURIComponent('urn:ietf:params:oauth:grant-type:jwt-bearer') + '&assertion=' + ic + '.' + hsB64uBayt(imza) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.access_token) throw new Error('jeton: ' + String(j.error || r.status).slice(0, 60));
+  hsJeton = { t: j.access_token, son: simdi + (+j.expires_in || 3600) * 1000, eposta: sa.eposta };
+  return hsJeton.t;
+}
+
+// Firebase'in ürettiği bağlantıyı (…firebaseapp.com/__/auth/action?mode=…&oobCode=…&apiKey=…) mdsinyal.com/hesap/ sayfasına çevirir.
+export function siteBaglantisi(oob) {
+  let u; try { u = new URL(oob); } catch (x) { return null; }
+  const mode = u.searchParams.get('mode'), kod = u.searchParams.get('oobCode');
+  if (!/^(resetPassword|verifyEmail|recoverEmail|verifyAndChangeEmail)$/.test(mode || '') || !kod) return null;
+  const q = new URLSearchParams({ mode, oobCode: kod, lang: 'tr' });
+  if (u.searchParams.get('apiKey')) q.set('apiKey', u.searchParams.get('apiKey'));
+  return HS_SITE + '?' + q.toString();
+}
+
+const HS_SATIR = { sifre: {
+  konu: 'mdSinyal şifrenizi yenileyin',
+  baslik: 'Şifrenizi yenileyin',
+  giris: a => `<b>${hsKacis(a)}</b> adresiyle açılan mdSinyal hesabınız için şifre yenileme isteği aldık.`,
+  dugme: 'Şifremi yenile',
+  not: 'Bağlantı kısa süre geçerlidir ve yalnız bir kez kullanılır. Süresi dolarsa giriş ekranında “Şifremi unuttum”a yeniden basın.',
+  degil: 'Bu isteği siz yapmadıysanız bu e-postayı dikkate almayın; şifreniz değişmez.',
+}, dogrula: {
+  konu: 'mdSinyal e-posta adresinizi doğrulayın',
+  baslik: 'E-posta adresinizi doğrulayın',
+  giris: a => `mdSinyal hesabınızda <b>${hsKacis(a)}</b> adresini kullanabilmeniz için adresin size ait olduğunu doğrulamamız gerekiyor.`,
+  dugme: 'Adresimi doğrula',
+  not: 'Bağlantı kısa süre geçerlidir ve yalnız bir kez kullanılır.',
+  degil: 'Bu isteği siz yapmadıysanız bu e-postayı dikkate almayın.',
+} };
+
+export function epostaGovde(tur, adres, baglanti) {
+  const s = HS_SATIR[tur], b = hsKacis(baglanti);
+  const html = `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${hsKacis(s.konu)}</title></head>
+<body style="margin:0;padding:0;background:#eef1f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;color:#0a1120">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#eef1f6;padding:24px 12px"><tr><td align="center">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden">
+<tr><td style="background:#0a1120;padding:20px 28px"><span style="font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-.2px">md<span style="color:#ffc21a">Sinyal</span></span></td></tr>
+<tr><td style="padding:28px 28px 8px"><h1 style="margin:0 0 14px;font-size:22px;line-height:1.3;color:#0a1120">${hsKacis(s.baslik)}</h1>
+<p style="margin:0 0 22px;font-size:15px;line-height:1.55;color:#2b3443">${s.giris(adres)}</p>
+<table role="presentation" cellspacing="0" cellpadding="0"><tr><td style="border-radius:12px;background:#ffc21a"><a href="${b}" style="display:inline-block;padding:14px 26px;font-size:16px;font-weight:700;color:#0a1120;text-decoration:none">${hsKacis(s.dugme)}</a></td></tr></table>
+<p style="margin:22px 0 0;font-size:13px;line-height:1.5;color:#5b6576">${hsKacis(s.not)}</p>
+<p style="margin:10px 0 0;font-size:13px;line-height:1.5;color:#5b6576">${hsKacis(s.degil)}</p>
+<p style="margin:18px 0 0;font-size:12px;line-height:1.5;color:#8a93a3;word-break:break-all">Düğme çalışmazsa bu bağlantıyı tarayıcınıza yapıştırın:<br><a href="${b}" style="color:#33507a">${b}</a></p></td></tr>
+<tr><td style="padding:22px 28px 26px;font-size:12px;line-height:1.5;color:#8a93a3;border-top:1px solid #edf0f5">Sorun yaşarsanız bu e-postayı yanıtlayın: <a href="mailto:destek@mdsinyal.com" style="color:#33507a">destek@mdsinyal.com</a><br>mdSinyal · Sürücü kursu yönetim programı</td></tr>
+</table></td></tr></table></body></html>`;
+  const metin = [s.baslik, '', s.giris(adres).replace(/<[^>]+>/g, ''), '', s.dugme + ': ' + baglanti, '', s.not, s.degil, '', 'Sorun yaşarsanız: destek@mdsinyal.com', 'mdSinyal'].join('\n');
+  return { konu: s.konu, html, metin };
+}
+
+async function hsSha(s) { const h = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))); return Array.from(h.slice(0, 12), x => x.toString(16).padStart(2, '0')).join(''); }
+const hsGunTR = t => new Date(t + 3 * 3600e3).toISOString().slice(0, 10);
+const hsSaatTR = t => new Date(t + 3 * 3600e3).toISOString().slice(0, 13);
+// sayaç: sınır doluysa false; değilse artırır (KV oku-yaz, yaklaşık sınır)
+async function hsSay(kv, anahtar, sinir, ttl) {
+  if (!kv) return true;
+  const n = +((await kv.get(anahtar)) || 0); if (n >= sinir) return false;
+  await kv.put(anahtar, String(n + 1), { expirationTtl: ttl }); return true;
+}
+
+// ana giriş. o: { saglayici: {gonder({kime,konu,html,metin})}|null, f?: fetch, simdi?: () => ms, firebaseKey }
+export async function hesapEposta(req, env, yol, cevap, o = {}) {
+  if (req.method !== 'POST') return cevap({ ok: false }, 405);
+  const f = o.f || fetch, simdi = (o.simdi || Date.now)(), kv = env.LINK;
+  const yedek = neden => { console.log(JSON.stringify({ tur: 'hesap-eposta', yedek: neden })); return cevap({ ok: false, yedek: true }); };
+  const sa = hsSaOku(env); if (!sa) return yedek('sa yok');
+  if (!o.saglayici) return yedek('saglayici yok');
+  const tur = yol === 'hesap/sifre' ? 'sifre' : yol === 'hesap/dogrula' ? 'dogrula' : null; if (!tur) return cevap({ ok: false }, 404);
+
+  let adres = '';
+  if (tur === 'sifre') {
+    const b = await req.json().catch(() => ({})); adres = String(b.eposta || '').trim().toLowerCase();
+    if (!hsGecerli(adres)) return cevap({ ok: false, hata: 'Geçerli bir e-posta adresi yazın' }, 400);
+    if (hsIcAdres(adres)) return cevap({ ok: true });   // iç giriş adresi: posta kutusu yok, sessizce geç
+  } else {
+    // girişli kullanıcı: belirteç Google'a doğrulatılır, adres belirteçten alınır (istemcinin yazdığına güvenilmez)
+    const tok = (req.headers.get('Authorization') || '').replace(/^Bearer /, '').trim();
+    if (tok.split('.').length !== 3) return cevap({ ok: false, hata: 'Giriş gerekli' }, 401);
+    const r = await f('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=' + o.firebaseKey, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: tok }) });
+    const j = await r.json().catch(() => ({})), u = j.users && j.users[0];
+    if (!r.ok || !u) return cevap({ ok: false, hata: 'Giriş gerekli' }, 401);
+    adres = String(u.email || '').trim().toLowerCase();
+    if (!hsGecerli(adres) || hsIcAdres(adres)) return cevap({ ok: false, hata: 'Hesapta doğrulanacak bir e-posta yok' }, 400);
+    if (u.emailVerified) return cevap({ ok: true, zaten: true });
+  }
+
+  const ip = req.headers.get('CF-Connecting-IP') || 'yok';
+  if (!(await hsSay(kv, 'hspi:' + ip + ':' + hsSaatTR(simdi), HS_IP_SAAT, 2 * 3600))) return cevap({ ok: false, hata: 'Çok fazla istek; biraz sonra yeniden deneyin' }, 429);
+  if (!(await hsSay(kv, 'hspa:' + (await hsSha(adres)) + ':' + hsGunTR(simdi), HS_ADRES_GUN, 2 * 86400))) return cevap({ ok: true });   // aynı adrese fazlası: sessiz
+  if (!(await hsSay(kv, 'hspg:' + hsGunTR(simdi), +env.HESAP_EPOSTA_GUNLUK || HS_GENEL_GUN, 2 * 86400))) return yedek('gunluk sinir');
+
+  let oob;
+  try {
+    const t = await hsErisimJetonu(sa, f, simdi);
+    const r = await f(`https://identitytoolkit.googleapis.com/v1/projects/${sa.proje}/accounts:sendOobCode`, { method: 'POST',
+      headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requestType: tur === 'sifre' ? 'PASSWORD_RESET' : 'VERIFY_EMAIL', email: adres, returnOobLink: true }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      const m = String((j.error && j.error.message) || '');
+      if (/EMAIL_NOT_FOUND|USER_NOT_FOUND/.test(m)) return cevap({ ok: true });   // hesap yok: aynı cevap
+      return yedek('google ' + r.status + ' ' + m.slice(0, 60));
+    }
+    oob = siteBaglantisi(j.oobLink || '');
+    if (!oob) return yedek('baglanti cozulmedi');
+  } catch (x) { return yedek('google ' + String(x && x.message || x).slice(0, 60)); }
+
+  const g = epostaGovde(tur, adres, oob);
+  try { await o.saglayici.gonder({ kime: [adres], konu: g.konu, html: g.html, metin: g.metin }); }
+  catch (x) { return yedek('gonderim ' + String(x && x.message || x).slice(0, 80)); }
+  return cevap({ ok: true });
+}
+
 export default {
   // Cron: "0 4 * * *" günlük (hat sağlığı, mevzuat takibi, pazartesi bülten); "*/" ile başlayan sık tetik (ör. "*/15 * * * *") servis hesabı işleri
   async scheduled(olay, env, ctx) {
@@ -2237,6 +2394,8 @@ export default {
     if (yol === 'servis' || yol === 'servis/calistir') return servisUc(req, env, yol, cevap);   // UYG-012
     // YON-021: istemcinin IP adresi (IP yetkilendirme: ön büroyu kurs bilgisayarına bağlama); yalnız sitenin kendi adresinden, kayıt tutulmaz
     if (yol === 'ip' && req.method === 'GET') return IZINLI.includes(origin) ? cevap({ ok: true, ip: req.headers.get('CF-Connecting-IP') || '' }) : cevap({ ok: false, hata: 'Izin yok' }, 403);
+    // MSJ-042: şifre yenileme / e-posta doğrulama e-postası mdSinyal adresinden (Resend); yapılamazsa istemci Firebase'in kendi e-postasına düşer
+    if (yol === 'hesap/sifre' || yol === 'hesap/dogrula') return IZINLI.includes(origin) ? hesapEposta(req, env, yol, cevap, { saglayici: epSaglayici(env), firebaseKey: env.FIREBASE_KEY || FIREBASE_KEY }) : cevap({ ok: false, hata: 'Izin yok' }, 403);
     if (yol === 'soru-bildir' && req.method === 'POST') return IZINLI.includes(origin) ? soruBildirAl(req, env, cevap) : cevap({ ok: false, hata: 'Izin yok' }, 403);
     if (yol === 'soru-bildir/yonet') return soruBildirYonet(req, env, url, cevap);
     // kursun rapor ve yedek e-postaları (kimlik denetimi eposta() içinde)
