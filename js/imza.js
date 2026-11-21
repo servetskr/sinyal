@@ -73,7 +73,7 @@ export async function imzaIste(tur, k, dersIdleri = []) {
     ? `${selam(k)} ${kursAdi()} kurs sözleşmeniz imzanızı bekliyor.\n\nOkuyup parmağınızla imzalamak için dokunun:\n${link}`
     : `${selam(k)} ${dersler.length > 1 ? 'aşağıdaki direksiyon derslerinizin' : 'direksiyon dersinizin'} takip formu imzanızı bekliyor:\n\n${dersler.map(satir).join('\n')}\n\nKontrol edip parmağınızla imzalamak için dokunun (1 dakika sürer):\n${link}`;
   islem('İmzaya gönderdi', tamAd(k) + ' · ' + (tur === 'sozlesme' ? 'sözleşme' : dersIdleri.length + ' ders')); gonderimEkle(tamAd(k), (tur === 'sozlesme' ? 'Sözleşme' : 'Takip formu') + ' imza linki', 'İmza isteği'); kaydet();
-  waAc(k.tel, metin, 'WhatsApp', tamAd(k), false, 'ÖĞRENCİ');
+  waAc(k.tel, metin, 'WhatsApp', tamAd(k), false, 'ÖĞRENCİ', '', 'imza');
   return id;
 }
 export const bekleyenImza = (k, tur) => (S.imzaTalepleri || []).filter(t => t.kursiyer === k.id && t.durum === 'bekliyor' && (!tur || t.tur === tur));

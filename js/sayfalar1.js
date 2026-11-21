@@ -80,12 +80,12 @@ export const alici = k => {
 };
 // Bir olayın birden çok kişiye bildirimi (ör. ders saati değişti → öğrenci + hoca). API açıksa sessizce gider.
 export function bildirimler(liste, baslik = 'Bildirimler') {
-  const l = liste.filter(x => x && x.kim && x.metin && !(x.kim === 'mudur' && mudurMu() && !x.kendine)).map(x => { const a = alici(x.kim); return { ad: a.ad, tel: a.tel, rol: a.rol, metin: x.metin, tur: x.tur || baslik }; });
+  const l = liste.filter(x => x && x.kim && x.metin && !(x.kim === 'mudur' && mudurMu() && !x.kendine)).map(x => { const a = alici(x.kim); return { ad: a.ad, tel: a.tel, rol: a.rol, metin: x.metin, tur: x.tur || baslik, ...(x.sablon ? { sablon: x.sablon } : {}) }; });
   waSirali(l, baslik, { sessiz: true });
 }
 // Elle gönderilen mesaj: WhatsApp kişinin sohbetinde hazır mesajla açılır (Instagram adayında metin kopyalanır, DM kutusu açılır).
 export const mudurMu = () => !!(oturum.kullanici && oturum.kullanici.rol === 'mudur');
-export const wpGonder = (k, metin, tur = 'Mesaj') => {
+export const wpGonder = (k, metin, tur = 'Mesaj', sablon = '') => {
   const a = alici(k);
   if (a.kanal === 'Instagram') { gonderimEkle(a.ad, metin, tur + ' (Instagram, elle)'); try { navigator.clipboard.writeText(metin); } catch (x) { } window.open('https://www.instagram.com/direct/inbox/', '_blank'); return bildir('Mesaj kopyalandı; Instagram’da ' + a.ad.split(' ')[0] + ' sohbetine yapıştırıp gönderin'); }
   // PAR-058: WhatsApp'ı olmayan öğrenciye yedek kanal — SMS (cihazın mesaj uygulaması) ya da e-posta (cihazın e-posta uygulaması, konu kurs adı ve tür)
@@ -93,7 +93,7 @@ export const wpGonder = (k, metin, tur = 'Mesaj') => {
     location.href = 'mailto:' + encodeURIComponent(a.eposta) + '?subject=' + encodeURIComponent((S.kurs.ad || '') + ' · ' + tur) + '&body=' + encodeURIComponent(metin); return bildir(a.ad.split(' ')[0] + ' için e-posta uygulaması açıldı; gönderin'); }
   if (a.kanal === 'SMS' || (a.kanal === 'E-posta' && !a.eposta)) { const r = waAc(a.tel, metin, 'SMS', a.ad, true, a.rol, tur); if (r === true) bildir(a.ad.split(' ')[0] + ' için SMS hazır; gönderin'); else if (r === 'onizleme') bildir('Demo: SMS gönderilmedi, yalnız gösterildi'); return r; }
   // waAc: true = WhatsApp açıldı, 'api' = arka planda gidiyor (sonucu kendisi bildirir), 'onizleme' = demo, false = tarayıcı pencereyi engelledi (düğmeli kutu açılır)
-  const r = waAc(a.tel, metin, 'WhatsApp', a.ad, false, a.rol, tur);
+  const r = waAc(a.tel, metin, 'WhatsApp', a.ad, false, a.rol, tur, sablon);
   if (r === true) bildir(a.ad.split(' ')[0] + ' için WhatsApp açıldı; mesajı gönderin', 'wp');
   else if (r === 'onizleme') bildir('Demo: mesaj gönderilmedi, yalnız gösterildi');
   else if (r === false) bildir('Tarayıcı WhatsApp penceresini engelledi; kutudaki düğmeyle açın', 'uyari');

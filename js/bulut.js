@@ -687,7 +687,8 @@ function kancalariKur(u) {
   setInterval(makbuzDenetle, 30000); setTimeout(makbuzDenetle, 5000);
   if (['mudur', 'sekreter'].includes(u.rol)) { setTimeout(() => gunlukYedek().catch(x => console.error(x)), 45000);
     // haftalık / aylık rapor e-postası (ve gönderilemeyen son gün sonu raporu): dönemin ilk açılışında, tek cihazdan (eposta.js)
-    setTimeout(() => import('./eposta.js?v=235').then(m => m.zamanliRaporlar()).catch(x => console.error(x)), 60000); gelenDinle(); ustaGelenDinle(); setTimeout(() => { ustaKirli.add('*'); ustaProjeksiyonYaz(); }, 3000); }
+    setTimeout(() => import('./eposta.js?v=235').then(m => m.zamanliRaporlar()).catch(x => console.error(x)), 60000); gelenDinle(); ustaGelenDinle(); setTimeout(() => { ustaKirli.add('*'); ustaProjeksiyonYaz(); }, 3000);
+    import('./ui.js?v=235').then(u => u.ortakDurumAl(true)).catch(() => { }); }   // MSJ-044: ortak mdSinyal WhatsApp hattı kurulu mu (zamanlayıcıdan önce)
 }
 
 // ---- yedek ----
@@ -1032,7 +1033,8 @@ function ogrenciUygula(docId, g) {
       S.gonderimler.unshift(m);
       if (!izinli && y.iletilecek) { islem('Öğrenci panelinden izinsiz bildirim engellendi', tamAd(k) + ' → ' + m.kime); continue; }
       if (retler.length && /dersi aldı|dersini iptal etti/.test(m.metin)) continue;  // istek reddedildiyse "ders aldı / iptal etti" bildirimi gitmez
-      if (y.iletilecek && S.kurs.waApi) sahiplen('og|' + docId + '|' + x.id).then(ok => { if (ok) import('./ui.js?v=235').then(u => u.apiGonder(u.etiket(m.kime, y.rol || '') + m.metin, undefined, undefined, { ad: m.kime, rol: y.rol || '' }).then(s => { if (!s.ok) { islem('Öğrenci bildirimi gönderilemedi', m.kime + ' · ' + m.tur + ': ' + s.hata); kaydet(); } })); });
+      // MSJ-044: kursun kendi hattı yokken ortak hattan da gider (apiAcik)
+      if (y.iletilecek) import('./ui.js?v=235').then(u => { if (!u.apiAcik()) return; sahiplen('og|' + docId + '|' + x.id).then(ok => { if (ok) u.apiGonder(u.etiket(m.kime, y.rol || '') + m.metin, undefined, undefined, { ad: m.kime, rol: y.rol || '' }).then(s => { if (!s.ok) { islem('Öğrenci bildirimi gönderilemedi', m.kime + ' · ' + m.tur + ': ' + s.hata); kaydet(); } }); }); });
     }
   }
   if (notlar.length) islem('Öğrenci panelinden', tamAd(k) + ': ' + notlar.join(', '));
