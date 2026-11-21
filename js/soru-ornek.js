@@ -17,7 +17,7 @@ const stil = `<style>
 .so-mod{display:flex;gap:6px}
 .so-kart{border:1.5px solid var(--cizgi-2);border-radius:10px;padding:14px 16px;margin-bottom:12px;background:var(--panel)}
 .so-etiket{font-size:12px;font-weight:700;color:var(--metin);margin:0 0 6px;text-transform:none}
-.so-kok{font-size:16px;font-weight:700;color:var(--murekkep);margin:0 0 12px;line-height:1.4}
+.so-kok{font-size:16px;font-weight:700;color:var(--murekkep);margin:0 0 12px;line-height:1.4;white-space:pre-line}
 .so-siklar{display:grid;gap:8px}
 .so-sik{display:flex;gap:10px;align-items:flex-start;text-align:left;width:100%;padding:10px 12px;border:1.5px solid var(--cizgi-2);border-radius:8px;background:var(--zemin, #fff);font:inherit;font-size:15px;color:var(--murekkep);cursor:pointer;line-height:1.35}
 .so-sik b{flex:none;width:22px}
