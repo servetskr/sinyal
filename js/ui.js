@@ -366,8 +366,59 @@ export function yonlendir(tel, metin, ad, rol) {
 // Ziyaretçi (giriş yapmadan inceleyen) modunda hiçbir mesaj gönderilmez, adres kayıtlı olsa bile
 // Gerçek kursta otomatik gönderim, kursun kendi WhatsApp hattı bağlıysa açılır (Ayarlar › Kurs bilgileri)
 // Servisin kökü. Yerel emülatör testinde (EMU) gerçek servise hiçbir istek gitmez: kapalı yerel adrese yönlenir
-export const waKok = (a = S && S.kurs && S.kurs.waApi) => EMU ? 'http://127.0.0.1:9' : new URL(a).origin;
-export const apiAcik = () => !!(S && S.kurs && S.kurs.waApi) && !(oturum.kullanici && oturum.kullanici.ziyaretci) && (!S._bulut || !!S.kurs.waHat);
+// MSJ-044: kursun kendi hattı yokken ortak hat da aynı servise gider; adres boşsa servisin kendi adresi
+export const waKok = (a = S && S.kurs && S.kurs.waApi) => EMU ? 'http://127.0.0.1:9' : new URL(a || 'https://api.mdsinyal.com').origin;
+// ---- MSJ-043…047: tek ortak mdSinyal WhatsApp hattı ----
+// Kursun kendi hattı (S.kurs.waHat) yoksa bilgilendirme mesajları mdSinyal'in ortak hattından gider. Ortak hattın kurulu olup olmadığını
+// servis söyler (/ortak/durum); cevap gelene kadar ve hat kurulu değilken gerçek kursta eski davranış (WhatsApp hazır metinle açılır) sürer.
+// Örnek kurs (demo) ortak hat düzenini gösterir: türü pazarlama olan, rızası olmayan ve DUR yazan kişiye otomatik gitmez.
+export const ortak = { ortak: false, kursHatti: false, toplu: null, zaman: 0 };
+export const ortakMod = () => !!(S && S.kurs) && !S.kurs.waHat && (S._bulut ? ortak.ortak && !ortak.kursHatti : true);
+export async function ortakDurumAl(zorla = false) {
+  if (!S || !S._bulut || ziyaretci() || (!zorla && Date.now() - ortak.zaman < 5 * 60e3)) return ortak;
+  try { const r = await waIstek('/ortak/durum'), j = await r.json().catch(() => ({})); if (r.ok && j.ok) Object.assign(ortak, { ortak: !!j.ortak, kursHatti: !!j.kursHatti, toplu: j.toplu || null, zaman: Date.now() }); } catch (x) { }
+  return ortak;
+}
+// DUR yazanları servisten tazeler (Mesajlar açılınca): listede olan kişide waDur işaretlenir, BAŞLA yazıp listeden çıkanda kalkar
+let durSon = 0;
+export async function durTazele() {
+  if (!S || !S._bulut || !ortakMod() || ziyaretci() || Date.now() - durSon < 60e3) return 0;
+  durSon = Date.now();
+  const kisiler = [...(S.kursiyerler || []).filter(k => !k.kapali), ...(S.egitmenler || []), ...(S.adaylar || []).filter(a => !['Kayıt', 'Kaybedildi'].includes(a.asama))].filter(x => WO.telRakam(x.tel));
+  let degisen = 0;
+  for (let i = 0; i < kisiler.length; i += 200) {
+    const parca = kisiler.slice(i, i + 200), teller = [...new Set(parca.map(x => '0' + WO.telRakam(x.tel).slice(2)))];
+    try {
+      const r = await waIstek('/ortak/dur?tel=' + encodeURIComponent(teller.join(','))), j = await r.json().catch(() => ({})); if (!r.ok || !j.ok) return degisen;
+      const dur = new Set((j.dur || []).map(WO.telRakam));
+      parca.forEach(x => { const d = dur.has(WO.telRakam(x.tel)); if (d && !x.waDur) { x.waDur = gunBugun(); degisen++; } else if (!d && x.waDur) { delete x.waDur; degisen++; } });
+    } catch (e) { return degisen; }
+  }
+  if (degisen) kaydet();
+  return degisen;
+}
+const gunBugun = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+// MSJ-047: kişinin kendi uygulamasından rıza verme / geri çekme. Öğrencinin kaydı ofise kendiliğinden gider (kursiyerler farkı);
+// öğretmenin telefonunda kayıt ofise gitmediği için ayrıca waRizaGelen'e yazılır (bulut.js ustaUygula yalnız rıza alanını işler)
+export function rizaUygulamadan(kisi, ver, ogretmen = false) {
+  if (!kisi) return; const t = gunBugun();
+  if (ver) WO.rizaVer(kisi, ogretmen ? 'ogretmen-uygulama' : 'ogrenci-uygulama', t); else WO.rizaGeriAl(kisi, t);
+  if (ogretmen && oturum.kullanici && oturum.kullanici.rol === 'usta') (S.waRizaGelen = S.waRizaGelen || []).push({ id: 'wr' + Date.now().toString(36), kim: kisi.id, waRiza: kisi.waRiza, ...(kisi.waRizaGeri ? { waRizaGeri: kisi.waRizaGeri } : {}) });
+  kaydet();
+}
+export const RIZA_METNI = WO.RIZA_METNI;
+// Kurs çalışanı (müdür, ön büro) kursun mdSinyal hizmet sözleşmesiyle bildirim alır; rıza kişi kaydında aranmaz
+const PERSONEL_ROL = ['MÜDÜR', 'ÖN BÜRO'];
+// Ortak hattan gidemeyecek mesajın nedeni: '' (gidebilir) | 'pazarlama' | 'dur' | 'riza'. Kursun kendi hattında hep ''.
+export function ortakEngel(kime, sablon) {
+  if (!ortakMod()) return '';
+  if (WO.pazarlamaMi(sablon)) return 'pazarlama';
+  if (kime && PERSONEL_ROL.includes(kime.rol)) return '';
+  const k = aliciKisi(kime);
+  if (k && k.waDur) return 'dur';
+  return WO.rizaVar(k) ? '' : 'riza';
+}
+export const apiAcik = () => !(oturum.kullanici && oturum.kullanici.ziyaretci) && ((!!(S && S.kurs && S.kurs.waApi) && (!S._bulut || !!S.kurs.waHat)) || (!!(S && S._bulut) && ortakMod()));
 // WhatsApp servisine istek: gerçek kursta kursun kimliğiyle (servis kursun üyesi olduğunu doğrular), örnek kursta kimliksiz
 export async function waIstek(yol, ayar = {}) {
   const h = { ...(ayar.headers || {}), ...(S._bulut && bulutKanca.yetki ? await bulutKanca.yetki() : {}) };

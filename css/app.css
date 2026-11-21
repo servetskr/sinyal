@@ -1947,6 +1947,8 @@ body.usta-modu .u-satir-govde small{font-size:15px}
 .hs-ik.kirmizi{background:#e0483d}
 .hs-metin{flex:1;font-size:17px;color:#0b0d10;line-height:1.25}
 .hs-metin small{display:block;font-size:14px;color:#6b6e76}
+.hs-riza{display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:10px 16px;cursor:pointer}
+.hs-riza .anahtar{flex:none}
 .hs-cikis .hs-metin{color:#d63a2f}
 /* sekmelerin mevcut içeriği aynı dile: çerçevesiz beyaz gruplar, hap rozetler, dolgu düğmeler */
 .portal-og .kart,.portal-og .og-degerlendir,.portal-og .og-karo,.portal-og .og-ozet-kutu,.portal-og .og-sayac>div{border:0;border-radius:14px;background:#fff;box-shadow:none}

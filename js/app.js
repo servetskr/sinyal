@@ -1,6 +1,6 @@
 import { DESTEK } from './iletisim.js?v=235';
 import { ilSecenekleri, ekranDuzey, ekranYetkili, kullaniciSubesi, S, tamAd, gecikenler, eksikEvrak, egitmen, kursiyer, oturum, islem, kaydet, geriAl, gorunum, subeSec, sinifEtiket, sb } from './veri.js?v=235';
-import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=235';
+import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat, rizaUygulamadan, RIZA_METNI, tarih as tarihYaz } from './ui.js?v=235';
 import * as Y1 from './sayfalar1.js?v=235';
 import * as Y2 from './sayfalar2.js?v=235';
 import * as SG from './sinavgunu.js?v=235';
@@ -135,6 +135,9 @@ function hesapSayfasi() {
   const ogr = u.rol === 'ogrenci', og = ogr ? kursiyer(u.kursiyer) : null, ad = og ? tamAd(og) : u.ad;
   const tel = (S.kurs.tel || '').replace(/\s/g, '');
   const satir = (ikon, metin, ek, ton = '') => `<span class="hs-ik ${ton}">${ik(ikon)}</span><span class="hs-metin">${metin}${ek ? `<small>${ek}</small>` : ''}</span>`;
+  // MSJ-047: öğrenci ve öğretmen mdSinyal'in ortak WhatsApp hattından bildirim almayı kendisi kabul eder ya da geri çeker
+  const rk = og || (u.rol === 'usta' ? S.egitmenler.find(x => x.id === u.usta) : null);
+  const rizaSatir = rk ? `<label class="hs-riza">${satir('wp', e(RIZA_METNI), rk.waRiza && rk.waRiza.tarih ? 'Onay ' + e(tarihYaz(rk.waRiza.tarih)) + '. Kurs adına ders, sınav ve ödeme bildirimleri mdSinyal’in WhatsApp numarasından gelir; DUR yazarak da durdurabilirsin.' : 'Kurs adına ders, sınav ve ödeme bildirimleri mdSinyal’in WhatsApp numarasından gelir. İstediğin zaman kapatabilirsin.')}<span class="anahtar"><input type="checkbox" data-wa-riza ${rk.waRiza && rk.waRiza.tarih ? 'checked' : ''} aria-label="${e(RIZA_METNI)}"><i></i></span></label>` : '';
   pencere({ baslik: 'Hesabım', alt: true, icerik: `<div class="hs-kim"><span class="app-profil buyuk" aria-hidden="true">${basHarf(ad)}</span><div><b>${e(ad)}</b><small>${e(S.kurs.ad)} · ${ogr ? 'Öğrenci' : ORT.yonetimModu() || u.rol === 'ortak' ? (u.rol === 'mudur' ? 'Yönetici' : 'Ortak · yalnız görüntüler') : ROL_AD[u.rol]}</small></div></div>
     <div class="hs-liste">${ogr ? `<button type="button" data-ogr-sifre>${satir('kilit', 'Şifremi değiştir')}${ik('sag')}</button><button type="button" data-ogr-eposta>${satir('mesaj', B.ogrenciEposta() ? 'E-postamı değiştir' : 'E-postamı ekle', B.ogrenciEposta() ? e(B.ogrenciEposta()) : 'E-postanla da girersin; şifreni e-postayla yenilersin')}${ik('sag')}</button>` : ''}
       ${tel && !ORT.yonetimModu() && u.rol !== 'ortak' ? `<a href="tel:${e(tel)}">${satir('tel', 'Kursu ara', e(S.kurs.tel))}${ik('sag')}</a>` : ''}
@@ -146,7 +149,9 @@ function hesapSayfasi() {
       ${ORT.yonetimModu() && u.rol === 'mudur' ? `<button type="button" data-yn-hesaplar>${satir('kilit', 'Hesaplar', 'Kurs hesapları, kullanıcılar, şifre yenileme')}${ik('sag')}</button>` : ''}
       ${!ogr && !ORT.yonetimModu() && u.rol !== 'ortak' ? `<button type="button" data-destek>${satir('mesaj', 'mdSinyal Destek', 'Sorun, soru ya da istek bildir')}${ik('sag')}</button>` : ''}
       <button type="button" data-sg-denetle>${satir('sifirla', 'Uygulama sürümü', `<span data-sg-metin>${e(GU.kisaMetin())}</span>`)}${ik('sag')}</button></div>
-    <div class="hs-liste"><button type="button" class="hs-cikis" ${ogr ? 'data-ogr-cikis' : 'data-cikis'}>${satir('cikis', u.bulut || ogr ? 'Çıkış yap' : 'Kullanıcı değiştir', '', 'kirmizi')}</button></div>` });
+    ${rizaSatir ? `<div class="hs-liste">${rizaSatir}</div>` : ''}
+    <div class="hs-liste"><button type="button" class="hs-cikis" ${ogr ? 'data-ogr-cikis' : 'data-cikis'}>${satir('cikis', u.bulut || ogr ? 'Çıkış yap' : 'Kullanıcı değiştir', '', 'kirmizi')}</button></div>`,
+    onAc(d) { const c = d.querySelector('[data-wa-riza]'); if (c) c.addEventListener('change', () => { rizaUygulamadan(rk, c.checked, !og); bildir(c.checked ? 'WhatsApp bildirimleri açıldı' : 'WhatsApp bildirimleri kapatıldı; kursun bildirimleri uygulamada görünür'); }); } });
 }
 // Kurs personeli mdSinyal'e destek talebi açar: talep kursun verisine yazılır, Servet mdSinyal Yönetim › Destek'te görür ve cevaplar
 const DESTEK_TUR = ['Hata', 'Öneri', 'Soru', 'İstek', 'Eğitim'];   // DIG-030: öneri ayrı tür; öncelik (Normal / Acil) talepte

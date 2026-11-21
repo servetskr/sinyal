@@ -1,5 +1,5 @@
 import { dersSirasi, oturum, islem, S, kaydet, gun, fark, tarihOku, SINIFLAR, ASAMALAR, EVRAKLAR, kursiyer, egitmen, arac, tamAd, odenen, kalanBorc, gecikenler, eksikEvrak, asamaNo, sonrakiDers, gonderimEkle, yerelZaman, BECERI, risk, ekToplam, selam, kursAdi, konuListesi, konuOner, DERS_TUR_AD, dersKalanSaat, dersIptalIz, gerekliDireksiyon, sinifEtiket, egitimSinifi, teorikVar, teorikSaat } from './veri.js?v=235';
-import { e, saatDe, saatE, tl, ik, rozet, avatar, csvIndir, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani, waAc, waNumara } from './ui.js?v=235';
+import { e, saatDe, saatE, tl, ik, rozet, avatar, csvIndir, plaka, yol, ilerleme, bos, pencere, kapatPencere, bildir, tarih, tarihUzun, goreli, gunKisa, aracGorsel, isaret, imzaAlani, waAc, waNumara, rizaUygulamadan } from './ui.js?v=235';
 import { yenile } from './app.js?v=235';
 import { ekDersKabul, bosTeklifKabul, wpGonder, bildirimler } from './sayfalar1.js?v=235';
 import { KONULAR } from './konular.js?v=235';
@@ -515,6 +515,9 @@ function sinavMenu(k) {
 // Öğrenci ekranlarında ortak eylemler (ödeme, ders saati değişikliği, randevu, kursa yaz, ek ders cevabı): eski ve yeni tasarım birlikte kullanır
 function ogGenelTik(t, k) {
   const o = t.closest('[data-ode]'); if (o) odemeYap(k, +o.dataset.ode);
+  // MSJ-047: ana sayfadaki WhatsApp bildirim rızası sorusu; MSJ-045: kurstan gelen uygulama bildirimi (bu telefonda okundu sayılır)
+  const rz = t.closest('[data-og-riza]'); if (rz) { rizaUygulamadan(k, rz.dataset.ogRiza === '1'); bildir(rz.dataset.ogRiza === '1' ? 'Teşekkürler; bildirimler WhatsApp’tan gelecek. Hesabım’dan kapatabilirsin' : 'Tamam; bildirimleri uygulamada görürsün. Hesabım’dan açabilirsin'); return yenile(); }
+  const km = t.closest('[data-og-km]'); if (km) { try { const l = JSON.parse(localStorage.getItem('sinyal-km-okundu') || '[]'); l.unshift(km.dataset.ogKm); localStorage.setItem('sinyal-km-okundu', JSON.stringify(l.slice(0, 30))); } catch (x) { } return yenile(); }
   const oe = t.closest('[data-og-ekders]'); if (oe) { if (oe.dataset.ogEkders === 'evet') { const et = OG.ekDersTeklifBilgi(k); if (et && !et.kabul) return kursaYaz(k, 'ekTeklif'); ekDersKabul(k); } else { k.ekDersTeklif = null; kaydet(); bildirimler([{ kim: 'mudur', metin: `${tamAd(k)} ek direksiyon dersi teklifini istemedi.`, tur: 'Kursiyer cevabı' }], 'Ek ders'); bildir('Cevabın kursa iletildi'); yenile(); } }
   const ob = t.closest('[data-og-bos]'); if (ob) bosTeklifKabul(ob.dataset.ogBos, k.id, true);
   const dg = t.closest('[data-degis]'); if (dg) { const sd2 = sonrakiDers(k), m = `Merhaba, ben ${tamAd(k)}. ${sd2 ? tarihUzun(sd2.tarih) + ' ' + sd2.saat + ' direksiyon dersimin saatini' : 'Ders saatimi'} değiştirmek istiyorum.`; gonderimEkle(S.kurs.ad, m, 'Kursiyer talebi'); const kno = S.kurs.wp || S.kurs.wpGenel || S.kurs.tel; if (!waNumara(kno)) return bildir('Kursun WhatsApp numarası kayıtlı değil; kursu arayın' + (S.kurs.tel ? ': ' + S.kurs.tel : ''), 'uyari'); if (waAc(kno, m, 'WhatsApp', tamAd(k), false, 'KURSA GELEN') !== 'api') bildir('WhatsApp açıldı; mesajı kursa gönder', 'wp'); }
