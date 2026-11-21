@@ -961,11 +961,36 @@ const kimlikUret = () => 's' + Date.now().toString(36) + Math.random().toString(
 
 function destekHtml() {
   const v = isl(), l = tumTalepler(), acik = l.filter(t => tDurum(t) !== 'Çözüldü').length, ay = bugunIso().slice(0, 7), hAy = v.hizmetler.filter(h => String(h.tarih || '').startsWith(ay));
-  const sek = [['talepler', 'Talepler', acik], ['hizmetler', 'Hizmetler', v.hizmetler.length], ['hatalar', 'Son hatalar', hataRozet()], ['asistan', 'Asistan', ag.liste ? ag.liste.filter(x => !x.iyi).length : 0], ['site', 'Site formları', sf.liste ? sf.liste.filter(x => (x.durum || 'yeni') === 'yeni').length : 0], ['soru', 'Soru bankası', sq.liste ? sq.liste.filter(x => x.durum === 'yeni').length : 0], ['mevzuat', 'Mevzuat', mo.takip ? (mo.takip.yeni || []).length : 0], ['ilan', 'İlanlar', il.liste ? il.liste.filter(x => x.durum === 'bekliyor').length : 0]];
+  const sek = [['talepler', 'Talepler', acik], ['hizmetler', 'Hizmetler', v.hizmetler.length], ['hatalar', 'Son hatalar', hataRozet()], ['asistan', 'Asistan', ag.liste ? ag.liste.filter(x => !x.iyi).length : 0], ['site', 'Site formları', sf.liste ? sf.liste.filter(x => (x.durum || 'yeni') === 'yeni').length : 0], ['soru', 'Soru bankası', sq.liste ? sq.liste.filter(x => x.durum === 'yeni').length : 0], ['mevzuat', 'Mevzuat', mo.takip ? (mo.takip.yeni || []).length : 0], ['ilan', 'İlanlar', il.liste ? il.liste.filter(x => x.durum === 'bekliyor').length : 0], ['wa', 'WhatsApp', es.liste ? es.liste.length : 0]];
   return `<div class="sh-bas"><div><h1>Destek</h1><p>${acik} açık talep · bu ay ${hAy.length} hizmet</p></div>
       <div class="sh-bas-dg"><button class="dg dg-cizgi dg-kucuk" data-sh-yenile ${yukleniyor ? 'disabled' : ''}>${ik('sifirla')}${yukleniyor ? 'Yükleniyor…' : 'Yenile'}</button><button class="dg dg-cizgi dg-kucuk" data-sh-talep-ekle>${ik('arti')}Talep ekle</button><button class="dg dg-ana dg-kucuk" data-sh-hizmet-ekle>${ik('arti')}Hizmet ekle</button></div></div>
     <div class="sh-suz sh-alt" role="tablist">${sek.map(([k, a, n]) => `<button role="tab" aria-selected="${destekAlt === k}" class="${destekAlt === k ? 'secili' : ''}" data-sh-dalt="${k}">${a}${n ? ` <em>${n}</em>` : ''}</button>`).join('')}</div>
-    ${destekAlt === 'talepler' ? talepListeHtml(l) : destekAlt === 'hatalar' ? hataListeHtml() : destekAlt === 'asistan' ? asistanGeriHtml() : destekAlt === 'mevzuat' ? mevzuatYonetHtml() : destekAlt === 'site' ? siteFormHtml() : destekAlt === 'soru' ? soruBildirHtml() : destekAlt === 'ilan' ? ilanYonetHtml() : hizmetListeHtml(v.hizmetler)}`;
+    ${destekAlt === 'talepler' ? talepListeHtml(l) : destekAlt === 'hatalar' ? hataListeHtml() : destekAlt === 'asistan' ? asistanGeriHtml() : destekAlt === 'mevzuat' ? mevzuatYonetHtml() : destekAlt === 'site' ? siteFormHtml() : destekAlt === 'soru' ? soruBildirHtml() : destekAlt === 'ilan' ? ilanYonetHtml() : destekAlt === 'wa' ? eslesmeyenHtml() : hizmetListeHtml(v.hizmetler)}`;
+}
+// ---- MSJ-044: ortak mdSinyal WhatsApp hattına gelen, hiçbir kursla eşleşmeyen mesajlar (worker /sahip/eslesmeyen) ----
+// Gönderenin numarası ne son gönderen kursta ne kayıtlı kişilerde bulunamadı. Platform sahibi doğru kursa taşır (o kişinin sonraki cevapları
+// da o kursa gider) ya da siler. Numara maskesiz yalnız burada görünür; 60 gün tutulur.
+const es = { liste: null, yukleniyor: false, hata: '', yetkisiz: false };
+async function eslesmeyenYukle() {
+  if (es.yukleniyor) return; es.yukleniyor = true; es.hata = ''; ciz();
+  try { const j = await moIstek('/sahip/eslesmeyen'); es.liste = (j.liste || []).slice().sort((a, b) => String(b.zaman || '').localeCompare(String(a.zaman || ''))); es.yetkisiz = false; }
+  catch (x) { if (x.yetkisiz) es.yetkisiz = true; else es.hata = turkceHata(x); }
+  es.yukleniyor = false; ciz();
+}
+const esTel = t => { const d = String(t || '').replace(/\D/g, ''); return d.length === 12 && d.startsWith('90') ? '0' + d.slice(2, 5) + ' ' + d.slice(5, 8) + ' ' + d.slice(8, 10) + ' ' + d.slice(10) : d ? '+' + d : '—'; };
+function eslesmeyenHtml() {
+  if (es.liste === null && !es.yukleniyor && !es.yetkisiz && !es.hata) setTimeout(eslesmeyenYukle, 0);
+  if (es.yetkisiz) return `<div class="sh-bos">${ik('kilit')}<b>Eşleşmeyen mesajları yalnız platform sahibi görür</b><small>mdSinyal Yönetim’e platform sahibinin hesabıyla gir.</small></div>`;
+  if (es.hata && !es.liste) return `<div class="sh-bos">${ik('uyari')}<b>Eşleşmeyen WhatsApp mesajları okunamadı</b><small>${e(es.hata)}</small><button class="dg dg-cizgi dg-kucuk" data-sh-es-yenile>Yeniden dene</button></div>`;
+  if (!es.liste) return `<div class="sh-bos">${ik('saat')}<b>Eşleşmeyen mesajlar yükleniyor…</b></div>`;
+  const kurslar = Object.entries(kursIst).map(([k, x]) => [k, (x && x.ad) || kursAd(k)]).sort((a, b) => String(a[1]).localeCompare(String(b[1]), 'tr'));
+  const ust = `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:4px 0 12px"><p style="margin:0;font-size:14px;color:var(--soluk)">Ortak mdSinyal hattına yazan, hiçbir kursla eşleşmeyen ${es.liste.length} mesaj</p><button class="dg dg-cizgi dg-kucuk" data-sh-es-yenile ${es.yukleniyor ? 'disabled' : ''}>${ik('sifirla')}Yenile</button></div>`;
+  if (!es.liste.length) return ust + `<div class="sh-bos">${ik('tik')}<b>Eşleşmeyen WhatsApp mesajı yok</b><small>Ortak hatta yazan kişi son mesaj gönderen kursa ya da kayıtlı olduğu kursa yönlenir; ikisi de bulunamazsa burada görünür.</small></div>`;
+  return ust + `<div class="sh-liste" data-resmi>${es.liste.map(x => `<div class="sh-satir sh-es" style="cursor:default;align-items:flex-start;flex-wrap:wrap">
+    <span class="sh-av sh-av-yok">${ik('wp')}</span>
+    <span class="sh-satir-ic" style="flex:1 1 220px"><b style="white-space:normal">${e(String(x.metin || '').slice(0, 400)) || '(boş mesaj)'}</b><small>${e(esTel(x.tel))} · ${e(hataZaman(x.zaman))}</small></span>
+    <span class="sh-es-dg"><select class="girdi" data-sh-es-kurs="${e(x.id)}" aria-label="Taşınacak kurs"><option value="">Kurs seçin…</option>${kurslar.map(([k, a]) => `<option value="${e(k)}">${e(a)}</option>`).join('')}</select><button class="dg dg-ana dg-kucuk" data-sh-es-tasi="${e(x.id)}">Taşı</button><button class="dg dg-hafif dg-kucuk" data-sh-es-sil="${e(x.id)}">Sil</button></span></div>`).join('')}</div>
+    <p class="sh-dip">Taşınan mesaj kursun Mesajlar kutusuna düşer; o numaranın sonraki cevapları da o kursa gider. Kayıtlar 60 gün tutulur.</p>`;
 }
 // ---- Soru bankası bildirimleri (UYG-018): öğrencilerin 'Soruda hata var' bildirimleri, soru başına tek satır (worker /soru-bildir/yonet) ----
 const sq = { liste: null, yukleniyor: false, hata: '', yetkisiz: false, suz: 'yeni' };
@@ -1569,6 +1594,15 @@ async function destekTikla(t) {
   const d = t.closest('[data-sh-dalt]'); if (d) { destekAlt = d.dataset.shDalt; ciz(); return true; }
   if (t.closest('[data-sh-hata-yenile]')) { hatalarYukle(); return true; }
   if (t.closest('[data-sh-ag-yenile]')) { asistanGeriYukle(); return true; }
+  if (t.closest('[data-sh-es-yenile]')) { eslesmeyenYukle(); return true; }
+  { const ta = t.closest('[data-sh-es-tasi]'), sl = t.closest('[data-sh-es-sil]'); if (ta || sl) {
+    const id = (ta || sl).dataset[ta ? 'shEsTasi' : 'shEsSil'], x = (es.liste || []).find(y => String(y.id) === id); if (!x) return true;
+    let kurs = '';
+    if (ta) { const sec = [...document.querySelectorAll('[data-sh-es-kurs]')].find(y => y.dataset.shEsKurs === id); kurs = sec ? sec.value : ''; if (!kurs) { bildir('Önce mesajın taşınacağı kursu seçin', 'uyari'); return true; } }
+    else if (!(await onaySor('Mesaj eşleşmeyenler listesinden kalıcı olarak silinir.', { baslik: 'Mesaj silinsin mi?', evet: 'Sil', tehlike: true }))) return true;
+    try { await moIstek('/sahip/eslesmeyen', { yontem: 'POST', govde: ta ? { id: x.id, kurs } : { id: x.id, sil: true } }); es.liste = es.liste.filter(y => y !== x); islem(ta ? 'mdSinyal Yönetim: eşleşmeyen WhatsApp mesajını kursa taşıdı' : 'mdSinyal Yönetim: eşleşmeyen WhatsApp mesajını sildi', ta ? kursAd(kurs) : ''); kaydet(); bildir(ta ? 'Mesaj ' + kursAd(kurs) + ' gelen kutusuna taşındı' : 'Mesaj silindi'); }
+    catch (y) { bildir(y.yetkisiz ? 'Bu işlem yalnız platform sahibine açık' : turkceHata(y), 'uyari'); }
+    ciz(); return true; } }
   if (t.closest('[data-sh-mo-yenile]')) { mo.veri = null; mevzuatYonetYukle(); return true; }
   if (t.closest('[data-sh-mo-ekle]')) { mevzuatBelgePenceresi(); return true; }
   const mb = t.closest('[data-sh-mo-bulten]'); if (mb) { try { const j = await moIstek('/mevzuat/ortak/bulten', { yontem: 'POST', govde: { acik: mb.dataset.shMoBulten === '1' } }); mo.bulten = j.bulten; bildir(j.bulten.acik ? 'Haftalık bülten açıldı' : 'Haftalık bülten kapatıldı'); ciz(); } catch (x) { bildir(turkceHata(x), 'uyari'); } return true; }

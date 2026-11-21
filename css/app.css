@@ -2263,6 +2263,9 @@ body.sahip-modu{
 .sh-liste{background:#fff;border-radius:14px;overflow:hidden;border:1px solid var(--cizgi-2)}
 .sh-satir{display:flex;align-items:center;gap:12px;width:100%;padding:11px 14px;text-align:left;min-width:0;background:#fff;transition:background .12s}
 .sh-satir+.sh-satir{border-top:1px solid var(--cizgi-2)}
+.sh-es-dg{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-left:auto}
+.sh-es-dg select{width:auto;min-width:160px;max-width:100%;min-height:34px;padding:4px 8px;font-size:13.5px}
+@media (max-width:600px){.sh-es-dg{width:100%;margin-left:0}.sh-es-dg select{flex:1 1 100%}}
 .sh-satir:hover{background:#f7f7fa}
 .sh-satir:active{background:#eeeef2}
 .sh-satir.kapali .sh-satir-ic b{color:var(--soluk);text-decoration:line-through}
