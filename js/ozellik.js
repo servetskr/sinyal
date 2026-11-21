@@ -1,6 +1,6 @@
 import { cevapIsle } from './mesaj.js?v=235';
 import { S, kaydet, gun, fark, SINIFLAR, kursiyer, egitmen, arac, tamAd, islem, sb, aktifSiniflar, tcGecerli, sonrakiDers, selam, bulutKanca, iptalEdilebilir, oturum, dersIptalIz, gonderimEkle, gerekliDireksiyon, ekDersFiyat, ekDersTabani } from './veri.js?v=235';
-import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos, waIstek, ziyaretci, apiGonder, waAc, waNumara } from './ui.js?v=235';
+import { e, tl, ik, rozet, isaret, bildir, pencere, kapatPencere, tarih, tarihUzun, gunKisa, saatDe, csvIndir, ekranNotu, bos, waIstek, ziyaretci, apiGonder, waAc, waNumara, ortakMod } from './ui.js?v=235';
 import { yenile } from './app.js?v=235';
 import { sinifEsit, sertifikaKodu, tcTemiz } from './mebnorm.js?v=235';
 // MEB-039: MEBBİS sertifika metni ('B SINIFI SERTİFİKA (Otomatik)') mebnorm'la; tanınmayan sınıfta (ör. OP) eski düz karşılaştırma
@@ -277,7 +277,7 @@ async function dersTalebi(x) {
 let gelenDe = false, ilkTur = true;
 const uiBildir = (m, t) => bildir(m, t);
 export async function gelenKontrol() {
-  if (gelenDe || !S.kurs.waApi || ziyaretci()) return 0;
+  if (gelenDe || !(S.kurs.waApi || (S._bulut && ortakMod())) || ziyaretci()) return 0;   // MSJ-044: ortak hattan gelen cevaplar da aynı kutuya düşer
   gelenDe = true; let n = 0; const uyarilar = [];
   const bildir = (m, t) => uyarilar.push([m, t]);
   try {
@@ -295,15 +295,24 @@ export async function gelenKontrol() {
       const saat = new Date(x.zaman).toTimeString().slice(0, 5);
       // gönderdiğimiz mesaja verilen cevap (evet/hayır ya da “yanıtla”) adaya değil o mesaja işlenir
       // kayıtlı öğrencinin WhatsApp'tan ders değişikliği (asistan tanıdı): saat önerisi ya da seçilen saate taşıma
-      if (x.niyet) { await dersTalebi(x).catch(err => console.error(err)); continue; }
+      if (x.niyet && x.kanal !== 'ortak') { await dersTalebi(x).catch(err => console.error(err)); continue; }
+      const ortakHat = x.kanal === 'ortak' ? { hat: 'ortak' } : {};
+      // MSJ-046: ortak hatta DUR / BAŞLA: kişinin kaydındaki işaret de güncellenir (servis bildirimleri zaten durdurdu ya da açtı)
+      if (ortakHat.hat && /^\s*(dur|stop|başla|basla)\s*[.!]?\s*$/i.test(String(x.metin || '').toLocaleLowerCase('tr'))) {
+        const t10 = x.tel ? String(x.tel).replace(/\D/g, '').slice(-10) : '', durdu = /^(dur|stop)/.test(String(x.metin).trim().toLocaleLowerCase('tr'));
+        const kisi = t10 && [...S.kursiyerler, ...S.egitmenler, ...S.adaylar].find(y => String(y.tel || '').replace(/\D/g, '').slice(-10) === t10);
+        if (kisi) { if (durdu) kisi.waDur = gun(0); else delete kisi.waDur; }
+        const ad = kisi ? (kisi.soyad ? kisi.ad + ' ' + kisi.soyad : kisi.ad) : '···' + (x.son4 || t10.slice(-4));
+        islem(durdu ? 'Ortak hatta DUR yazdı' : 'Ortak hatta BAŞLA yazdı', ad); bildir(`${ad} ${durdu ? 'mdSinyal bildirimlerini durdurdu (DUR)' : 'mdSinyal bildirimlerini yeniden açtı (BAŞLA)'}`, 'wp'); continue;
+      }
       const cv = cevapIsle(x);
       if (cv) { islem('Mesaja cevap geldi', cv.ad + ' · ' + cv.baslik + ' · ' + x.metin); bildir(`${cv.ad} cevap verdi: “${x.metin.slice(0, 40)}”`, 'wp'); continue; }
       // gerçek kurs hattında numara tam gelir: kayıtlı kursiyerse mesaj ona yazılır, aday açılmaz
       const tel10 = x.tel ? String(x.tel).slice(-10) : '', ogr = tel10 && S.kursiyerler.find(k => String(k.tel || '').replace(/\D/g, '').slice(-10) === tel10);
-      if (ogr) { const ad = ogr.ad + ' ' + ogr.soyad; S.devredilen.unshift({ ad, kanal: 'WhatsApp', konu: 'Kursiyer mesajı', mesaj: x.metin, neden: 'Kursiyer kursun WhatsApp hattına yazdı', saat, z: new Date().toISOString(), bildirim: [[saat, S.kurs.yetkili || 'Kurs müdürü', 'mdSinyal']] }); islem('WhatsApp’tan kursiyer mesajı', ad + ' · ' + x.metin.slice(0, 60)); bildir(`${ad} WhatsApp’tan yazdı: “${x.metin.slice(0, 40)}”`, 'wp'); continue; }
+      if (ogr) { const ad = ogr.ad + ' ' + ogr.soyad; S.devredilen.unshift({ ad, kanal: 'WhatsApp', ...ortakHat, konu: 'Kursiyer mesajı', mesaj: x.metin, neden: ortakHat.hat ? 'Kursiyer ortak mdSinyal hattındaki mesaja cevap yazdı' : 'Kursiyer kursun WhatsApp hattına yazdı', saat, z: new Date().toISOString(), bildirim: [[saat, S.kurs.yetkili || 'Kurs müdürü', 'mdSinyal']] }); islem('WhatsApp’tan kursiyer mesajı', ad + ' · ' + x.metin.slice(0, 60)); bildir(`${ad} WhatsApp’tan yazdı: “${x.metin.slice(0, 40)}”`, 'wp'); continue; }
       let a = S.adaylar.find(y => (tel10 && String(y.tel || '').replace(/\D/g, '').slice(-10) === tel10) || (y.waSon4 === x.son4 && !['Kayıt', 'Kaybedildi'].includes(y.asama)));
-      if (!a) { a = { id: 'l' + Date.now() + n, ad: x.ad || 'WhatsApp adayı · ···' + x.son4, tel: tel10 ? '0' + tel10 : '', waSon4: x.son4, kaynak: 'WhatsApp', kanal: 'WhatsApp', sinif: 'B', asama: 'Yeni', tarih: gun(0), saat, takip: null, not: x.cevap ? 'Kursun WhatsApp hattına yazdı; asistan cevapladı' : 'Kursun WhatsApp hattına yazdı', devir: null, mesajlar: [] }; S.adaylar.unshift(a); }
-      a.mesajlar.push({ kim: 'aday', metin: x.metin, z: x.zaman || new Date().toISOString() }, ...(x.cevap ? [{ kim: 'asistan', metin: x.cevap, z: x.zaman || new Date().toISOString() }] : [])); a.saat = saat;
+      if (!a) { a = { id: 'l' + Date.now() + n, ad: x.ad || 'WhatsApp adayı · ···' + x.son4, tel: tel10 ? '0' + tel10 : '', waSon4: x.son4, kaynak: 'WhatsApp', kanal: 'WhatsApp', ...ortakHat, sinif: 'B', asama: 'Yeni', tarih: gun(0), saat, takip: null, not: ortakHat.hat ? 'Ortak mdSinyal hattına yazdı' : x.cevap ? 'Kursun WhatsApp hattına yazdı; asistan cevapladı' : 'Kursun WhatsApp hattına yazdı', devir: null, mesajlar: [] }; S.adaylar.unshift(a); }
+      a.mesajlar.push({ kim: 'aday', metin: x.metin, z: x.zaman || new Date().toISOString(), ...ortakHat }, ...(x.cevap ? [{ kim: 'asistan', metin: x.cevap, z: x.zaman || new Date().toISOString() }] : [])); a.saat = saat;
       if (x.devir) { a.devir = x.cevap ? 'Bilinmeyen soru' : 'Yeni mesaj'; S.devredilen.unshift({ ad: a.ad, aday: a.id, kanal: 'WhatsApp', z: new Date().toISOString(), konu: x.cevap ? 'Bilinmeyen soru' : 'Yeni mesaj', mesaj: x.metin, neden: x.cevap ? 'Asistan bilmediği için size devretti' : 'Kursun WhatsApp hattına yazdı; cevabı siz verin', saat, bildirim: [[saat, S.kurs.yetkili || 'Kurs müdürü', 'mdSinyal']] }); }
       islem('WhatsApp’tan mesaj geldi', a.ad + ' · ' + (x.konu || 'yeni mesaj'));
       bildir(`WhatsApp’tan yeni mesaj: “${x.metin.slice(0, 40)}”${!x.cevap ? '' : x.devir ? ' · size devredildi' : ' · asistan cevapladı'}`, x.devir && x.cevap ? 'uyari' : 'wp');
