@@ -1,8 +1,20 @@
 // Mesaj merkezi: grup ya da tek tek seçilen kişilere kişiye özel WhatsApp mesajı, planlı gönderim, iletildi/okundu takibi
 import { S, kaydet, gun, fark, kursiyer, egitmen, tamAd, kalanBorc, gecikenler, gecikenTutar, eksikEvrak, sonrakiDers, risk, islem, sb, aktifSiniflar, SINIFLAR, selam, kursAdi, adEk, yerelZaman, bulutKanca, tabanListesi, odenen, adaySinavSaati } from './veri.js?v=235';
-import { e, tl, ik, rozet, bos, pencere, kapatPencere, bildir, tarihUzun, apiAcik, apiGonder, etiket, waSirali, ziyaretci, isaret, waIstek, metaHata } from './ui.js?v=235';
+import { e, tl, ik, rozet, bos, pencere, kapatPencere, bildir, tarihUzun, apiAcik, apiGonder, etiket, waSirali, ziyaretci, isaret, waIstek, metaHata, ortakMod, ortak, elleGonder, csvIndir } from './ui.js?v=235';
+import * as WO from './waortak.js?v=235';
 
-const durum = { grup: 'aktif', sinif: '', ogretmen: '', secili: null, sira: 0, zaman: 'simdi', metin: null, sablon: '', ek: null, cevapIste: false, tanitim: false };
+// tur: 'bilgi' | 'kampanya' — MSJ-046: gönderimden önce seçilmesi zorunlu (kampanya = tanıtım; yalnız izin verenlere)
+const durum = { grup: 'aktif', sinif: '', ogretmen: '', secili: null, sira: 0, zaman: 'simdi', metin: null, sablon: '', ek: null, cevapIste: false, tanitim: false, tur: '' };
+// Ortak mdSinyal hattında bilgilendirme: ön ek, DUR satırı, rıza ve DUR ayrımı, günlük iki toplu sınırı
+const ortakBilgi = () => ortakMod() && durum.tur === 'bilgi';
+const onizMetin = m => ortakBilgi() ? WO.ortakMetin(S.kurs.ad, m) : m;
+// Bugün kullanılan toplu bilgilendirme sayısı: servisin sayısı ile bu cihazın kaydı, hangisi büyükse
+export function topluBugun() {
+  const yerel = new Set((S.kampanyalar || []).filter(c => c.topluId && c.tarih === gun(0) && ['gönderildi', 'gönderiliyor'].includes(c.durum)).map(c => c.topluId)).size;
+  const t = ortak.toplu, servis = t && t.gun === gun(0) ? +t.kullanilan || 0 : 0;
+  return Math.max(yerel, servis);
+}
+const topluSinir = () => (ortak.toplu && +ortak.toplu.sinir) || WO.TOPLU_SINIR;
 // Tanıtım (ticari ileti) mesajı yalnız izni olan öğrencilere gider; eski kayıtlardaki birleşik rıza izin sayılır
 const tanitimIzni = k => !!(k.kvkk && (k.kvkk.pazarlama === undefined ? k.kvkk.riza : k.kvkk.pazarlama));  // izin kaydı yoksa gönderilmez
 // Ekli dosyalar localStorage’a yazılmaz (büyük olabilir); gönderim süresince bellekte durur
@@ -124,9 +136,10 @@ async function gonder(c) {
     const r = c.kisiler[i];
     if (sinirli && i >= DEMO_SINIR) { c.sonuc.push({ ad: r.ad, rol: r.rol, durum: 'demo sınırı' }); continue; }
     const ek = EKLER[c.id] || c.ekVeri;
-    const s = await apiGonder(etiket(r.ad, r.rol) + r.metin, ek ? { base64: ek.base64, dosya: ek.dosya, tur: ek.tur } : undefined, undefined, r, c.tanitim ? { kategori: 'pazarlama' } : {});   // MSJ-023: tanıtım → pazarlama şablonu
-    c.sonuc.push({ ad: r.ad, rol: r.rol, id: s.id || null, durum: s.ok ? 'gönderildi' : 'hata: ' + s.hata });
-    if (!s.ok && /24 saat|ulaşılamadı/.test(s.hata || '')) { bildir(s.hata, 'uyari'); break; }
+    // MSJ-023: tanıtım → pazarlama şablonu. MSJ-045/046: kaynak 'kampanya' ya da 'toplu'; birden çok kişiye giden bilgilendirme toplu sayılır (topluId)
+    const s = await apiGonder(etiket(r.ad, r.rol) + r.metin, ek ? { base64: ek.base64, dosya: ek.dosya, tur: ek.tur } : undefined, undefined, r, { sablon: c.tanitim ? 'kampanya' : 'toplu', ...(c.tanitim ? { kategori: 'pazarlama' } : {}), ...(c.topluId ? { toplu: true, topluId: c.topluId } : {}) });
+    c.sonuc.push({ ad: r.ad, rol: r.rol, id: s.id || null, durum: s.ok ? 'gönderildi' : 'hata: ' + s.hata, ...(s.kanal === 'ortak' ? { kanal: 'ortak' } : {}) });
+    if (!s.ok && (/24 saat|ulaşılamadı/.test(s.hata || '') || ['limit', 'guncelle', 'pazarlama'].includes(s.kod))) { bildir(s.hata, 'uyari'); break; }
     await new Promise(z => setTimeout(z, 300));
   }
   c.durum = 'gönderildi'; c.gonderim = yerelZaman(); delete EKLER[c.id]; delete c.ekVeri; kaydet();
@@ -148,33 +161,50 @@ export function yeniMesajHtml() {
   const r = sec[Math.min(durum.sira, Math.max(0, sec.length - 1))];
   const bosOlan = sec.filter(x => bosKalan(durum.metin, x).length);
   const kmp = (S.kampanyalar || []).slice(0, 12);
+  // MSJ-046: ortak hatta bilgilendirmede DUR yazanlar ve rızası olmayanlar ayrı sayılır, onlara gitmez
+  const ay = ortakBilgi() ? WO.topluAyir(sec) : null, kelime = durum.tur === 'bilgi' ? WO.kampanyaKelimeleri(durum.metin) : [];
+  const sinirDolu = ortakBilgi() && sec.length > 1 && durum.zaman !== 'plan' && topluBugun() >= topluSinir();
+  const ortakKampanya = ortakMod() && durum.tur === 'kampanya';
   return `<div class="izgara iz-21 mm">
   <div class="kart"><div class="kart-bas"><h3>Yeni mesaj</h3><small>Kişiye özel, WhatsApp’tan</small></div><div class="kart-govde mm-govde">
-    <div class="mm-adim"><span class="et">1 · Kime?</span>
+    <div class="mm-adim"><span class="et">1 · Mesajın türü <small style="font-weight:400;color:var(--soluk)">seçmek zorunlu</small></span>
+      <div class="secim mm-tur" role="radiogroup" aria-label="Mesajın türü">${[['bilgi', 'Bilgilendirme', 'Ders, sınav, ödeme, evrak, kapalı gün'], ['kampanya', 'Kampanya', 'Tanıtım, yeni dönem, indirim, yorum isteği']].map(([v, t, a]) => `<label><input type="radio" name="mm-tur" value="${v}" ${durum.tur === v ? 'checked' : ''}><span><b>${t}</b><small>${a}</small></span></label>`).join('')}</div>
+      ${ortakMod() && durum.tur === 'bilgi' ? `<p class="mm-not mm-ortak-not">${ik('wp')}<span>Ortak mdSinyal WhatsApp hattından gider · bugün <b>${topluBugun()} / ${topluSinir()}</b> toplu bilgilendirme</span></p>` : ''}
+      ${ortakMod() && durum.tur === 'kampanya' ? `<p class="ipucu" style="margin:6px 0 0;font-size:13px">${isaret('bilgi', 18)}<span>Kampanya mesajı ortak mdSinyal hattından gitmez. Kişileri WhatsApp Business yayın listesine aktarın ya da e-posta, uygulama bildirimi veya kursun telefonundan gönderin. Yalnız tanıtım izni olan öğrenciler listelenir.</span></p>` : durum.tur === 'kampanya' && ogrenciGrubu ? `<p class="mm-not" style="margin-top:6px">Yalnız tanıtım (ticari ileti) izni olan öğrencilere gider.</p>` : ''}
+      ${durum.tur === 'kampanya' && ogrenciGrubu && !(S.kurs.iys && S.kurs.iys.kayitli) ? `<p class="ipucu uyari" style="margin:4px 0 8px;font-size:13px">${isaret('uyari', 18)}<span>Tanıtım mesajından önce kurs İleti Yönetim Sistemi’ne (İYS) kayıtlı olmalı ve izinler İYS’ye yüklenmeli; İYS’de onayı olmayana ticari ileti gönderilemez (6563 sayılı Kanun). <a href="#/ayarlar/kvkk">Ayarlar › KVKK › İYS</a></span></p>` : ''}
+    </div>
+    <div class="mm-adim"><span class="et">2 · Kime?</span>
       <div class="secim mm-gruplar">${GRUPLAR.map(([v, t]) => `<label><input type="radio" name="mm-grup" value="${v}" ${durum.grup === v ? 'checked' : ''}><span>${t}<b>${kisiler(v, durum.sinif, durum.ogretmen).length}</b></span></label>`).join('')}</div>
-      ${ogrenciGrubu ? `<div class="mm-suz"><select class="girdi" data-mm-sinif aria-label="Sınıf"><option value="">Bütün sınıflar</option>${aktifSiniflar().map(([k, v]) => `<option value="${k}" ${durum.sinif === k ? 'selected' : ''}>${e(v.ad)}</option>`).join('')}</select><select class="girdi" data-mm-ogretmen aria-label="Öğretmen"><option value="">Bütün öğretmenler</option>${S.egitmenler.map(h => `<option value="${h.id}" ${durum.ogretmen === h.id ? 'selected' : ''}>${e(h.ad)}</option>`).join('')}</select></div><label class="mm-tanitim" style="display:flex;gap:8px;align-items:center;font-size:13.5px;margin:6px 0"><input type="checkbox" data-mm-tanitim ${durum.tanitim ? 'checked' : ''}> Tanıtım (ticari ileti) mesajı (yalnız izin verenlere gider)</label>${durum.tanitim && !(S.kurs.iys && S.kurs.iys.kayitli) ? `<p class="ipucu uyari" style="margin:4px 0 8px;font-size:13px">${isaret('uyari', 18)}<span>Tanıtım mesajından önce kurs İleti Yönetim Sistemi’ne (İYS) kayıtlı olmalı ve izinler İYS’ye yüklenmeli; İYS’de onayı olmayana ticari ileti gönderilemez (6563 sayılı Kanun). <a href="#/ayarlar/kvkk">Ayarlar › KVKK › İYS</a></span></p>` : ''}` : ''}
+      ${ogrenciGrubu ? `<div class="mm-suz"><select class="girdi" data-mm-sinif aria-label="Sınıf"><option value="">Bütün sınıflar</option>${aktifSiniflar().map(([k, v]) => `<option value="${k}" ${durum.sinif === k ? 'selected' : ''}>${e(v.ad)}</option>`).join('')}</select><select class="girdi" data-mm-ogretmen aria-label="Öğretmen"><option value="">Bütün öğretmenler</option>${S.egitmenler.map(h => `<option value="${h.id}" ${durum.ogretmen === h.id ? 'selected' : ''}>${e(h.ad)}</option>`).join('')}</select></div>` : ''}
+      ${ay && (ay.dur.length || ay.rizasiz.length) ? `<div class="mm-ayri"><p>${ik('tik')}<b>${ay.gidecek.length}</b> kişiye gidecek${ay.dur.length ? ` · <b>${ay.dur.length}</b> kişi DUR yazdı` : ''}${ay.rizasiz.length ? ` · <b>${ay.rizasiz.length}</b> kişinin rızası yok` : ''}</p>
+        ${ay.rizasiz.length ? `<details><summary>Rızası olmayanlar · ofiste rıza alındıysa işaretleyin</summary><ul>${ay.rizasiz.map(x => `<li><span><b>${e(x.ad)}</b><small>${e(x.alt)}</small></span><button type="button" class="dg dg-hafif dg-kucuk" data-mm-riza="${x.anahtar}">Rıza alındı</button></li>`).join('')}</ul></details>` : ''}
+        ${ay.dur.length ? `<details><summary>DUR yazanlar · ortak hattan bir daha gitmez</summary><ul>${ay.dur.map(x => `<li><span><b>${e(x.ad)}</b><small>${e(x.alt)}${x.kisi && x.kisi.waDur ? ' · ' + e(x.kisi.waDur) : ''}</small></span></li>`).join('')}</ul></details>` : ''}</div>` : ''}
       <details class="mm-kisiler" ${l.length <= 8 ? 'open' : ''}><summary><b>${sec.length}</b> / ${l.length} kişi seçili · listeyi gör, tek tek çıkar</summary>
         <div class="mm-kisi-ust"><button type="button" class="dg dg-hafif dg-kucuk" data-mm-hepsi="1">Hepsini seç</button><button type="button" class="dg dg-hafif dg-kucuk" data-mm-hepsi="0">Hiçbirini</button></div>
         <ul>${l.map(x => `<li><label><input type="checkbox" data-mm-kisi="${x.anahtar}" ${durum.secili.has(x.anahtar) ? 'checked' : ''}><span><b>${e(x.ad)}</b><small>${e(x.alt)}</small></span></label></li>`).join('') || `<li>${bos('Bu grupta kimse yok', 'Başka bir grup seçin.')}</li>`}</ul></details>
     </div>
-    <div class="mm-adim"><span class="et">2 · Ne yazalım?</span>
+    <div class="mm-adim"><span class="et">3 · Ne yazalım?</span>
       <div class="mm-sablonlar">${SABLONLAR.map(([ad], i) => `<button type="button" class="dg dg-cizgi dg-kucuk ${durum.sablon === ad ? 'secili' : ''}" data-mm-sablon="${i}">${e(ad)}</button>`).join('')}</div>
       <textarea class="girdi mm-metin" data-mm-metin aria-label="Mesaj metni">${e(durum.metin)}</textarea>
       <div class="mm-alanlar"><small>Kişiye özel alan ekle:</small>${ALANLAR.map(([a, t]) => `<button type="button" data-mm-alan="${a}">${t}</button>`).join('')}</div>
       <div class="mm-ek-satir">${durum.ek ? `<span class="mm-ek">${ik('belge')}<b>${e(durum.ek.dosya)}</b><small>${Math.round(durum.ek.boyut / 1024)} KB</small><button type="button" class="dg-ikon" data-mm-ek-sil aria-label="Eki kaldır">${ik('kapat')}</button></span>` : `<label class="dg dg-cizgi dg-kucuk mm-ek-ekle">${ik('belge')}Dosya ekle<input type="file" accept="application/pdf,image/jpeg,image/png" data-mm-ek hidden></label><small>PDF ya da görsel · ders programı, duyuru afişi…</small>`}
         <label class="mm-cevap"><input type="checkbox" data-mm-cevap ${durum.cevapIste ? 'checked' : ''}><span>Cevap iste <small>(Evet / Hayır)</small></span></label></div>
+      ${kelime.length ? `<p class="ipucu uyari mm-kmp-uyari">${isaret('uyari', 18)}<span>Metinde kampanya sözcüğü var: ${kelime.map(k => '“' + e(k) + '”').join(', ')}. Bilgilendirme mesajında satış ve tanıtım olmaz${ortakMod() ? '; bu metin ortak mdSinyal hattından gitmez' : ''}. Metni düzeltin ya da türü “Kampanya” seçin.</span></p>` : ''}
       ${bosOlan.length ? `<p class="ipucu mm-uyari">${isaret('uyari', 18)}<span>${bosOlan.length} kişide ${[...new Set(bosOlan.flatMap(x => bosKalan(durum.metin, x)))].map(a => '“' + (ALANLAR.find(z => z[0] === a) || [a, a])[1].toLocaleLowerCase('tr') + '”').join(', ')} boş kalıyor. <button type="button" class="dg-baglanti" data-mm-bosu-cikar>Onları listeden çıkar</button></span></p>` : ''}
     </div>
-    <div class="mm-adim"><span class="et">3 · Ne zaman?</span>
+    ${ortakKampanya ? '' : `<div class="mm-adim"><span class="et">4 · Ne zaman?</span>
       <div class="secim"><label><input type="radio" name="mm-zaman" value="simdi" ${durum.zaman === 'simdi' ? 'checked' : ''}><span>Şimdi</span></label><label><input type="radio" name="mm-zaman" value="plan" ${durum.zaman === 'plan' ? 'checked' : ''}><span>İleri bir saate planla</span></label></div>
       ${durum.zaman === 'plan' ? `<input class="girdi mm-saat" type="datetime-local" data-mm-saat value="${durum.planli || gun(1) + 'T09:00'}" min="${yerelZaman().slice(0, 16)}">` : ''}
-    </div>
-    <div class="mm-gonder"><span>${sec.length} kişiye${durum.zaman === 'plan' ? ' planlanacak' : ' gidecek'}${S.zamanli && S.zamanli.sinir && apiAcik() && sec.length > 5 && durum.zaman !== 'plan' ? ' · demo: ilk 5’i gönderilir' : ''}</span><button type="button" class="dg dg-wp" data-mm-gonder ${sec.length ? '' : 'disabled'}>${ik('wp')}${durum.zaman === 'plan' ? 'Planla' : 'Gönder'}</button></div>
+    </div>`}
+    ${ortakKampanya ? `<div class="mm-adim mm-kampanya"><span class="et">4 · Nasıl gönderilsin?</span>
+      <p class="mm-not">WhatsApp Business uygulamasında <b>Yayın listesi</b> kurun: kişileri telefon rehberine aktarın, listeye ekleyin, mesajı yapıştırıp gönderin. Mesaj yalnız kurs numarasını rehberine kaydedenlere ulaşır.</p>
+      <div class="mm-kampanya-dg"><button type="button" class="dg dg-cizgi dg-kucuk" data-mm-disa="vcf" ${sec.length ? '' : 'disabled'}>${ik('indir')}Rehber dosyası (vCard)</button><button type="button" class="dg dg-cizgi dg-kucuk" data-mm-disa="csv" ${sec.length ? '' : 'disabled'}>${ik('indir')}Tablo (CSV)</button><button type="button" class="dg dg-cizgi dg-kucuk" data-mm-kopyala ${durum.metin ? '' : 'disabled'}>Metni kopyala</button></div>
+      <div class="mm-gonder"><span>${sec.length} kişi · tanıtım izni olanlar</span><button type="button" class="dg dg-ana" data-mm-elle ${sec.length ? '' : 'disabled'}>E-posta, uygulama ya da kurs telefonu</button></div></div>` : `<div class="mm-gonder"><span>${ay ? ay.gidecek.length : sec.length} kişiye${durum.zaman === 'plan' ? ' planlanacak' : ' gidecek'}${S.zamanli && S.zamanli.sinir && apiAcik() && sec.length > 5 && durum.zaman !== 'plan' ? ' · demo: ilk 5’i gönderilir' : ''}</span><button type="button" class="dg dg-wp" data-mm-gonder ${sec.length && durum.tur && !sinirDolu ? '' : 'disabled'}>${ik('wp')}${durum.zaman === 'plan' ? 'Planla' : 'Gönder'}</button></div>${!durum.tur ? '<p class="mm-not" style="text-align:right">Önce mesajın türünü seçin: bilgilendirme ya da kampanya.</p>' : sinirDolu ? `<p class="mm-not" style="text-align:right">Bugünkü ${topluSinir()} toplu bilgilendirme hakkı doldu; yarın gönderin ya da ileri bir saate planlayın.</p>` : ''}`}
   </div></div>
   <div class="mm-sag">
     <div class="kart mm-onizleme"><div class="kart-bas"><h3>Önizleme</h3><small>${r ? e(r.ad) : '—'}</small>${sec.length > 1 ? `<div class="sag mm-oklar"><button type="button" class="dg-ikon" data-mm-sira="-1" aria-label="Önceki kişi">‹</button><span>${Math.min(durum.sira, sec.length - 1) + 1}/${sec.length}</span><button type="button" class="dg-ikon" data-mm-sira="1" aria-label="Sonraki kişi">›</button></div>` : ''}</div>
-      <div class="mm-telefon">${r ? `<div class="balon giden">${durum.ek ? `<span class="mm-balon-ek">${ik('belge')}${e(durum.ek.dosya)}</span>` : ''}<span class="mm-balon-metin">${e(sonMetin(kisiyeOzel(durum.metin, r)))}</span></div>` : `<p style="color:var(--soluk);text-align:center">Kişi seçin</p>`}</div>
-      <p class="mm-not">Her kişiye kendi adı ve bilgileriyle gider. SMS programındaki gibi tek tek yazmanız gerekmez.</p></div>
+      <div class="mm-telefon">${r ? `<div class="balon giden">${durum.ek ? `<span class="mm-balon-ek">${ik('belge')}${e(durum.ek.dosya)}</span>` : ''}<span class="mm-balon-metin">${e(onizMetin(sonMetin(kisiyeOzel(durum.metin, r))))}</span></div>` : `<p style="color:var(--soluk);text-align:center">Kişi seçin</p>`}</div>
+      <p class="mm-not">${ortakBilgi() ? 'Ortak mdSinyal hattından böyle görünür: başta kursunuzun adı, sonda DUR satırı. ' : ''}Her kişiye kendi adı ve bilgileriyle gider. SMS programındaki gibi tek tek yazmanız gerekmez.</p></div>
     <div class="kart"><div class="kart-bas"><h3>Gönderilen mesajlar</h3><small>İletildi ve okundu bilgisiyle</small></div>
       <ul class="liste mm-gecmis">${kmp.map(c => { const n = sayac(c); return `<li><button type="button" data-mm-kampanya="${c.id}"><span><b>${e(c.baslik)}</b><small>${c.durum === 'planlandı' ? 'Planlandı · ' + tarihUzun(c.planli.slice(0, 10)) + ' ' + c.planli.slice(11, 16) : (c.gonderim || '').slice(11, 16) + ' · ' + c.kisiler.length + ' kişi'}</small></span>${c.durum === 'planlandı' ? rozet('Planlı', 'mavi') : c.durum === 'demo' ? rozet('Demo', 'notr') : c.cevapIste && n.cevap ? `<span class="mm-say"><i class="mm-evet">Evet ${n.evet}</i><i class="mm-hayir">Hayır ${n.hayir}</i></span>` : `<span class="mm-say"><i title="Gönderildi">✓ ${n.gitti}</i><i class="tik-delivered" title="İletildi">✓✓ ${n.iletildi}</i><i class="tik-read" title="Okundu">✓✓ ${n.okundu}</i></span>`}</button></li>`; }).join('') || `<li>${bos('Henüz mesaj gönderilmedi', 'Gönderdiğiniz her mesajın kime iletildiğini ve kimin okuduğunu burada görürsünüz.')}</li>`}</ul></div>
   </div></div>`;
@@ -187,7 +217,7 @@ export function yeniMesajBagla(k, yenile) {
     const t = ev.target;
     if (t.name === 'mm-grup') { durum.grup = t.value; durum.secili = null; durum.sira = 0; return yenile(); }
     if (t.matches('[data-mm-sinif]')) { durum.sinif = t.value; durum.secili = null; durum.sira = 0; return yenile(); }
-    if (t.matches('[data-mm-tanitim]')) { durum.tanitim = t.checked; durum.secili = null; durum.sira = 0; return yenile(); }
+    if (t.name === 'mm-tur') { durum.tur = t.value; durum.tanitim = t.value === 'kampanya'; durum.secili = null; durum.sira = 0; return yenile(); }
     if (t.matches('[data-mm-ogretmen]')) { durum.ogretmen = t.value; durum.secili = null; durum.sira = 0; return yenile(); }
     if (t.matches('[data-mm-kisi]')) { durum.secili[t.checked ? 'add' : 'delete'](t.dataset.mmKisi); durum.sira = 0; return yenile(); }
     if (t.name === 'mm-zaman') { durum.zaman = t.value; return yenile(); }
@@ -201,8 +231,8 @@ export function yeniMesajBagla(k, yenile) {
     }
   });
   // yazarken önizleme anında güncellenir (sayfa yeniden çizilmeden)
-  ta.addEventListener('input', () => { durum.metin = ta.value; durum.sablon = ''; const sec = seciliListe(), r = sec[Math.min(durum.sira, sec.length - 1)], b = kok.querySelector('.mm-telefon .mm-balon-metin'); if (b && r) b.textContent = sonMetin(kisiyeOzel(durum.metin, r)); });
-  ta.addEventListener('blur', () => { if (seciliListe().some(x => bosKalan(durum.metin, x).length) !== !!kok.querySelector('.mm-uyari')) yenile(); });
+  ta.addEventListener('input', () => { durum.metin = ta.value; durum.sablon = ''; const sec = seciliListe(), r = sec[Math.min(durum.sira, sec.length - 1)], b = kok.querySelector('.mm-telefon .mm-balon-metin'); if (b && r) b.textContent = onizMetin(sonMetin(kisiyeOzel(durum.metin, r))); });
+  ta.addEventListener('blur', () => { if (seciliListe().some(x => bosKalan(durum.metin, x).length) !== !!kok.querySelector('.mm-uyari') || (durum.tur === 'bilgi' && WO.kampanyaKelimeleri(durum.metin).length > 0) !== !!kok.querySelector('.mm-kmp-uyari')) yenile(); });
   kok.addEventListener('click', ev => {
     const t = ev.target;
     const sb2 = t.closest('[data-mm-sablon]'); if (sb2) { const [ad, m, cvp] = SABLONLAR[+sb2.dataset.mmSablon]; durum.metin = m; durum.sablon = ad; if (cvp) durum.cevapIste = true; return yenile(); }
@@ -213,15 +243,34 @@ export function yeniMesajBagla(k, yenile) {
     if (t.closest('[data-mm-bosu-cikar]')) { seciliListe().forEach(x => { if (bosKalan(durum.metin, x).length) durum.secili.delete(x.anahtar); }); durum.sira = 0; return yenile(); }
     const kp = t.closest('[data-mm-kampanya]'); if (kp) return kampanyaAc(kp.dataset.mmKampanya, yenile);
     if (t.closest('[data-mm-gonder]')) return gonderTikla(yenile);
+    // MSJ-047: eski kayıt için ofiste alınan rıza (kanal 'ofis')
+    const rz = t.closest('[data-mm-riza]'); if (rz) { const x = liste().find(y => y.anahtar === rz.dataset.mmRiza); if (x && x.kisi) { WO.rizaVer(x.kisi, 'ofis', gun(0)); islem('WhatsApp bildirim rızasını işaretledi (ofis)', x.ad); kaydet(); } return yenile(); }
+    // MSJ-046: kampanya ortak hattan gitmez — yayın listesi dışa aktarımı ya da başka kanal
+    const da = t.closest('[data-mm-disa]'); if (da) return kampanyaDisa(da.dataset.mmDisa);
+    if (t.closest('[data-mm-kopyala]')) { try { navigator.clipboard.writeText(durum.metin.trim()); bildir('Mesaj metni kopyalandı; WhatsApp Business’ta yayın listesine yapıştırın'); } catch (x) { bildir('Kopyalanamadı; metni elle seçip kopyalayın', 'uyari'); } return; }
+    if (t.closest('[data-mm-elle]')) return kampanyaElle(yenile);
   });
 }
 
 // İl taban fiyat listesi notu 6: hiçbir ad altında indirim, kampanya, promosyon, hediye ya da ödül yapılamaz; böyle bir toplu mesaj göndermeden önce sorulur
 const KAMPANYA_RX = /indirim|kampanya|hediye|promosyon|ödül|bedava/i;
 function gonderTikla(yenile, not6Tamam = false) {
-  const sec = seciliListe(), m = durum.metin.trim();
+  let sec = seciliListe(); const m = durum.metin.trim();
+  if (!durum.tur) return bildir('Önce mesajın türünü seçin: bilgilendirme ya da kampanya', 'uyari');
   if (!sec.length) return bildir('Önce kişi seçin', 'uyari');
   if (!m) return bildir('Mesajı yazın', 'uyari');
+  if (ortakMod() && durum.tur === 'kampanya') return kampanyaElle(yenile);
+  // MSJ-046: ortak hatta bilgilendirme — kampanya sözcüğü olan metin gitmez; DUR yazan ve rızası olmayan atlanır; günde en çok iki toplu
+  let atlanan = null;
+  if (ortakBilgi()) {
+    const kl = WO.kampanyaKelimeleri(m);
+    if (kl.length) return bildir('Metinde kampanya sözcüğü var (' + kl.join(', ') + '); bilgilendirme olarak ortak hattan gitmez. Metni düzeltin ya da türü “Kampanya” seçin', 'uyari');
+    const ay = WO.topluAyir(sec);
+    if (!ay.gidecek.length) return bildir('Seçilenlerin hiçbirine ortak hattan gönderilemez: ' + [ay.dur.length && ay.dur.length + ' kişi DUR yazdı', ay.rizasiz.length && ay.rizasiz.length + ' kişinin rızası yok'].filter(Boolean).join(', '), 'uyari');
+    if (ay.gidecek.length > 1 && durum.zaman !== 'plan' && topluBugun() >= topluSinir()) return bildir(WO.ortakHataMetni('limit'), 'uyari');
+    if (ay.dur.length || ay.rizasiz.length) atlanan = { dur: ay.dur.length, riza: ay.rizasiz.length };
+    sec = ay.gidecek;
+  }
   if (!not6Tamam && KAMPANYA_RX.test(m) && tabanListesi()) {
     const kelime = (m.match(KAMPANYA_RX) || [''])[0];
     return pencere({ baslik: 'Mesajda indirim ya da kampanya geçiyor', icerik: `<p style="font-size:14.5px">Mesajda “${e(kelime)}” yazıyor. İl taban fiyat listesinin 6. notuna göre promosyon, ödül, hediye, kardeş, arkadaş, toplu kayıt dahil hiçbir ad altında indirim ve kampanya yapılamaz.</p><p style="font-size:14.5px;margin-top:8px">Mesaj bir indirim ya da kampanya duyurmuyorsa (ör. “indirim yapılamıyor” diyorsa) gönderebilirsiniz.</p>`,
@@ -237,7 +286,8 @@ function gonderTikla(yenile, not6Tamam = false) {
   }
   const kisilerL = sec.map(r => ({ ad: r.ad, tel: r.tel, rol: r.rol, metin: sonMetin(kisiyeOzel(m, r)) }));
   const baslik = durum.sablon || (GRUPLAR.find(g => g[0] === durum.grup) || [0, 'Mesaj'])[1];
-  const c = { id: 'm' + Date.now(), tarih: gun(0), baslik, sablon: sonMetin(m), grup: durum.grup, kisiler: kisilerL, durum: 'hazır', cevapIste: durum.cevapIste, ekAd: durum.ek ? durum.ek.dosya : null, ...(durum.tanitim ? { tanitim: true } : {}) };
+  const cid = 'm' + Date.now();
+  const c = { id: cid, tarih: gun(0), baslik, sablon: sonMetin(m), grup: durum.grup, kisiler: kisilerL, durum: 'hazır', cevapIste: durum.cevapIste, ekAd: durum.ek ? durum.ek.dosya : null, tur: durum.tur, ...(durum.tanitim ? { tanitim: true } : {}), ...(!durum.tanitim && kisilerL.length > 1 ? { topluId: cid } : {}), ...(atlanan ? { atlanan } : {}) };
   if (durum.ek) EKLER[c.id] = durum.ek;
   S.kampanyalar = S.kampanyalar || [];
   if (durum.zaman === 'plan') {
@@ -246,12 +296,32 @@ function gonderTikla(yenile, not6Tamam = false) {
     if (durum.ek && durum.ek.boyut > 900 * 1024) return bildir('Planlı mesaja en çok 900 KB dosya eklenebilir; daha büyük dosyayı hemen gönderin', 'uyari');
     if (durum.ek) { c.ekVeri = durum.ek; delete EKLER[c.id]; }
     Object.assign(c, { durum: 'planlandı', planli: p }); S.kampanyalar.unshift(c); islem('Mesaj planladı', baslik + ' · ' + sec.length + ' kişi'); kaydet();
+    Object.assign(c, { tarih: p.slice(0, 10) });   // toplu sınırı gönderim gününe sayılır
     bildir(`${sec.length} kişiye ${tarihUzun(p.slice(0, 10))} ${p.slice(11, 16)}’de gidecek`); return yenile();
   }
   S.kampanyalar.unshift(c); islem('Mesaj gönderdi', baslik + ' · ' + sec.length + ' kişi');
-  if (ziyaretci() || !apiAcik()) { c.durum = ziyaretci() ? 'demo' : 'elle'; c.gonderim = yerelZaman(); kaydet(); waSirali(kisilerL.map(x => ({ ...x, tur: baslik })), baslik, { bitince: () => yenile() }); return yenile(); }
+  if (ziyaretci() || !apiAcik()) { c.durum = ziyaretci() ? 'demo' : 'elle'; c.gonderim = yerelZaman(); kaydet(); waSirali(kisilerL.map(x => ({ ...x, tur: baslik, sablon: c.tanitim ? 'kampanya' : 'toplu' })), baslik, { bitince: () => yenile() }); return yenile(); }
+  if (atlanan) bildir(`${[atlanan.dur && atlanan.dur + ' kişi DUR yazdığı', atlanan.riza && atlanan.riza + ' kişinin rızası olmadığı'].filter(Boolean).join(', ')} için ortak hattan gönderilmeyecek`, 'uyari');
   c.durum = 'gönderiliyor'; durum.ek = null; kaydet(); yenile();
   gonder(c).then(() => yenile());
+}
+
+// MSJ-046: kampanya (tanıtım) ortak mdSinyal hattından gitmez. WhatsApp Business yayın listesi için rehber dosyası ve tablo;
+// e-posta, öğrenci uygulaması bildirimi ya da kursun telefonundan sırayla WhatsApp (elleGonder)
+function kampanyaDisa(tur) {
+  const l = seciliListe().filter(r => WO.telRakam(r.tel)); if (!l.length) return bildir('Seçilenlerde telefon numarası yok', 'uyari');
+  const ad = 'kampanya-listesi-' + gun(0);
+  if (tur === 'csv') csvIndir(ad + '.csv', WO.csvSatirlari(l));
+  else { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([WO.vcardMetni(l)], { type: 'text/vcard;charset=utf-8' })); a.download = ad + '.vcf'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }
+  islem('Kampanya listesini dışa aktardı', (tur === 'csv' ? 'CSV' : 'vCard') + ' · ' + l.length + ' kişi'); kaydet();
+  bildir(`${l.length} kişi ${tur === 'csv' ? 'tabloya' : 'rehber dosyasına'} aktarıldı; telefonda açıp rehbere ekleyin`);
+}
+function kampanyaElle(yenile) {
+  const sec = seciliListe(), m = durum.metin.trim(); if (!sec.length) return bildir('Önce kişi seçin', 'uyari'); if (!m) return bildir('Mesajı yazın', 'uyari');
+  const baslik = durum.sablon || 'Kampanya', kisilerL = sec.map(r => ({ ad: r.ad, tel: r.tel, rol: r.rol, metin: kisiyeOzel(m, r), tur: baslik, sablon: 'kampanya' }));
+  const c = { id: 'm' + Date.now(), tarih: gun(0), baslik, sablon: m, grup: durum.grup, kisiler: kisilerL.map(({ ad, tel, rol, metin }) => ({ ad, tel, rol, metin })), durum: 'elle', gonderim: yerelZaman(), tanitim: true, tur: 'kampanya' };
+  S.kampanyalar = S.kampanyalar || []; S.kampanyalar.unshift(c); islem('Kampanya mesajı hazırladı', baslik + ' · ' + sec.length + ' kişi'); kaydet();
+  elleGonder(kisilerL, baslik, { bitince: () => yenile() });
 }
 
 function kampanyaAc(id, yenile) {
@@ -267,7 +337,9 @@ function kampanyaAc(id, yenile) {
     altlik: c.durum === 'planlandı' ? `<button class="dg dg-cizgi" data-mm-iptal>Planı iptal et</button><button class="dg dg-ana" data-kapat>Tamam</button>` : `${okumayan(c).length ? `<button class="dg dg-cizgi" data-mm-hatirlat>${ik('wp')}Okumayanlara hatırlat (${okumayan(c).length})</button>` : ''}<button class="dg dg-ana" data-kapat>Tamam</button>`,
     onAc(d) {
       const ht = d.querySelector('[data-mm-hatirlat]'); if (ht) ht.addEventListener('click', () => {
-        const l = okumayan(c), k2 = { id: 'm' + Date.now(), tarih: gun(0), baslik: 'Hatırlatma · ' + c.baslik, sablon: 'Hatırlatma: ' + c.sablon, grup: c.grup, cevapIste: c.cevapIste, kisiler: l.map(x => { const k0 = c.kisiler.find(y => y.ad === x.ad) || x; return { ad: k0.ad, tel: k0.tel, rol: k0.rol, metin: 'Hatırlatma: ' + (k0.metin || c.sablon) }; }), durum: 'gönderiliyor' };
+        const l = okumayan(c), k2id = 'm' + Date.now();
+        if (ortakMod() && !c.tanitim && l.length > 1 && topluBugun() >= topluSinir()) return bildir(WO.ortakHataMetni('limit'), 'uyari');
+        const k2 = { id: k2id, tarih: gun(0), ...(c.tanitim ? { tanitim: true } : l.length > 1 ? { topluId: k2id } : {}), tur: c.tur, baslik: 'Hatırlatma · ' + c.baslik, sablon: 'Hatırlatma: ' + c.sablon, grup: c.grup, cevapIste: c.cevapIste, kisiler: l.map(x => { const k0 = c.kisiler.find(y => y.ad === x.ad) || x; return { ad: k0.ad, tel: k0.tel, rol: k0.rol, metin: 'Hatırlatma: ' + (k0.metin || c.sablon) }; }), durum: 'gönderiliyor' };
         S.kampanyalar.unshift(k2); islem('Okumayanlara hatırlattı', c.baslik + ' · ' + l.length + ' kişi'); kaydet(); kapatPencere(); yenile();
         if (ziyaretci() || !apiAcik()) { k2.durum = 'demo'; kaydet(); return waSirali(k2.kisiler.map(x => ({ ...x, tur: k2.baslik })), k2.baslik, { bitince: () => yenile() }); }
         gonder(k2).then(() => yenile());

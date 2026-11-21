@@ -791,6 +791,29 @@ body.portal-modu .sube-sec,body.portal-modu .sube-yan{display:none!important}
 .mm-ozet div{flex:1 1 90px;background:var(--panel-2);border-radius:9px;padding:10px 12px}
 .mm-ozet b{display:block;font:800 24px/1 var(--baslik);color:var(--murekkep)}
 .mm-ozet small{color:var(--soluk);font-size:12.5px}
+.mm-tur{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mm-tur label{display:flex}
+.mm-tur span{flex:1;display:grid;gap:2px;align-content:center;min-height:56px;padding:8px 12px;line-height:1.25}
+.mm-tur span b{font-size:14.5px}
+.mm-tur span small{font-size:12.5px;font-weight:400;color:var(--soluk)}
+.mm-tur input:checked+span small{color:rgba(255,255,255,.85)}
+.mm-ortak-not{display:flex;gap:6px;align-items:center;padding:2px 0 0}
+.mm-ortak-not .ik{width:16px;height:16px;flex:none}
+.mm-ayri{border:1px solid var(--cizgi);border-radius:9px;background:var(--panel-2);padding:10px 14px;font-size:13.5px;display:grid;gap:6px}
+.mm-ayri p{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0}
+.mm-ayri p .ik{width:16px;height:16px}
+.mm-ayri summary{cursor:pointer;color:var(--levha);font-weight:700}
+.mm-ayri ul{list-style:none;margin:6px 0 0;max-height:200px;overflow:auto;display:grid;gap:4px}
+.mm-ayri li{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.mm-ayri li span{min-width:0}
+.mm-ayri li b{display:block;color:var(--murekkep)}
+.mm-ayri li small{display:block;color:var(--soluk);font-size:12px}
+.mm-kampanya .mm-not{padding:0}
+.mm-kampanya-dg{display:flex;gap:6px;flex-wrap:wrap}
+.etiket-ortak{display:inline-block;font:700 10.5px/1.5 var(--mono);letter-spacing:.02em;padding:0 6px;border-radius:4px;background:var(--levha-acik);color:var(--levha);vertical-align:middle;white-space:nowrap}
+.oto-ortak{display:flex;gap:6px;align-items:flex-start;margin-top:6px;font-size:12.5px;line-height:1.4;color:#9a5b00}
+.oto-ortak svg{flex:none}
+@media (max-width:520px){.mm-tur{grid-template-columns:1fr}}
 .oto-gidecek{display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-size:13px;color:var(--yesil);background:var(--yesil-acik);border-radius:6px;padding:5px 9px;font-weight:700}
 .oto-gidecek b{font-weight:800}
 .oto-gidecek .ik{width:15px;height:15px}
