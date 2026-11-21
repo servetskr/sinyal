@@ -3,7 +3,7 @@
 Ofis bilgisayarı kapalıyken de iki iş sunucuda (Cloudflare worker `sinyal-wa`) yapılır:
 
 1. **Öğrenci istekleri:** öğrenci uygulamasından gelen ders alma, ders iptali (24 saat kuralı), puan, ders defteri onayı/itirazı, evrak ve dekont yükleme, müsaitlik, çalışma verileri. 10 dakikadan uzun bekleyen istek işlenir; uygulamadaki denetimlerin aynısı uygulanır. Ek ders teklifine cevap ve gece kısıtlı öğrencinin akşam ders isteği ofise kalır.
-2. **Hatırlatmalar:** yarınki direksiyon dersi (öğrenciye), yarınki program (öğretmene), doğum günü. Yalnız kursun kendi WhatsApp hattı bağlıysa, kural açıksa ve *Zamanlı mesajlar › Demo sınırı* kapalıysa. Uygulama açıksa önce o gönderir; aynı mesaj iki kez gitmez. 21:00–08:00 arası mesaj gitmez.
+2. **Hatırlatmalar:** yarınki direksiyon dersi (öğrenciye), yarınki program (öğretmene), doğum günü. Kursun kendi WhatsApp hattı bağlıysa ya da (hat yoksa) ortak mdSinyal hattı kuruluysa, kural açıksa ve *Zamanlı mesajlar › Demo sınırı* kapalıysa. Ortak hattan doğum günü (satış/tanıtım türü) hiç gitmez; alıcının WhatsApp bildirim onayı (waRiza) yoksa ya da DUR yazdıysa gitmez (müdüre giden kurs içi bildirim onay aramaz). Gitmeyenler `GET /servis` özetinde `ortak` altında nedenine göre sayılır. Uygulama açıksa önce o gönderir; aynı mesaj iki kez gitmez. 21:00–08:00 arası mesaj gitmez.
 
 `FIREBASE_SA` tanımlı değilse bunların hiçbiri çalışmaz. Ücretsizdir (Firebase Spark planında kalınır).
 

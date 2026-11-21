@@ -175,6 +175,7 @@ const pencereAcik = async (env, kurs, to) => { const t = +(await env.LINK.get('s
 // ---- MSJ-043…047: ortak mdSinyal hattı (env PHONE_ID + WA_TOKEN; numara koda yazılmaz) ----
 // Kursun kendi hattı (hat:<kurs>) yoksa yalnız bilgilendirme ortak hattan gider; istek alanları: tur (bilgi|pazarlama, zorunlu), riza, kursAd, toplu + topluId.
 // KV: dur:<tel> (DUR yazan, süresiz), son:<tel> { kurs, zaman } (gelen cevabın kursu, 90 gün), son:ortak:<tel> (24 saat penceresi; ORTAK_SABLON varsa yazılır),
+//     okurs:<kurs> (ortak hattı kullanan kurs; zamanlı servis işleri için, 35 gün),
 //     otoplu:<kurs>:<gün> (o gün kullanılan topluId'ler, 2 gün), eslesmeyen (kursu bulunamayan gelenler, 60 gün, en çok 500).
 // ORTAK_SABLON (+ ORTAK_SABLON_DIL, varsayılan tr): 24 saat dışı onaylı şablon, {{1}} kurs adı, {{2}} mesaj. Tanımlı değilse SABLON_AD (tek değişken) eskisi gibi.
 const ORTAK_DUR_SATIR = '\n\nBu bildirimleri almak istemiyorsanız DUR yazın.', ORTAK_TOPLU = 2, ORTAK_SABIT = 200;   // ORTAK_SABIT: ortak şablonun sabit metin payı
@@ -188,6 +189,47 @@ const ortakKomut = m => { const t = kucuk(m).replace(/[\s.!]+$/, '').trim(); ret
 const ortakSablonGovde = (to, ad, dil, kursAd, metin) => { const k = sablonParam(kursAd, 60); return { messaging_product: 'whatsapp', to, type: 'template', template: { name: ad, language: { code: dil || 'tr' }, components: [{ type: 'body', parameters: [{ type: 'text', text: k }, { type: 'text', text: sablonParam(metin, SABLON_GOVDE_SINIR - ORTAK_SABIT - k.length) }] }] } }; };
 const sonYaz = (env, tel, kurs) => env.LINK.put('son:' + tel, JSON.stringify({ kurs, zaman: new Date().toISOString() }), { expirationTtl: 90 * 86400 }).catch(() => {});
 const otopluOku = async (env, kurs, gun) => { try { return JSON.parse((await env.LINK.get('otoplu:' + kurs + ':' + gun)) || '[]'); } catch (x) { return []; } };
+// MSJ-049: ortak hattı kullanan kurs işareti (okurs:<kurs> = gün, 35 gün); zamanlı servis işleri bu kursları da tarar. Günde en çok bir yazım.
+const ortakIsaret = async (env, kurs) => { try { const g = trGun(Date.now()); if ((await env.LINK.get('okurs:' + kurs)) !== g) await env.LINK.put('okurs:' + kurs, g, { expirationTtl: 35 * 86400 }); } catch (x) { } };
+// Satış/tanıtım türü (js/waortak.js PAZARLAMA ile aynı liste; worker'da tek yer): ortak hattan asla gitmez
+const ORTAK_PAZARLAMA = new Set(['o5', 'o6', 'o7', 'o15', 'o16', 'kampanya']);
+// Rıza kaydı (js/waortak.js rizaVar ile aynı): kişi kaydında waRiza { tarih:'YYYY-MM-DD', kanal }
+const waRizaVar = x => !!(x && x.waRiza && /^\d{4}-\d{2}-\d{2}$/.test(String(x.waRiza.tarih || '')));
+// Ortak hattan gidemeyecek mesajın nedeni: '' | 'pazarlama' | 'riza' | 'dur'. Kurs çalışanı (personel) hizmet sözleşmesiyle alır, rıza aranmaz.
+async function ortakEngel(env, { sablon, tur, riza, personel, tel }) {
+  if (tur === 'pazarlama' || ORTAK_PAZARLAMA.has(String(sablon || ''))) return 'pazarlama';
+  if (!personel && riza !== true) return 'riza';
+  if (await env.LINK.get('dur:' + telAnahtar(tel))) return 'dur';
+  return '';
+}
+// Ortak hattın metin biçimi: "mdSinyal · {kurs}: {mesaj}" + DUR satırı; belge açıklaması 1.000, metin 4.096 karakteri aşmaz
+const ortakBicim = (kursAd, metin, belge) => { const bas = 'mdSinyal · ' + kursAd + ': ', ic = String(metin || '').slice(0, (belge ? 1000 : 4096) - bas.length - ORTAK_DUR_SATIR.length).trimEnd(); return { ic, govde: bas + ic + ORTAK_DUR_SATIR }; };
+// Ortak hattan tek gönderim (kapılar geçildikten sonra): 24 saat dışı ORTAK_SABLON, 131047'de şablonla tekrar, başarıda son:<tel>.
+// Dönüş: { ok:true, id, sablon? } ya da { ok:false, kod, hata, durum }
+async function ortakIlet(env, b, to, kurs, kursAd, metin) {
+  const belge = !!(b && b.belge && b.belge.base64), { ic, govde: govdeMetin } = ortakBicim(kursAd, metin, belge);
+  const G = 'https://graph.facebook.com/v25.0/' + env.PHONE_ID + '/messages', H = { Authorization: 'Bearer ' + env.WA_TOKEN, 'Content-Type': 'application/json' };
+  const yolla = async govde => { const r = await fetch(G, { method: 'POST', headers: H, body: JSON.stringify(govde) }); return { r, j: await r.json().catch(() => ({})) }; };
+  const tamam = async (j, ek = {}) => { await sonYaz(env, to, kurs); await ortakIsaret(env, kurs); return { ok: true, id: j.messages && j.messages[0] && j.messages[0].id, ...ek }; };
+  const sablon = env.ORTAK_SABLON, dil = env.ORTAK_SABLON_DIL || 'tr';
+  // kişi son 24 saatte ortak hatta yazmadıysa doğrudan ortak şablon (kurs hattındaki kuralla aynı)
+  if (sablon && !belge && !(await pencereAcik(env, 'ortak', to))) {
+    const { r, j } = await yolla(ortakSablonGovde(to, sablon, dil, kursAd, ic));
+    return r.ok ? tamam(j, { sablon: true }) : { ok: false, kod: j.error && j.error.code, hata: 'Şablonla gönderilemedi: ' + ((j.error && j.error.message) || 'Meta hatasi'), durum: 502 };
+  }
+  const g = await mesajGovdesi(b || {}, govdeMetin, to, env.PHONE_ID, env.WA_TOKEN);
+  if (g.hata) return { ...g.hata, durum: 502 };
+  const { r, j } = await yolla(g.govde);
+  if (r.ok) return tamam(j);
+  const kod = j.error && j.error.code;
+  if (kod === 131047 && !belge && (sablon || env.SABLON_AD)) {
+    const s2 = await yolla(sablon ? ortakSablonGovde(to, sablon, dil, kursAd, ic) : sablonGovde(to, env.SABLON_AD, env.SABLON_DIL, govdeMetin));
+    if (s2.r.ok) return tamam(s2.j, { sablon: true });
+    return { ok: false, kod: s2.j.error && s2.j.error.code, hata: 'Şablonla da gönderilemedi: ' + ((s2.j.error && s2.j.error.message) || 'Meta hatasi'), durum: 502 };
+  }
+  return { ok: false, kod, hata: (j.error && j.error.message) || 'Meta hatasi', durum: 502 };
+}
+const ORTAK_RED = { pazarlama: ['Satış/tanıtım mesajları ortak mdSinyal hattından gitmez; kursun kendi telefonundan gönderin', 403], riza: ['Alıcının WhatsApp bildirim onayı kayıtlı değil', 403], dur: ['Alıcı DUR yazdı; ortak hattan bildirim almıyor', 409] };
 // Kursun hattı yokken gönderim (fetch içindeki gönderme ucundan); hata kodları: guncelle | riza | pazarlama | dur | limit | hat-yok (+ Meta hataları)
 async function ortakGonder(req, env, b, kurs, metin, cevap) {
   const red = (kod, hata, s) => cevap({ ok: false, kod, hata, kanal: 'ortak' }, s);
@@ -195,9 +237,8 @@ async function ortakGonder(req, env, b, kurs, metin, cevap) {
   const to = telAnahtar(b.tel);
   if (!/^\d{11,15}$/.test(to)) return cevap({ ok: false, hata: 'Alıcının telefon numarası geçersiz' }, 400);
   if (b.tur !== 'bilgi' && b.tur !== 'pazarlama') return red('guncelle', 'mdSinyal’i güncelleyin: ortak hattan gönderim için mesaj türü gerekli', 400);
-  if (b.tur === 'pazarlama' || b.kategori === 'pazarlama') return red('pazarlama', 'Satış/tanıtım mesajları ortak mdSinyal hattından gitmez; kursun kendi telefonundan gönderin', 403);
-  if (b.riza !== true) return red('riza', 'Alıcının WhatsApp bildirim onayı kayıtlı değil', 403);
-  if (await env.LINK.get('dur:' + to)) return red('dur', 'Alıcı DUR yazdı; ortak hattan bildirim almıyor', 409);
+  const engel = await ortakEngel(env, { sablon: b.sablon, tur: b.kategori === 'pazarlama' ? 'pazarlama' : b.tur, riza: b.riza, tel: to });
+  if (engel) return red(engel, ...ORTAK_RED[engel]);
   const kursAd = kursAdTemiz(b.kursAd) || kursAdTemiz(await kursAdiOku(req, kurs));
   if (!kursAd) return red('guncelle', 'Kurs adı gelmedi; mdSinyal’i güncelleyin', 400);
   // kurs başına günde en çok 2 toplu bilgilendirme: aynı topluId'nin bütün alıcıları tek sayılır
@@ -210,28 +251,8 @@ async function ortakGonder(req, env, b, kurs, metin, cevap) {
       l.push(tid); await env.LINK.put('otoplu:' + kurs + ':' + gun, JSON.stringify(l), { expirationTtl: 2 * 86400 });
     }
   }
-  // "mdSinyal · {kurs}: {mesaj}" + DUR satırı; belge açıklaması 1.000, metin 4.096 karakteri aşmaz
-  const belge = !!(b.belge && b.belge.base64), bas = 'mdSinyal · ' + kursAd + ': ', ic = metin.slice(0, (belge ? 1000 : 4096) - bas.length - ORTAK_DUR_SATIR.length).trimEnd(), govdeMetin = bas + ic + ORTAK_DUR_SATIR;
-  const G = 'https://graph.facebook.com/v25.0/' + env.PHONE_ID + '/messages', H = { Authorization: 'Bearer ' + env.WA_TOKEN, 'Content-Type': 'application/json' };
-  const yolla = async govde => { const r = await fetch(G, { method: 'POST', headers: H, body: JSON.stringify(govde) }); return { r, j: await r.json().catch(() => ({})) }; };
-  const tamam = async (j, ek = {}) => { await sonYaz(env, to, kurs); return cevap({ ok: true, id: j.messages && j.messages[0] && j.messages[0].id, kanal: 'ortak', ...ek }); };
-  const sablon = env.ORTAK_SABLON, dil = env.ORTAK_SABLON_DIL || 'tr';
-  // kişi son 24 saatte ortak hatta yazmadıysa doğrudan ortak şablon (kurs hattındaki kuralla aynı)
-  if (sablon && !belge && !(await pencereAcik(env, 'ortak', to))) {
-    const { r, j } = await yolla(ortakSablonGovde(to, sablon, dil, kursAd, ic));
-    return r.ok ? tamam(j, { sablon: true }) : cevap({ ok: false, kod: j.error && j.error.code, kanal: 'ortak', hata: 'Şablonla gönderilemedi: ' + ((j.error && j.error.message) || 'Meta hatasi') }, 502);
-  }
-  const g = await mesajGovdesi(b, govdeMetin, to, env.PHONE_ID, env.WA_TOKEN);
-  if (g.hata) return cevap({ ...g.hata, kanal: 'ortak' }, 502);
-  const { r, j } = await yolla(g.govde);
-  if (r.ok) return tamam(j);
-  const kod = j.error && j.error.code;
-  if (kod === 131047 && !belge && (sablon || env.SABLON_AD)) {
-    const s2 = await yolla(sablon ? ortakSablonGovde(to, sablon, dil, kursAd, ic) : sablonGovde(to, env.SABLON_AD, env.SABLON_DIL, govdeMetin));
-    if (s2.r.ok) return tamam(s2.j, { sablon: true });
-    return cevap({ ok: false, kod: s2.j.error && s2.j.error.code, kanal: 'ortak', hata: 'Şablonla da gönderilemedi: ' + ((s2.j.error && s2.j.error.message) || 'Meta hatasi') }, 502);
-  }
-  return cevap({ ok: false, kod, kanal: 'ortak', hata: (j.error && j.error.message) || 'Meta hatasi' }, 502);
+  const { durum, ...s } = await ortakIlet(env, b, to, kurs, kursAd, metin);
+  return cevap({ ...s, kanal: 'ortak' }, s.ok ? 200 : durum || 502);
 }
 // Ortak hatta gelen mesajın kursu: (a) son gönderen kurs (son:<tel>), (b) Firestore telefonlar/{tel}.k (FIREBASE_SA varsa), (c) yok
 async function ortakKursBul(env, tel) {
@@ -269,7 +290,11 @@ async function ortakGelen(env, m, v) {
 // GET /ortak/dur?tel=…,… (DUR yazmış olanlar), GET /ortak/durum (ortak hat, kurs hattı, bugünkü toplu sayısı). Kurs üyesi (fetch içinde doğrulanır).
 async function ortakUc(req, env, url, yol, kurs, cevap) {
   if (req.method !== 'GET') return cevap({ ok: false }, 405);
-  if (yol === 'ortak/durum') { const gun = trGun(Date.now()), l = env.LINK ? await otopluOku(env, kurs, gun) : []; return cevap({ ok: true, ortak: ortakVar(env), kursHatti: !!(env.LINK && await kursHat(env, kurs)), toplu: { gun, kullanilan: l.length, sinir: ORTAK_TOPLU } }); }
+  if (yol === 'ortak/durum') {
+    const gun = trGun(Date.now()), l = env.LINK ? await otopluOku(env, kurs, gun) : [], kursHatti = !!(env.LINK && await kursHat(env, kurs));
+    if (ortakVar(env) && !kursHatti && env.LINK) await ortakIsaret(env, kurs);   // MSJ-049: zamanlı servis işleri bu kursu da tarasın
+    return cevap({ ok: true, ortak: ortakVar(env), kursHatti, toplu: { gun, kullanilan: l.length, sinir: ORTAK_TOPLU } });
+  }
   const tel = [...new Set(String(url.searchParams.get('tel') || '').split(',').map(telAnahtar).filter(t => /^\d{11,15}$/.test(t)))].slice(0, 500), dur = [];
   if (env.LINK) for (let i = 0; i < tel.length; i += 50) { const p = tel.slice(i, i + 50), v = await Promise.all(p.map(t => env.LINK.get('dur:' + t))); v.forEach((x, j) => { if (x) dur.push(p[j]); }); }
   return cevap({ ok: true, dur });
@@ -1878,6 +1903,11 @@ async function earsiv(req, env, yol, cevap, { gercek, rol, kursId }) {
 //    kural açıksa, demo sınırı kapalıysa (Zamanlı mesajlar › Demo sınırı) ve öğrencinin WhatsApp onayı varsa. Aynı mesaj iki kez gitmez:
 //    uygulamanın kullandığı kilit belgesi (kurslar/{k}/gonderim/g…, anahtar 'z|<kural anahtarı>|<gün>') önce oluşturulur; oluşturamayan göndermez.
 //    Gönderilen, zamanli.gonderilen ve gönderim geçmişine yazılır (ofis cihazı da 'gönderildi' görür).
+// 4) MSJ-049 ortak mdSinyal hattı: kursun kendi hattı yoksa ve ortak hat kuruluysa (PHONE_ID + WA_TOKEN) aynı işler ortak hattan,
+//    gönderme ucundaki kurallarla gider: pazarlama türü (o16 doğum günü dahil; ORTAK_PAZARLAMA) hiç gitmez; alıcının kaydında waRiza yoksa
+//    gitmez (müdüre giden kurs içi bildirim rıza aramaz); dur:<tel> varsa gitmez; biçim "mdSinyal · {kurs}: …" + DUR satırı, 24 saat dışı
+//    ORTAK_SABLON; başarıda son:<tel>. Taranan kurslar: hat:<kurs> ve okurs:<kurs> (ortak hattı kullanan kurs, /ortak/durum ve gönderim yazar).
+//    Gönderilmeyenler servis özetinde (servis:durum → ortak) nedenine göre sayılır; kişi bilgisi yazılmaz.
 // İstek bütçesi: ücretsiz planda bir çalıştırmada en çok 50 alt istek var (SERVIS_ISTEK, varsayılan 45); bitince iş sonraki çalıştırmaya kalır.
 
 const TOKEN_URL = 'https://oauth2.googleapis.com/token', KAPSAM = 'https://www.googleapis.com/auth/datastore', PROJE = 'sinyal-5d37a';
@@ -2139,7 +2169,8 @@ export function ogrenciIsle(D, g, docId, simdi) {
       gunluk.gonderimler.push(m);
       if (!izinli && y.iletilecek) { gunluk.islemler.push({ zaman, kim: 'Sunucu', ne: 'Öğrenci panelinden izinsiz bildirim engellendi', ayrinti: tamAd(k) + ' → ' + m.kime }); continue; }
       if (retler.length && /dersi aldı|dersini iptal etti/.test(m.metin)) continue;
-      if (y.iletilecek && D.kurs && D.kurs.waApi && !D.kurs.demoNumara) { const tel = waNumara(y.rol === 'MÜDÜR' ? mudurTel(D.kurs) : hoca && hoca.tel); if (tel) gonder.push({ anahtar: 'og|' + docId + '|' + x.id, tel, metin: m.metin, kime: m.kime }); }
+      // MSJ-049: kursun hattı yoksa (waHat yok) ortak hat için de aday çıkar; hangi hattan gideceğine kilitliGonder karar verir
+      if (y.iletilecek && D.kurs && (D.kurs.waApi || !D.kurs.waHat) && !D.kurs.demoNumara) { const tel = waNumara(y.rol === 'MÜDÜR' ? mudurTel(D.kurs) : hoca && hoca.tel); if (tel) gonder.push({ anahtar: 'og|' + docId + '|' + x.id, tel, metin: m.metin, kime: m.kime, sablon: 'serbest', personel: y.rol === 'MÜDÜR', riza: y.rol === 'MÜDÜR' || waRizaVar(hoca) }); }
     }
   }
   if (notlar.length) gunluk.islemler.push({ zaman, kim: 'Sunucu', ne: 'Öğrenci panelinden', ayrinti: tamAd(k) + ': ' + notlar.join(', ') });
@@ -2221,13 +2252,22 @@ async function kursOgrenciIsle(is, kurs, gelenler, durum) {
     for (const id of ofis) await is.env.LINK.put('srv:ofis:' + kurs + ':' + id, '1', { expirationTtl: 14 * 86400 });
     // öğrenci bildirimleri (müdür / öğretmen): gece gitmez (kayıtta durur), uygulamanın kilidiyle bir kez
     const saat = trSaat(simdi);
-    if (gonder.length && saat >= '08:00' && saat < '21:00') await kilitliGonder(is, kurs, gonder, durum, 'ogrenci');
+    if (gonder.length && saat >= '08:00' && saat < '21:00') await kilitliGonder(is, kurs, gonder, durum, 'ogrenci', D.kurs || {});
   } catch (x) { if (!yazildi) isim = tx; throw x; }
   finally { if (isim) { try { await fsIstek(is, ':rollback', { transaction: isim }); } catch (y) { } } }
 }
 // kilit al → gönder → gönderilemeyenin kilidini bırak
-async function kilitliGonder(is, kurs, l, durum, tur) {
-  const h = await is.hatOku(is.env, kurs); if (!h) return [];
+// MSJ-049: kursun hattı yoksa ve ortak hat kuruluysa ortak hattan; önce kapılar (pazarlama, rıza, DUR), gidemeyen kilitlenmez, nedeni sayılır
+async function kilitliGonder(is, kurs, l, durum, tur, K = {}) {
+  let h = await is.hatOku(is.env, kurs);
+  if (!h && ortakVar(is.env)) {
+    const kursAd = kursAdTemiz(K.ad);
+    if (!kursAd) { if (l.length) durum.hata.push(tur + ': ortak hat için kurs adı yok'); return []; }
+    h = { ortak: true, kursAd }; const kalan = [];
+    for (const x of l) { const e = await ortakEngel(is.env, { sablon: x.kural || x.sablon, riza: x.riza, personel: x.personel, tel: x.tel }); if (e) durum.ortak[e]++; else kalan.push(x); }
+    l = kalan;
+  }
+  if (!h || !l.length) return [];
   const ok = await kilitAl(is, kurs, l.map(x => x.anahtar)), giden = [], birak = [];
   for (let i = 0; i < l.length; i++) {
     if (!ok[i]) continue;
@@ -2235,7 +2275,7 @@ async function kilitliGonder(is, kurs, l, durum, tur) {
     if (is.kalan < 3) { birak.push(...l.slice(i).filter((_, j) => ok[i + j]).map(z => z.anahtar)); durum.butce = true; break; }
     is.kalan -= 2;
     let s; try { s = await is.gonder(is.env, kurs, h, l[i].tel, l[i].metin); } catch (x) { s = { ok: false, hata: String(x.message || x) }; }
-    if (s.ok) { giden.push(l[i]); durum[tur].gonderilen++; } else { birak.push(l[i].anahtar); durum.hata.push(tur + ' gönderilemedi: ' + String(s.hata || '').slice(0, 80)); }
+    if (s.ok) { giden.push(l[i]); durum[tur].gonderilen++; if (h.ortak) durum.ortak.gonderilen++; } else { birak.push(l[i].anahtar); durum.hata.push(tur + ' gönderilemedi: ' + String(s.hata || '').slice(0, 80)); }
   }
   if (birak.length) await kilitBirak(is, kurs, birak);
   return giden;
@@ -2252,10 +2292,10 @@ export function hatirlatmaUret(V, kurallar, simdi) {
   const kursiyer = id => V.dizi.kursiyerler.find(k => k.id === id), egitmen = id => V.dizi.egitmenler.find(e => e.id === id);
   for (const id of kurallar) {
     const o = oto.get(id); if (!o || !o.acik) continue;
-    if (id === 'o1') V.dizi.dersler.filter(d => d.durum === 'Planlandı' && d.tarih === yarin).forEach(d => { const k = kursiyer(d.kursiyer), h = egitmen(d.egitmen), tel = ogrWa(k); if (k && h && tel) l.push({ kural: id, anahtar: 'o1|' + d.id, tel, kime: tamAd(k), rol: 'ÖĞRENCİ', kid: k.id, metin: doldur(K, o.sablon, { kisi: k, ad: k.ad, saat: d.saat, saatte: saatDe(d.saat), egitmen: h.ad }) }); });
+    if (id === 'o1') V.dizi.dersler.filter(d => d.durum === 'Planlandı' && d.tarih === yarin).forEach(d => { const k = kursiyer(d.kursiyer), h = egitmen(d.egitmen), tel = ogrWa(k); if (k && h && tel) l.push({ kural: id, anahtar: 'o1|' + d.id, tel, kime: tamAd(k), rol: 'ÖĞRENCİ', kid: k.id, riza: waRizaVar(k), metin: doldur(K, o.sablon, { kisi: k, ad: k.ad, saat: d.saat, saatte: saatDe(d.saat), egitmen: h.ad }) }); });
     if (id === 'o10') V.dizi.egitmenler.forEach(h => { const ds = V.dizi.dersler.filter(d => d.egitmen === h.id && d.durum === 'Planlandı' && d.tarih === yarin).sort((a, b) => (a.tarih + a.saat).localeCompare(b.tarih + b.saat)), tel = waNumara(h.tel);
-      if (ds.length && tel) l.push({ kural: id, anahtar: 'o10|' + h.id + '|' + yarin, tel, kime: h.ad, rol: 'HOCA', metin: doldur(K, o.sablon, { ad: String(h.ad).split(' ')[0], liste: ds.map(d => { const k = kursiyer(d.kursiyer); return d.saat + ' ' + (k ? tamAd(k) + ' (' + (SINIF_AD[k.sinif] || k.sinif || '') + ')' : ''); }).join(', ') }) }); });
-    if (id === 'o16') V.dizi.kursiyerler.filter(k => !k.kapali && k.dogumTarihi && String(k.dogumTarihi).slice(5) === bugun.slice(5)).forEach(k => { const tel = ogrWa(k); if (tel) l.push({ kural: id, anahtar: 'o16|' + k.id + '|' + bugun.slice(0, 4), tel, kime: tamAd(k), rol: 'ÖĞRENCİ', kid: k.id, metin: doldur(K, o.sablon, { kisi: k, ad: k.ad }) }); });
+      if (ds.length && tel) l.push({ kural: id, anahtar: 'o10|' + h.id + '|' + yarin, tel, kime: h.ad, rol: 'HOCA', riza: waRizaVar(h), metin: doldur(K, o.sablon, { ad: String(h.ad).split(' ')[0], liste: ds.map(d => { const k = kursiyer(d.kursiyer); return d.saat + ' ' + (k ? tamAd(k) + ' (' + (SINIF_AD[k.sinif] || k.sinif || '') + ')' : ''); }).join(', ') }) }); });
+    if (id === 'o16') V.dizi.kursiyerler.filter(k => !k.kapali && k.dogumTarihi && String(k.dogumTarihi).slice(5) === bugun.slice(5)).forEach(k => { const tel = ogrWa(k); if (tel) l.push({ kural: id, anahtar: 'o16|' + k.id + '|' + bugun.slice(0, 4), tel, kime: tamAd(k), rol: 'ÖĞRENCİ', kid: k.id, riza: waRizaVar(k), metin: doldur(K, o.sablon, { kisi: k, ad: k.ad }) }); });
   }
   return l;
 }
@@ -2264,8 +2304,10 @@ export async function hatirlatmalar(is, durum) {
   if (saat < '08:00' || saat >= '21:00') return;
   const kurslar = []; let imlec;
   do { const r = await is.env.LINK.list({ prefix: 'hat:', cursor: imlec }); r.keys.forEach(x => kurslar.push(x.name.slice(4))); imlec = r.list_complete === false ? r.cursor : null; } while (imlec);
+  // MSJ-049: ortak hat kuruluysa ortak hattı kullanan kurslar da (okurs:<kurs>)
+  if (ortakVar(is.env)) do { const r = await is.env.LINK.list({ prefix: 'okurs:', cursor: imlec }); r.keys.forEach(x => kurslar.push(x.name.slice(6))); imlec = r.list_complete === false ? r.cursor : null; } while (imlec);
   let n = 0;
-  for (const kurs of kurslar) {
+  for (const kurs of new Set(kurslar)) {
     if (!/^[A-Za-z0-9]{10,40}$/.test(kurs) || !izinliKurs(is.env, kurs)) continue;
     const dilimler = [];
     for (const [ad, kurallar] of DILIM) { const acik = kurallar.filter(k => saat >= KURAL_SAAT[k]); if (acik.length && !(await is.env.LINK.get(`srv:hat:${kurs}:${bugun}:${ad}`))) dilimler.push([ad, acik]); }
@@ -2284,7 +2326,7 @@ async function kursHatirlat(is, kurs, dilimler, durum) {
   const gonderilen = z.gonderilen || {}, enCok = +is.env.SERVIS_MESAJ || 20;
   const adaylar = hatirlatmaUret(V, dilimler.flatMap(([, l]) => l), simdi).filter(x => !gonderilen[x.anahtar]);
   const bu = adaylar.slice(0, Math.max(0, Math.min(enCok, Math.floor((is.kalan - 8) / 2))));
-  const giden = await kilitliGonder(is, kurs, bu.map(x => ({ ...x, anahtar: 'z|' + x.anahtar + '|' + bugun })), durum, 'hatirlatma');
+  const giden = await kilitliGonder(is, kurs, bu.map(x => ({ ...x, anahtar: 'z|' + x.anahtar + '|' + bugun })), durum, 'hatirlatma', K);
   if (giden.length) {
     // gönderildi bilgisi uygulamanın zamanli kaydına ve gönderim geçmişine (tek işlemde; zamanli o an yeniden okunur)
     const tx = (await fsIstek(is, ':beginTransaction', { options: { readWrite: {} } })).transaction;
@@ -2303,7 +2345,7 @@ async function kursHatirlat(is, kurs, dilimler, durum) {
 // ---- Cron girişi ----
 export async function servisCalistir(env, o = {}) {
   if (!saOku(env) || !env.LINK) return { kapali: true };
-  const is = isBaglam(env, o), durum = { zaman: new Date(is.simdi()).toISOString(), ogrenci: { islenen: 0, ofise: 0, gonderilen: 0 }, hatirlatma: { gonderilen: 0, atlanan: 0 }, hata: [], butce: false };
+  const is = isBaglam(env, o), durum = { zaman: new Date(is.simdi()).toISOString(), ogrenci: { islenen: 0, ofise: 0, gonderilen: 0 }, hatirlatma: { gonderilen: 0, atlanan: 0 }, ortak: { gonderilen: 0, pazarlama: 0, riza: 0, dur: 0 }, hata: [], butce: false };
   for (const is0 of [ogrenciGelenIsle, hatirlatmalar]) {
     try { await is0(is, durum); } catch (x) { if (x instanceof ButceBitti) { durum.butce = true; break; } durum.hata.push(String(x.message || x).slice(0, 160)); }
   }
@@ -2315,6 +2357,7 @@ export async function servisCalistir(env, o = {}) {
 // ---- UYG-012 / MSJ-021: servis hesabı işleri (kurulum SERVIS-HESABI.md) ----
 // Kursun kendi hattından düz metin; şablon tanımlıysa ve kişi 24 saatte yazmadıysa doğrudan şablon, 131047'de şablonla tekrar (ana gönderim yoluyla aynı kural)
 async function hatMetinGonder(env, kurs, h, to, metin) {
+  if (h.ortak) { const { durum, ...s } = await ortakIlet(env, null, to, kurs, h.kursAd, metin); return s; }   // MSJ-049: kapılar kilitliGonder'de geçildi
   const G = 'https://graph.facebook.com/v25.0/' + h.phoneId + '/messages', H = { Authorization: 'Bearer ' + h.token, 'Content-Type': 'application/json' };
   const yolla = async govde => { const r = await fetch(G, { method: 'POST', headers: H, body: JSON.stringify(govde) }); const j = await r.json().catch(() => ({})); return r.ok ? { ok: true, id: j.messages && j.messages[0] && j.messages[0].id } : { ok: false, kod: j.error && j.error.code, hata: (j.error && j.error.message) || 'Meta hatasi' }; };
   if (h.sablon && env.LINK && !(await pencereAcik(env, kurs, to))) return yolla(sablonGovde(to, h.sablon, h.sablonDil, metin));
@@ -2558,7 +2601,7 @@ export default {
     if (req.method === 'GET') {
       if (!yol) return cevap({ ok: true, hazir: !!(env.WA_TOKEN && env.PHONE_ID && env.ALICI), belge: true, kisa: !!env.LINK, kursHatti: true, sablon: !!env.SABLON_AD, demoHatlari: { usta: !!env.PHONE_ID_USTA, mudur: !!env.PHONE_ID_MUDUR } });
       const anahtar = yol.startsWith('k/') ? yol.slice(2) : yol;
-      if (/^(gelen$|eslesmeyen$|(son|dur|otoplu):|(hat|hatno|gelen|medya|durum|yedek|kisaad|kursad|hata|sohbet|epadres|eponay|epsay|epgitti|epogr|ekalarm|mbelge)[:-])/.test(anahtar)) return cevap({ ok: false }, 404);  // iç kayıtlar (e-posta adresleri ve onay belirteçleri dahil) kısa link gibi okunamaz
+      if (/^(gelen$|eslesmeyen$|(son|dur|otoplu|okurs):|(hat|hatno|gelen|medya|durum|yedek|kisaad|kursad|hata|sohbet|epadres|eponay|epsay|epgitti|epogr|ekalarm|mbelge)[:-])/.test(anahtar)) return cevap({ ok: false }, 404);  // iç kayıtlar (e-posta adresleri ve onay belirteçleri dahil) kısa link gibi okunamaz
       // imza dönüşü: sunucu kaydı (zaman, IP, ülke, tarayıcı) yalnız imza isteğinin mührünü bilen kursa verilir (?ka=)
       if (yol.startsWith('k/takip-') && env.LINK) {
         const g = await env.LINK.getWithMetadata(anahtar), md = g.metadata || null;
