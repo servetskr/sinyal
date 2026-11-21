@@ -1,6 +1,6 @@
 import { planlilariGonder } from './mesaj.js?v=235';
 import { izinBitisi, memVermeSuresi, adaySinavSaati, esinavUcreti, esinavHakDurum, odemeKodu, ibanMetni, S, kaydet, gun, fark, kursiyer, egitmen, tamAd, eksikEvrak, gecikenler, kalanBorc, islem, gonderimEkle, yerelZaman, oturum, kapaliGun, SINIFLAR, risk, selam, kursAdi, bulutKanca, mudurTel, ekDersFiyat, ekDersTabani } from './veri.js?v=235';
-import { tl, tamTarih, tarihUzun, saatDe, apiAcik, apiGonder, etiket, bildir, waSirali } from './ui.js?v=235';
+import { tl, tamTarih, tarihUzun, saatDe, apiAcik, apiGonder, etiket, bildir, waSirali, ortakEngel, elleGonder } from './ui.js?v=235';
 import { denetimSkoru } from './ozellik.js?v=235';
 import * as KR from './kurallar.js?v=235';
 import * as TY from './teorikyol.js?v=235';
@@ -110,7 +110,7 @@ URET.o15 = ornek => S.kursiyerler.map(k => ({ k, r: risk(k) })).filter(({ k, r }
 export function anlikBildirim(id, alan) {
   kurallariHazirla(); const o = kural(id); if (!o || !o.acik || !apiAcik()) return 0;
   const ben = oturum.kullanici && oturum.kullanici.id, l = (o.kime && o.kime.length ? (S.kullanicilar || []).filter(u => o.kime.includes(u.id)) : [{ id: 'mudur', ad: S.kurs.yetkili || 'Kurs müdürü', tel: mudurTel(), rol: 'mudur' }]).filter(u => u.id !== ben && !(u.rol === 'mudur' && oturum.kullanici && oturum.kullanici.rol === 'mudur' && !(o.kime || []).length));
-  const metin = doldur(id, alan), liste = l.map(u => ({ ad: u.ad, tel: u.tel || (u.rol === 'mudur' ? mudurTel() : ''), rol: u.rol === 'mudur' ? 'MÜDÜR' : 'ÖN BÜRO', metin, tur: o.ad })).filter(x => x.tel);
+  const metin = doldur(id, alan), liste = l.map(u => ({ ad: u.ad, tel: u.tel || (u.rol === 'mudur' ? mudurTel() : ''), rol: u.rol === 'mudur' ? 'MÜDÜR' : 'ÖN BÜRO', metin, tur: o.ad, sablon: id })).filter(x => x.tel);
   if (liste.length) { waSirali(liste, o.ad, { sessiz: true }); o.gonderim = (o.gonderim || 0) + liste.length; }
   return liste.length;
 }
@@ -166,11 +166,16 @@ export async function zamanlayiciCalistir(elle = false) {
     for (const x of l) {
       const atla = z.sinir && apiAcik() && ((z.gunluk || {})[bugun + x.kural] || 0) >= 2;
       if (atla) { z.gonderilen[x.anahtar] = bugun; z.kayit.unshift({ zaman: yerelZaman(), kural: x.kural, kime: x.kim.ad, rol: x.kim.rol, metin: x.metin, durum: 'demo sınırı' }); continue; }
+      // MSJ-045: ortak hatta gidemeyen (satış/tanıtım türü, rızası olmayan, DUR yazan) mesaj otomatik gitmez; elle gönderilecekler listesine düşer
+      const engel = apiAcik() && !(x.kim && x.kim.kanal) ? ortakEngel(x.kim, x.kural) : '';
+      if (engel) { if (!z.kuyruk.some(y => y.anahtar === x.anahtar)) z.kuyruk.push({ ...x, eklendi: yerelZaman(), gun: bugun, elle: engel }); continue; }
       if (apiAcik() && !(x.kim && x.kim.kanal)) {
         // gerçek kursta birden çok cihaz açık olabilir: mesajı ilk sahiplenen cihaz gönderir, öbürleri atlar
         if (bulutKanca.sahiplen && !(await bulutKanca.sahiplen('z|' + x.anahtar + '|' + bugun))) continue;  // öbür cihaz gönderdi; kaydı eşitlemeyle gelir
-        const s = await apiGonder(etiket(x.kim.ad, x.kim.rol) + x.metin, undefined, undefined, x.kim);
-        z.kayit.unshift({ zaman: yerelZaman(), kural: x.kural, kime: x.kim.ad, rol: x.kim.rol, metin: x.metin, id: s.id || null, durum: s.ok ? 'gönderildi' : 'hata: ' + s.hata });
+        const s = await apiGonder(etiket(x.kim.ad, x.kim.rol) + x.metin, undefined, undefined, x.kim, { sablon: x.kural });
+        z.kayit.unshift({ zaman: yerelZaman(), kural: x.kural, kime: x.kim.ad, rol: x.kim.rol, metin: x.metin, id: s.id || null, durum: s.ok ? 'gönderildi' + (s.kanal === 'ortak' ? ' (ortak hat)' : '') : 'hata: ' + s.hata });
+        // ortak hattın kalıcı reddi (DUR, rıza, tür): yeniden denenmez, elle gönderilecekler listesine düşer
+        if (!s.ok && ['dur', 'riza', 'pazarlama'].includes(s.kod)) { z.gonderilen[x.anahtar] = bugun; if (!z.kuyruk.some(y => y.anahtar === x.anahtar)) z.kuyruk.push({ ...x, eklendi: yerelZaman(), gun: bugun, elle: s.kod }); continue; }
         if (s.ok) gonderimEkle(x.kim.ad, x.metin, kural(x.kural).ad, { oto: true });   // MSJ-027: otomatik mesaj da öğrencinin geçmişine
         // gönderilemeyen mesaj öbürlerini durdurmaz; aynı mesaj 3 kez denenince bugünlük bırakılır
         if (!s.ok) { z.hata = z.hata || {}; z.hata[x.anahtar] = (z.hata[x.anahtar] || 0) + 1; if (z.hata[x.anahtar] >= 3) { z.gonderilen[x.anahtar] = bugun; if (!z.kuyruk.some(y => y.anahtar === x.anahtar)) z.kuyruk.push({ ...x, eklendi: yerelZaman(), gun: bugun, hata: s.hata }); } continue; }  // 3 denemede gitmezse elle gönderilecekler listesine düşer
@@ -191,12 +196,14 @@ export function kuyruguGonder(sonra) {
   const z = S.zamanli; if (!z || !z.kuyruk.length) return bildir('Bekleyen zamanlı mesaj yok');
   const hepsi = z.kuyruk.slice(), tamam = x => { z.gonderilen[x.anahtar] = gun(0); z.kuyruk = z.kuyruk.filter(q => q.anahtar !== x.anahtar); z.kayit.unshift({ zaman: yerelZaman(), kural: x.kural, kime: x.kim.ad, rol: x.kim.rol, metin: x.metin, durum: 'gönderildi' }); kural(x.kural).gonderim++; etkiUygula(x); };
   // PAR-058: e-posta kanalındakiler cihazın e-posta uygulamasıyla tek tek; SMS kanalındakiler sırayla SMS; öbürleri WhatsApp
-  const ep = hepsi.filter(x => x.kim.kanal === 'E-posta' && x.kim.eposta), sms = hepsi.filter(x => x.kim.kanal === 'SMS' || (x.kim.kanal === 'E-posta' && !x.kim.eposta)), l = hepsi.filter(x => !ep.includes(x) && !sms.includes(x));
+  // MSJ-045: ortak hattan gitmeyenler (x.elle) için kanal seçimi: kursun telefonundan WhatsApp, e-posta ya da uygulama bildirimi
+  const oe = hepsi.filter(x => x.elle && !x.kim.kanal), ep = hepsi.filter(x => x.kim.kanal === 'E-posta' && x.kim.eposta), sms = hepsi.filter(x => x.kim.kanal === 'SMS' || (x.kim.kanal === 'E-posta' && !x.kim.eposta)), l = hepsi.filter(x => !ep.includes(x) && !sms.includes(x) && !oe.includes(x));
   const epPencere = () => { if (!ep.length) { if (sonra) sonra(); return; } import('./ui.js?v=235').then(u => u.pencere({ baslik: 'E-postayla gidecekler', taslak: false, icerik: `<ul class="liste">${ep.map((x, i) => `<li><div style="flex:1;min-width:0"><b>${u.e(x.kim.ad)}</b><small style="display:block;color:var(--soluk)">${u.e(kural(x.kural).ad)}</small></div><a class="dg dg-cizgi dg-kucuk" data-ep-i="${i}" href="mailto:${encodeURIComponent(x.kim.eposta)}?subject=${encodeURIComponent((S.kurs.ad || '') + ' · ' + kural(x.kural).ad)}&body=${encodeURIComponent(x.metin)}">E-postayı aç</a></li>`).join('')}</ul>`, altlik: '<button class="dg dg-ana" data-kapat>Bitti</button>',
     onAc(p) { p.addEventListener('click', ev => { const a = ev.target.closest('[data-ep-i]'); if (!a) return; const x = ep[+a.dataset.epI]; tamam(x); gonderimEkle(x.kim.ad, x.metin, kural(x.kural).ad + ' (e-posta)'); a.textContent = 'Açıldı ✓'; kaydet(); }); } })); if (sonra) sonra(); };
   const smsSira = () => sms.length ? waSirali(sms.map(x => ({ ad: x.kim.ad, tel: x.kim.tel, rol: x.kim.rol, metin: x.metin, tur: kural(x.kural).ad })), 'SMS ile gidecekler', { kanal: 'SMS', bitince: acilan => { const ac = acilan || new Set(sms.map((x, i) => i)); sms.forEach((x, i) => { if (ac.has(i)) tamam(x); }); kaydet(); epPencere(); } }) : epPencere();
-  if (!l.length) return smsSira();
-  waSirali(l.map(x => ({ ad: x.kim.ad, tel: x.kim.tel, rol: x.kim.rol, metin: x.metin, tur: kural(x.kural).ad })), 'Zamanı gelen mesajlar', { bitince: acilan => { const ac = acilan || new Set(l.map((x, i) => i)); l.forEach((x, i) => { if (!ac.has(i)) return; tamam(x); }); kaydet(); smsSira(); } });
+  const elleSira = () => oe.length ? elleGonder(oe.map(x => ({ ad: x.kim.ad, tel: x.kim.tel, rol: x.kim.rol, metin: x.metin, tur: kural(x.kural).ad, sablon: x.kural, neden: x.elle })), 'Zamanı gelen mesajlar', { bitince: ac => { oe.forEach((x, i) => { if (ac && ac.has(i)) tamam(x); }); kaydet(); smsSira(); } }) : smsSira();
+  if (!l.length) return elleSira();
+  waSirali(l.map(x => ({ ad: x.kim.ad, tel: x.kim.tel, rol: x.kim.rol, metin: x.metin, tur: kural(x.kural).ad, sablon: x.kural })), 'Zamanı gelen mesajlar', { bitince: acilan => { const ac = acilan || new Set(l.map((x, i) => i)); l.forEach((x, i) => { if (!ac.has(i)) return; tamam(x); }); kaydet(); elleSira(); } });
 }
 // Demo: bir kuraldan tek örnek mesajı hemen gönder (tarih şartı aranmaz)
 export async function ornekGonder(id) {
@@ -204,8 +211,10 @@ export async function ornekGonder(id) {
   const x = (URET[id](true) || []).filter(x => x && x.kim)[0];
   if (!x) return bildir('Bu kural için uygun kayıt yok', 'uyari');
   islem('Zamanlı mesaj örneği gönderdi', kural(id).ad);
-  if (apiAcik()) { const s = await apiGonder(etiket(x.kim.ad, x.kim.rol) + x.metin, undefined, undefined, x.kim); S.zamanli.kayit.unshift({ zaman: yerelZaman(), kural: id, kime: x.kim.ad, rol: x.kim.rol, metin: x.metin, id: s.id || null, durum: s.ok ? 'örnek gönderildi' : 'hata: ' + s.hata }); if (s.ok) etkiUygula(x); kaydet(); return bildir(s.ok ? `“${kural(id).ad}” örneği gönderildi ✓` : s.hata, s.ok ? 'wp' : 'uyari'); }
-  waSirali([{ ad: x.kim.ad, tel: x.kim.tel, rol: x.kim.rol, metin: x.metin }], kural(id).ad + ' · örnek');
+  const engel = apiAcik() ? ortakEngel(x.kim, id) : '';
+  if (engel) return elleGonder([{ ad: x.kim.ad, tel: x.kim.tel, rol: x.kim.rol, metin: x.metin, tur: kural(id).ad, sablon: id }], kural(id).ad + ' · örnek', { bitince: ac => { if (ac && ac.size) { etkiUygula(x); kaydet(); } } });
+  if (apiAcik()) { const s = await apiGonder(etiket(x.kim.ad, x.kim.rol) + x.metin, undefined, undefined, x.kim, { sablon: id }); S.zamanli.kayit.unshift({ zaman: yerelZaman(), kural: id, kime: x.kim.ad, rol: x.kim.rol, metin: x.metin, id: s.id || null, durum: s.ok ? 'örnek gönderildi' : 'hata: ' + s.hata }); if (s.ok) etkiUygula(x); kaydet(); return bildir(s.ok ? `“${kural(id).ad}” örneği gönderildi ✓` : s.hata, s.ok ? 'wp' : 'uyari'); }
+  waSirali([{ ad: x.kim.ad, tel: x.kim.tel, rol: x.kim.rol, metin: x.metin, sablon: id }], kural(id).ad + ' · örnek');
 }
 let zamanlayici = null;
 export function zamanlayiciBaslat() {

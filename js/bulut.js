@@ -3,6 +3,7 @@
 // farklı kayıtları değiştirirse ikisi de korunur. Fotoğraf ve imzalar kurslar/{kurs}/dosyalar'da ayrı belge.
 import { DESTEK } from './iletisim.js?v=235';
 import { musaitlikTemizle, musaitlikOzet } from './planlayici.js?v=235';
+import { rizaOku } from './waortak.js?v=235';
 import { FIREBASE, EMU, emuBagla } from './firebase-ayar.js?v=235';
 import { izTabaniYenile, makbuzBaslangic, makbuzBicim, dersDiziniBoz, SINIFLAR, kuralAyar, S, bulutVeri, bosVeri, kaydetDinle, kaydet, oturum, bulutKanca, makbuzSira, islem, iso, EVRAKLAR, gun, fark, tamAd, iptalEdilebilir, dersIptalIz, geceKisitli, geceDersMi, gerekliDireksiyon } from './veri.js?v=235';
 
@@ -687,7 +688,8 @@ function kancalariKur(u) {
   setInterval(makbuzDenetle, 30000); setTimeout(makbuzDenetle, 5000);
   if (['mudur', 'sekreter'].includes(u.rol)) { setTimeout(() => gunlukYedek().catch(x => console.error(x)), 45000);
     // haftalık / aylık rapor e-postası (ve gönderilemeyen son gün sonu raporu): dönemin ilk açılışında, tek cihazdan (eposta.js)
-    setTimeout(() => import('./eposta.js?v=235').then(m => m.zamanliRaporlar()).catch(x => console.error(x)), 60000); gelenDinle(); ustaGelenDinle(); setTimeout(() => { ustaKirli.add('*'); ustaProjeksiyonYaz(); }, 3000); }
+    setTimeout(() => import('./eposta.js?v=235').then(m => m.zamanliRaporlar()).catch(x => console.error(x)), 60000); gelenDinle(); ustaGelenDinle(); setTimeout(() => { ustaKirli.add('*'); ustaProjeksiyonYaz(); }, 3000);
+    import('./ui.js?v=235').then(u => u.ortakDurumAl(true)).catch(() => { }); }   // MSJ-044: ortak mdSinyal WhatsApp hattı kurulu mu (zamanlayıcıdan önce)
 }
 
 // ---- yedek ----
@@ -976,6 +978,8 @@ function ogrenciUygula(docId, g) {
     let y = null; try { y = x.v ? JSON.parse(x.v) : null; } catch (e) { continue; }
     if (x.a === 'kursiyerler' && x.id === k.id && y) {
       ['deneme', 'denemeDetay', 'bildirilenSorular', 'bildirimDuzeltildi', 'yanlislar', 'konuAnaliz', 'okunan', 'tekrar', 'gorulen', 'dirCalisma', 'tehlike'].forEach(f => { if (y[f] !== undefined && JSON.stringify(y[f]).length < 50000) k[f] = guvenliVeri(y[f]); });
+      // MSJ-047: öğrencinin uygulamadan verdiği / geri çektiği WhatsApp bildirim rızası (yalnız tarih ve kanal; kanal burada konur)
+      { const r = rizaOku(y, 'ogrenci-uygulama'); if (r && JSON.stringify(r.waRiza || null) !== JSON.stringify(k.waRiza || null)) { k.waRiza = r.waRiza; if (r.waRiza) delete k.waRizaGeri; else k.waRizaGeri = r.waRizaGeri; notlar.push(r.waRiza ? 'mdSinyal’den WhatsApp bildirimi almayı kabul etti' : 'WhatsApp bildirimi rızasını geri çekti'); } }
       ['hesapAktif', 'sonGiris'].forEach(f => { if (typeof y[f] === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(y[f]) && y[f] !== k[f]) { k[f] = y[f]; if (f === 'hesapAktif') notlar.push('şifresini belirleyip hesabını kullanmaya başladı'); } });
       // UYG-010: öğrencinin bildirdiği müsait zamanlar (temizlenmiş biçimde; planlayıcı bunlara göre yerleştirir)
       if ('musaitlik' in y) { const m = musaitlikTemizle(y.musaitlik); if (JSON.stringify(m) !== JSON.stringify(k.musaitlik || null)) { k.musaitlik = m; notlar.push(m ? 'müsait zamanlarını bildirdi: ' + musaitlikOzet(m) : 'müsaitlik bildirimini kaldırdı'); } }
@@ -1032,7 +1036,8 @@ function ogrenciUygula(docId, g) {
       S.gonderimler.unshift(m);
       if (!izinli && y.iletilecek) { islem('Öğrenci panelinden izinsiz bildirim engellendi', tamAd(k) + ' → ' + m.kime); continue; }
       if (retler.length && /dersi aldı|dersini iptal etti/.test(m.metin)) continue;  // istek reddedildiyse "ders aldı / iptal etti" bildirimi gitmez
-      if (y.iletilecek && S.kurs.waApi) sahiplen('og|' + docId + '|' + x.id).then(ok => { if (ok) import('./ui.js?v=235').then(u => u.apiGonder(u.etiket(m.kime, y.rol || '') + m.metin, undefined, undefined, { ad: m.kime, rol: y.rol || '' }).then(s => { if (!s.ok) { islem('Öğrenci bildirimi gönderilemedi', m.kime + ' · ' + m.tur + ': ' + s.hata); kaydet(); } })); });
+      // MSJ-044: kursun kendi hattı yokken ortak hattan da gider (apiAcik)
+      if (y.iletilecek) import('./ui.js?v=235').then(u => { if (!u.apiAcik()) return; sahiplen('og|' + docId + '|' + x.id).then(ok => { if (ok) u.apiGonder(u.etiket(m.kime, y.rol || '') + m.metin, undefined, undefined, { ad: m.kime, rol: y.rol || '' }).then(s => { if (!s.ok) { islem('Öğrenci bildirimi gönderilemedi', m.kime + ' · ' + m.tur + ': ' + s.hata); kaydet(); } }); }); });
     }
   }
   if (notlar.length) islem('Öğrenci panelinden', tamAd(k) + ': ' + notlar.join(', '));
@@ -1110,7 +1115,8 @@ export function ogrenciAyril() { try { localStorage.removeItem('sinyal-ogrenci')
 // Ofis cihazı (müdür / ön büro) her öğretmen için kurslar/{kurs}/ustalar/{öğretmen} belgesini hazırlar; öğretmenin telefonu
 // kurs verisinin tamamını değil yalnız bu belgeyi okur. Öğretmenin yaptıkları (ders başlat/bitir, imza, not, deneme) ustaGelen'e
 // yazılır, ofis cihazı denetleyip kayda işler. Kendi telefonunda değişiklik hemen görünür; ofiste mdSinyal açık değilse kayda sonra geçer.
-const DIZI_USTA = ['dersler', 'kursiyerler', 'gonderimler', 'imzaTalepleri', 'dersIptaller', 'islemler', 'pufGelen', 'izinTalepleri'];
+// waRizaGelen: öğretmenin kendi WhatsApp bildirim rızası (MSJ-047); ofis yalnız rıza alanını öğretmenin kaydına yazar
+const DIZI_USTA = ['dersler', 'kursiyerler', 'gonderimler', 'imzaTalepleri', 'dersIptaller', 'islemler', 'pufGelen', 'izinTalepleri', 'waRizaGelen'];
 const KURSIYER_USTA = ['id', 'no', 'ad', 'soyad', 'tel', 'foto', 'sinif', 'asama', 'egitmen', 'sube', 'kapali', 'direksiyon', 'teorik', 'deneme', 'dDeneme', 'esinav', 'dsinav', 'kayit', 'teorikGrup', 'mevcutEhliyet', 'ekDersHakki', 'cinsiyet', 'muaf',
   // öğrenciye özgü direksiyon saati (veri.js direksiyonAyrinti): müdürün elle girdiği değer, ders kuralı, mevcut belge ayrıntısı, ikinci dört hak
   'dersKural', 'gerekliElle', 'gerekliElleNot', 'ikinciHak', 'mevcutOtomatik', 'mevcutEski', 'oncekiBelge'];
@@ -1205,6 +1211,10 @@ function ustaUygula(docId, g) {
       const T = /^\d{4}-\d{2}-\d{2}$/; if (y.kim !== egId || !T.test(y.bas) || !T.test(y.bit) || y.bit < y.bas || (S.izinTalepleri || []).some(t => t.id === y.id)) continue;
       (S.izinTalepleri = S.izinTalepleri || []).unshift({ id: String(y.id).slice(0, 30), kim: egId, bas: y.bas, bit: y.bit, neden: String(y.neden || '').replace(/[<>"'`]/g, '').slice(0, 200), tarih: iso(new Date()), durum: 'bekliyor' });
       try { import('./sayfalar1.js?v=235').then(m => m.bildirimler && m.bildirimler([{ kim: 'mudur', metin: `${(S.egitmenler.find(z => z.id === egId) || {}).ad || 'Öğretmen'} ${y.bas === y.bit ? y.bas : y.bas + ' – ' + y.bit} için müsait olmadığını bildirdi; Ekip ve araçlar › İzinler’den onaylayın.`, tur: 'İzin talebi' }], 'İzin talebi')).catch(() => { }); } catch (e) { }
+    } else if (x.a === 'waRizaGelen' && y) {
+      // MSJ-047: öğretmenin uygulamadan verdiği / geri çektiği WhatsApp bildirim rızası; yalnız kendi kaydına
+      const eg = S.egitmenler.find(z => z.id === egId), r = y.kim === egId && rizaOku(y, 'ogretmen-uygulama');
+      if (eg && r && JSON.stringify(r.waRiza || null) !== JSON.stringify(eg.waRiza || null)) { eg.waRiza = r.waRiza; if (r.waRiza) delete eg.waRizaGeri; else eg.waRizaGeri = r.waRizaGeri; islem(r.waRiza ? 'Öğretmen mdSinyal’den WhatsApp bildirimi almayı kabul etti' : 'Öğretmen WhatsApp bildirimi rızasını geri çekti', eg.ad); }
     } else if (x.a === 'pufGelen' && y) {
       // öğretmenin püf noktası: güzergâh varsa eklenir, hemen görünür (müdür silebilir)
       const g = (S.kurs.guzergahlar || []).find(z => z.id === y.guzergah), eg = S.egitmenler.find(z => z.id === egId);

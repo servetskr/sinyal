@@ -4,7 +4,7 @@
 // data-destek, Çıkış yap / Kullanıcı değiştir: data-cikis; ikisi de app.js'teki belge dinleyicisinde çalışır) buraya taşındı.
 import { S, SINIFLAR, oturum, tarihOku, sinifEtiket, anaSinif, fark, kaydet } from '../veri.js?v=235';
 import { haftaYuku, izinKarti } from './bugun.js?v=235';
-import { ayAdi, tarih, bildir } from '../ui.js?v=235';
+import { ayAdi, tarih, bildir, rizaUygulamadan, RIZA_METNI } from '../ui.js?v=235';
 import { guzergahlar } from '../guzergah.js?v=235';
 import { kisaMetin } from '../guncelleme.js?v=235';
 import * as ARC from '../ogr/araclar.js?v=235';
@@ -113,8 +113,12 @@ function hesapHtml(ctx) {
   // UYG-009: çalışma izni ve haftalık ders yükü
   const iz = eg.mebIzinBitis ? satir({ ikon: 'kimlik', ton: fark(eg.mebIzinBitis) <= 30 ? 'turuncu' : 'gri', baslik: 'Çalışma izni', alt: esc(`${tarih(eg.mebIzinBitis)} tarihine kadar${fark(eg.mebIzinBitis) < 0 ? ' · bitti' : fark(eg.mebIzinBitis) <= 30 ? ` · ${fark(eg.mebIzinBitis)} gün kaldı` : ''}`), ok: false }) : '';
   const hy = haftaYuku(eg), hs = hy.n || hy.sinir ? satir({ ikon: 'takvim', ton: 'gri', baslik: 'Bu hafta', alt: `${hy.n}${hy.sinir ? ' / ' + hy.sinir : ''} ders`, ok: false }) : '';
+  // MSJ-047: mdSinyal'in ortak WhatsApp hattından bildirim alma rızası (öğretmen kendisi verir ya da geri çeker)
+  const rz = eg.waRiza && eg.waRiza.tarih;
+  const riza = satir({ ikon: 'mesaj', ton: rz ? 'yesil' : 'gri', baslik: esc(RIZA_METNI), alt: rz ? esc('Onay ' + tarih(eg.waRiza.tarih) + '. Ders programı ve kurs bildirimleri mdSinyal’in WhatsApp numarasından gelir.') : 'Ders programı ve kurs bildirimleri mdSinyal’in WhatsApp numarasından gelir. İstediğin zaman kapatabilirsin.', sag: `<input type="checkbox" class="ox-uar-riza" data-ux-riza ${rz ? 'checked' : ''} aria-label="${esc(RIZA_METNI)}">`, attrs: { 'data-ux-riza-satir': true }, etiket: 'label', ok: false });
   return geriBugun() + sayfaBas('Hesabım') + kim + izinKarti(eg)
     + (iz || hs ? `<div class="ox-uar-ara">${liste([iz, hs].filter(Boolean))}</div>` : '')
+    + `<div class="ox-uar-ara">${liste([riza])}</div>`
     + `<div class="ox-uar-ara">${liste(satirlar)}</div>`
     + `<div class="ox-uar-ara">${liste([satir({ ikon: 'cikis', ton: 'kirmizi', baslik: u.bulut ? 'Çıkış yap' : 'Kullanıcı değiştir', attrs: { 'data-cikis': true }, ok: false, cls: 'ox-uar-cikis' })])}</div>`
     + not('Bilgilerin yanlışsa kurs müdürüne söyle; adını ve telefonunu kurs günceller.');
@@ -124,7 +128,7 @@ export function altEkran(ad, ctx) {
   const a = String(ad || '').split(':')[0];
   if (a === 'arac') return { html: aracHtml(ctx) };
   if (a === 'guzergah') return { html: gzHtml(), baglan: gzBagla };
-  if (a === 'hesap') return { html: hesapHtml(ctx) };
+  if (a === 'hesap') return { html: hesapHtml(ctx), baglan: kap => kap.addEventListener('change', ev => { if (!ev.target.matches('[data-ux-riza]')) return; rizaUygulamadan(ctx.eg, ev.target.checked, true); bildir(ev.target.checked ? 'WhatsApp bildirimleri açıldı' : 'WhatsApp bildirimleri kapatıldı'); }) };
   if (a === 'izin') return { html: izinHtml(ctx), baglan: kap => izinBagla(kap, ctx) };
   if (a === 'anim') return { html: animListeHtml() };
   if (a === 'onizle') return animOnizle(String(ad).slice(7), ctx);
@@ -181,6 +185,8 @@ stilEkle('ox-uar', `
 .ox-uar-kim h2{font-size:20px;line-height:1.2;font-weight:800;letter-spacing:-.02em;color:var(--ox-bas);overflow-wrap:anywhere}
 .ox-uar-kim p{margin-top:3px;font-size:15px;color:var(--ox-ikincil);overflow-wrap:anywhere}
 .ox-uar-cikis .ox-satir-govde b{color:var(--ox-kirmizi)}
+.ox-uar-riza{width:24px;height:24px;flex:none;accent-color:var(--ox-mavi)}
+label.ox-satir{cursor:pointer}
 a.ox-satir{text-decoration:none;color:inherit}
 `);
 

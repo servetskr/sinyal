@@ -68,8 +68,13 @@ function yolculuk(k, S0, sinav) {
 const isKart = ({ ikon, ton, baslik, alt = '', sag = '', alttaki = '' }) => kart(
   `<div class="ox-ana-is-ust">${ikonKutu(ikon, ton)}<span class="ox-ana-is-govde"><b>${baslik}</b>${alt ? `<small>${alt}</small>` : ''}</span>${sag}</div>${alttaki ? `<div class="ox-ana-is-dg">${alttaki}</div>` : ''}`, 'ox-ana-is');
 
+// MSJ-045: kurstan uygulama bildirimi (ortak WhatsApp hattından gitmeyen mesaj); "Tamam" deyince bu telefonda gizlenir
+const kmOkundu = () => { try { return JSON.parse(localStorage.getItem('sinyal-km-okundu') || '[]'); } catch (x) { return []; } };
 function yapilacaklar(k, S0, sd, sinav) {
   const l = [], sn = OG.sonrakiTaksit(k);
+  { const ok = kmOkundu(); (k.kursMesaj || []).filter(m => m && m.id && !ok.includes(m.id) && fark(m.tarih) >= -14).slice(0, 3).forEach(m => l.push(isKart({ ikon: 'mesaj', ton: 'mavi', baslik: 'Kurstan mesaj', alt: esc(m.metin), alttaki: dugme('Tamam', { 'data-og-km': m.id }, { tur: 'cizgi', kucuk: true }) }))); }
+  // MSJ-047: rıza bir kez sorulur (verilmemiş ve geri çekilmemişse)
+  if (!(k.waRiza && k.waRiza.tarih) && !k.waRizaGeri) l.push(isKart({ ikon: 'wp', ton: 'yesil', baslik: 'WhatsApp bildirimleri', alt: 'Ders, sınav ve ödeme hatırlatmaları kurs adına mdSinyal’in WhatsApp numarasından gelsin mi? İstediğin zaman Hesabım’dan kapatabilirsin.', alttaki: dugme('Hayır', { 'data-og-riza': '0' }, { tur: 'cizgi', kucuk: true }) + dugme('Kabul ediyorum', { 'data-og-riza': '1' }, { kucuk: true }) }));
   if (sn && fark(sn.t.vade) < 0) l.push(isKart({ ikon: 'kart', ton: 'kirmizi', baslik: 'Taksitin gecikti', alt: `${tl(sn.t.tutar - (sn.t.kismi || 0))} · vade ${tarih(sn.t.vade).replace(/ /g, '\u00a0')}`, sag: dugme('Öde', { 'data-ode': sn.i }, { kucuk: true }) }));
   const et = OG.ekDersTeklifBilgi(k);  // birim ücret il tabanının altındaysa kabul yerine kursa sorulur
   if (et) l.push(isKart({
