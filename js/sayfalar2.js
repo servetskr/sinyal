@@ -7,6 +7,7 @@ import { pencereSor, pinSor, apiGonder, alanHatalari, e, saatDe, saatE, tl, sayi
 import { yenile } from './app.js?v=235';
 import { AYAR_SEKMELERI, ayarBaglan, ustaDavet, kimlikKartlari, personelFotoKirp, personelOzeti, mebAracKur, mebAktar, mebCek, MEB_BILGI } from './sayfalar5.js?v=235';
 import * as MB from './mebmerkez.js?v=235';
+import * as MKT from './mebkart.js?v=235';   // MEB-193: MEB işlemleri iş kartları
 import { kisaArama as mzKisaArama, kisaAramaBaglan as mzKisaBaglan } from './sayfa-mevzuat.js?v=235';
 import * as EKL from './eklenti.js?v=235';
 import { nakitDekontHtml, nakitDekontBagla, nakitDekontOku, fotoAl, hesapSecici, hesapOku, wpGonder, tahsilAl, ekDersOner, kisiListe, odemeBilgisi, yorumMetni, alici, mudurMu, bildirimler } from './sayfalar1.js?v=235';
@@ -1234,6 +1235,7 @@ function yonetmelikKarti() {
   return `<div class="ekran-notu" data-yonetmelik-kart style="align-items:flex-start">${isaret('bilgi', 20)}<span style="flex:1"><b>Yeni yönetmelik taslağı:</b> MEB, direksiyon sınavı için yeni bir yönetmelik taslağı hazırladı; sınavın serbest güzergâhta yapılması ve kamerayla kaydedilmesi gündemde. Resmî Gazete’de yayımlandığında sınav süresi ve sınav günü planlama kuralları mdSinyal’de güncellenecek; değişiklikleri buradan duyuracağız.</span><button type="button" class="dg dg-hafif dg-kucuk" data-yonetmelik-kapat>Kapat</button></div>`;
 }
 export function meb(alt) {
+  if (MKT.sayfaMi(alt)) return MKT.sayfa(alt);   // MEB-193: ana ekran ve iş ekranları; aşağıdaki sekmeler 'Kontrol ve diğer işler' bağlantılarından açılır
   const SEK = ['aktarim', 'asistan', 'denetim', 'mutabakat', 'evrak', 'esinav', 'kontrol', 'duyuru'];
   if (alt && SEK.includes(alt)) durum.meb = alt;
   if (!SEK.includes(durum.meb)) durum.meb = 'aktarim';
@@ -1270,20 +1272,18 @@ export function meb(alt) {
   if (durum.meb === 'duyuru') govde = `${mzKisaArama()}<div class="kart"><div class="kart-bas"><h3>Mevzuat takibi</h3><small>Son tarama: ${goreli(S.mevzuat[0].tarih)} · her ay MEB, ÖÖKGM ve Resmî Gazete taranır</small></div><ul class="liste" style="margin-top:8px">${S.mevzuat.map(m => `<li style="align-items:flex-start">${isaret(m.uygulandi ? 'tamam' : 'bilgi', 26)}<div style="flex:1"><b style="color:var(--murekkep);display:block">${e(m.konu)}</b><p style="font-size:14px;margin-top:2px">${e(m.ne)}</p><small style="color:var(--soluk)">${m.tarih.length === 10 && m.tarih[4] === '-' ? tarih(m.tarih) + ' ' + m.tarih.slice(0, 4) : e(m.tarih)}${m.uygulandi ? ' · mdSinyal’de uygulandı' : ''}</small></div></li>`).join('')}</ul><p style="font-size:13.5px;color:var(--soluk);padding:0 20px 18px">Kural ya da ücret değiştiğinde değerleri mdSinyal ekibi günceller; kursa bildirim gider.</p></div>`;
   return {
     baslik: 'MEB işlemleri', alt: 'MEBBİS’e girilecekler, evrak, sınav başvuruları ve kurallar',
-    html: (() => {
+    html: MKT.geriBag() + (() => {
       // DENETİM Ö3 (MEB-187): aktarım sekmesinde iş paneli öne çıkar — bilgi kutuları tek katlanır satırda, şube uyarısı tek yerde
       const onk = `${onkosulSeridi('MEBBİS’e yazma', 'MEBBİS ders programı')}`, ymk = `${yonetmelikKarti()}`;
       const subeBilgi = cokSube() && seciliSube() ? `<div class="kurum-serit">${isaret('bilgi', 22)}<span><b>MEBBİS kurumu: ${e(seciliSube().ad)}</b> · kurum kodu <span class="mono">${e(seciliSube().kurumKodu)}</span> · müdür ${e(seciliSube().mudur)} · ${e(seciliSube().mebbis)}</span></div>` : '';
       const subeUyari = cokSube() && !seciliSube() ? `<div class="kurum-serit uyari">${isaret('uyari', 22)}<span><b>MEB işlemleri şube başına yapılır.</b> Her şube ayrı izinli kurumdur: ayrı kurum kodu, müdür ve MEBBİS hesabı. Aşağıda iki şubenin işleri birlikte görünüyor; girmek için şube seçin.</span><span style="display:flex;gap:6px;flex-wrap:wrap">${S.subeler.map(x => `<button class="dg dg-ana dg-kucuk" data-sube-sec="${x.id}">${e(x.ad)}</button>`).join('')}</span></div>` : '';
       const kurumB = `${(mk => mk ? `<div class="kurum-serit">${isaret('bilgi', 22)}<span><b>MEBBİS kurum bilgisi</b> · bina kontenjanı ${mk.binaKontenjan || '—'} · açık programlar ${e((mk.programlar || []).filter(p => programAcik(mk, p.kod)).map(p => p.kod).join(', ') || '—')}${(mk.programlar || []).some(p => !programAcik(mk, p.kod)) ? ' · kapalı: ' + e(mk.programlar.filter(p => !programAcik(mk, p.kod)).map(p => p.kod || p.ad).join(', ')) : ''} · ${(mk.derslikler || []).length} derslik${(mk.derslikler || []).length ? ' (' + e(mk.derslikler.map(d => d.ad + (d.kontenjan ? ' ' + d.kontenjan : '')).join(', ')) + ')' : ''} <small style="color:var(--soluk)">· ${String(mk.okundu || '').split('-').reverse().join('.')} okundu</small></span></div>` : '')(mebKurum())}`, farkB = `${(n => n ? `<div class="kurum-serit uyari">${isaret('uyari', 22)}<span><b>${n} dönem grubunun başlangıcı MEBBİS’tekinden farklı.</b> MEBBİS’teki tarih esastır; <a href="#/ayarlar/donem" style="color:inherit;font-weight:800">Ayarlar › Dönem ve gruplar</a>’da etkisini görüp düzeltin.</span></div>` : '')((S.gruplar || []).filter(g => g.mebBaslangic && g.mebBaslangic !== g.baslangic).length)}`;
-      const notB = `${ekranNotu('Günde bir kez: MEBBİS’e girin, “Önce MEBBİS’ten güncelle”, sonra “Başla”. Açık MEBBİS işleri son günüyle üstte; yönetmeliğe aykırı plan önceden işaretlenir.')}`;
-      if (durum.meb !== 'aktarim') return notB + onk + ymk + subeBilgi + subeUyari + kurumB + farkB;
+      const notB = `${ekranNotu('Günde bir kez: MEBBİS’e girin, “MEBBİS’ten bilgileri çek”, sonra MEB işlemlerindeki kartlardan bekleyen işleri aktarın. Yönetmeliğe aykırı plan önceden işaretlenir.')}`;
+      if (durum.meb !== 'aktarim') return (durum.meb === 'mutabakat' ? subeUyari : '') + (durum.meb === 'duyuru' ? ymk : '');   // MEB-193: öteki bilgiler iş kartları ekranında
       const parcalar = [onk, farkB, ymk, kurumB, notB].filter(x => x && x.trim()), uyari = [onk, farkB].filter(x => x && x.trim()).length;
       return subeUyari + (parcalar.length ? `<details class="mx-bilgi"${uyari ? ' data-uyari' : ''}><summary>${isaret(uyari ? 'uyari' : 'bilgi', 18)}<span>${uyari ? `${uyari} uyarı · ` : ''}Bilgiler ve duyurular (${parcalar.length})</span></summary><div>${parcalar.join('')}</div></details>` : '');
     })() + `
-      ${durum.meb === 'aktarim' ? '' : olcumler([['Girilecek kayıt', aktarim.length + '', 'Evrakı tamam'], ['Girilecek program', program.length + ' ders', 'MEBBİS’e girilmemiş'], ['Sınav randevusu', sinavBildir.length + '', 'MEBBİS’e girilmemiş sınav'], ['Kural uyarısı', kurallar.length + '', kurallar.length ? 'İnceleme bekliyor' : 'Sorun yok', kurallar.length ? 'uyari' : '']])}
-      <div class="ara-bosluk"></div>
-      <div id="sek">${sekmeler([['aktarim', 'MEBBİS aktarımı', MB.merkezSayisi()], ['asistan', 'Elle giriş', null], ['denetim', 'Denetim hazırlığı', eks.length], ['mutabakat', 'MEBBİS mutabakatı', S.mutabakat ? ['yalnizSinyal', 'yalnizMeb', 'sinif', 'ders'].reduce((a, x) => a + S.mutabakat.sonuc[x].length, 0) : null], ['evrak', 'Evrak kontrolü', eksik.length], ['esinav', 'e-Sınav başvuruları', esinav.length], ['kontrol', 'Kurallar ve takvim', kurallar.length], ['duyuru', 'Mevzuat']], durum.meb)}</div>${govde}`,
+      ${govde}`,
     baglan(k) {
       MB.merkezBaglan(k, yenile);
       mzKisaBaglan(k);
@@ -1297,6 +1297,7 @@ export function meb(alt) {
         if (t.closest('[data-denetim-dosya]')) import('./sayfalar3.js?v=235').then(m => m.belgeAc('denetim'));
       });
       if (durum.meb === 'mutabakat') OZ.mutabakatBaglan(k);
+      MKT.altMenu(k, durum.meb);   // DIG-057
       k.addEventListener('click', ev => {
         const t = ev.target;
         if (t.closest('[data-program]')) import('./sayfalar3.js?v=235').then(m => m.programPenceresi());

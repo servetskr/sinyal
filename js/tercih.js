@@ -31,7 +31,7 @@ export function tercihYaz(ad, v) {
 export const suzgecOku = ekran => tercihler().yapiskan ? (yerelOku('sinyal-suzgec-' + kimlik())[ekran] || null) : null;
 export const suzgecYaz = (ekran, v) => { if (!tercihler().yapiskan) return; const l = yerelOku('sinyal-suzgec-' + kimlik()); l[ekran] = v; yerelYaz('sinyal-suzgec-' + kimlik(), l); };
 // sekme hatırlama: menüden sayfaya gelince en son açılan sekme
-export const SEKMELI = ['ayarlar', 'meb', 'raporlar', 'mesajlar', 'sosyal'];
+export const SEKMELI = ['ayarlar', 'raporlar', 'mesajlar', 'sosyal'];   // MEB-193: MEB işlemlerinde sekme yok; menüden hep iş kartlarına gelinir
 export const sekmeOku = ad => tercihler().sekmeHatirla ? (yerelOku('sinyal-sekme-' + kimlik())[ad] || null) : null;
 export const sekmeYaz = (ad, hash) => { if (!tercihler().sekmeHatirla) return; const l = yerelOku('sinyal-sekme-' + kimlik()); if (l[ad] === hash) return; l[ad] = hash; yerelYaz('sinyal-sekme-' + kimlik(), l); };
 

@@ -3,6 +3,7 @@ import { ilSecenekleri, ekranDuzey, ekranYetkili, kullaniciSubesi, S, tamAd, gec
 import { ik, e, pencere, kapatPencere, bugunMetni, bildir, ziyaretci, sadeDil, sadeDilBaslat } from './ui.js?v=235';
 import * as Y1 from './sayfalar1.js?v=235';
 import * as Y2 from './sayfalar2.js?v=235';
+import * as MKT from './mebkart.js?v=235';
 import * as SG from './sinavgunu.js?v=235';
 import * as P from './portal.js?v=235';
 import * as OXU from './ogr/ui.js?v=235';
@@ -117,7 +118,7 @@ function sayaclar() {
   return {
     adaylar: [S.adaylar.filter(a => a.asama === 'Yeni').length, false],
     kasa: [sb(S.kursiyerler).filter(k => !(k.kapali && k.kapali.tur === 'arsiv') && gecikenler(k).length).length, false],   // DENETİM K8: Kasa sayfası gibi şube süzgecine uyar; arşivdekiler sayılmaz (DIG-051)
-    meb: [S.kursiyerler.filter(k => !k.mebIslendi && !eksikEvrak(k).length).length, true],
+    meb: [MKT.bekleyenIsSayisi(), true],   // MEB-193: MEB işlemleri ekranının başlığıyla aynı sayı (bekleyen işi olan kart)
     sosyal: [S.sosyal.yorumlar.filter(y => y.durum === 'devir' || y.durum === 'onay').length + S.devredilen.length, false],
     kurulum: [Y5.kurulumAdimlari().filter(x => !x[1]).length, true],
   };

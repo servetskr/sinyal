@@ -11,7 +11,9 @@ import * as MX from './mebekran.js?v=235';   // MEB-187: üst şerit, açık pen
 import { pencere, kapatPencere, bildir, tl, waAc } from './ui.js?v=235';
 
 const TURLER = [['kayit', 'Kayıt'], ['evrak', 'Evrak'], ['grup', 'Dönem grubu'], ['onay', 'Kurum onayı'], ['teorik', 'Teorik program'], ['program', 'Direksiyon programı'], ['esinav', 'e-Sınav başvurusu'], ['sinav', 'Sınav randevusu'], ['fatura', 'Fatura'], ['al', 'MEBBİS’ten al']];
-const butunIsler = hepsi => [...EK.mebIsleri(hepsi), ...MT.ekIsler(hepsi)];
+// MEBBİS'ten güncelle / bilgileri çek: okunanlar (MEBBİS'e bir şey yazılmaz); MEB-193 iş kartları ekranı da bunu kullanır
+export const GUNCELLE = ['gruplar', 'kursiyerler', 'dosya', 'personel', 'araclar', 'sinavlar', 'sonuclar', 'merkezler', 'direksiyonProgrami', 'randevular'];
+export const butunIsler = hepsi => [...EK.mebIsleri(hepsi), ...MT.ekIsler(hepsi)];
 const CEK = [
   ['grup', 'Dönem grupları', 'MEBBİS’teki dönem, grup ve şubeler (ör. Kasım 1A) mdSinyal’e grup kartı olarak gelir. İlk kurulumda önce bunu çekin.'],
   ['sinav', 'Sınav sonuçları', 'e-Sınav ve direksiyon sonuçları mdSinyal’in sonuç penceresine dolar; siz kaydedersiniz.'],
@@ -28,7 +30,7 @@ const ayrintiSar = h => `<details class="mx-ayrinti" data-mx-ayrinti ${m.ayrinti
 
 const sonEtiket = t => { if (!t) return ['—', '']; const k = fark(t); return k < 0 ? ['Süresi geçti', 'kirmizi'] : k === 0 ? ['Bugün son gün', 'kirmizi'] : k <= 3 ? [k + ' gün kaldı', 'uyari'] : [tarih(t), 'notr']; };
 // [etiket, renk, not, iz] · iz: aktarılan işte kim, ne zaman, nasıl doğrulandı (S.mebDurum başarıda da kalır)
-function durumu(x) {
+export function durumu(x) {
   const d = (S.mebDurum || {})[x.id];
   if (x.bitti) {
     if (d && d.durum === 'tamam' && d.dogrulama === 'mesaj') return ['Kontrol edin', 'uyari', 'Yardımcı yalnız MEBBİS’in mesajını gördü; kaydı MEBBİS listesinde kontrol edin', MK.izMetni(d)];
@@ -36,7 +38,7 @@ function durumu(x) {
   }
   // MEB-187: Yardımcı şu an bu kaydı yazıyorsa satırda canlı görünür (Wenntech şeffaflığı)
   { const sr = MT.suruyor() && ((MT.durum.son || {}).sonuc || {}).suruyor; if (sr && (sr === x.id || (x.tur === 'sinav' && String(sr).startsWith('randevu-' + ((x.ref || {}).sinav || '') + '|')))) return ['İşleniyor', 'mavi', 'Yardımcı şu an MEBBİS’e yazıyor', '']; }
-  if (d && d.durum === 'hata' && d.hataTur === 'ekran') return ['Ekran değişti', 'kirmizi', 'MEBBİS ekranı değiştiği için gönderilmedi; “Elle gir” ile girin', ''];
+  if (d && d.durum === 'hata' && d.hataTur === 'ekran') return ['Ekran değişti', 'kirmizi', 'MEBBİS ekranı değiştiği için gönderilmedi; “Bilgileri kopyala” ile elle girin', ''];
   if (d && d.durum === 'hata') return ['Hata', 'kirmizi', MK.maskele(d.not || ''), ''];
   // Gönderilen iş, Yardımcı "bitti" ya da "hata" diyene kadar (en çok 7 gün) Gönderildi kalır; kendiliğinden Bekliyor'a dönüp iki kez girilmesin
   if (d && d.durum === 'gonderildi' && Date.now() - d.zaman < 7 * 864e5) return ['Gönderildi', 'mavi', 'Yardımcı sonucu bildirmedi; MEBBİS’te kontrol edip gerekirse yeniden gönderin'];
@@ -57,7 +59,7 @@ export function merkezSayisi() { return butunIsler().length; }
 
 // DIR-054: MEBBİS ile uyumsuzluklar — geri okumada (SKT04002, aday dosyası) bulunan farklar; açık olanlar üstte, bilerek bırakılanlar katlanır
 let uyKapaliGoster = false;
-function uyumsuzKarti() {
+export function uyumsuzKarti() {
   const hepsi = (S.mebUyumsuz || []).filter(x => !x.kursiyer || kursiyer(x.kursiyer)), acik = hepsi.filter(x => !x.kapandi), kapali = hepsi.filter(x => x.kapandi);
   const ok = (S.mebAnaliz || {}).program; if (!hepsi.length && !ok) return '';
   const satir = x => { const m = UY.metin(x); return `<li class="uy-l"><div style="flex:1;min-width:0"><b>${e(m.baslik)}</b> ${m.etiket.map(t => rozet(t, /yok|Yalnız/.test(t) ? 'kirmizi' : 'sari')).join(' ')}
@@ -192,7 +194,7 @@ export function merkezBaglan(k, yenile) {
     if (t.closest('[data-mm-kurulum]')) return MT.topluCek(MT.KURULUM_CEK);   // MEB-188
     if (t.closest('[data-mm-donemsil]')) return MT.donemSil();   // MEB-184
     if (t.closest('[data-mm-merkez]')) return MT.topluCek(['merkezler']);   // MEB-027
-    if (t.closest('[data-mm-guncelle]')) return MT.topluCek(['gruplar', 'kursiyerler', 'dosya', 'personel', 'araclar', 'sinavlar', 'sonuclar', 'merkezler', 'direksiyonProgrami', 'randevular']);
+    if (t.closest('[data-mm-guncelle]')) return MT.topluCek(GUNCELLE);
     if (t.closest('[data-mm-hepsini]')) { const ids = butunIsler(true).filter(x => !x.bitti && x.tur !== 'onay').map(x => x.id); MT.yaz(ids).then(r => { if (r) m.secili.clear(); yenile(); }); return; }
     // seçim yalnız iş Yardımcı'ya gidince temizlenir; onay penceresinde vazgeçilirse seçim kalır
     if (t.closest('[data-mm-yaz]')) { const ids = [...m.secili]; MT.yaz(ids).then(r => { if (r) ids.forEach(id => m.secili.delete(id)); yenile(); }); return; }
